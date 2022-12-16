@@ -171,7 +171,7 @@ static Optional<unsigned> findArgIdxOfSymbol(ProgramStateRef CurrSt,
                                              SymbolRef &Sym,
                                              Optional<CallEventRef<>> CE) {
   if (!CE)
-    return None;
+    return std::nullopt;
 
   for (unsigned Idx = 0; Idx < (*CE)->getNumArgs(); Idx++)
     if (const MemRegion *MR = (*CE)->getArgSVal(Idx).getAsRegion())
@@ -179,25 +179,25 @@ static Optional<unsigned> findArgIdxOfSymbol(ProgramStateRef CurrSt,
         if (CurrSt->getSVal(MR, TR->getValueType()).getAsSymbol() == Sym)
           return Idx;
 
-  return None;
+  return std::nullopt;
 }
 
 static Optional<std::string> findMetaClassAlloc(const Expr *Callee) {
   if (const auto *ME = dyn_cast<MemberExpr>(Callee)) {
     if (ME->getMemberDecl()->getNameAsString() != "alloc")
-      return None;
+      return std::nullopt;
     const Expr *This = ME->getBase()->IgnoreParenImpCasts();
     if (const auto *DRE = dyn_cast<DeclRefExpr>(This)) {
       const ValueDecl *VD = DRE->getDecl();
       if (VD->getNameAsString() != "metaClass")
-        return None;
+        return std::nullopt;
 
       if (const auto *RD = dyn_cast<CXXRecordDecl>(VD->getDeclContext()))
         return RD->getNameAsString();
 
     }
   }
-  return None;
+  return std::nullopt;
 }
 
 static std::string findAllocatedObjectName(const Stmt *S, QualType QT) {
@@ -607,7 +607,7 @@ static Optional<std::string> describeRegion(const MemRegion *MR) {
     return std::string(VR->getDecl()->getName());
   // Once we support more storage locations for bindings,
   // this would need to be improved.
-  return None;
+  return std::nullopt;
 }
 
 using Bindings = llvm::SmallVector<std::pair<const MemRegion *, SVal>, 4>;

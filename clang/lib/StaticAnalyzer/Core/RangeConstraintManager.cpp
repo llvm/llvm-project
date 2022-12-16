@@ -1095,7 +1095,7 @@ Optional<bool> meansEquality(const SymSymExpr *Sym) {
     // This case is: A != B != 0 -> diseqiality check.
     return false;
   default:
-    return llvm::None;
+    return std::nullopt;
   }
 }
 
@@ -1139,7 +1139,7 @@ intersect(RangeSet::Factory &F, const RangeSet *End) {
   if (End) {
     return *End;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 template <class... RestTy>
@@ -1365,7 +1365,7 @@ private:
   llvm::Optional<Range> convert(const Range &Origin, APSIntType To) {
     if (To.testInRange(Origin.From(), false) != APSIntType::RTR_Within ||
         To.testInRange(Origin.To(), false) != APSIntType::RTR_Within) {
-      return llvm::None;
+      return std::nullopt;
     }
     return Range(ValueFactory.Convert(To, Origin.From()),
                  ValueFactory.Convert(To, Origin.To()));
@@ -1455,13 +1455,13 @@ private:
     // Do not negate if the type cannot be meaningfully negated.
     if (!T->isUnsignedIntegerOrEnumerationType() &&
         !T->isSignedIntegerOrEnumerationType())
-      return llvm::None;
+      return std::nullopt;
 
     if (SymbolRef NegatedSym = F())
       if (const RangeSet *NegatedRange = getConstraint(State, NegatedSym))
         return RangeFactory.negate(*NegatedRange);
 
-    return llvm::None;
+    return std::nullopt;
   }
 
   Optional<RangeSet> getRangeForNegatedUnarySym(const UnarySymExpr *USE) {
@@ -1511,7 +1511,7 @@ private:
 
     // We currently do not support <=> (C++20).
     if (!BinaryOperator::isComparisonOp(CurrentOP) || (CurrentOP == BO_Cmp))
-      return llvm::None;
+      return std::nullopt;
 
     static const OperatorRelationsTable CmpOpTable{};
 
@@ -1581,14 +1581,14 @@ private:
                                                            : getFalseRange(T);
     }
 
-    return llvm::None;
+    return std::nullopt;
   }
 
   Optional<RangeSet> getRangeForEqualities(const SymSymExpr *Sym) {
     Optional<bool> Equality = meansEquality(Sym);
 
     if (!Equality)
-      return llvm::None;
+      return std::nullopt;
 
     if (Optional<bool> AreEqual =
             EquivalenceClass::areEqual(State, Sym->getLHS(), Sym->getRHS())) {
@@ -1602,7 +1602,7 @@ private:
       return getFalseRange(Sym->getType());
     }
 
-    return llvm::None;
+    return std::nullopt;
   }
 
   RangeSet getTrueRange(QualType T) {
@@ -2106,7 +2106,7 @@ private:
     if (!Constraint.containsZero())
       return true;
 
-    return llvm::None;
+    return std::nullopt;
   }
 
   ProgramStateRef State;
@@ -2523,7 +2523,7 @@ inline Optional<bool> EquivalenceClass::areEqual(ProgramStateRef State,
     return false;
 
   // It is not clear.
-  return llvm::None;
+  return std::nullopt;
 }
 
 [[nodiscard]] ProgramStateRef

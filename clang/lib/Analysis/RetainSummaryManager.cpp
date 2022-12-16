@@ -71,7 +71,7 @@ Optional<ObjKind> RetainSummaryManager::hasAnyEnabledAttrOf(const Decl *D,
   if (isOneOf<T, CFConsumedAttr, CFReturnsRetainedAttr,
               CFReturnsNotRetainedAttr>()) {
     if (!TrackObjCAndCFObjects)
-      return None;
+      return std::nullopt;
 
     K = ObjKind::CF;
   } else if (isOneOf<T, NSConsumedAttr, NSConsumesSelfAttr,
@@ -79,19 +79,19 @@ Optional<ObjKind> RetainSummaryManager::hasAnyEnabledAttrOf(const Decl *D,
                      NSReturnsNotRetainedAttr, NSConsumesSelfAttr>()) {
 
     if (!TrackObjCAndCFObjects)
-      return None;
+      return std::nullopt;
 
     if (isOneOf<T, NSReturnsRetainedAttr, NSReturnsAutoreleasedAttr,
                 NSReturnsNotRetainedAttr>() &&
         !cocoa::isCocoaObjectRef(QT))
-      return None;
+      return std::nullopt;
     K = ObjKind::ObjC;
   } else if (isOneOf<T, OSConsumedAttr, OSConsumesThisAttr,
                      OSReturnsNotRetainedAttr, OSReturnsRetainedAttr,
                      OSReturnsRetainedOnZeroAttr,
                      OSReturnsRetainedOnNonZeroAttr>()) {
     if (!TrackOSObjects)
-      return None;
+      return std::nullopt;
     K = ObjKind::OS;
   } else if (isOneOf<T, GeneralizedReturnsNotRetainedAttr,
                      GeneralizedReturnsRetainedAttr,
@@ -102,7 +102,7 @@ Optional<ObjKind> RetainSummaryManager::hasAnyEnabledAttrOf(const Decl *D,
   }
   if (D->hasAttr<T>())
     return K;
-  return None;
+  return std::nullopt;
 }
 
 template <class T1, class T2, class... Others>
@@ -724,7 +724,7 @@ RetainSummaryManager::canEval(const CallExpr *CE, const FunctionDecl *FD,
 
   IdentifierInfo *II = FD->getIdentifier();
   if (!II)
-    return None;
+    return std::nullopt;
 
   StringRef FName = II->getName();
   FName = FName.substr(FName.find_first_not_of('_'));
@@ -741,7 +741,7 @@ RetainSummaryManager::canEval(const CallExpr *CE, const FunctionDecl *FD,
         FName == "CMBufferQueueDequeueIfDataReadyAndRetain") {
       // Part of: <rdar://problem/39390714>.
       // These are not retain. They just return something and retain it.
-      return None;
+      return std::nullopt;
     }
     if (CE->getNumArgs() == 1 &&
         (cocoa::isRefType(ResultTy, "CF", FName) ||
@@ -781,7 +781,7 @@ RetainSummaryManager::canEval(const CallExpr *CE, const FunctionDecl *FD,
         return BehaviorSummary::NoOp;
   }
 
-  return None;
+  return std::nullopt;
 }
 
 const RetainSummary *
@@ -885,7 +885,7 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
       if (auto RE = getRetEffectFromAnnotations(RetTy, PD))
         return RE;
 
-  return None;
+  return std::nullopt;
 }
 
 /// \return Whether the chain of typedefs starting from @c QT

@@ -775,7 +775,7 @@ public:
     // For member operator calls argument 0 on the expression corresponds
     // to implicit this-parameter on the declaration.
     return (ASTArgumentIndex > 0) ? Optional<unsigned>(ASTArgumentIndex - 1)
-                                  : None;
+                                  : std::nullopt;
   }
 
   unsigned getASTArgumentIndex(unsigned CallArgumentIndex) const override {

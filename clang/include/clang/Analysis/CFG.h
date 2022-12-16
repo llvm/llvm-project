@@ -108,7 +108,7 @@ public:
   template<typename T>
   Optional<T> getAs() const {
     if (!T::isKind(*this))
-      return None;
+      return std::nullopt;
     T t;
     CFGElement& e = t;
     e = *this;
