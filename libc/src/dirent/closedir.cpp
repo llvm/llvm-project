@@ -12,12 +12,18 @@
 #include "src/__support/common.h"
 
 #include <dirent.h>
+#include <errno.h>
 
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, closedir, (::DIR * dir)) {
   auto *d = reinterpret_cast<__llvm_libc::Dir *>(dir);
-  return d->close();
+  int retval = d->close();
+  if (retval != 0) {
+    errno = retval;
+    return -1;
+  }
+  return 0;
 }
 
 } // namespace __llvm_libc
