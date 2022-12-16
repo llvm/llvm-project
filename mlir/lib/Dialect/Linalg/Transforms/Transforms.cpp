@@ -512,6 +512,17 @@ static Value getPackOpSourceOrPaddedSource(OpBuilder &builder,
                                  /*nofold=*/false, loc, builder);
 }
 
+static SmallVector<int64_t>
+getPackUnpackNormalizedInnerPerm(int rank, ArrayRef<int64_t> innerDimsPos) {
+  constexpr int64_t kNonTiledMarker = -1;
+  SmallVector<int64_t> vec(rank, kNonTiledMarker);
+  for (auto [index, value] : llvm::enumerate(innerDimsPos))
+    vec[value] = index;
+  SmallVector<int64_t> perm = llvm::to_vector(llvm::make_filter_range(
+      vec, [&](int64_t v) { return v != kNonTiledMarker; }));
+  return perm;
+}
+
 LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
     tensor::PackOp packOp, PatternRewriter &rewriter) const {
   // TODO: support the case that outer dimensions are not all 1s A
@@ -556,14 +567,8 @@ LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
       loc, readType, input, readOffsets, readSizes, readStrides);
 
   // 2. Transpose the tile to match the inner tile order.
-  constexpr int64_t kNonTiledMarker = -1;
-  ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();
-  SmallVector<int64_t> vec(srcRank, kNonTiledMarker);
-  for (auto [index, value] : llvm::enumerate(innerDimsPos))
-    vec[value] = index;
-  SmallVector<int64_t> perm = llvm::to_vector(llvm::make_filter_range(
-      vec, [&](int64_t v) { return v != kNonTiledMarker; }));
-
+  SmallVector<int64_t> perm =
+      getPackUnpackNormalizedInnerPerm(srcRank, packOp.getInnerDimsPos());
   SmallVector<int64_t> transpShape = readShape;
   applyPermutationToVector<int64_t>(transpShape, perm);
 
@@ -583,6 +588,81 @@ LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
       loc, transposedOp.getResult()[0], packOp.getDest(), writeOffsets,
       writeSizes, writeStrides);
   rewriter.replaceOp(packOp, insert.getResult());
+
+  return success();
+}
+
+LogicalResult GeneralizeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
+    tensor::UnPackOp unpackOp, PatternRewriter &rewriter) const {
+  int64_t srcRank = unpackOp.getSourceRank();
+  int64_t destRank = unpackOp.getDestRank();
+  ArrayRef<int64_t> srcShape = unpackOp.getSourceType().getShape();
+  if (llvm::any_of(srcShape.take_front(destRank),
+                   [](int64_t val) { return val != 1; })) {
+    return rewriter.notifyMatchFailure(
+        unpackOp, "require the outer dimension of the result are all 1s");
+  }
+
+  // 1. Use rank-reduced tensor.extract_slice op to extract the tile.
+  Location loc = unpackOp.getLoc();
+  Attribute zeroIdxAttr = rewriter.getIndexAttr(0);
+  Attribute oneIdxAttr = rewriter.getIndexAttr(1);
+  SmallVector<OpFoldResult> readOffsets(srcRank, zeroIdxAttr);
+  SmallVector<OpFoldResult> readStrides(srcRank, oneIdxAttr);
+
+  auto mixedTiles = unpackOp.getMixedTiles();
+  SmallVector<OpFoldResult> readSizes(destRank, oneIdxAttr);
+  readSizes.append(mixedTiles.begin(), mixedTiles.end());
+
+  // Explicitly create the type for extract_slice op because the inner tile
+  // size could be 1. We want to represent the whole inner tile in this case.
+  ArrayRef<int64_t> readShape = srcShape.drop_front(destRank);
+  Type elemType = unpackOp.getSourceType().getElementType();
+  auto readType = RankedTensorType::get(readShape, elemType);
+  Value innerTile = rewriter.create<tensor::ExtractSliceOp>(
+      loc, readType, unpackOp.getSource(), readOffsets, readSizes, readStrides);
+
+  // 2. Transpose the tile to match the outer corresponding tile order.
+  ArrayRef<int64_t> innerDimsPos = unpackOp.getInnerDimsPos();
+  SmallVector<int64_t> perm =
+      getPackUnpackNormalizedInnerPerm(srcRank, innerDimsPos);
+  SmallVector<int64_t> transpShape(readShape);
+  applyPermutationToVector<int64_t>(transpShape, perm);
+
+  Value empty = rewriter.create<tensor::EmptyOp>(loc, transpShape, elemType);
+  auto transposedOp =
+      rewriter.create<linalg::TransposeOp>(loc, innerTile, empty, perm);
+
+  // 3. Handle in-complete tiles if needed. It truncates trailing data from the
+  // transposed tile.
+  int numLoops = transpShape.size();
+  SmallVector<OpFoldResult> tileStrides(numLoops, oneIdxAttr);
+  SmallVector<OpFoldResult> tileOffsets(numLoops, zeroIdxAttr);
+  SmallVector<OpFoldResult> tileSizes;
+  for (int dim : innerDimsPos)
+    tileSizes.push_back(getAsOpFoldResult(
+        rewriter.createOrFold<tensor::DimOp>(loc, unpackOp.getDest(), dim)));
+
+  applyPermutationToVector<OpFoldResult>(tileSizes, perm);
+  auto partialTile = rewriter.create<tensor::ExtractSliceOp>(
+      loc, transposedOp.getResult()[0], tileOffsets, tileSizes, tileStrides);
+
+  // 4. Insert the result to the destination tensor.
+  SmallVector<OpFoldResult> writeSizes;
+  SmallVector<OpFoldResult> writeStrides(destRank, oneIdxAttr);
+  SmallVector<OpFoldResult> writeOffsets(destRank, zeroIdxAttr);
+  DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
+      unpackOp.getDimAndTileMapping();
+  for (int i = 0, idx = 0; i < destRank; ++i) {
+    if (dimAndTileMapping.count(i))
+      writeSizes.push_back(tileSizes[idx++]);
+    else
+      writeSizes.push_back(oneIdxAttr);
+  }
+  auto insert = rewriter.create<tensor::InsertSliceOp>(
+      loc, partialTile, unpackOp.getDest(), writeOffsets, writeSizes,
+      writeStrides);
+  rewriter.replaceOp(unpackOp, insert.getResult());
 
   return success();
 }
