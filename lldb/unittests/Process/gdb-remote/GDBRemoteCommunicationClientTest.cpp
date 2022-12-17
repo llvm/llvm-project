@@ -192,12 +192,11 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo) {
   auto result = async_result.get();
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(1u, result->size());
-  EXPECT_EQ("/foo/bar.so", result.value()[0].GetFileSpec().GetPath());
-  EXPECT_EQ(triple, result.value()[0].GetArchitecture().GetTriple());
-  EXPECT_EQ(UUID("@ABCDEFGHIJKLMNO", 16),
-            result.value()[0].GetUUID());
-  EXPECT_EQ(0u, result.value()[0].GetObjectOffset());
-  EXPECT_EQ(1234u, result.value()[0].GetObjectSize());
+  EXPECT_EQ("/foo/bar.so", (*result)[0].GetFileSpec().GetPath());
+  EXPECT_EQ(triple, (*result)[0].GetArchitecture().GetTriple());
+  EXPECT_EQ(UUID("@ABCDEFGHIJKLMNO", 16), (*result)[0].GetUUID());
+  EXPECT_EQ(0u, (*result)[0].GetObjectOffset());
+  EXPECT_EQ(1234u, (*result)[0].GetObjectSize());
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo_UUID20) {
@@ -217,12 +216,11 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo_UUID20) {
   auto result = async_result.get();
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(1u, result->size());
-  EXPECT_EQ("/foo/bar.so", result.value()[0].GetFileSpec().GetPath());
-  EXPECT_EQ(triple, result.value()[0].GetArchitecture().GetTriple());
-  EXPECT_EQ(UUID("@ABCDEFGHIJKLMNOPQRS", 20),
-            result.value()[0].GetUUID());
-  EXPECT_EQ(0u, result.value()[0].GetObjectOffset());
-  EXPECT_EQ(1234u, result.value()[0].GetObjectSize());
+  EXPECT_EQ("/foo/bar.so", (*result)[0].GetFileSpec().GetPath());
+  EXPECT_EQ(triple, (*result)[0].GetArchitecture().GetTriple());
+  EXPECT_EQ(UUID("@ABCDEFGHIJKLMNOPQRS", 20), (*result)[0].GetUUID());
+  EXPECT_EQ(0u, (*result)[0].GetObjectOffset());
+  EXPECT_EQ(1234u, (*result)[0].GetObjectSize());
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfoInvalidResponse) {
