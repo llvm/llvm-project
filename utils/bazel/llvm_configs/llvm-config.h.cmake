@@ -123,4 +123,7 @@
 /* Define to 1 if you have the DIA SDK installed, and to 0 if you don't. */
 #cmakedefine01 LLVM_ENABLE_DIA_SDK
 
+/* Define if plugins enabled */
+#cmakedefine LLVM_ENABLE_PLUGINS
+
 #endif
