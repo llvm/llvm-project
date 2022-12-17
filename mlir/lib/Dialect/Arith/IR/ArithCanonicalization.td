@@ -126,7 +126,7 @@ def MulSIExtendedToMulI :
 def IsScalarOrSplatOne :
     Constraint<And<[
       CPred<"succeeded(getIntOrSplatIntValue($0))">,
-      CPred<"getIntOrSplatIntValue($0).value() == 1">]>>;
+      CPred<"*getIntOrSplatIntValue($0) == 1">]>>;
 
 // mulsi_extended(x, 1) -> [x, extsi(cmpi slt, x, 0)]
 def MulSIExtendedRHSOne :
@@ -284,7 +284,7 @@ def TruncationMatchesShiftAmount :
     Constraint<And<[
       CPred<"succeeded(getIntOrSplatIntValue($2))">,
       CPred<"(getScalarOrElementWidth($0) - getScalarOrElementWidth($1)) == "
-              "getIntOrSplatIntValue($2).value()">]>>;
+              "*getIntOrSplatIntValue($2)">]>>;
 
 // trunci(shrsi(x, c)) -> trunci(shrui(x, c))
 def TruncIShrSIToTrunciShrUI :
