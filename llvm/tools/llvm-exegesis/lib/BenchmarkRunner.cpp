@@ -135,6 +135,21 @@ private:
 };
 } // namespace
 
+Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
+    const BenchmarkCode &BC, const SnippetRepetitor &Repetitor,
+    unsigned MinInstructions, unsigned LoopBodySize) const {
+  const std::vector<MCInst> &Instructions = BC.Key.Instructions;
+  SmallString<0> Buffer;
+  raw_svector_ostream OS(Buffer);
+  if (Error E = assembleToStream(
+          State.getExegesisTarget(), State.createTargetMachine(), BC.LiveIns,
+          BC.Key.RegisterInitialValues,
+          Repetitor.Repeat(Instructions, MinInstructions, LoopBodySize), OS)) {
+    return std::move(E);
+  }
+  return Buffer;
+}
+
 Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
     const BenchmarkCode &BC, unsigned NumRepetitions, unsigned LoopBodySize,
     const SnippetRepetitor &Repetitor, bool DumpObjectToDisk) const {
@@ -156,38 +171,26 @@ Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
   const int MinInstructionsForSnippet = 4 * Instructions.size();
   const int LoopBodySizeForSnippet = 2 * Instructions.size();
   {
-    SmallString<0> Buffer;
-    raw_svector_ostream OS(Buffer);
-    if (Error E = assembleToStream(
-            State.getExegesisTarget(), State.createTargetMachine(), BC.LiveIns,
-            BC.Key.RegisterInitialValues,
-            Repetitor.Repeat(Instructions, MinInstructionsForSnippet,
-                             LoopBodySizeForSnippet),
-            OS)) {
+    auto Snippet = assembleSnippet(BC, Repetitor, MinInstructionsForSnippet,
+                                   LoopBodySizeForSnippet);
+    if (Error E = Snippet.takeError())
       return std::move(E);
-    }
     const ExecutableFunction EF(State.createTargetMachine(),
-                                getObjectFromBuffer(OS.str()));
+                                getObjectFromBuffer(*Snippet));
     const auto FnBytes = EF.getFunctionBytes();
     llvm::append_range(InstrBenchmark.AssembledSnippet, FnBytes);
   }
 
   // Assemble NumRepetitions instructions repetitions of the snippet for
   // measurements.
-  const auto Filler = Repetitor.Repeat(
-      Instructions, InstrBenchmark.NumRepetitions, LoopBodySize);
-
   object::OwningBinary<object::ObjectFile> ObjectFile;
   {
-    SmallString<0> Buffer;
-    raw_svector_ostream OS(Buffer);
-    if (Error E = assembleToStream(State.getExegesisTarget(),
-                                   State.createTargetMachine(), BC.LiveIns,
-                                   BC.Key.RegisterInitialValues, Filler, OS)) {
+    auto Snippet = assembleSnippet(BC, Repetitor, InstrBenchmark.NumRepetitions,
+                                   LoopBodySize);
+    if (Error E = Snippet.takeError())
       return std::move(E);
-    }
     if (DumpObjectToDisk) {
-      auto ObjectFilePath = writeObjectFile(Buffer);
+      auto ObjectFilePath = writeObjectFile(*Snippet);
       if (Error E = ObjectFilePath.takeError()) {
         InstrBenchmark.Error = toString(std::move(E));
         return InstrBenchmark;
@@ -195,7 +198,7 @@ Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
       outs() << "Check generated assembly with: /usr/bin/objdump -d "
              << *ObjectFilePath << "\n";
     }
-    ObjectFile = getObjectFromBuffer(OS.str());
+    ObjectFile = getObjectFromBuffer(*Snippet);
   }
 
   if (BenchmarkSkipMeasurements) {

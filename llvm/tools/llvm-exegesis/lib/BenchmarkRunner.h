@@ -83,6 +83,11 @@ private:
   virtual Expected<std::vector<BenchmarkMeasure>>
   runMeasurements(const FunctionExecutor &Executor) const = 0;
 
+  Expected<SmallString<0>> assembleSnippet(const BenchmarkCode &BC,
+                                           const SnippetRepetitor &Repetitor,
+                                           unsigned MinInstructions,
+                                           unsigned LoopBodySize) const;
+
   Expected<std::string> writeObjectFile(StringRef Buffer) const;
 
   const std::unique_ptr<ScratchSpace> Scratch;
