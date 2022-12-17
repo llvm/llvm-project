@@ -475,7 +475,7 @@ void Writer::populateTargetFeatures() {
   }
 
   if (config->extraFeatures.has_value()) {
-    auto &extraFeatures = config->extraFeatures.value();
+    auto &extraFeatures = *config->extraFeatures;
     allowed.insert(extraFeatures.begin(), extraFeatures.end());
   }
 
@@ -483,7 +483,7 @@ void Writer::populateTargetFeatures() {
   bool inferFeatures = !config->features.has_value();
 
   if (!inferFeatures) {
-    auto &explicitFeatures = config->features.value();
+    auto &explicitFeatures = *config->features;
     allowed.insert(explicitFeatures.begin(), explicitFeatures.end());
     if (!config->checkFeatures)
       goto done;
