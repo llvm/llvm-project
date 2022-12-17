@@ -101,16 +101,21 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
                                        uint64_t NumTeamsClause,
                                        uint64_t LoopTripCount,
                                        uint32_t NumThreads) const {
-  uint64_t PreferredNumBlocks = getDefaultNumBlocks(GenericDevice);
   if (NumTeamsClause > 0) {
-    PreferredNumBlocks = NumTeamsClause;
-  } else if (LoopTripCount > 0) {
+    // TODO: We need to honor any value and consequently allow more than the
+    // block limit. For this we might need to start multiple kernels or let the
+    // blocks start again until the requested number has been started.
+    return std::min(NumTeamsClause, GenericDevice.getBlockLimit());
+  }
+
+  uint64_t TripCountNumBlocks = std::numeric_limits<uint64_t>::max();
+  if (LoopTripCount > 0) {
     if (isSPMDMode()) {
       // We have a combined construct, i.e. `target teams distribute
       // parallel for [simd]`. We launch so many teams so that each thread
       // will execute one iteration of the loop. round up to the nearest
       // integer
-      PreferredNumBlocks = ((LoopTripCount - 1) / NumThreads) + 1;
+      TripCountNumBlocks = ((LoopTripCount - 1) / NumThreads) + 1;
     } else {
       assert((isGenericMode() || isGenericSPMDMode()) &&
              "Unexpected execution mode!");
@@ -126,9 +131,12 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
       //
       // Threads within a team will execute the iterations of the `parallel`
       // loop.
-      PreferredNumBlocks = LoopTripCount;
+      TripCountNumBlocks = LoopTripCount;
     }
   }
+  // If the loops are long running we rather reuse blocks than spawn too many.
+  uint64_t PreferredNumBlocks =
+      std::min(TripCountNumBlocks, getDefaultNumBlocks(GenericDevice));
   return std::min(PreferredNumBlocks, GenericDevice.getBlockLimit());
 }
 
