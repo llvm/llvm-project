@@ -2103,10 +2103,18 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
         if (dataRef && !CheckDataRef(*dataRef)) {
           return std::nullopt;
         }
-        if (dataRef && dataRef->Rank() > 0 && sym->attrs().test(semantics::Attr::NOPASS)) {
-          // C1529 seems unnecessary and most compilers don't enforce it.
-          Say(sc.component.source,
-            "Base of procedure component reference should be scalar when NOPASS component or binding '%s' is referenced"_port_en_US, sc.component.source);
+        if (dataRef && dataRef->Rank() > 0) {
+          if (sym->has<semantics::ProcBindingDetails>() &&
+              sym->attrs().test(semantics::Attr::NOPASS)) {
+            // C1529 seems unnecessary and most compilers don't enforce it.
+            AttachDeclaration(
+                Say(sc.component.source,
+                    "Base of NOPASS type-bound procedure reference should be scalar"_port_en_US),
+                *sym);
+          } else if (IsProcedurePointer(*sym)) { // C919
+            Say(sc.component.source,
+                "Base of procedure component reference must be scalar"_err_en_US);
+          }
         }
         if (const Symbol *resolution{
                 GetBindingResolution(dtExpr->GetType(), *sym)}) {
