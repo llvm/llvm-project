@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   Passes
   Support
   TransformUtils
+  IPO
   )
 
 set(ANALYSIS_TEST_SOURCES
