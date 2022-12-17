@@ -1224,7 +1224,7 @@ void MallocChecker::checkKernelMalloc(const CallEvent &Call,
   llvm::Optional<ProgramStateRef> MaybeState =
       performKernelMalloc(Call, C, State);
   if (MaybeState)
-    State = MaybeState.value();
+    State = *MaybeState;
   else
     State = MallocMemAux(C, Call, Call.getArgExpr(0), UndefinedVal(), State,
                          AF_Malloc);

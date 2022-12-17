@@ -3121,7 +3121,7 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
   PathDiagnosticLocation Loc(Cond, SM, LCtx);
   auto event = std::make_shared<PathDiagnosticEventPiece>(Loc, Message);
   if (shouldPrune)
-    event->setPrunable(shouldPrune.value());
+    event->setPrunable(*shouldPrune);
   return event;
 }
 
