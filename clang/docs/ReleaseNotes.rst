@@ -187,6 +187,11 @@ code bases.
 - ``-p`` is rejected for all targets which are not AIX or OpenBSD. ``-p`` led
   to an ``-Wunused-command-line-argument`` warning in previous releases.
 
+- Clang now diagnoses non-inline externally-visible definitions in C++
+  standard header units as per ``[module.import/6]``.  Previously, in Clang-15,
+  these definitions were allowed.  Note that such definitions are ODR
+  violations if the header is included more than once.
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed

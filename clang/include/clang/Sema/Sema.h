@@ -2325,6 +2325,12 @@ public:
     return ModuleScopes.empty() ? false : ModuleScopes.back().ModuleInterface;
   }
 
+  /// Is the module scope we are in a C++ Header Unit?
+  bool currentModuleIsHeaderUnit() const {
+    return ModuleScopes.empty() ? false
+                                : ModuleScopes.back().Module->isHeaderUnit();
+  }
+
   /// Get the module owning an entity.
   Module *getOwningModule(const Decl *Entity) {
     return Entity->getOwningModule();
