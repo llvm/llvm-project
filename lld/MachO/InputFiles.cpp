@@ -231,14 +231,8 @@ std::optional<MemoryBufferRef> macho::readFile(StringRef path) {
       return std::nullopt;
     }
 
-    uint32_t cpuType = read32be(&arch[i].cputype);
-    uint32_t cpuSubtype =
-        read32be(&arch[i].cpusubtype) & ~MachO::CPU_SUBTYPE_MASK;
-
-    // FIXME: LD64 has a more complex fallback logic here.
-    // Consider implementing that as well?
-    if (cpuType != static_cast<uint32_t>(target->cpuType) ||
-        cpuSubtype != target->cpuSubtype)
+    if (read32be(&arch[i].cputype) != static_cast<uint32_t>(target->cpuType) ||
+        read32be(&arch[i].cpusubtype) != target->cpuSubtype)
       continue;
 
     uint32_t offset = read32be(&arch[i].offset);
