@@ -403,7 +403,7 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool UseEpilogRemainder,
   std::optional<MDNode *> NewLoopID = makeFollowupLoopID(
       LoopID, {LLVMLoopUnrollFollowupAll, LLVMLoopUnrollFollowupRemainder});
   if (NewLoopID) {
-    NewLoop->setLoopID(NewLoopID.value());
+    NewLoop->setLoopID(*NewLoopID);
 
     // Do not setLoopAlreadyUnrolled if loop attributes have been defined
     // explicitly.
