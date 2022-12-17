@@ -1174,10 +1174,9 @@ MallocChecker::performKernelMalloc(const CallEvent &Call, CheckerContext &C,
   }
 
   NonLoc Flags = V.castAs<NonLoc>();
-  NonLoc ZeroFlag =
-      C.getSValBuilder()
-          .makeIntVal(KernelZeroFlagVal.value(), FlagsEx->getType())
-          .castAs<NonLoc>();
+  NonLoc ZeroFlag = C.getSValBuilder()
+                        .makeIntVal(*KernelZeroFlagVal, FlagsEx->getType())
+                        .castAs<NonLoc>();
   SVal MaskedFlagsUC = C.getSValBuilder().evalBinOpNN(State, BO_And,
                                                       Flags, ZeroFlag,
                                                       FlagsEx->getType());
