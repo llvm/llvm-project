@@ -271,7 +271,7 @@ TEST_F(VPIntrinsicTest, GetParamPos) {
     std::optional<unsigned> MaskParamPos =
         VPIntrinsic::getMaskParamPos(F.getIntrinsicID());
     if (MaskParamPos) {
-      Type *MaskParamType = F.getArg(MaskParamPos.value())->getType();
+      Type *MaskParamType = F.getArg(*MaskParamPos)->getType();
       ASSERT_TRUE(MaskParamType->isVectorTy());
       ASSERT_TRUE(
           cast<VectorType>(MaskParamType)->getElementType()->isIntegerTy(1));
@@ -280,7 +280,7 @@ TEST_F(VPIntrinsicTest, GetParamPos) {
     std::optional<unsigned> VecLenParamPos =
         VPIntrinsic::getVectorLengthParamPos(F.getIntrinsicID());
     if (VecLenParamPos) {
-      Type *VecLenParamType = F.getArg(VecLenParamPos.value())->getType();
+      Type *VecLenParamType = F.getArg(*VecLenParamPos)->getType();
       ASSERT_TRUE(VecLenParamType->isIntegerTy(32));
     }
   }
