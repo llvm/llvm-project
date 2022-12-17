@@ -347,7 +347,6 @@ define i1 @assume_2_nr(i1 %arg, i1 %cond) norecurse {
 ; TUNIT-LABEL: define {{[^@]+}}@assume_2_nr
 ; TUNIT-SAME: (i1 [[ARG:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:    [[STACK:%.*]] = alloca i1, align 1
-; TUNIT-NEXT:    store i1 [[ARG]], ptr [[STACK]], align 1
 ; TUNIT-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    store i1 true, ptr [[STACK]], align 1
@@ -364,7 +363,6 @@ define i1 @assume_2_nr(i1 %arg, i1 %cond) norecurse {
 ; CGSCC-LABEL: define {{[^@]+}}@assume_2_nr
 ; CGSCC-SAME: (i1 [[ARG:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR3]] {
 ; CGSCC-NEXT:    [[STACK:%.*]] = alloca i1, align 1
-; CGSCC-NEXT:    store i1 [[ARG]], ptr [[STACK]], align 1
 ; CGSCC-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
 ; CGSCC-NEXT:    store i1 true, ptr [[STACK]], align 1
@@ -424,9 +422,6 @@ define i1 @assume_3_nr(i1 %arg, i1 %cond) norecurse {
 ; TUNIT-LABEL: define {{[^@]+}}@assume_3_nr
 ; TUNIT-SAME: (i1 [[ARG:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:    [[STACK:%.*]] = alloca i1, align 1
-; TUNIT-NEXT:    store i1 [[ARG]], ptr [[STACK]], align 1
-; TUNIT-NEXT:    [[L:%.*]] = load i1, ptr [[STACK]], align 1
-; TUNIT-NEXT:    call void @llvm.assume(i1 noundef [[L]]) #[[ATTR6]]
 ; TUNIT-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    store i1 true, ptr [[STACK]], align 1
@@ -477,7 +472,6 @@ define i1 @assume_4_nr(i1 %arg, i1 %cond) norecurse {
 ; TUNIT-LABEL: define {{[^@]+}}@assume_4_nr
 ; TUNIT-SAME: (i1 [[ARG:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:    [[STACK:%.*]] = alloca i1, align 1
-; TUNIT-NEXT:    store i1 [[ARG]], ptr [[STACK]], align 1
 ; TUNIT-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    store i1 true, ptr [[STACK]], align 1
@@ -530,9 +524,6 @@ define i1 @assume_5_nr(i1 %arg, i1 %cond) norecurse {
 ; TUNIT-LABEL: define {{[^@]+}}@assume_5_nr
 ; TUNIT-SAME: (i1 [[ARG:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:    [[STACK:%.*]] = alloca i1, align 1
-; TUNIT-NEXT:    store i1 [[ARG]], ptr [[STACK]], align 1
-; TUNIT-NEXT:    [[L1:%.*]] = load i1, ptr [[STACK]], align 1
-; TUNIT-NEXT:    call void @llvm.assume(i1 noundef [[L1]]) #[[ATTR6]]
 ; TUNIT-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    store i1 true, ptr [[STACK]], align 1
@@ -601,9 +592,7 @@ define i1 @assume_5c_nr(i1 %cond) norecurse {
 ; TUNIT-LABEL: define {{[^@]+}}@assume_5c_nr
 ; TUNIT-SAME: (i1 noundef [[COND:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:    [[STACK:%.*]] = alloca i1, align 1
-; TUNIT-NEXT:    store i1 true, ptr [[STACK]], align 1
-; TUNIT-NEXT:    [[L1:%.*]] = load i1, ptr [[STACK]], align 1
-; TUNIT-NEXT:    call void @llvm.assume(i1 noundef [[L1]]) #[[ATTR6]]
+; TUNIT-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR6]]
 ; TUNIT-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    store i1 true, ptr [[STACK]], align 1
@@ -973,7 +962,6 @@ define i1 @assume_2(i1 %arg, i1 %cond) {
 ; TUNIT-LABEL: define {{[^@]+}}@assume_2
 ; TUNIT-SAME: (i1 [[ARG:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:    [[STACK:%.*]] = alloca i1, align 1
-; TUNIT-NEXT:    store i1 [[ARG]], ptr [[STACK]], align 1
 ; TUNIT-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    store i1 true, ptr [[STACK]], align 1
@@ -990,7 +978,6 @@ define i1 @assume_2(i1 %arg, i1 %cond) {
 ; CGSCC-LABEL: define {{[^@]+}}@assume_2
 ; CGSCC-SAME: (i1 [[ARG:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR3]] {
 ; CGSCC-NEXT:    [[STACK:%.*]] = alloca i1, align 1
-; CGSCC-NEXT:    store i1 [[ARG]], ptr [[STACK]], align 1
 ; CGSCC-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
 ; CGSCC-NEXT:    store i1 true, ptr [[STACK]], align 1
@@ -1050,9 +1037,6 @@ define i1 @assume_3(i1 %arg, i1 %cond) {
 ; TUNIT-LABEL: define {{[^@]+}}@assume_3
 ; TUNIT-SAME: (i1 [[ARG:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:    [[STACK:%.*]] = alloca i1, align 1
-; TUNIT-NEXT:    store i1 [[ARG]], ptr [[STACK]], align 1
-; TUNIT-NEXT:    [[L:%.*]] = load i1, ptr [[STACK]], align 1
-; TUNIT-NEXT:    call void @llvm.assume(i1 noundef [[L]]) #[[ATTR6]]
 ; TUNIT-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    store i1 true, ptr [[STACK]], align 1
@@ -1103,7 +1087,6 @@ define i1 @assume_4(i1 %arg, i1 %cond) {
 ; TUNIT-LABEL: define {{[^@]+}}@assume_4
 ; TUNIT-SAME: (i1 [[ARG:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:    [[STACK:%.*]] = alloca i1, align 1
-; TUNIT-NEXT:    store i1 [[ARG]], ptr [[STACK]], align 1
 ; TUNIT-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    store i1 true, ptr [[STACK]], align 1
@@ -1156,9 +1139,6 @@ define i1 @assume_5(i1 %arg, i1 %cond) {
 ; TUNIT-LABEL: define {{[^@]+}}@assume_5
 ; TUNIT-SAME: (i1 [[ARG:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:    [[STACK:%.*]] = alloca i1, align 1
-; TUNIT-NEXT:    store i1 [[ARG]], ptr [[STACK]], align 1
-; TUNIT-NEXT:    [[L1:%.*]] = load i1, ptr [[STACK]], align 1
-; TUNIT-NEXT:    call void @llvm.assume(i1 noundef [[L1]]) #[[ATTR6]]
 ; TUNIT-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    store i1 true, ptr [[STACK]], align 1
@@ -1227,9 +1207,7 @@ define i1 @assume_5c(i1 %cond) {
 ; TUNIT-LABEL: define {{[^@]+}}@assume_5c
 ; TUNIT-SAME: (i1 noundef [[COND:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:    [[STACK:%.*]] = alloca i1, align 1
-; TUNIT-NEXT:    store i1 true, ptr [[STACK]], align 1
-; TUNIT-NEXT:    [[L1:%.*]] = load i1, ptr [[STACK]], align 1
-; TUNIT-NEXT:    call void @llvm.assume(i1 noundef [[L1]]) #[[ATTR6]]
+; TUNIT-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR6]]
 ; TUNIT-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    store i1 true, ptr [[STACK]], align 1
@@ -1303,7 +1281,6 @@ define i32 @assume_read_global_good() {
 ; TUNIT-NEXT:    [[C:%.*]] = icmp eq i32 [[LGS1]], 42
 ; TUNIT-NEXT:    call void @llvm.assume(i1 noundef [[C]]) #[[ATTR6]]
 ; TUNIT-NEXT:    [[LGS2:%.*]] = load i32, ptr @Gstatic_int1, align 4
-; TUNIT-NEXT:    store i32 13, ptr @Gstatic_int1, align 4
 ; TUNIT-NEXT:    store i32 17, ptr @Gstatic_int1, align 4
 ; TUNIT-NEXT:    [[LGS3:%.*]] = load i32, ptr @Gstatic_int1, align 4
 ; TUNIT-NEXT:    [[ADD:%.*]] = add i32 [[LGS2]], [[LGS3]]
@@ -1316,7 +1293,6 @@ define i32 @assume_read_global_good() {
 ; CGSCC-NEXT:    [[C:%.*]] = icmp eq i32 [[LGS1]], 42
 ; CGSCC-NEXT:    call void @llvm.assume(i1 noundef [[C]]) #[[ATTR7]]
 ; CGSCC-NEXT:    [[LGS2:%.*]] = load i32, ptr @Gstatic_int1, align 4
-; CGSCC-NEXT:    store i32 13, ptr @Gstatic_int1, align 4
 ; CGSCC-NEXT:    store i32 17, ptr @Gstatic_int1, align 4
 ; CGSCC-NEXT:    [[LGS3:%.*]] = load i32, ptr @Gstatic_int1, align 4
 ; CGSCC-NEXT:    [[ADD:%.*]] = add i32 [[LGS2]], [[LGS3]]
