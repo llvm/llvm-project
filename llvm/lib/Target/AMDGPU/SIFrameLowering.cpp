@@ -98,10 +98,12 @@ static void getVGPRSpillLaneOrTempRegister(MachineFunction &MF,
     if (TRI->spillSGPRToVGPR() && MFI->allocateSGPRSpillToVGPR(MF, NewFI)) {
       // 3: There's no free lane to spill, and no free register to save FP/BP,
       // so we're forced to spill another VGPR to use for the spill.
+      auto Spill = MFI->getSGPRToVGPRSpills(NewFI).front();
+      MFI->allocateWWMSpill(MF, Spill.VGPR);
+
       FrameIndex = NewFI;
 
       LLVM_DEBUG(
-          auto Spill = MFI->getSGPRToVGPRSpills(NewFI).front();
           dbgs() << (IsFP ? "FP" : "BP") << " requires fallback spill to "
                  << printReg(Spill.VGPR, TRI) << ':' << Spill.Lane << '\n';);
     } else {
@@ -777,17 +779,14 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   std::optional<int> BPSaveIndex = FuncInfo->BasePointerSaveIndex;
 
   // VGPRs used for SGPR->VGPR spills
-  for (const SIMachineFunctionInfo::SGPRSpillVGPR &Reg :
-       FuncInfo->getSGPRSpillVGPRs()) {
-    if (!Reg.FI)
-      continue;
-
+  for (const auto &Reg : FuncInfo->getWWMSpills()) {
+    Register VGPR = Reg.first;
+    int FI = Reg.second;
     if (!ScratchExecCopy)
       ScratchExecCopy = buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL,
                                              /*IsProlog*/ true);
 
-    buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL, Reg.VGPR,
-                     *Reg.FI);
+    buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL, VGPR, FI);
   }
 
   for (auto ReservedWWM : FuncInfo->wwmAllocation()) {
@@ -1054,17 +1053,15 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   Register ScratchExecCopy;
-  for (const SIMachineFunctionInfo::SGPRSpillVGPR &Reg :
-       FuncInfo->getSGPRSpillVGPRs()) {
-    if (!Reg.FI)
-      continue;
-
+  for (const auto &Reg : FuncInfo->getWWMSpills()) {
+    Register VGPR = Reg.first;
+    int FI = Reg.second;
     if (!ScratchExecCopy)
       ScratchExecCopy =
           buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL, /*IsProlog*/ false);
 
-    buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL,
-                       Reg.VGPR, *Reg.FI);
+    buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL, VGPR,
+                       FI);
   }
 
   for (auto ReservedWWM : FuncInfo->wwmAllocation()) {
@@ -1262,6 +1259,32 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      // WRITELANE instructions used for SGPR spills can overwrite the inactive
+      // lanes of VGPRs and callee must spill and restore them even if they are
+      // marked Caller-saved.
+
+      // TODO: Handle this elsewhere at an early point. Walking through all MBBs
+      // here would be a bad heuristic. A better way should be by calling
+      // allocateWWMSpill during the regalloc pipeline whenever a physical
+      // register is allocated for the intended virtual registers. That will
+      // also help excluding the general use of WRITELANE/READLANE intrinsics
+      // that won't really need any such special handling.
+      if (MI.getOpcode() == AMDGPU::V_WRITELANE_B32)
+        MFI->allocateWWMSpill(MF, MI.getOperand(0).getReg());
+      else if (MI.getOpcode() == AMDGPU::V_READLANE_B32)
+        MFI->allocateWWMSpill(MF, MI.getOperand(1).getReg());
+    }
+  }
+
+  for (MachineBasicBlock &MBB : MF) {
+    for (auto &Reg : MFI->getWWMSpills())
+      MBB.addLiveIn(Reg.first);
+
+    MBB.sortUniqueLiveIns();
+  }
+
   // Ignore the SGPRs the default implementation found.
   SavedVGPRs.clearBitsNotInMask(TRI->getAllVectorRegMask());
 
@@ -1285,8 +1308,8 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   // VGPRs used for SGPR spilling need to be specially inserted in the prolog,
   // so don't allow the default insertion to handle them.
-  for (auto SSpill : MFI->getSGPRSpillVGPRs())
-    SavedVGPRs.reset(SSpill.VGPR);
+  for (auto &Reg : MFI->getWWMSpills())
+    SavedVGPRs.reset(Reg.first);
 
   LivePhysRegs LiveRegs;
   LiveRegs.init(*TRI);

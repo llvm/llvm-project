@@ -1161,7 +1161,7 @@ define void @spill_sgpr_no_free_vgpr(<4 x i32> addrspace(1)* %out, <4 x i32> add
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:448 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:464 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:444 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:440 ; 4-byte Folded Spill
@@ -1295,17 +1295,17 @@ define void @spill_sgpr_no_free_vgpr(<4 x i32> addrspace(1)* %out, <4 x i32> add
 ; GCN-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GCN-NEXT:    flat_load_dwordx4 v[5:8], v[2:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:452 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:448 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:456 ; 4-byte Folded Spill
-; GCN-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:460 ; 4-byte Folded Spill
-; GCN-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:464 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:452 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:456 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:460 ; 4-byte Folded Spill
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:452 ; 4-byte Folded Reload
-; GCN-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:456 ; 4-byte Folded Reload
-; GCN-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:460 ; 4-byte Folded Reload
-; GCN-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:464 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:448 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:452 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:456 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:460 ; 4-byte Folded Reload
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -1427,7 +1427,7 @@ define void @spill_sgpr_no_free_vgpr(<4 x i32> addrspace(1)* %out, <4 x i32> add
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:440 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:444 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:448 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:464 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]

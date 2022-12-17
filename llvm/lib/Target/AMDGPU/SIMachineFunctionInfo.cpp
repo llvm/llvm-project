@@ -270,6 +270,16 @@ Register SIMachineFunctionInfo::addLDSKernelId() {
   return ArgInfo.LDSKernelId.getRegister();
 }
 
+void SIMachineFunctionInfo::allocateWWMSpill(MachineFunction &MF, Register VGPR,
+                                             uint64_t Size, Align Alignment) {
+  // Skip if it is an entry function or the register is already added.
+  if (isEntryFunction() || WWMSpills.count(VGPR))
+    return;
+
+  WWMSpills.insert(std::make_pair(
+      VGPR, MF.getFrameInfo().CreateSpillStackObject(Size, Alignment)));
+}
+
 bool SIMachineFunctionInfo::isCalleeSavedReg(const MCPhysReg *CSRegs,
                                              MCPhysReg Reg) {
   for (unsigned I = 0; CSRegs[I]; ++I) {
@@ -340,21 +350,14 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
         return false;
       }
 
-      std::optional<int> SpillFI;
-      // We need to preserve inactive lanes, so always save, even caller-save
-      // registers.
-      if (!isEntryFunction()) {
-        SpillFI = FrameInfo.CreateSpillStackObject(4, Align(4));
-      }
-
-      SpillVGPRs.push_back(SGPRSpillVGPR(LaneVGPR, SpillFI));
+      SpillVGPRs.push_back(LaneVGPR);
 
       // Add this register as live-in to all blocks to avoid machine verifier
       // complaining about use of an undefined physical register.
       for (MachineBasicBlock &BB : MF)
         BB.addLiveIn(LaneVGPR);
     } else {
-      LaneVGPR = SpillVGPRs.back().VGPR;
+      LaneVGPR = SpillVGPRs.back();
     }
 
     SpillLanes.push_back(SIRegisterInfo::SpilledReg(LaneVGPR, VGPRIndex));
