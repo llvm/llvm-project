@@ -695,7 +695,7 @@ public:
         checkHasDynamicBatchDims(rewriter, op, {input, op.getOutput()});
     if (!dynamicDimsOr.has_value())
       return failure();
-    SmallVector<Value> dynamicDims = dynamicDimsOr.value();
+    SmallVector<Value> dynamicDims = *dynamicDimsOr;
 
     // Determine what the initial value needs to be for the max pool op.
     Attribute initialAttr;
@@ -772,7 +772,7 @@ public:
         checkHasDynamicBatchDims(rewriter, op, {input, op.getOutput()});
     if (!dynamicDimsOr.has_value())
       return failure();
-    SmallVector<Value> dynamicDims = dynamicDimsOr.value();
+    SmallVector<Value> dynamicDims = *dynamicDimsOr;
 
     // Apply padding as necessary.
     llvm::SmallVector<int64_t> pad;

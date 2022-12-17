@@ -143,8 +143,8 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
     return funcOp.emitRemark("lower entry point failure: could not select "
                              "execution model based on 'spirv.target_env'");
 
-  builder.create<spirv::EntryPointOp>(funcOp.getLoc(), executionModel.value(),
-                                      funcOp, interfaceVars);
+  builder.create<spirv::EntryPointOp>(funcOp.getLoc(), *executionModel, funcOp,
+                                      interfaceVars);
 
   // Specifies the spirv.ExecutionModeOp.
   if (DenseI32ArrayAttr workgroupSizeAttr = entryPointAttr.getWorkgroupSize()) {

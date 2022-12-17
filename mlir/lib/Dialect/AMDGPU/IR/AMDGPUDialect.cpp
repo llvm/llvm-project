@@ -103,7 +103,7 @@ static bool staticallyOutOfBounds(OpType op) {
     Optional<uint32_t> idxVal = getConstantUint32(idx);
     if (!idxVal)
       return false;
-    indexVal += stride * idxVal.value();
+    indexVal += stride * *idxVal;
   }
   result += indexVal;
   if (result > std::numeric_limits<uint32_t>::max())

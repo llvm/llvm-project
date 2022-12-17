@@ -210,6 +210,6 @@ tensor::simplifyCollapseShapeWithRankReducingExtractSlice(
 
   return rewriter
       .replaceOpWithNewOp<tensor::CollapseShapeOp>(
-          op, sliceOp.getResult(), info->newReassociationIndices.value())
+          op, sliceOp.getResult(), *info->newReassociationIndices)
       .getOperation();
 }

@@ -220,8 +220,7 @@ ParseResult AllocaOp::parse(OpAsmParser &parser, OperationState &result) {
   Optional<NamedAttribute> alignmentAttr =
       result.attributes.getNamed("alignment");
   if (alignmentAttr.has_value()) {
-    auto alignmentInt =
-        alignmentAttr.value().getValue().dyn_cast<IntegerAttr>();
+    auto alignmentInt = alignmentAttr->getValue().dyn_cast<IntegerAttr>();
     if (!alignmentInt)
       return parser.emitError(parser.getNameLoc(),
                               "expected integer alignment");
