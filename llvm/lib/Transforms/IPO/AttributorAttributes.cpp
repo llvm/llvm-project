@@ -9940,7 +9940,7 @@ private:
                      const Function &Fn) {
       std::optional<bool> Cached = isCachedReachable(Fn);
       if (Cached)
-        return Cached.value();
+        return *Cached;
 
       // The query was not cached, thus it is new. We need to request an update
       // explicitly to make sure this the information is properly run to a
