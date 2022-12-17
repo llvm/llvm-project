@@ -169,7 +169,7 @@ TEST_F(VPIntrinsicTest, VPIntrinsicsDefScopes) {
   ScopeVPID = Intrinsic::VPID;
 #define END_REGISTER_VP_INTRINSIC(VPID)                                        \
   ASSERT_TRUE(ScopeVPID.has_value());                                          \
-  ASSERT_EQ(ScopeVPID.value(), Intrinsic::VPID);                               \
+  ASSERT_EQ(*ScopeVPID, Intrinsic::VPID);                                      \
   ScopeVPID = std::nullopt;
 
   Optional<ISD::NodeType> ScopeOPC;
@@ -178,7 +178,7 @@ TEST_F(VPIntrinsicTest, VPIntrinsicsDefScopes) {
   ScopeOPC = ISD::SDOPC;
 #define END_REGISTER_VP_SDNODE(SDOPC)                                          \
   ASSERT_TRUE(ScopeOPC.has_value());                                           \
-  ASSERT_EQ(ScopeOPC.value(), ISD::SDOPC);                                     \
+  ASSERT_EQ(*ScopeOPC, ISD::SDOPC);                                            \
   ScopeOPC = std::nullopt;
 #include "llvm/IR/VPIntrinsics.def"
 
