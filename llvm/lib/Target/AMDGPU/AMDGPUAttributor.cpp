@@ -13,7 +13,6 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
@@ -21,10 +20,6 @@
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #define DEBUG_TYPE "amdgpu-attributor"
-
-namespace llvm {
-void initializeCycleInfoWrapperPassPass(PassRegistry &);
-}
 
 using namespace llvm;
 
@@ -752,7 +747,7 @@ public:
 
   bool runOnModule(Module &M) override {
     SetVector<Function *> Functions;
-    AnalysisGetter AG(this);
+    AnalysisGetter AG;
     for (Function &F : M) {
       if (!F.isIntrinsic())
         Functions.insert(&F);
@@ -787,10 +782,6 @@ public:
     return Change == ChangeStatus::CHANGED;
   }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<CycleInfoWrapperPass>();
-  }
-
   StringRef getPassName() const override { return "AMDGPU Attributor"; }
   TargetMachine *TM;
   static char ID;
@@ -800,8 +791,4 @@ public:
 char AMDGPUAttributor::ID = 0;
 
 Pass *llvm::createAMDGPUAttributorPass() { return new AMDGPUAttributor(); }
-INITIALIZE_PASS_BEGIN(AMDGPUAttributor, DEBUG_TYPE, "AMDGPU Attributor", false,
-                      false)
-INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass);
-INITIALIZE_PASS_END(AMDGPUAttributor, DEBUG_TYPE, "AMDGPU Attributor", false,
-                    false)
+INITIALIZE_PASS(AMDGPUAttributor, DEBUG_TYPE, "AMDGPU Attributor", false, false)
