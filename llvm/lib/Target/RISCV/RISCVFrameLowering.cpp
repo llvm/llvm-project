@@ -1245,7 +1245,7 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
     Register Reg = CS.getReg();
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
     TII.storeRegToStackSlot(MBB, MI, Reg, !MBB.isLiveIn(Reg), CS.getFrameIdx(),
-                            RC, TRI);
+                            RC, TRI, Register());
   }
 
   return true;
@@ -1273,7 +1273,8 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
   for (auto &CS : NonLibcallCSI) {
     Register Reg = CS.getReg();
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, TRI);
+    TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, TRI,
+                             Register());
     assert(MI != MBB.begin() && "loadRegFromStackSlot didn't insert any code!");
   }
 
