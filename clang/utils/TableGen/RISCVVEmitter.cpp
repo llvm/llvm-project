@@ -353,7 +353,7 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
     auto T = TypeCache.computeType(BasicType::Int8, Log2LMUL,
                                    PrototypeDescriptor::Mask);
     if (T)
-      printType(T.value());
+      printType(*T);
   }
   // Print RVV int/float types.
   for (char I : StringRef("csil")) {
@@ -361,13 +361,13 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
     for (int Log2LMUL : Log2LMULs) {
       auto T = TypeCache.computeType(BT, Log2LMUL, PrototypeDescriptor::Vector);
       if (T) {
-        printType(T.value());
+        printType(*T);
         auto UT = TypeCache.computeType(
             BT, Log2LMUL,
             PrototypeDescriptor(BaseTypeModifier::Vector,
                                 VectorTypeModifier::NoModifier,
                                 TypeModifier::UnsignedInteger));
-        printType(UT.value());
+        printType(*UT);
       }
     }
   }
@@ -376,7 +376,7 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
     auto T = TypeCache.computeType(BasicType::Float16, Log2LMUL,
                                    PrototypeDescriptor::Vector);
     if (T)
-      printType(T.value());
+      printType(*T);
   }
   OS << "#endif\n";
 
@@ -385,7 +385,7 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
     auto T = TypeCache.computeType(BasicType::Float32, Log2LMUL,
                                    PrototypeDescriptor::Vector);
     if (T)
-      printType(T.value());
+      printType(*T);
   }
   OS << "#endif\n";
 
@@ -394,7 +394,7 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
     auto T = TypeCache.computeType(BasicType::Float64, Log2LMUL,
                                    PrototypeDescriptor::Vector);
     if (T)
-      printType(T.value());
+      printType(*T);
   }
   OS << "#endif\n\n";
 
@@ -583,7 +583,7 @@ void RVVEmitter::createRVVIntrinsics(
                 Name, SuffixStr, OverloadedName, OverloadedSuffixStr, IRName,
                 /*IsMask=*/false, /*HasMaskedOffOperand=*/false, HasVL,
                 UnMaskedPolicyScheme, SupportOverloading, HasBuiltinAlias,
-                ManualCodegen, PolicyTypes.value(), IntrinsicTypes,
+                ManualCodegen, *PolicyTypes, IntrinsicTypes,
                 RequiredFeatures, NF, P, IsPrototypeDefaultTU));
           }
         if (!HasMasked)
@@ -595,7 +595,7 @@ void RVVEmitter::createRVVIntrinsics(
             Name, SuffixStr, OverloadedName, OverloadedSuffixStr, MaskedIRName,
             /*IsMasked=*/true, HasMaskedOffOperand, HasVL, MaskedPolicyScheme,
             SupportOverloading, HasBuiltinAlias, MaskedManualCodegen,
-            MaskTypes.value(), IntrinsicTypes, RequiredFeatures, NF,
+            *MaskTypes, IntrinsicTypes, RequiredFeatures, NF,
             Policy::PolicyNone, IsPrototypeDefaultTU));
         if (MaskedPolicyScheme == PolicyScheme::SchemeNone)
           continue;
@@ -610,7 +610,7 @@ void RVVEmitter::createRVVIntrinsics(
               Name, SuffixStr, OverloadedName, OverloadedSuffixStr,
               MaskedIRName, /*IsMasked=*/true, HasMaskedOffOperand, HasVL,
               MaskedPolicyScheme, SupportOverloading, HasBuiltinAlias,
-              MaskedManualCodegen, PolicyTypes.value(), IntrinsicTypes,
+              MaskedManualCodegen, *PolicyTypes, IntrinsicTypes,
               RequiredFeatures, NF, P, IsPrototypeDefaultTU));
         }
       } // End for Log2LMULList

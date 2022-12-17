@@ -796,7 +796,7 @@ RVVTypeCache::computeTypes(BasicType BT, int Log2LMUL, unsigned NF,
     if (!T)
       return std::nullopt;
     // Record legal type index
-    Types.push_back(T.value());
+    Types.push_back(*T);
   }
   return Types;
 }
