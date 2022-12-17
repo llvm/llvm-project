@@ -28,9 +28,7 @@ class Strategy;
 
 // Because we're dealing with raw pointers, let's define what we mean by that.
 static auto hasPointerType() {
-  return anyOf(hasType(pointerType()),
-               hasType(autoType(hasDeducedType(
-                   hasUnqualifiedDesugaredType(pointerType())))));
+    return hasType(hasCanonicalType(pointerType()));
 }
 
 namespace {
