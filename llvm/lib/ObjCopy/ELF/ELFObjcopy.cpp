@@ -599,8 +599,8 @@ handleUserSection(const NewSectionInfo &NewSection,
 static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
                         Object &Obj) {
   if (Config.OutputArch) {
-    Obj.Machine = Config.OutputArch.value().EMachine;
-    Obj.OSABI = Config.OutputArch.value().OSABI;
+    Obj.Machine = Config.OutputArch->EMachine;
+    Obj.OSABI = Config.OutputArch->OSABI;
   }
 
   if (!Config.SplitDWO.empty() && Config.ExtractDWO) {
@@ -698,7 +698,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
         const SectionRename &SR = Iter->second;
         Sec.Name = std::string(SR.NewName);
         if (SR.NewFlags)
-          setSectionFlagsAndType(Sec, SR.NewFlags.value());
+          setSectionFlagsAndType(Sec, *SR.NewFlags);
         RenamedSections.insert(&Sec);
       } else if (RelocSec && !(Sec.Flags & SHF_ALLOC))
         // Postpone processing relocation sections which are not specified in
@@ -809,9 +809,9 @@ Error objcopy::elf::executeObjcopyOnBinary(const CommonConfig &Config,
   if (!Obj)
     return Obj.takeError();
   // Prefer OutputArch (-O<format>) if set, otherwise infer it from the input.
-  const ElfType OutputElfType =
-      Config.OutputArch ? getOutputElfType(Config.OutputArch.value())
-                        : getOutputElfType(In);
+  const ElfType OutputElfType = Config.OutputArch
+                                    ? getOutputElfType(*Config.OutputArch)
+                                    : getOutputElfType(In);
 
   if (Error E = handleArgs(Config, ELFConfig, **Obj))
     return createFileError(Config.InputFilename, std::move(E));
