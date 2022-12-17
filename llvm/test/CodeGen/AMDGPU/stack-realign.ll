@@ -159,11 +159,11 @@ define void @func_call_align1024_bp_gets_vgpr_spill(<32 x i32> %a, i32 %b) #0 {
 ; GCN: buffer_store_dword [[VGPR_REG:v[0-9]+]], off, s[0:3], s32 offset:1028 ; 4-byte Folded Spill
 ; GCN-NEXT: buffer_store_dword [[VGPR_REG_1:v[0-9]+]], off, s[0:3], s32 offset:1032 ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec, s[16:17]
+; GCN-DAG: v_writelane_b32 [[VGPR_REG_1]], s34, 1
 ; GCN-NEXT: v_writelane_b32 [[VGPR_REG_1]], s33, 0
 ; GCN-DAG: s_add_i32 [[SCRATCH_REG:s[0-9]+]], s32, 0xffc0
 ; GCN: s_and_b32 s33, [[SCRATCH_REG]], 0xffff0000
 ; GCN: v_mov_b32_e32 v32, 0
-; GCN-DAG: v_writelane_b32 [[VGPR_REG_1]], s34, 1
 ; GCN: s_mov_b32 s34, s32
 ; GCN: buffer_store_dword v32, off, s[0:3], s33 offset:1024
 ; GCN-NEXT: s_waitcnt vmcnt(0)
@@ -175,8 +175,8 @@ define void @func_call_align1024_bp_gets_vgpr_spill(<32 x i32> %a, i32 %b) #0 {
 ; GCN: v_readlane_b32 s31, [[VGPR_REG]], 1
 ; GCN: v_readlane_b32 s30, [[VGPR_REG]], 0
 ; GCN: s_add_i32 s32, s32, 0xfffd0000
-; GCN-NEXT: v_readlane_b32 s33, [[VGPR_REG_1]], 0
 ; GCN-NEXT: v_readlane_b32 s34, [[VGPR_REG_1]], 1
+; GCN-NEXT: v_readlane_b32 s33, [[VGPR_REG_1]], 0
 ; GCN-NEXT: s_or_saveexec_b64 s[4:5], -1
 ; GCN-NEXT: buffer_load_dword [[VGPR_REG]], off, s[0:3], s32 offset:1028 ; 4-byte Folded Reload
 ; GCN-NEXT: buffer_load_dword [[VGPR_REG_1]], off, s[0:3], s32 offset:1032 ; 4-byte Folded Reload
@@ -197,8 +197,8 @@ define i32 @needs_align1024_stack_args_used_inside_loop(ptr addrspace(5) nocaptu
 ; The BP value will get saved/restored in an SGPR at the prolgoue/epilogue.
 
 ; GCN-LABEL: needs_align1024_stack_args_used_inside_loop:
-; GCN: s_mov_b32 [[FP_COPY:s[0-9]+]], s33
-; GCN-NEXT: s_mov_b32 [[BP_COPY:s[0-9]+]], s34
+; GCN: s_mov_b32 [[BP_COPY:s[0-9]+]], s34
+; GCN-NEXT: s_mov_b32 [[FP_COPY:s[0-9]+]], s33
 ; GCN-NEXT: s_add_i32 s33, s32, 0xffc0
 ; GCN-NEXT: s_mov_b32 s34, s32
 ; GCN-NEXT: s_and_b32 s33, s33, 0xffff0000
@@ -209,8 +209,8 @@ define i32 @needs_align1024_stack_args_used_inside_loop(ptr addrspace(5) nocaptu
 ; GCN: buffer_load_dword v{{[0-9]+}}, [[VGPR_REG]], s[0:3], 0 offen
 ; GCN: v_add_u32_e32 [[VGPR_REG]], vcc, 4, [[VGPR_REG]]
 ; GCN: s_add_i32 s32, s32, 0xfffd0000
-; GCN-NEXT: s_mov_b32 s33, [[FP_COPY]]
 ; GCN-NEXT: s_mov_b32 s34, [[BP_COPY]]
+; GCN-NEXT: s_mov_b32 s33, [[FP_COPY]]
 ; GCN-NEXT: s_setpc_b64 s[30:31]
 begin:
   %local_var = alloca i32, align 1024, addrspace(5)
@@ -262,9 +262,9 @@ define void @no_free_regs_spill_bp_to_memory(<32 x i32> %a, i32 %b) #5 {
 
 ; GCN-LABEL: no_free_regs_spill_bp_to_mem
 ; GCN: s_or_saveexec_b64 s[4:5], -1
-; GCN: v_mov_b32_e32 v0, s33
-; GCN: buffer_store_dword v0, off, s[0:3], s32
 ; GCN: v_mov_b32_e32 v0, s34
+; GCN: buffer_store_dword v0, off, s[0:3], s32
+; GCN: v_mov_b32_e32 v0, s33
 ; GCN-DAG: buffer_store_dword v0, off, s[0:3], s32
   %local_val = alloca i32, align 128, addrspace(5)
   store volatile i32 %b, ptr addrspace(5) %local_val, align 128
@@ -298,13 +298,13 @@ define void @spill_bp_to_memory_scratch_reg_needed_mubuf_offset(<32 x i32> %a, i
 ; GCN-NEXT: s_add_i32 s6, s32, 0x42100
 ; GCN-NEXT: buffer_store_dword v39, off, s[0:3], s6 ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec, s[4:5]
-; GCN-NEXT: v_mov_b32_e32 v0, s33
-; GCN-NOT: v_mov_b32_e32 v0, 0x1088
-; GCN-NEXT: s_add_i32 s6, s32, 0x42200
-; GCN-NEXT: buffer_store_dword v0, off, s[0:3], s6 ; 4-byte Folded Spill
 ; GCN-NEXT: v_mov_b32_e32 v0, s34
-; GCN-NOT: v_mov_b32_e32 v0, 0x108c
+; GCN-NOT: v_mov_b32_e32 v0, 0x1088
 ; GCN-NEXT: s_add_i32 s6, s32, 0x42300
+; GCN-NEXT: buffer_store_dword v0, off, s[0:3], s6 ; 4-byte Folded Spill
+; GCN-NEXT: v_mov_b32_e32 v0, s33
+; GCN-NOT: v_mov_b32_e32 v0, 0x108c
+; GCN-NEXT: s_add_i32 s6, s32, 0x42200
 ; GCN-NEXT: s_mov_b32 s34, s32
 ; GCN-NEXT: buffer_store_dword v0, off, s[0:3], s6 ; 4-byte Folded Spill
   %local_val = alloca i32, align 128, addrspace(5)
