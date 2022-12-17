@@ -955,7 +955,7 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
         break;
       }
       // If we found something: Fill in non-pack parameters
-      auto Info = V.Info.value();
+      auto Info = *V.Info;
       HeadIt = std::copy(Info.Head.begin(), Info.Head.end(), HeadIt);
       TailIt = std::copy(Info.Tail.rbegin(), Info.Tail.rend(), TailIt);
       // Prepare next recursion level
