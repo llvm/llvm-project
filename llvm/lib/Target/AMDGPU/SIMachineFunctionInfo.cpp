@@ -361,7 +361,6 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPRLane(MachineFunction &MF,
     return true;
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const SIRegisterInfo *TRI = ST.getRegisterInfo();
   MachineFrameInfo &FrameInfo = MF.getFrameInfo();
   unsigned WaveSize = ST.getWavefrontSize();
 
@@ -372,7 +371,8 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPRLane(MachineFunction &MF,
     return false;
 
   assert(Size >= 4 && "invalid sgpr spill size");
-  assert(TRI->spillSGPRToVGPR() && "not spilling SGPRs to VGPRs");
+  assert(ST.getRegisterInfo()->spillSGPRToVGPR() &&
+         "not spilling SGPRs to VGPRs");
 
   unsigned &NumSpillLanes =
       IsPrologEpilog ? NumVGPRPrologEpilogSpillLanes : NumVGPRSpillLanes;
