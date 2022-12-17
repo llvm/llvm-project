@@ -317,6 +317,66 @@ generateSnippets(const LLVMState &State, unsigned Opcode,
   return Benchmarks;
 }
 
+static void runBenchmarkConfigurations(
+    const LLVMState &State, ArrayRef<BenchmarkCode> Configurations,
+    ArrayRef<std::unique_ptr<const SnippetRepetitor>> Repetitors,
+    const BenchmarkRunner &Runner) {
+  std::optional<raw_fd_ostream> FileOstr;
+  if (BenchmarkFile != "-") {
+    int ResultFD = 0;
+    // Create output file or open existing file and truncate it, once.
+    ExitOnErr(errorCodeToError(openFileForWrite(BenchmarkFile, ResultFD,
+                                                sys::fs::CD_CreateAlways,
+                                                sys::fs::OF_TextWithCRLF)));
+    FileOstr.emplace(ResultFD, true /*shouldClose*/);
+  }
+  raw_ostream &Ostr = FileOstr ? *FileOstr : outs();
+
+  std::optional<ProgressMeter<>> Meter;
+  if (BenchmarkMeasurementsPrintProgress)
+    Meter.emplace(Configurations.size());
+  for (const BenchmarkCode &Conf : Configurations) {
+    ProgressMeter<>::ProgressMeterStep MeterStep(Meter ? &*Meter : nullptr);
+    SmallVector<InstructionBenchmark, 2> AllResults;
+
+    for (const std::unique_ptr<const SnippetRepetitor> &Repetitor :
+         Repetitors) {
+      auto RC = ExitOnErr(Runner.getRunnableConfiguration(
+          Conf, NumRepetitions, LoopBodySize, *Repetitor, DumpObjectToDisk));
+      AllResults.emplace_back(
+          ExitOnErr(Runner.runConfiguration(std::move(RC))));
+    }
+    InstructionBenchmark &Result = AllResults.front();
+
+    if (RepetitionMode == InstructionBenchmark::RepetitionModeE::AggregateMin) {
+      assert(!Result.Measurements.empty() &&
+             "We're in an 'min' repetition mode, and need to aggregate new "
+             "result to the existing result.");
+      for (const InstructionBenchmark &OtherResult :
+           ArrayRef<InstructionBenchmark>(AllResults).drop_front()) {
+        llvm::append_range(Result.AssembledSnippet,
+                           OtherResult.AssembledSnippet);
+        assert(OtherResult.Measurements.size() == Result.Measurements.size() &&
+               "Expected to have identical number of measurements.");
+        for (auto I : zip(Result.Measurements, OtherResult.Measurements)) {
+          BenchmarkMeasure &Measurement = std::get<0>(I);
+          const BenchmarkMeasure &NewMeasurement = std::get<1>(I);
+          assert(Measurement.Key == NewMeasurement.Key &&
+                 "Expected measurements to be symmetric");
+
+          Measurement.PerInstructionValue =
+              std::min(Measurement.PerInstructionValue,
+                       NewMeasurement.PerInstructionValue);
+          Measurement.PerSnippetValue = std::min(
+              Measurement.PerSnippetValue, NewMeasurement.PerSnippetValue);
+        }
+      }
+    }
+
+    ExitOnFileError(BenchmarkFile, Result.writeYamlTo(State, Ostr));
+  }
+}
+
 void benchmarkMain() {
   if (!BenchmarkSkipMeasurements) {
 #ifndef HAVE_LIBPFM
@@ -401,60 +461,8 @@ void benchmarkMain() {
   if (BenchmarkFile.empty())
     BenchmarkFile = "-";
 
-  std::optional<raw_fd_ostream> FileOstr;
-  if (BenchmarkFile != "-") {
-    int ResultFD = 0;
-    // Create output file or open existing file and truncate it, once.
-    ExitOnErr(errorCodeToError(openFileForWrite(BenchmarkFile, ResultFD,
-                                                sys::fs::CD_CreateAlways,
-                                                sys::fs::OF_TextWithCRLF)));
-    FileOstr.emplace(ResultFD, true /*shouldClose*/);
-  }
-  raw_ostream &Ostr = FileOstr ? *FileOstr : outs();
+  runBenchmarkConfigurations(State, Configurations, Repetitors, *Runner);
 
-  std::optional<ProgressMeter<>> Meter;
-  if (BenchmarkMeasurementsPrintProgress)
-    Meter.emplace(Configurations.size());
-  for (const BenchmarkCode &Conf : Configurations) {
-    ProgressMeter<>::ProgressMeterStep MeterStep(Meter ? &*Meter : nullptr);
-    SmallVector<InstructionBenchmark, 2> AllResults;
-
-    for (const std::unique_ptr<const SnippetRepetitor> &Repetitor :
-         Repetitors) {
-      auto RC = ExitOnErr(Runner->getRunnableConfiguration(
-          Conf, NumRepetitions, LoopBodySize, *Repetitor, DumpObjectToDisk));
-      AllResults.emplace_back(
-          ExitOnErr(Runner->runConfiguration(std::move(RC))));
-    }
-    InstructionBenchmark &Result = AllResults.front();
-
-    if (RepetitionMode == InstructionBenchmark::RepetitionModeE::AggregateMin) {
-      assert(!Result.Measurements.empty() &&
-             "We're in an 'min' repetition mode, and need to aggregate new "
-             "result to the existing result.");
-      for (const InstructionBenchmark &OtherResult :
-           ArrayRef<InstructionBenchmark>(AllResults).drop_front()) {
-        llvm::append_range(Result.AssembledSnippet,
-                           OtherResult.AssembledSnippet);
-        assert(OtherResult.Measurements.size() == Result.Measurements.size() &&
-               "Expected to have identical number of measurements.");
-        for (auto I : zip(Result.Measurements, OtherResult.Measurements)) {
-          BenchmarkMeasure &Measurement = std::get<0>(I);
-          const BenchmarkMeasure &NewMeasurement = std::get<1>(I);
-          assert(Measurement.Key == NewMeasurement.Key &&
-                 "Expected measurements to be symmetric");
-
-          Measurement.PerInstructionValue =
-              std::min(Measurement.PerInstructionValue,
-                       NewMeasurement.PerInstructionValue);
-          Measurement.PerSnippetValue = std::min(
-              Measurement.PerSnippetValue, NewMeasurement.PerSnippetValue);
-        }
-      }
-    }
-
-    ExitOnFileError(BenchmarkFile, Result.writeYamlTo(State, Ostr));
-  }
   exegesis::pfm::pfmTerminate();
 }
 
