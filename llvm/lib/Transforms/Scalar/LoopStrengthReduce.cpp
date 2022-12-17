@@ -6438,9 +6438,8 @@ static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
     // less DWARF ops than an iteration count-based expression.
     if (std::optional<APInt> Offset =
             SE.computeConstantDifference(DVIRec.SCEVs[i], SCEVInductionVar)) {
-      if (Offset.value().getMinSignedBits() <= 64)
-        SalvageExpr->createOffsetExpr(Offset.value().getSExtValue(),
-                                      LSRInductionVar);
+      if (Offset->getMinSignedBits() <= 64)
+        SalvageExpr->createOffsetExpr(Offset->getSExtValue(), LSRInductionVar);
     } else if (!SalvageExpr->createIterCountExpr(DVIRec.SCEVs[i], IterCountExpr,
                                                  SE))
       return false;

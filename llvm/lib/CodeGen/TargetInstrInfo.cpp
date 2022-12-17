@@ -834,7 +834,7 @@ TargetInstrInfo::getReassociationOpcodes(MachineCombinerPattern Pattern,
   assert(areOpcodesEqualOrInverse(Root.getOpcode(), Prev.getOpcode()) &&
          "Incorrectly matched pattern");
   unsigned AssocCommutOpcode = Root.getOpcode();
-  unsigned InverseOpcode = getInverseOpcode(Root.getOpcode()).value();
+  unsigned InverseOpcode = *getInverseOpcode(Root.getOpcode());
   if (!AssocCommutRoot)
     std::swap(AssocCommutOpcode, InverseOpcode);
 
