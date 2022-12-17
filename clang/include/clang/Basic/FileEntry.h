@@ -332,7 +332,7 @@ public:
   /// FileEntry::getName have been deleted, delete this class and replace
   /// instances with Optional<FileEntryRef>
   operator const FileEntry *() const {
-    return has_value() ? &value().getFileEntry() : nullptr;
+    return has_value() ? &(*this)->getFileEntry() : nullptr;
   }
 };
 
