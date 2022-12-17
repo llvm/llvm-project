@@ -2251,10 +2251,6 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
     }
   }
   if (const auto *details{ultimate.detailsIf<semantics::GenericDetails>()}) {
-    bool anyBareNullActual{
-        std::find_if(actuals.begin(), actuals.end(), [](auto iter) {
-          return IsBareNullPointer(iter->UnwrapExpr());
-        }) != actuals.end()};
     for (const Symbol &specific : details->specificProcs()) {
       if (isSubroutine != !IsFunction(specific)) {
         continue;
@@ -2279,14 +2275,13 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
             // 16.9.144(6): a bare NULL() is not allowed as an actual
             // argument to a generic procedure if the specific procedure
             // cannot be unambiguously distinguished
-            return {nullptr, true /* due to NULL actuals */};
+            // Underspecified external procedure actual arguments can
+            // also lead to ambiguity.
+            return {nullptr, true /* due to ambiguity */};
           }
           if (!procedure->IsElemental()) {
             // takes priority over elemental match
             nonElemental = &specific;
-            if (!anyBareNullActual) {
-              break; // unambiguous case
-            }
           } else {
             elemental = &specific;
           }
@@ -2363,9 +2358,9 @@ const Symbol &ExpressionAnalyzer::AccessSpecific(
 }
 
 void ExpressionAnalyzer::EmitGenericResolutionError(
-    const Symbol &symbol, bool dueToNullActuals, bool isSubroutine) {
-  Say(dueToNullActuals
-          ? "One or more NULL() actual arguments to the generic procedure '%s' requires a MOLD= for disambiguation"_err_en_US
+    const Symbol &symbol, bool dueToAmbiguity, bool isSubroutine) {
+  Say(dueToAmbiguity
+          ? "One or more actual arguments to the generic procedure '%s' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface"_err_en_US
           : semantics::IsGenericDefinedOp(symbol)
           ? "No specific procedure of generic operator '%s' matches the actual arguments"_err_en_US
           : isSubroutine
@@ -2401,7 +2396,7 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
   }
   const Symbol &ultimate{DEREF(symbol).GetUltimate()};
   CheckForBadRecursion(name.source, ultimate);
-  bool dueToNullActual{false};
+  bool dueToAmbiguity{false};
   bool isGenericInterface{ultimate.has<semantics::GenericDetails>()};
   bool isExplicitIntrinsic{ultimate.attrs().test(semantics::Attr::INTRINSIC)};
   const Symbol *resolution{nullptr};
@@ -2410,7 +2405,7 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
     auto pair{ResolveGeneric(*symbol, arguments, noAdjustment, isSubroutine,
         mightBeStructureConstructor)};
     resolution = pair.first;
-    dueToNullActual = pair.second;
+    dueToAmbiguity = pair.second;
     if (resolution) {
       // re-resolve name to the specific procedure
       name.symbol = const_cast<Symbol *>(resolution);
@@ -2433,7 +2428,7 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
           std::move(specificCall->arguments)};
     } else {
       if (isGenericInterface) {
-        EmitGenericResolutionError(*symbol, dueToNullActual, isSubroutine);
+        EmitGenericResolutionError(*symbol, dueToAmbiguity, isSubroutine);
       }
       return std::nullopt;
     }
