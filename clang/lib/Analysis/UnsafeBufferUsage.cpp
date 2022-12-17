@@ -129,6 +129,32 @@ public:
 
   const UnaryOperator *getBaseStmt() const override { return Op; }
 };
+
+/// Array subscript expressions on raw pointers as if they're arrays. Unsafe as
+/// it doesn't have any bounds checks for the array.
+class ArraySubscriptGadget : public UnsafeGadget {
+  static constexpr const char *const ArraySubscrTag = "arraySubscr";
+  const ArraySubscriptExpr *ASE;
+
+public:
+  ArraySubscriptGadget(const MatchFinder::MatchResult &Result)
+      : UnsafeGadget(Kind::ArraySubscript),
+        ASE(Result.Nodes.getNodeAs<ArraySubscriptExpr>(ArraySubscrTag)) {}
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::ArraySubscript;
+  }
+
+  static Matcher matcher() {
+    // FIXME: What if the index is integer literal 0? Should this be
+    // a safe gadget in this case?
+    return stmt(
+        arraySubscriptExpr(hasBase(ignoringParenImpCasts(hasPointerType())))
+            .bind(ArraySubscrTag));
+  }
+
+  const ArraySubscriptExpr *getBaseStmt() const override { return ASE; }
+};
 } // namespace
 
 // Scan the function and return a list of gadgets found with provided kits.
