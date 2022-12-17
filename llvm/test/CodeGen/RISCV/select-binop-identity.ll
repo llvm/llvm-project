@@ -29,12 +29,11 @@ define signext i32 @and_select_all_ones_i32(i1 zeroext %c, i32 signext %x, i32 s
 ;
 ; SFB64-LABEL: and_select_all_ones_i32:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    and a1, a1, a2
-; SFB64-NEXT:    bnez a0, .LBB0_2
+; SFB64-NEXT:    beqz a0, .LBB0_2
 ; SFB64-NEXT:  # %bb.1:
-; SFB64-NEXT:    mv a1, a2
+; SFB64-NEXT:    and a2, a2, a1
 ; SFB64-NEXT:  .LBB0_2:
-; SFB64-NEXT:    mv a0, a1
+; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
   %a = select i1 %c, i32 %x, i32 -1
   %b = and i32 %a, %y
@@ -60,12 +59,11 @@ define i64 @and_select_all_ones_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ;
 ; SFB64-LABEL: and_select_all_ones_i64:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    and a1, a1, a2
-; SFB64-NEXT:    beqz a0, .LBB1_2
+; SFB64-NEXT:    bnez a0, .LBB1_2
 ; SFB64-NEXT:  # %bb.1:
-; SFB64-NEXT:    mv a1, a2
+; SFB64-NEXT:    and a2, a2, a1
 ; SFB64-NEXT:  .LBB1_2:
-; SFB64-NEXT:    mv a0, a1
+; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
   %a = select i1 %c, i64 -1, i64 %x
   %b = and i64 %y, %a
@@ -89,12 +87,11 @@ define signext i32 @or_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 s
 ;
 ; SFB64-LABEL: or_select_all_zeros_i32:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    or a1, a1, a2
-; SFB64-NEXT:    bnez a0, .LBB2_2
+; SFB64-NEXT:    beqz a0, .LBB2_2
 ; SFB64-NEXT:  # %bb.1:
-; SFB64-NEXT:    mv a1, a2
+; SFB64-NEXT:    or a2, a2, a1
 ; SFB64-NEXT:  .LBB2_2:
-; SFB64-NEXT:    mv a0, a1
+; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
   %a = select i1 %c, i32 %x, i32 0
   %b = or i32 %y, %a
@@ -120,12 +117,11 @@ define i64 @or_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ;
 ; SFB64-LABEL: or_select_all_zeros_i64:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    or a1, a1, a2
-; SFB64-NEXT:    beqz a0, .LBB3_2
+; SFB64-NEXT:    bnez a0, .LBB3_2
 ; SFB64-NEXT:  # %bb.1:
-; SFB64-NEXT:    mv a1, a2
+; SFB64-NEXT:    or a2, a2, a1
 ; SFB64-NEXT:  .LBB3_2:
-; SFB64-NEXT:    mv a0, a1
+; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
   %a = select i1 %c, i64 0, i64 %x
   %b = or i64 %a, %y
@@ -149,12 +145,11 @@ define signext i32 @xor_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 
 ;
 ; SFB64-LABEL: xor_select_all_zeros_i32:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    xor a1, a1, a2
-; SFB64-NEXT:    beqz a0, .LBB4_2
+; SFB64-NEXT:    bnez a0, .LBB4_2
 ; SFB64-NEXT:  # %bb.1:
-; SFB64-NEXT:    mv a1, a2
+; SFB64-NEXT:    xor a2, a2, a1
 ; SFB64-NEXT:  .LBB4_2:
-; SFB64-NEXT:    mv a0, a1
+; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
   %a = select i1 %c, i32 0, i32 %x
   %b = xor i32 %y, %a
@@ -180,12 +175,11 @@ define i64 @xor_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ;
 ; SFB64-LABEL: xor_select_all_zeros_i64:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    xor a1, a1, a2
-; SFB64-NEXT:    bnez a0, .LBB5_2
+; SFB64-NEXT:    beqz a0, .LBB5_2
 ; SFB64-NEXT:  # %bb.1:
-; SFB64-NEXT:    mv a1, a2
+; SFB64-NEXT:    xor a2, a2, a1
 ; SFB64-NEXT:  .LBB5_2:
-; SFB64-NEXT:    mv a0, a1
+; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
   %a = select i1 %c, i64 %x, i64 0
   %b = xor i64 %a, %y
@@ -209,12 +203,11 @@ define signext i32 @add_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 
 ;
 ; SFB64-LABEL: add_select_all_zeros_i32:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    addw a1, a1, a2
-; SFB64-NEXT:    beqz a0, .LBB6_2
+; SFB64-NEXT:    bnez a0, .LBB6_2
 ; SFB64-NEXT:  # %bb.1:
-; SFB64-NEXT:    mv a1, a2
+; SFB64-NEXT:    addw a2, a2, a1
 ; SFB64-NEXT:  .LBB6_2:
-; SFB64-NEXT:    mv a0, a1
+; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
   %a = select i1 %c, i32 0, i32 %x
   %b = add i32 %y, %a
@@ -242,12 +235,11 @@ define i64 @add_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ;
 ; SFB64-LABEL: add_select_all_zeros_i64:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    add a1, a1, a2
-; SFB64-NEXT:    bnez a0, .LBB7_2
+; SFB64-NEXT:    beqz a0, .LBB7_2
 ; SFB64-NEXT:  # %bb.1:
-; SFB64-NEXT:    mv a1, a2
+; SFB64-NEXT:    add a2, a2, a1
 ; SFB64-NEXT:  .LBB7_2:
-; SFB64-NEXT:    mv a0, a1
+; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
   %a = select i1 %c, i64 %x, i64 0
   %b = add i64 %a, %y
@@ -271,12 +263,11 @@ define signext i32 @sub_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 
 ;
 ; SFB64-LABEL: sub_select_all_zeros_i32:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    subw a1, a2, a1
-; SFB64-NEXT:    beqz a0, .LBB8_2
+; SFB64-NEXT:    bnez a0, .LBB8_2
 ; SFB64-NEXT:  # %bb.1:
-; SFB64-NEXT:    mv a1, a2
+; SFB64-NEXT:    subw a2, a2, a1
 ; SFB64-NEXT:  .LBB8_2:
-; SFB64-NEXT:    mv a0, a1
+; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
   %a = select i1 %c, i32 0, i32 %x
   %b = sub i32 %y, %a
@@ -304,12 +295,11 @@ define i64 @sub_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ;
 ; SFB64-LABEL: sub_select_all_zeros_i64:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    sub a1, a2, a1
-; SFB64-NEXT:    bnez a0, .LBB9_2
+; SFB64-NEXT:    beqz a0, .LBB9_2
 ; SFB64-NEXT:  # %bb.1:
-; SFB64-NEXT:    mv a1, a2
+; SFB64-NEXT:    sub a2, a2, a1
 ; SFB64-NEXT:  .LBB9_2:
-; SFB64-NEXT:    mv a0, a1
+; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
   %a = select i1 %c, i64 %x, i64 0
   %b = sub i64 %y, %a
