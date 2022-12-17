@@ -29,10 +29,10 @@ void * voidPtrCall(void);
 char * charPtrCall(void);
 
 void testArraySubscripts(int *p, int **pp) {
-  foo(p[0],             // expected-warning{{unchecked operation on raw buffer in expression}}
-      pp[0][0],         // expected-warning2{{unchecked operation on raw buffer in expression}}
-      0[0[pp]],         // expected-warning2{{unchecked operation on raw buffer in expression}}
-      0[pp][0]          // expected-warning2{{unchecked operation on raw buffer in expression}}
+  foo(p[1],             // expected-warning{{unchecked operation on raw buffer in expression}}
+      pp[1][1],         // expected-warning2{{unchecked operation on raw buffer in expression}}
+      1[1[pp]],         // expected-warning2{{unchecked operation on raw buffer in expression}}
+      1[pp][1]          // expected-warning2{{unchecked operation on raw buffer in expression}}
       );
 
   if (p[3]) {           // expected-warning{{unchecked operation on raw buffer in expression}}
@@ -50,11 +50,18 @@ void testArraySubscripts(int *p, int **pp) {
   int a[10], b[10][10];
 
   // Not to warn subscripts on arrays
-  foo(a[0], a[1],
-      0[a], 1[a],
+  foo(a[1], 1[a],
       b[3][4],
       4[b][3],
       4[3[b]]);
+
+  // Not to warn when index is zero
+  foo(p[0], pp[0][0], 0[0[pp]], 0[pp][0],
+      ((int*)voidPtrCall())[0],
+      0[(int*)voidPtrCall()],
+      charPtrCall()[0],
+      0[charPtrCall()]
+      );
 }
 
 void testArraySubscriptsWithAuto(int *p, int **pp) {
@@ -62,19 +69,19 @@ void testArraySubscriptsWithAuto(int *p, int **pp) {
 
   auto ap1 = a;
 
-  foo(ap1[0]);  // expected-warning{{unchecked operation on raw buffer in expression}}
+  foo(ap1[1]);  // expected-warning{{unchecked operation on raw buffer in expression}}
 
   auto ap2 = p;
 
-  foo(ap2[0]);  // expected-warning{{unchecked operation on raw buffer in expression}}
+  foo(ap2[1]);  // expected-warning{{unchecked operation on raw buffer in expression}}
 
   auto ap3 = pp;
 
-  foo(ap3[0][0]); // expected-warning2{{unchecked operation on raw buffer in expression}}
+  foo(ap3[1][1]); // expected-warning2{{unchecked operation on raw buffer in expression}}
 
   auto ap4 = *pp;
 
-  foo(ap4[0]);  // expected-warning{{unchecked operation on raw buffer in expression}}
+  foo(ap4[1]);  // expected-warning{{unchecked operation on raw buffer in expression}}
 }
 
 void testUnevaluatedContext(int * p) {
