@@ -702,7 +702,7 @@ GlobalOp Importer::processGlobal(llvm::GlobalVariable *globalVar) {
         convertConstantExpr(globalVar->getInitializer());
     if (failed(initializer))
       return {};
-    builder.create<ReturnOp>(globalOp.getLoc(), initializer.value());
+    builder.create<ReturnOp>(globalOp.getLoc(), *initializer);
   }
   if (globalVar->hasAtLeastLocalUnnamedAddr()) {
     globalOp.setUnnamedAddr(
@@ -865,7 +865,7 @@ FailureOr<Value> Importer::convertConstantExpr(llvm::Constant *constant) {
     FailureOr<Value> converted = convertConstant(constantToConvert);
     if (failed(converted))
       return failure();
-    mapValue(constantToConvert, converted.value());
+    mapValue(constantToConvert, *converted);
   }
 
   // Update the constant insertion point and return the converted constant.
@@ -903,7 +903,7 @@ Importer::convertValues(ArrayRef<llvm::Value *> values) {
     FailureOr<Value> converted = convertValue(value);
     if (failed(converted))
       return failure();
-    remapped.push_back(converted.value());
+    remapped.push_back(*converted);
   }
   return remapped;
 }
@@ -912,7 +912,7 @@ IntegerAttr Importer::matchIntegerAttr(llvm::Value *value) {
   IntegerAttr integerAttr;
   FailureOr<Value> converted = convertValue(value);
   bool success = succeeded(converted) &&
-                 matchPattern(converted.value(), m_Constant(&integerAttr));
+                 matchPattern(*converted, m_Constant(&integerAttr));
   assert(success && "expected a constant value");
   (void)success;
   return integerAttr;
@@ -933,7 +933,7 @@ Importer::convertBranchArgs(llvm::Instruction *branch, llvm::BasicBlock *target,
     FailureOr<Value> converted = convertValue(value);
     if (failed(converted))
       return failure();
-    blockArguments.push_back(converted.value());
+    blockArguments.push_back(*converted);
   }
   return success();
 }
@@ -949,13 +949,13 @@ Importer::convertCallTypeAndOperands(llvm::CallBase *callInst,
     FailureOr<Value> called = convertValue(callInst->getCalledOperand());
     if (failed(called))
       return failure();
-    operands.push_back(called.value());
+    operands.push_back(*called);
   }
   SmallVector<llvm::Value *> args(callInst->args());
   FailureOr<SmallVector<Value>> arguments = convertValues(args);
   if (failed(arguments))
     return failure();
-  llvm::append_range(operands, arguments.value());
+  llvm::append_range(operands, *arguments);
   return success();
 }
 
@@ -1004,7 +1004,7 @@ LogicalResult Importer::convertOperation(OpBuilder &odsBuilder,
       FailureOr<Value> condition = convertValue(brInst->getCondition());
       if (failed(condition))
         return failure();
-      builder.create<LLVM::CondBrOp>(loc, condition.value(), succBlocks.front(),
+      builder.create<LLVM::CondBrOp>(loc, *condition, succBlocks.front(),
                                      succBlockArgs.front(), succBlocks.back(),
                                      succBlockArgs.back());
     } else {
@@ -1041,7 +1041,7 @@ LogicalResult Importer::convertOperation(OpBuilder &odsBuilder,
       caseBlocks[it.index()] = lookupBlock(succBB);
     }
 
-    builder.create<SwitchOp>(loc, condition.value(), lookupBlock(defaultBB),
+    builder.create<SwitchOp>(loc, *condition, lookupBlock(defaultBB),
                              defaultBlockArgs, caseValues, caseBlocks,
                              caseOperandRefs);
     return success();
@@ -1081,7 +1081,7 @@ LogicalResult Importer::convertOperation(OpBuilder &odsBuilder,
       FailureOr<Value> operand = convertConstantExpr(lpInst->getClause(i));
       if (failed(operand))
         return failure();
-      operands.push_back(operand.value());
+      operands.push_back(*operand);
     }
 
     Type type = convertType(lpInst->getType());
@@ -1136,13 +1136,12 @@ LogicalResult Importer::convertOperation(OpBuilder &odsBuilder,
       FailureOr<Value> index = convertValue(operand);
       if (failed(index))
         return failure();
-      indices.push_back(index.value());
+      indices.push_back(*index);
     }
 
     Type type = convertType(inst->getType());
-    Value res =
-        builder.create<GEPOp>(loc, type, sourceElementType, basePtr.value(),
-                              indices, gepInst->isInBounds());
+    Value res = builder.create<GEPOp>(loc, type, sourceElementType, *basePtr,
+                                      indices, gepInst->isInBounds());
     mapValue(inst, res);
     return success();
   }

@@ -557,7 +557,7 @@ public:
           loc, op.getLhs(), b, acc, kind, rewriter, isInt);
       if (!mult.has_value())
         return failure();
-      rewriter.replaceOp(op, mult.value());
+      rewriter.replaceOp(op, *mult);
       return success();
     }
 
@@ -575,8 +575,7 @@ public:
           createContractArithOp(loc, a, op.getRhs(), r, kind, rewriter, isInt);
       if (!m.has_value())
         return failure();
-      result = rewriter.create<vector::InsertOp>(loc, resType, m.value(),
-                                                 result, pos);
+      result = rewriter.create<vector::InsertOp>(loc, resType, *m, result, pos);
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -1878,7 +1877,7 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
     auto newOp = lowerParallel(op, lhsIndex, rhsIndex, rewriter);
     if (failed(newOp))
       return failure();
-    rewriter.replaceOp(op, newOp.value());
+    rewriter.replaceOp(op, *newOp);
     return success();
   }
 
@@ -1899,7 +1898,7 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
       auto newOp = lowerParallel(op, lhsIndex, /*rhsIndex=*/-1, rewriter);
       if (failed(newOp))
         return failure();
-      rewriter.replaceOp(op, newOp.value());
+      rewriter.replaceOp(op, *newOp);
       return success();
     }
   }
@@ -1911,7 +1910,7 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
       auto newOp = lowerParallel(op, /*lhsIndex=*/-1, rhsIndex, rewriter);
       if (failed(newOp))
         return failure();
-      rewriter.replaceOp(op, newOp.value());
+      rewriter.replaceOp(op, *newOp);
       return success();
     }
   }
@@ -1921,7 +1920,7 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
     auto newOp = lowerReduction(op, rewriter);
     if (failed(newOp))
       return failure();
-    rewriter.replaceOp(op, newOp.value());
+    rewriter.replaceOp(op, *newOp);
     return success();
   }
 
@@ -2021,8 +2020,8 @@ ContractionOpLowering::lowerReduction(vector::ContractionOp op,
     return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
       diag << "expected iterIndex=" << iterIndex << "to map to a RHS dimension";
     });
-  int64_t lhsIndex = lookupLhs.value();
-  int64_t rhsIndex = lookupRhs.value();
+  int64_t lhsIndex = *lookupLhs;
+  int64_t rhsIndex = *lookupRhs;
   int64_t dimSize = lhsType.getDimSize(lhsIndex);
   if (dimSize != rhsType.getDimSize(rhsIndex))
     return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {

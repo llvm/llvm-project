@@ -3197,7 +3197,7 @@ void PackOp::build(OpBuilder &builder, OperationState &state, Value source,
   SmallVector<Value> dynamicTileSizes;
   dispatchIndexOpFoldResults(innerTiles, dynamicTileSizes, staticTileSizes);
   build(builder, state, dest.getType(), source, dest,
-        paddingValue ? paddingValue.value() : nullptr,
+        paddingValue ? *paddingValue : nullptr,
         outerDimsPerm.empty() ? nullptr
                               : builder.getDenseI64ArrayAttr(outerDimsPerm),
         builder.getDenseI64ArrayAttr(innerDimsPos), dynamicTileSizes,
