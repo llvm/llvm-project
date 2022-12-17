@@ -61,6 +61,7 @@ public:
 
   nub_addr_t AllocateMemory(nub_size_t size, uint32_t permissions);
   nub_bool_t DeallocateMemory(nub_addr_t addr);
+  void ClearAllocations();
 
   mach_port_t ExceptionPort() const;
   bool ExceptionPortIsValid() const;
