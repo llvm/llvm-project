@@ -231,6 +231,7 @@ def : InstRW<[WriteMove], (instrs COPY)>;
 
 // BMI1 BEXTR, BMI2 BZHI
 defm : ZnWriteResPair<WriteBEXTR, [ZnALU], 1>;
+defm : ZnWriteResPair<WriteBLS,   [ZnALU], 2, [1], 2, 4, 1>;
 defm : ZnWriteResPair<WriteBZHI,  [ZnALU], 1>;
 
 // IDIV
@@ -702,12 +703,6 @@ def ZnWriteBTRSCm : SchedWriteRes<[ZnAGU, ZnALU]> {
 // m,r,i.
 def : SchedAlias<WriteBitTestSetImmRMW, ZnWriteBTRSCm>;
 def : SchedAlias<WriteBitTestSetRegRMW, ZnWriteBTRSCm>;
-
-// BLSI BLSMSK BLSR.
-// r,r.
-def : SchedAlias<WriteBLS, ZnWriteALULat2>;
-// r,m.
-def : SchedAlias<WriteBLSLd, ZnWriteALULat2Ld>;
 
 // PDEP PEXT.
 // r,r,r.

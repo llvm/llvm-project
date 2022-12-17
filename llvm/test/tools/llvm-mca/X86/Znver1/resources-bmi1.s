@@ -57,18 +57,18 @@ tzcnt       (%rax), %rcx
 # CHECK-NEXT:  2      5     0.50    *                   bextrl	%eax, (%rbx), %ecx
 # CHECK-NEXT:  1      1     0.25                        bextrq	%rax, %rbx, %rcx
 # CHECK-NEXT:  2      5     0.50    *                   bextrq	%rax, (%rbx), %rcx
-# CHECK-NEXT:  1      2     0.25                        blsil	%eax, %ecx
-# CHECK-NEXT:  1      6     0.50    *                   blsil	(%rax), %ecx
-# CHECK-NEXT:  1      2     0.25                        blsiq	%rax, %rcx
-# CHECK-NEXT:  1      6     0.50    *                   blsiq	(%rax), %rcx
-# CHECK-NEXT:  1      2     0.25                        blsmskl	%eax, %ecx
-# CHECK-NEXT:  1      6     0.50    *                   blsmskl	(%rax), %ecx
-# CHECK-NEXT:  1      2     0.25                        blsmskq	%rax, %rcx
-# CHECK-NEXT:  1      6     0.50    *                   blsmskq	(%rax), %rcx
-# CHECK-NEXT:  1      2     0.25                        blsrl	%eax, %ecx
-# CHECK-NEXT:  1      6     0.50    *                   blsrl	(%rax), %ecx
-# CHECK-NEXT:  1      2     0.25                        blsrq	%rax, %rcx
-# CHECK-NEXT:  1      6     0.50    *                   blsrq	(%rax), %rcx
+# CHECK-NEXT:  2      2     0.25                        blsil	%eax, %ecx
+# CHECK-NEXT:  3      6     0.50    *                   blsil	(%rax), %ecx
+# CHECK-NEXT:  2      2     0.25                        blsiq	%rax, %rcx
+# CHECK-NEXT:  3      6     0.50    *                   blsiq	(%rax), %rcx
+# CHECK-NEXT:  2      2     0.25                        blsmskl	%eax, %ecx
+# CHECK-NEXT:  3      6     0.50    *                   blsmskl	(%rax), %ecx
+# CHECK-NEXT:  2      2     0.25                        blsmskq	%rax, %rcx
+# CHECK-NEXT:  3      6     0.50    *                   blsmskq	(%rax), %rcx
+# CHECK-NEXT:  2      2     0.25                        blsrl	%eax, %ecx
+# CHECK-NEXT:  3      6     0.50    *                   blsrl	(%rax), %ecx
+# CHECK-NEXT:  2      2     0.25                        blsrq	%rax, %rcx
+# CHECK-NEXT:  3      6     0.50    *                   blsrq	(%rax), %rcx
 # CHECK-NEXT:  1      2     0.25                        tzcntw	%ax, %cx
 # CHECK-NEXT:  2      6     0.50    *                   tzcntw	(%rax), %cx
 # CHECK-NEXT:  1      2     0.25                        tzcntl	%eax, %ecx
