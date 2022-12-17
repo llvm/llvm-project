@@ -406,8 +406,40 @@ void benchmarkMain() {
     Meter.emplace(Configurations.size());
   for (const BenchmarkCode &Conf : Configurations) {
     ProgressMeter<>::ProgressMeterStep MeterStep(Meter ? &*Meter : nullptr);
-    InstructionBenchmark Result = ExitOnErr(Runner->runConfiguration(
-        Conf, NumRepetitions, LoopBodySize, Repetitors, DumpObjectToDisk));
+    SmallVector<InstructionBenchmark, 2> AllResults;
+
+    for (const std::unique_ptr<const SnippetRepetitor> &Repetitor :
+         Repetitors) {
+      AllResults.emplace_back(ExitOnErr(Runner->runConfiguration(
+          Conf, NumRepetitions, LoopBodySize, *Repetitor, DumpObjectToDisk)));
+    }
+    InstructionBenchmark &Result = AllResults.front();
+
+    if (RepetitionMode == InstructionBenchmark::RepetitionModeE::AggregateMin) {
+      assert(!Result.Measurements.empty() &&
+             "We're in an 'min' repetition mode, and need to aggregate new "
+             "result to the existing result.");
+      for (const InstructionBenchmark &OtherResult :
+           ArrayRef<InstructionBenchmark>(AllResults).drop_front()) {
+        llvm::append_range(Result.AssembledSnippet,
+                           OtherResult.AssembledSnippet);
+        assert(OtherResult.Measurements.size() == Result.Measurements.size() &&
+               "Expected to have identical number of measurements.");
+        for (auto I : zip(Result.Measurements, OtherResult.Measurements)) {
+          BenchmarkMeasure &Measurement = std::get<0>(I);
+          const BenchmarkMeasure &NewMeasurement = std::get<1>(I);
+          assert(Measurement.Key == NewMeasurement.Key &&
+                 "Expected measurements to be symmetric");
+
+          Measurement.PerInstructionValue =
+              std::min(Measurement.PerInstructionValue,
+                       NewMeasurement.PerInstructionValue);
+          Measurement.PerSnippetValue = std::min(
+              Measurement.PerSnippetValue, NewMeasurement.PerSnippetValue);
+        }
+      }
+    }
+
     ExitOnFileError(BenchmarkFile, Result.writeYaml(State, BenchmarkFile));
   }
   exegesis::pfm::pfmTerminate();
