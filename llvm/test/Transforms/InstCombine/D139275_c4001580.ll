@@ -5,8 +5,10 @@
 ; FIXME: this is a miscompile.
 define i8 @D139275_c4001580(i1 %c0, i1 %c1, i1 %c2, i8 %inner.sel.trueval, i8 %inner.sel.falseval, i8 %outer.sel.trueval) {
 ; CHECK-LABEL: @D139275_c4001580(
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[C2:%.*]], i8 [[OUTER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL_TRUEVAL:%.*]]
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[C1:%.*]], i8 [[INNER_SEL]], i8 [[INNER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[INNER_COND:%.*]] = xor i1 [[C0:%.*]], [[C1:%.*]]
+; CHECK-NEXT:    [[OUTER_COND:%.*]] = and i1 [[C2:%.*]], [[C1]]
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[INNER_COND]], i8 [[INNER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[OUTER_COND]], i8 [[OUTER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL]]
 ; CHECK-NEXT:    ret i8 [[OUTER_SEL]]
 ;
   %inner.cond = xor i1 %c0, %c1
