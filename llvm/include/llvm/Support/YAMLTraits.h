@@ -10,7 +10,6 @@
 #define LLVM_SUPPORT_YAMLTRAITS_H
 
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -27,6 +26,7 @@
 #include <map>
 #include <memory>
 #include <new>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <type_traits>
@@ -904,9 +904,10 @@ public:
   }
 
   template <typename T, typename Context>
-  void mapOptionalWithContext(const char *Key, Optional<T> &Val, Context &Ctx) {
-    this->processKeyWithDefault(Key, Val, Optional<T>(), /*Required=*/false,
-                                Ctx);
+  void mapOptionalWithContext(const char *Key, std::optional<T> &Val,
+                              Context &Ctx) {
+    this->processKeyWithDefault(Key, Val, std::optional<T>(),
+                                /*Required=*/false, Ctx);
   }
 
   template <typename T, typename Context>
@@ -926,9 +927,9 @@ public:
 
 private:
   template <typename T, typename Context>
-  void processKeyWithDefault(const char *Key, Optional<T> &Val,
-                             const Optional<T> &DefaultValue, bool Required,
-                             Context &Ctx);
+  void processKeyWithDefault(const char *Key, std::optional<T> &Val,
+                             const std::optional<T> &DefaultValue,
+                             bool Required, Context &Ctx);
 
   template <typename T, typename Context>
   void processKeyWithDefault(const char *Key, T &Val, const T &DefaultValue,
@@ -1665,10 +1666,10 @@ private:
 };
 
 template <typename T, typename Context>
-void IO::processKeyWithDefault(const char *Key, Optional<T> &Val,
-                               const Optional<T> &DefaultValue, bool Required,
-                               Context &Ctx) {
-  assert(!DefaultValue && "Optional<T> shouldn't have a value!");
+void IO::processKeyWithDefault(const char *Key, std::optional<T> &Val,
+                               const std::optional<T> &DefaultValue,
+                               bool Required, Context &Ctx) {
+  assert(!DefaultValue && "std::optional<T> shouldn't have a value!");
   void *SaveInfo;
   bool UseDefault = true;
   const bool sameAsDefault = outputting() && !Val;
@@ -1677,13 +1678,14 @@ void IO::processKeyWithDefault(const char *Key, Optional<T> &Val,
   if (Val &&
       this->preflightKey(Key, Required, sameAsDefault, UseDefault, SaveInfo)) {
 
-    // When reading an Optional<X> key from a YAML description, we allow the
-    // special "<none>" value, which can be used to specify that no value was
-    // requested, i.e. the DefaultValue will be assigned. The DefaultValue is
-    // usually None.
+    // When reading an std::optional<X> key from a YAML description, we allow
+    // the special "<none>" value, which can be used to specify that no value
+    // was requested, i.e. the DefaultValue will be assigned. The DefaultValue
+    // is usually None.
     bool IsNone = false;
     if (!outputting())
-      if (const auto *Node = dyn_cast<ScalarNode>(((Input *)this)->getCurrentNode()))
+      if (const auto *Node =
+              dyn_cast<ScalarNode>(((Input *)this)->getCurrentNode()))
         // We use rtrim to ignore possible white spaces that might exist when a
         // comment is present on the same line.
         IsNone = Node->getRawValue().rtrim(' ') == "<none>";

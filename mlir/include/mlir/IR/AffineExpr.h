@@ -82,7 +82,7 @@ public:
   bool operator!() const { return expr == nullptr; }
 
   template <typename U>
-  bool isa() const;
+  constexpr bool isa() const;
   template <typename U>
   U dyn_cast() const;
   template <typename U>
@@ -267,14 +267,14 @@ AffineExpr getAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
 raw_ostream &operator<<(raw_ostream &os, AffineExpr expr);
 
 template <typename U>
-bool AffineExpr::isa() const {
-  if (std::is_same<U, AffineBinaryOpExpr>::value)
+constexpr bool AffineExpr::isa() const {
+  if constexpr (std::is_same_v<U, AffineBinaryOpExpr>)
     return getKind() <= AffineExprKind::LAST_AFFINE_BINARY_OP;
-  if (std::is_same<U, AffineDimExpr>::value)
+  if constexpr (std::is_same_v<U, AffineDimExpr>)
     return getKind() == AffineExprKind::DimId;
-  if (std::is_same<U, AffineSymbolExpr>::value)
+  if constexpr (std::is_same_v<U, AffineSymbolExpr>)
     return getKind() == AffineExprKind::SymbolId;
-  if (std::is_same<U, AffineConstantExpr>::value)
+  if constexpr (std::is_same_v<U, AffineConstantExpr>)
     return getKind() == AffineExprKind::Constant;
 }
 template <typename U>

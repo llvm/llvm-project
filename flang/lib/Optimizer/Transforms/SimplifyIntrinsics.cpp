@@ -515,7 +515,7 @@ static llvm::Optional<mlir::Type> getArgElementType(mlir::Value val) {
     defOp = val.getDefiningOp();
     // Analyze only sequences of convert operations.
     if (!mlir::isa<fir::ConvertOp>(defOp))
-      return llvm::None;
+      return std::nullopt;
     val = defOp->getOperand(0);
     // The convert operation is expected to convert from one
     // box type to another box type.

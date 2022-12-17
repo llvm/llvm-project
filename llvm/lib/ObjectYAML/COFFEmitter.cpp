@@ -25,6 +25,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <vector>
 
 using namespace llvm;
@@ -454,7 +455,7 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
     }
     for (uint32_t I = 0; I < CP.Obj.OptionalHeader->Header.NumberOfRvaAndSize;
          ++I) {
-      const Optional<COFF::DataDirectory> *DataDirectories =
+      const std::optional<COFF::DataDirectory> *DataDirectories =
           CP.Obj.OptionalHeader->DataDirectories;
       uint32_t NumDataDir = std::size(CP.Obj.OptionalHeader->DataDirectories);
       if (I >= NumDataDir || !DataDirectories[I]) {

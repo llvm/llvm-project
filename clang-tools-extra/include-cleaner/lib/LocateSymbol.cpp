@@ -53,6 +53,7 @@ std::vector<SymbolLocation> locateSymbol(const Symbol &S) {
   case Symbol::Macro:
     return {SymbolLocation(S.macro().Definition)};
   }
+  llvm_unreachable("Unknown Symbol::Kind enum");
 }
 
 } // namespace clang::include_cleaner

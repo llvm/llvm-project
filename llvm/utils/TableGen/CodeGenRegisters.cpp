@@ -1024,7 +1024,7 @@ void CodeGenRegisterClass::computeSubClasses(CodeGenRegBank &RegBank) {
       RC.inheritProperties(RegBank);
 }
 
-Optional<std::pair<CodeGenRegisterClass *, CodeGenRegisterClass *>>
+std::optional<std::pair<CodeGenRegisterClass *, CodeGenRegisterClass *>>
 CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
     CodeGenRegBank &RegBank, const CodeGenSubRegIndex *SubIdx) const {
   auto SizeOrder = [this](const CodeGenRegisterClass *A,

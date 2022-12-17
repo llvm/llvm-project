@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -scalable-vectorization=on \
+; RUN: opt < %s -passes=loop-vectorize -scalable-vectorization=on \
 ; RUN:   -riscv-v-vector-bits-min=128 -riscv-v-vector-bits-max=128 \
 ; RUN:   -pass-remarks=loop-vectorize -pass-remarks-analysis=loop-vectorize \
 ; RUN:   -pass-remarks-missed=loop-vectorize -mtriple riscv64-linux-gnu \

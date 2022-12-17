@@ -29,10 +29,10 @@ namespace {
 class WindowsUserIDResolver : public UserIDResolver {
 protected:
   llvm::Optional<std::string> DoGetUserName(id_t uid) override {
-    return llvm::None;
+    return std::nullopt;
   }
   llvm::Optional<std::string> DoGetGroupName(id_t gid) override {
-    return llvm::None;
+    return std::nullopt;
   }
 };
 } // namespace
@@ -77,7 +77,7 @@ llvm::VersionTuple HostInfoWindows::GetOSVersion() {
 llvm::Optional<std::string> HostInfoWindows::GetOSBuildString() {
   llvm::VersionTuple version = GetOSVersion();
   if (version.empty())
-    return llvm::None;
+    return std::nullopt;
 
   return "Windows NT " + version.getAsString();
 }

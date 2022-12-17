@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize -enable-vplan-native-path -mtriple aarch64-gnu-linux < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -enable-vplan-native-path -mtriple aarch64-gnu-linux < %s | FileCheck %s
 
 ; extern int arr[8][8];
 ; extern int arr2[8];

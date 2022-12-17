@@ -215,7 +215,7 @@ namespace options {
   static std::string RemarksFilename;
   static std::string RemarksPasses;
   static bool RemarksWithHotness = false;
-  static Optional<uint64_t> RemarksHotnessThreshold = 0;
+  static std::optional<uint64_t> RemarksHotnessThreshold = 0;
   static std::string RemarksFormat;
 
   // Context sensitive PGO options.

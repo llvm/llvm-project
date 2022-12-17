@@ -1073,7 +1073,7 @@ Optional<int64_t> DimOp::getConstantIndex() {
     return constSizeOp.getValue().getLimitedValue();
   if (auto constantOp = getIndex().getDefiningOp<arith::ConstantOp>())
     return constantOp.getValue().cast<IntegerAttr>().getInt();
-  return llvm::None;
+  return std::nullopt;
 }
 
 OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
@@ -1301,7 +1301,7 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
     return;
   assert(type.getNumInputs() == argAttrs.size());
   function_interface_impl::addArgAndResultAttrs(builder, state, argAttrs,
-                                                /*resultAttrs=*/llvm::None);
+                                                /*resultAttrs=*/std::nullopt);
 }
 
 ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -1327,7 +1327,7 @@ Optional<int64_t> GetExtentOp::getConstantDim() {
     return constSizeOp.getValue().getLimitedValue();
   if (auto constantOp = getDim().getDefiningOp<arith::ConstantOp>())
     return constantOp.getValue().cast<IntegerAttr>().getInt();
-  return llvm::None;
+  return std::nullopt;
 }
 
 OpFoldResult GetExtentOp::fold(ArrayRef<Attribute> operands) {

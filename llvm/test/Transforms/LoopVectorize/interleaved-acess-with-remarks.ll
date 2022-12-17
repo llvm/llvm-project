@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize -instcombine -force-vector-width=4 -force-vector-interleave=1 -enable-interleaved-mem-accesses=true -runtime-memory-check-threshold=24 --pass-remarks=loop-vectorize < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize,instcombine -force-vector-width=4 -force-vector-interleave=1 -enable-interleaved-mem-accesses=true -runtime-memory-check-threshold=24 --pass-remarks=loop-vectorize < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 

@@ -121,6 +121,7 @@
 #include <map>
 #include <memory>
 #include <numeric>
+#include <optional>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -826,7 +827,7 @@ populateEHOperandBundle(VPCandidateInfo &Cand,
   if (!isa<IntrinsicInst>(OrigCall)) {
     // The instrumentation call should belong to the same funclet as a
     // non-intrinsic call, so just copy the operand bundle, if any exists.
-    Optional<OperandBundleUse> ParentFunclet =
+    std::optional<OperandBundleUse> ParentFunclet =
         OrigCall->getOperandBundle(LLVMContext::OB_funclet);
     if (ParentFunclet)
       OpBundles.emplace_back(OperandBundleDef(*ParentFunclet));

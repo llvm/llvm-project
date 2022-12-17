@@ -784,7 +784,7 @@ SymbolFileDWARFDebugMap::GetDynamicArrayInfoForUID(
   SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx);
   if (oso_dwarf)
     return oso_dwarf->GetDynamicArrayInfoForUID(type_uid, exe_ctx);
-  return llvm::None;
+  return std::nullopt;
 }
 
 bool SymbolFileDWARFDebugMap::CompleteType(CompilerType &compiler_type) {

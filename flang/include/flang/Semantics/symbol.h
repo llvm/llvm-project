@@ -105,6 +105,10 @@ public:
   Symbol *moduleInterface() { return moduleInterface_; }
   const Symbol *moduleInterface() const { return moduleInterface_; }
   void set_moduleInterface(Symbol &);
+  void ReplaceResult(Symbol &result) {
+    CHECK(result_ != nullptr);
+    result_ = &result;
+  }
 
 private:
   bool isInterface_{false}; // true if this represents an interface-body
@@ -523,9 +527,9 @@ std::string DetailsToString(const Details &);
 class Symbol {
 public:
   ENUM_CLASS(Flag,
-      Function, // symbol is a function
+      Function, // symbol is a function or statement function
       Subroutine, // symbol is a subroutine
-      StmtFunction, // symbol is a statement function (Function is set too)
+      StmtFunction, // symbol is a statement function or result
       Implicit, // symbol is implicitly typed
       ImplicitOrError, // symbol must be implicitly typed or it's an error
       ModFile, // symbol came from .mod file

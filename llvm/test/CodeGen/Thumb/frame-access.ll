@@ -77,12 +77,9 @@ entry:
 ; CHECK-FP-ATPCS: adds r0, #8
 ; CHECK-FP-ATPCS: stm r0!, {r1, r2, r3}
 ; CHECK-FP-AAPCS: mov r0, r11
-; CHECK-FP-AAPCS: str r1, [r0, #8]
-; CHECK-FP-AAPCS: mov r0, r11
-; CHECK-FP-AAPCS: str r2, [r0, #12]
-; CHECK-FP-AAPCS: mov r0, r11
-; CHECK-FP-AAPCS: str r3, [r0, #16]
-
+; CHECK-FP-AAPCS: mov r7, r0
+; CHECK-FP-AAPCS: adds r7, #8
+; CHECK-FP-AAPCS: stm r7!, {r1, r2, r3}
 ; Re-aligned stack, access via FP
 ; int test_args_realign(int a, int b, int c, int d, int e) {
 ;   __attribute__((aligned(16))) int v[4];
@@ -148,11 +145,9 @@ entry:
 ; CHECK-ATPCS-NEXT: adds r0, #8
 ; CHECK-ATPCS-NEXT: stm r0!, {r1, r2, r3}
 ; CHECK-AAPCS: mov r0, r11
-; CHECK-AAPCS: str r1, [r0, #8]
-; CHECK-AAPCS: mov r0, r11
-; CHECK-AAPCS: str r2, [r0, #12]
-; CHECK-AAPCS: mov r0, r11
-; CHECK-AAPCS: str r3, [r0, #16]
+; CHECK-AAPCS: mov r7, r0
+; CHECK-AAPCS: adds r7, #8
+; CHECK-AAPCS: stm r7!, {r1, r2, r3}
 ; VLAs present, access via FP
 ; int test_args_vla(int a, int b, int c, int d, int e) {
 ;   int v[a];
@@ -308,11 +303,9 @@ entry:
 ; CHECK-FP-ATPCS-NEXT: adds r0, #8
 ; CHECK-FP-ATPCS-NEXT: stm r0!, {r1, r2, r3}
 ; CHECK-FP-AAPCS:      mov r0, r11
-; CHECK-FP-AAPCS-NEXT: str r1, [r0, #8]
-; CHECK-FP-AAPCS-NEXT: mov r0, r11
-; CHECK-FP-AAPCS-NEXT: str r2, [r0, #12]
-; CHECK-FP-AAPCS-NEXT: mov r0, r11
-; CHECK-FP-AAPCS-NEXT: str r3, [r0, #16]
+; CHECK-FP-AAPCS-NEXT: mov r5, r0
+; CHECK-FP-AAPCS-NEXT: adds r5, #8
+; CHECK-FP-AAPCS-NEXT: stm r5!, {r1, r2, r3}
 
 ; struct S { int x[128]; } s;
 ; int test(S a, int b) {

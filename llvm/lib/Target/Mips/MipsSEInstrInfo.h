@@ -81,7 +81,7 @@ protected:
   /// If the specific machine instruction is a instruction that moves/copies
   /// value from one register to another register return destination and source
   /// registers as machine operands.
-  Optional<DestSourcePair>
+  std::optional<DestSourcePair>
   isCopyInstrImpl(const MachineInstr &MI) const override;
 
 private:

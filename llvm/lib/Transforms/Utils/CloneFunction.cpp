@@ -52,7 +52,7 @@ class LifetimeMaterializer final : public ValueMaterializer {
   }
 
   Metadata *mapLifetime(Metadata *M) {
-    if (Optional<Metadata *> Mapped = VMap.getMappedMD(M))
+    if (std::optional<Metadata *> Mapped = VMap.getMappedMD(M))
       return *Mapped;
     if (isa<DIFragment>(M) && !GlobalFragments.contains(M)) {
       M = mapToMetadata(

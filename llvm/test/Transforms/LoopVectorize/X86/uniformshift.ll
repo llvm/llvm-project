@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=x86_64-apple-darwin -mattr=+sse2 -loop-vectorize -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=x86_64-apple-darwin -mattr=+sse2 -passes=loop-vectorize -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK: 'foo'

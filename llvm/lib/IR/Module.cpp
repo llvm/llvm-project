@@ -12,7 +12,6 @@
 
 #include "llvm/IR/Module.h"
 #include "SymbolTableListTraitsImpl.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"

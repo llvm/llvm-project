@@ -11,7 +11,6 @@
 
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -324,7 +323,7 @@ private:
     return true;
   }
 
-  Optional<DecodedAnnotation> Current;
+  std::optional<DecodedAnnotation> Current;
   ArrayRef<uint8_t> Data;
   ArrayRef<uint8_t> Next;
 };

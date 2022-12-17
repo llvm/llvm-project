@@ -3,6 +3,7 @@
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++2b %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
 // FIXME: __SIZE_TYPE__ expands to 'long long' on some targets.
 __extension__ typedef __SIZE_TYPE__ size_t;
@@ -78,6 +79,40 @@ namespace dr403 { // dr403: yes
 
 // dr404: na
 // (NB: also sup 594)
+
+namespace dr405 { // dr405: yes
+                  // NB: also dup 218
+  namespace A {
+    struct S {};
+    void f(S);
+  }
+  namespace B {
+    struct S {};
+    void f(S);
+  }
+
+  struct C {
+    int f;
+    void test1(A::S as) { f(as); } // expected-error {{called object type 'int'}}
+    void test2(A::S as) { void f(); f(as); } // expected-error {{too many arguments}} expected-note {{}}
+    void test3(A::S as) { using A::f; f(as); } // ok
+    void test4(A::S as) { using B::f; f(as); } // ok
+    void test5(A::S as) { int f; f(as); } // expected-error {{called object type 'int'}}
+    void test6(A::S as) { struct f {}; (void) f(as); } // expected-error {{no matching conversion}} expected-note +{{}}
+  };
+
+  namespace D {
+    struct S {};
+    struct X { void operator()(S); } f;
+  }
+  void testD(D::S ds) { f(ds); } // expected-error {{undeclared identifier}}
+
+  namespace E {
+    struct S {};
+    struct f { f(S); };
+  }
+  void testE(E::S es) { f(es); } // expected-error {{undeclared identifier}}
+}
 
 namespace dr406 { // dr406: yes
   typedef struct {

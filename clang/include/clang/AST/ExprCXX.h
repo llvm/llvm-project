@@ -2268,7 +2268,7 @@ public:
 
   bool isArray() const { return CXXNewExprBits.IsArray; }
 
-  /// This might return None even if isArray() returns true,
+  /// This might return std::nullopt even if isArray() returns true,
   /// since there might not be an array size expression.
   /// If the result is not-None, it will never wrap a nullptr.
   Optional<Expr *> getArraySize() {
@@ -2282,7 +2282,7 @@ public:
     return std::nullopt;
   }
 
-  /// This might return None even if isArray() returns true,
+  /// This might return std::nullopt even if isArray() returns true,
   /// since there might not be an array size expression.
   /// If the result is not-None, it will never wrap a nullptr.
   Optional<const Expr *> getArraySize() const {

@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
 
 ; This test is checking that a scalable load inside a loop does not trigger a
 ; TypeSize error in the loop vectorization legality analysis. It is possible for

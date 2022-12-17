@@ -925,8 +925,8 @@ static APInt getElementIndex(TypeSize ElemSize, APInt &Offset) {
   return Index;
 }
 
-Optional<APInt> DataLayout::getGEPIndexForOffset(Type *&ElemTy,
-                                                 APInt &Offset) const {
+std::optional<APInt> DataLayout::getGEPIndexForOffset(Type *&ElemTy,
+                                                      APInt &Offset) const {
   if (auto *ArrTy = dyn_cast<ArrayType>(ElemTy)) {
     ElemTy = ArrTy->getElementType();
     return getElementIndex(getTypeAllocSize(ElemTy), Offset);
@@ -964,7 +964,7 @@ SmallVector<APInt> DataLayout::getGEPIndicesForOffset(Type *&ElemTy,
   SmallVector<APInt> Indices;
   Indices.push_back(getElementIndex(getTypeAllocSize(ElemTy), Offset));
   while (Offset != 0) {
-    Optional<APInt> Index = getGEPIndexForOffset(ElemTy, Offset);
+    std::optional<APInt> Index = getGEPIndexForOffset(ElemTy, Offset);
     if (!Index)
       break;
     Indices.push_back(*Index);

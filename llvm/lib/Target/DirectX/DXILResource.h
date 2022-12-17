@@ -13,7 +13,6 @@
 #ifndef LLVM_TARGET_DIRECTX_DXILRESOURCE_H
 #define LLVM_TARGET_DIRECTX_DXILRESOURCE_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
@@ -77,7 +76,7 @@ protected:
 
 public:
   struct ExtendedProperties {
-    llvm::Optional<ComponentType> ElementType;
+    std::optional<ComponentType> ElementType;
 
     // The value ordering of this enumeration is part of the DXIL ABI. Elements
     // can only be added to the end, and not removed.

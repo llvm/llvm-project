@@ -20,7 +20,7 @@ int make_error_code; // It's important that this comes before <system_error>
 #include <cassert>
 #include <type_traits>
 
-namespace user {
+namespace User {
   enum Err {};
 
   std::error_code make_error_code(Err) { return std::error_code(42, std::generic_category()); }
@@ -28,12 +28,12 @@ namespace user {
 
 namespace std {
   template <>
-  struct is_error_code_enum<user::Err> : true_type {};
+  struct is_error_code_enum<User::Err> : true_type {};
 }
 
 int main(int, char**) {
   std::error_code e;
-  e = user::Err();
+  e = User::Err();
   assert(e.value() == 42);
   assert(e.category() == std::generic_category());
 

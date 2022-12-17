@@ -825,7 +825,7 @@ Constant *SymbolicallyEvaluateBinop(unsigned Opc, Constant *Op0, Constant *Op1,
 /// If array indices are not pointer-sized integers, explicitly cast them so
 /// that they aren't implicitly casted by the getelementptr.
 Constant *CastGEPIndices(Type *SrcElemTy, ArrayRef<Constant *> Ops,
-                         Type *ResultTy, Optional<unsigned> InRangeIndex,
+                         Type *ResultTy, std::optional<unsigned> InRangeIndex,
                          const DataLayout &DL, const TargetLibraryInfo *TLI) {
   Type *IntIdxTy = DL.getIndexType(ResultTy);
   Type *IntIdxScalarTy = IntIdxTy->getScalarType();
@@ -992,8 +992,8 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 
   // Preserve the inrange index from the innermost GEP if possible. We must
   // have calculated the same indices up to and including the inrange index.
-  Optional<unsigned> InRangeIndex;
-  if (Optional<unsigned> LastIRIndex = InnermostGEP->getInRangeIndex())
+  std::optional<unsigned> InRangeIndex;
+  if (std::optional<unsigned> LastIRIndex = InnermostGEP->getInRangeIndex())
     if (SrcElemTy == InnermostGEP->getSourceElementType() &&
         NewIdxs.size() > *LastIRIndex) {
       InRangeIndex = LastIRIndex;
@@ -1906,8 +1906,8 @@ static bool getConstIntOrUndef(Value *Op, const APInt *&C) {
 /// \param St Exception flags raised during constant evaluation.
 static bool mayFoldConstrained(ConstrainedFPIntrinsic *CI,
                                APFloat::opStatus St) {
-  Optional<RoundingMode> ORM = CI->getRoundingMode();
-  Optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
+  std::optional<RoundingMode> ORM = CI->getRoundingMode();
+  std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
 
   // If the operation does not change exception status flags, it is safe
   // to fold.
@@ -1932,7 +1932,7 @@ static bool mayFoldConstrained(ConstrainedFPIntrinsic *CI,
 /// Returns the rounding mode that should be used for constant evaluation.
 static RoundingMode
 getEvaluationRoundingMode(const ConstrainedFPIntrinsic *CI) {
-  Optional<RoundingMode> ORM = CI->getRoundingMode();
+  std::optional<RoundingMode> ORM = CI->getRoundingMode();
   if (!ORM || *ORM == RoundingMode::Dynamic)
     // Even if the rounding mode is unknown, try evaluating the operation.
     // If it does not raise inexact exception, rounding was not applied,
@@ -2133,7 +2133,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     // Rounding operations (floor, trunc, ceil, round and nearbyint) do not
     // raise FP exceptions, unless the argument is signaling NaN.
 
-    Optional<APFloat::roundingMode> RM;
+    std::optional<APFloat::roundingMode> RM;
     switch (IntrinsicID) {
     default:
       break;
@@ -2164,12 +2164,12 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         APFloat::opStatus St = U.roundToIntegral(*RM);
         if (IntrinsicID == Intrinsic::experimental_constrained_rint &&
             St == APFloat::opInexact) {
-          Optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
+          std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
           if (EB && *EB == fp::ebStrict)
             return nullptr;
         }
       } else if (U.isSignaling()) {
-        Optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
+        std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
         if (EB && *EB != fp::ebIgnore)
           return nullptr;
         U = APFloat::getQNaN(U.getSemantics());

@@ -157,7 +157,7 @@ FlatAffineValueConstraints::FlatAffineValueConstraints(IntegerSet set)
                                                      /*numLocals=*/0)) {
 
   // Resize values.
-  values.resize(getNumDimAndSymbolVars(), None);
+  values.resize(getNumDimAndSymbolVars(), std::nullopt);
 
   // Flatten expressions and add them to the constraint system.
   std::vector<SmallVector<int64_t, 8>> flatExprs;
@@ -294,7 +294,7 @@ unsigned FlatAffineValueConstraints::insertVar(VarKind kind, unsigned pos,
   unsigned absolutePos = IntegerPolyhedron::insertVar(kind, pos, num);
 
   if (kind != VarKind::Local) {
-    values.insert(values.begin() + absolutePos, num, None);
+    values.insert(values.begin() + absolutePos, num, std::nullopt);
     assert(values.size() == getNumDimAndSymbolVars());
   }
 
@@ -312,7 +312,7 @@ unsigned FlatAffineValueConstraints::insertVar(VarKind kind, unsigned pos,
   // If a Value is provided, insert it; otherwise use None.
   for (unsigned i = 0; i < num; ++i)
     values.insert(values.begin() + absolutePos + i,
-                  vals[i] ? Optional<Value>(vals[i]) : None);
+                  vals[i] ? Optional<Value>(vals[i]) : std::nullopt);
 
   assert(values.size() == getNumDimAndSymbolVars());
   return absolutePos;
@@ -637,6 +637,33 @@ FlatAffineValueConstraints::addAffineForOpDomain(AffineForOp forOp) {
   // Non-constant upper bound case.
   return addBound(BoundType::UB, pos, forOp.getUpperBoundMap(),
                   forOp.getUpperBoundOperands());
+}
+
+LogicalResult FlatAffineValueConstraints::addAffineParallelOpDomain(
+    AffineParallelOp parallelOp) {
+  size_t ivPos = 0;
+  for (auto iv : parallelOp.getIVs()) {
+    unsigned pos;
+    if (!findVar(iv, &pos)) {
+      assert(false && "variable expected for the IV value");
+      return failure();
+    }
+
+    AffineMap lowerBound = parallelOp.getLowerBoundMap(ivPos);
+    if (lowerBound.isConstant())
+      addBound(BoundType::LB, pos, lowerBound.getSingleConstantResult());
+    else if (failed(addBound(BoundType::LB, pos, lowerBound,
+                             parallelOp.getLowerBoundsOperands())))
+      return failure();
+
+    auto upperBound = parallelOp.getUpperBoundMap(ivPos);
+    if (upperBound.isConstant())
+      addBound(BoundType::UB, pos, upperBound.getSingleConstantResult());
+    else if (failed(addBound(BoundType::UB, pos, upperBound,
+                             parallelOp.getUpperBoundsOperands())))
+      return failure();
+  }
+  return success();
 }
 
 LogicalResult
@@ -1351,9 +1378,9 @@ void FlatAffineValueConstraints::swapVar(unsigned posA, unsigned posB) {
 
   // Treat value of a local variable as None.
   if (getVarKindAt(posA) == VarKind::Local)
-    values[posB] = None;
+    values[posB] = std::nullopt;
   else if (getVarKindAt(posB) == VarKind::Local)
-    values[posA] = None;
+    values[posA] = std::nullopt;
   else
     std::swap(values[posA], values[posB]);
 }
@@ -1392,7 +1419,7 @@ void FlatAffineValueConstraints::clearAndCopyFrom(
   } else {
     *static_cast<IntegerRelation *>(this) = other;
     values.clear();
-    values.resize(getNumDimAndSymbolVars(), None);
+    values.resize(getNumDimAndSymbolVars(), std::nullopt);
   }
 }
 

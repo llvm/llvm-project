@@ -1636,31 +1636,12 @@ LLVMValueRef LLVMConstAShr(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
                                     unwrap<Constant>(RHSConstant)));
 }
 
-LLVMValueRef LLVMConstGEP(LLVMValueRef ConstantVal,
-                          LLVMValueRef *ConstantIndices, unsigned NumIndices) {
-  ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
-                               NumIndices);
-  Constant *Val = unwrap<Constant>(ConstantVal);
-  Type *Ty = Val->getType()->getScalarType()->getNonOpaquePointerElementType();
-  return wrap(ConstantExpr::getGetElementPtr(Ty, Val, IdxList));
-}
-
 LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                            LLVMValueRef *ConstantIndices, unsigned NumIndices) {
   ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
                                NumIndices);
   Constant *Val = unwrap<Constant>(ConstantVal);
   return wrap(ConstantExpr::getGetElementPtr(unwrap(Ty), Val, IdxList));
-}
-
-LLVMValueRef LLVMConstInBoundsGEP(LLVMValueRef ConstantVal,
-                                  LLVMValueRef *ConstantIndices,
-                                  unsigned NumIndices) {
-  ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
-                               NumIndices);
-  Constant *Val = unwrap<Constant>(ConstantVal);
-  Type *Ty = Val->getType()->getScalarType()->getNonOpaquePointerElementType();
-  return wrap(ConstantExpr::getInBoundsGetElementPtr(Ty, Val, IdxList));
 }
 
 LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
@@ -2208,15 +2189,6 @@ void LLVMSetExternallyInitialized(LLVMValueRef GlobalVar, LLVMBool IsExtInit) {
 }
 
 /*--.. Operations on aliases ......................................--*/
-
-LLVMValueRef LLVMAddAlias(LLVMModuleRef M, LLVMTypeRef Ty, LLVMValueRef Aliasee,
-                          const char *Name) {
-  auto *PTy = unwrap<PointerType>(Ty);
-  return wrap(GlobalAlias::create(PTy->getNonOpaquePointerElementType(),
-                                  PTy->getAddressSpace(),
-                                  GlobalValue::ExternalLinkage, Name,
-                                  unwrap<Constant>(Aliasee), unwrap(M)));
-}
 
 LLVMValueRef LLVMAddAlias2(LLVMModuleRef M, LLVMTypeRef ValueTy,
                            unsigned AddrSpace, LLVMValueRef Aliasee,
@@ -3147,19 +3119,6 @@ LLVMValueRef LLVMBuildIndirectBr(LLVMBuilderRef B, LLVMValueRef Addr,
   return wrap(unwrap(B)->CreateIndirectBr(unwrap(Addr), NumDests));
 }
 
-LLVMValueRef LLVMBuildInvoke(LLVMBuilderRef B, LLVMValueRef Fn,
-                             LLVMValueRef *Args, unsigned NumArgs,
-                             LLVMBasicBlockRef Then, LLVMBasicBlockRef Catch,
-                             const char *Name) {
-  Value *V = unwrap(Fn);
-  FunctionType *FnT =
-      cast<FunctionType>(V->getType()->getNonOpaquePointerElementType());
-
-  return wrap(
-      unwrap(B)->CreateInvoke(FnT, unwrap(Fn), unwrap(Then), unwrap(Catch),
-                              makeArrayRef(unwrap(Args), NumArgs), Name));
-}
-
 LLVMValueRef LLVMBuildInvoke2(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
                               LLVMValueRef *Args, unsigned NumArgs,
                               LLVMBasicBlockRef Then, LLVMBasicBlockRef Catch,
@@ -3519,15 +3478,6 @@ LLVMValueRef LLVMBuildFree(LLVMBuilderRef B, LLVMValueRef PointerVal) {
      CallInst::CreateFree(unwrap(PointerVal), unwrap(B)->GetInsertBlock())));
 }
 
-LLVMValueRef LLVMBuildLoad(LLVMBuilderRef B, LLVMValueRef PointerVal,
-                           const char *Name) {
-  Value *V = unwrap(PointerVal);
-  PointerType *Ty = cast<PointerType>(V->getType());
-
-  return wrap(
-      unwrap(B)->CreateLoad(Ty->getNonOpaquePointerElementType(), V, Name));
-}
-
 LLVMValueRef LLVMBuildLoad2(LLVMBuilderRef B, LLVMTypeRef Ty,
                             LLVMValueRef PointerVal, const char *Name) {
   return wrap(unwrap(B)->CreateLoad(unwrap(Ty), unwrap(PointerVal), Name));
@@ -3626,29 +3576,11 @@ LLVMValueRef LLVMBuildFence(LLVMBuilderRef B, LLVMAtomicOrdering Ordering,
                            Name));
 }
 
-LLVMValueRef LLVMBuildGEP(LLVMBuilderRef B, LLVMValueRef Pointer,
-                          LLVMValueRef *Indices, unsigned NumIndices,
-                          const char *Name) {
-  ArrayRef<Value *> IdxList(unwrap(Indices), NumIndices);
-  Value *Val = unwrap(Pointer);
-  Type *Ty = Val->getType()->getScalarType()->getNonOpaquePointerElementType();
-  return wrap(unwrap(B)->CreateGEP(Ty, Val, IdxList, Name));
-}
-
 LLVMValueRef LLVMBuildGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
                            LLVMValueRef Pointer, LLVMValueRef *Indices,
                            unsigned NumIndices, const char *Name) {
   ArrayRef<Value *> IdxList(unwrap(Indices), NumIndices);
   return wrap(unwrap(B)->CreateGEP(unwrap(Ty), unwrap(Pointer), IdxList, Name));
-}
-
-LLVMValueRef LLVMBuildInBoundsGEP(LLVMBuilderRef B, LLVMValueRef Pointer,
-                                  LLVMValueRef *Indices, unsigned NumIndices,
-                                  const char *Name) {
-  ArrayRef<Value *> IdxList(unwrap(Indices), NumIndices);
-  Value *Val = unwrap(Pointer);
-  Type *Ty = Val->getType()->getScalarType()->getNonOpaquePointerElementType();
-  return wrap(unwrap(B)->CreateInBoundsGEP(Ty, Val, IdxList, Name));
 }
 
 LLVMValueRef LLVMBuildInBoundsGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
@@ -3657,13 +3589,6 @@ LLVMValueRef LLVMBuildInBoundsGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
   ArrayRef<Value *> IdxList(unwrap(Indices), NumIndices);
   return wrap(
       unwrap(B)->CreateInBoundsGEP(unwrap(Ty), unwrap(Pointer), IdxList, Name));
-}
-
-LLVMValueRef LLVMBuildStructGEP(LLVMBuilderRef B, LLVMValueRef Pointer,
-                                unsigned Idx, const char *Name) {
-  Value *Val = unwrap(Pointer);
-  Type *Ty = Val->getType()->getScalarType()->getNonOpaquePointerElementType();
-  return wrap(unwrap(B)->CreateStructGEP(Ty, Val, Idx, Name));
 }
 
 LLVMValueRef LLVMBuildStructGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
@@ -3884,17 +3809,6 @@ LLVMValueRef LLVMBuildPhi(LLVMBuilderRef B, LLVMTypeRef Ty, const char *Name) {
   return wrap(unwrap(B)->CreatePHI(unwrap(Ty), 0, Name));
 }
 
-LLVMValueRef LLVMBuildCall(LLVMBuilderRef B, LLVMValueRef Fn,
-                           LLVMValueRef *Args, unsigned NumArgs,
-                           const char *Name) {
-  Value *V = unwrap(Fn);
-  FunctionType *FnT =
-      cast<FunctionType>(V->getType()->getNonOpaquePointerElementType());
-
-  return wrap(unwrap(B)->CreateCall(FnT, unwrap(Fn),
-                                    makeArrayRef(unwrap(Args), NumArgs), Name));
-}
-
 LLVMValueRef LLVMBuildCall2(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
                             LLVMValueRef *Args, unsigned NumArgs,
                             const char *Name) {
@@ -3960,13 +3874,6 @@ LLVMValueRef LLVMBuildIsNull(LLVMBuilderRef B, LLVMValueRef Val,
 LLVMValueRef LLVMBuildIsNotNull(LLVMBuilderRef B, LLVMValueRef Val,
                                 const char *Name) {
   return wrap(unwrap(B)->CreateIsNotNull(unwrap(Val), Name));
-}
-
-LLVMValueRef LLVMBuildPtrDiff(LLVMBuilderRef B, LLVMValueRef LHS,
-                              LLVMValueRef RHS, const char *Name) {
-  Value *L = unwrap(LHS);
-  Type *ElemTy = L->getType()->getNonOpaquePointerElementType();
-  return wrap(unwrap(B)->CreatePtrDiff(ElemTy, L, unwrap(RHS), Name));
 }
 
 LLVMValueRef LLVMBuildPtrDiff2(LLVMBuilderRef B, LLVMTypeRef ElemTy,

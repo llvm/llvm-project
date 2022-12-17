@@ -258,8 +258,8 @@ char *LLVMGetHostCPUFeatures(void) {
   StringMap<bool> HostFeatures;
 
   if (sys::getHostCPUFeatures(HostFeatures))
-    for (auto &F : HostFeatures)
-      Features.AddFeature(F.first(), F.second);
+    for (const auto &[Feature, IsEnabled] : HostFeatures)
+      Features.AddFeature(Feature, IsEnabled);
 
   return strdup(Features.getString().c_str());
 }

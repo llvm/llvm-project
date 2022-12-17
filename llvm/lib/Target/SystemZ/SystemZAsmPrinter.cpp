@@ -759,6 +759,17 @@ void SystemZAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
                             getSubtargetInfo());
 }
 
+// The *alignment* of 128-bit vector types is different between the software
+// and hardware vector ABIs. If the there is an externally visible use of a
+// vector type in the module it should be annotated with an attribute.
+void SystemZAsmPrinter::emitAttributes(Module &M) {
+  if (M.getModuleFlag("s390x-visible-vector-ABI")) {
+    bool HasVectorFeature =
+      TM.getMCSubtargetInfo()->getFeatureBits()[SystemZ::FeatureVector];
+    OutStreamer->emitGNUAttribute(8, HasVectorFeature ? 2 : 1);
+  }
+}
+
 // Convert a SystemZ-specific constant pool modifier into the associated
 // MCSymbolRefExpr variant kind.
 static MCSymbolRefExpr::VariantKind
@@ -857,6 +868,10 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
                MCOperand::createImm(MI->getOperand(OpNo + 1).getImm()),
                MI->getOperand(OpNo + 2).getReg(), OS);
   return false;
+}
+
+void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
+  emitAttributes(M);
 }
 
 void SystemZAsmPrinter::emitFunctionBodyEnd() {

@@ -191,7 +191,7 @@ struct CompletionCandidate {
   const CodeCompletionResult *SemaResult = nullptr;
   const Symbol *IndexResult = nullptr;
   const RawIdentifier *IdentifierResult = nullptr;
-  llvm::SmallVector<llvm::StringRef, 1> RankedIncludeHeaders;
+  llvm::SmallVector<SymbolInclude, 1> RankedIncludeHeaders;
 
   // Returns a token identifying the overload set this is part of.
   // 0 indicates it's not part of any overload set.
@@ -258,16 +258,20 @@ struct CompletionCandidate {
   headerToInsertIfAllowed(const CodeCompleteOptions &Opts) const {
     if (Opts.InsertIncludes == CodeCompleteOptions::NeverInsert ||
         RankedIncludeHeaders.empty())
-      return None;
+      return std::nullopt;
     if (SemaResult && SemaResult->Declaration) {
       // Avoid inserting new #include if the declaration is found in the current
       // file e.g. the symbol is forward declared.
       auto &SM = SemaResult->Declaration->getASTContext().getSourceManager();
       for (const Decl *RD : SemaResult->Declaration->redecls())
         if (SM.isInMainFile(SM.getExpansionLoc(RD->getBeginLoc())))
-          return None;
+          return std::nullopt;
     }
-    return RankedIncludeHeaders[0];
+    for (const auto &Inc : RankedIncludeHeaders)
+      // FIXME: We should support #import directives here.
+      if ((Inc.Directive & clang::clangd::Symbol::Include) != 0)
+        return Inc.Header;
+    return None;
   }
 
   using Bundle = llvm::SmallVector<CompletionCandidate, 4>;
@@ -383,16 +387,21 @@ struct CodeCompletionBuilder {
     bool ShouldInsert = C.headerToInsertIfAllowed(Opts).has_value();
     // Calculate include paths and edits for all possible headers.
     for (const auto &Inc : C.RankedIncludeHeaders) {
-      if (auto ToInclude = Inserted(Inc)) {
+      // FIXME: We should support #import directives here.
+      if ((Inc.Directive & clang::clangd::Symbol::Include) == 0)
+        continue;
+
+      if (auto ToInclude = Inserted(Inc.Header)) {
         CodeCompletion::IncludeCandidate Include;
         Include.Header = ToInclude->first;
         if (ToInclude->second && ShouldInsert)
-          Include.Insertion = Includes.insert(ToInclude->first);
+          Include.Insertion = Includes.insert(
+              ToInclude->first, tooling::IncludeDirective::Include);
         Completion.Includes.push_back(std::move(Include));
       } else
         log("Failed to generate include insertion edits for adding header "
             "(FileURI='{0}', IncludeHeader='{1}') into {2}: {3}",
-            C.IndexResult->CanonicalDeclaration.FileURI, Inc, FileName,
+            C.IndexResult->CanonicalDeclaration.FileURI, Inc.Header, FileName,
             ToInclude.takeError());
     }
     // Prefer includes that do not need edits (i.e. already exist).
@@ -1821,7 +1830,7 @@ private:
          (C.IndexResult &&
           C.IndexResult->SymInfo.Kind == index::SymbolKind::Macro)) &&
         !C.Name.startswith_insensitive(Filter->pattern()))
-      return None;
+      return std::nullopt;
     return Filter->match(C.Name);
   }
 
@@ -2049,7 +2058,7 @@ maybeFunctionArgumentCommentStart(llvm::StringRef Content) {
   Content = Content.rtrim();
   if (Content.endswith("/*"))
     return Content.size() - 2;
-  return None;
+  return std::nullopt;
 }
 
 CodeCompleteResult codeComplete(PathRef FileName, Position Pos,

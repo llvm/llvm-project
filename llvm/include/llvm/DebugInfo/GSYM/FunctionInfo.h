@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_GSYM_FUNCTIONINFO_H
 #define LLVM_DEBUGINFO_GSYM_FUNCTIONINFO_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
@@ -89,8 +88,8 @@ class GsymReader;
 struct FunctionInfo {
   AddressRange Range;
   uint32_t Name; ///< String table offset in the string table.
-  llvm::Optional<LineTable> OptLineTable;
-  llvm::Optional<InlineInfo> Inline;
+  std::optional<LineTable> OptLineTable;
+  std::optional<InlineInfo> Inline;
 
   FunctionInfo(uint64_t Addr = 0, uint64_t Size = 0, uint32_t N = 0)
       : Range(Addr, Addr + Size), Name(N) {}

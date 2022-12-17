@@ -278,17 +278,17 @@ Streams:
 ...
 )"),
                     llvm::Succeeded());
-  EXPECT_EQ(llvm::None, parser->FindMemoryRange(0x00));
-  EXPECT_EQ(llvm::None, parser->FindMemoryRange(0x2a));
+  EXPECT_EQ(std::nullopt, parser->FindMemoryRange(0x00));
+  EXPECT_EQ(std::nullopt, parser->FindMemoryRange(0x2a));
   EXPECT_EQ((minidump::Range{0x401d46, llvm::ArrayRef<uint8_t>{0x54, 0x21}}),
             parser->FindMemoryRange(0x401d46));
-  EXPECT_EQ(llvm::None, parser->FindMemoryRange(0x401d46 + 2));
+  EXPECT_EQ(std::nullopt, parser->FindMemoryRange(0x401d46 + 2));
 
   EXPECT_EQ(
       (minidump::Range{0x7ffceb34a000,
                        llvm::ArrayRef<uint8_t>{0xc8, 0x4d, 0x04, 0xbc, 0xe9}}),
       parser->FindMemoryRange(0x7ffceb34a000 + 2));
-  EXPECT_EQ(llvm::None, parser->FindMemoryRange(0x7ffceb34a000 + 5));
+  EXPECT_EQ(std::nullopt, parser->FindMemoryRange(0x7ffceb34a000 + 5));
 }
 
 TEST_F(MinidumpParserTest, GetMemory) {
@@ -536,7 +536,7 @@ Streams:
 ...
 )"),
                     llvm::Succeeded());
-  EXPECT_EQ(llvm::None, parser->GetLinuxProcStatus());
+  EXPECT_EQ(std::nullopt, parser->GetLinuxProcStatus());
 }
 
 TEST_F(MinidumpParserTest, GetMiscInfoWindows) {

@@ -363,7 +363,7 @@ static bool emitDialectDoc(const RecordKeeper &recordKeeper, raw_ostream &os) {
   std::vector<Record *> dialectDefs =
       recordKeeper.getAllDerivedDefinitionsIfDefined("Dialect");
   SmallVector<Dialect> dialects(dialectDefs.begin(), dialectDefs.end());
-  Optional<Dialect> dialect = findDialectToGenerate(dialects);
+  std::optional<Dialect> dialect = findDialectToGenerate(dialects);
   if (!dialect)
     return true;
 

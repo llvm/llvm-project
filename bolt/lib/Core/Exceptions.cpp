@@ -115,7 +115,7 @@ void BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
   uint8_t LPStartEncoding = Data.getU8(&Offset);
   uint64_t LPStart = 0;
   // Convert to offset if LPStartEncoding is typed absptr DW_EH_PE_absptr
-  if (Optional<uint64_t> MaybeLPStart = Data.getEncodedPointer(
+  if (std::optional<uint64_t> MaybeLPStart = Data.getEncodedPointer(
           &Offset, LPStartEncoding, Offset + LSDASectionAddress))
     LPStart = (LPStartEncoding && 0xFF == 0) ? *MaybeLPStart
                                              : *MaybeLPStart - Address;
@@ -393,7 +393,7 @@ void BinaryFunction::updateEHRanges() {
         // Extract exception handling information from the instruction.
         const MCSymbol *LP = nullptr;
         uint64_t Action = 0;
-        if (const Optional<MCPlus::MCLandingPad> EHInfo =
+        if (const std::optional<MCPlus::MCLandingPad> EHInfo =
                 BC.MIB->getEHInfo(*II))
           std::tie(LP, Action) = *EHInfo;
 
@@ -496,7 +496,7 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
     return true;
 
   const FDE &CurFDE = *I->second;
-  Optional<uint64_t> LSDA = CurFDE.getLSDAAddress();
+  std::optional<uint64_t> LSDA = CurFDE.getLSDAAddress();
   Function.setLSDAAddress(LSDA ? *LSDA : 0);
 
   uint64_t Offset = Function.getFirstInstructionOffset();
@@ -785,7 +785,7 @@ Error EHFrameParser::parseCIE(uint64_t StartOffset) {
       break;
     case 'P': {
       uint32_t PersonalityEncoding = Data.getU8(&Offset);
-      Optional<uint64_t> Personality =
+      std::optional<uint64_t> Personality =
           Data.getEncodedPointer(&Offset, PersonalityEncoding,
                                  EHFrameAddress ? EHFrameAddress + Offset : 0);
       // Patch personality address
@@ -817,7 +817,7 @@ Error EHFrameParser::parseCIE(uint64_t StartOffset) {
 
 Error EHFrameParser::parseFDE(uint64_t CIEPointer,
                               uint64_t StartStructureOffset) {
-  Optional<uint64_t> LSDAAddress;
+  std::optional<uint64_t> LSDAAddress;
   CIEInfo *Cie = CIEs[StartStructureOffset - CIEPointer];
 
   // The address size is encoded in the CIE we reference.

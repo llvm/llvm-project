@@ -86,15 +86,18 @@ static void checkDependences(ArrayRef<Operation *> loadsAndStores) {
         DependenceResult result = checkMemrefAccessDependence(
             srcAccess, dstAccess, d, &dependenceConstraints,
             &dependenceComponents);
-        assert(result.value != DependenceResult::Failure);
-        bool ret = hasDependence(result);
-        // TODO: Print dependence type (i.e. RAW, etc) and print
-        // distance vectors as: ([2, 3], [0, 10]). Also, shorten distance
-        // vectors from ([1, 1], [3, 3]) to (1, 3).
-        srcOpInst->emitRemark("dependence from ")
-            << i << " to " << j << " at depth " << d << " = "
-            << getDirectionVectorStr(ret, numCommonLoops, d,
-                                     dependenceComponents);
+        if (result.value == DependenceResult::Failure) {
+          srcOpInst->emitError("dependence check failed");
+        } else {
+          bool ret = hasDependence(result);
+          // TODO: Print dependence type (i.e. RAW, etc) and print
+          // distance vectors as: ([2, 3], [0, 10]). Also, shorten distance
+          // vectors from ([1, 1], [3, 3]) to (1, 3).
+          srcOpInst->emitRemark("dependence from ")
+              << i << " to " << j << " at depth " << d << " = "
+              << getDirectionVectorStr(ret, numCommonLoops, d,
+                                       dependenceComponents);
+        }
       }
     }
   }

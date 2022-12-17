@@ -300,18 +300,18 @@ public:
   static Optional<bool> getAsBoolLiteral(const Expr *E, bool FilterMacro) {
     if (const auto *Bool = dyn_cast<CXXBoolLiteralExpr>(E)) {
       if (FilterMacro && Bool->getBeginLoc().isMacroID())
-        return llvm::None;
+        return std::nullopt;
       return Bool->getValue();
     }
     if (const auto *UnaryOp = dyn_cast<UnaryOperator>(E)) {
       if (FilterMacro && UnaryOp->getBeginLoc().isMacroID())
-        return None;
+        return std::nullopt;
       if (UnaryOp->getOpcode() == UO_LNot)
         if (Optional<bool> Res = getAsBoolLiteral(
                 UnaryOp->getSubExpr()->IgnoreImplicit(), FilterMacro))
           return !*Res;
     }
-    return llvm::None;
+    return std::nullopt;
   }
 
   template <typename Node> struct NodeAndBool {

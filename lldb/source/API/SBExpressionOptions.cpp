@@ -94,7 +94,7 @@ uint32_t SBExpressionOptions::GetTimeoutInMicroSeconds() const {
 void SBExpressionOptions::SetTimeoutInMicroSeconds(uint32_t timeout) {
   LLDB_INSTRUMENT_VA(this, timeout);
 
-  m_opaque_up->SetTimeout(timeout == 0 ? Timeout<std::micro>(llvm::None)
+  m_opaque_up->SetTimeout(timeout == 0 ? Timeout<std::micro>(std::nullopt)
                                        : std::chrono::microseconds(timeout));
 }
 
@@ -110,7 +110,7 @@ void SBExpressionOptions::SetOneThreadTimeoutInMicroSeconds(uint32_t timeout) {
   LLDB_INSTRUMENT_VA(this, timeout);
 
   m_opaque_up->SetOneThreadTimeout(timeout == 0
-                                       ? Timeout<std::micro>(llvm::None)
+                                       ? Timeout<std::micro>(std::nullopt)
                                        : std::chrono::microseconds(timeout));
 }
 

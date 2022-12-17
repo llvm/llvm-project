@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -debug-only=loop-vectorize -S -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -debug-only=loop-vectorize -S -disable-output 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Make sure LV legal bails out when there is a non-int, non-ptr phi

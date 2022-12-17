@@ -53,7 +53,7 @@ define signext i32 @bar() #0 {
 ; AIX64-NEXT:  L..BB0_1: # %for.cond
 ; AIX64-NEXT:    #
 ; AIX64-NEXT:    lwz 3, 120(1)
-; AIX64-NEXT:    ld 4, L..C0(2) # @x
+; AIX64-NEXT:    ld 4, L..C0(2)
 ; AIX64-NEXT:    lwz 4, 0(4)
 ; AIX64-NEXT:    cmpw 3, 4
 ; AIX64-NEXT:    bge 0, L..BB0_4

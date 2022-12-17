@@ -16,11 +16,11 @@ namespace llvm {
 struct SymbolInfoTy;
 
 namespace objdump {
-Optional<XCOFF::StorageMappingClass>
+std::optional<XCOFF::StorageMappingClass>
 getXCOFFSymbolCsectSMC(const object::XCOFFObjectFile &Obj,
                        const object::SymbolRef &Sym);
 
-Optional<object::SymbolRef>
+std::optional<object::SymbolRef>
 getXCOFFSymbolContainingSymbolRef(const object::XCOFFObjectFile &Obj,
                                   const object::SymbolRef &Sym);
 

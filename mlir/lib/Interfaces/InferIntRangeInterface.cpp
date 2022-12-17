@@ -118,7 +118,7 @@ Optional<APInt> ConstantIntRanges::getConstantValue() const {
     return umin();
   if (smin() == smax() && smin().getBitWidth() != 0)
     return smin();
-  return None;
+  return std::nullopt;
 }
 
 raw_ostream &mlir::operator<<(raw_ostream &os, const ConstantIntRanges &range) {

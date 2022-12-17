@@ -7,6 +7,7 @@
 # chunk. Files are written to current working directory.
 
 import sys
+import re
 
 chunk_id = 0
 

@@ -1,5 +1,5 @@
-; RUN: opt -vector-library=MASSV -mtriple=powerpc64le-unknown-linux-gnu -inject-tli-mappings -loop-vectorize -force-vector-interleave=1 -S < %s | FileCheck %s
-; RUN: opt -vector-library=MASSV -vec-extabi -mattr=+altivec -mtriple=powerpc64-ibm-aix-xcoff -inject-tli-mappings -loop-vectorize -force-vector-interleave=1 -S < %s | FileCheck %s
+; RUN: opt -vector-library=MASSV -mtriple=powerpc64le-unknown-linux-gnu -passes=inject-tli-mappings,loop-vectorize -force-vector-interleave=1 -S < %s | FileCheck %s
+; RUN: opt -vector-library=MASSV -vec-extabi -mattr=+altivec -mtriple=powerpc64-ibm-aix-xcoff -passes=inject-tli-mappings,loop-vectorize -force-vector-interleave=1 -S < %s | FileCheck %s
 
 declare double @cbrt(double) #0
 declare float @cbrtf(float) #0

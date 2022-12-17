@@ -63,7 +63,7 @@ static Optional<int64_t> unpackedDim(OpTy xferOp) {
   }
   assert(xferOp.isBroadcastDim(0) &&
          "Expected AffineDimExpr or AffineConstantExpr");
-  return None;
+  return std::nullopt;
 }
 
 /// Compute the permutation map for the new (N-1)-D vector transfer op. This
@@ -1114,7 +1114,7 @@ get1dMemrefIndices(OpBuilder &b, OpTy xferOp, Value iv,
 
   assert(xferOp.isBroadcastDim(0) &&
          "Expected AffineDimExpr or AffineConstantExpr");
-  return None;
+  return std::nullopt;
 }
 
 /// Codegen strategy for TransferOp1dConversion, depending on the

@@ -44,8 +44,8 @@ public:
 
   //
   // Derived classes should provide the following method which performs the
-  // actual conversion. It should return llvm::None upon conversion failure and
-  // return the converted operation upon success.
+  // actual conversion. It should return std::nullopt upon conversion failure
+  // and return the converted operation upon success.
   //
   // Optional<SourceOp> convertSourceOp(SourceOp op, OpAdaptor adaptor,
   //                                    ConversionPatternRewriter &rewriter,
@@ -127,7 +127,7 @@ public:
 
     // convertRegionTypes already takes care of 1:N conversion.
     if (failed(rewriter.convertRegionTypes(&op.getLoopBody(), *typeConverter)))
-      return llvm::None;
+      return std::nullopt;
 
     // Unpacked the iteration arguments.
     SmallVector<Value> flatArgs;
@@ -201,7 +201,7 @@ public:
 
     for (auto i : {0u, 1u}) {
       if (failed(rewriter.convertRegionTypes(&op.getRegion(i), *typeConverter)))
-        return llvm::None;
+        return std::nullopt;
       auto &dstRegion = newOp.getRegion(i);
       rewriter.inlineRegionBefore(op.getRegion(i), dstRegion, dstRegion.end());
     }

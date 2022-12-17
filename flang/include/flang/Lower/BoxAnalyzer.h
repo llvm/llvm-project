@@ -79,7 +79,7 @@ struct ScalarDynamicChar : ScalarSym {
   llvm::Optional<Fortran::lower::SomeExpr> charLen() const {
     if (auto *l = std::get_if<Fortran::lower::SomeExpr>(&len))
       return {*l};
-    return llvm::None;
+    return std::nullopt;
   }
 
   static constexpr bool staticSize() { return false; }
@@ -323,7 +323,7 @@ public:
         [](const ScalarStaticChar &x) -> A { return {x.charLen()}; },
         [](const StaticArrayStaticChar &x) -> A { return {x.charLen()}; },
         [](const DynamicArrayStaticChar &x) -> A { return {x.charLen()}; },
-        [](const auto &) -> A { return llvm::None; });
+        [](const auto &) -> A { return std::nullopt; });
   }
 
   llvm::Optional<Fortran::lower::SomeExpr> getCharLenExpr() const {
@@ -331,7 +331,7 @@ public:
     return match([](const ScalarDynamicChar &x) { return x.charLen(); },
                  [](const StaticArrayDynamicChar &x) { return x.charLen(); },
                  [](const DynamicArrayDynamicChar &x) { return x.charLen(); },
-                 [](const auto &) -> A { return llvm::None; });
+                 [](const auto &) -> A { return std::nullopt; });
   }
 
   /// Is the origin of this array the default of vector of `1`?
@@ -480,7 +480,7 @@ private:
           return 0;
         return *asInt;
       }
-    return llvm::None;
+    return std::nullopt;
   }
 
   // Get the `SomeExpr` that describes the CHARACTER's LEN.
@@ -503,7 +503,7 @@ private:
             if (Fortran::semantics::MaybeSubscriptIntExpr expr =
                     charExpr->LEN())
               return {Fortran::evaluate::AsGenericExpr(std::move(*expr))};
-    return llvm::None;
+    return std::nullopt;
   }
 
   VT box;

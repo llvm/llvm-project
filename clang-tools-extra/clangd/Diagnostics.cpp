@@ -622,7 +622,7 @@ void StoreDiags::BeginSourceFile(const LangOptions &Opts,
 
 void StoreDiags::EndSourceFile() {
   flushLastDiag();
-  LangOpts = None;
+  LangOpts = std::nullopt;
   OrigSrcMgr = nullptr;
 }
 
@@ -923,7 +923,7 @@ llvm::Optional<std::string> getDiagnosticDocURI(Diag::DiagSource Source,
     // '-' in the name.
     std::tie(Module, Check) = Name.split('-');
     if (Module.empty() || Check.empty())
-      return llvm::None;
+      return std::nullopt;
     return ("https://clang.llvm.org/extra/clang-tidy/checks/" + Module + "/" +
             Check + ".html")
         .str();
@@ -937,7 +937,7 @@ llvm::Optional<std::string> getDiagnosticDocURI(Diag::DiagSource Source,
     // However we have no diagnostic codes, which the link should describe!
     break;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 } // namespace clangd

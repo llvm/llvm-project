@@ -156,8 +156,11 @@ check-format)
     echo "+++ Checking formatting"
     # We need to set --extensions so that clang-format checks extensionless files.
     mkdir -p ${BUILD_DIR}
-    git-clang-format \
-        --binary /usr/bin/clang-format --diff \
+    if [ -z "${GIT_CLANG_FORMAT}" ]; then
+       GIT_CLANG_FORMAT=git-clang-format
+    fi
+    ${GIT_CLANG_FORMAT} \
+        --diff \
         --extensions ',h,hh,hpp,hxx,c,cc,cxx,cpp' HEAD~1 \
         -- \
             libcxx/{benchmarks,include,src,test} \

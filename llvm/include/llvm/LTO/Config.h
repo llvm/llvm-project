@@ -153,7 +153,7 @@ struct Config {
   ///                    compilation.
   ///
   /// If threshold option is not specified, it is disabled by default.
-  llvm::Optional<uint64_t> RemarksHotnessThreshold = 0;
+  std::optional<uint64_t> RemarksHotnessThreshold = 0;
 
   /// The format used for serializing remarks (default: YAML).
   std::string RemarksFormat;

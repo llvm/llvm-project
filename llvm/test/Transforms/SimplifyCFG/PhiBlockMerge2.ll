@@ -3,7 +3,7 @@
 ; where the mergedinto block doesn't have any PHI nodes, and is in fact
 ; dominated by the block-to-be-eliminated
 ;
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 ;
 
 declare i1 @foo()

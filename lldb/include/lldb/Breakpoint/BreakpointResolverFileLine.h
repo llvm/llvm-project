@@ -24,7 +24,7 @@ public:
   BreakpointResolverFileLine(
       const lldb::BreakpointSP &bkpt, lldb::addr_t offset, bool skip_prologue,
       const SourceLocationSpec &location_spec,
-      llvm::Optional<llvm::StringRef> removed_prefix_opt = llvm::None);
+      llvm::Optional<llvm::StringRef> removed_prefix_opt = std::nullopt);
 
   static BreakpointResolver *
   CreateFromStructuredData(const lldb::BreakpointSP &bkpt,

@@ -12,12 +12,19 @@ define void @test() nounwind comdat {
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu 1, -64(1)
 ; CHECK-NEXT:    std 0, 80(1)
-; CHECK-NEXT:    ld 29, 0(3)
+; CHECK-NEXT:    ld 3, 0(3)
 ; CHECK-NEXT:    ld 30, 32(1)
-; CHECK-NEXT:    cmpld 30, 29
-; CHECK-NEXT:    bge- 0, .LBB0_2
-; CHECK-NEXT:    .p2align 5
-; CHECK-NEXT:  .LBB0_1: # %bounds.ok
+; CHECK-NEXT:    sub 4, 3, 30
+; CHECK-NEXT:    cmpld 4, 3
+; CHECK-NEXT:    iselgt 3, 0, 4
+; CHECK-NEXT:    addi 29, 3, 1
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB0_1: # %forcond
+; CHECK-NEXT:    #
+; CHECK-NEXT:    addi 29, 29, -1
+; CHECK-NEXT:    cmpldi 29, 0
+; CHECK-NEXT:    bc 4, 1, .LBB0_3
+; CHECK-NEXT:  # %bb.2: # %bounds.ok
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lfs 2, 0(3)
 ; CHECK-NEXT:    xxlxor 1, 1, 1
@@ -25,9 +32,8 @@ define void @test() nounwind comdat {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi 30, 30, 1
 ; CHECK-NEXT:    stfs 1, 0(3)
-; CHECK-NEXT:    cmpld 30, 29
-; CHECK-NEXT:    blt+ 0, .LBB0_1
-; CHECK-NEXT:  .LBB0_2: # %bounds.fail
+; CHECK-NEXT:    b .LBB0_1
+; CHECK-NEXT:  .LBB0_3: # %bounds.fail
 ; CHECK-NEXT:    std 30, 32(1)
   %pos = alloca i64, align 8
   br label %forcond

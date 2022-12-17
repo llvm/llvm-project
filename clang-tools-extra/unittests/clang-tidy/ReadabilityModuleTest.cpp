@@ -256,7 +256,7 @@ TEST(BracesAroundStatementsCheckTest, IfElseWithShortStatements) {
                 "  else if (1 == 2) return -2;\n"
                 "  else return -3;\n"
                 "}",
-                nullptr, "input.cc", None, Options));
+                nullptr, "input.cc", std::nullopt, Options));
 
   // If the last else is an else-if, we also force it.
   EXPECT_EQ("int main() {\n"
@@ -269,7 +269,7 @@ TEST(BracesAroundStatementsCheckTest, IfElseWithShortStatements) {
                 "  if (false) return -1;\n"
                 "  else if (1 == 2) return -2;\n"
                 "}",
-                nullptr, "input.cc", None, Options));
+                nullptr, "input.cc", std::nullopt, Options));
 }
 
 TEST(BracesAroundStatementsCheckTest, For) {
@@ -484,7 +484,8 @@ TEST(BracesAroundStatementsCheckTest, Macros) {
 }
 
 #define EXPECT_NO_CHANGES_WITH_OPTS(Check, Opts, Code)                         \
-  EXPECT_EQ(Code, runCheckOnCode<Check>(Code, nullptr, "input.cc", None, Opts))
+  EXPECT_EQ(Code, runCheckOnCode<Check>(Code, nullptr, "input.cc",             \
+                                        std::nullopt, Opts))
 TEST(BracesAroundStatementsCheckTest, ImplicitCastInReturn) {
   ClangTidyOptions Opts;
   Opts.CheckOptions["test-check-0.ShortStatementLines"] = "1";

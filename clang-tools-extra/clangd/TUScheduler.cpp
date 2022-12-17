@@ -140,7 +140,7 @@ static clang::clangd::Key<std::string> FileBeingProcessed;
 llvm::Optional<llvm::StringRef> TUScheduler::getFileBeingProcessedInContext() {
   if (auto *File = Context::current().get(FileBeingProcessed))
     return llvm::StringRef(*File);
-  return None;
+  return std::nullopt;
 }
 
 /// An LRU cache of idle ASTs.
@@ -180,7 +180,7 @@ public:
     ForCleanup.reset();
   }
 
-  /// Returns the cached value for \p K, or llvm::None if the value is not in
+  /// Returns the cached value for \p K, or std::nullopt if the value is not in
   /// the cache anymore. If nullptr was cached for \p K, this function will
   /// return a null unique_ptr wrapped into an optional.
   /// If \p AccessMetric is set records whether there was a hit or miss.
@@ -192,7 +192,7 @@ public:
     if (Existing == LRU.end()) {
       if (AccessMetric)
         AccessMetric->record(1, "miss");
-      return None;
+      return std::nullopt;
     }
     if (AccessMetric)
       AccessMetric->record(1, "hit");
@@ -996,7 +996,7 @@ void ASTWorker::runWithAST(
          FileInputs.Version);
     Action(InputsAndAST{FileInputs, **AST});
   };
-  startTask(Name, std::move(Task), /*Update=*/None, Invalidation);
+  startTask(Name, std::move(Task), /*Update=*/std::nullopt, Invalidation);
 }
 
 /// To be called from ThreadCrashReporter's signal handler.
@@ -1132,7 +1132,7 @@ void ASTWorker::updatePreamble(std::unique_ptr<CompilerInvocation> CI,
     std::lock_guard<std::mutex> Lock(Mutex);
     PreambleRequests.push_back({std::move(Task), std::string(TaskName),
                                 steady_clock::now(), Context::current().clone(),
-                                llvm::None, llvm::None,
+                                std::nullopt, std::nullopt,
                                 TUScheduler::NoInvalidation, nullptr});
   }
   PreambleCV.notify_all();
@@ -1464,12 +1464,12 @@ Deadline ASTWorker::scheduleLocked() {
   for (auto I = Requests.begin(), E = Requests.end(); I != E; ++I) {
     if (!isCancelled(I->Ctx)) {
       // Cancellations after the first read don't affect current scheduling.
-      if (I->Update == None)
+      if (I->Update == std::nullopt)
         break;
       continue;
     }
     // Cancelled reads are moved to the front of the queue and run immediately.
-    if (I->Update == None) {
+    if (I->Update == std::nullopt) {
       Request R = std::move(*I);
       Requests.erase(I);
       Requests.push_front(std::move(R));
@@ -1490,7 +1490,8 @@ Deadline ASTWorker::scheduleLocked() {
   // We debounce "maybe-unused" writes, sleeping in case they become dead.
   // But don't delay reads (including updates where diagnostics are needed).
   for (const auto &R : Requests)
-    if (R.Update == None || R.Update->Diagnostics == WantDiagnostics::Yes)
+    if (R.Update == std::nullopt ||
+        R.Update->Diagnostics == WantDiagnostics::Yes)
       return Deadline::zero();
   // Front request needs to be debounced, so determine when we're ready.
   Deadline D(Requests.front().AddTime + UpdateDebounce.compute(RebuildTimes));

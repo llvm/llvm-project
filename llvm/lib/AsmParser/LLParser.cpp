@@ -3870,7 +3870,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
         return true;
     }
 
-    Optional<unsigned> InRangeOp;
+    std::optional<unsigned> InRangeOp;
     if (parseGlobalValueVector(
             Elts, Opc == Instruction::GetElementPtr ? &InRangeOp : nullptr) ||
         parseToken(lltok::rparen, "expected ')' in constantexpr"))
@@ -4013,7 +4013,7 @@ bool LLParser::parseOptionalComdat(StringRef GlobalName, Comdat *&C) {
 ///   ::= /*empty*/
 ///   ::= [inrange] TypeAndValue (',' [inrange] TypeAndValue)*
 bool LLParser::parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts,
-                                      Optional<unsigned> *InRangeOp) {
+                                      std::optional<unsigned> *InRangeOp) {
   // Empty list.
   if (Lex.getKind() == lltok::rbrace ||
       Lex.getKind() == lltok::rsquare ||
@@ -4605,7 +4605,7 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name, MDFieldList &Result) {
 template <>
 bool LLParser::parseMDField(LocTy Loc, StringRef Name,
                             ChecksumKindField &Result) {
-  Optional<DIFile::ChecksumKind> CSKind =
+  std::optional<DIFile::ChecksumKind> CSKind =
       DIFile::getChecksumKind(Lex.getStrVal());
 
   if (Lex.getKind() != lltok::ChecksumKind || !CSKind)
@@ -4918,7 +4918,7 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Optional<unsigned> DWARFAddressSpace;
+  std::optional<unsigned> DWARFAddressSpace;
   if (dwarfAddressSpace.Val != UINT32_MAX)
     DWARFAddressSpace = dwarfAddressSpace.Val;
 
@@ -5018,13 +5018,13 @@ bool LLParser::parseDIFile(MDNode *&Result, bool IsDistinct) {
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Optional<DIFile::ChecksumInfo<MDString *>> OptChecksum;
+  std::optional<DIFile::ChecksumInfo<MDString *>> OptChecksum;
   if (checksumkind.Seen && checksum.Seen)
     OptChecksum.emplace(checksumkind.Val, checksum.Val);
   else if (checksumkind.Seen || checksum.Seen)
     return Lex.Error("'checksumkind' and 'checksum' must be provided together");
 
-  Optional<MDString *> OptSource;
+  std::optional<MDString *> OptSource;
   if (source.Seen)
     OptSource = source.Val;
   Result = GET_OR_DISTINCT(DIFile, (Context, filename.Val, directory.Val,

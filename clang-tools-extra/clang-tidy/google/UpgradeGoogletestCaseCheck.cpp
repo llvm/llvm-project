@@ -37,7 +37,7 @@ getNewMacroName(llvm::StringRef MacroName) {
       return Mapping.second;
   }
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 namespace {

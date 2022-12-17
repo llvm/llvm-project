@@ -67,8 +67,8 @@ struct ParsedSourceRange {
   /// second element is the column.
   std::pair<unsigned, unsigned> End;
 
-  /// Returns a parsed source range from a string or None if the string is
-  /// invalid.
+  /// Returns a parsed source range from a string or std::nullopt if the string
+  /// is invalid.
   ///
   /// These source string has the following format:
   ///
@@ -93,7 +93,7 @@ struct ParsedSourceRange {
     }
     auto Begin = ParsedSourceLocation::FromString(RangeSplit.first);
     if (Begin.FileName.empty())
-      return None;
+      return std::nullopt;
     if (!HasEndLoc) {
       EndLine = Begin.Line;
       EndColumn = Begin.Column;

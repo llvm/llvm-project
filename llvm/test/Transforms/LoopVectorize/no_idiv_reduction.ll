@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -S < %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -S < %s | FileCheck %s
 @a = common global [128 x i32] zeroinitializer, align 16
 
 ;; Must not vectorize division reduction. Division is lossy.

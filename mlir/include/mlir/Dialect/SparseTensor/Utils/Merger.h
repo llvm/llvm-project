@@ -174,9 +174,9 @@ public:
         dimTypes(numTensors,
                  std::vector<DimLevelType>(numLoops, DimLevelType::Undef)),
         loopIdxToDim(numTensors,
-                     std::vector<Optional<unsigned>>(numLoops, llvm::None)),
+                     std::vector<Optional<unsigned>>(numLoops, std::nullopt)),
         dimToLoopIdx(numTensors,
-                     std::vector<Optional<unsigned>>(numLoops, llvm::None)) {}
+                     std::vector<Optional<unsigned>>(numLoops, std::nullopt)) {}
 
   /// Adds a tensor expression. Returns its index.
   unsigned addExp(Kind k, unsigned e0, unsigned e1 = -1u, Value v = Value(),

@@ -412,7 +412,7 @@ WhileOpConversion::matchAndRewrite(scf::WhileOp whileOp, OpAdaptor adaptor,
 
   rewriter.setInsertionPointToEnd(&beforeBlock);
   rewriter.replaceOpWithNewOp<spirv::BranchConditionalOp>(
-      cond, conditionVal, &afterBlock, condArgs, &mergeBlock, llvm::None);
+      cond, conditionVal, &afterBlock, condArgs, &mergeBlock, std::nullopt);
 
   // Convert the scf.yield op to a branch back to the header block.
   rewriter.setInsertionPointToEnd(&afterBlock);

@@ -533,8 +533,9 @@ public:
       bool IgnoreTemplateOrMacroSubstitution = false) const;
 
   /// isIntegerConstantExpr - Return the value if this expression is a valid
-  /// integer constant expression.  If not a valid i-c-e, return None and fill
-  /// in Loc (if specified) with the location of the invalid expression.
+  /// integer constant expression.  If not a valid i-c-e, return std::nullopt
+  /// and fill in Loc (if specified) with the location of the invalid
+  /// expression.
   ///
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.

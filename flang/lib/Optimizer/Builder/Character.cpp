@@ -372,7 +372,7 @@ fir::factory::CharacterExprHelper::createCharacterTemp(mlir::Type type,
   if (typeLen == fir::CharacterType::unknownLen())
     lenParams.push_back(len);
   auto ref = builder.allocateLocal(loc, charTy, "", ".chrtmp",
-                                   /*shape=*/llvm::None, lenParams);
+                                   /*shape=*/std::nullopt, lenParams);
   return {ref, len};
 }
 
@@ -419,7 +419,8 @@ void fir::factory::CharacterExprHelper::createAssign(
   auto rhsCstLen = getCompileTimeLength(rhs);
   auto lhsCstLen = getCompileTimeLength(lhs);
   bool compileTimeSameLength =
-      lhsCstLen && rhsCstLen && *lhsCstLen == *rhsCstLen;
+      (lhsCstLen && rhsCstLen && *lhsCstLen == *rhsCstLen) ||
+      (rhs.getLen() == lhs.getLen());
 
   if (compileTimeSameLength && *lhsCstLen == 1) {
     createLengthOneAssign(lhs, rhs);

@@ -95,7 +95,8 @@ void AbstractSparseDataFlowAnalysis::visitOperation(Operation *op) {
   // The results of a region branch operation are determined by control-flow.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
     return visitRegionSuccessors({branch}, branch,
-                                 /*successorIndex=*/llvm::None, resultLattices);
+                                 /*successorIndex=*/std::nullopt,
+                                 resultLattices);
   }
 
   // The results of a call operation are determined by the callgraph.

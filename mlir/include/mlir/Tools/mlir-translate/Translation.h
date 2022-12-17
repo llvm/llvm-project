@@ -100,11 +100,11 @@ struct TranslateToMLIRRegistration {
   TranslateToMLIRRegistration(
       llvm::StringRef name, llvm::StringRef description,
       const TranslateSourceMgrToMLIRFunction &function,
-      Optional<llvm::Align> inputAlignment = llvm::None);
+      Optional<llvm::Align> inputAlignment = std::nullopt);
   TranslateToMLIRRegistration(
       llvm::StringRef name, llvm::StringRef description,
       const TranslateStringRefToMLIRFunction &function,
-      Optional<llvm::Align> inputAlignment = llvm::None);
+      Optional<llvm::Align> inputAlignment = std::nullopt);
 };
 
 struct TranslateFromMLIRRegistration {

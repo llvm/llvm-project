@@ -281,7 +281,7 @@ libc++ specific options
 .. option:: LIBCXX_INSTALL_INCLUDE_TARGET_DIR:PATH
 
   **Default**: ``include/c++/v1`` or
-  ``include/${LLVM_TARGET_TRIPLE}/c++/v1``
+  ``include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1``
 
   Path where target-specific libc++ headers should be installed. If a relative
   path, relative to ``CMAKE_INSTALL_PREFIX``.

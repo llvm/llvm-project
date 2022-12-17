@@ -75,7 +75,7 @@ struct SemaphorePipe {
   static llvm::Optional<SemaphorePipe> create() {
     int InotifyPollingStopperFDs[2];
     if (pipe2(InotifyPollingStopperFDs, O_CLOEXEC) == -1)
-      return llvm::None;
+      return std::nullopt;
     return SemaphorePipe(InotifyPollingStopperFDs);
   }
 };

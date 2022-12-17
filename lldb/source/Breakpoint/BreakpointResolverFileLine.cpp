@@ -200,7 +200,7 @@ void BreakpointResolverFileLine::DeduceSourceMapping(
   const llvm::StringRef path_separator = llvm::sys::path::get_separator(
       m_location_spec.GetFileSpec().GetPathStyle());
   // Check if "b" is a suffix of "a".
-  // And return llvm::None if not or the new path
+  // And return std::nullopt if not or the new path
   // of "a" after consuming "b" from the back.
   auto check_suffix =
       [path_separator](llvm::StringRef a, llvm::StringRef b,
@@ -210,7 +210,7 @@ void BreakpointResolverFileLine::DeduceSourceMapping(
         return a;
       }
     }
-    return llvm::None;
+    return std::nullopt;
   };
 
   FileSpec request_file = m_location_spec.GetFileSpec();

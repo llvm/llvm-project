@@ -277,8 +277,8 @@ define <16 x half> @test_mask_load_16xf16(<16 x i1> %mask, ptr %addr) {
 ; CHECK-NEXT:    testb $64, %al
 ; CHECK-NEXT:    jne LBB12_16
 ; CHECK-NEXT:  LBB12_17: ## %else17
-; CHECK-NEXT:    testb $-128, %al
-; CHECK-NEXT:    jne LBB12_18
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    js LBB12_18
 ; CHECK-NEXT:  LBB12_19: ## %else20
 ; CHECK-NEXT:    testl $256, %eax ## imm = 0x100
 ; CHECK-NEXT:    jne LBB12_20
@@ -313,8 +313,8 @@ define <16 x half> @test_mask_load_16xf16(<16 x i1> %mask, ptr %addr) {
 ; CHECK-NEXT:    je LBB12_17
 ; CHECK-NEXT:  LBB12_16: ## %cond.load16
 ; CHECK-NEXT:    movzwl 12(%rsi), %ebp
-; CHECK-NEXT:    testb $-128, %al
-; CHECK-NEXT:    je LBB12_19
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jns LBB12_19
 ; CHECK-NEXT:  LBB12_18: ## %cond.load19
 ; CHECK-NEXT:    movzwl 14(%rsi), %r14d
 ; CHECK-NEXT:    testl $256, %eax ## imm = 0x100
@@ -410,8 +410,8 @@ define void @test_mask_store_16xf16(<16 x i1> %mask, ptr %addr, <16 x half> %val
 ; CHECK-NEXT:    testb $64, %al
 ; CHECK-NEXT:    jne LBB13_13
 ; CHECK-NEXT:  LBB13_14: ## %else12
-; CHECK-NEXT:    testb $-128, %al
-; CHECK-NEXT:    jne LBB13_15
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    js LBB13_15
 ; CHECK-NEXT:  LBB13_16: ## %else14
 ; CHECK-NEXT:    testl $256, %eax ## imm = 0x100
 ; CHECK-NEXT:    jne LBB13_17
@@ -466,8 +466,8 @@ define void @test_mask_store_16xf16(<16 x i1> %mask, ptr %addr, <16 x half> %val
 ; CHECK-NEXT:  LBB13_13: ## %cond.store11
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
 ; CHECK-NEXT:    movw %cx, 12(%rdi)
-; CHECK-NEXT:    testb $-128, %al
-; CHECK-NEXT:    je LBB13_16
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jns LBB13_16
 ; CHECK-NEXT:  LBB13_15: ## %cond.store13
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
 ; CHECK-NEXT:    movw %cx, 14(%rdi)

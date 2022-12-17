@@ -169,8 +169,8 @@ public:
   /// Return the first line entry if the line table isn't empty.
   ///
   /// \returns An optional line entry with the first line entry if the line
-  /// table isn't empty, or llvm::None if the line table is emtpy.
-  Optional<LineEntry> first() const {
+  /// table isn't empty, or std::nullopt if the line table is emtpy.
+  std::optional<LineEntry> first() const {
     if (Lines.empty())
       return std::nullopt;
     return Lines.front();
@@ -178,8 +178,8 @@ public:
   /// Return the last line entry if the line table isn't empty.
   ///
   /// \returns An optional line entry with the last line entry if the line
-  /// table isn't empty, or llvm::None if the line table is emtpy.
-  Optional<LineEntry> last() const {
+  /// table isn't empty, or std::nullopt if the line table is emtpy.
+  std::optional<LineEntry> last() const {
     if (Lines.empty())
       return std::nullopt;
     return Lines.back();

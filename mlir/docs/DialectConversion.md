@@ -301,15 +301,15 @@ class TypeConverter {
   /// to any of the following forms(where `T` is a class derived from `Type`:
   ///   * Optional<Type>(T)
   ///     - This form represents a 1-1 type conversion. It should return nullptr
-  ///       or `llvm::None` to signify failure. If `llvm::None` is returned, the
+  ///       or `std::nullopt` to signify failure. If `std::nullopt` is returned, the
   ///       converter is allowed to try another conversion function to perform
   ///       the conversion.
   ///   * Optional<LogicalResult>(T, SmallVectorImpl<Type> &)
   ///     - This form represents a 1-N type conversion. It should return
-  ///       `failure` or `llvm::None` to signify a failed conversion. If the new
+  ///       `failure` or `std::nullopt` to signify a failed conversion. If the new
   ///       set of types is empty, the type is removed and any usages of the
   ///       existing value are expected to be removed during conversion. If
-  ///       `llvm::None` is returned, the converter is allowed to try another
+  ///       `std::nullopt` is returned, the converter is allowed to try another
   ///       conversion function to perform the conversion.
   ///   * Optional<LogicalResult>(T, SmallVectorImpl<Type> &, ArrayRef<Type>)
   ///     - This form represents a 1-N type conversion supporting recursive
@@ -334,7 +334,7 @@ class TypeConverter {
   /// This function is responsible for creating an operation, using the
   /// OpBuilder and Location provided, that "converts" a range of values into a
   /// single value of the given type `T`. It must return a Value of the
-  /// converted type on success, an `llvm::None` if it failed but other
+  /// converted type on success, an `std::nullopt` if it failed but other
   /// materialization can be attempted, and `nullptr` on unrecoverable failure.
   /// It will only be called for (sub)types of `T`.
   ///

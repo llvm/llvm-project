@@ -11590,8 +11590,9 @@ public:
   /// \param TI The trait info object representing the match clause.
   /// \param NumAppendArgs The number of omp_interop_t arguments to account for
   /// in checking.
-  /// \returns None, if the function/variant function are not compatible with
-  /// the pragma, pair of original function/variant ref expression otherwise.
+  /// \returns std::nullopt, if the function/variant function are not compatible
+  /// with the pragma, pair of original function/variant ref expression
+  /// otherwise.
   Optional<std::pair<FunctionDecl *, Expr *>>
   checkOpenMPDeclareVariantFunction(DeclGroupPtrTy DG, Expr *VariantRef,
                                     OMPTraitInfo &TI, unsigned NumAppendArgs,

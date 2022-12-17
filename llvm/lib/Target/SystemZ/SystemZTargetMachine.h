@@ -15,7 +15,6 @@
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZTARGETMACHINE_H
 
 #include "SystemZSubtarget.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/CodeGen.h"

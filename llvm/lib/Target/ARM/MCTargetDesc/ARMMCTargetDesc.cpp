@@ -431,15 +431,14 @@ public:
     return false;
   }
 
-  Optional<uint64_t> evaluateMemoryOperandAddress(const MCInst &Inst,
-                                                  const MCSubtargetInfo *STI,
-                                                  uint64_t Addr,
-                                                  uint64_t Size) const override;
+  std::optional<uint64_t>
+  evaluateMemoryOperandAddress(const MCInst &Inst, const MCSubtargetInfo *STI,
+                               uint64_t Addr, uint64_t Size) const override;
 };
 
 } // namespace
 
-static Optional<uint64_t>
+static std::optional<uint64_t>
 // NOLINTNEXTLINE(readability-identifier-naming)
 evaluateMemOpAddrForAddrMode_i12(const MCInst &Inst, const MCInstrDesc &Desc,
                                  unsigned MemOpIndex, uint64_t Addr) {
@@ -458,10 +457,9 @@ evaluateMemOpAddrForAddrMode_i12(const MCInst &Inst, const MCInstrDesc &Desc,
   return Addr + OffImm;
 }
 
-static Optional<uint64_t> evaluateMemOpAddrForAddrMode3(const MCInst &Inst,
-                                                        const MCInstrDesc &Desc,
-                                                        unsigned MemOpIndex,
-                                                        uint64_t Addr) {
+static std::optional<uint64_t>
+evaluateMemOpAddrForAddrMode3(const MCInst &Inst, const MCInstrDesc &Desc,
+                              unsigned MemOpIndex, uint64_t Addr) {
   if (MemOpIndex + 2 >= Desc.getNumOperands())
     return std::nullopt;
 
@@ -479,10 +477,9 @@ static Optional<uint64_t> evaluateMemOpAddrForAddrMode3(const MCInst &Inst,
   return Addr + ImmOffs;
 }
 
-static Optional<uint64_t> evaluateMemOpAddrForAddrMode5(const MCInst &Inst,
-                                                        const MCInstrDesc &Desc,
-                                                        unsigned MemOpIndex,
-                                                        uint64_t Addr) {
+static std::optional<uint64_t>
+evaluateMemOpAddrForAddrMode5(const MCInst &Inst, const MCInstrDesc &Desc,
+                              unsigned MemOpIndex, uint64_t Addr) {
   if (MemOpIndex + 1 >= Desc.getNumOperands())
     return std::nullopt;
 
@@ -499,7 +496,7 @@ static Optional<uint64_t> evaluateMemOpAddrForAddrMode5(const MCInst &Inst,
   return Addr + ImmOffs * 4;
 }
 
-static Optional<uint64_t>
+static std::optional<uint64_t>
 evaluateMemOpAddrForAddrMode5FP16(const MCInst &Inst, const MCInstrDesc &Desc,
                                   unsigned MemOpIndex, uint64_t Addr) {
   if (MemOpIndex + 1 >= Desc.getNumOperands())
@@ -518,7 +515,7 @@ evaluateMemOpAddrForAddrMode5FP16(const MCInst &Inst, const MCInstrDesc &Desc,
   return Addr + ImmOffs * 2;
 }
 
-static Optional<uint64_t>
+static std::optional<uint64_t>
 // NOLINTNEXTLINE(readability-identifier-naming)
 evaluateMemOpAddrForAddrModeT2_i8s4(const MCInst &Inst, const MCInstrDesc &Desc,
                                     unsigned MemOpIndex, uint64_t Addr) {
@@ -539,7 +536,7 @@ evaluateMemOpAddrForAddrModeT2_i8s4(const MCInst &Inst, const MCInstrDesc &Desc,
   return Addr + OffImm;
 }
 
-static Optional<uint64_t>
+static std::optional<uint64_t>
 // NOLINTNEXTLINE(readability-identifier-naming)
 evaluateMemOpAddrForAddrModeT2_pc(const MCInst &Inst, const MCInstrDesc &Desc,
                                   unsigned MemOpIndex, uint64_t Addr) {
@@ -555,14 +552,14 @@ evaluateMemOpAddrForAddrModeT2_pc(const MCInst &Inst, const MCInstrDesc &Desc,
   return Addr + OffImm;
 }
 
-static Optional<uint64_t>
+static std::optional<uint64_t>
 // NOLINTNEXTLINE(readability-identifier-naming)
 evaluateMemOpAddrForAddrModeT1_s(const MCInst &Inst, const MCInstrDesc &Desc,
                                  unsigned MemOpIndex, uint64_t Addr) {
   return evaluateMemOpAddrForAddrModeT2_pc(Inst, Desc, MemOpIndex, Addr);
 }
 
-Optional<uint64_t> ARMMCInstrAnalysis::evaluateMemoryOperandAddress(
+std::optional<uint64_t> ARMMCInstrAnalysis::evaluateMemoryOperandAddress(
     const MCInst &Inst, const MCSubtargetInfo *STI, uint64_t Addr,
     uint64_t Size) const {
   const MCInstrDesc &Desc = Info->get(Inst.getOpcode());

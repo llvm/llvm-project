@@ -43,6 +43,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 using namespace llvm;
@@ -55,7 +56,7 @@ static cl::opt<bool> DisableI2pP2iOpt(
 //                            AllocaInst Class
 //===----------------------------------------------------------------------===//
 
-Optional<TypeSize>
+std::optional<TypeSize>
 AllocaInst::getAllocationSizeInBits(const DataLayout &DL) const {
   TypeSize Size = DL.getTypeAllocSizeInBits(getAllocatedType());
   if (isArrayAllocation()) {

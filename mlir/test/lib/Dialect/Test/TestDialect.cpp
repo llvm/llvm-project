@@ -94,7 +94,7 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
             .Case("alias_test:sanitize_conflict_b",
                   StringRef("test_alias_conflict0_"))
             .Case("alias_test:tensor_encoding", StringRef("test_encoding"))
-            .Default(llvm::None);
+            .Default(std::nullopt);
     if (!aliasName)
       return AliasResult::NoAlias;
 
@@ -441,7 +441,7 @@ TestDialect::getParseOperationHook(StringRef opName) const {
       return ParseResult::success();
     }};
   }
-  return None;
+  return std::nullopt;
 }
 
 llvm::unique_function<void(Operation *, OpAsmPrinter &)>
@@ -680,7 +680,10 @@ static ParseResult parseCustomDirectiveAttributes(OpAsmParser &parser,
   }
   return success();
 }
-
+static ParseResult parseCustomDirectiveSpacing(OpAsmParser &parser,
+                                               mlir::StringAttr &attr) {
+  return parser.parseAttribute(attr);
+}
 static ParseResult parseCustomDirectiveAttrDict(OpAsmParser &parser,
                                                 NamedAttrList &attrs) {
   return parser.parseOptionalAttrDict(attrs);
@@ -759,7 +762,10 @@ static void printCustomDirectiveAttributes(OpAsmPrinter &printer, Operation *,
   if (optAttribute)
     printer << ", " << optAttribute;
 }
-
+static void printCustomDirectiveSpacing(OpAsmPrinter &printer, Operation *op,
+                                        Attribute attribute) {
+  printer << attribute;
+}
 static void printCustomDirectiveAttrDict(OpAsmPrinter &printer, Operation *op,
                                          DictionaryAttr attrs) {
   printer.printOptionalAttrDict(attrs.getValue());

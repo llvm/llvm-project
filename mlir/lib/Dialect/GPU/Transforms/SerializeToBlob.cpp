@@ -41,7 +41,7 @@ gpu::SerializeToBlobPass::translateToISA(llvm::Module &llvmModule,
   llvmModule.setDataLayout(targetMachine.createDataLayout());
 
   if (failed(optimizeLlvm(llvmModule, targetMachine)))
-    return llvm::None;
+    return std::nullopt;
 
   std::string targetISA;
   llvm::raw_string_ostream stream(targetISA);
@@ -52,7 +52,7 @@ gpu::SerializeToBlobPass::translateToISA(llvm::Module &llvmModule,
 
     if (targetMachine.addPassesToEmitFile(codegenPasses, pstream, nullptr,
                                           llvm::CGFT_AssemblyFile))
-      return llvm::None;
+      return std::nullopt;
 
     codegenPasses.run(llvmModule);
   }

@@ -560,7 +560,7 @@ uint64_t EmulateInstructionARM64::
 AddWithCarry(uint32_t N, uint64_t x, uint64_t y, bit carry_in,
              EmulateInstructionARM64::ProcState &proc_state) {
   uint64_t unsigned_sum = UInt(x) + UInt(y) + UInt(carry_in);
-  llvm::Optional<int64_t> signed_sum = llvm::checkedAdd(SInt(x), SInt(y));
+  std::optional<int64_t> signed_sum = llvm::checkedAdd(SInt(x), SInt(y));
   bool overflow = !signed_sum;
   if (!overflow)
     overflow |= !llvm::checkedAdd(*signed_sum, SInt(carry_in));

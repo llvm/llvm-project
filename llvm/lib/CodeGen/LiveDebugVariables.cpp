@@ -59,6 +59,7 @@
 #include <cassert>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -286,7 +287,7 @@ class LDVImpl;
 class UserValue {
   const DILocalVariable *Variable; ///< The debug info variable we are part of.
   /// The part of the variable we describe.
-  const Optional<DIExpression::FragmentInfo> Fragment;
+  const std::optional<DIExpression::FragmentInfo> Fragment;
   DebugLoc dl;            ///< The debug location for the variable. This is
                           ///< used by dwarf writer to find lexical scope.
   UserValue *leader;      ///< Equivalence class leader.
@@ -319,7 +320,7 @@ class UserValue {
 public:
   /// Create a new UserValue.
   UserValue(const DILocalVariable *var,
-            Optional<DIExpression::FragmentInfo> Fragment, DebugLoc L,
+            std::optional<DIExpression::FragmentInfo> Fragment, DebugLoc L,
             LocMap::Allocator &alloc)
       : Variable(var), Fragment(Fragment), dl(std::move(L)), leader(this),
         locInts(alloc) {}
@@ -582,7 +583,7 @@ class LDVImpl {
 
   /// Find or create a UserValue.
   UserValue *getUserValue(const DILocalVariable *Var,
-                          Optional<DIExpression::FragmentInfo> Fragment,
+                          std::optional<DIExpression::FragmentInfo> Fragment,
                           const DebugLoc &DL);
 
   /// Find the EC leader for VirtReg or null.
@@ -768,9 +769,10 @@ void UserValue::mapVirtRegs(LDVImpl *LDV) {
       LDV->mapVirtReg(locations[i].getReg(), this);
 }
 
-UserValue *LDVImpl::getUserValue(const DILocalVariable *Var,
-                                 Optional<DIExpression::FragmentInfo> Fragment,
-                                 const DebugLoc &DL) {
+UserValue *
+LDVImpl::getUserValue(const DILocalVariable *Var,
+                      std::optional<DIExpression::FragmentInfo> Fragment,
+                      const DebugLoc &DL) {
   // FIXME: Handle partially overlapping fragments. See
   // https://reviews.llvm.org/D70121#1849741.
   DebugVariable ID(Var, Fragment, DL->getInlinedAt());

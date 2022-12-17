@@ -118,7 +118,7 @@ public:
     TheStreamer->switchSection(C.MOFI->getDwarfLineSection());
     MCDwarfLineTableHeader Header;
     MCDwarfLineTableParams Params = Assembler.getDWARFLinetableParams();
-    Optional<MCDwarfLineStr> LineStr(std::nullopt);
+    std::optional<MCDwarfLineStr> LineStr(std::nullopt);
     if (Ctx.getDwarfVersion() >= 5) {
       LineStr.emplace(Ctx);
       Header.setRootFile("dir", "file", std::nullopt, std::nullopt);

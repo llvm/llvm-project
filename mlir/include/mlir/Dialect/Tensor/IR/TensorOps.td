@@ -1765,7 +1765,7 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     OpBuilder<(ins "Value":$source, "Value":$dest,
       "ArrayRef<int64_t>":$innerDimsPos,
       "ArrayRef<OpFoldResult>":$innerTiles,
-      CArg<"Optional<Value>", "llvm::None">:$paddingValue,
+      CArg<"Optional<Value>", "std::nullopt">:$paddingValue,
       CArg<"ArrayRef<int64_t>", "{}">:$outerDimsPerm)>
   ];
 
@@ -1776,6 +1776,10 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     static ShapedType inferPackedType(ShapedType sourceType,
         ArrayRef<int64_t> innerTileSizes, ArrayRef<int64_t> innerDimsPos,
         ArrayRef<int64_t> outerDimsPerm = {});
+
+    static Value createDestinationTensor(OpBuilder &b, Location loc,
+        Value source, ArrayRef<OpFoldResult> innerTileSizes,
+        ArrayRef<int64_t> innerDimsPos, ArrayRef<int64_t> outerDimsPerm);
   }];
 }
 

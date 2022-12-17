@@ -770,7 +770,7 @@ void *ProcessKDP::AsyncThread() {
                 "ProcessKDP::AsyncThread (pid = %" PRIu64
                 ") listener.WaitForEvent (NULL, event_sp)...",
                 pid);
-      if (listener_sp->GetEvent(event_sp, llvm::None)) {
+      if (listener_sp->GetEvent(event_sp, std::nullopt)) {
         uint32_t event_type = event_sp->GetType();
         LLDB_LOGF(log,
                   "ProcessKDP::AsyncThread (pid = %" PRIu64

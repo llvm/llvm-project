@@ -43,6 +43,13 @@
 
 // -----
 
+// Ensure self type parameters get considered for aliases.
+// CHECK: !test_ui8_ = !test.int<unsigned, 8>
+// CHECK: #test.attr_with_self_type_param : !test_ui8_
+"test.op"() {alias_test = #test.attr_with_self_type_param : !test.int<unsigned, 8> } : () -> ()
+
+// -----
+
 // Check that we don't print aliases for things that aren't printed.
 // CHECK: #loc1 = loc(fused<memref<1xi32>
 // CHECK-NOT: #map

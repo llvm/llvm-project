@@ -304,7 +304,7 @@ public:
     if (type.isa<CoroHandleType>())
       return AsyncAPI::opaquePointerType(type.getContext());
 
-    return llvm::None;
+    return std::nullopt;
   }
 };
 } // namespace

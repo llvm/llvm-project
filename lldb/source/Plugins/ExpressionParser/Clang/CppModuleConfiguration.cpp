@@ -50,10 +50,10 @@ getTargetIncludePaths(const llvm::Triple &triple) {
 static llvm::Optional<llvm::StringRef>
 guessIncludePath(llvm::StringRef path_to_file, llvm::StringRef pattern) {
   if (pattern.empty())
-    return llvm::None;
+    return std::nullopt;
   size_t pos = path_to_file.find(pattern);
   if (pos == llvm::StringRef::npos)
-    return llvm::None;
+    return std::nullopt;
 
   return path_to_file.substr(0, pos + pattern.size());
 }

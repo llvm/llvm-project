@@ -1289,6 +1289,18 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       }
     }
 
+    // Reduce add-carry of bools to logic:
+    // ((zext BoolX) + (zext BoolY)) >> 1 --> zext (BoolX && BoolY)
+    Value *BoolX, *BoolY;
+    if (ShAmtC == 1 && match(Op0, m_Add(m_Value(X), m_Value(Y))) &&
+        match(X, m_ZExt(m_Value(BoolX))) && match(Y, m_ZExt(m_Value(BoolY))) &&
+        BoolX->getType()->isIntOrIntVectorTy(1) &&
+        BoolY->getType()->isIntOrIntVectorTy(1) &&
+        (X->hasOneUse() || Y->hasOneUse() || Op0->hasOneUse())) {
+      Value *And = Builder.CreateAnd(BoolX, BoolY);
+      return new ZExtInst(And, Ty);
+    }
+
     // If the shifted-out value is known-zero, then this is an exact shift.
     if (!I.isExact() &&
         MaskedValueIsZero(Op0, APInt::getLowBitsSet(BitWidth, ShAmtC), 0, &I)) {

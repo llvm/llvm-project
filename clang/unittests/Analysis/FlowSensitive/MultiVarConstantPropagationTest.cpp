@@ -61,9 +61,10 @@ struct ValueLattice {
   // When `None`, the lattice is either at top or bottom, based on `State`.
   llvm::Optional<int64_t> Value;
 
-  constexpr ValueLattice() : State(ValueState::Undefined), Value(llvm::None) {}
+  constexpr ValueLattice()
+      : State(ValueState::Undefined), Value(std::nullopt) {}
   constexpr ValueLattice(int64_t V) : State(ValueState::Defined), Value(V) {}
-  constexpr ValueLattice(ValueState S) : State(S), Value(llvm::None) {}
+  constexpr ValueLattice(ValueState S) : State(S), Value(std::nullopt) {}
 
   static constexpr ValueLattice bottom() {
     return ValueLattice(ValueState::Undefined);

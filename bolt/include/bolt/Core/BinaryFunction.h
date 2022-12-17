@@ -894,7 +894,8 @@ public:
   BinaryBasicBlock *getLandingPadBBFor(const BinaryBasicBlock &BB,
                                        const MCInst &InvokeInst) const {
     assert(BC.MIB->isInvoke(InvokeInst) && "must be invoke instruction");
-    const Optional<MCPlus::MCLandingPad> LP = BC.MIB->getEHInfo(InvokeInst);
+    const std::optional<MCPlus::MCLandingPad> LP =
+        BC.MIB->getEHInfo(InvokeInst);
     if (LP && LP->first) {
       BinaryBasicBlock *LBB = BB.getLandingPad(LP->first);
       assert(LBB && "Landing pad should be defined");

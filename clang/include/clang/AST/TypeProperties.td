@@ -668,7 +668,7 @@ let Class = TemplateSpecializationType in {
       node->isTypeAlias()
         ? llvm::Optional<QualType>(node->getAliasedType())
         : node->isCanonicalUnqualified()
-            ? llvm::None
+            ? std::nullopt
             : llvm::Optional<QualType>(node->getCanonicalTypeInternal())
     }];
   }
@@ -834,7 +834,7 @@ let Class = DependentNameType in {
   def : Property<"underlyingType", Optional<QualType>> {
     let Read = [{
       node->isCanonicalUnqualified()
-        ? llvm::None
+        ? std::nullopt
         : llvm::Optional<QualType>(node->getCanonicalTypeInternal())
     }];
   }

@@ -1083,7 +1083,7 @@ protected:
     options.SetUnwindOnError(true);
     options.SetKeepInMemory(false);
     options.SetTryAllThreads(true);
-    options.SetTimeout(llvm::None);
+    options.SetTimeout(std::nullopt);
 
     ExpressionResults expr_result =
         target->EvaluateExpression(expr, frame, valobj_sp, options);

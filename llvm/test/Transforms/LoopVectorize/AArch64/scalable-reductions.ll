@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -prefer-predicate-over-epilogue=scalar-epilogue -pass-remarks=loop-vectorize -pass-remarks-analysis=loop-vectorize \
+; RUN: opt < %s -passes=loop-vectorize -prefer-predicate-over-epilogue=scalar-epilogue -pass-remarks=loop-vectorize -pass-remarks-analysis=loop-vectorize \
 ; RUN:   -pass-remarks-missed=loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve,+bf16 -S 2>%t | FileCheck %s -check-prefix=CHECK
 ; RUN: cat %t | FileCheck %s -check-prefix=CHECK-REMARK
 

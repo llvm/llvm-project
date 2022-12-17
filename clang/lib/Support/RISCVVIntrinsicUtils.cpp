@@ -65,7 +65,7 @@ VScaleVal LMULType::getScale(unsigned ElementBitwidth) const {
   }
   // Illegal vscale result would be less than 1
   if (Log2ScaleResult < 0)
-    return llvm::None;
+    return std::nullopt;
   return 1 << Log2ScaleResult;
 }
 
@@ -433,7 +433,7 @@ Optional<PrototypeDescriptor> PrototypeDescriptor::parsePrototypeDescriptor(
       uint32_t Log2EEW;
       if (ComplexTT.second.getAsInteger(10, Log2EEW)) {
         llvm_unreachable("Invalid Log2EEW value!");
-        return None;
+        return std::nullopt;
       }
       switch (Log2EEW) {
       case 3:
@@ -450,13 +450,13 @@ Optional<PrototypeDescriptor> PrototypeDescriptor::parsePrototypeDescriptor(
         break;
       default:
         llvm_unreachable("Invalid Log2EEW value, should be [3-6]");
-        return None;
+        return std::nullopt;
       }
     } else if (ComplexTT.first == "FixedSEW") {
       uint32_t NewSEW;
       if (ComplexTT.second.getAsInteger(10, NewSEW)) {
         llvm_unreachable("Invalid FixedSEW value!");
-        return None;
+        return std::nullopt;
       }
       switch (NewSEW) {
       case 8:
@@ -473,13 +473,13 @@ Optional<PrototypeDescriptor> PrototypeDescriptor::parsePrototypeDescriptor(
         break;
       default:
         llvm_unreachable("Invalid FixedSEW value, should be 8, 16, 32 or 64");
-        return None;
+        return std::nullopt;
       }
     } else if (ComplexTT.first == "LFixedLog2LMUL") {
       int32_t Log2LMUL;
       if (ComplexTT.second.getAsInteger(10, Log2LMUL)) {
         llvm_unreachable("Invalid LFixedLog2LMUL value!");
-        return None;
+        return std::nullopt;
       }
       switch (Log2LMUL) {
       case -3:
@@ -505,13 +505,13 @@ Optional<PrototypeDescriptor> PrototypeDescriptor::parsePrototypeDescriptor(
         break;
       default:
         llvm_unreachable("Invalid LFixedLog2LMUL value, should be [-3, 3]");
-        return None;
+        return std::nullopt;
       }
     } else if (ComplexTT.first == "SFixedLog2LMUL") {
       int32_t Log2LMUL;
       if (ComplexTT.second.getAsInteger(10, Log2LMUL)) {
         llvm_unreachable("Invalid SFixedLog2LMUL value!");
-        return None;
+        return std::nullopt;
       }
       switch (Log2LMUL) {
       case -3:
@@ -537,7 +537,7 @@ Optional<PrototypeDescriptor> PrototypeDescriptor::parsePrototypeDescriptor(
         break;
       default:
         llvm_unreachable("Invalid LFixedLog2LMUL value, should be [-3, 3]");
-        return None;
+        return std::nullopt;
       }
 
     } else {
@@ -788,13 +788,13 @@ RVVTypeCache::computeTypes(BasicType BT, int Log2LMUL, unsigned NF,
                            ArrayRef<PrototypeDescriptor> Prototype) {
   // LMUL x NF must be less than or equal to 8.
   if ((Log2LMUL >= 1) && (1 << Log2LMUL) * NF > 8)
-    return llvm::None;
+    return std::nullopt;
 
   RVVTypes Types;
   for (const PrototypeDescriptor &Proto : Prototype) {
     auto T = computeType(BT, Log2LMUL, Proto);
     if (!T)
-      return llvm::None;
+      return std::nullopt;
     // Record legal type index
     Types.push_back(T.value());
   }
@@ -823,7 +823,7 @@ Optional<RVVTypePtr> RVVTypeCache::computeType(BasicType BT, int Log2LMUL,
     return &(It->second);
 
   if (IllegalTypes.count(Idx))
-    return llvm::None;
+    return std::nullopt;
 
   // Compute type and record the result.
   RVVType T(BT, Log2LMUL, Proto);
@@ -835,7 +835,7 @@ Optional<RVVTypePtr> RVVTypeCache::computeType(BasicType BT, int Log2LMUL,
   }
   // Record illegal type index.
   IllegalTypes.insert(Idx);
-  return llvm::None;
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//

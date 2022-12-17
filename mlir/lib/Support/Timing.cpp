@@ -511,7 +511,7 @@ void DefaultTimingManager::dumpAsTree(raw_ostream &os) {
 Optional<void *> DefaultTimingManager::rootTimer() {
   if (impl->enabled)
     return impl->rootTimer.get();
-  return llvm::None;
+  return std::nullopt;
 }
 
 void DefaultTimingManager::startTimer(void *handle) {

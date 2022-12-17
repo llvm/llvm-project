@@ -259,9 +259,9 @@ public:
   // Pair representing either a index to an argument or a type constraint. Only
   // one of these entries should have the non-default value.
   struct ArgOrType {
-    explicit ArgOrType(int index) : index(index), constraint(None) {}
+    explicit ArgOrType(int index) : index(index), constraint(std::nullopt) {}
     explicit ArgOrType(TypeConstraint constraint)
-        : index(None), constraint(constraint) {}
+        : index(std::nullopt), constraint(constraint) {}
     bool isArg() const {
       assert(constraint.has_value() ^ index.has_value());
       return index.has_value();
@@ -275,8 +275,8 @@ public:
     TypeConstraint getType() const { return *constraint; }
 
   private:
-    Optional<int> index;
-    Optional<TypeConstraint> constraint;
+    std::optional<int> index;
+    std::optional<TypeConstraint> constraint;
   };
 
   // Return all arguments or type constraints with same type as result[index].

@@ -479,7 +479,7 @@ static Optional<ValTy> parseAndVerify(SPIRVDialect const &dialect,
   StringRef enumSpec;
   SMLoc enumLoc = parser.getCurrentLocation();
   if (parser.parseKeyword(&enumSpec)) {
-    return llvm::None;
+    return std::nullopt;
   }
 
   auto val = spirv::symbolizeEnum<ValTy>(enumSpec);
@@ -494,7 +494,7 @@ Optional<Type> parseAndVerify<Type>(SPIRVDialect const &dialect,
   // TODO: Further verify that the element type can be sampled
   auto ty = parseAndVerifyType(dialect, parser);
   if (!ty)
-    return llvm::None;
+    return std::nullopt;
   return ty;
 }
 
@@ -503,7 +503,7 @@ static Optional<IntTy> parseAndVerifyInteger(SPIRVDialect const &dialect,
                                              DialectAsmParser &parser) {
   IntTy offsetVal = std::numeric_limits<IntTy>::max();
   if (parser.parseInteger(offsetVal))
-    return llvm::None;
+    return std::nullopt;
   return offsetVal;
 }
 
@@ -524,14 +524,14 @@ struct ParseCommaSeparatedList {
   operator()(SPIRVDialect const &dialect, DialectAsmParser &parser) const {
     auto parseVal = parseAndVerify<ParseType>(dialect, parser);
     if (!parseVal)
-      return llvm::None;
+      return std::nullopt;
 
     auto numArgs = std::tuple_size<std::tuple<Args...>>::value;
     if (numArgs != 0 && failed(parser.parseComma()))
-      return llvm::None;
+      return std::nullopt;
     auto remainingValues = ParseCommaSeparatedList<Args...>{}(dialect, parser);
     if (!remainingValues)
-      return llvm::None;
+      return std::nullopt;
     return std::tuple_cat(std::tuple<ParseType>(parseVal.value()),
                           remainingValues.value());
   }
@@ -545,7 +545,7 @@ struct ParseCommaSeparatedList<ParseType> {
                                              DialectAsmParser &parser) const {
     if (auto value = parseAndVerify<ParseType>(dialect, parser))
       return std::tuple<ParseType>(*value);
-    return llvm::None;
+    return std::nullopt;
   }
 };
 } // namespace

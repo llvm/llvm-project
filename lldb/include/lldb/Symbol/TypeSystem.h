@@ -572,7 +572,7 @@ private:
   /// \return The found type system or an error.
   llvm::Expected<lldb::TypeSystemSP> GetTypeSystemForLanguage(
       lldb::LanguageType language,
-      llvm::Optional<CreateCallback> create_callback = llvm::None);
+      llvm::Optional<CreateCallback> create_callback = std::nullopt);
   };
 
 } // namespace lldb_private

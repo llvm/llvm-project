@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include <optional>
 
 #include "LiveDebugValues.h"
 
@@ -889,8 +890,8 @@ public:
   void writeRegMask(const MachineOperand *MO, unsigned CurBB, unsigned InstID);
 
   /// Find LocIdx for SpillLoc \p L, creating a new one if it's not tracked.
-  /// Returns None when in scenarios where a spill slot could be tracked, but
-  /// we would likely run into resource limitations.
+  /// Returns std::nullopt when in scenarios where a spill slot could be
+  /// tracked, but we would likely run into resource limitations.
   Optional<SpillLocationNo> getOrTrackSpillLoc(SpillLoc L);
 
   // Get LocIdx of a spill ID.
@@ -1005,7 +1006,7 @@ public:
       // The "empty" fragment is stored as DebugVariable::DefaultFragment, so
       // that it overlaps with everything, however its cannonical representation
       // in a DebugVariable is as "None".
-      Optional<DIExpression::FragmentInfo> OptFragmentInfo = FragmentInfo;
+      std::optional<DIExpression::FragmentInfo> OptFragmentInfo = FragmentInfo;
       if (DebugVariable::isDefaultFragment(FragmentInfo))
         OptFragmentInfo = std::nullopt;
 
@@ -1033,7 +1034,7 @@ public:
   friend class ::InstrRefLDVTest;
 
   using FragmentInfo = DIExpression::FragmentInfo;
-  using OptFragmentInfo = Optional<DIExpression::FragmentInfo>;
+  using OptFragmentInfo = std::optional<DIExpression::FragmentInfo>;
 
   // Helper while building OverlapMap, a map of all fragments seen for a given
   // DILocalVariable.
@@ -1126,11 +1127,11 @@ private:
     uint64_t InstrNum;
     /// Block where DBG_PHI occurred.
     MachineBasicBlock *MBB;
-    /// The value number read by the DBG_PHI -- or None if it didn't refer to
-    /// a value.
+    /// The value number read by the DBG_PHI -- or std::nullopt if it didn't
+    /// refer to a value.
     Optional<ValueIDNum> ValueRead;
-    /// Register/Stack location the DBG_PHI reads -- or None if it referred to
-    /// something unexpected.
+    /// Register/Stack location the DBG_PHI reads -- or std::nullopt if it
+    /// referred to something unexpected.
     Optional<LocIdx> ReadLoc;
 
     operator unsigned() const { return InstrNum; }
@@ -1228,7 +1229,7 @@ private:
   /// forming another mini-ssa problem to solve.
   /// \p Here the position of a DBG_INSTR_REF seeking a machine value number
   /// \p InstrNum Debug instruction number defined by DBG_PHI instructions.
-  /// \returns The machine value number at position Here, or None.
+  /// \returns The machine value number at position Here, or std::nullopt.
   Optional<ValueIDNum> resolveDbgPHIs(MachineFunction &MF,
                                       const ValueTable *MLiveOuts,
                                       const ValueTable *MLiveIns,

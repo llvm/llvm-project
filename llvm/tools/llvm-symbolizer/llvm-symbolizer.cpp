@@ -341,11 +341,11 @@ static FunctionNameKind decideHowToPrintFunctions(const opt::InputArgList &Args,
   return IsAddr2Line ? FunctionNameKind::None : FunctionNameKind::LinkageName;
 }
 
-static Optional<bool> parseColorArg(const opt::InputArgList &Args) {
+static std::optional<bool> parseColorArg(const opt::InputArgList &Args) {
   if (Args.hasArg(OPT_color))
     return true;
   if (const opt::Arg *A = Args.getLastArg(OPT_color_EQ))
-    return StringSwitch<Optional<bool>>(A->getValue())
+    return StringSwitch<std::optional<bool>>(A->getValue())
         .Case("always", true)
         .Case("never", false)
         .Case("auto", std::nullopt);

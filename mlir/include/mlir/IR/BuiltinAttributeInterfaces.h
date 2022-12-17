@@ -312,7 +312,7 @@ auto ElementsAttr::try_value_begin() const
   FailureOr<detail::ElementsAttrIndexer> indexer =
       getValuesImpl(TypeID::get<T>());
   if (failed(indexer))
-    return llvm::None;
+    return std::nullopt;
   return iterator<T>(std::move(*indexer), 0);
 }
 } // namespace mlir.

@@ -98,7 +98,7 @@ private:
   int computeScale(unsigned GEPElemSize, unsigned MemoryElemSize);
   // If the value is a constant, or derived from constants via additions
   // and multilications, return its numeric value
-  Optional<int64_t> getIfConst(const Value *V);
+  std::optional<int64_t> getIfConst(const Value *V);
   // If Inst is an add instruction, check whether one summand is a
   // constant. If so, scale this constant and return it together with
   // the other summand.
@@ -335,31 +335,31 @@ int MVEGatherScatterLowering::computeScale(unsigned GEPElemSize,
   return -1;
 }
 
-Optional<int64_t> MVEGatherScatterLowering::getIfConst(const Value *V) {
+std::optional<int64_t> MVEGatherScatterLowering::getIfConst(const Value *V) {
   const Constant *C = dyn_cast<Constant>(V);
   if (C && C->getSplatValue())
-    return Optional<int64_t>{C->getUniqueInteger().getSExtValue()};
+    return std::optional<int64_t>{C->getUniqueInteger().getSExtValue()};
   if (!isa<Instruction>(V))
-    return Optional<int64_t>{};
+    return std::optional<int64_t>{};
 
   const Instruction *I = cast<Instruction>(V);
   if (I->getOpcode() == Instruction::Add || I->getOpcode() == Instruction::Or ||
       I->getOpcode() == Instruction::Mul ||
       I->getOpcode() == Instruction::Shl) {
-    Optional<int64_t> Op0 = getIfConst(I->getOperand(0));
-    Optional<int64_t> Op1 = getIfConst(I->getOperand(1));
+    std::optional<int64_t> Op0 = getIfConst(I->getOperand(0));
+    std::optional<int64_t> Op1 = getIfConst(I->getOperand(1));
     if (!Op0 || !Op1)
-      return Optional<int64_t>{};
+      return std::optional<int64_t>{};
     if (I->getOpcode() == Instruction::Add)
-      return Optional<int64_t>{Op0.value() + Op1.value()};
+      return std::optional<int64_t>{Op0.value() + Op1.value()};
     if (I->getOpcode() == Instruction::Mul)
-      return Optional<int64_t>{Op0.value() * Op1.value()};
+      return std::optional<int64_t>{Op0.value() * Op1.value()};
     if (I->getOpcode() == Instruction::Shl)
-      return Optional<int64_t>{Op0.value() << Op1.value()};
+      return std::optional<int64_t>{Op0.value() << Op1.value()};
     if (I->getOpcode() == Instruction::Or)
-      return Optional<int64_t>{Op0.value() | Op1.value()};
+      return std::optional<int64_t>{Op0.value() | Op1.value()};
   }
-  return Optional<int64_t>{};
+  return std::optional<int64_t>{};
 }
 
 // Return true if I is an Or instruction that is equivalent to an add, due to
@@ -381,7 +381,7 @@ MVEGatherScatterLowering::getVarAndConst(Value *Inst, int TypeScale) {
     return ReturnFalse;
 
   Value *Summand;
-  Optional<int64_t> Const;
+  std::optional<int64_t> Const;
   // Find out which operand the value that is increased is
   if ((Const = getIfConst(Add->getOperand(0))))
     Summand = Add->getOperand(1);

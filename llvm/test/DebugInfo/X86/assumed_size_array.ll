@@ -3,6 +3,11 @@
 
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu %s -filetype=obj -o %t.o
 ; RUN: llvm-dwarfdump  %t.o | FileCheck %s
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: sed -e "s/Fortran90/Fortran18/" %s > %t/test.ll
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu %t/test.ll -filetype=obj -o %t/test.o
+; RUN: llvm-dwarfdump  %t/test.o | FileCheck %s
 
 ; CHECK-LABEL: DW_TAG_formal_parameter
 ; CHECK: DW_AT_name    ("array1")

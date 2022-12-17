@@ -753,7 +753,7 @@ RegisteredOperationName::lookup(StringRef name, MLIRContext *ctx) {
   auto it = impl.registeredOperations.find(name);
   if (it != impl.registeredOperations.end())
     return it->getValue();
-  return llvm::None;
+  return std::nullopt;
 }
 
 ParseResult

@@ -157,7 +157,7 @@ public:
   llvm::Optional<ExprAST *> getExpr() {
     if (expr.has_value())
       return expr->get();
-    return llvm::None;
+    return std::nullopt;
   }
 
   /// LLVM style RTTI

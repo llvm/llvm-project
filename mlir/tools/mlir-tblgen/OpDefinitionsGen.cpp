@@ -216,7 +216,7 @@ struct AttributeMetadata {
   /// Whether the attribute is required.
   bool isRequired;
   /// The ODS attribute constraint. Not present for implicit attributes.
-  Optional<Attribute> constraint;
+  std::optional<Attribute> constraint;
   /// The number of required attributes less than this attribute.
   unsigned lowerBound = 0;
   /// The number of required attributes greater than this attribute.
@@ -354,13 +354,13 @@ void OpOrAdaptorHelper::computeAttrMetadata() {
     attrMetadata.insert(
         {operandSegmentAttrName,
          AttributeMetadata{operandSegmentAttrName, /*isRequired=*/true,
-                           /*attr=*/llvm::None}});
+                           /*attr=*/std::nullopt}});
   }
   if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments")) {
     attrMetadata.insert(
         {resultSegmentAttrName,
          AttributeMetadata{resultSegmentAttrName, /*isRequired=*/true,
-                           /*attr=*/llvm::None}});
+                           /*attr=*/std::nullopt}});
   }
 
   // Store the metadata in sorted order.
@@ -731,7 +731,7 @@ static void genAttributeVerifier(
                                 StringRef varName) {
     std::string condition = attr.getPredicate().getCondition();
 
-    Optional<StringRef> constraintFn;
+    std::optional<StringRef> constraintFn;
     if (emitHelper.isEmittingForOp() &&
         (constraintFn = staticVerifierEmitter.getAttrConstraintFn(attr))) {
       body << formatv(verifyAttrUnique, *constraintFn, varName, attrName);
@@ -1148,7 +1148,7 @@ void OpEmitter::genAttrSetters() {
 
     // TODO: Handle unit attr parameters specially, given that it is treated as
     // optional but not in the same way as the others (i.e. it uses bool over
-    // Optional<>).
+    // llvm::Optional<>).
     StringRef paramStr = isUnitAttr ? "attrValue" : "*attrValue";
     const char *optionalCodeBody = R"(
     if (attrValue)
@@ -1890,12 +1890,13 @@ getBuilderSignature(const Builder &builder) {
 
   for (unsigned i = 0, e = params.size(); i < e; ++i) {
     // If no name is provided, generate one.
-    Optional<StringRef> paramName = params[i].getName();
+    std::optional<StringRef> paramName = params[i].getName();
     std::string name =
         paramName ? paramName->str() : "odsArg" + std::to_string(i);
 
     StringRef defaultValue;
-    if (Optional<StringRef> defaultParamValue = params[i].getDefaultValue())
+    if (std::optional<StringRef> defaultParamValue =
+            params[i].getDefaultValue())
       defaultValue = *defaultParamValue;
 
     arguments.emplace_back(params[i].getCppType(), std::move(name),
@@ -1910,7 +1911,7 @@ void OpEmitter::genBuilder() {
   for (const Builder &builder : op.getBuilders()) {
     SmallVector<MethodParameter> arguments = getBuilderSignature(builder);
 
-    Optional<StringRef> body = builder.getBody();
+    std::optional<StringRef> body = builder.getBody();
     auto properties = body ? Method::Static : Method::StaticDeclaration;
     auto *method =
         opClass.addMethod("void", "build", properties, std::move(arguments));

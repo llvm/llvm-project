@@ -183,6 +183,10 @@ const Symbol *ProcedureDesignator::GetSymbol() const {
       u);
 }
 
+const SymbolRef *ProcedureDesignator::UnwrapSymbolRef() const {
+  return std::get_if<SymbolRef>(&u);
+}
+
 std::string ProcedureDesignator::GetName() const {
   return common::visit(
       common::visitors{

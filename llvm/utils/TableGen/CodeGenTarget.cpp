@@ -369,11 +369,9 @@ CodeGenRegBank &CodeGenTarget::getRegBank() const {
   return *RegBank;
 }
 
-Optional<CodeGenRegisterClass *>
-CodeGenTarget::getSuperRegForSubReg(const ValueTypeByHwMode &ValueTy,
-                                    CodeGenRegBank &RegBank,
-                                    const CodeGenSubRegIndex *SubIdx,
-                                    bool MustBeAllocatable) const {
+std::optional<CodeGenRegisterClass *> CodeGenTarget::getSuperRegForSubReg(
+    const ValueTypeByHwMode &ValueTy, CodeGenRegBank &RegBank,
+    const CodeGenSubRegIndex *SubIdx, bool MustBeAllocatable) const {
   std::vector<CodeGenRegisterClass *> Candidates;
   auto &RegClasses = RegBank.getRegClasses();
 

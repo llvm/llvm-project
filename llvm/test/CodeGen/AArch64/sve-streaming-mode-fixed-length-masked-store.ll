@@ -10,16 +10,13 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @masked_store_v4i8(<4 x i8>* %dst, <4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI0_0]
-; CHECK-NEXT:    adrp x8, .LCPI0_1
-; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_1]
-; CHECK-NEXT:    asr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, #15
+; CHECK-NEXT:    asr z0.h, p0/m, z0.h, #15
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
-; CHECK-NEXT:    st1b { z2.h }, p0, [x0]
+; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    st1b { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v4i8(<4 x i8> zeroinitializer, <4 x i8>* %dst, i32 8, <4 x i1> %mask)
   ret void
@@ -28,16 +25,13 @@ define void @masked_store_v4i8(<4 x i8>* %dst, <4 x i1> %mask) #0 {
 define void @masked_store_v8i8(<8 x i8>* %dst, <8 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI1_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.b, vl8
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI1_0]
-; CHECK-NEXT:    adrp x8, .LCPI1_1
-; CHECK-NEXT:    lsl z0.b, p0/m, z0.b, z1.b
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI1_1]
-; CHECK-NEXT:    asr z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    lsl z0.b, p0/m, z0.b, #7
+; CHECK-NEXT:    asr z0.b, p0/m, z0.b, #7
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
-; CHECK-NEXT:    st1b { z2.b }, p0, [x0]
+; CHECK-NEXT:    mov z0.b, #0 // =0x0
+; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v8i8(<8 x i8> zeroinitializer, <8 x i8>* %dst, i32 8, <8 x i1> %mask)
   ret void
@@ -46,16 +40,13 @@ define void @masked_store_v8i8(<8 x i8>* %dst, <8 x i1> %mask) #0 {
 define void @masked_store_v16i8(<16 x i8>* %dst, <16 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI2_0
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.b, vl16
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
-; CHECK-NEXT:    adrp x8, .LCPI2_1
-; CHECK-NEXT:    lsl z0.b, p0/m, z0.b, z1.b
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI2_1]
-; CHECK-NEXT:    asr z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    lsl z0.b, p0/m, z0.b, #7
+; CHECK-NEXT:    asr z0.b, p0/m, z0.b, #7
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
-; CHECK-NEXT:    st1b { z2.b }, p0, [x0]
+; CHECK-NEXT:    mov z0.b, #0 // =0x0
+; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v16i8(<16 x i8> zeroinitializer, <16 x i8>* %dst, i32 8, <16 x i1> %mask)
   ret void
@@ -113,31 +104,29 @@ define void @masked_store_v32i8(<32 x i8>* %dst, <32 x i1> %mask) #0 {
 ; CHECK-NEXT:    strb w9, [sp, #21]
 ; CHECK-NEXT:    ldr w9, [sp, #120]
 ; CHECK-NEXT:    strb w10, [sp, #20]
-; CHECK-NEXT:    ldr w10, [sp, #104]
+; CHECK-NEXT:    ldr w10, [sp, #112]
 ; CHECK-NEXT:    strb w8, [sp, #19]
-; CHECK-NEXT:    ldr w8, [sp, #112]
+; CHECK-NEXT:    ldr w8, [sp, #104]
 ; CHECK-NEXT:    strb w4, [sp, #3]
-; CHECK-NEXT:    adrp x11, .LCPI3_0
-; CHECK-NEXT:    strb w3, [sp, #2]
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    strb w3, [sp, #2]
 ; CHECK-NEXT:    strb w2, [sp, #1]
 ; CHECK-NEXT:    strb w1, [sp]
-; CHECK-NEXT:    ldr q0, [x11, :lo12:.LCPI3_0]
 ; CHECK-NEXT:    strb w9, [sp, #18]
-; CHECK-NEXT:    strb w8, [sp, #17]
-; CHECK-NEXT:    adrp x8, .LCPI3_1
-; CHECK-NEXT:    strb w10, [sp, #16]
-; CHECK-NEXT:    ldp q1, q2, [sp]
-; CHECK-NEXT:    lsl z1.b, p0/m, z1.b, z0.b
-; CHECK-NEXT:    asr z1.b, p0/m, z1.b, z0.b
-; CHECK-NEXT:    lsl z2.b, p0/m, z2.b, z0.b
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI3_1]
+; CHECK-NEXT:    strb w10, [sp, #17]
+; CHECK-NEXT:    strb w8, [sp, #16]
 ; CHECK-NEXT:    mov w8, #16
-; CHECK-NEXT:    asrr z0.b, p0/m, z0.b, z2.b
-; CHECK-NEXT:    cmpne p1.b, p0/z, z1.b, #0
+; CHECK-NEXT:    ldp q0, q1, [sp]
+; CHECK-NEXT:    lsl z0.b, p0/m, z0.b, #7
+; CHECK-NEXT:    asr z0.b, p0/m, z0.b, #7
+; CHECK-NEXT:    lsl z1.b, p0/m, z1.b, #7
+; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    asr z0.b, p0/m, z0.b, #7
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
-; CHECK-NEXT:    st1b { z3.b }, p0, [x0, x8]
-; CHECK-NEXT:    st1b { z3.b }, p1, [x0]
+; CHECK-NEXT:    mov z0.b, #0 // =0x0
+; CHECK-NEXT:    st1b { z0.b }, p0, [x0, x8]
+; CHECK-NEXT:    st1b { z0.b }, p1, [x0]
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v32i8(<32 x i8> zeroinitializer, <32 x i8>* %dst, i32 8, <32 x i1> %mask)
@@ -150,22 +139,19 @@ define void @masked_store_v2f16(<2 x half>* %dst, <2 x i1> %mask) #0 {
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    mov z1.s, z0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    adrp x8, .LCPI4_0
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    str wzr, [sp, #12]
+; CHECK-NEXT:    mov z0.s, z0.s[1]
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    strh w9, [sp, #8]
-; CHECK-NEXT:    strh w10, [sp, #10]
-; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI4_0]
-; CHECK-NEXT:    ldr d1, [sp, #8]
-; CHECK-NEXT:    adrp x8, .LCPI4_1
-; CHECK-NEXT:    lsl z1.h, p0/m, z1.h, z0.h
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI4_1]
-; CHECK-NEXT:    asrr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    strh w8, [sp, #8]
+; CHECK-NEXT:    strh w9, [sp, #10]
+; CHECK-NEXT:    ldr d0, [sp, #8]
+; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, #15
+; CHECK-NEXT:    asr z0.h, p0/m, z0.h, #15
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
-; CHECK-NEXT:    st1h { z2.h }, p0, [x0]
+; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v2f16(<2 x half> zeroinitializer, <2 x half>* %dst, i32 8, <2 x i1> %mask)
@@ -175,16 +161,13 @@ define void @masked_store_v2f16(<2 x half>* %dst, <2 x i1> %mask) #0 {
 define void @masked_store_v4f16(<4 x half>* %dst, <4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI5_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI5_0]
-; CHECK-NEXT:    adrp x8, .LCPI5_1
-; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI5_1]
-; CHECK-NEXT:    asr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, #15
+; CHECK-NEXT:    asr z0.h, p0/m, z0.h, #15
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
-; CHECK-NEXT:    st1h { z2.h }, p0, [x0]
+; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v4f16(<4 x half> zeroinitializer, <4 x half>* %dst, i32 8, <4 x i1> %mask)
   ret void
@@ -193,17 +176,14 @@ define void @masked_store_v4f16(<4 x half>* %dst, <4 x i1> %mask) #0 {
 define void @masked_store_v8f16(<8 x half>* %dst, <8 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI6_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI6_0]
-; CHECK-NEXT:    adrp x8, .LCPI6_1
-; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI6_1]
-; CHECK-NEXT:    asr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, #15
+; CHECK-NEXT:    asr z0.h, p0/m, z0.h, #15
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
-; CHECK-NEXT:    st1h { z2.h }, p0, [x0]
+; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v8f16(<8 x half> zeroinitializer, <8 x half>* %dst, i32 8, <8 x i1> %mask)
   ret void
@@ -212,25 +192,22 @@ define void @masked_store_v8f16(<8 x half>* %dst, <8 x i1> %mask) #0 {
 define void @masked_store_v16f16(<16 x half>* %dst, <16 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI7_0
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z1.d, z0.d
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
+; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    uunpklo z1.h, z1.b
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI7_0]
-; CHECK-NEXT:    adrp x8, .LCPI7_1
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI7_1]
-; CHECK-NEXT:    lsl z1.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    mov x8, #8
-; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z2.h
-; CHECK-NEXT:    asr z1.h, p0/m, z1.h, z2.h
-; CHECK-NEXT:    asr z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    lsl z1.h, p0/m, z1.h, #15
+; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, #15
+; CHECK-NEXT:    asr z1.h, p0/m, z1.h, #15
+; CHECK-NEXT:    asr z0.h, p0/m, z0.h, #15
 ; CHECK-NEXT:    cmpne p1.h, p0/z, z1.h, #0
+; CHECK-NEXT:    mov z1.h, #0 // =0x0
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
-; CHECK-NEXT:    st1h { z3.h }, p1, [x0, x8, lsl #1]
-; CHECK-NEXT:    st1h { z3.h }, p0, [x0]
+; CHECK-NEXT:    st1h { z1.h }, p1, [x0, x8, lsl #1]
+; CHECK-NEXT:    st1h { z1.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v16f16(<16 x half> zeroinitializer, <16 x half>* %dst, i32 8, <16 x i1> %mask)
   ret void
@@ -239,17 +216,14 @@ define void @masked_store_v16f16(<16 x half>* %dst, <16 x i1> %mask) #0 {
 define void @masked_store_v4f32(<4 x float>* %dst, <4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI8_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI8_0]
-; CHECK-NEXT:    adrp x8, .LCPI8_1
-; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI8_1]
-; CHECK-NEXT:    asr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, #31
+; CHECK-NEXT:    asr z0.s, p0/m, z0.s, #31
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
-; CHECK-NEXT:    st1w { z2.s }, p0, [x0]
+; CHECK-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v4f32(<4 x float> zeroinitializer, <4 x float>* %dst, i32 8, <4 x i1> %mask)
   ret void
@@ -263,46 +237,42 @@ define void @masked_store_v8f32(<8 x float>* %dst, <8 x i1> %mask) #0 {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z1.b, z0.b[7]
 ; CHECK-NEXT:    mov z2.b, z0.b[6]
-; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    mov z1.b, z0.b[5]
-; CHECK-NEXT:    fmov w10, s2
-; CHECK-NEXT:    mov z2.b, z0.b[4]
-; CHECK-NEXT:    fmov w11, s1
-; CHECK-NEXT:    adrp x8, .LCPI9_0
-; CHECK-NEXT:    strh w9, [sp, #14]
 ; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    strh w10, [sp, #12]
-; CHECK-NEXT:    adrp x10, .LCPI9_1
-; CHECK-NEXT:    strh w11, [sp, #10]
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI9_0]
-; CHECK-NEXT:    strh w9, [sp, #8]
-; CHECK-NEXT:    mov x9, #4
+; CHECK-NEXT:    mov z2.b, z0.b[4]
+; CHECK-NEXT:    fmov w10, s1
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    strh w8, [sp, #14]
+; CHECK-NEXT:    fmov w8, s2
+; CHECK-NEXT:    strh w9, [sp, #12]
+; CHECK-NEXT:    mov z2.b, z0.b[3]
+; CHECK-NEXT:    strh w10, [sp, #10]
+; CHECK-NEXT:    mov z3.b, z0.b[2]
+; CHECK-NEXT:    strh w8, [sp, #8]
+; CHECK-NEXT:    mov z4.b, z0.b[1]
 ; CHECK-NEXT:    ldr d1, [sp, #8]
 ; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    ldr q3, [x10, :lo12:.LCPI9_1]
-; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    mov z4.b, z0.b[3]
-; CHECK-NEXT:    mov z5.b, z0.b[2]
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    mov z6.b, z0.b[1]
-; CHECK-NEXT:    lsl z1.s, p0/m, z1.s, z2.s
-; CHECK-NEXT:    movprfx z0, z1
-; CHECK-NEXT:    asr z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    mov x9, #4
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    uunpklo z0.s, z1.h
+; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, #31
+; CHECK-NEXT:    asr z0.s, p0/m, z0.s, #31
 ; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
-; CHECK-NEXT:    fmov w10, s4
-; CHECK-NEXT:    st1w { z3.s }, p1, [x0, x9, lsl #2]
-; CHECK-NEXT:    fmov w9, s5
+; CHECK-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NEXT:    st1w { z0.s }, p1, [x0, x9, lsl #2]
+; CHECK-NEXT:    fmov w9, s3
 ; CHECK-NEXT:    strh w8, [sp]
-; CHECK-NEXT:    fmov w8, s6
+; CHECK-NEXT:    fmov w8, s4
 ; CHECK-NEXT:    strh w10, [sp, #6]
 ; CHECK-NEXT:    strh w9, [sp, #4]
 ; CHECK-NEXT:    strh w8, [sp, #2]
-; CHECK-NEXT:    ldr d0, [sp]
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, z2.s
-; CHECK-NEXT:    asr z0.s, p0/m, z0.s, z2.s
-; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
-; CHECK-NEXT:    st1w { z3.s }, p0, [x0]
+; CHECK-NEXT:    ldr d1, [sp]
+; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    lsl z1.s, p0/m, z1.s, #31
+; CHECK-NEXT:    asr z1.s, p0/m, z1.s, #31
+; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v8f32(<8 x float> zeroinitializer, <8 x float>* %dst, i32 8, <8 x i1> %mask)
@@ -312,17 +282,14 @@ define void @masked_store_v8f32(<8 x float>* %dst, <8 x i1> %mask) #0 {
 define void @masked_store_v2f64(<2 x double>* %dst, <2 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI10_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI10_0]
-; CHECK-NEXT:    adrp x8, .LCPI10_1
-; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI10_1]
-; CHECK-NEXT:    asr z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, #63
+; CHECK-NEXT:    asr z0.d, p0/m, z0.d, #63
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
-; CHECK-NEXT:    st1d { z2.d }, p0, [x0]
+; CHECK-NEXT:    mov z0.d, #0 // =0x0
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v2f64(<2 x double> zeroinitializer, <2 x double>* %dst, i32 8, <2 x i1> %mask)
   ret void
@@ -331,25 +298,22 @@ define void @masked_store_v2f64(<2 x double>* %dst, <2 x i1> %mask) #0 {
 define void @masked_store_v4f64(<4 x double>* %dst, <4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI11_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z2.d, z0.s
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI11_0]
-; CHECK-NEXT:    adrp x8, .LCPI11_1
-; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI11_1]
-; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    mov x8, #2
-; CHECK-NEXT:    lsl z2.d, p0/m, z2.d, z1.d
-; CHECK-NEXT:    asr z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    asrr z1.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    uunpklo z1.d, z0.s
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    lsl z1.d, p0/m, z1.d, #63
+; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, #63
+; CHECK-NEXT:    asr z1.d, p0/m, z1.d, #63
+; CHECK-NEXT:    asr z0.d, p0/m, z0.d, #63
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    mov z0.d, #0 // =0x0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; CHECK-NEXT:    st1d { z3.d }, p1, [x0, x8, lsl #3]
-; CHECK-NEXT:    st1d { z3.d }, p0, [x0]
+; CHECK-NEXT:    st1d { z0.d }, p1, [x0, x8, lsl #3]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.v4f64(<4 x double> zeroinitializer, <4 x double>* %dst, i32 8, <4 x i1> %mask)
   ret void

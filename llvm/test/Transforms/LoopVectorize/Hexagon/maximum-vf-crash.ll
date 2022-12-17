@@ -1,4 +1,4 @@
-; RUN: opt -march=hexagon -hexagon-autohvx -loop-vectorize -S < %s 2>&1 | FileCheck %s
+; RUN: opt -march=hexagon -hexagon-autohvx -passes=loop-vectorize -S < %s 2>&1 | FileCheck %s
 
 ; Check that we don't crash.
 

@@ -225,7 +225,7 @@ void arith::AddIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 Optional<SmallVector<int64_t, 4>> arith::AddUICarryOp::getShapeForUnroll() {
   if (auto vt = getType(0).dyn_cast<VectorType>())
     return llvm::to_vector<4>(vt.getShape());
-  return None;
+  return std::nullopt;
 }
 
 // Returns the carry bit, assuming that `sum` is the result of addition of
@@ -1509,7 +1509,7 @@ static Optional<int64_t> getIntegerWidth(Type t) {
   if (auto vectorIntType = t.dyn_cast<VectorType>()) {
     return vectorIntType.getElementType().cast<IntegerType>().getWidth();
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 OpFoldResult arith::CmpIOp::fold(ArrayRef<Attribute> operands) {

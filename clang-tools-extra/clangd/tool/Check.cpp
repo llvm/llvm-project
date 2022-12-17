@@ -178,7 +178,7 @@ public:
       Inputs.Contents = *Contents;
       log("Imaginary source file contents:\n{0}", Inputs.Contents);
     } else {
-      if (auto Contents = TFS.view(llvm::None)->getBufferForFile(File)) {
+      if (auto Contents = TFS.view(std::nullopt)->getBufferForFile(File)) {
         Inputs.Contents = Contents->get()->getBuffer().str();
       } else {
         elog("Couldn't read {0}: {1}", File, Contents.getError().message());

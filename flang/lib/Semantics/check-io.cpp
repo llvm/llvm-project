@@ -231,6 +231,9 @@ void IoChecker::Enter(const parser::Format &spec) {
               if (!IsVariable(*expr)) {
                 context_.Say(format.source,
                     "Assigned format label must be a scalar variable"_err_en_US);
+              } else if (context_.ShouldWarn(common::LanguageFeature::Assign)) {
+                context_.Say(format.source,
+                    "Assigned format labels are deprecated"_port_en_US);
               }
               return;
             }

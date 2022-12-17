@@ -148,7 +148,7 @@ void CFIInstrInserter::calculateCFAInfo(MachineFunction &MF) {
       MF.getSubtarget().getFrameLowering()->getInitialCFAOffset(MF);
   // Initial CFA register value i.e. the one valid at the beginning of the
   // function.
-  unsigned InitialRegister =
+  Register InitialRegister =
       MF.getSubtarget().getFrameLowering()->getInitialCFARegister(MF);
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   unsigned NumRegs = TRI.getNumRegs();

@@ -383,6 +383,10 @@ std::list<std::list<SymbolRef>> GetStorageAssociations(const Scope &);
 //     its non-POINTER components and the potential subobject components of
 //     its non-POINTER derived type components.  (The lifetime of each
 //     potential subobject component is that of the entire instance.)
+//   - PotentialAndPointer subobject components of a derived type are the
+//   closure of
+//     its components (including POINTERs) and the PotentialAndPointer subobject
+//     components of its non-POINTER derived type components.
 // Parent and procedure components are considered against these definitions.
 // For this kind of iterator, the component tree is recursively visited in the
 // following order:
@@ -413,7 +417,8 @@ std::list<std::list<SymbolRef>> GetStorageAssociations(const Scope &);
 //       ....
 //    }
 
-ENUM_CLASS(ComponentKind, Ordered, Direct, Ultimate, Potential, Scope)
+ENUM_CLASS(ComponentKind, Ordered, Direct, Ultimate, Potential, Scope,
+    PotentialAndPointer)
 
 template <ComponentKind componentKind> class ComponentIterator {
 public:
@@ -535,11 +540,14 @@ extern template class ComponentIterator<ComponentKind::Direct>;
 extern template class ComponentIterator<ComponentKind::Ultimate>;
 extern template class ComponentIterator<ComponentKind::Potential>;
 extern template class ComponentIterator<ComponentKind::Scope>;
+extern template class ComponentIterator<ComponentKind::PotentialAndPointer>;
 using OrderedComponentIterator = ComponentIterator<ComponentKind::Ordered>;
 using DirectComponentIterator = ComponentIterator<ComponentKind::Direct>;
 using UltimateComponentIterator = ComponentIterator<ComponentKind::Ultimate>;
 using PotentialComponentIterator = ComponentIterator<ComponentKind::Potential>;
 using ScopeComponentIterator = ComponentIterator<ComponentKind::Scope>;
+using PotentialAndPointerComponentIterator =
+    ComponentIterator<ComponentKind::PotentialAndPointer>;
 
 // Common component searches, the iterator returned is referring to the first
 // component, according to the order defined for the related ComponentIterator,

@@ -1295,7 +1295,6 @@ define i32 @test_fptoui_ppc_i32_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-NEXT:    lfs 0, .LCPI31_0@toc@l(3)
 ; PC64LE-NEXT:    lis 3, -32768
 ; PC64LE-NEXT:    fcmpo 0, 2, 3
-; PC64LE-NEXT:    xxlxor 3, 3, 3
 ; PC64LE-NEXT:    fcmpo 1, 1, 0
 ; PC64LE-NEXT:    crand 20, 6, 0
 ; PC64LE-NEXT:    crandc 21, 4, 6
@@ -1333,7 +1332,6 @@ define i32 @test_fptoui_ppc_i32_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE9-NEXT:    lfs 0, .LCPI31_0@toc@l(3)
 ; PC64LE9-NEXT:    fcmpo 1, 2, 3
 ; PC64LE9-NEXT:    lis 3, -32768
-; PC64LE9-NEXT:    xxlxor 3, 3, 3
 ; PC64LE9-NEXT:    fcmpo 0, 1, 0
 ; PC64LE9-NEXT:    crand 20, 2, 4
 ; PC64LE9-NEXT:    crandc 21, 0, 2

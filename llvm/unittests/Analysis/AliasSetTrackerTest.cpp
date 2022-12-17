@@ -68,7 +68,8 @@ TEST(AliasSetTracker, AliasUnknownInst) {
   // Initialize the alias set tracker for the @test function.
   Function *Test = M->getFunction("test");
   ASSERT_NE(Test, nullptr);
-  AliasSetTracker AST(AA);
+  BatchAAResults BAA(AA);
+  AliasSetTracker AST(BAA);
   for (auto &BB : *Test)
     AST.add(BB);
   // There should be 2 disjoint alias sets. 1 from each call. 

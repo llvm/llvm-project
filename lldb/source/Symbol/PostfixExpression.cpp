@@ -23,7 +23,7 @@ using namespace lldb_private::dwarf;
 static llvm::Optional<BinaryOpNode::OpType>
 GetBinaryOpType(llvm::StringRef token) {
   if (token.size() != 1)
-    return llvm::None;
+    return std::nullopt;
   switch (token[0]) {
   case '@':
     return BinaryOpNode::Align;
@@ -32,14 +32,14 @@ GetBinaryOpType(llvm::StringRef token) {
   case '+':
     return BinaryOpNode::Plus;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 static llvm::Optional<UnaryOpNode::OpType>
 GetUnaryOpType(llvm::StringRef token) {
   if (token == "^")
     return UnaryOpNode::Deref;
-  return llvm::None;
+  return std::nullopt;
 }
 
 Node *postfix::ParseOneExpression(llvm::StringRef expr,

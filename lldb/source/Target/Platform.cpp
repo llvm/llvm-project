@@ -1810,7 +1810,7 @@ lldb::ProcessSP Platform::DoConnectProcess(llvm::StringRef connect_url,
 
   if (synchronous) {
     EventSP event_sp;
-    process_sp->WaitForProcessToStop(llvm::None, &event_sp, true, listener_sp,
+    process_sp->WaitForProcessToStop(std::nullopt, &event_sp, true, listener_sp,
                                      nullptr);
     process_sp->RestoreProcessEvents();
     bool pop_process_io_handler = false;

@@ -106,7 +106,7 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
       if (const FieldDecl *Member = Init->getMember()) {
         const Record::Field *F = R->getField(Member);
 
-        if (Optional<PrimType> T = this->classify(InitExpr)) {
+        if (std::optional<PrimType> T = this->classify(InitExpr)) {
           if (!this->emitThis(InitExpr))
             return false;
 
@@ -399,7 +399,7 @@ bool ByteCodeStmtGen<Emitter>::visitVarDecl(const VarDecl *VD) {
   }
 
   // Integers, pointers, primitives.
-  if (Optional<PrimType> T = this->classify(VD->getType())) {
+  if (std::optional<PrimType> T = this->classify(VD->getType())) {
     const Expr *Init = VD->getInit();
 
     if (!Init)
@@ -418,7 +418,7 @@ bool ByteCodeStmtGen<Emitter>::visitVarDecl(const VarDecl *VD) {
   }
 
   // Composite types - allocate storage and initialize it.
-  if (Optional<unsigned> Offset = this->allocateLocal(VD))
+  if (std::optional<unsigned> Offset = this->allocateLocal(VD))
     return this->visitLocalInitializer(VD->getInit(), *Offset);
 
   return this->bail(VD);

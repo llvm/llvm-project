@@ -135,7 +135,7 @@ public:
   // Look up a property, returning nullptr if it doesn't exist.
   Value *get(StringRef K);
   const Value *get(StringRef K) const;
-  // Typed accessors return None/nullptr if
+  // Typed accessors return std::nullopt/nullptr if
   //   - the property doesn't exist
   //   - or it has the wrong type
   llvm::Optional<std::nullptr_t> getNull(StringRef K) const;
@@ -400,7 +400,8 @@ public:
     llvm_unreachable("Unknown kind");
   }
 
-  // Typed accessors return None/nullptr if the Value is not of this type.
+  // Typed accessors return std::nullopt/nullptr if the Value is not of this
+  // type.
   llvm::Optional<std::nullptr_t> getAsNull() const {
     if (LLVM_LIKELY(Type == T_Null))
       return nullptr;

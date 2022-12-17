@@ -157,7 +157,7 @@ Error CVTypeVisitor::visitTypeStream(CVTypeRange Types) {
 }
 
 Error CVTypeVisitor::visitTypeStream(TypeCollection &Types) {
-  Optional<TypeIndex> I = Types.getFirst();
+  std::optional<TypeIndex> I = Types.getFirst();
   while (I) {
     CVType Type = Types.getType(*I);
     if (auto EC = visitTypeRecord(Type, *I))

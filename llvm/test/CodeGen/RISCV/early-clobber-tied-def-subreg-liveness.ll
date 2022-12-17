@@ -20,6 +20,7 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    li a1, 10
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x0a, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 10 * vlenb
 ; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_49)
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_49)
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma

@@ -13,9 +13,9 @@
 #ifndef LLVM_SUPPORT_RAW_OSTREAM_H
 #define LLVM_SUPPORT_RAW_OSTREAM_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 #include <cstddef>
@@ -740,6 +740,28 @@ class Error;
 /// temporary file after the \p Write function is finished.
 Error writeToOutput(StringRef OutputFileName,
                     std::function<Error(raw_ostream &)> Write);
+
+raw_ostream &operator<<(raw_ostream &OS, std::nullopt_t);
+
+template <typename T, typename = decltype(std::declval<raw_ostream &>()
+                                          << std::declval<const T &>())>
+raw_ostream &operator<<(raw_ostream &OS, const Optional<T> &O) {
+  if (O)
+    OS << *O;
+  else
+    OS << std::nullopt;
+  return OS;
+}
+
+template <typename T, typename = decltype(std::declval<raw_ostream &>()
+                                          << std::declval<const T &>())>
+raw_ostream &operator<<(raw_ostream &OS, const std::optional<T> &O) {
+  if (O)
+    OS << *O;
+  else
+    OS << std::nullopt;
+  return OS;
+}
 
 } // end namespace llvm
 

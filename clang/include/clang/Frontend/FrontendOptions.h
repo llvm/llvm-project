@@ -241,9 +241,9 @@ public:
   InputKind getKind() const { return Kind; }
   bool isSystem() const { return IsSystem; }
 
-  bool isEmpty() const { return File.empty() && Buffer == None; }
+  bool isEmpty() const { return File.empty() && Buffer == std::nullopt; }
   bool isFile() const { return !isBuffer(); }
-  bool isBuffer() const { return Buffer != None; }
+  bool isBuffer() const { return Buffer != std::nullopt; }
   bool isPreprocessed() const { return Kind.isPreprocessed(); }
   bool isHeader() const { return Kind.isHeader(); }
   InputKind::HeaderUnitKind getHeaderUnitKind() const {

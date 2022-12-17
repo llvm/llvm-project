@@ -31,15 +31,15 @@ LLDB_PLUGIN_DEFINE_ADV(EmulateInstructionRISCV, InstructionRISCV)
 
 namespace lldb_private {
 
-/// Returns all values wrapped in Optional, or None if any of the values is
-/// None.
+/// Returns all values wrapped in Optional, or std::nullopt if any of the values
+/// is None.
 template <typename... Ts>
 static llvm::Optional<std::tuple<Ts...>> zipOpt(llvm::Optional<Ts> &&...ts) {
   if ((ts.has_value() && ...))
     return llvm::Optional<std::tuple<Ts...>>(
         std::make_tuple(std::move(*ts)...));
   else
-    return llvm::None;
+    return std::nullopt;
 }
 
 // The funct3 is the type of compare in B<CMP> instructions.
@@ -134,7 +134,7 @@ llvm::Optional<uint64_t> Rs::Read(EmulateInstructionRISCV &emulator) {
   RegisterValue value;
   return emulator.ReadRegister(eRegisterKindLLDB, lldbReg, value)
              ? llvm::Optional<uint64_t>(value.GetAsUInt64())
-             : llvm::None;
+             : std::nullopt;
 }
 
 llvm::Optional<int32_t> Rs::ReadI32(EmulateInstructionRISCV &emulator) {
@@ -157,7 +157,7 @@ llvm::Optional<llvm::APFloat> Rs::ReadAPFloat(EmulateInstructionRISCV &emulator,
   uint32_t lldbReg = FPREncodingToLLDB(rs);
   RegisterValue value;
   if (!emulator.ReadRegister(eRegisterKindLLDB, lldbReg, value))
-    return llvm::None;
+    return std::nullopt;
   uint64_t bits = value.GetAsUInt64();
   llvm::APInt api(64, bits, false);
   return llvm::APFloat(isDouble ? llvm::APFloat(api.bitsToDouble())
@@ -251,9 +251,9 @@ static std::enable_if_t<is_amo_add<I> || is_amo_bit_op<I> || is_amo_swap<I> ||
 AtomicAddr(EmulateInstructionRISCV &emulator, I inst, unsigned int align) {
   return inst.rs1.Read(emulator)
       .transform([&](uint64_t rs1) {
-        return rs1 % align == 0 ? llvm::Optional<uint64_t>(rs1) : llvm::None;
+        return rs1 % align == 0 ? llvm::Optional<uint64_t>(rs1) : std::nullopt;
       })
-      .value_or(llvm::None);
+      .value_or(std::nullopt);
 }
 
 template <typename I, typename T>
@@ -497,13 +497,13 @@ static const InstrPattern PATTERNS[] = {
 
     // RVC (Compressed Instructions) //
     {"C_LWSP", 0xE003, 0x4002, DecodeC_LWSP},
-    {"C_LDSP", 0xE003, 0x6002, DecodeC_LDSP},
+    {"C_LDSP", 0xE003, 0x6002, DecodeC_LDSP, RV64 | RV128},
     {"C_SWSP", 0xE003, 0xC002, DecodeC_SWSP},
-    {"C_SDSP", 0xE003, 0xE002, DecodeC_SDSP},
+    {"C_SDSP", 0xE003, 0xE002, DecodeC_SDSP, RV64 | RV128},
     {"C_LW", 0xE003, 0x4000, DecodeC_LW},
-    {"C_LD", 0xE003, 0x6000, DecodeC_LD},
+    {"C_LD", 0xE003, 0x6000, DecodeC_LD, RV64 | RV128},
     {"C_SW", 0xE003, 0xC000, DecodeC_SW},
-    {"C_SD", 0xE003, 0xE000, DecodeC_SD},
+    {"C_SD", 0xE003, 0xE000, DecodeC_SD, RV64 | RV128},
     {"C_J", 0xE003, 0xA001, DecodeC_J},
     {"C_JR", 0xF07F, 0x8002, DecodeC_JR},
     {"C_JALR", 0xF07F, 0x9002, DecodeC_JALR},
@@ -512,11 +512,11 @@ static const InstrPattern PATTERNS[] = {
     {"C_LI", 0xE003, 0x4001, DecodeC_LI},
     {"C_LUI_ADDI16SP", 0xE003, 0x6001, DecodeC_LUI_ADDI16SP},
     {"C_ADDI", 0xE003, 0x1, DecodeC_ADDI},
-    {"C_ADDIW", 0xE003, 0x2001, DecodeC_ADDIW},
+    {"C_ADDIW", 0xE003, 0x2001, DecodeC_ADDIW, RV64 | RV128},
     {"C_ADDI4SPN", 0xE003, 0x0, DecodeC_ADDI4SPN},
-    {"C_SLLI", 0xE003, 0x2, DecodeC_SLLI},
-    {"C_SRLI", 0xEC03, 0x8001, DecodeC_SRLI},
-    {"C_SRAI", 0xEC03, 0x8401, DecodeC_SRAI},
+    {"C_SLLI", 0xE003, 0x2, DecodeC_SLLI, RV64 | RV128},
+    {"C_SRLI", 0xEC03, 0x8001, DecodeC_SRLI, RV64 | RV128},
+    {"C_SRAI", 0xEC03, 0x8401, DecodeC_SRAI, RV64 | RV128},
     {"C_ANDI", 0xEC03, 0x8801, DecodeC_ANDI},
     {"C_MV", 0xF003, 0x8002, DecodeC_MV},
     {"C_ADD", 0xF003, 0x9002, DecodeC_ADD},
@@ -524,8 +524,13 @@ static const InstrPattern PATTERNS[] = {
     {"C_OR", 0xFC63, 0x8C41, DecodeC_OR},
     {"C_XOR", 0xFC63, 0x8C21, DecodeC_XOR},
     {"C_SUB", 0xFC63, 0x8C01, DecodeC_SUB},
-    {"C_SUBW", 0xFC63, 0x9C01, DecodeC_SUBW},
-    {"C_ADDW", 0xFC63, 0x9C21, DecodeC_ADDW},
+    {"C_SUBW", 0xFC63, 0x9C01, DecodeC_SUBW, RV64 | RV128},
+    {"C_ADDW", 0xFC63, 0x9C21, DecodeC_ADDW, RV64 | RV128},
+    // RV32FC //
+    {"FLW", 0xE003, 0x6000, DecodeC_FLW, RV32},
+    {"FSW", 0xE003, 0xE000, DecodeC_FSW, RV32},
+    {"FLWSP", 0xE003, 0x6002, DecodeC_FLWSP, RV32},
+    {"FSWSP", 0xE003, 0xE002, DecodeC_FSWSP, RV32},
 
     // RV32F (Extension for Single-Precision Floating-Point) //
     {"FLW", 0x707F, 0x2007, DecodeIType<FLW>},
@@ -538,22 +543,28 @@ static const InstrPattern PATTERNS[] = {
     {"FSUB_S", 0xFE00007F, 0x8000053, DecodeRType<FSUB_S>},
     {"FMUL_S", 0xFE00007F, 0x10000053, DecodeRType<FMUL_S>},
     {"FDIV_S", 0xFE00007F, 0x18000053, DecodeRType<FDIV_S>},
-    {"FSQRT_S", 0xFFF0007F, 0x58000053, DecodeRType<FSQRT_S>},
+    {"FSQRT_S", 0xFFF0007F, 0x58000053, DecodeIType<FSQRT_S>},
     {"FSGNJ_S", 0xFE00707F, 0x20000053, DecodeRType<FSGNJ_S>},
     {"FSGNJN_S", 0xFE00707F, 0x20001053, DecodeRType<FSGNJN_S>},
     {"FSGNJX_S", 0xFE00707F, 0x20002053, DecodeRType<FSGNJX_S>},
     {"FMIN_S", 0xFE00707F, 0x28000053, DecodeRType<FMIN_S>},
     {"FMAX_S", 0xFE00707F, 0x28001053, DecodeRType<FMAX_S>},
-    {"FCVT_W_S", 0xFFF0007F, 0xC0000053, DecodeRType<FCVT_W_S>},
-    {"FCVT_WU_S", 0xFFF0007F, 0xC0100053, DecodeRType<FCVT_WU_S>},
-    {"FMV_X_W", 0xFFF0707F, 0xE0000053, DecodeRType<FMV_X_W>},
+    {"FCVT_W_S", 0xFFF0007F, 0xC0000053, DecodeIType<FCVT_W_S>},
+    {"FCVT_WU_S", 0xFFF0007F, 0xC0100053, DecodeIType<FCVT_WU_S>},
+    {"FMV_X_W", 0xFFF0707F, 0xE0000053, DecodeIType<FMV_X_W>},
     {"FEQ_S", 0xFE00707F, 0xA2002053, DecodeRType<FEQ_S>},
     {"FLT_S", 0xFE00707F, 0xA2001053, DecodeRType<FLT_S>},
     {"FLE_S", 0xFE00707F, 0xA2000053, DecodeRType<FLE_S>},
-    {"FCLASS_S", 0xFFF0707F, 0xE0001053, DecodeRType<FCLASS_S>},
-    {"FCVT_S_W", 0xFFF0007F, 0xD0000053, DecodeRType<FCVT_S_W>},
-    {"FCVT_S_WU", 0xFFF0007F, 0xD0100053, DecodeRType<FCVT_S_WU>},
-    {"FMV_W_X", 0xFFF0707F, 0xF0000053, DecodeRType<FMV_W_X>},
+    {"FCLASS_S", 0xFFF0707F, 0xE0001053, DecodeIType<FCLASS_S>},
+    {"FCVT_S_W", 0xFFF0007F, 0xD0000053, DecodeIType<FCVT_S_W>},
+    {"FCVT_S_WU", 0xFFF0007F, 0xD0100053, DecodeIType<FCVT_S_WU>},
+    {"FMV_W_X", 0xFFF0707F, 0xF0000053, DecodeIType<FMV_W_X>},
+
+    // RV64F (Extension for Single-Precision Floating-Point) //
+    {"FCVT_L_S", 0xFFF0007F, 0xC0200053, DecodeIType<FCVT_L_S>},
+    {"FCVT_LU_S", 0xFFF0007F, 0xC0300053, DecodeIType<FCVT_LU_S>},
+    {"FCVT_S_L", 0xFFF0007F, 0xD0200053, DecodeIType<FCVT_S_L>},
+    {"FCVT_S_LU", 0xFFF0007F, 0xD0300053, DecodeIType<FCVT_S_LU>},
 };
 
 llvm::Optional<DecodeResult> EmulateInstructionRISCV::Decode(uint32_t inst) {
@@ -563,9 +574,16 @@ llvm::Optional<DecodeResult> EmulateInstructionRISCV::Decode(uint32_t inst) {
   // check whether the compressed encode could be valid
   uint16_t mask = try_rvc & 0b11;
   bool is_rvc = try_rvc != 0 && mask != 3;
+  uint8_t inst_type = RV64;
+
+  // if we have ArchSpec::eCore_riscv128 in the future,
+  // we also need to check it here
+  if (m_arch.GetCore() == ArchSpec::eCore_riscv32)
+    inst_type = RV32;
 
   for (const InstrPattern &pat : PATTERNS) {
-    if ((inst & pat.type_mask) == pat.eigen) {
+    if ((inst & pat.type_mask) == pat.eigen &&
+        (inst_type & pat.inst_type) != 0) {
       LLDB_LOGF(
           log, "EmulateInstructionRISCV::%s: inst(%x at %lx) was decoded to %s",
           __FUNCTION__, inst, m_addr, pat.name);
@@ -575,7 +593,7 @@ llvm::Optional<DecodeResult> EmulateInstructionRISCV::Decode(uint32_t inst) {
   }
   LLDB_LOGF(log, "EmulateInstructionRISCV::%s: inst(0x%x) was unsupported",
             __FUNCTION__, inst);
-  return llvm::None;
+  return std::nullopt;
 }
 
 class Executor {
@@ -1428,6 +1446,38 @@ public:
         })
         .value_or(false);
   }
+  bool operator()(FCVT_L_S inst) {
+    return inst.rs1.ReadAPFloat(m_emu, false)
+        .transform([&](auto &&rs1) {
+          int64_t res = rs1.convertToFloat();
+          return inst.rd.Write(m_emu, uint64_t(res));
+        })
+        .value_or(false);
+  }
+  bool operator()(FCVT_LU_S inst) {
+    return inst.rs1.ReadAPFloat(m_emu, false)
+        .transform([&](auto &&rs1) {
+          uint64_t res = rs1.convertToFloat();
+          return inst.rd.Write(m_emu, res);
+        })
+        .value_or(false);
+  }
+  bool operator()(FCVT_S_L inst) {
+    return inst.rs1.ReadI64(m_emu)
+        .transform([&](auto &&rs1) {
+          llvm::APFloat apf(llvm::APFloat::IEEEsingle(), rs1);
+          return inst.rd.WriteAPFloat(m_emu, apf);
+        })
+        .value_or(false);
+  }
+  bool operator()(FCVT_S_LU inst) {
+    return inst.rs1.Read(m_emu)
+        .transform([&](auto &&rs1) {
+          llvm::APFloat apf(llvm::APFloat::IEEEsingle(), rs1);
+          return inst.rd.WriteAPFloat(m_emu, apf);
+        })
+        .value_or(false);
+  }
   bool operator()(INVALID inst) { return false; }
   bool operator()(RESERVED inst) { return false; }
   bool operator()(EBREAK inst) { return false; }
@@ -1467,7 +1517,7 @@ llvm::Optional<DecodeResult>
 EmulateInstructionRISCV::ReadInstructionAt(lldb::addr_t addr) {
   return ReadMem<uint32_t>(addr)
       .transform([&](uint32_t inst) { return Decode(inst); })
-      .value_or(llvm::None);
+      .value_or(std::nullopt);
 }
 
 bool EmulateInstructionRISCV::ReadInstruction() {
@@ -1490,7 +1540,7 @@ llvm::Optional<lldb::addr_t> EmulateInstructionRISCV::ReadPC() {
   bool success = false;
   auto addr = ReadRegisterUnsigned(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC,
                                    LLDB_INVALID_ADDRESS, &success);
-  return success ? llvm::Optional<lldb::addr_t>(addr) : llvm::None;
+  return success ? llvm::Optional<lldb::addr_t>(addr) : std::nullopt;
 }
 
 bool EmulateInstructionRISCV::WritePC(lldb::addr_t pc) {

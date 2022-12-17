@@ -89,10 +89,11 @@ void PPCELFStreamer::emitInstruction(const MCInst &Inst,
       static_cast<PPCMCCodeEmitter*>(getAssembler().getEmitterPtr());
 
   // If the instruction is a part of the GOT to PC-Rel link time optimization
-  // instruction pair, return a value, otherwise return None. A true returned
-  // value means the instruction is the PLDpc and a false value means it is
-  // the user instruction.
-  Optional<bool> IsPartOfGOTToPCRelPair = isPartOfGOTToPCRelPair(Inst, STI);
+  // instruction pair, return a value, otherwise return std::nullopt. A true
+  // returned value means the instruction is the PLDpc and a false value means
+  // it is the user instruction.
+  std::optional<bool> IsPartOfGOTToPCRelPair =
+      isPartOfGOTToPCRelPair(Inst, STI);
 
   // User of the GOT-indirect address.
   // For example, the load that will get the relocation as follows:
@@ -190,14 +191,14 @@ void PPCELFStreamer::emitGOTToPCRelLabel(const MCInst &Inst) {
 // <MCInst SOME_LOAD <MCOperand Reg:22> <MCOperand Imm:0> <MCOperand Reg:282>
 //   <MCOperand Expr:(.Lpcrel@<<invalid>>)>>
 // The above is a pair of such instructions and this function will not return
-// None for either one of them. In both cases we are looking for the last
-// operand <MCOperand Expr:(.Lpcrel@<<invalid>>)> which needs to be an MCExpr
-// and has the flag MCSymbolRefExpr::VK_PPC_PCREL_OPT. After that we just look
-// at the opcode and in the case of PLDpc we will return true. For the load
+// std::nullopt for either one of them. In both cases we are looking for the
+// last operand <MCOperand Expr:(.Lpcrel@<<invalid>>)> which needs to be an
+// MCExpr and has the flag MCSymbolRefExpr::VK_PPC_PCREL_OPT. After that we just
+// look at the opcode and in the case of PLDpc we will return true. For the load
 // (or store) this function will return false indicating it has found the second
 // instruciton in the pair.
-Optional<bool> llvm::isPartOfGOTToPCRelPair(const MCInst &Inst,
-                                            const MCSubtargetInfo &STI) {
+std::optional<bool> llvm::isPartOfGOTToPCRelPair(const MCInst &Inst,
+                                                 const MCSubtargetInfo &STI) {
   // Need at least two operands.
   if (Inst.getNumOperands() < 2)
     return std::nullopt;
@@ -205,7 +206,8 @@ Optional<bool> llvm::isPartOfGOTToPCRelPair(const MCInst &Inst,
   unsigned LastOp = Inst.getNumOperands() - 1;
   // The last operand needs to be an MCExpr and it needs to have a variant kind
   // of VK_PPC_PCREL_OPT. If it does not satisfy these conditions it is not a
-  // link time GOT PC Rel opt instruction and we can ignore it and return None.
+  // link time GOT PC Rel opt instruction and we can ignore it and return
+  // std::nullopt.
   const MCOperand &Operand = Inst.getOperand(LastOp);
   if (!Operand.isExpr())
     return std::nullopt;

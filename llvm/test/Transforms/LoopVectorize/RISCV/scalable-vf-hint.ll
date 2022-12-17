@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=riscv64 -mattr=+m,+v -loop-vectorize \
+; RUN: opt -mtriple=riscv64 -mattr=+m,+v -passes=loop-vectorize \
 ; RUN:   -riscv-v-vector-bits-max=512 -S -scalable-vectorization=on < %s 2>&1 \
 ; RUN:   | FileCheck %s
 

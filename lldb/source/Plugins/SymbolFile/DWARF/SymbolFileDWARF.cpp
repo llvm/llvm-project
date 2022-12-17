@@ -798,7 +798,7 @@ llvm::Optional<uint32_t> SymbolFileDWARF::GetDWARFUnitIndex(uint32_t cu_idx) {
   if (m_lldb_cu_to_dwarf_unit.empty())
     return cu_idx;
   if (cu_idx >= m_lldb_cu_to_dwarf_unit.size())
-    return llvm::None;
+    return std::nullopt;
   return m_lldb_cu_to_dwarf_unit[cu_idx];
 }
 
@@ -1422,11 +1422,11 @@ SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
     SymbolFileDWARF *dwarf = debug_map->GetSymbolFileByOSOIndex(
         debug_map->GetOSOIndexFromUserID(uid));
     return DecodedUID{
-        *dwarf, {llvm::None, DIERef::Section::DebugInfo, dw_offset_t(uid)}};
+        *dwarf, {std::nullopt, DIERef::Section::DebugInfo, dw_offset_t(uid)}};
   }
   dw_offset_t die_offset = uid;
   if (die_offset == DW_INVALID_OFFSET)
-    return llvm::None;
+    return std::nullopt;
 
   DIERef::Section section =
       uid >> 63 ? DIERef::Section::DebugTypes : DIERef::Section::DebugInfo;
@@ -1507,7 +1507,7 @@ SymbolFileDWARF::GetDynamicArrayInfoForUID(
   if (DWARFDIE type_die = GetDIE(type_uid))
     return DWARFASTParser::ParseChildArrayInfo(type_die, exe_ctx);
   else
-    return llvm::None;
+    return std::nullopt;
 }
 
 Type *SymbolFileDWARF::ResolveTypeUID(const DIERef &die_ref) {
@@ -3866,7 +3866,7 @@ CollectCallSiteParameters(ModuleSP module, DWARFDIE call_site_die) {
     const size_t num_attributes = child.GetAttributes(attributes);
 
     // Parse the location at index \p attr_index within this call site parameter
-    // DIE, or return None on failure.
+    // DIE, or return std::nullopt on failure.
     auto parse_simple_location =
         [&](int attr_index) -> llvm::Optional<DWARFExpressionList> {
       DWARFFormValue form_value;

@@ -282,26 +282,26 @@ public:
     enum class Kind : uint8_t { Attr, Operand, Result, Value, MultipleValues };
 
     // Creates a SymbolInfo instance. `dagAndConstant` is only used for `Attr`
-    // and `Operand` so should be llvm::None for `Result` and `Value` kind.
+    // and `Operand` so should be std::nullopt for `Result` and `Value` kind.
     SymbolInfo(const Operator *op, Kind kind,
-               Optional<DagAndConstant> dagAndConstant);
+               std::optional<DagAndConstant> dagAndConstant);
 
     // Static methods for creating SymbolInfo.
     static SymbolInfo getAttr(const Operator *op, int index) {
       return SymbolInfo(op, Kind::Attr, DagAndConstant(nullptr, index));
     }
     static SymbolInfo getAttr() {
-      return SymbolInfo(nullptr, Kind::Attr, llvm::None);
+      return SymbolInfo(nullptr, Kind::Attr, std::nullopt);
     }
     static SymbolInfo getOperand(DagNode node, const Operator *op, int index) {
       return SymbolInfo(op, Kind::Operand,
                         DagAndConstant(node.getAsOpaquePointer(), index));
     }
     static SymbolInfo getResult(const Operator *op) {
-      return SymbolInfo(op, Kind::Result, llvm::None);
+      return SymbolInfo(op, Kind::Result, std::nullopt);
     }
     static SymbolInfo getValue() {
-      return SymbolInfo(nullptr, Kind::Value, llvm::None);
+      return SymbolInfo(nullptr, Kind::Value, std::nullopt);
     }
     static SymbolInfo getMultipleValues(int numValues) {
       return SymbolInfo(nullptr, Kind::MultipleValues,
@@ -345,11 +345,11 @@ public:
     // the size of MultipleValue symbol). Note that operands may be bound to the
     // same symbol, use the DagNode and index to distinguish them. For `Attr`
     // and MultipleValue, the Dag part will be nullptr.
-    Optional<DagAndConstant> dagAndConstant;
+    std::optional<DagAndConstant> dagAndConstant;
 
     // Alternative name for the symbol. It is used in case the name
     // is not unique. Applicable for `Operand` only.
-    Optional<std::string> alternativeName;
+    std::optional<std::string> alternativeName;
   };
 
   using BaseT = std::unordered_multimap<std::string, SymbolInfo>;

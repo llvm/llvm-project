@@ -44,7 +44,7 @@ using namespace lldb_private;
 // The first bits in the flags are reserved for the SymbolContext::Scope bits
 // so we know if we have tried to look up information in our internal symbol
 // context (m_sc) already.
-#define RESOLVED_FRAME_CODE_ADDR (uint32_t(eSymbolContextEverything + 1))
+#define RESOLVED_FRAME_CODE_ADDR (uint32_t(eSymbolContextLastItem) << 1)
 #define RESOLVED_FRAME_ID_SYMBOL_SCOPE (RESOLVED_FRAME_CODE_ADDR << 1)
 #define GOT_FRAME_BASE (RESOLVED_FRAME_ID_SYMBOL_SCOPE << 1)
 #define RESOLVED_VARIABLES (GOT_FRAME_BASE << 1)

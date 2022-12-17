@@ -17,7 +17,7 @@ using namespace mlir;
 using namespace mlir::arith;
 
 /// Function that evaluates the result of doing something on arithmetic
-/// constants and returns None on overflow.
+/// constants and returns std::nullopt on overflow.
 using ConstArithFn =
     function_ref<Optional<APInt>(const APInt &, const APInt &)>;
 

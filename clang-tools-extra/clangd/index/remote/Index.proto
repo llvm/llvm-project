@@ -107,6 +107,7 @@ message Position {
 message HeaderWithReferences {
   optional string header = 1;
   optional uint32 references = 2;
+  optional uint32 supported_directives = 3;
 }
 
 message RelationsRequest {

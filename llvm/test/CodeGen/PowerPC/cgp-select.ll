@@ -11,7 +11,6 @@ define dso_local void @wibble(ptr nocapture readonly %arg, i32 signext %arg1, pt
 ; CHECK-NEXT:    blt 0, .LBB0_5
 ; CHECK-NEXT:  # %bb.1: # %bb6
 ; CHECK-NEXT:    clrldi 4, 4, 32
-; CHECK-NEXT:    li 7, 7
 ; CHECK-NEXT:    addi 4, 4, -1
 ; CHECK-NEXT:    mtctr 4
 ; CHECK-NEXT:    li 4, 8

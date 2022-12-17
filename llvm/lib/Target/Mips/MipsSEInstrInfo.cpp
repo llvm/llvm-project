@@ -221,7 +221,7 @@ static bool isReadOrWriteToDSPReg(const MachineInstr &MI, bool &isWrite) {
 /// We check for the common case of 'or', as it's MIPS' preferred instruction
 /// for GPRs but we have to check the operands to ensure that is the case.
 /// Other move instructions for MIPS are directly identifiable.
-Optional<DestSourcePair>
+std::optional<DestSourcePair>
 MipsSEInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   bool isDSPControlWrite = false;
   // Condition is made to match the creation of WRDSP/RDDSP copy instruction

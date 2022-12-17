@@ -65,7 +65,7 @@ struct Config {
     std::vector<llvm::unique_function<void(std::vector<std::string> &) const>>
         Edits;
     /// Where to search for compilation databases for this file's flags.
-    CDBSearchSpec CDBSearch = {CDBSearchSpec::Ancestors, llvm::None};
+    CDBSearchSpec CDBSearch = {CDBSearchSpec::Ancestors, std::nullopt};
   } CompileFlags;
 
   enum class BackgroundPolicy { Build, Skip };

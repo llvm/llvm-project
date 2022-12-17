@@ -91,7 +91,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
     SourceRange SR = getSourceRange(Node);
     auto Spelled = Tokens.spelledForExpanded(Tokens.expandedTokens(SR));
     if (!Spelled)
-      return llvm::None;
+      return std::nullopt;
     return halfOpenToRange(
         Tokens.sourceManager(),
         CharSourceRange::getCharRange(Spelled->front().location(),

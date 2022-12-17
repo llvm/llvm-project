@@ -17,8 +17,8 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/TypeSize.h"
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -250,7 +250,7 @@ namespace Intrinsic {
   // returns the declaration with the same signature and remangled name.
   // An existing GlobalValue with the wanted name but with a wrong prototype
   // or of the wrong kind will be renamed by adding ".renamed" to the name.
-  llvm::Optional<Function*> remangleIntrinsicFunction(Function *F);
+  std::optional<Function *> remangleIntrinsicFunction(Function *F);
 
 } // End Intrinsic namespace
 

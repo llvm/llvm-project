@@ -24,6 +24,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <optional>
 
 namespace llvm {
 
@@ -90,7 +91,7 @@ public:
   DIExpression::expr_op_iterator end() const { return End; }
 
   /// Retrieve the fragment information, if any.
-  Optional<DIExpression::FragmentInfo> getFragmentInfo() const {
+  std::optional<DIExpression::FragmentInfo> getFragmentInfo() const {
     return DIExpression::getFragmentInfo(Start, End);
   }
 };

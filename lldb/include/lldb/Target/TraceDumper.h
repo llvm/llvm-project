@@ -39,10 +39,10 @@ struct TraceDumperOptions {
   /// For each instruction, print the instruction kind.
   bool show_control_flow_kind = false;
   /// Optional custom id to start traversing from.
-  llvm::Optional<uint64_t> id = llvm::None;
+  llvm::Optional<uint64_t> id = std::nullopt;
   /// Optional number of instructions to skip from the starting position
   /// of the cursor.
-  llvm::Optional<size_t> skip = llvm::None;
+  llvm::Optional<size_t> skip = std::nullopt;
 };
 
 /// Class used to dump the instructions of a \a TraceCursor using its current
@@ -411,8 +411,8 @@ public:
   ///     The number of instructions to print.
   ///
   /// \return
-  ///     The instruction id of the last traversed instruction, or \b llvm::None
-  ///     if no instructions were visited.
+  ///     The instruction id of the last traversed instruction, or \b
+  ///     std::nullopt if no instructions were visited.
   llvm::Optional<lldb::user_id_t> DumpInstructions(size_t count);
 
   /// Dump all function calls forwards chronologically and hierarchically

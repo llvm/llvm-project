@@ -2613,10 +2613,10 @@ bool DWARFExpression::ParseDWARFLocationList(
       dwarf_cu->GetLocationTable(data);
   Log *log = GetLog(LLDBLog::Expressions);
   auto lookup_addr =
-      [&](uint32_t index) -> llvm::Optional<llvm::object::SectionedAddress> {
+      [&](uint32_t index) -> std::optional<llvm::object::SectionedAddress> {
     addr_t address = dwarf_cu->ReadAddressFromDebugAddrSection(index);
     if (address == LLDB_INVALID_ADDRESS)
-      return llvm::None;
+      return std::nullopt;
     return llvm::object::SectionedAddress{address};
   };
   auto process_list = [&](llvm::Expected<llvm::DWARFLocationExpression> loc) {

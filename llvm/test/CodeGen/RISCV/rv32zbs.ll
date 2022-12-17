@@ -512,8 +512,8 @@ define i32 @bseti_i32_10(i32 %a) nounwind {
 define i32 @bseti_i32_11(i32 %a) nounwind {
 ; RV32I-LABEL: bseti_i32_11:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 1
-; RV32I-NEXT:    addi a1, a1, -2048
+; RV32I-NEXT:    li a1, 1
+; RV32I-NEXT:    slli a1, a1, 11
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
@@ -567,8 +567,8 @@ define i32 @binvi_i32_10(i32 %a) nounwind {
 define i32 @binvi_i32_11(i32 %a) nounwind {
 ; RV32I-LABEL: binvi_i32_11:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 1
-; RV32I-NEXT:    addi a1, a1, -2048
+; RV32I-NEXT:    li a1, 1
+; RV32I-NEXT:    slli a1, a1, 11
 ; RV32I-NEXT:    xor a0, a0, a1
 ; RV32I-NEXT:    ret
 ;

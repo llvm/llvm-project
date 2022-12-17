@@ -52,18 +52,18 @@ TEST(LRTable, Builder) {
   B.Reduce[StateID{2}].insert(RuleID{1});
   LRTable T = std::move(B).build();
 
-  EXPECT_EQ(T.getShiftState(0, Eof), llvm::None);
+  EXPECT_EQ(T.getShiftState(0, Eof), std::nullopt);
   EXPECT_THAT(T.getShiftState(0, Identifier), ValueIs(0));
   EXPECT_THAT(T.getReduceRules(0), ElementsAre(0));
 
-  EXPECT_EQ(T.getShiftState(1, Eof), llvm::None);
-  EXPECT_EQ(T.getShiftState(1, Identifier), llvm::None);
+  EXPECT_EQ(T.getShiftState(1, Eof), std::nullopt);
+  EXPECT_EQ(T.getShiftState(1, Identifier), std::nullopt);
   EXPECT_THAT(T.getGoToState(1, Term), ValueIs(3));
   EXPECT_THAT(T.getReduceRules(1), ElementsAre(2));
 
   // Verify the behaivor for other non-available-actions terminals.
   SymbolID Int = tokenSymbol(tok::kw_int);
-  EXPECT_EQ(T.getShiftState(2, Int), llvm::None);
+  EXPECT_EQ(T.getShiftState(2, Int), std::nullopt);
 
   // Check follow sets.
   EXPECT_TRUE(T.canFollow(Term, Plus));

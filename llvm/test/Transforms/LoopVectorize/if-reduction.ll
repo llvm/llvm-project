@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 < %s | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 

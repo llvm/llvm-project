@@ -420,7 +420,7 @@ public:
 
   /// Some calls have parameter numbering mismatched from argument numbering.
   /// This function converts an argument index to the corresponding
-  /// parameter index. Returns None is the argument doesn't correspond
+  /// parameter index. Returns std::nullopt is the argument doesn't correspond
   /// to any parameter variable.
   virtual Optional<unsigned>
   getAdjustedParameterIndex(unsigned ASTArgumentIndex) const {

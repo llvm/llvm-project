@@ -121,6 +121,7 @@ add_llvm_component_library(LLVMCodeGen
   MachineFunctionSplitter.cpp
   MachineInstrBundle.cpp
   MachineInstr.cpp
+  MachineLateInstrsCleanup.cpp
   MachineLICM.cpp
   MachineLoopInfo.cpp
   MachineLoopUtils.cpp
@@ -199,6 +200,7 @@ add_llvm_component_library(LLVMCodeGen
   RegisterBankInfo.cpp
   SafeStack.cpp
   SafeStackLayout.cpp
+  SanitizerBinaryMetadata.cpp
   ScheduleDAG.cpp
   ScheduleDAGInstrs.cpp
   ScheduleDAGPrinter.cpp

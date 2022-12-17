@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-width=4 -enable-vplan-native-path -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 -enable-vplan-native-path -S %s | FileCheck %s
 
 ; Vectorize explict marked outer loop using vplan native path. Inner loop
 ; contains simple double add reduction. IR is compiled and modified by hand

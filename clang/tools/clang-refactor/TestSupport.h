@@ -93,7 +93,7 @@ struct TestSelectionRangesInFile {
 /// because clang-refactor should return zero on exit when the group results are
 /// consistent.
 ///
-/// \returns None on failure (errors are emitted to stderr), or a set of
+/// \returns std::nullopt on failure (errors are emitted to stderr), or a set of
 /// grouped source ranges in the given file otherwise.
 Optional<TestSelectionRangesInFile> findTestSelectionRanges(StringRef Filename);
 

@@ -48,7 +48,7 @@ FmtContext &FmtContext::withSelf(Twine subst) {
   return *this;
 }
 
-Optional<StringRef>
+std::optional<StringRef>
 FmtContext::getSubstFor(FmtContext::PHKind placeholder) const {
   if (placeholder == FmtContext::PHKind::None ||
       placeholder == FmtContext::PHKind::Custom)
@@ -59,7 +59,7 @@ FmtContext::getSubstFor(FmtContext::PHKind placeholder) const {
   return StringRef(it->second);
 }
 
-Optional<StringRef> FmtContext::getSubstFor(StringRef placeholder) const {
+std::optional<StringRef> FmtContext::getSubstFor(StringRef placeholder) const {
   auto it = customSubstMap.find(placeholder);
   if (it == customSubstMap.end())
     return {};
@@ -165,7 +165,7 @@ void FmtObjectBase::format(raw_ostream &s) const {
         // We need the context to replace special placeholders.
         s << repl.spec << kMarkerForNoSubst;
       } else {
-        Optional<StringRef> subst;
+        std::optional<StringRef> subst;
         if (repl.placeholder == FmtContext::PHKind::Custom) {
           // Skip the leading '$' sign for the custom placeholder
           subst = context->getSubstFor(repl.spec.substr(1));

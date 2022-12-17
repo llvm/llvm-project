@@ -1790,7 +1790,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   SmallVector<SDValue, 16> ProxyRegOps;
-  SmallVector<Optional<MVT>, 16> ProxyRegTruncates;
+  SmallVector<std::optional<MVT>, 16> ProxyRegTruncates;
 
   // Generate loads from param memory/moves from registers for result
   if (Ins.size() > 0) {
@@ -1873,9 +1873,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
           ProxyRegOps.push_back(RetVal.getValue(j));
 
           if (needTruncate)
-            ProxyRegTruncates.push_back(Optional<MVT>(Ins[VecIdx + j].VT));
+            ProxyRegTruncates.push_back(std::optional<MVT>(Ins[VecIdx + j].VT));
           else
-            ProxyRegTruncates.push_back(Optional<MVT>());
+            ProxyRegTruncates.push_back(std::optional<MVT>());
         }
 
         Chain = RetVal.getValue(NumElts);

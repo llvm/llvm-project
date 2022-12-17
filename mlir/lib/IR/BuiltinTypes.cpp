@@ -385,8 +385,8 @@ unsigned BaseMemRefType::getMemorySpaceAsInt() const {
 /// `reducedShape`. The returned mask can be applied as a projection to
 /// `originalShape` to obtain the `reducedShape`. This mask is useful to track
 /// which dimensions must be kept when e.g. compute MemRef strides under
-/// rank-reducing operations. Return None if reducedShape cannot be obtained
-/// by dropping only `1` entries in `originalShape`.
+/// rank-reducing operations. Return std::nullopt if reducedShape cannot be
+/// obtained by dropping only `1` entries in `originalShape`.
 llvm::Optional<llvm::SmallDenseSet<unsigned>>
 mlir::computeRankReductionMask(ArrayRef<int64_t> originalShape,
                                ArrayRef<int64_t> reducedShape) {
@@ -405,11 +405,11 @@ mlir::computeRankReductionMask(ArrayRef<int64_t> originalShape,
     // If no match on `originalIdx`, the `originalShape` at this dimension
     // must be 1, otherwise we bail.
     if (originalShape[originalIdx] != 1)
-      return llvm::None;
+      return std::nullopt;
   }
   // The whole reducedShape must be scanned, otherwise we bail.
   if (reducedIdx != reducedRank)
-    return llvm::None;
+    return std::nullopt;
   return unusedDims;
 }
 

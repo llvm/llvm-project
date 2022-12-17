@@ -66,7 +66,7 @@ public:
   /// of 6 KindTy must be passed. The kinds must be the given in the following
   /// order: CHARACTER, COMPLEX, DOUBLE PRECISION, INTEGER, LOGICAL, and REAL.
   explicit KindMapping(mlir::MLIRContext *context, llvm::StringRef map,
-                       llvm::ArrayRef<KindTy> defs = llvm::None);
+                       llvm::ArrayRef<KindTy> defs = std::nullopt);
   explicit KindMapping(mlir::MLIRContext *context, llvm::StringRef map,
                        llvm::StringRef defs)
       : KindMapping{context, map, toDefaultKinds(defs)} {}

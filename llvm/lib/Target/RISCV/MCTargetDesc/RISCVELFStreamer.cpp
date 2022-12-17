@@ -187,6 +187,11 @@ void RISCVTargetELFStreamer::reset() {
   Contents.clear();
 }
 
+void RISCVTargetELFStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {
+  getStreamer().getAssembler().registerSymbol(Symbol);
+  cast<MCSymbolELF>(Symbol).setOther(ELF::STO_RISCV_VARIANT_CC);
+}
+
 namespace {
 class RISCVELFStreamer : public MCELFStreamer {
   static std::pair<unsigned, unsigned> getRelocPairForSize(unsigned Size) {

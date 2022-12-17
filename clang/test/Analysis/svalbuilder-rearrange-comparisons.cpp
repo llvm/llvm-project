@@ -529,7 +529,7 @@ void compare_same_symbol_minus_left_minus_right_int_less(void) {
 //
 //  // Rearrange signed symbolic expressions only
 //  if (!SingleTy->isSignedIntegerOrEnumerationType())
-//    return None;
+//    return std::nullopt;
 //
 // Without the symbolic casts, the SVal for `x` in `unsigned x = f()` will be
 // the signed `int`. However, with the symbolic casts it will be `unsigned`.

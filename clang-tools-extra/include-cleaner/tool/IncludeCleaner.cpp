@@ -69,11 +69,13 @@ cl::opt<bool> Insert{
     "insert",
     cl::desc("Allow header insertions"),
     cl::init(true),
+    cl::cat(IncludeCleaner),
 };
 cl::opt<bool> Remove{
     "remove",
     cl::desc("Allow header removals"),
     cl::init(true),
+    cl::cat(IncludeCleaner),
 };
 
 std::atomic<unsigned> Errors = ATOMIC_VAR_INIT(0);

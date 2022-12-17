@@ -468,7 +468,8 @@ define <1 x i16> @fcvtzu_v1f64_v1i16(<1 x double> %op1) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    fcvtzs w8, d0
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    mov z0.h, w8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fptoui <1 x double> %op1 to <1 x i16>
   ret <1 x i16> %res
@@ -718,7 +719,8 @@ define <1 x i64> @fcvtzu_v1f64_v1i64(<1 x double> %op1) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    fcvtzu x8, d0
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    mov z0.d, x8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fptoui <1 x double> %op1 to <1 x i64>
   ret <1 x i64> %res
@@ -1219,7 +1221,8 @@ define <1 x i16> @fcvtzs_v1f64_v1i16(<1 x double> %op1) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    fcvtzs w8, d0
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    mov z0.h, w8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fptosi <1 x double> %op1 to <1 x i16>
   ret <1 x i16> %res
@@ -1469,7 +1472,8 @@ define <1 x i64> @fcvtzs_v1f64_v1i64(<1 x double> %op1) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    fcvtzs x8, d0
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    mov z0.d, x8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fptosi <1 x double> %op1 to <1 x i64>
   ret <1 x i64> %res

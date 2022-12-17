@@ -30,6 +30,7 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
+#include <optional>
 #include <unordered_map>
 #include <utility>
 
@@ -144,7 +145,7 @@ void DataAggregator::deleteTempFiles() {
 }
 
 void DataAggregator::findPerfExecutable() {
-  Optional<std::string> PerfExecutable =
+  std::optional<std::string> PerfExecutable =
       sys::Process::FindInEnvPath("PATH", "perf");
   if (!PerfExecutable) {
     outs() << "PERF2BOLT: No perf executable found!\n";

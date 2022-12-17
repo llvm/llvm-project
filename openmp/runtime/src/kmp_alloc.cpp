@@ -1630,6 +1630,9 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
   else if (allocator == ompx_pinned_mem_alloc)
     is_pinned = true;
 
+  // Use default allocator if libmemkind is not available
+  int use_default_allocator = (__kmp_memkind_available) ? false : true;
+
   if (__kmp_memkind_available) {
     if (allocator < kmp_max_mem_alloc) {
       // pre-defined allocator
@@ -1719,11 +1722,25 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
 
     // pre-defined allocator
     if (allocator == omp_high_bw_mem_alloc) {
-      // ptr = NULL;
+      KMP_WARNING(OmpNoAllocator, "omp_high_bw_mem_alloc");
     } else if (allocator == omp_large_cap_mem_alloc) {
-      // warnings?
-    } else {
+      KMP_WARNING(OmpNoAllocator, "omp_large_cap_mem_alloc");
+    } else if (allocator == omp_const_mem_alloc) {
+      KMP_WARNING(OmpNoAllocator, "omp_const_mem_alloc");
+    } else if (allocator == omp_low_lat_mem_alloc) {
+      KMP_WARNING(OmpNoAllocator, "omp_low_lat_mem_alloc");
+    } else if (allocator == omp_cgroup_mem_alloc) {
+      KMP_WARNING(OmpNoAllocator, "omp_cgroup_mem_alloc");
+    } else if (allocator == omp_pteam_mem_alloc) {
+      KMP_WARNING(OmpNoAllocator, "omp_pteam_mem_alloc");
+    } else if (allocator == omp_thread_mem_alloc) {
+      KMP_WARNING(OmpNoAllocator, "omp_thread_mem_alloc");
+    } else { // default allocator requested
+      use_default_allocator = true;
+    }
+    if (use_default_allocator) {
       ptr = __kmp_thread_malloc(__kmp_thread_from_gtid(gtid), desc.size_a);
+      use_default_allocator = false;
     }
   } else if (KMP_IS_TARGET_MEM_SPACE(al->memspace) ||
              (al->memspace > kmp_max_mem_space &&

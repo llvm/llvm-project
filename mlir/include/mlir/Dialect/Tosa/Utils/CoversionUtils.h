@@ -68,7 +68,7 @@ Optional<SmallVector<Value>> checkHasDynamicBatchDims(PatternRewriter &rewriter,
     if (llvm::any_of(dynTy.getShape().drop_front(), ShapedType::isDynamic)) {
       (void)rewriter.notifyMatchFailure(
           op, "input can only be dynamic for batch size");
-      return llvm::None;
+      return std::nullopt;
     }
   }
 

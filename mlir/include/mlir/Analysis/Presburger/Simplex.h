@@ -779,7 +779,7 @@ public:
   /// tableau A and one in B.
   static Simplex makeProduct(const Simplex &a, const Simplex &b);
 
-  /// Returns an integer sample point if one exists, or None
+  /// Returns an integer sample point if one exists, or std::nullopt
   /// otherwise. This should only be called for bounded sets.
   Optional<SmallVector<MPInt, 8>> findIntegerSample();
 

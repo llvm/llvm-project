@@ -104,6 +104,7 @@ private:
               SmallVector<std::pair<const MCSymbol *, const MCSymbol *>, 1>>
         DefRanges;
     bool UseReferenceType = false;
+    std::optional<APSInt> ConstantValue;
   };
 
   struct CVGlobalVariable {

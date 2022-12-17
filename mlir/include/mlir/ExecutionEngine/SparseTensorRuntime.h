@@ -137,6 +137,9 @@ MLIR_SPARSETENSOR_FOREVERY_V(DECL_EXPINSERT)
 /// Tensor-storage method to get the size of the given level.
 MLIR_CRUNNERUTILS_EXPORT index_type sparseLvlSize(void *tensor, index_type l);
 
+/// Tensor-storage method to get the size of the given dimension.
+MLIR_CRUNNERUTILS_EXPORT index_type sparseDimSize(void *tensor, index_type d);
+
 /// Tensor-storage method to finalize lexicographic insertions.
 MLIR_CRUNNERUTILS_EXPORT void endInsert(void *tensor);
 

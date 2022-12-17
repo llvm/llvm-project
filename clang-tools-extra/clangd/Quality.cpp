@@ -372,7 +372,7 @@ wordMatching(llvm::StringRef Name, const llvm::StringSet<> *ContextWords) {
     for (const auto &Word : ContextWords->keys())
       if (Name.contains_insensitive(Word))
         return Word;
-  return llvm::None;
+  return std::nullopt;
 }
 
 SymbolRelevanceSignals::DerivedSignals

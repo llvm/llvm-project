@@ -554,7 +554,7 @@ void testBinarySetOperationExhaustive(Fn1 OpFn, Fn2 ExactOpFn, Fn3 InResultFn) {
         ConstantRange SignedCR = OpFn(CR1, CR2, ConstantRange::Signed);
         TestRange(SignedCR, Elems, PreferSmallestNonFullSigned, {CR1, CR2});
 
-        Optional<ConstantRange> ExactCR = ExactOpFn(CR1, CR2);
+        std::optional<ConstantRange> ExactCR = ExactOpFn(CR1, CR2);
         if (SmallestCR.isSizeLargerThan(Elems.count())) {
           EXPECT_TRUE(!ExactCR);
         } else {
@@ -1724,32 +1724,33 @@ TEST(ConstantRange, MakeGuaranteedNoWrapRegion) {
 template<typename Fn>
 void TestNoWrapRegionExhaustive(Instruction::BinaryOps BinOp,
                                 unsigned NoWrapKind, Fn OverflowFn) {
-  unsigned Bits = 5;
-  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
-    if (CR.isEmptySet())
-      return;
-    if (Instruction::isShift(BinOp) && CR.getUnsignedMax().uge(Bits))
-      return;
+  for (unsigned Bits : {1, 5}) {
+    EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
+      if (CR.isEmptySet())
+        return;
+      if (Instruction::isShift(BinOp) && CR.getUnsignedMax().uge(Bits))
+        return;
 
-    ConstantRange NoWrap =
-        ConstantRange::makeGuaranteedNoWrapRegion(BinOp, CR, NoWrapKind);
-    EnumerateAPInts(Bits, [&](const APInt &N1) {
-      bool NoOverflow = true;
-      bool Overflow = true;
-      ForeachNumInConstantRange(CR, [&](const APInt &N2) {
-        if (OverflowFn(N1, N2))
-          NoOverflow = false;
-        else
-          Overflow = false;
+      ConstantRange NoWrap =
+          ConstantRange::makeGuaranteedNoWrapRegion(BinOp, CR, NoWrapKind);
+      EnumerateAPInts(Bits, [&](const APInt &N1) {
+        bool NoOverflow = true;
+        bool Overflow = true;
+        ForeachNumInConstantRange(CR, [&](const APInt &N2) {
+          if (OverflowFn(N1, N2))
+            NoOverflow = false;
+          else
+            Overflow = false;
+        });
+        EXPECT_EQ(NoOverflow, NoWrap.contains(N1));
+
+        // The no-wrap range is exact for single-element ranges.
+        if (CR.isSingleElement()) {
+          EXPECT_EQ(Overflow, !NoWrap.contains(N1));
+        }
       });
-      EXPECT_EQ(NoOverflow, NoWrap.contains(N1));
-
-      // The no-wrap range is exact for single-element ranges.
-      if (CR.isSingleElement()) {
-        EXPECT_EQ(Overflow, !NoWrap.contains(N1));
-      }
     });
-  });
+  }
 }
 
 // Show that makeGuaranteedNoWrapRegion() is maximal, and for single-element

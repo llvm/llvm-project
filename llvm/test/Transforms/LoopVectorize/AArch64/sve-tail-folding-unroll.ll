@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue -force-vector-interleave=4 -force-vector-width=4 < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue -force-vector-interleave=4 -force-vector-width=4 < %s | FileCheck %s
 
 target triple = "aarch64-unknown-linux-gnu"
 

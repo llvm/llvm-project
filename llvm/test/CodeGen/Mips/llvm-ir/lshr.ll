@@ -841,7 +841,6 @@ define signext i128 @lshr_i128(i128 signext %a, i128 signext %b) {
 ; MMR3-NEXT:    or16 $6, $4
 ; MMR3-NEXT:    lw $4, 8($sp) # 4-byte Folded Reload
 ; MMR3-NEXT:    movn $1, $7, $4
-; MMR3-NEXT:    li16 $7, 0
 ; MMR3-NEXT:    movn $1, $6, $10
 ; MMR3-NEXT:    lw $4, 24($sp) # 4-byte Folded Reload
 ; MMR3-NEXT:    movz $1, $4, $16

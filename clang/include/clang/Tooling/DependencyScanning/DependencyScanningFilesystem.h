@@ -98,7 +98,7 @@ public:
         return ArrayRef<dependency_directives_scan::Directive>(
             Directives->value());
     }
-    return None;
+    return std::nullopt;
   }
 
   /// \returns The error.

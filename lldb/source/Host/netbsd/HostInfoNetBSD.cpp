@@ -51,7 +51,7 @@ llvm::Optional<std::string> HostInfoNetBSD::GetOSBuildString() {
   if (::sysctl(mib, 2, &osrev, &osrev_len, NULL, 0) == 0)
     return llvm::formatv("{0,10:10}", osrev).str();
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 FileSpec HostInfoNetBSD::GetProgramFileSpec() {

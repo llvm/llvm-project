@@ -21,7 +21,8 @@ using namespace llvm;
 
 namespace llvm {
 
-Optional<PseudoProbe> extractProbeFromDiscriminator(const Instruction &Inst) {
+std::optional<PseudoProbe>
+extractProbeFromDiscriminator(const Instruction &Inst) {
   assert(isa<CallBase>(&Inst) && !isa<IntrinsicInst>(&Inst) &&
          "Only call instructions should have pseudo probe encodes as their "
          "Dwarf discriminators");
@@ -45,7 +46,7 @@ Optional<PseudoProbe> extractProbeFromDiscriminator(const Instruction &Inst) {
   return std::nullopt;
 }
 
-Optional<PseudoProbe> extractProbe(const Instruction &Inst) {
+std::optional<PseudoProbe> extractProbe(const Instruction &Inst) {
   if (const auto *II = dyn_cast<PseudoProbeInst>(&Inst)) {
     PseudoProbe Probe;
     Probe.Id = II->getIndex()->getZExtValue();

@@ -445,7 +445,7 @@ void ModuleManager::visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
 bool ModuleManager::lookupModuleFile(StringRef FileName, off_t ExpectedSize,
                                      time_t ExpectedModTime,
                                      Optional<FileEntryRef> &File) {
-  File = None;
+  File = std::nullopt;
   if (FileName == "-")
     return false;
 

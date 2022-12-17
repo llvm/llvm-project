@@ -95,7 +95,7 @@ public:
   llvm::Optional<ArrayInfo> GetDynamicArrayInfoForUID(
       lldb::user_id_t type_uid,
       const lldb_private::ExecutionContext *exe_ctx) override {
-    return llvm::None;
+    return std::nullopt;
   }
 
   bool CompleteType(CompilerType &compiler_type) override { return false; }

@@ -14,19 +14,19 @@
 namespace llvm {
 
 class MCSymbolWasm : public MCSymbol {
-  Optional<wasm::WasmSymbolType> Type;
+  std::optional<wasm::WasmSymbolType> Type;
   bool IsWeak = false;
   bool IsHidden = false;
   bool IsComdat = false;
   bool OmitFromLinkingSection = false;
   mutable bool IsUsedInInitArray = false;
   mutable bool IsUsedInGOT = false;
-  Optional<StringRef> ImportModule;
-  Optional<StringRef> ImportName;
-  Optional<StringRef> ExportName;
+  std::optional<StringRef> ImportModule;
+  std::optional<StringRef> ImportName;
+  std::optional<StringRef> ExportName;
   wasm::WasmSignature *Signature = nullptr;
-  Optional<wasm::WasmGlobalType> GlobalType;
-  Optional<wasm::WasmTableType> TableType;
+  std::optional<wasm::WasmGlobalType> GlobalType;
+  std::optional<wasm::WasmTableType> TableType;
 
   /// An expression describing how to calculate the size of a symbol. If a
   /// symbol has no size this field will be NULL.
@@ -48,7 +48,7 @@ public:
   bool isSection() const { return Type == wasm::WASM_SYMBOL_TYPE_SECTION; }
   bool isTag() const { return Type == wasm::WASM_SYMBOL_TYPE_TAG; }
 
-  Optional<wasm::WasmSymbolType> getType() const { return Type; }
+  std::optional<wasm::WasmSymbolType> getType() const { return Type; }
 
   void setType(wasm::WasmSymbolType type) { Type = type; }
 

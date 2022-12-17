@@ -132,7 +132,7 @@ Constant *Evaluator::MutableValue::read(Type *Ty, APInt Offset,
   const MutableValue *V = this;
   while (const auto *Agg = V->Val.dyn_cast<MutableAggregate *>()) {
     Type *AggTy = Agg->Ty;
-    Optional<APInt> Index = DL.getGEPIndexForOffset(AggTy, Offset);
+    std::optional<APInt> Index = DL.getGEPIndexForOffset(AggTy, Offset);
     if (!Index || Index->uge(Agg->Elements.size()) ||
         !TypeSize::isKnownLE(TySize, DL.getTypeStoreSize(AggTy)))
       return nullptr;
@@ -176,7 +176,7 @@ bool Evaluator::MutableValue::write(Constant *V, APInt Offset,
 
     MutableAggregate *Agg = MV->Val.get<MutableAggregate *>();
     Type *AggTy = Agg->Ty;
-    Optional<APInt> Index = DL.getGEPIndexForOffset(AggTy, Offset);
+    std::optional<APInt> Index = DL.getGEPIndexForOffset(AggTy, Offset);
     if (!Index || Index->uge(Agg->Elements.size()) ||
         !TypeSize::isKnownLE(TySize, DL.getTypeStoreSize(AggTy)))
       return false;

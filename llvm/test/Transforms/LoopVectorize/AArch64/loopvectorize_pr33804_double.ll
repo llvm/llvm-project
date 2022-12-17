@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -S < %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -S < %s | FileCheck %s
 
 ; These tests check that we don't crash if vectorizer decides to cast
 ; a double value to be stored into a pointer type or vice-versa.

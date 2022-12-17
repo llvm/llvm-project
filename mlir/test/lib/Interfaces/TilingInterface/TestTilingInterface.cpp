@@ -50,11 +50,11 @@ struct LinalgTransformationFilter {
 
   explicit LinalgTransformationFilter(
       ArrayRef<StringAttr> matchDisjunction = {},
-      Optional<StringAttr> replacement = None);
+      Optional<StringAttr> replacement = std::nullopt);
 
   explicit LinalgTransformationFilter(
       const FilterFunction &f, ArrayRef<StringAttr> matchDisjunction = {},
-      Optional<StringAttr> replacement = None);
+      Optional<StringAttr> replacement = std::nullopt);
 
   LinalgTransformationFilter(LinalgTransformationFilter &&) = default;
   LinalgTransformationFilter(const LinalgTransformationFilter &) = default;
@@ -368,6 +368,9 @@ void TestTilingInterfacePass::addTestPatterns(MLIRContext *context,
     // 5. Tile and fuse a sequence of GEMMs by tiling and fusing only along M
     // dimension.
     addPatternForTileAndFuse(context, patterns, "gemm_sequence_fusion", {10});
+    // 6. Fusion of back-to-back-reduction ops
+    addPatternForTileAndFuse(context, patterns, "reduction_sequence_fusion",
+                             {10});
     return;
   }
   if (testLoweringToScalar) {

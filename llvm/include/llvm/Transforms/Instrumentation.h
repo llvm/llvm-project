@@ -150,13 +150,6 @@ struct SanitizerCoverageOptions {
   SanitizerCoverageOptions() = default;
 };
 
-/// Options for SanitizerBinaryMetadata.
-struct SanitizerBinaryMetadataOptions {
-  bool Covered = false;
-  bool Atomics = false;
-  SanitizerBinaryMetadataOptions() = default;
-};
-
 /// Calculate what to divide by to scale counts.
 ///
 /// Given the maximum count, calculate a divisor that will scale all the

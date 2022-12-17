@@ -684,8 +684,8 @@ define signext i32 @bseti_i32_10(i32 signext %a) nounwind {
 define signext i32 @bseti_i32_11(i32 signext %a) nounwind {
 ; RV64I-LABEL: bseti_i32_11:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, -2048
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    slli a1, a1, 11
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -734,8 +734,8 @@ define i64 @bseti_i64_10(i64 %a) nounwind {
 define i64 @bseti_i64_11(i64 %a) nounwind {
 ; RV64I-LABEL: bseti_i64_11:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, -2048
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    slli a1, a1, 11
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -822,8 +822,8 @@ define signext i32 @binvi_i32_10(i32 signext %a) nounwind {
 define signext i32 @binvi_i32_11(i32 signext %a) nounwind {
 ; RV64I-LABEL: binvi_i32_11:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, -2048
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    slli a1, a1, 11
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -872,8 +872,8 @@ define i64 @binvi_i64_10(i64 %a) nounwind {
 define i64 @binvi_i64_11(i64 %a) nounwind {
 ; RV64I-LABEL: binvi_i64_11:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, -2048
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    slli a1, a1, 11
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    ret
 ;

@@ -146,13 +146,13 @@ static bool opensProtoMessageField(const FormatToken &LessTok,
            (LessTok.Previous && LessTok.Previous->is(tok::equal))));
 }
 
-// Returns the delimiter of a raw string literal, or None if TokenText is not
-// the text of a raw string literal. The delimiter could be the empty string.
-// For example, the delimiter of R"deli(cont)deli" is deli.
+// Returns the delimiter of a raw string literal, or std::nullopt if TokenText
+// is not the text of a raw string literal. The delimiter could be the empty
+// string.  For example, the delimiter of R"deli(cont)deli" is deli.
 static llvm::Optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
   if (TokenText.size() < 5 // The smallest raw string possible is 'R"()"'.
       || !TokenText.startswith("R\"") || !TokenText.endswith("\"")) {
-    return None;
+    return std::nullopt;
   }
 
   // A raw string starts with 'R"<delimiter>(' and delimiter is ascii and has
@@ -160,15 +160,15 @@ static llvm::Optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
   // 19 bytes.
   size_t LParenPos = TokenText.substr(0, 19).find_first_of('(');
   if (LParenPos == StringRef::npos)
-    return None;
+    return std::nullopt;
   StringRef Delimiter = TokenText.substr(2, LParenPos - 2);
 
   // Check that the string ends in ')Delimiter"'.
   size_t RParenPos = TokenText.size() - Delimiter.size() - 2;
   if (TokenText[RParenPos] != ')')
-    return None;
+    return std::nullopt;
   if (!TokenText.substr(RParenPos + 1).startswith(Delimiter))
-    return None;
+    return std::nullopt;
   return Delimiter;
 }
 
@@ -209,7 +209,7 @@ llvm::Optional<FormatStyle>
 RawStringFormatStyleManager::getDelimiterStyle(StringRef Delimiter) const {
   auto It = DelimiterStyle.find(Delimiter);
   if (It == DelimiterStyle.end())
-    return None;
+    return std::nullopt;
   return It->second;
 }
 
@@ -218,7 +218,7 @@ RawStringFormatStyleManager::getEnclosingFunctionStyle(
     StringRef EnclosingFunction) const {
   auto It = EnclosingFunctionStyle.find(EnclosingFunction);
   if (It == EnclosingFunctionStyle.end())
-    return None;
+    return std::nullopt;
   return It->second;
 }
 
@@ -720,8 +720,9 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
        (Previous.is(tok::l_brace) && Previous.isNot(BK_Block) &&
         Style.Cpp11BracedListStyle)) &&
       State.Column > getNewLineColumn(State) &&
-      (!Previous.Previous || !Previous.Previous->isOneOf(
-                                 tok::kw_for, tok::kw_while, tok::kw_switch)) &&
+      (!Previous.Previous ||
+       !Previous.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
+                                   tok::kw_switch)) &&
       // Don't do this for simple (no expressions) one-argument function calls
       // as that feels like needlessly wasting whitespace, e.g.:
       //
@@ -2071,17 +2072,17 @@ llvm::Optional<FormatStyle>
 ContinuationIndenter::getRawStringStyle(const FormatToken &Current,
                                         const LineState &State) {
   if (!Current.isStringLiteral())
-    return None;
+    return std::nullopt;
   auto Delimiter = getRawStringDelimiter(Current.TokenText);
   if (!Delimiter)
-    return None;
+    return std::nullopt;
   auto RawStringStyle = RawStringFormats.getDelimiterStyle(*Delimiter);
   if (!RawStringStyle && Delimiter->empty()) {
     RawStringStyle = RawStringFormats.getEnclosingFunctionStyle(
         getEnclosingFunctionName(Current));
   }
   if (!RawStringStyle)
-    return None;
+    return std::nullopt;
   RawStringStyle->ColumnLimit = getColumnLimit(State);
   return RawStringStyle;
 }

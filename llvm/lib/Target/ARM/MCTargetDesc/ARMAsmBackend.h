@@ -31,7 +31,7 @@ public:
     return STI->getFeatureBits()[ARM::HasV6T2Ops];
   }
 
-  Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 

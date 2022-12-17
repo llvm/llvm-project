@@ -53,7 +53,7 @@ void LineEntryTest::SetUp() {
 
   // TODO: Handle SourceLocationSpec column information
 llvm::Expected<SymbolContextList> LineEntryTest::GetLineEntriesForLine(
-    uint32_t line, llvm::Optional<uint16_t> column = llvm::None) {
+    uint32_t line, llvm::Optional<uint16_t> column = std::nullopt) {
   SymbolContextList sc_comp_units;
   SymbolContextList sc_line_entries;
   FileSpec file_spec("inlined-functions.cpp");

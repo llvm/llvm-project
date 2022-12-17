@@ -10,7 +10,6 @@
 #include "ELFObject.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"

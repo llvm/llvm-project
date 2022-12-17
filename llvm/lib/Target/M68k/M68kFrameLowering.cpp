@@ -673,7 +673,7 @@ void M68kFrameLowering::emitEpilogue(MachineFunction &MF,
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   M68kMachineFunctionInfo *MMFI = MF.getInfo<M68kMachineFunctionInfo>();
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
-  Optional<unsigned> RetOpcode;
+  std::optional<unsigned> RetOpcode;
   if (MBBI != MBB.end())
     RetOpcode = MBBI->getOpcode();
   DebugLoc DL;

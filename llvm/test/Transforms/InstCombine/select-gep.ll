@@ -248,8 +248,8 @@ declare void @use_i32p(ptr)
 
 define <2 x ptr> @test7(<2 x ptr> %p1, i64 %idx, <2 x i1> %cc) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, <2 x ptr> [[P1:%.*]], i64 [[IDX]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select <2 x i1> [[CC:%.*]], <2 x ptr> [[P1:%.*]], <2 x ptr> [[GEP]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, <2 x ptr> [[P1:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select <2 x i1> [[CC:%.*]], <2 x ptr> [[P1]], <2 x ptr> [[GEP]]
 ; CHECK-NEXT:    ret <2 x ptr> [[SELECT]]
 ;
   %gep = getelementptr i64, <2 x ptr> %p1, i64 %idx

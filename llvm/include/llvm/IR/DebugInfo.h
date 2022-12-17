@@ -27,6 +27,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
+#include <optional>
 
 namespace llvm {
 
@@ -302,12 +303,12 @@ struct AssignmentInfo {
             SizeInBits == DL.getTypeSizeInBits(Base->getAllocatedType())) {}
 };
 
-Optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
-                                           const MemIntrinsic *I);
-Optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
-                                           const StoreInst *SI);
-Optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
-                                           const AllocaInst *AI);
+std::optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
+                                                const MemIntrinsic *I);
+std::optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
+                                                const StoreInst *SI);
+std::optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
+                                                const AllocaInst *AI);
 
 } // end namespace at
 

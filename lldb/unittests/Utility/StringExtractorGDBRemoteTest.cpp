@@ -7,104 +7,104 @@
 
 TEST(StringExtractorGDBRemoteTest, GetPidTid) {
   StringExtractorGDBRemote ex("");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   // invalid/short values
 
   ex.Reset("narf");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   ex.Reset(";1234");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   ex.Reset(".1234");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   ex.Reset("p");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   ex.Reset("pnarf");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   ex.Reset("p;1234");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   ex.Reset("p.1234");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   ex.Reset("p1234.");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   ex.Reset("p1234.;1234");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   ex.Reset("-2");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   ex.Reset("p1234.-2");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   ex.Reset("p-2");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   ex.Reset("p-2.1234");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   // overflow
 
   ex.Reset("p10000000000000000");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   ex.Reset("p10000000000000000.0");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   ex.Reset("10000000000000000");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   ex.Reset("p0.10000000000000000");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   ex.Reset("p10000000000000000.10000000000000000");
-  EXPECT_EQ(ex.GetPidTid(0), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(0), std::nullopt);
 
   // invalid: all processes but specific thread
 
   ex.Reset("p-1.0");
-  EXPECT_EQ(ex.GetPidTid(100), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(100), std::nullopt);
 
   ex.Reset("p-1.1234");
-  EXPECT_EQ(ex.GetPidTid(100), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(100), std::nullopt);
 
   ex.Reset("p-1.123456789ABCDEF0");
-  EXPECT_EQ(ex.GetPidTid(100), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(100), std::nullopt);
 
   // unsupported: pid/tid 0
 
   ex.Reset("0");
-  EXPECT_EQ(ex.GetPidTid(100), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(100), std::nullopt);
 
   ex.Reset("p0");
-  EXPECT_EQ(ex.GetPidTid(100), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(100), std::nullopt);
 
   ex.Reset("p0.0");
-  EXPECT_EQ(ex.GetPidTid(100), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(100), std::nullopt);
 
   ex.Reset("p0.-1");
-  EXPECT_EQ(ex.GetPidTid(100), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(100), std::nullopt);
 
   ex.Reset("p0.1234");
-  EXPECT_EQ(ex.GetPidTid(100), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(100), std::nullopt);
 
   ex.Reset("p0.123456789ABCDEF0");
-  EXPECT_EQ(ex.GetPidTid(100), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(100), std::nullopt);
 
   ex.Reset("p1234.0");
-  EXPECT_EQ(ex.GetPidTid(100), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(100), std::nullopt);
 
   ex.Reset("p123456789ABCDEF0.0");
-  EXPECT_EQ(ex.GetPidTid(100), llvm::None);
+  EXPECT_EQ(ex.GetPidTid(100), std::nullopt);
 
   // pure thread id
 

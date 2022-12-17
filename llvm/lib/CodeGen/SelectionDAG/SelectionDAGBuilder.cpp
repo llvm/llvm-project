@@ -1705,7 +1705,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
 
   // If this is an instruction which fast-isel has deferred, select it now.
   if (const Instruction *Inst = dyn_cast<Instruction>(V)) {
-    unsigned InReg = FuncInfo.InitializeRegForValue(Inst);
+    Register InReg = FuncInfo.InitializeRegForValue(Inst);
 
     RegsForValue RFV(*DAG.getContext(), TLI, DAG.getDataLayout(), InReg,
                      Inst->getType(), std::nullopt);
@@ -2117,7 +2117,7 @@ void SelectionDAGBuilder::ExportFromCurrentBlock(const Value *V) {
   // Already exported?
   if (FuncInfo.isExportedInst(V)) return;
 
-  unsigned Reg = FuncInfo.InitializeRegForValue(V);
+  Register Reg = FuncInfo.InitializeRegForValue(V);
   CopyValueToVirtualRegister(V, Reg);
 }
 
@@ -6442,7 +6442,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // Get the last argument, the metadata and convert it to an integer in the
     // call
     Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(1))->getMetadata();
-    Optional<RoundingMode> RoundMode =
+    std::optional<RoundingMode> RoundMode =
         convertStrToRoundingMode(cast<MDString>(MD)->getString());
 
     EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());

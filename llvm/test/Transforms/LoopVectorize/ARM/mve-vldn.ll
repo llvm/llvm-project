@@ -1,7 +1,7 @@
-; RUN: opt -loop-vectorize < %s -S -o - | FileCheck %s --check-prefixes=CHECK,CHECK-2,CHECK-NO4
-; RUN: opt -loop-vectorize -mve-max-interleave-factor=1 < %s -S -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NO2,CHECK-NO4
-; RUN: opt -loop-vectorize -mve-max-interleave-factor=2 < %s -S -o - | FileCheck %s --check-prefixes=CHECK,CHECK-2,CHECK-NO4
-; RUN: opt -loop-vectorize -mve-max-interleave-factor=4 < %s -S -o - | FileCheck %s --check-prefixes=CHECK,CHECK-2,CHECK-4
+; RUN: opt -passes=loop-vectorize < %s -S -o - | FileCheck %s --check-prefixes=CHECK,CHECK-2,CHECK-NO4
+; RUN: opt -passes=loop-vectorize -mve-max-interleave-factor=1 < %s -S -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NO2,CHECK-NO4
+; RUN: opt -passes=loop-vectorize -mve-max-interleave-factor=2 < %s -S -o - | FileCheck %s --check-prefixes=CHECK,CHECK-2,CHECK-NO4
+; RUN: opt -passes=loop-vectorize -mve-max-interleave-factor=4 < %s -S -o - | FileCheck %s --check-prefixes=CHECK,CHECK-2,CHECK-4
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8.1m.main-none-none-eabi"

@@ -44,7 +44,7 @@ dumpDXContainer(MemoryBufferRef Source) {
     dxbc::PartType PT = dxbc::parsePartType(P.Part.getName());
     switch (PT) {
     case dxbc::PartType::DXIL: {
-      Optional<DXContainer::DXILData> DXIL = Container.getDXIL();
+      std::optional<DXContainer::DXILData> DXIL = Container.getDXIL();
       assert(DXIL && "Since we are iterating and found a DXIL part, "
                      "this should never not have a value");
       NewPart.Program = DXContainerYAML::DXILProgram{
@@ -61,14 +61,14 @@ dumpDXContainer(MemoryBufferRef Source) {
       break;
     }
     case dxbc::PartType::SFI0: {
-      Optional<uint64_t> Flags = Container.getShaderFlags();
+      std::optional<uint64_t> Flags = Container.getShaderFlags();
       // Omit the flags in the YAML if they are missing or zero.
       if (Flags && *Flags > 0)
         NewPart.Flags = DXContainerYAML::ShaderFlags(*Flags);
       break;
     }
     case dxbc::PartType::HASH: {
-      Optional<dxbc::ShaderHash> Hash = Container.getShaderHash();
+      std::optional<dxbc::ShaderHash> Hash = Container.getShaderHash();
       if (Hash && Hash->isPopulated())
         NewPart.Hash = DXContainerYAML::ShaderHash(*Hash);
       break;

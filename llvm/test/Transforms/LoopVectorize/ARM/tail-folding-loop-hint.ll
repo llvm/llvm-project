@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -loop-vectorize -tail-predication=enabled -S < %s | \
+; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -passes=loop-vectorize -tail-predication=enabled -S < %s | \
 ; RUN:  FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"

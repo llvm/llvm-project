@@ -71,7 +71,7 @@ public:
   ///
   ///   * Optional<BaseT>(T)
   ///     - This either returns a valid Attribute/Type in the case of success,
-  ///       nullptr in the case of failure, or `llvm::None` to signify that
+  ///       nullptr in the case of failure, or `std::nullopt` to signify that
   ///       additional replacement functions may be applied (i.e. this function
   ///       doesn't handle that instance).
   ///

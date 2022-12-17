@@ -69,14 +69,14 @@ Optional<ProgressEvent> ProgressEvent::Create(uint64_t progress_id,
                                               const ProgressEvent *prev_event) {
   // If it's an update without a previous event, we abort
   if (completed > 0 && completed < total && !prev_event)
-    return None;
+    return std::nullopt;
   ProgressEvent event(progress_id, message, completed, total, prev_event);
   // We shouldn't show unnamed start events in the IDE
   if (event.GetEventType() == progressStart && event.GetEventName().empty())
-    return None;
+    return std::nullopt;
 
   if (prev_event && prev_event->EqualsForIDE(event))
-    return None;
+    return std::nullopt;
 
   return event;
 }
@@ -163,7 +163,7 @@ const ProgressEvent &ProgressEventManager::GetMostRecentEvent() const {
 void ProgressEventManager::Update(uint64_t progress_id, uint64_t completed,
                                   uint64_t total) {
   if (Optional<ProgressEvent> event = ProgressEvent::Create(
-          progress_id, None, completed, total, &GetMostRecentEvent())) {
+          progress_id, std::nullopt, completed, total, &GetMostRecentEvent())) {
     if (event->GetEventType() == progressEnd)
       m_finished = true;
 

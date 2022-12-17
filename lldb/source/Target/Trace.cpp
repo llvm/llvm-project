@@ -52,7 +52,7 @@ template <typename K, typename V>
 static Optional<V> Lookup(DenseMap<K, V> &map, K k) {
   auto it = map.find(k);
   if (it == map.end())
-    return None;
+    return std::nullopt;
   return it->second;
 }
 
@@ -69,7 +69,7 @@ template <typename K1, typename K2, typename V>
 static Optional<V> Lookup(DenseMap<K1, DenseMap<K2, V>> &map, K1 k1, K2 k2) {
   auto it = map.find(k1);
   if (it == map.end())
-    return None;
+    return std::nullopt;
   return Lookup(it->second, k2);
 }
 
@@ -236,7 +236,7 @@ Trace::GetLiveThreadBinaryData(lldb::tid_t tid, llvm::StringRef kind) {
         kind.data(), tid);
 
   TraceGetBinaryDataRequest request{GetPluginName().str(), kind.str(), tid,
-                                    /*cpu_id=*/None};
+                                    /*cpu_id=*/std::nullopt};
   return GetLiveTraceBinaryData(request, *size);
 }
 
@@ -254,7 +254,7 @@ Trace::GetLiveCpuBinaryData(lldb::cpu_id_t cpu_id, llvm::StringRef kind) {
         kind.data(), cpu_id);
 
   TraceGetBinaryDataRequest request{GetPluginName().str(), kind.str(),
-                                    /*tid=*/None, cpu_id};
+                                    /*tid=*/std::nullopt, cpu_id};
   return m_live_process->TraceGetBinaryData(request);
 }
 
@@ -267,7 +267,8 @@ Trace::GetLiveProcessBinaryData(llvm::StringRef kind) {
         "Tracing data \"%s\" is not available for the process.", kind.data());
 
   TraceGetBinaryDataRequest request{GetPluginName().str(), kind.str(),
-                                    /*tid=*/None, /*cpu_id*/ None};
+                                    /*tid=*/std::nullopt,
+                                    /*cpu_id*/ std::nullopt};
   return GetLiveTraceBinaryData(request, *size);
 }
 

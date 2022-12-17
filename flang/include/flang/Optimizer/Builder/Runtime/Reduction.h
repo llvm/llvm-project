@@ -148,6 +148,16 @@ void genMinvalDim(fir::FirOpBuilder &builder, mlir::Location loc,
                   mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
                   mlir::Value maskBox);
 
+/// Generate call to `Norm2` intrinsic runtime routine. This is the version
+/// that does not take a dim argument.
+mlir::Value genNorm2(fir::FirOpBuilder &builder, mlir::Location loc,
+                     mlir::Value arrayBox);
+
+/// Generate call to `Norm2Dim` intrinsic runtime routine. This is the version
+/// that takes a dim argument.
+void genNorm2Dim(fir::FirOpBuilder &builder, mlir::Location loc,
+                 mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim);
+
 /// Generate call to `Parity` runtime routine. This version of `parity` is
 /// specialized for rank 1 mask arguments.
 /// This calls the version that returns a scalar logical value.

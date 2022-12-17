@@ -141,6 +141,7 @@ namespace dr217 { // dr217: yes
 }
 
 namespace dr218 { // dr218: yes
+                  // NB: also dup 405
   namespace A {
     struct S {};
     void f(S);

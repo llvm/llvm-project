@@ -684,10 +684,9 @@ static void normalizePredicate(ScalarEvolution *SE, Loop *L,
       ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE;
 }
 
-
 /// If ICI can be widened to a loop invariant condition emits the loop
 /// invariant condition in the loop preheader and return it, otherwise
-/// returns None.
+/// returns std::nullopt.
 Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
                                                        SCEVExpander &Expander,
                                                        Instruction *Guard) {

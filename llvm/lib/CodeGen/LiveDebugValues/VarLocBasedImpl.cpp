@@ -148,6 +148,7 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <optional>
 #include <queue>
 #include <tuple>
 #include <utility>
@@ -281,7 +282,7 @@ private:
   enum struct TransferKind { TransferCopy, TransferSpill, TransferRestore };
 
   using FragmentInfo = DIExpression::FragmentInfo;
-  using OptFragmentInfo = Optional<DIExpression::FragmentInfo>;
+  using OptFragmentInfo = std::optional<DIExpression::FragmentInfo>;
 
   /// A pair of debug variable and value location.
   struct VarLoc {

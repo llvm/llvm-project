@@ -16,6 +16,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "correlator"
 
@@ -264,11 +265,11 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
     if (!isDIEOfProbe(Die))
       return;
     Optional<const char *> FunctionName;
-    Optional<uint64_t> CFGHash;
+    std::optional<uint64_t> CFGHash;
     Optional<uint64_t> CounterPtr = getLocation(Die);
     auto FnDie = Die.getParent();
     auto FunctionPtr = dwarf::toAddress(FnDie.find(dwarf::DW_AT_low_pc));
-    Optional<uint64_t> NumCounters;
+    std::optional<uint64_t> NumCounters;
     for (const DWARFDie &Child : Die.children()) {
       if (Child.getTag() != dwarf::DW_TAG_LLVM_annotation)
         continue;

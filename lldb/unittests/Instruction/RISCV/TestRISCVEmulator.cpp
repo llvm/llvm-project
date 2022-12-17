@@ -27,8 +27,8 @@ struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
   RegisterInfoPOSIX_riscv64::FPR fpr;
   uint8_t memory[1024] = {0};
 
-  RISCVEmulatorTester()
-      : EmulateInstructionRISCV(ArchSpec("riscv64-unknown-linux-gnu")) {
+  RISCVEmulatorTester(std::string triple = "riscv64-unknown-linux-gnu")
+      : EmulateInstructionRISCV(ArchSpec(triple)) {
     EmulateInstruction::SetReadRegCallback(ReadRegisterCallback);
     EmulateInstruction::SetWriteRegCallback(WriteRegisterCallback);
     EmulateInstruction::SetReadMemCallback(ReadMemoryCallback);
@@ -356,6 +356,26 @@ TEST_F(RISCVEmulatorTester, TestCDecode) {
   }
 }
 
+class RISCVEmulatorTester32 : public RISCVEmulatorTester {
+public:
+  RISCVEmulatorTester32() : RISCVEmulatorTester("riscv32-unknown-linux-gnu") {}
+};
+
+TEST_F(RISCVEmulatorTester32, TestCDecodeRV32) {
+  std::vector<TestDecode> tests = {
+      {0x6002, FLW{Rd{0}, Rs{2}, 0}},
+      {0xE006, FSW{Rs{2}, Rs{1}, 0}},
+      {0x6000, FLW{Rd{8}, Rs{8}, 0}},
+      {0xE000, FSW{Rs{8}, Rs{8}, 0}},
+  };
+
+  for (auto i : tests) {
+    auto decode = this->Decode(i.inst);
+    ASSERT_TRUE(decode.has_value());
+    ASSERT_TRUE(compareInst(decode->decoded, i.inst_type));
+  }
+}
+
 // GEN_BRANCH_TEST(opcode, imm1, imm2, imm3):
 // It should branch for instruction `opcode imm1, imm2`
 // It should do nothing for instruction `opcode imm1, imm3`
@@ -584,10 +604,10 @@ struct FCVTInst {
 
 TEST_F(RISCVEmulatorTester, TestFCVTInst) {
   std::vector<FCVTInst> tests = {
-      {0xC001F253, "FCVT_W_S"},
-      {0xC011F253, "FCVT_WU_S"},
-      {0xD001F253, "FCVT_S_W"},
-      {0xD011F253, "FCVT_S_WU"},
+      {0xC001F253, "FCVT_W_S"}, {0xC011F253, "FCVT_WU_S"},
+      {0xD001F253, "FCVT_S_W"}, {0xD011F253, "FCVT_S_WU"},
+      {0xC021F253, "FCVT_L_S"}, {0xC031F253, "FCVT_LU_S"},
+      {0xD021F253, "FCVT_S_L"}, {0xD031F253, "FCVT_S_LU"},
   };
   for (auto i : tests) {
     auto decode = this->Decode(i.inst);

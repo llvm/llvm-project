@@ -23,7 +23,7 @@ std::vector<DirectoryWatcher::Event>
 getAsFileEvents(const std::vector<std::string> &Scan);
 
 /// Gets status of file (or directory) at \p Path.
-/// \returns llvm::None if \p Path doesn't exist or can't get the status.
+/// \returns std::nullopt if \p Path doesn't exist or can't get the status.
 llvm::Optional<llvm::sys::fs::file_status> getFileStatus(llvm::StringRef Path);
 
 } // namespace clang

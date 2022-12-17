@@ -188,7 +188,6 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:  ; %bb.3: ; %LeafBlock1
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_cmp_eq_u32 s8, 1
-; GCN-NEXT:    s_mov_b64 s[4:5], -1
 ; GCN-NEXT:    s_cbranch_scc0 .LBB1_5
 ; GCN-NEXT:  ; %bb.4: ; %case1
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1

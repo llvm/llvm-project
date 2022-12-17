@@ -41,16 +41,16 @@ public:
   virtual ~PassInstrumentation() = 0;
 
   /// A callback to run before a pass pipeline is executed. This function takes
-  /// the name of the operation type being operated on, or None if the pipeline
-  /// is op-agnostic, and information related to the parent that spawned this
-  /// pipeline.
+  /// the name of the operation type being operated on, or std::nullopt if the
+  /// pipeline is op-agnostic, and information related to the parent that
+  /// spawned this pipeline.
   virtual void runBeforePipeline(Optional<OperationName> name,
                                  const PipelineParentInfo &parentInfo);
 
   /// A callback to run after a pass pipeline has executed. This function takes
-  /// the name of the operation type being operated on, or None if the pipeline
-  /// is op-agnostic, and information related to the parent that spawned this
-  /// pipeline.
+  /// the name of the operation type being operated on, or std::nullopt if the
+  /// pipeline is op-agnostic, and information related to the parent that
+  /// spawned this pipeline.
   virtual void runAfterPipeline(Optional<OperationName> name,
                                 const PipelineParentInfo &parentInfo);
 

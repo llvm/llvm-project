@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -S | FileCheck %s
 
 ; CHECK: vector.body:
 ; CHECK: fadd

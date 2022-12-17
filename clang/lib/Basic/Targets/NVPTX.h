@@ -18,6 +18,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace clang {
 namespace targets {
@@ -156,9 +157,9 @@ public:
   /// space \p AddressSpace to be converted in order to be used, then return the
   /// corresponding target specific DWARF address space.
   ///
-  /// \returns Otherwise return None and no conversion will be emitted in the
-  /// DWARF.
-  Optional<unsigned>
+  /// \returns Otherwise return std::nullopt and no conversion will be emitted
+  /// in the DWARF.
+  std::optional<unsigned>
   getDWARFAddressSpace(unsigned AddressSpace) const override {
     if (AddressSpace >= std::size(NVPTXDWARFAddrSpaceMap) ||
         NVPTXDWARFAddrSpaceMap[AddressSpace] < 0)

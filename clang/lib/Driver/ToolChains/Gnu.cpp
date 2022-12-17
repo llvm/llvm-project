@@ -1702,7 +1702,8 @@ static void findCSKYMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
   FilterNonExistent NonExistent(Path, "/crtbegin.o", D.getVFS());
 
   tools::csky::FloatABI TheFloatABI = tools::csky::getCSKYFloatABI(D, Args);
-  llvm::Optional<llvm::StringRef> Res = tools::csky::getCSKYArchName(D, Args, TargetTriple);
+  std::optional<llvm::StringRef> Res =
+      tools::csky::getCSKYArchName(D, Args, TargetTriple);
 
   if (!Res)
     return;

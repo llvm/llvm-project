@@ -14,7 +14,6 @@
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -24,6 +23,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include <cassert>
+#include <optional>
 
 namespace llvm {
 
@@ -133,14 +133,14 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// redzone, and no value otherwise.
   /// Initialized during frame lowering, unless the function has the noredzone
   /// attribute, in which case it is set to false at construction.
-  Optional<bool> HasRedZone;
+  std::optional<bool> HasRedZone;
 
   /// ForwardedMustTailRegParms - A list of virtual and physical registers
   /// that must be forwarded to every musttail call.
   SmallVector<ForwardedRegister, 1> ForwardedMustTailRegParms;
 
   /// FrameIndex for the tagged base pointer.
-  Optional<int> TaggedBasePointerIndex;
+  std::optional<int> TaggedBasePointerIndex;
 
   /// Offset from SP-at-entry to the tagged base pointer.
   /// Tagged base pointer is set up to point to the first (lowest address)
@@ -149,7 +149,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
   /// OutliningStyle denotes, if a function was outined, how it was outlined,
   /// e.g. Tail Call, Thunk, or Function if none apply.
-  Optional<std::string> OutliningStyle;
+  std::optional<std::string> OutliningStyle;
 
   // Offset from SP-after-callee-saved-spills (i.e. SP-at-entry minus
   // CalleeSavedStackSize) to the address of the frame record.
@@ -189,10 +189,10 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
 
   /// True if the function need unwind information.
-  mutable Optional<bool> NeedsDwarfUnwindInfo;
+  mutable std::optional<bool> NeedsDwarfUnwindInfo;
 
   /// True if the function need asynchronous unwind information.
-  mutable Optional<bool> NeedsAsyncDwarfUnwindInfo;
+  mutable std::optional<bool> NeedsAsyncDwarfUnwindInfo;
 
 public:
   explicit AArch64FunctionInfo(MachineFunction &MF);
@@ -251,7 +251,9 @@ public:
   uint64_t getLocalStackSize() const { return LocalStackSize; }
 
   void setOutliningStyle(std::string Style) { OutliningStyle = Style; }
-  Optional<std::string> getOutliningStyle() const { return OutliningStyle; }
+  std::optional<std::string> getOutliningStyle() const {
+    return OutliningStyle;
+  }
 
   void setCalleeSavedStackSize(unsigned Size) {
     CalleeSavedStackSize = Size;
@@ -333,7 +335,7 @@ public:
     return NumLocalDynamicTLSAccesses;
   }
 
-  Optional<bool> hasRedZone() const { return HasRedZone; }
+  std::optional<bool> hasRedZone() const { return HasRedZone; }
   void setHasRedZone(bool s) { HasRedZone = s; }
 
   int getVarArgsStackIndex() const { return VarArgsStackIndex; }
@@ -407,7 +409,7 @@ public:
     return ForwardedMustTailRegParms;
   }
 
-  Optional<int> getTaggedBasePointerIndex() const {
+  std::optional<int> getTaggedBasePointerIndex() const {
     return TaggedBasePointerIndex;
   }
   void setTaggedBasePointerIndex(int Index) { TaggedBasePointerIndex = Index; }
@@ -457,7 +459,7 @@ private:
 
 namespace yaml {
 struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
-  Optional<bool> HasRedZone;
+  std::optional<bool> HasRedZone;
 
   AArch64FunctionInfo() = default;
   AArch64FunctionInfo(const llvm::AArch64FunctionInfo &MFI);

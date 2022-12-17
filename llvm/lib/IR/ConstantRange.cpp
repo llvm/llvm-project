@@ -258,10 +258,9 @@ static ConstantRange makeExactMulNUWRegion(const APInt &V) {
 
 /// Exact mul nsw region for single element RHS.
 static ConstantRange makeExactMulNSWRegion(const APInt &V) {
-  // Handle special case for 0, -1 and 1. See the last for reason why we
-  // specialize -1 and 1.
+  // Handle 0 and -1 separately to avoid division by zero or overflow.
   unsigned BitWidth = V.getBitWidth();
-  if (V == 0 || V.isOne())
+  if (V == 0)
     return ConstantRange::getFull(BitWidth);
 
   APInt MinValue = APInt::getSignedMinValue(BitWidth);
@@ -278,10 +277,7 @@ static ConstantRange makeExactMulNSWRegion(const APInt &V) {
     Lower = APIntOps::RoundingSDiv(MinValue, V, APInt::Rounding::UP);
     Upper = APIntOps::RoundingSDiv(MaxValue, V, APInt::Rounding::DOWN);
   }
-  // ConstantRange ctor take a half inclusive interval [Lower, Upper + 1).
-  // Upper + 1 is guaranteed not to overflow, because |divisor| > 1. 0, -1,
-  // and 1 are already handled as special cases.
-  return ConstantRange(Lower, Upper + 1);
+  return ConstantRange::getNonEmpty(Lower, Upper + 1);
 }
 
 ConstantRange
@@ -699,7 +695,7 @@ ConstantRange ConstantRange::unionWith(const ConstantRange &CR,
   return ConstantRange(std::move(L), std::move(U));
 }
 
-Optional<ConstantRange>
+std::optional<ConstantRange>
 ConstantRange::exactIntersectWith(const ConstantRange &CR) const {
   // TODO: This can be implemented more efficiently.
   ConstantRange Result = intersectWith(CR);
@@ -708,7 +704,7 @@ ConstantRange::exactIntersectWith(const ConstantRange &CR) const {
   return std::nullopt;
 }
 
-Optional<ConstantRange>
+std::optional<ConstantRange>
 ConstantRange::exactUnionWith(const ConstantRange &CR) const {
   // TODO: This can be implemented more efficiently.
   ConstantRange Result = unionWith(CR);

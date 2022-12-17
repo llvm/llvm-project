@@ -82,9 +82,11 @@ BUILTIN(__builtin_arm_prefetch, "vvC*UiUiUiUi", "nc")
 // System Registers
 BUILTIN(__builtin_arm_rsr, "UicC*", "nc")
 BUILTIN(__builtin_arm_rsr64, "WUicC*", "nc")
+BUILTIN(__builtin_arm_rsr128, "LLLUicC*", "nc")
 BUILTIN(__builtin_arm_rsrp, "v*cC*", "nc")
 BUILTIN(__builtin_arm_wsr, "vcC*Ui", "nc")
 BUILTIN(__builtin_arm_wsr64, "vcC*WUi", "nc")
+BUILTIN(__builtin_arm_wsr128, "vcC*LLLUi", "nc")
 BUILTIN(__builtin_arm_wsrp, "vcC*vC*", "nc")
 
 // MSVC

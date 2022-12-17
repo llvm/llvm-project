@@ -315,7 +315,7 @@ Error TpiSource::mergeDebugT(TypeMerger *m) {
   // When dealing with PCH.OBJ, some indices were already merged.
   unsigned nbHeadIndices = indexMapStorage.size();
 
-  Optional<PCHMergerInfo> pchInfo;
+  std::optional<PCHMergerInfo> pchInfo;
   if (auto err = mergeTypeAndIdRecords(m->idTable, m->typeTable,
                                        indexMapStorage, types, pchInfo))
     fatal("codeview::mergeTypeAndIdRecords failed: " +

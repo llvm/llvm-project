@@ -655,7 +655,7 @@ void FrameTypeBuilder::addFieldForAllocas(const Function &F,
         StackLifetimeAnalyzer.getLiveRange(AI2));
   };
   auto GetAllocaSize = [&](const AllocaInfo &A) {
-    Optional<TypeSize> RetSize = A.Alloca->getAllocationSizeInBits(DL);
+    std::optional<TypeSize> RetSize = A.Alloca->getAllocationSizeInBits(DL);
     assert(RetSize && "Variable Length Arrays (VLA) are not supported.\n");
     assert(!RetSize->isScalable() && "Scalable vectors are not yet supported");
     return RetSize->getFixedSize();

@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S -hoist-common-insts=true | FileCheck %s
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S -hoist-common-insts=true | FileCheck %s
 
 ; TODO: Track the acutal DebugLoc of the hoisted instruction when no-line
 ; DebugLoc is supported (https://reviews.llvm.org/D24180)

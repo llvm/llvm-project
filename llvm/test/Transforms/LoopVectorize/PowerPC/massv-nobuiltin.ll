@@ -1,6 +1,6 @@
-; RUN: opt -vector-library=MASSV -inject-tli-mappings -loop-vectorize -force-vector-interleave=1 -S < %s | FileCheck %s
+; RUN: opt -vector-library=MASSV -passes=inject-tli-mappings,loop-vectorize -force-vector-interleave=1 -S < %s | FileCheck %s
 
-target datalayout = "e-m:e-i64:64-n32:64" 
+target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
 
 declare double @atanh(double) #1

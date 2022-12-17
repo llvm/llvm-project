@@ -51,7 +51,7 @@ llvm::Optional<SymbolID> Grammar::findNonterminal(llvm::StringRef Name) const {
       [&](const GrammarTable::Nonterminal &X) { return X.Name < Name; });
   if (It != T->Nonterminals.end() && It->Name == Name)
     return It - T->Nonterminals.begin();
-  return llvm::None;
+  return std::nullopt;
 }
 
 std::string Grammar::dumpRule(RuleID RID) const {

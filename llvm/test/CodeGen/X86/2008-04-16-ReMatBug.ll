@@ -27,7 +27,6 @@ define i16 @SQLDriversW(i8* %henv, i16 zeroext  %fDir, i32* %szDrvDesc, i16 sign
 ; CHECK-NEXT:    jne LBB0_6
 ; CHECK-NEXT:  ## %bb.4: ## %bb37
 ; CHECK-NEXT:    movw $0, 40(%edi)
-; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    leal (,%ecx,4), %ecx
 ; CHECK-NEXT:    leal (,%ebx,4), %edx

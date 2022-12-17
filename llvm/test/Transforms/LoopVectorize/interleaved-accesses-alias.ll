@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -enable-interleaved-mem-accesses=true < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -enable-interleaved-mem-accesses=true < %s | FileCheck %s
 
 ; When merging two stores with interleaved access vectorization, make sure we
 ; propagate the alias information from all scalar stores to form the most

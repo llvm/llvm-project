@@ -66,7 +66,7 @@ spirv::mapMemorySpaceToVulkanStorageClass(Attribute memorySpaceAttr) {
   // Downstream callers should plug in more specialized ones.
   auto intAttr = memorySpaceAttr.dyn_cast<IntegerAttr>();
   if (!intAttr)
-    return llvm::None;
+    return std::nullopt;
   unsigned memorySpace = intAttr.getInt();
 
 #define STORAGE_SPACE_MAP_FN(storage, space)                                   \
@@ -78,7 +78,7 @@ spirv::mapMemorySpaceToVulkanStorageClass(Attribute memorySpaceAttr) {
   default:
     break;
   }
-  return llvm::None;
+  return std::nullopt;
 
 #undef STORAGE_SPACE_MAP_FN
 }
@@ -94,7 +94,7 @@ spirv::mapVulkanStorageClassToMemorySpace(spirv::StorageClass storageClass) {
   default:
     break;
   }
-  return llvm::None;
+  return std::nullopt;
 
 #undef STORAGE_SPACE_MAP_FN
 }
@@ -120,7 +120,7 @@ spirv::mapMemorySpaceToOpenCLStorageClass(Attribute memorySpaceAttr) {
   // Downstream callers should plug in more specialized ones.
   auto intAttr = memorySpaceAttr.dyn_cast<IntegerAttr>();
   if (!intAttr)
-    return llvm::None;
+    return std::nullopt;
   unsigned memorySpace = intAttr.getInt();
 
 #define STORAGE_SPACE_MAP_FN(storage, space)                                   \
@@ -132,7 +132,7 @@ spirv::mapMemorySpaceToOpenCLStorageClass(Attribute memorySpaceAttr) {
   default:
     break;
   }
-  return llvm::None;
+  return std::nullopt;
 
 #undef STORAGE_SPACE_MAP_FN
 }
@@ -148,7 +148,7 @@ spirv::mapOpenCLStorageClassToMemorySpace(spirv::StorageClass storageClass) {
   default:
     break;
   }
-  return llvm::None;
+  return std::nullopt;
 
 #undef STORAGE_SPACE_MAP_FN
 }
@@ -172,7 +172,7 @@ spirv::MemorySpaceToStorageClassConverter::MemorySpaceToStorageClassConverter(
       LLVM_DEBUG(llvm::dbgs()
                  << "cannot convert " << memRefType
                  << " due to being unable to find memory space in map\n");
-      return llvm::None;
+      return std::nullopt;
     }
 
     auto storageAttr =

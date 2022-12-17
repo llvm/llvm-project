@@ -19,7 +19,7 @@
 
 declare i32 @foo()
 
-define i32 @main(i32 %argc, i8** nocapture readnone %argv) {
+define i32 @main(i32 %argc, ptr nocapture readnone %argv) {
 entry:
   %0 = call i32 @foo()
   ret i32 %0

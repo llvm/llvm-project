@@ -450,6 +450,11 @@ AffineForOp getForInductionVarOwner(Value val);
 void extractForInductionVars(ArrayRef<AffineForOp> forInsts,
                              SmallVectorImpl<Value> *ivs);
 
+/// Extracts the induction variables from a list of either AffineForOp or
+/// AffineParallelOp and places them in the output argument `ivs`.
+void extractInductionVars(ArrayRef<Operation *> affineOps,
+                          SmallVectorImpl<Value> &ivs);
+
 /// Builds a perfect nest of affine.for loops, i.e., each loop except the
 /// innermost one contains only another loop and a terminator. The loops iterate
 /// from "lbs" to "ubs" with "steps". The body of the innermost loop is

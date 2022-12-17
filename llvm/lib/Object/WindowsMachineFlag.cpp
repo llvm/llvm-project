@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 

@@ -294,6 +294,22 @@ v_fmamk_f32 v0, 0xff32, 0x1122, v0
 // GFX6-9: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: :[[@LINE-2]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 
+v_fmaak_f32 v0, 0xff32, v0, 0
+// GFX6-9: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX10: :[[@LINE-2]]:{{[0-9]+}}: error: only one unique literal operand is allowed
+
+v_fmaak_f16 v0, 0xff32, v0, 0
+// GFX6-9: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX10: :[[@LINE-2]]:{{[0-9]+}}: error: only one unique literal operand is allowed
+
+v_fmamk_f32 v0, 0xff32, 1, v0
+// GFX6-9: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX10: :[[@LINE-2]]:{{[0-9]+}}: error: only one unique literal operand is allowed
+
+v_fmamk_f16 v0, 0xff32, 1, v0
+// GFX6-9: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX10: :[[@LINE-2]]:{{[0-9]+}}: error: only one unique literal operand is allowed
+
 //===----------------------------------------------------------------------===//
 // VOP2 E64.
 //===----------------------------------------------------------------------===//

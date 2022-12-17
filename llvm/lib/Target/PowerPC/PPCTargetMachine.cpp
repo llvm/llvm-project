@@ -19,7 +19,6 @@
 #include "PPCTargetObjectFile.h"
 #include "PPCTargetTransformInfo.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
@@ -231,9 +230,6 @@ static PPCTargetMachine::PPCABI computeTargetABI(const Triple &TT,
 
   assert(Options.MCOptions.getABIName().empty() &&
          "Unknown target-abi option!");
-
-  if (TT.isMacOSX())
-    return PPCTargetMachine::PPC_ABI_UNKNOWN;
 
   switch (TT.getArch()) {
   case Triple::ppc64le:

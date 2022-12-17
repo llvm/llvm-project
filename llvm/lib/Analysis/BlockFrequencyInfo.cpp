@@ -26,6 +26,7 @@
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -204,7 +205,7 @@ BlockFrequency BlockFrequencyInfo::getBlockFreq(const BasicBlock *BB) const {
   return BFI ? BFI->getBlockFreq(BB) : 0;
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 BlockFrequencyInfo::getBlockProfileCount(const BasicBlock *BB,
                                          bool AllowSynthetic) const {
   if (!BFI)
@@ -213,7 +214,7 @@ BlockFrequencyInfo::getBlockProfileCount(const BasicBlock *BB,
   return BFI->getBlockProfileCount(*getFunction(), BB, AllowSynthetic);
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 BlockFrequencyInfo::getProfileCountFromFreq(uint64_t Freq) const {
   if (!BFI)
     return std::nullopt;

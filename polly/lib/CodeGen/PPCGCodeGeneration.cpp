@@ -2383,7 +2383,7 @@ std::string GPUNodeBuilder::createKernelASM() {
   }
 
   std::unique_ptr<TargetMachine> TargetM(GPUTarget->createTargetMachine(
-      GPUTriple.getTriple(), subtarget, "", Options, Optional<Reloc::Model>()));
+      GPUTriple.getTriple(), subtarget, "", Options, std::nullopt));
 
   SmallString<0> ASMString;
   raw_svector_ostream ASMStream(ASMString);

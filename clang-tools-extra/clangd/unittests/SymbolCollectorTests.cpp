@@ -877,7 +877,7 @@ TEST_F(SymbolCollectorTest, RefContainers) {
           return Ref;
       }
     }
-    return llvm::None;
+    return std::nullopt;
   };
   auto Container = [&](llvm::StringRef RangeName) {
     auto Ref = FindRefWithRange(Code.range(RangeName));

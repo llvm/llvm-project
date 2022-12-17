@@ -293,7 +293,7 @@ class Token;
     /// entity with index \p Index came from file \p FID.
     virtual Optional<bool> isPreprocessedEntityInFileID(unsigned Index,
                                                         FileID FID) {
-      return None;
+      return std::nullopt;
     }
 
     /// Read a preallocated skipped range from the external source.

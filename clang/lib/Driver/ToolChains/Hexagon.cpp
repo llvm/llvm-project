@@ -120,9 +120,10 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
     HvxVerNum = 0;
 
   // Handle HVX floating point flags.
-  auto checkFlagHvxVersion = [&](auto FlagOn, auto FlagOff,
-                                 unsigned MinVerNum) -> Optional<StringRef> {
-    // Return an Optional<StringRef>:
+  auto checkFlagHvxVersion =
+      [&](auto FlagOn, auto FlagOff,
+          unsigned MinVerNum) -> std::optional<StringRef> {
+    // Return an std::optional<StringRef>:
     // - None indicates a verification failure, or that the flag was not
     //   present in Args.
     // - Otherwise the returned value is that name of the feature to add
@@ -519,8 +520,8 @@ std::string HexagonToolChain::getHexagonTargetDir(
   return InstalledDir;
 }
 
-Optional<unsigned> HexagonToolChain::getSmallDataThreshold(
-      const ArgList &Args) {
+std::optional<unsigned>
+HexagonToolChain::getSmallDataThreshold(const ArgList &Args) {
   StringRef Gn = "";
   if (Arg *A = Args.getLastArg(options::OPT_G)) {
     Gn = A->getValue();

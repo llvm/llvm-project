@@ -546,6 +546,7 @@ struct IntrinsicLibrary {
   void genMvbits(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genNearest(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genNint(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genNorm2(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genNot(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genPack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -940,6 +941,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"topos", asValue}}}},
     {"nearest", &I::genNearest},
     {"nint", &I::genNint},
+    {"norm2",
+     &I::genNorm2,
+     {{{"array", asBox}, {"dim", asValue}}},
+     /*isElemental=*/false},
     {"not", &I::genNot},
     {"null", &I::genNull, {{{"mold", asInquired}}}, /*isElemental=*/false},
     {"pack",
@@ -4098,6 +4103,50 @@ mlir::Value IntrinsicLibrary::genNint(mlir::Type resultType,
   // Skip optional kind argument to search the runtime; it is already reflected
   // in result type.
   return genRuntimeCall("nint", resultType, {args[0]});
+}
+
+// NORM2
+fir::ExtendedValue
+IntrinsicLibrary::genNorm2(mlir::Type resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+
+  // Handle required array argument
+  mlir::Value array = builder.createBox(loc, args[0]);
+  unsigned rank = fir::BoxValue(array).rank();
+  assert(rank >= 1);
+
+  // Check if the dim argument is present
+  bool absentDim = isStaticallyAbsent(args[1]);
+
+  // If dim argument is absent or the array is rank 1, then the result is
+  // a scalar (since the the result is rank-1 or 0). Otherwise, the result is
+  // an array.
+  if (absentDim || rank == 1) {
+    return fir::runtime::genNorm2(builder, loc, array);
+  } else {
+    // Create mutable fir.box to be passed to the runtime for the result.
+    mlir::Type resultArrayType = builder.getVarLenSeqTy(resultType, rank - 1);
+    fir::MutableBoxValue resultMutableBox =
+        fir::factory::createTempMutableBox(builder, loc, resultArrayType);
+    mlir::Value resultIrBox =
+        fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+    mlir::Value dim = fir::getBase(args[1]);
+    fir::runtime::genNorm2Dim(builder, loc, resultIrBox, array, dim);
+
+    // Handle cleanup of allocatable result descriptor and return
+    fir::ExtendedValue res =
+        fir::factory::genMutableBoxRead(builder, loc, resultMutableBox);
+    return res.match(
+        [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
+          addCleanUpForTemp(loc, box.getAddr());
+          return box;
+        },
+        [&](const auto &) -> fir::ExtendedValue {
+          fir::emitFatalError(loc, "unexpected result for Norm2");
+        });
+  }
 }
 
 // NOT

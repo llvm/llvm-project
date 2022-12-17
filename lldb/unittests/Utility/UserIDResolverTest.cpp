@@ -24,24 +24,24 @@ TEST(UserIDResolver, GetUserName) {
   StrictMock<TestUserIDResolver> r;
   llvm::StringRef user47("foo");
   EXPECT_CALL(r, DoGetUserName(47)).Times(1).WillOnce(Return(user47.str()));
-  EXPECT_CALL(r, DoGetUserName(42)).Times(1).WillOnce(Return(llvm::None));
+  EXPECT_CALL(r, DoGetUserName(42)).Times(1).WillOnce(Return(std::nullopt));
 
   // Call functions twice to make sure the caching works.
   EXPECT_EQ(user47, r.GetUserName(47));
   EXPECT_EQ(user47, r.GetUserName(47));
-  EXPECT_EQ(llvm::None, r.GetUserName(42));
-  EXPECT_EQ(llvm::None, r.GetUserName(42));
+  EXPECT_EQ(std::nullopt, r.GetUserName(42));
+  EXPECT_EQ(std::nullopt, r.GetUserName(42));
 }
 
 TEST(UserIDResolver, GetGroupName) {
   StrictMock<TestUserIDResolver> r;
   llvm::StringRef group47("foo");
   EXPECT_CALL(r, DoGetGroupName(47)).Times(1).WillOnce(Return(group47.str()));
-  EXPECT_CALL(r, DoGetGroupName(42)).Times(1).WillOnce(Return(llvm::None));
+  EXPECT_CALL(r, DoGetGroupName(42)).Times(1).WillOnce(Return(std::nullopt));
 
   // Call functions twice to make sure the caching works.
   EXPECT_EQ(group47, r.GetGroupName(47));
   EXPECT_EQ(group47, r.GetGroupName(47));
-  EXPECT_EQ(llvm::None, r.GetGroupName(42));
-  EXPECT_EQ(llvm::None, r.GetGroupName(42));
+  EXPECT_EQ(std::nullopt, r.GetGroupName(42));
+  EXPECT_EQ(std::nullopt, r.GetGroupName(42));
 }

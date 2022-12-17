@@ -133,14 +133,14 @@ bool MCPlusBuilder::isTailCall(const MCInst &Inst) const {
   return false;
 }
 
-Optional<MCLandingPad> MCPlusBuilder::getEHInfo(const MCInst &Inst) const {
+std::optional<MCLandingPad> MCPlusBuilder::getEHInfo(const MCInst &Inst) const {
   if (!isCall(Inst))
     return std::nullopt;
-  Optional<int64_t> LPSym =
+  std::optional<int64_t> LPSym =
       getAnnotationOpValue(Inst, MCAnnotation::kEHLandingPad);
   if (!LPSym)
     return std::nullopt;
-  Optional<int64_t> Action =
+  std::optional<int64_t> Action =
       getAnnotationOpValue(Inst, MCAnnotation::kEHAction);
   if (!Action)
     return std::nullopt;
@@ -171,7 +171,7 @@ bool MCPlusBuilder::updateEHInfo(MCInst &Inst, const MCLandingPad &LP) {
 }
 
 int64_t MCPlusBuilder::getGnuArgsSize(const MCInst &Inst) const {
-  Optional<int64_t> Value =
+  std::optional<int64_t> Value =
       getAnnotationOpValue(Inst, MCAnnotation::kGnuArgsSize);
   if (!Value)
     return -1LL;
@@ -188,7 +188,7 @@ void MCPlusBuilder::addGnuArgsSize(MCInst &Inst, int64_t GnuArgsSize,
 }
 
 uint64_t MCPlusBuilder::getJumpTable(const MCInst &Inst) const {
-  Optional<int64_t> Value =
+  std::optional<int64_t> Value =
       getAnnotationOpValue(Inst, MCAnnotation::kJumpTable);
   if (!Value)
     return 0;
@@ -216,9 +216,9 @@ bool MCPlusBuilder::unsetJumpTable(MCInst &Inst) {
   return true;
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 MCPlusBuilder::getConditionalTailCall(const MCInst &Inst) const {
-  Optional<int64_t> Value =
+  std::optional<int64_t> Value =
       getAnnotationOpValue(Inst, MCAnnotation::kConditionalTailCall);
   if (!Value)
     return std::nullopt;
@@ -240,8 +240,9 @@ bool MCPlusBuilder::unsetConditionalTailCall(MCInst &Inst) {
   return true;
 }
 
-Optional<uint32_t> MCPlusBuilder::getOffset(const MCInst &Inst) const {
-  Optional<int64_t> Value = getAnnotationOpValue(Inst, MCAnnotation::kOffset);
+std::optional<uint32_t> MCPlusBuilder::getOffset(const MCInst &Inst) const {
+  std::optional<int64_t> Value =
+      getAnnotationOpValue(Inst, MCAnnotation::kOffset);
   if (!Value)
     return std::nullopt;
   return static_cast<uint32_t>(*Value);
@@ -249,7 +250,7 @@ Optional<uint32_t> MCPlusBuilder::getOffset(const MCInst &Inst) const {
 
 uint32_t MCPlusBuilder::getOffsetWithDefault(const MCInst &Inst,
                                              uint32_t Default) const {
-  if (Optional<uint32_t> Offset = getOffset(Inst))
+  if (std::optional<uint32_t> Offset = getOffset(Inst))
     return *Offset;
   return Default;
 }

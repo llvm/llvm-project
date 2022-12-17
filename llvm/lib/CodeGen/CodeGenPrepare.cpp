@@ -1433,7 +1433,7 @@ bool matchIncrement(const Instruction *IVInc, Instruction *&LHS,
 
 /// If given \p PN is an inductive variable with value IVInc coming from the
 /// backedge, and on each iteration it gets increased by Step, return pair
-/// <IVInc, Step>. Otherwise, return None.
+/// <IVInc, Step>. Otherwise, return std::nullopt.
 static std::optional<std::pair<Instruction *, Constant *>>
 getIVIncrement(const PHINode *PN, const LoopInfo *LI) {
   const Loop *L = LI->getLoopFor(PN->getParent());

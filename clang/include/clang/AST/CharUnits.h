@@ -183,7 +183,8 @@ namespace clang {
       llvm::Align getAsAlign() const { return llvm::Align(Quantity); }
 
       /// getAsMaybeAlign - Returns Quantity as a valid llvm::Align or
-      /// llvm::None, Beware llvm::MaybeAlign assumes power of two 8-bit bytes.
+      /// std::nullopt, Beware llvm::MaybeAlign assumes power of two 8-bit
+      /// bytes.
       llvm::MaybeAlign getAsMaybeAlign() const {
         return llvm::MaybeAlign(Quantity);
       }

@@ -198,8 +198,9 @@ mlir::Value Fortran::lower::genInitialDataTarget(
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
           initialTarget))
-    return fir::factory::createUnallocatedBox(builder, loc, boxType,
-                                              /*nonDeferredParams=*/llvm::None);
+    return fir::factory::createUnallocatedBox(
+        builder, loc, boxType,
+        /*nonDeferredParams=*/std::nullopt);
   // Pointer initial data target, and NULL(mold).
   for (const auto &sym : Fortran::evaluate::CollectSymbols(initialTarget)) {
     // Length parameters processing will need care in global initializer
@@ -343,7 +344,7 @@ static mlir::Value genDefaultInitializerValue(
         // need to be disassociated, but for sanity and simplicity, do it in
         // global constructor since this has no runtime cost.
         componentValue = fir::factory::createUnallocatedBox(
-            builder, loc, componentTy, llvm::None);
+            builder, loc, componentTy, std::nullopt);
       } else if (hasDefaultInitialization(component)) {
         // Component type has default initialization.
         componentValue = genDefaultInitializerValue(converter, loc, component,
@@ -471,7 +472,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
       Fortran::lower::createGlobalInitialization(
           builder, global, [&](fir::FirOpBuilder &b) {
             mlir::Value box =
-                fir::factory::createUnallocatedBox(b, loc, symTy, llvm::None);
+                fir::factory::createUnallocatedBox(b, loc, symTy, std::nullopt);
             b.create<fir::HasValueOp>(loc, box);
           });
     }
@@ -842,7 +843,7 @@ instantiateAggregateStore(Fortran::lower::AbstractConverter &converter,
   fir::SequenceType::Shape shape(1, size);
   auto seqTy = fir::SequenceType::get(shape, i8Ty);
   mlir::Value local =
-      builder.allocateLocal(loc, seqTy, aggName, "", llvm::None, llvm::None,
+      builder.allocateLocal(loc, seqTy, aggName, "", std::nullopt, std::nullopt,
                             /*target=*/false);
   insertAggregateStore(storeMap, var, local);
 }
@@ -1347,8 +1348,8 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
                              Fortran::lower::SymMap &symMap,
                              const Fortran::semantics::Symbol &sym,
                              mlir::Value base, mlir::Value len = {},
-                             llvm::ArrayRef<mlir::Value> shape = llvm::None,
-                             llvm::ArrayRef<mlir::Value> lbounds = llvm::None,
+                             llvm::ArrayRef<mlir::Value> shape = std::nullopt,
+                             llvm::ArrayRef<mlir::Value> lbounds = std::nullopt,
                              bool force = false) {
   if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();

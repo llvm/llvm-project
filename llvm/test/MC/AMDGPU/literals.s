@@ -847,7 +847,13 @@ v_madak_f32 v0, scc, v0, 0x11213141
 v_madak_f32 v0, 0xff32ff, v0, 0x11213141
 
 // NOGCN: :[[@LINE+1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
+v_madak_f32 v0, 0xff32ff, v0, 1
+
+// NOGCN: :[[@LINE+1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 v_madmk_f32 v0, 0xff32ff, 0x11213141, v0
+
+// NOGCN: :[[@LINE+1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
+v_madmk_f32 v0, 0xff32ff, -1, v0
 
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOGFX89: :[[@LINE+1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
@@ -855,7 +861,15 @@ v_madak_f16 v0, 0xff32, v0, 0x1122
 
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOGFX89: :[[@LINE+1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
+v_madak_f16 v0, 0xff32, v0, 0
+
+// NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOGFX89: :[[@LINE+1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 v_madmk_f16 v0, 0xff32, 0x1122, v0
+
+// NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// NOGFX89: :[[@LINE+1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
+v_madmk_f16 v0, 0xff32, 1, v0
 
 // NOSICIVI: :[[@LINE+2]]:{{[0-9]+}}: error: register not available on this GPU
 // NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)

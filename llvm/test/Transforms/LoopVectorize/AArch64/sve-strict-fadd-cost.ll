@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -loop-vectorize -debug -disable-output -force-ordered-reductions=true -hints-allow-reordering=false \
+; RUN: opt < %s -passes=loop-vectorize -debug -disable-output -force-ordered-reductions=true -hints-allow-reordering=false \
 ; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -force-vector-interleave=1 -S 2>&1 | FileCheck %s
-; RUN: opt < %s -loop-vectorize -debug -disable-output -force-ordered-reductions=true -hints-allow-reordering=false \
+; RUN: opt < %s -passes=loop-vectorize -debug -disable-output -force-ordered-reductions=true -hints-allow-reordering=false \
 ; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -force-vector-interleave=1 \
 ; RUN:   -mcpu=neoverse-n2 -S 2>&1 | FileCheck %s --check-prefix=CHECK-CPU-NEOVERSE-N2
 

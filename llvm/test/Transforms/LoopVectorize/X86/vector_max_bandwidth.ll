@@ -1,5 +1,5 @@
-; RUN: opt -loop-vectorize -vectorizer-maximize-bandwidth -mcpu=corei7-avx -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-AVX1
-; RUN: opt -loop-vectorize -vectorizer-maximize-bandwidth -mcpu=core-avx2 -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-AVX2
+; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -mcpu=corei7-avx -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-AVX1
+; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -mcpu=core-avx2 -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-AVX2
 ; REQUIRES: asserts
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

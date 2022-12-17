@@ -495,7 +495,7 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
 
   for (llvm::StringRef line : lines(Record::Public)) {
     if (auto record = PublicRecord::parse(line))
-      add_symbol(record->Address, llvm::None, record->Name);
+      add_symbol(record->Address, std::nullopt, record->Name);
     else
       LLDB_LOG(log, "Failed to parse: {0}. Skipping record.", line);
   }
@@ -528,7 +528,7 @@ GetRule(llvm::StringRef &unwind_rules) {
   llvm::StringRef lhs, rest;
   std::tie(lhs, rest) = getToken(unwind_rules);
   if (!lhs.consume_back(":"))
-    return llvm::None;
+    return std::nullopt;
 
   // Seek forward to the next register: expression pair
   llvm::StringRef::size_type pos = rest.find(": ");
@@ -541,7 +541,7 @@ GetRule(llvm::StringRef &unwind_rules) {
   // Go back one token to find the end of the current rule.
   pos = rest.rfind(' ', pos);
   if (pos == llvm::StringRef::npos)
-    return llvm::None;
+    return std::nullopt;
 
   llvm::StringRef rhs = rest.take_front(pos);
   unwind_rules = rest.drop_front(pos);

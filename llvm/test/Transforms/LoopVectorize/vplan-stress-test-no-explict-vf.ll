@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s  -S -loop-vectorize -enable-vplan-native-path -vplan-build-stress-test -debug-only=loop-vectorize -disable-output 2>&1  | FileCheck %s
+; RUN: opt < %s  -S -passes=loop-vectorize -enable-vplan-native-path -vplan-build-stress-test -debug-only=loop-vectorize -disable-output 2>&1  | FileCheck %s
 
 ; This test checks that, when stress testing VPlan, if the computed VF
 ; is 1, we override it to VF = 4.

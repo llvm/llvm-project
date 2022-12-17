@@ -112,7 +112,7 @@ def AOp : NS_Op<"a_op", []> {
 // DEF-NEXT:   ::mlir::impl::getAttrFromSortedRange((*this)->getAttrs().begin() + 1, (*this)->getAttrs().end() - 0, getCAttrAttrName()).dyn_cast_or_null<some-attr-kind>()
 // DEF:      ::llvm::Optional<some-return-type> AOp::getCAttr() {
 // DEF-NEXT:   auto attr = getCAttrAttr()
-// DEF-NEXT:   return attr ? ::llvm::Optional<some-return-type>(attr.some-convert-from-storage()) : (::llvm::None);
+// DEF-NEXT:   return attr ? ::llvm::Optional<some-return-type>(attr.some-convert-from-storage()) : (::std::nullopt);
 
 // DEF:      some-attr-kind AOp::getDAttrAttr()
 // DEF-NEXT:   ::mlir::impl::getAttrFromSortedRange((*this)->getAttrs().begin() + 1, (*this)->getAttrs().end() - 0, getDAttrAttrName()).dyn_cast_or_null<some-attr-kind>()
@@ -249,7 +249,7 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 // DEF-NEXT:   return ::mlir::impl::getAttrFromSortedRange({{.*}}).dyn_cast_or_null<some-attr-kind>()
 // DEF:      ::llvm::Optional<some-return-type> AgetOp::getCAttr() {
 // DEF-NEXT:   auto attr = getCAttrAttr()
-// DEF-NEXT:   return attr ? ::llvm::Optional<some-return-type>(attr.some-convert-from-storage()) : (::llvm::None);
+// DEF-NEXT:   return attr ? ::llvm::Optional<some-return-type>(attr.some-convert-from-storage()) : (::std::nullopt);
 
 // Test setter methods
 // ---

@@ -139,7 +139,7 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                   .Case("ropi", llvm::Reloc::ROPI)
                   .Case("rwpi", llvm::Reloc::RWPI)
                   .Case("ropi-rwpi", llvm::Reloc::ROPI_RWPI)
-                  .Default(llvm::None);
+                  .Default(std::nullopt);
     if (RM.has_value())
       opts.setRelocationModel(*RM);
     else

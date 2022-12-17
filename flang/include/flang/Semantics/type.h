@@ -261,19 +261,18 @@ public:
   const Scope *scope() const { return scope_; }
   void set_scope(const Scope &);
   void ReplaceScope(const Scope &);
-  RawParameters &rawParameters() { return rawParameters_; }
+  const RawParameters &rawParameters() const { return rawParameters_; }
   const ParameterMapType &parameters() const { return parameters_; }
 
   bool MightBeParameterized() const;
   bool IsForwardReferenced() const;
   bool HasDefaultInitialization(bool ignoreAllocatable = false) const;
   bool HasDestruction() const;
-  bool HasFinalization() const;
 
   // The "raw" type parameter list is a simple transcription from the
   // parameter list in the parse tree, built by calling AddRawParamValue().
   // It can be used with forward-referenced derived types.
-  void AddRawParamValue(const std::optional<parser::Keyword> &, ParamValue &&);
+  void AddRawParamValue(const parser::Keyword *, ParamValue &&);
   // Checks the raw parameter list against the definition of a derived type.
   // Converts the raw parameter list to a map, naming each actual parameter.
   void CookParameters(evaluate::FoldingContext &);

@@ -126,8 +126,8 @@ private:
     auto attrTc = TC == Fortran::common::TypeCategory::Logical
                       ? Fortran::common::TypeCategory::Integer
                       : TC;
-    attributeElementType = Fortran::lower::getFIRType(builder.getContext(),
-                                                      attrTc, KIND, llvm::None);
+    attributeElementType = Fortran::lower::getFIRType(
+        builder.getContext(), attrTc, KIND, std::nullopt);
     for (auto element : constant.values())
       attributes.push_back(
           convertToAttribute<TC, KIND>(builder, element, attributeElementType));
@@ -198,8 +198,8 @@ static mlir::Value genScalarLit(
     fir::FirOpBuilder &builder, mlir::Location loc,
     const Fortran::evaluate::Scalar<Fortran::evaluate::Type<TC, KIND>> &value) {
   if constexpr (TC == Fortran::common::TypeCategory::Integer) {
-    mlir::Type ty =
-        Fortran::lower::getFIRType(builder.getContext(), TC, KIND, llvm::None);
+    mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, KIND,
+                                               std::nullopt);
     if (KIND == 16) {
       auto bigInt =
           llvm::APInt(ty.getIntOrFloatBitWidth(), value.SignedDecimal(), 10);
@@ -272,7 +272,7 @@ createStringLitOp(fir::FirOpBuilder &builder, mlir::Location loc,
     mlir::NamedAttribute sizeAttr(sizeTag, builder.getI64IntegerAttr(len));
     llvm::SmallVector<mlir::NamedAttribute> attrs = {dataAttr, sizeAttr};
     return builder.create<fir::StringLitOp>(
-        loc, llvm::ArrayRef<mlir::Type>{type}, llvm::None, attrs);
+        loc, llvm::ArrayRef<mlir::Type>{type}, std::nullopt, attrs);
   }
 }
 

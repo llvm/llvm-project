@@ -15,7 +15,6 @@
 #define LLVM_SUPPORT_GLOBPATTERN_H
 
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"
 #include <optional>
 #include <vector>

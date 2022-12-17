@@ -1874,10 +1874,10 @@ std::string configurationAsText(const FormatStyle &Style) {
 llvm::Optional<FormatStyle>
 FormatStyle::FormatStyleSet::Get(FormatStyle::LanguageKind Language) const {
   if (!Styles)
-    return None;
+    return std::nullopt;
   auto It = Styles->find(Language);
   if (It == Styles->end())
-    return None;
+    return std::nullopt;
   FormatStyle Style = It->second;
   Style.StyleSet = *this;
   return Style;
@@ -3302,7 +3302,8 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
     (void)Matched;
     auto IncludeName = Matches[2];
     auto Replace =
-        Includes.insert(IncludeName.trim("\"<>"), IncludeName.startswith("<"));
+        Includes.insert(IncludeName.trim("\"<>"), IncludeName.startswith("<"),
+                        tooling::IncludeDirective::Include);
     if (Replace) {
       auto Err = Result.add(*Replace);
       if (Err) {

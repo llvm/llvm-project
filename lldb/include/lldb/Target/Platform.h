@@ -232,11 +232,11 @@ public:
   virtual bool GetRemoteOSVersion() { return false; }
 
   virtual llvm::Optional<std::string> GetRemoteOSBuildString() {
-    return llvm::None;
+    return std::nullopt;
   }
 
   virtual llvm::Optional<std::string> GetRemoteOSKernelDescription() {
-    return llvm::None;
+    return std::nullopt;
   }
 
   // Remote Platform subclasses need to override this function

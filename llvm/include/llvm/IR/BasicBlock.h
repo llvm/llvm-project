@@ -520,7 +520,7 @@ public:
   /// This method can only be used on blocks that have a parent function.
   bool isEntryBlock() const;
 
-  Optional<uint64_t> getIrrLoopHeaderWeight() const;
+  std::optional<uint64_t> getIrrLoopHeaderWeight() const;
 
   /// Returns true if the Order field of child Instructions is valid.
   bool isInstrOrderValid() const {

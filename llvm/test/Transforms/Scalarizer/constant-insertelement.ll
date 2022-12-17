@@ -7,9 +7,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define <4 x i32> @f1(ptr %src, i32 %repl, i32 %index) {
 ; ALL-LABEL: @f1(
 ; ALL-NEXT:    [[VAL0_I0:%.*]] = load i32, ptr [[SRC:%.*]], align 16
-; ALL-NEXT:    [[SRC_I1:%.*]] = getelementptr i32, ptr [[SRC:%.*]], i32 1
+; ALL-NEXT:    [[SRC_I1:%.*]] = getelementptr i32, ptr [[SRC]], i32 1
 ; ALL-NEXT:    [[VAL0_I1:%.*]] = load i32, ptr [[SRC_I1]], align 4
-; ALL-NEXT:    [[SRC_I2:%.*]] = getelementptr i32, ptr [[SRC:%.*]], i32 2
+; ALL-NEXT:    [[SRC_I2:%.*]] = getelementptr i32, ptr [[SRC]], i32 2
 ; ALL-NEXT:    [[VAL0_I2:%.*]] = load i32, ptr [[SRC_I2]], align 8
 ; ALL-NEXT:    [[VAL2_I0:%.*]] = shl i32 1, [[VAL0_I0]]
 ; ALL-NEXT:    [[VAL2_I1:%.*]] = shl i32 2, [[VAL0_I1]]

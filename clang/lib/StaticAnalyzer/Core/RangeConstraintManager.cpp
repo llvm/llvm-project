@@ -1164,7 +1164,8 @@ template <class SecondTy, class... RestTy>
 
 /// Main generic intersect function.
 /// It intersects all of the given range sets.  If some of the given arguments
-/// don't hold a range set (nullptr or llvm::None), the function will skip them.
+/// don't hold a range set (nullptr or std::nullopt), the function will skip
+/// them.
 ///
 /// Available representations for the arguments are:
 ///   * RangeSet
@@ -1179,7 +1180,7 @@ template <class SecondTy, class... RestTy>
 /// simply RangeSet, in other cases we have to back off to Optional<RangeSet>.
 ///
 /// Please, prefer optional range sets to raw pointers.  If the last argument is
-/// a raw pointer and all previous arguments are None, it will cost one
+/// a raw pointer and all previous arguments are std::nullopt, it will cost one
 /// additional check to convert RangeSet * into Optional<RangeSet>.
 template <class HeadTy, class SecondTy, class... RestTy>
 [[nodiscard]] inline
@@ -1361,7 +1362,7 @@ private:
 
   /// Try to convert given range into the given type.
   ///
-  /// It will return llvm::None only when the trivial conversion is possible.
+  /// It will return std::nullopt only when the trivial conversion is possible.
   llvm::Optional<Range> convert(const Range &Origin, APSIntType To) {
     if (To.testInRange(Origin.From(), false) != APSIntType::RTR_Within ||
         To.testInRange(Origin.To(), false) != APSIntType::RTR_Within) {

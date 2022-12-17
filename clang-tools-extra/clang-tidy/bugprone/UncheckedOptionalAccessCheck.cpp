@@ -46,7 +46,7 @@ analyzeFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx) {
   Expected<ControlFlowContext> Context =
       ControlFlowContext::build(&FuncDecl, FuncDecl.getBody(), &ASTCtx);
   if (!Context)
-    return llvm::None;
+    return std::nullopt;
 
   dataflow::DataflowAnalysisContext AnalysisContext(
       std::make_unique<dataflow::WatchedLiteralsSolver>());
@@ -66,7 +66,7 @@ analyzeFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx) {
             llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
           });
   if (!BlockToOutputState)
-    return llvm::None;
+    return std::nullopt;
 
   return Diagnostics;
 }

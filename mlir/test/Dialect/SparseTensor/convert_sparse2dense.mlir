@@ -70,7 +70,7 @@ func.func @sparse_convert_1d(%arg0: tensor<13xi32, #SparseVector>) -> tensor<13x
 //   CHECK-DAG: memref.store %[[DenseDLT]], %[[LvlTypes]][%[[I0]]] : memref<1xi8>
 //   CHECK-DAG: %[[DimSizes:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-DAG: %[[DimSizesP:.*]] = memref.cast %[[DimSizes]] : memref<1xindex> to memref<?xindex>
-//   CHECK-DAG: %[[SizeI0:.*]] = call @sparseLvlSize(%[[Arg]], %[[I0]]) : (!llvm.ptr<i8>, index) -> index
+//   CHECK-DAG: %[[SizeI0:.*]] = call @sparseDimSize(%[[Arg]], %[[I0]]) : (!llvm.ptr<i8>, index) -> index
 //   CHECK-DAG: memref.store %[[SizeI0]], %[[DimSizes]][%[[I0]]] : memref<1xindex>
 //   CHECK-DAG: %[[LvlSizes:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-DAG: %[[LvlSizesP:.*]] = memref.cast %[[LvlSizes]] : memref<1xindex> to memref<?xindex>
@@ -175,7 +175,7 @@ func.func @sparse_convert_2d(%arg0: tensor<2x4xf64, #SparseMatrix>) -> tensor<2x
 //   CHECK-DAG: memref.store %[[DenseDLT]], %[[LvlTypes]][%[[I1]]] : memref<2xi8>
 //   CHECK-DAG: %[[DimSizes:.*]] = memref.alloca() : memref<2xindex>
 //   CHECK-DAG: %[[DimSizesP:.*]] = memref.cast %[[DimSizes]] : memref<2xindex> to memref<?xindex>
-//   CHECK-DAG: %[[SizeI0:.*]] = call @sparseLvlSize(%[[Arg]], %[[I0]]) : (!llvm.ptr<i8>, index) -> index
+//   CHECK-DAG: %[[SizeI0:.*]] = call @sparseDimSize(%[[Arg]], %[[I0]]) : (!llvm.ptr<i8>, index) -> index
 //   CHECK-DAG: memref.store %[[SizeI0]], %[[DimSizes]][%[[I0]]] : memref<2xindex>
 //   CHECK-DAG: memref.store %[[I4]], %[[DimSizes]][%[[I1]]] : memref<2xindex>
 //   CHECK-DAG: %[[LvlSizes:.*]] = memref.alloca() : memref<2xindex>
@@ -223,7 +223,7 @@ func.func @sparse_convert_2d_dyn0(%arg0: tensor<?x4xf64, #SparseMatrix>) -> tens
 //   CHECK-DAG: memref.store %[[DenseDLT]], %[[LvlTypes]][%[[I1]]] : memref<2xi8>
 //   CHECK-DAG: %[[DimSizes:.*]] = memref.alloca() : memref<2xindex>
 //   CHECK-DAG: %[[DimSizesP:.*]] = memref.cast %[[DimSizes]] : memref<2xindex> to memref<?xindex>
-//   CHECK-DAG: %[[SizeI1:.*]] = call @sparseLvlSize(%[[Arg]], %[[I1]]) : (!llvm.ptr<i8>, index) -> index
+//   CHECK-DAG: %[[SizeI1:.*]] = call @sparseDimSize(%[[Arg]], %[[I1]]) : (!llvm.ptr<i8>, index) -> index
 //   CHECK-DAG: memref.store %[[I2]], %[[DimSizes]][%[[I0]]] : memref<2xindex>
 //   CHECK-DAG: memref.store %[[SizeI1]], %[[DimSizes]][%[[I1]]] : memref<2xindex>
 //   CHECK-DAG: %[[LvlSizes:.*]] = memref.alloca() : memref<2xindex>
@@ -270,8 +270,8 @@ func.func @sparse_convert_2d_dyn1(%arg0: tensor<2x?xf64, #SparseMatrix>) -> tens
 //   CHECK-DAG: memref.store %[[DenseDLT]], %[[LvlTypes]][%[[I1]]] : memref<2xi8>
 //   CHECK-DAG: %[[DimSizes:.*]] = memref.alloca() : memref<2xindex>
 //   CHECK-DAG: %[[DimSizesP:.*]] = memref.cast %[[DimSizes]] : memref<2xindex> to memref<?xindex>
-//   CHECK-DAG: %[[SizeI0:.*]] = call @sparseLvlSize(%[[Arg]], %[[I0]]) : (!llvm.ptr<i8>, index) -> index
-//   CHECK-DAG: %[[SizeI1:.*]] = call @sparseLvlSize(%[[Arg]], %[[I1]]) : (!llvm.ptr<i8>, index) -> index
+//   CHECK-DAG: %[[SizeI0:.*]] = call @sparseDimSize(%[[Arg]], %[[I0]]) : (!llvm.ptr<i8>, index) -> index
+//   CHECK-DAG: %[[SizeI1:.*]] = call @sparseDimSize(%[[Arg]], %[[I1]]) : (!llvm.ptr<i8>, index) -> index
 //   CHECK-DAG: memref.store %[[SizeI0]], %[[DimSizes]][%[[I0]]] : memref<2xindex>
 //   CHECK-DAG: memref.store %[[SizeI1]], %[[DimSizes]][%[[I1]]] : memref<2xindex>
 //   CHECK-DAG: %[[LvlSizes:.*]] = memref.alloca() : memref<2xindex>

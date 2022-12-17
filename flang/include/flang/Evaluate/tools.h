@@ -262,9 +262,9 @@ template <typename A> const Symbol *ExtractBareLenParameter(const A &expr) {
 }
 
 // If an expression simply wraps a DataRef, extract and return it.
-// The Boolean argument controls the handling of Substring and ComplexPart
+// The Boolean arguments control the handling of Substring and ComplexPart
 // references: when true (not default), it extracts the base DataRef
-// of a substring or complex part, if it has one.
+// of a substring or complex part.
 template <typename A>
 common::IfNoLvalue<std::optional<DataRef>, A> ExtractDataRef(
     const A &, bool intoSubstring, bool intoComplexPart) {
@@ -312,15 +312,15 @@ std::optional<DataRef> ExtractDataRef(const std::optional<A> &x,
 }
 template <typename A>
 std::optional<DataRef> ExtractDataRef(
-    const A *p, bool intoSubstring = false, bool intoComplexPart = false) {
+    A *p, bool intoSubstring = false, bool intoComplexPart = false) {
   if (p) {
-    return ExtractDataRef(*p, intoSubstring, intoComplexPart);
+    return ExtractDataRef(std::as_const(*p), intoSubstring, intoComplexPart);
   } else {
     return std::nullopt;
   }
 }
-std::optional<DataRef> ExtractDataRef(
-    const ActualArgument &, bool intoSubstring = false);
+std::optional<DataRef> ExtractDataRef(const ActualArgument &,
+    bool intoSubstring = false, bool intoComplexPart = false);
 
 std::optional<DataRef> ExtractSubstringBase(const Substring &);
 

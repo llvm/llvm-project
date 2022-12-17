@@ -24,7 +24,6 @@ define void @_Z8castTestv() {
 ; Third iteration: g(0), x=5 (requires cast), f(5.0), a=5.0
 ; Fourth iteration (and subsequent): g(5), x=5, f(5.0), a=5.0
 ; Therefore, peeling 3 times removes the phi nodes, so check for 3 peels.
-; CURRENT LIMITATION: only peels twice because cannot handle cast
 ;
 ; void castTest() {
 ;   int x = 0;
@@ -61,8 +60,17 @@ define void @_Z8castTestv() {
 ; CHECK-NEXT:    [[EXITCOND_PEEL5:%.*]] = icmp ne i32 [[INC_PEEL4]], 100000
 ; CHECK-NEXT:    br i1 [[EXITCOND_PEEL5]], label [[FOR_BODY_PEEL_NEXT1:%.*]], label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.body.peel.next1:
-; CHECK-NEXT:    br label [[FOR_BODY_PEEL_NEXT6:%.*]]
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL7:%.*]]
+; CHECK:       for.body.peel7:
+; CHECK-NEXT:    tail call void @_Z1gi(i32 noundef signext [[CONV_PEEL3]])
+; CHECK-NEXT:    [[CONV_PEEL8:%.*]] = fptosi float 5.000000e+00 to i32
+; CHECK-NEXT:    tail call void @_Z1ff(float noundef 5.000000e+00)
+; CHECK-NEXT:    [[INC_PEEL9:%.*]] = add nuw nsw i32 [[INC_PEEL4]], 1
+; CHECK-NEXT:    [[EXITCOND_PEEL10:%.*]] = icmp ne i32 [[INC_PEEL9]], 100000
+; CHECK-NEXT:    br i1 [[EXITCOND_PEEL10]], label [[FOR_BODY_PEEL_NEXT6:%.*]], label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.body.peel.next6:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL_NEXT11:%.*]]
+; CHECK:       for.body.peel.next11:
 ; CHECK-NEXT:    br label [[ENTRY_PEEL_NEWPH:%.*]]
 ; CHECK:       entry.peel.newph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -71,8 +79,8 @@ define void @_Z8castTestv() {
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INC_PEEL4]], [[ENTRY_PEEL_NEWPH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[CONV_PEEL3]], [[ENTRY_PEEL_NEWPH]] ], [ 5, [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INC_PEEL9]], [[ENTRY_PEEL_NEWPH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[CONV_PEEL8]], [[ENTRY_PEEL_NEWPH]] ], [ 5, [[FOR_BODY]] ]
 ; CHECK-NEXT:    tail call void @_Z1gi(i32 noundef signext [[X]])
 ; CHECK-NEXT:    tail call void @_Z1ff(float noundef 5.000000e+00)
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I]], 1
@@ -110,7 +118,6 @@ define void @_Z6binaryv() {
 ; Third iteration: g(1), x=6, g(5), y=6, a=5
 ; Fourth iteration (and subsequent): g(6), x=6, g(5), y=6, a=5
 ; Therefore, peeling 3 times removes the phi nodes.
-; CURRENT_LIMITATION: only peels once because cannot handle binary operator
 ;
 ; void g(int);
 ; void binary() {
@@ -139,8 +146,24 @@ define void @_Z6binaryv() {
 ; CHECK-NEXT:    [[EXITCOND_PEEL:%.*]] = icmp eq i32 [[INC_PEEL]], 100000
 ; CHECK-NEXT:    br i1 [[EXITCOND_PEEL]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PEEL_NEXT:%.*]]
 ; CHECK:       for.body.peel.next:
-; CHECK-NEXT:    br label [[FOR_BODY_PEEL_NEXT1:%.*]]
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL2:%.*]]
+; CHECK:       for.body.peel2:
+; CHECK-NEXT:    tail call void @_Z1gi(i32 signext 0)
+; CHECK-NEXT:    tail call void @_Z1gi(i32 signext 5)
+; CHECK-NEXT:    [[INC_PEEL4:%.*]] = add nuw nsw i32 [[INC_PEEL]], 1
+; CHECK-NEXT:    [[EXITCOND_PEEL5:%.*]] = icmp eq i32 [[INC_PEEL4]], 100000
+; CHECK-NEXT:    br i1 [[EXITCOND_PEEL5]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_PEEL_NEXT1:%.*]]
 ; CHECK:       for.body.peel.next1:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL7:%.*]]
+; CHECK:       for.body.peel7:
+; CHECK-NEXT:    tail call void @_Z1gi(i32 signext [[ADD_PEEL]])
+; CHECK-NEXT:    tail call void @_Z1gi(i32 signext 5)
+; CHECK-NEXT:    [[INC_PEEL9:%.*]] = add nuw nsw i32 [[INC_PEEL4]], 1
+; CHECK-NEXT:    [[EXITCOND_PEEL10:%.*]] = icmp eq i32 [[INC_PEEL9]], 100000
+; CHECK-NEXT:    br i1 [[EXITCOND_PEEL10]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_PEEL_NEXT6:%.*]]
+; CHECK:       for.body.peel.next6:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL_NEXT11:%.*]]
+; CHECK:       for.body.peel.next11:
 ; CHECK-NEXT:    br label [[ENTRY_PEEL_NEWPH:%.*]]
 ; CHECK:       entry.peel.newph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -149,10 +172,8 @@ define void @_Z6binaryv() {
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INC_PEEL]], [[ENTRY_PEEL_NEWPH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[Y:%.*]] = phi i32 [ [[ADD_PEEL]], [[ENTRY_PEEL_NEWPH]] ], [ 6, [[FOR_BODY]] ]
-; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[ENTRY_PEEL_NEWPH]] ], [ [[Y]], [[FOR_BODY]] ]
-; CHECK-NEXT:    tail call void @_Z1gi(i32 signext [[X]])
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INC_PEEL9]], [[ENTRY_PEEL_NEWPH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    tail call void @_Z1gi(i32 signext 6)
 ; CHECK-NEXT:    tail call void @_Z1gi(i32 signext 5)
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 100000

@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -debug-only=loop-vectorize\
+; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -debug-only=loop-vectorize\
 ; RUN:     -disable-output -S %s 2>&1 | FileCheck %s
 
 ; Make sure that we report about not vectorizing functions with 'noimplicitfloat' attributes

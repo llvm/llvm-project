@@ -22,7 +22,7 @@ entry:
 ; for.body -> for.cond.backedge (100%)
 ;          -> cond.false.i (0%)
 ; CHECK: bb.1.for.body:
-; CHECK: successors: %bb.2(0x80000000), %bb.4(0x00000000)
+; CHECK: successors: %bb.2(0x80000000), %bb.5(0x00000000)
 for.body:
   br i1 undef, label %for.cond.backedge, label %lor.lhs.false.i, !prof !1
 

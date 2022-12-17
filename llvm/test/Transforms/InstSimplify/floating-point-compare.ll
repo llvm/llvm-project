@@ -1347,3 +1347,26 @@ define i1 @isNotKnownNeverInfinity_copysign(double %x, double %sign) {
   %r = fcmp une double %e, 0x7ff0000000000000
   ret i1 %r
 }
+
+define i1 @isKnownNeverInfinity_arithmetic_fence(double %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_arithmetic_fence(
+; CHECK-NEXT:    ret i1 true
+;
+  %a = fadd ninf double %x, 1.0
+  %e = call double @llvm.arithmetic.fence.f64(double %a)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isNotKnownNeverInfinity_arithmetic_fence(double %x) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_arithmetic_fence(
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.arithmetic.fence.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = call double @llvm.arithmetic.fence.f64(double %x)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+declare double @llvm.arithmetic.fence.f64(double)

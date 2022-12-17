@@ -70,10 +70,10 @@ LogicalResult RawBufferAtomicFaddOp::verify() {
 static Optional<uint32_t> getConstantUint32(Value v) {
   APInt cst;
   if (!v.getType().isInteger(32))
-    return None;
+    return std::nullopt;
   if (matchPattern(v, m_ConstantInt(&cst)))
     return cst.getZExtValue();
-  return None;
+  return std::nullopt;
 }
 
 template <typename OpType>

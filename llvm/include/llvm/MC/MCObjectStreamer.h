@@ -191,7 +191,7 @@ public:
   void emitTPRel64Value(const MCExpr *Value) override;
   void emitGPRel32Value(const MCExpr *Value) override;
   void emitGPRel64Value(const MCExpr *Value) override;
-  Optional<std::pair<bool, std::string>>
+  std::optional<std::pair<bool, std::string>>
   emitRelocDirective(const MCExpr &Offset, StringRef Name, const MCExpr *Expr,
                      SMLoc Loc, const MCSubtargetInfo &STI) override;
   using MCStreamer::emitFill;

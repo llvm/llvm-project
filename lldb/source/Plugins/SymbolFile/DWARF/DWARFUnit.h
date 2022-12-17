@@ -241,12 +241,12 @@ public:
 
   llvm::Optional<uint64_t> GetLoclistOffset(uint32_t Index) {
     if (!m_loclist_table_header)
-      return llvm::None;
+      return std::nullopt;
 
-    llvm::Optional<uint64_t> Offset = m_loclist_table_header->getOffsetEntry(
+    std::optional<uint64_t> Offset = m_loclist_table_header->getOffsetEntry(
         m_dwarf.GetDWARFContext().getOrLoadLocListsData().GetAsLLVM(), Index);
     if (!Offset)
-      return llvm::None;
+      return std::nullopt;
     return *Offset + m_loclists_base;
   }
 

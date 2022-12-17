@@ -508,7 +508,8 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
       if (tldx && merger.isFilterLoop(tldx.value())) {
         assert(!ta.isa<AffineDimExpr>() &&
                !isDenseDLT(getDimLevelType(enc, d)));
-        addAffineOrderings(adjM, inDegree, ta, AffineExpr(), llvm::None, tldx);
+        addAffineOrderings(adjM, inDegree, ta, AffineExpr(), std::nullopt,
+                           tldx);
         // Now that the ordering of affine expression is captured by filter
         // loop idx, we only need to ensure the affine ordering against filter
         // loop. Thus, we reset the affine express to nil here to mark it as
@@ -1532,7 +1533,7 @@ static bool endLoop(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
 
   genLoopBoundary(codegen, merger, [&](MutableArrayRef<Value> reduc) {
     codegen.loopEmitter.exitCurrentLoop(rewriter, op.getLoc(), reduc);
-    return llvm::None;
+    return std::nullopt;
   });
 
   return needsUniv;

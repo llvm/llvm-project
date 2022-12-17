@@ -205,7 +205,7 @@ namespace clang {
       return Common->PartialSpecializations;
     }
     ArrayRef<Decl> getPartialSpecializations(FunctionTemplateDecl::Common *) {
-      return None;
+      return std::nullopt;
     }
 
     template<typename DeclTy>

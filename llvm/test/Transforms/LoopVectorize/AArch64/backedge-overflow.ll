@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=aarch64--linux-gnueabi -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 < %s -S | FileCheck %s
+; RUN: opt -mtriple=aarch64--linux-gnueabi -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 < %s -S | FileCheck %s
 
 ; The following tests contain loops for which SCEV cannot determine the backedge
 ; taken count. This is because the backedge taken condition is produced by an

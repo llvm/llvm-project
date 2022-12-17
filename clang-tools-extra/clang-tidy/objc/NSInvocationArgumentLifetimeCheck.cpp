@@ -57,7 +57,7 @@ fixItHintReplacementForOwnershipString(StringRef Text, CharSourceRange Range,
                                        StringRef Ownership) {
   size_t Index = Text.find(Ownership);
   if (Index == StringRef::npos)
-    return llvm::None;
+    return std::nullopt;
 
   SourceLocation Begin = Range.getBegin().getLocWithOffset(Index);
   SourceLocation End = Begin.getLocWithOffset(Ownership.size());
@@ -71,7 +71,7 @@ fixItHintForVarDecl(const VarDecl *VD, const SourceManager &SM,
   assert(VD && "VarDecl parameter must not be null");
   // Don't provide fix-its for any parameter variables at this time.
   if (isa<ParmVarDecl>(VD))
-    return llvm::None;
+    return std::nullopt;
 
   // Currently there is no way to directly get the source range for the
   // __weak/__strong ObjC lifetime qualifiers, so it's necessary to string
@@ -81,7 +81,7 @@ fixItHintForVarDecl(const VarDecl *VD, const SourceManager &SM,
   if (Range.isInvalid()) {
     // An invalid range likely means inside a macro, in which case don't supply
     // a fix-it.
-    return llvm::None;
+    return std::nullopt;
   }
 
   StringRef VarDeclText = Lexer::getSourceText(Range, SM, LangOpts);

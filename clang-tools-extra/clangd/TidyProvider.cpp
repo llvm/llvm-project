@@ -21,6 +21,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/SourceMgr.h"
 #include <memory>
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -136,7 +137,7 @@ public:
 
 } // namespace
 
-static void mergeCheckList(llvm::Optional<std::string> &Checks,
+static void mergeCheckList(std::optional<std::string> &Checks,
                            llvm::StringRef List) {
   if (List.empty())
     return;
@@ -148,8 +149,8 @@ static void mergeCheckList(llvm::Optional<std::string> &Checks,
 }
 
 TidyProviderRef provideEnvironment() {
-  static const llvm::Optional<std::string> User = [] {
-    llvm::Optional<std::string> Ret = llvm::sys::Process::GetEnv("USER");
+  static const std::optional<std::string> User = [] {
+    std::optional<std::string> Ret = llvm::sys::Process::GetEnv("USER");
 #ifdef _WIN32
     if (!Ret)
       return llvm::sys::Process::GetEnv("USERNAME");

@@ -68,7 +68,7 @@ uint64_t DWARFDataExtractor::getRelocatedValue(uint32_t Size, uint64_t *Off,
   return R;
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 DWARFDataExtractor::getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
                                       uint64_t PCRelOffset) const {
   if (Encoding == dwarf::DW_EH_PE_omit)

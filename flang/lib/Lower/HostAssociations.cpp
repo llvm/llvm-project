@@ -321,15 +321,15 @@ public:
           .genThen([&]() {
             fir::factory::associateMutableBox(builder, loc, boxInTuple,
                                               args.hostValue,
-                                              /*lbounds=*/llvm::None);
+                                              /*lbounds=*/std::nullopt);
           })
           .genElse([&]() {
             fir::factory::disassociateMutableBox(builder, loc, boxInTuple);
           })
           .end();
     } else {
-      fir::factory::associateMutableBox(builder, loc, boxInTuple,
-                                        args.hostValue, /*lbounds=*/llvm::None);
+      fir::factory::associateMutableBox(
+          builder, loc, boxInTuple, args.hostValue, /*lbounds=*/std::nullopt);
     }
   }
 
@@ -360,7 +360,7 @@ public:
     }
 
     if (canReadCapturedBoxValue(converter, sym)) {
-      fir::BoxValue boxValue(box, lbounds, /*explicitParams=*/llvm::None);
+      fir::BoxValue boxValue(box, lbounds, /*explicitParams=*/std::nullopt);
       args.symMap.addSymbol(sym,
                             fir::factory::readBoxValue(builder, loc, boxValue));
     } else {
@@ -380,7 +380,7 @@ public:
         box = builder.create<mlir::arith::SelectOp>(loc, isPresent, box,
                                                     absentBox);
       }
-      fir::BoxValue boxValue(box, lbounds, /*explicitParams=*/llvm::None);
+      fir::BoxValue boxValue(box, lbounds, /*explicitParams=*/std::nullopt);
       args.symMap.addSymbol(sym, boxValue);
     }
   }

@@ -14,7 +14,6 @@
 #include "SIRegisterInfo.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -25,6 +24,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include <cassert>
+#include <optional>
 #include <vector>
 
 #define MAX_LANES 64
@@ -566,12 +566,12 @@ static yaml::StringValue regToString(Register Reg,
   return Dest;
 }
 
-static Optional<yaml::SIArgumentInfo>
+static std::optional<yaml::SIArgumentInfo>
 convertArgumentInfo(const AMDGPUFunctionArgInfo &ArgInfo,
                     const TargetRegisterInfo &TRI) {
   yaml::SIArgumentInfo AI;
 
-  auto convertArg = [&](Optional<yaml::SIArgument> &A,
+  auto convertArg = [&](std::optional<yaml::SIArgument> &A,
                         const ArgDescriptor &Arg) {
     if (!Arg)
       return false;

@@ -213,6 +213,15 @@ size_t randomBit(const BitVector &Vector) {
   return *Itr;
 }
 
+std::optional<int> getFirstCommonBit(const BitVector &A, const BitVector &B) {
+  BitVector Intersect = A;
+  Intersect &= B;
+  int idx = Intersect.find_first();
+  if (idx != -1)
+    return idx;
+  return {};
+}
+
 void setRandomAliasing(const AliasingConfigurations &AliasingConfigurations,
                        InstructionTemplate &DefIB, InstructionTemplate &UseIB) {
   assert(!AliasingConfigurations.empty());

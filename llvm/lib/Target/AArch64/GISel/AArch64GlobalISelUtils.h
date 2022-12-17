@@ -13,7 +13,6 @@
 #define LLVM_LIB_TARGET_AARCH64_GISEL_AARCH64GLOBALISELUTILS_H
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/Register.h"

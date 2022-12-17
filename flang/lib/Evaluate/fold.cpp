@@ -205,24 +205,9 @@ ComplexPart FoldOperation(FoldingContext &context, ComplexPart &&complexPart) {
       FoldOperation(context, std::move(complex)), complexPart.part()};
 }
 
-std::optional<std::int64_t> GetInt64Arg(
-    const std::optional<ActualArgument> &arg) {
-  if (const auto *intExpr{UnwrapExpr<Expr<SomeInteger>>(arg)}) {
-    return ToInt64(*intExpr);
-  } else {
-    return std::nullopt;
-  }
-}
-
 std::optional<std::int64_t> GetInt64ArgOr(
     const std::optional<ActualArgument> &arg, std::int64_t defaultValue) {
-  if (!arg) {
-    return defaultValue;
-  } else if (const auto *intExpr{UnwrapExpr<Expr<SomeInteger>>(arg)}) {
-    return ToInt64(*intExpr);
-  } else {
-    return std::nullopt;
-  }
+  return arg ? ToInt64(*arg) : defaultValue;
 }
 
 Expr<ImpliedDoIndex::Result> FoldOperation(

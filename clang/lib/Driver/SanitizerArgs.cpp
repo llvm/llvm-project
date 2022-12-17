@@ -104,6 +104,7 @@ enum CoverageFeature {
 enum BinaryMetadataFeature {
   BinaryMetadataCovered = 1 << 0,
   BinaryMetadataAtomics = 1 << 1,
+  BinaryMetadataUAR = 1 << 2,
 };
 
 /// Parse a -fsanitize= or -fno-sanitize= argument's values, diagnosing any
@@ -1133,7 +1134,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   // flags. Does not depend on any other sanitizers.
   const std::pair<int, std::string> BinaryMetadataFlags[] = {
       std::make_pair(BinaryMetadataCovered, "covered"),
-      std::make_pair(BinaryMetadataAtomics, "atomics")};
+      std::make_pair(BinaryMetadataAtomics, "atomics"),
+      std::make_pair(BinaryMetadataUAR, "uar")};
   for (const auto &F : BinaryMetadataFlags) {
     if (BinaryMetadataFeatures & F.first)
       CmdArgs.push_back(
@@ -1399,6 +1401,7 @@ int parseBinaryMetadataFeatures(const Driver &D, const llvm::opt::Arg *A,
     int F = llvm::StringSwitch<int>(Value)
                 .Case("covered", BinaryMetadataCovered)
                 .Case("atomics", BinaryMetadataAtomics)
+                .Case("uar", BinaryMetadataUAR)
                 .Case("all", ~0)
                 .Default(0);
     if (F == 0 && DiagnoseErrors)

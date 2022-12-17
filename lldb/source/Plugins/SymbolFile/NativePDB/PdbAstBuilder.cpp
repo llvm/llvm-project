@@ -150,7 +150,7 @@ TranslateCallingConvention(llvm::codeview::CallingConvention conv) {
   case CC::NearVector:
     return clang::CallingConv::CC_X86VectorCall;
   default:
-    return llvm::None;
+    return std::nullopt;
   }
 }
 
@@ -284,19 +284,19 @@ llvm::Optional<CompilerDecl> PdbAstBuilder::GetOrCreateDeclForUid(PdbSymUid uid)
   case PdbSymUidKind::Type: {
     clang::QualType qt = GetOrCreateType(uid.asTypeSym());
     if (qt.isNull())
-      return llvm::None;
+      return std::nullopt;
     if (auto *tag = qt->getAsTagDecl()) {
       result = tag;
       break;
     }
-    return llvm::None;
+    return std::nullopt;
   }
   default:
-    return llvm::None;
+    return std::nullopt;
   }
 
   if (!result)
-    return llvm::None;
+    return std::nullopt;
   m_uid_to_decl[toOpaqueUid(uid)] = result;
   return ToCompilerDecl(*result);
 }

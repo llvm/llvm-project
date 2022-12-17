@@ -72,7 +72,7 @@ public:
   /// list. Has to be passed base address of the compile unit referencing this
   /// range list.
   DWARFAddressRangesVector
-  getAbsoluteRanges(llvm::Optional<object::SectionedAddress> BaseAddr) const;
+  getAbsoluteRanges(std::optional<object::SectionedAddress> BaseAddr) const;
 };
 
 } // end namespace llvm

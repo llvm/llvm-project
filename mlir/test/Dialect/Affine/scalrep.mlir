@@ -788,3 +788,61 @@ func.func @no_forwarding_across_scopes() -> memref<1xf32> {
   }
   return %A : memref<1xf32>
 }
+
+// CHECK-LABEL: func @parallel_store_load() {
+func.func @parallel_store_load() {
+  %cf7 = arith.constant 7.0 : f32
+  %m = memref.alloc() : memref<10xf32>
+  affine.parallel (%i0) = (0) to (10) {
+    affine.store %cf7, %m[%i0] : memref<10xf32>
+    %v0 = affine.load %m[%i0] : memref<10xf32>
+    %v1 = arith.addf %v0, %v0 : f32
+  }
+  memref.dealloc %m : memref<10xf32>
+  return
+// CHECK:       %[[C7:.*]] = arith.constant 7.000000e+00 : f32
+// CHECK-NEXT:  affine.parallel (%{{.*}}) = (0) to (10) {
+// CHECK-NEXT:    arith.addf %[[C7]], %[[C7]] : f32
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return
+}
+
+func.func @non_constant_parallel_store_load(%N : index) {
+  %cf7 = arith.constant 7.0 : f32
+  %m = memref.alloc() : memref<10xf32>
+  affine.parallel (%i0) = (0) to (%N) {
+    affine.store %cf7, %m[%i0] : memref<10xf32>
+    %v0 = affine.load %m[%i0] : memref<10xf32>
+    %v1 = arith.addf %v0, %v0 : f32
+  }
+  memref.dealloc %m : memref<10xf32>
+  return
+}
+// CHECK: func.func @non_constant_parallel_store_load(%[[ARG0:.*]]: index) {
+// CHECK-NEXT:  %[[C7:.*]] = arith.constant 7.000000e+00 : f32
+// CHECK-NEXT:  affine.parallel (%{{.*}}) = (0) to (%[[ARG0]]) {
+// CHECK-NEXT:    arith.addf %[[C7]], %[[C7]] : f32
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return
+
+// CHECK-LABEL: func @parallel_surrounding_for() {
+func.func @parallel_surrounding_for() {
+  %cf7 = arith.constant 7.0 : f32
+  %m = memref.alloc() : memref<10x10xf32>
+  affine.parallel (%i0) = (0) to (10) {
+    affine.for %i1 = 0 to 10 {
+      affine.store %cf7, %m[%i0,%i1] : memref<10x10xf32>
+      %v0 = affine.load %m[%i0,%i1] : memref<10x10xf32>
+      %v1 = arith.addf %v0, %v0 : f32
+    }
+  }
+  memref.dealloc %m : memref<10x10xf32>
+  return
+// CHECK:       %[[C7:.*]] = arith.constant 7.000000e+00 : f32
+// CHECK-NEXT:  affine.parallel (%{{.*}}) = (0) to (10) {
+// CHECK-NEXT:    affine.for %{{.*}} = 0 to 10 {
+// CHECK-NEXT:      arith.addf %[[C7]], %[[C7]] : f32
+// CHECK-NEXT:    }
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return
+}

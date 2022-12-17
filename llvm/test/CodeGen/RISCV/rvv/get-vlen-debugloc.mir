@@ -30,6 +30,7 @@ body: |
   ; CHECK-NEXT:   $x10 = frame-setup PseudoReadVLENB
   ; CHECK-NEXT:   $x10 = frame-setup SLLI killed $x10, 1
   ; CHECK-NEXT:   $x2 = frame-setup SUB $x2, killed $x10
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x0a, 0x72, 0x00, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   $x10 = frame-destroy PseudoReadVLENB

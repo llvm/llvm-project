@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -dce -instcombine -mtriple aarch64-linux-gnu -mattr=+sve \
+; RUN: opt -passes=loop-vectorize,dce,instcombine -mtriple aarch64-linux-gnu -mattr=+sve \
 ; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue < %s -S | FileCheck %s
 
 

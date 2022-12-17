@@ -145,7 +145,7 @@ void VirtRegMap::assignVirt2StackSlot(Register virtReg, int SS) {
 void VirtRegMap::print(raw_ostream &OS, const Module*) const {
   OS << "********** REGISTER MAP **********\n";
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
-    unsigned Reg = Register::index2VirtReg(i);
+    Register Reg = Register::index2VirtReg(i);
     if (Virt2PhysMap[Reg] != (unsigned)VirtRegMap::NO_PHYS_REG) {
       OS << '[' << printReg(Reg, TRI) << " -> "
          << printReg(Virt2PhysMap[Reg], TRI) << "] "
@@ -154,7 +154,7 @@ void VirtRegMap::print(raw_ostream &OS, const Module*) const {
   }
 
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
-    unsigned Reg = Register::index2VirtReg(i);
+    Register Reg = Register::index2VirtReg(i);
     if (Virt2StackSlotMap[Reg] != VirtRegMap::NO_STACK_SLOT) {
       OS << '[' << printReg(Reg, TRI) << " -> fi#" << Virt2StackSlotMap[Reg]
          << "] " << TRI->getRegClassName(MRI->getRegClass(Reg)) << "\n";

@@ -319,8 +319,15 @@ def TestTypeDefaultValuedType : Test_Type<"TestTypeDefaultValuedType"> {
 def TestTypeCustom : Test_Type<"TestTypeCustom"> {
   let parameters = (ins "int":$a, OptionalParameter<"mlir::Optional<int>">:$b);
   let mnemonic = "custom_type";
-  let assemblyFormat = [{ `<` custom<CustomTypeA>($a)
+  let assemblyFormat = [{ `<` custom<CustomTypeA>($a) ``
                               custom<CustomTypeB>(ref($a), $b) `>` }];
+}
+
+def TestTypeCustomSpacing : Test_Type<"TestTypeCustomSpacing"> {
+  let parameters = (ins "int":$a, "int":$b);
+  let mnemonic = "custom_type_spacing";
+  let assemblyFormat = [{ `<` custom<CustomTypeA>($a)
+                              custom<CustomTypeA>($b) `>` }];
 }
 
 def TestTypeCustomString : Test_Type<"TestTypeCustomString"> {

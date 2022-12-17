@@ -143,7 +143,7 @@ struct DependenceComponent {
   Optional<int64_t> lb;
   // The upper bound of the dependence distance (inclusive).
   Optional<int64_t> ub;
-  DependenceComponent() : lb(llvm::None), ub(llvm::None) {}
+  DependenceComponent() : lb(std::nullopt), ub(std::nullopt) {}
 };
 
 /// Checks whether two accesses to the same memref access the same element.

@@ -9733,8 +9733,8 @@ isBetterMultiversionCandidate(const OverloadCandidate &Cand1,
 }
 
 /// Compute the type of the implicit object parameter for the given function,
-/// if any. Returns None if there is no implicit object parameter, and a null
-/// QualType if there is a 'matches anything' implicit object parameter.
+/// if any. Returns std::nullopt if there is no implicit object parameter, and a
+/// null QualType if there is a 'matches anything' implicit object parameter.
 static Optional<QualType> getImplicitObjectParamType(ASTContext &Context,
                                                      const FunctionDecl *F) {
   if (!isa<CXXMethodDecl>(F) || isa<CXXConstructorDecl>(F))

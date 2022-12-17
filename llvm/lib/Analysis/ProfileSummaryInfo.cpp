@@ -20,6 +20,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/Support/CommandLine.h"
+#include <optional>
 using namespace llvm;
 
 // Knobs for profile summary based thresholds.
@@ -75,7 +76,7 @@ void ProfileSummaryInfo::refresh() {
   computeThresholds();
 }
 
-Optional<uint64_t> ProfileSummaryInfo::getProfileCount(
+std::optional<uint64_t> ProfileSummaryInfo::getProfileCount(
     const CallBase &Call, BlockFrequencyInfo *BFI, bool AllowSynthetic) const {
   assert((isa<CallInst>(Call) || isa<InvokeInst>(Call)) &&
          "We can only get profile count for call/invoke instruction.");
@@ -83,7 +84,7 @@ Optional<uint64_t> ProfileSummaryInfo::getProfileCount(
     // In sample PGO mode, check if there is a profile metadata on the
     // instruction. If it is present, determine hotness solely based on that,
     // since the sampled entry count may not be accurate. If there is no
-    // annotated on the instruction, return None.
+    // annotated on the instruction, return std::nullopt.
     uint64_t TotalCount;
     if (Call.extractProfTotalWeight(TotalCount))
       return TotalCount;

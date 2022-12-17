@@ -598,8 +598,8 @@ define i64 @icmp_slt_constant_2047(i64 %a) nounwind {
 define i64 @icmp_slt_constant_2048(i64 %a) nounwind {
 ; RV64I-LABEL: icmp_slt_constant_2048:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, -2048
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    slli a1, a1, 11
 ; RV64I-NEXT:    slt a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = icmp slt i64 %a, 2048
@@ -663,8 +663,8 @@ define i64 @icmp_sle_constant_2046(i64 %a) nounwind {
 define i64 @icmp_sle_constant_2047(i64 %a) nounwind {
 ; RV64I-LABEL: icmp_sle_constant_2047:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, -2048
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    slli a1, a1, 11
 ; RV64I-NEXT:    slt a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = icmp sle i64 %a, 2047

@@ -31,7 +31,7 @@ llvm::Optional<Header> Header::parse(llvm::StringRef text) {
   std::tie(line, text) = text.split('\n');
   auto Module = ModuleRecord::parse(line);
   if (!Module)
-    return llvm::None;
+    return std::nullopt;
 
   llvm::Triple triple;
   triple.setArch(Module->Arch);

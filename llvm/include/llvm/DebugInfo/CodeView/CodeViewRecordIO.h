@@ -10,7 +10,6 @@
 #define LLVM_DEBUGINFO_CODEVIEW_CODEVIEWRECORDIO_H
 
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
@@ -63,7 +62,7 @@ public:
   explicit CodeViewRecordIO(CodeViewRecordStreamer &Streamer)
       : Streamer(&Streamer) {}
 
-  Error beginRecord(Optional<uint32_t> MaxLength);
+  Error beginRecord(std::optional<uint32_t> MaxLength);
   Error endRecord();
 
   Error mapInteger(TypeIndex &TypeInd, const Twine &Comment = "");
@@ -245,9 +244,9 @@ private:
 
   struct RecordLimit {
     uint32_t BeginOffset;
-    Optional<uint32_t> MaxLength;
+    std::optional<uint32_t> MaxLength;
 
-    Optional<uint32_t> bytesRemaining(uint32_t CurrentOffset) const {
+    std::optional<uint32_t> bytesRemaining(uint32_t CurrentOffset) const {
       if (!MaxLength)
         return std::nullopt;
       assert(CurrentOffset >= BeginOffset);

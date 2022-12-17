@@ -410,7 +410,7 @@ MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
   if (getDriver().getInstalledDir() != getDriver().Dir)
     getProgramPaths().push_back(getDriver().Dir);
 
-  Optional<llvm::StringRef> VCToolsDir, VCToolsVersion;
+  std::optional<llvm::StringRef> VCToolsDir, VCToolsVersion;
   if (Arg *A = Args.getLastArg(options::OPT__SLASH_vctoolsdir))
     VCToolsDir = A->getValue();
   if (Arg *A = Args.getLastArg(options::OPT__SLASH_vctoolsversion))

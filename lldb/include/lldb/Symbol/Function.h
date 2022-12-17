@@ -485,7 +485,7 @@ public:
   llvm::ArrayRef<std::unique_ptr<CallEdge>> GetCallEdges();
 
   /// Get the outgoing tail-calling edges from this function. If none exist,
-  /// return None.
+  /// return std::nullopt.
   llvm::ArrayRef<std::unique_ptr<CallEdge>> GetTailCallingEdges();
 
   /// Get the outgoing call edge from this function which has the given return

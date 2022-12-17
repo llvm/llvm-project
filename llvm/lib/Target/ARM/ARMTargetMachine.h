@@ -14,7 +14,6 @@
 #define LLVM_LIB_TARGET_ARM_ARMTARGETMACHINE_H
 
 #include "ARMSubtarget.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"

@@ -30,7 +30,7 @@ public:
   static IntegerValueRange getMaxRange(Value value);
 
   /// Create an integer value range lattice value.
-  IntegerValueRange(Optional<ConstantIntRanges> value = None)
+  IntegerValueRange(Optional<ConstantIntRanges> value = std::nullopt)
       : value(std::move(value)) {}
 
   /// Whether the range is uninitialized. This happens when the state hasn't

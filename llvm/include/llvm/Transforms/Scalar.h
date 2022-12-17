@@ -33,12 +33,6 @@ FunctionPass *createAlignmentFromAssumptionsPass();
 
 //===----------------------------------------------------------------------===//
 //
-// AnnotationRemarks - Emit remarks for !annotation metadata.
-//
-FunctionPass *createAnnotationRemarksLegacyPass();
-
-//===----------------------------------------------------------------------===//
-//
 // SCCP - Sparse conditional constant propagation.
 //
 FunctionPass *createSCCPPass();

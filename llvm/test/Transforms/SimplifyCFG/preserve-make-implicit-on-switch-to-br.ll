@@ -1,4 +1,4 @@
-; RUN: opt %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 ; ConstantFoldTerminator function can convert SwitchInst with one case (and default) to
 ; a conditional BranchInst. This test checks the converted BranchInst preserve the

@@ -403,7 +403,7 @@ Error DebuginfodCollection::findBinaries(StringRef Path) {
         if (!Object)
           continue;
 
-        Optional<BuildIDRef> ID = getBuildID(Object);
+        std::optional<BuildIDRef> ID = getBuildID(Object);
         if (!ID)
           continue;
 

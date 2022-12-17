@@ -151,7 +151,7 @@ Optional<StringRef> HeaderMapImpl::getString(unsigned StrTabIdx) const {
 
   // Check for invalid index.
   if (StrTabIdx >= FileBuffer->getBufferSize())
-    return None;
+    return std::nullopt;
 
   const char *Data = FileBuffer->getBufferStart() + StrTabIdx;
   unsigned MaxLen = FileBuffer->getBufferSize() - StrTabIdx;
@@ -159,7 +159,7 @@ Optional<StringRef> HeaderMapImpl::getString(unsigned StrTabIdx) const {
 
   // Check whether the buffer is null-terminated.
   if (Len == MaxLen && Data[Len - 1])
-    return None;
+    return std::nullopt;
 
   return StringRef(Data, Len);
 }

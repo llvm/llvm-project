@@ -137,7 +137,7 @@ void PseudoProbeVerifier::runAfterPass(const Loop *L) {
 void PseudoProbeVerifier::collectProbeFactors(const BasicBlock *Block,
                                               ProbeFactorMap &ProbeFactors) {
   for (const auto &I : *Block) {
-    if (Optional<PseudoProbe> Probe = extractProbe(I)) {
+    if (std::optional<PseudoProbe> Probe = extractProbe(I)) {
       uint64_t Hash = computeCallStackHash(I);
       ProbeFactors[{Probe->Id, Hash}] += Probe->Factor;
     }
@@ -421,7 +421,7 @@ void PseudoProbeUpdatePass::runOnFunction(Function &F,
   ProbeFactorMap ProbeFactors;
   for (auto &Block : F) {
     for (auto &I : Block) {
-      if (Optional<PseudoProbe> Probe = extractProbe(I)) {
+      if (std::optional<PseudoProbe> Probe = extractProbe(I)) {
         uint64_t Hash = computeCallStackHash(I);
         ProbeFactors[{Probe->Id, Hash}] += BBProfileCount(&Block);
       }
@@ -431,7 +431,7 @@ void PseudoProbeUpdatePass::runOnFunction(Function &F,
   // Fix up over-counted probes.
   for (auto &Block : F) {
     for (auto &I : Block) {
-      if (Optional<PseudoProbe> Probe = extractProbe(I)) {
+      if (std::optional<PseudoProbe> Probe = extractProbe(I)) {
         uint64_t Hash = computeCallStackHash(I);
         float Sum = ProbeFactors[{Probe->Id, Hash}];
         if (Sum != 0)

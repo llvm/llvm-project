@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
 ; PR584
 @g_38098584 = external global i32		; <i32*> [#uses=1]
 @g_60187400 = external global i32		; <i32*> [#uses=1]

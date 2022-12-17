@@ -64,7 +64,7 @@ SmallVector<ReassociationIndices, 2> convertReassociationMapsToIndices(
     OpBuilder &b, ArrayRef<ReassociationExprs> reassociationExprs);
 
 /// Return the reassociations maps to use to reshape given the source type and
-/// the target type when possible. Return llvm::None when this computation
+/// the target type when possible. Return std::nullopt when this computation
 /// failed.
 Optional<SmallVector<ReassociationIndices>>
 getReassociationIndicesForReshape(ShapedType sourceType, ShapedType targetType);
@@ -360,14 +360,14 @@ private:
         if (srcSubShape == resultSubShape)
           composedReassociation.push_back(srcIndices);
         else
-          return llvm::None;
+          return std::nullopt;
       }
 
       // Find reassociation to collapse `srcSubShape` into `resultSubShape`.
       auto subShapeReassociation =
           getReassociationIndicesForCollapse(srcSubShape, resultSubShape);
       if (!subShapeReassociation)
-        return llvm::None;
+        return std::nullopt;
 
       // Remap the subshape indices back to the original srcShape.
       for (auto &subshape_indices : *subShapeReassociation) {

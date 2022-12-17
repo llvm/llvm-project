@@ -1378,7 +1378,11 @@ void CXXRecordDecl::addedSelectedDestructor(CXXDestructorDecl *DD) {
 }
 
 void CXXRecordDecl::addedEligibleSpecialMemberFunction(const CXXMethodDecl *MD,
-                                               unsigned SMKind) {
+                                                       unsigned SMKind) {
+  // FIXME: We shouldn't change DeclaredNonTrivialSpecialMembers if `MD` is
+  // a function template, but this needs CWG attention before we break ABI.
+  // See https://github.com/llvm/llvm-project/issues/59206
+
   if (const auto *DD = dyn_cast<CXXDestructorDecl>(MD)) {
     if (DD->isUserProvided())
       data().HasIrrelevantDestructor = false;

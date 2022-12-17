@@ -180,7 +180,7 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
   // --internalize ignores the first bc file which came from previous link.
 
   // Get the environment variable ROCM_LINK_ARGS and add to llvm-link.
-  Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LINK_ARGS");
+  std::optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LINK_ARGS");
   if (OptEnv.has_value()) {
     SmallVector<StringRef, 8> Envs;
     SplitString(OptEnv.value(), Envs);
@@ -259,7 +259,7 @@ const char *AMDGCN::OpenMPLinker::constructOptCommand(
   // OptArgs.push_back(Args.MakeArgString("-openmp-opt-disable=1"));
 
   // Get the environment variable ROCM_OPT_ARGS and add to opt.
-  Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_OPT_ARGS");
+  std::optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_OPT_ARGS");
   if (OptEnv.has_value()) {
     SmallVector<StringRef, 8> Envs;
     SplitString(OptEnv.value(), Envs);
@@ -327,7 +327,7 @@ const char *AMDGCN::OpenMPLinker::constructLlcCommand(
       Args.MakeArgString(Twine("-filetype=") + (OutputIsAsm ? "asm" : "obj")));
 
   // Get the environment variable ROCM_LLC_ARGS and add to llc.
-  Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LLC_ARGS");
+  std::optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LLC_ARGS");
   if (OptEnv.has_value()) {
     SmallVector<StringRef, 8> Envs;
     SplitString(OptEnv.value(), Envs);
@@ -388,7 +388,7 @@ void AMDGCN::OpenMPLinker::constructLldCommand(
 
   LldArgs.push_back(Args.MakeArgString(InputFileName));
   // Get the environment variable ROCM_LLD_ARGS and add to lld.
-  Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LLD_ARGS");
+  std::optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LLD_ARGS");
   if (OptEnv.has_value()) {
     SmallVector<StringRef, 8> Envs;
     SplitString(OptEnv.value(), Envs);

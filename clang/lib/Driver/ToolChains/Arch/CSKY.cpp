@@ -25,7 +25,7 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
-llvm::Optional<llvm::StringRef>
+std::optional<llvm::StringRef>
 csky::getCSKYArchName(const Driver &D, const ArgList &Args,
                       const llvm::Triple &Triple) {
   if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
@@ -35,7 +35,7 @@ csky::getCSKYArchName(const Driver &D, const ArgList &Args,
       D.Diag(clang::diag::err_drv_invalid_arch_name) << A->getAsString(Args);
       return std::nullopt;
     }
-    return llvm::Optional<llvm::StringRef>(A->getValue());
+    return std::optional<llvm::StringRef>(A->getValue());
   }
 
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ)) {
@@ -44,10 +44,10 @@ csky::getCSKYArchName(const Driver &D, const ArgList &Args,
       D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
       return std::nullopt;
     }
-    return llvm::Optional<llvm::StringRef>(llvm::CSKY::getArchName(ArchKind));
+    return std::optional<llvm::StringRef>(llvm::CSKY::getArchName(ArchKind));
   }
 
-  return llvm::Optional<llvm::StringRef>("ck810");
+  return std::optional<llvm::StringRef>("ck810");
 }
 
 csky::FloatABI csky::getCSKYFloatABI(const Driver &D, const ArgList &Args) {

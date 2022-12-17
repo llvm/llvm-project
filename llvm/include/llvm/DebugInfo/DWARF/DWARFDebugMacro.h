@@ -125,8 +125,8 @@ public:
 private:
   /// Parse the debug_macinfo/debug_macro section accessible via the 'MacroData'
   /// parameter.
-  Error parseImpl(Optional<DWARFUnitVector::compile_unit_range> Units,
-                  Optional<DataExtractor> StringExtractor,
+  Error parseImpl(std::optional<DWARFUnitVector::compile_unit_range> Units,
+                  std::optional<DataExtractor> StringExtractor,
                   DWARFDataExtractor Data, bool IsMacro);
 };
 

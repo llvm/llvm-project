@@ -366,8 +366,8 @@ lldb_private::process_linux::CreateContextSwitchTracePerfEvent(
   if (parent_perf_event)
     group_fd = parent_perf_event->GetFd();
 
-  if (Expected<PerfEvent> perf_event =
-          PerfEvent::Init(attr, /*pid=*/None, cpu_id, group_fd, /*flags=*/0)) {
+  if (Expected<PerfEvent> perf_event = PerfEvent::Init(
+          attr, /*pid=*/std::nullopt, cpu_id, group_fd, /*flags=*/0)) {
     if (Error mmap_err = perf_event->MmapMetadataAndBuffers(
             data_buffer_numpages, 0, /*data_buffer_write=*/false)) {
       return std::move(mmap_err);

@@ -54,7 +54,7 @@ spirv::TargetEnv::allows(ArrayRef<spirv::Capability> caps) const {
   });
   if (chosen != caps.end())
     return *chosen;
-  return llvm::None;
+  return std::nullopt;
 }
 
 bool spirv::TargetEnv::allows(spirv::Extension extension) const {
@@ -68,7 +68,7 @@ spirv::TargetEnv::allows(ArrayRef<spirv::Extension> exts) const {
   });
   if (chosen != exts.end())
     return *chosen;
-  return llvm::None;
+  return std::nullopt;
 }
 
 spirv::Vendor spirv::TargetEnv::getVendorID() const {
@@ -163,8 +163,8 @@ spirv::getDefaultResourceLimits(MLIRContext *context) {
       /*max_compute_workgroup_invocations=*/128,
       /*max_compute_workgroup_size=*/b.getI32ArrayAttr({128, 128, 64}),
       /*subgroup_size=*/32,
-      /*min_subgroup_size=*/llvm::None,
-      /*max_subgroup_size=*/llvm::None,
+      /*min_subgroup_size=*/std::nullopt,
+      /*max_subgroup_size=*/std::nullopt,
       /*cooperative_matrix_properties_nv=*/ArrayAttr());
 }
 

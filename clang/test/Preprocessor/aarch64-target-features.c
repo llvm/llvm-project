@@ -539,6 +539,13 @@
 // CHECK-MOPS: __ARM_FEATURE_MOPS 1
 // CHECK-NOMOPS-NOT: __ARM_FEATURE_MOPS 1
 
+// ================== Check Armv8.9-A/Armv9.4-A 128-bit System Registers (FEAT_SYSREG128)
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.9-a      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOSYS128 %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.4-a      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOSYS128 %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.4-a+d128 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SYS128   %s
+// CHECK-SYS128: __ARM_FEATURE_SYSREG128 1
+// CHECK-NOSYS128-NOT: __ARM_FEATURE_SYSREG128 1
+
 // ================== Check default macros for Armv8.1-A and later
 // RUN: %clang -target aarch64-arm-none-eabi -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-BEFORE-V83,CHECK-BEFORE-V85     %s
 // RUN: %clang -target aarch64-arm-none-eabi -march=armv8.2-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-BEFORE-V83,CHECK-BEFORE-V85     %s

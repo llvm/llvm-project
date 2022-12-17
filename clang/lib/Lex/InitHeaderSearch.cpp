@@ -62,14 +62,14 @@ public:
   /// if used.
   /// Returns true if the path exists, false if it was ignored.
   bool AddPath(const Twine &Path, IncludeDirGroup Group, bool isFramework,
-               Optional<unsigned> UserEntryIdx = None);
+               Optional<unsigned> UserEntryIdx = std::nullopt);
 
   /// Add the specified path to the specified group list, without performing any
   /// sysroot remapping.
   /// Returns true if the path exists, false if it was ignored.
   bool AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
                        bool isFramework,
-                       Optional<unsigned> UserEntryIdx = None);
+                       Optional<unsigned> UserEntryIdx = std::nullopt);
 
   /// Add the specified prefix to the system header prefix list.
   void AddSystemHeaderPrefix(StringRef Prefix, bool IsSystemHeader) {

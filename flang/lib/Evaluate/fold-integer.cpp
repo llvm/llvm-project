@@ -119,7 +119,7 @@ Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
       std::optional<int> dim;
       if (funcRef.Rank() == 0) {
         // Optional DIM= argument is present: result is scalar.
-        if (auto dim64{GetInt64Arg(args[1])}) {
+        if (auto dim64{ToInt64(args[1])}) {
           if (*dim64 < 1 || *dim64 > rank) {
             context.messages().Say("DIM=%jd dimension is out of range for "
                                    "rank-%d array"_err_en_US,
@@ -173,7 +173,7 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
       std::optional<int> dim;
       if (funcRef.Rank() == 0) {
         // Optional DIM= argument is present: result is scalar.
-        if (auto dim64{GetInt64Arg(args[1])}) {
+        if (auto dim64{ToInt64(args[1])}) {
           if (*dim64 < 1 || *dim64 > rank) {
             context.messages().Say("DIM=%jd dimension is out of range for "
                                    "rank-%d array"_err_en_US,
@@ -1014,7 +1014,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       }
     }
   } else if (name == "selected_int_kind") {
-    if (auto p{GetInt64Arg(args[0])}) {
+    if (auto p{ToInt64(args[0])}) {
       return Expr<T>{context.targetCharacteristics().SelectedIntKind(*p)};
     }
   } else if (name == "selected_real_kind" ||
@@ -1073,7 +1073,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "size") {
     if (auto shape{GetContextFreeShape(context, args[0])}) {
       if (auto &dimArg{args[1]}) { // DIM= is present, get one extent
-        if (auto dim{GetInt64Arg(args[1])}) {
+        if (auto dim{ToInt64(args[1])}) {
           int rank{GetRank(*shape)};
           if (*dim >= 1 && *dim <= rank) {
             const Symbol *symbol{UnwrapWholeSymbolDataRef(args[0])};
@@ -1190,11 +1190,11 @@ std::optional<std::int64_t> ToInt64(const Expr<SomeInteger> &expr) {
 }
 
 std::optional<std::int64_t> ToInt64(const Expr<SomeType> &expr) {
-  if (const auto *intExpr{UnwrapExpr<Expr<SomeInteger>>(expr)}) {
-    return ToInt64(*intExpr);
-  } else {
-    return std::nullopt;
-  }
+  return ToInt64(UnwrapExpr<Expr<SomeInteger>>(expr));
+}
+
+std::optional<std::int64_t> ToInt64(const ActualArgument &arg) {
+  return ToInt64(arg.UnwrapExpr());
 }
 
 #ifdef _MSC_VER // disable bogus warning about missing definitions

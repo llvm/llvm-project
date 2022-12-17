@@ -43,6 +43,7 @@
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 
 #include <cstdint>
+#include <optional>
 
 #define DEBUG_TYPE "openmp-ir-builder"
 
@@ -626,7 +627,7 @@ Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(DebugLoc DL,
     return getOrCreateDefaultSrcLocStr(SrcLocStrSize);
   StringRef FileName = M.getName();
   if (DIFile *DIF = DIL->getFile())
-    if (Optional<StringRef> Source = DIF->getSource())
+    if (std::optional<StringRef> Source = DIF->getSource())
       FileName = *Source;
   StringRef Function = DIL->getScope()->getSubprogram()->getName();
   if (Function.empty() && F)

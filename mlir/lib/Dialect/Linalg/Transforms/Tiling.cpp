@@ -382,8 +382,8 @@ FailureOr<ForeachThreadTilingResult>
 linalg::tileToForeachThreadOp(RewriterBase &b, TilingInterface op,
                               ArrayRef<OpFoldResult> numThreads,
                               Optional<ArrayAttr> mapping) {
-  return tileToForeachThreadOpImpl(b, op, numThreads, /*nominalTileSizes=*/None,
-                                   mapping,
+  return tileToForeachThreadOpImpl(b, op, numThreads,
+                                   /*nominalTileSizes=*/std::nullopt, mapping,
                                    /*omitTileOffsetBoundsCheck=*/false);
 }
 
@@ -467,7 +467,7 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
   calculateTileOffsetsAndSizes(
       b, loc, foreachThreadOp, numThreads, iterationDomain,
       /*omitTileOffsetBoundsCheck =*/false,
-      /*nominalTileSizes=*/llvm::None, tiledOffsets, tiledSizes);
+      /*nominalTileSizes=*/std::nullopt, tiledOffsets, tiledSizes);
 
   // 4. Clone the tileable op and update its destination operands to use the
   // output bbArgs of the ForeachThreadOp.

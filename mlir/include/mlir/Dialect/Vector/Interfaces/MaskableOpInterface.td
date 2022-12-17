@@ -63,7 +63,7 @@ def MaskableOpInterface : OpInterface<"MaskableOpInterface"> {
       /*defaultImplementation=*/[{
       // Default implementation is only aimed for operations that implement the
       // `getVectorType()` method.
-        return $_op.getVectorType().cloneWith(/*shape=*/llvm::None,
+        return $_op.getVectorType().cloneWith(/*shape=*/std::nullopt,
           IntegerType::get($_op.getContext(), /*width=*/1));
     }]>,
   ];

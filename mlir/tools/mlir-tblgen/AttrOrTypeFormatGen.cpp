@@ -333,7 +333,7 @@ void DefFormat::genParser(MethodBody &os) {
     os << ",\n    ";
     std::string paramSelfStr;
     llvm::raw_string_ostream selfOs(paramSelfStr);
-    if (Optional<StringRef> defaultValue = param.getDefaultValue()) {
+    if (std::optional<StringRef> defaultValue = param.getDefaultValue()) {
       selfOs << formatv("(_result_{0}.value_or(", param.getName())
              << tgfmt(*defaultValue, &ctx) << "))";
     } else {
@@ -826,6 +826,12 @@ void DefFormat::genStructPrinter(StructDirective *el, FmtContext &ctx,
 
 void DefFormat::genCustomPrinter(CustomDirective *el, FmtContext &ctx,
                                  MethodBody &os) {
+  // Insert a space before the custom directive, if necessary.
+  if (shouldEmitSpace || !lastWasPunctuation)
+    os << tgfmt("$_printer << ' ';\n", &ctx);
+  shouldEmitSpace = true;
+  lastWasPunctuation = false;
+
   os << tgfmt("print$0($_printer", &ctx, el->getName());
   os.indent();
   for (FormatElement *arg : el->getArguments()) {

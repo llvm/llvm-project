@@ -228,15 +228,15 @@ private:
           return item_index;
         }
         if (item_index == 0)
-          return None;
+          return std::nullopt;
         item_index--;
       }
-      return None;
+      return std::nullopt;
     };
     // Similar to most_recent_insn_index but skips the starting position.
     auto prev_insn_index = [&](uint64_t item_index) -> Optional<uint64_t> {
       if (item_index == 0)
-        return None;
+        return std::nullopt;
       return most_recent_insn_index(item_index - 1);
     };
 
@@ -244,7 +244,7 @@ private:
     Optional<uint64_t> last_insn_index_opt =
         *prev_insn_index(m_decoded_thread.GetItemsCount());
     if (!last_insn_index_opt)
-      return None;
+      return std::nullopt;
     uint64_t last_insn_index = *last_insn_index_opt;
 
     // We then find the most recent previous occurrence of that last
@@ -258,7 +258,7 @@ private:
       loop_size++;
     }
     if (!last_insn_copy_index)
-      return None;
+      return std::nullopt;
 
     // Now we check if the segment between these last positions of the last
     // instruction address is in fact a repeating loop.
@@ -269,14 +269,14 @@ private:
       if (Optional<uint64_t> prev = prev_insn_index(insn_index_a))
         insn_index_a = *prev;
       else
-        return None;
+        return std::nullopt;
       if (Optional<uint64_t> prev = prev_insn_index(insn_index_b))
         insn_index_b = *prev;
       else
-        return None;
+        return std::nullopt;
       if (m_decoded_thread.GetInstructionLoadAddress(insn_index_a) !=
           m_decoded_thread.GetInstructionLoadAddress(insn_index_b))
-        return None;
+        return std::nullopt;
       loop_elements_visited++;
     }
     return loop_size;
@@ -570,7 +570,7 @@ Error lldb_private::trace_intel_pt::DecodeSingleTraceForThread(
         trace_intel_pt, block, buffer.slice(block.psb_offset, block.size),
         *decoded_thread.GetThread()->GetProcess(),
         i + 1 < blocks->size() ? blocks->at(i + 1).starting_ip : None,
-        decoded_thread, llvm::None);
+        decoded_thread, std::nullopt);
     if (!decoder)
       return decoder.takeError();
 
@@ -766,15 +766,15 @@ lldb_private::trace_intel_pt::FindLowestTSCInTrace(TraceIntelPT &trace_intel_pt,
   uint64_t ip = LLDB_INVALID_ADDRESS;
   int status = pt_qry_sync_forward(decoder, &ip);
   if (IsLibiptError(status))
-    return None;
+    return std::nullopt;
 
   while (HasEvents(status)) {
     pt_event event;
     status = pt_qry_event(decoder, &event, sizeof(event));
     if (IsLibiptError(status))
-      return None;
+      return std::nullopt;
     if (event.has_tsc)
       return event.tsc;
   }
-  return None;
+  return std::nullopt;
 }

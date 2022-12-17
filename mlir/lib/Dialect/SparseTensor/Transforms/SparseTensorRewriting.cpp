@@ -51,13 +51,15 @@ static bool isSparseTensor(OpOperand *op) {
 // Helper method to find zero/uninitialized allocation.
 static bool isAlloc(OpOperand *op, bool isZero) {
   Value val = op->get();
+  // Check allocation, with zero alloc when required.
   if (auto alloc = val.getDefiningOp<AllocTensorOp>()) {
     Value copy = alloc.getCopy();
     if (isZero)
       return copy && isZeroValue(copy);
     return !copy;
   }
-  return false;
+  // Last resort for zero alloc: the whole value is zero.
+  return isZero && isZeroValue(val);
 }
 
 // Helper to detect sampling operation.
@@ -695,7 +697,7 @@ private:
     Block *insertionBlock = rewriter.getInsertionBlock();
     bool noEscape = bufferization::allocationDoesNotEscape(op->getOpResult(0));
 
-    rewriter.create<ForeachOp>(loc, src, llvm::None,
+    rewriter.create<ForeachOp>(loc, src, std::nullopt,
                                [&](OpBuilder &builder, Location loc,
                                    ValueRange args, Value v, ValueRange reduc) {
                                  builder.create<memref::StoreOp>(loc, v, dst,
@@ -1065,7 +1067,7 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
     ModuleOp module = op->getParentOfType<ModuleOp>();
     // For each element in the source tensor, output the element.
     rewriter.create<ForeachOp>(
-        loc, src, llvm::None,
+        loc, src, std::nullopt,
         [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
             ValueRange reduc) {
           for (uint64_t i = 0; i < rank; i++) {

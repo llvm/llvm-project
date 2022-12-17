@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
 ; PR 2777
 @g_103 = common global i32 0		; <i32*> [#uses=1]
 

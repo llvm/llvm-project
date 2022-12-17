@@ -3,6 +3,22 @@
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 // RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 // RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++2b %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+
+namespace dr600 { // dr600: yes
+struct S {
+  void f(int);
+
+private:
+  void f(double); // expected-note {{declared private here}}
+};
+
+void g(S *sp) {
+  sp->f(2);
+  // access control is applied after overload resolution
+  sp->f(2.2); // expected-error {{is a private member}}
+}
+} // namespace dr600
 
 namespace std {
   struct type_info {};

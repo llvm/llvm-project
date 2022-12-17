@@ -15,7 +15,6 @@
 #include "XCore.h"
 #include "XCoreTargetObjectFile.h"
 #include "XCoreTargetTransformInfo.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"

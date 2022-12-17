@@ -524,7 +524,8 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
       // Given what we're doing here and the semantics of guards, it would
       // be correct to use a subset intersection, but that may be too
       // aggressive in cases we care about.
-      if (Optional<ConstantRange> Intersect = CR0.exactIntersectWith(CR1)) {
+      if (std::optional<ConstantRange> Intersect =
+              CR0.exactIntersectWith(CR1)) {
         APInt NewRHSAP;
         CmpInst::Predicate Pred;
         if (Intersect->getEquivalentICmp(Pred, NewRHSAP)) {

@@ -1279,7 +1279,7 @@ TEST(RenameTest, PrepareRename) {
   runAddDocument(Server, FooCCPath, FooCC.code());
 
   auto Results = runPrepareRename(Server, FooCCPath, FooCC.point(),
-                                  /*NewName=*/llvm::None, {});
+                                  /*NewName=*/std::nullopt, {});
   // Verify that for multi-file rename, we only return main-file occurrences.
   ASSERT_TRUE(bool(Results)) << Results.takeError();
   // We don't know the result is complete in prepareRename (passing a nullptr

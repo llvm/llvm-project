@@ -986,7 +986,7 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
           getStridesAndOffset(originalType, originalStrides, originalOffset)) ||
       failed(
           getStridesAndOffset(reducedType, candidateStrides, candidateOffset)))
-    return llvm::None;
+    return std::nullopt;
 
   // For memrefs, a dimension is truly dropped if its corresponding stride is
   // also dropped. This is particularly important when more than one of the dims
@@ -1021,13 +1021,13 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
         candidateStridesNumOccurences[originalStride]) {
       // This should never happen. Cant have a stride in the reduced rank type
       // that wasnt in the original one.
-      return llvm::None;
+      return std::nullopt;
     }
   }
 
   if ((int64_t)unusedDims.count() + reducedType.getRank() !=
       originalType.getRank())
-    return llvm::None;
+    return std::nullopt;
   return unusedDims;
 }
 

@@ -9,8 +9,8 @@ define i32 @f(i1 %0, i32 %1, ptr %2) {
 ; CHECK-NEXT:    subw a1, a1, a3
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    lui a3, 1
-; CHECK-NEXT:    addiw a3, a3, -2048
+; CHECK-NEXT:    li a3, 1
+; CHECK-NEXT:    slli a3, a3, 11
 ; CHECK-NEXT:    or a0, a0, a3
 ; CHECK-NEXT:    sw a1, 0(a2)
 ; CHECK-NEXT:    ret
@@ -30,8 +30,8 @@ define i32 @g(i1 %0, i32 %1, ptr %2) {
 ; CHECK-NEXT:    subw a1, a1, a3
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    lui a3, 1
-; CHECK-NEXT:    addiw a3, a3, -2048
+; CHECK-NEXT:    li a3, 1
+; CHECK-NEXT:    slli a3, a3, 11
 ; CHECK-NEXT:    or a0, a0, a3
 ; CHECK-NEXT:    sw a1, 0(a2)
 ; CHECK-NEXT:    ret
@@ -69,8 +69,8 @@ define i32 @i(i1 %0, i32 %1, ptr %2) {
 ; CHECK-NEXT:    slliw a1, a1, 12
 ; CHECK-NEXT:    subw a1, a1, a3
 ; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    lui a3, 1
-; CHECK-NEXT:    addiw a3, a3, -2048
+; CHECK-NEXT:    li a3, 1
+; CHECK-NEXT:    slli a3, a3, 11
 ; CHECK-NEXT:    and a0, a0, a3
 ; CHECK-NEXT:    sw a1, 0(a2)
 ; CHECK-NEXT:    ret

@@ -1,5 +1,5 @@
-; RUN: opt -loop-vectorize -scalable-vectorization=on -force-vector-width=4 -force-vector-interleave=1 -force-target-supports-scalable-vectors=true -S < %s | FileCheck %s --check-prefix=CHECK-VF4UF1
-; RUN: opt -loop-vectorize -scalable-vectorization=on -force-vector-width=4 -force-vector-interleave=2 -force-target-supports-scalable-vectors=true -S < %s | FileCheck %s --check-prefix=CHECK-VF4UF2
+; RUN: opt -passes=loop-vectorize -scalable-vectorization=on -force-vector-width=4 -force-vector-interleave=1 -force-target-supports-scalable-vectors=true -S < %s | FileCheck %s --check-prefix=CHECK-VF4UF1
+; RUN: opt -passes=loop-vectorize -scalable-vectorization=on -force-vector-width=4 -force-vector-interleave=2 -force-target-supports-scalable-vectors=true -S < %s | FileCheck %s --check-prefix=CHECK-VF4UF2
 
 ; void recurrence_1(int *a, int *b, int n) {
 ;   for(int i = 0; i < n; i++)

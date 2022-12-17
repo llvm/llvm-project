@@ -40,7 +40,7 @@ void NativeInlineSiteSymbol::dump(raw_ostream &OS, int Indent,
   dumpSymbolField(OS, "name", getName(), Indent);
 }
 
-static Optional<InlineeSourceLine>
+static std::optional<InlineeSourceLine>
 findInlineeByTypeIndex(TypeIndex Id, ModuleDebugStreamRef &ModS) {
   for (const auto &SS : ModS.getSubsectionsArray()) {
     if (SS.kind() != DebugSubsectionKind::InlineeLines)
@@ -104,11 +104,11 @@ void NativeInlineSiteSymbol::getLineOffset(uint32_t OffsetInFunc,
   LineOffset = 0;
   FileOffset = 0;
   uint32_t CodeOffset = 0;
-  Optional<uint32_t> CodeOffsetBase;
-  Optional<uint32_t> CodeOffsetEnd;
-  Optional<int32_t> CurLineOffset;
-  Optional<int32_t> NextLineOffset;
-  Optional<uint32_t> NextFileOffset;
+  std::optional<uint32_t> CodeOffsetBase;
+  std::optional<uint32_t> CodeOffsetEnd;
+  std::optional<int32_t> CurLineOffset;
+  std::optional<int32_t> NextLineOffset;
+  std::optional<uint32_t> NextFileOffset;
   auto UpdateCodeOffset = [&](uint32_t Delta) {
     if (!CodeOffsetBase)
       CodeOffsetBase = CodeOffset;
@@ -209,7 +209,7 @@ NativeInlineSiteSymbol::findInlineeLinesByVA(uint64_t VA,
   getLineOffset(VA - ParentAddr, SrcLineOffset, SrcFileOffset);
 
   // Get line info from inlinee line table.
-  Optional<InlineeSourceLine> Inlinee =
+  std::optional<InlineeSourceLine> Inlinee =
       findInlineeByTypeIndex(Sym.Inlinee, ModS.get());
 
   if (!Inlinee)

@@ -406,7 +406,7 @@ static void clampReturnedValueStates(
 
   // Use an optional state as there might not be any return values and we want
   // to join (IntegerState::operator&) the state of all there are.
-  Optional<StateType> T;
+  std::optional<StateType> T;
 
   // Callback for each possibly returned value.
   auto CheckReturnValue = [&](Value &RV) -> bool {
@@ -465,7 +465,7 @@ static void clampCallSiteArgumentStates(Attributor &A, const AAType &QueryingAA,
 
   // Use an optional state as there might not be any return values and we want
   // to join (IntegerState::operator&) the state of all there are.
-  Optional<StateType> T;
+  std::optional<StateType> T;
 
   // The argument number which is also the call site argument number.
   unsigned ArgNo = QueryingAA.getIRPosition().getCallSiteArgNo();
@@ -822,7 +822,7 @@ struct AA::PointerInfo::State : public AbstractState {
   ///
   /// \Returns CHANGED, if the state changed, UNCHANGED otherwise.
   ChangeStatus addAccess(Attributor &A, int64_t Offset, int64_t Size,
-                         Instruction &I, Optional<Value *> Content,
+                         Instruction &I, std::optional<Value *> Content,
                          AAPointerInfo::AccessKind Kind, Type *Ty,
                          Instruction *RemoteI = nullptr);
 
@@ -901,7 +901,7 @@ private:
 
 ChangeStatus AA::PointerInfo::State::addAccess(Attributor &A, int64_t Offset,
                                                int64_t Size, Instruction &I,
-                                               Optional<Value *> Content,
+                                               std::optional<Value *> Content,
                                                AAPointerInfo::AccessKind Kind,
                                                Type *Ty, Instruction *RemoteI) {
   RemoteI = RemoteI ? RemoteI : &I;
@@ -1173,7 +1173,7 @@ struct AAPointerInfoImpl
           continue;
         bool UsedAssumedInformation = false;
         AccessKind AK = RAcc.getKind();
-        Optional<Value *> Content = RAcc.getContent();
+        std::optional<Value *> Content = RAcc.getContent();
         if (FromCallee) {
           Content = A.translateArgumentToCallSiteContent(
               RAcc.getContent(), CB, *this, UsedAssumedInformation);
@@ -1221,8 +1221,8 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
   /// Deal with an access and signal if it was handled successfully.
   bool handleAccess(Attributor &A, Instruction &I, Value &Ptr,
-                    Optional<Value *> Content, AccessKind Kind, int64_t Offset,
-                    ChangeStatus &Changed, Type *Ty,
+                    std::optional<Value *> Content, AccessKind Kind,
+                    int64_t Offset, ChangeStatus &Changed, Type *Ty,
                     int64_t Size = AA::OffsetAndSize::Unknown) {
     using namespace AA::PointerInfo;
     // No need to find a size if one is given.
@@ -1401,7 +1401,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         else
           AK = AccessKind(AK | AccessKind::AK_MAY);
         bool UsedAssumedInformation = false;
-        Optional<Value *> Content = nullptr;
+        std::optional<Value *> Content = nullptr;
         if (ValueOp)
           Content = A.getAssumedSimplified(
               *ValueOp, *this, UsedAssumedInformation, AA::Interprocedural);
@@ -1770,7 +1770,7 @@ public:
   /// Return an assumed unique return value if a single candidate is found. If
   /// there cannot be one, return a nullptr. If it is not clear yet, return the
   /// Optional::NoneType.
-  Optional<Value *> getAssumedUniqueReturnValue(Attributor &A) const;
+  std::optional<Value *> getAssumedUniqueReturnValue(Attributor &A) const;
 
   /// See AbstractState::checkForAllReturnedValues(...).
   bool checkForAllReturnedValuesAndReturnInsts(
@@ -1808,7 +1808,7 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
                   "Number of function with known return values");
 
   // Check if we have an assumed unique return value that we could manifest.
-  Optional<Value *> UniqueRV = getAssumedUniqueReturnValue(A);
+  std::optional<Value *> UniqueRV = getAssumedUniqueReturnValue(A);
 
   if (!UniqueRV || !UniqueRV.value())
     return Changed;
@@ -1832,19 +1832,19 @@ const std::string AAReturnedValuesImpl::getAsStr() const {
          (isValidState() ? std::to_string(getNumReturnValues()) : "?") + ")";
 }
 
-Optional<Value *>
+std::optional<Value *>
 AAReturnedValuesImpl::getAssumedUniqueReturnValue(Attributor &A) const {
   // If checkForAllReturnedValues provides a unique value, ignoring potential
   // undef values that can also be present, it is assumed to be the actual
   // return value and forwarded to the caller of this method. If there are
   // multiple, a nullptr is returned indicating there cannot be a unique
   // returned value.
-  Optional<Value *> UniqueRV;
+  std::optional<Value *> UniqueRV;
   Type *Ty = getAssociatedFunction()->getReturnType();
 
   auto Pred = [&](Value &RV) -> bool {
     UniqueRV = AA::combineOptionalValuesInAAValueLatice(UniqueRV, &RV, Ty);
-    return UniqueRV != Optional<Value *>(nullptr);
+    return UniqueRV != std::optional<Value *>(nullptr);
   };
 
   if (!A.checkForAllReturnedValues(Pred, *this))
@@ -2593,7 +2593,8 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
 
       // Either we stopped and the appropriate action was taken,
       // or we got back a simplified value to continue.
-      Optional<Value *> SimplifiedPtrOp = stopOnUndefOrAssumed(A, PtrOp, &I);
+      std::optional<Value *> SimplifiedPtrOp =
+          stopOnUndefOrAssumed(A, PtrOp, &I);
       if (!SimplifiedPtrOp || !SimplifiedPtrOp.value())
         return true;
       const Value *PtrOpVal = SimplifiedPtrOp.value();
@@ -2637,7 +2638,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
 
       // Either we stopped and the appropriate action was taken,
       // or we got back a simplified value to continue.
-      Optional<Value *> SimplifiedCond =
+      std::optional<Value *> SimplifiedCond =
           stopOnUndefOrAssumed(A, BrInst->getCondition(), BrInst);
       if (!SimplifiedCond || !*SimplifiedCond)
         return true;
@@ -2681,7 +2682,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
         if (!NoUndefAA.isKnownNoUndef())
           continue;
         bool UsedAssumedInformation = false;
-        Optional<Value *> SimplifiedVal =
+        std::optional<Value *> SimplifiedVal =
             A.getAssumedSimplified(IRPosition::value(*ArgVal), *this,
                                    UsedAssumedInformation, AA::Interprocedural);
         if (UsedAssumedInformation)
@@ -2707,7 +2708,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
       auto &RI = cast<ReturnInst>(I);
       // Either we stopped and the appropriate action was taken,
       // or we got back a simplified return value to continue.
-      Optional<Value *> SimplifiedRetValue =
+      std::optional<Value *> SimplifiedRetValue =
           stopOnUndefOrAssumed(A, RI.getReturnValue(), &I);
       if (!SimplifiedRetValue || !*SimplifiedRetValue)
         return true;
@@ -2847,14 +2848,14 @@ private:
   // - If the value is assumed, then stop.
   // - If the value is known but undef, then consider it UB.
   // - Otherwise, do specific processing with the simplified value.
-  // We return None in the first 2 cases to signify that an appropriate
+  // We return std::nullopt in the first 2 cases to signify that an appropriate
   // action was taken and the caller should stop.
   // Otherwise, we return the simplified value that the caller should
   // use for specific processing.
-  Optional<Value *> stopOnUndefOrAssumed(Attributor &A, Value *V,
-                                         Instruction *I) {
+  std::optional<Value *> stopOnUndefOrAssumed(Attributor &A, Value *V,
+                                              Instruction *I) {
     bool UsedAssumedInformation = false;
-    Optional<Value *> SimplifiedV =
+    std::optional<Value *> SimplifiedV =
         A.getAssumedSimplified(IRPosition::value(*V), *this,
                                UsedAssumedInformation, AA::Interprocedural);
     if (!UsedAssumedInformation) {
@@ -3502,7 +3503,7 @@ struct AAIsDeadValueImpl : public AAIsDead {
         if (!A.isRunOn(*I->getFunction()))
           return false;
       bool UsedAssumedInformation = false;
-      Optional<Constant *> C =
+      std::optional<Constant *> C =
           A.getAssumedConstant(V, *this, UsedAssumedInformation);
       if (!C || *C)
         return true;
@@ -4019,7 +4020,7 @@ identifyAliveSuccessors(Attributor &A, const BranchInst &BI,
   if (BI.getNumSuccessors() == 1) {
     AliveSuccessors.push_back(&BI.getSuccessor(0)->front());
   } else {
-    Optional<Constant *> C =
+    std::optional<Constant *> C =
         A.getAssumedConstant(*BI.getCondition(), AA, UsedAssumedInformation);
     if (!C || isa_and_nonnull<UndefValue>(*C)) {
       // No value yet, assume both edges are dead.
@@ -4041,7 +4042,7 @@ identifyAliveSuccessors(Attributor &A, const SwitchInst &SI,
                         AbstractAttribute &AA,
                         SmallVectorImpl<const Instruction *> &AliveSuccessors) {
   bool UsedAssumedInformation = false;
-  Optional<Constant *> C =
+  std::optional<Constant *> C =
       A.getAssumedConstant(*SI.getCondition(), AA, UsedAssumedInformation);
   if (!C || isa_and_nonnull<UndefValue>(C.value())) {
     // No value yet, assume all edges are dead.
@@ -5367,11 +5368,11 @@ struct AANoCaptureCallSiteReturned final : AANoCaptureImpl {
 
 /// ------------------ Value Simplify Attribute ----------------------------
 
-bool ValueSimplifyStateType::unionAssumed(Optional<Value *> Other) {
+bool ValueSimplifyStateType::unionAssumed(std::optional<Value *> Other) {
   // FIXME: Add a typecast support.
   SimplifiedAssociatedValue = AA::combineOptionalValuesInAAValueLatice(
       SimplifiedAssociatedValue, Other, Ty);
-  if (SimplifiedAssociatedValue == Optional<Value *>(nullptr))
+  if (SimplifiedAssociatedValue == std::optional<Value *>(nullptr))
     return false;
 
   LLVM_DEBUG({
@@ -5412,7 +5413,8 @@ struct AAValueSimplifyImpl : AAValueSimplify {
   void trackStatistics() const override {}
 
   /// See AAValueSimplify::getAssumedSimplifiedValue()
-  Optional<Value *> getAssumedSimplifiedValue(Attributor &A) const override {
+  std::optional<Value *>
+  getAssumedSimplifiedValue(Attributor &A) const override {
     return SimplifiedAssociatedValue;
   }
 
@@ -5476,7 +5478,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     if (const auto &NewV = VMap.lookup(&V))
       return NewV;
     bool UsedAssumedInformation = false;
-    Optional<Value *> SimpleV = A.getAssumedSimplified(
+    std::optional<Value *> SimpleV = A.getAssumedSimplified(
         V, QueryingAA, UsedAssumedInformation, AA::Interprocedural);
     if (!SimpleV.has_value())
       return PoisonValue::get(&Ty);
@@ -5517,7 +5519,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
   bool checkAndUpdate(Attributor &A, const AbstractAttribute &QueryingAA,
                       const IRPosition &IRP, bool Simplify = true) {
     bool UsedAssumedInformation = false;
-    Optional<Value *> QueryingValueSimplified = &IRP.getAssociatedValue();
+    std::optional<Value *> QueryingValueSimplified = &IRP.getAssociatedValue();
     if (Simplify)
       QueryingValueSimplified = A.getAssumedSimplified(
           IRP, QueryingAA, UsedAssumedInformation, AA::Interprocedural);
@@ -5533,7 +5535,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     const auto &AA =
         A.getAAFor<AAType>(*this, getIRPosition(), DepClassTy::NONE);
 
-    Optional<Constant *> COpt = AA.getAssumedConstant(A);
+    std::optional<Constant *> COpt = AA.getAssumedConstant(A);
 
     if (!COpt) {
       SimplifiedAssociatedValue = std::nullopt;
@@ -5625,7 +5627,7 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
       // in other functions, e.g., we don't want to say a an argument in a
       // static function is actually an argument in a different function.
       bool UsedAssumedInformation = false;
-      Optional<Constant *> SimpleArgOp =
+      std::optional<Constant *> SimpleArgOp =
           A.getAssumedConstant(ACSArgPos, *this, UsedAssumedInformation);
       if (!SimpleArgOp)
         return true;
@@ -5667,7 +5669,8 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
       : AAValueSimplifyImpl(IRP, A) {}
 
   /// See AAValueSimplify::getAssumedSimplifiedValue()
-  Optional<Value *> getAssumedSimplifiedValue(Attributor &A) const override {
+  std::optional<Value *>
+  getAssumedSimplifiedValue(Attributor &A) const override {
     if (!isValidState())
       return nullptr;
     return SimplifiedAssociatedValue;
@@ -5801,12 +5804,13 @@ struct AAValueSimplifyCallSiteReturned : AAValueSimplifyImpl {
     auto PredForReturned =
         [&](Value &RetVal, const SmallSetVector<ReturnInst *, 4> &RetInsts) {
           bool UsedAssumedInformation = false;
-          Optional<Value *> CSRetVal = A.translateArgumentToCallSiteContent(
-              &RetVal, *cast<CallBase>(getCtxI()), *this,
-              UsedAssumedInformation);
+          std::optional<Value *> CSRetVal =
+              A.translateArgumentToCallSiteContent(
+                  &RetVal, *cast<CallBase>(getCtxI()), *this,
+                  UsedAssumedInformation);
           SimplifiedAssociatedValue = AA::combineOptionalValuesInAAValueLatice(
               SimplifiedAssociatedValue, CSRetVal, getAssociatedType());
-          return SimplifiedAssociatedValue != Optional<Value *>(nullptr);
+          return SimplifiedAssociatedValue != std::optional<Value *>(nullptr);
         };
     if (!RetAA.checkForAllReturnedValuesAndReturnInsts(PredForReturned))
       if (!askSimplifiedValueForOtherAAs(A))
@@ -5944,7 +5948,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
 
     Attributor::SimplifictionCallbackTy SCB =
         [](const IRPosition &, const AbstractAttribute *,
-           bool &) -> Optional<Value *> { return nullptr; };
+           bool &) -> std::optional<Value *> { return nullptr; };
     for (const auto &It : AllocationInfos)
       A.registerSimplificationCallback(IRPosition::callsite_returned(*It.first),
                                        SCB);
@@ -6055,7 +6059,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       if (MaybeAlign RetAlign = AI.CB->getRetAlign())
         Alignment = std::max(Alignment, *RetAlign);
       if (Value *Align = getAllocAlignment(AI.CB, TLI)) {
-        Optional<APInt> AlignmentAPI = getAPInt(A, *this, *Align);
+        std::optional<APInt> AlignmentAPI = getAPInt(A, *this, *Align);
         assert(AlignmentAPI && AlignmentAPI.value().getZExtValue() > 0 &&
                "Expected an alignment during manifest!");
         Alignment = std::max(
@@ -6101,10 +6105,10 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     return HasChanged;
   }
 
-  Optional<APInt> getAPInt(Attributor &A, const AbstractAttribute &AA,
-                           Value &V) {
+  std::optional<APInt> getAPInt(Attributor &A, const AbstractAttribute &AA,
+                                Value &V) {
     bool UsedAssumedInformation = false;
-    Optional<Constant *> SimpleV =
+    std::optional<Constant *> SimpleV =
         A.getAssumedConstant(V, AA, UsedAssumedInformation);
     if (!SimpleV)
       return APInt(64, 0);
@@ -6117,7 +6121,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
                           AllocationInfo &AI) {
     auto Mapper = [&](const Value *V) -> const Value * {
       bool UsedAssumedInformation = false;
-      if (Optional<Constant *> SimpleV =
+      if (std::optional<Constant *> SimpleV =
               A.getAssumedConstant(*V, AA, UsedAssumedInformation))
         if (*SimpleV)
           return *SimpleV;
@@ -6369,7 +6373,7 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
       continue;
 
     if (Value *Align = getAllocAlignment(AI.CB, TLI)) {
-      Optional<APInt> APAlign = getAPInt(A, *this, *Align);
+      std::optional<APInt> APAlign = getAPInt(A, *this, *Align);
       if (!APAlign) {
         // Can't generate an alloca which respects the required alignment
         // on the allocation.
@@ -6452,11 +6456,12 @@ struct AAPrivatizablePtrImpl : public AAPrivatizablePtr {
 
   /// Identify the type we can chose for a private copy of the underlying
   /// argument. None means it is not clear yet, nullptr means there is none.
-  virtual Optional<Type *> identifyPrivatizableType(Attributor &A) = 0;
+  virtual std::optional<Type *> identifyPrivatizableType(Attributor &A) = 0;
 
   /// Return a privatizable type that encloses both T0 and T1.
   /// TODO: This is merely a stub for now as we should manage a mapping as well.
-  Optional<Type *> combineTypes(Optional<Type *> T0, Optional<Type *> T1) {
+  std::optional<Type *> combineTypes(std::optional<Type *> T0,
+                                     std::optional<Type *> T1) {
     if (!T0)
       return T1;
     if (!T1)
@@ -6466,7 +6471,7 @@ struct AAPrivatizablePtrImpl : public AAPrivatizablePtr {
     return nullptr;
   }
 
-  Optional<Type *> getPrivatizableType() const override {
+  std::optional<Type *> getPrivatizableType() const override {
     return PrivatizableType;
   }
 
@@ -6475,7 +6480,7 @@ struct AAPrivatizablePtrImpl : public AAPrivatizablePtr {
   }
 
 protected:
-  Optional<Type *> PrivatizableType;
+  std::optional<Type *> PrivatizableType;
 };
 
 // TODO: Do this for call site arguments (probably also other values) as well.
@@ -6485,7 +6490,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       : AAPrivatizablePtrImpl(IRP, A) {}
 
   /// See AAPrivatizablePtrImpl::identifyPrivatizableType(...)
-  Optional<Type *> identifyPrivatizableType(Attributor &A) override {
+  std::optional<Type *> identifyPrivatizableType(Attributor &A) override {
     // If this is a byval argument and we know all the call sites (so we can
     // rewrite them), there is no need to check them explicitly.
     bool UsedAssumedInformation = false;
@@ -6496,7 +6501,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
                                true, UsedAssumedInformation))
       return Attrs[0].getValueAsType();
 
-    Optional<Type *> Ty;
+    std::optional<Type *> Ty;
     unsigned ArgNo = getIRPosition().getCallSiteArgNo();
 
     // Make sure the associated call site argument has the same type at all call
@@ -6515,7 +6520,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       // Check that all call sites agree on a type.
       auto &PrivCSArgAA =
           A.getAAFor<AAPrivatizablePtr>(*this, ACSArgPos, DepClassTy::REQUIRED);
-      Optional<Type *> CSTy = PrivCSArgAA.getPrivatizableType();
+      std::optional<Type *> CSTy = PrivCSArgAA.getPrivatizableType();
 
       LLVM_DEBUG({
         dbgs() << "[AAPrivatizablePtr] ACSPos: " << ACSArgPos << ", CSTy: ";
@@ -6928,7 +6933,7 @@ struct AAPrivatizablePtrFloating : public AAPrivatizablePtrImpl {
   }
 
   /// See AAPrivatizablePtrImpl::identifyPrivatizableType(...)
-  Optional<Type *> identifyPrivatizableType(Attributor &A) override {
+  std::optional<Type *> identifyPrivatizableType(Attributor &A) override {
     Value *Obj = getUnderlyingObject(&getAssociatedValue());
     if (!Obj) {
       LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] No underlying object found!\n");
@@ -9089,8 +9094,8 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
     Value *RHS = SI->getFalseValue();
 
     bool UsedAssumedInformation = false;
-    Optional<Constant *> C = A.getAssumedConstant(*SI->getCondition(), *this,
-                                                  UsedAssumedInformation);
+    std::optional<Constant *> C = A.getAssumedConstant(
+        *SI->getCondition(), *this, UsedAssumedInformation);
 
     // Check if we only need one operand.
     bool OnlyLeft = false, OnlyRight = false;
@@ -9620,8 +9625,8 @@ private:
       Unreachable.erase(&Fn);
     }
 
-    /// If there is no information about the function None is returned.
-    Optional<bool> isCachedReachable(const Function &Fn) {
+    /// If there is no information about the function std::nullopt is returned.
+    std::optional<bool> isCachedReachable(const Function &Fn) {
       // Assume that we can reach the function.
       // TODO: Be more specific with the unknown callee.
       if (CanReachUnknownCallee)
@@ -9676,7 +9681,7 @@ private:
     bool isReachable(Attributor &A, AAFunctionReachability &AA,
                      ArrayRef<const AACallEdges *> AAEdgesList,
                      const Function &Fn) {
-      Optional<bool> Cached = isCachedReachable(Fn);
+      std::optional<bool> Cached = isCachedReachable(Fn);
       if (Cached)
         return Cached.value();
 
@@ -9899,7 +9904,7 @@ private:
 } // namespace
 
 template <typename AAType>
-static Optional<Constant *>
+static std::optional<Constant *>
 askForAssumedConstant(Attributor &A, const AbstractAttribute &QueryingAA,
                       const IRPosition &IRP, Type &Ty) {
   if (!Ty.isIntegerTy())
@@ -9908,7 +9913,7 @@ askForAssumedConstant(Attributor &A, const AbstractAttribute &QueryingAA,
   // This will also pass the call base context.
   const auto &AA = A.getAAFor<AAType>(QueryingAA, IRP, DepClassTy::NONE);
 
-  Optional<Constant *> COpt = AA.getAssumedConstant(A);
+  std::optional<Constant *> COpt = AA.getAssumedConstant(A);
 
   if (!COpt.has_value()) {
     A.recordDependence(AA, QueryingAA, DepClassTy::OPTIONAL);
@@ -9925,7 +9930,7 @@ Value *AAPotentialValues::getSingleValue(
     Attributor &A, const AbstractAttribute &AA, const IRPosition &IRP,
     SmallVectorImpl<AA::ValueAndContext> &Values) {
   Type &Ty = *IRP.getAssociatedType();
-  Optional<Value *> V;
+  std::optional<Value *> V;
   for (auto &It : Values) {
     V = AA::combineOptionalValuesInAAValueLatice(V, It.getValue(), &Ty);
     if (V.has_value() && !V.value())
@@ -9968,12 +9973,12 @@ struct AAPotentialValuesImpl : AAPotentialValues {
   }
 
   template <typename AAType>
-  static Optional<Value *> askOtherAA(Attributor &A,
-                                      const AbstractAttribute &AA,
-                                      const IRPosition &IRP, Type &Ty) {
+  static std::optional<Value *> askOtherAA(Attributor &A,
+                                           const AbstractAttribute &AA,
+                                           const IRPosition &IRP, Type &Ty) {
     if (isa<Constant>(IRP.getAssociatedValue()))
       return &IRP.getAssociatedValue();
-    Optional<Constant *> C = askForAssumedConstant<AAType>(A, AA, IRP, Ty);
+    std::optional<Constant *> C = askForAssumedConstant<AAType>(A, AA, IRP, Ty);
     if (!C)
       return std::nullopt;
     if (C.value())
@@ -9999,7 +10004,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
     Value *VPtr = &V;
     if (ValIRP.getAssociatedType()->isIntegerTy()) {
       Type &Ty = *getAssociatedType();
-      Optional<Value *> SimpleV =
+      std::optional<Value *> SimpleV =
           askOtherAA<AAValueConstantRange>(A, *this, ValIRP, Ty);
       if (SimpleV.has_value() && !SimpleV.value()) {
         auto &PotentialConstantsAA = A.getAAFor<AAPotentialConstantValues>(
@@ -10224,7 +10229,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     const Instruction *CtxI = II.I.getCtxI();
     bool UsedAssumedInformation = false;
 
-    Optional<Constant *> C =
+    std::optional<Constant *> C =
         A.getAssumedConstant(*SI.getCondition(), *this, UsedAssumedInformation);
     bool NoValueYet = !C.has_value();
     if (NoValueYet || isa_and_nonnull<UndefValue>(*C))
@@ -10649,7 +10654,7 @@ struct AAPotentialValuesCallSiteReturned : AAPotentialValuesImpl {
     bool AnyNonLocal = false;
     for (auto &It : Values) {
       Value *V = It.getValue();
-      Optional<Value *> CallerV = A.translateArgumentToCallSiteContent(
+      std::optional<Value *> CallerV = A.translateArgumentToCallSiteContent(
           V, *CB, *this, UsedAssumedInformation);
       if (!CallerV.has_value()) {
         // Nothing to do as long as no value was determined.

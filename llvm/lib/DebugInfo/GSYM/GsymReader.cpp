@@ -206,7 +206,7 @@ const Header &GsymReader::getHeader() const {
   return *Hdr;
 }
 
-Optional<uint64_t> GsymReader::getAddress(size_t Index) const {
+std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
   switch (Hdr->AddrOffSize) {
   case 1: return addressForIndex<uint8_t>(Index);
   case 2: return addressForIndex<uint16_t>(Index);
@@ -216,7 +216,7 @@ Optional<uint64_t> GsymReader::getAddress(size_t Index) const {
   return std::nullopt;
 }
 
-Optional<uint64_t> GsymReader::getAddressInfoOffset(size_t Index) const {
+std::optional<uint64_t> GsymReader::getAddressInfoOffset(size_t Index) const {
   const auto NumAddrInfoOffsets = AddrInfoOffsets.size();
   if (Index < NumAddrInfoOffsets)
     return AddrInfoOffsets[Index];
@@ -227,7 +227,7 @@ Expected<uint64_t>
 GsymReader::getAddressIndex(const uint64_t Addr) const {
   if (Addr >= Hdr->BaseAddress) {
     const uint64_t AddrOffset = Addr - Hdr->BaseAddress;
-    Optional<uint64_t> AddrOffsetIndex;
+    std::optional<uint64_t> AddrOffsetIndex;
     switch (Hdr->AddrOffSize) {
     case 1:
       AddrOffsetIndex = getAddressOffsetIndex<uint8_t>(AddrOffset);
@@ -262,7 +262,7 @@ llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
   assert(*AddressIndex < AddrInfoOffsets.size());
   auto AddrInfoOffset = AddrInfoOffsets[*AddressIndex];
   DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset), Endian, 4);
-  if (Optional<uint64_t> OptAddr = getAddress(*AddressIndex)) {
+  if (std::optional<uint64_t> OptAddr = getAddress(*AddressIndex)) {
     auto ExpectedFI = FunctionInfo::decode(Data, *OptAddr);
     if (ExpectedFI) {
       if (ExpectedFI->Range.contains(Addr) || ExpectedFI->Range.size() == 0)
@@ -284,7 +284,7 @@ llvm::Expected<LookupResult> GsymReader::lookup(uint64_t Addr) const {
   assert(*AddressIndex < AddrInfoOffsets.size());
   auto AddrInfoOffset = AddrInfoOffsets[*AddressIndex];
   DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset), Endian, 4);
-  if (Optional<uint64_t> OptAddr = getAddress(*AddressIndex))
+  if (std::optional<uint64_t> OptAddr = getAddress(*AddressIndex))
     return FunctionInfo::lookup(Data, *this, *OptAddr, Addr);
   return createStringError(std::errc::invalid_argument,
                            "failed to extract address[%" PRIu64 "]",
@@ -382,7 +382,7 @@ void GsymReader::dump(raw_ostream &OS, const InlineInfo &II, uint32_t Indent) {
     dump(OS, ChildII, Indent + 2);
 }
 
-void GsymReader::dump(raw_ostream &OS, Optional<FileEntry> FE) {
+void GsymReader::dump(raw_ostream &OS, std::optional<FileEntry> FE) {
   if (FE) {
     // IF we have the file from index 0, then don't print anything
     if (FE->Dir == 0 && FE->Base == 0)

@@ -21,7 +21,6 @@ using namespace clang::interp;
 
 using APSInt = llvm::APSInt;
 template <typename T> using Expected = llvm::Expected<T>;
-template <typename T> using Optional = llvm::Optional<T>;
 
 namespace clang {
 namespace interp {
@@ -51,7 +50,7 @@ public:
       : Ctx(Ctx), OldDiscardResult(Ctx->DiscardResult),
         OldInitFn(std::move(Ctx->InitFn)) {
     Ctx->DiscardResult = NewDiscardResult;
-    Ctx->InitFn = llvm::Optional<InitFnRef>{};
+    Ctx->InitFn = std::optional<InitFnRef>{};
   }
 
   /// Root constructor, setting up compilation state.
@@ -81,7 +80,7 @@ private:
   /// Old discard flag to restore.
   bool OldDiscardResult;
   /// Old pointer emitter to restore.
-  llvm::Optional<InitFnRef> OldInitFn;
+  std::optional<InitFnRef> OldInitFn;
 };
 
 } // namespace interp
@@ -135,8 +134,8 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_IntegralToBoolean:
   case CK_IntegralCast: {
-    Optional<PrimType> FromT = classify(SubExpr->getType());
-    Optional<PrimType> ToT = classify(CE->getType());
+    std::optional<PrimType> FromT = classify(SubExpr->getType());
+    std::optional<PrimType> ToT = classify(CE->getType());
     if (!FromT || !ToT)
       return false;
 
@@ -187,9 +186,9 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   }
 
   // Typecheck the args.
-  Optional<PrimType> LT = classify(LHS->getType());
-  Optional<PrimType> RT = classify(RHS->getType());
-  Optional<PrimType> T = classify(BO->getType());
+  std::optional<PrimType> LT = classify(LHS->getType());
+  std::optional<PrimType> RT = classify(RHS->getType());
+  std::optional<PrimType> T = classify(BO->getType());
   if (!LT || !RT || !T) {
     return this->bail(BO);
   }
@@ -267,8 +266,8 @@ bool ByteCodeExprGen<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
       (!LHS->getType()->isPointerType() && !RHS->getType()->isPointerType()))
     return false;
 
-  Optional<PrimType> LT = classify(LHS);
-  Optional<PrimType> RT = classify(RHS);
+  std::optional<PrimType> LT = classify(LHS);
+  std::optional<PrimType> RT = classify(RHS);
 
   if (!LT || !RT)
     return false;
@@ -307,7 +306,7 @@ bool ByteCodeExprGen<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitImplicitValueInitExpr(const ImplicitValueInitExpr *E) {
-  if (Optional<PrimType> T = classify(E))
+  if (std::optional<PrimType> T = classify(E))
     return this->emitZero(*T, E);
 
   return false;
@@ -526,8 +525,8 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
     const CompoundAssignOperator *E) {
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
-  Optional<PrimType> LT = classify(E->getLHS()->getType());
-  Optional<PrimType> RT = classify(E->getRHS()->getType());
+  std::optional<PrimType> LT = classify(E->getLHS()->getType());
+  std::optional<PrimType> RT = classify(E->getRHS()->getType());
 
   if (!LT || !RT)
     return false;
@@ -591,7 +590,7 @@ bool ByteCodeExprGen<Emitter>::visit(const Expr *E) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::visitBool(const Expr *E) {
-  if (Optional<PrimType> T = classify(E->getType())) {
+  if (std::optional<PrimType> T = classify(E->getType())) {
     return visit(E);
   } else {
     return this->bail(E);
@@ -629,7 +628,7 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::dereference(
     const Expr *LV, DerefKind AK, llvm::function_ref<bool(PrimType)> Direct,
     llvm::function_ref<bool(PrimType)> Indirect) {
-  if (Optional<PrimType> T = classify(LV->getType())) {
+  if (std::optional<PrimType> T = classify(LV->getType())) {
     if (!LV->refersToBitField()) {
       // Only primitive, non bit-field types can be dereferenced directly.
       if (auto *DE = dyn_cast<DeclRefExpr>(LV)) {
@@ -812,7 +811,7 @@ unsigned ByteCodeExprGen<Emitter>::allocateLocalPrimitive(DeclTy &&Src,
 }
 
 template <class Emitter>
-llvm::Optional<unsigned>
+std::optional<unsigned>
 ByteCodeExprGen<Emitter>::allocateLocal(DeclTy &&Src, bool IsExtended) {
   QualType Ty;
 
@@ -853,7 +852,7 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
   if (const auto *InitList = dyn_cast<InitListExpr>(Initializer)) {
     unsigned ElementIndex = 0;
     for (const Expr *Init : InitList->inits()) {
-      if (Optional<PrimType> T = classify(Init->getType())) {
+      if (std::optional<PrimType> T = classify(Init->getType())) {
         // Visit the primitive element like normal.
         if (!this->emitDupPtr(Init))
           return false;
@@ -890,7 +889,7 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
     //   the AILE's Common expr.
     const Expr *SubExpr = AILE->getSubExpr();
     size_t Size = AILE->getArraySize().getZExtValue();
-    Optional<PrimType> ElemT = classify(SubExpr->getType());
+    std::optional<PrimType> ElemT = classify(SubExpr->getType());
 
     // So, every iteration, we execute an assignment here
     // where the LHS is on the stack (the target array)
@@ -931,7 +930,7 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
     const auto *CAT = cast<ConstantArrayType>(AT);
     size_t NumElems = CAT->getSize().getZExtValue();
 
-    if (Optional<PrimType> ElemT = classify(CAT->getElementType())) {
+    if (std::optional<PrimType> ElemT = classify(CAT->getElementType())) {
       // TODO(perf): For int and bool types, we can probably just skip this
       //   since we memset our Block*s to 0 and so we have the desired value
       //   without this.
@@ -1016,7 +1015,7 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
       if (!this->emitDupPtr(Initializer))
         return false;
 
-      if (Optional<PrimType> T = classify(Init)) {
+      if (std::optional<PrimType> T = classify(Init)) {
         if (!this->visit(Init))
           return false;
 
@@ -1126,7 +1125,7 @@ bool ByteCodeExprGen<Emitter>::visitExpr(const Expr *Exp) {
   if (!visit(Exp))
     return false;
 
-  if (Optional<PrimType> T = classify(Exp))
+  if (std::optional<PrimType> T = classify(Exp))
     return this->emitRet(*T, Exp);
   else
     return this->emitRetValue(Exp);
@@ -1136,8 +1135,8 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
   const Expr *Init = VD->getInit();
 
-  if (Optional<unsigned> I = P.createGlobal(VD, Init)) {
-    if (Optional<PrimType> T = classify(VD->getType())) {
+  if (std::optional<unsigned> I = P.createGlobal(VD, Init)) {
+    if (std::optional<PrimType> T = classify(VD->getType())) {
       {
         // Primitive declarations - compute the value and set it.
         DeclScope<Emitter> LocalScope(this, VD);
@@ -1187,13 +1186,13 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
       return false;
 
     QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
-    Optional<PrimType> T = classify(ReturnType);
+    std::optional<PrimType> T = classify(ReturnType);
 
     if (Func->hasRVO() && DiscardResult) {
       // If we need to discard the return value but the function returns its
       // value via an RVO pointer, we need to create one such pointer just
       // for this call.
-      if (Optional<unsigned> LocalIndex = allocateLocal(E)) {
+      if (std::optional<unsigned> LocalIndex = allocateLocal(E)) {
         if (!this->emitGetPtrLocal(*LocalIndex, E))
           return false;
       }
@@ -1272,7 +1271,7 @@ bool ByteCodeExprGen<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   const Expr *SubExpr = E->getSubExpr();
-  Optional<PrimType> T = classify(SubExpr->getType());
+  std::optional<PrimType> T = classify(SubExpr->getType());
 
   // TODO: Support pointers for inc/dec operators.
   switch (E->getOpcode()) {

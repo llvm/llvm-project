@@ -736,7 +736,7 @@ TEST_F(AArch64GISelMITest, WidenUADDO) {
   LLT s8{LLT::scalar(8)};
   LLT s16{LLT::scalar(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
-  unsigned CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  Register CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
   auto MIBUAddO =
       B.buildInstr(TargetOpcode::G_UADDO, {s8, CarryReg}, {MIBTrunc, MIBTrunc});
   AInfo Info(MF->getSubtarget());
@@ -775,7 +775,7 @@ TEST_F(AArch64GISelMITest, WidenUSUBO) {
   LLT s8{LLT::scalar(8)};
   LLT s16{LLT::scalar(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
-  unsigned CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  Register CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
   auto MIBUSUBO =
       B.buildInstr(TargetOpcode::G_USUBO, {s8, CarryReg}, {MIBTrunc, MIBTrunc});
   AInfo Info(MF->getSubtarget());
@@ -814,7 +814,7 @@ TEST_F(AArch64GISelMITest, WidenSADDO) {
   LLT s8{LLT::scalar(8)};
   LLT s16{LLT::scalar(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
-  unsigned CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  Register CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
   auto MIBSAddO =
       B.buildInstr(TargetOpcode::G_SADDO, {s8, CarryReg}, {MIBTrunc, MIBTrunc});
   AInfo Info(MF->getSubtarget());
@@ -853,7 +853,7 @@ TEST_F(AArch64GISelMITest, WidenSSUBO) {
   LLT s8{LLT::scalar(8)};
   LLT s16{LLT::scalar(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
-  unsigned CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  Register CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
   auto MIBSSUBO =
       B.buildInstr(TargetOpcode::G_SSUBO, {s8, CarryReg}, {MIBTrunc, MIBTrunc});
   AInfo Info(MF->getSubtarget());

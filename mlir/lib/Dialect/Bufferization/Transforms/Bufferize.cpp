@@ -210,7 +210,7 @@ struct OneShotBufferizePass
       opt.functionBoundaryTypeConversion =
           parseLayoutMapOption(functionBoundaryTypeConversion);
       if (mustInferMemorySpace)
-        opt.defaultMemorySpace = None;
+        opt.defaultMemorySpace = std::nullopt;
       opt.printConflicts = printConflicts;
       opt.testAnalysisOnly = testAnalysisOnly;
       opt.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;

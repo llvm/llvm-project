@@ -419,7 +419,7 @@ llvm::Optional<std::string> printExprValue(const Expr *E,
   QualType T = E->getType();
   if (T.isNull() || T->isFunctionType() || T->isFunctionPointerType() ||
       T->isFunctionReferenceType() || T->isVoidType())
-    return llvm::None;
+    return std::nullopt;
 
   Expr::EvalResult Constant;
   // Attempt to evaluate. If expr is dependent, evaluation crashes!
@@ -427,7 +427,7 @@ llvm::Optional<std::string> printExprValue(const Expr *E,
       // Disable printing for record-types, as they are usually confusing and
       // might make clang crash while printing the expressions.
       Constant.Val.isStruct() || Constant.Val.isUnion())
-    return llvm::None;
+    return std::nullopt;
 
   // Show enums symbolically, not numerically like APValue::printPretty().
   if (T->isEnumeralType() && Constant.Val.isInt() &&
@@ -468,16 +468,16 @@ llvm::Optional<std::string> printExprValue(const SelectionTree::Node *N,
       break;
     }
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 llvm::Optional<StringRef> fieldName(const Expr *E) {
   const auto *ME = llvm::dyn_cast<MemberExpr>(E->IgnoreCasts());
   if (!ME || !llvm::isa<CXXThisExpr>(ME->getBase()->IgnoreCasts()))
-    return llvm::None;
+    return std::nullopt;
   const auto *Field = llvm::dyn_cast<FieldDecl>(ME->getMemberDecl());
   if (!Field || !Field->getDeclName().isIdentifier())
-    return llvm::None;
+    return std::nullopt;
   return Field->getDeclName().getAsIdentifierInfo()->getName();
 }
 
@@ -485,13 +485,13 @@ llvm::Optional<StringRef> fieldName(const Expr *E) {
 llvm::Optional<StringRef> getterVariableName(const CXXMethodDecl *CMD) {
   assert(CMD->hasBody());
   if (CMD->getNumParams() != 0 || CMD->isVariadic())
-    return llvm::None;
+    return std::nullopt;
   const auto *Body = llvm::dyn_cast<CompoundStmt>(CMD->getBody());
   const auto *OnlyReturn = (Body && Body->size() == 1)
                                ? llvm::dyn_cast<ReturnStmt>(Body->body_front())
                                : nullptr;
   if (!OnlyReturn || !OnlyReturn->getRetValue())
-    return llvm::None;
+    return std::nullopt;
   return fieldName(OnlyReturn->getRetValue());
 }
 
@@ -504,59 +504,59 @@ llvm::Optional<StringRef> getterVariableName(const CXXMethodDecl *CMD) {
 llvm::Optional<StringRef> setterVariableName(const CXXMethodDecl *CMD) {
   assert(CMD->hasBody());
   if (CMD->isConst() || CMD->getNumParams() != 1 || CMD->isVariadic())
-    return llvm::None;
+    return std::nullopt;
   const ParmVarDecl *Arg = CMD->getParamDecl(0);
   if (Arg->isParameterPack())
-    return llvm::None;
+    return std::nullopt;
 
   const auto *Body = llvm::dyn_cast<CompoundStmt>(CMD->getBody());
   if (!Body || Body->size() == 0 || Body->size() > 2)
-    return llvm::None;
+    return std::nullopt;
   // If the second statement exists, it must be `return this` or `return *this`.
   if (Body->size() == 2) {
     auto *Ret = llvm::dyn_cast<ReturnStmt>(Body->body_back());
     if (!Ret || !Ret->getRetValue())
-      return llvm::None;
+      return std::nullopt;
     const Expr *RetVal = Ret->getRetValue()->IgnoreCasts();
     if (const auto *UO = llvm::dyn_cast<UnaryOperator>(RetVal)) {
       if (UO->getOpcode() != UO_Deref)
-        return llvm::None;
+        return std::nullopt;
       RetVal = UO->getSubExpr()->IgnoreCasts();
     }
     if (!llvm::isa<CXXThisExpr>(RetVal))
-      return llvm::None;
+      return std::nullopt;
   }
   // The first statement must be an assignment of the arg to a field.
   const Expr *LHS, *RHS;
   if (const auto *BO = llvm::dyn_cast<BinaryOperator>(Body->body_front())) {
     if (BO->getOpcode() != BO_Assign)
-      return llvm::None;
+      return std::nullopt;
     LHS = BO->getLHS();
     RHS = BO->getRHS();
   } else if (const auto *COCE =
                  llvm::dyn_cast<CXXOperatorCallExpr>(Body->body_front())) {
     if (COCE->getOperator() != OO_Equal || COCE->getNumArgs() != 2)
-      return llvm::None;
+      return std::nullopt;
     LHS = COCE->getArg(0);
     RHS = COCE->getArg(1);
   } else {
-    return llvm::None;
+    return std::nullopt;
   }
 
   // Detect the case when the item is moved into the field.
   if (auto *CE = llvm::dyn_cast<CallExpr>(RHS->IgnoreCasts())) {
     if (CE->getNumArgs() != 1)
-      return llvm::None;
+      return std::nullopt;
     auto *ND = llvm::dyn_cast_or_null<NamedDecl>(CE->getCalleeDecl());
     if (!ND || !ND->getIdentifier() || ND->getName() != "move" ||
         !ND->isInStdNamespace())
-      return llvm::None;
+      return std::nullopt;
     RHS = CE->getArg(0);
   }
 
   auto *DRE = llvm::dyn_cast<DeclRefExpr>(RHS->IgnoreCasts());
   if (!DRE || DRE->getDecl() != Arg)
-    return llvm::None;
+    return std::nullopt;
   return fieldName(LHS);
 }
 
@@ -818,7 +818,7 @@ llvm::Optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST,
   // There's not much value in hovering over "42" and getting a hover card
   // saying "42 is an int", similar for other literals.
   if (isLiteral(E))
-    return llvm::None;
+    return std::nullopt;
 
   HoverInfo HI;
   // Print the type and the size for string literals
@@ -837,7 +837,7 @@ llvm::Optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST,
     HI.Name = std::string(getNameForExpr(E));
     return HI;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 // Generates hover info for attributes.
@@ -1062,13 +1062,13 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
   auto CurLoc = sourceLocationInMainFile(SM, Pos);
   if (!CurLoc) {
     llvm::consumeError(CurLoc.takeError());
-    return llvm::None;
+    return std::nullopt;
   }
   const auto &TB = AST.getTokens();
   auto TokensTouchingCursor = syntax::spelledTokensTouching(*CurLoc, TB);
   // Early exit if there were no tokens around the cursor.
   if (TokensTouchingCursor.empty())
-    return llvm::None;
+    return std::nullopt;
 
   // Show full header file path if cursor is on include directive.
   for (const auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
@@ -1111,7 +1111,7 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
       // If we can't find interesting hover information for this
       // auto/decltype keyword, return nothing to avoid showing
       // irrelevant or incorrect informations.
-      return llvm::None;
+      return std::nullopt;
     }
   }
 
@@ -1146,7 +1146,7 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
   }
 
   if (!HI)
-    return llvm::None;
+    return std::nullopt;
 
   // Reformat Definition
   if (!HI->Definition.empty()) {
@@ -1291,22 +1291,22 @@ llvm::Optional<llvm::StringRef> getBacktickQuoteRange(llvm::StringRef Line,
   llvm::StringRef Prefix = Line.substr(0, Offset);
   constexpr llvm::StringLiteral BeforeStartChars = " \t(=";
   if (!Prefix.empty() && !BeforeStartChars.contains(Prefix.back()))
-    return llvm::None;
+    return std::nullopt;
 
   // The quoted string must be nonempty and usually has no leading/trailing ws.
   auto Next = Line.find('`', Offset + 1);
   if (Next == llvm::StringRef::npos)
-    return llvm::None;
+    return std::nullopt;
   llvm::StringRef Contents = Line.slice(Offset + 1, Next);
   if (Contents.empty() || isWhitespace(Contents.front()) ||
       isWhitespace(Contents.back()))
-    return llvm::None;
+    return std::nullopt;
 
   // The close-quote is usually followed by whitespace or punctuation.
   llvm::StringRef Suffix = Line.substr(Next + 1);
   constexpr llvm::StringLiteral AfterEndChars = " \t)=.,;:";
   if (!Suffix.empty() && !AfterEndChars.contains(Suffix.front()))
-    return llvm::None;
+    return std::nullopt;
 
   return Line.slice(Offset, Next + 1);
 }

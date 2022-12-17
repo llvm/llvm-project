@@ -52,8 +52,8 @@ static void dump(ArrayRef<MPInt> vec) {
 ///   for the IntegerPolyhedron poly. Also check that getIntegerLexmin finds a
 ///   non-empty lexmin.
 ///
-///   If hasSample is false, check that findIntegerSample returns None and
-///   findIntegerLexMin returns Empty.
+///   If hasSample is false, check that findIntegerSample returns std::nullopt
+///   and findIntegerLexMin returns Empty.
 ///
 /// If fn is TestFunction::Empty, check that isIntegerEmpty returns the
 /// opposite of hasSample.

@@ -2430,7 +2430,7 @@ Constant *ConstantExpr::getSelect(Constant *C, Constant *V1, Constant *V2,
 
 Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
                                          ArrayRef<Value *> Idxs, bool InBounds,
-                                         Optional<unsigned> InRangeIndex,
+                                         std::optional<unsigned> InRangeIndex,
                                          Type *OnlyIfReducedTy) {
   PointerType *OrigPtrTy = cast<PointerType>(C->getType()->getScalarType());
   assert(Ty && "Must specify element type");

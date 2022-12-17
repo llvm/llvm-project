@@ -10,23 +10,18 @@ define <2 x half> @select_v2f16(<2 x half> %op1, <2 x half> %op2, <2 x i1> %mask
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
 ; CHECK-NEXT:    mov z3.s, z2.s[1]
-; CHECK-NEXT:    adrp x8, .LCPI0_0
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    fmov w10, s3
+; CHECK-NEXT:    fmov w8, s2
+; CHECK-NEXT:    fmov w9, s3
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_0]
-; CHECK-NEXT:    adrp x8, .LCPI0_1
-; CHECK-NEXT:    strh w9, [sp, #8]
-; CHECK-NEXT:    strh w10, [sp, #10]
-; CHECK-NEXT:    ldr d3, [sp, #8]
-; CHECK-NEXT:    ldr d4, [x8, :lo12:.LCPI0_1]
-; CHECK-NEXT:    lsl z3.h, p0/m, z3.h, z2.h
-; CHECK-NEXT:    asrr z2.h, p0/m, z2.h, z3.h
-; CHECK-NEXT:    eor z3.d, z2.d, z4.d
+; CHECK-NEXT:    strh w8, [sp, #8]
+; CHECK-NEXT:    strh w9, [sp, #10]
+; CHECK-NEXT:    ldr d2, [sp, #8]
+; CHECK-NEXT:    lsl z2.h, p0/m, z2.h, #15
+; CHECK-NEXT:    asr z2.h, p0/m, z2.h, #15
+; CHECK-NEXT:    bic z1.d, z1.d, z2.d
 ; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    and z1.d, z1.d, z3.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    add sp, sp, #16
@@ -38,19 +33,14 @@ define <2 x half> @select_v2f16(<2 x half> %op1, <2 x half> %op2, <2 x i1> %mask
 define <4 x half> @select_v4f16(<4 x half> %op1, <4 x half> %op2, <4 x i1> %mask) #0 {
 ; CHECK-LABEL: select_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI1_0
-; CHECK-NEXT:    adrp x9, .LCPI1_1
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI1_0]
-; CHECK-NEXT:    ldr d4, [x9, :lo12:.LCPI1_1]
-; CHECK-NEXT:    lsl z2.h, p0/m, z2.h, z3.h
-; CHECK-NEXT:    asr z2.h, p0/m, z2.h, z3.h
-; CHECK-NEXT:    eor z3.d, z2.d, z4.d
+; CHECK-NEXT:    lsl z2.h, p0/m, z2.h, #15
+; CHECK-NEXT:    asr z2.h, p0/m, z2.h, #15
+; CHECK-NEXT:    bic z1.d, z1.d, z2.d
 ; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    and z1.d, z1.d, z3.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -61,20 +51,15 @@ define <4 x half> @select_v4f16(<4 x half> %op1, <4 x half> %op2, <4 x i1> %mask
 define <8 x half> @select_v8f16(<8 x half> %op1, <8 x half> %op2, <8 x i1> %mask) #0 {
 ; CHECK-LABEL: select_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    adrp x9, .LCPI2_1
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    uunpklo z2.h, z2.b
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI2_0]
-; CHECK-NEXT:    ldr q4, [x9, :lo12:.LCPI2_1]
-; CHECK-NEXT:    lsl z2.h, p0/m, z2.h, z3.h
-; CHECK-NEXT:    asr z2.h, p0/m, z2.h, z3.h
-; CHECK-NEXT:    eor z3.d, z2.d, z4.d
+; CHECK-NEXT:    lsl z2.h, p0/m, z2.h, #15
+; CHECK-NEXT:    asr z2.h, p0/m, z2.h, #15
+; CHECK-NEXT:    bic z1.d, z1.d, z2.d
 ; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    and z1.d, z1.d, z3.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -85,23 +70,19 @@ define <8 x half> @select_v8f16(<8 x half> %op1, <8 x half> %op2, <8 x i1> %mask
 define void @select_v16f16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: select_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x1]
-; CHECK-NEXT:    adrp x8, .LCPI3_0
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    ldp q3, q2, [x0]
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI3_0]
-; CHECK-NEXT:    fcmeq p1.h, p0/z, z2.h, z1.h
-; CHECK-NEXT:    fcmeq p0.h, p0/z, z3.h, z0.h
-; CHECK-NEXT:    mov z5.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z6.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z2.d, z2.d, z5.d
-; CHECK-NEXT:    eor z5.d, z5.d, z4.d
-; CHECK-NEXT:    eor z4.d, z6.d, z4.d
-; CHECK-NEXT:    and z3.d, z3.d, z6.d
-; CHECK-NEXT:    and z0.d, z0.d, z4.d
-; CHECK-NEXT:    and z1.d, z1.d, z5.d
-; CHECK-NEXT:    orr z0.d, z3.d, z0.d
-; CHECK-NEXT:    orr z1.d, z2.d, z1.d
+; CHECK-NEXT:    ldp q3, q2, [x1]
+; CHECK-NEXT:    fcmeq p1.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, z3.h
+; CHECK-NEXT:    mov z4.h, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z5.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    bic z2.d, z2.d, z4.d
+; CHECK-NEXT:    bic z3.d, z3.d, z5.d
+; CHECK-NEXT:    and z0.d, z0.d, z5.d
+; CHECK-NEXT:    and z1.d, z1.d, z4.d
+; CHECK-NEXT:    orr z0.d, z0.d, z3.d
+; CHECK-NEXT:    orr z1.d, z1.d, z2.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
@@ -115,19 +96,14 @@ define void @select_v16f16(ptr %a, ptr %b) #0 {
 define <2 x float> @select_v2f32(<2 x float> %op1, <2 x float> %op2, <2 x i1> %mask) #0 {
 ; CHECK-LABEL: select_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI4_0
-; CHECK-NEXT:    adrp x9, .LCPI4_1
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
 ; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI4_0]
-; CHECK-NEXT:    ldr d4, [x9, :lo12:.LCPI4_1]
-; CHECK-NEXT:    lsl z2.s, p0/m, z2.s, z3.s
-; CHECK-NEXT:    asr z2.s, p0/m, z2.s, z3.s
-; CHECK-NEXT:    eor z3.d, z2.d, z4.d
+; CHECK-NEXT:    lsl z2.s, p0/m, z2.s, #31
+; CHECK-NEXT:    asr z2.s, p0/m, z2.s, #31
+; CHECK-NEXT:    bic z1.d, z1.d, z2.d
 ; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    and z1.d, z1.d, z3.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -138,20 +114,15 @@ define <2 x float> @select_v2f32(<2 x float> %op1, <2 x float> %op2, <2 x i1> %m
 define <4 x float> @select_v4f32(<4 x float> %op1, <4 x float> %op2, <4 x i1> %mask) #0 {
 ; CHECK-LABEL: select_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI5_0
-; CHECK-NEXT:    adrp x9, .LCPI5_1
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    uunpklo z2.s, z2.h
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI5_0]
-; CHECK-NEXT:    ldr q4, [x9, :lo12:.LCPI5_1]
-; CHECK-NEXT:    lsl z2.s, p0/m, z2.s, z3.s
-; CHECK-NEXT:    asr z2.s, p0/m, z2.s, z3.s
-; CHECK-NEXT:    eor z3.d, z2.d, z4.d
+; CHECK-NEXT:    lsl z2.s, p0/m, z2.s, #31
+; CHECK-NEXT:    asr z2.s, p0/m, z2.s, #31
+; CHECK-NEXT:    bic z1.d, z1.d, z2.d
 ; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    and z1.d, z1.d, z3.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -162,23 +133,19 @@ define <4 x float> @select_v4f32(<4 x float> %op1, <4 x float> %op2, <4 x i1> %m
 define void @select_v8f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: select_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x1]
-; CHECK-NEXT:    adrp x8, .LCPI6_0
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ldp q3, q2, [x0]
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI6_0]
-; CHECK-NEXT:    fcmeq p1.s, p0/z, z2.s, z1.s
-; CHECK-NEXT:    fcmeq p0.s, p0/z, z3.s, z0.s
-; CHECK-NEXT:    mov z5.s, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z6.s, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z2.d, z2.d, z5.d
-; CHECK-NEXT:    eor z5.d, z5.d, z4.d
-; CHECK-NEXT:    eor z4.d, z6.d, z4.d
-; CHECK-NEXT:    and z3.d, z3.d, z6.d
-; CHECK-NEXT:    and z0.d, z0.d, z4.d
-; CHECK-NEXT:    and z1.d, z1.d, z5.d
-; CHECK-NEXT:    orr z0.d, z3.d, z0.d
-; CHECK-NEXT:    orr z1.d, z2.d, z1.d
+; CHECK-NEXT:    ldp q3, q2, [x1]
+; CHECK-NEXT:    fcmeq p1.s, p0/z, z1.s, z2.s
+; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, z3.s
+; CHECK-NEXT:    mov z4.s, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z5.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    bic z2.d, z2.d, z4.d
+; CHECK-NEXT:    bic z3.d, z3.d, z5.d
+; CHECK-NEXT:    and z0.d, z0.d, z5.d
+; CHECK-NEXT:    and z1.d, z1.d, z4.d
+; CHECK-NEXT:    orr z0.d, z0.d, z3.d
+; CHECK-NEXT:    orr z1.d, z1.d, z2.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x float>, ptr %a
@@ -193,13 +160,12 @@ define <1 x double> @select_v1f64(<1 x double> %op1, <1 x double> %op2, <1 x i1>
 ; CHECK-LABEL: select_v1f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    tst w0, #0x1
-; CHECK-NEXT:    mov x9, #-1
-; CHECK-NEXT:    csetm x8, ne
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    fmov d3, x9
-; CHECK-NEXT:    fmov d2, x8
-; CHECK-NEXT:    eor z3.d, z2.d, z3.d
+; CHECK-NEXT:    csetm x8, ne
+; CHECK-NEXT:    mvn x9, x8
+; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    mov z3.d, x9
 ; CHECK-NEXT:    and z0.d, z0.d, z2.d
 ; CHECK-NEXT:    and z1.d, z1.d, z3.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
@@ -212,20 +178,15 @@ define <1 x double> @select_v1f64(<1 x double> %op1, <1 x double> %op2, <1 x i1>
 define <2 x double> @select_v2f64(<2 x double> %op1, <2 x double> %op2, <2 x i1> %mask) #0 {
 ; CHECK-LABEL: select_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI8_0
-; CHECK-NEXT:    adrp x9, .LCPI8_1
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    uunpklo z2.d, z2.s
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI8_0]
-; CHECK-NEXT:    ldr q4, [x9, :lo12:.LCPI8_1]
-; CHECK-NEXT:    lsl z2.d, p0/m, z2.d, z3.d
-; CHECK-NEXT:    asr z2.d, p0/m, z2.d, z3.d
-; CHECK-NEXT:    eor z3.d, z2.d, z4.d
+; CHECK-NEXT:    lsl z2.d, p0/m, z2.d, #63
+; CHECK-NEXT:    asr z2.d, p0/m, z2.d, #63
+; CHECK-NEXT:    bic z1.d, z1.d, z2.d
 ; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    and z1.d, z1.d, z3.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -236,23 +197,19 @@ define <2 x double> @select_v2f64(<2 x double> %op1, <2 x double> %op2, <2 x i1>
 define void @select_v4f64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: select_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x1]
-; CHECK-NEXT:    adrp x8, .LCPI9_0
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldp q3, q2, [x0]
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI9_0]
-; CHECK-NEXT:    fcmeq p1.d, p0/z, z2.d, z1.d
-; CHECK-NEXT:    fcmeq p0.d, p0/z, z3.d, z0.d
-; CHECK-NEXT:    mov z5.d, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z6.d, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z2.d, z2.d, z5.d
-; CHECK-NEXT:    eor z5.d, z5.d, z4.d
-; CHECK-NEXT:    eor z4.d, z6.d, z4.d
-; CHECK-NEXT:    and z3.d, z3.d, z6.d
-; CHECK-NEXT:    and z0.d, z0.d, z4.d
-; CHECK-NEXT:    and z1.d, z1.d, z5.d
-; CHECK-NEXT:    orr z0.d, z3.d, z0.d
-; CHECK-NEXT:    orr z1.d, z2.d, z1.d
+; CHECK-NEXT:    ldp q3, q2, [x1]
+; CHECK-NEXT:    fcmeq p1.d, p0/z, z1.d, z2.d
+; CHECK-NEXT:    fcmeq p0.d, p0/z, z0.d, z3.d
+; CHECK-NEXT:    mov z4.d, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z5.d, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    bic z2.d, z2.d, z4.d
+; CHECK-NEXT:    bic z3.d, z3.d, z5.d
+; CHECK-NEXT:    and z0.d, z0.d, z5.d
+; CHECK-NEXT:    and z1.d, z1.d, z4.d
+; CHECK-NEXT:    orr z0.d, z0.d, z3.d
+; CHECK-NEXT:    orr z1.d, z1.d, z2.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x double>, ptr %a

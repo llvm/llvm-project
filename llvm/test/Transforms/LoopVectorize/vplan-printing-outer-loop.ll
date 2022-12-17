@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: opt -loop-vectorize -enable-vplan-native-path -debug -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -enable-vplan-native-path -debug -disable-output %s 2>&1 | FileCheck %s
 
 @arr2 = external global [8 x i64], align 16
 @arr = external global [8 x [8 x i64]], align 16

@@ -301,7 +301,7 @@ Optional<std::string> LineEditor::readLine() const {
     char *Res = ::fgets(Buf, sizeof(Buf), Data->In);
     if (!Res) {
       if (Line.empty())
-        return None;
+        return std::nullopt;
       else
         return Line;
     }

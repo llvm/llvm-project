@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 ; CHECK-LABEL: define void @foo
 define void @foo() personality i32 (...)* @__gxx_personality_v0 {

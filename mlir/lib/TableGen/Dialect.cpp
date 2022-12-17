@@ -57,9 +57,9 @@ ArrayRef<StringRef> Dialect::getDependentDialects() const {
   return dependentDialects;
 }
 
-llvm::Optional<StringRef> Dialect::getExtraClassDeclaration() const {
+std::optional<StringRef> Dialect::getExtraClassDeclaration() const {
   auto value = def->getValueAsString("extraClassDeclaration");
-  return value.empty() ? llvm::Optional<StringRef>() : value;
+  return value.empty() ? std::optional<StringRef>() : value;
 }
 
 bool Dialect::hasCanonicalizer() const {

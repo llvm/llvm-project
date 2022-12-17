@@ -91,10 +91,10 @@ TEST(DWARFListTableHeader, OffsetEntryCount) {
                               /*ListTypeString=*/"range");
   uint64_t Offset = 0;
   EXPECT_FALSE(!!Header.extract(Extractor, &Offset));
-  Optional<uint64_t> Offset0 = Header.getOffsetEntry(Extractor, 0);
+  std::optional<uint64_t> Offset0 = Header.getOffsetEntry(Extractor, 0);
   EXPECT_TRUE(!!Offset0);
   EXPECT_EQ(Offset0, uint64_t(4));
-  Optional<uint64_t> Offset1 = Header.getOffsetEntry(Extractor, 1);
+  std::optional<uint64_t> Offset1 = Header.getOffsetEntry(Extractor, 1);
   EXPECT_FALSE(!!Offset1);
   EXPECT_EQ(Header.length(), sizeof(SecData) - 1);
 }

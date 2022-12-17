@@ -18193,8 +18193,11 @@ static bool AreSpecialMemberFunctionsSameKind(ASTContext &Context,
                                               CXXMethodDecl *M1,
                                               CXXMethodDecl *M2,
                                               Sema::CXXSpecialMember CSM) {
+  // We don't want to compare templates to non-templates: See
+  // https://github.com/llvm/llvm-project/issues/59206
   if (CSM == Sema::CXXDefaultConstructor)
-    return true;
+    return bool(M1->getDescribedFunctionTemplate()) ==
+           bool(M2->getDescribedFunctionTemplate());
   if (!Context.hasSameType(M1->getParamDecl(0)->getType(),
                            M2->getParamDecl(0)->getType()))
     return false;

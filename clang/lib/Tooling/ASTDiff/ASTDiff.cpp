@@ -691,7 +691,7 @@ llvm::Optional<std::string> Node::getQualifiedIdentifier() const {
     if (ND->getDeclName().isIdentifier())
       return ND->getQualifiedNameAsString();
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 llvm::Optional<StringRef> Node::getIdentifier() const {
@@ -699,7 +699,7 @@ llvm::Optional<StringRef> Node::getIdentifier() const {
     if (ND->getDeclName().isIdentifier())
       return ND->getName();
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 namespace {

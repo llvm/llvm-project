@@ -12,10 +12,9 @@ entry:
 define i32 @main()
 {
        %res = call i32 @test(double 3.14)
-       %ptr = getelementptr [4 x i8], [4 x i8]* @format, i32 0, i32 0
-       call i32 (i8*,...) @printf(i8* %ptr, i32 %res)
+       call i32 (ptr,...) @printf(ptr @format, i32 %res)
        ret i32 0
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 @format = internal constant [4 x i8] c"%x\0A\00"

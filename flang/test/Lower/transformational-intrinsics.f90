@@ -141,7 +141,7 @@ end subroutine
   ! CHECK:         %[[VAL_14:.*]] = fir.alloca !fir.array<6xi32> {bindc_name = "vectorresult", uniq_name = "_QMtest2Fcshift_testEvectorresult"}
   ! CHECK:         %[[VAL_15:.*]] = fir.shape %[[VAL_6]], %[[VAL_7]] : (index, index) -> !fir.shape<2>
   ! CHECK:         %[[VAL_16:.*]] = fir.array_load %[[VAL_8]](%[[VAL_15]]) : (!fir.ref<!fir.array<3x3xi32>>, !fir.shape<2>) -> !fir.array<3x3xi32>
-  ! CHECK:         %[[VAL_17:.*]] = arith.constant -2 : i32
+  ! CHECK:         %[[VAL_17:.*]] = arith.constant 2 : i32
   ! CHECK:         %[[VAL_18:.*]] = fir.shape %[[VAL_3]], %[[VAL_4]] : (index, index) -> !fir.shape<2>
   ! CHECK:         %[[VAL_19:.*]] = fir.embox %[[VAL_5]](%[[VAL_18]]) : (!fir.ref<!fir.array<3x3xi32>>, !fir.shape<2>) -> !fir.box<!fir.array<3x3xi32>>
   ! CHECK:         %[[VAL_20:.*]] = fir.zero_bits !fir.heap<!fir.array<?x?xi32>>
@@ -224,7 +224,7 @@ subroutine cshift_test()
   integer, dimension(3, 3) :: result
   integer, dimension(6) :: vectorResult
   integer, dimension (6) :: vector
-  result = cshift(array, shift, -2) ! non-vector case
+  result = cshift(array, shift, 2) ! non-vector case
   vectorResult = cshift(vector, 3) ! vector case
 end subroutine cshift_test
 

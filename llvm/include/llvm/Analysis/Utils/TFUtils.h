@@ -82,10 +82,10 @@ public:
   TFModelEvaluator(const TFModelEvaluator &) = delete;
   TFModelEvaluator(TFModelEvaluator &&) = delete;
 
-  /// Evaluate the model, assuming it is valid. Returns None if the evaluation
-  /// fails or the model is invalid, or an EvaluationResult otherwise. The
-  /// inputs are assumed to have been already provided via getInput(). When
-  /// returning None, it also invalidates this object.
+  /// Evaluate the model, assuming it is valid. Returns std::nullopt if the
+  /// evaluation fails or the model is invalid, or an EvaluationResult
+  /// otherwise. The inputs are assumed to have been already provided via
+  /// getInput(). When returning None, it also invalidates this object.
   Optional<EvaluationResult> evaluate();
 
   /// Provides access to the input vector.

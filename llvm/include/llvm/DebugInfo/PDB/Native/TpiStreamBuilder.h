@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_TPISTREAMBUILDER_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_TPISTREAMBUILDER_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
@@ -46,7 +45,7 @@ public:
   TpiStreamBuilder &operator=(const TpiStreamBuilder &) = delete;
 
   void setVersionHeader(PdbRaw_TpiVer Version);
-  void addTypeRecord(ArrayRef<uint8_t> Type, Optional<uint32_t> Hash);
+  void addTypeRecord(ArrayRef<uint8_t> Type, std::optional<uint32_t> Hash);
   void addTypeRecords(ArrayRef<uint8_t> Types, ArrayRef<uint16_t> Sizes,
                       ArrayRef<uint32_t> Hashes);
 

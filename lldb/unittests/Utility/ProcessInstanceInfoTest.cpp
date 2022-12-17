@@ -19,13 +19,13 @@ protected:
   llvm::Optional<std::string> DoGetUserName(id_t uid) override {
     if (uid % 2)
       return ("user" + llvm::Twine(uid)).str();
-    return llvm::None;
+    return std::nullopt;
   }
 
   llvm::Optional<std::string> DoGetGroupName(id_t gid) override {
     if (gid % 2)
       return ("group" + llvm::Twine(gid)).str();
-    return llvm::None;
+    return std::nullopt;
   }
 };
 } // namespace

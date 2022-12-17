@@ -153,14 +153,14 @@ bool PlatformRemoteGDBServer::GetRemoteOSVersion() {
 
 llvm::Optional<std::string> PlatformRemoteGDBServer::GetRemoteOSBuildString() {
   if (!m_gdb_client_up)
-    return llvm::None;
+    return std::nullopt;
   return m_gdb_client_up->GetOSBuildString();
 }
 
 llvm::Optional<std::string>
 PlatformRemoteGDBServer::GetRemoteOSKernelDescription() {
   if (!m_gdb_client_up)
-    return llvm::None;
+    return std::nullopt;
   return m_gdb_client_up->GetOSKernelDescription();
 }
 
@@ -288,7 +288,7 @@ PlatformRemoteGDBServer::DoGetUserName(UserIDResolver::id_t uid) {
   std::string name;
   if (m_gdb_client_up && m_gdb_client_up->GetUserName(uid, name))
     return std::move(name);
-  return llvm::None;
+  return std::nullopt;
 }
 
 llvm::Optional<std::string>
@@ -296,7 +296,7 @@ PlatformRemoteGDBServer::DoGetGroupName(UserIDResolver::id_t gid) {
   std::string name;
   if (m_gdb_client_up && m_gdb_client_up->GetGroupName(gid, name))
     return std::move(name);
-  return llvm::None;
+  return std::nullopt;
 }
 
 uint32_t PlatformRemoteGDBServer::FindProcesses(

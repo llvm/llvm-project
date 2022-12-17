@@ -1,6 +1,6 @@
-; RUN: opt < %s -loop-vectorize -force-vector-width=4 -transform-warning -S 2>&1 | FileCheck %s
-; RUN: opt < %s -loop-vectorize -force-vector-width=1 -transform-warning -S 2>&1 | FileCheck %s -check-prefix=NOANALYSIS
-; RUN: opt < %s -loop-vectorize -force-vector-width=4 -transform-warning -pass-remarks-missed='loop-vectorize' -S 2>&1 | FileCheck %s -check-prefix=MOREINFO
+; RUN: opt < %s -passes=loop-vectorize,transform-warning -force-vector-width=4 -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize,transform-warning -force-vector-width=1 -S 2>&1 | FileCheck %s -check-prefix=NOANALYSIS
+; RUN: opt < %s -passes=loop-vectorize,transform-warning -force-vector-width=4 -pass-remarks-missed='loop-vectorize' -S 2>&1 | FileCheck %s -check-prefix=MOREINFO
 
 ; This test is a copy of no_switch.ll, with the "llvm.loop.vectorize.enable" metadata set to false.
 ; It tests that vectorization is explicitly disabled and no warnings are emitted.

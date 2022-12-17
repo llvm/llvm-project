@@ -10,16 +10,12 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x i8> @ashr_v4i8(<4 x i8> %op1, <4 x i8> %op2) #0 {
 ; CHECK-LABEL: ashr_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI0_0
-; CHECK-NEXT:    adrp x9, .LCPI0_1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_0]
-; CHECK-NEXT:    ldr d3, [x9, :lo12:.LCPI0_1]
-; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z2.h
-; CHECK-NEXT:    asr z0.h, p0/m, z0.h, z2.h
-; CHECK-NEXT:    and z1.d, z1.d, z3.d
+; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, #8
+; CHECK-NEXT:    and z1.h, z1.h, #0xff
+; CHECK-NEXT:    asr z0.h, p0/m, z0.h, #8
 ; CHECK-NEXT:    asr z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -73,16 +69,12 @@ define void @ashr_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 define <2 x i16> @ashr_v2i16(<2 x i16> %op1, <2 x i16> %op2) #0 {
 ; CHECK-LABEL: ashr_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI4_0
-; CHECK-NEXT:    adrp x9, .LCPI4_1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI4_0]
-; CHECK-NEXT:    ldr d3, [x9, :lo12:.LCPI4_1]
-; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, z2.s
-; CHECK-NEXT:    asr z0.s, p0/m, z0.s, z2.s
-; CHECK-NEXT:    and z1.d, z1.d, z3.d
+; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, #16
+; CHECK-NEXT:    and z1.s, z1.s, #0xffff
+; CHECK-NEXT:    asr z0.s, p0/m, z0.s, #16
 ; CHECK-NEXT:    asr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -226,13 +218,11 @@ define void @ashr_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 define <4 x i8> @lshr_v4i8(<4 x i8> %op1, <4 x i8> %op2) #0 {
 ; CHECK-LABEL: lshr_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI14_0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI14_0]
-; CHECK-NEXT:    and z1.d, z1.d, z2.d
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
+; CHECK-NEXT:    and z1.h, z1.h, #0xff
+; CHECK-NEXT:    and z0.h, z0.h, #0xff
 ; CHECK-NEXT:    lsr z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -286,13 +276,11 @@ define void @lshr_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 define <2 x i16> @lshr_v2i16(<2 x i16> %op1, <2 x i16> %op2) #0 {
 ; CHECK-LABEL: lshr_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI18_0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI18_0]
-; CHECK-NEXT:    and z1.d, z1.d, z2.d
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
+; CHECK-NEXT:    and z1.s, z1.s, #0xffff
+; CHECK-NEXT:    and z0.s, z0.s, #0xffff
 ; CHECK-NEXT:    lsr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -436,12 +424,10 @@ define void @lshr_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 define <2 x i8> @shl_v2i8(<2 x i8> %op1, <2 x i8> %op2) #0 {
 ; CHECK-LABEL: shl_v2i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI28_0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI28_0]
-; CHECK-NEXT:    and z1.d, z1.d, z2.d
+; CHECK-NEXT:    and z1.s, z1.s, #0xff
 ; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -452,12 +438,10 @@ define <2 x i8> @shl_v2i8(<2 x i8> %op1, <2 x i8> %op2) #0 {
 define <4 x i8> @shl_v4i8(<4 x i8> %op1, <4 x i8> %op2) #0 {
 ; CHECK-LABEL: shl_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI29_0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI29_0]
-; CHECK-NEXT:    and z1.d, z1.d, z2.d
+; CHECK-NEXT:    and z1.h, z1.h, #0xff
 ; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret

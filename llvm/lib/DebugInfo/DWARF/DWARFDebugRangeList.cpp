@@ -85,7 +85,7 @@ void DWARFDebugRangeList::dump(raw_ostream &OS) const {
 }
 
 DWARFAddressRangesVector DWARFDebugRangeList::getAbsoluteRanges(
-    llvm::Optional<object::SectionedAddress> BaseAddr) const {
+    std::optional<object::SectionedAddress> BaseAddr) const {
   DWARFAddressRangesVector Res;
   // debug_addr can't use the max integer tombstone because that's used for the
   // base address specifier entry - so use max-1.

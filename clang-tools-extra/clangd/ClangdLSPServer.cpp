@@ -67,7 +67,7 @@ llvm::Optional<int64_t> decodeVersion(llvm::StringRef Encoded) {
     return Result;
   if (!Encoded.empty()) // Empty can be e.g. diagnostics on close.
     elog("unexpected non-numeric version {0}", Encoded);
-  return llvm::None;
+  return std::nullopt;
 }
 
 const llvm::StringLiteral ApplyFixCommand = "clangd.applyFix";
@@ -808,7 +808,7 @@ void ClangdLSPServer::onWorkspaceSymbol(
 void ClangdLSPServer::onPrepareRename(const TextDocumentPositionParams &Params,
                                       Callback<llvm::Optional<Range>> Reply) {
   Server->prepareRename(
-      Params.textDocument.uri.file(), Params.position, /*NewName*/ llvm::None,
+      Params.textDocument.uri.file(), Params.position, /*NewName*/ std::nullopt,
       Opts.Rename,
       [Reply = std::move(Reply)](llvm::Expected<RenameResult> Result) mutable {
         if (!Result)
@@ -890,7 +890,7 @@ void ClangdLSPServer::onDocumentFormatting(
   auto File = Params.textDocument.uri.file();
   auto Code = Server->getDraft(File);
   Server->formatFile(File,
-                     /*Rng=*/llvm::None,
+                     /*Rng=*/std::nullopt,
                      [Code = std::move(Code), Reply = std::move(Reply)](
                          llvm::Expected<tooling::Replacements> Result) mutable {
                        if (Result)
@@ -951,14 +951,14 @@ void ClangdLSPServer::onFoldingRange(
 static llvm::Optional<Command> asCommand(const CodeAction &Action) {
   Command Cmd;
   if (Action.command && Action.edit)
-    return None; // Not representable. (We never emit these anyway).
+    return std::nullopt; // Not representable. (We never emit these anyway).
   if (Action.command) {
     Cmd = *Action.command;
   } else if (Action.edit) {
     Cmd.command = std::string(ApplyFixCommand);
     Cmd.argument = *Action.edit;
   } else {
-    return None;
+    return std::nullopt;
   }
   Cmd.title = Action.title;
   if (Action.kind && *Action.kind == CodeAction::QUICKFIX_KIND)
@@ -1153,7 +1153,7 @@ void ClangdLSPServer::onSwitchSourceHeader(
           return Reply(Path.takeError());
         if (*Path)
           return Reply(URIForFile::canonicalize(**Path, Params.uri.file()));
-        return Reply(llvm::None);
+        return Reply(std::nullopt);
       });
 }
 
@@ -1172,7 +1172,7 @@ void ClangdLSPServer::onHover(const TextDocumentPositionParams &Params,
                       if (!H)
                         return Reply(H.takeError());
                       if (!*H)
-                        return Reply(llvm::None);
+                        return Reply(std::nullopt);
 
                       Hover R;
                       R.contents.kind = HoverContentFormat;

@@ -149,7 +149,7 @@ public:
 
   /// Attaches a note to the last diagnostic.
   /// Expects this object to be a silenceable failure.
-  Diagnostic &attachNote(Optional<Location> loc = llvm::None) {
+  Diagnostic &attachNote(Optional<Location> loc = std::nullopt) {
     assert(isSilenceableFailure() &&
            "can only attach notes to silenceable failures");
     return diagnostics.back().attachNote(loc);
@@ -212,7 +212,7 @@ public:
   }
 
   /// Attaches a note to the error.
-  Diagnostic &attachNote(Optional<Location> loc = llvm::None) {
+  Diagnostic &attachNote(Optional<Location> loc = std::nullopt) {
     return diag.attachNote(loc);
   }
 

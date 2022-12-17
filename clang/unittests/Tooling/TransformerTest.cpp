@@ -110,18 +110,18 @@ protected:
             "clang-tool", std::make_shared<PCHContainerOperations>(),
             FileContents)) {
       llvm::errs() << "Running tool failed.\n";
-      return None;
+      return std::nullopt;
     }
     if (ErrorCount != 0) {
       llvm::errs() << "Generating changes failed.\n";
-      return None;
+      return std::nullopt;
     }
     auto ChangedCode =
         applyAtomicChanges("input.cc", Code, Changes, ApplyChangesSpec());
     if (!ChangedCode) {
       llvm::errs() << "Applying changes failed: "
                    << llvm::toString(ChangedCode.takeError()) << "\n";
-      return None;
+      return std::nullopt;
     }
     return *ChangedCode;
   }

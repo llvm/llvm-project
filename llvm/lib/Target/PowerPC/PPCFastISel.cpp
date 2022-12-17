@@ -20,7 +20,6 @@
 #include "PPCMachineFunctionInfo.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/FastISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
@@ -198,8 +197,8 @@ class PPCFastISel final : public FastISel {
 
 } // end anonymous namespace
 
-static Optional<PPC::Predicate> getComparePred(CmpInst::Predicate Pred) {
-  switch (Pred) {
+static std::optional<PPC::Predicate> getComparePred(CmpInst::Predicate Pred) {
+    switch (Pred) {
     // These are not representable with any single compare.
     case CmpInst::FCMP_FALSE:
     case CmpInst::FCMP_TRUE:
@@ -770,7 +769,8 @@ bool PPCFastISel::SelectBranch(const Instruction *I) {
   // For now, just try the simplest case where it's fed by a compare.
   if (const CmpInst *CI = dyn_cast<CmpInst>(BI->getCondition())) {
     if (isValueAvailable(CI)) {
-      Optional<PPC::Predicate> OptPPCPred = getComparePred(CI->getPredicate());
+      std::optional<PPC::Predicate> OptPPCPred =
+          getComparePred(CI->getPredicate());
       if (!OptPPCPred)
         return false;
 

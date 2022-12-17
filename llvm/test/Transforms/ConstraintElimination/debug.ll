@@ -5,11 +5,11 @@
 declare void @use(i1)
 
 define i1 @test_and_ule(i4 %x, i4 %y, i4 %z) {
-; CHECK:      Processing   %c.1 = icmp ule i4 %x, %y
+; CHECK:      Processing fact to add to the system:  %c.1 = icmp ule i4 %x, %y
 ; CHECK-NEXT: Adding 'ule %x, %y'
 ; CHECK-NEXT:  constraint: %x + -1 * %y <= 0
 
-; CHECK:      Processing   %c.2 = icmp ule i4 %y, %z
+; CHECK:      Processing fact to add to the system:  %c.2 = icmp ule i4 %y, %z
 ; CHECK-NEXT: Adding 'ule %y, %z'
 ; CHECK-NEXT:  constraint: %y + -1 * %z <= 0
 

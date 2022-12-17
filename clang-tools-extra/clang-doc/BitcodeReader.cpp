@@ -11,6 +11,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace clang {
 namespace doc {
@@ -81,7 +82,7 @@ llvm::Error decodeRecord(const Record &R, TagTypeKind &Field,
   }
 }
 
-llvm::Error decodeRecord(const Record &R, llvm::Optional<Location> &Field,
+llvm::Error decodeRecord(const Record &R, std::optional<Location> &Field,
                          llvm::StringRef Blob) {
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),

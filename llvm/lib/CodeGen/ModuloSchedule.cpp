@@ -880,7 +880,7 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
     MachineBasicBlock *Epilog = EpilogBBs[i];
 
     SmallVector<MachineOperand, 4> Cond;
-    Optional<bool> StaticallyGreater =
+    std::optional<bool> StaticallyGreater =
         LoopInfo->createTripCountGreaterCondition(j + 1, *Prolog, Cond);
     unsigned numAdded = 0;
     if (!StaticallyGreater) {
@@ -1963,7 +1963,7 @@ void PeelingModuloScheduleExpander::fixupBranches() {
     MachineBasicBlock *Epilog = *EI;
     SmallVector<MachineOperand, 4> Cond;
     TII->removeBranch(*Prolog);
-    Optional<bool> StaticallyGreater =
+    std::optional<bool> StaticallyGreater =
         LoopInfo->createTripCountGreaterCondition(TC, *Prolog, Cond);
     if (!StaticallyGreater) {
       LLVM_DEBUG(dbgs() << "Dynamic: TC > " << TC << "\n");

@@ -129,7 +129,7 @@ CompileFlags: {$unexpected^
                                     "Entry, or Flow Mapping End."),
                         diagKind(llvm::SourceMgr::DK_Error),
                         diagPos(YAML.point("unexpected")),
-                        diagRange(llvm::None))));
+                        diagRange(std::nullopt))));
 
   ASSERT_EQ(Results.size(), 1u); // invalid fragment discarded.
   EXPECT_THAT(Results.front().CompileFlags.Add, ElementsAre(val("first")));
@@ -215,7 +215,7 @@ Completion:
                                 diagPos(YAML.range("diagrange").start),
                                 diagRange(YAML.range("diagrange")))));
   ASSERT_EQ(Results.size(), 1u);
-  EXPECT_THAT(Results[0].Completion.AllScopes, testing::Eq(llvm::None));
+  EXPECT_THAT(Results[0].Completion.AllScopes, testing::Eq(std::nullopt));
 }
 
 TEST(ParseYAML, ShowAKA) {
@@ -244,7 +244,7 @@ InlayHints:
   ASSERT_EQ(Results.size(), 1u);
   EXPECT_THAT(Results[0].InlayHints.Enabled, llvm::ValueIs(val(false)));
   EXPECT_THAT(Results[0].InlayHints.ParameterNames, llvm::ValueIs(val(true)));
-  EXPECT_EQ(Results[0].InlayHints.DeducedTypes, llvm::None);
+  EXPECT_EQ(Results[0].InlayHints.DeducedTypes, std::nullopt);
 }
 
 TEST(ParseYAML, IncludesIgnoreHeader) {

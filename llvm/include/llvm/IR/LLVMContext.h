@@ -15,11 +15,11 @@
 #define LLVM_IR_LLVMCONTEXT_H
 
 #include "llvm-c/Types.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/IR/DiagnosticHandler.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -205,7 +205,7 @@ public:
 
   bool getMisExpectWarningRequested() const;
   void setMisExpectWarningRequested(bool Requested);
-  void setDiagnosticsMisExpectTolerance(Optional<uint32_t> Tolerance);
+  void setDiagnosticsMisExpectTolerance(std::optional<uint32_t> Tolerance);
   uint32_t getDiagnosticsMisExpectTolerance() const;
 
   /// Return the minimum hotness value a diagnostic would need in order
@@ -222,7 +222,7 @@ public:
 
   /// Set the minimum hotness value a diagnostic needs in order to be
   /// included in optimization diagnostics.
-  void setDiagnosticsHotnessThreshold(Optional<uint64_t> Threshold);
+  void setDiagnosticsHotnessThreshold(std::optional<uint64_t> Threshold);
 
   /// Return if hotness threshold is requested from PSI.
   bool isDiagnosticsHotnessThresholdSetFromPSI() const;

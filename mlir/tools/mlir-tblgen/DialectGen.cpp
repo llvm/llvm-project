@@ -56,10 +56,11 @@ filterForDialect(ArrayRef<llvm::Record *> records, Dialect &dialect) {
           DialectFilterIterator(records.end(), records.end(), filterFn)};
 }
 
-Optional<Dialect> tblgen::findDialectToGenerate(ArrayRef<Dialect> dialects) {
+std::optional<Dialect>
+tblgen::findDialectToGenerate(ArrayRef<Dialect> dialects) {
   if (dialects.empty()) {
     llvm::errs() << "no dialect was found\n";
-    return llvm::None;
+    return std::nullopt;
   }
 
   // Select the dialect to gen for.
@@ -69,7 +70,7 @@ Optional<Dialect> tblgen::findDialectToGenerate(ArrayRef<Dialect> dialects) {
   if (selectedDialect.getNumOccurrences() == 0) {
     llvm::errs() << "when more than 1 dialect is present, one must be selected "
                     "via '-dialect'\n";
-    return llvm::None;
+    return std::nullopt;
   }
 
   const auto *dialectIt = llvm::find_if(dialects, [](const Dialect &dialect) {
@@ -77,7 +78,7 @@ Optional<Dialect> tblgen::findDialectToGenerate(ArrayRef<Dialect> dialects) {
   });
   if (dialectIt == dialects.end()) {
     llvm::errs() << "selected dialect with '-dialect' does not exist\n";
-    return llvm::None;
+    return std::nullopt;
   }
   return *dialectIt;
 }
@@ -216,8 +217,7 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
       os << regionResultAttrVerifierDecl;
     if (dialect.hasOperationInterfaceFallback())
       os << operationInterfaceFallbackDecl;
-    if (llvm::Optional<StringRef> extraDecl =
-            dialect.getExtraClassDeclaration())
+    if (std::optional<StringRef> extraDecl = dialect.getExtraClassDeclaration())
       os << *extraDecl;
 
     // End the dialect decl.
@@ -237,7 +237,7 @@ static bool emitDialectDecls(const llvm::RecordKeeper &recordKeeper,
     return false;
 
   SmallVector<Dialect> dialects(dialectDefs.begin(), dialectDefs.end());
-  Optional<Dialect> dialect = findDialectToGenerate(dialects);
+  std::optional<Dialect> dialect = findDialectToGenerate(dialects);
   if (!dialect)
     return true;
   emitDialectDecl(*dialect, os);
@@ -308,7 +308,7 @@ static bool emitDialectDefs(const llvm::RecordKeeper &recordKeeper,
     return false;
 
   SmallVector<Dialect> dialects(dialectDefs.begin(), dialectDefs.end());
-  Optional<Dialect> dialect = findDialectToGenerate(dialects);
+  std::optional<Dialect> dialect = findDialectToGenerate(dialects);
   if (!dialect)
     return true;
   emitDialectDef(*dialect, os);

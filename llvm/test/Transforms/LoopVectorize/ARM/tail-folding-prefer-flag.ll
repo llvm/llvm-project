@@ -1,7 +1,7 @@
-; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -loop-vectorize -tail-predication=enabled -S < %s | \
+; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -passes=loop-vectorize -tail-predication=enabled -S < %s | \
 ; RUN:  FileCheck %s -check-prefix=CHECK
 
-; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -loop-vectorize -tail-predication=enabled \
+; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -passes=loop-vectorize -tail-predication=enabled \
 ; RUN:     -prefer-predicate-over-epilogue=predicate-dont-vectorize -S < %s | \
 ; RUN:     FileCheck -check-prefix=PREDFLAG %s
 

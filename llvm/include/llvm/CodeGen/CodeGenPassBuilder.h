@@ -926,6 +926,7 @@ Error CodeGenPassBuilder<Derived>::addMachinePasses(
 
   addPass(StackMapLivenessPass());
   addPass(LiveDebugValuesPass());
+  addPass(MachineSanitizerBinaryMetadata());
 
   if (TM.Options.EnableMachineOutliner && getOptLevel() != CodeGenOpt::None &&
       Opt.EnableMachineOutliner != RunOutliner::NeverOutline) {
@@ -1129,6 +1130,9 @@ void CodeGenPassBuilder<Derived>::addMachineLateOptimization(
   // In addition it can also make CFG irreducible. Thus we disable it.
   if (!TM.requiresStructuredCFG())
     addPass(TailDuplicatePass());
+
+  // Cleanup of redundant (identical) address/immediate loads.
+  addPass(MachineLateInstrsCleanupPass());
 
   // Copy propagation.
   addPass(MachineCopyPropagationPass());

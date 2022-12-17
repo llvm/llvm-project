@@ -51,7 +51,7 @@ public:
     return LoongArch::NumTargetFixupKinds;
   }
 
-  Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 

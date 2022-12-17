@@ -823,7 +823,7 @@ public:
       IntrusiveRefCntPtr<DiagnosticsEngine> Diags, StringRef ResourceFilesPath,
       bool OnlyLocalDecls = false,
       CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
-      ArrayRef<RemappedFile> RemappedFiles = None,
+      ArrayRef<RemappedFile> RemappedFiles = std::nullopt,
       bool RemappedFilesKeepOriginalName = true,
       unsigned PrecompilePreambleAfterNParses = 0,
       TranslationUnitKind TUKind = TU_Complete,
@@ -835,7 +835,7 @@ public:
       bool SingleFileParse = false, bool UserFilesAreVolatile = false,
       bool ForSerialization = false,
       bool RetainExcludedConditionalBlocks = false,
-      llvm::Optional<StringRef> ModuleFormat = llvm::None,
+      llvm::Optional<StringRef> ModuleFormat = std::nullopt,
       std::unique_ptr<ASTUnit> *ErrAST = nullptr,
       IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
@@ -851,7 +851,7 @@ public:
   /// \returns True if a failure occurred that causes the ASTUnit not to
   /// contain any translation-unit information, false otherwise.
   bool Reparse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-               ArrayRef<RemappedFile> RemappedFiles = None,
+               ArrayRef<RemappedFile> RemappedFiles = std::nullopt,
                IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
   /// Free data that will be re-generated on the next parse.

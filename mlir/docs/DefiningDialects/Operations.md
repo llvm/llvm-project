@@ -1391,13 +1391,13 @@ llvm::Optional<MyIntEnum> ConvertToEnum(llvm::StringRef str) {
   return llvm::StringSwitch<llvm::Optional<MyIntEnum>>(str)
       .Case("Case15", MyIntEnum::Case15)
       .Case("Case20", MyIntEnum::Case20)
-      .Default(llvm::None);
+      .Default(std::nullopt);
 }
 llvm::Optional<MyIntEnum> symbolizeMyIntEnum(uint32_t value) {
   switch (value) {
   case 15: return MyIntEnum::Case15;
   case 20: return MyIntEnum::Case20;
-  default: return llvm::None;
+  default: return std::nullopt;
   }
 }
 
@@ -1520,8 +1520,8 @@ llvm::Optional<MyBitEnum> symbolizeMyBitEnum(llvm::StringRef str) {
       .Case("Bit1", 2)
       .Case("Bit2", 4)
       .Case("Bit3", 8)
-      .Default(llvm::None);
-    if (bit) { val |= *bit; } else { return llvm::None; }
+      .Default(std::nullopt);
+    if (bit) { val |= *bit; } else { return std::nullopt; }
   }
   return static_cast<MyBitEnum>(val);
 }
@@ -1530,7 +1530,7 @@ llvm::Optional<MyBitEnum> symbolizeMyBitEnum(uint32_t value) {
   // Special case for all bits unset.
   if (value == 0) return MyBitEnum::None;
 
-  if (value & ~static_cast<uint32_t>(15u)) return llvm::None;
+  if (value & ~static_cast<uint32_t>(15u)) return std::nullopt;
   return static_cast<MyBitEnum>(value);
 }
 ```

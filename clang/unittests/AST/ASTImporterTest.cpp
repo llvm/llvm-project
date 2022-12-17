@@ -4818,7 +4818,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportSubstTemplateTypeParmType) {
     ASSERT_EQ(Subst->getPackIndex(), PackIndex);
   };
   auto tests = [&](ASTContext &Ctx) {
-    testType(Ctx, "void", None);
+    testType(Ctx, "void", std::nullopt);
     testType(Ctx, "char", 3);
     testType(Ctx, "float", 2);
     testType(Ctx, "int", 1);

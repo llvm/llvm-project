@@ -167,12 +167,12 @@ std::string ForestNode::dumpRecursive(const Grammar &G,
             LineDec.Subsequent = "│ ";
           }
           Dump(Children[I], P->kind() == Sequence ? EndOfElement(I) : End,
-               llvm::None, LineDec);
+               std::nullopt, LineDec);
         }
         LineDec.Prefix.resize(OldPrefixSize);
       };
   LineDecoration LineDec;
-  Dump(this, KEnd, llvm::None, LineDec);
+  Dump(this, KEnd, std::nullopt, LineDec);
   return Result;
 }
 

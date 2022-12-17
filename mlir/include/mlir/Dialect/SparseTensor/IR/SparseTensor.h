@@ -75,6 +75,21 @@ inline bool isSingletonDim(RankedTensorType type, uint64_t d) {
   return isSingletonDLT(getDimLevelType(type, d));
 }
 
+/// Convenience function to test for dense dimension (0 <= d < rank).
+inline bool isDenseDim(SparseTensorEncodingAttr enc, uint64_t d) {
+  return isDenseDLT(getDimLevelType(enc, d));
+}
+
+/// Convenience function to test for compressed dimension (0 <= d < rank).
+inline bool isCompressedDim(SparseTensorEncodingAttr enc, uint64_t d) {
+  return isCompressedDLT(getDimLevelType(enc, d));
+}
+
+/// Convenience function to test for singleton dimension (0 <= d < rank).
+inline bool isSingletonDim(SparseTensorEncodingAttr enc, uint64_t d) {
+  return isSingletonDLT(getDimLevelType(enc, d));
+}
+
 //
 // Dimension level properties.
 //

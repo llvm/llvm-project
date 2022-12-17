@@ -114,7 +114,7 @@ static bool isAllocationSupported(Operation *allocOp, MemRefType type) {
 
 /// Returns the scope to use for atomic operations use for emulating store
 /// operations of unsupported integer bitwidths, based on the memref
-/// type. Returns None on failure.
+/// type. Returns std::nullopt on failure.
 static Optional<spirv::Scope> getAtomicOpScope(MemRefType type) {
   auto sc = type.getMemorySpace().dyn_cast_or_null<spirv::StorageClassAttr>();
   switch (sc.getValue()) {

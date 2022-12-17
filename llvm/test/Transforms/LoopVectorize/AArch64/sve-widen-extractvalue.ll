@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize < %s | FileCheck %s
 
 target triple = "aarch64-unknown-linux-gnu"
 

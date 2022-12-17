@@ -10,12 +10,10 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x i8> @bitreverse_v4i8(<4 x i8> %op) #0 {
 ; CHECK-LABEL: bitreverse_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    rbit z0.h, p0/m, z0.h
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI0_0]
-; CHECK-NEXT:    lsr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    lsr z0.h, p0/m, z0.h, #8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <4 x i8> @llvm.bitreverse.v4i8(<4 x i8> %op)
@@ -64,12 +62,10 @@ define void @bitreverse_v32i8(<32 x i8>* %a) #0 {
 define <2 x i16> @bitreverse_v2i16(<2 x i16> %op) #0 {
 ; CHECK-LABEL: bitreverse_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI4_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    rbit z0.s, p0/m, z0.s
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI4_0]
-; CHECK-NEXT:    lsr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    lsr z0.s, p0/m, z0.s, #16
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> %op)
@@ -200,28 +196,21 @@ define void @bitreverse_v4i64(<4 x i64>* %a) #0 {
 define <2 x i16> @bswap_v2i16(<2 x i16> %op) #0 {
 ; CHECK-LABEL: bswap_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI14_0
-; CHECK-NEXT:    adrp x10, .LCPI14_2
-; CHECK-NEXT:    adrp x9, .LCPI14_1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI14_0]
-; CHECK-NEXT:    adrp x8, .LCPI14_3
-; CHECK-NEXT:    ldr d3, [x10, :lo12:.LCPI14_2]
-; CHECK-NEXT:    movprfx z4, z0
-; CHECK-NEXT:    lsr z4.s, p0/m, z4.s, z1.s
-; CHECK-NEXT:    ldr d2, [x9, :lo12:.LCPI14_1]
-; CHECK-NEXT:    movprfx z5, z0
-; CHECK-NEXT:    lsr z5.s, p0/m, z5.s, z2.s
-; CHECK-NEXT:    lslr z1.s, p0/m, z1.s, z0.s
-; CHECK-NEXT:    and z0.d, z0.d, z3.d
-; CHECK-NEXT:    and z3.d, z5.d, z3.d
-; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, z2.s
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI14_3]
-; CHECK-NEXT:    orr z3.d, z3.d, z4.d
-; CHECK-NEXT:    orr z0.d, z1.d, z0.d
-; CHECK-NEXT:    orr z0.d, z0.d, z3.d
-; CHECK-NEXT:    lsr z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    lsr z1.s, p0/m, z1.s, #24
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    lsr z2.s, p0/m, z2.s, #8
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    lsl z3.s, p0/m, z3.s, #24
+; CHECK-NEXT:    and z0.s, z0.s, #0xff00
+; CHECK-NEXT:    and z2.s, z2.s, #0xff00
+; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, #8
+; CHECK-NEXT:    orr z1.d, z2.d, z1.d
+; CHECK-NEXT:    orr z0.d, z3.d, z0.d
+; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    lsr z0.s, p0/m, z0.s, #16
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> %op)
@@ -231,14 +220,12 @@ define <2 x i16> @bswap_v2i16(<2 x i16> %op) #0 {
 define <4 x i16> @bswap_v4i16(<4 x i16> %op) #0 {
 ; CHECK-LABEL: bswap_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI15_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI15_0]
-; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    lsr z2.h, p0/m, z2.h, z1.h
-; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    orr z0.d, z0.d, z2.d
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    lsr z1.h, p0/m, z1.h, #8
+; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, #8
+; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <4 x i16> @llvm.bswap.v4i16(<4 x i16> %op)
@@ -248,14 +235,12 @@ define <4 x i16> @bswap_v4i16(<4 x i16> %op) #0 {
 define <8 x i16> @bswap_v8i16(<8 x i16> %op) #0 {
 ; CHECK-LABEL: bswap_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI16_0
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI16_0]
-; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    lsr z2.h, p0/m, z2.h, z1.h
-; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    orr z0.d, z0.d, z2.d
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    lsr z1.h, p0/m, z1.h, #8
+; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, #8
+; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <8 x i16> @llvm.bswap.v8i16(<8 x i16> %op)
@@ -265,18 +250,16 @@ define <8 x i16> @bswap_v8i16(<8 x i16> %op) #0 {
 define void @bswap_v16i16(<16 x i16>* %a) #0 {
 ; CHECK-LABEL: bswap_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI17_0
+; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    ldp q2, q0, [x0]
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI17_0]
-; CHECK-NEXT:    movprfx z3, z0
-; CHECK-NEXT:    lsr z3.h, p0/m, z3.h, z1.h
-; CHECK-NEXT:    movprfx z4, z2
-; CHECK-NEXT:    lsr z4.h, p0/m, z4.h, z1.h
-; CHECK-NEXT:    lsl z2.h, p0/m, z2.h, z1.h
-; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    orr z1.d, z2.d, z4.d
-; CHECK-NEXT:    orr z0.d, z0.d, z3.d
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    lsr z2.h, p0/m, z2.h, #8
+; CHECK-NEXT:    movprfx z3, z1
+; CHECK-NEXT:    lsr z3.h, p0/m, z3.h, #8
+; CHECK-NEXT:    lsl z1.h, p0/m, z1.h, #8
+; CHECK-NEXT:    orr z1.d, z1.d, z3.d
+; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, #8
+; CHECK-NEXT:    orr z0.d, z0.d, z2.d
 ; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
   %op = load <16 x i16>, <16 x i16>* %a
@@ -288,26 +271,20 @@ define void @bswap_v16i16(<16 x i16>* %a) #0 {
 define <2 x i32> @bswap_v2i32(<2 x i32> %op) #0 {
 ; CHECK-LABEL: bswap_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI18_0
-; CHECK-NEXT:    adrp x10, .LCPI18_2
-; CHECK-NEXT:    adrp x9, .LCPI18_1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI18_0]
-; CHECK-NEXT:    movprfx z4, z0
-; CHECK-NEXT:    lsr z4.s, p0/m, z4.s, z1.s
-; CHECK-NEXT:    ldr d3, [x10, :lo12:.LCPI18_2]
-; CHECK-NEXT:    ldr d2, [x9, :lo12:.LCPI18_1]
-; CHECK-NEXT:    movprfx z5, z0
-; CHECK-NEXT:    lsr z5.s, p0/m, z5.s, z2.s
-; CHECK-NEXT:    and z5.d, z5.d, z3.d
-; CHECK-NEXT:    and z3.d, z0.d, z3.d
-; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    movprfx z1, z3
-; CHECK-NEXT:    lsl z1.s, p0/m, z1.s, z2.s
-; CHECK-NEXT:    orr z2.d, z5.d, z4.d
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    lsr z1.s, p0/m, z1.s, #24
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    lsr z2.s, p0/m, z2.s, #8
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    lsl z3.s, p0/m, z3.s, #24
+; CHECK-NEXT:    and z0.s, z0.s, #0xff00
+; CHECK-NEXT:    and z2.s, z2.s, #0xff00
+; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, #8
+; CHECK-NEXT:    orr z1.d, z2.d, z1.d
+; CHECK-NEXT:    orr z0.d, z3.d, z0.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    orr z0.d, z0.d, z2.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %op)
@@ -317,26 +294,20 @@ define <2 x i32> @bswap_v2i32(<2 x i32> %op) #0 {
 define <4 x i32> @bswap_v4i32(<4 x i32> %op) #0 {
 ; CHECK-LABEL: bswap_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI19_0
-; CHECK-NEXT:    adrp x10, .LCPI19_2
-; CHECK-NEXT:    adrp x9, .LCPI19_1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI19_0]
-; CHECK-NEXT:    movprfx z4, z0
-; CHECK-NEXT:    lsr z4.s, p0/m, z4.s, z1.s
-; CHECK-NEXT:    ldr q3, [x10, :lo12:.LCPI19_2]
-; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI19_1]
-; CHECK-NEXT:    movprfx z5, z0
-; CHECK-NEXT:    lsr z5.s, p0/m, z5.s, z2.s
-; CHECK-NEXT:    and z5.d, z5.d, z3.d
-; CHECK-NEXT:    and z3.d, z0.d, z3.d
-; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    movprfx z1, z3
-; CHECK-NEXT:    lsl z1.s, p0/m, z1.s, z2.s
-; CHECK-NEXT:    orr z2.d, z5.d, z4.d
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    lsr z1.s, p0/m, z1.s, #24
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    lsr z2.s, p0/m, z2.s, #8
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    lsl z3.s, p0/m, z3.s, #24
+; CHECK-NEXT:    and z0.s, z0.s, #0xff00
+; CHECK-NEXT:    and z2.s, z2.s, #0xff00
+; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, #8
+; CHECK-NEXT:    orr z1.d, z2.d, z1.d
+; CHECK-NEXT:    orr z0.d, z3.d, z0.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    orr z0.d, z0.d, z2.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %op)
@@ -346,38 +317,33 @@ define <4 x i32> @bswap_v4i32(<4 x i32> %op) #0 {
 define void @bswap_v8i32(<8 x i32>* %a) #0 {
 ; CHECK-LABEL: bswap_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI20_0
-; CHECK-NEXT:    adrp x9, .LCPI20_1
-; CHECK-NEXT:    ldp q4, q1, [x0]
+; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI20_0]
-; CHECK-NEXT:    adrp x8, .LCPI20_2
-; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI20_1]
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    lsr z2.s, p0/m, z2.s, #24
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    lsr z3.s, p0/m, z3.s, #8
+; CHECK-NEXT:    movprfx z4, z1
+; CHECK-NEXT:    lsr z4.s, p0/m, z4.s, #24
 ; CHECK-NEXT:    movprfx z5, z1
-; CHECK-NEXT:    lsr z5.s, p0/m, z5.s, z0.s
-; CHECK-NEXT:    movprfx z6, z1
-; CHECK-NEXT:    lsr z6.s, p0/m, z6.s, z2.s
-; CHECK-NEXT:    movprfx z7, z1
-; CHECK-NEXT:    lsl z7.s, p0/m, z7.s, z0.s
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI20_2]
-; CHECK-NEXT:    movprfx z16, z4
-; CHECK-NEXT:    lsr z16.s, p0/m, z16.s, z2.s
-; CHECK-NEXT:    and z1.d, z1.d, z3.d
-; CHECK-NEXT:    and z6.d, z6.d, z3.d
-; CHECK-NEXT:    and z16.d, z16.d, z3.d
-; CHECK-NEXT:    and z3.d, z4.d, z3.d
-; CHECK-NEXT:    orr z5.d, z6.d, z5.d
-; CHECK-NEXT:    movprfx z6, z4
-; CHECK-NEXT:    lsr z6.s, p0/m, z6.s, z0.s
-; CHECK-NEXT:    lslr z0.s, p0/m, z0.s, z4.s
-; CHECK-NEXT:    lsl z1.s, p0/m, z1.s, z2.s
-; CHECK-NEXT:    lslr z2.s, p0/m, z2.s, z3.s
-; CHECK-NEXT:    orr z3.d, z16.d, z6.d
+; CHECK-NEXT:    lsr z5.s, p0/m, z5.s, #8
+; CHECK-NEXT:    and z3.s, z3.s, #0xff00
+; CHECK-NEXT:    and z5.s, z5.s, #0xff00
+; CHECK-NEXT:    orr z2.d, z3.d, z2.d
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    lsl z3.s, p0/m, z3.s, #24
+; CHECK-NEXT:    orr z4.d, z5.d, z4.d
+; CHECK-NEXT:    movprfx z5, z1
+; CHECK-NEXT:    lsl z5.s, p0/m, z5.s, #24
+; CHECK-NEXT:    and z1.s, z1.s, #0xff00
+; CHECK-NEXT:    and z0.s, z0.s, #0xff00
+; CHECK-NEXT:    lsl z1.s, p0/m, z1.s, #8
+; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, #8
+; CHECK-NEXT:    orr z1.d, z5.d, z1.d
+; CHECK-NEXT:    orr z0.d, z3.d, z0.d
+; CHECK-NEXT:    orr z1.d, z1.d, z4.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z2.d
-; CHECK-NEXT:    orr z1.d, z7.d, z1.d
-; CHECK-NEXT:    orr z0.d, z0.d, z3.d
-; CHECK-NEXT:    orr z1.d, z1.d, z5.d
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
   %op = load <8 x i32>, <8 x i32>* %a
   %res = call <8 x i32> @llvm.bswap.v8i32(<8 x i32> %op)
@@ -388,46 +354,35 @@ define void @bswap_v8i32(<8 x i32>* %a) #0 {
 define <1 x i64> @bswap_v1i64(<1 x i64> %op) #0 {
 ; CHECK-LABEL: bswap_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #56
-; CHECK-NEXT:    mov w9, #40
-; CHECK-NEXT:    mov w10, #65280
-; CHECK-NEXT:    mov w11, #24
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl1
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    mov w8, #16711680
-; CHECK-NEXT:    fmov d2, x9
-; CHECK-NEXT:    mov w9, #8
-; CHECK-NEXT:    fmov d3, x10
-; CHECK-NEXT:    movprfx z7, z0
-; CHECK-NEXT:    lsr z7.d, p0/m, z7.d, z1.d
-; CHECK-NEXT:    fmov d5, x8
-; CHECK-NEXT:    mov w8, #-16777216
-; CHECK-NEXT:    movprfx z16, z0
-; CHECK-NEXT:    lsr z16.d, p0/m, z16.d, z2.d
-; CHECK-NEXT:    fmov d4, x11
-; CHECK-NEXT:    fmov d6, x9
-; CHECK-NEXT:    and z16.d, z16.d, z3.d
-; CHECK-NEXT:    fmov d17, x8
-; CHECK-NEXT:    orr z7.d, z16.d, z7.d
-; CHECK-NEXT:    movprfx z16, z0
-; CHECK-NEXT:    lsr z16.d, p0/m, z16.d, z4.d
-; CHECK-NEXT:    movprfx z18, z0
-; CHECK-NEXT:    lsr z18.d, p0/m, z18.d, z6.d
-; CHECK-NEXT:    and z16.d, z16.d, z5.d
-; CHECK-NEXT:    and z5.d, z0.d, z5.d
-; CHECK-NEXT:    and z18.d, z18.d, z17.d
-; CHECK-NEXT:    and z17.d, z0.d, z17.d
-; CHECK-NEXT:    lslr z6.d, p0/m, z6.d, z17.d
-; CHECK-NEXT:    lslr z4.d, p0/m, z4.d, z5.d
-; CHECK-NEXT:    and z3.d, z0.d, z3.d
-; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    orr z16.d, z18.d, z16.d
-; CHECK-NEXT:    movprfx z1, z3
-; CHECK-NEXT:    lsl z1.d, p0/m, z1.d, z2.d
-; CHECK-NEXT:    orr z2.d, z4.d, z6.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    orr z1.d, z16.d, z7.d
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, #56
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    lsr z2.d, p0/m, z2.d, #40
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    lsr z3.d, p0/m, z3.d, #24
+; CHECK-NEXT:    movprfx z4, z0
+; CHECK-NEXT:    lsr z4.d, p0/m, z4.d, #8
+; CHECK-NEXT:    mov z5.d, z0.d
+; CHECK-NEXT:    and z2.d, z2.d, #0xff00
+; CHECK-NEXT:    and z3.d, z3.d, #0xff0000
+; CHECK-NEXT:    orr z1.d, z2.d, z1.d
+; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    and z4.d, z4.d, #0xff000000
+; CHECK-NEXT:    and z5.d, z5.d, #0xff000000
+; CHECK-NEXT:    orr z3.d, z4.d, z3.d
+; CHECK-NEXT:    and z2.d, z2.d, #0xff0000
+; CHECK-NEXT:    movprfx z4, z5
+; CHECK-NEXT:    lsl z4.d, p0/m, z4.d, #8
+; CHECK-NEXT:    movprfx z5, z0
+; CHECK-NEXT:    lsl z5.d, p0/m, z5.d, #56
+; CHECK-NEXT:    and z0.d, z0.d, #0xff00
+; CHECK-NEXT:    lsl z2.d, p0/m, z2.d, #24
+; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, #40
+; CHECK-NEXT:    orr z2.d, z2.d, z4.d
+; CHECK-NEXT:    orr z0.d, z5.d, z0.d
+; CHECK-NEXT:    orr z1.d, z3.d, z1.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z2.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -439,46 +394,35 @@ define <1 x i64> @bswap_v1i64(<1 x i64> %op) #0 {
 define <2 x i64> @bswap_v2i64(<2 x i64> %op) #0 {
 ; CHECK-LABEL: bswap_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI22_0
-; CHECK-NEXT:    adrp x9, .LCPI22_1
-; CHECK-NEXT:    adrp x10, .LCPI22_2
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI22_0]
-; CHECK-NEXT:    adrp x8, .LCPI22_3
-; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI22_1]
-; CHECK-NEXT:    adrp x9, .LCPI22_4
-; CHECK-NEXT:    ldr q3, [x10, :lo12:.LCPI22_2]
-; CHECK-NEXT:    adrp x10, .LCPI22_5
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI22_3]
-; CHECK-NEXT:    adrp x8, .LCPI22_6
-; CHECK-NEXT:    ldr q5, [x9, :lo12:.LCPI22_4]
-; CHECK-NEXT:    movprfx z7, z0
-; CHECK-NEXT:    lsr z7.d, p0/m, z7.d, z1.d
-; CHECK-NEXT:    movprfx z16, z0
-; CHECK-NEXT:    lsr z16.d, p0/m, z16.d, z2.d
-; CHECK-NEXT:    ldr q6, [x10, :lo12:.LCPI22_5]
-; CHECK-NEXT:    ldr q17, [x8, :lo12:.LCPI22_6]
-; CHECK-NEXT:    and z16.d, z16.d, z3.d
-; CHECK-NEXT:    orr z7.d, z16.d, z7.d
-; CHECK-NEXT:    movprfx z16, z0
-; CHECK-NEXT:    lsr z16.d, p0/m, z16.d, z4.d
-; CHECK-NEXT:    movprfx z18, z0
-; CHECK-NEXT:    lsr z18.d, p0/m, z18.d, z6.d
-; CHECK-NEXT:    and z16.d, z16.d, z5.d
-; CHECK-NEXT:    and z18.d, z18.d, z17.d
-; CHECK-NEXT:    and z17.d, z0.d, z17.d
-; CHECK-NEXT:    and z5.d, z0.d, z5.d
-; CHECK-NEXT:    lslr z6.d, p0/m, z6.d, z17.d
-; CHECK-NEXT:    lslr z4.d, p0/m, z4.d, z5.d
-; CHECK-NEXT:    and z3.d, z0.d, z3.d
-; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    orr z16.d, z18.d, z16.d
-; CHECK-NEXT:    movprfx z1, z3
-; CHECK-NEXT:    lsl z1.d, p0/m, z1.d, z2.d
-; CHECK-NEXT:    orr z2.d, z4.d, z6.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    orr z1.d, z16.d, z7.d
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, #56
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    lsr z2.d, p0/m, z2.d, #40
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    lsr z3.d, p0/m, z3.d, #24
+; CHECK-NEXT:    movprfx z4, z0
+; CHECK-NEXT:    lsr z4.d, p0/m, z4.d, #8
+; CHECK-NEXT:    mov z5.d, z0.d
+; CHECK-NEXT:    and z2.d, z2.d, #0xff00
+; CHECK-NEXT:    and z3.d, z3.d, #0xff0000
+; CHECK-NEXT:    orr z1.d, z2.d, z1.d
+; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    and z4.d, z4.d, #0xff000000
+; CHECK-NEXT:    and z5.d, z5.d, #0xff000000
+; CHECK-NEXT:    orr z3.d, z4.d, z3.d
+; CHECK-NEXT:    and z2.d, z2.d, #0xff0000
+; CHECK-NEXT:    movprfx z4, z5
+; CHECK-NEXT:    lsl z4.d, p0/m, z4.d, #8
+; CHECK-NEXT:    movprfx z5, z0
+; CHECK-NEXT:    lsl z5.d, p0/m, z5.d, #56
+; CHECK-NEXT:    and z0.d, z0.d, #0xff00
+; CHECK-NEXT:    lsl z2.d, p0/m, z2.d, #24
+; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, #40
+; CHECK-NEXT:    orr z2.d, z2.d, z4.d
+; CHECK-NEXT:    orr z0.d, z5.d, z0.d
+; CHECK-NEXT:    orr z1.d, z3.d, z1.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z2.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -490,75 +434,67 @@ define <2 x i64> @bswap_v2i64(<2 x i64> %op) #0 {
 define void @bswap_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-LABEL: bswap_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI23_0
-; CHECK-NEXT:    adrp x9, .LCPI23_1
-; CHECK-NEXT:    adrp x10, .LCPI23_3
+; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldp q1, q2, [x0]
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI23_0]
-; CHECK-NEXT:    adrp x8, .LCPI23_2
-; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI23_1]
-; CHECK-NEXT:    adrp x9, .LCPI23_4
-; CHECK-NEXT:    ldr q5, [x10, :lo12:.LCPI23_3]
-; CHECK-NEXT:    adrp x10, .LCPI23_6
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI23_2]
-; CHECK-NEXT:    adrp x8, .LCPI23_5
-; CHECK-NEXT:    ldr q6, [x9, :lo12:.LCPI23_4]
-; CHECK-NEXT:    movprfx z16, z2
-; CHECK-NEXT:    lsr z16.d, p0/m, z16.d, z3.d
-; CHECK-NEXT:    ldr q17, [x10, :lo12:.LCPI23_6]
-; CHECK-NEXT:    movprfx z18, z2
-; CHECK-NEXT:    lsr z18.d, p0/m, z18.d, z0.d
-; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI23_5]
-; CHECK-NEXT:    movprfx z19, z2
-; CHECK-NEXT:    lsr z19.d, p0/m, z19.d, z5.d
-; CHECK-NEXT:    movprfx z20, z2
-; CHECK-NEXT:    lsr z20.d, p0/m, z20.d, z7.d
-; CHECK-NEXT:    and z16.d, z16.d, z4.d
-; CHECK-NEXT:    and z19.d, z19.d, z6.d
-; CHECK-NEXT:    and z20.d, z20.d, z17.d
-; CHECK-NEXT:    orr z16.d, z16.d, z18.d
-; CHECK-NEXT:    orr z18.d, z20.d, z19.d
-; CHECK-NEXT:    and z19.d, z2.d, z17.d
-; CHECK-NEXT:    and z20.d, z2.d, z6.d
-; CHECK-NEXT:    lsl z19.d, p0/m, z19.d, z7.d
-; CHECK-NEXT:    lsl z20.d, p0/m, z20.d, z5.d
-; CHECK-NEXT:    orr z16.d, z18.d, z16.d
-; CHECK-NEXT:    orr z18.d, z20.d, z19.d
-; CHECK-NEXT:    movprfx z19, z2
-; CHECK-NEXT:    lsl z19.d, p0/m, z19.d, z0.d
-; CHECK-NEXT:    and z2.d, z2.d, z4.d
-; CHECK-NEXT:    movprfx z20, z1
-; CHECK-NEXT:    lsr z20.d, p0/m, z20.d, z3.d
-; CHECK-NEXT:    lsl z2.d, p0/m, z2.d, z3.d
-; CHECK-NEXT:    movprfx z21, z1
-; CHECK-NEXT:    lsr z21.d, p0/m, z21.d, z0.d
-; CHECK-NEXT:    and z20.d, z20.d, z4.d
-; CHECK-NEXT:    orr z2.d, z19.d, z2.d
-; CHECK-NEXT:    orr z19.d, z20.d, z21.d
-; CHECK-NEXT:    movprfx z20, z1
-; CHECK-NEXT:    lsr z20.d, p0/m, z20.d, z5.d
-; CHECK-NEXT:    movprfx z21, z1
-; CHECK-NEXT:    lsr z21.d, p0/m, z21.d, z7.d
-; CHECK-NEXT:    and z20.d, z20.d, z6.d
-; CHECK-NEXT:    and z21.d, z21.d, z17.d
-; CHECK-NEXT:    and z17.d, z1.d, z17.d
-; CHECK-NEXT:    and z6.d, z1.d, z6.d
-; CHECK-NEXT:    lslr z7.d, p0/m, z7.d, z17.d
-; CHECK-NEXT:    lslr z5.d, p0/m, z5.d, z6.d
-; CHECK-NEXT:    lslr z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    orr z20.d, z21.d, z20.d
-; CHECK-NEXT:    and z4.d, z1.d, z4.d
-; CHECK-NEXT:    movprfx z1, z4
-; CHECK-NEXT:    lsl z1.d, p0/m, z1.d, z3.d
-; CHECK-NEXT:    orr z3.d, z5.d, z7.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    orr z1.d, z20.d, z19.d
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    lsr z2.d, p0/m, z2.d, #56
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    lsr z3.d, p0/m, z3.d, #40
+; CHECK-NEXT:    movprfx z4, z0
+; CHECK-NEXT:    lsr z4.d, p0/m, z4.d, #24
+; CHECK-NEXT:    movprfx z5, z0
+; CHECK-NEXT:    lsr z5.d, p0/m, z5.d, #8
+; CHECK-NEXT:    and z3.d, z3.d, #0xff00
+; CHECK-NEXT:    and z4.d, z4.d, #0xff0000
+; CHECK-NEXT:    and z5.d, z5.d, #0xff000000
+; CHECK-NEXT:    orr z2.d, z3.d, z2.d
+; CHECK-NEXT:    orr z3.d, z5.d, z4.d
+; CHECK-NEXT:    mov z6.d, z0.d
+; CHECK-NEXT:    mov z7.d, z0.d
+; CHECK-NEXT:    movprfx z16, z0
+; CHECK-NEXT:    lsl z16.d, p0/m, z16.d, #56
+; CHECK-NEXT:    orr z2.d, z3.d, z2.d
+; CHECK-NEXT:    and z6.d, z6.d, #0xff000000
+; CHECK-NEXT:    and z7.d, z7.d, #0xff0000
+; CHECK-NEXT:    movprfx z3, z6
+; CHECK-NEXT:    lsl z3.d, p0/m, z3.d, #8
+; CHECK-NEXT:    movprfx z4, z7
+; CHECK-NEXT:    lsl z4.d, p0/m, z4.d, #24
+; CHECK-NEXT:    orr z3.d, z4.d, z3.d
+; CHECK-NEXT:    movprfx z4, z1
+; CHECK-NEXT:    lsr z4.d, p0/m, z4.d, #40
+; CHECK-NEXT:    and z0.d, z0.d, #0xff00
+; CHECK-NEXT:    movprfx z5, z1
+; CHECK-NEXT:    lsr z5.d, p0/m, z5.d, #56
+; CHECK-NEXT:    and z4.d, z4.d, #0xff00
+; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, #40
+; CHECK-NEXT:    orr z4.d, z4.d, z5.d
+; CHECK-NEXT:    movprfx z5, z1
+; CHECK-NEXT:    lsr z5.d, p0/m, z5.d, #24
+; CHECK-NEXT:    movprfx z7, z1
+; CHECK-NEXT:    lsr z7.d, p0/m, z7.d, #8
+; CHECK-NEXT:    orr z0.d, z16.d, z0.d
+; CHECK-NEXT:    mov z6.d, z1.d
+; CHECK-NEXT:    mov z16.d, z1.d
+; CHECK-NEXT:    and z5.d, z5.d, #0xff0000
+; CHECK-NEXT:    and z7.d, z7.d, #0xff000000
+; CHECK-NEXT:    orr z5.d, z7.d, z5.d
+; CHECK-NEXT:    and z6.d, z6.d, #0xff000000
+; CHECK-NEXT:    and z16.d, z16.d, #0xff0000
+; CHECK-NEXT:    movprfx z7, z1
+; CHECK-NEXT:    lsl z7.d, p0/m, z7.d, #56
+; CHECK-NEXT:    and z1.d, z1.d, #0xff00
+; CHECK-NEXT:    lsl z6.d, p0/m, z6.d, #8
+; CHECK-NEXT:    lsl z16.d, p0/m, z16.d, #24
+; CHECK-NEXT:    lsl z1.d, p0/m, z1.d, #40
+; CHECK-NEXT:    orr z6.d, z16.d, z6.d
+; CHECK-NEXT:    orr z1.d, z7.d, z1.d
+; CHECK-NEXT:    orr z4.d, z5.d, z4.d
+; CHECK-NEXT:    orr z1.d, z1.d, z6.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z3.d
-; CHECK-NEXT:    orr z2.d, z2.d, z18.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    orr z1.d, z2.d, z16.d
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    orr z1.d, z1.d, z4.d
+; CHECK-NEXT:    orr z0.d, z0.d, z2.d
+; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
   %op = load <4 x i64>, <4 x i64>* %a
   %res = call <4 x i64> @llvm.bswap.v4i64(<4 x i64> %op)

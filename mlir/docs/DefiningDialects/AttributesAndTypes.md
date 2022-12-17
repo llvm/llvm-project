@@ -653,7 +653,7 @@ operator is used.
 
 When using `OptionalParameter`, the default value is set to the C++
 default-constructed value for the C++ storage type. For example, `Optional<int>`
-will be set to `llvm::None` and `Attribute` will be set to `nullptr`. The
+will be set to `std::nullopt` and `Attribute` will be set to `nullptr`. The
 presence of these parameters is tested by comparing them to their "null" values.
 
 An optional group is a set of elements optionally printed based on the presence

@@ -118,7 +118,7 @@ struct FieldParser<
         return {Optional<IntT>(value)};
       return failure();
     }
-    return {llvm::None};
+    return {std::nullopt};
   }
 };
 

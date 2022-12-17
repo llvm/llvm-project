@@ -21,13 +21,16 @@ namespace tooling {
 /// Returns true if the given physical file is a self-contained header.
 ///
 /// A header is considered self-contained if
-//   - it has a proper header guard or has been #imported
+//   - it has a proper header guard or has been #imported or contains #import(s)
 //   - *and* it doesn't have a dont-include-me pattern.
 ///
 /// This function can be expensive as it may scan the source code to find out
 /// dont-include-me pattern heuristically.
 bool isSelfContainedHeader(const FileEntry *FE, const SourceManager &SM,
                            HeaderSearch &HeaderInfo);
+
+/// This scans the given source code to see if it contains #import(s).
+bool codeContainsImports(llvm::StringRef Code);
 
 /// If Text begins an Include-What-You-Use directive, returns it.
 /// Given "// IWYU pragma: keep", returns "keep".

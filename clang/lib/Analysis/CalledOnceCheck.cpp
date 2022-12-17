@@ -997,7 +997,7 @@ private:
 
   /// Return true/false if 'swift_async' attribute states that the given
   /// parameter is conventionally called once.
-  /// Return llvm::None if the given declaration doesn't have 'swift_async'
+  /// Return std::nullopt if the given declaration doesn't have 'swift_async'
   /// attribute.
   static llvm::Optional<bool> isConventionalSwiftAsync(const Decl *D,
                                                        unsigned ParamIndex) {

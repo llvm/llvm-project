@@ -338,7 +338,7 @@ class RegionRange
 public:
   using RangeBaseT::RangeBaseT;
 
-  RegionRange(MutableArrayRef<Region> regions = llvm::None);
+  RegionRange(MutableArrayRef<Region> regions = std::nullopt);
 
   template <typename Arg, typename = std::enable_if_t<std::is_constructible<
                               ArrayRef<std::unique_ptr<Region>>, Arg>::value>>

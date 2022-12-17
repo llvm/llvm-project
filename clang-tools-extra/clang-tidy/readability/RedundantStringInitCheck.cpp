@@ -50,7 +50,7 @@ getConstructExprArgRange(const CXXConstructExpr &Construct) {
       E = Arg->getEndLoc();
   }
   if (B.isInvalid() || E.isInvalid())
-    return llvm::None;
+    return std::nullopt;
   return SourceRange(B, E);
 }
 

@@ -402,7 +402,7 @@ static Constant *getSignedIntOrFpConstant(Type *Ty, int64_t C) {
 ///   1) Returns exact trip count if it is known.
 ///   2) Returns expected trip count according to profile data if any.
 ///   3) Returns upper bound estimate if it is known.
-///   4) Returns None if all of the above failed.
+///   4) Returns std::nullopt if all of the above failed.
 static Optional<unsigned> getSmallBestKnownTC(ScalarEvolution &SE, Loop *L) {
   // Check if exact trip count is known.
   if (unsigned ExpectedTC = SE.getSmallConstantTripCount(L))
@@ -2361,7 +2361,6 @@ static void buildScalarSteps(Value *ScalarIV, Value *Step,
   // Determine the number of scalars we need to generate for each unroll
   // iteration.
   bool FirstLaneOnly = vputils::onlyFirstLaneUsed(Def);
-  unsigned Lanes = FirstLaneOnly ? 1 : State.VF.getKnownMinValue();
   // Compute the scalar steps and save the results in State.
   Type *IntStepTy = IntegerType::get(ScalarIVTy->getContext(),
                                      ScalarIVTy->getScalarSizeInBits());
@@ -2375,7 +2374,17 @@ static void buildScalarSteps(Value *ScalarIV, Value *Step,
     SplatIV = Builder.CreateVectorSplat(State.VF, ScalarIV);
   }
 
-  for (unsigned Part = 0; Part < State.UF; ++Part) {
+  unsigned StartPart = 0;
+  unsigned EndPart = State.UF;
+  unsigned StartLane = 0;
+  unsigned EndLane = FirstLaneOnly ? 1 : State.VF.getKnownMinValue();
+  if (State.Instance) {
+    StartPart = State.Instance->Part;
+    EndPart = StartPart + 1;
+    StartLane = State.Instance->Lane.getKnownLane();
+    EndLane = StartLane + 1;
+  }
+  for (unsigned Part = StartPart; Part < EndPart; ++Part) {
     Value *StartIdx0 = createStepForVF(Builder, IntStepTy, State.VF, Part);
 
     if (!FirstLaneOnly && State.VF.isScalable()) {
@@ -2394,7 +2403,7 @@ static void buildScalarSteps(Value *ScalarIV, Value *Step,
     if (ScalarIVTy->isFloatingPointTy())
       StartIdx0 = Builder.CreateSIToFP(StartIdx0, ScalarIVTy);
 
-    for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
+    for (unsigned Lane = StartLane; Lane < EndLane; ++Lane) {
       Value *StartIdx = Builder.CreateBinOp(
           AddOp, StartIdx0, getSignedIntOrFpConstant(ScalarIVTy, Lane));
       // The step returned by `createStepForVF` is a runtime-evaluated value
@@ -9557,8 +9566,6 @@ void VPDerivedIVRecipe::execute(VPTransformState &State) {
 }
 
 void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
-  assert(!State.Instance && "VPScalarIVStepsRecipe being replicated.");
-
   // Fast-math-flags propagate from the original induction instruction.
   IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
   if (IndDesc.getInductionBinOp() &&

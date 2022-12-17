@@ -683,7 +683,7 @@ public:
             &result = procedure.functionResult)
       if (const auto *resultTypeAndShape = result->GetTypeAndShape())
         return resultTypeAndShape->type();
-    return llvm::None;
+    return std::nullopt;
   }
 
   static bool mustPassLengthWithDummyProcedure(
@@ -1060,15 +1060,15 @@ private:
           getConverter().getFoldingContext(), toEvExpr(*expr)));
     return std::nullopt;
   }
-  void
-  addFirOperand(mlir::Type type, int entityPosition, Property p,
-                llvm::ArrayRef<mlir::NamedAttribute> attributes = llvm::None) {
+  void addFirOperand(
+      mlir::Type type, int entityPosition, Property p,
+      llvm::ArrayRef<mlir::NamedAttribute> attributes = std::nullopt) {
     interface.inputs.emplace_back(
         FirPlaceHolder{type, entityPosition, p, attributes});
   }
   void
   addFirResult(mlir::Type type, int entityPosition, Property p,
-               llvm::ArrayRef<mlir::NamedAttribute> attributes = llvm::None) {
+               llvm::ArrayRef<mlir::NamedAttribute> attributes = std::nullopt) {
     interface.outputs.emplace_back(
         FirPlaceHolder{type, entityPosition, p, attributes});
   }

@@ -888,7 +888,7 @@ public:
   /// Finds the positive number associated with \p V if it has been mapped.
   /// \param [in] V - the Value to find.
   /// \returns The positive number corresponding to the value.
-  /// \returns None if not present.
+  /// \returns std::nullopt if not present.
   Optional<unsigned> getGVN(Value *V) {
     assert(V != nullptr && "Value is a nullptr?");
     DenseMap<Value *, unsigned>::iterator VNIt = ValueToNumber.find(V);
@@ -900,7 +900,7 @@ public:
   /// Finds the Value associate with \p Num if it exists.
   /// \param [in] Num - the number to find.
   /// \returns The Value associated with the number.
-  /// \returns None if not present.
+  /// \returns std::nullopt if not present.
   Optional<Value *> fromGVN(unsigned Num) {
     DenseMap<unsigned, Value *>::iterator VNIt = NumberToValue.find(Num);
     if (VNIt == NumberToValue.end())

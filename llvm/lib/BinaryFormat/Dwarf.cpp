@@ -365,7 +365,8 @@ unsigned llvm::dwarf::LanguageVendor(dwarf::SourceLanguage Lang) {
   }
 }
 
-Optional<unsigned> llvm::dwarf::LanguageLowerBound(dwarf::SourceLanguage Lang) {
+std::optional<unsigned>
+llvm::dwarf::LanguageLowerBound(dwarf::SourceLanguage Lang) {
   switch (Lang) {
   default:
     return std::nullopt;
@@ -691,8 +692,8 @@ StringRef llvm::dwarf::IndexString(unsigned Idx) {
   }
 }
 
-Optional<uint8_t> llvm::dwarf::getFixedFormByteSize(dwarf::Form Form,
-                                                    FormParams Params) {
+std::optional<uint8_t> llvm::dwarf::getFixedFormByteSize(dwarf::Form Form,
+                                                         FormParams Params) {
   switch (Form) {
   case DW_FORM_addr:
     if (Params)

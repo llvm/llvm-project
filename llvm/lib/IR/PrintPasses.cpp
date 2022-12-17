@@ -8,6 +8,7 @@
 
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
@@ -155,37 +156,64 @@ bool llvm::isFunctionInPrintList(StringRef FunctionName) {
          PrintFuncNames.count(std::string(FunctionName));
 }
 
+std::error_code cleanUpTempFilesImpl(ArrayRef<std::string> FileName,
+                                     unsigned N) {
+  std::error_code RC;
+  for (unsigned I = 0; I < N; ++I) {
+    std::error_code EC = sys::fs::remove(FileName[I]);
+    if (EC)
+      RC = EC;
+  }
+  return RC;
+}
+
+std::error_code llvm::prepareTempFiles(SmallVector<int> &FD,
+                                       ArrayRef<StringRef> SR,
+                                       SmallVector<std::string> &FileName) {
+  assert(FD.size() >= SR.size() && FileName.size() == FD.size() &&
+         "Unexpected array sizes");
+  std::error_code EC;
+  unsigned I = 0;
+  for (; I < FD.size(); ++I) {
+    if (FD[I] == -1) {
+      SmallVector<char, 200> SV;
+      EC = sys::fs::createTemporaryFile("tmpfile", "txt", FD[I], SV);
+      if (EC)
+        break;
+      FileName[I] = Twine(SV).str();
+    }
+    if (I < SR.size()) {
+      EC = sys::fs::openFileForWrite(FileName[I], FD[I]);
+      if (EC)
+        break;
+      raw_fd_ostream OutStream(FD[I], /*shouldClose=*/true);
+      if (FD[I] == -1) {
+        EC = make_error_code(errc::io_error);
+        break;
+      }
+      OutStream << SR[I];
+    }
+  }
+  if (EC && I > 0)
+    // clean up created temporary files
+    cleanUpTempFilesImpl(FileName, I);
+  return EC;
+}
+
+std::error_code llvm::cleanUpTempFiles(ArrayRef<std::string> FileName) {
+  return cleanUpTempFilesImpl(FileName, FileName.size());
+}
+
 std::string llvm::doSystemDiff(StringRef Before, StringRef After,
                                StringRef OldLineFormat, StringRef NewLineFormat,
                                StringRef UnchangedLineFormat) {
-  StringRef SR[2]{Before, After};
   // Store the 2 bodies into temporary files and call diff on them
   // to get the body of the node.
-  const unsigned NumFiles = 3;
-  static std::string FileName[NumFiles];
-  static int FD[NumFiles]{-1, -1, -1};
-  for (unsigned I = 0; I < NumFiles; ++I) {
-    if (FD[I] == -1) {
-      SmallVector<char, 200> SV;
-      std::error_code EC =
-          sys::fs::createTemporaryFile("tmpdiff", "txt", FD[I], SV);
-      if (EC)
-        return "Unable to create temporary file.";
-      FileName[I] = Twine(SV).str();
-    }
-    // The third file is used as the result of the diff.
-    if (I == NumFiles - 1)
-      break;
-
-    std::error_code EC = sys::fs::openFileForWrite(FileName[I], FD[I]);
-    if (EC)
-      return "Unable to open temporary file for writing.";
-
-    raw_fd_ostream OutStream(FD[I], /*shouldClose=*/true);
-    if (FD[I] == -1)
-      return "Error opening file for writing.";
-    OutStream << SR[I];
-  }
+  static SmallVector<int> FD{-1, -1, -1};
+  SmallVector<StringRef> SR{Before, After};
+  static SmallVector<std::string> FileName{"", "", ""};
+  if (auto Err = prepareTempFiles(FD, SR, FileName))
+    return "Unable to create temporary file.";
 
   static ErrorOr<std::string> DiffExe = sys::findProgramByName(DiffBinary);
   if (!DiffExe)
@@ -210,11 +238,8 @@ std::string llvm::doSystemDiff(StringRef Before, StringRef After,
   else
     return "Unable to read result.";
 
-  // Clean up.
-  for (const std::string &I : FileName) {
-    std::error_code EC = sys::fs::remove(I);
-    if (EC)
-      return "Unable to remove temporary file.";
-  }
+  if (auto Err = cleanUpTempFiles(FileName))
+    return "Unable to remove temporary file.";
+
   return Diff;
 }

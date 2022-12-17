@@ -139,9 +139,9 @@ class GsymCreator {
   DenseMap<llvm::gsym::FileEntry, uint32_t> FileEntryToIndex;
   std::vector<llvm::gsym::FileEntry> Files;
   std::vector<uint8_t> UUID;
-  Optional<AddressRanges> ValidTextRanges;
+  std::optional<AddressRanges> ValidTextRanges;
   AddressRanges Ranges;
-  llvm::Optional<uint64_t> BaseAddress;
+  std::optional<uint64_t> BaseAddress;
   bool Finalized = false;
   bool Quiet;
 
@@ -249,7 +249,7 @@ public:
   }
 
   /// Get the valid text ranges.
-  const Optional<AddressRanges> GetValidTextRanges() const {
+  const std::optional<AddressRanges> GetValidTextRanges() const {
     return ValidTextRanges;
   }
 

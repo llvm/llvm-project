@@ -451,7 +451,7 @@ private:
           .getValue()
           .getSExtValue();
 
-    return llvm::None;
+    return std::nullopt;
   }
 
   Value extractSizeOfRankedMemRef(Type operandType, memref::DimOp dimOp,
@@ -1278,7 +1278,7 @@ private:
     UnrankedMemRefDescriptor::computeSizes(rewriter, loc, *getTypeConverter(),
                                            targetDesc, sizes);
     Value underlyingDescPtr = rewriter.create<LLVM::AllocaOp>(
-        loc, getVoidPtrType(), sizes.front(), llvm::None);
+        loc, getVoidPtrType(), sizes.front(), std::nullopt);
     targetDesc.setMemRefDescPtr(rewriter, loc, underlyingDescPtr);
 
     // Extract pointers and offset from the source memref.
@@ -1362,8 +1362,8 @@ private:
 
     // Hook up the cond exit to the remainder.
     rewriter.setInsertionPointToEnd(condBlock);
-    rewriter.create<LLVM::CondBrOp>(loc, pred, bodyBlock, llvm::None, remainder,
-                                    llvm::None);
+    rewriter.create<LLVM::CondBrOp>(loc, pred, bodyBlock, std::nullopt,
+                                    remainder, std::nullopt);
 
     // Reset position to beginning of new remainder block.
     rewriter.setInsertionPointToStart(remainder);
@@ -1599,7 +1599,8 @@ static void fillInStridesForCollapsedMemDescriptor(
               initBlock->getParent(), Region::iterator(continueBlock), {});
         }
         rewriter.create<LLVM::CondBrOp>(loc, predNeOne, continueBlock,
-                                        srcStride, nextEntryBlock, llvm::None);
+                                        srcStride, nextEntryBlock,
+                                        std::nullopt);
         curEntryBlock = nextEntryBlock;
       }
     }
@@ -1897,7 +1898,7 @@ matchSimpleAtomicOp(memref::AtomicRMWOp atomicOp) {
   case arith::AtomicRMWKind::andi:
     return LLVM::AtomicBinOp::_and;
   default:
-    return llvm::None;
+    return std::nullopt;
   }
   llvm_unreachable("Invalid AtomicRMWKind");
 }

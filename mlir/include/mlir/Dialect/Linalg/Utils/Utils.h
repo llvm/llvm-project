@@ -138,7 +138,7 @@ Optional<SmallVector<ReassociationIndices>>
 getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes);
 
 /// Return the identity numeric value associated to the give op. Return
-/// llvm::None if there is no known neutral element.
+/// std::nullopt if there is no known neutral element.
 Optional<Attribute> getNeutralElement(Operation *op);
 
 //===----------------------------------------------------------------------===//
@@ -222,7 +222,7 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
 /// number of values in `ivs`.
 ///
 /// Some of the `valuesToTile` won't be affected by tiling. For these values,
-/// llvm::None will be returned.
+/// std::nullopt will be returned.
 SmallVector<Optional<SliceParameters>>
 computeAllSliceParameters(OpBuilder &builder, Location loc, LinalgOp linalgOp,
                           ValueRange valuesToTile, ArrayRef<OpFoldResult> ivs,

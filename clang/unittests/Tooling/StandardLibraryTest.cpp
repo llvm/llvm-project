@@ -94,13 +94,13 @@ TEST(StdlibTest, Recognizer) {
 
   stdlib::Recognizer Recognizer;
 
-  EXPECT_EQ(Recognizer(&VectorNonstd), llvm::None);
+  EXPECT_EQ(Recognizer(&VectorNonstd), std::nullopt);
   EXPECT_EQ(Recognizer(Vec), stdlib::Symbol::named("std::", "vector"));
   EXPECT_EQ(Recognizer(Nest), stdlib::Symbol::named("std::", "vector"));
   EXPECT_EQ(Recognizer(Clock),
             stdlib::Symbol::named("std::chrono::", "system_clock"));
   EXPECT_EQ(Recognizer(CDivT), stdlib::Symbol::named("", "div_t"));
-  EXPECT_EQ(Recognizer(Sec), llvm::None);
+  EXPECT_EQ(Recognizer(Sec), std::nullopt);
 }
 
 } // namespace

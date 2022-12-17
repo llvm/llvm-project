@@ -96,7 +96,7 @@ clang::tooling::getRangeForEdit(const CharSourceRange &EditRange,
   CharSourceRange Range = Lexer::makeFileCharRange(EditRange, SM, LangOpts);
   bool IsInvalid = llvm::errorToBool(validateEditRange(Range, SM));
   if (IsInvalid)
-    return llvm::None;
+    return std::nullopt;
   return Range;
 
 }

@@ -65,7 +65,7 @@ public:
     DIEInfo(dw_offset_t o, dw_tag_t t, uint32_t f, uint32_t h);
 
     explicit operator DIERef() const {
-      return DIERef(llvm::None, DIERef::Section::DebugInfo, die_offset);
+      return DIERef(std::nullopt, DIERef::Section::DebugInfo, die_offset);
     }
   };
 

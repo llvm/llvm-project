@@ -132,12 +132,12 @@ static Optional<int64_t> getEquivalentFuncArgIdx(FuncOp funcOp,
   auto funcOpIt = state.equivalentFuncArgs.find(funcOp);
   if (funcOpIt == state.equivalentFuncArgs.end())
     // No equivalence info stores for funcOp.
-    return None;
+    return std::nullopt;
 
   auto retValIt = funcOpIt->getSecond().find(returnValIdx);
   if (retValIt == funcOpIt->getSecond().end())
     // Return value has no equivalent bbArg.
-    return None;
+    return std::nullopt;
 
   return retValIt->getSecond();
 }
@@ -273,7 +273,7 @@ struct CallOpInterface
     SmallVector<Value> replacementValues(numResults, Value());
     // For non-tensor results: A mapping from return val indices of the old
     // CallOp to return val indices of the bufferized CallOp.
-    SmallVector<Optional<unsigned>> retValMapping(numResults, None);
+    SmallVector<Optional<unsigned>> retValMapping(numResults, std::nullopt);
     // Operands of the bufferized CallOp.
     SmallVector<Value> newOperands(numOperands, Value());
 

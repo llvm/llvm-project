@@ -16,6 +16,7 @@ llvm_all_targets = [
   "BPF",
   "Hexagon",
   "Lanai",
+  "LoongArch",
   "Mips",
   "NVPTX",
   "PowerPC",
@@ -81,8 +82,8 @@ foreach(target, llvm_targets_to_build) {
   } else if (target == "X86") {
     llvm_build_X86 = true
   } else if (target == "AVR" || target == "Hexagon" || target == "Lanai" ||
-             target == "NVPTX" || target == "RISCV" || target == "Sparc" ||
-             target == "SystemZ") {
+             target == "LoongArch" || target == "NVPTX" || target == "RISCV" ||
+             target == "Sparc" || target == "SystemZ") {
     # Nothing to do.
   } else {
     all_targets_string = ""

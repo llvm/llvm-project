@@ -592,8 +592,8 @@ std::string codegen::getFeaturesStr() {
   if (getMCPU() == "native") {
     StringMap<bool> HostFeatures;
     if (sys::getHostCPUFeatures(HostFeatures))
-      for (auto &F : HostFeatures)
-        Features.AddFeature(F.first(), F.second);
+      for (const auto &[Feature, IsEnabled] : HostFeatures)
+        Features.AddFeature(Feature, IsEnabled);
   }
 
   for (auto const &MAttr : getMAttrs())
@@ -612,8 +612,8 @@ std::vector<std::string> codegen::getFeatureList() {
   if (getMCPU() == "native") {
     StringMap<bool> HostFeatures;
     if (sys::getHostCPUFeatures(HostFeatures))
-      for (auto &F : HostFeatures)
-        Features.AddFeature(F.first(), F.second);
+      for (const auto &[Feature, IsEnabled] : HostFeatures)
+        Features.AddFeature(Feature, IsEnabled);
   }
 
   for (auto const &MAttr : getMAttrs())

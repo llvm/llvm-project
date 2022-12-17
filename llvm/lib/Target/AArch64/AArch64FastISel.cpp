@@ -496,6 +496,30 @@ unsigned AArch64FastISel::materializeGV(const GlobalValue *GV) {
             ADRPReg)
         .addGlobalAddress(GV, 0, AArch64II::MO_PAGE | OpFlags);
 
+    if (OpFlags & AArch64II::MO_TAGGED) {
+      // MO_TAGGED on the page indicates a tagged address. Set the tag now.
+      // We do so by creating a MOVK that sets bits 48-63 of the register to
+      // (global address + 0x100000000 - PC) >> 48. This assumes that we're in
+      // the small code model so we can assume a binary size of <= 4GB, which
+      // makes the untagged PC relative offset positive. The binary must also be
+      // loaded into address range [0, 2^48). Both of these properties need to
+      // be ensured at runtime when using tagged addresses.
+      //
+      // TODO: There is duplicate logic in AArch64ExpandPseudoInsts.cpp that
+      // also uses BuildMI for making an ADRP (+ MOVK) + ADD, but the operands
+      // are not exactly 1:1 with FastISel so we cannot easily abstract this
+      // out. At some point, it would be nice to find a way to not have this
+      // duplciate code.
+      unsigned DstReg = createResultReg(&AArch64::GPR64commonRegClass);
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::MOVKXi),
+              DstReg)
+          .addReg(ADRPReg)
+          .addGlobalAddress(GV, /*Offset=*/0x100000000,
+                            AArch64II::MO_PREL | AArch64II::MO_G3)
+          .addImm(48);
+      ADRPReg = DstReg;
+    }
+
     ResultReg = createResultReg(&AArch64::GPR64spRegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::ADDXri),
             ResultReg)

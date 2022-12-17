@@ -689,7 +689,8 @@ static Optional<unsigned> findMainViewFileID(const FunctionRecord &Function) {
 }
 
 /// Check if SourceFile is the file that contains the definition of
-/// the Function. Return the ID of the file in that case or None otherwise.
+/// the Function. Return the ID of the file in that case or std::nullopt
+/// otherwise.
 static Optional<unsigned> findMainViewFileID(StringRef SourceFile,
                                              const FunctionRecord &Function) {
   Optional<unsigned> I = findMainViewFileID(Function);

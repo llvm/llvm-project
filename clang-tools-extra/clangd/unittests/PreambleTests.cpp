@@ -194,7 +194,7 @@ llvm::Optional<ParsedAST> createPatchedAST(llvm::StringRef Baseline,
   auto BaselinePreamble = TestTU::withCode(Baseline).preamble();
   if (!BaselinePreamble) {
     ADD_FAILURE() << "Failed to build baseline preamble";
-    return llvm::None;
+    return std::nullopt;
   }
 
   IgnoreDiagnostics Diags;
@@ -203,7 +203,7 @@ llvm::Optional<ParsedAST> createPatchedAST(llvm::StringRef Baseline,
   auto CI = buildCompilerInvocation(TU.inputs(FS), Diags);
   if (!CI) {
     ADD_FAILURE() << "Failed to build compiler invocation";
-    return llvm::None;
+    return std::nullopt;
   }
   return ParsedAST::build(testPath(TU.Filename), TU.inputs(FS), std::move(CI),
                           {}, BaselinePreamble);

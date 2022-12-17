@@ -64,7 +64,7 @@ define void @test4(ptr %ptr, <2 x i32> %val) {
 ; CHECK-NEXT:    [[VAL_I0:%.*]] = extractelement <2 x i32> [[VAL:%.*]], i32 0
 ; CHECK-NEXT:    store i32 [[VAL_I0]], ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    [[VAL_I1:%.*]] = extractelement <2 x i32> [[VAL]], i32 1
-; CHECK-NEXT:    [[PTR_I1:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i32 1
+; CHECK-NEXT:    [[PTR_I1:%.*]] = getelementptr i32, ptr [[PTR]], i32 1
 ; CHECK-NEXT:    store i32 [[VAL_I1]], ptr [[PTR_I1]], align 4
 ; CHECK-NEXT:    ret void
 ;

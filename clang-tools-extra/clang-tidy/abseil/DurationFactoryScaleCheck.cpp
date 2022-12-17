@@ -30,7 +30,7 @@ getScaleForFactory(llvm::StringRef FactoryName) {
       .Case("Seconds", DurationScale::Seconds)
       .Case("Minutes", DurationScale::Minutes)
       .Case("Hours", DurationScale::Hours)
-      .Default(llvm::None);
+      .Default(std::nullopt);
 }
 
 // Given either an integer or float literal, return its value.
@@ -89,7 +89,7 @@ getNewScaleSingleStep(DurationScale OldScale, double Multiplier) {
     break;
   }
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 // Given the scale of a duration and a `Multiplier`, determine if `Multiplier`
@@ -107,7 +107,7 @@ static llvm::Optional<DurationScale> getNewScale(DurationScale OldScale,
     OldScale = std::get<0>(*Result);
   }
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 void DurationFactoryScaleCheck::registerMatchers(MatchFinder *Finder) {

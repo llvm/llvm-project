@@ -1,6 +1,6 @@
-; RUN: opt -S -loop-vectorize -enable-vplan-native-path -mtriple x86_64  < %s | FileCheck %s
-; RUN: opt -S -loop-vectorize -enable-vplan-native-path -mtriple x86_64  -mattr=+avx < %s | FileCheck %s --check-prefix=AVX
-; RUN: opt -S -loop-vectorize -enable-vplan-native-path -mtriple x86_64  -mattr=+avx2 < %s | FileCheck %s --check-prefix=AVX
+; RUN: opt -S -passes=loop-vectorize -enable-vplan-native-path -mtriple x86_64  < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -enable-vplan-native-path -mtriple x86_64  -mattr=+avx < %s | FileCheck %s --check-prefix=AVX
+; RUN: opt -S -passes=loop-vectorize -enable-vplan-native-path -mtriple x86_64  -mattr=+avx2 < %s | FileCheck %s --check-prefix=AVX
 
 ; extern int arr[8][8];
 ; extern int arr2[8];

@@ -1289,7 +1289,7 @@ static Optional<FileEntryRef> getPublicModuleMap(FileEntryRef File,
   else if (Filename == "module.private.modulemap")
     llvm::sys::path::append(PublicFilename, "module.modulemap");
   else
-    return None;
+    return std::nullopt;
   return FileMgr.getOptionalFileRef(PublicFilename);
 }
 

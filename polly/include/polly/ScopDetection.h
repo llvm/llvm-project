@@ -48,15 +48,12 @@
 
 #include "polly/ScopDetectionDiagnostic.h"
 #include "polly/Support/ScopHelper.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Pass.h"
 #include <set>
-
-namespace llvm {
-class AAResults;
-} // namespace llvm
 
 namespace polly {
 using llvm::AAResults;
@@ -64,6 +61,7 @@ using llvm::AliasSetTracker;
 using llvm::AnalysisInfoMixin;
 using llvm::AnalysisKey;
 using llvm::AnalysisUsage;
+using llvm::BatchAAResults;
 using llvm::BranchInst;
 using llvm::CallInst;
 using llvm::DenseMap;
@@ -142,6 +140,7 @@ public:
   /// Context variables for SCoP detection.
   struct DetectionContext {
     Region &CurRegion;   // The region to check.
+    BatchAAResults BAA;  // The batched alias analysis results.
     AliasSetTracker AST; // The AliasSetTracker to hold the alias information.
     bool Verifying;      // If we are in the verification phase?
 
@@ -189,7 +188,7 @@ public:
 
     /// Initialize a DetectionContext from scratch.
     DetectionContext(Region &R, AAResults &AA, bool Verify)
-        : CurRegion(R), AST(AA), Verifying(Verify), Log(&R) {}
+        : CurRegion(R), BAA(AA), AST(BAA), Verifying(Verify), Log(&R) {}
   };
 
   /// Helper data structure to collect statistics about loop counts.

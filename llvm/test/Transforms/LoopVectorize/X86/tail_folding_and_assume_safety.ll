@@ -1,4 +1,4 @@
-; RUN: opt -mcpu=skx -S -loop-vectorize -instcombine -force-vector-width=8 -force-vector-interleave=1 < %s | FileCheck %s
+; RUN: opt -mcpu=skx -S -passes=loop-vectorize,instcombine -force-vector-width=8 -force-vector-interleave=1 < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"

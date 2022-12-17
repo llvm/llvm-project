@@ -151,7 +151,7 @@ private:
   Class defCls;
   /// An optional attribute or type storage class. The storage class will
   /// exist if and only if the def has more than zero parameters.
-  Optional<Class> storageCls;
+  std::optional<Class> storageCls;
 
   /// The C++ base value of the def, either "Attribute" or "Type".
   StringRef valueType;
@@ -217,7 +217,7 @@ void DefGen::createParentWithTraits() {
 /// Extra class definitions have a `$cppClass` substitution that is to be
 /// replaced by the C++ class name.
 static std::string formatExtraDefinitions(const AttrOrTypeDef &def) {
-  if (Optional<StringRef> extraDef = def.getExtraDefs()) {
+  if (std::optional<StringRef> extraDef = def.getExtraDefs()) {
     FmtContext ctx = FmtContext().addSubst("cppClass", def.getCppClassName());
     return tgfmt(*extraDef, &ctx).str();
   }
@@ -230,7 +230,7 @@ void DefGen::emitTopLevelDeclarations() {
   defCls.declare<UsingDeclaration>("Base::Base");
 
   // Emit the extra declarations first in case there's a definition in there.
-  Optional<StringRef> extraDecl = def.getExtraDecls();
+  std::optional<StringRef> extraDecl = def.getExtraDecls();
   std::string extraDef = formatExtraDefinitions(def);
   defCls.declare<ExtraClassDeclaration>(extraDecl ? *extraDecl : "",
                                         std::move(extraDef));
@@ -359,7 +359,7 @@ void DefGen::emitCustomBuilder(const AttrOrTypeBuilder &builder) {
   // Don't emit a body if there isn't one.
   auto props = builder.getBody() ? Method::Static : Method::StaticDeclaration;
   StringRef returnType = def.getCppClassName();
-  if (Optional<StringRef> builderReturnType = builder.getReturnType())
+  if (std::optional<StringRef> builderReturnType = builder.getReturnType())
     returnType = *builderReturnType;
   Method *m = defCls.addMethod(returnType, "get", props,
                                getCustomBuilderParams({}, builder));
@@ -387,7 +387,7 @@ void DefGen::emitCheckedCustomBuilder(const AttrOrTypeBuilder &builder) {
   // Don't emit a body if there isn't one.
   auto props = builder.getBody() ? Method::Static : Method::StaticDeclaration;
   StringRef returnType = def.getCppClassName();
-  if (Optional<StringRef> builderReturnType = builder.getReturnType())
+  if (std::optional<StringRef> builderReturnType = builder.getReturnType())
     returnType = *builderReturnType;
   Method *m = defCls.addMethod(
       returnType, "getChecked", props,
@@ -507,7 +507,7 @@ void DefGen::emitConstruct() {
     // Use the parameters' custom allocator code, if provided.
     FmtContext ctx = FmtContext().addSubst("_allocator", "allocator");
     for (auto &param : params) {
-      if (Optional<StringRef> allocCode = param.getAllocator()) {
+      if (std::optional<StringRef> allocCode = param.getAllocator()) {
         ctx.withSelf(param.getName()).addSubst("_dst", param.getName());
         body << tgfmt(*allocCode, &ctx) << '\n';
       }
@@ -815,7 +815,7 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
   }
   parse.body() << "    .Default([&](llvm::StringRef keyword, llvm::SMLoc) {\n"
                   "      *mnemonic = keyword;\n"
-                  "      return llvm::None;\n"
+                  "      return std::nullopt;\n"
                   "    });";
   printer.body() << "    .Default([](auto) { return ::mlir::failure(); });";
 

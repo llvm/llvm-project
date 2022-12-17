@@ -369,7 +369,7 @@ public:
     return loc::ConcreteInt(BasicVals.getValue(integer));
   }
 
-  /// Return MemRegionVal on success cast, otherwise return None.
+  /// Return MemRegionVal on success cast, otherwise return std::nullopt.
   Optional<loc::MemRegionVal> getCastedMemRegionVal(const MemRegion *region,
                                                     QualType type);
 

@@ -1,13 +1,13 @@
 ; RUN: %lli -jit-kind=mcjit %s > /dev/null
 ; RUN: %lli %s > /dev/null
 
-@X = global i32 7		; <i32*> [#uses=0]
-@msg = internal global [13 x i8] c"Hello World\0A\00"		; <[13 x i8]*> [#uses=1]
+@X = global i32 7		; <ptr> [#uses=0]
+@msg = internal global [13 x i8] c"Hello World\0A\00"		; <ptr> [#uses=1]
 
-declare void @printf([13 x i8]*, ...)
+declare void @printf(ptr, ...)
 
 define void @bar() {
-	call void ([13 x i8]*, ...) @printf( [13 x i8]* @msg )
+	call void (ptr, ...) @printf( ptr @msg )
 	ret void
 }
 

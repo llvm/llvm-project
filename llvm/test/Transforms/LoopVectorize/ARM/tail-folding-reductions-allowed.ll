@@ -1,10 +1,10 @@
-; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -loop-vectorize -tail-predication=enabled -S < %s | \
+; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -passes=loop-vectorize -tail-predication=enabled -S < %s | \
 ; RUN:  FileCheck %s -check-prefixes=COMMON,CHECK
 
-; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -loop-vectorize -tail-predication=enabled-no-reductions -S < %s | \
+; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -passes=loop-vectorize -tail-predication=enabled-no-reductions -S < %s | \
 ; RUN:  FileCheck %s -check-prefixes=COMMON,NORED
 
-; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -loop-vectorize -tail-predication=force-enabled-no-reductions -S < %s | \
+; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -passes=loop-vectorize -tail-predication=force-enabled-no-reductions -S < %s | \
 ; RUN:  FileCheck %s -check-prefixes=COMMON,NORED
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"

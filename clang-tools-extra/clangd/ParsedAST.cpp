@@ -399,7 +399,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     elog("Failed to prepare a compiler instance: {0}",
          !Diags.empty() ? static_cast<DiagBase &>(Diags.back()).Message
                         : "unknown error");
-    return None;
+    return std::nullopt;
   }
   tidy::ClangTidyOptions ClangTidyOpts;
   if (PreserveDiags) {
@@ -443,7 +443,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   if (!Action->BeginSourceFile(*Clang, MainInput)) {
     log("BeginSourceFile() failed when building AST for {0}",
         MainInput.getFile());
-    return None;
+    return std::nullopt;
   }
   // If we saw an include guard in the preamble section of the main file,
   // mark the main-file as include-guarded.
@@ -784,7 +784,7 @@ ParsedAST::ParsedAST(PathRef TUPath, llvm::StringRef Version,
 
 llvm::Optional<llvm::StringRef> ParsedAST::preambleVersion() const {
   if (!Preamble)
-    return llvm::None;
+    return std::nullopt;
   return llvm::StringRef(Preamble->Version);
 }
 

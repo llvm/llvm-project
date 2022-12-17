@@ -137,8 +137,7 @@ static alias DumpAllAlias("a", desc("Alias for --all"), aliasopt(DumpAll),
 
 // Options for dumping specific sections.
 static unsigned DumpType = DIDT_Null;
-static std::array<llvm::Optional<uint64_t>, (unsigned)DIDT_ID_Count>
-    DumpOffsets;
+static std::array<std::optional<uint64_t>, (unsigned)DIDT_ID_Count> DumpOffsets;
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
   static opt<OPTION> Dump##ENUM_NAME(CMDLINE_NAME,                             \
                                      desc("Dump the " ELF_NAME " section"),    \
@@ -386,7 +385,7 @@ static void filterByName(const StringSet<> &Names,
 static void getDies(DWARFContext &DICtx, const AppleAcceleratorTable &Accel,
                     StringRef Name, SmallVectorImpl<DWARFDie> &Dies) {
   for (const auto &Entry : Accel.equal_range(Name)) {
-    if (llvm::Optional<uint64_t> Off = Entry.getDIESectionOffset()) {
+    if (std::optional<uint64_t> Off = Entry.getDIESectionOffset()) {
       if (DWARFDie Die = DICtx.getDIEForOffset(*Off))
         Dies.push_back(Die);
     }
@@ -395,8 +394,8 @@ static void getDies(DWARFContext &DICtx, const AppleAcceleratorTable &Accel,
 
 static DWARFDie toDie(const DWARFDebugNames::Entry &Entry,
                       DWARFContext &DICtx) {
-  llvm::Optional<uint64_t> CUOff = Entry.getCUOffset();
-  llvm::Optional<uint64_t> Off = Entry.getDIEUnitOffset();
+  std::optional<uint64_t> CUOff = Entry.getCUOffset();
+  std::optional<uint64_t> Off = Entry.getDIEUnitOffset();
   if (!CUOff || !Off)
     return DWARFDie();
 
@@ -404,7 +403,7 @@ static DWARFDie toDie(const DWARFDebugNames::Entry &Entry,
   if (!CU)
     return DWARFDie();
 
-  if (llvm::Optional<uint64_t> DWOId = CU->getDWOId()) {
+  if (std::optional<uint64_t> DWOId = CU->getDWOId()) {
     // This is a skeleton unit. Look up the DIE in the DWO unit.
     CU = DICtx.getDWOCompileUnitForHash(*DWOId);
     if (!CU)
@@ -477,7 +476,7 @@ static bool collectLineTableSources(const DWARFDebugLine::LineTable &LT,
                                     StringRef CompDir,
                                     std::vector<std::string> &Sources) {
   bool Result = true;
-  llvm::Optional<uint64_t> LastIndex = LT.getLastValidFileIndex();
+  std::optional<uint64_t> LastIndex = LT.getLastValidFileIndex();
   for (uint64_t I = LT.hasFileAtIndex(0) ? 0 : 1,
                 E = LastIndex ? *LastIndex + 1 : 0;
        I < E; ++I) {

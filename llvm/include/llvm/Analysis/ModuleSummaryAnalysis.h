@@ -13,7 +13,6 @@
 #ifndef LLVM_ANALYSIS_MODULESUMMARYANALYSIS_H
 #define LLVM_ANALYSIS_MODULESUMMARYANALYSIS_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"

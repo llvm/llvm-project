@@ -672,7 +672,7 @@ Sections:
   std::vector<BBAddrMap> AllBBAddrMaps = {E1, E2, E3};
 
   auto DoCheckSucceeds = [&](StringRef YamlString,
-                             Optional<unsigned> TextSectionIndex,
+                             std::optional<unsigned> TextSectionIndex,
                              std::vector<BBAddrMap> ExpectedResult) {
     SmallString<0> Storage;
     Expected<ELFObjectFile<ELF64LE>> ElfOrErr =
@@ -688,7 +688,7 @@ Sections:
   };
 
   auto DoCheckFails = [&](StringRef YamlString,
-                          Optional<unsigned> TextSectionIndex,
+                          std::optional<unsigned> TextSectionIndex,
                           const char *ErrMsg) {
     SmallString<0> Storage;
     Expected<ELFObjectFile<ELF64LE>> ElfOrErr =

@@ -198,7 +198,7 @@ public:
           return Result;
         diagnoseBadIntegerOption(NamePrefix + LocalName, *Value);
       }
-      return None;
+      return std::nullopt;
     }
 
     /// Read a named option from the ``Context`` and parse it as an
@@ -235,14 +235,14 @@ public:
         IsGlobal = true;
         ValueOr = getLocalOrGlobal(LocalName);
         if (!ValueOr)
-          return None;
+          return std::nullopt;
       }
       T Result{};
       if (!StringRef(*ValueOr).getAsInteger(10, Result))
         return Result;
       diagnoseBadIntegerOption(
           IsGlobal ? Twine(LocalName) : NamePrefix + LocalName, *ValueOr);
-      return None;
+      return std::nullopt;
     }
 
     /// Read a named option from the ``Context`` and parse it as an
@@ -279,7 +279,7 @@ public:
       if (llvm::Optional<int64_t> ValueOr =
               getEnumInt(LocalName, typeEraseMapping<T>(), false, IgnoreCase))
         return static_cast<T>(*ValueOr);
-      return None;
+      return std::nullopt;
     }
 
     /// Read a named option from the ``Context`` and parse it as an
@@ -319,7 +319,7 @@ public:
       if (llvm::Optional<int64_t> ValueOr =
               getEnumInt(LocalName, typeEraseMapping<T>(), true, IgnoreCase))
         return static_cast<T>(*ValueOr);
-      return None;
+      return std::nullopt;
     }
 
     /// Read a named option from the ``Context`` and parse it as an

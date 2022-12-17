@@ -1,14 +1,14 @@
-; RUN: opt -S -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 < %s | FileCheck --check-prefix=DBG_VALUE --check-prefix=LOOPVEC_4_1 %s
-; RUN: opt -S -loop-vectorize -force-vector-width=2 -force-vector-interleave=3 < %s | FileCheck --check-prefix=DBG_VALUE --check-prefix=LOOPVEC_2_3 %s
-; RUN: opt -S -loop-unroll  -unroll-count=5 < %s | FileCheck --check-prefix=DBG_VALUE --check-prefix=LOOPUNROLL_5 %s
-; RUN: opt -S -loop-vectorize -force-vector-width=4 -force-vector-interleave=4 -loop-unroll -unroll-count=2 < %s | FileCheck --check-prefix=DBG_VALUE --check-prefix=LOOPVEC_UNROLL %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 < %s | FileCheck --check-prefix=DBG_VALUE --check-prefix=LOOPVEC_4_1 %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=3 < %s | FileCheck --check-prefix=DBG_VALUE --check-prefix=LOOPVEC_2_3 %s
+; RUN: opt -S -passes=loop-unroll  -unroll-count=5 < %s | FileCheck --check-prefix=DBG_VALUE --check-prefix=LOOPUNROLL_5 %s
+; RUN: opt -S -passes=loop-vectorize,loop-unroll -force-vector-width=4 -force-vector-interleave=4 - -unroll-count=2 < %s | FileCheck --check-prefix=DBG_VALUE --check-prefix=LOOPVEC_UNROLL %s
 
 ; Test if vectorization/unroll factor is recorded in discriminator.
 ;
 ; Original source code:
 ;  1 int *a;
 ;  2 int *b;
-;  3 
+;  3
 ;  4 void foo() {
 ;  5   for (int i = 0; i < 4096; i++)
 ;  6     a[i] += b[i];

@@ -34,7 +34,7 @@ SmallVector<int64_t> mlir::computeElementwiseMul(ArrayRef<int64_t> v1,
 Optional<SmallVector<int64_t>>
 mlir::computeShapeRatio(ArrayRef<int64_t> shape, ArrayRef<int64_t> subShape) {
   if (shape.size() < subShape.size())
-    return None;
+    return std::nullopt;
   assert(llvm::all_of(shape, [](int64_t s) { return s > 0; }) &&
          "shape must be nonnegative");
   assert(llvm::all_of(subShape, [](int64_t s) { return s > 0; }) &&
@@ -47,7 +47,7 @@ mlir::computeShapeRatio(ArrayRef<int64_t> shape, ArrayRef<int64_t> subShape) {
        llvm::zip(llvm::reverse(shape), llvm::reverse(subShape))) {
     // If integral division does not occur, return and let the caller decide.
     if (size % subSize != 0)
-      return None;
+      return std::nullopt;
     result.push_back(size / subSize);
   }
   // At this point we computed the ratio (in reverse) for the common size.

@@ -256,7 +256,8 @@ bool LoopVersioningLICM::legalLoopStructure() {
 /// LoopVersioningLICM.
 bool LoopVersioningLICM::legalLoopMemoryAccesses() {
   // Loop over the body of this loop, construct AST.
-  AliasSetTracker AST(*AA);
+  BatchAAResults BAA(*AA);
+  AliasSetTracker AST(BAA);
   for (auto *Block : CurLoop->getBlocks()) {
     // Ignore blocks in subloops.
     if (LI.getLoopFor(Block) == CurLoop)

@@ -1,4 +1,4 @@
-; RUN: opt -vector-library=SVML -inject-tli-mappings -loop-vectorize -S < %s | FileCheck %s
+; RUN: opt -vector-library=SVML -passes=inject-tli-mappings,loop-vectorize -S < %s | FileCheck %s
 
 ; Test to verify that when math headers are built with
 ; __FINITE_MATH_ONLY__ enabled, causing use of __<func>_finite

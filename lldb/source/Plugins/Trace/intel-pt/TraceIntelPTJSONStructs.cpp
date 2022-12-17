@@ -21,7 +21,7 @@ namespace trace_intel_pt {
 
 Optional<std::vector<lldb::cpu_id_t>> JSONTraceBundleDescription::GetCpuIds() {
   if (!cpus)
-    return None;
+    return std::nullopt;
   std::vector<lldb::cpu_id_t> cpu_ids;
   for (const JSONCpu &cpu : *cpus)
     cpu_ids.push_back(cpu.id);

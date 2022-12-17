@@ -1548,7 +1548,7 @@ bool BinaryFunction::scanExternalRefs() {
 
     // Create relocation for every fixup.
     for (const MCFixup &Fixup : Fixups) {
-      Optional<Relocation> Rel = BC.MIB->createRelocation(Fixup, *BC.MAB);
+      std::optional<Relocation> Rel = BC.MIB->createRelocation(Fixup, *BC.MAB);
       if (!Rel) {
         Success = false;
         continue;
@@ -1923,7 +1923,8 @@ void BinaryFunction::recomputeLandingPads() {
       if (!BC.MIB->isInvoke(Instr))
         continue;
 
-      const Optional<MCPlus::MCLandingPad> EHInfo = BC.MIB->getEHInfo(Instr);
+      const std::optional<MCPlus::MCLandingPad> EHInfo =
+          BC.MIB->getEHInfo(Instr);
       if (!EHInfo || !EHInfo->first)
         continue;
 
@@ -2280,7 +2281,7 @@ void BinaryFunction::removeConditionalTailCalls() {
     if (!CTCInstr)
       continue;
 
-    Optional<uint64_t> TargetAddressOrNone =
+    std::optional<uint64_t> TargetAddressOrNone =
         BC.MIB->getConditionalTailCall(*CTCInstr);
     if (!TargetAddressOrNone)
       continue;

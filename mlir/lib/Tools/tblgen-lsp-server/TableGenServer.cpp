@@ -59,7 +59,7 @@ getLspDiagnoticFromDiag(const llvm::SMDiagnostic &diag,
                         const lsp::URIForFile &uri) {
   auto *sourceMgr = const_cast<llvm::SourceMgr *>(diag.getSourceMgr());
   if (!sourceMgr || !diag.getLoc().isValid())
-    return llvm::None;
+    return std::nullopt;
 
   lsp::Diagnostic lspDiag;
   lspDiag.source = "tablegen";
@@ -71,7 +71,7 @@ getLspDiagnoticFromDiag(const llvm::SMDiagnostic &diag,
 
   // Skip diagnostics that weren't emitted within the main file.
   if (loc.uri != uri)
-    return llvm::None;
+    return std::nullopt;
 
   // Convert the severity for the diagnostic.
   switch (diag.getKind()) {
@@ -531,7 +531,7 @@ TableGenTextFile::findHover(const lsp::URIForFile &uri,
   SMLoc posLoc = hoverPos.getAsSMLoc(sourceMgr);
   const TableGenIndexSymbol *symbol = index.lookup(posLoc, &hoverRange);
   if (!symbol)
-    return llvm::None;
+    return std::nullopt;
 
   // Build hover for a Record.
   if (auto *record = dyn_cast<TableGenRecordSymbol>(symbol))
@@ -693,7 +693,7 @@ void lsp::TableGenServer::updateDocument(
 Optional<int64_t> lsp::TableGenServer::removeDocument(const URIForFile &uri) {
   auto it = impl->files.find(uri.file());
   if (it == impl->files.end())
-    return llvm::None;
+    return std::nullopt;
 
   int64_t version = it->second->getVersion();
   impl->files.erase(it);
@@ -728,5 +728,5 @@ Optional<lsp::Hover> lsp::TableGenServer::findHover(const URIForFile &uri,
   auto fileIt = impl->files.find(uri.file());
   if (fileIt != impl->files.end())
     return fileIt->second->findHover(uri, hoverPos);
-  return llvm::None;
+  return std::nullopt;
 }

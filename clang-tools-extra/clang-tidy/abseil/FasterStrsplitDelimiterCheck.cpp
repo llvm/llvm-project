@@ -45,11 +45,11 @@ llvm::Optional<std::string> makeCharacterLiteral(const StringLiteral *Literal,
   // Now replace the " with '.
   std::string::size_type Pos = Result.find_first_of('"');
   if (Pos == Result.npos)
-    return llvm::None;
+    return std::nullopt;
   Result[Pos] = '\'';
   Pos = Result.find_last_of('"');
   if (Pos == Result.npos)
-    return llvm::None;
+    return std::nullopt;
   Result[Pos] = '\'';
   return Result;
 }

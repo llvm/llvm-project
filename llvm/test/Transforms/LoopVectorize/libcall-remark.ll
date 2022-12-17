@@ -1,6 +1,6 @@
-; RUN: opt -S -loop-vectorize < %s 2>&1 -pass-remarks-analysis=.* | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize < %s 2>&1 -pass-remarks-analysis=.* | FileCheck %s
 
-; Test the optimization remark emitter for recognition 
+; Test the optimization remark emitter for recognition
 ; of a mathlib function vs. an arbitrary function.
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

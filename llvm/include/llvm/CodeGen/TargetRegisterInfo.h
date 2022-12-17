@@ -16,7 +16,6 @@
 #define LLVM_CODEGEN_TARGETREGISTERINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -531,7 +530,7 @@ public:
   /// The absence of an explanation does not mean that the register is not
   /// reserved (meaning, you should check that PhysReg is in fact reserved
   /// before calling this).
-  virtual llvm::Optional<std::string>
+  virtual std::optional<std::string>
   explainReservedReg(const MachineFunction &MF, MCRegister PhysReg) const {
     return {};
   }

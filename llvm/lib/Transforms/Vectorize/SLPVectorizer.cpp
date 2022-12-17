@@ -1641,7 +1641,7 @@ public:
 
     // Search all operands in Ops[*][Lane] for the one that matches best
     // Ops[OpIdx][LastLane] and return its opreand index.
-    // If no good match can be found, return None.
+    // If no good match can be found, return std::nullopt.
     Optional<unsigned> getBestOperand(unsigned OpIdx, int Lane, int LastLane,
                                       ArrayRef<ReorderingMode> ReorderingModes,
                                       ArrayRef<Value *> MainAltOps) {
@@ -1721,7 +1721,7 @@ public:
         getData(*BestOp.Idx, Lane).IsUsed = IsUsed;
         return BestOp.Idx;
       }
-      // If we could not find a good match return None.
+      // If we could not find a good match return std::nullopt.
       return std::nullopt;
     }
 
@@ -2139,9 +2139,9 @@ public:
 
   /// Evaluate each pair in \p Candidates and return index into \p Candidates
   /// for a pair which have highest score deemed to have best chance to form
-  /// root of profitable tree to vectorize. Return None if no candidate scored
-  /// above the LookAheadHeuristics::ScoreFail.
-  /// \param Limit Lower limit of the cost, considered to be good enough score.
+  /// root of profitable tree to vectorize. Return std::nullopt if no candidate
+  /// scored above the LookAheadHeuristics::ScoreFail. \param Limit Lower limit
+  /// of the cost, considered to be good enough score.
   Optional<int>
   findBestRootPair(ArrayRef<std::pair<Value *, Value *>> Candidates,
                    int Limit = LookAheadHeuristics::ScoreFail) {

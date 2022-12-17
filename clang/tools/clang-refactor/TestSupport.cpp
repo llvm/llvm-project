@@ -298,7 +298,7 @@ findTestSelectionRanges(StringRef Filename) {
   if (!ErrOrFile) {
     llvm::errs() << "error: -selection=test:" << Filename
                  << " : could not open the given file";
-    return None;
+    return std::nullopt;
   }
   StringRef Source = ErrOrFile.get()->getBuffer();
 
@@ -340,7 +340,7 @@ findTestSelectionRanges(StringRef Filename) {
     // Allow CHECK: comments to contain range= commands.
     if (!RangeRegex.match(Comment, &Matches) || Comment.contains("CHECK")) {
       if (DetectMistypedCommand())
-        return None;
+        return std::nullopt;
       continue;
     }
     unsigned Offset = Tok.getEndLoc().getRawEncoding();
@@ -359,7 +359,7 @@ findTestSelectionRanges(StringRef Filename) {
       SmallVector<StringRef, 4> EndLocMatches;
       if (!EndLocRegex.match(Matches[3], &EndLocMatches)) {
         if (DetectMistypedCommand())
-          return None;
+          return std::nullopt;
         continue;
       }
       unsigned EndLineOffset = 0, EndColumn = 0;
@@ -380,7 +380,7 @@ findTestSelectionRanges(StringRef Filename) {
   if (GroupedRanges.empty()) {
     llvm::errs() << "error: -selection=test:" << Filename
                  << ": no 'range' commands";
-    return None;
+    return std::nullopt;
   }
 
   TestSelectionRangesInFile TestRanges = {Filename.str(), {}};

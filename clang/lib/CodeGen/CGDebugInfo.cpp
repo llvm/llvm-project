@@ -53,6 +53,7 @@
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/SHA256.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <optional>
 using namespace clang;
 using namespace clang::CodeGen;
 
@@ -347,7 +348,7 @@ StringRef CGDebugInfo::getClassName(const RecordDecl *RD) {
   return StringRef();
 }
 
-Optional<llvm::DIFile::ChecksumKind>
+std::optional<llvm::DIFile::ChecksumKind>
 CGDebugInfo::computeChecksum(FileID FID, SmallString<64> &Checksum) const {
   Checksum.clear();
 
@@ -375,8 +376,8 @@ CGDebugInfo::computeChecksum(FileID FID, SmallString<64> &Checksum) const {
   llvm_unreachable("Unhandled DebugSrcHashKind enum");
 }
 
-Optional<StringRef> CGDebugInfo::getSource(const SourceManager &SM,
-                                           FileID FID) {
+std::optional<StringRef> CGDebugInfo::getSource(const SourceManager &SM,
+                                                FileID FID) {
   if (!CGM.getCodeGenOpts().EmbedSource)
     return std::nullopt;
 
@@ -421,17 +422,18 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
 
   SmallString<64> Checksum;
 
-  Optional<llvm::DIFile::ChecksumKind> CSKind = computeChecksum(FID, Checksum);
-  Optional<llvm::DIFile::ChecksumInfo<StringRef>> CSInfo;
+  std::optional<llvm::DIFile::ChecksumKind> CSKind =
+      computeChecksum(FID, Checksum);
+  std::optional<llvm::DIFile::ChecksumInfo<StringRef>> CSInfo;
   if (CSKind)
     CSInfo.emplace(*CSKind, Checksum);
   return createFile(FileName, CSInfo, getSource(SM, SM.getFileID(Loc)));
 }
 
-llvm::DIFile *
-CGDebugInfo::createFile(StringRef FileName,
-                        Optional<llvm::DIFile::ChecksumInfo<StringRef>> CSInfo,
-                        Optional<StringRef> Source) {
+llvm::DIFile *CGDebugInfo::createFile(
+    StringRef FileName,
+    std::optional<llvm::DIFile::ChecksumInfo<StringRef>> CSInfo,
+    std::optional<StringRef> Source) {
   StringRef Dir;
   StringRef File;
   std::string RemappedFile = remapDIPath(FileName);
@@ -514,8 +516,8 @@ StringRef CGDebugInfo::getCurrentDirname() {
 
 void CGDebugInfo::CreateCompileUnit() {
   SmallString<64> Checksum;
-  Optional<llvm::DIFile::ChecksumKind> CSKind;
-  Optional<llvm::DIFile::ChecksumInfo<StringRef>> CSInfo;
+  std::optional<llvm::DIFile::ChecksumKind> CSKind;
+  std::optional<llvm::DIFile::ChecksumInfo<StringRef>> CSInfo;
 
   // Should we be asking the SourceManager for the main file name, instead of
   // accepting it as an argument? This just causes the main file name to
@@ -1150,8 +1152,9 @@ llvm::DIType *CGDebugInfo::CreatePointerLikeType(llvm::dwarf::Tag Tag,
   // Size is always the size of a pointer.
   uint64_t Size = CGM.getContext().getTypeSize(Ty);
   auto Align = getTypeAlignIfRequired(Ty, CGM.getContext());
-  Optional<unsigned> DWARFAddressSpace = CGM.getTarget().getDWARFAddressSpace(
-      CGM.getTypes().getTargetAddressSpace(PointeeTy));
+  std::optional<unsigned> DWARFAddressSpace =
+      CGM.getTarget().getDWARFAddressSpace(
+          CGM.getTypes().getTargetAddressSpace(PointeeTy));
 
   SmallVector<llvm::Metadata *, 4> Annots;
   auto *BTFAttrTy = dyn_cast<BTFTagAttributedType>(PointeeTy);
@@ -1652,10 +1655,15 @@ void CGDebugInfo::CollectRecordFields(
       } else if (CGM.getCodeGenOpts().EmitCodeView) {
         // Debug info for nested types is included in the member list only for
         // CodeView.
-        if (const auto *nestedType = dyn_cast<TypeDecl>(I))
+        if (const auto *nestedType = dyn_cast<TypeDecl>(I)) {
+          // MSVC doesn't generate nested type for anonymous struct/union.
+          if (isa<RecordDecl>(I) &&
+              cast<RecordDecl>(I)->isAnonymousStructOrUnion())
+            continue;
           if (!nestedType->isImplicit() &&
               nestedType->getDeclContext() == record)
             CollectRecordNestedType(nestedType, elements);
+        }
       }
   }
 }
@@ -2203,7 +2211,7 @@ llvm::DIType *CGDebugInfo::getOrCreateVTablePtrType(llvm::DIFile *Unit) {
   llvm::DIType *SubTy = DBuilder.createSubroutineType(SElements);
   unsigned Size = Context.getTypeSize(Context.VoidPtrTy);
   unsigned VtblPtrAddressSpace = CGM.getTarget().getVtblPtrAddressSpace();
-  Optional<unsigned> DWARFAddressSpace =
+  std::optional<unsigned> DWARFAddressSpace =
       CGM.getTarget().getDWARFAddressSpace(VtblPtrAddressSpace);
 
   llvm::DIType *vtbl_ptr_type = DBuilder.createPointerType(
@@ -2300,7 +2308,7 @@ void CGDebugInfo::CollectVTableInfo(const CXXRecordDecl *RD, llvm::DIFile *Unit,
         VFTLayout.vtable_components().size() - CGM.getLangOpts().RTTIData;
     unsigned VTableWidth = PtrWidth * VSlotCount;
     unsigned VtblPtrAddressSpace = CGM.getTarget().getVtblPtrAddressSpace();
-    Optional<unsigned> DWARFAddressSpace =
+    std::optional<unsigned> DWARFAddressSpace =
         CGM.getTarget().getDWARFAddressSpace(VtblPtrAddressSpace);
 
     // Create a very wide void* type and insert it directly in the element list.
@@ -4286,7 +4294,7 @@ void CGDebugInfo::CreateLexicalBlock(SourceLocation Loc) {
 
 void CGDebugInfo::AppendAddressSpaceXDeref(
     unsigned AddressSpace, SmallVectorImpl<uint64_t> &Expr) const {
-  Optional<unsigned> DWARFAddressSpace =
+  std::optional<unsigned> DWARFAddressSpace =
       CGM.getTarget().getDWARFAddressSpace(AddressSpace);
   if (!DWARFAddressSpace)
     return;

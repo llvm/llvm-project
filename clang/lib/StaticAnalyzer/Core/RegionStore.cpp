@@ -1674,7 +1674,7 @@ getElementRegionOffsetsWithBase(const ElementRegion *ER) {
 ///   const int arr[10][20][30] = {}; // ArrayExtents { 10, 20, 30 }
 ///   int x1 = arr[4][5][6]; // SrcOffsets { NonLoc(6), NonLoc(5), NonLoc(4) }
 ///                          // DstOffsets { 4, 5, 6 }
-///                          // returns None
+///                          // returns std::nullopt
 ///   int x2 = arr[42][5][-6]; // returns UndefinedVal
 ///   int x3 = arr[4][5][x2];  // returns UnknownVal
 static Optional<SVal>

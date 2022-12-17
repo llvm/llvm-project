@@ -16,6 +16,7 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <optional>
 #include <utility>
 
 #define DEBUG_TYPE "clang-tidy-options"
@@ -147,7 +148,7 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   Options.HeaderFilterRegex = "";
   Options.SystemHeaders = false;
   Options.FormatStyle = "none";
-  Options.User = llvm::None;
+  Options.User = std::nullopt;
   for (const ClangTidyModuleRegistry::entry &Module :
        ClangTidyModuleRegistry::entries())
     Options.mergeWith(Module.instantiate()->getModuleOptions(), 0);
@@ -155,7 +156,7 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
 }
 
 template <typename T>
-static void mergeVectors(Optional<T> &Dest, const Optional<T> &Src) {
+static void mergeVectors(std::optional<T> &Dest, const std::optional<T> &Src) {
   if (Src) {
     if (Dest)
       Dest->insert(Dest->end(), Src->begin(), Src->end());
@@ -164,14 +165,14 @@ static void mergeVectors(Optional<T> &Dest, const Optional<T> &Src) {
   }
 }
 
-static void mergeCommaSeparatedLists(Optional<std::string> &Dest,
-                                     const Optional<std::string> &Src) {
+static void mergeCommaSeparatedLists(std::optional<std::string> &Dest,
+                                     const std::optional<std::string> &Src) {
   if (Src)
     Dest = (Dest && !Dest->empty() ? *Dest + "," : "") + *Src;
 }
 
 template <typename T>
-static void overrideValue(Optional<T> &Dest, const Optional<T> &Src) {
+static void overrideValue(std::optional<T> &Dest, const std::optional<T> &Src) {
   if (Src)
     Dest = Src;
 }
@@ -368,7 +369,7 @@ FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
   if (!DirectoryStatus || !DirectoryStatus->isDirectory()) {
     llvm::errs() << "Error reading configuration from " << Directory
                  << ": directory doesn't exist.\n";
-    return llvm::None;
+    return std::nullopt;
   }
 
   for (const ConfigFileHandler &ConfigHandler : ConfigHandlers) {
@@ -403,7 +404,7 @@ FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
     }
     return OptionsSource(*ParsedOptions, std::string(ConfigFile));
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// Parses -line-filter option and stores it to the \c Options.

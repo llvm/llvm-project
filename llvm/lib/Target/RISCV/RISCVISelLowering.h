@@ -393,6 +393,9 @@ public:
                                          CallingConv::ID CC,
                                          EVT VT) const override;
 
+  bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
+                                            EVT VT) const override;
+
   /// Return true if the given shuffle mask can be codegen'd directly, or if it
   /// should be stack expanded.
   bool isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
@@ -612,7 +615,7 @@ private:
                                ISD::ArgFlagsTy ArgFlags, CCState &State,
                                bool IsFixed, bool IsRet, Type *OrigTy,
                                const RISCVTargetLowering &TLI,
-                               Optional<unsigned> FirstMaskArgument);
+                               std::optional<unsigned> FirstMaskArgument);
 
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,

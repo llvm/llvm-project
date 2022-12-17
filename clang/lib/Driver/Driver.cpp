@@ -101,6 +101,7 @@
 #include <cstdlib> // ::getenv
 #include <map>
 #include <memory>
+#include <optional>
 #include <utility>
 #if LLVM_ON_UNIX
 #include <unistd.h> // getpid
@@ -110,8 +111,8 @@ using namespace clang::driver;
 using namespace clang;
 using namespace llvm::opt;
 
-static llvm::Optional<llvm::Triple>
-getOffloadTargetTriple(const Driver &D, const ArgList &Args) {
+static std::optional<llvm::Triple> getOffloadTargetTriple(const Driver &D,
+                                                          const ArgList &Args) {
   auto OffloadTargets = Args.getAllArgValues(options::OPT_offload_EQ);
   // Offload compilation flow does not support multiple targets for now. We
   // need the HIPActionBuilder (and possibly the CudaActionBuilder{,Base}too)
@@ -129,7 +130,7 @@ getOffloadTargetTriple(const Driver &D, const ArgList &Args) {
   return llvm::Triple(OffloadTargets[0]);
 }
 
-static llvm::Optional<llvm::Triple>
+static std::optional<llvm::Triple>
 getNVIDIAOffloadTargetTriple(const Driver &D, const ArgList &Args,
                              const llvm::Triple &HostTriple) {
   if (!Args.hasArg(options::OPT_offload_EQ)) {
@@ -147,7 +148,7 @@ getNVIDIAOffloadTargetTriple(const Driver &D, const ArgList &Args,
   D.Diag(diag::err_drv_invalid_or_unsupported_offload_target) << TT->str();
   return std::nullopt;
 }
-static llvm::Optional<llvm::Triple>
+static std::optional<llvm::Triple>
 getHIPOffloadTargetTriple(const Driver &D, const ArgList &Args) {
   if (!Args.hasArg(options::OPT_offload_EQ)) {
     return llvm::Triple("amdgcn-amd-amdhsa"); // Default HIP triple.
@@ -238,14 +239,14 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
 void Driver::setDriverMode(StringRef Value) {
   static const std::string OptName =
       getOpts().getOption(options::OPT_driver_mode).getPrefixedName();
-  if (auto M = llvm::StringSwitch<llvm::Optional<DriverMode>>(Value)
+  if (auto M = llvm::StringSwitch<std::optional<DriverMode>>(Value)
                    .Case("gcc", GCCMode)
                    .Case("g++", GXXMode)
                    .Case("cpp", CPPMode)
                    .Case("cl", CLMode)
                    .Case("flang", FlangMode)
                    .Case("dxc", DXCMode)
-                   .Default(None))
+                   .Default(std::nullopt))
     Mode = *M;
   else
     Diag(diag::err_drv_unsupported_option_argument) << OptName << Value;
@@ -587,7 +588,7 @@ static llvm::Triple computeTargetTriple(const Driver &D,
 
   // On AIX, the env OBJECT_MODE may affect the resulting arch variant.
   if (Target.isOSAIX()) {
-    if (Optional<std::string> ObjectModeValue =
+    if (std::optional<std::string> ObjectModeValue =
             llvm::sys::Process::GetEnv("OBJECT_MODE")) {
       StringRef ObjectMode = *ObjectModeValue;
       llvm::Triple::ArchType AT = llvm::Triple::UnknownArch;
@@ -1484,7 +1485,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     A->claim();
     PrefixDirs.push_back(A->getValue(0));
   }
-  if (Optional<std::string> CompilerPathValue =
+  if (std::optional<std::string> CompilerPathValue =
           llvm::sys::Process::GetEnv("COMPILER_PATH")) {
     StringRef CompilerPath = *CompilerPathValue;
     while (!CompilerPath.empty()) {
@@ -3204,7 +3205,7 @@ class OffloadingActionBuilder final {
     /// option is invalid.
     virtual StringRef getCanonicalOffloadArch(StringRef Arch) = 0;
 
-    virtual llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>
+    virtual std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
     getConflictOffloadArchCombination(const std::set<StringRef> &GpuArchs) = 0;
 
     bool initialize() override {
@@ -3341,7 +3342,7 @@ class OffloadingActionBuilder final {
       return CudaArchToString(Arch);
     }
 
-    llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>
+    std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
     getConflictOffloadArchCombination(
         const std::set<StringRef> &GpuArchs) override {
       return std::nullopt;
@@ -3460,7 +3461,7 @@ class OffloadingActionBuilder final {
     // Bundle code objects except --no-gpu-output is specified for device
     // only compilation. Bundle other type of output files only if
     // --gpu-bundle-output is specified for device only compilation.
-    Optional<bool> BundleOutput;
+    std::optional<bool> BundleOutput;
 
   public:
     HIPActionBuilder(Compilation &C, DerivedArgList &Args,
@@ -3491,7 +3492,7 @@ class OffloadingActionBuilder final {
       return Args.MakeArgStringRef(CanId);
     };
 
-    llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>
+    std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
     getConflictOffloadArchCombination(
         const std::set<StringRef> &GpuArchs) override {
       return getConflictTargetIDCombination(GpuArchs);
@@ -4651,7 +4652,7 @@ static StringRef getCanonicalArchString(Compilation &C,
 
 /// Checks if the set offloading architectures does not conflict. Returns the
 /// incompatible pair if a conflict occurs.
-static llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>
+static std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
 getConflictOffloadArchCombination(const llvm::DenseSet<StringRef> &Archs,
                                   Action::OffloadKind Kind) {
   if (Kind != Action::OFK_HIP)
@@ -5915,7 +5916,7 @@ const char *Driver::CreateTempFile(Compilation &C, StringRef Prefix,
                                    StringRef BoundArch) const {
   SmallString<128> TmpName;
   Arg *A = C.getArgs().getLastArg(options::OPT_fcrash_diagnostics_dir);
-  Optional<std::string> CrashDirectory =
+  std::optional<std::string> CrashDirectory =
       CCGenDiagnostics && A
           ? std::string(A->getValue())
           : llvm::sys::Process::GetEnv("CLANG_CRASH_DIAGNOSTICS_DIR");
@@ -6198,7 +6199,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
 std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
   // Search for Name in a list of paths.
   auto SearchPaths = [&](const llvm::SmallVectorImpl<std::string> &P)
-      -> llvm::Optional<std::string> {
+      -> std::optional<std::string> {
     // Respect a limited subset of the '-Bprefix' functionality in GCC by
     // attempting to use this prefix when looking for file paths.
     for (const auto &Dir : P) {

@@ -10,36 +10,36 @@ entry:
   ret void
 }
 
-; CHECK: error: <unknown>:0:0: in function invalid_load void (i32*, i32*): Unsupported non-inclusive atomic synchronization scope
+; CHECK: error: <unknown>:0:0: in function invalid_load void (ptr, ptr): Unsupported non-inclusive atomic synchronization scope
 define amdgpu_kernel void @invalid_load(
-    i32* %in, i32* %out) {
+    ptr %in, ptr %out) {
 entry:
-  %val = load atomic i32, i32* %in syncscope("invalid") seq_cst, align 4
-  store i32 %val, i32* %out
+  %val = load atomic i32, ptr %in syncscope("invalid") seq_cst, align 4
+  store i32 %val, ptr %out
   ret void
 }
 
-; CHECK: error: <unknown>:0:0: in function invalid_store void (i32, i32*): Unsupported non-inclusive atomic synchronization scope
+; CHECK: error: <unknown>:0:0: in function invalid_store void (i32, ptr): Unsupported non-inclusive atomic synchronization scope
 define amdgpu_kernel void @invalid_store(
-    i32 %in, i32* %out) {
+    i32 %in, ptr %out) {
 entry:
-  store atomic i32 %in, i32* %out syncscope("invalid") seq_cst, align 4
+  store atomic i32 %in, ptr %out syncscope("invalid") seq_cst, align 4
   ret void
 }
 
-; CHECK: error: <unknown>:0:0: in function invalid_cmpxchg void (i32*, i32, i32): Unsupported non-inclusive atomic synchronization scope
+; CHECK: error: <unknown>:0:0: in function invalid_cmpxchg void (ptr, i32, i32): Unsupported non-inclusive atomic synchronization scope
 define amdgpu_kernel void @invalid_cmpxchg(
-    i32* %out, i32 %in, i32 %old) {
+    ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32* %out, i32 4
-  %val = cmpxchg volatile i32* %gep, i32 %old, i32 %in syncscope("invalid") seq_cst seq_cst
+  %gep = getelementptr i32, ptr %out, i32 4
+  %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("invalid") seq_cst seq_cst
   ret void
 }
 
-; CHECK: error: <unknown>:0:0: in function invalid_rmw void (i32*, i32): Unsupported non-inclusive atomic synchronization scope
+; CHECK: error: <unknown>:0:0: in function invalid_rmw void (ptr, i32): Unsupported non-inclusive atomic synchronization scope
 define amdgpu_kernel void @invalid_rmw(
-    i32* %out, i32 %in) {
+    ptr %out, i32 %in) {
 entry:
-  %val = atomicrmw volatile xchg i32* %out, i32 %in syncscope("invalid") seq_cst
+  %val = atomicrmw volatile xchg ptr %out, i32 %in syncscope("invalid") seq_cst
   ret void
 }

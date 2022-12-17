@@ -23,13 +23,13 @@ using namespace omp;
 using namespace target;
 using namespace plugin;
 
-uint32_t GenericPluginTy::NumActiveInstances = 0;
+GenericPluginTy *Plugin::SpecificPlugin = nullptr;
 
 AsyncInfoWrapperTy::~AsyncInfoWrapperTy() {
   // If we used a local async info object we want synchronous behavior.
   // In that case, and assuming the current status code is OK, we will
   // synchronize explicitly when the object is deleted.
-  if (AsyncInfoPtr == &LocalAsyncInfo && !Err)
+  if (AsyncInfoPtr == &LocalAsyncInfo && LocalAsyncInfo.Queue && !Err)
     Err = Device.synchronize(&LocalAsyncInfo);
 }
 
@@ -133,14 +133,18 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
 
 GenericDeviceTy::GenericDeviceTy(int32_t DeviceId, int32_t NumDevices,
                                  const llvm::omp::GV &OMPGridValues)
-    : OMP_TeamLimit("OMP_TEAM_LIMIT"), OMP_NumTeams("OMP_NUM_TEAMS"),
+    : MemoryManager(nullptr), OMP_TeamLimit("OMP_TEAM_LIMIT"),
+      OMP_NumTeams("OMP_NUM_TEAMS"),
       OMP_TeamsThreadLimit("OMP_TEAMS_THREAD_LIMIT"),
       OMPX_DebugKind("LIBOMPTARGET_DEVICE_RTL_DEBUG"),
       OMPX_SharedMemorySize("LIBOMPTARGET_SHARED_MEMORY_SIZE"),
       // Do not initialize the following two envars since they depend on the
       // device initialization. These cannot be consulted until the device is
       // initialized correctly. We intialize them in GenericDeviceTy::init().
-      OMPX_TargetStackSize(), OMPX_TargetHeapSize(), MemoryManager(nullptr),
+      OMPX_TargetStackSize(), OMPX_TargetHeapSize(),
+      // By default, the initial number of streams and events are 32.
+      OMPX_InitialNumStreams("LIBOMPTARGET_NUM_INITIAL_STREAMS", 32),
+      OMPX_InitialNumEvents("LIBOMPTARGET_NUM_INITIAL_EVENTS", 32),
       DeviceId(DeviceId), GridValues(OMPGridValues),
       PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock() {
   if (OMP_NumTeams > 0)
@@ -236,12 +240,17 @@ Error GenericDeviceTy::setupDeviceEnvironment(GenericPluginTy &Plugin,
   DeviceEnvironment.DynamicMemSize = OMPX_SharedMemorySize;
 
   // Create the metainfo of the device environment global.
-  GlobalTy DeviceEnvGlobal("omptarget_device_environment",
-                           sizeof(DeviceEnvironmentTy), &DeviceEnvironment);
+  GlobalTy DevEnvGlobal("omptarget_device_environment",
+                        sizeof(DeviceEnvironmentTy), &DeviceEnvironment);
 
   // Write device environment values to the device.
-  GenericGlobalHandlerTy &GlobalHandler = Plugin.getGlobalHandler();
-  return GlobalHandler.writeGlobalToDevice(*this, Image, DeviceEnvGlobal);
+  GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
+  if (auto Err = GHandler.writeGlobalToDevice(*this, Image, DevEnvGlobal)) {
+    DP("Missing symbol %s, continue execution anyway.\n",
+       DevEnvGlobal.getName().data());
+    consumeError(std::move(Err));
+  }
+  return Plugin::success();
 }
 
 Error GenericDeviceTy::registerOffloadEntries(DeviceImageTy &Image) {
@@ -447,33 +456,6 @@ Error GenericDeviceTy::initDeviceInfo(__tgt_device_info *DeviceInfo) {
   return initDeviceInfoImpl(DeviceInfo);
 }
 
-Error GenericPluginTy::initDevice(int32_t DeviceId) {
-  assert(!Devices[DeviceId] && "Device already initialized");
-
-  // Create the device and save the reference.
-  GenericDeviceTy &Device = createDevice(DeviceId);
-  Devices[DeviceId] = &Device;
-
-  // Initialize the device and its resources.
-  return Device.init(*this);
-}
-
-Error GenericPluginTy::deinitDevice(int32_t DeviceId) {
-  // The device may be already deinitialized.
-  if (Devices[DeviceId] == nullptr)
-    return Plugin::success();
-
-  // Deinitialize the device and release its resources.
-  if (auto Err = Devices[DeviceId]->deinit())
-    return Err;
-
-  // Delete the device and invalidate its reference.
-  delete Devices[DeviceId];
-  Devices[DeviceId] = nullptr;
-
-  return Plugin::success();
-}
-
 Error GenericDeviceTy::printInfo() {
   // TODO: Print generic information here
   return printInfoImpl();
@@ -506,6 +488,72 @@ Error GenericDeviceTy::syncEvent(void *EventPtr) {
   return syncEventImpl(EventPtr);
 }
 
+Error GenericPluginTy::init() {
+  auto NumDevicesOrErr = initImpl();
+  if (!NumDevicesOrErr)
+    return NumDevicesOrErr.takeError();
+
+  NumDevices = *NumDevicesOrErr;
+  if (NumDevices == 0)
+    return Plugin::success();
+
+  assert(Devices.size() == 0 && "Plugin already initialized");
+  Devices.resize(NumDevices, nullptr);
+
+  GlobalHandler = Plugin::createGlobalHandler();
+  assert(GlobalHandler && "Invalid global handler");
+
+  return Plugin::success();
+}
+
+Error GenericPluginTy::deinit() {
+  // There is no global handler if no device is available.
+  if (GlobalHandler)
+    delete GlobalHandler;
+
+  // Deinitialize all active devices.
+  for (int32_t DeviceId = 0; DeviceId < NumDevices; ++DeviceId) {
+    if (Devices[DeviceId]) {
+      if (auto Err = deinitDevice(DeviceId))
+        return Err;
+    }
+    assert(!Devices[DeviceId] && "Device was not deinitialized");
+  }
+
+  // Perform last deinitializations on the plugin.
+  return deinitImpl();
+}
+
+Error GenericPluginTy::initDevice(int32_t DeviceId) {
+  assert(!Devices[DeviceId] && "Device already initialized");
+
+  // Create the device and save the reference.
+  GenericDeviceTy *Device = Plugin::createDevice(DeviceId, NumDevices);
+  assert(Device && "Invalid device");
+
+  // Save the device reference into the list.
+  Devices[DeviceId] = Device;
+
+  // Initialize the device and its resources.
+  return Device->init(*this);
+}
+
+Error GenericPluginTy::deinitDevice(int32_t DeviceId) {
+  // The device may be already deinitialized.
+  if (Devices[DeviceId] == nullptr)
+    return Plugin::success();
+
+  // Deinitialize the device and release its resources.
+  if (auto Err = Devices[DeviceId]->deinit())
+    return Err;
+
+  // Delete the device and invalidate its reference.
+  delete Devices[DeviceId];
+  Devices[DeviceId] = nullptr;
+
+  return Plugin::success();
+}
+
 /// Exposed library API function, basically wrappers around the GenericDeviceTy
 /// functionality with the same name. All non-async functions are redirected
 /// to the async versions right away with a NULL AsyncInfoPtr.
@@ -514,7 +562,7 @@ extern "C" {
 #endif
 
 int32_t __tgt_rtl_init_plugin() {
-  auto Err = Plugin::init();
+  auto Err = Plugin::initIfNeeded();
   if (Err)
     REPORT("Failure to initialize plugin " GETNAME(TARGET_NAME) ": %s\n",
            toString(std::move(Err)).data());
@@ -523,7 +571,7 @@ int32_t __tgt_rtl_init_plugin() {
 }
 
 int32_t __tgt_rtl_deinit_plugin() {
-  auto Err = Plugin::deinit();
+  auto Err = Plugin::deinitIfNeeded();
   if (Err)
     REPORT("Failure to deinitialize plugin " GETNAME(TARGET_NAME) ": %s\n",
            toString(std::move(Err)).data());

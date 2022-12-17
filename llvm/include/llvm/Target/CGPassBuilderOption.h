@@ -14,7 +14,6 @@
 #ifndef LLVM_TARGET_CGPASSBUILDEROPTION_H
 #define LLVM_TARGET_CGPASSBUILDEROPTION_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Target/TargetOptions.h"
 #include <optional>

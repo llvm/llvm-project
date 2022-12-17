@@ -22,7 +22,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/Optional.h"
 
 namespace clang {
 class QualType;
@@ -120,10 +119,10 @@ protected:
   }
 
   /// Classifies a type.
-  llvm::Optional<PrimType> classify(const Expr *E) const {
+  std::optional<PrimType> classify(const Expr *E) const {
     return E->isGLValue() ? PT_Ptr : classify(E->getType());
   }
-  llvm::Optional<PrimType> classify(QualType Ty) const {
+  std::optional<PrimType> classify(QualType Ty) const {
     return Ctx.classify(Ty);
   }
 
@@ -192,8 +191,7 @@ protected:
                                   bool IsExtended = false);
 
   /// Allocates a space storing a local given its type.
-  llvm::Optional<unsigned> allocateLocal(DeclTy &&Decl,
-                                         bool IsExtended = false);
+  std::optional<unsigned> allocateLocal(DeclTy &&Decl, bool IsExtended = false);
 
 private:
   friend class VariableScope<Emitter>;
@@ -264,13 +262,13 @@ protected:
   VariableScope<Emitter> *VarScope = nullptr;
 
   /// Current argument index. Needed to emit ArrayInitIndexExpr.
-  llvm::Optional<uint64_t> ArrayIndex;
+  std::optional<uint64_t> ArrayIndex;
 
   /// Flag indicating if return value is to be discarded.
   bool DiscardResult = false;
 
   /// Expression being initialized.
-  llvm::Optional<InitFnRef> InitFn = {};
+  std::optional<InitFnRef> InitFn = {};
 };
 
 extern template class ByteCodeExprGen<ByteCodeEmitter>;
@@ -341,7 +339,7 @@ public:
 
 protected:
   /// Index of the scope in the chain.
-  Optional<unsigned> Idx;
+  std::optional<unsigned> Idx;
 };
 
 /// Scope for storage declared in a compound statement.
@@ -376,7 +374,7 @@ public:
 
 private:
   ByteCodeExprGen<Emitter> *Ctx;
-  Optional<uint64_t> OldArrayIndex;
+  std::optional<uint64_t> OldArrayIndex;
 };
 
 } // namespace interp

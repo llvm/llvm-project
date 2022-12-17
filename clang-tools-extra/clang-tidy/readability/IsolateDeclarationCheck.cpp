@@ -110,10 +110,10 @@ declRanges(const DeclStmt *DS, const SourceManager &SM,
            const LangOptions &LangOpts) {
   std::size_t DeclCount = std::distance(DS->decl_begin(), DS->decl_end());
   if (DeclCount < 2)
-    return None;
+    return std::nullopt;
 
   if (rangeContainsExpansionsOrDirectives(DS->getSourceRange(), SM, LangOpts))
-    return None;
+    return std::nullopt;
 
   // The initial type of the declaration and each declaration has it's own
   // slice. This is necessary, because pointers and references bind only
@@ -127,12 +127,12 @@ declRanges(const DeclStmt *DS, const SourceManager &SM,
   const auto *FirstDecl = dyn_cast<VarDecl>(*DS->decl_begin());
 
   if (FirstDecl == nullptr)
-    return None;
+    return std::nullopt;
 
   // FIXME: Member pointers are not transformed correctly right now, that's
   // why they are treated as problematic here.
   if (typeIsMemberPointer(FirstDecl->getType().IgnoreParens().getTypePtr()))
-    return None;
+    return std::nullopt;
 
   // Consider the following case: 'int * pointer, value = 42;'
   // Created slices (inclusive)    [  ][       ] [         ]
@@ -168,7 +168,7 @@ declRanges(const DeclStmt *DS, const SourceManager &SM,
 
   SourceRange DeclRange(DS->getBeginLoc(), Start);
   if (DeclRange.isInvalid() || isMacroID(DeclRange))
-    return None;
+    return std::nullopt;
 
   // The first slice, that is prepended to every isolated declaration, is
   // created.
@@ -182,7 +182,7 @@ declRanges(const DeclStmt *DS, const SourceManager &SM,
     // FIXME: Member pointers are not transformed correctly right now, that's
     // why they are treated as problematic here.
     if (typeIsMemberPointer(CurrentDecl->getType().IgnoreParens().getTypePtr()))
-      return None;
+      return std::nullopt;
 
     SourceLocation DeclEnd =
         CurrentDecl->hasInit()
@@ -192,7 +192,7 @@ declRanges(const DeclStmt *DS, const SourceManager &SM,
 
     SourceRange VarNameRange(DeclBegin, DeclEnd);
     if (VarNameRange.isInvalid() || isMacroID(VarNameRange))
-      return None;
+      return std::nullopt;
 
     Slices.emplace_back(VarNameRange);
     DeclBegin = DeclEnd.getLocWithOffset(1);
@@ -212,14 +212,14 @@ collectSourceRanges(llvm::ArrayRef<SourceRange> Ranges, const SourceManager &SM,
         LangOpts);
 
     if (CharRange.isInvalid())
-      return None;
+      return std::nullopt;
 
     bool InvalidText = false;
     StringRef Snippet =
         Lexer::getSourceText(CharRange, SM, LangOpts, &InvalidText);
 
     if (InvalidText)
-      return None;
+      return std::nullopt;
 
     Snippets.emplace_back(Snippet);
   }

@@ -84,14 +84,14 @@ public:
 struct DriverConfig {
   std::vector<std::string> InputFilePaths;
 
-  Optional<FileFormat> InputFormat;
-  Optional<FileFormat> OutputFormat;
+  std::optional<FileFormat> InputFormat;
+  std::optional<FileFormat> OutputFormat;
 
   std::optional<std::string> HintIfsTarget;
-  Optional<std::string> OptTargetTriple;
-  Optional<IFSArch> OverrideArch;
-  Optional<IFSBitWidthType> OverrideBitWidth;
-  Optional<IFSEndiannessType> OverrideEndianness;
+  std::optional<std::string> OptTargetTriple;
+  std::optional<IFSArch> OverrideArch;
+  std::optional<IFSBitWidthType> OverrideBitWidth;
+  std::optional<IFSEndiannessType> OverrideEndianness;
 
   bool StripIfsArch = false;
   bool StripIfsBitwidth = false;
@@ -130,7 +130,7 @@ static std::string getTypeName(IFSSymbolType Type) {
 }
 
 static Expected<std::unique_ptr<IFSStub>>
-readInputFile(Optional<FileFormat> &InputFormat, StringRef FilePath) {
+readInputFile(std::optional<FileFormat> &InputFormat, StringRef FilePath) {
   // Read in file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrError =
       MemoryBuffer::getFileOrSTDIN(FilePath, /*IsText=*/true);
@@ -306,7 +306,7 @@ static DriverConfig parseArgs(int argc, char *const *argv) {
   for (const opt::Arg *A : Args.filtered(OPT_INPUT))
     Config.InputFilePaths.push_back(A->getValue());
   if (const opt::Arg *A = Args.getLastArg(OPT_input_format_EQ)) {
-    Config.InputFormat = StringSwitch<Optional<FileFormat>>(A->getValue())
+    Config.InputFormat = StringSwitch<std::optional<FileFormat>>(A->getValue())
                              .Case("IFS", FileFormat::IFS)
                              .Case("ELF", FileFormat::ELF)
                              .Default(std::nullopt);
@@ -319,7 +319,7 @@ static DriverConfig parseArgs(int argc, char *const *argv) {
                " option: Cannot find option named '" + OptionName + "'!");
   };
   if (const opt::Arg *A = Args.getLastArg(OPT_output_format_EQ)) {
-    Config.OutputFormat = StringSwitch<Optional<FileFormat>>(A->getValue())
+    Config.OutputFormat = StringSwitch<std::optional<FileFormat>>(A->getValue())
                               .Case("IFS", FileFormat::IFS)
                               .Case("ELF", FileFormat::ELF)
                               .Case("TBD", FileFormat::TBD)
@@ -341,7 +341,7 @@ static DriverConfig parseArgs(int argc, char *const *argv) {
   }
   if (const opt::Arg *A = Args.getLastArg(OPT_endianness_EQ)) {
     Config.OverrideEndianness =
-        StringSwitch<Optional<IFSEndiannessType>>(A->getValue())
+        StringSwitch<std::optional<IFSEndiannessType>>(A->getValue())
             .Case("little", IFSEndiannessType::Little)
             .Case("big", IFSEndiannessType::Big)
             .Default(std::nullopt);

@@ -55,8 +55,8 @@ std::unique_ptr<Pass> createCanonicalizerPass();
 /// set to their type name.
 std::unique_ptr<Pass>
 createCanonicalizerPass(const GreedyRewriteConfig &config,
-                        ArrayRef<std::string> disabledPatterns = llvm::None,
-                        ArrayRef<std::string> enabledPatterns = llvm::None);
+                        ArrayRef<std::string> disabledPatterns = std::nullopt,
+                        ArrayRef<std::string> enabledPatterns = std::nullopt);
 
 /// Creates a pass to perform control-flow sinking.
 std::unique_ptr<Pass> createControlFlowSinkPass();

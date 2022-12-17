@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -mtriple=x86_64-unknown-linux-gnu -S
+; RUN: opt < %s -passes=loop-vectorize -mtriple=x86_64-unknown-linux-gnu -S
 
 ; Make sure we are not crashing on this one.
 

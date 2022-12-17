@@ -18,7 +18,7 @@ Optional<sys::fs::file_status> getFileStatus(StringRef Path) {
   sys::fs::file_status Status;
   std::error_code EC = status(Path, Status);
   if (EC)
-    return None;
+    return std::nullopt;
   return Status;
 }
 

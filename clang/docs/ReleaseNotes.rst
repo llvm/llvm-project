@@ -319,6 +319,8 @@ Bug Fixes
   `Issue 58302 <https://github.com/llvm/llvm-project/issues/58302>`_
   `Issue 58753 <https://github.com/llvm/llvm-project/issues/58753>`_
   `Issue 59100 <https://github.com/llvm/llvm-project/issues/59100>`_
+- Fix issue using __attribute__((format)) on non-variadic functions that expect
+  more than one formatted argument.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -763,6 +765,7 @@ X86 Support in Clang
   * Support intrinsic of ``_mm(256)_cvtneps_avx_pbh``.
 - ``-march=raptorlake`` and ``-march=meteorlake`` are now supported.
 - ``-march=sierraforest``, ``-march=graniterapids`` and ``-march=grandridge`` are now supported.
+- Lift _BitInt() supported max width from 128 to 8388608.
 
 WebAssembly Support in Clang
 ----------------------------

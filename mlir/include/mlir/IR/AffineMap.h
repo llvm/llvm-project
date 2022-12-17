@@ -167,8 +167,8 @@ public:
   unsigned getDimPosition(unsigned idx) const;
 
   /// Extracts the first result position where `input` dimension resides.
-  /// Returns `llvm::None` if `input` is not a dimension expression or cannot be
-  /// found in results.
+  /// Returns `std::nullopt` if `input` is not a dimension expression or cannot
+  /// be found in results.
   Optional<unsigned> getResultPosition(AffineExpr input) const;
 
   /// Return true if any affine expression involves AffineDimExpr `position`.

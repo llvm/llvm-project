@@ -140,7 +140,7 @@ public:
 private:
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> viewImpl() const override {
     auto OFS = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
-        Base.view(llvm::None));
+        Base.view(std::nullopt));
     OFS->pushOverlay(DirtyFiles.asVFS());
     return OFS;
   }
@@ -515,7 +515,7 @@ void ClangdServer::formatOnType(PathRef File, Position Pos,
                  CB = std::move(CB), this]() mutable {
     auto Style = format::getStyle(format::DefaultFormatStyle, File,
                                   format::DefaultFallbackStyle, Code,
-                                  TFS.view(/*CWD=*/llvm::None).get());
+                                  TFS.view(/*CWD=*/std::nullopt).get());
     if (!Style)
       return CB(Style.takeError());
 
@@ -566,7 +566,7 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
     if (!InpAST)
       return CB(InpAST.takeError());
     auto R = clangd::rename({Pos, NewName, InpAST->AST, File,
-                             DirtyFS->view(llvm::None), Index, Opts});
+                             DirtyFS->view(std::nullopt), Index, Opts});
     if (!R)
       return CB(R.takeError());
 
@@ -659,7 +659,7 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
                  this](Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
-    auto FS = DirtyFS->view(llvm::None);
+    auto FS = DirtyFS->view(std::nullopt);
     auto Selections = tweakSelection(Sel, *InpAST, FS.get());
     if (!Selections)
       return CB(Selections.takeError());
@@ -713,7 +713,7 @@ void ClangdServer::switchSourceHeader(
   //  2) if 1) fails, we use the AST&Index approach, it is slower but supports
   //     different code layout.
   if (auto CorrespondingFile =
-          getCorrespondingHeaderOrSource(Path, TFS.view(llvm::None)))
+          getCorrespondingHeaderOrSource(Path, TFS.view(std::nullopt)))
     return CB(std::move(CorrespondingFile));
   auto Action = [Path = Path.str(), CB = std::move(CB),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
@@ -989,7 +989,7 @@ void ClangdServer::getAST(PathRef File, llvm::Optional<Range> R,
               return false;
             });
         if (!Success)
-          CB(llvm::None);
+          CB(std::nullopt);
       };
   WorkScheduler->runWithAST("GetAST", File, std::move(Action));
 }

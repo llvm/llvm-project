@@ -156,6 +156,7 @@ define <256 x i8> @select_v256i8(<256 x i1> %a, <256 x i8> %b, <256 x i8> %c, i3
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    sub sp, sp, a2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    addi a2, sp, 16
 ; CHECK-NEXT:    vs8r.v v16, (a2) # Unknown-size Folded Spill
 ; CHECK-NEXT:    vmv1r.v v2, v8
@@ -201,6 +202,7 @@ define <256 x i8> @select_evl_v256i8(<256 x i1> %a, <256 x i8> %b, <256 x i8> %c
 ; CHECK-NEXT:    li a3, 24
 ; CHECK-NEXT:    mul a2, a2, a3
 ; CHECK-NEXT:    sub sp, sp, a2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 24 * vlenb
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v24, (a0)
@@ -403,6 +405,7 @@ define <32 x i64> @select_v32i64(<32 x i1> %a, <32 x i64> %b, <32 x i64> %c, i32
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, sp, a1
@@ -570,6 +573,7 @@ define <64 x float> @select_v64f32(<64 x i1> %a, <64 x float> %b, <64 x float> %
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, sp, a1

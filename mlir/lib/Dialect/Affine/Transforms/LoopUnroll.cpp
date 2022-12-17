@@ -51,8 +51,8 @@ struct LoopUnroll : public impl::AffineLoopUnrollBase<LoopUnroll> {
 
       = default;
   explicit LoopUnroll(
-      Optional<unsigned> unrollFactor = None, bool unrollUpToFactor = false,
-      bool unrollFull = false,
+      Optional<unsigned> unrollFactor = std::nullopt,
+      bool unrollUpToFactor = false, bool unrollFull = false,
       const std::function<unsigned(AffineForOp)> &getUnrollFactor = nullptr)
       : getUnrollFactor(getUnrollFactor) {
     if (unrollFactor)
@@ -145,6 +145,6 @@ std::unique_ptr<OperationPass<func::FuncOp>> mlir::createLoopUnrollPass(
     int unrollFactor, bool unrollUpToFactor, bool unrollFull,
     const std::function<unsigned(AffineForOp)> &getUnrollFactor) {
   return std::make_unique<LoopUnroll>(
-      unrollFactor == -1 ? None : Optional<unsigned>(unrollFactor),
+      unrollFactor == -1 ? std::nullopt : Optional<unsigned>(unrollFactor),
       unrollUpToFactor, unrollFull, getUnrollFactor);
 }
