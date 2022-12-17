@@ -19,7 +19,7 @@ contains
     deallocate(b)
     deallocate(c)
     deallocate(d)
-    !ERROR: name in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute
+    !ERROR: Name in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute
     deallocate(e)
   end subroutine
 end
