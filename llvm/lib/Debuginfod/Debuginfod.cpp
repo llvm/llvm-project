@@ -469,7 +469,7 @@ Expected<std::string> DebuginfodCollection::findBinaryPath(BuildIDRef ID) {
       }
     }
     if (Path)
-      return Path.value();
+      return *Path;
   }
 
   // Try federation.
@@ -500,7 +500,7 @@ Expected<std::string> DebuginfodCollection::findDebugBinaryPath(BuildIDRef ID) {
     }
   }
   if (Path)
-    return Path.value();
+    return *Path;
 
   // Try federation.
   return getCachedOrDownloadDebuginfo(ID);
