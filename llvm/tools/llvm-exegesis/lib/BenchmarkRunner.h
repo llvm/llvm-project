@@ -83,8 +83,7 @@ private:
   virtual Expected<std::vector<BenchmarkMeasure>>
   runMeasurements(const FunctionExecutor &Executor) const = 0;
 
-  Expected<std::string> writeObjectFile(const BenchmarkCode &Configuration,
-                                        const FillFunction &Fill) const;
+  Expected<std::string> writeObjectFile(StringRef Buffer) const;
 
   const std::unique_ptr<ScratchSpace> Scratch;
 };
