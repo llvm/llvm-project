@@ -38,6 +38,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -712,10 +713,10 @@ void SourceManager::overrideFileContents(const FileEntry *SourceFile,
     Pair.first->second = NewFile;
 }
 
-Optional<FileEntryRef>
+std::optional<FileEntryRef>
 SourceManager::bypassFileContentsOverride(FileEntryRef File) {
   assert(isFileOverridden(&File.getFileEntry()));
-  llvm::Optional<FileEntryRef> BypassFile = FileMgr.getBypassFile(File);
+  std::optional<FileEntryRef> BypassFile = FileMgr.getBypassFile(File);
 
   // If the file can't be found in the FS, give up.
   if (!BypassFile)
