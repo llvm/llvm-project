@@ -150,80 +150,78 @@ Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
 
   InstrBenchmark.Key = BC.Key;
 
+  // Assemble at least kMinInstructionsForSnippet instructions by repeating
+  // the snippet for debug/analysis. This is so that the user clearly
+  // understands that the inside instructions are repeated.
+  const int MinInstructionsForSnippet = 4 * Instructions.size();
+  const int LoopBodySizeForSnippet = 2 * Instructions.size();
   {
-    // Assemble at least kMinInstructionsForSnippet instructions by repeating
-    // the snippet for debug/analysis. This is so that the user clearly
-    // understands that the inside instructions are repeated.
-    const int MinInstructionsForSnippet = 4 * Instructions.size();
-    const int LoopBodySizeForSnippet = 2 * Instructions.size();
-    {
-      SmallString<0> Buffer;
-      raw_svector_ostream OS(Buffer);
-      if (Error E = assembleToStream(
-              State.getExegesisTarget(), State.createTargetMachine(),
-              BC.LiveIns, BC.Key.RegisterInitialValues,
-              Repetitor.Repeat(Instructions, MinInstructionsForSnippet,
-                               LoopBodySizeForSnippet),
-              OS)) {
-        return std::move(E);
-      }
-      const ExecutableFunction EF(State.createTargetMachine(),
-                                  getObjectFromBuffer(OS.str()));
-      const auto FnBytes = EF.getFunctionBytes();
-      llvm::append_range(InstrBenchmark.AssembledSnippet, FnBytes);
+    SmallString<0> Buffer;
+    raw_svector_ostream OS(Buffer);
+    if (Error E = assembleToStream(
+            State.getExegesisTarget(), State.createTargetMachine(), BC.LiveIns,
+            BC.Key.RegisterInitialValues,
+            Repetitor.Repeat(Instructions, MinInstructionsForSnippet,
+                             LoopBodySizeForSnippet),
+            OS)) {
+      return std::move(E);
     }
+    const ExecutableFunction EF(State.createTargetMachine(),
+                                getObjectFromBuffer(OS.str()));
+    const auto FnBytes = EF.getFunctionBytes();
+    llvm::append_range(InstrBenchmark.AssembledSnippet, FnBytes);
+  }
 
-    // Assemble NumRepetitions instructions repetitions of the snippet for
-    // measurements.
-    const auto Filler = Repetitor.Repeat(
-        Instructions, InstrBenchmark.NumRepetitions, LoopBodySize);
+  // Assemble NumRepetitions instructions repetitions of the snippet for
+  // measurements.
+  const auto Filler = Repetitor.Repeat(
+      Instructions, InstrBenchmark.NumRepetitions, LoopBodySize);
 
-    object::OwningBinary<object::ObjectFile> ObjectFile;
-    if (DumpObjectToDisk) {
-      auto ObjectFilePath = writeObjectFile(BC, Filler);
-      if (Error E = ObjectFilePath.takeError()) {
-        InstrBenchmark.Error = toString(std::move(E));
-        return InstrBenchmark;
-      }
-      outs() << "Check generated assembly with: /usr/bin/objdump -d "
-             << *ObjectFilePath << "\n";
-      ObjectFile = getObjectFromFile(*ObjectFilePath);
-    } else {
-      SmallString<0> Buffer;
-      raw_svector_ostream OS(Buffer);
-      if (Error E = assembleToStream(
-              State.getExegesisTarget(), State.createTargetMachine(),
-              BC.LiveIns, BC.Key.RegisterInitialValues, Filler, OS)) {
-        return std::move(E);
-      }
-      ObjectFile = getObjectFromBuffer(OS.str());
-    }
-
-    if (BenchmarkSkipMeasurements) {
-      InstrBenchmark.Error =
-          "in --skip-measurements mode, actual measurements skipped.";
-      return InstrBenchmark;
-    }
-
-    const FunctionExecutorImpl Executor(State, std::move(ObjectFile),
-                                        Scratch.get());
-    auto NewMeasurements = runMeasurements(Executor);
-    if (Error E = NewMeasurements.takeError()) {
-      if (!E.isA<SnippetCrash>())
-        return std::move(E);
+  object::OwningBinary<object::ObjectFile> ObjectFile;
+  if (DumpObjectToDisk) {
+    auto ObjectFilePath = writeObjectFile(BC, Filler);
+    if (Error E = ObjectFilePath.takeError()) {
       InstrBenchmark.Error = toString(std::move(E));
       return InstrBenchmark;
     }
-    assert(InstrBenchmark.NumRepetitions > 0 && "invalid NumRepetitions");
-    for (BenchmarkMeasure &BM : *NewMeasurements) {
-      // Scale the measurements by instruction.
-      BM.PerInstructionValue /= InstrBenchmark.NumRepetitions;
-      // Scale the measurements by snippet.
-      BM.PerSnippetValue *= static_cast<double>(Instructions.size()) /
-                            InstrBenchmark.NumRepetitions;
+    outs() << "Check generated assembly with: /usr/bin/objdump -d "
+           << *ObjectFilePath << "\n";
+    ObjectFile = getObjectFromFile(*ObjectFilePath);
+  } else {
+    SmallString<0> Buffer;
+    raw_svector_ostream OS(Buffer);
+    if (Error E = assembleToStream(State.getExegesisTarget(),
+                                   State.createTargetMachine(), BC.LiveIns,
+                                   BC.Key.RegisterInitialValues, Filler, OS)) {
+      return std::move(E);
     }
-    InstrBenchmark.Measurements = std::move(*NewMeasurements);
+    ObjectFile = getObjectFromBuffer(OS.str());
   }
+
+  if (BenchmarkSkipMeasurements) {
+    InstrBenchmark.Error =
+        "in --skip-measurements mode, actual measurements skipped.";
+    return InstrBenchmark;
+  }
+
+  const FunctionExecutorImpl Executor(State, std::move(ObjectFile),
+                                      Scratch.get());
+  auto NewMeasurements = runMeasurements(Executor);
+  if (Error E = NewMeasurements.takeError()) {
+    if (!E.isA<SnippetCrash>())
+      return std::move(E);
+    InstrBenchmark.Error = toString(std::move(E));
+    return InstrBenchmark;
+  }
+  assert(InstrBenchmark.NumRepetitions > 0 && "invalid NumRepetitions");
+  for (BenchmarkMeasure &BM : *NewMeasurements) {
+    // Scale the measurements by instruction.
+    BM.PerInstructionValue /= InstrBenchmark.NumRepetitions;
+    // Scale the measurements by snippet.
+    BM.PerSnippetValue *= static_cast<double>(Instructions.size()) /
+                          InstrBenchmark.NumRepetitions;
+  }
+  InstrBenchmark.Measurements = std::move(*NewMeasurements);
 
   return InstrBenchmark;
 }
