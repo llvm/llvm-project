@@ -1172,7 +1172,7 @@ static Operation *genFor(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   bool isParallel = isParallelFor(codegen, isOuter, isSparse);
 
   Operation *loop =
-      genLoopBoundary(codegen, merger, [&](MutableArrayRef<Value> reduc) {
+      *genLoopBoundary(codegen, merger, [&](MutableArrayRef<Value> reduc) {
         if (merger.isFilterLoop(idx)) {
           // extraTids/extraDims must be empty because filter loops only
           // corresponding to the one and only sparse tensor level.
@@ -1187,7 +1187,7 @@ static Operation *genFor(Merger &merger, CodeGen &codegen, OpBuilder &builder,
         }
         return codegen.loopEmitter.enterLoopOverTensorAtDim(
             builder, loc, tid, dim, reduc, isParallel, extraTids, extraDims);
-      }).value();
+      });
   assert(loop);
   return loop;
 }
@@ -1200,12 +1200,12 @@ static Operation *genWhile(Merger &merger, CodeGen &codegen, OpBuilder &builder,
                            ArrayRef<size_t> extraDims) {
 
   Operation *loop =
-      genLoopBoundary(codegen, merger, [&](MutableArrayRef<Value> reduc) {
+      *genLoopBoundary(codegen, merger, [&](MutableArrayRef<Value> reduc) {
         // Construct the while-loop with a parameter for each index.
         return codegen.loopEmitter.enterCoIterationOverTensorsAtDims(
             builder, op.getLoc(), condTids, condDims, needsUniv, reduc,
             extraTids, extraDims);
-      }).value();
+      });
   assert(loop);
   return loop;
 }
@@ -1277,7 +1277,7 @@ static scf::IfOp genIf(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     Value clause;
     if (isCompressedDLT(merger.getDimLevelType(b)) ||
         isSingletonDLT(merger.getDimLevelType(b))) {
-      auto dim = merger.getDimNum(tensor, idx).value();
+      auto dim = *merger.getDimNum(tensor, idx);
       Value op1 = codegen.loopEmitter.getCoord()[tensor][dim];
       Value op2 = codegen.getLoopIdxValue(idx);
       clause = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, op1,
@@ -1486,7 +1486,7 @@ static void translateBitsToTidDimPairs(
     // Note that we generate dense indices of the output tensor
     // unconditionally, since they may not appear in the lattice, but may be
     // needed for linearized codegen.
-    auto dim = merger.getDimNum(merger.getOutTensorID(), idx).value();
+    auto dim = *merger.getDimNum(merger.getOutTensorID(), idx);
     extraTids.push_back(merger.getOutTensorID());
     extraDims.push_back(dim);
   }
