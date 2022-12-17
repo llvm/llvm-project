@@ -379,7 +379,7 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
                                         innerMostLoop.getRegionIterArgs());
   }
 
-  tilingResult.replacements = replacementOr.value();
+  tilingResult.replacements = *replacementOr;
 
   LLVM_DEBUG({
     if (!tilingResult.loops.empty()) {
@@ -438,9 +438,8 @@ mlir::scf::tileReductionUsingScf(PatternRewriter &b,
 
   // 3. Generate the tiled implementation within the inner most loop.
   b.setInsertionPoint(loops.back().getBody()->getTerminator());
-  Operation *parallelOp =
-      op.tileToPartialReduction(b, loc, identityTensor.value()->getResults(),
-                                offsets, sizes, reductionDim);
+  Operation *parallelOp = op.tileToPartialReduction(
+      b, loc, (*identityTensor)->getResults(), offsets, sizes, reductionDim);
 
   SmallVector<OpFoldResult> resultSizesList;
   for (size_t i = 0; i < offsets.size(); i++)
@@ -448,8 +447,8 @@ mlir::scf::tileReductionUsingScf(PatternRewriter &b,
         b.createOrFold<tensor::DimOp>(loc, parallelOp->getResult(0), i));
   SmallVector<OpFoldResult> outOffsets(offsets.size(), b.getIndexAttr(0));
   FailureOr<SmallVector<Value>> replacementOr = yieldTiledValues(
-      b, identityTensor.value()->getResults(), parallelOp->getResults(),
-      outOffsets, resultSizesList, loops);
+      b, (*identityTensor)->getResults(), parallelOp->getResults(), outOffsets,
+      resultSizesList, loops);
   if (failed(replacementOr))
     return b.notifyMatchFailure(op, "failed to yield replacement");
 
@@ -464,12 +463,11 @@ mlir::scf::tileReductionUsingScf(PatternRewriter &b,
 
   // 4. Apply the merge reduction to combine all the partial values.
   b.setInsertionPointAfter(*loops.begin());
-  Operation *mergeOp =
-      op.mergeReductions(b, loc, replacementOr.value(), reductionDim);
+  Operation *mergeOp = op.mergeReductions(b, loc, *replacementOr, reductionDim);
   b.replaceOp(op, mergeOp->getResults());
 
   SCFReductionTilingResult results;
-  results.initialOp = identityTensor.value();
+  results.initialOp = *identityTensor;
   results.loops = std::move(loops);
   results.parallelTiledOp = parallelOp;
   results.mergeOp = mergeOp;
@@ -574,7 +572,7 @@ mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
                                                      fusableProducer);
     if (failed(fusedProducerValue))
       continue;
-    rewriter.replaceOp(candidateSliceOp, fusedProducerValue.value());
+    rewriter.replaceOp(candidateSliceOp, *fusedProducerValue);
 
     // 2d. The operands of the fused producer might themselved be slices of
     //     values produced by operations that implement the `TilingInterface`.
@@ -646,8 +644,8 @@ mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
             iterArgNumber.value(),
             dstOp.getTiedOpOperand(fusableProducer)->get());
       }
-      if (auto dstOp = fusedProducerValue.value()
-                           .getDefiningOp<DestinationStyleOpInterface>()) {
+      if (auto dstOp = fusedProducerValue
+                           ->getDefiningOp<DestinationStyleOpInterface>()) {
         scf::ForOp innerMostLoop = tileAndFuseResult.loops.back();
         updateDestinationOperandsForTiledOp(
             rewriter, dstOp.getDpsInitOperand(resultNumber)->get(),

@@ -205,9 +205,8 @@ QuantDialectBytecodeInterface::readCalibratedQuantizedType(
                  llvm::APFloat::IEEEdouble())))
     return reader.emitError("invalid CalibratedQuantizedType"),
            CalibratedQuantizedType();
-  return CalibratedQuantizedType::get(expressedType,
-                                      min.value().convertToDouble(),
-                                      max.value().convertToDouble());
+  return CalibratedQuantizedType::get(expressedType, min->convertToDouble(),
+                                      max->convertToDouble());
 }
 void QuantDialectBytecodeInterface::write(CalibratedQuantizedType type,
                                           DialectBytecodeWriter &writer) const {
@@ -234,7 +233,7 @@ UniformQuantizedType QuantDialectBytecodeInterface::readUniformQuantizedType(
     return reader.emitError("invalid UniformQuantizedType"),
            UniformQuantizedType();
   return UniformQuantizedType::get(flags, storageType, expressedType,
-                                   scale.value().convertToDouble(), zeroPoint,
+                                   scale->convertToDouble(), zeroPoint,
                                    storageTypeMin, storageTypeMax);
 }
 void QuantDialectBytecodeInterface::write(UniformQuantizedType type,
@@ -263,7 +262,7 @@ QuantDialectBytecodeInterface::readUniformQuantizedPerAxisType(
     FailureOr<APFloat> fl =
         reader.readAPFloatWithKnownSemantics(APFloat::IEEEdouble());
     if (succeeded(fl)) {
-      val = fl.value().convertToDouble();
+      val = fl->convertToDouble();
       return success();
     }
     return failure();

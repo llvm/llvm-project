@@ -414,7 +414,7 @@ mlir::getSimplifyCollapseShapeWithRankReducingSliceInfo(
   for (const auto &[nonUnitDim, indices] :
        llvm::zip(*trivialSegments, reassociationIndices)) {
     if (nonUnitDim) {
-      sliceShape.push_back(sourceType.getDimSize(nonUnitDim.value()));
+      sliceShape.push_back(sourceType.getDimSize(*nonUnitDim));
       continue;
     }
     llvm::append_range(sliceShape, llvm::map_range(indices, [&](int64_t idx) {

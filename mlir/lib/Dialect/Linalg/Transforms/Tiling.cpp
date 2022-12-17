@@ -650,7 +650,7 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
 
   // 2. Create the ForeachThreadOp with an empty region.
   scf::ForeachThreadOp foreachThreadOp = b.create<scf::ForeachThreadOp>(
-      loc, identityTensor.value()->getResults(),
+      loc, (*identityTensor)->getResults(),
       ValueRange(materializedNonZeroNumThreads), mapping);
 
   // 3. Calculate the tile offsets and sizes for the subsequent loop that will
@@ -768,7 +768,7 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
 
   // 8. Return.
   ForeachThreadReductionTilingResult results;
-  results.initialOp = identityTensor.value();
+  results.initialOp = *identityTensor;
   results.loops = foreachThreadOp;
   results.parallelTiledOp = tiledOp;
   results.mergeOp = mergeOp;
