@@ -400,10 +400,10 @@ private:
   static const char *SgnNames[] = {"Positive", "Signed", "Unsigned"};
   OS << Instruction::getOpcodeName(Op.Opcode) << '.' << Op.Frac;
   if (Op.RoundAt.has_value()) {
-    if (Op.Frac != 0 && Op.RoundAt.value() == Op.Frac - 1) {
+    if (Op.Frac != 0 && *Op.RoundAt == Op.Frac - 1) {
       OS << ":rnd";
     } else {
-      OS << " + 1<<" << Op.RoundAt.value();
+      OS << " + 1<<" << *Op.RoundAt;
     }
   }
   OS << "\n  X:(" << SgnNames[Op.X.Sgn] << ") " << *Op.X.Val << "\n"

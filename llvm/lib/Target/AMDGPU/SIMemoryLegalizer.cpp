@@ -2318,13 +2318,13 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
         continue;
 
       if (const auto &MOI = MOA.getLoadInfo(MI))
-        Changed |= expandLoad(MOI.value(), MI);
+        Changed |= expandLoad(*MOI, MI);
       else if (const auto &MOI = MOA.getStoreInfo(MI))
-        Changed |= expandStore(MOI.value(), MI);
+        Changed |= expandStore(*MOI, MI);
       else if (const auto &MOI = MOA.getAtomicFenceInfo(MI))
-        Changed |= expandAtomicFence(MOI.value(), MI);
+        Changed |= expandAtomicFence(*MOI, MI);
       else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(MI))
-        Changed |= expandAtomicCmpxchgOrRmw(MOI.value(), MI);
+        Changed |= expandAtomicCmpxchgOrRmw(*MOI, MI);
     }
   }
 
