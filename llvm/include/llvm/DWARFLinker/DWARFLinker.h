@@ -153,7 +153,7 @@ public:
   virtual void emitCIE(StringRef CIEBytes) = 0;
 
   /// Emit an FDE with data \p Bytes.
-  virtual void emitFDE(uint32_t CIEOffset, uint32_t AddreSize, uint32_t Address,
+  virtual void emitFDE(uint32_t CIEOffset, uint32_t AddreSize, uint64_t Address,
                        StringRef Bytes) = 0;
 
   /// Emit the .debug_loc contribution for \p Unit by copying the entries from
