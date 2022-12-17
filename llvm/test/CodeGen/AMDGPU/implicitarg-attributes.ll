@@ -63,36 +63,6 @@ entry:
   ret void
 }
 
-; CHECK-NOT: hidden_hostcall_buffer
-; CHECK-NOT: hidden_multigrid_sync_arg
-; CHECK-LABEL: .name:           kernel_3
-
-define amdgpu_kernel void @kernel_3(i32 addrspace(1)* %a, i1 %cond)  {
-entry:
-  %tmp7 = tail call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
-  br i1 %cond, label %old, label %new
-
-old:                                              ; preds = %entry
-  %tmp4 = getelementptr i8, i8 addrspace(4)* %tmp7, i64 12
-  br label %join
-
-new:                                              ; preds = %entry
-  %tmp12 = getelementptr inbounds i8, i8 addrspace(4)* %tmp7, i64 18
-  br label %join
-
-join:                                             ; preds = %new, %old
-  %.in.in.in = phi i8 addrspace(4)* [ %tmp12, %new ], [ %tmp4, %old ]
-  %.in.in = bitcast i8 addrspace(4)* %.in.in.in to i16 addrspace(4)*
-
-  ;;; THIS USE of implicitarg_ptr should not produce hostcall metadata
-  %.in = load i16, i16 addrspace(4)* %.in.in, align 2
-
-  %idx.ext = sext i16 %.in to i64
-  %add.ptr3 = getelementptr inbounds i32, i32 addrspace(1)* %a, i64 %idx.ext
-  %tmp16 = atomicrmw add i32 addrspace(1)* %add.ptr3, i32 15 syncscope("agent-one-as") monotonic, align 4
-  ret void
-}
-
 declare i32 @llvm.amdgcn.workitem.id.x()
 
 declare align 4 i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
