@@ -339,7 +339,7 @@ bool AtomicSequence(EmulateInstructionRISCV &emulator) {
   const auto pc = emulator.ReadPC();
   if (!pc)
     return false;
-  auto current_pc = pc.value();
+  auto current_pc = *pc;
   const auto entry_pc = current_pc;
 
   // The first instruction should be LR.W or LR.D
