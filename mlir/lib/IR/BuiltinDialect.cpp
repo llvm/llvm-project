@@ -126,7 +126,7 @@ void BuiltinDialect::initialize() {
 //===----------------------------------------------------------------------===//
 
 void ModuleOp::build(OpBuilder &builder, OperationState &state,
-                     Optional<StringRef> name) {
+                     std::optional<StringRef> name) {
   state.addRegion()->emplaceBlock();
   if (name) {
     state.attributes.push_back(builder.getNamedAttr(
@@ -135,7 +135,7 @@ void ModuleOp::build(OpBuilder &builder, OperationState &state,
 }
 
 /// Construct a module from the given context.
-ModuleOp ModuleOp::create(Location loc, Optional<StringRef> name) {
+ModuleOp ModuleOp::create(Location loc, std::optional<StringRef> name) {
   OpBuilder builder(loc->getContext());
   return builder.create<ModuleOp>(loc, name);
 }

@@ -44,7 +44,7 @@ using namespace mlir;
 using namespace mlir::vector;
 
 // Helper to find an index in an affine map.
-static Optional<int64_t> getResultIndex(AffineMap map, int64_t index) {
+static std::optional<int64_t> getResultIndex(AffineMap map, int64_t index) {
   for (int64_t i = 0, e = map.getNumResults(); i < e; ++i) {
     int64_t idx = map.getDimPosition(i);
     if (idx == index)
@@ -147,11 +147,11 @@ static SmallVector<IntType> extractVector(ArrayAttr arrayAttr) {
 }
 
 /// Helper to create arithmetic operation associated with a kind of contraction.
-static Optional<Value> createContractArithOp(Location loc, Value x, Value y,
-                                             Value acc,
-                                             vector::CombiningKind kind,
-                                             PatternRewriter &rewriter,
-                                             bool isInt) {
+static std::optional<Value> createContractArithOp(Location loc, Value x,
+                                                  Value y, Value acc,
+                                                  vector::CombiningKind kind,
+                                                  PatternRewriter &rewriter,
+                                                  bool isInt) {
   using vector::CombiningKind;
   Value mul;
   if (isInt) {
@@ -169,12 +169,13 @@ static Optional<Value> createContractArithOp(Location loc, Value x, Value y,
       return std::nullopt;
     // Special case for fused multiply-add.
     if (acc && acc.getType().isa<VectorType>() && kind == CombiningKind::ADD) {
-      return Optional<Value>(rewriter.create<vector::FMAOp>(loc, x, y, acc));
+      return std::optional<Value>(
+          rewriter.create<vector::FMAOp>(loc, x, y, acc));
     }
     mul = rewriter.create<arith::MulFOp>(loc, x, y);
   }
   if (!acc)
-    return Optional<Value>(mul);
+    return std::optional<Value>(mul);
   return makeArithReduction(rewriter, loc, kind, mul, acc);
 }
 
@@ -191,7 +192,7 @@ static SmallVector<int64_t> getReductionIndex(AffineMap map,
 
 /// Look for a given dimension in an affine map and return its position. Return
 /// std::nullopt if the dimension is not in the map results.
-static llvm::Optional<unsigned> getDimPosition(AffineMap map, unsigned dim) {
+static std::optional<unsigned> getDimPosition(AffineMap map, unsigned dim) {
   for (unsigned i = 0, e = map.getNumResults(); i < e; i++) {
     if (map.getDimPosition(i) == dim)
       return i;
@@ -552,8 +553,8 @@ public:
     if (!rhsType) {
       // Special case: AXPY operation.
       Value b = rewriter.create<vector::BroadcastOp>(loc, lhsType, op.getRhs());
-      Optional<Value> mult = createContractArithOp(loc, op.getLhs(), b, acc,
-                                                   kind, rewriter, isInt);
+      std::optional<Value> mult = createContractArithOp(
+          loc, op.getLhs(), b, acc, kind, rewriter, isInt);
       if (!mult.has_value())
         return failure();
       rewriter.replaceOp(op, mult.value());
@@ -570,7 +571,7 @@ public:
       Value r = nullptr;
       if (acc)
         r = rewriter.create<vector::ExtractOp>(loc, rhsType, acc, pos);
-      Optional<Value> m =
+      std::optional<Value> m =
           createContractArithOp(loc, a, op.getRhs(), r, kind, rewriter, isInt);
       if (!m.has_value())
         return failure();
@@ -645,7 +646,7 @@ struct ContractOpToElementwise
     // Loop through the parallel dimensions to calculate the dimensions to
     // broadcast and to permute in order to extract only parallel dimensions.
     for (unsigned i = 0; i < numParallelDims; i++) {
-      llvm::Optional<unsigned> lhsDim =
+      std::optional<unsigned> lhsDim =
           getDimPosition(lhsMap, accMap.getDimPosition(i));
       if (lhsDim) {
         lhsTranspose.push_back(numLhsDimToBroadcast + *lhsDim);
@@ -655,7 +656,7 @@ struct ContractOpToElementwise
             contractOp.getResultType().cast<VectorType>().getDimSize(i));
         lhsTranspose.push_back(lhsDims.size() - 1);
       }
-      llvm::Optional<unsigned> rhsDim =
+      std::optional<unsigned> rhsDim =
           getDimPosition(rhsMap, accMap.getDimPosition(i));
       if (rhsDim) {
         rhsTranspose.push_back(numRhsDimToBroadcast + *rhsDim);
@@ -690,7 +691,7 @@ struct ContractOpToElementwise
         loc, newLhs, rewriter.getI64ArrayAttr(lhsOffsets));
     newRhs = rewriter.create<vector::ExtractOp>(
         loc, newRhs, rewriter.getI64ArrayAttr(rhsOffsets));
-    Optional<Value> result =
+    std::optional<Value> result =
         createContractArithOp(loc, newLhs, newRhs, contractOp.getAcc(),
                               contractOp.getKind(), rewriter, isInt);
     rewriter.replaceOp(contractOp, {*result});
@@ -2010,8 +2011,8 @@ ContractionOpLowering::lowerReduction(vector::ContractionOp op,
   // Use iterator index 0.
   int64_t iterIndex = 0;
   SmallVector<AffineMap> iMap = op.getIndexingMapsArray();
-  Optional<int64_t> lookupLhs = getResultIndex(iMap[0], iterIndex);
-  Optional<int64_t> lookupRhs = getResultIndex(iMap[1], iterIndex);
+  std::optional<int64_t> lookupLhs = getResultIndex(iMap[0], iterIndex);
+  std::optional<int64_t> lookupRhs = getResultIndex(iMap[1], iterIndex);
   if (!lookupLhs.has_value())
     return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
       diag << "expected iterIndex=" << iterIndex << "to map to a LHS dimension";
@@ -2075,7 +2076,7 @@ ContractionOpLowering::lowerReduction(vector::ContractionOp op,
 struct TransferReadToVectorLoadLowering
     : public OpRewritePattern<vector::TransferReadOp> {
   TransferReadToVectorLoadLowering(MLIRContext *context,
-                                   llvm::Optional<unsigned> maxRank,
+                                   std::optional<unsigned> maxRank,
                                    PatternBenefit benefit = 1)
       : OpRewritePattern<vector::TransferReadOp>(context, benefit),
         maxTransferRank(maxRank) {}
@@ -2151,7 +2152,7 @@ struct TransferReadToVectorLoadLowering
     return success();
   }
 
-  llvm::Optional<unsigned> maxTransferRank;
+  std::optional<unsigned> maxTransferRank;
 };
 
 /// Replace a 0-d vector.load with a memref.load + vector.broadcast.
@@ -2217,7 +2218,7 @@ struct VectorStoreToMemrefStoreLowering
 struct TransferWriteToVectorStoreLowering
     : public OpRewritePattern<vector::TransferWriteOp> {
   TransferWriteToVectorStoreLowering(MLIRContext *context,
-                                     llvm::Optional<unsigned> maxRank,
+                                     std::optional<unsigned> maxRank,
                                      PatternBenefit benefit = 1)
       : OpRewritePattern<vector::TransferWriteOp>(context, benefit),
         maxTransferRank(maxRank) {}
@@ -2280,7 +2281,7 @@ struct TransferWriteToVectorStoreLowering
     return success();
   }
 
-  llvm::Optional<unsigned> maxTransferRank;
+  std::optional<unsigned> maxTransferRank;
 };
 
 // Returns the values in `arrayAttr` as an integer vector.
@@ -3026,7 +3027,7 @@ void mlir::vector::
 }
 
 void mlir::vector::populateVectorTransferLoweringPatterns(
-    RewritePatternSet &patterns, llvm::Optional<unsigned> maxTransferRank,
+    RewritePatternSet &patterns, std::optional<unsigned> maxTransferRank,
     PatternBenefit benefit) {
   patterns.add<TransferReadToVectorLoadLowering,
                TransferWriteToVectorStoreLowering>(patterns.getContext(),

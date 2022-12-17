@@ -148,7 +148,7 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
 
   // Specifies the spirv.ExecutionModeOp.
   if (DenseI32ArrayAttr workgroupSizeAttr = entryPointAttr.getWorkgroupSize()) {
-    Optional<ArrayRef<spirv::Capability>> caps =
+    std::optional<ArrayRef<spirv::Capability>> caps =
         spirv::getCapabilities(spirv::ExecutionMode::LocalSize);
     if (!caps || targetEnv.allows(*caps)) {
       builder.create<spirv::ExecutionModeOp>(funcOp.getLoc(), funcOp,
@@ -161,7 +161,7 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
     }
   }
   if (Optional<int> subgroupSize = entryPointAttr.getSubgroupSize()) {
-    Optional<ArrayRef<spirv::Capability>> caps =
+    std::optional<ArrayRef<spirv::Capability>> caps =
         spirv::getCapabilities(spirv::ExecutionMode::SubgroupSize);
     if (!caps || targetEnv.allows(*caps)) {
       builder.create<spirv::ExecutionModeOp>(funcOp.getLoc(), funcOp,

@@ -631,14 +631,14 @@ def batchmatmulOp : LinalgNamedStructured_Op<"batchmatmul", [
 When `mlir-linalg-ods-gen -gen-impl=1` is called, the following C++ is produced:
 
 ```
-llvm::Optional<SmallVector<StringRef, 8>> batchmatmul::referenceIterators() {
+std::optional<SmallVector<StringRef, 8>> batchmatmul::referenceIterators() {
   return SmallVector<StringRef, 8>{
     getParallelIteratorTypeName(),
     getParallelIteratorTypeName(),
     getParallelIteratorTypeName(),
     getReductionIteratorTypeName() };
 }
-llvm::Optional<SmallVector<AffineMap, 8>> batchmatmul::referenceIndexingMaps() {
+std::optional<SmallVector<AffineMap, 8>> batchmatmul::referenceIndexingMaps() {
   MLIRContext *context = getContext();
   AffineExpr d0, d1, d2, d3;
   bindDims(context, d0, d1, d2, d3);

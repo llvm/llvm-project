@@ -46,7 +46,7 @@ struct DimOfShapedTypeOpInterface : public OpRewritePattern<OpTy> {
     if (!shapedTypeOp)
       return failure();
 
-    Optional<int64_t> dimIndex = dimOp.getConstantIndex();
+    std::optional<int64_t> dimIndex = dimOp.getConstantIndex();
     if (!dimIndex)
       return failure();
 
@@ -88,7 +88,7 @@ struct DimOfReifyRankedShapedTypeOpInterface : public OpRewritePattern<OpTy> {
     if (!rankedShapeTypeOp)
       return failure();
 
-    Optional<int64_t> dimIndex = dimOp.getConstantIndex();
+    std::optional<int64_t> dimIndex = dimOp.getConstantIndex();
     if (!dimIndex)
       return failure();
 
