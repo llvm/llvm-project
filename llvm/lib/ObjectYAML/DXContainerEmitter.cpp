@@ -141,17 +141,17 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
 
       // Compute the optional fields if needed...
       if (P.Program->DXILOffset)
-        Header.Bitcode.Offset = P.Program->DXILOffset.value();
+        Header.Bitcode.Offset = *P.Program->DXILOffset;
       else
         Header.Bitcode.Offset = sizeof(dxbc::BitcodeHeader);
 
       if (P.Program->DXILSize)
-        Header.Bitcode.Size = P.Program->DXILSize.value();
+        Header.Bitcode.Size = *P.Program->DXILSize;
       else
         Header.Bitcode.Size = P.Program->DXIL ? P.Program->DXIL->size() : 0;
 
       if (P.Program->Size)
-        Header.Size = P.Program->Size.value();
+        Header.Size = *P.Program->Size;
       else
         Header.Size = sizeof(dxbc::ProgramHeader) + Header.Bitcode.Size;
 
