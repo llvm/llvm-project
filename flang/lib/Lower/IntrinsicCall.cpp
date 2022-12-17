@@ -1686,44 +1686,6 @@ private:
   bool infinite = false; // When forbidden conversion or wrong argument number
 };
 
-/// Build mlir::func::FuncOp from runtime symbol description and add
-/// fir.runtime attribute.
-static mlir::func::FuncOp getFuncOp(mlir::Location loc,
-                                    fir::FirOpBuilder &builder,
-                                    const RuntimeFunction &runtime) {
-  mlir::func::FuncOp function = builder.addNamedFunction(
-      loc, runtime.symbol, runtime.typeGenerator(builder.getContext()));
-  function->setAttr("fir.runtime", builder.getUnitAttr());
-  return function;
-}
-
-/// Select runtime function that has the smallest distance to the intrinsic
-/// function type and that will not imply narrowing arguments or extending the
-/// result.
-/// If nothing is found, the mlir::func::FuncOp will contain a nullptr.
-static mlir::func::FuncOp searchFunctionInLibrary(
-    mlir::Location loc, fir::FirOpBuilder &builder,
-    const Fortran::common::StaticMultimapView<RuntimeFunction> &lib,
-    llvm::StringRef name, mlir::FunctionType funcType,
-    const RuntimeFunction **bestNearMatch,
-    FunctionDistance &bestMatchDistance) {
-  std::pair<const RuntimeFunction *, const RuntimeFunction *> range =
-      lib.equal_range(name);
-  for (auto iter = range.first; iter != range.second && iter; ++iter) {
-    const RuntimeFunction &impl = *iter;
-    mlir::FunctionType implType = impl.typeGenerator(builder.getContext());
-    if (funcType == implType)
-      return getFuncOp(loc, builder, impl); // exact match
-
-    FunctionDistance distance(funcType, implType);
-    if (distance.isSmallerThan(bestMatchDistance)) {
-      *bestNearMatch = &impl;
-      bestMatchDistance = std::move(distance);
-    }
-  }
-  return {};
-}
-
 using RtMap = Fortran::common::StaticMultimapView<MathOperation>;
 static constexpr RtMap mathOps(mathOperations);
 static_assert(mathOps.Verify() && "map must be sorted");
