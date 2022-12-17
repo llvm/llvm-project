@@ -1555,7 +1555,7 @@ multiclass VOP3Only_Realtriple_gfx12<bits<10> op, bit isSingle = 0> :
 
 // IsSingle is captured from the vopprofile for these instructions, but the
 // following alternative is more explicit
-multiclass VO3Only_Real_Base_gfx12<bits<10> op> :
+multiclass VOP3Only_Real_Base_gfx12<bits<10> op> :
   VOP3_Real_Base<GFX12Gen, op, NAME, 1/*IsSingle*/>;
 
 multiclass VOP3Only_Realtriple_t16_gfx12<bits<10> op> :

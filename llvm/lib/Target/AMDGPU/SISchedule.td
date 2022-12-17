@@ -93,6 +93,7 @@ def SIDPFullSpeedModel : SISchedMachineModel;
 def SIDPGFX940FullSpeedModel : SISchedMachineModel;
 def GFX10SpeedModel : SISchedMachineModel;
 def GFX11SpeedModel : SISchedMachineModel;
+def GFX12SpeedModel : SISchedMachineModel;
 
 // XXX: Are the resource counts correct?
 def HWBranch : ProcResource<1> {
@@ -350,3 +351,30 @@ def : HWWriteRes<WriteBarrier,       [HWBranch],       2000>;
 def : InstRW<[WriteCopy], (instrs COPY)>;
 
 }  // End SchedModel = GFX11SpeedModel
+
+let SchedModel = GFX12SpeedModel in {
+
+def : HWWriteRes<Write32Bit,         [HWVALU, HWRC],   5>;
+def : HWWriteRes<WriteFloatCvt,      [HWVALU, HWRC],   5>;
+def : HWWriteRes<Write64Bit,         [HWVALU, HWRC],   6>;
+def : HWWriteRes<WriteTrans32,       [HWVALU, HWRC],   10>;
+def : HWWriteRes<WriteQuarterRate32, [HWVALU, HWRC],   8>;
+def : HWWriteRes<WriteFloatFMA,      [HWVALU, HWRC],   5>;
+def : HWWriteRes<WriteDouble,        [HWVALU, HWRC],   38>;
+def : HWWriteRes<WriteDoubleAdd,     [HWVALU, HWRC],   38>;
+def : HWWriteRes<WriteDoubleCvt,     [HWVALU, HWRC],   38>;
+def : HWWriteRes<WriteIntMul,        [HWVALU, HWRC],   8>;
+def : HWWriteRes<WriteTrans64,       [HWVALU, HWRC],   40>;
+
+def : HWWriteRes<WriteBranch,        [HWBranch],       32>;
+def : HWWriteRes<WriteExport,        [HWExport, HWRC], 16>;
+def : HWWriteRes<WriteLDS,           [HWLGKM,   HWRC], 20>;
+def : HWWriteRes<WriteSALU,          [HWSALU,   HWRC], 2>;
+def : HWWriteRes<WriteSFPU,          [HWSALU,   HWRC], 4>;
+def : HWWriteRes<WriteSMEM,          [HWLGKM,   HWRC], 20>;
+def : HWWriteRes<WriteVMEM,          [HWVMEM,   HWRC], 320>;
+def : HWWriteRes<WriteBarrier,       [HWBranch],       2000>;
+
+def : InstRW<[WriteCopy], (instrs COPY)>;
+
+}  // End SchedModel = GFX12SpeedModel
