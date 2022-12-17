@@ -2150,8 +2150,17 @@ public:
   UnsafeBufferUsageReporter(Sema &S) : S(S) {}
 
   void handleUnsafeOperation(const Stmt *Operation) override {
-    S.Diag(Operation->getBeginLoc(), diag::warn_unsafe_buffer_usage)
+    S.Diag(Operation->getBeginLoc(), diag::warn_unsafe_buffer_expression)
         << Operation->getSourceRange();
+  }
+
+  void handleFixableVariable(const VarDecl *Variable,
+                             FixItList &&Fixes) override {
+    const auto &D =
+        S.Diag(Variable->getBeginLoc(), diag::warn_unsafe_buffer_variable);
+    D << Variable << Variable->getSourceRange();
+    for (const auto &F: Fixes)
+      D << F;
   }
 };
 
@@ -2449,7 +2458,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
         checkThrowInNonThrowingFunc(S, FD, AC);
 
   // Emit unsafe buffer usage warnings and fixits.
-  if (!Diags.isIgnored(diag::warn_unsafe_buffer_usage, D->getBeginLoc())) {
+  if (!Diags.isIgnored(diag::warn_unsafe_buffer_expression, D->getBeginLoc()) ||
+      !Diags.isIgnored(diag::warn_unsafe_buffer_variable, D->getBeginLoc())) {
     UnsafeBufferUsageReporter R(S);
     checkUnsafeBufferUsage(D, R);
   }
