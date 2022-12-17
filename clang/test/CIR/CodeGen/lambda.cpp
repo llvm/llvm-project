@@ -6,6 +6,6 @@ void fn() {
 }
 
 //      CHECK: !ty_22class2Eanon22 = !cir.struct<"class.anon", i8>
-// CHECK-NEXT: module
+//  CHECK-DAG: module
 // CHECK-NEXT:   cir.func @_Z2fnv()
 // CHECK-NEXT:     %0 = cir.alloca !ty_22class2Eanon22, cir.ptr <!ty_22class2Eanon22>, ["a"]
