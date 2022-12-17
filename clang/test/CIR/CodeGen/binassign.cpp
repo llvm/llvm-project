@@ -50,4 +50,6 @@ int foo(int a, int b) {
 // CHECK: = cir.binop(or,
 // CHECK: cir.store {{.*}}[[Value]]
 
-// CHECK: [[SourceLocation]] = loc(fused["{{.*}}binassign.cpp":8:3, "{{.*}}binassign.cpp":8:8])
+// CHECK: [[SourceLocationB:#loc[0-9]+]] = loc("{{.*}}binassign.cpp":8:8)
+// CHECK: [[SourceLocationA:#loc[0-9]+]] = loc("{{.*}}binassign.cpp":8:3)
+// CHECK: [[SourceLocation]] = loc(fused[[[SourceLocationA]], [[SourceLocationB]]])
