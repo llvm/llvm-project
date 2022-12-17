@@ -778,7 +778,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   std::optional<int> FPSaveIndex = FuncInfo->FramePointerSaveIndex;
   std::optional<int> BPSaveIndex = FuncInfo->BasePointerSaveIndex;
 
-  // VGPRs used for SGPR->VGPR spills
+  // Spill Whole-Wave Mode VGPRs.
   for (const auto &Reg : FuncInfo->getWWMSpills()) {
     Register VGPR = Reg.first;
     int FI = Reg.second;
@@ -787,15 +787,6 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
                                              /*IsProlog*/ true);
 
     buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL, VGPR, FI);
-  }
-
-  for (auto ReservedWWM : FuncInfo->wwmAllocation()) {
-    if (!ScratchExecCopy)
-      ScratchExecCopy =
-          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL, /*IsProlog*/ true);
-
-    buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL,
-                     std::get<0>(ReservedWWM), std::get<1>(ReservedWWM));
   }
 
   if (ScratchExecCopy) {
@@ -1064,15 +1055,6 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
                        FI);
   }
 
-  for (auto ReservedWWM : FuncInfo->wwmAllocation()) {
-    if (!ScratchExecCopy)
-      ScratchExecCopy =
-          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL, /*IsProlog*/ false);
-
-    buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL,
-                       std::get<0>(ReservedWWM), std::get<1>(ReservedWWM));
-  }
-
   if (ScratchExecCopy) {
     // FIXME: Split block and make terminator.
     unsigned ExecMov = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
@@ -1120,9 +1102,13 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
 
+  // Allocate spill slots for WWM reserved VGPRs.
   if (!FuncInfo->isEntryFunction()) {
-    // Spill VGPRs used for Whole Wave Mode
-    FuncInfo->allocateWWMReservedSpillSlots(MFI, *TRI);
+    for (Register Reg : FuncInfo->getWWMReservedRegs()) {
+      const TargetRegisterClass *RC = TRI->getPhysRegClass(Reg);
+      FuncInfo->allocateWWMSpill(MF, Reg, TRI->getSpillSize(*RC),
+                                 TRI->getSpillAlign(*RC));
+    }
   }
 
   const bool SpillVGPRToAGPR = ST.hasMAIInsts() && FuncInfo->hasSpilledVGPRs()
@@ -1306,8 +1292,8 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
       FrameInfo.hasCalls() &&
       (SavedVGPRs.any() || !allStackObjectsAreDead(FrameInfo));
 
-  // VGPRs used for SGPR spilling need to be specially inserted in the prolog,
-  // so don't allow the default insertion to handle them.
+  // The Whole-Wave VGPRs need to be specially inserted in the prolog, so don't
+  // allow the default insertion to handle them.
   for (auto &Reg : MFI->getWWMSpills())
     SavedVGPRs.reset(Reg.first);
 

@@ -473,20 +473,6 @@ bool SIMachineFunctionInfo::removeDeadFrameIndices(
   return HaveSGPRToMemory;
 }
 
-void SIMachineFunctionInfo::allocateWWMReservedSpillSlots(
-    MachineFrameInfo &MFI, const SIRegisterInfo &TRI) {
-  assert(WWMReservedFrameIndexes.empty());
-
-  WWMReservedFrameIndexes.resize(WWMReservedRegs.size());
-
-  int I = 0;
-  for (Register VGPR : WWMReservedRegs) {
-    const TargetRegisterClass *RC = TRI.getPhysRegClass(VGPR);
-    WWMReservedFrameIndexes[I++] = MFI.CreateSpillStackObject(
-        TRI.getSpillSize(*RC), TRI.getSpillAlign(*RC));
-  }
-}
-
 int SIMachineFunctionInfo::getScavengeFI(MachineFrameInfo &MFI,
                                          const SIRegisterInfo &TRI) {
   if (ScavengeFI)
@@ -613,7 +599,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       BytesInStackArgArea(MFI.getBytesInStackArgArea()),
       ReturnsVoid(MFI.returnsVoid()),
       ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)), Mode(MFI.getMode()) {
-  for (Register Reg : MFI.WWMReservedRegs)
+  for (Register Reg : MFI.getWWMReservedRegs())
     WWMReservedRegs.push_back(regToString(Reg, TRI));
 
   if (MFI.getVGPRForAGPRCopy())
