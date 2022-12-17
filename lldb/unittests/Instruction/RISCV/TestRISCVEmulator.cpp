@@ -566,7 +566,7 @@ TEST_F(RISCVEmulatorTester, TestFloatInst) {
     ASSERT_TRUE(decode.has_value());
     std::string name = decode->pattern.name;
     ASSERT_EQ(name, i.name);
-    TestF_D_CalInst(this, decode.value(), i.rs1_val, i.rs2_val, i.rd_val);
+    TestF_D_CalInst(this, *decode, i.rs1_val, i.rs2_val, i.rd_val);
   }
 }
 
@@ -604,7 +604,7 @@ TEST_F(RISCVEmulatorTester, TestDoubleInst) {
     ASSERT_TRUE(decode.has_value());
     std::string name = decode->pattern.name;
     ASSERT_EQ(name, i.name);
-    TestF_D_CalInst(this, decode.value(), i.rs1_val, i.rs2_val, i.rd_val);
+    TestF_D_CalInst(this, *decode, i.rs1_val, i.rs2_val, i.rd_val);
   }
 }
 
@@ -704,7 +704,7 @@ TEST_F(RISCVEmulatorTester, TestFloatLSInst) {
   ASSERT_TRUE(decode.has_value());
   std::string name = decode->pattern.name;
   ASSERT_EQ(name, "FLW");
-  ASSERT_TRUE(this->Execute(decode.value(), false));
+  ASSERT_TRUE(this->Execute(*decode, false));
   ASSERT_EQ(this->fpr.fpr[DecodeRD(FLWInst)], bits);
 
   this->fpr.fpr[DecodeRS2(FSWInst)] = bits;
@@ -712,7 +712,7 @@ TEST_F(RISCVEmulatorTester, TestFloatLSInst) {
   ASSERT_TRUE(decode.has_value());
   name = decode->pattern.name;
   ASSERT_EQ(name, "FSW");
-  ASSERT_TRUE(this->Execute(decode.value(), false));
+  ASSERT_TRUE(this->Execute(*decode, false));
   ASSERT_EQ(*(uint32_t *)(this->memory + 16), bits);
 }
 
@@ -728,7 +728,7 @@ TEST_F(RISCVEmulatorTester, TestDoubleLSInst) {
   ASSERT_TRUE(decode.has_value());
   std::string name = decode->pattern.name;
   ASSERT_EQ(name, "FLD");
-  ASSERT_TRUE(this->Execute(decode.value(), false));
+  ASSERT_TRUE(this->Execute(*decode, false));
   ASSERT_EQ(this->fpr.fpr[DecodeRD(FLDInst)], bits);
 
   this->fpr.fpr[DecodeRS2(FSDInst)] = bits;
@@ -736,7 +736,7 @@ TEST_F(RISCVEmulatorTester, TestDoubleLSInst) {
   ASSERT_TRUE(decode.has_value());
   name = decode->pattern.name;
   ASSERT_EQ(name, "FSD");
-  ASSERT_TRUE(this->Execute(decode.value(), false));
+  ASSERT_TRUE(this->Execute(*decode, false));
   ASSERT_EQ(*(uint64_t *)(this->memory + 16), bits);
 }
 
@@ -750,7 +750,7 @@ TEST_F(RISCVEmulatorTester, TestFMV_X_WInst) {
   ASSERT_TRUE(decode.has_value());
   std::string name = decode->pattern.name;
   ASSERT_EQ(name, "FMV_X_W");
-  ASSERT_TRUE(this->Execute(decode.value(), false));
+  ASSERT_TRUE(this->Execute(*decode, false));
   ASSERT_EQ(this->gpr.gpr[DecodeRD(FMV_X_WInst)], exp_bits);
 }
 
@@ -764,7 +764,7 @@ TEST_F(RISCVEmulatorTester, TestFMV_X_DInst) {
   ASSERT_TRUE(decode.has_value());
   std::string name = decode->pattern.name;
   ASSERT_EQ(name, "FMV_X_D");
-  ASSERT_TRUE(this->Execute(decode.value(), false));
+  ASSERT_TRUE(this->Execute(*decode, false));
   ASSERT_EQ(this->gpr.gpr[DecodeRD(FMV_X_DInst)], exp_bits);
 }
 
@@ -778,7 +778,7 @@ TEST_F(RISCVEmulatorTester, TestFMV_W_XInst) {
   ASSERT_TRUE(decode.has_value());
   std::string name = decode->pattern.name;
   ASSERT_EQ(name, "FMV_W_X");
-  ASSERT_TRUE(this->Execute(decode.value(), false));
+  ASSERT_TRUE(this->Execute(*decode, false));
   ASSERT_EQ(this->fpr.fpr[DecodeRD(FMV_W_XInst)], exp_bits);
 }
 
@@ -792,6 +792,6 @@ TEST_F(RISCVEmulatorTester, TestFMV_D_XInst) {
   ASSERT_TRUE(decode.has_value());
   std::string name = decode->pattern.name;
   ASSERT_EQ(name, "FMV_D_X");
-  ASSERT_TRUE(this->Execute(decode.value(), false));
+  ASSERT_TRUE(this->Execute(*decode, false));
   ASSERT_EQ(this->fpr.fpr[DecodeRD(FMV_D_XInst)], bits);
 }
