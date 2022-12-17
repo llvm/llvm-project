@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=x86_64-unknown-linux-gnu -load-store-vectorizer -mcpu haswell -S -o - %s | FileCheck --check-prefix=CHECK-HSW %s
-; RUN: opt -mtriple=x86_64-unknown-linux-gnu -load-store-vectorizer -mcpu knl -S -o - %s | FileCheck --check-prefix=CHECK-KNL %s
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -passes=load-store-vectorizer -mcpu haswell -S -o - %s | FileCheck --check-prefix=CHECK-HSW %s
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -passes=load-store-vectorizer -mcpu knl -S -o - %s | FileCheck --check-prefix=CHECK-KNL %s
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' -mcpu haswell -S -o - %s | FileCheck --check-prefix=CHECK-HSW %s
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' -mcpu knl -S -o - %s | FileCheck --check-prefix=CHECK-KNL %s
 

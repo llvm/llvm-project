@@ -1,4 +1,3 @@
-; RUN: opt < %s -rewrite-statepoints-for-gc -spp-rematerialization-threshold=0 -S | FileCheck %s
 ; RUN: opt < %s -passes=rewrite-statepoints-for-gc -spp-rematerialization-threshold=0 -S | FileCheck %s
 
 
@@ -89,7 +88,7 @@ else_branch:                                      ; preds = %bci_0
 ; CHECK-LABEL: else_branch:
 ; CHECK: gc.statepoint
 ; CHECK: gc.relocate
-; We need to end up with a single relocation phi updated from both paths 
+; We need to end up with a single relocation phi updated from both paths
   call void @foo() [ "deopt"() ]
   br label %join
 
@@ -107,8 +106,8 @@ declare void @goo(i64)
 
 declare i32 @moo(i64 addrspace(1)*)
 
-; Make sure a use in a statepoint gets properly relocated at a previous one.  
-; This is basically just making sure that statepoints aren't accidentally 
+; Make sure a use in a statepoint gets properly relocated at a previous one.
+; This is basically just making sure that statepoints aren't accidentally
 ; treated specially.
 define void @test3(i64 addrspace(1)* %obj) gc "statepoint-example" {
 ; CHECK-LABEL: @test3
@@ -124,7 +123,7 @@ entry:
 
 declare i8 addrspace(1)* @boo()
 
-; Check specifically for the case where the result of a statepoint needs to 
+; Check specifically for the case where the result of a statepoint needs to
 ; be relocated itself
 define void @test4() gc "statepoint-example" {
 ; CHECK-LABEL: @test4
@@ -172,9 +171,9 @@ entry:
 do_safepoint:                                     ; preds = %entry
 ; CHECK-LABEL: do_safepoint:
 ; CHECK: gc.statepoint
-; CHECK: arg1.relocated = 
-; CHECK: arg2.relocated = 
-; CHECK: arg3.relocated = 
+; CHECK: arg1.relocated =
+; CHECK: arg2.relocated =
+; CHECK: arg3.relocated =
   call void @foo() [ "deopt"(i8 addrspace(1)* %arg1, i8 addrspace(1)* %arg2, i8 addrspace(1)* %arg3) ]
   br label %gc.safepoint_poll.exit2
 
@@ -232,10 +231,10 @@ outer-loop:                                       ; preds = %outer-inc, %bci_0
 ; CHECK: phi i8 addrspace(1)* [ %arg1, %bci_0 ], [ %arg1.relocated, %outer-inc ]
   br label %inner-loop
 ; CHECK-LABEL: inner-loop
-; CHECK: phi i8 addrspace(1)* 
+; CHECK: phi i8 addrspace(1)*
 ; CHECK-DAG: %outer-loop ]
 ; CHECK-DAG: [ %arg2.relocated, %inner-loop ]
-; CHECK: phi i8 addrspace(1)* 
+; CHECK: phi i8 addrspace(1)*
 ; CHECK-DAG: %outer-loop ]
 ; CHECK-DAG: [ %arg1.relocated, %inner-loop ]
 ; CHECK: gc.statepoint
@@ -268,7 +267,7 @@ callbb:                                           ; preds = %branch2
 join:                                             ; preds = %callbb, %entry
 ; CHECK-LABEL: join:
 ; CHECK: phi i64 addrspace(1)* [ %obj.relocated.casted, %callbb ], [ %obj, %entry ]
-; CHECK: phi i64 addrspace(1)* 
+; CHECK: phi i64 addrspace(1)*
 ; CHECK-DAG: [ %obj, %entry ]
 ; CHECK-DAG: [ %obj2.relocated.casted, %callbb ]
   %phi1 = phi i64 addrspace(1)* [ %obj, %entry ], [ %obj2, %callbb ]
@@ -276,8 +275,8 @@ join:                                             ; preds = %callbb, %entry
 
 join2:                                            ; preds = %join, %branch2
 ; CHECK-LABEL: join2:
-; CHECK: phi2 = phi i64 addrspace(1)* 
-; CHECK-DAG: %join ] 
+; CHECK: phi2 = phi i64 addrspace(1)*
+; CHECK-DAG: %join ]
 ; CHECK-DAG:  [ %obj2, %branch2 ]
   %phi2 = phi i64 addrspace(1)* [ %obj, %join ], [ %obj2, %branch2 ]
   ret i64 addrspace(1)* %phi2

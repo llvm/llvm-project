@@ -226,3 +226,7 @@ def GenExecuteOnly : Predicate<"Subtarget->genExecuteOnly()">;
 // Armv8.5-A extensions
 def HasSB            : Predicate<"Subtarget->hasSB()">,
                        AssemblerPredicate<(all_of FeatureSB), "sb">;
+
+// Armv8.9-A/9.4-A 2022 Architecture extensions
+def HasCLRBHB        : Predicate<"Subtarget->hasCLRBHB()">,
+                       AssemblerPredicate<(all_of FeatureCLRBHB), "clrbhb">;

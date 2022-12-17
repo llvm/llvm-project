@@ -31,7 +31,7 @@ mlir::bufferization::castOrReallocMemRefValue(OpBuilder &b, Value value,
   // Element type, rank and memory space must match.
   if (srcType.getElementType() != destType.getElementType())
     return failure();
-  if (srcType.getMemorySpaceAsInt() != destType.getMemorySpaceAsInt())
+  if (srcType.getMemorySpace() != destType.getMemorySpace())
     return failure();
   if (srcType.getRank() != destType.getRank())
     return failure();

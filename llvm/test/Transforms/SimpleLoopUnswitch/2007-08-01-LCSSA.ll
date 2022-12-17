@@ -1,4 +1,4 @@
-; RUN: opt < %s -simple-loop-unswitch -verify-memoryssa -instcombine -disable-output
+; RUN: opt < %s -passes='loop(simple-loop-unswitch),instcombine' -verify-memoryssa -disable-output
 	%struct.ClassDef = type { %struct.QByteArray, %struct.QByteArray, %"struct.QList<ArgumentDef>", %"struct.QList<ArgumentDef>", i8, i8, %"struct.QList<ArgumentDef>", %"struct.QList<ArgumentDef>", %"struct.QList<ArgumentDef>", %"struct.QList<ArgumentDef>", %"struct.QList<ArgumentDef>", %"struct.QList<ArgumentDef>", %"struct.QMap<QByteArray,QByteArray>", %"struct.QList<ArgumentDef>", %"struct.QMap<QByteArray,QByteArray>", i32, i32 }
 	%struct.FILE = type { i32, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, %struct._IO_marker*, %struct.FILE*, i32, i32, i32, i16, i8, [1 x i8], i8*, i64, i8*, i8*, i8*, i8*, i32, i32, [40 x i8] }
 	%struct.Generator = type { %struct.FILE*, %struct.ClassDef*, %"struct.QList<ArgumentDef>", %struct.QByteArray, %"struct.QList<ArgumentDef>" }

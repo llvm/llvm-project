@@ -327,15 +327,22 @@ bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
     return true;
 
   Expected<sys::fs::file_t> FD = sys::fs::openNativeFileForRead(FileName);
-  if (!FD)
+  if (!FD) {
+    consumeError(FD.takeError());
     return false;
+  }
 
   char Buf[7] = {0, 0, 0, 0, 0, 0, 0};
 
   auto Close = make_scope_exit([&] { sys::fs::closeFile(*FD); });
   Expected<size_t> BytesRead = sys::fs::readNativeFileSlice(
       *FD, makeMutableArrayRef(Buf, sizeof(Buf)), 0);
-  if (!BytesRead || *BytesRead != 7)
+  if (!BytesRead) {
+    consumeError(BytesRead.takeError());
+    return false;
+  }
+
+  if (*BytesRead != 7)
     return false;
 
   if (strncmp(Buf, "PERFILE", 7) == 0)

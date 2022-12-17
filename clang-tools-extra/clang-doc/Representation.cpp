@@ -250,6 +250,8 @@ void RecordInfo::merge(RecordInfo &&Other) {
   reduceChildren(Children.Enums, std::move(Other.Children.Enums));
   reduceChildren(Children.Typedefs, std::move(Other.Children.Typedefs));
   SymbolInfo::merge(std::move(Other));
+  if (!Template)
+    Template = Other.Template;
 }
 
 void EnumInfo::merge(EnumInfo &&Other) {
@@ -274,6 +276,8 @@ void FunctionInfo::merge(FunctionInfo &&Other) {
   if (Params.empty())
     Params = std::move(Other.Params);
   SymbolInfo::merge(std::move(Other));
+  if (!Template)
+    Template = Other.Template;
 }
 
 void TypedefInfo::merge(TypedefInfo &&Other) {

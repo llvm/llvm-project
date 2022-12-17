@@ -14,7 +14,6 @@
 #include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/MsgPackDocument.h"
 

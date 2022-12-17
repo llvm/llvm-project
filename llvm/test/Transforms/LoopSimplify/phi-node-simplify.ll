@@ -1,5 +1,5 @@
 ; Loop Simplify should turn phi nodes like X = phi [X, Y]  into just Y, eliminating them.
-; RUN: opt < %s -loop-simplify -S | grep phi | count 6
+; RUN: opt < %s -passes=loop-simplify -S | grep phi | count 6
 
 @A = weak global [3000000 x i32] zeroinitializer		; <[3000000 x i32]*> [#uses=1]
 @B = weak global [20000 x i32] zeroinitializer		; <[20000 x i32]*> [#uses=1]

@@ -1681,13 +1681,24 @@ public:
           dy = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dy);
         }
 
+        Value xScaleNExt = xScaleN;
+        Value yScaleNExt = yScaleN;
+
+        if (xScaleN.getType() != resultElementTy)
+          xScaleNExt =
+              rewriter.create<arith::ExtSIOp>(loc, resultElementTy, xScaleN);
+
+        if (yScaleN.getType() != resultElementTy)
+          yScaleNExt =
+              rewriter.create<arith::ExtSIOp>(loc, resultElementTy, yScaleN);
+
         Value topAcc, bottomAcc;
         if (imageW == 1) {
-          topAcc = rewriter.create<arith::MulIOp>(loc, y0x0, xScaleN);
-          bottomAcc = rewriter.create<arith::MulIOp>(loc, y1x0, xScaleN);
+          topAcc = rewriter.create<arith::MulIOp>(loc, y0x0, xScaleNExt);
+          bottomAcc = rewriter.create<arith::MulIOp>(loc, y1x0, xScaleNExt);
         } else {
           Value rightPart = dx;
-          Value leftPart = rewriter.create<arith::SubIOp>(loc, xScaleN, dx);
+          Value leftPart = rewriter.create<arith::SubIOp>(loc, xScaleNExt, dx);
 
           y0x0 = rewriter.create<arith::MulIOp>(loc, y0x0, leftPart);
           y0x1 = rewriter.create<arith::MulIOp>(loc, y0x1, rightPart);
@@ -1700,10 +1711,10 @@ public:
 
         Value result;
         if (imageH == 1) {
-          result = rewriter.create<arith::MulIOp>(loc, topAcc, yScaleN);
+          result = rewriter.create<arith::MulIOp>(loc, topAcc, yScaleNExt);
         } else {
           Value bottomPart = dy;
-          Value topPart = rewriter.create<arith::SubIOp>(loc, yScaleN, dy);
+          Value topPart = rewriter.create<arith::SubIOp>(loc, yScaleNExt, dy);
           topAcc = rewriter.create<arith::MulIOp>(loc, topAcc, topPart);
           bottomAcc =
               rewriter.create<arith::MulIOp>(loc, bottomAcc, bottomPart);

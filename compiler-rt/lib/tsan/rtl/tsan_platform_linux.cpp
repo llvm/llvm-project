@@ -230,6 +230,14 @@ void InitializePlatformEarly() {
     Die();
   }
 #endif
+#elif SANITIZER_LOONGARCH64
+# if !SANITIZER_GO
+  if (vmaSize != 47) {
+    Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
+    Printf("FATAL: Found %zd - Supported 47\n", vmaSize);
+    Die();
+  }
+# endif
 #elif defined(__powerpc64__)
 # if !SANITIZER_GO
   if (vmaSize != 44 && vmaSize != 46 && vmaSize != 47) {
@@ -290,11 +298,12 @@ void InitializePlatform() {
       SetAddressSpaceUnlimited();
       reexec = true;
     }
-#if SANITIZER_LINUX && defined(__aarch64__)
+#if SANITIZER_ANDROID && (defined(__aarch64__) || defined(__x86_64__))
     // After patch "arm64: mm: support ARCH_MMAP_RND_BITS." is introduced in
     // linux kernel, the random gap between stack and mapped area is increased
     // from 128M to 36G on 39-bit aarch64. As it is almost impossible to cover
     // this big range, we should disable randomized virtual space on aarch64.
+    // ASLR personality check.
     int old_personality = personality(0xffffffff);
     if (old_personality != -1 && (old_personality & ADDR_NO_RANDOMIZE) == 0) {
       VReport(1, "WARNING: Program is run with randomized virtual address "
@@ -303,6 +312,9 @@ void InitializePlatform() {
       CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
       reexec = true;
     }
+
+#endif
+#if SANITIZER_LINUX && defined(__aarch64__)
     // Initialize the xor key used in {sig}{set,long}jump.
     InitializeLongjmpXorKey();
 #endif
@@ -375,6 +387,8 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 # else
   return mangled_sp;
 # endif
+#elif defined(__loongarch__)
+  return mangled_sp;
 #elif defined(__powerpc64__)
   // Reverse of:
   //   ld   r4, -28696(r13)
@@ -410,6 +424,8 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 #elif SANITIZER_LINUX
 # ifdef __aarch64__
 #  define LONG_JMP_SP_ENV_SLOT 13
+# elif defined(__loongarch__)
+#  define LONG_JMP_SP_ENV_SLOT 1
 # elif defined(__mips64)
 #  define LONG_JMP_SP_ENV_SLOT 1
 # elif defined(__s390x__)

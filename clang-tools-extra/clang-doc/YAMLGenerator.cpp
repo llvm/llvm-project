@@ -9,6 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Generators.h"
+#include "Representation.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -24,6 +25,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(CommentInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(FunctionInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(EnumInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(EnumValueInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(TemplateParamInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(TypedefInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(BaseRecordInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<CommentInfo>)
@@ -143,6 +145,7 @@ static void RecordInfoMapping(IO &IO, RecordInfo &I) {
   IO.mapOptional("ChildFunctions", I.Children.Functions);
   IO.mapOptional("ChildEnums", I.Children.Enums);
   IO.mapOptional("ChildTypedefs", I.Children.Typedefs);
+  IO.mapOptional("Template", I.Template);
 }
 
 static void CommentInfoMapping(IO &IO, CommentInfo &I) {
@@ -175,6 +178,7 @@ template <> struct MappingTraits<Reference> {
   static void mapping(IO &IO, Reference &Ref) {
     IO.mapOptional("Type", Ref.RefType, InfoType::IT_default);
     IO.mapOptional("Name", Ref.Name, SmallString<16>());
+    IO.mapOptional("QualName", Ref.QualName, SmallString<16>());
     IO.mapOptional("USR", Ref.USR, SymbolID());
     IO.mapOptional("Path", Ref.Path, SmallString<128>());
   }
@@ -268,6 +272,28 @@ template <> struct MappingTraits<FunctionInfo> {
     // the AS that shouldn't be part of the output. Even though AS_public is the
     // default in the struct, it should be displayed in the YAML output.
     IO.mapOptional("Access", I.Access, clang::AccessSpecifier::AS_none);
+    IO.mapOptional("Template", I.Template);
+  }
+};
+
+template <> struct MappingTraits<TemplateParamInfo> {
+  static void mapping(IO &IO, TemplateParamInfo &I) {
+    IO.mapOptional("Contents", I.Contents);
+  }
+};
+
+template <> struct MappingTraits<TemplateSpecializationInfo> {
+  static void mapping(IO &IO, TemplateSpecializationInfo &I) {
+    IO.mapOptional("SpecializationOf", I.SpecializationOf);
+    IO.mapOptional("Params", I.Params);
+  }
+};
+
+template <> struct MappingTraits<TemplateInfo> {
+  static void mapping(IO &IO, TemplateInfo &I) {
+    IO.mapOptional("Params", I.Params);
+    IO.mapOptional("Specialization", I.Specialization,
+                   std::optional<TemplateSpecializationInfo>());
   }
 };
 

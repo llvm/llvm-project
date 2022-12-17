@@ -1,4 +1,4 @@
-# RUN: llvm-exegesis -mode=latency -opcode-name=SQRTSSr -repetition-mode=loop | FileCheck %s
+# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --skip-measurements -opcode-name=SQRTSSr -repetition-mode=loop | FileCheck %s
 
 # Check that the setup code for MXCSR does not crash the snippet.
 

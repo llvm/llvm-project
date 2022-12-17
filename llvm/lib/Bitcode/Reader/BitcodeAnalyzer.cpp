@@ -15,6 +15,7 @@
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/SHA1.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -23,9 +24,9 @@ static Error reportError(StringRef Message) {
 }
 
 /// Return a symbolic block name if known, otherwise return null.
-static Optional<const char *> GetBlockName(unsigned BlockID,
-                                           const BitstreamBlockInfo &BlockInfo,
-                                           CurStreamTypeType CurStreamType) {
+static std::optional<const char *>
+GetBlockName(unsigned BlockID, const BitstreamBlockInfo &BlockInfo,
+             CurStreamTypeType CurStreamType) {
   // Standard blocks for all bitcode files.
   if (BlockID < bitc::FIRST_APPLICATION_BLOCKID) {
     if (BlockID == bitc::BLOCKINFO_BLOCK_ID)
@@ -86,9 +87,10 @@ static Optional<const char *> GetBlockName(unsigned BlockID,
 }
 
 /// Return a symbolic code name if known, otherwise return null.
-static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
-                                          const BitstreamBlockInfo &BlockInfo,
-                                          CurStreamTypeType CurStreamType) {
+static std::optional<const char *>
+GetCodeName(unsigned CodeID, unsigned BlockID,
+            const BitstreamBlockInfo &BlockInfo,
+            CurStreamTypeType CurStreamType) {
   // Standard blocks for all bitcode files.
   if (BlockID < bitc::FIRST_APPLICATION_BLOCKID) {
     if (BlockID == bitc::BLOCKINFO_BLOCK_ID) {
@@ -478,7 +480,7 @@ static Expected<CurStreamTypeType> ReadSignature(BitstreamCursor &Stream) {
   return UnknownBitstream;
 }
 
-static Expected<CurStreamTypeType> analyzeHeader(Optional<BCDumpOptions> O,
+static Expected<CurStreamTypeType> analyzeHeader(std::optional<BCDumpOptions> O,
                                                  BitstreamCursor &Stream) {
   ArrayRef<uint8_t> Bytes = Stream.getBitcodeBytes();
   const unsigned char *BufPtr = (const unsigned char *)Bytes.data();
@@ -558,14 +560,14 @@ Error BitcodeAnalyzer::decodeMetadataStringsBlob(StringRef Indent,
 }
 
 BitcodeAnalyzer::BitcodeAnalyzer(StringRef Buffer,
-                                 Optional<StringRef> BlockInfoBuffer)
+                                 std::optional<StringRef> BlockInfoBuffer)
     : Stream(Buffer) {
   if (BlockInfoBuffer)
     BlockInfoStream.emplace(*BlockInfoBuffer);
 }
 
-Error BitcodeAnalyzer::analyze(Optional<BCDumpOptions> O,
-                               Optional<StringRef> CheckHash) {
+Error BitcodeAnalyzer::analyze(std::optional<BCDumpOptions> O,
+                               std::optional<StringRef> CheckHash) {
   if (Error E = analyzeHeader(O, Stream).moveInto(CurStreamType))
     return E;
 
@@ -589,7 +591,7 @@ Error BitcodeAnalyzer::analyze(Optional<BCDumpOptions> O,
       if (!MaybeBlockID)
         return MaybeBlockID.takeError();
       if (MaybeBlockID.get() == bitc::BLOCKINFO_BLOCK_ID) {
-        Optional<BitstreamBlockInfo> NewBlockInfo;
+        std::optional<BitstreamBlockInfo> NewBlockInfo;
         if (Error E =
                 BlockInfoCursor.ReadBlockInfoBlock(/*ReadBlockInfoNames=*/true)
                     .moveInto(NewBlockInfo))
@@ -626,7 +628,7 @@ Error BitcodeAnalyzer::analyze(Optional<BCDumpOptions> O,
 }
 
 void BitcodeAnalyzer::printStats(BCDumpOptions O,
-                                 Optional<StringRef> Filename) {
+                                 std::optional<StringRef> Filename) {
   uint64_t BufferSizeBits = Stream.getBitcodeBytes().size() * CHAR_BIT;
   // Print a summary of the read file.
   O.OS << "Summary ";
@@ -660,7 +662,7 @@ void BitcodeAnalyzer::printStats(BCDumpOptions O,
   O.OS << "Per-block Summary:\n";
   for (const auto &Stat : BlockIDStats) {
     O.OS << "  Block ID #" << Stat.first;
-    if (Optional<const char *> BlockName =
+    if (std::optional<const char *> BlockName =
             GetBlockName(Stat.first, BlockInfo, CurStreamType))
       O.OS << " (" << *BlockName << ")";
     O.OS << ":\n";
@@ -723,7 +725,7 @@ void BitcodeAnalyzer::printStats(BCDumpOptions O,
           O.OS << "        ";
 
         O.OS << "  ";
-        if (Optional<const char *> CodeName = GetCodeName(
+        if (std::optional<const char *> CodeName = GetCodeName(
                 FreqPair.second, Stat.first, BlockInfo, CurStreamType))
           O.OS << *CodeName << "\n";
         else
@@ -735,8 +737,8 @@ void BitcodeAnalyzer::printStats(BCDumpOptions O,
 }
 
 Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
-                                  Optional<BCDumpOptions> O,
-                                  Optional<StringRef> CheckHash) {
+                                  std::optional<BCDumpOptions> O,
+                                  std::optional<StringRef> CheckHash) {
   std::string Indent(IndentLevel * 2, ' ');
   uint64_t BlockBitStart = Stream.GetCurrentBitNo();
 
@@ -750,7 +752,7 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
   if (BlockID == bitc::BLOCKINFO_BLOCK_ID) {
     if (O && !O->DumpBlockinfo)
       O->OS << Indent << "<BLOCKINFO_BLOCK/>\n";
-    Optional<BitstreamBlockInfo> NewBlockInfo;
+    std::optional<BitstreamBlockInfo> NewBlockInfo;
     if (Error E = Stream.ReadBlockInfoBlock(/*ReadBlockInfoNames=*/true)
                       .moveInto(NewBlockInfo))
       return E;
@@ -771,7 +773,7 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
   // Keep it for later, when we see a MODULE_HASH record
   uint64_t BlockEntryPos = Stream.getCurrentByteNo();
 
-  Optional<const char *> BlockName;
+  std::optional<const char *> BlockName;
   if (DumpRecords) {
     O->OS << Indent << "<";
     if ((BlockName = GetBlockName(BlockID, BlockInfo, CurStreamType)))
@@ -865,7 +867,7 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
 
     if (DumpRecords) {
       O->OS << Indent << "  <";
-      Optional<const char *> CodeName =
+      std::optional<const char *> CodeName =
           GetCodeName(Code, BlockID, BlockInfo, CurStreamType);
       if (CodeName)
         O->OS << *CodeName;

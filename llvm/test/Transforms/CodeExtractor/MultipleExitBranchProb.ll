@@ -1,4 +1,4 @@
-; RUN: opt < %s -partial-inliner -max-num-inline-blocks=2 -skip-partial-inlining-cost-analysis -S | FileCheck %s
+; RUN: opt < %s -passes=partial-inliner -max-num-inline-blocks=2 -skip-partial-inlining-cost-analysis -S | FileCheck %s
 
 ; This test checks to make sure that CodeExtractor updates
 ;  the exit branch probabilities for multiple exit blocks.

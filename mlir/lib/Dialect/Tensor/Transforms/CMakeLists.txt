@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRTensorTransforms
   BufferizableOpInterfaceImpl.cpp
   Bufferize.cpp
+  EmptyOpPatterns.cpp
   ExtractSliceFromReshapeUtils.cpp
   MergeConsecutiveInsertExtractSlicePatterns.cpp
   ReshapePatterns.cpp

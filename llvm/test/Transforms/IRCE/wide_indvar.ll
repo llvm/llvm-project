@@ -1,4 +1,4 @@
-; RUN: opt -verify-loop-info -irce-print-changed-loops -irce -irce-allow-narrow-latch=true -S < %s 2>&1 | FileCheck %s
+; RUN: opt -verify-loop-info -irce-print-changed-loops -passes=irce -irce-allow-narrow-latch=true -S < %s 2>&1 | FileCheck %s
 ; RUN: opt -verify-loop-info -irce-print-changed-loops -passes='require<branch-prob>,irce' -irce-allow-narrow-latch=true -S < %s 2>&1 | FileCheck %s
 
 ; Check that we can remove trivially non-failing range check.

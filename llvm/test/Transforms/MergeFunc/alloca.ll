@@ -1,4 +1,4 @@
-; RUN: opt -mergefunc -S < %s | FileCheck %s
+; RUN: opt -passes=mergefunc -S < %s | FileCheck %s
 
 ;; Make sure that two different allocas are not treated as equal.
 

@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 
 ; This tests that functions with the attribute `no-inline-line-tables` have the
 ; correct debug information when they are inlined.
@@ -12,9 +12,9 @@ target triple = "x86_64-unknown-windows-msvc"
 define dso_local i32 @f(i32 %x) #0 !dbg !7 {
 entry:
   %x.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !12, metadata !DIExpression()), !dbg !13
-  %0 = load i32, i32* %x.addr, align 4, !dbg !14
+  store i32 %x, ptr %x.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !12, metadata !DIExpression()), !dbg !13
+  %0 = load i32, ptr %x.addr, align 4, !dbg !14
   ret i32 %0, !dbg !14
 }
 
@@ -25,14 +25,14 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 define i32 @g(i32 %x) #0 !dbg !15 {
 entry:
   %x.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !16, metadata !DIExpression()), !dbg !17
+  store i32 %x, ptr %x.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !16, metadata !DIExpression()), !dbg !17
   br label %L, !dbg !17
 
 L:                                                ; preds = %entry
   call void @llvm.dbg.label(metadata !18), !dbg !19
-  store i32 42, i32* %x.addr, align 4, !dbg !20
-  %0 = load i32, i32* %x.addr, align 4, !dbg !21
+  store i32 42, ptr %x.addr, align 4, !dbg !20
+  %0 = load i32, ptr %x.addr, align 4, !dbg !21
   ret i32 %0, !dbg !21
 }
 
@@ -47,14 +47,14 @@ entry:
 ; CHECK-LABEL: @main()
 ; CHECK-NOT: @f
 ; CHECK-NOT: @llvm.dbg.declare
-; CHECK: %{{[0-9]+}} = load i32, i32* %x.addr.i, align 4, !dbg ![[VAR1:[0-9]+]]
+; CHECK: %{{[0-9]+}} = load i32, ptr %x.addr.i, align 4, !dbg ![[VAR1:[0-9]+]]
   %call = call i32 @f(i32 3), !dbg !25
 
 ; Another test for inlining debug intrinsics where the intrinsic appears at the
 ; start of the basic block.
 ; CHECK-NOT: @g
 ; CHECK-NOT: @llvm.dbg.label
-; CHECK: %{{[0-9]+}} = load i32, i32* %x.addr.i1, align 4, !dbg ![[VAR2:[0-9]+]]
+; CHECK: %{{[0-9]+}} = load i32, ptr %x.addr.i1, align 4, !dbg ![[VAR2:[0-9]+]]
   %call1 = call i32 @g(i32 340), !dbg !26
   ret i32 0, !dbg !27
 }

@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -S -dfa-jump-threading -debug-only=dfa-jump-threading -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=dfa-jump-threading -debug-only=dfa-jump-threading -disable-output %s 2>&1 | FileCheck %s
 
 ; This test checks that the analysis identifies all threadable paths in a
 ; simple CFG. A threadable path includes a list of basic blocks, the exit

@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 
 define i32 @fn2() noinline {

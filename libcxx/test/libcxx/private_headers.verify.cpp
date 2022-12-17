@@ -342,6 +342,7 @@ END-SCRIPT
 #include <__format/formatter_pointer.h> // expected-error@*:* {{use of private header from outside its module: '__format/formatter_pointer.h'}}
 #include <__format/formatter_string.h> // expected-error@*:* {{use of private header from outside its module: '__format/formatter_string.h'}}
 #include <__format/parser_std_format_spec.h> // expected-error@*:* {{use of private header from outside its module: '__format/parser_std_format_spec.h'}}
+#include <__format/range_default_formatter.h> // expected-error@*:* {{use of private header from outside its module: '__format/range_default_formatter.h'}}
 #include <__format/unicode.h> // expected-error@*:* {{use of private header from outside its module: '__format/unicode.h'}}
 #include <__functional/binary_function.h> // expected-error@*:* {{use of private header from outside its module: '__functional/binary_function.h'}}
 #include <__functional/binary_negate.h> // expected-error@*:* {{use of private header from outside its module: '__functional/binary_negate.h'}}
@@ -639,6 +640,7 @@ END-SCRIPT
 #include <__type_traits/is_scoped_enum.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_scoped_enum.h'}}
 #include <__type_traits/is_signed.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_signed.h'}}
 #include <__type_traits/is_signed_integer.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_signed_integer.h'}}
+#include <__type_traits/is_specialization.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_specialization.h'}}
 #include <__type_traits/is_standard_layout.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_standard_layout.h'}}
 #include <__type_traits/is_swappable.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_swappable.h'}}
 #include <__type_traits/is_trivial.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_trivial.h'}}

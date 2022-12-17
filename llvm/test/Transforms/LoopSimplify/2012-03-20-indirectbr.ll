@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-simplify -S | FileCheck %s
+; RUN: opt < %s -passes=loop-simplify -S | FileCheck %s
 
 ; Make sure the preheader exists.
 ; CHECK: sw.bb103:

@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-unroll -S | FileCheck %s
+; RUN: opt < %s -passes=loop-unroll -S | FileCheck %s
 ; RUN: opt < %s -passes='require<opt-remark-emit>,loop-unroll' -S | FileCheck %s
 
 

@@ -1,4 +1,4 @@
-; RUN: opt < %s -licm -simple-loop-unswitch -disable-output 
+; RUN: opt < %s -passes=licm,simple-loop-unswitch -disable-output
 ; PR 1589
 
       	%struct.QBasicAtomic = type { i32 }

@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-deletion -S | FileCheck %s
+; RUN: opt < %s -passes=loop-deletion -S | FileCheck %s
 ; RUN: opt < %s -passes='loop(loop-deletion)' -S | FileCheck %s
 
 ; ScalarEvolution can prove the loop iteration is finite, even though

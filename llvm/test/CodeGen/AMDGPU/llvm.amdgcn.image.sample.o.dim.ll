@@ -186,7 +186,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_c_d_cl_o_2d:
-; GCN: image_sample_c_d_cl_o v[0:3], v[0:15], s[0:7], s[8:11] dmask:0xf{{$}}
+; GCN: image_sample_c_d_cl_o v[0:3], v[0:8], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_c_d_cl_o_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %clamp) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.2d.v4f32.f32.f32(i32 15, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -250,7 +250,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_c_cd_cl_o_2d:
-; GCN: image_sample_c_cd_cl_o v[0:3], v[0:15], s[0:7], s[8:11] dmask:0xf{{$}}
+; GCN: image_sample_c_cd_cl_o v[0:3], v[0:8], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_c_cd_cl_o_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %clamp) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.2d.v4f32.f32.f32(i32 15, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)

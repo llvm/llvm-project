@@ -1,8 +1,8 @@
-; RUN: opt -verify-loop-info -irce -S < %s
+; RUN: opt -verify-loop-info -passes=irce -S < %s
 ; RUN: opt -verify-loop-info -passes='require<branch-prob>,irce' -S < %s
 
 ; These test cases don't check the correctness of the transform, but
-; that -irce does not crash in the presence of certain things in
+; that -passes=irce does not crash in the presence of certain things in
 ; the IR:
 
 define void @mismatched_types_1() {

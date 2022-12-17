@@ -17,7 +17,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1628,11 +1627,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       Checksum.emplace(static_cast<DIFile::ChecksumKind>(Record[3]),
                        getMDString(Record[4]));
     MetadataList.assignValue(
-        GET_OR_DISTINCT(DIFile, (Context, getMDString(Record[1]),
-                                 getMDString(Record[2]), Checksum,
-                                 Record.size() > 5 ? std::optional<MDString *>(
-                                                         getMDString(Record[5]))
-                                                   : std::nullopt)),
+        GET_OR_DISTINCT(DIFile,
+                        (Context, getMDString(Record[1]),
+                         getMDString(Record[2]), Checksum,
+                         Record.size() > 5 ? getMDString(Record[5]) : nullptr)),
         NextMetadataNo);
     NextMetadataNo++;
     break;

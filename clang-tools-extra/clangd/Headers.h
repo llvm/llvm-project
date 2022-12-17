@@ -240,8 +240,8 @@ public:
   /// \param IncludingFile is the absolute path of the file that InsertedHeader
   /// will be inserted.
   ///
-  /// \return A quoted "path" or <path> to be included, or None if it couldn't
-  /// be shortened.
+  /// \return A quoted "path" or <path> to be included, or std::nullopt if it
+  /// couldn't be shortened.
   llvm::Optional<std::string>
   calculateIncludePath(const HeaderFile &InsertedHeader,
                        llvm::StringRef IncludingFile) const;

@@ -1248,23 +1248,23 @@ image_atomic_xor v[1:2], v[2:3], s[96:103] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA uno
 image_atomic_xor v[254:255], v[254:255], ttmp[8:15] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA unorm glc slc dlc a16 lwe
 // GFX11: [0x98,0x73,0x51,0xf0,0xfe,0xfe,0x5d,0x00]
 
-image_bvh64_intersect_ray v[5:8], v[1:16], s[8:11]
+image_bvh64_intersect_ray v[5:8], v[1:12], s[8:11]
 // GFX11: [0x80,0x8f,0x68,0xf0,0x01,0x05,0x02,0x00]
 
-image_bvh64_intersect_ray v[5:8], v[240:255], s[8:11]
-// GFX11: [0x80,0x8f,0x68,0xf0,0xf0,0x05,0x02,0x00]
+image_bvh64_intersect_ray v[5:8], v[244:255], s[8:11]
+// GFX11: [0x80,0x8f,0x68,0xf0,0xf4,0x05,0x02,0x00]
 
-image_bvh64_intersect_ray v[5:8], v[1:16], s[100:103] a16
+image_bvh64_intersect_ray v[5:8], v[1:9], s[100:103] a16
 // GFX11: [0x80,0x8f,0x69,0xf0,0x01,0x05,0x19,0x00]
 
-image_bvh64_intersect_ray v[252:255], v[240:255], ttmp[12:15] a16
-// GFX11: [0x80,0x8f,0x69,0xf0,0xf0,0xfc,0x1e,0x00]
+image_bvh64_intersect_ray v[252:255], v[247:255], ttmp[12:15] a16
+// GFX11: [0x80,0x8f,0x69,0xf0,0xf7,0xfc,0x1e,0x00]
 
-image_bvh_intersect_ray v[5:8], v[1:16], s[8:11]
+image_bvh_intersect_ray v[5:8], v[1:11], s[8:11]
 // GFX11: [0x80,0x8f,0x64,0xf0,0x01,0x05,0x02,0x00]
 
-image_bvh_intersect_ray v[5:8], v[240:255], s[8:11]
-// GFX11: [0x80,0x8f,0x64,0xf0,0xf0,0x05,0x02,0x00]
+image_bvh_intersect_ray v[5:8], v[245:255], s[8:11]
+// GFX11: [0x80,0x8f,0x64,0xf0,0xf5,0x05,0x02,0x00]
 
 image_bvh_intersect_ray v[5:8], v[1:8], s[100:103] a16
 // GFX11: [0x80,0x8f,0x65,0xf0,0x01,0x05,0x19,0x00]
@@ -3264,17 +3264,17 @@ image_sample_c_d v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D 
 image_sample_c_d v[5:6], v[252:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D a16
 // GFX11: [0x00,0x03,0x85,0xf0,0xfc,0x05,0x02,0x0c]
 
-image_sample_c_d v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+image_sample_c_d v[5:6], v[1:10], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
 // GFX11: [0x08,0x03,0x84,0xf0,0x01,0x05,0x02,0x0c]
 
-image_sample_c_d v[5:6], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+image_sample_c_d v[5:6], v[240:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
 // GFX11: [0x08,0x03,0x84,0xf0,0xf0,0x05,0x02,0x0c]
 
-image_sample_c_d v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
+image_sample_c_d v[5:6], v[1:9], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
 // GFX11: [0x08,0x03,0x85,0xf0,0x01,0x05,0x02,0x0c]
 
-image_sample_c_d v[5:6], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
-// GFX11: [0x08,0x03,0x85,0xf0,0xf0,0x05,0x02,0x0c]
+image_sample_c_d v[5:6], v[241:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
+// GFX11: [0x08,0x03,0x85,0xf0,0xf1,0x05,0x02,0x0c]
 
 image_sample_c_d v[5:6], v[1:7], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_2D
 // GFX11: [0x04,0x03,0x84,0xf0,0x01,0x05,0x02,0x0c]
@@ -3336,17 +3336,17 @@ image_sample_c_d_cl v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_
 image_sample_c_d_cl v[5:6], v[252:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D a16
 // GFX11: [0x00,0x03,0x11,0xf1,0xfc,0x05,0x02,0x0c]
 
-image_sample_c_d_cl v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+image_sample_c_d_cl v[5:6], v[1:11], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
 // GFX11: [0x08,0x03,0x10,0xf1,0x01,0x05,0x02,0x0c]
 
-image_sample_c_d_cl v[5:6], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
-// GFX11: [0x08,0x03,0x10,0xf1,0xf0,0x05,0x02,0x0c]
+image_sample_c_d_cl v[5:6], v[241:251], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+// GFX11: [0x08,0x03,0x10,0xf1,0xf1,0x05,0x02,0x0c]
 
-image_sample_c_d_cl v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
+image_sample_c_d_cl v[5:6], v[1:9], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
 // GFX11: [0x08,0x03,0x11,0xf1,0x01,0x05,0x02,0x0c]
 
-image_sample_c_d_cl v[5:6], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
-// GFX11: [0x08,0x03,0x11,0xf1,0xf0,0x05,0x02,0x0c]
+image_sample_c_d_cl v[5:6], v[241:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
+// GFX11: [0x08,0x03,0x11,0xf1,0xf1,0x05,0x02,0x0c]
 
 image_sample_c_d_cl v[5:6], v[1:8], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_2D
 // GFX11: [0x04,0x03,0x10,0xf1,0x01,0x05,0x02,0x0c]
@@ -3360,11 +3360,11 @@ image_sample_c_d_cl v[5:7], v[1:7], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_
 image_sample_c_d_cl v[253:255], v[249:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_2D a16 tfe
 // GFX11: [0x04,0x03,0x11,0xf1,0xf9,0xfd,0x22,0x0c]
 
-image_sample_c_d_cl v5, v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE d16
+image_sample_c_d_cl v5, v[1:9], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE d16
 // GFX11: [0x0c,0x03,0x12,0xf1,0x01,0x05,0x02,0x0c]
 
-image_sample_c_d_cl v255, v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE d16
-// GFX11: [0x0c,0x03,0x12,0xf1,0xf0,0xff,0x02,0x0c]
+image_sample_c_d_cl v255, v[241:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE d16
+// GFX11: [0x0c,0x03,0x12,0xf1,0xf1,0xff,0x02,0x0c]
 
 image_sample_c_d_cl v[5:6], v[1:7], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE a16 tfe d16
 // GFX11: [0x0c,0x03,0x13,0xf1,0x01,0x05,0x22,0x0c]
@@ -3384,11 +3384,11 @@ image_sample_c_d_cl v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_
 image_sample_c_d_cl v[254:255], v[251:255], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_1D_ARRAY a16 tfe
 // GFX11: [0x10,0x04,0x11,0xf1,0xfb,0xfe,0x22,0x0c]
 
-image_sample_c_d_cl v5, v[1:16], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY d16
+image_sample_c_d_cl v5, v[1:9], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY d16
 // GFX11: [0x14,0x04,0x12,0xf1,0x01,0x05,0x02,0x0c]
 
-image_sample_c_d_cl v255, v[240:255], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY d16
-// GFX11: [0x14,0x04,0x12,0xf1,0xf0,0xff,0x02,0x0c]
+image_sample_c_d_cl v255, v[241:249], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY d16
+// GFX11: [0x14,0x04,0x12,0xf1,0xf1,0xff,0x02,0x0c]
 
 image_sample_c_d_cl v[5:6], v[1:7], s[96:103], s[100:103] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY a16 tfe d16
 // GFX11: [0x14,0x04,0x13,0xf1,0x01,0x05,0x38,0x64]
@@ -3408,11 +3408,11 @@ image_sample_c_d_cl_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_
 image_sample_c_d_cl_g16 v[5:6], v[252:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D a16
 // GFX11: [0x00,0x03,0x51,0xf1,0xfc,0x05,0x02,0x0c]
 
-image_sample_c_d_cl_g16 v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+image_sample_c_d_cl_g16 v[5:6], v[1:9], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
 // GFX11: [0x08,0x03,0x50,0xf1,0x01,0x05,0x02,0x0c]
 
-image_sample_c_d_cl_g16 v[5:6], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
-// GFX11: [0x08,0x03,0x50,0xf1,0xf0,0x05,0x02,0x0c]
+image_sample_c_d_cl_g16 v[5:6], v[241:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+// GFX11: [0x08,0x03,0x50,0xf1,0xf1,0x05,0x02,0x0c]
 
 image_sample_c_d_cl_g16 v[5:6], v[1:7], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
 // GFX11: [0x08,0x03,0x51,0xf1,0x01,0x05,0x02,0x0c]
@@ -3480,23 +3480,23 @@ image_sample_c_d_cl_o v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IM
 image_sample_c_d_cl_o v[5:6], v[251:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D a16
 // GFX11: [0x00,0x03,0x29,0xf1,0xfb,0x05,0x02,0x0c]
 
-image_sample_c_d_cl_o v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+image_sample_c_d_cl_o v[5:6], v[1:12], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
 // GFX11: [0x08,0x03,0x28,0xf1,0x01,0x05,0x02,0x0c]
 
-image_sample_c_d_cl_o v[5:6], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+image_sample_c_d_cl_o v[5:6], v[240:251], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
 // GFX11: [0x08,0x03,0x28,0xf1,0xf0,0x05,0x02,0x0c]
 
-image_sample_c_d_cl_o v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
+image_sample_c_d_cl_o v[5:6], v[1:10], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
 // GFX11: [0x08,0x03,0x29,0xf1,0x01,0x05,0x02,0x0c]
 
-image_sample_c_d_cl_o v[5:6], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
+image_sample_c_d_cl_o v[5:6], v[240:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
 // GFX11: [0x08,0x03,0x29,0xf1,0xf0,0x05,0x02,0x0c]
 
-image_sample_c_d_cl_o v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_2D
+image_sample_c_d_cl_o v[5:6], v[1:9], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_2D
 // GFX11: [0x04,0x03,0x28,0xf1,0x01,0x05,0x02,0x0c]
 
-image_sample_c_d_cl_o v[254:255], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_2D
-// GFX11: [0x04,0x03,0x28,0xf1,0xf0,0xfe,0x02,0x0c]
+image_sample_c_d_cl_o v[254:255], v[241:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_2D
+// GFX11: [0x04,0x03,0x28,0xf1,0xf1,0xfe,0x02,0x0c]
 
 image_sample_c_d_cl_o v[5:7], v[1:8], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_2D a16 tfe
 // GFX11: [0x04,0x03,0x29,0xf1,0x01,0x05,0x22,0x0c]
@@ -3504,10 +3504,10 @@ image_sample_c_d_cl_o v[5:7], v[1:8], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IM
 image_sample_c_d_cl_o v[253:255], v[248:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_2D a16 tfe
 // GFX11: [0x04,0x03,0x29,0xf1,0xf8,0xfd,0x22,0x0c]
 
-image_sample_c_d_cl_o v5, v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE d16
+image_sample_c_d_cl_o v5, v[1:10], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE d16
 // GFX11: [0x0c,0x03,0x2a,0xf1,0x01,0x05,0x02,0x0c]
 
-image_sample_c_d_cl_o v255, v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE d16
+image_sample_c_d_cl_o v255, v[240:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE d16
 // GFX11: [0x0c,0x03,0x2a,0xf1,0xf0,0xff,0x02,0x0c]
 
 image_sample_c_d_cl_o v[5:6], v[1:8], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE a16 tfe d16
@@ -3528,10 +3528,10 @@ image_sample_c_d_cl_o v[5:6], v[1:6], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IM
 image_sample_c_d_cl_o v[254:255], v[250:255], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_1D_ARRAY a16 tfe
 // GFX11: [0x10,0x04,0x29,0xf1,0xfa,0xfe,0x22,0x0c]
 
-image_sample_c_d_cl_o v5, v[1:16], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY d16
+image_sample_c_d_cl_o v5, v[1:10], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY d16
 // GFX11: [0x14,0x04,0x2a,0xf1,0x01,0x05,0x02,0x0c]
 
-image_sample_c_d_cl_o v255, v[240:255], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY d16
+image_sample_c_d_cl_o v255, v[240:249], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY d16
 // GFX11: [0x14,0x04,0x2a,0xf1,0xf0,0xff,0x02,0x0c]
 
 image_sample_c_d_cl_o v[5:6], v[1:8], s[96:103], s[100:103] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY a16 tfe d16
@@ -3552,10 +3552,10 @@ image_sample_c_d_cl_o_g16 v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSR
 image_sample_c_d_cl_o_g16 v[5:6], v[251:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D a16
 // GFX11: [0x00,0x03,0x59,0xf1,0xfb,0x05,0x02,0x0c]
 
-image_sample_c_d_cl_o_g16 v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+image_sample_c_d_cl_o_g16 v[5:6], v[1:10], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
 // GFX11: [0x08,0x03,0x58,0xf1,0x01,0x05,0x02,0x0c]
 
-image_sample_c_d_cl_o_g16 v[5:6], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+image_sample_c_d_cl_o_g16 v[5:6], v[240:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
 // GFX11: [0x08,0x03,0x58,0xf1,0xf0,0x05,0x02,0x0c]
 
 image_sample_c_d_cl_o_g16 v[5:6], v[1:8], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
@@ -3696,16 +3696,16 @@ image_sample_c_d_o v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1
 image_sample_c_d_o v[5:6], v[251:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D a16
 // GFX11: [0x00,0x03,0xad,0xf0,0xfb,0x05,0x02,0x0c]
 
-image_sample_c_d_o v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+image_sample_c_d_o v[5:6], v[1:11], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
 // GFX11: [0x08,0x03,0xac,0xf0,0x01,0x05,0x02,0x0c]
 
-image_sample_c_d_o v[5:6], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
-// GFX11: [0x08,0x03,0xac,0xf0,0xf0,0x05,0x02,0x0c]
+image_sample_c_d_o v[5:6], v[241:251], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+// GFX11: [0x08,0x03,0xac,0xf0,0xf1,0x05,0x02,0x0c]
 
-image_sample_c_d_o v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
+image_sample_c_d_o v[5:6], v[1:10], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
 // GFX11: [0x08,0x03,0xad,0xf0,0x01,0x05,0x02,0x0c]
 
-image_sample_c_d_o v[5:6], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
+image_sample_c_d_o v[5:6], v[240:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
 // GFX11: [0x08,0x03,0xad,0xf0,0xf0,0x05,0x02,0x0c]
 
 image_sample_c_d_o v[5:6], v[1:8], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_2D
@@ -3720,11 +3720,11 @@ image_sample_c_d_o v[5:7], v[1:7], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_2
 image_sample_c_d_o v[253:255], v[249:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_2D a16 tfe
 // GFX11: [0x04,0x03,0xad,0xf0,0xf9,0xfd,0x22,0x0c]
 
-image_sample_c_d_o v5, v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE d16
+image_sample_c_d_o v5, v[1:9], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE d16
 // GFX11: [0x0c,0x03,0xae,0xf0,0x01,0x05,0x02,0x0c]
 
-image_sample_c_d_o v255, v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE d16
-// GFX11: [0x0c,0x03,0xae,0xf0,0xf0,0xff,0x02,0x0c]
+image_sample_c_d_o v255, v[241:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE d16
+// GFX11: [0x0c,0x03,0xae,0xf0,0xf1,0xff,0x02,0x0c]
 
 image_sample_c_d_o v[5:6], v[1:8], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE a16 tfe d16
 // GFX11: [0x0c,0x03,0xaf,0xf0,0x01,0x05,0x22,0x0c]
@@ -3744,11 +3744,11 @@ image_sample_c_d_o v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_1
 image_sample_c_d_o v[254:255], v[251:255], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_1D_ARRAY a16 tfe
 // GFX11: [0x10,0x04,0xad,0xf0,0xfb,0xfe,0x22,0x0c]
 
-image_sample_c_d_o v5, v[1:16], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY d16
+image_sample_c_d_o v5, v[1:9], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY d16
 // GFX11: [0x14,0x04,0xae,0xf0,0x01,0x05,0x02,0x0c]
 
-image_sample_c_d_o v255, v[240:255], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY d16
-// GFX11: [0x14,0x04,0xae,0xf0,0xf0,0xff,0x02,0x0c]
+image_sample_c_d_o v255, v[241:249], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY d16
+// GFX11: [0x14,0x04,0xae,0xf0,0xf1,0xff,0x02,0x0c]
 
 image_sample_c_d_o v[5:6], v[1:8], s[96:103], s[100:103] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY a16 tfe d16
 // GFX11: [0x14,0x04,0xaf,0xf0,0x01,0x05,0x38,0x64]
@@ -3768,11 +3768,11 @@ image_sample_c_d_o_g16 v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_I
 image_sample_c_d_o_g16 v[5:6], v[251:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D a16
 // GFX11: [0x00,0x03,0xf1,0xf0,0xfb,0x05,0x02,0x0c]
 
-image_sample_c_d_o_g16 v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+image_sample_c_d_o_g16 v[5:6], v[1:9], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
 // GFX11: [0x08,0x03,0xf0,0xf0,0x01,0x05,0x02,0x0c]
 
-image_sample_c_d_o_g16 v[5:6], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
-// GFX11: [0x08,0x03,0xf0,0xf0,0xf0,0x05,0x02,0x0c]
+image_sample_c_d_o_g16 v[5:6], v[241:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+// GFX11: [0x08,0x03,0xf0,0xf0,0xf1,0x05,0x02,0x0c]
 
 image_sample_c_d_o_g16 v[5:6], v[1:8], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
 // GFX11: [0x08,0x03,0xf1,0xf0,0x01,0x05,0x02,0x0c]
@@ -4344,11 +4344,11 @@ image_sample_d v[5:6], v[1:3], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D a1
 image_sample_d v[5:6], v[253:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D a16
 // GFX11: [0x00,0x03,0x71,0xf0,0xfd,0x05,0x02,0x0c]
 
-image_sample_d v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+image_sample_d v[5:6], v[1:9], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
 // GFX11: [0x08,0x03,0x70,0xf0,0x01,0x05,0x02,0x0c]
 
-image_sample_d v[5:6], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
-// GFX11: [0x08,0x03,0x70,0xf0,0xf0,0x05,0x02,0x0c]
+image_sample_d v[5:6], v[241:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+// GFX11: [0x08,0x03,0x70,0xf0,0xf1,0x05,0x02,0x0c]
 
 image_sample_d v[5:6], v[1:8], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
 // GFX11: [0x08,0x03,0x71,0xf0,0x01,0x05,0x02,0x0c]
@@ -4416,10 +4416,10 @@ image_sample_d_cl v[5:6], v[1:3], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D
 image_sample_d_cl v[5:6], v[253:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D a16
 // GFX11: [0x00,0x03,0x05,0xf1,0xfd,0x05,0x02,0x0c]
 
-image_sample_d_cl v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+image_sample_d_cl v[5:6], v[1:10], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
 // GFX11: [0x08,0x03,0x04,0xf1,0x01,0x05,0x02,0x0c]
 
-image_sample_d_cl v[5:6], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+image_sample_d_cl v[5:6], v[240:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
 // GFX11: [0x08,0x03,0x04,0xf1,0xf0,0x05,0x02,0x0c]
 
 image_sample_d_cl v[5:6], v[1:8], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
@@ -4560,17 +4560,17 @@ image_sample_d_cl_o v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_
 image_sample_d_cl_o v[5:6], v[252:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D a16
 // GFX11: [0x00,0x03,0x1d,0xf1,0xfc,0x05,0x02,0x0c]
 
-image_sample_d_cl_o v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+image_sample_d_cl_o v[5:6], v[1:11], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
 // GFX11: [0x08,0x03,0x1c,0xf1,0x01,0x05,0x02,0x0c]
 
-image_sample_d_cl_o v[5:6], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
-// GFX11: [0x08,0x03,0x1c,0xf1,0xf0,0x05,0x02,0x0c]
+image_sample_d_cl_o v[5:6], v[241:251], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+// GFX11: [0x08,0x03,0x1c,0xf1,0xf1,0x05,0x02,0x0c]
 
-image_sample_d_cl_o v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
+image_sample_d_cl_o v[5:6], v[1:9], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
 // GFX11: [0x08,0x03,0x1d,0xf1,0x01,0x05,0x02,0x0c]
 
-image_sample_d_cl_o v[5:6], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
-// GFX11: [0x08,0x03,0x1d,0xf1,0xf0,0x05,0x02,0x0c]
+image_sample_d_cl_o v[5:6], v[241:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
+// GFX11: [0x08,0x03,0x1d,0xf1,0xf1,0x05,0x02,0x0c]
 
 image_sample_d_cl_o v[5:6], v[1:8], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_2D
 // GFX11: [0x04,0x03,0x1c,0xf1,0x01,0x05,0x02,0x0c]
@@ -4584,11 +4584,11 @@ image_sample_d_cl_o v[5:7], v[1:7], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_
 image_sample_d_cl_o v[253:255], v[249:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_2D a16 tfe
 // GFX11: [0x04,0x03,0x1d,0xf1,0xf9,0xfd,0x22,0x0c]
 
-image_sample_d_cl_o v5, v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE d16
+image_sample_d_cl_o v5, v[1:9], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE d16
 // GFX11: [0x0c,0x03,0x1e,0xf1,0x01,0x05,0x02,0x0c]
 
-image_sample_d_cl_o v255, v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE d16
-// GFX11: [0x0c,0x03,0x1e,0xf1,0xf0,0xff,0x02,0x0c]
+image_sample_d_cl_o v255, v[241:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE d16
+// GFX11: [0x0c,0x03,0x1e,0xf1,0xf1,0xff,0x02,0x0c]
 
 image_sample_d_cl_o v[5:6], v[1:7], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_CUBE a16 tfe d16
 // GFX11: [0x0c,0x03,0x1f,0xf1,0x01,0x05,0x22,0x0c]
@@ -4608,11 +4608,11 @@ image_sample_d_cl_o v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_
 image_sample_d_cl_o v[254:255], v[251:255], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_1D_ARRAY a16 tfe
 // GFX11: [0x10,0x04,0x1d,0xf1,0xfb,0xfe,0x22,0x0c]
 
-image_sample_d_cl_o v5, v[1:16], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY d16
+image_sample_d_cl_o v5, v[1:9], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY d16
 // GFX11: [0x14,0x04,0x1e,0xf1,0x01,0x05,0x02,0x0c]
 
-image_sample_d_cl_o v255, v[240:255], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY d16
-// GFX11: [0x14,0x04,0x1e,0xf1,0xf0,0xff,0x02,0x0c]
+image_sample_d_cl_o v255, v[241:249], s[8:15], s[12:15] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY d16
+// GFX11: [0x14,0x04,0x1e,0xf1,0xf1,0xff,0x02,0x0c]
 
 image_sample_d_cl_o v[5:6], v[1:7], s[96:103], s[100:103] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY a16 tfe d16
 // GFX11: [0x14,0x04,0x1f,0xf1,0x01,0x05,0x38,0x64]
@@ -4632,11 +4632,11 @@ image_sample_d_cl_o_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_
 image_sample_d_cl_o_g16 v[5:6], v[252:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D a16
 // GFX11: [0x00,0x03,0x55,0xf1,0xfc,0x05,0x02,0x0c]
 
-image_sample_d_cl_o_g16 v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+image_sample_d_cl_o_g16 v[5:6], v[1:9], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
 // GFX11: [0x08,0x03,0x54,0xf1,0x01,0x05,0x02,0x0c]
 
-image_sample_d_cl_o_g16 v[5:6], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
-// GFX11: [0x08,0x03,0x54,0xf1,0xf0,0x05,0x02,0x0c]
+image_sample_d_cl_o_g16 v[5:6], v[241:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+// GFX11: [0x08,0x03,0x54,0xf1,0xf1,0x05,0x02,0x0c]
 
 image_sample_d_cl_o_g16 v[5:6], v[1:7], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
 // GFX11: [0x08,0x03,0x55,0xf1,0x01,0x05,0x02,0x0c]
@@ -4776,17 +4776,17 @@ image_sample_d_o v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D 
 image_sample_d_o v[5:6], v[252:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D a16
 // GFX11: [0x00,0x03,0x99,0xf0,0xfc,0x05,0x02,0x0c]
 
-image_sample_d_o v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+image_sample_d_o v[5:6], v[1:10], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
 // GFX11: [0x08,0x03,0x98,0xf0,0x01,0x05,0x02,0x0c]
 
-image_sample_d_o v[5:6], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
+image_sample_d_o v[5:6], v[240:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D
 // GFX11: [0x08,0x03,0x98,0xf0,0xf0,0x05,0x02,0x0c]
 
-image_sample_d_o v[5:6], v[1:16], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
+image_sample_d_o v[5:6], v[1:9], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
 // GFX11: [0x08,0x03,0x99,0xf0,0x01,0x05,0x02,0x0c]
 
-image_sample_d_o v[5:6], v[240:255], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
-// GFX11: [0x08,0x03,0x99,0xf0,0xf0,0x05,0x02,0x0c]
+image_sample_d_o v[5:6], v[241:249], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_3D a16
+// GFX11: [0x08,0x03,0x99,0xf0,0xf1,0x05,0x02,0x0c]
 
 image_sample_d_o v[5:6], v[1:7], s[8:15], s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_2D
 // GFX11: [0x04,0x03,0x98,0xf0,0x01,0x05,0x02,0x0c]

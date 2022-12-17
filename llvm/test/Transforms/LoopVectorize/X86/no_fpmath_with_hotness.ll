@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=loop-vectorize -mtriple=x86_64-unknown-linux -S -pass-remarks=loop-vectorize -pass-remarks-missed=loop-vectorize -pass-remarks-analysis=loop-vectorize -pass-remarks-with-hotness 2>&1 | FileCheck %s
-; RUN: opt < %s -passes=loop-vectorize -mtriple=x86_64-unknown-linux -S -pass-remarks=loop-vectorize -pass-remarks-missed=loop-vectorize -pass-remarks-analysis=loop-vectorize -pass-remarks-with-hotness 2>&1 | FileCheck %s
 
 ; CHECK: remark: no_fpmath.c:6:11: loop not vectorized: cannot prove it is safe to reorder floating-point operations (hotness: 300)
 ; CHECK: remark: no_fpmath.c:6:14: loop not vectorized

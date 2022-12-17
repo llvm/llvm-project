@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-unroll -indvars -disable-output
+; RUN: opt < %s -passes=loop-unroll,indvars -disable-output
 
 @b = external global i32, align 4
 

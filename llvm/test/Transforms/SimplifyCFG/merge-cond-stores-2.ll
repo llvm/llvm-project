@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv7--linux-gnueabihf"
 
-; This is a bit reversal that has been run through the early optimizer (-mem2reg -gvn -instcombine).
+; This is a bit reversal that has been run through the early optimizer (-mem2reg -passes=gvn -instcombine).
 ; There should be no additional PHIs created at all. The store should be on its own in a predicated
 ; block and there should be no PHIs.
 

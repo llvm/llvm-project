@@ -1,9 +1,3 @@
-; Legacy pass manager
-; RUN: opt < %s -transform-warning -disable-output -pass-remarks-missed=transform-warning -pass-remarks-analysis=transform-warning 2>&1 | FileCheck %s
-; RUN: opt < %s -transform-warning -disable-output -pass-remarks-output=%t.yaml
-; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
-
-; New pass manager
 ; RUN: opt < %s -passes=transform-warning -disable-output -pass-remarks-missed=transform-warning -pass-remarks-analysis=transform-warning 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=transform-warning -disable-output -pass-remarks-output=%t.yaml
 ; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
@@ -27,10 +21,10 @@ entry:
   %cmp9 = icmp sgt i32 %Length, 0, !dbg !32
   br i1 %cmp9, label %for.body.preheader, label %for.end, !dbg !32
 
-for.body.preheader:                          
+for.body.preheader:
   br label %for.body, !dbg !35
 
-for.body:                                    
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, i32* %B, i64 %indvars.iv, !dbg !35
   %0 = load i32, i32* %arrayidx, align 4, !dbg !35, !tbaa !18
@@ -44,10 +38,10 @@ for.body:
   %exitcond = icmp eq i32 %lftr.wideiv, %Length, !dbg !32
   br i1 %exitcond, label %for.end.loopexit, label %for.body, !dbg !32, !llvm.loop !50
 
-for.end.loopexit:                            
+for.end.loopexit:
   br label %for.end
 
-for.end:                                      
+for.end:
   ret void, !dbg !36
 }
 

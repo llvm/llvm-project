@@ -232,8 +232,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC64-NEXT:    or %i0, %i4, %i0
 ; SPARC64-NEXT:    xor %i0, %i5, %i0
 ; SPARC64-NEXT:    or %i0, %i2, %i0
-; SPARC64-NEXT:    cmp %i0, 0
-; SPARC64-NEXT:    movne %xcc, 1, %l7
+; SPARC64-NEXT:    movrnz %i0, 1, %l7
 ; SPARC64-NEXT:    srl %l0, 0, %i0
 ; SPARC64-NEXT:    or %i3, %i0, %i0
 ; SPARC64-NEXT:    srl %l7, 0, %i2

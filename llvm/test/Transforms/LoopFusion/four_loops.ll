@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-fusion < %s | FileCheck %s
+; RUN: opt -S -passes=loop-fusion < %s | FileCheck %s
 
 @A = common global [1024 x i32] zeroinitializer, align 16
 @B = common global [1024 x i32] zeroinitializer, align 16

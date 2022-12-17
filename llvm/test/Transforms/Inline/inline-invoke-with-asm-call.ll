@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 target triple = "x86_64-apple-darwin"
 
@@ -9,7 +9,7 @@ target triple = "x86_64-apple-darwin"
 ; Make sure we are generating "call asm" instead of "invoke asm".
 ; CHECK: call void asm
 ; CHECK-LABEL: @callee_with_asm
-define void @caller() personality i8* bitcast (i32 (...)* @__objc_personality_v0 to i8*) {
+define void @caller() personality ptr @__objc_personality_v0 {
   br i1 undef, label %1, label %4
 
 ; <label>:1
@@ -17,9 +17,9 @@ define void @caller() personality i8* bitcast (i32 (...)* @__objc_personality_v0
           to label %4 unwind label %2
 
 ; <label>:2
-  %3 = landingpad { i8*, i32 }
+  %3 = landingpad { ptr, i32 }
           cleanup
-  resume { i8*, i32 } undef
+  resume { ptr, i32 } undef
 
 ; <label>:4
   ret void

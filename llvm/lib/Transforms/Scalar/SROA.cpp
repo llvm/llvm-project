@@ -38,6 +38,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
@@ -78,6 +79,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <algorithm>
@@ -104,6 +106,8 @@ STATISTIC(MaxUsesPerAllocaPartition, "Maximum number of uses of a partition");
 STATISTIC(NumNewAllocas, "Number of new, smaller allocas introduced");
 STATISTIC(NumPromoted, "Number of allocas promoted to SSA values");
 STATISTIC(NumLoadsSpeculated, "Number of loads speculated to allow promotion");
+STATISTIC(NumLoadsPredicated,
+          "Number of loads rewritten into predicated loads to allow promotion");
 STATISTIC(NumDeleted, "Number of instructions deleted");
 STATISTIC(NumVectorized, "Number of vectorized aggregates");
 
@@ -111,7 +115,6 @@ STATISTIC(NumVectorized, "Number of vectorized aggregates");
 /// GEPs.
 static cl::opt<bool> SROAStrictInbounds("sroa-strict-inbounds", cl::init(false),
                                         cl::Hidden);
-
 namespace {
 
 /// A custom IRBuilder inserter which prefixes all names, but only in
@@ -1306,24 +1309,53 @@ static void speculatePHINodeLoads(IRBuilderTy &IRB, PHINode &PN) {
   PN.eraseFromParent();
 }
 
-/// Select instructions that use an alloca and are subsequently loaded can be
-/// rewritten to load both input pointers and then select between the result,
-/// allowing the load of the alloca to be promoted.
-/// From this:
-///   %P2 = select i1 %cond, i32* %Alloca, i32* %Other
-///   %V = load i32* %P2
-/// to:
-///   %V1 = load i32* %Alloca      -> will be mem2reg'd
-///   %V2 = load i32* %Other
-///   %V = select i1 %cond, i32 %V1, i32 %V2
-///
-/// We can do this to a select if its only uses are loads and if the operand
-/// to the select can be loaded unconditionally. If found an intervening bitcast
-/// with a single use of the load, allow the promotion.
-static bool isSafeSelectToSpeculate(SelectInst &SI) {
-  Value *TValue = SI.getTrueValue();
-  Value *FValue = SI.getFalseValue();
+sroa::SelectHandSpeculativity &
+sroa::SelectHandSpeculativity::setAsSpeculatable(bool isTrueVal) {
+  if (isTrueVal)
+    Bitfield::set<sroa::SelectHandSpeculativity::TrueVal>(Storage, true);
+  else
+    Bitfield::set<sroa::SelectHandSpeculativity::FalseVal>(Storage, true);
+  return *this;
+}
+
+bool sroa::SelectHandSpeculativity::isSpeculatable(bool isTrueVal) const {
+  return isTrueVal
+             ? Bitfield::get<sroa::SelectHandSpeculativity::TrueVal>(Storage)
+             : Bitfield::get<sroa::SelectHandSpeculativity::FalseVal>(Storage);
+}
+
+bool sroa::SelectHandSpeculativity::areAllSpeculatable() const {
+  return isSpeculatable(/*isTrueVal=*/true) &&
+         isSpeculatable(/*isTrueVal=*/false);
+}
+
+bool sroa::SelectHandSpeculativity::areAnySpeculatable() const {
+  return isSpeculatable(/*isTrueVal=*/true) ||
+         isSpeculatable(/*isTrueVal=*/false);
+}
+bool sroa::SelectHandSpeculativity::areNoneSpeculatable() const {
+  return !areAnySpeculatable();
+}
+
+static sroa::SelectHandSpeculativity
+isSafeLoadOfSelectToSpeculate(LoadInst &LI, SelectInst &SI, bool PreserveCFG) {
+  assert(LI.isSimple() && "Only for simple loads");
+  sroa::SelectHandSpeculativity Spec;
+
   const DataLayout &DL = SI.getModule()->getDataLayout();
+  for (Value *Value : {SI.getTrueValue(), SI.getFalseValue()})
+    if (isSafeToLoadUnconditionally(Value, LI.getType(), LI.getAlign(), DL,
+                                    &LI))
+      Spec.setAsSpeculatable(/*isTrueVal=*/Value == SI.getTrueValue());
+    else if (PreserveCFG)
+      return Spec;
+
+  return Spec;
+}
+
+std::optional<sroa::PossiblySpeculatableLoads>
+SROAPass::isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
+  PossiblySpeculatableLoads Loads;
 
   for (User *U : SI.users()) {
     LoadInst *LI;
@@ -1333,75 +1365,136 @@ static bool isSafeSelectToSpeculate(SelectInst &SI) {
     else
       LI = dyn_cast<LoadInst>(U);
 
-    if (!LI || !LI->isSimple())
-      return false;
+    // Note that atomic loads can be transformed;
+    // atomic semantics do not have any meaning for a local alloca.
+    if (!LI || LI->isVolatile())
+      return {}; // Give up on this `select`.
 
-    // Both operands to the select need to be dereferenceable, either
-    // absolutely (e.g. allocas) or at this point because we can see other
-    // accesses to it.
-    if (!isSafeToLoadUnconditionally(TValue, LI->getType(),
-                                     LI->getAlign(), DL, LI))
-      return false;
-    if (!isSafeToLoadUnconditionally(FValue, LI->getType(),
-                                     LI->getAlign(), DL, LI))
-      return false;
+    PossiblySpeculatableLoad Load(LI);
+
+    if (!LI->isSimple()) {
+      // If the `load` is not simple, we can't speculatively execute it,
+      // but we could handle this via a CFG modification. But can we?
+      if (PreserveCFG)
+        return {}; // Give up on this `select`.
+      Loads.emplace_back(Load);
+      continue;
+    }
+
+    sroa::SelectHandSpeculativity Spec =
+        isSafeLoadOfSelectToSpeculate(*LI, SI, PreserveCFG);
+    if (PreserveCFG && !Spec.areAllSpeculatable())
+      return {}; // Give up on this `select`.
+
+    Load.setInt(Spec);
+    Loads.emplace_back(Load);
   }
 
-  return true;
+  return Loads;
 }
 
-static void speculateSelectInstLoads(IRBuilderTy &IRB, SelectInst &SI) {
-  LLVM_DEBUG(dbgs() << "    original: " << SI << "\n");
+static void speculateSelectInstLoads(SelectInst &SI, LoadInst &LI,
+                                     IRBuilderTy &IRB) {
+  LLVM_DEBUG(dbgs() << "    original load: " << SI << "\n");
 
   IRB.SetInsertPoint(&SI);
   Value *TV = SI.getTrueValue();
   Value *FV = SI.getFalseValue();
-  // Replace the loads of the select with a select of two loads.
-  while (!SI.use_empty()) {
-    LoadInst *LI;
-    BitCastInst *BC = dyn_cast<BitCastInst>(SI.user_back());
-    if (BC) {
-      assert(BC->hasOneUse() && "Bitcast should have a single use.");
-      LI = cast<LoadInst>(BC->user_back());
-    } else {
-      LI = cast<LoadInst>(SI.user_back());
-    }
+  // Replace the given load of the select with a select of two loads.
 
-    assert(LI->isSimple() && "We only speculate simple loads");
+  assert(LI.isSimple() && "We only speculate simple loads");
 
-    IRB.SetInsertPoint(LI);
-    Value *NewTV =
-        BC ? IRB.CreateBitCast(TV, BC->getType(), TV->getName() + ".sroa.cast")
-           : TV;
-    Value *NewFV =
-        BC ? IRB.CreateBitCast(FV, BC->getType(), FV->getName() + ".sroa.cast")
-           : FV;
-    LoadInst *TL = IRB.CreateLoad(LI->getType(), NewTV,
-                                  LI->getName() + ".sroa.speculate.load.true");
-    LoadInst *FL = IRB.CreateLoad(LI->getType(), NewFV,
-                                  LI->getName() + ".sroa.speculate.load.false");
-    NumLoadsSpeculated += 2;
+  IRB.SetInsertPoint(&LI);
+  LoadInst *TL =
+      IRB.CreateAlignedLoad(LI.getType(), TV, LI.getAlign(),
+                            LI.getName() + ".sroa.speculate.load.true");
+  LoadInst *FL =
+      IRB.CreateAlignedLoad(LI.getType(), FV, LI.getAlign(),
+                            LI.getName() + ".sroa.speculate.load.false");
+  NumLoadsSpeculated += 2;
 
-    // Transfer alignment and AA info if present.
-    TL->setAlignment(LI->getAlign());
-    FL->setAlignment(LI->getAlign());
+  // Transfer alignment and AA info if present.
+  TL->setAlignment(LI.getAlign());
+  FL->setAlignment(LI.getAlign());
 
-    AAMDNodes Tags = LI->getAAMetadata();
-    if (Tags) {
-      TL->setAAMetadata(Tags);
-      FL->setAAMetadata(Tags);
-    }
-
-    Value *V = IRB.CreateSelect(SI.getCondition(), TL, FL,
-                                LI->getName() + ".sroa.speculated");
-
-    LLVM_DEBUG(dbgs() << "          speculated to: " << *V << "\n");
-    LI->replaceAllUsesWith(V);
-    LI->eraseFromParent();
-    if (BC)
-      BC->eraseFromParent();
+  AAMDNodes Tags = LI.getAAMetadata();
+  if (Tags) {
+    TL->setAAMetadata(Tags);
+    FL->setAAMetadata(Tags);
   }
+
+  Value *V = IRB.CreateSelect(SI.getCondition(), TL, FL,
+                              LI.getName() + ".sroa.speculated");
+
+  LLVM_DEBUG(dbgs() << "          speculated to: " << *V << "\n");
+  LI.replaceAllUsesWith(V);
+}
+
+static void rewriteLoadOfSelect(SelectInst &SI, LoadInst &LI,
+                                sroa::SelectHandSpeculativity Spec,
+                                DomTreeUpdater &DTU) {
+  LLVM_DEBUG(dbgs() << "    original load: " << SI << "\n");
+  BasicBlock *Head = LI.getParent();
+  Instruction *ThenTerm = nullptr;
+  Instruction *ElseTerm = nullptr;
+  if (Spec.areNoneSpeculatable())
+    SplitBlockAndInsertIfThenElse(SI.getCondition(), &LI, &ThenTerm, &ElseTerm,
+                                  SI.getMetadata(LLVMContext::MD_prof), &DTU);
+  else {
+    SplitBlockAndInsertIfThen(SI.getCondition(), &LI, /*Unreachable=*/false,
+                              SI.getMetadata(LLVMContext::MD_prof), &DTU,
+                              /*LI=*/nullptr, /*ThenBlock=*/nullptr);
+    if (Spec.isSpeculatable(/*isTrueVal=*/true))
+      cast<BranchInst>(Head->getTerminator())->swapSuccessors();
+  }
+  auto *HeadBI = cast<BranchInst>(Head->getTerminator());
+  Spec = {}; // Do not use `Spec` beyond this point.
+  BasicBlock *Tail = LI.getParent();
+  Tail->setName(Head->getName() + ".cont");
+  auto *PN = PHINode::Create(LI.getType(), 2, "", &LI);
+  for (BasicBlock *SuccBB : successors(Head)) {
+    bool IsThen = SuccBB == HeadBI->getSuccessor(0);
+    int SuccIdx = IsThen ? 0 : 1;
+    auto *NewLoadBB = SuccBB == Tail ? Head : SuccBB;
+    if (NewLoadBB != Head) {
+      NewLoadBB->setName(Head->getName() + (IsThen ? ".then" : ".else"));
+      ++NumLoadsPredicated;
+    } else
+      ++NumLoadsSpeculated;
+    auto *CondLoad = cast<LoadInst>(LI.clone());
+    CondLoad->insertBefore(NewLoadBB->getTerminator());
+    CondLoad->setOperand(0, SI.getOperand(1 + SuccIdx));
+    CondLoad->setName(LI.getName() + (IsThen ? ".then" : ".else") + ".val");
+    PN->addIncoming(CondLoad, NewLoadBB);
+  }
+  PN->takeName(&LI);
+  LLVM_DEBUG(dbgs() << "          to: " << *PN << "\n");
+  LI.replaceAllUsesWith(PN);
+}
+
+static bool rewriteSelectInstLoads(SelectInst &SI,
+                                   const sroa::PossiblySpeculatableLoads &Loads,
+                                   IRBuilderTy &IRB, DomTreeUpdater *DTU) {
+  bool CFGChanged = false;
+  LLVM_DEBUG(dbgs() << "    original select: " << SI << "\n");
+
+  for (const PossiblySpeculatableLoad &Load : Loads) {
+    LoadInst *LI = Load.getPointer();
+    sroa::SelectHandSpeculativity Spec = Load.getInt();
+    if (Spec.areAllSpeculatable()) {
+      speculateSelectInstLoads(SI, *LI, IRB);
+    } else {
+      assert(DTU && "Should not get here when not allowed to modify the CFG!");
+      rewriteLoadOfSelect(SI, *LI, Spec, *DTU);
+      CFGChanged = true;
+    }
+    LI->eraseFromParent();
+  }
+
+  for (User *U : make_early_inc_range(SI.users()))
+    cast<BitCastInst>(U)->eraseFromParent();
   SI.eraseFromParent();
+  return CFGChanged;
 }
 
 /// Build a GEP out of a base pointer and indices.
@@ -4397,13 +4490,21 @@ AllocaInst *SROAPass::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
       break;
     }
 
-  for (SelectInst *Sel : SelectUsers)
-    if (!isSafeSelectToSpeculate(*Sel)) {
+  SmallVector<std::pair<SelectInst *, PossiblySpeculatableLoads>, 2>
+      NewSelectsToRewrite;
+  NewSelectsToRewrite.reserve(SelectUsers.size());
+  for (SelectInst *Sel : SelectUsers) {
+    std::optional<PossiblySpeculatableLoads> Loads =
+        isSafeSelectToSpeculate(*Sel, PreserveCFG);
+    if (!Loads) {
       Promotable = false;
       PHIUsers.clear();
       SelectUsers.clear();
+      NewSelectsToRewrite.clear();
       break;
     }
+    NewSelectsToRewrite.emplace_back(std::make_pair(Sel, *Loads));
+  }
 
   if (Promotable) {
     for (Use *U : AS.getDeadUsesIfPromotable()) {
@@ -4422,8 +4523,12 @@ AllocaInst *SROAPass::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
       // next iteration.
       for (PHINode *PHIUser : PHIUsers)
         SpeculatablePHIs.insert(PHIUser);
-      for (SelectInst *SelectUser : SelectUsers)
-        SpeculatableSelects.insert(SelectUser);
+      SelectsToRewrite.reserve(SelectsToRewrite.size() +
+                               NewSelectsToRewrite.size());
+      for (auto &&KV : llvm::make_range(
+               std::make_move_iterator(NewSelectsToRewrite.begin()),
+               std::make_move_iterator(NewSelectsToRewrite.end())))
+        SelectsToRewrite.insert(std::move(KV));
       Worklist.insert(NewAI);
     }
   } else {
@@ -4637,14 +4742,19 @@ void SROAPass::clobberUse(Use &U) {
 /// This analyzes the alloca to ensure we can reason about it, builds
 /// the slices of the alloca, and then hands it off to be split and
 /// rewritten as needed.
-bool SROAPass::runOnAlloca(AllocaInst &AI) {
+std::pair<bool /*Changed*/, bool /*CFGChanged*/>
+SROAPass::runOnAlloca(AllocaInst &AI) {
+  bool Changed = false;
+  bool CFGChanged = false;
+
   LLVM_DEBUG(dbgs() << "SROA alloca: " << AI << "\n");
   ++NumAllocasAnalyzed;
 
   // Special case dead allocas, as they're trivial.
   if (AI.use_empty()) {
     AI.eraseFromParent();
-    return true;
+    Changed = true;
+    return {Changed, CFGChanged};
   }
   const DataLayout &DL = AI.getModule()->getDataLayout();
 
@@ -4652,9 +4762,7 @@ bool SROAPass::runOnAlloca(AllocaInst &AI) {
   auto *AT = AI.getAllocatedType();
   if (AI.isArrayAllocation() || !AT->isSized() || isa<ScalableVectorType>(AT) ||
       DL.getTypeAllocSize(AT).getFixedSize() == 0)
-    return false;
-
-  bool Changed = false;
+    return {Changed, CFGChanged};
 
   // First, split any FCA loads and stores touching this alloca to promote
   // better splitting and promotion opportunities.
@@ -4666,7 +4774,7 @@ bool SROAPass::runOnAlloca(AllocaInst &AI) {
   AllocaSlices AS(DL, AI);
   LLVM_DEBUG(AS.print(dbgs()));
   if (AS.isEscaped())
-    return Changed;
+    return {Changed, CFGChanged};
 
   // Delete all the dead users of this alloca before splitting and rewriting it.
   for (Instruction *DeadUser : AS.getDeadUsers()) {
@@ -4688,7 +4796,7 @@ bool SROAPass::runOnAlloca(AllocaInst &AI) {
 
   // No slices to split. Leave the dead alloca for a later pass to clean up.
   if (AS.begin() == AS.end())
-    return Changed;
+    return {Changed, CFGChanged};
 
   Changed |= splitAlloca(AI, AS);
 
@@ -4696,11 +4804,15 @@ bool SROAPass::runOnAlloca(AllocaInst &AI) {
   while (!SpeculatablePHIs.empty())
     speculatePHINodeLoads(IRB, *SpeculatablePHIs.pop_back_val());
 
-  LLVM_DEBUG(dbgs() << "  Speculating Selects\n");
-  while (!SpeculatableSelects.empty())
-    speculateSelectInstLoads(IRB, *SpeculatableSelects.pop_back_val());
+  LLVM_DEBUG(dbgs() << "  Rewriting Selects\n");
+  auto RemainingSelectsToRewrite = SelectsToRewrite.takeVector();
+  while (!RemainingSelectsToRewrite.empty()) {
+    const auto [K, V] = RemainingSelectsToRewrite.pop_back_val();
+    CFGChanged |=
+        rewriteSelectInstLoads(*K, V, IRB, PreserveCFG ? nullptr : DTU);
+  }
 
-  return Changed;
+  return {Changed, CFGChanged};
 }
 
 /// Delete the dead instructions accumulated in this run.
@@ -4759,16 +4871,16 @@ bool SROAPass::promoteAllocas(Function &F) {
   NumPromoted += PromotableAllocas.size();
 
   LLVM_DEBUG(dbgs() << "Promoting allocas with mem2reg...\n");
-  PromoteMemToReg(PromotableAllocas, *DT, AC);
+  PromoteMemToReg(PromotableAllocas, DTU->getDomTree(), AC);
   PromotableAllocas.clear();
   return true;
 }
 
-PreservedAnalyses SROAPass::runImpl(Function &F, DominatorTree &RunDT,
+PreservedAnalyses SROAPass::runImpl(Function &F, DomTreeUpdater &RunDTU,
                                     AssumptionCache &RunAC) {
   LLVM_DEBUG(dbgs() << "SROA function: " << F.getName() << "\n");
   C = &F.getContext();
-  DT = &RunDT;
+  DTU = &RunDTU;
   AC = &RunAC;
 
   BasicBlock &EntryBB = F.getEntryBlock();
@@ -4785,13 +4897,18 @@ PreservedAnalyses SROAPass::runImpl(Function &F, DominatorTree &RunDT,
   }
 
   bool Changed = false;
+  bool CFGChanged = false;
   // A set of deleted alloca instruction pointers which should be removed from
   // the list of promotable allocas.
   SmallPtrSet<AllocaInst *, 4> DeletedAllocas;
 
   do {
     while (!Worklist.empty()) {
-      Changed |= runOnAlloca(*Worklist.pop_back_val());
+      auto [IterationChanged, IterationCFGChanged] =
+          runOnAlloca(*Worklist.pop_back_val());
+      Changed |= IterationChanged;
+      CFGChanged |= IterationCFGChanged;
+
       Changed |= deleteDeadInstructions(DeletedAllocas);
 
       // Remove the deleted allocas from various lists so that we don't try to
@@ -4811,18 +4928,40 @@ PreservedAnalyses SROAPass::runImpl(Function &F, DominatorTree &RunDT,
     PostPromotionWorklist.clear();
   } while (!Worklist.empty());
 
+  assert((!CFGChanged || Changed) && "Can not only modify the CFG.");
+  assert((!CFGChanged || !PreserveCFG) &&
+         "Should not have modified the CFG when told to preserve it.");
+
   if (!Changed)
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
+  if (!CFGChanged)
+    PA.preserveSet<CFGAnalyses>();
+  PA.preserve<DominatorTreeAnalysis>();
   return PA;
+}
+
+PreservedAnalyses SROAPass::runImpl(Function &F, DominatorTree &RunDT,
+                                    AssumptionCache &RunAC) {
+  DomTreeUpdater DTU(RunDT, DomTreeUpdater::UpdateStrategy::Lazy);
+  return runImpl(F, DTU, RunAC);
 }
 
 PreservedAnalyses SROAPass::run(Function &F, FunctionAnalysisManager &AM) {
   return runImpl(F, AM.getResult<DominatorTreeAnalysis>(F),
                  AM.getResult<AssumptionAnalysis>(F));
 }
+
+void SROAPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<SROAPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << (PreserveCFG ? "<preserve-cfg>" : "<modify-cfg>");
+}
+
+SROAPass::SROAPass(SROAOptions PreserveCFG_)
+    : PreserveCFG(PreserveCFG_ == SROAOptions::PreserveCFG) {}
 
 /// A legacy pass for the legacy pass manager that wraps the \c SROA pass.
 ///
@@ -4835,7 +4974,8 @@ class llvm::sroa::SROALegacyPass : public FunctionPass {
 public:
   static char ID;
 
-  SROALegacyPass() : FunctionPass(ID) {
+  SROALegacyPass(SROAOptions PreserveCFG = SROAOptions::PreserveCFG)
+      : FunctionPass(ID), Impl(PreserveCFG) {
     initializeSROALegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -4853,7 +4993,7 @@ public:
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.setPreservesCFG();
+    AU.addPreserved<DominatorTreeWrapperPass>();
   }
 
   StringRef getPassName() const override { return "SROA"; }
@@ -4861,7 +5001,10 @@ public:
 
 char SROALegacyPass::ID = 0;
 
-FunctionPass *llvm::createSROAPass() { return new SROALegacyPass(); }
+FunctionPass *llvm::createSROAPass(bool PreserveCFG) {
+  return new SROALegacyPass(PreserveCFG ? SROAOptions::PreserveCFG
+                                        : SROAOptions::ModifyCFG);
+}
 
 INITIALIZE_PASS_BEGIN(SROALegacyPass, "sroa",
                       "Scalar Replacement Of Aggregates", false, false)

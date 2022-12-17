@@ -568,7 +568,7 @@ public:
   Attribute get(StringAttr name) const;
   Attribute get(StringRef name) const;
 
-  /// Return the specified named attribute if present, None otherwise.
+  /// Return the specified named attribute if present, std::nullopt otherwise.
   Optional<NamedAttribute> getNamed(StringRef name) const;
   Optional<NamedAttribute> getNamed(StringAttr name) const;
 

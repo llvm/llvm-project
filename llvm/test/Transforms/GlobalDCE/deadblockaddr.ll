@@ -1,4 +1,4 @@
-; RUN: opt -globaldce -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S < %s | FileCheck %s
+; RUN: opt -passes=globaldce,simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S < %s | FileCheck %s
 
 ; Tests whether globaldce does the right cleanup while removing @bar
 ; so that a dead BlockAddress reference to foo won't prevent other passes

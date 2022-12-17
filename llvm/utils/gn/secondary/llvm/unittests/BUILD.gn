@@ -80,6 +80,9 @@ group("unittests") {
       "tools/llvm-exegesis/ARM:LLVMExegesisARMTests",
     ]
   }
+  if (llvm_build_LoongArch) {
+    deps += [ "Target/LoongArch:LoongArchTests" ]
+  }
   if (llvm_build_Mips) {
     deps += [ "tools/llvm-exegesis/Mips:LLVMExegesisMipsTests" ]
   }

@@ -2895,9 +2895,8 @@ TEST(APIntTest, SolveQuadraticEquationWrap) {
         continue;
       for (int B = Low; B != High; ++B) {
         for (int C = Low; C != High; ++C) {
-          Optional<APInt> S = APIntOps::SolveQuadraticEquationWrap(
-                                APInt(Width, A), APInt(Width, B),
-                                APInt(Width, C), Width);
+          std::optional<APInt> S = APIntOps::SolveQuadraticEquationWrap(
+              APInt(Width, A), APInt(Width, B), APInt(Width, C), Width);
           if (S)
             Validate(A, B, C, Width, S->getSExtValue());
         }

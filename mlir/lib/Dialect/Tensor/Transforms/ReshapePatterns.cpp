@@ -11,8 +11,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 
-#define DEBUG_TYPE "mlir-tensor-split-padding"
-
 using namespace mlir;
 using namespace mlir::tensor;
 
@@ -51,13 +49,14 @@ struct FoldExpandOfRankReducingExtract
 };
 
 /// Fold insert_slice(collapse_shape) ops that cancel itself out.
-struct FoldInsertOfRankReducingInsert : public OpRewritePattern<InsertSliceOp> {
-  using OpRewritePattern<InsertSliceOp>::OpRewritePattern;
+template <typename OpTy>
+struct FoldInsertOfRankReducingInsert : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(InsertSliceOp insertSliceOp,
+  LogicalResult matchAndRewrite(OpTy insertSliceOp,
                                 PatternRewriter &rewriter) const override {
     auto collapseShapeOp =
-        insertSliceOp.getSource().getDefiningOp<CollapseShapeOp>();
+        insertSliceOp.getSource().template getDefiningOp<CollapseShapeOp>();
     if (!collapseShapeOp)
       return failure();
     RankedTensorType srcType = collapseShapeOp.getSrcType();
@@ -67,16 +66,16 @@ struct FoldInsertOfRankReducingInsert : public OpRewritePattern<InsertSliceOp> {
     // has no rank-reduction anymore are supported at the moment.
     RankedTensorType nonReducingInsertType =
         RankedTensorType::get(insertSliceOp.getStaticSizes(),
-                              insertSliceOp.getType().getElementType());
+                              insertSliceOp.getDestType().getElementType());
     if (nonReducingInsertType != srcType)
       return failure();
 
     SmallVector<OpFoldResult> mixedOffsets = insertSliceOp.getMixedOffsets();
     SmallVector<OpFoldResult> mixedSizes = insertSliceOp.getMixedSizes();
     SmallVector<OpFoldResult> mixedStrides = insertSliceOp.getMixedStrides();
-    rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
-        insertSliceOp, collapseShapeOp.getSrc(), insertSliceOp.getDest(),
-        mixedOffsets, mixedSizes, mixedStrides);
+    rewriter.replaceOpWithNewOp<OpTy>(insertSliceOp, collapseShapeOp.getSrc(),
+                                      insertSliceOp.getDest(), mixedOffsets,
+                                      mixedSizes, mixedStrides);
     return success();
   }
 };
@@ -84,6 +83,8 @@ struct FoldInsertOfRankReducingInsert : public OpRewritePattern<InsertSliceOp> {
 
 void mlir::tensor::populateReassociativeReshapeFoldingPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<FoldExpandOfRankReducingExtract, FoldInsertOfRankReducingInsert>(
+  patterns.add<FoldExpandOfRankReducingExtract,
+               FoldInsertOfRankReducingInsert<tensor::InsertSliceOp>,
+               FoldInsertOfRankReducingInsert<tensor::ParallelInsertSliceOp>>(
       patterns.getContext());
 }

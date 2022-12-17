@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-simplify -licm -disable-output
+; RUN: opt < %s -passes='loop-simplify,loop-mssa(licm)' -disable-output
 
 ; This is PR306
 

@@ -213,13 +213,13 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts arith.addui_carry to spirv.IAddCarry.
-class AddICarryOpPattern final
-    : public OpConversionPattern<arith::AddUICarryOp> {
+/// Converts arith.addui_extended to spirv.IAddCarry.
+class AddUIExtendedOpPattern final
+    : public OpConversionPattern<arith::AddUIExtendedOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(arith::AddUICarryOp op, OpAdaptor adaptor,
+  matchAndRewrite(arith::AddUIExtendedOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -920,12 +920,12 @@ LogicalResult CmpFOpNanNonePattern::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
-// AddICarryOpPattern
+// AddUIExtendedOpPattern
 //===----------------------------------------------------------------------===//
 
-LogicalResult
-AddICarryOpPattern::matchAndRewrite(arith::AddUICarryOp op, OpAdaptor adaptor,
-                                    ConversionPatternRewriter &rewriter) const {
+LogicalResult AddUIExtendedOpPattern::matchAndRewrite(
+    arith::AddUIExtendedOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
   Type dstElemTy = adaptor.getLhs().getType();
   Location loc = op->getLoc();
   Value result = rewriter.create<spirv::IAddCarryOp>(loc, adaptor.getLhs(),
@@ -1040,7 +1040,7 @@ void mlir::arith::populateArithToSPIRVPatterns(
     TypeCastingOpPattern<arith::BitcastOp, spirv::BitcastOp>,
     CmpIOpBooleanPattern, CmpIOpPattern,
     CmpFOpNanNonePattern, CmpFOpPattern,
-    AddICarryOpPattern, SelectOpPattern,
+    AddUIExtendedOpPattern, SelectOpPattern,
 
     MinMaxFOpPattern<arith::MaxFOp, spirv::GLFMaxOp>,
     MinMaxFOpPattern<arith::MinFOp, spirv::GLFMinOp>,

@@ -1170,7 +1170,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #41
+  ; CHECK: call void @f.nobuiltin() #42
 
   call fastcc noalias i32* @f.noalias() noinline
   ; CHECK: call fastcc noalias i32* @f.noalias() #12
@@ -1556,9 +1556,10 @@ normal:
 ; CHECK: attributes #36 = { nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #37 = { nounwind memory(argmem: read) }
 ; CHECK: attributes #38 = { nounwind memory(argmem: readwrite) }
-; CHECK: attributes #39 = { nounwind memory(read) }
-; CHECK: attributes #40 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
-; CHECK: attributes #41 = { builtin }
+; CHECK: attributes #39 = { nocallback nofree nosync nounwind willreturn memory(read) }
+; CHECK: attributes #40 = { nocallback nounwind }
+; CHECK: attributes #41 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #42 = { builtin }
 
 ;; Metadata
 

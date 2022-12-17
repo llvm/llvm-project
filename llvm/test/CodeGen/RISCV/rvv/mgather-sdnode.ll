@@ -1293,7 +1293,7 @@ define void @mgather_nxv16i64(<vscale x 8 x i64*> %ptrs0, <vscale x 8 x i64*> %p
 ; RV64-NEXT:    vslidedown.vx v0, v0, a1
 ; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
 ; RV64-NEXT:    addi a1, sp, 16
-; RV64-NEXT:    vl8re8.v v16, (a1) # Unknown-size Folded Reload
+; RV64-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
 ; RV64-NEXT:    vluxei64.v v8, (zero), v16, v0.t
 ; RV64-NEXT:    slli a0, a0, 3
 ; RV64-NEXT:    add a0, a2, a0

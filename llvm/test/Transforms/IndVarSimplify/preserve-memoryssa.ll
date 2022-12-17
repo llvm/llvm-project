@@ -1,4 +1,4 @@
-; RUN: opt -S -licm -indvars -verify-memoryssa < %s | FileCheck %s
+; RUN: opt -S -passes=licm,indvars -verify-memoryssa < %s | FileCheck %s
 ; REQUIRES: asserts
 @v_69 = external constant { i16, i16 }, align 1
 

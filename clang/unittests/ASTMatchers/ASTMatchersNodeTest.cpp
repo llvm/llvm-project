@@ -2306,6 +2306,30 @@ TEST_P(ASTMatchersTest,
           hasName("cc"), hasInitializer(integerLiteral(equals(1))))))))));
 }
 
+TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureOfReferenceType) {
+  if (!GetParam().isCXX20OrLater()) {
+    return;
+  }
+  auto matcher = lambdaExpr(hasAnyCapture(
+      lambdaCapture(capturesVar(varDecl(hasType(referenceType()))))));
+  EXPECT_TRUE(matches("template <class ...T> void f(T &...args) {"
+                      "  [&...args = args] () mutable {"
+                      "  }();"
+                      "}"
+                      "int main() {"
+                      "  int a;"
+                      "  f(a);"
+                      "}", matcher));
+  EXPECT_FALSE(matches("template <class ...T> void f(T &...args) {"
+                       "  [...args = args] () mutable {"
+                       "  }();"
+                       "}"
+                       "int main() {"
+                       "  int a;"
+                       "  f(a);"
+                       "}", matcher));
+}
+
 TEST(ASTMatchersTestObjC, ObjCMessageCalees) {
   StatementMatcher MessagingFoo =
       objcMessageExpr(callee(objcMethodDecl(hasName("foo"))));

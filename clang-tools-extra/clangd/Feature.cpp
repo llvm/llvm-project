@@ -66,6 +66,10 @@ std::string featureString() {
 #if !CLANGD_TIDY_CHECKS
       "-tidy"
 #endif
+
+#if !CLANGD_DECISION_FOREST
+      "-decision_forest"
+#endif
       ;
 }
 

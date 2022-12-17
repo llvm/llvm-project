@@ -1,8 +1,8 @@
 ; Check that the instcombine result is the same with/without debug info.
 ; This is a regression test for a function taken from malloc-free-delete.ll.
 
-; RUN: opt < %s -instcombine -S > %t.no_dbg.ll
-; RUN: opt < %s -debugify-each -instcombine -S > %t.ll
+; RUN: opt < %s -passes=instcombine -S > %t.no_dbg.ll
+; RUN: opt < %s -debugify-each -passes=instcombine -S > %t.ll
 ; RUN: diff %t.no_dbg.ll %t.ll
 
 declare void @free(ptr)

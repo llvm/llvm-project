@@ -1,4 +1,4 @@
-; RUN: opt -inline -mtriple=aarch64--linux-gnu -S -o - < %s -inline-threshold=0 | FileCheck %s
+; RUN: opt -passes=inline -mtriple=aarch64--linux-gnu -S -o - < %s -inline-threshold=0 | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
@@ -23,7 +23,7 @@ define i32 @outer_add2(i32 %a) {
 define i32 @add(i32 %a, i32 %b) {
   %add = add i32 %a, %b
   call void @pad()
-  store i32 0, i32* @glbl
+  store i32 0, ptr @glbl
   ret i32 %add
 }
 
@@ -39,7 +39,7 @@ define i32 @outer_sub1(i32 %a) {
 define i32 @sub1(i32 %a, i32 %b) {
   %sub = sub i32 %a, %b
   call void @pad()
-  store i32 0, i32* @glbl
+  store i32 0, ptr @glbl
   ret i32 %sub
 }
 
@@ -76,7 +76,7 @@ define i32 @outer_mul2(i32 %a) {
 define i32 @mul(i32 %a, i32 %b) {
   %mul = mul i32 %a, %b
   call void @pad()
-  store i32 0, i32* @glbl
+  store i32 0, ptr @glbl
   ret i32 %mul
 }
 
@@ -99,7 +99,7 @@ define i32 @outer_div2(i32 %a) {
 define i32 @div1(i32 %a, i32 %b) {
   %div = sdiv i32 %a, %b
   call void @pad()
-  store i32 0, i32* @glbl
+  store i32 0, ptr @glbl
   ret i32 %div
 }
 
@@ -136,7 +136,7 @@ define i32 @outer_rem2(i32 %a) {
 define i32 @rem1(i32 %a, i32 %b) {
   %rem = urem i32 %a, %b
   call void @pad()
-  store i32 0, i32* @glbl
+  store i32 0, ptr @glbl
   ret i32 %rem
 }
 
@@ -166,7 +166,7 @@ define i32 @outer_shl1(i32 %a) {
 define i32 @shl(i32 %a, i32 %b) {
   %shl = shl i32 %a, %b
   call void @pad()
-  store i32 0, i32* @glbl
+  store i32 0, ptr @glbl
   ret i32 %shl
 }
 
@@ -182,7 +182,7 @@ define i32 @outer_shr1(i32 %a) {
 define i32 @shr(i32 %a, i32 %b) {
   %shr = ashr i32 %a, %b
   call void @pad()
-  store i32 0, i32* @glbl
+  store i32 0, ptr @glbl
   ret i32 %shr
 }
 
@@ -205,7 +205,7 @@ define i1 @outer_and2(i1 %a) {
 define i1 @and1(i1 %a, i1 %b) {
   %and = and i1 %a, %b
   call void @pad()
-  store i32 0, i32* @glbl
+  store i32 0, ptr @glbl
   ret i1 %and
 }
 
@@ -242,7 +242,7 @@ define i1 @outer_or2(i1 %a) {
 define i1 @or1(i1 %a, i1 %b) {
   %or = or i1 %a, %b
   call void @pad()
-  store i32 0, i32* @glbl
+  store i32 0, ptr @glbl
   ret i1 %or
 }
 
@@ -272,7 +272,7 @@ define i1 @outer_xor1(i1 %a) {
 define i1 @xor1(i1 %a, i1 %b) {
   %xor = xor i1 %a, %b
   call void @pad()
-  store i32 0, i32* @glbl
+  store i32 0, ptr @glbl
   ret i1 %xor
 }
 

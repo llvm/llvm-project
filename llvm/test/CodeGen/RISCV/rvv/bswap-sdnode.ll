@@ -528,7 +528,7 @@ define <vscale x 8 x i64> @bswap_nxv8i64(<vscale x 8 x i64> %va) {
 ; RV32-NEXT:    vand.vv v16, v16, v24
 ; RV32-NEXT:    vor.vv v16, v16, v0
 ; RV32-NEXT:    addi a4, sp, 16
-; RV32-NEXT:    vl8re8.v v0, (a4) # Unknown-size Folded Reload
+; RV32-NEXT:    vl8r.v v0, (a4) # Unknown-size Folded Reload
 ; RV32-NEXT:    vor.vv v16, v16, v0
 ; RV32-NEXT:    addi a4, sp, 16
 ; RV32-NEXT:    vs8r.v v16, (a4) # Unknown-size Folded Spill
@@ -543,7 +543,7 @@ define <vscale x 8 x i64> @bswap_nxv8i64(<vscale x 8 x i64> %va) {
 ; RV32-NEXT:    vor.vv v8, v8, v24
 ; RV32-NEXT:    vor.vv v8, v16, v8
 ; RV32-NEXT:    addi a0, sp, 16
-; RV32-NEXT:    vl8re8.v v16, (a0) # Unknown-size Folded Reload
+; RV32-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
 ; RV32-NEXT:    vor.vv v8, v8, v16
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 3

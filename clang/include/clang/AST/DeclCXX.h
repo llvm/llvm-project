@@ -415,9 +415,11 @@ private:
     /// or within a data member initializer.
     LazyDeclPtr ContextDecl;
 
-    /// The list of captures, both explicit and implicit, for this
-    /// lambda.
-    Capture *Captures = nullptr;
+    /// The lists of captures, both explicit and implicit, for this
+    /// lambda. One list is provided for each merged copy of the lambda.
+    /// The first list corresponds to the canonical definition.
+    /// The destructor is registered by AddCaptureList when necessary.
+    llvm::TinyPtrVector<Capture*> Captures;
 
     /// The type of the call method.
     TypeSourceInfo *MethodTyInfo;
@@ -435,6 +437,9 @@ private:
       Aggregate = false;
       PlainOldData = false;
     }
+
+    // Add a list of captures.
+    void AddCaptureList(ASTContext &Ctx, Capture *CaptureList);
   };
 
   struct DefinitionData *dataPtr() const {
@@ -1063,6 +1068,11 @@ public:
   ///
   /// \note No entries will be added for init-captures, as they do not capture
   /// variables.
+  ///
+  /// \note If multiple versions of the lambda are merged together, they may
+  /// have different variable declarations corresponding to the same capture.
+  /// In that case, all of those variable declarations will be added to the
+  /// Captures list, so it may have more than one variable listed per field.
   void
   getCaptureFields(llvm::DenseMap<const ValueDecl *, FieldDecl *> &Captures,
                    FieldDecl *&ThisCapture) const;
@@ -1075,7 +1085,9 @@ public:
   }
 
   capture_const_iterator captures_begin() const {
-    return isLambda() ? getLambdaData().Captures : nullptr;
+    if (!isLambda()) return nullptr;
+    LambdaDefinitionData &LambdaData = getLambdaData();
+    return LambdaData.Captures.empty() ? nullptr : LambdaData.Captures.front();
   }
 
   capture_const_iterator captures_end() const {

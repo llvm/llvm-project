@@ -1,4 +1,4 @@
-; RUN: opt -mergefunc -disable-output < %s
+; RUN: opt -passes=mergefunc -disable-output < %s
 
 ; A linked list type and simple payload
 %LL = type { %S, %LL* }

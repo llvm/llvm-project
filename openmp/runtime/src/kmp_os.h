@@ -596,27 +596,26 @@ inline kmp_int32 __kmp_compare_and_store_ptr(void *volatile *p, void *cv,
 }
 
 // The _RET versions return the value instead of a bool
-/*
+
 #define KMP_COMPARE_AND_STORE_RET8(p, cv, sv)                                  \
    _InterlockedCompareExchange8((p), (sv), (cv))
 #define KMP_COMPARE_AND_STORE_RET16(p, cv, sv)                                 \
   _InterlockedCompareExchange16((p), (sv), (cv))
-*/
+
 #define KMP_COMPARE_AND_STORE_RET64(p, cv, sv)                                 \
   _InterlockedCompareExchange64((volatile kmp_int64 *)(p), (kmp_int64)(sv),    \
                                 (kmp_int64)(cv))
 
-/*
+
 #define KMP_XCHG_FIXED8(p, v)                                                  \
   _InterlockedExchange8((volatile kmp_int8 *)(p), (kmp_int8)(v));
-*/
-// #define KMP_XCHG_FIXED16(p, v) _InterlockedExchange16((p), (v));
-// #define KMP_XCHG_REAL64(p, v) __kmp_xchg_real64((p), (v)));
+#define KMP_XCHG_FIXED16(p, v) _InterlockedExchange16((p), (v));
+#define KMP_XCHG_REAL64(p, v) __kmp_xchg_real64((p), (v)));
 
-// inline kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v) {
-//   kmp_int64 tmp = _InterlockedExchange64((volatile kmp_int64 *)p, *(kmp_int64
-//   *)&v); return *(kmp_real64 *)&tmp;
-// }
+inline kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v) {
+  kmp_int64 tmp = _InterlockedExchange64((volatile kmp_int64 *)p, *(kmp_int64
+  *)&v); return *(kmp_real64 *)&tmp;
+}
 
 #else // !KMP_ARCH_AARCH64
 

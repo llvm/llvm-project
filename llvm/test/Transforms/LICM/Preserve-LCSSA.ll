@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-rotate -licm -simple-loop-unswitch -disable-output -verify-loop-info -verify-dom-info
+; RUN: opt < %s -passes='loop-mssa(loop-rotate,licm,simple-loop-unswitch)' -disable-output -verify-loop-info -verify-dom-info
 
 define i32 @stringSearch_Clib(i32 %count) {
 entry:

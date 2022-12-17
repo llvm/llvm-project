@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-versioning -S -o - | FileCheck %s
+; RUN: opt < %s -passes=loop-versioning -S -o - | FileCheck %s
 
 ; This test case used to end like this:
 ;

@@ -18,12 +18,11 @@
 #define LLVM_CODEGEN_MIRPARSER_MIRPARSER_H
 
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
 #include <memory>
+#include <optional>
 
 namespace llvm {
 
@@ -36,7 +35,7 @@ class MachineModuleInfo;
 class SMDiagnostic;
 class StringRef;
 
-typedef llvm::function_ref<Optional<std::string>(StringRef)>
+typedef llvm::function_ref<std::optional<std::string>(StringRef)>
     DataLayoutCallbackTy;
 
 /// This class initializes machine functions by applying the state loaded from

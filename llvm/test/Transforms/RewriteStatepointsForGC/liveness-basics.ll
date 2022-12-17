@@ -1,9 +1,8 @@
 ; A collection of liveness test cases to ensure we're reporting the
 ; correct live values at statepoints
-; RUN: opt -rewrite-statepoints-for-gc -spp-rematerialization-threshold=0 -S < %s | FileCheck %s
 ; RUN: opt -passes=rewrite-statepoints-for-gc -spp-rematerialization-threshold=0 -S < %s | FileCheck %s
 
-; Tests to make sure we consider %obj live in both the taken and untaken 
+; Tests to make sure we consider %obj live in both the taken and untaken
 ; predeccessor of merge.
 
 define i64 addrspace(1)* @test1(i1 %cmp, i64 addrspace(1)* %obj) gc "statepoint-example" {
@@ -102,18 +101,18 @@ entry:
 ; CHECK-NEXT:  %derived = getelementptr
 ; CHECK-NEXT:  gc.statepoint
 ; CHECK-NEXT:  %derived.relocated =
-; CHECK-NEXT:  bitcast 
+; CHECK-NEXT:  bitcast
 ; CHECK-NEXT:  %obj.relocated =
 ; CHECK-NEXT:  bitcast
 ; CHECK-NEXT:  gc.statepoint
 ; CHECK-NEXT:  %derived.relocated2 =
-; CHECK-NEXT:  bitcast 
+; CHECK-NEXT:  bitcast
 
 ; Note: It's legal to relocate obj again, but not strictly needed
 ; CHECK-NEXT:  %obj.relocated3 =
 ; CHECK-NEXT:  bitcast
 ; CHECK-NEXT:  ret i64 addrspace(1)* %derived.relocated2.casted
-; 
+;
 ; Make sure that a phi def visited during iteration is considered a kill.
 ; Also, liveness after base pointer analysis can change based on new uses,
 ; not just new defs.

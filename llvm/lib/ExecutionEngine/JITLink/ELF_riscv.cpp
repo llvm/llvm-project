@@ -302,6 +302,8 @@ private:
       // pairs with current relocation R_RISCV_PCREL_LO12_S. So here may need a
       // check.
       auto RelHI20 = getRISCVPCRelHi20(E);
+      if (!RelHI20)
+        return RelHI20.takeError();
       int64_t Value = RelHI20->getTarget().getAddress() +
                       RelHI20->getAddend() - E.getTarget().getAddress();
       int64_t Lo = Value & 0xFFF;

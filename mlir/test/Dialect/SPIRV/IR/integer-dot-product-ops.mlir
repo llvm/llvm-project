@@ -49,6 +49,14 @@ func.func @sdot_scalar_bad_types(%a: i32, %b: i64) -> i32 {
   %r = spirv.SDot %a, %b : (i32, i64) -> i32
   return %r : i32
 }
+// -----
+
+func.func @sdot_vector_4xi8_bad_attr(%a: vector<4xi8>, %b: vector<4xi8>) -> i32 {
+  // expected-error @+1 {{op with invalid format attribute for vector operands of type 'vector<4xi8>'}}
+  %r = spirv.SDot %a, %b {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}:
+        (vector<4xi8>, vector<4xi8>) -> i32
+  return %r : i32
+}
 
 // -----
 
@@ -56,6 +64,14 @@ func.func @sdot_scalar_i32_bad_attr(%a: i32, %b: i32) -> i32 {
   // expected-error @+1 {{op only supports the 'format' #spirv.packed_vector_format attribute}}
   %r = spirv.SDot %a, %b {volatile = #spirv.decoration<Volatile>,
                           format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32) -> i32
+  return %r : i32
+}
+
+// -----
+
+func.func @udot_vector_4xi8_bad_attr(%a: vector<4xi8>, %b: vector<4xi8>) -> i32 {
+  // expected-error @+1 {{op only supports the 'format' #spirv.packed_vector_format attribute}}
+  %r = spirv.UDot %a, %b {volatile = #spirv.decoration<Volatile>}: (vector<4xi8>, vector<4xi8>) -> i32
   return %r : i32
 }
 

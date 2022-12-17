@@ -1114,6 +1114,12 @@ struct EmboxCharOpConversion : public FIROpConversion<fir::EmboxCharOp> {
         llvmStructTy.cast<mlir::LLVM::LLVMStructType>().getBody()[1];
     mlir::Value lenAfterCast = integerCast(loc, rewriter, lenTy, charBufferLen);
 
+    mlir::Type addrTy =
+        llvmStructTy.cast<mlir::LLVM::LLVMStructType>().getBody()[0];
+    if (addrTy != charBuffer.getType())
+      charBuffer =
+          rewriter.create<mlir::LLVM::BitcastOp>(loc, addrTy, charBuffer);
+
     auto insertBufferOp = rewriter.create<mlir::LLVM::InsertValueOp>(
         loc, llvmStruct, charBuffer, 0);
     rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(

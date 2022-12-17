@@ -25,6 +25,7 @@
 # CHECK-NEXT:     Name: <?>
 # CHECK-NEXT:     BB entries [
 # CHECK-NEXT:       {
+# CHECK-NEXT:         ID: 0
 # CHECK-NEXT:         Offset: 0x0
 # CHECK-NEXT:         Size: 0x1
 # CHECK-NEXT:         HasReturn: No
@@ -33,6 +34,7 @@
 # CHECK-NEXT:         CanFallThrough: No
 # CHECK-NEXT:       }
 # CHECK-NEXT:       {
+# CHECK-NEXT:         ID: 2
 # CHECK-NEXT:         Offset: 0x4
 # CHECK-NEXT:         Size: 0x4
 # CHECK-NEXT:         HasReturn: Yes
@@ -47,6 +49,7 @@
 # CHECK-NEXT:     Name: foo
 # CHECK-NEXT:     BB entries [
 # CHECK-NEXT:       {
+# CHECK-NEXT:         ID: 4
 # CHECK-NEXT:         Offset: 0x6
 # CHECK-NEXT:         Size: 0x7
 # CHECK-NEXT:         HasReturn: No
@@ -70,6 +73,7 @@
 # TRUNCATED-NEXT:     Name: bar
 # TRUNCATED-NEXT:     BB entries [
 # TRUNCATED-NEXT:       {
+# TRUNCATED-NEXT:         ID: 6
 # TRUNCATED-NEXT:         Offset: 0x9
 # TRUNCATED-NEXT:         Size: 0xA
 # TRUNCATED-NEXT:         HasReturn: Yes
@@ -78,6 +82,7 @@
 # TRUNCATED-NEXT:         CanFallThrough: Yes
 # TRUNCATED-NEXT:       }
 # TRUNCATED-NEXT:       {
+# TRUNCATED-NEXT:         ID: 7
 # TRUNCATED-NEXT:         Offset: 0x1F
 # TRUNCATED-NEXT:         Size: 0xD
 # TRUNCATED-NEXT:         HasReturn: No
@@ -106,19 +111,22 @@ Sections:
     ShSize: [[SIZE=<none>]]
     Link:   .text
     Entries:
-      - Version: 1
+      - Version: 2
         Address: [[ADDR=0x11111]]
         BBEntries:
-          - AddressOffset: 0x0
+          - ID:            0
+            AddressOffset: 0x0
             Size:          0x1
             Metadata:      0xF0000002
-          - AddressOffset: 0x3
+          - ID:            2
+            AddressOffset: 0x3
             Size:          0x4
             Metadata:      0x5
-      - Version: 1
+      - Version: 2
         Address: 0x22222
         BBEntries:
-          - AddressOffset: 0x6
+          - ID:            4
+            AddressOffset: 0x6
             Size:          0x7
             Metadata:      0x8
   - Name: dummy_section
@@ -128,13 +136,15 @@ Sections:
     Type: SHT_LLVM_BB_ADDR_MAP
     Link: .text.bar
     Entries:
-      - Version: 1
+      - Version: 2
         Address: 0x33333
         BBEntries:
-          - AddressOffset: 0x9
+          - ID:            6
+            AddressOffset: 0x9
             Size:          0xa
             Metadata:      0xb
-          - AddressOffset: 0xc
+          - ID:            7
+            AddressOffset: 0xc
             Size:          0xd
             Metadata:      0xe
 Symbols:
@@ -165,6 +175,7 @@ Symbols:
 # V0-NEXT:     Name: foo
 # V0-NEXT:     BB entries [
 # V0-NEXT:       {
+# V0-NEXT:         ID: 0
 # V0-NEXT:         Offset: 0x1
 # V0-NEXT:         Size: 0x2
 # V0-NEXT:         HasReturn:
@@ -173,6 +184,7 @@ Symbols:
 # V0-NEXT:         CanFallThrough:
 # V0-NEXT:       }
 # V0-NEXT:       {
+# V0-NEXT:         ID: 1
 # V0-NEXT:         Offset: 0x4
 # V0-NEXT:         Size: 0x5
 # V0-NEXT:         HasReturn:
@@ -182,6 +194,36 @@ Symbols:
 # V0-NEXT:       }
 # V0-NEXT:     ]
 # V0-NEXT:   }
+
+## Check version 1 (without BB IDs).
+# RUN: yaml2obj --docnum=2 %s -DVERSION=1 -DSECTION_TYPE=SHT_LLVM_BB_ADDR_MAP -o %t3
+# RUN: llvm-readobj %t3 --bb-addr-map 2>&1 | FileCheck %s --check-prefix=V1
+
+# V1:      BBAddrMap [
+# V1-NEXT:   Function {
+# V1-NEXT:     At:   0x11111
+# V1-NEXT:     Name: foo
+# V1-NEXT:     BB entries [
+# V1-NEXT:       {
+# V1-NEXT:         ID: 0
+# V1-NEXT:         Offset: 0x1
+# V1-NEXT:         Size: 0x2
+# V1-NEXT:         HasReturn:
+# V1-NEXT:         HasTailCall:
+# V1-NEXT:         IsEHPad:
+# V1-NEXT:         CanFallThrough:
+# V1-NEXT:       }
+# V1-NEXT:       {
+# V1-NEXT:         ID: 1
+# V1-NEXT:         Offset: 0x7
+# V1-NEXT:         Size: 0x5
+# V1-NEXT:         HasReturn:
+# V1-NEXT:         HasTailCall:
+# V1-NEXT:         IsEHPad:
+# V1-NEXT:         CanFallThrough:
+# V1-NEXT:       }
+# V1-NEXT:     ]
+# V1-NEXT:   }
 
 --- !ELF
 FileHeader:

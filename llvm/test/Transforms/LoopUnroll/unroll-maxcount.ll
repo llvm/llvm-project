@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -unroll-allow-partial -unroll-max-count=1 | FileCheck %s
+; RUN: opt < %s -S -passes=loop-unroll -unroll-allow-partial -unroll-max-count=1 | FileCheck %s
 ; Checks that unroll MaxCount is honored.
 ;
 ; CHECK-LABEL: @foo(

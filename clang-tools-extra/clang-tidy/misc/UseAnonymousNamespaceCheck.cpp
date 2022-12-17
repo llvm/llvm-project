@@ -25,36 +25,29 @@ AST_MATCHER(FunctionDecl, isMemberFunction) {
   return llvm::isa<CXXMethodDecl>(&Node);
 }
 AST_MATCHER(VarDecl, isStaticDataMember) { return Node.isStaticDataMember(); }
-} // namespace
 
-static bool isInAnonymousNamespace(const Decl *Decl) {
-  const DeclContext *DC = Decl->getDeclContext();
-  if (DC && DC->isNamespace()) {
-    const auto *ND = llvm::cast<NamespaceDecl>(DC);
-    if (ND && ND->isAnonymousNamespace())
-      return true;
-  }
-  return false;
+AST_MATCHER(Decl, isInAnonymousNamespace) {
+  return Node.isInAnonymousNamespace();
 }
+} // namespace
 
 template <typename T>
 void UseAnonymousNamespaceCheck::processMatch(const T *MatchedDecl) {
   StringRef Type = llvm::isa<VarDecl>(MatchedDecl) ? "variable" : "function";
-  if (isInAnonymousNamespace(MatchedDecl))
-    diag(MatchedDecl->getLocation(), "%0 %1 declared 'static' in "
-                                     "anonymous namespace, remove 'static'")
-        << Type << MatchedDecl;
-  else
-    diag(MatchedDecl->getLocation(),
-         "%0 %1 declared 'static', move to anonymous namespace instead")
-        << Type << MatchedDecl;
+  diag(MatchedDecl->getLocation(),
+       "%0 %1 declared 'static', move to anonymous namespace instead")
+      << Type << MatchedDecl;
 }
 
 void UseAnonymousNamespaceCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      functionDecl(isStatic(), unless(isMemberFunction())).bind("func"), this);
+      functionDecl(isStatic(),
+                   unless(anyOf(isInAnonymousNamespace(), isMemberFunction())))
+          .bind("func"),
+      this);
   Finder->addMatcher(
-      varDecl(isStatic(), unless(anyOf(isStaticLocal(), isStaticDataMember())))
+      varDecl(isStatic(), unless(anyOf(isInAnonymousNamespace(),
+                                       isStaticLocal(), isStaticDataMember())))
           .bind("var"),
       this);
 }

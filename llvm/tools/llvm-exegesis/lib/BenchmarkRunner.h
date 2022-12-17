@@ -35,7 +35,8 @@ namespace exegesis {
 class BenchmarkRunner {
 public:
   explicit BenchmarkRunner(const LLVMState &State,
-                           InstructionBenchmark::ModeE Mode);
+                           InstructionBenchmark::ModeE Mode,
+                           bool BenchmarkSkipMeasurements);
 
   virtual ~BenchmarkRunner();
 
@@ -77,6 +78,7 @@ public:
 protected:
   const LLVMState &State;
   const InstructionBenchmark::ModeE Mode;
+  const bool BenchmarkSkipMeasurements;
 
 private:
   virtual Expected<std::vector<BenchmarkMeasure>>

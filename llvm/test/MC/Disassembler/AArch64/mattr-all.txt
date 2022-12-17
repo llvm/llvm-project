@@ -40,6 +40,10 @@
 # CHECK: cfp rctx, x0
 [0x80,0x73,0x0b,0xd5]
 
+## predres2 (sysreg alias implementation is different from predres)
+# CHECK: cosp rctx, x0
+[0xc0,0x73,0x0b,0xd5]
+
 ## sme
 # CHECK: addha za0.s, p0/m, p0/m, z0.s
 [0x00,0x00,0x90,0xc0]
@@ -55,4 +59,3 @@
 ## sme2
 # CHECK: add { z0.h, z1.h }, { z0.h, z1.h }, z0.h
 [0x00,0xa3,0x60,0xc1]
-

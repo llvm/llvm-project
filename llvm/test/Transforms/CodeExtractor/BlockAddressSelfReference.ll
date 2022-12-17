@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-simplify -loop-extract -S | FileCheck %s
+; RUN: opt < %s -passes='function(loop-simplify),loop-extract'  -S | FileCheck %s
 
 @choum.addr = internal unnamed_addr constant [3 x i8*] [i8* blockaddress(@choum, %bb10), i8* blockaddress(@choum, %bb14), i8* blockaddress(@choum, %bb18)]
 

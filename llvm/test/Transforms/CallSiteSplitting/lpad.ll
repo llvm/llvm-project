@@ -1,4 +1,4 @@
-; RUN: opt -S -callsite-splitting < %s | FileCheck %s
+; RUN: opt -S -passes=callsite-splitting < %s | FileCheck %s
 ;
 ; Make sure that the callsite is not splitted by checking that there's only one
 ; call to @callee.

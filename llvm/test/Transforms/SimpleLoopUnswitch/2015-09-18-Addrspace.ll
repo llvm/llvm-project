@@ -1,4 +1,4 @@
-; RUN: opt < %s -simple-loop-unswitch -verify-memoryssa -S | FileCheck %s
+; RUN: opt < %s -passes=simple-loop-unswitch -verify-memoryssa -S | FileCheck %s
 
 ; In cases where two address spaces do not have the same size pointer, the
 ; input for the addrspacecast should not be used as a substitute for itself
@@ -14,7 +14,7 @@ entry:
   br i1 undef, label %for.body.i, label %bar.exit
 
 for.body.i:                                       ; preds = %for.body.i, %entry
-; When we call makeLoopInvariant (i.e. trivial LICM) on this load, it 
+; When we call makeLoopInvariant (i.e. trivial LICM) on this load, it
 ; will try to find the base object to prove deferenceability.  If we look
 ; through the addrspacecast, we'll fail an assertion about bitwidths matching
 ; CHECK-LABEL: for.body.i

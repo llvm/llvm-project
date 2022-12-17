@@ -1,4 +1,3 @@
-; RUN: opt -lcssa -S < %s | FileCheck %s
 ; RUN: opt -passes=lcssa -S < %s | FileCheck %s
 
 ; This test is based on the following C++ code:

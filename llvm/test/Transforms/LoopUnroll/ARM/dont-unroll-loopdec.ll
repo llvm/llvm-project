@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=thumbv8.1m.main -mattr=+mve.fp -loop-unroll -S < %s | FileCheck %s
+; RUN: opt -mtriple=thumbv8.1m.main -mattr=+mve.fp -passes=loop-unroll -S < %s | FileCheck %s
 
 ; CHECK-LABEL:  foo
 ; CHECK:        5:

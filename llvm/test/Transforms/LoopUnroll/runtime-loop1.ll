@@ -1,5 +1,5 @@
-; RUN: opt < %s -S -loop-unroll -unroll-runtime -unroll-count=2 -unroll-runtime-epilog=true | FileCheck %s -check-prefix=EPILOG
-; RUN: opt < %s -S -loop-unroll -unroll-runtime -unroll-count=2 -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
+; RUN: opt < %s -S -passes=loop-unroll -unroll-runtime -unroll-count=2 -unroll-runtime-epilog=true | FileCheck %s -check-prefix=EPILOG
+; RUN: opt < %s -S -passes=loop-unroll -unroll-runtime -unroll-count=2 -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
 
 ; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll' -unroll-runtime -unroll-count=2 -unroll-runtime-epilog=true | FileCheck %s -check-prefix=EPILOG
 ; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll' -unroll-runtime -unroll-count=2 -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
@@ -72,4 +72,4 @@ for.end:                                          ; preds = %for.body, %entry
 !11 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
                              file: !5,
                              isOptimized: true, flags: "-O2",
-                             splitDebugFilename: "abc.debug", emissionKind: 2) 
+                             splitDebugFilename: "abc.debug", emissionKind: 2)

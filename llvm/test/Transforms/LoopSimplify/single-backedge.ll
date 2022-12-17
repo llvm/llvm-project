@@ -1,8 +1,8 @@
 ; The loop canonicalization pass should guarantee that there is one backedge
-; for all loops.  This allows the -indvars pass to recognize the %IV
+; for all loops.  This allows the -passes=indvars pass to recognize the %IV
 ; induction variable in this testcase.
 
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 ; CHECK: Loop.backedge:
 ; CHECK-NOT: br
 ; CHECK: br label %Loop, !dbg [[BACKEDGE_LOC:![0-9]+]]

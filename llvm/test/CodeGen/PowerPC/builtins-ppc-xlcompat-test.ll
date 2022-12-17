@@ -77,11 +77,11 @@ define i32 @test_builtin_ppc_test_data_class_d(double %d) {
 ; CHECK-NEXT:    iseleq 3, 4, 3
 ; CHECK-NEXT:    blr
 entry:
-  %test_data_class = tail call i32 @llvm.ppc.test.data.class.d(double %d, i32 0)
+  %test_data_class = tail call i32 @llvm.ppc.test.data.class.f64(double %d, i32 0)
   ret i32 %test_data_class
 }
 
-declare i32 @llvm.ppc.test.data.class.d(double, i32 immarg)
+declare i32 @llvm.ppc.test.data.class.f64(double, i32 immarg)
 
 define i32 @test_builtin_ppc_test_data_class_f(float %f) {
 ; CHECK-LABEL: test_builtin_ppc_test_data_class_f:
@@ -92,8 +92,8 @@ define i32 @test_builtin_ppc_test_data_class_f(float %f) {
 ; CHECK-NEXT:    iseleq 3, 4, 3
 ; CHECK-NEXT:    blr
 entry:
-  %test_data_class = tail call i32 @llvm.ppc.test.data.class.f(float %f, i32 127)
+  %test_data_class = tail call i32 @llvm.ppc.test.data.class.f32(float %f, i32 127)
   ret i32 %test_data_class
 }
 
-declare i32 @llvm.ppc.test.data.class.f(float, i32 immarg)
+declare i32 @llvm.ppc.test.data.class.f32(float, i32 immarg)

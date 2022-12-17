@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-idiom < %s
+; RUN: opt -S -passes=loop-idiom < %s
 ; Don't crash
 ; PR13892
 

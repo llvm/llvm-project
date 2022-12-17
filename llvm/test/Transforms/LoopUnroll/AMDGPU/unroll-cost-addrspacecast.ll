@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=hawaii -loop-unroll -unroll-threshold=49 -unroll-peel-count=0 -unroll-allow-partial=false -unroll-max-iteration-count-to-analyze=16 < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=hawaii -passes=loop-unroll -unroll-threshold=49 -unroll-peel-count=0 -unroll-allow-partial=false -unroll-max-iteration-count-to-analyze=16 < %s | FileCheck %s
 
 ; CHECK-LABEL: @test_func_addrspacecast_cost_noop(
 ; CHECK-NOT: br i1

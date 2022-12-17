@@ -1,5 +1,4 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=infer-address-spaces %s | FileCheck %s
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=infer-address-spaces %s | FileCheck %s
 ; Ports of most of test/CodeGen/NVPTX/access-non-generic.ll
 
 @scalar = internal addrspace(3) global float 0.0, align 4

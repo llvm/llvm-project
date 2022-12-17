@@ -1,6 +1,6 @@
-; RUN: opt < %s -loop-unroll -pragma-unroll-threshold=1024 -S | FileCheck -check-prefixes=CHECK,REM %s
-; RUN: opt < %s -loop-unroll -loop-unroll -pragma-unroll-threshold=1024 -S | FileCheck -check-prefixes=CHECK,REM %s
-; RUN: opt < %s -loop-unroll -unroll-allow-remainder=0 -pragma-unroll-threshold=1024 -S | FileCheck -check-prefixes=CHECK,NOREM %s
+; RUN: opt < %s -passes=loop-unroll -pragma-unroll-threshold=1024 -S | FileCheck -check-prefixes=CHECK,REM %s
+; RUN: opt < %s -passes=loop-unroll,loop-unroll -pragma-unroll-threshold=1024 -S | FileCheck -check-prefixes=CHECK,REM %s
+; RUN: opt < %s -passes=loop-unroll -unroll-allow-remainder=0 -pragma-unroll-threshold=1024 -S | FileCheck -check-prefixes=CHECK,NOREM %s
 ;
 ; Run loop unrolling twice to verify that loop unrolling metadata is properly
 ; removed and further unrolling is disabled after the pass is run once.

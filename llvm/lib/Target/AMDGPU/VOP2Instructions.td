@@ -424,9 +424,9 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
                     dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
   let InsDPP16 = !con(InsDPP, (ins FI:$fi));
-  let InsVOP3Base = getIns64<Src0VOP3DPP, Src1VOP3DPP, RegisterOperand<VGPR_32>, 3,
+  let InsVOP3Base = getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP, RegisterOperand<VGPR_32>, 3,
                        0, HasModifiers, HasModifiers, HasOMod,
-                       Src0ModVOP3DPP, Src1ModVOP3DPP, Src2Mod>.ret;
+                       Src0ModVOP3DPP, Src1ModVOP3DPP, Src2Mod, HasOpSel, 0/*IsVOP3P*/>.ret;
   // We need a dummy src2 tied to dst to track the use of that register for s_delay_alu
   let InsVOPDX = (ins Src0RC32:$src0X, Src1RC32:$vsrc1X, VGPRSrc_32:$src2X);
   let InsVOPDXDeferred =
@@ -473,6 +473,9 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
 def VOP_MAC_F16 : VOP_MAC <f16>;
 def VOP_MAC_F16_t16 : VOP_MAC <f16> {
   let IsTrue16 = 1;
+  let HasOpSel = 1;
+  let AsmVOP3OpSel = getAsmVOP3OpSel<2/*NumSrcArgs*/, HasClamp, HasOMod,
+                        HasSrc0FloatMods, HasSrc1FloatMods, HasSrc2FloatMods>.ret;
   let DstRC = VOPDstOperand<VGPR_32_Lo128>;
   let DstRC64 = VOPDstOperand<VGPR_32>;
   let Src1RC32 = VGPRSrc_32_Lo128;

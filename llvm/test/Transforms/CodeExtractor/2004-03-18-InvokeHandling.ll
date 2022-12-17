@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-simplify -loop-extract -disable-output
+; RUN: opt < %s -passes='function(loop-simplify),loop-extract'  -disable-output
 
 declare i32 @_IO_getc()
 

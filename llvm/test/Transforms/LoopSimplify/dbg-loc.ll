@@ -1,5 +1,5 @@
 ; Check that LoopSimplify creates debug locations in synthesized basic blocks.
-; RUN: opt -loop-simplify %s -S -o - | FileCheck %s
+; RUN: opt -passes=loop-simplify %s -S -o - | FileCheck %s
 
 %union.anon = type { i32 }
 %"Length" = type <{ %union.anon, i8, i8, i8, i8 }>

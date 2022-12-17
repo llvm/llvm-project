@@ -72,6 +72,29 @@ extern __inline int
 
 #define __syscall(/*ui15*/ _1) __builtin_loongarch_syscall((_1))
 
+#define __csrrd_w(/*ui14*/ _1) ((unsigned int)__builtin_loongarch_csrrd_w((_1)))
+
+#define __csrwr_w(/*unsigned int*/ _1, /*ui14*/ _2)                            \
+  ((unsigned int)__builtin_loongarch_csrwr_w((unsigned int)(_1), (_2)))
+
+#define __csrxchg_w(/*unsigned int*/ _1, /*unsigned int*/ _2, /*ui14*/ _3)     \
+  ((unsigned int)__builtin_loongarch_csrxchg_w((unsigned int)(_1),             \
+                                               (unsigned int)(_2), (_3)))
+
+#if __loongarch_grlen == 64
+#define __csrrd_d(/*ui14*/ _1)                                                 \
+  ((unsigned long int)__builtin_loongarch_csrrd_d((_1)))
+
+#define __csrwr_d(/*unsigned long int*/ _1, /*ui14*/ _2)                       \
+  ((unsigned long int)__builtin_loongarch_csrwr_d((unsigned long int)(_1),     \
+                                                  (_2)))
+
+#define __csrxchg_d(/*unsigned long int*/ _1, /*unsigned long int*/ _2,        \
+                    /*ui14*/ _3)                                               \
+  ((unsigned long int)__builtin_loongarch_csrxchg_d(                           \
+      (unsigned long int)(_1), (unsigned long int)(_2), (_3)))
+#endif
+
 #ifdef __cplusplus
 }
 #endif

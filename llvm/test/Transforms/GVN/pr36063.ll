@@ -1,4 +1,4 @@
-; RUN: opt < %s -memcpyopt -mldst-motion -gvn -S | FileCheck %s
+; RUN: opt < %s -passes=memcpyopt,mldst-motion,gvn -S | FileCheck %s
 
 define void @foo(i8* %ret, i1 %x) {
   %a = alloca i8

@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=arm64-darwin-unknown -S -consthoist < %s | FileCheck %s
+; RUN: opt -mtriple=arm64-darwin-unknown -S -passes=consthoist < %s | FileCheck %s
 
 %T = type { i32, i32, i32, i32 }
 

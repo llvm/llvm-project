@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=aarch64-unknown-linux-gnu -mattr=+sme -S -inline < %s | FileCheck %s
+; RUN: opt -mtriple=aarch64-unknown-linux-gnu -mattr=+sme -S -passes=inline < %s | FileCheck %s
 
 declare void @inlined_body()
 

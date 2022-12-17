@@ -21,8 +21,9 @@ namespace exegesis {
 
 class UopsBenchmarkRunner : public BenchmarkRunner {
 public:
-  UopsBenchmarkRunner(const LLVMState &State)
-      : BenchmarkRunner(State, InstructionBenchmark::Uops) {}
+  UopsBenchmarkRunner(const LLVMState &State, bool BenchmarkSkipMeasurements)
+      : BenchmarkRunner(State, InstructionBenchmark::Uops,
+                        BenchmarkSkipMeasurements) {}
   ~UopsBenchmarkRunner() override;
 
   static constexpr const size_t kMinNumDifferentAddresses = 6;

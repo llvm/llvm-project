@@ -154,7 +154,7 @@ updateCalls(ModuleOp module,
       auto memrefType = memref.getType().cast<MemRefType>();
       auto allocType =
           MemRefType::get(memrefType.getShape(), memrefType.getElementType(),
-                          AffineMap(), memrefType.getMemorySpaceAsInt());
+                          AffineMap(), memrefType.getMemorySpace());
       Value outParam = builder.create<memref::AllocOp>(op.getLoc(), allocType);
       if (!hasStaticIdentityLayout(memrefType)) {
         // Layout maps are already checked in `updateFuncOp`.

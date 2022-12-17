@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -licm | FileCheck %s
+; RUN: opt < %s -S -passes=licm | FileCheck %s
 
 ; Check that the LICM pass does not operate on a loop which has the
 ; llvm.licm.disable metadata.

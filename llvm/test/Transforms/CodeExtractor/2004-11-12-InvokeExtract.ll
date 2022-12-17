@@ -1,4 +1,4 @@
-; RUN: opt < %s -extract-blocks -disable-output
+; RUN: opt < %s -passes=extract-blocks -disable-output
 define i32 @foo() personality i32 (...)* @__gcc_personality_v0 {
         br label %EB
 

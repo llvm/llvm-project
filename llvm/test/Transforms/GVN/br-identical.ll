@@ -1,4 +1,4 @@
-; RUN: opt -gvn -S -o - %s | FileCheck %s
+; RUN: opt -passes=gvn -S -o - %s | FileCheck %s
 
 ; If a branch has two identical successors, we cannot declare either dead.
 

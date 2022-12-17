@@ -1077,7 +1077,7 @@ public:
   /// <critical_section_name> + ".var" for "omp critical" directives; 2)
   /// <mangled_name_for_global_var> + ".cache." for cache for threadprivate
   /// variables.
-  StringMap<AssertingVH<Constant>, BumpPtrAllocator> InternalVars;
+  StringMap<Constant*, BumpPtrAllocator> InternalVars;
 
   /// Create the global variable holding the offload mappings information.
   GlobalVariable *createOffloadMaptypes(SmallVectorImpl<uint64_t> &Mappings,

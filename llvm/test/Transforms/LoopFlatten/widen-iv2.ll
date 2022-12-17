@@ -3,8 +3,8 @@
 ; This checks updating of phi nodes when the transformation is deemed
 ; unprofitable after IV widening.
 
-; RUN: opt < %s -S -loop-flatten \
-; RUN:     -verify-loop-info -verify-dom-info -verify-scev -verify | \
+; RUN: opt < %s -S -passes='loop(loop-flatten),verify' \
+; RUN:     -verify-loop-info -verify-dom-info -verify-scev | \
 ; RUN:     FileCheck %s --check-prefix=CHECK
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

@@ -1,4 +1,4 @@
-; RUN: opt %s -S -loop-unroll -licm | FileCheck %s
+; RUN: opt %s -S -passes='loop-unroll,loop-mssa(licm)' | FileCheck %s
 
 ; Check that we can deal with loops where a parent loop gets deleted before it
 ; is visited by LICM.

@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-simplify -S | FileCheck %s
+; RUN: opt < %s -passes=loop-simplify -S | FileCheck %s
 ; PR11575
 
 @catchtypeinfo = external unnamed_addr constant { i8*, i8*, i8* }

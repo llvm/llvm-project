@@ -93,23 +93,23 @@ static Error getBBClusterInfo(const MemoryBuffer *MBuf,
       if (FI == ProgramBBClusterInfo.end())
         return invalidProfileError(
             "Cluster list does not follow a function name specifier.");
-      SmallVector<StringRef, 4> BBIndexes;
-      S.split(BBIndexes, ' ');
+      SmallVector<StringRef, 4> BBIDs;
+      S.split(BBIDs, ' ');
       // Reset current cluster position.
       CurrentPosition = 0;
-      for (auto BBIndexStr : BBIndexes) {
-        unsigned long long BBIndex;
-        if (getAsUnsignedInteger(BBIndexStr, 10, BBIndex))
+      for (auto BBIDStr : BBIDs) {
+        unsigned long long BBID;
+        if (getAsUnsignedInteger(BBIDStr, 10, BBID))
           return invalidProfileError(Twine("Unsigned integer expected: '") +
-                                     BBIndexStr + "'.");
-        if (!FuncBBIDs.insert(BBIndex).second)
+                                     BBIDStr + "'.");
+        if (!FuncBBIDs.insert(BBID).second)
           return invalidProfileError(Twine("Duplicate basic block id found '") +
-                                     BBIndexStr + "'.");
-        if (!BBIndex && CurrentPosition)
+                                     BBIDStr + "'.");
+        if (BBID == 0 && CurrentPosition)
           return invalidProfileError("Entry BB (0) does not begin a cluster.");
 
-        FI->second.emplace_back(BBClusterInfo{
-            ((unsigned)BBIndex), CurrentCluster, CurrentPosition++});
+        FI->second.emplace_back(
+            BBClusterInfo{((unsigned)BBID), CurrentCluster, CurrentPosition++});
       }
       CurrentCluster++;
     } else { // This is a function name specifier.

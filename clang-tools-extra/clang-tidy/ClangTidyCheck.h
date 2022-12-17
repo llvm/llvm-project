@@ -169,7 +169,7 @@ public:
     /// Reads the option with the check-local name \p LocalName from local or
     /// global ``CheckOptions``. Gets local option first. If local is not
     /// present, falls back to get global option. If global option is not
-    /// present either, return ``None``.
+    /// present either, return ``std::nullopt``.
     llvm::Optional<StringRef> getLocalOrGlobal(StringRef LocalName) const;
 
     /// Read a named option from the ``Context``.
@@ -185,10 +185,10 @@ public:
     ///
     /// Reads the option with the check-local name \p LocalName from the
     /// ``CheckOptions``. If the corresponding key is not present, return
-    /// ``None``.
+    /// ``std::nullopt``.
     ///
     /// If the corresponding key can't be parsed as a ``T``, emit a
-    /// diagnostic and return ``None``.
+    /// diagnostic and return ``std::nullopt``.
     template <typename T>
     std::enable_if_t<std::is_integral<T>::value, llvm::Optional<T>>
     get(StringRef LocalName) const {
@@ -222,10 +222,10 @@ public:
     /// Reads the option with the check-local name \p LocalName from local or
     /// global ``CheckOptions``. Gets local option first. If local is not
     /// present, falls back to get global option. If global option is not
-    /// present either, return ``None``.
+    /// present either, return ``std::nullopt``.
     ///
     /// If the corresponding key can't be parsed as a ``T``, emit a
-    /// diagnostic and return ``None``.
+    /// diagnostic and return ``std::nullopt``.
     template <typename T>
     std::enable_if_t<std::is_integral<T>::value, llvm::Optional<T>>
     getLocalOrGlobal(StringRef LocalName) const {
@@ -266,10 +266,10 @@ public:
     ///
     /// Reads the option with the check-local name \p LocalName from the
     /// ``CheckOptions``. If the corresponding key is not present, return
-    /// ``None``.
+    /// ``std::nullopt``.
     ///
     /// If the corresponding key can't be parsed as a ``T``, emit a
-    /// diagnostic and return ``None``.
+    /// diagnostic and return ``std::nullopt``.
     ///
     /// \ref clang::tidy::OptionEnumMapping must be specialized for ``T`` to
     /// supply the mapping required to convert between ``T`` and a string.
@@ -306,10 +306,10 @@ public:
     /// Reads the option with the check-local name \p LocalName from local or
     /// global ``CheckOptions``. Gets local option first. If local is not
     /// present, falls back to get global option. If global option is not
-    /// present either, returns ``None``.
+    /// present either, returns ``std::nullopt``.
     ///
     /// If the corresponding key can't be parsed as a ``T``, emit a
-    /// diagnostic and return ``None``.
+    /// diagnostic and return ``std::nullopt``.
     ///
     /// \ref clang::tidy::OptionEnumMapping must be specialized for ``T`` to
     /// supply the mapping required to convert between ``T`` and a string.
@@ -428,10 +428,10 @@ protected:
 ///
 /// Reads the option with the check-local name \p LocalName from the
 /// ``CheckOptions``. If the corresponding key is not present, return
-/// ``None``.
+/// ``std::nullopt``.
 ///
 /// If the corresponding key can't be parsed as a bool, emit a
-/// diagnostic and return ``None``.
+/// diagnostic and return ``std::nullopt``.
 template <>
 llvm::Optional<bool>
 ClangTidyCheck::OptionsView::get<bool>(StringRef LocalName) const;

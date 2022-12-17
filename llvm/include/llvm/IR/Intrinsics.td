@@ -513,10 +513,10 @@ def int_addressofreturnaddress : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [], [In
 def int_frameaddress : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_i32_ty],
                                  [IntrNoMem, ImmArg<ArgIndex<0>>]>;
 def int_sponentry  : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [], [IntrNoMem]>;
-def int_read_register  : Intrinsic<[llvm_anyint_ty], [llvm_metadata_ty],
+def int_read_register  : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_metadata_ty],
                                    [IntrReadMem], "llvm.read_register">;
 def int_write_register : Intrinsic<[], [llvm_metadata_ty, llvm_anyint_ty],
-                                   [], "llvm.write_register">;
+                                   [IntrNoCallback], "llvm.write_register">;
 def int_read_volatile_register  : Intrinsic<[llvm_anyint_ty], [llvm_metadata_ty],
                                             [IntrHasSideEffects],
                                              "llvm.read_volatile_register">;
@@ -1054,17 +1054,17 @@ def int_eh_sjlj_setup_dispatch  : Intrinsic<[], []>;
 //===---------------- Generic Variable Attribute Intrinsics----------------===//
 //
 def int_var_annotation : DefaultAttrsIntrinsic<
-    [], [llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty, llvm_ptr_ty],
+    [], [llvm_anyptr_ty, llvm_anyptr_ty, LLVMMatchType<1>, llvm_i32_ty, LLVMMatchType<1>],
     [IntrInaccessibleMemOnly], "llvm.var.annotation">;
 
 def int_ptr_annotation : DefaultAttrsIntrinsic<
     [LLVMAnyPointerType<llvm_anyint_ty>],
-    [LLVMMatchType<0>, llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty, llvm_ptr_ty],
+    [LLVMMatchType<0>, llvm_anyptr_ty, LLVMMatchType<1>, llvm_i32_ty, LLVMMatchType<1>],
     [IntrInaccessibleMemOnly], "llvm.ptr.annotation">;
 
 def int_annotation : DefaultAttrsIntrinsic<
     [llvm_anyint_ty],
-    [LLVMMatchType<0>, llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty],
+    [LLVMMatchType<0>, llvm_anyptr_ty, LLVMMatchType<1>, llvm_i32_ty],
     [IntrInaccessibleMemOnly], "llvm.annotation">;
 
 // Annotates the current program point with metadata strings which are emitted
@@ -1565,6 +1565,18 @@ let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {
                                llvm_i32_ty]>;
   def int_vp_bswap : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                              [ LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
+  def int_vp_fshl : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
+  def int_vp_fshr : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMMatchType<0>,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
 

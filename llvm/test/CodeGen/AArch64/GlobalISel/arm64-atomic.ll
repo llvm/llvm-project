@@ -711,7 +711,7 @@ define i8 @atomic_load_relaxed_8(ptr %p, i32 %off32) #0 {
 ; CHECK-NOLSE-O1-NEXT:    ldurb w11, [x0, #-256]
 ; CHECK-NOLSE-O1-NEXT:    ldrb w8, [x8]
 ; CHECK-NOLSE-O1-NEXT:    add w9, w9, w11
-; CHECK-NOLSE-O1-NEXT:    add w9, w10, w9
+; CHECK-NOLSE-O1-NEXT:    add w9, w9, w10
 ; CHECK-NOLSE-O1-NEXT:    add w0, w9, w8
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
@@ -735,7 +735,7 @@ define i8 @atomic_load_relaxed_8(ptr %p, i32 %off32) #0 {
 ; CHECK-LSE-O1-NEXT:    ldrb w9, [x0, w1, sxtw]
 ; CHECK-LSE-O1-NEXT:    ldurb w10, [x0, #-256]
 ; CHECK-LSE-O1-NEXT:    add w8, w8, w10
-; CHECK-LSE-O1-NEXT:    add w8, w9, w8
+; CHECK-LSE-O1-NEXT:    add w8, w8, w9
 ; CHECK-LSE-O1-NEXT:    add x9, x0, #291, lsl #12 ; =1191936
 ; CHECK-LSE-O1-NEXT:    ldrb w9, [x9]
 ; CHECK-LSE-O1-NEXT:    add w0, w8, w9
@@ -781,7 +781,7 @@ define i16 @atomic_load_relaxed_16(ptr %p, i32 %off32) #0 {
 ; CHECK-NOLSE-O1-NEXT:    ldurh w11, [x0, #-256]
 ; CHECK-NOLSE-O1-NEXT:    ldrh w8, [x8]
 ; CHECK-NOLSE-O1-NEXT:    add w9, w9, w11
-; CHECK-NOLSE-O1-NEXT:    add w9, w10, w9
+; CHECK-NOLSE-O1-NEXT:    add w9, w9, w10
 ; CHECK-NOLSE-O1-NEXT:    add w0, w9, w8
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
@@ -805,7 +805,7 @@ define i16 @atomic_load_relaxed_16(ptr %p, i32 %off32) #0 {
 ; CHECK-LSE-O1-NEXT:    ldrh w9, [x0, w1, sxtw #1]
 ; CHECK-LSE-O1-NEXT:    ldurh w10, [x0, #-256]
 ; CHECK-LSE-O1-NEXT:    add w8, w8, w10
-; CHECK-LSE-O1-NEXT:    add w8, w9, w8
+; CHECK-LSE-O1-NEXT:    add w8, w8, w9
 ; CHECK-LSE-O1-NEXT:    add x9, x0, #291, lsl #12 ; =1191936
 ; CHECK-LSE-O1-NEXT:    ldrh w9, [x9]
 ; CHECK-LSE-O1-NEXT:    add w0, w8, w9
@@ -851,7 +851,7 @@ define i32 @atomic_load_relaxed_32(ptr %p, i32 %off32) #0 {
 ; CHECK-NOLSE-O1-NEXT:    ldur w11, [x0, #-256]
 ; CHECK-NOLSE-O1-NEXT:    ldr w8, [x8]
 ; CHECK-NOLSE-O1-NEXT:    add w9, w9, w11
-; CHECK-NOLSE-O1-NEXT:    add w9, w10, w9
+; CHECK-NOLSE-O1-NEXT:    add w9, w9, w10
 ; CHECK-NOLSE-O1-NEXT:    add w0, w9, w8
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
@@ -873,7 +873,7 @@ define i32 @atomic_load_relaxed_32(ptr %p, i32 %off32) #0 {
 ; CHECK-LSE-O1-NEXT:    ldr w9, [x0, w1, sxtw #2]
 ; CHECK-LSE-O1-NEXT:    ldur w10, [x0, #-256]
 ; CHECK-LSE-O1-NEXT:    add w8, w8, w10
-; CHECK-LSE-O1-NEXT:    add w8, w9, w8
+; CHECK-LSE-O1-NEXT:    add w8, w8, w9
 ; CHECK-LSE-O1-NEXT:    add x9, x0, #291, lsl #12 ; =1191936
 ; CHECK-LSE-O1-NEXT:    ldr w9, [x9]
 ; CHECK-LSE-O1-NEXT:    add w0, w8, w9
@@ -917,7 +917,7 @@ define i64 @atomic_load_relaxed_64(ptr %p, i32 %off32) #0 {
 ; CHECK-NOLSE-O1-NEXT:    ldur x11, [x0, #-256]
 ; CHECK-NOLSE-O1-NEXT:    ldr x8, [x8]
 ; CHECK-NOLSE-O1-NEXT:    add x9, x9, x11
-; CHECK-NOLSE-O1-NEXT:    add x9, x10, x9
+; CHECK-NOLSE-O1-NEXT:    add x9, x9, x10
 ; CHECK-NOLSE-O1-NEXT:    add x0, x9, x8
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
@@ -939,7 +939,7 @@ define i64 @atomic_load_relaxed_64(ptr %p, i32 %off32) #0 {
 ; CHECK-LSE-O1-NEXT:    ldr x9, [x0, w1, sxtw #3]
 ; CHECK-LSE-O1-NEXT:    ldur x10, [x0, #-256]
 ; CHECK-LSE-O1-NEXT:    add x8, x8, x10
-; CHECK-LSE-O1-NEXT:    add x8, x9, x8
+; CHECK-LSE-O1-NEXT:    add x8, x8, x9
 ; CHECK-LSE-O1-NEXT:    add x9, x0, #291, lsl #12 ; =1191936
 ; CHECK-LSE-O1-NEXT:    ldr x9, [x9]
 ; CHECK-LSE-O1-NEXT:    add x0, x8, x9

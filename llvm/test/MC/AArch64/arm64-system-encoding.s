@@ -158,6 +158,7 @@ foo:
   msr SCTLR2_EL1, x3
   msr SCTLR2_EL12, x3
   msr SCTLR2_EL2, x3
+  msr SCTLR2_EL3, x3
   msr TCR2_EL1, x3
   msr TCR2_EL12, x3
   msr TCR2_EL2, x3
@@ -264,6 +265,7 @@ foo:
 ; CHECK: msr SCTLR2_EL1, x3             ; encoding: [0x63,0x10,0x18,0xd5]
 ; CHECK: msr SCTLR2_EL12, x3            ; encoding: [0x63,0x10,0x1d,0xd5]
 ; CHECK: msr SCTLR2_EL2, x3             ; encoding: [0x63,0x10,0x1c,0xd5]
+; CHECK: msr SCTLR2_EL3, x3             ; encoding: [0x63,0x10,0x1e,0xd5]
 ; CHECK: msr TCR2_EL1, x3               ; encoding: [0x63,0x20,0x18,0xd5]
 ; CHECK: msr TCR2_EL12, x3              ; encoding: [0x63,0x20,0x1d,0xd5]
 ; CHECK: msr TCR2_EL2, x3               ; encoding: [0x63,0x20,0x1c,0xd5]
@@ -334,8 +336,11 @@ foo:
   mrs x3, ID_AA64ISAR2_EL1
   mrs x3, ID_AA64MMFR0_EL1
   mrs x3, ID_AA64MMFR1_EL1
+  mrs x3, ID_AA64MMFR2_EL1
+  mrs x3, ID_AA64MMFR3_EL1
   mrs x3, ID_AA64PFR0_EL1
   mrs x3, ID_AA64PFR1_EL1
+  mrs x3, ID_AA64PFR2_EL1
   mrs x3, IFSR32_EL2
   mrs x3, ISR_EL1
   mrs x3, MAIR_EL1
@@ -482,6 +487,7 @@ foo:
   mrs x3, SCTLR2_EL1
   mrs x3, SCTLR2_EL12
   mrs x3, SCTLR2_EL2
+  mrs x3, SCTLR2_EL3
   mrs x3, TCR2_EL1
   mrs x3, TCR2_EL12
   mrs x3, TCR2_EL2
@@ -548,8 +554,11 @@ foo:
 ; CHECK: mrs x3, ID_AA64ISAR2_EL1       ; encoding: [0x43,0x06,0x38,0xd5]
 ; CHECK: mrs x3, ID_AA64MMFR0_EL1       ; encoding: [0x03,0x07,0x38,0xd5]
 ; CHECK: mrs x3, ID_AA64MMFR1_EL1       ; encoding: [0x23,0x07,0x38,0xd5]
+; CHECK: mrs x3, ID_AA64MMFR2_EL1       ; encoding: [0x43,0x07,0x38,0xd5]
+; CHECK: mrs x3, ID_AA64MMFR3_EL1       ; encoding: [0x63,0x07,0x38,0xd5]
 ; CHECK: mrs x3, ID_AA64PFR0_EL1        ; encoding: [0x03,0x04,0x38,0xd5]
 ; CHECK: mrs x3, ID_AA64PFR1_EL1        ; encoding: [0x23,0x04,0x38,0xd5]
+; CHECK: mrs x3, ID_AA64PFR2_EL1        ; encoding: [0x43,0x04,0x38,0xd5]
 ; CHECK: mrs x3, IFSR32_EL2             ; encoding: [0x23,0x50,0x3c,0xd5]
 ; CHECK: mrs x3, ISR_EL1                ; encoding: [0x03,0xc1,0x38,0xd5]
 ; CHECK: mrs x3, MAIR_EL1               ; encoding: [0x03,0xa2,0x38,0xd5]
@@ -695,6 +704,7 @@ foo:
 ; CHECK: mrs x3, SCTLR2_EL1           ; encoding: [0x63,0x10,0x38,0xd5]
 ; CHECK: mrs x3, SCTLR2_EL12          ; encoding: [0x63,0x10,0x3d,0xd5]
 ; CHECK: mrs x3, SCTLR2_EL2           ; encoding: [0x63,0x10,0x3c,0xd5]
+; CHECK: mrs x3, SCTLR2_EL3           ; encoding: [0x63,0x10,0x3e,0xd5]
 ; CHECK: mrs x3, TCR2_EL1             ; encoding: [0x63,0x20,0x38,0xd5]
 ; CHECK: mrs x3, TCR2_EL12            ; encoding: [0x63,0x20,0x3d,0xd5]
 ; CHECK: mrs x3, TCR2_EL2             ; encoding: [0x63,0x20,0x3c,0xd5]

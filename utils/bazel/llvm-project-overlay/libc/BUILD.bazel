@@ -276,6 +276,7 @@ cc_library(
     textual_hdrs = [
         "src/__support/FPUtil/x86_64/FEnvImpl.h",
         "src/__support/FPUtil/aarch64/FEnvImpl.h",
+        "src/__support/FPUtil/aarch64/fenv_darwin_impl.h",
     ],
     deps = [
         ":__support_common",

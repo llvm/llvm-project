@@ -276,11 +276,12 @@ struct ConvertAddI final : OpConversionPattern<arith::AddIOp> {
     auto [rhsElem0, rhsElem1] =
         extractLastDimHalves(rewriter, loc, adaptor.getRhs());
 
-    auto lowSum = rewriter.create<arith::AddUICarryOp>(loc, lhsElem0, rhsElem0);
-    Value carryVal =
-        rewriter.create<arith::ExtUIOp>(loc, newElemTy, lowSum.getCarry());
+    auto lowSum =
+        rewriter.create<arith::AddUIExtendedOp>(loc, lhsElem0, rhsElem0);
+    Value overflowVal =
+        rewriter.create<arith::ExtUIOp>(loc, newElemTy, lowSum.getOverflow());
 
-    Value high0 = rewriter.create<arith::AddIOp>(loc, carryVal, lhsElem1);
+    Value high0 = rewriter.create<arith::AddIOp>(loc, overflowVal, lhsElem1);
     Value high = rewriter.create<arith::AddIOp>(loc, high0, rhsElem1);
 
     Value resultVec =

@@ -258,7 +258,7 @@ body: |
     ; GFX11-NEXT: SI_RETURN implicit $vgpr2
     $vgpr0 = IMPLICIT_DEF
     $vgpr1 = IMPLICIT_DEF
-    $vgpr2 = V_FMA_F16_gfx9_e64 0, 18688, 0, $vgpr0, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
+    $vgpr2 = V_FMA_F16_gfx9_e64 0, 18688, 0, $vgpr0, 0, $vgpr1, 0, 0, 0, implicit $mode, implicit $exec
     SI_RETURN implicit $vgpr2
 ...
 
@@ -278,7 +278,7 @@ body: |
     ; GFX11-NEXT: SI_RETURN implicit $vgpr2
     $vgpr0 = IMPLICIT_DEF
     $vgpr1 = IMPLICIT_DEF
-    $vgpr2 = V_FMA_F16_gfx9_e64 0, $vgpr0, 0, 18688, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
+    $vgpr2 = V_FMA_F16_gfx9_e64 0, $vgpr0, 0, 18688, 0, $vgpr1, 0, 0, 0, implicit $mode, implicit $exec
     SI_RETURN implicit $vgpr2
 ...
 
@@ -298,7 +298,7 @@ body: |
     ; GFX11-NEXT: SI_RETURN implicit $vgpr2
     $vgpr0 = IMPLICIT_DEF
     $vgpr1 = IMPLICIT_DEF
-    $vgpr2 = V_FMA_F16_gfx9_e64 0, $vgpr0, 0, $vgpr1, 0, 18688, 0, 0, implicit $mode, implicit $exec
+    $vgpr2 = V_FMA_F16_gfx9_e64 0, $vgpr0, 0, $vgpr1, 0, 18688, 0, 0, 0, implicit $mode, implicit $exec
     SI_RETURN implicit $vgpr2
 ...
 
@@ -318,6 +318,6 @@ body: |
     ; GFX11-NEXT: SI_RETURN implicit $vgpr2
     $vgpr0 = IMPLICIT_DEF
     $sgpr1 = IMPLICIT_DEF
-    $vgpr2 = V_FMA_F16_gfx9_e64 0, $vgpr0, 0, $vgpr1, 0, 18688, 0, 0, implicit $mode, implicit $exec
+    $vgpr2 = V_FMA_F16_gfx9_e64 0, $vgpr0, 0, $vgpr1, 0, 18688, 0, 0, 0, implicit $mode, implicit $exec
     SI_RETURN implicit $vgpr2
 ...

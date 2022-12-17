@@ -1,5 +1,5 @@
 ; Test to make sure that load from the same address as a store and appears after the store prevents the store from being sunk
-; RUN: opt -mldst-motion -S < %s | FileCheck %s
+; RUN: opt -passes=mldst-motion -S < %s | FileCheck %s
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 %struct.node = type { i32, ptr, ptr, ptr, i32, i32, i32, i32 }

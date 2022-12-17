@@ -67,7 +67,7 @@ enum ID {
 #include "Options.inc"
 #undef PREFIX
 
-const opt::OptTable::Info InfoTable[] = {
+static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {                                                                            \
@@ -546,7 +546,7 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
   return OutputLocation(std::string(Path.str()), ResourceDir);
 }
 
-int dsymutil_main(int argc, char **argv) {
+int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
   // Parse arguments.

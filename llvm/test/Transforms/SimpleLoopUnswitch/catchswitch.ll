@@ -1,4 +1,4 @@
-; RUN: opt -passes=simple-loop-unswitch -enable-nontrivial-unswitch < %s -S | FileCheck %s
+; RUN: opt -passes='simple-loop-unswitch<nontrivial>' < %s -S | FileCheck %s
 
 ; CHECK: if.end{{.*}}:
 ; CHECK-NOT: if.end{{.*}}:

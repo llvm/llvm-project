@@ -1,5 +1,4 @@
-; RUN: opt < %s -callsite-splitting -inline -instcombine -jump-threading -S | FileCheck %s
-; RUN: opt < %s  -passes='function(callsite-splitting),cgscc(inline),function(instcombine,jump-threading)' -S | FileCheck %s
+; RUN: opt < %s -passes='function(callsite-splitting),cgscc(inline),function(instcombine,jump-threading)' -S | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-linaro-linux-gnueabi"

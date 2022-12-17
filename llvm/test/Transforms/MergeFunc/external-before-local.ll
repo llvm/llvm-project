@@ -1,4 +1,4 @@
-; RUN: opt -S -mergefunc < %s | FileCheck %s
+; RUN: opt -S -passes=mergefunc < %s | FileCheck %s
 
 ; We should normalize to test2 rather than test1,
 ; because it allows us to drop test1 entirely
@@ -7,7 +7,7 @@
 ; CHECK: define void @test3() unnamed_addr
 ; CHECK-NEXT: call void @test2()
 ; CHECK-NEXT: call void @test2()
-  
+
 declare void @dummy()
 
 define internal void @test1() unnamed_addr {
@@ -37,7 +37,7 @@ define void @test3() unnamed_addr {
 ; CHECK-NEXT: tail call void @test6()
 
 declare void @dummy2()
-  
+
 define weak void @test4() {
     call void @dummy2()
     call void @dummy2()

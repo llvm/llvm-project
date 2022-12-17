@@ -389,8 +389,8 @@ define i8 @atomic_load_relaxed_8(ptr %p, i32 %off32) {
   ; CHECK-NEXT:   renamable $w10 = LDRBBroW renamable $x0, killed renamable $w1, 1, 0, pcsections !0 :: (load unordered (s8) from %ir.ptr_regoff)
   ; CHECK-NEXT:   renamable $w11 = LDURBBi killed renamable $x0, -256, pcsections !0 :: (load monotonic (s8) from %ir.ptr_unscaled)
   ; CHECK-NEXT:   renamable $w8 = LDRBBui killed renamable $x8, 0, pcsections !0 :: (load unordered (s8) from %ir.ptr_random)
-  ; CHECK-NEXT:   $w9 = ADDWrs killed renamable $w9, killed renamable $w11, 0
-  ; CHECK-NEXT:   $w9 = ADDWrs killed renamable $w10, killed renamable $w9, 0
+  ; CHECK-NEXT:   $w9 = ADDWrs killed renamable $w9, killed renamable $w11, 0, pcsections !0
+  ; CHECK-NEXT:   $w9 = ADDWrs killed renamable $w9, killed renamable $w10, 0, pcsections !0
   ; CHECK-NEXT:   $w0 = ADDWrs killed renamable $w9, killed renamable $w8, 0, pcsections !0
   ; CHECK-NEXT:   RET undef $lr, implicit $w0
   %ptr_unsigned = getelementptr i8, ptr %p, i32 4095
@@ -421,8 +421,8 @@ define i16 @atomic_load_relaxed_16(ptr %p, i32 %off32) {
   ; CHECK-NEXT:   renamable $w10 = LDRHHroW renamable $x0, killed renamable $w1, 1, 1, pcsections !0 :: (load unordered (s16) from %ir.ptr_regoff)
   ; CHECK-NEXT:   renamable $w11 = LDURHHi killed renamable $x0, -256, pcsections !0 :: (load monotonic (s16) from %ir.ptr_unscaled)
   ; CHECK-NEXT:   renamable $w8 = LDRHHui killed renamable $x8, 0, pcsections !0 :: (load unordered (s16) from %ir.ptr_random)
-  ; CHECK-NEXT:   $w9 = ADDWrs killed renamable $w9, killed renamable $w11, 0
-  ; CHECK-NEXT:   $w9 = ADDWrs killed renamable $w10, killed renamable $w9, 0
+  ; CHECK-NEXT:   $w9 = ADDWrs killed renamable $w9, killed renamable $w11, 0, pcsections !0
+  ; CHECK-NEXT:   $w9 = ADDWrs killed renamable $w9, killed renamable $w10, 0, pcsections !0
   ; CHECK-NEXT:   $w0 = ADDWrs killed renamable $w9, killed renamable $w8, 0, pcsections !0
   ; CHECK-NEXT:   RET undef $lr, implicit $w0
   %ptr_unsigned = getelementptr i16, ptr %p, i32 4095
@@ -453,8 +453,8 @@ define i32 @atomic_load_relaxed_32(ptr %p, i32 %off32) {
   ; CHECK-NEXT:   renamable $w10 = LDRWroW renamable $x0, killed renamable $w1, 1, 1, pcsections !0 :: (load unordered (s32) from %ir.ptr_regoff)
   ; CHECK-NEXT:   renamable $w11 = LDURWi killed renamable $x0, -256, pcsections !0 :: (load monotonic (s32) from %ir.ptr_unscaled)
   ; CHECK-NEXT:   renamable $w8 = LDRWui killed renamable $x8, 0, pcsections !0 :: (load unordered (s32) from %ir.ptr_random)
-  ; CHECK-NEXT:   $w9 = ADDWrs killed renamable $w9, killed renamable $w11, 0
-  ; CHECK-NEXT:   $w9 = ADDWrs killed renamable $w10, killed renamable $w9, 0
+  ; CHECK-NEXT:   $w9 = ADDWrs killed renamable $w9, killed renamable $w11, 0, pcsections !0
+  ; CHECK-NEXT:   $w9 = ADDWrs killed renamable $w9, killed renamable $w10, 0, pcsections !0
   ; CHECK-NEXT:   $w0 = ADDWrs killed renamable $w9, killed renamable $w8, 0, pcsections !0
   ; CHECK-NEXT:   RET undef $lr, implicit $w0
   %ptr_unsigned = getelementptr i32, ptr %p, i32 4095
@@ -485,8 +485,8 @@ define i64 @atomic_load_relaxed_64(ptr %p, i32 %off32) {
   ; CHECK-NEXT:   renamable $x10 = LDRXroW renamable $x0, killed renamable $w1, 1, 1, pcsections !0 :: (load unordered (s64) from %ir.ptr_regoff)
   ; CHECK-NEXT:   renamable $x11 = LDURXi killed renamable $x0, -256, pcsections !0 :: (load monotonic (s64) from %ir.ptr_unscaled)
   ; CHECK-NEXT:   renamable $x8 = LDRXui killed renamable $x8, 0, pcsections !0 :: (load unordered (s64) from %ir.ptr_random)
-  ; CHECK-NEXT:   $x9 = ADDXrs killed renamable $x9, killed renamable $x11, 0
-  ; CHECK-NEXT:   $x9 = ADDXrs killed renamable $x10, killed renamable $x9, 0
+  ; CHECK-NEXT:   $x9 = ADDXrs killed renamable $x9, killed renamable $x11, 0, pcsections !0
+  ; CHECK-NEXT:   $x9 = ADDXrs killed renamable $x9, killed renamable $x10, 0, pcsections !0
   ; CHECK-NEXT:   $x0 = ADDXrs killed renamable $x9, killed renamable $x8, 0, pcsections !0
   ; CHECK-NEXT:   RET undef $lr, implicit $x0
   %ptr_unsigned = getelementptr i64, ptr %p, i32 4095

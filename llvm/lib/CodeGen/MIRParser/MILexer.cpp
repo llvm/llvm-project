@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MILexer.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
@@ -273,11 +272,13 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("pcsections", MIToken::kw_pcsections)
       .Case("cfi-type", MIToken::kw_cfi_type)
       .Case("bbsections", MIToken::kw_bbsections)
+      .Case("bb_id", MIToken::kw_bb_id)
       .Case("unknown-size", MIToken::kw_unknown_size)
       .Case("unknown-address", MIToken::kw_unknown_address)
       .Case("distinct", MIToken::kw_distinct)
       .Case("ir-block-address-taken", MIToken::kw_ir_block_address_taken)
-      .Case("machine-block-address-taken", MIToken::kw_machine_block_address_taken)
+      .Case("machine-block-address-taken",
+            MIToken::kw_machine_block_address_taken)
       .Default(MIToken::Identifier);
 }
 

@@ -1,4 +1,4 @@
-; RUN: opt -simple-loop-unswitch -verify-memoryssa -S < %s | FileCheck %s
+; RUN: opt -passes=simple-loop-unswitch -verify-memoryssa -S < %s | FileCheck %s
 
 define void @f(i32 %n, i32* %ptr) {
 ; CHECK-LABEL: @f(

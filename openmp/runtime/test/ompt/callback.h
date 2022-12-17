@@ -209,11 +209,13 @@ ompt_label_##id:
 #endif
 #elif KMP_ARCH_LOONGARCH64
 // On LoongArch64 the NOP instruction is 4 bytes long, can be followed by
-// inserted jump instruction (another 4 bytes long).
+// inserted jump instruction (another 4 bytes long). And an additional jump
+// instruction may appear (adding 4 more bytes) when the NOP is referenced
+// elsewhere (ie. another branch).
 #define print_possible_return_addresses(addr)                                  \
-  printf("%" PRIu64 ": current_address=%p or %p\n",                            \
+  printf("%" PRIu64 ": current_address=%p or %p or %p\n",                      \
          ompt_get_thread_data()->value, ((char *)addr) - 4,                    \
-         ((char *)addr) - 8)
+         ((char *)addr) - 8, ((char *)addr) - 12)
 #else
 #error Unsupported target architecture, cannot determine address offset!
 #endif

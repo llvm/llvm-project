@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -simplifycfg -simplifycfg-require-and-preserve-domtree=1 | FileCheck %s
+; RUN: opt < %s -S -passes=loop-unroll,simplifycfg -simplifycfg-require-and-preserve-domtree=1 | FileCheck %s
 ; PR12513: Loop unrolling breaks with indirect branches.
 ; If loop unrolling attempts to transform this loop, it replaces the
 ; indirectbr successors. SimplifyCFG then considers them to be unreachable.

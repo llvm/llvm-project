@@ -2162,6 +2162,11 @@ bool HexagonTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
   return SrcTy.getVectorNumElements() <= 8;
 }
 
+bool HexagonTargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
+  return Op.getOpcode() == ISD::CONCAT_VECTORS ||
+         TargetLowering::isTargetCanonicalConstantNode(Op);
+}
+
 bool HexagonTargetLowering::isShuffleMaskLegal(ArrayRef<int> Mask,
                                                EVT VT) const {
   return true;

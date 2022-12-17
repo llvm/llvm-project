@@ -1,4 +1,4 @@
-; RUN: opt -verify-loop-info -irce -S < %s | FileCheck %s
+; RUN: opt -verify-loop-info -passes=irce -S < %s | FileCheck %s
 ; RUN: opt -verify-loop-info -passes='require<branch-prob>,irce' -S < %s | FileCheck %s
 
 define void @decrementing_loop(ptr %arr, ptr %a_len_ptr, i32 %n) {

@@ -1,4 +1,4 @@
-; RUN: opt -licm -S < %s | FileCheck %s
+; RUN: opt -passes=licm -S < %s | FileCheck %s
 
 define void @f(i1 zeroext %p1) {
 ; CHECK-LABEL: @f(

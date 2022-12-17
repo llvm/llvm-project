@@ -2,6 +2,7 @@
 // RUN: mlir-tblgen -gen-dialect-doc -I %S/../../include -dialect=test_toc %s | FileCheck %s --check-prefix=CHECK_TOC
 
 include "mlir/IR/OpBase.td"
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def Test_Dialect : Dialect {
@@ -25,6 +26,28 @@ def TestType : DialectType<Test_Dialect, CPred<"true">> {
   let description = "type description";
 }
 
+def TestAttrDef : AttrDef<Test_Dialect, "TestAttrDef"> {
+  let mnemonic = "test_attr_def";
+}
+
+def TestAttrDefParams : AttrDef<Test_Dialect, "TestAttrDefParams"> {
+  let mnemonic = "test_attr_def_params";
+  let parameters = (ins "int":$value);
+
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def TestTypeDef : TypeDef<Test_Dialect, "TestTypeDef"> {
+  let mnemonic = "test_type_def";
+}
+
+def TestTypeDefParams : TypeDef<Test_Dialect, "TestTypeDefParams"> {
+  let mnemonic = "test_type_def_params";
+  let parameters = (ins "int":$value);
+
+  let assemblyFormat = "`<` $value `>`";
+}
+
 // CHECK: Dialect without a [TOC] here.
 // CHECK: TOC added by tool.
 // CHECK: [TOC]
@@ -38,10 +61,25 @@ def TestType : DialectType<Test_Dialect, CPred<"true">> {
 // CHECK: ### attribute summary
 // CHECK: attribute description
 
+// CHECK: TestAttrDefAttr
+// CHECK: Syntax:
+// CHECK: #test.test_attr_def
+
+// CHECK: TestAttrDefParamsAttr
+// CHECK: Syntax:
+// CHECK: #test.test_attr_def_params
+
 // CHECK: ## Type constraint definition
 // CHECK: ### type summary
 // CHECK: type description
 
+// CHECK: TestTypeDefType
+// CHECK: Syntax:
+// CHECK: !test.test_type_def
+
+// CHECK: TestTypeDefParamsType
+// CHECK: Syntax:
+// CHECK: !test.test_type_def_params
 
 def Toc_Dialect : Dialect {
   let name = "test_toc";

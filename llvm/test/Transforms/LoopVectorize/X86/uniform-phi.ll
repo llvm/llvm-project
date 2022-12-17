@@ -1,4 +1,4 @@
-; RUN: opt < %s  -passes=loop-vectorize -mtriple=x86_64-apple-macosx10.8.0 -mcpu=corei7 -debug-only=loop-vectorize -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -mtriple=x86_64-apple-macosx10.8.0 -mcpu=corei7 -debug-only=loop-vectorize -S 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

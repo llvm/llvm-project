@@ -1,4 +1,4 @@
-; RUN: opt -loop-versioning -S < %s | FileCheck %s
+; RUN: opt -passes=loop-versioning -S < %s | FileCheck %s
 target triple = "x86_64-unknown-linux-gnu"
 
 define void @fill(i8** %ls1.20, i8** %ls2.21, i8* %cse3.22) {

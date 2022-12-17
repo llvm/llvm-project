@@ -1,4 +1,4 @@
-; RUN: opt -irce -S -verify-loop-info -irce-print-changed-loops -irce-skip-profitability-checks < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=irce -S -verify-loop-info -irce-print-changed-loops -irce-skip-profitability-checks < %s 2>&1 | FileCheck %s
 
 ; CHECK: irce: in function test_inc_eq: constrained Loop at depth 1 containing: %for.body<header>,%if.else,%if.then,%for.inc<latch><exiting>
 ; CHECK: irce: in function test_inc_ne: constrained Loop at depth 1 containing: %for.body<header>,%if.else,%if.then,%for.inc<latch><exiting>

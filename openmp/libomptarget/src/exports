@@ -21,14 +21,10 @@ VERS1.0 {
     __tgt_target_mapper;
     __tgt_target_teams_mapper;
     __tgt_target_data_begin_nowait_mapper;
-    __tgt_target_data_begin_with_deps;
     __tgt_target_data_end_nowait_mapper;
-    __tgt_target_data_end_with_deps;
     __tgt_target_data_update_nowait_mapper;
-    __tgt_target_data_update_with_deps;
     __tgt_target_nowait_mapper;
     __tgt_target_teams_nowait_mapper;
-    __tgt_target_with_deps;
     __tgt_target_kernel;
     __tgt_target_kernel_nowait;
     __tgt_mapper_num_components;
@@ -62,7 +58,6 @@ VERS1.0 {
     hostrpc_varfn_double_allocate;
     hostrpc_varfn_uint64_execute;
     hostrpc_varfn_uint64;
-    hostrpc_invoke;
     llvm_omp_target_alloc_host;
     llvm_omp_target_alloc_shared;
     llvm_omp_target_alloc_device;

@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=arm-none-none-eabi -mcpu=cortex-m23 -loop-unroll -unroll-runtime-multi-exit -S %s -o - | FileCheck %s
+; RUN: opt -mtriple=arm-none-none-eabi -mcpu=cortex-m23 -passes=loop-unroll -unroll-runtime-multi-exit -S %s -o - | FileCheck %s
 
 ; This loop has too many live outs, and should not be unrolled under v6m.
 ; CHECK-LABEL: multiple_liveouts

@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-load-elim < %s | FileCheck %s
+; RUN: opt -S -passes=loop-load-elim < %s | FileCheck %s
 
 ; We can't hoist conditional loads to the preheader for the initial value.
 ; E.g. in the loop below we'd access array[-1] if we did:

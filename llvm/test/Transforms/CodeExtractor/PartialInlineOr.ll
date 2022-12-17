@@ -1,6 +1,4 @@
-; RUN: opt < %s -partial-inliner -skip-partial-inlining-cost-analysis -S | FileCheck %s
 ; RUN: opt < %s -passes=partial-inliner -skip-partial-inlining-cost-analysis -S | FileCheck %s
-; RUN: opt < %s -partial-inliner -max-num-inline-blocks=2 -S | FileCheck --check-prefix=LIMIT %s
 ; RUN: opt < %s -passes=partial-inliner -max-num-inline-blocks=2 -S | FileCheck  --check-prefix=LIMIT %s
 
 ; Function Attrs: nounwind uwtable
@@ -74,7 +72,7 @@ bb7:
   tail call void (...) @foo() #1
   br label %bb8
 bb8:
-  ret i32 0 
+  ret i32 0
 
 bb5:                                              ; preds = %bb4, %bb1
   %.0 = phi i32 [ 0, %bb4 ], [ 1, %bb1 ], [0, %bb6]

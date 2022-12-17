@@ -1,8 +1,6 @@
 ; The outlined region has high frequency  and the outlining
 ; call sequence is expensive (input, output, multiple exit etc)
-; RUN: opt < %s -partial-inliner -max-num-inline-blocks=2 -S | FileCheck %s
 ; RUN: opt < %s -passes=partial-inliner -max-num-inline-blocks=2 -S | FileCheck %s
-; RUN: opt < %s -partial-inliner -skip-partial-inlining-cost-analysis -max-num-inline-blocks=2 -S | FileCheck --check-prefix=NOCOST %s
 ; RUN: opt < %s -passes=partial-inliner -skip-partial-inlining-cost-analysis -max-num-inline-blocks=2 -S | FileCheck  --check-prefix=NOCOST %s
 
 
@@ -76,7 +74,7 @@ define i32 @dummy_caller(i32 %arg) local_unnamed_addr #0 {
 bb:
 ; CHECK-LABEL: @dummy_caller
 ; CHECK-NOT: br i1
-; CHECK-NOT: call{{.*}}bar_hot_outline_region. 
+; CHECK-NOT: call{{.*}}bar_hot_outline_region.
 ; NOCOST-LABEL: @dummy_caller
 ; NOCOST: br i1
 ; NOCOST: call{{.*}}bar_hot_outline_region.

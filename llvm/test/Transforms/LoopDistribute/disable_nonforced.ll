@@ -1,4 +1,4 @@
-; RUN: opt -loop-distribute -enable-loop-distribute=1 -S < %s | FileCheck %s
+; RUN: opt -passes=loop-distribute -enable-loop-distribute=1 -S < %s | FileCheck %s
 ;
 ; Check that the disable_nonforced is honored by loop distribution.
 ;

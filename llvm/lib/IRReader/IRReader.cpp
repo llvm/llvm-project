@@ -16,6 +16,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <system_error>
 
 using namespace llvm;

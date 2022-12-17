@@ -9,6 +9,7 @@
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -417,7 +418,7 @@ Error BitstreamCursor::ReadAbbrevRecord() {
   return Error::success();
 }
 
-Expected<Optional<BitstreamBlockInfo>>
+Expected<std::optional<BitstreamBlockInfo>>
 BitstreamCursor::ReadBlockInfoBlock(bool ReadBlockInfoNames) {
   if (llvm::Error Err = EnterSubBlock(bitc::BLOCKINFO_BLOCK_ID))
     return std::move(Err);

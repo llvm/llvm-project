@@ -190,6 +190,24 @@ TEST(MetadataTest, DeleteInstUsedByDbgValue) {
   EXPECT_TRUE(isa<UndefValue>(DVIs[0]->getValue(0)));
 }
 
+TEST(DIBuiler, CreateFile) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M(new Module("MyModule", Ctx));
+  DIBuilder DIB(*M);
+
+  DIFile *F = DIB.createFile("main.c", "/");
+  EXPECT_EQ(std::nullopt, F->getSource());
+
+  std::optional<DIFile::ChecksumInfo<StringRef>> Checksum = std::nullopt;
+  std::optional<StringRef> Source = std::nullopt;
+  F = DIB.createFile("main.c", "/", Checksum, Source);
+  EXPECT_EQ(Source, F->getSource());
+
+  Source = "";
+  F = DIB.createFile("main.c", "/", Checksum, Source);
+  EXPECT_EQ(Source, F->getSource());
+}
+
 TEST(DIBuilder, CreateFortranArrayTypeWithAttributes) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M(new Module("MyModule", Ctx));

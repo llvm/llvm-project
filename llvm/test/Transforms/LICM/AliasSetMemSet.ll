@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-deletion -licm -loop-idiom -disable-output
+; RUN: opt < %s -passes='loop-mssa(loop-deletion,licm,loop-idiom)' -disable-output
 ; Check no assertion when loop-idiom deletes the MemSet already analyzed by licm
 define void @set_array() {
   br i1 false, label %bb3.preheader.lr.ph, label %bb9

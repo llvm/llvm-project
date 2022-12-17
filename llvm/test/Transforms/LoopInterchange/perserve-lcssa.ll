@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-interchange -cache-line-size=64 -loop-interchange-threshold=-100 -verify-loop-lcssa -S | FileCheck %s
+; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 -loop-interchange-threshold=-100 -verify-loop-lcssa -S | FileCheck %s
 
 ; Test case for PR41725. The induction variables in the latches escape the
 ; loops and we must move some PHIs around.

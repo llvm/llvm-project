@@ -1,4 +1,4 @@
-; RUN: opt -mergefunc -S < %s | FileCheck %s
+; RUN: opt -passes=mergefunc -S < %s | FileCheck %s
 
 ; CHECK-LABEL: @int_ptr_arg_different
 ; CHECK-NEXT: call void asm

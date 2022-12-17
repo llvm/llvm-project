@@ -1,5 +1,5 @@
-; RUN: opt < %s -callsite-splitting -S | FileCheck %s
-; RUN: opt < %s  -passes='function(callsite-splitting)' -S | FileCheck %s
+; RUN: opt < %s -passes=callsite-splitting -S | FileCheck %s
+; RUN: opt < %s -passes='function(callsite-splitting)' -S | FileCheck %s
 
 define i32 @callee(i32*, i32, i32) {
   ret i32 10

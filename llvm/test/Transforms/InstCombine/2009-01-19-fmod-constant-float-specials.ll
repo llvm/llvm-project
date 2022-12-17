@@ -1,6 +1,6 @@
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -instcombine -S | grep 0x7FF8000000000000 | count 12
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -instcombine -S | grep "0\.0" | count 3
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -instcombine -S | grep "3\.5" | count 1
+; RUN: opt < %s -passes=simplifycfg,instcombine -simplifycfg-require-and-preserve-domtree=1 -S | grep 0x7FF8000000000000 | count 12
+; RUN: opt < %s -passes=simplifycfg,instcombine -simplifycfg-require-and-preserve-domtree=1 -S | grep "0\.0" | count 3
+; RUN: opt < %s -passes=simplifycfg,instcombine -simplifycfg-require-and-preserve-domtree=1 -S | grep "3\.5" | count 1
 ;
 
 ; ModuleID = 'apf.c'

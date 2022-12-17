@@ -10,7 +10,6 @@
 #include "URI.h"
 #include "support/Logger.h"
 #include "support/Path.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"

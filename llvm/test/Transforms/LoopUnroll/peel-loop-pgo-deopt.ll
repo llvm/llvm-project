@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -S -debug-only=loop-unroll -loop-unroll -unroll-runtime 2>&1 | FileCheck %s
+; RUN: opt < %s -S -debug-only=loop-unroll -passes=loop-unroll -unroll-runtime 2>&1 | FileCheck %s
 ; RUN: opt < %s -S -debug-only=loop-unroll -passes='require<profile-summary>,function(require<opt-remark-emit>,loop-unroll)' 2>&1 | FileCheck %s
 ; RUN: opt < %s -S -debug-only=loop-unroll -passes='require<profile-summary>,function(require<opt-remark-emit>,loop-unroll<no-profile-peeling>)' 2>&1 | FileCheck %s --check-prefixes=CHECK-NO-PEEL
 

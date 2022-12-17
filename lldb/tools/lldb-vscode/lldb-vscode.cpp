@@ -83,7 +83,7 @@ enum ID {
 #include "Options.inc"
 #undef PREFIX
 
-static const llvm::opt::OptTable::Info InfoTable[] = {
+static constexpr llvm::opt::OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {PREFIX,      NAME,      HELPTEXT,                                           \

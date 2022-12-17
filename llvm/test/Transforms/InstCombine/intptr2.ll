@@ -1,4 +1,4 @@
-; RUN: opt < %s  -passes=instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 define void @test1(float* %a, float* readnone %a_end, i32* %b.i) {
 ; CHECK-LABEL: @test1
@@ -17,7 +17,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %a.addr.03 = phi float* [ %incdec.ptr, %for.body ], [ %a, %for.body.preheader ]
   %b.addr.02 = phi i64 [ %add.int, %for.body ], [ %b, %for.body.preheader ]
 ; CHECK:  %a.addr.03 = phi float* [ %incdec.ptr, %for.body ], [ %a, %for.body.preheader ]
-; CHECK-NOT: phi i64 
+; CHECK-NOT: phi i64
   %tmp = inttoptr i64 %b.addr.02 to float*
 ; CHECK-NOT: inttoptr
   %tmp1 = load float, float* %tmp, align 4
@@ -25,11 +25,11 @@ for.body:                                         ; preds = %for.body, %for.body
   %mul.i = fmul float %tmp1, 4.200000e+01
   store float %mul.i, float* %a.addr.03, align 4
   %add = getelementptr inbounds float, float* %tmp, i64 1
-; CHECK: %add = 
+; CHECK: %add =
   %add.int = ptrtoint float* %add to i64
 ; CHECK-NOT: ptrtoint
   %incdec.ptr = getelementptr inbounds float, float* %a.addr.03, i64 1
-; CHECK: %incdec.ptr = 
+; CHECK: %incdec.ptr =
   %cmp = icmp ult float* %incdec.ptr, %a_end
   br i1 %cmp, label %for.body, label %for.end
 

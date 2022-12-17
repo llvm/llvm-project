@@ -1,5 +1,5 @@
 
-;  RUN: opt < %s -partial-inliner -skip-partial-inlining-cost-analysis -S | FileCheck  %s
+;  RUN: opt < %s -passes=partial-inliner -skip-partial-inlining-cost-analysis -S | FileCheck  %s
  ; RUN: opt < %s -passes=partial-inliner -skip-partial-inlining-cost-analysis -S | FileCheck   %s
 
 %"class.base" = type { %"struct.base"* }

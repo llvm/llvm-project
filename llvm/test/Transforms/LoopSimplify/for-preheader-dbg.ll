@@ -1,7 +1,7 @@
 ; Confirm that the line number for the for.body.preheader block
 ; branch is the the start of the loop.
 
-; RUN: opt -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -loop-simplify -S <%s | FileCheck %s
+; RUN: opt -passes=simplifycfg,loop-simplify -simplifycfg-require-and-preserve-domtree=1 -S <%s | FileCheck %s
 ;
 ; CHECK: for.body.preheader:
 ; CHECK-NEXT: br label %for.body, !dbg ![[DL:[0-9]+]]

@@ -1,5 +1,5 @@
-; RUN: opt -loop-load-elim -S < %s | FileCheck %s
-; RUN: opt -loop-load-elim -S -runtime-check-per-loop-load-elim=2 < %s | FileCheck %s --check-prefix=AGGRESSIVE
+; RUN: opt -passes=loop-load-elim -S < %s | FileCheck %s
+; RUN: opt -passes=loop-load-elim -S -runtime-check-per-loop-load-elim=2 < %s | FileCheck %s --check-prefix=AGGRESSIVE
 
 ; This needs two pairs of memchecks (A * { C, D }) for a single load
 ; elimination which is considered to expansive by default.

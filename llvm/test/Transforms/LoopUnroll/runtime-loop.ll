@@ -1,5 +1,5 @@
-; RUN: opt < %s -S -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=true  | FileCheck %s -check-prefixes=EPILOG,COMMON
-; RUN: opt < %s -S -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefixes=PROLOG,COMMON
+; RUN: opt < %s -S -passes=loop-unroll -unroll-runtime=true -unroll-runtime-epilog=true  | FileCheck %s -check-prefixes=EPILOG,COMMON
+; RUN: opt < %s -S -passes=loop-unroll -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefixes=PROLOG,COMMON
 ;
 ; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll' -unroll-runtime=true -unroll-runtime-epilog=true  | FileCheck %s -check-prefixes=EPILOG,COMMON
 ; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll' -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefixes=PROLOG,COMMON

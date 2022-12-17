@@ -1,4 +1,4 @@
-; RUN: opt < %s  -passes=loop-vectorize -mtriple x86_64 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -mtriple x86_64 -S | FileCheck %s
 
 %struct.ST4 = type { i32, i32, i32, i32 }
 

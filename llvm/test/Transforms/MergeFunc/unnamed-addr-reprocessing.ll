@@ -1,4 +1,4 @@
-; RUN: opt -S -mergefunc < %s | FileCheck %s
+; RUN: opt -S -passes=mergefunc < %s | FileCheck %s
 
 ; After the merge of test5 and test6, we can merge test3 and test4,
 ; then test1 and test2.

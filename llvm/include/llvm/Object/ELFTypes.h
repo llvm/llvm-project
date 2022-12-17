@@ -799,6 +799,7 @@ struct BBAddrMap {
   uint64_t Addr; // Function address
   // Struct representing the BBAddrMap information for one basic block.
   struct BBEntry {
+    uint32_t ID;     // Unique ID of this basic block.
     uint32_t Offset; // Offset of basic block relative to function start.
     uint32_t Size;   // Size of the basic block.
 
@@ -809,13 +810,13 @@ struct BBAddrMap {
     bool IsEHPad;        // If this is an exception handling block.
     bool CanFallThrough; // If this block can fall through to its next.
 
-    BBEntry(uint32_t Offset, uint32_t Size, uint32_t Metadata)
-        : Offset(Offset), Size(Size), HasReturn(Metadata & 1),
+    BBEntry(uint32_t ID, uint32_t Offset, uint32_t Size, uint32_t Metadata)
+        : ID(ID), Offset(Offset), Size(Size), HasReturn(Metadata & 1),
           HasTailCall(Metadata & (1 << 1)), IsEHPad(Metadata & (1 << 2)),
           CanFallThrough(Metadata & (1 << 3)){};
 
     bool operator==(const BBEntry &Other) const {
-      return Offset == Other.Offset && Size == Other.Size &&
+      return ID == Other.ID && Offset == Other.Offset && Size == Other.Size &&
              HasReturn == Other.HasReturn && HasTailCall == Other.HasTailCall &&
              IsEHPad == Other.IsEHPad && CanFallThrough == Other.CanFallThrough;
     }

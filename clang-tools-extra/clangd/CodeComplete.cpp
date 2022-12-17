@@ -22,6 +22,7 @@
 #include "CodeCompletionStrings.h"
 #include "Compiler.h"
 #include "ExpectedTypes.h"
+#include "Feature.h"
 #include "FileDistance.h"
 #include "FuzzyMatch.h"
 #include "Headers.h"
@@ -56,7 +57,6 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -77,6 +77,16 @@
 
 namespace clang {
 namespace clangd {
+
+#if CLANGD_DECISION_FOREST
+const CodeCompleteOptions::CodeCompletionRankingModel
+    CodeCompleteOptions::DefaultRankingModel =
+        CodeCompleteOptions::DecisionForest;
+#else
+const CodeCompleteOptions::CodeCompletionRankingModel
+    CodeCompleteOptions::DefaultRankingModel = CodeCompleteOptions::Heuristics;
+#endif
+
 namespace {
 
 CompletionItemKind toCompletionItemKind(index::SymbolKind Kind) {
@@ -271,7 +281,7 @@ struct CompletionCandidate {
       // FIXME: We should support #import directives here.
       if ((Inc.Directive & clang::clangd::Symbol::Include) != 0)
         return Inc.Header;
-    return None;
+    return std::nullopt;
   }
 
   using Bundle = llvm::SmallVector<CompletionCandidate, 4>;

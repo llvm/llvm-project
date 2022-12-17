@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -10,14 +10,14 @@ entry:
   unreachable
 }
 
-define dso_local void @proxy() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define dso_local void @proxy() personality ptr @__gxx_personality_v0 {
 entry:
   call void asm sideeffect "call trap", "~{dirflag},~{fpsr},~{flags}"()
   call void asm sideeffect "call trap", "~{dirflag},~{fpsr},~{flags}"()
   ret void
 }
 
-define dso_local void @test() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define dso_local void @test() personality ptr @__gxx_personality_v0 {
 entry:
 ; CHECK: define dso_local void @test
 ; CHECK-NOT: invoke void @proxy()
@@ -31,16 +31,16 @@ invoke.cont:
   ret void
 
 lpad:
-; CHECK: %0 = landingpad { i8*, i32 }
-; CHECK: resume { i8*, i32 } %0
+; CHECK: %0 = landingpad { ptr, i32 }
+; CHECK: resume { ptr, i32 } %0
 
-  %0 = landingpad { i8*, i32 }
+  %0 = landingpad { ptr, i32 }
           cleanup
-  call void (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.2, i64 0, i64 0))
-  resume { i8*, i32 } %0
+  call void (ptr, ...) @printf(ptr @.str.2)
+  resume { ptr, i32 } %0
 
 }
 
 declare dso_local i32 @__gxx_personality_v0(...)
 
-declare dso_local void @printf(i8*, ...)
+declare dso_local void @printf(ptr, ...)

@@ -159,7 +159,7 @@ define void @exit_orcond_nsw(i32 *%a) nounwind {
 ; CHECK-NEXT:  Determining loop execution counts for: @exit_orcond_nsw
 ; CHECK-NEXT:  Loop %for.body.i: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body.i: constant max backedge-taken count is 1
-; CHECK-NEXT:  Loop %for.body.i: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body.i: symbolic max backedge-taken count is 1
 ; CHECK-NEXT:  Loop %for.body.i: Unpredictable predicated backedge-taken count.
 ;
 entry:

@@ -35,7 +35,7 @@ enum OptionFlags {
   OptFlag3 = (1 << 6)
 };
 
-static const OptTable::Info InfoTable[] = {
+static constexpr OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {PREFIX, NAME,  HELPTEXT,    METAVAR,     OPT_##ID,  Option::KIND##Class,    \

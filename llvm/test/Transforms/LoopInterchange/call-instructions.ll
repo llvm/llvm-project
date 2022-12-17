@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -loop-interchange -cache-line-size=64 -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
+; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
 ; RUN:     -verify-dom-info -verify-loop-info -stats 2>&1 | FileCheck -check-prefix=STATS %s
 ; RUN: FileCheck --input-file=%t %s
 

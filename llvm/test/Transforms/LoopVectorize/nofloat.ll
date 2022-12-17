@@ -1,4 +1,4 @@
-; RUN: opt < %s  -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
 
 ; Make sure that we don't vectorize functions with 'noimplicitfloat' attributes.
 

@@ -43,7 +43,7 @@ define void @foo(i32* nocapture noundef %p1) {
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (s2)
 ; CHECK-NEXT:    addi a0, s1, 160
-; CHECK-NEXT:    vl2re8.v v10, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vfadd.vv v8, v10, v8
 ; CHECK-NEXT:    vse32.v v8, (s2)
 ; CHECK-NEXT:    addi sp, s0, -192

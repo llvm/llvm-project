@@ -211,6 +211,10 @@ else()
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../go
 	COMMENT "Checking TSan Go runtime..."
 	VERBATIM)
+    elseif(arch MATCHES "loongarch64")
+      add_asm_sources(TSAN_ASM_SOURCES
+        tsan_rtl_loongarch64.S
+        )
     elseif(arch MATCHES "mips64|mips64le")
       add_asm_sources(TSAN_ASM_SOURCES
         tsan_rtl_mips64.S

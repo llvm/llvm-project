@@ -1,5 +1,4 @@
-; RUN: opt -S -callsite-splitting -callsite-splitting-duplication-threshold=100000000 < %s | FileCheck -enable-var-scope %s
-; RUN: opt -S -callsite-splitting -callsite-splitting-duplication-threshold=100000000 < %s | FileCheck -enable-var-scope %s
+; RUN: opt -S -passes=callsite-splitting -callsite-splitting-duplication-threshold=100000000 < %s | FileCheck -enable-var-scope %s
 
 ; Noduplicate calls should not be duplicated
 ; CHECK-LABEL: define void @noduplicate_caller(

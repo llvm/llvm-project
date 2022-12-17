@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn
+; RUN: opt < %s -passes=gvn
 ; PR2032
 
 define i32 @sscal(i32 %n, double %sa1, float* %sx, i32 %incx) {

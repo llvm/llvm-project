@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-predication -S | FileCheck %s
+; RUN: opt < %s -passes=loop-predication -S | FileCheck %s
 ; RUN: opt -S -passes='require<scalar-evolution>,loop-mssa(loop-predication)' -verify-memoryssa < %s 2>&1 | FileCheck %s
 
 ;; This is a simplified copy of @unswitch_exit_form test that should trigger loop-predication

@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -indvars -disable-output -stats -info-output-file - | FileCheck %s
+; RUN: opt < %s -passes=indvars -disable-output -stats -info-output-file - | FileCheck %s
 ; Check that IndVarSimplify is not creating unnecessary canonical IVs
 ; that will never be used.
 ; CHECK-NOT: indvars

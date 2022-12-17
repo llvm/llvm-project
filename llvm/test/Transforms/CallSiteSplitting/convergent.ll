@@ -1,4 +1,4 @@
-; RUN: opt -S -callsite-splitting -callsite-splitting-duplication-threshold=100000000 < %s | FileCheck -enable-var-scope %s
+; RUN: opt -S -passes=callsite-splitting -callsite-splitting-duplication-threshold=100000000 < %s | FileCheck -enable-var-scope %s
 
 ; Convergent calls should not be duplicated in this case
 ; CHECK-LABEL: define void @convergent_caller(

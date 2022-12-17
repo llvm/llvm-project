@@ -3722,22 +3722,6 @@ AMDGPUInstructionSelector::selectWMMAOpSelVOP3PMods(
 }
 
 InstructionSelector::ComplexRendererFns
-AMDGPUInstructionSelector::selectVOP3Mods_nnan(MachineOperand &Root) const {
-  Register Src;
-  unsigned Mods;
-  std::tie(Src, Mods) = selectVOP3ModsImpl(Root);
-  if (!isKnownNeverNaN(Src, *MRI))
-    return std::nullopt;
-
-  return {{
-      [=](MachineInstrBuilder &MIB) {
-        MIB.addReg(copyToVGPRIfSrcFolded(Src, Mods, Root, MIB));
-      },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
-  }};
-}
-
-InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3OpSelMods(MachineOperand &Root) const {
   Register Src;
   unsigned Mods;

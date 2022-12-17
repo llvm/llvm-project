@@ -11,6 +11,7 @@
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <string>
 
 // We need to supprt Windows paths as well. In order to have paths with the same
@@ -34,8 +35,8 @@ static void checkAnalyze(StringRef Input, StringRef Expected) {
 }
 
 static void check(remarks::SerializerMode Mode, const remarks::Remark &R,
-                  StringRef ExpectedR, Optional<StringRef> ExpectedMeta,
-                  Optional<remarks::StringTable> StrTab) {
+                  StringRef ExpectedR, std::optional<StringRef> ExpectedMeta,
+                  std::optional<remarks::StringTable> StrTab) {
   // Emit the remark.
   std::string InputBuf;
   raw_string_ostream InputOS(InputBuf);
@@ -67,14 +68,14 @@ static void check(remarks::SerializerMode Mode, const remarks::Remark &R,
 
 static void check(const remarks::Remark &R, StringRef ExpectedR,
                   StringRef ExpectedMeta,
-                  Optional<remarks::StringTable> StrTab = std::nullopt) {
+                  std::optional<remarks::StringTable> StrTab = std::nullopt) {
   return check(remarks::SerializerMode::Separate, R, ExpectedR, ExpectedMeta,
                std::move(StrTab));
 }
 
 static void
 checkStandalone(const remarks::Remark &R, StringRef ExpectedR,
-                Optional<remarks::StringTable> StrTab = std::nullopt) {
+                std::optional<remarks::StringTable> StrTab = std::nullopt) {
   return check(remarks::SerializerMode::Standalone, R, ExpectedR,
                /*ExpectedMeta=*/std::nullopt, std::move(StrTab));
 }

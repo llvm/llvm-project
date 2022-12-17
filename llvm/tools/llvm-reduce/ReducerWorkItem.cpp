@@ -32,6 +32,7 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include <optional>
 
 extern cl::OptionCategory LLVMReduceOptions;
 static cl::opt<std::string> TargetTriple("mtriple",
@@ -407,7 +408,7 @@ parseReducerWorkItem(const char *ToolName, StringRef Filename,
         createMIRParser(std::move(FileOrErr.get()), Ctxt);
 
     auto SetDataLayout =
-        [&](StringRef DataLayoutTargetTriple) -> Optional<std::string> {
+        [&](StringRef DataLayoutTargetTriple) -> std::optional<std::string> {
       // If we are supposed to override the target triple, do so now.
       std::string IRTargetTriple = DataLayoutTargetTriple.str();
       if (!TargetTriple.empty())

@@ -14,7 +14,6 @@
 #include "CodeGenTarget.h"
 #include "SequenceToOffsetTable.h"
 #include "TableGenBackends.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TableGen/Error.h"

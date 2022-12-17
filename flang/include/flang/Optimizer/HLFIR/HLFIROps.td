@@ -300,4 +300,36 @@ def hlfir_EndAssociateOp : hlfir_Op<"end_associate", []> {
   let builders = [OpBuilder<(ins "hlfir::AssociateOp":$associate)>];
 }
 
+def hlfir_AsExprOp : hlfir_Op<"as_expr", []> {
+  let summary = "Take the value of an array, character or derived expression";
+
+  let description = [{
+    Take the value of an array, character or derived expression.
+  }];
+
+  let arguments = (ins AnyFortranVariable:$var);
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $var attr-dict `:` functional-type(operands, results)
+  }];
+
+
+  let builders = [OpBuilder<(ins "mlir::Value":$var)>];
+}
+
+def hlfir_NoReassocOp : hlfir_Op<"no_reassoc", [NoMemoryEffect, SameOperandsAndResultType]> {
+  let summary = "synthetic op to prevent reassociation";
+
+  let description = [{
+    Same as fir.reassoc, except it accepts hlfir.expr arguments.
+  }];
+
+  let arguments = (ins AnyFortranEntity:$val);
+  let results = (outs AnyFortranEntity);
+
+  let assemblyFormat = "$val attr-dict `:` type($val)";
+}
+
+
 #endif // FORTRAN_DIALECT_HLFIR_OPS

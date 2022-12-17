@@ -1893,12 +1893,9 @@ let TargetPrefix = "ppc" in {
       DefaultAttrsIntrinsic<[llvm_i32_ty], 
                             [llvm_double_ty, llvm_double_ty],
                             [IntrNoMem]>;
-  def int_ppc_test_data_class_d : DefaultAttrsIntrinsic<[llvm_i32_ty],
-                                            [llvm_double_ty, llvm_i32_ty],
-                                            [IntrNoMem, ImmArg<ArgIndex<1>>]>;
-  def int_ppc_test_data_class_f : DefaultAttrsIntrinsic<[llvm_i32_ty],
-                                            [llvm_float_ty, llvm_i32_ty],
-                                            [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_ppc_test_data_class : Intrinsic<[llvm_i32_ty],
+                                          [llvm_anyfloat_ty, llvm_i32_ty],
+                                          [IntrNoMem, ImmArg<ArgIndex<1>>]>;
   def int_ppc_fnabs
       : ClangBuiltin<"__builtin_ppc_fnabs">,
         DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;

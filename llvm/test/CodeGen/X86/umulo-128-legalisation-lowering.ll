@@ -143,11 +143,11 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    andb %bl, %al
 ; X86-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Folded Reload
-; X86-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Folded Reload
-; X86-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Folded Reload
-; X86-NEXT:    orb %bh, %al
-; X86-NEXT:    andb $1, %al
-; X86-NEXT:    movb %al, 16(%ecx)
+; X86-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %bh # 1-byte Folded Reload
+; X86-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %bh # 1-byte Folded Reload
+; X86-NEXT:    orb %al, %bh
+; X86-NEXT:    andb $1, %bh
+; X86-NEXT:    movb %bh, 16(%ecx)
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    addl $24, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 20

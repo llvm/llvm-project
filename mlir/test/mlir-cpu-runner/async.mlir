@@ -7,6 +7,7 @@
 // RUN: | FileCheck %s
 
 // FIXME: https://github.com/llvm/llvm-project/issues/57231
+// UNSUPPORTED: asan
 // UNSUPPORTED: hwasan
 
 func.func @main() {

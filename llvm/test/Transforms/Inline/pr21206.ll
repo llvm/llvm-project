@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 ; RUN: opt < %s -passes='module-inline' -S | FileCheck %s
 
@@ -15,6 +15,6 @@ define linkonce_odr void @bar() comdat($c) {
 }
 ; CHECK: define linkonce_odr void @bar() comdat($c)
 
-define void()* @zed()  {
-  ret void()* @foo
+define ptr @zed()  {
+  ret ptr @foo
 }

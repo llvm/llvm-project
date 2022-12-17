@@ -207,7 +207,8 @@ public:
   bool hasReassociableSibling(const MachineInstr &Inst,
                               bool &Commuted) const override;
 
-  bool isAssociativeAndCommutative(const MachineInstr &Inst) const override;
+  bool isAssociativeAndCommutative(const MachineInstr &Inst,
+                                   bool Invert) const override;
 
 protected:
   const RISCVSubtarget &STI;

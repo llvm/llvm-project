@@ -1,4 +1,4 @@
-; RUN: opt -licm -S < %s | FileCheck %s
+; RUN: opt -passes=licm -S < %s | FileCheck %s
 
 @A = common global [1024 x float] zeroinitializer, align 4
 

@@ -9,6 +9,7 @@
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
@@ -17,6 +18,7 @@
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
 using namespace mlir::func;
@@ -52,12 +54,17 @@ public:
       const bufferization::OneShotBufferizationOptions &bufferizationOptions,
       const SparsificationOptions &sparsificationOptions,
       const SparseTensorConversionOptions &sparseTensorConversionOptions,
-      bool enableRuntimeLibrary, bool enableBufferInitialization)
+      bool enableRuntimeLibrary, bool enableBufferInitialization,
+      unsigned vectorLength, bool enableVLAVectorization,
+      bool enableSIMDIndex32)
       : bufferizationOptions(bufferizationOptions),
         sparsificationOptions(sparsificationOptions),
         sparseTensorConversionOptions(sparseTensorConversionOptions),
         enableRuntimeLibrary(enableRuntimeLibrary),
-        enableBufferInitialization(enableBufferInitialization) {}
+        enableBufferInitialization(enableBufferInitialization),
+        vectorLength(vectorLength),
+        enableVLAVectorization(enableVLAVectorization),
+        enableSIMDIndex32(enableSIMDIndex32) {}
 
   /// Bufferize all dense ops. This assumes that no further analysis is needed
   /// and that all required buffer copies were already inserted by
@@ -84,6 +91,10 @@ public:
 
     bufferization::removeBufferizationAttributesInModule(getOperation());
     return success();
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<bufferization::BufferizationDialect>();
   }
 
   void runOnOperation() override {
@@ -122,6 +133,11 @@ public:
       OpPassManager pm("builtin.module");
       pm.addPass(createSparsificationPass(sparsificationOptions));
       pm.addPass(createPostSparsificationRewritePass(enableRuntimeLibrary));
+      if (vectorLength > 0) {
+        pm.addPass(mlir::createLoopInvariantCodeMotionPass());
+        pm.addPass(createSparseVectorizationPass(
+            vectorLength, enableVLAVectorization, enableSIMDIndex32));
+      }
       if (enableRuntimeLibrary) {
         pm.addPass(
             createSparseTensorConversionPass(sparseTensorConversionOptions));
@@ -144,7 +160,11 @@ private:
   SparseTensorConversionOptions sparseTensorConversionOptions;
   bool enableRuntimeLibrary;
   bool enableBufferInitialization;
+  unsigned vectorLength;
+  bool enableVLAVectorization;
+  bool enableSIMDIndex32;
 };
+
 } // namespace sparse_tensor
 } // namespace mlir
 
@@ -152,10 +172,13 @@ std::unique_ptr<Pass> mlir::createSparsificationAndBufferizationPass(
     const bufferization::OneShotBufferizationOptions &bufferizationOptions,
     const SparsificationOptions &sparsificationOptions,
     const SparseTensorConversionOptions &sparseTensorConversionOptions,
-    bool enableRuntimeLibrary, bool enableBufferInitialization) {
+    bool enableRuntimeLibrary, bool enableBufferInitialization,
+    unsigned vectorLength, bool enableVLAVectorization,
+    bool enableSIMDIndex32) {
   return std::make_unique<
       mlir::sparse_tensor::SparsificationAndBufferizationPass>(
       bufferizationOptions, sparsificationOptions,
       sparseTensorConversionOptions, enableRuntimeLibrary,
-      enableBufferInitialization);
+      enableBufferInitialization, vectorLength, enableVLAVectorization,
+      enableSIMDIndex32);
 }

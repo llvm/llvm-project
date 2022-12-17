@@ -1,5 +1,5 @@
-; RUN: opt < %s -loop-simplify -loop-extract -disable-output
-; This testcase is failing the loop extractor because not all exit blocks 
+; RUN: opt < %s -passes='function(loop-simplify),loop-extract'  -disable-output
+; This testcase is failing the loop extractor because not all exit blocks
 ; are dominated by all of the live-outs.
 
 define i32 @ab(i32 %alpha, i32 %beta) {

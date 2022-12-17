@@ -530,6 +530,82 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::vp_bswap, MVT::nxv2i64, 31},
     {Intrinsic::vp_bswap, MVT::nxv4i64, 31},
     {Intrinsic::vp_bswap, MVT::nxv8i64, 31},
+    {Intrinsic::vp_fshl, MVT::v2i8, 7},
+    {Intrinsic::vp_fshl, MVT::v4i8, 7},
+    {Intrinsic::vp_fshl, MVT::v8i8, 7},
+    {Intrinsic::vp_fshl, MVT::v16i8, 7},
+    {Intrinsic::vp_fshl, MVT::nxv1i8, 7},
+    {Intrinsic::vp_fshl, MVT::nxv2i8, 7},
+    {Intrinsic::vp_fshl, MVT::nxv4i8, 7},
+    {Intrinsic::vp_fshl, MVT::nxv8i8, 7},
+    {Intrinsic::vp_fshl, MVT::nxv16i8, 7},
+    {Intrinsic::vp_fshl, MVT::nxv32i8, 7},
+    {Intrinsic::vp_fshl, MVT::nxv64i8, 7},
+    {Intrinsic::vp_fshl, MVT::v2i16, 7},
+    {Intrinsic::vp_fshl, MVT::v4i16, 7},
+    {Intrinsic::vp_fshl, MVT::v8i16, 7},
+    {Intrinsic::vp_fshl, MVT::v16i16, 7},
+    {Intrinsic::vp_fshl, MVT::nxv1i16, 7},
+    {Intrinsic::vp_fshl, MVT::nxv2i16, 7},
+    {Intrinsic::vp_fshl, MVT::nxv4i16, 7},
+    {Intrinsic::vp_fshl, MVT::nxv8i16, 7},
+    {Intrinsic::vp_fshl, MVT::nxv16i16, 7},
+    {Intrinsic::vp_fshl, MVT::nxv32i16, 7},
+    {Intrinsic::vp_fshl, MVT::v2i32, 7},
+    {Intrinsic::vp_fshl, MVT::v4i32, 7},
+    {Intrinsic::vp_fshl, MVT::v8i32, 7},
+    {Intrinsic::vp_fshl, MVT::v16i32, 7},
+    {Intrinsic::vp_fshl, MVT::nxv1i32, 7},
+    {Intrinsic::vp_fshl, MVT::nxv2i32, 7},
+    {Intrinsic::vp_fshl, MVT::nxv4i32, 7},
+    {Intrinsic::vp_fshl, MVT::nxv8i32, 7},
+    {Intrinsic::vp_fshl, MVT::nxv16i32, 7},
+    {Intrinsic::vp_fshl, MVT::v2i64, 7},
+    {Intrinsic::vp_fshl, MVT::v4i64, 7},
+    {Intrinsic::vp_fshl, MVT::v8i64, 7},
+    {Intrinsic::vp_fshl, MVT::v16i64, 7},
+    {Intrinsic::vp_fshl, MVT::nxv1i64, 7},
+    {Intrinsic::vp_fshl, MVT::nxv2i64, 7},
+    {Intrinsic::vp_fshl, MVT::nxv4i64, 7},
+    {Intrinsic::vp_fshl, MVT::nxv8i64, 7},
+    {Intrinsic::vp_fshr, MVT::v2i8, 7},
+    {Intrinsic::vp_fshr, MVT::v4i8, 7},
+    {Intrinsic::vp_fshr, MVT::v8i8, 7},
+    {Intrinsic::vp_fshr, MVT::v16i8, 7},
+    {Intrinsic::vp_fshr, MVT::nxv1i8, 7},
+    {Intrinsic::vp_fshr, MVT::nxv2i8, 7},
+    {Intrinsic::vp_fshr, MVT::nxv4i8, 7},
+    {Intrinsic::vp_fshr, MVT::nxv8i8, 7},
+    {Intrinsic::vp_fshr, MVT::nxv16i8, 7},
+    {Intrinsic::vp_fshr, MVT::nxv32i8, 7},
+    {Intrinsic::vp_fshr, MVT::nxv64i8, 7},
+    {Intrinsic::vp_fshr, MVT::v2i16, 7},
+    {Intrinsic::vp_fshr, MVT::v4i16, 7},
+    {Intrinsic::vp_fshr, MVT::v8i16, 7},
+    {Intrinsic::vp_fshr, MVT::v16i16, 7},
+    {Intrinsic::vp_fshr, MVT::nxv1i16, 7},
+    {Intrinsic::vp_fshr, MVT::nxv2i16, 7},
+    {Intrinsic::vp_fshr, MVT::nxv4i16, 7},
+    {Intrinsic::vp_fshr, MVT::nxv8i16, 7},
+    {Intrinsic::vp_fshr, MVT::nxv16i16, 7},
+    {Intrinsic::vp_fshr, MVT::nxv32i16, 7},
+    {Intrinsic::vp_fshr, MVT::v2i32, 7},
+    {Intrinsic::vp_fshr, MVT::v4i32, 7},
+    {Intrinsic::vp_fshr, MVT::v8i32, 7},
+    {Intrinsic::vp_fshr, MVT::v16i32, 7},
+    {Intrinsic::vp_fshr, MVT::nxv1i32, 7},
+    {Intrinsic::vp_fshr, MVT::nxv2i32, 7},
+    {Intrinsic::vp_fshr, MVT::nxv4i32, 7},
+    {Intrinsic::vp_fshr, MVT::nxv8i32, 7},
+    {Intrinsic::vp_fshr, MVT::nxv16i32, 7},
+    {Intrinsic::vp_fshr, MVT::v2i64, 7},
+    {Intrinsic::vp_fshr, MVT::v4i64, 7},
+    {Intrinsic::vp_fshr, MVT::v8i64, 7},
+    {Intrinsic::vp_fshr, MVT::v16i64, 7},
+    {Intrinsic::vp_fshr, MVT::nxv1i64, 7},
+    {Intrinsic::vp_fshr, MVT::nxv2i64, 7},
+    {Intrinsic::vp_fshr, MVT::nxv4i64, 7},
+    {Intrinsic::vp_fshr, MVT::nxv8i64, 7},
     {Intrinsic::bitreverse, MVT::v2i8, 17},
     {Intrinsic::bitreverse, MVT::v4i8, 17},
     {Intrinsic::bitreverse, MVT::v8i8, 17},
@@ -602,6 +678,17 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::ctpop, MVT::nxv8i64, 21},
 };
 
+static unsigned getISDForVPIntrinsicID(Intrinsic::ID ID) {
+  switch (ID) {
+#define HELPER_MAP_VPID_TO_VPSD(VPID, VPSD)                                    \
+  case Intrinsic::VPID:                                                        \
+    return ISD::VPSD;
+#include "llvm/IR/VPIntrinsics.def"
+#undef HELPER_MAP_VPID_TO_VPSD
+  }
+  return ISD::DELETED_NODE;
+}
+
 InstructionCost
 RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                     TTI::TargetCostKind CostKind) {
@@ -657,6 +744,20 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     unsigned Cost = 7;
     auto LT = getTypeLegalizationCost(RetTy);
     if (TLI->isOperationCustom(ISD::VP_FRINT, LT.second))
+      return Cost * LT.first;
+    break;
+  }
+  case Intrinsic::vp_ceil:
+  case Intrinsic::vp_floor:
+  case Intrinsic::vp_round:
+  case Intrinsic::vp_roundeven:
+  case Intrinsic::vp_roundtozero: {
+    // Rounding with static rounding mode needs two more instructions to
+    // swap/write FRM than vp_rint.
+    unsigned Cost = 7;
+    auto LT = getTypeLegalizationCost(RetTy);
+    unsigned VPISD = getISDForVPIntrinsicID(ICA.getID());
+    if (TLI->isOperationCustom(VPISD, LT.second))
       return Cost * LT.first;
     break;
   }

@@ -2,7 +2,7 @@
 ;
 ; RUN: opt -passes='loop(simple-loop-unswitch<nontrivial>),verify<loops>' -unswitch-threshold=5 -S < %s | FileCheck %s
 ; RUN: opt -passes='loop-mssa(simple-loop-unswitch<nontrivial>),verify<loops>' -unswitch-threshold=5 -S < %s | FileCheck %s
-; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -unswitch-threshold=5 -verify-memoryssa -S < %s | FileCheck %s
+; RUN: opt -passes='simple-loop-unswitch<nontrivial>' -unswitch-threshold=5 -verify-memoryssa -S < %s | FileCheck %s
 
 declare void @a()
 declare void @b()

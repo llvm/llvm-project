@@ -233,6 +233,10 @@ def HasHBC           : Predicate<"Subtarget->hasHBC()">,
                        AssemblerPredicateWithAll<(all_of FeatureHBC), "hbc">;
 def HasMOPS          : Predicate<"Subtarget->hasMOPS()">,
                        AssemblerPredicateWithAll<(all_of FeatureMOPS), "mops">;
+def HasCLRBHB        : Predicate<"Subtarget->hasCLRBHB()">,
+                       AssemblerPredicateWithAll<(all_of FeatureCLRBHB), "clrbhb">;
+def HasSPECRES2      : Predicate<"Subtarget->hasSPECRES2()">,
+                       AssemblerPredicateWithAll<(all_of FeatureSPECRES2), "specres2">;
 def HasITE           : Predicate<"Subtarget->hasITE()">,
                        AssemblerPredicateWithAll<(all_of FeatureITE), "ite">;
 def HasTHE           : Predicate<"Subtarget->hasTHE()">,
@@ -8546,6 +8550,11 @@ def : Pat<(AArch64AssertZExtBool GPR32:$op),
 //===----------------------------===//
 // 2022 Architecture Extensions:
 //===----------------------------===//
+def : InstAlias<"clrbhb",  (HINT 22), 0>;
+let Predicates = [HasCLRBHB] in {
+  def : InstAlias<"clrbhb",  (HINT 22), 1>;
+}
+
 defm RCW     : ReadCheckWriteCompareAndSwap;
 
 defm RCWCLR  : ReadCheckWriteOperation<0b001, "clr">;

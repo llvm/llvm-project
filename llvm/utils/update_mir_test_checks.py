@@ -36,9 +36,11 @@ VREG_RE = re.compile(r'(%[0-9]+)(?::[a-z0-9_]+)?(?:\([<>a-z0-9 ]+\))?')
 MI_FLAGS_STR= (
     r'(frame-setup |frame-destroy |nnan |ninf |nsz |arcp |contract |afn '
     r'|reassoc |nuw |nsw |exact |nofpexcept |nomerge )*')
+VREG_DEF_FLAGS_STR = r'(?:dead )*'
 VREG_DEF_RE = re.compile(
-    r'^ *(?P<vregs>{0}(?:, {0})*) = '
-    r'{1}(?P<opcode>[A-Zt][A-Za-z0-9_]+)'.format(VREG_RE.pattern, MI_FLAGS_STR))
+    r'^ *(?P<vregs>{2}{0}(?:, {2}{0})*) = '
+    r'{1}(?P<opcode>[A-Zt][A-Za-z0-9_]+)'.format(
+        VREG_RE.pattern, MI_FLAGS_STR, VREG_DEF_FLAGS_STR))
 MIR_PREFIX_DATA_RE = re.compile(r'^ *(;|bb.[0-9].*: *$|[a-z]+:( |$)|$)')
 
 IR_FUNC_NAME_RE = re.compile(

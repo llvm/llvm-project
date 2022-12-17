@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-simplify -loop-extract -S | FileCheck %s
+; RUN: opt < %s -passes='function(loop-simplify),loop-extract'  -S | FileCheck %s
 
 @label = common local_unnamed_addr global i8* null
 

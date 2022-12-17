@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=verify < %s | FileCheck %s
+; RUN: opt -passes=verify -S < %s | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

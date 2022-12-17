@@ -484,3 +484,11 @@ func.func @resize_dyn(%input: tensor<?x2x2x1xi8>) -> () {
   %output = "tosa.resize"(%input) { scale = [4, 2, 4, 2], offset = [-1, -1], border = [1, 1], mode = "BILINEAR" } : (tensor<?x2x2x1xi8>)  -> (tensor<?x4x4x1xi32>)
   return
 }
+
+// -----
+
+// CHECK-LABEL: @resize_bilinear_int48
+func.func @resize_bilinear_int48(%arg0: tensor<1x19x19x1xi16>) {
+  %0 = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [16, 1, 16, 1], offset = [0, 0], border = [0, 0]} : (tensor<1x19x19x1xi16>) -> tensor<1x289x289x1xi48>
+           return
+}

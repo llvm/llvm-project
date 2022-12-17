@@ -151,7 +151,7 @@ struct CopySignPattern final : public OpConversionPattern<math::CopySignOp> {
     Value valueMask = rewriter.create<spirv::ConstantOp>(
         loc, intType, rewriter.getIntegerAttr(intType, intValue - 1u));
 
-    if (auto vectorType = copySignOp.getType().dyn_cast<VectorType>()) {
+    if (auto vectorType = type.dyn_cast<VectorType>()) {
       assert(vectorType.getRank() == 1);
       int count = vectorType.getNumElements();
       intType = VectorType::get(count, intType);

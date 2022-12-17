@@ -1,4 +1,4 @@
-; RUN: opt -loop-unroll -debug-only=loop-unroll -S < %s  2>&1 | FileCheck %s
+; RUN: opt -passes=loop-unroll -debug-only=loop-unroll -S < %s  2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 

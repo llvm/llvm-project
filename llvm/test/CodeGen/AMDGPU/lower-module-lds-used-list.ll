@@ -1,5 +1,5 @@
-; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds < %s | FileCheck %s
-; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
 
 ; Check new struct is added to compiler.used and that the replaced variable is removed
 
@@ -27,6 +27,13 @@
 ; CHECK: @llvm.compiler.used = appending global [2 x i8*] [i8* addrspacecast (i8 addrspace(1)* bitcast (i64 addrspace(1)* @ignored to i8 addrspace(1)*) to i8*), i8* addrspacecast (i8 addrspace(3)* bitcast (%llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds to i8 addrspace(3)*) to i8*)], section "llvm.metadata"
 
 @llvm.compiler.used = appending global [2 x i8*] [i8* addrspacecast (i8 addrspace(3)* bitcast (float addrspace(3)* @tolower to i8 addrspace(3)*) to i8*), i8* addrspacecast (i8 addrspace(1)* bitcast (i64 addrspace(1)* @ignored to i8 addrspace(1)*) to i8*)], section "llvm.metadata"
+
+
+; Functions that are not called are ignored by the lowering
+define amdgpu_kernel void @call_func() {
+  call void @func()
+  ret void
+}
 
 ; CHECK-LABEL: @func()
 ; CHECK: %dec = atomicrmw fsub float addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 0), float 1.000000e+00 monotonic, align 8

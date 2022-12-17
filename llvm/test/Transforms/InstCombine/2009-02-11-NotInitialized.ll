@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -instcombine -function-attrs | llvm-dis
+; RUN: opt < %s -passes=inline,instcombine,function-attrs | llvm-dis
 ;
 ; Check that nocapture attributes are added when run after an SCC pass.
 ; PR3520

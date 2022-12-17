@@ -1,5 +1,5 @@
 ; Test that inliner skips @llvm.icall.branch.funnel
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"

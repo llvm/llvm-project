@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-simplify | FileCheck %s
+; RUN: opt < %s -S -passes=loop-simplify | FileCheck %s
 
 ; Don't separate out nested loops if a convergent call is present
 

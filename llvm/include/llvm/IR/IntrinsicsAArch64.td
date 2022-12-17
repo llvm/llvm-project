@@ -1516,7 +1516,7 @@ class SVE_4Vec_BF16
 
 class SVE_4Vec_BF16_Indexed
     : DefaultAttrsIntrinsic<[llvm_nxv4f32_ty],
-                [llvm_nxv4f32_ty, llvm_nxv8bf16_ty, llvm_nxv8bf16_ty, llvm_i64_ty],
+                [llvm_nxv4f32_ty, llvm_nxv8bf16_ty, llvm_nxv8bf16_ty, llvm_i32_ty],
                 [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
 //
@@ -2519,9 +2519,9 @@ def int_aarch64_sve_bfmlalt : SVE_4Vec_BF16;
 
 def int_aarch64_sve_bfmmla  : SVE_4Vec_BF16;
 
-def int_aarch64_sve_bfdot_lane   : SVE_4Vec_BF16_Indexed;
-def int_aarch64_sve_bfmlalb_lane : SVE_4Vec_BF16_Indexed;
-def int_aarch64_sve_bfmlalt_lane : SVE_4Vec_BF16_Indexed;
+def int_aarch64_sve_bfdot_lane_v2   : SVE_4Vec_BF16_Indexed;
+def int_aarch64_sve_bfmlalb_lane_v2 : SVE_4Vec_BF16_Indexed;
+def int_aarch64_sve_bfmlalt_lane_v2 : SVE_4Vec_BF16_Indexed;
 }
 
 //

@@ -1,4 +1,4 @@
-; RUN: opt < %s -simple-loop-unswitch -disable-output
+; RUN: opt < %s -passes=simple-loop-unswitch -disable-output
 
 ; PR38283
 ; PR38737

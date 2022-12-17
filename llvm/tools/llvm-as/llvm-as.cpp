@@ -27,6 +27,7 @@
 #include "llvm/Support/SystemUtils.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <memory>
+#include <optional>
 using namespace llvm;
 
 cl::OptionCategory AsCat("llvm-as Options");
@@ -120,7 +121,7 @@ int main(int argc, char **argv) {
 
   // Parse the file now...
   SMDiagnostic Err;
-  auto SetDataLayout = [](StringRef) -> Optional<std::string> {
+  auto SetDataLayout = [](StringRef) -> std::optional<std::string> {
     if (ClDataLayout.empty())
       return std::nullopt;
     return ClDataLayout;

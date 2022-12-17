@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-simplify -lcssa -verify-loop-info -verify-dom-info -S \
+; RUN: opt < %s -passes=loop-simplify,lcssa -verify-loop-info -verify-dom-info -S \
 ; RUN:   | grep -F "indirectbr i8* %x, [label %L0, label %L1]" \
 ; RUN:   | count 6
 

@@ -232,6 +232,11 @@ static DemandedFields getDemanded(const MachineInstr &MI) {
     Res.LMUL = false;
   }
 
+  // For vmv.s.x and vfmv.s.f, there is only two behaviors, VL = 0 and VL > 0.
+  // As such, the result does not depend on LMUL.
+  if (isScalarMoveInstr(MI))
+    Res.LMUL = false;
+
   return Res;
 }
 
@@ -304,11 +309,13 @@ public:
     return false;
   }
 
+  bool hasEquallyZeroAVL(const VSETVLIInfo &Other) const {
+    if (hasSameAVL(Other))
+      return true;
+    return (hasNonZeroAVL() && Other.hasNonZeroAVL());
+  }
+
   bool hasSameAVL(const VSETVLIInfo &Other) const {
-    assert(isValid() && Other.isValid() &&
-           "Can't compare invalid VSETVLIInfos");
-    assert(!isUnknown() && !Other.isUnknown() &&
-           "Can't compare AVL in unknown state");
     if (hasAVLReg() && Other.hasAVLReg())
       return getAVLReg() == Other.getAVLReg();
 
@@ -771,12 +778,10 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
     return true;
 
   // For vmv.s.x and vfmv.s.f, there is only two behaviors, VL = 0 and VL > 0.
-  // VL=0 is uninteresting (as it should have been deleted already), so it is
-  // compatible if we can prove both are non-zero.  Additionally, if writing
-  // to an implicit_def operand, we don't need to preserve any other bits and
-  // are thus compatible with any larger etype, and can disregard policy bits.
-  if (isScalarMoveInstr(MI) &&
-      CurInfo.hasNonZeroAVL() && Require.hasNonZeroAVL()) {
+  // Additionally, if writing to an implicit_def operand, we don't need to
+  // preserve any other bits and are thus compatible with any larger etype,
+  // and can disregard policy bits.
+  if (isScalarMoveInstr(MI) && CurInfo.hasEquallyZeroAVL(Require)) {
     auto *VRegDef = MRI->getVRegDef(MI.getOperand(1).getReg());
     if (VRegDef && VRegDef->isImplicitDef() &&
         CurInfo.getSEW() >= Require.getSEW())
@@ -830,7 +835,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info, const MachineInstr &M
   // prevent extending live range of an avl register operand.
   // TODO: We can probably relax this for immediates.
   if (isScalarMoveInstr(MI) && PrevInfo.isValid() &&
-      PrevInfo.hasNonZeroAVL() && Info.hasNonZeroAVL() &&
+      PrevInfo.hasEquallyZeroAVL(Info) &&
       Info.hasSameVLMAX(PrevInfo)) {
     if (PrevInfo.hasAVLImm())
       Info.setAVLImm(PrevInfo.getAVLImm());

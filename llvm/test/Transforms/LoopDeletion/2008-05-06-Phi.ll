@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -instcombine -jump-threading -licm -simple-loop-unswitch -instcombine -indvars -loop-deletion -gvn -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -verify -disable-output
+; RUN: opt < %s -passes='cgscc(inline),function(instcombine,jump-threading,loop-mssa(licm),simple-loop-unswitch,instcombine,indvars,loop-deletion,gvn,simplifycfg),verify' -simplifycfg-require-and-preserve-domtree=1 -disable-output
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
 target triple = "i386-apple-darwin9"

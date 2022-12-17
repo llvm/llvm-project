@@ -431,7 +431,7 @@ public:
   void updateAddressMap(uint32_t Index, uint32_t Address);
 
   /// Writes out current sections entry into .debug_str_offsets.
-  void finalizeSection();
+  void finalizeSection(DWARFUnit &Unit);
 
   /// Returns False if no strings were added to .debug_str.
   bool isFinalized() const { return !StrOffsetsBuffer->empty(); }
@@ -445,8 +445,10 @@ private:
   std::unique_ptr<DebugStrOffsetsBufferVector> StrOffsetsBuffer;
   std::unique_ptr<raw_svector_ostream> StrOffsetsStream;
   std::map<uint32_t, uint32_t> IndexToAddressMap;
+  DenseSet<uint64_t> ProcessedBaseOffsets;
   // Section size not including header.
   uint32_t CurrentSectionSize{0};
+  bool StrOffsetSectionWasModified = false;
 };
 
 using DebugStrBufferVector = SmallVector<char, 16>;

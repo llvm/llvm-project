@@ -1202,9 +1202,9 @@ void MCStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {}
 void MCStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
                                         StringRef Name, bool KeepOriginalSym) {}
 void MCStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                                       unsigned ByteAlignment) {}
+                                       Align ByteAlignment) {}
 void MCStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
-                                uint64_t Size, unsigned ByteAlignment) {}
+                                uint64_t Size, Align ByteAlignment) {}
 void MCStreamer::changeSection(MCSection *, const MCExpr *) {}
 void MCStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {}
 void MCStreamer::emitBytes(StringRef Data) {}

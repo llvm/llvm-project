@@ -1,4 +1,4 @@
-; RUN: opt -gvn %s -S | FileCheck %s
+; RUN: opt -passes=gvn %s -S | FileCheck %s
 ; PR42605. Check phi-translate won't translate the value number of a call
 ; to the value of another call with clobber in between.
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

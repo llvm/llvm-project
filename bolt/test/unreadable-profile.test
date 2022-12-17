@@ -1,0 +1,13 @@
+REQUIRES: system-linux
+
+RUN: touch %t.profile && chmod 000 %t.profile
+RUN: %clang %S/Inputs/hello.c -o %t
+RUN: not llvm-bolt %t -o %t.bolt --data %t.profile 2>&1 \
+RUN:   | FileCheck %s --check-prefix CHECK-NOPERM
+RUN: not llvm-bolt %t -o %t.bolt --data %t.fake.profile 2>&1 \
+RUN:   | FileCheck %s --check-prefix CHECK-FAKE
+
+## Check that llvm-bolt gracefully handles errors accessing profile data.
+
+CHECK-NOPERM: Permission denied
+CHECK-FAKE: No such file or directory

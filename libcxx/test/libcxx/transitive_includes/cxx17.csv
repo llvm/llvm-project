@@ -349,6 +349,7 @@ format optional
 format stdexcept
 format string
 format string_view
+format tuple
 format type_traits
 format version
 forward_list algorithm
@@ -557,6 +558,7 @@ memory_resource mutex
 memory_resource new
 memory_resource stdexcept
 memory_resource tuple
+memory_resource type_traits
 memory_resource version
 mutex atomic
 mutex concepts

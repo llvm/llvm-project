@@ -1,4 +1,4 @@
-; RUN: opt -mldst-motion -S < %s | FileCheck %s
+; RUN: opt -passes=mldst-motion -S < %s | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='require<memdep>',mldst-motion \
 ; RUN:   -S < %s | FileCheck %s
 

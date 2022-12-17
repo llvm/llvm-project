@@ -424,6 +424,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
                  CmpMarshallingOpts);
 
   std::vector<MarshallingInfo> MarshallingInfos;
+  MarshallingInfos.reserve(OptsWithMarshalling.size());
   for (const auto *R : OptsWithMarshalling)
     MarshallingInfos.push_back(createMarshallingInfo(*R));
 

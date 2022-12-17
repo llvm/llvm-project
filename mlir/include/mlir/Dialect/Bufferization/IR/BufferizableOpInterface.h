@@ -292,7 +292,7 @@ struct BufferizationOptions {
   bool printConflicts = false;
 
   /// Buffer alignment for new memory allocations.
-  unsigned int bufferAlignment = 128;
+  unsigned int bufferAlignment = 64;
 
   /// Initializer functions for analysis state. These can be used to
   /// initialize dialect-specific analysis state.

@@ -1,4 +1,3 @@
-; RUN: opt        -lower-global-dtors -S < %s | FileCheck %s --implicit-check-not=llvm.global_dtors
 ; RUN: opt -passes=lower-global-dtors -S < %s | FileCheck %s --implicit-check-not=llvm.global_dtors
 
 ; Test that @llvm.global_dtors is properly lowered into @llvm.global_ctors,

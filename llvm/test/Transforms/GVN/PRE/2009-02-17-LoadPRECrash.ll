@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -enable-load-pre -disable-output
+; RUN: opt < %s -passes=gvn -enable-load-pre -disable-output
 
 	%struct.VEC_rtx_base = type { i32, i32, [1 x %struct.rtx_def*] }
 	%struct.VEC_rtx_gc = type { %struct.VEC_rtx_base }

@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-fusion < %s | FileCheck %s
+; RUN: opt -S -passes=loop-fusion < %s | FileCheck %s
 ;
 ;    int A[1024][1024];
 ;    int B[1024][1024];

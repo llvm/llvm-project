@@ -28,7 +28,7 @@
 ;; }
 
 
-; RUN: opt -inline %s -S | FileCheck %s
+; RUN: opt -passes=inline %s -S | FileCheck %s
 
 ; ModuleID = 'memprof_inline.cc'
 source_filename = "memprof_inline.cc"
@@ -36,82 +36,82 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: mustprogress uwtable
-; CHECK-LABEL: define dso_local noundef i8* @_Z3foov
-define dso_local noundef i8* @_Z3foov() #0 !dbg !39 {
+; CHECK-LABEL: define dso_local noundef ptr @_Z3foov
+define dso_local noundef ptr @_Z3foov() #0 !dbg !39 {
 entry:
   ; CHECK: call {{.*}} @_Znam
   ; CHECK-NOT: !memprof
   ; CHECK-NOT: !callsite
-  %call = call noalias noundef nonnull i8* @_Znam(i64 noundef 10) #6, !dbg !42, !memprof !43, !callsite !50
+  %call = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #6, !dbg !42, !memprof !43, !callsite !50
   ; CHECK-NEXT: ret
-  ret i8* %call, !dbg !51
+  ret ptr %call, !dbg !51
 }
 
 ; Function Attrs: nobuiltin allocsize(0)
-declare noundef nonnull i8* @_Znam(i64 noundef) #1
+declare noundef nonnull ptr @_Znam(i64 noundef) #1
 
 ; Function Attrs: mustprogress uwtable
-; CHECK-LABEL: define dso_local noundef i8* @_Z4foo2v
-define dso_local noundef i8* @_Z4foo2v() #0 !dbg !52 {
+; CHECK-LABEL: define dso_local noundef ptr @_Z4foo2v
+define dso_local noundef ptr @_Z4foo2v() #0 !dbg !52 {
 entry:
   ; CHECK: call {{.*}} @_Znam{{.*}} #[[COLD:[0-9]+]]
-  %call = call noundef i8* @_Z3foov(), !dbg !53, !callsite !54
-  ret i8* %call, !dbg !55
+  %call = call noundef ptr @_Z3foov(), !dbg !53, !callsite !54
+  ret ptr %call, !dbg !55
 }
 
 ; Function Attrs: mustprogress norecurse uwtable
 ; CHECK-LABEL: define dso_local noundef i32 @main
-define dso_local noundef i32 @main(i32 noundef %argc, i8** noundef %argv) #2 !dbg !56 {
+define dso_local noundef i32 @main(i32 noundef %argc, ptr noundef %argv) #2 !dbg !56 {
 entry:
   %retval = alloca i32, align 4
   %argc.addr = alloca i32, align 4
-  %argv.addr = alloca i8**, align 8
-  %c = alloca i8*, align 8
-  %d = alloca i8*, align 8
-  %e = alloca i8*, align 8
-  store i32 0, i32* %retval, align 4
-  store i32 %argc, i32* %argc.addr, align 4
-  store i8** %argv, i8*** %argv.addr, align 8
+  %argv.addr = alloca ptr, align 8
+  %c = alloca ptr, align 8
+  %d = alloca ptr, align 8
+  %e = alloca ptr, align 8
+  store i32 0, ptr %retval, align 4
+  store i32 %argc, ptr %argc.addr, align 4
+  store ptr %argv, ptr %argv.addr, align 8
   ; CHECK: call {{.*}} @_Znam{{.*}} #[[NOTCOLD:[0-9]+]]
-  %call = call noundef i8* @_Z3foov(), !dbg !57, !callsite !58
-  store i8* %call, i8** %c, align 8, !dbg !59
+  %call = call noundef ptr @_Z3foov(), !dbg !57, !callsite !58
+  store ptr %call, ptr %c, align 8, !dbg !59
   ; CHECK: call {{.*}} @_Znam{{.*}} #[[COLD]]
-  %call1 = call noundef i8* @_Z3foov(), !dbg !60, !callsite !61
-  store i8* %call1, i8** %d, align 8, !dbg !62
+  %call1 = call noundef ptr @_Z3foov(), !dbg !60, !callsite !61
+  store ptr %call1, ptr %d, align 8, !dbg !62
   ; CHECK: call {{.*}} @_Znam{{.*}} #[[COLD]]
-  %call2 = call noundef i8* @_Z4foo2v(), !dbg !63, !callsite !64
-  store i8* %call2, i8** %e, align 8, !dbg !65
-  %0 = load i8*, i8** %c, align 8, !dbg !66
-  call void @llvm.memset.p0i8.i64(i8* align 1 %0, i8 0, i64 10, i1 false), !dbg !67
-  %1 = load i8*, i8** %d, align 8, !dbg !68
-  call void @llvm.memset.p0i8.i64(i8* align 1 %1, i8 0, i64 10, i1 false), !dbg !69
-  %2 = load i8*, i8** %e, align 8, !dbg !70
-  call void @llvm.memset.p0i8.i64(i8* align 1 %2, i8 0, i64 10, i1 false), !dbg !71
-  %3 = load i8*, i8** %c, align 8, !dbg !72
-  %isnull = icmp eq i8* %3, null, !dbg !73
+  %call2 = call noundef ptr @_Z4foo2v(), !dbg !63, !callsite !64
+  store ptr %call2, ptr %e, align 8, !dbg !65
+  %0 = load ptr, ptr %c, align 8, !dbg !66
+  call void @llvm.memset.p0.i64(ptr align 1 %0, i8 0, i64 10, i1 false), !dbg !67
+  %1 = load ptr, ptr %d, align 8, !dbg !68
+  call void @llvm.memset.p0.i64(ptr align 1 %1, i8 0, i64 10, i1 false), !dbg !69
+  %2 = load ptr, ptr %e, align 8, !dbg !70
+  call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 10, i1 false), !dbg !71
+  %3 = load ptr, ptr %c, align 8, !dbg !72
+  %isnull = icmp eq ptr %3, null, !dbg !73
   br i1 %isnull, label %delete.end, label %delete.notnull, !dbg !73
 
 delete.notnull:                                   ; preds = %entry
-  call void @_ZdaPv(i8* noundef %3) #7, !dbg !74
+  call void @_ZdaPv(ptr noundef %3) #7, !dbg !74
   br label %delete.end, !dbg !74
 
 delete.end:                                       ; preds = %delete.notnull, %entry
   %call4 = call i32 @sleep(i32 noundef 200), !dbg !76
-  %4 = load i8*, i8** %d, align 8, !dbg !77
-  %isnull5 = icmp eq i8* %4, null, !dbg !78
+  %4 = load ptr, ptr %d, align 8, !dbg !77
+  %isnull5 = icmp eq ptr %4, null, !dbg !78
   br i1 %isnull5, label %delete.end7, label %delete.notnull6, !dbg !78
 
 delete.notnull6:                                  ; preds = %delete.end
-  call void @_ZdaPv(i8* noundef %4) #7, !dbg !79
+  call void @_ZdaPv(ptr noundef %4) #7, !dbg !79
   br label %delete.end7, !dbg !79
 
 delete.end7:                                      ; preds = %delete.notnull6, %delete.end
-  %5 = load i8*, i8** %e, align 8, !dbg !80
-  %isnull8 = icmp eq i8* %5, null, !dbg !81
+  %5 = load ptr, ptr %e, align 8, !dbg !80
+  %isnull8 = icmp eq ptr %5, null, !dbg !81
   br i1 %isnull8, label %delete.end10, label %delete.notnull9, !dbg !81
 
 delete.notnull9:                                  ; preds = %delete.end7
-  call void @_ZdaPv(i8* noundef %5) #7, !dbg !82
+  call void @_ZdaPv(ptr noundef %5) #7, !dbg !82
   br label %delete.end10, !dbg !82
 
 delete.end10:                                     ; preds = %delete.notnull9, %delete.end7
@@ -119,10 +119,10 @@ delete.end10:                                     ; preds = %delete.notnull9, %d
 }
 
 ; Function Attrs: argmemonly nofree nounwind willreturn writeonly
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #3
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #3
 
 ; Function Attrs: nobuiltin nounwind
-declare void @_ZdaPv(i8* noundef) #4
+declare void @_ZdaPv(ptr noundef) #4
 
 declare i32 @sleep(i32 noundef) #5
 

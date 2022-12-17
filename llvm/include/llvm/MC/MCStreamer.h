@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
@@ -679,17 +678,16 @@ public:
   /// \param Size - The size of the common symbol.
   /// \param ByteAlignment - The alignment of the common symbol in bytes.
   virtual void emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                                     unsigned ByteAlignment);
+                                     Align ByteAlignment);
 
   /// Emit the zerofill section and an optional symbol.
   ///
   /// \param Section - The zerofill section to create and or to put the symbol
   /// \param Symbol - The zerofill symbol to emit, if non-NULL.
   /// \param Size - The size of the zerofill symbol.
-  /// \param ByteAlignment - The alignment of the zerofill symbol if
-  /// non-zero. This must be a power of 2 on some targets.
+  /// \param ByteAlignment - The alignment of the zerofill symbol.
   virtual void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
-                            uint64_t Size = 0, unsigned ByteAlignment = 0,
+                            uint64_t Size = 0, Align ByteAlignment = Align(1),
                             SMLoc Loc = SMLoc()) = 0;
 
   /// Emit a thread local bss (.tbss) symbol.
@@ -697,10 +695,9 @@ public:
   /// \param Section - The thread local common section.
   /// \param Symbol - The thread local common symbol to emit.
   /// \param Size - The size of the symbol.
-  /// \param ByteAlignment - The alignment of the thread local common symbol
-  /// if non-zero.  This must be a power of 2 on some targets.
+  /// \param ByteAlignment - The alignment of the thread local common symbol.
   virtual void emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
-                              uint64_t Size, unsigned ByteAlignment = 0);
+                              uint64_t Size, Align ByteAlignment = Align(1));
 
   /// @}
   /// \name Generating Data

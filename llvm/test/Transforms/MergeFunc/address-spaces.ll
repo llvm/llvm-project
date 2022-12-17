@@ -1,4 +1,4 @@
-; RUN: opt -S -mergefunc < %s | FileCheck %s
+; RUN: opt -S -passes=mergefunc < %s | FileCheck %s
 
 target datalayout = "p:32:32:32-p1:32:32:32-p2:16:16:16"
 

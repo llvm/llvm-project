@@ -1,5 +1,5 @@
 ; REQUIRES: x86_64-linux
-; RUN: opt < %s -simplifycfg -S -o %t
+; RUN: opt < %s -passes=simplifycfg -S -o %t
 ; RUN: FileCheck %s < %t
 
 ; Test to make sure the dangling probe is gone.

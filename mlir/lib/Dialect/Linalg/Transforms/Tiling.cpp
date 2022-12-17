@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -410,152 +411,6 @@ linalg::tileToForeachThreadOpUsingTileSizes(RewriterBase &b, TilingInterface op,
                                    /*omitTileOffsetBoundsCheck=*/true);
 }
 
-FailureOr<linalg::ForeachThreadReductionTilingResult>
-linalg::tileReductionUsingForeachThread(RewriterBase &b,
-                                        PartialReductionOpInterface op,
-                                        ArrayRef<OpFoldResult> numThreads,
-                                        Optional<ArrayAttr> mapping) {
-  Location loc = op.getLoc();
-  OpBuilder::InsertionGuard g(b);
-  // Ops implementing PartialReductionOpInterface are expected to implement
-  // TilingInterface.
-  auto tilingInterfaceOp = cast<TilingInterface>(op.getOperation());
-  SmallVector<Range> iterationDomain = tilingInterfaceOp.getIterationDomain(b);
-  if (op->getNumResults() != 1)
-    return b.notifyMatchFailure(
-        op, "don't support ops with multiple results for now");
-  SmallVector<utils::IteratorType> iterators =
-      tilingInterfaceOp.getLoopIteratorTypes();
-  SmallVector<unsigned> redDims;
-  cast<linalg::LinalgOp>(op.getOperation()).getReductionDims(redDims);
-  if (redDims.size() != 1)
-    return b.notifyMatchFailure(
-        op, "only support ops with one reduction dimension.");
-  int reductionDim = static_cast<int>(redDims.front());
-  // 1. create the inital tensor value.
-  FailureOr<Operation *> identityTensor =
-      op.generateInitialTensorForPartialReduction(b, loc, numThreads,
-                                                  reductionDim);
-  if (failed(identityTensor))
-    return b.notifyMatchFailure(op,
-                                "cannot create a tensor of identity value.");
-
-  // Gather destination tensors.
-  SmallVector<Value> dest;
-  if (failed(tensor::getOrCreateDestinations(b, loc, op, dest)))
-    return b.notifyMatchFailure(op, "failed to get destination tensors");
-
-  Operation *tiledOp = nullptr;
-
-  SmallVector<OpFoldResult> nonZeroNumThreads =
-      llvm::to_vector(llvm::make_filter_range(numThreads, [](OpFoldResult ofr) {
-        return !isConstantIntValue(ofr, 0);
-      }));
-  SmallVector<Value> materializedNonZeroNumThreads =
-      llvm::to_vector(llvm::map_range(nonZeroNumThreads, [&](OpFoldResult ofr) {
-        return getValueOrCreateConstantIndexOp(b, loc, ofr);
-      }));
-
-  // 2. Create the ForeachThreadOp with an empty region.
-  scf::ForeachThreadOp foreachThreadOp = b.create<scf::ForeachThreadOp>(
-      loc, identityTensor.value()->getResults(),
-      ValueRange(materializedNonZeroNumThreads), mapping);
-
-  // 3. calculate the tile offsets and sizes.
-  b.setInsertionPointToStart(foreachThreadOp.getBody(0));
-  SmallVector<OpFoldResult> tiledOffsets, tiledSizes;
-  calculateTileOffsetsAndSizes(
-      b, loc, foreachThreadOp, numThreads, iterationDomain,
-      /*omitTileOffsetBoundsCheck =*/false,
-      /*nominalTileSizes=*/std::nullopt, tiledOffsets, tiledSizes);
-
-  // 4. Clone the tileable op and update its destination operands to use the
-  // output bbArgs of the ForeachThreadOp.
-  ArrayRef<BlockArgument> destBbArgs =
-      foreachThreadOp.getOutputBlockArguments();
-  Operation *clonedOp = b.clone(*op.getOperation());
-  auto destinationStyleOp = cast<DestinationStyleOpInterface>(clonedOp);
-  for (OpOperand *outOperand : destinationStyleOp.getDpsInitOperands()) {
-    auto *it = llvm::find(dest, outOperand->get());
-    assert(it != dest.end() && "dest operand not found in dest");
-    unsigned destNum = std::distance(dest.begin(), it);
-    SmallVector<OpFoldResult> strides(numThreads.size(), b.getIndexAttr(1));
-    SmallVector<OpFoldResult> outOffsets(numThreads.size(), b.getIndexAttr(0));
-    SmallVector<OpFoldResult> sizes = tiledSizes;
-    sizes[reductionDim] = b.getIndexAttr(1);
-    outOffsets[reductionDim] = foreachThreadOp.getThreadIndices().front();
-    // TODO: use SubsetExtractOpInterface once it is available.
-    Value patial = b.create<tensor::ExtractSliceOp>(
-        loc, outOperand->get().getType().cast<RankedTensorType>(),
-        destBbArgs[destNum], outOffsets, sizes, strides);
-    outOperand->set(patial);
-  }
-
-  // 5. Tile the cloned op and delete the clone.
-  SmallVector<Operation *> tiledOps =
-      cast<TilingInterface>(clonedOp).getTiledImplementation(b, tiledOffsets,
-                                                             tiledSizes);
-  b.eraseOp(clonedOp);
-  assert(tiledOps.size() == 1 && "expected a single produced tiled op");
-  tiledOp = tiledOps.front();
-
-  // 6. Insert the partial reductions back into a new tensor.
-  auto tiledInterfaceOp = dyn_cast<TilingInterface>(tiledOp);
-  assert(tiledInterfaceOp && "Tiled op does not implement TilingInterface");
-  OpBuilder::InsertPoint insertPt = b.saveInsertionPoint();
-  for (auto it : llvm::zip(llvm::seq(unsigned(0), unsigned(dest.size())),
-                           tiledInterfaceOp->getResults(), destBbArgs)) {
-    b.setInsertionPoint(insertPt.getBlock(), insertPt.getPoint());
-    SmallVector<OpFoldResult> resultOffsets, resultSizes;
-    if (failed(tilingInterfaceOp.getResultTilePosition(
-            b, std::get<0>(it), tiledOffsets, tiledSizes, resultOffsets,
-            resultSizes)))
-      return op->emitOpError("output offsets couldn't be calculated");
-    SmallVector<OpFoldResult> resultOffsetsRank, resultSizesRank;
-    int64_t offIdx = 0;
-    int64_t sizeIdx = 0;
-    for (int64_t i = 0, e = numThreads.size(); i < e; ++i) {
-      if (i == reductionDim) {
-        resultOffsetsRank.push_back(foreachThreadOp.getThreadIndices().front());
-        resultSizesRank.push_back(b.getIndexAttr(1));
-        continue;
-      }
-      resultOffsetsRank.push_back(resultOffsets[offIdx++]);
-      resultSizesRank.push_back(resultSizes[sizeIdx++]);
-    }
-
-    SmallVector<OpFoldResult> strides(resultSizesRank.size(),
-                                      b.getIndexAttr(1));
-    b.setInsertionPointToEnd(foreachThreadOp.getTerminator().getBody());
-    b.create<tensor::ParallelInsertSliceOp>(loc, std::get<1>(it),
-                                            std::get<2>(it), resultOffsetsRank,
-                                            resultSizesRank, strides);
-  }
-  // 7. Merge the partial reductions.
-  b.setInsertionPointAfter(foreachThreadOp);
-  Operation *mergeOp =
-      op.mergeReductions(b, loc, foreachThreadOp->getResults(), reductionDim);
-  b.replaceOp(op, mergeOp->getResults());
-  ForeachThreadReductionTilingResult results;
-  results.initialOp = identityTensor.value();
-  results.loops = foreachThreadOp;
-  results.parallelTiledOp = tiledOp;
-  results.mergeOp = mergeOp;
-  return results;
-}
-
-// Insert a tile `source` into the destination tensor `dest`. The position at
-// which the tile is inserted (as well as size of tile) is taken from a given
-// ExtractSliceOp `sliceOp`.
-static Value insertSliceIntoTensor(OpBuilder &b, Location loc,
-                                   tensor::ExtractSliceOp sliceOp, Value source,
-                                   Value dest) {
-  return b.create<tensor::InsertSliceOp>(
-      loc, sliceOp.getSource().getType(), source, dest, sliceOp.getOffsets(),
-      sliceOp.getSizes(), sliceOp.getStrides(), sliceOp.getStaticOffsets(),
-      sliceOp.getStaticSizes(), sliceOp.getStaticStrides());
-}
-
 template <typename LoopTy>
 static FailureOr<TiledLinalgOp>
 tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
@@ -705,6 +560,165 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
 
   return TiledLinalgOp{
       res, loops, outermostLoop ? outermostLoop->getResults() : tensorResults};
+}
+
+FailureOr<linalg::ForeachThreadReductionTilingResult>
+linalg::tileReductionUsingForeachThread(RewriterBase &b,
+                                        PartialReductionOpInterface op,
+                                        ArrayRef<OpFoldResult> numThreads,
+                                        ArrayRef<OpFoldResult> tileSizes,
+                                        Optional<ArrayAttr> mapping) {
+  Location loc = op.getLoc();
+  OpBuilder::InsertionGuard g(b);
+  // Ops implementing PartialReductionOpInterface are expected to implement
+  // TilingInterface.
+  auto tilingInterfaceOp = cast<TilingInterface>(op.getOperation());
+  SmallVector<Range> iterationDomain = tilingInterfaceOp.getIterationDomain(b);
+  if (op->getNumResults() != 1)
+    return b.notifyMatchFailure(
+        op, "don't support ops with multiple results for now");
+  SmallVector<utils::IteratorType> iterators =
+      tilingInterfaceOp.getLoopIteratorTypes();
+  SmallVector<unsigned> redDims;
+  cast<linalg::LinalgOp>(op.getOperation()).getReductionDims(redDims);
+  if (redDims.size() != 1)
+    return b.notifyMatchFailure(
+        op, "only support ops with one reduction dimension.");
+  if (!tileSizes.empty() && tileSizes.size() != numThreads.size())
+    return b.notifyMatchFailure(op, "if tile sizes are present it must have as "
+                                    "many elements as number of threads");
+  int reductionDim = static_cast<int>(redDims.front());
+  // 1. create the inital tensor value.
+  FailureOr<Operation *> identityTensor =
+      op.generateInitialTensorForPartialReduction(b, loc, numThreads,
+                                                  reductionDim);
+  if (failed(identityTensor))
+    return b.notifyMatchFailure(op,
+                                "cannot create a tensor of identity value.");
+
+  // Gather destination tensors.
+  SmallVector<Value> dest;
+  if (failed(tensor::getOrCreateDestinations(b, loc, op, dest)))
+    return b.notifyMatchFailure(op, "failed to get destination tensors");
+
+  Operation *tiledOp = nullptr;
+
+  SmallVector<OpFoldResult> nonZeroNumThreads =
+      llvm::to_vector(llvm::make_filter_range(numThreads, [](OpFoldResult ofr) {
+        return !isConstantIntValue(ofr, 0);
+      }));
+  SmallVector<Value> materializedNonZeroNumThreads =
+      getAsValues(b, loc, nonZeroNumThreads);
+
+  // 2. Create the ForeachThreadOp with an empty region.
+  scf::ForeachThreadOp foreachThreadOp = b.create<scf::ForeachThreadOp>(
+      loc, identityTensor.value()->getResults(),
+      ValueRange(materializedNonZeroNumThreads), mapping);
+
+  // 3. calculate the tile offsets and sizes.
+  b.setInsertionPointToStart(foreachThreadOp.getBody(0));
+  SmallVector<OpFoldResult> tiledOffsets, tiledSizes;
+  calculateTileOffsetsAndSizes(
+      b, loc, foreachThreadOp, numThreads, iterationDomain,
+      /*omitTileOffsetBoundsCheck =*/false,
+      /*nominalTileSizes=*/std::nullopt, tiledOffsets, tiledSizes);
+
+  // 4. Clone the tileable op and update its destination operands to use the
+  // output bbArgs of the ForeachThreadOp.
+  ArrayRef<BlockArgument> destBbArgs =
+      foreachThreadOp.getOutputBlockArguments();
+  Operation *clonedOp = b.clone(*op.getOperation());
+  b.setInsertionPointToStart(foreachThreadOp.getBody(0));
+  auto destinationStyleOp = cast<DestinationStyleOpInterface>(clonedOp);
+  for (OpOperand *initOperand : destinationStyleOp.getDpsInitOperands()) {
+    auto *it = llvm::find(dest, initOperand->get());
+    assert(it != dest.end() && "dest operand not found in dest");
+    unsigned destNum = std::distance(dest.begin(), it);
+    SmallVector<OpFoldResult> strides(numThreads.size(), b.getIndexAttr(1));
+    SmallVector<OpFoldResult> outOffsets(numThreads.size(), b.getIndexAttr(0));
+    SmallVector<OpFoldResult> sizes = tiledSizes;
+    sizes[reductionDim] = b.getIndexAttr(1);
+    outOffsets[reductionDim] = foreachThreadOp.getThreadIndices().front();
+    // TODO: use SubsetExtractOpInterface once it is available.
+    Value patial = b.create<tensor::ExtractSliceOp>(
+        loc, initOperand->get().getType().cast<RankedTensorType>(),
+        destBbArgs[destNum], outOffsets, sizes, strides);
+    initOperand->set(patial);
+  }
+  b.setInsertionPoint(clonedOp);
+
+  // 5. Tile the cloned op and delete the clone.
+  if (tileSizes.empty()) {
+    SmallVector<Operation *> tiledOps =
+        cast<TilingInterface>(clonedOp).getTiledImplementation(b, tiledOffsets,
+                                                               tiledSizes);
+    assert(tiledOps.size() == 1 && "expected a single produced tiled op");
+    tiledOp = tiledOps.front();
+  } else {
+    LinalgTilingOptions options;
+    auto tiled = tileLinalgOpImpl<scf::ForOp>(b, cast<LinalgOp>(clonedOp),
+                                              tileSizes, options);
+    SmallVector<Value> ids = foreachThreadOp.getThreadIndices();
+    mapLoopToProcessorIds(cast<scf::ForOp>(tiled->loops.back()), ids,
+                          materializedNonZeroNumThreads);
+    assert(tiled->loops.size() == 1 && "expected a single produced loop");
+    tiledOp = tiled->loops.front();
+  }
+  b.eraseOp(clonedOp);
+
+  // 6. Insert the partial reductions back into a new tensor.
+  b.setInsertionPointAfter(tiledOp);
+  OpBuilder::InsertPoint insertPt = b.saveInsertionPoint();
+  for (auto [index, result, bbArg] :
+       llvm::zip(llvm::seq<unsigned>(0, dest.size()), tiledOp->getResults(),
+                 destBbArgs)) {
+    b.setInsertionPoint(insertPt.getBlock(), insertPt.getPoint());
+    SmallVector<OpFoldResult> resultOffsets, resultSizes;
+    if (failed(tilingInterfaceOp.getResultTilePosition(
+            b, index, tiledOffsets, tiledSizes, resultOffsets, resultSizes)))
+      return op->emitOpError("output offsets couldn't be calculated");
+    SmallVector<OpFoldResult> resultOffsetsRank, resultSizesRank;
+    int64_t offIdx = 0;
+    int64_t sizeIdx = 0;
+    for (int64_t i = 0, e = numThreads.size(); i < e; ++i) {
+      if (i == reductionDim) {
+        resultOffsetsRank.push_back(foreachThreadOp.getThreadIndices().front());
+        resultSizesRank.push_back(b.getIndexAttr(1));
+        continue;
+      }
+      resultOffsetsRank.push_back(resultOffsets[offIdx++]);
+      resultSizesRank.push_back(resultSizes[sizeIdx++]);
+    }
+
+    SmallVector<OpFoldResult> strides(resultSizesRank.size(),
+                                      b.getIndexAttr(1));
+    b.setInsertionPointToEnd(foreachThreadOp.getTerminator().getBody());
+    b.create<tensor::ParallelInsertSliceOp>(
+        loc, result, bbArg, resultOffsetsRank, resultSizesRank, strides);
+  }
+  // 7. Merge the partial reductions.
+  b.setInsertionPointAfter(foreachThreadOp);
+  Operation *mergeOp =
+      op.mergeReductions(b, loc, foreachThreadOp->getResults(), reductionDim);
+  b.replaceOp(op, mergeOp->getResults());
+  ForeachThreadReductionTilingResult results;
+  results.initialOp = identityTensor.value();
+  results.loops = foreachThreadOp;
+  results.parallelTiledOp = tiledOp;
+  results.mergeOp = mergeOp;
+  return results;
+}
+
+// Insert a tile `source` into the destination tensor `dest`. The position at
+// which the tile is inserted (as well as size of tile) is taken from a given
+// ExtractSliceOp `sliceOp`.
+static Value insertSliceIntoTensor(OpBuilder &b, Location loc,
+                                   tensor::ExtractSliceOp sliceOp, Value source,
+                                   Value dest) {
+  return b.create<tensor::InsertSliceOp>(
+      loc, sliceOp.getSource().getType(), source, dest, sliceOp.getOffsets(),
+      sliceOp.getSizes(), sliceOp.getStrides(), sliceOp.getStaticOffsets(),
+      sliceOp.getStaticSizes(), sliceOp.getStaticStrides());
 }
 
 template <typename LoopTy>

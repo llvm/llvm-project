@@ -73,30 +73,30 @@ func.func @index_scalar_srem(%lhs: index, %rhs: index) {
 }
 
 // Check integer add-with-carry conversions.
-// CHECK-LABEL: @int32_scalar_addui_carry
+// CHECK-LABEL: @int32_scalar_addui_extended
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
-func.func @int32_scalar_addui_carry(%lhs: i32, %rhs: i32) -> (i32, i1) {
+func.func @int32_scalar_addui_extended(%lhs: i32, %rhs: i32) -> (i32, i1) {
   // CHECK-NEXT: %[[IAC:.+]] = spirv.IAddCarry %[[LHS]], %[[RHS]] : !spirv.struct<(i32, i32)>
   // CHECK-DAG:  %[[SUM:.+]] = spirv.CompositeExtract %[[IAC]][0 : i32] : !spirv.struct<(i32, i32)>
   // CHECK-DAG:  %[[C0:.+]]  = spirv.CompositeExtract %[[IAC]][1 : i32] : !spirv.struct<(i32, i32)>
   // CHECK-DAG:  %[[ONE:.+]] = spirv.Constant 1 : i32
   // CHECK-NEXT: %[[C1:.+]]  = spirv.IEqual %[[C0]], %[[ONE]] : i32
   // CHECK-NEXT: return %[[SUM]], %[[C1]] : i32, i1
-  %sum, %carry = arith.addui_carry %lhs, %rhs: i32, i1
-  return %sum, %carry : i32, i1
+  %sum, %overflow = arith.addui_extended %lhs, %rhs: i32, i1
+  return %sum, %overflow : i32, i1
 }
 
-// CHECK-LABEL: @int32_vector_addui_carry
+// CHECK-LABEL: @int32_vector_addui_extended
 // CHECK-SAME: (%[[LHS:.+]]: vector<4xi32>, %[[RHS:.+]]: vector<4xi32>)
-func.func @int32_vector_addui_carry(%lhs: vector<4xi32>, %rhs: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
+func.func @int32_vector_addui_extended(%lhs: vector<4xi32>, %rhs: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
   // CHECK-NEXT: %[[IAC:.+]] = spirv.IAddCarry %[[LHS]], %[[RHS]] : !spirv.struct<(vector<4xi32>, vector<4xi32>)>
   // CHECK-DAG:  %[[SUM:.+]] = spirv.CompositeExtract %[[IAC]][0 : i32] : !spirv.struct<(vector<4xi32>, vector<4xi32>)>
   // CHECK-DAG:  %[[C0:.+]]  = spirv.CompositeExtract %[[IAC]][1 : i32] : !spirv.struct<(vector<4xi32>, vector<4xi32>)>
   // CHECK-DAG:  %[[ONE:.+]] = spirv.Constant dense<1> : vector<4xi32>
   // CHECK-NEXT: %[[C1:.+]]  = spirv.IEqual %[[C0]], %[[ONE]] : vector<4xi32>
   // CHECK-NEXT: return %[[SUM]], %[[C1]] : vector<4xi32>, vector<4xi1>
-  %sum, %carry = arith.addui_carry %lhs, %rhs: vector<4xi32>, vector<4xi1>
-  return %sum, %carry : vector<4xi32>, vector<4xi1>
+  %sum, %overflow = arith.addui_extended %lhs, %rhs: vector<4xi32>, vector<4xi1>
+  return %sum, %overflow : vector<4xi32>, vector<4xi1>
 }
 
 // Check float unary operation conversions.

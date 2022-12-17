@@ -652,6 +652,10 @@ def SI_INDIRECT_SRC_V1 : SI_INDIRECT_SRC<VGPR_32>;
 def SI_INDIRECT_SRC_V2 : SI_INDIRECT_SRC<VReg_64>;
 def SI_INDIRECT_SRC_V4 : SI_INDIRECT_SRC<VReg_128>;
 def SI_INDIRECT_SRC_V8 : SI_INDIRECT_SRC<VReg_256>;
+def SI_INDIRECT_SRC_V9 : SI_INDIRECT_SRC<VReg_288>;
+def SI_INDIRECT_SRC_V10 : SI_INDIRECT_SRC<VReg_320>;
+def SI_INDIRECT_SRC_V11 : SI_INDIRECT_SRC<VReg_352>;
+def SI_INDIRECT_SRC_V12 : SI_INDIRECT_SRC<VReg_384>;
 def SI_INDIRECT_SRC_V16 : SI_INDIRECT_SRC<VReg_512>;
 def SI_INDIRECT_SRC_V32 : SI_INDIRECT_SRC<VReg_1024>;
 
@@ -659,6 +663,10 @@ def SI_INDIRECT_DST_V1 : SI_INDIRECT_DST<VGPR_32>;
 def SI_INDIRECT_DST_V2 : SI_INDIRECT_DST<VReg_64>;
 def SI_INDIRECT_DST_V4 : SI_INDIRECT_DST<VReg_128>;
 def SI_INDIRECT_DST_V8 : SI_INDIRECT_DST<VReg_256>;
+def SI_INDIRECT_DST_V9 : SI_INDIRECT_DST<VReg_288>;
+def SI_INDIRECT_DST_V10 : SI_INDIRECT_DST<VReg_320>;
+def SI_INDIRECT_DST_V11 : SI_INDIRECT_DST<VReg_352>;
+def SI_INDIRECT_DST_V12 : SI_INDIRECT_DST<VReg_384>;
 def SI_INDIRECT_DST_V16 : SI_INDIRECT_DST<VReg_512>;
 def SI_INDIRECT_DST_V32 : SI_INDIRECT_DST<VReg_1024>;
 
@@ -700,6 +708,10 @@ def V_INDIRECT_REG_WRITE_MOVREL_B32_V3 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V4 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_128>;
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V5 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_160>;
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V8 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_256>;
+def V_INDIRECT_REG_WRITE_MOVREL_B32_V9 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_288>;
+def V_INDIRECT_REG_WRITE_MOVREL_B32_V10 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_320>;
+def V_INDIRECT_REG_WRITE_MOVREL_B32_V11 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_352>;
+def V_INDIRECT_REG_WRITE_MOVREL_B32_V12 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_384>;
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V16 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_512>;
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V32 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_1024>;
 
@@ -737,6 +749,10 @@ def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V3 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VR
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V4 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_128>;
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V5 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_160>;
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V8 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_256>;
+def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V9 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_288>;
+def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V10 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_320>;
+def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V11 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_352>;
+def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V12 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_384>;
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V16 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_512>;
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V32 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_1024>;
 
@@ -753,6 +769,10 @@ def V_INDIRECT_REG_READ_GPR_IDX_B32_V3 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V4 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_128>;
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V5 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_160>;
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V8 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_256>;
+def V_INDIRECT_REG_READ_GPR_IDX_B32_V9 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_288>;
+def V_INDIRECT_REG_READ_GPR_IDX_B32_V10 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_320>;
+def V_INDIRECT_REG_READ_GPR_IDX_B32_V11 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_352>;
+def V_INDIRECT_REG_READ_GPR_IDX_B32_V12 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_384>;
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V16 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_512>;
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V32 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_1024>;
 
@@ -793,6 +813,10 @@ defm SI_SPILL_S160 : SI_SPILL_SGPR <SReg_160>;
 defm SI_SPILL_S192 : SI_SPILL_SGPR <SReg_192>;
 defm SI_SPILL_S224 : SI_SPILL_SGPR <SReg_224>;
 defm SI_SPILL_S256 : SI_SPILL_SGPR <SReg_256>;
+defm SI_SPILL_S288 : SI_SPILL_SGPR <SReg_288>;
+defm SI_SPILL_S320 : SI_SPILL_SGPR <SReg_320>;
+defm SI_SPILL_S352 : SI_SPILL_SGPR <SReg_352>;
+defm SI_SPILL_S384 : SI_SPILL_SGPR <SReg_384>;
 defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
 defm SI_SPILL_S1024 : SI_SPILL_SGPR <SReg_1024>;
 
@@ -849,6 +873,10 @@ defm SI_SPILL_V160 : SI_SPILL_VGPR <VReg_160>;
 defm SI_SPILL_V192 : SI_SPILL_VGPR <VReg_192>;
 defm SI_SPILL_V224 : SI_SPILL_VGPR <VReg_224>;
 defm SI_SPILL_V256 : SI_SPILL_VGPR <VReg_256>;
+defm SI_SPILL_V288 : SI_SPILL_VGPR <VReg_288>;
+defm SI_SPILL_V320 : SI_SPILL_VGPR <VReg_320>;
+defm SI_SPILL_V352 : SI_SPILL_VGPR <VReg_352>;
+defm SI_SPILL_V384 : SI_SPILL_VGPR <VReg_384>;
 defm SI_SPILL_V512 : SI_SPILL_VGPR <VReg_512>;
 defm SI_SPILL_V1024 : SI_SPILL_VGPR <VReg_1024>;
 
@@ -860,6 +888,10 @@ defm SI_SPILL_A160 : SI_SPILL_VGPR <AReg_160, 1>;
 defm SI_SPILL_A192 : SI_SPILL_VGPR <AReg_192, 1>;
 defm SI_SPILL_A224 : SI_SPILL_VGPR <AReg_224, 1>;
 defm SI_SPILL_A256 : SI_SPILL_VGPR <AReg_256, 1>;
+defm SI_SPILL_A288 : SI_SPILL_VGPR <AReg_288, 1>;
+defm SI_SPILL_A320 : SI_SPILL_VGPR <AReg_320, 1>;
+defm SI_SPILL_A352 : SI_SPILL_VGPR <AReg_352, 1>;
+defm SI_SPILL_A384 : SI_SPILL_VGPR <AReg_384, 1>;
 defm SI_SPILL_A512 : SI_SPILL_VGPR <AReg_512, 1>;
 defm SI_SPILL_A1024 : SI_SPILL_VGPR <AReg_1024, 1>;
 
@@ -871,6 +903,10 @@ defm SI_SPILL_AV160 : SI_SPILL_VGPR <AV_160, 1>;
 defm SI_SPILL_AV192 : SI_SPILL_VGPR <AV_192, 1>;
 defm SI_SPILL_AV224 : SI_SPILL_VGPR <AV_224, 1>;
 defm SI_SPILL_AV256 : SI_SPILL_VGPR <AV_256, 1>;
+defm SI_SPILL_AV288 : SI_SPILL_VGPR <AV_288, 1>;
+defm SI_SPILL_AV320 : SI_SPILL_VGPR <AV_320, 1>;
+defm SI_SPILL_AV352 : SI_SPILL_VGPR <AV_352, 1>;
+defm SI_SPILL_AV384 : SI_SPILL_VGPR <AV_384, 1>;
 defm SI_SPILL_AV512 : SI_SPILL_VGPR <AV_512, 1>;
 defm SI_SPILL_AV1024 : SI_SPILL_VGPR <AV_1024, 1>;
 
@@ -1248,6 +1284,70 @@ foreach Index = 0-7 in {
   >;
 }
 
+foreach Index = 0-8 in {
+  def Extract_Element_v9i32_#Index : Extract_Element <
+    i32, v9i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v9i32_#Index : Insert_Element <
+    i32, v9i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+
+  def Extract_Element_v9f32_#Index : Extract_Element <
+    f32, v9f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v9f32_#Index : Insert_Element <
+    f32, v9f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+}
+
+foreach Index = 0-9 in {
+  def Extract_Element_v10i32_#Index : Extract_Element <
+    i32, v10i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v10i32_#Index : Insert_Element <
+    i32, v10i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+
+  def Extract_Element_v10f32_#Index : Extract_Element <
+    f32, v10f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v10f32_#Index : Insert_Element <
+    f32, v10f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+}
+
+foreach Index = 0-10 in {
+  def Extract_Element_v11i32_#Index : Extract_Element <
+    i32, v11i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v11i32_#Index : Insert_Element <
+    i32, v11i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+
+  def Extract_Element_v11f32_#Index : Extract_Element <
+    f32, v11f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v11f32_#Index : Insert_Element <
+    f32, v11f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+}
+
+foreach Index = 0-11 in {
+  def Extract_Element_v12i32_#Index : Extract_Element <
+    i32, v12i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v12i32_#Index : Insert_Element <
+    i32, v12i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+
+  def Extract_Element_v12f32_#Index : Extract_Element <
+    f32, v12f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v12f32_#Index : Insert_Element <
+    f32, v12f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+}
+
 foreach Index = 0-15 in {
   def Extract_Element_v16i32_#Index : Extract_Element <
     i32, v16i32, Index, !cast<SubRegIndex>(sub#Index)
@@ -1504,6 +1604,30 @@ def : BitConvert <v4i64, v16f16, VReg_256>;
 def : BitConvert <v4i64, v16i16, VReg_256>;
 def : BitConvert <v4f64, v16f16, VReg_256>;
 def : BitConvert <v4f64, v16i16, VReg_256>;
+
+// 288-bit bitcast
+def : BitConvert <v9i32, v9f32, SReg_288>;
+def : BitConvert <v9f32, v9i32, SReg_288>;
+def : BitConvert <v9i32, v9f32, VReg_288>;
+def : BitConvert <v9f32, v9i32, VReg_288>;
+
+// 320-bit bitcast
+def : BitConvert <v10i32, v10f32, SReg_320>;
+def : BitConvert <v10f32, v10i32, SReg_320>;
+def : BitConvert <v10i32, v10f32, VReg_320>;
+def : BitConvert <v10f32, v10i32, VReg_320>;
+
+// 320-bit bitcast
+def : BitConvert <v11i32, v11f32, SReg_352>;
+def : BitConvert <v11f32, v11i32, SReg_352>;
+def : BitConvert <v11i32, v11f32, VReg_352>;
+def : BitConvert <v11f32, v11i32, VReg_352>;
+
+// 384-bit bitcast
+def : BitConvert <v12i32, v12f32, SReg_384>;
+def : BitConvert <v12f32, v12i32, SReg_384>;
+def : BitConvert <v12i32, v12f32, VReg_384>;
+def : BitConvert <v12f32, v12i32, VReg_384>;
 
 // 512-bit bitcast
 def : BitConvert <v16i32, v16f32, VReg_512>;
@@ -2045,12 +2169,20 @@ multiclass SI_INDIRECT_Pattern <ValueType vt, ValueType eltvt, string VecSize> {
 defm : SI_INDIRECT_Pattern <v2f32, f32, "V2">;
 defm : SI_INDIRECT_Pattern <v4f32, f32, "V4">;
 defm : SI_INDIRECT_Pattern <v8f32, f32, "V8">;
+defm : SI_INDIRECT_Pattern <v9f32, f32, "V9">;
+defm : SI_INDIRECT_Pattern <v10f32, f32, "V10">;
+defm : SI_INDIRECT_Pattern <v11f32, f32, "V11">;
+defm : SI_INDIRECT_Pattern <v12f32, f32, "V12">;
 defm : SI_INDIRECT_Pattern <v16f32, f32, "V16">;
 defm : SI_INDIRECT_Pattern <v32f32, f32, "V32">;
 
 defm : SI_INDIRECT_Pattern <v2i32, i32, "V2">;
 defm : SI_INDIRECT_Pattern <v4i32, i32, "V4">;
 defm : SI_INDIRECT_Pattern <v8i32, i32, "V8">;
+defm : SI_INDIRECT_Pattern <v9i32, i32, "V9">;
+defm : SI_INDIRECT_Pattern <v10i32, i32, "V10">;
+defm : SI_INDIRECT_Pattern <v11i32, i32, "V11">;
+defm : SI_INDIRECT_Pattern <v12i32, i32, "V12">;
 defm : SI_INDIRECT_Pattern <v16i32, i32, "V16">;
 defm : SI_INDIRECT_Pattern <v32i32, i32, "V32">;
 
@@ -3119,26 +3251,39 @@ multiclass IntMed3Pat<Instruction med3Inst,
 defm : IntMed3Pat<V_MED3_I32_e64, smin, smax>;
 defm : IntMed3Pat<V_MED3_U32_e64, umin, umax>;
 
-// This matches 16 permutations of
-// max(min(x, y), min(max(x, y), z))
-class FPMed3Pat<ValueType vt,
-                //SDPatternOperator max, SDPatternOperator min,
-                Instruction med3Inst> : GCNPat<
-  (fmaxnum_like (fminnum_like (VOP3Mods_nnan vt:$src0, i32:$src0_mods),
-                              (VOP3Mods_nnan vt:$src1, i32:$src1_mods)),
-           (fminnum_like (fmaxnum_like (VOP3Mods_nnan vt:$src0, i32:$src0_mods),
-                                       (VOP3Mods_nnan vt:$src1, i32:$src1_mods)),
-                         (vt (VOP3Mods_nnan vt:$src2, i32:$src2_mods)))),
-  (med3Inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2, DSTCLAMP.NONE, DSTOMOD.NONE)
->;
+multiclass FPMed3Pat<ValueType vt,
+                Instruction med3Inst> {
+  // This matches 16 permutations of max(min(x, y), min(max(x, y), z))
+  def : GCNPat<
+    (fmaxnum_like_nnan
+      (fminnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
+                    (VOP3Mods vt:$src1, i32:$src1_mods)),
+      (fminnum_like (fmaxnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
+                                  (VOP3Mods vt:$src1, i32:$src1_mods)),
+                    (vt (VOP3Mods vt:$src2, i32:$src2_mods)))),
+    (med3Inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2,
+              DSTCLAMP.NONE, DSTOMOD.NONE)>;
+
+
+  // This matches 16 permutations of min(max(x, y), max(min(x, y), z))
+  def : GCNPat<
+    (fminnum_like_nnan
+      (fmaxnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
+                    (VOP3Mods vt:$src1, i32:$src1_mods)),
+      (fmaxnum_like (fminnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
+                                  (VOP3Mods vt:$src1, i32:$src1_mods)),
+                    (vt (VOP3Mods vt:$src2, i32:$src2_mods)))),
+    (med3Inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2,
+              DSTCLAMP.NONE, DSTOMOD.NONE)>;
+}
 
 class FP16Med3Pat<ValueType vt,
                 Instruction med3Inst> : GCNPat<
-  (fmaxnum_like (fminnum_like (VOP3Mods_nnan vt:$src0, i32:$src0_mods),
-                                     (VOP3Mods_nnan vt:$src1, i32:$src1_mods)),
-                (fminnum_like (fmaxnum_like (VOP3Mods_nnan vt:$src0, i32:$src0_mods),
-                                            (VOP3Mods_nnan vt:$src1, i32:$src1_mods)),
-                              (vt (VOP3Mods_nnan vt:$src2, i32:$src2_mods)))),
+  (fmaxnum_like_nnan (fminnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
+                                   (VOP3Mods vt:$src1, i32:$src1_mods)),
+           (fminnum_like (fmaxnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
+                                       (VOP3Mods vt:$src1, i32:$src1_mods)),
+                         (vt (VOP3Mods vt:$src2, i32:$src2_mods)))),
   (med3Inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2, DSTCLAMP.NONE)
 >;
 
@@ -3162,7 +3307,7 @@ multiclass Int16Med3Pat<Instruction med3Inst,
 >;
 }
 
-def : FPMed3Pat<f32, V_MED3_F32_e64>;
+defm : FPMed3Pat<f32, V_MED3_F32_e64>;
 
 class
 IntMinMaxPat<Instruction minmaxInst, SDPatternOperator min_or_max,

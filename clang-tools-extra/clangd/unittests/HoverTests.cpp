@@ -15,7 +15,6 @@
 #include "index/MemIndex.h"
 #include "clang/AST/Attr.h"
 #include "clang/Index/IndexSymbol.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
 
 #include "gmock/gmock.h"

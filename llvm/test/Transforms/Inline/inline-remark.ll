@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -inline-remark-attribute --inline-threshold=0 -S | FileCheck %s
+; RUN: opt < %s -passes=inline -inline-remark-attribute --inline-threshold=0 -S | FileCheck %s
 
 ; Test that the inliner adds inline remark attributes to non-inlined callsites.
 
@@ -37,7 +37,7 @@ define void @noop() {
 }
 
 ;; Test 2 - Printed InlineResult messages are followed by InlineCost.
-define void @test2(i8*) {
+define void @test2(ptr) {
 ; CHECK-LABEL: @test2
 ; CHECK-NEXT: call void @noop() [[ATTR3:#[0-9]+]] [ "CUSTOM_OPERAND_BUNDLE"() ]
 ; CHECK-NEXT: ret void

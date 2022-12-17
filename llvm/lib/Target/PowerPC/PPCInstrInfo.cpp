@@ -251,7 +251,10 @@ void PPCInstrInfo::setSpecialOperandAttr(MachineInstr &MI,
 // reduce the critical path. Mostly, this means floating-point operations,
 // because they have high latencies(>=5) (compared to other operations, such as
 // and/or, which are also associative and commutative, but have low latencies).
-bool PPCInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
+bool PPCInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
+                                               bool Invert) const {
+  if (Invert)
+    return false;
   switch (Inst.getOpcode()) {
   // Floating point:
   // FP Add:

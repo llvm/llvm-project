@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-fusion -loop-fusion-peel-max-count=3 < %s | FileCheck %s
+; RUN: opt -S -passes=loop-fusion -loop-fusion-peel-max-count=3 < %s | FileCheck %s
 
 ; Tests whether we can fuse two loops together if they have constant but a
 ; different tripcount.

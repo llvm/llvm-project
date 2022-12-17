@@ -13,11 +13,10 @@
 #ifndef LLVM_ASMPARSER_PARSER_H
 #define LLVM_ASMPARSER_PARSER_H
 
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
+#include <optional>
 
 namespace llvm {
 
@@ -30,7 +29,7 @@ struct SlotMapping;
 class SMDiagnostic;
 class Type;
 
-typedef llvm::function_ref<Optional<std::string>(StringRef)>
+typedef llvm::function_ref<std::optional<std::string>(StringRef)>
     DataLayoutCallbackTy;
 
 /// This function is a main interface to the LLVM Assembly Parser. It parses

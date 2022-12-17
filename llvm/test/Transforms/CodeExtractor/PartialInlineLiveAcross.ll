@@ -1,4 +1,3 @@
-; RUN: opt -S  -partial-inliner -max-num-inline-blocks=2 -skip-partial-inlining-cost-analysis < %s  | FileCheck %s
 ; RUN: opt -S -passes=partial-inliner -max-num-inline-blocks=2 -skip-partial-inlining-cost-analysis < %s  | FileCheck %s
 define i32 @test(i32 %arg) local_unnamed_addr #0 {
 bb:

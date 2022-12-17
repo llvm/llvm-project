@@ -34,6 +34,8 @@ namespace llvm {
     SELECT_ICC, // Select between two values using the current ICC flags.
     SELECT_XCC, // Select between two values using the current XCC flags.
     SELECT_FCC, // Select between two values using the current FCC flags.
+    SELECT_REG, // Select between two values using the comparison of a register
+                // with zero.
 
     Hi,
     Lo, // Hi/Lo operations, typically on a global address.

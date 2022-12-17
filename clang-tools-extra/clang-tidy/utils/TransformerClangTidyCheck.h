@@ -44,8 +44,8 @@ public:
   /// \c setRule.
   ///
   /// \p MakeRule generates the rewrite rule to be used by the check, based on
-  /// the given language and clang-tidy options. It can return \c None to handle
-  /// cases where the options disable the check.
+  /// the given language and clang-tidy options. It can return \c std::nullopt
+  /// to handle cases where the options disable the check.
   ///
   /// See \c setRule for constraints on the rule.
   TransformerClangTidyCheck(

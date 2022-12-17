@@ -508,7 +508,8 @@ public:
 
   bool useMachineCombiner() const override { return true; }
 
-  bool isAssociativeAndCommutative(const MachineInstr &Inst) const override;
+  bool isAssociativeAndCommutative(const MachineInstr &Inst,
+                                   bool Invert) const override;
 
   bool hasReassociableOperands(const MachineInstr &Inst,
                                const MachineBasicBlock *MBB) const override;

@@ -9,11 +9,11 @@ define void @copy_novsrp() local_unnamed_addr {
 ; CHECK-NEXT:    xxlxor v2, v2, v2
 ; CHECK-NEXT:    xxlxor vs0, vs0, vs0
 ; CHECK-NEXT:    xxlor vs3, v2, v2
-; CHECK-NEXT:    stxv vs1, 0(0)
+; CHECK-NEXT:    stxv vs0, 0(0)
 dmblvi_entry:
   %0 = tail call <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8> zeroinitializer, <16 x i8> undef, <16 x i8> undef, <16 x i8> zeroinitializer)
   %1 = tail call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.ppc.mma.disassemble.acc(<512 x i1> %0)
-  %2 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %1, 2
+  %2 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %1, 3
   store <16 x i8> %2, ptr null, align 1
   unreachable
 }

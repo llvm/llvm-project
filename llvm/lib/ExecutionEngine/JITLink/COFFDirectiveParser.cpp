@@ -23,7 +23,7 @@ using namespace jitlink;
 #undef PREFIX
 
 // Create table mapping all options defined in COFFOptions.td
-static const opt::OptTable::Info infoTable[] = {
+static constexpr opt::OptTable::Info infoTable[] = {
 #define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
   {X1,                                                                         \
    X2,                                                                         \

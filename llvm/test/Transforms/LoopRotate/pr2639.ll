@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-deletion -loop-rotate -verify-dom-info -verify-loop-info -disable-output
+; RUN: opt < %s -passes=loop-deletion,loop-rotate -verify-dom-info -verify-loop-info -disable-output
 ; PR 2639
 
 	%struct.HexxagonMove = type { i8, i8, i32 }

@@ -61,6 +61,17 @@ void LLVMShutdown() {
   llvm_shutdown();
 }
 
+/*===-- Version query -----------------------------------------------------===*/
+
+void LLVMGetVersion(unsigned *Major, unsigned *Minor, unsigned *Patch) {
+    if (Major)
+        *Major = LLVM_VERSION_MAJOR;
+    if (Minor)
+        *Minor = LLVM_VERSION_MINOR;
+    if (Patch)
+        *Patch = LLVM_VERSION_PATCH;
+}
+
 /*===-- Error handling ----------------------------------------------------===*/
 
 char *LLVMCreateMessage(const char *Message) {

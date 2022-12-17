@@ -136,3 +136,16 @@ entry:
 ; Function Attrs: nounwind readnone
 declare i64 @llvm.ppc.scalar.extract.expq(fp128)
 
+define i32 @test_data_class_f128(fp128 %d) {
+entry:
+  %test_data_class = tail call i32 @llvm.ppc.test.data.class.f128(fp128 %d, i32 0)
+  ret i32 %test_data_class
+; CHECK-LABEL: test_data_class_f128:
+; CHECK: xststdcqp cr0, v2, 0
+; CHECK-NEXT: li r3, 0
+; CHECK-NEXT: li r4, 1
+; CHECK-NEXT: iseleq r3, r4, r3
+; CHECK-NEXT: blr
+}
+
+declare i32 @llvm.ppc.test.data.class.f128(fp128, i32 immarg)

@@ -3639,6 +3639,7 @@ static const struct Extension {
     {"ras", {AArch64::FeatureRAS}},
     {"lse", {AArch64::FeatureLSE}},
     {"predres", {AArch64::FeaturePredRes}},
+    {"predres2", {AArch64::FeatureSPECRES2}},
     {"ccdp", {AArch64::FeatureCacheDeepPersist}},
     {"mte", {AArch64::FeatureMTE}},
     {"memtag", {AArch64::FeatureMTE}},
@@ -3797,23 +3798,31 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       return TokError(Str);
     }
     createSysAlias(TLBI->Encoding, Operands, S);
-  } else if (Mnemonic == "cfp" || Mnemonic == "dvp" || Mnemonic == "cpp") {
-    const AArch64PRCTX::PRCTX *PRCTX = AArch64PRCTX::lookupPRCTXByName(Op);
-    if (!PRCTX)
+  } else if (Mnemonic == "cfp" || Mnemonic == "dvp" || Mnemonic == "cpp" || Mnemonic == "cosp") {
+
+    if (Op.lower() != "rctx")
       return TokError("invalid operand for prediction restriction instruction");
-    else if (!PRCTX->haveFeatures(getSTI().getFeatureBits())) {
-      std::string Str(
-          Mnemonic.upper() + std::string(PRCTX->Name) + " requires: ");
-      setRequiredFeatureString(PRCTX->getRequiredFeatures(), Str);
-      return TokError(Str);
-    }
-    uint16_t PRCTX_Op2 =
-      Mnemonic == "cfp" ? 4 :
-      Mnemonic == "dvp" ? 5 :
-      Mnemonic == "cpp" ? 7 :
-      0;
-    assert(PRCTX_Op2 && "Invalid mnemonic for prediction restriction instruction");
-    createSysAlias(PRCTX->Encoding << 3 | PRCTX_Op2 , Operands, S);
+
+    bool hasAll = getSTI().hasFeature(AArch64::FeatureAll);
+    bool hasPredres = hasAll || getSTI().hasFeature(AArch64::FeaturePredRes);
+    bool hasSpecres2 = hasAll || getSTI().hasFeature(AArch64::FeatureSPECRES2);
+
+    if (Mnemonic == "cosp" && !hasSpecres2)
+      return TokError("COSP requires: predres2");
+    if (!hasPredres)
+      return TokError(Mnemonic.upper() + "RCTX requires: predres");
+
+    uint16_t PRCTX_Op2 = Mnemonic == "cfp"    ? 0b100
+                         : Mnemonic == "dvp"  ? 0b101
+                         : Mnemonic == "cosp" ? 0b110
+                         : Mnemonic == "cpp"  ? 0b111
+                                              : 0;
+    assert(PRCTX_Op2 &&
+           "Invalid mnemonic for prediction restriction instruction");
+    const auto SYS_3_7_3 = 0b01101110011; // op=3, CRn=7, CRm=3
+    const auto Encoding = SYS_3_7_3 << 3 | PRCTX_Op2;
+
+    createSysAlias(Encoding, Operands, S);
   }
 
   Lex(); // Eat operand.
@@ -5080,7 +5089,7 @@ bool AArch64AsmParser::ParseInstruction(ParseInstructionInfo &Info,
   // IC, DC, AT, TLBI and Prediction invalidation instructions are aliases for
   // the SYS instruction.
   if (Head == "ic" || Head == "dc" || Head == "at" || Head == "tlbi" ||
-      Head == "cfp" || Head == "dvp" || Head == "cpp")
+      Head == "cfp" || Head == "dvp" || Head == "cpp" || Head == "cosp")
     return parseSysAlias(Head, NameLoc, Operands);
 
   // TLBIP instructions are aliases for the SYSP instruction.

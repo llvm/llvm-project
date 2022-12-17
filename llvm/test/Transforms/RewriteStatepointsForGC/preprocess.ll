@@ -1,4 +1,3 @@
-; RUN: opt -rewrite-statepoints-for-gc -S < %s | FileCheck %s
 ; RUN: opt -passes=rewrite-statepoints-for-gc -S < %s | FileCheck %s
 
 ; Test to make sure we destroy LCSSA's single entry phi nodes before

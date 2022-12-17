@@ -502,7 +502,7 @@ def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
   let HasSrc2 = 0;
   let HasSrc2Mods = 1;
   let AsmVOP3OpSel = !subst(", $src2_modifiers", "",
-                            getAsmVOP3OpSel<3, HasClamp,
+                            getAsmVOP3OpSel<3, HasClamp, HasOMod,
                                             HasSrc0FloatMods, HasSrc1FloatMods,
                                             HasSrc2FloatMods>.ret);
   let HasExtVOP3DPP = 0;
@@ -774,7 +774,7 @@ class VOP3_DOT_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP
   let InsVOP3OpSel = getInsVOP3OpSel<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
                                      HasClamp, HasOMod, FP16InputMods,
                                      FP16InputMods, FP16InputMods>.ret;
-  let AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs, HasClamp, 1, 1, 1>.ret;
+  let AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs, HasClamp, HasOMod, 1, 1, 1>.ret;
 }
 
 let SubtargetPredicate = isGFX11Plus in {

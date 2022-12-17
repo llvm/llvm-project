@@ -771,7 +771,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       Size = 1; // zerofill of 0 bytes is undefined.
     emitLinkage(GV, GVSym);
     // .zerofill __DATA, __bss, _foo, 400, 5
-    OutStreamer->emitZerofill(TheSection, GVSym, Size, Alignment.value());
+    OutStreamer->emitZerofill(TheSection, GVSym, Size, Alignment);
     return;
   }
 
@@ -790,7 +790,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     // Prefer to simply fall back to .local / .comm in this case.
     if (MAI->getLCOMMDirectiveAlignmentType() != LCOMM::NoAlignment) {
       // .lcomm _foo, 42
-      OutStreamer->emitLocalCommonSymbol(GVSym, Size, Alignment.value());
+      OutStreamer->emitLocalCommonSymbol(GVSym, Size, Alignment);
       return;
     }
 
@@ -818,7 +818,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
     if (GVKind.isThreadBSS()) {
       TheSection = getObjFileLowering().getTLSBSSSection();
-      OutStreamer->emitTBSSSymbol(TheSection, MangSym, Size, Alignment.value());
+      OutStreamer->emitTBSSSymbol(TheSection, MangSym, Size, Alignment);
     } else if (GVKind.isThreadData()) {
       OutStreamer->switchSection(TheSection);
 
@@ -1365,7 +1365,8 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   OutStreamer->pushSection();
   OutStreamer->switchSection(BBAddrMapSection);
   OutStreamer->AddComment("version");
-  OutStreamer->emitInt8(OutStreamer->getContext().getBBAddrMapVersion());
+  uint8_t BBAddrMapVersion = OutStreamer->getContext().getBBAddrMapVersion();
+  OutStreamer->emitInt8(BBAddrMapVersion);
   OutStreamer->AddComment("feature");
   OutStreamer->emitInt8(0);
   OutStreamer->AddComment("function address");
@@ -1377,12 +1378,19 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   for (const MachineBasicBlock &MBB : MF) {
     const MCSymbol *MBBSymbol =
         MBB.isEntryBlock() ? FunctionSymbol : MBB.getSymbol();
+    // TODO: Remove this check when version 1 is deprecated.
+    if (BBAddrMapVersion > 1) {
+      OutStreamer->AddComment("BB id");
+      // Emit the BB ID for this basic block.
+      OutStreamer->emitULEB128IntValue(*MBB.getBBID());
+    }
     // Emit the basic block offset relative to the end of the previous block.
     // This is zero unless the block is padded due to alignment.
     emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
     // Emit the basic block size. When BBs have alignments, their size cannot
     // always be computed from their offsets.
     emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
+    // Emit the Metadata.
     OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
     PrevMBBEndSymbol = MBB.getEndSymbol();
   }
@@ -2081,7 +2089,7 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   remarks::RemarkSerializer &RemarkSerializer = RS.getSerializer();
 
   std::optional<SmallString<128>> Filename;
-  if (Optional<StringRef> FilenameRef = RS.getFilename()) {
+  if (std::optional<StringRef> FilenameRef = RS.getFilename()) {
     Filename = *FilenameRef;
     sys::fs::make_absolute(*Filename);
     assert(!Filename->empty() && "The filename can't be empty.");

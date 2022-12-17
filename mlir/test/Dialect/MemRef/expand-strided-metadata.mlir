@@ -907,21 +907,28 @@ func.func @extract_aligned_pointer_as_index(%arg0: memref<f32>) -> index {
 // Size 2 = origSize4 * origSize5
 //        = 6 * 7
 //        = 42
-// Stride 0 = origStride0
-// Stride 1 = origStride3 (orig stride of the inner most dimension)
-//          = 42
-// Stride 2 = origStride5
+// Stride 0 = min(origStride0)
+//          = Right now the folder of affine.min is not smart
+//            enough to just return origStride0
+// Stride 1 = min(origStride1, origStride2, origStride3)
+//          = min(origStride1, origStride2, 42)
+// Stride 2 = min(origStride4, origStride5)
+//          = min(7, 1)
 //          = 1
 //
+//   CHECK-DAG: #[[$STRIDE0_MIN_MAP:.*]] = affine_map<()[s0] -> (s0)>
 //   CHECK-DAG: #[[$SIZE0_MAP:.*]] = affine_map<()[s0, s1] -> ((s0 * s1) * 4)>
+//   CHECK-DAG: #[[$STRIDE1_MIN_MAP:.*]] = affine_map<()[s0, s1] -> (s0, s1, 42)>
 // CHECK-LABEL: func @simplify_collapse(
 //  CHECK-SAME: %[[ARG:.*]]: memref<?x?x4x?x6x7xi32>)
 //
 //       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:6, %[[STRIDES:.*]]:6 = memref.extract_strided_metadata %[[ARG]] : memref<?x?x4x?x6x7xi32>
 //
-//       CHECK: %[[DYN_SIZE1:.*]] = affine.apply #[[$SIZE0_MAP]]()[%[[SIZES]]#1, %[[SIZES]]#3]
+//   CHECK-DAG: %[[DYN_STRIDE0:.*]] = affine.min #[[$STRIDE0_MIN_MAP]]()[%[[STRIDES]]#0]
+//   CHECK-DAG: %[[DYN_SIZE1:.*]] = affine.apply #[[$SIZE0_MAP]]()[%[[SIZES]]#1, %[[SIZES]]#3]
+//   CHECK-DAG: %[[DYN_STRIDE1:.*]] = affine.min #[[$STRIDE1_MIN_MAP]]()[%[[STRIDES]]#1, %[[STRIDES]]#2]
 //
-//       CHECK: %[[COLLAPSE_VIEW:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [0], sizes: [%[[SIZES]]#0, %[[DYN_SIZE1]], 42], strides: [%[[STRIDES]]#0, 42, 1]
+//       CHECK: %[[COLLAPSE_VIEW:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [0], sizes: [%[[SIZES]]#0, %[[DYN_SIZE1]], 42], strides: [%[[DYN_STRIDE0]], %[[DYN_STRIDE1]], 1]
 func.func @simplify_collapse(%arg : memref<?x?x4x?x6x7xi32>)
   -> memref<?x?x42xi32> {
 
@@ -930,6 +937,118 @@ func.func @simplify_collapse(%arg : memref<?x?x4x?x6x7xi32>)
 
   return %collapsed_view : memref<?x?x42xi32>
 
+}
+
+// -----
+
+// Check that we simplify collapse_shape into
+// reinterpret_cast(extract_strided_metadata) + <some math>
+// when there are dimensions of size 1 involved.
+//
+// We transform: 3x1 to [0, 1]
+//
+// The tricky bit here is the strides between dimension 0 and 1
+// are not truly contiguous, but since we dealing with a dimension of size 1
+// this is actually fine (i.e., we are not going to jump around.)
+//
+// As a result the resulting stride needs to ignore the strides of the
+// dimensions of size 1.
+//
+// Size 0 = origSize0 * origSize1
+//        = 3 * 1
+//        = 3
+// Stride 0 = min(origStride_i, for all i in reassocation group and dim_i != 1)
+//          = min(origStride0)
+//          = min(2)
+//          = 2
+//
+// CHECK-LABEL: func @simplify_collapse_with_dim_of_size1(
+//  CHECK-SAME: %[[ARG:.*]]: memref<3x1xf32, strided<[2, 1]>>,
+//
+//       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]] : memref<3x1xf32, strided<[2, 1]>>
+//
+//
+//       CHECK: %[[COLLAPSE_VIEW:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [0], sizes: [3], strides: [2]
+func.func @simplify_collapse_with_dim_of_size1(%arg0: memref<3x1xf32, strided<[2,1]>>, %arg1: memref<3xf32>) {
+
+  %collapse_shape = memref.collapse_shape %arg0 [[0, 1]] :
+    memref<3x1xf32, strided<[2, 1]>> into memref<3xf32, strided<[2]>>
+
+  memref.copy %collapse_shape, %arg1 : memref<3xf32, strided<[2]>> to memref<3xf32>
+
+  return
+}
+
+
+// -----
+
+// Check that we simplify collapse_shape with an edge case group of 1x1x...x1.
+//
+// The tricky bit here is also the resulting stride is meaningless, we still
+// have to please the type system.
+//
+// In this case, we're collapsing two strides of respectively 2 and 1 and the
+// resulting type wants a stride of 2.
+//
+// CHECK-LABEL: func @simplify_collapse_with_dim_of_size1_and_non_1_stride(
+//  CHECK-SAME: %[[ARG:.*]]: memref<1x1xi32, strided<[2, 1]
+//
+//       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]] : memref<1x1xi32, strided<[2, 1], offset: ?>>
+//
+//       CHECK: %[[COLLAPSE_VIEW:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[OFFSET]]], sizes: [1], strides: [2]
+func.func @simplify_collapse_with_dim_of_size1_and_non_1_stride
+    (%arg0: memref<1x1xi32, strided<[2, 1], offset: ?>>)
+    -> memref<1xi32, strided<[2], offset: ?>> {
+
+  %collapse_shape = memref.collapse_shape %arg0 [[0, 1]] :
+    memref<1x1xi32, strided<[2, 1], offset: ?>>
+    into memref<1xi32, strided<[2], offset: ?>>
+
+  return %collapse_shape : memref<1xi32, strided<[2], offset: ?>>
+}
+
+// -----
+
+// Check that we simplify collapse_shape with an edge case group of 1x1x...x1.
+// We also have a couple of collapsed dimensions before the 1x1x...x1 group
+// to make sure we properly index into the dynamic strides based on the
+// group ID.
+//
+// The tricky bit in this test is that the 1x1x...x1 group stride is dynamic
+// so we have to propagate one of the dynamic dimension for this group.
+//
+// For this test we have:
+// Size0 = origSize0 * origSize1
+//       = 2 * 3
+//       = 6
+// Size1 = origSize2 * origSize3 * origSize4
+//       = 1 * 1 * 1
+//       = 1
+//
+// Stride0 = min(origStride0, origStride1)
+// Stride1 = we actually don't know, this is dynamic but we don't know
+//           which one to pick.
+//           We just return the first dynamic one for this group.
+//
+//
+//   CHECK-DAG: #[[$STRIDE0_MIN_MAP:.*]] = affine_map<()[s0, s1] -> (s0, s1)>
+// CHECK-LABEL: func @simplify_collapse_with_dim_of_size1_and_resulting_dyn_stride(
+//  CHECK-SAME: %[[ARG:.*]]: memref<2x3x1x1x1xi32, strided<[?, ?, ?, ?, 2]
+//
+//       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:5, %[[STRIDES:.*]]:5 = memref.extract_strided_metadata %[[ARG]] : memref<2x3x1x1x1xi32, strided<[?, ?, ?, ?, 2], offset: ?>>
+//
+//   CHECK-DAG: %[[DYN_STRIDE0:.*]] = affine.min #[[$STRIDE0_MIN_MAP]]()[%[[STRIDES]]#0, %[[STRIDES]]#1]
+//
+//       CHECK: %[[COLLAPSE_VIEW:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[OFFSET]]], sizes: [6, 1], strides: [%[[DYN_STRIDE0]], %[[STRIDES]]#2]
+func.func @simplify_collapse_with_dim_of_size1_and_resulting_dyn_stride
+    (%arg0: memref<2x3x1x1x1xi32, strided<[?, ?, ?, ?, 2], offset: ?>>)
+    -> memref<6x1xi32, strided<[?, ?], offset: ?>> {
+
+  %collapse_shape = memref.collapse_shape %arg0 [[0, 1], [2, 3, 4]] :
+    memref<2x3x1x1x1xi32, strided<[?, ?, ?, ?, 2], offset: ?>>
+    into memref<6x1xi32, strided<[?, ?], offset: ?>>
+
+  return %collapse_shape : memref<6x1xi32, strided<[?, ?], offset: ?>>
 }
 
 // -----
@@ -950,6 +1069,7 @@ func.func @simplify_collapse(%arg : memref<?x?x4x?x6x7xi32>)
 //          = 1
 //
 //   CHECK-DAG: #[[$SIZE0_MAP:.*]] = affine_map<()[s0, s1] -> ((s0 * s1) * 4)>
+//   CHECK-DAG: #[[$STRIDE0_MAP:.*]] = affine_map<()[s0] -> (s0)>
 // CHECK-LABEL: func @extract_strided_metadata_of_collapse(
 //  CHECK-SAME: %[[ARG:.*]]: memref<?x?x4x?x6x7xi32>)
 //
@@ -959,9 +1079,10 @@ func.func @simplify_collapse(%arg : memref<?x?x4x?x6x7xi32>)
 //
 //   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:6, %[[STRIDES:.*]]:6 = memref.extract_strided_metadata %[[ARG]] : memref<?x?x4x?x6x7xi32>
 //
+//   CHECK-DAG: %[[DYN_STRIDE0:.*]] = affine.min #[[$STRIDE0_MAP]]()[%[[STRIDES]]#0]
 //   CHECK-DAG: %[[DYN_SIZE1:.*]] = affine.apply #[[$SIZE0_MAP]]()[%[[SIZES]]#1, %[[SIZES]]#3]
 //
-//       CHECK: return %[[BASE]], %[[C0]], %[[SIZES]]#0, %[[DYN_SIZE1]], %[[C42]], %[[STRIDES]]#0, %[[C42]], %[[C1]]
+//       CHECK: return %[[BASE]], %[[C0]], %[[SIZES]]#0, %[[DYN_SIZE1]], %[[C42]], %[[DYN_STRIDE0]], %[[C42]], %[[C1]]
 func.func @extract_strided_metadata_of_collapse(%arg : memref<?x?x4x?x6x7xi32>)
   -> (memref<i32>, index,
       index, index, index,

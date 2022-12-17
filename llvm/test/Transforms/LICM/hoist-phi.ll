@@ -1,6 +1,6 @@
-; RUN: opt -S -licm < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
-; RUN: opt -S -licm -licm-control-flow-hoisting=1 < %s | FileCheck %s -check-prefixes=CHECK,CHECK-ENABLED
-; RUN: opt -S -licm -licm-control-flow-hoisting=0 < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
+; RUN: opt -S -passes=licm < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
+; RUN: opt -S -passes=licm -licm-control-flow-hoisting=1 < %s | FileCheck %s -check-prefixes=CHECK,CHECK-ENABLED
+; RUN: opt -S -passes=licm -licm-control-flow-hoisting=0 < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
 ; RUN: opt -passes='require<opt-remark-emit>,loop-mssa(licm)' -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
 
 ; RUN: opt -passes='require<opt-remark-emit>,loop-mssa(licm)' -licm-control-flow-hoisting=1 -verify-memoryssa -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-ENABLED

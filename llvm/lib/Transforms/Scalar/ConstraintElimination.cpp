@@ -184,12 +184,12 @@ struct DecompEntry {
   int64_t Coefficient;
   Value *Variable;
   /// True if the variable is known positive in the current constraint.
-  bool IsKnownPositive;
+  bool IsKnownNonNegative;
 
   DecompEntry(int64_t Coefficient, Value *Variable,
-              bool IsKnownPositive = false)
+              bool IsKnownNonNegative = false)
       : Coefficient(Coefficient), Variable(Variable),
-        IsKnownPositive(IsKnownPositive) {}
+        IsKnownNonNegative(IsKnownNonNegative) {}
 };
 
 /// Represents an Offset + Coefficient1 * Variable1 + ... decomposition.
@@ -198,8 +198,8 @@ struct Decomposition {
   SmallVector<DecompEntry, 3> Vars;
 
   Decomposition(int64_t Offset) : Offset(Offset) {}
-  Decomposition(Value *V, bool IsKnownPositive = false) {
-    Vars.emplace_back(1, V, IsKnownPositive);
+  Decomposition(Value *V, bool IsKnownNonNegative = false) {
+    Vars.emplace_back(1, V, IsKnownNonNegative);
   }
   Decomposition(int64_t Offset, ArrayRef<DecompEntry> Vars)
       : Offset(Offset), Vars(Vars) {}
@@ -243,6 +243,8 @@ decomposeGEP(GetElementPtrInst &GEP,
   if (!GEP.isInBounds())
     return &GEP;
 
+  assert(!IsSigned && "The logic below only supports decomposition for "
+                      "unsinged predicates at the moment.");
   Type *PtrTy = GEP.getType()->getScalarType();
   unsigned BitWidth = DL.getIndexTypeSizeInBits(PtrTy);
   MapVector<Value *, APInt> VariableOffsets;
@@ -328,9 +330,9 @@ static Decomposition decompose(Value *V,
     return decomposeGEP(*GEP, Preconditions, IsSigned, DL);
 
   Value *Op0;
-  bool IsKnownPositive = false;
+  bool IsKnownNonNegative = false;
   if (match(V, m_ZExt(m_Value(Op0)))) {
-    IsKnownPositive = true;
+    IsKnownNonNegative = true;
     V = Op0;
   }
 
@@ -377,7 +379,7 @@ static Decomposition decompose(Value *V,
   if (match(V, m_NUWSub(m_Value(Op0), m_Value(Op1))))
     return {0, {{1, Op0}, {-1, Op1}}};
 
-  return {V, IsKnownPositive};
+  return {V, IsKnownNonNegative};
 }
 
 ConstraintTy
@@ -413,7 +415,6 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     break;
   }
 
-  // Only ULE and ULT predicates are supported at the moment.
   if (Pred != CmpInst::ICMP_ULE && Pred != CmpInst::ICMP_ULT &&
       Pred != CmpInst::ICMP_SLE && Pred != CmpInst::ICMP_SLT)
     return {};
@@ -458,19 +459,21 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
       IsSigned);
   // Collect variables that are known to be positive in all uses in the
   // constraint.
-  DenseMap<Value *, bool> KnownPositiveVariables;
+  DenseMap<Value *, bool> KnownNonNegativeVariables;
   Res.IsEq = IsEq;
   auto &R = Res.Coefficients;
   for (const auto &KV : VariablesA) {
     R[GetOrAddIndex(KV.Variable)] += KV.Coefficient;
-    auto I = KnownPositiveVariables.insert({KV.Variable, KV.IsKnownPositive});
-    I.first->second &= KV.IsKnownPositive;
+    auto I =
+        KnownNonNegativeVariables.insert({KV.Variable, KV.IsKnownNonNegative});
+    I.first->second &= KV.IsKnownNonNegative;
   }
 
   for (const auto &KV : VariablesB) {
     R[GetOrAddIndex(KV.Variable)] -= KV.Coefficient;
-    auto I = KnownPositiveVariables.insert({KV.Variable, KV.IsKnownPositive});
-    I.first->second &= KV.IsKnownPositive;
+    auto I =
+        KnownNonNegativeVariables.insert({KV.Variable, KV.IsKnownNonNegative});
+    I.first->second &= KV.IsKnownNonNegative;
   }
 
   int64_t OffsetSum;
@@ -494,7 +497,7 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   }
 
   // Add extra constraints for variables that are known positive.
-  for (auto &KV : KnownPositiveVariables) {
+  for (auto &KV : KnownNonNegativeVariables) {
     if (!KV.second || (Value2Index.find(KV.first) == Value2Index.end() &&
                        NewIndexMap.find(KV.first) == NewIndexMap.end()))
       continue;
@@ -623,19 +626,9 @@ struct State {
   void addInfoFor(BasicBlock &BB);
 
   /// Returns true if we can add a known condition from BB to its successor
-  /// block Succ. Each predecessor of Succ can either be BB or be dominated
-  /// by Succ (e.g. the case when adding a condition from a pre-header to a
-  /// loop header).
+  /// block Succ.
   bool canAddSuccessor(BasicBlock &BB, BasicBlock *Succ) const {
-    if (BB.getSingleSuccessor()) {
-      assert(BB.getSingleSuccessor() == Succ);
-      return DT.properlyDominates(&BB, Succ);
-    }
-    return any_of(successors(&BB),
-                  [Succ](const BasicBlock *S) { return S != Succ; }) &&
-           all_of(predecessors(Succ), [&BB, Succ, this](BasicBlock *Pred) {
-             return Pred == &BB || DT.dominates(Succ, Pred);
-           });
+    return DT.dominates(BasicBlockEdge(&BB, Succ), Succ);
   }
 };
 
@@ -850,7 +843,8 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
       dbgs() << "\n";
     });
 
-    DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned, ValuesToRelease);
+    DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
+                            std::move(ValuesToRelease));
 
     if (R.IsEq) {
       // Also add the inverted constraint for equality constraints.

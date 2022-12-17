@@ -1,4 +1,3 @@
-; RUN: opt < %s -partial-inliner -S  | FileCheck %s
 ; RUN: opt < %s -passes=partial-inliner -S  | FileCheck %s
 
 

@@ -1,18 +1,20 @@
-; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds < %s | FileCheck %s
-; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
 
 ; Padding to meet alignment, so references to @var1 replaced with gep ptr, 0, 2
 ; No i64 as addrspace(3) types with initializers are ignored. Likewise no addrspace(4).
 ; CHECK: %llvm.amdgcn.module.lds.t = type { float, [4 x i8], i32 }
 
-; Variables removed by pass
+; Variable removed by pass
 ; CHECK-NOT: @var0
-; CHECK-NOT: @var1
 
 @var0 = addrspace(3) global float undef, align 8
 @var1 = addrspace(3) global i32 undef, align 8
 
-@ptr =  addrspace(1) global i32 addrspace(3)* @var1, align 4
+; The invalid use by the global is left unchanged
+; CHECK: @var1 = addrspace(3) global i32 undef, align 8
+; CHECK: @ptr = addrspace(1) global i32 addrspace(3)* @var1, align 4 
+@ptr = addrspace(1) global i32 addrspace(3)* @var1, align 4
 
 ; A variable that is unchanged by pass
 ; CHECK: @with_init = addrspace(3) global i64 0

@@ -185,7 +185,8 @@ void test_P1636() {
 #endif
   assert_is_not_formattable<std::shared_ptr<int>, CharT>();
 #ifndef TEST_HAS_NO_LOCALIZATION
-  assert_is_not_formattable<std::sub_match<CharT*>, CharT>();
+  if constexpr (!std::same_as<CharT, int>) // sub_match only works with proper character types
+    assert_is_not_formattable<std::sub_match<CharT*>, CharT>();
 #endif
 #ifndef TEST_HAS_NO_THREADS
   assert_is_not_formattable<std::thread::id, CharT>();

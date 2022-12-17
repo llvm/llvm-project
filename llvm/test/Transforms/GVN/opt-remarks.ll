@@ -1,6 +1,6 @@
-; RUN: opt < %s -gvn -o /dev/null  -S -pass-remarks=gvn -pass-remarks-missed=gvn  \
+; RUN: opt < %s -passes=gvn -o /dev/null  -S -pass-remarks=gvn -pass-remarks-missed=gvn  \
 ; RUN:     2>&1 | FileCheck %s
-; RUN: opt < %s -gvn -o /dev/null  -pass-remarks-output=%t -S
+; RUN: opt < %s -passes=gvn -o /dev/null  -pass-remarks-output=%t -S
 ; RUN: cat %t | FileCheck -check-prefix=YAML %s
 
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes=gvn -o /dev/null -S -pass-remarks=gvn -pass-remarks-missed=gvn \

@@ -543,6 +543,34 @@ define i5 @udiv_shl_mul_nuw(i5 %x, i5 %y, i5 %z) {
   ret i5 %d
 }
 
+define i5 @udiv_shl_mul_nuw_swap(i5 %x, i5 %y, i5 %z) {
+; CHECK-LABEL: @udiv_shl_mul_nuw_swap(
+; CHECK-NEXT:    [[M1:%.*]] = shl nuw i5 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[M2:%.*]] = mul nuw i5 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i5 [[M1]], [[M2]]
+; CHECK-NEXT:    ret i5 [[D]]
+;
+  %m1 = shl nuw i5 %x, %z
+  %m2 = mul nuw i5 %y, %x
+  %d = udiv i5 %m1, %m2
+  ret i5 %d
+}
+
+; negative test - sdiv
+
+define i5 @sdiv_shl_mul_nuw(i5 %x, i5 %y, i5 %z) {
+; CHECK-LABEL: @sdiv_shl_mul_nuw(
+; CHECK-NEXT:    [[M1:%.*]] = shl nuw i5 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[M2:%.*]] = mul nuw i5 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i5 [[M1]], [[M2]]
+; CHECK-NEXT:    ret i5 [[D]]
+;
+  %m1 = shl nuw i5 %x, %z
+  %m2 = mul nuw i5 %x, %y
+  %d = sdiv i5 %m1, %m2
+  ret i5 %d
+}
+
 ; negative test - wrong no-wrap
 
 define i5 @udiv_mul_shl_missing_nsw1(i5 %x, i5 %y, i5 %z) {

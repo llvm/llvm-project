@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-unroll -disable-output
+; RUN: opt < %s -passes=loop-unroll -disable-output
 
 define i32 @main() {
 entry:

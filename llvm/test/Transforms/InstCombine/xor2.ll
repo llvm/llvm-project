@@ -520,14 +520,14 @@ define i8 @test16(i8 %A, i8 %B) {
   ret i8 %res
 }
 
-; TODO: Canonicalize ~((A & B) ^ (A | ?)) -> (A & B) | ~(A | ?)
+; Canonicalize ~((A & B) ^ (A | ?)) -> (A & B) | ~(A | ?)
 
 define i3 @not_xor_to_or_not1(i3 %a, i3 %b, i3 %c) {
 ; CHECK-LABEL: @not_xor_to_or_not1(
 ; CHECK-NEXT:    [[OR:%.*]] = or i3 [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i3 [[A:%.*]], [[C]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i3 [[AND]], [[OR]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor i3 [[XOR]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i3 [[OR]], -1
+; CHECK-NEXT:    [[NOT:%.*]] = or i3 [[AND]], [[TMP1]]
 ; CHECK-NEXT:    ret i3 [[NOT]]
 ;
   %or = or i3 %b, %c
@@ -541,8 +541,8 @@ define i3 @not_xor_to_or_not2(i3 %a, i3 %b, i3 %c) {
 ; CHECK-LABEL: @not_xor_to_or_not2(
 ; CHECK-NEXT:    [[OR:%.*]] = or i3 [[C:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i3 [[A:%.*]], [[C]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i3 [[AND]], [[OR]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor i3 [[XOR]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i3 [[OR]], -1
+; CHECK-NEXT:    [[NOT:%.*]] = or i3 [[AND]], [[TMP1]]
 ; CHECK-NEXT:    ret i3 [[NOT]]
 ;
   %or = or i3 %c, %b
@@ -556,8 +556,8 @@ define i3 @not_xor_to_or_not3(i3 %a, i3 %b, i3 %c) {
 ; CHECK-LABEL: @not_xor_to_or_not3(
 ; CHECK-NEXT:    [[OR:%.*]] = or i3 [[C:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i3 [[C]], [[A:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i3 [[AND]], [[OR]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor i3 [[XOR]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i3 [[OR]], -1
+; CHECK-NEXT:    [[NOT:%.*]] = or i3 [[AND]], [[TMP1]]
 ; CHECK-NEXT:    ret i3 [[NOT]]
 ;
   %or = or i3 %c, %b
@@ -571,8 +571,8 @@ define i3 @not_xor_to_or_not4(i3 %a, i3 %b, i3 %c) {
 ; CHECK-LABEL: @not_xor_to_or_not4(
 ; CHECK-NEXT:    [[OR:%.*]] = or i3 [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i3 [[C]], [[A:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i3 [[AND]], [[OR]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor i3 [[XOR]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i3 [[OR]], -1
+; CHECK-NEXT:    [[NOT:%.*]] = or i3 [[AND]], [[TMP1]]
 ; CHECK-NEXT:    ret i3 [[NOT]]
 ;
   %or = or i3 %b, %c
@@ -586,8 +586,8 @@ define <3 x i5> @not_xor_to_or_not_vector(<3 x i5> %a, <3 x i5> %b, <3 x i5> %c)
 ; CHECK-LABEL: @not_xor_to_or_not_vector(
 ; CHECK-NEXT:    [[OR:%.*]] = or <3 x i5> [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <3 x i5> [[A:%.*]], [[C]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor <3 x i5> [[OR]], [[AND]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor <3 x i5> [[XOR]], <i5 -1, i5 -1, i5 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i5> [[OR]], <i5 -1, i5 -1, i5 -1>
+; CHECK-NEXT:    [[NOT:%.*]] = or <3 x i5> [[AND]], [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i5> [[NOT]]
 ;
   %or = or <3 x i5> %b, %c
@@ -601,8 +601,8 @@ define <3 x i5> @not_xor_to_or_not_vector_poison(<3 x i5> %a, <3 x i5> %b, <3 x 
 ; CHECK-LABEL: @not_xor_to_or_not_vector_poison(
 ; CHECK-NEXT:    [[OR:%.*]] = or <3 x i5> [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <3 x i5> [[A:%.*]], [[C]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor <3 x i5> [[OR]], [[AND]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor <3 x i5> [[XOR]], <i5 poison, i5 -1, i5 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i5> [[OR]], <i5 -1, i5 -1, i5 -1>
+; CHECK-NEXT:    [[NOT:%.*]] = or <3 x i5> [[AND]], [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i5> [[NOT]]
 ;
   %or = or <3 x i5> %b, %c
@@ -611,6 +611,8 @@ define <3 x i5> @not_xor_to_or_not_vector_poison(<3 x i5> %a, <3 x i5> %b, <3 x 
   %not = xor <3 x i5> %xor, <i5 poison, i5 -1, i5 -1>
   ret <3 x i5> %not
 }
+
+; negative test : not one use
 
 define i3 @not_xor_to_or_not_2use(i3 %a, i3 %b, i3 %c) {
 ; CHECK-LABEL: @not_xor_to_or_not_2use(
@@ -629,14 +631,14 @@ define i3 @not_xor_to_or_not_2use(i3 %a, i3 %b, i3 %c) {
   ret i3 %not
 }
 
-; TODO: Canonicalize ~(A & B) ^ (A | ?) -> (A & B) | ~(A | ?)
+; Canonicalize ~(A & B) ^ (A | ?) -> (A & B) | ~(A | ?)
 
 define i3 @xor_notand_to_or_not1(i3 %a, i3 %b, i3 %c) {
 ; CHECK-LABEL: @xor_notand_to_or_not1(
 ; CHECK-NEXT:    [[OR:%.*]] = or i3 [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i3 [[A:%.*]], [[C]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i3 [[AND]], [[OR]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i3 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i3 [[OR]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = or i3 [[AND]], [[TMP1]]
 ; CHECK-NEXT:    ret i3 [[XOR]]
 ;
   %or = or i3 %b, %c
@@ -650,8 +652,8 @@ define i3 @xor_notand_to_or_not2(i3 %a, i3 %b, i3 %c) {
 ; CHECK-LABEL: @xor_notand_to_or_not2(
 ; CHECK-NEXT:    [[OR:%.*]] = or i3 [[C:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i3 [[A:%.*]], [[C]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i3 [[AND]], [[OR]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i3 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i3 [[OR]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = or i3 [[AND]], [[TMP1]]
 ; CHECK-NEXT:    ret i3 [[XOR]]
 ;
   %or = or i3 %c, %b
@@ -665,8 +667,8 @@ define i3 @xor_notand_to_or_not3(i3 %a, i3 %b, i3 %c) {
 ; CHECK-LABEL: @xor_notand_to_or_not3(
 ; CHECK-NEXT:    [[OR:%.*]] = or i3 [[C:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i3 [[C]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i3 [[AND]], [[OR]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i3 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i3 [[OR]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = or i3 [[AND]], [[TMP1]]
 ; CHECK-NEXT:    ret i3 [[XOR]]
 ;
   %or = or i3 %c, %b
@@ -680,8 +682,8 @@ define i3 @xor_notand_to_or_not4(i3 %a, i3 %b, i3 %c) {
 ; CHECK-LABEL: @xor_notand_to_or_not4(
 ; CHECK-NEXT:    [[OR:%.*]] = or i3 [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i3 [[C]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i3 [[AND]], [[OR]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i3 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i3 [[OR]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = or i3 [[AND]], [[TMP1]]
 ; CHECK-NEXT:    ret i3 [[XOR]]
 ;
   %or = or i3 %b, %c
@@ -695,8 +697,8 @@ define <3 x i5> @xor_notand_to_or_not_vector(<3 x i5> %a, <3 x i5> %b, <3 x i5> 
 ; CHECK-LABEL: @xor_notand_to_or_not_vector(
 ; CHECK-NEXT:    [[OR:%.*]] = or <3 x i5> [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <3 x i5> [[A:%.*]], [[C]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i5> [[AND]], [[OR]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor <3 x i5> [[TMP1]], <i5 -1, i5 -1, i5 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i5> [[OR]], <i5 -1, i5 -1, i5 -1>
+; CHECK-NEXT:    [[XOR:%.*]] = or <3 x i5> [[AND]], [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i5> [[XOR]]
 ;
   %or = or <3 x i5> %b, %c
@@ -710,8 +712,8 @@ define <3 x i5> @xor_notand_to_or_not_vector_poison(<3 x i5> %a, <3 x i5> %b, <3
 ; CHECK-LABEL: @xor_notand_to_or_not_vector_poison(
 ; CHECK-NEXT:    [[OR:%.*]] = or <3 x i5> [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <3 x i5> [[A:%.*]], [[C]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i5> [[AND]], [[OR]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor <3 x i5> [[TMP1]], <i5 -1, i5 poison, i5 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i5> [[OR]], <i5 -1, i5 -1, i5 -1>
+; CHECK-NEXT:    [[XOR:%.*]] = or <3 x i5> [[AND]], [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i5> [[XOR]]
 ;
   %or = or <3 x i5> %b, %c
@@ -720,6 +722,8 @@ define <3 x i5> @xor_notand_to_or_not_vector_poison(<3 x i5> %a, <3 x i5> %b, <3
   %xor = xor <3 x i5> %not, %or
   ret <3 x i5> %xor
 }
+
+; negative test : not one use
 
 define i3 @xor_notand_to_or_not_2use(i3 %a, i3 %b, i3 %c) {
 ; CHECK-LABEL: @xor_notand_to_or_not_2use(

@@ -1,5 +1,5 @@
-; RUN: opt -loop-unroll-and-jam -allow-unroll-and-jam -unroll-runtime < %s -S | FileCheck %s
-; RUN: opt -loop-unroll-and-jam -allow-unroll-and-jam -unroll-runtime -unroll-and-jam-threshold=15 < %s -S | FileCheck %s --check-prefix=CHECK-LOWTHRES
+; RUN: opt -passes=loop-unroll-and-jam -allow-unroll-and-jam -unroll-runtime < %s -S | FileCheck %s
+; RUN: opt -passes=loop-unroll-and-jam -allow-unroll-and-jam -unroll-runtime -unroll-and-jam-threshold=15 < %s -S | FileCheck %s --check-prefix=CHECK-LOWTHRES
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 

@@ -1,7 +1,7 @@
 ; RUN: opt -passes='loop-mssa(simple-loop-unswitch<nontrivial>),instcombine,indvars' -S %s | FileCheck %s
 
 ; This used to crash in SCEVExpander when there were congruent phis with and
-; undef incoming value from the loop header. The -loop-unswitch -instcombine is
+; undef incoming value from the loop header. The -loop-unswitch -passes=instcombine is
 ; necessary to create just this pattern, which is essentially a nop and gets
 ; folded away aggressively if spelled out in IR directly.
 ; PR 20093

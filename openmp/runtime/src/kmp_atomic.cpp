@@ -1914,8 +1914,7 @@ ATOMIC_CMPXCHG_CMPLX(cmplx4, kmp_cmplx32, mul, 64, *, cmplx8, kmp_cmplx64, 8c,
 ATOMIC_CMPXCHG_CMPLX(cmplx4, kmp_cmplx32, div, 64, /, cmplx8, kmp_cmplx64, 8c,
                      7, KMP_ARCH_X86) // __kmpc_atomic_cmplx4_div_cmplx8
 
-// READ, WRITE, CAPTURE are supported only on IA-32 architecture and Intel(R) 64
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+// READ, WRITE, CAPTURE
 
 // ------------------------------------------------------------------------
 // Atomic READ routines
@@ -2925,6 +2924,7 @@ ATOMIC_CRITICAL_CPT(cmplx16, div_a16_cpt, kmp_cmplx128_a16_t, /, 32c,
 // binop x; v = x; }  for non-commutative operations.
 // Supported only on IA-32 architecture and Intel(R) 64
 
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
 // -------------------------------------------------------------------------
 // Operation on *lhs, rhs bound by critical section
 //     OP     - operator (it's supposed to contain an assignment)

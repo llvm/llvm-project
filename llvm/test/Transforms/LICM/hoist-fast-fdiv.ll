@@ -1,4 +1,4 @@
-; RUN: opt -licm -verify-memoryssa -S < %s | FileCheck %s
+; RUN: opt -passes=licm -verify-memoryssa -S < %s | FileCheck %s
 
 ; Function Attrs: noinline norecurse nounwind readnone ssp uwtable
 define zeroext i1 @invariant_denom(double %v) #0 {

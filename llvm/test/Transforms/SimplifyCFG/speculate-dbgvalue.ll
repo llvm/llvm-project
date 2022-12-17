@@ -11,7 +11,7 @@
 ;   }
 ;
 ; using
-;   clang speculate-dbgvalue.c -S -emit-llvm -g -O3 -mllvm -disable-llvm-optzns -o - | opt -mem2reg -S
+;   clang speculate-dbgvalue.c -S -emit-llvm -g -O3 -mllvm -disable-llvm-optzns -o - | opt -passes=mem2reg -S
 
 
 ; Function Attrs: nounwind uwtable

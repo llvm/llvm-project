@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -function-specialization -debug -S < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=function-specialization -debug -S < %s 2>&1 | FileCheck %s
 
 ; The purpose of this test is to check that we don't run the solver as there's
 ; nothing to do here. For a test that doesn't trigger function specialisation,

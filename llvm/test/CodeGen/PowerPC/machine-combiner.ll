@@ -25,7 +25,7 @@ define float @reassociate_adds2(float %x0, float %x1, float %x2, float %x3) {
 ; CHECK:       # %bb.0:
 ; CHECK:       fadds [[REG0:[0-9]+]], 1, 2
 ; CHECK:       fadds [[REG1:[0-9]+]], 3, 4
-; CHECK:       fadds 1, [[REG0]], [[REG1]]
+; CHECK:       fadds 1, [[REG1]], [[REG0]]
 ; CHECK-NEXT:  blr
 
   %t0 = fadd reassoc nsz float %x0, %x1
@@ -38,8 +38,8 @@ define float @reassociate_adds3(float %x0, float %x1, float %x2, float %x3) {
 ; CHECK-LABEL: reassociate_adds3:
 ; CHECK:       # %bb.0:
 ; CHECK:       fadds [[REG0:[0-9]+]], 1, 2
-; CHECK:       fadds [[REG1:[0-9]+]], 3, 4
-; CHECK:       fadds 1, [[REG0]], [[REG1]]
+; CHECK:       fadds [[REG1:[0-9]+]], 4, 3
+; CHECK:       fadds 1, [[REG1]], [[REG0]]
 ; CHECK-NEXT:  blr
 
   %t0 = fadd reassoc nsz float %x0, %x1
@@ -52,8 +52,8 @@ define float @reassociate_adds4(float %x0, float %x1, float %x2, float %x3) {
 ; CHECK-LABEL: reassociate_adds4:
 ; CHECK:       # %bb.0:
 ; CHECK:       fadds [[REG0:[0-9]+]], 1, 2
-; CHECK:       fadds [[REG1:[0-9]+]], 3, 4
-; CHECK:       fadds 1, [[REG0]], [[REG1]]
+; CHECK:       fadds [[REG1:[0-9]+]], 4, 3
+; CHECK:       fadds 1, [[REG1]], [[REG0]]
 ; CHECK-NEXT:  blr
 
   %t0 = fadd reassoc nsz float %x0, %x1
@@ -108,7 +108,7 @@ define <4 x float> @vector_reassociate_adds2(<4 x float> %x0, <4 x float> %x1, <
 ; CHECK:       # %bb.0:
 ; CHECK-PWR:       xvaddsp [[REG0:[0-9]+]], 34, 35
 ; CHECK-PWR:       xvaddsp [[REG1:[0-9]+]], 36, 37
-; CHECK-PWR:       xvaddsp 34, [[REG0]], [[REG1]]
+; CHECK-PWR:       xvaddsp 34, [[REG1]], [[REG0]]
 ; CHECK-NEXT:  blr
 
   %t0 = fadd reassoc nsz <4 x float> %x0, %x1
@@ -121,8 +121,8 @@ define <4 x float> @vector_reassociate_adds3(<4 x float> %x0, <4 x float> %x1, <
 ; CHECK-LABEL: vector_reassociate_adds3:
 ; CHECK:       # %bb.0:
 ; CHECK-PWR:       xvaddsp [[REG0:[0-9]+]], 34, 35
-; CHECK-PWR:       xvaddsp [[REG1:[0-9]+]], 36, 37
-; CHECK-PWR:       xvaddsp 34, [[REG0]], [[REG1]]
+; CHECK-PWR:       xvaddsp [[REG1:[0-9]+]], 37, 36
+; CHECK-PWR:       xvaddsp 34, [[REG1]], [[REG0]]
 ; CHECK-NEXT:  blr
 
   %t0 = fadd reassoc nsz <4 x float> %x0, %x1
@@ -135,8 +135,8 @@ define <4 x float> @vector_reassociate_adds4(<4 x float> %x0, <4 x float> %x1, <
 ; CHECK-LABEL: vector_reassociate_adds4:
 ; CHECK:       # %bb.0:
 ; CHECK-PWR:       xvaddsp [[REG0:[0-9]+]], 34, 35
-; CHECK-PWR:       xvaddsp [[REG1:[0-9]+]], 36, 37
-; CHECK-PWR:       xvaddsp 34, [[REG0]], [[REG1]]
+; CHECK-PWR:       xvaddsp [[REG1:[0-9]+]], 37, 36
+; CHECK-PWR:       xvaddsp 34, [[REG1]], [[REG0]]
 ; CHECK-NEXT:  blr
 
   %t0 = fadd reassoc nsz <4 x float> %x0, %x1

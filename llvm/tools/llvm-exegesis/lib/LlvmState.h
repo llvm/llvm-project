@@ -39,7 +39,7 @@ public:
   // If `Triple` is empty, uses the host triple.
   // If `CpuName` is empty, uses the host CPU.
   // `Features` is intended for tests.
-  static Expected<LLVMState> Create(std::string Triple, std::string CpuName,
+  static Expected<LLVMState> Create(std::string TripleName, std::string CpuName,
                                     StringRef Features = "");
 
   const TargetMachine &getTargetMachine() const { return *TheTargetMachine; }

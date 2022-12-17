@@ -1,4 +1,4 @@
-; RUN: opt -S -licm -loop-unroll < %s
+; RUN: opt -S -passes='loop-mssa(licm),loop-unroll' < %s
 ;
 ; This test contains a carefully rotated set of three nested loops. The middle
 ; loop can be unrolled leaving one copy of the inner loop inside the outer

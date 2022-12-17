@@ -846,6 +846,7 @@ module std [system] {
       module formatter_pointer               { private header "__format/formatter_pointer.h" }
       module formatter_string                { private header "__format/formatter_string.h" }
       module parser_std_format_spec          { private header "__format/parser_std_format_spec.h" }
+      module range_default_formatter         { private header "__format/range_default_formatter.h" }
       module unicode                         { private header "__format/unicode.h" }
     }
   }
@@ -1429,6 +1430,7 @@ module std [system] {
     module is_scoped_enum                      { private header "__type_traits/is_scoped_enum.h" }
     module is_signed                           { private header "__type_traits/is_signed.h" }
     module is_signed_integer                   { private header "__type_traits/is_signed_integer.h" }
+    module is_specialization                   { private header "__type_traits/is_specialization.h" }
     module is_standard_layout                  { private header "__type_traits/is_standard_layout.h" }
     module is_swappable                        { private header "__type_traits/is_swappable.h" }
     module is_trivial                          { private header "__type_traits/is_trivial.h" }

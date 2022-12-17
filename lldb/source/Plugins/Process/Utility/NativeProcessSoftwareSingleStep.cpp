@@ -168,7 +168,7 @@ Status NativeProcessSoftwareSingleStep::SetupSoftwareSingleStepping(
       size_hint = 4;
     }
   } else if (arch.IsMIPS() || arch.GetTriple().isPPC64() ||
-             arch.GetTriple().isRISCV())
+             arch.GetTriple().isRISCV() || arch.GetTriple().isLoongArch())
     size_hint = 4;
   error = process.SetBreakpoint(next_pc, size_hint, /*hardware=*/false);
 

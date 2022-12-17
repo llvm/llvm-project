@@ -737,3 +737,7 @@ std::string Operator::getGetterName(StringRef name) const {
 std::string Operator::getSetterName(StringRef name) const {
   return "set" + convertToCamelFromSnakeCase(name, /*capitalizeFirst=*/true);
 }
+
+std::string Operator::getRemoverName(StringRef name) const {
+  return "remove" + convertToCamelFromSnakeCase(name, /*capitalizeFirst=*/true);
+}

@@ -139,7 +139,8 @@ public:
   bool MatchAndExplain(const ErrorHolder &Holder,
                        testing::MatchResultListener *listener) const override {
     std::vector<std::string> Messages;
-    for (const std::shared_ptr<ErrorInfoBase> &Info: Holder.Infos)
+    Messages.reserve(Holder.Infos.size());
+    for (const std::shared_ptr<ErrorInfoBase> &Info : Holder.Infos)
       Messages.push_back(Info->message());
 
     return Matcher.MatchAndExplain(Messages, listener);

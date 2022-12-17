@@ -8,7 +8,6 @@
 
 #include "FS.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/None.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 

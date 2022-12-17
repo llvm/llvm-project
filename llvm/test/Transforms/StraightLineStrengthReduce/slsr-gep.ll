@@ -1,4 +1,4 @@
-; RUN: opt < %s -slsr -gvn -S | FileCheck %s
+; RUN: opt < %s -passes=slsr,gvn -S | FileCheck %s
 ; RUN: opt < %s -passes='slsr,gvn' -S | FileCheck %s
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64-p:64:64:64-p1:32:32:32"

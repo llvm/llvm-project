@@ -913,8 +913,8 @@ public:
   /// candidate.
   ///
   /// \param N - The global value number to find the canonical number for.
-  /// \returns An optional containing the value, and None if it could not be
-  /// found.
+  /// \returns An optional containing the value, and std::nullopt if it could
+  /// not be found.
   Optional<unsigned> getCanonicalNum(unsigned N) {
     DenseMap<unsigned, unsigned>::iterator NCIt = NumberToCanonNum.find(N);
     if (NCIt == NumberToCanonNum.end())
@@ -926,8 +926,8 @@ public:
   /// candidate.
   ///
   /// \param N - The canonical number to find the global vlaue number for.
-  /// \returns An optional containing the value, and None if it could not be
-  /// found.
+  /// \returns An optional containing the value, and std::nullopt if it could
+  /// not be found.
   Optional<unsigned> fromCanonicalNum(unsigned N) {
     DenseMap<unsigned, unsigned>::iterator CNIt = CanonNumToNumber.find(N);
     if (CNIt == CanonNumToNumber.end())

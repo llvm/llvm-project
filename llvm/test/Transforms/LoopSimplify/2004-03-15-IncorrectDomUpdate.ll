@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-simplify -licm -disable-output
+; RUN: opt < %s -passes='loop-simplify,loop-mssa(licm)' -disable-output
 define void @main() {
 entry:
 	br i1 false, label %Out, label %loop

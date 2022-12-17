@@ -45,7 +45,7 @@ namespace tidy {
 enum class NoLintType { NoLint, NoLintNextLine, NoLintBegin, NoLintEnd };
 
 // Convert a string like "NOLINTNEXTLINE" to its enum `Type::NoLintNextLine`.
-// Return `None` if the string is unrecognized.
+// Return `std::nullopt` if the string is unrecognized.
 static Optional<NoLintType> strToNoLintType(StringRef Str) {
   auto Type = llvm::StringSwitch<Optional<NoLintType>>(Str)
                   .Case("NOLINT", NoLintType::NoLint)

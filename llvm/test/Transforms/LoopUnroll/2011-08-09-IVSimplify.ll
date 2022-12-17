@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -loop-unroll -unroll-count=4 | FileCheck %s
+; RUN: opt -S < %s -passes=loop-unroll -unroll-count=4 | FileCheck %s
 ;
 ; Test induction variable simplify after loop unrolling. It should
 ; expose nice opportunities for GVN.

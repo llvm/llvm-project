@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 
 ; Check that functions with "returns_twice" calls are only inlined,
@@ -38,7 +38,7 @@ entry:
   ret i32 %add
 }
 
-define i32 @inner3() personality i8* null {
+define i32 @inner3() personality ptr null {
 entry:
   %invoke = invoke i32 @a() returns_twice
       to label %cont unwind label %lpad
@@ -61,7 +61,7 @@ entry:
   ret i32 %add
 }
 
-define i32 @inner4() returns_twice personality i8* null {
+define i32 @inner4() returns_twice personality ptr null {
 entry:
   %invoke = invoke i32 @a() returns_twice
       to label %cont unwind label %lpad

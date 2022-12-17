@@ -1,5 +1,5 @@
-; RUN: opt -S -loop-rotate < %s | FileCheck --check-prefix=FULL %s
-; RUN: opt -S -loop-rotate -rotation-prepare-for-lto < %s | FileCheck --check-prefix=PREPARE %s
+; RUN: opt -S -passes=loop-rotate < %s | FileCheck --check-prefix=FULL %s
+; RUN: opt -S -passes=loop-rotate -rotation-prepare-for-lto < %s | FileCheck --check-prefix=PREPARE %s
 ; RUN: opt -S -passes='require<targetir>,require<assumptions>,loop(loop-rotate)' < %s | FileCheck --check-prefix=FULL %s
 ; RUN: opt -S -passes='require<targetir>,require<assumptions>,loop(loop-rotate)' -rotation-prepare-for-lto < %s | FileCheck --check-prefix=PREPARE %s
 

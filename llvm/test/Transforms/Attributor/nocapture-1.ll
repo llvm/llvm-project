@@ -211,7 +211,8 @@ define i32 @nc1(i32* %q, i32* %p, i1 %b) {
 ; TUNIT-NEXT:  e:
 ; TUNIT-NEXT:    br label [[L:%.*]]
 ; TUNIT:       l:
-; TUNIT-NEXT:    [[Y:%.*]] = phi i32* [ [[Q]], [[E:%.*]] ]
+; TUNIT-NEXT:    [[X:%.*]] = phi i32* [ [[P]], [[E:%.*]] ]
+; TUNIT-NEXT:    [[Y:%.*]] = phi i32* [ [[Q]], [[E]] ]
 ; TUNIT-NEXT:    [[TMP2:%.*]] = select i1 [[B]], i32* [[P]], i32* [[Q]]
 ; TUNIT-NEXT:    [[VAL:%.*]] = load i32, i32* [[TMP2]], align 4
 ; TUNIT-NEXT:    store i32 0, i32* [[P]], align 4
@@ -224,7 +225,8 @@ define i32 @nc1(i32* %q, i32* %p, i1 %b) {
 ; CGSCC-NEXT:  e:
 ; CGSCC-NEXT:    br label [[L:%.*]]
 ; CGSCC:       l:
-; CGSCC-NEXT:    [[Y:%.*]] = phi i32* [ [[Q]], [[E:%.*]] ]
+; CGSCC-NEXT:    [[X:%.*]] = phi i32* [ [[P]], [[E:%.*]] ]
+; CGSCC-NEXT:    [[Y:%.*]] = phi i32* [ [[Q]], [[E]] ]
 ; CGSCC-NEXT:    [[TMP2:%.*]] = select i1 [[B]], i32* [[P]], i32* [[Q]]
 ; CGSCC-NEXT:    [[VAL:%.*]] = load i32, i32* [[TMP2]], align 4
 ; CGSCC-NEXT:    store i32 0, i32* [[P]], align 4

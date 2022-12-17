@@ -562,7 +562,7 @@ void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
 
 unsigned
 RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
-  return MF.getSubtarget<RISCVSubtarget>().hasStdExtC() ? 1 : 0;
+  return MF.getSubtarget<RISCVSubtarget>().hasStdExtCOrZca() ? 1 : 0;
 }
 
 // Add two address hints to improve chances of being able to use a compressed

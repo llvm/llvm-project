@@ -1,5 +1,5 @@
-; RUN: opt -vector-library=SVML       -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,SVML
-; RUN: opt -vector-library=MASSV      -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,MASSV
+; RUN: opt -vector-library=SVML -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,SVML
+; RUN: opt -vector-library=MASSV -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,MASSV
 ; RUN: opt -vector-library=LIBMVEC-X86 -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,LIBMVEC-X86
 ; RUN: opt -vector-library=Accelerate -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,ACCELERATE
 

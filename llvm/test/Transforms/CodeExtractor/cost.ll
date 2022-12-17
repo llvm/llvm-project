@@ -1,8 +1,7 @@
-; RUN: opt -S < %s  -partial-inliner -partial-inlining-extra-penalty=10 | FileCheck %s
-; RUN: opt -S < %s  -passes=partial-inliner -partial-inlining-extra-penalty=10 | FileCheck %s
+; RUN: opt -S < %s -passes=partial-inliner -partial-inlining-extra-penalty=10 | FileCheck %s
 define i32 @outline_region_notlikely(i32* %arg) local_unnamed_addr {
 bb:
-;  ptr != null is predicted to be true 
+;  ptr != null is predicted to be true
   %tmp = icmp ne i32* %arg, null
   br i1 %tmp, label %bb8, label %bb1
 

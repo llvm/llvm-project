@@ -436,6 +436,10 @@ LogicalResult getStridesAndOffset(MemRefType t,
                                   SmallVectorImpl<int64_t> &strides,
                                   int64_t &offset);
 
+/// Wrapper around getStridesAndOffset(MemRefType, SmallVectorImpl<int64_t>,
+/// int64_t) that will assert if the logical result is not succeeded.
+std::pair<SmallVector<int64_t>, int64_t> getStridesAndOffset(MemRefType t);
+
 /// Return a version of `t` with identity layout if it can be determined
 /// statically that the layout is the canonical contiguous strided layout.
 /// Otherwise pass `t`'s layout into `simplifyAffineMap` and return a copy of

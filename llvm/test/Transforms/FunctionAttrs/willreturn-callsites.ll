@@ -1,4 +1,4 @@
-; RUN: opt -inferattrs -function-attrs -S %s | FileCheck %s
+; RUN: opt -passes=inferattrs,function-attrs -S %s | FileCheck %s
 
 declare void @decl_readonly() readonly
 declare void @decl_readnone() readnone

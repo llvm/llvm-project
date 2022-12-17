@@ -120,10 +120,11 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
     } else if (Rec->isSubClassOf("RegisterClass")) {
       OperandType = "OPERAND_REGISTER";
     } else if (!Rec->isSubClassOf("PointerLikeRegClass") &&
-               !Rec->isSubClassOf("unknown_class"))
+               !Rec->isSubClassOf("unknown_class")) {
       PrintFatalError(R->getLoc(), "Unknown operand class '" + Rec->getName() +
                                        "' in '" + R->getName() +
                                        "' instruction!");
+    }
 
     // Check that the operand has a name and that it's unique.
     if (ArgName.empty())
@@ -135,6 +136,10 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
                       "In instruction '" + R->getName() + "', operand #" +
                           Twine(i) +
                           " has the same name as a previous operand!");
+
+    OperandInfo &OpInfo = OperandList.emplace_back(
+        Rec, std::string(ArgName), std::string(PrintMethod),
+        OperandNamespace + "::" + OperandType, MIOperandNo, NumOps, MIOpInfo);
 
     if (SubArgDag) {
       if (SubArgDag->getNumArgs() != NumOps) {
@@ -162,24 +167,30 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
                           "In instruction '" + R->getName() + "', operand #" +
                               Twine(i) + " sub-arg #" + Twine(j) +
                               " has the same name as a previous operand!");
+
+        if (auto MaybeEncoderMethod =
+                cast<DefInit>(MIOpInfo->getArg(j))
+                    ->getDef()
+                    ->getValueAsOptionalString("EncoderMethod")) {
+          OpInfo.EncoderMethodNames[j] = *MaybeEncoderMethod;
+        }
+
+        OpInfo.SubOpNames[j] = SubArgName;
         SubOpAliases[SubArgName] = std::make_pair(MIOperandNo, j);
       }
+    } else if (!EncoderMethod.empty()) {
+      // If we have no explicit sub-op dag, but have an top-level encoder
+      // method, the single encoder will multiple sub-ops, itself.
+      OpInfo.EncoderMethodNames[0] = EncoderMethod;
+      for (unsigned j = 1; j < NumOps; ++j)
+        OpInfo.DoNotEncode[j] = true;
     }
 
-    OperandList.emplace_back(
-        Rec, std::string(ArgName), std::string(PrintMethod),
-        std::string(EncoderMethod), OperandNamespace + "::" + OperandType,
-        MIOperandNo, NumOps, MIOpInfo);
     MIOperandNo += NumOps;
   }
 
   if (VariadicOuts)
     --NumDefs;
-
-  // Make sure the constraints list for each operand is large enough to hold
-  // constraint info, even if none is present.
-  for (OperandInfo &OpInfo : OperandList)
-    OpInfo.Constraints.resize(OpInfo.MINumOperands);
 }
 
 
@@ -409,8 +420,6 @@ void CGIOperandList::ProcessDisableEncoding(StringRef DisableEncoding) {
     std::pair<unsigned,unsigned> Op = ParseOperandName(OpName, false);
 
     // Mark the operand as not-to-be encoded.
-    if (Op.second >= OperandList[Op.first].DoNotEncode.size())
-      OperandList[Op.first].DoNotEncode.resize(Op.second+1);
     OperandList[Op.first].DoNotEncode[Op.second] = true;
   }
 
