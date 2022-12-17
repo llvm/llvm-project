@@ -168,14 +168,6 @@ public:
   bool WriteToMemory(ExecutionContext *exe_ctx, lldb::addr_t address,
                      AddressType address_type, DataExtractor &data);
 
-  bool GetIsDeclaration() const;
-
-  void SetIsDeclaration(bool b);
-
-  bool GetIsExternal() const;
-
-  void SetIsExternal(bool b);
-
   lldb::Format GetFormat();
 
   lldb::Encoding GetEncoding(uint64_t &count);
