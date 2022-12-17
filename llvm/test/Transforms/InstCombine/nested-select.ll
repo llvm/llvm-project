@@ -241,6 +241,23 @@ define i1 @orcond.different.inner.cond.inverted.in.inner.sel(i1 %inner.cond.v0, 
   ret i1 %outer.sel
 }
 
+; Not an inversion
+; Based on reproduced from https://reviews.llvm.org/D139275#4001580
+define i8 @D139275_c4001580(i1 %c0, i1 %c1, i1 %c2, i8 %inner.sel.trueval, i8 %inner.sel.falseval, i8 %outer.sel.trueval) {
+; CHECK-LABEL: @D139275_c4001580(
+; CHECK-NEXT:    [[INNER_COND:%.*]] = xor i1 [[C0:%.*]], [[C1:%.*]]
+; CHECK-NEXT:    [[OUTER_COND:%.*]] = and i1 [[C2:%.*]], [[C1]]
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[INNER_COND]], i8 [[INNER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[OUTER_COND]], i8 [[OUTER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL]]
+; CHECK-NEXT:    ret i8 [[OUTER_SEL]]
+;
+  %inner.cond = xor i1 %c0, %c1
+  %outer.cond = and i1 %c2, %c1
+  %inner.sel = select i1 %inner.cond, i8 %inner.sel.trueval, i8 %inner.sel.falseval
+  %outer.sel = select i1 %outer.cond, i8 %outer.sel.trueval, i8 %inner.sel
+  ret i8 %outer.sel
+}
+
 ; Tests with intervening inversions
 
 ; In %outer.sel, %outer.cond is inverted
