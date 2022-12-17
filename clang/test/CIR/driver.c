@@ -19,7 +19,7 @@ void foo() {}
 // CIR-NEXT: }
 
 //      LLVM: define void @foo()
-// LLVM-NEXT:   ret void,
+// LLVM-NEXT:   ret void
 // LLVM-NEXT: }
 
 // OBJ: 0: c3 retq

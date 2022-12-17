@@ -62,7 +62,7 @@ struct ConvertCIRToMLIRPass
   void getDependentDialects(mlir::DialectRegistry &registry) const override {
     registry.insert<mlir::BuiltinDialect, mlir::func::FuncDialect,
                     mlir::affine::AffineDialect, mlir::memref::MemRefDialect,
-                    mlir::arith::ArithDialect>();
+                    mlir::arith::ArithDialect, mlir::cf::ControlFlowDialect>();
   }
   void runOnOperation() final;
 
