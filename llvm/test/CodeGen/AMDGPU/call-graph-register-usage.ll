@@ -14,16 +14,16 @@ define void @use_vcc() #1 {
 }
 
 ; GCN-LABEL: {{^}}indirect_use_vcc:
-; GCN: v_writelane_b32 v40, s33, 2
+; GCN: v_writelane_b32 v41, s33, 0
 ; GCN: v_writelane_b32 v40, s30, 0
 ; GCN: v_writelane_b32 v40, s31, 1
 ; GCN: s_swappc_b64
 ; GCN: v_readlane_b32 s31, v40, 1
 ; GCN: v_readlane_b32 s30, v40, 0
-; GCN: v_readlane_b32 s33, v40, 2
+; GCN: v_readlane_b32 s33, v41, 0
 ; GCN: s_setpc_b64 s[30:31]
 ; GCN: ; NumSgprs: 36
-; GCN: ; NumVgprs: 41
+; GCN: ; NumVgprs: 42
 define void @indirect_use_vcc() #1 {
   call void @use_vcc()
   ret void
@@ -34,7 +34,7 @@ define void @indirect_use_vcc() #1 {
 ; CI: ; NumSgprs: 38
 ; VI-NOBUG: ; NumSgprs: 40
 ; VI-BUG: ; NumSgprs: 96
-; GCN: ; NumVgprs: 41
+; GCN: ; NumVgprs: 42
 define amdgpu_kernel void @indirect_2level_use_vcc_kernel(ptr addrspace(1) %out) #0 {
   call void @indirect_use_vcc()
   ret void
@@ -52,7 +52,7 @@ define void @use_flat_scratch() #1 {
 ; GCN-LABEL: {{^}}indirect_use_flat_scratch:
 ; CI: ; NumSgprs: 38
 ; VI: ; NumSgprs: 40
-; GCN: ; NumVgprs: 41
+; GCN: ; NumVgprs: 42
 define void @indirect_use_flat_scratch() #1 {
   call void @use_flat_scratch()
   ret void
@@ -63,7 +63,7 @@ define void @indirect_use_flat_scratch() #1 {
 ; CI: ; NumSgprs: 38
 ; VI-NOBUG: ; NumSgprs: 40
 ; VI-BUG: ; NumSgprs: 96
-; GCN: ; NumVgprs: 41
+; GCN: ; NumVgprs: 42
 define amdgpu_kernel void @indirect_2level_use_flat_scratch_kernel(ptr addrspace(1) %out) #0 {
   call void @indirect_use_flat_scratch()
   ret void
@@ -78,7 +78,7 @@ define void @use_10_vgpr() #1 {
 }
 
 ; GCN-LABEL: {{^}}indirect_use_10_vgpr:
-; GCN: ; NumVgprs: 41
+; GCN: ; NumVgprs: 42
 define void @indirect_use_10_vgpr() #0 {
   call void @use_10_vgpr()
   ret void
@@ -86,7 +86,7 @@ define void @indirect_use_10_vgpr() #0 {
 
 ; GCN-LABEL: {{^}}indirect_2_level_use_10_vgpr:
 ; GCN: is_dynamic_callstack = 0
-; GCN: ; NumVgprs: 41
+; GCN: ; NumVgprs: 42
 define amdgpu_kernel void @indirect_2_level_use_10_vgpr() #0 {
   call void @indirect_use_10_vgpr()
   ret void
