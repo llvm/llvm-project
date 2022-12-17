@@ -129,7 +129,7 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
     //   to Features.
     Arg *A = Args.getLastArg(FlagOn, FlagOff);
     if (!A)
-      return None;
+      return std::nullopt;
 
     StringRef OptName = A->getOption().getName();
     if (A->getOption().matches(FlagOff))
@@ -137,12 +137,12 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
 
     if (!HasHVX) {
       D.Diag(diag::err_drv_needs_hvx) << withMinus(OptName);
-      return None;
+      return std::nullopt;
     }
     if (HvxVerNum < MinVerNum) {
       D.Diag(diag::err_drv_needs_hvx_version)
           << withMinus(OptName) << ("v" + std::to_string(HvxVerNum));
-      return None;
+      return std::nullopt;
     }
     return makeFeature(OptName, true);
   };
@@ -533,7 +533,7 @@ Optional<unsigned> HexagonToolChain::getSmallDataThreshold(
   if (!Gn.getAsInteger(10, G))
     return G;
 
-  return None;
+  return std::nullopt;
 }
 
 std::string HexagonToolChain::getCompilerRTPath() const {
