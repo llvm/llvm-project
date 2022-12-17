@@ -11756,7 +11756,10 @@ def err_loongarch_builtin_requires_la64 : Error<
   "this builtin requires target: loongarch64">;
 
 // Unsafe buffer usage diagnostics.
-def warn_unsafe_buffer_usage : Warning<
+def warn_unsafe_buffer_expression : Warning<
   "unchecked operation on raw buffer in expression">,
-  InGroup<DiagGroup<"unsafe-buffer-usage">>, DefaultIgnore;
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_unsafe_buffer_variable : Warning<
+  "variable %0 participates in unchecked buffer operations">,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
 } // end of sema component.
