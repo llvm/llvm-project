@@ -34,9 +34,9 @@ void OptionalWorksInConstexpr() {
                 "Default construction and hasValue() are contexpr");
   constexpr auto y1 = Optional<int>(3);
   constexpr Optional<int> y2{3};
-  static_assert(y1.value() == y2.value() && y1.value() == 3,
+  static_assert(*y1 == *y2 && *y1 == 3,
                 "Construction with value and getValue() are constexpr");
-  static_assert(y1.value() == y2.value() && y1.value() == 3,
+  static_assert(*y1 == *y2 && *y1 == 3,
                 "Construction with value and getValue() are constexpr");
   static_assert(Optional<int>{3} >= 2 && Optional<int>{1} < Optional<int>{2},
                 "Comparisons work in constexpr");

@@ -277,18 +277,18 @@ public:
   constexpr bool has_value() const { return Storage.has_value(); }
   constexpr const T *operator->() const { return &Storage.value(); }
   T *operator->() { return &Storage.value(); }
-  constexpr const T &operator*() const & { return value(); }
-  T &operator*() & { return value(); }
+  constexpr const T &operator*() const & { return Storage.value(); }
+  T &operator*() & { return Storage.value(); }
 
   template <typename U> constexpr T value_or(U &&alt) const & {
-    return has_value() ? value() : std::forward<U>(alt);
+    return has_value() ? operator*() : std::forward<U>(alt);
   }
 
   T &&value() && { return std::move(Storage.value()); }
   T &&operator*() && { return std::move(Storage.value()); }
 
   template <typename U> T value_or(U &&alt) && {
-    return has_value() ? std::move(value()) : std::forward<U>(alt);
+    return has_value() ? std::move(operator*()) : std::forward<U>(alt);
   }
 };
 
