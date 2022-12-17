@@ -231,7 +231,7 @@ public:
 
         // FIXME: we cannot roundtrip prettyForm=true right now.
         mlir::OpPrintingFlags flags;
-        flags.enableDebugInfo(/*prettyForm=*/false);
+        flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
         mlirMod->print(*outputStream, flags);
       }
       break;
@@ -240,7 +240,7 @@ public:
       assert(outputStream && "Why are we here without an output stream?");
       // FIXME: we cannot roundtrip prettyForm=true right now.
       mlir::OpPrintingFlags flags;
-      flags.enableDebugInfo(/*prettyForm=*/false);
+      flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
       loweredMlirModule->print(*outputStream, flags);
       break;
     }
