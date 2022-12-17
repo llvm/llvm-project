@@ -42,8 +42,7 @@ public:
 
   Expected<InstructionBenchmark>
   runConfiguration(const BenchmarkCode &Configuration, unsigned NumRepetitions,
-                   unsigned LoopUnrollFactor,
-                   ArrayRef<std::unique_ptr<const SnippetRepetitor>> Repetitors,
+                   unsigned LoopUnrollFactor, const SnippetRepetitor &Repetitor,
                    bool DumpObjectToDisk) const;
 
   // Scratch space to run instructions that touch memory.

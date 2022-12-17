@@ -137,8 +137,7 @@ private:
 
 Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
     const BenchmarkCode &BC, unsigned NumRepetitions, unsigned LoopBodySize,
-    ArrayRef<std::unique_ptr<const SnippetRepetitor>> Repetitors,
-    bool DumpObjectToDisk) const {
+    const SnippetRepetitor &Repetitor, bool DumpObjectToDisk) const {
   InstructionBenchmark InstrBenchmark;
   InstrBenchmark.Mode = Mode;
   InstrBenchmark.CpuName = std::string(State.getTargetMachine().getTargetCPU());
@@ -151,23 +150,7 @@ Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
 
   InstrBenchmark.Key = BC.Key;
 
-  // If we end up having an error, and we've previously succeeded with
-  // some other Repetitor, we want to discard the previous measurements.
-  struct ClearBenchmarkOnReturn {
-    ClearBenchmarkOnReturn(InstructionBenchmark *IB) : IB(IB) {}
-    ~ClearBenchmarkOnReturn() {
-      if (Clear)
-        IB->Measurements.clear();
-    }
-    void disarm() { Clear = false; }
-
-  private:
-    InstructionBenchmark *const IB;
-    bool Clear = true;
-  };
-  ClearBenchmarkOnReturn CBOR(&InstrBenchmark);
-
-  for (const std::unique_ptr<const SnippetRepetitor> &Repetitor : Repetitors) {
+  {
     // Assemble at least kMinInstructionsForSnippet instructions by repeating
     // the snippet for debug/analysis. This is so that the user clearly
     // understands that the inside instructions are repeated.
@@ -179,8 +162,8 @@ Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
       if (Error E = assembleToStream(
               State.getExegesisTarget(), State.createTargetMachine(),
               BC.LiveIns, BC.Key.RegisterInitialValues,
-              Repetitor->Repeat(Instructions, MinInstructionsForSnippet,
-                                LoopBodySizeForSnippet),
+              Repetitor.Repeat(Instructions, MinInstructionsForSnippet,
+                               LoopBodySizeForSnippet),
               OS)) {
         return std::move(E);
       }
@@ -192,7 +175,7 @@ Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
 
     // Assemble NumRepetitions instructions repetitions of the snippet for
     // measurements.
-    const auto Filler = Repetitor->Repeat(
+    const auto Filler = Repetitor.Repeat(
         Instructions, InstrBenchmark.NumRepetitions, LoopBodySize);
 
     object::OwningBinary<object::ObjectFile> ObjectFile;
@@ -219,7 +202,7 @@ Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
     if (BenchmarkSkipMeasurements) {
       InstrBenchmark.Error =
           "in --skip-measurements mode, actual measurements skipped.";
-      continue;
+      return InstrBenchmark;
     }
 
     const FunctionExecutorImpl Executor(State, std::move(ObjectFile),
@@ -239,31 +222,9 @@ Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
       BM.PerSnippetValue *= static_cast<double>(Instructions.size()) /
                             InstrBenchmark.NumRepetitions;
     }
-    if (InstrBenchmark.Measurements.empty()) {
-      InstrBenchmark.Measurements = std::move(*NewMeasurements);
-      continue;
-    }
-
-    assert(Repetitors.size() > 1 && !InstrBenchmark.Measurements.empty() &&
-           "We're in an 'min' repetition mode, and need to aggregate new "
-           "result to the existing result.");
-    assert(InstrBenchmark.Measurements.size() == NewMeasurements->size() &&
-           "Expected to have identical number of measurements.");
-    for (auto I : zip(InstrBenchmark.Measurements, *NewMeasurements)) {
-      BenchmarkMeasure &Measurement = std::get<0>(I);
-      BenchmarkMeasure &NewMeasurement = std::get<1>(I);
-      assert(Measurement.Key == NewMeasurement.Key &&
-             "Expected measurements to be symmetric");
-
-      Measurement.PerInstructionValue = std::min(
-          Measurement.PerInstructionValue, NewMeasurement.PerInstructionValue);
-      Measurement.PerSnippetValue =
-          std::min(Measurement.PerSnippetValue, NewMeasurement.PerSnippetValue);
-    }
+    InstrBenchmark.Measurements = std::move(*NewMeasurements);
   }
 
-  // We successfully measured everything, so don't discard the results.
-  CBOR.disarm();
   return InstrBenchmark;
 }
 
