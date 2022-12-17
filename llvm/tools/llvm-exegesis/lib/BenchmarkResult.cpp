@@ -152,8 +152,8 @@ private:
   const exegesis::LLVMState *State;
   std::string LastError;
   raw_string_ostream ErrorStream;
-  const StringMap<unsigned> &OpcodeNameToOpcodeIdx;
-  const StringMap<unsigned> &RegNameToRegNo;
+  const DenseMap<StringRef, unsigned> &OpcodeNameToOpcodeIdx;
+  const DenseMap<StringRef, unsigned> &RegNameToRegNo;
 };
 } // namespace
 
