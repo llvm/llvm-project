@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -Wno-return-stack-address -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
-// XFAIL: *
 
 void a0() {
   int a[10];
@@ -41,7 +40,7 @@ void local_stringlit() {
   const char *s = "whatnow";
 }
 
-// CHECK: cir.global "private" constant internal @".str" = #cir.cst_array<"whatnow\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64} loc(#loc17)
+// CHECK: cir.global "private" constant internal @".str" = #cir.cst_array<"whatnow\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64}
 // CHECK: cir.func @_Z15local_stringlitv() {
 // CHECK-NEXT:  %0 = cir.alloca !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>, ["s", init] {alignment = 8 : i64}
 // CHECK-NEXT:  %1 = cir.get_global @".str" : cir.ptr <!cir.array<i8 x 8>>
