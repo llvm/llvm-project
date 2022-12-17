@@ -13,15 +13,14 @@ define i32 @main() nounwind  {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr @g_37, align 4
 ; CHECK-NEXT:    [[CMPA:%.*]] = icmp ne i32 [[L]], 0
-; CHECK-NEXT:    br i1 [[CMPA]], label [[FUNC_1_EXIT:%.*]], label [[MOOSEBLOCK:%.*]]
-; CHECK:       mooseblock:
 ; CHECK-NEXT:    [[CMPB:%.*]] = icmp eq i1 [[CMPA]], false
-; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 [[CMPB]], [[CMPA]]
-; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 [[CMPB]], i32 0, i32 2
-; CHECK-NEXT:    br i1 [[BRMERGE]], label [[FUNC_1_EXIT]], label [[INFLOOP:%.*]]
+; CHECK-NEXT:    [[OUTVAL_SEL:%.*]] = select i1 [[CMPA]], i32 1, i32 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMPA]], [[CMPB]]
+; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 [[OR_COND]], [[CMPA]]
+; CHECK-NEXT:    [[OUTVAL_SEL_MUX:%.*]] = select i1 [[OR_COND]], i32 [[OUTVAL_SEL]], i32 2
+; CHECK-NEXT:    br i1 [[BRMERGE]], label [[FUNC_1_EXIT:%.*]], label [[INFLOOP:%.*]]
 ; CHECK:       func_1.exit:
-; CHECK-NEXT:    [[OUTVAL:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[DOTMUX]], [[MOOSEBLOCK]] ]
-; CHECK-NEXT:    [[POUT:%.*]] = tail call i32 (ptr, ...) @printf(ptr noalias @.str, i32 [[OUTVAL]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[POUT:%.*]] = tail call i32 (ptr, ...) @printf(ptr noalias @.str, i32 [[OUTVAL_SEL_MUX]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       infloop:
 ; CHECK-NEXT:    br label [[INFLOOP]]
