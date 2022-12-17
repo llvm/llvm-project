@@ -66,6 +66,9 @@ struct GV {
 
   /// the maximum number of teams.
   unsigned GV_Max_Teams;
+  // The default number of teams in the absence of any other information.
+  unsigned GV_Default_Num_Teams;
+
   // An alternative to the heavy data sharing infrastructure that uses global
   // memory is one that uses device __shared__ memory.  The amount of such space
   // (in bytes) reserved by the OpenMP runtime is noted here.
@@ -82,21 +85,23 @@ struct GV {
 
 /// For AMDGPU GPUs
 static constexpr GV AMDGPUGridValues64 = {
-    256,       // GV_Slot_Size
-    64,        // GV_Warp_Size
+    256,  // GV_Slot_Size
+    64,   // GV_Warp_Size
     (1 << 16), // GV_Max_Teams
-    896,       // GV_SimpleBufferSize
-    1024,      // GV_Max_WG_Size,
-    256,       // GV_Default_WG_Size
+    440,  // GV_Default_Num_Teams
+    896,  // GV_SimpleBufferSize
+    1024, // GV_Max_WG_Size,
+    256,  // GV_Default_WG_Size
 };
 
 static constexpr GV AMDGPUGridValues32 = {
-    256,       // GV_Slot_Size
-    32,        // GV_Warp_Size
+    256,  // GV_Slot_Size
+    32,   // GV_Warp_Size
     (1 << 16), // GV_Max_Teams
-    896,       // GV_SimpleBufferSize
-    1024,      // GV_Max_WG_Size,
-    256,       // GV_Default_WG_Size
+    440,  // GV_Default_Num_Teams
+    896,  // GV_SimpleBufferSize
+    1024, // GV_Max_WG_Size,
+    256,  // GV_Default_WG_Size
 };
 
 template <unsigned wavesize> constexpr const GV &getAMDGPUGridValues() {
@@ -106,12 +111,13 @@ template <unsigned wavesize> constexpr const GV &getAMDGPUGridValues() {
 
 /// For Nvidia GPUs
 static constexpr GV NVPTXGridValues = {
-    256,       // GV_Slot_Size
-    32,        // GV_Warp_Size
+    256,  // GV_Slot_Size
+    32,   // GV_Warp_Size
     (1 << 16), // GV_Max_Teams
-    896,       // GV_SimpleBufferSize
-    1024,      // GV_Max_WG_Size
-    128,       // GV_Default_WG_Size
+    3200, // GV_Default_Num_Teams
+    896,  // GV_SimpleBufferSize
+    1024, // GV_Max_WG_Size
+    128,  // GV_Default_WG_Size
 };
 
 } // namespace omp
