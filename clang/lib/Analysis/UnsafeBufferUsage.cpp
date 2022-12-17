@@ -189,9 +189,9 @@ public:
   static Matcher matcher() {
     // FIXME: What if the index is integer literal 0? Should this be
     // a safe gadget in this case?
-    return stmt(
-        arraySubscriptExpr(hasBase(ignoringParenImpCasts(hasPointerType())))
-            .bind(ArraySubscrTag));
+    return stmt(arraySubscriptExpr(hasBase(ignoringParenImpCasts(hasPointerType())),
+                                   unless(hasIndex(integerLiteral(equals(0)))))
+                .bind(ArraySubscrTag));
   }
 
   const ArraySubscriptExpr *getBaseStmt() const override { return ASE; }
