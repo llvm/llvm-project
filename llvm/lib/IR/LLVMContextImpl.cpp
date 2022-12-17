@@ -259,7 +259,7 @@ bool LLVMContextImpl::getOpaquePointers() {
 }
 
 void LLVMContextImpl::setOpaquePointers(bool OP) {
-  assert((!OpaquePointers || OpaquePointers.value() == OP) &&
+  assert((!OpaquePointers || *OpaquePointers == OP) &&
          "Cannot change opaque pointers mode once set");
   OpaquePointers = OP;
 }

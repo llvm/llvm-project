@@ -612,9 +612,7 @@ template <typename T> struct ValueIsPresent<std::optional<T>> {
   static inline bool isPresent(const std::optional<T> &t) {
     return t.has_value();
   }
-  static inline decltype(auto) unwrapValue(std::optional<T> &t) {
-    return t.value();
-  }
+  static inline decltype(auto) unwrapValue(std::optional<T> &t) { return *t; }
 };
 
 // If something is "nullable" then we just compare it to nullptr to see if it
