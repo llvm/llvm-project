@@ -178,22 +178,22 @@ Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
       Instructions, InstrBenchmark.NumRepetitions, LoopBodySize);
 
   object::OwningBinary<object::ObjectFile> ObjectFile;
-  if (DumpObjectToDisk) {
-    auto ObjectFilePath = writeObjectFile(BC, Filler);
-    if (Error E = ObjectFilePath.takeError()) {
-      InstrBenchmark.Error = toString(std::move(E));
-      return InstrBenchmark;
-    }
-    outs() << "Check generated assembly with: /usr/bin/objdump -d "
-           << *ObjectFilePath << "\n";
-    ObjectFile = getObjectFromFile(*ObjectFilePath);
-  } else {
+  {
     SmallString<0> Buffer;
     raw_svector_ostream OS(Buffer);
     if (Error E = assembleToStream(State.getExegesisTarget(),
                                    State.createTargetMachine(), BC.LiveIns,
                                    BC.Key.RegisterInitialValues, Filler, OS)) {
       return std::move(E);
+    }
+    if (DumpObjectToDisk) {
+      auto ObjectFilePath = writeObjectFile(Buffer);
+      if (Error E = ObjectFilePath.takeError()) {
+        InstrBenchmark.Error = toString(std::move(E));
+        return InstrBenchmark;
+      }
+      outs() << "Check generated assembly with: /usr/bin/objdump -d "
+             << *ObjectFilePath << "\n";
     }
     ObjectFile = getObjectFromBuffer(OS.str());
   }
@@ -226,20 +226,15 @@ Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
   return InstrBenchmark;
 }
 
-Expected<std::string>
-BenchmarkRunner::writeObjectFile(const BenchmarkCode &BC,
-                                 const FillFunction &FillFunction) const {
+Expected<std::string> BenchmarkRunner::writeObjectFile(StringRef Buffer) const {
   int ResultFD = 0;
   SmallString<256> ResultPath;
   if (Error E = errorCodeToError(
           sys::fs::createTemporaryFile("snippet", "o", ResultFD, ResultPath)))
     return std::move(E);
   raw_fd_ostream OFS(ResultFD, true /*ShouldClose*/);
-  if (Error E = assembleToStream(
-          State.getExegesisTarget(), State.createTargetMachine(), BC.LiveIns,
-          BC.Key.RegisterInitialValues, FillFunction, OFS)) {
-    return std::move(E);
-  }
+  OFS.write(Buffer.data(), Buffer.size());
+  OFS.flush();
   return std::string(ResultPath.str());
 }
 
