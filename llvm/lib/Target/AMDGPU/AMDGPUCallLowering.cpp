@@ -827,8 +827,8 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     } else if (InputID == AMDGPUFunctionArgInfo::LDS_KERNEL_ID) {
       std::optional<uint32_t> Id =
           AMDGPUMachineFunction::getLDSKernelIdMetadata(MF.getFunction());
-      if (Id.has_value()) {
-        MIRBuilder.buildConstant(InputReg, Id.value());
+      if (Id) {
+        MIRBuilder.buildConstant(InputReg, *Id);
       } else {
         MIRBuilder.buildUndef(InputReg);
       }

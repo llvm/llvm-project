@@ -133,7 +133,7 @@ public:
     bool IsAOneAddressSpace = isOneAddressSpace(A);
     bool IsBOneAddressSpace = isOneAddressSpace(B);
 
-    return AIO.value() >= BIO.value() &&
+    return *AIO >= *BIO &&
            (IsAOneAddressSpace == IsBOneAddressSpace || !IsAOneAddressSpace);
   }
 };
