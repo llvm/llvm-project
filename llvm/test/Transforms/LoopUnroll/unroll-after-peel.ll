@@ -8,10 +8,10 @@ define i64 @hoge(i1 %c) {
 ; CHECK:       bb1.peel.begin:
 ; CHECK-NEXT:    br label [[BB1_PEEL:%.*]]
 ; CHECK:       bb1.peel:
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB2_PEEL:%.*]], label [[BB4:%.*]]
-; CHECK:       bb2.peel:
 ; CHECK-NEXT:    [[TMP3_PEEL:%.*]] = icmp slt i32 0, 9
-; CHECK-NEXT:    br i1 [[TMP3_PEEL]], label [[BB1_PEEL_NEXT:%.*]], label [[BB4]]
+; CHECK-NEXT:    [[TMP5_SEL_PEEL:%.*]] = select i1 [[C:%.*]], i32 8, i32 0
+; CHECK-NEXT:    [[OR_COND_PEEL:%.*]] = and i1 [[C]], [[TMP3_PEEL]]
+; CHECK-NEXT:    br i1 [[OR_COND_PEEL]], label [[BB1_PEEL_NEXT:%.*]], label [[BB4:%.*]]
 ; CHECK:       bb1.peel.next:
 ; CHECK-NEXT:    br label [[BB1_PEEL_NEXT1:%.*]]
 ; CHECK:       bb1.peel.next1:
@@ -21,10 +21,8 @@ define i64 @hoge(i1 %c) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br i1 [[C]], label [[BB1]], label [[BB4_LOOPEXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       bb4.loopexit:
-; CHECK-NEXT:    [[TMP5_PH:%.*]] = phi i32 [ 8, [[BB1]] ]
 ; CHECK-NEXT:    br label [[BB4]]
 ; CHECK:       bb4:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ 0, [[BB1_PEEL]] ], [ 8, [[BB2_PEEL]] ], [ [[TMP5_PH]], [[BB4_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 (...) @llvm.experimental.deoptimize.i64(i32 10) [ "deopt"() ]
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
