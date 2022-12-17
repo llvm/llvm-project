@@ -96,7 +96,7 @@ def : ReadAdvance<ReadInt2Fpu, 0>;
 multiclass HWWriteResPair<X86FoldableSchedWrite SchedRW,
                           list<ProcResourceKind> ExePorts,
                           int Lat, list<int> Res = [1], int UOps = 1,
-                          int LoadLat = 5> {
+                          int LoadLat = 5, int LoadUOps = 1> {
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
@@ -109,7 +109,7 @@ multiclass HWWriteResPair<X86FoldableSchedWrite SchedRW,
   def : WriteRes<SchedRW.Folded, !listconcat([HWPort23], ExePorts)> {
     let Latency = !add(Lat, LoadLat);
     let ResourceCycles = !listconcat([1], Res);
-    let NumMicroOps = !add(UOps, 1);
+    let NumMicroOps = !add(UOps, LoadUOps);
   }
 }
 
