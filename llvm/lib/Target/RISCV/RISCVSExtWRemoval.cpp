@@ -222,30 +222,6 @@ static bool hasAllWUsers(const MachineInstr &OrigMI, MachineRegisterInfo &MRI) {
           return false;
         Worklist.push_back(UserMI);
         break;
-      case RISCV::PseudoCCADD:
-      case RISCV::PseudoCCSUB:
-      case RISCV::PseudoCCAND:
-      case RISCV::PseudoCCOR:
-      case RISCV::PseudoCCXOR:
-        // Instruction either returns operand 4 or performs ADD/SUB/AND/OR/XOR
-        // of operand 5 and 6 and returns that result. If only lower word of the
-        // result is used, then only the lower result of these operands is used.
-        if (OpIdx != 4 && OpIdx != 5 && OpIdx != 6)
-          return false;
-        Worklist.push_back(UserMI);
-        break;
-      case RISCV::PseudoCCADDW:
-      case RISCV::PseudoCCSUBW:
-        // Instruction either returns operand 4 or performs an ADDW/SUBW of
-        // operand 5 and 6 and returns that result.
-        // Only the lower word of operand 5 and 6 is ever needed.
-        if (OpIdx == 5 || OpIdx == 6)
-          return true;
-        // For operand 4 we need to check the users of this instruction.
-        if (OpIdx != 4)
-          return false;
-        Worklist.push_back(UserMI);
-        break;
       }
     }
   }
@@ -407,33 +383,20 @@ static bool isSignExtendedW(Register SrcReg, MachineRegisterInfo &MRI,
     case RISCV::MIN:
     case RISCV::MINU:
     case RISCV::PseudoCCMOVGPR:
-    case RISCV::PseudoCCAND:
-    case RISCV::PseudoCCOR:
-    case RISCV::PseudoCCXOR:
     case RISCV::PHI: {
       // If all incoming values are sign-extended, the output of AND, OR, XOR,
       // MIN, MAX, or PHI is also sign-extended.
 
       // The input registers for PHI are operand 1, 3, ...
       // The input registers for PseudoCCMOVGPR are 4 and 5.
-      // The input registers for PseudoCCAND/OR/XOR are 4, 5, and 6.
       // The input registers for others are operand 1 and 2.
       unsigned B = 1, E = 3, D = 1;
-      switch (MI->getOpcode()) {
-      case RISCV::PHI:
+      if (MI->getOpcode() == RISCV::PHI) {
         E = MI->getNumOperands();
         D = 2;
-        break;
-      case RISCV::PseudoCCMOVGPR:
+      } else if (MI->getOpcode() == RISCV::PseudoCCMOVGPR) {
         B = 4;
         E = 6;
-        break;
-      case RISCV::PseudoCCAND:
-      case RISCV::PseudoCCOR:
-      case RISCV::PseudoCCXOR:
-        B = 4;
-        E = 7;
-        break;
       }
 
       for (unsigned I = B; I != E; I += D) {
