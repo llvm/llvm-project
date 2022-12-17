@@ -1980,9 +1980,6 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   if (DestAS == AMDGPUAS::FLAT_ADDRESS &&
       (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
        SrcAS == AMDGPUAS::PRIVATE_ADDRESS)) {
-    if (!ST.hasFlatAddressSpace())
-      return false;
-
     Register ApertureReg = getSegmentAperture(SrcAS, MRI, B);
     if (!ApertureReg.isValid())
       return false;
