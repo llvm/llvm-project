@@ -1378,6 +1378,7 @@ def PseudoCCXOR : Pseudo<(outs GPR:$dst),
                   Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
 
 // RV64I instructions
+let IsSignExtendingOpW = 1 in {
 def PseudoCCADDW : Pseudo<(outs GPR:$dst),
                           (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
                            GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
@@ -1386,6 +1387,7 @@ def PseudoCCSUBW : Pseudo<(outs GPR:$dst),
                           (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
                            GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
                    Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
+}
 }
 
 multiclass SelectCC_GPR_rrirr<RegisterClass valty> {
