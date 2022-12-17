@@ -419,15 +419,15 @@ define void @func_call_too_many_args_use_workitem_id_x(i32 %arg0) #1 {
 ; Requires loading and storing to stack slot.
 ; GCN-LABEL: {{^}}too_many_args_call_too_many_args_use_workitem_id_x:
 ; GCN-DAG: s_addk_i32 s32, 0x400{{$}}
-; GCN-DAG: buffer_store_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GCN-DAG: buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-DAG: buffer_load_dword [[TMP_REG:v[0-9]+]], off, s[0:3], s33{{$}}
 
 ; GCN: buffer_store_dword [[TMP_REG]], off, s[0:3], s32{{$}}
 
 ; GCN: s_swappc_b64
 
+; GCN: buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GCN: s_addk_i32 s32, 0xfc00{{$}}
-; GCN: buffer_load_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GCN: s_setpc_b64
 define void @too_many_args_call_too_many_args_use_workitem_id_x(
   i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7,
