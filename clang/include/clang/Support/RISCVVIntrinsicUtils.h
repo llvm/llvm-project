@@ -234,8 +234,8 @@ public:
   }
 
   bool isValid() const { return Valid; }
-  bool isScalar() const { return Scale && Scale.value() == 0; }
-  bool isVector() const { return Scale && Scale.value() != 0; }
+  bool isScalar() const { return Scale && *Scale == 0; }
+  bool isVector() const { return Scale && *Scale != 0; }
   bool isVector(unsigned Width) const {
     return isVector() && ElementBitwidth == Width;
   }

@@ -95,8 +95,7 @@ public:
     assert(Contents && "contents not initialized");
     if (auto *Directives = Contents->DepDirectives.load()) {
       if (Directives->has_value())
-        return ArrayRef<dependency_directives_scan::Directive>(
-            Directives->value());
+        return ArrayRef<dependency_directives_scan::Directive>(**Directives);
     }
     return std::nullopt;
   }
