@@ -2308,7 +2308,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   }
 
   // (~x) & y  -->  ~(x | (~y))  iff that gets rid of inversions
-  if (sinkNotIntoOtherHandOfAndOrOr(I))
+  if (sinkNotIntoOtherHandOfLogicalOp(I))
     return &I;
 
   // An and recurrence w/loop invariant step is equivelent to (and start, step)
@@ -3252,7 +3252,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   }
 
   // (~x) | y  -->  ~(x & (~y))  iff that gets rid of inversions
-  if (sinkNotIntoOtherHandOfAndOrOr(I))
+  if (sinkNotIntoOtherHandOfLogicalOp(I))
     return &I;
 
   // Improve "get low bit mask up to and including bit X" pattern:
@@ -3614,35 +3614,39 @@ static Instruction *canonicalizeAbs(BinaryOperator &Xor,
 // into:
 //   z = ~(x |/& (~y))
 // iff y is free to invert and all uses of z can be freely updated.
-bool InstCombinerImpl::sinkNotIntoOtherHandOfAndOrOr(BinaryOperator &I) {
-  Instruction::BinaryOps NewOpc;
-  switch (I.getOpcode()) {
-  case Instruction::And:
-    NewOpc = Instruction::Or;
-    break;
-  case Instruction::Or:
-    NewOpc = Instruction::And;
-    break;
-  default:
+bool InstCombinerImpl::sinkNotIntoOtherHandOfLogicalOp(Instruction &I) {
+  Value *Op0, *Op1;
+  if (!match(&I, m_LogicalOp(m_Value(Op0), m_Value(Op1))))
     return false;
-  };
+  Instruction::BinaryOps NewOpc =
+      match(&I, m_LogicalAnd()) ? Instruction::Or : Instruction::And;
+  bool IsBinaryOp = isa<BinaryOperator>(I);
 
-  Value *X, *Y;
-  if (!match(&I, m_c_BinOp(m_Not(m_Value(X)), m_Value(Y))))
-    return false;
-
-  // Will we be able to fold the `not` into Y eventually?
-  if (!InstCombiner::isFreeToInvert(Y, Y->hasOneUse()))
+  Value *NotOp0 = nullptr;
+  Value *NotOp1 = nullptr;
+  Value **OpToInvert = nullptr;
+  if (match(Op0, m_Not(m_Value(NotOp0))) &&
+      InstCombiner::isFreeToInvert(Op1, Op1->hasOneUse())) {
+    Op0 = NotOp0;
+    OpToInvert = &Op1;
+  } else if (match(Op1, m_Not(m_Value(NotOp1))) &&
+             InstCombiner::isFreeToInvert(Op0, Op0->hasOneUse())) {
+    Op1 = NotOp1;
+    OpToInvert = &Op0;
+  } else
     return false;
 
   // And can our users be adapted?
   if (!InstCombiner::canFreelyInvertAllUsersOf(&I, /*IgnoredUser=*/nullptr))
     return false;
 
-  Value *NotY = Builder.CreateNot(Y, Y->getName() + ".not");
-  Value *NewBinOp =
-      BinaryOperator::Create(NewOpc, X, NotY, I.getName() + ".not");
-  Builder.Insert(NewBinOp);
+  *OpToInvert =
+      Builder.CreateNot(*OpToInvert, (*OpToInvert)->getName() + ".not");
+  Value *NewBinOp;
+  if (IsBinaryOp)
+    NewBinOp = Builder.CreateBinOp(NewOpc, Op0, Op1, I.getName() + ".not");
+  else
+    NewBinOp = Builder.CreateLogicalOp(NewOpc, Op0, Op1, I.getName() + ".not");
   replaceInstUsesWith(I, NewBinOp);
   // We can not just create an outer `not`, it will most likely be immediately
   // folded back, reconstructing our initial pattern, and causing an
