@@ -100,9 +100,10 @@ struct InstructionBenchmark {
   class Error readYamlFrom(const LLVMState &State, StringRef InputContent);
 
   // Write functions, non-const because of YAML traits.
+  // NOTE: we intentionally do *NOT* have a variant of this function taking
+  //       filename, because it's behaviour is bugprone with regards to
+  //       accidentally using it more than once and overriding previous YAML.
   class Error writeYamlTo(const LLVMState &State, raw_ostream &S);
-
-  class Error writeYaml(const LLVMState &State, const StringRef Filename);
 };
 
 bool operator==(const BenchmarkMeasure &A, const BenchmarkMeasure &B);
