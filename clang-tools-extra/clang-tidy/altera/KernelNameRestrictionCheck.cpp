@@ -10,7 +10,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -31,9 +30,8 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FileNameRange,
-                          std::optional<FileEntryRef> File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
 
   void EndOfMainFile() override;
@@ -64,7 +62,7 @@ void KernelNameRestrictionCheck::registerPPCallbacks(const SourceManager &SM,
 
 void KernelNameRestrictionPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &, StringRef FileName, bool,
-    CharSourceRange, std::optional<FileEntryRef>, StringRef, StringRef,
+    CharSourceRange, Optional<FileEntryRef>, StringRef, StringRef,
     const Module *, SrcMgr::CharacteristicKind) {
   IncludeDirective ID = {HashLoc, FileName};
   IncludeDirectives.push_back(std::move(ID));

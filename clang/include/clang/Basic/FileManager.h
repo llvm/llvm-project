@@ -31,7 +31,6 @@
 #include <ctime>
 #include <map>
 #include <memory>
-#include <optional>
 #include <string>
 
 namespace llvm {
@@ -232,10 +231,10 @@ public:
   llvm::Expected<FileEntryRef> getSTDIN();
 
   /// Get a FileEntryRef if it exists, without doing anything on error.
-  std::optional<FileEntryRef> getOptionalFileRef(StringRef Filename,
-                                                 bool OpenFile = false,
-                                                 bool CacheFailure = true) {
-    return llvm::expectedToStdOptional(
+  llvm::Optional<FileEntryRef> getOptionalFileRef(StringRef Filename,
+                                                  bool OpenFile = false,
+                                                  bool CacheFailure = true) {
+    return llvm::expectedToOptional(
         getFileRef(Filename, OpenFile, CacheFailure));
   }
 
@@ -271,7 +270,7 @@ public:
   /// bypasses all mapping and uniquing, blindly creating a new FileEntry.
   /// There is no attempt to deduplicate these; if you bypass the same file
   /// twice, you get two new file entries.
-  std::optional<FileEntryRef> getBypassFile(FileEntryRef VFE);
+  llvm::Optional<FileEntryRef> getBypassFile(FileEntryRef VFE);
 
   /// Open the specified file as a MemoryBuffer, returning a new
   /// MemoryBuffer if successful, otherwise returning null.

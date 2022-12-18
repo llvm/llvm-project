@@ -12,7 +12,6 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseSet.h"
-#include <optional>
 
 namespace llvm {
 namespace vfs {
@@ -70,7 +69,7 @@ private:
   void InclusionDirective(SourceLocation DirectiveLoc,
                           const Token &IncludeToken, StringRef IncludedFilename,
                           bool IsAngled, CharSourceRange FilenameRange,
-                          std::optional<FileEntryRef> IncludedFile,
+                          Optional<FileEntryRef> IncludedFile,
                           StringRef SearchPath, StringRef RelativePath,
                           const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
@@ -92,8 +91,7 @@ private:
   void PragmaDiagnosticPop(SourceLocation Loc, StringRef) override;
   void PragmaDiagnostic(SourceLocation Loc, StringRef, diag::Severity,
                         StringRef) override;
-  void HasInclude(SourceLocation Loc, StringRef, bool,
-                  std::optional<FileEntryRef>,
+  void HasInclude(SourceLocation Loc, StringRef, bool, Optional<FileEntryRef> ,
                   SrcMgr::CharacteristicKind) override;
   void PragmaOpenCLExtension(SourceLocation NameLoc, const IdentifierInfo *,
                              SourceLocation StateLoc, unsigned) override;

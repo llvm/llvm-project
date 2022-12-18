@@ -20,7 +20,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/CAS/CASID.h"
 #include "llvm/Support/raw_ostream.h"
-#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -144,9 +143,8 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          std::optional<FileEntryRef> File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
   void moduleImport(SourceLocation ImportLoc, ModuleIdPath Path,
                     const Module *Imported) override;

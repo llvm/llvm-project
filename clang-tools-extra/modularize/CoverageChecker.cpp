@@ -50,9 +50,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CoverageChecker.h"
 #include "ModularizeUtilities.h"
 #include "clang/AST/ASTConsumer.h"
+#include "CoverageChecker.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
@@ -69,7 +69,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <optional>
 
 using namespace Modularize;
 using namespace clang;
@@ -90,9 +89,8 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          std::optional<FileEntryRef> File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override {
     Checker.collectUmbrellaHeaderHeader(File->getName());
   }
