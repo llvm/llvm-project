@@ -67,8 +67,9 @@ class LanaiAsmParser : public MCTargetAsmParser {
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
-  bool ParseRegister(unsigned &RegNum, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  bool parseRegister(MCRegister &RegNum, SMLoc &StartLoc,
+                     SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override;
 
   bool MatchAndEmitInstruction(SMLoc IdLoc, unsigned &Opcode,
@@ -717,7 +718,7 @@ LanaiAsmParser::parseRegister(bool RestoreOnFailure) {
   return nullptr;
 }
 
-bool LanaiAsmParser::ParseRegister(unsigned &RegNum, SMLoc &StartLoc,
+bool LanaiAsmParser::parseRegister(MCRegister &RegNum, SMLoc &StartLoc,
                                    SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
@@ -728,7 +729,7 @@ bool LanaiAsmParser::ParseRegister(unsigned &RegNum, SMLoc &StartLoc,
   return (Op == nullptr);
 }
 
-OperandMatchResultTy LanaiAsmParser::tryParseRegister(unsigned &RegNum,
+OperandMatchResultTy LanaiAsmParser::tryParseRegister(MCRegister &RegNum,
                                                       SMLoc &StartLoc,
                                                       SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();

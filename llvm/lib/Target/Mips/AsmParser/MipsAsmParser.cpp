@@ -179,8 +179,9 @@ class MipsAsmParser : public MCTargetAsmParser {
                                bool MatchingInlineAsm) override;
 
   /// Parse a register as used in CFI directives
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+                     SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override;
 
   bool parseParenSuffix(StringRef Name, OperandVector &Operands);
@@ -6398,12 +6399,12 @@ bool MipsAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   return true;
 }
 
-bool MipsAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+bool MipsAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                   SMLoc &EndLoc) {
   return tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success;
 }
 
-OperandMatchResultTy MipsAsmParser::tryParseRegister(unsigned &RegNo,
+OperandMatchResultTy MipsAsmParser::tryParseRegister(MCRegister &RegNo,
                                                      SMLoc &StartLoc,
                                                      SMLoc &EndLoc) {
   SmallVector<std::unique_ptr<MCParsedAsmOperand>, 1> Operands;
