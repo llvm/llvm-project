@@ -139,7 +139,6 @@ write_cmake_config("config") {
     values += [
       "HAVE_FUTIMENS=1",
       "HAVE_LINK_H=1",
-      "HAVE_LSEEK64=1",
       "HAVE_MALLINFO=1",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=1",
     ]
@@ -147,7 +146,6 @@ write_cmake_config("config") {
     values += [
       "HAVE_FUTIMENS=",
       "HAVE_LINK_H=",
-      "HAVE_LSEEK64=",
       "HAVE_MALLINFO=",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=",
     ]
