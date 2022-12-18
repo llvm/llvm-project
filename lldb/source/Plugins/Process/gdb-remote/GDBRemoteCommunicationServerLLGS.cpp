@@ -1501,7 +1501,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qGetWorkingDir(
   FileSpec working_dir{m_process_launch_info.GetWorkingDirectory()};
   if (working_dir) {
     StreamString response;
-    response.PutStringAsRawHex8(working_dir.GetPath().c_str());
+    response.PutStringAsRawHex8(working_dir.GetPath());
     return SendPacketNoLock(response.GetString());
   }
 
@@ -3197,7 +3197,7 @@ GDBRemoteCommunicationServerLLGS::ReadXferObject(llvm::StringRef object,
     response.Printf("<library-list-svr4 version=\"1.0\">");
     for (auto const &library : *library_list) {
       response.Printf("<library name=\"%s\" ",
-                      XMLEncodeAttributeValue(library.name.c_str()).c_str());
+                      XMLEncodeAttributeValue(library.name).c_str());
       response.Printf("lm=\"0x%" PRIx64 "\" ", library.link_map);
       response.Printf("l_addr=\"0x%" PRIx64 "\" ", library.base_addr);
       response.Printf("l_ld=\"0x%" PRIx64 "\" />", library.ld_addr);

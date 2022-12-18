@@ -747,9 +747,8 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_shell(
       std::string output;
       FileSpec working_spec(working_dir);
       FileSystem::Instance().Resolve(working_spec);
-      Status err =
-          Host::RunShellCommand(path.c_str(), working_spec, &status, &signo,
-                                &output, std::chrono::seconds(10));
+      Status err = Host::RunShellCommand(path, working_spec, &status, &signo,
+                                         &output, std::chrono::seconds(10));
       StreamGDBRemote response;
       if (err.Fail()) {
         response.PutCString("F,");
@@ -1136,8 +1135,7 @@ GDBRemoteCommunicationServerCommon::Handle_qModuleInfo(
   response.PutChar(';');
 
   response.PutCString("file_path:");
-  response.PutStringAsRawHex8(
-        matched_module_spec.GetFileSpec().GetPath().c_str());
+  response.PutStringAsRawHex8(matched_module_spec.GetFileSpec().GetPath());
   response.PutChar(';');
   response.PutCString("file_offset:");
   response.PutHex64(file_offset);
@@ -1212,7 +1210,7 @@ void GDBRemoteCommunicationServerCommon::CreateProcessInfoResponse(
       proc_info.GetUserID(), proc_info.GetGroupID(),
       proc_info.GetEffectiveUserID(), proc_info.GetEffectiveGroupID());
   response.PutCString("name:");
-  response.PutStringAsRawHex8(proc_info.GetExecutableFile().GetPath().c_str());
+  response.PutStringAsRawHex8(proc_info.GetExecutableFile().GetPath());
 
   response.PutChar(';');
   response.PutCString("args:");

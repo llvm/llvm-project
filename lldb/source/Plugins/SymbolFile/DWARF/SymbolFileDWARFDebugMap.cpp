@@ -459,8 +459,7 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
                              ->GetArchitecture()
                              .GetTriple()
                              .getArchName()
-                             .str()
-                             .c_str());
+                             .str());
       comp_unit_info->oso_sp->module_sp = std::make_shared<DebugMapModule>(
           obj_file->GetModule(), GetCompUnitInfoIndex(comp_unit_info), oso_file,
           oso_arch, oso_object ? &oso_object : nullptr, 0,
