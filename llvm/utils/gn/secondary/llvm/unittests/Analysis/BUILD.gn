@@ -5,7 +5,9 @@ unittest("AnalysisTests") {
     "//llvm/lib/Analysis",
     "//llvm/lib/AsmParser",
     "//llvm/lib/IR",
+    "//llvm/lib/Passes",
     "//llvm/lib/Support",
+    "//llvm/lib/Testing/Support",
     "//llvm/lib/Transforms/Utils",
   ]
   sources = [
@@ -37,6 +39,7 @@ unittest("AnalysisTests") {
     "MemoryProfileInfoTest.cpp",
     "MemorySSATest.cpp",
     "PhiValuesTest.cpp",
+    "PluginInlineAdvisorAnalysisTest.cpp",
     "ProfileSummaryInfoTest.cpp",
     "ScalarEvolutionTest.cpp",
     "SparsePropagation.cpp",
