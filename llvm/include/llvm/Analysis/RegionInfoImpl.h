@@ -778,12 +778,12 @@ template <class Tr>
 void RegionInfoBase<Tr>::dump() const { print(dbgs()); }
 #endif
 
-template <class Tr>
-void RegionInfoBase<Tr>::releaseMemory() {
+template <class Tr> void RegionInfoBase<Tr>::releaseMemory() {
   BBtoRegion.clear();
-  if (TopLevelRegion)
+  if (TopLevelRegion) {
     delete TopLevelRegion;
-  TopLevelRegion = nullptr;
+    TopLevelRegion = nullptr;
+  }
 }
 
 template <class Tr>
