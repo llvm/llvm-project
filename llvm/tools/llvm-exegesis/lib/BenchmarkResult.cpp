@@ -394,25 +394,6 @@ Error InstructionBenchmark::readYamlFrom(const LLVMState &State,
   return Error::success();
 }
 
-Error InstructionBenchmark::writeYaml(const LLVMState &State,
-                                      const StringRef Filename) {
-  if (Filename == "-") {
-    if (auto Err = writeYamlTo(State, outs()))
-      return Err;
-  } else {
-    int ResultFD = 0;
-    if (auto E = errorCodeToError(openFileForWrite(Filename, ResultFD,
-                                                   sys::fs::CD_CreateAlways,
-                                                   sys::fs::OF_TextWithCRLF))) {
-      return E;
-    }
-    raw_fd_ostream Ostr(ResultFD, true /*shouldClose*/);
-    if (auto Err = writeYamlTo(State, Ostr))
-      return Err;
-  }
-  return Error::success();
-}
-
 void PerInstructionStats::push(const BenchmarkMeasure &BM) {
   if (Key.empty())
     Key = BM.Key;
