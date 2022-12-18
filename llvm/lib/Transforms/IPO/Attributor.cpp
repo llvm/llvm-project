@@ -1176,8 +1176,8 @@ std::optional<Value *> Attributor::translateArgumentToCallSiteContent(
 Attributor::~Attributor() {
   // The abstract attributes are allocated via the BumpPtrAllocator Allocator,
   // thus we cannot delete them. We can, and want to, destruct them though.
-  for (auto &DepAA : DG.SyntheticRoot.Deps) {
-    AbstractAttribute *AA = cast<AbstractAttribute>(DepAA.getPointer());
+  for (auto &It : AAMap) {
+    AbstractAttribute *AA = It.getSecond();
     AA->~AbstractAttribute();
   }
 }
