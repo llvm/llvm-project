@@ -1298,13 +1298,19 @@ static void replaceExitCond(BranchInst *BI, Value *NewCond,
     DeadInsts.emplace_back(OldCond);
 }
 
-static void foldExit(const Loop *L, BasicBlock *ExitingBB, bool IsTaken,
-                     SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+static Constant *createFoldedExitCond(const Loop *L, BasicBlock *ExitingBB,
+                                      bool IsTaken) {
   BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
   bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
   auto *OldCond = BI->getCondition();
-  auto *NewCond =
-      ConstantInt::get(OldCond->getType(), IsTaken ? ExitIfTrue : !ExitIfTrue);
+  return ConstantInt::get(OldCond->getType(),
+                          IsTaken ? ExitIfTrue : !ExitIfTrue);
+}
+
+static void foldExit(const Loop *L, BasicBlock *ExitingBB, bool IsTaken,
+                     SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+  BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  auto *NewCond = createFoldedExitCond(L, ExitingBB, IsTaken);
   replaceExitCond(BI, NewCond, DeadInsts);
 }
 
@@ -1346,21 +1352,21 @@ static void replaceLoopPHINodesWithPreheaderValues(
   }
 }
 
-static void replaceWithInvariantCond(
-    const Loop *L, BasicBlock *ExitingBB, ICmpInst::Predicate InvariantPred,
-    const SCEV *InvariantLHS, const SCEV *InvariantRHS, SCEVExpander &Rewriter,
-    SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+static Value *
+createInvariantCond(const Loop *L, BasicBlock *ExitingBB,
+                    const ScalarEvolution::LoopInvariantPredicate &LIP,
+                    SCEVExpander &Rewriter) {
+  ICmpInst::Predicate InvariantPred = LIP.Pred;
   BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
   Rewriter.setInsertPoint(BI);
-  auto *LHSV = Rewriter.expandCodeFor(InvariantLHS);
-  auto *RHSV = Rewriter.expandCodeFor(InvariantRHS);
+  auto *LHSV = Rewriter.expandCodeFor(LIP.LHS);
+  auto *RHSV = Rewriter.expandCodeFor(LIP.RHS);
   bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
   if (ExitIfTrue)
     InvariantPred = ICmpInst::getInversePredicate(InvariantPred);
   IRBuilder<> Builder(BI);
-  auto *NewCond = Builder.CreateICmp(InvariantPred, LHSV, RHSV,
-                                     BI->getCondition()->getName());
-  replaceExitCond(BI, NewCond, DeadInsts);
+  return Builder.CreateICmp(InvariantPred, LHSV, RHSV,
+                            BI->getCondition()->getName());
 }
 
 static bool optimizeLoopExitWithUnknownExitCount(
@@ -1415,9 +1421,10 @@ static bool optimizeLoopExitWithUnknownExitCount(
   // Can we prove it to be trivially true?
   if (SE->isKnownPredicateAt(LIP->Pred, LIP->LHS, LIP->RHS, BI))
     foldExit(L, ExitingBB, /*IsTaken*/ false, DeadInsts);
-  else
-    replaceWithInvariantCond(L, ExitingBB, LIP->Pred, LIP->LHS, LIP->RHS,
-                             Rewriter, DeadInsts);
+  else {
+    auto *NewCond = createInvariantCond(L, ExitingBB, *LIP, Rewriter);
+    replaceExitCond(BI, NewCond, DeadInsts);
+  }
 
   return true;
 }

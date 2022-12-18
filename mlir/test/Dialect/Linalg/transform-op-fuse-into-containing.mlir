@@ -96,6 +96,52 @@ module {
 
 // -----
 
+module {
+  func.func @foo(%0: tensor<f32>) -> tensor<f32> {
+    return %0: tensor<f32>
+  }
+
+  // CHECK-LABEL: func.func @fuse_tileable_op_rank_reducing
+  //  CHECK-SAME:   %[[CHUNK_SIZE:[0-9a-z]+]]: index
+  //  CHECK-SAME:   %[[IN:[0-9a-z]+]]: tensor<?xf32>
+  //  CHECK-SAME:   %[[OUT:[0-9a-z]+]]: tensor<?xf32>
+  func.func @fuse_tileable_op_rank_reducing(%arg0: index, %arg1: tensor<?xf32>, %arg2: tensor<?xf32>) -> tensor<?xf32> {
+    %cst = arith.constant 4.200000e+01 : f32
+    %c0 = arith.constant 0 : index
+    %0 = linalg.fill ins(%cst : f32) outs(%arg2 : tensor<?xf32>) -> tensor<?xf32>
+    %d0 = tensor.dim %arg1, %c0 : tensor<?xf32>
+
+    // CHECK: scf.foreach_thread {{.*}} -> (tensor<?xf32>) {
+    %2 = scf.foreach_thread (%arg3) in (%d0) shared_outs(%o = %0) -> (tensor<?xf32>) {
+      %5 = tensor.extract_slice %o[%arg3] [1] [1] : tensor<?xf32> to tensor<f32>
+      
+      // CHECK: tensor.extract_slice %{{.*}}[%{{.*}}] [1] [1] : tensor<?xf32> to tensor<1xf32>
+      // CHECK: linalg.fill ins(%{{.*}} : f32) outs(%{{.*}} : tensor<1xf32>) -> tensor<1xf32>
+      // CHECK: tensor.extract_slice %{{.*}}[0] [1] [1] : tensor<1xf32> to tensor<f32>
+      // CHECK: func.call @foo(%{{.*}}) : (tensor<f32>) -> tensor<f32>
+      %7 = func.call @foo(%5) : (tensor<f32>) -> tensor<f32>
+
+      scf.foreach_thread.perform_concurrently {
+      // CHECK: tensor.parallel_insert_slice %{{.*}} into %{{.*}}[%{{.*}}] [1] [1] : tensor<f32> into tensor<?xf32>
+        tensor.parallel_insert_slice %7 into %o[%arg3] [1] [1] : tensor<f32> into tensor<?xf32>
+      }
+    }
+    // CHECK: }
+    func.return %2 : tensor<?xf32>
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb1(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["linalg.fill"]} in %arg1
+    %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1
+
+    // linalg.fill is tileable. The op is tiled and fused.
+    transform.structured.fuse_into_containing_op %0 into %1
+  }
+}
+
+// -----
+
 #map0 = affine_map<()[s0, s1] -> (s0 ceildiv s1)>
 #map1 = affine_map<(d0)[s0] -> (d0 * s0)>
 #map2 = affine_map<(d0)[s0, s1] -> (-(d0 * s1) + s0, s1)>

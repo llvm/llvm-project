@@ -119,7 +119,6 @@ static_library("Analysis") {
     "SyncDependenceAnalysis.cpp",
     "SyntheticCountsUtils.cpp",
     "TFLiteUtils.cpp",
-    "TFUtils.cpp",
     "TargetLibraryInfo.cpp",
     "TargetTransformInfo.cpp",
     "TensorSpec.cpp",

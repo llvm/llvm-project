@@ -93,6 +93,9 @@ public:
   /// directive is present or not.
   std::optional<bool> HasRequiresUnifiedSharedMemory;
 
+  // Flag for specifying if offloading is mandatory.
+  Optional<bool> OpenMPOffloadMandatory;
+
   /// First separator used between the initial two parts of a name.
   std::optional<StringRef> FirstSeparator;
   /// Separator used between all of the rest consecutive parts of s name
@@ -100,9 +103,11 @@ public:
 
   OpenMPIRBuilderConfig() {}
   OpenMPIRBuilderConfig(bool IsEmbedded, bool IsTargetCodegen,
-                        bool HasRequiresUnifiedSharedMemory)
+                        bool HasRequiresUnifiedSharedMemory,
+                        bool OpenMPOffloadMandatory)
       : IsEmbedded(IsEmbedded), IsTargetCodegen(IsTargetCodegen),
-        HasRequiresUnifiedSharedMemory(HasRequiresUnifiedSharedMemory) {}
+        HasRequiresUnifiedSharedMemory(HasRequiresUnifiedSharedMemory),
+        OpenMPOffloadMandatory(OpenMPOffloadMandatory) {}
 
   // Getters functions that assert if the required values are not present.
   bool isEmbedded() const {
@@ -121,6 +126,11 @@ public:
     return HasRequiresUnifiedSharedMemory.value();
   }
 
+  bool openMPOffloadMandatory() const {
+    assert(OpenMPOffloadMandatory.has_value() &&
+           "OpenMPOffloadMandatory is not set");
+    return OpenMPOffloadMandatory.value();
+  }
   // Returns the FirstSeparator if set, otherwise use the default
   // separator depending on isTargetCodegen
   StringRef firstSeparator() const {
@@ -1479,6 +1489,49 @@ private:
                                         StringRef EntryFnName);
 
 public:
+  /// Functions used to generate a function with the given name.
+  using FunctionGenCallback = std::function<Function *(StringRef FunctionName)>;
+
+  /// Create a unique name for the entry function using the source location
+  /// information of the current target region. The name will be something like:
+  ///
+  /// __omp_offloading_DD_FFFF_PP_lBB[_CC]
+  ///
+  /// where DD_FFFF is an ID unique to the file (device and file IDs), PP is the
+  /// mangled name of the function that encloses the target region and BB is the
+  /// line number of the target region. CC is a count added when more than one
+  /// region is located at the same location.
+  ///
+  /// If this target outline function is not an offload entry, we don't need to
+  /// register it. This may happen if it is guarded by an if clause that is
+  /// false at compile time, or no target archs have been specified.
+  ///
+  /// The created target region ID is used by the runtime library to identify
+  /// the current target region, so it only has to be unique and not
+  /// necessarily point to anything. It could be the pointer to the outlined
+  /// function that implements the target region, but we aren't using that so
+  /// that the compiler doesn't need to keep that, and could therefore inline
+  /// the host function if proven worthwhile during optimization. In the other
+  /// hand, if emitting code for the device, the ID has to be the function
+  /// address so that it can retrieved from the offloading entry and launched
+  /// by the runtime library. We also mark the outlined function to have
+  /// external linkage in case we are emitting code for the device, because
+  /// these functions will be entry points to the device.
+  ///
+  /// \param InfoManager The info manager keeping track of the offload entries
+  /// \param EntryInfo The entry information about the function
+  /// \param GenerateFunctionCallback The callback function to generate the code
+  /// \param NumTeams Number default teams
+  /// \param NumThreads Number default threads
+  /// \param OutlinedFunction Pointer to the outlined function
+  /// \param EntryFnIDName Name of the ID o be created
+  void emitTargetRegionFunction(OffloadEntriesInfoManager &InfoManager,
+                                TargetRegionEntryInfo &EntryInfo,
+                                FunctionGenCallback &GenerateFunctionCallback,
+                                int32_t NumTeams, int32_t NumThreads,
+                                bool IsOffloadEntry, Function *&OutlinedFn,
+                                Constant *&OutlinedFnID);
+
   /// Registers the given function and sets up the attribtues of the function
   /// Returns the FunctionID.
   ///

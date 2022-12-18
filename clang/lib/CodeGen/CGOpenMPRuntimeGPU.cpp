@@ -1308,7 +1308,8 @@ unsigned CGOpenMPRuntimeGPU::getDefaultLocationReserved2Flags() const {
 CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
     : CGOpenMPRuntime(CGM) {
   llvm::OpenMPIRBuilderConfig Config(CGM.getLangOpts().OpenMPIsDevice, true,
-                                     hasRequiresUnifiedSharedMemory());
+                                     hasRequiresUnifiedSharedMemory(),
+                                     CGM.getLangOpts().OpenMPOffloadMandatory);
   OMPBuilder.setConfig(Config);
   OffloadEntriesInfoManager.setConfig(Config);
 

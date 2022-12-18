@@ -74,7 +74,7 @@ static int testRoundtripEncoding(MlirContext ctx) {
   return 0;
 }
 
-int main() {
+int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirDialectHandleRegisterDialect(mlirGetDialectHandle__sparse_tensor__(),
                                    ctx);

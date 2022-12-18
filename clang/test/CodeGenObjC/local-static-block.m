@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fblocks -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fblocks -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck %s
 // rdar: // 8390455
 
 // CHECK: @ArrayRecurs = internal global
@@ -59,7 +59,7 @@ void FUNC2(void) {
 
 // CHECK-LABEL: define{{.*}} void @FUNC2(
 // CHECK: define internal void @_block_invoke{{.*}}(
-// CHECK: call void %{{.*}}(i8* noundef bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor* }* @__block_literal_global{{.*}} to i8*), i32 noundef %{{.*}})
+// CHECK: call void %{{.*}}(ptr noundef @__block_literal_global{{.*}}, i32 noundef %{{.*}})
 
 void FUNC1(void)
 {

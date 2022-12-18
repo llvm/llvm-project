@@ -16,8 +16,9 @@ namespace __llvm_libc {
 namespace printf_core {
 
 int FileWriter::write(const char *__restrict to_write, size_t len) {
-  int written = file->write_unlocked(to_write, len);
-  if (written != static_cast<int>(len))
+  auto result = file->write_unlocked(to_write, len);
+  int written = result.value;
+  if (written != static_cast<int>(len) || result.has_error())
     written = FILE_WRITE_ERROR;
   if (file->error_unlocked())
     written = FILE_STATUS_ERROR;

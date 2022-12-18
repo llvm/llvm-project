@@ -1028,7 +1028,7 @@ def add_ir_checks(output_lines, comment_marker, prefix_list, func_dict,
                   func_name, preserve_names, function_sig,
                   global_vars_seen_dict, is_filtered):
   # Label format is based on IR string.
-  function_def_regex = 'define {{[^@]+}}' if function_sig else ''
+  function_def_regex = 'define {{[^@]+}}'
   check_label_format = '{} %s-LABEL: {}@%s%s%s'.format(comment_marker, function_def_regex)
   return add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name,
                     check_label_format, False, preserve_names, global_vars_seen_dict,

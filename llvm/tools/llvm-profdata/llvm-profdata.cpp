@@ -349,6 +349,9 @@ static void mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
     Dst->Errors.push_back(std::move(ErrorPair));
   Src->Errors.clear();
 
+  if (Error E = Dst->Writer.mergeProfileKind(Src->Writer.getProfileKind()))
+    exitWithError(std::move(E));
+
   Dst->Writer.mergeRecordsFromWriter(std::move(Src->Writer), [&](Error E) {
     instrprof_error IPE = InstrProfError::take(std::move(E));
     std::unique_lock<std::mutex> ErrGuard{Dst->ErrLock};
@@ -406,9 +409,6 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   if (NumThreads == 0)
     NumThreads = std::min(hardware_concurrency().compute_thread_count(),
                           unsigned((Inputs.size() + 1) / 2));
-  // FIXME: There's a bug here, where setting NumThreads = Inputs.size() fails
-  // the merge_empty_profile.test because the InstrProfWriter.ProfileKind isn't
-  // merged, thus the emitted file ends up with a PF_Unknown kind.
 
   // Initialize the writer contexts.
   SmallVector<std::unique_ptr<WriterContext>, 4> Contexts;

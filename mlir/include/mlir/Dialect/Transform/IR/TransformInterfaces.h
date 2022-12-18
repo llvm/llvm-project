@@ -34,7 +34,6 @@ namespace mlir {
 /// failures as their diagnostics have been already reported to the user.
 class [[nodiscard]] DiagnosedSilenceableFailure {
 public:
-  explicit DiagnosedSilenceableFailure(LogicalResult result) : result(result) {}
   DiagnosedSilenceableFailure(const DiagnosedSilenceableFailure &) = delete;
   DiagnosedSilenceableFailure &
   operator=(const DiagnosedSilenceableFailure &) = delete;
@@ -156,6 +155,7 @@ public:
   }
 
 private:
+  explicit DiagnosedSilenceableFailure(LogicalResult result) : result(result) {}
   explicit DiagnosedSilenceableFailure(Diagnostic &&diagnostic)
       : result(failure()) {
     diagnostics.emplace_back(std::move(diagnostic));

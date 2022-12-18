@@ -139,6 +139,17 @@ static cl::opt<unsigned> MaxXors("aarch64-max-xors", cl::init(16), cl::Hidden,
 /// Value type used for condition codes.
 static const MVT MVT_CC = MVT::i32;
 
+static const MCPhysReg GPRArgRegs[] = {AArch64::X0, AArch64::X1, AArch64::X2,
+                                       AArch64::X3, AArch64::X4, AArch64::X5,
+                                       AArch64::X6, AArch64::X7};
+static const MCPhysReg FPRArgRegs[] = {AArch64::Q0, AArch64::Q1, AArch64::Q2,
+                                       AArch64::Q3, AArch64::Q4, AArch64::Q5,
+                                       AArch64::Q6, AArch64::Q7};
+
+const ArrayRef<MCPhysReg> llvm::AArch64::getGPRArgRegs() { return GPRArgRegs; }
+
+const ArrayRef<MCPhysReg> llvm::AArch64::getFPRArgRegs() { return FPRArgRegs; }
+
 static inline EVT getPackedSVEVectorVT(EVT VT) {
   switch (VT.getSimpleVT().SimpleTy) {
   default:
@@ -4526,7 +4537,7 @@ SDValue AArch64TargetLowering::LowerSET_ROUNDING(SDValue Op,
 }
 
 static unsigned selectUmullSmull(SDNode *&N0, SDNode *&N1, SelectionDAG &DAG,
-                                 bool &IsMLA) {
+                                 SDLoc DL, bool &IsMLA) {
   bool IsN0SExt = isSignExtended(N0, DAG);
   bool IsN1SExt = isSignExtended(N1, DAG);
   if (IsN0SExt && IsN1SExt)
@@ -4538,6 +4549,25 @@ static unsigned selectUmullSmull(SDNode *&N0, SDNode *&N1, SelectionDAG &DAG,
   if (IsN0ZExt && IsN1ZExt)
     return AArch64ISD::UMULL;
 
+  // Select SMULL if we can replace zext with sext.
+  if (((IsN0SExt && IsN1ZExt) || (IsN0ZExt && IsN1SExt)) &&
+      !isExtendedBUILD_VECTOR(N0, DAG, false) &&
+      !isExtendedBUILD_VECTOR(N1, DAG, false)) {
+    SDValue ZextOperand;
+    if (IsN0ZExt)
+      ZextOperand = N0->getOperand(0);
+    else
+      ZextOperand = N1->getOperand(0);
+    if (DAG.SignBitIsZero(ZextOperand)) {
+      SDNode *NewSext =
+          DAG.getSExtOrTrunc(ZextOperand, DL, N0->getValueType(0)).getNode();
+      if (IsN0ZExt)
+        N0 = NewSext;
+      else
+        N1 = NewSext;
+      return AArch64ISD::SMULL;
+    }
+  }
   if (!IsN1SExt && !IsN1ZExt)
     return 0;
   // Look for (s/zext A + s/zext B) * (s/zext C). We want to turn these
@@ -4575,7 +4605,8 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   SDNode *N0 = Op.getOperand(0).getNode();
   SDNode *N1 = Op.getOperand(1).getNode();
   bool isMLA = false;
-  unsigned NewOpc = selectUmullSmull(N0, N1, DAG, isMLA);
+  SDLoc DL(Op);
+  unsigned NewOpc = selectUmullSmull(N0, N1, DAG, DL, isMLA);
 
   if (!NewOpc) {
     if (VT == MVT::v2i64)
@@ -4587,7 +4618,6 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   }
 
   // Legalize to a S/UMULL instruction
-  SDLoc DL(Op);
   SDValue Op0;
   SDValue Op1 = skipExtensionForVectorMULL(N1, DAG);
   if (!isMLA) {
@@ -6543,10 +6573,8 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
 
   SmallVector<SDValue, 8> MemOps;
 
-  static const MCPhysReg GPRArgRegs[] = { AArch64::X0, AArch64::X1, AArch64::X2,
-                                          AArch64::X3, AArch64::X4, AArch64::X5,
-                                          AArch64::X6, AArch64::X7 };
-  unsigned NumGPRArgRegs = std::size(GPRArgRegs);
+  auto GPRArgRegs = AArch64::getGPRArgRegs();
+  unsigned NumGPRArgRegs = GPRArgRegs.size();
   if (Subtarget->isWindowsArm64EC()) {
     // In the ARM64EC ABI, only x0-x3 are used to pass arguments to varargs
     // functions.
@@ -6596,10 +6624,8 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
   FuncInfo->setVarArgsGPRSize(GPRSaveSize);
 
   if (Subtarget->hasFPARMv8() && !IsWin64) {
-    static const MCPhysReg FPRArgRegs[] = {
-        AArch64::Q0, AArch64::Q1, AArch64::Q2, AArch64::Q3,
-        AArch64::Q4, AArch64::Q5, AArch64::Q6, AArch64::Q7};
-    static const unsigned NumFPRArgRegs = std::size(FPRArgRegs);
+    auto FPRArgRegs = AArch64::getFPRArgRegs();
+    const unsigned NumFPRArgRegs = FPRArgRegs.size();
     unsigned FirstVariadicFPR = CCInfo.getFirstUnallocated(FPRArgRegs);
 
     unsigned FPRSaveSize = 16 * (NumFPRArgRegs - FirstVariadicFPR);
@@ -22624,50 +22650,39 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorIntDivideToSVE(
     return LowerToPredicatedOp(Op, DAG, PredOpcode);
 
   // Scalable vector i8/i16 DIV is not supported. Promote it to i32.
-  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
   EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
-  EVT FixedWidenedVT = HalfVT.widenIntegerVectorElementType(*DAG.getContext());
-  EVT ScalableWidenedVT = getContainerForFixedLengthVector(DAG, FixedWidenedVT);
+  EVT PromVT = HalfVT.widenIntegerVectorElementType(*DAG.getContext());
+  unsigned ExtendOpcode = Signed ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
 
-  // If this is not a full vector, extend, div, and truncate it.
-  EVT WidenedVT = VT.widenIntegerVectorElementType(*DAG.getContext());
-  if (DAG.getTargetLoweringInfo().isTypeLegal(WidenedVT)) {
-    unsigned ExtendOpcode = Signed ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-    SDValue Op0 = DAG.getNode(ExtendOpcode, dl, WidenedVT, Op.getOperand(0));
-    SDValue Op1 = DAG.getNode(ExtendOpcode, dl, WidenedVT, Op.getOperand(1));
-    SDValue Div = DAG.getNode(Op.getOpcode(), dl, WidenedVT, Op0, Op1);
+  // If the wider type is legal: extend, op, and truncate.
+  EVT WideVT = VT.widenIntegerVectorElementType(*DAG.getContext());
+  if (DAG.getTargetLoweringInfo().isTypeLegal(WideVT)) {
+    SDValue Op0 = DAG.getNode(ExtendOpcode, dl, WideVT, Op.getOperand(0));
+    SDValue Op1 = DAG.getNode(ExtendOpcode, dl, WideVT, Op.getOperand(1));
+    SDValue Div = DAG.getNode(Op.getOpcode(), dl, WideVT, Op0, Op1);
     return DAG.getNode(ISD::TRUNCATE, dl, VT, Div);
   }
 
-  // Convert the operands to scalable vectors.
-  SDValue Op0 = convertToScalableVector(DAG, ContainerVT, Op.getOperand(0));
-  SDValue Op1 = convertToScalableVector(DAG, ContainerVT, Op.getOperand(1));
+  auto HalveAndExtendVector = [&DAG, &dl, &HalfVT, &PromVT,
+                               &ExtendOpcode](SDValue Op) {
+    SDValue IdxZero = DAG.getConstant(0, dl, MVT::i64);
+    SDValue IdxHalf =
+        DAG.getConstant(HalfVT.getVectorNumElements(), dl, MVT::i64);
+    SDValue Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, HalfVT, Op, IdxZero);
+    SDValue Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, HalfVT, Op, IdxHalf);
+    return std::pair<SDValue, SDValue>(
+        {DAG.getNode(ExtendOpcode, dl, PromVT, Lo),
+         DAG.getNode(ExtendOpcode, dl, PromVT, Hi)});
+  };
 
-  // Extend the scalable operands.
-  unsigned UnpkLo = Signed ? AArch64ISD::SUNPKLO : AArch64ISD::UUNPKLO;
-  unsigned UnpkHi = Signed ? AArch64ISD::SUNPKHI : AArch64ISD::UUNPKHI;
-  SDValue Op0Lo = DAG.getNode(UnpkLo, dl, ScalableWidenedVT, Op0);
-  SDValue Op1Lo = DAG.getNode(UnpkLo, dl, ScalableWidenedVT, Op1);
-  SDValue Op0Hi = DAG.getNode(UnpkHi, dl, ScalableWidenedVT, Op0);
-  SDValue Op1Hi = DAG.getNode(UnpkHi, dl, ScalableWidenedVT, Op1);
-
-  // Convert back to fixed vectors so the DIV can be further lowered.
-  Op0Lo = convertFromScalableVector(DAG, FixedWidenedVT, Op0Lo);
-  Op1Lo = convertFromScalableVector(DAG, FixedWidenedVT, Op1Lo);
-  Op0Hi = convertFromScalableVector(DAG, FixedWidenedVT, Op0Hi);
-  Op1Hi = convertFromScalableVector(DAG, FixedWidenedVT, Op1Hi);
-  SDValue ResultLo = DAG.getNode(Op.getOpcode(), dl, FixedWidenedVT,
-                                 Op0Lo, Op1Lo);
-  SDValue ResultHi = DAG.getNode(Op.getOpcode(), dl, FixedWidenedVT,
-                                 Op0Hi, Op1Hi);
-
-  // Convert again to scalable vectors to truncate.
-  ResultLo = convertToScalableVector(DAG, ScalableWidenedVT, ResultLo);
-  ResultHi = convertToScalableVector(DAG, ScalableWidenedVT, ResultHi);
-  SDValue ScalableResult = DAG.getNode(AArch64ISD::UZP1, dl, ContainerVT,
-                                       ResultLo, ResultHi);
-
-  return convertFromScalableVector(DAG, VT, ScalableResult);
+  // If wider type is not legal: split, extend, op, trunc and concat.
+  auto [Op0LoExt, Op0HiExt] = HalveAndExtendVector(Op.getOperand(0));
+  auto [Op1LoExt, Op1HiExt] = HalveAndExtendVector(Op.getOperand(1));
+  SDValue Lo = DAG.getNode(Op.getOpcode(), dl, PromVT, Op0LoExt, Op1LoExt);
+  SDValue Hi = DAG.getNode(Op.getOpcode(), dl, PromVT, Op0HiExt, Op1HiExt);
+  SDValue LoTrunc = DAG.getNode(ISD::TRUNCATE, dl, HalfVT, Lo);
+  SDValue HiTrunc = DAG.getNode(ISD::TRUNCATE, dl, HalfVT, Hi);
+  return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, {LoTrunc, HiTrunc});
 }
 
 SDValue AArch64TargetLowering::LowerFixedLengthVectorIntExtendToSVE(

@@ -12875,11 +12875,22 @@ static bool fpModeMatchesGlobalFPAtomicMode(const AtomicRMWInst *RMW) {
   return DenormMode == DenormalMode::getIEEE();
 }
 
+// The amdgpu-unsafe-fp-atomics attribute enables generation of unsafe
+// floating point atomic instructions. May generate more efficient code,
+// but may not respect rounding and denormal modes, and may give incorrect
+// results for certain memory destinations.
+bool unsafeFPAtomicsDisabled(Function *F) {
+  return F->getFnAttribute("amdgpu-unsafe-fp-atomics").getValueAsString() !=
+         "true";
+}
+
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   unsigned AS = RMW->getPointerAddressSpace();
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
     return AtomicExpansionKind::NotAtomic;
+
+  auto SSID = RMW->getSyncScopeID();
 
   auto ReportUnsafeHWInst = [&](TargetLowering::AtomicExpansionKind Kind) {
     OptimizationRemarkEmitter ORE(RMW->getFunction());
@@ -12899,6 +12910,10 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     return Kind;
   };
 
+  bool HasSystemScope =
+      SSID == SyncScope::System ||
+      SSID == RMW->getContext().getOrInsertSyncScopeID("one-as");
+
   switch (RMW->getOperation()) {
   case AtomicRMWInst::FAdd: {
     Type *Ty = RMW->getType();
@@ -12909,21 +12924,13 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     if (!Ty->isFloatTy() && (!Subtarget->hasGFX90AInsts() || !Ty->isDoubleTy()))
       return AtomicExpansionKind::CmpXChg;
 
-    if ((AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS) &&
+    if (AMDGPU::isFlatGlobalAddrSpace(AS) &&
         Subtarget->hasAtomicFaddNoRtnInsts()) {
-      // The amdgpu-unsafe-fp-atomics attribute enables generation of unsafe
-      // floating point atomic instructions. May generate more efficient code,
-      // but may not respect rounding and denormal modes, and may give incorrect
-      // results for certain memory destinations.
-      if (RMW->getFunction()
-              ->getFnAttribute("amdgpu-unsafe-fp-atomics")
-              .getValueAsString() != "true")
+      if (unsafeFPAtomicsDisabled(RMW->getFunction()))
         return AtomicExpansionKind::CmpXChg;
 
       // Always expand system scope fp atomics.
-      auto SSID = RMW->getSyncScopeID();
-      if (SSID == SyncScope::System ||
-          SSID == RMW->getContext().getOrInsertSyncScopeID("one-as"))
+      if (HasSystemScope)
         return AtomicExpansionKind::CmpXChg;
 
       if (AS == AMDGPUAS::GLOBAL_ADDRESS && Ty->isFloatTy()) {
@@ -12978,6 +12985,23 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     }
 
     return AtomicExpansionKind::CmpXChg;
+  }
+  case AtomicRMWInst::FMin:
+  case AtomicRMWInst::FMax:
+  case AtomicRMWInst::Min:
+  case AtomicRMWInst::Max:
+  case AtomicRMWInst::UMin:
+  case AtomicRMWInst::UMax: {
+    if (AMDGPU::isFlatGlobalAddrSpace(AS)) {
+      if (RMW->getType()->isFloatTy() &&
+          unsafeFPAtomicsDisabled(RMW->getFunction()))
+        return AtomicExpansionKind::CmpXChg;
+
+      // Always expand system scope min/max atomics.
+      if (HasSystemScope)
+        return AtomicExpansionKind::CmpXChg;
+    }
+    break;
   }
   default:
     break;

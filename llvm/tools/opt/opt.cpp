@@ -87,12 +87,6 @@ static cl::opt<std::string> PassPipeline(
 static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
                                    cl::desc("Alias for -passes"));
 
-static cl::opt<bool> TemporarilyAllowOldPassesSyntax(
-    "temporarily-allow-old-pass-syntax",
-    cl::desc("Do not use in new tests. To be removed once all tests have "
-             "migrated."),
-    cl::init(false));
-
 static cl::opt<bool> PrintPasses("print-passes",
                                  cl::desc("Print available passes that can be "
                                           "specified in -passes=foo and exit"));
@@ -487,6 +481,15 @@ int main(int argc, char **argv) {
   const bool UseNPM = (EnableNewPassManager && !shouldForceLegacyPM()) ||
                       PassPipeline.getNumOccurrences() > 0;
 
+  if (UseNPM && !PassList.empty()) {
+    errs() << "The `opt -passname` syntax for the new pass manager is "
+              "not supported, please use `opt -passes=<pipeline>` (or the `-p` "
+              "alias for a more concise version).\n";
+    errs() << "See https://llvm.org/docs/NewPassManager.html#invoking-opt "
+              "for more details on the pass pipeline syntax.\n\n";
+    return 1;
+  }
+
   if (!UseNPM && PluginList.size()) {
     errs() << argv[0] << ": " << PassPlugins.ArgStr
            << " specified with legacy PM.\n";
@@ -661,35 +664,19 @@ int main(int argc, char **argv) {
              "-debug-pass-manager, or use the legacy PM (-enable-new-pm=0)\n";
       return 1;
     }
-    if (PassPipeline.getNumOccurrences() > 0 && PassList.size() > 0) {
-      errs()
-          << "Cannot specify passes via both -foo-pass and --passes=foo-pass\n";
-      return 1;
-    }
     auto NumOLevel = OptLevelO0 + OptLevelO1 + OptLevelO2 + OptLevelO3 +
                      OptLevelOs + OptLevelOz;
     if (NumOLevel > 1) {
       errs() << "Cannot specify multiple -O#\n";
       return 1;
     }
-    if (NumOLevel > 0 &&
-        (PassPipeline.getNumOccurrences() > 0 || PassList.size() > 0)) {
+    if (NumOLevel > 0 && (PassPipeline.getNumOccurrences() > 0)) {
       errs() << "Cannot specify -O# and --passes=/--foo-pass, use "
                 "-passes='default<O#>,other-pass'\n";
       return 1;
     }
-    if (!PassList.empty()) {
-      errs() << "The `opt -passname` syntax for the new pass manager is "
-                "deprecated, please use `opt -passes=<pipeline>` (or the `-p` "
-                "alias for a more concise version).\n";
-      errs() << "See https://llvm.org/docs/NewPassManager.html#invoking-opt "
-                "for more details on the pass pipeline syntax.\n\n";
-      if (!TemporarilyAllowOldPassesSyntax)
-        return 1;
-    }
     std::string Pipeline = PassPipeline;
 
-    SmallVector<StringRef, 4> Passes;
     if (OptLevelO0)
       Pipeline = "default<O0>";
     if (OptLevelO1)
@@ -702,8 +689,6 @@ int main(int argc, char **argv) {
       Pipeline = "default<Os>";
     if (OptLevelOz)
       Pipeline = "default<Oz>";
-    for (const auto &P : PassList)
-      Passes.push_back(P->getPassArgument());
     OutputKind OK = OK_NoOutput;
     if (!NoOutput)
       OK = OutputAssembly
@@ -721,7 +706,7 @@ int main(int argc, char **argv) {
     // layer.
     return runPassPipeline(argv[0], *M, TM.get(), &TLII, Out.get(),
                            ThinLinkOut.get(), RemarksFile.get(), Pipeline,
-                           Passes, PluginList, OK, VK, PreserveAssemblyUseListOrder,
+                           PluginList, OK, VK, PreserveAssemblyUseListOrder,
                            PreserveBitcodeUseListOrder, EmitSummaryIndex,
                            EmitModuleHash, EnableDebugify,
                            VerifyDebugInfoPreserve)
