@@ -41,16 +41,21 @@
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
 // RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -Wl,-none --serialize-diagnostics %t/t2.diag \
 // RUN:   2>&1 | FileCheck %s -check-prefix=WARN
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas CLANG_CACHE_ENABLE_INCLUDE_TREE=1 %clang-cache \
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -Wl,-none --serialize-diagnostics %t/t2.inc.diag \
+// RUN:   2>&1 | FileCheck %s -check-prefix=WARN
 // RUN: diff %t/t1.diag %t/t2.diag
+// RUN: diff %t/t1.diag %t/t2.inc.diag
 
 // Try again with cache hit.
 // RUN: rm %t/t2.diag
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
 // RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -Wl,-none --serialize-diagnostics %t/t2.diag
-// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
-// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -Wl,-none --serialize-diagnostics %t/t2.diag \
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas CLANG_CACHE_ENABLE_INCLUDE_TREE=1 %clang-cache \
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -Wl,-none --serialize-diagnostics %t/t2.inc.diag \
 // RUN:   2>&1 | FileCheck %s -check-prefix=WARN
 // RUN: diff %t/t1.diag %t/t2.diag
+// RUN: diff %t/t1.diag %t/t2.inc.diag
 
 // WARN: warning: -Wl,-none: 'linker' input unused
 // WARN: warning: some warning

@@ -12,6 +12,14 @@
 // RUN: %clang @%t/t1.rsp 2> %t/diags1.txt
 // RUN: diff -u %t/regular-diags1.txt %t/diags1.txt
 
+// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t/t1.noprefix.rsp -cc1-args \
+// RUN:   -cc1 -triple x86_64-apple-macos12 -fcas-path %t/cas -faction-cache-path %t/cache \
+// RUN:     -emit-obj %t/src/main.c -o %t/out/output.o -I %t/src/inc -Wunknown-pragmas
+
+// Compare diagnostics without prefix mappings.
+// RUN: %clang @%t/t1.noprefix.rsp 2> %t/diags1.noprefix.txt
+// RUN: diff -u %t/regular-diags1.txt %t/diags1.noprefix.txt
+
 // Check that we have both the remark and source diagnostics.
 // RUN: %clang @%t/t1.rsp -Rcompile-job-cache 2> %t/diags-hit1.txt
 // RUN: FileCheck %s -input-file %t/diags-hit1.txt
