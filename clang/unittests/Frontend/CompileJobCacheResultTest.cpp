@@ -46,12 +46,10 @@ TEST(CompileJobCacheResultTest, AddOutputs) {
 
   auto Obj1 = llvm::cantFail(CAS->storeFromString({}, "obj1"));
   auto Obj2 = llvm::cantFail(CAS->storeFromString({}, "obj2"));
-  auto Obj3 = llvm::cantFail(CAS->storeFromString({}, "err"));
 
   std::vector<Output> Expected = {
       Output{Obj1, OutputKind::MainOutput},
       Output{Obj2, OutputKind::Dependencies},
-      Output{Obj3, OutputKind::Stderr},
   };
 
   CompileJobCacheResult::Builder B;
@@ -65,7 +63,7 @@ TEST(CompileJobCacheResultTest, AddOutputs) {
   CompileJobResultSchema Schema(*CAS);
   ASSERT_THAT_ERROR(Schema.load(*Result).moveInto(Proxy), Succeeded());
 
-  EXPECT_EQ(Proxy->getNumOutputs(), 3u);
+  EXPECT_EQ(Proxy->getNumOutputs(), 2u);
   auto Actual = getAllOutputs(*Proxy);
 
   EXPECT_EQ(Actual, Expected);

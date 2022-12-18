@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CachedDiagnostics.h"
 #include "clang/Basic/DiagnosticCAS.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetOptions.h"
@@ -56,6 +57,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/PrefixMapper.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/ScopedDurationTimer.h"
 #include "llvm/Support/Signals.h"
@@ -213,7 +215,7 @@ class CachingOutputs {
 public:
   using OutputKind = clang::cas::CompileJobCacheResult::OutputKind;
 
-  CachingOutputs(CompilerInstance &Clang);
+  CachingOutputs(CompilerInstance &Clang, llvm::PrefixMapper Mapper);
   virtual ~CachingOutputs() = default;
 
   /// \returns true if result was found and replayed, false otherwise.
@@ -223,39 +225,38 @@ public:
   /// \returns true on failure, false on success.
   virtual bool prepareOutputCollection() = 0;
 
+  void stopDiagnosticsCapture();
+
   /// Finish writing outputs from a computed result, after a cache miss.
   /// If SkipCache is true, it should not insert the ResultCacheKey into
   /// Cache for future uses.
   virtual Error finishComputedResult(const llvm::cas::CASID &ResultCacheKey,
                                      bool SkipCache) = 0;
 
-  void finishSerializedDiagnostics();
-
 protected:
   StringRef getPathForOutputKind(OutputKind Kind);
 
   bool prepareOutputCollectionCommon(
       IntrusiveRefCntPtr<llvm::vfs::OutputBackend> CacheOutputs);
+  Error replayCachedDiagnostics(StringRef DiagsData);
 
   CompilerInstance &Clang;
+  const llvm::PrefixMapper PrefixMapper;
   clang::cas::CompileJobCacheResult::Builder CachedResultBuilder;
   std::string OutputFile;
-  std::string SerialDiagsFile;
   std::string DependenciesFile;
-  SmallString<256> ResultDiags;
-  std::unique_ptr<llvm::raw_ostream> ResultDiagsOS;
-  SmallString<256> SerialDiagsBuf;
-  Optional<llvm::vfs::OutputFile> SerialDiagsOutput;
+  std::unique_ptr<cas::CachingDiagnosticsProcessor> DiagProcessor;
 };
 
 /// Store and retrieve compilation artifacts using \p llvm::cas::ObjectStore and
 /// \p llvm::cas::ActionCache.
 class ObjectStoreCachingOutputs : public CachingOutputs {
 public:
-  ObjectStoreCachingOutputs(CompilerInstance &Clang,
+  ObjectStoreCachingOutputs(CompilerInstance &Clang, llvm::PrefixMapper Mapper,
                             std::shared_ptr<llvm::cas::ObjectStore> DB,
                             std::shared_ptr<llvm::cas::ActionCache> Cache)
-      : CachingOutputs(Clang), CAS(std::move(DB)), Cache(std::move(Cache)) {
+      : CachingOutputs(Clang, std::move(Mapper)), CAS(std::move(DB)),
+        Cache(std::move(Cache)) {
     CASOutputs = llvm::makeIntrusiveRefCnt<llvm::cas::CASOutputBackend>(*CAS);
   }
 
@@ -338,9 +339,9 @@ private:
 /// and \p llvm::cas::KeyValueDBClient.
 class RemoteCachingOutputs : public CachingOutputs {
 public:
-  RemoteCachingOutputs(CompilerInstance &Clang,
+  RemoteCachingOutputs(CompilerInstance &Clang, llvm::PrefixMapper Mapper,
                        llvm::cas::remote::ClientServices Clients)
-      : CachingOutputs(Clang) {
+      : CachingOutputs(Clang, std::move(Mapper)) {
     RemoteKVClient = std::move(Clients.KVDB);
     RemoteCASClient = std::move(Clients.CASDB);
     CollectingOutputs = llvm::makeIntrusiveRefCnt<CollectingOutputBackend>();
@@ -458,8 +459,6 @@ StringRef CachingOutputs::getPathForOutputKind(OutputKind Kind) {
   switch (Kind) {
   case OutputKind::MainOutput:
     return OutputFile;
-  case OutputKind::SerializedDiagnostics:
-    return SerialDiagsFile;
   case OutputKind::Dependencies:
     return DependenciesFile;
   default:
@@ -514,6 +513,17 @@ Optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
 
   DisableCachedCompileJobReplay = CacheOpts.DisableCachedCompileJobReplay;
 
+  llvm::PrefixMapper PrefixMapper;
+  llvm::SmallVector<llvm::MappedPrefix> Split;
+  llvm::MappedPrefix::transformJoinedIfValid(CacheOpts.PathPrefixMappings,
+                                             Split);
+  for (const auto &MappedPrefix : Split) {
+    // We use the inverse mapping because the \p PrefixMapper will be used for
+    // de-canonicalization of paths.
+    if (auto E = PrefixMapper.add(MappedPrefix.getInverse()))
+      return reportCachingBackendError(Clang.getDiagnostics(), std::move(E));
+  }
+
   if (!CacheOpts.CompilationCachingServicePath.empty()) {
     Expected<llvm::cas::remote::ClientServices> Clients =
         llvm::cas::remote::createCompilationCachingRemoteClient(
@@ -521,73 +531,29 @@ Optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
     if (!Clients)
       return reportCachingBackendError(Clang.getDiagnostics(),
                                        Clients.takeError());
-    CacheBackend =
-        std::make_unique<RemoteCachingOutputs>(Clang, std::move(*Clients));
+    CacheBackend = std::make_unique<RemoteCachingOutputs>(
+        Clang, std::move(PrefixMapper), std::move(*Clients));
   } else {
-    CacheBackend =
-        std::make_unique<ObjectStoreCachingOutputs>(Clang, CAS, Cache);
+    CacheBackend = std::make_unique<ObjectStoreCachingOutputs>(
+        Clang, std::move(PrefixMapper), CAS, Cache);
   }
 
   return std::nullopt;
 }
 
-CachingOutputs::CachingOutputs(CompilerInstance &Clang) : Clang(Clang) {
+CachingOutputs::CachingOutputs(CompilerInstance &Clang,
+                               llvm::PrefixMapper Mapper)
+    : Clang(Clang), PrefixMapper(std::move(Mapper)) {
   CompilerInvocation &Invocation = Clang.getInvocation();
   FrontendOptions &FrontendOpts = Invocation.getFrontendOpts();
   if (!Clang.hasFileManager())
     Clang.createFileManager();
   FileManager &FM = Clang.getFileManager();
   OutputFile = fixupRelativePath(FrontendOpts.OutputFile, FM);
-  SerialDiagsFile = fixupRelativePath(
-      Invocation.getDiagnosticOpts().DiagnosticSerializationFile, FM);
   DependenciesFile =
       fixupRelativePath(Invocation.getDependencyOutputOpts().OutputFile, FM);
-}
-
-namespace {
-class raw_mirroring_ostream : public llvm::raw_ostream {
-  llvm::raw_ostream &Base;
-  std::unique_ptr<llvm::raw_ostream> Reflection;
-
-  void write_impl(const char *Ptr, size_t Size) override {
-    Base.write(Ptr, Size);
-    Reflection->write(Ptr, Size);
-  }
-
-  uint64_t current_pos() const override { return Base.tell(); }
-
-public:
-  raw_mirroring_ostream(llvm::raw_ostream &Base,
-                        std::unique_ptr<llvm::raw_ostream> Reflection)
-      : Base(Base), Reflection(std::move(Reflection)) {
-    // FIXME: Is this right?
-    enable_colors(true);
-    SetUnbuffered();
-  }
-
-  bool is_displayed() const override { return Base.is_displayed(); }
-
-  bool has_colors() const override { return Base.has_colors(); }
-};
-} // namespace
-
-static Expected<llvm::vfs::OutputFile>
-createBinaryOutputFile(CompilerInstance &Clang, StringRef OutputPath) {
-  using namespace llvm::vfs;
-  Expected<OutputFile> O = Clang.getOrCreateOutputBackend().createFile(
-      OutputPath, OutputConfig()
-                      .setTextWithCRLF(false)
-                      .setDiscardOnSignal(true)
-                      .setAtomicWrite(true)
-                      // To avoid failures that would not happen in uncached
-                      // builds, always create the parent directory. See comment
-                      // in replayCachedResult.
-                      .setImplyCreateDirectories(true));
-  if (!O)
-    return O.takeError();
-
-  O->discardOnDestroy([](llvm::Error E) { consumeError(std::move(E)); });
-  return O;
+  DiagProcessor =
+      std::make_unique<cas::CachingDiagnosticsProcessor>(PrefixMapper, FM);
 }
 
 Expected<bool> ObjectStoreCachingOutputs::tryReplayCachedResult(
@@ -687,70 +653,24 @@ bool CachingOutputs::prepareOutputCollectionCommon(
 
   Clang.setOutputBackend(llvm::vfs::makeMirroringOutputBackend(
       FilterBackend, std::move(OnDiskOutputs)));
-  ResultDiagsOS = std::make_unique<raw_mirroring_ostream>(
-      llvm::errs(), std::make_unique<llvm::raw_svector_ostream>(ResultDiags));
 
-  // FIXME: This should be saving/replaying structured diagnostics, not saving
-  // stderr and a separate diagnostics file, thus using the current llvm::errs()
-  // colour capabilities and making the choice of whether colors are used, or
-  // whether a serialized diagnostics file is emitted, not affect the
-  // compilation key. We still want to print errors live during this
-  // compilation, just also serialize them. Another benefit of saving structured
-  // diagnostics is that it will enable remapping canonicalized paths in
-  // diagnostics to their non-canical form for displaying purposes
-  // (rdar://85234207).
-  //
-  // Note that the serialized diagnostics file format loses information, e.g.
-  // the include stack is written as additional 'note' diagnostics but when
-  // printed in terminal the include stack is printed in a different way than
-  // 'note' diagnostics. We should serialize/deserialize diagnostics in a way
-  // that we can accurately feed them to a DiagnosticConsumer (whatever that
-  // consumer implementation is doing). A potential way is to serialize data
-  // that can be deserialized as 'StoredDiagnostic's, which would be close to
-  // what the DiagnosticConsumers expect.
-
-  // Notify the existing diagnostic client that all files were processed.
-  Clang.getDiagnosticClient().finish();
-
-  DiagnosticsEngine &Diags = Clang.getDiagnostics();
-  DiagnosticOptions &DiagOpts = Clang.getInvocation().getDiagnosticOpts();
-  Clang.getDiagnostics().setClient(
-      new TextDiagnosticPrinter(*ResultDiagsOS, &DiagOpts),
-      /*ShouldOwnClient=*/true);
-  if (!DiagOpts.DiagnosticSerializationFile.empty()) {
-    // Save the serialized diagnostics file as CAS output.
-    if (Error E =
-            createBinaryOutputFile(Clang, DiagOpts.DiagnosticSerializationFile)
-                .moveInto(SerialDiagsOutput)) {
-      Diags.Report(diag::err_fe_unable_to_open_output)
-          << DiagOpts.DiagnosticSerializationFile
-          << errorToErrorCode(std::move(E)).message();
-      return 1;
-    }
-
-    Expected<std::unique_ptr<raw_pwrite_stream>> OS =
-        SerialDiagsOutput->createProxy();
-    if (!OS) {
-      Diags.Report(diag::err_fe_unable_to_open_output)
-          << DiagOpts.DiagnosticSerializationFile
-          << errorToErrorCode(OS.takeError()).message();
-      return 1;
-    }
-    auto SerializedConsumer = clang::serialized_diags::create(
-        OutputFile, &DiagOpts, /*MergeChildRecords*/ false, std::move(*OS));
-    Diags.setClient(new ChainedDiagnosticConsumer(
-        Diags.takeClient(), std::move(SerializedConsumer)));
-  } else {
-    // We always generate the serialized diagnostics so the key is independent
-    // of the presence of '--serialize-diagnostics'.
-    auto OS = std::make_unique<llvm::raw_svector_ostream>(SerialDiagsBuf);
-    auto SerializedConsumer = clang::serialized_diags::create(
-        StringRef(), &DiagOpts, /*MergeChildRecords*/ false, std::move(OS));
-    Diags.setClient(new ChainedDiagnosticConsumer(
-        Diags.takeClient(), std::move(SerializedConsumer)));
-  }
+  DiagProcessor->insertDiagConsumer(Clang.getDiagnostics());
 
   return false;
+}
+
+void CachingOutputs::stopDiagnosticsCapture() {
+  DiagProcessor->removeDiagConsumer(Clang.getDiagnostics());
+}
+
+Error CachingOutputs::replayCachedDiagnostics(StringRef DiagsData) {
+  DiagnosticConsumer &Consumer = *Clang.getDiagnostics().getClient();
+  Consumer.BeginSourceFile(Clang.getLangOpts());
+  if (Error E = DiagProcessor->replayCachedDiagnostics(DiagsData, Consumer))
+    return E;
+  Consumer.EndSourceFile();
+  Clang.printDiagnosticStats();
+  return Error::success();
 }
 
 bool ObjectStoreCachingOutputs::prepareOutputCollection() {
@@ -773,7 +693,7 @@ bool CompileJobCache::finishComputedResult(CompilerInstance &Clang,
   if (!CacheCompileJob)
     return Success;
 
-  CacheBackend->finishSerializedDiagnostics();
+  CacheBackend->stopDiagnosticsCapture();
 
   // Don't cache failed builds.
   //
@@ -784,12 +704,6 @@ bool CompileJobCache::finishComputedResult(CompilerInstance &Clang,
     return false;
 
   DiagnosticsEngine &Diags = Clang.getDiagnostics();
-
-  // Existing diagnostic client is finished, create a new one in case we need
-  // to print more diagnostics.
-  Diags.setClient(new TextDiagnosticPrinter(
-                      llvm::errs(), &Clang.getInvocation().getDiagnosticOpts()),
-                  /*ShouldOwnClient=*/true);
 
   // Check if we encounter any source that would generate non-reproducible
   // outputs.
@@ -815,22 +729,6 @@ bool CompileJobCache::finishComputedResult(CompilerInstance &Clang,
   return true;
 }
 
-void CachingOutputs::finishSerializedDiagnostics() {
-  if (SerialDiagsOutput) {
-    llvm::handleAllErrors(
-        SerialDiagsOutput->keep(),
-        [&](const llvm::vfs::TempFileOutputError &E) {
-          Clang.getDiagnostics().Report(diag::err_unable_to_rename_temp)
-              << E.getTempPath() << E.getOutputPath()
-              << E.convertToErrorCode().message();
-        },
-        [&](const llvm::vfs::OutputError &E) {
-          Clang.getDiagnostics().Report(diag::err_fe_unable_to_open_output)
-              << E.getOutputPath() << E.convertToErrorCode().message();
-        });
-  }
-}
-
 Expected<llvm::cas::ObjectRef> ObjectStoreCachingOutputs::writeOutputs(
     const llvm::cas::CASID &ResultCacheKey) {
   DiagnosticsEngine &Diags = Clang.getDiagnostics();
@@ -839,16 +737,16 @@ Expected<llvm::cas::ObjectRef> ObjectStoreCachingOutputs::writeOutputs(
         << llvm::format("%.6fs", Seconds);
   });
 
-  if (!SerialDiagsOutput) {
-    // Not requested to get a serialized diagnostics file but we generated it
-    // and will store it regardless so that the key is independent of the
-    // presence of '--serialize-diagnostics'.
-    Expected<llvm::cas::ObjectProxy> SerialDiags =
-        CAS->createProxy(std::nullopt, SerialDiagsBuf);
-    if (!SerialDiags)
-      return SerialDiags.takeError();
-    CachedResultBuilder.addOutput(OutputKind::SerializedDiagnostics,
-                                  SerialDiags->getRef());
+  Expected<std::optional<std::string>> SerialDiags =
+      DiagProcessor->serializeEmittedDiagnostics();
+  if (!SerialDiags)
+    return SerialDiags.takeError();
+  if (*SerialDiags) {
+    Expected<llvm::cas::ObjectRef> DiagsRef =
+        CAS->storeFromString(std::nullopt, **SerialDiags);
+    if (!DiagsRef)
+      return DiagsRef.takeError();
+    CachedResultBuilder.addOutput(OutputKind::SerializedDiagnostics, *DiagsRef);
   }
 
   if (DependenciesOutput)
@@ -859,13 +757,6 @@ Expected<llvm::cas::ObjectRef> ObjectStoreCachingOutputs::writeOutputs(
   for (auto &Output : BackendOutputs)
     if (auto Err = CachedResultBuilder.addOutput(Output.Path, Output.Object))
       return std::move(Err);
-
-  // Hack around llvm::errs() not being captured by the output backend yet.
-  Expected<llvm::cas::ObjectRef> Errs =
-      CAS->storeFromString(std::nullopt, ResultDiags);
-  if (!Errs)
-    return Errs.takeError();
-  CachedResultBuilder.addOutput(OutputKind::Stderr, *Errs);
 
   // Cache the result.
   return CachedResultBuilder.build(*CAS);
@@ -903,20 +794,6 @@ ObjectStoreCachingOutputs::replayCachedResult(llvm::cas::ObjectRef ResultID,
   if (JustComputedResult)
     return std::nullopt;
 
-  if (!JustComputedResult) {
-    // Disable the existing DiagnosticConsumer, we'll both print to stderr
-    // directly and also potentially output a serialized diagnostics file, in
-    // which case we don't want the outer DiagnosticConsumer to overwrite it and
-    // lose the compilation diagnostics.
-    // See FIXME in CompileJobCache::tryReplayCachedResult() about improving how
-    // we handle diagnostics for caching purposes.
-    Clang.getDiagnosticClient().finish();
-    DiagnosticOptions &DiagOpts = Clang.getInvocation().getDiagnosticOpts();
-    Clang.getDiagnostics().setClient(
-        new TextDiagnosticPrinter(llvm::errs(), &DiagOpts),
-        /*ShouldOwnClient=*/true);
-  }
-
   // FIXME: Stop calling report_fatal_error().
   Optional<clang::cas::CompileJobCacheResult> Result;
   clang::cas::CompileJobResultSchema Schema(*CAS);
@@ -925,12 +802,11 @@ ObjectStoreCachingOutputs::replayCachedResult(llvm::cas::ObjectRef ResultID,
 
   auto Err = Result->forEachOutput([&](clang::cas::CompileJobCacheResult::Output
                                            O) -> Error {
-    if (O.Kind == OutputKind::Stderr) {
-      Optional<llvm::cas::ObjectProxy> Errs;
-      if (Error E = CAS->getProxy(O.Object).moveInto(Errs))
+    if (O.Kind == OutputKind::SerializedDiagnostics) {
+      Optional<llvm::cas::ObjectProxy> DiagsObj;
+      if (Error E = CAS->getProxy(O.Object).moveInto(DiagsObj))
         return E;
-      llvm::errs() << Errs->getData();
-      return Error::success(); // continue
+      return replayCachedDiagnostics(DiagsObj->getData());
     }
 
     std::string Path = std::string(getPathForOutputKind(O.Kind));
@@ -1019,8 +895,6 @@ Expected<bool> RemoteCachingOutputs::tryReplayCachedResult(
 static constexpr llvm::StringLiteral MainOutputKindName = "<output>";
 static constexpr llvm::StringLiteral SerializedDiagnosticsKindName =
     "<serial-diags>";
-static constexpr llvm::StringLiteral StderrDiagnosticsKindName =
-    "<stderr-diags>";
 static constexpr llvm::StringLiteral DependenciesOutputKindName =
     "<dependencies>";
 
@@ -1030,8 +904,6 @@ StringRef RemoteCachingOutputs::getOutputKindName(OutputKind Kind) {
     return MainOutputKindName;
   case OutputKind::SerializedDiagnostics:
     return SerializedDiagnosticsKindName;
-  case OutputKind::Stderr:
-    return StderrDiagnosticsKindName;
   case OutputKind::Dependencies:
     return DependenciesOutputKindName;
   }
@@ -1042,7 +914,6 @@ RemoteCachingOutputs::getOutputKindForName(StringRef Name) {
   return llvm::StringSwitch<Optional<OutputKind>>(Name)
       .Case(MainOutputKindName, OutputKind::MainOutput)
       .Case(SerializedDiagnosticsKindName, OutputKind::SerializedDiagnostics)
-      .Case(StderrDiagnosticsKindName, OutputKind::Stderr)
       .Case(DependenciesOutputKindName, OutputKind::Dependencies)
       .Default(std::nullopt);
 }
@@ -1059,28 +930,17 @@ Expected<bool> RemoteCachingOutputs::replayCachedResult(
   // if we need to fallback to normal compilation we'd ask and wait for an
   // execution lane before continuing it.
 
-  // Disable the existing DiagnosticConsumer, we'll both print to stderr
-  // directly and also potentially output a serialized diagnostics file, in
-  // which case we don't want the outer DiagnosticConsumer to overwrite it and
-  // lose the compilation diagnostics.
-  // See FIXME in CompileJobCache::tryReplayCachedResult() about improving how
-  // we handle diagnostics for caching purposes.
-  Clang.getDiagnosticClient().finish();
-  // Insert a text printer so that the caching remarks can be printed.
-  DiagnosticsEngine &Diags = Clang.getDiagnostics();
-  Diags.setClient(new TextDiagnosticPrinter(
-                      llvm::errs(), &Clang.getInvocation().getDiagnosticOpts()),
-                  /*ShouldOwnClient=*/true);
-
   // Replay outputs.
+
+  DiagnosticsEngine &Diags = Clang.getDiagnostics();
 
   auto &LoadQueue = RemoteCASClient->loadQueue();
   struct CallCtx : public llvm::cas::remote::AsyncCallerContext {
     StringRef OutputName;
     StringRef CASID;
-    bool IsStderr;
-    CallCtx(StringRef OutputName, StringRef CASID, bool IsStderr)
-        : OutputName(OutputName), CASID(CASID), IsStderr(IsStderr) {}
+    bool IsDiags;
+    CallCtx(StringRef OutputName, StringRef CASID, bool IsDiags)
+        : OutputName(OutputName), CASID(CASID), IsDiags(IsDiags) {}
   };
   auto makeCtx =
       [](StringRef OutputName, StringRef CASID,
@@ -1096,9 +956,9 @@ Expected<bool> RemoteCachingOutputs::replayCachedResult(
     Optional<OutputKind> OutKind = getOutputKindForName(OutputName);
     StringRef Path = OutKind ? getPathForOutputKind(*OutKind) : OutputName;
 
-    if (OutKind && *OutKind == OutputKind::Stderr) {
+    if (OutKind && *OutKind == OutputKind::SerializedDiagnostics) {
       LoadQueue.loadAsync(CASID, /*OutFilePath*/ std::nullopt,
-                          makeCtx(OutputName, CASID, /*IsStderr*/ true));
+                          makeCtx(OutputName, CASID, /*IsDiags*/ true));
       continue;
     }
     if (Path.empty()) {
@@ -1110,7 +970,7 @@ Expected<bool> RemoteCachingOutputs::replayCachedResult(
   }
 
   bool HasMissingOutput = false;
-  Optional<std::string> StderrDiags;
+  Optional<std::string> SerialDiags;
 
   while (LoadQueue.hasPending()) {
     auto Response = LoadQueue.receiveNext();
@@ -1127,8 +987,8 @@ Expected<bool> RemoteCachingOutputs::replayCachedResult(
     if (HasMissingOutput)
       continue;
 
-    if (Ctx.IsStderr)
-      StderrDiags = std::move(Response->BlobData);
+    if (Ctx.IsDiags)
+      SerialDiags = std::move(Response->BlobData);
   }
 
   if (HasMissingOutput)
@@ -1143,8 +1003,10 @@ Expected<bool> RemoteCachingOutputs::replayCachedResult(
       << ResultCacheKey.toString()
       << (Twine(MainOutputName) + ": " + PrintedRemoteMainOutputCASID).str();
 
-  if (StderrDiags)
-    llvm::errs() << *StderrDiags;
+  if (SerialDiags) {
+    if (Error E = replayCachedDiagnostics(*SerialDiags))
+      return std::move(E);
+  }
 
   return true;
 }
@@ -1179,21 +1041,17 @@ RemoteCachingOutputs::saveOutputs(const llvm::cas::CASID &ResultCacheKey) {
     return std::make_shared<CallCtx>(OutputName);
   };
 
-  if (!SerialDiagsOutput) {
-    // Not requested to get a serialized diagnostics file but we generated it
-    // and will store it regardless so that the key is independent of the
-    // presence of '--serialize-diagnostics'.
+  Expected<std::optional<std::string>> SerialDiags =
+      DiagProcessor->serializeEmittedDiagnostics();
+  if (!SerialDiags)
+    return SerialDiags.takeError();
+  if (*SerialDiags) {
     SaveQueue.saveDataAsync(
-        SerialDiagsBuf.str().str(),
+        std::move(**SerialDiags),
         makeCtx(getOutputKindName(OutputKind::SerializedDiagnostics)));
   }
 
   // FIXME: Save dependencies output.
-
-  if (!ResultDiags.empty()) {
-    SaveQueue.saveDataAsync(ResultDiags.str().str(),
-                            makeCtx(getOutputKindName(OutputKind::Stderr)));
-  }
 
   for (StringRef OutputName : CollectingOutputs->getOutputs()) {
     Optional<OutputKind> OutKind = getOutputKindForName(OutputName);

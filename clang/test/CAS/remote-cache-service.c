@@ -22,11 +22,14 @@
 // RUN: diff %t/t1.o %t/t2.o
 // RUN: diff %t/t.o %t/t1.o
 
-// RUN: diff %t/t1.dia %t/t2.dia
-// RUN: diff %t/t.dia %t/t1.dia
-
 // RUN: diff %t/t1.d %t/t2.d
 // RUN: diff %t/t.d %t/t1.d
+
+// RUN: c-index-test -read-diagnostics %t/t1.dia 2>&1 | FileCheck %s --check-prefix=SERIAL_DIAG-MISS --check-prefix=SERIAL_DIAG-COMMON
+// RUN: c-index-test -read-diagnostics %t/t2.dia 2>&1 | FileCheck %s --check-prefix=SERIAL_DIAG-HIT --check-prefix=SERIAL_DIAG-COMMON
+// SERIAL_DIAG-MISS: warning: compile job cache miss
+// SERIAL_DIAG-HIT: warning: compile job cache hit
+// SERIAL_DIAG-COMMON: warning: some warning
 
 // Verify the outputs did not go into the on-disk ObjectStore.
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \

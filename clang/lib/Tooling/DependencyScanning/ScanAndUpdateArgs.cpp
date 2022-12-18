@@ -56,6 +56,13 @@ static void updateCompilerInvocation(CompilerInvocation &Invocation,
   auto &FrontendOpts = Invocation.getFrontendOpts();
   FrontendOpts.CacheCompileJob = true; // FIXME: Don't set.
 
+  FrontendOpts.PathPrefixMappings.clear();
+  // Pass the remappings so that we can map cached diagnostics to the local
+  // paths during diagnostic rendering.
+  for (const llvm::MappedPrefix &Map : Mapper.getMappings()) {
+    FrontendOpts.PathPrefixMappings.push_back(Map.Old + "=" + Map.New);
+  }
+
   // Turn off dependency outputs. Should have already been emitted.
   Invocation.getDependencyOutputOpts().OutputFile.clear();
 

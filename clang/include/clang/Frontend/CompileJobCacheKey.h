@@ -36,6 +36,8 @@ struct CompileJobCachingOptions {
   std::string CompilationCachingServicePath;
   /// See \c FrontendOptions::DisableCachedCompileJobReplay.
   bool DisableCachedCompileJobReplay;
+  /// See \c FrontendOptions::PathPrefixMappings.
+  std::vector<std::string> PathPrefixMappings;
 };
 
 /// Create a cache key for the given \c CompilerInvocation as a \c CASID. If \p

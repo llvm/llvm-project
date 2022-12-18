@@ -26,6 +26,7 @@ endif()
 
 add_clang_tool(clang
   driver.cpp
+  CachedDiagnostics.cpp
   CacheLauncherMode.cpp
   cc1_main.cpp
   cc1as_main.cpp
@@ -50,7 +51,6 @@ clang_target_link_libraries(clang
   clangFrontend
   clangFrontendTool
   clangSerialization
-  ${REMOTE_CACHE_TARGET}
   )
 
 if(WIN32 AND NOT CYGWIN)
