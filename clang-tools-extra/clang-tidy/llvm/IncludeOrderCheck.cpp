@@ -13,7 +13,6 @@
 #include "llvm/ADT/STLExtras.h"
 
 #include <map>
-#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -29,9 +28,8 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          std::optional<FileEntryRef> File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
   void EndOfMainFile() override;
 
@@ -84,9 +82,8 @@ static int getPriority(StringRef Filename, bool IsAngled, bool IsMainModule) {
 
 void IncludeOrderPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
-    bool IsAngled, CharSourceRange FilenameRange,
-    std::optional<FileEntryRef> File, StringRef SearchPath,
-    StringRef RelativePath, const Module *Imported,
+    bool IsAngled, CharSourceRange FilenameRange, Optional<FileEntryRef> File,
+    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
   // We recognize the first include as a special main module header and want
   // to leave it in the top position.

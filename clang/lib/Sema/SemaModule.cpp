@@ -15,7 +15,6 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/SemaInternal.h"
-#include <optional>
 
 using namespace clang;
 using namespace sema;
@@ -321,7 +320,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
       Diag(Path[0].second, diag::err_module_redefinition) << ModuleName;
       if (M->DefinitionLoc.isValid())
         Diag(M->DefinitionLoc, diag::note_prev_module_definition);
-      else if (std::optional<FileEntryRef> FE = M->getASTFile())
+      else if (Optional<FileEntryRef> FE = M->getASTFile())
         Diag(M->DefinitionLoc, diag::note_prev_module_definition_from_ast_file)
             << FE->getName();
       Mod = M;

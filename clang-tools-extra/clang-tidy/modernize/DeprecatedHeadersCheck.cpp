@@ -15,7 +15,6 @@
 #include "llvm/ADT/StringSet.h"
 
 #include <algorithm>
-#include <optional>
 #include <vector>
 
 using IncludeMarker =
@@ -34,9 +33,8 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          std::optional<FileEntryRef> File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
 
 private:
@@ -181,9 +179,8 @@ IncludeModernizePPCallbacks::IncludeModernizePPCallbacks(
 
 void IncludeModernizePPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
-    bool IsAngled, CharSourceRange FilenameRange,
-    std::optional<FileEntryRef> File, StringRef SearchPath,
-    StringRef RelativePath, const Module *Imported,
+    bool IsAngled, CharSourceRange FilenameRange, Optional<FileEntryRef> File,
+    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
 
   // If we don't want to warn for non-main file reports and this is one, skip
