@@ -29,7 +29,7 @@ static void printCompileJobCacheKey(llvm::cas::ObjectStore &CAS,
 
 static void printIncludeTree(llvm::cas::ObjectStore &CAS, StringRef Key) {
   auto ID = ExitOnErr(CAS.parseID(Key));
-  llvm::cas::ObjectRef Ref = CAS.getReference(ID).value();
+  llvm::cas::ObjectRef Ref = *CAS.getReference(ID);
   auto IncludeTree = ExitOnErr(IncludeTreeRoot::get(CAS, Ref));
   ExitOnErr(IncludeTree.print(outs()));
 }

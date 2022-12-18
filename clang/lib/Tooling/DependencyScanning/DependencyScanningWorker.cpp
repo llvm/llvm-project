@@ -181,7 +181,7 @@ public:
   }
 
   void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
-                  Optional<FileEntryRef> File,
+                  std::optional<FileEntryRef> File,
                   SrcMgr::CharacteristicKind FileType) override {
     Consumer.handleHasIncludeCheck(PP, File.has_value());
   }

@@ -24,6 +24,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
 
+#include <optional>
 #include <utility>
 
 namespace llvm {
@@ -294,9 +295,9 @@ namespace clang {
 ///
 /// FIXME: Once FileEntryRef is "everywhere" and FileEntry::LastRef and
 /// FileEntry::getName have been deleted, delete this class and replace
-/// instances with Optional<FileEntryRef>.
+/// instances with std::optional<FileEntryRef>.
 class OptionalFileEntryRefDegradesToFileEntryPtr
-    : public Optional<FileEntryRef> {
+    : public std::optional<FileEntryRef> {
 public:
   OptionalFileEntryRefDegradesToFileEntryPtr() = default;
   OptionalFileEntryRefDegradesToFileEntryPtr(
@@ -310,31 +311,55 @@ public:
 
   OptionalFileEntryRefDegradesToFileEntryPtr(std::nullopt_t) {}
   OptionalFileEntryRefDegradesToFileEntryPtr(FileEntryRef Ref)
-      : Optional<FileEntryRef>(Ref) {}
-  OptionalFileEntryRefDegradesToFileEntryPtr(Optional<FileEntryRef> MaybeRef)
-      : Optional<FileEntryRef>(MaybeRef) {}
+      : std::optional<FileEntryRef>(Ref) {}
+  OptionalFileEntryRefDegradesToFileEntryPtr(
+      std::optional<FileEntryRef> MaybeRef)
+      : std::optional<FileEntryRef>(MaybeRef) {}
 
   OptionalFileEntryRefDegradesToFileEntryPtr &operator=(std::nullopt_t) {
-    Optional<FileEntryRef>::operator=(std::nullopt);
+    std::optional<FileEntryRef>::operator=(std::nullopt);
     return *this;
   }
   OptionalFileEntryRefDegradesToFileEntryPtr &operator=(FileEntryRef Ref) {
-    Optional<FileEntryRef>::operator=(Ref);
+    std::optional<FileEntryRef>::operator=(Ref);
     return *this;
   }
   OptionalFileEntryRefDegradesToFileEntryPtr &
-  operator=(Optional<FileEntryRef> MaybeRef) {
-    Optional<FileEntryRef>::operator=(MaybeRef);
+  operator=(std::optional<FileEntryRef> MaybeRef) {
+    std::optional<FileEntryRef>::operator=(MaybeRef);
     return *this;
   }
 
   /// Degrade to 'const FileEntry *' to allow  FileEntry::LastRef and
   /// FileEntry::getName have been deleted, delete this class and replace
-  /// instances with Optional<FileEntryRef>
+  /// instances with std::optional<FileEntryRef>
   operator const FileEntry *() const {
     return has_value() ? &(*this)->getFileEntry() : nullptr;
   }
 };
+
+// Add these operators to resolve ambiguities appearing after replacing
+// llvm::Optional with std::optional.
+constexpr bool operator==(const std::optional<FileEntryRef> &X,
+                          const std::optional<FileEntryRef> &Y) {
+  // Copied from llvm::Optional.
+  if (X && Y)
+    return *X == *Y;
+  return X.has_value() == Y.has_value();
+}
+constexpr bool operator==(const OptionalFileEntryRefDegradesToFileEntryPtr &X,
+                          const OptionalFileEntryRefDegradesToFileEntryPtr &Y) {
+  return static_cast<const std::optional<FileEntryRef> &>(X) ==
+         static_cast<const std::optional<FileEntryRef> &>(Y);
+}
+constexpr bool operator==(const OptionalFileEntryRefDegradesToFileEntryPtr &X,
+                          const std::optional<FileEntryRef> &Y) {
+  return static_cast<const std::optional<FileEntryRef> &>(X) == Y;
+}
+constexpr bool operator==(const std::optional<FileEntryRef> &X,
+                          const OptionalFileEntryRefDegradesToFileEntryPtr &Y) {
+  return X == static_cast<const std::optional<FileEntryRef> &>(Y);
+}
 
 static_assert(
     std::is_trivially_copyable<
@@ -342,18 +367,18 @@ static_assert(
     "OptionalFileEntryRefDegradesToFileEntryPtr should be trivially copyable");
 
 inline bool operator==(const FileEntry *LHS,
-                       const Optional<FileEntryRef> &RHS) {
+                       const std::optional<FileEntryRef> &RHS) {
   return LHS == (RHS ? &RHS->getFileEntry() : nullptr);
 }
-inline bool operator==(const Optional<FileEntryRef> &LHS,
+inline bool operator==(const std::optional<FileEntryRef> &LHS,
                        const FileEntry *RHS) {
   return (LHS ? &LHS->getFileEntry() : nullptr) == RHS;
 }
 inline bool operator!=(const FileEntry *LHS,
-                       const Optional<FileEntryRef> &RHS) {
+                       const std::optional<FileEntryRef> &RHS) {
   return !(LHS == RHS);
 }
-inline bool operator!=(const Optional<FileEntryRef> &LHS,
+inline bool operator!=(const std::optional<FileEntryRef> &LHS,
                        const FileEntry *RHS) {
   return !(LHS == RHS);
 }

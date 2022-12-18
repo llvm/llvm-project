@@ -24,6 +24,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/ADT/STLExtras.h"
 #include <memory>
+#include <optional>
 
 using namespace clang;
 using namespace clang::index;
@@ -458,11 +459,13 @@ private:
     Includes.push_back({FE, To, lineNo});
   }
 
-  virtual void InclusionDirective(
-      SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
-      bool IsAngled, CharSourceRange FilenameRange, Optional<FileEntryRef> File,
-      StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-      SrcMgr::CharacteristicKind FileType) override {
+  virtual void
+  InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
+                     StringRef FileName, bool IsAngled,
+                     CharSourceRange FilenameRange,
+                     std::optional<FileEntryRef> File, StringRef SearchPath,
+                     StringRef RelativePath, const Module *Imported,
+                     SrcMgr::CharacteristicKind FileType) override {
     if (HashLoc.isFileID() && File)
       addInclude(HashLoc, *File);
   }

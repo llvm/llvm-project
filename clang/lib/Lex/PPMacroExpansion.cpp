@@ -53,6 +53,7 @@
 #include <cstddef>
 #include <cstring>
 #include <ctime>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -1255,7 +1256,7 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
     return false;
 
   // Search include directories.
-  Optional<FileEntryRef> File =
+  std::optional<FileEntryRef> File =
       PP.LookupFile(FilenameLoc, Filename, isAngled, LookupFrom, LookupFromFile,
                     nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
 

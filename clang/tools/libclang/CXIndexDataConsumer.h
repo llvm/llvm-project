@@ -11,10 +11,11 @@
 
 #include "CXCursor.h"
 #include "Index_Internal.h"
-#include "clang/Index/IndexDataConsumer.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/Index/IndexDataConsumer.h"
 #include "llvm/ADT/DenseSet.h"
+#include <optional>
 
 namespace clang {
   class FileEntry;
@@ -363,8 +364,8 @@ public:
   void enteredMainFile(const FileEntry *File);
 
   void ppIncludedFile(SourceLocation hashLoc, StringRef filename,
-                      Optional<FileEntryRef> File, bool isImport, bool isAngled,
-                      bool isModuleImport);
+                      std::optional<FileEntryRef> File, bool isImport,
+                      bool isAngled, bool isModuleImport);
 
   void importedModule(const ImportDecl *ImportD);
   void importedPCH(const FileEntry *File);
