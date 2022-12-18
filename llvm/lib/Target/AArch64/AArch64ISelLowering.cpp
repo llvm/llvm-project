@@ -4647,6 +4647,45 @@ static inline SDValue getPTrue(SelectionDAG &DAG, SDLoc DL, EVT VT,
                      DAG.getTargetConstant(Pattern, DL, MVT::i32));
 }
 
+static SDValue optimizeWhile(SDValue Op, SelectionDAG &DAG, bool IsSigned,
+                             bool IsLess, bool IsEqual) {
+  if (!isa<ConstantSDNode>(Op.getOperand(1)) ||
+      !isa<ConstantSDNode>(Op.getOperand(2)))
+    return SDValue();
+
+  SDLoc dl(Op);
+  APInt X = Op.getConstantOperandAPInt(1);
+  APInt Y = Op.getConstantOperandAPInt(2);
+  APInt NumActiveElems;
+  bool Overflow;
+  if (IsLess)
+    NumActiveElems = IsSigned ? Y.ssub_ov(X, Overflow) : Y.usub_ov(X, Overflow);
+  else
+    NumActiveElems = IsSigned ? X.ssub_ov(Y, Overflow) : X.usub_ov(Y, Overflow);
+
+  if (Overflow)
+    return SDValue();
+
+  if (IsEqual) {
+    APInt One(NumActiveElems.getBitWidth(), 1, IsSigned);
+    NumActiveElems = IsSigned ? NumActiveElems.sadd_ov(One, Overflow)
+                              : NumActiveElems.uadd_ov(One, Overflow);
+    if (Overflow)
+      return SDValue();
+  }
+
+  std::optional<unsigned> PredPattern =
+      getSVEPredPatternFromNumElements(NumActiveElems.getZExtValue());
+  unsigned MinSVEVectorSize = std::max(
+      DAG.getSubtarget<AArch64Subtarget>().getMinSVEVectorSizeInBits(), 128u);
+  unsigned ElementSize = 128 / Op.getValueType().getVectorMinNumElements();
+  if (PredPattern != std::nullopt &&
+      NumActiveElems.getZExtValue() <= (MinSVEVectorSize / ElementSize))
+    return getPTrue(DAG, dl, Op.getValueType(), *PredPattern);
+
+  return SDValue();
+}
+
 // Returns a safe bitcast between two scalable vector predicates, where
 // any newly created lanes from a widening bitcast are defined as zero.
 static SDValue getSVEPredicateBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) {
@@ -4899,22 +4938,30 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                  Op.getOperand(1))));
     return SDValue();
   }
-  case Intrinsic::aarch64_sve_whilelo: {
-    if (isa<ConstantSDNode>(Op.getOperand(1)) &&
-        isa<ConstantSDNode>(Op.getOperand(2))) {
-      unsigned MinSVEVectorSize =
-          std::max(Subtarget->getMinSVEVectorSizeInBits(), 128u);
-      unsigned ElementSize = 128 / Op.getValueType().getVectorMinNumElements();
-      unsigned NumActiveElems =
-          Op.getConstantOperandVal(2) - Op.getConstantOperandVal(1);
-      std::optional<unsigned> PredPattern =
-          getSVEPredPatternFromNumElements(NumActiveElems);
-      if ((PredPattern != std::nullopt) &&
-          NumActiveElems <= (MinSVEVectorSize / ElementSize))
-        return getPTrue(DAG, dl, Op.getValueType(), *PredPattern);
-    }
-    return SDValue();
-  }
+  case Intrinsic::aarch64_sve_whilelo:
+    return optimizeWhile(Op, DAG, /*IsSigned=*/false, /*IsLess=*/true,
+                         /*IsEqual=*/false);
+  case Intrinsic::aarch64_sve_whilelt:
+    return optimizeWhile(Op, DAG, /*IsSigned=*/true, /*IsLess=*/true,
+                         /*IsEqual=*/false);
+  case Intrinsic::aarch64_sve_whilels:
+    return optimizeWhile(Op, DAG, /*IsSigned=*/false, /*IsLess=*/true,
+                         /*IsEqual=*/true);
+  case Intrinsic::aarch64_sve_whilele:
+    return optimizeWhile(Op, DAG, /*IsSigned=*/true, /*IsLess=*/true,
+                         /*IsEqual=*/true);
+  case Intrinsic::aarch64_sve_whilege:
+    return optimizeWhile(Op, DAG, /*IsSigned=*/true, /*IsLess=*/false,
+                         /*IsEqual=*/true);
+  case Intrinsic::aarch64_sve_whilegt:
+    return optimizeWhile(Op, DAG, /*IsSigned=*/true, /*IsLess=*/false,
+                         /*IsEqual=*/false);
+  case Intrinsic::aarch64_sve_whilehs:
+    return optimizeWhile(Op, DAG, /*IsSigned=*/false, /*IsLess=*/false,
+                         /*IsEqual=*/true);
+  case Intrinsic::aarch64_sve_whilehi:
+    return optimizeWhile(Op, DAG, /*IsSigned=*/false, /*IsLess=*/false,
+                         /*IsEqual=*/false);
   case Intrinsic::aarch64_sve_sunpkhi:
     return DAG.getNode(AArch64ISD::SUNPKHI, dl, Op.getValueType(),
                        Op.getOperand(1));
