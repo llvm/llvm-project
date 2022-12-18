@@ -120,11 +120,11 @@ CIRRecordLowering::CIRRecordLowering(CIRGenTypes &cirGenTypes,
                                      const RecordDecl *recordDecl,
                                      bool isPacked)
     : cirGenTypes{cirGenTypes}, astContext{cirGenTypes.getContext()},
-      recordDecl{recordDecl}, cxxRecordDecl{llvm::dyn_cast<CXXRecordDecl>(
-                                  recordDecl)},
+      recordDecl{recordDecl},
+      cxxRecordDecl{llvm::dyn_cast<CXXRecordDecl>(recordDecl)},
       astRecordLayout{cirGenTypes.getContext().getASTRecordLayout(recordDecl)},
-      IsZeroInitializable(true),
-      IsZeroInitializableAsBase(true), isPacked{isPacked} {}
+      IsZeroInitializable(true), IsZeroInitializableAsBase(true),
+      isPacked{isPacked} {}
 
 void CIRRecordLowering::lower(bool nonVirtualBaseType) {
   if (recordDecl->isUnion()) {
