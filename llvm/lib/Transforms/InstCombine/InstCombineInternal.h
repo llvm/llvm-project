@@ -106,7 +106,7 @@ public:
   Value *simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1, bool Inverted);
   Instruction *visitAnd(BinaryOperator &I);
   Instruction *visitOr(BinaryOperator &I);
-  bool sinkNotIntoOtherHandOfAndOrOr(BinaryOperator &I);
+  bool sinkNotIntoOtherHandOfLogicalOp(Instruction &I);
   Instruction *visitXor(BinaryOperator &I);
   Instruction *visitShl(BinaryOperator &I);
   Value *reassociateShiftAmtsOfTwoSameDirectionShifts(
