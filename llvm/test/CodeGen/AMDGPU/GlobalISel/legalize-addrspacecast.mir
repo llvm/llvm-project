@@ -424,8 +424,9 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(p6) = COPY $vgpr0
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
-    ; GCN-NEXT: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
+    ; GCN-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p6)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GCN-NEXT: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[PTRTOINT]](s32), [[C]](s32)
     ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[MV]](p4)
     %0:_(p6) = COPY $vgpr0
     %1:_(p4) = G_ADDRSPACE_CAST %0
@@ -444,8 +445,9 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(p6) = COPY $vgpr0
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 -559038737
-    ; GCN-NEXT: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
+    ; GCN-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p6)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -559038737
+    ; GCN-NEXT: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[PTRTOINT]](s32), [[C]](s32)
     ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[MV]](p4)
     %0:_(p6) = COPY $vgpr0
     %1:_(p4) = G_ADDRSPACE_CAST %0
@@ -479,8 +481,9 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(p6) = COPY $vgpr0
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
-    ; GCN-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
+    ; GCN-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p6)
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GCN-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[C]](s32)
     ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[MV]](p0)
     %0:_(p6) = COPY $vgpr0
     %1:_(p0) = G_ADDRSPACE_CAST %0
