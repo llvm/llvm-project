@@ -46,8 +46,7 @@ bool isUniqueCOOType(RankedTensorType tp);
 // And therefore all functions calling it cannot be constexpr either.
 // TODO: since Clang does allow these to be constexpr, perhaps we should
 // define a macro to abstract over `inline` vs `constexpr` annotations.
-inline DimLevelType getDimLevelType(const SparseTensorEncodingAttr &enc,
-                                    uint64_t d) {
+inline DimLevelType getDimLevelType(SparseTensorEncodingAttr enc, uint64_t d) {
   if (enc) {
     auto types = enc.getDimLevelType();
     assert(d < types.size() && "Dimension out of bounds");
@@ -110,8 +109,8 @@ inline bool isUniqueDim(RankedTensorType type, uint64_t d) {
 // Reordering.
 //
 
-uint64_t toOrigDim(const SparseTensorEncodingAttr &enc, uint64_t d);
-uint64_t toStoredDim(const SparseTensorEncodingAttr &enc, uint64_t d);
+uint64_t toOrigDim(SparseTensorEncodingAttr enc, uint64_t d);
+uint64_t toStoredDim(SparseTensorEncodingAttr enc, uint64_t d);
 
 /// Convenience method to translate the given stored dimension
 /// to the original dimension (0 <= d < rank).

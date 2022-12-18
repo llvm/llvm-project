@@ -3619,7 +3619,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitCommonDirectiveEntry(
   // Emit thenBB and set the Builder's insertion point there for
   // body generation next. Place the block after the current block.
   Function *CurFn = EntryBB->getParent();
-  CurFn->getBasicBlockList().insertAfter(EntryBB->getIterator(), ThenBB);
+  CurFn->insertBasicBlockAt(std::next(EntryBB->getIterator()), ThenBB);
 
   // Move Entry branch to end of ThenBB, and replace with conditional
   // branch (If-stmt)

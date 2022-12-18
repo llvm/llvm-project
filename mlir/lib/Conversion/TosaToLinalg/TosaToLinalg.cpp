@@ -18,7 +18,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
-#include "mlir/Dialect/Tosa/Utils/CoversionUtils.h"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Matchers.h"
@@ -177,10 +177,10 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
     auto sub = rewriter.create<arith::SubIOp>(loc, zpAddValue, ext);
 
     // Clamp to the negation range.
-    auto min = rewriter.create<arith::ConstantIntOp>(
+    Value min = rewriter.create<arith::ConstantIntOp>(
         loc, APInt::getSignedMinValue(inputBitWidth).getSExtValue(),
         intermediateType);
-    auto max = rewriter.create<arith::ConstantIntOp>(
+    Value max = rewriter.create<arith::ConstantIntOp>(
         loc, APInt::getSignedMaxValue(inputBitWidth).getSExtValue(),
         intermediateType);
     auto clamp = clampIntHelper(loc, sub, min, max, rewriter);
@@ -1431,10 +1431,11 @@ public:
   LogicalResult matchAndRewrite(tosa::ResizeOp op,
                                 PatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
+    ImplicitLocOpBuilder b(loc, rewriter);
     auto input = op.getInput();
     auto inputTy = input.getType().cast<ShapedType>();
     auto resultTy = op.getType().cast<ShapedType>();
-    auto resultElementTy = resultTy.getElementType();
+    auto resultETy = resultTy.getElementType();
 
     auto imageH = inputTy.getShape()[1];
     auto imageW = inputTy.getShape()[2];
@@ -1444,284 +1445,229 @@ public:
     if (!dynamicDimsOr.has_value())
       return rewriter.notifyMatchFailure(
           op, "unable to get dynamic dimensions of tosa.resize");
-    SmallVector<Value> dynamicDims = dynamicDimsOr.value();
 
     if (op.getMode() != "NEAREST_NEIGHBOR" && op.getMode() != "BILINEAR")
       return rewriter.notifyMatchFailure(
           op, "tosa.resize mode should be NEAREST_NEIGHBOR or BILINEAR");
 
-    auto emptyTensor = rewriter.create<tensor::EmptyOp>(
-        loc, resultTy.getShape(), resultElementTy, dynamicDims);
-
     SmallVector<AffineMap, 2> affineMaps = {
         rewriter.getMultiDimIdentityMap(resultTy.getRank())};
-
-    Value resize = input;
-    auto genericOp = rewriter.create<linalg::GenericOp>(
-        loc, resultTy, ValueRange({}), ValueRange{emptyTensor}, affineMaps,
+    auto emptyTensor = b.create<tensor::EmptyOp>(resultTy.getShape(), resultETy,
+                                                 dynamicDimsOr.value());
+    auto genericOp = b.create<linalg::GenericOp>(
+        resultTy, ValueRange({}), ValueRange{emptyTensor}, affineMaps,
         getNParallelLoopsAttrs(resultTy.getRank()));
-    resize = genericOp.getResult(0);
+    Value resize = genericOp.getResult(0);
 
-    OpBuilder::InsertionGuard regionGuard(rewriter);
-    rewriter.createBlock(&genericOp.getRegion(), genericOp.getRegion().end(),
-                         TypeRange({resultElementTy}), loc);
-    Value batch = rewriter.create<linalg::IndexOp>(loc, 0);
-    Value y = rewriter.create<linalg::IndexOp>(loc, 1);
-    Value x = rewriter.create<linalg::IndexOp>(loc, 2);
-    Value channel = rewriter.create<linalg::IndexOp>(loc, 3);
+    {
+      OpBuilder::InsertionGuard regionGuard(b);
+      b.createBlock(&genericOp.getRegion(), genericOp.getRegion().end(),
+                    TypeRange({resultETy}), loc);
+      Value batch = b.create<linalg::IndexOp>(0);
+      Value y = b.create<linalg::IndexOp>(1);
+      Value x = b.create<linalg::IndexOp>(2);
+      Value channel = b.create<linalg::IndexOp>(3);
 
-    auto hwMin =
-        rewriter.create<arith::ConstantOp>(loc, rewriter.getI32IntegerAttr(0));
-    auto hMax = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(imageH - 1));
-    auto wMax = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(imageW - 1));
+      Value zeroI32 = b.create<arith::ConstantOp>(b.getI32IntegerAttr(0));
+      Value hMax = b.create<arith::ConstantOp>(b.getI32IntegerAttr(imageH - 1));
+      Value wMax = b.create<arith::ConstantOp>(b.getI32IntegerAttr(imageW - 1));
 
-    Value inY =
-        rewriter.create<arith::IndexCastOp>(loc, rewriter.getI32Type(), y);
-    Value inX =
-        rewriter.create<arith::IndexCastOp>(loc, rewriter.getI32Type(), x);
+      Value inY = b.create<arith::IndexCastOp>(b.getI32Type(), y);
+      Value inX = b.create<arith::IndexCastOp>(b.getI32Type(), x);
 
-    bool floatingPointMode = resultElementTy.isF32();
+      bool floatingPointMode = resultETy.isF32();
 
-    Value yScaleN, yScaleD, xScaleN, xScaleD, yOffset, xOffset, yBorder,
-        xBorder;
-    SmallVector<int32_t> scale, offset, border;
-    getValuesFromIntArrayAttribute(op.getScale(), scale);
-    getValuesFromIntArrayAttribute(op.getOffset(), offset);
-    getValuesFromIntArrayAttribute(op.getBorder(), border);
+      SmallVector<int32_t> scale, offset, border;
+      getValuesFromIntArrayAttribute(op.getScale(), scale);
+      getValuesFromIntArrayAttribute(op.getOffset(), offset);
+      getValuesFromIntArrayAttribute(op.getBorder(), border);
 
-    yScaleN = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(scale[0]));
-    yScaleD = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(scale[1]));
-    xScaleN = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(scale[2]));
-    xScaleD = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(scale[3]));
-    yOffset = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(offset[0]));
-    xOffset = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(offset[1]));
-    yBorder = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(border[0]));
-    xBorder = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(border[1]));
+      Value yScaleN, yScaleD, xScaleN, xScaleD;
+      yScaleN = b.create<arith::ConstantOp>(b.getI32IntegerAttr(scale[0]));
+      yScaleD = b.create<arith::ConstantOp>(b.getI32IntegerAttr(scale[1]));
+      xScaleN = b.create<arith::ConstantOp>(b.getI32IntegerAttr(scale[2]));
+      xScaleD = b.create<arith::ConstantOp>(b.getI32IntegerAttr(scale[3]));
 
-    // Compute the the integer index and partial offset.
-    Value ix, iy, dx, dy;
-    // x = x * scale_d + offset;
-    // ix = floor(x / scale_n)
-    if (floatingPointMode) {
-      // dx = x / scale_n - ix
-      Value y =
-          rewriter.create<arith::UIToFPOp>(loc, rewriter.getF32Type(), inY);
-      Value x =
-          rewriter.create<arith::UIToFPOp>(loc, rewriter.getF32Type(), inX);
+      Value yOffset, xOffset, yBorder, xBorder;
+      yOffset = b.create<arith::ConstantOp>(b.getI32IntegerAttr(offset[0]));
+      xOffset = b.create<arith::ConstantOp>(b.getI32IntegerAttr(offset[1]));
+      yBorder = b.create<arith::ConstantOp>(b.getI32IntegerAttr(border[0]));
+      xBorder = b.create<arith::ConstantOp>(b.getI32IntegerAttr(border[1]));
 
-      yScaleN =
-          rewriter.create<arith::UIToFPOp>(loc, rewriter.getF32Type(), yScaleN);
-      yScaleD =
-          rewriter.create<arith::UIToFPOp>(loc, rewriter.getF32Type(), yScaleD);
-      xScaleN =
-          rewriter.create<arith::UIToFPOp>(loc, rewriter.getF32Type(), xScaleN);
-      xScaleD =
-          rewriter.create<arith::UIToFPOp>(loc, rewriter.getF32Type(), xScaleD);
-      yOffset =
-          rewriter.create<arith::UIToFPOp>(loc, rewriter.getF32Type(), yOffset);
-      xOffset =
-          rewriter.create<arith::UIToFPOp>(loc, rewriter.getF32Type(), xOffset);
+      // Compute the ix and dx values for both the X and Y dimensions.
+      auto getIndexAndDeltaFp = [&](Value &index, Value &delta, Value in,
+                                    Value scaleN, Value scaleD, Value offset,
+                                    int size, ImplicitLocOpBuilder &b) {
+        // x = x * scale_d + offset;
+        // ix = floor(x / scale_n)
+        // dx = x / scale_n - ix
+        Value val = b.create<arith::UIToFPOp>(b.getF32Type(), in);
+        scaleN = b.create<arith::UIToFPOp>(b.getF32Type(), scaleN);
+        scaleD = b.create<arith::UIToFPOp>(b.getF32Type(), scaleD);
+        offset = b.create<arith::UIToFPOp>(b.getF32Type(), offset);
+        val = b.create<arith::MulFOp>(val, scaleD);
+        val = b.create<arith::AddFOp>(val, offset);
+        val = b.create<arith::DivFOp>(val, scaleN);
+        index = b.create<math::FloorOp>(val);
+        delta = b.create<arith::SubFOp>(val, index);
+        index = b.create<arith::FPToSIOp>(b.getI32Type(), index);
+      };
 
-      y = rewriter.create<arith::MulFOp>(loc, y, yScaleD);
-      x = rewriter.create<arith::MulFOp>(loc, x, xScaleD);
+      // Compute the ix and dx values for the X and Y dimensions - int case.
+      auto getIndexAndDeltaInt = [&](Value &index, Value &delta, Value in,
+                                     Value scaleN, Value scaleD, Value offset,
+                                     int size, ImplicitLocOpBuilder &b) {
+        // x = x * scale_d + offset;
+        // ix = floor(x / scale_n)
+        //  dx = x - ix * scale_n;
+        Value val = b.create<arith::MulIOp>(in, scaleD);
+        val = b.create<arith::AddIOp>(val, offset);
+        index = b.create<arith::DivSIOp>(val, scaleN);
+        delta = b.create<arith::MulIOp>(index, scaleN);
+        delta = b.create<arith::SubIOp>(val, delta);
+      };
 
-      y = rewriter.create<arith::AddFOp>(loc, y, yOffset);
-      x = rewriter.create<arith::AddFOp>(loc, x, xOffset);
-
-      y = rewriter.create<arith::DivFOp>(loc, y, yScaleN);
-      x = rewriter.create<arith::DivFOp>(loc, x, xScaleN);
-
-      iy = rewriter.create<math::FloorOp>(loc, y);
-      ix = rewriter.create<math::FloorOp>(loc, x);
-
-      dy = rewriter.create<arith::SubFOp>(loc, y, iy);
-      dx = rewriter.create<arith::SubFOp>(loc, x, ix);
-
-      iy = rewriter.create<arith::FPToSIOp>(loc, rewriter.getI32Type(), iy);
-      ix = rewriter.create<arith::FPToSIOp>(loc, rewriter.getI32Type(), ix);
-    } else {
-      //  dx = x - ix * scale_n;
-      Value y = rewriter.create<arith::MulIOp>(loc, inY, yScaleD);
-      Value x = rewriter.create<arith::MulIOp>(loc, inX, xScaleD);
-
-      y = rewriter.create<arith::AddIOp>(loc, y, yOffset);
-      x = rewriter.create<arith::AddIOp>(loc, x, xOffset);
-
-      iy = rewriter.create<arith::DivSIOp>(loc, y, yScaleN);
-      ix = rewriter.create<arith::DivSIOp>(loc, x, xScaleN);
-
-      Value tempY = rewriter.create<arith::MulIOp>(loc, iy, yScaleN);
-      Value tempX = rewriter.create<arith::MulIOp>(loc, ix, xScaleN);
-
-      dy = rewriter.create<arith::SubIOp>(loc, y, tempY);
-      dx = rewriter.create<arith::SubIOp>(loc, x, tempX);
-    }
-
-    if (op.getMode() == "NEAREST_NEIGHBOR") {
-      Value yPred, xPred;
-      auto zeroVal = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getI32IntegerAttr(0));
-      auto oneVal = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getI32IntegerAttr(1));
-
-      // Round the index position towards the closest pixel location.
+      Value ix, iy, dx, dy;
       if (floatingPointMode) {
-        auto halfVal = rewriter.create<arith::ConstantOp>(
-            loc, rewriter.getF32FloatAttr(0.5f));
-        yPred = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OGE,
-                                               dy, halfVal);
-        xPred = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OGE,
-                                               dx, halfVal);
+        getIndexAndDeltaFp(iy, dy, inY, yScaleN, yScaleD, yOffset, imageH, b);
+        getIndexAndDeltaFp(ix, dx, inX, xScaleN, xScaleD, xOffset, imageW, b);
       } else {
-        Value dyDoubled = rewriter.create<arith::ShLIOp>(loc, dy, oneVal);
-        Value dxDoubled = rewriter.create<arith::ShLIOp>(loc, dx, oneVal);
-        yPred = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sge,
-                                               dyDoubled, yScaleN);
-        xPred = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sge,
-                                               dxDoubled, xScaleN);
+        getIndexAndDeltaInt(iy, dy, inY, yScaleN, yScaleD, yOffset, imageH, b);
+        getIndexAndDeltaInt(ix, dx, inX, xScaleN, xScaleD, xOffset, imageW, b);
       }
 
-      auto yOffset =
-          rewriter.create<arith::SelectOp>(loc, yPred, oneVal, zeroVal);
-      auto xOffset =
-          rewriter.create<arith::SelectOp>(loc, xPred, oneVal, zeroVal);
+      if (op.getMode() == "NEAREST_NEIGHBOR") {
+        auto one = b.create<arith::ConstantOp>(b.getI32IntegerAttr(1));
 
-      iy = rewriter.create<arith::AddIOp>(loc, iy, yOffset);
-      ix = rewriter.create<arith::AddIOp>(loc, ix, xOffset);
+        auto getNearestIndexAndClamp = [&](Value val, Value dval, Value scale,
+                                           Value max, int size,
+                                           ImplicitLocOpBuilder &b) -> Value {
+          if (size == 1) {
+            return b.create<arith::ConstantIndexOp>(0);
+          }
 
-      // Clamp the to be within the bounds of the input image.
-      iy = clampIntHelper(loc, iy, hwMin, hMax, rewriter);
-      ix = clampIntHelper(loc, ix, hwMin, wMax, rewriter);
+          Value pred;
+          if (floatingPointMode) {
+            auto h = b.create<arith::ConstantOp>(b.getF32FloatAttr(0.5f));
+            pred = b.create<arith::CmpFOp>(arith::CmpFPredicate::OGE, dval, h);
+          } else {
+            Value dvalDouble = b.create<arith::ShLIOp>(dval, one);
+            pred = b.create<arith::CmpIOp>(arith::CmpIPredicate::sge,
+                                           dvalDouble, scale);
+          }
 
-      // Read the value from the input array.
-      iy =
-          rewriter.create<arith::IndexCastOp>(loc, rewriter.getIndexType(), iy);
-      ix =
-          rewriter.create<arith::IndexCastOp>(loc, rewriter.getIndexType(), ix);
+          auto offset = b.create<arith::SelectOp>(pred, one, zeroI32);
+          val = b.create<arith::AddIOp>(val, offset);
+          val = clampIntHelper(loc, val, zeroI32, max, b);
+          return b.create<arith::IndexCastOp>(b.getIndexType(), val);
+        };
 
-      Value result = rewriter.create<tensor::ExtractOp>(
-          loc, input, ValueRange{batch, iy, ix, channel});
+        iy = getNearestIndexAndClamp(iy, dy, yScaleN, hMax, imageH, b);
+        ix = getNearestIndexAndClamp(ix, dx, xScaleN, wMax, imageW, b);
 
-      rewriter.create<linalg::YieldOp>(loc, result);
-    } else {
-      // The mode here must be BILINEAR.
-      assert(op.getMode() == "BILINEAR");
-      Value y0 = iy;
-      Value x0 = ix;
+        Value result = b.create<tensor::ExtractOp>(
+            input, ValueRange{batch, iy, ix, channel});
 
-      auto oneVal = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getI32IntegerAttr(1));
-      Value y1 = rewriter.create<arith::AddIOp>(loc, y0, oneVal);
-      Value x1 = rewriter.create<arith::AddIOp>(loc, x0, oneVal);
-
-      y0 = clampIntHelper(loc, y0, hwMin, hMax, rewriter);
-      y1 = clampIntHelper(loc, y1, hwMin, hMax, rewriter);
-
-      x0 = clampIntHelper(loc, x0, hwMin, wMax, rewriter);
-      x1 = clampIntHelper(loc, x1, hwMin, wMax, rewriter);
-
-      y0 =
-          rewriter.create<arith::IndexCastOp>(loc, rewriter.getIndexType(), y0);
-      y1 =
-          rewriter.create<arith::IndexCastOp>(loc, rewriter.getIndexType(), y1);
-      x0 =
-          rewriter.create<arith::IndexCastOp>(loc, rewriter.getIndexType(), x0);
-      x1 =
-          rewriter.create<arith::IndexCastOp>(loc, rewriter.getIndexType(), x1);
-
-      Value y0x0 = rewriter.create<tensor::ExtractOp>(
-          loc, input, ValueRange{batch, y0, x0, channel});
-      Value y0x1 = rewriter.create<tensor::ExtractOp>(
-          loc, input, ValueRange{batch, y0, x1, channel});
-      Value y1x0 = rewriter.create<tensor::ExtractOp>(
-          loc, input, ValueRange{batch, y1, x0, channel});
-      Value y1x1 = rewriter.create<tensor::ExtractOp>(
-          loc, input, ValueRange{batch, y1, x1, channel});
-
-      if (floatingPointMode) {
-        Value rightPart = dx;
-        auto oneVal = rewriter.create<arith::ConstantOp>(
-            loc, rewriter.getF32FloatAttr(1.0f));
-        Value leftPart = rewriter.create<arith::SubFOp>(loc, oneVal, dx);
-
-        y0x0 = rewriter.create<arith::MulFOp>(loc, y0x0, leftPart);
-        y0x1 = rewriter.create<arith::MulFOp>(loc, y0x1, rightPart);
-        Value topAcc = rewriter.create<arith::AddFOp>(loc, y0x0, y0x1);
-
-        y1x0 = rewriter.create<arith::MulFOp>(loc, y1x0, leftPart);
-        y1x1 = rewriter.create<arith::MulFOp>(loc, y1x1, rightPart);
-        Value bottomAcc = rewriter.create<arith::AddFOp>(loc, y1x0, y1x1);
-
-        Value bottomPart = dy;
-        Value topPart = rewriter.create<arith::SubFOp>(loc, oneVal, dy);
-        topAcc = rewriter.create<arith::MulFOp>(loc, topAcc, topPart);
-        bottomAcc = rewriter.create<arith::MulFOp>(loc, bottomAcc, bottomPart);
-        Value result = rewriter.create<arith::AddFOp>(loc, topAcc, bottomAcc);
-
-        rewriter.create<linalg::YieldOp>(loc, result);
+        b.create<linalg::YieldOp>(result);
       } else {
-        // Perform in quantized space.
-        y0x0 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y0x0);
-        y0x1 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y0x1);
-        y1x0 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y1x0);
-        y1x1 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y1x1);
+        // The mode here must be BILINEAR.
+        assert(op.getMode() == "BILINEAR");
 
-        if (resultElementTy.getIntOrFloatBitWidth() > 32) {
-          dx = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dx);
-          dy = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dy);
-        }
+        auto oneVal = b.create<arith::ConstantOp>(b.getI32IntegerAttr(1));
 
-        Value xScaleNExt = xScaleN;
-        Value yScaleNExt = yScaleN;
+        auto getClampedIdxs = [&](Value &val0, Value &val1, int size, Value in,
+                                  Value max, ImplicitLocOpBuilder &b) {
+          val0 = in;
+          val1 = b.create<arith::AddIOp>(val0, oneVal);
+          val0 = clampIntHelper(loc, val0, zeroI32, max, b);
+          val1 = clampIntHelper(loc, val1, zeroI32, max, b);
+          val0 = b.create<arith::IndexCastOp>(b.getIndexType(), val0);
+          val1 = b.create<arith::IndexCastOp>(b.getIndexType(), val1);
+        };
 
-        if (xScaleN.getType() != resultElementTy)
-          xScaleNExt =
-              rewriter.create<arith::ExtSIOp>(loc, resultElementTy, xScaleN);
+        // Linalg equivalent to the section below:
+        //    int16_t iy0 = apply_max(iy, 0);
+        //    int16_t iy1 = apply_min(iy + 1, IH - 1);
+        //    int16_t ix0 = apply_max(ix, 0);
+        //    int16_t ix1 = apply_min(ix + 1, IW - 1);
+        Value x0, x1, y0, y1;
+        getClampedIdxs(y0, y1, imageH, iy, hMax, b);
+        getClampedIdxs(x0, x1, imageW, ix, wMax, b);
 
-        if (yScaleN.getType() != resultElementTy)
-          yScaleNExt =
-              rewriter.create<arith::ExtSIOp>(loc, resultElementTy, yScaleN);
+        Value y0x0 = b.create<tensor::ExtractOp>(
+            input, ValueRange{batch, y0, x0, channel});
+        Value y0x1 = b.create<tensor::ExtractOp>(
+            input, ValueRange{batch, y0, x1, channel});
+        Value y1x0 = b.create<tensor::ExtractOp>(
+            input, ValueRange{batch, y1, x0, channel});
+        Value y1x1 = b.create<tensor::ExtractOp>(
+            input, ValueRange{batch, y1, x1, channel});
 
-        Value topAcc, bottomAcc;
-        if (imageW == 1) {
-          topAcc = rewriter.create<arith::MulIOp>(loc, y0x0, xScaleNExt);
-          bottomAcc = rewriter.create<arith::MulIOp>(loc, y1x0, xScaleNExt);
+        if (floatingPointMode) {
+          auto oneVal = b.create<arith::ConstantOp>(b.getF32FloatAttr(1.0f));
+          auto interpolate = [&](Value val0, Value val1, Value delta,
+                                 ImplicitLocOpBuilder &b) -> Value {
+            Value oneMinusDelta = b.create<arith::SubFOp>(oneVal, delta);
+            Value mul0 = b.create<arith::MulFOp>(val0, oneMinusDelta);
+            Value mul1 = b.create<arith::MulFOp>(val1, delta);
+            return b.create<arith::AddFOp>(mul0, mul1);
+          };
+
+          // Linalg equivalent to the section below:
+          //   topAcc = v00 * (unit_x - dx);
+          //   topAcc += v01 * dx;
+          Value topAcc = interpolate(y0x0, y0x1, dx, b);
+
+          // Linalg equivalent to the section below:
+          //   bottomAcc = v10 * (unit_x - dx);
+          //   bottomAcc += v11 * dx;
+          Value bottomAcc = interpolate(y1x0, y1x1, dx, b);
+
+          // Linalg equivalent to the section below:
+          //   result = topAcc * (unit_y - dy) + bottomAcc * dy
+          Value result = interpolate(topAcc, bottomAcc, dy, b);
+          b.create<linalg::YieldOp>(result);
         } else {
-          Value rightPart = dx;
-          Value leftPart = rewriter.create<arith::SubIOp>(loc, xScaleNExt, dx);
+          // Perform in quantized space.
+          y0x0 = b.create<arith::ExtSIOp>(resultETy, y0x0);
+          y0x1 = b.create<arith::ExtSIOp>(resultETy, y0x1);
+          y1x0 = b.create<arith::ExtSIOp>(resultETy, y1x0);
+          y1x1 = b.create<arith::ExtSIOp>(resultETy, y1x1);
 
-          y0x0 = rewriter.create<arith::MulIOp>(loc, y0x0, leftPart);
-          y0x1 = rewriter.create<arith::MulIOp>(loc, y0x1, rightPart);
-          topAcc = rewriter.create<arith::AddIOp>(loc, y0x0, y0x1);
+          const int64_t deltaBitwidth = dx.getType().getIntOrFloatBitWidth();
+          if (resultETy.getIntOrFloatBitWidth() > deltaBitwidth) {
+            dx = b.create<arith::ExtSIOp>(resultETy, dx);
+            dy = b.create<arith::ExtSIOp>(resultETy, dy);
+          }
 
-          y1x0 = rewriter.create<arith::MulIOp>(loc, y1x0, leftPart);
-          y1x1 = rewriter.create<arith::MulIOp>(loc, y1x1, rightPart);
-          bottomAcc = rewriter.create<arith::AddIOp>(loc, y1x0, y1x1);
+          Value yScaleNExt = yScaleN;
+          Value xScaleNExt = xScaleN;
+
+          const int64_t scaleBitwidth =
+              xScaleN.getType().getIntOrFloatBitWidth();
+          if (resultETy.getIntOrFloatBitWidth() > scaleBitwidth) {
+            yScaleNExt = b.create<arith::ExtSIOp>(resultETy, yScaleN);
+            xScaleNExt = b.create<arith::ExtSIOp>(resultETy, xScaleN);
+          }
+
+          auto interpolate = [](Value val0, Value val1, Value weight0,
+                                Value weight1,
+                                ImplicitLocOpBuilder &b) -> Value {
+            Value mul0 = b.create<arith::MulIOp>(val0, weight0);
+            Value mul1 = b.create<arith::MulIOp>(val1, weight1);
+            return b.create<arith::AddIOp>(mul0, mul1);
+          };
+
+          Value weight0 = b.create<arith::SubIOp>(xScaleNExt, dx);
+          Value weight1 = dx;
+          Value topAcc = interpolate(y0x0, y0x1, weight0, weight1, b);
+          Value bottomAcc = interpolate(y1x0, y1x1, weight0, weight1, b);
+
+          weight0 = b.create<arith::SubIOp>(yScaleNExt, dy);
+          weight1 = dy;
+          Value result = interpolate(topAcc, bottomAcc, weight0, weight1, b);
+          b.create<linalg::YieldOp>(result);
         }
-
-        Value result;
-        if (imageH == 1) {
-          result = rewriter.create<arith::MulIOp>(loc, topAcc, yScaleNExt);
-        } else {
-          Value bottomPart = dy;
-          Value topPart = rewriter.create<arith::SubIOp>(loc, yScaleNExt, dy);
-          topAcc = rewriter.create<arith::MulIOp>(loc, topAcc, topPart);
-          bottomAcc =
-              rewriter.create<arith::MulIOp>(loc, bottomAcc, bottomPart);
-          result = rewriter.create<arith::AddIOp>(loc, topAcc, bottomAcc);
-        }
-
-        rewriter.create<linalg::YieldOp>(loc, result);
       }
     }
 

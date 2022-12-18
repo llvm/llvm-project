@@ -59,6 +59,21 @@ void TemplUse() {
 
   // dr2636: na
 
+namespace dr2640 { // dr2640: 16
+
+int \N{Λ} = 0; //expected-error {{'Λ' is not a valid Unicode character name}} \
+               //expected-error {{expected unqualified-id}}
+const char* emoji = "\N{🤡}"; // expected-error {{'🤡' is not a valid Unicode character name}} \
+                              // expected-note 5{{did you mean}}
+
+#define z(x) 0
+#define dr2640_a z(
+int x = dr2640_a\N{abc}); // expected-error {{'abc' is not a valid Unicode character name}}
+int y = dr2640_a\N{LOTUS}); // expected-error {{character <U+1FAB7> not allowed in an identifier}} \
+                     // expected-error {{use of undeclared identifier 'dr2640_a🪷'}} \
+                     // expected-error {{extraneous ')' before ';'}}
+}
+
   // dr2642: na
 
 namespace dr2644 { // dr2644: yes
@@ -87,4 +102,20 @@ void f() {
     brachiosaur -= neck;                // OK
     brachiosaur |= neck;                // OK
 }
+}
+
+namespace dr2631 { // dr2631: 16
+  constexpr int g();
+  consteval int f() {
+    return g();
+  }
+  int k(int x = f()) {
+    return x;
+  }
+  constexpr int g() {
+    return 42;
+  }
+  int test() {
+    return k();
+  }
 }

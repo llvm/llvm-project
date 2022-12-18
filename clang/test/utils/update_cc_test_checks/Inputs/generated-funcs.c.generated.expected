@@ -30,7 +30,7 @@ void foo(void) {
     A[i] = 1.0;
   }
 }
-// OMP-LABEL: define {{[^@]+}}@main(
+// OMP-LABEL: @main(
 // OMP-NEXT:  entry:
 // OMP-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // OMP-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -41,7 +41,7 @@ void foo(void) {
 // OMP-NEXT:    ret i32 0
 //
 //
-// OMP-LABEL: define {{[^@]+}}@.omp_outlined.(
+// OMP-LABEL: @.omp_outlined.(
 // OMP-NEXT:  entry:
 // OMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // OMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -104,7 +104,7 @@ void foo(void) {
 // OMP-NEXT:    ret void
 //
 //
-// OMP-LABEL: define {{[^@]+}}@foo(
+// OMP-LABEL: @foo(
 // OMP-NEXT:  entry:
 // OMP-NEXT:    [[I:%.*]] = alloca i32, align 4
 // OMP-NEXT:    store i32 0, i32* [[I]], align 4
@@ -112,7 +112,7 @@ void foo(void) {
 // OMP-NEXT:    ret void
 //
 //
-// OMP-LABEL: define {{[^@]+}}@.omp_outlined..1(
+// OMP-LABEL: @.omp_outlined..1(
 // OMP-NEXT:  entry:
 // OMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // OMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -175,7 +175,7 @@ void foo(void) {
 // OMP-NEXT:    ret void
 //
 //
-// NOOMP-LABEL: define {{[^@]+}}@main(
+// NOOMP-LABEL: @main(
 // NOOMP-NEXT:  entry:
 // NOOMP-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // NOOMP-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -203,7 +203,7 @@ void foo(void) {
 // NOOMP-NEXT:    ret i32 0
 //
 //
-// NOOMP-LABEL: define {{[^@]+}}@foo(
+// NOOMP-LABEL: @foo(
 // NOOMP-NEXT:  entry:
 // NOOMP-NEXT:    [[I:%.*]] = alloca i32, align 4
 // NOOMP-NEXT:    store i32 0, i32* [[I]], align 4

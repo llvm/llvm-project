@@ -233,13 +233,9 @@ static bool decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate &Pre
 /// the right hand side as a pair.
 /// LHS and RHS are the left hand side and the right hand side ICmps and PredL
 /// and PredR are their predicates, respectively.
-static
-Optional<std::pair<unsigned, unsigned>>
-getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C,
-                         Value *&D, Value *&E, ICmpInst *LHS,
-                         ICmpInst *RHS,
-                         ICmpInst::Predicate &PredL,
-                         ICmpInst::Predicate &PredR) {
+static std::optional<std::pair<unsigned, unsigned>> getMaskedTypeForICmpPair(
+    Value *&A, Value *&B, Value *&C, Value *&D, Value *&E, ICmpInst *LHS,
+    ICmpInst *RHS, ICmpInst::Predicate &PredL, ICmpInst::Predicate &PredR) {
   // Don't allow pointers. Splat vectors are fine.
   if (!LHS->getOperand(0)->getType()->isIntOrIntVectorTy() ||
       !RHS->getOperand(0)->getType()->isIntOrIntVectorTy())
@@ -358,7 +354,8 @@ getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C,
 
   unsigned LeftType = getMaskedICmpType(A, B, C, PredL);
   unsigned RightType = getMaskedICmpType(A, D, E, PredR);
-  return Optional<std::pair<unsigned, unsigned>>(std::make_pair(LeftType, RightType));
+  return std::optional<std::pair<unsigned, unsigned>>(
+      std::make_pair(LeftType, RightType));
 }
 
 /// Try to fold (icmp(A & B) ==/!= C) &/| (icmp(A & D) ==/!= E) into a single
@@ -526,7 +523,7 @@ static Value *foldLogOpOfMaskedICmps(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
                                      InstCombiner::BuilderTy &Builder) {
   Value *A = nullptr, *B = nullptr, *C = nullptr, *D = nullptr, *E = nullptr;
   ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
-  Optional<std::pair<unsigned, unsigned>> MaskPair =
+  std::optional<std::pair<unsigned, unsigned>> MaskPair =
       getMaskedTypeForICmpPair(A, B, C, D, E, LHS, RHS, PredL, PredR);
   if (!MaskPair)
     return nullptr;
@@ -665,7 +662,7 @@ static Value *foldLogOpOfMaskedICmps(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
 /// If \p Inverted is true then the check is for the inverted range, e.g.
 /// (icmp slt x, 0) | (icmp sgt x, n) --> icmp ugt x, n
 Value *InstCombinerImpl::simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1,
-                                            bool Inverted) {
+                                            bool Inverted, bool IsLogical) {
   // Check the lower range comparison, e.g. x >= 0
   // InstCombine already ensured that if there is a constant it's on the RHS.
   ConstantInt *RangeStart = dyn_cast<ConstantInt>(Cmp0->getOperand(1));
@@ -712,6 +709,8 @@ Value *InstCombinerImpl::simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1,
   if (Inverted)
     NewPred = ICmpInst::getInversePredicate(NewPred);
 
+  if (IsLogical)
+    RangeEnd = Builder.CreateFreeze(RangeEnd);
   return Builder.CreateICmp(NewPred, Input, RangeEnd);
 }
 
@@ -1016,7 +1015,7 @@ struct IntPart {
 };
 
 /// Match an extraction of bits from an integer.
-static Optional<IntPart> matchIntPart(Value *V) {
+static std::optional<IntPart> matchIntPart(Value *V) {
   Value *X;
   if (!match(V, m_OneUse(m_Trunc(m_Value(X)))))
     return std::nullopt;
@@ -1056,10 +1055,10 @@ Value *InstCombinerImpl::foldEqOfParts(ICmpInst *Cmp0, ICmpInst *Cmp1,
   if (Cmp0->getPredicate() != Pred || Cmp1->getPredicate() != Pred)
     return nullptr;
 
-  Optional<IntPart> L0 = matchIntPart(Cmp0->getOperand(0));
-  Optional<IntPart> R0 = matchIntPart(Cmp0->getOperand(1));
-  Optional<IntPart> L1 = matchIntPart(Cmp1->getOperand(0));
-  Optional<IntPart> R1 = matchIntPart(Cmp1->getOperand(1));
+  std::optional<IntPart> L0 = matchIntPart(Cmp0->getOperand(0));
+  std::optional<IntPart> R0 = matchIntPart(Cmp0->getOperand(1));
+  std::optional<IntPart> L1 = matchIntPart(Cmp1->getOperand(0));
+  std::optional<IntPart> R1 = matchIntPart(Cmp1->getOperand(1));
   if (!L0 || !R0 || !L1 || !R1)
     return nullptr;
 
@@ -2675,19 +2674,18 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   if (Value *V = foldIsPowerOf2OrZero(RHS, LHS, IsAnd, Builder))
     return V;
 
-  // TODO: One of these directions is fine with logical and/or, the other could
-  // be supported by inserting freeze.
-  if (!IsLogical) {
-    // E.g. (icmp slt x, 0) | (icmp sgt x, n) --> icmp ugt x, n
-    // E.g. (icmp sge x, 0) & (icmp slt x, n) --> icmp ult x, n
-    if (Value *V = simplifyRangeCheck(LHS, RHS, /*Inverted=*/!IsAnd))
-      return V;
+  // E.g. (icmp slt x, 0) | (icmp sgt x, n) --> icmp ugt x, n
+  // E.g. (icmp sge x, 0) & (icmp slt x, n) --> icmp ult x, n
+  if (Value *V = simplifyRangeCheck(LHS, RHS, /*Inverted=*/!IsAnd, IsLogical))
+    return V;
 
-    // E.g. (icmp sgt x, n) | (icmp slt x, 0) --> icmp ugt x, n
-    // E.g. (icmp slt x, n) & (icmp sge x, 0) --> icmp ult x, n
-    if (Value *V = simplifyRangeCheck(RHS, LHS, /*Inverted=*/!IsAnd))
-      return V;
-  }
+  // E.g. (icmp sgt x, n) | (icmp slt x, 0) --> icmp ugt x, n
+  // E.g. (icmp slt x, n) & (icmp sge x, 0) --> icmp ult x, n
+  // We can treat logical like bitwise here, because poison from both x and n
+  // propagates in the original pattern.
+  if (Value *V = simplifyRangeCheck(RHS, LHS, /*Inverted=*/!IsAnd,
+                                    /*IsLogical*/ false))
+    return V;
 
   // TODO: Add conjugated or fold, check whether it is safe for logical and/or.
   if (IsAnd && !IsLogical)

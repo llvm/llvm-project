@@ -84,7 +84,23 @@ def note_constexpr_pointer_subtraction_not_same_array : Note<
 def note_constexpr_pointer_subtraction_zero_size : Note<
   "subtraction of pointers to type %0 of zero size">;
 def note_constexpr_pointer_comparison_unspecified : Note<
-  "comparison has unspecified value">;
+  "comparison between '%0' and '%1' has unspecified value">;
+def note_constexpr_pointer_constant_comparison : Note<
+  "comparison of numeric address '%0' with pointer '%1' can only be performed "
+  "at runtime">;
+def note_constexpr_literal_comparison : Note<
+  "comparison of addresses of literals has unspecified value">;
+def note_constexpr_pointer_weak_comparison : Note<
+  "comparison against address of weak declaration '%0' can only be performed "
+  "at runtime">;
+def note_constexpr_mem_pointer_weak_comparison : Note<
+  "comparison against pointer to weak member %q0 can only be performed "
+  "at runtime">;
+def note_constexpr_pointer_comparison_past_end : Note<
+  "comparison against pointer '%0' that points past the end of a "
+  "complete object has unspecified value">;
+def note_constexpr_pointer_comparison_zero_sized : Note<
+  "comparison of pointers '%0' and '%1' to unrelated zero-sized objects">;
 def note_constexpr_pointer_comparison_base_classes : Note<
   "comparison of addresses of subobjects of different base classes "
   "has unspecified value">;

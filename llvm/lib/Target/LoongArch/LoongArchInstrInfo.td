@@ -151,6 +151,20 @@ class UImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"U", width, suffix> {
 }
 
+// A parse method for "$r*" or "$r*, 0", where the 0 is be silently ignored.
+// Only used for "AM*" instructions, in order to be compatible with GAS.
+def AtomicMemAsmOperand : AsmOperandClass {
+  let Name = "AtomicMemAsmOperand";
+  let RenderMethod = "addRegOperands";
+  let PredicateMethod = "isGPR";
+  let ParserMethod = "parseAtomicMemOp";
+}
+
+def GPRMemAtomic : RegisterOperand<GPR> {
+  let ParserMatchClass = AtomicMemAsmOperand;
+  let PrintMethod = "printAtomicMemOp";
+}
+
 // A parameterized register class alternative to i32imm/i64imm from Target.td.
 def grlenimm : Operand<GRLenVT>;
 def imm32 : Operand<GRLenVT> {
@@ -434,7 +448,8 @@ class STORE_2RI14<bits<8> op, string opstr>
 
 let mayLoad = 1, mayStore = 1, Constraints = "@earlyclobber $rd" in
 class AM_3R<bits<17> op, string opstr>
-    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rk, GPR:$rj), opstr, "$rd, $rk, $rj">;
+    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rk, GPRMemAtomic:$rj), opstr,
+            "$rd, $rk, $rj">;
 
 let mayLoad = 1 in
 class LLBase<bits<8> op, string opstr>
@@ -1312,17 +1327,17 @@ defm : AtomicStPat<atomic_store_16, ST_H, GPR, GRLenVT>;
 defm : AtomicStPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i32>,
                    Requires<[IsLA32]>;
 
-def PseudoAtomicStoreW : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk)>,
-                                 PseudoInstExpansion<(AMSWAP_DB_W R0,
-                                                      GPR:$rk, GPR:$rj)>;
+def PseudoAtomicStoreW
+  : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk)>,
+           PseudoInstExpansion<(AMSWAP_DB_W R0, GPR:$rk, GPRMemAtomic:$rj)>;
 
 def : Pat<(atomic_store_release_seqcst_32 GPR:$rj, GPR:$rk),
           (PseudoAtomicStoreW GPR:$rj, GPR:$rk)>;
 
 let Predicates = [IsLA64] in {
-def PseudoAtomicStoreD : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk)>,
-                                 PseudoInstExpansion<(AMSWAP_DB_D R0,
-                                                      GPR:$rk, GPR:$rj)>;
+def PseudoAtomicStoreD
+  : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk)>,
+           PseudoInstExpansion<(AMSWAP_DB_D R0, GPR:$rk, GPRMemAtomic:$rj)>;
 
 def : Pat<(atomic_store_release_seqcst_64 GPR:$rj, GPR:$rk),
           (PseudoAtomicStoreD GPR:$rj, GPR:$rk)>;

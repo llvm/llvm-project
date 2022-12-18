@@ -13,7 +13,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(long, atol, (const char *str)) {
-  auto result = internal::strtointeger<int>(str, 10);
+  auto result = internal::strtointeger<long>(str, 10);
   if (result.has_error())
     errno = result.error;
 

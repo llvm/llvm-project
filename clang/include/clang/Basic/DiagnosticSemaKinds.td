@@ -2646,6 +2646,10 @@ def err_invalid_consteval_take_address : Error<
   " of an immediate invocation">;
 def err_invalid_consteval_call : Error<
   "call to consteval function %q0 is not a constant expression">;
+def note_invalid_consteval_initializer : Note<
+  "in the default initalizer of %0">;
+def note_invalid_consteval_initializer_here : Note<
+  "initialized here %0">;
 def err_invalid_consteval_decl_kind : Error<
   "%0 cannot be declared consteval">;
 def err_invalid_constexpr : Error<
@@ -10443,6 +10447,10 @@ def err_omp_reduction_incomplete_type : Error<
   "a reduction list item with incomplete type %0">;
 def err_omp_unexpected_clause_value : Error<
   "expected %0 in OpenMP clause '%1'">;
+def err_omp_unexpected_call_to_omp_runtime_api
+    : Error<"calls to OpenMP runtime API are not allowed within a region that "
+            "corresponds to a construct with an order clause that specifies "
+            "concurrent">;
 def err_omp_expected_var_name_member_expr : Error<
   "expected variable name%select{| or data member of current class}0">;
 def err_omp_expected_var_name_member_expr_with_type : Error<
@@ -10637,6 +10645,9 @@ def err_omp_prohibited_region_simd : Error<
   "OpenMP constructs may not be nested inside a simd region%select{| except for ordered simd, simd, scan, or atomic directive}0">;
 def err_omp_prohibited_region_atomic : Error<
   "OpenMP constructs may not be nested inside an atomic region">;
+def err_omp_prohibited_region_order
+    : Error<"construct '%0' not allowed in a region associated with a "
+            "directive with 'order' clause">;
 def err_omp_prohibited_region_critical_same_name : Error<
   "cannot nest 'critical' regions having the same name %0">;
 def note_omp_previous_critical_region : Note<

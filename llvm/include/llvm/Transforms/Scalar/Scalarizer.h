@@ -17,8 +17,8 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_SCALARIZER_H
 #define LLVM_TRANSFORMS_SCALAR_SCALARIZER_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/IR/PassManager.h"
+#include <optional>
 
 namespace llvm {
 
@@ -30,8 +30,8 @@ struct ScalarizerPassOptions {
   // Scalarizer.cpp. When the cl::opt are specified, they take precedence.
   // When the cl::opt are not specified, the present optional booleans allow to
   // override the cl::opt's default values.
-  llvm::Optional<bool> ScalarizeVariableInsertExtract;
-  llvm::Optional<bool> ScalarizeLoadStore;
+  std::optional<bool> ScalarizeVariableInsertExtract;
+  std::optional<bool> ScalarizeLoadStore;
 };
 
 class ScalarizerPass : public PassInfoMixin<ScalarizerPass> {

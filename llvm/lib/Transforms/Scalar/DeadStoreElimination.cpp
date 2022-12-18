@@ -1296,7 +1296,7 @@ struct DSEState {
   // there is no such MemoryDef, return std::nullopt. The returned value may not
   // (completely) overwrite \p KillingLoc. Currently we bail out when we
   // encounter an aliasing MemoryUse (read).
-  Optional<MemoryAccess *>
+  std::optional<MemoryAccess *>
   getDomMemoryDef(MemoryDef *KillingDef, MemoryAccess *StartAccess,
                   const MemoryLocation &KillingLoc, const Value *KillingUndObj,
                   unsigned &ScanLimit, unsigned &WalkerStepLimit,
@@ -2082,7 +2082,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
       if (State.SkipStores.count(Current))
         continue;
 
-      Optional<MemoryAccess *> MaybeDeadAccess = State.getDomMemoryDef(
+      std::optional<MemoryAccess *> MaybeDeadAccess = State.getDomMemoryDef(
           KillingDef, Current, KillingLoc, KillingUndObj, ScanLimit,
           WalkerStepLimit, IsMemTerm, PartialLimit);
 

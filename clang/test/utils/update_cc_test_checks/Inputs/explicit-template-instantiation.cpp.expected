@@ -36,7 +36,7 @@ public:
 
 // These two specializations should generate lines for all of Foo's methods.
 
-// CHECK-LABEL: define {{[^@]+}}@_ZN3FooIcEC1Ec(
+// CHECK-LABEL: @_ZN3FooIcEC1Ec(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Foo*, align 8
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i8, align 1
@@ -47,7 +47,7 @@ public:
 // CHECK-NEXT:    call void @_ZN3FooIcEC2Ec(%struct.Foo* noundef nonnull align 1 dereferenceable(1) [[THIS1]], i8 noundef signext [[TMP0]])
 // CHECK-NEXT:    ret void
 //
-// CHECK-LABEL: define {{[^@]+}}@_ZN3FooIcED1Ev(
+// CHECK-LABEL: @_ZN3FooIcED1Ev(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Foo*, align 8
 // CHECK-NEXT:    store %struct.Foo* [[THIS:%.*]], %struct.Foo** [[THIS_ADDR]], align 8
@@ -55,7 +55,7 @@ public:
 // CHECK-NEXT:    call void @_ZN3FooIcED2Ev(%struct.Foo* noundef nonnull align 1 dereferenceable(1) [[THIS1]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
-// CHECK-LABEL: define {{[^@]+}}@_ZN3FooIcE3getEv(
+// CHECK-LABEL: @_ZN3FooIcE3getEv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Foo*, align 8
 // CHECK-NEXT:    store %struct.Foo* [[THIS:%.*]], %struct.Foo** [[THIS_ADDR]], align 8
@@ -64,7 +64,7 @@ public:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[X]], align 1
 // CHECK-NEXT:    ret i8 [[TMP0]]
 //
-// CHECK-LABEL: define {{[^@]+}}@_ZN3FooIcE3setEc(
+// CHECK-LABEL: @_ZN3FooIcE3setEc(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Foo*, align 8
 // CHECK-NEXT:    [[_X_ADDR:%.*]] = alloca i8, align 1
@@ -78,7 +78,7 @@ public:
 //
 template struct Foo<char>;
 
-// CHECK-LABEL: define {{[^@]+}}@_ZN3FooIsEC1Es(
+// CHECK-LABEL: @_ZN3FooIsEC1Es(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Foo.0*, align 8
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i16, align 2
@@ -89,7 +89,7 @@ template struct Foo<char>;
 // CHECK-NEXT:    call void @_ZN3FooIsEC2Es(%struct.Foo.0* noundef nonnull align 2 dereferenceable(2) [[THIS1]], i16 noundef signext [[TMP0]])
 // CHECK-NEXT:    ret void
 //
-// CHECK-LABEL: define {{[^@]+}}@_ZN3FooIsED1Ev(
+// CHECK-LABEL: @_ZN3FooIsED1Ev(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Foo.0*, align 8
 // CHECK-NEXT:    store %struct.Foo.0* [[THIS:%.*]], %struct.Foo.0** [[THIS_ADDR]], align 8
@@ -97,7 +97,7 @@ template struct Foo<char>;
 // CHECK-NEXT:    call void @_ZN3FooIsED2Ev(%struct.Foo.0* noundef nonnull align 2 dereferenceable(2) [[THIS1]]) #[[ATTR2]]
 // CHECK-NEXT:    ret void
 //
-// CHECK-LABEL: define {{[^@]+}}@_ZN3FooIsE3getEv(
+// CHECK-LABEL: @_ZN3FooIsE3getEv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Foo.0*, align 8
 // CHECK-NEXT:    store %struct.Foo.0* [[THIS:%.*]], %struct.Foo.0** [[THIS_ADDR]], align 8
@@ -106,7 +106,7 @@ template struct Foo<char>;
 // CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[X]], align 2
 // CHECK-NEXT:    ret i16 [[TMP0]]
 //
-// CHECK-LABEL: define {{[^@]+}}@_ZN3FooIsE3setEs(
+// CHECK-LABEL: @_ZN3FooIsE3setEs(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Foo.0*, align 8
 // CHECK-NEXT:    [[_X_ADDR:%.*]] = alloca i16, align 2
@@ -123,7 +123,7 @@ template struct Foo<short>;
 // This should not generate lines for the implicit specialization of Foo, but
 // should generate lines for the explicit specialization of Bar.
 
-// CHECK-LABEL: define {{[^@]+}}@_ZN3BarIiEC1Ei(
+// CHECK-LABEL: @_ZN3BarIiEC1Ei(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Bar*, align 8
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
@@ -134,7 +134,7 @@ template struct Foo<short>;
 // CHECK-NEXT:    call void @_ZN3BarIiEC2Ei(%struct.Bar* noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK-NEXT:    ret void
 //
-// CHECK-LABEL: define {{[^@]+}}@_ZN3BarIiED1Ev(
+// CHECK-LABEL: @_ZN3BarIiED1Ev(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Bar*, align 8
 // CHECK-NEXT:    store %struct.Bar* [[THIS:%.*]], %struct.Bar** [[THIS_ADDR]], align 8
@@ -142,7 +142,7 @@ template struct Foo<short>;
 // CHECK-NEXT:    call void @_ZN3BarIiED2Ev(%struct.Bar* noundef nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR2]]
 // CHECK-NEXT:    ret void
 //
-// CHECK-LABEL: define {{[^@]+}}@_ZN3BarIiE3getEv(
+// CHECK-LABEL: @_ZN3BarIiE3getEv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Bar*, align 8
 // CHECK-NEXT:    store %struct.Bar* [[THIS:%.*]], %struct.Bar** [[THIS_ADDR]], align 8
@@ -151,7 +151,7 @@ template struct Foo<short>;
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN3FooIiE3getEv(%struct.Foo.1* noundef nonnull align 4 dereferenceable(4) [[FOO]])
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
-// CHECK-LABEL: define {{[^@]+}}@_ZN3BarIiE3setEi(
+// CHECK-LABEL: @_ZN3BarIiE3setEi(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Bar*, align 8
 // CHECK-NEXT:    [[_X_ADDR:%.*]] = alloca i32, align 4
@@ -168,7 +168,7 @@ template struct Bar<int>;
 // This should not generate lines for the implicit specialization of Foo, but
 // should generate lines for the explicit specialization of Baz.
 
-// CHECK-LABEL: define {{[^@]+}}@_ZN3BazIlEC1El(
+// CHECK-LABEL: @_ZN3BazIlEC1El(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Baz*, align 8
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i64, align 8
@@ -179,7 +179,7 @@ template struct Bar<int>;
 // CHECK-NEXT:    call void @_ZN3BazIlEC2El(%struct.Baz* noundef nonnull align 8 dereferenceable(8) [[THIS1]], i64 noundef [[TMP0]])
 // CHECK-NEXT:    ret void
 //
-// CHECK-LABEL: define {{[^@]+}}@_ZN3BazIlED1Ev(
+// CHECK-LABEL: @_ZN3BazIlED1Ev(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Baz*, align 8
 // CHECK-NEXT:    store %struct.Baz* [[THIS:%.*]], %struct.Baz** [[THIS_ADDR]], align 8

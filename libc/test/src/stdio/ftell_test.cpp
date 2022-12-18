@@ -55,9 +55,9 @@ protected:
 
     ASSERT_EQ(0, __llvm_libc::fclose(file));
 
-    errno = 0;
-    ASSERT_EQ(__llvm_libc::ftell(file), long(-1));
-    ASSERT_NE(errno, 0);
+    // errno = 0;
+    // ASSERT_EQ(__llvm_libc::ftell(file), long(-1));
+    // ASSERT_NE(errno, 0);
   }
 };
 
