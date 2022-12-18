@@ -240,7 +240,7 @@ T ExitOnFileError(const Twine &FileName, Expected<T> &&E) {
 // Checks that only one of OpcodeNames, OpcodeIndex or SnippetsFile is provided,
 // and returns the opcode indices or {} if snippets should be read from
 // `SnippetsFile`.
-static std::vector<unsigned> getOpcodesOrDie(const MCInstrInfo &MCInstrInfo) {
+static std::vector<unsigned> getOpcodesOrDie(const LLVMState &State) {
   const size_t NumSetFlags = (OpcodeNames.empty() ? 0 : 1) +
                              (OpcodeIndex == 0 ? 0 : 1) +
                              (SnippetsFile.empty() ? 0 : 1);
@@ -255,21 +255,25 @@ static std::vector<unsigned> getOpcodesOrDie(const MCInstrInfo &MCInstrInfo) {
     return {static_cast<unsigned>(OpcodeIndex)};
   if (OpcodeIndex < 0) {
     std::vector<unsigned> Result;
-    for (unsigned I = 1, E = MCInstrInfo.getNumOpcodes(); I < E; ++I)
+    unsigned NumOpcodes = State.getInstrInfo().getNumOpcodes();
+    Result.reserve(NumOpcodes);
+    for (unsigned I = 0, E = NumOpcodes; I < E; ++I)
       Result.push_back(I);
     return Result;
   }
   // Resolve opcode name -> opcode.
-  const auto ResolveName = [&MCInstrInfo](StringRef OpcodeName) -> unsigned {
-    for (unsigned I = 1, E = MCInstrInfo.getNumOpcodes(); I < E; ++I)
-      if (MCInstrInfo.getName(I) == OpcodeName)
-        return I;
+  const auto ResolveName = [&State](StringRef OpcodeName) -> unsigned {
+    const auto &Map = State.getOpcodeNameToOpcodeIdxMapping();
+    auto I = Map.find(OpcodeName);
+    if (I != Map.end())
+      return I->getSecond();
     return 0u;
   };
   SmallVector<StringRef, 2> Pieces;
   StringRef(OpcodeNames.getValue())
       .split(Pieces, ",", /* MaxSplit */ -1, /* KeepEmpty */ false);
   std::vector<unsigned> Result;
+  Result.reserve(Pieces.size());
   for (const StringRef &OpcodeName : Pieces) {
     if (unsigned Opcode = ResolveName(OpcodeName))
       Result.push_back(Opcode);
@@ -415,7 +419,7 @@ void benchmarkMain() {
     ExitWithError("cannot create benchmark runner");
   }
 
-  const auto Opcodes = getOpcodesOrDie(State.getInstrInfo());
+  const auto Opcodes = getOpcodesOrDie(State);
 
   SmallVector<std::unique_ptr<const SnippetRepetitor>, 2> Repetitors;
   if (RepetitionMode != InstructionBenchmark::RepetitionModeE::AggregateMin)
