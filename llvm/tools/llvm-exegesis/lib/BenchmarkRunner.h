@@ -40,10 +40,32 @@ public:
 
   virtual ~BenchmarkRunner();
 
+  class RunnableConfiguration {
+    friend class BenchmarkRunner;
+
+  public:
+    ~RunnableConfiguration() = default;
+    RunnableConfiguration(RunnableConfiguration &&) = default;
+
+    RunnableConfiguration(const RunnableConfiguration &) = delete;
+    RunnableConfiguration &operator=(RunnableConfiguration &&) = delete;
+    RunnableConfiguration &operator=(const RunnableConfiguration &) = delete;
+
+  private:
+    RunnableConfiguration() = default;
+
+    InstructionBenchmark InstrBenchmark;
+    object::OwningBinary<object::ObjectFile> ObjectFile;
+  };
+
+  Expected<RunnableConfiguration>
+  getRunnableConfiguration(const BenchmarkCode &Configuration,
+                           unsigned NumRepetitions, unsigned LoopUnrollFactor,
+                           const SnippetRepetitor &Repetitor,
+                           bool DumpObjectToDisk) const;
+
   Expected<InstructionBenchmark>
-  runConfiguration(const BenchmarkCode &Configuration, unsigned NumRepetitions,
-                   unsigned LoopUnrollFactor, const SnippetRepetitor &Repetitor,
-                   bool DumpObjectToDisk) const;
+  runConfiguration(RunnableConfiguration &&RC) const;
 
   // Scratch space to run instructions that touch memory.
   struct ScratchSpace {
