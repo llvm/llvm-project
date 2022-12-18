@@ -199,7 +199,8 @@ mlir::ParseResult FuncOp::parse(mlir::OpAsmParser &parser,
 
   return mlir::function_interface_impl::parseFunctionOp(
       parser, result, /*allowVariadic=*/false,
-      getFunctionTypeAttrName(result.name), buildFuncType);
+      getFunctionTypeAttrName(result.name), buildFuncType,
+      getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 }
 
 void FuncOp::print(mlir::OpAsmPrinter &p) {

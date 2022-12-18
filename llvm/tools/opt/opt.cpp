@@ -87,6 +87,12 @@ static cl::opt<std::string> PassPipeline(
 static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
                                    cl::desc("Alias for -passes"));
 
+static cl::opt<bool> TemporarilyAllowOldPassesSyntax(
+    "temporarily-allow-old-pass-syntax",
+    cl::desc("Do not use in new tests. To be removed once all tests have "
+             "migrated."),
+    cl::init(false));
+
 static cl::opt<bool> PrintPasses("print-passes",
                                  cl::desc("Print available passes that can be "
                                           "specified in -passes=foo and exit"));
@@ -678,6 +684,8 @@ int main(int argc, char **argv) {
                 "alias for a more concise version).\n";
       errs() << "See https://llvm.org/docs/NewPassManager.html#invoking-opt "
                 "for more details on the pass pipeline syntax.\n\n";
+      if (!TemporarilyAllowOldPassesSyntax)
+        return 1;
     }
     std::string Pipeline = PassPipeline;
 

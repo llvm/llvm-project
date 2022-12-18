@@ -17,6 +17,7 @@
 #include "llvm/Analysis/ModelUnderTrainingRunner.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 using namespace llvm;
 namespace {
@@ -39,18 +40,18 @@ loadOutputSpecs(LLVMContext &Ctx, StringRef ExpectedDecisionName,
   if (!BufferOrError) {
     Ctx.emitError("Error opening output specs file: " + FileName + " : " +
                   BufferOrError.getError().message());
-    return None;
+    return std::nullopt;
   }
   auto ParsedJSONValues = json::parse(BufferOrError.get()->getBuffer());
   if (!ParsedJSONValues) {
     Ctx.emitError("Could not parse specs file: " + FileName);
-    return None;
+    return std::nullopt;
   }
   auto ValuesArray = ParsedJSONValues->getAsArray();
   if (!ValuesArray) {
     Ctx.emitError("Expected an array of {tensor_spec:<TensorSpec>, "
                   "logging_name:<name>} dictionaries");
-    return None;
+    return std::nullopt;
   }
   std::vector<LoggedFeatureSpec> Ret;
   for (const auto &Value : *ValuesArray)
@@ -65,7 +66,7 @@ loadOutputSpecs(LLVMContext &Ctx, StringRef ExpectedDecisionName,
                   "Only int64, int32, and float tensors are supported. "
                   "Found unsupported type for tensor named " +
                   TensorSpec->name());
-              return None;
+              return std::nullopt;
             }
             Ret.push_back({*TensorSpec, LoggingName->str()});
           }
@@ -77,13 +78,13 @@ loadOutputSpecs(LLVMContext &Ctx, StringRef ExpectedDecisionName,
         "with a json object describing a TensorSpec; and a 'logging_name' key, "
         "which is a string to use as name when logging this tensor in the "
         "training log.");
-    return None;
+    return std::nullopt;
   }
   if (Ret.empty() || *Ret[0].LoggingName != ExpectedDecisionName) {
     Ctx.emitError("The first output spec must describe the decision tensor, "
                   "and must have the logging_name " +
                   StringRef(ExpectedDecisionName));
-    return None;
+    return std::nullopt;
   }
   return Ret;
 }

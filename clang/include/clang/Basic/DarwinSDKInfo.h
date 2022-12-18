@@ -160,8 +160,8 @@ private:
 
 /// Parse the SDK information from the SDKSettings.json file.
 ///
-/// \returns an error if the SDKSettings.json file is invalid, None if the
-/// SDK has no SDKSettings.json, or a valid \c DarwinSDKInfo otherwise.
+/// \returns an error if the SDKSettings.json file is invalid, std::nullopt if
+/// the SDK has no SDKSettings.json, or a valid \c DarwinSDKInfo otherwise.
 Expected<std::optional<DarwinSDKInfo>>
 parseDarwinSDKInfo(llvm::vfs::FileSystem &VFS, StringRef SDKRootPath);
 

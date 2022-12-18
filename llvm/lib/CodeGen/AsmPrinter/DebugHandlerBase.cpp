@@ -433,6 +433,7 @@ void DebugHandlerBase::endFunction(const MachineFunction *MF) {
 }
 
 void DebugHandlerBase::beginBasicBlockSection(const MachineBasicBlock &MBB) {
+  EpilogBeginBlock = nullptr;
   if (!MBB.isEntryBlock())
     PrevLabel = MBB.getSymbol();
 }

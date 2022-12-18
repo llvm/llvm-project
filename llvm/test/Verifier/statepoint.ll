@@ -1,4 +1,4 @@
-; RUN: opt -S %s -verify | FileCheck %s
+; RUN: opt -S %s -passes=verify | FileCheck %s
 
 declare void @use(...)
 declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)

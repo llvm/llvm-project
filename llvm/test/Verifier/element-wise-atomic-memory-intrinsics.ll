@@ -1,4 +1,4 @@
-; RUN: not opt -verify < %s 2>&1 | FileCheck %s
+; RUN: not opt -passes=verify < %s 2>&1 | FileCheck %s
 
 define void @test_memcpy(i8* %P, i8* %Q, i32 %A, i32 %E) {
   ; CHECK: immarg operand has non-immediate parameter

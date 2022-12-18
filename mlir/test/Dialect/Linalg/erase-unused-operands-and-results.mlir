@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -split-input-file -test-linalg-transform-patterns=test-erase-unused-operands-and-results | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -test-linalg-transform-patterns=test-erase-unnecessary-inputs | FileCheck %s --check-prefix=CHECK-INPUT
 
 // CHECK-LABEL: func @remove_deadargs_generic_basic
 //  CHECK-SAME: (%[[ARG0:.*]]: tensor<?xf32>) -> tensor<?xf32> {
@@ -493,3 +494,29 @@ func.func @drop_only_the_cycles_not_used_by_others(%arg0 : tensor<?x?x?xf32>) ->
 // CHECK-SAME:       indexing_maps = [#[[MAP1]], #[[MAP2]]]
 // CHECK-SAME:       outs(%[[ARG0]], %[[INIT]] :
 //      CHECK:   return %[[GENERIC]]#0
+
+
+// -----
+
+// CHECK-INPUT-LABEL: func @remove_unnecessary_input(
+//  CHECK-INPUT-SAME:     %[[a:.*]]: tensor<?xf32>, %[[b:.*]]: tensor<?xf32>
+#map = affine_map<(d0) -> (d0)>
+func.func @remove_unnecessary_input(%a: tensor<?xf32>, %b: tensor<?xf32>)
+    -> tensor<?xf32>
+{
+  //      CHECK-INPUT: %[[result:.*]] = linalg.generic {indexing_maps = [#{{.*}}, #{{.*}}], iterator_types = ["parallel"]}
+  // CHECK-INPUT-SAME:     ins(%[[a]] : tensor<?xf32>) outs(%[[b]] : tensor<?xf32>) {
+  //      CHECK-INPUT: ^bb0(%[[in:.*]]: f32, %[[out:.*]]: f32):
+  //      CHECK-INPUT:   %[[add:.*]] = arith.addf %[[in]], %[[out]]
+  //      CHECK-INPUT:   linalg.yield %[[add]]
+  //      CHECK-INPUT: } -> tensor<?xf32>
+  //      CHECK-INPUT: return %[[result]]
+  %0 = linalg.generic
+    {indexing_maps = [#map, #map, #map], iterator_types = ["parallel"]}
+    ins(%a, %b : tensor<?xf32>, tensor<?xf32>) outs(%b : tensor<?xf32>) {
+  ^bb0(%in: f32, %in_2: f32, %out: f32):
+    %16 = arith.addf %in, %in_2 : f32
+    linalg.yield %16 : f32
+  } -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}

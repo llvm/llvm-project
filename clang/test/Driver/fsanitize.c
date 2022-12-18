@@ -460,8 +460,20 @@
 // RUN: %clang --target=arm64-apple-macos -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-ARM64-MACOS
 // CHECK-TSAN-ARM64-MACOS-NOT: unsupported option
 
+// RUN: %clang --target=arm64-apple-ios-simulator -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-ARM64-IOSSIMULATOR
+// CHECK-TSAN-ARM64-IOSSIMULATOR-NOT: unsupported option
+
+// RUN: %clang --target=arm64-apple-watchos-simulator -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-ARM64-WATCHOSSIMULATOR
+// CHECK-TSAN-ARM64-WATCHOSSIMULATOR-NOT: unsupported option
+
+// RUN: %clang --target=arm64-apple-tvos-simulator -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-ARM64-TVOSSIMULATOR
+// CHECK-TSAN-ARM64-TVOSSIMULATOR-NOT: unsupported option
+
 // RUN: %clang --target=x86_64-apple-ios-simulator -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-X86-64-IOSSIMULATOR
 // CHECK-TSAN-X86-64-IOSSIMULATOR-NOT: unsupported option
+
+// RUN: %clang --target=x86_64-apple-watchos-simulator -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-X86-64-WATCHOSSIMULATOR
+// CHECK-TSAN-X86-64-WATCHOSSIMULATOR-NOT: unsupported option
 
 // RUN: %clang --target=x86_64-apple-tvos-simulator -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-X86-64-TVOSSIMULATOR
 // CHECK-TSAN-X86-64-TVOSSIMULATOR-NOT: unsupported option

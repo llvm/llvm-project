@@ -84,13 +84,13 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
+#include <optional>
 #include <utility>
 
 using namespace clang;
@@ -238,8 +238,8 @@ class StmtComparer {
                         const GenericSelectionExpr *E2) {
     for (auto Pair : zip_longest(E1->getAssocTypeSourceInfos(),
                                  E2->getAssocTypeSourceInfos())) {
-      Optional<TypeSourceInfo *> Child1 = std::get<0>(Pair);
-      Optional<TypeSourceInfo *> Child2 = std::get<1>(Pair);
+      std::optional<TypeSourceInfo *> Child1 = std::get<0>(Pair);
+      std::optional<TypeSourceInfo *> Child2 = std::get<1>(Pair);
       // Skip this case if there are a different number of associated types.
       if (!Child1 || !Child2)
         return false;
@@ -310,8 +310,8 @@ class StmtComparer {
       return false;
 
     for (auto Pair : zip_longest(E1->getArgs(), E2->getArgs())) {
-      Optional<TypeSourceInfo *> Child1 = std::get<0>(Pair);
-      Optional<TypeSourceInfo *> Child2 = std::get<1>(Pair);
+      std::optional<TypeSourceInfo *> Child1 = std::get<0>(Pair);
+      std::optional<TypeSourceInfo *> Child2 = std::get<1>(Pair);
       // Different number of args.
       if (!Child1 || !Child2)
         return false;
@@ -400,8 +400,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   // Iterate over the children of both statements and also compare them.
   for (auto Pair : zip_longest(S1->children(), S2->children())) {
-    Optional<const Stmt *> Child1 = std::get<0>(Pair);
-    Optional<const Stmt *> Child2 = std::get<1>(Pair);
+    std::optional<const Stmt *> Child1 = std::get<0>(Pair);
+    std::optional<const Stmt *> Child2 = std::get<1>(Pair);
     // One of the statements has a different amount of children than the other,
     // so the statements can't be equivalent.
     if (!Child1 || !Child2)

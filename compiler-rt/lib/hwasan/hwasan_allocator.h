@@ -32,8 +32,7 @@ namespace __hwasan {
 
 struct Metadata {
   u32 requested_size_low;
-  u32 requested_size_high : 31;
-  u32 right_aligned : 1;
+  u32 requested_size_high;
   u32 alloc_context_id;
   u64 get_requested_size() {
     return (static_cast<u64>(requested_size_high) << 32) + requested_size_low;

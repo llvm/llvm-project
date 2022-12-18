@@ -1,4 +1,4 @@
-; RUN: opt -check-debugify < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=check-debugify < %s 2>&1 | FileCheck %s
 
 define <2 x i64> @test-fun(<2 x i64> %A) !dbg !6 {
   %and = and <2 x i64> %A, <i64 23, i64 42>, !dbg !14

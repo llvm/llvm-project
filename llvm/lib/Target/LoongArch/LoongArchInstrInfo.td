@@ -46,6 +46,8 @@ def SDT_LoongArchCsrxchg : SDTypeProfile<1, 3, [SDTCisInt<0>,
                                                 SDTCisSameAs<0, 1>,
                                                 SDTCisSameAs<0, 2>,
                                                 SDTCisVT<3, GRLenVT>]>;
+def SDT_LoongArchIocsrwr : SDTypeProfile<0, 2, [SDTCisInt<0>,
+                                                SDTCisSameAs<0, 1>]>;
 
 // TODO: Add LoongArch specific DAG Nodes
 // Target-independent nodes, but with target-specific formats.
@@ -109,6 +111,26 @@ def loongarch_csrwr : SDNode<"LoongArchISD::CSRWR", SDT_LoongArchCsrwr,
 def loongarch_csrxchg : SDNode<"LoongArchISD::CSRXCHG",
                                 SDT_LoongArchCsrxchg,
                                 [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrrd_b : SDNode<"LoongArchISD::IOCSRRD_B", SDTUnaryOp,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrrd_h : SDNode<"LoongArchISD::IOCSRRD_H", SDTUnaryOp,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrrd_w : SDNode<"LoongArchISD::IOCSRRD_W", SDTUnaryOp,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrrd_d : SDNode<"LoongArchISD::IOCSRRD_D", SDTUnaryOp,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrwr_b : SDNode<"LoongArchISD::IOCSRWR_B",
+                                  SDT_LoongArchIocsrwr,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrwr_h : SDNode<"LoongArchISD::IOCSRWR_H",
+                                  SDT_LoongArchIocsrwr,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrwr_w : SDNode<"LoongArchISD::IOCSRWR_W",
+                                  SDT_LoongArchIocsrwr,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrwr_d : SDNode<"LoongArchISD::IOCSRWR_D",
+                                  SDT_LoongArchIocsrwr,
+                                  [SDNPHasChain, SDNPSideEffect]>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -1654,3 +1676,16 @@ def : Pat<(loongarch_csrwr GPR:$rd, uimm14:$imm14),
           (CSRWR GPR:$rd, uimm14:$imm14)>;
 def : Pat<(loongarch_csrxchg GPR:$rd, GPR:$rj, uimm14:$imm14),
           (CSRXCHG GPR:$rd, GPR:$rj, uimm14:$imm14)>;
+
+def : Pat<(loongarch_iocsrrd_b GPR:$rj), (IOCSRRD_B GPR:$rj)>;
+def : Pat<(loongarch_iocsrrd_h GPR:$rj), (IOCSRRD_H GPR:$rj)>;
+def : Pat<(loongarch_iocsrrd_w GPR:$rj), (IOCSRRD_W GPR:$rj)>;
+
+def : Pat<(loongarch_iocsrwr_b GPR:$rd, GPR:$rj), (IOCSRWR_B GPR:$rd, GPR:$rj)>;
+def : Pat<(loongarch_iocsrwr_h GPR:$rd, GPR:$rj), (IOCSRWR_H GPR:$rd, GPR:$rj)>;
+def : Pat<(loongarch_iocsrwr_w GPR:$rd, GPR:$rj), (IOCSRWR_W GPR:$rd, GPR:$rj)>;
+
+let Predicates = [IsLA64] in {
+def : Pat<(loongarch_iocsrrd_d GPR:$rj), (IOCSRRD_D GPR:$rj)>;
+def : Pat<(loongarch_iocsrwr_d GPR:$rd, GPR:$rj), (IOCSRWR_D GPR:$rd, GPR:$rj)>;
+} // Predicates = [IsLA64]

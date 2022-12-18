@@ -2540,6 +2540,7 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
                                              InstCombinerImpl &IC) {
   Value *CondVal = SI.getCondition();
 
+  bool ChangedFMF = false;
   for (bool Swap : {false, true}) {
     Value *TrueVal = SI.getTrueValue();
     Value *X = SI.getFalseValue();
@@ -2564,13 +2565,29 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
       }
     }
 
+    if (!match(TrueVal, m_FNeg(m_Specific(X))))
+      return nullptr;
+
+    // Forward-propagate nnan and ninf from the fneg to the select.
+    // If all inputs are not those values, then the select is not either.
+    // Note: nsz is defined differently, so it may not be correct to propagate.
+    FastMathFlags FMF = cast<FPMathOperator>(TrueVal)->getFastMathFlags();
+    if (FMF.noNaNs() && !SI.hasNoNaNs()) {
+      SI.setHasNoNaNs(true);
+      ChangedFMF = true;
+    }
+    if (FMF.noInfs() && !SI.hasNoInfs()) {
+      SI.setHasNoInfs(true);
+      ChangedFMF = true;
+    }
+
     // With nsz, when 'Swap' is false:
     // fold (X < +/-0.0) ? -X : X or (X <= +/-0.0) ? -X : X to fabs(X)
     // fold (X > +/-0.0) ? -X : X or (X >= +/-0.0) ? -X : X to -fabs(x)
     // when 'Swap' is true:
     // fold (X > +/-0.0) ? X : -X or (X >= +/-0.0) ? X : -X to fabs(X)
     // fold (X < +/-0.0) ? X : -X or (X <= +/-0.0) ? X : -X to -fabs(X)
-    if (!match(TrueVal, m_FNeg(m_Specific(X))) || !SI.hasNoSignedZeros())
+    if (!SI.hasNoSignedZeros())
       return nullptr;
 
     if (Swap)
@@ -2593,7 +2610,7 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
     }
   }
 
-  return nullptr;
+  return ChangedFMF ? &SI : nullptr;
 }
 
 // Match the following IR pattern:
@@ -2667,6 +2684,80 @@ foldRoundUpIntegerWithPow2Alignment(SelectInst &SI,
   Value *R = Builder.CreateAnd(XOffset, ConstantInt::get(Ty, *HighBitMaskCst));
   R->takeName(&SI);
   return R;
+}
+
+/// Look for patterns like
+///   %outer.cond = select i1 %inner.cond, i1 %alt.cond, i1 false
+///   %inner.sel = select i1 %inner.cond, i8 %inner.sel.t, i8 %inner.sel.f
+///   %outer.sel = select i1 %outer.cond, i8 %outer.sel.t, i8 %inner.sel
+/// and rewrite it as
+///   %inner.sel = select i1 %cond.alternative, i8 %sel.outer.t, i8 %sel.inner.t
+///   %sel.outer = select i1 %cond.inner, i8 %inner.sel, i8 %sel.inner.f
+static Instruction *foldNestedSelects(SelectInst &OuterSel,
+                                      InstCombiner::BuilderTy &Builder) {
+  // We must start with a `select`.
+  Value *OuterCond, *InnerSel, *OuterSelFalseVal;
+  match(&OuterSel, m_Select(m_Value(OuterCond), m_Value(InnerSel),
+                            m_Value(OuterSelFalseVal)));
+
+  // Canonicalize inversion of the outermost `select`'s condition.
+  if (match(OuterCond, m_Not(m_Value(OuterCond))))
+    std::swap(InnerSel, OuterSelFalseVal);
+
+  auto m_c_LogicalOp = [](auto L, auto R) {
+    return m_CombineOr(m_c_LogicalAnd(L, R), m_c_LogicalOr(L, R));
+  };
+
+  // The condition of the outermost select must be an `and`/`or`.
+  if (!match(OuterCond, m_c_LogicalOp(m_Value(), m_Value())))
+    return nullptr;
+
+  // To simplify logic, prefer the pattern variant with an `or`.
+  bool IsAndVariant = match(OuterCond, m_LogicalAnd());
+  if (match(OuterCond, m_LogicalAnd()))
+    std::swap(InnerSel, OuterSelFalseVal);
+
+  // Profitability check - avoid increasing instruction count.
+  if (none_of(ArrayRef<Value *>({OuterCond, InnerSel}),
+              [](Value *V) { return V->hasOneUse(); }))
+    return nullptr;
+
+  // The appropriate hand of the outermost `select` must be a select itself.
+  Value *InnerCond, *InnerSelTrueVal, *InnerSelFalseVal;
+  if (!match(InnerSel, m_Select(m_Value(InnerCond), m_Value(InnerSelTrueVal),
+                                m_Value(InnerSelFalseVal))))
+    return nullptr;
+
+  // Canonicalize inversion of the innermost `select`'s condition.
+  if (match(InnerCond, m_Not(m_Value(InnerCond))))
+    std::swap(InnerSelTrueVal, InnerSelFalseVal);
+
+  Value *AltCond = nullptr;
+  auto matchOuterCond = [OuterCond, m_c_LogicalOp, &AltCond](auto m_InnerCond) {
+    return match(OuterCond, m_c_LogicalOp(m_InnerCond, m_Value(AltCond)));
+  };
+
+  // Finally, match the condition that was driving the outermost `select`,
+  // it should be a logical operation between the condition that was driving
+  // the innermost `select` (after accounting for the possible inversions
+  // of the condition), and some other condition.
+  if (matchOuterCond(m_Specific(InnerCond))) {
+    // Done!
+  } else if (Value * NotInnerCond; matchOuterCond(m_CombineAnd(
+                 m_Not(m_Specific(InnerCond)), m_Value(NotInnerCond)))) {
+    // Done!
+    std::swap(InnerSelTrueVal, InnerSelFalseVal);
+    InnerCond = NotInnerCond;
+  } else // Not the pattern we were looking for.
+    return nullptr;
+
+  Value *SelInner = Builder.CreateSelect(
+      AltCond, IsAndVariant ? OuterSelFalseVal : InnerSelFalseVal,
+      IsAndVariant ? InnerSelTrueVal : OuterSelFalseVal);
+  SelInner->takeName(InnerSel);
+  return SelectInst::Create(InnerCond,
+                            IsAndVariant ? SelInner : InnerSelTrueVal,
+                            IsAndVariant ? InnerSelFalseVal : SelInner);
 }
 
 Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
@@ -2973,8 +3064,23 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         Value *NewSel = Builder.CreateSelect(NewCond, FalseVal, TrueVal);
         return replaceInstUsesWith(SI, NewSel);
       }
+    }
+  }
 
-      // NOTE: if we wanted to, this is where to detect MIN/MAX
+  if (isa<FPMathOperator>(SI)) {
+    // TODO: Try to forward-propagate FMF from select arms to the select.
+
+    // Canonicalize select of FP values where NaN and -0.0 are not valid as
+    // minnum/maxnum intrinsics.
+    if (SI.hasNoNaNs() && SI.hasNoSignedZeros()) {
+      Value *X, *Y;
+      if (match(&SI, m_OrdFMax(m_Value(X), m_Value(Y))))
+        return replaceInstUsesWith(
+            SI, Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, X, Y, &SI));
+
+      if (match(&SI, m_OrdFMin(m_Value(X), m_Value(Y))))
+        return replaceInstUsesWith(
+            SI, Builder.CreateBinaryIntrinsic(Intrinsic::minnum, X, Y, &SI));
     }
   }
 
@@ -3087,19 +3193,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         return replaceInstUsesWith(SI, NewCast);
       }
     }
-  }
-
-  // Canonicalize select of FP values where NaN and -0.0 are not valid as
-  // minnum/maxnum intrinsics.
-  if (isa<FPMathOperator>(SI) && SI.hasNoNaNs() && SI.hasNoSignedZeros()) {
-    Value *X, *Y;
-    if (match(&SI, m_OrdFMax(m_Value(X), m_Value(Y))))
-      return replaceInstUsesWith(
-          SI, Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, X, Y, &SI));
-
-    if (match(&SI, m_OrdFMin(m_Value(X), m_Value(Y))))
-      return replaceInstUsesWith(
-          SI, Builder.CreateBinaryIntrinsic(Intrinsic::minnum, X, Y, &SI));
   }
 
   // See if we can fold the select into a phi node if the condition is a select.
@@ -3289,6 +3382,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       return replaceInstUsesWith(SI, MaskedInst);
     }
   }
+
+  if (Instruction *I = foldNestedSelects(SI, Builder))
+    return I;
 
   return nullptr;
 }

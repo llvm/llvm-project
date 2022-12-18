@@ -317,7 +317,7 @@ public:
   virtual Optional<unsigned> mapToDWARFAddrSpace(unsigned LLVMAddrSpace) const {
     if (LLVMAddrSpace == DL.getDefaultGlobalsAddressSpace())
       return 0;
-    return None;
+    return std::nullopt;
   }
 
   void setPGOOption(std::optional<PGOOptions> PGOOpt) { PGOOption = PGOOpt; }

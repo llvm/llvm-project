@@ -27,6 +27,7 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 namespace mlir {
 #define GEN_PASS_DEF_ASYNCTOASYNCRUNTIME
@@ -90,7 +91,7 @@ struct CoroMachinery {
 
   Value coroHandle; // coroutine handle (!async.coro.getHandle value)
   Block *entry;     // coroutine entry block
-  Optional<Block *> setError; // set returned values to error state
+  std::optional<Block *> setError; // set returned values to error state
   Block *cleanup;   // coroutine cleanup block
   Block *suspend;   // coroutine suspension block
 };

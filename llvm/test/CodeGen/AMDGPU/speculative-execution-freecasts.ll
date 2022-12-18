@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -mtriple=amdgcn-unknown-amdhsa -speculative-execution \
+; RUN: opt < %s -S -mtriple=amdgcn-unknown-amdhsa -passes=speculative-execution \
 ; RUN:   -spec-exec-max-speculation-cost 1 -spec-exec-max-not-hoisted 1 \
 ; RUN:   | FileCheck %s
 

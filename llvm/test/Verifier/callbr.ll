@@ -1,4 +1,4 @@
-; RUN: not opt -S %s -verify 2>&1 | FileCheck %s
+; RUN: not opt -S %s -passes=verify 2>&1 | FileCheck %s
 
 ; CHECK: Number of label constraints does not match number of callbr dests
 ; CHECK-NEXT: #too_few_label_constraints

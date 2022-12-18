@@ -49,7 +49,7 @@ T t { R{q}, S{q} };
 // CHECK-NEXT: [[L5]]:
 // CHECK-NEXT: [[EXN:%[a-z0-9.]+]] = load ptr, ptr [[XPT]], align 8
 // CHECK-NEXT: [[SEL:%[a-z0-9.]+]] = load i32, ptr [[SLOT]], align 4
-// CHECK-NEXT: [[LV1:%[a-z0-9.]+]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// CHECK-NEXT: [[LV1:%[a-z0-9.]+]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // CHECK-NEXT: [[LV2:%[a-z0-9.]+]] = insertvalue { ptr, i32 } [[LV1]], i32 [[SEL]], 1
 // CHECK-NEXT: resume { ptr, i32 } [[LV2]]
 // CHECK-NEXT: }

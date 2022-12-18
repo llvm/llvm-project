@@ -72,6 +72,9 @@ protected:
   /// function body.
   DebugLoc PrologEndLoc;
 
+  /// This block includes epilogue instructions.
+  const MachineBasicBlock *EpilogBeginBlock;
+
   /// If nonnull, stores the current machine instruction we're processing.
   const MachineInstr *CurMI = nullptr;
 

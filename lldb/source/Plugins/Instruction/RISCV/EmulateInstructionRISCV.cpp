@@ -32,7 +32,7 @@ LLDB_PLUGIN_DEFINE_ADV(EmulateInstructionRISCV, InstructionRISCV)
 namespace lldb_private {
 
 /// Returns all values wrapped in Optional, or std::nullopt if any of the values
-/// is None.
+/// is std::nullopt.
 template <typename... Ts>
 static llvm::Optional<std::tuple<Ts...>> zipOpt(llvm::Optional<Ts> &&...ts) {
   if ((ts.has_value() && ...))

@@ -242,7 +242,7 @@ static Value buildVectorWrite(OpBuilder &b, Value value,
 // with CustomVectorizationHook. Returns success if the corresponding custom
 // hook can vectorize the op.
 using CustomVectorizationPrecondition =
-    std::function<LogicalResult(Operation *)>;
+    std::function<LogicalResult(Operation *, bool)>;
 
 // Custom vectorization function type. Produce a vector form of Operation*
 // assuming all its vectorized operands are already in the BlockAndValueMapping.
@@ -314,13 +314,13 @@ vectorizeLinalgIndex(RewriterBase &rewriter, Operation *op, LinalgOp linalgOp) {
 
 /// Helper function to check if the tensor.extract can be vectorized by the
 /// custom hook vectorizeTensorExtract.
-static LogicalResult tensorExtractVectorizationPrecondition(Operation *op) {
+static LogicalResult
+tensorExtractVectorizationPrecondition(Operation *op, bool vectorizeNDExtract) {
   tensor::ExtractOp extractOp = dyn_cast<tensor::ExtractOp>(op);
   if (!extractOp)
     return failure();
 
-  // Currently only supports extraction with an 1-D index.
-  if (extractOp.getIndices().size() != 1)
+  if (extractOp.getIndices().size() != 1 && !vectorizeNDExtract)
     return failure();
 
   if (!VectorType::isValidElementType(extractOp.getIndices()[0].getType()))
@@ -335,6 +335,51 @@ static LogicalResult tensorExtractVectorizationPrecondition(Operation *op) {
   return success();
 }
 
+/// Calculates the offsets (`$index_vec`) for `vector.gather` operations
+/// generated from `tensor.extract`. The offset is calculated as follows
+/// (example using scalar values):
+///
+///    offset = extractOp.indices[0]
+///    for (i = 1; i < numIndices; i++)
+///      offset = extractOp.dimSize[i] * offset + extractOp.indices[i];
+///
+/// For tensor<45 x 80 x 15 x f32> and index [1, 2, 3], this leads to:
+///  offset = ( ( 1 ) * 80 +  2 ) * 15  + 3
+static Value
+calculateGatherOffset(OpBuilder &b, tensor::ExtractOp extractOp,
+                      const BlockAndValueMapping &bvm,
+                      const SmallVectorImpl<int64_t> &targetShape) {
+  // The vector of indices for GatherOp should be shaped as the output vector
+  auto indexVecType = VectorType::get(targetShape, b.getIndexType());
+  auto loc = extractOp.getLoc();
+
+  Value offset = b.create<vector::BroadcastOp>(
+      loc, indexVecType, bvm.lookup(extractOp.getIndices()[0]));
+
+  const size_t numIndices = extractOp.getIndices().size();
+  for (size_t i = 1; i < numIndices; i++) {
+    auto dimSizeBcast = b.create<vector::BroadcastOp>(
+        loc, indexVecType,
+        b.create<arith::ConstantIndexOp>(
+            loc,
+            extractOp.getTensor().getType().cast<ShapedType>().getDimSize(i)));
+    offset = b.create<arith::MulIOp>(loc, offset, dimSizeBcast);
+
+    auto originalIndexBcast = bvm.lookup(extractOp.getIndices()[i]);
+    if (i == numIndices - 1) {
+      // We only need an additional broadcast for the trailing index. All other
+      // indices have already been broadcast by `vectorizeLinalgIndex` to match
+      // the output size.
+      originalIndexBcast = b.create<vector::BroadcastOp>(
+          loc, indexVecType, bvm.lookup(extractOp.getIndices()[i]));
+    }
+
+    offset = b.create<arith::AddIOp>(loc, originalIndexBcast, offset);
+  }
+
+  return offset;
+}
+
 /// Helper function to vectorize the tensor.extract operations. Returns
 /// VectorizationStatus::NewOp to signal the vectorization algorithm that it
 /// should map the produced operations. This function is meant to be used as a
@@ -347,29 +392,29 @@ vectorizeTensorExtract(RewriterBase &rewriter, Operation *op, LinalgOp linalgOp,
     return VectorizationResult{VectorizationStatus::Failure, nullptr};
   auto loc = extractOp.getLoc();
 
-  // Currently only supports extraction with an 1-D index. Checked in the
-  // tensorExtractVectorizationPrecondition.
-  assert(extractOp.getIndices().size() == 1);
-
-  auto indexVec = bvm.lookup(extractOp.getIndices()[0]);
   // Compute the static loop sizes of the extract op.
   auto targetShape = linalgOp.computeStaticLoopSizes();
 
-  SmallVector<Value> gatherIndices;
-  gatherIndices.push_back(rewriter.create<arith::ConstantIndexOp>(loc, 0));
-
+  auto resultType =
+      VectorType::get(targetShape, extractOp.getResult().getType());
   auto maskConstantOp = rewriter.create<arith::ConstantOp>(
       loc, DenseIntElementsAttr::get(
                VectorType::get(targetShape, rewriter.getI1Type()),
                /*value=*/true));
-
-  auto resultType =
-      VectorType::get(targetShape, extractOp.getResult().getType());
   auto passThruConstantOp =
       rewriter.create<arith::ConstantOp>(loc, rewriter.getZeroAttr(resultType));
 
+  // Base indices are currently set to 0. We will need to re-visit if more
+  // generic scenarios are to be supported.
+  SmallVector<Value> baseIndices(
+      extractOp.getIndices().size(),
+      rewriter.create<arith::ConstantIndexOp>(loc, 0));
+
+  Value offset = calculateGatherOffset(rewriter, extractOp, bvm, targetShape);
+
+  // Generate the gather load
   auto gatherOp = rewriter.create<vector::GatherOp>(
-      loc, resultType, extractOp.getTensor(), gatherIndices, indexVec,
+      loc, resultType, extractOp.getTensor(), baseIndices, offset,
       maskConstantOp, passThruConstantOp);
 
   return VectorizationResult{VectorizationStatus::NewOp, gatherOp};
@@ -586,7 +631,7 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, LinalgOp linalgOp,
   };
   hooks.push_back(vectorizeYield);
 
-  // 4rewriter. Register CustomVectorizationHook for indexOp.
+  // 4b. Register CustomVectorizationHook for indexOp.
   CustomVectorizationHook vectorizeIndex =
       [&](Operation *op,
           const BlockAndValueMapping &bvm) -> VectorizationResult {
@@ -642,7 +687,8 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
 
 static LogicalResult vectorizeStaticLinalgOpPrecondition(
     linalg::LinalgOp op,
-    ArrayRef<CustomVectorizationPrecondition> customPreconditions) {
+    ArrayRef<CustomVectorizationPrecondition> customPreconditions,
+    bool vectorizeNDExtract) {
 
   // All types in the body should be a supported element type for VectorType.
   for (Operation &innerOp : op->getRegion(0).front()) {
@@ -650,7 +696,8 @@ static LogicalResult vectorizeStaticLinalgOpPrecondition(
     if (llvm::any_of(
             customPreconditions,
             [&](const CustomVectorizationPrecondition &customPrecondition) {
-              return succeeded(customPrecondition(&innerOp));
+              return succeeded(
+                  customPrecondition(&innerOp, vectorizeNDExtract));
             })) {
       continue;
     }
@@ -686,7 +733,9 @@ static LogicalResult vectorizeStaticLinalgOpPrecondition(
   return success();
 }
 
-LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(LinalgOp linalgOp) {
+LogicalResult
+mlir::linalg::vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
+                                            bool vectorizeNDExtract) {
   // All types must be static shape to go to vector.
   if (linalgOp.hasDynamicShape()) {
     LDBG("precondition failed: dynamic shape");
@@ -698,12 +747,13 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(LinalgOp linalgOp) {
   // Register CustomVectorizationPrecondition for extractOp.
   customPreconditions.push_back(tensorExtractVectorizationPrecondition);
 
-  return vectorizeStaticLinalgOpPrecondition(linalgOp, customPreconditions);
+  return vectorizeStaticLinalgOpPrecondition(linalgOp, customPreconditions,
+                                             vectorizeNDExtract);
 }
 
-LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter,
-                                      LinalgOp linalgOp) {
-  if (failed(vectorizeLinalgOpPrecondition(linalgOp)))
+LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, LinalgOp linalgOp,
+                                      bool vectorizeNDExtract) {
+  if (failed(vectorizeLinalgOpPrecondition(linalgOp, vectorizeNDExtract)))
     return failure();
 
   SmallVector<Value> results;
@@ -713,7 +763,7 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter,
   if (succeeded(convOr)) {
     llvm::append_range(results, (*convOr)->getResults());
   } else {
-    if (failed(vectorizeLinalgOpPrecondition(linalgOp)))
+    if (failed(vectorizeLinalgOpPrecondition(linalgOp, vectorizeNDExtract)))
       return failure();
     LDBG("Vectorize generic by broadcasting to a common shape: " << linalgOp);
     if (failed(vectorizeAsLinalgGeneric(rewriter, linalgOp, results)))

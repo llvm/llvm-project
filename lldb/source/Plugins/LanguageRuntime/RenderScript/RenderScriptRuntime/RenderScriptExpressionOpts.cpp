@@ -8,7 +8,6 @@
 
 #include <string>
 
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"

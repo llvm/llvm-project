@@ -638,7 +638,7 @@ public:
   bool isAbsoluteSymbolRef() const;
 
   /// If this is an absolute symbol reference, returns the range of the symbol,
-  /// otherwise returns None.
+  /// otherwise returns std::nullopt.
   std::optional<ConstantRange> getAbsoluteSymbolRange() const;
 
   /// This method unlinks 'this' from the containing module, but does not delete

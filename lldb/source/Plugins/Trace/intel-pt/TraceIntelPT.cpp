@@ -19,7 +19,6 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "llvm/ADT/None.h"
 
 using namespace lldb;
 using namespace lldb_private;

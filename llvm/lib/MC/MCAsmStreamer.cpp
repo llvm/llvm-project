@@ -203,7 +203,7 @@ public:
 
   void emitELFSize(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                        unsigned ByteAlignment) override;
+                        Align ByteAlignment) override;
 
   /// Emit a local common (.lcomm) symbol.
   ///
@@ -970,15 +970,15 @@ void MCAsmStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
 }
 
 void MCAsmStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                                     unsigned ByteAlignment) {
+                                     Align ByteAlignment) {
   OS << "\t.comm\t";
   Symbol->print(OS, MAI);
   OS << ',' << Size;
 
   if (MAI->getCOMMDirectiveAlignmentIsInBytes())
-    OS << ',' << ByteAlignment;
+    OS << ',' << ByteAlignment.value();
   else
-    OS << ',' << Log2_32(ByteAlignment);
+    OS << ',' << Log2(ByteAlignment);
   EmitEOL();
 
   // Print symbol's rename (original name contains invalid character(s)) if
@@ -986,7 +986,6 @@ void MCAsmStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
   MCSymbolXCOFF *XSym = dyn_cast<MCSymbolXCOFF>(Symbol);
   if (XSym && XSym->hasRename())
     emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
-
 }
 
 void MCAsmStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,

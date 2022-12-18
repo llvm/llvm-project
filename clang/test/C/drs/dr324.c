@@ -1,4 +1,5 @@
-/* RUN: %clang_cc1 -std=c89 -fsyntax-only -fms-extensions -pedantic -verify %s
+/* RUN: touch %s
+   RUN: %clang_cc1 -std=c89 -fsyntax-only -fms-extensions -pedantic -verify %s
    RUN: %clang_cc1 -std=c99 -fsyntax-only -fms-extensions -pedantic -verify %s
    RUN: %clang_cc1 -std=c11 -fsyntax-only -fms-extensions -pedantic -verify %s
    RUN: %clang_cc1 -std=c17 -fsyntax-only -fms-extensions -pedantic -verify %s
@@ -21,7 +22,7 @@ char lit_char = '\y';       /* expected-warning {{unknown escape sequence '\y'}}
  * The second pragma is a string-literal and so the \d is invalid there.
  */
 #ifdef _WIN32
-/* This test only makes sense on Windows targets where the backslash is a valid
+/* This test only makes sense on Windows targets, where the backslash is a valid
  * path separator.
  */
 #pragma GCC dependency "oops\..\dr0xx.c"

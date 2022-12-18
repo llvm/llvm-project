@@ -360,6 +360,7 @@ void function_interface_impl::setFunctionType(FunctionOpInterface op,
   unsigned newNumResults = op.getNumResults();
 
   // Functor used to update the argument and result attributes of the function.
+  auto emptyDict = DictionaryAttr::get(op.getContext());
   auto updateAttrFn = [&](auto isArg, unsigned oldCount, unsigned newCount) {
     constexpr bool isArgVal = std::is_same_v<decltype(isArg), std::true_type>;
 
@@ -378,9 +379,9 @@ void function_interface_impl::setFunctionType(FunctionOpInterface op,
           op, attrs.getValue().take_front(newCount));
 
     // Otherwise, the new type has more arguments/results. Initialize the new
-    // arguments/results with empty attributes.
+    // arguments/results with empty dictionary attributes.
     SmallVector<Attribute> newAttrs(attrs.begin(), attrs.end());
-    newAttrs.resize(newCount);
+    newAttrs.resize(newCount, emptyDict);
     setAllArgResAttrDicts<isArgVal>(op, newAttrs);
   };
 

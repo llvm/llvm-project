@@ -172,7 +172,7 @@ $LINK $LIBCXX_ARCHIVE_DIR/libc++.a \
       -ignore-non-bitcode -o all.bc
 
 echo "Optimizing..."
-$OPT -internalize -internalize-public-api-list=${SYMBOLIZER_API_LIST} all.bc -o opt.bc
+$OPT -passes=internalize -internalize-public-api-list=${SYMBOLIZER_API_LIST} all.bc -o opt.bc
 $CC $FLAGS -fno-lto -c opt.bc -o symbolizer.o
 
 echo "Checking undefined symbols..."

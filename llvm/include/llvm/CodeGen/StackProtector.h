@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Pass.h"
@@ -49,7 +50,7 @@ private:
   Function *F;
   Module *M;
 
-  DominatorTree *DT;
+  std::optional<DomTreeUpdater> DTU;
 
   /// Layout - Mapping of allocations to the required SSPLayoutKind.
   /// StackProtector analysis will update this map when determining if an

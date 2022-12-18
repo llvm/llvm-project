@@ -1747,7 +1747,7 @@ class OMPMessageClause final : public OMPClause {
 public:
   /// Build 'message' clause with message string argument
   ///
-  /// \param A Argument of the clause (message string).
+  /// \param MS Argument of the clause (message string).
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.

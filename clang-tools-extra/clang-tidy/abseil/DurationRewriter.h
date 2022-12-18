@@ -42,7 +42,7 @@ bool isLiteralZero(const ast_matchers::MatchFinder::MatchResult &Result,
 /// Possibly strip a floating point cast expression.
 ///
 /// If `Node` represents an explicit cast to a floating point type, return
-/// the textual context of the cast argument, otherwise `None`.
+/// the textual context of the cast argument, otherwise `std::nullopt`.
 llvm::Optional<std::string>
 stripFloatCast(const ast_matchers::MatchFinder::MatchResult &Result,
                const Expr &Node);

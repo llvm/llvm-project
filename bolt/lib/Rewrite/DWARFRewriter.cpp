@@ -256,8 +256,8 @@ void DWARFRewriter::updateDebugInfo() {
   auto processUnitDIE = [&](size_t CUIndex, DWARFUnit *Unit) {
     // Check if the unit is a skeleton and we need special updates for it and
     // its matching split/DWO CU.
-    Optional<DWARFUnit *> SplitCU;
-    Optional<uint64_t> RangesBase;
+    std::optional<DWARFUnit *> SplitCU;
+    std::optional<uint64_t> RangesBase;
     std::optional<uint64_t> DWOId = Unit->getDWOId();
     StrOffstsWriter->initialize(Unit->getStringOffsetSection(),
                                 Unit->getStringOffsetsTableContribution());
@@ -357,7 +357,7 @@ void DWARFRewriter::updateUnitDebugInfo(
     DWARFUnit &Unit, DebugInfoBinaryPatcher &DebugInfoPatcher,
     DebugAbbrevWriter &AbbrevWriter, DebugLocWriter &DebugLocWriter,
     DebugRangesSectionWriter &RangesSectionWriter,
-    Optional<uint64_t> RangesBase) {
+    std::optional<uint64_t> RangesBase) {
   // Cache debug ranges so that the offset for identical ranges could be reused.
   std::map<DebugAddressRangesVector, uint64_t> CachedRanges;
 
@@ -794,7 +794,7 @@ void DWARFRewriter::updateUnitDebugInfo(
 void DWARFRewriter::updateDWARFObjectAddressRanges(
     const DWARFDie DIE, uint64_t DebugRangesOffset,
     SimpleBinaryPatcher &DebugInfoPatcher, DebugAbbrevWriter &AbbrevWriter,
-    uint64_t LowPCToUse, Optional<uint64_t> RangesBase) {
+    uint64_t LowPCToUse, std::optional<uint64_t> RangesBase) {
 
   // Some objects don't have an associated DIE and cannot be updated (such as
   // compiler-generated functions).
@@ -1190,7 +1190,7 @@ StringRef getSectionName(const SectionRef &Section) {
 
 // Exctracts an appropriate slice if input is DWP.
 // Applies patches or overwrites the section.
-Optional<StringRef>
+std::optional<StringRef>
 updateDebugData(DWARFContext &DWCtx, std::string &Storage,
                 StringRef SectionName, StringRef SectionContents,
                 const StringMap<KnownSectionsEntry> &KnownSections,
@@ -1419,7 +1419,7 @@ void DWARFRewriter::writeDWP(
       continue;
 
     // Skipping CUs that we failed to load.
-    Optional<DWARFUnit *> DWOCU = BC.getDWOCU(*DWOId);
+    std::optional<DWARFUnit *> DWOCU = BC.getDWOCU(*DWOId);
     if (!DWOCU)
       continue;
 
@@ -1483,7 +1483,7 @@ void DWARFRewriter::writeDWP(
         extractDWOTUFromDWO(Contents, TUContributionsToCU);
       }
 
-      Optional<StringRef> TOutData = updateDebugData(
+      std::optional<StringRef> TOutData = updateDebugData(
           (*DWOCU)->getContext(), Storage, SectionName, Contents, KnownSections,
           *Streamer, *this, CUDWOEntry, *DWOId, OutputData, RangeListssWriter);
       if (!TOutData)
@@ -1588,7 +1588,7 @@ void DWARFRewriter::writeDWOFiles(
       continue;
 
     // Skipping CUs that we failed to load.
-    Optional<DWARFUnit *> DWOCU = BC.getDWOCU(*DWOId);
+    std::optional<DWARFUnit *> DWOCU = BC.getDWOCU(*DWOId);
     if (!DWOCU)
       continue;
 
@@ -1624,7 +1624,7 @@ void DWARFRewriter::writeDWOFiles(
       if (!RangeListssWriter->empty()) {
         std::string Storage;
         std::unique_ptr<DebugBufferVector> OutputData;
-        if (Optional<StringRef> OutData = updateDebugData(
+        if (std::optional<StringRef> OutData = updateDebugData(
                 (*DWOCU)->getContext(), Storage, "debug_rnglists.dwo", "",
                 KnownSections, *Streamer, *this, CUDWOEntry, *DWOId, OutputData,
                 RangeListssWriter))
@@ -1658,7 +1658,7 @@ void DWARFRewriter::writeDWOFiles(
                                   *Streamer, Contents, *DWOId);
       }
 
-      if (Optional<StringRef> OutData = updateDebugData(
+      if (std::optional<StringRef> OutData = updateDebugData(
               (*DWOCU)->getContext(), Storage, SectionName, Contents,
               KnownSections, *Streamer, *this, CUDWOEntry, *DWOId, OutputData,
               RangeListssWriter))
@@ -1867,7 +1867,7 @@ void getRangeAttrData(DWARFDie DIE, std::optional<AttrInfo> &LowPCVal,
 
 void DWARFRewriter::convertToRangesPatchAbbrev(
     const DWARFUnit &Unit, const DWARFAbbreviationDeclaration *Abbrev,
-    DebugAbbrevWriter &AbbrevWriter, Optional<uint64_t> RangesBase) {
+    DebugAbbrevWriter &AbbrevWriter, std::optional<uint64_t> RangesBase) {
 
   dwarf::Attribute RangeBaseAttribute = dwarf::DW_AT_GNU_ranges_base;
   dwarf::Form RangesForm = dwarf::DW_FORM_sec_offset;
@@ -1894,7 +1894,7 @@ void DWARFRewriter::convertToRangesPatchAbbrev(
 void DWARFRewriter::convertToRangesPatchDebugInfo(
     DWARFDie DIE, uint64_t RangesSectionOffset,
     SimpleBinaryPatcher &DebugInfoPatcher, uint64_t LowPCToUse,
-    Optional<uint64_t> RangesBase) {
+    std::optional<uint64_t> RangesBase) {
   std::optional<AttrInfo> LowPCVal;
   std::optional<AttrInfo> HighPCVal;
   getRangeAttrData(DIE, LowPCVal, HighPCVal);

@@ -47,8 +47,6 @@ add_llvm_component_library(LLVMAnalysis
   CFG.cpp
   CFGPrinter.cpp
   CFGSCCPrinter.cpp
-  CFLAndersAliasAnalysis.cpp
-  CFLSteensAliasAnalysis.cpp
   CGSCCPassManager.cpp
   CallGraph.cpp
   CallGraphSCCPass.cpp

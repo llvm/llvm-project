@@ -21,10 +21,53 @@
 #include "llvm/ADT/Twine.h"
 
 namespace mlir {
-/// Operation is a basic unit of execution within MLIR. Operations can
-/// be nested within `Region`s held by other operations effectively forming a
-/// tree. Child operations are organized into operation blocks represented by a
-/// 'Block' class.
+/// Operation is the basic unit of execution within MLIR.
+///
+/// The following documentation are recommended to understand this class:
+/// - https://mlir.llvm.org/docs/LangRef/#operations
+/// - https://mlir.llvm.org/docs/Tutorials/UnderstandingTheIRStructure/
+///
+/// An Operation is defined first by its name, which is a unique string. The
+/// name is interpreted so that if it contains a '.' character, the part before
+/// is the dialect name this operation belongs to, and everything that follows
+/// is this operation name within the dialect.
+///
+/// An Operation defines zero or more SSA `Value` that we refer to as the
+/// Operation results. This array of Value is actually stored in memory before
+/// the Operation itself in reverse order. That is for an Operation with 3
+/// results we allocate the following memory layout:
+///
+///  [Result2, Result1, Result0, Operation]
+///                              ^ this is where `Operation*` pointer points to.
+///
+/// A consequence of this is that this class must be heap allocated, which is
+/// handled by the various `create` methods. Each result contains:
+///  - one pointer to the first use (see `OpOperand`)
+///  - the type of the SSA Value this result defines.
+///  - the index for this result in the array.
+/// The results are defined as subclass of `ValueImpl`, and more precisely as
+/// the only two subclasses of `OpResultImpl`: `InlineOpResult` and
+/// `OutOfLineOpResult`. The former is used for the first 5 results and the
+/// latter for the subsequent ones. They differ in how they store their index:
+/// the first 5 results only need 3 bits and thus are packed with the Type
+/// pointer, while the subsequent one have an extra `unsigned` value and thus
+/// need more space.
+///
+/// An Operation also has zero or more operands: these are uses of SSA Value,
+/// which can be the results of other operations or Block arguments. Each of
+/// these uses is an instance of `OpOperand`. This optional array is initially
+/// tail allocated with the operation class itself, but can be dynamically moved
+/// out-of-line in a dynamic allocation as needed.
+///
+/// An Operation may contain optionally one or multiple Regions, stored in a
+/// tail allocated array. Each `Region` is a list of Blocks. Each `Block` is
+/// itself a list of Operations. This structure is effectively forming a tree.
+///
+/// Some operations like branches also refer to other Block, in which case they
+/// would have an array of `BlockOperand`.
+///
+/// Finally an Operation also contain an optional `DictionaryAttr`, a Location,
+/// and a pointer to its parent Block (if any).
 class alignas(8) Operation final
     : public llvm::ilist_node_with_parent<Operation, Block>,
       private llvm::TrailingObjects<Operation, detail::OperandStorage,
@@ -754,6 +797,19 @@ private:
   /// constraint, we should drop the const to fit the rest of the MLIR const
   /// model.
   Block *getParent() const { return block; }
+
+  /// Expose a few methods explicitly for the debugger to call for
+  /// visualization.
+#ifndef NDEBUG
+  LLVM_DUMP_METHOD operand_range debug_getOperands() { return getOperands(); }
+  LLVM_DUMP_METHOD result_range debug_getResults() { return getResults(); }
+  LLVM_DUMP_METHOD SuccessorRange debug_getSuccessors() {
+    return getSuccessors();
+  }
+  LLVM_DUMP_METHOD MutableArrayRef<Region> debug_getRegions() {
+    return getRegions();
+  }
+#endif
 
   /// The operation block that contains this operation.
   Block *block = nullptr;

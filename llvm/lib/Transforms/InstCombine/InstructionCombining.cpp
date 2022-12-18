@@ -2717,7 +2717,7 @@ static bool isAllocSiteRemovable(Instruction *AI,
                                  SmallVectorImpl<WeakTrackingVH> &Users,
                                  const TargetLibraryInfo &TLI) {
   SmallVector<Instruction*, 4> Worklist;
-  const Optional<StringRef> Family = getAllocationFamily(AI, &TLI);
+  const std::optional<StringRef> Family = getAllocationFamily(AI, &TLI);
   Worklist.push_back(AI);
 
   do {
@@ -2793,7 +2793,7 @@ static bool isAllocSiteRemovable(Instruction *AI,
           continue;
         }
 
-        if (getReallocatedOperand(cast<CallBase>(I), &TLI) == PI &&
+        if (getReallocatedOperand(cast<CallBase>(I)) == PI &&
             getAllocationFamily(I, &TLI) == Family) {
           assert(Family);
           Users.emplace_back(I);
@@ -3037,7 +3037,7 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
   // realloc() entirely.
   CallInst *CI = dyn_cast<CallInst>(Op);
   if (CI && CI->hasOneUse())
-    if (Value *ReallocatedOp = getReallocatedOperand(CI, &TLI))
+    if (Value *ReallocatedOp = getReallocatedOperand(CI))
       return eraseInstFromFunction(*replaceInstUsesWith(*CI, ReallocatedOp));
 
   // If we optimize for code size, try to move the call to free before the null

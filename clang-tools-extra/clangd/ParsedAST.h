@@ -113,7 +113,7 @@ public:
   PathRef tuPath() const { return TUPath; }
 
   /// Returns the version of the ParseInputs used to build Preamble part of this
-  /// AST. Might be None if no Preamble is used.
+  /// AST. Might be std::nullopt if no Preamble is used.
   llvm::Optional<llvm::StringRef> preambleVersion() const;
 
   const HeuristicResolver *getHeuristicResolver() const {
@@ -152,7 +152,8 @@ private:
   MainFileMacros Macros;
   // Pragma marks in the main file.
   std::vector<PragmaMark> Marks;
-  // Data, stored after parsing. None if AST was built with a stale preamble.
+  // Data, stored after parsing. std::nullopt if AST was built with a stale
+  // preamble.
   llvm::Optional<std::vector<Diag>> Diags;
   // Top-level decls inside the current file. Not that this does not include
   // top-level decls from the preamble.

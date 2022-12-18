@@ -501,7 +501,8 @@ public:
     // correctly.
     for (auto e : llvm::enumerate(funcTy.getInputs())) {
       unsigned index = e.index();
-      llvm::ArrayRef<mlir::NamedAttribute> attrs = func.getArgAttrs(index);
+      llvm::ArrayRef<mlir::NamedAttribute> attrs =
+          mlir::function_interface_impl::getArgAttrs(func, index);
       for (mlir::NamedAttribute attr : attrs) {
         savedAttrs.push_back({index, attr});
       }

@@ -1,8 +1,8 @@
-; RUN: opt -verify -S < %s 2>&1 | FileCheck --check-prefix=CHECK1 %s
-; RUN: sed -e s/.T2:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK2 %s
-; RUN: sed -e s/.T3:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK3 %s
-; RUN: sed -e s/.T4:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK4 %s
-; RUN: sed -e s/.T5:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK5 %s
+; RUN: opt -passes=verify -S < %s 2>&1 | FileCheck --check-prefix=CHECK1 %s
+; RUN: sed -e s/.T2:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK2 %s
+; RUN: sed -e s/.T3:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK3 %s
+; RUN: sed -e s/.T4:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK4 %s
+; RUN: sed -e s/.T5:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK5 %s
 
 ; Common declarations used for all runs.
 declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata)

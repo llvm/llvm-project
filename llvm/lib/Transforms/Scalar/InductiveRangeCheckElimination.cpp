@@ -45,7 +45,6 @@
 #include "llvm/Transforms/Scalar/InductiveRangeCheckElimination.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -236,7 +235,7 @@ class InductiveRangeCheckElimination {
   LoopInfo &LI;
 
   using GetBFIFunc =
-      llvm::Optional<llvm::function_ref<llvm::BlockFrequencyInfo &()> >;
+      std::optional<llvm::function_ref<llvm::BlockFrequencyInfo &()>>;
   GetBFIFunc GetBFI;
 
   // Returns true if it is profitable to do a transform basing on estimation of
@@ -542,10 +541,10 @@ class LoopConstrainer {
 
   // Calculated subranges we restrict the iteration space of the main loop to.
   // See the implementation of `calculateSubRanges' for more details on how
-  // these fields are computed.  `LowLimit` is None if there is no restriction
-  // on low end of the restricted iteration space of the main loop.  `HighLimit`
-  // is None if there is no restriction on high end of the restricted iteration
-  // space of the main loop.
+  // these fields are computed.  `LowLimit` is std::nullopt if there is no
+  // restriction on low end of the restricted iteration space of the main loop.
+  // `HighLimit` is std::nullopt if there is no restriction on high end of the
+  // restricted iteration space of the main loop.
 
   struct SubRanges {
     std::optional<const SCEV *> LowLimit;

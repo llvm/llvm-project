@@ -47,7 +47,7 @@ TEST(IntrusiveVariantTest, ZeroArgConstructionAndAssignment) {
 TEST(IntrusiveVariantTest, MustHaveSingleReturn) {
   IntrusiveVariant<A, B> V;
   visit<Optional<bool>>(
-      makeVisitor([](A) { return true; }, [](B) { return None; }), V);
+      makeVisitor([](A) { return true; }, [](B) { return std::nullopt; }), V);
 }
 
 template <typename T> class Alt {

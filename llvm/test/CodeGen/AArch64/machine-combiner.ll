@@ -249,6 +249,75 @@ define double @reassociate_muls_double(double %x0, double %x1, double %x2, doubl
   ret double %t2
 }
 
+; Verify that scalar integer adds are reassociated.
+
+define i32 @reassociate_adds_i32(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
+; CHECK-LABEL: reassociate_adds_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    udiv w8, w0, w1
+; CHECK-NEXT:    add w9, w3, w2
+; CHECK-NEXT:    add w0, w9, w8
+; CHECK-NEXT:    ret
+  %t0 = udiv i32 %x0, %x1
+  %t1 = add i32 %x2, %t0
+  %t2 = add i32 %x3, %t1
+  ret i32 %t2
+}
+
+define i64 @reassociate_adds_i64(i64 %x0, i64 %x1, i64 %x2, i64 %x3) {
+; CHECK-LABEL: reassociate_adds_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    udiv x8, x0, x1
+; CHECK-NEXT:    add x9, x3, x2
+; CHECK-NEXT:    add x0, x9, x8
+; CHECK-NEXT:    ret
+  %t0 = udiv i64 %x0, %x1
+  %t1 = add i64 %x2, %t0
+  %t2 = add i64 %x3, %t1
+  ret i64 %t2
+}
+
+; Verify that scalar bitwise operations are reassociated.
+
+define i32 @reassociate_ands_i32(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
+; CHECK-LABEL: reassociate_ands_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and w8, w0, w1
+; CHECK-NEXT:    and w9, w2, w3
+; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    ret
+  %t0 = and i32 %x0, %x1
+  %t1 = and i32 %t0, %x2
+  %t2 = and i32 %t1, %x3
+  ret i32 %t2
+}
+
+define i64 @reassociate_ors_i64(i64 %x0, i64 %x1, i64 %x2, i64 %x3) {
+; CHECK-LABEL: reassociate_ors_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr x8, x0, x1
+; CHECK-NEXT:    orr x9, x2, x3
+; CHECK-NEXT:    orr x0, x8, x9
+; CHECK-NEXT:    ret
+  %t0 = or i64 %x0, %x1
+  %t1 = or i64 %t0, %x2
+  %t2 = or i64 %t1, %x3
+  ret i64 %t2
+}
+
+define i32 @reassociate_xors_i32(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
+; CHECK-LABEL: reassociate_xors_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    eor w8, w0, w1
+; CHECK-NEXT:    eor w9, w2, w3
+; CHECK-NEXT:    eor w0, w8, w9
+; CHECK-NEXT:    ret
+  %t0 = xor i32 %x0, %x1
+  %t1 = xor i32 %t0, %x2
+  %t2 = xor i32 %t1, %x3
+  ret i32 %t2
+}
+
 ; Verify that we reassociate vector instructions too.
 
 define <4 x float> @vector_reassociate_adds1(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, <4 x float> %x3) {

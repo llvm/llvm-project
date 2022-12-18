@@ -1,4 +1,4 @@
-; RUN: not opt -verify < %s 2>&1 | FileCheck %s
+; RUN: not opt -passes=verify < %s 2>&1 | FileCheck %s
 
 ; CHECK: atomic store operand must have integer, pointer, or floating point type!
 ; CHECK: atomic load operand must have integer, pointer, or floating point type!

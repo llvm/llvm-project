@@ -108,7 +108,7 @@ KMP_PREFIX_UNDERSCORE(\proc):
 # endif // KMP_OS_DARWIN
 #endif // KMP_ARCH_X86 || KMP_ARCH_x86_64
 
-#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_AARCH64
+#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_ARM)
 
 # if KMP_OS_DARWIN
 #  define KMP_PREFIX_UNDERSCORE(x) _##x  // extra underscore for OS X* symbols
@@ -160,7 +160,11 @@ KMP_PREFIX_UNDERSCORE(\proc):
 	.cfi_endproc
 // Not sure why we need .type and .size for the functions
 	ALIGN 2
+#if KMP_ARCH_ARM
+	.type  \proc,%function
+#else
 	.type  \proc,@function
+#endif
 	.size  \proc,.-\proc
 .endm
 
@@ -172,7 +176,7 @@ KMP_PREFIX_UNDERSCORE(\proc):
 .endm
 # endif // KMP_OS_DARWIN
 
-#endif // (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_AARCH64
+#endif // (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_ARM)
 
 .macro COMMON name, size, align_power
 #if KMP_OS_DARWIN
@@ -1358,6 +1362,148 @@ KMP_LABEL(kmp_1):
 
 #endif /* (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_AARCH64 */
 
+#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_ARM
+
+//------------------------------------------------------------------------
+// int
+// __kmp_invoke_microtask( void (*pkfn) (int gtid, int tid, ...),
+//                         int gtid, int tid,
+//                         int argc, void *p_argv[]
+// #if OMPT_SUPPORT
+//                         ,
+//                         void **exit_frame_ptr
+// #endif
+//                       ) {
+// #if OMPT_SUPPORT
+//   *exit_frame_ptr = OMPT_GET_FRAME_ADDRESS(0);
+// #endif
+//
+//   (*pkfn)( & gtid, & tid, argv[0], ... );
+//
+// // FIXME: This is done at call-site and can be removed here.
+// #if OMPT_SUPPORT
+//   *exit_frame_ptr = 0;
+// #endif
+//
+//   return 1;
+// }
+//
+// parameters:
+//	r0:	pkfn
+//	r1:	gtid
+//	r2:	tid
+//	r3:	argc
+//	r4(stack):	p_argv
+//	r5(stack):	&exit_frame
+//
+// locals:
+//	__gtid:	gtid parm pushed on stack so can pass &gtid to pkfn
+//	__tid:	tid parm pushed on stack so can pass &tid to pkfn
+//
+// reg temps:
+//	 r4:	used to hold pkfn address
+//	 r5:	used as temporary for number of pkfn parms
+//	 r6:	used to traverse p_argv array
+//	 r7:	frame pointer (in some configurations)
+//	 r8:	used as temporary for stack placement calculation
+//	 	and as pointer to base of callee saved area
+//	 r9:	used as temporary for stack parameters
+//	r10:	used to preserve exit_frame_ptr, callee-save
+//	r11:	frame pointer (in some configurations)
+//
+// return:	r0	(always 1/TRUE)
+//
+
+__gtid = 4
+__tid = 8
+
+// -- Begin __kmp_invoke_microtask
+// mark_begin;
+	.text
+	PROC __kmp_invoke_microtask
+
+	// Pushing one extra register (r3) to keep the stack aligned
+	// for when we call pkfn below
+	push	{r3-r11,lr}
+	// Load p_argv and &exit_frame
+	ldrd	r4, r5, [sp, #10*4]
+
+# if KMP_OS_DARWIN || (defined(__thumb__) && !KMP_OS_WINDOWS)
+# define FP r7
+# define FPOFF 4*4
+#else
+# define FP r11
+# define FPOFF 8*4
+#endif
+	add	FP, sp, #FPOFF
+# if OMPT_SUPPORT
+	mov	r10, r5
+	str	FP, [r10]
+# endif
+	mov	r8, sp
+
+	// Calculate how much stack to allocate, in increments of 8 bytes.
+	// We strictly need 4*(argc-2) bytes (2 arguments are passed in
+	// registers) but allocate 4*argc for simplicity (to avoid needing
+	// to handle the argc<2 cases). We align the number of bytes
+	// allocated to 8 bytes, to keep the stack aligned. (Since we
+	// already allocate more than enough, it's ok to round down
+	// instead of up for the alignment.) We allocate another extra
+	// 8 bytes for gtid and tid.
+	mov	r5, #1
+	add	r5, r5, r3, lsr #1
+	sub	sp, sp, r5, lsl #3
+
+	str	r1, [r8, #-__gtid]
+	str	r2, [r8, #-__tid]
+	mov	r5, r3
+	mov	r6, r4
+	mov	r4, r0
+
+	// Prepare the first 2 parameters to pkfn - pointers to gtid and tid
+	// in our stack frame.
+	sub	r0, r8, #__gtid
+	sub	r1, r8, #__tid
+
+	mov	r8, sp
+
+	// Load p_argv[0] and p_argv[1] into r2 and r3, if argc >= 1/2
+	cmp	r5, #0
+	beq	KMP_LABEL(kmp_1)
+	ldr	r2, [r6]
+
+	subs	r5, r5, #1
+	beq	KMP_LABEL(kmp_1)
+	ldr	r3, [r6, #4]!
+
+	// Loop, loading the rest of p_argv and writing the elements on the
+	// stack.
+KMP_LABEL(kmp_0):
+	subs	r5, r5, #1
+	beq	KMP_LABEL(kmp_1)
+	ldr	r12, [r6, #4]!
+	str	r12, [r8], #4
+	b	KMP_LABEL(kmp_0)
+KMP_LABEL(kmp_1):
+	blx	r4
+	mov	r0, #1
+
+	sub	r4, FP, #FPOFF
+	mov	sp, r4
+# undef FP
+# undef FPOFF
+
+# if OMPT_SUPPORT
+	mov	r1, #0
+	str	r1, [r10]
+# endif
+	pop	{r3-r11,pc}
+
+	DEBUG_INFO __kmp_invoke_microtask
+// -- End  __kmp_invoke_microtask
+
+#endif /* (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_AARCH64 */
+
 #if KMP_ARCH_PPC64
 
 //------------------------------------------------------------------------
@@ -1919,7 +2065,9 @@ __kmp_invoke_microtask:
     .global __kmp_unnamed_critical_addr
 __kmp_unnamed_critical_addr:
     .4byte .gomp_critical_user_
+#ifdef __ELF__
     .size __kmp_unnamed_critical_addr,4
+#endif
 #endif /* KMP_ARCH_ARM */
 
 #if KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64

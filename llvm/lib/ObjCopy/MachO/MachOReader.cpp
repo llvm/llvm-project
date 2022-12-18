@@ -291,7 +291,7 @@ void MachOReader::readExportInfo(Object &O) const {
   O.Exports.Trie = Trie;
 }
 
-void MachOReader::readLinkData(Object &O, Optional<size_t> LCIndex,
+void MachOReader::readLinkData(Object &O, std::optional<size_t> LCIndex,
                                LinkData &LD) const {
   if (!LCIndex)
     return;

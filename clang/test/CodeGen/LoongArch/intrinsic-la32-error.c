@@ -87,3 +87,11 @@ void csrxchg_w(unsigned int a, unsigned int b) {
     __builtin_loongarch_csrxchg_w(a, b, -1); // expected-error {{argument value 4294967295 is outside the valid range [0, 16383]}}
     __builtin_loongarch_csrxchg_w(a, b, b); // expected-error {{argument to '__builtin_loongarch_csrxchg_w' must be a constant integer}}
 }
+
+unsigned long int iocsrrd_d(unsigned int a) {
+  return __builtin_loongarch_iocsrrd_d(a); // expected-error {{this builtin requires target: loongarch64}}
+}
+
+void iocsrwr_d(unsigned long int a, unsigned int b) {
+  __builtin_loongarch_iocsrwr_d(a, b); // expected-error {{this builtin requires target: loongarch64}}
+}
