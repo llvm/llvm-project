@@ -401,6 +401,17 @@ void benchmarkMain() {
   if (BenchmarkFile.empty())
     BenchmarkFile = "-";
 
+  std::optional<raw_fd_ostream> FileOstr;
+  if (BenchmarkFile != "-") {
+    int ResultFD = 0;
+    // Create output file or open existing file and truncate it, once.
+    ExitOnErr(errorCodeToError(openFileForWrite(BenchmarkFile, ResultFD,
+                                                sys::fs::CD_CreateAlways,
+                                                sys::fs::OF_TextWithCRLF)));
+    FileOstr.emplace(ResultFD, true /*shouldClose*/);
+  }
+  raw_ostream &Ostr = FileOstr ? *FileOstr : outs();
+
   std::optional<ProgressMeter<>> Meter;
   if (BenchmarkMeasurementsPrintProgress)
     Meter.emplace(Configurations.size());
@@ -440,7 +451,7 @@ void benchmarkMain() {
       }
     }
 
-    ExitOnFileError(BenchmarkFile, Result.writeYaml(State, BenchmarkFile));
+    ExitOnFileError(BenchmarkFile, Result.writeYamlTo(State, Ostr));
   }
   exegesis::pfm::pfmTerminate();
 }

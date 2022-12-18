@@ -78,8 +78,16 @@ TEST_F(MipsBenchmarkResultTest, WriteToAndReadFromDisk) {
   SmallString<64> Filename(TestDirectory.path());
   sys::path::append(Filename, "data.yaml");
   errs() << Filename << "-------\n";
-  ExitOnErr(ToDisk.writeYaml(State, Filename));
+  {
+    int ResultFD = 0;
+    // Create output file or open existing file and truncate it, once.
+    ExitOnErr(errorCodeToError(openFileForWrite(Filename, ResultFD,
+                                                sys::fs::CD_CreateAlways,
+                                                sys::fs::OF_TextWithCRLF)));
+    raw_fd_ostream FileOstr(ResultFD, true /*shouldClose*/);
 
+    ExitOnErr(ToDisk.writeYamlTo(State, FileOstr));
+  }
   const std::unique_ptr<MemoryBuffer> Buffer =
       std::move(*MemoryBuffer::getFile(Filename));
 
