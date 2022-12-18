@@ -19,6 +19,9 @@
 // REQUIRES: clang
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+// We don't control the implementation of these functions on windows
+// UNSUPPORTED: windows
+
 #include <cmath>
 #include <cstdlib>
 #include <cassert>
@@ -201,21 +204,21 @@ int main(int, char**) {
   ASSERT_NOT_CONSTEXPR_CXX23(std::fpclassify(-1.0) == FP_NORMAL);
   ASSERT_NOT_CONSTEXPR_CXX23(std::fpclassify(-1.0L) == FP_NORMAL);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isfinite(-1.0f) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isfinite(-1.0) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isfinite(-1.0L) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::isfinite(-1.0f) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::isfinite(-1.0) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::isfinite(-1.0L) == 1);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isinf(-1.0f) == 0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isinf(-1.0) == 0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isinf(-1.0L) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isinf(-1.0f) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isinf(-1.0) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isinf(-1.0L) == 0);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isnan(-1.0f) == 0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isnan(-1.0) == 0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isnan(-1.0L) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isnan(-1.0f) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isnan(-1.0) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isnan(-1.0L) == 0);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isnormal(-1.0f) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isnormal(-1.0) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isnormal(-1.0L) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::isnormal(-1.0f) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::isnormal(-1.0) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::isnormal(-1.0L) == 1);
 
   ASSERT_NOT_CONSTEXPR_CXX23(std::signbit(-1.0f) == 1);
   ASSERT_NOT_CONSTEXPR_CXX23(std::signbit(-1.0) == 1);
