@@ -5,10 +5,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define ptr @example(ptr dereferenceable(24) %x) {
 ; CHECK-LABEL: @example(
-; CHECK-NEXT:    [[Y:%.*]] = load ptr, ptr [[X:%.*]], align 8
-; CHECK-NEXT:    [[Y_IS_NULL:%.*]] = icmp ne ptr [[Y]], null
-; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_IS_NULL]])
-; CHECK-NEXT:    ret ptr [[X]]
+; CHECK-NEXT:    ret ptr [[X:%.*]]
 ;
   %y = load ptr, ptr %x, align 8
   %y_is_null = icmp eq ptr %y, null
