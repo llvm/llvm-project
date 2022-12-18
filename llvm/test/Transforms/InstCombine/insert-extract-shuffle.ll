@@ -355,8 +355,8 @@ define <4 x float> @insert_not_undef_shuffle_translate_commute(float %x, <4 x fl
 
 define <4 x float> @insert_insert_shuffle_translate(float %x1, float %x2, <4 x float> %q) {
 ; CHECK-LABEL: @insert_insert_shuffle_translate(
-; CHECK-NEXT:    [[XV2:%.*]] = insertelement <4 x float> [[Q:%.*]], float [[X2:%.*]], i64 2
-; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> [[XV2]], float [[X1:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[Q:%.*]], float [[X1:%.*]], i64 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> [[TMP1]], float [[X2:%.*]], i64 2
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %xv1 = insertelement <4 x float> %q, float %x1, i32 0
