@@ -18,7 +18,6 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Path.h"
-#include <optional>
 
 #define DEBUG_TYPE "clang-move"
 
@@ -132,8 +131,8 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token & /*IncludeTok*/,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          std::optional<FileEntryRef> /*File*/,
-                          StringRef SearchPath, StringRef /*RelativePath*/,
+                          Optional<FileEntryRef> /*File*/, StringRef SearchPath,
+                          StringRef /*RelativePath*/,
                           const Module * /*Imported*/,
                           SrcMgr::CharacteristicKind /*FileType*/) override {
     if (const auto *FileEntry = SM.getFileEntryForID(SM.getFileID(HashLoc)))

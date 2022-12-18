@@ -10,7 +10,6 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
-#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -25,7 +24,7 @@ public:
   void InclusionDirective(SourceLocation HashLocation,
                           const Token &IncludeToken, StringRef FileNameRef,
                           bool IsAngled, CharSourceRange FileNameRange,
-                          std::optional<FileEntryRef> /*IncludedFile*/,
+                          Optional<FileEntryRef> /*IncludedFile*/,
                           StringRef /*SearchPath*/, StringRef /*RelativePath*/,
                           const Module * /*ImportedModule*/,
                           SrcMgr::CharacteristicKind /*FileType*/) override {

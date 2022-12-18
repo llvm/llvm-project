@@ -28,7 +28,6 @@
 #include <cassert>
 #include <cstddef>
 #include <memory>
-#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -480,7 +479,7 @@ public:
   /// found in any of searched SearchDirs. Will be set to false if a framework
   /// is found only through header maps. Doesn't guarantee the requested file is
   /// found.
-  std::optional<FileEntryRef> LookupFile(
+  Optional<FileEntryRef> LookupFile(
       StringRef Filename, SourceLocation IncludeLoc, bool isAngled,
       ConstSearchDirIterator FromDir, ConstSearchDirIterator *CurDir,
       ArrayRef<std::pair<const FileEntry *, const DirectoryEntry *>> Includers,
@@ -496,7 +495,7 @@ public:
   /// within ".../Carbon.framework/Headers/Carbon.h", check to see if
   /// HIToolbox is a subframework within Carbon.framework.  If so, return
   /// the FileEntry for the designated file, otherwise return null.
-  std::optional<FileEntryRef> LookupSubframeworkHeader(
+  Optional<FileEntryRef> LookupSubframeworkHeader(
       StringRef Filename, const FileEntry *ContextFileEnt,
       SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
       Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule);
@@ -770,7 +769,7 @@ private:
 
   /// Look up the file with the specified name and determine its owning
   /// module.
-  std::optional<FileEntryRef>
+  Optional<FileEntryRef>
   getFileAndSuggestModule(StringRef FileName, SourceLocation IncludeLoc,
                           const DirectoryEntry *Dir, bool IsSystemHeaderDir,
                           Module *RequestingModule,

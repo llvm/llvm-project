@@ -57,7 +57,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/thread.h"
 #include <mutex>
-#include <optional>
 
 #if LLVM_ENABLE_THREADS != 0 && defined(__APPLE__)
 #define USE_DARWIN_THREADS
@@ -8532,7 +8531,7 @@ CXFile clang_getIncludedFile(CXCursor cursor) {
     return nullptr;
 
   const InclusionDirective *ID = getCursorInclusionDirective(cursor);
-  std::optional<FileEntryRef> File = ID->getFile();
+  Optional<FileEntryRef> File = ID->getFile();
   return const_cast<FileEntry *>(File ? &File->getFileEntry() : nullptr);
 }
 

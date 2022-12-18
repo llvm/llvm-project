@@ -33,7 +33,6 @@
 #include <cstdint>
 #include <ctime>
 #include <iterator>
-#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -189,7 +188,7 @@ private:
 
   /// The AST file if this is a top-level module which has a
   /// corresponding serialized AST file, or null otherwise.
-  std::optional<FileEntryRef> ASTFile;
+  Optional<FileEntryRef> ASTFile;
 
   /// The \c ActionCache key for this module, if any.
   Optional<std::string> ModuleCacheKey;
@@ -624,7 +623,7 @@ public:
   }
 
   /// Set the serialized AST file for the top-level module of this module.
-  void setASTFile(std::optional<FileEntryRef> File) {
+  void setASTFile(Optional<FileEntryRef> File) {
     assert((!getASTFile() || getASTFile() == File) && "file path changed");
     getTopLevelModule()->ASTFile = File;
   }
