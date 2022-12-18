@@ -25,6 +25,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 
 #include "mlir/IR/MLIRContext.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include <utility>
 

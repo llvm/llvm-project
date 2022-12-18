@@ -24,6 +24,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 
 #include "mlir/IR/Value.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 namespace cir {
 
@@ -418,7 +419,8 @@ public:
   /// Get the preferred size to use when storing a value to this slot. This
   /// is the type size unless that might overlap another object, in which
   /// case it's the dsize.
-  clang::CharUnits getPreferredSize(clang::ASTContext &Ctx, clang::QualType Type) {
+  clang::CharUnits getPreferredSize(clang::ASTContext &Ctx,
+                                    clang::QualType Type) {
     return mayOverlap() ? Ctx.getTypeInfoDataSizeInChars(Type).Width
                         : Ctx.getTypeSizeInChars(Type);
   }
