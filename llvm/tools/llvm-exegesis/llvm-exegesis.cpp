@@ -348,14 +348,21 @@ static void runBenchmarkConfigurations(
     }
     InstructionBenchmark &Result = AllResults.front();
 
+    // If any of our measurements failed, pretend they all have failed.
+    if (AllResults.size() > 1 &&
+        any_of(AllResults, [](const InstructionBenchmark &R) {
+          return R.Measurements.empty();
+        }))
+      Result.Measurements.clear();
+
     if (RepetitionMode == InstructionBenchmark::RepetitionModeE::AggregateMin) {
-      assert(!Result.Measurements.empty() &&
-             "We're in an 'min' repetition mode, and need to aggregate new "
-             "result to the existing result.");
       for (const InstructionBenchmark &OtherResult :
            ArrayRef<InstructionBenchmark>(AllResults).drop_front()) {
         llvm::append_range(Result.AssembledSnippet,
                            OtherResult.AssembledSnippet);
+        // Aggregate measurements, but only iff all measurements succeeded.
+        if (Result.Measurements.empty())
+          continue;
         assert(OtherResult.Measurements.size() == Result.Measurements.size() &&
                "Expected to have identical number of measurements.");
         for (auto I : zip(Result.Measurements, OtherResult.Measurements)) {
