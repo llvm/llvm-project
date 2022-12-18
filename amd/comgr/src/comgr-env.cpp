@@ -53,7 +53,7 @@ bool shouldSaveTemps() {
 Optional<StringRef> getRedirectLogs() {
   static char *RedirectLogs = getenv("AMD_COMGR_REDIRECT_LOGS");
   if (!RedirectLogs || StringRef(RedirectLogs) == "0") {
-    return None;
+    return std::nullopt;
   }
   return StringRef(RedirectLogs);
 }
