@@ -217,6 +217,8 @@ static const char *isInvalidOpcode(const Instruction &Instr) {
   case X86::LSS32rm:
   case X86::LSS64rm:
   case X86::SYSENTER:
+  case X86::WRFSBASE:
+  case X86::WRFSBASE64:
     return "unsupported opcode";
   default:
     break;
