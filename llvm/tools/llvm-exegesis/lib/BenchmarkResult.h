@@ -78,6 +78,14 @@ struct InstructionBenchmark {
   std::vector<uint8_t> AssembledSnippet;
   // How to aggregate measurements.
   enum ResultAggregationModeE { Min, Max, Mean, MinVariance };
+
+  InstructionBenchmark() = default;
+  InstructionBenchmark(InstructionBenchmark &&) = default;
+
+  InstructionBenchmark(const InstructionBenchmark &) = delete;
+  InstructionBenchmark &operator=(const InstructionBenchmark &) = delete;
+  InstructionBenchmark &operator=(InstructionBenchmark &&) = delete;
+
   // Read functions.
   static Expected<InstructionBenchmark> readYaml(const LLVMState &State,
                                                  MemoryBufferRef Buffer);

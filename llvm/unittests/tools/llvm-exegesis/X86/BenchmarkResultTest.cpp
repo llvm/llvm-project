@@ -136,7 +136,7 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
     const auto FromDiskVector =
         ExitOnErr(InstructionBenchmark::readYamls(State, *Buffer));
     ASSERT_EQ(FromDiskVector.size(), size_t{1});
-    const auto FromDisk = FromDiskVector[0];
+    const auto &FromDisk = FromDiskVector[0];
     EXPECT_THAT(FromDisk.Key.Instructions,
                 Pointwise(EqMCInst(), ToDisk.Key.Instructions));
     EXPECT_EQ(FromDisk.Key.Config, ToDisk.Key.Config);
