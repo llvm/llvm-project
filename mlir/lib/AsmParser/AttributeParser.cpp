@@ -280,6 +280,10 @@ OptionalParseResult Parser::parseOptionalAttribute(StringAttr &attribute,
                                                    Type type) {
   return parseOptionalAttributeWithToken(Token::string, attribute, type);
 }
+OptionalParseResult Parser::parseOptionalAttribute(SymbolRefAttr &result,
+                                                   Type type) {
+  return parseOptionalAttributeWithToken(Token::at_identifier, result, type);
+}
 
 /// Attribute dictionary.
 ///
