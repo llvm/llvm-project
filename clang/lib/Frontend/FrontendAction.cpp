@@ -42,6 +42,7 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <optional>
 #include <system_error>
 using namespace clang;
 
@@ -832,7 +833,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         Dir = *DirOrErr;
       SmallVector<std::pair<const FileEntry *, const DirectoryEntry *>, 1> CWD;
       CWD.push_back({nullptr, Dir});
-      Optional<FileEntryRef> FE =
+      std::optional<FileEntryRef> FE =
           HS.LookupFile(FileName, SourceLocation(),
                         /*Angled*/ Input.getKind().getHeaderUnitKind() ==
                             InputKind::HeaderUnit_System,

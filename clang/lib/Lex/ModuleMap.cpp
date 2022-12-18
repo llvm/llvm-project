@@ -46,6 +46,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -1268,7 +1269,7 @@ void ModuleMap::addHeader(Module *Mod, Module::Header Header,
     Cb->moduleMapAddHeader(Header.Entry->getName());
 }
 
-Optional<FileEntryRef>
+std::optional<FileEntryRef>
 ModuleMap::getContainingModuleMapFile(const Module *Module) const {
   if (Module->DefinitionLoc.isInvalid())
     return std::nullopt;
@@ -1277,7 +1278,7 @@ ModuleMap::getContainingModuleMapFile(const Module *Module) const {
       SourceMgr.getFileID(Module->DefinitionLoc));
 }
 
-Optional<FileEntryRef>
+std::optional<FileEntryRef>
 ModuleMap::getModuleMapFileForUniquing(const Module *M) const {
   if (M->IsInferred) {
     assert(InferredModuleAllowedBy.count(M) && "missing inferred module map");
