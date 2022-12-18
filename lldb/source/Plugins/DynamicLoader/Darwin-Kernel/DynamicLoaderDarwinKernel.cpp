@@ -644,7 +644,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::ReadMemoryModule(
   if (m_load_address == LLDB_INVALID_ADDRESS)
     return false;
 
-  FileSpec file_spec(m_name.c_str());
+  FileSpec file_spec(m_name);
 
   llvm::MachO::mach_header mh;
   size_t size_to_read = 512;
@@ -785,7 +785,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
             PlatformDarwinKernel::GetPluginNameStatic());
         if (platform_sp->GetPluginName() == g_platform_name.GetStringRef()) {
           ModuleSpec kext_bundle_module_spec(module_spec);
-          FileSpec kext_filespec(m_name.c_str());
+          FileSpec kext_filespec(m_name);
           FileSpecList search_paths = target.GetExecutableSearchPaths();
           kext_bundle_module_spec.GetFileSpec() = kext_filespec;
           platform_sp->GetSharedModule(kext_bundle_module_spec, process,

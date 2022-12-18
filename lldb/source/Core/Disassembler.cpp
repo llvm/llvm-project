@@ -1129,7 +1129,7 @@ Disassembler::Disassembler(const ArchSpec &arch, const char *flavor)
       thumb_arch_name.erase(0, 3);
       thumb_arch_name.insert(0, "thumb");
     }
-    m_arch.SetTriple(thumb_arch_name.c_str());
+    m_arch.SetTriple(thumb_arch_name);
   }
 }
 

@@ -217,7 +217,7 @@ bool CommandObjectMultiword::Execute(const char *args_string,
     }
   }
   error_msg.append("\n");
-  result.AppendRawError(error_msg.c_str());
+  result.AppendRawError(error_msg);
   return false;
 }
 

@@ -1710,7 +1710,7 @@ protected:
       }
 
       if (!warnings.empty())
-        result.AppendWarning(warnings.c_str());
+        result.AppendWarning(warnings);
     }
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
