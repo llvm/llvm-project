@@ -12,10 +12,9 @@ declare void @use1(i1)
 ; Most basic positive test
 define i32 @t0(i1 %i0, i32 %v0, i32 %v1, i32 %v2, i32 %v3) {
 ; CHECK-LABEL: @t0(
-; CHECK-NEXT:    [[I1:%.*]] = icmp eq i32 [[V0:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[I2:%.*]] = xor i1 [[I0:%.*]], true
-; CHECK-NEXT:    [[I3:%.*]] = select i1 [[I2]], i1 [[I1]], i1 false
-; CHECK-NEXT:    [[I4:%.*]] = select i1 [[I3]], i32 [[V2:%.*]], i32 [[V3:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = icmp ne i32 [[V0:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    [[I3_NOT:%.*]] = select i1 [[I0:%.*]], i1 true, i1 [[I1]]
+; CHECK-NEXT:    [[I4:%.*]] = select i1 [[I3_NOT]], i32 [[V3:%.*]], i32 [[V2:%.*]]
 ; CHECK-NEXT:    ret i32 [[I4]]
 ;
   %i1 = icmp eq i32 %v0, %v1
@@ -26,10 +25,9 @@ define i32 @t0(i1 %i0, i32 %v0, i32 %v1, i32 %v2, i32 %v3) {
 }
 define i32 @t0_commutative(i1 %i0, i32 %v0, i32 %v1, i32 %v2, i32 %v3) {
 ; CHECK-LABEL: @t0_commutative(
-; CHECK-NEXT:    [[I1:%.*]] = icmp eq i32 [[V0:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[I2:%.*]] = xor i1 [[I0:%.*]], true
-; CHECK-NEXT:    [[I3:%.*]] = select i1 [[I1]], i1 [[I2]], i1 false
-; CHECK-NEXT:    [[I4:%.*]] = select i1 [[I3]], i32 [[V2:%.*]], i32 [[V3:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = icmp ne i32 [[V0:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    [[I3_NOT:%.*]] = select i1 [[I1]], i1 true, i1 [[I0:%.*]]
+; CHECK-NEXT:    [[I4:%.*]] = select i1 [[I3_NOT]], i32 [[V3:%.*]], i32 [[V2:%.*]]
 ; CHECK-NEXT:    ret i32 [[I4]]
 ;
   %i1 = icmp eq i32 %v0, %v1
@@ -41,11 +39,10 @@ define i32 @t0_commutative(i1 %i0, i32 %v0, i32 %v1, i32 %v2, i32 %v3) {
 define i32 @t1(i32 %v0, i32 %v1, i32 %v2, i32 %v3, i32 %v4, i32 %v5) {
 ; CHECK-LABEL: @t1(
 ; CHECK-NEXT:    [[I0:%.*]] = icmp eq i32 [[V0:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[I1:%.*]] = icmp eq i32 [[V2:%.*]], [[V3:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = icmp ne i32 [[V2:%.*]], [[V3:%.*]]
 ; CHECK-NEXT:    call void @use1(i1 [[I0]])
-; CHECK-NEXT:    [[I2:%.*]] = xor i1 [[I0]], true
-; CHECK-NEXT:    [[I3:%.*]] = select i1 [[I2]], i1 [[I1]], i1 false
-; CHECK-NEXT:    [[I4:%.*]] = select i1 [[I3]], i32 [[V4:%.*]], i32 [[V5:%.*]]
+; CHECK-NEXT:    [[I3_NOT:%.*]] = select i1 [[I0]], i1 true, i1 [[I1]]
+; CHECK-NEXT:    [[I4:%.*]] = select i1 [[I3_NOT]], i32 [[V5:%.*]], i32 [[V4:%.*]]
 ; CHECK-NEXT:    ret i32 [[I4]]
 ;
   %i0 = icmp eq i32 %v0, %v1
@@ -59,11 +56,10 @@ define i32 @t1(i32 %v0, i32 %v1, i32 %v2, i32 %v3, i32 %v4, i32 %v5) {
 define i32 @t1_commutative(i32 %v0, i32 %v1, i32 %v2, i32 %v3, i32 %v4, i32 %v5) {
 ; CHECK-LABEL: @t1_commutative(
 ; CHECK-NEXT:    [[I0:%.*]] = icmp eq i32 [[V0:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[I1:%.*]] = icmp eq i32 [[V2:%.*]], [[V3:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = icmp ne i32 [[V2:%.*]], [[V3:%.*]]
 ; CHECK-NEXT:    call void @use1(i1 [[I0]])
-; CHECK-NEXT:    [[I2:%.*]] = xor i1 [[I0]], true
-; CHECK-NEXT:    [[I3:%.*]] = select i1 [[I1]], i1 [[I2]], i1 false
-; CHECK-NEXT:    [[I4:%.*]] = select i1 [[I3]], i32 [[V4:%.*]], i32 [[V5:%.*]]
+; CHECK-NEXT:    [[I3_NOT:%.*]] = select i1 [[I1]], i1 true, i1 [[I0]]
+; CHECK-NEXT:    [[I4:%.*]] = select i1 [[I3_NOT]], i32 [[V5:%.*]], i32 [[V4:%.*]]
 ; CHECK-NEXT:    ret i32 [[I4]]
 ;
   %i0 = icmp eq i32 %v0, %v1
