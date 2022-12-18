@@ -421,8 +421,10 @@ void benchmarkMain() {
 
     for (const std::unique_ptr<const SnippetRepetitor> &Repetitor :
          Repetitors) {
-      AllResults.emplace_back(ExitOnErr(Runner->runConfiguration(
-          Conf, NumRepetitions, LoopBodySize, *Repetitor, DumpObjectToDisk)));
+      auto RC = ExitOnErr(Runner->getRunnableConfiguration(
+          Conf, NumRepetitions, LoopBodySize, *Repetitor, DumpObjectToDisk));
+      AllResults.emplace_back(
+          ExitOnErr(Runner->runConfiguration(std::move(RC))));
     }
     InstructionBenchmark &Result = AllResults.front();
 
