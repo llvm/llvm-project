@@ -10,9 +10,9 @@
 #include <memory_resource>
 
 #if defined(_LIBCPP_ABI_MICROSOFT)
-#    include "support/runtime/default_resource_msvc.ipp"
+#  include "support/runtime/default_resource_msvc.ipp"
 #else
-#    include "support/runtime/default_resource_fallback.ipp"
+#  include "support/runtime/default_resource_fallback.ipp"
 #endif
 
 #ifndef _LIBCPP_HAS_NO_ATOMIC_HEADER
