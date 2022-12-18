@@ -148,9 +148,12 @@ public:
                                 "dynamically sized stack!");
               return false;
             }
-            // Calculate this `AllocaInst`s size and create a replacement
-            // pointer into the shadow stack.
-            size_t AllocaSize = *AllocaSizeInBits / 8;
+            // Calculate this `AllocaInst`s size, aligning its pointer if
+            // necessary, and create a replacement pointer into the shadow
+            // stack.
+            size_t AllocaSize = *AllocaSizeInBits / sizeof(uintptr_t);
+            size_t Align = AI.getAlign().value();
+            Offset = int((Offset + (Align - 1)) / Align) * Align;
             GetElementPtrInst *GEP = GetElementPtrInst::Create(
                 Int8Ty, SSPtr, {ConstantInt::get(Int32Ty, Offset)}, "",
                 cast<Instruction>(&AI));
@@ -205,7 +208,14 @@ public:
             }
 
             // Adjust shadow stack pointer before a call, and reset it back to
-            // its previous value upon returning.
+            // its previous value upon returning. Make sure to align the shadow
+            // stack to a 16 byte boundary before calling, as required by the
+            // calling convention.
+#ifdef __x86_64__
+            Offset = int((Offset + (16 - 1)) / 16) * 16;
+#else
+#error unknown platform
+#endif
             GetElementPtrInst *GEP = GetElementPtrInst::Create(
                 Int8Ty, SSPtr, {ConstantInt::get(Int32Ty, Offset)}, "", &I);
             Builder.SetInsertPoint(&I);
