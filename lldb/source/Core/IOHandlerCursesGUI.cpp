@@ -3838,7 +3838,7 @@ public:
 
   void UpdateMatches(const std::string &text) override {
     CompletionResult result;
-    CompletionRequest request(text.c_str(), text.size(), result);
+    CompletionRequest request(text, text.size(), result);
     CommandCompletions::InvokeCommonCompletionCallbacks(
         m_debugger.GetCommandInterpreter(), m_completion_mask, request,
         nullptr);

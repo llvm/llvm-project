@@ -629,9 +629,9 @@ static ValueObjectSP ExpandIndexedExpression(ValueObject *valobj, size_t index,
   ValueObject::ExpressionPathAftermath what_next =
       (deref_pointer ? ValueObject::eExpressionPathAftermathDereference
                      : ValueObject::eExpressionPathAftermathNothing);
-  ValueObjectSP item = valobj->GetValueForExpressionPath(
-      ptr_deref_buffer.c_str(), &reason_to_stop, &final_value_type, options,
-      &what_next);
+  ValueObjectSP item =
+      valobj->GetValueForExpressionPath(ptr_deref_buffer, &reason_to_stop,
+                                        &final_value_type, options, &what_next);
   if (!item) {
     LLDB_LOGF(log,
               "[ExpandIndexedExpression] ERROR: why stopping = %d,"
@@ -765,7 +765,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
 
     target =
         valobj
-            ->GetValueForExpressionPath(expr_path.c_str(), &reason_to_stop,
+            ->GetValueForExpressionPath(expr_path, &reason_to_stop,
                                         &final_value_type, options, &what_next)
             .get();
 
