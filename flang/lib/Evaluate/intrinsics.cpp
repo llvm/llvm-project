@@ -2918,24 +2918,6 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     if (const auto &arg{call.arguments[0]}) {
       ok = CheckForNonPositiveValues(context, *arg, name, "image");
     }
-  } else if (name == "ishftc") {
-    if (const auto &sizeArg{call.arguments[2]}) {
-      ok = CheckForNonPositiveValues(context, *sizeArg, name, "size");
-      if (ok) {
-        if (auto sizeVal{ToInt64(sizeArg->UnwrapExpr())}) {
-          if (const auto &shiftArg{call.arguments[1]}) {
-            if (auto shiftVal{ToInt64(shiftArg->UnwrapExpr())}) {
-              if (std::abs(*shiftVal) > *sizeVal) {
-                ok = false;
-                context.messages().Say(shiftArg->sourceLocation(),
-                    "The absolute value of the 'shift=' argument for intrinsic '%s' must be less than or equal to the 'size=' argument"_err_en_US,
-                    name);
-              }
-            }
-          }
-        }
-      }
-    }
   } else if (name == "lcobound") {
     return CheckDimAgainstCorank(call, context);
   } else if (name == "loc") {
