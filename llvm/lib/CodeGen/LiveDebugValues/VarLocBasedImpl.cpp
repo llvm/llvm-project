@@ -10,12 +10,13 @@
 ///
 /// LiveDebugValues is an optimistic "available expressions" dataflow
 /// algorithm. The set of expressions is the set of machine locations
-/// (registers, spill slots, constants) that a variable fragment might be
-/// located, qualified by a DIExpression and indirect-ness flag, while each
-/// variable is identified by a DebugVariable object. The availability of an
-/// expression begins when a DBG_VALUE instruction specifies the location of a
-/// DebugVariable, and continues until that location is clobbered or
-/// re-specified by a different DBG_VALUE for the same DebugVariable.
+/// (registers, spill slots, constants, and target indices) that a variable
+/// fragment might be located, qualified by a DIExpression and indirect-ness
+/// flag, while each variable is identified by a DebugVariable object. The
+/// availability of an expression begins when a DBG_VALUE instruction specifies
+/// the location of a DebugVariable, and continues until that location is
+/// clobbered or re-specified by a different DBG_VALUE for the same
+/// DebugVariable.
 ///
 /// The output of LiveDebugValues is additional DBG_VALUE instructions,
 /// placed to extend variable locations as far they're available. This file
@@ -230,6 +231,14 @@ struct LocIndex {
   static constexpr u32_location_t kEntryValueBackupLocation =
       kFirstInvalidRegLocation + 1;
 
+  /// A special location reserved for VarLocs with locations of kind
+  /// WasmLocKind.
+  /// TODO Placing all Wasm target index locations in this single kWasmLocation
+  /// may cause slowdown in compilation time in very large functions. Consider
+  /// giving a each target index/offset pair its own u32_location_t if this
+  /// becomes a problem.
+  static constexpr u32_location_t kWasmLocation = kFirstInvalidRegLocation + 2;
+
   LocIndex(u32_location_t Location, u32_index_t Index)
       : Location(Location), Index(Index) {}
 
@@ -301,7 +310,12 @@ private:
 
     // Target indices used for wasm-specific locations.
     struct WasmLoc {
-      int Index; // One of TargetIndex values defined in WebAssembly.h
+      // One of TargetIndex values defined in WebAssembly.h. We deal with
+      // local-related TargetIndex in this analysis (TI_LOCAL and
+      // TI_LOCAL_INDIRECT). Stack operands (TI_OPERAND_STACK) will be handled
+      // separately WebAssemblyDebugFixup pass, and we don't associate debug
+      // info with values in global operands (TI_GLOBAL_RELOC) at the moment.
+      int Index;
       int64_t Offset;
       bool operator==(const WasmLoc &Other) const {
         return Index == Other.Index && Offset == Other.Offset;
@@ -673,6 +687,21 @@ private:
       llvm_unreachable("Could not find given SpillLoc in Locs");
     }
 
+    bool containsWasmLocs() const {
+      return any_of(Locs, [](VarLoc::MachineLoc ML) {
+        return ML.Kind == VarLoc::MachineLocKind::WasmLocKind;
+      });
+    }
+
+    /// If this variable is described in whole or part by \p WasmLocation,
+    /// return true.
+    bool usesWasmLoc(WasmLoc WasmLocation) const {
+      MachineLoc WasmML;
+      WasmML.Kind = MachineLocKind::WasmLocKind;
+      WasmML.Value.WasmLocation = WasmLocation;
+      return is_contained(Locs, WasmML);
+    }
+
     /// Determine whether the lexical scope of this value's debug location
     /// dominates MBB.
     bool dominates(LexicalScopes &LS, MachineBasicBlock &MBB) const {
@@ -784,10 +813,10 @@ private:
                         return RegNo < LocIndex::kFirstInvalidRegLocation;
                       }) &&
                "Physreg out of range?");
-        if (VL.containsSpillLocs()) {
-          LocIndex::u32_location_t Loc = LocIndex::kSpillLocation;
-          Locations.push_back(Loc);
-        }
+        if (VL.containsSpillLocs())
+          Locations.push_back(LocIndex::kSpillLocation);
+        if (VL.containsWasmLocs())
+          Locations.push_back(LocIndex::kWasmLocation);
       } else if (VL.EVKind != VarLoc::EntryValueLocKind::EntryValueKind) {
         LocIndex::u32_location_t Loc = LocIndex::kEntryValueBackupLocation;
         Locations.push_back(Loc);
@@ -940,6 +969,12 @@ private:
       return LocIndex::indexRangeForLocation(
           getVarLocs(), LocIndex::kEntryValueBackupLocation);
     }
+
+    /// Get all set IDs for VarLocs with MLs of kind WasmLocKind.
+    auto getWasmVarLocs() const {
+      return LocIndex::indexRangeForLocation(getVarLocs(),
+                                             LocIndex::kWasmLocation);
+    }
   };
 
   /// Collect all VarLoc IDs from \p CollectFrom for VarLocs with MLs of kind
@@ -1026,6 +1061,8 @@ private:
                            VarLocMap &VarLocIDs,
                            InstToEntryLocMap &EntryValTransfers,
                            RegDefToInstMap &RegSetInstrs);
+  void transferWasmDef(MachineInstr &MI, OpenRangesSet &OpenRanges,
+                       VarLocMap &VarLocIDs);
   bool transferTerminator(MachineBasicBlock *MBB, OpenRangesSet &OpenRanges,
                           VarLocInMBB &OutLocs, const VarLocMap &VarLocIDs);
 
@@ -1606,6 +1643,30 @@ void VarLocBasedLDV::transferRegisterDef(MachineInstr &MI,
   }
 }
 
+void VarLocBasedLDV::transferWasmDef(MachineInstr &MI,
+                                     OpenRangesSet &OpenRanges,
+                                     VarLocMap &VarLocIDs) {
+  // If this is not a Wasm local.set or local.tee, which sets local values,
+  // return.
+  int Index;
+  int64_t Offset;
+  if (!TII->isExplicitTargetIndexDef(MI, Index, Offset))
+    return;
+
+  // Find the target indices killed by MI, and delete those variable locations
+  // from the open range.
+  VarLocsInRange KillSet;
+  VarLoc::WasmLoc Loc{Index, Offset};
+  for (uint64_t ID : OpenRanges.getWasmVarLocs()) {
+    LocIndex Idx = LocIndex::fromRawInteger(ID);
+    const VarLoc &VL = VarLocIDs[Idx];
+    assert(VL.containsWasmLocs() && "Broken VarLocSet?");
+    if (VL.usesWasmLoc(Loc))
+      KillSet.insert(ID);
+  }
+  OpenRanges.erase(KillSet, VarLocIDs, LocIndex::kWasmLocation);
+}
+
 bool VarLocBasedLDV::isSpillInstruction(const MachineInstr &MI,
                                          MachineFunction *MF) {
   // TODO: Handle multiple stores folded into one.
@@ -1944,6 +2005,7 @@ void VarLocBasedLDV::process(MachineInstr &MI, OpenRangesSet &OpenRanges,
                      RegSetInstrs);
   transferRegisterDef(MI, OpenRanges, VarLocIDs, EntryValTransfers,
                       RegSetInstrs);
+  transferWasmDef(MI, OpenRanges, VarLocIDs);
   transferRegisterCopy(MI, OpenRanges, VarLocIDs, Transfers);
   transferSpillOrRestoreInst(MI, OpenRanges, VarLocIDs, Transfers);
 }
