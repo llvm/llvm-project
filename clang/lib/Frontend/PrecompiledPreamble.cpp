@@ -33,7 +33,6 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include <limits>
 #include <mutex>
-#include <optional>
 #include <utility>
 
 using namespace clang;
@@ -98,9 +97,8 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          std::optional<FileEntryRef> File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override {
     // File is None if it wasn't found.
     // (We have some false negatives if PP recovered e.g. <foo> -> "foo")
