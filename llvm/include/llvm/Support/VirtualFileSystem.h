@@ -15,7 +15,6 @@
 #define LLVM_SUPPORT_VIRTUALFILESYSTEM_H
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -29,6 +28,7 @@
 #include <cstdint>
 #include <ctime>
 #include <memory>
+#include <optional>
 #include <stack>
 #include <string>
 #include <system_error>
