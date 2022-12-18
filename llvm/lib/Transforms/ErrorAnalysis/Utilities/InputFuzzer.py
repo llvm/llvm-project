@@ -50,19 +50,31 @@ def main():
     # Building the program
     subprocess.run(['make', 'build_pass', 'NO_DATA_DUMP=-DNO_DATA_DUMP', 'MEMORY_OPT=-DMEMORY_OPT'])
 
-    print(file_path.parent)
+    # print(file_path.parent)
 
     # Generating Inputs
     inputs = [[mid_point[j] + i * interval[j] for i in range(-num_points_one_side[j], num_points_one_side[j] + 1)]
               for j in range(num_variables)]
-    print(inputs)
+    # print(inputs)
+
+    # Writing opening main curly braces.
+    if not os.path.exists(str(file_path.parent) + '/.fAF_logs'):
+        os.makedirs(str(file_path.parent) + '/.fAF_logs')
+    f = open(str(file_path.parent) + '/.fAF_logs/PlotData.json', 'w')
+    f.write('{')
+    f.close()
     
     # Running the program
     for i in range(len(inputs[0])):
         input_string = ''
         for variable_value_list in inputs:
             input_string += str(variable_value_list[i]) + '\n'
-        proc = subprocess.run(['make', 'run_pass2'], input=bytes(input_string, 'utf-8'))
+        proc = subprocess.run(['make', 'run_pass'], input=bytes(input_string, 'utf-8'))
+
+    # Appending closing main curly braces.
+    f = open(str(file_path.parent) + '/.fAF_logs/PlotData.json', 'a')
+    f.write('}')
+    f.close()
 
 
 if __name__ == "__main__":

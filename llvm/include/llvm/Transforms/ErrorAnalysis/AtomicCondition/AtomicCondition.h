@@ -111,7 +111,7 @@ void fACStoreACItems(FILE *FP, ACItem **ObjectPointerList, uint64_t NumObjects) 
       }
       for (int J = 0; J < ObjectPointerList[I]->NumOperands; ++J) {
         fprintf(FP,
-                "\t\t\t\"ACWRTOperand %d\": %lf,\n",
+                "\t\t\t\"ACWRTOperand %d\": %0.15lf,\n",
                 J,
                 ObjectPointerList[I]->ACWRTOperands[J]);
       }
@@ -984,8 +984,8 @@ ACItem **fACComputeAC(const char *ResultVar,
 }
 
 void fACStoreACs() {
-#if NO_DATA_DUMP
-#else
+//#if NO_DATA_DUMP
+//#else
   printf("\nWriting Atomic Conditions to file.\n");
   // Generate a file path + file name string to store the AC Records
   char File[5000];
@@ -1001,7 +1001,7 @@ void fACStoreACs() {
   }
 
   printf("Atomic Conditions written to file: %s\n", File);
-#endif
+//#endif
 }
 
 

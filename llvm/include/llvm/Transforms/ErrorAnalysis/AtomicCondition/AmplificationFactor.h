@@ -186,7 +186,7 @@ void fAFStoreAFItems(FILE *FP, AFItem **ObjectPointerList, uint64_t NumObjects) 
                   "\t\t\t\"ACItemString\": \"%s\",\n"
                   "\t\t\t\"ProductTailItemId\": %d,\n"
                   "\t\t\t\"Input\": \"%s\",\n"
-                  "\t\t\t\"AF\": %lf,\n",
+                  "\t\t\t\"AF\": %0.15lf,\n",
                   ObjectPointerList[I]->Components[J]->ItemId,
                   ObjectPointerList[I]->Components[J]->Factor->ItemId,
                   ObjectPointerList[I]->Components[J]->Factor->ResultVar,
@@ -520,7 +520,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands, int NumOperands)
       NewAFItem->Components[NewAFItem->NumAFComponents] = NewAFComponent;
       NewAFItem->NumAFComponents++;
 #endif
-    } else {
+    } else if(strlen((*AC)->OperandNames[I]) != 0) {
       // Create a new AFProduct and copy the ACItem and set the AF.
       AFProduct *NewAFComponent = NULL;
       fAFCreateAFComponent(&NewAFComponent);

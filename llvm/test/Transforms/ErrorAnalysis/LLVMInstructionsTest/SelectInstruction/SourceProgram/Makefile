@@ -12,11 +12,21 @@ build_pass:
 	$(OPT) -passes=error-analysis -S select.ll \
 								  -o select_ac.ll
 
-run_pass:
+	$(CXX) --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/AtomicCondition.h \
+           --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/AmplificationFactor.h \
+    $(OP) -S -emit-llvm selectUsingPhi.c \
+          -o selectUsingPhi.ll
+	$(OPT) -passes=error-analysis -S selectUsingPhi.ll \
+           						  -o selectUsingPhi_ac.ll
+
+run_pass1:
 	$(LLI) select_ac.ll
+run_pass2:
+	$(LLI) selectUsingPhi_ac.ll
 
 build_original:
 	gcc select.c -lm -o select.out
+	gcc selectUsingPhi.c -lm -o selectUsingPhi.out
 
 clean:
-	rm -rf .fAC_logs a.out select.ll ex1_ac.ll select.out
+	rm -rf .fAF_logs a.out select.ll  selectUsingPhi.ll ex1_ac.ll select.out selectUsingPhi.out

@@ -73,23 +73,12 @@ void fRSStoreACResult() {
     I++;
   }
 
-  // Create a directory if not present
-  char *DirectoryName = (char *)malloc((strlen(RESULT_DIRECTORY_NAME)+1) * sizeof(char));
-  strcpy(DirectoryName, RESULT_DIRECTORY_NAME);
-  fAFcreateLogDirectory(DirectoryName);
-
-  char ExecutionId[5000];
-  char FileName[5000];
-  FileName[0] = '\0';
-  strcpy(FileName, strcat(strcpy(FileName, DirectoryName), "/fAC_Results_"));
-
-  fACGenerateExecutionID(ExecutionId);
-  strcat(ExecutionId, ".json");
-
-  strcat(FileName, ExecutionId);
+  // Generate a file path + file name string to store the AF Records
+  char File[5000];
+  fAFCreateFile(File, "fAC_Results_");
 
   // Table Output
-  FILE *FP = fopen(FileName, "w");
+  FILE *FP = fopen(File, "w");
   fprintf(FP, "{\n");
 
   long unsigned int RecordsStored = 0;
@@ -171,5 +160,5 @@ void fRSStoreACResult() {
 
   fclose(FP);
 
-  printf("\nHighest AC for each operation written to file: %s\n", FileName);
+  printf("\nHighest AC for each operation written to file: %s\n", File);
 }
