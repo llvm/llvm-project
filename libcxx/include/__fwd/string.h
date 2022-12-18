@@ -62,8 +62,6 @@ using u32string = basic_string<char32_t>;
 _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_BEGIN_NAMESPACE_STD_PMR
 
-using ___alloc = std::pmr::polymorphic_allocator<char>;
-
 template <class _CharT, class _Traits = char_traits<_CharT>>
 using basic_string = std::basic_string<_CharT, _Traits, std::pmr::polymorphic_allocator<_CharT>>;
 

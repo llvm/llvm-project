@@ -117,5 +117,5 @@ memory_resource* new_delete_resource() noexcept { return &res_init.resources.new
 
 memory_resource* null_memory_resource() noexcept { return &res_init.resources.null_res; }
 
-} // pmr
-} // std
+} // namespace pmr
+} // namespace std

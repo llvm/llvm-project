@@ -59,6 +59,6 @@ memory_resource* null_memory_resource() noexcept {
     return ::null_memory_resource();
 }
 
-} // pmr
+} // namespace pmr
 
-} // std
+} // namespace std
