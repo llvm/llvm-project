@@ -150,10 +150,15 @@ Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
   return Buffer;
 }
 
-Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
-    const BenchmarkCode &BC, unsigned NumRepetitions, unsigned LoopBodySize,
-    const SnippetRepetitor &Repetitor, bool DumpObjectToDisk) const {
-  InstructionBenchmark InstrBenchmark;
+Expected<BenchmarkRunner::RunnableConfiguration>
+BenchmarkRunner::getRunnableConfiguration(const BenchmarkCode &BC,
+                                          unsigned NumRepetitions,
+                                          unsigned LoopBodySize,
+                                          const SnippetRepetitor &Repetitor,
+                                          bool DumpObjectToDisk) const {
+  RunnableConfiguration RC;
+
+  InstructionBenchmark &InstrBenchmark = RC.InstrBenchmark;
   InstrBenchmark.Mode = Mode;
   InstrBenchmark.CpuName = std::string(State.getTargetMachine().getTargetCPU());
   InstrBenchmark.LLVMTriple =
@@ -183,7 +188,6 @@ Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
 
   // Assemble NumRepetitions instructions repetitions of the snippet for
   // measurements.
-  object::OwningBinary<object::ObjectFile> ObjectFile;
   {
     auto Snippet = assembleSnippet(BC, Repetitor, InstrBenchmark.NumRepetitions,
                                    LoopBodySize);
@@ -193,18 +197,26 @@ Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
       auto ObjectFilePath = writeObjectFile(*Snippet);
       if (Error E = ObjectFilePath.takeError()) {
         InstrBenchmark.Error = toString(std::move(E));
-        return InstrBenchmark;
+        return std::move(RC);
       }
       outs() << "Check generated assembly with: /usr/bin/objdump -d "
              << *ObjectFilePath << "\n";
     }
-    ObjectFile = getObjectFromBuffer(*Snippet);
+    RC.ObjectFile = getObjectFromBuffer(*Snippet);
   }
+
+  return std::move(RC);
+}
+
+Expected<InstructionBenchmark>
+BenchmarkRunner::runConfiguration(RunnableConfiguration &&RC) const {
+  InstructionBenchmark &InstrBenchmark = RC.InstrBenchmark;
+  object::OwningBinary<object::ObjectFile> &ObjectFile = RC.ObjectFile;
 
   if (BenchmarkSkipMeasurements) {
     InstrBenchmark.Error =
         "in --skip-measurements mode, actual measurements skipped.";
-    return InstrBenchmark;
+    return std::move(InstrBenchmark);
   }
 
   const FunctionExecutorImpl Executor(State, std::move(ObjectFile),
@@ -214,19 +226,20 @@ Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
     if (!E.isA<SnippetCrash>())
       return std::move(E);
     InstrBenchmark.Error = toString(std::move(E));
-    return InstrBenchmark;
+    return std::move(InstrBenchmark);
   }
   assert(InstrBenchmark.NumRepetitions > 0 && "invalid NumRepetitions");
   for (BenchmarkMeasure &BM : *NewMeasurements) {
     // Scale the measurements by instruction.
     BM.PerInstructionValue /= InstrBenchmark.NumRepetitions;
     // Scale the measurements by snippet.
-    BM.PerSnippetValue *= static_cast<double>(Instructions.size()) /
-                          InstrBenchmark.NumRepetitions;
+    BM.PerSnippetValue *=
+        static_cast<double>(InstrBenchmark.Key.Instructions.size()) /
+        InstrBenchmark.NumRepetitions;
   }
   InstrBenchmark.Measurements = std::move(*NewMeasurements);
 
-  return InstrBenchmark;
+  return std::move(InstrBenchmark);
 }
 
 Expected<std::string> BenchmarkRunner::writeObjectFile(StringRef Buffer) const {
