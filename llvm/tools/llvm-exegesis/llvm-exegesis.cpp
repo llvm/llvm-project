@@ -321,6 +321,7 @@ static void runBenchmarkConfigurations(
     const LLVMState &State, ArrayRef<BenchmarkCode> Configurations,
     ArrayRef<std::unique_ptr<const SnippetRepetitor>> Repetitors,
     const BenchmarkRunner &Runner) {
+  assert(!Configurations.empty() && "Don't have any configurations to run.");
   std::optional<raw_fd_ostream> FileOstr;
   if (BenchmarkFile != "-") {
     int ResultFD = 0;
@@ -468,7 +469,8 @@ void benchmarkMain() {
   if (BenchmarkFile.empty())
     BenchmarkFile = "-";
 
-  runBenchmarkConfigurations(State, Configurations, Repetitors, *Runner);
+  if (!Configurations.empty())
+    runBenchmarkConfigurations(State, Configurations, Repetitors, *Runner);
 
   exegesis::pfm::pfmTerminate();
 }
