@@ -20,7 +20,7 @@ if(LIBC_TARGET_ARCHITECTURE_IS_GPU AND
                       "'${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}' "
                       " is not `Clang ${req_ver}.")
 endif()
-if(LLVM_LIBC_FULL_BUILD)
+if(NOT LLVM_LIBC_FULL_BUILD)
   message(FATAL_ERROR "LLVM_LIBC_FULL_BUILD must be enabled to build libc for "
                       "GPU.")
 endif()
