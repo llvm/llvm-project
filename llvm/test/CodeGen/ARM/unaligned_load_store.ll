@@ -10,7 +10,7 @@
 ; rdar://7113725
 ; rdar://12091029
 
-define void @t(i8* nocapture %a, i8* nocapture %b) nounwind {
+define void @t(ptr nocapture %a, ptr nocapture %b) nounwind {
 entry:
 ; EXPANDED-LABEL: t:
 ; EXPANDED-DAG: ldrb [[R2:r[0-9]+]]
@@ -26,14 +26,12 @@ entry:
 ; UNALIGNED: ldr r1
 ; UNALIGNED: str r1
 
-  %__src1.i = bitcast i8* %b to i32*              ; <i32*> [#uses=1]
-  %__dest2.i = bitcast i8* %a to i32*             ; <i32*> [#uses=1]
-  %tmp.i = load i32, i32* %__src1.i, align 1           ; <i32> [#uses=1]
-  store i32 %tmp.i, i32* %__dest2.i, align 1
+  %tmp.i = load i32, ptr %b, align 1           ; <i32> [#uses=1]
+  store i32 %tmp.i, ptr %a, align 1
   ret void
 }
 
-define void @hword(double* %a, double* %b) nounwind {
+define void @hword(ptr %a, ptr %b) nounwind {
 entry:
 ; EXPANDED-LABEL: hword:
 ; EXPANDED-NOT: vld1
@@ -44,12 +42,12 @@ entry:
 ; UNALIGNED-LABEL: hword:
 ; UNALIGNED: vld1.16
 ; UNALIGNED: vst1.16
-  %tmp = load double, double* %a, align 2
-  store double %tmp, double* %b, align 2
+  %tmp = load double, ptr %a, align 2
+  store double %tmp, ptr %b, align 2
   ret void
 }
 
-define void @byte(double* %a, double* %b) nounwind {
+define void @byte(ptr %a, ptr %b) nounwind {
 entry:
 ; EXPANDED-LABEL: byte:
 ; EXPANDED-NOT: vld1
@@ -60,12 +58,12 @@ entry:
 ; UNALIGNED-LABEL: byte:
 ; UNALIGNED: vld1.8
 ; UNALIGNED: vst1.8
-  %tmp = load double, double* %a, align 1
-  store double %tmp, double* %b, align 1
+  %tmp = load double, ptr %a, align 1
+  store double %tmp, ptr %b, align 1
   ret void
 }
 
-define void @byte_word_ops(i32* %a, i32* %b) nounwind {
+define void @byte_word_ops(ptr %a, ptr %b) nounwind {
 entry:
 ; EXPANDED-LABEL: byte_word_ops:
 ; EXPANDED: ldrb
@@ -76,7 +74,7 @@ entry:
 ; UNALIGNED: ldr
 ; UNALIGNED-NOT: strb
 ; UNALIGNED: str
-  %tmp = load i32, i32* %a, align 1
-  store i32 %tmp, i32* %b, align 1
+  %tmp = load i32, ptr %a, align 1
+  store i32 %tmp, ptr %b, align 1
   ret void
 }

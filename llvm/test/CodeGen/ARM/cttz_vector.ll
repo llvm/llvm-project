@@ -23,7 +23,7 @@ declare <2 x i64> @llvm.cttz.v2i64(<2 x i64>, i1)
 
 ;------------------------------------------------------------------------------
 
-define void @test_v1i8(<1 x i8>* %p) {
+define void @test_v1i8(ptr %p) {
 ; CHECK-LABEL: test_v1i8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldrb r1, [r0]
@@ -32,13 +32,13 @@ define void @test_v1i8(<1 x i8>* %p) {
 ; CHECK-NEXT:    clz r1, r1
 ; CHECK-NEXT:    strb r1, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <1 x i8>, <1 x i8>* %p
+  %a = load <1 x i8>, ptr %p
   %tmp = call <1 x i8> @llvm.cttz.v1i8(<1 x i8> %a, i1 false)
-  store <1 x i8> %tmp, <1 x i8>* %p
+  store <1 x i8> %tmp, ptr %p
   ret void
 }
 
-define void @test_v2i8(<2 x i8>* %p) {
+define void @test_v2i8(ptr %p) {
 ; CHECK-LABEL: test_v2i8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.16 {d16[0]}, [r0:16]
@@ -55,13 +55,13 @@ define void @test_v2i8(<2 x i8>* %p) {
 ; CHECK-NEXT:    strb r1, [r0, #1]
 ; CHECK-NEXT:    strb r2, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <2 x i8>, <2 x i8>* %p
+  %a = load <2 x i8>, ptr %p
   %tmp = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> %a, i1 false)
-  store <2 x i8> %tmp, <2 x i8>* %p
+  store <2 x i8> %tmp, ptr %p
   ret void
 }
 
-define void @test_v4i8(<4 x i8>* %p) {
+define void @test_v4i8(ptr %p) {
 ; CHECK-LABEL: test_v4i8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.32 {d16[0]}, [r0:32]
@@ -76,13 +76,13 @@ define void @test_v4i8(<4 x i8>* %p) {
 ; CHECK-NEXT:    vuzp.8 d16, d17
 ; CHECK-NEXT:    vst1.32 {d16[0]}, [r0:32]
 ; CHECK-NEXT:    bx lr
-  %a = load <4 x i8>, <4 x i8>* %p
+  %a = load <4 x i8>, ptr %p
   %tmp = call <4 x i8> @llvm.cttz.v4i8(<4 x i8> %a, i1 false)
-  store <4 x i8> %tmp, <4 x i8>* %p
+  store <4 x i8> %tmp, ptr %p
   ret void
 }
 
-define void @test_v8i8(<8 x i8>* %p) {
+define void @test_v8i8(ptr %p) {
 ; CHECK-LABEL: test_v8i8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
@@ -93,13 +93,13 @@ define void @test_v8i8(<8 x i8>* %p) {
 ; CHECK-NEXT:    vcnt.8 d16, d16
 ; CHECK-NEXT:    vstr d16, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <8 x i8>, <8 x i8>* %p
+  %a = load <8 x i8>, ptr %p
   %tmp = call <8 x i8> @llvm.cttz.v8i8(<8 x i8> %a, i1 false)
-  store <8 x i8> %tmp, <8 x i8>* %p
+  store <8 x i8> %tmp, ptr %p
   ret void
 }
 
-define void @test_v16i8(<16 x i8>* %p) {
+define void @test_v16i8(ptr %p) {
 ; CHECK-LABEL: test_v16i8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -110,13 +110,13 @@ define void @test_v16i8(<16 x i8>* %p) {
 ; CHECK-NEXT:    vcnt.8 q8, q8
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <16 x i8>, <16 x i8>* %p
+  %a = load <16 x i8>, ptr %p
   %tmp = call <16 x i8> @llvm.cttz.v16i8(<16 x i8> %a, i1 false)
-  store <16 x i8> %tmp, <16 x i8>* %p
+  store <16 x i8> %tmp, ptr %p
   ret void
 }
 
-define void @test_v1i16(<1 x i16>* %p) {
+define void @test_v1i16(ptr %p) {
 ; CHECK-LABEL: test_v1i16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldrh r1, [r0]
@@ -125,13 +125,13 @@ define void @test_v1i16(<1 x i16>* %p) {
 ; CHECK-NEXT:    clz r1, r1
 ; CHECK-NEXT:    strh r1, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <1 x i16>, <1 x i16>* %p
+  %a = load <1 x i16>, ptr %p
   %tmp = call <1 x i16> @llvm.cttz.v1i16(<1 x i16> %a, i1 false)
-  store <1 x i16> %tmp, <1 x i16>* %p
+  store <1 x i16> %tmp, ptr %p
   ret void
 }
 
-define void @test_v2i16(<2 x i16>* %p) {
+define void @test_v2i16(ptr %p) {
 ; CHECK-LABEL: test_v2i16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.32 {d16[0]}, [r0:32]
@@ -145,13 +145,13 @@ define void @test_v2i16(<2 x i16>* %p) {
 ; CHECK-NEXT:    vuzp.16 d16, d17
 ; CHECK-NEXT:    vst1.32 {d16[0]}, [r0:32]
 ; CHECK-NEXT:    bx lr
-  %a = load <2 x i16>, <2 x i16>* %p
+  %a = load <2 x i16>, ptr %p
   %tmp = call <2 x i16> @llvm.cttz.v2i16(<2 x i16> %a, i1 false)
-  store <2 x i16> %tmp, <2 x i16>* %p
+  store <2 x i16> %tmp, ptr %p
   ret void
 }
 
-define void @test_v4i16(<4 x i16>* %p) {
+define void @test_v4i16(ptr %p) {
 ; CHECK-LABEL: test_v4i16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
@@ -163,13 +163,13 @@ define void @test_v4i16(<4 x i16>* %p) {
 ; CHECK-NEXT:    vpaddl.u8 d16, d16
 ; CHECK-NEXT:    vstr d16, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <4 x i16>, <4 x i16>* %p
+  %a = load <4 x i16>, ptr %p
   %tmp = call <4 x i16> @llvm.cttz.v4i16(<4 x i16> %a, i1 false)
-  store <4 x i16> %tmp, <4 x i16>* %p
+  store <4 x i16> %tmp, ptr %p
   ret void
 }
 
-define void @test_v8i16(<8 x i16>* %p) {
+define void @test_v8i16(ptr %p) {
 ; CHECK-LABEL: test_v8i16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -181,13 +181,13 @@ define void @test_v8i16(<8 x i16>* %p) {
 ; CHECK-NEXT:    vpaddl.u8 q8, q8
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <8 x i16>, <8 x i16>* %p
+  %a = load <8 x i16>, ptr %p
   %tmp = call <8 x i16> @llvm.cttz.v8i16(<8 x i16> %a, i1 false)
-  store <8 x i16> %tmp, <8 x i16>* %p
+  store <8 x i16> %tmp, ptr %p
   ret void
 }
 
-define void @test_v1i32(<1 x i32>* %p) {
+define void @test_v1i32(ptr %p) {
 ; CHECK-LABEL: test_v1i32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldr r1, [r0]
@@ -195,13 +195,13 @@ define void @test_v1i32(<1 x i32>* %p) {
 ; CHECK-NEXT:    clz r1, r1
 ; CHECK-NEXT:    str r1, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <1 x i32>, <1 x i32>* %p
+  %a = load <1 x i32>, ptr %p
   %tmp = call <1 x i32> @llvm.cttz.v1i32(<1 x i32> %a, i1 false)
-  store <1 x i32> %tmp, <1 x i32>* %p
+  store <1 x i32> %tmp, ptr %p
   ret void
 }
 
-define void @test_v2i32(<2 x i32>* %p) {
+define void @test_v2i32(ptr %p) {
 ; CHECK-LABEL: test_v2i32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
@@ -214,13 +214,13 @@ define void @test_v2i32(<2 x i32>* %p) {
 ; CHECK-NEXT:    vpaddl.u16 d16, d16
 ; CHECK-NEXT:    vstr d16, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <2 x i32>, <2 x i32>* %p
+  %a = load <2 x i32>, ptr %p
   %tmp = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %a, i1 false)
-  store <2 x i32> %tmp, <2 x i32>* %p
+  store <2 x i32> %tmp, ptr %p
   ret void
 }
 
-define void @test_v4i32(<4 x i32>* %p) {
+define void @test_v4i32(ptr %p) {
 ; CHECK-LABEL: test_v4i32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -233,13 +233,13 @@ define void @test_v4i32(<4 x i32>* %p) {
 ; CHECK-NEXT:    vpaddl.u16 q8, q8
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <4 x i32>, <4 x i32>* %p
+  %a = load <4 x i32>, ptr %p
   %tmp = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %a, i1 false)
-  store <4 x i32> %tmp, <4 x i32>* %p
+  store <4 x i32> %tmp, ptr %p
   ret void
 }
 
-define void @test_v1i64(<1 x i64>* %p) {
+define void @test_v1i64(ptr %p) {
 ; CHECK-LABEL: test_v1i64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i32 d16, #0x0
@@ -254,13 +254,13 @@ define void @test_v1i64(<1 x i64>* %p) {
 ; CHECK-NEXT:    vpaddl.u32 d16, d16
 ; CHECK-NEXT:    vstr d16, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <1 x i64>, <1 x i64>* %p
+  %a = load <1 x i64>, ptr %p
   %tmp = call <1 x i64> @llvm.cttz.v1i64(<1 x i64> %a, i1 false)
-  store <1 x i64> %tmp, <1 x i64>* %p
+  store <1 x i64> %tmp, ptr %p
   ret void
 }
 
-define void @test_v2i64(<2 x i64>* %p) {
+define void @test_v2i64(ptr %p) {
 ; CHECK-LABEL: test_v2i64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i32 q8, #0x0
@@ -275,15 +275,15 @@ define void @test_v2i64(<2 x i64>* %p) {
 ; CHECK-NEXT:    vpaddl.u32 q8, q8
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <2 x i64>, <2 x i64>* %p
+  %a = load <2 x i64>, ptr %p
   %tmp = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %a, i1 false)
-  store <2 x i64> %tmp, <2 x i64>* %p
+  store <2 x i64> %tmp, ptr %p
   ret void
 }
 
 ;------------------------------------------------------------------------------
 
-define void @test_v1i8_zero_undef(<1 x i8>* %p) {
+define void @test_v1i8_zero_undef(ptr %p) {
 ; CHECK-LABEL: test_v1i8_zero_undef:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldrb r1, [r0]
@@ -291,13 +291,13 @@ define void @test_v1i8_zero_undef(<1 x i8>* %p) {
 ; CHECK-NEXT:    clz r1, r1
 ; CHECK-NEXT:    strb r1, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <1 x i8>, <1 x i8>* %p
+  %a = load <1 x i8>, ptr %p
   %tmp = call <1 x i8> @llvm.cttz.v1i8(<1 x i8> %a, i1 true)
-  store <1 x i8> %tmp, <1 x i8>* %p
+  store <1 x i8> %tmp, ptr %p
   ret void
 }
 
-define void @test_v2i8_zero_undef(<2 x i8>* %p) {
+define void @test_v2i8_zero_undef(ptr %p) {
 ; CHECK-LABEL: test_v2i8_zero_undef:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.16 {d16[0]}, [r0:16]
@@ -313,13 +313,13 @@ define void @test_v2i8_zero_undef(<2 x i8>* %p) {
 ; CHECK-NEXT:    strb r1, [r0, #1]
 ; CHECK-NEXT:    strb r2, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <2 x i8>, <2 x i8>* %p
+  %a = load <2 x i8>, ptr %p
   %tmp = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> %a, i1 true)
-  store <2 x i8> %tmp, <2 x i8>* %p
+  store <2 x i8> %tmp, ptr %p
   ret void
 }
 
-define void @test_v4i8_zero_undef(<4 x i8>* %p) {
+define void @test_v4i8_zero_undef(ptr %p) {
 ; CHECK-LABEL: test_v4i8_zero_undef:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.32 {d16[0]}, [r0:32]
@@ -332,13 +332,13 @@ define void @test_v4i8_zero_undef(<4 x i8>* %p) {
 ; CHECK-NEXT:    vuzp.8 d16, d17
 ; CHECK-NEXT:    vst1.32 {d16[0]}, [r0:32]
 ; CHECK-NEXT:    bx lr
-  %a = load <4 x i8>, <4 x i8>* %p
+  %a = load <4 x i8>, ptr %p
   %tmp = call <4 x i8> @llvm.cttz.v4i8(<4 x i8> %a, i1 true)
-  store <4 x i8> %tmp, <4 x i8>* %p
+  store <4 x i8> %tmp, ptr %p
   ret void
 }
 
-define void @test_v8i8_zero_undef(<8 x i8>* %p) {
+define void @test_v8i8_zero_undef(ptr %p) {
 ; CHECK-LABEL: test_v8i8_zero_undef:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
@@ -349,13 +349,13 @@ define void @test_v8i8_zero_undef(<8 x i8>* %p) {
 ; CHECK-NEXT:    vcnt.8 d16, d16
 ; CHECK-NEXT:    vstr d16, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <8 x i8>, <8 x i8>* %p
+  %a = load <8 x i8>, ptr %p
   %tmp = call <8 x i8> @llvm.cttz.v8i8(<8 x i8> %a, i1 true)
-  store <8 x i8> %tmp, <8 x i8>* %p
+  store <8 x i8> %tmp, ptr %p
   ret void
 }
 
-define void @test_v16i8_zero_undef(<16 x i8>* %p) {
+define void @test_v16i8_zero_undef(ptr %p) {
 ; CHECK-LABEL: test_v16i8_zero_undef:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -366,13 +366,13 @@ define void @test_v16i8_zero_undef(<16 x i8>* %p) {
 ; CHECK-NEXT:    vcnt.8 q8, q8
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <16 x i8>, <16 x i8>* %p
+  %a = load <16 x i8>, ptr %p
   %tmp = call <16 x i8> @llvm.cttz.v16i8(<16 x i8> %a, i1 true)
-  store <16 x i8> %tmp, <16 x i8>* %p
+  store <16 x i8> %tmp, ptr %p
   ret void
 }
 
-define void @test_v1i16_zero_undef(<1 x i16>* %p) {
+define void @test_v1i16_zero_undef(ptr %p) {
 ; CHECK-LABEL: test_v1i16_zero_undef:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldrh r1, [r0]
@@ -380,13 +380,13 @@ define void @test_v1i16_zero_undef(<1 x i16>* %p) {
 ; CHECK-NEXT:    clz r1, r1
 ; CHECK-NEXT:    strh r1, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <1 x i16>, <1 x i16>* %p
+  %a = load <1 x i16>, ptr %p
   %tmp = call <1 x i16> @llvm.cttz.v1i16(<1 x i16> %a, i1 true)
-  store <1 x i16> %tmp, <1 x i16>* %p
+  store <1 x i16> %tmp, ptr %p
   ret void
 }
 
-define void @test_v2i16_zero_undef(<2 x i16>* %p) {
+define void @test_v2i16_zero_undef(ptr %p) {
 ; CHECK-LABEL: test_v2i16_zero_undef:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.32 {d16[0]}, [r0:32]
@@ -399,13 +399,13 @@ define void @test_v2i16_zero_undef(<2 x i16>* %p) {
 ; CHECK-NEXT:    vuzp.16 d16, d17
 ; CHECK-NEXT:    vst1.32 {d16[0]}, [r0:32]
 ; CHECK-NEXT:    bx lr
-  %a = load <2 x i16>, <2 x i16>* %p
+  %a = load <2 x i16>, ptr %p
   %tmp = call <2 x i16> @llvm.cttz.v2i16(<2 x i16> %a, i1 true)
-  store <2 x i16> %tmp, <2 x i16>* %p
+  store <2 x i16> %tmp, ptr %p
   ret void
 }
 
-define void @test_v4i16_zero_undef(<4 x i16>* %p) {
+define void @test_v4i16_zero_undef(ptr %p) {
 ; CHECK-LABEL: test_v4i16_zero_undef:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
@@ -416,13 +416,13 @@ define void @test_v4i16_zero_undef(<4 x i16>* %p) {
 ; CHECK-NEXT:    vsub.i16 d16, d17, d16
 ; CHECK-NEXT:    vstr d16, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <4 x i16>, <4 x i16>* %p
+  %a = load <4 x i16>, ptr %p
   %tmp = call <4 x i16> @llvm.cttz.v4i16(<4 x i16> %a, i1 true)
-  store <4 x i16> %tmp, <4 x i16>* %p
+  store <4 x i16> %tmp, ptr %p
   ret void
 }
 
-define void @test_v8i16_zero_undef(<8 x i16>* %p) {
+define void @test_v8i16_zero_undef(ptr %p) {
 ; CHECK-LABEL: test_v8i16_zero_undef:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -433,13 +433,13 @@ define void @test_v8i16_zero_undef(<8 x i16>* %p) {
 ; CHECK-NEXT:    vsub.i16 q8, q9, q8
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <8 x i16>, <8 x i16>* %p
+  %a = load <8 x i16>, ptr %p
   %tmp = call <8 x i16> @llvm.cttz.v8i16(<8 x i16> %a, i1 true)
-  store <8 x i16> %tmp, <8 x i16>* %p
+  store <8 x i16> %tmp, ptr %p
   ret void
 }
 
-define void @test_v1i32_zero_undef(<1 x i32>* %p) {
+define void @test_v1i32_zero_undef(ptr %p) {
 ; CHECK-LABEL: test_v1i32_zero_undef:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldr r1, [r0]
@@ -447,13 +447,13 @@ define void @test_v1i32_zero_undef(<1 x i32>* %p) {
 ; CHECK-NEXT:    clz r1, r1
 ; CHECK-NEXT:    str r1, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <1 x i32>, <1 x i32>* %p
+  %a = load <1 x i32>, ptr %p
   %tmp = call <1 x i32> @llvm.cttz.v1i32(<1 x i32> %a, i1 true)
-  store <1 x i32> %tmp, <1 x i32>* %p
+  store <1 x i32> %tmp, ptr %p
   ret void
 }
 
-define void @test_v2i32_zero_undef(<2 x i32>* %p) {
+define void @test_v2i32_zero_undef(ptr %p) {
 ; CHECK-LABEL: test_v2i32_zero_undef:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
@@ -464,13 +464,13 @@ define void @test_v2i32_zero_undef(<2 x i32>* %p) {
 ; CHECK-NEXT:    vsub.i32 d16, d17, d16
 ; CHECK-NEXT:    vstr d16, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <2 x i32>, <2 x i32>* %p
+  %a = load <2 x i32>, ptr %p
   %tmp = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %a, i1 true)
-  store <2 x i32> %tmp, <2 x i32>* %p
+  store <2 x i32> %tmp, ptr %p
   ret void
 }
 
-define void @test_v4i32_zero_undef(<4 x i32>* %p) {
+define void @test_v4i32_zero_undef(ptr %p) {
 ; CHECK-LABEL: test_v4i32_zero_undef:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -481,13 +481,13 @@ define void @test_v4i32_zero_undef(<4 x i32>* %p) {
 ; CHECK-NEXT:    vsub.i32 q8, q9, q8
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <4 x i32>, <4 x i32>* %p
+  %a = load <4 x i32>, ptr %p
   %tmp = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %a, i1 true)
-  store <4 x i32> %tmp, <4 x i32>* %p
+  store <4 x i32> %tmp, ptr %p
   ret void
 }
 
-define void @test_v1i64_zero_undef(<1 x i64>* %p) {
+define void @test_v1i64_zero_undef(ptr %p) {
 ; CHECK-LABEL: test_v1i64_zero_undef:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i32 d16, #0x0
@@ -502,13 +502,13 @@ define void @test_v1i64_zero_undef(<1 x i64>* %p) {
 ; CHECK-NEXT:    vpaddl.u32 d16, d16
 ; CHECK-NEXT:    vstr d16, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <1 x i64>, <1 x i64>* %p
+  %a = load <1 x i64>, ptr %p
   %tmp = call <1 x i64> @llvm.cttz.v1i64(<1 x i64> %a, i1 true)
-  store <1 x i64> %tmp, <1 x i64>* %p
+  store <1 x i64> %tmp, ptr %p
   ret void
 }
 
-define void @test_v2i64_zero_undef(<2 x i64>* %p) {
+define void @test_v2i64_zero_undef(ptr %p) {
 ; CHECK-LABEL: test_v2i64_zero_undef:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i32 q8, #0x0
@@ -523,8 +523,8 @@ define void @test_v2i64_zero_undef(<2 x i64>* %p) {
 ; CHECK-NEXT:    vpaddl.u32 q8, q8
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    bx lr
-  %a = load <2 x i64>, <2 x i64>* %p
+  %a = load <2 x i64>, ptr %p
   %tmp = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %a, i1 true)
-  store <2 x i64> %tmp, <2 x i64>* %p
+  store <2 x i64> %tmp, ptr %p
   ret void
 }

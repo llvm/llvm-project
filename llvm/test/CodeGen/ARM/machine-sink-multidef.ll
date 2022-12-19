@@ -31,11 +31,11 @@ define arm_aapcscc void @g() {
 ; CHECK-NEXT:  .LCPI0_1:
 ; CHECK-NEXT:    .long e
 entry:
-  %0 = load i32, i32* @f, align 4
-  %c = getelementptr inbounds [2 x %struct.anon.1.19.23.27.35.49.55.57.59.61.89.95], [2 x %struct.anon.1.19.23.27.35.49.55.57.59.61.89.95]* @e, i32 0, i32 %0, i32 0
-  %1 = load i32, i32* %c, align 4
-  %d = getelementptr inbounds [2 x %struct.anon.1.19.23.27.35.49.55.57.59.61.89.95], [2 x %struct.anon.1.19.23.27.35.49.55.57.59.61.89.95]* @e, i32 0, i32 %0, i32 1
-  %2 = load i32, i32* %d, align 4
+  %0 = load i32, ptr @f, align 4
+  %c = getelementptr inbounds [2 x %struct.anon.1.19.23.27.35.49.55.57.59.61.89.95], ptr @e, i32 0, i32 %0, i32 0
+  %1 = load i32, ptr %c, align 4
+  %d = getelementptr inbounds [2 x %struct.anon.1.19.23.27.35.49.55.57.59.61.89.95], ptr @e, i32 0, i32 %0, i32 1
+  %2 = load i32, ptr %d, align 4
   br i1 undef, label %land.lhs.true, label %if.end
 
 land.lhs.true:                                    ; preds = %entry
@@ -46,7 +46,7 @@ if.end:                                           ; preds = %land.lhs.true, %ent
   br i1 undef, label %if.end7, label %if.then5
 
 if.then5:                                         ; preds = %if.end
-  %call6 = call arm_aapcscc i32 bitcast (i32 (...)* @k to i32 (i32, i32)*)(i32 %h.0, i32 %2)
+  %call6 = call arm_aapcscc i32 @k(i32 %h.0, i32 %2)
   unreachable
 
 if.end7:                                          ; preds = %if.end

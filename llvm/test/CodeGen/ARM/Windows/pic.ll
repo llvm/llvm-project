@@ -8,7 +8,7 @@
 
 define arm_aapcs_vfpcc i8 @return_external() {
 entry:
-  %0 = load i8, i8* @external, align 1
+  %0 = load i8, ptr @external, align 1
   ret i8 %0
 }
 

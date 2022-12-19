@@ -25,7 +25,7 @@ define i32 @preserve_blocks(i32 %x) {
 ; CHECK-NOT: 1 ifcvt          - Number of diamond if-conversions performed
 entry:
   %c2 = icmp slt i32 %x, 3
-  %blockaddr = select i1 %c2, i8* blockaddress(@preserve_blocks, %ibt1), i8* blockaddress(@preserve_blocks, %ibt2)
+  %blockaddr = select i1 %c2, ptr blockaddress(@preserve_blocks, %ibt1), ptr blockaddress(@preserve_blocks, %ibt2)
   %c1 = icmp eq i32 %x, 0
   br i1 %c1, label %pre_ib, label %nextblock
 
@@ -39,5 +39,5 @@ ibt2:
   ret i32 1
 
 pre_ib:
-  indirectbr i8* %blockaddr, [ label %ibt1, label %ibt2 ]
+  indirectbr ptr %blockaddr, [ label %ibt1, label %ibt2 ]
 }

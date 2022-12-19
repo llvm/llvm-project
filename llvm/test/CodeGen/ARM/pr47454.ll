@@ -39,8 +39,8 @@ define internal fastcc void @main() {
 Entry:
     ; First arg directly from constant
     %const = alloca half, align 2
-    store half 0xH7C00, half* %const, align 2
-    %arg1 = load half, half* %const, align 2
+    store half 0xH7C00, ptr %const, align 2
+    %arg1 = load half, ptr %const, align 2
     ; Second arg from fucntion return
     %arg2 = call fastcc half @getConstant()
     ; Arguments should have equivalent mangling

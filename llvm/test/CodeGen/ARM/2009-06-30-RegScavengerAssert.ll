@@ -1,18 +1,18 @@
 ; RUN: llc < %s -mtriple=armv6-apple-darwin9
 
-@nn = external global i32		; <i32*> [#uses=1]
-@al_len = external global i32		; <i32*> [#uses=2]
-@no_mat = external global i32		; <i32*> [#uses=2]
-@no_mis = external global i32		; <i32*> [#uses=2]
-@"\01LC12" = external constant [29 x i8], align 1		; <[29 x i8]*> [#uses=1]
-@"\01LC16" = external constant [33 x i8], align 1		; <[33 x i8]*> [#uses=1]
-@"\01LC17" = external constant [47 x i8], align 1		; <[47 x i8]*> [#uses=1]
+@nn = external global i32		; <ptr> [#uses=1]
+@al_len = external global i32		; <ptr> [#uses=2]
+@no_mat = external global i32		; <ptr> [#uses=2]
+@no_mis = external global i32		; <ptr> [#uses=2]
+@"\01LC12" = external constant [29 x i8], align 1		; <ptr> [#uses=1]
+@"\01LC16" = external constant [33 x i8], align 1		; <ptr> [#uses=1]
+@"\01LC17" = external constant [47 x i8], align 1		; <ptr> [#uses=1]
 
-declare i32 @printf(i8* nocapture, ...) nounwind
+declare i32 @printf(ptr nocapture, ...) nounwind
 
-declare void @diff(i8*, i8*, i32, i32, i32, i32) nounwind
+declare void @diff(ptr, ptr, i32, i32, i32, i32) nounwind
 
-define void @SIM(i8* %A, i8* %B, i32 %M, i32 %N, i32 %K, [256 x i32]* %V, i32 %Q, i32 %R, i32 %nseq) nounwind {
+define void @SIM(ptr %A, ptr %B, i32 %M, i32 %N, i32 %K, ptr %V, i32 %Q, i32 %R, i32 %nseq) nounwind {
 entry:
 	br i1 undef, label %bb5, label %bb
 
@@ -35,26 +35,26 @@ bb10:		; preds = %bb9
 	unreachable
 
 bb11:		; preds = %bb9
-	%0 = load i32, i32* undef, align 4		; <i32> [#uses=2]
+	%0 = load i32, ptr undef, align 4		; <i32> [#uses=2]
 	%1 = add i32 %0, 1		; <i32> [#uses=2]
-	store i32 %1, i32* undef, align 4
-	%2 = load i32, i32* undef, align 4		; <i32> [#uses=1]
-	store i32 %2, i32* @nn, align 4
-	store i32 0, i32* @al_len, align 4
-	store i32 0, i32* @no_mat, align 4
-	store i32 0, i32* @no_mis, align 4
-	%3 = getelementptr i8, i8* %B, i32 %0		; <i8*> [#uses=1]
-	tail call  void @diff(i8* undef, i8* %3, i32 undef, i32 undef, i32 undef, i32 undef) nounwind
+	store i32 %1, ptr undef, align 4
+	%2 = load i32, ptr undef, align 4		; <i32> [#uses=1]
+	store i32 %2, ptr @nn, align 4
+	store i32 0, ptr @al_len, align 4
+	store i32 0, ptr @no_mat, align 4
+	store i32 0, ptr @no_mis, align 4
+	%3 = getelementptr i8, ptr %B, i32 %0		; <ptr> [#uses=1]
+	tail call  void @diff(ptr undef, ptr %3, i32 undef, i32 undef, i32 undef, i32 undef) nounwind
 	%4 = sitofp i32 undef to double		; <double> [#uses=1]
 	%5 = fdiv double %4, 1.000000e+01		; <double> [#uses=1]
-	%6 = tail call  i32 (i8*, ...) @printf(i8* getelementptr ([29 x i8], [29 x i8]* @"\01LC12", i32 0, i32 0), double %5) nounwind		; <i32> [#uses=0]
-	%7 = load i32, i32* @al_len, align 4		; <i32> [#uses=1]
-	%8 = load i32, i32* @no_mat, align 4		; <i32> [#uses=1]
-	%9 = load i32, i32* @no_mis, align 4		; <i32> [#uses=1]
+	%6 = tail call  i32 (ptr, ...) @printf(ptr @"\01LC12", double %5) nounwind		; <i32> [#uses=0]
+	%7 = load i32, ptr @al_len, align 4		; <i32> [#uses=1]
+	%8 = load i32, ptr @no_mat, align 4		; <i32> [#uses=1]
+	%9 = load i32, ptr @no_mis, align 4		; <i32> [#uses=1]
 	%10 = sub i32 %7, %8		; <i32> [#uses=1]
 	%11 = sub i32 %10, %9		; <i32> [#uses=1]
-	%12 = tail call  i32 (i8*, ...) @printf(i8* getelementptr ([33 x i8], [33 x i8]* @"\01LC16", i32 0, i32 0), i32 %11) nounwind		; <i32> [#uses=0]
-	%13 = tail call  i32 (i8*, ...) @printf(i8* getelementptr ([47 x i8], [47 x i8]* @"\01LC17", i32 0, i32 0), i32 undef, i32 %1, i32 undef, i32 undef) nounwind		; <i32> [#uses=0]
+	%12 = tail call  i32 (ptr, ...) @printf(ptr @"\01LC16", i32 %11) nounwind		; <i32> [#uses=0]
+	%13 = tail call  i32 (ptr, ...) @printf(ptr @"\01LC17", i32 undef, i32 %1, i32 undef, i32 undef) nounwind		; <i32> [#uses=0]
 	br i1 undef, label %bb15, label %bb12
 
 bb12:		; preds = %bb11
