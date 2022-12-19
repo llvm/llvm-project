@@ -23,7 +23,7 @@
 
 ; Check dynamic stack realignment in functions without variable-sized objects.
 
-declare void @helper_01(i32, i32, i32, i32, i32*)
+declare void @helper_01(i32, i32, i32, i32, ptr)
 
 ; O32 ABI
 define void @func_01() {
@@ -58,12 +58,12 @@ entry:
   ; GP32-MMR6:  addiu   $sp, $sp, 1024
 
   %a = alloca i32, align 512
-  call void @helper_01(i32 0, i32 0, i32 0, i32 0, i32* %a)
+  call void @helper_01(i32 0, i32 0, i32 0, i32 0, ptr %a)
   ret void
 }
 
 declare void @helper_02(i32, i32, i32, i32,
-                        i32, i32, i32, i32, i32*)
+                        i32, i32, i32, i32, ptr)
 
 ; N32/N64 ABIs
 define void @func_02() {
@@ -100,16 +100,16 @@ entry:
 
   %a = alloca i32, align 512
   call void @helper_02(i32 0, i32 0, i32 0, i32 0,
-                       i32 0, i32 0, i32 0, i32 0, i32* %a)
+                       i32 0, i32 0, i32 0, i32 0, ptr %a)
   ret void
 }
 
 ; Verify that we use $fp for referencing incoming arguments.
 
-declare void @helper_03(i32, i32, i32, i32, i32*, i32*)
+declare void @helper_03(i32, i32, i32, i32, ptr, ptr)
 
 ; O32 ABI
-define void @func_03(i32 %p0, i32 %p1, i32 %p2, i32 %p3, i32* %b) {
+define void @func_03(i32 %p0, i32 %p1, i32 %p2, i32 %p3, ptr %b) {
 entry:
 ; GP32-LABEL: func_03:
 
@@ -123,17 +123,17 @@ entry:
   ; GP32-MM-DAG:  sw16    $[[T1]], 20(${{[0-9]+}})
 
   %a = alloca i32, align 512
-  call void @helper_03(i32 0, i32 0, i32 0, i32 0, i32* %a, i32* %b)
+  call void @helper_03(i32 0, i32 0, i32 0, i32 0, ptr %a, ptr %b)
   ret void
 }
 
 declare void @helper_04(i32, i32, i32, i32,
-                        i32, i32, i32, i32, i32*, i32*)
+                        i32, i32, i32, i32, ptr, ptr)
 
 ; N32/N64 ABIs
 define void @func_04(i32 %p0, i32 %p1, i32 %p2, i32 %p3,
                      i32 %p4, i32 %p5, i32 %p6, i32 %p7,
-                     i32* %b) {
+                     ptr %b) {
 entry:
 ; GP64-LABEL: func_04:
 
@@ -147,7 +147,7 @@ entry:
 
   %a = alloca i32, align 512
   call void @helper_04(i32 0, i32 0, i32 0, i32 0,
-                       i32 0, i32 0, i32 0, i32 0, i32* %a, i32* %b)
+                       i32 0, i32 0, i32 0, i32 0, ptr %a, ptr %b)
   ret void
 }
 
@@ -188,8 +188,8 @@ entry:
   %a0 = alloca i32, i32 %sz, align 512
   %a1 = alloca i32, align 4
 
-  store volatile i32 111, i32* %a0, align 512
-  store volatile i32 222, i32* %a1, align 4
+  store volatile i32 111, ptr %a0, align 512
+  store volatile i32 222, ptr %a1, align 4
 
   ret void
 }
@@ -227,8 +227,8 @@ entry:
   %a0 = alloca i32, i32 %sz, align 512
   %a1 = alloca i32, align 4
 
-  store volatile i32 111, i32* %a0, align 512
-  store volatile i32 222, i32* %a1, align 4
+  store volatile i32 111, ptr %a0, align 512
+  store volatile i32 222, ptr %a1, align 4
 
   ret void
 }
@@ -254,10 +254,10 @@ entry:
   %a0 = alloca i32, i32 %sz, align 512
   %a1 = alloca i32, align 4
 
-  store volatile i32 111, i32* %a0, align 512
-  store volatile i32 222, i32* %a1, align 4
+  store volatile i32 111, ptr %a0, align 512
+  store volatile i32 222, ptr %a1, align 4
 
-  call void @helper_01(i32 0, i32 0, i32 0, i32 0, i32* %a1)
+  call void @helper_01(i32 0, i32 0, i32 0, i32 0, ptr %a1)
 
   ret void
 }
@@ -282,11 +282,11 @@ entry:
   %a0 = alloca i32, i32 %sz, align 512
   %a1 = alloca i32, align 4
 
-  store volatile i32 111, i32* %a0, align 512
-  store volatile i32 222, i32* %a1, align 4
+  store volatile i32 111, ptr %a0, align 512
+  store volatile i32 222, ptr %a1, align 4
 
   call void @helper_02(i32 0, i32 0, i32 0, i32 0,
-                       i32 0, i32 0, i32 0, i32 0, i32* %a1)
+                       i32 0, i32 0, i32 0, i32 0, ptr %a1)
   ret void
 }
 
@@ -299,7 +299,7 @@ entry:
   ; ALL-NOT:  and     $sp, $sp, $[[T0:[0-9]+|ra|gp]]
 
   %a = alloca i32, align 512
-  call void @helper_01(i32 0, i32 0, i32 0, i32 0, i32* %a)
+  call void @helper_01(i32 0, i32 0, i32 0, i32 0, ptr %a)
   ret void
 }
 
@@ -312,8 +312,8 @@ entry:
   %a0 = alloca i32, i32 %sz, align 512
   %a1 = alloca i32, align 4
 
-  store volatile i32 111, i32* %a0, align 512
-  store volatile i32 222, i32* %a1, align 4
+  store volatile i32 111, ptr %a0, align 512
+  store volatile i32 222, ptr %a1, align 4
 
   ret void
 }

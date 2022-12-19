@@ -12,18 +12,18 @@
 
 define void @test() nounwind {
 entry:
-  %0 = load i32, i32* @k, align 4
-  %1 = load i32, i32* @j, align 4
+  %0 = load i32, ptr @k, align 4
+  %1 = load i32, ptr @j, align 4
   %cmp = icmp sge i32 %0, %1
   %conv = zext i1 %cmp to i32
-  store i32 %conv, i32* @r1, align 4
+  store i32 %conv, ptr @r1, align 4
 ; 16:   slt   ${{[0-9]+}}, ${{[0-9]+}}
 ; MMR6: slt   ${{[0-9]+}}, ${{[0-9]+}}, ${{[0-9]+}}
 ; 16:   move  $[[REGISTER:[0-9]+]], $24
 ; 16:   xor   $[[REGISTER]], ${{[0-9]+}}
-  %2 = load i32, i32* @m, align 4
+  %2 = load i32, ptr @m, align 4
   %cmp1 = icmp sge i32 %0, %2
   %conv2 = zext i1 %cmp1 to i32
-  store i32 %conv2, i32* @r2, align 4
+  store i32 %conv2, ptr @r2, align 4
   ret void
 }

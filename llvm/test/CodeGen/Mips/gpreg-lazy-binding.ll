@@ -19,13 +19,13 @@ declare void @externalFunc()
 
 define internal fastcc void @internalFunc() nounwind noinline {
 entry:
-  %0 = load i32, i32* @g, align 4
+  %0 = load i32, ptr @g, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* @g, align 4
+  store i32 %inc, ptr @g, align 4
   ret void
 }
 
-define void @no_lazy(void (i32)* %pf) {
+define void @no_lazy(ptr %pf) {
 
 ; CHECK-LABEL:  no_lazy
 ; CHECK-NOT:    gp_disp

@@ -4,8 +4,8 @@
 define i32 @main() #0 {
 entry:
   %jmp = alloca i32, align 4
-  store i32 0, i32* %jmp, align 4
-  %0 = load i32, i32* %jmp, align 4
+  store i32 0, ptr %jmp, align 4
+  %0 = load i32, ptr %jmp, align 4
   call void asm sideeffect "jr $0", "c,~{$1}"(i32 %0) #1
 
 ; CHECK: addiu   $25, $zero, 0
