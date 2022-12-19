@@ -7,13 +7,13 @@ declare void @otherfn()
 ; CHECK: itt ne
 ; CHECK: movne
 ; CHECK: strne
-define i32 @triangle1(i32 %n, i32* %p) {
+define i32 @triangle1(i32 %n, ptr %p) {
 entry:
   %tobool = icmp eq i32 %n, 0
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:
-  store i32 1, i32* %p, align 4
+  store i32 1, ptr %p, align 4
   br label %if.end
 
 if.end:
@@ -32,14 +32,14 @@ if.end:
 ; CHECK-NOBP: str
 ; CHECK-NOBP: movs
 ; CHECK-NOBP: str
-define i32 @triangle2(i32 %n, i32* %p, i32* %q) {
+define i32 @triangle2(i32 %n, ptr %p, ptr %q) {
 entry:
   %tobool = icmp eq i32 %n, 0
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:
-  store i32 1, i32* %p, align 4
-  store i32 2, i32* %q, align 4
+  store i32 1, ptr %p, align 4
+  store i32 2, ptr %q, align 4
   br label %if.end
 
 if.end:
@@ -55,16 +55,16 @@ if.end:
 ; CHECK: str
 ; CHECK: movs
 ; CHECK: str
-define i32 @triangle3(i32 %n, i32* %p, i32* %q, i32* %r) {
+define i32 @triangle3(i32 %n, ptr %p, ptr %q, ptr %r) {
 entry:
   %tobool = icmp eq i32 %n, 0
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:
-  store i32 1, i32* %p, align 4
-  store i32 2, i32* %q, align 4
-  store i32 3, i32* %r, align 4
-  store i32 4, i32* %p, align 4
+  store i32 1, ptr %p, align 4
+  store i32 2, ptr %q, align 4
+  store i32 3, ptr %r, align 4
+  store i32 4, ptr %p, align 4
   br label %if.end
 
 if.end:
@@ -76,17 +76,17 @@ if.end:
 ; CHECK: itee eq
 ; CHECK: ldreq
 ; CHECK: strne
-define i32 @diamond1(i32 %n, i32* %p) {
+define i32 @diamond1(i32 %n, ptr %p) {
 entry:
   %tobool = icmp eq i32 %n, 0
   br i1 %tobool, label %if.else, label %if.then
 
 if.then:
-  store i32 %n, i32* %p, align 4
+  store i32 %n, ptr %p, align 4
   br label %if.end
 
 if.else:
-  %0 = load i32, i32* %p, align 4
+  %0 = load i32, ptr %p, align 4
   br label %if.end
 
 if.end:
@@ -107,19 +107,19 @@ if.end:
 ; CHECK-NOBP: addeq
 ; CHECK-NOBP: strne
 ; CHECK-NOBP: strne
-define i32 @diamond2(i32 %n, i32* %p, i32* %q) {
+define i32 @diamond2(i32 %n, ptr %p, ptr %q) {
 entry:
   %tobool = icmp eq i32 %n, 0
   br i1 %tobool, label %if.else, label %if.then
 
 if.then:
-  store i32 %n, i32* %p, align 4
-  %arrayidx = getelementptr inbounds i32, i32* %p, i32 2
-  store i32 %n, i32* %arrayidx, align 4
+  store i32 %n, ptr %p, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %p, i32 2
+  store i32 %n, ptr %arrayidx, align 4
   br label %if.end
 
 if.else:
-  store i32 %n, i32* %q, align 4
+  store i32 %n, ptr %q, align 4
   %0 = add i32 %n, 10
   br label %if.end
 
@@ -137,18 +137,18 @@ if.end:
 ; CHECK: ldr
 ; CHECK: ldr
 ; CHECK: adds
-define i32 @diamond3(i32 %n, i32* %p, i32* %q) {
+define i32 @diamond3(i32 %n, ptr %p, ptr %q) {
 entry:
   %tobool = icmp eq i32 %n, 0
   br i1 %tobool, label %if.else, label %if.then
 
 if.then:
-  store i32 1, i32* %p, align 4
+  store i32 1, ptr %p, align 4
   br label %if.end
 
 if.else:
-  %0 = load i32, i32* %p, align 4
-  %1 = load i32, i32* %q, align 4
+  %0 = load i32, ptr %p, align 4
+  %1 = load i32, ptr %q, align 4
   %add = add nsw i32 %1, %0
   br label %if.end
 

@@ -21,7 +21,7 @@
 ; CHECK-NOT:   $lr = t2DLS killed renamable $lr
 ; CHECK: bb.3.while.body:
 ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.3
-define void @ne_and_guard(i1 zeroext %t1, i1 zeroext %t2, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
+define void @ne_and_guard(i1 zeroext %t1, i1 zeroext %t2, ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
   %brmerge.demorgan = and i1 %t1, %t2
   %cmp6 = icmp ne i32 %N, 0
@@ -30,12 +30,12 @@ entry:
 
 while.body:                                       ; preds = %while.body, %entry
   %i.09 = phi i32 [ %inc, %while.body ], [ 0, %entry ]
-  %a.addr.08 = phi i32* [ %incdec.ptr3, %while.body ], [ %a, %entry ]
-  %b.addr.07 = phi i32* [ %incdec.ptr, %while.body ], [ %b, %entry ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %b.addr.07, i32 1
-  %tmp = load i32, i32* %b.addr.07, align 4
-  %incdec.ptr3 = getelementptr inbounds i32, i32* %a.addr.08, i32 1
-  store i32 %tmp, i32* %a.addr.08, align 4
+  %a.addr.08 = phi ptr [ %incdec.ptr3, %while.body ], [ %a, %entry ]
+  %b.addr.07 = phi ptr [ %incdec.ptr, %while.body ], [ %b, %entry ]
+  %incdec.ptr = getelementptr inbounds i32, ptr %b.addr.07, i32 1
+  %tmp = load i32, ptr %b.addr.07, align 4
+  %incdec.ptr3 = getelementptr inbounds i32, ptr %a.addr.08, i32 1
+  store i32 %tmp, ptr %a.addr.08, align 4
   %inc = add nuw i32 %i.09, 1
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %if.end, label %while.body
@@ -54,7 +54,7 @@ if.end:                                           ; preds = %while.body, %entry
 ; CHECK-NOT:   $lr = t2DLS killed renamable $lr
 ; CHECK: bb.3.while.body:
 ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.3
-define void @ne_preheader(i1 zeroext %t1, i1 zeroext %t2, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
+define void @ne_preheader(i1 zeroext %t1, i1 zeroext %t2, ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
   %brmerge.demorgan = and i1 %t1, %t2
   br i1 %brmerge.demorgan, label %while.preheader, label %if.end
@@ -65,12 +65,12 @@ while.preheader:                                  ; preds = %entry
 
 while.body:                                       ; preds = %while.body, %while.preheader
   %i.09 = phi i32 [ %inc, %while.body ], [ 0, %while.preheader ]
-  %a.addr.08 = phi i32* [ %incdec.ptr3, %while.body ], [ %a, %while.preheader ]
-  %b.addr.07 = phi i32* [ %incdec.ptr, %while.body ], [ %b, %while.preheader ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %b.addr.07, i32 1
-  %tmp = load i32, i32* %b.addr.07, align 4
-  %incdec.ptr3 = getelementptr inbounds i32, i32* %a.addr.08, i32 1
-  store i32 %tmp, i32* %a.addr.08, align 4
+  %a.addr.08 = phi ptr [ %incdec.ptr3, %while.body ], [ %a, %while.preheader ]
+  %b.addr.07 = phi ptr [ %incdec.ptr, %while.body ], [ %b, %while.preheader ]
+  %incdec.ptr = getelementptr inbounds i32, ptr %b.addr.07, i32 1
+  %tmp = load i32, ptr %b.addr.07, align 4
+  %incdec.ptr3 = getelementptr inbounds i32, ptr %a.addr.08, i32 1
+  store i32 %tmp, ptr %a.addr.08, align 4
   %inc = add nuw i32 %i.09, 1
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %if.end, label %while.body
@@ -89,7 +89,7 @@ if.end:                                           ; preds = %while.body, %while.
 ; CHECK-NOT:   $lr = t2DLS killed renamable $lr
 ; CHECK: bb.3.while.body:
 ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.3
-define void @eq_preheader(i1 zeroext %t1, i1 zeroext %t2, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
+define void @eq_preheader(i1 zeroext %t1, i1 zeroext %t2, ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
   %brmerge.demorgan = and i1 %t1, %t2
   br i1 %brmerge.demorgan, label %while.preheader, label %if.end
@@ -100,12 +100,12 @@ while.preheader:                                  ; preds = %entry
 
 while.body:                                       ; preds = %while.body, %while.preheader
   %i.09 = phi i32 [ %inc, %while.body ], [ 0, %while.preheader ]
-  %a.addr.08 = phi i32* [ %incdec.ptr3, %while.body ], [ %a, %while.preheader ]
-  %b.addr.07 = phi i32* [ %incdec.ptr, %while.body ], [ %b, %while.preheader ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %b.addr.07, i32 1
-  %tmp = load i32, i32* %b.addr.07, align 4
-  %incdec.ptr3 = getelementptr inbounds i32, i32* %a.addr.08, i32 1
-  store i32 %tmp, i32* %a.addr.08, align 4
+  %a.addr.08 = phi ptr [ %incdec.ptr3, %while.body ], [ %a, %while.preheader ]
+  %b.addr.07 = phi ptr [ %incdec.ptr, %while.body ], [ %b, %while.preheader ]
+  %incdec.ptr = getelementptr inbounds i32, ptr %b.addr.07, i32 1
+  %tmp = load i32, ptr %b.addr.07, align 4
+  %incdec.ptr3 = getelementptr inbounds i32, ptr %a.addr.08, i32 1
+  store i32 %tmp, ptr %a.addr.08, align 4
   %inc = add nuw i32 %i.09, 1
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %if.end, label %while.body
@@ -124,7 +124,7 @@ if.end:                                           ; preds = %while.body, %while.
 ; CHECK-NOT:   $lr = t2DLS killed renamable $lr
 ; CHECK: bb.3.while.body:
 ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.3
-define void @ne_prepreheader(i1 zeroext %t1, i1 zeroext %t2, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
+define void @ne_prepreheader(i1 zeroext %t1, i1 zeroext %t2, ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
   %cmp = icmp ne i32 %N, 0
   br i1 %cmp, label %while.preheader, label %if.end
@@ -135,12 +135,12 @@ while.preheader:                                  ; preds = %entry
 
 while.body:                                       ; preds = %while.body, %while.preheader
   %i.09 = phi i32 [ %inc, %while.body ], [ 0, %while.preheader ]
-  %a.addr.08 = phi i32* [ %incdec.ptr3, %while.body ], [ %a, %while.preheader ]
-  %b.addr.07 = phi i32* [ %incdec.ptr, %while.body ], [ %b, %while.preheader ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %b.addr.07, i32 1
-  %tmp = load i32, i32* %b.addr.07, align 4
-  %incdec.ptr3 = getelementptr inbounds i32, i32* %a.addr.08, i32 1
-  store i32 %tmp, i32* %a.addr.08, align 4
+  %a.addr.08 = phi ptr [ %incdec.ptr3, %while.body ], [ %a, %while.preheader ]
+  %b.addr.07 = phi ptr [ %incdec.ptr, %while.body ], [ %b, %while.preheader ]
+  %incdec.ptr = getelementptr inbounds i32, ptr %b.addr.07, i32 1
+  %tmp = load i32, ptr %b.addr.07, align 4
+  %incdec.ptr3 = getelementptr inbounds i32, ptr %a.addr.08, i32 1
+  store i32 %tmp, ptr %a.addr.08, align 4
   %inc = add nuw i32 %i.09, 1
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %if.end, label %while.body
@@ -155,7 +155,7 @@ if.end:                                           ; preds = %while.body, %while.
 ; CHECK:   $lr =
 ; CHECK: bb.2.do.body:
 ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
-define void @be_ne(i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
+define void @be_ne(ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
   %cmp = icmp ne i32 %N, 0
   %sub = sub i32 %N, 1
@@ -164,13 +164,13 @@ entry:
   br i1 %cmp.1, label %do.body, label %if.end
 
 do.body:                                          ; preds = %do.body, %entry
-  %b.addr.0 = phi i32* [ %incdec.ptr, %do.body ], [ %b, %entry ]
-  %a.addr.0 = phi i32* [ %incdec.ptr3, %do.body ], [ %a, %entry ]
+  %b.addr.0 = phi ptr [ %incdec.ptr, %do.body ], [ %b, %entry ]
+  %a.addr.0 = phi ptr [ %incdec.ptr3, %do.body ], [ %a, %entry ]
   %i.0 = phi i32 [ %inc, %do.body ], [ 0, %entry ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %b.addr.0, i32 1
-  %tmp = load i32, i32* %b.addr.0, align 4
-  %incdec.ptr3 = getelementptr inbounds i32, i32* %a.addr.0, i32 1
-  store i32 %tmp, i32* %a.addr.0, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %b.addr.0, i32 1
+  %tmp = load i32, ptr %b.addr.0, align 4
+  %incdec.ptr3 = getelementptr inbounds i32, ptr %a.addr.0, i32 1
+  store i32 %tmp, ptr %a.addr.0, align 4
   %inc = add nuw i32 %i.0, 1
   %cmp.2 = icmp ult i32 %inc, %N
   br i1 %cmp.2, label %do.body, label %if.end
@@ -186,7 +186,7 @@ if.end:                                           ; preds = %do.body, %entry
 ; CHECK: bb.1.do.body.preheader:
 ; CHECK: bb.2.do.body:
 ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
-define void @ne_trip_count(i1 zeroext %t1, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
+define void @ne_trip_count(i1 zeroext %t1, ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
   br label %do.body.preheader
 
@@ -195,13 +195,13 @@ do.body.preheader:
   br i1 %cmp, label %do.body, label %if.end
 
 do.body:
-  %b.addr.0 = phi i32* [ %incdec.ptr, %do.body ], [ %b, %do.body.preheader ]
-  %a.addr.0 = phi i32* [ %incdec.ptr3, %do.body ], [ %a, %do.body.preheader ]
+  %b.addr.0 = phi ptr [ %incdec.ptr, %do.body ], [ %b, %do.body.preheader ]
+  %a.addr.0 = phi ptr [ %incdec.ptr3, %do.body ], [ %a, %do.body.preheader ]
   %i.0 = phi i32 [ %inc, %do.body ], [ 0, %do.body.preheader ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %b.addr.0, i32 1
-  %tmp = load i32, i32* %b.addr.0, align 4
-  %incdec.ptr3 = getelementptr inbounds i32, i32* %a.addr.0, i32 1
-  store i32 %tmp, i32* %a.addr.0, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %b.addr.0, i32 1
+  %tmp = load i32, ptr %b.addr.0, align 4
+  %incdec.ptr3 = getelementptr inbounds i32, ptr %a.addr.0, i32 1
+  store i32 %tmp, ptr %a.addr.0, align 4
   %inc = add nuw i32 %i.0, 1
   %cmp.1 = icmp ult i32 %inc, %N
   br i1 %cmp.1, label %do.body, label %if.end

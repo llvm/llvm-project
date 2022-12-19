@@ -3,9 +3,9 @@
 target triple = "thumbv7-linux-androideabi"
 
 define i1 @f() {
-  %a = alloca i8*
+  %a = alloca ptr
   ; CHECK: adds.w r0, sp, #0
   ; CHECK: it ne
-  %cmp = icmp ne i8** %a, null
+  %cmp = icmp ne ptr %a, null
   ret i1 %cmp
 }
