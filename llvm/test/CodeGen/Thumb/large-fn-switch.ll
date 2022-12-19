@@ -7,7 +7,7 @@
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv6m-unknown-unknown-eabi"
 
-define dso_local i32 @a(i32 %x, i32* nocapture %p) {
+define dso_local i32 @a(i32 %x, ptr nocapture %p) {
 entry:
   switch i32 %x, label %return [
     i32 0, label %GO2
@@ -703,7 +703,7 @@ GO2:
   br label %return
 
 GO3:
-  store i32 3, i32* %p, align 4
+  store i32 3, ptr %p, align 4
   br label %return
 
 return:
