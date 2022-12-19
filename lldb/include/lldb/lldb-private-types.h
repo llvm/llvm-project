@@ -62,6 +62,8 @@ struct RegisterInfo {
   /// this register changes. For example, the invalidate list for eax would be
   /// rax ax, ah, and al.
   uint32_t *invalidate_regs;
+  // Will be replaced with register flags info in the next patch.
+  void *unused;
 
   llvm::ArrayRef<uint8_t> data(const uint8_t *context_base) const {
     return llvm::ArrayRef<uint8_t>(context_base + byte_offset, byte_size);

@@ -38,7 +38,7 @@ using namespace lldb_private;
                                  {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    \
                                   LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    \
                                   dbg_##reg##i },                              \
-                                  NULL, NULL,
+                                  NULL, NULL, NULL,
 #define REG_CONTEXT_SIZE                                                       \
   (sizeof(RegisterInfoPOSIX_arm::GPR) + sizeof(RegisterInfoPOSIX_arm::FPU) +   \
    sizeof(RegisterInfoPOSIX_arm::EXC))
