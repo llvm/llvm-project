@@ -60,7 +60,7 @@ public:
 
   unsigned int GetVersionAtIndex(size_t idx) const { return m_versions[idx]; }
 
-  std::string GetFamily() const { return m_family; }
+  std::string GetFamily() const { return m_family.c_str(); }
 
 private:
   std::string m_family;

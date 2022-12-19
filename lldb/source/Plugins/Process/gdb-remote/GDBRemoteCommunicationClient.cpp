@@ -1333,7 +1333,7 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
               else
                 triple += os_name;
             }
-            m_host_arch.SetTriple(triple);
+            m_host_arch.SetTriple(triple.c_str());
 
             llvm::Triple &host_triple = m_host_arch.GetTriple();
             if (host_triple.getVendor() == llvm::Triple::Apple &&
@@ -1358,7 +1358,7 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
             }
           }
         } else {
-          m_host_arch.SetTriple(triple);
+          m_host_arch.SetTriple(triple.c_str());
           if (pointer_byte_size) {
             assert(pointer_byte_size == m_host_arch.GetAddressByteSize());
           }
@@ -1615,7 +1615,7 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
           std::string error_string;
           // Now convert the HEX bytes into a string value
           error_extractor.GetHexByteString(error_string);
-          error.SetErrorString(error_string);
+          error.SetErrorString(error_string.c_str());
         } else if (name.equals("dirty-pages")) {
           std::vector<addr_t> dirty_page_list;
           for (llvm::StringRef x : llvm::split(value, ',')) {
@@ -2023,7 +2023,7 @@ bool GDBRemoteCommunicationClient::DecodeProcessInfoResponse(
         StringExtractor extractor(value);
         std::string triple;
         extractor.GetHexByteString(triple);
-        process_info.GetArchitecture().SetTriple(triple);
+        process_info.GetArchitecture().SetTriple(triple.c_str());
       } else if (name.equals("name")) {
         StringExtractor extractor(value);
         // The process name from ASCII hex bytes since we can't control the
@@ -2205,7 +2205,7 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
 
       // Set the ArchSpec from the triple if we have it.
       if (!triple.empty()) {
-        m_process_arch.SetTriple(triple);
+        m_process_arch.SetTriple(triple.c_str());
         m_process_arch.SetFlags(elf_abi);
         if (pointer_byte_size) {
           assert(pointer_byte_size == m_process_arch.GetAddressByteSize());
@@ -3805,7 +3805,7 @@ bool GDBRemoteCommunicationClient::GetModuleInfo(
       StringExtractor extractor(value);
       std::string triple;
       extractor.GetHexByteString(triple);
-      module_spec.GetArchitecture().SetTriple(triple);
+      module_spec.GetArchitecture().SetTriple(triple.c_str());
     } else if (name == "file_offset") {
       uint64_t ival = 0;
       if (!value.getAsInteger(16, ival))

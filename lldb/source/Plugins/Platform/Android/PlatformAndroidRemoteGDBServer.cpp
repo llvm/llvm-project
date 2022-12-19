@@ -95,8 +95,8 @@ bool PlatformAndroidRemoteGDBServer::LaunchGDBServer(lldb::pid_t &pid,
   if (gdbstub_port)
     local_port = std::stoi(gdbstub_port);
 
-  auto error =
-      MakeConnectURL(pid, local_port, remote_port, socket_name, connect_url);
+  auto error = MakeConnectURL(pid, local_port, remote_port, socket_name.c_str(),
+                              connect_url);
   if (error.Success() && log)
     LLDB_LOGF(log, "gdbserver connect URL: %s", connect_url.c_str());
 

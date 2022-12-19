@@ -381,12 +381,12 @@ static void NSNumber_FormatInt128(ValueObject &valobj, Stream &stream,
     }
   }
 
-  stream.PutCString(prefix);
+  stream.PutCString(prefix.c_str());
   const int radix = 10;
   const bool isSigned = true;
   std::string str = llvm::toString(value, radix, isSigned);
-  stream.PutCString(str);
-  stream.PutCString(suffix);
+  stream.PutCString(str.c_str());
+  stream.PutCString(suffix.c_str());
 }
 
 static void NSNumber_FormatFloat(ValueObject &valobj, Stream &stream,

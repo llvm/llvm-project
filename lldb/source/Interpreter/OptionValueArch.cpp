@@ -45,7 +45,7 @@ Status OptionValueArch::SetValueFromString(llvm::StringRef value,
   case eVarSetOperationReplace:
   case eVarSetOperationAssign: {
     std::string value_str = value.trim().str();
-    if (m_current_value.SetTriple(value_str)) {
+    if (m_current_value.SetTriple(value_str.c_str())) {
       m_value_was_set = true;
       NotifyValueChanged();
     } else

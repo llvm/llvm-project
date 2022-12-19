@@ -350,7 +350,7 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
         (CFDictionaryRef)uuid_dict, CFSTR("DBGSymbolRichExecutable"));
     if (cf_str && CFGetTypeID(cf_str) == CFStringGetTypeID()) {
       if (CFCString::FileSystemRepresentation(cf_str, str)) {
-        module_spec.GetFileSpec().SetFile(str, FileSpec::Style::native);
+        module_spec.GetFileSpec().SetFile(str.c_str(), FileSpec::Style::native);
         FileSystem::Instance().Resolve(module_spec.GetFileSpec());
         LLDB_LOGF(log,
                   "From dsymForUUID plist: Symbol rich executable is at '%s'",
@@ -362,7 +362,8 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
                                                CFSTR("DBGDSYMPath"));
     if (cf_str && CFGetTypeID(cf_str) == CFStringGetTypeID()) {
       if (CFCString::FileSystemRepresentation(cf_str, str)) {
-        module_spec.GetSymbolFileSpec().SetFile(str, FileSpec::Style::native);
+        module_spec.GetSymbolFileSpec().SetFile(str.c_str(),
+                                                FileSpec::Style::native);
         FileSystem::Instance().Resolve(module_spec.GetFileSpec());
         success = true;
         LLDB_LOGF(log, "From dsymForUUID plist: dSYM is at '%s'", str.c_str());
@@ -433,7 +434,7 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
               DBGSourcePath = original_DBGSourcePath_value;
             }
             if (DBGSourcePath[0] == '~') {
-              FileSpec resolved_source_path(DBGSourcePath);
+              FileSpec resolved_source_path(DBGSourcePath.c_str());
               FileSystem::Instance().Resolve(resolved_source_path);
               DBGSourcePath = resolved_source_path.GetPath();
             }
@@ -444,8 +445,8 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
             module_spec.GetSourceMappingList().Append(DBGBuildSourcePath,
                                                       DBGSourcePath, true);
             if (do_truncate_remapping_names) {
-              FileSpec build_path(DBGBuildSourcePath);
-              FileSpec source_path(DBGSourcePath);
+              FileSpec build_path(DBGBuildSourcePath.c_str());
+              FileSpec source_path(DBGSourcePath.c_str());
               build_path.RemoveLastPathComponent();
               build_path.RemoveLastPathComponent();
               source_path.RemoveLastPathComponent();
@@ -479,7 +480,7 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
 
     if (!DBGBuildSourcePath.empty() && !DBGSourcePath.empty()) {
       if (DBGSourcePath[0] == '~') {
-        FileSpec resolved_source_path(DBGSourcePath);
+        FileSpec resolved_source_path(DBGSourcePath.c_str());
         FileSystem::Instance().Resolve(resolved_source_path);
         DBGSourcePath = resolved_source_path.GetPath();
       }

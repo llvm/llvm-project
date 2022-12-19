@@ -145,15 +145,15 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
           return false;
         } else if (!sub_cmd_obj) {
           StreamString error_msg_stream;
-          GenerateAdditionalHelpAvenuesMessage(&error_msg_stream, cmd_string,
-                                               m_interpreter.GetCommandPrefix(),
-                                               sub_command);
+          GenerateAdditionalHelpAvenuesMessage(
+              &error_msg_stream, cmd_string.c_str(),
+              m_interpreter.GetCommandPrefix(), sub_command.c_str());
           result.AppendError(error_msg_stream.GetString());
           return false;
         } else {
           GenerateAdditionalHelpAvenuesMessage(
-              &result.GetOutputStream(), cmd_string,
-              m_interpreter.GetCommandPrefix(), sub_command);
+              &result.GetOutputStream(), cmd_string.c_str(),
+              m_interpreter.GetCommandPrefix(), sub_command.c_str());
           result.GetOutputStream().Printf(
               "\nThe closest match is '%s'. Help on it follows.\n\n",
               sub_cmd_obj->GetCommandName().str().c_str());
