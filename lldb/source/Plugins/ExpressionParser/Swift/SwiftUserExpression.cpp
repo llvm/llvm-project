@@ -363,7 +363,7 @@ static bool AddVariableInfo(
       variable_sp->GetScope(), variable_sp->GetSymbolContextScope(),
       variable_sp->GetScopeRange(),
       const_cast<lldb_private::Declaration *>(&variable_sp->GetDeclaration()),
-      variable_sp->LocationExpression(), variable_sp->IsExternal(),
+      variable_sp->LocationExpressionList(), variable_sp->IsExternal(),
       variable_sp->IsArtificial(),
       variable_sp->GetLocationIsConstantValueData(),
       variable_sp->IsStaticMember(), variable_sp->IsConstant());
