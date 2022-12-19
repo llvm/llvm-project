@@ -458,6 +458,9 @@ def FeatureHBC : SubtargetFeature<"hbc", "HasHBC",
 def FeatureMOPS : SubtargetFeature<"mops", "HasMOPS",
     "true", "Enable Armv8.8-A memcpy and memset acceleration instructions (FEAT_MOPS)">;
 
+def FeatureNMI : SubtargetFeature<"nmi", "HasNMI",
+    "true", "Enable Armv8.8-A Non-maskable Interrupts (FEAT_NMI, FEAT_GICv3_NMI)">;
+
 def FeatureBRBE : SubtargetFeature<"brbe", "HasBRBE",
     "true", "Enable Branch Record Buffer Extension (FEAT_BRBE)">;
 
@@ -588,7 +591,7 @@ def HasV8_7aOps : SubtargetFeature<
 
 def HasV8_8aOps : SubtargetFeature<
   "v8.8a", "HasV8_8aOps", "true", "Support ARM v8.8a instructions",
-  [HasV8_7aOps, FeatureHBC, FeatureMOPS]>;
+  [HasV8_7aOps, FeatureHBC, FeatureMOPS, FeatureNMI]>;
 
 def HasV8_9aOps : SubtargetFeature<
   "v8.9a", "HasV8_9aOps", "true", "Support ARM v8.9a instructions",
