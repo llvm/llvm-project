@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=thumbv8.1m.main-none-eabi -mattr=+mve --verify-machineinstrs %s -o - | FileCheck %s
 
 ; Tail predicated so we use DLSTP
-define void @simple(i32* nocapture readonly %x, i32* nocapture readnone %y, i32* nocapture %z, i32 %m, i32 %n) {
+define void @simple(ptr nocapture readonly %x, ptr nocapture readnone %y, ptr nocapture %z, i32 %m, i32 %n) {
 ; CHECK-LABEL: simple:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -32,13 +32,12 @@ do.body:                                          ; preds = %entry, %do.body
   %n.addr.0 = phi i32 [ %sub, %do.body ], [ %n, %entry ]
   %count.0 = phi i32 [ %sub3, %do.body ], [ %div, %entry ]
   %s.0 = phi i32 [ %add2, %do.body ], [ %m, %entry ]
-  %x.addr.0 = phi i32* [ %add.ptr, %do.body ], [ %x, %entry ]
+  %x.addr.0 = phi ptr [ %add.ptr, %do.body ], [ %x, %entry ]
   %0 = tail call <4 x i1> @llvm.arm.mve.vctp32(i32 %n.addr.0)
-  %1 = bitcast i32* %x.addr.0 to <4 x i32>*
-  %2 = load <4 x i32>, <4 x i32>* %1, align 4
-  %3 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %2, i32 0, <4 x i1> %0)
-  %add2 = add nsw i32 %3, %s.0
-  %add.ptr = getelementptr inbounds i32, i32* %x.addr.0, i32 4
+  %1 = load <4 x i32>, ptr %x.addr.0, align 4
+  %2 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %1, i32 0, <4 x i1> %0)
+  %add2 = add nsw i32 %2, %s.0
+  %add.ptr = getelementptr inbounds i32, ptr %x.addr.0, i32 4
   %sub = add i32 %n.addr.0, -4
   %sub3 = add nsw i32 %count.0, -1
   %cmp4 = icmp sgt i32 %count.0, 1
@@ -46,12 +45,12 @@ do.body:                                          ; preds = %entry, %do.body
 
 if.end:                                           ; preds = %do.body, %entry
   %s.1 = phi i32 [ %m, %entry ], [ %add2, %do.body ]
-  store i32 %s.1, i32* %z, align 4
+  store i32 %s.1, ptr %z, align 4
   ret void
 }
 
 ; Tail predicated so we use DLSTP
-define void @nested(i32* nocapture readonly %x, i32* nocapture readnone %y, i32* nocapture %z, i32 %m, i32 %n) {
+define void @nested(ptr nocapture readonly %x, ptr nocapture readnone %y, ptr nocapture %z, i32 %m, i32 %n) {
 ; CHECK-LABEL: nested:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
@@ -102,7 +101,7 @@ for.cond.cleanup:                                 ; preds = %if.end, %entry
   ret void
 
 for.body:                                         ; preds = %entry, %if.end
-  %x.addr.023 = phi i32* [ %x.addr.2, %if.end ], [ %x, %entry ]
+  %x.addr.023 = phi ptr [ %x.addr.2, %if.end ], [ %x, %entry ]
   %a.022 = phi i32 [ %inc, %if.end ], [ 0, %entry ]
   %n.addr.021 = phi i32 [ %n.addr.2, %if.end ], [ %n, %entry ]
   %add = add i32 %n.addr.021, 3
@@ -112,35 +111,34 @@ for.body:                                         ; preds = %entry, %if.end
 
 do.body.preheader:                                ; preds = %for.body
   %0 = and i32 %add, -4
-  %scevgep = getelementptr i32, i32* %x.addr.023, i32 %0
+  %scevgep = getelementptr i32, ptr %x.addr.023, i32 %0
   br label %do.body
 
 do.body:                                          ; preds = %do.body.preheader, %do.body
   %n.addr.1 = phi i32 [ %sub, %do.body ], [ %n.addr.021, %do.body.preheader ]
   %count.0 = phi i32 [ %sub4, %do.body ], [ %div, %do.body.preheader ]
   %s.0 = phi i32 [ %add3, %do.body ], [ %m, %do.body.preheader ]
-  %x.addr.1 = phi i32* [ %add.ptr, %do.body ], [ %x.addr.023, %do.body.preheader ]
+  %x.addr.1 = phi ptr [ %add.ptr, %do.body ], [ %x.addr.023, %do.body.preheader ]
   %1 = tail call <4 x i1> @llvm.arm.mve.vctp32(i32 %n.addr.1)
-  %2 = bitcast i32* %x.addr.1 to <4 x i32>*
-  %3 = load <4 x i32>, <4 x i32>* %2, align 4
-  %4 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %3, i32 0, <4 x i1> %1)
-  %add3 = add nsw i32 %4, %s.0
-  %add.ptr = getelementptr inbounds i32, i32* %x.addr.1, i32 4
+  %2 = load <4 x i32>, ptr %x.addr.1, align 4
+  %3 = tail call i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32> %2, i32 0, <4 x i1> %1)
+  %add3 = add nsw i32 %3, %s.0
+  %add.ptr = getelementptr inbounds i32, ptr %x.addr.1, i32 4
   %sub = add i32 %n.addr.1, -4
   %sub4 = add nsw i32 %count.0, -1
   %cmp5 = icmp sgt i32 %count.0, 1
   br i1 %cmp5, label %do.body, label %if.end.loopexit
 
 if.end.loopexit:                                  ; preds = %do.body
-  %5 = sub i32 %n.addr.021, %0
+  %4 = sub i32 %n.addr.021, %0
   br label %if.end
 
 if.end:                                           ; preds = %if.end.loopexit, %for.body
-  %n.addr.2 = phi i32 [ %n.addr.021, %for.body ], [ %5, %if.end.loopexit ]
+  %n.addr.2 = phi i32 [ %n.addr.021, %for.body ], [ %4, %if.end.loopexit ]
   %s.1 = phi i32 [ %m, %for.body ], [ %add3, %if.end.loopexit ]
-  %x.addr.2 = phi i32* [ %x.addr.023, %for.body ], [ %scevgep, %if.end.loopexit ]
-  %arrayidx = getelementptr inbounds i32, i32* %z, i32 %a.022
-  store i32 %s.1, i32* %arrayidx, align 4
+  %x.addr.2 = phi ptr [ %x.addr.023, %for.body ], [ %scevgep, %if.end.loopexit ]
+  %arrayidx = getelementptr inbounds i32, ptr %z, i32 %a.022
+  store i32 %s.1, ptr %arrayidx, align 4
   %inc = add nuw nsw i32 %a.022, 1
   %exitcond.not = icmp eq i32 %inc, %m
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
@@ -151,7 +149,7 @@ declare i32 @llvm.arm.mve.addv.predicated.v4i32.v4i1(<4 x i32>, i32, <4 x i1>)
 
 
 ; Long test that was spilling lr between t2LoopDec and End
-define dso_local i32 @b(i32* %c, i32 %d, i32 %e, i32* %n) "frame-pointer"="all" {
+define dso_local i32 @b(ptr %c, i32 %d, i32 %e, ptr %n) "frame-pointer"="all" {
 ; CHECK-LABEL: b:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
@@ -238,26 +236,26 @@ define dso_local i32 @b(i32* %c, i32 %d, i32 %e, i32* %n) "frame-pointer"="all" 
 ; CHECK-NEXT:    pop.w {r8, r9, r10, r11}
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
-  %0 = inttoptr i32 %e to i32*
+  %0 = inttoptr i32 %e to ptr
   %tobool.not70 = icmp eq i32 %d, 0
   br i1 %tobool.not70, label %while.end, label %while.body
 
 while.body:                                       ; preds = %entry, %while.body
-  %p.077 = phi i32* [ %incdec.ptr22, %while.body ], [ inttoptr (i32 2 to i32*), %entry ]
-  %c.addr.076 = phi i32* [ %incdec.ptr1, %while.body ], [ %c, %entry ]
-  %n.075 = phi i32* [ %incdec.ptr43, %while.body ], [ %n, %entry ]
+  %p.077 = phi ptr [ %incdec.ptr22, %while.body ], [ inttoptr (i32 2 to ptr), %entry ]
+  %c.addr.076 = phi ptr [ %incdec.ptr1, %while.body ], [ %c, %entry ]
+  %n.075 = phi ptr [ %incdec.ptr43, %while.body ], [ %n, %entry ]
   %m.074 = phi i32 [ %conv35, %while.body ], [ undef, %entry ]
   %d.addr.073 = phi i32 [ %dec, %while.body ], [ %d, %entry ]
   %h.072 = phi i32 [ %conv41, %while.body ], [ undef, %entry ]
-  %incdec.ptr43 = getelementptr inbounds i32, i32* %n.075, i32 1
-  %1 = ptrtoint i32* %n.075 to i32
-  %2 = load i32, i32* %incdec.ptr43, align 4
-  %3 = load i32, i32* %c.addr.076, align 4
+  %incdec.ptr43 = getelementptr inbounds i32, ptr %n.075, i32 1
+  %1 = ptrtoint ptr %n.075 to i32
+  %2 = load i32, ptr %incdec.ptr43, align 4
+  %3 = load i32, ptr %c.addr.076, align 4
   %mul = mul nsw i32 %3, %1
   %conv = sext i32 %mul to i64
   %add = add nsw i64 %conv, 2147483648
-  %incdec.ptr1 = getelementptr inbounds i32, i32* %c.addr.076, i32 1
-  %4 = ptrtoint i32* %c.addr.076 to i32
+  %incdec.ptr1 = getelementptr inbounds i32, ptr %c.addr.076, i32 1
+  %4 = ptrtoint ptr %c.addr.076 to i32
   %mul2 = mul nsw i32 %2, %4
   %conv3 = sext i32 %mul2 to i64
   %add4 = add nsw i64 %conv3, 2147483648
@@ -266,7 +264,7 @@ while.body:                                       ; preds = %entry, %while.body
   %conv6 = ashr exact i64 %5, 32
   %conv7 = sext i32 %2 to i64
   %conv11 = sext i32 %h.072 to i64
-  %6 = load i32, i32* %incdec.ptr1, align 4
+  %6 = load i32, ptr %incdec.ptr1, align 4
   %mul12 = mul nsw i32 %6, %1
   %conv13 = sext i32 %mul12 to i64
   %add14 = add nuw nsw i64 %conv11, 2147483648
@@ -279,8 +277,8 @@ while.body:                                       ; preds = %entry, %while.body
   %sh_prom = zext i32 %2 to i64
   %shl = shl i64 %conv18, %sh_prom
   %conv21 = sext i32 %conv17 to i64
-  %incdec.ptr22 = getelementptr inbounds i32, i32* %p.077, i32 -1
-  %8 = load i32, i32* %p.077, align 4
+  %incdec.ptr22 = getelementptr inbounds i32, ptr %p.077, i32 -1
+  %8 = load i32, ptr %p.077, align 4
   %conv23 = sext i32 %8 to i64
   %conv24 = sext i32 %m.074 to i64
   %mul25 = mul nsw i64 %conv23, %conv24
@@ -288,7 +286,7 @@ while.body:                                       ; preds = %entry, %while.body
   %add26 = add nsw i64 %sub, %conv21
   %9 = shl i64 %shl, 30
   %conv27 = ashr i64 %9, 32
-  %10 = load i32, i32* %incdec.ptr22, align 4
+  %10 = load i32, ptr %incdec.ptr22, align 4
   %mul28 = mul nsw i32 %10, %m.074
   %add29 = add nsw i32 %mul28, 2
   %sh_prom30 = zext i32 %add29 to i64
@@ -297,8 +295,8 @@ while.body:                                       ; preds = %entry, %while.body
   %shr33 = ashr i64 %add26, %add32
   %11 = lshr i64 %shr33, 2
   %conv35 = trunc i64 %11 to i32
-  store i32 %conv35, i32* inttoptr (i32 2 to i32*), align 4
-  %12 = load i32, i32* %incdec.ptr22, align 4
+  store i32 %conv35, ptr inttoptr (i32 2 to ptr), align 4
+  %12 = load i32, ptr %incdec.ptr22, align 4
   %mul36 = mul nsw i32 %12, %2
   %sub37 = sub nsw i32 %conv17, %mul36
   %conv38 = sext i32 %sub37 to i64
@@ -306,8 +304,8 @@ while.body:                                       ; preds = %entry, %while.body
   %13 = lshr i64 %add39, 2
   %conv41 = trunc i64 %13 to i32
   %sub42 = sub nsw i32 0, %conv41
-  store i32 %sub42, i32* %0, align 4
-  store i32 %sub42, i32* %n.075, align 4
+  store i32 %sub42, ptr %0, align 4
+  store i32 %sub42, ptr %n.075, align 4
   %dec = add nsw i32 %d.addr.073, -1
   %tobool.not = icmp eq i32 %dec, 0
   br i1 %tobool.not, label %while.end, label %while.body
@@ -317,7 +315,7 @@ while.end:                                        ; preds = %while.body, %entry
 }
 
 declare void @callee()
-define void @callinpreheader(i32* noalias nocapture readonly %pAngle, i32* nocapture %pDst, i32 %size) {
+define void @callinpreheader(ptr noalias nocapture readonly %pAngle, ptr nocapture %pDst, i32 %size) {
 ; CHECK-LABEL: callinpreheader:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
@@ -350,8 +348,8 @@ for.body.ph:
 for.body:
   %i.09 = phi i32 [ %inc, %for.body ], [ 0, %for.body.ph ]
   %s.08 = phi i32 [ %add, %for.body ], [ 0, %for.body.ph ]
-  %arrayidx = getelementptr inbounds i32, i32* %pAngle, i32 %i.09
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %pAngle, i32 %i.09
+  %0 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %0, %s.08
   %inc = add nuw nsw i32 %i.09, 1
   %exitcond.not = icmp eq i32 %inc, %size
@@ -359,6 +357,6 @@ for.body:
 
 for.cond.cleanup:
   %s.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
-  store i32 %s.0.lcssa, i32* %pDst, align 4
+  store i32 %s.0.lcssa, ptr %pDst, align 4
   ret void
 }

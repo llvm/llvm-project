@@ -4,10 +4,10 @@
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv7em-arm-none-eabi"
 
-%struct.a = type { i32, %struct.b*, i8, i8, i8, i8, i8*, %struct.b*, i16, i16, i16, i16, i16, i16, i16, i16, i32, i32, i32, i32, i32, i32, i32 }
+%struct.a = type { i32, ptr, i8, i8, i8, i8, ptr, ptr, i16, i16, i16, i16, i16, i16, i16, i16, i32, i32, i32, i32, i32, i32, i32 }
 %struct.b = type { i8, i8, i8, i8, i32, i16, i16, i32, i32, i32, i32, [16 x i8], [64 x i8], [128 x i8], i32, [68 x i8] }
 
-define void @test(%struct.a* nocapture %dhcp, i16 zeroext %value) #0 {
+define void @test(ptr nocapture %dhcp, i16 zeroext %value) #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrh r2, [r0, #20]
@@ -27,23 +27,23 @@ define void @test(%struct.a* nocapture %dhcp, i16 zeroext %value) #0 {
 entry:
   %shr = lshr i16 %value, 8
   %conv1 = trunc i16 %shr to i8
-  %msg_out = getelementptr inbounds %struct.a, %struct.a* %dhcp, i32 0, i32 7
-  %0 = load %struct.b*, %struct.b** %msg_out, align 4
-  %options_out_len = getelementptr inbounds %struct.a, %struct.a* %dhcp, i32 0, i32 8
-  %1 = load i16, i16* %options_out_len, align 4
+  %msg_out = getelementptr inbounds %struct.a, ptr %dhcp, i32 0, i32 7
+  %0 = load ptr, ptr %msg_out, align 4
+  %options_out_len = getelementptr inbounds %struct.a, ptr %dhcp, i32 0, i32 8
+  %1 = load i16, ptr %options_out_len, align 4
   %inc = add i16 %1, 1
-  store i16 %inc, i16* %options_out_len, align 4
+  store i16 %inc, ptr %options_out_len, align 4
   %idxprom = zext i16 %1 to i32
-  %arrayidx = getelementptr inbounds %struct.b, %struct.b* %0, i32 0, i32 15, i32 %idxprom
-  store i8 %conv1, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds %struct.b, ptr %0, i32 0, i32 15, i32 %idxprom
+  store i8 %conv1, ptr %arrayidx, align 1
   %conv4 = trunc i16 %value to i8
-  %2 = load %struct.b*, %struct.b** %msg_out, align 4
-  %3 = load i16, i16* %options_out_len, align 4
+  %2 = load ptr, ptr %msg_out, align 4
+  %3 = load i16, ptr %options_out_len, align 4
   %inc8 = add i16 %3, 1
-  store i16 %inc8, i16* %options_out_len, align 4
+  store i16 %inc8, ptr %options_out_len, align 4
   %idxprom9 = zext i16 %3 to i32
-  %arrayidx10 = getelementptr inbounds %struct.b, %struct.b* %2, i32 0, i32 15, i32 %idxprom9
-  store i8 %conv4, i8* %arrayidx10, align 1
+  %arrayidx10 = getelementptr inbounds %struct.b, ptr %2, i32 0, i32 15, i32 %idxprom9
+  store i8 %conv4, ptr %arrayidx10, align 1
   ret void
 }
 

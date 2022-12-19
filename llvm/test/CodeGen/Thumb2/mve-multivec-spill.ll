@@ -4,7 +4,7 @@
 
 declare void @external_function()
 
-define arm_aapcs_vfpcc void @spill_multivector(<4 x i32>* %p) {
+define arm_aapcs_vfpcc void @spill_multivector(ptr %p) {
 ; CHECK-LABEL: spill_multivector:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
@@ -54,52 +54,51 @@ define arm_aapcs_vfpcc void @spill_multivector(<4 x i32>* %p) {
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
-  %ip01 = bitcast <4 x i32>* %p to i32*
-  %v01 = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.v4i32.p0i32(i32* %ip01)
-  %ip23 = getelementptr i32, i32* %ip01, i32 16
-  %v23 = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.v4i32.p0i32(i32* %ip23)
-  %ip45 = getelementptr i32, i32* %ip23, i32 16
-  %v45 = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.v4i32.p0i32(i32* %ip45)
-  %ip67 = getelementptr i32, i32* %ip45, i32 16
-  %v67 = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.v4i32.p0i32(i32* %ip67)
-  %ip89 = getelementptr i32, i32* %ip67, i32 16
-  %v89 = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.v4i32.p0i32(i32* %ip89)
+  %v01 = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.v4i32.p0(ptr %p)
+  %ip23 = getelementptr i32, ptr %p, i32 16
+  %v23 = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.v4i32.p0(ptr %ip23)
+  %ip45 = getelementptr i32, ptr %ip23, i32 16
+  %v45 = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.v4i32.p0(ptr %ip45)
+  %ip67 = getelementptr i32, ptr %ip45, i32 16
+  %v67 = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.v4i32.p0(ptr %ip67)
+  %ip89 = getelementptr i32, ptr %ip67, i32 16
+  %v89 = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.v4i32.p0(ptr %ip89)
   call void @external_function()
 
   %v0 = extractvalue { <4 x i32>, <4 x i32> } %v01, 0
   %v1 = extractvalue { <4 x i32>, <4 x i32> } %v01, 1
-  store <4 x i32> %v0, <4 x i32>* %p, align 4
-  %p1 = getelementptr <4 x i32>, <4 x i32>* %p, i32 1
-  store <4 x i32> %v1, <4 x i32>* %p1, align 4
+  store <4 x i32> %v0, ptr %p, align 4
+  %p1 = getelementptr <4 x i32>, ptr %p, i32 1
+  store <4 x i32> %v1, ptr %p1, align 4
 
   %v2 = extractvalue { <4 x i32>, <4 x i32> } %v23, 0
   %v3 = extractvalue { <4 x i32>, <4 x i32> } %v23, 1
-  %p2 = getelementptr <4 x i32>, <4 x i32>* %p, i32 2
-  store <4 x i32> %v2, <4 x i32>* %p2, align 4
-  %p3 = getelementptr <4 x i32>, <4 x i32>* %p, i32 3
-  store <4 x i32> %v3, <4 x i32>* %p3, align 4
+  %p2 = getelementptr <4 x i32>, ptr %p, i32 2
+  store <4 x i32> %v2, ptr %p2, align 4
+  %p3 = getelementptr <4 x i32>, ptr %p, i32 3
+  store <4 x i32> %v3, ptr %p3, align 4
 
   %v4 = extractvalue { <4 x i32>, <4 x i32> } %v45, 0
   %v5 = extractvalue { <4 x i32>, <4 x i32> } %v45, 1
-  %p4 = getelementptr <4 x i32>, <4 x i32>* %p, i32 4
-  store <4 x i32> %v4, <4 x i32>* %p4, align 4
-  %p5 = getelementptr <4 x i32>, <4 x i32>* %p, i32 5
-  store <4 x i32> %v5, <4 x i32>* %p5, align 4
+  %p4 = getelementptr <4 x i32>, ptr %p, i32 4
+  store <4 x i32> %v4, ptr %p4, align 4
+  %p5 = getelementptr <4 x i32>, ptr %p, i32 5
+  store <4 x i32> %v5, ptr %p5, align 4
 
   %v6 = extractvalue { <4 x i32>, <4 x i32> } %v67, 0
   %v7 = extractvalue { <4 x i32>, <4 x i32> } %v67, 1
-  %p6 = getelementptr <4 x i32>, <4 x i32>* %p, i32 6
-  store <4 x i32> %v6, <4 x i32>* %p6, align 4
-  %p7 = getelementptr <4 x i32>, <4 x i32>* %p, i32 7
-  store <4 x i32> %v7, <4 x i32>* %p7, align 4
+  %p6 = getelementptr <4 x i32>, ptr %p, i32 6
+  store <4 x i32> %v6, ptr %p6, align 4
+  %p7 = getelementptr <4 x i32>, ptr %p, i32 7
+  store <4 x i32> %v7, ptr %p7, align 4
 
   %v8 = extractvalue { <4 x i32>, <4 x i32> } %v89, 0
   %v9 = extractvalue { <4 x i32>, <4 x i32> } %v89, 1
-  %p8 = getelementptr <4 x i32>, <4 x i32>* %p, i32 8
-  store <4 x i32> %v8, <4 x i32>* %p8, align 4
-  %p9 = getelementptr <4 x i32>, <4 x i32>* %p, i32 9
-  store <4 x i32> %v9, <4 x i32>* %p9, align 4
+  %p8 = getelementptr <4 x i32>, ptr %p, i32 8
+  store <4 x i32> %v8, ptr %p8, align 4
+  %p9 = getelementptr <4 x i32>, ptr %p, i32 9
+  store <4 x i32> %v9, ptr %p9, align 4
   ret void
 }
 
-declare { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.v4i32.p0i32(i32*)
+declare { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.v4i32.p0(ptr)
