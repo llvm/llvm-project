@@ -91,8 +91,8 @@ entry:
   br label %outer
 
 outer:
-  %l.1 = load i16*, ptr %arg, align 8
-  %l.2 = load i16*, ptr %arg, align 8
+  %l.1 = load ptr, ptr %arg, align 8
+  %l.2 = load ptr, ptr %arg, align 8
   %c.1 = call i1 @cond()
   br i1 %c.1, label %outer, label %inner
 
@@ -116,9 +116,9 @@ loop.3:
   %iv.next = add nsw nuw i64 %iv, 1
   %c.5  = icmp ult i64 %iv, %N
   %gep.1 = getelementptr inbounds i16, ptr %l.1, i64 %iv.next
-  %loop.l.1 = load i16, i16* %gep.1, align 2
+  %loop.l.1 = load i16, ptr %gep.1, align 2
   %gep.2 = getelementptr inbounds i16, ptr %l.2, i64 0
-  store i16 %loop.l.1, i16* %gep.2 , align 2
+  store i16 %loop.l.1, ptr %gep.2 , align 2
   br i1 %c.5, label %loop.3, label %exit
 
 exit:
