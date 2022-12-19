@@ -3701,6 +3701,7 @@ bool InstCombinerImpl::sinkNotIntoOtherHandOfLogicalOp(Instruction &I) {
   freelyInvertAllUsersOf(NotOpToInvert, /*IgnoredUser=*/&I);
   *OpToInvert = NotOpToInvert;
 
+  Builder.SetInsertPoint(&*I.getInsertionPointAfterDef());
   Value *NewBinOp;
   if (IsBinaryOp)
     NewBinOp = Builder.CreateBinOp(NewOpc, Op0, Op1, I.getName() + ".not");
