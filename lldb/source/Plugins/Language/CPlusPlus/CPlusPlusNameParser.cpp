@@ -55,8 +55,8 @@ Optional<ParsedName> CPlusPlusNameParser::ParseAsFullName() {
   if (HasMoreTokens())
     return std::nullopt;
   ParsedName result;
-  result.basename = GetTextForRange(name_ranges.value().basename_range);
-  result.context = GetTextForRange(name_ranges.value().context_range);
+  result.basename = GetTextForRange(name_ranges->basename_range);
+  result.context = GetTextForRange(name_ranges->context_range);
   return result;
 }
 
@@ -130,8 +130,8 @@ CPlusPlusNameParser::ParseFunctionImpl(bool expect_return_type) {
   SkipFunctionQualifiers();
   size_t end_position = GetCurrentPosition();
 
-  result.name.basename = GetTextForRange(maybe_name.value().basename_range);
-  result.name.context = GetTextForRange(maybe_name.value().context_range);
+  result.name.basename = GetTextForRange(maybe_name->basename_range);
+  result.name.context = GetTextForRange(maybe_name->context_range);
   result.arguments = GetTextForRange(Range(argument_start, qualifiers_start));
   result.qualifiers = GetTextForRange(Range(qualifiers_start, end_position));
   start_position.Remove();
@@ -709,10 +709,10 @@ CPlusPlusNameParser::ParseFullNameImpl() {
       state == State::AfterTemplate) {
     ParsedNameRanges result;
     if (last_coloncolon_position) {
-      result.context_range = Range(start_position.GetSavedPosition(),
-                                   last_coloncolon_position.value());
+      result.context_range =
+          Range(start_position.GetSavedPosition(), *last_coloncolon_position);
       result.basename_range =
-          Range(last_coloncolon_position.value() + 1, GetCurrentPosition());
+          Range(*last_coloncolon_position + 1, GetCurrentPosition());
     } else {
       result.basename_range =
           Range(start_position.GetSavedPosition(), GetCurrentPosition());

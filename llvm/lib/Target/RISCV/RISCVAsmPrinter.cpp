@@ -15,6 +15,7 @@
 #include "MCTargetDesc/RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVTargetStreamer.h"
 #include "RISCV.h"
+#include "RISCVMachineFunctionInfo.h"
 #include "RISCVTargetMachine.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/ADT/Statistic.h"
@@ -80,6 +81,8 @@ public:
 
   void emitStartOfAsmFile(Module &M) override;
   void emitEndOfAsmFile(Module &M) override;
+
+  void emitFunctionEntryLabel() override;
 
 private:
   void emitAttributes();
@@ -223,6 +226,16 @@ void RISCVAsmPrinter::emitAttributes() {
   RISCVTargetStreamer &RTS =
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
   RTS.emitTargetAttributes(*MCSTI);
+}
+
+void RISCVAsmPrinter::emitFunctionEntryLabel() {
+  const auto *RMFI = MF->getInfo<RISCVMachineFunctionInfo>();
+  if (RMFI->isVectorCall()) {
+    auto &RTS =
+        static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+    RTS.emitDirectiveVariantCC(*CurrentFnSym);
+  }
+  return AsmPrinter::emitFunctionEntryLabel();
 }
 
 // Force static initialization.

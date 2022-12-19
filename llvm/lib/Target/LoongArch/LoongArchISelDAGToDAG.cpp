@@ -20,6 +20,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loongarch-isel"
 
+char LoongArchDAGToDAGISel::ID;
+
 void LoongArchDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {

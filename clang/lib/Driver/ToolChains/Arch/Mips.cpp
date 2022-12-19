@@ -467,11 +467,6 @@ bool mips::isFP64ADefault(const llvm::Triple &Triple, StringRef CPUName) {
 
 bool mips::isFPXXDefault(const llvm::Triple &Triple, StringRef CPUName,
                          StringRef ABIName, mips::FloatABI FloatABI) {
-  if (Triple.getVendor() != llvm::Triple::ImaginationTechnologies &&
-      Triple.getVendor() != llvm::Triple::MipsTechnologies &&
-      !Triple.isAndroid())
-    return false;
-
   if (ABIName != "32")
     return false;
 

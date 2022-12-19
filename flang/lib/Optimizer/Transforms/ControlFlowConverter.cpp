@@ -397,7 +397,7 @@ public:
 
     for (unsigned idx : orderedTypeGuards) {
       auto *dest = selectType.getSuccessor(idx);
-      llvm::Optional<mlir::ValueRange> destOps =
+      std::optional<mlir::ValueRange> destOps =
           selectType.getSuccessorOperands(operands, idx);
       if (typeGuards[idx].dyn_cast<mlir::UnitAttr>())
         rewriter.replaceOpWithNewOp<mlir::cf::BranchOp>(selectType, dest);
@@ -470,12 +470,13 @@ public:
     return 0;
   }
 
-  mlir::LogicalResult
-  genTypeLadderStep(mlir::Location loc, mlir::Value selector,
-                    mlir::Attribute attr, mlir::Block *dest,
-                    llvm::Optional<mlir::ValueRange> destOps,
-                    mlir::ModuleOp mod, mlir::PatternRewriter &rewriter,
-                    fir::KindMapping &kindMap) const {
+  mlir::LogicalResult genTypeLadderStep(mlir::Location loc,
+                                        mlir::Value selector,
+                                        mlir::Attribute attr, mlir::Block *dest,
+                                        std::optional<mlir::ValueRange> destOps,
+                                        mlir::ModuleOp mod,
+                                        mlir::PatternRewriter &rewriter,
+                                        fir::KindMapping &kindMap) const {
     mlir::Value cmp;
     // TYPE IS type guard comparison are all done inlined.
     if (auto a = attr.dyn_cast<fir::ExactTypeAttr>()) {

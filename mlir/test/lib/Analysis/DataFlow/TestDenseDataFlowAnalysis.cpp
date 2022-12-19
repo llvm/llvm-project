@@ -21,7 +21,7 @@ namespace {
 class UnderlyingValue {
 public:
   /// Create an underlying value state with a known underlying value.
-  explicit UnderlyingValue(Optional<Value> underlyingValue = std::nullopt)
+  explicit UnderlyingValue(std::optional<Value> underlyingValue = std::nullopt)
       : underlyingValue(underlyingValue) {}
 
   /// Whether the state is uninitialized.
@@ -54,7 +54,7 @@ public:
   void print(raw_ostream &os) const { os << underlyingValue; }
 
 private:
-  Optional<Value> underlyingValue;
+  std::optional<Value> underlyingValue;
 };
 
 /// This lattice represents, for a given memory resource, the potential last

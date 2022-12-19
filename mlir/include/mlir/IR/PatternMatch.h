@@ -89,7 +89,7 @@ public:
 
   /// Return the root node that this pattern matches. Patterns that can match
   /// multiple root types return std::nullopt.
-  Optional<OperationName> getRootKind() const {
+  std::optional<OperationName> getRootKind() const {
     if (rootKind == RootKind::OperationName)
       return OperationName::getFromOpaquePointer(rootValue);
     return std::nullopt;

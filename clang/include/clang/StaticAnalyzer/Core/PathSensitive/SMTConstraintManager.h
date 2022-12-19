@@ -128,7 +128,7 @@ public:
       addStateConstraints(State);
 
       // Constraints are unsatisfiable
-      Optional<bool> isSat = Solver->check();
+      std::optional<bool> isSat = Solver->check();
       if (!isSat || !*isSat)
         return nullptr;
 
@@ -145,7 +145,7 @@ public:
 
       Solver->addConstraint(NotExp);
 
-      Optional<bool> isNotSat = Solver->check();
+      std::optional<bool> isNotSat = Solver->check();
       if (!isNotSat || *isNotSat)
         return nullptr;
 
@@ -340,11 +340,11 @@ protected:
     Solver->reset();
     addStateConstraints(NewState);
 
-    Optional<bool> res = Solver->check();
+    std::optional<bool> res = Solver->check();
     if (!res)
       Cached[hash] = ConditionTruthVal();
     else
-      Cached[hash] = ConditionTruthVal(res.value());
+      Cached[hash] = ConditionTruthVal(*res);
 
     return Cached[hash];
   }

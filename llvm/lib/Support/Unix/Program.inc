@@ -396,7 +396,10 @@ ProcessInfo llvm::sys::Wait(const ProcessInfo &PI,
   bool WaitUntilTerminates = false;
   if (!SecondsToWait) {
     WaitUntilTerminates = true;
-  } else if (*SecondsToWait != 0) {
+  } else {
+    if (*SecondsToWait == 0)
+      WaitPidOptions = WNOHANG;
+
     // Install a timeout handler.  The handler itself does nothing, but the
     // simple fact of having a handler at all causes the wait below to return
     // with EINTR, unlike if we used SIG_IGN.
@@ -407,8 +410,6 @@ ProcessInfo llvm::sys::Wait(const ProcessInfo &PI,
     // FIXME The alarm signal may be delivered to another thread.
 
     alarm(*SecondsToWait);
-  } else {
-    WaitPidOptions = WNOHANG;
   }
 
   // Parent process: Wait for the child process to terminate.

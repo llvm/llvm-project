@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -922,8 +921,8 @@ bool SelectOptimize::computeLoopCosts(
           EmitAndPrintRemark(ORE, ORmissL);
           return false;
         }
-        IPredCost += Scaled64::get(ILatency.value());
-        INonPredCost += Scaled64::get(ILatency.value());
+        IPredCost += Scaled64::get(*ILatency);
+        INonPredCost += Scaled64::get(*ILatency);
 
         // For a select that can be converted to branch,
         // compute its cost as a branch (non-predicated cost).

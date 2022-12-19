@@ -39,7 +39,7 @@ public:
 
   XCOFF::StorageClass getStorageClass() const {
     assert(StorageClass && "StorageClass not set on XCOFF MCSymbol.");
-    return StorageClass.value();
+    return *StorageClass;
   }
 
   StringRef getUnqualifiedName() const { return getUnqualifiedName(getName()); }

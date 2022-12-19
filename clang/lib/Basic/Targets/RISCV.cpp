@@ -279,7 +279,7 @@ bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
                     .Case("64bit", Is64Bit)
                     .Default(std::nullopt);
   if (Result)
-    return Result.value();
+    return *Result;
 
   if (ISAInfo->isSupportedExtensionFeature(Feature))
     return ISAInfo->hasExtension(Feature);

@@ -14,6 +14,7 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/StringSaver.h"
+#include <optional>
 
 using namespace clang;
 using namespace tooling;
@@ -237,7 +238,7 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
   if (llvm::any_of(CI.getFrontendOpts().Inputs, needsModules)) {
     Preprocessor &PP = ScanInstance.getPreprocessor();
     if (Module *CurrentModule = PP.getCurrentModuleImplementation())
-      if (Optional<FileEntryRef> CurrentModuleMap =
+      if (std::optional<FileEntryRef> CurrentModuleMap =
               PP.getHeaderSearchInfo()
                   .getModuleMap()
                   .getModuleMapFileForUniquing(CurrentModule))
@@ -334,8 +335,9 @@ void ModuleDepCollectorPP::FileChanged(SourceLocation Loc,
 
 void ModuleDepCollectorPP::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
-    bool IsAngled, CharSourceRange FilenameRange, Optional<FileEntryRef> File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
+    bool IsAngled, CharSourceRange FilenameRange,
+    std::optional<FileEntryRef> File, StringRef SearchPath,
+    StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
   if (!File && !Imported) {
     // This is a non-modular include that HeaderSearch failed to find. Add it
@@ -419,7 +421,8 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   ModuleMap &ModMapInfo =
       MDC.ScanInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
 
-  Optional<FileEntryRef> ModuleMap = ModMapInfo.getModuleMapFileForUniquing(M);
+  std::optional<FileEntryRef> ModuleMap =
+      ModMapInfo.getModuleMapFileForUniquing(M);
 
   if (ModuleMap) {
     SmallString<128> Path = ModuleMap->getNameAsRequested();

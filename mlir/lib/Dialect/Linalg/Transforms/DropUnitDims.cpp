@@ -233,7 +233,7 @@ struct FoldUnitDimLoops : public OpRewritePattern<GenericOp> {
   }
 };
 
-/// Pattern to add init operands to ins when all the loops are parallel and
+/// Pattern to move init operands to ins when all the loops are parallel and
 /// blockArgument corresponding to init is used in the region. This is a fix-up
 /// when unit reduction dimensions are all folded away. In this context, it
 /// becomes a elementwise generic op. E.g., it converts
@@ -269,7 +269,7 @@ struct FoldUnitDimLoops : public OpRewritePattern<GenericOp> {
 ///    %4 = arith.addf %in, %in_0 : f32
 ///    linalg.yield %4 : f32
 ///  } -> tensor<1x1xf32>
-struct AddInitOperandsToInput : public OpRewritePattern<GenericOp> {
+struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
@@ -667,10 +667,10 @@ void mlir::linalg::populateFoldUnitExtentDimsViaReshapesPatterns(
   patterns.add<ReplaceUnitExtents>(context,
                                    RankReductionStrategy::ReassociativeReshape);
   // TODO: Patterns unrelated to unit dim folding should be factored out.
-  patterns
-      .add<FoldUnitDimLoops, AddInitOperandsToInput, RankReducedExtractSliceOp,
-           RankReducedInsertSliceOp<tensor::InsertSliceOp>,
-           RankReducedInsertSliceOp<tensor::ParallelInsertSliceOp>>(context);
+  patterns.add<FoldUnitDimLoops, RankReducedExtractSliceOp,
+               RankReducedInsertSliceOp<tensor::InsertSliceOp>,
+               RankReducedInsertSliceOp<tensor::ParallelInsertSliceOp>>(
+      context);
   linalg::FillOp::getCanonicalizationPatterns(patterns, context);
   tensor::CollapseShapeOp::getCanonicalizationPatterns(patterns, context);
   tensor::EmptyOp::getCanonicalizationPatterns(patterns, context);
@@ -688,6 +688,11 @@ void mlir::linalg::populateFoldUnitExtentDimsViaSlicesPatterns(
   patterns.add<FoldUnitDimLoops>(context);
 }
 
+void mlir::linalg::populateMoveInitOperandsToInputPattern(
+    RewritePatternSet &patterns) {
+  patterns.add<MoveInitOperandsToInput>(patterns.getContext());
+}
+
 namespace {
 /// Pass that removes unit-extent dims within generic ops.
 struct LinalgFoldUnitExtentDimsPass
@@ -697,11 +702,13 @@ struct LinalgFoldUnitExtentDimsPass
     MLIRContext *context = op->getContext();
     RewritePatternSet patterns(context);
     if (foldOneTripLoopsOnly) {
-      patterns.add<FoldUnitDimLoops, AddInitOperandsToInput>(context);
+      patterns.add<FoldUnitDimLoops, MoveInitOperandsToInput>(context);
     } else if (useRankReducingSlices) {
       populateFoldUnitExtentDimsViaSlicesPatterns(patterns);
+      populateMoveInitOperandsToInputPattern(patterns);
     } else {
       populateFoldUnitExtentDimsViaReshapesPatterns(patterns);
+      populateMoveInitOperandsToInputPattern(patterns);
     }
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }

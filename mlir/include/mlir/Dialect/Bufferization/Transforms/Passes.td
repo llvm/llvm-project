@@ -317,6 +317,17 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
            "Controls layout maps for non-inferrable memref types.">,
   ];
   let constructor = "mlir::bufferization::createOneShotBufferizePass()";
+
+  let statistics = [
+    Statistic<"numBufferAlloc", "num-buffer-alloc",
+              "Number of buffer allocations">,
+    Statistic<"numBufferDealloc", "num-buffer-dealloc",
+              "Number of buffer deallocations">,
+    Statistic<"numTensorInPlace", "num-tensor-in-place",
+              "Number of in-place tensor OpOperands">,
+    Statistic<"numTensorOutOfPlace", "num-tensor-out-of-place",
+              "Number of out-of-place tensor OpOperands">,
+  ];
 }
 
 def PromoteBuffersToStack : Pass<"promote-buffers-to-stack", "func::FuncOp"> {

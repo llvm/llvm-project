@@ -196,7 +196,7 @@
 // RUN: %clang -target mips-linux-gnu -mno-mips16 -mips16 -### \
 // RUN:   -no-integrated-as -fno-pic -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-16 %s
-// MIPS-16: as{{(.exe)?}}" "-march" "mips32r2" "-mabi" "32" "-mno-shared" "-call_nonpic" "-EB" "-mips16"
+// MIPS-16: as{{(.exe)?}}" "-march" "mips32r2" "-mabi" "32" "-mno-shared" "-call_nonpic" "-EB" "-mfpxx" "-mips16"
 //
 // RUN: %clang -target mips-linux-gnu -mips16 -mno-mips16 -### \
 // RUN:   -no-integrated-as -fno-pic -c %s 2>&1 \
@@ -207,7 +207,7 @@
 // RUN: %clang -target mips-linux-gnu -mno-micromips -mmicromips -### \
 // RUN:   -no-integrated-as -fno-pic -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-MICRO %s
-// MIPS-MICRO: as{{(.exe)?}}" "-march" "mips32r2" "-mabi" "32" "-mno-shared" "-call_nonpic" "-EB" "-mmicromips"
+// MIPS-MICRO: as{{(.exe)?}}" "-march" "mips32r2" "-mabi" "32" "-mno-shared" "-call_nonpic" "-EB" "-mfpxx" "-mmicromips"
 //
 // RUN: %clang -target mips-linux-gnu -mmicromips -mno-micromips -### \
 // RUN:   -no-integrated-as -fno-pic -c %s 2>&1 \
@@ -218,7 +218,7 @@
 // RUN: %clang -target mips-linux-gnu -mno-dsp -mdsp -### \
 // RUN:   -no-integrated-as -fno-pic -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-DSP %s
-// MIPS-DSP: as{{(.exe)?}}" "-march" "mips32r2" "-mabi" "32" "-mno-shared" "-call_nonpic" "-EB" "-mdsp"
+// MIPS-DSP: as{{(.exe)?}}" "-march" "mips32r2" "-mabi" "32" "-mno-shared" "-call_nonpic" "-EB" "-mfpxx" "-mdsp"
 //
 // RUN: %clang -target mips-linux-gnu -mdsp -mno-dsp -### \
 // RUN:   -no-integrated-as -fno-pic -c %s 2>&1 \
@@ -229,7 +229,7 @@
 // RUN: %clang -target mips-linux-gnu -mno-dspr2 -mdspr2 -### \
 // RUN:   -no-integrated-as -fno-pic -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-DSPR2 %s
-// MIPS-DSPR2: as{{(.exe)?}}" "-march" "mips32r2" "-mabi" "32" "-mno-shared" "-call_nonpic" "-EB" "-mdspr2"
+// MIPS-DSPR2: as{{(.exe)?}}" "-march" "mips32r2" "-mabi" "32" "-mno-shared" "-call_nonpic" "-EB" "-mfpxx" "-mdspr2"
 //
 // RUN: %clang -target mips-linux-gnu -mdspr2 -mno-dspr2 -### \
 // RUN:   -no-integrated-as -fno-pic -c %s 2>&1 \
@@ -266,7 +266,7 @@
 // RUN: %clang -target mips-linux-gnu -mno-msa -mmsa -### \
 // RUN:   -no-integrated-as -fno-pic -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-MSA %s
-// MIPS-MSA: as{{(.exe)?}}" "-march" "mips32r2" "-mabi" "32" "-mno-shared" "-call_nonpic" "-EB" "-mmsa"
+// MIPS-MSA: as{{(.exe)?}}" "-march" "mips32r2" "-mabi" "32" "-mno-shared" "-call_nonpic" "-EB" "-mfpxx" "-mmsa"
 //
 // RUN: %clang -target mips-linux-gnu -mmsa -mno-msa -### \
 // RUN:   -no-integrated-as -fno-pic -c %s 2>&1 \

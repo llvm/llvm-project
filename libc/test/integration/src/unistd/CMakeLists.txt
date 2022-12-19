@@ -7,8 +7,8 @@ add_integration_test(
     unistd-integration-tests
   SRCS
     getcwd_test.cpp
-  LOADER
-    libc.loader.linux.crt1
+  STARTUP
+    libc.startup.linux.crt1
   DEPENDS
     libc.include.errno
     libc.src.__support.CPP.string_view
@@ -22,8 +22,8 @@ add_integration_test(
     unistd-integration-tests
   SRCS
     fork_test.cpp
-  LOADER
-    libc.loader.linux.crt1
+  STARTUP
+    libc.startup.linux.crt1
   DEPENDS
     libc.include.errno
     libc.include.signal
@@ -67,8 +67,8 @@ add_integration_test(
     unistd-integration-tests
   SRCS
     execv_test.cpp
-  LOADER
-    libc.loader.linux.crt1
+  STARTUP
+    libc.startup.linux.crt1
   DEPENDS
     libc_execv_test_normal_exit
     libc_execv_test_signal_exit
@@ -86,8 +86,8 @@ add_integration_test(
     unistd-integration-tests
   SRCS
     execve_test.cpp
-  LOADER
-    libc.loader.linux.crt1
+  STARTUP
+    libc.startup.linux.crt1
   DEPENDS
     libc_execv_test_normal_exit
     libc_execv_test_signal_exit

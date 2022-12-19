@@ -256,7 +256,7 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
         as << formatv("if (failed(_llvmir_gen_operand_{0}))\n"
                       "  return failure();\n",
                       name);
-        bs << formatv("_llvmir_gen_operand_{0}.value()", name);
+        bs << formatv("*_llvmir_gen_operand_{0}", name);
       }
     } else if (isResultName(op, name)) {
       if (op.getNumResults() != 1)

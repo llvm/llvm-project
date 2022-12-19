@@ -20,7 +20,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntervalMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -8030,9 +8029,9 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     // the element will provide a range of bytes. For example, if we have a
     // vector of i16s, each element provides two bytes (V[1] provides byte 2 and
     // 3).
-    if (VectorIndex.value() * NarrowByteWidth > StartingIndex)
+    if (*VectorIndex * NarrowByteWidth > StartingIndex)
       return std::nullopt;
-    if ((VectorIndex.value() + 1) * NarrowByteWidth <= StartingIndex)
+    if ((*VectorIndex + 1) * NarrowByteWidth <= StartingIndex)
       return std::nullopt;
 
     return calculateByteProvider(Op->getOperand(0), Index, Depth + 1,
@@ -9391,7 +9390,7 @@ static SDValue combineShiftToMULH(SDNode *N, SelectionDAG &DAG,
 
   // return true if U may use the lower bits of its operands
   auto UserOfLowerBits = [NarrowVTSize](SDNode *U) {
-    if (U->getOpcode() != ISD::SRL || U->getOpcode() != ISD::SRA) {
+    if (U->getOpcode() != ISD::SRL && U->getOpcode() != ISD::SRA) {
       return true;
     }
     ConstantSDNode *UShiftAmtSrc = isConstOrConstSplat(U->getOperand(1));

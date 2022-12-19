@@ -44,6 +44,16 @@ module dispatch1
     procedure :: a1_proc => a2_proc
   end type
 
+  type ty_kind(i, j)
+    integer, kind :: i, j
+    integer :: a(i)
+  end Type
+
+  type, extends(ty_kind) :: ty_kind_ex
+    integer :: b(j)
+  end type
+  type(ty_kind(10,20)) :: tk1
+  type(ty_kind_ex(10,20)) :: tke1
 contains
 
   subroutine display1_p1(this)
@@ -279,6 +289,9 @@ end
 
 ! Check the layout of the binding table. This is easier to do in FIR than in 
 ! LLVM IR.
+
+! BT-LABEL: fir.dispatch_table @_QMdispatch1Tty_kindK10K20
+! BT-LABEL: fir.dispatch_table @_QMdispatch1Tty_kind_exK10K20 extends("_QMdispatch1Tty_kindK10K20")
 
 ! BT-LABEL: fir.dispatch_table @_QMdispatch1Tp1 {
 ! BT: fir.dt_entry "aproc", @_QMdispatch1Paproc

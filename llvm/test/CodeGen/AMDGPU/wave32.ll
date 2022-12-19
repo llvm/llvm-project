@@ -1110,36 +1110,39 @@ declare void @external_void_func_void() #1
 ; GCN-LABEL: {{^}}callee_no_stack_with_call:
 ; GCN: s_waitcnt
 ; GCN-NEXT: s_waitcnt_vscnt
-
+; GCN-NEXT: s_mov_b32 [[FP_SCRATCH_COPY:s[0-9]+]], s33
+; GCN-NEXT: s_mov_b32 s33, s32
 ; GFX1064-NEXT: s_or_saveexec_b64 [[COPY_EXEC0:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GFX1032-NEXT: s_or_saveexec_b32 [[COPY_EXEC0:s[0-9]+]], -1{{$}}
-; GCN-NEXT: buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
+; GCN-NEXT: buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
+; GCN-NEXT: buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT: s_waitcnt_depctr 0xffe3
 ; GFX1064-NEXT: s_mov_b64 exec, [[COPY_EXEC0]]
 ; GFX1032-NEXT: s_mov_b32 exec_lo, [[COPY_EXEC0]]
 
-; GCN-NEXT: v_writelane_b32 v40, s33, 2
-; GCN: s_mov_b32 s33, s32
 ; GFX1064: s_addk_i32 s32, 0x400
 ; GFX1032: s_addk_i32 s32, 0x200
-
+; GCN-NEXT: v_writelane_b32 v41, [[FP_SCRATCH_COPY]], 0
 
 ; GCN-DAG: v_writelane_b32 v40, s30, 0
+
 ; GCN-DAG: v_writelane_b32 v40, s31, 1
 ; GCN: s_swappc_b64
 ; GCN-DAG: v_readlane_b32 s30, v40, 0
 ; GCN-DAG: v_readlane_b32 s31, v40, 1
 
-
-; GFX1064: s_addk_i32 s32, 0xfc00
-; GFX1032: s_addk_i32 s32, 0xfe00
-; GCN: v_readlane_b32 s33, v40, 2
+; GCN: v_readlane_b32 [[FP_SCRATCH_COPY:s[0-9]+]], v41, 0
 ; GFX1064: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GFX1032: s_or_saveexec_b32 [[COPY_EXEC1:s[0-9]]], -1{{$}}
-; GCN-NEXT: buffer_load_dword v40, off, s[0:3], s32 ; 4-byte Folded Reload
+; GCN-NEXT: s_clause 0x1
+; GCN-NEXT: buffer_load_dword v40, off, s[0:3], s33
+; GCN-NEXT: buffer_load_dword v41, off, s[0:3], s33 offset:4
 ; GCN-NEXT: s_waitcnt_depctr 0xffe3
 ; GFX1064-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
 ; GFX1032-NEXT: s_mov_b32 exec_lo, [[COPY_EXEC1]]
+; GFX1064: s_addk_i32 s32, 0xfc00
+; GFX1032: s_addk_i32 s32, 0xfe00
+; GCN-NEXT: s_mov_b32 s33, [[FP_SCRATCH_COPY]]
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define void @callee_no_stack_with_call() #1 {

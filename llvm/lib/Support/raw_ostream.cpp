@@ -428,7 +428,7 @@ raw_ostream &raw_ostream::operator<<(const FormattedBytes &FB) {
     indent(FB.IndentLevel);
 
     if (FB.FirstByteOffset) {
-      uint64_t Offset = FB.FirstByteOffset.value();
+      uint64_t Offset = *FB.FirstByteOffset;
       llvm::write_hex(*this, Offset + LineIndex, HPS, OffsetWidth);
       *this << ": ";
     }
@@ -802,8 +802,6 @@ uint64_t raw_fd_ostream::seek(uint64_t off) {
   flush();
 #ifdef _WIN32
   pos = ::_lseeki64(FD, off, SEEK_SET);
-#elif defined(HAVE_LSEEK64)
-  pos = ::lseek64(FD, off, SEEK_SET);
 #else
   pos = ::lseek(FD, off, SEEK_SET);
 #endif

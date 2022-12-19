@@ -250,6 +250,12 @@ end
 * A type-bound procedure binding can be passed as an actual
   argument corresponding to a dummy procedure and can be used as
   the target of a procedure pointer assignment statement.
+* An explicit `INTERFACE` can declare the interface of a
+  procedure pointer even if it is not a dummy argument.
+* A `NOPASS` type-bound procedure binding is required by C1529
+  to apply only to a scalar data-ref, but most compilers don't
+  enforce it and the constraint is not necessary for a correct
+  implementation.
 
 ### Extensions supported when enabled by options
 
@@ -520,3 +526,8 @@ end module
   or `BLOCK DATA` subprogram to also be the name of an local entity in its
   scope, with a portability warning, since that global name is not actually
   capable of being "used" in its scope.
+
+## De Facto Standard Features
+
+* `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
+  same type, a case that is technically implementation-defined.

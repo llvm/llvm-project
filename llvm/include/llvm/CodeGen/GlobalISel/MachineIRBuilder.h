@@ -1175,6 +1175,20 @@ public:
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre \p Res must be a generic virtual register with scalar type.
   /// \pre \p Val must be a generic virtual register with vector type.
+  ///
+  /// \return The newly created instruction.
+  MachineInstrBuilder buildExtractVectorElementConstant(const DstOp &Res,
+                                                        const SrcOp &Val,
+                                                        const int Idx) {
+    return buildExtractVectorElement(Res, Val,
+                                     buildConstant(LLT::scalar(64), Idx));
+  }
+
+  /// Build and insert \p Res = G_EXTRACT_VECTOR_ELT \p Val, \p Idx
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with scalar type.
+  /// \pre \p Val must be a generic virtual register with vector type.
   /// \pre \p Idx must be a generic virtual register with scalar type.
   ///
   /// \return The newly created instruction.

@@ -2754,7 +2754,7 @@ void Sema::CheckObjCPropertyAttributes(Decl *PDecl,
 
   if (Attributes & ObjCPropertyAttribute::kind_weak) {
     // 'weak' and 'nonnull' are mutually exclusive.
-    if (auto nullability = PropertyTy->getNullability(Context)) {
+    if (auto nullability = PropertyTy->getNullability()) {
       if (*nullability == NullabilityKind::NonNull)
         Diag(Loc, diag::err_objc_property_attr_mutually_exclusive)
           << "nonnull" << "weak";

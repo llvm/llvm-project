@@ -50,6 +50,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <vector>
 
 // Force the linker to link in Clang-tidy modules.
@@ -171,9 +172,10 @@ private:
 
   void replay() {
     for (const auto &Inc : Includes) {
-      llvm::Optional<FileEntryRef> File;
+      std::optional<FileEntryRef> File;
       if (Inc.Resolved != "")
-        File = expectedToOptional(SM.getFileManager().getFileRef(Inc.Resolved));
+        File =
+            expectedToStdOptional(SM.getFileManager().getFileRef(Inc.Resolved));
 
       // Re-lex the #include directive to find its interesting parts.
       auto HashLoc = SM.getComposedLoc(SM.getMainFileID(), Inc.HashOffset);

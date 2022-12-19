@@ -366,11 +366,7 @@ defm STORE_V128_A64 :
 
 // Def store patterns from WebAssemblyInstrMemory.td for vector types
 foreach vec = AllVecs in {
-defm : StorePatNoOffset<vec.vt, store, "STORE_V128">;
-defm : StorePatImmOff<vec.vt, store, regPlusImm, "STORE_V128">;
-defm : StorePatImmOff<vec.vt, store, or_is_add, "STORE_V128">;
-defm : StorePatOffsetOnly<vec.vt, store, "STORE_V128">;
-defm : StorePatGlobalAddrOffOnly<vec.vt, store, "STORE_V128">;
+defm : StorePat<vec.vt, store, "STORE_V128">;
 }
 
 // Store lane
@@ -399,13 +395,16 @@ defm "" : SIMDStoreLane<I16x8, 0x59>;
 defm "" : SIMDStoreLane<I32x4, 0x5a>;
 defm "" : SIMDStoreLane<I64x2, 0x5b>;
 
-// Select stores with no constant offset.
-multiclass StoreLanePatNoOffset<Vec vec, SDPatternOperator kind> {
-  def : Pat<(kind (i32 I32:$addr), (vec.vt V128:$vec), (i32 vec.lane_idx:$idx)),
-            (!cast<NI>("STORE_LANE_"#vec#"_A32") 0, 0, imm:$idx, $addr, $vec)>,
+multiclass StoreLanePat<Vec vec, SDPatternOperator kind> {
+  def : Pat<(kind (AddrOps32 offset32_op:$offset, I32:$addr),
+                  (vec.vt V128:$vec),
+                  (i32 vec.lane_idx:$idx)),
+            (!cast<NI>("STORE_LANE_"#vec#"_A32") 0, $offset, imm:$idx, $addr, $vec)>,
         Requires<[HasAddr32]>;
-  def : Pat<(kind (i64 I64:$addr), (vec.vt V128:$vec), (i32 vec.lane_idx:$idx)),
-            (!cast<NI>("STORE_LANE_"#vec#"_A64") 0, 0, imm:$idx, $addr, $vec)>,
+  def : Pat<(kind (AddrOps64 offset64_op:$offset, I64:$addr),
+                  (vec.vt V128:$vec),
+                  (i32 vec.lane_idx:$idx)),
+            (!cast<NI>("STORE_LANE_"#vec#"_A64") 0, $offset, imm:$idx, $addr, $vec)>,
         Requires<[HasAddr64]>;
 }
 
@@ -424,10 +423,10 @@ def store64_lane :
 // TODO: floating point lanes as well
 
 let AddedComplexity = 1 in {
-defm : StoreLanePatNoOffset<I8x16, store8_lane>;
-defm : StoreLanePatNoOffset<I16x8, store16_lane>;
-defm : StoreLanePatNoOffset<I32x4, store32_lane>;
-defm : StoreLanePatNoOffset<I64x2, store64_lane>;
+defm : StoreLanePat<I8x16, store8_lane>;
+defm : StoreLanePat<I16x8, store16_lane>;
+defm : StoreLanePat<I32x4, store32_lane>;
+defm : StoreLanePat<I64x2, store64_lane>;
 }
 
 //===----------------------------------------------------------------------===//

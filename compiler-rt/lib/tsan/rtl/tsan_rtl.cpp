@@ -213,6 +213,9 @@ static void DoResetImpl(uptr epoch) {
 #else
   auto resetFailed =
       !MmapFixedSuperNoReserve(shadow_begin, shadow_end-shadow_begin, "shadow");
+#  if !SANITIZER_GO
+  DontDumpShadow(shadow_begin, shadow_end - shadow_begin);
+#  endif
 #endif
   if (resetFailed) {
     Printf("failed to reset shadow memory\n");

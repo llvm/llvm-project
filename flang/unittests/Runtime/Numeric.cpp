@@ -205,3 +205,82 @@ TEST(Numeric, Spacing) {
   EXPECT_TRUE(
       std::isnan(RTNAME(Spacing8)(std::numeric_limits<Real<8>>::quiet_NaN())));
 }
+
+TEST(Numeric, FPowI) {
+  EXPECT_EQ(RTNAME(FPow4i)(Real<4>{0}, Int<4>{0}), Real<4>{1});
+  EXPECT_EQ(RTNAME(FPow4i)(Real<4>{0.3}, Int<4>{0}), Real<4>{1});
+  EXPECT_EQ(RTNAME(FPow4i)(Real<4>{2}, Int<4>{-1}), Real<4>{0.5});
+  EXPECT_EQ(RTNAME(FPow4i)(Real<4>{0.5}, Int<4>{-1}), Real<4>{2});
+  EXPECT_EQ(RTNAME(FPow4i)(Real<4>{-3}, Int<4>{3}), Real<4>{-27});
+  EXPECT_EQ(RTNAME(FPow4i)(Real<4>{-2}, Int<4>{-3}), Real<4>{-0.125});
+
+  EXPECT_EQ(RTNAME(FPow4k)(Real<4>{0}, Int<8>{0}), Real<4>{1});
+  EXPECT_EQ(RTNAME(FPow4k)(Real<4>{0.3}, Int<8>{0}), Real<4>{1});
+  EXPECT_EQ(RTNAME(FPow4k)(Real<4>{2}, Int<8>{-1}), Real<4>{0.5});
+  EXPECT_EQ(RTNAME(FPow4k)(Real<4>{0.5}, Int<8>{-1}), Real<4>{2});
+  EXPECT_EQ(RTNAME(FPow4k)(Real<4>{-3}, Int<8>{3}), Real<4>{-27});
+  EXPECT_EQ(RTNAME(FPow4k)(Real<4>{-2}, Int<8>{-3}), Real<4>{-0.125});
+
+  EXPECT_EQ(RTNAME(FPow8i)(Real<8>{0}, Int<4>{0}), Real<8>{1});
+  EXPECT_EQ(RTNAME(FPow8i)(Real<8>{0.3}, Int<4>{0}), Real<8>{1});
+  EXPECT_EQ(RTNAME(FPow8i)(Real<8>{2}, Int<4>{-1}), Real<8>{0.5});
+  EXPECT_EQ(RTNAME(FPow8i)(Real<8>{0.5}, Int<4>{-1}), Real<8>{2});
+  EXPECT_EQ(RTNAME(FPow8i)(Real<8>{-3}, Int<4>{3}), Real<8>{-27});
+  EXPECT_EQ(RTNAME(FPow8i)(Real<8>{-2}, Int<4>{-3}), Real<8>{-0.125});
+
+  EXPECT_EQ(RTNAME(FPow8k)(Real<8>{0}, Int<8>{0}), Real<8>{1});
+  EXPECT_EQ(RTNAME(FPow8k)(Real<8>{0.3}, Int<8>{0}), Real<8>{1});
+  EXPECT_EQ(RTNAME(FPow8k)(Real<8>{2}, Int<8>{-1}), Real<8>{0.5});
+  EXPECT_EQ(RTNAME(FPow8k)(Real<8>{0.5}, Int<8>{-1}), Real<8>{2});
+  EXPECT_EQ(RTNAME(FPow8k)(Real<8>{-3}, Int<8>{3}), Real<8>{-27});
+  EXPECT_EQ(RTNAME(FPow8k)(Real<8>{-2}, Int<8>{-3}), Real<8>{-0.125});
+
+#if LDBL_MANT_DIG == 64
+  EXPECT_EQ(RTNAME(FPow10i)(Real<10>{0}, Int<4>{0}), Real<10>{1});
+  EXPECT_EQ(RTNAME(FPow10i)(Real<10>{0.3}, Int<4>{0}), Real<10>{1});
+  EXPECT_EQ(RTNAME(FPow10i)(Real<10>{2}, Int<4>{-1}), Real<10>{0.5});
+  EXPECT_EQ(RTNAME(FPow10i)(Real<10>{0.5}, Int<4>{-1}), Real<10>{2});
+  EXPECT_EQ(RTNAME(FPow10i)(Real<10>{-3}, Int<4>{3}), Real<10>{-27});
+  EXPECT_EQ(RTNAME(FPow10i)(Real<10>{-2}, Int<4>{-3}), Real<10>{-0.125});
+
+  EXPECT_EQ(RTNAME(FPow10k)(Real<10>{0}, Int<8>{0}), Real<10>{1});
+  EXPECT_EQ(RTNAME(FPow10k)(Real<10>{0.3}, Int<8>{0}), Real<10>{1});
+  EXPECT_EQ(RTNAME(FPow10k)(Real<10>{2}, Int<8>{-1}), Real<10>{0.5});
+  EXPECT_EQ(RTNAME(FPow10k)(Real<10>{0.5}, Int<8>{-1}), Real<10>{2});
+  EXPECT_EQ(RTNAME(FPow10k)(Real<10>{-3}, Int<8>{3}), Real<10>{-27});
+  EXPECT_EQ(RTNAME(FPow10k)(Real<10>{-2}, Int<8>{-3}), Real<10>{-0.125});
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+  EXPECT_EQ(RTNAME(FPow16i)(Real<16>{0}, Int<4>{0}), Real<16>{1});
+  EXPECT_EQ(RTNAME(FPow16i)(Real<16>{0.3}, Int<4>{0}), Real<16>{1});
+  EXPECT_EQ(RTNAME(FPow16i)(Real<16>{2}, Int<4>{-1}), Real<16>{0.5});
+  EXPECT_EQ(RTNAME(FPow16i)(Real<16>{0.5}, Int<4>{-1}), Real<16>{2});
+  EXPECT_EQ(RTNAME(FPow16i)(Real<16>{-3}, Int<4>{3}), Real<16>{-27});
+  EXPECT_EQ(RTNAME(FPow16i)(Real<16>{-2}, Int<4>{-3}), Real<16>{-0.125});
+
+  EXPECT_EQ(RTNAME(FPow16k)(Real<16>{0}, Int<8>{0}), Real<16>{1});
+  EXPECT_EQ(RTNAME(FPow16k)(Real<16>{0.3}, Int<8>{0}), Real<16>{1});
+  EXPECT_EQ(RTNAME(FPow16k)(Real<16>{2}, Int<8>{-1}), Real<16>{0.5});
+  EXPECT_EQ(RTNAME(FPow16k)(Real<16>{0.5}, Int<8>{-1}), Real<16>{2});
+  EXPECT_EQ(RTNAME(FPow16k)(Real<16>{-3}, Int<8>{3}), Real<16>{-27});
+  EXPECT_EQ(RTNAME(FPow16k)(Real<16>{-2}, Int<8>{-3}), Real<16>{-0.125});
+#endif
+
+  // Test some extreme values.
+  if (sizeof(double) == sizeof(std::uint64_t)) {
+    // (0x3FF0000000000001 ** -2147483648) ~ 0x3FEFFFFF00000401
+    double base;
+    *reinterpret_cast<std::uint64_t *>(&base) = 4607182418800017409ULL;
+    double result;
+    *reinterpret_cast<std::uint64_t *>(&result) = 4607182414505051137ULL;
+    EXPECT_TRUE(std::abs(RTNAME(FPow8i)(Real<8>{base},
+                             Int<4>{std::numeric_limits<Int<4>>::min()}) -
+                    Real<8>{result}) < 0.00000000001);
+
+    // (0x3FF0000000000001 ** 4294967296ULL) ~ 0x3FF00001000007FF
+    *reinterpret_cast<std::uint64_t *>(&base) = 4607182418800017409ULL;
+    *reinterpret_cast<std::uint64_t *>(&result) = 4607182423094986751ULL;
+    EXPECT_TRUE(std::abs(RTNAME(FPow8k)(Real<8>{base}, Int<8>{4294967296ULL}) -
+                    Real<8>{result}) < 0.00000000001);
+  }
+}

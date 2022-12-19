@@ -522,7 +522,7 @@ void Simplifier::Context::link(Instruction *I, BasicBlock *B,
       link(OpI, B, At);
   }
 
-  I->insertAt(B, At);
+  I->insertInto(B, At);
 }
 
 Value *Simplifier::Context::materialize(BasicBlock *B,

@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cctype>
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -119,8 +120,9 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          Optional<FileEntryRef> File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          std::optional<FileEntryRef> File,
+                          StringRef SearchPath, StringRef RelativePath,
+                          const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override {
     clearCurrentEnum(HashLoc);
   }

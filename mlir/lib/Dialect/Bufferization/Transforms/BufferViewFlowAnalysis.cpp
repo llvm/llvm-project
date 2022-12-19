@@ -104,7 +104,7 @@ void BufferViewFlowAnalysis::build(Operation *op) {
                                           successorRegions);
       for (RegionSuccessor &successorRegion : successorRegions) {
         // Determine the current region index (if any).
-        Optional<unsigned> regionIndex;
+        std::optional<unsigned> regionIndex;
         Region *regionSuccessor = successorRegion.getSuccessor();
         if (regionSuccessor)
           regionIndex = regionSuccessor->getRegionNumber();

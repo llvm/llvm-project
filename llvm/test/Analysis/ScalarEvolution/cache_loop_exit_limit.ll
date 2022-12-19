@@ -1,14 +1,14 @@
 ; RUN: opt -scalar-evolution-max-arith-depth=4 -scalar-evolution-max-add-rec-size=4 -loop-reduce -S < %s | FileCheck %s
 
 ; Check that the test does not hang.
-define void @test_01(i32* nocapture %a) local_unnamed_addr {
+define void @test_01(ptr nocapture %a) local_unnamed_addr {
 
 ; CHECK-LABEL: @test_01(
 
 while.body.outer:
-  %arrayidx2 = getelementptr inbounds i32, i32* %a, i64 96
-  %arrayidx2.promoted50 = load i32, i32* %arrayidx2, align 1
-  %a.promoted = load i32, i32* %a, align 1
+  %arrayidx2 = getelementptr inbounds i32, ptr %a, i64 96
+  %arrayidx2.promoted50 = load i32, ptr %arrayidx2, align 1
+  %a.promoted = load i32, ptr %a, align 1
   %add347.peel = xor i32 %arrayidx2.promoted50, -1
   %tobool48.peel = icmp eq i32 %a.promoted, %add347.peel
   br i1 %tobool48.peel, label %while.body.preheader, label %while.body4.preheader

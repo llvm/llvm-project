@@ -18,31 +18,31 @@ program test_ishftc
   n = ishftc(3, 2, 3)
   array_result = ishftc([3,3], [2,2], [3,3])
 
-  !ERROR: 'size=' argument for intrinsic 'ishftc' must be a positive value, but is -3
+  !ERROR: SIZE=-3 count for ishftc is not positive
   n = ishftc(3, 2, -3)
-  !ERROR: 'size=' argument for intrinsic 'ishftc' must be a positive value, but is 0
+  !ERROR: SIZE=0 count for ishftc is not positive
   n = ishftc(3, 2, 0)
-  !ERROR: The absolute value of the 'shift=' argument for intrinsic 'ishftc' must be less than or equal to the 'size=' argument
+  !ERROR: SHIFT=2 count for ishftc is greater in magnitude than SIZE=1
   n = ishftc(3, 2, 1)
-  !ERROR: The absolute value of the 'shift=' argument for intrinsic 'ishftc' must be less than or equal to the 'size=' argument
+  !ERROR: SHIFT=-2 count for ishftc is greater in magnitude than SIZE=1
   n = ishftc(3, -2, 1)
-  !ERROR: 'size=' argument for intrinsic 'ishftc' must contain all positive values
+  !ERROR: SIZE=-3 count for ishftc is not positive
   array_result = ishftc([3,3], [2,2], [-3,3])
-  !ERROR: 'size=' argument for intrinsic 'ishftc' must contain all positive values
+  !ERROR: SIZE=-3 count for ishftc is not positive
   array_result = ishftc([3,3], [2,2], [-3,-3])
-  !ERROR: 'size=' argument for intrinsic 'ishftc' must contain all positive values
+  !ERROR: SIZE=-3 count for ishftc is not positive
   array_result = ishftc([3,3], [-2,-2], const_arr1)
-  !ERROR: 'size=' argument for intrinsic 'ishftc' must contain all positive values
+  !ERROR: SIZE=0 count for ishftc is not positive
   array_result = ishftc([3,3], [-2,-2], const_arr2)
-  !ERROR: 'size=' argument for intrinsic 'ishftc' must contain all positive values
+  !ERROR: SIZE=0 count for ishftc is not positive
   array_result = ishftc([3,3], [-2,-2], const_arr3)
-  !ERROR: 'size=' argument for intrinsic 'ishftc' must contain all positive values
+  !ERROR: SIZE=0 count for ishftc is not positive
   array_result = ishftc([3,3], [-2,-2], const_arr4)
-  !ERROR: 'size=' argument for intrinsic 'ishftc' must contain all positive values
+  !ERROR: SIZE=0 count for ishftc is not positive
   array_result = ishftc([3,3], [-2,-2], const_arr5)
-  !ERROR: 'size=' argument for intrinsic 'ishftc' must contain all positive values
+  !ERROR: SIZE=0 count for ishftc is not positive
   array_result = ishftc([3,3], [-2,-2], const_arr6)
-  !ERROR: 'size=' argument for intrinsic 'ishftc' must contain all positive values
+  !ERROR: SIZE=0 count for ishftc is not positive
   array_result = ishftc([3,3], [-2,-2], const_arr7)
 
 end program test_ishftc

@@ -503,7 +503,7 @@ static V getOrCreateCachedOptional(K Key, DenseMap<K, std::optional<V>> &Map,
   std::optional<V> &OptVal = Map[Key];
   if (!OptVal)
     OptVal = Fn(std::forward<ArgsTy>(args)...);
-  return OptVal.value();
+  return *OptVal;
 }
 
 const BasicBlock *

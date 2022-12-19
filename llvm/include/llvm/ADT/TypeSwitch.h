@@ -119,7 +119,7 @@ public:
 
     // Check to see if CaseT applies to 'value'.
     if (auto caseValue = BaseT::template castValue<CaseT>(this->value))
-      result = caseFn(caseValue);
+      result.emplace(caseFn(caseValue));
     return *this;
   }
 

@@ -143,7 +143,7 @@ exit:
 ; Check that we can correctly evaluate a sum of phis+variants from two different
 ; loops in any order.
 
-define void @test_02(i32 %a, i32 %b, i32* %p) {
+define void @test_02(i32 %a, i32 %b, ptr %p) {
 
 ; CHECK-LABEL: Classifying expressions for: @test_02
 ; CHECK:       %sum1 = add i32 %phi1, %phi2
@@ -185,7 +185,7 @@ loop1:
   %phi1.inc = add i32 %phi1, 1
   %phi2.inc = add i32 %phi2, 2
   %phi3.inc = add i32 %phi3, 3
-  %v1 = load i32, i32* %p
+  %v1 = load i32, ptr %p
   %sum1 = add i32 %phi1, %phi2
   %sum2 = add i32 %sum1, %phi3
   %is1 = add i32 %sum2, %v1
@@ -199,7 +199,7 @@ loop2:
   %phi4.inc = add i32 %phi4, 1
   %phi5.inc = add i32 %phi5, 2
   %phi6.inc = add i32 %phi6, 3
-  %v2 = load i32, i32* %p
+  %v2 = load i32, ptr %p
   %sum3 = add i32 %phi4, %phi5
   %sum4 = add i32 %sum3, %phi6
   %is2 = add i32 %sum4, %v2
@@ -223,10 +223,10 @@ exit:
 ; incorrect order. It also shows that we cannot safely fold v1 (SCEVUnknown)
 ; because we cannot prove for sure that it doesn't use Phis of loop 2.
 
-define void @test_03(i32 %a, i32 %b, i32 %c, i32* %p) {
+define void @test_03(i32 %a, i32 %b, i32 %c, ptr %p) {
 
 ; CHECK-LABEL: Classifying expressions for: @test_03
-; CHECK:       %v1 = load i32, i32* %p
+; CHECK:       %v1 = load i32, ptr %p
 ; CHECK-NEXT:  -->  %v1
 ; CHECK:       %s1 = add i32 %phi1, %v1
 ; CHECK-NEXT:  -->  ({%a,+,1}<%loop1> + %v1)
@@ -247,7 +247,7 @@ loop1:
 loop2:
   %phi2 = phi i32 [ %a, %loop1 ], [ %phi2.inc, %loop2 ]
   %phi2.inc = add i32 %phi2, 2
-  %v1 = load i32, i32* %p
+  %v1 = load i32, ptr %p
   %s1 = add i32 %phi1, %v1
   %s2 = add i32 %s1, %b
   %s3 = add i32 %s2, %phi2
@@ -301,7 +301,7 @@ bb5:
 
 loop2:
   %tmp7 = phi i64 [ %tmp15, %loop2 ], [ 2, %loop1 ]
-  %tmp8 = load i8, i8 addrspace(1)* undef, align 1
+  %tmp8 = load i8, ptr addrspace(1) undef, align 1
   %tmp9 = sext i8 %tmp8 to i64
   %tmp10 = sub i64 %tmp9, %tmp7
   %tmp11 = add i64 %tmp10, undef
@@ -331,8 +331,8 @@ entry:
         br label %bb3
 
 bb:             ; preds = %bb3
-        %tmp = getelementptr [1000 x i32], [1000 x i32]* @A, i32 0, i32 %i.0          ; <i32*> [#uses=1]
-        store i32 123, i32* %tmp
+        %tmp = getelementptr [1000 x i32], ptr @A, i32 0, i32 %i.0          ; <ptr> [#uses=1]
+        store i32 123, ptr %tmp
         %tmp2 = add i32 %i.0, 1         ; <i32> [#uses=1]
         br label %bb3
 

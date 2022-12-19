@@ -49,7 +49,7 @@ public:
     if (Steps == 0)
       return std::nullopt;
     return AvgTy(Accumulated) / Steps;
-  };
+  }
 };
 
 template <typename ClockTypeTy = std::chrono::steady_clock,

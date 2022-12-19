@@ -2295,10 +2295,12 @@ m_NSWNeg(const ValTy &V) {
 }
 
 /// Matches a 'Not' as 'xor V, -1' or 'xor -1, V'.
+/// NOTE: we first match the 'Not' (by matching '-1'),
+/// and only then match the inner matcher!
 template <typename ValTy>
-inline BinaryOp_match<ValTy, cst_pred_ty<is_all_ones>, Instruction::Xor, true>
+inline BinaryOp_match<cst_pred_ty<is_all_ones>, ValTy, Instruction::Xor, true>
 m_Not(const ValTy &V) {
-  return m_c_Xor(V, m_AllOnes());
+  return m_c_Xor(m_AllOnes(), V);
 }
 
 template <typename ValTy> struct NotForbidUndef_match {

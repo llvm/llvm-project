@@ -87,6 +87,9 @@ RUN ln -s /usr/bin/clang-tidy-14 /usr/bin/clang-tidy && [ -e $(readlink /usr/bin
 # Install llvm-dev to compile custom clang-tidy checks
 RUN apt-get update && apt-get install llvm-$(($LLVM_HEAD_VERSION - 1))-dev llvm-$(($LLVM_HEAD_VERSION - 2))-dev
 
+# TODO LLVM16 Don't install llvm-16-dev explicitly
+RUN apt-get update && apt-get install llvm-16-dev
+
 # Install clang-tools
 RUN apt-get update && apt-get install -y clang-tools-$(($LLVM_HEAD_VERSION - 1)) clang-tools-$LLVM_HEAD_VERSION
 

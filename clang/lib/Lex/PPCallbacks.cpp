@@ -8,6 +8,7 @@
 
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Basic/FileManager.h"
+#include <optional>
 
 using namespace clang;
 
@@ -15,16 +16,16 @@ using namespace clang;
 PPCallbacks::~PPCallbacks() = default;
 
 void PPCallbacks::HasInclude(SourceLocation Loc, StringRef FileName,
-                             bool IsAngled, Optional<FileEntryRef> File,
+                             bool IsAngled, std::optional<FileEntryRef> File,
                              SrcMgr::CharacteristicKind FileType) {}
 
 // Out of line key method.
 PPChainedCallbacks::~PPChainedCallbacks() = default;
 
 void PPChainedCallbacks::HasInclude(SourceLocation Loc, StringRef FileName,
-                                    bool IsAngled, Optional<FileEntryRef> File,
+                                    bool IsAngled,
+                                    std::optional<FileEntryRef> File,
                                     SrcMgr::CharacteristicKind FileType) {
   First->HasInclude(Loc, FileName, IsAngled, File, FileType);
   Second->HasInclude(Loc, FileName, IsAngled, File, FileType);
 }
-

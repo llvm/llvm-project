@@ -304,7 +304,7 @@ bool BreakpointBase::BreakpointHitCallback(
   }
   if (!output.empty() && output.back() != '\n')
     output.push_back('\n'); // Ensure log message has line break.
-  g_vsc.SendOutput(OutputType::Console, output.c_str());
+  g_vsc.SendOutput(OutputType::Console, output);
 
   // Do not stop.
   return false;

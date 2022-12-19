@@ -151,8 +151,8 @@ TEST(AlignmentTest, isAligned_isAddrAligned) {
     MaybeAlign A(T.alignment);
     // Test Align
     if (A) {
-      EXPECT_EQ(isAligned(A.value(), T.offset), T.isAligned);
-      EXPECT_EQ(isAddrAligned(A.value(), T.forgedAddr()), T.isAligned);
+      EXPECT_EQ(isAligned(*A, T.offset), T.isAligned);
+      EXPECT_EQ(isAddrAligned(*A, T.forgedAddr()), T.isAligned);
     }
   }
 }
@@ -233,10 +233,6 @@ std::vector<uint64_t> getValidAlignmentsForDeathTest() {
 }
 
 std::vector<uint64_t> getNonPowerOfTwo() { return {3, 10, 15}; }
-
-TEST(AlignmentDeathTest, CantConvertUnsetMaybe) {
-  EXPECT_DEATH((*MaybeAlign(0)), ".*");
-}
 
 TEST(AlignmentDeathTest, InvalidCTors) {
   EXPECT_DEATH((Align(0)), "Value must not be 0");

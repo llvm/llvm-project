@@ -88,7 +88,7 @@ t;
 static addr_t RetrieveUnsigned(ValueObjectSP return_value_sp,
                                ProcessSP process_sp,
                                const std::string &expression_path) {
-  return return_value_sp->GetValueForExpressionPath(expression_path.c_str())
+  return return_value_sp->GetValueForExpressionPath(expression_path)
       ->GetValueAsUnsigned(0);
 }
 

@@ -130,9 +130,9 @@ getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace,
       }
     };
     auto InProgressFixup = [&] {
-      return Info
-          .transform(
-              [](const FailureInfo &Info) { return StringRef(Info.Fixup); })
+      return llvm::transformOptional(
+                 Info,
+                 [](const FailureInfo &Info) { return StringRef(Info.Fixup); })
           .value_or(Name);
     };
     if (auto Fixup = getDoubleUnderscoreFixup(InProgressFixup(), LangOpts))

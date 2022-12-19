@@ -883,6 +883,11 @@ bool IEEEFloat::isSmallest() const {
     significandMSB() == 0;
 }
 
+bool IEEEFloat::isSmallestNormalized() const {
+  return getCategory() == fcNormal && exponent == semantics->minExponent &&
+         isSignificandAllZerosExceptMSB();
+}
+
 bool IEEEFloat::isSignificandAllOnes() const {
   // Test if the significand excluding the integral bit is all ones. This allows
   // us to test for binade boundaries.
@@ -953,6 +958,21 @@ bool IEEEFloat::isSignificandAllZeros() const {
     return false;
 
   return true;
+}
+
+bool IEEEFloat::isSignificandAllZerosExceptMSB() const {
+  const integerPart *Parts = significandParts();
+  const unsigned PartCount = partCountForBits(semantics->precision);
+
+  for (unsigned i = 0; i < PartCount - 1; i++) {
+    if (Parts[i])
+      return false;
+  }
+
+  const unsigned NumHighBits =
+      PartCount * integerPartWidth - semantics->precision + 1;
+  return Parts[PartCount - 1] == integerPart(1)
+                                     << (integerPartWidth - NumHighBits);
 }
 
 bool IEEEFloat::isLargest() const {
@@ -4995,6 +5015,15 @@ bool DoubleAPFloat::isSmallest() const {
     return false;
   DoubleAPFloat Tmp(*this);
   Tmp.makeSmallest(this->isNegative());
+  return Tmp.compare(*this) == cmpEqual;
+}
+
+bool DoubleAPFloat::isSmallestNormalized() const {
+  if (getCategory() != fcNormal)
+    return false;
+
+  DoubleAPFloat Tmp(*this);
+  Tmp.makeSmallestNormalized(this->isNegative());
   return Tmp.compare(*this) == cmpEqual;
 }
 

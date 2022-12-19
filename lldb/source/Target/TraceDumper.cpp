@@ -20,7 +20,7 @@ using namespace llvm;
 
 /// \return
 ///   The given string or \b std::nullopt if it's empty.
-static Optional<const char *> ToOptionalString(const char *s) {
+static std::optional<const char *> ToOptionalString(const char *s) {
   if (!s)
     return std::nullopt;
   return s;
@@ -407,7 +407,7 @@ public:
       m_j.attribute("id", item.id);
       if (m_options.show_timestamps)
         m_j.attribute("timestamp_ns", item.timestamp
-                                          ? Optional<std::string>(
+                                          ? std::optional<std::string>(
                                                 std::to_string(*item.timestamp))
                                           : std::nullopt);
 

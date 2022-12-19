@@ -23,6 +23,17 @@ module m
   procedure(procFunc), bind(c), pointer, bind(c) :: proc3
   !WARNING: Attribute 'PROTECTED' cannot be used more than once
   procedure(procFunc), protected, pointer, protected :: proc4
+  !ERROR: A PROTECTED entity must be a variable or pointer
+  external extsub
+  protected extsub
+  real x
+  !ERROR: A PROTECTED entity must be a variable or pointer
+  namelist /nml/ x
+  protected nml
+  !ERROR: A PROTECTED entity may not be in a common block
+  real y
+  common /blk/ y
+  protected y
 
 contains
 
@@ -43,6 +54,9 @@ contains
       procedure(procFunc), pointer, optional, pointer :: arg10
       !WARNING: Attribute 'SAVE' cannot be used more than once
       procedure(procFunc), save, pointer, save :: localProc
+      !ERROR: A PROTECTED entity must be in the specification part of a module
+      real x
+      protected x
     end subroutine testProcDecl
 
 end module m

@@ -209,7 +209,11 @@ const semantics::DerivedTypeSpec *GetDerivedTypeSpec(const DynamicType &type) {
 static const semantics::Symbol *FindParentComponent(
     const semantics::DerivedTypeSpec &derived) {
   const semantics::Symbol &typeSymbol{derived.typeSymbol()};
-  if (const semantics::Scope * scope{typeSymbol.scope()}) {
+  const semantics::Scope *scope{derived.scope()};
+  if (!scope) {
+    scope = typeSymbol.scope();
+  }
+  if (scope) {
     const auto &dtDetails{typeSymbol.get<semantics::DerivedTypeDetails>()};
     if (auto extends{dtDetails.GetParentComponentName()}) {
       if (auto iter{scope->find(*extends)}; iter != scope->cend()) {
@@ -354,10 +358,11 @@ bool DynamicType::IsTkLenCompatibleWith(const DynamicType &that) const {
 std::optional<bool> DynamicType::SameTypeAs(const DynamicType &that) const {
   bool x{AreCompatibleTypes(*this, that, true, true)};
   bool y{AreCompatibleTypes(that, *this, true, true)};
-  if (x == y) {
-    return x;
+  if (!x && !y) {
+    return false;
+  } else if (x && y && !IsPolymorphic() && !that.IsPolymorphic()) {
+    return true;
   } else {
-    // If either is unlimited polymorphic, the result is unknown.
     return std::nullopt;
   }
 }
@@ -366,9 +371,23 @@ std::optional<bool> DynamicType::SameTypeAs(const DynamicType &that) const {
 std::optional<bool> DynamicType::ExtendsTypeOf(const DynamicType &that) const {
   if (IsUnlimitedPolymorphic() || that.IsUnlimitedPolymorphic()) {
     return std::nullopt; // unknown
-  } else if (!AreCompatibleDerivedTypes(evaluate::GetDerivedTypeSpec(that),
-                 evaluate::GetDerivedTypeSpec(*this), true)) {
-    return false;
+  }
+  const auto *thisDts{evaluate::GetDerivedTypeSpec(*this)};
+  const auto *thatDts{evaluate::GetDerivedTypeSpec(that)};
+  if (!thisDts || !thatDts) {
+    return std::nullopt;
+  } else if (!AreCompatibleDerivedTypes(thatDts, thisDts, true)) {
+    // Note that I check *thisDts, not its parent, so that EXTENDS_TYPE_OF()
+    // is .true. when they are the same type.  This is technically
+    // an implementation-defined case in the standard, but every other
+    // compiler works this way.
+    if (IsPolymorphic() && AreCompatibleDerivedTypes(thisDts, thatDts, true)) {
+      // 'that' is *this or an extension of *this, and so runtime *this
+      // could be an extension of 'that'
+      return std::nullopt;
+    } else {
+      return false;
+    }
   } else if (that.IsPolymorphic()) {
     return std::nullopt; // unknown
   } else {

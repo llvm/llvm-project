@@ -891,7 +891,7 @@ static bool CheckElementalConformance(parser::ContextualMessages &messages,
   int index{0};
   bool hasArrayArg{false};
   for (const auto &arg : actuals) {
-    if (arg && arg.value().Rank() > 0) {
+    if (arg && !arg->isAlternateReturn() && arg->Rank() > 0) {
       hasArrayArg = true;
       break;
     }

@@ -22,12 +22,15 @@ define amdgpu_kernel void @test_kernel_call_external_void_func_void_clobber_s30_
 }
 
 ; GCN-LABEL: {{^}}test_func_call_external_void_func_void_clobber_s30_s31_call_external_void_func_void:
+; GCN: s_mov_b32 [[FP_SCRATCH_COPY:s[0-9]+]], s33
+; MUBUF:   buffer_store_dword
 ; MUBUF:   buffer_store_dword
 ; FLATSCR: scratch_store_dword
-; GCN: v_writelane_b32 v40, s33, 4
+; FLATSCR: scratch_store_dword
 ; GCN: v_writelane_b32 v40, s30, 0
 ; GCN: v_writelane_b32 v40, s31, 1
 ; GCN: v_writelane_b32 v40, s34, 2
+; GCN: v_writelane_b32 v41, [[FP_SCRATCH_COPY]], 0
 ; GCN: v_writelane_b32 v40, s35, 3
 
 ; GCN: s_swappc_b64
@@ -41,9 +44,12 @@ define amdgpu_kernel void @test_kernel_call_external_void_func_void_clobber_s30_
 ; FLATSCR-DAG: v_readlane_b32 s31, v40, 1
 ; FLATSCR-DAG: v_readlane_b32 s30, v40, 0
 
-; GCN: v_readlane_b32 s33, v40, 4
+; GCN: v_readlane_b32 [[FP_SCRATCH_COPY:s[0-9]+]], v41, 0
+; MUBUF:   buffer_load_dword
 ; MUBUF:   buffer_load_dword
 ; FLATSCR: scratch_load_dword
+; FLATSCR: scratch_load_dword
+; GCN: s_mov_b32 s33, [[FP_SCRATCH_COPY]]
 ; GCN: s_setpc_b64 s[30:31]
 define void @test_func_call_external_void_func_void_clobber_s30_s31_call_external_void_func_void() #0 {
   call void @external_void_func_void()
@@ -53,19 +59,25 @@ define void @test_func_call_external_void_func_void_clobber_s30_s31_call_externa
 }
 
 ; GCN-LABEL: {{^}}test_func_call_external_void_funcx2:
-; MUBUF:   buffer_store_dword v40
-; FLATSCR: scratch_store_dword off, v40
-; GCN: v_writelane_b32 v40, s33, 4
-
+; GCN: s_mov_b32 [[FP_SCRATCH_COPY:s[0-9]+]], s33
 ; GCN: s_mov_b32 s33, s32
+; MUBUF:   buffer_store_dword v40
+; MUBUF:   buffer_store_dword v41
+; FLATSCR: scratch_store_dword off, v40
+; FLATSCR: scratch_store_dword off, v41
 ; MUBUF:   s_addk_i32 s32, 0x400
 ; FLATSCR: s_add_i32 s32, s32, 16
+; GCN: v_writelane_b32 v41, [[FP_SCRATCH_COPY]], 0
+
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_swappc_b64
 
-; GCN: v_readlane_b32 s33, v40, 4
+; GCN: v_readlane_b32 [[FP_SCRATCH_COPY:s[0-9]+]], v41, 0
 ; MUBUF:   buffer_load_dword v40
+; MUBUF:   buffer_load_dword v41
 ; FLATSCR: scratch_load_dword v40
+; FLATSCR: scratch_load_dword v41
+; GCN: s_mov_b32 s33, [[FP_SCRATCH_COPY]]
 define void @test_func_call_external_void_funcx2() #0 {
   call void @external_void_func_void()
   call void @external_void_func_void()

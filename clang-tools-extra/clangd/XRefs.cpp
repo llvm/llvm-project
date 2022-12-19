@@ -857,7 +857,6 @@ public:
   struct Reference {
     syntax::Token SpelledTok;
     index::SymbolRoleSet Role;
-    SymbolID Target;
 
     Range range(const SourceManager &SM) const {
       return halfOpenToRange(SM, SpelledTok.range(SM).toCharRange(SM));
@@ -868,10 +867,8 @@ public:
                   const llvm::ArrayRef<const NamedDecl *> Targets,
                   bool PerToken)
       : PerToken(PerToken), AST(AST) {
-    for (const NamedDecl *ND : Targets) {
-      const Decl *CD = ND->getCanonicalDecl();
-      TargetDeclToID[CD] = getSymbolID(CD);
-    }
+    for (const NamedDecl *ND : Targets)
+      TargetDecls.insert(ND->getCanonicalDecl());
   }
 
   std::vector<Reference> take() && {
@@ -897,8 +894,7 @@ public:
                        llvm::ArrayRef<index::SymbolRelation> Relations,
                        SourceLocation Loc,
                        index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
-    auto DeclID = TargetDeclToID.find(D->getCanonicalDecl());
-    if (DeclID == TargetDeclToID.end())
+    if (!TargetDecls.contains(D->getCanonicalDecl()))
       return true;
     const SourceManager &SM = AST.getSourceManager();
     if (!isInsideMainFile(Loc, SM))
@@ -926,7 +922,7 @@ public:
     for (SourceLocation L : Locs) {
       L = SM.getFileLoc(L);
       if (const auto *Tok = TB.spelledTokenAt(L))
-        References.push_back({*Tok, Roles, DeclID->getSecond()});
+        References.push_back({*Tok, Roles});
     }
     return true;
   }
@@ -935,7 +931,7 @@ private:
   bool PerToken; // If true, report 3 references for split ObjC selector names.
   std::vector<Reference> References;
   const ParsedAST &AST;
-  llvm::DenseMap<const Decl *, SymbolID> TargetDeclToID;
+  llvm::DenseSet<const Decl *> TargetDecls;
 };
 
 std::vector<ReferenceFinder::Reference>
@@ -2060,7 +2056,7 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
   return Results;
 }
 
-llvm::Optional<std::vector<TypeHierarchyItem>>
+std::optional<std::vector<TypeHierarchyItem>>
 superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index) {
   std::vector<TypeHierarchyItem> Results;
   if (!Item.data.parents)

@@ -1608,7 +1608,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_PERFMON, AArch64::AEK_SVE2p1,    AArch64::AEK_SME2p1,
       AArch64::AEK_B16B16,  AArch64::AEK_SMEF16F16, AArch64::AEK_CSSC,
       AArch64::AEK_RCPC3,   AArch64::AEK_THE,       AArch64::AEK_D128,
-      AArch64::AEK_LSE128,  AArch64::AEK_SPECRES2,
+      AArch64::AEK_LSE128,  AArch64::AEK_SPECRES2,  AArch64::AEK_RASv2,
   };
 
   std::vector<StringRef> Features;
@@ -1773,6 +1773,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"mops", "nomops", "+mops", "-mops"},
       {"pmuv3", "nopmuv3", "+perfmon", "-perfmon"},
       {"predres2", "nopredres2", "+specres2", "-specres2"},
+      {"rasv2", "norasv2", "+rasv2", "-rasv2"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
