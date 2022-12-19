@@ -7,7 +7,7 @@
 define void @test18(<16 x i32> %a) #0 {
 entry:
   %0 = tail call <16 x i32> @llvm.hexagon.V6.vcl0w(<16 x i32> %a)
-  store <16 x i32> %0, <16 x i32>* @d, align 64
+  store <16 x i32> %0, ptr @d, align 64
   ret void
 }
 
@@ -16,7 +16,7 @@ entry:
 define void @test19(<16 x i32> %a) #0 {
 entry:
   %0 = tail call <16 x i32> @llvm.hexagon.V6.vpopcounth(<16 x i32> %a)
-  store <16 x i32> %0, <16 x i32>* @d, align 64
+  store <16 x i32> %0, ptr @d, align 64
   ret void
 }
 
@@ -25,7 +25,7 @@ entry:
 define void @test20(<16 x i32> %a) #0 {
 entry:
   %0 = tail call <16 x i32> @llvm.hexagon.V6.vcl0h(<16 x i32> %a)
-  store <16 x i32> %0, <16 x i32>* @d, align 64
+  store <16 x i32> %0, ptr @d, align 64
   ret void
 }
 
@@ -34,7 +34,7 @@ entry:
 define void @test21(<16 x i32> %a) #0 {
 entry:
   %0 = tail call <16 x i32> @llvm.hexagon.V6.vnormamtw(<16 x i32> %a)
-  store <16 x i32> %0, <16 x i32>* @d, align 64
+  store <16 x i32> %0, ptr @d, align 64
   ret void
 }
 
@@ -43,7 +43,7 @@ entry:
 define void @test22(<16 x i32> %a) #0 {
 entry:
   %0 = tail call <16 x i32> @llvm.hexagon.V6.vnormamth(<16 x i32> %a)
-  store <16 x i32> %0, <16 x i32>* @d, align 64
+  store <16 x i32> %0, ptr @d, align 64
   ret void
 }
 

@@ -14,17 +14,17 @@ define dso_local i64 @fshl(i64 %x, i64 %y) {
 entry:
   %x.addr = alloca i64, align 8
   %y.addr = alloca i64, align 8
-  store i64 %x, i64* %x.addr, align 8
-  store i64 %y, i64* %y.addr, align 8
-  %0 = load i64, i64* %x.addr, align 8
+  store i64 %x, ptr %x.addr, align 8
+  store i64 %y, ptr %y.addr, align 8
+  %0 = load i64, ptr %x.addr, align 8
   %shr = lshr i64 %0, 1
-  %1 = load i64, i64* %x.addr, align 8
-  %2 = load i64, i64* %y.addr, align 8
+  %1 = load i64, ptr %x.addr, align 8
+  %2 = load i64, ptr %y.addr, align 8
   %call = call i64 @parity(i64 %1, i64 %2)
   %shl = shl i64 %call, 63
   %or = or i64 %shr, %shl
-  store i64 %or, i64* %x.addr, align 8
-  %3 = load i64, i64* %x.addr, align 8
+  store i64 %or, ptr %x.addr, align 8
+  %3 = load i64, ptr %x.addr, align 8
   ret i64 %3
 }
 

@@ -8,8 +8,8 @@
 ; CHECK-DAG: [[T2:r[0-9]+]] = memuh(r1+#4)
 ; CHECK-DAG: [[T3:r[0-9]+]] = memuh(r1+#6)
 ; CHECK:     r1 |= asl([[T3]],#16)
-define <4 x i16> @danny(<4 x i16>* %p) {
-  %t0 = load <4 x i16>, <4 x i16>* %p, align 2
+define <4 x i16> @danny(ptr %p) {
+  %t0 = load <4 x i16>, ptr %p, align 2
   ret <4 x i16> %t0
 }
 
@@ -17,7 +17,7 @@ define <4 x i16> @danny(<4 x i16>* %p) {
 ; CHECK-DAG: [[T0:r[0-9]+]] = memw(r0+#0)
 ; CHECK-DAG: r1 = memw(r0+#4)
 ; CHECK:     r0 = [[T0]]
-define <4 x i16> @sammy(<4 x i16>* %p) {
-  %t0 = load <4 x i16>, <4 x i16>* %p, align 4
+define <4 x i16> @sammy(ptr %p) {
+  %t0 = load <4 x i16>, ptr %p, align 4
   ret <4 x i16> %t0
 }

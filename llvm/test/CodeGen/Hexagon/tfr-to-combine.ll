@@ -21,7 +21,7 @@ entry:
 ; CHECK: combine(#0,r{{[0-9]+}})
 define i32 @test2() #0 {
 entry:
-  %t0 = load i16, i16* @c, align 2
+  %t0 = load i16, ptr @c, align 2
   %t1 = zext i16 %t0 to i32
   call void @test0b(i32 %t1, i32 0, i32 %t1, i32 0)
   ret i32 0
