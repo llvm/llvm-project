@@ -36,7 +36,7 @@ entry:
   ret i32 %and
 }
 
-define void @truncated(i16 %a, i16* %p) {
+define void @truncated(i16 %a, ptr %p) {
 ; CHECK-T1-LABEL: truncated:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #128
@@ -50,11 +50,11 @@ define void @truncated(i16 %a, i16* %p) {
 ; CHECK-T2-NEXT:    strh r0, [r1]
 ; CHECK-T2-NEXT:    bx lr
   %and = and i16 %a, -129
-  store i16 %and, i16* %p
+  store i16 %and, ptr %p
   ret void
 }
 
-define void @truncated_neg2(i16 %a, i16* %p) {
+define void @truncated_neg2(i16 %a, ptr %p) {
 ; CHECK-T1-LABEL: truncated_neg2:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #1
@@ -68,11 +68,11 @@ define void @truncated_neg2(i16 %a, i16* %p) {
 ; CHECK-T2-NEXT:    strh r0, [r1]
 ; CHECK-T2-NEXT:    bx lr
   %and = and i16 %a, -2
-  store i16 %and, i16* %p
+  store i16 %and, ptr %p
   ret void
 }
 
-define void @truncated_neg256(i16 %a, i16* %p) {
+define void @truncated_neg256(i16 %a, ptr %p) {
 ; CHECK-T1-LABEL: truncated_neg256:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #255
@@ -86,12 +86,12 @@ define void @truncated_neg256(i16 %a, i16* %p) {
 ; CHECK-T2-NEXT:    strh r0, [r1]
 ; CHECK-T2-NEXT:    bx lr
   %and = and i16 %a, -256
-  store i16 %and, i16* %p
+  store i16 %and, ptr %p
   ret void
 }
 
 ; FIXME: Thumb2 supports "bic r0, r0, #510"
-define void @truncated_neg511(i16 %a, i16* %p) {
+define void @truncated_neg511(i16 %a, ptr %p) {
 ; CHECK-T1-LABEL: truncated_neg511:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    ldr r2, .LCPI5_0
@@ -110,6 +110,6 @@ define void @truncated_neg511(i16 %a, i16* %p) {
 ; CHECK-T2-NEXT:    strh r0, [r1]
 ; CHECK-T2-NEXT:    bx lr
   %and = and i16 %a, -511
-  store i16 %and, i16* %p
+  store i16 %and, ptr %p
   ret void
 }
