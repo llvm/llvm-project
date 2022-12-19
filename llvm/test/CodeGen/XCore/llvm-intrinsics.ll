@@ -1,67 +1,67 @@
 ; RUN: llc < %s -march=xcore | FileCheck %s
 ; RUN: llc < %s -march=xcore -frame-pointer=all | FileCheck %s -check-prefix=CHECKFP
 
-declare i8* @llvm.frameaddress(i32) nounwind readnone
-declare i8* @llvm.returnaddress(i32) nounwind
-declare i8* @llvm.eh.dwarf.cfa(i32) nounwind
-declare void @llvm.eh.return.i32(i32, i8*) nounwind
+declare ptr @llvm.frameaddress(i32) nounwind readnone
+declare ptr @llvm.returnaddress(i32) nounwind
+declare ptr @llvm.eh.dwarf.cfa(i32) nounwind
+declare void @llvm.eh.return.i32(i32, ptr) nounwind
 declare void @llvm.eh.unwind.init() nounwind
 
-define i8* @FA0() nounwind {
+define ptr @FA0() nounwind {
 entry:
 ; CHECK-LABEL: FA0
 ; CHECK: ldaw r0, sp[0]
 ; CHECK-NEXT: retsp 0
-  %0 = call i8* @llvm.frameaddress(i32 0)
-  ret i8* %0
+  %0 = call ptr @llvm.frameaddress(i32 0)
+  ret ptr %0
 }
 
-define i8* @FA1() nounwind {
+define ptr @FA1() nounwind {
 entry:
 ; CHECK-LABEL: FA1
 ; CHECK: entsp 100
 ; CHECK-NEXT: ldaw r0, sp[0]
 ; CHECK-NEXT: retsp 100
   %0 = alloca [100 x i32]
-  %1 = call i8* @llvm.frameaddress(i32 0)
-  ret i8* %1
+  %1 = call ptr @llvm.frameaddress(i32 0)
+  ret ptr %1
 }
 
-define i8* @RA0() nounwind {
+define ptr @RA0() nounwind {
 entry:
 ; CHECK-LABEL: RA0
 ; CHECK: stw lr, sp[0]
 ; CHECK-NEXT: ldw r0, sp[0]
 ; CHECK-NEXT: ldw lr, sp[0]
 ; CHECK-NEXT: retsp 0
-  %0 = call i8* @llvm.returnaddress(i32 0)
-  ret i8* %0
+  %0 = call ptr @llvm.returnaddress(i32 0)
+  ret ptr %0
 }
 
-define i8* @RA1() nounwind {
+define ptr @RA1() nounwind {
 entry:
 ; CHECK-LABEL: RA1
 ; CHECK: entsp 100
 ; CHECK-NEXT: ldw r0, sp[100]
 ; CHECK-NEXT: retsp 100
   %0 = alloca [100 x i32]
-  %1 = call i8* @llvm.returnaddress(i32 0)
-  ret i8* %1
+  %1 = call ptr @llvm.returnaddress(i32 0)
+  ret ptr %1
 }
 
 ; test FRAME_TO_ARGS_OFFSET lowering
-define i8* @FTAO0() nounwind {
+define ptr @FTAO0() nounwind {
 entry:
 ; CHECK-LABEL: FTAO0
 ; CHECK: ldc r0, 0
 ; CHECK-NEXT: ldaw r1, sp[0]
 ; CHECK-NEXT: add r0, r1, r0
 ; CHECK-NEXT: retsp 0
-  %0 = call i8* @llvm.eh.dwarf.cfa(i32 0)
-  ret i8* %0
+  %0 = call ptr @llvm.eh.dwarf.cfa(i32 0)
+  ret ptr %0
 }
 
-define i8* @FTAO1() nounwind {
+define ptr @FTAO1() nounwind {
 entry:
 ; CHECK-LABEL: FTAO1
 ; CHECK: entsp 100
@@ -70,11 +70,11 @@ entry:
 ; CHECK-NEXT: add r0, r1, r0
 ; CHECK-NEXT: retsp 100
   %0 = alloca [100 x i32]
-  %1 = call i8* @llvm.eh.dwarf.cfa(i32 0)
-  ret i8* %1
+  %1 = call ptr @llvm.eh.dwarf.cfa(i32 0)
+  ret ptr %1
 }
 
-define i8* @EH0(i32 %offset, i8* %handler) {
+define ptr @EH0(i32 %offset, ptr %handler) {
 entry:
 ; CHECK-LABEL: EH0
 ; CHECK: entsp 2
@@ -91,12 +91,12 @@ entry:
 ; CHECK-NEXT: ldw r0, sp[1]
 ; CHECK-NEXT: set sp, r2
 ; CHECK-NEXT: bau r3
-  call void @llvm.eh.return.i32(i32 %offset, i8* %handler)
+  call void @llvm.eh.return.i32(i32 %offset, ptr %handler)
   unreachable
 }
 
 declare void @foo(...)
-define i8* @EH1(i32 %offset, i8* %handler) {
+define ptr @EH1(i32 %offset, ptr %handler) {
 entry:
 ; CHECK-LABEL: EH1
 ; CHECK: entsp 5
@@ -123,13 +123,13 @@ entry:
 ; CHECK-NEXT: set sp, r2
 ; CHECK-NEXT: bau r3
   call void (...) @foo()
-  call void @llvm.eh.return.i32(i32 %offset, i8* %handler)
+  call void @llvm.eh.return.i32(i32 %offset, ptr %handler)
   unreachable
 }
 
 @offset = external constant i32
 @handler = external constant i8
-define i8* @EH2(i32 %r0, i32 %r1, i32 %r2, i32 %r3) {
+define ptr @EH2(i32 %r0, i32 %r1, i32 %r2, i32 %r3) {
 entry:
 ; CHECK-LABEL: EH2
 ; CHECK: entsp 3
@@ -145,8 +145,8 @@ entry:
 ; CHECK-NEXT: set sp, r2
 ; CHECK-NEXT: bau r3
   call void (...) @foo()
-  %0 = load i32, i32* @offset
-  call void @llvm.eh.return.i32(i32 %0, i8* @handler)
+  %0 = load i32, ptr @offset
+  call void @llvm.eh.return.i32(i32 %0, ptr @handler)
   unreachable
 }
 
@@ -349,12 +349,12 @@ define void @Unwind1() {
 ; CHECK-NEXT: ldw r0, sp[1]
 ; CHECK-NEXT: set sp, r2
 ; CHECK-NEXT: bau r3
-define void @UnwindEH(i32 %offset, i8* %handler) {
+define void @UnwindEH(i32 %offset, ptr %handler) {
   call void @llvm.eh.unwind.init()
   %cmp = icmp eq i32 %offset, 0
   br i1 %cmp, label %normal, label %eh
 eh:
-  call void @llvm.eh.return.i32(i32 %offset, i8* %handler)
+  call void @llvm.eh.return.i32(i32 %offset, ptr %handler)
   unreachable
 normal:
   ret void
