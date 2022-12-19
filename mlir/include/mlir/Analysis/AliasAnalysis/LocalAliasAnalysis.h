@@ -28,6 +28,10 @@ public:
 
   /// Return the modify-reference behavior of `op` on `location`.
   ModRefResult getModRef(Operation *op, Value location);
+
+protected:
+  /// Given the two values, return their aliasing behavior.
+  virtual AliasResult aliasImpl(Value lhs, Value rhs);
 };
 } // namespace mlir
 
