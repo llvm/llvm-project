@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
 ; CHECK-DAG: OpName [[SHFv4:%.+]] "shuffle_v4"
 ; CHECK-DAG: OpName [[INSv4:%.+]] "insert_v4"
