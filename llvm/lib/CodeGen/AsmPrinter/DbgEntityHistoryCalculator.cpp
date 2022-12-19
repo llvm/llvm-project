@@ -76,7 +76,7 @@ bool DbgValueHistoryMap::startDbgValue(InlinedEntity Var,
   auto &Entries = VarEntries[Var];
   if (!Entries.empty() && Entries.back().isDbgValue() &&
       !Entries.back().isClosed() &&
-      Entries.back().getInstr()->isIdenticalTo(MI)) {
+      Entries.back().getInstr()->isEquivalentDbgInstr(MI)) {
     LLVM_DEBUG(dbgs() << "Coalescing identical DBG_VALUE entries:\n"
                       << "\t" << Entries.back().getInstr() << "\t" << MI
                       << "\n");
