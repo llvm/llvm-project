@@ -12176,12 +12176,9 @@ unsigned PPCTargetLowering::getStackProbeSize(const MachineFunction &MF) const {
          "Unexpected stack alignment");
   // The default stack probe size is 4096 if the function has no
   // stack-probe-size attribute.
-  unsigned StackProbeSize = 4096;
   const Function &Fn = MF.getFunction();
-  if (Fn.hasFnAttribute("stack-probe-size"))
-    Fn.getFnAttribute("stack-probe-size")
-        .getValueAsString()
-        .getAsInteger(0, StackProbeSize);
+  unsigned StackProbeSize =
+      Fn.getFnAttributeAsParsedInteger("stack-probe-size", 4096);
   // Round down to the stack alignment.
   StackProbeSize &= ~(StackAlign - 1);
   return StackProbeSize ? StackProbeSize : StackAlign;
