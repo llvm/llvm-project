@@ -21,7 +21,7 @@
 ; RUN: llvm-objdump -dr --symbol-description %t64.o | \
 ; RUN:   FileCheck --check-prefix=DIS64 %s
 
-@alias_foo = alias void (...), bitcast (void ()* @foo to void (...)*)
+@alias_foo = alias void (...), ptr @foo
 
 define void @foo() {
 entry:
@@ -37,8 +37,8 @@ define void @bar() {
 entry:
   call void @foo()
   call void @static_overalign_foo()
-  call void bitcast (void (...)* @alias_foo to void ()*)()
-  call void bitcast (void (...)* @extern_foo to void ()*)()
+  call void @alias_foo()
+  call void @extern_foo()
   call void @hidden_foo()
   ret void
 }
