@@ -5,15 +5,15 @@
 target triple = "hexagon"
 
 ; Function Attrs: nounwind optsize
-define void @f0(i32* nocapture %a0, i8* %a1) #0 {
+define void @f0(ptr nocapture %a0, ptr %a1) #0 {
 b0:
-  call void @llvm.hexagon.prefetch(i8* %a1)
-  store i32 0, i32* %a0, align 4, !tbaa !0
+  call void @llvm.hexagon.prefetch(ptr %a1)
+  store i32 0, ptr %a0, align 4, !tbaa !0
   ret void
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.hexagon.prefetch(i8*) #1
+declare void @llvm.hexagon.prefetch(ptr) #1
 
 attributes #0 = { nounwind optsize "target-cpu"="hexagonv55" }
 attributes #1 = { nounwind }

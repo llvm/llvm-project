@@ -13,7 +13,7 @@
 ; PIC: r[[R0:[0-9]+]] = add(pc,##_GLOBAL_OFFSET_TABLE_@PCREL)
 ; PIC: = memw(r[[R0]]+##g0@GOT)
 define i32 @f0() #0 {
-  %v0 = load i32, i32* @g0
+  %v0 = load i32, ptr @g0
   ret i32 %v0
 }
 
@@ -22,7 +22,7 @@ define i32 @f0() #0 {
 ; PIC: r[[R1:[0-9]+]] = add(pc,##_GLOBAL_OFFSET_TABLE_@PCREL)
 ; PIC: = memw(r[[R1]]+##g1@GOT)
 define i32 @f1() #0 {
-  %v0 = load i32, i32* @g1
+  %v0 = load i32, ptr @g1
   ret i32 %v0
 }
 

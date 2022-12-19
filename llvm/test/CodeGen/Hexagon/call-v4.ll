@@ -11,7 +11,7 @@ target triple = "hexagon"
 ; Function Attrs: nounwind
 define i32 @f0() #0 {
 b0:
-  %v0 = load i32, i32* @g0, align 4
+  %v0 = load i32, ptr @g0, align 4
   %v1 = tail call i32 @f1(i32 %v0) #0
   %v2 = icmp eq i32 %v1, 0
   br i1 %v2, label %b1, label %b2

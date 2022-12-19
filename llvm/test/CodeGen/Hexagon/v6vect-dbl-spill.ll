@@ -15,7 +15,7 @@ b0:
 
 b1:                                               ; preds = %b1, %b0
   %v5 = phi i32 [ %v77, %b1 ], [ 0, %b0 ]
-  %v6 = phi <32 x i32>* [ undef, %b1 ], [ undef, %b0 ]
+  %v6 = phi ptr [ undef, %b1 ], [ undef, %b0 ]
   %v7 = tail call <32 x i32> @llvm.hexagon.V6.vabsdiffub.128B(<32 x i32> undef, <32 x i32> undef)
   %v8 = tail call <128 x i1> @llvm.hexagon.V6.vgtub.128B(<32 x i32> %v7, <32 x i32> zeroinitializer)
   %v9 = tail call <32 x i32> @llvm.hexagon.V6.vaddbnq.128B(<128 x i1> %v8, <32 x i32> undef, <32 x i32> %v0)
@@ -48,7 +48,7 @@ b1:                                               ; preds = %b1, %b0
   %v36 = tail call <32 x i32> @llvm.hexagon.V6.vaddbnq.128B(<128 x i1> undef, <32 x i32> %v35, <32 x i32> %v0)
   %v37 = tail call <32 x i32> @llvm.hexagon.V6.vaddbnq.128B(<128 x i1> undef, <32 x i32> %v36, <32 x i32> %v0)
   %v38 = tail call <32 x i32> @llvm.hexagon.V6.vaddbnq.128B(<128 x i1> %v30, <32 x i32> %v37, <32 x i32> %v0)
-  %v39 = load <32 x i32>, <32 x i32>* null, align 128, !tbaa !0
+  %v39 = load <32 x i32>, ptr null, align 128, !tbaa !0
   %v40 = tail call <128 x i1> @llvm.hexagon.V6.vgtub.128B(<32 x i32> undef, <32 x i32> zeroinitializer)
   %v41 = tail call <32 x i32> @llvm.hexagon.V6.vmux.128B(<128 x i1> %v40, <32 x i32> undef, <32 x i32> %v39)
   %v42 = tail call <64 x i32> @llvm.hexagon.V6.vmpybus.acc.128B(<64 x i32> %v34, <32 x i32> %v41, i32 16843009)
@@ -86,7 +86,7 @@ b1:                                               ; preds = %b1, %b0
   %v74 = tail call <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32> %v73)
   %v75 = tail call <32 x i32> @llvm.hexagon.V6.vasrwh.128B(<32 x i32> %v74, <32 x i32> undef, i32 14)
   %v76 = tail call <32 x i32> @llvm.hexagon.V6.vshuffeb.128B(<32 x i32> %v75, <32 x i32> undef)
-  store <32 x i32> %v76, <32 x i32>* %v6, align 128, !tbaa !0
+  store <32 x i32> %v76, ptr %v6, align 128, !tbaa !0
   %v77 = add nsw i32 %v5, 1
   %v78 = icmp slt i32 %v77, %v3
   br i1 %v78, label %b1, label %b2
