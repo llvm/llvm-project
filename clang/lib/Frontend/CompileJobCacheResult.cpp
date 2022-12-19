@@ -16,9 +16,9 @@ using llvm::Error;
 
 ArrayRef<CompileJobCacheResult::OutputKind>
 CompileJobCacheResult::getAllOutputKinds() {
-  static const OutputKind OutputKinds[] = {
-      OutputKind::MainOutput, OutputKind::SerializedDiagnostics,
-      OutputKind::Dependencies, OutputKind::Stderr};
+  static const OutputKind OutputKinds[] = {OutputKind::MainOutput,
+                                           OutputKind::SerializedDiagnostics,
+                                           OutputKind::Dependencies};
   return llvm::makeArrayRef(OutputKinds);
 }
 
@@ -56,9 +56,6 @@ static void printOutputKind(llvm::raw_ostream &OS,
     break;
   case CompileJobCacheResult::OutputKind::SerializedDiagnostics:
     OS << "diags  ";
-    break;
-  case CompileJobCacheResult::OutputKind::Stderr:
-    OS << "stderr ";
     break;
   }
 }

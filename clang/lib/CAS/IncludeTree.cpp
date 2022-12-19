@@ -317,7 +317,9 @@ public:
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
     getBuffer(const Twine &Name, int64_t FileSize, bool RequiresNullTerminator,
               bool IsVolatile) override {
-      return llvm::MemoryBuffer::getMemBuffer(Contents);
+      SmallString<256> NameBuf;
+      return llvm::MemoryBuffer::getMemBuffer(Contents,
+                                              Name.toStringRef(NameBuf));
     }
 
     llvm::ErrorOr<Optional<cas::ObjectRef>> getObjectRefForContent() override {
