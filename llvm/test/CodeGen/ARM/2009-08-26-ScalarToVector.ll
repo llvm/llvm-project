@@ -6,12 +6,12 @@ target triple = "thumbv7-elf"
 %bar = type { float, float, float }
 %baz = type { i32, [16 x %bar], [16 x float], [16 x i32], i8 }
 %foo = type { <4 x float> }
-%quux = type { i32 (...)**, %baz*, i32 }
+%quux = type { ptr, ptr, i32 }
 %quuz = type { %quux, i32, %bar, [128 x i8], [16 x %foo], %foo, %foo, %foo }
 
 declare <2 x i32> @llvm.arm.neon.vpadd.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
 
-define void @_ZN6squish10ClusterFit9Compress3EPv(%quuz* %this, i8* %block) {
+define void @_ZN6squish10ClusterFit9Compress3EPv(ptr %this, ptr %block) {
 entry:
   %0 = lshr <4 x i32> zeroinitializer, <i32 31, i32 31, i32 31, i32 31>
   %1 = shufflevector <4 x i32> %0, <4 x i32> undef, <2 x i32> <i32 2, i32 3>

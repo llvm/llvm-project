@@ -196,7 +196,7 @@ entry:
   br label %for.cond
 
 for.cond:
-  %0 = load half, half* %f, align 2
+  %0 = load half, ptr %f, align 2
   %cmp = fcmp nnan ninf nsz ole half %0, 0xH6800
   br i1 %cmp, label %for.body, label %for.end
 
@@ -692,8 +692,8 @@ entry:
 }
 
 ; 35. VSELEQ
-define half @select_cc1(half* %a0)  {
-  %1 = load half, half* %a0
+define half @select_cc1(ptr %a0)  {
+  %1 = load half, ptr %a0
   %2 = fcmp nsz oeq half %1, 0xH0001
   %3 = select i1 %2, half 0xHC000, half 0xH0002
   ret half %3
@@ -719,8 +719,8 @@ define half @select_cc1(half* %a0)  {
 ; be encoded as an FP16 immediate need to be added here.
 ;
 ; 36. VSELGE
-define half @select_cc_ge1(half* %a0)  {
-  %1 = load half, half* %a0
+define half @select_cc_ge1(ptr %a0)  {
+  %1 = load half, ptr %a0
   %2 = fcmp nsz oge half %1, 0xH0001
   %3 = select i1 %2, half 0xHC000, half 0xH0002
   ret half %3
@@ -741,8 +741,8 @@ define half @select_cc_ge1(half* %a0)  {
 ; CHECK-SOFTFP-FP16-T32-NEXT:  vmovge.f32 s{{.}}, s{{.}}
 }
 
-define half @select_cc_ge2(half* %a0)  {
-  %1 = load half, half* %a0
+define half @select_cc_ge2(ptr %a0)  {
+  %1 = load half, ptr %a0
   %2 = fcmp nsz ole half %1, 0xH0001
   %3 = select i1 %2, half 0xHC000, half 0xH0002
   ret half %3
@@ -763,8 +763,8 @@ define half @select_cc_ge2(half* %a0)  {
 ; CHECK-SOFTFP-FP16-T32-NEXT:  vmovls.f32 s{{.}}, s{{.}}
 }
 
-define half @select_cc_ge3(half* %a0)  {
-  %1 = load half, half* %a0
+define half @select_cc_ge3(ptr %a0)  {
+  %1 = load half, ptr %a0
   %2 = fcmp nsz ugt half %1, 0xH0001
   %3 = select i1 %2, half 0xHC000, half 0xH0002
   ret half %3
@@ -785,8 +785,8 @@ define half @select_cc_ge3(half* %a0)  {
 ; CHECK-SOFTFP-FP16-T32-NEXT:  vmovhi.f32 s{{.}}, s{{.}}
 }
 
-define half @select_cc_ge4(half* %a0)  {
-  %1 = load half, half* %a0
+define half @select_cc_ge4(ptr %a0)  {
+  %1 = load half, ptr %a0
   %2 = fcmp nsz ult half %1, 0xH0001
   %3 = select i1 %2, half 0xHC000, half 0xH0002
   ret half %3
@@ -808,8 +808,8 @@ define half @select_cc_ge4(half* %a0)  {
 }
 
 ; 37. VSELGT
-define half @select_cc_gt1(half* %a0)  {
-  %1 = load half, half* %a0
+define half @select_cc_gt1(ptr %a0)  {
+  %1 = load half, ptr %a0
   %2 = fcmp nsz ogt half %1, 0xH0001
   %3 = select i1 %2, half 0xHC000, half 0xH0002
   ret half %3
@@ -830,8 +830,8 @@ define half @select_cc_gt1(half* %a0)  {
 ; CHECK-SOFTFP-FP16-T32-NEXT:  vmovgt.f32 s{{.}}, s{{.}}
 }
 
-define half @select_cc_gt2(half* %a0)  {
-  %1 = load half, half* %a0
+define half @select_cc_gt2(ptr %a0)  {
+  %1 = load half, ptr %a0
   %2 = fcmp nsz uge half %1, 0xH0001
   %3 = select i1 %2, half 0xHC000, half 0xH0002
   ret half %3
@@ -852,8 +852,8 @@ define half @select_cc_gt2(half* %a0)  {
 ; CHECK-SOFTFP-FP16-T32-NEXT:  vmovpl.f32 s{{.}}, s{{.}}
 }
 
-define half @select_cc_gt3(half* %a0)  {
-  %1 = load half, half* %a0
+define half @select_cc_gt3(ptr %a0)  {
+  %1 = load half, ptr %a0
   %2 = fcmp nsz ule half %1, 0xH0001
   %3 = select i1 %2, half 0xHC000, half 0xH0002
   ret half %3
@@ -874,8 +874,8 @@ define half @select_cc_gt3(half* %a0)  {
 ; CHECK-SOFTFP-FP16-T32-NEXT:  vmovle.f32 s{{.}}, s{{.}}
 }
 
-define half @select_cc_gt4(half* %a0)  {
-  %1 = load half, half* %a0
+define half @select_cc_gt4(ptr %a0)  {
+  %1 = load half, ptr %a0
   %2 = fcmp nsz olt half %1, 0xH0001
   %3 = select i1 %2, half 0xHC000, half 0xH0002
   ret half %3
@@ -1009,9 +1009,8 @@ entry:
   %S = alloca half, align 2
   %tmp.0.extract.trunc = trunc i32 %A.coerce to i16
   %0 = bitcast i16 %tmp.0.extract.trunc to half
-  %S.0.S.0..sroa_cast = bitcast half* %S to i8*
-  store volatile half 0xH3C00, half* %S, align 2
-  %S.0.S.0. = load volatile half, half* %S, align 2
+  store volatile half 0xH3C00, ptr %S, align 2
+  %S.0.S.0. = load volatile half, ptr %S, align 2
   %add = fadd half %S.0.S.0., %0
   %1 = bitcast half %add to i16
   %tmp2.0.insert.ext = zext i16 %1 to i32
@@ -1031,12 +1030,12 @@ define i32 @fn1() {
 entry:
   %coerce = alloca half, align 2
   %tmp2 = alloca i32, align 4
-  store half 0xH7C00, half* %coerce, align 2
-  %0 = load i32, i32* %tmp2, align 4
-  %call = call i32 bitcast (i32 (...)* @fn2 to i32 (i32)*)(i32 %0)
-  store half 0xH7C00, half* %coerce, align 2
-  %1 = load i32, i32* %tmp2, align 4
-  %call3 = call i32 bitcast (i32 (...)* @fn3 to i32 (i32)*)(i32 %1)
+  store half 0xH7C00, ptr %coerce, align 2
+  %0 = load i32, ptr %tmp2, align 4
+  %call = call i32 @fn2(i32 %0)
+  store half 0xH7C00, ptr %coerce, align 2
+  %1 = load i32, ptr %tmp2, align 4
+  %call3 = call i32 @fn3(i32 %1)
   ret i32 %call3
 
 ; CHECK-SPILL-RELOAD-LABEL: fn1:

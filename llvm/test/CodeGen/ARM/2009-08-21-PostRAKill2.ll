@@ -4,14 +4,14 @@
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:64:64-v128:128:128-a0:0:64"
 target triple = "armv7-apple-darwin9"
 
-%struct.anon = type { [3 x double], double, %struct.node*, [64 x %struct.bnode*], [64 x %struct.bnode*] }
-%struct.bnode = type { i16, double, [3 x double], i32, i32, [3 x double], [3 x double], [3 x double], double, %struct.bnode*, %struct.bnode* }
+%struct.anon = type { [3 x double], double, ptr, [64 x ptr], [64 x ptr] }
+%struct.bnode = type { i16, double, [3 x double], i32, i32, [3 x double], [3 x double], [3 x double], double, ptr, ptr }
 %struct.icstruct = type { [3 x i32], i16 }
 %struct.node = type { i16, double, [3 x double], i32, i32 }
 
 declare double @floor(double) nounwind readnone
 
-define void @intcoord(%struct.icstruct* noalias nocapture sret(%struct.icstruct) %agg.result, i1 %a, double %b) {
+define void @intcoord(ptr noalias nocapture sret(%struct.icstruct) %agg.result, i1 %a, double %b) {
 entry:
   br i1 %a, label %bb3, label %bb1
 
@@ -32,7 +32,7 @@ bb9:                                              ; preds = %bb7
   br label %bb11
 
 bb11:                                             ; preds = %bb9, %bb7
-  %1 = getelementptr %struct.icstruct, %struct.icstruct* %agg.result, i32 0, i32 0, i32 0 ; <i32*> [#uses=1]
-  store i32 0, i32* %1
+  %1 = getelementptr %struct.icstruct, ptr %agg.result, i32 0, i32 0, i32 0 ; <ptr> [#uses=1]
+  store i32 0, ptr %1
   ret void
 }

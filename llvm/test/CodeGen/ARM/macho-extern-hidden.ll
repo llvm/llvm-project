@@ -5,6 +5,6 @@
 
 @bar = external hidden global i32
 define i32 @foo() {
-  %tmp = load i32, i32* @bar, align 4
+  %tmp = load i32, ptr @bar, align 4
   ret i32 %tmp
 }

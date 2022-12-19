@@ -160,9 +160,9 @@ define void @foo3() uwtable {
 ; THUMB: {{(movt r[0-9]+, :upper16:_?bar0)|(ldr r[0-9]+, \[r[0-9]+\])}}
 ; THUMB: movs    {{r[0-9]+}}, #0
 ; THUMB: blx     {{r[0-9]+}}
-  %fptr = alloca i32 (i32)*, align 8
-  store i32 (i32)* @bar0, i32 (i32)** %fptr, align 8
-  %1 = load i32 (i32)*, i32 (i32)** %fptr, align 8
+  %fptr = alloca ptr, align 8
+  store ptr @bar0, ptr %fptr, align 8
+  %1 = load ptr, ptr %fptr, align 8
   %call = call i32 %1(i32 0)
   ret void
 }

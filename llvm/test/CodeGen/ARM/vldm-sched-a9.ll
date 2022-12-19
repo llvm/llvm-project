@@ -28,73 +28,71 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK: test:
 ; CHECK: vldmia r{{.*}}, {d{{.*}}, d{{.*}}}
 ; CHECK: vldmia r{{.*}}, {d{{.*}}, d{{.*}}}
-define <16 x i64> @test(i64* %src0, i64* %src1) #0 {
+define <16 x i64> @test(ptr %src0, ptr %src1) #0 {
 entry:
-  %addr.0 = getelementptr inbounds i64, i64* %src0, i32 0
-  %el.0 = load i64, i64* %addr.0, align 8
-  %addr.1 = getelementptr inbounds i64, i64* %src0, i32 1
-  %el.1 = load i64, i64* %addr.1, align 8
-  %addr.2 = getelementptr inbounds i64, i64* %src0, i32 2
-  %el.2 = load i64, i64* %addr.2, align 8
-  %addr.3 = getelementptr inbounds i64, i64* %src0, i32 3
-  %el.3 = load i64, i64* %addr.3, align 8
-  %addr.4 = getelementptr inbounds i64, i64* %src0, i32 4
-  %el.4 = load i64, i64* %addr.4, align 8
-  %addr.5 = getelementptr inbounds i64, i64* %src0, i32 5
-  %el.5 = load i64, i64* %addr.5, align 8
-  %addr.6 = getelementptr inbounds i64, i64* %src0, i32 6
-  %el.6 = load i64, i64* %addr.6, align 8
-  %addr.7 = getelementptr inbounds i64, i64* %src0, i32 7
-  %el.7 = load i64, i64* %addr.7, align 8
-  %addr.8 = getelementptr inbounds i64, i64* %src0, i32 8
-  %el.8 = load i64, i64* %addr.8, align 8
-  %addr.9 = getelementptr inbounds i64, i64* %src0, i32 9
-  %el.9 = load i64, i64* %addr.9, align 8
-  %addr.10 = getelementptr inbounds i64, i64* %src0, i32 10
-  %el.10 = load i64, i64* %addr.10, align 8
-  %addr.11 = getelementptr inbounds i64, i64* %src0, i32 11
-  %el.11 = load i64, i64* %addr.11, align 8
-  %addr.12 = getelementptr inbounds i64, i64* %src0, i32 12
-  %el.12 = load i64, i64* %addr.12, align 8
-  %addr.13 = getelementptr inbounds i64, i64* %src0, i32 13
-  %el.13 = load i64, i64* %addr.13, align 8
-  %addr.14 = getelementptr inbounds i64, i64* %src0, i32 14
-  %el.14 = load i64, i64* %addr.14, align 8
-  %addr.15 = getelementptr inbounds i64, i64* %src0, i32 15
-  %el.15 = load i64, i64* %addr.15, align 8
+  %el.0 = load i64, ptr %src0, align 8
+  %addr.1 = getelementptr inbounds i64, ptr %src0, i32 1
+  %el.1 = load i64, ptr %addr.1, align 8
+  %addr.2 = getelementptr inbounds i64, ptr %src0, i32 2
+  %el.2 = load i64, ptr %addr.2, align 8
+  %addr.3 = getelementptr inbounds i64, ptr %src0, i32 3
+  %el.3 = load i64, ptr %addr.3, align 8
+  %addr.4 = getelementptr inbounds i64, ptr %src0, i32 4
+  %el.4 = load i64, ptr %addr.4, align 8
+  %addr.5 = getelementptr inbounds i64, ptr %src0, i32 5
+  %el.5 = load i64, ptr %addr.5, align 8
+  %addr.6 = getelementptr inbounds i64, ptr %src0, i32 6
+  %el.6 = load i64, ptr %addr.6, align 8
+  %addr.7 = getelementptr inbounds i64, ptr %src0, i32 7
+  %el.7 = load i64, ptr %addr.7, align 8
+  %addr.8 = getelementptr inbounds i64, ptr %src0, i32 8
+  %el.8 = load i64, ptr %addr.8, align 8
+  %addr.9 = getelementptr inbounds i64, ptr %src0, i32 9
+  %el.9 = load i64, ptr %addr.9, align 8
+  %addr.10 = getelementptr inbounds i64, ptr %src0, i32 10
+  %el.10 = load i64, ptr %addr.10, align 8
+  %addr.11 = getelementptr inbounds i64, ptr %src0, i32 11
+  %el.11 = load i64, ptr %addr.11, align 8
+  %addr.12 = getelementptr inbounds i64, ptr %src0, i32 12
+  %el.12 = load i64, ptr %addr.12, align 8
+  %addr.13 = getelementptr inbounds i64, ptr %src0, i32 13
+  %el.13 = load i64, ptr %addr.13, align 8
+  %addr.14 = getelementptr inbounds i64, ptr %src0, i32 14
+  %el.14 = load i64, ptr %addr.14, align 8
+  %addr.15 = getelementptr inbounds i64, ptr %src0, i32 15
+  %el.15 = load i64, ptr %addr.15, align 8
 
-  %addr.0.1 = getelementptr inbounds i64, i64* %src1, i32 0
-  %el.0.1 = load i64, i64* %addr.0.1, align 8
-  %addr.1.1 = getelementptr inbounds i64, i64* %src1, i32 1
-  %el.1.1 = load i64, i64* %addr.1.1, align 8
-  %addr.2.1 = getelementptr inbounds i64, i64* %src1, i32 2
-  %el.2.1 = load i64, i64* %addr.2.1, align 8
-  %addr.3.1 = getelementptr inbounds i64, i64* %src1, i32 3
-  %el.3.1 = load i64, i64* %addr.3.1, align 8
-  %addr.4.1 = getelementptr inbounds i64, i64* %src1, i32 4
-  %el.4.1 = load i64, i64* %addr.4.1, align 8
-  %addr.5.1 = getelementptr inbounds i64, i64* %src1, i32 5
-  %el.5.1 = load i64, i64* %addr.5.1, align 8
-  %addr.6.1 = getelementptr inbounds i64, i64* %src1, i32 6
-  %el.6.1 = load i64, i64* %addr.6.1, align 8
-  %addr.7.1 = getelementptr inbounds i64, i64* %src1, i32 7
-  %el.7.1 = load i64, i64* %addr.7.1, align 8
-  %addr.8.1 = getelementptr inbounds i64, i64* %src1, i32 8
-  %el.8.1 = load i64, i64* %addr.8.1, align 8
-  %addr.9.1 = getelementptr inbounds i64, i64* %src1, i32 9
-  %el.9.1 = load i64, i64* %addr.9.1, align 8
-  %addr.10.1 = getelementptr inbounds i64, i64* %src1, i32 10
-  %el.10.1 = load i64, i64* %addr.10.1, align 8
-  %addr.11.1 = getelementptr inbounds i64, i64* %src1, i32 11
-  %el.11.1 = load i64, i64* %addr.11.1, align 8
-  %addr.12.1 = getelementptr inbounds i64, i64* %src1, i32 12
-  %el.12.1 = load i64, i64* %addr.12.1, align 8
-  %addr.13.1 = getelementptr inbounds i64, i64* %src1, i32 13
-  %el.13.1 = load i64, i64* %addr.13.1, align 8
-  %addr.14.1 = getelementptr inbounds i64, i64* %src1, i32 14
-  %el.14.1 = load i64, i64* %addr.14.1, align 8
-  %addr.15.1 = getelementptr inbounds i64, i64* %src1, i32 15
-  %el.15.1 = load i64, i64* %addr.15.1, align 8
+  %el.0.1 = load i64, ptr %src1, align 8
+  %addr.1.1 = getelementptr inbounds i64, ptr %src1, i32 1
+  %el.1.1 = load i64, ptr %addr.1.1, align 8
+  %addr.2.1 = getelementptr inbounds i64, ptr %src1, i32 2
+  %el.2.1 = load i64, ptr %addr.2.1, align 8
+  %addr.3.1 = getelementptr inbounds i64, ptr %src1, i32 3
+  %el.3.1 = load i64, ptr %addr.3.1, align 8
+  %addr.4.1 = getelementptr inbounds i64, ptr %src1, i32 4
+  %el.4.1 = load i64, ptr %addr.4.1, align 8
+  %addr.5.1 = getelementptr inbounds i64, ptr %src1, i32 5
+  %el.5.1 = load i64, ptr %addr.5.1, align 8
+  %addr.6.1 = getelementptr inbounds i64, ptr %src1, i32 6
+  %el.6.1 = load i64, ptr %addr.6.1, align 8
+  %addr.7.1 = getelementptr inbounds i64, ptr %src1, i32 7
+  %el.7.1 = load i64, ptr %addr.7.1, align 8
+  %addr.8.1 = getelementptr inbounds i64, ptr %src1, i32 8
+  %el.8.1 = load i64, ptr %addr.8.1, align 8
+  %addr.9.1 = getelementptr inbounds i64, ptr %src1, i32 9
+  %el.9.1 = load i64, ptr %addr.9.1, align 8
+  %addr.10.1 = getelementptr inbounds i64, ptr %src1, i32 10
+  %el.10.1 = load i64, ptr %addr.10.1, align 8
+  %addr.11.1 = getelementptr inbounds i64, ptr %src1, i32 11
+  %el.11.1 = load i64, ptr %addr.11.1, align 8
+  %addr.12.1 = getelementptr inbounds i64, ptr %src1, i32 12
+  %el.12.1 = load i64, ptr %addr.12.1, align 8
+  %addr.13.1 = getelementptr inbounds i64, ptr %src1, i32 13
+  %el.13.1 = load i64, ptr %addr.13.1, align 8
+  %addr.14.1 = getelementptr inbounds i64, ptr %src1, i32 14
+  %el.14.1 = load i64, ptr %addr.14.1, align 8
+  %addr.15.1 = getelementptr inbounds i64, ptr %src1, i32 15
+  %el.15.1 = load i64, ptr %addr.15.1, align 8
   %vec.0 = insertelement <16 x i64> undef, i64 %el.0, i32 0
   %vec.1 = insertelement <16 x i64> %vec.0, i64 %el.1, i32 1
   %vec.2 = insertelement <16 x i64> %vec.1, i64 %el.2, i32 2
@@ -111,7 +109,7 @@ entry:
   %vec.13 = insertelement <16 x i64> %vec.12, i64 %el.13, i32 13
   %vec.14 = insertelement <16 x i64> %vec.13, i64 %el.14, i32 14
   %vec.15 = insertelement <16 x i64> %vec.14, i64 %el.15, i32 15
-  call void @capture(i64* %src0, i64* %src1)
+  call void @capture(ptr %src0, ptr %src1)
   %vec.0.1 = insertelement <16 x i64> undef, i64 %el.0.1, i32 0
   %vec.1.1 = insertelement <16 x i64> %vec.0.1, i64 %el.1.1, i32 1
   %vec.2.1 = insertelement <16 x i64> %vec.1.1, i64 %el.2.1, i32 2
@@ -132,6 +130,6 @@ entry:
   ret <16 x i64> %res
 }
 
-declare void @capture(i64*, i64*)
+declare void @capture(ptr, ptr)
 
 attributes #0 = { noredzone "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }

@@ -12,7 +12,7 @@
 attributes #0 = { nounwind }
 attributes #1 = { "cmse_nonsecure_call" nounwind }
 
-define void @fidififiddddff(void (float, i32, double, i32, float, i32, float, i32, double, double, double, double, float, float)* %fu, float %a, i32 %b, double %c, i32 %d, float %e, i32 %f, float %g, i32 %h, double %i, double %j, double %k, double %l, float %m, float %n) #0 {
+define void @fidififiddddff(ptr %fu, float %a, i32 %b, double %c, i32 %d, float %e, i32 %f, float %g, i32 %h, double %i, double %j, double %k, double %l, float %m, float %n) #0 {
 ; CHECK-V8-LE-LABEL: fidififiddddff:
 ; CHECK-V8-LE:       @ %bb.0: @ %entry
 ; CHECK-V8-LE-NEXT:    push {r7, lr}

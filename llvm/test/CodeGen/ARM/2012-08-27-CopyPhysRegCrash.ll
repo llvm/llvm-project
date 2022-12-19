@@ -5,33 +5,33 @@
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:32:64-v128:32:128-a0:0:32-n32-S32"
 target triple = "thumbv7-apple-ios5.1.0"
 
-declare { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.arm.neon.vld3.v16i8.p0i8(i8*, i32) nounwind readonly
+declare { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.arm.neon.vld3.v16i8.p0(ptr, i32) nounwind readonly
 
-declare void @llvm.arm.neon.vst1.p0i8.v16i8(i8*, <16 x i8>, i32) nounwind
+declare void @llvm.arm.neon.vst1.p0.v16i8(ptr, <16 x i8>, i32) nounwind
 
-define void @findEdges(i8*) nounwind ssp {
+define void @findEdges(ptr) nounwind ssp {
   %2 = icmp sgt i32 undef, 0
   br i1 %2, label %5, label %3
 
 ; <label>:3                                       ; preds = %5, %1
-  %4 = phi i8* [ %0, %1 ], [ %19, %5 ]
+  %4 = phi ptr [ %0, %1 ], [ %19, %5 ]
   ret void
 
 ; <label>:5                                       ; preds = %5, %1
-  %6 = phi i8* [ %19, %5 ], [ %0, %1 ]
-  %7 = tail call { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.arm.neon.vld3.v16i8.p0i8(i8* null, i32 1)
+  %6 = phi ptr [ %19, %5 ], [ %0, %1 ]
+  %7 = tail call { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.arm.neon.vld3.v16i8.p0(ptr null, i32 1)
   %8 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } %7, 0
-  %9 = getelementptr inbounds i8, i8* null, i32 3
-  %10 = tail call { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.arm.neon.vld3.v16i8.p0i8(i8* %9, i32 1)
+  %9 = getelementptr inbounds i8, ptr null, i32 3
+  %10 = tail call { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.arm.neon.vld3.v16i8.p0(ptr %9, i32 1)
   %11 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } %10, 2
-  %12 = tail call { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.arm.neon.vld3.v16i8.p0i8(i8* %6, i32 1)
+  %12 = tail call { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.arm.neon.vld3.v16i8.p0(ptr %6, i32 1)
   %13 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } %12, 0
   %14 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } %12, 1
-  %15 = getelementptr inbounds i8, i8* %6, i32 3
-  %16 = tail call { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.arm.neon.vld3.v16i8.p0i8(i8* %15, i32 1)
+  %15 = getelementptr inbounds i8, ptr %6, i32 3
+  %16 = tail call { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.arm.neon.vld3.v16i8.p0(ptr %15, i32 1)
   %17 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } %16, 1
   %18 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } %16, 2
-  %19 = getelementptr inbounds i8, i8* %6, i32 48
+  %19 = getelementptr inbounds i8, ptr %6, i32 48
   %20 = bitcast <16 x i8> %13 to <2 x i64>
   %21 = bitcast <16 x i8> %8 to <2 x i64>
   %22 = bitcast <16 x i8> %14 to <2 x i64>
@@ -111,7 +111,7 @@ define void @findEdges(i8*) nounwind ssp {
   %96 = bitcast <8 x i8> %94 to <1 x i64>
   %97 = shufflevector <1 x i64> %95, <1 x i64> %96, <2 x i32> <i32 0, i32 1>
   %98 = bitcast <2 x i64> %97 to <16 x i8>
-  tail call void @llvm.arm.neon.vst1.p0i8.v16i8(i8* null, <16 x i8> %98, i32 1)
+  tail call void @llvm.arm.neon.vst1.p0.v16i8(ptr null, <16 x i8> %98, i32 1)
   %99 = icmp slt i32 undef, undef
   br i1 %99, label %5, label %3
 }
