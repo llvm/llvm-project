@@ -462,7 +462,7 @@ private:
   // Current recorded maximum possible occupancy.
   unsigned Occupancy;
 
-  mutable Optional<bool> UsesAGPRs;
+  mutable std::optional<bool> UsesAGPRs;
 
   MCPhysReg getNextUserSGPR() const;
 
@@ -473,6 +473,17 @@ private:
   void MRI_NotecloneVirtualRegister(Register NewReg, Register SrcReg) override;
 
 public:
+  struct SGPRSpillVGPR {
+    // VGPR used for SGPR spills
+    Register VGPR;
+
+    // If the VGPR is used for SGPR spills in a non-entrypoint function, the
+    // stack slot used to save/restore it in the prolog/epilog.
+    std::optional<int> FI;
+
+    SGPRSpillVGPR(Register V, std::optional<int> F) : VGPR(V), FI(F) {}
+  };
+
   struct VGPRSpillToAGPR {
     SmallVector<MCPhysReg, 32> Lanes;
     bool FullyAllocated = false;
@@ -527,7 +538,7 @@ private:
 
   // Emergency stack slot. Sometimes, we create this before finalizing the stack
   // frame, so save it here and add it to the RegScavenger later.
-  Optional<int> ScavengeFI;
+  std::optional<int> ScavengeFI;
 
 private:
   Register VGPRForAGPRCopy;
@@ -546,6 +557,18 @@ public:
     VGPRForAGPRCopy = NewVGPRForAGPRCopy;
   }
 
+public: // FIXME
+  /// If this is set, an SGPR used for save/restore of the register used for the
+  /// frame pointer.
+  Register SGPRForFPSaveRestoreCopy;
+  std::optional<int> FramePointerSaveIndex;
+
+  /// If this is set, an SGPR used for save/restore of the register used for the
+  /// base pointer.
+  Register SGPRForBPSaveRestoreCopy;
+  std::optional<int> BasePointerSaveIndex;
+
+  //bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg);
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg) const;
 
 public:
@@ -704,7 +727,7 @@ public:
                               bool ResetSGPRSpillStackIDs);
 
   int getScavengeFI(MachineFrameInfo &MFI, const SIRegisterInfo &TRI);
-  Optional<int> getOptionalScavengeFI() const { return ScavengeFI; }
+  std::optional<int> getOptionalScavengeFI() const { return ScavengeFI; }
 
   unsigned getBytesInStackArgArea() const {
     return BytesInStackArgArea;

@@ -9,10 +9,10 @@
 #ifndef LLVM_ADT_ADDRESSRANGES_H
 #define LLVM_ADT_ADDRESSRANGES_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
+#include <optional>
 #include <stdint.h>
 
 namespace llvm {
@@ -63,7 +63,7 @@ public:
   bool contains(AddressRange Range) const {
     return find(Range) != Ranges.end();
   }
-  Optional<AddressRange> getRangeThatContains(uint64_t Addr) const {
+  std::optional<AddressRange> getRangeThatContains(uint64_t Addr) const {
     Collection::const_iterator It = find(Addr);
     if (It == Ranges.end())
       return std::nullopt;
@@ -125,7 +125,7 @@ public:
     assert(Ranges.size() == Values.size());
     return AddressRanges::size();
   }
-  Optional<std::pair<AddressRange, T>>
+  std::optional<std::pair<AddressRange, T>>
   getRangeValueThatContains(uint64_t Addr) const {
     Collection::const_iterator It = find(Addr);
     if (It == Ranges.end())

@@ -53,9 +53,9 @@ entry:
   ret i32 %mul3, !dbg !62
 }
 
-define dso_local i32 @main(i32 %argc, i8** nocapture readnone %argv) local_unnamed_addr #1 !dbg !63 !annotation !72 {
+define dso_local i32 @main(i32 %argc, ptr nocapture readnone %argv) local_unnamed_addr #1 !dbg !63 !annotation !72 {
 entry:
-  call void @llvm.dbg.value(metadata i8** %argv, metadata !70, metadata !DIExpression()), !dbg !73
+  call void @llvm.dbg.value(metadata ptr %argv, metadata !70, metadata !DIExpression()), !dbg !73
   call void @llvm.dbg.value(metadata i32 %argc, metadata !71, metadata !DIExpression()), !dbg !73
   %cmp = icmp eq i32 %argc, 2, !dbg !74
   br i1 %cmp, label %return, label %if.end, !dbg !74
@@ -122,8 +122,8 @@ attributes #1 = { optsize }
 !37 = !{i32 999999, i64 1, i32 2}
 !38 = !{i32 5, !"CG Profile", !39}
 !39 = !{!40, !41}
-!40 = !{i32 (i32)* @"?bar@@YAHH@Z", i32 (i32)* @"?foo@@YAHH@Z", i64 0}
-!41 = !{i32 (i32)* @"?bar@@YAHH@Z", i32 (i32)* @"?foo2@@YAHH@Z", i64 0}
+!40 = !{ptr @"?bar@@YAHH@Z", ptr @"?foo@@YAHH@Z", i64 0}
+!41 = !{ptr @"?bar@@YAHH@Z", ptr @"?foo2@@YAHH@Z", i64 0}
 !43 = distinct !DISubprogram(name: "foo", linkageName: "?foo@@YAHH@Z", scope: !1, file: !1, line: 2, type: !44, scopeLine: 2, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !47)
 !44 = !DISubroutineType(types: !45)
 !45 = !{!46, !46}

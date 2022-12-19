@@ -5,6 +5,7 @@ add_header_library(
   DEPENDS
     libc.include.fenv
     libc.src.__support.common
+    libc.src.__support.compiler_features
 )
 
 add_header_library(

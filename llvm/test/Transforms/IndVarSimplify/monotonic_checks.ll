@@ -3,10 +3,10 @@
 
 ; Monotonic decrementing iv. we should be able to prove that %iv.next <s len
 ; basing on its nsw and the fact that its starting value <s len.
-define i32 @test_01(i32* %p) {
+define i32 @test_01(ptr %p) {
 ; CHECK-LABEL: @test_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, [[RNG0:!range !.*]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4, [[RNG0:!range !.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -21,7 +21,7 @@ define i32 @test_01(i32* %p) {
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  %len = load i32, i32* %p, !range !0
+  %len = load i32, ptr %p, !range !0
   br label %loop
 
 loop:
@@ -42,10 +42,10 @@ exit:
 }
 
 ; We should not remove this range check because signed overflow is possible here (start at len = 0).
-define i32 @test_01_neg(i32* %p) {
+define i32 @test_01_neg(ptr %p) {
 ; CHECK-LABEL: @test_01_neg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4, [[RNG0]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -61,7 +61,7 @@ define i32 @test_01_neg(i32* %p) {
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  %len = load i32, i32* %p, !range !0
+  %len = load i32, ptr %p, !range !0
   br label %loop
 
 loop:
@@ -83,10 +83,10 @@ exit:
 
 ; Monotonic incrementing iv. we should be able to prove that %iv.next >s len
 ; basing on its nsw and the fact that its starting value >s len.
-define i32 @test_02(i32* %p) {
+define i32 @test_02(ptr %p) {
 ; CHECK-LABEL: @test_02(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, [[RNG1:!range !.*]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4, [[RNG1:!range !.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -101,7 +101,7 @@ define i32 @test_02(i32* %p) {
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  %len = load i32, i32* %p, !range !1
+  %len = load i32, ptr %p, !range !1
   br label %loop
 
 loop:
@@ -122,10 +122,10 @@ exit:
 }
 
 ; We should not remove this range check because signed overflow is possible here (start at len = -1).
-define i32 @test_02_neg(i32* %p) {
+define i32 @test_02_neg(ptr %p) {
 ; CHECK-LABEL: @test_02_neg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, [[RNG1]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4, [[RNG1]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -141,7 +141,7 @@ define i32 @test_02_neg(i32* %p) {
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  %len = load i32, i32* %p, !range !1
+  %len = load i32, ptr %p, !range !1
   br label %loop
 
 loop:
@@ -161,10 +161,10 @@ exit:
   ret i32 0
 }
 
-define i32 @test_03(i32* %p) {
+define i32 @test_03(ptr %p) {
 ; CHECK-LABEL: @test_03(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, [[RNG2:!range !.*]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4, [[RNG2:!range !.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -179,7 +179,7 @@ define i32 @test_03(i32* %p) {
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  %len = load i32, i32* %p, !range !2
+  %len = load i32, ptr %p, !range !2
   br label %loop
 
 loop:
@@ -199,10 +199,10 @@ exit:
   ret i32 0
 }
 
-define i32 @test_04(i32* %p) {
+define i32 @test_04(ptr %p) {
 ; CHECK-LABEL: @test_04(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, [[RNG2]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[P:%.*]], align 4, [[RNG2]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -217,7 +217,7 @@ define i32 @test_04(i32* %p) {
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  %len = load i32, i32* %p, !range !2
+  %len = load i32, ptr %p, !range !2
   br label %loop
 
 loop:

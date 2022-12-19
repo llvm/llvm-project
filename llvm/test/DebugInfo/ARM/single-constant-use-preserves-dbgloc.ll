@@ -17,16 +17,16 @@ define i32 @main() !dbg !4 {
 entry:
   %retval = alloca i32, align 4
   %x = alloca i32, align 4
-  store i32 0, i32* %retval
-  call void @llvm.dbg.declare(metadata i32* %x, metadata !10, metadata !11), !dbg !12
-  store i32 0, i32* %x, align 4, !dbg !12
-  %0 = load i32, i32* %x, align 4, !dbg !13
+  store i32 0, ptr %retval
+  call void @llvm.dbg.declare(metadata ptr %x, metadata !10, metadata !11), !dbg !12
+  store i32 0, ptr %x, align 4, !dbg !12
+  %0 = load i32, ptr %x, align 4, !dbg !13
   %cmp = icmp sgt i32 %0, 0, !dbg !15
   br i1 %cmp, label %if.then, label %if.end, !dbg !16
 
 if.then:                                          ; preds = %entry
-  %1 = load i32, i32* %x, align 4, !dbg !17
-  store i32 %1, i32* %retval, !dbg !18
+  %1 = load i32, ptr %x, align 4, !dbg !17
+  store i32 %1, ptr %retval, !dbg !18
   br label %return, !dbg !18
 
 if.end:                                           ; preds = %entry
@@ -37,15 +37,15 @@ if.end:                                           ; preds = %entry
 ; The backend performs the store to %retval first, for some reason.
 ; CHECK-NEXT: .loc    1 7 5
 ; CHECK-NEXT: str     r0, [sp, #4]
-  store i32 -1, i32* %x, align 4, !dbg !19
+  store i32 -1, ptr %x, align 4, !dbg !19
 
 ; CHECK-NEXT: .loc    1 6 7
 ; CHECK-NEXT: str     r0, [sp]
-  store i32 -1, i32* %retval, !dbg !20
+  store i32 -1, ptr %retval, !dbg !20
   br label %return, !dbg !20
 
 return:                                           ; preds = %if.end, %if.then
-  %2 = load i32, i32* %retval, !dbg !21
+  %2 = load i32, ptr %retval, !dbg !21
   ret i32 %2, !dbg !21
 }
 

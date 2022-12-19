@@ -94,14 +94,14 @@ target triple = "x86_64-pc-windows-msvc19.0.24210"
 ; Function Attrs: nounwind uwtable
 define i32 @f() local_unnamed_addr #0 !dbg !7 {
 entry:
-  %call = tail call i32 bitcast (i32 (...)* @barrier to i32 ()*)() #4, !dbg !15
+  %call = tail call i32 @barrier() #4, !dbg !15
   %tobool = icmp eq i32 %call, 0, !dbg !15
   br i1 %tobool, label %if.else, label %if.then, !dbg !16
 
 if.then:                                          ; preds = %entry
-  %call1 = tail call i32 bitcast (i32 (...)* @vardef to i32 ()*)() #4, !dbg !17
+  %call1 = tail call i32 @vardef() #4, !dbg !17
   tail call void @llvm.dbg.value(metadata i32 %call1, metadata !12, metadata !18), !dbg !19
-  %call2 = tail call i32 bitcast (i32 (...)* @barrier to i32 ()*)() #4, !dbg !20
+  %call2 = tail call i32 @barrier() #4, !dbg !20
   %tobool3 = icmp eq i32 %call2, 0, !dbg !20
   br i1 %tobool3, label %if.end, label %if.then4, !dbg !22
 
@@ -114,7 +114,7 @@ if.end:                                           ; preds = %if.then
   br label %if.end6, !dbg !25
 
 if.else:                                          ; preds = %entry
-  %call5 = tail call i32 bitcast (i32 (...)* @barrier to i32 ()*)() #4, !dbg !26
+  %call5 = tail call i32 @barrier() #4, !dbg !26
   br label %if.end6
 
 if.end6:                                          ; preds = %if.else, %if.end

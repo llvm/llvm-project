@@ -1,11 +1,11 @@
 ; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
 ; Generated from:
-; void * __attribute__ (( regparm(2) )) f(void *, void *);
-; void * __attribute__ (( regparm(0) )) g(void *, void *);
+; ptr __attribute__ (( regparm(2) )) f(ptr, ptr);
+; ptr __attribute__ (( regparm(0) )) g(ptr, ptr);
 ;  
-; void *g(void *t, void *k) {
-;   if (k == (void *)0)
-;     return (void *)0;
+; ptr g(ptr t, ptr k) {
+;   if (k == (ptr)0)
+;     return (ptr)0;
 ;   return f(t, k);
 ; }
 
@@ -21,23 +21,23 @@ target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 target triple = "i386--linux-gnu"
 
 ; Function Attrs: nounwind
-define i8* @g(i8* %t, i8* %k) local_unnamed_addr #0 !dbg !10 {
+define ptr @g(ptr %t, ptr %k) local_unnamed_addr #0 !dbg !10 {
 entry:
-  call void @llvm.dbg.value(metadata i8* %t, metadata !14, metadata !DIExpression()), !dbg !16
-  call void @llvm.dbg.value(metadata i8* %k, metadata !15, metadata !DIExpression()), !dbg !17
-  %cmp = icmp eq i8* %k, null, !dbg !18
+  call void @llvm.dbg.value(metadata ptr %t, metadata !14, metadata !DIExpression()), !dbg !16
+  call void @llvm.dbg.value(metadata ptr %k, metadata !15, metadata !DIExpression()), !dbg !17
+  %cmp = icmp eq ptr %k, null, !dbg !18
   br i1 %cmp, label %return, label %if.end, !dbg !20
 
 if.end:                                           ; preds = %entry
-  %call = tail call i8* @f(i8* inreg %t, i8* inreg nonnull %k) #3, !dbg !21
+  %call = tail call ptr @f(ptr inreg %t, ptr inreg nonnull %k) #3, !dbg !21
   br label %return, !dbg !22
 
 return:                                           ; preds = %entry, %if.end
-  %retval.0 = phi i8* [ %call, %if.end ], [ null, %entry ]
-  ret i8* %retval.0, !dbg !23
+  %retval.0 = phi ptr [ %call, %if.end ], [ null, %entry ]
+  ret ptr %retval.0, !dbg !23
 }
 
-declare i8* @f(i8* inreg, i8* inreg) local_unnamed_addr
+declare ptr @f(ptr inreg, ptr inreg) local_unnamed_addr
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2

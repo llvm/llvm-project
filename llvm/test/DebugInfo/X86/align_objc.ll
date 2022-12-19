@@ -54,8 +54,8 @@ define void @f() #0 !dbg !14 {
 entry:
   %s1 = alloca %struct.S1, align 64
   %i = alloca i32, align 32
-  call void @llvm.dbg.declare(metadata %struct.S1* %s1, metadata !17, metadata !22), !dbg !23
-  call void @llvm.dbg.declare(metadata i32* %i, metadata !24, metadata !22), !dbg !26
+  call void @llvm.dbg.declare(metadata ptr %s1, metadata !17, metadata !22), !dbg !23
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !24, metadata !22), !dbg !26
   ret void, !dbg !27
 }
 

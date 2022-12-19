@@ -7929,7 +7929,7 @@ private:
 ///                 LOAD
 ///
 /// *ExtractVectorElement
-static const Optional<ByteProvider>
+static const std::optional<ByteProvider>
 calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
                       std::optional<uint64_t> VectorIndex,
                       unsigned StartingIndex = 0) {
@@ -8003,7 +8003,7 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
 
     if (Index >= NarrowByteWidth)
       return Op.getOpcode() == ISD::ZERO_EXTEND
-                 ? Optional<ByteProvider>(ByteProvider::getConstantZero())
+                 ? std::optional<ByteProvider>(ByteProvider::getConstantZero())
                  : std::nullopt;
     return calculateByteProvider(NarrowOp, Index, Depth + 1, VectorIndex,
                                  StartingIndex);
@@ -8053,7 +8053,7 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     // question
     if (Index >= NarrowByteWidth)
       return L->getExtensionType() == ISD::ZEXTLOAD
-                 ? Optional<ByteProvider>(ByteProvider::getConstantZero())
+                 ? std::optional<ByteProvider>(ByteProvider::getConstantZero())
                  : std::nullopt;
 
     unsigned BPVectorIndex = VectorIndex.value_or(0U);
@@ -8075,8 +8075,8 @@ static unsigned bigEndianByteAt(unsigned BW, unsigned i) {
 // Check if the bytes offsets we are looking at match with either big or
 // little endian value loaded. Return true for big endian, false for little
 // endian, and std::nullopt if match failed.
-static Optional<bool> isBigEndian(const ArrayRef<int64_t> ByteOffsets,
-                                  int64_t FirstOffset) {
+static std::optional<bool> isBigEndian(const ArrayRef<int64_t> ByteOffsets,
+                                       int64_t FirstOffset) {
   // The endian can be decided only when it is 2 bytes at least.
   unsigned Width = ByteOffsets.size();
   if (Width < 2)
@@ -8367,7 +8367,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   SDValue Chain;
 
   SmallPtrSet<LoadSDNode *, 8> Loads;
-  Optional<ByteProvider> FirstByteProvider;
+  std::optional<ByteProvider> FirstByteProvider;
   int64_t FirstOffset = INT64_MAX;
 
   // Check if all the bytes of the OR we are looking at are loaded from the same
@@ -8460,7 +8460,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
 
   // Check if the bytes of the OR we are looking at match with either big or
   // little endian value load
-  Optional<bool> IsBigEndian = isBigEndian(
+  std::optional<bool> IsBigEndian = isBigEndian(
       makeArrayRef(ByteOffsets).drop_back(ZeroExtendedBytes), FirstOffset);
   if (!IsBigEndian)
     return SDValue();
@@ -25157,7 +25157,7 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
     bool IsAtomic;
     SDValue BasePtr;
     int64_t Offset;
-    Optional<int64_t> NumBytes;
+    std::optional<int64_t> NumBytes;
     MachineMemOperand *MMO;
   };
 
@@ -25172,21 +25172,26 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
                            : 0;
       uint64_t Size =
           MemoryLocation::getSizeOrUnknown(LSN->getMemoryVT().getStoreSize());
-      return {LSN->isVolatile(), LSN->isAtomic(), LSN->getBasePtr(),
+      return {LSN->isVolatile(),
+              LSN->isAtomic(),
+              LSN->getBasePtr(),
               Offset /*base offset*/,
-              Optional<int64_t>(Size),
+              std::optional<int64_t>(Size),
               LSN->getMemOperand()};
     }
     if (const auto *LN = cast<LifetimeSDNode>(N))
-      return {false /*isVolatile*/, /*isAtomic*/ false, LN->getOperand(1),
+      return {false /*isVolatile*/,
+              /*isAtomic*/ false,
+              LN->getOperand(1),
               (LN->hasOffset()) ? LN->getOffset() : 0,
-              (LN->hasOffset()) ? Optional<int64_t>(LN->getSize())
-                                : Optional<int64_t>(),
+              (LN->hasOffset()) ? std::optional<int64_t>(LN->getSize())
+                                : std::optional<int64_t>(),
               (MachineMemOperand *)nullptr};
     // Default.
-    return {false /*isvolatile*/, /*isAtomic*/ false, SDValue(),
-            (int64_t)0 /*offset*/,
-            Optional<int64_t>() /*size*/, (MachineMemOperand *)nullptr};
+    return {false /*isvolatile*/,
+            /*isAtomic*/ false,          SDValue(),
+            (int64_t)0 /*offset*/,       std::optional<int64_t>() /*size*/,
+            (MachineMemOperand *)nullptr};
   };
 
   MemUseCharacteristics MUC0 = getCharacteristics(Op0),

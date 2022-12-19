@@ -2908,8 +2908,16 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   case ISD::BF16_TO_FP: {
     // Always expand bf16 to f32 casts, they lower to ext + shift.
-    SDValue Op = DAG.getNode(ISD::BITCAST, dl, MVT::i16, Node->getOperand(0));
-    Op = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, Op);
+    //
+    // Note that the operand of this code can be bf16 or an integer type in case
+    // bf16 is not supported on the target and was softened.
+    SDValue Op = Node->getOperand(0);
+    if (Op.getValueType() == MVT::bf16) {
+      Op = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32,
+                       DAG.getNode(ISD::BITCAST, dl, MVT::i16, Op));
+    } else {
+      Op = DAG.getAnyExtOrTrunc(Op, dl, MVT::i32);
+    }
     Op = DAG.getNode(
         ISD::SHL, dl, MVT::i32, Op,
         DAG.getConstant(16, dl,
@@ -2918,6 +2926,26 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // Add fp_extend in case the output is bigger than f32.
     if (Node->getValueType(0) != MVT::f32)
       Op = DAG.getNode(ISD::FP_EXTEND, dl, Node->getValueType(0), Op);
+    Results.push_back(Op);
+    break;
+  }
+  case ISD::FP_TO_BF16: {
+    SDValue Op = Node->getOperand(0);
+    if (Op.getValueType() != MVT::f32)
+      Op = DAG.getNode(ISD::FP_ROUND, dl, MVT::f32, Op,
+                       DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
+    Op = DAG.getNode(
+        ISD::SRL, dl, MVT::i32, DAG.getNode(ISD::BITCAST, dl, MVT::i32, Op),
+        DAG.getConstant(16, dl,
+                        TLI.getShiftAmountTy(MVT::i32, DAG.getDataLayout())));
+    // The result of this node can be bf16 or an integer type in case bf16 is
+    // not supported on the target and was softened to i16 for storage.
+    if (Node->getValueType(0) == MVT::bf16) {
+      Op = DAG.getNode(ISD::BITCAST, dl, MVT::bf16,
+                       DAG.getNode(ISD::TRUNCATE, dl, MVT::i16, Op));
+    } else {
+      Op = DAG.getAnyExtOrTrunc(Op, dl, Node->getValueType(0));
+    }
     Results.push_back(Op);
     break;
   }

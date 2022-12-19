@@ -8,16 +8,16 @@
 ; reader should NEVER produce a program "successfully" with placeholders still
 ; around!
 ;
-; RUN: llvm-as --opaque-pointers=0 < %s | llvm-dis --opaque-pointers=0 | llvm-as
-; RUN: verify-uselistorder --opaque-pointers=0 %s
+; RUN: llvm-as  < %s | llvm-dis  | llvm-as
+; RUN: verify-uselistorder  %s
 
-@.LC0 = internal global [4 x i8] c"foo\00"		; <[4 x i8]*> [#uses=1]
-@X = global i8* null		; <i8**> [#uses=0]
+@.LC0 = internal global [4 x i8] c"foo\00"		; <ptr> [#uses=1]
+@X = global ptr null		; <ptr> [#uses=0]
 
-declare i32 @puts(i8*)
+declare i32 @puts(ptr)
 
 define void @main() {
 bb1:
-	%reg211 = call i32 @puts( i8* getelementptr ([4 x i8], [4 x i8]* @.LC0, i64 0, i64 0) )		; <i32> [#uses=0]
+	%reg211 = call i32 @puts( ptr @.LC0 )		; <i32> [#uses=0]
 	ret void
 }

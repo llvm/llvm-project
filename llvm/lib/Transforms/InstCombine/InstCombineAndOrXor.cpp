@@ -1093,7 +1093,7 @@ Value *InstCombinerImpl::foldEqOfParts(ICmpInst *Cmp0, ICmpInst *Cmp1,
 /// common operand with the constant. Callers are expected to call this with
 /// Cmp0/Cmp1 switched to handle logic op commutativity.
 static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
-                                          bool IsAnd,
+                                          bool IsAnd, bool IsLogical,
                                           InstCombiner::BuilderTy &Builder,
                                           const SimplifyQuery &Q) {
   // Match an equality compare with a non-poison constant as Cmp0.
@@ -1129,6 +1129,9 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
       return nullptr;
     SubstituteCmp = Builder.CreateICmp(Pred1, Y, C);
   }
+  if (IsLogical)
+    return IsAnd ? Builder.CreateLogicalAnd(Cmp0, SubstituteCmp)
+                 : Builder.CreateLogicalOr(Cmp0, SubstituteCmp);
   return Builder.CreateBinOp(IsAnd ? Instruction::And : Instruction::Or, Cmp0,
                              SubstituteCmp);
 }
@@ -1260,6 +1263,46 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
       // (fcmp ord x, 0.0) & (fcmp ord y, 0.0)  -> (fcmp ord x, y)
       // (fcmp uno x, 0.0) | (fcmp uno y, 0.0)  -> (fcmp uno x, y)
       return Builder.CreateFCmp(PredL, LHS0, RHS0);
+  }
+
+  return nullptr;
+}
+
+/// or (is_fpclass x, mask0), (is_fpclass x, mask1)
+///     -> is_fpclass x, (mask0 | mask1)
+/// and (is_fpclass x, mask0), (is_fpclass x, mask1)
+///     -> is_fpclass x, (mask0 & mask1)
+/// xor (is_fpclass x, mask0), (is_fpclass x, mask1)
+///     -> is_fpclass x, (mask0 ^ mask1)
+Instruction *InstCombinerImpl::foldLogicOfIsFPClass(BinaryOperator &BO,
+                                                    Value *Op0, Value *Op1) {
+  Value *ClassVal;
+  uint64_t ClassMask0, ClassMask1;
+
+  if (match(Op0, m_OneUse(m_Intrinsic<Intrinsic::is_fpclass>(
+                     m_Value(ClassVal), m_ConstantInt(ClassMask0)))) &&
+      match(Op1, m_OneUse(m_Intrinsic<Intrinsic::is_fpclass>(
+                     m_Specific(ClassVal), m_ConstantInt(ClassMask1))))) {
+    unsigned NewClassMask;
+    switch (BO.getOpcode()) {
+    case Instruction::And:
+      NewClassMask = ClassMask0 & ClassMask1;
+      break;
+    case Instruction::Or:
+      NewClassMask = ClassMask0 | ClassMask1;
+      break;
+    case Instruction::Xor:
+      NewClassMask = ClassMask0 ^ ClassMask1;
+      break;
+    default:
+      llvm_unreachable("not a binary logic operator");
+    }
+
+    // TODO: Also check for special fcmps
+    auto *II = cast<IntrinsicInst>(Op0);
+    II->setArgOperand(
+        1, ConstantInt::get(II->getArgOperand(1)->getType(), NewClassMask));
+    return replaceInstUsesWith(BO, II);
   }
 
   return nullptr;
@@ -2282,6 +2325,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   if (Instruction *Canonicalized = canonicalizeLogicFirst(I, Builder))
     return Canonicalized;
 
+  if (Instruction *Folded = foldLogicOfIsFPClass(I, Op0, Op1))
+    return Folded;
+
   return nullptr;
 }
 
@@ -2584,8 +2630,9 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *C, Value *B,
 
 // (icmp eq X, 0) | (icmp ult Other, X) -> (icmp ule Other, X-1)
 // (icmp ne X, 0) & (icmp uge Other, X) -> (icmp ugt Other, X-1)
-Value *foldAndOrOfICmpEqZeroAndICmp(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
-                                    IRBuilderBase &Builder) {
+static Value *foldAndOrOfICmpEqZeroAndICmp(ICmpInst *LHS, ICmpInst *RHS,
+                                           bool IsAnd, bool IsLogical,
+                                           IRBuilderBase &Builder) {
   ICmpInst::Predicate LPred =
       IsAnd ? LHS->getInversePredicate() : LHS->getPredicate();
   ICmpInst::Predicate RPred =
@@ -2604,6 +2651,8 @@ Value *foldAndOrOfICmpEqZeroAndICmp(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
   else
     return nullptr;
 
+  if (IsLogical)
+    Other = Builder.CreateFreeze(Other);
   return Builder.CreateICmp(
       IsAnd ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE,
       Builder.CreateAdd(LHS0, Constant::getAllOnesValue(LHS0->getType())),
@@ -2652,22 +2701,23 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   if (Value *V = foldLogOpOfMaskedICmps(LHS, RHS, IsAnd, IsLogical, Builder))
     return V;
 
-  // TODO: One of these directions is fine with logical and/or, the other could
-  // be supported by inserting freeze.
-  if (!IsLogical) {
-    if (Value *V = foldAndOrOfICmpEqZeroAndICmp(LHS, RHS, IsAnd, Builder))
-      return V;
-    if (Value *V = foldAndOrOfICmpEqZeroAndICmp(RHS, LHS, IsAnd, Builder))
-      return V;
-  }
+  if (Value *V =
+          foldAndOrOfICmpEqZeroAndICmp(LHS, RHS, IsAnd, IsLogical, Builder))
+    return V;
+  // We can treat logical like bitwise here, because both operands are used on
+  // the LHS, and as such poison from both will propagate.
+  if (Value *V = foldAndOrOfICmpEqZeroAndICmp(RHS, LHS, IsAnd,
+                                              /*IsLogical*/ false, Builder))
+    return V;
 
-  // TODO: Verify whether this is safe for logical and/or.
-  if (!IsLogical) {
-    if (Value *V = foldAndOrOfICmpsWithConstEq(LHS, RHS, IsAnd, Builder, Q))
-      return V;
-    if (Value *V = foldAndOrOfICmpsWithConstEq(RHS, LHS, IsAnd, Builder, Q))
-      return V;
-  }
+  if (Value *V =
+          foldAndOrOfICmpsWithConstEq(LHS, RHS, IsAnd, IsLogical, Builder, Q))
+    return V;
+  // We can convert this case to bitwise and, because both operands are used
+  // on the LHS, and as such poison from both will propagate.
+  if (Value *V = foldAndOrOfICmpsWithConstEq(RHS, LHS, IsAnd,
+                                             /*IsLogical*/ false, Builder, Q))
+    return V;
 
   if (Value *V = foldIsPowerOf2OrZero(LHS, RHS, IsAnd, Builder))
     return V;
@@ -3258,6 +3308,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *Canonicalized = canonicalizeLogicFirst(I, Builder))
     return Canonicalized;
 
+  if (Instruction *Folded = foldLogicOfIsFPClass(I, Op0, Op1))
+    return Folded;
+
   return nullptr;
 }
 
@@ -3736,6 +3789,14 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
       Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, NotY);
       return replaceInstUsesWith(I, InvMaxMin);
     }
+
+    if (II->getIntrinsicID() == Intrinsic::is_fpclass) {
+      ConstantInt *ClassMask = cast<ConstantInt>(II->getArgOperand(1));
+      II->setArgOperand(
+          1, ConstantInt::get(ClassMask->getType(),
+                              ~ClassMask->getZExtValue() & fcAllFlags));
+      return replaceInstUsesWith(I, II);
+    }
   }
 
   if (NotOp->hasOneUse()) {
@@ -4044,6 +4105,9 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
 
   if (Instruction *Canonicalized = canonicalizeLogicFirst(I, Builder))
     return Canonicalized;
+
+  if (Instruction *Folded = foldLogicOfIsFPClass(I, Op0, Op1))
+    return Folded;
 
   return nullptr;
 }

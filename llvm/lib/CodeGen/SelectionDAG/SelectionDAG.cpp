@@ -495,7 +495,7 @@ bool ISD::isVPReduction(unsigned Opcode) {
 }
 
 /// The operand position of the vector mask.
-Optional<unsigned> ISD::getVPMaskIdx(unsigned Opcode) {
+std::optional<unsigned> ISD::getVPMaskIdx(unsigned Opcode) {
   switch (Opcode) {
   default:
     return std::nullopt;
@@ -507,7 +507,7 @@ Optional<unsigned> ISD::getVPMaskIdx(unsigned Opcode) {
 }
 
 /// The operand position of the explicit vector length parameter.
-Optional<unsigned> ISD::getVPExplicitVectorLengthIdx(unsigned Opcode) {
+std::optional<unsigned> ISD::getVPExplicitVectorLengthIdx(unsigned Opcode) {
   switch (Opcode) {
   default:
     return std::nullopt;
@@ -5619,8 +5619,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   return V;
 }
 
-static llvm::Optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
-                                       const APInt &C2) {
+static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
+                                      const APInt &C2) {
   switch (Opcode) {
   case ISD::ADD:  return C1 + C2;
   case ISD::SUB:  return C1 - C2;
@@ -5701,10 +5701,9 @@ static llvm::Optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
 
 // Handle constant folding with UNDEF.
 // TODO: Handle more cases.
-static llvm::Optional<APInt> FoldValueWithUndef(unsigned Opcode,
-                                                const APInt &C1, bool IsUndef1,
-                                                const APInt &C2,
-                                                bool IsUndef2) {
+static std::optional<APInt> FoldValueWithUndef(unsigned Opcode, const APInt &C1,
+                                               bool IsUndef1, const APInt &C2,
+                                               bool IsUndef2) {
   if (!(IsUndef1 || IsUndef2))
     return FoldValue(Opcode, C1, C2);
 
@@ -5789,7 +5788,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
         if (C1->isOpaque() || C2->isOpaque())
           return SDValue();
 
-        Optional<APInt> FoldAttempt =
+        std::optional<APInt> FoldAttempt =
             FoldValue(Opcode, C1->getAPIntValue(), C2->getAPIntValue());
         if (!FoldAttempt)
           return SDValue();
@@ -5834,7 +5833,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
           BV2->getConstantRawBits(IsLE, EltBits, RawBits2, UndefElts2)) {
         SmallVector<APInt> RawBits;
         for (unsigned I = 0, E = NumElts.getFixedValue(); I != E; ++I) {
-          Optional<APInt> Fold = FoldValueWithUndef(
+          std::optional<APInt> Fold = FoldValueWithUndef(
               Opcode, RawBits1[I], UndefElts1[I], RawBits2[I], UndefElts2[I]);
           if (!Fold)
             break;
@@ -11982,7 +11981,7 @@ bool BuildVectorSDNode::isConstant() const {
   return true;
 }
 
-Optional<std::pair<APInt, APInt>>
+std::optional<std::pair<APInt, APInt>>
 BuildVectorSDNode::isConstantSequence() const {
   unsigned NumOps = getNumOperands();
   if (NumOps < 2)

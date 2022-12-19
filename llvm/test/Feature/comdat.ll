@@ -1,4 +1,4 @@
-; RUN: llvm-as --opaque-pointers=0 < %s | llvm-dis --opaque-pointers=0 | FileCheck %s
+; RUN: llvm-as  < %s | llvm-dis  | FileCheck %s
 
 $f = comdat any
 ; CHECK: $f = comdat any
@@ -9,8 +9,8 @@ $f2 = comdat any
 @v = global i32 0, comdat($f)
 ; CHECK: @v = global i32 0, comdat($f)
 
-@a = alias i32, i32* @v
-; CHECK: @a = alias i32, i32* @v{{$}}
+@a = alias i32, ptr @v
+; CHECK: @a = alias i32, ptr @v{{$}}
 
 define void @f() comdat($f) {
   ret void

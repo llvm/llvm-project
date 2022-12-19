@@ -321,8 +321,7 @@ getTopologicallySortedBlocks(llvm::Function *func) {
       blocks.insert(traversal.begin(), traversal.end());
     }
   }
-  assert(blocks.size() == func->getBasicBlockList().size() &&
-         "some blocks are not sorted");
+  assert(blocks.size() == func->size() && "some blocks are not sorted");
 
   return blocks;
 }

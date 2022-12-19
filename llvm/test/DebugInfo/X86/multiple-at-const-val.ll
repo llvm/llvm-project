@@ -12,20 +12,20 @@
 ; CHECK-NOT: DW_AT_const_value
 ; CHECK: NULL
 
-%"class.std::basic_ostream" = type { i32 (...)**, %"class.std::basic_os" }
-%"class.std::basic_os" = type { %"class.std::os_base", %"class.std::basic_ostream"*, i8, i8 }
-%"class.std::os_base" = type { i32 (...)**, i64, i64, i32, i32, i32 }
+%"class.std::basic_ostream" = type { ptr, %"class.std::basic_os" }
+%"class.std::basic_os" = type { %"class.std::os_base", ptr, i8, i8 }
+%"class.std::os_base" = type { ptr, i64, i64, i32, i32, i32 }
 
 @_ZSt4cout = external global %"class.std::basic_ostream"
 @.str = private unnamed_addr constant [6 x i8] c"c is \00", align 1
 
 define i32 @main() !dbg !960 {
 entry:
-  %call1.i = tail call %"class.std::basic_ostream"* @test(%"class.std::basic_ostream"* @_ZSt4cout, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0), i64 5)
+  %call1.i = tail call ptr @test(ptr @_ZSt4cout, ptr @.str, i64 5)
   ret i32 0
 }
 
-declare %"class.std::basic_ostream"* @test(%"class.std::basic_ostream"*, i8*, i64)
+declare ptr @test(ptr, ptr, i64)
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 

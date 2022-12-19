@@ -1263,6 +1263,9 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   // FIXME: Switch to using MF.needsFrameMoves() later
   const bool NeedsFrameMoves = true;
 
+  std::optional<int> FPSaveIndex = FuncInfo->FramePointerSaveIndex;
+  std::optional<int> BPSaveIndex = FuncInfo->BasePointerSaveIndex;
+
   if (NeedsFrameMoves)
     emitPrologueEntryCFI(MBB, MBBI, DL);
 
@@ -1435,6 +1438,8 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
     emitCSRSpillRestores(MF, MBB, MBBI, DL, LiveRegs, FramePtrReg,
                          FramePtrRegScratchCopy);
   }
+  std::optional<int> FPSaveIndex = FuncInfo->FramePointerSaveIndex;
+  std::optional<int> BPSaveIndex = FuncInfo->BasePointerSaveIndex;
 
   if (RoundedSize != 0 && hasFP(MF)) {
     auto Add = BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_ADD_I32), StackPtrReg)

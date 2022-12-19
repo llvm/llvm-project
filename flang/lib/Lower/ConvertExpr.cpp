@@ -1872,6 +1872,8 @@ public:
   mlir::Type genType(const Fortran::evaluate::DynamicType &dt) {
     if (dt.category() != Fortran::common::TypeCategory::Derived)
       return converter.genType(dt.category(), dt.kind());
+    if (dt.IsUnlimitedPolymorphic())
+      return mlir::NoneType::get(&converter.getMLIRContext());
     return converter.genType(dt.GetDerivedTypeSpec());
   }
 

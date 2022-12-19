@@ -3,7 +3,7 @@
 declare i32 @foo() 
 
 define void @bar() {
-	load i32, i32* @X
+	load i32, ptr @X
 	call i32 @foo()
 	ret void
 }

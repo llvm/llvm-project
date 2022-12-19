@@ -1,9 +1,9 @@
-; RUN: opt < %s -O2 -S -mtriple=i386-pc-windows-msvc18   | FileCheck %s --check-prefixes=CHECK,MSVCXX,MSVC32
-; RUN: opt < %s -O2 -S -mtriple=i386-pc-windows-msvc     | FileCheck %s --check-prefixes=CHECK,MSVC19,MSVC51
-; RUN: opt < %s -O2 -S -mtriple=x86_64-pc-windows-msvc17 | FileCheck %s --check-prefixes=CHECK,MSVCXX,MSVC64
-; RUN: opt < %s -O2 -S -mtriple=x86_64-pc-win32          | FileCheck %s --check-prefixes=CHECK,MSVC19,MSVC83
-; RUN: opt < %s -O2 -S -mtriple=i386-pc-mingw32          | FileCheck %s --check-prefixes=CHECK,MINGW32
-; RUN: opt < %s -O2 -S -mtriple=x86_64-pc-mingw32        | FileCheck %s --check-prefixes=CHECK,MINGW64
+; RUN: opt %s -passes=instcombine -S -mtriple=i386-pc-windows-msvc18   | FileCheck %s --check-prefixes=CHECK,MSVCXX,MSVC32
+; RUN: opt %s -passes=instcombine -S -mtriple=i386-pc-windows-msvc     | FileCheck %s --check-prefixes=CHECK,MSVC19,MSVC51
+; RUN: opt %s -passes=instcombine -S -mtriple=x86_64-pc-windows-msvc17 | FileCheck %s --check-prefixes=CHECK,MSVCXX,MSVC64
+; RUN: opt %s -passes=instcombine -S -mtriple=x86_64-pc-win32          | FileCheck %s --check-prefixes=CHECK,MSVC19,MSVC83
+; RUN: opt %s -passes=instcombine -S -mtriple=i386-pc-mingw32          | FileCheck %s --check-prefixes=CHECK,MINGW32
+; RUN: opt %s -passes=instcombine -S -mtriple=x86_64-pc-mingw32        | FileCheck %s --check-prefixes=CHECK,MINGW64
 
 ; x86 win32 msvcrt does not provide entry points for single-precision libm.
 ; x86-64 win32 msvcrt does, but with exceptions

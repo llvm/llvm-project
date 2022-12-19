@@ -3,7 +3,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 %class.A = type { [16 x i8] }
 
-define void @bar(%class.A*) {
+define void @bar(ptr) {
   ret void
 }
 

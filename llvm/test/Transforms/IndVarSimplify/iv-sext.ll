@@ -6,9 +6,9 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n32:64"
 
-define void @t(float* %pTmp1, float* %peakWeight, float* %nrgReducePeakrate, i32 %bandEdgeIndex, float %tmp1) nounwind {
+define void @t(ptr %pTmp1, ptr %peakWeight, ptr %nrgReducePeakrate, i32 %bandEdgeIndex, float %tmp1) nounwind {
 entry:
-	%tmp = load float, float* %peakWeight, align 4		; <float> [#uses=1]
+	%tmp = load float, ptr %peakWeight, align 4		; <float> [#uses=1]
 	%tmp2 = icmp sgt i32 %bandEdgeIndex, 0		; <i1> [#uses=1]
 	br i1 %tmp2, label %bb.nph22, label %return
 
@@ -33,13 +33,13 @@ bb:		; preds = %bb8, %bb.nph22
 bb1:		; preds = %bb
 	%tmp5 = add i32 %part.016, -1		; <i32> [#uses=1]
 	%tmp6 = sext i32 %tmp5 to i64		; <i64> [#uses=1]
-	%tmp7 = getelementptr float, float* %pTmp1, i64 %tmp6		; <float*> [#uses=1]
-	%tmp8 = load float, float* %tmp7, align 4		; <float> [#uses=1]
+	%tmp7 = getelementptr float, ptr %pTmp1, i64 %tmp6		; <ptr> [#uses=1]
+	%tmp8 = load float, ptr %tmp7, align 4		; <float> [#uses=1]
 	%tmp9 = fadd float %tmp8, %distERBlo.120		; <float> [#uses=1]
 	%tmp10 = add i32 %part.016, -1		; <i32> [#uses=1]
 	%tmp11 = sext i32 %tmp10 to i64		; <i64> [#uses=1]
-	%tmp12 = getelementptr float, float* %pTmp1, i64 %tmp11		; <float*> [#uses=1]
-	%tmp13 = load float, float* %tmp12, align 4		; <float> [#uses=1]
+	%tmp12 = getelementptr float, ptr %pTmp1, i64 %tmp11		; <ptr> [#uses=1]
+	%tmp13 = load float, ptr %tmp12, align 4		; <float> [#uses=1]
 	%tmp14 = fsub float %distERBhi.121, %tmp13		; <float> [#uses=1]
 	br label %bb3.preheader
 
@@ -57,12 +57,12 @@ bb2:		; preds = %bb3, %bb.nph
 	%loPart.02 = phi i32 [ %tmp24, %bb3 ], [ %loPart.118, %bb.nph ]		; <i32> [#uses=3]
 	%peakCount.01 = phi float [ %tmp23, %bb3 ], [ %peakCount.117, %bb.nph ]		; <float> [#uses=1]
 	%tmp16 = sext i32 %loPart.02 to i64		; <i64> [#uses=1]
-	%tmp17 = getelementptr float, float* %pTmp1, i64 %tmp16		; <float*> [#uses=1]
-	%tmp18 = load float, float* %tmp17, align 4		; <float> [#uses=1]
+	%tmp17 = getelementptr float, ptr %pTmp1, i64 %tmp16		; <ptr> [#uses=1]
+	%tmp18 = load float, ptr %tmp17, align 4		; <float> [#uses=1]
 	%tmp19 = fsub float %distERBlo.03, %tmp18		; <float> [#uses=3]
 	%tmp20 = sext i32 %loPart.02 to i64		; <i64> [#uses=1]
-	%tmp21 = getelementptr float, float* %peakWeight, i64 %tmp20		; <float*> [#uses=1]
-	%tmp22 = load float, float* %tmp21, align 4		; <float> [#uses=1]
+	%tmp21 = getelementptr float, ptr %peakWeight, i64 %tmp20		; <ptr> [#uses=1]
+	%tmp22 = load float, ptr %tmp21, align 4		; <float> [#uses=1]
 	%tmp23 = fsub float %peakCount.01, %tmp22		; <float> [#uses=2]
 	%tmp24 = add i32 %loPart.02, 1		; <i32> [#uses=2]
 	br label %bb3
@@ -97,13 +97,13 @@ bb4:		; preds = %bb5, %bb.nph12
 	%hiPart.08 = phi i32 [ %tmp31, %bb5 ], [ %hiPart.119, %bb.nph12 ]		; <i32> [#uses=2]
 	%peakCount.27 = phi float [ %tmp35, %bb5 ], [ %peakCount.0.lcssa, %bb.nph12 ]		; <float> [#uses=1]
 	%tmp27 = sext i32 %hiPart.08 to i64		; <i64> [#uses=1]
-	%tmp28 = getelementptr float, float* %pTmp1, i64 %tmp27		; <float*> [#uses=1]
-	%tmp29 = load float, float* %tmp28, align 4		; <float> [#uses=1]
+	%tmp28 = getelementptr float, ptr %pTmp1, i64 %tmp27		; <ptr> [#uses=1]
+	%tmp29 = load float, ptr %tmp28, align 4		; <float> [#uses=1]
 	%tmp30 = fadd float %tmp29, %distERBhi.29		; <float> [#uses=3]
 	%tmp31 = add i32 %hiPart.08, 1		; <i32> [#uses=4]
 	%tmp32 = sext i32 %tmp31 to i64		; <i64> [#uses=1]
-	%tmp33 = getelementptr float, float* %peakWeight, i64 %tmp32		; <float*> [#uses=1]
-	%tmp34 = load float, float* %tmp33, align 4		; <float> [#uses=1]
+	%tmp33 = getelementptr float, ptr %peakWeight, i64 %tmp32		; <ptr> [#uses=1]
+	%tmp34 = load float, ptr %tmp33, align 4		; <float> [#uses=1]
 	%tmp35 = fadd float %tmp34, %peakCount.27		; <float> [#uses=2]
 	br label %bb5
 
@@ -132,8 +132,8 @@ bb7:		; preds = %bb5.bb7_crit_edge, %bb5.preheader
 	%tmp42 = fadd float %tmp41, 1.000000e+00		; <float> [#uses=1]
 	%tmp43 = fdiv float 1.000000e+00, %tmp42		; <float> [#uses=1]
 	%tmp44 = sext i32 %part.016 to i64		; <i64> [#uses=1]
-	%tmp45 = getelementptr float, float* %nrgReducePeakrate, i64 %tmp44		; <float*> [#uses=1]
-	store float %tmp43, float* %tmp45, align 4
+	%tmp45 = getelementptr float, ptr %nrgReducePeakrate, i64 %tmp44		; <ptr> [#uses=1]
+	store float %tmp43, ptr %tmp45, align 4
 	%tmp46 = add i32 %part.016, 1		; <i32> [#uses=2]
 	br label %bb8
 

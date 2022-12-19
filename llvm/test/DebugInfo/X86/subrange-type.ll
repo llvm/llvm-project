@@ -11,8 +11,8 @@ define i32 @main() nounwind uwtable !dbg !5 {
 entry:
   %retval = alloca i32, align 4
   %i = alloca [2 x i32], align 4
-  store i32 0, i32* %retval
-  call void @llvm.dbg.declare(metadata [2 x i32]* %i, metadata !10, metadata !DIExpression()), !dbg !15
+  store i32 0, ptr %retval
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !10, metadata !DIExpression()), !dbg !15
   ret i32 0, !dbg !16
 }
 

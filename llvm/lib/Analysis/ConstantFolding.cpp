@@ -1947,8 +1947,12 @@ getEvaluationRoundingMode(const ConstrainedFPIntrinsic *CI) {
 static Constant *constantFoldCanonicalize(const Type *Ty, const CallBase *CI,
                                           const APFloat &Src) {
   // Zero, positive and negative, is always OK to fold.
-  if (Src.isZero())
-    return ConstantFP::get(CI->getContext(), Src);
+  if (Src.isZero()) {
+    // Get a fresh 0, since ppc_fp128 does have non-canonical zeros.
+    return ConstantFP::get(
+        CI->getContext(),
+        APFloat::getZero(Src.getSemantics(), Src.isNegative()));
+  }
 
   if (!Ty->isIEEELikeFPTy())
     return nullptr;
@@ -1966,9 +1970,10 @@ static Constant *constantFoldCanonicalize(const Type *Ty, const CallBase *CI,
     if (DenormMode == DenormalMode::getIEEE())
       return nullptr;
 
-    bool IsPositive = !Src.isNegative() ||
-                      DenormMode.Input == DenormalMode::PositiveZero ||
-                      DenormMode.Output == DenormalMode::PositiveZero;
+    bool IsPositive =
+        (!Src.isNegative() || DenormMode.Input == DenormalMode::PositiveZero ||
+         (DenormMode.Output == DenormalMode::PositiveZero &&
+          DenormMode.Input == DenormalMode::IEEE));
     return ConstantFP::get(CI->getContext(),
                            APFloat::getZero(Src.getSemantics(), !IsPositive));
   }

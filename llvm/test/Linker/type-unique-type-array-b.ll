@@ -22,23 +22,19 @@
 %struct.SA = type { i32 }
 
 ; Function Attrs: ssp uwtable
-define void @_Z4topBP1B2SA(%class.B* %b, i32 %sa.coerce) #0 !dbg !15 {
+define void @_Z4topBP1B2SA(ptr %b, i32 %sa.coerce) #0 !dbg !15 {
 entry:
   %sa = alloca %struct.SA, align 4
-  %b.addr = alloca %class.B*, align 8
+  %b.addr = alloca ptr, align 8
   %agg.tmp = alloca %struct.SA, align 4
-  %coerce.dive = getelementptr %struct.SA, %struct.SA* %sa, i32 0, i32 0
-  store i32 %sa.coerce, i32* %coerce.dive
-  store %class.B* %b, %class.B** %b.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.B** %b.addr, metadata !24, metadata !DIExpression()), !dbg !25
-  call void @llvm.dbg.declare(metadata %struct.SA* %sa, metadata !26, metadata !DIExpression()), !dbg !27
-  %0 = load %class.B*, %class.B** %b.addr, align 8, !dbg !28
-  %1 = bitcast %struct.SA* %agg.tmp to i8*, !dbg !28
-  %2 = bitcast %struct.SA* %sa to i8*, !dbg !28
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %1, i8* align 4 %2, i64 4, i1 false), !dbg !28
-  %coerce.dive1 = getelementptr %struct.SA, %struct.SA* %agg.tmp, i32 0, i32 0, !dbg !28
-  %3 = load i32, i32* %coerce.dive1, !dbg !28
-  call void @_ZN1B5testBE2SA(%class.B* %0, i32 %3), !dbg !28
+  store i32 %sa.coerce, ptr %sa
+  store ptr %b, ptr %b.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %b.addr, metadata !24, metadata !DIExpression()), !dbg !25
+  call void @llvm.dbg.declare(metadata ptr %sa, metadata !26, metadata !DIExpression()), !dbg !27
+  %0 = load ptr, ptr %b.addr, align 8, !dbg !28
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %sa, i64 4, i1 false), !dbg !28
+  %1 = load i32, ptr %agg.tmp, !dbg !28
+  call void @_ZN1B5testBE2SA(ptr %0, i32 %1), !dbg !28
   ret void, !dbg !29
 }
 
@@ -46,21 +42,20 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind ssp uwtable
-define linkonce_odr void @_ZN1B5testBE2SA(%class.B* %this, i32 %sa.coerce) #2 align 2 !dbg !20 {
+define linkonce_odr void @_ZN1B5testBE2SA(ptr %this, i32 %sa.coerce) #2 align 2 !dbg !20 {
 entry:
   %sa = alloca %struct.SA, align 4
-  %this.addr = alloca %class.B*, align 8
-  %coerce.dive = getelementptr %struct.SA, %struct.SA* %sa, i32 0, i32 0
-  store i32 %sa.coerce, i32* %coerce.dive
-  store %class.B* %this, %class.B** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.B** %this.addr, metadata !30, metadata !DIExpression()), !dbg !31
-  call void @llvm.dbg.declare(metadata %struct.SA* %sa, metadata !32, metadata !DIExpression()), !dbg !33
-  %this1 = load %class.B*, %class.B** %this.addr
+  %this.addr = alloca ptr, align 8
+  store i32 %sa.coerce, ptr %sa
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !30, metadata !DIExpression()), !dbg !31
+  call void @llvm.dbg.declare(metadata ptr %sa, metadata !32, metadata !DIExpression()), !dbg !33
+  %this1 = load ptr, ptr %this.addr
   ret void, !dbg !34
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #3
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) #3
 
 attributes #0 = { ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

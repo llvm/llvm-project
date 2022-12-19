@@ -1,9 +1,9 @@
 ; RUN: opt -passes='sroa' < %s -S -o - | FileCheck %s
 ;
 ; Test that recursively splitting an alloca updates the debug info correctly.
-; CHECK: %[[T:.*]] = load i64, i64* @t, align 8
+; CHECK: %[[T:.*]] = load i64, ptr @t, align 8
 ; CHECK: call void @llvm.dbg.value(metadata i64 %[[T]], metadata ![[Y:.*]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))
-; CHECK: %[[T1:.*]] = load i64, i64* @t, align 8
+; CHECK: %[[T1:.*]] = load i64, ptr @t, align 8
 ; CHECK: call void @llvm.dbg.value(metadata i64 %[[T1]], metadata ![[Y]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64))
 ; CHECK: call void @llvm.dbg.value(metadata i64 %[[T]], metadata ![[R:.*]], metadata !DIExpression(DW_OP_LLVM_fragment, 192, 64))
 ; CHECK: call void @llvm.dbg.value(metadata i64 %[[T1]], metadata ![[R]], metadata !DIExpression(DW_OP_LLVM_fragment, 256, 64))
@@ -52,39 +52,32 @@ entry:
   br i1 %tobool, label %if.then, label %if.end, !dbg !26
 
 if.then:                                          ; preds = %entry
-  store i32 0, i32* %retval, !dbg !27
+  store i32 0, ptr %retval, !dbg !27
   br label %return, !dbg !27
 
 if.end:                                           ; preds = %entry
-  call void @llvm.dbg.declare(metadata %struct.p* %y, metadata !28, metadata !29), !dbg !30
-  %s = getelementptr inbounds %struct.p, %struct.p* %y, i32 0, i32 0, !dbg !30
-  %0 = load i64, i64* @t, align 8, !dbg !30
-  store i64 %0, i64* %s, align 8, !dbg !30
-  %t = getelementptr inbounds %struct.p, %struct.p* %y, i32 0, i32 1, !dbg !30
-  %1 = load i64, i64* @t, align 8, !dbg !30
-  store i64 %1, i64* %t, align 8, !dbg !30
-  call void @llvm.dbg.declare(metadata %struct.r* %r, metadata !31, metadata !29), !dbg !32
-  %i = getelementptr inbounds %struct.r, %struct.r* %r, i32 0, i32 0, !dbg !32
-  store i32 0, i32* %i, align 4, !dbg !32
-  %x = getelementptr inbounds %struct.r, %struct.r* %r, i32 0, i32 1, !dbg !32
-  %s1 = getelementptr inbounds %struct.p, %struct.p* %x, i32 0, i32 0, !dbg !32
-  store i64 0, i64* %s1, align 8, !dbg !32
-  %t2 = getelementptr inbounds %struct.p, %struct.p* %x, i32 0, i32 1, !dbg !32
-  store i64 0, i64* %t2, align 8, !dbg !32
-  %y3 = getelementptr inbounds %struct.r, %struct.r* %r, i32 0, i32 2, !dbg !32
-  %2 = bitcast %struct.p* %y3 to i8*, !dbg !32
-  %3 = bitcast %struct.p* %y to i8*, !dbg !32
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %2, i8* align 8 %3, i64 16, i1 false), !dbg !32
-  %4 = bitcast %struct.r* %agg.tmp to i8*, !dbg !33
-  %5 = bitcast %struct.r* %r to i8*, !dbg !33
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %4, i8* align 8 %5, i64 40, i1 false), !dbg !33
-  %call4 = call i32 @_Z7call_me1r(%struct.r* byval(%struct.r) align 8 %agg.tmp), !dbg !33
-  store i32 %call4, i32* %retval, !dbg !33
+  call void @llvm.dbg.declare(metadata ptr %y, metadata !28, metadata !29), !dbg !30
+  %0 = load i64, ptr @t, align 8, !dbg !30
+  store i64 %0, ptr %y, align 8, !dbg !30
+  %t = getelementptr inbounds %struct.p, ptr %y, i32 0, i32 1, !dbg !30
+  %1 = load i64, ptr @t, align 8, !dbg !30
+  store i64 %1, ptr %t, align 8, !dbg !30
+  call void @llvm.dbg.declare(metadata ptr %r, metadata !31, metadata !29), !dbg !32
+  store i32 0, ptr %r, align 4, !dbg !32
+  %x = getelementptr inbounds %struct.r, ptr %r, i32 0, i32 1, !dbg !32
+  store i64 0, ptr %x, align 8, !dbg !32
+  %t2 = getelementptr inbounds %struct.p, ptr %x, i32 0, i32 1, !dbg !32
+  store i64 0, ptr %t2, align 8, !dbg !32
+  %y3 = getelementptr inbounds %struct.r, ptr %r, i32 0, i32 2, !dbg !32
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %y3, ptr align 8 %y, i64 16, i1 false), !dbg !32
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %agg.tmp, ptr align 8 %r, i64 40, i1 false), !dbg !33
+  %call4 = call i32 @_Z7call_me1r(ptr byval(%struct.r) align 8 %agg.tmp), !dbg !33
+  store i32 %call4, ptr %retval, !dbg !33
   br label %return, !dbg !33
 
 return:                                           ; preds = %if.end, %if.then
-  %6 = load i32, i32* %retval, !dbg !34
-  ret i32 %6, !dbg !34
+  %2 = load i32, ptr %retval, !dbg !34
+  ret i32 %2, !dbg !34
 }
 
 declare i32 @_Z5maybev()
@@ -93,9 +86,9 @@ declare i32 @_Z5maybev()
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #3
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) #3
 
-declare i32 @_Z7call_me1r(%struct.r* byval(%struct.r) align 8)
+declare i32 @_Z7call_me1r(ptr byval(%struct.r) align 8)
 
 attributes #0 = { nounwind }
 attributes #2 = { nounwind readnone }

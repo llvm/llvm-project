@@ -724,7 +724,7 @@ public:
     /// and its callees rely upon.
     Register findValueFromDefImpl(Register DefReg, unsigned StartBit,
                                   unsigned Size) {
-      Optional<DefinitionAndSourceRegister> DefSrcReg =
+      std::optional<DefinitionAndSourceRegister> DefSrcReg =
           getDefSrcRegIgnoringCopies(DefReg, MRI);
       MachineInstr *Def = DefSrcReg->MI;
       DefReg = DefSrcReg->Reg;

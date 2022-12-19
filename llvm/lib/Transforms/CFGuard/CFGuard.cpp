@@ -272,7 +272,7 @@ bool CFGuard::runOnFunction(Function &F) {
   // instructions. Make a separate list of pointers to indirect
   // call/invoke/callbr instructions because the original instructions will be
   // deleted as the checks are added.
-  for (BasicBlock &BB : F.getBasicBlockList()) {
+  for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       auto *CB = dyn_cast<CallBase>(&I);
       if (CB && CB->isIndirectCall() && !CB->hasFnAttr("guard_nocf")) {

@@ -1995,7 +1995,17 @@ TEST(APFloatTest, isFinite) {
 TEST(APFloatTest, isInfinity) {
   APFloat t(APFloat::IEEEsingle(), "0x1p+0");
   EXPECT_FALSE(t.isInfinity());
-  EXPECT_TRUE(APFloat::getInf(APFloat::IEEEsingle(), false).isInfinity());
+
+  APFloat PosInf = APFloat::getInf(APFloat::IEEEsingle(), false);
+  APFloat NegInf = APFloat::getInf(APFloat::IEEEsingle(), true);
+
+  EXPECT_TRUE(PosInf.isInfinity());
+  EXPECT_TRUE(PosInf.isPosInfinity());
+  EXPECT_FALSE(PosInf.isNegInfinity());
+  EXPECT_TRUE(NegInf.isInfinity());
+  EXPECT_FALSE(NegInf.isPosInfinity());
+  EXPECT_TRUE(NegInf.isNegInfinity());
+
   EXPECT_FALSE(APFloat::getZero(APFloat::IEEEsingle(), false).isInfinity());
   EXPECT_FALSE(APFloat::getNaN(APFloat::IEEEsingle(), false).isInfinity());
   EXPECT_FALSE(APFloat::getSNaN(APFloat::IEEEsingle(), false).isInfinity());

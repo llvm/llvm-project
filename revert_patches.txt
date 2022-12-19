@@ -6,4 +6,5 @@ Reverts: e1b88c8a [clang] Only use major version in resource dir
 Revert  595a08847 "[AMDGPU] Add support for new LLVM vector types"
 Revert "[ELF] Enable --no-undefined-version by default"
 Reapply: Revert "[-Wunsafe-buffer-usage] Initial commit - Transition away from raw buffers."
+Revert 6a2305484e87 [AAPointerInfo] track multiple constant offsets for each use
 

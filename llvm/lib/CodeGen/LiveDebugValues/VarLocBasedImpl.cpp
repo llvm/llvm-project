@@ -859,7 +859,7 @@ private:
     /// Insert a set of ranges.
     void insertFromLocSet(const VarLocSet &ToLoad, const VarLocMap &Map);
 
-    llvm::Optional<LocIndices> getEntryValueBackup(DebugVariable Var);
+    std::optional<LocIndices> getEntryValueBackup(DebugVariable Var);
 
     /// Empty the set.
     void clear() {
@@ -946,9 +946,9 @@ private:
 
   /// If a given instruction is identified as a spill, return the spill location
   /// and set \p Reg to the spilled register.
-  Optional<VarLoc::SpillLoc> isRestoreInstruction(const MachineInstr &MI,
-                                                  MachineFunction *MF,
-                                                  Register &Reg);
+  std::optional<VarLoc::SpillLoc> isRestoreInstruction(const MachineInstr &MI,
+                                                       MachineFunction *MF,
+                                                       Register &Reg);
   /// Given a spill instruction, extract the register and offset used to
   /// address the spill location in a target independent way.
   VarLoc::SpillLoc extractSpillBaseRegAndOffset(const MachineInstr &MI);
@@ -1110,7 +1110,7 @@ void VarLocBasedLDV::OpenRangesSet::insert(LocIndices VarLocIDs,
 
 /// Return the Loc ID of an entry value backup location, if it exists for the
 /// variable.
-llvm::Optional<LocIndices>
+std::optional<LocIndices>
 VarLocBasedLDV::OpenRangesSet::getEntryValueBackup(DebugVariable Var) {
   auto It = EntryValuesBackupVars.find(Var);
   if (It != EntryValuesBackupVars.end())
@@ -1398,7 +1398,7 @@ void VarLocBasedLDV::emitEntryValues(MachineInstr &MI,
       continue;
 
     auto DebugVar = VL.Var;
-    Optional<LocIndices> EntryValBackupIDs =
+    std::optional<LocIndices> EntryValBackupIDs =
         OpenRanges.getEntryValueBackup(DebugVar);
 
     // If the parameter has the entry value backup, it means we should
@@ -1618,9 +1618,9 @@ bool VarLocBasedLDV::isLocationSpill(const MachineInstr &MI,
   return false;
 }
 
-Optional<VarLocBasedLDV::VarLoc::SpillLoc>
+std::optional<VarLocBasedLDV::VarLoc::SpillLoc>
 VarLocBasedLDV::isRestoreInstruction(const MachineInstr &MI,
-                                      MachineFunction *MF, Register &Reg) {
+                                     MachineFunction *MF, Register &Reg) {
   if (!MI.hasOneMemOperand())
     return std::nullopt;
 
@@ -1647,7 +1647,7 @@ void VarLocBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI,
   MachineFunction *MF = MI.getMF();
   TransferKind TKind;
   Register Reg;
-  Optional<VarLoc::SpillLoc> Loc;
+  std::optional<VarLoc::SpillLoc> Loc;
 
   LLVM_DEBUG(dbgs() << "Examining instruction: "; MI.dump(););
 

@@ -1146,3 +1146,123 @@ cleanup:                                          ; preds = %entry, %if.end
   %retval.0 = phi i32 [ %r.4, %if.end ], [ 0, %entry ]
   ret i32 %retval.0
 }
+
+define void @test16(i32 signext %arg, i32 signext %arg1) nounwind {
+; CHECK-LABEL: test16:
+; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    addi sp, sp, -32
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    mv s0, a1
+; CHECK-NEXT:    call bar@plt
+; CHECK-NEXT:    mv s1, a0
+; CHECK-NEXT:  .LBB19_1: # %bb2
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    mv a0, s1
+; CHECK-NEXT:    call bar@plt
+; CHECK-NEXT:    sllw s1, s1, s0
+; CHECK-NEXT:    bnez a0, .LBB19_1
+; CHECK-NEXT:  # %bb.2: # %bb7
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:    ret
+;
+; NOREMOVAL-LABEL: test16:
+; NOREMOVAL:       # %bb.0: # %bb
+; NOREMOVAL-NEXT:    addi sp, sp, -32
+; NOREMOVAL-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; NOREMOVAL-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; NOREMOVAL-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; NOREMOVAL-NEXT:    mv s0, a1
+; NOREMOVAL-NEXT:    call bar@plt
+; NOREMOVAL-NEXT:    mv s1, a0
+; NOREMOVAL-NEXT:  .LBB19_1: # %bb2
+; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1
+; NOREMOVAL-NEXT:    sext.w a0, s1
+; NOREMOVAL-NEXT:    call bar@plt
+; NOREMOVAL-NEXT:    sllw s1, s1, s0
+; NOREMOVAL-NEXT:    bnez a0, .LBB19_1
+; NOREMOVAL-NEXT:  # %bb.2: # %bb7
+; NOREMOVAL-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; NOREMOVAL-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; NOREMOVAL-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; NOREMOVAL-NEXT:    addi sp, sp, 32
+; NOREMOVAL-NEXT:    ret
+bb:
+  %i = call signext i32 @bar(i32 signext %arg)
+  br label %bb2
+
+bb2:                                              ; preds = %bb2, %bb
+  %i3 = phi i32 [ %i, %bb ], [ %i5, %bb2 ]
+  %i4 = tail call signext i32 @bar(i32 signext %i3)
+  %i5 = shl i32 %i3, %arg1
+  %i6 = icmp eq i32 %i4, 0
+  br i1 %i6, label %bb7, label %bb2
+
+bb7:                                              ; preds = %bb2
+  ret void
+}
+
+define void @test17(i32 signext %arg, i32 signext %arg1) nounwind {
+; CHECK-LABEL: test17:
+; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    addi sp, sp, -32
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    mv s0, a1
+; CHECK-NEXT:    call bat@plt
+; CHECK-NEXT:    mv s1, a0
+; CHECK-NEXT:  .LBB20_1: # %bb2
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    mv a0, s1
+; CHECK-NEXT:    call bar@plt
+; CHECK-NEXT:    sllw s1, s1, s0
+; CHECK-NEXT:    bnez a0, .LBB20_1
+; CHECK-NEXT:  # %bb.2: # %bb7
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:    ret
+;
+; NOREMOVAL-LABEL: test17:
+; NOREMOVAL:       # %bb.0: # %bb
+; NOREMOVAL-NEXT:    addi sp, sp, -32
+; NOREMOVAL-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; NOREMOVAL-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; NOREMOVAL-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; NOREMOVAL-NEXT:    mv s0, a1
+; NOREMOVAL-NEXT:    call bat@plt
+; NOREMOVAL-NEXT:    mv s1, a0
+; NOREMOVAL-NEXT:  .LBB20_1: # %bb2
+; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1
+; NOREMOVAL-NEXT:    sext.w a0, s1
+; NOREMOVAL-NEXT:    call bar@plt
+; NOREMOVAL-NEXT:    sllw s1, s1, s0
+; NOREMOVAL-NEXT:    bnez a0, .LBB20_1
+; NOREMOVAL-NEXT:  # %bb.2: # %bb7
+; NOREMOVAL-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; NOREMOVAL-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; NOREMOVAL-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; NOREMOVAL-NEXT:    addi sp, sp, 32
+; NOREMOVAL-NEXT:    ret
+bb:
+  %i = call zeroext i16 @bat(i32 signext %arg)
+  %zext = zext i16 %i to i32
+  br label %bb2
+
+bb2:                                              ; preds = %bb2, %bb
+  %i3 = phi i32 [ %zext, %bb ], [ %i5, %bb2 ]
+  %i4 = tail call signext i32 @bar(i32 signext %i3)
+  %i5 = shl i32 %i3, %arg1
+  %i6 = icmp eq i32 %i4, 0
+  br i1 %i6, label %bb7, label %bb2
+
+bb7:                                              ; preds = %bb2
+  ret void
+}
+declare zeroext i16 @bat(i32 signext)
