@@ -40,7 +40,7 @@ struct Section {
 char CtxCtxPlaceholder;
 char CtxPlaceholder;
 
-const size_t MaxSections = 16;
+#define MaxSections 16
 static size_t SectionCount = 0;
 static struct Section Sections[MaxSections];
 
