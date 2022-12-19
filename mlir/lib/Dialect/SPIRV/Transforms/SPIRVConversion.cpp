@@ -848,7 +848,7 @@ bool SPIRVConversionTarget::isLegalOp(Operation *op) {
   // QueryMinVersionInterface/QueryMaxVersionInterface are available to all
   // SPIR-V versions.
   if (auto minVersionIfx = dyn_cast<spirv::QueryMinVersionInterface>(op)) {
-    Optional<spirv::Version> minVersion = minVersionIfx.getMinVersion();
+    std::optional<spirv::Version> minVersion = minVersionIfx.getMinVersion();
     if (minVersion && *minVersion > this->targetEnv.getVersion()) {
       LLVM_DEBUG(llvm::dbgs()
                  << op->getName() << " illegal: requiring min version "
@@ -857,7 +857,7 @@ bool SPIRVConversionTarget::isLegalOp(Operation *op) {
     }
   }
   if (auto maxVersionIfx = dyn_cast<spirv::QueryMaxVersionInterface>(op)) {
-    Optional<spirv::Version> maxVersion = maxVersionIfx.getMaxVersion();
+    std::optional<spirv::Version> maxVersion = maxVersionIfx.getMaxVersion();
     if (maxVersion && *maxVersion < this->targetEnv.getVersion()) {
       LLVM_DEBUG(llvm::dbgs()
                  << op->getName() << " illegal: requiring max version "

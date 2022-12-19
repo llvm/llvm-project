@@ -160,7 +160,7 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
           entryPointAttr.getSubgroupSize());
     }
   }
-  if (Optional<int> subgroupSize = entryPointAttr.getSubgroupSize()) {
+  if (std::optional<int> subgroupSize = entryPointAttr.getSubgroupSize()) {
     std::optional<ArrayRef<spirv::Capability>> caps =
         spirv::getCapabilities(spirv::ExecutionMode::SubgroupSize);
     if (!caps || targetEnv.allows(*caps)) {
