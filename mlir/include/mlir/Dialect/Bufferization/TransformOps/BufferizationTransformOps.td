@@ -69,15 +69,15 @@ def OneShotBufferizeOp
 def Transform_EmptyOp : Transform_ConcreteOpType<"tensor.empty">;
 def Transform_AllocTensorOp : Transform_ConcreteOpType<"bufferization.alloc_tensor">;
 
-def EmptyTensorToAllocTensorOp 
+def EmptyTensorToAllocTensorOp
     : Op<Transform_Dialect, "bufferization.empty_tensor_to_alloc_tensor",
-        [FunctionalStyleTransformOpTrait, 
+        [FunctionalStyleTransformOpTrait,
          MemoryEffectsOpInterface,
          TransformOpInterface,
          TransformEachOpTrait]> {
   let description = [{
     Replace a tensor.empty with a bufferization.tensor_alloc.
-    
+
     ### Return modes
 
     This operation consumes the `target` handle and produces the `transformed`
