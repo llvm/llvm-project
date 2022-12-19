@@ -1871,7 +1871,7 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
     if (iface && !iface->getDefaultDialect().empty())
       defaultDialect = iface->getDefaultDialect();
   } else {
-    Optional<Dialect::ParseOpHook> dialectHook;
+    std::optional<Dialect::ParseOpHook> dialectHook;
     Dialect *dialect = opNameInfo->getDialect();
     if (!dialect) {
       InFlightDiagnostic diag =
@@ -2057,7 +2057,7 @@ ParseResult OperationParser::parseRegionBody(Region &region, SMLoc startLoc,
                << "previously referenced here";
       }
       Location loc = entryArg.sourceLoc.has_value()
-                         ? entryArg.sourceLoc.value()
+                         ? *entryArg.sourceLoc
                          : getEncodedSourceLocation(argInfo.location);
       BlockArgument arg = block->addArgument(entryArg.type, loc);
 

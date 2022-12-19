@@ -244,7 +244,7 @@ FailureOr<GenericOp> generalizeNamedOp(RewriterBase &rewriter,
 /// smallest constant value for the size of the buffer needed for each
 /// dimension. If that is not possible, contains the dynamic size of the
 /// subview. The call back should return the buffer to use.
-using AllocBufferCallbackFn = std::function<Optional<Value>(
+using AllocBufferCallbackFn = std::function<std::optional<Value>(
     OpBuilder &b, memref::SubViewOp subView,
     ArrayRef<Value> boundingSubViewSize, DataLayout &layout)>;
 
@@ -262,7 +262,7 @@ using CopyCallbackFn =
 
 struct LinalgPromotionOptions {
   /// Indices of subViews to promote. If `None`, try to promote all operands.
-  Optional<DenseSet<unsigned>> operandsToPromote = std::nullopt;
+  std::optional<DenseSet<unsigned>> operandsToPromote = std::nullopt;
   LinalgPromotionOptions &setOperandsToPromote(ArrayRef<int64_t> operands) {
     operandsToPromote = DenseSet<unsigned>();
     operandsToPromote->insert(operands.begin(), operands.end());
@@ -273,7 +273,7 @@ struct LinalgPromotionOptions {
   /// Otherwise the partial view will be used. The decision is defaulted to
   /// `useFullTileBuffersDefault` when `useFullTileBuffers` is None and for
   /// operands missing from `useFullTileBuffers`.
-  Optional<llvm::SmallBitVector> useFullTileBuffers = std::nullopt;
+  std::optional<llvm::SmallBitVector> useFullTileBuffers = std::nullopt;
   LinalgPromotionOptions &setUseFullTileBuffers(ArrayRef<bool> useFullTiles) {
     unsigned size = useFullTiles.size();
     llvm::SmallBitVector tmp(size, false);
@@ -290,7 +290,7 @@ struct LinalgPromotionOptions {
     return *this;
   }
   /// Alignment of promoted buffer. If `None` do not specify alignment.
-  Optional<unsigned> alignment = std::nullopt;
+  std::optional<unsigned> alignment = std::nullopt;
   LinalgPromotionOptions &setAlignment(unsigned align) {
     alignment = align;
     return *this;
@@ -304,8 +304,8 @@ struct LinalgPromotionOptions {
   /// Callback function to do the allocation of the promoted buffer. If None,
   /// then the default allocation scheme of allocating a memref<?xi8> buffer
   /// followed by a view operation is used.
-  Optional<AllocBufferCallbackFn> allocationFn = std::nullopt;
-  Optional<DeallocBufferCallbackFn> deallocationFn = std::nullopt;
+  std::optional<AllocBufferCallbackFn> allocationFn = std::nullopt;
+  std::optional<DeallocBufferCallbackFn> deallocationFn = std::nullopt;
   LinalgPromotionOptions &
   setAllocationDeallocationFns(AllocBufferCallbackFn const &allocFn,
                                DeallocBufferCallbackFn const &deallocFn) {
@@ -315,8 +315,8 @@ struct LinalgPromotionOptions {
   }
   /// Callback function to do the copy of data to and from the promoted
   /// subview. If None then a memref.copy is used.
-  Optional<CopyCallbackFn> copyInFn = std::nullopt;
-  Optional<CopyCallbackFn> copyOutFn = std::nullopt;
+  std::optional<CopyCallbackFn> copyInFn = std::nullopt;
+  std::optional<CopyCallbackFn> copyOutFn = std::nullopt;
   LinalgPromotionOptions &setCopyInOutFns(CopyCallbackFn const &copyIn,
                                           CopyCallbackFn const &copyOut) {
     copyInFn = copyIn;
@@ -469,14 +469,14 @@ struct ForeachThreadTilingResult {
 FailureOr<ForeachThreadTilingResult>
 tileToForeachThreadOp(RewriterBase &builder, TilingInterface op,
                       ArrayRef<OpFoldResult> numThreads,
-                      Optional<ArrayAttr> mapping);
+                      std::optional<ArrayAttr> mapping);
 
 /// Same as `tileToForeachThreadOp`, but calculate the number of threads
 /// required using the given tileSizes.
 FailureOr<ForeachThreadTilingResult>
 tileToForeachThreadOpUsingTileSizes(RewriterBase &builder, TilingInterface op,
                                     ArrayRef<OpFoldResult> tileSizes,
-                                    Optional<ArrayAttr> mapping);
+                                    std::optional<ArrayAttr> mapping);
 
 /// Transformation information returned after reduction tiling.
 struct ForeachThreadReductionTilingResult {
@@ -514,11 +514,10 @@ struct ForeachThreadReductionTilingResult {
 /// %6 = linalg.generic %1 ["parallel", "reduction"]
 ///   : tensor<7x4xf32> -> tensor<7xf32>
 /// ```
-FailureOr<ForeachThreadReductionTilingResult>
-tileReductionUsingForeachThread(RewriterBase &b, PartialReductionOpInterface op,
-                                ArrayRef<OpFoldResult> numThreads,
-                                ArrayRef<OpFoldResult> tileSizes = {},
-                                Optional<ArrayAttr> mapping = std::nullopt);
+FailureOr<ForeachThreadReductionTilingResult> tileReductionUsingForeachThread(
+    RewriterBase &b, PartialReductionOpInterface op,
+    ArrayRef<OpFoldResult> numThreads, ArrayRef<OpFoldResult> tileSizes = {},
+    std::optional<ArrayAttr> mapping = std::nullopt);
 
 /// All indices returned by IndexOp should be invariant with respect to
 /// tiling. Therefore, if an operation is tiled, we have to transform the
@@ -623,7 +622,7 @@ struct LinalgTilingAndFusionOptions {
   SmallVector<int64_t> tileInterchange;
   /// When specified, specifies distribution of generated tile loops to
   /// processors.
-  Optional<LinalgLoopDistributionOptions> tileDistribution = std::nullopt;
+  std::optional<LinalgLoopDistributionOptions> tileDistribution = std::nullopt;
   LinalgTilingAndFusionOptions &
   setDistributionOptions(LinalgLoopDistributionOptions distributionOptions) {
     tileDistribution = std::move(distributionOptions);
@@ -676,7 +675,7 @@ struct LinalgTilingOptions {
 
   /// When specified, specifies distribution of generated tile loops to
   /// processors.
-  Optional<LinalgLoopDistributionOptions> distribution = std::nullopt;
+  std::optional<LinalgLoopDistributionOptions> distribution = std::nullopt;
 
   LinalgTilingOptions &
   setDistributionOptions(LinalgLoopDistributionOptions distributionOptions) {
@@ -806,7 +805,7 @@ struct CopyVectorizationPattern : public OpRewritePattern<memref::CopyOp> {
 };
 
 /// Return vector::CombiningKind for the given op.
-llvm::Optional<vector::CombiningKind> getCombinerOpKind(Operation *combinerOp);
+std::optional<vector::CombiningKind> getCombinerOpKind(Operation *combinerOp);
 
 //===----------------------------------------------------------------------===//
 // Transformations exposed as rewrite patterns.
@@ -966,7 +965,7 @@ struct ExtractSliceOfPadTensorSwapPattern
   ///
   /// See the documentation for tensor::bubbleUpPadSlice regarding zero slice
   /// guard.
-  using ControlFn = std::function<llvm::Optional<bool>(tensor::ExtractSliceOp)>;
+  using ControlFn = std::function<std::optional<bool>(tensor::ExtractSliceOp)>;
 
   ExtractSliceOfPadTensorSwapPattern(MLIRContext *context,
                                      ControlFn controlFn = nullptr,

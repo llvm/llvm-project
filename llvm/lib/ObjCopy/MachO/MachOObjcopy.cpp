@@ -348,7 +348,7 @@ static Expected<Section &> findSection(StringRef SecName, Object &O) {
                              SecName.str().c_str());
 
   assert(FoundSec->get()->CanonicalName == (SegName + "," + SecName).str());
-  return *FoundSec->get();
+  return **FoundSec;
 }
 
 static Error updateSection(const NewSectionInfo &NewSection, Object &O) {

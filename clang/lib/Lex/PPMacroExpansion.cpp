@@ -53,6 +53,7 @@
 #include <cstddef>
 #include <cstring>
 #include <ctime>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -1249,7 +1250,7 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
     return false;
 
   // Search include directories.
-  Optional<FileEntryRef> File =
+  std::optional<FileEntryRef> File =
       PP.LookupFile(FilenameLoc, Filename, isAngled, LookupFrom, LookupFromFile,
                     nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
 
@@ -1345,10 +1346,10 @@ already_lexed:
         // The last ')' has been reached; return the value if one found or
         // a diagnostic and a dummy value.
         if (Result) {
-          OS << Result.value();
+          OS << *Result;
           // For strict conformance to __has_cpp_attribute rules, use 'L'
           // suffix for dated literals.
-          if (Result.value() > 1)
+          if (*Result > 1)
             OS << 'L';
         } else {
           OS << 0;

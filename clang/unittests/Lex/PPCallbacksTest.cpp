@@ -6,7 +6,6 @@
 //
 //===--------------------------------------------------------------===//
 
-#include "clang/Lex/Preprocessor.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/Diagnostic.h"
@@ -19,12 +18,14 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Path.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace clang;
 
@@ -36,8 +37,9 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          Optional<FileEntryRef> File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          std::optional<FileEntryRef> File,
+                          StringRef SearchPath, StringRef RelativePath,
+                          const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override {
     this->HashLoc = HashLoc;
     this->IncludeTok = IncludeTok;
@@ -56,7 +58,7 @@ public:
   SmallString<16> FileName;
   bool IsAngled;
   CharSourceRange FilenameRange;
-  Optional<FileEntryRef> File;
+  std::optional<FileEntryRef> File;
   SmallString<16> SearchPath;
   SmallString<16> RelativePath;
   const Module* Imported;

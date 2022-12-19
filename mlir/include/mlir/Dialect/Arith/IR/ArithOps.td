@@ -268,7 +268,7 @@ def Arith_AddUIExtendedOp : Arith_Op<"addui_extended", [Pure, Commutative,
   let hasCanonicalizer = 1;
 
   let extraClassDeclaration = [{
-    Optional<SmallVector<int64_t, 4>> getShapeForUnroll();
+    std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
   }];
 }
 
@@ -330,7 +330,7 @@ def Arith_MulSIExtendedOp : Arith_Op<"mulsi_extended", [Pure, Commutative,
   let hasCanonicalizer = 1;
 
   let extraClassDeclaration = [{
-    Optional<SmallVector<int64_t, 4>> getShapeForUnroll();
+    std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
   }];
 }
 
@@ -373,7 +373,7 @@ def Arith_MulUIExtendedOp : Arith_Op<"mului_extended", [Pure, Commutative,
   let hasCanonicalizer = 1;
 
   let extraClassDeclaration = [{
-    Optional<SmallVector<int64_t, 4>> getShapeForUnroll();
+    std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
   }];
 }
 

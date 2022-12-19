@@ -99,7 +99,7 @@ private:
     else
       resultType = fir::ReferenceType::get(resultValueType);
 
-    llvm::Optional<bool> complexPart;
+    std::optional<bool> complexPart;
     llvm::SmallVector<mlir::Value> substring;
     auto designate = getBuilder().create<hlfir::DesignateOp>(
         getLoc(), resultType, partInfo.base.getBase(), "",
@@ -457,9 +457,9 @@ struct BinaryOp<Fortran::evaluate::Relational<
     auto cmp = fir::runtime::genCharCompare(
         builder, loc, translateRelational(op.opr), lhsExv, rhsExv);
     if (lhsCleanUp)
-      lhsCleanUp.value()();
+      (*lhsCleanUp)();
     if (rhsCleanUp)
-      rhsCleanUp.value()();
+      (*rhsCleanUp)();
     return hlfir::EntityWithAttributes{cmp};
   }
 };
@@ -718,10 +718,8 @@ private:
   gen(const Fortran::evaluate::FunctionRef<T> &expr) {
     mlir::Type resType =
         Fortran::lower::TypeBuilder<T>::genType(getConverter(), expr);
-    return Fortran::lower::convertCallToHLFIR(getLoc(), getConverter(), expr,
-                                              resType, getSymMap(),
-                                              getStmtCtx())
-        .value();
+    return *Fortran::lower::convertCallToHLFIR(
+        getLoc(), getConverter(), expr, resType, getSymMap(), getStmtCtx());
   }
 
   template <typename T>

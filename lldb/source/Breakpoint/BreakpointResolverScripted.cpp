@@ -139,7 +139,7 @@ void BreakpointResolverScripted::GetDescription(Stream *s) {
                                          short_help);
   }
   if (!short_help.empty())
-    s->PutCString(short_help.c_str());
+    s->PutCString(short_help);
   else
     s->Printf("python class = %s", m_class_name.c_str());
 }

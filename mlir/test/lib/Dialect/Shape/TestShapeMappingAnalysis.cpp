@@ -26,7 +26,7 @@ struct TestShapeMappingPass
     llvm::Optional<std::reference_wrapper<shape::ShapeMappingAnalysis>>
         maybeAnalysis = getCachedAnalysis<shape::ShapeMappingAnalysis>();
     if (maybeAnalysis.has_value())
-      maybeAnalysis.value().get().print(llvm::errs());
+      maybeAnalysis->get().print(llvm::errs());
     else
       llvm::errs() << "No cached ShapeMappingAnalysis existed.";
   }

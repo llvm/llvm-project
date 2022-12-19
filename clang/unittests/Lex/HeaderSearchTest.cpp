@@ -214,7 +214,7 @@ TEST_F(HeaderSearchTest, HeaderFrameworkLookup) {
 
   EXPECT_TRUE(FoundFile.has_value());
   EXPECT_TRUE(IsFrameworkFound);
-  auto &FE = FoundFile.value();
+  auto &FE = *FoundFile;
   auto FI = Search.getExistingFileInfo(FE);
   EXPECT_TRUE(FI);
   EXPECT_TRUE(FI->IsValid);
@@ -284,7 +284,7 @@ TEST_F(HeaderSearchTest, HeaderMapFrameworkLookup) {
 
   EXPECT_TRUE(FoundFile.has_value());
   EXPECT_TRUE(IsMapped);
-  auto &FE = FoundFile.value();
+  auto &FE = *FoundFile;
   auto FI = Search.getExistingFileInfo(FE);
   EXPECT_TRUE(FI);
   EXPECT_TRUE(FI->IsValid);

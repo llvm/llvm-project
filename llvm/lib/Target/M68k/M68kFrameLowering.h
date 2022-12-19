@@ -110,8 +110,7 @@ public:
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  ArrayRef<CalleeSavedInfo> CSI,
-                                 const TargetRegisterInfo *TRI,
-                                 Register VReg) const override;
+                                 const TargetRegisterInfo *TRI) const override;
 
   /// Issues instruction(s) to restore all callee saved registers and returns
   /// true if it isn't possible / profitable to do so by issuing a series of

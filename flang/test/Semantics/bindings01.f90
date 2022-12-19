@@ -215,6 +215,24 @@ contains
   end subroutine
 end module m7
 
+module m8 ! C1529 - warning only
+  type t
+    procedure(mysubr), pointer, nopass :: pp
+   contains
+    procedure, nopass :: tbp => mysubr
+  end type
+ contains
+  subroutine mysubr
+  end subroutine
+  subroutine test
+    type(t) a(2)
+    !PORTABILITY: Base of NOPASS type-bound procedure reference should be scalar
+    call a%tbp
+    !ERROR: Base of procedure component reference must be scalar
+    call a%pp
+  end subroutine
+end module
+
 program test
   use m1
   type,extends(t) :: t2

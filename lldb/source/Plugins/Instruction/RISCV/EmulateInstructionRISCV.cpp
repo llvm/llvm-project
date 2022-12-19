@@ -1214,8 +1214,7 @@ public:
     return transformOptional(inst.rs1.Read(m_emu),
                              [&](auto &&rs1) {
                                uint64_t addr = rs1 + uint64_t(inst.imm);
-                               uint64_t bits =
-                                   m_emu.ReadMem<uint64_t>(addr).value();
+                               uint64_t bits = *m_emu.ReadMem<uint64_t>(addr);
                                APFloat f(semantics(), APInt(numBits, bits));
                                return inst.rd.WriteAPFloat(m_emu, f);
                              })

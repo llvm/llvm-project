@@ -90,7 +90,7 @@ public:
 
   /// Clone this type with the given shape and element type. If the
   /// provided shape is `None`, the current shape of the type is used.
-  TensorType cloneWith(Optional<ArrayRef<int64_t>> shape,
+  TensorType cloneWith(std::optional<ArrayRef<int64_t>> shape,
                        Type elementType) const;
 
   /// Return true if the specified element type is ok in a tensor.
@@ -126,7 +126,7 @@ public:
 
   /// Clone this type with the given shape and element type. If the
   /// provided shape is `None`, the current shape of the type is used.
-  BaseMemRefType cloneWith(Optional<ArrayRef<int64_t>> shape,
+  BaseMemRefType cloneWith(std::optional<ArrayRef<int64_t>> shape,
                            Type elementType) const;
 
   /// Return true if the specified element type is ok in a memref.
@@ -337,7 +337,7 @@ private:
 /// which dimensions must be kept when e.g. compute MemRef strides under
 /// rank-reducing operations. Return std::nullopt if reducedShape cannot be
 /// obtained by dropping only `1` entries in `originalShape`.
-llvm::Optional<llvm::SmallDenseSet<unsigned>>
+std::optional<llvm::SmallDenseSet<unsigned>>
 computeRankReductionMask(ArrayRef<int64_t> originalShape,
                          ArrayRef<int64_t> reducedShape);
 

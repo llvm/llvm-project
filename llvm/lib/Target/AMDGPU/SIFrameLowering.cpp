@@ -1339,6 +1339,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   bool FPSaved = FuncInfo->hasPrologEpilogSGPRSpillEntry(FramePtrReg);
+  (void)FPSaved;
   assert((!HasFP || FPSaved) &&
          "Needed to save FP but didn't save it anywhere");
 
@@ -1348,6 +1349,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
          "Saved FP but didn't need it");
 
   bool BPSaved = FuncInfo->hasPrologEpilogSGPRSpillEntry(BasePtrReg);
+  (void)BPSaved;
   assert((!HasBP || BPSaved) &&
          "Needed to save BP but didn't save it anywhere");
 

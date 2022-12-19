@@ -1796,13 +1796,13 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType,
       // always bounded. However, when we have symbols, we may not be able to
       // obtain a constant upper bound. Also, mapping to a negative space is
       // invalid for normalization.
-      if (!ubConst.has_value() || ubConst.value() < 0) {
+      if (!ubConst.has_value() || *ubConst < 0) {
         LLVM_DEBUG(llvm::dbgs()
                    << "can't normalize map due to unknown/invalid upper bound");
         return memrefType;
       }
       // If dimension of new memrefType is dynamic, the value is -1.
-      newShape[d] = ubConst.value() + 1;
+      newShape[d] = *ubConst + 1;
     }
   }
 

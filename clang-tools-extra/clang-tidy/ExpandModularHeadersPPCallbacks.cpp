@@ -12,6 +12,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ASTReader.h"
+#include <optional>
 
 #define DEBUG_TYPE "clang-tidy"
 
@@ -162,7 +163,7 @@ void ExpandModularHeadersPPCallbacks::FileChanged(
 void ExpandModularHeadersPPCallbacks::InclusionDirective(
     SourceLocation DirectiveLoc, const Token &IncludeToken,
     StringRef IncludedFilename, bool IsAngled, CharSourceRange FilenameRange,
-    Optional<FileEntryRef> IncludedFile, StringRef SearchPath,
+    std::optional<FileEntryRef> IncludedFile, StringRef SearchPath,
     StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
   if (Imported) {
@@ -224,7 +225,8 @@ void ExpandModularHeadersPPCallbacks::PragmaDiagnostic(SourceLocation Loc,
   parseToLocation(Loc);
 }
 void ExpandModularHeadersPPCallbacks::HasInclude(SourceLocation Loc, StringRef,
-                                                 bool, Optional<FileEntryRef>,
+                                                 bool,
+                                                 std::optional<FileEntryRef>,
                                                  SrcMgr::CharacteristicKind) {
   parseToLocation(Loc);
 }

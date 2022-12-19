@@ -13,10 +13,11 @@
 #ifndef LLVM_CLANG_LEX_DIRECTORYLOOKUP_H
 #define LLVM_CLANG_LEX_DIRECTORYLOOKUP_H
 
-#include "clang/Basic/LLVM.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/ModuleMap.h"
+#include <optional>
 
 namespace clang {
 class HeaderMap;
@@ -180,7 +181,7 @@ public:
   /// \param [out] MappedName if this is a headermap which maps the filename to
   /// a framework include ("Foo.h" -> "Foo/Foo.h"), set the new name to this
   /// vector and point Filename to it.
-  Optional<FileEntryRef>
+  std::optional<FileEntryRef>
   LookupFile(StringRef &Filename, HeaderSearch &HS, SourceLocation IncludeLoc,
              SmallVectorImpl<char> *SearchPath,
              SmallVectorImpl<char> *RelativePath, Module *RequestingModule,
@@ -190,7 +191,7 @@ public:
              bool OpenFile = true) const;
 
 private:
-  Optional<FileEntryRef> DoFrameworkLookup(
+  std::optional<FileEntryRef> DoFrameworkLookup(
       StringRef Filename, HeaderSearch &HS, SmallVectorImpl<char> *SearchPath,
       SmallVectorImpl<char> *RelativePath, Module *RequestingModule,
       ModuleMap::KnownHeader *SuggestedModule,

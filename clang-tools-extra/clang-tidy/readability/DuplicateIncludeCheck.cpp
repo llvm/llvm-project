@@ -12,6 +12,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <memory>
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -48,8 +49,9 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          Optional<FileEntryRef> File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          std::optional<FileEntryRef> File,
+                          StringRef SearchPath, StringRef RelativePath,
+                          const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
 
   void MacroDefined(const Token &MacroNameTok,
@@ -77,8 +79,9 @@ void DuplicateIncludeCallbacks::FileChanged(SourceLocation Loc,
 
 void DuplicateIncludeCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
-    bool IsAngled, CharSourceRange FilenameRange, Optional<FileEntryRef> File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
+    bool IsAngled, CharSourceRange FilenameRange,
+    std::optional<FileEntryRef> File, StringRef SearchPath,
+    StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
   if (llvm::is_contained(Files.back(), FileName)) {
     // We want to delete the entire line, so make sure that [Start,End] covers
