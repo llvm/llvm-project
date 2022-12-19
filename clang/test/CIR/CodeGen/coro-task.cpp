@@ -100,6 +100,9 @@ co_invoke_fn co_invoke;
 
 // CHECK: ![[VoidTask:ty_.*]] = !cir.struct<"struct.folly::coro::Task", i8>
 // CHECK: ![[VoidPromisse:ty_.*]] = !cir.struct<"struct.folly::coro::Task<void>::promise_type", i8>
+// CHECK: ![[CoroHandleVoid:ty_.*]] = !cir.struct<"struct.std::coroutine_handle", i8>
+// CHECK: ![[CoroHandlePromise:ty_.*]] = !cir.struct<"struct.std::coroutine_handle", i8>
+// CHECK: ![[SuspendAlways:ty_.*]] = !cir.struct<"struct.std::suspend_always", i8>
 
 // CHECK: module {{.*}} {
 // CHECK-NEXT: cir.global external @_ZN5folly4coro9co_invokeE = #cir.zero : !ty_22struct2Efolly3A3Acoro3A3Aco_invoke_fn22
@@ -114,8 +117,6 @@ using VoidTask = folly::coro::Task<void>;
 VoidTask silly_task() {
   co_await std::suspend_always();
 }
-
-// CHECK: cir.func builtin @__builtin_coro_frame() -> !cir.ptr<i8> attributes {builtin, sym_visibility = "private"}
 
 // CHECK: cir.func @_Z10silly_taskv() -> ![[VoidTask]] {
 
@@ -148,5 +149,62 @@ VoidTask silly_task() {
 
 // CHECK: %[[#RetObj:]] = cir.call @_ZN5folly4coro4TaskIvE12promise_type17get_return_objectEv(%[[#VoidPromisseAddr]]) : {{.*}} -> ![[VoidTask]]
 // CHECK: cir.store %[[#RetObj]], %[[#VoidTaskAddr]] : ![[VoidTask]]
+
+// Start a new scope for the actual codegen for co_await, create temporary allocas for
+// holding coroutine handle and the suspend_always struct.
+
+// CHECK: cir.scope {
+// CHECK:   %[[#SuspendAlwaysAddr:]] = cir.alloca ![[SuspendAlways]], {{.*}} ["ref.tmp0"] {alignment = 1 : i64}
+// CHECK:   %[[#CoroHandleVoidAddr:]] = cir.alloca ![[CoroHandleVoid]], {{.*}} ["agg.tmp0"] {alignment = 1 : i64}
+// CHECK:   %[[#CoroHandlePromiseAddr:]] = cir.alloca ![[CoroHandlePromise]], {{.*}} ["agg.tmp1"] {alignment = 1 : i64}
+
+// Effectively execute `coawait promise_type::initial_suspend()` by calling initial_suspend() and getting
+// the suspend_always struct to use for cir.await. Note that we return by-value since we defer ABI lowering
+// to later passes, same is done elsewhere.
+
+// CHECK:   %15 = cir.call @_ZN5folly4coro4TaskIvE12promise_type15initial_suspendEv(%2)
+// CHECK:   cir.store %15, %[[#SuspendAlwaysAddr]] : !ty_22struct2Estd3A3Asuspend_always22, cir.ptr <!ty_22struct2Estd3A3Asuspend_always22>
+
+//
+// Here we start mapping co_await to cir.await.
+//
+
+// First regions `ready` has a special cir.yield code to veto suspension.
+
+// CHECK:   cir.await(ready : {
+// CHECK:     %16 = cir.call @_ZNSt14suspend_always11await_readyEv(%12) : (!cir.ptr<!ty_22struct2Estd3A3Asuspend_always22>) -> !cir.bool
+// CHECK:     cir.if %16 {
+// CHECK:       cir.yield break
+// CHECK:     }
+// CHECK:     cir.yield
+
+// Second region `suspend` contains the actual suspend logic.
+//
+// - Start by getting the coroutine handle using from_address().
+// - Implicit convert coroutine handle from task specific promisse
+//   specialization to a void one.
+// - Call suspend_always::await_suspend() passing the handle.
+//
+// FIXME: add missing builtin calls.
+// FIXME: add veto support for non-void await_suspends.
+
+// CHECK:   }, suspend : {
+// CHECK:     %16 = cir.call @_ZNSt16coroutine_handleIN5folly4coro4TaskIvE12promise_typeEE12from_addressEPv(%[[#CoroFrameAddr]])
+// CHECK:     cir.store %16, %[[#CoroHandlePromiseAddr]] : ![[CoroHandlePromise]]
+// CHECK:     %[[#CoroHandlePromiseReload:]] = cir.load %[[#CoroHandlePromiseAddr]]
+// CHECK:     cir.call @_ZNSt16coroutine_handleIvEC1IN5folly4coro4TaskIvE12promise_typeEEES_IT_E(%[[#CoroHandleVoidAddr]], %[[#CoroHandlePromiseReload]])
+// CHECK:     %[[#CoroHandleVoidReload:]] = cir.load %[[#CoroHandleVoidAddr]] : cir.ptr <![[CoroHandleVoid]]>, ![[CoroHandleVoid]]
+// CHECK:     cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[#SuspendAlwaysAddr]], %[[#CoroHandleVoidReload]])
+// CHECK:     cir.yield
+
+// Third region `resume` handles coroutine resuming logic.
+//
+// FIXME: add missing builtin calls.
+
+// CHECK:   }, resume : {
+// CHECK:     cir.call @_ZNSt14suspend_always12await_resumeEv(%[[#SuspendAlwaysAddr]])
+// CHECK:     cir.yield
+// CHECK:   },)
+// CHECK: }
 
 // CHECK: }

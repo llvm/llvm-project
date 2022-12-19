@@ -787,6 +787,7 @@ public:
                           AggValueSlot aggSlot = AggValueSlot::ignored(),
                           bool ignoreResult = false);
   RValue buildCoroutineIntrinsic(const CallExpr *E, unsigned int IID);
+  RValue buildCoroutineFrame();
 
   // Build CIR for a statement. useCurrentScope should be true if no
   // new scopes need be created when finding a compound statement.
