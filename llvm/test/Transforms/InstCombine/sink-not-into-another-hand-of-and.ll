@@ -28,8 +28,8 @@ define i8 @t1(i8 %v0, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %v5) {
 ; CHECK-LABEL: @t1(
 ; CHECK-NEXT:    [[I0:%.*]] = icmp eq i8 [[V0:%.*]], [[V1:%.*]]
 ; CHECK-NEXT:    [[I1:%.*]] = icmp ne i8 [[V2:%.*]], [[V3:%.*]]
-; CHECK-NEXT:    call void @use1(i1 [[I0]])
 ; CHECK-NEXT:    [[I3_NOT:%.*]] = or i1 [[I1]], [[I0]]
+; CHECK-NEXT:    call void @use1(i1 [[I0]])
 ; CHECK-NEXT:    [[I4:%.*]] = select i1 [[I3_NOT]], i8 [[V5:%.*]], i8 [[V4:%.*]]
 ; CHECK-NEXT:    ret i8 [[I4]]
 ;
@@ -77,12 +77,11 @@ define i8 @n3(i1 %i0, i8 %v0, i8 %v1, i8 %v2, i8 %v3) {
 ; Extra uses are invertible
 define i8 @t4(i1 %i0, i8 %v0, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %v5) {
 ; CHECK-LABEL: @t4(
-; CHECK-NEXT:    [[I1:%.*]] = icmp eq i8 [[V0:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[I2:%.*]] = select i1 [[I1]], i8 [[V2:%.*]], i8 [[V3:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = icmp ne i8 [[V0:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    [[I4_NOT:%.*]] = or i1 [[I1]], [[I0:%.*]]
+; CHECK-NEXT:    [[I2:%.*]] = select i1 [[I1]], i8 [[V3:%.*]], i8 [[V2:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[I2]])
-; CHECK-NEXT:    [[I3:%.*]] = xor i1 [[I0:%.*]], true
-; CHECK-NEXT:    [[I4:%.*]] = and i1 [[I1]], [[I3]]
-; CHECK-NEXT:    [[I5:%.*]] = select i1 [[I4]], i8 [[V4:%.*]], i8 [[V5:%.*]]
+; CHECK-NEXT:    [[I5:%.*]] = select i1 [[I4_NOT]], i8 [[V5:%.*]], i8 [[V4:%.*]]
 ; CHECK-NEXT:    ret i8 [[I5]]
 ;
   %i1 = icmp eq i8 %v0, %v1 ; has extra invertible use
@@ -95,12 +94,11 @@ define i8 @t4(i1 %i0, i8 %v0, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %v5) {
 }
 define i8 @t4_commutative(i1 %i0, i8 %v0, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %v5) {
 ; CHECK-LABEL: @t4_commutative(
-; CHECK-NEXT:    [[I1:%.*]] = icmp eq i8 [[V0:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[I2:%.*]] = select i1 [[I1]], i8 [[V2:%.*]], i8 [[V3:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = icmp ne i8 [[V0:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    [[I4_NOT:%.*]] = or i1 [[I1]], [[I0:%.*]]
+; CHECK-NEXT:    [[I2:%.*]] = select i1 [[I1]], i8 [[V3:%.*]], i8 [[V2:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[I2]])
-; CHECK-NEXT:    [[I3:%.*]] = xor i1 [[I0:%.*]], true
-; CHECK-NEXT:    [[I4:%.*]] = and i1 [[I1]], [[I3]]
-; CHECK-NEXT:    [[I5:%.*]] = select i1 [[I4]], i8 [[V4:%.*]], i8 [[V5:%.*]]
+; CHECK-NEXT:    [[I5:%.*]] = select i1 [[I4_NOT]], i8 [[V5:%.*]], i8 [[V4:%.*]]
 ; CHECK-NEXT:    ret i8 [[I5]]
 ;
   %i1 = icmp eq i8 %v0, %v1 ; has extra invertible use
