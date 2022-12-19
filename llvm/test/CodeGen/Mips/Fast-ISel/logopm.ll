@@ -22,13 +22,13 @@
 ; Function Attrs: noinline nounwind
 define void @andUb() #0 {
 entry:
-  %0 = load i8, i8* @ub1, align 1
-  %1 = load i8, i8* @ub2, align 1
+  %0 = load i8, ptr @ub1, align 1
+  %1 = load i8, ptr @ub2, align 1
   %conv0 = trunc i8 %0 to i1
   %conv1 = trunc i8 %1 to i1
   %and0 = and i1 %conv1, %conv0
   %conv3 = zext i1 %and0 to i8
-  store i8 %conv3, i8* @ub, align 1, !tbaa !2
+  store i8 %conv3, ptr @ub, align 1, !tbaa !2
 ; CHECK-LABEL:  .ent    andUb
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -47,11 +47,11 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @andUb0() #0 {
 entry:
-  %0 = load i8, i8* @ub1, align 1, !tbaa !2
+  %0 = load i8, ptr @ub1, align 1, !tbaa !2
   %conv = trunc i8 %0 to i1
   %and = and i1 %conv, 0
   %conv1 = zext i1 %and to i8
-  store i8 %conv1, i8* @ub, align 1, !tbaa !2
+  store i8 %conv1, ptr @ub, align 1, !tbaa !2
 ; CHECK-LABEL:  .ent    andUb0
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -70,11 +70,11 @@ entry:
 define void @andUb1() #0 {
 ; clang uses i8 constants for booleans, so we test with an i8 1.
 entry:
-  %x = load i8, i8* @ub1, align 1, !tbaa !2
+  %x = load i8, ptr @ub1, align 1, !tbaa !2
   %and = and i8 %x, 1
   %conv = trunc i8 %and to i1
   %conv1 = zext i1 %conv to i8
-  store i8 %conv1, i8* @ub, align 1, !tbaa !2
+  store i8 %conv1, ptr @ub, align 1, !tbaa !2
 ; CHECK-LABEL:  .ent    andUb1
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -93,13 +93,13 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @orUb() #0 {
 entry:
-  %0 = load i8, i8* @ub1, align 1
-  %1 = load i8, i8* @ub2, align 1
+  %0 = load i8, ptr @ub1, align 1
+  %1 = load i8, ptr @ub2, align 1
   %conv0 = trunc i8 %0 to i1
   %conv1 = trunc i8 %1 to i1
   %or0 = or i1 %conv1, %conv0
   %conv3 = zext i1 %or0 to i8
-  store i8 %conv3, i8* @ub, align 1, !tbaa !2
+  store i8 %conv3, ptr @ub, align 1, !tbaa !2
 ; CHECK-LABEL:  .ent    orUb
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -118,11 +118,11 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @orUb0() #0 {
 entry:
-  %0 = load i8, i8* @ub1, align 1, !tbaa !2
+  %0 = load i8, ptr @ub1, align 1, !tbaa !2
   %conv = trunc i8 %0 to i1
   %or = or i1 %conv, 0
   %conv1 = zext i1 %or to i8
-  store i8 %conv1, i8* @ub, align 1, !tbaa !2
+  store i8 %conv1, ptr @ub, align 1, !tbaa !2
 ; CHECK-LABEL:  .ent    orUb0
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -139,11 +139,11 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @orUb1() #0 {
 entry:
-  %x = load i8, i8* @ub1, align 1, !tbaa !2
+  %x = load i8, ptr @ub1, align 1, !tbaa !2
   %or = or i8 %x, 1
   %conv = trunc i8 %or to i1
   %conv1 = zext i1 %conv to i8
-  store i8 %conv1, i8* @ub, align 1, !tbaa !2
+  store i8 %conv1, ptr @ub, align 1, !tbaa !2
 ; CHECK-LABEL:  .ent    orUb1
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -162,13 +162,13 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @xorUb() #0 {
 entry:
-  %0 = load i8, i8* @ub1, align 1
-  %1 = load i8, i8* @ub2, align 1
+  %0 = load i8, ptr @ub1, align 1
+  %1 = load i8, ptr @ub2, align 1
   %conv0 = trunc i8 %0 to i1
   %conv1 = trunc i8 %1 to i1
   %xor0 = xor i1 %conv1, %conv0
   %conv3 = zext i1 %xor0 to i8
-  store i8 %conv3, i8* @ub, align 1, !tbaa !2
+  store i8 %conv3, ptr @ub, align 1, !tbaa !2
 ; CHECK-LABEL: .ent    xorUb
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -187,11 +187,11 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @xorUb0() #0 {
 entry:
-  %0 = load i8, i8* @ub1, align 1, !tbaa !2
+  %0 = load i8, ptr @ub1, align 1, !tbaa !2
   %conv = trunc i8 %0 to i1
   %xor = xor i1 %conv, 0
   %conv1 = zext i1 %xor to i8
-  store i8 %conv1, i8* @ub, align 1, !tbaa !2
+  store i8 %conv1, ptr @ub, align 1, !tbaa !2
 ; CHECK-LABEL:  .ent    xorUb0
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -209,11 +209,11 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @xorUb1() #0 {
 entry:
-  %x = load i8, i8* @ub1, align 1, !tbaa !2
+  %x = load i8, ptr @ub1, align 1, !tbaa !2
   %xor = xor i8 1, %x
   %conv = trunc i8 %xor to i1
   %conv1 = zext i1 %conv to i8
-  store i8 %conv1, i8* @ub, align 1, !tbaa !2
+  store i8 %conv1, ptr @ub, align 1, !tbaa !2
 ; CHECK-LABEL:  .ent    xorUb1
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -232,10 +232,10 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @andUc() #0 {
 entry:
-  %0 = load i8, i8* @uc1, align 1, !tbaa !2
-  %1 = load i8, i8* @uc2, align 1, !tbaa !2
+  %0 = load i8, ptr @uc1, align 1, !tbaa !2
+  %1 = load i8, ptr @uc2, align 1, !tbaa !2
   %and3 = and i8 %1, %0
-  store i8 %and3, i8* @uc, align 1, !tbaa !2
+  store i8 %and3, ptr @uc, align 1, !tbaa !2
 ; CHECK-LABEL:  .ent    andUc
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -253,9 +253,9 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @andUc0() #0 {
 entry:
-  %0 = load i8, i8* @uc1, align 1, !tbaa !2
+  %0 = load i8, ptr @uc1, align 1, !tbaa !2
   %and = and i8 %0, 67
-  store i8 %and, i8* @uc, align 1, !tbaa !2
+  store i8 %and, ptr @uc, align 1, !tbaa !2
 ; CHECK-LABEL:  .ent    andUc0
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -273,9 +273,9 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @andUc1() #0 {
 entry:
-  %0 = load i8, i8* @uc1, align 1, !tbaa !2
+  %0 = load i8, ptr @uc1, align 1, !tbaa !2
   %and = and i8 %0, 167
-  store i8 %and, i8* @uc, align 1, !tbaa !2
+  store i8 %and, ptr @uc, align 1, !tbaa !2
 ; CHECK-LABEL:  .ent    andUc1
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -293,10 +293,10 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @orUc() #0 {
 entry:
-  %0 = load i8, i8* @uc1, align 1, !tbaa !2
-  %1 = load i8, i8* @uc2, align 1, !tbaa !2
+  %0 = load i8, ptr @uc1, align 1, !tbaa !2
+  %1 = load i8, ptr @uc2, align 1, !tbaa !2
   %or3 = or i8 %1, %0
-  store i8 %or3, i8* @uc, align 1, !tbaa !2
+  store i8 %or3, ptr @uc, align 1, !tbaa !2
 ; CHECK-LABEL:  .ent    orUc
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -315,9 +315,9 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @orUc0() #0 {
 entry:
-  %0 = load i8, i8* @uc1, align 1, !tbaa !2
+  %0 = load i8, ptr @uc1, align 1, !tbaa !2
    %or = or i8 %0, 69
-  store i8 %or, i8* @uc, align 1, !tbaa !2
+  store i8 %or, ptr @uc, align 1, !tbaa !2
 ; CHECK-LABEL:  .ent    orUc0
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -335,9 +335,9 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @orUc1() #0 {
 entry:
-  %0 = load i8, i8* @uc1, align 1, !tbaa !2
+  %0 = load i8, ptr @uc1, align 1, !tbaa !2
   %or = or i8 %0, 238
-  store i8 %or, i8* @uc, align 1, !tbaa !2
+  store i8 %or, ptr @uc, align 1, !tbaa !2
 ; CHECK-LABEL:  .ent    orUc1
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -355,10 +355,10 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @xorUc() #0 {
 entry:
-  %0 = load i8, i8* @uc1, align 1, !tbaa !2
-  %1 = load i8, i8* @uc2, align 1, !tbaa !2
+  %0 = load i8, ptr @uc1, align 1, !tbaa !2
+  %1 = load i8, ptr @uc2, align 1, !tbaa !2
   %xor3 = xor i8 %1, %0
-  store i8 %xor3, i8* @uc, align 1, !tbaa !2
+  store i8 %xor3, ptr @uc, align 1, !tbaa !2
 ; CHECK-LABEL: .ent    xorUc
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -377,9 +377,9 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @xorUc0() #0 {
 entry:
-  %0 = load i8, i8* @uc1, align 1, !tbaa !2
+  %0 = load i8, ptr @uc1, align 1, !tbaa !2
   %xor = xor i8 %0, 23
-  store i8 %xor, i8* @uc, align 1, !tbaa !2
+  store i8 %xor, ptr @uc, align 1, !tbaa !2
 ; CHECK-LABEL:  .ent    xorUc0
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -397,9 +397,9 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @xorUc1() #0 {
 entry:
-  %0 = load i8, i8* @uc1, align 1, !tbaa !2
+  %0 = load i8, ptr @uc1, align 1, !tbaa !2
   %xor = xor i8 %0, 120
-  store i8 %xor, i8* @uc, align 1, !tbaa !2
+  store i8 %xor, ptr @uc, align 1, !tbaa !2
 ; CHECK-LABEL:  .ent    xorUc1
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -417,10 +417,10 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @andUs() #0 {
 entry:
-  %0 = load i16, i16* @us1, align 2, !tbaa !5
-  %1 = load i16, i16* @us2, align 2, !tbaa !5
+  %0 = load i16, ptr @us1, align 2, !tbaa !5
+  %1 = load i16, ptr @us2, align 2, !tbaa !5
   %and3 = and i16 %1, %0
-  store i16 %and3, i16* @us, align 2, !tbaa !5
+  store i16 %and3, ptr @us, align 2, !tbaa !5
 ; CHECK-LABEL:  .ent    andUs
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -439,9 +439,9 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @andUs0() #0 {
 entry:
-  %0 = load i16, i16* @us1, align 2, !tbaa !5
+  %0 = load i16, ptr @us1, align 2, !tbaa !5
   %and = and i16 %0, 4660
-  store i16 %and, i16* @us, align 2, !tbaa !5
+  store i16 %and, ptr @us, align 2, !tbaa !5
 ; CHECK-LABEL: .ent    andUs0
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -459,9 +459,9 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @andUs1() #0 {
 entry:
-  %0 = load i16, i16* @us1, align 2, !tbaa !5
+  %0 = load i16, ptr @us1, align 2, !tbaa !5
   %and = and i16 %0, 61351
-  store i16 %and, i16* @us, align 2, !tbaa !5
+  store i16 %and, ptr @us, align 2, !tbaa !5
 ; CHECK-LABEL:  .ent    andUs1
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -479,10 +479,10 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @orUs() #0 {
 entry:
-  %0 = load i16, i16* @us1, align 2, !tbaa !5
-  %1 = load i16, i16* @us2, align 2, !tbaa !5
+  %0 = load i16, ptr @us1, align 2, !tbaa !5
+  %1 = load i16, ptr @us2, align 2, !tbaa !5
   %or3 = or i16 %1, %0
-  store i16 %or3, i16* @us, align 2, !tbaa !5
+  store i16 %or3, ptr @us, align 2, !tbaa !5
 ; CHECK-LABEL:  .ent    orUs
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -501,18 +501,18 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @orUs0() #0 {
 entry:
-  %0 = load i16, i16* @us1, align 2, !tbaa !5
+  %0 = load i16, ptr @us1, align 2, !tbaa !5
   %or = or i16 %0, 17666
-  store i16 %or, i16* @us, align 2, !tbaa !5
+  store i16 %or, ptr @us, align 2, !tbaa !5
   ret void
 }
 
 ; Function Attrs: noinline nounwind
 define void @orUs1() #0 {
 entry:
-  %0 = load i16, i16* @us1, align 2, !tbaa !5
+  %0 = load i16, ptr @us1, align 2, !tbaa !5
   %or = or i16 %0, 60945
-  store i16 %or, i16* @us, align 2, !tbaa !5
+  store i16 %or, ptr @us, align 2, !tbaa !5
 ; CHECK-LABEL:  .ent    orUs1
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -530,10 +530,10 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @xorUs() #0 {
 entry:
-  %0 = load i16, i16* @us1, align 2, !tbaa !5
-  %1 = load i16, i16* @us2, align 2, !tbaa !5
+  %0 = load i16, ptr @us1, align 2, !tbaa !5
+  %1 = load i16, ptr @us2, align 2, !tbaa !5
   %xor3 = xor i16 %1, %0
-  store i16 %xor3, i16* @us, align 2, !tbaa !5
+  store i16 %xor3, ptr @us, align 2, !tbaa !5
 ; CHECK-LABEL:  .ent    xorUs
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -552,9 +552,9 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @xorUs0() #0 {
 entry:
-  %0 = load i16, i16* @us1, align 2, !tbaa !5
+  %0 = load i16, ptr @us1, align 2, !tbaa !5
   %xor = xor i16 %0, 6062
-  store i16 %xor, i16* @us, align 2, !tbaa !5
+  store i16 %xor, ptr @us, align 2, !tbaa !5
 ; CHECK-LABEL:  .ent    xorUs0
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -573,9 +573,9 @@ entry:
 ; Function Attrs: noinline nounwind
 define void @xorUs1() #0 {
 entry:
-  %0 = load i16, i16* @us1, align 2, !tbaa !5
+  %0 = load i16, ptr @us1, align 2, !tbaa !5
   %xor = xor i16 %0, 60024
-  store i16 %xor, i16* @us, align 2, !tbaa !5
+  store i16 %xor, ptr @us, align 2, !tbaa !5
 ; CHECK-LABEL:  .ent    xorUs1
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK:        addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)

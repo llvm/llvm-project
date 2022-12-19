@@ -10,10 +10,10 @@
 
 define void @llvm_mips_ceq_b_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_ceq_b_ARG1
-  %1 = load <16 x i8>, <16 x i8>* @llvm_mips_ceq_b_ARG2
+  %0 = load <16 x i8>, ptr @llvm_mips_ceq_b_ARG1
+  %1 = load <16 x i8>, ptr @llvm_mips_ceq_b_ARG2
   %2 = tail call <16 x i8> @llvm.mips.ceq.b(<16 x i8> %0, <16 x i8> %1)
-  store <16 x i8> %2, <16 x i8>* @llvm_mips_ceq_b_RES
+  store <16 x i8> %2, ptr @llvm_mips_ceq_b_RES
   ret void
 }
 
@@ -32,10 +32,10 @@ declare <16 x i8> @llvm.mips.ceq.b(<16 x i8>, <16 x i8>) nounwind
 
 define void @llvm_mips_ceq_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_ceq_h_ARG1
-  %1 = load <8 x i16>, <8 x i16>* @llvm_mips_ceq_h_ARG2
+  %0 = load <8 x i16>, ptr @llvm_mips_ceq_h_ARG1
+  %1 = load <8 x i16>, ptr @llvm_mips_ceq_h_ARG2
   %2 = tail call <8 x i16> @llvm.mips.ceq.h(<8 x i16> %0, <8 x i16> %1)
-  store <8 x i16> %2, <8 x i16>* @llvm_mips_ceq_h_RES
+  store <8 x i16> %2, ptr @llvm_mips_ceq_h_RES
   ret void
 }
 
@@ -54,10 +54,10 @@ declare <8 x i16> @llvm.mips.ceq.h(<8 x i16>, <8 x i16>) nounwind
 
 define void @llvm_mips_ceq_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_ceq_w_ARG1
-  %1 = load <4 x i32>, <4 x i32>* @llvm_mips_ceq_w_ARG2
+  %0 = load <4 x i32>, ptr @llvm_mips_ceq_w_ARG1
+  %1 = load <4 x i32>, ptr @llvm_mips_ceq_w_ARG2
   %2 = tail call <4 x i32> @llvm.mips.ceq.w(<4 x i32> %0, <4 x i32> %1)
-  store <4 x i32> %2, <4 x i32>* @llvm_mips_ceq_w_RES
+  store <4 x i32> %2, ptr @llvm_mips_ceq_w_RES
   ret void
 }
 
@@ -76,10 +76,10 @@ declare <4 x i32> @llvm.mips.ceq.w(<4 x i32>, <4 x i32>) nounwind
 
 define void @llvm_mips_ceq_d_test() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_ceq_d_ARG1
-  %1 = load <2 x i64>, <2 x i64>* @llvm_mips_ceq_d_ARG2
+  %0 = load <2 x i64>, ptr @llvm_mips_ceq_d_ARG1
+  %1 = load <2 x i64>, ptr @llvm_mips_ceq_d_ARG2
   %2 = tail call <2 x i64> @llvm.mips.ceq.d(<2 x i64> %0, <2 x i64> %1)
-  store <2 x i64> %2, <2 x i64>* @llvm_mips_ceq_d_RES
+  store <2 x i64> %2, ptr @llvm_mips_ceq_d_RES
   ret void
 }
 
@@ -98,10 +98,10 @@ declare <2 x i64> @llvm.mips.ceq.d(<2 x i64>, <2 x i64>) nounwind
 
 define void @llvm_mips_cle_s_b_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_cle_s_b_ARG1
-  %1 = load <16 x i8>, <16 x i8>* @llvm_mips_cle_s_b_ARG2
+  %0 = load <16 x i8>, ptr @llvm_mips_cle_s_b_ARG1
+  %1 = load <16 x i8>, ptr @llvm_mips_cle_s_b_ARG2
   %2 = tail call <16 x i8> @llvm.mips.cle.s.b(<16 x i8> %0, <16 x i8> %1)
-  store <16 x i8> %2, <16 x i8>* @llvm_mips_cle_s_b_RES
+  store <16 x i8> %2, ptr @llvm_mips_cle_s_b_RES
   ret void
 }
 
@@ -120,10 +120,10 @@ declare <16 x i8> @llvm.mips.cle.s.b(<16 x i8>, <16 x i8>) nounwind
 
 define void @llvm_mips_cle_s_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_cle_s_h_ARG1
-  %1 = load <8 x i16>, <8 x i16>* @llvm_mips_cle_s_h_ARG2
+  %0 = load <8 x i16>, ptr @llvm_mips_cle_s_h_ARG1
+  %1 = load <8 x i16>, ptr @llvm_mips_cle_s_h_ARG2
   %2 = tail call <8 x i16> @llvm.mips.cle.s.h(<8 x i16> %0, <8 x i16> %1)
-  store <8 x i16> %2, <8 x i16>* @llvm_mips_cle_s_h_RES
+  store <8 x i16> %2, ptr @llvm_mips_cle_s_h_RES
   ret void
 }
 
@@ -142,10 +142,10 @@ declare <8 x i16> @llvm.mips.cle.s.h(<8 x i16>, <8 x i16>) nounwind
 
 define void @llvm_mips_cle_s_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_cle_s_w_ARG1
-  %1 = load <4 x i32>, <4 x i32>* @llvm_mips_cle_s_w_ARG2
+  %0 = load <4 x i32>, ptr @llvm_mips_cle_s_w_ARG1
+  %1 = load <4 x i32>, ptr @llvm_mips_cle_s_w_ARG2
   %2 = tail call <4 x i32> @llvm.mips.cle.s.w(<4 x i32> %0, <4 x i32> %1)
-  store <4 x i32> %2, <4 x i32>* @llvm_mips_cle_s_w_RES
+  store <4 x i32> %2, ptr @llvm_mips_cle_s_w_RES
   ret void
 }
 
@@ -164,10 +164,10 @@ declare <4 x i32> @llvm.mips.cle.s.w(<4 x i32>, <4 x i32>) nounwind
 
 define void @llvm_mips_cle_s_d_test() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_cle_s_d_ARG1
-  %1 = load <2 x i64>, <2 x i64>* @llvm_mips_cle_s_d_ARG2
+  %0 = load <2 x i64>, ptr @llvm_mips_cle_s_d_ARG1
+  %1 = load <2 x i64>, ptr @llvm_mips_cle_s_d_ARG2
   %2 = tail call <2 x i64> @llvm.mips.cle.s.d(<2 x i64> %0, <2 x i64> %1)
-  store <2 x i64> %2, <2 x i64>* @llvm_mips_cle_s_d_RES
+  store <2 x i64> %2, ptr @llvm_mips_cle_s_d_RES
   ret void
 }
 
@@ -186,10 +186,10 @@ declare <2 x i64> @llvm.mips.cle.s.d(<2 x i64>, <2 x i64>) nounwind
 
 define void @llvm_mips_cle_u_b_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_cle_u_b_ARG1
-  %1 = load <16 x i8>, <16 x i8>* @llvm_mips_cle_u_b_ARG2
+  %0 = load <16 x i8>, ptr @llvm_mips_cle_u_b_ARG1
+  %1 = load <16 x i8>, ptr @llvm_mips_cle_u_b_ARG2
   %2 = tail call <16 x i8> @llvm.mips.cle.u.b(<16 x i8> %0, <16 x i8> %1)
-  store <16 x i8> %2, <16 x i8>* @llvm_mips_cle_u_b_RES
+  store <16 x i8> %2, ptr @llvm_mips_cle_u_b_RES
   ret void
 }
 
@@ -208,10 +208,10 @@ declare <16 x i8> @llvm.mips.cle.u.b(<16 x i8>, <16 x i8>) nounwind
 
 define void @llvm_mips_cle_u_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_cle_u_h_ARG1
-  %1 = load <8 x i16>, <8 x i16>* @llvm_mips_cle_u_h_ARG2
+  %0 = load <8 x i16>, ptr @llvm_mips_cle_u_h_ARG1
+  %1 = load <8 x i16>, ptr @llvm_mips_cle_u_h_ARG2
   %2 = tail call <8 x i16> @llvm.mips.cle.u.h(<8 x i16> %0, <8 x i16> %1)
-  store <8 x i16> %2, <8 x i16>* @llvm_mips_cle_u_h_RES
+  store <8 x i16> %2, ptr @llvm_mips_cle_u_h_RES
   ret void
 }
 
@@ -230,10 +230,10 @@ declare <8 x i16> @llvm.mips.cle.u.h(<8 x i16>, <8 x i16>) nounwind
 
 define void @llvm_mips_cle_u_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_cle_u_w_ARG1
-  %1 = load <4 x i32>, <4 x i32>* @llvm_mips_cle_u_w_ARG2
+  %0 = load <4 x i32>, ptr @llvm_mips_cle_u_w_ARG1
+  %1 = load <4 x i32>, ptr @llvm_mips_cle_u_w_ARG2
   %2 = tail call <4 x i32> @llvm.mips.cle.u.w(<4 x i32> %0, <4 x i32> %1)
-  store <4 x i32> %2, <4 x i32>* @llvm_mips_cle_u_w_RES
+  store <4 x i32> %2, ptr @llvm_mips_cle_u_w_RES
   ret void
 }
 
@@ -252,10 +252,10 @@ declare <4 x i32> @llvm.mips.cle.u.w(<4 x i32>, <4 x i32>) nounwind
 
 define void @llvm_mips_cle_u_d_test() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_cle_u_d_ARG1
-  %1 = load <2 x i64>, <2 x i64>* @llvm_mips_cle_u_d_ARG2
+  %0 = load <2 x i64>, ptr @llvm_mips_cle_u_d_ARG1
+  %1 = load <2 x i64>, ptr @llvm_mips_cle_u_d_ARG2
   %2 = tail call <2 x i64> @llvm.mips.cle.u.d(<2 x i64> %0, <2 x i64> %1)
-  store <2 x i64> %2, <2 x i64>* @llvm_mips_cle_u_d_RES
+  store <2 x i64> %2, ptr @llvm_mips_cle_u_d_RES
   ret void
 }
 
@@ -274,10 +274,10 @@ declare <2 x i64> @llvm.mips.cle.u.d(<2 x i64>, <2 x i64>) nounwind
 
 define void @llvm_mips_clt_s_b_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_clt_s_b_ARG1
-  %1 = load <16 x i8>, <16 x i8>* @llvm_mips_clt_s_b_ARG2
+  %0 = load <16 x i8>, ptr @llvm_mips_clt_s_b_ARG1
+  %1 = load <16 x i8>, ptr @llvm_mips_clt_s_b_ARG2
   %2 = tail call <16 x i8> @llvm.mips.clt.s.b(<16 x i8> %0, <16 x i8> %1)
-  store <16 x i8> %2, <16 x i8>* @llvm_mips_clt_s_b_RES
+  store <16 x i8> %2, ptr @llvm_mips_clt_s_b_RES
   ret void
 }
 
@@ -296,10 +296,10 @@ declare <16 x i8> @llvm.mips.clt.s.b(<16 x i8>, <16 x i8>) nounwind
 
 define void @llvm_mips_clt_s_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_clt_s_h_ARG1
-  %1 = load <8 x i16>, <8 x i16>* @llvm_mips_clt_s_h_ARG2
+  %0 = load <8 x i16>, ptr @llvm_mips_clt_s_h_ARG1
+  %1 = load <8 x i16>, ptr @llvm_mips_clt_s_h_ARG2
   %2 = tail call <8 x i16> @llvm.mips.clt.s.h(<8 x i16> %0, <8 x i16> %1)
-  store <8 x i16> %2, <8 x i16>* @llvm_mips_clt_s_h_RES
+  store <8 x i16> %2, ptr @llvm_mips_clt_s_h_RES
   ret void
 }
 
@@ -318,10 +318,10 @@ declare <8 x i16> @llvm.mips.clt.s.h(<8 x i16>, <8 x i16>) nounwind
 
 define void @llvm_mips_clt_s_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_clt_s_w_ARG1
-  %1 = load <4 x i32>, <4 x i32>* @llvm_mips_clt_s_w_ARG2
+  %0 = load <4 x i32>, ptr @llvm_mips_clt_s_w_ARG1
+  %1 = load <4 x i32>, ptr @llvm_mips_clt_s_w_ARG2
   %2 = tail call <4 x i32> @llvm.mips.clt.s.w(<4 x i32> %0, <4 x i32> %1)
-  store <4 x i32> %2, <4 x i32>* @llvm_mips_clt_s_w_RES
+  store <4 x i32> %2, ptr @llvm_mips_clt_s_w_RES
   ret void
 }
 
@@ -340,10 +340,10 @@ declare <4 x i32> @llvm.mips.clt.s.w(<4 x i32>, <4 x i32>) nounwind
 
 define void @llvm_mips_clt_s_d_test() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_clt_s_d_ARG1
-  %1 = load <2 x i64>, <2 x i64>* @llvm_mips_clt_s_d_ARG2
+  %0 = load <2 x i64>, ptr @llvm_mips_clt_s_d_ARG1
+  %1 = load <2 x i64>, ptr @llvm_mips_clt_s_d_ARG2
   %2 = tail call <2 x i64> @llvm.mips.clt.s.d(<2 x i64> %0, <2 x i64> %1)
-  store <2 x i64> %2, <2 x i64>* @llvm_mips_clt_s_d_RES
+  store <2 x i64> %2, ptr @llvm_mips_clt_s_d_RES
   ret void
 }
 
@@ -362,10 +362,10 @@ declare <2 x i64> @llvm.mips.clt.s.d(<2 x i64>, <2 x i64>) nounwind
 
 define void @llvm_mips_clt_u_b_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_clt_u_b_ARG1
-  %1 = load <16 x i8>, <16 x i8>* @llvm_mips_clt_u_b_ARG2
+  %0 = load <16 x i8>, ptr @llvm_mips_clt_u_b_ARG1
+  %1 = load <16 x i8>, ptr @llvm_mips_clt_u_b_ARG2
   %2 = tail call <16 x i8> @llvm.mips.clt.u.b(<16 x i8> %0, <16 x i8> %1)
-  store <16 x i8> %2, <16 x i8>* @llvm_mips_clt_u_b_RES
+  store <16 x i8> %2, ptr @llvm_mips_clt_u_b_RES
   ret void
 }
 
@@ -384,10 +384,10 @@ declare <16 x i8> @llvm.mips.clt.u.b(<16 x i8>, <16 x i8>) nounwind
 
 define void @llvm_mips_clt_u_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_clt_u_h_ARG1
-  %1 = load <8 x i16>, <8 x i16>* @llvm_mips_clt_u_h_ARG2
+  %0 = load <8 x i16>, ptr @llvm_mips_clt_u_h_ARG1
+  %1 = load <8 x i16>, ptr @llvm_mips_clt_u_h_ARG2
   %2 = tail call <8 x i16> @llvm.mips.clt.u.h(<8 x i16> %0, <8 x i16> %1)
-  store <8 x i16> %2, <8 x i16>* @llvm_mips_clt_u_h_RES
+  store <8 x i16> %2, ptr @llvm_mips_clt_u_h_RES
   ret void
 }
 
@@ -406,10 +406,10 @@ declare <8 x i16> @llvm.mips.clt.u.h(<8 x i16>, <8 x i16>) nounwind
 
 define void @llvm_mips_clt_u_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_clt_u_w_ARG1
-  %1 = load <4 x i32>, <4 x i32>* @llvm_mips_clt_u_w_ARG2
+  %0 = load <4 x i32>, ptr @llvm_mips_clt_u_w_ARG1
+  %1 = load <4 x i32>, ptr @llvm_mips_clt_u_w_ARG2
   %2 = tail call <4 x i32> @llvm.mips.clt.u.w(<4 x i32> %0, <4 x i32> %1)
-  store <4 x i32> %2, <4 x i32>* @llvm_mips_clt_u_w_RES
+  store <4 x i32> %2, ptr @llvm_mips_clt_u_w_RES
   ret void
 }
 
@@ -428,10 +428,10 @@ declare <4 x i32> @llvm.mips.clt.u.w(<4 x i32>, <4 x i32>) nounwind
 
 define void @llvm_mips_clt_u_d_test() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_clt_u_d_ARG1
-  %1 = load <2 x i64>, <2 x i64>* @llvm_mips_clt_u_d_ARG2
+  %0 = load <2 x i64>, ptr @llvm_mips_clt_u_d_ARG1
+  %1 = load <2 x i64>, ptr @llvm_mips_clt_u_d_ARG2
   %2 = tail call <2 x i64> @llvm.mips.clt.u.d(<2 x i64> %0, <2 x i64> %1)
-  store <2 x i64> %2, <2 x i64>* @llvm_mips_clt_u_d_RES
+  store <2 x i64> %2, ptr @llvm_mips_clt_u_d_RES
   ret void
 }
 
