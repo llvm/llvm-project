@@ -1862,7 +1862,7 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
 
   // Emit the compact unwind info if available.
   bool NeedsEHFrameSection = !MOFI->getSupportsCompactUnwindWithoutEHFrame();
-  if (IsEH && MOFI->getCompactUnwindSection()) {
+  if (MOFI->getCompactUnwindSection()) {
     Streamer.generateCompactUnwindEncodings(MAB);
     bool SectionEmitted = false;
     for (const MCDwarfFrameInfo &Frame : FrameArray) {
