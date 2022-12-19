@@ -48,6 +48,19 @@ def TransformOpInterface : OpInterface<"TransformOpInterface"> {
           "::mlir::transform::TransformResults &":$transformResults,
           "::mlir::transform::TransformState &":$state
     )>,
+    InterfaceMethod<
+      /*desc=*/[{
+        Indicates whether the op instance allows its handle operands to be
+        associated with the same payload operations.
+      }],
+      /*returnType=*/"bool",
+      /*name=*/"allowsRepeatedHandleOperands",
+      /*arguments=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
+      }]
+    >,
   ];
 
   let extraSharedClassDeclaration = [{

@@ -189,7 +189,8 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
   for (OpOperand &target : transform->getOpOperands()) {
     // If the operand uses an invalidated handle, report it.
     auto it = invalidatedHandles.find(target.get());
-    if (it != invalidatedHandles.end())
+    if (!transform.allowsRepeatedHandleOperands() &&
+        it != invalidatedHandles.end())
       return it->getSecond()(transform->getLoc()), failure();
 
     // Invalidate handles pointing to the operations nested in the operation
@@ -201,6 +202,7 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
     if (llvm::any_of(effects, consumesTarget))
       recordHandleInvalidation(target);
   }
+
   return success();
 }
 
