@@ -828,7 +828,7 @@ bool GlobalsAAResult::invalidate(Module &, const PreservedAnalyses &PA,
 /// address of the global isn't taken.
 AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
                                    const MemoryLocation &LocB,
-                                   AAQueryInfo &AAQI) {
+                                   AAQueryInfo &AAQI, const Instruction *) {
   // Get the base object these pointers point to.
   const Value *UV1 =
       getUnderlyingObject(LocA.Ptr->stripPointerCastsForAliasAnalysis());
@@ -905,7 +905,7 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
     if ((GV1 || GV2) && GV1 != GV2)
       return AliasResult::NoAlias;
 
-  return AAResultBase::alias(LocA, LocB, AAQI);
+  return AAResultBase::alias(LocA, LocB, AAQI, nullptr);
 }
 
 ModRefInfo GlobalsAAResult::getModRefInfoForArgument(const CallBase *Call,
@@ -927,8 +927,8 @@ ModRefInfo GlobalsAAResult::getModRefInfoForArgument(const CallBase *Call,
         // Try ::alias to see if all objects are known not to alias GV.
         !all_of(Objects, [&](const Value *V) {
           return this->alias(MemoryLocation::getBeforeOrAfter(V),
-                             MemoryLocation::getBeforeOrAfter(GV),
-                             AAQI) == AliasResult::NoAlias;
+                             MemoryLocation::getBeforeOrAfter(GV), AAQI,
+                             nullptr) == AliasResult::NoAlias;
         }))
       return ConservativeResult;
 

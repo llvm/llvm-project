@@ -1036,16 +1036,15 @@ void FlatAffineValueConstraints::getSliceBounds(
       auto ubConst = getConstantBound64(BoundType::UB, pos);
       if (lbConst.has_value() && ubConst.has_value()) {
         // Detect equality to a constant.
-        if (lbConst.value() == ubConst.value()) {
-          memo[pos] = getAffineConstantExpr(lbConst.value(), context);
+        if (*lbConst == *ubConst) {
+          memo[pos] = getAffineConstantExpr(*lbConst, context);
           changed = true;
           continue;
         }
 
         // Detect an variable as modulo of another variable w.r.t a
         // constant.
-        if (detectAsMod(*this, pos, lbConst.value(), ubConst.value(), memo,
-                        context)) {
+        if (detectAsMod(*this, pos, *lbConst, *ubConst, memo, context)) {
           changed = true;
           continue;
         }
@@ -1146,9 +1145,8 @@ void FlatAffineValueConstraints::getSliceBounds(
                    << "WARNING: Potentially over-approximating slice lb\n");
         auto lbConst = getConstantBound64(BoundType::LB, pos + offset);
         if (lbConst.has_value()) {
-          lbMap =
-              AffineMap::get(numMapDims, numMapSymbols,
-                             getAffineConstantExpr(lbConst.value(), context));
+          lbMap = AffineMap::get(numMapDims, numMapSymbols,
+                                 getAffineConstantExpr(*lbConst, context));
         }
       }
       if (!ubMap || ubMap.getNumResults() > 1) {
@@ -1158,7 +1156,7 @@ void FlatAffineValueConstraints::getSliceBounds(
         if (ubConst.has_value()) {
           ubMap = AffineMap::get(
               numMapDims, numMapSymbols,
-              getAffineConstantExpr(ubConst.value() + ubAdjustment, context));
+              getAffineConstantExpr(*ubConst + ubAdjustment, context));
         }
       }
     }
@@ -1698,12 +1696,12 @@ void FlatAffineRelation::compose(const FlatAffineRelation &other) {
   // Add and match domain of `rel` to domain of `this`.
   for (unsigned i = 0, e = rel.getNumDomainDims(); i < e; ++i)
     if (relMaybeValues[i].has_value())
-      setValue(i, relMaybeValues[i].value());
+      setValue(i, *relMaybeValues[i]);
   // Add and match range of `this` to range of `rel`.
   for (unsigned i = 0, e = getNumRangeDims(); i < e; ++i) {
     unsigned rangeIdx = rel.getNumDomainDims() + i;
     if (thisMaybeValues[rangeIdx].has_value())
-      rel.setValue(rangeIdx, thisMaybeValues[rangeIdx].value());
+      rel.setValue(rangeIdx, *thisMaybeValues[rangeIdx]);
   }
 
   // Append `this` to `rel` and simplify constraints.

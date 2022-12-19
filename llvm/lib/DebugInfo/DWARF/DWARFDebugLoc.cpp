@@ -111,20 +111,19 @@ DWARFLocationInterpreter::Interpret(const DWARFLocationEntry &E) {
 
 static void dumpExpression(raw_ostream &OS, DIDumpOptions DumpOpts,
                            ArrayRef<uint8_t> Data, bool IsLittleEndian,
-                           unsigned AddressSize, const MCRegisterInfo *MRI,
-                           DWARFUnit *U) {
+                           unsigned AddressSize, DWARFUnit *U) {
   DWARFDataExtractor Extractor(Data, IsLittleEndian, AddressSize);
   // Note. We do not pass any format to DWARFExpression, even if the
   // corresponding unit is known. For now, there is only one operation,
   // DW_OP_call_ref, which depends on the format; it is rarely used, and
   // is unexpected in location tables.
-  DWARFExpression(Extractor, AddressSize).print(OS, DumpOpts, MRI, U);
+  DWARFExpression(Extractor, AddressSize).print(OS, DumpOpts, U);
 }
 
 bool DWARFLocationTable::dumpLocationList(
     uint64_t *Offset, raw_ostream &OS, std::optional<SectionedAddress> BaseAddr,
-    const MCRegisterInfo *MRI, const DWARFObject &Obj, DWARFUnit *U,
-    DIDumpOptions DumpOpts, unsigned Indent) const {
+    const DWARFObject &Obj, DWARFUnit *U, DIDumpOptions DumpOpts,
+    unsigned Indent) const {
   DWARFLocationInterpreter Interp(
       BaseAddr, [U](uint32_t Index) -> std::optional<SectionedAddress> {
         if (U)
@@ -157,7 +156,7 @@ bool DWARFLocationTable::dumpLocationList(
         E.Kind != dwarf::DW_LLE_end_of_list) {
       OS << ": ";
       dumpExpression(OS, DumpOpts, E.Loc, Data.isLittleEndian(),
-                     Data.getAddressSize(), MRI, U);
+                     Data.getAddressSize(), U);
     }
     return true;
   });
@@ -183,13 +182,13 @@ Error DWARFLocationTable::visitAbsoluteLocationList(
   });
 }
 
-void DWARFDebugLoc::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
-                         const DWARFObject &Obj, DIDumpOptions DumpOpts,
+void DWARFDebugLoc::dump(raw_ostream &OS, const DWARFObject &Obj,
+                         DIDumpOptions DumpOpts,
                          std::optional<uint64_t> DumpOffset) const {
   auto BaseAddr = std::nullopt;
   unsigned Indent = 12;
   if (DumpOffset) {
-    dumpLocationList(&*DumpOffset, OS, BaseAddr, MRI, Obj, nullptr, DumpOpts,
+    dumpLocationList(&*DumpOffset, OS, BaseAddr, Obj, nullptr, DumpOpts,
                      Indent);
   } else {
     uint64_t Offset = 0;
@@ -199,7 +198,7 @@ void DWARFDebugLoc::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
       OS << Separator;
       Separator = "\n";
 
-      CanContinue = dumpLocationList(&Offset, OS, BaseAddr, MRI, Obj, nullptr,
+      CanContinue = dumpLocationList(&Offset, OS, BaseAddr, Obj, nullptr,
                                      DumpOpts, Indent);
       OS << '\n';
     }
@@ -386,8 +385,7 @@ void DWARFDebugLoclists::dumpRawEntry(const DWARFLocationEntry &Entry,
 }
 
 void DWARFDebugLoclists::dumpRange(uint64_t StartOffset, uint64_t Size,
-                                   raw_ostream &OS, const MCRegisterInfo *MRI,
-                                   const DWARFObject &Obj,
+                                   raw_ostream &OS, const DWARFObject &Obj,
                                    DIDumpOptions DumpOpts) {
   if (!Data.isValidOffsetForDataOfSize(StartOffset, Size))  {
     OS << "Invalid dump range\n";
@@ -400,8 +398,8 @@ void DWARFDebugLoclists::dumpRange(uint64_t StartOffset, uint64_t Size,
     OS << Separator;
     Separator = "\n";
 
-    CanContinue = dumpLocationList(&Offset, OS, /*BaseAddr=*/std::nullopt, MRI,
-                                   Obj, nullptr, DumpOpts, /*Indent=*/12);
+    CanContinue = dumpLocationList(&Offset, OS, /*BaseAddr=*/std::nullopt, Obj,
+                                   nullptr, DumpOpts, /*Indent=*/12);
     OS << '\n';
   }
 }

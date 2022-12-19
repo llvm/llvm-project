@@ -2837,7 +2837,7 @@ which is a pointer to an integer on the run time stack.
 There are essentially three ways to insert an ``Instruction`` into an existing
 sequence of instructions that form a ``BasicBlock``:
 
-* Insertion into an explicit instruction list
+* Insertion into the instruction list of the ``BasicBlock``
 
   Given a ``BasicBlock* pb``, an ``Instruction* pi`` within that ``BasicBlock``,
   and a newly-created instruction we wish to insert before ``*pi``, we do the
@@ -2849,7 +2849,7 @@ sequence of instructions that form a ``BasicBlock``:
       Instruction *pi = ...;
       auto *newInst = new Instruction(...);
 
-      pb->getInstList().insert(pi, newInst); // Inserts newInst before pi in pb
+      newInst->insertBefore(pi); // Inserts newInst before pi
 
   Appending to the end of a ``BasicBlock`` is so common that the ``Instruction``
   class and ``Instruction``-derived classes provide constructors which take a
@@ -2861,7 +2861,7 @@ sequence of instructions that form a ``BasicBlock``:
     BasicBlock *pb = ...;
     auto *newInst = new Instruction(...);
 
-    pb->getInstList().push_back(newInst); // Appends newInst to pb
+    newInst->insertInto(pb, pb->end()); // Appends newInst to pb
 
   becomes:
 
@@ -2872,37 +2872,6 @@ sequence of instructions that form a ``BasicBlock``:
 
   which is much cleaner, especially if you are creating long instruction
   streams.
-
-* Insertion into an implicit instruction list
-
-  ``Instruction`` instances that are already in ``BasicBlock``\ s are implicitly
-  associated with an existing instruction list: the instruction list of the
-  enclosing basic block.  Thus, we could have accomplished the same thing as the
-  above code without being given a ``BasicBlock`` by doing:
-
-  .. code-block:: c++
-
-    Instruction *pi = ...;
-    auto *newInst = new Instruction(...);
-
-    pi->getParent()->getInstList().insert(pi, newInst);
-
-  In fact, this sequence of steps occurs so frequently that the ``Instruction``
-  class and ``Instruction``-derived classes provide constructors which take (as
-  a default parameter) a pointer to an ``Instruction`` which the newly-created
-  ``Instruction`` should precede.  That is, ``Instruction`` constructors are
-  capable of inserting the newly-created instance into the ``BasicBlock`` of a
-  provided instruction, immediately before that instruction.  Using an
-  ``Instruction`` constructor with a ``insertBefore`` (default) parameter, the
-  above code becomes:
-
-  .. code-block:: c++
-
-    Instruction* pi = ...;
-    auto *newInst = new Instruction(..., pi);
-
-  which is much cleaner, especially if you're creating a lot of instructions and
-  adding them to ``BasicBlock``\ s.
 
 * Insertion using an instance of ``IRBuilder``
 
@@ -2987,7 +2956,7 @@ Deleting Instructions
     AllocaInst* instToReplace = ...;
     BasicBlock::iterator ii(instToReplace);
 
-    ReplaceInstWithValue(instToReplace->getParent()->getInstList(), ii,
+    ReplaceInstWithValue(instToReplace->getParent(), ii,
                          Constant::getNullValue(PointerType::getUnqual(Type::Int32Ty)));
 
 * ``ReplaceInstWithInst``
@@ -3003,7 +2972,7 @@ Deleting Instructions
     AllocaInst* instToReplace = ...;
     BasicBlock::iterator ii(instToReplace);
 
-    ReplaceInstWithInst(instToReplace->getParent()->getInstList(), ii,
+    ReplaceInstWithInst(instToReplace->getParent(), ii,
                         new AllocaInst(Type::Int32Ty, 0, "ptrToReplacedInt"));
 
 
@@ -3913,16 +3882,11 @@ Important Public Members of the ``Function``
 
 * | ``Function::iterator`` - Typedef for basic block list iterator
   | ``Function::const_iterator`` - Typedef for const_iterator.
-  | ``begin()``, ``end()``, ``size()``, ``empty()``
+  | ``begin()``, ``end()``, ``size()``, ``empty()``, ``insert()``,
+    ``splice()``, ``erase()``
 
   These are forwarding methods that make it easy to access the contents of a
   ``Function`` object's BasicBlock_ list.
-
-* ``Function::BasicBlockListType &getBasicBlockList()``
-
-  Returns the list of BasicBlock_\ s.  This is necessary to use when you need to
-  update the list or perform a complex action that doesn't have a forwarding
-  method.
 
 * | ``Function::arg_iterator`` - Typedef for the argument list iterator
   | ``Function::const_arg_iterator`` - Typedef for const_iterator.
@@ -4058,23 +4022,13 @@ Important Public Members of the ``BasicBlock`` class
 * | ``BasicBlock::iterator`` - Typedef for instruction list iterator
   | ``BasicBlock::const_iterator`` - Typedef for const_iterator.
   | ``begin()``, ``end()``, ``front()``, ``back()``,
-    ``size()``, ``empty()``
+    ``size()``, ``empty()``, ``splice()``
     STL-style functions for accessing the instruction list.
 
   These methods and typedefs are forwarding functions that have the same
   semantics as the standard library methods of the same names.  These methods
   expose the underlying instruction list of a basic block in a way that is easy
-  to manipulate.  To get the full complement of container operations (including
-  operations to update the list), you must use the ``getInstList()`` method.
-
-* ``BasicBlock::InstListType &getInstList()``
-
-  This method is used to get access to the underlying container that actually
-  holds the Instructions.  This method must be used when there isn't a
-  forwarding function in the ``BasicBlock`` class for the operation that you
-  would like to perform.  Because there are no forwarding functions for
-  "updating" operations, you need to use this if you want to update the contents
-  of a ``BasicBlock``.
+  to manipulate.
 
 * ``Function *getParent()``
 

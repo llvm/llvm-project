@@ -229,8 +229,8 @@ define <4 x i8> @extract_subvector_of_shuffle_extra_use(<2 x i8> %x, <2 x i8> %y
 
 define <2 x i8> @test13a(i8 %x1, i8 %x2) {
 ; CHECK-LABEL: @test13a(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> undef, i8 [[X1:%.*]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i8> [[TMP1]], i8 [[X2:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> undef, i8 [[X2:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i8> [[TMP1]], i8 [[X1:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i8> [[TMP2]], <i8 7, i8 5>
 ; CHECK-NEXT:    ret <2 x i8> [[TMP3]]
 ;

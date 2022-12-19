@@ -258,6 +258,17 @@ func.func @rsqrt_multidim_vector(%arg0 : vector<4x3xf32>) {
 
 // -----
 
+// CHECK-LABEL: func @fpowi(
+// CHECK-SAME: f64
+func.func @fpowi(%arg0 : f64, %arg1 : i32) {
+  // CHECK: llvm.intr.powi(%arg0, %arg1) : (f64, i32) -> f64
+  %0 = math.fpowi %arg0, %arg1 : f64, i32
+  func.return
+}
+
+
+// -----
+
 // CHECK-LABEL: func @powf(
 // CHECK-SAME: f64
 func.func @powf(%arg0 : f64) {

@@ -5,128 +5,128 @@ source_filename = "input.cpp"
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 
 ; Function Attrs: nofree
-define i8* @FSE_decompress_usingDTable(i8* %arg, i32 %arg1, i32 %arg2, i32 %arg3) local_unnamed_addr #0 {
+define ptr @FSE_decompress_usingDTable(ptr %arg, i32 %arg1, i32 %arg2, i32 %arg3) local_unnamed_addr #0 {
 ; CHECK-LABEL: 'FSE_decompress_usingDTable'
 ; CHECK-NEXT:  Classifying expressions for: @FSE_decompress_usingDTable
-; CHECK-NEXT:    %i = getelementptr inbounds i8, i8* %arg, i32 %arg2
+; CHECK-NEXT:    %i = getelementptr inbounds i8, ptr %arg, i32 %arg2
 ; CHECK-NEXT:    --> (%arg2 + %arg) U: full-set S: full-set
 ; CHECK-NEXT:    %i4 = sub nsw i32 0, %arg1
 ; CHECK-NEXT:    --> (-1 * %arg1) U: full-set S: full-set
-; CHECK-NEXT:    %i5 = getelementptr inbounds i8, i8* %i, i32 %i4
+; CHECK-NEXT:    %i5 = getelementptr inbounds i8, ptr %i, i32 %i4
 ; CHECK-NEXT:    --> ((-1 * %arg1) + %arg2 + %arg) U: full-set S: full-set
 ; CHECK-NEXT:    %i7 = select i1 %i6, i32 %arg2, i32 %arg1
-; CHECK-NEXT:    --> ((-1 * (ptrtoint i8* %arg to i32)) + (((-1 * %arg1) + (ptrtoint i8* %arg to i32) + %arg2) umin (ptrtoint i8* %arg to i32)) + %arg1) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (ptrtoint ptr %arg to i32)) + (((-1 * %arg1) + (ptrtoint ptr %arg to i32) + %arg2) umin (ptrtoint ptr %arg to i32)) + %arg1) U: full-set S: full-set
 ; CHECK-NEXT:    %i8 = sub i32 %arg3, %i7
-; CHECK-NEXT:    --> ((-1 * (((-1 * %arg1) + (ptrtoint i8* %arg to i32) + %arg2) umin (ptrtoint i8* %arg to i32))) + (-1 * %arg1) + (ptrtoint i8* %arg to i32) + %arg3) U: full-set S: full-set
-; CHECK-NEXT:    %i9 = getelementptr inbounds i8, i8* %arg, i32 %i8
-; CHECK-NEXT:    --> ((-1 * (((-1 * %arg1) + (ptrtoint i8* %arg to i32) + %arg2) umin (ptrtoint i8* %arg to i32))) + (-1 * %arg1) + (ptrtoint i8* %arg to i32) + %arg3 + %arg) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (((-1 * %arg1) + (ptrtoint ptr %arg to i32) + %arg2) umin (ptrtoint ptr %arg to i32))) + (-1 * %arg1) + (ptrtoint ptr %arg to i32) + %arg3) U: full-set S: full-set
+; CHECK-NEXT:    %i9 = getelementptr inbounds i8, ptr %arg, i32 %i8
+; CHECK-NEXT:    --> ((-1 * (((-1 * %arg1) + (ptrtoint ptr %arg to i32) + %arg2) umin (ptrtoint ptr %arg to i32))) + (-1 * %arg1) + (ptrtoint ptr %arg to i32) + %arg3 + %arg) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @FSE_decompress_usingDTable
 ;
 bb:
-  %i = getelementptr inbounds i8, i8* %arg, i32 %arg2
+  %i = getelementptr inbounds i8, ptr %arg, i32 %arg2
   %i4 = sub nsw i32 0, %arg1
-  %i5 = getelementptr inbounds i8, i8* %i, i32 %i4
-  %i6 = icmp ult i8* %i5, %arg
+  %i5 = getelementptr inbounds i8, ptr %i, i32 %i4
+  %i6 = icmp ult ptr %i5, %arg
   %i7 = select i1 %i6, i32 %arg2, i32 %arg1
   %i8 = sub i32 %arg3, %i7
-  %i9 = getelementptr inbounds i8, i8* %arg, i32 %i8
-  ret i8* %i9
+  %i9 = getelementptr inbounds i8, ptr %arg, i32 %i8
+  ret ptr %i9
 }
 
-define i8* @test_01(i8* %p) {
+define ptr @test_01(ptr %p) {
 ; CHECK-LABEL: 'test_01'
 ; CHECK-NEXT:  Classifying expressions for: @test_01
-; CHECK-NEXT:    %p1 = getelementptr i8, i8* %p, i32 2
+; CHECK-NEXT:    %p1 = getelementptr i8, ptr %p, i32 2
 ; CHECK-NEXT:    --> (2 + %p) U: full-set S: full-set
-; CHECK-NEXT:    %p2 = getelementptr i8, i8* %p, i32 1
+; CHECK-NEXT:    %p2 = getelementptr i8, ptr %p, i32 1
 ; CHECK-NEXT:    --> (1 + %p) U: full-set S: full-set
 ; CHECK-NEXT:    %index = select i1 %cmp, i32 2, i32 1
-; CHECK-NEXT:    --> ((-1 * (ptrtoint i8* %p to i32)) + ((1 + (ptrtoint i8* %p to i32)) umax (2 + (ptrtoint i8* %p to i32)))) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (ptrtoint ptr %p to i32)) + ((1 + (ptrtoint ptr %p to i32)) umax (2 + (ptrtoint ptr %p to i32)))) U: full-set S: full-set
 ; CHECK-NEXT:    %neg_index = sub i32 0, %index
-; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint i8* %p to i32)) umax (2 + (ptrtoint i8* %p to i32)))) + (ptrtoint i8* %p to i32)) U: full-set S: full-set
-; CHECK-NEXT:    %gep = getelementptr i8, i8* %p, i32 %neg_index
-; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint i8* %p to i32)) umax (2 + (ptrtoint i8* %p to i32)))) + (ptrtoint i8* %p to i32) + %p) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint ptr %p to i32)) umax (2 + (ptrtoint ptr %p to i32)))) + (ptrtoint ptr %p to i32)) U: full-set S: full-set
+; CHECK-NEXT:    %gep = getelementptr i8, ptr %p, i32 %neg_index
+; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint ptr %p to i32)) umax (2 + (ptrtoint ptr %p to i32)))) + (ptrtoint ptr %p to i32) + %p) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @test_01
 ;
-  %p1 = getelementptr i8, i8* %p, i32 2
-  %p2 = getelementptr i8, i8* %p, i32 1
-  %cmp = icmp ugt i8* %p1, %p2
+  %p1 = getelementptr i8, ptr %p, i32 2
+  %p2 = getelementptr i8, ptr %p, i32 1
+  %cmp = icmp ugt ptr %p1, %p2
   %index = select i1 %cmp, i32 2, i32 1
   %neg_index = sub i32 0, %index
-  %gep = getelementptr i8, i8* %p, i32 %neg_index
-  ret i8* %gep
+  %gep = getelementptr i8, ptr %p, i32 %neg_index
+  ret ptr %gep
 }
 
-define i8* @test_02(i8* %p) {
+define ptr @test_02(ptr %p) {
 ; CHECK-LABEL: 'test_02'
 ; CHECK-NEXT:  Classifying expressions for: @test_02
-; CHECK-NEXT:    %p1 = getelementptr i8, i8* %p, i32 2
+; CHECK-NEXT:    %p1 = getelementptr i8, ptr %p, i32 2
 ; CHECK-NEXT:    --> (2 + %p) U: full-set S: full-set
-; CHECK-NEXT:    %p2 = getelementptr i8, i8* %p, i32 1
+; CHECK-NEXT:    %p2 = getelementptr i8, ptr %p, i32 1
 ; CHECK-NEXT:    --> (1 + %p) U: full-set S: full-set
 ; CHECK-NEXT:    %index = select i1 %cmp, i32 2, i32 1
-; CHECK-NEXT:    --> ((-1 * (ptrtoint i8* %p to i32)) + ((1 + (ptrtoint i8* %p to i32)) smax (2 + (ptrtoint i8* %p to i32)))) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (ptrtoint ptr %p to i32)) + ((1 + (ptrtoint ptr %p to i32)) smax (2 + (ptrtoint ptr %p to i32)))) U: full-set S: full-set
 ; CHECK-NEXT:    %neg_index = sub i32 0, %index
-; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint i8* %p to i32)) smax (2 + (ptrtoint i8* %p to i32)))) + (ptrtoint i8* %p to i32)) U: full-set S: full-set
-; CHECK-NEXT:    %gep = getelementptr i8, i8* %p, i32 %neg_index
-; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint i8* %p to i32)) smax (2 + (ptrtoint i8* %p to i32)))) + (ptrtoint i8* %p to i32) + %p) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint ptr %p to i32)) smax (2 + (ptrtoint ptr %p to i32)))) + (ptrtoint ptr %p to i32)) U: full-set S: full-set
+; CHECK-NEXT:    %gep = getelementptr i8, ptr %p, i32 %neg_index
+; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint ptr %p to i32)) smax (2 + (ptrtoint ptr %p to i32)))) + (ptrtoint ptr %p to i32) + %p) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @test_02
 ;
-  %p1 = getelementptr i8, i8* %p, i32 2
-  %p2 = getelementptr i8, i8* %p, i32 1
-  %cmp = icmp sgt i8* %p1, %p2
+  %p1 = getelementptr i8, ptr %p, i32 2
+  %p2 = getelementptr i8, ptr %p, i32 1
+  %cmp = icmp sgt ptr %p1, %p2
   %index = select i1 %cmp, i32 2, i32 1
   %neg_index = sub i32 0, %index
-  %gep = getelementptr i8, i8* %p, i32 %neg_index
-  ret i8* %gep
+  %gep = getelementptr i8, ptr %p, i32 %neg_index
+  ret ptr %gep
 }
 
-define i8* @test_03(i8* %p) {
+define ptr @test_03(ptr %p) {
 ; CHECK-LABEL: 'test_03'
 ; CHECK-NEXT:  Classifying expressions for: @test_03
-; CHECK-NEXT:    %p1 = getelementptr i8, i8* %p, i32 2
+; CHECK-NEXT:    %p1 = getelementptr i8, ptr %p, i32 2
 ; CHECK-NEXT:    --> (2 + %p) U: full-set S: full-set
-; CHECK-NEXT:    %p2 = getelementptr i8, i8* %p, i32 1
+; CHECK-NEXT:    %p2 = getelementptr i8, ptr %p, i32 1
 ; CHECK-NEXT:    --> (1 + %p) U: full-set S: full-set
 ; CHECK-NEXT:    %index = select i1 %cmp, i32 2, i32 1
-; CHECK-NEXT:    --> ((-1 * (ptrtoint i8* %p to i32)) + ((1 + (ptrtoint i8* %p to i32)) umin (2 + (ptrtoint i8* %p to i32)))) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (ptrtoint ptr %p to i32)) + ((1 + (ptrtoint ptr %p to i32)) umin (2 + (ptrtoint ptr %p to i32)))) U: full-set S: full-set
 ; CHECK-NEXT:    %neg_index = sub i32 0, %index
-; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint i8* %p to i32)) umin (2 + (ptrtoint i8* %p to i32)))) + (ptrtoint i8* %p to i32)) U: full-set S: full-set
-; CHECK-NEXT:    %gep = getelementptr i8, i8* %p, i32 %neg_index
-; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint i8* %p to i32)) umin (2 + (ptrtoint i8* %p to i32)))) + (ptrtoint i8* %p to i32) + %p) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint ptr %p to i32)) umin (2 + (ptrtoint ptr %p to i32)))) + (ptrtoint ptr %p to i32)) U: full-set S: full-set
+; CHECK-NEXT:    %gep = getelementptr i8, ptr %p, i32 %neg_index
+; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint ptr %p to i32)) umin (2 + (ptrtoint ptr %p to i32)))) + (ptrtoint ptr %p to i32) + %p) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @test_03
 ;
-  %p1 = getelementptr i8, i8* %p, i32 2
-  %p2 = getelementptr i8, i8* %p, i32 1
-  %cmp = icmp ult i8* %p1, %p2
+  %p1 = getelementptr i8, ptr %p, i32 2
+  %p2 = getelementptr i8, ptr %p, i32 1
+  %cmp = icmp ult ptr %p1, %p2
   %index = select i1 %cmp, i32 2, i32 1
   %neg_index = sub i32 0, %index
-  %gep = getelementptr i8, i8* %p, i32 %neg_index
-  ret i8* %gep
+  %gep = getelementptr i8, ptr %p, i32 %neg_index
+  ret ptr %gep
 }
 
-define i8* @test_04(i8* %p) {
+define ptr @test_04(ptr %p) {
 ; CHECK-LABEL: 'test_04'
 ; CHECK-NEXT:  Classifying expressions for: @test_04
-; CHECK-NEXT:    %p1 = getelementptr i8, i8* %p, i32 2
+; CHECK-NEXT:    %p1 = getelementptr i8, ptr %p, i32 2
 ; CHECK-NEXT:    --> (2 + %p) U: full-set S: full-set
-; CHECK-NEXT:    %p2 = getelementptr i8, i8* %p, i32 1
+; CHECK-NEXT:    %p2 = getelementptr i8, ptr %p, i32 1
 ; CHECK-NEXT:    --> (1 + %p) U: full-set S: full-set
 ; CHECK-NEXT:    %index = select i1 %cmp, i32 2, i32 1
-; CHECK-NEXT:    --> ((-1 * (ptrtoint i8* %p to i32)) + ((1 + (ptrtoint i8* %p to i32)) smin (2 + (ptrtoint i8* %p to i32)))) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (ptrtoint ptr %p to i32)) + ((1 + (ptrtoint ptr %p to i32)) smin (2 + (ptrtoint ptr %p to i32)))) U: full-set S: full-set
 ; CHECK-NEXT:    %neg_index = sub i32 0, %index
-; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint i8* %p to i32)) smin (2 + (ptrtoint i8* %p to i32)))) + (ptrtoint i8* %p to i32)) U: full-set S: full-set
-; CHECK-NEXT:    %gep = getelementptr i8, i8* %p, i32 %neg_index
-; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint i8* %p to i32)) smin (2 + (ptrtoint i8* %p to i32)))) + (ptrtoint i8* %p to i32) + %p) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint ptr %p to i32)) smin (2 + (ptrtoint ptr %p to i32)))) + (ptrtoint ptr %p to i32)) U: full-set S: full-set
+; CHECK-NEXT:    %gep = getelementptr i8, ptr %p, i32 %neg_index
+; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint ptr %p to i32)) smin (2 + (ptrtoint ptr %p to i32)))) + (ptrtoint ptr %p to i32) + %p) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @test_04
 ;
-  %p1 = getelementptr i8, i8* %p, i32 2
-  %p2 = getelementptr i8, i8* %p, i32 1
-  %cmp = icmp slt i8* %p1, %p2
+  %p1 = getelementptr i8, ptr %p, i32 2
+  %p2 = getelementptr i8, ptr %p, i32 1
+  %cmp = icmp slt ptr %p1, %p2
   %index = select i1 %cmp, i32 2, i32 1
   %neg_index = sub i32 0, %index
-  %gep = getelementptr i8, i8* %p, i32 %neg_index
-  ret i8* %gep
+  %gep = getelementptr i8, ptr %p, i32 %neg_index
+  ret ptr %gep
 }
 
 attributes #0 = { nofree }

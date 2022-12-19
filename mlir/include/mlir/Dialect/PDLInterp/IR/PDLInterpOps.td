@@ -816,7 +816,7 @@ def PDLInterp_GetOperandsOp : PDLInterp_Op<"get_operands", [Pure]> {
   let assemblyFormat = "($index^)? `of` $inputOp `:` type($value) attr-dict";
   let builders = [
     OpBuilder<(ins "Type":$resultType, "Value":$inputOp,
-                   "Optional<unsigned>":$index), [{
+                   "std::optional<unsigned>":$index), [{
       build($_builder, $_state, resultType, inputOp,
             index ? $_builder.getI32IntegerAttr(*index) : IntegerAttr());
     }]>,
@@ -883,7 +883,7 @@ def PDLInterp_GetResultsOp : PDLInterp_Op<"get_results", [Pure]> {
   let assemblyFormat = "($index^)? `of` $inputOp `:` type($value) attr-dict";
   let builders = [
     OpBuilder<(ins "Type":$resultType, "Value":$inputOp,
-                   "Optional<unsigned>":$index), [{
+                   "std::optional<unsigned>":$index), [{
       build($_builder, $_state, resultType, inputOp,
             index ? $_builder.getI32IntegerAttr(*index) : IntegerAttr());
     }]>,

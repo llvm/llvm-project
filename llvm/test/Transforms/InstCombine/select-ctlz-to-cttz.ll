@@ -221,10 +221,10 @@ define i4 @PR45762(i3 %x4) {
 ; CHECK-LABEL: @PR45762(
 ; CHECK-NEXT:    [[T4:%.*]] = call i3 @llvm.cttz.i3(i3 [[X4:%.*]], i1 false), !range [[RNG2:![0-9]+]]
 ; CHECK-NEXT:    [[T7:%.*]] = zext i3 [[T4]] to i4
-; CHECK-NEXT:    [[ONE_HOT_16:%.*]] = shl i4 1, [[T7]]
+; CHECK-NEXT:    [[ONE_HOT_16:%.*]] = shl nuw i4 1, [[T7]]
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i3 [[X4]], 0
-; CHECK-NEXT:    [[UMUL_23:%.*]] = select i1 [[DOTNOT]], i4 0, i4 [[T7]]
-; CHECK-NEXT:    [[SEL_71:%.*]] = shl i4 [[ONE_HOT_16]], [[UMUL_23]]
+; CHECK-NEXT:    [[UMUL_231:%.*]] = select i1 [[DOTNOT]], i4 0, i4 [[T7]]
+; CHECK-NEXT:    [[SEL_71:%.*]] = shl i4 [[ONE_HOT_16]], [[UMUL_231]]
 ; CHECK-NEXT:    ret i4 [[SEL_71]]
 ;
   %t4 = call i3 @llvm.cttz.i3(i3 %x4, i1 false)
@@ -250,10 +250,10 @@ define i4 @PR45762_logical(i3 %x4) {
 ; CHECK-LABEL: @PR45762_logical(
 ; CHECK-NEXT:    [[T4:%.*]] = call i3 @llvm.cttz.i3(i3 [[X4:%.*]], i1 false), !range [[RNG2]]
 ; CHECK-NEXT:    [[T7:%.*]] = zext i3 [[T4]] to i4
-; CHECK-NEXT:    [[ONE_HOT_16:%.*]] = shl i4 1, [[T7]]
+; CHECK-NEXT:    [[ONE_HOT_16:%.*]] = shl nuw i4 1, [[T7]]
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i3 [[X4]], 0
-; CHECK-NEXT:    [[UMUL_23:%.*]] = select i1 [[DOTNOT]], i4 0, i4 [[T7]]
-; CHECK-NEXT:    [[SEL_71:%.*]] = shl i4 [[ONE_HOT_16]], [[UMUL_23]]
+; CHECK-NEXT:    [[UMUL_231:%.*]] = select i1 [[DOTNOT]], i4 0, i4 [[T7]]
+; CHECK-NEXT:    [[SEL_71:%.*]] = shl i4 [[ONE_HOT_16]], [[UMUL_231]]
 ; CHECK-NEXT:    ret i4 [[SEL_71]]
 ;
   %t4 = call i3 @llvm.cttz.i3(i3 %x4, i1 false)

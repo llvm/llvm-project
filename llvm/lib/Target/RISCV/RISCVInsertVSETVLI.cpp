@@ -399,16 +399,15 @@ public:
            MaskAgnostic == Other.MaskAgnostic;
   }
 
-  bool hasCompatibleVTYPE(const MachineInstr &MI,
+  bool hasCompatibleVTYPE(const DemandedFields &Used,
                           const VSETVLIInfo &Require) const {
-    const DemandedFields Used = getDemanded(MI);
     return areCompatibleVTYPEs(encodeVTYPE(), Require.encodeVTYPE(), Used);
   }
 
   // Determine whether the vector instructions requirements represented by
   // Require are compatible with the previous vsetvli instruction represented
   // by this.  MI is the instruction whose requirements we're considering.
-  bool isCompatible(const MachineInstr &MI, const VSETVLIInfo &Require) const {
+  bool isCompatible(const DemandedFields &Used, const VSETVLIInfo &Require) const {
     assert(isValid() && Require.isValid() &&
            "Can't compare invalid VSETVLIInfos");
     assert(!Require.SEWLMULRatioOnly &&
@@ -427,7 +426,10 @@ public:
       if (SEW == Require.SEW)
         return true;
 
-    return hasSameAVL(Require) && hasCompatibleVTYPE(MI, Require);
+    // TODO: Check Used.VL here
+    if (!hasSameAVL(Require))
+      return false;
+    return areCompatibleVTYPEs(encodeVTYPE(), Require.encodeVTYPE(), Used);
   }
 
   bool operator==(const VSETVLIInfo &Other) const {
@@ -774,7 +776,8 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   if (!CurInfo.isValid() || CurInfo.isUnknown() || CurInfo.hasSEWLMULRatioOnly())
     return true;
 
-  if (CurInfo.isCompatible(MI, Require))
+  const DemandedFields Used = getDemanded(MI);
+  if (CurInfo.isCompatible(Used, Require))
     return false;
 
   // For vmv.s.x and vfmv.s.f, there is only two behaviors, VL = 0 and VL > 0.
@@ -795,7 +798,7 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   // and the last VL/VTYPE we observed is the same, we don't need a
   // VSETVLI here.
   if (Require.hasAVLReg() && Require.getAVLReg().isVirtual() &&
-      CurInfo.hasCompatibleVTYPE(MI, Require)) {
+      CurInfo.hasCompatibleVTYPE(Used, Require)) {
     if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
       if (isVectorConfigInstr(*DefMI)) {
         VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
@@ -1195,21 +1198,35 @@ static void doUnion(DemandedFields &A, DemandedFields B) {
   A.MaskPolicy |= B.MaskPolicy;
 }
 
-// Return true if we can mutate PrevMI's VTYPE to match MI's
-// without changing any the fields which have been used.
-// TODO: Restructure code to allow code reuse between this and isCompatible
-// above.
+// Return true if we can mutate PrevMI to match MI without changing any the
+// fields which would be observed.
 static bool canMutatePriorConfig(const MachineInstr &PrevMI,
                                  const MachineInstr &MI,
                                  const DemandedFields &Used) {
-  // TODO: Extend this to handle cases where VL does change, but VL
-  // has not been used.  (e.g. over a vmv.x.s)
-  if (!isVLPreservingConfig(MI))
-    // Note: `vsetvli x0, x0, vtype' is the canonical instruction
-    // for this case.  If you find yourself wanting to add other forms
-    // to this "unused VTYPE" case, we're probably missing a
-    // canonicalization earlier.
-    return false;
+  // If the VL values aren't equal, return false if either a) the former is
+  // demanded, or b) we can't rewrite the former to be the later for
+  // implementation reasons.
+  if (!isVLPreservingConfig(MI)) {
+    if (Used.VL)
+      return false;
+
+    // TODO: Requires more care in the mutation...
+    if (isVLPreservingConfig(PrevMI))
+      return false;
+
+    // TODO: Track whether the register is defined between
+    // PrevMI and MI.
+    if (MI.getOperand(1).isReg() &&
+        RISCV::X0 != MI.getOperand(1).getReg())
+      return false;
+
+    // TODO: We need to change the result register to allow this rewrite
+    // without the result forming a vl preserving vsetvli which is not
+    // a correct state merge.
+    if (PrevMI.getOperand(0).getReg() == RISCV::X0 &&
+        MI.getOperand(1).isReg())
+      return false;
+  }
 
   if (!PrevMI.getOperand(2).isImm() || !MI.getOperand(2).isImm())
     return false;
@@ -1245,6 +1262,12 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
         // Leave NextMI unchanged
         continue;
       } else if (canMutatePriorConfig(MI, *NextMI, Used)) {
+        if (!isVLPreservingConfig(*NextMI)) {
+          if (NextMI->getOperand(1).isImm())
+            MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
+          else
+            MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(), false);
+        }
         MI.getOperand(2).setImm(NextMI->getOperand(2).getImm());
         ToDelete.push_back(NextMI);
         // fallthrough

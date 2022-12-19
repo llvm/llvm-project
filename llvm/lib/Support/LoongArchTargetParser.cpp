@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/LoongArchTargetParser.h"
-#include "llvm/ADT/StringSwitch.h"
 
 using namespace llvm;
 using namespace llvm::LoongArch;

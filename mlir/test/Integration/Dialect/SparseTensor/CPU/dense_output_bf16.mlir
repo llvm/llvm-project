@@ -15,7 +15,7 @@
 // REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
 // RUN: %{command}
 
-// UNSUPPORTED: aarch64
+// UNSUPPORTED: target=aarch64{{.*}}
 
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 #DenseVector = #sparse_tensor.encoding<{dimLevelType = ["dense"]}>

@@ -35,6 +35,11 @@ test.format_symbol_name_attr_op @name
 test.format_symbol_name_attr_op @opt_name
 test.format_opt_symbol_name_attr_op
 
+// CHECK: test.format_opt_symbol_ref_attr_op @foo
+// CHECK: test.format_opt_symbol_ref_attr_op {test.unit}
+test.format_opt_symbol_ref_attr_op @foo {test.unit}
+test.format_opt_symbol_ref_attr_op {test.unit}
+
 // CHECK: test.format_attr_dict_w_keyword attributes {attr = 10 : i64}
 test.format_attr_dict_w_keyword attributes {attr = 10 : i64}
 

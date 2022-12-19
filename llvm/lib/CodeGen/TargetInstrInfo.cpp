@@ -642,9 +642,10 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
   MachineBasicBlock::iterator Pos = MI;
 
   if (Flags == MachineMemOperand::MOStore)
-    storeRegToStackSlot(*MBB, Pos, MO.getReg(), MO.isKill(), FI, RC, TRI);
+    storeRegToStackSlot(*MBB, Pos, MO.getReg(), MO.isKill(), FI, RC, TRI,
+                        Register());
   else
-    loadRegFromStackSlot(*MBB, Pos, MO.getReg(), FI, RC, TRI);
+    loadRegFromStackSlot(*MBB, Pos, MO.getReg(), FI, RC, TRI, Register());
   return &*--Pos;
 }
 
@@ -834,7 +835,7 @@ TargetInstrInfo::getReassociationOpcodes(MachineCombinerPattern Pattern,
   assert(areOpcodesEqualOrInverse(Root.getOpcode(), Prev.getOpcode()) &&
          "Incorrectly matched pattern");
   unsigned AssocCommutOpcode = Root.getOpcode();
-  unsigned InverseOpcode = getInverseOpcode(Root.getOpcode()).value();
+  unsigned InverseOpcode = *getInverseOpcode(Root.getOpcode());
   if (!AssocCommutRoot)
     std::swap(AssocCommutOpcode, InverseOpcode);
 

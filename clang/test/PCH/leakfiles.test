@@ -3,7 +3,7 @@
 //
 // This test requires bash loops and ulimit.
 // REQUIRES: shell
-// UNSUPPORTED: win32
+// UNSUPPORTED: target={{.*win32.*}}
 //
 // Set up source files. lib/lib.h includes lots of lib*.h files in that dir.
 // client.c includes lib/lib.h, and also the individual files directly.

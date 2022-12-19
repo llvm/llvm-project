@@ -289,7 +289,7 @@ public:
   /// DirectoryEntry::getName have been deleted, delete this class and replace
   /// instances with Optional<DirectoryEntryRef>
   operator const DirectoryEntry *() const {
-    return has_value() ? &value().getDirEntry() : nullptr;
+    return has_value() ? &(*this)->getDirEntry() : nullptr;
   }
 };
 

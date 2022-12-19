@@ -13,7 +13,6 @@
 
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -509,10 +508,10 @@ llvm::getAllocationFamily(const Value *I, const TargetLibraryInfo *TLI) {
     // Callee is some known library function.
     const auto AllocData = getAllocationDataForFunction(Callee, AnyAlloc, TLI);
     if (AllocData)
-      return mangledNameForMallocFamily(AllocData.value().Family);
+      return mangledNameForMallocFamily(AllocData->Family);
     const auto FreeData = getFreeFunctionDataForFunction(Callee, TLIFn);
     if (FreeData)
-      return mangledNameForMallocFamily(FreeData.value().Family);
+      return mangledNameForMallocFamily(FreeData->Family);
   }
   // Callee isn't a known library function, still check attributes.
   if (checkFnAllocKind(I, AllocFnKind::Free | AllocFnKind::Alloc |

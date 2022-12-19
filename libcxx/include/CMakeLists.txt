@@ -672,6 +672,7 @@ set(files
   __type_traits/remove_reference.h
   __type_traits/remove_volatile.h
   __type_traits/result_of.h
+  __type_traits/strip_signature.h
   __type_traits/type_identity.h
   __type_traits/type_list.h
   __type_traits/underlying_type.h

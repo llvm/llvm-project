@@ -36,17 +36,17 @@ using namespace llvm::objcarc;
 
 AliasResult ObjCARCAAResult::alias(const MemoryLocation &LocA,
                                    const MemoryLocation &LocB,
-                                   AAQueryInfo &AAQI) {
+                                   AAQueryInfo &AAQI, const Instruction *) {
   if (!EnableARCOpts)
-    return AAResultBase::alias(LocA, LocB, AAQI);
+    return AAResultBase::alias(LocA, LocB, AAQI, nullptr);
 
   // First, strip off no-ops, including ObjC-specific no-ops, and try making a
   // precise alias query.
   const Value *SA = GetRCIdentityRoot(LocA.Ptr);
   const Value *SB = GetRCIdentityRoot(LocB.Ptr);
-  AliasResult Result =
-      AAResultBase::alias(MemoryLocation(SA, LocA.Size, LocA.AATags),
-                          MemoryLocation(SB, LocB.Size, LocB.AATags), AAQI);
+  AliasResult Result = AAResultBase::alias(
+      MemoryLocation(SA, LocA.Size, LocA.AATags),
+      MemoryLocation(SB, LocB.Size, LocB.AATags), AAQI, nullptr);
   if (Result != AliasResult::MayAlias)
     return Result;
 
@@ -56,7 +56,8 @@ AliasResult ObjCARCAAResult::alias(const MemoryLocation &LocA,
   const Value *UB = GetUnderlyingObjCPtr(SB);
   if (UA != SA || UB != SB) {
     Result = AAResultBase::alias(MemoryLocation::getBeforeOrAfter(UA),
-                                 MemoryLocation::getBeforeOrAfter(UB), AAQI);
+                                 MemoryLocation::getBeforeOrAfter(UB), AAQI,
+                                 nullptr);
     // We can't use MustAlias or PartialAlias results here because
     // GetUnderlyingObjCPtr may return an offsetted pointer value.
     if (Result == AliasResult::NoAlias)

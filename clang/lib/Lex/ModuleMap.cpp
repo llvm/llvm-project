@@ -46,6 +46,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -1215,8 +1216,8 @@ void ModuleMap::resolveHeaderDirectives(
     Module *Mod, llvm::Optional<const FileEntry *> File) const {
   bool NeedsFramework = false;
   SmallVector<Module::UnresolvedHeaderDirective, 1> NewHeaders;
-  const auto Size = File ? File.value()->getSize() : 0;
-  const auto ModTime = File ? File.value()->getModificationTime() : 0;
+  const auto Size = File ? (*File)->getSize() : 0;
+  const auto ModTime = File ? (*File)->getModificationTime() : 0;
 
   for (auto &Header : Mod->UnresolvedHeaders) {
     if (File && ((Header.ModTime && Header.ModTime != ModTime) ||
@@ -1258,7 +1259,7 @@ void ModuleMap::addHeader(Module *Mod, Module::Header Header,
     Cb->moduleMapAddHeader(Header.Entry->getName());
 }
 
-Optional<FileEntryRef>
+std::optional<FileEntryRef>
 ModuleMap::getContainingModuleMapFile(const Module *Module) const {
   if (Module->DefinitionLoc.isInvalid())
     return std::nullopt;
@@ -1267,7 +1268,7 @@ ModuleMap::getContainingModuleMapFile(const Module *Module) const {
       SourceMgr.getFileID(Module->DefinitionLoc));
 }
 
-Optional<FileEntryRef>
+std::optional<FileEntryRef>
 ModuleMap::getModuleMapFileForUniquing(const Module *M) const {
   if (M->IsInferred) {
     assert(InferredModuleAllowedBy.count(M) && "missing inferred module map");

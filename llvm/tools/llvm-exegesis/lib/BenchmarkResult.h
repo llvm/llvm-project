@@ -78,6 +78,14 @@ struct InstructionBenchmark {
   std::vector<uint8_t> AssembledSnippet;
   // How to aggregate measurements.
   enum ResultAggregationModeE { Min, Max, Mean, MinVariance };
+
+  InstructionBenchmark() = default;
+  InstructionBenchmark(InstructionBenchmark &&) = default;
+
+  InstructionBenchmark(const InstructionBenchmark &) = delete;
+  InstructionBenchmark &operator=(const InstructionBenchmark &) = delete;
+  InstructionBenchmark &operator=(InstructionBenchmark &&) = delete;
+
   // Read functions.
   static Expected<InstructionBenchmark> readYaml(const LLVMState &State,
                                                  MemoryBufferRef Buffer);
@@ -100,9 +108,10 @@ struct InstructionBenchmark {
   class Error readYamlFrom(const LLVMState &State, StringRef InputContent);
 
   // Write functions, non-const because of YAML traits.
+  // NOTE: we intentionally do *NOT* have a variant of this function taking
+  //       filename, because it's behaviour is bugprone with regards to
+  //       accidentally using it more than once and overriding previous YAML.
   class Error writeYamlTo(const LLVMState &State, raw_ostream &S);
-
-  class Error writeYaml(const LLVMState &State, const StringRef Filename);
 };
 
 bool operator==(const BenchmarkMeasure &A, const BenchmarkMeasure &B);

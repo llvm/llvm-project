@@ -119,7 +119,7 @@ FunctionPass *llvm::createAMDGPUISelDag(TargetMachine *TM,
 AMDGPUDAGToDAGISel::AMDGPUDAGToDAGISel(
     TargetMachine *TM /*= nullptr*/,
     CodeGenOpt::Level OptLevel /*= CodeGenOpt::Default*/)
-    : SelectionDAGISel(*TM, OptLevel) {
+    : SelectionDAGISel(ID, *TM, OptLevel) {
   EnableLateStructurizeCFG = AMDGPUTargetMachine::EnableLateStructurizeCFG;
 }
 
@@ -3020,3 +3020,5 @@ void AMDGPUDAGToDAGISel::PostprocessISelDAG() {
     CurDAG->RemoveDeadNodes();
   } while (IsModified);
 }
+
+char AMDGPUDAGToDAGISel::ID = 0;

@@ -55,6 +55,13 @@ private:
   bool selectZExt(MachineInstr &I, MachineBasicBlock &MBB,
                   MachineRegisterInfo &MRI) const;
 
+  std::optional<bool> selectI64ImmDirect(MachineInstr &I,
+                                         MachineBasicBlock &MBB,
+                                         MachineRegisterInfo &MRI, Register Reg,
+                                         uint64_t Imm) const;
+  bool selectI64Imm(MachineInstr &I, MachineBasicBlock &MBB,
+                    MachineRegisterInfo &MRI) const;
+
   const PPCSubtarget &STI;
   const PPCInstrInfo &TII;
   const PPCRegisterInfo &TRI;
@@ -250,6 +257,379 @@ bool PPCInstructionSelector::selectZExt(MachineInstr &I, MachineBasicBlock &MBB,
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
 
+// For any 32 < Num < 64, check if the Imm contains at least Num consecutive
+// zeros and return the number of bits by the left of these consecutive zeros.
+static uint32_t findContiguousZerosAtLeast(uint64_t Imm, unsigned Num) {
+  uint32_t HiTZ = countTrailingZeros<uint32_t>(Hi_32(Imm));
+  uint32_t LoLZ = countLeadingZeros<uint32_t>(Lo_32(Imm));
+  if ((HiTZ + LoLZ) >= Num)
+    return (32 + HiTZ);
+  return 0;
+}
+
+// Direct materialization of 64-bit constants by enumerated patterns.
+// Similar to PPCISelDAGToDAG::selectI64ImmDirect().
+std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
+                                                MachineBasicBlock &MBB,
+                                                MachineRegisterInfo &MRI,
+                                                Register Reg,
+                                                uint64_t Imm) const {
+  unsigned TZ = countTrailingZeros<uint64_t>(Imm);
+  unsigned LZ = countLeadingZeros<uint64_t>(Imm);
+  unsigned TO = countTrailingOnes<uint64_t>(Imm);
+  unsigned LO = countLeadingOnes<uint64_t>(Imm);
+  uint32_t Hi32 = Hi_32(Imm);
+  uint32_t Lo32 = Lo_32(Imm);
+  uint32_t Shift = 0;
+
+  // Following patterns use 1 instructions to materialize the Imm.
+
+  // 1-1) Patterns : {zeros}{15-bit valve}
+  //                 {ones}{15-bit valve}
+  if (isInt<16>(Imm))
+    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LI8), Reg)
+        .addImm(Imm)
+        .constrainAllUses(TII, TRI, RBI);
+  // 1-2) Patterns : {zeros}{15-bit valve}{16 zeros}
+  //                 {ones}{15-bit valve}{16 zeros}
+  if (TZ > 15 && (LZ > 32 || LO > 32))
+    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LIS8), Reg)
+        .addImm((Imm >> 16) & 0xffff)
+        .constrainAllUses(TII, TRI, RBI);
+
+  // Following patterns use 2 instructions to materialize the Imm.
+
+  assert(LZ < 64 && "Unexpected leading zeros here.");
+  // Count of ones follwing the leading zeros.
+  unsigned FO = countLeadingOnes<uint64_t>(Imm << LZ);
+  // 2-1) Patterns : {zeros}{31-bit value}
+  //                 {ones}{31-bit value}
+  if (isInt<32>(Imm)) {
+    uint64_t ImmHi16 = (Imm >> 16) & 0xffff;
+    unsigned Opcode = ImmHi16 ? PPC::LIS8 : PPC::LI8;
+    Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode), TmpReg)
+             .addImm((Imm >> 16) & 0xffff)
+             .constrainAllUses(TII, TRI, RBI))
+      return false;
+    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Reg)
+        .addReg(TmpReg, RegState::Kill)
+        .addImm(Imm & 0xffff)
+        .constrainAllUses(TII, TRI, RBI);
+  }
+  // 2-2) Patterns : {zeros}{ones}{15-bit value}{zeros}
+  //                 {zeros}{15-bit value}{zeros}
+  //                 {zeros}{ones}{15-bit value}
+  //                 {ones}{15-bit value}{zeros}
+  // We can take advantage of LI's sign-extension semantics to generate leading
+  // ones, and then use RLDIC to mask off the ones in both sides after rotation.
+  if ((LZ + FO + TZ) > 48) {
+    Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LI8), TmpReg)
+             .addImm((Imm >> TZ) & 0xffff)
+             .constrainAllUses(TII, TRI, RBI))
+      return false;
+    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDIC), Reg)
+        .addReg(TmpReg, RegState::Kill)
+        .addImm(TZ)
+        .addImm(LZ)
+        .constrainAllUses(TII, TRI, RBI);
+  }
+  // 2-3) Pattern : {zeros}{15-bit value}{ones}
+  // Shift right the Imm by (48 - LZ) bits to construct a negtive 16 bits value,
+  // therefore we can take advantage of LI's sign-extension semantics, and then
+  // mask them off after rotation.
+  //
+  // +--LZ--||-15-bit-||--TO--+     +-------------|--16-bit--+
+  // |00000001bbbbbbbbb1111111| ->  |00000000000001bbbbbbbbb1|
+  // +------------------------+     +------------------------+
+  // 63                      0      63                      0
+  //          Imm                   (Imm >> (48 - LZ) & 0xffff)
+  // +----sext-----|--16-bit--+     +clear-|-----------------+
+  // |11111111111111bbbbbbbbb1| ->  |00000001bbbbbbbbb1111111|
+  // +------------------------+     +------------------------+
+  // 63                      0      63                      0
+  // LI8: sext many leading zeros   RLDICL: rotate left (48 - LZ), clear left LZ
+  if ((LZ + TO) > 48) {
+    // Since the immediates with (LZ > 32) have been handled by previous
+    // patterns, here we have (LZ <= 32) to make sure we will not shift right
+    // the Imm by a negative value.
+    assert(LZ <= 32 && "Unexpected shift value.");
+    Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LI8), TmpReg)
+             .addImm(Imm >> (48 - LZ) & 0xffff)
+             .constrainAllUses(TII, TRI, RBI))
+      return false;
+    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
+        .addReg(TmpReg, RegState::Kill)
+        .addImm(48 - LZ)
+        .addImm(LZ)
+        .constrainAllUses(TII, TRI, RBI);
+  }
+  // 2-4) Patterns : {zeros}{ones}{15-bit value}{ones}
+  //                 {ones}{15-bit value}{ones}
+  // We can take advantage of LI's sign-extension semantics to generate leading
+  // ones, and then use RLDICL to mask off the ones in left sides (if required)
+  // after rotation.
+  //
+  // +-LZ-FO||-15-bit-||--TO--+     +-------------|--16-bit--+
+  // |00011110bbbbbbbbb1111111| ->  |000000000011110bbbbbbbbb|
+  // +------------------------+     +------------------------+
+  // 63                      0      63                      0
+  //            Imm                    (Imm >> TO) & 0xffff
+  // +----sext-----|--16-bit--+     +LZ|---------------------+
+  // |111111111111110bbbbbbbbb| ->  |00011110bbbbbbbbb1111111|
+  // +------------------------+     +------------------------+
+  // 63                      0      63                      0
+  // LI8: sext many leading zeros   RLDICL: rotate left TO, clear left LZ
+  if ((LZ + FO + TO) > 48) {
+    Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LI8), TmpReg)
+             .addImm((Imm >> TO) & 0xffff)
+             .constrainAllUses(TII, TRI, RBI))
+      return false;
+    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
+        .addReg(TmpReg, RegState::Kill)
+        .addImm(TO)
+        .addImm(LZ)
+        .constrainAllUses(TII, TRI, RBI);
+  }
+  // 2-5) Pattern : {32 zeros}{****}{0}{15-bit value}
+  // If Hi32 is zero and the Lo16(in Lo32) can be presented as a positive 16 bit
+  // value, we can use LI for Lo16 without generating leading ones then add the
+  // Hi16(in Lo32).
+  if (LZ == 32 && ((Lo32 & 0x8000) == 0)) {
+    Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LI8), TmpReg)
+             .addImm(Lo32 & 0xffff)
+             .constrainAllUses(TII, TRI, RBI))
+      return false;
+    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORIS8), Reg)
+        .addReg(TmpReg, RegState::Kill)
+        .addImm(Lo32 >> 16)
+        .constrainAllUses(TII, TRI, RBI);
+  }
+  // 2-6) Patterns : {******}{49 zeros}{******}
+  //                 {******}{49 ones}{******}
+  // If the Imm contains 49 consecutive zeros/ones, it means that a total of 15
+  // bits remain on both sides. Rotate right the Imm to construct an int<16>
+  // value, use LI for int<16> value and then use RLDICL without mask to rotate
+  // it back.
+  //
+  // 1) findContiguousZerosAtLeast(Imm, 49)
+  // +------|--zeros-|------+     +---ones--||---15 bit--+
+  // |bbbbbb0000000000aaaaaa| ->  |0000000000aaaaaabbbbbb|
+  // +----------------------+     +----------------------+
+  // 63                    0      63                    0
+  //
+  // 2) findContiguousZerosAtLeast(~Imm, 49)
+  // +------|--ones--|------+     +---ones--||---15 bit--+
+  // |bbbbbb1111111111aaaaaa| ->  |1111111111aaaaaabbbbbb|
+  // +----------------------+     +----------------------+
+  // 63                    0      63                    0
+  if ((Shift = findContiguousZerosAtLeast(Imm, 49)) ||
+      (Shift = findContiguousZerosAtLeast(~Imm, 49))) {
+    uint64_t RotImm = APInt(64, Imm).rotr(Shift).getZExtValue();
+    Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LI8), TmpReg)
+             .addImm(RotImm & 0xffff)
+             .constrainAllUses(TII, TRI, RBI))
+      return false;
+    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
+        .addReg(TmpReg, RegState::Kill)
+        .addImm(Shift)
+        .addImm(0)
+        .constrainAllUses(TII, TRI, RBI);
+  }
+
+  // Following patterns use 3 instructions to materialize the Imm.
+
+  // 3-1) Patterns : {zeros}{ones}{31-bit value}{zeros}
+  //                 {zeros}{31-bit value}{zeros}
+  //                 {zeros}{ones}{31-bit value}
+  //                 {ones}{31-bit value}{zeros}
+  // We can take advantage of LIS's sign-extension semantics to generate leading
+  // ones, add the remaining bits with ORI, and then use RLDIC to mask off the
+  // ones in both sides after rotation.
+  if ((LZ + FO + TZ) > 32) {
+    uint64_t ImmHi16 = (Imm >> (TZ + 16)) & 0xffff;
+    unsigned Opcode = ImmHi16 ? PPC::LIS8 : PPC::LI8;
+    Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    Register Tmp2Reg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode), TmpReg)
+             .addImm(ImmHi16)
+             .constrainAllUses(TII, TRI, RBI))
+      return false;
+    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
+             .addReg(TmpReg, RegState::Kill)
+             .addImm((Imm >> TZ) & 0xffff)
+             .constrainAllUses(TII, TRI, RBI))
+      return false;
+    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDIC), Reg)
+        .addReg(Tmp2Reg, RegState::Kill)
+        .addImm(TZ)
+        .addImm(LZ)
+        .constrainAllUses(TII, TRI, RBI);
+  }
+  // 3-2) Pattern : {zeros}{31-bit value}{ones}
+  // Shift right the Imm by (32 - LZ) bits to construct a negative 32 bits
+  // value, therefore we can take advantage of LIS's sign-extension semantics,
+  // add the remaining bits with ORI, and then mask them off after rotation.
+  // This is similar to Pattern 2-3, please refer to the diagram there.
+  if ((LZ + TO) > 32) {
+    // Since the immediates with (LZ > 32) have been handled by previous
+    // patterns, here we have (LZ <= 32) to make sure we will not shift right
+    // the Imm by a negative value.
+    assert(LZ <= 32 && "Unexpected shift value.");
+    Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    Register Tmp2Reg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LIS8), TmpReg)
+            .addImm((Imm >> (48 - LZ)) & 0xffff)
+            .constrainAllUses(TII, TRI, RBI))
+      return false;
+    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
+             .addReg(TmpReg, RegState::Kill)
+             .addImm((Imm >> (32 - LZ)) & 0xffff)
+             .constrainAllUses(TII, TRI, RBI))
+      return false;
+    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
+        .addReg(Tmp2Reg, RegState::Kill)
+        .addImm(32 - LZ)
+        .addImm(LZ)
+        .constrainAllUses(TII, TRI, RBI);
+  }
+  // 3-3) Patterns : {zeros}{ones}{31-bit value}{ones}
+  //                 {ones}{31-bit value}{ones}
+  // We can take advantage of LIS's sign-extension semantics to generate leading
+  // ones, add the remaining bits with ORI, and then use RLDICL to mask off the
+  // ones in left sides (if required) after rotation.
+  // This is similar to Pattern 2-4, please refer to the diagram there.
+  if ((LZ + FO + TO) > 32) {
+    Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    Register Tmp2Reg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LIS8), TmpReg)
+             .addImm((Imm >> (TO + 16)) & 0xffff)
+             .constrainAllUses(TII, TRI, RBI))
+      return false;
+    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
+             .addReg(TmpReg, RegState::Kill)
+             .addImm((Imm >> TO) & 0xffff)
+             .constrainAllUses(TII, TRI, RBI))
+      return false;
+    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
+        .addReg(Tmp2Reg, RegState::Kill)
+        .addImm(TO)
+        .addImm(LZ)
+        .constrainAllUses(TII, TRI, RBI);
+  }
+  // 3-4) Patterns : High word == Low word
+  if (Hi32 == Lo32) {
+    // Handle the first 32 bits.
+    uint64_t ImmHi16 = (Lo32 >> 16) & 0xffff;
+    unsigned Opcode = ImmHi16 ? PPC::LIS8 : PPC::LI8;
+    Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    Register Tmp2Reg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode), TmpReg)
+             .addImm(ImmHi16)
+             .constrainAllUses(TII, TRI, RBI))
+      return false;
+    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
+             .addReg(TmpReg, RegState::Kill)
+             .addImm(Lo32 & 0xffff)
+             .constrainAllUses(TII, TRI, RBI))
+      return false;
+    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDIMI), Reg)
+        .addReg(Tmp2Reg)
+        .addReg(Tmp2Reg, RegState::Kill)
+        .addImm(32)
+        .addImm(0)
+        .constrainAllUses(TII, TRI, RBI);
+  }
+  // 3-5) Patterns : {******}{33 zeros}{******}
+  //                 {******}{33 ones}{******}
+  // If the Imm contains 33 consecutive zeros/ones, it means that a total of 31
+  // bits remain on both sides. Rotate right the Imm to construct an int<32>
+  // value, use LIS + ORI for int<32> value and then use RLDICL without mask to
+  // rotate it back.
+  // This is similar to Pattern 2-6, please refer to the diagram there.
+  if ((Shift = findContiguousZerosAtLeast(Imm, 33)) ||
+      (Shift = findContiguousZerosAtLeast(~Imm, 33))) {
+    uint64_t RotImm = APInt(64, Imm).rotr(Shift).getZExtValue();
+    uint64_t ImmHi16 = (RotImm >> 16) & 0xffff;
+    unsigned Opcode = ImmHi16 ? PPC::LIS8 : PPC::LI8;
+    Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    Register Tmp2Reg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode), TmpReg)
+             .addImm(ImmHi16)
+             .constrainAllUses(TII, TRI, RBI))
+      return false;
+    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
+             .addReg(TmpReg, RegState::Kill)
+             .addImm(RotImm & 0xffff)
+             .constrainAllUses(TII, TRI, RBI))
+      return false;
+    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
+        .addReg(Tmp2Reg, RegState::Kill)
+        .addImm(Shift)
+        .addImm(0)
+        .constrainAllUses(TII, TRI, RBI);
+  }
+
+  // If we end up here then no instructions were inserted.
+  return std::nullopt;
+}
+
+// Derived from PPCISelDAGToDAG::selectI64Imm().
+// TODO: Add support for prefixed instructions.
+bool PPCInstructionSelector::selectI64Imm(MachineInstr &I,
+                                          MachineBasicBlock &MBB,
+                                          MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_CONSTANT && "Unexpected G code");
+
+  Register DstReg = I.getOperand(0).getReg();
+  int64_t Imm = I.getOperand(1).getCImm()->getValue().getZExtValue();
+  // No more than 3 instructions are used if we can select the i64 immediate
+  // directly.
+  if (std::optional<bool> Res = selectI64ImmDirect(I, MBB, MRI, DstReg, Imm)) {
+    I.eraseFromParent();
+    return *Res;
+  }
+
+  // Calculate the last bits as required.
+  uint32_t Hi16 = (Lo_32(Imm) >> 16) & 0xffff;
+  uint32_t Lo16 = Lo_32(Imm) & 0xffff;
+
+  Register Reg =
+      (Hi16 || Lo16) ? MRI.createVirtualRegister(&PPC::G8RCRegClass) : DstReg;
+
+  // Handle the upper 32 bit value.
+  std::optional<bool> Res =
+      selectI64ImmDirect(I, MBB, MRI, Reg, Imm & 0xffffffff00000000);
+  if (!Res || !*Res)
+    return false;
+
+  // Add in the last bits as required.
+  if (Hi16) {
+    Register TmpReg =
+        Lo16 ? MRI.createVirtualRegister(&PPC::G8RCRegClass) : DstReg;
+    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORIS8), TmpReg)
+             .addReg(Reg, RegState::Kill)
+             .addImm(Hi16)
+             .constrainAllUses(TII, TRI, RBI))
+      return false;
+    Reg = TmpReg;
+  }
+  if (Lo16) {
+    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), DstReg)
+             .addReg(Reg, RegState::Kill)
+             .addImm(Lo16)
+             .constrainAllUses(TII, TRI, RBI))
+      return false;
+  }
+  I.eraseFromParent();
+  return true;
+}
+
 bool PPCInstructionSelector::select(MachineInstr &I) {
   auto &MBB = *I.getParent();
   auto &MF = *MBB.getParent();
@@ -316,6 +696,8 @@ bool PPCInstructionSelector::select(MachineInstr &I) {
   // G_SEXT will be selected in tb-gen pattern.
   case TargetOpcode::G_ZEXT:
     return selectZExt(I, MBB, MRI);
+  case TargetOpcode::G_CONSTANT:
+    return selectI64Imm(I, MBB, MRI);
   }
   return false;
 }

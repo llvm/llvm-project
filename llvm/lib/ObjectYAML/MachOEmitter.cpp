@@ -17,6 +17,7 @@
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -315,7 +316,12 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
         if (OS.tell() - fileStart > Sec.offset && Sec.offset != (uint32_t)0)
           return createStringError(
               errc::invalid_argument,
-              "wrote too much data somewhere, section offsets don't line up");
+              llvm::formatv(
+                  "wrote too much data somewhere, section offsets in "
+                  "section {0} for segment {1} don't line up: "
+                  "[cursor={2:x}], [fileStart={3:x}], [sectionOffset={4:x}]",
+                  Sec.sectname, Sec.segname, OS.tell(), fileStart,
+                  Sec.offset.value));
 
         StringRef SectName(Sec.sectname,
                            strnlen(Sec.sectname, sizeof(Sec.sectname)));

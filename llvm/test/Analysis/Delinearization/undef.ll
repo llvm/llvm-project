@@ -2,7 +2,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @foo(double* %Ey) {
+define void @foo(ptr %Ey) {
 entry:
   br i1 undef, label %for.cond55.preheader, label %for.end324
 
@@ -20,8 +20,8 @@ for.body60:
   %tmp5 = add i64 %iy.067, %0
   %tmp6 = mul i64 %tmp5, undef
   %arrayidx69.sum = add i64 undef, %tmp6
-  %arrayidx70 = getelementptr inbounds double, double* %Ey, i64 %arrayidx69.sum
-  %1 = load double, double* %arrayidx70, align 8
+  %arrayidx70 = getelementptr inbounds double, ptr %Ey, i64 %arrayidx69.sum
+  %1 = load double, ptr %arrayidx70, align 8
   %inc = add nsw i64 %ix.062, 1
   br i1 false, label %for.body60, label %for.end
 

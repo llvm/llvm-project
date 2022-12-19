@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 #===- rename_check.py - clang-tidy check renamer ------------*- python -*--===#
 #

@@ -1353,7 +1353,7 @@ void SSANameState::printValueID(Value value, bool printResultNo,
   }
 
   if (resultNo && printResultNo)
-    stream << '#' << resultNo;
+    stream << '#' << *resultNo;
 }
 
 void SSANameState::printOperationID(Operation *op, raw_ostream &stream) const {

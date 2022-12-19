@@ -120,9 +120,9 @@ TEST_F(SarifDocumentWriterTest, canCreateDocumentWithOneRun) {
   ASSERT_TRUE(Driver->getString("fullName").has_value());
   ASSERT_TRUE(Driver->getString("language").has_value());
 
-  EXPECT_EQ(Driver->getString("name").value(), ShortName);
-  EXPECT_EQ(Driver->getString("fullName").value(), LongName);
-  EXPECT_EQ(Driver->getString("language").value(), "en-US");
+  EXPECT_EQ(*Driver->getString("name"), ShortName);
+  EXPECT_EQ(*Driver->getString("fullName"), LongName);
+  EXPECT_EQ(*Driver->getString("language"), "en-US");
 }
 
 TEST_F(SarifDocumentWriterTest, addingResultsWillCrashIfThereIsNoRun) {
@@ -229,8 +229,8 @@ TEST_F(SarifDocumentWriterTest, addingResultWithValidRuleAndRunIsOk) {
   ASSERT_TRUE(Driver->getString("name").has_value());
   ASSERT_TRUE(Driver->getString("fullName").has_value());
 
-  EXPECT_EQ(Driver->getString("name").value(), "sarif test");
-  EXPECT_EQ(Driver->getString("fullName").value(), "sarif test runner");
+  EXPECT_EQ(*Driver->getString("name"), "sarif test");
+  EXPECT_EQ(*Driver->getString("fullName"), "sarif test runner");
 
   // The results are as expected
   EXPECT_EQ(Results->size(), 1UL);

@@ -73,11 +73,10 @@ std::optional<TypeAndShape> TypeAndShape::Characterize(
   return common::visit(
       common::visitors{
           [&](const semantics::ProcEntityDetails &proc) {
-            const semantics::ProcInterface &interface { proc.interface() };
-            if (interface.type()) {
-              return Characterize(*interface.type(), context);
-            } else if (interface.symbol()) {
-              return Characterize(*interface.symbol(), context);
+            if (proc.procInterface()) {
+              return Characterize(*proc.procInterface(), context);
+            } else if (proc.type()) {
+              return Characterize(*proc.type(), context);
             } else {
               return std::optional<TypeAndShape>{};
             }
@@ -506,8 +505,8 @@ static std::optional<Procedure> CharacterizeProcedure(
               }
               return intrinsic;
             }
-            const semantics::ProcInterface &interface { proc.interface() };
-            if (const semantics::Symbol * interfaceSymbol{interface.symbol()}) {
+            if (const semantics::Symbol *
+                interfaceSymbol{proc.procInterface()}) {
               auto interface {
                 CharacterizeProcedure(*interfaceSymbol, context, seenProcs)
               };
@@ -517,7 +516,7 @@ static std::optional<Procedure> CharacterizeProcedure(
               return interface;
             } else {
               result.attrs.set(Procedure::Attr::ImplicitInterface);
-              const semantics::DeclTypeSpec *type{interface.type()};
+              const semantics::DeclTypeSpec *type{proc.type()};
               if (symbol.test(semantics::Symbol::Flag::Subroutine)) {
                 // ignore any implicit typing
                 result.attrs.set(Procedure::Attr::Subroutine);

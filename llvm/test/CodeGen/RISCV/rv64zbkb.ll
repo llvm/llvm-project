@@ -45,7 +45,7 @@ define signext i32 @pack_i32_2(i16 zeroext %a, i16 zeroext %b) nounwind {
 define signext i32 @pack_i32_3(i16 zeroext %0, i16 zeroext %1, i32 signext %2) {
 ; RV64I-LABEL: pack_i32_3:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 16
+; RV64I-NEXT:    slliw a0, a0, 16
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    addw a0, a0, a2
 ; RV64I-NEXT:    ret
@@ -227,8 +227,8 @@ define zeroext i16 @packh_i16(i8 zeroext %a, i8 zeroext %b) nounwind {
 define zeroext i16 @packh_i16_2(i8 zeroext %0, i8 zeroext %1, i8 zeroext %2) {
 ; RV64I-LABEL: packh_i16_2:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    add a0, a1, a0
-; RV64I-NEXT:    slli a0, a0, 8
+; RV64I-NEXT:    addw a0, a1, a0
+; RV64I-NEXT:    slliw a0, a0, 8
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    slli a0, a0, 48
 ; RV64I-NEXT:    srli a0, a0, 48

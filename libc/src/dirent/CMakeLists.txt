@@ -8,6 +8,7 @@ add_entrypoint_object(
     libc.include.dirent
     libc.src.__support.File.dir
     libc.src.__support.File.platform_dir
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -32,6 +33,7 @@ add_entrypoint_object(
     libc.include.dirent
     libc.src.__support.File.dir
     libc.src.__support.File.platform_dir
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -44,4 +46,5 @@ add_entrypoint_object(
     libc.include.dirent
     libc.src.__support.File.dir
     libc.src.__support.File.platform_dir
+    libc.src.errno.errno
 )

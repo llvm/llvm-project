@@ -1053,7 +1053,7 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
   if (def->getNumOperands() == 1) {
     auto x = buildTensorExp(op, def->getOperand(0));
     if (x.has_value()) {
-      unsigned e = x.value();
+      unsigned e = *x;
       if (isa<math::AbsFOp>(def))
         return addExp(kAbsF, e);
       if (isa<complex::AbsOp>(def))
@@ -1132,8 +1132,8 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
     auto x = buildTensorExp(op, def->getOperand(0));
     auto y = buildTensorExp(op, def->getOperand(1));
     if (x.has_value() && y.has_value()) {
-      unsigned e0 = x.value();
-      unsigned e1 = y.value();
+      unsigned e0 = *x;
+      unsigned e1 = *y;
       if (isa<arith::MulFOp>(def))
         return addExp(kMulF, e0, e1);
       if (isa<complex::MulOp>(def))
@@ -1188,8 +1188,8 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
     auto y = buildTensorExp(op, def->getOperand(1));
     auto z = buildTensorExp(op, def->getOperand(2));
     if (x.has_value() && y.has_value() && z.has_value()) {
-      unsigned e0 = x.value();
-      unsigned e1 = y.value();
+      unsigned e0 = *x;
+      unsigned e1 = *y;
       if (auto redop = dyn_cast<sparse_tensor::ReduceOp>(def)) {
         if (isAdmissibleBranch(redop, redop.getRegion()))
           return addExp(kReduce, e0, e1, Value(), def);

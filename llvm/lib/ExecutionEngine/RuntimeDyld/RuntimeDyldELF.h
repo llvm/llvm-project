@@ -79,11 +79,11 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
       return 0;
   }
 
-  unsigned getStubAlignment() override {
+  Align getStubAlignment() override {
     if (Arch == Triple::systemz)
-      return 8;
+      return Align(8);
     else
-      return 1;
+      return Align(1);
   }
 
   void setMipsABI(const ObjectFile &Obj) override;

@@ -31,6 +31,7 @@
 #include <cstddef>
 #include <cstring>
 #include <iterator>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -42,7 +43,7 @@ ExternalPreprocessingRecordSource::~ExternalPreprocessingRecordSource() =
 InclusionDirective::InclusionDirective(PreprocessingRecord &PPRec,
                                        InclusionKind Kind, StringRef FileName,
                                        bool InQuotes, bool ImportedModule,
-                                       Optional<FileEntryRef> File,
+                                       std::optional<FileEntryRef> File,
                                        SourceRange Range)
     : PreprocessingDirective(InclusionDirectiveKind, Range), InQuotes(InQuotes),
       Kind(Kind), ImportedModule(ImportedModule), File(File) {
@@ -112,10 +113,9 @@ bool PreprocessingRecord::isEntityInFileID(iterator PPEI, FileID FID) {
 
     // See if the external source can see if the entity is in the file without
     // deserializing it.
-    Optional<bool> IsInFile =
-        ExternalSource->isPreprocessedEntityInFileID(LoadedIndex, FID);
-    if (IsInFile)
-      return IsInFile.value();
+    if (Optional<bool> IsInFile =
+            ExternalSource->isPreprocessedEntityInFileID(LoadedIndex, FID))
+      return *IsInFile;
 
     // The external source did not provide a definite answer, go and deserialize
     // the entity to check it.
@@ -476,15 +476,10 @@ void PreprocessingRecord::MacroUndefined(const Token &Id,
 }
 
 void PreprocessingRecord::InclusionDirective(
-    SourceLocation HashLoc,
-    const Token &IncludeTok,
-    StringRef FileName,
-    bool IsAngled,
-    CharSourceRange FilenameRange,
-    Optional<FileEntryRef> File,
-    StringRef SearchPath,
-    StringRef RelativePath,
-    const Module *Imported,
+    SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
+    bool IsAngled, CharSourceRange FilenameRange,
+    std::optional<FileEntryRef> File, StringRef SearchPath,
+    StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
   InclusionDirective::InclusionKind Kind = InclusionDirective::Include;
 

@@ -85,7 +85,7 @@ struct TestCustomAAResult : AAResultBase {
   bool invalidate(Function &, const PreservedAnalyses &) { return false; }
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
-                    AAQueryInfo &AAQI) {
+                    AAQueryInfo &AAQI, const Instruction *) {
     CB();
     return AliasResult::MayAlias;
   }

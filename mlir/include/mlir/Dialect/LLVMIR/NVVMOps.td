@@ -990,8 +990,8 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
   let extraClassDeclaration = !strconcat([{
       static llvm::Intrinsic::ID getIntrinsicID(
             int64_t m, int64_t n, uint64_t k,
-            llvm::Optional<MMAB1Op> b1Op,
-            llvm::Optional<MMAIntOverflow> sat,
+            std::optional<MMAB1Op> b1Op,
+            std::optional<MMAIntOverflow> sat,
             mlir::NVVM::MMALayout layoutAEnum, mlir::NVVM::MMALayout layoutBEnum,
             mlir::NVVM::MMATypes eltypeAEnum, mlir::NVVM::MMATypes eltypeBEnum,
             mlir::NVVM::MMATypes eltypeCEnum, mlir::NVVM::MMATypes eltypeDEnum) {
@@ -1006,7 +1006,7 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
         return 0;
       }
 
-      static Optional<mlir::NVVM::MMATypes> inferOperandMMAType(Type operandElType,
+      static std::optional<mlir::NVVM::MMATypes> inferOperandMMAType(Type operandElType,
         bool isAccumulator);
 
       MMATypes accumPtxType();
@@ -1016,10 +1016,10 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
   let builders = [
       OpBuilder<(ins  "Type":$resultType, "ValueRange":$operandA,
         "ValueRange":$operandB, "ValueRange":$operandC,
-        "ArrayRef<int64_t>":$shape, "Optional<MMAB1Op>":$b1Op,
-        "Optional<MMAIntOverflow>":$intOverflow,
-        "Optional<std::array<MMATypes, 2>>":$multiplicandPtxTypes,
-        "Optional<std::array<MMALayout, 2>>":$multiplicandLayouts)>
+        "ArrayRef<int64_t>":$shape, "std::optional<MMAB1Op>":$b1Op,
+        "std::optional<MMAIntOverflow>":$intOverflow,
+        "std::optional<std::array<MMATypes, 2>>":$multiplicandPtxTypes,
+        "std::optional<std::array<MMALayout, 2>>":$multiplicandLayouts)>
     ];
 
   string llvmBuilder = [{

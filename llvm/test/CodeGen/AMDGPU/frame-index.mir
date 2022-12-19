@@ -164,7 +164,7 @@ body:             |
   bb.0:
     liveins: $sgpr30_sgpr31, $sgpr10
     ; GCN-LABEL: name: func_add_constant_to_fi_uniform_live_SCC_i32
-    ; GCN: liveins: $sgpr30_sgpr31, $sgpr10
+    ; GCN: liveins: $sgpr10, $sgpr30_sgpr31
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: renamable $sgpr4 = nuw S_ADD_U32 $sgpr10, 4, implicit-def $scc
     ; GCN-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec

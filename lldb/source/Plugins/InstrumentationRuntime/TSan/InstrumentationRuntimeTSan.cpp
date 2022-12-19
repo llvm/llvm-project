@@ -211,7 +211,7 @@ CreateStackTrace(ValueObjectSP o,
                  const std::string &trace_item_name = ".trace") {
   auto trace_sp = std::make_shared<StructuredData::Array>();
   ValueObjectSP trace_value_object =
-      o->GetValueForExpressionPath(trace_item_name.c_str());
+      o->GetValueForExpressionPath(trace_item_name);
   size_t count = trace_value_object->GetNumChildren();
   for (size_t j = 0; j < count; j++) {
     addr_t trace_addr =
@@ -230,11 +230,10 @@ static StructuredData::ArraySP ConvertToStructuredArray(
                        const StructuredData::DictionarySP &dict)> const
         &callback) {
   auto array_sp = std::make_shared<StructuredData::Array>();
-  unsigned int count =
-      return_value_sp->GetValueForExpressionPath(count_name.c_str())
-          ->GetValueAsUnsigned(0);
+  unsigned int count = return_value_sp->GetValueForExpressionPath(count_name)
+                           ->GetValueAsUnsigned(0);
   ValueObjectSP objects =
-      return_value_sp->GetValueForExpressionPath(items_name.c_str());
+      return_value_sp->GetValueForExpressionPath(items_name);
   for (unsigned int i = 0; i < count; i++) {
     ValueObjectSP o = objects->GetChildAtIndex(i, true);
     auto dict_sp = std::make_shared<StructuredData::Dictionary>();
@@ -249,9 +248,8 @@ static StructuredData::ArraySP ConvertToStructuredArray(
 static std::string RetrieveString(ValueObjectSP return_value_sp,
                                   ProcessSP process_sp,
                                   const std::string &expression_path) {
-  addr_t ptr =
-      return_value_sp->GetValueForExpressionPath(expression_path.c_str())
-          ->GetValueAsUnsigned(0);
+  addr_t ptr = return_value_sp->GetValueForExpressionPath(expression_path)
+                   ->GetValueAsUnsigned(0);
   std::string str;
   Status error;
   process_sp->ReadCStringFromMemory(ptr, str, error);

@@ -298,7 +298,7 @@ struct BubbleUpPackOpThroughElemGenericOpPattern
     auto genericOp = bubbleUpPackOpThroughElemGenericOp(rewriter, packOp);
     if (failed(genericOp))
       return failure();
-    rewriter.replaceOp(packOp, genericOp.value().getResults());
+    rewriter.replaceOp(packOp, genericOp->getResults());
     return success();
   }
 };

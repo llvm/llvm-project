@@ -1730,10 +1730,8 @@ RuntimeDyldELF::processRelocationRef(
       LLVM_DEBUG(dbgs() << " Create a new stub function\n");
 
       uintptr_t BaseAddress = uintptr_t(Section.getAddress());
-      uintptr_t StubAlignment = getStubAlignment();
       StubAddress =
-          (BaseAddress + Section.getStubOffset() + StubAlignment - 1) &
-          -StubAlignment;
+          alignTo(BaseAddress + Section.getStubOffset(), getStubAlignment());
       unsigned StubOffset = StubAddress - BaseAddress;
 
       Stubs[Value] = StubOffset;
@@ -1784,10 +1782,8 @@ RuntimeDyldELF::processRelocationRef(
           LLVM_DEBUG(dbgs() << " Create a new stub function\n");
 
           uintptr_t BaseAddress = uintptr_t(Section->getAddress());
-          uintptr_t StubAlignment = getStubAlignment();
-          StubAddress =
-              (BaseAddress + Section->getStubOffset() + StubAlignment - 1) &
-              -StubAlignment;
+          StubAddress = alignTo(BaseAddress + Section->getStubOffset(),
+                                getStubAlignment());
           unsigned StubOffset = StubAddress - BaseAddress;
           Stubs[Value] = StubOffset;
           createStubFunction((uint8_t *)StubAddress);

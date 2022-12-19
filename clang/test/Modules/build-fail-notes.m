@@ -6,7 +6,7 @@
 // CHECK: While building module 'DependsOnModule' imported from
 // CHECK: While building module 'Module' imported from
 // CHECK: error: expected ';' after top level declarator
-// CHECK: note: expanded from here
+// CHECK: note: expanded from macro 'getModuleVersion'
 // CHECK: fatal error: could not build module 'Module'
 // CHECK: fatal error: could not build module 'DependsOnModule'
 // CHECK-NOT: error:
@@ -24,7 +24,7 @@ extern int Module;
 // CHECK-SDIAG: Module.h:9:13: error: expected ';' after top level declarator
 // CHECK-SDIAG: build-fail-notes.m:4:9: note: while building module 'DependsOnModule' imported from
 // CHECK-SDIAG: DependsOnModule.h:1:10: note: while building module 'Module' imported from
-// CHECK-SDIAG: note: expanded from here
+// CHECK-SDIAG: note: expanded from macro 'getModuleVersion'
 // CHECK-SDIAG: warning: umbrella header for module 'Module' does not include header 'NotInModule.h' [-Wincomplete-umbrella]
 // CHECK-SDIAG: DependsOnModule.h:1:10: fatal: could not build module 'Module'
 // CHECK-SDIAG: build-fail-notes.m:4:9: note: while building module 'DependsOnModule' imported from

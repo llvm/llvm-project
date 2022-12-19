@@ -12,8 +12,8 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 ; CHECK: Memory dependences are safe{{$}}
 
-define void @f(i16* noalias %a,
-               i16* noalias %b, i64 %N) {
+define void @f(ptr noalias %a,
+               ptr noalias %b, i64 %N) {
 entry:
   br label %for.body
 
@@ -22,15 +22,15 @@ for.body:                                         ; preds = %for.body, %entry
 
   %mul = mul nuw nsw i64 %ind, 2
 
-  %arrayidxA = getelementptr inbounds i16, i16* %a, i64 %mul
-  %loadA = load i16, i16* %arrayidxA, align 2
+  %arrayidxA = getelementptr inbounds i16, ptr %a, i64 %mul
+  %loadA = load i16, ptr %arrayidxA, align 2
 
-  %arrayidxB = getelementptr inbounds i16, i16* %b, i64 %ind
-  %loadB = load i16, i16* %arrayidxB, align 2
+  %arrayidxB = getelementptr inbounds i16, ptr %b, i64 %ind
+  %loadB = load i16, ptr %arrayidxB, align 2
 
   %add = mul i16 %loadA, %loadB
 
-  store i16 %add, i16* %arrayidxA, align 2
+  store i16 %add, ptr %arrayidxA, align 2
 
   %inc = add nuw nsw i64 %ind, 1
   %exitcond = icmp eq i64 %inc, %N

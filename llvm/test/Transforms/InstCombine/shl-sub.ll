@@ -71,7 +71,7 @@ define <3 x i64> @shl_sub_i64_vec_undef(<3 x i64> %x) {
 define i32 @shl_bad_sub_i32(i32 %x) {
 ; CHECK-LABEL: @shl_bad_sub_i32(
 ; CHECK-NEXT:    [[S:%.*]] = sub i32 32, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = shl i32 1, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i32 1, [[S]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = sub i32 32, %x
@@ -93,7 +93,7 @@ define i32 @bad_shl_sub_i32(i32 %x) {
 define i32 @shl_bad_sub2_i32(i32 %x) {
 ; CHECK-LABEL: @shl_bad_sub2_i32(
 ; CHECK-NEXT:    [[S:%.*]] = add i32 [[X:%.*]], -31
-; CHECK-NEXT:    [[R:%.*]] = shl i32 1, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i32 1, [[S]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = sub i32 %x, 31
@@ -104,7 +104,7 @@ define i32 @shl_bad_sub2_i32(i32 %x) {
 define i32 @bad_shl2_sub_i32(i32 %x) {
 ; CHECK-LABEL: @bad_shl2_sub_i32(
 ; CHECK-NEXT:    [[S:%.*]] = add i32 [[X:%.*]], -31
-; CHECK-NEXT:    [[R:%.*]] = shl i32 1, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i32 1, [[S]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = sub i32 %x, 31
@@ -115,7 +115,7 @@ define i32 @bad_shl2_sub_i32(i32 %x) {
 define i8 @shl_bad_sub_i8(i8 %x) {
 ; CHECK-LABEL: @shl_bad_sub_i8(
 ; CHECK-NEXT:    [[S:%.*]] = sub i8 4, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = shl i8 1, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i8 1, [[S]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = sub i8 4, %x
@@ -126,7 +126,7 @@ define i8 @shl_bad_sub_i8(i8 %x) {
 define i64 @shl_bad_sub_i64(i64 %x) {
 ; CHECK-LABEL: @shl_bad_sub_i64(
 ; CHECK-NEXT:    [[S:%.*]] = sub i64 67, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = shl i64 1, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i64 1, [[S]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %s = sub i64 67, %x
@@ -137,7 +137,7 @@ define i64 @shl_bad_sub_i64(i64 %x) {
 define <2 x i64> @shl_bad_sub_i64_vec(<2 x i64> %x) {
 ; CHECK-LABEL: @shl_bad_sub_i64_vec(
 ; CHECK-NEXT:    [[S:%.*]] = sub <2 x i64> <i64 53, i64 53>, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = shl <2 x i64> <i64 1, i64 1>, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw <2 x i64> <i64 1, i64 1>, [[S]]
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %s = sub <2 x i64> <i64 53, i64 53>, %x
@@ -159,7 +159,7 @@ define <2 x i64> @bad_shl_sub_i64_vec(<2 x i64> %x) {
 define <3 x i64> @shl_sub_i64_vec_undef_bad(<3 x i64> %x) {
 ; CHECK-LABEL: @shl_sub_i64_vec_undef_bad(
 ; CHECK-NEXT:    [[S:%.*]] = sub <3 x i64> <i64 63, i64 undef, i64 63>, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = shl <3 x i64> <i64 1, i64 1, i64 1>, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw <3 x i64> <i64 1, i64 1, i64 1>, [[S]]
 ; CHECK-NEXT:    ret <3 x i64> [[R]]
 ;
   %s = sub <3 x i64> <i64 63, i64 undef, i64 63>, %x
@@ -170,7 +170,7 @@ define <3 x i64> @shl_sub_i64_vec_undef_bad(<3 x i64> %x) {
 define <3 x i64> @shl_sub_i64_vec_undef_bad2(<3 x i64> %x) {
 ; CHECK-LABEL: @shl_sub_i64_vec_undef_bad2(
 ; CHECK-NEXT:    [[S:%.*]] = sub <3 x i64> <i64 63, i64 undef, i64 63>, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = shl <3 x i64> <i64 1, i64 undef, i64 1>, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw <3 x i64> <i64 1, i64 undef, i64 1>, [[S]]
 ; CHECK-NEXT:    ret <3 x i64> [[R]]
 ;
   %s = sub <3 x i64> <i64 63, i64 undef, i64 63>, %x

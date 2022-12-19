@@ -1716,7 +1716,7 @@ SDValue SITargetLowering::getLDSKernelId(SelectionDAG &DAG,
   std::optional<uint32_t> KnownSize =
       AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
   if (KnownSize.has_value())
-    return DAG.getConstant(KnownSize.value(), SL, MVT::i32);
+    return DAG.getConstant(*KnownSize, SL, MVT::i32);
   return SDValue();
 }
 
@@ -2870,7 +2870,7 @@ void SITargetLowering::passSpecialInputs(
       std::optional<uint32_t> Id =
           AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
       if (Id.has_value()) {
-        InputReg = DAG.getConstant(Id.value(), DL, ArgVT);
+        InputReg = DAG.getConstant(*Id, DL, ArgVT);
       } else {
         InputReg = DAG.getUNDEF(ArgVT);
       }
@@ -12588,6 +12588,14 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
         MRI.setRegClass(Reg, TRI->getRegClass(NewClassID));
     }
   }
+
+  // Reserve the SGPR(s) to save/restore EXEC for WWM spill/copy handling.
+  unsigned MaxNumSGPRs = ST.getMaxNumSGPRs(MF);
+  Register SReg =
+      ST.isWave32()
+          ? AMDGPU::SGPR_32RegClass.getRegister(MaxNumSGPRs - 1)
+          : AMDGPU::SGPR_64RegClass.getRegister((MaxNumSGPRs / 2) - 1);
+  Info->setSGPRForEXECCopy(SReg);
 
   TargetLoweringBase::finalizeLowering(MF);
 }

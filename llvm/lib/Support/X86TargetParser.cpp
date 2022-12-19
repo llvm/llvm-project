@@ -298,6 +298,12 @@ constexpr FeatureBitset FeaturesZNVER2 = FeaturesZNVER1 | FeatureCLWB |
 static constexpr FeatureBitset FeaturesZNVER3 = FeaturesZNVER2 |
                                                 FeatureINVPCID | FeaturePKU |
                                                 FeatureVAES | FeatureVPCLMULQDQ;
+static constexpr FeatureBitset FeaturesZNVER4 =
+    FeaturesZNVER3 | FeatureAVX512F | FeatureAVX512CD | FeatureAVX512DQ |
+    FeatureAVX512BW | FeatureAVX512VL | FeatureAVX512IFMA | FeatureAVX512VBMI |
+    FeatureAVX512VBMI2 | FeatureAVX512VNNI | FeatureAVX512BITALG |
+    FeatureAVX512VPOPCNTDQ | FeatureAVX512BF16 | FeatureGFNI |
+    FeatureSHSTK;
 
 constexpr ProcInfo Processors[] = {
   // Empty processor. Include X87 and CMPXCHG8 for backwards compatibility.
@@ -425,6 +431,7 @@ constexpr ProcInfo Processors[] = {
   { {"znver1"}, CK_ZNVER1, FEATURE_AVX2, FeaturesZNVER1 },
   { {"znver2"}, CK_ZNVER2, FEATURE_AVX2, FeaturesZNVER2 },
   { {"znver3"}, CK_ZNVER3, FEATURE_AVX2, FeaturesZNVER3 },
+  { {"znver4"}, CK_ZNVER4, FEATURE_AVX512VBMI2, FeaturesZNVER4 },
   // Generic 64-bit processor.
   { {"x86-64"}, CK_x86_64, ~0U, FeaturesX86_64 },
   { {"x86-64-v2"}, CK_x86_64_v2, ~0U, FeaturesX86_64_V2 },

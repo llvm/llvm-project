@@ -10,6 +10,10 @@
 // Do the same run, but now with direct IR generation.
 // REDEFINE: %{option} = enable-runtime-library=false
 // RUN: %{command}
+//
+// Do the same run, but now with direct IR generation and vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// RUN: %{command}
 
 #DCSR = #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>
 
@@ -55,7 +59,7 @@ module {
     %0 = call @quantized_matmul(%input1, %sparse_input2, %output)
        : (tensor<5x3xi8>,
           tensor<3x6xi8, #DCSR>,
-	  tensor<5x6xi32>) -> tensor<5x6xi32>
+          tensor<5x6xi32>) -> tensor<5x6xi32>
 
     //
     // Verify the output.

@@ -253,7 +253,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-define void @ult_129_varying_rhs(i8* %n_p) {
+define void @ult_129_varying_rhs(ptr %n_p) {
 ; CHECK-LABEL: 'ult_129_varying_rhs'
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_129_varying_rhs
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
@@ -267,7 +267,7 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %i.05 = phi i8 [ %add, %for.body ], [ 0, %entry ]
   %add = add nuw i8 %i.05, 129
-  %n = load i8, i8* %n_p
+  %n = load i8, ptr %n_p
   %cmp = icmp ult i8 %add, %n
   br i1 %cmp, label %for.body, label %for.end
 
@@ -275,7 +275,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-define void @ult_symbolic_varying_rhs(i8* %n_p, i8 %step) {
+define void @ult_symbolic_varying_rhs(ptr %n_p, i8 %step) {
 ; CHECK-LABEL: 'ult_symbolic_varying_rhs'
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_symbolic_varying_rhs
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
@@ -291,7 +291,7 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %i.05 = phi i8 [ %add, %for.body ], [ 0, %entry ]
   %add = add nuw i8 %i.05, %step
-  %n = load i8, i8* %n_p
+  %n = load i8, ptr %n_p
   %cmp = icmp ult i8 %add, %n
   br i1 %cmp, label %for.body, label %for.end
 
@@ -549,7 +549,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-define void @slt_129_varying_rhs(i8* %n_p) {
+define void @slt_129_varying_rhs(ptr %n_p) {
 ; CHECK-LABEL: 'slt_129_varying_rhs'
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_129_varying_rhs
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
@@ -563,7 +563,7 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %i.05 = phi i8 [ %add, %for.body ], [ -128, %entry ]
   %add = add nsw i8 %i.05, 129
-  %n = load i8, i8* %n_p
+  %n = load i8, ptr %n_p
   %cmp = icmp slt i8 %add, %n
   br i1 %cmp, label %for.body, label %for.end
 
@@ -571,7 +571,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-define void @slt_symbolic_varying_rhs(i8* %n_p, i8 %step) {
+define void @slt_symbolic_varying_rhs(ptr %n_p, i8 %step) {
 ; CHECK-LABEL: 'slt_symbolic_varying_rhs'
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_symbolic_varying_rhs
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
@@ -587,7 +587,7 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %i.05 = phi i8 [ %add, %for.body ], [ -128, %entry ]
   %add = add nsw i8 %i.05, %step
-  %n = load i8, i8* %n_p
+  %n = load i8, ptr %n_p
   %cmp = icmp slt i8 %add, %n
   br i1 %cmp, label %for.body, label %for.end
 

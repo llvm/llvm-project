@@ -769,6 +769,10 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
 // of the loads is to form a wider load.
 static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
                                  TargetTransformInfo &TTI, AliasAnalysis &AA) {
+  // Only consider load chains of scalar values.
+  if (isa<VectorType>(I.getType()))
+    return false;
+
   LoadOps LOps;
   if (!foldLoadsRecursive(&I, LOps, DL, AA) || !LOps.FoundRoot)
     return false;

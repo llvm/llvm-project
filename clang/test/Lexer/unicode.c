@@ -46,7 +46,17 @@ extern int _\N{TANGSALETTERGA}; // expected-error {{'TANGSALETTERGA' is not a va
                                 // expected-error {{expected ';' after top level declarator}} \
                                 // expected-note {{characters names in Unicode escape sequences are sensitive to case and whitespace}}
 
+extern int 𝛛; // expected-warning {{mathematical notation character <U+1D6DB> in an identifier is a Clang extension}}
+extern int ₉; // expected-error {{character <U+2089> not allowed at the start of an identifier}} \\
+                 expected-warning {{declaration does not declare anything}}
 
+int a¹b₍₄₂₎∇; // expected-warning 6{{mathematical notation character}}
+
+int \u{221E} = 1; // expected-warning {{mathematical notation character}}
+int \N{MATHEMATICAL SANS-SERIF BOLD ITALIC PARTIAL DIFFERENTIAL} = 1;
+                 // expected-warning@-1 {{mathematical notation character}}
+
+int a\N{SUBSCRIPT EQUALS SIGN} = 1; // expected-warning {{mathematical notation character}}
 
 // This character doesn't have the XID_Start property
 extern int  \U00016AC0; // TANGSA DIGIT ZERO  // cxx-error {{expected unqualified-id}} \
