@@ -448,9 +448,9 @@ def : WriteRes<WriteMMXMOVMSK,  [SLM_FPC_RSV1]> { let Latency = 4; }
 defm : X86WriteResUnsupported<WriteVecMOVMSKY>;
 
 // AES Instructions.
-defm : SLMWriteResPair<WriteAESDecEnc, [SLM_FPC_RSV0], 8, [5]>;
-defm : SLMWriteResPair<WriteAESIMC,    [SLM_FPC_RSV0], 8, [5]>;
-defm : SLMWriteResPair<WriteAESKeyGen, [SLM_FPC_RSV0], 8, [5]>;
+defm : SLMWriteResPair<WriteAESDecEnc, [SLM_FPC_RSV0], 8, [5], 4, 1>;
+defm : SLMWriteResPair<WriteAESIMC,    [SLM_FPC_RSV0], 8, [4], 3, 1>;
+defm : SLMWriteResPair<WriteAESKeyGen, [SLM_FPC_RSV0], 8, [4], 3, 1>;
 
 // Carry-less multiplication instructions.
 defm : SLMWriteResPair<WriteCLMul, [SLM_FPC_RSV0], 10, [10], 8, 1>;
