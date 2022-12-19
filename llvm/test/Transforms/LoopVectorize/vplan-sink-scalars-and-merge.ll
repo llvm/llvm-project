@@ -60,12 +60,12 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-  %gep.b = getelementptr inbounds [2048 x i32], [2048 x i32]* @b, i32 0, i32 %iv
-  %lv.b  = load i32, i32* %gep.b, align 4
+  %gep.b = getelementptr inbounds [2048 x i32], ptr @b, i32 0, i32 %iv
+  %lv.b  = load i32, ptr %gep.b, align 4
   %add = add i32 %lv.b, 10
   %mul = mul i32 2, %add
-  %gep.a = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i32 0, i32 %iv
-  store i32 %mul, i32* %gep.a, align 4
+  %gep.a = getelementptr inbounds [2048 x i32], ptr @a, i32 0, i32 %iv
+  store i32 %mul, ptr %gep.a, align 4
   %iv.next = add i32 %iv, 1
   %large = icmp sge i32 %iv, 8
   %exitcond = icmp eq i32 %iv, %k
@@ -139,12 +139,12 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-  %gep.b = getelementptr inbounds [2048 x i32], [2048 x i32]* @b, i32 0, i32 %iv
-  %lv.b  = load i32, i32* %gep.b, align 4
+  %gep.b = getelementptr inbounds [2048 x i32], ptr @b, i32 0, i32 %iv
+  %lv.b  = load i32, ptr %gep.b, align 4
   %add = add i32 %lv.b, 10
   %mul = mul i32 %iv, 2
-  %gep.a = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i32 0, i32 %mul
-  store i32 %add, i32* %gep.a, align 4
+  %gep.a = getelementptr inbounds [2048 x i32], ptr @a, i32 0, i32 %mul
+  store i32 %add, ptr %gep.a, align 4
   %iv.next = add i32 %iv, 1
   %large = icmp sge i32 %iv, 8
   %exitcond = icmp eq i32 %iv, %k
@@ -218,12 +218,12 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-  %gep.b = getelementptr inbounds [2048 x i32], [2048 x i32]* @b, i32 0, i32 %iv
-  %lv.b  = load i32, i32* %gep.b, align 4
+  %gep.b = getelementptr inbounds [2048 x i32], ptr @b, i32 0, i32 %iv
+  %lv.b  = load i32, ptr %gep.b, align 4
   %add = add i32 %lv.b, 10
   %mul = mul i32 %iv, %add
-  %gep.a = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i32 0, i32 %mul
-  store i32 %add, i32* %gep.a, align 4
+  %gep.a = getelementptr inbounds [2048 x i32], ptr @a, i32 0, i32 %mul
+  store i32 %add, ptr %gep.a, align 4
   %iv.next = add i32 %iv, 1
   %large = icmp sge i32 %iv, 8
   %exitcond = icmp eq i32 %iv, %k
@@ -235,7 +235,7 @@ exit:
 }
 
 ; Make sure we do not sink uniform instructions.
-define void @uniform_gep(i64 %k, i16* noalias %A, i16* noalias %B) {
+define void @uniform_gep(i64 %k, ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: LV: Checking a loop in 'uniform_gep'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
@@ -292,14 +292,14 @@ entry:
 
 loop:
   %iv = phi i64 [ 21, %entry ], [ %iv.next, %loop.latch ]
-  %gep.A.uniform = getelementptr inbounds i16, i16* %A, i64 0
-  %gep.B = getelementptr inbounds i16, i16* %B, i64 %iv
-  %lv = load i16, i16* %gep.A.uniform, align 1
+  %gep.A.uniform = getelementptr inbounds i16, ptr %A, i64 0
+  %gep.B = getelementptr inbounds i16, ptr %B, i64 %iv
+  %lv = load i16, ptr %gep.A.uniform, align 1
   %cmp = icmp ult i64 %iv, %k
   br i1 %cmp, label %loop.latch, label %loop.then
 
 loop.then:
-  store i16 %lv, i16* %gep.B, align 1
+  store i16 %lv, ptr %gep.B, align 1
   br label %loop.latch
 
 loop.latch:
@@ -387,19 +387,19 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %next.0 ]
-  %gep.b = getelementptr inbounds [2048 x i32], [2048 x i32]* @b, i32 0, i32 %iv
+  %gep.b = getelementptr inbounds [2048 x i32], ptr @b, i32 0, i32 %iv
   %c.1 = icmp ult i32 %iv, %j
   %mul = mul i32 %iv, 10
-  %gep.a = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i32 0, i32 %mul
+  %gep.a = getelementptr inbounds [2048 x i32], ptr @a, i32 0, i32 %mul
   br i1 %c.1, label %then.0, label %next.0
 
 then.0:
-  %lv.b  = load i32, i32* %gep.b, align 4
+  %lv.b  = load i32, ptr %gep.b, align 4
   br label %next.0
 
 next.0:
   %p = phi i32 [ 0, %loop ], [ %lv.b, %then.0 ]
-  store i32 %p, i32* %gep.a, align 4
+  store i32 %p, ptr %gep.a, align 4
   %iv.next = add i32 %iv, 1
   %large = icmp sge i32 %iv, 8
   %exitcond = icmp eq i32 %iv, %k
@@ -496,15 +496,15 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %next.1 ]
-  %gep.b = getelementptr inbounds [2048 x i32], [2048 x i32]* @b, i32 0, i32 %iv
+  %gep.b = getelementptr inbounds [2048 x i32], ptr @b, i32 0, i32 %iv
   %mul = mul i32 %iv, 10
-  %gep.a = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i32 0, i32 %mul
+  %gep.a = getelementptr inbounds [2048 x i32], ptr @a, i32 0, i32 %mul
   %c.0 = icmp ult i32 %iv, %j
   %c.1 = icmp ugt i32 %iv, %j
   br i1 %c.0, label %then.0, label %next.0
 
 then.0:
-  %lv.b  = load i32, i32* %gep.b, align 4
+  %lv.b  = load i32, ptr %gep.b, align 4
   br label %next.0
 
 next.0:
@@ -512,7 +512,7 @@ next.0:
   br i1 %c.1, label %then.1, label %next.1
 
 then.1:
-  store i32 %p, i32* %gep.a, align 4
+  store i32 %p, ptr %gep.a, align 4
   br label %next.1
 
 next.1:
@@ -616,15 +616,15 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %next.1 ]
-  %gep.b = getelementptr inbounds [2048 x i32], [2048 x i32]* @b, i32 0, i32 %iv
+  %gep.b = getelementptr inbounds [2048 x i32], ptr @b, i32 0, i32 %iv
   %mul = mul i32 %iv, 10
-  %gep.a = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i32 0, i32 %mul
-  %gep.c = getelementptr inbounds [2048 x i32], [2048 x i32]* @c, i32 0, i32 %mul
+  %gep.a = getelementptr inbounds [2048 x i32], ptr @a, i32 0, i32 %mul
+  %gep.c = getelementptr inbounds [2048 x i32], ptr @c, i32 0, i32 %mul
   %c.0 = icmp ult i32 %iv, %j
   br i1 %c.0, label %then.0, label %next.0
 
 then.0:
-  %lv.b  = load i32, i32* %gep.b, align 4
+  %lv.b  = load i32, ptr %gep.b, align 4
   br label %next.0
 
 next.0:
@@ -632,8 +632,8 @@ next.0:
   br i1 %c.0, label %then.1, label %next.1
 
 then.1:
-  store i32 0, i32* %gep.a, align 4
-  store i32 %p, i32* %gep.c, align 4
+  store i32 0, ptr %gep.a, align 4
+  store i32 %p, ptr %gep.c, align 4
   br label %next.1
 
 next.1:
@@ -734,20 +734,20 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
-  %gep.a = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i32 0, i32 %iv
-  %lv.a  = load i32, i32* %gep.a, align 4
-  %gep.b = getelementptr inbounds [2048 x i32], [2048 x i32]* @b, i32 0, i32 %iv
-  %lv.b  = load i32, i32* %gep.b, align 4
-  %gep.c = getelementptr inbounds [2048 x i32], [2048 x i32]* @c, i32 0, i32 %iv
-  store i32 %lv.a, i32* %gep.c, align 4
-  store i32 %lv.b, i32* %gep.a, align 4
+  %gep.a = getelementptr inbounds [2048 x i32], ptr @a, i32 0, i32 %iv
+  %lv.a  = load i32, ptr %gep.a, align 4
+  %gep.b = getelementptr inbounds [2048 x i32], ptr @b, i32 0, i32 %iv
+  %lv.b  = load i32, ptr %gep.b, align 4
+  %gep.c = getelementptr inbounds [2048 x i32], ptr @c, i32 0, i32 %iv
+  store i32 %lv.a, ptr %gep.c, align 4
+  store i32 %lv.b, ptr %gep.a, align 4
   %c.0 = icmp ult i32 %iv, %j
   br i1 %c.0, label %then.0, label %latch
 
 then.0:
   %mul = mul i32 %lv.a, %lv.b
-  %gep.c.1 = getelementptr inbounds [2048 x i32], [2048 x i32]* @c, i32 0, i32 %iv
-  store i32 %mul, i32* %gep.c.1, align 4
+  %gep.c.1 = getelementptr inbounds [2048 x i32], ptr @c, i32 0, i32 %iv
+  store i32 %mul, ptr %gep.c.1, align 4
   br label %latch
 
 latch:
@@ -816,10 +816,10 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-  %gep.a = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i32 0, i32 %iv
-  %lv.a  = load i32, i32* %gep.a, align 4
+  %gep.a = getelementptr inbounds [2048 x i32], ptr @a, i32 0, i32 %iv
+  %lv.a  = load i32, ptr %gep.a, align 4
   %div = sdiv i32 %lv.a, %lv.a
-  store i32 %div, i32* %gep.a, align 4
+  store i32 %div, ptr %gep.a, align 4
   %iv.next = add i32 %iv, 1
   %large = icmp sge i32 %iv, 8
   %exitcond = icmp eq i32 %iv, %k
@@ -900,10 +900,10 @@ entry:
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %for = phi i32 [ 0, %entry ], [ %lv.a, %loop ]
-  %gep.a = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i32 0, i32 %iv
-  %lv.a  = load i32, i32* %gep.a, align 4
+  %gep.a = getelementptr inbounds [2048 x i32], ptr @a, i32 0, i32 %iv
+  %lv.a  = load i32, ptr %gep.a, align 4
   %div = sdiv i32 %for, %lv.a
-  store i32 %div, i32* %gep.a, align 4
+  store i32 %div, ptr %gep.a, align 4
   %iv.next = add i32 %iv, 1
   %large = icmp sge i32 %iv, 8
   %exitcond = icmp eq i32 %iv, %k
@@ -914,7 +914,7 @@ exit:
   ret void
 }
 
-define void @update_multiple_users(i16* noalias %src, i8* noalias %dst, i1 %c) {
+define void @update_multiple_users(ptr noalias %src, ptr noalias %dst, i1 %c) {
 ; CHECK-LABEL: LV: Checking a loop in 'update_multiple_users'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
@@ -969,11 +969,11 @@ loop.header:
   br i1 %c, label %loop.then, label %loop.latch
 
 loop.then:
-  %l1 = load i16, i16* %src, align 2
+  %l1 = load i16, ptr %src, align 2
   %l2 = trunc i16 %l1 to i8
   %cmp = icmp eq i16 %l1, 0
   %sel = select i1 %cmp, i8 5, i8 %l2
-  store i8 %sel, i8* %dst, align 1
+  store i8 %sel, ptr %dst, align 1
   %sext.l1 = sext i16 %l1 to i32
   br label %loop.latch
 
@@ -986,7 +986,7 @@ exit:
   ret void
 }
 
-define void @sinking_requires_duplication(float* %addr) {
+define void @sinking_requires_duplication(ptr %addr) {
 ; CHECK-LABEL: LV: Checking a loop in 'sinking_requires_duplication'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
@@ -1039,17 +1039,17 @@ entry:
 
 loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  %gep = getelementptr float, float* %addr, i64 %iv
+  %gep = getelementptr float, ptr %addr, i64 %iv
   %exitcond.not = icmp eq i64 %iv, 200
   br i1 %exitcond.not, label %exit, label %loop.body
 
 loop.body:
-  %0 = load float, float* %gep, align 4
+  %0 = load float, ptr %gep, align 4
   %pred = fcmp oeq float %0, 0.0
   br i1 %pred, label %loop.latch, label %then
 
 then:
-  store float 10.0, float* %gep, align 4
+  store float 10.0, ptr %gep, align 4
   br label %loop.latch
 
 loop.latch:
@@ -1062,7 +1062,7 @@ exit:
 
 ; Test case with a dead GEP between the load and store regions. Dead recipes
 ; need to be removed before merging.
-define void @merge_with_dead_gep_between_regions(i32 %n, i32* noalias %src, i32* noalias %dst) optsize {
+define void @merge_with_dead_gep_between_regions(i32 %n, ptr noalias %src, ptr noalias %dst) optsize {
 ; CHECK-LABEL: LV: Checking a loop in 'merge_with_dead_gep_between_regions'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
@@ -1119,11 +1119,11 @@ entry:
 loop:
   %iv = phi i32[ %n, %entry ], [ %iv.next, %loop ]
   %iv.next = add nsw i32 %iv, -1
-  %gep.src = getelementptr inbounds i32, i32* %src, i32 %iv
-  %l = load i32, i32* %gep.src, align 16
-  %dead_gep = getelementptr inbounds i32, i32* %dst, i64 1
-  %gep.dst = getelementptr inbounds i32, i32* %dst, i32 %iv
-  store i32 %l, i32* %gep.dst, align 16
+  %gep.src = getelementptr inbounds i32, ptr %src, i32 %iv
+  %l = load i32, ptr %gep.src, align 16
+  %dead_gep = getelementptr inbounds i32, ptr %dst, i64 1
+  %gep.dst = getelementptr inbounds i32, ptr %dst, i32 %iv
+  store i32 %l, ptr %gep.dst, align 16
   %ec = icmp eq i32 %iv.next, 0
   br i1 %ec, label %exit, label %loop
 
@@ -1131,7 +1131,7 @@ exit:
   ret void
 }
 
-define void @ptr_induction_remove_dead_recipe(i8* %start, i8* %end) {
+define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-LABEL: LV: Checking a loop in 'ptr_induction_remove_dead_recipe'
 ; CHECK:       VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
@@ -1185,18 +1185,18 @@ entry:
   br label %loop.header
 
 loop.header:
-  %ptr.iv = phi i8* [ %start, %entry ], [ %ptr.iv.next, %loop.latch ]
-  %ptr.iv.next = getelementptr inbounds i8, i8* %ptr.iv, i64 -1
-  %l = load i8, i8* %ptr.iv.next, align 1
+  %ptr.iv = phi ptr [ %start, %entry ], [ %ptr.iv.next, %loop.latch ]
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 -1
+  %l = load i8, ptr %ptr.iv.next, align 1
   %c.1 = icmp eq i8 %l, 0
   br i1 %c.1, label %loop.latch, label %if.then
 
 if.then:
-  store i8 95, i8* %ptr.iv.next, align 1
+  store i8 95, ptr %ptr.iv.next, align 1
   br label %loop.latch
 
 loop.latch:
-  %c.2 = icmp eq i8* %ptr.iv.next, %end
+  %c.2 = icmp eq ptr %ptr.iv.next, %end
   br i1 %c.2, label %exit, label %loop.header
 
 exit:
