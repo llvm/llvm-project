@@ -288,7 +288,7 @@ struct EndAssociateOpConversion
         TODO(loc, "unbox");
       rewriter.create<fir::FreeMemOp>(loc, var);
     };
-    if (auto cstMustFree = fir::factory::getIntIfConstant(mustFree)) {
+    if (auto cstMustFree = fir::getIntIfConstant(mustFree)) {
       if (*cstMustFree != 0)
         genFree();
       // else, nothing to do.

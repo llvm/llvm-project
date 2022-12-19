@@ -4676,8 +4676,7 @@ IntrinsicLibrary::genLbound(mlir::Type resultType,
   mlir::Value dim = fir::getBase(args[1]);
 
   // If it is a compile time constant, skip the runtime call.
-  if (llvm::Optional<std::int64_t> cstDim =
-          fir::factory::getIntIfConstant(dim)) {
+  if (std::optional<std::int64_t> cstDim = fir::getIntIfConstant(dim)) {
     mlir::Value one = builder.createIntegerConstant(loc, resultType, 1);
     mlir::Value zero = builder.createIntegerConstant(loc, indexType, 0);
     mlir::Value lb = computeLBOUND(builder, loc, array, *cstDim - 1, zero, one);

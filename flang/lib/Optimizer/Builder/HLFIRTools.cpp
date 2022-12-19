@@ -305,7 +305,7 @@ hlfir::Entity hlfir::getElementAt(mlir::Location loc,
 static mlir::Value genUBound(mlir::Location loc, fir::FirOpBuilder &builder,
                              mlir::Value lb, mlir::Value extent,
                              mlir::Value one) {
-  if (auto constantLb = fir::factory::getIntIfConstant(lb))
+  if (auto constantLb = fir::getIntIfConstant(lb))
     if (*constantLb == 1)
       return extent;
   extent = builder.createConvert(loc, one.getType(), extent);
@@ -500,7 +500,7 @@ static hlfir::ExprType getArrayExprType(mlir::Type elementType,
   hlfir::ExprType::Shape typeShape(rank, hlfir::ExprType::getUnknownExtent());
   if (auto shapeOp = shape.getDefiningOp<fir::ShapeOp>())
     for (auto extent : llvm::enumerate(shapeOp.getExtents()))
-      if (auto cstExtent = fir::factory::getIntIfConstant(extent.value()))
+      if (auto cstExtent = fir::getIntIfConstant(extent.value()))
         typeShape[extent.index()] = *cstExtent;
   return hlfir::ExprType::get(elementType.getContext(), typeShape, elementType,
                               isPolymorphic);
