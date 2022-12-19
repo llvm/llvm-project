@@ -659,6 +659,8 @@ class sve_int_pfalse<bits<6> opc, string asm>
 multiclass sve_int_pfalse<bits<6> opc, string asm> {
   def NAME : sve_int_pfalse<opc, asm>;
 
+  def : InstAlias<"pfalse\t$Pd", (!cast<Instruction>(NAME) PNR8:$Pd), 0>;
+
   def : Pat<(nxv16i1 immAllZerosV), (!cast<Instruction>(NAME))>;
   def : Pat<(nxv8i1 immAllZerosV), (!cast<Instruction>(NAME))>;
   def : Pat<(nxv4i1 immAllZerosV), (!cast<Instruction>(NAME))>;
