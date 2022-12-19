@@ -13,7 +13,7 @@ target triple = "wasm32-unknown-unknown"
 ; REF:        call_indirect __indirect_function_table, () -> ()
 ; NOREF:      call_indirect () -> ()
 ; CHECK-NEXT: end_function
-define void @call_indirect_void(void ()* %callee) {
+define void @call_indirect_void(ptr %callee) {
   call void %callee()
   ret void
 }

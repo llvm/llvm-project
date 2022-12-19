@@ -7,30 +7,29 @@ target triple = "wasm32-unknown-emscripten"
 ; function that cannot longjmp.
 
 %struct.__jmp_buf_tag = type { [6 x i32], i32, [32 x i32] }
-@malloc = weak alias i8* (i32), i8* (i32)* @dlmalloc
+@malloc = weak alias ptr (i32), ptr @dlmalloc
 
 ; CHECK-LABEL: @malloc_test
 define void @malloc_test() {
 entry:
-  ; CHECK: call i8* @malloc
+  ; CHECK: call ptr @malloc
   %retval = alloca i32, align 4
   %jmp = alloca [1 x %struct.__jmp_buf_tag], align 16
-  store i32 0, i32* %retval, align 4
-  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %jmp, i32 0, i32 0
-  %call = call i32 @setjmp(%struct.__jmp_buf_tag* %arraydecay) #0
+  store i32 0, ptr %retval, align 4
+  %call = call i32 @setjmp(ptr %jmp) #0
   call void @foo()
   ret void
 }
 
 ; This is a dummy dlmalloc implemenation only to make compiler pass, because an
 ; alias (malloc) has to point an actual definition.
-define i8* @dlmalloc(i32) {
-  %p = inttoptr i32 0 to i8*
-  ret i8* %p
+define ptr @dlmalloc(i32) {
+  %p = inttoptr i32 0 to ptr
+  ret ptr %p
 }
 
 declare void @foo()
 ; Function Attrs: returns_twice
-declare i32 @setjmp(%struct.__jmp_buf_tag*) #0
+declare i32 @setjmp(ptr) #0
 
 attributes #0 = { returns_twice }
