@@ -42,10 +42,10 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
   }
   NamedDecl *getMemberProvider(QualType Base) {
     if (Base->isPointerType())
-      Base = Base->getPointeeType();
+      return getMemberProvider(Base->getPointeeType());
     // Unwrap the sugar ElaboratedType.
     if (const auto *ElTy = dyn_cast<ElaboratedType>(Base))
-      Base = ElTy->getNamedType();
+      return getMemberProvider(ElTy->getNamedType());
 
     if (const auto *TT = dyn_cast<TypedefType>(Base))
       return TT->getDecl();
