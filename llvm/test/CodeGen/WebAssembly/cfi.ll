@@ -5,7 +5,7 @@
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
-@0 = private unnamed_addr constant [2 x void (...)*] [void (...)* bitcast (void ()* @f to void (...)*), void (...)* bitcast (void ()* @g to void (...)*)], align 16
+@0 = private unnamed_addr constant [2 x ptr] [ptr @f, ptr @g], align 16
 
 ; CHECK-LABEL: h:
 ; CHECK-NOT: .indidx
@@ -28,15 +28,15 @@ define void @g() !type !1 {
 !0 = !{i32 0, !"typeid1"}
 !1 = !{i32 0, !"typeid2"}
 
-declare i1 @llvm.type.test(i8* %ptr, metadata %bitset) nounwind readnone
+declare i1 @llvm.type.test(ptr %ptr, metadata %bitset) nounwind readnone
 declare void @llvm.trap() nounwind noreturn
 
 ; CHECK-LABEL: foo:
 ; CHECK: br_if
 ; CHECK: br_if
 ; CHECK: unreachable
-define i1 @foo(i8* %p) {
-  %x = call i1 @llvm.type.test(i8* %p, metadata !"typeid1")
+define i1 @foo(ptr %p) {
+  %x = call i1 @llvm.type.test(ptr %p, metadata !"typeid1")
   br i1 %x, label %contx, label %trap
 
 trap:
@@ -44,7 +44,7 @@ trap:
   unreachable
 
 contx:
-  %y = call i1 @llvm.type.test(i8* %p, metadata !"typeid2")
+  %y = call i1 @llvm.type.test(ptr %p, metadata !"typeid2")
   br i1 %y, label %conty, label %trap
 
 conty:

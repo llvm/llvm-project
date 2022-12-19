@@ -13,16 +13,16 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT: .functype test0 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, x+188{{$}}
 ; CHECK=NEXT: return $pop0{{$}}
-define dso_local i32* @test0() {
-  ret i32* getelementptr ([0 x i32], [0 x i32]* @x, i32 0, i32 47)
+define dso_local ptr @test0() {
+  ret ptr getelementptr ([0 x i32], ptr @x, i32 0, i32 47)
 }
 
 ; CHECK-LABEL: test1:
 ; CHECK-NEXT: .functype test1 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, y+188{{$}}
 ; CHECK=NEXT: return $pop0{{$}}
-define dso_local i32* @test1() {
-  ret i32* getelementptr ([50 x i32], [50 x i32]* @y, i32 0, i32 47)
+define dso_local ptr @test1() {
+  ret ptr getelementptr ([50 x i32], ptr @y, i32 0, i32 47)
 }
 
 ; Test zero offsets.
@@ -31,16 +31,16 @@ define dso_local i32* @test1() {
 ; CHECK-NEXT: .functype test2 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, x{{$}}
 ; CHECK=NEXT: return $pop0{{$}}
-define dso_local i32* @test2() {
-  ret i32* getelementptr ([0 x i32], [0 x i32]* @x, i32 0, i32 0)
+define dso_local ptr @test2() {
+  ret ptr @x
 }
 
 ; CHECK-LABEL: test3:
 ; CHECK-NEXT: .functype test3 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, y{{$}}
 ; CHECK=NEXT: return $pop0{{$}}
-define dso_local i32* @test3() {
-  ret i32* getelementptr ([50 x i32], [50 x i32]* @y, i32 0, i32 0)
+define dso_local ptr @test3() {
+  ret ptr @y
 }
 
 ; Test negative offsets.
@@ -49,14 +49,14 @@ define dso_local i32* @test3() {
 ; CHECK-NEXT: .functype test4 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, x-188{{$}}
 ; CHECK=NEXT: return $pop0{{$}}
-define dso_local i32* @test4() {
-  ret i32* getelementptr ([0 x i32], [0 x i32]* @x, i32 0, i32 -47)
+define dso_local ptr @test4() {
+  ret ptr getelementptr ([0 x i32], ptr @x, i32 0, i32 -47)
 }
 
 ; CHECK-LABEL: test5:
 ; CHECK-NEXT: .functype test5 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, y-188{{$}}
 ; CHECK=NEXT: return $pop0{{$}}
-define dso_local i32* @test5() {
-  ret i32* getelementptr ([50 x i32], [50 x i32]* @y, i32 0, i32 -47)
+define dso_local ptr @test5() {
+  ret ptr getelementptr ([50 x i32], ptr @y, i32 0, i32 -47)
 }
