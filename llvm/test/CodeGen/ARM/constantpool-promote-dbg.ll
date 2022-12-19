@@ -7,16 +7,16 @@ target triple = "thumbv7m--linux-gnu"
 
 ; CHECK-LABEL: fn1
 ; CHECK: .long .L.str
-define arm_aapcscc i8* @fn1() local_unnamed_addr #0 !dbg !8 {
+define arm_aapcscc ptr @fn1() local_unnamed_addr #0 !dbg !8 {
 entry:
-  ret i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), !dbg !14
+  ret ptr @.str, !dbg !14
 }
 
 ; CHECK-LABEL: fn2
 ; CHECK: .long .L.str
-define arm_aapcscc i8* @fn2() local_unnamed_addr #0 !dbg !15 {
+define arm_aapcscc ptr @fn2() local_unnamed_addr #0 !dbg !15 {
 entry:
-  ret i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 1), !dbg !16
+  ret ptr getelementptr inbounds ([4 x i8], ptr @.str, i32 0, i32 1), !dbg !16
 }
 
 attributes #0 = { minsize norecurse nounwind optsize readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="cortex-m3" "target-features"="+hwdiv,+soft-float,-crypto,-neon" "unsafe-fp-math"="false" "use-soft-float"="true" }

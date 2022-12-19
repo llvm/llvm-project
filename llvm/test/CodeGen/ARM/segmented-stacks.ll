@@ -7,11 +7,11 @@
 
 
 ; Just to prevent the alloca from being optimized away
-declare void @dummy_use(i32*, i32)
+declare void @dummy_use(ptr, i32)
 
 define void @test_basic() #0 {
         %mem = alloca i32, i32 10
-        call void @dummy_use (i32* %mem, i32 10)
+        call void @dummy_use (ptr %mem, i32 10)
 	ret void
 
 ; ARM-linux-LABEL: test_basic:
@@ -54,11 +54,11 @@ define void @test_basic() #0 {
 
 }
 
-define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
-       %addend = load i32 , i32 * %closure
+define i32 @test_nested(ptr nest %closure, i32 %other) #0 {
+       %addend = load i32 , ptr %closure
        %result = add i32 %other, %addend
        %mem = alloca i32, i32 10
-       call void @dummy_use (i32* %mem, i32 10)
+       call void @dummy_use (ptr %mem, i32 10)
        ret i32 %result
 
 ; ARM-linux-LABEL: test_nested:
@@ -103,7 +103,7 @@ define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
 
 define void @test_large() #0 {
         %mem = alloca i32, i32 10000
-        call void @dummy_use (i32* %mem, i32 0)
+        call void @dummy_use (ptr %mem, i32 0)
         ret void
 
 ; ARM-linux-LABEL: test_large:
@@ -156,7 +156,7 @@ define void @test_large() #0 {
 
 define fastcc void @test_fastcc() #0 {
         %mem = alloca i32, i32 10
-        call void @dummy_use (i32* %mem, i32 10)
+        call void @dummy_use (ptr %mem, i32 10)
         ret void
 
 ; ARM-linux-LABEL: test_fastcc:
@@ -201,7 +201,7 @@ define fastcc void @test_fastcc() #0 {
 
 define fastcc void @test_fastcc_large() #0 {
         %mem = alloca i32, i32 10000
-        call void @dummy_use (i32* %mem, i32 0)
+        call void @dummy_use (ptr %mem, i32 0)
         ret void
 
 ; ARM-linux-LABEL: test_fastcc_large:

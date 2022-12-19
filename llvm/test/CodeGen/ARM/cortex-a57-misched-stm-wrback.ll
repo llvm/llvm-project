@@ -13,19 +13,18 @@
 ; CHECK:       Data
 ; CHECK-SAME:  Latency=1
 
-define i32 @bar(i32 %v0, i32 %v1, i32 %v2, i32* %addr) {
+define i32 @bar(i32 %v0, i32 %v1, i32 %v2, ptr %addr) {
 
-  %addr.1 = getelementptr i32, i32* %addr, i32 0
-  store i32 %v0, i32* %addr.1
+  store i32 %v0, ptr %addr
 
-  %addr.2 = getelementptr i32, i32* %addr, i32 1
-  store i32 %v1, i32* %addr.2
+  %addr.2 = getelementptr i32, ptr %addr, i32 1
+  store i32 %v1, ptr %addr.2
 
-  %addr.3 = getelementptr i32, i32* %addr, i32 2
-  store i32 %v2, i32* %addr.3
+  %addr.3 = getelementptr i32, ptr %addr, i32 2
+  store i32 %v2, ptr %addr.3
   
-  %ptr_after = getelementptr i32, i32* %addr, i32 3
-  %val = ptrtoint i32* %ptr_after to i32
+  %ptr_after = getelementptr i32, ptr %addr, i32 3
+  %val = ptrtoint ptr %ptr_after to i32
   
   %rv1 = mul i32 %val, %v0
   %rv2 = mul i32 %rv1, %v1

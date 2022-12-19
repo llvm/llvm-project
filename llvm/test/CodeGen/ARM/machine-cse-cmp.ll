@@ -32,14 +32,14 @@ entry:
 ; CHECK: bxlt
 ; CHECK-NOT: cmp
 ; CHECK: movle
-  %0 = load i32, i32* @foo, align 4
+  %0 = load i32, ptr @foo, align 4
   %cmp28 = icmp sgt i32 %0, 0
   br i1 %cmp28, label %for.body.lr.ph, label %for.cond1.preheader
 
 for.body.lr.ph:                                   ; preds = %entry
   %1 = icmp sgt i32 %0, 1
   %smax = select i1 %1, i32 %0, i32 1
-  call void @llvm.memset.p0i8.i32(i8* getelementptr inbounds ([250 x i8], [250 x i8]* @bar, i32 0, i32 0), i8 0, i32 %smax, i1 false)
+  call void @llvm.memset.p0.i32(ptr @bar, i8 0, i32 %smax, i1 false)
   call void @llvm.trap()
   unreachable
 
@@ -47,16 +47,16 @@ for.cond1.preheader:                              ; preds = %entry
   ret void
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) nounwind
+declare void @llvm.memset.p0.i32(ptr nocapture, i8, i32, i1) nounwind
 
 ; rdar://12462006
-define i8* @f3(i8* %base, i32* nocapture %offset, i32 %size) nounwind {
+define ptr @f3(ptr %base, ptr nocapture %offset, i32 %size) nounwind {
 entry:
 ; CHECK-LABEL: f3:
 ; CHECK-NOT: sub
 ; CHECK: cmp
 ; CHECK: blt
-%0 = load i32, i32* %offset, align 4
+%0 = load i32, ptr %offset, align 4
 %cmp = icmp slt i32 %0, %size
 %s = sub nsw i32 %0, %size
 %size2 = sub nsw i32 %size, 0
@@ -72,17 +72,17 @@ if.end:
 ; CHECK: add [[R4:r[0-9]+]], [[R1]], [[R3]]
 ; CHECK-NOT: sub
 ; CHECK: str
-store i32 %s3, i32* %offset, align 4
-%add.ptr = getelementptr inbounds i8, i8* %base, i32 %sub
+store i32 %s3, ptr %offset, align 4
+%add.ptr = getelementptr inbounds i8, ptr %base, i32 %sub
 br label %return
 
 return:
-%retval.0 = phi i8* [ %add.ptr, %if.end ], [ null, %entry ]
-ret i8* %retval.0
+%retval.0 = phi ptr [ %add.ptr, %if.end ], [ null, %entry ]
+ret ptr %retval.0
 }
 
 ; The cmp of %val should not be hoisted above the preceding conditional branch
-define void @f4(i32** %ptr1, i64* %ptr2, i64 %val) {
+define void @f4(ptr %ptr1, ptr %ptr2, i64 %val) {
 entry:
 ; CHECK-LABEL: f4:
 ; CHECK: cmp
@@ -92,11 +92,11 @@ entry:
 ; CHECK-NOT: subs
 ; CHECK-NOT: sbcs
 ; CHECK: beq
-  %tobool.not = icmp eq i32** %ptr1, null
+  %tobool.not = icmp eq ptr %ptr1, null
   br i1 %tobool.not, label %if.end, label %if.then
 
 if.then:
-  store i32* null, i32** %ptr1, align 4
+  store ptr null, ptr %ptr1, align 4
   br label %if.end
 
 if.end:
@@ -112,7 +112,7 @@ if.end3:
 ; CHECK: subs
 ; CHECK: sbc
   %sub = add nsw i64 %val, -10
-  store i64 %sub, i64* %ptr2, align 8
+  store i64 %sub, ptr %ptr2, align 8
   br label %cleanup
 
 cleanup:

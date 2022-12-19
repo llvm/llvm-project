@@ -10,7 +10,7 @@ target triple = "arm-apple-darwin8"
 
 define double @u_f_nonbon(double %lambda) nounwind {
 entry:
-	%tmp19.i.i = load double, double* null, align 4		; <double> [#uses=2]
+	%tmp19.i.i = load double, ptr null, align 4		; <double> [#uses=2]
 	%tmp6.i = fcmp olt double %tmp19.i.i, 1.000000e+00		; <i1> [#uses=1]
 	%dielectric.0.i = select i1 %tmp6.i, double 1.000000e+00, double %tmp19.i.i		; <double> [#uses=1]
 	%tmp10.i4 = fdiv double 0x4074C2D71F36262D, %dielectric.0.i		; <double> [#uses=1]

@@ -55,11 +55,11 @@ define i32 @t0() {
 ; CHECK-T1-NEXT:  .LCPI0_1:
 ; CHECK-T1-NEXT:    .long dst
 entry:
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 getelementptr inbounds (%struct.x, %struct.x* @dst, i32 0, i32 0), i8* align 8 getelementptr inbounds (%struct.x, %struct.x* @src, i32 0, i32 0), i32 11, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 8 @dst, ptr align 8 @src, i32 11, i1 false)
   ret i32 0
 }
 
-define void @t1(i8* nocapture %C) nounwind {
+define void @t1(ptr nocapture %C) nounwind {
 ; CHECK-LABEL: t1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    movw r1, :lower16:(L_.str1-(LPC1_0+4))
@@ -86,11 +86,11 @@ define void @t1(i8* nocapture %C) nounwind {
 ; CHECK-T1-NEXT:  .LCPI1_0:
 ; CHECK-T1-NEXT:    .long .L.str1
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([31 x i8], [31 x i8]* @.str1, i64 0, i64 0), i64 31, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %C, ptr @.str1, i64 31, i1 false)
   ret void
 }
 
-define void @t2(i8* nocapture %C) nounwind {
+define void @t2(ptr nocapture %C) nounwind {
 ; CHECK-LABEL: t2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    movw r1, :lower16:(L_.str2-(LPC2_0+4))
@@ -119,11 +119,11 @@ define void @t2(i8* nocapture %C) nounwind {
 ; CHECK-T1-NEXT:  .LCPI2_0:
 ; CHECK-T1-NEXT:    .long .L.str2
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([36 x i8], [36 x i8]* @.str2, i64 0, i64 0), i64 36, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %C, ptr @.str2, i64 36, i1 false)
   ret void
 }
 
-define void @t3(i8* nocapture %C) nounwind {
+define void @t3(ptr nocapture %C) nounwind {
 ; CHECK-LABEL: t3:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    movw r1, :lower16:(L_.str3-(LPC3_0+4))
@@ -149,11 +149,11 @@ define void @t3(i8* nocapture %C) nounwind {
 ; CHECK-T1-NEXT:  .LCPI3_0:
 ; CHECK-T1-NEXT:    .long .L.str3
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([24 x i8], [24 x i8]* @.str3, i64 0, i64 0), i64 24, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %C, ptr @.str3, i64 24, i1 false)
   ret void
 }
 
-define void @t4(i8* nocapture %C) nounwind {
+define void @t4(ptr nocapture %C) nounwind {
 ; CHECK-LABEL: t4:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    movw r1, :lower16:(L_.str4-(LPC4_0+4))
@@ -179,11 +179,11 @@ define void @t4(i8* nocapture %C) nounwind {
 ; CHECK-T1-NEXT:  .LCPI4_0:
 ; CHECK-T1-NEXT:    .long .L.str4
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([18 x i8], [18 x i8]* @.str4, i64 0, i64 0), i64 18, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %C, ptr @.str4, i64 18, i1 false)
   ret void
 }
 
-define void @t5(i8* nocapture %C) nounwind {
+define void @t5(ptr nocapture %C) nounwind {
 ; CHECK-LABEL: t5:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    movw r1, #21337
@@ -207,7 +207,7 @@ define void @t5(i8* nocapture %C) nounwind {
 ; CHECK-T1-NEXT:  .LCPI5_0:
 ; CHECK-T1-NEXT:    .long .L.str5
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str5, i64 0, i64 0), i64 7, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %C, ptr @.str5, i64 7, i1 false)
   ret void
 }
 
@@ -253,13 +253,13 @@ define void @t6() nounwind {
 ; CHECK-T1-NEXT:  .LCPI6_3:
 ; CHECK-T1-NEXT:    .long 1886221359 @ 0x706d742f
 entry:
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* getelementptr inbounds ([512 x i8], [512 x i8]* @spool.splbuf, i64 0, i64 0), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str6, i64 0, i64 0), i64 14, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr @spool.splbuf, ptr @.str6, i64 14, i1 false)
   ret void
 }
 
 %struct.Foo = type { i32, i32, i32, i32 }
 
-define void @t7(%struct.Foo* nocapture %a, %struct.Foo* nocapture %b) nounwind {
+define void @t7(ptr nocapture %a, ptr nocapture %b) nounwind {
 ; CHECK-LABEL: t7:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.32 {d16, d17}, [r1]
@@ -278,11 +278,9 @@ define void @t7(%struct.Foo* nocapture %a, %struct.Foo* nocapture %b) nounwind {
 ; CHECK-T1-NEXT:    str r1, [r0]
 ; CHECK-T1-NEXT:    bx lr
 entry:
-  %0 = bitcast %struct.Foo* %a to i8*
-  %1 = bitcast %struct.Foo* %b to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %0, i8* align 4 %1, i32 16, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i32(ptr align 4 %a, ptr align 4 %b, i32 16, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind

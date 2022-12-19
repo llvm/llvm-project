@@ -27,7 +27,7 @@ define i32 @test1(i32 %a, i1 %x) nounwind {
 
 declare %umul.ty @llvm.umul.with.overflow.i32(i32, i32) nounwind readnone
 
-define i32 @test2(i32* %m_degree) ssp {
+define i32 @test2(ptr %m_degree) ssp {
 ; CHECK-LABEL: test2:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    push {r4, lr}
@@ -46,13 +46,13 @@ define i32 @test2(i32* %m_degree) ssp {
 ; CHECK-NEXT:    bl _Znam
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    pop {r4, pc}
-%val = load i32, i32* %m_degree, align 4
+%val = load i32, ptr %m_degree, align 4
 %res = call %umul.ty @llvm.umul.with.overflow.i32(i32 %val, i32 8)
 %ov = extractvalue %umul.ty %res, 1
 %mul = extractvalue %umul.ty %res, 0
 %sel = select i1 %ov, i32 -1, i32 %mul
-%ret = call noalias i8* @_Znam(i32 %sel)
+%ret = call noalias ptr @_Znam(i32 %sel)
 ret i32 0
 }
 
-declare noalias i8* @_Znam(i32)
+declare noalias ptr @_Znam(i32)

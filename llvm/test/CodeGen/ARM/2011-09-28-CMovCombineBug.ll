@@ -4,7 +4,7 @@
 ; ARM target specific dag combine created a cycle in DAG.
 
 define void @t() nounwind ssp {
-  %1 = load i64, i64* undef, align 4
+  %1 = load i64, ptr undef, align 4
   %2 = shl i32 5, 0
   %3 = zext i32 %2 to i64
   %4 = and i64 %1, %3
