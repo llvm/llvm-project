@@ -11,14 +11,14 @@ invoke.cont145:
   br i1 %or.cond, label %if.then274, label %invoke.cont145
 
 if.then274:
-  %0 = load i32, i32* null, align 4
+  %0 = load i32, ptr null, align 4
   br i1 undef, label %invoke.cont291, label %if.else313
 
 invoke.cont291:
   %idxprom.i.i.i605 = sext i32 %0 to i64
-  %arrayidx.i.i.i607 = getelementptr inbounds double, double* undef, i64 %idxprom.i.i.i605
+  %arrayidx.i.i.i607 = getelementptr inbounds double, ptr undef, i64 %idxprom.i.i.i605
   %idxprom.i.i.i596 = sext i32 %0 to i64
-  %arrayidx.i.i.i598 = getelementptr inbounds double, double* undef, i64 %idxprom.i.i.i596
+  %arrayidx.i.i.i598 = getelementptr inbounds double, ptr undef, i64 %idxprom.i.i.i596
   br label %if.end356
 
 if.else313:
@@ -30,7 +30,7 @@ invoke.cont317:
 
 invoke.cont326:
   %idxprom.i.i.i587 = sext i32 %0 to i64
-  %arrayidx.i.i.i589 = getelementptr inbounds double, double* undef, i64 %idxprom.i.i.i587
+  %arrayidx.i.i.i589 = getelementptr inbounds double, ptr undef, i64 %idxprom.i.i.i587
   %sub329 = fsub fast double undef, undef
   br label %invoke.cont334
 
@@ -40,12 +40,12 @@ invoke.cont334:
 
 invoke.cont342:
   %idxprom.i.i.i578 = sext i32 %0 to i64
-  %arrayidx.i.i.i580 = getelementptr inbounds double, double* undef, i64 %idxprom.i.i.i578
+  %arrayidx.i.i.i580 = getelementptr inbounds double, ptr undef, i64 %idxprom.i.i.i578
   br label %if.end356
 
 invoke.cont353:
   %idxprom.i.i.i572 = sext i32 %0 to i64
-  %arrayidx.i.i.i574 = getelementptr inbounds double, double* undef, i64 %idxprom.i.i.i572
+  %arrayidx.i.i.i574 = getelementptr inbounds double, ptr undef, i64 %idxprom.i.i.i572
   br label %if.end356
 
 if.end356:

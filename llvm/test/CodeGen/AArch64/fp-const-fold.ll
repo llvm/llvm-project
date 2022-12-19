@@ -3,7 +3,7 @@
 
 ; https://bugs.llvm.org/show_bug.cgi?id=41668
 
-define double @constant_fold_fdiv_by_zero(double* %p) {
+define double @constant_fold_fdiv_by_zero(ptr %p) {
 ; CHECK-LABEL: constant_fold_fdiv_by_zero:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #9218868437227405312
@@ -15,7 +15,7 @@ define double @constant_fold_fdiv_by_zero(double* %p) {
 
 ; frem by 0.0 --> NaN
 
-define double @constant_fold_frem_by_zero(double* %p) {
+define double @constant_fold_frem_by_zero(ptr %p) {
 ; CHECK-LABEL: constant_fold_frem_by_zero:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #9221120237041090560
@@ -27,7 +27,7 @@ define double @constant_fold_frem_by_zero(double* %p) {
 
 ; Inf * 0.0 --> NaN
 
-define double @constant_fold_fmul_nan(double* %p) {
+define double @constant_fold_fmul_nan(ptr %p) {
 ; CHECK-LABEL: constant_fold_fmul_nan:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #9221120237041090560
@@ -39,7 +39,7 @@ define double @constant_fold_fmul_nan(double* %p) {
 
 ; Inf + -Inf --> NaN
 
-define double @constant_fold_fadd_nan(double* %p) {
+define double @constant_fold_fadd_nan(ptr %p) {
 ; CHECK-LABEL: constant_fold_fadd_nan:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #9221120237041090560
@@ -51,7 +51,7 @@ define double @constant_fold_fadd_nan(double* %p) {
 
 ; Inf - Inf --> NaN
 
-define double @constant_fold_fsub_nan(double* %p) {
+define double @constant_fold_fsub_nan(ptr %p) {
 ; CHECK-LABEL: constant_fold_fsub_nan:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #9221120237041090560
@@ -63,7 +63,7 @@ define double @constant_fold_fsub_nan(double* %p) {
 
 ; Inf * 0.0 + ? --> NaN
 
-define double @constant_fold_fma_nan(double* %p) {
+define double @constant_fold_fma_nan(ptr %p) {
 ; CHECK-LABEL: constant_fold_fma_nan:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #9221120237041090560

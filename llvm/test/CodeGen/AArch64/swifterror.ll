@@ -4,13 +4,13 @@
 ; RUN: llc -verify-machineinstrs -frame-pointer=all -enable-shrink-wrap=false < %s -mtriple=arm64_32-apple-ios -disable-post-ra | FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-APPLE --check-prefix=CHECK-APPLE-ARM64_32 %s
 ; RUN: llc -verify-machineinstrs -O0 -fast-isel < %s -mtriple=arm64_32-apple-ios -disable-post-ra | FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-O0-ARM64_32 %s
 
-declare i8* @malloc(i64)
-declare void @free(i8*)
+declare ptr @malloc(i64)
+declare void @free(ptr)
 %swift_error = type {i64, i8}
 
 ; This tests the basic usage of a swifterror parameter. "foo" is the function
 ; that takes a swifterror parameter and "caller" is the caller of "foo".
-define float @foo(%swift_error** swifterror %error_ptr_ref) {
+define float @foo(ptr swifterror %error_ptr_ref) {
 ; CHECK-APPLE-LABEL: foo:
 ; CHECK-APPLE:       ; %bb.0: ; %entry
 ; CHECK-APPLE-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
@@ -62,16 +62,15 @@ define float @foo(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-O0-ARM64_32-NEXT:    ret
 
 entry:
-  %call = call i8* @malloc(i64 16)
-  %call.0 = bitcast i8* %call to %swift_error*
-  store %swift_error* %call.0, %swift_error** %error_ptr_ref
-  %tmp = getelementptr inbounds i8, i8* %call, i64 8
-  store i8 1, i8* %tmp
+  %call = call ptr @malloc(i64 16)
+  store ptr %call, ptr %error_ptr_ref
+  %tmp = getelementptr inbounds i8, ptr %call, i64 8
+  store i8 1, ptr %tmp
   ret float 1.0
 }
 
 ; "caller" calls "foo" that takes a swifterror parameter.
-define float @caller(i8* %error_ref) {
+define float @caller(ptr %error_ref) {
 ; CHECK-APPLE-AARCH64-LABEL: caller:
 ; CHECK-APPLE-AARCH64:       ; %bb.0: ; %entry
 ; CHECK-APPLE-AARCH64-NEXT:    sub sp, sp, #64
@@ -202,25 +201,24 @@ define float @caller(i8* %error_ref) {
 ; Access part of the error object and save it to error_ref
 
 entry:
-  %error_ptr_ref = alloca swifterror %swift_error*
-  store %swift_error* null, %swift_error** %error_ptr_ref
-  %call = call float @foo(%swift_error** swifterror %error_ptr_ref)
-  %error_from_foo = load %swift_error*, %swift_error** %error_ptr_ref
-  %had_error_from_foo = icmp ne %swift_error* %error_from_foo, null
-  %tmp = bitcast %swift_error* %error_from_foo to i8*
+  %error_ptr_ref = alloca swifterror ptr
+  store ptr null, ptr %error_ptr_ref
+  %call = call float @foo(ptr swifterror %error_ptr_ref)
+  %error_from_foo = load ptr, ptr %error_ptr_ref
+  %had_error_from_foo = icmp ne ptr %error_from_foo, null
   br i1 %had_error_from_foo, label %handler, label %cont
 cont:
-  %v1 = getelementptr inbounds %swift_error, %swift_error* %error_from_foo, i64 0, i32 1
-  %t = load i8, i8* %v1
-  store i8 %t, i8* %error_ref
+  %v1 = getelementptr inbounds %swift_error, ptr %error_from_foo, i64 0, i32 1
+  %t = load i8, ptr %v1
+  store i8 %t, ptr %error_ref
   br label %handler
 handler:
-  call void @free(i8* %tmp)
+  call void @free(ptr %error_from_foo)
   ret float 1.0
 }
 
 ; "caller2" is the caller of "foo", it calls "foo" inside a loop.
-define float @caller2(i8* %error_ref) {
+define float @caller2(ptr %error_ref) {
 ; CHECK-APPLE-AARCH64-LABEL: caller2:
 ; CHECK-APPLE-AARCH64:       ; %bb.0: ; %entry
 ; CHECK-APPLE-AARCH64-NEXT:    sub sp, sp, #80
@@ -391,31 +389,30 @@ define float @caller2(i8* %error_ref) {
 ; Access part of the error object and save it to error_ref
 
 entry:
-  %error_ptr_ref = alloca swifterror %swift_error*
+  %error_ptr_ref = alloca swifterror ptr
   br label %bb_loop
 bb_loop:
-  store %swift_error* null, %swift_error** %error_ptr_ref
-  %call = call float @foo(%swift_error** swifterror %error_ptr_ref)
-  %error_from_foo = load %swift_error*, %swift_error** %error_ptr_ref
-  %had_error_from_foo = icmp ne %swift_error* %error_from_foo, null
-  %tmp = bitcast %swift_error* %error_from_foo to i8*
+  store ptr null, ptr %error_ptr_ref
+  %call = call float @foo(ptr swifterror %error_ptr_ref)
+  %error_from_foo = load ptr, ptr %error_ptr_ref
+  %had_error_from_foo = icmp ne ptr %error_from_foo, null
   br i1 %had_error_from_foo, label %handler, label %cont
 cont:
   %cmp = fcmp ogt float %call, 1.000000e+00
   br i1 %cmp, label %bb_end, label %bb_loop
 bb_end:
-  %v1 = getelementptr inbounds %swift_error, %swift_error* %error_from_foo, i64 0, i32 1
-  %t = load i8, i8* %v1
-  store i8 %t, i8* %error_ref
+  %v1 = getelementptr inbounds %swift_error, ptr %error_from_foo, i64 0, i32 1
+  %t = load i8, ptr %v1
+  store i8 %t, ptr %error_ref
   br label %handler
 handler:
-  call void @free(i8* %tmp)
+  call void @free(ptr %error_from_foo)
   ret float 1.0
 }
 
 ; "foo_if" is a function that takes a swifterror parameter, it sets swifterror
 ; under a certain condition.
-define float @foo_if(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
+define float @foo_if(ptr swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-APPLE-LABEL: foo_if:
 ; CHECK-APPLE:       ; %bb.0: ; %entry
 ; CHECK-APPLE-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
@@ -501,11 +498,10 @@ entry:
   br i1 %cond, label %gen_error, label %normal
 
 gen_error:
-  %call = call i8* @malloc(i64 16)
-  %call.0 = bitcast i8* %call to %swift_error*
-  store %swift_error* %call.0, %swift_error** %error_ptr_ref
-  %tmp = getelementptr inbounds i8, i8* %call, i64 8
-  store i8 1, i8* %tmp
+  %call = call ptr @malloc(i64 16)
+  store ptr %call, ptr %error_ptr_ref
+  %tmp = getelementptr inbounds i8, ptr %call, i64 8
+  store i8 1, ptr %tmp
   ret float 1.0
 
 normal:
@@ -514,7 +510,7 @@ normal:
 
 ; "foo_loop" is a function that takes a swifterror parameter, it sets swifterror
 ; under a certain condition inside a loop.
-define float @foo_loop(%swift_error** swifterror %error_ptr_ref, i32 %cc, float %cc2) {
+define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-APPLE-LABEL: foo_loop:
 ; CHECK-APPLE:       ; %bb.0: ; %entry
 ; CHECK-APPLE-NEXT:    stp d9, d8, [sp, #-48]! ; 16-byte Folded Spill
@@ -657,11 +653,10 @@ bb_loop:
   br i1 %cond, label %gen_error, label %bb_cont
 
 gen_error:
-  %call = call i8* @malloc(i64 16)
-  %call.0 = bitcast i8* %call to %swift_error*
-  store %swift_error* %call.0, %swift_error** %error_ptr_ref
-  %tmp = getelementptr inbounds i8, i8* %call, i64 8
-  store i8 1, i8* %tmp
+  %call = call ptr @malloc(i64 16)
+  store ptr %call, ptr %error_ptr_ref
+  %tmp = getelementptr inbounds i8, ptr %call, i64 8
+  store i8 1, ptr %tmp
   br label %bb_cont
 
 bb_cont:
@@ -675,7 +670,7 @@ bb_end:
 
 ; "foo_sret" is a function that takes a swifterror parameter, it also has a sret
 ; parameter.
-define void @foo_sret(%struct.S* sret(%struct.S) %agg.result, i32 %val1, %swift_error** swifterror %error_ptr_ref) {
+define void @foo_sret(ptr sret(%struct.S) %agg.result, i32 %val1, ptr swifterror %error_ptr_ref) {
 ; CHECK-APPLE-LABEL: foo_sret:
 ; CHECK-APPLE:       ; %bb.0: ; %entry
 ; CHECK-APPLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
@@ -749,18 +744,17 @@ define void @foo_sret(%struct.S* sret(%struct.S) %agg.result, i32 %val1, %swift_
 ; spill x8
 ; reload from stack
 entry:
-  %call = call i8* @malloc(i64 16)
-  %call.0 = bitcast i8* %call to %swift_error*
-  store %swift_error* %call.0, %swift_error** %error_ptr_ref
-  %tmp = getelementptr inbounds i8, i8* %call, i64 8
-  store i8 1, i8* %tmp
-  %v2 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i32 0, i32 1
-  store i32 %val1, i32* %v2
+  %call = call ptr @malloc(i64 16)
+  store ptr %call, ptr %error_ptr_ref
+  %tmp = getelementptr inbounds i8, ptr %call, i64 8
+  store i8 1, ptr %tmp
+  %v2 = getelementptr inbounds %struct.S, ptr %agg.result, i32 0, i32 1
+  store i32 %val1, ptr %v2
   ret void
 }
 
 ; "caller3" calls "foo_sret" that takes a swifterror parameter.
-define float @caller3(i8* %error_ref) {
+define float @caller3(ptr %error_ref) {
 ; CHECK-APPLE-AARCH64-LABEL: caller3:
 ; CHECK-APPLE-AARCH64:       ; %bb.0: ; %entry
 ; CHECK-APPLE-AARCH64-NEXT:    sub sp, sp, #80
@@ -903,27 +897,26 @@ define float @caller3(i8* %error_ref) {
 ; reload from stack
 entry:
   %s = alloca %struct.S, align 8
-  %error_ptr_ref = alloca swifterror %swift_error*
-  store %swift_error* null, %swift_error** %error_ptr_ref
-  call void @foo_sret(%struct.S* sret(%struct.S) %s, i32 1, %swift_error** swifterror %error_ptr_ref)
-  %error_from_foo = load %swift_error*, %swift_error** %error_ptr_ref
-  %had_error_from_foo = icmp ne %swift_error* %error_from_foo, null
-  %tmp = bitcast %swift_error* %error_from_foo to i8*
+  %error_ptr_ref = alloca swifterror ptr
+  store ptr null, ptr %error_ptr_ref
+  call void @foo_sret(ptr sret(%struct.S) %s, i32 1, ptr swifterror %error_ptr_ref)
+  %error_from_foo = load ptr, ptr %error_ptr_ref
+  %had_error_from_foo = icmp ne ptr %error_from_foo, null
   br i1 %had_error_from_foo, label %handler, label %cont
 cont:
-  %v1 = getelementptr inbounds %swift_error, %swift_error* %error_from_foo, i64 0, i32 1
-  %t = load i8, i8* %v1
-  store i8 %t, i8* %error_ref
+  %v1 = getelementptr inbounds %swift_error, ptr %error_from_foo, i64 0, i32 1
+  %t = load i8, ptr %v1
+  store i8 %t, ptr %error_ref
   br label %handler
 handler:
-  call void @free(i8* %tmp)
+  call void @free(ptr %error_from_foo)
   ret float 1.0
 }
 
 ; "foo_vararg" is a function that takes a swifterror parameter, it also has
 ; variable number of arguments.
-declare void @llvm.va_start(i8*) nounwind
-define float @foo_vararg(%swift_error** swifterror %error_ptr_ref, ...) {
+declare void @llvm.va_start(ptr) nounwind
+define float @foo_vararg(ptr swifterror %error_ptr_ref, ...) {
 ; CHECK-APPLE-AARCH64-LABEL: foo_vararg:
 ; CHECK-APPLE-AARCH64:       ; %bb.0: ; %entry
 ; CHECK-APPLE-AARCH64-NEXT:    sub sp, sp, #48
@@ -1069,30 +1062,28 @@ define float @foo_vararg(%swift_error** swifterror %error_ptr_ref, ...) {
 
 
 entry:
-  %call = call i8* @malloc(i64 16)
-  %call.0 = bitcast i8* %call to %swift_error*
-  store %swift_error* %call.0, %swift_error** %error_ptr_ref
-  %tmp = getelementptr inbounds i8, i8* %call, i64 8
-  store i8 1, i8* %tmp
+  %call = call ptr @malloc(i64 16)
+  store ptr %call, ptr %error_ptr_ref
+  %tmp = getelementptr inbounds i8, ptr %call, i64 8
+  store i8 1, ptr %tmp
 
-  %args = alloca i8*, align 8
+  %args = alloca ptr, align 8
   %a10 = alloca i32, align 4
   %a11 = alloca i32, align 4
   %a12 = alloca i32, align 4
-  %v10 = bitcast i8** %args to i8*
-  call void @llvm.va_start(i8* %v10)
-  %v11 = va_arg i8** %args, i32
-  store i32 %v11, i32* %a10, align 4
-  %v12 = va_arg i8** %args, i32
-  store i32 %v12, i32* %a11, align 4
-  %v13 = va_arg i8** %args, i32
-  store i32 %v13, i32* %a12, align 4
+  call void @llvm.va_start(ptr %args)
+  %v11 = va_arg ptr %args, i32
+  store i32 %v11, ptr %a10, align 4
+  %v12 = va_arg ptr %args, i32
+  store i32 %v12, ptr %a11, align 4
+  %v13 = va_arg ptr %args, i32
+  store i32 %v13, ptr %a12, align 4
 
   ret float 1.0
 }
 
 ; "caller4" calls "foo_vararg" that takes a swifterror parameter.
-define float @caller4(i8* %error_ref) {
+define float @caller4(ptr %error_ref) {
 ; CHECK-APPLE-AARCH64-LABEL: caller4:
 ; CHECK-APPLE-AARCH64:       ; %bb.0: ; %entry
 ; CHECK-APPLE-AARCH64-NEXT:    sub sp, sp, #96
@@ -1269,37 +1260,36 @@ define float @caller4(i8* %error_ref) {
 
 ; Access part of the error object and save it to error_ref
 entry:
-  %error_ptr_ref = alloca swifterror %swift_error*
-  store %swift_error* null, %swift_error** %error_ptr_ref
+  %error_ptr_ref = alloca swifterror ptr
+  store ptr null, ptr %error_ptr_ref
 
   %a10 = alloca i32, align 4
   %a11 = alloca i32, align 4
   %a12 = alloca i32, align 4
-  store i32 10, i32* %a10, align 4
-  store i32 11, i32* %a11, align 4
-  store i32 12, i32* %a12, align 4
-  %v10 = load i32, i32* %a10, align 4
-  %v11 = load i32, i32* %a11, align 4
-  %v12 = load i32, i32* %a12, align 4
+  store i32 10, ptr %a10, align 4
+  store i32 11, ptr %a11, align 4
+  store i32 12, ptr %a12, align 4
+  %v10 = load i32, ptr %a10, align 4
+  %v11 = load i32, ptr %a11, align 4
+  %v12 = load i32, ptr %a12, align 4
 
-  %call = call float (%swift_error**, ...) @foo_vararg(%swift_error** swifterror %error_ptr_ref, i32 %v10, i32 %v11, i32 %v12)
-  %error_from_foo = load %swift_error*, %swift_error** %error_ptr_ref
-  %had_error_from_foo = icmp ne %swift_error* %error_from_foo, null
-  %tmp = bitcast %swift_error* %error_from_foo to i8*
+  %call = call float (ptr, ...) @foo_vararg(ptr swifterror %error_ptr_ref, i32 %v10, i32 %v11, i32 %v12)
+  %error_from_foo = load ptr, ptr %error_ptr_ref
+  %had_error_from_foo = icmp ne ptr %error_from_foo, null
   br i1 %had_error_from_foo, label %handler, label %cont
 
 cont:
-  %v1 = getelementptr inbounds %swift_error, %swift_error* %error_from_foo, i64 0, i32 1
-  %t = load i8, i8* %v1
-  store i8 %t, i8* %error_ref
+  %v1 = getelementptr inbounds %swift_error, ptr %error_from_foo, i64 0, i32 1
+  %t = load i8, ptr %v1
+  store i8 %t, ptr %error_ref
   br label %handler
 handler:
-  call void @free(i8* %tmp)
+  call void @free(ptr %error_from_foo)
   ret float 1.0
 }
 
 ; Check that we don't blow up on tail calling swifterror argument functions.
-define float @tailcallswifterror(%swift_error** swifterror %error_ptr_ref) {
+define float @tailcallswifterror(ptr swifterror %error_ptr_ref) {
 ; CHECK-APPLE-LABEL: tailcallswifterror:
 ; CHECK-APPLE:       ; %bb.0: ; %entry
 ; CHECK-APPLE-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
@@ -1333,10 +1323,10 @@ define float @tailcallswifterror(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-O0-ARM64_32-NEXT:    ldr x30, [sp], #16 ; 8-byte Folded Reload
 ; CHECK-O0-ARM64_32-NEXT:    ret
 entry:
-  %0 = tail call float @tailcallswifterror(%swift_error** swifterror %error_ptr_ref)
+  %0 = tail call float @tailcallswifterror(ptr swifterror %error_ptr_ref)
   ret float %0
 }
-define swiftcc float @tailcallswifterror_swiftcc(%swift_error** swifterror %error_ptr_ref) {
+define swiftcc float @tailcallswifterror_swiftcc(ptr swifterror %error_ptr_ref) {
 ; CHECK-APPLE-LABEL: tailcallswifterror_swiftcc:
 ; CHECK-APPLE:       ; %bb.0: ; %entry
 ; CHECK-APPLE-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
@@ -1370,11 +1360,11 @@ define swiftcc float @tailcallswifterror_swiftcc(%swift_error** swifterror %erro
 ; CHECK-O0-ARM64_32-NEXT:    ldr x30, [sp], #16 ; 8-byte Folded Reload
 ; CHECK-O0-ARM64_32-NEXT:    ret
 entry:
-  %0 = tail call swiftcc float @tailcallswifterror_swiftcc(%swift_error** swifterror %error_ptr_ref)
+  %0 = tail call swiftcc float @tailcallswifterror_swiftcc(ptr swifterror %error_ptr_ref)
   ret float %0
 }
 
-define swiftcc void @swifterror_clobber(%swift_error** nocapture swifterror %err) {
+define swiftcc void @swifterror_clobber(ptr nocapture swifterror %err) {
 ; CHECK-APPLE-LABEL: swifterror_clobber:
 ; CHECK-APPLE:       ; %bb.0:
 ; CHECK-APPLE-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
@@ -1424,7 +1414,7 @@ define swiftcc void @swifterror_clobber(%swift_error** nocapture swifterror %err
   ret void
 }
 
-define swiftcc void @swifterror_reg_clobber(%swift_error** nocapture %err) {
+define swiftcc void @swifterror_reg_clobber(ptr nocapture %err) {
 ; CHECK-APPLE-LABEL: swifterror_reg_clobber:
 ; CHECK-APPLE:       ; %bb.0:
 ; CHECK-APPLE-NEXT:    stp x22, x21, [sp, #-32]! ; 16-byte Folded Spill
@@ -1476,7 +1466,7 @@ define swiftcc void @swifterror_reg_clobber(%swift_error** nocapture %err) {
   ret void
 }
 
-define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, i64, i64, i8* swiftself, %swift_error** nocapture swifterror %err) {
+define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, i64, i64, ptr swiftself, ptr nocapture swifterror %err) {
 ; CHECK-APPLE-LABEL: params_in_reg:
 ; CHECK-APPLE:       ; %bb.0:
 ; CHECK-APPLE-NEXT:    sub sp, sp, #112
@@ -1649,15 +1639,15 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, i64, i64, i8* s
 ; CHECK-O0-ARM64_32-NEXT:    ldp x20, x30, [sp, #96] ; 16-byte Folded Reload
 ; CHECK-O0-ARM64_32-NEXT:    add sp, sp, #112
 ; CHECK-O0-ARM64_32-NEXT:    ret
-  %error_ptr_ref = alloca swifterror %swift_error*, align 8
-  store %swift_error* null, %swift_error** %error_ptr_ref
-  call swiftcc void @params_in_reg2(i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i8* swiftself null, %swift_error** nocapture swifterror %error_ptr_ref)
-  call swiftcc void @params_in_reg2(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, i8* swiftself %8, %swift_error** nocapture swifterror %err)
+  %error_ptr_ref = alloca swifterror ptr, align 8
+  store ptr null, ptr %error_ptr_ref
+  call swiftcc void @params_in_reg2(i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, ptr swiftself null, ptr nocapture swifterror %error_ptr_ref)
+  call swiftcc void @params_in_reg2(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, ptr swiftself %8, ptr nocapture swifterror %err)
   ret void
 }
-declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, i8* swiftself, %swift_error** nocapture swifterror %err)
+declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, ptr swiftself, ptr nocapture swifterror %err)
 
-define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_reg(i64, i64, i64, i64, i64, i64, i64, i64, i8* swiftself, %swift_error** nocapture swifterror %err) {
+define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_reg(i64, i64, i64, i64, i64, i64, i64, i64, ptr swiftself, ptr nocapture swifterror %err) {
 ; CHECK-APPLE-LABEL: params_and_return_in_reg:
 ; CHECK-APPLE:       ; %bb.0:
 ; CHECK-APPLE-NEXT:    sub sp, sp, #128
@@ -1961,21 +1951,21 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-O0-ARM64_32-NEXT:    ldr x28, [sp, #240] ; 8-byte Folded Reload
 ; CHECK-O0-ARM64_32-NEXT:    add sp, sp, #272
 ; CHECK-O0-ARM64_32-NEXT:    ret
-  %error_ptr_ref = alloca swifterror %swift_error*, align 8
-  store %swift_error* null, %swift_error** %error_ptr_ref
-  call swiftcc void @params_in_reg2(i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i8* swiftself null, %swift_error** nocapture swifterror %error_ptr_ref)
-  %val = call swiftcc  { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_reg2(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, i8* swiftself %8, %swift_error** nocapture swifterror %err)
-  call swiftcc void @params_in_reg2(i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i8* swiftself null, %swift_error** nocapture swifterror %error_ptr_ref)
+  %error_ptr_ref = alloca swifterror ptr, align 8
+  store ptr null, ptr %error_ptr_ref
+  call swiftcc void @params_in_reg2(i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, ptr swiftself null, ptr nocapture swifterror %error_ptr_ref)
+  %val = call swiftcc  { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_reg2(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, ptr swiftself %8, ptr nocapture swifterror %err)
+  call swiftcc void @params_in_reg2(i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, ptr swiftself null, ptr nocapture swifterror %error_ptr_ref)
   ret { i64, i64, i64, i64, i64, i64, i64, i64 } %val
 }
 
-declare swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, i8* swiftself, %swift_error** nocapture swifterror %err)
+declare swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, ptr swiftself, ptr nocapture swifterror %err)
 
-declare void @acallee(i8*)
+declare void @acallee(ptr)
 
 ; Make sure we don't tail call if the caller returns a swifterror value. We
 ; would have to move into the swifterror register before the tail call.
-define swiftcc void @tailcall_from_swifterror(%swift_error** swifterror %error_ptr_ref) {
+define swiftcc void @tailcall_from_swifterror(ptr swifterror %error_ptr_ref) {
 ; CHECK-APPLE-LABEL: tailcall_from_swifterror:
 ; CHECK-APPLE:       ; %bb.0: ; %entry
 ; CHECK-APPLE-NEXT:    str x19, [sp, #-32]! ; 8-byte Folded Spill
@@ -2025,14 +2015,14 @@ define swiftcc void @tailcall_from_swifterror(%swift_error** swifterror %error_p
 ; CHECK-O0-ARM64_32-NEXT:    add sp, sp, #32
 ; CHECK-O0-ARM64_32-NEXT:    ret
 entry:
-  tail call void @acallee(i8* null)
+  tail call void @acallee(ptr null)
   ret void
 }
 
-declare swiftcc void @foo2(%swift_error** swifterror)
+declare swiftcc void @foo2(ptr swifterror)
 
 ; Make sure we properly assign registers during fast-isel.
-define swiftcc %swift_error* @testAssign(i8* %error_ref) {
+define swiftcc ptr @testAssign(ptr %error_ref) {
 ; CHECK-APPLE-LABEL: testAssign:
 ; CHECK-APPLE:       ; %bb.0: ; %entry
 ; CHECK-APPLE-NEXT:    sub sp, sp, #48
@@ -2098,12 +2088,12 @@ define swiftcc %swift_error* @testAssign(i8* %error_ref) {
 ; CHECK-O0-ARM64_32-NEXT:    add sp, sp, #48
 ; CHECK-O0-ARM64_32-NEXT:    ret
 entry:
-  %error_ptr = alloca swifterror %swift_error*
-  store %swift_error* null, %swift_error** %error_ptr
-  call swiftcc void @foo2(%swift_error** swifterror %error_ptr)
+  %error_ptr = alloca swifterror ptr
+  store ptr null, ptr %error_ptr
+  call swiftcc void @foo2(ptr swifterror %error_ptr)
   br label %a
 
 a:
-  %error = load %swift_error*, %swift_error** %error_ptr
-  ret %swift_error* %error
+  %error = load ptr, ptr %error_ptr
+  ret ptr %error
 }

@@ -199,90 +199,90 @@ define <4 x float> @v_shuffledupQfloat(float %A) nounwind {
 	ret <4 x float> %tmp2
 }
 
-define <8 x i8> @vduplane8(<8 x i8>* %A) nounwind {
+define <8 x i8> @vduplane8(ptr %A) nounwind {
 ; CHECK-LABEL: vduplane8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    dup.8b v0, v0[1]
 ; CHECK-NEXT:    ret
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
+	%tmp1 = load <8 x i8>, ptr %A
 	%tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> < i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1 >
 	ret <8 x i8> %tmp2
 }
 
-define <4 x i16> @vduplane16(<4 x i16>* %A) nounwind {
+define <4 x i16> @vduplane16(ptr %A) nounwind {
 ; CHECK-LABEL: vduplane16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    dup.4h v0, v0[1]
 ; CHECK-NEXT:    ret
-	%tmp1 = load <4 x i16>, <4 x i16>* %A
+	%tmp1 = load <4 x i16>, ptr %A
 	%tmp2 = shufflevector <4 x i16> %tmp1, <4 x i16> undef, <4 x i32> < i32 1, i32 1, i32 1, i32 1 >
 	ret <4 x i16> %tmp2
 }
 
-define <2 x i32> @vduplane32(<2 x i32>* %A) nounwind {
+define <2 x i32> @vduplane32(ptr %A) nounwind {
 ; CHECK-LABEL: vduplane32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    dup.2s v0, v0[1]
 ; CHECK-NEXT:    ret
-	%tmp1 = load <2 x i32>, <2 x i32>* %A
+	%tmp1 = load <2 x i32>, ptr %A
 	%tmp2 = shufflevector <2 x i32> %tmp1, <2 x i32> undef, <2 x i32> < i32 1, i32 1 >
 	ret <2 x i32> %tmp2
 }
 
-define <2 x float> @vduplanefloat(<2 x float>* %A) nounwind {
+define <2 x float> @vduplanefloat(ptr %A) nounwind {
 ; CHECK-LABEL: vduplanefloat:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    dup.2s v0, v0[1]
 ; CHECK-NEXT:    ret
-	%tmp1 = load <2 x float>, <2 x float>* %A
+	%tmp1 = load <2 x float>, ptr %A
 	%tmp2 = shufflevector <2 x float> %tmp1, <2 x float> undef, <2 x i32> < i32 1, i32 1 >
 	ret <2 x float> %tmp2
 }
 
-define <16 x i8> @vduplaneQ8(<8 x i8>* %A) nounwind {
+define <16 x i8> @vduplaneQ8(ptr %A) nounwind {
 ; CHECK-LABEL: vduplaneQ8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    dup.16b v0, v0[1]
 ; CHECK-NEXT:    ret
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
+	%tmp1 = load <8 x i8>, ptr %A
 	%tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <16 x i32> < i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1 >
 	ret <16 x i8> %tmp2
 }
 
-define <8 x i16> @vduplaneQ16(<4 x i16>* %A) nounwind {
+define <8 x i16> @vduplaneQ16(ptr %A) nounwind {
 ; CHECK-LABEL: vduplaneQ16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    dup.8h v0, v0[1]
 ; CHECK-NEXT:    ret
-	%tmp1 = load <4 x i16>, <4 x i16>* %A
+	%tmp1 = load <4 x i16>, ptr %A
 	%tmp2 = shufflevector <4 x i16> %tmp1, <4 x i16> undef, <8 x i32> < i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1 >
 	ret <8 x i16> %tmp2
 }
 
-define <4 x i32> @vduplaneQ32(<2 x i32>* %A) nounwind {
+define <4 x i32> @vduplaneQ32(ptr %A) nounwind {
 ; CHECK-LABEL: vduplaneQ32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    dup.4s v0, v0[1]
 ; CHECK-NEXT:    ret
-	%tmp1 = load <2 x i32>, <2 x i32>* %A
+	%tmp1 = load <2 x i32>, ptr %A
 	%tmp2 = shufflevector <2 x i32> %tmp1, <2 x i32> undef, <4 x i32> < i32 1, i32 1, i32 1, i32 1 >
 	ret <4 x i32> %tmp2
 }
 
-define <4 x float> @vduplaneQfloat(<2 x float>* %A) nounwind {
+define <4 x float> @vduplaneQfloat(ptr %A) nounwind {
 ; CHECK-LABEL: vduplaneQfloat:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    dup.4s v0, v0[1]
 ; CHECK-NEXT:    ret
-	%tmp1 = load <2 x float>, <2 x float>* %A
+	%tmp1 = load <2 x float>, ptr %A
 	%tmp2 = shufflevector <2 x float> %tmp1, <2 x float> undef, <4 x i32> < i32 1, i32 1, i32 1, i32 1 >
 	ret <4 x float> %tmp2
 }
@@ -445,7 +445,7 @@ define <4 x float> @test_perfectshuffle_dupext_v4f32(<4 x float> %a, <4 x float>
   ret <4 x float> %r
 }
 
-define void @disguised_dup(<4 x float> %x, <4 x float>* %p1, <4 x float>* %p2) {
+define void @disguised_dup(<4 x float> %x, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: disguised_dup:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext.16b v1, v0, v0, #4
@@ -456,8 +456,8 @@ define void @disguised_dup(<4 x float> %x, <4 x float>* %p1, <4 x float>* %p2) {
 ; CHECK-NEXT:    ret
   %shuf = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 1, i32 2, i32 0, i32 0>
   %dup = shufflevector <4 x float> %shuf, <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 2, i32 3>
-  store <4 x float> %shuf, <4 x float>* %p1, align 8
-  store <4 x float> %dup, <4 x float>* %p2, align 8
+  store <4 x float> %shuf, ptr %p1, align 8
+  store <4 x float> %dup, ptr %p2, align 8
   ret void
 }
 

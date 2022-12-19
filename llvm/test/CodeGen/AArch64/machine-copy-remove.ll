@@ -4,13 +4,13 @@
 ; CHECK: cbz x[[REG:[0-9]+]], [[BB:.LBB.*]]
 ; CHECK: [[BB]]:
 ; CHECK-NOT: mov x[[REG]], xzr
-define i64 @f_XX(i64 %n, i64* nocapture readonly %P) {
+define i64 @f_XX(i64 %n, ptr nocapture readonly %P) {
 entry:
   %tobool = icmp eq i64 %n, 0
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  %0 = load i64, i64* %P
+  %0 = load i64, ptr %P
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
@@ -22,13 +22,13 @@ if.end:                                           ; preds = %entry, %if.then
 ; CHECK: cbz w[[REG:[0-9]+]], [[BB:.LBB.*]]
 ; CHECK: [[BB]]:
 ; CHECK-NOT: mov w[[REG]], wzr
-define i32 @f_WW(i32 %n, i32* nocapture readonly %P) {
+define i32 @f_WW(i32 %n, ptr nocapture readonly %P) {
 entry:
   %tobool = icmp eq i32 %n, 0
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  %0 = load i32, i32* %P
+  %0 = load i32, ptr %P
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
@@ -40,13 +40,13 @@ if.end:                                           ; preds = %entry, %if.then
 ; CHECK: cbz x[[REG:[0-9]+]], [[BB:.LBB.*]]
 ; CHECK: [[BB]]:
 ; CHECK-NOT: mov w[[REG]], wzr
-define i32 @f_XW(i64 %n, i32* nocapture readonly %P) {
+define i32 @f_XW(i64 %n, ptr nocapture readonly %P) {
 entry:
   %tobool = icmp eq i64 %n, 0
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  %0 = load i32, i32* %P
+  %0 = load i32, ptr %P
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
@@ -60,13 +60,13 @@ if.end:                                           ; preds = %entry, %if.then
 ; CHECK: mov x[[REG]], xzr
 ; Do not remove the mov in this case because we do not know if the upper bits
 ; of the X register are zero.
-define i64 @f_WX(i32 %n, i64* nocapture readonly %P) {
+define i64 @f_WX(i32 %n, ptr nocapture readonly %P) {
 entry:
   %tobool = icmp eq i32 %n, 0
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  %0 = load i64, i64* %P
+  %0 = load i64, ptr %P
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
@@ -81,7 +81,7 @@ if.end:                                           ; preds = %entry, %if.then
 ; CHECK-NOT: mov w[[REG]], wzr
 ; Because we returned w0 but x0 was marked live-in to the block, we didn't
 ; remove the <kill> on the str leading to a verification failure.
-define i32 @test_superreg(i64 %in, i64* %dest) {
+define i32 @test_superreg(i64 %in, ptr %dest) {
   %tst = icmp eq i64 %in, 0
   br i1 %tst, label %true, label %false
 
@@ -89,6 +89,6 @@ false:
   ret i32 42
 
 true:
-  store volatile i64 %in, i64* %dest
+  store volatile i64 %in, ptr %dest
   ret i32 0
 }

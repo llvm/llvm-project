@@ -10,13 +10,13 @@
 ; store merging immediately merges it back together (but used to get the
 ; merging wrong), this is the only way I was able to reproduce the bug...
 
-define void @func(<2 x double>* %sptr, <2 x double>* %dptr) {
+define void @func(ptr %sptr, ptr %dptr) {
 ; CHECK-LABEL: func:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %load = load <2 x double>, <2 x double>* %sptr, align 8
-  store <2 x double> %load, <2 x double>* %dptr, align 4
+  %load = load <2 x double>, ptr %sptr, align 8
+  store <2 x double> %load, ptr %dptr, align 4
   ret void
 }

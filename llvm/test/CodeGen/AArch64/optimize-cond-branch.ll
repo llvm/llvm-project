@@ -50,7 +50,7 @@ b2:
   br label %b5
 
 b3:
-  %v1 = load i32, i32* undef, align 4
+  %v1 = load i32, ptr undef, align 4
   %v2 = and i32 %v1, 256
   br label %b5
 

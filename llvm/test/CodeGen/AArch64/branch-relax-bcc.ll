@@ -31,11 +31,11 @@ bb2:
     "nop
      nop",
     ""() #0
-  store volatile i32 9, i32* undef
+  store volatile i32 9, ptr undef
   ret i32 1
 
 bb1:
-  store volatile i32 42, i32* undef
+  store volatile i32 42, ptr undef
   ret i32 0
 }
 

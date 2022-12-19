@@ -13,18 +13,18 @@
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-v1     | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-n2     | FileCheck %s
 
-@g = common local_unnamed_addr global i8* null, align 8
+@g = common local_unnamed_addr global ptr null, align 8
 
-define dso_local i8* @addldr(i32 %a, i32 %b) {
+define dso_local ptr @addldr(i32 %a, i32 %b) {
 ; CHECK-LABEL: addldr:
 ; CHECK: adrp [[R:x[0-9]+]], addldr
 ; CHECK-NEXT: add {{x[0-9]+}}, [[R]], :lo12:addldr
 entry:
   %add = add nsw i32 %b, %a
   %idx.ext = sext i32 %add to i64
-  %add.ptr = getelementptr i8, i8* bitcast (i8* (i32, i32)* @addldr to i8*), i64 %idx.ext
-  store i8* %add.ptr, i8** @g, align 8
-  ret i8* %add.ptr
+  %add.ptr = getelementptr i8, ptr @addldr, i64 %idx.ext
+  store ptr %add.ptr, ptr @g, align 8
+  ret ptr %add.ptr
 }
 
 
