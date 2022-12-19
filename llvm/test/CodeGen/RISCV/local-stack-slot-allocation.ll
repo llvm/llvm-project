@@ -44,7 +44,7 @@ define void @use_frame_base_reg() {
   %va = alloca i8, align 4
   %va1 = alloca i8, align 4
   %large = alloca [ 100000 x i8 ]
-  %argp.cur = load volatile i8, i8* %va, align 4
-  %argp.next = load volatile i8, i8* %va1, align 4
+  %argp.cur = load volatile i8, ptr %va, align 4
+  %argp.next = load volatile i8, ptr %va1, align 4
   ret void
 }

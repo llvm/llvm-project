@@ -471,8 +471,8 @@ define void @callee() nounwind {
 ; RV64I-WITH-FP-NEXT:    ld s11, 56(sp) # 8-byte Folded Reload
 ; RV64I-WITH-FP-NEXT:    addi sp, sp, 160
 ; RV64I-WITH-FP-NEXT:    ret
-  %val = load [32 x i32], [32 x i32]* @var
-  store volatile [32 x i32] %val, [32 x i32]* @var
+  %val = load [32 x i32], ptr @var
+  store volatile [32 x i32] %val, ptr @var
   ret void
 }
 
@@ -1058,8 +1058,8 @@ define void @caller() nounwind {
 ; RV64I-WITH-FP-NEXT:    addi sp, sp, 288
 ; RV64I-WITH-FP-NEXT:    ret
 
-  %val = load [32 x i32], [32 x i32]* @var
+  %val = load [32 x i32], ptr @var
   call void @callee()
-  store volatile [32 x i32] %val, [32 x i32]* @var
+  store volatile [32 x i32] %val, ptr @var
   ret void
 }

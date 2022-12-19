@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv32 -target-abi=ilp32d -mattr=+v,+zfh,+experimental-zvfh,+f,+d -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX1
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64d -mattr=+v,+zfh,+experimental-zvfh,+f,+d -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX1
 
-define void @fpext_v2f16_v2f32(<2 x half>* %x, <2 x float>* %y) {
+define void @fpext_v2f16_v2f32(ptr %x, ptr %y) {
 ; CHECK-LABEL: fpext_v2f16_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
@@ -12,13 +12,13 @@ define void @fpext_v2f16_v2f32(<2 x half>* %x, <2 x float>* %y) {
 ; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
 ; CHECK-NEXT:    vse32.v v9, (a1)
 ; CHECK-NEXT:    ret
-  %a = load <2 x half>, <2 x half>* %x
+  %a = load <2 x half>, ptr %x
   %d = fpext <2 x half> %a to <2 x float>
-  store <2 x float> %d, <2 x float>* %y
+  store <2 x float> %d, ptr %y
   ret void
 }
 
-define void @fpext_v2f16_v2f64(<2 x half>* %x, <2 x double>* %y) {
+define void @fpext_v2f16_v2f64(ptr %x, ptr %y) {
 ; CHECK-LABEL: fpext_v2f16_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
@@ -28,13 +28,13 @@ define void @fpext_v2f16_v2f64(<2 x half>* %x, <2 x double>* %y) {
 ; CHECK-NEXT:    vfwcvt.f.f.v v8, v9
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
-  %a = load <2 x half>, <2 x half>* %x
+  %a = load <2 x half>, ptr %x
   %d = fpext <2 x half> %a to <2 x double>
-  store <2 x double> %d, <2 x double>* %y
+  store <2 x double> %d, ptr %y
   ret void
 }
 
-define void @fpext_v8f16_v8f32(<8 x half>* %x, <8 x float>* %y) {
+define void @fpext_v8f16_v8f32(ptr %x, ptr %y) {
 ; LMULMAX8-LABEL: fpext_v8f16_v8f32:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -56,13 +56,13 @@ define void @fpext_v8f16_v8f32(<8 x half>* %x, <8 x float>* %y) {
 ; LMULMAX1-NEXT:    vse32.v v10, (a0)
 ; LMULMAX1-NEXT:    vse32.v v9, (a1)
 ; LMULMAX1-NEXT:    ret
-  %a = load <8 x half>, <8 x half>* %x
+  %a = load <8 x half>, ptr %x
   %d = fpext <8 x half> %a to <8 x float>
-  store <8 x float> %d, <8 x float>* %y
+  store <8 x float> %d, ptr %y
   ret void
 }
 
-define void @fpext_v8f16_v8f64(<8 x half>* %x, <8 x double>* %y) {
+define void @fpext_v8f16_v8f64(ptr %x, ptr %y) {
 ; LMULMAX8-LABEL: fpext_v8f16_v8f64:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -107,13 +107,13 @@ define void @fpext_v8f16_v8f64(<8 x half>* %x, <8 x double>* %y) {
 ; LMULMAX1-NEXT:    addi a1, a1, 16
 ; LMULMAX1-NEXT:    vse64.v v9, (a1)
 ; LMULMAX1-NEXT:    ret
-  %a = load <8 x half>, <8 x half>* %x
+  %a = load <8 x half>, ptr %x
   %d = fpext <8 x half> %a to <8 x double>
-  store <8 x double> %d, <8 x double>* %y
+  store <8 x double> %d, ptr %y
   ret void
 }
 
-define void @fpround_v2f32_v2f16(<2 x float>* %x, <2 x half>* %y) {
+define void @fpround_v2f32_v2f16(ptr %x, ptr %y) {
 ; CHECK-LABEL: fpround_v2f32_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
@@ -121,13 +121,13 @@ define void @fpround_v2f32_v2f16(<2 x float>* %x, <2 x half>* %y) {
 ; CHECK-NEXT:    vfncvt.f.f.w v9, v8
 ; CHECK-NEXT:    vse16.v v9, (a1)
 ; CHECK-NEXT:    ret
-  %a = load <2 x float>, <2 x float>* %x
+  %a = load <2 x float>, ptr %x
   %d = fptrunc <2 x float> %a to <2 x half>
-  store <2 x half> %d, <2 x half>* %y
+  store <2 x half> %d, ptr %y
   ret void
 }
 
-define void @fpround_v2f64_v2f16(<2 x double>* %x, <2 x half>* %y) {
+define void @fpround_v2f64_v2f16(ptr %x, ptr %y) {
 ; CHECK-LABEL: fpround_v2f64_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -137,13 +137,13 @@ define void @fpround_v2f64_v2f16(<2 x double>* %x, <2 x half>* %y) {
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    ret
-  %a = load <2 x double>, <2 x double>* %x
+  %a = load <2 x double>, ptr %x
   %d = fptrunc <2 x double> %a to <2 x half>
-  store <2 x half> %d, <2 x half>* %y
+  store <2 x half> %d, ptr %y
   ret void
 }
 
-define void @fpround_v8f32_v8f16(<8 x float>* %x, <8 x half>* %y) {
+define void @fpround_v8f32_v8f16(ptr %x, ptr %y) {
 ; LMULMAX8-LABEL: fpround_v8f32_v8f16:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -164,13 +164,13 @@ define void @fpround_v8f32_v8f16(<8 x float>* %x, <8 x half>* %y) {
 ; LMULMAX1-NEXT:    vslideup.vi v10, v8, 4
 ; LMULMAX1-NEXT:    vse16.v v10, (a1)
 ; LMULMAX1-NEXT:    ret
-  %a = load <8 x float>, <8 x float>* %x
+  %a = load <8 x float>, ptr %x
   %d = fptrunc <8 x float> %a to <8 x half>
-  store <8 x half> %d, <8 x half>* %y
+  store <8 x half> %d, ptr %y
   ret void
 }
 
-define void @fpround_v8f64_v8f16(<8 x double>* %x, <8 x half>* %y) {
+define void @fpround_v8f64_v8f16(ptr %x, ptr %y) {
 ; LMULMAX8-LABEL: fpround_v8f64_v8f16:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -214,8 +214,8 @@ define void @fpround_v8f64_v8f16(<8 x double>* %x, <8 x half>* %y) {
 ; LMULMAX1-NEXT:    vslideup.vi v9, v8, 6
 ; LMULMAX1-NEXT:    vse16.v v9, (a1)
 ; LMULMAX1-NEXT:    ret
-  %a = load <8 x double>, <8 x double>* %x
+  %a = load <8 x double>, ptr %x
   %d = fptrunc <8 x double> %a to <8 x half>
-  store <8 x half> %d, <8 x half>* %y
+  store <8 x half> %d, ptr %y
   ret void
 }

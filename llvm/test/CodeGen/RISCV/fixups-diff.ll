@@ -18,7 +18,7 @@ target triple = "riscv32"
 define i32 @main() !dbg !7 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   ret i32 0
 }
 
