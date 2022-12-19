@@ -1,6 +1,6 @@
 ; RUN: llc < %s
 ; PR748
-@G = external global i16		; <i16*> [#uses=1]
+@G = external global i16		; <ptr> [#uses=1]
 
 define void @OmNewObjHdr() {
 entry:
@@ -22,8 +22,8 @@ else.3:		; preds = %endif.4
 	]
 
 then.10:		; preds = %else.3, %else.3
-	%tmp.112 = load i16, i16* null		; <i16> [#uses=2]
-	%tmp.113 = load i16, i16* @G		; <i16> [#uses=2]
+	%tmp.112 = load i16, ptr null		; <i16> [#uses=2]
+	%tmp.113 = load i16, ptr @G		; <i16> [#uses=2]
 	%tmp.114 = icmp ugt i16 %tmp.112, %tmp.113		; <i1> [#uses=1]
 	%tmp.120 = icmp ult i16 %tmp.112, %tmp.113		; <i1> [#uses=1]
 	%bothcond = and i1 %tmp.114, %tmp.120		; <i1> [#uses=1]
