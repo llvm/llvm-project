@@ -68,23 +68,23 @@ for file in args.files:
             print(f"{file}:{line}: target line {target} is farther than {args.near}", file=sys.stderr)
             return capture
         if target > line:
-            delta = b('+' + str(target - line))
+            delta = '+' + str(target - line)
         elif target < line:
-            delta = b('-' + str(line - target))
+            delta = '-' + str(line - target)
         else:
-            delta = b''
+            delta = ''
 
         prefix = contents[:offset].rsplit(b'\n')[-1]
         is_lit = b'RUN' in prefix or b'DEFINE' in prefix
-        text = b(('%(line{0})' if is_lit else '[[@LINE{0}]]').format(delta))
+        text = ('%(line{0})' if is_lit else '[[@LINE{0}]]').format(delta)
         if args.verbose:
             print(f"{file}:{line}: {0} ==> {text}")
-        return text
+        return b(text)
 
     def replace_match(m):
         """Text to replace a whole match, e.g. --at=42:3 => --at=%(line+2):3"""
         line = 1 + contents[:m.start()].count(b'\n')
-        result = ''
+        result = b''
         pos = m.start()
         for index, capture in enumerate(m.groups()):
             index += 1 # re groups are conventionally 1-indexed
