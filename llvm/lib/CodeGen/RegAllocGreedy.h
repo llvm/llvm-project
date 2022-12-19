@@ -80,7 +80,7 @@ public:
     unsigned NextCascade = 1;
 
   public:
-    ExtraRegInfo() = default;
+    ExtraRegInfo() {}
     ExtraRegInfo(const ExtraRegInfo &) = delete;
 
     LiveRangeStage getStage(Register Reg) const { return Info[Reg].Stage; }

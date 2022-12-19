@@ -58,8 +58,7 @@ class DenseSet;
 class MallocAllocator;
 template <typename T>
 class MutableArrayRef;
-template <typename T>
-class Optional;
+template <typename T> using Optional = std::optional<T>;
 template <typename... PT>
 class PointerUnion;
 template <typename T, typename Vector, typename Set>

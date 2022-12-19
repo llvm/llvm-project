@@ -343,7 +343,7 @@ Type *Type::GetEncodingType() {
 
 llvm::Optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
   if (m_byte_size_has_value)
-    return m_byte_size;
+    return static_cast<uint64_t>(m_byte_size);
 
   switch (m_encoding_uid_type) {
   case eEncodingInvalid:
@@ -360,14 +360,14 @@ llvm::Optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
       if (llvm::Optional<uint64_t> size = encoding_type->GetByteSize(exe_scope)) {
         m_byte_size = *size;
         m_byte_size_has_value = true;
-        return m_byte_size;
+        return static_cast<uint64_t>(m_byte_size);
       }
 
     if (llvm::Optional<uint64_t> size =
             GetLayoutCompilerType().GetByteSize(exe_scope)) {
       m_byte_size = *size;
       m_byte_size_has_value = true;
-        return m_byte_size;
+      return static_cast<uint64_t>(m_byte_size);
     }
   } break;
 
@@ -378,7 +378,7 @@ llvm::Optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
       if (ArchSpec arch = m_symbol_file->GetObjectFile()->GetArchitecture()) {
         m_byte_size = arch.GetAddressByteSize();
         m_byte_size_has_value = true;
-        return m_byte_size;
+        return static_cast<uint64_t>(m_byte_size);
       }
     } break;
   }
