@@ -246,7 +246,7 @@ getAllocEffectFor(Value value,
 }
 
 /// Given the two values, return their aliasing behavior.
-static AliasResult aliasImpl(Value lhs, Value rhs) {
+AliasResult LocalAliasAnalysis::aliasImpl(Value lhs, Value rhs) {
   if (lhs == rhs)
     return AliasResult::MustAlias;
   Operation *lhsAllocScope = nullptr, *rhsAllocScope = nullptr;
