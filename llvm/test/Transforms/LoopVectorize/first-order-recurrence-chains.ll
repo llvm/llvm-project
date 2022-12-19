@@ -395,7 +395,7 @@ exit:
   ret void
 }
 
-define void @test_chained_first_order_recurrence_sink_users_1(double* %ptr) {
+define void @test_chained_first_order_recurrence_sink_users_1(ptr %ptr) {
 ; CHECK-LABEL: @test_chained_first_order_recurrence_sink_users_1
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
@@ -431,9 +431,9 @@ loop:
   %add.1 = fadd double 10.0, %for.2
   %add.2 = fadd double %add.1, %for.1
   %iv.next = add nuw nsw i64 %iv, 1
-  %gep.ptr = getelementptr inbounds double, double* %ptr, i64 %iv
-  %for.1.next  = load double, double* %gep.ptr, align 8
-  store double %add.2, double* %gep.ptr
+  %gep.ptr = getelementptr inbounds double, ptr %ptr, i64 %iv
+  %for.1.next  = load double, ptr %gep.ptr, align 8
+  store double %add.2, ptr %gep.ptr
   %exitcond.not = icmp eq i64 %iv.next, 1000
   br i1 %exitcond.not, label %exit, label %loop
 
