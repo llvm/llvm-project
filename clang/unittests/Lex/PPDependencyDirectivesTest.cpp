@@ -92,7 +92,7 @@ TEST_F(PPDependencyDirectivesTest, MacroGuard) {
                    "#include \"head3.h\"\n#include \"head3.h\"\n"));
   FileMgr.setVirtualFileSystem(VFS);
 
-  Optional<FileEntryRef> FE;
+  OptionalFileEntryRef FE;
   ASSERT_THAT_ERROR(FileMgr.getFileRef("main.c").moveInto(FE),
                     llvm::Succeeded());
   SourceMgr.setMainFileID(

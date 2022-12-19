@@ -463,10 +463,10 @@ void CXIndexDataConsumer::enteredMainFile(const FileEntry *File) {
 }
 
 void CXIndexDataConsumer::ppIncludedFile(SourceLocation hashLoc,
-                                     StringRef filename,
-                                     Optional<FileEntryRef> File,
-                                     bool isImport, bool isAngled,
-                                     bool isModuleImport) {
+                                         StringRef filename,
+                                         OptionalFileEntryRef File,
+                                         bool isImport, bool isAngled,
+                                         bool isModuleImport) {
   if (!CB.ppIncludedFile)
     return;
 

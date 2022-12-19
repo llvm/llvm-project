@@ -37,7 +37,7 @@ namespace llvm {
   template<unsigned InternalLen> class SmallString;
   template<typename T, unsigned N> class SmallVector;
   template<typename T> class SmallVectorImpl;
-  template<typename T> class Optional;
+  template <typename T> class Optional;
   template <class T> class Expected;
 
   template<typename T>
