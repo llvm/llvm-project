@@ -7,7 +7,7 @@
 ;     unsigned char b;
 ;     unsigned char c;
 ;   };
-;   extern void foo(void *);
+;   extern void foo(ptr);
 ;   int test() {
 ;     struct t v = {
 ;       .b = 2,
@@ -26,11 +26,10 @@
 define dso_local i32 @test() local_unnamed_addr {
 entry:
   %v1 = alloca [3 x i8], align 1
-  %v1.sub = getelementptr inbounds [3 x i8], [3 x i8]* %v1, i64 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 3, i8* nonnull %v1.sub)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 dereferenceable(3) %v1.sub, i8* nonnull align 1 dereferenceable(3) getelementptr inbounds (%struct.t, %struct.t* @__const.test.v, i64 0, i32 0), i64 3, i1 false)
-  call void @foo(i8* nonnull %v1.sub)
-  call void @llvm.lifetime.end.p0i8(i64 3, i8* nonnull %v1.sub)
+  call void @llvm.lifetime.start.p0(i64 3, ptr nonnull %v1)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 dereferenceable(3) %v1, ptr nonnull align 1 dereferenceable(3) @__const.test.v, i64 3, i1 false)
+  call void @foo(ptr nonnull %v1)
+  call void @llvm.lifetime.end.p0(i64 3, ptr nonnull %v1)
   ret i32 0
 }
 ; CHECK-NOT:    w{{[0-9]+}} = *(u16 *)
@@ -39,12 +38,12 @@ entry:
 ; CHECK:        *(u8 *)(r10 - 2) = w{{[0-9]+}}
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg)
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 
-declare dso_local void @foo(i8*) local_unnamed_addr
+declare dso_local void @foo(ptr) local_unnamed_addr
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)

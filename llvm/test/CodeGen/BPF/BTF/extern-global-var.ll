@@ -11,7 +11,7 @@
 
 ; Function Attrs: norecurse nounwind readonly
 define dso_local i32 @foo() local_unnamed_addr #0 !dbg !7 {
-  %1 = load i8, i8* @a, align 1, !dbg !11, !tbaa !12
+  %1 = load i8, ptr @a, align 1, !dbg !11, !tbaa !12
   %2 = sext i8 %1 to i32, !dbg !11
   ret i32 %2, !dbg !15
 }

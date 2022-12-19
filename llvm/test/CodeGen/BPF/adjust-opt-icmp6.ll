@@ -14,35 +14,35 @@
 ;   clang -target bpf -O2 -S -emit-llvm -Xclang -disable-llvm-passes test.c
 
 ; Function Attrs: nounwind
-define dso_local i32 @test(i32* noundef %p) #0 {
+define dso_local i32 @test(ptr noundef %p) #0 {
 entry:
   %retval = alloca i32, align 4
-  %p.addr = alloca i32*, align 8
-  store i32* %p, i32** %p.addr, align 8, !tbaa !3
-  %0 = load i32*, i32** %p.addr, align 8, !tbaa !3
-  %1 = load i32, i32* %0, align 4, !tbaa !7
+  %p.addr = alloca ptr, align 8
+  store ptr %p, ptr %p.addr, align 8, !tbaa !3
+  %0 = load ptr, ptr %p.addr, align 8, !tbaa !3
+  %1 = load i32, ptr %0, align 4, !tbaa !7
   %cmp = icmp ule i32 %1, 1
   br i1 %cmp, label %if.then, label %lor.lhs.false
 
 lor.lhs.false:                                    ; preds = %entry
-  %2 = load i32*, i32** %p.addr, align 8, !tbaa !3
-  %3 = load i32, i32* %2, align 4, !tbaa !7
+  %2 = load ptr, ptr %p.addr, align 8, !tbaa !3
+  %3 = load i32, ptr %2, align 4, !tbaa !7
   %cmp1 = icmp uge i32 %3, 7
   br i1 %cmp1, label %if.then, label %if.end
 
 if.then:                                          ; preds = %lor.lhs.false, %entry
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   br label %return
 
 if.end:                                           ; preds = %lor.lhs.false
-  %4 = load i32*, i32** %p.addr, align 8, !tbaa !3
-  %5 = load i32, i32* %4, align 4, !tbaa !7
+  %4 = load ptr, ptr %p.addr, align 8, !tbaa !3
+  %5 = load i32, ptr %4, align 4, !tbaa !7
   %call = call i32 @bar(i32 noundef %5)
-  store i32 %call, i32* %retval, align 4
+  store i32 %call, ptr %retval, align 4
   br label %return
 
 return:                                           ; preds = %if.end, %if.then
-  %6 = load i32, i32* %retval, align 4
+  %6 = load i32, ptr %retval, align 4
   ret i32 %6
 }
 
