@@ -14,7 +14,7 @@ target triple = "wasm32-unknown-emscripten"
 ; PIC-NEXT:   i32.load  $push1=, 40($pop0){{$}}
 ; CHECK-NEXT: return    $pop1{{$}}
 define i32 @load_test0() {
-  %t = load i32, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @g, i32 0, i32 10), align 4
+  %t = load i32, ptr getelementptr inbounds ([0 x i32], ptr @g, i32 0, i32 10), align 4
   ret i32 %t
 }
 
@@ -24,7 +24,7 @@ define i32 @load_test0() {
 ; PIC-NEXT:   i32.load  $push1=, 40($pop0){{$}}
 ; CHECK-NEXT: return    $pop1{{$}}
 define i32 @load_test0_noinbounds() {
-  %t = load i32, i32* getelementptr ([0 x i32], [0 x i32]* @g, i32 0, i32 10), align 4
+  %t = load i32, ptr getelementptr ([0 x i32], ptr @g, i32 0, i32 10), align 4
   ret i32 %t
 }
 
@@ -40,8 +40,8 @@ define i32 @load_test0_noinbounds() {
 ; CHECK-NEX T: return    $pop2{{$}}
 define i32 @load_test1(i32 %n) {
   %add = add nsw i32 %n, 10
-  %arrayidx = getelementptr inbounds [0 x i32], [0 x i32]* @g, i32 0, i32 %add
-  %t = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [0 x i32], ptr @g, i32 0, i32 %add
+  %t = load i32, ptr %arrayidx, align 4
   ret i32 %t
 }
 
@@ -53,8 +53,8 @@ define i32 @load_test1(i32 %n) {
 ; CHECK-NEX T: return    $pop2{{$}}
 define i32 @load_test2(i32 %n) {
   %add = add nsw i32 10, %n
-  %arrayidx = getelementptr inbounds [0 x i32], [0 x i32]* @g, i32 0, i32 %add
-  %t = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [0 x i32], ptr @g, i32 0, i32 %add
+  %t = load i32, ptr %arrayidx, align 4
   ret i32 %t
 }
 
@@ -65,9 +65,9 @@ define i32 @load_test2(i32 %n) {
 ; CHECK-NEX T: i32.load  $push2=, g+40($pop1){{$}}
 ; CHECK-NEX T: return    $pop2{{$}}
 define i32 @load_test3(i32 %n) {
-  %add.ptr = getelementptr inbounds [0 x i32], [0 x i32]* @g, i32 0, i32 %n
-  %add.ptr1 = getelementptr inbounds i32, i32* %add.ptr, i32 10
-  %t = load i32, i32* %add.ptr1, align 4
+  %add.ptr = getelementptr inbounds [0 x i32], ptr @g, i32 0, i32 %n
+  %add.ptr1 = getelementptr inbounds i32, ptr %add.ptr, i32 10
+  %t = load i32, ptr %add.ptr1, align 4
   ret i32 %t
 }
 
@@ -78,8 +78,8 @@ define i32 @load_test3(i32 %n) {
 ; CHECK-NEX T: i32.load  $push2=, g+40($pop1){{$}}
 ; CHECK-NEX T: return    $pop2{{$}}
 define i32 @load_test4(i32 %n) {
-  %add.ptr = getelementptr inbounds i32, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @g, i32 0, i32 10), i32 %n
-  %t = load i32, i32* %add.ptr, align 4
+  %add.ptr = getelementptr inbounds i32, ptr getelementptr inbounds ([0 x i32], ptr @g, i32 0, i32 10), i32 %n
+  %t = load i32, ptr %add.ptr, align 4
   ret i32 %t
 }
 
@@ -90,8 +90,8 @@ define i32 @load_test4(i32 %n) {
 ; CHECK-NEX T: i32.load  $push2=, g+40($pop1){{$}}
 ; CHECK-NEX T: return    $pop2{{$}}
 define i32 @load_test5(i32 %n) {
-  %add.ptr = getelementptr inbounds i32, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @g, i32 0, i32 10), i32 %n
-  %t = load i32, i32* %add.ptr, align 4
+  %add.ptr = getelementptr inbounds i32, ptr getelementptr inbounds ([0 x i32], ptr @g, i32 0, i32 10), i32 %n
+  %t = load i32, ptr %add.ptr, align 4
   ret i32 %t
 }
 
@@ -103,8 +103,8 @@ define i32 @load_test5(i32 %n) {
 ; CHECK-NEX T: return    $pop2{{$}}
 define i32 @load_test6(i32 %n) {
   %add = add nsw i32 %n, 10
-  %add.ptr = getelementptr inbounds [0 x i32], [0 x i32]* @g, i32 0, i32 %add
-  %t = load i32, i32* %add.ptr, align 4
+  %add.ptr = getelementptr inbounds [0 x i32], ptr @g, i32 0, i32 %add
+  %t = load i32, ptr %add.ptr, align 4
   ret i32 %t
 }
 
@@ -115,9 +115,9 @@ define i32 @load_test6(i32 %n) {
 ; CHECK-NEX T: i32.load  $push2=, g+40($pop1){{$}}
 ; CHECK-NEX T: return    $pop2{{$}}
 define i32 @load_test7(i32 %n) {
-  %add.ptr = getelementptr inbounds [0 x i32], [0 x i32]* @g, i32 0, i32 %n
-  %add.ptr1 = getelementptr inbounds i32, i32* %add.ptr, i32 10
-  %t = load i32, i32* %add.ptr1, align 4
+  %add.ptr = getelementptr inbounds [0 x i32], ptr @g, i32 0, i32 %n
+  %add.ptr1 = getelementptr inbounds i32, ptr %add.ptr, i32 10
+  %t = load i32, ptr %add.ptr1, align 4
   ret i32 %t
 }
 
@@ -129,8 +129,8 @@ define i32 @load_test7(i32 %n) {
 ; CHECK-NEX T: return    $pop2{{$}}
 define i32 @load_test8(i32 %n) {
   %add = add nsw i32 10, %n
-  %add.ptr = getelementptr inbounds [0 x i32], [0 x i32]* @g, i32 0, i32 %add
-  %t = load i32, i32* %add.ptr, align 4
+  %add.ptr = getelementptr inbounds [0 x i32], ptr @g, i32 0, i32 %add
+  %t = load i32, ptr %add.ptr, align 4
   ret i32 %t
 }
 
@@ -143,7 +143,7 @@ define i32 @load_test8(i32 %n) {
 ; PIC-NEXT: i32.load   $push3=, 0($pop2)
 ; PIC-NEXT: return     $pop3{{$}}
 define i32 @load_test9() {
-  %t = load i32, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @g, i32 0, i32 1073741814), align 4
+  %t = load i32, ptr getelementptr inbounds ([0 x i32], ptr @g, i32 0, i32 1073741814), align 4
   ret i32 %t
 }
 
@@ -160,8 +160,8 @@ define i32 @load_test9() {
 ; PIC-NEXT:   return    $pop6{{$}}
 define i32 @load_test10(i32 %n) {
   %add = add nsw i32 %n, -10
-  %arrayidx = getelementptr inbounds [0 x i32], [0 x i32]* @g, i32 0, i32 %add
-  %t = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [0 x i32], ptr @g, i32 0, i32 %add
+  %t = load i32, ptr %arrayidx, align 4
   ret i32 %t
 }
 
@@ -169,9 +169,9 @@ define i32 @load_test10(i32 %n) {
 ; CHECK-NEXT: .functype load_test11 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load  $push0=, 40($0){{$}}
 ; CHECK-NEXT: return    $pop0{{$}}
-define i32 @load_test11(i32* %p) {
-  %arrayidx = getelementptr inbounds i32, i32* %p, i32 10
-  %t = load i32, i32* %arrayidx, align 4
+define i32 @load_test11(ptr %p) {
+  %arrayidx = getelementptr inbounds i32, ptr %p, i32 10
+  %t = load i32, ptr %arrayidx, align 4
   ret i32 %t
 }
 
@@ -181,9 +181,9 @@ define i32 @load_test11(i32* %p) {
 ; CHECK-NEXT: i32.add   $push1=, $0, $pop0{{$}}
 ; CHECK-NEXT: i32.load  $push2=, 0($pop1){{$}}
 ; CHECK-NEXT: return    $pop2{{$}}
-define i32 @load_test11_noinbounds(i32* %p) {
-  %arrayidx = getelementptr i32, i32* %p, i32 10
-  %t = load i32, i32* %arrayidx, align 4
+define i32 @load_test11_noinbounds(ptr %p) {
+  %arrayidx = getelementptr i32, ptr %p, i32 10
+  %t = load i32, ptr %arrayidx, align 4
   ret i32 %t
 }
 
@@ -196,10 +196,10 @@ define i32 @load_test11_noinbounds(i32* %p) {
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.load  $push5=, 0($pop4){{$}}
 ; CHECK-NEXT: return    $pop5{{$}}
-define i32 @load_test12(i32* %p, i32 %n) {
+define i32 @load_test12(ptr %p, i32 %n) {
   %add = add nsw i32 %n, 10
-  %arrayidx = getelementptr inbounds i32, i32* %p, i32 %add
-  %t = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %p, i32 %add
+  %t = load i32, ptr %arrayidx, align 4
   ret i32 %t
 }
 
@@ -212,10 +212,10 @@ define i32 @load_test12(i32* %p, i32 %n) {
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.load  $push5=, 0($pop4){{$}}
 ; CHECK-NEXT: return    $pop5{{$}}
-define i32 @load_test13(i32* %p, i32 %n) {
+define i32 @load_test13(ptr %p, i32 %n) {
   %add = add nsw i32 10, %n
-  %arrayidx = getelementptr inbounds i32, i32* %p, i32 %add
-  %t = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %p, i32 %add
+  %t = load i32, ptr %arrayidx, align 4
   ret i32 %t
 }
 
@@ -226,10 +226,10 @@ define i32 @load_test13(i32* %p, i32 %n) {
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.load  $push3=, 40($pop2){{$}}
 ; CHECK-NEXT: return    $pop3{{$}}
-define i32 @load_test14(i32* %p, i32 %n) {
-  %add.ptr = getelementptr inbounds i32, i32* %p, i32 %n
-  %add.ptr1 = getelementptr inbounds i32, i32* %add.ptr, i32 10
-  %t = load i32, i32* %add.ptr1, align 4
+define i32 @load_test14(ptr %p, i32 %n) {
+  %add.ptr = getelementptr inbounds i32, ptr %p, i32 %n
+  %add.ptr1 = getelementptr inbounds i32, ptr %add.ptr, i32 10
+  %t = load i32, ptr %add.ptr1, align 4
   ret i32 %t
 }
 
@@ -242,10 +242,10 @@ define i32 @load_test14(i32* %p, i32 %n) {
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.load  $push5=, 0($pop4){{$}}
 ; CHECK-NEXT: return    $pop5{{$}}
-define i32 @load_test15(i32* %p, i32 %n) {
-  %add.ptr = getelementptr inbounds i32, i32* %p, i32 10
-  %add.ptr1 = getelementptr inbounds i32, i32* %add.ptr, i32 %n
-  %t = load i32, i32* %add.ptr1, align 4
+define i32 @load_test15(ptr %p, i32 %n) {
+  %add.ptr = getelementptr inbounds i32, ptr %p, i32 10
+  %add.ptr1 = getelementptr inbounds i32, ptr %add.ptr, i32 %n
+  %t = load i32, ptr %add.ptr1, align 4
   ret i32 %t
 }
 
@@ -258,10 +258,10 @@ define i32 @load_test15(i32* %p, i32 %n) {
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.load  $push5=, 0($pop4){{$}}
 ; CHECK-NEXT: return    $pop5{{$}}
-define i32 @load_test16(i32* %p, i32 %n) {
-  %add.ptr = getelementptr inbounds i32, i32* %p, i32 10
-  %add.ptr1 = getelementptr inbounds i32, i32* %add.ptr, i32 %n
-  %t = load i32, i32* %add.ptr1, align 4
+define i32 @load_test16(ptr %p, i32 %n) {
+  %add.ptr = getelementptr inbounds i32, ptr %p, i32 10
+  %add.ptr1 = getelementptr inbounds i32, ptr %add.ptr, i32 %n
+  %t = load i32, ptr %add.ptr1, align 4
   ret i32 %t
 }
 
@@ -274,10 +274,10 @@ define i32 @load_test16(i32* %p, i32 %n) {
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.load  $push5=, 0($pop4){{$}}
 ; CHECK-NEXT: return    $pop5{{$}}
-define i32 @load_test17(i32* %p, i32 %n) {
+define i32 @load_test17(ptr %p, i32 %n) {
   %add = add nsw i32 %n, 10
-  %add.ptr = getelementptr inbounds i32, i32* %p, i32 %add
-  %t = load i32, i32* %add.ptr, align 4
+  %add.ptr = getelementptr inbounds i32, ptr %p, i32 %add
+  %t = load i32, ptr %add.ptr, align 4
   ret i32 %t
 }
 
@@ -288,10 +288,10 @@ define i32 @load_test17(i32* %p, i32 %n) {
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.load  $push3=, 40($pop2){{$}}
 ; CHECK-NEXT: return    $pop3{{$}}
-define i32 @load_test18(i32* %p, i32 %n) {
-  %add.ptr = getelementptr inbounds i32, i32* %p, i32 %n
-  %add.ptr1 = getelementptr inbounds i32, i32* %add.ptr, i32 10
-  %t = load i32, i32* %add.ptr1, align 4
+define i32 @load_test18(ptr %p, i32 %n) {
+  %add.ptr = getelementptr inbounds i32, ptr %p, i32 %n
+  %add.ptr1 = getelementptr inbounds i32, ptr %add.ptr, i32 10
+  %t = load i32, ptr %add.ptr1, align 4
   ret i32 %t
 }
 
@@ -304,10 +304,10 @@ define i32 @load_test18(i32* %p, i32 %n) {
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.load  $push5=, 0($pop4){{$}}
 ; CHECK-NEXT: return    $pop5{{$}}
-define i32 @load_test19(i32* %p, i32 %n) {
+define i32 @load_test19(ptr %p, i32 %n) {
   %add = add nsw i32 10, %n
-  %add.ptr = getelementptr inbounds i32, i32* %p, i32 %add
-  %t = load i32, i32* %add.ptr, align 4
+  %add.ptr = getelementptr inbounds i32, ptr %p, i32 %add
+  %t = load i32, ptr %add.ptr, align 4
   ret i32 %t
 }
 
@@ -317,9 +317,9 @@ define i32 @load_test19(i32* %p, i32 %n) {
 ; CHECK-NEXT: i32.add   $push1=, $0, $pop0{{$}}
 ; CHECK-NEXT: i32.load  $push2=, 0($pop1){{$}}
 ; CHECK-NEXT: return    $pop2{{$}}
-define i32 @load_test20(i32* %p) {
-  %arrayidx = getelementptr inbounds i32, i32* %p, i32 -10
-  %t = load i32, i32* %arrayidx, align 4
+define i32 @load_test20(ptr %p) {
+  %arrayidx = getelementptr inbounds i32, ptr %p, i32 -10
+  %t = load i32, ptr %arrayidx, align 4
   ret i32 %t
 }
 
@@ -332,10 +332,10 @@ define i32 @load_test20(i32* %p) {
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.load  $push5=, 0($pop4){{$}}
 ; CHECK-NEXT: return    $pop5{{$}}
-define i32 @load_test21(i32* %p, i32 %n) {
+define i32 @load_test21(ptr %p, i32 %n) {
   %add = add nsw i32 %n, -10
-  %arrayidx = getelementptr inbounds i32, i32* %p, i32 %add
-  %t = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %p, i32 %add
+  %t = load i32, ptr %arrayidx, align 4
   ret i32 %t
 }
 
@@ -345,7 +345,7 @@ define i32 @load_test21(i32* %p, i32 %n) {
 ; PIC-NEXT:     i32.store 40($pop0), $0
 ; CHECK-NEXT:   return{{$}}
 define void @store_test0(i32 %i) {
-  store i32 %i, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @g, i32 0, i32 10), align 4
+  store i32 %i, ptr getelementptr inbounds ([0 x i32], ptr @g, i32 0, i32 10), align 4
   ret void
 }
 
@@ -355,7 +355,7 @@ define void @store_test0(i32 %i) {
 ; PIC-NEXT:     i32.store 40($pop0), $0{{$}}
 ; CHECK-NEXT:  return{{$}}
 define void @store_test0_noinbounds(i32 %i) {
-  store i32 %i, i32* getelementptr ([0 x i32], [0 x i32]* @g, i32 0, i32 10), align 4
+  store i32 %i, ptr getelementptr ([0 x i32], ptr @g, i32 0, i32 10), align 4
   ret void
 }
 
@@ -365,8 +365,8 @@ define void @store_test0_noinbounds(i32 %i) {
 ; CHECK-NEX T: return{{$}}
 define void @store_test1(i32 %n, i32 %i) {
   %add = add nsw i32 %n, 10
-  %arrayidx = getelementptr inbounds [0 x i32], [0 x i32]* @g, i32 0, i32 %add
-  store i32 %i, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [0 x i32], ptr @g, i32 0, i32 %add
+  store i32 %i, ptr %arrayidx, align 4
   ret void
 }
 
@@ -376,8 +376,8 @@ define void @store_test1(i32 %n, i32 %i) {
 ; CHECK-NEX T: return{{$}}
 define void @store_test2(i32 %n, i32 %i) {
   %add = add nsw i32 10, %n
-  %arrayidx = getelementptr inbounds [0 x i32], [0 x i32]* @g, i32 0, i32 %add
-  store i32 %i, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [0 x i32], ptr @g, i32 0, i32 %add
+  store i32 %i, ptr %arrayidx, align 4
   ret void
 }
 
@@ -386,9 +386,9 @@ define void @store_test2(i32 %n, i32 %i) {
 ; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
 ; CHECK-NEX T: return{{$}}
 define void @store_test3(i32 %n, i32 %i) {
-  %add.ptr = getelementptr inbounds [0 x i32], [0 x i32]* @g, i32 0, i32 %n
-  %add.ptr1 = getelementptr inbounds i32, i32* %add.ptr, i32 10
-  store i32 %i, i32* %add.ptr1, align 4
+  %add.ptr = getelementptr inbounds [0 x i32], ptr @g, i32 0, i32 %n
+  %add.ptr1 = getelementptr inbounds i32, ptr %add.ptr, i32 10
+  store i32 %i, ptr %add.ptr1, align 4
   ret void
 }
 
@@ -397,8 +397,8 @@ define void @store_test3(i32 %n, i32 %i) {
 ; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
 ; CHECK-NEX T: return{{$}}
 define void @store_test4(i32 %n, i32 %i) {
-  %add.ptr = getelementptr inbounds i32, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @g, i32 0, i32 10), i32 %n
-  store i32 %i, i32* %add.ptr, align 4
+  %add.ptr = getelementptr inbounds i32, ptr getelementptr inbounds ([0 x i32], ptr @g, i32 0, i32 10), i32 %n
+  store i32 %i, ptr %add.ptr, align 4
   ret void
 }
 
@@ -407,8 +407,8 @@ define void @store_test4(i32 %n, i32 %i) {
 ; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
 ; CHECK-NEX T: return{{$}}
 define void @store_test5(i32 %n, i32 %i) {
-  %add.ptr = getelementptr inbounds i32, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @g, i32 0, i32 10), i32 %n
-  store i32 %i, i32* %add.ptr, align 4
+  %add.ptr = getelementptr inbounds i32, ptr getelementptr inbounds ([0 x i32], ptr @g, i32 0, i32 10), i32 %n
+  store i32 %i, ptr %add.ptr, align 4
   ret void
 }
 
@@ -418,8 +418,8 @@ define void @store_test5(i32 %n, i32 %i) {
 ; CHECK-NEX T: return{{$}}
 define void @store_test6(i32 %n, i32 %i) {
   %add = add nsw i32 %n, 10
-  %add.ptr = getelementptr inbounds [0 x i32], [0 x i32]* @g, i32 0, i32 %add
-  store i32 %i, i32* %add.ptr, align 4
+  %add.ptr = getelementptr inbounds [0 x i32], ptr @g, i32 0, i32 %add
+  store i32 %i, ptr %add.ptr, align 4
   ret void
 }
 
@@ -428,9 +428,9 @@ define void @store_test6(i32 %n, i32 %i) {
 ; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
 ; CHECK-NEX T: return{{$}}
 define void @store_test7(i32 %n, i32 %i) {
-  %add.ptr = getelementptr inbounds [0 x i32], [0 x i32]* @g, i32 0, i32 %n
-  %add.ptr1 = getelementptr inbounds i32, i32* %add.ptr, i32 10
-  store i32 %i, i32* %add.ptr1, align 4
+  %add.ptr = getelementptr inbounds [0 x i32], ptr @g, i32 0, i32 %n
+  %add.ptr1 = getelementptr inbounds i32, ptr %add.ptr, i32 10
+  store i32 %i, ptr %add.ptr1, align 4
   ret void
 }
 
@@ -440,8 +440,8 @@ define void @store_test7(i32 %n, i32 %i) {
 ; CHECK-NEX T: return{{$}}
 define void @store_test8(i32 %n, i32 %i) {
   %add = add nsw i32 10, %n
-  %add.ptr = getelementptr inbounds [0 x i32], [0 x i32]* @g, i32 0, i32 %add
-  store i32 %i, i32* %add.ptr, align 4
+  %add.ptr = getelementptr inbounds [0 x i32], ptr @g, i32 0, i32 %add
+  store i32 %i, ptr %add.ptr, align 4
   ret void
 }
 
@@ -453,7 +453,7 @@ define void @store_test8(i32 %n, i32 %i) {
 ; PIC-NEXT:      i32.store  0($pop2), $0
 ; CHECK-NEXT:  return{{$}}
 define void @store_test9(i32 %i) {
-  store i32 %i, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @g, i32 0, i32 1073741814), align 4
+  store i32 %i, ptr getelementptr inbounds ([0 x i32], ptr @g, i32 0, i32 1073741814), align 4
   ret void
 }
 
@@ -469,8 +469,8 @@ define void @store_test9(i32 %i) {
 ; CHECK-NEXT:  return{{$}}
 define void @store_test10(i32 %n, i32 %i) {
   %add = add nsw i32 %n, -10
-  %arrayidx = getelementptr inbounds [0 x i32], [0 x i32]* @g, i32 0, i32 %add
-  store i32 %i, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [0 x i32], ptr @g, i32 0, i32 %add
+  store i32 %i, ptr %arrayidx, align 4
   ret void
 }
 
@@ -478,9 +478,9 @@ define void @store_test10(i32 %n, i32 %i) {
 ; CHECK-NEXT: .functype store_test11 (i32, i32) -> (){{$}}
 ; CHECK-NEXT:  i32.store 40($0), $1{{$}}
 ; CHECK-NEXT:  return{{$}}
-define void @store_test11(i32* %p, i32 %i) {
-  %arrayidx = getelementptr inbounds i32, i32* %p, i32 10
-  store i32 %i, i32* %arrayidx, align 4
+define void @store_test11(ptr %p, i32 %i) {
+  %arrayidx = getelementptr inbounds i32, ptr %p, i32 10
+  store i32 %i, ptr %arrayidx, align 4
   ret void
 }
 
@@ -490,97 +490,97 @@ define void @store_test11(i32* %p, i32 %i) {
 ; CHECK-NEXT:  i32.add   $push1=, $0, $pop0{{$}}
 ; CHECK-NEXT:  i32.store 0($pop1), $1{{$}}
 ; CHECK-NEXT:  return{{$}}
-define void @store_test11_noinbounds(i32* %p, i32 %i) {
-  %arrayidx = getelementptr i32, i32* %p, i32 10
-  store i32 %i, i32* %arrayidx, align 4
+define void @store_test11_noinbounds(ptr %p, i32 %i) {
+  %arrayidx = getelementptr i32, ptr %p, i32 10
+  store i32 %i, ptr %arrayidx, align 4
   ret void
 }
 
 ; CHECK-LABEL: store_test12:
 ; CHECK-NEXT: .functype store_test12 (i32, i32, i32) -> (){{$}}
-define void @store_test12(i32* %p, i32 %n, i32 %i) {
+define void @store_test12(ptr %p, i32 %n, i32 %i) {
   %add = add nsw i32 %n, 10
-  %arrayidx = getelementptr inbounds i32, i32* %p, i32 %add
-  store i32 %i, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %p, i32 %add
+  store i32 %i, ptr %arrayidx, align 4
   ret void
 }
 
 ; CHECK-LABEL: store_test13:
 ; CHECK-NEXT: .functype store_test13 (i32, i32, i32) -> (){{$}}
-define void @store_test13(i32* %p, i32 %n, i32 %i) {
+define void @store_test13(ptr %p, i32 %n, i32 %i) {
   %add = add nsw i32 10, %n
-  %arrayidx = getelementptr inbounds i32, i32* %p, i32 %add
-  store i32 %i, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %p, i32 %add
+  store i32 %i, ptr %arrayidx, align 4
   ret void
 }
 
 ; CHECK-LABEL: store_test14:
 ; CHECK-NEXT: .functype store_test14 (i32, i32, i32) -> (){{$}}
-define void @store_test14(i32* %p, i32 %n, i32 %i) {
-  %add.ptr = getelementptr inbounds i32, i32* %p, i32 %n
-  %add.ptr1 = getelementptr inbounds i32, i32* %add.ptr, i32 10
-  store i32 %i, i32* %add.ptr1, align 4
+define void @store_test14(ptr %p, i32 %n, i32 %i) {
+  %add.ptr = getelementptr inbounds i32, ptr %p, i32 %n
+  %add.ptr1 = getelementptr inbounds i32, ptr %add.ptr, i32 10
+  store i32 %i, ptr %add.ptr1, align 4
   ret void
 }
 
 ; CHECK-LABEL: store_test15:
 ; CHECK-NEXT: .functype store_test15 (i32, i32, i32) -> (){{$}}
-define void @store_test15(i32* %p, i32 %n, i32 %i) {
-  %add.ptr = getelementptr inbounds i32, i32* %p, i32 10
-  %add.ptr1 = getelementptr inbounds i32, i32* %add.ptr, i32 %n
-  store i32 %i, i32* %add.ptr1, align 4
+define void @store_test15(ptr %p, i32 %n, i32 %i) {
+  %add.ptr = getelementptr inbounds i32, ptr %p, i32 10
+  %add.ptr1 = getelementptr inbounds i32, ptr %add.ptr, i32 %n
+  store i32 %i, ptr %add.ptr1, align 4
   ret void
 }
 
 ; CHECK-LABEL: store_test16:
 ; CHECK-NEXT: .functype store_test16 (i32, i32, i32) -> (){{$}}
-define void @store_test16(i32* %p, i32 %n, i32 %i) {
-  %add.ptr = getelementptr inbounds i32, i32* %p, i32 10
-  %add.ptr1 = getelementptr inbounds i32, i32* %add.ptr, i32 %n
-  store i32 %i, i32* %add.ptr1, align 4
+define void @store_test16(ptr %p, i32 %n, i32 %i) {
+  %add.ptr = getelementptr inbounds i32, ptr %p, i32 10
+  %add.ptr1 = getelementptr inbounds i32, ptr %add.ptr, i32 %n
+  store i32 %i, ptr %add.ptr1, align 4
   ret void
 }
 
 ; CHECK-LABEL: store_test17:
 ; CHECK-NEXT: .functype store_test17 (i32, i32, i32) -> (){{$}}
-define void @store_test17(i32* %p, i32 %n, i32 %i) {
+define void @store_test17(ptr %p, i32 %n, i32 %i) {
   %add = add nsw i32 %n, 10
-  %add.ptr = getelementptr inbounds i32, i32* %p, i32 %add
-  store i32 %i, i32* %add.ptr, align 4
+  %add.ptr = getelementptr inbounds i32, ptr %p, i32 %add
+  store i32 %i, ptr %add.ptr, align 4
   ret void
 }
 
 ; CHECK-LABEL: store_test18:
 ; CHECK-NEXT: .functype store_test18 (i32, i32, i32) -> (){{$}}
-define void @store_test18(i32* %p, i32 %n, i32 %i) {
-  %add.ptr = getelementptr inbounds i32, i32* %p, i32 %n
-  %add.ptr1 = getelementptr inbounds i32, i32* %add.ptr, i32 10
-  store i32 %i, i32* %add.ptr1, align 4
+define void @store_test18(ptr %p, i32 %n, i32 %i) {
+  %add.ptr = getelementptr inbounds i32, ptr %p, i32 %n
+  %add.ptr1 = getelementptr inbounds i32, ptr %add.ptr, i32 10
+  store i32 %i, ptr %add.ptr1, align 4
   ret void
 }
 
 ; CHECK-LABEL: store_test19:
 ; CHECK-NEXT: .functype store_test19 (i32, i32, i32) -> (){{$}}
-define void @store_test19(i32* %p, i32 %n, i32 %i) {
+define void @store_test19(ptr %p, i32 %n, i32 %i) {
   %add = add nsw i32 10, %n
-  %add.ptr = getelementptr inbounds i32, i32* %p, i32 %add
-  store i32 %i, i32* %add.ptr, align 4
+  %add.ptr = getelementptr inbounds i32, ptr %p, i32 %add
+  store i32 %i, ptr %add.ptr, align 4
   ret void
 }
 
 ; CHECK-LABEL: store_test20:
 ; CHECK-NEXT: .functype store_test20 (i32, i32) -> (){{$}}
-define void @store_test20(i32* %p, i32 %i) {
-  %arrayidx = getelementptr inbounds i32, i32* %p, i32 -10
-  store i32 %i, i32* %arrayidx, align 4
+define void @store_test20(ptr %p, i32 %i) {
+  %arrayidx = getelementptr inbounds i32, ptr %p, i32 -10
+  store i32 %i, ptr %arrayidx, align 4
   ret void
 }
 
 ; CHECK-LABEL: store_test21:
 ; CHECK-NEXT: .functype store_test21 (i32, i32, i32) -> (){{$}}
-define void @store_test21(i32* %p, i32 %n, i32 %i) {
+define void @store_test21(ptr %p, i32 %n, i32 %i) {
   %add = add nsw i32 %n, -10
-  %arrayidx = getelementptr inbounds i32, i32* %p, i32 %add
-  store i32 %i, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %p, i32 %add
+  store i32 %i, ptr %arrayidx, align 4
   ret void
 }
