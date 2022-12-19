@@ -3,8 +3,8 @@
 
 %0 = type { i32, i32 }
 
-define void @t(%0*, i32, i32, i32, i32) nounwind {
-  tail call void @llvm.dbg.value(metadata %0* %0, i64 0, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
+define void @t(ptr, i32, i32, i32, i32) nounwind {
+  tail call void @llvm.dbg.value(metadata ptr %0, i64 0, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
   unreachable
 }
 
