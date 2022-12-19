@@ -69,12 +69,6 @@ public:
         new Impl<T>(::testing::SafeMatcherCast<T>(ValueMatcher)));
   }
 
-  template <class T>
-  operator ::testing::Matcher<const Optional<T> &>() const {
-    return ::testing::MakeMatcher(
-        new Impl<T, Optional<T>>(::testing::SafeMatcherCast<T>(ValueMatcher)));
-  }
-
   template <class T, class O = std::optional<T>>
   class Impl : public ::testing::MatcherInterface<const O &> {
   public:
