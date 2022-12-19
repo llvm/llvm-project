@@ -5,7 +5,7 @@
 declare amdgpu_gfx float @extern_func(float) #0
 declare amdgpu_gfx float @extern_func_many_args(<64 x float>) #0
 
-@funcptr = external hidden unnamed_addr addrspace(4) constant void()*, align 4
+@funcptr = external hidden unnamed_addr addrspace(4) constant ptr, align 4
 
 define amdgpu_gfx float @no_stack(float %arg0) #0 {
   %add = fadd float %arg0, 1.0
@@ -14,20 +14,20 @@ define amdgpu_gfx float @no_stack(float %arg0) #0 {
 
 define amdgpu_gfx float @simple_stack(float %arg0) #0 {
   %stack = alloca float, i32 4, align 4, addrspace(5)
-  store volatile float 2.0, float addrspace(5)* %stack
-  %val = load volatile float, float addrspace(5)* %stack
+  store volatile float 2.0, ptr addrspace(5) %stack
+  %val = load volatile float, ptr addrspace(5) %stack
   %add = fadd float %arg0, %val
   ret float %add
 }
 
 define amdgpu_gfx float @multiple_stack(float %arg0) #0 {
   %stack = alloca float, i32 4, align 4, addrspace(5)
-  store volatile float 2.0, float addrspace(5)* %stack
-  %val = load volatile float, float addrspace(5)* %stack
+  store volatile float 2.0, ptr addrspace(5) %stack
+  %val = load volatile float, ptr addrspace(5) %stack
   %add = fadd float %arg0, %val
   %stack2 = alloca float, i32 4, align 4, addrspace(5)
-  store volatile float 2.0, float addrspace(5)* %stack2
-  %val2 = load volatile float, float addrspace(5)* %stack2
+  store volatile float 2.0, ptr addrspace(5) %stack2
+  %val2 = load volatile float, ptr addrspace(5) %stack2
   %add2 = fadd float %add, %val2
   ret float %add2
 }
@@ -39,8 +39,8 @@ bb0:
 
 bb1:
   %stack = alloca float, i32 4, align 4, addrspace(5)
-  store volatile float 2.0, float addrspace(5)* %stack
-  %val = load volatile float, float addrspace(5)* %stack
+  store volatile float 2.0, ptr addrspace(5) %stack
+  %val = load volatile float, ptr addrspace(5) %stack
   %add = fadd float %arg0, %val
   br label %bb2
 
@@ -56,8 +56,8 @@ bb0:
 bb1:
   %ctr = phi i32 [ 0, %bb0 ], [ %newctr, %bb1 ]
   %stack = alloca float, i32 4, align 4, addrspace(5)
-  store volatile float 2.0, float addrspace(5)* %stack
-  %val = load volatile float, float addrspace(5)* %stack
+  store volatile float 2.0, ptr addrspace(5) %stack
+  %val = load volatile float, ptr addrspace(5) %stack
   %add = fadd float %arg0, %val
   %cmp = icmp sgt i32 %ctr, 0
   %newctr = sub i32 %ctr, 1
@@ -74,8 +74,8 @@ define amdgpu_gfx float @no_stack_call(float %arg0) #0 {
 
 define amdgpu_gfx float @simple_stack_call(float %arg0) #0 {
   %stack = alloca float, i32 4, align 4, addrspace(5)
-  store volatile float 2.0, float addrspace(5)* %stack
-  %val = load volatile float, float addrspace(5)* %stack
+  store volatile float 2.0, ptr addrspace(5) %stack
+  %val = load volatile float, ptr addrspace(5) %stack
   %res = call amdgpu_gfx float @simple_stack(float %arg0)
   %add = fadd float %res, %val
   ret float %add
@@ -88,8 +88,8 @@ define amdgpu_gfx float @no_stack_extern_call(float %arg0) #0 {
 
 define amdgpu_gfx float @simple_stack_extern_call(float %arg0) #0 {
   %stack = alloca float, i32 4, align 4, addrspace(5)
-  store volatile float 2.0, float addrspace(5)* %stack
-  %val = load volatile float, float addrspace(5)* %stack
+  store volatile float 2.0, ptr addrspace(5) %stack
+  %val = load volatile float, ptr addrspace(5) %stack
   %res = call amdgpu_gfx float @extern_func(float %arg0)
   %add = fadd float %res, %val
   ret float %add
@@ -101,16 +101,16 @@ define amdgpu_gfx float @no_stack_extern_call_many_args(<64 x float> %arg0) #0 {
 }
 
 define amdgpu_gfx float @no_stack_indirect_call(float %arg0) #0 {
-  %fptr = load void()*, void()* addrspace(4)* @funcptr
+  %fptr = load ptr, ptr addrspace(4) @funcptr
   call amdgpu_gfx void %fptr()
   ret float %arg0
 }
 
 define amdgpu_gfx float @simple_stack_indirect_call(float %arg0) #0 {
   %stack = alloca float, i32 4, align 4, addrspace(5)
-  store volatile float 2.0, float addrspace(5)* %stack
-  %val = load volatile float, float addrspace(5)* %stack
-  %fptr = load void()*, void()* addrspace(4)* @funcptr
+  store volatile float 2.0, ptr addrspace(5) %stack
+  %val = load volatile float, ptr addrspace(5) %stack
+  %fptr = load ptr, ptr addrspace(4) @funcptr
   call amdgpu_gfx void %fptr()
   %add = fadd float %arg0, %val
   ret float %add
@@ -118,8 +118,8 @@ define amdgpu_gfx float @simple_stack_indirect_call(float %arg0) #0 {
 
 define amdgpu_gfx float @simple_stack_recurse(float %arg0) #0 {
   %stack = alloca float, i32 4, align 4, addrspace(5)
-  store volatile float 2.0, float addrspace(5)* %stack
-  %val = load volatile float, float addrspace(5)* %stack
+  store volatile float 2.0, ptr addrspace(5) %stack
+  %val = load volatile float, ptr addrspace(5) %stack
   %res = call amdgpu_gfx float @simple_stack_recurse(float %arg0)
   %add = fadd float %res, %val
   ret float %add
@@ -128,14 +128,12 @@ define amdgpu_gfx float @simple_stack_recurse(float %arg0) #0 {
 @lds = internal addrspace(3) global [64 x float] undef
 
 define amdgpu_gfx float @simple_lds(float %arg0) #0 {
-  %lds_ptr = getelementptr [64 x float], [64 x float] addrspace(3)* @lds, i32 0, i32 0
-  %val = load float, float addrspace(3)* %lds_ptr
+  %val = load float, ptr addrspace(3) @lds
   ret float %val
 }
 
 define amdgpu_gfx float @simple_lds_recurse(float %arg0) #0 {
-  %lds_ptr = getelementptr [64 x float], [64 x float] addrspace(3)* @lds, i32 0, i32 0
-  %val = load float, float addrspace(3)* %lds_ptr
+  %val = load float, ptr addrspace(3) @lds
   %res = call amdgpu_gfx float @simple_lds_recurse(float %val)
   ret float %res
 }

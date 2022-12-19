@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 -verify-machineinstrs -global-isel < %s | FileCheck -check-prefix=GISEL %s
 
-@gv.fptr0 = external hidden unnamed_addr addrspace(4) constant void()*, align 4
-@gv.fptr1 = external hidden unnamed_addr addrspace(4) constant void(i32)*, align 4
+@gv.fptr0 = external hidden unnamed_addr addrspace(4) constant ptr, align 4
+@gv.fptr1 = external hidden unnamed_addr addrspace(4) constant ptr, align 4
 
 define amdgpu_kernel void @test_indirect_call_sgpr_ptr(i8) {
 ; GCN-LABEL: test_indirect_call_sgpr_ptr:
@@ -191,7 +191,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(i8) {
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GISEL-NEXT:    s_endpgm
-  %fptr = load void()*, void()* addrspace(4)* @gv.fptr0
+  %fptr = load ptr, ptr addrspace(4) @gv.fptr0
   call void %fptr()
   ret void
 }
@@ -384,12 +384,12 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg(i8) {
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GISEL-NEXT:    s_endpgm
-  %fptr = load void(i32)*, void(i32)* addrspace(4)* @gv.fptr1
+  %fptr = load ptr, ptr addrspace(4) @gv.fptr1
   call void %fptr(i32 123)
   ret void
 }
 
-define void @test_indirect_call_vgpr_ptr(void()* %fptr) {
+define void @test_indirect_call_vgpr_ptr(ptr %fptr) {
 ; GCN-LABEL: test_indirect_call_vgpr_ptr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -567,7 +567,7 @@ define void @test_indirect_call_vgpr_ptr(void()* %fptr) {
   ret void
 }
 
-define void @test_indirect_call_vgpr_ptr_arg(void(i32)* %fptr) {
+define void @test_indirect_call_vgpr_ptr_arg(ptr %fptr) {
 ; GCN-LABEL: test_indirect_call_vgpr_ptr_arg:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -749,7 +749,7 @@ define void @test_indirect_call_vgpr_ptr_arg(void(i32)* %fptr) {
   ret void
 }
 
-define i32 @test_indirect_call_vgpr_ptr_ret(i32()* %fptr) {
+define i32 @test_indirect_call_vgpr_ptr_ret(ptr %fptr) {
 ; GCN-LABEL: test_indirect_call_vgpr_ptr_ret:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -932,7 +932,7 @@ define i32 @test_indirect_call_vgpr_ptr_ret(i32()* %fptr) {
   ret i32 %b
 }
 
-define void @test_indirect_call_vgpr_ptr_in_branch(void()* %fptr, i1 %cond) {
+define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) {
 ; GCN-LABEL: test_indirect_call_vgpr_ptr_in_branch:
 ; GCN:       ; %bb.0: ; %bb0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1139,7 +1139,7 @@ bb2:
   ret void
 }
 
-define void @test_indirect_call_vgpr_ptr_inreg_arg(void(i32)* %fptr) {
+define void @test_indirect_call_vgpr_ptr_inreg_arg(ptr %fptr) {
 ; GCN-LABEL: test_indirect_call_vgpr_ptr_inreg_arg:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1333,7 +1333,7 @@ define void @test_indirect_call_vgpr_ptr_inreg_arg(void(i32)* %fptr) {
   ret void
 }
 
-define i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, void(i32)* %fptr) {
+define i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, ptr %fptr) {
 ; GCN-LABEL: test_indirect_call_vgpr_ptr_arg_and_reuse:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1539,7 +1539,7 @@ define i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, void(i32)* %fptr) 
 ; TODO The argument and return variable could be in the same physical register, but the register
 ; allocator is not able to do that because the return value clashes with the liverange of an
 ; IMPLICIT_DEF of the argument.
-define i32 @test_indirect_call_vgpr_ptr_arg_and_return(i32 %i, i32(i32)* %fptr) {
+define i32 @test_indirect_call_vgpr_ptr_arg_and_return(i32 %i, ptr %fptr) {
 ; GCN-LABEL: test_indirect_call_vgpr_ptr_arg_and_return:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1738,7 +1738,7 @@ define i32 @test_indirect_call_vgpr_ptr_arg_and_return(i32 %i, i32(i32)* %fptr) 
 }
 
 ; Calling a vgpr can never be a tail call.
-define void @test_indirect_tail_call_vgpr_ptr(void()* %fptr) {
+define void @test_indirect_tail_call_vgpr_ptr(ptr %fptr) {
 ; GCN-LABEL: test_indirect_tail_call_vgpr_ptr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)

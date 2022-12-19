@@ -9,9 +9,9 @@
 ; GCN-NOT: buffer_load_dword
 ; GCN:     v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL]]
 ; GCN:     ScratchSize: 0
-define amdgpu_kernel void @max_12regs_13a_used(i32 %cond, <4 x float> addrspace(1)* %arg, <4 x float> addrspace(1)* %out) #2 {
+define amdgpu_kernel void @max_12regs_13a_used(i32 %cond, ptr addrspace(1) %arg, ptr addrspace(1) %out) #2 {
 bb:
-  %in.1 = load <4 x float>, <4 x float> addrspace(1)* %arg
+  %in.1 = load <4 x float>, ptr addrspace(1) %arg
   %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float 1.0, float 1.0, <4 x float> %in.1, i32 0, i32 0, i32 0)
   %mai.2 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float 1.0, float 1.0, <4 x float> %mai.1, i32 0, i32 0, i32 0)
   %cmp = icmp eq i32 %cond, 0
@@ -19,12 +19,12 @@ bb:
 
 use:
   call void asm sideeffect "", "a,a,a,a,a"(i32 1, i32 2, i32 3, i32 4, i32 5)
-  store volatile <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, <4 x float> addrspace(1)* %out
+  store volatile <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, ptr addrspace(1) %out
   br label %st
 
 st:
-  %gep1 = getelementptr <4 x float>, <4 x float> addrspace(1)* %out, i64 16
-  %gep2 = getelementptr <4 x float>, <4 x float> addrspace(1)* %out, i64 32
+  %gep1 = getelementptr <4 x float>, ptr addrspace(1) %out, i64 16
+  %gep2 = getelementptr <4 x float>, ptr addrspace(1) %out, i64 32
   call void asm sideeffect "", "a,a"(<4 x float> %mai.1, <4 x float> %mai.2)
   ret void
 }
@@ -56,7 +56,7 @@ define amdgpu_kernel void @max_10_vgprs_used_9a() #1 {
 ; GCN-NOT: buffer_load_dword
 ; GCN:     v_accvgpr_write_b32
 ; GCN:     ScratchSize: 0
-define amdgpu_kernel void @max_32regs_mfma32(float addrspace(1)* %arg) #3 {
+define amdgpu_kernel void @max_32regs_mfma32(ptr addrspace(1) %arg) #3 {
 bb:
   %v = call i32 asm sideeffect "", "=a"()
   br label %use
@@ -65,7 +65,7 @@ use:
   %mai.1 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 1.0, <32 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, float 9.0, float 10.0, float 11.0, float 12.0, float 13.0, float 14.0, float 15.0, float 16.0, float 17.0, float 18.0, float 19.0, float 20.0, float 21.0, float 22.0, float 23.0, float 24.0, float 25.0, float 26.0, float 27.0, float 28.0, float 29.0, float 30.0, float 31.0, float 2.0>, i32 0, i32 0, i32 0)
   call void asm sideeffect "", "a"(i32 %v)
   %elt1 = extractelement <32 x float> %mai.1, i32 0
-  store float %elt1, float addrspace(1)* %arg
+  store float %elt1, ptr addrspace(1) %arg
   ret void
 }
 
@@ -103,15 +103,15 @@ use:
 ; GFX90A:  global_store_dwordx4 v[0:1], v[2:5], off
 
 ; GCN: ScratchSize: 20
-define amdgpu_kernel void @max_6regs_used_8a(<4 x float> addrspace(1)* %arg) #4 {
+define amdgpu_kernel void @max_6regs_used_8a(ptr addrspace(1) %arg) #4 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %v0 = call float asm sideeffect "; def $0", "=v"()
   %a4 = call <4 x float> asm sideeffect "; def $0", "=a"()
-  %gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %arg, i32 %tid
-  %mai.in = load <4 x float>, <4 x float> addrspace(1)* %gep
+  %gep = getelementptr inbounds <4 x float>, ptr addrspace(1) %arg, i32 %tid
+  %mai.in = load <4 x float>, ptr addrspace(1) %gep
   %mai.out = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float 1.0, float 1.0, <4 x float> %mai.in, i32 0, i32 0, i32 0)
-  store <4 x float> %mai.out, <4 x float> addrspace(1)* %gep
-  store volatile <4 x float> %a4, <4 x float> addrspace(1)* undef
+  store <4 x float> %mai.out, ptr addrspace(1) %gep
+  store volatile <4 x float> %a4, ptr addrspace(1) undef
   call void asm sideeffect "; use $0", "v"(float %v0);
   ret void
 }

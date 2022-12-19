@@ -17,39 +17,39 @@
 ; GCN:    VGPRBlocks: 2
 ; GFX900: NumVGPRsForWavesPerEU: 11
 ; GFX908: NumVGPRsForWavesPerEU: 10
-define amdgpu_kernel void @max_11_vgprs(i32 addrspace(1)* %p) #2 {
-  %tid = load volatile i32, i32 addrspace(1)* undef
-  %p1 = getelementptr inbounds i32, i32 addrspace(1)* %p, i32 %tid
-  %p2 = getelementptr inbounds i32, i32 addrspace(1)* %p1, i32 4
-  %p3 = getelementptr inbounds i32, i32 addrspace(1)* %p2, i32 8
-  %p4 = getelementptr inbounds i32, i32 addrspace(1)* %p3, i32 12
-  %p5 = getelementptr inbounds i32, i32 addrspace(1)* %p4, i32 16
-  %p6 = getelementptr inbounds i32, i32 addrspace(1)* %p5, i32 20
-  %p7 = getelementptr inbounds i32, i32 addrspace(1)* %p6, i32 24
-  %p8 = getelementptr inbounds i32, i32 addrspace(1)* %p7, i32 28
-  %p9 = getelementptr inbounds i32, i32 addrspace(1)* %p8, i32 32
-  %p10 = getelementptr inbounds i32, i32 addrspace(1)* %p9, i32 36
-  %v1 = load volatile i32, i32 addrspace(1)* %p1
-  %v2 = load volatile i32, i32 addrspace(1)* %p2
-  %v3 = load volatile i32, i32 addrspace(1)* %p3
-  %v4 = load volatile i32, i32 addrspace(1)* %p4
-  %v5 = load volatile i32, i32 addrspace(1)* %p5
-  %v6 = load volatile i32, i32 addrspace(1)* %p6
-  %v7 = load volatile i32, i32 addrspace(1)* %p7
-  %v8 = load volatile i32, i32 addrspace(1)* %p8
-  %v9 = load volatile i32, i32 addrspace(1)* %p9
-  %v10 = load volatile i32, i32 addrspace(1)* %p10
+define amdgpu_kernel void @max_11_vgprs(ptr addrspace(1) %p) #2 {
+  %tid = load volatile i32, ptr addrspace(1) undef
+  %p1 = getelementptr inbounds i32, ptr addrspace(1) %p, i32 %tid
+  %p2 = getelementptr inbounds i32, ptr addrspace(1) %p1, i32 4
+  %p3 = getelementptr inbounds i32, ptr addrspace(1) %p2, i32 8
+  %p4 = getelementptr inbounds i32, ptr addrspace(1) %p3, i32 12
+  %p5 = getelementptr inbounds i32, ptr addrspace(1) %p4, i32 16
+  %p6 = getelementptr inbounds i32, ptr addrspace(1) %p5, i32 20
+  %p7 = getelementptr inbounds i32, ptr addrspace(1) %p6, i32 24
+  %p8 = getelementptr inbounds i32, ptr addrspace(1) %p7, i32 28
+  %p9 = getelementptr inbounds i32, ptr addrspace(1) %p8, i32 32
+  %p10 = getelementptr inbounds i32, ptr addrspace(1) %p9, i32 36
+  %v1 = load volatile i32, ptr addrspace(1) %p1
+  %v2 = load volatile i32, ptr addrspace(1) %p2
+  %v3 = load volatile i32, ptr addrspace(1) %p3
+  %v4 = load volatile i32, ptr addrspace(1) %p4
+  %v5 = load volatile i32, ptr addrspace(1) %p5
+  %v6 = load volatile i32, ptr addrspace(1) %p6
+  %v7 = load volatile i32, ptr addrspace(1) %p7
+  %v8 = load volatile i32, ptr addrspace(1) %p8
+  %v9 = load volatile i32, ptr addrspace(1) %p9
+  %v10 = load volatile i32, ptr addrspace(1) %p10
   call void asm sideeffect "", "v,v,v,v,v,v,v,v,v,v"(i32 %v1, i32 %v2, i32 %v3, i32 %v4, i32 %v5, i32 %v6, i32 %v7, i32 %v8, i32 %v9, i32 %v10)
-  store volatile i32 %v1, i32 addrspace(1)* undef
-  store volatile i32 %v2, i32 addrspace(1)* undef
-  store volatile i32 %v3, i32 addrspace(1)* undef
-  store volatile i32 %v4, i32 addrspace(1)* undef
-  store volatile i32 %v5, i32 addrspace(1)* undef
-  store volatile i32 %v6, i32 addrspace(1)* undef
-  store volatile i32 %v7, i32 addrspace(1)* undef
-  store volatile i32 %v8, i32 addrspace(1)* undef
-  store volatile i32 %v9, i32 addrspace(1)* undef
-  store volatile i32 %v10, i32 addrspace(1)* undef
+  store volatile i32 %v1, ptr addrspace(1) undef
+  store volatile i32 %v2, ptr addrspace(1) undef
+  store volatile i32 %v3, ptr addrspace(1) undef
+  store volatile i32 %v4, ptr addrspace(1) undef
+  store volatile i32 %v5, ptr addrspace(1) undef
+  store volatile i32 %v6, ptr addrspace(1) undef
+  store volatile i32 %v7, ptr addrspace(1) undef
+  store volatile i32 %v8, ptr addrspace(1) undef
+  store volatile i32 %v9, ptr addrspace(1) undef
+  store volatile i32 %v10, ptr addrspace(1) undef
   ret void
 }
 
@@ -66,11 +66,11 @@ define amdgpu_kernel void @max_11_vgprs(i32 addrspace(1)* %p) #2 {
 ; GFX908: ScratchSize: 68
 ; GFX908: VGPRBlocks: 2
 ; GFX908: NumVGPRsForWavesPerEU: 10
-define amdgpu_kernel void @max_10_vgprs_spill_v32(<32 x float> addrspace(1)* %p) #0 {
+define amdgpu_kernel void @max_10_vgprs_spill_v32(ptr addrspace(1) %p) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p, i32 %tid
-  %v = load volatile <32 x float>, <32 x float> addrspace(1)* %gep
-  store volatile <32 x float> %v, <32 x float> addrspace(1)* undef
+  %gep = getelementptr inbounds <32 x float>, ptr addrspace(1) %p, i32 %tid
+  %v = load volatile <32 x float>, ptr addrspace(1) %gep
+  store volatile <32 x float> %v, ptr addrspace(1) undef
   ret void
 }
 
@@ -92,35 +92,35 @@ define amdgpu_kernel void @max_10_vgprs_spill_v32(<32 x float> addrspace(1)* %p)
 ; GCN908:    VGPRBlocks: 62
 ; GFX900:    NumVGPRsForWavesPerEU: 256
 ; GFX908:    NumVGPRsForWavesPerEU: 252
-define amdgpu_kernel void @max_256_vgprs_spill_9x32(<32 x float> addrspace(1)* %p) #1 {
+define amdgpu_kernel void @max_256_vgprs_spill_9x32(ptr addrspace(1) %p) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %p1 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p, i32 %tid
-  %p2 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p1, i32 %tid
-  %p3 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p2, i32 %tid
-  %p4 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p3, i32 %tid
-  %p5 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p4, i32 %tid
-  %p6 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p5, i32 %tid
-  %p7 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p6, i32 %tid
-  %p8 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p7, i32 %tid
-  %p9 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p8, i32 %tid
-  %v1 = load volatile <32 x float>, <32 x float> addrspace(1)* %p1
-  %v2 = load volatile <32 x float>, <32 x float> addrspace(1)* %p2
-  %v3 = load volatile <32 x float>, <32 x float> addrspace(1)* %p3
-  %v4 = load volatile <32 x float>, <32 x float> addrspace(1)* %p4
-  %v5 = load volatile <32 x float>, <32 x float> addrspace(1)* %p5
-  %v6 = load volatile <32 x float>, <32 x float> addrspace(1)* %p6
-  %v7 = load volatile <32 x float>, <32 x float> addrspace(1)* %p7
-  %v8 = load volatile <32 x float>, <32 x float> addrspace(1)* %p8
-  %v9 = load volatile <32 x float>, <32 x float> addrspace(1)* %p9
-  store volatile <32 x float> %v1, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v2, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v3, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v4, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v5, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v6, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v7, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v8, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v9, <32 x float> addrspace(1)* undef
+  %p1 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p, i32 %tid
+  %p2 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p1, i32 %tid
+  %p3 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p2, i32 %tid
+  %p4 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p3, i32 %tid
+  %p5 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p4, i32 %tid
+  %p6 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p5, i32 %tid
+  %p7 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p6, i32 %tid
+  %p8 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p7, i32 %tid
+  %p9 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p8, i32 %tid
+  %v1 = load volatile <32 x float>, ptr addrspace(1) %p1
+  %v2 = load volatile <32 x float>, ptr addrspace(1) %p2
+  %v3 = load volatile <32 x float>, ptr addrspace(1) %p3
+  %v4 = load volatile <32 x float>, ptr addrspace(1) %p4
+  %v5 = load volatile <32 x float>, ptr addrspace(1) %p5
+  %v6 = load volatile <32 x float>, ptr addrspace(1) %p6
+  %v7 = load volatile <32 x float>, ptr addrspace(1) %p7
+  %v8 = load volatile <32 x float>, ptr addrspace(1) %p8
+  %v9 = load volatile <32 x float>, ptr addrspace(1) %p9
+  store volatile <32 x float> %v1, ptr addrspace(1) undef
+  store volatile <32 x float> %v2, ptr addrspace(1) undef
+  store volatile <32 x float> %v3, ptr addrspace(1) undef
+  store volatile <32 x float> %v4, ptr addrspace(1) undef
+  store volatile <32 x float> %v5, ptr addrspace(1) undef
+  store volatile <32 x float> %v6, ptr addrspace(1) undef
+  store volatile <32 x float> %v7, ptr addrspace(1) undef
+  store volatile <32 x float> %v8, ptr addrspace(1) undef
+  store volatile <32 x float> %v9, ptr addrspace(1) undef
   ret void
 }
 
@@ -143,38 +143,38 @@ define amdgpu_kernel void @max_256_vgprs_spill_9x32(<32 x float> addrspace(1)* %
 ; GFX908: VGPRBlocks: 62
 ; GFX900: NumVGPRsForWavesPerEU: 256
 ; GFX908: NumVGPRsForWavesPerEU: 252
-define amdgpu_kernel void @max_256_vgprs_spill_9x32_2bb(<32 x float> addrspace(1)* %p) #1 {
+define amdgpu_kernel void @max_256_vgprs_spill_9x32_2bb(ptr addrspace(1) %p) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %p1 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p, i32 %tid
-  %p2 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p1, i32 %tid
-  %p3 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p2, i32 %tid
-  %p4 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p3, i32 %tid
-  %p5 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p4, i32 %tid
-  %p6 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p5, i32 %tid
-  %p7 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p6, i32 %tid
-  %p8 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p7, i32 %tid
-  %p9 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p8, i32 %tid
-  %v1 = load volatile <32 x float>, <32 x float> addrspace(1)* %p1
-  %v2 = load volatile <32 x float>, <32 x float> addrspace(1)* %p2
-  %v3 = load volatile <32 x float>, <32 x float> addrspace(1)* %p3
-  %v4 = load volatile <32 x float>, <32 x float> addrspace(1)* %p4
-  %v5 = load volatile <32 x float>, <32 x float> addrspace(1)* %p5
-  %v6 = load volatile <32 x float>, <32 x float> addrspace(1)* %p6
-  %v7 = load volatile <32 x float>, <32 x float> addrspace(1)* %p7
-  %v8 = load volatile <32 x float>, <32 x float> addrspace(1)* %p8
-  %v9 = load volatile <32 x float>, <32 x float> addrspace(1)* %p9
+  %p1 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p, i32 %tid
+  %p2 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p1, i32 %tid
+  %p3 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p2, i32 %tid
+  %p4 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p3, i32 %tid
+  %p5 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p4, i32 %tid
+  %p6 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p5, i32 %tid
+  %p7 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p6, i32 %tid
+  %p8 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p7, i32 %tid
+  %p9 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p8, i32 %tid
+  %v1 = load volatile <32 x float>, ptr addrspace(1) %p1
+  %v2 = load volatile <32 x float>, ptr addrspace(1) %p2
+  %v3 = load volatile <32 x float>, ptr addrspace(1) %p3
+  %v4 = load volatile <32 x float>, ptr addrspace(1) %p4
+  %v5 = load volatile <32 x float>, ptr addrspace(1) %p5
+  %v6 = load volatile <32 x float>, ptr addrspace(1) %p6
+  %v7 = load volatile <32 x float>, ptr addrspace(1) %p7
+  %v8 = load volatile <32 x float>, ptr addrspace(1) %p8
+  %v9 = load volatile <32 x float>, ptr addrspace(1) %p9
   br label %st
 
 st:
-  store volatile <32 x float> %v1, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v2, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v3, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v4, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v5, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v6, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v7, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v8, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v9, <32 x float> addrspace(1)* undef
+  store volatile <32 x float> %v1, ptr addrspace(1) undef
+  store volatile <32 x float> %v2, ptr addrspace(1) undef
+  store volatile <32 x float> %v3, ptr addrspace(1) undef
+  store volatile <32 x float> %v4, ptr addrspace(1) undef
+  store volatile <32 x float> %v5, ptr addrspace(1) undef
+  store volatile <32 x float> %v6, ptr addrspace(1) undef
+  store volatile <32 x float> %v7, ptr addrspace(1) undef
+  store volatile <32 x float> %v8, ptr addrspace(1) undef
+  store volatile <32 x float> %v9, ptr addrspace(1) undef
   ret void
 }
 
@@ -185,34 +185,34 @@ st:
 ; GFX908: v_accvgpr_write_b32
 ; GFX908: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32
 ; GFX908: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32 offset:4
-define void @stack_args_vgpr_spill(<32 x float> %arg0, <32 x float> %arg1, <32 x float> addrspace(1)* %p) #1 {
+define void @stack_args_vgpr_spill(<32 x float> %arg0, <32 x float> %arg1, ptr addrspace(1) %p) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %p1 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p, i32 %tid
-  %p2 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p1, i32 %tid
-  %p3 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p2, i32 %tid
-  %p4 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p3, i32 %tid
-  %p5 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p4, i32 %tid
-  %p6 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p5, i32 %tid
-  %p7 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p6, i32 %tid
-  %v1 = load volatile <32 x float>, <32 x float> addrspace(1)* %p1
-  %v2 = load volatile <32 x float>, <32 x float> addrspace(1)* %p2
-  %v3 = load volatile <32 x float>, <32 x float> addrspace(1)* %p3
-  %v4 = load volatile <32 x float>, <32 x float> addrspace(1)* %p4
-  %v5 = load volatile <32 x float>, <32 x float> addrspace(1)* %p5
-  %v6 = load volatile <32 x float>, <32 x float> addrspace(1)* %p6
-  %v7 = load volatile <32 x float>, <32 x float> addrspace(1)* %p7
+  %p1 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p, i32 %tid
+  %p2 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p1, i32 %tid
+  %p3 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p2, i32 %tid
+  %p4 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p3, i32 %tid
+  %p5 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p4, i32 %tid
+  %p6 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p5, i32 %tid
+  %p7 = getelementptr inbounds <32 x float>, ptr addrspace(1) %p6, i32 %tid
+  %v1 = load volatile <32 x float>, ptr addrspace(1) %p1
+  %v2 = load volatile <32 x float>, ptr addrspace(1) %p2
+  %v3 = load volatile <32 x float>, ptr addrspace(1) %p3
+  %v4 = load volatile <32 x float>, ptr addrspace(1) %p4
+  %v5 = load volatile <32 x float>, ptr addrspace(1) %p5
+  %v6 = load volatile <32 x float>, ptr addrspace(1) %p6
+  %v7 = load volatile <32 x float>, ptr addrspace(1) %p7
   br label %st
 
 st:
-  store volatile <32 x float> %arg0, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %arg1, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v1, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v2, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v3, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v4, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v5, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v6, <32 x float> addrspace(1)* undef
-  store volatile <32 x float> %v7, <32 x float> addrspace(1)* undef
+  store volatile <32 x float> %arg0, ptr addrspace(1) undef
+  store volatile <32 x float> %arg1, ptr addrspace(1) undef
+  store volatile <32 x float> %v1, ptr addrspace(1) undef
+  store volatile <32 x float> %v2, ptr addrspace(1) undef
+  store volatile <32 x float> %v3, ptr addrspace(1) undef
+  store volatile <32 x float> %v4, ptr addrspace(1) undef
+  store volatile <32 x float> %v5, ptr addrspace(1) undef
+  store volatile <32 x float> %v6, ptr addrspace(1) undef
+  store volatile <32 x float> %v7, ptr addrspace(1) undef
   ret void
 }
 

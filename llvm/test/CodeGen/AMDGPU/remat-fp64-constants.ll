@@ -8,7 +8,7 @@
 ; GCN-NOT:     v_writelane_b32
 ; GCN:         s_cbranch_{{[^ ]+}} [[LOOP]]
 ; GCN: .sgpr_spill_count: 0
-define amdgpu_kernel void @test_remat_sgpr(double addrspace(1)* %arg, double addrspace(1)* %arg1) {
+define amdgpu_kernel void @test_remat_sgpr(ptr addrspace(1) %arg, ptr addrspace(1) %arg1) {
 bb:
   %i = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %bb3
@@ -20,8 +20,8 @@ bb3:                                              ; preds = %bb3, %bb
   %i4 = phi i32 [ 0, %bb ], [ %i22, %bb3 ]
   %i5 = add nuw nsw i32 %i4, %i
   %i6 = zext i32 %i5 to i64
-  %i7 = getelementptr inbounds double, double addrspace(1)* %arg, i64 %i6
-  %i8 = load double, double addrspace(1)* %i7, align 8
+  %i7 = getelementptr inbounds double, ptr addrspace(1) %arg, i64 %i6
+  %i8 = load double, ptr addrspace(1) %i7, align 8
   %i9 = fadd double %i8, 0x3EFC01997CC9E6B0
   %i10 = tail call double @llvm.fma.f64(double %i8, double %i9, double 0x3FBE25E43ABE935A)
   %i11 = tail call double @llvm.fma.f64(double %i10, double %i9, double 0x3FC110EF47E6C9C2)
@@ -34,8 +34,8 @@ bb3:                                              ; preds = %bb3, %bb
   %i18 = tail call double @llvm.fma.f64(double %i17, double %i9, double 0x3FD799999999799C)
   %i19 = tail call double @llvm.fma.f64(double %i18, double %i9, double 0x3FD699999999699C)
   %i20 = tail call double @llvm.fma.f64(double %i19, double %i9, double 0x3FD599999999599C)
-  %i21 = getelementptr inbounds double, double addrspace(1)* %arg1, i64 %i6
-  store double %i19, double addrspace(1)* %i21, align 8
+  %i21 = getelementptr inbounds double, ptr addrspace(1) %arg1, i64 %i6
+  store double %i19, ptr addrspace(1) %i21, align 8
   %i22 = add nuw nsw i32 %i4, 1
   %i23 = icmp eq i32 %i22, 1024
   br i1 %i23, label %bb2, label %bb3
