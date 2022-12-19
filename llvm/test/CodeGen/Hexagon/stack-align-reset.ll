@@ -6,16 +6,16 @@
 target triple = "hexagon-unknown--elf"
 
 %struct.0 = type { [5 x i32] }
-%struct.2 = type { i32, i32, i32, %struct.1* }
-%struct.1 = type { i16*, i32, i32, i32 }
+%struct.2 = type { i32, i32, i32, ptr }
+%struct.1 = type { ptr, i32, i32, i32 }
 
 @g0 = external hidden unnamed_addr constant [52 x i8], align 1
 @g1 = external hidden unnamed_addr constant [3 x i8], align 1
 
-declare extern_weak void @f0(i32, i8*, i32, i8*, ...) #0
-declare void @f1(%struct.0*, i32) #0
+declare extern_weak void @f0(i32, ptr, i32, ptr, ...) #0
+declare void @f1(ptr, i32) #0
 
-define void @fred(i8* %a0) #0 {
+define void @fred(ptr %a0) #0 {
 b1:
   %v2 = alloca %struct.0, align 4
   %v3 = alloca %struct.2, i32 undef, align 8
@@ -25,20 +25,20 @@ b4:                                               ; preds = %b1
   br label %b7
 
 b5:                                               ; preds = %b5, %b1
-  %v6 = getelementptr inbounds %struct.2, %struct.2* %v3, i32 undef, i32 3
-  store %struct.1* undef, %struct.1** %v6, align 4
+  %v6 = getelementptr inbounds %struct.2, ptr %v3, i32 undef, i32 3
+  store ptr undef, ptr %v6, align 4
   br label %b5
 
 b7:                                               ; preds = %b10, %b4
   %v8 = call i32 @llvm.hexagon.V6.extractw(<16 x i32> zeroinitializer, i32 0)
-  br i1 icmp eq (void (i32, i8*, i32, i8*, ...)* @f0, void (i32, i8*, i32, i8*, ...)* null), label %b11, label %b9
+  br i1 icmp eq (ptr @f0, ptr null), label %b11, label %b9
 
 b9:                                               ; preds = %b7
-  call void (i32, i8*, i32, i8*, ...) @f0(i32 2, i8* getelementptr inbounds ([52 x i8], [52 x i8]* @g0, i32 0, i32 0), i32 2346, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @g1, i32 0, i32 0), i32 %v8)
+  call void (i32, ptr, i32, ptr, ...) @f0(i32 2, ptr @g0, i32 2346, ptr @g1, i32 %v8)
   unreachable
 
 b10:                                              ; preds = %b11
-  call void @f1(%struct.0* nonnull %v2, i32 28)
+  call void @f1(ptr nonnull %v2, i32 28)
   br label %b7
 
 b11:                                              ; preds = %b11, %b7

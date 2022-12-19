@@ -50,7 +50,7 @@ b0:
   %v0 = icmp eq <16 x i32> %a0, %a1
   %v1 = select <16 x i1> %v0, <16 x i32> %a0, <16 x i32> zeroinitializer
   %v2 = trunc <16 x i32> %v1 to <16 x i16>
-  store <16 x i16> %v2, <16 x i16>* @g0, align 2
+  store <16 x i16> %v2, ptr @g0, align 2
   ret void
 }
 

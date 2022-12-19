@@ -7,7 +7,7 @@ target triple = "hexagon"
 
 define i32 @bad_load() #0 !dbg !10 {
 entry:
-  %0 = load i32, i32* inttoptr (i32 74565 to i32*), align 4, !dbg !13, !tbaa !14
+  %0 = load i32, ptr inttoptr (i32 74565 to ptr), align 4, !dbg !13, !tbaa !14
   ret i32 %0, !dbg !18
 }
 

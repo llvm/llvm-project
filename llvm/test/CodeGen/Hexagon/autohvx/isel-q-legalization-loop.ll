@@ -18,7 +18,7 @@ declare <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32>) #0
 define void @f0() local_unnamed_addr #1 {
 b0:
   %v0 = tail call <128 x i1> @llvm.hexagon.V6.vandvrt.128B(<32 x i32> undef, i32 16843009)
-  %v1 = getelementptr inbounds %s.0, %s.0* null, i32 0, i32 0, i32 3
+  %v1 = getelementptr inbounds %s.0, ptr null, i32 0, i32 0, i32 3
   br label %b1
 
 b1:                                               ; preds = %b1, %b0
@@ -31,7 +31,7 @@ b1:                                               ; preds = %b1, %b0
   %v8 = tail call <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32> %v7)
   %v9 = tail call <64 x i32> @llvm.hexagon.V6.vdealvdd.128B(<32 x i32> undef, <32 x i32> %v8, i32 -32)
   %v10 = tail call <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32> %v9)
-  store <32 x i32> %v10, <32 x i32>* %v1, align 128
+  store <32 x i32> %v10, ptr %v1, align 128
   %v11 = add nuw nsw i32 %v2, 1
   br label %b1
 }

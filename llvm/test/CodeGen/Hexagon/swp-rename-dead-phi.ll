@@ -10,7 +10,7 @@ b0:
   br i1 undef, label %b1, label %b12
 
 b1:                                               ; preds = %b0
-  %v0 = load float, float* undef, align 4
+  %v0 = load float, ptr undef, align 4
   br i1 undef, label %b2, label %b5
 
 b2:                                               ; preds = %b1

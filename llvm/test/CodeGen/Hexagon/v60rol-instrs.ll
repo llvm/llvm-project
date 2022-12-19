@@ -19,18 +19,18 @@ define i32 @f0() #0 {
 b0:
   %v0 = alloca i32, align 4
   %v1 = alloca i32, align 4
-  store i32 0, i32* %v0
-  store i32 0, i32* %v1, align 4
+  store i32 0, ptr %v0
+  store i32 0, ptr %v1, align 4
   %v2 = call i32 @llvm.hexagon.S6.rol.i.r.acc(i32 0, i32 1, i32 31)
-  store i32 %v2, i32* @g0, align 4
+  store i32 %v2, ptr @g0, align 4
   %v3 = call i32 @llvm.hexagon.S6.rol.i.r.and(i32 0, i32 1, i32 31)
-  store i32 %v3, i32* @g1, align 4
+  store i32 %v3, ptr @g1, align 4
   %v4 = call i32 @llvm.hexagon.S6.rol.i.r.nac(i32 0, i32 1, i32 31)
-  store i32 %v4, i32* @g2, align 4
+  store i32 %v4, ptr @g2, align 4
   %v5 = call i32 @llvm.hexagon.S6.rol.i.r.or(i32 0, i32 1, i32 31)
-  store i32 %v5, i32* @g3, align 4
+  store i32 %v5, ptr @g3, align 4
   %v6 = call i32 @llvm.hexagon.S6.rol.i.r.xacc(i32 0, i32 1, i32 31)
-  store i32 %v6, i32* @g4, align 4
+  store i32 %v6, ptr @g4, align 4
   ret i32 0
 }
 

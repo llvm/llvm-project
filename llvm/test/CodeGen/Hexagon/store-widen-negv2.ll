@@ -7,12 +7,11 @@ target datalayout = "e-m:e-p:32:32-i1:32-i64:64-a:0-v32:32-n16:32"
 target triple = "hexagon"
 
 ; Function Attrs: nounwind
-define void @foo(i16* nocapture %s) #0 {
+define void @foo(ptr nocapture %s) #0 {
 entry:
-  %0 = bitcast i16* %s to i8*
-  store i8 -2, i8* %0, align 2
-  %add.ptr = getelementptr inbounds i8, i8* %0, i32 1
-  store i8 -1, i8* %add.ptr, align 1
+  store i8 -2, ptr %s, align 2
+  %add.ptr = getelementptr inbounds i8, ptr %s, i32 1
+  store i8 -1, ptr %add.ptr, align 1
   ret void
 }
 

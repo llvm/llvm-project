@@ -16,9 +16,9 @@ define void @test2(i32 %lane_id, i32 %rx_pwr_st) #0 {
 entry:
   %lane_id.addr = alloca i32, align 4
   %rx_pwr_st.addr = alloca i32, align 4
-  store i32 %lane_id, i32* %lane_id.addr, align 4
-  store i32 %rx_pwr_st, i32* %rx_pwr_st.addr, align 4
-  %0 = load i32, i32* %lane_id.addr, align 4
+  store i32 %lane_id, ptr %lane_id.addr, align 4
+  store i32 %rx_pwr_st, ptr %rx_pwr_st.addr, align 4
+  %0 = load i32, ptr %lane_id.addr, align 4
   switch i32 %0, label %sw.epilog [
     i32 0, label %sw.bb
     i32 1, label %sw.bb1
@@ -28,26 +28,26 @@ entry:
   ]
 
 sw.bb:                                            ; preds = %entry
-  store i32 1, i32* @lane0_pwr_st, align 4
+  store i32 1, ptr @lane0_pwr_st, align 4
   br label %sw.epilog
 
 sw.bb1:                                           ; preds = %entry
-  store i32 1, i32* @lane1_pwr_st, align 4
+  store i32 1, ptr @lane1_pwr_st, align 4
   br label %sw.epilog
 
 sw.bb2:                                           ; preds = %entry
-  store i32 1, i32* @lane2_pwr_st, align 4
+  store i32 1, ptr @lane2_pwr_st, align 4
   br label %sw.epilog
 
 sw.bb3:                                           ; preds = %entry
-  store i32 1, i32* @lane3_pwr_st, align 4
+  store i32 1, ptr @lane3_pwr_st, align 4
   br label %sw.epilog
 
 sw.bb4:                                           ; preds = %entry
-  store i32 1, i32* @lane0_pwr_st, align 4
-  store i32 1, i32* @lane1_pwr_st, align 4
-  store i32 1, i32* @lane2_pwr_st, align 4
-  store i32 1, i32* @lane3_pwr_st, align 4
+  store i32 1, ptr @lane0_pwr_st, align 4
+  store i32 1, ptr @lane1_pwr_st, align 4
+  store i32 1, ptr @lane2_pwr_st, align 4
+  store i32 1, ptr @lane3_pwr_st, align 4
   br label %sw.epilog
 
 sw.epilog:                                        ; preds = %entry, %sw.bb4, %sw.bb3, %sw.bb2, %sw.bb1, %sw.bb

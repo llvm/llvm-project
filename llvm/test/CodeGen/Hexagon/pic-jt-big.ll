@@ -22,24 +22,24 @@ b0:
   ]
 
 b1:                                               ; preds = %b0
-  tail call void bitcast (void (...)* @f1 to void ()*)() #0
+  tail call void @f1() #0
   br label %b8
 
 b2:                                               ; preds = %b0
-  %v0 = load i32, i32* @g0, align 4, !tbaa !0
+  %v0 = load i32, ptr @g0, align 4, !tbaa !0
   %v1 = add nsw i32 %v0, 99
   br label %b9
 
 b3:                                               ; preds = %b0
-  %v2 = load i32, i32* @g1, align 4, !tbaa !0
-  %v3 = load i32, i32* @g0, align 4, !tbaa !0
+  %v2 = load i32, ptr @g1, align 4, !tbaa !0
+  %v3 = load i32, ptr @g0, align 4, !tbaa !0
   %v4 = add nsw i32 %v3, %v2
   tail call void @f2(i32 %v4) #0
   br label %b8
 
 b4:                                               ; preds = %b0
-  %v5 = load i32, i32* @g1, align 4, !tbaa !0
-  %v6 = load i32, i32* @g0, align 4, !tbaa !0
+  %v5 = load i32, ptr @g1, align 4, !tbaa !0
+  %v6 = load i32, ptr @g0, align 4, !tbaa !0
   %v7 = mul nsw i32 %v6, 2
   %v8 = add i32 %v5, 9
   %v9 = add i32 %v8, %v7
