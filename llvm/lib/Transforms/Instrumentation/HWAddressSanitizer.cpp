@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -387,8 +388,7 @@ private:
   bool DetectUseAfterScope;
   bool UsePageAliases;
 
-  bool HasMatchAllTag = false;
-  uint8_t MatchAllTag = 0;
+  llvm::Optional<uint8_t> MatchAllTag;
 
   unsigned PointerTagShift;
   uint64_t TagMaskByte;
@@ -589,11 +589,9 @@ void HWAddressSanitizer::initializeModule() {
 
   if (ClMatchAllTag.getNumOccurrences()) {
     if (ClMatchAllTag != -1) {
-      HasMatchAllTag = true;
       MatchAllTag = ClMatchAllTag & 0xFF;
     }
   } else if (CompileKernel) {
-    HasMatchAllTag = true;
     MatchAllTag = 0xFF;
   }
 
@@ -819,8 +817,8 @@ Value *HWAddressSanitizer::memToShadow(Value *Mem, IRBuilder<> &IRB) {
 int64_t HWAddressSanitizer::getAccessInfo(bool IsWrite,
                                           unsigned AccessSizeIndex) {
   return (CompileKernel << HWASanAccessInfo::CompileKernelShift) |
-         (HasMatchAllTag << HWASanAccessInfo::HasMatchAllShift) |
-         (MatchAllTag << HWASanAccessInfo::MatchAllShift) |
+         (MatchAllTag.has_value() << HWASanAccessInfo::HasMatchAllShift) |
+         (MatchAllTag.value_or(0) << HWASanAccessInfo::MatchAllShift) |
          (Recover << HWASanAccessInfo::RecoverShift) |
          (IsWrite << HWASanAccessInfo::IsWriteShift) |
          (AccessSizeIndex << HWASanAccessInfo::AccessSizeShift);
@@ -856,9 +854,9 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   Value *MemTag = IRB.CreateLoad(Int8Ty, Shadow);
   Value *TagMismatch = IRB.CreateICmpNE(PtrTag, MemTag);
 
-  if (HasMatchAllTag) {
+  if (MatchAllTag.has_value()) {
     Value *TagNotIgnored = IRB.CreateICmpNE(
-        PtrTag, ConstantInt::get(PtrTag->getType(), MatchAllTag));
+        PtrTag, ConstantInt::get(PtrTag->getType(), *MatchAllTag));
     TagMismatch = IRB.CreateAnd(TagMismatch, TagNotIgnored);
   }
 
