@@ -6620,10 +6620,12 @@ cc_library(
     srcs = [
         "lib/Target/LLVMIR/ConvertFromLLVMIR.cpp",
         "lib/Target/LLVMIR/DebugImporter.cpp",
+        "lib/Target/LLVMIR/ModuleImport.cpp",
         "lib/Target/LLVMIR/TypeFromLLVM.cpp",
     ],
     hdrs = [
         "include/mlir/Target/LLVMIR/Import.h",
+        "include/mlir/Target/LLVMIR/ModuleImport.h",
         "include/mlir/Target/LLVMIR/TypeFromLLVM.h",
         "lib/Target/LLVMIR/DebugImporter.h",
     ],
