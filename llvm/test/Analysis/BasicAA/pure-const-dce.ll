@@ -7,7 +7,7 @@
 ; CHECK:      %tmp0 = call i32 @TestConst(i32 5) [[READNONE:#[0-9]+]]
 ; CHECK-NEXT: %tmp1 = call i32 @TestPure(i32 6) [[READONLY:#[0-9]+]]
 ; CHECK-NEXT: %tmp2 = call i32 @TestNone(i32 7)
-; CHECK-NEXT: store i32 1, i32* @g
+; CHECK-NEXT: store i32 1, ptr @g
 ; CHECK-NEXT: %tmp5 = call i32 @TestPure(i32 6) [[READONLY]]
 ; CHECK-NEXT: %tmp7 = call i32 @TestNone(i32 7)
 ; CHECK-NEXT: %tmp8 = call i32 @TestNone(i32 7)
@@ -26,7 +26,7 @@ entry:
 	%tmp0 = call i32 @TestConst( i32 5 ) readnone 		; <i32> [#uses=1]
 	%tmp1 = call i32 @TestPure( i32 6 ) readonly 		; <i32> [#uses=1]
 	%tmp2 = call i32 @TestNone( i32 7 )		; <i32> [#uses=1]
-	store i32 1, i32* @g
+	store i32 1, ptr @g
 	%tmp3 = call i32 @TestConst( i32 5 ) readnone 		; <i32> [#uses=1]
 	%tmp4 = call i32 @TestConst( i32 5 ) readnone 		; <i32> [#uses=1]
 	%tmp5 = call i32 @TestPure( i32 6 ) readonly 		; <i32> [#uses=1]

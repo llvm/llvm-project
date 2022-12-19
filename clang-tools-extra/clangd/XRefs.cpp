@@ -2060,7 +2060,7 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
   return Results;
 }
 
-llvm::Optional<std::vector<TypeHierarchyItem>>
+std::optional<std::vector<TypeHierarchyItem>>
 superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index) {
   std::vector<TypeHierarchyItem> Results;
   if (!Item.data.parents)

@@ -62,7 +62,7 @@ struct LSPServer {
   // Hover
 
   void onHover(const TextDocumentPositionParams &params,
-               Callback<Optional<Hover>> reply);
+               Callback<std::optional<Hover>> reply);
 
   //===--------------------------------------------------------------------===//
   // Document Symbols
@@ -92,7 +92,7 @@ struct LSPServer {
   // PDLL View Output
 
   void onPDLLViewOutput(const PDLLViewOutputParams &params,
-                        Callback<Optional<PDLLViewOutputResult>> reply);
+                        Callback<std::optional<PDLLViewOutputResult>> reply);
 
   //===--------------------------------------------------------------------===//
   // Fields
@@ -225,7 +225,7 @@ void LSPServer::onDocumentLink(const DocumentLinkParams &params,
 // Hover
 
 void LSPServer::onHover(const TextDocumentPositionParams &params,
-                        Callback<Optional<Hover>> reply) {
+                        Callback<std::optional<Hover>> reply) {
   reply(server.findHover(params.textDocument.uri, params.position));
 }
 
@@ -270,7 +270,7 @@ void LSPServer::onInlayHint(const InlayHintsParams &params,
 
 void LSPServer::onPDLLViewOutput(
     const PDLLViewOutputParams &params,
-    Callback<Optional<PDLLViewOutputResult>> reply) {
+    Callback<std::optional<PDLLViewOutputResult>> reply) {
   reply(server.getPDLLViewOutput(params.uri, params.kind));
 }
 

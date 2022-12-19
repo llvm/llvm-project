@@ -42,7 +42,7 @@ b2:                                               ; preds = %b1
 
 @g0 = common dso_local global i16 0, align 2
 @g1 = common dso_local global i32 0, align 4
-@g2 = common dso_local global i32* null, align 8
+@g2 = common dso_local global ptr null, align 8
 
 define void @f1() #0 {
 ; CHECK-LABEL: 'f1'
@@ -76,8 +76,8 @@ define void @f1() #0 {
 ; CHECK:       Loop %b1: Trip multiple is 3
 ;
 b0:
-  store i16 0, i16* @g0, align 2
-  store i32* @g1, i32** @g2, align 8
+  store i16 0, ptr @g0, align 2
+  store ptr @g1, ptr @g2, align 8
   br label %b1
 
 b1:                                               ; preds = %b1, %b0
@@ -93,8 +93,8 @@ b1:                                               ; preds = %b1, %b0
 b2:                                               ; preds = %b1
   %v7 = phi i32 [ %v1, %b1 ]
   %v8 = phi i16 [ %v3, %b1 ]
-  store i32 %v7, i32* @g1, align 4
-  store i16 %v8, i16* @g0, align 2
+  store i32 %v7, ptr @g1, align 4
+  store i16 %v8, ptr @g0, align 2
   br label %b3
 
 b3:                                               ; preds = %b3, %b2

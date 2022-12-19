@@ -1134,9 +1134,8 @@ define double @vreduce_ord_fwadd_v32f64(<32 x float>* %x, double %s) {
 ; CHECK-NEXT:    vfmv.s.f v24, fa0
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwredosum.vs v16, v16, v24
-; CHECK-NEXT:    vsetivli zero, 0, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s ft0, v16
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m1, ta, ma
+; CHECK-NEXT:    vfmv.f.s ft0, v16
 ; CHECK-NEXT:    vfmv.s.f v16, ft0
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwredosum.vs v8, v8, v16

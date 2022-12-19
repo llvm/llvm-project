@@ -341,7 +341,7 @@ FilePermissionsApplier::create(StringRef InputFilename) {
 
 Error FilePermissionsApplier::apply(
     StringRef OutputFilename, bool CopyDates,
-    Optional<sys::fs::perms> OverwritePermissions) {
+    std::optional<sys::fs::perms> OverwritePermissions) {
   sys::fs::file_status Status = InputStatus;
 
   if (OverwritePermissions)

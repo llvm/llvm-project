@@ -15,7 +15,6 @@
 
 #include "ByteStreamer.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include <cassert>

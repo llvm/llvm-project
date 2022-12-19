@@ -125,8 +125,8 @@ bb:
   ret i32 %i8
 }
 
-define i32 @mul_one_bit_hi_hi_u32(i32 %arg, i32 %arg1, i32* %arg2) {
-; CHECK-LABEL: mul_one_bit_hi_hi_u32:
+define i32 @mul_one_bit_hi_hi_u32_lshr_lshr(i32 %arg, i32 %arg1, i32* %arg2) {
+; CHECK-LABEL: mul_one_bit_hi_hi_u32_lshr_lshr:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mul_hi_u32 v0, v1, v0
@@ -142,6 +142,27 @@ bb:
   %i6 = trunc i64 %i5 to i32
   store i32 %i6, i32* %arg2, align 4
   %i7 = lshr i64 %i4, 33
+  %i8 = trunc i64 %i7 to i32
+  ret i32 %i8
+}
+
+define i32 @mul_one_bit_hi_hi_u32_lshr_ashr(i32 %arg, i32 %arg1, i32* %arg2) {
+; CHECK-LABEL: mul_one_bit_hi_hi_u32_lshr_ashr:
+; CHECK:       ; %bb.0: ; %bb
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mul_hi_u32 v4, v1, v0
+; CHECK-NEXT:    v_ashrrev_i64 v[0:1], 33, v[3:4]
+; CHECK-NEXT:    flat_store_dword v[2:3], v4
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %i = zext i32 %arg to i64
+  %i3 = zext i32 %arg1 to i64
+  %i4 = mul nsw i64 %i3, %i
+  %i5 = lshr i64 %i4, 32
+  %i6 = trunc i64 %i5 to i32
+  store i32 %i6, i32* %arg2, align 4
+  %i7 = ashr i64 %i4, 33
   %i8 = trunc i64 %i7 to i32
   ret i32 %i8
 }

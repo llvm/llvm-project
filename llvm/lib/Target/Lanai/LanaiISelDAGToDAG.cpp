@@ -47,8 +47,10 @@ namespace {
 
 class LanaiDAGToDAGISel : public SelectionDAGISel {
 public:
+  static char ID;
+
   explicit LanaiDAGToDAGISel(LanaiTargetMachine &TargetMachine)
-      : SelectionDAGISel(TargetMachine) {}
+      : SelectionDAGISel(ID, TargetMachine) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     return SelectionDAGISel::runOnMachineFunction(MF);
@@ -97,6 +99,8 @@ bool canBeRepresentedAsSls(const ConstantSDNode &CN) {
 }
 
 } // namespace
+
+char LanaiDAGToDAGISel::ID = 0;
 
 // Helper functions for ComplexPattern used on LanaiInstrInfo
 // Used on Lanai Load/Store instructions.

@@ -354,10 +354,11 @@ bool DynamicType::IsTkLenCompatibleWith(const DynamicType &that) const {
 std::optional<bool> DynamicType::SameTypeAs(const DynamicType &that) const {
   bool x{AreCompatibleTypes(*this, that, true, true)};
   bool y{AreCompatibleTypes(that, *this, true, true)};
-  if (x == y) {
-    return x;
+  if (!x && !y) {
+    return false;
+  } else if (x && y && !IsPolymorphic() && !that.IsPolymorphic()) {
+    return true;
   } else {
-    // If either is unlimited polymorphic, the result is unknown.
     return std::nullopt;
   }
 }

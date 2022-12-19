@@ -18,15 +18,19 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.cpp.inc"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrEnums.cpp.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorTypes.cpp.inc"
+
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
 //===----------------------------------------------------------------------===//
 // TensorDialect Attribute Methods.
 //===----------------------------------------------------------------------===//
-
-#define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.cpp.inc"
 
 static bool acceptBitWidth(unsigned bitWidth) {
   switch (bitWidth) {
@@ -51,6 +55,12 @@ Type SparseTensorEncodingAttr::getIndexType() const {
   unsigned idxWidth = getIndexBitWidth();
   Type indexType = IndexType::get(getContext());
   return idxWidth ? IntegerType::get(getContext(), idxWidth) : indexType;
+}
+
+SparseTensorEncodingAttr SparseTensorEncodingAttr::withoutOrdering() const {
+  return SparseTensorEncodingAttr::get(
+      getContext(), getDimLevelType(), AffineMap(), AffineMap(),
+      getPointerBitWidth(), getIndexBitWidth());
 }
 
 Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
@@ -156,39 +166,7 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
   // Print the struct-like storage in dictionary fashion.
   printer << "<{ dimLevelType = [ ";
   for (unsigned i = 0, e = getDimLevelType().size(); i < e; i++) {
-    switch (getDimLevelType()[i]) {
-    case DimLevelType::Undef:
-      // TODO: should probably raise an error instead of printing it...
-      printer << "\"undef\"";
-      break;
-    case DimLevelType::Dense:
-      printer << "\"dense\"";
-      break;
-    case DimLevelType::Compressed:
-      printer << "\"compressed\"";
-      break;
-    case DimLevelType::CompressedNu:
-      printer << "\"compressed-nu\"";
-      break;
-    case DimLevelType::CompressedNo:
-      printer << "\"compressed-no\"";
-      break;
-    case DimLevelType::CompressedNuNo:
-      printer << "\"compressed-nu-no\"";
-      break;
-    case DimLevelType::Singleton:
-      printer << "\"singleton\"";
-      break;
-    case DimLevelType::SingletonNu:
-      printer << "\"singleton-nu\"";
-      break;
-    case DimLevelType::SingletonNo:
-      printer << "\"singleton-no\"";
-      break;
-    case DimLevelType::SingletonNuNo:
-      printer << "\"singleton-nu-no\"";
-      break;
-    }
+    printer << toMLIRString(getDimLevelType()[i]);
     if (i != e - 1)
       printer << ", ";
   }
@@ -273,6 +251,8 @@ SparseTensorEncodingAttr
 mlir::sparse_tensor::getSparseTensorEncoding(Type type) {
   if (auto ttp = type.dyn_cast<RankedTensorType>())
     return ttp.getEncoding().dyn_cast_or_null<SparseTensorEncodingAttr>();
+  if (auto mdtp = type.dyn_cast<StorageSpecifierType>())
+    return mdtp.getEncoding();
   return nullptr;
 }
 
@@ -332,7 +312,39 @@ uint64_t mlir::sparse_tensor::toStoredDim(RankedTensorType type, uint64_t d) {
 }
 
 //===----------------------------------------------------------------------===//
-// TensorDialect Operations.
+// SparseTensorDialect Types.
+//===----------------------------------------------------------------------===//
+
+IntegerType StorageSpecifierType::getSizesType() const {
+  unsigned idxBitWidth =
+      getEncoding().getIndexBitWidth() ? getEncoding().getIndexBitWidth() : 64u;
+  unsigned ptrBitWidth =
+      getEncoding().getIndexBitWidth() ? getEncoding().getIndexBitWidth() : 64u;
+
+  return IntegerType::get(getContext(), std::max(idxBitWidth, ptrBitWidth));
+}
+
+Type StorageSpecifierType::getFieldType(StorageSpecifierKind kind,
+                                        Optional<unsigned> dim) const {
+  if (kind != StorageSpecifierKind::ValMemSize)
+    assert(dim);
+
+  // Right now, we store every sizes metadata using the same size type.
+  // TODO: the field size type can be defined dimensional wise after sparse
+  // tensor encoding supports per dimension index/pointer bitwidth.
+  return getSizesType();
+}
+
+Type StorageSpecifierType::getFieldType(StorageSpecifierKind kind,
+                                        Optional<APInt> dim) const {
+  Optional<unsigned> intDim = std::nullopt;
+  if (dim)
+    intDim = dim.value().getZExtValue();
+  return getFieldType(kind, intDim);
+}
+
+//===----------------------------------------------------------------------===//
+// SparseTensorDialect Operations.
 //===----------------------------------------------------------------------===//
 
 static LogicalResult isInBounds(uint64_t dim, Value tensor) {
@@ -347,6 +359,34 @@ static LogicalResult isMatchingWidth(Value result, unsigned width) {
   if ((width == 0 && etp.isIndex()) || (width > 0 && etp.isInteger(width)))
     return success();
   return failure();
+}
+
+static LogicalResult
+verifySparsifierGetterSetter(StorageSpecifierKind mdKind, Optional<APInt> dim,
+                             TypedValue<StorageSpecifierType> md,
+                             Operation *op) {
+  if (mdKind == StorageSpecifierKind::ValMemSize && dim) {
+    return op->emitError(
+        "redundant dimension argument for querying value memory size");
+  }
+
+  auto enc = md.getType().getEncoding();
+  ArrayRef<DimLevelType> dlts = enc.getDimLevelType();
+  unsigned rank = dlts.size();
+
+  if (mdKind != StorageSpecifierKind::ValMemSize) {
+    if (!dim)
+      return op->emitError("missing dimension argument");
+
+    unsigned d = dim.value().getZExtValue();
+    if (d >= rank)
+      return op->emitError("requested dimension out of bound");
+
+    if (mdKind == StorageSpecifierKind::PtrMemSize && isSingletonDLT(dlts[d]))
+      return op->emitError(
+          "requested pointer memory size on a singleton level");
+  }
+  return success();
 }
 
 LogicalResult NewOp::verify() {
@@ -409,6 +449,50 @@ LogicalResult ToValuesOp::verify() {
   MemRefType mtp = getResult().getType().cast<MemRefType>();
   if (ttp.getElementType() != mtp.getElementType())
     return emitError("unexpected mismatch in element types");
+  return success();
+}
+
+LogicalResult GetStorageSpecifierOp::verify() {
+  if (failed(verifySparsifierGetterSetter(getSpecifierKind(), getDim(),
+                                          getSpecifier(), getOperation()))) {
+    return failure();
+  }
+
+  // Checks the result type
+  if (getSpecifier().getType().getFieldType(getSpecifierKind(), getDim()) !=
+      getResult().getType()) {
+    return emitError(
+        "type mismatch between requested specifier field and result value");
+  }
+  return success();
+}
+
+template <typename SpecifierOp>
+static SetStorageSpecifierOp getSpecifierSetDef(SpecifierOp op) {
+  return op.getSpecifier().template getDefiningOp<SetStorageSpecifierOp>();
+}
+
+OpFoldResult GetStorageSpecifierOp::fold(ArrayRef<Attribute> operands) {
+  StorageSpecifierKind kind = getSpecifierKind();
+  Optional<APInt> dim = getDim();
+  for (auto op = getSpecifierSetDef(*this); op; op = getSpecifierSetDef(op))
+    if (kind == op.getSpecifierKind() && dim == op.getDim())
+      return op.getValue();
+  return {};
+}
+
+LogicalResult SetStorageSpecifierOp::verify() {
+  if (failed(verifySparsifierGetterSetter(getSpecifierKind(), getDim(),
+                                          getSpecifier(), getOperation()))) {
+    return failure();
+  }
+
+  // Checks the input type
+  if (getSpecifier().getType().getFieldType(getSpecifierKind(), getDim()) !=
+      getValue().getType()) {
+    return emitError(
+        "type mismatch between requested specifier field and input value");
+  }
   return success();
 }
 
@@ -800,6 +884,10 @@ void SparseTensorDialect::initialize() {
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.cpp.inc"
+      >();
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorTypes.cpp.inc"
       >();
   addOperations<
 #define GET_OP_LIST

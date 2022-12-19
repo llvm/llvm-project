@@ -59,6 +59,12 @@ static cl::opt<bool>
                               "VWADD_W) with splat constants"),
                      cl::init(false));
 
+static cl::opt<unsigned> NumRepeatedDivisors(
+    DEBUG_TYPE "-fp-repeated-divisors", cl::Hidden,
+    cl::desc("Set the minimum number of repetitions of a divisor to allow "
+             "transformation to multiplications by the reciprocal"),
+    cl::init(2));
+
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
@@ -1726,6 +1732,10 @@ bool RISCVTargetLowering::isLegalElementTypeForRVV(Type *ScalarTy) const {
   return false;
 }
 
+unsigned RISCVTargetLowering::combineRepeatedFPDivisors() const {
+  return NumRepeatedDivisors;
+}
+
 static SDValue getVLOperand(SDValue Op) {
   assert((Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
           Op.getOpcode() == ISD::INTRINSIC_W_CHAIN) &&
@@ -2816,14 +2826,26 @@ static MVT getLMUL1VT(MVT VT) {
 static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL,
                                  MVT VT, SDLoc DL, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
+  const MVT XLenVT = Subtarget.getXLenVT();
+
   SDValue Passthru = DAG.getUNDEF(VT);
-  if (VT.isFloatingPoint())
+  if (VT.isFloatingPoint()) {
     // TODO: Use vmv.v.i for appropriate constants
-    return DAG.getNode(RISCVISD::VFMV_S_F_VL, DL, VT, Passthru, Scalar, VL);
+    // Use M1 or smaller to avoid over constraining register allocation
+    const MVT M1VT = getLMUL1VT(VT);
+    auto InnerVT = VT.bitsLE(M1VT) ? VT : M1VT;
+    SDValue Result = DAG.getNode(RISCVISD::VFMV_S_F_VL, DL, InnerVT,
+                                 DAG.getUNDEF(InnerVT), Scalar, VL);
+    if (VT != InnerVT)
+      Result = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
+                           DAG.getUNDEF(VT),
+                           Result, DAG.getConstant(0, DL, XLenVT));
+    return Result;
+  }
+
 
   // Avoid the tricky legalization cases by falling back to using the
   // splat code which already handles it gracefully.
-  const MVT XLenVT = Subtarget.getXLenVT();
   if (!Scalar.getValueType().bitsLE(XLenVT))
     return lowerScalarSplat(DAG.getUNDEF(VT), Scalar,
                             DAG.getConstant(1, DL, XLenVT),
@@ -2844,7 +2866,17 @@ static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL,
         VT.bitsLE(getLMUL1VT(VT)))
       return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Passthru, Scalar, VL);
   }
-  return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, VT, Passthru, Scalar, VL);
+  // Use M1 or smaller to avoid over constraining register allocation
+  const MVT M1VT = getLMUL1VT(VT);
+  auto InnerVT = VT.bitsLE(M1VT) ? VT : M1VT;
+  SDValue Result = DAG.getNode(RISCVISD::VMV_S_X_VL, DL, InnerVT,
+                               DAG.getUNDEF(InnerVT), Scalar, VL);
+  if (VT != InnerVT)
+    Result = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
+                         DAG.getUNDEF(VT),
+                         Result, DAG.getConstant(0, DL, XLenVT));
+  return Result;
+
 }
 
 static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, bool &SwapSources,
@@ -12038,6 +12070,10 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     InVals.push_back(ArgValue);
   }
 
+  if (any_of(ArgLocs,
+             [](CCValAssign &VA) { return VA.getLocVT().isScalableVector(); }))
+    MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
+
   if (IsVarArg) {
     ArrayRef<MCPhysReg> ArgRegs = makeArrayRef(ArgGPRs);
     unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs);
@@ -12508,7 +12544,7 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                  const SmallVectorImpl<ISD::OutputArg> &Outs,
                                  const SmallVectorImpl<SDValue> &OutVals,
                                  const SDLoc &DL, SelectionDAG &DAG) const {
-  const MachineFunction &MF = DAG.getMachineFunction();
+  MachineFunction &MF = DAG.getMachineFunction();
   const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
 
   // Stores the assignment of the return value to a location.
@@ -12578,6 +12614,10 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   if (Glue.getNode()) {
     RetOps.push_back(Glue);
   }
+
+  if (any_of(RVLocs,
+             [](CCValAssign &VA) { return VA.getLocVT().isScalableVector(); }))
+    MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
 
   unsigned RetOpc = RISCVISD::RET_FLAG;
   // Interrupt service routines use different return instructions.

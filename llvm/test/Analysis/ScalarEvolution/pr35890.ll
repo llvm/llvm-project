@@ -5,12 +5,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Check that it does not crash because SCEVAddRec's step is not an AddRec.
 
-define void @pr35890(i32* %inc_ptr, i32 %a) {
+define void @pr35890(ptr %inc_ptr, i32 %a) {
 
 ; CHECK-LABEL: @pr35890(
 
 entry:
-  %inc = load i32, i32* %inc_ptr, !range !0
+  %inc = load i32, ptr %inc_ptr, !range !0
   %ne.cond = icmp ne i32 %inc, 0
   br i1 %ne.cond, label %loop, label %bail
 

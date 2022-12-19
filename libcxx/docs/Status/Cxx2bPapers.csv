@@ -53,7 +53,7 @@
 "","","","","",""
 "`P0009R18 <https://wg21.link/P0009R18>`__","LWG","mdspan: A Non-Owning Multidimensional Array Reference","July 2022","",""
 "`P0429R9 <https://wg21.link/P0429R9>`__","LWG","A Standard ``flat_map``","July 2022","",""
-"`P1169R4 <https://wg21.link/P1169R4>`__","LWG","``static operator()``","July 2022","",""
+"`P1169R4 <https://wg21.link/P1169R4>`__","LWG","``static operator()``","July 2022","|Complete|","16.0"
 "`P1222R4 <https://wg21.link/P1222R4>`__","LWG","A Standard ``flat_set``","July 2022","",""
 "`P1223R5 <https://wg21.link/P1223R5>`__","LWG","``ranges::find_last()``, ``ranges::find_last_if()``, and ``ranges::find_last_if_not()``","July 2022","","","|ranges|"
 "`P1467R9 <https://wg21.link/P1467R9>`__","LWG","Extended ``floating-point`` types and standard names","July 2022","",""

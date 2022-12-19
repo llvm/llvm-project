@@ -1525,6 +1525,9 @@ static Instruction *foldTruncInsEltPair(InsertElementInst &InsElt,
   Value *IndexOp  = InsElt.getOperand(2);
 
   // inselt (inselt BaseVec, (trunc X), Index0), (trunc (lshr X, BW/2)), Index1
+  // Note: It is not safe to do this transform with an arbitrary base vector
+  //       because the bitcast of that vector to fewer/larger elements could
+  //       allow poison to spill into an element that was not poison before.
   // TODO: The insertion order could be reversed.
   // TODO: Detect smaller fractions of the scalar.
   // TODO: One-use checks are conservative.
@@ -1536,7 +1539,8 @@ static Instruction *foldTruncInsEltPair(InsertElementInst &InsElt,
                                          m_ConstantInt(Index0)))) ||
       !match(ScalarOp, m_OneUse(m_Trunc(m_LShr(m_Specific(X),
                                                m_ConstantInt(ShAmt))))) ||
-      !match(IndexOp, m_ConstantInt(Index1)))
+      !match(IndexOp, m_ConstantInt(Index1)) ||
+      !match(BaseVec, m_Undef()))
     return nullptr;
 
   Type *SrcTy = X->getType();

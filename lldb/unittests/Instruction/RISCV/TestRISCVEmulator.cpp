@@ -19,6 +19,7 @@
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv64.h"
 #include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
 
+using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -69,7 +70,7 @@ struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
   }
 
   static size_t ReadMemoryCallback(EmulateInstruction *instruction, void *baton,
-                                   const Context &context, lldb::addr_t addr,
+                                   const Context &context, addr_t addr,
                                    void *dst, size_t length) {
     RISCVEmulatorTester *tester = (RISCVEmulatorTester *)instruction;
     assert(addr + length < sizeof(tester->memory));
@@ -79,7 +80,7 @@ struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
 
   static size_t WriteMemoryCallback(EmulateInstruction *instruction,
                                     void *baton, const Context &context,
-                                    lldb::addr_t addr, const void *dst,
+                                    addr_t addr, const void *dst,
                                     size_t length) {
     RISCVEmulatorTester *tester = (RISCVEmulatorTester *)instruction;
     assert(addr + length < sizeof(tester->memory));
@@ -88,8 +89,9 @@ struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
   };
 
   bool DecodeAndExecute(uint32_t inst, bool ignore_cond) {
-    return Decode(inst)
-        .transform([&](DecodeResult res) { return Execute(res, ignore_cond); })
+    return llvm::transformOptional(
+               Decode(inst),
+               [&](DecodeResult res) { return Execute(res, ignore_cond); })
         .value_or(false);
   }
 
@@ -101,7 +103,7 @@ struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
 };
 
 TEST_F(RISCVEmulatorTester, testJAL) {
-  lldb::addr_t old_pc = 0x114514;
+  addr_t old_pc = 0x114514;
   WritePC(old_pc);
   // jal x1, -6*4
   uint32_t inst = 0b11111110100111111111000011101111;
@@ -123,8 +125,8 @@ constexpr uint32_t EncodeJALR(uint32_t rd, uint32_t rs1, int32_t offset) {
 }
 
 TEST_F(RISCVEmulatorTester, testJALR) {
-  lldb::addr_t old_pc = 0x114514;
-  lldb::addr_t old_x2 = 0x1024;
+  addr_t old_pc = 0x114514;
+  addr_t old_x2 = 0x1024;
   WritePC(old_pc);
   gpr.gpr[2] = old_x2;
   // jalr x1, x2(-255)
@@ -175,7 +177,7 @@ using EncoderB = uint32_t (*)(uint32_t rs1, uint32_t rs2, int32_t offset);
 static void testBranch(RISCVEmulatorTester *tester, EncoderB encoder,
                        bool branched, uint64_t rs1, uint64_t rs2) {
   // prepare test registers
-  lldb::addr_t old_pc = 0x114514;
+  addr_t old_pc = 0x114514;
   tester->WritePC(old_pc);
   tester->gpr.gpr[1] = rs1;
   tester->gpr.gpr[2] = rs2;
@@ -215,7 +217,7 @@ using RDComputer = std::function<uint64_t(RS1, RS2, PC)>;
 static void TestInst(RISCVEmulatorTester *tester, DecodeResult inst,
                      bool has_rs2, RDComputer rd_val) {
 
-  lldb::addr_t old_pc = 0x114514;
+  addr_t old_pc = 0x114514;
   tester->WritePC(old_pc);
   uint32_t rd = DecodeRD(inst.inst);
   uint32_t rs1 = DecodeRS1(inst.inst);
@@ -279,25 +281,6 @@ struct TestDecode {
   RISCVInst inst_type;
 };
 
-static bool compareInst(const RISCVInst &lhs, const RISCVInst &rhs) {
-  if (lhs.index() != rhs.index())
-    return false;
-  return std::visit(
-      [&](auto &&L) {
-        return std::visit(
-            [&](auto &&R) {
-              // guaranteed by
-              // 1. lhs.index() == rhs.index()
-              // (they are the same instruction type)
-              // 2. all instruction representations are plain data objects
-              // consisting of primitive types.
-              return std::memcmp(&L, &R, sizeof(L)) == 0;
-            },
-            rhs);
-      },
-      lhs);
-}
-
 TEST_F(RISCVEmulatorTester, TestCDecode) {
   std::vector<TestDecode> tests = {
       {0x0000, INVALID{0x0000}},
@@ -352,7 +335,7 @@ TEST_F(RISCVEmulatorTester, TestCDecode) {
   for (auto i : tests) {
     auto decode = this->Decode(i.inst);
     ASSERT_TRUE(decode.has_value());
-    ASSERT_TRUE(compareInst(decode->decoded, i.inst_type));
+    ASSERT_EQ(decode->decoded, i.inst_type);
   }
 }
 
@@ -372,7 +355,7 @@ TEST_F(RISCVEmulatorTester32, TestCDecodeRV32) {
   for (auto i : tests) {
     auto decode = this->Decode(i.inst);
     ASSERT_TRUE(decode.has_value());
-    ASSERT_TRUE(compareInst(decode->decoded, i.inst_type));
+    ASSERT_EQ(decode->decoded, i.inst_type);
   }
 }
 
@@ -485,49 +468,68 @@ TEST_F(RISCVEmulatorTester, TestAMOMAXU) {
   TestAtomic<uint64_t>(this, 0xE0F7382F, 0x1, 0x2, 0x1, 0x2);
 }
 
-struct FloatCalInst {
+template <typename T> struct F_D_CalInst {
   uint32_t inst;
   std::string name;
-  float rs1_val;
-  float rs2_val;
-  float rd_val;
+  T rs1_val;
+  T rs2_val;
+  T rd_val;
 };
 
-static void TestFloatCalInst(RISCVEmulatorTester *tester, DecodeResult inst,
-                             float rs1_val, float rs2_val, float rd_exp) {
-  std::vector<std::string> FloatCMP = {"FEQ_S", "FLT_S", "FLE_S"};
-  std::vector<std::string> FloatCal3 = {"FMADD_S", "FMSUB_S", "FNMSUB_S",
-                                        "FNMADD_S"};
+using FloatCalInst = F_D_CalInst<float>;
+using DoubleCalInst = F_D_CalInst<double>;
+
+template <typename T>
+static void TestF_D_CalInst(RISCVEmulatorTester *tester, DecodeResult inst,
+                            T rs1_val, T rs2_val, T rd_exp) {
+  std::vector<std::string> CMPs = {"FEQ_S", "FLT_S", "FLE_S",
+                                   "FEQ_D", "FLT_D", "FLE_D"};
+  std::vector<std::string> FMAs = {"FMADD_S",  "FMSUB_S", "FNMSUB_S",
+                                   "FNMADD_S", "FMADD_D", "FMSUB_D",
+                                   "FNMSUB_D", "FNMADD_D"};
 
   uint32_t rd = DecodeRD(inst.inst);
   uint32_t rs1 = DecodeRS1(inst.inst);
   uint32_t rs2 = DecodeRS2(inst.inst);
 
-  llvm::APFloat ap_rs1_val(rs1_val);
-  llvm::APFloat ap_rs2_val(rs2_val);
-  llvm::APFloat ap_rs3_val(0.5f);
+  APFloat ap_rs1_val(rs1_val);
+  APFloat ap_rs2_val(rs2_val);
+  APFloat ap_rs3_val(0.0f);
+  static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>,
+                "T should be float or double");
+  if constexpr (std::is_same_v<T, float>)
+    ap_rs3_val = APFloat(0.5f);
+  if constexpr (std::is_same_v<T, double>)
+    ap_rs3_val = APFloat(0.5);
 
   if (rs1)
     tester->fpr.fpr[rs1] = ap_rs1_val.bitcastToAPInt().getZExtValue();
   if (rs2)
     tester->fpr.fpr[rs2] = ap_rs2_val.bitcastToAPInt().getZExtValue();
-  for (auto i : FloatCal3) {
+  for (auto i : FMAs) {
     if (inst.pattern.name == i) {
       uint32_t rs3 = DecodeRS3(inst.inst);
       tester->fpr.fpr[rs3] = ap_rs3_val.bitcastToAPInt().getZExtValue();
     }
   }
   ASSERT_TRUE(tester->Execute(inst, false));
-  for (auto i : FloatCMP) {
+  for (auto i : CMPs) {
     if (inst.pattern.name == i) {
       ASSERT_EQ(tester->gpr.gpr[rd], rd_exp);
       return;
     }
   }
 
-  llvm::APInt apInt(32, tester->fpr.fpr[rd]);
-  llvm::APFloat rd_val(apInt.bitsToFloat());
-  ASSERT_EQ(rd_val.convertToFloat(), rd_exp);
+  if constexpr (std::is_same_v<T, float>) {
+    APInt apInt(32, tester->fpr.fpr[rd]);
+    APFloat rd_val(apInt.bitsToFloat());
+    ASSERT_EQ(rd_val.convertToFloat(), rd_exp);
+  }
+  if constexpr (std::is_same_v<T, double>) {
+    APInt apInt(64, tester->fpr.fpr[rd]);
+    APFloat rd_val(apInt.bitsToDouble());
+    ASSERT_EQ(rd_val.convertToDouble(), rd_exp);
+  }
 }
 
 TEST_F(RISCVEmulatorTester, TestFloatInst) {
@@ -546,14 +548,14 @@ TEST_F(RISCVEmulatorTester, TestFloatInst) {
       {0x28219253, "FMAX_S", -0.5f, -0.6f, -0.5f},
       {0x28219253, "FMAX_S", 0.5f, 0.6f, 0.6f},
       {0x28219253, "FMAX_S", 0.5f, -0.6f, 0.5f},
-      {0xA221A253, "FEQ_S", 0.5f, 0.5f, 1},
-      {0xA221A253, "FEQ_S", 0.5f, -0.5f, 0},
-      {0xA221A253, "FEQ_S", -0.5f, 0.5f, 0},
-      {0xA221A253, "FEQ_S", 0.4f, 0.5f, 0},
-      {0xA2219253, "FLT_S", 0.4f, 0.5f, 1},
-      {0xA2219253, "FLT_S", 0.5f, 0.5f, 0},
-      {0xA2218253, "FLE_S", 0.4f, 0.5f, 1},
-      {0xA2218253, "FLE_S", 0.5f, 0.5f, 1},
+      {0xA021A253, "FEQ_S", 0.5f, 0.5f, 1},
+      {0xA021A253, "FEQ_S", 0.5f, -0.5f, 0},
+      {0xA021A253, "FEQ_S", -0.5f, 0.5f, 0},
+      {0xA021A253, "FEQ_S", 0.4f, 0.5f, 0},
+      {0xA0219253, "FLT_S", 0.4f, 0.5f, 1},
+      {0xA0219253, "FLT_S", 0.5f, 0.5f, 0},
+      {0xA0218253, "FLE_S", 0.4f, 0.5f, 1},
+      {0xA0218253, "FLE_S", 0.5f, 0.5f, 1},
       {0x4021F243, "FMADD_S", 0.5f, 0.5f, 0.75f},
       {0x4021F247, "FMSUB_S", 0.5f, 0.5f, -0.25f},
       {0x4021F24B, "FNMSUB_S", 0.5f, 0.5f, 0.25f},
@@ -564,65 +566,137 @@ TEST_F(RISCVEmulatorTester, TestFloatInst) {
     ASSERT_TRUE(decode.has_value());
     std::string name = decode->pattern.name;
     ASSERT_EQ(name, i.name);
-    TestFloatCalInst(this, decode.value(), i.rs1_val, i.rs2_val, i.rd_val);
+    TestF_D_CalInst(this, decode.value(), i.rs1_val, i.rs2_val, i.rd_val);
   }
 }
 
-static void TestFCVT(RISCVEmulatorTester *tester, DecodeResult inst) {
-  std::vector<std::string> FloatToInt = {"FCVT_W_S", "FCVT_WU_S"};
-  std::vector<std::string> IntToFloat = {"FCVT_S_W", "FCVT_S_WU"};
-
-  uint32_t rd = DecodeRD(inst.inst);
-  uint32_t rs1 = DecodeRS1(inst.inst);
-
-  for (auto i : FloatToInt) {
-    if (inst.pattern.name == i) {
-      llvm::APFloat apf_rs1_val(12.0f);
-      tester->fpr.fpr[rs1] = apf_rs1_val.bitcastToAPInt().getZExtValue();
-      ASSERT_TRUE(tester->Execute(inst, false));
-      ASSERT_EQ(tester->gpr.gpr[rd], uint64_t(12));
-      return;
-    }
-  }
-
-  for (auto i : IntToFloat) {
-    if (inst.pattern.name == i) {
-      tester->gpr.gpr[rs1] = 12;
-      ASSERT_TRUE(tester->Execute(inst, false));
-      llvm::APInt apInt(32, tester->fpr.fpr[rd]);
-      llvm::APFloat rd_val(apInt.bitsToFloat());
-      ASSERT_EQ(rd_val.convertToFloat(), 12.0f);
-      return;
-    }
-  }
-}
-
-struct FCVTInst {
-  uint32_t inst;
-  std::string name;
-};
-
-TEST_F(RISCVEmulatorTester, TestFCVTInst) {
-  std::vector<FCVTInst> tests = {
-      {0xC001F253, "FCVT_W_S"}, {0xC011F253, "FCVT_WU_S"},
-      {0xD001F253, "FCVT_S_W"}, {0xD011F253, "FCVT_S_WU"},
-      {0xC021F253, "FCVT_L_S"}, {0xC031F253, "FCVT_LU_S"},
-      {0xD021F253, "FCVT_S_L"}, {0xD031F253, "FCVT_S_LU"},
+TEST_F(RISCVEmulatorTester, TestDoubleInst) {
+  std::vector<DoubleCalInst> tests = {
+      {0x221F253, "FADD_D", 0.5, 0.5, 1.0},
+      {0xA21F253, "FSUB_D", 1.0, 0.5, 0.5},
+      {0x1221F253, "FMUL_D", 0.5, 0.5, 0.25},
+      {0x1A21F253, "FDIV_D", 0.1, 0.1, 1.0},
+      {0x22218253, "FSGNJ_D", 0.5, 0.2, 0.5},
+      {0x22219253, "FSGNJN_D", 0.5, -1.0, 0.5},
+      {0x2221A253, "FSGNJX_D", -0.5, -0.5, 0.5},
+      {0x2221A253, "FSGNJX_D", -0.5, 0.5, -0.5},
+      {0x2A218253, "FMIN_D", -0.5, 0.5, -0.5},
+      {0x2A218253, "FMIN_D", -0.5, -0.6, -0.6},
+      {0x2A218253, "FMIN_D", 0.5, 0.6, 0.5},
+      {0x2A219253, "FMAX_D", -0.5, -0.6, -0.5},
+      {0x2A219253, "FMAX_D", 0.5, 0.6, 0.6},
+      {0x2A219253, "FMAX_D", 0.5, -0.6, 0.5},
+      {0xA221A253, "FEQ_D", 0.5, 0.5, 1},
+      {0xA221A253, "FEQ_D", 0.5, -0.5, 0},
+      {0xA221A253, "FEQ_D", -0.5, 0.5, 0},
+      {0xA221A253, "FEQ_D", 0.4, 0.5, 0},
+      {0xA2219253, "FLT_D", 0.4, 0.5, 1},
+      {0xA2219253, "FLT_D", 0.5, 0.5, 0},
+      {0xA2218253, "FLE_D", 0.4, 0.5, 1},
+      {0xA2218253, "FLE_D", 0.5, 0.5, 1},
+      {0x4221F243, "FMADD_D", 0.5, 0.5, 0.75},
+      {0x4221F247, "FMSUB_D", 0.5, 0.5, -0.25},
+      {0x4221F24B, "FNMSUB_D", 0.5, 0.5, 0.25},
+      {0x4221F24F, "FNMADD_D", 0.5, 0.5, -0.75},
   };
   for (auto i : tests) {
     auto decode = this->Decode(i.inst);
     ASSERT_TRUE(decode.has_value());
     std::string name = decode->pattern.name;
     ASSERT_EQ(name, i.name);
-    TestFCVT(this, decode.value());
+    TestF_D_CalInst(this, decode.value(), i.rs1_val, i.rs2_val, i.rd_val);
   }
+}
+
+template <typename T>
+static void TestInverse(RISCVEmulatorTester *tester, uint32_t f_reg,
+                        uint32_t x_reg, DecodeResult f2i, DecodeResult i2f,
+                        APFloat apf_val) {
+  uint64_t exp_x;
+  if constexpr (std::is_same_v<T, float>)
+    exp_x = uint64_t(apf_val.convertToFloat());
+  if constexpr (std::is_same_v<T, double>)
+    exp_x = uint64_t(apf_val.convertToDouble());
+  T exp_f = T(exp_x);
+
+  // convert float/double to int.
+  tester->fpr.fpr[f_reg] = apf_val.bitcastToAPInt().getZExtValue();
+  ASSERT_TRUE(tester->Execute(f2i, false));
+  ASSERT_EQ(tester->gpr.gpr[x_reg], exp_x);
+
+  // then convert int to float/double back.
+  ASSERT_TRUE(tester->Execute(i2f, false));
+  ASSERT_EQ(tester->fpr.fpr[f_reg],
+            APFloat(exp_f).bitcastToAPInt().getZExtValue());
+}
+
+struct FCVTInst {
+  uint32_t f2i;
+  uint32_t i2f;
+  APFloat data;
+  bool isDouble;
+};
+
+TEST_F(RISCVEmulatorTester, TestFCVT) {
+  std::vector<FCVTInst> tests{
+      // FCVT_W_S and FCVT_S_W
+      {0xC000F0D3, 0xD000F0D3, APFloat(12.0f), false},
+      // FCVT_WU_S and FCVT_S_WU
+      {0xC010F0D3, 0xD010F0D3, APFloat(12.0f), false},
+      // FCVT_L_S and FCVT_S_L
+      {0xC020F0D3, 0xD020F0D3, APFloat(12.0f), false},
+      // FCVT_LU_S and FCVT_S_LU
+      {0xC030F0D3, 0xD030F0D3, APFloat(12.0f), false},
+      // FCVT_W_D and FCVT_D_W
+      {0xC200F0D3, 0xD200F0D3, APFloat(12.0), true},
+      // FCVT_WU_D and FCVT_D_WU
+      {0xC210F0D3, 0xD210F0D3, APFloat(12.0), true},
+      // FCVT_L_D and FCVT_D_L
+      {0xC220F0D3, 0xD220F0D3, APFloat(12.0), true},
+      // FCVT_LU_D and FCVT_D_LU
+      {0xC230F0D3, 0xD230F0D3, APFloat(12.0), true},
+  };
+  for (auto i : tests) {
+    auto f2i = this->Decode(i.f2i);
+    auto i2f = this->Decode(i.i2f);
+    ASSERT_TRUE(f2i.has_value());
+    ASSERT_TRUE(i2f.has_value());
+    uint32_t f_reg = DecodeRS1((*f2i).inst);
+    uint32_t x_reg = DecodeRS1((*i2f).inst);
+    if (i.isDouble)
+      TestInverse<double>(this, f_reg, x_reg, *f2i, *i2f, i.data);
+    else
+      TestInverse<float>(this, f_reg, x_reg, *f2i, *i2f, i.data);
+  }
+}
+
+TEST_F(RISCVEmulatorTester, TestFDInverse) {
+  // FCVT_S_D
+  auto d2f = this->Decode(0x4010F0D3);
+  // FCVT_S_D
+  auto f2d = this->Decode(0x4200F0D3);
+  ASSERT_TRUE(d2f.has_value());
+  ASSERT_TRUE(f2d.has_value());
+  auto data = APFloat(12.0);
+  uint32_t reg = DecodeRS1((*d2f).inst);
+  float exp_f = 12.0f;
+  double exp_d = 12.0;
+
+  // double to float
+  this->fpr.fpr[reg] = data.bitcastToAPInt().getZExtValue();
+  ASSERT_TRUE(this->Execute(*d2f, false));
+  ASSERT_EQ(this->fpr.fpr[reg], APFloat(exp_f).bitcastToAPInt().getZExtValue());
+
+  // float to double
+  ASSERT_TRUE(this->Execute(*f2d, false));
+  ASSERT_EQ(this->fpr.fpr[reg], APFloat(exp_d).bitcastToAPInt().getZExtValue());
 }
 
 TEST_F(RISCVEmulatorTester, TestFloatLSInst) {
   uint32_t FLWInst = 0x1A207;  // imm = 0
   uint32_t FSWInst = 0x21A827; // imm = 16
 
-  llvm::APFloat apf(12.0f);
+  APFloat apf(12.0f);
   uint64_t bits = apf.bitcastToAPInt().getZExtValue();
 
   *(uint64_t *)this->memory = bits;
@@ -642,30 +716,82 @@ TEST_F(RISCVEmulatorTester, TestFloatLSInst) {
   ASSERT_EQ(*(uint32_t *)(this->memory + 16), bits);
 }
 
+TEST_F(RISCVEmulatorTester, TestDoubleLSInst) {
+  uint32_t FLDInst = 0x1B207;  // imm = 0
+  uint32_t FSDInst = 0x21B827; // imm = 16
+
+  APFloat apf(12.0);
+  uint64_t bits = apf.bitcastToAPInt().getZExtValue();
+
+  *(uint64_t *)this->memory = bits;
+  auto decode = this->Decode(FLDInst);
+  ASSERT_TRUE(decode.has_value());
+  std::string name = decode->pattern.name;
+  ASSERT_EQ(name, "FLD");
+  ASSERT_TRUE(this->Execute(decode.value(), false));
+  ASSERT_EQ(this->fpr.fpr[DecodeRD(FLDInst)], bits);
+
+  this->fpr.fpr[DecodeRS2(FSDInst)] = bits;
+  decode = this->Decode(FSDInst);
+  ASSERT_TRUE(decode.has_value());
+  name = decode->pattern.name;
+  ASSERT_EQ(name, "FSD");
+  ASSERT_TRUE(this->Execute(decode.value(), false));
+  ASSERT_EQ(*(uint64_t *)(this->memory + 16), bits);
+}
+
 TEST_F(RISCVEmulatorTester, TestFMV_X_WInst) {
   auto FMV_X_WInst = 0xE0018253;
 
-  llvm::APFloat apf(12.0f);
-  auto bits = NanBoxing(apf.bitcastToAPInt().getZExtValue());
-  this->fpr.fpr[DecodeRS1(FMV_X_WInst)] = bits;
+  APFloat apf(12.0f);
+  auto exp_bits = apf.bitcastToAPInt().getZExtValue();
+  this->fpr.fpr[DecodeRS1(FMV_X_WInst)] = NanBoxing(exp_bits);
   auto decode = this->Decode(FMV_X_WInst);
   ASSERT_TRUE(decode.has_value());
   std::string name = decode->pattern.name;
   ASSERT_EQ(name, "FMV_X_W");
   ASSERT_TRUE(this->Execute(decode.value(), false));
-  ASSERT_EQ(this->gpr.gpr[DecodeRD(FMV_X_WInst)], bits);
+  ASSERT_EQ(this->gpr.gpr[DecodeRD(FMV_X_WInst)], exp_bits);
+}
+
+TEST_F(RISCVEmulatorTester, TestFMV_X_DInst) {
+  auto FMV_X_DInst = 0xE2018253;
+
+  APFloat apf(12.0);
+  auto exp_bits = apf.bitcastToAPInt().getZExtValue();
+  this->fpr.fpr[DecodeRS1(FMV_X_DInst)] = exp_bits;
+  auto decode = this->Decode(FMV_X_DInst);
+  ASSERT_TRUE(decode.has_value());
+  std::string name = decode->pattern.name;
+  ASSERT_EQ(name, "FMV_X_D");
+  ASSERT_TRUE(this->Execute(decode.value(), false));
+  ASSERT_EQ(this->gpr.gpr[DecodeRD(FMV_X_DInst)], exp_bits);
 }
 
 TEST_F(RISCVEmulatorTester, TestFMV_W_XInst) {
   auto FMV_W_XInst = 0xF0018253;
 
-  llvm::APFloat apf(12.0f);
-  uint64_t bits = NanUnBoxing(apf.bitcastToAPInt().getZExtValue());
-  this->gpr.gpr[DecodeRS1(FMV_W_XInst)] = bits;
+  APFloat apf(12.0f);
+  uint64_t exp_bits = NanUnBoxing(apf.bitcastToAPInt().getZExtValue());
+  this->gpr.gpr[DecodeRS1(FMV_W_XInst)] = exp_bits;
   auto decode = this->Decode(FMV_W_XInst);
   ASSERT_TRUE(decode.has_value());
   std::string name = decode->pattern.name;
   ASSERT_EQ(name, "FMV_W_X");
   ASSERT_TRUE(this->Execute(decode.value(), false));
-  ASSERT_EQ(this->fpr.fpr[DecodeRD(FMV_W_XInst)], bits);
+  ASSERT_EQ(this->fpr.fpr[DecodeRD(FMV_W_XInst)], exp_bits);
+}
+
+TEST_F(RISCVEmulatorTester, TestFMV_D_XInst) {
+  auto FMV_D_XInst = 0xF2018253;
+
+  APFloat apf(12.0);
+  uint64_t bits = apf.bitcastToAPInt().getZExtValue();
+  this->gpr.gpr[DecodeRS1(FMV_D_XInst)] = bits;
+  auto decode = this->Decode(FMV_D_XInst);
+  ASSERT_TRUE(decode.has_value());
+  std::string name = decode->pattern.name;
+  ASSERT_EQ(name, "FMV_D_X");
+  ASSERT_TRUE(this->Execute(decode.value(), false));
+  ASSERT_EQ(this->fpr.fpr[DecodeRD(FMV_D_XInst)], bits);
 }

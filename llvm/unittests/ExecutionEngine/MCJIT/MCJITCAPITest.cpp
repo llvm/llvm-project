@@ -86,10 +86,10 @@ public:
 
   bool needsToReserveAllocationSpace() override { return true; }
 
-  void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
-                              uintptr_t DataSizeRO, uint32_t RODataAlign,
+  void reserveAllocationSpace(uintptr_t CodeSize, Align CodeAlign,
+                              uintptr_t DataSizeRO, Align RODataAlign,
                               uintptr_t DataSizeRW,
-                              uint32_t RWDataAlign) override {
+                              Align RWDataAlign) override {
     ReservedCodeSize = CodeSize;
     ReservedDataSizeRO = DataSizeRO;
     ReservedDataSizeRW = DataSizeRW;

@@ -248,7 +248,7 @@ public:
 
   /// Get code hover for a given position.
   void findHover(PathRef File, Position Pos,
-                 Callback<llvm::Optional<HoverInfo>> CB);
+                 Callback<std::optional<HoverInfo>> CB);
 
   /// Get information about type hierarchy for a given position.
   void typeHierarchy(PathRef File, Position Pos, int Resolve,
@@ -256,7 +256,7 @@ public:
                      Callback<std::vector<TypeHierarchyItem>> CB);
   /// Get direct parents of a type hierarchy item.
   void superTypes(const TypeHierarchyItem &Item,
-                  Callback<llvm::Optional<std::vector<TypeHierarchyItem>>> CB);
+                  Callback<std::optional<std::vector<TypeHierarchyItem>>> CB);
   /// Get direct children of a type hierarchy item.
   void subTypes(const TypeHierarchyItem &Item,
                 Callback<std::vector<TypeHierarchyItem>> CB);
@@ -264,7 +264,7 @@ public:
   /// Resolve type hierarchy item in the given direction.
   void resolveTypeHierarchy(TypeHierarchyItem Item, int Resolve,
                             TypeHierarchyDirection Direction,
-                            Callback<llvm::Optional<TypeHierarchyItem>> CB);
+                            Callback<std::optional<TypeHierarchyItem>> CB);
 
   /// Get information about call hierarchy for a given position.
   void prepareCallHierarchy(PathRef File, Position Pos,
@@ -275,7 +275,7 @@ public:
                      Callback<std::vector<CallHierarchyIncomingCall>>);
 
   /// Resolve inlay hints for a given document.
-  void inlayHints(PathRef File, llvm::Optional<Range> RestrictRange,
+  void inlayHints(PathRef File, std::optional<Range> RestrictRange,
                   Callback<std::vector<InlayHint>>);
 
   /// Retrieve the top symbols from the workspace matching a query.
@@ -361,8 +361,8 @@ public:
                           Callback<std::vector<HighlightingToken>>);
 
   /// Describe the AST subtree for a piece of code.
-  void getAST(PathRef File, llvm::Optional<Range> R,
-              Callback<llvm::Optional<ASTNode>> CB);
+  void getAST(PathRef File, std::optional<Range> R,
+              Callback<std::optional<ASTNode>> CB);
 
   /// Runs an arbitrary action that has access to the AST of the specified file.
   /// The action will execute on one of ClangdServer's internal threads.

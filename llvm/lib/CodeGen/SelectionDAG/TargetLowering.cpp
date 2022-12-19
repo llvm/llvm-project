@@ -1133,12 +1133,11 @@ bool TargetLowering::SimplifyDemandedBits(
     std::optional<unsigned> MaxVScale = Attr.getVScaleRangeMax();
     if (!MaxVScale.has_value())
       return false;
-    int64_t VScaleResultUpperbound =
-        *MaxVScale * Op.getConstantOperandAPInt(0).getSExtValue();
-    bool Negative = VScaleResultUpperbound < 0;
+    APInt VScaleResultUpperbound = *MaxVScale * Op.getConstantOperandAPInt(0);
+    bool Negative = VScaleResultUpperbound.isNegative();
     if (Negative)
       VScaleResultUpperbound = ~VScaleResultUpperbound;
-    unsigned RequiredBits = Log2_64(VScaleResultUpperbound) + 1;
+    unsigned RequiredBits = VScaleResultUpperbound.getActiveBits();
     if (RequiredBits < BitWidth)
       (Negative ? Known.One : Known.Zero).setHighBits(BitWidth - RequiredBits);
     return false;
@@ -2104,9 +2103,9 @@ bool TargetLowering::SimplifyDemandedBits(
     KnownBits Known0 = TLO.DAG.computeKnownBits(Op0, DemandedElts, Depth + 1);
     KnownBits Known1 = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
     Known = KnownBits::umin(Known0, Known1);
-    if (Optional<bool> IsULE = KnownBits::ule(Known0, Known1))
+    if (std::optional<bool> IsULE = KnownBits::ule(Known0, Known1))
       return TLO.CombineTo(Op, IsULE.value() ? Op0 : Op1);
-    if (Optional<bool> IsULT = KnownBits::ult(Known0, Known1))
+    if (std::optional<bool> IsULT = KnownBits::ult(Known0, Known1))
       return TLO.CombineTo(Op, IsULT.value() ? Op0 : Op1);
     break;
   }
@@ -2117,9 +2116,9 @@ bool TargetLowering::SimplifyDemandedBits(
     KnownBits Known0 = TLO.DAG.computeKnownBits(Op0, DemandedElts, Depth + 1);
     KnownBits Known1 = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
     Known = KnownBits::umax(Known0, Known1);
-    if (Optional<bool> IsUGE = KnownBits::uge(Known0, Known1))
+    if (std::optional<bool> IsUGE = KnownBits::uge(Known0, Known1))
       return TLO.CombineTo(Op, IsUGE.value() ? Op0 : Op1);
-    if (Optional<bool> IsUGT = KnownBits::ugt(Known0, Known1))
+    if (std::optional<bool> IsUGT = KnownBits::ugt(Known0, Known1))
       return TLO.CombineTo(Op, IsUGT.value() ? Op0 : Op1);
     break;
   }

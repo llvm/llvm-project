@@ -145,8 +145,10 @@ namespace {
     unsigned GlobalBaseReg = 0;
 
   public:
+    static char ID;
+
     explicit PPCDAGToDAGISel(PPCTargetMachine &tm, CodeGenOpt::Level OptLevel)
-        : SelectionDAGISel(tm, OptLevel), TM(tm) {}
+        : SelectionDAGISel(ID, tm, OptLevel), TM(tm) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override {
       // Make sure we re-emit a set of the global base reg if necessary
@@ -444,6 +446,8 @@ private:
   };
 
 } // end anonymous namespace
+
+char PPCDAGToDAGISel::ID = 0;
 
 /// getGlobalBaseReg - Output the instructions required to put the
 /// base address to use for accessing globals into a register.

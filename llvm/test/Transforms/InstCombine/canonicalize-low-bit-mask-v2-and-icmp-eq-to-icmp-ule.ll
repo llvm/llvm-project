@@ -268,7 +268,7 @@ define i1 @n0(i8 %x, i8 %y, i8 %notx) {
 
 define i1 @n1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @n1(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 1, [[Y:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nuw i8 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    [[T2:%.*]] = and i8 [[T1]], [[X:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = icmp eq i8 [[T2]], [[X]]

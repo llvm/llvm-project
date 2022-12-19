@@ -580,12 +580,12 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
   if (VI != valueNumbering.end())
     return VI->second;
 
-  if (!isa<Instruction>(V)) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I) {
     valueNumbering[V] = nextValueNumber;
     return nextValueNumber++;
   }
 
-  Instruction* I = cast<Instruction>(V);
   Expression exp;
   switch (I->getOpcode()) {
     case Instruction::Call:
@@ -1060,25 +1060,25 @@ static void reportMayClobberedLoad(LoadInst *Load, MemDepResult DepInfo,
                                    OptimizationRemarkEmitter *ORE) {
   using namespace ore;
 
-  User *OtherAccess = nullptr;
+  Instruction *OtherAccess = nullptr;
 
   OptimizationRemarkMissed R(DEBUG_TYPE, "LoadClobbered", Load);
   R << "load of type " << NV("Type", Load->getType()) << " not eliminated"
     << setExtraArgs();
 
   for (auto *U : Load->getPointerOperand()->users()) {
-    if (U != Load && (isa<LoadInst>(U) || isa<StoreInst>(U)) &&
-        cast<Instruction>(U)->getFunction() == Load->getFunction() &&
-        DT->dominates(cast<Instruction>(U), Load)) {
-      // Use the most immediately dominating value
-      if (OtherAccess) {
-        if (DT->dominates(cast<Instruction>(OtherAccess), cast<Instruction>(U)))
-          OtherAccess = U;
-        else
-          assert(U == OtherAccess || DT->dominates(cast<Instruction>(U),
-                                                   cast<Instruction>(OtherAccess)));
-      } else
-        OtherAccess = U;
+    if (U != Load && (isa<LoadInst>(U) || isa<StoreInst>(U))) {
+      auto *I = cast<Instruction>(U);
+      if (I->getFunction() == Load->getFunction() && DT->dominates(I, Load)) {
+        // Use the most immediately dominating value
+        if (OtherAccess) {
+          if (DT->dominates(OtherAccess, I))
+            OtherAccess = I;
+          else
+            assert(U == OtherAccess || DT->dominates(I, OtherAccess));
+        } else
+          OtherAccess = I;
+      }
     }
   }
 
@@ -1086,22 +1086,22 @@ static void reportMayClobberedLoad(LoadInst *Load, MemDepResult DepInfo,
     // There is no dominating use, check if we can find a closest non-dominating
     // use that lies between any other potentially available use and Load.
     for (auto *U : Load->getPointerOperand()->users()) {
-      if (U != Load && (isa<LoadInst>(U) || isa<StoreInst>(U)) &&
-          cast<Instruction>(U)->getFunction() == Load->getFunction() &&
-          isPotentiallyReachable(cast<Instruction>(U), Load, nullptr, DT)) {
-        if (OtherAccess) {
-          if (liesBetween(cast<Instruction>(OtherAccess), cast<Instruction>(U),
-                          Load, DT)) {
-            OtherAccess = U;
-          } else if (!liesBetween(cast<Instruction>(U),
-                                  cast<Instruction>(OtherAccess), Load, DT)) {
-            // These uses are both partially available at Load were it not for
-            // the clobber, but neither lies strictly after the other.
-            OtherAccess = nullptr;
-            break;
-          } // else: keep current OtherAccess since it lies between U and Load
-        } else {
-          OtherAccess = U;
+      if (U != Load && (isa<LoadInst>(U) || isa<StoreInst>(U))) {
+        auto *I = cast<Instruction>(U);
+        if (I->getFunction() == Load->getFunction() &&
+            isPotentiallyReachable(I, Load, nullptr, DT)) {
+          if (OtherAccess) {
+            if (liesBetween(OtherAccess, I, Load, DT)) {
+              OtherAccess = I;
+            } else if (!liesBetween(I, OtherAccess, Load, DT)) {
+              // These uses are both partially available at Load were it not for
+              // the clobber, but neither lies strictly after the other.
+              OtherAccess = nullptr;
+              break;
+            } // else: keep current OtherAccess since it lies between U and Load
+          } else {
+            OtherAccess = I;
+          }
         }
       }
     }
@@ -1890,11 +1890,10 @@ static bool impliesEquivalanceIfFalse(CmpInst* Cmp) {
 
 
 static bool hasUsersIn(Value *V, BasicBlock *BB) {
-  for (User *U : V->users())
-    if (isa<Instruction>(U) &&
-        cast<Instruction>(U)->getParent() == BB)
-      return true;
-  return false;
+  return llvm::any_of(V->users(), [BB](User *U) {
+    auto *I = dyn_cast<Instruction>(U);
+    return I && I->getParent() == BB;
+  });
 }
 
 bool GVNPass::processAssumeIntrinsic(AssumeInst *IntrinsicI) {

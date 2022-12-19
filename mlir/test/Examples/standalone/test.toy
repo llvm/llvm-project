@@ -8,4 +8,4 @@
 # Note: The number of checked tests is not important. The command will fail
 # if any fail.
 # CHECK: Passed
-# UNSUPPORTED: windows, android
+# UNSUPPORTED: target={{.*(windows|android).*}}

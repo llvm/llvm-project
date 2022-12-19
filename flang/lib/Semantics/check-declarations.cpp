@@ -353,6 +353,9 @@ void CheckHelper::Check(const Symbol &symbol) {
         messages_.Say(
             "An assumed-length CHARACTER(*) function cannot return a POINTER"_err_en_US);
       }
+    } else if (IsPointer(symbol)) {
+      messages_.Say(
+          "A procedure pointer should not have assumed-length CHARACTER(*) result type"_port_en_US);
     }
   }
   if (symbol.attrs().test(Attr::VALUE)) {
@@ -2375,11 +2378,13 @@ void CheckHelper::CheckDefinedIoProc(const Symbol &symbol,
 }
 
 void CheckHelper::CheckSymbolType(const Symbol &symbol) {
-  if (!IsAllocatableOrPointer(symbol)) { // C702
+  if (!IsAllocatable(symbol) &&
+      (!IsPointer(symbol) ||
+          (IsProcedure(symbol) && !symbol.HasExplicitInterface()))) { // C702
     if (auto dyType{evaluate::DynamicType::From(symbol)}) {
       if (dyType->HasDeferredTypeParameter()) {
         messages_.Say(
-            "'%s' has a type %s with a deferred type parameter but is neither an allocatable or a pointer"_err_en_US,
+            "'%s' has a type %s with a deferred type parameter but is neither an allocatable nor an object pointer"_err_en_US,
             symbol.name(), dyType->AsFortran());
       }
     }

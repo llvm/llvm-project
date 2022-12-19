@@ -143,15 +143,19 @@ bool BufferizationAliasInfo::isInPlace(OpOperand &operand) const {
 /// Set the inPlace bufferization spec to true.
 void BufferizationAliasInfo::bufferizeInPlace(OpOperand &operand,
                                               AnalysisState &state) {
+  if (inplaceBufferized.contains(&operand))
+    return;
   markInPlace(operand);
   for (OpResult result : state.getAliasingOpResult(operand))
     aliasInfo.unionSets(result, operand.get());
+  ++statNumTensorInPlace;
 }
 
 /// Set the inPlace bufferization spec to false.
 void BufferizationAliasInfo::bufferizeOutOfPlace(OpOperand &operand) {
   assert(!inplaceBufferized.contains(&operand) &&
          "OpOperand was already decided to bufferize inplace");
+  ++statNumTensorOutOfPlace;
 }
 
 /// Apply `fun` to all the members of the equivalence class of `v`.
@@ -198,15 +202,10 @@ OneShotAnalysisState::OneShotAnalysisState(
   op->walk([&](BufferizableOpInterface bufferizableOp) {
     if (!options.isOpAllowed(bufferizableOp))
       return WalkResult::skip();
-    for (OpOperand &opOperand : bufferizableOp->getOpOperands()) {
+    for (OpOperand &opOperand : bufferizableOp->getOpOperands())
       if (opOperand.get().getType().isa<TensorType>())
-        if (bufferizableOp.mustBufferizeInPlace(opOperand, *this)) {
-          for (OpResult opResult :
-               bufferizableOp.getAliasingOpResult(opOperand, *this))
-            aliasInfo.unionAliasSets(opOperand.get(), opResult);
-          aliasInfo.markInPlace(opOperand);
-        }
-    }
+        if (bufferizableOp.mustBufferizeInPlace(opOperand, *this))
+          aliasInfo.bufferizeInPlace(opOperand, *this);
     return WalkResult::advance();
   });
 }
@@ -1159,7 +1158,8 @@ static LogicalResult assertNoAllocsReturned(Operation *op,
 }
 
 LogicalResult bufferization::analyzeOp(Operation *op,
-                                       OneShotAnalysisState &state) {
+                                       OneShotAnalysisState &state,
+                                       BufferizationStatistics *statistics) {
   DominanceInfo domInfo(op);
   BufferizationAliasInfo &aliasInfo = state.getAliasInfo();
   const OneShotBufferizationOptions &options = state.getOptions();
@@ -1171,6 +1171,12 @@ LogicalResult bufferization::analyzeOp(Operation *op,
   if (failed(inPlaceAnalysis(op, aliasInfo, state, domInfo,
                              options.analysisFuzzerSeed)))
     return failure();
+
+  if (statistics) {
+    statistics->numTensorInPlace = aliasInfo.getStatNumTensorInPlace();
+    statistics->numTensorOutOfPlace = aliasInfo.getStatNumTensorOutOfPlace();
+  }
+
   equivalenceAnalysis(op, aliasInfo, state);
 
   bool failedAnalysis = false;
@@ -1199,15 +1205,17 @@ LogicalResult bufferization::analyzeOp(Operation *op,
 
 LogicalResult
 bufferization::runOneShotBufferize(Operation *op,
-                                   const OneShotBufferizationOptions &options) {
+                                   const OneShotBufferizationOptions &options,
+                                   BufferizationStatistics *statistics) {
   assert(!(options.copyBeforeWrite && options.testAnalysisOnly) &&
          "invalid combination of bufferization flags");
   if (!options.copyBeforeWrite) {
     // If a buffer is copied before every write, no analysis is needed.
-    if (failed(insertTensorCopies(op, options)))
+    if (failed(insertTensorCopies(op, options, statistics)))
       return failure();
   }
   if (options.testAnalysisOnly)
     return success();
-  return bufferizeOp(op, options, /*copyBeforeWrite=*/options.copyBeforeWrite);
+  return bufferizeOp(op, options, /*copyBeforeWrite=*/options.copyBeforeWrite,
+                     /*opFilter=*/nullptr, statistics);
 }

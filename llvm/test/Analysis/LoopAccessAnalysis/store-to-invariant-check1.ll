@@ -17,7 +17,7 @@
 ; CHECK: for.cond1.preheader:
 ; CHECK:   Non vectorizable stores to invariant address were not found in loop.
 
-define i32 @foo(i32* nocapture %var1, i32* nocapture readonly %var2, i32 %itr) #0 {
+define i32 @foo(ptr nocapture %var1, ptr nocapture readonly %var2, i32 %itr) #0 {
 entry:
   %cmp20 = icmp eq i32 %itr, 0
   br i1 %cmp20, label %for.end10, label %for.cond1.preheader
@@ -29,20 +29,20 @@ for.cond1.preheader:                              ; preds = %entry, %for.inc8
   br i1 %cmp218, label %for.body3.lr.ph, label %for.inc8
 
 for.body3.lr.ph:                                  ; preds = %for.cond1.preheader
-  %arrayidx5 = getelementptr inbounds i32, i32* %var1, i64 %indvars.iv23
+  %arrayidx5 = getelementptr inbounds i32, ptr %var1, i64 %indvars.iv23
   %0 = zext i32 %j.022 to i64
   br label %for.body3
 
 for.body3:                                        ; preds = %for.body3, %for.body3.lr.ph
   %indvars.iv = phi i64 [ %0, %for.body3.lr.ph ], [ %indvars.iv.next, %for.body3 ]
-  %arrayidx = getelementptr inbounds i32, i32* %var2, i64 %indvars.iv
-  %1 = load i32, i32* %arrayidx, align 4
-  %2 = load i32, i32* %arrayidx5, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %var2, i64 %indvars.iv
+  %1 = load i32, ptr %arrayidx, align 4
+  %2 = load i32, ptr %arrayidx5, align 4
   %add = add nsw i32 %2, %1
-  store i32 %add, i32* %arrayidx5, align 4
-  %3 = load i32, i32* %arrayidx5, align 4
+  store i32 %add, ptr %arrayidx5, align 4
+  %3 = load i32, ptr %arrayidx5, align 4
   %4 = add nsw i32 %3, 1
-  store i32 %4, i32* %arrayidx5, align 4
+  store i32 %4, ptr %arrayidx5, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %itr

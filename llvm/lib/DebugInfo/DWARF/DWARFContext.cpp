@@ -38,7 +38,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/MachO.h"
@@ -309,9 +308,7 @@ DWARFContext::parseMacroOrMacinfo(MacroSecType SectionType) {
 }
 
 static void dumpLoclistsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
-                                DWARFDataExtractor Data,
-                                const MCRegisterInfo *MRI,
-                                const DWARFObject &Obj,
+                                DWARFDataExtractor Data, const DWARFObject &Obj,
                                 std::optional<uint64_t> DumpOffset) {
   uint64_t Offset = 0;
 
@@ -330,13 +327,13 @@ static void dumpLoclistsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
     if (DumpOffset) {
       if (DumpOffset >= Offset && DumpOffset < EndOffset) {
         Offset = *DumpOffset;
-        Loc.dumpLocationList(&Offset, OS, /*BaseAddr=*/std::nullopt, MRI, Obj,
+        Loc.dumpLocationList(&Offset, OS, /*BaseAddr=*/std::nullopt, Obj,
                              nullptr, DumpOpts, /*Indent=*/0);
         OS << "\n";
         return;
       }
     } else {
-      Loc.dumpRange(Offset, EndOffset - Offset, OS, MRI, Obj, DumpOpts);
+      Loc.dumpRange(Offset, EndOffset - Offset, OS, Obj, DumpOpts);
     }
     Offset = EndOffset;
   }
@@ -424,21 +421,21 @@ void DWARFContext::dump(
 
   if (const auto *Off = shouldDump(Explicit, ".debug_loc", DIDT_ID_DebugLoc,
                                    DObj->getLocSection().Data)) {
-    getDebugLoc()->dump(OS, getRegisterInfo(), *DObj, LLDumpOpts, *Off);
+    getDebugLoc()->dump(OS, *DObj, LLDumpOpts, *Off);
   }
   if (const auto *Off =
           shouldDump(Explicit, ".debug_loclists", DIDT_ID_DebugLoclists,
                      DObj->getLoclistsSection().Data)) {
     DWARFDataExtractor Data(*DObj, DObj->getLoclistsSection(), isLittleEndian(),
                             0);
-    dumpLoclistsSection(OS, LLDumpOpts, Data, getRegisterInfo(), *DObj, *Off);
+    dumpLoclistsSection(OS, LLDumpOpts, Data, *DObj, *Off);
   }
   if (const auto *Off =
           shouldDump(ExplicitDWO, ".debug_loclists.dwo", DIDT_ID_DebugLoclists,
                      DObj->getLoclistsDWOSection().Data)) {
     DWARFDataExtractor Data(*DObj, DObj->getLoclistsDWOSection(),
                             isLittleEndian(), 0);
-    dumpLoclistsSection(OS, LLDumpOpts, Data, getRegisterInfo(), *DObj, *Off);
+    dumpLoclistsSection(OS, LLDumpOpts, Data, *DObj, *Off);
   }
 
   if (const auto *Off =
@@ -450,12 +447,12 @@ void DWARFContext::dump(
     if (*Off) {
       uint64_t Offset = **Off;
       Loc.dumpLocationList(&Offset, OS,
-                           /*BaseAddr=*/std::nullopt, getRegisterInfo(), *DObj,
-                           nullptr, LLDumpOpts, /*Indent=*/0);
+                           /*BaseAddr=*/std::nullopt, *DObj, nullptr,
+                           LLDumpOpts,
+                           /*Indent=*/0);
       OS << "\n";
     } else {
-      Loc.dumpRange(0, Data.getData().size(), OS, getRegisterInfo(), *DObj,
-                    LLDumpOpts);
+      Loc.dumpRange(0, Data.getData().size(), OS, *DObj, LLDumpOpts);
     }
   }
 
@@ -463,7 +460,7 @@ void DWARFContext::dump(
           shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrame,
                      DObj->getFrameSection().Data)) {
     if (Expected<const DWARFDebugFrame *> DF = getDebugFrame())
-      (*DF)->dump(OS, DumpOpts, getRegisterInfo(), *Off);
+      (*DF)->dump(OS, DumpOpts, *Off);
     else
       RecoverableErrorHandler(DF.takeError());
   }
@@ -472,7 +469,7 @@ void DWARFContext::dump(
           shouldDump(Explicit, ".eh_frame", DIDT_ID_DebugFrame,
                      DObj->getEHFrameSection().Data)) {
     if (Expected<const DWARFDebugFrame *> DF = getEHFrame())
-      (*DF)->dump(OS, DumpOpts, getRegisterInfo(), *Off);
+      (*DF)->dump(OS, DumpOpts, *Off);
     else
       RecoverableErrorHandler(DF.takeError());
   }
@@ -2018,23 +2015,6 @@ DWARFContext::create(const StringMap<std::unique_ptr<MemoryBuffer>> &Sections,
       std::make_unique<DWARFObjInMemory>(Sections, AddrSize, isLittleEndian);
   return std::make_unique<DWARFContext>(
       std::move(DObj), "", RecoverableErrorHandler, WarningHandler);
-}
-
-Error DWARFContext::loadRegisterInfo(const object::ObjectFile &Obj) {
-  // Detect the architecture from the object file. We usually don't need OS
-  // info to lookup a target and create register info.
-  Triple TT;
-  TT.setArch(Triple::ArchType(Obj.getArch()));
-  TT.setVendor(Triple::UnknownVendor);
-  TT.setOS(Triple::UnknownOS);
-  std::string TargetLookupError;
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget(TT.str(), TargetLookupError);
-  if (!TargetLookupError.empty())
-    return createStringError(errc::invalid_argument,
-                             TargetLookupError.c_str());
-  RegInfo.reset(TheTarget->createMCRegInfo(TT.str()));
-  return Error::success();
 }
 
 uint8_t DWARFContext::getCUAddrSize() {

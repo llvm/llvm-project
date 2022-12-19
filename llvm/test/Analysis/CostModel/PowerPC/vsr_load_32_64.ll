@@ -4,16 +4,16 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define i32 @loads(i32 %arg) {
   ; CHECK: cost of 1 {{.*}} load
-  load <4 x i8>, <4 x i8>* undef, align 1
+  load <4 x i8>, ptr undef, align 1
 
   ; CHECK: cost of 1 {{.*}} load
-  load <8 x i8>, <8 x i8>* undef, align 1
+  load <8 x i8>, ptr undef, align 1
 
   ; CHECK: cost of 1 {{.*}} load
-  load <2 x i16>, <2 x i16>* undef, align 2
+  load <2 x i16>, ptr undef, align 2
 
   ; CHECK: cost of 1 {{.*}} load
-  load <4 x i16>, <4 x i16>* undef, align 2
+  load <4 x i16>, ptr undef, align 2
 
   ret i32 undef
 }

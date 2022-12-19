@@ -548,8 +548,11 @@ public:
     return canInstructionRangeModRef(I1, I2, MemoryLocation(Ptr, Size), Mode);
   }
 
+  // CtxI can be nullptr, in which case the query is whether or not the aliasing
+  // relationship holds through the entire function.
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
-                    AAQueryInfo &AAQI);
+                    AAQueryInfo &AAQI, const Instruction *CtxI = nullptr);
+
   bool pointsToConstantMemory(const MemoryLocation &Loc, AAQueryInfo &AAQI,
                               bool OrLocal = false);
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
@@ -684,7 +687,8 @@ public:
   /// each other. This is the interface that must be implemented by specific
   /// alias analysis implementations.
   virtual AliasResult alias(const MemoryLocation &LocA,
-                            const MemoryLocation &LocB, AAQueryInfo &AAQI) = 0;
+                            const MemoryLocation &LocB, AAQueryInfo &AAQI,
+                            const Instruction *CtxI) = 0;
 
   /// @}
   //===--------------------------------------------------------------------===//
@@ -743,8 +747,8 @@ public:
   ~Model() override = default;
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
-                    AAQueryInfo &AAQI) override {
-    return Result.alias(LocA, LocB, AAQI);
+                    AAQueryInfo &AAQI, const Instruction *CtxI) override {
+    return Result.alias(LocA, LocB, AAQI, CtxI);
   }
 
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
@@ -798,7 +802,7 @@ protected:
 
 public:
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
-                    AAQueryInfo &AAQI) {
+                    AAQueryInfo &AAQI, const Instruction *I) {
     return AliasResult::MayAlias;
   }
 

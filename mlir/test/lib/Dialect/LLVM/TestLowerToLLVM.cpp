@@ -24,6 +24,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/Passes.h"
+#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -68,6 +69,10 @@ void buildTestLowerToLLVM(OpPassManager &pm,
           options.reassociateFPReductions)));
   // Convert Math to LLVM (always needed).
   pm.addNestedPass<func::FuncOp>(createConvertMathToLLVMPass());
+  // Expand complicated MemRef operations before lowering them.
+  pm.addPass(memref::createExpandStridedMetadataPass());
+  // The expansion may create affine expressions. Get rid of them.
+  pm.addPass(createLowerAffinePass());
   // Convert MemRef to LLVM (always needed).
   pm.addPass(createMemRefToLLVMConversionPass());
   // Convert Func to LLVM (always needed).

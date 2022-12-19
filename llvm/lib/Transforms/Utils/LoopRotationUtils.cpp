@@ -795,6 +795,11 @@ bool LoopRotate::simplifyLoopLatch(Loop *L) {
   MergeBlockIntoPredecessor(Latch, &DTU, LI, MSSAU, nullptr,
                             /*PredecessorWithTwoSuccessors=*/true);
 
+    if (SE) {
+      // Merging blocks may remove blocks reference in the block disposition cache. Clear the cache.
+      SE->forgetBlockAndLoopDispositions();
+    }
+
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
 

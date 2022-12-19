@@ -17,28 +17,28 @@ target triple = "aarch64--linux-gnueabi"
 ; CHECK: function 'f':
 ; CHECK: (Low: (20000 + %a)<nuw> High: (60004 + %a))
 
-@B = common global i32* null, align 8
-@A = common global i32* null, align 8
+@B = common global ptr null, align 8
+@A = common global ptr null, align 8
 
 define void @f() {
 entry:
-  %a = load i32*, i32** @A, align 8
-  %b = load i32*, i32** @B, align 8
+  %a = load ptr, ptr @A, align 8
+  %b = load ptr, ptr @B, align 8
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %idx = phi i64 [ 0, %entry ], [ %add, %for.body ]
   %negidx = sub i64 15000, %idx
 
-  %arrayidxA0 = getelementptr inbounds i32, i32* %a, i64 %negidx
-  %loadA0 = load i32, i32* %arrayidxA0, align 2
+  %arrayidxA0 = getelementptr inbounds i32, ptr %a, i64 %negidx
+  %loadA0 = load i32, ptr %arrayidxA0, align 2
 
   %res = mul i32 %loadA0, 3
 
   %add = add nuw nsw i64 %idx, 1
 
-  %arrayidxB = getelementptr inbounds i32, i32* %b, i64 %idx
-  store i32 %res, i32* %arrayidxB, align 2
+  %arrayidxB = getelementptr inbounds i32, ptr %b, i64 %idx
+  store i32 %res, ptr %arrayidxB, align 2
 
   %exitcond = icmp eq i64 %idx, 10000
   br i1 %exitcond, label %for.end, label %for.body
@@ -52,7 +52,7 @@ for.end:                                          ; preds = %for.body
 ; the interval limits.
 
 ;   for (i = 0; i < 10000; i++) {
-;     B[i] = A[15000 - step * i] * 3;
+;     B[i] = A[i] * 3;
 ;   }
 
 ; Here it is not obvious what the limits are, since 'step' could be negative.
@@ -62,8 +62,8 @@ for.end:                                          ; preds = %for.body
 
 define void @g(i64 %step) {
 entry:
-  %a = load i32*, i32** @A, align 8
-  %b = load i32*, i32** @B, align 8
+  %a = load ptr, ptr @A, align 8
+  %b = load ptr, ptr @B, align 8
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
@@ -71,15 +71,15 @@ for.body:                                         ; preds = %for.body, %entry
   %idx_mul = mul i64 %idx, %step
   %negidx = sub i64 15000, %idx_mul
 
-  %arrayidxA0 = getelementptr inbounds i32, i32* %a, i64 %negidx
-  %loadA0 = load i32, i32* %arrayidxA0, align 2
+  %arrayidxA0 = getelementptr inbounds i32, ptr %a, i64 %negidx
+  %loadA0 = load i32, ptr %arrayidxA0, align 2
 
   %res = mul i32 %loadA0, 3
 
   %add = add nuw nsw i64 %idx, 1
 
-  %arrayidxB = getelementptr inbounds i32, i32* %b, i64 %idx
-  store i32 %res, i32* %arrayidxB, align 2
+  %arrayidxB = getelementptr inbounds i32, ptr %b, i64 %idx
+  store i32 %res, ptr %arrayidxB, align 2
 
   %exitcond = icmp eq i64 %idx, 10000
   br i1 %exitcond, label %for.end, label %for.body

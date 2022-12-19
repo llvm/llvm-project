@@ -208,6 +208,9 @@ struct WmmaElementwiseOpToSPIRVScalarMulLowering
         return failure();
     }
 
+    if (elementwiseOp.getOpType() != gpu::MMAElementwiseOp::MULF)
+      return failure();
+
     // Use the original operands to check whether one of the operands is a splat
     // scalar value.
     Value lhs = elementwiseOp.getOperands().front();

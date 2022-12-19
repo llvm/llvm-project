@@ -1,4 +1,4 @@
-; REQUIRES: have_tf_api
+; REQUIRES: have_tflite
 ; REQUIRES: x86_64-linux
 ;
 ; Check that we log the currently in development features correctly with both the default

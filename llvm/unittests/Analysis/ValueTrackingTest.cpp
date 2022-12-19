@@ -1624,7 +1624,7 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsUnknownVScale) {
   EXPECT_EQ(Known.Zero.getZExtValue(), 0u);
 
   BasicBlock *BB = BasicBlock::Create(Context);
-  CI->insertAt(BB, BB->end());
+  CI->insertInto(BB, BB->end());
   Known = computeKnownBits(CI, M.getDataLayout(), /* Depth */ 0);
   // There is no parent function so we cannot look up the vscale_range
   // attribute to determine the number of bits.

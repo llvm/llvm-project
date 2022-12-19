@@ -368,6 +368,23 @@ void Function::eraseFromParent() {
   getParent()->getFunctionList().erase(getIterator());
 }
 
+void Function::splice(Function::iterator ToIt, Function *FromF,
+                      Function::iterator FromBeginIt,
+                      Function::iterator FromEndIt) {
+#ifdef EXPENSIVE_CHECKS
+  // Check that FromBeginIt is before FromEndIt.
+  auto FromFEnd = FromF->end();
+  for (auto It = FromBeginIt; It != FromEndIt; ++It)
+    assert(It != FromFEnd && "FromBeginIt not before FromEndIt!");
+#endif // EXPENSIVE_CHECKS
+  BasicBlocks.splice(ToIt, FromF->BasicBlocks, FromBeginIt, FromEndIt);
+}
+
+Function::iterator Function::erase(Function::iterator FromIt,
+                                   Function::iterator ToIt) {
+  return BasicBlocks.erase(FromIt, ToIt);
+}
+
 //===----------------------------------------------------------------------===//
 // Function Implementation
 //===----------------------------------------------------------------------===//

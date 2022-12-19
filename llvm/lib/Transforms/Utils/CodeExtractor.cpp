@@ -999,7 +999,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
 
     newFunction->addFnAttr(Attr);
   }
-  newFunction->insertBasicBlockAt(newFunction->end(), newRootNode);
+  newFunction->insert(newFunction->end(), newRootNode);
 
   // Create scalar and aggregate iterators to name all of the arguments we
   // inserted.
@@ -1208,7 +1208,7 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
         Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), i);
         GetElementPtrInst *GEP = GetElementPtrInst::Create(
             StructArgTy, Struct, Idx, "gep_" + StructValues[i]->getName());
-        GEP->insertAt(codeReplacer, codeReplacer->end());
+        GEP->insertInto(codeReplacer, codeReplacer->end());
         new StoreInst(StructValues[i], GEP, codeReplacer);
         NumAggregatedInputs++;
       }
@@ -1226,7 +1226,7 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
     if (auto DL = newFunction->getEntryBlock().getTerminator()->getDebugLoc())
       call->setDebugLoc(DL);
   }
-  call->insertAt(codeReplacer, codeReplacer->end());
+  call->insertInto(codeReplacer, codeReplacer->end());
 
   // Set swifterror parameter attributes.
   for (unsigned SwiftErrArgNo : SwiftErrorArgs) {
@@ -1246,7 +1246,7 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
       Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), aggIdx);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
-      GEP->insertAt(codeReplacer, codeReplacer->end());
+      GEP->insertInto(codeReplacer, codeReplacer->end());
       Output = GEP;
       ++aggIdx;
     } else {
@@ -1445,7 +1445,7 @@ void CodeExtractor::moveCodeToFunction(Function *newFunction) {
     // for the new function. The entry block may be followed
     // by a set of exit blocks at this point, but these exit
     // blocks better be placed at the end of the new function.
-    newFuncIt = newFunction->insertBasicBlockAt(std::next(newFuncIt), Block);
+    newFuncIt = newFunction->insert(std::next(newFuncIt), Block);
   }
 }
 
@@ -1735,7 +1735,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
       });
     });
   }
-  BranchI->insertAt(newFuncRoot, newFuncRoot->end());
+  BranchI->insertInto(newFuncRoot, newFuncRoot->end());
 
   ValueSet SinkingCands, HoistingCands;
   BasicBlock *CommonExit = nullptr;

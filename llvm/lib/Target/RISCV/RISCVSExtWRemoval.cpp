@@ -6,7 +6,9 @@
 //
 //===---------------------------------------------------------------------===//
 //
-// This pass removes unneeded sext.w instructions at the MI level.
+// This pass removes unneeded sext.w instructions at the MI level. Either
+// because the sign extended bits aren't consumed or because the input was
+// already sign extended by an earlier instruction.
 //
 //===---------------------------------------------------------------------===//
 
@@ -229,70 +231,15 @@ static bool hasAllWUsers(const MachineInstr &OrigMI, MachineRegisterInfo &MRI) {
 
 // This function returns true if the machine instruction always outputs a value
 // where bits 63:32 match bit 31.
-// TODO: Allocate a bit in TSFlags for the W instructions?
-// TODO: Add other W instructions.
 static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI) {
-  switch (MI.getOpcode()) {
-  case RISCV::LUI:
-  case RISCV::LW:
-  case RISCV::ADDW:
-  case RISCV::ADDIW:
-  case RISCV::SUBW:
-  case RISCV::MULW:
-  case RISCV::SLLW:
-  case RISCV::SLLIW:
-  case RISCV::SRAW:
-  case RISCV::SRAIW:
-  case RISCV::SRLW:
-  case RISCV::SRLIW:
-  case RISCV::DIVW:
-  case RISCV::DIVUW:
-  case RISCV::REMW:
-  case RISCV::REMUW:
-  case RISCV::ROLW:
-  case RISCV::RORW:
-  case RISCV::RORIW:
-  case RISCV::CLZW:
-  case RISCV::CTZW:
-  case RISCV::CPOPW:
-  case RISCV::PACKW:
-  case RISCV::FCVT_W_H:
-  case RISCV::FCVT_WU_H:
-  case RISCV::FCVT_W_S:
-  case RISCV::FCVT_WU_S:
-  case RISCV::FCVT_W_D:
-  case RISCV::FCVT_WU_D:
-  case RISCV::FMV_X_W:
-  // The following aren't W instructions, but are either sign extended from a
-  // smaller size, always outputs a small integer, or put zeros in bits 63:31.
-  case RISCV::LBU:
-  case RISCV::LHU:
-  case RISCV::LB:
-  case RISCV::LH:
-  case RISCV::SLT:
-  case RISCV::SLTI:
-  case RISCV::SLTU:
-  case RISCV::SLTIU:
-  case RISCV::FEQ_H:
-  case RISCV::FEQ_S:
-  case RISCV::FEQ_D:
-  case RISCV::FLT_H:
-  case RISCV::FLT_S:
-  case RISCV::FLT_D:
-  case RISCV::FLE_H:
-  case RISCV::FLE_S:
-  case RISCV::FLE_D:
-  case RISCV::SEXT_B:
-  case RISCV::SEXT_H:
-  case RISCV::ZEXT_H_RV64:
-  case RISCV::FMV_X_H:
-  case RISCV::BEXT:
-  case RISCV::BEXTI:
-  case RISCV::CLZ:
-  case RISCV::CPOP:
-  case RISCV::CTZ:
-  case RISCV::PACKH:
+  uint64_t TSFlags = MI.getDesc().TSFlags;
+
+  // Instructions that can be determined from opcode are marked in tablegen.
+  if (TSFlags & RISCVII::IsSignExtendingOpWMask)
     return true;
+
+  // Special cases that require checking operands.
+  switch (MI.getOpcode()) {
   // shifting right sufficiently makes the value 32-bit sign-extended
   case RISCV::SRAI:
     return MI.getOperand(2).getImm() >= 32;
@@ -310,7 +257,6 @@ static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI) {
   // Copying from X0 produces zero.
   case RISCV::COPY:
     return MI.getOperand(1).getReg() == RISCV::X0;
-
   }
 
   return false;
@@ -535,9 +481,10 @@ bool RISCVSExtWRemoval::runOnMachineFunction(MachineFunction &MF) {
 
       SmallPtrSet<MachineInstr *, 4> FixableDefs;
 
-      // If all definitions reaching MI sign-extend their output,
-      // then sext.w is redundant
-      if (!isSignExtendedW(SrcReg, MRI, FixableDefs))
+      // If all users only use the lower bits, this sext.w is redundant.
+      // Or if all definitions reaching MI sign-extend their output,
+      // then sext.w is redundant.
+      if (!hasAllWUsers(*MI, MRI) && !isSignExtendedW(SrcReg, MRI, FixableDefs))
         continue;
 
       Register DstReg = MI->getOperand(0).getReg();

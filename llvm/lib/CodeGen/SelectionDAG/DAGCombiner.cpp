@@ -20,7 +20,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntervalMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -9391,7 +9390,7 @@ static SDValue combineShiftToMULH(SDNode *N, SelectionDAG &DAG,
 
   // return true if U may use the lower bits of its operands
   auto UserOfLowerBits = [NarrowVTSize](SDNode *U) {
-    if (U->getOpcode() != ISD::SRL || U->getOpcode() != ISD::SRA) {
+    if (U->getOpcode() != ISD::SRL && U->getOpcode() != ISD::SRA) {
       return true;
     }
     ConstantSDNode *UShiftAmtSrc = isConstOrConstSplat(U->getOperand(1));
