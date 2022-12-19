@@ -10,13 +10,13 @@
 ;; Checks that we can merge an indirect debug value with an equivalent direct
 ;; debug value that uses DW_OP_deref.
 ; CHECK: DW_AT_location
-; CHECK-SAME: (DW_OP_fbreg +8)
+; CHECK-SAME: (DW_OP_fbreg +{{[0-9]+}})
 ; CHECK-NEXT: DW_AT_name    ("Var1")
 
 ;; Checks that we can merge a non-variadic debug value with an equivalent
 ;; variadic debug value.
 ; CHECK: DW_AT_location
-; CHECK-SAME: (DW_OP_fbreg +8, DW_OP_deref, DW_OP_stack_value)
+; CHECK-SAME: (DW_OP_fbreg +{{[0-9]+}}, DW_OP_deref, DW_OP_stack_value)
 ; CHECK-NEXT: DW_AT_name    ("Var2")
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
