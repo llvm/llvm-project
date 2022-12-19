@@ -2614,6 +2614,11 @@ bool TargetLowering::SimplifyDemandedBits(
       return true;
     }
 
+    // neg x with only low bit demanded is simply x.
+    if (Op.getOpcode() == ISD::SUB && DemandedBits.isOne() &&
+        isa<ConstantSDNode>(Op0) && cast<ConstantSDNode>(Op0)->isZero())
+      return TLO.CombineTo(Op, Op1);
+
     // Attempt to avoid multi-use ops if we don't need anything from them.
     if (!LoMask.isAllOnes() || !DemandedElts.isAllOnes()) {
       SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
