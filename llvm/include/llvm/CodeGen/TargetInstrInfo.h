@@ -1059,24 +1059,36 @@ public:
   /// Store the specified register of the given register class to the specified
   /// stack frame index. The store instruction is to be added to the given
   /// machine basic block before the specified machine instruction. If isKill
-  /// is true, the register operand is the last use and must be marked kill.
+  /// is true, the register operand is the last use and must be marked kill. If
+  /// \p SrcReg is being directly spilled as part of assigning a virtual
+  /// register, \p VReg is the register being assigned. This additional register
+  /// argument is needed for certain targets when invoked from RegAllocFast to
+  /// map the spilled physical register to its virtual register. A null register
+  /// can be passed elsewhere.
   virtual void storeRegToStackSlot(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MI,
                                    Register SrcReg, bool isKill, int FrameIndex,
                                    const TargetRegisterClass *RC,
-                                   const TargetRegisterInfo *TRI) const {
+                                   const TargetRegisterInfo *TRI,
+                                   Register VReg) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::storeRegToStackSlot!");
   }
 
   /// Load the specified register of the given register class from the specified
   /// stack frame index. The load instruction is to be added to the given
-  /// machine basic block before the specified machine instruction.
+  /// machine basic block before the specified machine instruction. If \p
+  /// DestReg is being directly reloaded as part of assigning a virtual
+  /// register, \p VReg is the register being assigned. This additional register
+  /// argument is needed for certain targets when invoked from RegAllocFast to
+  /// map the loaded physical register to its virtual register. A null register
+  /// can be passed elsewhere.
   virtual void loadRegFromStackSlot(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MI,
                                     Register DestReg, int FrameIndex,
                                     const TargetRegisterClass *RC,
-                                    const TargetRegisterInfo *TRI) const {
+                                    const TargetRegisterInfo *TRI,
+                                    Register VReg) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::loadRegFromStackSlot!");
   }
