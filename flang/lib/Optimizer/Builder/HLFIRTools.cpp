@@ -431,6 +431,9 @@ void hlfir::genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
     if (auto concat = expr.getDefiningOp<hlfir::ConcatOp>()) {
       result.push_back(concat.getLength());
       return;
+    } else if (auto concat = expr.getDefiningOp<hlfir::SetLengthOp>()) {
+      result.push_back(concat.getLength());
+      return;
     } else if (auto asExpr = expr.getDefiningOp<hlfir::AsExprOp>()) {
       hlfir::genLengthParameters(loc, builder, hlfir::Entity{asExpr.getVar()},
                                  result);

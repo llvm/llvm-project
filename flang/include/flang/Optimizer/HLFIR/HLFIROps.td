@@ -236,6 +236,26 @@ def hlfir_ConcatOp : hlfir_Op<"concat", []> {
   let hasVerifier = 1;
 }
 
+def hlfir_SetLengthOp : hlfir_Op<"set_length", []> {
+  let summary = "change the length of a character entity";
+  let description = [{
+    Change the length of character entity. This trims or pads the
+    character argument according to the new length.
+  }];
+
+  let arguments = (ins AnyScalarCharacterEntity:$string,
+                   AnyIntegerType:$length);
+
+  let results = (outs AnyScalarCharacterExpr);
+
+  let assemblyFormat = [{
+    $string `len` $length
+     attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [OpBuilder<(ins "mlir::Value":$string,"mlir::Value":$len)>];
+}
+
 def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
   let summary = "Create a variable from an expression value";
