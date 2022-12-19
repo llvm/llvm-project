@@ -124,6 +124,7 @@ void SPIRVPassConfig::addPostRegAlloc() {
   disablePass(&PatchableFunctionID);
   disablePass(&ShrinkWrapID);
   disablePass(&LiveDebugValuesID);
+  disablePass(&MachineLateInstrsCleanupID);
 
   // Do not work with OpPhi.
   disablePass(&BranchFolderPassID);
