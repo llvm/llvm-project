@@ -91,8 +91,8 @@ public:
     return isNormalDir() ? &u.Dir.getDirEntry() : nullptr;
   }
 
-  Optional<DirectoryEntryRef> getDirRef() const {
-    return isNormalDir() ? Optional<DirectoryEntryRef>(u.Dir) : std::nullopt;
+  OptionalDirectoryEntryRef getDirRef() const {
+    return isNormalDir() ? OptionalDirectoryEntryRef(u.Dir) : std::nullopt;
   }
 
   /// getFrameworkDir - Return the directory that this framework refers to.
@@ -101,8 +101,8 @@ public:
     return isFramework() ? &u.Dir.getDirEntry() : nullptr;
   }
 
-  Optional<DirectoryEntryRef> getFrameworkDirRef() const {
-    return isFramework() ? Optional<DirectoryEntryRef>(u.Dir) : std::nullopt;
+  OptionalDirectoryEntryRef getFrameworkDirRef() const {
+    return isFramework() ? OptionalDirectoryEntryRef(u.Dir) : std::nullopt;
   }
 
   /// getHeaderMap - Return the directory that this entry refers to.
@@ -180,7 +180,7 @@ public:
   /// \param [out] MappedName if this is a headermap which maps the filename to
   /// a framework include ("Foo.h" -> "Foo/Foo.h"), set the new name to this
   /// vector and point Filename to it.
-  Optional<FileEntryRef>
+  OptionalFileEntryRef
   LookupFile(StringRef &Filename, HeaderSearch &HS, SourceLocation IncludeLoc,
              SmallVectorImpl<char> *SearchPath,
              SmallVectorImpl<char> *RelativePath, Module *RequestingModule,
@@ -190,7 +190,7 @@ public:
              bool OpenFile = true) const;
 
 private:
-  Optional<FileEntryRef> DoFrameworkLookup(
+  OptionalFileEntryRef DoFrameworkLookup(
       StringRef Filename, HeaderSearch &HS, SmallVectorImpl<char> *SearchPath,
       SmallVectorImpl<char> *RelativePath, Module *RequestingModule,
       ModuleMap::KnownHeader *SuggestedModule,

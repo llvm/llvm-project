@@ -527,7 +527,7 @@ void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
     return;
 
   // Search include directories for this file.
-  Optional<FileEntryRef> File =
+  OptionalFileEntryRef File =
       LookupFile(FilenameTok.getLocation(), Filename, isAngled, nullptr,
                  nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
   if (!File) {
