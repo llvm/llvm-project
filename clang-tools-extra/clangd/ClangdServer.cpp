@@ -233,6 +233,9 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
 }
 
 ClangdServer::~ClangdServer() {
+  // Wait for stdlib indexing to finish.
+  if (IndexTasks)
+    IndexTasks->wait();
   // Destroying TUScheduler first shuts down request threads that might
   // otherwise access members concurrently.
   // (Nobody can be using TUScheduler because we're on the main thread).
