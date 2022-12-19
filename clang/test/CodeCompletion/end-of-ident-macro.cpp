@@ -5,11 +5,11 @@ using FUNCTION = int();
 // middle, or end.
 FUNC(int) a = 10;
 // ^FUNC(int)
-// RUN: %clang_cc1 -code-completion-at=%s:6:1 -code-completion-macros %s | FileCheck %s
+// RUN: %clang_cc1 -code-completion-at=%s:%(line-2):1 -code-completion-macros %s | FileCheck %s
 // FU^NC(int)
-// RUN: %clang_cc1 -code-completion-at=%s:6:3 -code-completion-macros %s | FileCheck %s
+// RUN: %clang_cc1 -code-completion-at=%s:%(line-4):3 -code-completion-macros %s | FileCheck %s
 // FUNC^(int)
-// RUN: %clang_cc1 -code-completion-at=%s:6:5 -code-completion-macros %s | FileCheck %s
+// RUN: %clang_cc1 -code-completion-at=%s:%(line-6):5 -code-completion-macros %s | FileCheck %s
 
 // CHECK: COMPLETION: FUNC : FUNC(<#X#>)
 // CHECK: COMPLETION: FUNCTION : FUNCTION
