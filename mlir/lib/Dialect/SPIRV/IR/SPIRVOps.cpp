@@ -4851,11 +4851,11 @@ static LogicalResult verifyIntegerDotProduct(Operation *op) {
   return success();
 }
 
-static Optional<spirv::Version> getIntegerDotProductMinVersion() {
+static std::optional<spirv::Version> getIntegerDotProductMinVersion() {
   return spirv::Version::V_1_0; // Available in SPIR-V >= 1.0.
 }
 
-static Optional<spirv::Version> getIntegerDotProductMaxVersion() {
+static std::optional<spirv::Version> getIntegerDotProductMaxVersion() {
   return spirv::Version::V_1_6; // Available in SPIR-V <= 1.6.
 }
 
@@ -4910,10 +4910,10 @@ getIntegerDotProductCapabilities(Operation *op) {
   SmallVector<ArrayRef<spirv::Capability>, 1> OpName::getCapabilities() {      \
     return getIntegerDotProductCapabilities(*this);                            \
   }                                                                            \
-  Optional<spirv::Version> OpName::getMinVersion() {                           \
+  std::optional<spirv::Version> OpName::getMinVersion() {                      \
     return getIntegerDotProductMinVersion();                                   \
   }                                                                            \
-  Optional<spirv::Version> OpName::getMaxVersion() {                           \
+  std::optional<spirv::Version> OpName::getMaxVersion() {                      \
     return getIntegerDotProductMaxVersion();                                   \
   }
 

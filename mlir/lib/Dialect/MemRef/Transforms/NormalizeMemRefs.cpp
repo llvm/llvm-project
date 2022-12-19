@@ -120,7 +120,8 @@ void NormalizeMemRefs::setCalleesAndCallersNonNormalizable(
                    << " calls or is called by non-normalizable function\n");
   normalizableFuncs.erase(funcOp);
   // Caller of the function.
-  Optional<SymbolTable::UseRange> symbolUses = funcOp.getSymbolUses(moduleOp);
+  std::optional<SymbolTable::UseRange> symbolUses =
+      funcOp.getSymbolUses(moduleOp);
   for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
     // TODO: Extend this for ops that are FunctionOpInterface. This would
     // require creating an OpInterface for FunctionOpInterface ops.
@@ -256,7 +257,8 @@ void NormalizeMemRefs::updateFunctionSignature(func::FuncOp funcOp,
   llvm::SmallDenseSet<func::FuncOp, 8> funcOpsToUpdate;
   // We iterate over all symbolic uses of the function and update the return
   // type at the caller site.
-  Optional<SymbolTable::UseRange> symbolUses = funcOp.getSymbolUses(moduleOp);
+  std::optional<SymbolTable::UseRange> symbolUses =
+      funcOp.getSymbolUses(moduleOp);
   for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
     Operation *userOp = symbolUse.getUser();
     OpBuilder builder(userOp);

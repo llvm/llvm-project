@@ -45,7 +45,7 @@ void PrintOpAvailability::runOnOperation() {
     auto &os = llvm::outs();
 
     if (auto minVersionIfx = dyn_cast<spirv::QueryMinVersionInterface>(op)) {
-      Optional<spirv::Version> minVersion = minVersionIfx.getMinVersion();
+      std::optional<spirv::Version> minVersion = minVersionIfx.getMinVersion();
       os << opName << " min version: ";
       if (minVersion)
         os << spirv::stringifyVersion(*minVersion) << "\n";
@@ -54,7 +54,7 @@ void PrintOpAvailability::runOnOperation() {
     }
 
     if (auto maxVersionIfx = dyn_cast<spirv::QueryMaxVersionInterface>(op)) {
-      Optional<spirv::Version> maxVersion = maxVersionIfx.getMaxVersion();
+      std::optional<spirv::Version> maxVersion = maxVersionIfx.getMaxVersion();
       os << opName << " max version: ";
       if (maxVersion)
         os << spirv::stringifyVersion(*maxVersion) << "\n";

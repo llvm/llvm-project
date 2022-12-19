@@ -53,7 +53,7 @@ public:
 
   /// Gets a InterfaceVarABIAttr.
   static InterfaceVarABIAttr get(uint32_t descriptorSet, uint32_t binding,
-                                 Optional<StorageClass> storageClass,
+                                 std::optional<StorageClass> storageClass,
                                  MLIRContext *context);
   static InterfaceVarABIAttr get(IntegerAttr descriptorSet, IntegerAttr binding,
                                  IntegerAttr storageClass);
@@ -68,7 +68,7 @@ public:
   uint32_t getBinding();
 
   /// Returns `spirv::StorageClass`.
-  Optional<StorageClass> getStorageClass();
+  std::optional<StorageClass> getStorageClass();
 
   static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
                               IntegerAttr descriptorSet, IntegerAttr binding,

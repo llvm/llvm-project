@@ -37,7 +37,7 @@ def AllocationOpInterface : OpInterface<"AllocationOpInterface"> {
         operation implementing this interface. If there is no compatible
         deallocation operation, this method can return ::std::nullopt.
       }],
-      "::mlir::Optional<::mlir::Operation*>", "buildDealloc",
+      "::std::optional<::mlir::Operation*>", "buildDealloc",
       (ins "::mlir::OpBuilder&":$builder, "::mlir::Value":$alloc), [{}],
       /*defaultImplementation=*/[{ return std::nullopt; }]
     >,
@@ -48,7 +48,7 @@ def AllocationOpInterface : OpInterface<"AllocationOpInterface"> {
         implementing this interface. If there is no compatible clone operation,
         this method can return ::std::nullopt.
       }],
-      "::mlir::Optional<::mlir::Value>", "buildClone",
+      "::std::optional<::mlir::Value>", "buildClone",
       (ins "::mlir::OpBuilder&":$builder, "::mlir::Value":$alloc), [{}],
       /*defaultImplementation=*/[{ return std::nullopt; }]
     >
