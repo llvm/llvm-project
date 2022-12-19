@@ -47,7 +47,6 @@ typedef std::pair<const RuntimeCheckingPtrGroup *,
                   const RuntimeCheckingPtrGroup *>
     RuntimePointerCheck;
 
-template <typename T> class Optional;
 template <typename T, unsigned N> class SmallSetVector;
 template <typename T, unsigned N> class SmallPriorityWorklist;
 

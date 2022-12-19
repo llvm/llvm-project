@@ -33,7 +33,6 @@ namespace llvm {
   class SourceMgr;
   class Type;
   struct MaybeAlign;
-  template <typename T> class Optional;
   class Function;
   class Value;
   class BasicBlock;
