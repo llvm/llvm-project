@@ -43,7 +43,7 @@ define i8 @func_gv() {
 ; PIC-NEXT:    ld %s15, 24(, %s11)
 ; PIC-NEXT:    b.l.t (, %s10)
 
-  %v = load i8, i8* @vi8, align 1
+  %v = load i8, ptr @vi8, align 1
   ret i8 %v
 }
 
@@ -84,7 +84,7 @@ define i32 @func_alloca(i32 signext %0) {
 ; PIC-NEXT:    adds.l %s11, 16, %s11
 ; PIC-NEXT:    b.l.t (, %s10)
   %2 = alloca i32, align 4
-  store i32 %0, i32* %2, align 4
-  %3 = load i32, i32* %2, align 4
+  store i32 %0, ptr %2, align 4
+  %3 = load i32, ptr %2, align 4
   ret i32 %3
 }
