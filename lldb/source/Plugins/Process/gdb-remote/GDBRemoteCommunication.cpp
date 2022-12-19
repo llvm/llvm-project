@@ -869,7 +869,7 @@ lldb::thread_result_t GDBRemoteCommunication::ListenThread() {
   if (connection) {
     // Do the listen on another thread so we can continue on...
     if (connection->Connect(
-            m_listen_url.c_str(),
+            m_listen_url,
             [this](llvm::StringRef port_str) {
               uint16_t port = 0;
               llvm::to_integer(port_str, port, 10);

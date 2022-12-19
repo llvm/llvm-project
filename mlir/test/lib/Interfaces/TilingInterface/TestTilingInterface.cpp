@@ -135,7 +135,7 @@ LinalgTransformationFilter::checkAndNotify(PatternRewriter &rewriter,
 void LinalgTransformationFilter::replaceLinalgTransformationFilter(
     PatternRewriter &rewriter, Operation *op) const {
   if (replacement.has_value())
-    op->setAttr(kLinalgTransformMarker, replacement.value());
+    op->setAttr(kLinalgTransformMarker, *replacement);
   else
     op->removeAttr(rewriter.getStringAttr(kLinalgTransformMarker));
 }

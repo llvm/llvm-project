@@ -1,4 +1,4 @@
-# UNSUPPORTED: darwin, freebsd, aarch64
+# UNSUPPORTED: darwin, target={{.*freebsd.*}}, target=aarch64{{.*}}
 # Tests how the fork mode works together with ubsan.
 RUN: %cpp_compiler %S/IntegerOverflowTest.cpp -o %t-IntegerOverflowTest -fsanitize=signed-integer-overflow -fno-sanitize-recover=signed-integer-overflow
 RUN: not %run %t-IntegerOverflowTest -fork=1 -ignore_crashes=1  -runs=10000 2>&1 | FileCheck %s --check-prefix=UBSAN_FORK

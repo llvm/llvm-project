@@ -27,7 +27,6 @@
 
 namespace llvm {
 
-class MCRegisterInfo;
 class MemoryBuffer;
 class AppleAcceleratorTable;
 class DWARFCompileUnit;
@@ -81,9 +80,6 @@ class DWARFContext : public DIContext {
   std::weak_ptr<DWOFile> DWP;
   bool CheckedForDWP = false;
   std::string DWPName;
-
-  std::unique_ptr<MCRegisterInfo> RegInfo;
-
   std::function<void(Error)> RecoverableErrorHandler =
       WithColor::defaultErrorHandler;
   std::function<void(Error)> WarningHandler = WithColor::defaultWarningHandler;
@@ -408,8 +404,6 @@ public:
 
   std::shared_ptr<DWARFContext> getDWOContext(StringRef AbsolutePath);
 
-  const MCRegisterInfo *getRegisterInfo() const { return RegInfo.get(); }
-
   function_ref<void(Error)> getRecoverableErrorHandler() {
     return RecoverableErrorHandler;
   }
@@ -434,11 +428,6 @@ public:
              WithColor::defaultErrorHandler,
          std::function<void(Error)> WarningHandler =
              WithColor::defaultWarningHandler);
-
-  /// Loads register info for the architecture of the provided object file.
-  /// Improves readability of dumped DWARF expressions. Requires the caller to
-  /// have initialized the relevant target descriptions.
-  Error loadRegisterInfo(const object::ObjectFile &Obj);
 
   /// Get address size from CUs.
   /// TODO: refactor compile_units() to make this const.

@@ -120,7 +120,7 @@ const Symbol *ProcedureDesignator::GetInterfaceSymbol() const {
   if (const Symbol * symbol{GetSymbol()}) {
     const Symbol &ultimate{symbol->GetUltimate()};
     if (const auto *proc{ultimate.detailsIf<semantics::ProcEntityDetails>()}) {
-      return proc->interface().symbol();
+      return proc->procInterface();
     } else if (const auto *binding{
                    ultimate.detailsIf<semantics::ProcBindingDetails>()}) {
       return &binding->symbol();

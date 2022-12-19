@@ -61,7 +61,7 @@ protected:
   int64_t alignedAllocationGetAlignment(ConversionPatternRewriter &rewriter,
                                         Location loc, OpType op,
                                         const DataLayout *defaultLayout) const {
-    if (Optional<uint64_t> alignment = op.getAlignment())
+    if (std::optional<uint64_t> alignment = op.getAlignment())
       return *alignment;
 
     // Whenever we don't have alignment set, we will use an alignment

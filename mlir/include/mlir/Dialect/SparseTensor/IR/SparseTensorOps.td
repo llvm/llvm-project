@@ -11,6 +11,7 @@
 
 include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorBase.td"
+include "mlir/Dialect/SparseTensor/IR/SparseTensorTypes.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -173,6 +174,71 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [Pure]>,
     ```
   }];
   let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($result)";
+  let hasVerifier = 1;
+}
+
+def SparseTensor_StorageSpecifierInitOp : SparseTensor_Op<"storage_specifier.init", [Pure]>,
+    Results<(outs SparseTensorStorageSpecifier:$result)> {
+  let summary = "";
+  let description = [{
+    Returns an initial storage specifier value. A storage specifier value holds
+    the sizes for tensor dimensions, pointer arrays, index arrays, and the value array.
+
+    Example:
+
+    ```mlir
+    %0 = sparse_tensor.storage_specifier.init :  !sparse_tensor.storage_specifier<#CSR>
+    ```
+  }];
+
+  let assemblyFormat = "attr-dict `:` qualified(type($result))";
+}
+
+def SparseTensor_GetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.get", [Pure]>,
+    Arguments<(ins SparseTensorStorageSpecifier:$specifier,
+                   SparseTensorStorageSpecifierKindAttr:$specifierKind,
+                   OptionalAttr<IndexAttr>:$dim)>,
+    Results<(outs AnyType:$result)> {
+  let summary = "";
+  let description = [{
+    Returns the requested field of the given storage_specifier.
+
+    Example of querying the size of the index array for level 0:
+
+    ```mlir
+    %0 = sparse_tensor.storage_specifier.get %arg0 idx_mem_sz at 0
+         : !sparse_tensor.storage_specifier<#COO> to i64
+    ```
+  }];
+
+  let assemblyFormat = "$specifier $specifierKind (`at` $dim^)? attr-dict `:` "
+                       "qualified(type($specifier)) `to` type($result)";
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+def SparseTensor_SetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.set",
+    [Pure, AllTypesMatch<["result", "specifier"]>]>,
+    Arguments<(ins SparseTensorStorageSpecifier:$specifier,
+                   SparseTensorStorageSpecifierKindAttr:$specifierKind,
+                   OptionalAttr<IndexAttr>:$dim,
+                   AnyType:$value)>,
+    Results<(outs SparseTensorStorageSpecifier:$result)> {
+  let summary = "";
+  let description = [{
+    Set the field of the storage specifier to the given input value. Returns
+    the updated storage_specifier as a new SSA value.
+
+    Example of updating the sizes of the index array for level 0:
+
+    ```mlir
+    %0 = sparse_tensor.storage_specifier.set %arg0 idx_mem_sz at 0 with %new_sz
+       : i32, !sparse_tensor.storage_specifier<#COO>
+
+    ```
+  }];
+  let assemblyFormat = "$specifier $specifierKind (`at` $dim^)? `with` $value attr-dict `:` "
+                       "type($value) `,` qualified(type($result))";
   let hasVerifier = 1;
 }
 
@@ -386,7 +452,7 @@ def SparseTensor_CompressOp : SparseTensor_Op<"compress",
                    StridedMemRefRankOf<[Index],[1]>:$added,
                    Index:$count,
                    AnySparseTensor:$tensor,
-		   Variadic<Index>:$indices)>,
+                   Variadic<Index>:$indices)>,
     Results<(outs AnySparseTensor:$result)> {
   string summary = "Compressed an access pattern for insertion";
   string description = [{
@@ -412,8 +478,8 @@ def SparseTensor_CompressOp : SparseTensor_Op<"compress",
   }];
   let assemblyFormat = "$values `,` $filled `,` $added `,` $count"
                        " `into` $tensor `[` $indices `]` attr-dict"
-		       " `:` type($values) `,` type($filled) `,` type($added)"
-		       " `,` type($tensor)";
+                       " `:` type($values) `,` type($filled) `,` type($added)"
+                       " `,` type($tensor)";
   let hasVerifier = 1;
 }
 

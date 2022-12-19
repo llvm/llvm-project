@@ -1,4 +1,3 @@
-# XFAIL: target-arm && linux-gnu
 # REQUIRES: x86-registered-target
 
 # RUN: yaml2obj %s -o %t

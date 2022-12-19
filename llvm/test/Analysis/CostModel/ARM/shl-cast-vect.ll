@@ -15,133 +15,133 @@ target triple = "armv7--linux-gnueabihf"
 %T432 = type <4 x i32>
 %T464 = type <4 x i64>
 
-define void @direct(%T432* %loadaddr, %T432* %loadaddr2, %T432* %storeaddr) {
+define void @direct(ptr %loadaddr, ptr %loadaddr2, ptr %storeaddr) {
 ; COST-LABEL: 'direct'
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v0 = load <4 x i32>, <4 x i32>* %loadaddr, align 8
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load <4 x i32>, <4 x i32>* %loadaddr2, align 8
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v0 = load <4 x i32>, ptr %loadaddr, align 8
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load <4 x i32>, ptr %loadaddr2, align 8
 ; COST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r3 = shl <4 x i32> %v0, %v1
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i32> %r3, <4 x i32>* %storeaddr, align 8
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i32> %r3, ptr %storeaddr, align 8
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
-  %v0 = load %T432, %T432* %loadaddr
+  %v0 = load %T432, ptr %loadaddr
 ; ASM: vld1.64
-  %v1 = load %T432, %T432* %loadaddr2
+  %v1 = load %T432, ptr %loadaddr2
 ; ASM: vld1.64
   %r3 = shl %T432 %v0, %v1
 ; ASM: vshl.i32
-  store %T432 %r3, %T432* %storeaddr
+  store %T432 %r3, ptr %storeaddr
 ; ASM: vst1.64
   ret void
 }
 
-define void @ups1632(%T416* %loadaddr, %T416* %loadaddr2, %T432* %storeaddr) {
+define void @ups1632(ptr %loadaddr, ptr %loadaddr2, ptr %storeaddr) {
 ; COST-LABEL: 'ups1632'
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v0 = load <4 x i16>, <4 x i16>* %loadaddr, align 8
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load <4 x i16>, <4 x i16>* %loadaddr2, align 8
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v0 = load <4 x i16>, ptr %loadaddr, align 8
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load <4 x i16>, ptr %loadaddr2, align 8
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r1 = sext <4 x i16> %v0 to <4 x i32>
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r2 = sext <4 x i16> %v1 to <4 x i32>
 ; COST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r3 = shl <4 x i32> %r1, %r2
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i32> %r3, <4 x i32>* %storeaddr, align 8
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i32> %r3, ptr %storeaddr, align 8
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
-  %v0 = load %T416, %T416* %loadaddr
+  %v0 = load %T416, ptr %loadaddr
 ; ASM: vldr
-  %v1 = load %T416, %T416* %loadaddr2
+  %v1 = load %T416, ptr %loadaddr2
 ; ASM: vldr
   %r1 = sext %T416 %v0 to %T432
   %r2 = sext %T416 %v1 to %T432
   %r3 = shl %T432 %r1, %r2
 ; ASM: vshll.s16
-  store %T432 %r3, %T432* %storeaddr
+  store %T432 %r3, ptr %storeaddr
 ; ASM: vst1.64
   ret void
 }
 
-define void @upu1632(%T416* %loadaddr, %T416* %loadaddr2, %T432* %storeaddr) {
+define void @upu1632(ptr %loadaddr, ptr %loadaddr2, ptr %storeaddr) {
 ; COST-LABEL: 'upu1632'
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v0 = load <4 x i16>, <4 x i16>* %loadaddr, align 8
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load <4 x i16>, <4 x i16>* %loadaddr2, align 8
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v0 = load <4 x i16>, ptr %loadaddr, align 8
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load <4 x i16>, ptr %loadaddr2, align 8
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r1 = zext <4 x i16> %v0 to <4 x i32>
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r2 = zext <4 x i16> %v1 to <4 x i32>
 ; COST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r3 = shl <4 x i32> %r1, %r2
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i32> %r3, <4 x i32>* %storeaddr, align 8
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i32> %r3, ptr %storeaddr, align 8
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
-  %v0 = load %T416, %T416* %loadaddr
+  %v0 = load %T416, ptr %loadaddr
 ; ASM: vldr
-  %v1 = load %T416, %T416* %loadaddr2
+  %v1 = load %T416, ptr %loadaddr2
 ; ASM: vldr
   %r1 = zext %T416 %v0 to %T432
   %r2 = zext %T416 %v1 to %T432
   %r3 = shl %T432 %r1, %r2
 ; ASM: vshll.u16
-  store %T432 %r3, %T432* %storeaddr
+  store %T432 %r3, ptr %storeaddr
 ; ASM: vst1.64
   ret void
 }
 
-define void @ups3264(%T232* %loadaddr, %T232* %loadaddr2, %T264* %storeaddr) {
+define void @ups3264(ptr %loadaddr, ptr %loadaddr2, ptr %storeaddr) {
 ; COST-LABEL: 'ups3264'
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v0 = load <2 x i32>, <2 x i32>* %loadaddr, align 8
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load <2 x i32>, <2 x i32>* %loadaddr2, align 8
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v0 = load <2 x i32>, ptr %loadaddr, align 8
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load <2 x i32>, ptr %loadaddr2, align 8
 ; COST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r3 = shl <2 x i32> %v0, %v1
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %st = sext <2 x i32> %r3 to <2 x i64>
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i64> %st, <2 x i64>* %storeaddr, align 8
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i64> %st, ptr %storeaddr, align 8
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
-  %v0 = load %T232, %T232* %loadaddr
+  %v0 = load %T232, ptr %loadaddr
 ; ASM: vldr
-  %v1 = load %T232, %T232* %loadaddr2
+  %v1 = load %T232, ptr %loadaddr2
 ; ASM: vldr
   %r3 = shl %T232 %v0, %v1
 ; ASM: vshl.i32
   %st = sext %T232 %r3 to %T264
 ; ASM: vmovl.s32
-  store %T264 %st, %T264* %storeaddr
+  store %T264 %st, ptr %storeaddr
 ; ASM: vst1.64
   ret void
 }
 
-define void @upu3264(%T232* %loadaddr, %T232* %loadaddr2, %T264* %storeaddr) {
+define void @upu3264(ptr %loadaddr, ptr %loadaddr2, ptr %storeaddr) {
 ; COST-LABEL: 'upu3264'
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v0 = load <2 x i32>, <2 x i32>* %loadaddr, align 8
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load <2 x i32>, <2 x i32>* %loadaddr2, align 8
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v0 = load <2 x i32>, ptr %loadaddr, align 8
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load <2 x i32>, ptr %loadaddr2, align 8
 ; COST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r3 = shl <2 x i32> %v0, %v1
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %st = zext <2 x i32> %r3 to <2 x i64>
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i64> %st, <2 x i64>* %storeaddr, align 8
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i64> %st, ptr %storeaddr, align 8
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
-  %v0 = load %T232, %T232* %loadaddr
+  %v0 = load %T232, ptr %loadaddr
 ; ASM: vldr
-  %v1 = load %T232, %T232* %loadaddr2
+  %v1 = load %T232, ptr %loadaddr2
 ; ASM: vldr
   %r3 = shl %T232 %v0, %v1
 ; ASM: vshl.i32
   %st = zext %T232 %r3 to %T264
 ; ASM: vmovl.u32
-  store %T264 %st, %T264* %storeaddr
+  store %T264 %st, ptr %storeaddr
 ; ASM: vst1.64
   ret void
 }
 
-define void @dn3216(%T432* %loadaddr, %T432* %loadaddr2, %T416* %storeaddr) {
+define void @dn3216(ptr %loadaddr, ptr %loadaddr2, ptr %storeaddr) {
 ; COST-LABEL: 'dn3216'
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v0 = load <4 x i32>, <4 x i32>* %loadaddr, align 8
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load <4 x i32>, <4 x i32>* %loadaddr2, align 8
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v0 = load <4 x i32>, ptr %loadaddr, align 8
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load <4 x i32>, ptr %loadaddr2, align 8
 ; COST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r3 = shl <4 x i32> %v0, %v1
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %st = trunc <4 x i32> %r3 to <4 x i16>
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i16> %st, <4 x i16>* %storeaddr, align 8
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i16> %st, ptr %storeaddr, align 8
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
-  %v0 = load %T432, %T432* %loadaddr
+  %v0 = load %T432, ptr %loadaddr
 ; ASM: vld1.64
-  %v1 = load %T432, %T432* %loadaddr2
+  %v1 = load %T432, ptr %loadaddr2
 ; ASM: vld1.64
   %r3 = shl %T432 %v0, %v1
 ; ASM: vshl.i32
   %st = trunc %T432 %r3 to %T416
 ; ASM: vmovn.i32
-  store %T416 %st, %T416* %storeaddr
+  store %T416 %st, ptr %storeaddr
 ; ASM: vstr
   ret void
 }

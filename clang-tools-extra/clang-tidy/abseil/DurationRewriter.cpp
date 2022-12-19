@@ -273,7 +273,7 @@ std::string rewriteExprFromNumberToDuration(
     const Expr *Node) {
   const Expr &RootNode = *Node->IgnoreParenImpCasts();
 
-  // First check to see if we can undo a complimentary function call.
+  // First check to see if we can undo a complementary function call.
   if (llvm::Optional<std::string> MaybeRewrite =
           rewriteInverseDurationCall(Result, Scale, RootNode))
     return *MaybeRewrite;
@@ -291,7 +291,7 @@ std::string rewriteExprFromNumberToTime(
     const Expr *Node) {
   const Expr &RootNode = *Node->IgnoreParenImpCasts();
 
-  // First check to see if we can undo a complimentary function call.
+  // First check to see if we can undo a complementary function call.
   if (llvm::Optional<std::string> MaybeRewrite =
           rewriteInverseTimeCall(Result, Scale, RootNode))
     return *MaybeRewrite;

@@ -24,6 +24,7 @@ add_object_library(
   HDRS
     dir.h
   DEPENDS
+    libc.src.__support.CPP.new
     libc.src.__support.CPP.span
     libc.src.__support.threads.mutex
 )
@@ -56,6 +57,6 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS}_dir.cpp)
       libc.include.fcntl
       libc.include.sys_syscall
       libc.src.__support.OSUtil.osutil
-      libc.src.errno.errno
+      libc.src.__support.error_or
   )
 endif()

@@ -40,11 +40,32 @@ public:
 
   virtual ~BenchmarkRunner();
 
+  class RunnableConfiguration {
+    friend class BenchmarkRunner;
+
+  public:
+    ~RunnableConfiguration() = default;
+    RunnableConfiguration(RunnableConfiguration &&) = default;
+
+    RunnableConfiguration(const RunnableConfiguration &) = delete;
+    RunnableConfiguration &operator=(RunnableConfiguration &&) = delete;
+    RunnableConfiguration &operator=(const RunnableConfiguration &) = delete;
+
+  private:
+    RunnableConfiguration() = default;
+
+    InstructionBenchmark InstrBenchmark;
+    object::OwningBinary<object::ObjectFile> ObjectFile;
+  };
+
+  Expected<RunnableConfiguration>
+  getRunnableConfiguration(const BenchmarkCode &Configuration,
+                           unsigned NumRepetitions, unsigned LoopUnrollFactor,
+                           const SnippetRepetitor &Repetitor,
+                           bool DumpObjectToDisk) const;
+
   Expected<InstructionBenchmark>
-  runConfiguration(const BenchmarkCode &Configuration, unsigned NumRepetitions,
-                   unsigned LoopUnrollFactor,
-                   ArrayRef<std::unique_ptr<const SnippetRepetitor>> Repetitors,
-                   bool DumpObjectToDisk) const;
+  runConfiguration(RunnableConfiguration &&RC) const;
 
   // Scratch space to run instructions that touch memory.
   struct ScratchSpace {
@@ -84,8 +105,12 @@ private:
   virtual Expected<std::vector<BenchmarkMeasure>>
   runMeasurements(const FunctionExecutor &Executor) const = 0;
 
-  Expected<std::string> writeObjectFile(const BenchmarkCode &Configuration,
-                                        const FillFunction &Fill) const;
+  Expected<SmallString<0>> assembleSnippet(const BenchmarkCode &BC,
+                                           const SnippetRepetitor &Repetitor,
+                                           unsigned MinInstructions,
+                                           unsigned LoopBodySize) const;
+
+  Expected<std::string> writeObjectFile(StringRef Buffer) const;
 
   const std::unique_ptr<ScratchSpace> Scratch;
 };

@@ -300,13 +300,13 @@ UnixSignals::GetFilteredSignals(llvm::Optional<bool> should_suppress,
 
     // If any of filtering conditions are not met, we move on to the next
     // signal.
-    if (should_suppress && signal_suppress != should_suppress.value())
+    if (should_suppress && signal_suppress != *should_suppress)
       continue;
 
-    if (should_stop && signal_stop != should_stop.value())
+    if (should_stop && signal_stop != *should_stop)
       continue;
 
-    if (should_notify && signal_notify != should_notify.value())
+    if (should_notify && signal_notify != *should_notify)
       continue;
 
     result.push_back(signo);

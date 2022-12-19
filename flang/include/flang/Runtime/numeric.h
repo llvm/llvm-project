@@ -377,6 +377,40 @@ CppTypeFor<TypeCategory::Real, 16> RTNAME(Spacing16)(
     CppTypeFor<TypeCategory::Real, 16>);
 #endif
 
+CppTypeFor<TypeCategory::Real, 4> RTNAME(FPow4i)(
+    CppTypeFor<TypeCategory::Real, 4> b,
+    CppTypeFor<TypeCategory::Integer, 4> e);
+CppTypeFor<TypeCategory::Real, 8> RTNAME(FPow8i)(
+    CppTypeFor<TypeCategory::Real, 8> b,
+    CppTypeFor<TypeCategory::Integer, 4> e);
+#if LDBL_MANT_DIG == 64
+CppTypeFor<TypeCategory::Real, 10> RTNAME(FPow10i)(
+    CppTypeFor<TypeCategory::Real, 10> b,
+    CppTypeFor<TypeCategory::Integer, 4> e);
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CppTypeFor<TypeCategory::Real, 16> RTNAME(FPow16i)(
+    CppTypeFor<TypeCategory::Real, 16> b,
+    CppTypeFor<TypeCategory::Integer, 4> e);
+#endif
+
+CppTypeFor<TypeCategory::Real, 4> RTNAME(FPow4k)(
+    CppTypeFor<TypeCategory::Real, 4> b,
+    CppTypeFor<TypeCategory::Integer, 8> e);
+CppTypeFor<TypeCategory::Real, 8> RTNAME(FPow8k)(
+    CppTypeFor<TypeCategory::Real, 8> b,
+    CppTypeFor<TypeCategory::Integer, 8> e);
+#if LDBL_MANT_DIG == 64
+CppTypeFor<TypeCategory::Real, 10> RTNAME(FPow10k)(
+    CppTypeFor<TypeCategory::Real, 10> b,
+    CppTypeFor<TypeCategory::Integer, 8> e);
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CppTypeFor<TypeCategory::Real, 16> RTNAME(FPow16k)(
+    CppTypeFor<TypeCategory::Real, 16> b,
+    CppTypeFor<TypeCategory::Integer, 8> e);
+#endif
+
 } // extern "C"
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_NUMERIC_H_

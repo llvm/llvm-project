@@ -31,7 +31,9 @@ class VEDAGToDAGISel : public SelectionDAGISel {
   const VESubtarget *Subtarget;
 
 public:
-  explicit VEDAGToDAGISel(VETargetMachine &tm) : SelectionDAGISel(tm) {}
+  static char ID;
+
+  explicit VEDAGToDAGISel(VETargetMachine &tm) : SelectionDAGISel(ID, tm) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<VESubtarget>();
@@ -68,6 +70,8 @@ private:
   bool matchADDRri(SDValue N, SDValue &Base, SDValue &Offset);
 };
 } // end anonymous namespace
+
+char VEDAGToDAGISel::ID = 0;
 
 bool VEDAGToDAGISel::selectADDRrri(SDValue Addr, SDValue &Base, SDValue &Index,
                                    SDValue &Offset) {

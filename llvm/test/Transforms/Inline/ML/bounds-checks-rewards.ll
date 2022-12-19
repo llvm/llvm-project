@@ -4,7 +4,7 @@
 ; learn from it).
 ; However, when we discover we 'trip' over the artificially-low size increase 
 ; factor, we penalize the 'bad' decision.
-; REQUIRES: have_tf_api
+; REQUIRES: have_tflite
 ;
 ; Generate mock model
 ; RUN: rm -rf %t

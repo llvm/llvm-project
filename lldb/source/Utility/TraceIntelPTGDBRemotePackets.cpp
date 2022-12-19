@@ -30,10 +30,10 @@ json::Value toJSON(const JSONUINT64 &uint64, bool hex) {
 }
 
 bool fromJSON(const json::Value &value, JSONUINT64 &uint64, Path path) {
-  if (Optional<uint64_t> val = value.getAsUINT64()) {
+  if (std::optional<uint64_t> val = value.getAsUINT64()) {
     uint64.value = *val;
     return true;
-  } else if (Optional<StringRef> val = value.getAsString()) {
+  } else if (std::optional<StringRef> val = value.getAsString()) {
     if (!val->getAsInteger(/*radix=*/0, uint64.value))
       return true;
     path.report("invalid string number");

@@ -35,7 +35,7 @@ static Error IncludePerfEventParanoidMessageInError(Error &&error) {
 Expected<std::unique_ptr<IntelPTMultiCoreTrace>>
 IntelPTMultiCoreTrace::StartOnAllCores(const TraceIntelPTStartRequest &request,
                                        NativeProcessProtocol &process,
-                                       Optional<int> cgroup_fd) {
+                                       std::optional<int> cgroup_fd) {
   Expected<ArrayRef<cpu_id_t>> cpu_ids = GetAvailableLogicalCoreIDs();
   if (!cpu_ids)
     return cpu_ids.takeError();

@@ -574,9 +574,9 @@ void CodeGenFunction::EmitBlock(llvm::BasicBlock *BB, bool IsFinished) {
   // Place the block after the current block, if possible, or else at
   // the end of the function.
   if (CurBB && CurBB->getParent())
-    CurFn->insertBasicBlockAt(std::next(CurBB->getIterator()), BB);
+    CurFn->insert(std::next(CurBB->getIterator()), BB);
   else
-    CurFn->insertBasicBlockAt(CurFn->end(), BB);
+    CurFn->insert(CurFn->end(), BB);
   Builder.SetInsertPoint(BB);
 }
 
@@ -601,15 +601,14 @@ void CodeGenFunction::EmitBlockAfterUses(llvm::BasicBlock *block) {
   bool inserted = false;
   for (llvm::User *u : block->users()) {
     if (llvm::Instruction *insn = dyn_cast<llvm::Instruction>(u)) {
-      CurFn->insertBasicBlockAt(std::next(insn->getParent()->getIterator()),
-                                block);
+      CurFn->insert(std::next(insn->getParent()->getIterator()), block);
       inserted = true;
       break;
     }
   }
 
   if (!inserted)
-    CurFn->insertBasicBlockAt(CurFn->end(), block);
+    CurFn->insert(CurFn->end(), block);
 
   Builder.SetInsertPoint(block);
 }
@@ -1469,7 +1468,7 @@ void CodeGenFunction::EmitCaseStmtRange(const CaseStmt &S,
   llvm::BasicBlock *FalseDest = CaseRangeBlock;
   CaseRangeBlock = createBasicBlock("sw.caserange");
 
-  CurFn->insertBasicBlockAt(CurFn->end(), CaseRangeBlock);
+  CurFn->insert(CurFn->end(), CaseRangeBlock);
   Builder.SetInsertPoint(CaseRangeBlock);
 
   // Emit range check.

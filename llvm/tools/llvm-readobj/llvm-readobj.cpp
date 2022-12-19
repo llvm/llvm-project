@@ -21,7 +21,6 @@
 #include "llvm-readobj.h"
 #include "ObjDumper.h"
 #include "WindowsResourceDumper.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/CodeView/GlobalTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
 #include "llvm/MC/TargetRegistry.h"

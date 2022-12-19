@@ -41,7 +41,9 @@ void expectDumpResult(const dwarf::CIE &TestCIE, bool IsEH,
                       StringRef ExpectedFirstLine) {
   std::string Output;
   raw_string_ostream OS(Output);
-  TestCIE.dump(OS, DIDumpOptions(), /*MRI=*/nullptr, IsEH);
+  auto DumpOpts = DIDumpOptions();
+  DumpOpts.IsEH = IsEH;
+  TestCIE.dump(OS, DumpOpts);
   OS.flush();
   StringRef FirstLine = StringRef(Output).split('\n').first;
   EXPECT_EQ(FirstLine, ExpectedFirstLine);
@@ -51,7 +53,9 @@ void expectDumpResult(const dwarf::FDE &TestFDE, bool IsEH,
                       StringRef ExpectedFirstLine) {
   std::string Output;
   raw_string_ostream OS(Output);
-  TestFDE.dump(OS, DIDumpOptions(), /*MRI=*/nullptr, IsEH);
+  auto DumpOpts = DIDumpOptions();
+  DumpOpts.IsEH = IsEH;
+  TestFDE.dump(OS, DumpOpts);
   OS.flush();
   StringRef FirstLine = StringRef(Output).split('\n').first;
   EXPECT_EQ(FirstLine, ExpectedFirstLine);

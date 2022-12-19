@@ -122,6 +122,7 @@ def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
   let isMoveImm = 1;
   let SchedRW = [Write64Bit];
   let Size = 16; // Needs maximum 2 v_mov_b32 instructions 8 byte long each.
+  let UseNamedOperandTable = 1;
 }
 
 // 64-bit vector move with dpp. Expanded post-RA.
@@ -888,6 +889,8 @@ defm SI_SPILL_AV352 : SI_SPILL_VGPR <AV_352, 1>;
 defm SI_SPILL_AV384 : SI_SPILL_VGPR <AV_384, 1>;
 defm SI_SPILL_AV512 : SI_SPILL_VGPR <AV_512, 1>;
 defm SI_SPILL_AV1024 : SI_SPILL_VGPR <AV_1024, 1>;
+
+defm SI_SPILL_WWM_V32 : SI_SPILL_VGPR <VGPR_32>;
 
 def SI_PC_ADD_REL_OFFSET : SPseudoInstSI <
   (outs SReg_64:$dst),

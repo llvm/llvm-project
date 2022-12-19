@@ -98,7 +98,7 @@ define i1 @test_class_isnan_f32(float %x) {
 
 define i1 @test_class_isnan_f32_strict(float %x) {
 ; CHECK-LABEL: @test_class_isnan_f32_strict(
-; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 3) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 3) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %val = call i1 @llvm.is.fpclass.f32(float %x, i32 3) strictfp
@@ -125,7 +125,7 @@ define i1 @test_class_is_not_p0_n0_f32(float %x) {
 
 define i1 @test_class_is_not_p0_n0_f32_strict(float %x) {
 ; CHECK-LABEL: @test_class_is_not_p0_n0_f32_strict(
-; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 927) #[[ATTR3]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 927) #[[ATTR2]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %val = call i1 @llvm.is.fpclass.f32(float %x, i32 927) strictfp ; ~fcZero & fcAllFlags
@@ -161,7 +161,7 @@ define i1 @test_class_is_not_p0_n0_psub_nsub_f32_dapz(float %x) "denormal-fp-mat
 
 define i1 @test_class_is_p0_n0_f32_strict(float %x) {
 ; CHECK-LABEL: @test_class_is_p0_n0_f32_strict(
-; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 96) #[[ATTR3]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 96) #[[ATTR2]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %val = call i1 @llvm.is.fpclass.f32(float %x, i32 96) strictfp
@@ -456,7 +456,7 @@ define i1 @test_class_is_not_nan_nnan_src(float %x) {
 define i1 @test_class_is_not_nan_nnan_src_strict(float %x) {
 ; CHECK-LABEL: @test_class_is_not_nan_nnan_src_strict(
 ; CHECK-NEXT:    [[NNAN:%.*]] = fadd nnan float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NNAN]], i32 1020) #[[ATTR3]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NNAN]], i32 1020) #[[ATTR2]]
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %nnan = fadd nnan float %x, 1.0
@@ -526,7 +526,7 @@ define i1 @test_class_is_not_inf_ninf_src(float %x) {
 define i1 @test_class_is_not_inf_ninf_src_strict(float %x) {
 ; CHECK-LABEL: @test_class_is_not_inf_ninf_src_strict(
 ; CHECK-NEXT:    [[NINF:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 507) #[[ATTR3]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 507) #[[ATTR2]]
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %ninf = fadd ninf float %x, 1.0
@@ -1054,6 +1054,1125 @@ define <2 x i1> @test_fold_xor_class_v2f32(<2 x float> %a) {
   ret <2 x i1> %xor
 }
 
+; ---------------------------------------------------------------------
+; fneg folds
+; ---------------------------------------------------------------------
+
+; -> false
+define i1 @test_class_fneg_none(float %arg) {
+; CHECK-LABEL: @test_class_fneg_none(
+; CHECK-NEXT:    ret i1 false
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 0)
+  ret i1 %class
+}
+
+; -> true
+define i1 @test_class_fneg_all(float %arg) {
+; CHECK-LABEL: @test_class_fneg_all(
+; CHECK-NEXT:    ret i1 true
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 1023)
+  ret i1 %class
+}
+
+; -> snan
+define i1 @test_class_fneg_snan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_snan(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 1)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 1)
+  ret i1 %class
+}
+
+; -> qnan
+define i1 @test_class_fneg_qnan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_qnan(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 2)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 2)
+  ret i1 %class
+}
+
+; -> posinf
+define i1 @test_class_fneg_neginf(float %arg) {
+; CHECK-LABEL: @test_class_fneg_neginf(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 4)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 4)
+  ret i1 %class
+}
+
+; -> posnormal
+define i1 @test_class_fneg_negnormal(float %arg) {
+; CHECK-LABEL: @test_class_fneg_negnormal(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 8)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 8)
+  ret i1 %class
+}
+
+; -> possubnormal
+define i1 @test_class_fneg_negsubnormal(float %arg) {
+; CHECK-LABEL: @test_class_fneg_negsubnormal(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 16)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 16)
+  ret i1 %class
+}
+
+; -> poszero
+define i1 @test_class_fneg_negzero(float %arg) {
+; CHECK-LABEL: @test_class_fneg_negzero(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 32)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 32)
+  ret i1 %class
+}
+
+; -> negzero
+define i1 @test_class_fneg_poszero(float %arg) {
+; CHECK-LABEL: @test_class_fneg_poszero(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 64)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 64)
+  ret i1 %class
+}
+
+; -> negsubnormal
+define i1 @test_class_fneg_possubnormal(float %arg) {
+; CHECK-LABEL: @test_class_fneg_possubnormal(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 128)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 128)
+  ret i1 %class
+}
+
+; -> negnormal
+define i1 @test_class_fneg_posnormal(float %arg) {
+; CHECK-LABEL: @test_class_fneg_posnormal(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 256)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 256)
+  ret i1 %class
+}
+
+; -> neginf
+define i1 @test_class_fneg_posinf(float %arg) {
+; CHECK-LABEL: @test_class_fneg_posinf(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 512)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 512)
+  ret i1 %class
+}
+
+; -> qnan|snan
+define i1 @test_class_fneg_isnan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_isnan(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 3)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 3)
+  ret i1 %class
+}
+
+; -> ~nan
+define i1 @test_class_fneg_nnan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_nnan(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 1020)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 1020)
+  ret i1 %class
+}
+
+; -> normal
+define i1 @test_class_fneg_normal(float %arg) {
+; CHECK-LABEL: @test_class_fneg_normal(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 264)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 264)
+  ret i1 %class
+}
+
+; -> zero
+define i1 @test_class_fneg_zero(float %arg) {
+;
+; CHECK-LABEL: @test_class_fneg_zero(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 96)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 96)
+  ret i1 %class
+}
+
+; -> subnormal
+define i1 @test_class_fneg_subnormal(float %arg) {
+;
+; CHECK-LABEL: @test_class_fneg_subnormal(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 144)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 144)
+  ret i1 %class
+}
+
+; -> normal|pinf
+define i1 @test_class_fneg_normal_neginf(float %arg) {
+; CHECK-LABEL: @test_class_fneg_normal_neginf(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 268)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 268)
+  ret i1 %class
+}
+
+; -> normal|ninf
+define i1 @test_class_fneg_normal_pinf(float %arg) {
+; CHECK-LABEL: @test_class_fneg_normal_pinf(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 776)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 776)
+  ret i1 %class
+}
+
+; -> pinf|nnormal|pnormal|nzero
+define i1 @test_class_fneg_neginf_posnormal_negsubnormal_poszero(float %arg) {
+; CHECK-LABEL: @test_class_fneg_neginf_posnormal_negsubnormal_poszero(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 340)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 340)
+  ret i1 %class
+}
+
+; -> pinf|nnormal|psubnormal|negzero|snan
+define i1 @test_class_fneg_neginf_posnormal_negsubnormal_poszero_snan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_neginf_posnormal_negsubnormal_poszero_snan(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 341)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 341)
+  ret i1 %class
+}
+
+; pinf|negnormal|psubnormal|negzero|qnan
+define i1 @test_class_fneg_neginf_posnormal_negsubnormal_poszero_qnan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_neginf_posnormal_negsubnormal_poszero_qnan(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 342)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 342)
+  ret i1 %class
+}
+
+; -> pinf | nnormal|psubnormal|nzero|nan
+define i1 @test_class_fneg_neginf_posnormal_negsubnormal_poszero_nan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_neginf_posnormal_negsubnormal_poszero_nan(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 343)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 343)
+  ret i1 %class
+}
+
+; -> ninf|pnormal|negsubnormal|pzero
+define i1 @test_class_fneg_posinf_negnormal_possubnormal_negzero(float %arg) {
+; CHECK-LABEL: @test_class_fneg_posinf_negnormal_possubnormal_negzero(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 680)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 680)
+  ret i1 %class
+}
+
+; -> ninf|pnormal|negsubnormal|pzero|snan
+define i1 @test_class_fneg_posinf_negnormal_possubnormal_negzero_snan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_posinf_negnormal_possubnormal_negzero_snan(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 681)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 681)
+  ret i1 %class
+}
+
+; -> ninf|pnormal|negsubnormal|pzero|qnan
+define i1 @test_class_fneg_posinf_negnormal_possubnormal_negzero_qnan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_posinf_negnormal_possubnormal_negzero_qnan(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 682)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 682)
+  ret i1 %class
+}
+
+; -> ninf|pnormal|negsubnormal|pzero
+define i1 @test_class_fneg_posinf_negnormal_possubnormal_negzero_nan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_posinf_negnormal_possubnormal_negzero_nan(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 683)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 683)
+  ret i1 %class
+}
+
+; strictfp doesn't matter
+; -> ninf|pnormal|negsubnormal|pzero|snan
+define i1 @test_class_fneg_posinf_negnormal_possubnormal_negzero_snan_strictfp(float %arg) strictfp {
+; CHECK-LABEL: @test_class_fneg_posinf_negnormal_possubnormal_negzero_snan_strictfp(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 681) #[[ATTR2]]
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 681) strictfp
+  ret i1 %class
+}
+
+; multiple uses don't matter
+define i1 @test_class_fneg_multiple_use_fneg(float %arg, ptr %ptr) {
+; CHECK-LABEL: @test_class_fneg_multiple_use_fneg(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[ARG:%.*]]
+; CHECK-NEXT:    store float [[FNEG]], ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG]], i32 682)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fneg = fneg float %arg
+  store float %fneg, ptr %ptr
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg, i32 682)
+  ret i1 %class
+}
+
+define <2 x i1> @test_class_fneg_posinf_negnormal_possubnormal_negzero_nan_vector(<2 x float> %arg) {
+; CHECK-LABEL: @test_class_fneg_posinf_negnormal_possubnormal_negzero_nan_vector(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg <2 x float> [[ARG:%.*]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[FNEG]], i32 683)
+; CHECK-NEXT:    ret <2 x i1> [[CLASS]]
+;
+  %fneg = fneg <2 x float> %arg
+  %class = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %fneg, i32 683)
+  ret <2 x i1> %class
+}
+
+; ---------------------------------------------------------------------
+; fabs folds
+; ---------------------------------------------------------------------
+
+; -> false
+define i1 @test_class_fabs_none(float %arg) {
+; CHECK-LABEL: @test_class_fabs_none(
+; CHECK-NEXT:    ret i1 false
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 0)
+  ret i1 %class
+}
+
+; -> true
+define i1 @test_class_fabs_all(float %arg) {
+; CHECK-LABEL: @test_class_fabs_all(
+; CHECK-NEXT:    ret i1 true
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 1023)
+  ret i1 %class
+}
+
+; -> snan
+define i1 @test_class_fabs_snan(float %arg) {
+; CHECK-LABEL: @test_class_fabs_snan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 1)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 1)
+  ret i1 %class
+}
+
+; -> qnan
+define i1 @test_class_fabs_qnan(float %arg) {
+; CHECK-LABEL: @test_class_fabs_qnan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 2)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 2)
+  ret i1 %class
+}
+
+; -> false
+define i1 @test_class_fabs_neginf(float %arg) {
+; CHECK-LABEL: @test_class_fabs_neginf(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 4)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 4)
+  ret i1 %class
+}
+
+; -> false
+define i1 @test_class_fabs_negnormal(float %arg) {
+; CHECK-LABEL: @test_class_fabs_negnormal(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 8)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 8)
+  ret i1 %class
+}
+
+; -> false
+define i1 @test_class_fabs_negsubnormal(float %arg) {
+; CHECK-LABEL: @test_class_fabs_negsubnormal(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 16)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 16)
+  ret i1 %class
+}
+
+; -> false
+define i1 @test_class_fabs_negzero(float %arg) {
+; CHECK-LABEL: @test_class_fabs_negzero(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 32)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 32)
+  ret i1 %class
+}
+
+; -> poszero
+define i1 @test_class_fabs_poszero(float %arg) {
+; CHECK-LABEL: @test_class_fabs_poszero(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 64)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 64)
+  ret i1 %class
+}
+
+; -> possubnormal
+define i1 @test_class_fabs_possubnormal(float %arg) {
+; CHECK-LABEL: @test_class_fabs_possubnormal(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 128)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 128)
+  ret i1 %class
+}
+
+; -> posnormal
+define i1 @test_class_fabs_posnormal(float %arg) {
+; CHECK-LABEL: @test_class_fabs_posnormal(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 256)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 256)
+  ret i1 %class
+}
+
+; -> posinf
+define i1 @test_class_fabs_posinf(float %arg) {
+; CHECK-LABEL: @test_class_fabs_posinf(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 512)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 512)
+  ret i1 %class
+}
+
+; -> qnan|snan
+define i1 @test_class_fabs_isnan(float %arg) {
+; CHECK-LABEL: @test_class_fabs_isnan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 3)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 3)
+  ret i1 %class
+}
+
+; -> fcPositive
+define i1 @test_class_fabs_nnan(float %arg) {
+; CHECK-LABEL: @test_class_fabs_nnan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 1020)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 1020)
+  ret i1 %class
+}
+
+; -> posnormal
+define i1 @test_class_fabs_normal(float %arg) {
+; CHECK-LABEL: @test_class_fabs_normal(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 264)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 264)
+  ret i1 %class
+}
+
+; -> poszero
+define i1 @test_class_fabs_zero(float %arg) {
+; CHECK-LABEL: @test_class_fabs_zero(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 96)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 96)
+  ret i1 %class
+}
+
+; -> possubnormal
+define i1 @test_class_fabs_subnormal(float %arg) {
+; CHECK-LABEL: @test_class_fabs_subnormal(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 144)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 144)
+  ret i1 %class
+}
+
+; -> posnormal
+define i1 @test_class_fabs_normal_neginf(float %arg) {
+; CHECK-LABEL: @test_class_fabs_normal_neginf(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 268)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 268)
+  ret i1 %class
+}
+
+; -> pnormal|pinf
+define i1 @test_class_fabs_normal_pinf(float %arg) {
+; CHECK-LABEL: @test_class_fabs_normal_pinf(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 776)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 776)
+  ret i1 %class
+}
+
+; -> pnormal|pzero
+define i1 @test_class_fabs_neginf_posnormal_negsubnormal_poszero(float %arg) {
+; CHECK-LABEL: @test_class_fabs_neginf_posnormal_negsubnormal_poszero(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 340)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 340)
+  ret i1 %class
+}
+
+; -> pnormal|pzero|snan
+define i1 @test_class_fabs_neginf_posnormal_negsubnormal_poszero_snan(float %arg) {
+; CHECK-LABEL: @test_class_fabs_neginf_posnormal_negsubnormal_poszero_snan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 341)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 341)
+  ret i1 %class
+}
+
+; -> negnormal|pzero|qnan
+define i1 @test_class_fabs_neginf_posnormal_negsubnormal_poszero_qnan(float %arg) {
+; CHECK-LABEL: @test_class_fabs_neginf_posnormal_negsubnormal_poszero_qnan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 342)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 342)
+  ret i1 %class
+}
+
+; -> pnormal|pzero|nan
+define i1 @test_class_fabs_neginf_posnormal_negsubnormal_poszero_nan(float %arg) {
+; CHECK-LABEL: @test_class_fabs_neginf_posnormal_negsubnormal_poszero_nan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 343)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 343)
+  ret i1 %class
+}
+
+; -> ninf|pnormal|negsubnormal|pzero
+define i1 @test_class_fabs_posinf_negnormal_possubnormal_negzero(float %arg) {
+; CHECK-LABEL: @test_class_fabs_posinf_negnormal_possubnormal_negzero(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 680)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 680)
+  ret i1 %class
+}
+
+; -> pinf|psubnormal|snan
+define i1 @test_class_fabs_posinf_negnormal_possubnormal_negzero_snan(float %arg) {
+; CHECK-LABEL: @test_class_fabs_posinf_negnormal_possubnormal_negzero_snan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 681)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 681)
+  ret i1 %class
+}
+
+; -> pinf|psubnormal|qnan
+define i1 @test_class_fabs_posinf_negnormal_possubnormal_negzero_qnan(float %arg) {
+; CHECK-LABEL: @test_class_fabs_posinf_negnormal_possubnormal_negzero_qnan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 682)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 682)
+  ret i1 %class
+}
+
+; -> pinf|psubnormal|nan
+define i1 @test_class_fabs_posinf_negnormal_possubnormal_negzero_nan(float %arg) {
+; CHECK-LABEL: @test_class_fabs_posinf_negnormal_possubnormal_negzero_nan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 683)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 683)
+  ret i1 %class
+}
+
+; strictfp doesn't matter
+; -> pinf|psubnormal|snan
+define i1 @test_class_fabs_posinf_negnormal_possubnormal_negzero_snan_strictfp(float %arg) strictfp {
+; CHECK-LABEL: @test_class_fabs_posinf_negnormal_possubnormal_negzero_snan_strictfp(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 681) #[[ATTR2]]
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 681) strictfp
+  ret i1 %class
+}
+
+; multiple uses don't matter
+define i1 @test_class_fabs_multiple_use_fabs(float %arg, ptr %ptr) {
+; CHECK-LABEL: @test_class_fabs_multiple_use_fabs(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    store float [[FABS]], ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 682)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  store float %fabs, ptr %ptr
+  %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 682)
+  ret i1 %class
+}
+
+define <2 x i1> @test_class_fabs_posinf_negnormal_possubnormal_negzero_nan_vector(<2 x float> %arg) {
+; CHECK-LABEL: @test_class_fabs_posinf_negnormal_possubnormal_negzero_nan_vector(
+; CHECK-NEXT:    [[FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[FABS]], i32 683)
+; CHECK-NEXT:    ret <2 x i1> [[CLASS]]
+;
+  %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %arg)
+  %class = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %fabs, i32 683)
+  ret <2 x i1> %class
+}
+
+; ---------------------------------------------------------------------
+; fneg (fabs) folds
+; ---------------------------------------------------------------------
+
+define i1 @test_class_fneg_fabs_none(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_none(
+; CHECK-NEXT:    ret i1 false
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 0)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_all(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_all(
+; CHECK-NEXT:    ret i1 true
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 1023)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_snan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_snan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 1)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 1)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_qnan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_qnan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 2)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 2)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_neginf(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_neginf(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 4)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 4)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_negnormal(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_negnormal(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 8)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 8)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_negsubnormal(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_negsubnormal(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 16)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 16)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_negzero(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_negzero(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 32)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 32)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_poszero(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_poszero(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 64)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 64)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_possubnormal(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_possubnormal(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 128)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 128)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_posnormal(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_posnormal(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 256)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 256)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_posinf(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_posinf(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 512)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 512)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_isnan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_isnan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 3)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 3)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_nnan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_nnan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 1020)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 1020)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_normal(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_normal(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 264)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 264)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_zero(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_zero(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 96)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 96)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_subnormal(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_subnormal(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 144)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 144)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_normal_neginf(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_normal_neginf(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 268)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 268)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_normal_pinf(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_normal_pinf(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 776)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 776)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 340)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 340)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero_snan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero_snan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 341)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 341)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero_qnan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero_qnan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 342)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 342)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero_nan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero_nan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 343)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 343)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 680)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 680)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_snan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_snan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 681)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 681)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_qnan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_qnan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 682)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 682)
+  ret i1 %class
+}
+
+define i1 @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_nan(float %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_nan(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 683)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 683)
+  ret i1 %class
+}
+
+; strictfp doesn't matter
+define i1 @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_snan_strictfp(float %arg) strictfp {
+; CHECK-LABEL: @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_snan_strictfp(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 681) #[[ATTR2]]
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 681) strictfp
+  ret i1 %class
+}
+
+; multiple uses don't matter
+define i1 @test_class_fneg_fabs_multiple_use_fabs(float %arg, ptr %ptr) {
+; CHECK-LABEL: @test_class_fneg_fabs_multiple_use_fabs(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    store float [[FNEG_FABS]], ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FNEG_FABS]], i32 682)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fneg.fabs = fneg float %fabs
+  store float %fneg.fabs, ptr %ptr
+  %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 682)
+  ret i1 %class
+}
+
+define <2 x i1> @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_nan_vector(<2 x float> %arg) {
+; CHECK-LABEL: @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_nan_vector(
+; CHECK-NEXT:    [[FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[ARG:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[FABS]], i32 683)
+; CHECK-NEXT:    ret <2 x i1> [[CLASS]]
+;
+  %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %arg)
+  %fneg.fabs = fneg <2 x float> %fabs
+  %class = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %fabs, i32 683)
+  ret <2 x i1> %class
+}
+
 declare i1 @llvm.is.fpclass.f32(float, i32 immarg)
 declare i1 @llvm.is.fpclass.f64(double, i32 immarg)
 declare <2 x i1> @llvm.is.fpclass.v2f32(<2 x float>, i32 immarg)
+declare float @llvm.fabs.f32(float)
+declare <2 x float> @llvm.fabs.v2f32(<2 x float>)

@@ -1076,7 +1076,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
         FilenameFunctionMap;
     for (const auto &SourceFile : SourceFiles)
       for (const auto &Function : Coverage->getCoveredFunctions(SourceFile))
-        if (Filters.matches(*Coverage.get(), Function))
+        if (Filters.matches(*Coverage, Function))
           FilenameFunctionMap[SourceFile].push_back(&Function);
 
     // Only print filter matching functions for each file.
@@ -1165,7 +1165,7 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
   if (!Coverage)
     return 1;
 
-  CoverageReport Report(ViewOpts, *Coverage.get());
+  CoverageReport Report(ViewOpts, *Coverage);
   if (!ShowFunctionSummaries) {
     if (SourceFiles.empty())
       Report.renderFileReports(llvm::outs(), IgnoreFilenameFilters);
@@ -1231,16 +1231,16 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
 
   switch (ViewOpts.Format) {
   case CoverageViewOptions::OutputFormat::Text:
-    Exporter = std::make_unique<CoverageExporterJson>(*Coverage.get(),
-                                                       ViewOpts, outs());
+    Exporter =
+        std::make_unique<CoverageExporterJson>(*Coverage, ViewOpts, outs());
     break;
   case CoverageViewOptions::OutputFormat::HTML:
     // Unreachable because we should have gracefully terminated with an error
     // above.
     llvm_unreachable("Export in HTML is not supported!");
   case CoverageViewOptions::OutputFormat::Lcov:
-    Exporter = std::make_unique<CoverageExporterLcov>(*Coverage.get(),
-                                                       ViewOpts, outs());
+    Exporter =
+        std::make_unique<CoverageExporterLcov>(*Coverage, ViewOpts, outs());
     break;
   }
 

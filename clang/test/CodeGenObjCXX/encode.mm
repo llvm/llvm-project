@@ -90,8 +90,11 @@ namespace rdar9357400 {
   typedef vector< float,  fixed<4> > vector4f;
 
   // FIXME: This difference is due to D76801. It was probably an unintentional change. Maybe we want to undo it?
-  // CHECKCXX98: @_ZN11rdar93574002ggE ={{.*}} constant [49 x i8] c"{vector<float, rdar9357400::fixed<4, -1> >=[4f]}\00"
-  // CHECKCXX20: @_ZN11rdar93574002ggE ={{.*}} constant [48 x i8] c"{vector<float, rdar9357400::fixed<4, -1>>=[4f]}\00"
+  // @encoding for C++ is dependent on the TypePrinter implementation, which is a known issue. But since there
+  // are currently no system frameworks that vend Objective-C++ types, a potential ABI break caused by changes
+  // to the TypePrinter should not be a concern.
+  // CHECKCXX98: @_ZN11rdar93574002ggE ={{.*}} constant [45 x i8] c"{vector<float, rdar9357400::fixed<4> >=[4f]}\00"
+  // CHECKCXX20: @_ZN11rdar93574002ggE ={{.*}} constant [44 x i8] c"{vector<float, rdar9357400::fixed<4>>=[4f]}\00"
   extern const char gg[] = @encode(vector4f);
 }
 

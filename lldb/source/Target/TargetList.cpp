@@ -351,7 +351,7 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
       target_sp->SetArg0(resolved_bundle_exe_path);
     } else {
       // Use resolved path
-      target_sp->SetArg0(file.GetPath().c_str());
+      target_sp->SetArg0(file.GetPath());
     }
   }
   if (file.GetDirectory()) {

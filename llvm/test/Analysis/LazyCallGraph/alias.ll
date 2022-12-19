@@ -18,21 +18,21 @@ target triple = "x86_64-grtev4-linux-gnu"
 
 ; CHECK-NOT:       baz
 
-@alias1 = weak dso_local alias i8* (i8*), i8* (i8*)* @foo
+@alias1 = weak dso_local alias ptr (ptr), ptr @foo
 
-define dso_local i8* @foo(i8* %returned) {
-  ret i8* %returned
+define dso_local ptr @foo(ptr %returned) {
+  ret ptr %returned
 }
 
-@alias2 = weak dso_local alias i8* (i8*), i8* (i8*)* @bar
+@alias2 = weak dso_local alias ptr (ptr), ptr @bar
 
-define internal i8* @bar(i8* %returned) {
-  ret i8* %returned
+define internal ptr @bar(ptr %returned) {
+  ret ptr %returned
 }
 
 ; Internal alias is not reachable.
-@alias3 = internal alias i8* (i8*), i8* (i8*)* @baz
+@alias3 = internal alias ptr (ptr), ptr @baz
 
-define internal i8* @baz(i8* %returned) {
-  ret i8* %returned
+define internal ptr @baz(ptr %returned) {
+  ret ptr %returned
 }

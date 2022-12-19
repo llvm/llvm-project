@@ -19,9 +19,9 @@ define void @dep_constraint_crash_test(i32 %M, i32 %N) {
   %3 = icmp slt i32 %M, 2
   %4 = add nsw i32 %M, -1
   %5 = sext i32 %4 to i64
-  %6 = getelementptr inbounds [10 x [10 x i32]], [10 x [10 x i32]]* @c, i64 0, i64 0, i64 %5
+  %6 = getelementptr inbounds [10 x [10 x i32]], ptr @c, i64 0, i64 0, i64 %5
   %7 = add nsw i32 %M, -1
-  %out_l.promoted = load i32, i32* @out_l
+  %out_l.promoted = load i32, ptr @out_l
   %8 = sext i32 %7 to i64
   %9 = sext i32 %2 to i64
   br label %.preheader
@@ -48,8 +48,8 @@ define void @dep_constraint_crash_test(i32 %M, i32 %N) {
 .lr.ph4:                                          ; preds = %.lr.ph6, %._crit_edge
   %indvars.iv19 = phi i64 [ %indvars.iv.next20, %._crit_edge ], [ %indvars.iv17, %.lr.ph6 ]
   %indvars.iv15 = phi i32 [ %indvars.iv.next16, %._crit_edge ], [ %indvars.iv13, %.lr.ph6 ]
-  %13 = getelementptr inbounds [10 x [10 x [10 x i32]]], [10 x [10 x [10 x i32]]]* @sum_c, i64 0, i64 %indvars.iv23, i64 %indvars.iv19, i64 %indvars.iv23
-  store i32 0, i32* %13
+  %13 = getelementptr inbounds [10 x [10 x [10 x i32]]], ptr @sum_c, i64 0, i64 %indvars.iv23, i64 %indvars.iv19, i64 %indvars.iv23
+  store i32 0, ptr %13
   %14 = add nsw i64 %indvars.iv19, -1
   %15 = icmp slt i64 %indvars.iv23, %14
   br i1 %15, label %.lr.ph, label %._crit_edge
@@ -57,29 +57,29 @@ define void @dep_constraint_crash_test(i32 %M, i32 %N) {
 .lr.ph:                                           ; preds = %.lr.ph4, %.lr.ph
   %indvars.iv11 = phi i64 [ %indvars.iv.next12, %.lr.ph ], [ %indvars.iv17, %.lr.ph4 ]
   %16 = add nsw i64 %indvars.iv11, -1
-  %17 = getelementptr inbounds [10 x [10 x [10 x i32]]], [10 x [10 x [10 x i32]]]* @sum_c, i64 0, i64 %indvars.iv23, i64 %indvars.iv19, i64 %16
-  %18 = load i32, i32* %17
-  %19 = getelementptr inbounds [10 x [10 x i32]], [10 x [10 x i32]]* @c, i64 0, i64 %indvars.iv23, i64 %indvars.iv11
-  %20 = load i32, i32* %19
+  %17 = getelementptr inbounds [10 x [10 x [10 x i32]]], ptr @sum_c, i64 0, i64 %indvars.iv23, i64 %indvars.iv19, i64 %16
+  %18 = load i32, ptr %17
+  %19 = getelementptr inbounds [10 x [10 x i32]], ptr @c, i64 0, i64 %indvars.iv23, i64 %indvars.iv11
+  %20 = load i32, ptr %19
   %21 = add nsw i32 %20, %18
-  %22 = getelementptr inbounds [10 x [10 x i32]], [10 x [10 x i32]]* @c, i64 0, i64 %indvars.iv11, i64 %indvars.iv19
-  %23 = load i32, i32* %22
+  %22 = getelementptr inbounds [10 x [10 x i32]], ptr @c, i64 0, i64 %indvars.iv11, i64 %indvars.iv19
+  %23 = load i32, ptr %22
   %24 = add nsw i32 %21, %23
-  %25 = getelementptr inbounds [10 x [10 x [10 x i32]]], [10 x [10 x [10 x i32]]]* @sum_c, i64 0, i64 %indvars.iv23, i64 %indvars.iv19, i64 %indvars.iv11
-  store i32 %24, i32* %25
+  %25 = getelementptr inbounds [10 x [10 x [10 x i32]]], ptr @sum_c, i64 0, i64 %indvars.iv23, i64 %indvars.iv19, i64 %indvars.iv11
+  store i32 %24, ptr %25
   %indvars.iv.next12 = add nuw nsw i64 %indvars.iv11, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next12 to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %indvars.iv15
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
 ._crit_edge:                                      ; preds = %.lr.ph, %.lr.ph4
-  %26 = getelementptr inbounds [10 x [10 x [10 x i32]]], [10 x [10 x [10 x i32]]]* @sum_c, i64 0, i64 %indvars.iv23, i64 %indvars.iv19, i64 %14
-  %27 = load i32, i32* %26
-  %28 = getelementptr inbounds [10 x [10 x i32]], [10 x [10 x i32]]* @W, i64 0, i64 %indvars.iv23, i64 %indvars.iv19
-  %29 = load i32, i32* %28
+  %26 = getelementptr inbounds [10 x [10 x [10 x i32]]], ptr @sum_c, i64 0, i64 %indvars.iv23, i64 %indvars.iv19, i64 %14
+  %27 = load i32, ptr %26
+  %28 = getelementptr inbounds [10 x [10 x i32]], ptr @W, i64 0, i64 %indvars.iv23, i64 %indvars.iv19
+  %29 = load i32, ptr %28
   %30 = add nsw i32 %29, %27
-  %31 = getelementptr inbounds [10 x [10 x i32]], [10 x [10 x i32]]* @c, i64 0, i64 %indvars.iv23, i64 %indvars.iv19
-  store i32 %30, i32* %31
+  %31 = getelementptr inbounds [10 x [10 x i32]], ptr @c, i64 0, i64 %indvars.iv23, i64 %indvars.iv19
+  store i32 %30, ptr %31
   %indvars.iv.next16 = add nuw i32 %indvars.iv15, 1
   %indvars.iv.next20 = add nuw nsw i64 %indvars.iv19, 1
   %lftr.wideiv21 = trunc i64 %indvars.iv.next20 to i32
@@ -87,14 +87,14 @@ define void @dep_constraint_crash_test(i32 %M, i32 %N) {
   br i1 %exitcond22, label %.loopexit, label %.lr.ph4
 
 ._crit_edge7:                                     ; preds = %.loopexit, %.preheader
-  %32 = load i32, i32* %6
+  %32 = load i32, ptr %6
   %33 = add nsw i32 %10, %32
   %34 = add nuw nsw i32 %iter.08, 1
   %exitcond25 = icmp eq i32 %34, %N
   br i1 %exitcond25, label %._crit_edge9, label %.preheader
 
 ._crit_edge9:                                     ; preds = %._crit_edge7
-  store i32 %33, i32* @out_l
+  store i32 %33, ptr @out_l
   br label %35
 
 ; <label>:35                                      ; preds = %._crit_edge9, %0

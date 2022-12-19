@@ -26,8 +26,8 @@ using namespace mlir::transform;
 /// Check if given mapping attributes are one of the desired attributes
 static DiagnosedSilenceableFailure
 checkAttributeType(ArrayRef<DeviceMappingAttrInterface> threadMappingAttributes,
-                   const Optional<ArrayAttr> &foreachMapping,
-                   Optional<TransformOpInterface> transformOp) {
+                   const std::optional<ArrayAttr> &foreachMapping,
+                   std::optional<TransformOpInterface> transformOp) {
   if (!foreachMapping.has_value())
     return transformOp->emitSilenceableError() << "mapping must be present";
 
@@ -52,11 +52,11 @@ checkAttributeType(ArrayRef<DeviceMappingAttrInterface> threadMappingAttributes,
 /// Determines if the size of the kernel configuration is supported by the GPU
 /// architecture being used. It presently makes use of CUDA limitations, however
 /// that aspect may be enhanced for other GPUs.
-static DiagnosedSilenceableFailure
-checkGpuLimits(TransformOpInterface transformOp, Optional<int64_t> gridDimX,
-               Optional<int64_t> gridDimY, Optional<int64_t> gridDimZ,
-               Optional<int64_t> blockDimX, Optional<int64_t> blockDimY,
-               Optional<int64_t> blockDimZ) {
+static DiagnosedSilenceableFailure checkGpuLimits(
+    TransformOpInterface transformOp, std::optional<int64_t> gridDimX,
+    std::optional<int64_t> gridDimY, std::optional<int64_t> gridDimZ,
+    std::optional<int64_t> blockDimX, std::optional<int64_t> blockDimY,
+    std::optional<int64_t> blockDimZ) {
 
   static constexpr int maxTotalBlockdim = 1024;
   static constexpr int maxBlockdimx = 1024;
@@ -92,12 +92,12 @@ checkGpuLimits(TransformOpInterface transformOp, Optional<int64_t> gridDimX,
 static DiagnosedSilenceableFailure
 createGpuLaunch(RewriterBase &rewriter, Location loc,
                 TransformOpInterface transformOp, LaunchOp &launchOp,
-                Optional<int64_t> gridDimX = std::nullopt,
-                Optional<int64_t> gridDimY = std::nullopt,
-                Optional<int64_t> gridDimZ = std::nullopt,
-                Optional<int64_t> blockDimX = std::nullopt,
-                Optional<int64_t> blockDimY = std::nullopt,
-                Optional<int64_t> blockDimZ = std::nullopt) {
+                std::optional<int64_t> gridDimX = std::nullopt,
+                std::optional<int64_t> gridDimY = std::nullopt,
+                std::optional<int64_t> gridDimZ = std::nullopt,
+                std::optional<int64_t> blockDimX = std::nullopt,
+                std::optional<int64_t> blockDimY = std::nullopt,
+                std::optional<int64_t> blockDimZ = std::nullopt) {
   DiagnosedSilenceableFailure diag =
       checkGpuLimits(transformOp, gridDimX, gridDimY, gridDimZ, blockDimX,
                      blockDimY, blockDimZ);
@@ -126,12 +126,12 @@ createGpuLaunch(RewriterBase &rewriter, Location loc,
 static DiagnosedSilenceableFailure
 alterGpuLaunch(TrivialPatternRewriter &rewriter, LaunchOp gpuLaunch,
                TransformOpInterface transformOp,
-               Optional<int64_t> gridDimX = std::nullopt,
-               Optional<int64_t> gridDimY = std::nullopt,
-               Optional<int64_t> gridDimZ = std::nullopt,
-               Optional<int64_t> blockDimX = std::nullopt,
-               Optional<int64_t> blockDimY = std::nullopt,
-               Optional<int64_t> blockDimZ = std::nullopt) {
+               std::optional<int64_t> gridDimX = std::nullopt,
+               std::optional<int64_t> gridDimY = std::nullopt,
+               std::optional<int64_t> gridDimZ = std::nullopt,
+               std::optional<int64_t> blockDimX = std::nullopt,
+               std::optional<int64_t> blockDimY = std::nullopt,
+               std::optional<int64_t> blockDimZ = std::nullopt) {
   DiagnosedSilenceableFailure diag =
       checkGpuLimits(transformOp, gridDimX, gridDimY, gridDimZ, blockDimX,
                      blockDimY, blockDimZ);
@@ -370,7 +370,7 @@ transform::MapForeachToBlocks::applyToOne(Operation *target,
 static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
     RewriterBase &rewriter, scf::ForeachThreadOp foreachThreadOp,
     const SmallVectorImpl<int64_t> &globalBlockDims, bool syncAfterDistribute,
-    llvm::Optional<TransformOpInterface> transformOp,
+    std::optional<TransformOpInterface> transformOp,
     const ArrayRef<DeviceMappingAttrInterface> &threadMappingAttributes) {
   // Step 0. Target-specific verifications. There is no good place to anchor
   // those right now: the ForeachThreadOp is target-independent and the
@@ -502,7 +502,7 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
 DiagnosedSilenceableFailure mlir::transform::gpu::mapNestedForeachToThreadsImpl(
     RewriterBase &rewriter, Operation *target,
     const SmallVectorImpl<int64_t> &blockDim, bool syncAfterDistribute,
-    llvm::Optional<TransformOpInterface> transformOp,
+    std::optional<TransformOpInterface> transformOp,
     const ArrayRef<DeviceMappingAttrInterface> &threadMappingAttributes) {
   DiagnosedSilenceableFailure diag = DiagnosedSilenceableFailure::success();
   target->walk([&](scf::ForeachThreadOp foreachThreadOp) {

@@ -470,3 +470,40 @@ final_right:
   call void @sideeffect1.vec(<2 x i8> %final_right.phi.1)
   ret void
 }
+
+; From https://reviews.llvm.org/D139275#4001580
+define float @D139275_c4001580(float %val) {
+; ALL-LABEL: @D139275_c4001580(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[CMP:%.*]] = fcmp ugt float [[VAL:%.*]], 0.000000e+00
+; ALL-NEXT:    [[CMP1:%.*]] = fcmp ult float [[VAL]], 1.000000e+00
+; ALL-NEXT:    [[RETVAL_0_SEL:%.*]] = select i1 [[CMP]], float 0x3FB99999A0000000, float 0.000000e+00
+; ALL-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP]], [[CMP1]]
+; ALL-NEXT:    [[OR_COND_NOT:%.*]] = xor i1 [[OR_COND]], true
+; ALL-NEXT:    [[CMP4:%.*]] = fcmp olt float [[VAL]], 0x3FC99999A0000000
+; ALL-NEXT:    [[RETVAL_0_SEL1:%.*]] = select i1 [[OR_COND_NOT]], float [[RETVAL_0_SEL]], float 0.000000e+00
+; ALL-NEXT:    [[OR_COND2:%.*]] = select i1 [[OR_COND_NOT]], i1 true, i1 [[CMP4]]
+; ALL-NEXT:    [[SUB:%.*]] = fadd float [[VAL]], 0xBFB99999A0000000
+; ALL-NEXT:    [[RETVAL_0:%.*]] = select i1 [[OR_COND2]], float [[RETVAL_0_SEL1]], float [[SUB]]
+; ALL-NEXT:    ret float [[RETVAL_0]]
+;
+entry:
+  %cmp = fcmp ugt float %val, 0.000000e+00
+  br i1 %cmp, label %if.end, label %return
+
+if.end:
+  %cmp1 = fcmp ult float %val, 1.000000e+00
+  br i1 %cmp1, label %if.end3, label %return
+
+if.end3:
+  %cmp4 = fcmp olt float %val, 0x3FC99999A0000000
+  br i1 %cmp4, label %return, label %if.end6
+
+if.end6:
+  %sub = fadd float %val, 0xBFB99999A0000000
+  br label %return
+
+return:
+  %retval.0 = phi float [ %sub, %if.end6 ], [ 0.000000e+00, %entry ], [ 0x3FB99999A0000000, %if.end ], [ 0.000000e+00, %if.end3 ]
+  ret float %retval.0
+}

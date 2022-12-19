@@ -343,7 +343,7 @@ TEST(YAMLParser, FlowSequenceTokensOutsideFlowSequence) {
 }
 
 static void expectCanParseBool(StringRef S, bool Expected) {
-  llvm::Optional<bool> Parsed = yaml::parseBool(S);
+  std::optional<bool> Parsed = yaml::parseBool(S);
   EXPECT_TRUE(Parsed.has_value());
   EXPECT_EQ(*Parsed, Expected);
 }

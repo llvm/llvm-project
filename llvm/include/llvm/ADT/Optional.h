@@ -258,10 +258,6 @@ public:
     Storage.emplace(std::forward<ArgTypes>(Args)...);
   }
 
-  static constexpr Optional create(const T *y) {
-    return y ? Optional(*y) : Optional();
-  }
-
   Optional &operator=(const T &y) {
     Storage = y;
     return *this;
@@ -274,42 +270,28 @@ public:
   constexpr const T *getPointer() const { return &Storage.value(); }
   LLVM_DEPRECATED("Use &*X instead.", "&*X")
   T *getPointer() { return &Storage.value(); }
+  LLVM_DEPRECATED("std::optional::value is throwing. Use *X instead", "*X")
   constexpr const T &value() const & { return Storage.value(); }
+  LLVM_DEPRECATED("std::optional::value is throwing. Use *X instead", "*X")
   T &value() & { return Storage.value(); }
 
   constexpr explicit operator bool() const { return has_value(); }
   constexpr bool has_value() const { return Storage.has_value(); }
   constexpr const T *operator->() const { return &Storage.value(); }
   T *operator->() { return &Storage.value(); }
-  constexpr const T &operator*() const & { return value(); }
-  T &operator*() & { return value(); }
+  constexpr const T &operator*() const & { return Storage.value(); }
+  T &operator*() & { return Storage.value(); }
 
   template <typename U> constexpr T value_or(U &&alt) const & {
-    return has_value() ? value() : std::forward<U>(alt);
+    return has_value() ? operator*() : std::forward<U>(alt);
   }
 
-  /// Apply a function to the value if present; otherwise return std::nullopt.
-  template <class Function>
-  auto transform(const Function &F) const & -> Optional<decltype(F(value()))> {
-    if (*this)
-      return F(value());
-    return std::nullopt;
-  }
-
+  LLVM_DEPRECATED("std::optional::value is throwing. Use *X instead", "*X")
   T &&value() && { return std::move(Storage.value()); }
   T &&operator*() && { return std::move(Storage.value()); }
 
   template <typename U> T value_or(U &&alt) && {
-    return has_value() ? std::move(value()) : std::forward<U>(alt);
-  }
-
-  /// Apply a function to the value if present; otherwise return std::nullopt.
-  template <class Function>
-  auto transform(
-      const Function &F) && -> Optional<decltype(F(std::move(*this).value()))> {
-    if (*this)
-      return F(std::move(*this).value());
-    return std::nullopt;
+    return has_value() ? std::move(operator*()) : std::forward<U>(alt);
   }
 };
 

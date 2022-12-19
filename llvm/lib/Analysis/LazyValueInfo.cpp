@@ -13,7 +13,6 @@
 
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
@@ -925,7 +924,7 @@ LazyValueInfoImpl::solveBlockValueCast(CastInst *CI, BasicBlock *BB) {
   if (!LHSRes)
     // More work to do before applying this transfer rule.
     return std::nullopt;
-  const ConstantRange &LHSRange = LHSRes.value();
+  const ConstantRange &LHSRange = *LHSRes;
 
   const unsigned ResultBitWidth = CI->getType()->getIntegerBitWidth();
 
@@ -951,8 +950,8 @@ LazyValueInfoImpl::solveBlockValueBinaryOpImpl(
     // More work to do before applying this transfer rule.
     return std::nullopt;
 
-  const ConstantRange &LHSRange = LHSRes.value();
-  const ConstantRange &RHSRange = RHSRes.value();
+  const ConstantRange &LHSRange = *LHSRes;
+  const ConstantRange &RHSRange = *RHSRes;
   return ValueLatticeElement::getRange(OpFn(LHSRange, RHSRange));
 }
 

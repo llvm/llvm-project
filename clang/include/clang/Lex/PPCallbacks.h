@@ -20,6 +20,7 @@
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/Pragma.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 
 namespace clang {
   class Token;
@@ -125,16 +126,12 @@ public:
   /// implicitly 'extern "C"' in C++ mode.
   ///
   virtual void InclusionDirective(SourceLocation HashLoc,
-                                  const Token &IncludeTok,
-                                  StringRef FileName,
-                                  bool IsAngled,
-                                  CharSourceRange FilenameRange,
-                                  Optional<FileEntryRef> File,
-                                  StringRef SearchPath,
-                                  StringRef RelativePath,
+                                  const Token &IncludeTok, StringRef FileName,
+                                  bool IsAngled, CharSourceRange FilenameRange,
+                                  std::optional<FileEntryRef> File,
+                                  StringRef SearchPath, StringRef RelativePath,
                                   const Module *Imported,
-                                  SrcMgr::CharacteristicKind FileType) {
-  }
+                                  SrcMgr::CharacteristicKind FileType) {}
 
   /// Callback invoked whenever a submodule was entered.
   ///
@@ -327,7 +324,7 @@ public:
   /// Hook called when a '__has_include' or '__has_include_next' directive is
   /// read.
   virtual void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
-                          Optional<FileEntryRef> File,
+                          std::optional<FileEntryRef> File,
                           SrcMgr::CharacteristicKind FileType);
 
   /// Hook called when a source range is skipped.
@@ -458,8 +455,9 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          Optional<FileEntryRef> File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          std::optional<FileEntryRef> File,
+                          StringRef SearchPath, StringRef RelativePath,
+                          const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override {
     First->InclusionDirective(HashLoc, IncludeTok, FileName, IsAngled,
                               FilenameRange, File, SearchPath, RelativePath,
@@ -548,7 +546,7 @@ public:
   }
 
   void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
-                  Optional<FileEntryRef> File,
+                  std::optional<FileEntryRef> File,
                   SrcMgr::CharacteristicKind FileType) override;
 
   void PragmaOpenCLExtension(SourceLocation NameLoc, const IdentifierInfo *Name,

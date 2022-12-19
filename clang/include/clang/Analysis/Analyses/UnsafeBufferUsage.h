@@ -26,8 +26,16 @@ public:
   UnsafeBufferUsageHandler() = default;
   virtual ~UnsafeBufferUsageHandler() = default;
 
+  /// This analyses produces large fixits that are organized into lists
+  /// of primitive fixits (individual insertions/removals/replacements).
+  using FixItList = llvm::SmallVectorImpl<FixItHint>;
+
   /// Invoked when an unsafe operation over raw pointers is found.
   virtual void handleUnsafeOperation(const Stmt *Operation) = 0;
+
+  /// Invoked when a fix is suggested against a variable.
+  virtual void handleFixableVariable(const VarDecl *Variable,
+                                     FixItList &&List) = 0;
 };
 
 // This function invokes the analysis and allows the caller to react to it

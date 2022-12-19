@@ -103,7 +103,7 @@ TEST_F(WalkUsedTest, Basic) {
   auto PrivateFile = Header(AST.fileManager().getFile("private.h").get());
   auto PublicFile = Header("\"path/public.h\"");
   auto MainFile = Header(SM.getFileEntryForID(SM.getMainFileID()));
-  auto VectorSTL = Header(tooling::stdlib::Header::named("<vector>").value());
+  auto VectorSTL = Header(*tooling::stdlib::Header::named("<vector>"));
   EXPECT_THAT(
       offsetToProviders(AST, SM),
       UnorderedElementsAre(

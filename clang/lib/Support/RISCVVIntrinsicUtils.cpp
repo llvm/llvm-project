@@ -112,7 +112,7 @@ bool RVVType::verifyType() const {
     return false;
   if (isFloat() && ElementBitwidth == 8)
     return false;
-  unsigned V = Scale.value();
+  unsigned V = *Scale;
   switch (ElementBitwidth) {
   case 1:
   case 8:
@@ -796,7 +796,7 @@ RVVTypeCache::computeTypes(BasicType BT, int Log2LMUL, unsigned NF,
     if (!T)
       return std::nullopt;
     // Record legal type index
-    Types.push_back(T.value());
+    Types.push_back(*T);
   }
   return Types;
 }

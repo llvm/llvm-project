@@ -47,6 +47,7 @@
 #include <cassert>
 #include <cstring>
 #include <new>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -947,7 +948,7 @@ Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
   return nullptr;
 }
 
-Optional<FileEntryRef> Preprocessor::LookupFile(
+std::optional<FileEntryRef> Preprocessor::LookupFile(
     SourceLocation FilenameLoc, StringRef Filename, bool isAngled,
     ConstSearchDirIterator FromDir, const FileEntry *FromFile,
     ConstSearchDirIterator *CurDirArg, SmallVectorImpl<char> *SearchPath,
@@ -1012,7 +1013,7 @@ Optional<FileEntryRef> Preprocessor::LookupFile(
     // the include path until we find that file or run out of files.
     ConstSearchDirIterator TmpCurDir = CurDir;
     ConstSearchDirIterator TmpFromDir = nullptr;
-    while (Optional<FileEntryRef> FE = HeaderInfo.LookupFile(
+    while (std::optional<FileEntryRef> FE = HeaderInfo.LookupFile(
                Filename, FilenameLoc, isAngled, TmpFromDir, &TmpCurDir,
                Includers, SearchPath, RelativePath, RequestingModule,
                SuggestedModule, /*IsMapped=*/nullptr,
@@ -1030,7 +1031,7 @@ Optional<FileEntryRef> Preprocessor::LookupFile(
   }
 
   // Do a standard file entry lookup.
-  Optional<FileEntryRef> FE = HeaderInfo.LookupFile(
+  std::optional<FileEntryRef> FE = HeaderInfo.LookupFile(
       Filename, FilenameLoc, isAngled, FromDir, &CurDir, Includers, SearchPath,
       RelativePath, RequestingModule, SuggestedModule, IsMapped,
       IsFrameworkFound, SkipCache, BuildSystemModule, OpenFile, CacheFailures);
@@ -1048,7 +1049,7 @@ Optional<FileEntryRef> Preprocessor::LookupFile(
   // headers on the #include stack and pass them to HeaderInfo.
   if (IsFileLexer()) {
     if ((CurFileEnt = CurPPLexer->getFileEntry())) {
-      if (Optional<FileEntryRef> FE = HeaderInfo.LookupSubframeworkHeader(
+      if (std::optional<FileEntryRef> FE = HeaderInfo.LookupSubframeworkHeader(
               Filename, CurFileEnt, SearchPath, RelativePath, RequestingModule,
               SuggestedModule)) {
         if (SuggestedModule && !LangOpts.AsmPreprocessor)
@@ -1063,9 +1064,10 @@ Optional<FileEntryRef> Preprocessor::LookupFile(
   for (IncludeStackInfo &ISEntry : llvm::reverse(IncludeMacroStack)) {
     if (IsFileLexer(ISEntry)) {
       if ((CurFileEnt = ISEntry.ThePPLexer->getFileEntry())) {
-        if (Optional<FileEntryRef> FE = HeaderInfo.LookupSubframeworkHeader(
-                Filename, CurFileEnt, SearchPath, RelativePath,
-                RequestingModule, SuggestedModule)) {
+        if (std::optional<FileEntryRef> FE =
+                HeaderInfo.LookupSubframeworkHeader(
+                    Filename, CurFileEnt, SearchPath, RelativePath,
+                    RequestingModule, SuggestedModule)) {
           if (SuggestedModule && !LangOpts.AsmPreprocessor)
             HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
                 RequestingModule, RequestingModuleIsModuleInterface,
@@ -2003,7 +2005,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   }
 }
 
-Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
+std::optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
     ConstSearchDirIterator *CurDir, StringRef &Filename,
     SourceLocation FilenameLoc, CharSourceRange FilenameRange,
     const Token &FilenameTok, bool &IsFrameworkFound, bool IsImportDecl,
@@ -2011,9 +2013,8 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
     const FileEntry *LookupFromFile, StringRef &LookupFilename,
     SmallVectorImpl<char> &RelativePath, SmallVectorImpl<char> &SearchPath,
     ModuleMap::KnownHeader &SuggestedModule, bool isAngled) {
-  Optional<FileEntryRef> File = LookupFile(
-      FilenameLoc, LookupFilename,
-      isAngled, LookupFrom, LookupFromFile, CurDir,
+  std::optional<FileEntryRef> File = LookupFile(
+      FilenameLoc, LookupFilename, isAngled, LookupFrom, LookupFromFile, CurDir,
       Callbacks ? &SearchPath : nullptr, Callbacks ? &RelativePath : nullptr,
       &SuggestedModule, &IsMapped, &IsFrameworkFound);
   if (File)
@@ -2026,9 +2027,8 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
   // brackets, we can attempt a lookup as though it were a quoted path to
   // provide the user with a possible fixit.
   if (isAngled) {
-    Optional<FileEntryRef> File = LookupFile(
-        FilenameLoc, LookupFilename,
-        false, LookupFrom, LookupFromFile, CurDir,
+    std::optional<FileEntryRef> File = LookupFile(
+        FilenameLoc, LookupFilename, false, LookupFrom, LookupFromFile, CurDir,
         Callbacks ? &SearchPath : nullptr, Callbacks ? &RelativePath : nullptr,
         &SuggestedModule, &IsMapped,
         /*IsFrameworkFound=*/nullptr);
@@ -2057,9 +2057,9 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
     StringRef TypoCorrectionName = CorrectTypoFilename(Filename);
     StringRef TypoCorrectionLookupName = CorrectTypoFilename(LookupFilename);
 
-    Optional<FileEntryRef> File = LookupFile(
-        FilenameLoc, TypoCorrectionLookupName, isAngled, LookupFrom, LookupFromFile,
-        CurDir, Callbacks ? &SearchPath : nullptr,
+    std::optional<FileEntryRef> File = LookupFile(
+        FilenameLoc, TypoCorrectionLookupName, isAngled, LookupFrom,
+        LookupFromFile, CurDir, Callbacks ? &SearchPath : nullptr,
         Callbacks ? &RelativePath : nullptr, &SuggestedModule, &IsMapped,
         /*IsFrameworkFound=*/nullptr);
     if (File) {
@@ -2182,7 +2182,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     BackslashStyle = llvm::sys::path::Style::windows;
   }
 
-  Optional<FileEntryRef> File = LookupHeaderIncludeOrImport(
+  std::optional<FileEntryRef> File = LookupHeaderIncludeOrImport(
       &CurDir, Filename, FilenameLoc, FilenameRange, FilenameTok,
       IsFrameworkFound, IsImportDecl, IsMapped, LookupFrom, LookupFromFile,
       LookupFilename, RelativePath, SearchPath, SuggestedModule, isAngled);

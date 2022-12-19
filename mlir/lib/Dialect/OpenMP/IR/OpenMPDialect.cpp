@@ -117,7 +117,7 @@ static ParseResult parseClauseAttr(AsmParser &parser, ClauseAttr &attr) {
   SMLoc loc = parser.getCurrentLocation();
   if (parser.parseKeyword(&enumStr))
     return failure();
-  if (Optional<ClauseT> enumValue = symbolizeEnum<ClauseT>(enumStr)) {
+  if (std::optional<ClauseT> enumValue = symbolizeEnum<ClauseT>(enumStr)) {
     attr = ClauseAttr::get(parser.getContext(), *enumValue);
     return success();
   }
@@ -173,9 +173,9 @@ static void printLinearClause(OpAsmPrinter &p, Operation *op,
 //===----------------------------------------------------------------------===//
 // Parser, verifier and printer for Aligned Clause
 //===----------------------------------------------------------------------===//
-static LogicalResult verifyAlignedClause(Operation *op,
-                                         Optional<ArrayAttr> alignmentValues,
-                                         OperandRange alignedVariables) {
+static LogicalResult
+verifyAlignedClause(Operation *op, std::optional<ArrayAttr> alignmentValues,
+                    OperandRange alignedVariables) {
   // Check if number of alignment values equals to number of aligned variables
   if (!alignedVariables.empty()) {
     if (!alignmentValues || alignmentValues->size() != alignedVariables.size())
@@ -236,7 +236,7 @@ static ParseResult parseAlignedClause(
 static void printAlignedClause(OpAsmPrinter &p, Operation *op,
                                ValueRange alignedVars,
                                TypeRange alignedVarTypes,
-                               Optional<ArrayAttr> alignmentValues) {
+                               std::optional<ArrayAttr> alignmentValues) {
   for (unsigned i = 0; i < alignedVars.size(); ++i) {
     if (i != 0)
       p << ", ";
@@ -293,11 +293,11 @@ verifyScheduleModifiers(OpAsmParser &parser,
 static ParseResult parseScheduleClause(
     OpAsmParser &parser, ClauseScheduleKindAttr &scheduleAttr,
     ScheduleModifierAttr &scheduleModifier, UnitAttr &simdModifier,
-    Optional<OpAsmParser::UnresolvedOperand> &chunkSize, Type &chunkType) {
+    std::optional<OpAsmParser::UnresolvedOperand> &chunkSize, Type &chunkType) {
   StringRef keyword;
   if (parser.parseKeyword(&keyword))
     return failure();
-  llvm::Optional<mlir::omp::ClauseScheduleKind> schedule =
+  std::optional<mlir::omp::ClauseScheduleKind> schedule =
       symbolizeClauseScheduleKind(keyword);
   if (!schedule)
     return parser.emitError(parser.getNameLoc()) << " expected schedule kind";
@@ -334,7 +334,7 @@ static ParseResult parseScheduleClause(
 
   if (!modifiers.empty()) {
     SMLoc loc = parser.getCurrentLocation();
-    if (Optional<ScheduleModifier> mod =
+    if (std::optional<ScheduleModifier> mod =
             symbolizeScheduleModifier(modifiers[0])) {
       scheduleModifier = ScheduleModifierAttr::get(parser.getContext(), *mod);
     } else {
@@ -396,7 +396,7 @@ parseReductionVarList(OpAsmParser &parser,
 static void printReductionVarList(OpAsmPrinter &p, Operation *op,
                                   OperandRange reductionVars,
                                   TypeRange reductionTypes,
-                                  Optional<ArrayAttr> reductions) {
+                                  std::optional<ArrayAttr> reductions) {
   for (unsigned i = 0, e = reductions->size(); i < e; ++i) {
     if (i != 0)
       p << ", ";
@@ -407,7 +407,7 @@ static void printReductionVarList(OpAsmPrinter &p, Operation *op,
 
 /// Verifies Reduction Clause
 static LogicalResult verifyReductionVarList(Operation *op,
-                                            Optional<ArrayAttr> reductions,
+                                            std::optional<ArrayAttr> reductions,
                                             OperandRange reductionVars) {
   if (!reductionVars.empty()) {
     if (!reductions || reductions->size() != reductionVars.size())

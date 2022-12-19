@@ -291,7 +291,8 @@ static bool shouldRecordNewFile(SrcMgr::CharacteristicKind NewFileType,
 void HeaderIncludesJSONCallback::FileChanged(
     SourceLocation Loc, FileChangeReason Reason,
     SrcMgr::CharacteristicKind NewFileType, FileID PrevFID) {
-  if (!shouldRecordNewFile(NewFileType, SM.getLocForStartOfFile(PrevFID), SM))
+  if (PrevFID.isInvalid() ||
+      !shouldRecordNewFile(NewFileType, SM.getLocForStartOfFile(PrevFID), SM))
     return;
 
   // Unless we are exiting a #include, make sure to skip ahead to the line the

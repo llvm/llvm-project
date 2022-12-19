@@ -27,9 +27,9 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 // DECL: Bit3 = 8,
 // DECL: }
 
-// DECL: ::llvm::Optional<MyBitEnum> symbolizeMyBitEnum(uint32_t);
+// DECL: ::std::optional<MyBitEnum> symbolizeMyBitEnum(uint32_t);
 // DECL: std::string stringifyMyBitEnum(MyBitEnum);
-// DECL: ::llvm::Optional<MyBitEnum> symbolizeMyBitEnum(::llvm::StringRef);
+// DECL: ::std::optional<MyBitEnum> symbolizeMyBitEnum(::llvm::StringRef);
 
 // DECL: struct FieldParser<::MyBitEnum, ::MyBitEnum> {
 // DECL:   template <typename ParserT>
@@ -40,7 +40,7 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 // DECL:     if (failed(parser.parseOptionalKeywordOrString(&enumKeyword)))
 // DECL:       return parser.emitError(loc, "expected keyword for An example bit enum");
 // DECL:     // Symbolize the keyword.
-// DECL:     if (::llvm::Optional<::MyBitEnum> attr = ::symbolizeEnum<::MyBitEnum>(enumKeyword))
+// DECL:     if (::std::optional<::MyBitEnum> attr = ::symbolizeEnum<::MyBitEnum>(enumKeyword))
 // DECL:       return *attr;
 // DECL:     return parser.emitError(loc, "invalid An example bit enum specification: ") << enumKeyword;
 // DECL:   }
@@ -66,7 +66,7 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 // DEF: if (2u == (2u & val))
 // DEF-NEXT: push_back("Bit1")
 
-// DEF-LABEL: ::llvm::Optional<MyBitEnum> symbolizeMyBitEnum(::llvm::StringRef str)
+// DEF-LABEL: ::std::optional<MyBitEnum> symbolizeMyBitEnum(::llvm::StringRef str)
 // DEF: if (str == "none") return MyBitEnum::None;
 // DEF: .Case("tagged", 1)
 // DEF: .Case("Bit1", 2)

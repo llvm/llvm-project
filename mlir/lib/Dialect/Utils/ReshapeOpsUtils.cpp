@@ -57,8 +57,7 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
     // dimensions should also be dynamic and product of all previous unprocessed
     // dimensions of the expanded shape should be 1.
     if (sourceShape[sourceDim] == ShapedType::kDynamic &&
-        (currTargetShape != ShapedType::kDynamic ||
-         prodOfCollapsedDims != 1))
+        (currTargetShape != ShapedType::kDynamic || prodOfCollapsedDims != 1))
       return std::nullopt;
 
     // If the collapsed dim is dynamic, the current expanded dim should also
@@ -229,7 +228,7 @@ LogicalResult mlir::reshapeLikeShapesAreCompatible(
     ArrayRef<ReassociationIndices> reassociationMaps, bool isExpandingReshape) {
   unsigned expandedDimStart = 0;
   for (const auto &map : llvm::enumerate(reassociationMaps)) {
-    Optional<int64_t> dynamicShape;
+    std::optional<int64_t> dynamicShape;
     int64_t linearizedStaticShape = 1;
     for (const auto &dim : llvm::enumerate(
              expandedShape.slice(expandedDimStart, map.value().size()))) {
@@ -279,8 +278,8 @@ mlir::getSlicedDimensions(ArrayRef<OpFoldResult> sliceInputShape,
   llvm::SmallBitVector mask(sliceInputShape.size());
   unsigned idx = 0;
   for (const auto &[offset, size, stride] : sliceParams) {
-    Optional<int64_t> offsetConst = getConstantIntValue(offset);
-    Optional<int64_t> strideConst = getConstantIntValue(stride);
+    std::optional<int64_t> offsetConst = getConstantIntValue(offset);
+    std::optional<int64_t> strideConst = getConstantIntValue(stride);
     mask[idx] = !isEqualConstantIntOrValue(size, sliceInputShape[idx]) ||
                 (!strideConst || *strideConst != 1) ||
                 (!offsetConst || *offsetConst != 0);
@@ -415,7 +414,7 @@ mlir::getSimplifyCollapseShapeWithRankReducingSliceInfo(
   for (const auto &[nonUnitDim, indices] :
        llvm::zip(*trivialSegments, reassociationIndices)) {
     if (nonUnitDim) {
-      sliceShape.push_back(sourceType.getDimSize(nonUnitDim.value()));
+      sliceShape.push_back(sourceType.getDimSize(*nonUnitDim));
       continue;
     }
     llvm::append_range(sliceShape, llvm::map_range(indices, [&](int64_t idx) {

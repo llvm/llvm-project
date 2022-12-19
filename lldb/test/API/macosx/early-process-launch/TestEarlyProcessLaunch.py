@@ -13,6 +13,7 @@ class TestEarlyProcessLaunch(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessDarwin
+    @skipIfAsan # rdar://103359354
     @skipIfOutOfTreeDebugserver  # 2022-12-13 FIXME: skipping system debugserver 
                                  # until this feature is included in the system
                                  # debugserver.

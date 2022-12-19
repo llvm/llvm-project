@@ -101,9 +101,8 @@ static void CreateHistoryThreadFromValueObject(ProcessSP process_sp,
   std::string trace_path = "." + std::string(type) + "_trace";
 
   ValueObjectSP count_sp =
-      return_value_sp->GetValueForExpressionPath(count_path.c_str());
-  ValueObjectSP tid_sp =
-      return_value_sp->GetValueForExpressionPath(tid_path.c_str());
+      return_value_sp->GetValueForExpressionPath(count_path);
+  ValueObjectSP tid_sp = return_value_sp->GetValueForExpressionPath(tid_path);
 
   if (!count_sp || !tid_sp)
     return;
@@ -115,7 +114,7 @@ static void CreateHistoryThreadFromValueObject(ProcessSP process_sp,
     return;
 
   ValueObjectSP trace_sp =
-      return_value_sp->GetValueForExpressionPath(trace_path.c_str());
+      return_value_sp->GetValueForExpressionPath(trace_path);
 
   if (!trace_sp)
     return;

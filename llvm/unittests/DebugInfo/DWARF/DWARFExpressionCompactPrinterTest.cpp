@@ -60,7 +60,17 @@ void DWARFExpressionCompactPrinterTest::TestExprPrinter(
   raw_string_ostream OS(Result);
   DataExtractor DE(ExprData, true, 8);
   DWARFExpression Expr(DE, 8);
-  Expr.printCompact(OS, *MRI);
+
+  auto GetRegName = [&](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
+    if (std::optional<unsigned> LLVMRegNum =
+            this->MRI->getLLVMRegNum(DwarfRegNum, IsEH))
+      if (const char *RegName = this->MRI->getName(*LLVMRegNum))
+        return llvm::StringRef(RegName);
+    OS << "<unknown register " << DwarfRegNum << ">";
+    return {};
+  };
+
+  Expr.printCompact(OS, GetRegName);
   EXPECT_EQ(OS.str(), Expected);
 }
 

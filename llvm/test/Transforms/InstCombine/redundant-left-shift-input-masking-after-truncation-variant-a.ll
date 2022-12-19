@@ -17,7 +17,7 @@ declare void @use64(i64)
 define i32 @t0_basic(i64 %x, i32 %nbits) {
 ; CHECK-LABEL: @t0_basic(
 ; CHECK-NEXT:    [[T0:%.*]] = zext i32 [[NBITS:%.*]] to i64
-; CHECK-NEXT:    [[T1:%.*]] = shl i64 1, [[T0]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nuw i64 1, [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i64 [[T1]], -1
 ; CHECK-NEXT:    [[T3:%.*]] = sub i32 32, [[NBITS]]
 ; CHECK-NEXT:    [[T4:%.*]] = and i64 [[T2]], [[X:%.*]]
@@ -57,7 +57,7 @@ declare void @use8xi64(<8 x i64>)
 define <8 x i32> @t1_vec_splat(<8 x i64> %x, <8 x i32> %nbits) {
 ; CHECK-LABEL: @t1_vec_splat(
 ; CHECK-NEXT:    [[T0:%.*]] = zext <8 x i32> [[NBITS:%.*]] to <8 x i64>
-; CHECK-NEXT:    [[T1:%.*]] = shl <8 x i64> <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>, [[T0]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nuw <8 x i64> <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>, [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add <8 x i64> [[T1]], <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
 ; CHECK-NEXT:    [[T3:%.*]] = sub <8 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>, [[NBITS]]
 ; CHECK-NEXT:    [[T4:%.*]] = and <8 x i64> [[T2]], [[X:%.*]]
@@ -92,7 +92,7 @@ define <8 x i32> @t1_vec_splat(<8 x i64> %x, <8 x i32> %nbits) {
 define <8 x i32> @t2_vec_splat_undef(<8 x i64> %x, <8 x i32> %nbits) {
 ; CHECK-LABEL: @t2_vec_splat_undef(
 ; CHECK-NEXT:    [[T0:%.*]] = zext <8 x i32> [[NBITS:%.*]] to <8 x i64>
-; CHECK-NEXT:    [[T1:%.*]] = shl <8 x i64> <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 undef, i64 1>, [[T0]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nuw <8 x i64> <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 undef, i64 1>, [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add <8 x i64> [[T1]], <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 undef, i64 -1>
 ; CHECK-NEXT:    [[T3:%.*]] = sub <8 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 undef, i32 32>, [[NBITS]]
 ; CHECK-NEXT:    [[T4:%.*]] = and <8 x i64> [[T2]], [[X:%.*]]
@@ -127,7 +127,7 @@ define <8 x i32> @t2_vec_splat_undef(<8 x i64> %x, <8 x i32> %nbits) {
 define <8 x i32> @t3_vec_nonsplat(<8 x i64> %x, <8 x i32> %nbits) {
 ; CHECK-LABEL: @t3_vec_nonsplat(
 ; CHECK-NEXT:    [[T0:%.*]] = zext <8 x i32> [[NBITS:%.*]] to <8 x i64>
-; CHECK-NEXT:    [[T1:%.*]] = shl <8 x i64> <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>, [[T0]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nuw <8 x i64> <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>, [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add <8 x i64> [[T1]], <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
 ; CHECK-NEXT:    [[T3:%.*]] = sub <8 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>, [[NBITS]]
 ; CHECK-NEXT:    [[T4:%.*]] = and <8 x i64> [[T2]], [[X:%.*]]
@@ -164,7 +164,7 @@ define <8 x i32> @t3_vec_nonsplat(<8 x i64> %x, <8 x i32> %nbits) {
 define i32 @n4_extrause(i64 %x, i32 %nbits) {
 ; CHECK-LABEL: @n4_extrause(
 ; CHECK-NEXT:    [[T0:%.*]] = zext i32 [[NBITS:%.*]] to i64
-; CHECK-NEXT:    [[T1:%.*]] = shl i64 1, [[T0]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nuw i64 1, [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i64 [[T1]], -1
 ; CHECK-NEXT:    [[T3:%.*]] = sub i32 32, [[NBITS]]
 ; CHECK-NEXT:    [[T4:%.*]] = and i64 [[T2]], [[X:%.*]]

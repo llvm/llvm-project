@@ -481,12 +481,45 @@ private:
     // used.
     if (!typeSpec)
       typeSpec = &alloc.type;
+    assert(typeSpec && "type spec missing for polymorphic allocation");
+
+    // Set up the descriptor for allocation for intrinsic type spec on
+    // unlimited polymorphic entity.
+    if (typeSpec->AsIntrinsic() &&
+        fir::isUnlimitedPolymorphicType(fir::getBase(box).getType())) {
+      mlir::func::FuncOp callee =
+          box.isPointer()
+              ? fir::runtime::getRuntimeFunc<mkRTKey(PointerNullifyIntrinsic)>(
+                    loc, builder)
+              : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableInitIntrinsic)>(
+                    loc, builder);
+
+      llvm::ArrayRef<mlir::Type> inputTypes =
+          callee.getFunctionType().getInputs();
+      llvm::SmallVector<mlir::Value> args;
+      args.push_back(builder.createConvert(loc, inputTypes[0], box.getAddr()));
+      mlir::Value category = builder.createIntegerConstant(
+          loc, inputTypes[1],
+          static_cast<int32_t>(typeSpec->AsIntrinsic()->category()));
+      mlir::Value kind = builder.createIntegerConstant(
+          loc, inputTypes[2],
+          Fortran::evaluate::ToInt64(typeSpec->AsIntrinsic()->kind()).value());
+      mlir::Value rank = builder.createIntegerConstant(
+          loc, inputTypes[3], alloc.getSymbol().Rank());
+      mlir::Value corank = builder.createIntegerConstant(loc, inputTypes[4], 0);
+      args.push_back(category);
+      args.push_back(kind);
+      args.push_back(rank);
+      args.push_back(corank);
+      builder.create<fir::CallOp>(loc, callee, args);
+      return;
+    }
 
     // Do not generate calls for non derived-type type spec.
     if (!typeSpec->AsDerived())
       return;
 
-    assert(typeSpec && "type spec missing for polymorphic allocation");
+    // Set up descriptor for allocation with derived type spec.
     std::string typeName =
         Fortran::lower::mangle::mangleName(typeSpec->derivedTypeSpec());
     std::string typeDescName =
@@ -513,9 +546,9 @@ private:
     args.push_back(builder.createConvert(loc, inputTypes[1], typeDescAddr));
     mlir::Value rank = builder.createIntegerConstant(loc, inputTypes[2],
                                                      alloc.getSymbol().Rank());
-    mlir::Value c0 = builder.createIntegerConstant(loc, inputTypes[3], 0);
+    mlir::Value corank = builder.createIntegerConstant(loc, inputTypes[3], 0);
     args.push_back(rank);
-    args.push_back(c0);
+    args.push_back(corank);
     builder.create<fir::CallOp>(loc, callee, args);
   }
 

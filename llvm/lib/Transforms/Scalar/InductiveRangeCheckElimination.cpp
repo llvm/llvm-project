@@ -45,7 +45,6 @@
 #include "llvm/Transforms/Scalar/InductiveRangeCheckElimination.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1718,7 +1717,7 @@ IntersectSignedRange(ScalarEvolution &SE,
     return std::nullopt;
   if (!R1)
     return R2;
-  auto &R1Value = R1.value();
+  auto &R1Value = *R1;
   // We never return empty ranges from this function, and R1 is supposed to be
   // a result of intersection. Thus, R1 is never empty.
   assert(!R1Value.isEmpty(SE, /* IsSigned */ true) &&
@@ -1747,7 +1746,7 @@ IntersectUnsignedRange(ScalarEvolution &SE,
     return std::nullopt;
   if (!R1)
     return R2;
-  auto &R1Value = R1.value();
+  auto &R1Value = *R1;
   // We never return empty ranges from this function, and R1 is supposed to be
   // a result of intersection. Thus, R1 is never empty.
   assert(!R1Value.isEmpty(SE, /* IsSigned */ false) &&
@@ -1957,13 +1956,12 @@ bool InductiveRangeCheckElimination::run(
     auto Result = IRC.computeSafeIterationSpace(SE, IndVar,
                                                 LS.IsSignedPredicate);
     if (Result) {
-      auto MaybeSafeIterRange =
-          IntersectRange(SE, SafeIterRange, Result.value());
+      auto MaybeSafeIterRange = IntersectRange(SE, SafeIterRange, *Result);
       if (MaybeSafeIterRange) {
-        assert(!MaybeSafeIterRange.value().isEmpty(SE, LS.IsSignedPredicate) &&
+        assert(!MaybeSafeIterRange->isEmpty(SE, LS.IsSignedPredicate) &&
                "We should never return empty ranges!");
         RangeChecksToEliminate.push_back(IRC);
-        SafeIterRange = MaybeSafeIterRange.value();
+        SafeIterRange = *MaybeSafeIterRange;
       }
     }
   }
@@ -1971,7 +1969,7 @@ bool InductiveRangeCheckElimination::run(
   if (!SafeIterRange)
     return false;
 
-  LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, DT, SafeIterRange.value());
+  LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, DT, *SafeIterRange);
   bool Changed = LC.run();
 
   if (Changed) {

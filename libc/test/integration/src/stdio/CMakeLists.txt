@@ -9,8 +9,8 @@ add_integration_test(
     stdio-integration-tests
   SRCS
     sprintf_size_test.cpp
-  LOADER
-    libc.loader.linux.crt1
+  STARTUP
+    libc.startup.linux.crt1
   DEPENDS
     libc.src.stdio.sprintf
   ARGS
@@ -26,8 +26,8 @@ add_integration_test(
     stdio-integration-tests
   SRCS
     sprintf_size_test.cpp
-  LOADER
-    libc.loader.linux.crt1
+  STARTUP
+    libc.startup.linux.crt1
   ARGS
     "%s %c %d"
     "First arg"

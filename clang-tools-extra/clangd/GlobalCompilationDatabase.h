@@ -106,7 +106,7 @@ public:
     std::function<Context(llvm::StringRef)> ContextProvider;
     // Only look for a compilation database in this one fixed directory.
     // FIXME: fold this into config/context mechanism.
-    llvm::Optional<Path> CompileCommandsDir;
+    std::optional<Path> CompileCommandsDir;
   };
 
   DirectoryBasedGlobalCompilationDatabase(const Options &Opts);

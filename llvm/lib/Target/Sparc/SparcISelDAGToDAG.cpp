@@ -33,7 +33,9 @@ class SparcDAGToDAGISel : public SelectionDAGISel {
   /// make the right decision when generating code for different targets.
   const SparcSubtarget *Subtarget = nullptr;
 public:
-  explicit SparcDAGToDAGISel(SparcTargetMachine &tm) : SelectionDAGISel(tm) {}
+  static char ID;
+
+  explicit SparcDAGToDAGISel(SparcTargetMachine &tm) : SelectionDAGISel(ID, tm) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<SparcSubtarget>();
@@ -64,6 +66,8 @@ private:
   bool tryInlineAsm(SDNode *N);
 };
 }  // end anonymous namespace
+
+char SparcDAGToDAGISel::ID = 0;
 
 SDNode* SparcDAGToDAGISel::getGlobalBaseReg() {
   Register GlobalBaseReg = Subtarget->getInstrInfo()->getGlobalBaseReg(MF);

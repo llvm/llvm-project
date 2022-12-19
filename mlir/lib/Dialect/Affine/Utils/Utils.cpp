@@ -73,16 +73,11 @@ public:
   ///             negative = a < 0 in
   ///         select negative, remainder + b, remainder.
   Value visitModExpr(AffineBinaryOpExpr expr) {
-    auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>();
-    if (!rhsConst) {
-      emitError(
-          loc,
-          "semi-affine expressions (modulo by non-const) are not supported");
-      return nullptr;
-    }
-    if (rhsConst.getValue() <= 0) {
-      emitError(loc, "modulo by non-positive value is not supported");
-      return nullptr;
+    if (auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>()) {
+      if (rhsConst.getValue() <= 0) {
+        emitError(loc, "modulo by non-positive value is not supported");
+        return nullptr;
+      }
     }
 
     auto lhs = visit(expr.getLHS());
@@ -110,19 +105,20 @@ public:
   ///            let absolute = negative ? -a - 1 : a in
   ///            let quotient = absolute / b in
   ///                negative ? -quotient - 1 : quotient
+  ///
+  /// Note: this lowering does not use arith.floordivsi because the lowering of
+  /// that to arith.divsi (see populateCeilFloorDivExpandOpsPatterns) generates
+  /// not one but two arith.divsi. That could be changed to one divsi, but one
+  /// way or another, going through arith.floordivsi will result in more complex
+  /// IR because arith.floordivsi is more general than affine floordiv in that
+  /// it supports negative RHS.
   Value visitFloorDivExpr(AffineBinaryOpExpr expr) {
-    auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>();
-    if (!rhsConst) {
-      emitError(
-          loc,
-          "semi-affine expressions (division by non-const) are not supported");
-      return nullptr;
+    if (auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>()) {
+      if (rhsConst.getValue() <= 0) {
+        emitError(loc, "division by non-positive value is not supported");
+        return nullptr;
+      }
     }
-    if (rhsConst.getValue() <= 0) {
-      emitError(loc, "division by non-positive value is not supported");
-      return nullptr;
-    }
-
     auto lhs = visit(expr.getLHS());
     auto rhs = visit(expr.getRHS());
     assert(lhs && rhs && "unexpected affine expr lowering failure");
@@ -152,16 +148,15 @@ public:
   ///         let absolute = negative ? -a : a - 1 in
   ///         let quotient = absolute / b in
   ///             negative ? -quotient : quotient + 1
+  ///
+  /// Note: not using arith.ceildivsi for the same reason as explained in the
+  /// visitFloorDivExpr comment.
   Value visitCeilDivExpr(AffineBinaryOpExpr expr) {
-    auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>();
-    if (!rhsConst) {
-      emitError(loc) << "semi-affine expressions (division by non-const) are "
-                        "not supported";
-      return nullptr;
-    }
-    if (rhsConst.getValue() <= 0) {
-      emitError(loc, "division by non-positive value is not supported");
-      return nullptr;
+    if (auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>()) {
+      if (rhsConst.getValue() <= 0) {
+        emitError(loc, "division by non-positive value is not supported");
+        return nullptr;
+      }
     }
     auto lhs = visit(expr.getLHS());
     auto rhs = visit(expr.getRHS());
@@ -643,6 +638,41 @@ LogicalResult mlir::normalizeAffineFor(AffineForOp op, bool promoteSingleIter) {
   return success();
 }
 
+/// Returns true if `srcMemOp` may have an effect on `destMemOp` within the
+/// scope of the outermost `minSurroundingLoops` loops that surround them.
+/// `srcMemOp` and `destMemOp` are expected to be affine read/write ops.
+static bool mayHaveEffect(Operation *srcMemOp, Operation *destMemOp,
+                          unsigned minSurroundingLoops) {
+  MemRefAccess srcAccess(srcMemOp);
+  MemRefAccess destAccess(destMemOp);
+
+  // Affine dependence analysis here is applicable only if both ops operate on
+  // the same memref and if `srcMemOp` and `destMemOp` are in the same
+  // AffineScope. Also, we can only check if our affine scope is isolated from
+  // above; otherwise, values can from outside of the affine scope that the
+  // check below cannot analyze.
+  Region *srcScope = getAffineScope(srcMemOp);
+  if (srcAccess.memref == destAccess.memref &&
+      srcScope == getAffineScope(destMemOp)) {
+    unsigned nsLoops = getNumCommonSurroundingLoops(*srcMemOp, *destMemOp);
+    FlatAffineValueConstraints dependenceConstraints;
+    for (unsigned d = nsLoops + 1; d > minSurroundingLoops; d--) {
+      DependenceResult result = checkMemrefAccessDependence(
+          srcAccess, destAccess, d, &dependenceConstraints,
+          /*dependenceComponents=*/nullptr);
+      // A dependence failure or the presence of a dependence implies a
+      // side effect.
+      if (!noDependence(result))
+        return true;
+    }
+    // No side effect was seen.
+    return false;
+  }
+  // TODO: Check here if the memrefs alias: there is no side effect if
+  // `srcAccess.memref` and `destAccess.memref` don't alias.
+  return true;
+}
+
 template <typename EffectType, typename T>
 bool mlir::hasNoInterveningEffect(Operation *start, T memOp) {
   auto isLocallyAllocated = [](Value memref) {
@@ -687,49 +717,19 @@ bool mlir::hasNoInterveningEffect(Operation *start, T memOp) {
       // If the side effect comes from an affine read or write, try to
       // prove the side effecting `op` cannot reach `memOp`.
       if (isa<AffineReadOpInterface, AffineWriteOpInterface>(op)) {
-        MemRefAccess srcAccess(op);
-        MemRefAccess destAccess(memOp);
-        // Affine dependence analysis here is applicable only if both ops
-        // operate on the same memref and if `op`, `memOp`, and `start` are in
-        // the same AffineScope.
-        if (srcAccess.memref == destAccess.memref &&
-            getAffineScope(op) == getAffineScope(memOp) &&
-            getAffineScope(op) == getAffineScope(start)) {
-          // Number of loops containing the start op and the ending operation.
-          unsigned minSurroundingLoops =
-              getNumCommonSurroundingLoops(*start, *memOp);
-
-          // Number of loops containing the operation `op` which has the
-          // potential memory side effect and can occur on a path between
-          // `start` and `memOp`.
-          unsigned nsLoops = getNumCommonSurroundingLoops(*op, *memOp);
-
-          // For ease, let's consider the case that `op` is a store and we're
-          // looking for other potential stores (e.g `op`) that overwrite memory
-          // after `start`, and before being read in `memOp`. In this case, we
-          // only need to consider other potential stores with depth >
-          // minSurrounding loops since `start` would overwrite any store with a
-          // smaller number of surrounding loops before.
-          unsigned d;
-          FlatAffineValueConstraints dependenceConstraints;
-          for (d = nsLoops + 1; d > minSurroundingLoops; d--) {
-            DependenceResult result = checkMemrefAccessDependence(
-                srcAccess, destAccess, d, &dependenceConstraints,
-                /*dependenceComponents=*/nullptr);
-            // A dependence failure or the presence of a dependence implies a
-            // side effect.
-            if (!noDependence(result)) {
-              hasSideEffect = true;
-              return;
-            }
-          }
-
-          // No side effect was seen, simply return.
-          return;
-        }
-        // TODO: Check here if the memrefs alias: there is no side effect if
-        // `srcAccess.memref` and `destAccess.memref` don't alias.
+        // For ease, let's consider the case that `op` is a store and
+        // we're looking for other potential stores that overwrite memory after
+        // `start`, and before being read in `memOp`. In this case, we only
+        // need to consider other potential stores with depth >
+        // minSurroundingLoops since `start` would overwrite any store with a
+        // smaller number of surrounding loops before.
+        unsigned minSurroundingLoops =
+            getNumCommonSurroundingLoops(*start, *memOp);
+        if (mayHaveEffect(op, memOp, minSurroundingLoops))
+          hasSideEffect = true;
+        return;
       }
+
       // We have an op with a memory effect and we cannot prove if it
       // intervenes.
       hasSideEffect = true;
@@ -1796,13 +1796,13 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType,
       // always bounded. However, when we have symbols, we may not be able to
       // obtain a constant upper bound. Also, mapping to a negative space is
       // invalid for normalization.
-      if (!ubConst.has_value() || ubConst.value() < 0) {
+      if (!ubConst.has_value() || *ubConst < 0) {
         LLVM_DEBUG(llvm::dbgs()
                    << "can't normalize map due to unknown/invalid upper bound");
         return memrefType;
       }
       // If dimension of new memrefType is dynamic, the value is -1.
-      newShape[d] = ubConst.value() + 1;
+      newShape[d] = *ubConst + 1;
     }
   }
 

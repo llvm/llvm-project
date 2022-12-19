@@ -251,6 +251,20 @@ void CheckHelper::Check(const Symbol &symbol) {
   if (isDone) {
     return; // following checks do not apply
   }
+  if (symbol.attrs().test(Attr::PROTECTED)) {
+    if (symbol.owner().kind() != Scope::Kind::Module) { // C854
+      messages_.Say(
+          "A PROTECTED entity must be in the specification part of a module"_err_en_US);
+    }
+    if (!evaluate::IsVariable(symbol) && !IsProcedurePointer(symbol)) { // C855
+      messages_.Say(
+          "A PROTECTED entity must be a variable or pointer"_err_en_US);
+    }
+    if (InCommonBlock(symbol)) { // C856
+      messages_.Say(
+          "A PROTECTED entity may not be in a common block"_err_en_US);
+    }
+  }
   if (IsPointer(symbol)) {
     CheckPointer(symbol);
   }
@@ -353,6 +367,9 @@ void CheckHelper::Check(const Symbol &symbol) {
         messages_.Say(
             "An assumed-length CHARACTER(*) function cannot return a POINTER"_err_en_US);
       }
+    } else if (IsPointer(symbol)) {
+      messages_.Say(
+          "A procedure pointer should not have assumed-length CHARACTER(*) result type"_port_en_US);
     }
   }
   if (symbol.attrs().test(Attr::VALUE)) {
@@ -820,7 +837,7 @@ void CheckHelper::CheckProcEntity(
           "An ELEMENTAL subprogram may not have a dummy procedure"_err_en_US);
     }
     const Symbol *interface {
-      details.interface().symbol()
+      details.procInterface()
     };
     if (!symbol.attrs().test(Attr::INTRINSIC) &&
         (IsElementalProcedure(symbol) ||
@@ -849,11 +866,11 @@ void CheckHelper::CheckProcEntity(
           "Procedure component '%s' must have POINTER attribute"_err_en_US,
           name);
     }
-    CheckPassArg(symbol, details.interface().symbol(), details);
+    CheckPassArg(symbol, details.procInterface(), details);
   }
   if (symbol.attrs().test(Attr::POINTER)) {
     CheckPointerInitialization(symbol);
-    if (const Symbol *interface{details.interface().symbol()}) {
+    if (const Symbol * interface{details.procInterface()}) {
       const Symbol &ultimate{interface->GetUltimate()};
       if (ultimate.attrs().test(Attr::INTRINSIC)) {
         if (const auto intrinsic{
@@ -2053,8 +2070,8 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
     }
   }
   if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
-    if (!proc->interface().symbol() ||
-        !proc->interface().symbol()->attrs().test(Attr::BIND_C)) {
+    if (!proc->procInterface() ||
+        !proc->procInterface()->attrs().test(Attr::BIND_C)) {
       messages_.Say(symbol.name(),
           "An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement"_err_en_US);
       context_.SetError(symbol);
@@ -2375,11 +2392,13 @@ void CheckHelper::CheckDefinedIoProc(const Symbol &symbol,
 }
 
 void CheckHelper::CheckSymbolType(const Symbol &symbol) {
-  if (!IsAllocatableOrPointer(symbol)) { // C702
+  if (!IsAllocatable(symbol) &&
+      (!IsPointer(symbol) ||
+          (IsProcedure(symbol) && !symbol.HasExplicitInterface()))) { // C702
     if (auto dyType{evaluate::DynamicType::From(symbol)}) {
       if (dyType->HasDeferredTypeParameter()) {
         messages_.Say(
-            "'%s' has a type %s with a deferred type parameter but is neither an allocatable or a pointer"_err_en_US,
+            "'%s' has a type %s with a deferred type parameter but is neither an allocatable nor an object pointer"_err_en_US,
             symbol.name(), dyType->AsFortran());
       }
     }

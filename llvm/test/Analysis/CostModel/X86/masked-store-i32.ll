@@ -14,45 +14,45 @@ target triple = "x86_64-unknown-linux-gnu"
 @A = global [1024 x i8] zeroinitializer, align 128
 @B = global [1024 x i32] zeroinitializer, align 128
 
-define void @test([1024 x i32]* %C) {
+define void @test(ptr %C) {
 ; SSE2-LABEL: 'test'
-; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, i32* %out, align 4
-; SSE2:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i32 %valB, i32* %out, align 4
-; SSE2:  LV: Found an estimated cost of 5 for VF 4 For instruction: store i32 %valB, i32* %out, align 4
-; SSE2:  LV: Found an estimated cost of 11 for VF 8 For instruction: store i32 %valB, i32* %out, align 4
-; SSE2:  LV: Found an estimated cost of 22 for VF 16 For instruction: store i32 %valB, i32* %out, align 4
+; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, ptr %out, align 4
+; SSE2:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i32 %valB, ptr %out, align 4
+; SSE2:  LV: Found an estimated cost of 5 for VF 4 For instruction: store i32 %valB, ptr %out, align 4
+; SSE2:  LV: Found an estimated cost of 11 for VF 8 For instruction: store i32 %valB, ptr %out, align 4
+; SSE2:  LV: Found an estimated cost of 22 for VF 16 For instruction: store i32 %valB, ptr %out, align 4
 ;
 ; SSE42-LABEL: 'test'
-; SSE42:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, i32* %out, align 4
-; SSE42:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i32 %valB, i32* %out, align 4
-; SSE42:  LV: Found an estimated cost of 4 for VF 4 For instruction: store i32 %valB, i32* %out, align 4
-; SSE42:  LV: Found an estimated cost of 8 for VF 8 For instruction: store i32 %valB, i32* %out, align 4
-; SSE42:  LV: Found an estimated cost of 16 for VF 16 For instruction: store i32 %valB, i32* %out, align 4
+; SSE42:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, ptr %out, align 4
+; SSE42:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i32 %valB, ptr %out, align 4
+; SSE42:  LV: Found an estimated cost of 4 for VF 4 For instruction: store i32 %valB, ptr %out, align 4
+; SSE42:  LV: Found an estimated cost of 8 for VF 8 For instruction: store i32 %valB, ptr %out, align 4
+; SSE42:  LV: Found an estimated cost of 16 for VF 16 For instruction: store i32 %valB, ptr %out, align 4
 ;
 ; AVX1-LABEL: 'test'
-; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, i32* %out, align 4
-; AVX1:  LV: Found an estimated cost of 9 for VF 2 For instruction: store i32 %valB, i32* %out, align 4
-; AVX1:  LV: Found an estimated cost of 8 for VF 4 For instruction: store i32 %valB, i32* %out, align 4
-; AVX1:  LV: Found an estimated cost of 8 for VF 8 For instruction: store i32 %valB, i32* %out, align 4
-; AVX1:  LV: Found an estimated cost of 16 for VF 16 For instruction: store i32 %valB, i32* %out, align 4
-; AVX1:  LV: Found an estimated cost of 32 for VF 32 For instruction: store i32 %valB, i32* %out, align 4
+; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, ptr %out, align 4
+; AVX1:  LV: Found an estimated cost of 9 for VF 2 For instruction: store i32 %valB, ptr %out, align 4
+; AVX1:  LV: Found an estimated cost of 8 for VF 4 For instruction: store i32 %valB, ptr %out, align 4
+; AVX1:  LV: Found an estimated cost of 8 for VF 8 For instruction: store i32 %valB, ptr %out, align 4
+; AVX1:  LV: Found an estimated cost of 16 for VF 16 For instruction: store i32 %valB, ptr %out, align 4
+; AVX1:  LV: Found an estimated cost of 32 for VF 32 For instruction: store i32 %valB, ptr %out, align 4
 ;
 ; AVX2-LABEL: 'test'
-; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, i32* %out, align 4
-; AVX2:  LV: Found an estimated cost of 9 for VF 2 For instruction: store i32 %valB, i32* %out, align 4
-; AVX2:  LV: Found an estimated cost of 8 for VF 4 For instruction: store i32 %valB, i32* %out, align 4
-; AVX2:  LV: Found an estimated cost of 8 for VF 8 For instruction: store i32 %valB, i32* %out, align 4
-; AVX2:  LV: Found an estimated cost of 16 for VF 16 For instruction: store i32 %valB, i32* %out, align 4
-; AVX2:  LV: Found an estimated cost of 32 for VF 32 For instruction: store i32 %valB, i32* %out, align 4
+; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, ptr %out, align 4
+; AVX2:  LV: Found an estimated cost of 9 for VF 2 For instruction: store i32 %valB, ptr %out, align 4
+; AVX2:  LV: Found an estimated cost of 8 for VF 4 For instruction: store i32 %valB, ptr %out, align 4
+; AVX2:  LV: Found an estimated cost of 8 for VF 8 For instruction: store i32 %valB, ptr %out, align 4
+; AVX2:  LV: Found an estimated cost of 16 for VF 16 For instruction: store i32 %valB, ptr %out, align 4
+; AVX2:  LV: Found an estimated cost of 32 for VF 32 For instruction: store i32 %valB, ptr %out, align 4
 ;
 ; AVX512-LABEL: 'test'
-; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, i32* %out, align 4
-; AVX512:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i32 %valB, i32* %out, align 4
-; AVX512:  LV: Found an estimated cost of 1 for VF 4 For instruction: store i32 %valB, i32* %out, align 4
-; AVX512:  LV: Found an estimated cost of 1 for VF 8 For instruction: store i32 %valB, i32* %out, align 4
-; AVX512:  LV: Found an estimated cost of 1 for VF 16 For instruction: store i32 %valB, i32* %out, align 4
-; AVX512:  LV: Found an estimated cost of 2 for VF 32 For instruction: store i32 %valB, i32* %out, align 4
-; AVX512:  LV: Found an estimated cost of 4 for VF 64 For instruction: store i32 %valB, i32* %out, align 4
+; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, ptr %out, align 4
+; AVX512:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i32 %valB, ptr %out, align 4
+; AVX512:  LV: Found an estimated cost of 1 for VF 4 For instruction: store i32 %valB, ptr %out, align 4
+; AVX512:  LV: Found an estimated cost of 1 for VF 8 For instruction: store i32 %valB, ptr %out, align 4
+; AVX512:  LV: Found an estimated cost of 1 for VF 16 For instruction: store i32 %valB, ptr %out, align 4
+; AVX512:  LV: Found an estimated cost of 2 for VF 32 For instruction: store i32 %valB, ptr %out, align 4
+; AVX512:  LV: Found an estimated cost of 4 for VF 64 For instruction: store i32 %valB, ptr %out, align 4
 ;
 entry:
   br label %for.body
@@ -60,17 +60,17 @@ entry:
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %end ]
 
-  %inB = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, i64 %iv
-  %valB = load i32, i32* %inB
+  %inB = getelementptr inbounds [1024 x i32], ptr @B, i64 0, i64 %iv
+  %valB = load i32, ptr %inB
 
-  %inA = getelementptr inbounds [1024 x i8], [1024 x i8]* @A, i64 0, i64 %iv
-  %valA = load i8, i8* %inA
+  %inA = getelementptr inbounds [1024 x i8], ptr @A, i64 0, i64 %iv
+  %valA = load i8, ptr %inA
   %canStore = icmp ne i8 %valA, 0
   br i1 %canStore, label %store, label %mask
 
 store:
-  %out = getelementptr inbounds [1024 x i32], [1024 x i32]* %C, i64 0, i64 %iv
-  store i32 %valB, i32* %out
+  %out = getelementptr inbounds [1024 x i32], ptr %C, i64 0, i64 %iv
+  store i32 %valB, ptr %out
   br label %end
 
 mask:

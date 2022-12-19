@@ -484,6 +484,7 @@ void MapThreadTrace(uptr addr, uptr size, const char *name);
 void DontNeedShadowFor(uptr addr, uptr size);
 void UnmapShadow(ThreadState *thr, uptr addr, uptr size);
 void InitializeShadowMemory();
+void DontDumpShadow(uptr addr, uptr size);
 void InitializeInterceptors();
 void InitializeLibIgnore();
 void InitializeDynamicAnnotations();

@@ -51,7 +51,7 @@ public:
     assert(BlockIt != CFCtx.getStmtToBlock().end());
     const auto &State = BlockToState[BlockIt->getSecond()->getBlockID()];
     assert(State);
-    return &State.value().Env;
+    return &State->Env;
   }
 
 private:
@@ -262,7 +262,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
     if (!MaybePredState)
       continue;
 
-    TypeErasedDataflowAnalysisState PredState = MaybePredState.value();
+    TypeErasedDataflowAnalysisState PredState = *MaybePredState;
     if (BuiltinTransferOpts) {
       if (const Stmt *PredTerminatorStmt = Pred->getTerminatorStmt()) {
         const StmtToEnvMapImpl StmtToEnv(AC.CFCtx, AC.BlockStates);
@@ -450,7 +450,7 @@ runTypeErasedDataflowAnalysis(
     if (OldBlockState) {
       if (isLoopHead(*Block)) {
         LatticeJoinEffect Effect1 = Analysis.widenTypeErased(
-            NewBlockState.Lattice, OldBlockState.value().Lattice);
+            NewBlockState.Lattice, OldBlockState->Lattice);
         LatticeJoinEffect Effect2 =
             NewBlockState.Env.widen(OldBlockState->Env, Analysis);
         if (Effect1 == LatticeJoinEffect::Unchanged &&
@@ -458,7 +458,7 @@ runTypeErasedDataflowAnalysis(
           // The state of `Block` didn't change from widening so there's no need
           // to revisit its successors.
           continue;
-      } else if (Analysis.isEqualTypeErased(OldBlockState.value().Lattice,
+      } else if (Analysis.isEqualTypeErased(OldBlockState->Lattice,
                                             NewBlockState.Lattice) &&
                  OldBlockState->Env.equivalentTo(NewBlockState.Env, Analysis)) {
         // The state of `Block` didn't change after transfer so there's no need

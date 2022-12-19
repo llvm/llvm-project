@@ -24,8 +24,10 @@ class LoongArchDAGToDAGISel : public SelectionDAGISel {
   const LoongArchSubtarget *Subtarget = nullptr;
 
 public:
+  static char ID;
+
   explicit LoongArchDAGToDAGISel(LoongArchTargetMachine &TM)
-      : SelectionDAGISel(TM) {}
+      : SelectionDAGISel(ID, TM) {}
 
   StringRef getPassName() const override {
     return "LoongArch DAG->DAG Pattern Instruction Selection";

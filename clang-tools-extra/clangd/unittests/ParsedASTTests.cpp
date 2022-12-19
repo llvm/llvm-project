@@ -37,6 +37,7 @@
 #include "gmock/gmock-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -381,7 +382,7 @@ TEST(ParsedASTTest, ReplayPreambleForTidyCheckers) {
     void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                             StringRef FileName, bool IsAngled,
                             CharSourceRange FilenameRange,
-                            Optional<FileEntryRef>, StringRef, StringRef,
+                            std::optional<FileEntryRef>, StringRef, StringRef,
                             const clang::Module *,
                             SrcMgr::CharacteristicKind) override {
       Includes.emplace_back(SM, HashLoc, IncludeTok, FileName, IsAngled,

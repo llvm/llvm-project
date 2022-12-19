@@ -198,7 +198,7 @@ lldb_private::Status SelectHelper::Select() {
     if (m_end_time) {
       tv_ptr = &tv;
       const auto remaining_dur =
-          duration_cast<microseconds>(m_end_time.value() - steady_clock::now());
+          duration_cast<microseconds>(*m_end_time - steady_clock::now());
       if (remaining_dur.count() > 0) {
         // Wait for a specific amount of time
         const auto dur_secs = duration_cast<seconds>(remaining_dur);

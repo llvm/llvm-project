@@ -76,9 +76,9 @@ void resource_handle::FileDescriptorDeleter::operator()(long *ptr) {
 }
 
 llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
-                                          Optional<lldb::pid_t> pid,
-                                          Optional<lldb::cpu_id_t> cpu,
-                                          Optional<long> group_fd,
+                                          std::optional<lldb::pid_t> pid,
+                                          std::optional<lldb::cpu_id_t> cpu,
+                                          std::optional<long> group_fd,
                                           unsigned long flags) {
   errno = 0;
   long fd = syscall(SYS_perf_event_open, &attr, pid.value_or(-1),
@@ -92,8 +92,8 @@ llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
 }
 
 llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
-                                          Optional<lldb::pid_t> pid,
-                                          Optional<lldb::cpu_id_t> cpu) {
+                                          std::optional<lldb::pid_t> pid,
+                                          std::optional<lldb::cpu_id_t> cpu) {
   return Init(attr, pid, cpu, -1, 0);
 }
 
@@ -362,7 +362,7 @@ lldb_private::process_linux::CreateContextSwitchTracePerfEvent(
   LLDB_LOG(log, "Will create context switch trace buffer of size {0}",
            data_buffer_size);
 
-  Optional<long> group_fd;
+  std::optional<long> group_fd;
   if (parent_perf_event)
     group_fd = parent_perf_event->GetFd();
 

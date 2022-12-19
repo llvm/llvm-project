@@ -100,7 +100,7 @@ static lldb::offset_t DumpAPInt(Stream *s, const DataExtractor &data,
                                 bool is_signed, unsigned radix) {
   llvm::Optional<llvm::APInt> apint = GetAPInt(data, &offset, byte_size);
   if (apint) {
-    std::string apint_str = toString(apint.value(), radix, is_signed);
+    std::string apint_str = toString(*apint, radix, is_signed);
     switch (radix) {
     case 2:
       s->Write("0b", 2);
@@ -669,7 +669,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       llvm::Optional<llvm::APInt> apint =
           GetAPInt(DE, &offset, semantics_byte_size);
       if (apint) {
-        llvm::APFloat apfloat(semantics, apint.value());
+        llvm::APFloat apfloat(semantics, *apint);
         llvm::SmallVector<char, 256> sv;
         if (format_max_padding)
           apfloat.toString(sv, format_precision, *format_max_padding);

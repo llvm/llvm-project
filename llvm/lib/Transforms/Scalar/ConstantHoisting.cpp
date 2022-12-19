@@ -609,9 +609,9 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
             C2->ConstInt->getValue(), ConstCand->ConstInt->getValue());
         if (Diff) {
           const InstructionCost ImmCosts =
-              TTI->getIntImmCodeSizeCost(Opcode, OpndIdx, Diff.value(), Ty);
+              TTI->getIntImmCodeSizeCost(Opcode, OpndIdx, *Diff, Ty);
           Cost -= ImmCosts;
-          LLVM_DEBUG(dbgs() << "Offset " << Diff.value() << " "
+          LLVM_DEBUG(dbgs() << "Offset " << *Diff << " "
                             << "has penalty: " << ImmCosts << "\n"
                             << "Adjusted cost: " << Cost << "\n");
         }

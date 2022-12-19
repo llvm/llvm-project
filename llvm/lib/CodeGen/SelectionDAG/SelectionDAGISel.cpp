@@ -313,7 +313,8 @@ void TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 // SelectionDAGISel code
 //===----------------------------------------------------------------------===//
 
-SelectionDAGISel::SelectionDAGISel(TargetMachine &tm, CodeGenOpt::Level OL)
+SelectionDAGISel::SelectionDAGISel(char &ID, TargetMachine &tm,
+                                   CodeGenOpt::Level OL)
     : MachineFunctionPass(ID), TM(tm), FuncInfo(new FunctionLoweringInfo()),
       SwiftError(new SwiftErrorValueTracking()),
       CurDAG(new SelectionDAG(tm, OL)),
@@ -2338,7 +2339,7 @@ void SelectionDAGISel::Select_PATCHPOINT(SDNode *N) {
   Ops.push_back(RegMask);
   Ops.push_back(Chain);
   if (Glue.has_value())
-    Ops.push_back(Glue.value());
+    Ops.push_back(*Glue);
 
   SDVTList NodeTys = N->getVTList();
   CurDAG->SelectNodeTo(N, TargetOpcode::PATCHPOINT, NodeTys, Ops);
@@ -3815,5 +3816,3 @@ void SelectionDAGISel::CannotYetSelect(SDNode *N) {
   }
   report_fatal_error(Twine(Msg.str()));
 }
-
-char SelectionDAGISel::ID = 0;

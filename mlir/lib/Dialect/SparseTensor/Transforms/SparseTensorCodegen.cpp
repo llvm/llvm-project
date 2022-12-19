@@ -133,9 +133,10 @@ static scf::ForOp createFor(OpBuilder &builder, Location loc, Value upper,
 /// Gets the dimension size for the given sparse tensor at the given
 /// original dimension 'dim'. Returns std::nullopt if no sparse encoding is
 /// attached to the given tensor type.
-static Optional<Value> sizeFromTensorAtDim(OpBuilder &builder, Location loc,
-                                           SparseTensorDescriptor desc,
-                                           unsigned dim) {
+static std::optional<Value> sizeFromTensorAtDim(OpBuilder &builder,
+                                                Location loc,
+                                                SparseTensorDescriptor desc,
+                                                unsigned dim) {
   RankedTensorType rtp = desc.getTensorType();
   // Access into static dimension can query original type directly.
   // Note that this is typically already done by DimOp's folding.
@@ -681,7 +682,7 @@ public:
   LogicalResult
   matchAndRewrite(tensor::DimOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Optional<int64_t> index = op.getConstantIndex();
+    std::optional<int64_t> index = op.getConstantIndex();
     if (!index || !getSparseTensorEncoding(adaptor.getSource().getType()))
       return failure();
 

@@ -84,7 +84,7 @@ LogicalResult emitc::CallOp::verify() {
   if (getCallee().empty())
     return emitOpError("callee must not be empty");
 
-  if (Optional<ArrayAttr> argsAttr = getArgs()) {
+  if (std::optional<ArrayAttr> argsAttr = getArgs()) {
     for (Attribute arg : *argsAttr) {
       auto intAttr = arg.dyn_cast<IntegerAttr>();
       if (intAttr && intAttr.getType().isa<IndexType>()) {
@@ -102,7 +102,7 @@ LogicalResult emitc::CallOp::verify() {
     }
   }
 
-  if (Optional<ArrayAttr> templateArgsAttr = getTemplateArgs()) {
+  if (std::optional<ArrayAttr> templateArgsAttr = getTemplateArgs()) {
     for (Attribute tArg : *templateArgsAttr) {
       if (!tArg.isa<TypeAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>())
         return emitOpError("template argument has invalid type");
