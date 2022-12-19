@@ -7,7 +7,7 @@ entry:
   br i1 undef, label %CF, label %CF77
 
 CF:                                               ; preds = %CF, %CF76
-  store float %B26, float* undef
+  store float %B26, ptr undef
   br i1 undef, label %CF, label %CF77
 
 CF77:                                             ; preds = %CF

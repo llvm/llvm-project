@@ -9,11 +9,11 @@ define void @test_stack_no_frame() {
 ; CHECK: test_stack_no_frame
 ; CHECK: sub sp, sp, #[[STACKSIZE:[0-9]+]]
   %local = alloca [20 x i64]
-  %val = load volatile [20 x i64], [20 x i64]* @global, align 8
-  store volatile [20 x i64] %val, [20 x i64]* %local, align 8
+  %val = load volatile [20 x i64], ptr @global, align 8
+  store volatile [20 x i64] %val, ptr %local, align 8
 
-  %val2 = load volatile [20 x i64], [20 x i64]* %local, align 8
-  store volatile [20 x i64] %val2, [20 x i64]* @global, align 8
+  %val2 = load volatile [20 x i64], ptr %local, align 8
+  store volatile [20 x i64] %val2, ptr @global, align 8
 
 ; CHECK: add sp, sp, #[[STACKSIZE]]
   ret void

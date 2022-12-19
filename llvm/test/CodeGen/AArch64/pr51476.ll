@@ -19,8 +19,8 @@ define void @test(i8 %arg) nounwind {
   %tmp = alloca i8
   %cmp1 = icmp ne i8 %arg, 1
   %zext = zext i1 %cmp1 to i8
-  store i8 %zext, i8* %tmp
-  %zext2 = load i8, i8* %tmp
+  store i8 %zext, ptr %tmp
+  %zext2 = load i8, ptr %tmp
   %cmp2 = icmp eq i8 %zext2, 3
   br i1 %cmp2, label %exit, label %do_call
 

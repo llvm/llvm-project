@@ -106,7 +106,7 @@ define i32 @n7_fshr(i32 %x, i32 %y, i8 %shamt) nounwind {
   ret i32 %r
 }
 
-define i32 @n8_extrause(i32 %x, i8 %shamt, i32* %shamt_wide_store) nounwind {
+define i32 @n8_extrause(i32 %x, i8 %shamt, ptr %shamt_wide_store) nounwind {
 ; CHECK-LABEL: n8_extrause:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sxtb w8, w1
@@ -114,7 +114,7 @@ define i32 @n8_extrause(i32 %x, i8 %shamt, i32* %shamt_wide_store) nounwind {
 ; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
   %shamt_wide = sext i8 %shamt to i32
-  store i32 %shamt_wide, i32* %shamt_wide_store, align 4
+  store i32 %shamt_wide, ptr %shamt_wide_store, align 4
   %r = shl i32 %x, %shamt_wide
   ret i32 %r
 }
