@@ -895,9 +895,17 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
                   std::move(*Req));
       } break;
       case concepts::Requirement::RK_Nested: {
-        if (/* IsSubstitutionDiagnostic */Record.readInt()) {
+        bool HasInvalidConstraint = Record.readInt();
+        if (HasInvalidConstraint) {
+          std::string InvalidConstraint = Record.readString();
+          char *InvalidConstraintBuf =
+              new (Record.getContext()) char[InvalidConstraint.size()];
+          std::copy(InvalidConstraint.begin(), InvalidConstraint.end(),
+                    InvalidConstraintBuf);
           R = new (Record.getContext()) concepts::NestedRequirement(
-              readSubstitutionDiagnostic(Record));
+              Record.getContext(),
+              StringRef(InvalidConstraintBuf, InvalidConstraint.size()),
+              readConstraintSatisfaction(Record));
           break;
         }
         Expr *E = Record.readExpr();

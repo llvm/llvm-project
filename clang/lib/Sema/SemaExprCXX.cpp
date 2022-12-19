@@ -9091,9 +9091,11 @@ Sema::BuildNestedRequirement(Expr *Constraint) {
 }
 
 concepts::NestedRequirement *
-Sema::BuildNestedRequirement(
-    concepts::Requirement::SubstitutionDiagnostic *SubstDiag) {
-  return new (Context) concepts::NestedRequirement(SubstDiag);
+Sema::BuildNestedRequirement(StringRef InvalidConstraintEntity,
+                       const ASTConstraintSatisfaction &Satisfaction) {
+  return new (Context) concepts::NestedRequirement(
+      InvalidConstraintEntity,
+      ASTConstraintSatisfaction::Rebuild(Context, Satisfaction));
 }
 
 RequiresExprBodyDecl *
