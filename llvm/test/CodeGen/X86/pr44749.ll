@@ -30,13 +30,13 @@ define i32 @a() {
 entry:
   %call = call i32 (...) @b()
   %conv = sitofp i32 %call to double
-  %fsub = fsub double sitofp (i32 select (i1 icmp ne (i8* (i64, i64)* bitcast (i8* getelementptr (i8, i8* bitcast (i8* (i64, i64)* @calloc to i8*), i64 1) to i8* (i64, i64)*), i8* (i64, i64)* null), i32 1, i32 0) to double), 1.000000e+02
+  %fsub = fsub double sitofp (i32 select (i1 icmp ne (ptr getelementptr (i8, ptr @calloc, i64 1), ptr null), i32 1, i32 0) to double), 1.000000e+02
   %cmp = fcmp ole double %fsub, %conv
   %cond = select i1 %cmp, double 1.000000e+00, double 3.140000e+00
   %conv2 = fptosi double %cond to i32
   ret i32 %conv2
 }
 
-declare i8* @calloc(i64, i64)
+declare ptr @calloc(i64, i64)
 
 declare i32 @b(...)
