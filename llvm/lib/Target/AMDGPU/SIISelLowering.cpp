@@ -2648,7 +2648,7 @@ SDValue SITargetLowering::LowerFormalArguments(
       ST.getFlatWorkGroupSizes(Fn).second > ST.getWavefrontSize()) {
 
     int WorkGroupInfoSgprNo =
-        AMDGPU::getIntegerAttribute(Fn, "amdgpu-work-group-info-arg-no", -1);
+        Fn.getFnAttributeAsParsedInteger("amdgpu-work-group-info-arg-no", -1);
     if (WorkGroupInfoSgprNo != -1)
       for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
         const ISD::InputArg &Arg = Ins[i];
