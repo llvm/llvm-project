@@ -188,17 +188,14 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
 
 static bool convertExternsToLinkOnce(Module *MOUT, LLVMContext &Ctx) {
   // Convert all external functions to LinkOnceODR so they get inlined
-  // and removed by the optimizer in the next HIP driver step.
-  // After next opt step, only kernels will exist
+  // and removed by the optimizer unless optnone is set
   for (Module::iterator i = MOUT->begin(), e = MOUT->end(); i != e; ++i) {
     llvm::Function *F = &*i;
     if (!i->isDeclaration()) {
       if (Verbose)
         errs() << "Function attribute cleanup for\'"
                << F->getName().str().c_str() << "\' \n";
-      if (i->getCallingConv() == llvm::CallingConv::AMDGPU_KERNEL) {
-        F->removeFnAttr(llvm::Attribute::OptimizeNone);
-      } else {
+      if (i->getCallingConv() != llvm::CallingConv::AMDGPU_KERNEL) {
         if (!strncmp(F->getName().str().c_str(), "__ockl_devmem_request",
                      strlen("__ockl_devmem_request")))
           continue;
@@ -215,9 +212,11 @@ static bool convertExternsToLinkOnce(Module *MOUT, LLVMContext &Ctx) {
         // all other functions
         F->setLinkage(GlobalValue::LinkOnceODRLinkage);
         F->setVisibility(GlobalValue::ProtectedVisibility);
-        F->removeFnAttr(llvm::Attribute::OptimizeNone);
-        F->removeFnAttr(llvm::Attribute::NoInline);
-        F->addFnAttr(llvm::Attribute::AlwaysInline);
+        if (!F->hasOptNone()) {
+          F->removeFnAttr(llvm::Attribute::OptimizeNone);
+          F->removeFnAttr(llvm::Attribute::NoInline);
+          F->addFnAttr(llvm::Attribute::AlwaysInline);
+	}
       }
     }
   }
