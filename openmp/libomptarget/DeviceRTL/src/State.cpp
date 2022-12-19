@@ -17,7 +17,7 @@
 #include "Types.h"
 #include "Utils.h"
 
-using namespace _OMP;
+using namespace ompx;
 
 #pragma omp begin declare target device_type(nohost)
 
@@ -221,8 +221,8 @@ void state::TeamStateTy::assertEqual(TeamStateTy &Other) const {
   ASSERT(HasThreadState == Other.HasThreadState);
 }
 
-state::TeamStateTy SHARED(_OMP::state::TeamState);
-state::ThreadStateTy **SHARED(_OMP::state::ThreadStates);
+state::TeamStateTy SHARED(ompx::state::TeamState);
+state::ThreadStateTy **SHARED(ompx::state::ThreadStates);
 
 namespace {
 

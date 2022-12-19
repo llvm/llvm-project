@@ -16,7 +16,7 @@
 
 #pragma omp begin declare target device_type(nohost)
 
-namespace _OMP {
+namespace ompx {
 namespace utils {
 
 /// Return the value \p Var from thread Id \p SrcLane in the warp if the thread
@@ -89,7 +89,7 @@ __attribute__((loader_uninitialized)) static void *const UndefPtr;
 #define OMP_UNLIKELY(EXPR) __builtin_expect((bool)(EXPR), false)
 
 } // namespace utils
-} // namespace _OMP
+} // namespace ompx
 
 #pragma omp end declare target
 
