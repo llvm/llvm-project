@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK-LE
 ; RUN: llc -mtriple=thumbebv8.1m.main-none-none-eabi -mattr=+mve -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK-BE
 
-define arm_aapcs_vfpcc <4 x i32> @load_4xi32_a4(<4 x i32>* %vp) {
+define arm_aapcs_vfpcc <4 x i32> @load_4xi32_a4(ptr %vp) {
 ; CHECK-LE-LABEL: load_4xi32_a4:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vldrw.u32 q0, [r0]
@@ -16,12 +16,12 @@ define arm_aapcs_vfpcc <4 x i32> @load_4xi32_a4(<4 x i32>* %vp) {
 ; CHECK-BE-NEXT:    vrev64.32 q0, q1
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %vp, align 4
+  %0 = load <4 x i32>, ptr %vp, align 4
   %1 = lshr <4 x i32> %0, <i32 1, i32 1, i32 1, i32 1>
   ret <4 x i32> %1
 }
 
-define arm_aapcs_vfpcc <4 x i32> @load_4xi32_a2(<4 x i32>* %vp) {
+define arm_aapcs_vfpcc <4 x i32> @load_4xi32_a2(ptr %vp) {
 ; CHECK-LE-LABEL: load_4xi32_a2:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vldrh.u16 q0, [r0]
@@ -36,12 +36,12 @@ define arm_aapcs_vfpcc <4 x i32> @load_4xi32_a2(<4 x i32>* %vp) {
 ; CHECK-BE-NEXT:    vrev64.32 q0, q1
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %vp, align 2
+  %0 = load <4 x i32>, ptr %vp, align 2
   %1 = lshr <4 x i32> %0, <i32 1, i32 1, i32 1, i32 1>
   ret <4 x i32> %1
 }
 
-define arm_aapcs_vfpcc <4 x i32> @load_4xi32_a1(<4 x i32>* %vp) {
+define arm_aapcs_vfpcc <4 x i32> @load_4xi32_a1(ptr %vp) {
 ; CHECK-LE-LABEL: load_4xi32_a1:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vldrb.u8 q0, [r0]
@@ -56,12 +56,12 @@ define arm_aapcs_vfpcc <4 x i32> @load_4xi32_a1(<4 x i32>* %vp) {
 ; CHECK-BE-NEXT:    vrev64.32 q0, q1
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %vp, align 1
+  %0 = load <4 x i32>, ptr %vp, align 1
   %1 = lshr <4 x i32> %0, <i32 1, i32 1, i32 1, i32 1>
   ret <4 x i32> %1
 }
 
-define arm_aapcs_vfpcc void @store_4xi32_a4(<4 x i32>* %vp, <4 x i32> %val) {
+define arm_aapcs_vfpcc void @store_4xi32_a4(ptr %vp, <4 x i32> %val) {
 ; CHECK-LE-LABEL: store_4xi32_a4:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vshr.u32 q0, q0, #1
@@ -76,11 +76,11 @@ define arm_aapcs_vfpcc void @store_4xi32_a4(<4 x i32>* %vp, <4 x i32> %val) {
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %0 = lshr <4 x i32> %val, <i32 1, i32 1, i32 1, i32 1>
-  store <4 x i32> %0, <4 x i32>* %vp, align 4
+  store <4 x i32> %0, ptr %vp, align 4
   ret void
 }
 
-define arm_aapcs_vfpcc void @store_4xi32_a2(<4 x i32>* %vp, <4 x i32> %val) {
+define arm_aapcs_vfpcc void @store_4xi32_a2(ptr %vp, <4 x i32> %val) {
 ; CHECK-LE-LABEL: store_4xi32_a2:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vshr.u32 q0, q0, #1
@@ -96,11 +96,11 @@ define arm_aapcs_vfpcc void @store_4xi32_a2(<4 x i32>* %vp, <4 x i32> %val) {
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %0 = lshr <4 x i32> %val, <i32 1, i32 1, i32 1, i32 1>
-  store <4 x i32> %0, <4 x i32>* %vp, align 2
+  store <4 x i32> %0, ptr %vp, align 2
   ret void
 }
 
-define arm_aapcs_vfpcc void @store_4xi32_a1(<4 x i32>* %vp, <4 x i32> %val) {
+define arm_aapcs_vfpcc void @store_4xi32_a1(ptr %vp, <4 x i32> %val) {
 ; CHECK-LE-LABEL: store_4xi32_a1:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vshr.u32 q0, q0, #1
@@ -116,11 +116,11 @@ define arm_aapcs_vfpcc void @store_4xi32_a1(<4 x i32>* %vp, <4 x i32> %val) {
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %0 = lshr <4 x i32> %val, <i32 1, i32 1, i32 1, i32 1>
-  store <4 x i32> %0, <4 x i32>* %vp, align 1
+  store <4 x i32> %0, ptr %vp, align 1
   ret void
 }
 
-define arm_aapcs_vfpcc <4 x i32> @load_4xi32_a4_offset_pos(i32* %ip) {
+define arm_aapcs_vfpcc <4 x i32> @load_4xi32_a4_offset_pos(ptr %ip) {
 ; CHECK-LE-LABEL: load_4xi32_a4_offset_pos:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vldrw.u32 q0, [r0, #508]
@@ -133,13 +133,12 @@ define arm_aapcs_vfpcc <4 x i32> @load_4xi32_a4_offset_pos(i32* %ip) {
 ; CHECK-BE-NEXT:    vrev64.8 q0, q1
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %ipoffset = getelementptr inbounds i32, i32* %ip, i32 127
-  %vp = bitcast i32* %ipoffset to <4 x i32>*
-  %0 = load <4 x i32>, <4 x i32>* %vp, align 4
+  %ipoffset = getelementptr inbounds i32, ptr %ip, i32 127
+  %0 = load <4 x i32>, ptr %ipoffset, align 4
   ret <4 x i32> %0
 }
 
-define arm_aapcs_vfpcc <4 x i32> @load_4xi32_a4_offset_neg(i32* %ip) {
+define arm_aapcs_vfpcc <4 x i32> @load_4xi32_a4_offset_neg(ptr %ip) {
 ; CHECK-LE-LABEL: load_4xi32_a4_offset_neg:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vldrw.u32 q0, [r0, #-508]
@@ -152,9 +151,8 @@ define arm_aapcs_vfpcc <4 x i32> @load_4xi32_a4_offset_neg(i32* %ip) {
 ; CHECK-BE-NEXT:    vrev64.8 q0, q1
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %ipoffset = getelementptr inbounds i32, i32* %ip, i32 -127
-  %vp = bitcast i32* %ipoffset to <4 x i32>*
-  %0 = load <4 x i32>, <4 x i32>* %vp, align 4
+  %ipoffset = getelementptr inbounds i32, ptr %ip, i32 -127
+  %0 = load <4 x i32>, ptr %ipoffset, align 4
   ret <4 x i32> %0
 }
 
@@ -189,16 +187,12 @@ define arm_aapcs_vfpcc <4 x i32> @loadstore_4xi32_stack_off16() {
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = alloca [1 x [5 x [2 x i32]]], align 4
-  %0 = bitcast [1 x [5 x [2 x i32]]]* %c to i8*
-  %arrayidx5 = getelementptr inbounds [1 x [5 x [2 x i32]]], [1 x [5 x [2 x i32]]]* %c, i32 0, i32 0, i32 0, i32 0
-  %1 = bitcast [1 x [5 x [2 x i32]]]* %c to <4 x i32>*
-  store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32>* %1, align 4
-  %arrayidx5.2 = getelementptr inbounds [1 x [5 x [2 x i32]]], [1 x [5 x [2 x i32]]]* %c, i32 0, i32 0, i32 2, i32 0
-  %2 = bitcast i32* %arrayidx5.2 to <4 x i32>*
-  store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32>* %2, align 4
-  store i32 3, i32* %arrayidx5.2, align 4
-  %3 = load <4 x i32>, <4 x i32>* %2, align 4
-  ret <4 x i32> %3
+  store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr %c, align 4
+  %arrayidx5.2 = getelementptr inbounds [1 x [5 x [2 x i32]]], ptr %c, i32 0, i32 0, i32 2, i32 0
+  store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr %arrayidx5.2, align 4
+  store i32 3, ptr %arrayidx5.2, align 4
+  %0 = load <4 x i32>, ptr %arrayidx5.2, align 4
+  ret <4 x i32> %0
 }
 
 define arm_aapcs_vfpcc <8 x i16> @loadstore_8xi16_stack_off16() {
@@ -232,16 +226,12 @@ define arm_aapcs_vfpcc <8 x i16> @loadstore_8xi16_stack_off16() {
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = alloca [1 x [10 x [2 x i16]]], align 2
-  %0 = bitcast [1 x [10 x [2 x i16]]]* %c to i8*
-  %arrayidx5 = getelementptr inbounds [1 x [10 x [2 x i16]]], [1 x [10 x [2 x i16]]]* %c, i32 0, i32 0, i32 0, i32 0
-  %1 = bitcast [1 x [10 x [2 x i16]]]* %c to <8 x i16>*
-  store <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <8 x i16>* %1, align 2
-  %arrayidx5.2 = getelementptr inbounds [1 x [10 x [2 x i16]]], [1 x [10 x [2 x i16]]]* %c, i32 0, i32 0, i32 4, i32 0
-  %2 = bitcast i16* %arrayidx5.2 to <8 x i16>*
-  store <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <8 x i16>* %2, align 2
-  store i16 3, i16* %arrayidx5.2, align 2
-  %3 = load <8 x i16>, <8 x i16>* %2, align 2
-  ret <8 x i16> %3
+  store <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, ptr %c, align 2
+  %arrayidx5.2 = getelementptr inbounds [1 x [10 x [2 x i16]]], ptr %c, i32 0, i32 0, i32 4, i32 0
+  store <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, ptr %arrayidx5.2, align 2
+  store i16 3, ptr %arrayidx5.2, align 2
+  %0 = load <8 x i16>, ptr %arrayidx5.2, align 2
+  ret <8 x i16> %0
 }
 
 define arm_aapcs_vfpcc <16 x i8> @loadstore_16xi8_stack_off16() {
@@ -275,14 +265,10 @@ define arm_aapcs_vfpcc <16 x i8> @loadstore_16xi8_stack_off16() {
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = alloca [1 x [20 x [2 x i8]]], align 1
-  %0 = bitcast [1 x [20 x [2 x i8]]]* %c to i8*
-  %arrayidx5 = getelementptr inbounds [1 x [20 x [2 x i8]]], [1 x [20 x [2 x i8]]]* %c, i32 0, i32 0, i32 0, i32 0
-  %1 = bitcast [1 x [20 x [2 x i8]]]* %c to <16 x i8>*
-  store <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, <16 x i8>* %1, align 1
-  %arrayidx5.2 = getelementptr inbounds [1 x [20 x [2 x i8]]], [1 x [20 x [2 x i8]]]* %c, i32 0, i32 0, i32 8, i32 0
-  %2 = bitcast i8* %arrayidx5.2 to <16 x i8>*
-  store <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, <16 x i8>* %2, align 1
-  store i8 3, i8* %arrayidx5.2, align 1
-  %3 = load <16 x i8>, <16 x i8>* %2, align 1
-  ret <16 x i8> %3
+  store <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, ptr %c, align 1
+  %arrayidx5.2 = getelementptr inbounds [1 x [20 x [2 x i8]]], ptr %c, i32 0, i32 0, i32 8, i32 0
+  store <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, ptr %arrayidx5.2, align 1
+  store i8 3, ptr %arrayidx5.2, align 1
+  %0 = load <16 x i8>, ptr %arrayidx5.2, align 1
+  ret <16 x i8> %0
 }
