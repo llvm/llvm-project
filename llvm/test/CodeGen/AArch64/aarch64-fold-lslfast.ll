@@ -7,7 +7,7 @@
 %struct.c = type [256 x i64]
 
 declare void @foo()
-define i16 @halfword(%struct.a* %ctx, i32 %xor72) nounwind {
+define i16 @halfword(ptr %ctx, i32 %xor72) nounwind {
 ; CHECK0-LABEL: halfword:
 ; CHECK0:       // %bb.0:
 ; CHECK0-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
@@ -41,14 +41,14 @@ define i16 @halfword(%struct.a* %ctx, i32 %xor72) nounwind {
   %shr81 = lshr i32 %xor72, 9
   %conv82 = zext i32 %shr81 to i64
   %idxprom83 = and i64 %conv82, 255
-  %arrayidx86 = getelementptr inbounds %struct.a, %struct.a* %ctx, i64 0, i64 %idxprom83
-  %result = load i16, i16* %arrayidx86, align 2
+  %arrayidx86 = getelementptr inbounds %struct.a, ptr %ctx, i64 0, i64 %idxprom83
+  %result = load i16, ptr %arrayidx86, align 2
   call void @foo()
-  store i16 %result, i16* %arrayidx86, align 2
+  store i16 %result, ptr %arrayidx86, align 2
   ret i16 %result
 }
 
-define i32 @word(%struct.b* %ctx, i32 %xor72) nounwind {
+define i32 @word(ptr %ctx, i32 %xor72) nounwind {
 ; CHECK0-LABEL: word:
 ; CHECK0:       // %bb.0:
 ; CHECK0-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
@@ -82,14 +82,14 @@ define i32 @word(%struct.b* %ctx, i32 %xor72) nounwind {
   %shr81 = lshr i32 %xor72, 9
   %conv82 = zext i32 %shr81 to i64
   %idxprom83 = and i64 %conv82, 255
-  %arrayidx86 = getelementptr inbounds %struct.b, %struct.b* %ctx, i64 0, i64 %idxprom83
-  %result = load i32, i32* %arrayidx86, align 4
+  %arrayidx86 = getelementptr inbounds %struct.b, ptr %ctx, i64 0, i64 %idxprom83
+  %result = load i32, ptr %arrayidx86, align 4
   call void @foo()
-  store i32 %result, i32* %arrayidx86, align 4
+  store i32 %result, ptr %arrayidx86, align 4
   ret i32 %result
 }
 
-define i64 @doubleword(%struct.c* %ctx, i32 %xor72) nounwind {
+define i64 @doubleword(ptr %ctx, i32 %xor72) nounwind {
 ; CHECK0-LABEL: doubleword:
 ; CHECK0:       // %bb.0:
 ; CHECK0-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
@@ -123,10 +123,10 @@ define i64 @doubleword(%struct.c* %ctx, i32 %xor72) nounwind {
   %shr81 = lshr i32 %xor72, 9
   %conv82 = zext i32 %shr81 to i64
   %idxprom83 = and i64 %conv82, 255
-  %arrayidx86 = getelementptr inbounds %struct.c, %struct.c* %ctx, i64 0, i64 %idxprom83
-  %result = load i64, i64* %arrayidx86, align 8
+  %arrayidx86 = getelementptr inbounds %struct.c, ptr %ctx, i64 0, i64 %idxprom83
+  %result = load i64, ptr %arrayidx86, align 8
   call void @foo()
-  store i64 %result, i64* %arrayidx86, align 8
+  store i64 %result, ptr %arrayidx86, align 8
   ret i64 %result
 }
 
@@ -162,7 +162,7 @@ endbb:
  ret i64 %mul2
 }
 
-define i64 @gep3(i64 *%p, i64 %b) {
+define i64 @gep3(ptr %p, i64 %b) {
 ; CHECK0-LABEL: gep3:
 ; CHECK0:       // %bb.0:
 ; CHECK0-NEXT:    lsl x9, x1, #3
@@ -177,22 +177,22 @@ define i64 @gep3(i64 *%p, i64 %b) {
 ; CHECK3-NEXT:    ldr x0, [x0, x1, lsl #3]
 ; CHECK3-NEXT:    str x1, [x8, x1, lsl #3]
 ; CHECK3-NEXT:    ret
-  %g = getelementptr inbounds i64, i64* %p, i64 %b
-  %l = load i64, i64* %g
-  store i64 %b, i64* %g
+  %g = getelementptr inbounds i64, ptr %p, i64 %b
+  %l = load i64, ptr %g
+  store i64 %b, ptr %g
   ret i64 %l
 }
 
-define i128 @gep4(i128 *%p, i128 %a, i64 %b) {
+define i128 @gep4(ptr %p, i128 %a, i64 %b) {
 ; CHECK-LABEL: gep4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add x8, x0, x4, lsl #4
 ; CHECK-NEXT:    ldp x0, x1, [x8]
 ; CHECK-NEXT:    stp x2, x3, [x8]
 ; CHECK-NEXT:    ret
-  %g = getelementptr inbounds i128, i128* %p, i64 %b
-  %l = load i128, i128* %g
-  store i128 %a, i128* %g
+  %g = getelementptr inbounds i128, ptr %p, i64 %b
+  %l = load i128, ptr %g
+  store i128 %a, ptr %g
   ret i128 %l
 }
 

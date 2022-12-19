@@ -191,7 +191,7 @@ entry:
     ret <4 x i32> %out
 }
 
-define void @typei1_orig(i64 %a, i8* %p, <8 x i16>* %q) {
+define void @typei1_orig(i64 %a, ptr %p, ptr %q) {
 ; CHECK-LABEL: typei1_orig:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
@@ -207,7 +207,7 @@ define void @typei1_orig(i64 %a, i8* %p, <8 x i16>* %q) {
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
     %tmp = xor <16 x i1> zeroinitializer, <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
-    %tmp6 = load <8 x i16>, <8 x i16>* %q, align 2
+    %tmp6 = load <8 x i16>, ptr %q, align 2
     %tmp7 = sub <8 x i16> zeroinitializer, %tmp6
     %tmp8 = shufflevector <8 x i16> %tmp7, <8 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
     %tmp9 = icmp slt i64 0, %a
@@ -218,8 +218,7 @@ define void @typei1_orig(i64 %a, i8* %p, <8 x i16>* %q) {
     %tmp14 = icmp ne <16 x i16> %tmp13, zeroinitializer
     %tmp15 = and <16 x i1> %tmp14, %tmp
     %tmp16 = sext <16 x i1> %tmp15 to <16 x i8>
-    %tmp17 = bitcast i8* %p to <16 x i8>*
-    store <16 x i8> %tmp16, <16 x i8>* %tmp17, align 1
+    store <16 x i8> %tmp16, ptr %p, align 1
     ret void
 }
 

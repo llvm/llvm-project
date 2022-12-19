@@ -5,7 +5,7 @@ target triple = "aarch64-unknown-unknown-eabi"
 ; Function Attrs: nounwind
 define dso_local void @f(i64 %v) local_unnamed_addr #0 {
 entry:
-  %call = tail call i32 bitcast (i32 (...)* @test to i32 ()*)() #0
+  %call = tail call i32 @test() #0
   %and = and i32 %call, 2
   %cmp = icmp eq i32 %and, 0
   br i1 %cmp, label %if.then, label %if.else
@@ -20,19 +20,19 @@ if.then:                                          ; preds = %entry
   ]
 
 sw.bb:                                            ; preds = %if.then
-  tail call void bitcast (void (...)* @g0 to void ()*)() #0
+  tail call void @g0() #0
   br label %sw.bb1
 
 sw.bb1:                                           ; preds = %if.then, %sw.bb
-  tail call void bitcast (void (...)* @g1 to void ()*)() #0
+  tail call void @g1() #0
   br label %sw.bb2
 
 sw.bb2:                                           ; preds = %if.then, %sw.bb1
-  tail call void bitcast (void (...)* @g2 to void ()*)() #0
+  tail call void @g2() #0
   br label %sw.bb3
 
 sw.bb3:                                           ; preds = %if.then, %sw.bb2
-  tail call void bitcast (void (...)* @g3 to void ()*)() #0
+  tail call void @g3() #0
   br label %sw.epilog
 
 sw.epilog:                                        ; preds = %sw.bb3, %if.then
@@ -40,7 +40,7 @@ sw.epilog:                                        ; preds = %sw.bb3, %if.then
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  tail call void bitcast (void (...)* @e to void ()*)() #0
+  tail call void @e() #0
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %sw.epilog

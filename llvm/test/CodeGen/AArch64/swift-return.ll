@@ -41,8 +41,8 @@ declare swiftcc { i16, i8 } @gen(i32)
 define i64 @test2(i64 %key) {
 entry:
   %key.addr = alloca i64, align 4
-  store i64 %key, i64* %key.addr, align 4
-  %0 = load i64, i64* %key.addr, align 4
+  store i64 %key, ptr %key.addr, align 4
+  %0 = load i64, ptr %key.addr, align 4
   %call = call swiftcc { i64, i64, i64, i64, i64 } @gen2(i64 %0)
 
   %v3 = extractvalue { i64, i64, i64, i64, i64 } %call, 0

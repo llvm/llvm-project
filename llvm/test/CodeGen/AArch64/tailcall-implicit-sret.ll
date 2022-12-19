@@ -38,7 +38,7 @@ define i1024 @test_tailcall_sret() #0 {
 ; CHECK: ldr [[CALLERSRET1:q[0-9]+]], [sp]
 ; CHECK: str [[CALLERSRET1:q[0-9]+]], [x[[CALLERX8NUM]]]
 ; CHECK: ret
-define i1024 @test_indirect_tailcall_sret(i1024 ()* %f) #0 {
+define i1024 @test_indirect_tailcall_sret(ptr %f) #0 {
   %a = tail call i1024 %f()
   ret i1024 %a
 }
