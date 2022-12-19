@@ -118,3 +118,19 @@ func.func @matmul(%A: tensor<12x9xf32>, %B: tensor<9x6xf32>, %C: tensor<12x6xf32
   // CHECK: return %[[C]] : memref<12x6xf32>
   return %D : tensor<12x6xf32>
 }
+
+// -----
+
+transform.sequence failures(propagate) {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["tensor.empty"]} in %arg1
+    %1 = transform.cast %0 : !pdl.operation to !transform.op<"tensor.empty">
+    transform.bufferization.empty_tensor_to_alloc_tensor %1 : (!transform.op<"tensor.empty">) -> !transform.op<"bufferization.alloc_tensor">
+}
+
+// Expect `bufferization.empty_tensor_to_alloc_tensor` to replace the tensor.empty.
+func.func @empty_to_tensor_alloc() -> tensor<2x2xf32> {
+  // CHECK: bufferization.alloc_tensor
+  %0 = tensor.empty() : tensor<2x2xf32>
+  return %0 : tensor<2x2xf32>
+}
