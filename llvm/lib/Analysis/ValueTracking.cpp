@@ -5267,15 +5267,12 @@ static bool directlyImpliesPoison(const Value *ValAssumedPoison,
     return false;
 
   if (const auto *I = dyn_cast<Instruction>(V)) {
-    if (propagatesPoison(cast<Operator>(I)))
-      return any_of(I->operands(), [=](const Value *Op) {
-        return directlyImpliesPoison(ValAssumedPoison, Op, Depth + 1);
-      });
+    if (any_of(I->operands(), [=](const Use &Op) {
+          return propagatesPoison(Op) &&
+                 directlyImpliesPoison(ValAssumedPoison, Op, Depth + 1);
+        }))
+      return true;
 
-    // 'select ValAssumedPoison, _, _' is poison.
-    if (const auto *SI = dyn_cast<SelectInst>(I))
-      return directlyImpliesPoison(ValAssumedPoison, SI->getCondition(),
-                                   Depth + 1);
     // V  = extractvalue V0, idx
     // V2 = extractvalue V0, idx2
     // V0's elements are all poison or not. (e.g., add_with_overflow)
@@ -5433,7 +5430,8 @@ static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
       else if (PoisonOnly && isa<Operator>(Cond)) {
         // For poison, we can analyze further
         auto *Opr = cast<Operator>(Cond);
-        if (propagatesPoison(Opr) && is_contained(Opr->operand_values(), V))
+        if (any_of(Opr->operands(),
+                   [V](const Use &U) { return V == U && propagatesPoison(U); }))
           return true;
       }
     }
@@ -5555,13 +5553,15 @@ bool llvm::isGuaranteedToExecuteForEveryIteration(const Instruction *I,
   llvm_unreachable("Instruction not contained in its own parent basic block.");
 }
 
-bool llvm::propagatesPoison(const Operator *I) {
+bool llvm::propagatesPoison(const Use &PoisonOp) {
+  const Operator *I = cast<Operator>(PoisonOp.getUser());
   switch (I->getOpcode()) {
   case Instruction::Freeze:
-  case Instruction::Select:
   case Instruction::PHI:
   case Instruction::Invoke:
     return false;
+  case Instruction::Select:
+    return PoisonOp.getOperandNo() == 0;
   case Instruction::Call:
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
       switch (II->getIntrinsicID()) {
@@ -5729,11 +5729,11 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
   SmallSet<const BasicBlock *, 4> Visited;
 
   YieldsPoison.insert(V);
-  auto Propagate = [&](const User *User) {
-    if (propagatesPoison(cast<Operator>(User)))
-      YieldsPoison.insert(User);
+  auto Propagate = [&](const Use &U) {
+    if (propagatesPoison(U))
+      YieldsPoison.insert(U.getUser());
   };
-  for_each(V->users(), Propagate);
+  for_each(V->uses(), Propagate);
   Visited.insert(BB);
 
   while (true) {
@@ -5749,7 +5749,7 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
 
       // Mark poison that propagates from I through uses of I.
       if (YieldsPoison.count(&I))
-        for_each(I.users(), Propagate);
+        for_each(I.uses(), Propagate);
     }
 
     BB = BB->getSingleSuccessor();
