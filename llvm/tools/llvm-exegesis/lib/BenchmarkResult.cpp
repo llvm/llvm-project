@@ -367,7 +367,7 @@ InstructionBenchmark::readYamls(const LLVMState &State,
       return make_error<Failure>(Context.getLastError());
     Yin.nextDocument();
   }
-  return Benchmarks;
+  return std::move(Benchmarks);
 }
 
 Error InstructionBenchmark::writeYamlTo(const LLVMState &State,
