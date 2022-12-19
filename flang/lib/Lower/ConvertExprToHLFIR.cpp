@@ -883,7 +883,7 @@ HlfirDesignatorBuilder::genSubscript(const Fortran::evaluate::Expr<T> &expr) {
     // IR harder to read: directly use index constants for constant subscripts.
     mlir::Type idxTy = builder.getIndexType();
     if (loweredExpr.getType() != idxTy)
-      if (auto cstIndex = fir::factory::getIntIfConstant(loweredExpr))
+      if (auto cstIndex = fir::getIntIfConstant(loweredExpr))
         return hlfir::EntityWithAttributes{
             builder.createIntegerConstant(getLoc(), idxTy, *cstIndex)};
   }
