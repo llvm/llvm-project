@@ -130,10 +130,10 @@ public:
         m_bp_opts.SetThreadID(thread_id);
     } break;
     case 'T':
-      m_bp_opts.GetThreadSpec()->SetName(option_arg.str());
+      m_bp_opts.GetThreadSpec()->SetName(option_arg.str().c_str());
       break;
     case 'q':
-      m_bp_opts.GetThreadSpec()->SetQueueName(option_arg.str());
+      m_bp_opts.GetThreadSpec()->SetQueueName(option_arg.str().c_str());
       break;
     case 'x': {
       uint32_t thread_index = UINT32_MAX;
