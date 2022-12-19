@@ -449,11 +449,13 @@ public:
 
   void copySymbolBinding(Fortran::lower::SymbolRef src,
                          Fortran::lower::SymbolRef target) override final {
-    if (bridge.getLoweringOptions().getLowerToHighLevelFIR())
-      localSymbols.addVariableDefinition(
-          target, localSymbols.lookupVariableDefinition(src).value());
-    else
+    if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
+      auto srcDef = localSymbols.lookupVariableDefinition(src);
+      assert(srcDef && "source binding does not exists");
+      localSymbols.addVariableDefinition(target, *srcDef);
+    } else {
       localSymbols.addSymbol(target, lookupSymbol(src).toExtendedValue());
+    }
   }
 
   /// Add the symbol binding to the inner-most level of the symbol map and
