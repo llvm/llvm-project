@@ -370,15 +370,18 @@ LatticeJoinEffect Environment::widen(const Environment &PrevEnv,
 
   auto Effect = LatticeJoinEffect::Unchanged;
 
-  // By the API, `PrevEnv` <= `*this`, meaning `join(PrevEnv, *this) =
-  // *this`. That guarantees that these maps are subsets of the maps in
-  // `PrevEnv`. So, we don't need change their current values to widen (in
-  // contrast to `join`).
+  // By the API, `PrevEnv` is a previous version of the environment for the same
+  // block, so we have some guarantees about its shape. In particular, it will
+  // be the result of a join or widen operation on previous values for this
+  // block. For `DeclToLoc` and `ExprToLoc`, join guarantees that these maps are
+  // subsets of the maps in `PrevEnv`. So, as long as we maintain this property
+  // here, we don't need change their current values to widen.
   //
-  // FIXME: The above is violated for `MemberLocToStruct`, because `join` can
-  // cause the map size to increase (when we add fresh data in places of
-  // conflict). Once this issue with join is resolved, re-enable the assertion
-  // below or replace with something that captures the desired invariant.
+  // FIXME: `MemberLocToStruct` does not share the above property, because
+  // `join` can cause the map size to increase (when we add fresh data in places
+  // of conflict). Once this issue with join is resolved, re-enable the
+  // assertion below or replace with something that captures the desired
+  // invariant.
   assert(DeclToLoc.size() <= PrevEnv.DeclToLoc.size());
   assert(ExprToLoc.size() <= PrevEnv.ExprToLoc.size());
   // assert(MemberLocToStruct.size() <= PrevEnv.MemberLocToStruct.size());
