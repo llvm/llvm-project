@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=riscv32 -target-abi=ilp32d -mattr=+v,+zfh,+experimental-zvfh,+f,+d,+zbs -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV32ZBS
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64d -mattr=+v,+zfh,+experimental-zvfh,+f,+d,+zbs -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64ZBS
 
-define i1 @extractelt_v1i1(<1 x i8>* %x, i64 %idx) nounwind {
+define i1 @extractelt_v1i1(ptr %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_v1i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
@@ -16,13 +16,13 @@ define i1 @extractelt_v1i1(<1 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-  %a = load <1 x i8>, <1 x i8>* %x
+  %a = load <1 x i8>, ptr %x
   %b = icmp eq <1 x i8> %a, zeroinitializer
   %c = extractelement <1 x i1> %b, i64 %idx
   ret i1 %c
 }
 
-define i1 @extractelt_v2i1(<2 x i8>* %x, i64 %idx) nounwind {
+define i1 @extractelt_v2i1(ptr %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
@@ -34,13 +34,13 @@ define i1 @extractelt_v2i1(<2 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-  %a = load <2 x i8>, <2 x i8>* %x
+  %a = load <2 x i8>, ptr %x
   %b = icmp eq <2 x i8> %a, zeroinitializer
   %c = extractelement <2 x i1> %b, i64 %idx
   ret i1 %c
 }
 
-define i1 @extractelt_v4i1(<4 x i8>* %x, i64 %idx) nounwind {
+define i1 @extractelt_v4i1(ptr %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_v4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
@@ -52,13 +52,13 @@ define i1 @extractelt_v4i1(<4 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-  %a = load <4 x i8>, <4 x i8>* %x
+  %a = load <4 x i8>, ptr %x
   %b = icmp eq <4 x i8> %a, zeroinitializer
   %c = extractelement <4 x i1> %b, i64 %idx
   ret i1 %c
 }
 
-define i1 @extractelt_v8i1(<8 x i8>* %x, i64 %idx) nounwind {
+define i1 @extractelt_v8i1(ptr %x, i64 %idx) nounwind {
 ; RV32-LABEL: extractelt_v8i1:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
@@ -96,13 +96,13 @@ define i1 @extractelt_v8i1(<8 x i8>* %x, i64 %idx) nounwind {
 ; RV64ZBS-NEXT:    vmv.x.s a0, v8
 ; RV64ZBS-NEXT:    bext a0, a0, a1
 ; RV64ZBS-NEXT:    ret
-  %a = load <8 x i8>, <8 x i8>* %x
+  %a = load <8 x i8>, ptr %x
   %b = icmp eq <8 x i8> %a, zeroinitializer
   %c = extractelement <8 x i1> %b, i64 %idx
   ret i1 %c
 }
 
-define i1 @extractelt_v16i1(<16 x i8>* %x, i64 %idx) nounwind {
+define i1 @extractelt_v16i1(ptr %x, i64 %idx) nounwind {
 ; RV32-LABEL: extractelt_v16i1:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
@@ -144,13 +144,13 @@ define i1 @extractelt_v16i1(<16 x i8>* %x, i64 %idx) nounwind {
 ; RV64ZBS-NEXT:    vmv.x.s a0, v8
 ; RV64ZBS-NEXT:    bext a0, a0, a1
 ; RV64ZBS-NEXT:    ret
-  %a = load <16 x i8>, <16 x i8>* %x
+  %a = load <16 x i8>, ptr %x
   %b = icmp eq <16 x i8> %a, zeroinitializer
   %c = extractelement <16 x i1> %b, i64 %idx
   ret i1 %c
 }
 
-define i1 @extractelt_v32i1(<32 x i8>* %x, i64 %idx) nounwind {
+define i1 @extractelt_v32i1(ptr %x, i64 %idx) nounwind {
 ; RV32-LABEL: extractelt_v32i1:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    li a2, 32
@@ -196,13 +196,13 @@ define i1 @extractelt_v32i1(<32 x i8>* %x, i64 %idx) nounwind {
 ; RV64ZBS-NEXT:    vmv.x.s a0, v10
 ; RV64ZBS-NEXT:    bext a0, a0, a1
 ; RV64ZBS-NEXT:    ret
-  %a = load <32 x i8>, <32 x i8>* %x
+  %a = load <32 x i8>, ptr %x
   %b = icmp eq <32 x i8> %a, zeroinitializer
   %c = extractelement <32 x i1> %b, i64 %idx
   ret i1 %c
 }
 
-define i1 @extractelt_v64i1(<64 x i8>* %x, i64 %idx) nounwind {
+define i1 @extractelt_v64i1(ptr %x, i64 %idx) nounwind {
 ; RV32-LABEL: extractelt_v64i1:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    li a2, 64
@@ -252,13 +252,13 @@ define i1 @extractelt_v64i1(<64 x i8>* %x, i64 %idx) nounwind {
 ; RV64ZBS-NEXT:    vmv.x.s a0, v12
 ; RV64ZBS-NEXT:    bext a0, a0, a1
 ; RV64ZBS-NEXT:    ret
-  %a = load <64 x i8>, <64 x i8>* %x
+  %a = load <64 x i8>, ptr %x
   %b = icmp eq <64 x i8> %a, zeroinitializer
   %c = extractelement <64 x i1> %b, i64 %idx
   ret i1 %c
 }
 
-define i1 @extractelt_v128i1(<128 x i8>* %x, i64 %idx) nounwind {
+define i1 @extractelt_v128i1(ptr %x, i64 %idx) nounwind {
 ; RV32-LABEL: extractelt_v128i1:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    li a2, 128
@@ -312,13 +312,13 @@ define i1 @extractelt_v128i1(<128 x i8>* %x, i64 %idx) nounwind {
 ; RV64ZBS-NEXT:    vmv.x.s a0, v8
 ; RV64ZBS-NEXT:    bext a0, a0, a1
 ; RV64ZBS-NEXT:    ret
-  %a = load <128 x i8>, <128 x i8>* %x
+  %a = load <128 x i8>, ptr %x
   %b = icmp eq <128 x i8> %a, zeroinitializer
   %c = extractelement <128 x i1> %b, i64 %idx
   ret i1 %c
 }
 
-define i1 @extractelt_v256i1(<256 x i8>* %x, i64 %idx) nounwind {
+define i1 @extractelt_v256i1(ptr %x, i64 %idx) nounwind {
 ; RV32-LABEL: extractelt_v256i1:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -384
@@ -442,13 +442,13 @@ define i1 @extractelt_v256i1(<256 x i8>* %x, i64 %idx) nounwind {
 ; RV64ZBS-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
 ; RV64ZBS-NEXT:    addi sp, sp, 384
 ; RV64ZBS-NEXT:    ret
-  %a = load <256 x i8>, <256 x i8>* %x
+  %a = load <256 x i8>, ptr %x
   %b = icmp eq <256 x i8> %a, zeroinitializer
   %c = extractelement <256 x i1> %b, i64 %idx
   ret i1 %c
 }
 
-define i1 @extractelt_v1i1_idx0(<1 x i8>* %x) nounwind {
+define i1 @extractelt_v1i1_idx0(ptr %x) nounwind {
 ; CHECK-LABEL: extractelt_v1i1_idx0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
@@ -458,13 +458,13 @@ define i1 @extractelt_v1i1_idx0(<1 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-  %a = load <1 x i8>, <1 x i8>* %x
+  %a = load <1 x i8>, ptr %x
   %b = icmp eq <1 x i8> %a, zeroinitializer
   %c = extractelement <1 x i1> %b, i64 0
   ret i1 %c
 }
 
-define i1 @extractelt_v2i1_idx0(<2 x i8>* %x) nounwind {
+define i1 @extractelt_v2i1_idx0(ptr %x) nounwind {
 ; CHECK-LABEL: extractelt_v2i1_idx0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
@@ -474,13 +474,13 @@ define i1 @extractelt_v2i1_idx0(<2 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-  %a = load <2 x i8>, <2 x i8>* %x
+  %a = load <2 x i8>, ptr %x
   %b = icmp eq <2 x i8> %a, zeroinitializer
   %c = extractelement <2 x i1> %b, i64 0
   ret i1 %c
 }
 
-define i1 @extractelt_v4i1_idx0(<4 x i8>* %x) nounwind {
+define i1 @extractelt_v4i1_idx0(ptr %x) nounwind {
 ; CHECK-LABEL: extractelt_v4i1_idx0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
@@ -490,13 +490,13 @@ define i1 @extractelt_v4i1_idx0(<4 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-  %a = load <4 x i8>, <4 x i8>* %x
+  %a = load <4 x i8>, ptr %x
   %b = icmp eq <4 x i8> %a, zeroinitializer
   %c = extractelement <4 x i1> %b, i64 0
   ret i1 %c
 }
 
-define i1 @extractelt_v8i1_idx0(<8 x i8>* %x) nounwind {
+define i1 @extractelt_v8i1_idx0(ptr %x) nounwind {
 ; CHECK-LABEL: extractelt_v8i1_idx0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
@@ -505,13 +505,13 @@ define i1 @extractelt_v8i1_idx0(<8 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    ret
-  %a = load <8 x i8>, <8 x i8>* %x
+  %a = load <8 x i8>, ptr %x
   %b = icmp eq <8 x i8> %a, zeroinitializer
   %c = extractelement <8 x i1> %b, i64 0
   ret i1 %c
 }
 
-define i1 @extractelt_v16i1_idx0(<16 x i8>* %x) nounwind {
+define i1 @extractelt_v16i1_idx0(ptr %x) nounwind {
 ; CHECK-LABEL: extractelt_v16i1_idx0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
@@ -521,13 +521,13 @@ define i1 @extractelt_v16i1_idx0(<16 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    ret
-  %a = load <16 x i8>, <16 x i8>* %x
+  %a = load <16 x i8>, ptr %x
   %b = icmp eq <16 x i8> %a, zeroinitializer
   %c = extractelement <16 x i1> %b, i64 0
   ret i1 %c
 }
 
-define i1 @extractelt_v32i1_idx0(<32 x i8>* %x) nounwind {
+define i1 @extractelt_v32i1_idx0(ptr %x) nounwind {
 ; CHECK-LABEL: extractelt_v32i1_idx0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
@@ -538,13 +538,13 @@ define i1 @extractelt_v32i1_idx0(<32 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vmv.x.s a0, v10
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    ret
-  %a = load <32 x i8>, <32 x i8>* %x
+  %a = load <32 x i8>, ptr %x
   %b = icmp eq <32 x i8> %a, zeroinitializer
   %c = extractelement <32 x i1> %b, i64 0
   ret i1 %c
 }
 
-define i1 @extractelt_v64i1_idx0(<64 x i8>* %x) nounwind {
+define i1 @extractelt_v64i1_idx0(ptr %x) nounwind {
 ; RV32-LABEL: extractelt_v64i1_idx0:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    li a1, 64
@@ -588,13 +588,13 @@ define i1 @extractelt_v64i1_idx0(<64 x i8>* %x) nounwind {
 ; RV64ZBS-NEXT:    vmv.x.s a0, v12
 ; RV64ZBS-NEXT:    andi a0, a0, 1
 ; RV64ZBS-NEXT:    ret
-  %a = load <64 x i8>, <64 x i8>* %x
+  %a = load <64 x i8>, ptr %x
   %b = icmp eq <64 x i8> %a, zeroinitializer
   %c = extractelement <64 x i1> %b, i64 0
   ret i1 %c
 }
 
-define i1 @extractelt_v128i1_idx0(<128 x i8>* %x) nounwind {
+define i1 @extractelt_v128i1_idx0(ptr %x) nounwind {
 ; RV32-LABEL: extractelt_v128i1_idx0:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    li a1, 128
@@ -638,13 +638,13 @@ define i1 @extractelt_v128i1_idx0(<128 x i8>* %x) nounwind {
 ; RV64ZBS-NEXT:    vmv.x.s a0, v16
 ; RV64ZBS-NEXT:    andi a0, a0, 1
 ; RV64ZBS-NEXT:    ret
-  %a = load <128 x i8>, <128 x i8>* %x
+  %a = load <128 x i8>, ptr %x
   %b = icmp eq <128 x i8> %a, zeroinitializer
   %c = extractelement <128 x i1> %b, i64 0
   ret i1 %c
 }
 
-define i1 @extractelt_v256i1_idx0(<256 x i8>* %x) nounwind {
+define i1 @extractelt_v256i1_idx0(ptr %x) nounwind {
 ; RV32-LABEL: extractelt_v256i1_idx0:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    li a1, 128
@@ -688,7 +688,7 @@ define i1 @extractelt_v256i1_idx0(<256 x i8>* %x) nounwind {
 ; RV64ZBS-NEXT:    vmv.x.s a0, v16
 ; RV64ZBS-NEXT:    andi a0, a0, 1
 ; RV64ZBS-NEXT:    ret
-  %a = load <256 x i8>, <256 x i8>* %x
+  %a = load <256 x i8>, ptr %x
   %b = icmp eq <256 x i8> %a, zeroinitializer
   %c = extractelement <256 x i1> %b, i64 0
   ret i1 %c

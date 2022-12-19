@@ -22,9 +22,9 @@ define dso_local i32 @test_zext_i8() nounwind {
 ; RV32I-NEXT:  .LBB0_2: # %if.end
 ; RV32I-NEXT:    ret
 entry:
-  %0 = load i8, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @bytes, i32 0, i32 0), align 1
+  %0 = load i8, ptr @bytes, align 1
   %cmp = icmp eq i8 %0, -120
-  %1 = load i8, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @bytes, i32 0, i32 1), align 1
+  %1 = load i8, ptr getelementptr inbounds ([5 x i8], ptr @bytes, i32 0, i32 1), align 1
   %cmp3 = icmp eq i8 %1, 7
   %or.cond = and i1 %cmp, %cmp3
   br i1 %or.cond, label %if.end, label %if.then
@@ -56,9 +56,9 @@ define dso_local i32 @test_zext_i16() nounwind {
 ; RV32I-NEXT:  .LBB1_2: # %if.end
 ; RV32I-NEXT:    ret
 entry:
-  %0 = load i16, i16* getelementptr inbounds ([5 x i16], [5 x i16]* @shorts, i32 0, i32 0), align 2
+  %0 = load i16, ptr @shorts, align 2
   %cmp = icmp eq i16 %0, -120
-  %1 = load i16, i16* getelementptr inbounds ([5 x i16], [5 x i16]* @shorts, i32 0, i32 1), align 2
+  %1 = load i16, ptr getelementptr inbounds ([5 x i16], ptr @shorts, i32 0, i32 1), align 2
   %cmp3 = icmp eq i16 %1, 7
   %or.cond = and i1 %cmp, %cmp3
   br i1 %or.cond, label %if.end, label %if.then

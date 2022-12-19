@@ -27,11 +27,11 @@ define void @dwarf() {
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 entry:
-  %0 = call i8* @llvm.eh.dwarf.cfa(i32 0)
-  call void @foo(i8* %0)
+  %0 = call ptr @llvm.eh.dwarf.cfa(i32 0)
+  call void @foo(ptr %0)
   ret void
 }
 
-declare void @foo(i8*)
+declare void @foo(ptr)
 
-declare i8* @llvm.eh.dwarf.cfa(i32) nounwind
+declare ptr @llvm.eh.dwarf.cfa(i32) nounwind

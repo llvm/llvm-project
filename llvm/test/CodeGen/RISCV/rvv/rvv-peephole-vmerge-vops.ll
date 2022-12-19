@@ -173,7 +173,7 @@ define <vscale x 2 x float> @vpmerge_vpfptrunc(<vscale x 2 x float> %passthru, <
 }
 
 ; Test load operation by vp.load.
-declare <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0nxv2i32(<vscale x 2 x i32> *, <vscale x 2 x i1>, i32)
+declare <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0(<vscale x 2 x i32> *, <vscale x 2 x i1>, i32)
 define <vscale x 2 x i32> @vpmerge_vpload(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> * %p, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpmerge_vpload:
 ; CHECK:       # %bb.0:
@@ -182,7 +182,7 @@ define <vscale x 2 x i32> @vpmerge_vpload(<vscale x 2 x i32> %passthru, <vscale 
 ; CHECK-NEXT:    ret
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
   %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0nxv2i32(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
+  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
   %b = call <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
   ret <vscale x 2 x i32> %b
 }
@@ -198,7 +198,7 @@ define <vscale x 2 x i32> @vpmerge_vpload2(<vscale x 2 x i32> %passthru, <vscale
 ; CHECK-NEXT:    ret
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
   %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0nxv2i32(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
+  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
   %m = call <vscale x 2 x i1> @llvm.vp.icmp.nxv2i32(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y, metadata !"eq", <vscale x 2 x i1> %mask, i32 %vl)
   %b = call <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
   ret <vscale x 2 x i32> %b
@@ -214,7 +214,7 @@ define void @vpmerge_vpload_store(<vscale x 2 x i32> %passthru, <vscale x 2 x i3
 ; CHECK-NEXT:    ret
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
   %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0nxv2i32(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
+  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
   %b = call <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
   store <vscale x 2 x i32> %b, <vscale x 2 x i32> * %p
   ret void
@@ -602,7 +602,7 @@ define <vscale x 2 x i32> @vpselect_vpload(<vscale x 2 x i32> %passthru, <vscale
 ; CHECK-NEXT:    ret
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
   %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0nxv2i32(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
+  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
   %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
   ret <vscale x 2 x i32> %b
 }
@@ -617,7 +617,7 @@ define <vscale x 2 x i32> @vpselect_vpload2(<vscale x 2 x i32> %passthru, <vscal
 ; CHECK-NEXT:    ret
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
   %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0nxv2i32(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
+  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
   %m = call <vscale x 2 x i1> @llvm.vp.icmp.nxv2i32(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y, metadata !"eq", <vscale x 2 x i1> %mask, i32 %vl)
   %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
   ret <vscale x 2 x i32> %b
@@ -633,7 +633,7 @@ define void @vpselect_vpload_store(<vscale x 2 x i32> %passthru, <vscale x 2 x i
 ; CHECK-NEXT:    ret
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
   %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0nxv2i32(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
+  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
   %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
   store <vscale x 2 x i32> %b, <vscale x 2 x i32> * %p
   ret void

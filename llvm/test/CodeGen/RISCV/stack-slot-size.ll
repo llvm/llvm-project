@@ -48,9 +48,9 @@ define i32 @caller129() nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
   %1 = alloca i32
-  store i32 42, i32* %1
+  store i32 42, ptr %1
   call void @callee129(i129 0)
-  %2 = load i32, i32* %1
+  %2 = load i32, ptr %1
   ret i32 %2
 }
 
@@ -89,9 +89,9 @@ define i32 @caller160() nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
   %1 = alloca i32
-  store i32 42, i32* %1
+  store i32 42, ptr %1
   call void @callee160(i160 0)
-  %2 = load i32, i32* %1
+  %2 = load i32, ptr %1
   ret i32 %2
 }
 
@@ -131,8 +131,8 @@ define i32 @caller161() nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
   %1 = alloca i32
-  store i32 42, i32* %1
+  store i32 42, ptr %1
   call void @callee161(i161 0)
-  %2 = load i32, i32* %1
+  %2 = load i32, ptr %1
   ret i32 %2
 }

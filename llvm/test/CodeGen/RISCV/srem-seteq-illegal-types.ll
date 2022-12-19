@@ -297,7 +297,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
   ret i1 %cmp
 }
 
-define void @test_srem_vec(<3 x i33>* %X) nounwind {
+define void @test_srem_vec(ptr %X) nounwind {
 ; RV32-LABEL: test_srem_vec:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -32
@@ -789,10 +789,10 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV64MV-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; RV64MV-NEXT:    addi sp, sp, 64
 ; RV64MV-NEXT:    ret
-  %ld = load <3 x i33>, <3 x i33>* %X
+  %ld = load <3 x i33>, ptr %X
   %srem = srem <3 x i33> %ld, <i33 6, i33 7, i33 -5>
   %cmp = icmp ne <3 x i33> %srem, <i33 0, i33 1, i33 2>
   %ext = sext <3 x i1> %cmp to <3 x i33>
-  store <3 x i33> %ext, <3 x i33>* %X
+  store <3 x i33> %ext, ptr %X
   ret void
 }
