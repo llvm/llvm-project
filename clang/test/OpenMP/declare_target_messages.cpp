@@ -11,7 +11,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp-version=51 -fopenmp-simd -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp-version=51 -fopenmp-simd -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 
-// RUN: %clang_cc1 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -fopenmp-version=52 -DVERBOSE_MODE=1 -verify=expected,omp52 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -DVERBOSE_MODE=1 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5 -fopenmp -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 #pragma omp end declare target // expected-error {{unexpected OpenMP directive '#pragma omp end declare target'}}
@@ -242,11 +242,3 @@ int MultiDevTy;
 // expected-warning@+1 {{expected '#pragma omp end declare target' at end of file to match '#pragma omp begin declare target'}}
 #pragma omp begin declare target
 #endif
-
-void fun();
-void host_function();
-#pragma omp declare target enter(fun) device_type(nohost) // omp45-error {{unexpected 'enter' clause, use 'to' instead}} omp45-error {{expected at least one 'to' or 'link' clause}} omp5-error {{unexpected 'enter' clause, use 'to' instead}} omp5-error {{expected at least one 'to' or 'link' clause}} omp51-error {{expected at least one 'to', 'link' or 'indirect' clause}} omp51-error {{unexpected 'enter' clause, use 'to' instead}}
-#pragma omp declare variant(host_function) match(device={kind(host)})
-void fun() {}
-void host_function() {}
-void call_host_function() { fun(); }
