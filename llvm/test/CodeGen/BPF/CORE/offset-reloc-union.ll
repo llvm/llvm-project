@@ -13,8 +13,8 @@
 ;     } u;
 ;   };
 ;   #define _(x) (__builtin_preserve_access_index(x))
-;   static int (*bpf_probe_read)(void *dst, int size, void *unsafe_ptr)
-;       = (void *) 4;
+;   static int (*bpf_probe_read)(ptr dst, int size, ptr unsafe_ptr)
+;       = (ptr) 4;
 ;
 ;   int bpf_prog(union sk_buff *ctx) {
 ;     int dev_id;
@@ -31,21 +31,18 @@ target triple = "bpf"
 %union.anon = type { i32 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @bpf_prog(%union.sk_buff*) local_unnamed_addr #0 !dbg !15 {
+define dso_local i32 @bpf_prog(ptr) local_unnamed_addr #0 !dbg !15 {
   %2 = alloca i32, align 4
-  call void @llvm.dbg.value(metadata %union.sk_buff* %0, metadata !32, metadata !DIExpression()), !dbg !34
-  %3 = bitcast i32* %2 to i8*, !dbg !35
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %3) #4, !dbg !35
-  %4 = tail call %union.sk_buff* @llvm.preserve.union.access.index.p0s_union.sk_buffs.p0s_union.sk_buffs(%union.sk_buff* %0, i32 1), !dbg !36, !llvm.preserve.access.index !19
-  %5 = getelementptr inbounds %union.sk_buff, %union.sk_buff* %4, i64 0, i32 0, !dbg !36
-  %6 = tail call %union.anon* @llvm.preserve.struct.access.index.p0s_union.anons.p0s_struct.anons(%struct.anon* elementtype(%struct.anon) %5, i32 1, i32 1), !dbg !36, !llvm.preserve.access.index !23
-  %7 = tail call %union.anon* @llvm.preserve.union.access.index.p0s_union.anons.p0s_union.anons(%union.anon* %6, i32 0), !dbg !36, !llvm.preserve.access.index !27
-  %8 = bitcast %union.anon* %7 to i8*, !dbg !36
-  %9 = call i32 inttoptr (i64 4 to i32 (i8*, i32, i8*)*)(i8* nonnull %3, i32 4, i8* %8) #4, !dbg !37
-  %10 = load i32, i32* %2, align 4, !dbg !38, !tbaa !39
-  call void @llvm.dbg.value(metadata i32 %10, metadata !33, metadata !DIExpression()), !dbg !34
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %3) #4, !dbg !43
-  ret i32 %10, !dbg !44
+  call void @llvm.dbg.value(metadata ptr %0, metadata !32, metadata !DIExpression()), !dbg !34
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %2) #4, !dbg !35
+  %3 = tail call ptr @llvm.preserve.union.access.index.p0.sk_buffs.p0.sk_buffs(ptr %0, i32 1), !dbg !36, !llvm.preserve.access.index !19
+  %4 = tail call ptr @llvm.preserve.struct.access.index.p0.anons.p0.anons(ptr elementtype(%struct.anon) %3, i32 1, i32 1), !dbg !36, !llvm.preserve.access.index !23
+  %5 = tail call ptr @llvm.preserve.union.access.index.p0.anons.p0.anons(ptr %4, i32 0), !dbg !36, !llvm.preserve.access.index !27
+  %6 = call i32 inttoptr (i64 4 to ptr)(ptr nonnull %2, i32 4, ptr %5) #4, !dbg !37
+  %7 = load i32, ptr %2, align 4, !dbg !38, !tbaa !39
+  call void @llvm.dbg.value(metadata i32 %7, metadata !33, metadata !DIExpression()), !dbg !34
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %2) #4, !dbg !43
+  ret i32 %7, !dbg !44
 }
 
 ; CHECK:             .section        .BTF,"",@progbits
@@ -148,19 +145,19 @@ define dso_local i32 @bpf_prog(%union.sk_buff*) local_unnamed_addr #0 !dbg !15 {
 ; CHECK-NEXT:        .long   0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone
-declare %union.sk_buff* @llvm.preserve.union.access.index.p0s_union.sk_buffs.p0s_union.sk_buffs(%union.sk_buff*, i32 immarg) #2
+declare ptr @llvm.preserve.union.access.index.p0.sk_buffs.p0.sk_buffs(ptr, i32 immarg) #2
 
 ; Function Attrs: nounwind readnone
-declare %union.anon* @llvm.preserve.struct.access.index.p0s_union.anons.p0s_struct.anons(%struct.anon*, i32 immarg, i32 immarg) #2
+declare ptr @llvm.preserve.struct.access.index.p0.anons.p0.anons(ptr, i32 immarg, i32 immarg) #2
 
 ; Function Attrs: nounwind readnone
-declare %union.anon* @llvm.preserve.union.access.index.p0s_union.anons.p0s_union.anons(%union.anon*, i32 immarg) #2
+declare ptr @llvm.preserve.union.access.index.p0.anons.p0.anons(ptr, i32 immarg) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, metadata, metadata) #3

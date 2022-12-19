@@ -21,13 +21,13 @@
 ;     unsigned size = __builtin_preserve_field_info(arg->b2, FIELD_BYTE_SIZE);
 ;     switch(size) {
 ;     case 1:
-;       ull = *(unsigned char *)((void *)arg + offset); break;
+;       ull = *(unsigned char *)((ptr)arg + offset); break;
 ;     case 2:
-;       ull = *(unsigned short *)((void *)arg + offset); break;
+;       ull = *(unsigned short *)((ptr)arg + offset); break;
 ;     case 4:
-;       ull = *(unsigned int *)((void *)arg + offset); break;
+;       ull = *(unsigned int *)((ptr)arg + offset); break;
 ;     case 8:
-;       ull = *(unsigned long long *)((void *)arg + offset); break;
+;       ull = *(unsigned long long *)((ptr)arg + offset); break;
 ;     }
 ;     ull <<= __builtin_preserve_field_info(arg->b2, FIELD_LSHIFT_U64);
 ;     if (__builtin_preserve_field_info(arg->b2, FIELD_SIGNEDNESS))
@@ -42,13 +42,13 @@ target triple = "bpfel"
 %struct.s = type { i32, i16 }
 
 ; Function Attrs: nounwind readonly
-define dso_local i32 @field_read(%struct.s* %arg) local_unnamed_addr #0 !dbg !26 {
+define dso_local i32 @field_read(ptr %arg) local_unnamed_addr #0 !dbg !26 {
 entry:
-  call void @llvm.dbg.value(metadata %struct.s* %arg, metadata !37, metadata !DIExpression()), !dbg !41
-  %0 = tail call i16* @llvm.preserve.struct.access.index.p0i16.p0s_struct.ss(%struct.s* elementtype(%struct.s) %arg, i32 1, i32 2), !dbg !42, !llvm.preserve.access.index !31
-  %1 = tail call i32 @llvm.bpf.preserve.field.info.p0i16(i16* %0, i64 0), !dbg !43
+  call void @llvm.dbg.value(metadata ptr %arg, metadata !37, metadata !DIExpression()), !dbg !41
+  %0 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr elementtype(%struct.s) %arg, i32 1, i32 2), !dbg !42, !llvm.preserve.access.index !31
+  %1 = tail call i32 @llvm.bpf.preserve.field.info.p0(ptr %0, i64 0), !dbg !43
   call void @llvm.dbg.value(metadata i32 %1, metadata !39, metadata !DIExpression()), !dbg !41
-  %2 = tail call i32 @llvm.bpf.preserve.field.info.p0i16(i16* %0, i64 1), !dbg !44
+  %2 = tail call i32 @llvm.bpf.preserve.field.info.p0(ptr %0, i64 1), !dbg !44
   call void @llvm.dbg.value(metadata i32 %2, metadata !40, metadata !DIExpression()), !dbg !41
   switch i32 %2, label %sw.epilog [
     i32 1, label %sw.bb
@@ -58,54 +58,47 @@ entry:
   ], !dbg !45
 
 sw.bb:                                            ; preds = %entry
-  %3 = bitcast %struct.s* %arg to i8*, !dbg !46
   %idx.ext = zext i32 %1 to i64, !dbg !48
-  %add.ptr = getelementptr i8, i8* %3, i64 %idx.ext, !dbg !48
-  %4 = load i8, i8* %add.ptr, align 1, !dbg !49, !tbaa !50
-  %conv = zext i8 %4 to i64, !dbg !49
+  %add.ptr = getelementptr i8, ptr %arg, i64 %idx.ext, !dbg !48
+  %3 = load i8, ptr %add.ptr, align 1, !dbg !49, !tbaa !50
+  %conv = zext i8 %3 to i64, !dbg !49
   call void @llvm.dbg.value(metadata i64 %conv, metadata !38, metadata !DIExpression()), !dbg !41
   br label %sw.epilog, !dbg !53
 
 sw.bb1:                                           ; preds = %entry
-  %5 = bitcast %struct.s* %arg to i8*, !dbg !54
   %idx.ext2 = zext i32 %1 to i64, !dbg !55
-  %add.ptr3 = getelementptr i8, i8* %5, i64 %idx.ext2, !dbg !55
-  %6 = bitcast i8* %add.ptr3 to i16*, !dbg !56
-  %7 = load i16, i16* %6, align 2, !dbg !57, !tbaa !58
-  %conv4 = zext i16 %7 to i64, !dbg !57
+  %add.ptr3 = getelementptr i8, ptr %arg, i64 %idx.ext2, !dbg !55
+  %4 = load i16, ptr %add.ptr3, align 2, !dbg !57, !tbaa !58
+  %conv4 = zext i16 %4 to i64, !dbg !57
   call void @llvm.dbg.value(metadata i64 %conv4, metadata !38, metadata !DIExpression()), !dbg !41
   br label %sw.epilog, !dbg !60
 
 sw.bb5:                                           ; preds = %entry
-  %8 = bitcast %struct.s* %arg to i8*, !dbg !61
   %idx.ext6 = zext i32 %1 to i64, !dbg !62
-  %add.ptr7 = getelementptr i8, i8* %8, i64 %idx.ext6, !dbg !62
-  %9 = bitcast i8* %add.ptr7 to i32*, !dbg !63
-  %10 = load i32, i32* %9, align 4, !dbg !64, !tbaa !65
-  %conv8 = zext i32 %10 to i64, !dbg !64
+  %add.ptr7 = getelementptr i8, ptr %arg, i64 %idx.ext6, !dbg !62
+  %5 = load i32, ptr %add.ptr7, align 4, !dbg !64, !tbaa !65
+  %conv8 = zext i32 %5 to i64, !dbg !64
   call void @llvm.dbg.value(metadata i64 %conv8, metadata !38, metadata !DIExpression()), !dbg !41
   br label %sw.epilog, !dbg !67
 
 sw.bb9:                                           ; preds = %entry
-  %11 = bitcast %struct.s* %arg to i8*, !dbg !68
   %idx.ext10 = zext i32 %1 to i64, !dbg !69
-  %add.ptr11 = getelementptr i8, i8* %11, i64 %idx.ext10, !dbg !69
-  %12 = bitcast i8* %add.ptr11 to i64*, !dbg !70
-  %13 = load i64, i64* %12, align 8, !dbg !71, !tbaa !72
-  call void @llvm.dbg.value(metadata i64 %13, metadata !38, metadata !DIExpression()), !dbg !41
+  %add.ptr11 = getelementptr i8, ptr %arg, i64 %idx.ext10, !dbg !69
+  %6 = load i64, ptr %add.ptr11, align 8, !dbg !71, !tbaa !72
+  call void @llvm.dbg.value(metadata i64 %6, metadata !38, metadata !DIExpression()), !dbg !41
   br label %sw.epilog, !dbg !74
 
 sw.epilog:                                        ; preds = %entry, %sw.bb9, %sw.bb5, %sw.bb1, %sw.bb
-  %ull.0 = phi i64 [ undef, %entry ], [ %13, %sw.bb9 ], [ %conv8, %sw.bb5 ], [ %conv4, %sw.bb1 ], [ %conv, %sw.bb ]
+  %ull.0 = phi i64 [ undef, %entry ], [ %6, %sw.bb9 ], [ %conv8, %sw.bb5 ], [ %conv4, %sw.bb1 ], [ %conv, %sw.bb ]
   call void @llvm.dbg.value(metadata i64 %ull.0, metadata !38, metadata !DIExpression()), !dbg !41
-  %14 = tail call i32 @llvm.bpf.preserve.field.info.p0i16(i16* %0, i64 4), !dbg !75
-  %sh_prom = zext i32 %14 to i64, !dbg !76
+  %7 = tail call i32 @llvm.bpf.preserve.field.info.p0(ptr %0, i64 4), !dbg !75
+  %sh_prom = zext i32 %7 to i64, !dbg !76
   %shl = shl i64 %ull.0, %sh_prom, !dbg !76
   call void @llvm.dbg.value(metadata i64 %shl, metadata !38, metadata !DIExpression()), !dbg !41
-  %15 = tail call i32 @llvm.bpf.preserve.field.info.p0i16(i16* %0, i64 3), !dbg !77
-  %tobool = icmp eq i32 %15, 0, !dbg !77
-  %16 = tail call i32 @llvm.bpf.preserve.field.info.p0i16(i16* %0, i64 5), !dbg !41
-  %sh_prom12 = zext i32 %16 to i64, !dbg !41
+  %8 = tail call i32 @llvm.bpf.preserve.field.info.p0(ptr %0, i64 3), !dbg !77
+  %tobool = icmp eq i32 %8, 0, !dbg !77
+  %9 = tail call i32 @llvm.bpf.preserve.field.info.p0(ptr %0, i64 5), !dbg !41
+  %sh_prom12 = zext i32 %9 to i64, !dbg !41
   %shr = ashr i64 %shl, %sh_prom12, !dbg !79
   %shr15 = lshr i64 %shl, %sh_prom12, !dbg !79
   %retval.0.in = select i1 %tobool, i64 %shr15, i64 %shr, !dbg !79
@@ -164,10 +157,10 @@ sw.epilog:                                        ; preds = %entry, %sw.bb9, %sw
 ; CHECK-NEXT:        .long   3
 
 ; Function Attrs: nounwind readnone
-declare i16* @llvm.preserve.struct.access.index.p0i16.p0s_struct.ss(%struct.s*, i32, i32) #1
+declare ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr, i32, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.bpf.preserve.field.info.p0i16(i16*, i64) #1
+declare i32 @llvm.bpf.preserve.field.info.p0(ptr, i64) #1
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2

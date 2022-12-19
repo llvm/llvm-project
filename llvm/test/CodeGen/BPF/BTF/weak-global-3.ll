@@ -14,7 +14,7 @@
 ; Function Attrs: nofree norecurse nounwind willreturn
 define dso_local i32 @test() local_unnamed_addr #0 !dbg !13 {
 entry:
-  %0 = load volatile i8, i8* @g, align 1, !dbg !17, !tbaa !18
+  %0 = load volatile i8, ptr @g, align 1, !dbg !17, !tbaa !18
   %conv = sext i8 %0 to i32, !dbg !17
   ret i32 %conv, !dbg !21
 }

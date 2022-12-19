@@ -13,11 +13,11 @@
 %struct.s1 = type { i32, i32 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @foo(%struct.s1* %arg) #0 !dbg !7 {
+define dso_local i32 @foo(ptr %arg) #0 !dbg !7 {
 entry:
-  %arg.addr = alloca %struct.s1*, align 8
-  store %struct.s1* %arg, %struct.s1** %arg.addr, align 8, !tbaa !18
-  call void @llvm.dbg.declare(metadata %struct.s1** %arg.addr, metadata !17, metadata !DIExpression()), !dbg !22
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8, !tbaa !18
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !17, metadata !DIExpression()), !dbg !22
   %0 = call i64 @llvm.bpf.btf.type.id(i32 0, i64 0), !dbg !23, !llvm.preserve.access.index !12
   %conv = trunc i64 %0 to i32, !dbg !23
   ret i32 %conv, !dbg !24
@@ -30,11 +30,11 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 declare i64 @llvm.bpf.btf.type.id(i32, i64) #2
 
 ; Function Attrs: nounwind
-define dso_local i32 @bar(%struct.s1* %arg) #0 !dbg !25 {
+define dso_local i32 @bar(ptr %arg) #0 !dbg !25 {
 entry:
-  %arg.addr = alloca %struct.s1*, align 8
-  store %struct.s1* %arg, %struct.s1** %arg.addr, align 8, !tbaa !18
-  call void @llvm.dbg.declare(metadata %struct.s1** %arg.addr, metadata !27, metadata !DIExpression()), !dbg !28
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8, !tbaa !18
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !27, metadata !DIExpression()), !dbg !28
   %0 = call i64 @llvm.bpf.btf.type.id(i32 1, i64 0), !dbg !29, !llvm.preserve.access.index !12
   %conv = trunc i64 %0 to i32, !dbg !29
   ret i32 %conv, !dbg !30
