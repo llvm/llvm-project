@@ -1939,6 +1939,13 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   // This is a scratch AST context, mark it as such.
   swift_ast_sp->m_is_scratch_context = true;
 
+  // When loading Swift types that conform to ObjC protocols that have
+  // been renamed with NS_SWIFT_NAME the DwarfImporterDelegate will crash
+  // during protocol conformance checks as the underlying type cannot be
+  // found. Allowing module compilation to proceed with compiler
+  // errors will prevent crashing, instead we will have empty type info
+  // for the protocol conforming types.
+  swift_ast_sp->GetLanguageOptions().AllowModuleWithCompilerErrors = true;
   swift_ast_sp->GetLanguageOptions().EnableTargetOSChecking = false;
   swift_ast_sp->GetLanguageOptions().EnableCXXInterop =
       target.GetSwiftEnableCxxInterop();
