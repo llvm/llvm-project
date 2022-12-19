@@ -462,7 +462,10 @@ struct IntrinsicLibrary {
       genCommandArgumentCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
-
+  fir::ExtendedValue genBesselJn(mlir::Type,
+                                 llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genBesselYn(mlir::Type,
+                                 llvm::ArrayRef<fir::ExtendedValue>);
   /// Lower a bitwise comparison intrinsic using the given comparator.
   template <mlir::arith::CmpIPredicate pred>
   mlir::Value genBitwiseCompare(mlir::Type resultType,
@@ -731,6 +734,14 @@ static constexpr IntrinsicHandler handlers[]{
     {"associated",
      &I::genAssociated,
      {{{"pointer", asInquired}, {"target", asInquired}}},
+     /*isElemental=*/false},
+    {"bessel_jn",
+     &I::genBesselJn,
+     {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
+     /*isElemental=*/false},
+    {"bessel_yn",
+     &I::genBesselYn,
+     {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
      /*isElemental=*/false},
     {"bge", &I::genBitwiseCompare<mlir::arith::CmpIPredicate::uge>},
     {"bgt", &I::genBitwiseCompare<mlir::arith::CmpIPredicate::ugt>},
@@ -2525,6 +2536,196 @@ IntrinsicLibrary::genAssociated(mlir::Type resultType,
       fir::factory::getMutableIRBox(builder, loc, *pointer);
   auto pointerBox = builder.create<fir::LoadOp>(loc, pointerBoxRef);
   return Fortran::lower::genAssociated(builder, loc, pointerBox, targetBox);
+}
+
+// BESSEL_JN
+fir::ExtendedValue
+IntrinsicLibrary::genBesselJn(mlir::Type resultType,
+                              llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2 || args.size() == 3);
+
+  mlir::Value x = fir::getBase(args.back());
+
+  if (args.size() == 2) {
+    mlir::Value n = fir::getBase(args[0]);
+
+    return genRuntimeCall("bessel_jn", resultType, {n, x});
+  } else {
+    mlir::Value n1 = fir::getBase(args[0]);
+    mlir::Value n2 = fir::getBase(args[1]);
+
+    mlir::Type intTy = n1.getType();
+    mlir::Type floatTy = x.getType();
+    mlir::Value zero = builder.createRealZeroConstant(loc, floatTy);
+    mlir::Value one = builder.createIntegerConstant(loc, intTy, 1);
+
+    mlir::Type resultArrayType = builder.getVarLenSeqTy(resultType, 1);
+    fir::MutableBoxValue resultMutableBox =
+        fir::factory::createTempMutableBox(builder, loc, resultArrayType);
+    mlir::Value resultBox =
+        fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+    mlir::Value cmpXEq0 = builder.create<mlir::arith::CmpFOp>(
+        loc, mlir::arith::CmpFPredicate::UEQ, x, zero);
+    mlir::Value cmpN1LtN2 = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::slt, n1, n2);
+    mlir::Value cmpN1EqN2 = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::eq, n1, n2);
+
+    auto genXEq0 = [&]() {
+      fir::runtime::genBesselJnX0(builder, loc, floatTy, resultBox, n1, n2);
+    };
+
+    auto genN1LtN2 = [&]() {
+      // The runtime generates the values in the range using a backward
+      // recursion from n2 to n1. (see https://dlmf.nist.gov/10.74.iv and
+      // https://dlmf.nist.gov/10.6.E1). When n1 < n2, this requires
+      // the values of BESSEL_JN(n2) and BESSEL_JN(n2 - 1) since they
+      // are the anchors of the recursion.
+      mlir::Value n2_1 = builder.create<mlir::arith::SubIOp>(loc, n2, one);
+      mlir::Value bn2 = genRuntimeCall("bessel_jn", resultType, {n2, x});
+      mlir::Value bn2_1 = genRuntimeCall("bessel_jn", resultType, {n2_1, x});
+      fir::runtime::genBesselJn(builder, loc, resultBox, n1, n2, x, bn2, bn2_1);
+    };
+
+    auto genN1EqN2 = [&]() {
+      // When n1 == n2, only BESSEL_JN(n2) is needed.
+      mlir::Value bn2 = genRuntimeCall("bessel_jn", resultType, {n2, x});
+      fir::runtime::genBesselJn(builder, loc, resultBox, n1, n2, x, bn2, zero);
+    };
+
+    auto genN1GtN2 = [&]() {
+      // The standard requires n1 <= n2. However, we still need to allocate
+      // a zero-length array and return it when n1 > n2, so we do need to call
+      // the runtime function.
+      fir::runtime::genBesselJn(builder, loc, resultBox, n1, n2, x, zero, zero);
+    };
+
+    auto genN1GeN2 = [&] {
+      builder.genIfThenElse(loc, cmpN1EqN2)
+          .genThen(genN1EqN2)
+          .genElse(genN1GtN2)
+          .end();
+    };
+
+    auto genXNeq0 = [&]() {
+      builder.genIfThenElse(loc, cmpN1LtN2)
+          .genThen(genN1LtN2)
+          .genElse(genN1GeN2)
+          .end();
+    };
+
+    builder.genIfThenElse(loc, cmpXEq0)
+        .genThen(genXEq0)
+        .genElse(genXNeq0)
+        .end();
+
+    fir::ExtendedValue res =
+        fir::factory::genMutableBoxRead(builder, loc, resultMutableBox);
+    return res.match(
+        [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
+          addCleanUpForTemp(loc, box.getAddr());
+          return box;
+        },
+        [&](const auto &) -> fir::ExtendedValue {
+          fir::emitFatalError(loc, "unexpected result for BESSEL_JN");
+        });
+  }
+}
+
+// BESSEL_YN
+fir::ExtendedValue
+IntrinsicLibrary::genBesselYn(mlir::Type resultType,
+                              llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2 || args.size() == 3);
+
+  mlir::Value x = fir::getBase(args.back());
+
+  if (args.size() == 2) {
+    mlir::Value n = fir::getBase(args[0]);
+
+    return genRuntimeCall("bessel_yn", resultType, {n, x});
+  } else {
+    mlir::Value n1 = fir::getBase(args[0]);
+    mlir::Value n2 = fir::getBase(args[1]);
+
+    mlir::Type floatTy = x.getType();
+    mlir::Type intTy = n1.getType();
+    mlir::Value zero = builder.createRealZeroConstant(loc, floatTy);
+    mlir::Value one = builder.createIntegerConstant(loc, intTy, 1);
+
+    mlir::Type resultArrayType = builder.getVarLenSeqTy(resultType, 1);
+    fir::MutableBoxValue resultMutableBox =
+        fir::factory::createTempMutableBox(builder, loc, resultArrayType);
+    mlir::Value resultBox =
+        fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+    mlir::Value cmpXEq0 = builder.create<mlir::arith::CmpFOp>(
+        loc, mlir::arith::CmpFPredicate::UEQ, x, zero);
+    mlir::Value cmpN1LtN2 = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::slt, n1, n2);
+    mlir::Value cmpN1EqN2 = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::eq, n1, n2);
+
+    auto genXEq0 = [&]() {
+      fir::runtime::genBesselYnX0(builder, loc, floatTy, resultBox, n1, n2);
+    };
+
+    auto genN1LtN2 = [&]() {
+      // The runtime generates the values in the range using a forward
+      // recursion from n1 to n2. (see https://dlmf.nist.gov/10.74.iv and
+      // https://dlmf.nist.gov/10.6.E1). When n1 < n2, this requires
+      // the values of BESSEL_YN(n1) and BESSEL_YN(n1 + 1) since they
+      // are the anchors of the recursion.
+      mlir::Value n1_1 = builder.create<mlir::arith::AddIOp>(loc, n1, one);
+      mlir::Value bn1 = genRuntimeCall("bessel_yn", resultType, {n1, x});
+      mlir::Value bn1_1 = genRuntimeCall("bessel_yn", resultType, {n1_1, x});
+      fir::runtime::genBesselYn(builder, loc, resultBox, n1, n2, x, bn1, bn1_1);
+    };
+
+    auto genN1EqN2 = [&]() {
+      // When n1 == n2, only BESSEL_YN(n1) is needed.
+      mlir::Value bn1 = genRuntimeCall("bessel_yn", resultType, {n1, x});
+      fir::runtime::genBesselYn(builder, loc, resultBox, n1, n2, x, bn1, zero);
+    };
+
+    auto genN1GtN2 = [&]() {
+      // The standard requires n1 <= n2. However, we still need to allocate
+      // a zero-length array and return it when n1 > n2, so we do need to call
+      // the runtime function.
+      fir::runtime::genBesselYn(builder, loc, resultBox, n1, n2, x, zero, zero);
+    };
+
+    auto genN1GeN2 = [&] {
+      builder.genIfThenElse(loc, cmpN1EqN2)
+          .genThen(genN1EqN2)
+          .genElse(genN1GtN2)
+          .end();
+    };
+
+    auto genXNeq0 = [&]() {
+      builder.genIfThenElse(loc, cmpN1LtN2)
+          .genThen(genN1LtN2)
+          .genElse(genN1GeN2)
+          .end();
+    };
+
+    builder.genIfThenElse(loc, cmpXEq0)
+        .genThen(genXEq0)
+        .genElse(genXNeq0)
+        .end();
+
+    fir::ExtendedValue res =
+        fir::factory::genMutableBoxRead(builder, loc, resultMutableBox);
+    return res.match(
+        [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
+          addCleanUpForTemp(loc, box.getAddr());
+          return box;
+        },
+        [&](const auto &) -> fir::ExtendedValue {
+          fir::emitFatalError(loc, "unexpected result for BESSEL_YN");
+        });
+  }
 }
 
 // BGE, BGT, BLE, BLT
