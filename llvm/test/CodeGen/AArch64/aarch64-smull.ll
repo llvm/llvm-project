@@ -928,3 +928,208 @@ define <4 x i64> @amull2_i32(<4 x i32> %arg1, <4 x i32> %arg2) {
   ret <4 x i64> %and
 }
 
+
+define <8 x i16> @umull_and_v8i16(<8 x i8> %src1, <8 x i16> %src2) {
+; CHECK-LABEL: umull_and_v8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    bic v1.8h, #255, lsl #8
+; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+entry:
+  %in1 = zext <8 x i8> %src1 to <8 x i16>
+  %in2 = and <8 x i16> %src2, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
+  %out = mul nsw <8 x i16> %in1, %in2
+  ret <8 x i16> %out
+}
+
+define <8 x i16> @umull_and_v8i16_c(<8 x i8> %src1, <8 x i16> %src2) {
+; CHECK-LABEL: umull_and_v8i16_c:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    bic v1.8h, #255, lsl #8
+; CHECK-NEXT:    mul v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    ret
+entry:
+  %in1 = zext <8 x i8> %src1 to <8 x i16>
+  %in2 = and <8 x i16> %src2, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
+  %out = mul nsw <8 x i16> %in2, %in1
+  ret <8 x i16> %out
+}
+
+define <8 x i16> @umull_and256_v8i16(<8 x i8> %src1, <8 x i16> %src2) {
+; CHECK-LABEL: umull_and256_v8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.8h, #1, lsl #8
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+entry:
+  %in1 = zext <8 x i8> %src1 to <8 x i16>
+  %in2 = and <8 x i16> %src2, <i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256>
+  %out = mul nsw <8 x i16> %in1, %in2
+  ret <8 x i16> %out
+}
+
+define <8 x i16> @umull_andconst_v8i16(<8 x i8> %src1, <8 x i16> %src2) {
+; CHECK-LABEL: umull_andconst_v8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v1.2d, #0xffffffffffffffff
+; CHECK-NEXT:    umull v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+entry:
+  %in1 = zext <8 x i8> %src1 to <8 x i16>
+  %out = mul nsw <8 x i16> %in1, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
+  ret <8 x i16> %out
+}
+
+define <8 x i16> @umull_smaller_v8i16(<8 x i4> %src1, <8 x i16> %src2) {
+; CHECK-LABEL: umull_smaller_v8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.8b, #15
+; CHECK-NEXT:    bic v1.8h, #255, lsl #8
+; CHECK-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+entry:
+  %in1 = zext <8 x i4> %src1 to <8 x i16>
+  %in2 = and <8 x i16> %src2, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
+  %out = mul nsw <8 x i16> %in1, %in2
+  ret <8 x i16> %out
+}
+
+define <4 x i32> @umull_and_v4i32(<4 x i16> %src1, <4 x i32> %src2) {
+; CHECK-LABEL: umull_and_v4i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x0000ff000000ff
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+entry:
+  %in1 = zext <4 x i16> %src1 to <4 x i32>
+  %in2 = and <4 x i32> %src2, <i32 255, i32 255, i32 255, i32 255>
+  %out = mul nsw <4 x i32> %in1, %in2
+  ret <4 x i32> %out
+}
+
+define <8 x i32> @umull_and_v8i32(<8 x i16> %src1, <8 x i32> %src2) {
+; CHECK-LABEL: umull_and_v8i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v3.2d, #0x0000ff000000ff
+; CHECK-NEXT:    ushll v4.4s, v0.4h, #0
+; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #0
+; CHECK-NEXT:    and v5.16b, v1.16b, v3.16b
+; CHECK-NEXT:    and v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    mul v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    mul v0.4s, v4.4s, v5.4s
+; CHECK-NEXT:    ret
+entry:
+  %in1 = zext <8 x i16> %src1 to <8 x i32>
+  %in2 = and <8 x i32> %src2, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
+  %out = mul nsw <8 x i32> %in1, %in2
+  ret <8 x i32> %out
+}
+
+define <8 x i32> @umull_and_v8i32_dup(<8 x i16> %src1, i32 %src2) {
+; CHECK-LABEL: umull_and_v8i32_dup:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and w8, w0, #0xff
+; CHECK-NEXT:    ushll v1.4s, v0.4h, #0
+; CHECK-NEXT:    ushll2 v3.4s, v0.8h, #0
+; CHECK-NEXT:    dup v2.4s, w8
+; CHECK-NEXT:    mul v0.4s, v1.4s, v2.4s
+; CHECK-NEXT:    mul v1.4s, v3.4s, v2.4s
+; CHECK-NEXT:    ret
+entry:
+  %in1 = zext <8 x i16> %src1 to <8 x i32>
+  %in2 = and i32 %src2, 255
+  %broadcast.splatinsert = insertelement <8 x i32> undef, i32 %in2, i64 0
+  %broadcast.splat = shufflevector <8 x i32> %broadcast.splatinsert, <8 x i32> undef, <8 x i32> zeroinitializer
+  %out = mul nsw <8 x i32> %in1, %broadcast.splat
+  ret <8 x i32> %out
+}
+
+define <2 x i64> @umull_and_v2i64(<2 x i32> %src1, <2 x i64> %src2) {
+; CHECK-LABEL: umull_and_v2i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0x000000000000ff
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    mov x8, v1.d[1]
+; CHECK-NEXT:    mov x11, v0.d[1]
+; CHECK-NEXT:    mul x9, x10, x9
+; CHECK-NEXT:    mul x8, x11, x8
+; CHECK-NEXT:    fmov d0, x9
+; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    ret
+entry:
+  %in1 = zext <2 x i32> %src1 to <2 x i64>
+  %in2 = and <2 x i64> %src2, <i64 255, i64 255>
+  %out = mul nsw <2 x i64> %in1, %in2
+  ret <2 x i64> %out
+}
+
+define <4 x i64> @umull_and_v4i64(<4 x i32> %src1, <4 x i64> %src2) {
+; CHECK-LABEL: umull_and_v4i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v3.2d, #0x000000000000ff
+; CHECK-NEXT:    ushll v4.2d, v0.2s, #0
+; CHECK-NEXT:    ushll2 v0.2d, v0.4s, #0
+; CHECK-NEXT:    fmov x14, d4
+; CHECK-NEXT:    and v2.16b, v2.16b, v3.16b
+; CHECK-NEXT:    fmov x11, d0
+; CHECK-NEXT:    mov x9, v0.d[1]
+; CHECK-NEXT:    and v0.16b, v1.16b, v3.16b
+; CHECK-NEXT:    fmov x10, d2
+; CHECK-NEXT:    fmov x13, d0
+; CHECK-NEXT:    mov x8, v2.d[1]
+; CHECK-NEXT:    mov x12, v0.d[1]
+; CHECK-NEXT:    mul x10, x11, x10
+; CHECK-NEXT:    mov x15, v4.d[1]
+; CHECK-NEXT:    mul x11, x14, x13
+; CHECK-NEXT:    mul x8, x9, x8
+; CHECK-NEXT:    fmov d1, x10
+; CHECK-NEXT:    mul x9, x15, x12
+; CHECK-NEXT:    fmov d0, x11
+; CHECK-NEXT:    mov v1.d[1], x8
+; CHECK-NEXT:    mov v0.d[1], x9
+; CHECK-NEXT:    ret
+entry:
+  %in1 = zext <4 x i32> %src1 to <4 x i64>
+  %in2 = and <4 x i64> %src2, <i64 255, i64 255, i64 255, i64 255>
+  %out = mul nsw <4 x i64> %in1, %in2
+  ret <4 x i64> %out
+}
+
+define <4 x i64> @umull_and_v4i64_dup(<4 x i32> %src1, i64 %src2) {
+; CHECK-LABEL: umull_and_v4i64_dup:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ushll2 v1.2d, v0.4s, #0
+; CHECK-NEXT:    and x8, x0, #0xff
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    fmov x11, d0
+; CHECK-NEXT:    mov x10, v1.d[1]
+; CHECK-NEXT:    mov x12, v0.d[1]
+; CHECK-NEXT:    mul x9, x9, x8
+; CHECK-NEXT:    mul x11, x11, x8
+; CHECK-NEXT:    mul x10, x10, x8
+; CHECK-NEXT:    mul x8, x12, x8
+; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    fmov d0, x11
+; CHECK-NEXT:    mov v1.d[1], x10
+; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    ret
+entry:
+  %in1 = zext <4 x i32> %src1 to <4 x i64>
+  %in2 = and i64 %src2, 255
+  %broadcast.splatinsert = insertelement <4 x i64> undef, i64 %in2, i64 0
+  %broadcast.splat = shufflevector <4 x i64> %broadcast.splatinsert, <4 x i64> undef, <4 x i32> zeroinitializer
+  %out = mul nsw <4 x i64> %in1, %broadcast.splat
+  ret <4 x i64> %out
+}
