@@ -859,6 +859,7 @@ Build System Changes
 
 AST Matchers
 ------------
+- Add ``isInAnoymousNamespace`` matcher to match declarations in an anonymous namespace.
 
 clang-format
 ------------
