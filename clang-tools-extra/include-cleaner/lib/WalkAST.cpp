@@ -80,12 +80,12 @@ public:
     //
     // FIXME: support dependent types, e.g., "std::vector<T>().size()".
     QualType Type = E->getBase()->IgnoreImpCasts()->getType();
-    // FIXME: this should report as implicit reference.
-    report(E->getMemberLoc(), getMemberProvider(Type));
+    report(E->getMemberLoc(), getMemberProvider(Type), RefType::Implicit);
     return true;
   }
   bool VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E) {
-    report(E->getMemberLoc(), getMemberProvider(E->getBaseType()));
+    report(E->getMemberLoc(), getMemberProvider(E->getBaseType()),
+           RefType::Implicit);
     return true;
   }
 
