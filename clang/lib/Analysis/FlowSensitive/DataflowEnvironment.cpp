@@ -444,10 +444,6 @@ LatticeJoinEffect Environment::join(const Environment &Other,
 
   JoinedEnv.MemberLocToStruct =
       intersectDenseMaps(MemberLocToStruct, Other.MemberLocToStruct);
-  assert(JoinedEnv.MemberLocToStruct.size() <=
-         std::min(MemberLocToStruct.size(), Other.MemberLocToStruct.size()));
-
-  intersectDenseMaps(MemberLocToStruct, Other.MemberLocToStruct);
   if (MemberLocToStruct.size() != JoinedEnv.MemberLocToStruct.size())
     Effect = LatticeJoinEffect::Changed;
 
