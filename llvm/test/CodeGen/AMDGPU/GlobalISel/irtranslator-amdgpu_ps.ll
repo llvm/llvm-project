@@ -109,7 +109,7 @@ define amdgpu_ps { i32, i32 } @sgpr_struct_return_i32_i32(i32 %vgpr0, i32 %vgpr1
   ret { i32, i32 } %value
 }
 
-define amdgpu_ps i8 addrspace(3)* @sgpr_return_p3i8(i8 addrspace(3)* %vgpr) {
+define amdgpu_ps ptr addrspace(3) @sgpr_return_p3i8(ptr addrspace(3) %vgpr) {
   ; CHECK-LABEL: name: sgpr_return_p3i8
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -119,10 +119,10 @@ define amdgpu_ps i8 addrspace(3)* @sgpr_return_p3i8(i8 addrspace(3)* %vgpr) {
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[PTRTOINT]](s32)
   ; CHECK-NEXT:   $sgpr0 = COPY [[INT]](s32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0
-  ret i8 addrspace(3)* %vgpr
+  ret ptr addrspace(3) %vgpr
 }
 
-define amdgpu_ps i8 addrspace(1)* @sgpr_return_p1i8(i8 addrspace(1)* %vgpr) {
+define amdgpu_ps ptr addrspace(1) @sgpr_return_p1i8(ptr addrspace(1) %vgpr) {
   ; CHECK-LABEL: name: sgpr_return_p1i8
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
@@ -136,7 +136,7 @@ define amdgpu_ps i8 addrspace(1)* @sgpr_return_p1i8(i8 addrspace(1)* %vgpr) {
   ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[UV1]](s32)
   ; CHECK-NEXT:   $sgpr1 = COPY [[INT1]](s32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
-  ret i8 addrspace(1)* %vgpr
+  ret ptr addrspace(1) %vgpr
 }
 
 define amdgpu_ps <2 x i16> @sgpr_return_v2i16(<2 x i16> %vgpr) {

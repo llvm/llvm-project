@@ -158,7 +158,7 @@ for.end:
 }
 
 ; a loop inside an if-else
-define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, float(float)* %extern_func, float(float)* %extern_func2) #0 {
+define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_func, ptr %extern_func2) #0 {
 ; SI-LABEL: loop:
 ; SI:       ; %bb.0: ; %main_body
 ; SI-NEXT:    v_mov_b32_e32 v6, v0
@@ -236,7 +236,7 @@ end:
 }
 
 ; a loop inside an if-else, but the variable is still in use after the if-else
-define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, float(float)* %extern_func, float(float)* %extern_func2) #0 {
+define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %extern_func, ptr %extern_func2) #0 {
 ; SI-LABEL: loop_with_use:
 ; SI:       ; %bb.0: ; %main_body
 ; SI-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0

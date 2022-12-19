@@ -5,7 +5,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; Make sure the add and load are reduced to 32-bits even with the
 ; bitcast to vector.
-define amdgpu_kernel void @bitcast_int_to_vector_extract_0(i32 addrspace(1)* %out, i64 addrspace(1)* %in, i64 %b) {
+define amdgpu_kernel void @bitcast_int_to_vector_extract_0(ptr addrspace(1) %out, ptr addrspace(1) %in, i64 %b) {
 ; GCN-LABEL: bitcast_int_to_vector_extract_0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -26,16 +26,16 @@ define amdgpu_kernel void @bitcast_int_to_vector_extract_0(i32 addrspace(1)* %ou
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
    %tid = call i32 @llvm.amdgcn.workitem.id.x()
-   %gep = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
-   %a = load i64, i64 addrspace(1)* %gep
+   %gep = getelementptr i64, ptr addrspace(1) %in, i32 %tid
+   %a = load i64, ptr addrspace(1) %gep
    %add = add i64 %a, %b
    %val.bc = bitcast i64 %add to <2 x i32>
    %extract = extractelement <2 x i32> %val.bc, i32 0
-   store i32 %extract, i32 addrspace(1)* %out
+   store i32 %extract, ptr addrspace(1) %out
    ret void
 }
 
-define amdgpu_kernel void @bitcast_fp_to_vector_extract_0(i32 addrspace(1)* %out, double addrspace(1)* %in, double %b) {
+define amdgpu_kernel void @bitcast_fp_to_vector_extract_0(ptr addrspace(1) %out, ptr addrspace(1) %in, double %b) {
 ; GCN-LABEL: bitcast_fp_to_vector_extract_0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -56,16 +56,16 @@ define amdgpu_kernel void @bitcast_fp_to_vector_extract_0(i32 addrspace(1)* %out
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
    %tid = call i32 @llvm.amdgcn.workitem.id.x()
-   %gep = getelementptr double, double addrspace(1)* %in, i32 %tid
-   %a = load double, double addrspace(1)* %gep
+   %gep = getelementptr double, ptr addrspace(1) %in, i32 %tid
+   %a = load double, ptr addrspace(1) %gep
    %add = fadd double %a, %b
    %val.bc = bitcast double %add to <2 x i32>
    %extract = extractelement <2 x i32> %val.bc, i32 0
-   store i32 %extract, i32 addrspace(1)* %out
+   store i32 %extract, ptr addrspace(1) %out
    ret void
 }
 
-define amdgpu_kernel void @bitcast_int_to_fpvector_extract_0(float addrspace(1)* %out, i64 addrspace(1)* %in, i64 %b) {
+define amdgpu_kernel void @bitcast_int_to_fpvector_extract_0(ptr addrspace(1) %out, ptr addrspace(1) %in, i64 %b) {
 ; GCN-LABEL: bitcast_int_to_fpvector_extract_0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -86,16 +86,16 @@ define amdgpu_kernel void @bitcast_int_to_fpvector_extract_0(float addrspace(1)*
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
    %tid = call i32 @llvm.amdgcn.workitem.id.x()
-   %gep = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
-   %a = load i64, i64 addrspace(1)* %gep
+   %gep = getelementptr i64, ptr addrspace(1) %in, i32 %tid
+   %a = load i64, ptr addrspace(1) %gep
    %add = add i64 %a, %b
    %val.bc = bitcast i64 %add to <2 x float>
    %extract = extractelement <2 x float> %val.bc, i32 0
-   store float %extract, float addrspace(1)* %out
+   store float %extract, ptr addrspace(1) %out
    ret void
 }
 
-define amdgpu_kernel void @no_extract_volatile_load_extract0(i32 addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
+define amdgpu_kernel void @no_extract_volatile_load_extract0(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: no_extract_volatile_load_extract0:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -113,13 +113,13 @@ define amdgpu_kernel void @no_extract_volatile_load_extract0(i32 addrspace(1)* %
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
 entry:
-  %vec = load volatile <4 x i32>, <4 x i32> addrspace(1)* %in
+  %vec = load volatile <4 x i32>, ptr addrspace(1) %in
   %elt0 = extractelement <4 x i32> %vec, i32 0
-  store i32 %elt0, i32 addrspace(1)* %out
+  store i32 %elt0, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @no_extract_volatile_load_extract2(i32 addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
+define amdgpu_kernel void @no_extract_volatile_load_extract2(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: no_extract_volatile_load_extract2:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -137,13 +137,13 @@ define amdgpu_kernel void @no_extract_volatile_load_extract2(i32 addrspace(1)* %
 ; GCN-NEXT:    buffer_store_dword v2, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
 entry:
-  %vec = load volatile <4 x i32>, <4 x i32> addrspace(1)* %in
+  %vec = load volatile <4 x i32>, ptr addrspace(1) %in
   %elt2 = extractelement <4 x i32> %vec, i32 2
-  store i32 %elt2, i32 addrspace(1)* %out
+  store i32 %elt2, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @no_extract_volatile_load_dynextract(i32 addrspace(1)* %out, <4 x i32> addrspace(1)* %in, i32 %idx) {
+define amdgpu_kernel void @no_extract_volatile_load_dynextract(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %idx) {
 ; GCN-LABEL: no_extract_volatile_load_dynextract:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -171,8 +171,8 @@ define amdgpu_kernel void @no_extract_volatile_load_dynextract(i32 addrspace(1)*
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
 entry:
-  %vec = load volatile <4 x i32>, <4 x i32> addrspace(1)* %in
+  %vec = load volatile <4 x i32>, ptr addrspace(1) %in
   %eltN = extractelement <4 x i32> %vec, i32 %idx
-  store i32 %eltN, i32 addrspace(1)* %out
+  store i32 %eltN, ptr addrspace(1) %out
   ret void
 }

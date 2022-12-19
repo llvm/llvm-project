@@ -6,7 +6,7 @@
 ; When we started spilling them into virtual VGPR lanes, we always succeed in doing so.
 ; The regalloc pass later takes care of allocating VGPRs to these virtual registers.
 
-define amdgpu_kernel void @partial_no_vgprs_last_sgpr_spill(i32 addrspace(1)* %out, i32 %in) #1 {
+define amdgpu_kernel void @partial_no_vgprs_last_sgpr_spill(ptr addrspace(1) %out, i32 %in) #1 {
 ; GCN-LABEL: partial_no_vgprs_last_sgpr_spill:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_add_u32 s0, s0, s7

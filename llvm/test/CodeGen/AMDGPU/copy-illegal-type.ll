@@ -5,7 +5,7 @@
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone
 
-define amdgpu_kernel void @test_copy_v4i8(<4 x i8> addrspace(1)* %out, <4 x i8> addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @test_copy_v4i8(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_copy_v4i8:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -39,13 +39,13 @@ define amdgpu_kernel void @test_copy_v4i8(<4 x i8> addrspace(1)* %out, <4 x i8> 
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %tid.x = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <4 x i8>, <4 x i8> addrspace(1)* %in, i32 %tid.x
-  %val = load <4 x i8>, <4 x i8> addrspace(1)* %gep, align 4
-  store <4 x i8> %val, <4 x i8> addrspace(1)* %out, align 4
+  %gep = getelementptr <4 x i8>, ptr addrspace(1) %in, i32 %tid.x
+  %val = load <4 x i8>, ptr addrspace(1) %gep, align 4
+  store <4 x i8> %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_copy_v4i8_x2(<4 x i8> addrspace(1)* %out0, <4 x i8> addrspace(1)* %out1, <4 x i8> addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @test_copy_v4i8_x2(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_copy_v4i8_x2:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xd
@@ -94,14 +94,14 @@ define amdgpu_kernel void @test_copy_v4i8_x2(<4 x i8> addrspace(1)* %out0, <4 x 
 ; VI-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; VI-NEXT:    s_endpgm
   %tid.x = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <4 x i8>, <4 x i8> addrspace(1)* %in, i32 %tid.x
-  %val = load <4 x i8>, <4 x i8> addrspace(1)* %gep, align 4
-  store <4 x i8> %val, <4 x i8> addrspace(1)* %out0, align 4
-  store <4 x i8> %val, <4 x i8> addrspace(1)* %out1, align 4
+  %gep = getelementptr <4 x i8>, ptr addrspace(1) %in, i32 %tid.x
+  %val = load <4 x i8>, ptr addrspace(1) %gep, align 4
+  store <4 x i8> %val, ptr addrspace(1) %out0, align 4
+  store <4 x i8> %val, ptr addrspace(1) %out1, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_copy_v4i8_x3(<4 x i8> addrspace(1)* %out0, <4 x i8> addrspace(1)* %out1, <4 x i8> addrspace(1)* %out2, <4 x i8> addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @test_copy_v4i8_x3(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %out2, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_copy_v4i8_x3:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -152,15 +152,15 @@ define amdgpu_kernel void @test_copy_v4i8_x3(<4 x i8> addrspace(1)* %out0, <4 x 
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %tid.x = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <4 x i8>, <4 x i8> addrspace(1)* %in, i32 %tid.x
-  %val = load <4 x i8>, <4 x i8> addrspace(1)* %gep, align 4
-  store <4 x i8> %val, <4 x i8> addrspace(1)* %out0, align 4
-  store <4 x i8> %val, <4 x i8> addrspace(1)* %out1, align 4
-  store <4 x i8> %val, <4 x i8> addrspace(1)* %out2, align 4
+  %gep = getelementptr <4 x i8>, ptr addrspace(1) %in, i32 %tid.x
+  %val = load <4 x i8>, ptr addrspace(1) %gep, align 4
+  store <4 x i8> %val, ptr addrspace(1) %out0, align 4
+  store <4 x i8> %val, ptr addrspace(1) %out1, align 4
+  store <4 x i8> %val, ptr addrspace(1) %out2, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_copy_v4i8_x4(<4 x i8> addrspace(1)* %out0, <4 x i8> addrspace(1)* %out1, <4 x i8> addrspace(1)* %out2, <4 x i8> addrspace(1)* %out3, <4 x i8> addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @test_copy_v4i8_x4(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %out2, ptr addrspace(1) %out3, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_copy_v4i8_x4:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x11
@@ -241,16 +241,16 @@ define amdgpu_kernel void @test_copy_v4i8_x4(<4 x i8> addrspace(1)* %out0, <4 x 
 ; VI-NEXT:    buffer_store_dword v0, off, s[20:23], 0
 ; VI-NEXT:    s_endpgm
   %tid.x = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <4 x i8>, <4 x i8> addrspace(1)* %in, i32 %tid.x
-  %val = load <4 x i8>, <4 x i8> addrspace(1)* %gep, align 4
-  store <4 x i8> %val, <4 x i8> addrspace(1)* %out0, align 4
-  store <4 x i8> %val, <4 x i8> addrspace(1)* %out1, align 4
-  store <4 x i8> %val, <4 x i8> addrspace(1)* %out2, align 4
-  store <4 x i8> %val, <4 x i8> addrspace(1)* %out3, align 4
+  %gep = getelementptr <4 x i8>, ptr addrspace(1) %in, i32 %tid.x
+  %val = load <4 x i8>, ptr addrspace(1) %gep, align 4
+  store <4 x i8> %val, ptr addrspace(1) %out0, align 4
+  store <4 x i8> %val, ptr addrspace(1) %out1, align 4
+  store <4 x i8> %val, ptr addrspace(1) %out2, align 4
+  store <4 x i8> %val, ptr addrspace(1) %out3, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_copy_v4i8_extra_use(<4 x i8> addrspace(1)* %out0, <4 x i8> addrspace(1)* %out1, <4 x i8> addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @test_copy_v4i8_extra_use(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_copy_v4i8_extra_use:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xd
@@ -326,16 +326,16 @@ define amdgpu_kernel void @test_copy_v4i8_extra_use(<4 x i8> addrspace(1)* %out0
 ; VI-NEXT:    buffer_store_dword v1, off, s[8:11], 0
 ; VI-NEXT:    s_endpgm
   %tid.x = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <4 x i8>, <4 x i8> addrspace(1)* %in, i32 %tid.x
-  %val = load <4 x i8>, <4 x i8> addrspace(1)* %gep, align 4
+  %gep = getelementptr <4 x i8>, ptr addrspace(1) %in, i32 %tid.x
+  %val = load <4 x i8>, ptr addrspace(1) %gep, align 4
   %add = add <4 x i8> %val, <i8 9, i8 9, i8 9, i8 9>
-  store <4 x i8> %val, <4 x i8> addrspace(1)* %out0, align 4
-  store <4 x i8> %add, <4 x i8> addrspace(1)* %out1, align 4
+  store <4 x i8> %val, ptr addrspace(1) %out0, align 4
+  store <4 x i8> %add, ptr addrspace(1) %out1, align 4
   ret void
 }
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
-define amdgpu_kernel void @test_copy_v4i8_x2_extra_use(<4 x i8> addrspace(1)* %out0, <4 x i8> addrspace(1)* %out1, <4 x i8> addrspace(1)* %out2, <4 x i8> addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @test_copy_v4i8_x2_extra_use(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %out2, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_copy_v4i8_x2_extra_use:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -413,16 +413,16 @@ define amdgpu_kernel void @test_copy_v4i8_x2_extra_use(<4 x i8> addrspace(1)* %o
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %tid.x = call i32 @llvm.amdgcn.workitem.id.x()
-  %in.ptr = getelementptr <4 x i8>, <4 x i8> addrspace(1)* %in, i32 %tid.x
-  %val = load <4 x i8>, <4 x i8> addrspace(1)* %in.ptr, align 4
+  %in.ptr = getelementptr <4 x i8>, ptr addrspace(1) %in, i32 %tid.x
+  %val = load <4 x i8>, ptr addrspace(1) %in.ptr, align 4
   %add = add <4 x i8> %val, <i8 9, i8 9, i8 9, i8 9>
-  store <4 x i8> %val, <4 x i8> addrspace(1)* %out0, align 4
-  store <4 x i8> %add, <4 x i8> addrspace(1)* %out1, align 4
-  store <4 x i8> %val, <4 x i8> addrspace(1)* %out2, align 4
+  store <4 x i8> %val, ptr addrspace(1) %out0, align 4
+  store <4 x i8> %add, ptr addrspace(1) %out1, align 4
+  store <4 x i8> %val, ptr addrspace(1) %out2, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_copy_v3i8_align4(<3 x i8> addrspace(1)* %out, <3 x i8> addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @test_copy_v3i8_align4(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_copy_v3i8_align4:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -460,13 +460,13 @@ define amdgpu_kernel void @test_copy_v3i8_align4(<3 x i8> addrspace(1)* %out, <3
 ; VI-NEXT:    buffer_store_byte v1, off, s[0:3], 0 offset:2
 ; VI-NEXT:    s_endpgm
   %tid.x = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <3 x i8>, <3 x i8> addrspace(1)* %in, i32 %tid.x
-  %val = load <3 x i8>, <3 x i8> addrspace(1)* %gep, align 4
-  store <3 x i8> %val, <3 x i8> addrspace(1)* %out, align 4
+  %gep = getelementptr <3 x i8>, ptr addrspace(1) %in, i32 %tid.x
+  %val = load <3 x i8>, ptr addrspace(1) %gep, align 4
+  store <3 x i8> %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_copy_v3i8_align2(<3 x i8> addrspace(1)* %out, <3 x i8> addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @test_copy_v3i8_align2(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_copy_v3i8_align2:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -506,12 +506,12 @@ define amdgpu_kernel void @test_copy_v3i8_align2(<3 x i8> addrspace(1)* %out, <3
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    buffer_store_short v1, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
-  %val = load <3 x i8>, <3 x i8> addrspace(1)* %in, align 2
-  store <3 x i8> %val, <3 x i8> addrspace(1)* %out, align 2
+  %val = load <3 x i8>, ptr addrspace(1) %in, align 2
+  store <3 x i8> %val, ptr addrspace(1) %out, align 2
   ret void
 }
 
-define amdgpu_kernel void @test_copy_v3i8_align1(<3 x i8> addrspace(1)* %out, <3 x i8> addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @test_copy_v3i8_align1(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_copy_v3i8_align1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -556,12 +556,12 @@ define amdgpu_kernel void @test_copy_v3i8_align1(<3 x i8> addrspace(1)* %out, <3
 ; VI-NEXT:    v_lshrrev_b16_e32 v0, 8, v0
 ; VI-NEXT:    buffer_store_byte v0, off, s[4:7], 0 offset:1
 ; VI-NEXT:    s_endpgm
-  %val = load <3 x i8>, <3 x i8> addrspace(1)* %in, align 1
-  store <3 x i8> %val, <3 x i8> addrspace(1)* %out, align 1
+  %val = load <3 x i8>, ptr addrspace(1) %in, align 1
+  store <3 x i8> %val, ptr addrspace(1) %out, align 1
   ret void
 }
 
-define amdgpu_kernel void @test_copy_v4i8_volatile_load(<4 x i8> addrspace(1)* %out, <4 x i8> addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @test_copy_v4i8_volatile_load(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_copy_v4i8_volatile_load:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -595,12 +595,12 @@ define amdgpu_kernel void @test_copy_v4i8_volatile_load(<4 x i8> addrspace(1)* %
 ; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
-  %val = load volatile <4 x i8>, <4 x i8> addrspace(1)* %in, align 4
-  store <4 x i8> %val, <4 x i8> addrspace(1)* %out, align 4
+  %val = load volatile <4 x i8>, ptr addrspace(1) %in, align 4
+  store <4 x i8> %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_copy_v4i8_volatile_store(<4 x i8> addrspace(1)* %out, <4 x i8> addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @test_copy_v4i8_volatile_store(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_copy_v4i8_volatile_store:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -654,7 +654,7 @@ define amdgpu_kernel void @test_copy_v4i8_volatile_store(<4 x i8> addrspace(1)* 
 ; VI-NEXT:    buffer_store_byte v3, off, s[4:7], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
-  %val = load <4 x i8>, <4 x i8> addrspace(1)* %in, align 4
-  store volatile <4 x i8> %val, <4 x i8> addrspace(1)* %out, align 4
+  %val = load <4 x i8>, ptr addrspace(1) %in, align 4
+  store volatile <4 x i8> %val, ptr addrspace(1) %out, align 4
   ret void
 }

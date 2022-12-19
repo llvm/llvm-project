@@ -228,7 +228,7 @@ define amdgpu_gfx void @void_func_void_clobber_s28_s29() #1 {
   ret void
 }
 
-define amdgpu_gfx void @test_call_void_func_void_mayclobber_s31(i32 addrspace(1)* %out) #0 {
+define amdgpu_gfx void @test_call_void_func_void_mayclobber_s31(ptr addrspace(1) %out) #0 {
 ; GFX9-LABEL: test_call_void_func_void_mayclobber_s31:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -361,7 +361,7 @@ define amdgpu_gfx void @test_call_void_func_void_mayclobber_s31(i32 addrspace(1)
   ret void
 }
 
-define amdgpu_gfx void @test_call_void_func_void_mayclobber_v31(i32 addrspace(1)* %out) #0 {
+define amdgpu_gfx void @test_call_void_func_void_mayclobber_v31(ptr addrspace(1) %out) #0 {
 ; GFX9-LABEL: test_call_void_func_void_mayclobber_v31:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -496,7 +496,7 @@ define amdgpu_gfx void @test_call_void_func_void_mayclobber_v31(i32 addrspace(1)
 }
 
 
-define amdgpu_gfx void @test_call_void_func_void_preserves_s33(i32 addrspace(1)* %out) #0 {
+define amdgpu_gfx void @test_call_void_func_void_preserves_s33(ptr addrspace(1) %out) #0 {
 ; GFX9-LABEL: test_call_void_func_void_preserves_s33:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -630,7 +630,7 @@ define amdgpu_gfx void @test_call_void_func_void_preserves_s33(i32 addrspace(1)*
   ret void
 }
 
-define amdgpu_gfx void @test_call_void_func_void_preserves_s34(i32 addrspace(1)* %out) #0 {
+define amdgpu_gfx void @test_call_void_func_void_preserves_s34(ptr addrspace(1) %out) #0 {
 ; GFX9-LABEL: test_call_void_func_void_preserves_s34:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -764,7 +764,7 @@ define amdgpu_gfx void @test_call_void_func_void_preserves_s34(i32 addrspace(1)*
   ret void
 }
 
-define amdgpu_gfx void @test_call_void_func_void_preserves_v40(i32 addrspace(1)* %out) #0 {
+define amdgpu_gfx void @test_call_void_func_void_preserves_v40(ptr addrspace(1) %out) #0 {
 ; GFX9-LABEL: test_call_void_func_void_preserves_v40:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)

@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GFX90A_GFX940 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GFX90A_GFX940 %s
 
-define amdgpu_ps void @flat_atomic_fadd_f64_no_rtn_intrinsic(double* %ptr, double %data) {
+define amdgpu_ps void @flat_atomic_fadd_f64_no_rtn_intrinsic(ptr %ptr, double %data) {
   ; GFX90A_GFX940-LABEL: name: flat_atomic_fadd_f64_no_rtn_intrinsic
   ; GFX90A_GFX940: bb.0 (%ir-block.0):
   ; GFX90A_GFX940-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -17,11 +17,11 @@ define amdgpu_ps void @flat_atomic_fadd_f64_no_rtn_intrinsic(double* %ptr, doubl
   ; GFX90A_GFX940-NEXT:   [[COPY5:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]]
   ; GFX90A_GFX940-NEXT:   FLAT_ATOMIC_ADD_F64 killed [[COPY4]], killed [[COPY5]], 0, 0, implicit $exec, implicit $flat_scr :: (volatile dereferenceable load store (s64) on %ir.ptr)
   ; GFX90A_GFX940-NEXT:   S_ENDPGM 0
-  %ret = call double @llvm.amdgcn.flat.atomic.fadd.f64.p1f64.f64(double* %ptr, double %data)
+  %ret = call double @llvm.amdgcn.flat.atomic.fadd.f64.p1.f64(ptr %ptr, double %data)
   ret void
 }
 
-define amdgpu_ps double @flat_atomic_fadd_f64_rtn_intrinsic(double* %ptr, double %data) {
+define amdgpu_ps double @flat_atomic_fadd_f64_rtn_intrinsic(ptr %ptr, double %data) {
   ; GFX90A_GFX940-LABEL: name: flat_atomic_fadd_f64_rtn_intrinsic
   ; GFX90A_GFX940: bb.0 (%ir-block.0):
   ; GFX90A_GFX940-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -40,11 +40,11 @@ define amdgpu_ps double @flat_atomic_fadd_f64_rtn_intrinsic(double* %ptr, double
   ; GFX90A_GFX940-NEXT:   $sgpr0 = COPY [[COPY6]]
   ; GFX90A_GFX940-NEXT:   $sgpr1 = COPY [[COPY7]]
   ; GFX90A_GFX940-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1
-  %ret = call double @llvm.amdgcn.flat.atomic.fadd.f64.p1f64.f64(double* %ptr, double %data)
+  %ret = call double @llvm.amdgcn.flat.atomic.fadd.f64.p1.f64(ptr %ptr, double %data)
   ret double %ret
 }
 
-define amdgpu_ps void @flat_atomic_fadd_f64_no_rtn_atomicrmw(double* %ptr, double %data) #0 {
+define amdgpu_ps void @flat_atomic_fadd_f64_no_rtn_atomicrmw(ptr %ptr, double %data) #0 {
   ; GFX90A_GFX940-LABEL: name: flat_atomic_fadd_f64_no_rtn_atomicrmw
   ; GFX90A_GFX940: bb.0 (%ir-block.0):
   ; GFX90A_GFX940-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -59,11 +59,11 @@ define amdgpu_ps void @flat_atomic_fadd_f64_no_rtn_atomicrmw(double* %ptr, doubl
   ; GFX90A_GFX940-NEXT:   [[COPY5:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]]
   ; GFX90A_GFX940-NEXT:   FLAT_ATOMIC_ADD_F64 killed [[COPY4]], killed [[COPY5]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic (s64) on %ir.ptr)
   ; GFX90A_GFX940-NEXT:   S_ENDPGM 0
-  %ret = atomicrmw fadd double* %ptr, double %data syncscope("wavefront") monotonic
+  %ret = atomicrmw fadd ptr %ptr, double %data syncscope("wavefront") monotonic
   ret void
 }
 
-define amdgpu_ps double @flat_atomic_fadd_f64_rtn_atomicrmw(double* %ptr, double %data) #0 {
+define amdgpu_ps double @flat_atomic_fadd_f64_rtn_atomicrmw(ptr %ptr, double %data) #0 {
   ; GFX90A_GFX940-LABEL: name: flat_atomic_fadd_f64_rtn_atomicrmw
   ; GFX90A_GFX940: bb.0 (%ir-block.0):
   ; GFX90A_GFX940-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -82,10 +82,10 @@ define amdgpu_ps double @flat_atomic_fadd_f64_rtn_atomicrmw(double* %ptr, double
   ; GFX90A_GFX940-NEXT:   $sgpr0 = COPY [[COPY6]]
   ; GFX90A_GFX940-NEXT:   $sgpr1 = COPY [[COPY7]]
   ; GFX90A_GFX940-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1
-  %ret = atomicrmw fadd double* %ptr, double %data syncscope("wavefront") monotonic
+  %ret = atomicrmw fadd ptr %ptr, double %data syncscope("wavefront") monotonic
   ret double %ret
 }
 
-declare double @llvm.amdgcn.flat.atomic.fadd.f64.p1f64.f64(double*, double)
+declare double @llvm.amdgcn.flat.atomic.fadd.f64.p1.f64(ptr, double)
 
 attributes #0 = {"amdgpu-unsafe-fp-atomics"="true" }

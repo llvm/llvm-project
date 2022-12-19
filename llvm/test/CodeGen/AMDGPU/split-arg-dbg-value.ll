@@ -131,7 +131,7 @@ define hidden i64 @split_i64_arg(i64 returned %arg) local_unnamed_addr #0 !dbg !
   ret i64 %arg, !dbg !69
 }
 
-define hidden i8 addrspace(1)* @split_ptr_arg(i8 addrspace(1)* readnone returned %arg) local_unnamed_addr #0 !dbg !70 {
+define hidden ptr addrspace(1) @split_ptr_arg(ptr addrspace(1) readnone returned %arg) local_unnamed_addr #0 !dbg !70 {
 ; GCN-LABEL: split_ptr_arg:
 ; GCN:       .Lfunc_begin6:
 ; GCN-NEXT:    .loc 0 27 0 ; /tmp/dbg.cl:27:0
@@ -145,8 +145,8 @@ define hidden i8 addrspace(1)* @split_ptr_arg(i8 addrspace(1)* readnone returned
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GCN-NEXT:  .Ltmp17:
 ; GCN:         .cfi_endproc
-  call void @llvm.dbg.value(metadata i8 addrspace(1)* %arg, metadata !76, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !77
-  ret i8 addrspace(1)* %arg, !dbg !78
+  call void @llvm.dbg.value(metadata ptr addrspace(1) %arg, metadata !76, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !77
+  ret ptr addrspace(1) %arg, !dbg !78
 }
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
