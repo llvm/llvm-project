@@ -1205,6 +1205,47 @@ Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
   return Builder.CreateICmp(NewPred, NewV, ConstantInt::get(Ty, NewC));
 }
 
+/// Ignore all operations which only change the sign of a value, returning the
+/// underlying magnitude value.
+static Value *stripSignOnlyFPOps(Value *Val) {
+  match(Val, m_FNeg(m_Value(Val)));
+  match(Val, m_FAbs(m_Value(Val)));
+  match(Val, m_CopySign(m_Value(Val), m_Value()));
+  return Val;
+}
+
+/// Matches canonical form of isnan, fcmp ord x, 0
+static bool matchIsNotNaN(FCmpInst::Predicate P, Value *LHS, Value *RHS) {
+  return P == FCmpInst::FCMP_ORD && match(RHS, m_AnyZeroFP());
+}
+
+/// Matches fcmp u__ x, +/-inf
+static bool matchUnorderedInfCompare(FCmpInst::Predicate P, Value *LHS,
+                                     Value *RHS) {
+  return FCmpInst::isUnordered(P) && match(RHS, m_Inf());
+}
+
+/// and (fcmp ord x, 0), (fcmp u* x, inf) -> fcmp o* x, inf
+///
+/// Clang emits this pattern for doing an isfinite check in __builtin_isnormal.
+static Value *matchIsFiniteTest(InstCombiner::BuilderTy &Builder, FCmpInst *LHS,
+                                FCmpInst *RHS) {
+  Value *LHS0 = LHS->getOperand(0), *LHS1 = LHS->getOperand(1);
+  Value *RHS0 = RHS->getOperand(0), *RHS1 = RHS->getOperand(1);
+  FCmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
+
+  if (!matchIsNotNaN(PredL, LHS0, LHS1) ||
+      !matchUnorderedInfCompare(PredR, RHS0, RHS1))
+    return nullptr;
+
+  IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+  FastMathFlags FMF = LHS->getFastMathFlags();
+  FMF &= RHS->getFastMathFlags();
+  Builder.setFastMathFlags(FMF);
+
+  return Builder.CreateFCmp(FCmpInst::getOrderedPredicate(PredR), RHS0, RHS1);
+}
+
 Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
                                           bool IsAnd, bool IsLogicalSelect) {
   Value *LHS0 = LHS->getOperand(0), *LHS1 = LHS->getOperand(1);
@@ -1261,6 +1302,15 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
       // (fcmp ord x, 0.0) & (fcmp ord y, 0.0)  -> (fcmp ord x, y)
       // (fcmp uno x, 0.0) | (fcmp uno y, 0.0)  -> (fcmp uno x, y)
       return Builder.CreateFCmp(PredL, LHS0, RHS0);
+  }
+
+  if (IsAnd && stripSignOnlyFPOps(LHS0) == stripSignOnlyFPOps(RHS0)) {
+    // and (fcmp ord x, 0), (fcmp u* x, inf) -> fcmp o* x, inf
+    // and (fcmp ord x, 0), (fcmp u* fabs(x), inf) -> fcmp o* x, inf
+    if (Value *Left = matchIsFiniteTest(Builder, LHS, RHS))
+      return Left;
+    if (Value *Right = matchIsFiniteTest(Builder, RHS, LHS))
+      return Right;
   }
 
   return nullptr;
