@@ -144,10 +144,17 @@ void AMDGPUInstPrinter::printAddr64(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printOffset(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O) {
-  uint16_t Imm = MI->getOperand(OpNo).getImm();
+  uint32_t Imm = MI->getOperand(OpNo).getImm();
   if (Imm != 0) {
     O << " offset:";
-    printU16ImmDecOperand(MI, OpNo, O);
+
+    // GFX12 uses a 24-bit signed offset for VBUFFER.
+    const MCInstrDesc &Desc = MII.get(MI->getOpcode());
+    bool IsVBuffer = Desc.TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF);
+    if (AMDGPU::isGFX12(STI) && IsVBuffer)
+      O << formatDec(SignExtend32<24>(Imm));
+    else
+      printU16ImmDecOperand(MI, OpNo, O);
   }
 }
 
