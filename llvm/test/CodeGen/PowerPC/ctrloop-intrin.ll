@@ -28,10 +28,10 @@ declare ptr @halide_string_to_string(ptr, ptr, ptr) #1
 ; Function Attrs: nounwind
 declare ptr @halide_int64_to_string(ptr, ptr, i64, i32) #1
 
-;; FIXME: hardware loop should not be generated in the loop that already has a
-;; user defined hardware loop. Only one mtctr should be in the final assembly.
+;; Hardware loop should not be generated in the loop that already has a user
+;; defined hardware loop. Only one mtctr should be in the final assembly.
 ; CHECK-LABEL: halide_double_to_string
-; CHECK-COUNT-2: mtctr
+; CHECK-COUNT-1: mtctr
 
 ; Function Attrs: nounwind
 define weak ptr @halide_double_to_string(ptr %dst, ptr %end, double %arg, i32 %scientific) #1 {
