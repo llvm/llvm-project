@@ -125,6 +125,13 @@ RValue CIRGenFunction::buildCoroutineIntrinsic(const CallExpr *E,
   llvm_unreachable("NYI");
 }
 
+RValue CIRGenFunction::buildCoroutineFrame() {
+  if (CurCoro.Data && CurCoro.Data->CoroBegin) {
+    return RValue::get(CurCoro.Data->CoroBegin);
+  }
+  llvm_unreachable("NYI");
+}
+
 static mlir::LogicalResult buildBodyAndFallthrough(CIRGenFunction &CGF,
                                                    const CoroutineBodyStmt &S,
                                                    Stmt *Body) {

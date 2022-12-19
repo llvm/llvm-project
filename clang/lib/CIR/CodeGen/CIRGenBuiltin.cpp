@@ -96,7 +96,9 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_coro_align:
     llvm_unreachable("NYI");
 
-  case Builtin::BI__builtin_coro_frame:
+  case Builtin::BI__builtin_coro_frame: {
+    return buildCoroutineFrame();
+  }
   case Builtin::BI__builtin_coro_free:
   case Builtin::BI__builtin_coro_size: {
     GlobalDecl gd{FD};
