@@ -4,23 +4,23 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+f -verify-machineinstrs < %s \
 ; RUN:   -target-abi=lp64f | FileCheck -check-prefixes=CHECKIF,RV64IF %s
 
-define dso_local float @flw(float *%a) nounwind {
+define dso_local float @flw(ptr %a) nounwind {
 ; CHECKIF-LABEL: flw:
 ; CHECKIF:       # %bb.0:
 ; CHECKIF-NEXT:    flw ft0, 0(a0)
 ; CHECKIF-NEXT:    flw ft1, 12(a0)
 ; CHECKIF-NEXT:    fadd.s fa0, ft0, ft1
 ; CHECKIF-NEXT:    ret
-  %1 = load float, float* %a
-  %2 = getelementptr float, float* %a, i32 3
-  %3 = load float, float* %2
+  %1 = load float, ptr %a
+  %2 = getelementptr float, ptr %a, i32 3
+  %3 = load float, ptr %2
 ; Use both loaded values in an FP op to ensure an flw is used, even for the
 ; soft float ABI
   %4 = fadd float %1, %3
   ret float %4
 }
 
-define dso_local void @fsw(float *%a, float %b, float %c) nounwind {
+define dso_local void @fsw(ptr %a, float %b, float %c) nounwind {
 ; Use %b and %c in an FP op to ensure floating point registers are used, even
 ; for the soft float ABI
 ; CHECKIF-LABEL: fsw:
@@ -30,9 +30,9 @@ define dso_local void @fsw(float *%a, float %b, float %c) nounwind {
 ; CHECKIF-NEXT:    fsw ft0, 32(a0)
 ; CHECKIF-NEXT:    ret
   %1 = fadd float %b, %c
-  store float %1, float* %a
-  %2 = getelementptr float, float* %a, i32 8
-  store float %1, float* %2
+  store float %1, ptr %a
+  %2 = getelementptr float, ptr %a, i32 8
+  store float %1, ptr %2
   ret void
 }
 
@@ -53,11 +53,11 @@ define dso_local float @flw_fsw_global(float %a, float %b) nounwind {
 ; CHECKIF-NEXT:    fsw fa0, 36(a1)
 ; CHECKIF-NEXT:    ret
   %1 = fadd float %a, %b
-  %2 = load volatile float, float* @G
-  store float %1, float* @G
-  %3 = getelementptr float, float* @G, i32 9
-  %4 = load volatile float, float* %3
-  store float %1, float* %3
+  %2 = load volatile float, ptr @G
+  store float %1, ptr @G
+  %3 = getelementptr float, ptr @G, i32 9
+  %4 = load volatile float, ptr %3
+  store float %1, ptr %3
   ret float %1
 }
 
@@ -79,14 +79,14 @@ define dso_local float @flw_fsw_constant(float %a) nounwind {
 ; RV64IF-NEXT:    fadd.s fa0, fa0, ft0
 ; RV64IF-NEXT:    fsw fa0, -273(a0)
 ; RV64IF-NEXT:    ret
-  %1 = inttoptr i32 3735928559 to float*
-  %2 = load volatile float, float* %1
+  %1 = inttoptr i32 3735928559 to ptr
+  %2 = load volatile float, ptr %1
   %3 = fadd float %a, %2
-  store float %3, float* %1
+  store float %3, ptr %1
   ret float %3
 }
 
-declare void @notdead(i8*)
+declare void @notdead(ptr)
 
 define dso_local float @flw_stack(float %a) nounwind {
 ; RV32IF-LABEL: flw_stack:
@@ -119,11 +119,10 @@ define dso_local float @flw_stack(float %a) nounwind {
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
   %1 = alloca float, align 4
-  %2 = bitcast float* %1 to i8*
-  call void @notdead(i8* %2)
-  %3 = load float, float* %1
-  %4 = fadd float %3, %a ; force load in to FPR32
-  ret float %4
+  call void @notdead(ptr %1)
+  %2 = load float, ptr %1
+  %3 = fadd float %2, %a ; force load in to FPR32
+  ret float %3
 }
 
 define dso_local void @fsw_stack(float %a, float %b) nounwind {
@@ -152,8 +151,7 @@ define dso_local void @fsw_stack(float %a, float %b) nounwind {
 ; RV64IF-NEXT:    ret
   %1 = fadd float %a, %b ; force store from FPR32
   %2 = alloca float, align 4
-  store float %1, float* %2
-  %3 = bitcast float* %2 to i8*
-  call void @notdead(i8* %3)
+  store float %1, ptr %2
+  call void @notdead(ptr %2)
   ret void
 }

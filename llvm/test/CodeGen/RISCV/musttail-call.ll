@@ -11,10 +11,10 @@
 
 %struct.A = type { i32 }
 
-declare void @callee_musttail(%struct.A* sret(%struct.A) %a)
-define void @caller_musttail(%struct.A* sret(%struct.A) %a) {
+declare void @callee_musttail(ptr sret(%struct.A) %a)
+define void @caller_musttail(ptr sret(%struct.A) %a) {
 ; CHECK: LLVM ERROR: failed to perform tail call elimination on a call site marked musttail
 entry:
-  musttail call void @callee_musttail(%struct.A* sret(%struct.A) %a)
+  musttail call void @callee_musttail(ptr sret(%struct.A) %a)
   ret void
 }
