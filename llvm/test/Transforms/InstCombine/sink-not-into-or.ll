@@ -14,8 +14,8 @@ define i1 @t0(i32 %v0, i32 %v1, i32 %v2, i32 %v3) {
 ; CHECK-LABEL: @t0(
 ; CHECK-NEXT:    [[I1:%.*]] = icmp ne i32 [[V0:%.*]], [[V1:%.*]]
 ; CHECK-NEXT:    [[I2:%.*]] = icmp ne i32 [[V2:%.*]], [[V3:%.*]]
-; CHECK-NEXT:    [[I4:%.*]] = and i1 [[I2]], [[I1]]
-; CHECK-NEXT:    ret i1 [[I4]]
+; CHECK-NEXT:    [[I3_NOT:%.*]] = and i1 [[I2]], [[I1]]
+; CHECK-NEXT:    ret i1 [[I3_NOT]]
 ;
   %i1 = icmp eq i32 %v0, %v1
   %i2 = icmp eq i32 %v2, %v3
@@ -115,13 +115,11 @@ define i1 @n6(i32 %v0, i32 %v1, i32 %v2, i32 %v3) {
 ; Hands have invertible uses
 define i1 @t7(i32 %v0, i32 %v1, i32 %v2, i32 %v3) {
 ; CHECK-LABEL: @t7(
-; CHECK-NEXT:    [[I1:%.*]] = icmp eq i32 [[V0:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[I1_NOT:%.*]] = xor i1 [[I1]], true
-; CHECK-NEXT:    call void @use1(i1 [[I1_NOT]])
-; CHECK-NEXT:    [[I2:%.*]] = icmp eq i32 [[V2:%.*]], [[V3:%.*]]
-; CHECK-NEXT:    [[I3:%.*]] = or i1 [[I2]], [[I1]]
-; CHECK-NEXT:    [[I4:%.*]] = xor i1 [[I3]], true
-; CHECK-NEXT:    ret i1 [[I4]]
+; CHECK-NEXT:    [[I1:%.*]] = icmp ne i32 [[V0:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[I1]])
+; CHECK-NEXT:    [[I2:%.*]] = icmp ne i32 [[V2:%.*]], [[V3:%.*]]
+; CHECK-NEXT:    [[I3_NOT:%.*]] = and i1 [[I2]], [[I1]]
+; CHECK-NEXT:    ret i1 [[I3_NOT]]
 ;
   %i1 = icmp eq i32 %v0, %v1
   %i1.not = xor i1 %i1, -1
@@ -133,13 +131,11 @@ define i1 @t7(i32 %v0, i32 %v1, i32 %v2, i32 %v3) {
 }
 define i1 @t8(i32 %v0, i32 %v1, i32 %v2, i32 %v3) {
 ; CHECK-LABEL: @t8(
-; CHECK-NEXT:    [[I1:%.*]] = icmp eq i32 [[V0:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[I2:%.*]] = icmp eq i32 [[V2:%.*]], [[V3:%.*]]
-; CHECK-NEXT:    [[I2_NOT:%.*]] = xor i1 [[I2]], true
-; CHECK-NEXT:    call void @use1(i1 [[I2_NOT]])
-; CHECK-NEXT:    [[I3:%.*]] = or i1 [[I2]], [[I1]]
-; CHECK-NEXT:    [[I4:%.*]] = xor i1 [[I3]], true
-; CHECK-NEXT:    ret i1 [[I4]]
+; CHECK-NEXT:    [[I1:%.*]] = icmp ne i32 [[V0:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    [[I2:%.*]] = icmp ne i32 [[V2:%.*]], [[V3:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[I2]])
+; CHECK-NEXT:    [[I3_NOT:%.*]] = and i1 [[I2]], [[I1]]
+; CHECK-NEXT:    ret i1 [[I3_NOT]]
 ;
   %i1 = icmp eq i32 %v0, %v1
   %i2 = icmp eq i32 %v2, %v3
@@ -151,15 +147,12 @@ define i1 @t8(i32 %v0, i32 %v1, i32 %v2, i32 %v3) {
 }
 define i1 @t9(i32 %v0, i32 %v1, i32 %v2, i32 %v3) {
 ; CHECK-LABEL: @t9(
-; CHECK-NEXT:    [[I1:%.*]] = icmp eq i32 [[V0:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[I1_NOT:%.*]] = xor i1 [[I1]], true
-; CHECK-NEXT:    call void @use1(i1 [[I1_NOT]])
-; CHECK-NEXT:    [[I2:%.*]] = icmp eq i32 [[V2:%.*]], [[V3:%.*]]
-; CHECK-NEXT:    [[I2_NOT:%.*]] = xor i1 [[I2]], true
-; CHECK-NEXT:    call void @use1(i1 [[I2_NOT]])
-; CHECK-NEXT:    [[I3:%.*]] = or i1 [[I2]], [[I1]]
-; CHECK-NEXT:    [[I4:%.*]] = xor i1 [[I3]], true
-; CHECK-NEXT:    ret i1 [[I4]]
+; CHECK-NEXT:    [[I1:%.*]] = icmp ne i32 [[V0:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[I1]])
+; CHECK-NEXT:    [[I2:%.*]] = icmp ne i32 [[V2:%.*]], [[V3:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[I2]])
+; CHECK-NEXT:    [[I3_NOT:%.*]] = and i1 [[I2]], [[I1]]
+; CHECK-NEXT:    ret i1 [[I3_NOT]]
 ;
   %i1 = icmp eq i32 %v0, %v1
   %i1.not = xor i1 %i1, -1
@@ -181,8 +174,7 @@ define i1 @n10(i32 %v0, i32 %v1, i32 %v2, i32 %v3) {
 ; CHECK-NEXT:    [[I2:%.*]] = icmp eq i32 [[V2:%.*]], [[V3:%.*]]
 ; CHECK-NEXT:    [[I3:%.*]] = or i1 [[I2]], [[I1]]
 ; CHECK-NEXT:    call void @use1(i1 [[I3]])
-; CHECK-NEXT:    [[I4_DEMORGAN:%.*]] = or i1 [[I2]], [[I1]]
-; CHECK-NEXT:    [[I4:%.*]] = xor i1 [[I4_DEMORGAN]], true
+; CHECK-NEXT:    [[I4:%.*]] = xor i1 [[I3]], true
 ; CHECK-NEXT:    ret i1 [[I4]]
 ;
   %i1 = icmp eq i32 %v0, %v1
@@ -196,14 +188,12 @@ define i1 @n10(i32 %v0, i32 %v1, i32 %v2, i32 %v3) {
 ; All other uses can be adapted.
 define i1 @t11(i32 %v0, i32 %v1, i32 %v2, i32 %v3, i1 %v4, i1 %v5) {
 ; CHECK-LABEL: @t11(
-; CHECK-NEXT:    [[I1:%.*]] = icmp eq i32 [[V0:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[I2:%.*]] = icmp eq i32 [[V2:%.*]], [[V3:%.*]]
-; CHECK-NEXT:    [[I3:%.*]] = or i1 [[I2]], [[I1]]
-; CHECK-NEXT:    [[I4_DEMORGAN:%.*]] = or i1 [[I2]], [[I1]]
-; CHECK-NEXT:    [[I4:%.*]] = xor i1 [[I4_DEMORGAN]], true
-; CHECK-NEXT:    [[I5:%.*]] = select i1 [[I3]], i1 [[V4:%.*]], i1 [[V5:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = icmp ne i32 [[V0:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    [[I2:%.*]] = icmp ne i32 [[V2:%.*]], [[V3:%.*]]
+; CHECK-NEXT:    [[I3_NOT:%.*]] = and i1 [[I2]], [[I1]]
+; CHECK-NEXT:    [[I5:%.*]] = select i1 [[I3_NOT]], i1 [[V5:%.*]], i1 [[V4:%.*]]
 ; CHECK-NEXT:    call void @use1(i1 [[I5]])
-; CHECK-NEXT:    ret i1 [[I4]]
+; CHECK-NEXT:    ret i1 [[I3_NOT]]
 ;
   %i1 = icmp eq i32 %v0, %v1
   %i2 = icmp eq i32 %v2, %v3
