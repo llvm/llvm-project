@@ -67,13 +67,10 @@ define float @select_fsub0_or_8_cmp_olt_fsub1_neg8_f32(float %a, float %b) #0 {
 ; CHECK-NEXT:    vmov.f32 s0, #4.000000e+00
 ; CHECK-NEXT:    vmov s2, r0
 ; CHECK-NEXT:    vmov.f32 s4, #-8.000000e+00
-; CHECK-NEXT:    vmov.f32 s8, #8.000000e+00
-; CHECK-NEXT:    vsub.f32 s6, s0, s2
-; CHECK-NEXT:    vsub.f32 s0, s2, s0
-; CHECK-NEXT:    vcmp.f32 s4, s6
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselgt.f32 s0, s0, s8
+; CHECK-NEXT:    vsub.f32 s0, s0, s2
+; CHECK-NEXT:    vminnm.f32 s0, s0, s4
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    eor r0, r0, #-2147483648
 ; CHECK-NEXT:    mov pc, lr
   %sub.0 = fsub nnan nsz float 4.0, %a
   %sub.1 = fsub nnan nsz float %a, 4.0
@@ -88,13 +85,10 @@ define float @select_fsub0_or_neg8_cmp_olt_fsub1_8_f32(float %a, float %b) #0 {
 ; CHECK-NEXT:    vmov.f32 s0, #4.000000e+00
 ; CHECK-NEXT:    vmov s2, r0
 ; CHECK-NEXT:    vmov.f32 s4, #8.000000e+00
-; CHECK-NEXT:    vmov.f32 s8, #-8.000000e+00
-; CHECK-NEXT:    vsub.f32 s6, s0, s2
-; CHECK-NEXT:    vsub.f32 s0, s2, s0
-; CHECK-NEXT:    vcmp.f32 s4, s6
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselgt.f32 s0, s0, s8
+; CHECK-NEXT:    vsub.f32 s0, s0, s2
+; CHECK-NEXT:    vminnm.f32 s0, s0, s4
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    eor r0, r0, #-2147483648
 ; CHECK-NEXT:    mov pc, lr
   %sub.0 = fsub nnan nsz float 4.0, %a
   %sub.1 = fsub nnan nsz float %a, 4.0
@@ -108,15 +102,11 @@ define float @select_mul4_or_neg8_cmp_olt_mulneg4_8_f32(float %a, float %b) #0 {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.f32 s0, #-4.000000e+00
 ; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    vmov.f32 s6, #8.000000e+00
-; CHECK-NEXT:    vmov.f32 s4, #4.000000e+00
-; CHECK-NEXT:    vmov.f32 s8, #-8.000000e+00
+; CHECK-NEXT:    vmov.f32 s4, #8.000000e+00
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
-; CHECK-NEXT:    vmul.f32 s2, s2, s4
-; CHECK-NEXT:    vcmp.f32 s6, s0
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselgt.f32 s0, s2, s8
+; CHECK-NEXT:    vminnm.f32 s0, s0, s4
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    eor r0, r0, #-2147483648
 ; CHECK-NEXT:    mov pc, lr
   %mul.0 = fmul nnan nsz float %a, 4.0
   %mul.1 = fmul nnan nsz float %a, -4.0
@@ -130,15 +120,11 @@ define float @select_mul4_or_8_cmp_olt_mulneg4_neg8_f32(float %a, float %b) #0 {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.f32 s0, #-4.000000e+00
 ; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    vmov.f32 s6, #-8.000000e+00
-; CHECK-NEXT:    vmov.f32 s4, #4.000000e+00
-; CHECK-NEXT:    vmov.f32 s8, #8.000000e+00
+; CHECK-NEXT:    vmov.f32 s4, #-8.000000e+00
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
-; CHECK-NEXT:    vmul.f32 s2, s2, s4
-; CHECK-NEXT:    vcmp.f32 s6, s0
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselgt.f32 s0, s2, s8
+; CHECK-NEXT:    vminnm.f32 s0, s0, s4
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    eor r0, r0, #-2147483648
 ; CHECK-NEXT:    mov pc, lr
   %mul.0 = fmul nnan nsz float %a, 4.0
   %mul.1 = fmul nnan nsz float %a, -4.0
@@ -194,15 +180,11 @@ define float @select_mulneg4_or_neg8_cmp_olt_mul4_8_f32(float %a, float %b) #0 {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.f32 s0, #4.000000e+00
 ; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    vmov.f32 s6, #8.000000e+00
-; CHECK-NEXT:    vmov.f32 s4, #-4.000000e+00
-; CHECK-NEXT:    vmov.f32 s8, #-8.000000e+00
+; CHECK-NEXT:    vmov.f32 s4, #8.000000e+00
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
-; CHECK-NEXT:    vmul.f32 s2, s2, s4
-; CHECK-NEXT:    vcmp.f32 s6, s0
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselgt.f32 s0, s2, s8
+; CHECK-NEXT:    vminnm.f32 s0, s0, s4
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    eor r0, r0, #-2147483648
 ; CHECK-NEXT:    mov pc, lr
   %mul.0 = fmul nnan nsz float %a, -4.0
   %mul.1 = fmul nnan nsz float %a, 4.0
