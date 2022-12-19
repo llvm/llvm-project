@@ -70,6 +70,9 @@ void defineCommonBlocks(
 /// instantiateVariable cannot be called.
 void mapSymbolAttributes(AbstractConverter &, const pft::Variable &, SymMap &,
                          StatementContext &, mlir::Value preAlloc = {});
+void mapSymbolAttributes(AbstractConverter &, const semantics::SymbolRef &,
+                         SymMap &, StatementContext &,
+                         mlir::Value preAlloc = {});
 
 /// Instantiate the variables that appear in the specification expressions
 /// of the result of a function call. The instantiated variables are added
