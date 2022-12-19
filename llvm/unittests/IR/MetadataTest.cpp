@@ -3110,6 +3110,49 @@ TEST_F(DIExpressionTest, replaceArg) {
 #undef EXPECT_REPLACE_ARG_EQ
 }
 
+TEST_F(DIExpressionTest, isEqualExpression) {
+#define EXPECT_EQ_DEBUG_VALUE(ExprA, DirectA, ExprB, DirectB)                  \
+  EXPECT_TRUE(DIExpression::isEqualExpression(ExprA, DirectA, ExprB, DirectB))
+#define EXPECT_NE_DEBUG_VALUE(ExprA, DirectA, ExprB, DirectB)                  \
+  EXPECT_FALSE(DIExpression::isEqualExpression(ExprA, DirectA, ExprB, DirectB))
+#define GET_EXPR(...) DIExpression::get(Context, {__VA_ARGS__})
+
+  EXPECT_EQ_DEBUG_VALUE(GET_EXPR(), false, GET_EXPR(), false);
+  EXPECT_NE_DEBUG_VALUE(GET_EXPR(), false, GET_EXPR(), true);
+  EXPECT_EQ_DEBUG_VALUE(
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 32), true,
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 32, dwarf::DW_OP_deref), false);
+  EXPECT_NE_DEBUG_VALUE(
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 16, dwarf::DW_OP_deref), true,
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 16, dwarf::DW_OP_deref), false);
+  EXPECT_EQ_DEBUG_VALUE(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus_uconst, 5), false,
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 5), false);
+  EXPECT_NE_DEBUG_VALUE(GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus),
+                        false,
+                        GET_EXPR(dwarf::DW_OP_LLVM_arg, 0,
+                                 dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus),
+                        false);
+  EXPECT_NE_DEBUG_VALUE(GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_constu,
+                                 8, dwarf::DW_OP_minus),
+                        false,
+                        GET_EXPR(dwarf::DW_OP_constu, 8, dwarf::DW_OP_LLVM_arg,
+                                 0, dwarf::DW_OP_minus),
+                        false);
+  // These expressions are actually equivalent, but we do not currently identify
+  // commutative operations with different operand orders as being equivalent.
+  EXPECT_NE_DEBUG_VALUE(GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_constu,
+                                 8, dwarf::DW_OP_plus),
+                        false,
+                        GET_EXPR(dwarf::DW_OP_constu, 8, dwarf::DW_OP_LLVM_arg,
+                                 0, dwarf::DW_OP_plus),
+                        false);
+
+#undef EXPECT_EQ_DEBUG_VALUE
+#undef EXPECT_NE_DEBUG_VALUE
+#undef GET_EXPR
+}
+
 TEST_F(DIExpressionTest, foldConstant) {
   const ConstantInt *Int;
   const ConstantInt *NewInt;
