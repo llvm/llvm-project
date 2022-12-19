@@ -210,6 +210,25 @@ TEST(WalkAST, MemberExprs) {
       };
       struct Foo {};)cpp",
            "void test(unique_ptr<Foo> &V) { V.^release(); }");
+  // Respect the sugar type (typedef, using-type).
+  testWalk(R"cpp(
+      namespace ns { struct Foo { int a; }; }
+      using $explicit^Bar = ns::Foo;)cpp",
+           "void test(Bar b) { b.^a; }");
+  testWalk(R"cpp(
+      namespace ns { struct Foo { int a; }; }
+      using ns::$explicit^Foo;)cpp",
+           "void test(Foo b) { b.^a; }");
+  testWalk(R"cpp(
+      namespace ns { struct Foo { int a; }; }
+      namespace ns2 { using Bar = ns::Foo; }
+      using ns2::$explicit^Bar;
+      )cpp",
+           "void test(Bar b) { b.^a; }");
+  testWalk(R"cpp(
+      namespace ns { template<typename> struct Foo { int a; }; }
+      using ns::$explicit^Foo;)cpp",
+           "void k(Foo<int> b) { b.^a; }");
 }
 
 TEST(WalkAST, ConstructExprs) {
