@@ -19,6 +19,256 @@
 
 using namespace Fortran::runtime;
 
+/// Placeholder for real*10 version of BesselJn intrinsic.
+struct ForcedBesselJn_10 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselJn_10));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF80(ctx);
+      auto boxTy =
+          fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 32);
+      auto noneTy = mlir::NoneType::get(ctx);
+      return mlir::FunctionType::get(
+          ctx, {boxTy, intTy, intTy, ty, ty, ty, strTy, intTy}, {noneTy});
+    };
+  }
+};
+
+/// Placeholder for real*16 version of BesselJn intrinsic.
+struct ForcedBesselJn_16 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselJn_16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF128(ctx);
+      auto boxTy =
+          fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 32);
+      auto noneTy = mlir::NoneType::get(ctx);
+      return mlir::FunctionType::get(
+          ctx, {boxTy, intTy, intTy, ty, ty, ty, strTy, intTy}, {noneTy});
+    };
+  }
+};
+
+/// Placeholder for real*10 version of BesselJn intrinsic when `x == 0.0`.
+struct ForcedBesselJnX0_10 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselJnX0_10));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto boxTy =
+          fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 32);
+      auto noneTy = mlir::NoneType::get(ctx);
+      return mlir::FunctionType::get(ctx, {boxTy, intTy, intTy, strTy, intTy},
+                                     {noneTy});
+    };
+  }
+};
+
+/// Placeholder for real*16 version of BesselJn intrinsic when `x == 0.0`.
+struct ForcedBesselJnX0_16 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselJnX0_16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto boxTy =
+          fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 32);
+      auto noneTy = mlir::NoneType::get(ctx);
+      return mlir::FunctionType::get(ctx, {boxTy, intTy, intTy, strTy, intTy},
+                                     {noneTy});
+    };
+  }
+};
+
+/// Placeholder for real*10 version of BesselYn intrinsic.
+struct ForcedBesselYn_10 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselYn_10));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF80(ctx);
+      auto boxTy =
+          fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 32);
+      auto noneTy = mlir::NoneType::get(ctx);
+      return mlir::FunctionType::get(
+          ctx, {boxTy, intTy, intTy, ty, ty, ty, strTy, intTy}, {noneTy});
+    };
+  }
+};
+
+/// Placeholder for real*16 version of BesselYn intrinsic.
+struct ForcedBesselYn_16 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselYn_16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF128(ctx);
+      auto boxTy =
+          fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 32);
+      auto noneTy = mlir::NoneType::get(ctx);
+      return mlir::FunctionType::get(
+          ctx, {boxTy, intTy, intTy, ty, ty, ty, strTy, intTy}, {noneTy});
+    };
+  }
+};
+
+/// Placeholder for real*10 version of BesselYn intrinsic when `x == 0.0`.
+struct ForcedBesselYnX0_10 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselYnX0_10));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto boxTy =
+          fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 32);
+      auto noneTy = mlir::NoneType::get(ctx);
+      return mlir::FunctionType::get(ctx, {boxTy, intTy, intTy, strTy, intTy},
+                                     {noneTy});
+    };
+  }
+};
+
+/// Placeholder for real*16 version of BesselYn intrinsic when `x == 0.0`.
+struct ForcedBesselYnX0_16 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselYnX0_16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto boxTy =
+          fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 32);
+      auto noneTy = mlir::NoneType::get(ctx);
+      return mlir::FunctionType::get(ctx, {boxTy, intTy, intTy, strTy, intTy},
+                                     {noneTy});
+    };
+  }
+};
+
+/// Generate call to `BesselJn` intrinsic.
+void fir::runtime::genBesselJn(fir::FirOpBuilder &builder, mlir::Location loc,
+                               mlir::Value resultBox, mlir::Value n1,
+                               mlir::Value n2, mlir::Value x, mlir::Value bn2,
+                               mlir::Value bn2_1) {
+  mlir::func::FuncOp func;
+  auto xTy = x.getType();
+
+  if (xTy.isF16() || xTy.isBF16())
+    TODO(loc, "half-precision BESSEL_JN");
+  else if (xTy.isF32())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(BesselJn_4)>(loc, builder);
+  else if (xTy.isF64())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(BesselJn_8)>(loc, builder);
+  else if (xTy.isF80())
+    func = fir::runtime::getRuntimeFunc<ForcedBesselJn_10>(loc, builder);
+  else if (xTy.isF128())
+    func = fir::runtime::getRuntimeFunc<ForcedBesselJn_16>(loc, builder);
+  else
+    fir::emitFatalError(loc, "invalid type in BESSEL_JN");
+
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(7));
+  auto args =
+      fir::runtime::createArguments(builder, loc, fTy, resultBox, n1, n2, x,
+                                    bn2, bn2_1, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
+/// Generate call to `BesselJn` intrinsic. This is used when `x == 0.0`.
+void fir::runtime::genBesselJnX0(fir::FirOpBuilder &builder, mlir::Location loc,
+                                 mlir::Type xTy, mlir::Value resultBox,
+                                 mlir::Value n1, mlir::Value n2) {
+  mlir::func::FuncOp func;
+
+  if (xTy.isF16() || xTy.isBF16())
+    TODO(loc, "half-precision BESSEL_JN");
+  else if (xTy.isF32())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(BesselJnX0_4)>(loc, builder);
+  else if (xTy.isF64())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(BesselJnX0_8)>(loc, builder);
+  else if (xTy.isF80())
+    func = fir::runtime::getRuntimeFunc<ForcedBesselJnX0_10>(loc, builder);
+  else if (xTy.isF128())
+    func = fir::runtime::getRuntimeFunc<ForcedBesselJnX0_16>(loc, builder);
+  else
+    fir::emitFatalError(loc, "invalid type in BESSEL_JN");
+
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
+  auto args = fir::runtime::createArguments(builder, loc, fTy, resultBox, n1,
+                                            n2, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
+/// Generate call to `BesselYn` intrinsic.
+void fir::runtime::genBesselYn(fir::FirOpBuilder &builder, mlir::Location loc,
+                               mlir::Value resultBox, mlir::Value n1,
+                               mlir::Value n2, mlir::Value x, mlir::Value bn1,
+                               mlir::Value bn1_1) {
+  mlir::func::FuncOp func;
+  auto xTy = x.getType();
+
+  if (xTy.isF16() || xTy.isBF16())
+    TODO(loc, "half-precision BESSEL_YN");
+  else if (xTy.isF32())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(BesselYn_4)>(loc, builder);
+  else if (xTy.isF64())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(BesselYn_8)>(loc, builder);
+  else if (xTy.isF80())
+    func = fir::runtime::getRuntimeFunc<ForcedBesselYn_10>(loc, builder);
+  else if (xTy.isF128())
+    func = fir::runtime::getRuntimeFunc<ForcedBesselYn_16>(loc, builder);
+  else
+    fir::emitFatalError(loc, "invalid type in BESSEL_YN");
+
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(7));
+  auto args =
+      fir::runtime::createArguments(builder, loc, fTy, resultBox, n1, n2, x,
+                                    bn1, bn1_1, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
+/// Generate call to `BesselYn` intrinsic. This is used when `x == 0.0`.
+void fir::runtime::genBesselYnX0(fir::FirOpBuilder &builder, mlir::Location loc,
+                                 mlir::Type xTy, mlir::Value resultBox,
+                                 mlir::Value n1, mlir::Value n2) {
+  mlir::func::FuncOp func;
+
+  if (xTy.isF16() || xTy.isBF16())
+    TODO(loc, "half-precision BESSEL_YN");
+  else if (xTy.isF32())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(BesselYnX0_4)>(loc, builder);
+  else if (xTy.isF64())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(BesselYnX0_8)>(loc, builder);
+  else if (xTy.isF80())
+    func = fir::runtime::getRuntimeFunc<ForcedBesselYnX0_10>(loc, builder);
+  else if (xTy.isF128())
+    func = fir::runtime::getRuntimeFunc<ForcedBesselYnX0_16>(loc, builder);
+  else
+    fir::emitFatalError(loc, "invalid type in BESSEL_YN");
+
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
+  auto args = fir::runtime::createArguments(builder, loc, fTy, resultBox, n1,
+                                            n2, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
 /// Generate call to Cshift intrinsic
 void fir::runtime::genCshift(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::Value resultBox, mlir::Value arrayBox,
