@@ -4,11 +4,11 @@ define private void @bar() {
   ret void
 }
 
-define void()* @foo() {
+define ptr @foo() {
 ; CHECK:      foo:
 ; CHECK:      lw     $[[REG:.*]], %got($bar)($1)
 ; CHECK-NEXT: jr     $ra
 ; CHECK-NEXT: addiu  $2, $[[REG]], %lo($bar)
 
-  ret void()* @bar
+  ret ptr @bar
 }

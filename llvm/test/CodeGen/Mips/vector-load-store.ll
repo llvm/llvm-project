@@ -10,8 +10,8 @@ entry:
 ; CHECK: lw
 ; CHECK: sw
 
-  %0 = load <2 x i16>, <2 x i16>* @g1, align 4
-  store <2 x i16> %0, <2 x i16>* @g0, align 4
+  %0 = load <2 x i16>, ptr @g1, align 4
+  store <2 x i16> %0, ptr @g0, align 4
   ret void
 }
 
@@ -20,8 +20,8 @@ entry:
 ; CHECK: lw
 ; CHECK: sw
 
-  %0 = load <4 x i8>, <4 x i8>* @g3, align 4
-  store <4 x i8> %0, <4 x i8>* @g2, align 4
+  %0 = load <4 x i8>, ptr @g3, align 4
+  store <4 x i8> %0, ptr @g2, align 4
   ret void
 }
 

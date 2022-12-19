@@ -24,9 +24,9 @@ define i32 @main() {
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i32 signext 1234567890)
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i32 signext 1234567890)
   ret i32 0
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 

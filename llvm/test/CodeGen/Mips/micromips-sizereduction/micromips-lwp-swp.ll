@@ -3,7 +3,7 @@
 ; RUN: -verify-machineinstrs < %s | FileCheck %s
 
 ; Function Attrs: nounwind
-define i32 @fun(i32* %adr, i32 %val) {
+define i32 @fun(ptr %adr, i32 %val) {
 ; CHECK-LABEL: fun:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addiusp -32
@@ -24,10 +24,10 @@ define i32 @fun(i32* %adr, i32 %val) {
 ; CHECK-NEXT:    addiusp 32
 ; CHECK-NEXT:    jrc $ra
 entry:
-  %call1 =  call i32* @fun1()
-  store i32 %val, i32* %adr, align 4
+  %call1 =  call ptr @fun1()
+  store i32 %val, ptr %adr, align 4
   ret i32 0
 }
 
-declare i32* @fun1()
+declare ptr @fun1()
 

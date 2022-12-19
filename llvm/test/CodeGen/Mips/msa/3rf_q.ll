@@ -10,10 +10,10 @@
 
 define void @llvm_mips_mul_q_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_mul_q_h_ARG1
-  %1 = load <8 x i16>, <8 x i16>* @llvm_mips_mul_q_h_ARG2
+  %0 = load <8 x i16>, ptr @llvm_mips_mul_q_h_ARG1
+  %1 = load <8 x i16>, ptr @llvm_mips_mul_q_h_ARG2
   %2 = tail call <8 x i16> @llvm.mips.mul.q.h(<8 x i16> %0, <8 x i16> %1)
-  store <8 x i16> %2, <8 x i16>* @llvm_mips_mul_q_h_RES
+  store <8 x i16> %2, ptr @llvm_mips_mul_q_h_RES
   ret void
 }
 
@@ -32,10 +32,10 @@ declare <8 x i16> @llvm.mips.mul.q.h(<8 x i16>, <8 x i16>) nounwind
 
 define void @llvm_mips_mul_q_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_mul_q_w_ARG1
-  %1 = load <4 x i32>, <4 x i32>* @llvm_mips_mul_q_w_ARG2
+  %0 = load <4 x i32>, ptr @llvm_mips_mul_q_w_ARG1
+  %1 = load <4 x i32>, ptr @llvm_mips_mul_q_w_ARG2
   %2 = tail call <4 x i32> @llvm.mips.mul.q.w(<4 x i32> %0, <4 x i32> %1)
-  store <4 x i32> %2, <4 x i32>* @llvm_mips_mul_q_w_RES
+  store <4 x i32> %2, ptr @llvm_mips_mul_q_w_RES
   ret void
 }
 
@@ -54,10 +54,10 @@ declare <4 x i32> @llvm.mips.mul.q.w(<4 x i32>, <4 x i32>) nounwind
 
 define void @llvm_mips_mulr_q_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_mulr_q_h_ARG1
-  %1 = load <8 x i16>, <8 x i16>* @llvm_mips_mulr_q_h_ARG2
+  %0 = load <8 x i16>, ptr @llvm_mips_mulr_q_h_ARG1
+  %1 = load <8 x i16>, ptr @llvm_mips_mulr_q_h_ARG2
   %2 = tail call <8 x i16> @llvm.mips.mulr.q.h(<8 x i16> %0, <8 x i16> %1)
-  store <8 x i16> %2, <8 x i16>* @llvm_mips_mulr_q_h_RES
+  store <8 x i16> %2, ptr @llvm_mips_mulr_q_h_RES
   ret void
 }
 
@@ -76,10 +76,10 @@ declare <8 x i16> @llvm.mips.mulr.q.h(<8 x i16>, <8 x i16>) nounwind
 
 define void @llvm_mips_mulr_q_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_mulr_q_w_ARG1
-  %1 = load <4 x i32>, <4 x i32>* @llvm_mips_mulr_q_w_ARG2
+  %0 = load <4 x i32>, ptr @llvm_mips_mulr_q_w_ARG1
+  %1 = load <4 x i32>, ptr @llvm_mips_mulr_q_w_ARG2
   %2 = tail call <4 x i32> @llvm.mips.mulr.q.w(<4 x i32> %0, <4 x i32> %1)
-  store <4 x i32> %2, <4 x i32>* @llvm_mips_mulr_q_w_RES
+  store <4 x i32> %2, ptr @llvm_mips_mulr_q_w_RES
   ret void
 }
 

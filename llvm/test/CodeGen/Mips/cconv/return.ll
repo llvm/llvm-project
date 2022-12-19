@@ -24,7 +24,7 @@
 
 define i8 @reti8() nounwind {
 entry:
-        %0 = load volatile i8, i8* @byte
+        %0 = load volatile i8, ptr @byte
         ret i8 %0
 }
 
@@ -38,7 +38,7 @@ entry:
 
 define i32 @reti32() nounwind {
 entry:
-        %0 = load volatile i32, i32* @word
+        %0 = load volatile i32, ptr @word
         ret i32 %0
 }
 
@@ -52,7 +52,7 @@ entry:
 
 define i64 @reti64() nounwind {
 entry:
-        %0 = load volatile i64, i64* @dword
+        %0 = load volatile i64, ptr @dword
         ret i64 %0
 }
 
