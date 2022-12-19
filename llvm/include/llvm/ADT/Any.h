@@ -31,9 +31,9 @@ class LLVM_EXTERNAL_VISIBILITY Any {
   // identifier for the type `T`. It is explicitly marked with default
   // visibility so that when `-fvisibility=hidden` is used, the loader still
   // merges duplicate definitions across DSO boundaries.
-  template <typename T> struct TypeId {
-    static const char Id;
-  };
+  // We also cannot mark it as `const`, otherwise msvc merges all definitions
+  // when lto is enabled, making any comparison return true.
+  template <typename T> struct TypeId { static char Id; };
 
   struct StorageBase {
     virtual ~StorageBase() = default;
@@ -117,7 +117,7 @@ private:
   std::unique_ptr<StorageBase> Storage;
 };
 
-template <typename T> const char Any::TypeId<T>::Id = 0;
+template <typename T> char Any::TypeId<T>::Id = 0;
 
 template <typename T> bool any_isa(const Any &Value) {
   if (!Value.Storage)
