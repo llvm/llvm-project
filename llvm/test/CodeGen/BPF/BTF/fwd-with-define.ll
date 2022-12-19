@@ -7,7 +7,7 @@
 ; Compilation flag:
 ;   clang -target bpf -O2 -g -S -emit-llvm t.c
 
-%struct.t1 = type { %struct.t1* }
+%struct.t1 = type { ptr }
 
 @a = common dso_local local_unnamed_addr global %struct.t1 zeroinitializer, align 8, !dbg !0
 

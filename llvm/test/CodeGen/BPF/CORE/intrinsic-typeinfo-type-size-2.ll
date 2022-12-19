@@ -22,9 +22,9 @@ target triple = "bpf"
 ; Function Attrs: nounwind readnone
 define dso_local i32 @test() local_unnamed_addr #0 !dbg !17 {
 entry:
-  call void @llvm.dbg.declare(metadata [10 x i32]* undef, metadata !20, metadata !DIExpression()), !dbg !28
-  call void @llvm.dbg.declare(metadata i32 ()** undef, metadata !19, metadata !DIExpression()), !dbg !29
-  call void @llvm.dbg.declare(metadata i32* undef, metadata !27, metadata !DIExpression()), !dbg !30
+  call void @llvm.dbg.declare(metadata ptr undef, metadata !20, metadata !DIExpression()), !dbg !28
+  call void @llvm.dbg.declare(metadata ptr undef, metadata !19, metadata !DIExpression()), !dbg !29
+  call void @llvm.dbg.declare(metadata ptr undef, metadata !27, metadata !DIExpression()), !dbg !30
   %0 = tail call i32 @llvm.bpf.preserve.type.info(i32 0, i64 1), !dbg !31, !llvm.preserve.access.index !8
   %1 = tail call i32 @llvm.bpf.preserve.type.info(i32 1, i64 1), !dbg !32, !llvm.preserve.access.index !21
   %add = add i32 %1, %0, !dbg !33
