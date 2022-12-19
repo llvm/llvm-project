@@ -10,6 +10,8 @@
 ; CHECK-DAG: OpName %[[#FN5:]] "fn5"
 ; CHECK-DAG: OpName %[[#FN6:]] "fn6"
 ; CHECK-DAG: OpName %[[#FN7:]] "fn7"
+; CHECK-DAG: OpName %[[#FN8:]] "fn8"
+; CHECK-DAG: OpName %[[#FN9:]] "fn9"
 
 ;; Types:
 ; CHECK:     %[[#VOID:]] = OpTypeVoid
@@ -56,15 +58,29 @@ define void @fn5() readnone {
 ; CHECK: OpFunctionEnd
 
 
-define void @fn6() readonly {
+define void @fn6() memory(none) {
   ret void
 }
-; CHECK: %[[#FN6]] = OpFunction %[[#VOID]] Const %[[#FN]]
+; CHECK: %[[#FN6]] = OpFunction %[[#VOID]] Pure %[[#FN]]
 ; CHECK: OpFunctionEnd
 
 
-define void @fn7() alwaysinline readnone {
+define void @fn7() readonly {
   ret void
 }
-; CHECK: %[[#FN7]] = OpFunction %[[#VOID]] Inline|Pure %[[#FN]]
+; CHECK: %[[#FN7]] = OpFunction %[[#VOID]] Const %[[#FN]]
+; CHECK: OpFunctionEnd
+
+
+define void @fn8() memory(read) {
+  ret void
+}
+; CHECK: %[[#FN8]] = OpFunction %[[#VOID]] Const %[[#FN]]
+; CHECK: OpFunctionEnd
+
+
+define void @fn9() alwaysinline readnone {
+  ret void
+}
+; CHECK: %[[#FN9]] = OpFunction %[[#VOID]] Inline|Pure %[[#FN]]
 ; CHECK: OpFunctionEnd
