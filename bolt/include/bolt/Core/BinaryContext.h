@@ -316,7 +316,7 @@ public:
     if (FileBuildID)
       return StringRef(*FileBuildID);
 
-    return NoneType();
+    return None;
   }
   void setFileBuildID(StringRef ID) { FileBuildID = std::string(ID); }
 
