@@ -50,7 +50,7 @@ public:
       MaterializationResponsibility &R, std::unique_ptr<MemoryBuffer>)>;
 
   using GetMemoryManagerFunction =
-      std::function<std::unique_ptr<RuntimeDyld::MemoryManager>()>;
+      unique_function<std::unique_ptr<RuntimeDyld::MemoryManager>()>;
 
   /// Construct an ObjectLinkingLayer with the given NotifyLoaded,
   ///        and NotifyEmitted functors.

@@ -599,7 +599,7 @@ private:
                              : LLVMLoopDistributeFollowupCoincident});
     if (PartitionID) {
       Loop *NewLoop = Part->getDistributedLoop();
-      NewLoop->setLoopID(PartitionID.value());
+      NewLoop->setLoopID(*PartitionID);
     }
   }
 };
@@ -819,12 +819,10 @@ public:
       // The unversioned loop will not be changed, so we inherit all attributes
       // from the original loop, but remove the loop distribution metadata to
       // avoid to distribute it again.
-      MDNode *UnversionedLoopID =
-          makeFollowupLoopID(OrigLoopID,
-                             {LLVMLoopDistributeFollowupAll,
-                              LLVMLoopDistributeFollowupFallback},
-                             "llvm.loop.distribute.", true)
-              .value();
+      MDNode *UnversionedLoopID = *makeFollowupLoopID(
+          OrigLoopID,
+          {LLVMLoopDistributeFollowupAll, LLVMLoopDistributeFollowupFallback},
+          "llvm.loop.distribute.", true);
       LVer.getNonVersionedLoop()->setLoopID(UnversionedLoopID);
     }
 

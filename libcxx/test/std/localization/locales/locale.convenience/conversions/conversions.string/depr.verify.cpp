@@ -16,5 +16,5 @@
 #include <codecvt>
 #include <locale>
 
-std::wstring_convert<std::codecvt_utf8<wchar_t>> c1; // expected-warning {{'wstring_convert<std::codecvt_utf8<wchar_t, 1114111, 0>>' is deprecated}}
-// expected-warning@-1 {{'codecvt_utf8<wchar_t, 1114111, 0>' is deprecated}}
+std::wstring_convert<std::codecvt_utf8<wchar_t>> c1; // expected-warning {{'wstring_convert<std::codecvt_utf8<wchar_t>>' is deprecated}}
+// expected-warning@-1 {{'codecvt_utf8<wchar_t>' is deprecated}}

@@ -407,13 +407,13 @@ Error DebuginfodCollection::findBinaries(StringRef Path) {
         if (!ID)
           continue;
 
-        std::string IDString = buildIDToString(ID.value());
+        std::string IDString = buildIDToString(*ID);
         if (Object->hasDebugInfo()) {
           std::lock_guard<sys::RWMutex> DebugBinariesGuard(DebugBinariesMutex);
-          DebugBinaries[IDString] = FilePath;
+          (void)DebugBinaries.try_emplace(IDString, std::move(FilePath));
         } else {
           std::lock_guard<sys::RWMutex> BinariesGuard(BinariesMutex);
-          Binaries[IDString] = FilePath;
+          (void)Binaries.try_emplace(IDString, std::move(FilePath));
         }
       }
     });
@@ -469,7 +469,7 @@ Expected<std::string> DebuginfodCollection::findBinaryPath(BuildIDRef ID) {
       }
     }
     if (Path)
-      return Path.value();
+      return *Path;
   }
 
   // Try federation.
@@ -500,7 +500,7 @@ Expected<std::string> DebuginfodCollection::findDebugBinaryPath(BuildIDRef ID) {
     }
   }
   if (Path)
-    return Path.value();
+    return *Path;
 
   // Try federation.
   return getCachedOrDownloadDebuginfo(ID);

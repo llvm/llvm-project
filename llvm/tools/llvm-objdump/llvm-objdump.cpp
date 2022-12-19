@@ -1691,7 +1691,7 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
           continue;
         }
 
-        if (Status.value() == MCDisassembler::Fail) {
+        if (*Status == MCDisassembler::Fail) {
           // If onSymbolStart returns Fail, that means it identified some kind
           // of special data at this address, but wasn't able to disassemble it
           // meaningfully. So we fall back to disassembling the failed region
@@ -2505,8 +2505,8 @@ void objdump::printSymbol(const ObjectFile &O, const SymbolRef &Symbol,
             SymName = demangle(SymName);
 
           if (SymbolDescription)
-            SymName = getXCOFFSymbolDescription(
-                createSymbolInfo(O, SymRef.value()), SymName);
+            SymName = getXCOFFSymbolDescription(createSymbolInfo(O, *SymRef),
+                                                SymName);
 
           outs() << ' ' << SymName;
           outs() << ") ";
@@ -2614,7 +2614,7 @@ static void printRawClangAST(const ObjectFile *Obj) {
     return;
 
   StringRef ClangASTContents =
-      unwrapOrError(ClangASTSection.value().getContents(), Obj->getFileName());
+      unwrapOrError(ClangASTSection->getContents(), Obj->getFileName());
   outs().write(ClangASTContents.data(), ClangASTContents.size());
 }
 

@@ -553,7 +553,7 @@ PDLDocument::buildHoverForCoreConstraint(const ast::CoreConstraintDecl *decl,
         .Case([&](const ast::OpConstraintDecl *opCst) {
           hoverOS << "Op";
           if (Optional<StringRef> name = opCst->getName())
-            hoverOS << "<" << name << ">";
+            hoverOS << "<" << *name << ">";
         })
         .Case([&](const ast::TypeConstraintDecl *) { hoverOS << "Type"; })
         .Case([&](const ast::TypeRangeConstraintDecl *) {

@@ -1,4 +1,4 @@
-// UNSUPPORTED: windows-msvc
+// UNSUPPORTED: target={{.*windows-msvc.*}}
 
 // RUN: %clangxx_cfi -o %t %s
 // RUN: %expect_crash %run %t a

@@ -30,7 +30,7 @@ public:
   static IntegerValueRange getMaxRange(Value value);
 
   /// Create an integer value range lattice value.
-  IntegerValueRange(Optional<ConstantIntRanges> value = std::nullopt)
+  IntegerValueRange(std::optional<ConstantIntRanges> value = std::nullopt)
       : value(std::move(value)) {}
 
   /// Whether the range is uninitialized. This happens when the state hasn't
@@ -63,7 +63,7 @@ public:
 
 private:
   /// The known integer value range.
-  Optional<ConstantIntRanges> value;
+  std::optional<ConstantIntRanges> value;
 };
 
 /// This lattice element represents the integer value range of an SSA value.

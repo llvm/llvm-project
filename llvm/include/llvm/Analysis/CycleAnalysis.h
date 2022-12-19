@@ -27,27 +27,6 @@ extern template class GenericCycle<SSAContext>;
 using CycleInfo = GenericCycleInfo<SSAContext>;
 using Cycle = CycleInfo::CycleT;
 
-/// Legacy analysis pass which computes a \ref CycleInfo.
-class CycleInfoWrapperPass : public FunctionPass {
-  Function *F = nullptr;
-  CycleInfo CI;
-
-public:
-  static char ID;
-
-  CycleInfoWrapperPass();
-
-  CycleInfo &getResult() { return CI; }
-  const CycleInfo &getResult() const { return CI; }
-
-  bool runOnFunction(Function &F) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  void releaseMemory() override;
-  void print(raw_ostream &OS, const Module *M = nullptr) const override;
-
-  // TODO: verify analysis?
-};
-
 /// Analysis pass which computes a \ref CycleInfo.
 class CycleAnalysis : public AnalysisInfoMixin<CycleAnalysis> {
   friend AnalysisInfoMixin<CycleAnalysis>;
@@ -56,8 +35,6 @@ class CycleAnalysis : public AnalysisInfoMixin<CycleAnalysis> {
 public:
   /// Provide the result typedef for this analysis pass.
   using Result = CycleInfo;
-
-  using LegacyWrapper = CycleInfoWrapperPass;
 
   /// Run the analysis pass over a function and produce a dominator tree.
   CycleInfo run(Function &F, FunctionAnalysisManager &);
@@ -73,6 +50,27 @@ public:
   explicit CycleInfoPrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+/// Legacy analysis pass which computes a \ref CycleInfo.
+class CycleInfoWrapperPass : public FunctionPass {
+  Function *F = nullptr;
+  CycleInfo CI;
+
+public:
+  static char ID;
+
+  CycleInfoWrapperPass();
+
+  CycleInfo &getCycleInfo() { return CI; }
+  const CycleInfo &getCycleInfo() const { return CI; }
+
+  bool runOnFunction(Function &F) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void releaseMemory() override;
+  void print(raw_ostream &OS, const Module *M = nullptr) const override;
+
+  // TODO: verify analysis?
 };
 
 } // end namespace llvm

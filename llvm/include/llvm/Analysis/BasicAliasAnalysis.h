@@ -134,9 +134,9 @@ private:
                           const Value *V2, LocationSize V2Size,
                           AAQueryInfo &AAQI);
 
-  AliasResult aliasCheck(const Value *V1, LocationSize V1Size,
-                         const Value *V2, LocationSize V2Size,
-                         AAQueryInfo &AAQI);
+  AliasResult aliasCheck(const Value *V1, LocationSize V1Size, const Value *V2,
+                         LocationSize V2Size, AAQueryInfo &AAQI,
+                         const Instruction *CtxI);
 
   AliasResult aliasCheckRecursive(const Value *V1, LocationSize V1Size,
                                   const Value *V2, LocationSize V2Size,

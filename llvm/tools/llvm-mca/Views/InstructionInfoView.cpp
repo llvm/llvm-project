@@ -71,7 +71,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
       TempStream << ' ';
 
     if (IIVDEntry.RThroughput) {
-      double RT = IIVDEntry.RThroughput.value();
+      double RT = *IIVDEntry.RThroughput;
       TempStream << format("%.2f", RT) << ' ';
       if (RT < 10.0)
         TempStream << "  ";

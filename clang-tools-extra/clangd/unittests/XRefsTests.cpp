@@ -288,11 +288,11 @@ MATCHER_P3(sym, Name, Decl, DefOrNone, "") {
     return false;
   }
   if (!Def && arg.Definition) {
-    *result_listener << "Definition is " << llvm::to_string(arg.Definition);
+    *result_listener << "Definition is " << llvm::to_string(*arg.Definition);
     return false;
   }
   if (arg.Definition->range != *Def) {
-    *result_listener << "Definition is " << llvm::to_string(arg.Definition);
+    *result_listener << "Definition is " << llvm::to_string(*arg.Definition);
     return false;
   }
   return true;

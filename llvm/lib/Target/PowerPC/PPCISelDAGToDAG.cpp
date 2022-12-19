@@ -1091,9 +1091,9 @@ static SDNode *selectI64ImmDirect(SelectionDAG *CurDAG, const SDLoc &dl,
                                   getI32Imm(TZ), getI32Imm(LZ));
   }
   // 3-2) Pattern : {zeros}{31-bit value}{ones}
-  // Shift right the Imm by (32 - LZ) bits to construct a negtive 32 bits value,
-  // therefore we can take advantage of LIS's sign-extension semantics, add
-  // the remaining bits with ORI, and then mask them off after rotation.
+  // Shift right the Imm by (32 - LZ) bits to construct a negative 32 bits
+  // value, therefore we can take advantage of LIS's sign-extension semantics,
+  // add the remaining bits with ORI, and then mask them off after rotation.
   // This is similar to Pattern 2-3, please refer to the diagram there.
   if ((LZ + TO) > 32) {
     // Since the immediates with (LZ > 32) have been handled by previous
@@ -1285,7 +1285,7 @@ static SDNode *selectI64ImmDirectPrefix(SelectionDAG *CurDAG, const SDLoc &dl,
 static SDNode *selectI64Imm(SelectionDAG *CurDAG, const SDLoc &dl, uint64_t Imm,
                             unsigned *InstCnt = nullptr) {
   unsigned InstCntDirect = 0;
-  // No more than 3 instructions is used if we can select the i64 immediate
+  // No more than 3 instructions are used if we can select the i64 immediate
   // directly.
   SDNode *Result = selectI64ImmDirect(CurDAG, dl, Imm, InstCntDirect);
 

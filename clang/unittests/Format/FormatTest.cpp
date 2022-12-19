@@ -8008,12 +8008,14 @@ TEST_F(FormatTest, DeductionGuides) {
   verifyFormat("template <class T> x() -> x<1>;");
   verifyFormat("template <class T> explicit x(T &) -> x<1>;");
 
+  verifyFormat("A(const char *) -> A<string &>;");
+  verifyFormat("A() -> A<int>;");
+
   // Ensure not deduction guides.
   verifyFormat("c()->f<int>();");
   verifyFormat("x()->foo<1>;");
   verifyFormat("x = p->foo<3>();");
   verifyFormat("x()->x<1>();");
-  verifyFormat("x()->x<1>;");
 }
 
 TEST_F(FormatTest, BreaksFunctionDeclarationsWithTrailingTokens) {

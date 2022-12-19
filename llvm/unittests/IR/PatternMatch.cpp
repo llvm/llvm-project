@@ -550,6 +550,20 @@ TEST_F(PatternMatchTest, Power2) {
   EXPECT_TRUE(m_NegatedPower2().match(CNegIntMin));
 }
 
+TEST_F(PatternMatchTest, Not) {
+  Value *C1 = IRB.getInt32(1);
+  Value *C2 = IRB.getInt32(2);
+  Value *C3 = IRB.getInt32(3);
+  Instruction *Not = BinaryOperator::CreateXor(C1, C2);
+
+  // When `m_Not` does not match the `not` itself,
+  // it should not try to apply the inner matcher.
+  Value *Val = C3;
+  EXPECT_FALSE(m_Not(m_Value(Val)).match(Not));
+  EXPECT_EQ(Val, C3);
+  Not->deleteValue();
+}
+
 TEST_F(PatternMatchTest, CommutativeDeferredValue) {
   Value *X = IRB.getInt32(1);
   Value *Y = IRB.getInt32(2);

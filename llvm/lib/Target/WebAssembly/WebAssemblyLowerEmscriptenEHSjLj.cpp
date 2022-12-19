@@ -551,7 +551,7 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallBase *CI) {
     auto [SizeArg, NEltArg] = *Args;
     SizeArg += 1;
     if (NEltArg)
-      NEltArg = NEltArg.value() + 1;
+      NEltArg = *NEltArg + 1;
     FnAttrs.addAllocSizeAttr(SizeArg, NEltArg);
   }
   // In case the callee has 'noreturn' attribute, We need to remove it, because

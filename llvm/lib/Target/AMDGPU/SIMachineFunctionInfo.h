@@ -436,17 +436,6 @@ private:
   MCPhysReg getNextSystemSGPR() const;
 
 public:
-  struct SGPRSpillVGPR {
-    // VGPR used for SGPR spills
-    Register VGPR;
-
-    // If the VGPR is used for SGPR spills in a non-entrypoint function, the
-    // stack slot used to save/restore it in the prolog/epilog.
-    std::optional<int> FI;
-
-    SGPRSpillVGPR(Register V, std::optional<int> F) : VGPR(V), FI(F) {}
-  };
-
   struct VGPRSpillToAGPR {
     SmallVector<MCPhysReg, 32> Lanes;
     bool FullyAllocated = false;
@@ -467,30 +456,27 @@ public:
     unsigned TotalSize = 0;
   };
 
-  // Track VGPRs reserved for WWM.
-  SmallSetVector<Register, 8> WWMReservedRegs;
-
-  /// Track stack slots used for save/restore of reserved WWM VGPRs in the
-  /// prolog/epilog.
-
-  /// FIXME: This is temporary state only needed in PrologEpilogInserter, and
-  /// doesn't really belong here. It does not require serialization
-  SmallVector<int, 8> WWMReservedFrameIndexes;
-
-  void allocateWWMReservedSpillSlots(MachineFrameInfo &MFI,
-                                     const SIRegisterInfo &TRI);
-
-  auto wwmAllocation() const {
-    assert(WWMReservedRegs.size() == WWMReservedFrameIndexes.size());
-    return zip(WWMReservedRegs, WWMReservedFrameIndexes);
-  }
-
 private:
   // Track VGPR + wave index for each subregister of the SGPR spilled to
   // frameindex key.
   DenseMap<int, std::vector<SIRegisterInfo::SpilledReg>> SGPRToVGPRSpills;
   unsigned NumVGPRSpillLanes = 0;
-  SmallVector<SGPRSpillVGPR, 2> SpillVGPRs;
+  SmallVector<Register, 2> SpillVGPRs;
+  using WWMSpillsMap = MapVector<Register, int>;
+  // To track the registers used in instructions that can potentially modify the
+  // inactive lanes. The WWM instructions and the writelane instructions for
+  // spilling SGPRs to VGPRs fall under such category of operations. The VGPRs
+  // modified by them should be spilled/restored at function prolog/epilog to
+  // avoid any undesired outcome. Each entry in this map holds a pair of values,
+  // the VGPR and its stack slot index.
+  WWMSpillsMap WWMSpills;
+
+  using ReservedRegSet = SmallSetVector<Register, 8>;
+  // To track the VGPRs reserved for WWM instructions. They get stack slots
+  // later during PrologEpilogInserter and get added into the superset WWMSpills
+  // for actual spilling. A separate set makes the register reserved part and
+  // the serialization easier.
+  ReservedRegSet WWMReservedRegs;
 
   DenseMap<int, VGPRSpillToAGPR> VGPRToAGPRSpills;
 
@@ -545,9 +531,7 @@ public:
                                 PerFunctionMIParsingState &PFS,
                                 SMDiagnostic &Error, SMRange &SourceRange);
 
-  void reserveWWMRegister(Register Reg) {
-    WWMReservedRegs.insert(Reg);
-  }
+  void reserveWWMRegister(Register Reg) { WWMReservedRegs.insert(Reg); }
 
   AMDGPU::SIModeRegisterDefaults getMode() const {
     return Mode;
@@ -561,7 +545,12 @@ public:
                : makeArrayRef(I->second);
   }
 
-  ArrayRef<SGPRSpillVGPR> getSGPRSpillVGPRs() const { return SpillVGPRs; }
+  ArrayRef<Register> getSGPRSpillVGPRs() const { return SpillVGPRs; }
+  const WWMSpillsMap &getWWMSpills() const { return WWMSpills; }
+  const ReservedRegSet &getWWMReservedRegs() const { return WWMReservedRegs; }
+
+  void allocateWWMSpill(MachineFunction &MF, Register VGPR, uint64_t Size = 4,
+                        Align Alignment = Align(4));
 
   ArrayRef<MCPhysReg> getAGPRSpillVGPRs() const {
     return SpillAGPR;

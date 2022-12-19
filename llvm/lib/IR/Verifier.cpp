@@ -4963,12 +4963,23 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   case Intrinsic::assume: {
     for (auto &Elem : Call.bundle_op_infos()) {
+      unsigned ArgCount = Elem.End - Elem.Begin;
+      // Separate storage assumptions are special insofar as they're the only
+      // operand bundles allowed on assumes that aren't parameter attributes.
+      if (Elem.Tag->getKey() == "separate_storage") {
+        Check(ArgCount == 2,
+              "separate_storage assumptions should have 2 arguments", Call);
+        Check(Call.getOperand(Elem.Begin)->getType()->isPointerTy() &&
+                  Call.getOperand(Elem.Begin + 1)->getType()->isPointerTy(),
+              "arguments to separate_storage assumptions should be pointers",
+              Call);
+        return;
+      }
       Check(Elem.Tag->getKey() == "ignore" ||
                 Attribute::isExistingAttribute(Elem.Tag->getKey()),
             "tags must be valid attribute names", Call);
       Attribute::AttrKind Kind =
           Attribute::getAttrKindFromName(Elem.Tag->getKey());
-      unsigned ArgCount = Elem.End - Elem.Begin;
       if (Kind == Attribute::Alignment) {
         Check(ArgCount <= 3 && ArgCount >= 2,
               "alignment assumptions should have 2 or 3 arguments", Call);
@@ -5752,6 +5763,17 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(ElemTy,
           "Intrinsic requires elementtype attribute on second argument.",
           &Call);
+    break;
+  }
+  case Intrinsic::aarch64_prefetch: {
+    Check(cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue() < 2,
+          "write argument to llvm.aarch64.prefetch must be 0 or 1", Call);
+    Check(cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue() < 4,
+          "target argument to llvm.aarch64.prefetch must be 0-3", Call);
+    Check(cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue() < 2,
+          "stream argument to llvm.aarch64.prefetch must be 0 or 1", Call);
+    Check(cast<ConstantInt>(Call.getArgOperand(4))->getZExtValue() < 2,
+          "isdata argument to llvm.aarch64.prefetch must be 0 or 1", Call);
     break;
   }
   };

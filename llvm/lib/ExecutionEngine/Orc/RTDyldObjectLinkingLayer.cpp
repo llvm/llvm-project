@@ -81,7 +81,7 @@ using BaseT = RTTIExtends<RTDyldObjectLinkingLayer, ObjectLayer>;
 
 RTDyldObjectLinkingLayer::RTDyldObjectLinkingLayer(
     ExecutionSession &ES, GetMemoryManagerFunction GetMemoryManager)
-    : BaseT(ES), GetMemoryManager(GetMemoryManager) {
+    : BaseT(ES), GetMemoryManager(std::move(GetMemoryManager)) {
   ES.registerResourceManager(*this);
 }
 

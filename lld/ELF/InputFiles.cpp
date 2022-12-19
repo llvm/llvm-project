@@ -149,7 +149,7 @@ static void updateSupportedARMFeatures(const ARMAttributeParser &attributes) {
       attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
   if (!attr)
     return;
-  auto arch = attr.value();
+  auto arch = *attr;
   switch (arch) {
   case ARMBuildAttrs::Pre_v4:
   case ARMBuildAttrs::v4:

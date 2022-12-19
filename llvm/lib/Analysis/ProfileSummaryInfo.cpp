@@ -282,19 +282,19 @@ ProfileSummaryInfo::computeThreshold(int PercentileCutoff) const {
 }
 
 bool ProfileSummaryInfo::hasHugeWorkingSetSize() const {
-  return HasHugeWorkingSetSize && HasHugeWorkingSetSize.value();
+  return HasHugeWorkingSetSize && *HasHugeWorkingSetSize;
 }
 
 bool ProfileSummaryInfo::hasLargeWorkingSetSize() const {
-  return HasLargeWorkingSetSize && HasLargeWorkingSetSize.value();
+  return HasLargeWorkingSetSize && *HasLargeWorkingSetSize;
 }
 
 bool ProfileSummaryInfo::isHotCount(uint64_t C) const {
-  return HotCountThreshold && C >= HotCountThreshold.value();
+  return HotCountThreshold && C >= *HotCountThreshold;
 }
 
 bool ProfileSummaryInfo::isColdCount(uint64_t C) const {
-  return ColdCountThreshold && C <= ColdCountThreshold.value();
+  return ColdCountThreshold && C <= *ColdCountThreshold;
 }
 
 template <bool isHot>
@@ -302,9 +302,9 @@ bool ProfileSummaryInfo::isHotOrColdCountNthPercentile(int PercentileCutoff,
                                                        uint64_t C) const {
   auto CountThreshold = computeThreshold(PercentileCutoff);
   if (isHot)
-    return CountThreshold && C >= CountThreshold.value();
+    return CountThreshold && C >= *CountThreshold;
   else
-    return CountThreshold && C <= CountThreshold.value();
+    return CountThreshold && C <= *CountThreshold;
 }
 
 bool ProfileSummaryInfo::isHotCountNthPercentile(int PercentileCutoff,
