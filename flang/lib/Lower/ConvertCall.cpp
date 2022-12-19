@@ -366,10 +366,12 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
     callNumResults = call.getNumResults();
   }
 
-  if (caller.mustSaveResult())
+  if (caller.mustSaveResult()) {
+    assert(allocatedResult.has_value());
     builder.create<fir::SaveResultOp>(loc, callResult,
                                       fir::getBase(*allocatedResult),
                                       arrayResultShape, resultLengths);
+  }
 
   if (allocatedResult) {
     allocatedResult->match(
