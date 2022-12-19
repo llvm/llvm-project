@@ -9,12 +9,12 @@
 
 define internal void @foo() {
       ret void
-      
+
 }
 
 define internal void @foo.5() {
       ret void
-      
+
 }
 
 ; CHECK: ---
@@ -25,12 +25,12 @@ define internal void @foo.5() {
 
 define internal void @bar() {
       ret void
-      
+
 }
 
 define internal void @bar.5() {
       ret void
-      
+
 }
 
 ; CHECK: .kind: fini
