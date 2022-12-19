@@ -1,21 +1,23 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -stress-regalloc=1 < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}spill_csr_s5_copy:
+; GCN: s_mov_b32 [[FP_SCRATCH_COPY:s[0-9]+]], s33
 ; GCN: s_or_saveexec_b64
-; GCN-NEXT: buffer_store_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; GCN-NEXT: buffer_store_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
+; GCN-NEXT: buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; GCN-NEXT: buffer_store_dword v41, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec
-; GCN: v_writelane_b32 v41, s33, 0
+; GCN: v_writelane_b32 v41, [[FP_SCRATCH_COPY]], 0
 ; GCN: s_swappc_b64
 
 ; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 9
 ; GCN: buffer_store_dword [[K]], off, s[0:3], s33{{$}}
 
-; GCN: v_readlane_b32 s33, v41, 0
+; GCN: v_readlane_b32 [[FP_SCRATCH_COPY:s[0-9]+]], v41, 0
 ; GCN: s_or_saveexec_b64
-; GCN-NEXT: buffer_load_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; GCN-NEXT: buffer_load_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
+; GCN-NEXT: buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT: buffer_load_dword v41, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; GCN: s_mov_b64 exec
+; GCN: s_mov_b32 s33, [[FP_SCRATCH_COPY]]
 ; GCN: s_setpc_b64
 define void @spill_csr_s5_copy() #0 {
 bb:

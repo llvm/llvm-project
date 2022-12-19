@@ -14,13 +14,15 @@ define void @use_vcc() #1 {
 }
 
 ; GCN-LABEL: {{^}}indirect_use_vcc:
-; GCN: v_writelane_b32 v41, s33, 0
+; GCN: s_mov_b32 s4, s33
+; GCN: v_writelane_b32 v41, s4, 0
 ; GCN: v_writelane_b32 v40, s30, 0
 ; GCN: v_writelane_b32 v40, s31, 1
 ; GCN: s_swappc_b64
 ; GCN: v_readlane_b32 s31, v40, 1
 ; GCN: v_readlane_b32 s30, v40, 0
-; GCN: v_readlane_b32 s33, v41, 0
+; GCN: v_readlane_b32 s4, v41, 0
+; GCN: s_mov_b32 s33, s4
 ; GCN: s_setpc_b64 s[30:31]
 ; GCN: ; NumSgprs: 36
 ; GCN: ; NumVgprs: 42

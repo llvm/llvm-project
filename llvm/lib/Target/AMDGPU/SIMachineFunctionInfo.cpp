@@ -280,8 +280,22 @@ void SIMachineFunctionInfo::allocateWWMSpill(MachineFunction &MF, Register VGPR,
       VGPR, MF.getFrameInfo().CreateSpillStackObject(Size, Alignment)));
 }
 
+// Separate out the callee-saved and scratch registers.
+void SIMachineFunctionInfo::splitWWMSpillRegisters(
+    MachineFunction &MF,
+    SmallVectorImpl<std::pair<Register, int>> &CalleeSavedRegs,
+    SmallVectorImpl<std::pair<Register, int>> &ScratchRegs) const {
+  const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
+  for (auto &Reg : WWMSpills) {
+    if (isCalleeSavedReg(CSRegs, Reg.first))
+      CalleeSavedRegs.push_back(Reg);
+    else
+      ScratchRegs.push_back(Reg);
+  }
+}
+
 bool SIMachineFunctionInfo::isCalleeSavedReg(const MCPhysReg *CSRegs,
-                                             MCPhysReg Reg) {
+                                             MCPhysReg Reg) const {
   for (unsigned I = 0; CSRegs[I]; ++I) {
     if (CSRegs[I] == Reg)
       return true;
@@ -473,13 +487,13 @@ bool SIMachineFunctionInfo::removeDeadFrameIndices(
   bool HaveSGPRToMemory = false;
 
   if (ResetSGPRSpillStackIDs) {
-    // All other SPGRs must be allocated on the default stack, so reset the
+    // All other SGPRs must be allocated on the default stack, so reset the
     // stack ID.
-    for (int i = MFI.getObjectIndexBegin(), e = MFI.getObjectIndexEnd(); i != e;
-         ++i) {
-      if (i != FramePointerSaveIndex && i != BasePointerSaveIndex) {
-        if (MFI.getStackID(i) == TargetStackID::SGPRSpill) {
-          MFI.setStackID(i, TargetStackID::Default);
+    for (int I = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd(); I != E;
+         ++I) {
+      if (!checkIndexInPrologEpilogSGPRSpills(I)) {
+        if (MFI.getStackID(I) == TargetStackID::SGPRSpill) {
+          MFI.setStackID(I, TargetStackID::Default);
           HaveSGPRToMemory = true;
         }
       }

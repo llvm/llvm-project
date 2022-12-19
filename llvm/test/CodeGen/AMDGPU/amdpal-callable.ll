@@ -200,7 +200,7 @@ attributes #0 = { nounwind }
 ; GCN-NEXT:        .vgpr_count:     0x1{{$}}
 ; GCN-NEXT:      simple_lds_recurse:
 ; GCN-NEXT:        .lds_size:       0x100{{$}}
-; GCN-NEXT:        .sgpr_count:     0x26{{$}}
+; GCN-NEXT:        .sgpr_count:     0x28{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
 ; GCN-NEXT:        .vgpr_count:     0x2a{{$}}
 ; GCN-NEXT:      simple_stack:
@@ -227,7 +227,7 @@ attributes #0 = { nounwind }
 ; GCN-NEXT:        .vgpr_count:     0x2c{{$}}
 ; GCN-NEXT:      simple_stack_recurse:
 ; GCN-NEXT:        .lds_size:       0{{$}}
-; GCN-NEXT:        .sgpr_count:     0x26{{$}}
+; GCN-NEXT:        .sgpr_count:     0x28{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x20{{$}}
 ; GCN-NEXT:        .vgpr_count:     0x2b{{$}}
 ; GCN-NEXT: ...
