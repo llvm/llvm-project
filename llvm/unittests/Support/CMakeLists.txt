@@ -89,6 +89,7 @@ add_llvm_unittest(SupportTests
   TimeProfilerTest.cpp
   ToolOutputFileTest.cpp
   TypeNameTest.cpp
+  TypeSizeTest.cpp
   TypeTraitsTest.cpp
   TrailingObjectsTest.cpp
   TrigramIndexTest.cpp
