@@ -3675,11 +3675,13 @@ bool InstCombinerImpl::sinkNotIntoOtherHandOfLogicalOp(Instruction &I) {
   Value *NotOp1 = nullptr;
   Value **OpToInvert = nullptr;
   if (match(Op0, m_Not(m_Value(NotOp0))) &&
-      InstCombiner::isFreeToInvert(Op1, Op1->hasOneUse())) {
+      InstCombiner::isFreeToInvert(Op1, /*WillInvertAllUses=*/true) &&
+      InstCombiner::canFreelyInvertAllUsersOf(Op1, /*IgnoredUser=*/&I)) {
     Op0 = NotOp0;
     OpToInvert = &Op1;
   } else if (match(Op1, m_Not(m_Value(NotOp1))) &&
-             InstCombiner::isFreeToInvert(Op0, Op0->hasOneUse())) {
+             InstCombiner::isFreeToInvert(Op0, /*WillInvertAllUses=*/true) &&
+             InstCombiner::canFreelyInvertAllUsersOf(Op0, /*IgnoredUser=*/&I)) {
     Op1 = NotOp1;
     OpToInvert = &Op0;
   } else
@@ -3689,8 +3691,16 @@ bool InstCombinerImpl::sinkNotIntoOtherHandOfLogicalOp(Instruction &I) {
   if (!InstCombiner::canFreelyInvertAllUsersOf(&I, /*IgnoredUser=*/nullptr))
     return false;
 
-  *OpToInvert =
+  Builder.SetInsertPoint(
+      &*cast<Instruction>(*OpToInvert)->getInsertionPointAfterDef());
+  Value *NotOpToInvert =
       Builder.CreateNot(*OpToInvert, (*OpToInvert)->getName() + ".not");
+  (*OpToInvert)->replaceUsesWithIf(NotOpToInvert, [NotOpToInvert](Use &U) {
+    return U.getUser() != NotOpToInvert;
+  });
+  freelyInvertAllUsersOf(NotOpToInvert, /*IgnoredUser=*/&I);
+  *OpToInvert = NotOpToInvert;
+
   Value *NewBinOp;
   if (IsBinaryOp)
     NewBinOp = Builder.CreateBinOp(NewOpc, Op0, Op1, I.getName() + ".not");
