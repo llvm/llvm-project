@@ -8219,6 +8219,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":TilingInterface",
         ":TransformDialect",
+        ":TransformDialectUtils",
         ":TransformUtils",
         "//llvm:Support",
     ],
@@ -9092,6 +9093,21 @@ cc_library(
         ":SideEffectInterfaces",
         ":TransformDialect",
         ":TransformDialectTransformsIncGen",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "TransformDialectUtils",
+    srcs = ["lib/Dialect/Transform/Utils/Utils.cpp"],
+    hdrs = ["include/mlir/Dialect/Transform/Utils/Utils.h"],
+    includes = ["include"],
+    deps = [
+        ":DialectUtils",
+        ":IR",
+        ":Support",
+        ":TransformDialect",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
