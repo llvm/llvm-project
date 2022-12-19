@@ -19,13 +19,13 @@
 ; GCN: s_addc_u32 s{{[0-9]+}}, s[[PC1_HI]], private2@rel32@hi+12
 
 ; R600-LABEL: private_test
-define amdgpu_kernel void @private_test(i32 %index, float addrspace(1)* %out) {
-  %ptr = getelementptr [4 x float], [4 x float] addrspace(4) * @private1, i32 0, i32 %index
-  %val = load float, float addrspace(4)* %ptr
-  store volatile float %val, float addrspace(1)* %out
-  %ptr2 = getelementptr [4 x float], [4 x float] addrspace(4) * @private2, i32 0, i32 %index
-  %val2 = load float, float addrspace(4)* %ptr2
-  store volatile float %val2, float addrspace(1)* %out
+define amdgpu_kernel void @private_test(i32 %index, ptr addrspace(1) %out) {
+  %ptr = getelementptr [4 x float], ptr addrspace(4) @private1, i32 0, i32 %index
+  %val = load float, ptr addrspace(4) %ptr
+  store volatile float %val, ptr addrspace(1) %out
+  %ptr2 = getelementptr [4 x float], ptr addrspace(4) @private2, i32 0, i32 %index
+  %val2 = load float, ptr addrspace(4) %ptr2
+  store volatile float %val2, ptr addrspace(1) %out
   ret void
 }
 
@@ -34,10 +34,10 @@ define amdgpu_kernel void @private_test(i32 %index, float addrspace(1)* %out) {
 ; GCN: s_add_u32 s{{[0-9]+}}, s[[PC0_LO]], available_externally@gotpcrel32@lo+4
 ; GCN: s_addc_u32 s{{[0-9]+}}, s[[PC0_HI]], available_externally@gotpcrel32@hi+12
 ; R600-LABEL: available_externally_test
-define amdgpu_kernel void @available_externally_test(i32 addrspace(1)* %out) {
-  %ptr = getelementptr [256 x i32], [256 x i32] addrspace(4)* @available_externally, i32 0, i32 1
-  %val = load i32, i32 addrspace(4)* %ptr
-  store i32 %val, i32 addrspace(1)* %out
+define amdgpu_kernel void @available_externally_test(ptr addrspace(1) %out) {
+  %ptr = getelementptr [256 x i32], ptr addrspace(4) @available_externally, i32 0, i32 1
+  %val = load i32, ptr addrspace(4) %ptr
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 

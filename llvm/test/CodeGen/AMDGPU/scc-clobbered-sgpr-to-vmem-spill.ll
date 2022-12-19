@@ -5,7 +5,7 @@
 ; while trying to spill SGPRs to memory. After we enabled SGPR spills into virtual VGPRs
 ; the edge case won't arise and the test would always compile.
 
-define amdgpu_kernel void @kernel0(i32 addrspace(1)* %out, i32 %in) #1 {
+define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
 ; CHECK-LABEL: kernel0:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ;;#ASMSTART

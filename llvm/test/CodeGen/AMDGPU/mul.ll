@@ -14,12 +14,12 @@
 ; GCN: v_mul_lo_u32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 ; GCN: v_mul_lo_u32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 
-define amdgpu_kernel void @test_mul_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) {
-  %b_ptr = getelementptr <2 x i32>, <2 x i32> addrspace(1)* %in, i32 1
-  %a = load <2 x i32>, <2 x i32> addrspace(1) * %in
-  %b = load <2 x i32>, <2 x i32> addrspace(1) * %b_ptr
+define amdgpu_kernel void @test_mul_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
+  %b_ptr = getelementptr <2 x i32>, ptr addrspace(1) %in, i32 1
+  %a = load <2 x i32>, ptr addrspace(1) %in
+  %b = load <2 x i32>, ptr addrspace(1) %b_ptr
   %result = mul <2 x i32> %a, %b
-  store <2 x i32> %result, <2 x i32> addrspace(1)* %out
+  store <2 x i32> %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -34,12 +34,12 @@ define amdgpu_kernel void @test_mul_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32
 ; GCN: v_mul_lo_u32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 ; GCN: v_mul_lo_u32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 
-define amdgpu_kernel void @v_mul_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
-  %b_ptr = getelementptr <4 x i32>, <4 x i32> addrspace(1)* %in, i32 1
-  %a = load <4 x i32>, <4 x i32> addrspace(1) * %in
-  %b = load <4 x i32>, <4 x i32> addrspace(1) * %b_ptr
+define amdgpu_kernel void @v_mul_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
+  %b_ptr = getelementptr <4 x i32>, ptr addrspace(1) %in, i32 1
+  %a = load <4 x i32>, ptr addrspace(1) %in
+  %b = load <4 x i32>, ptr addrspace(1) %b_ptr
   %result = mul <4 x i32> %a, %b
-  store <4 x i32> %result, <4 x i32> addrspace(1)* %out
+  store <4 x i32> %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -48,10 +48,10 @@ define amdgpu_kernel void @v_mul_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> a
 ; GCN: s_load_dword
 ; GCN: s_mul_i32
 ; GCN: buffer_store_dword
-define amdgpu_kernel void @s_trunc_i64_mul_to_i32(i32 addrspace(1)* %out, i64 %a, i64 %b) {
+define amdgpu_kernel void @s_trunc_i64_mul_to_i32(ptr addrspace(1) %out, i64 %a, i64 %b) {
   %mul = mul i64 %b, %a
   %trunc = trunc i64 %mul to i32
-  store i32 %trunc, i32 addrspace(1)* %out, align 8
+  store i32 %trunc, ptr addrspace(1) %out, align 8
   ret void
 }
 
@@ -60,12 +60,12 @@ define amdgpu_kernel void @s_trunc_i64_mul_to_i32(i32 addrspace(1)* %out, i64 %a
 ; GCN: s_load_dword
 ; GCN: v_mul_lo_u32
 ; GCN: buffer_store_dword
-define amdgpu_kernel void @v_trunc_i64_mul_to_i32(i32 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) nounwind {
-  %a = load i64, i64 addrspace(1)* %aptr, align 8
-  %b = load i64, i64 addrspace(1)* %bptr, align 8
+define amdgpu_kernel void @v_trunc_i64_mul_to_i32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) nounwind {
+  %a = load i64, ptr addrspace(1) %aptr, align 8
+  %b = load i64, ptr addrspace(1) %bptr, align 8
   %mul = mul i64 %b, %a
   %trunc = trunc i64 %mul to i32
-  store i32 %trunc, i32 addrspace(1)* %out, align 8
+  store i32 %trunc, ptr addrspace(1) %out, align 8
   ret void
 }
 
@@ -77,11 +77,11 @@ define amdgpu_kernel void @v_trunc_i64_mul_to_i32(i32 addrspace(1)* %out, i64 ad
 ; SI-DAG: s_mulk_i32
 ; SI-DAG: v_mul_hi_i32
 ; VI: v_mad_i64_i32
-define amdgpu_kernel void @mul64_sext_c(i64 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @mul64_sext_c(ptr addrspace(1) %out, i32 %in) {
 entry:
   %0 = sext i32 %in to i64
   %1 = mul i64 %0, 80
-  store i64 %1, i64 addrspace(1)* %out
+  store i64 %1, ptr addrspace(1) %out
   ret void
 }
 
@@ -92,11 +92,11 @@ entry:
 ; SI-DAG: v_mul_hi_i32
 ; VI: v_mad_i64_i32
 ; GCN: s_endpgm
-define amdgpu_kernel void @v_mul64_sext_c(i64 addrspace(1)* %out, i32 addrspace(1)* %in) {
-  %val = load i32, i32 addrspace(1)* %in, align 4
+define amdgpu_kernel void @v_mul64_sext_c(ptr addrspace(1) %out, ptr addrspace(1) %in) {
+  %val = load i32, ptr addrspace(1) %in, align 4
   %ext = sext i32 %val to i64
   %mul = mul i64 %ext, 80
-  store i64 %mul, i64 addrspace(1)* %out, align 8
+  store i64 %mul, ptr addrspace(1) %out, align 8
   ret void
 }
 
@@ -105,11 +105,11 @@ define amdgpu_kernel void @v_mul64_sext_c(i64 addrspace(1)* %out, i32 addrspace(
 ; SI-DAG: v_mul_hi_i32 v{{[0-9]+}}, v{{[0-9]+}}, 9
 ; VI: v_mad_i64_i32 v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}, 9, 0
 ; GCN: s_endpgm
-define amdgpu_kernel void @v_mul64_sext_inline_imm(i64 addrspace(1)* %out, i32 addrspace(1)* %in) {
-  %val = load i32, i32 addrspace(1)* %in, align 4
+define amdgpu_kernel void @v_mul64_sext_inline_imm(ptr addrspace(1) %out, ptr addrspace(1) %in) {
+  %val = load i32, ptr addrspace(1) %in, align 4
   %ext = sext i32 %val to i64
   %mul = mul i64 %ext, 9
-  store i64 %mul, i64 addrspace(1)* %out, align 8
+  store i64 %mul, ptr addrspace(1) %out, align 8
   ret void
 }
 
@@ -120,20 +120,20 @@ define amdgpu_kernel void @v_mul64_sext_inline_imm(i64 addrspace(1)* %out, i32 a
 ; GCN: v_mov_b32_e32 [[VRESULT:v[0-9]+]], [[SRESULT]]
 ; GCN: buffer_store_dword [[VRESULT]],
 ; GCN: s_endpgm
-define amdgpu_kernel void @s_mul_i32(i32 addrspace(1)* %out, [8 x i32], i32 %a, [8 x i32], i32 %b) nounwind {
+define amdgpu_kernel void @s_mul_i32(ptr addrspace(1) %out, [8 x i32], i32 %a, [8 x i32], i32 %b) nounwind {
   %mul = mul i32 %a, %b
-  store i32 %mul, i32 addrspace(1)* %out, align 4
+  store i32 %mul, ptr addrspace(1) %out, align 4
   ret void
 }
 
 ; FUNC-LABEL: {{^}}v_mul_i32:
 ; GCN: v_mul_lo_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define amdgpu_kernel void @v_mul_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
-  %b_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
-  %a = load i32, i32 addrspace(1)* %in
-  %b = load i32, i32 addrspace(1)* %b_ptr
+define amdgpu_kernel void @v_mul_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
+  %b_ptr = getelementptr i32, ptr addrspace(1) %in, i32 1
+  %a = load i32, ptr addrspace(1) %in
+  %b = load i32, ptr addrspace(1) %b_ptr
   %result = mul i32 %a, %b
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -150,31 +150,31 @@ define amdgpu_kernel void @v_mul_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %
 ; GFX9PLUS-DAG: s_mul_i32
 ; GFX9PLUS-DAG: s_mul_i32
 ; GFX9PLUS: s_endpgm
-define amdgpu_kernel void @s_mul_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
+define amdgpu_kernel void @s_mul_i64(ptr addrspace(1) %out, i64 %a, i64 %b) nounwind {
   %mul = mul i64 %a, %b
-  store i64 %mul, i64 addrspace(1)* %out, align 8
+  store i64 %mul, ptr addrspace(1) %out, align 8
   ret void
 }
 
 ; FUNC-LABEL: {{^}}v_mul_i64:
 ; GCN: v_mul_lo_u32
-define amdgpu_kernel void @v_mul_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) {
-  %a = load i64, i64 addrspace(1)* %aptr, align 8
-  %b = load i64, i64 addrspace(1)* %bptr, align 8
+define amdgpu_kernel void @v_mul_i64(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) {
+  %a = load i64, ptr addrspace(1) %aptr, align 8
+  %b = load i64, ptr addrspace(1) %bptr, align 8
   %mul = mul i64 %a, %b
-  store i64 %mul, i64 addrspace(1)* %out, align 8
+  store i64 %mul, ptr addrspace(1) %out, align 8
   ret void
 }
 
 ; FUNC-LABEL: {{^}}mul32_in_branch:
 ; GCN: s_mul_i32
-define amdgpu_kernel void @mul32_in_branch(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %a, i32 %b, i32 %c) {
+define amdgpu_kernel void @mul32_in_branch(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %a, i32 %b, i32 %c) {
 entry:
   %0 = icmp eq i32 %a, 0
   br i1 %0, label %if, label %else
 
 if:
-  %1 = load i32, i32 addrspace(1)* %in
+  %1 = load i32, ptr addrspace(1) %in
   br label %endif
 
 else:
@@ -183,7 +183,7 @@ else:
 
 endif:
   %3 = phi i32 [%1, %if], [%2, %else]
-  store i32 %3, i32 addrspace(1)* %out
+  store i32 %3, ptr addrspace(1) %out
   ret void
 }
 
@@ -192,13 +192,13 @@ endif:
 ; SI-DAG: v_mul_hi_u32
 ; VI: v_mad_u64_u32
 ; GCN: s_endpgm
-define amdgpu_kernel void @mul64_in_branch(i64 addrspace(1)* %out, i64 addrspace(1)* %in, i64 %a, i64 %b, i64 %c) {
+define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(1) %in, i64 %a, i64 %b, i64 %c) {
 entry:
   %0 = icmp eq i64 %a, 0
   br i1 %0, label %if, label %else
 
 if:
-  %1 = load i64, i64 addrspace(1)* %in
+  %1 = load i64, ptr addrspace(1) %in
   br label %endif
 
 else:
@@ -207,7 +207,7 @@ else:
 
 endif:
   %3 = phi i64 [%1, %if], [%2, %else]
-  store i64 %3, i64 addrspace(1)* %out
+  store i64 %3, ptr addrspace(1) %out
   ret void
 }
 
@@ -243,9 +243,9 @@ endif:
 
 
 ; GCN: buffer_store_dwordx4
-define amdgpu_kernel void @s_mul_i128(i128 addrspace(1)* %out, [8 x i32], i128 %a, [8 x i32], i128 %b) nounwind #0 {
+define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a, [8 x i32], i128 %b) nounwind #0 {
   %mul = mul i128 %a, %b
-  store i128 %mul, i128 addrspace(1)* %out
+  store i128 %mul, ptr addrspace(1) %out
   ret void
 }
 
@@ -283,15 +283,15 @@ define amdgpu_kernel void @s_mul_i128(i128 addrspace(1)* %out, [8 x i32], i128 %
 ; VI-DAG: v_mul_lo_u32
 
 ; GCN: {{buffer|flat}}_store_dwordx4
-define amdgpu_kernel void @v_mul_i128(i128 addrspace(1)* %out, i128 addrspace(1)* %aptr, i128 addrspace(1)* %bptr) #0 {
+define amdgpu_kernel void @v_mul_i128(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.a = getelementptr inbounds i128, i128 addrspace(1)* %aptr, i32 %tid
-  %gep.b = getelementptr inbounds i128, i128 addrspace(1)* %bptr, i32 %tid
-  %gep.out = getelementptr inbounds i128, i128 addrspace(1)* %bptr, i32 %tid
-  %a = load i128, i128 addrspace(1)* %gep.a
-  %b = load i128, i128 addrspace(1)* %gep.b
+  %gep.a = getelementptr inbounds i128, ptr addrspace(1) %aptr, i32 %tid
+  %gep.b = getelementptr inbounds i128, ptr addrspace(1) %bptr, i32 %tid
+  %gep.out = getelementptr inbounds i128, ptr addrspace(1) %bptr, i32 %tid
+  %a = load i128, ptr addrspace(1) %gep.a
+  %b = load i128, ptr addrspace(1) %gep.b
   %mul = mul i128 %a, %b
-  store i128 %mul, i128 addrspace(1)* %gep.out
+  store i128 %mul, ptr addrspace(1) %gep.out
   ret void
 }
 

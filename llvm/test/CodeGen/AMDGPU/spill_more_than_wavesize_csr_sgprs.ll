@@ -29,7 +29,7 @@ define void @spill_more_than_wavesize_csr_sgprs() {
 ; CHECK-DAG:    v_readlane_b32 s98, v0, 63
 define void @spill_more_than_wavesize_csr_sgprs_with_stack_object() {
   %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
   call void asm sideeffect "",
    "~{s35},~{s36},~{s37},~{s38},~{s39},~{s40},~{s41},~{s42}
    ,~{s43},~{s44},~{s45},~{s46},~{s47},~{s48},~{s49},~{s50}

@@ -36,7 +36,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 ; GCN: v_mov_b32_e32 [[V_CND:v[0-9]+]], [[CND]]
 ; GCN: buffer_store_dword [[V_CND]]
 ; GCN: s_endpgm
-define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(i32 addrspace(1)* %arg, i32 %cnd) #0 {
+define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(ptr addrspace(1) %arg, i32 %cnd) #0 {
 bb:
   %cmp = icmp eq i32 %cnd, 0
   br i1 %cmp, label %bb3, label %bb2 ; +8 dword branch
@@ -51,7 +51,7 @@ bb2:
   br label %bb3
 
 bb3:
-  store volatile i32 %cnd, i32 addrspace(1)* %arg
+  store volatile i32 %cnd, ptr addrspace(1) %arg
   ret void
 }
 
@@ -79,7 +79,7 @@ bb3:
 ; GCN: v_mov_b32_e32 [[V_CND:v[0-9]+]], [[CND]]
 ; GCN: buffer_store_dword [[V_CND]]
 ; GCN: s_endpgm
-define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(i32 addrspace(1)* %arg, i32 %cnd) #0 {
+define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(ptr addrspace(1) %arg, i32 %cnd) #0 {
 bb0:
   %cmp = icmp eq i32 %cnd, 0
   br i1 %cmp, label %bb3, label %bb2 ; +9 dword branch
@@ -94,7 +94,7 @@ bb2:
   br label %bb3
 
 bb3:
-  store volatile i32 %cnd, i32 addrspace(1)* %arg
+  store volatile i32 %cnd, ptr addrspace(1) %arg
   ret void
 }
 
@@ -122,7 +122,7 @@ bb3:
 ; GCN: v_mov_b32_e32 [[V_CND:v[0-9]+]], [[CND]]
 ; GCN: buffer_store_dword [[V_CND]]
 ; GCN: s_endpgm
-define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(float addrspace(1)* %arg, float %cnd) #0 {
+define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr addrspace(1) %arg, float %cnd) #0 {
 bb0:
   %cmp = fcmp oeq float %cnd, 0.0
   br i1 %cmp, label %bb3, label %bb2 ; + 8 dword branch
@@ -136,7 +136,7 @@ bb2:
   br label %bb3
 
 bb3:
-  store volatile float %cnd, float addrspace(1)* %arg
+  store volatile float %cnd, ptr addrspace(1) %arg
   ret void
 }
 
@@ -154,12 +154,12 @@ bb3:
 ; GCN: s_or_b64 exec, exec, [[SAVE]]
 ; GCN: buffer_store_dword
 ; GCN: s_endpgm
-define amdgpu_kernel void @min_long_forward_vbranch(i32 addrspace(1)* %arg) #0 {
+define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = zext i32 %tid to i64
-  %gep = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %tid.ext
-  %load = load volatile i32, i32 addrspace(1)* %gep
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tid.ext
+  %load = load volatile i32, ptr addrspace(1) %gep
   %cmp = icmp eq i32 %load, 0
   br i1 %cmp, label %bb3, label %bb2 ; + 8 dword branch
 
@@ -172,7 +172,7 @@ bb2:
   br label %bb3
 
 bb3:
-  store volatile i32 %load, i32 addrspace(1)* %gep
+  store volatile i32 %load, ptr addrspace(1) %gep
   ret void
 }
 
@@ -203,7 +203,7 @@ bb3:
 
 ; GCN-NEXT: [[ENDBB]]:
 ; GCN-NEXT: s_endpgm
-define amdgpu_kernel void @long_backward_sbranch(i32 addrspace(1)* %arg) #0 {
+define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 bb:
   br label %bb2
 
@@ -252,13 +252,13 @@ bb3:
 ; GCN: ;;#ASMEND
 
 ; GCN: .Lfunc_end{{[0-9]+}}:
-define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(i32 addrspace(1)* %arg, i32 %arg1) {
+define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr addrspace(1) %arg, i32 %arg1) {
 bb0:
   %tmp = icmp ne i32 %arg1, 0
   br i1 %tmp, label %bb2, label %bb3
 
 bb2:
-  store volatile i32 17, i32 addrspace(1)* undef
+  store volatile i32 17, ptr addrspace(1) undef
   br label %bb4
 
 bb3:
@@ -271,7 +271,7 @@ bb3:
   br label %bb4
 
 bb4:
-  store volatile i32 63, i32 addrspace(1)* %arg
+  store volatile i32 63, ptr addrspace(1) %arg
   ret void
 }
 
@@ -296,7 +296,7 @@ bb4:
 ; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], (.L[[LOOP]]-[[POST_GETPC]])>>32
 ; GCN-NEXT: s_setpc_b64 s[[[PC_LO]]:[[PC_HI]]]
 ; GCN-NEXT: .Lfunc_end{{[0-9]+}}:
-define amdgpu_kernel void @uniform_unconditional_min_long_backward_branch(i32 addrspace(1)* %arg, i32 %arg1) {
+define amdgpu_kernel void @uniform_unconditional_min_long_backward_branch(ptr addrspace(1) %arg, i32 %arg1) {
 entry:
   br label %loop
 
@@ -355,7 +355,7 @@ bb0:
   br i1 %cmp0, label %bb2, label %bb1
 
 bb1:
-  %val = load volatile i32, i32 addrspace(4)* undef
+  %val = load volatile i32, ptr addrspace(4) undef
   %cmp1 = icmp eq i32 %val, 3
   br i1 %cmp1, label %bb3, label %bb2
 
@@ -402,19 +402,19 @@ bb3:
 ; GCN-NEXT: s_or_b64 exec, exec, [[MASK]]
 ; GCN-NEXT: s_sleep 5
 ; GCN-NEXT: s_endpgm
-define amdgpu_kernel void @uniform_inside_divergent(i32 addrspace(1)* %out, i32 %cond) #0 {
+define amdgpu_kernel void @uniform_inside_divergent(ptr addrspace(1) %out, i32 %cond) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %d_cmp = icmp ult i32 %tid, 16
   br i1 %d_cmp, label %if, label %endif
 
 if:
-  store i32 0, i32 addrspace(1)* %out
+  store i32 0, ptr addrspace(1) %out
   %u_cmp = icmp eq i32 %cond, 0
   br i1 %u_cmp, label %if_uniform, label %endif
 
 if_uniform:
-  store i32 1, i32 addrspace(1)* %out
+  store i32 1, ptr addrspace(1) %out
   br label %endif
 
 endif:
@@ -479,7 +479,7 @@ loop_body:
   br label %loop
 
 ret:
-  store volatile i32 7, i32 addrspace(1)* undef
+  store volatile i32 7, ptr addrspace(1) undef
   ret void
 }
 
@@ -504,7 +504,7 @@ ret:
 ; GCN: s_setpc_b64
 
 ; GCN: s_endpgm
-define amdgpu_kernel void @long_branch_hang(i32 addrspace(1)* nocapture %arg, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i64 %arg5) #0 {
+define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i64 %arg5) #0 {
 bb:
   %tmp = icmp slt i32 %arg2, 9
   %tmp6 = icmp eq i32 %arg1, 0
@@ -535,8 +535,8 @@ bb14:                                             ; preds = %bb13, %bb9
 
 bb19:                                             ; preds = %bb14, %bb13, %bb9
   %tmp20 = phi i32 [ undef, %bb9 ], [ undef, %bb13 ], [ %tmp18, %bb14 ]
-  %tmp21 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %arg5
-  store i32 %tmp20, i32 addrspace(1)* %tmp21, align 4
+  %tmp21 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %arg5
+  store i32 %tmp20, ptr addrspace(1) %tmp21, align 4
   ret void
 }
 

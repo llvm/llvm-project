@@ -9,7 +9,7 @@
 ; RUN:  llc -global-isel=0 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11CHECK %s
 ; RUN:  llc -global-isel=1 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11CHECK %s
 
-define amdgpu_kernel void @sgpr_isnan_f32(i32 addrspace(1)* %out, float %x) {
+define amdgpu_kernel void @sgpr_isnan_f32(ptr addrspace(1) %out, float %x) {
 ; GFX7SELDAG-LABEL: sgpr_isnan_f32:
 ; GFX7SELDAG:       ; %bb.0:
 ; GFX7SELDAG-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -84,11 +84,11 @@ define amdgpu_kernel void @sgpr_isnan_f32(i32 addrspace(1)* %out, float %x) {
 ; GFX11CHECK-NEXT:    s_endpgm
   %result = call i1 @llvm.is.fpclass.f32(float %x, i32 3)  ; nan
   %sext = sext i1 %result to i32
-  store i32 %sext, i32 addrspace(1)* %out, align 4
+  store i32 %sext, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @sgpr_isnan_f64(i32 addrspace(1)* %out, double %x) {
+define amdgpu_kernel void @sgpr_isnan_f64(ptr addrspace(1) %out, double %x) {
 ; GFX7ISELDAG-LABEL: sgpr_isnan_f64:
 ; GFX7ISELDAG:       ; %bb.0:
 ; GFX7ISELDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -168,7 +168,7 @@ define amdgpu_kernel void @sgpr_isnan_f64(i32 addrspace(1)* %out, double %x) {
 ; GFX11CHECK-NEXT:    s_endpgm
   %result = call i1 @llvm.is.fpclass.f64(double %x, i32 3)  ; nan
   %sext = sext i1 %result to i32
-  store i32 %sext, i32 addrspace(1)* %out, align 4
+  store i32 %sext, ptr addrspace(1) %out, align 4
   ret void
 }
 

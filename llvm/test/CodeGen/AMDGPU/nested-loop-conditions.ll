@@ -7,7 +7,7 @@
 ; the condition that appears to have no uses until the loop is
 ; completely processed.
 
-define amdgpu_kernel void @reduced_nested_loop_conditions(i64 addrspace(3)* nocapture %arg) #0 {
+define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) nocapture %arg) #0 {
 ; GCN-LABEL: reduced_nested_loop_conditions:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x9
@@ -49,8 +49,8 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(i64 addrspace(3)* noca
 ; IR-LABEL: @reduced_nested_loop_conditions(
 ; IR-NEXT:  bb:
 ; IR-NEXT:    [[MY_TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x() #[[ATTR4:[0-9]+]]
-; IR-NEXT:    [[MY_TMP1:%.*]] = getelementptr inbounds i64, i64 addrspace(3)* [[ARG:%.*]], i32 [[MY_TMP]]
-; IR-NEXT:    [[MY_TMP2:%.*]] = load volatile i64, i64 addrspace(3)* [[MY_TMP1]], align 4
+; IR-NEXT:    [[MY_TMP1:%.*]] = getelementptr inbounds i64, ptr addrspace(3) [[ARG:%.*]], i32 [[MY_TMP]]
+; IR-NEXT:    [[MY_TMP2:%.*]] = load volatile i64, ptr addrspace(3) [[MY_TMP1]], align 4
 ; IR-NEXT:    br label [[BB5:%.*]]
 ; IR:       bb3:
 ; IR-NEXT:    br i1 true, label [[BB4:%.*]], label [[BB13:%.*]]
@@ -83,8 +83,8 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(i64 addrspace(3)* noca
 ; IR-NEXT:    br i1 [[MY_TMP14]], label [[BB16:%.*]], label [[BB20:%.*]]
 ; IR:       bb16:
 ; IR-NEXT:    [[MY_TMP17:%.*]] = extractelement <2 x i32> [[MY_TMP15]], i64 1
-; IR-NEXT:    [[MY_TMP18:%.*]] = getelementptr inbounds i32, i32 addrspace(3)* undef, i32 [[MY_TMP17]]
-; IR-NEXT:    [[MY_TMP19:%.*]] = load volatile i32, i32 addrspace(3)* [[MY_TMP18]], align 4
+; IR-NEXT:    [[MY_TMP18:%.*]] = getelementptr inbounds i32, ptr addrspace(3) undef, i32 [[MY_TMP17]]
+; IR-NEXT:    [[MY_TMP19:%.*]] = load volatile i32, ptr addrspace(3) [[MY_TMP18]], align 4
 ; IR-NEXT:    br label [[BB20]]
 ; IR:       bb20:
 ; IR-NEXT:    [[MY_TMP21]] = phi i32 [ [[MY_TMP19]], [[BB16]] ], [ 0, [[BB13]] ]
@@ -95,8 +95,8 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(i64 addrspace(3)* noca
 ; IR-NEXT:    ret void
 bb:
   %my.tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %my.tmp1 = getelementptr inbounds i64, i64 addrspace(3)* %arg, i32 %my.tmp
-  %my.tmp2 = load volatile i64, i64 addrspace(3)* %my.tmp1
+  %my.tmp1 = getelementptr inbounds i64, ptr addrspace(3) %arg, i32 %my.tmp
+  %my.tmp2 = load volatile i64, ptr addrspace(3) %my.tmp1
   br label %bb5
 
 bb3:                                              ; preds = %bb9
@@ -128,8 +128,8 @@ bb13:                                             ; preds = %bb8, %bb3
 
 bb16:                                             ; preds = %bb13
   %my.tmp17 = extractelement <2 x i32> %my.tmp15, i64 1
-  %my.tmp18 = getelementptr inbounds i32, i32 addrspace(3)* undef, i32 %my.tmp17
-  %my.tmp19 = load volatile i32, i32 addrspace(3)* %my.tmp18
+  %my.tmp18 = getelementptr inbounds i32, ptr addrspace(3) undef, i32 %my.tmp17
+  %my.tmp19 = load volatile i32, ptr addrspace(3) %my.tmp18
   br label %bb20
 
 bb20:                                             ; preds = %bb16, %bb13
@@ -143,7 +143,7 @@ bb23:                                             ; preds = %bb10
 
 ; Earlier version of above, before a run of the structurizer.
 
-define amdgpu_kernel void @nested_loop_conditions(i64 addrspace(1)* nocapture %arg) #0 {
+define amdgpu_kernel void @nested_loop_conditions(ptr addrspace(1) nocapture %arg) #0 {
 ; GCN-LABEL: nested_loop_conditions:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
@@ -190,15 +190,15 @@ define amdgpu_kernel void @nested_loop_conditions(i64 addrspace(1)* nocapture %a
 ; GCN-NEXT:    s_endpgm
 ; IR-LABEL: @nested_loop_conditions(
 ; IR-NEXT:  bb:
-; IR-NEXT:    [[MY_TMP1134:%.*]] = load volatile i32, i32 addrspace(1)* undef, align 4
+; IR-NEXT:    [[MY_TMP1134:%.*]] = load volatile i32, ptr addrspace(1) undef, align 4
 ; IR-NEXT:    [[MY_TMP1235:%.*]] = icmp slt i32 [[MY_TMP1134]], 9
 ; IR-NEXT:    br i1 [[MY_TMP1235]], label [[BB14_LR_PH:%.*]], label [[FLOW:%.*]]
 ; IR:       bb14.lr.ph:
 ; IR-NEXT:    [[MY_TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x() #[[ATTR4]]
 ; IR-NEXT:    [[MY_TMP1:%.*]] = zext i32 [[MY_TMP]] to i64
-; IR-NEXT:    [[MY_TMP2:%.*]] = getelementptr inbounds i64, i64 addrspace(1)* [[ARG:%.*]], i64 [[MY_TMP1]]
-; IR-NEXT:    [[MY_TMP3:%.*]] = load i64, i64 addrspace(1)* [[MY_TMP2]], align 16
-; IR-NEXT:    [[MY_TMP932:%.*]] = load <4 x i32>, <4 x i32> addrspace(1)* undef, align 16
+; IR-NEXT:    [[MY_TMP2:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[ARG:%.*]], i64 [[MY_TMP1]]
+; IR-NEXT:    [[MY_TMP3:%.*]] = load i64, ptr addrspace(1) [[MY_TMP2]], align 16
+; IR-NEXT:    [[MY_TMP932:%.*]] = load <4 x i32>, ptr addrspace(1) undef, align 16
 ; IR-NEXT:    [[MY_TMP1033:%.*]] = extractelement <4 x i32> [[MY_TMP932]], i64 0
 ; IR-NEXT:    br label [[BB14:%.*]]
 ; IR:       Flow3:
@@ -244,7 +244,7 @@ define amdgpu_kernel void @nested_loop_conditions(i64 addrspace(1)* nocapture %a
 ; IR-NEXT:    [[TMP17:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP16]])
 ; IR-NEXT:    br i1 [[TMP17]], label [[FLOW2:%.*]], label [[BB14]]
 ; IR:       bb18:
-; IR-NEXT:    [[MY_TMP19:%.*]] = load volatile i32, i32 addrspace(1)* undef, align 4
+; IR-NEXT:    [[MY_TMP19:%.*]] = load volatile i32, ptr addrspace(1) undef, align 4
 ; IR-NEXT:    [[MY_TMP20:%.*]] = icmp slt i32 [[MY_TMP19]], 9
 ; IR-NEXT:    br i1 [[MY_TMP20]], label [[BB21]], label [[BB18]]
 ; IR:       bb21:
@@ -258,10 +258,10 @@ define amdgpu_kernel void @nested_loop_conditions(i64 addrspace(1)* nocapture %a
 ; IR-NEXT:    [[MY_TMP29:%.*]] = select i1 [[MY_TMP28]], i64 1, i64 2
 ; IR-NEXT:    [[MY_TMP30:%.*]] = extractelement <4 x i32> [[MY_TMP936]], i64 [[MY_TMP29]]
 ; IR-NEXT:    [[MY_TMP7:%.*]] = zext i32 [[MY_TMP30]] to i64
-; IR-NEXT:    [[MY_TMP8:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* undef, i64 [[MY_TMP7]]
-; IR-NEXT:    [[MY_TMP9]] = load <4 x i32>, <4 x i32> addrspace(1)* [[MY_TMP8]], align 16
+; IR-NEXT:    [[MY_TMP8:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) undef, i64 [[MY_TMP7]]
+; IR-NEXT:    [[MY_TMP9]] = load <4 x i32>, ptr addrspace(1) [[MY_TMP8]], align 16
 ; IR-NEXT:    [[MY_TMP10]] = extractelement <4 x i32> [[MY_TMP9]], i64 0
-; IR-NEXT:    [[MY_TMP11:%.*]] = load volatile i32, i32 addrspace(1)* undef, align 4
+; IR-NEXT:    [[MY_TMP11:%.*]] = load volatile i32, ptr addrspace(1) undef, align 4
 ; IR-NEXT:    [[MY_TMP12]] = icmp sge i32 [[MY_TMP11]], 9
 ; IR-NEXT:    br label [[FLOW1]]
 ; IR:       Flow2:
@@ -274,19 +274,19 @@ define amdgpu_kernel void @nested_loop_conditions(i64 addrspace(1)* nocapture %a
 ; IR-NEXT:    br label [[FLOW3]]
 ; IR:       bb31:
 ; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP7]])
-; IR-NEXT:    store volatile i32 0, i32 addrspace(1)* undef, align 4
+; IR-NEXT:    store volatile i32 0, ptr addrspace(1) undef, align 4
 ; IR-NEXT:    ret void
 bb:
-  %my.tmp1134 = load volatile i32, i32 addrspace(1)* undef
+  %my.tmp1134 = load volatile i32, ptr addrspace(1) undef
   %my.tmp1235 = icmp slt i32 %my.tmp1134, 9
   br i1 %my.tmp1235, label %bb14.lr.ph, label %bb13
 
 bb14.lr.ph:                                       ; preds = %bb
   %my.tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %my.tmp1 = zext i32 %my.tmp to i64
-  %my.tmp2 = getelementptr inbounds i64, i64 addrspace(1)* %arg, i64 %my.tmp1
-  %my.tmp3 = load i64, i64 addrspace(1)* %my.tmp2, align 16
-  %my.tmp932 = load <4 x i32>, <4 x i32> addrspace(1)* undef, align 16
+  %my.tmp2 = getelementptr inbounds i64, ptr addrspace(1) %arg, i64 %my.tmp1
+  %my.tmp3 = load i64, ptr addrspace(1) %my.tmp2, align 16
+  %my.tmp932 = load <4 x i32>, ptr addrspace(1) undef, align 16
   %my.tmp1033 = extractelement <4 x i32> %my.tmp932, i64 0
   br label %bb14
 
@@ -307,7 +307,7 @@ bb16:                                             ; preds = %bb14
   br label %bb18
 
 bb18:                                             ; preds = %bb18, %bb16
-  %my.tmp19 = load volatile i32, i32 addrspace(1)* undef
+  %my.tmp19 = load volatile i32, ptr addrspace(1) undef
   %my.tmp20 = icmp slt i32 %my.tmp19, 9
   br i1 %my.tmp20, label %bb21, label %bb18
 
@@ -322,10 +322,10 @@ bb21:                                             ; preds = %bb18
   %my.tmp29 = select i1 %my.tmp28, i64 1, i64 2
   %my.tmp30 = extractelement <4 x i32> %my.tmp936, i64 %my.tmp29
   %my.tmp7 = zext i32 %my.tmp30 to i64
-  %my.tmp8 = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* undef, i64 %my.tmp7
-  %my.tmp9 = load <4 x i32>, <4 x i32> addrspace(1)* %my.tmp8, align 16
+  %my.tmp8 = getelementptr inbounds <4 x i32>, ptr addrspace(1) undef, i64 %my.tmp7
+  %my.tmp9 = load <4 x i32>, ptr addrspace(1) %my.tmp8, align 16
   %my.tmp10 = extractelement <4 x i32> %my.tmp9, i64 0
-  %my.tmp11 = load volatile i32, i32 addrspace(1)* undef
+  %my.tmp11 = load volatile i32, ptr addrspace(1) undef
   %my.tmp12 = icmp slt i32 %my.tmp11, 9
   br i1 %my.tmp12, label %bb14, label %bb4.bb13_crit_edge
 
@@ -333,7 +333,7 @@ bb31.loopexit:                                    ; preds = %bb14
   br label %bb31
 
 bb31:                                             ; preds = %bb31.loopexit, %bb13
-  store volatile i32 0, i32 addrspace(1)* undef
+  store volatile i32 0, ptr addrspace(1) undef
   ret void
 }
 

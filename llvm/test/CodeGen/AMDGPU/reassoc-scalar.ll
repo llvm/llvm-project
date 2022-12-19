@@ -5,12 +5,12 @@
 ; GCN: s_add_i32 [[ADD1:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
 ; GFX8: v_add_u32_e32 v{{[0-9]+}}, vcc, [[ADD1]], v{{[0-9]+}}
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, [[ADD1]], v{{[0-9]+}}
-define amdgpu_kernel void @reassoc_i32(i32 addrspace(1)* %arg, i32 %x, i32 %y) {
+define amdgpu_kernel void @reassoc_i32(ptr addrspace(1) %arg, i32 %x, i32 %y) {
 bb:
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %add1 = add i32 %x, %tid
   %add2 = add i32 %add1, %y
-  store i32 %add2, i32 addrspace(1)* %arg, align 4
+  store i32 %add2, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -18,12 +18,12 @@ bb:
 ; GCN:  s_add_i32 [[ADD1:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
 ; GFX8: v_add_u32_e32 v{{[0-9]+}}, vcc, [[ADD1]], v{{[0-9]+}}
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, [[ADD1]], v{{[0-9]+}}
-define amdgpu_kernel void @reassoc_i32_swap_arg_order(i32 addrspace(1)* %arg, i32 %x, i32 %y) {
+define amdgpu_kernel void @reassoc_i32_swap_arg_order(ptr addrspace(1) %arg, i32 %x, i32 %y) {
 bb:
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %add1 = add i32 %tid, %x
   %add2 = add i32 %y, %add1
-  store i32 %add2, i32 addrspace(1)* %arg, align 4
+  store i32 %add2, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -35,13 +35,13 @@ bb:
 ; GCN-DAG:  v_mov_b32_e32 [[VADD1H:v[0-9]+]], [[ADD1H]]
 ; GFX8:     v_addc_u32_e32 v{{[0-9]+}}, vcc, 0, [[VADD1H]], vcc
 ; GFX9:     v_addc_co_u32_e32 v{{[0-9]+}}, vcc, 0, [[VADD1H]], vcc
-define amdgpu_kernel void @reassoc_i64(i64 addrspace(1)* %arg, i64 %x, i64 %y) {
+define amdgpu_kernel void @reassoc_i64(ptr addrspace(1) %arg, i64 %x, i64 %y) {
 bb:
   %tid32 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tid = zext i32 %tid32 to i64
   %add1 = add i64 %x, %tid
   %add2 = add i64 %add1, %y
-  store i64 %add2, i64 addrspace(1)* %arg, align 8
+  store i64 %add2, ptr addrspace(1) %arg, align 8
   ret void
 }
 
@@ -52,7 +52,7 @@ bb:
 ; GFX8: v_add_u32_e32 v{{[0-9]+}}, vcc, [[ADD2]], v{{[0-9]+}}
 ; GFX9-DAG: v_add_u32_e32 v{{[0-9]+}}, [[ADD1]], v{{[0-9]+}}
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, [[ADD2]], v{{[0-9]+}}
-define amdgpu_kernel void @reassoc_v2i32(<2 x i32> addrspace(1)* %arg, <2 x i32> %x, <2 x i32> %y) {
+define amdgpu_kernel void @reassoc_v2i32(ptr addrspace(1) %arg, <2 x i32> %x, <2 x i32> %y) {
 bb:
   %t1 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %t2 = tail call i32 @llvm.amdgcn.workitem.id.y()
@@ -60,7 +60,7 @@ bb:
   %v2 = insertelement <2 x i32> %v1, i32 %t2, i32 1
   %add1 = add <2 x i32> %x, %v2
   %add2 = add <2 x i32> %add1, %y
-  store <2 x i32> %add2, <2 x i32> addrspace(1)* %arg, align 4
+  store <2 x i32> %add2, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -68,12 +68,12 @@ bb:
 ; GCN:  s_add_i32 [[ADD1:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
 ; GFX8: v_add_u32_e32 v{{[0-9]+}}, vcc, [[ADD1]], v{{[0-9]+}}
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, [[ADD1]], v{{[0-9]+}}
-define amdgpu_kernel void @reassoc_i32_nuw(i32 addrspace(1)* %arg, i32 %x, i32 %y) {
+define amdgpu_kernel void @reassoc_i32_nuw(ptr addrspace(1) %arg, i32 %x, i32 %y) {
 bb:
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %add1 = add i32 %x, %tid
   %add2 = add nuw i32 %add1, %y
-  store i32 %add2, i32 addrspace(1)* %arg, align 4
+  store i32 %add2, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -82,13 +82,13 @@ bb:
 ; GFX9: v_add_u32_e32 [[ADD1:v[0-9]+]], s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX8: v_add_u32_e32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, [[ADD1]]
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, s{{[0-9]+}}, [[ADD1]]
-define amdgpu_kernel void @reassoc_i32_multiuse(i32 addrspace(1)* %arg, i32 %x, i32 %y) {
+define amdgpu_kernel void @reassoc_i32_multiuse(ptr addrspace(1) %arg, i32 %x, i32 %y) {
 bb:
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %add1 = add i32 %x, %tid
   %add2 = add i32 %add1, %y
-  store volatile i32 %add1, i32 addrspace(1)* %arg, align 4
-  store volatile i32 %add2, i32 addrspace(1)* %arg, align 4
+  store volatile i32 %add1, ptr addrspace(1) %arg, align 4
+  store volatile i32 %add2, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -99,13 +99,13 @@ bb:
 ; GFX9: v_add_u32_e32 [[ADD1:v[0-9]+]],  42, v{{[0-9]+}}
 ; GFX8: v_add_u32_e32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, [[ADD1]]
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, s{{[0-9]+}}, [[ADD1]]
-define amdgpu_kernel void @reassoc_i32_const(i32 addrspace(1)* %arg, i32 %x) {
+define amdgpu_kernel void @reassoc_i32_const(ptr addrspace(1) %arg, i32 %x) {
 bb:
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %add1 = add i32 %tid, 42
   %add2 = add i32 %add1, %x
-  store volatile i32 %add1, i32 addrspace(1)* %arg, align 4
-  store volatile i32 %add2, i32 addrspace(1)* %arg, align 4
+  store volatile i32 %add1, ptr addrspace(1) %arg, align 4
+  store volatile i32 %add2, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -119,9 +119,9 @@ define amdgpu_kernel void @reassoc_i32_ga(i64 %x) {
 bb:
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %t64 = zext i32 %tid to i64
-  %add1 = getelementptr [4 x i32], [4 x i32] addrspace(1)* @var, i64 0, i64 %t64
-  %add2 = getelementptr i32, i32 addrspace(1)* %add1, i64 %x
-  store volatile i32 1, i32 addrspace(1)* %add2, align 4
+  %add1 = getelementptr [4 x i32], ptr addrspace(1) @var, i64 0, i64 %t64
+  %add2 = getelementptr i32, ptr addrspace(1) %add1, i64 %x
+  store volatile i32 1, ptr addrspace(1) %add2, align 4
   ret void
 }
 
