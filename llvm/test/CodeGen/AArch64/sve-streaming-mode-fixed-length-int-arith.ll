@@ -42,7 +42,7 @@ define <16 x i8> @add_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
   ret <16 x i8> %res
 }
 
-define void @add_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
+define void @add_v32i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: add_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -51,10 +51,10 @@ define void @add_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-NEXT:    add z1.b, z1.b, z3.b
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i8>, <32 x i8>* %a
-  %op2 = load <32 x i8>, <32 x i8>* %b
+  %op1 = load <32 x i8>, ptr %a
+  %op2 = load <32 x i8>, ptr %b
   %res = add <32 x i8> %op1, %op2
-  store <32 x i8> %res, <32 x i8>* %a
+  store <32 x i8> %res, ptr %a
   ret void
 }
 
@@ -94,7 +94,7 @@ define <8 x i16> @add_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
   ret <8 x i16> %res
 }
 
-define void @add_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
+define void @add_v16i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: add_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -103,10 +103,10 @@ define void @add_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-NEXT:    add z1.h, z1.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
-  %op2 = load <16 x i16>, <16 x i16>* %b
+  %op1 = load <16 x i16>, ptr %a
+  %op2 = load <16 x i16>, ptr %b
   %res = add <16 x i16> %op1, %op2
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
@@ -134,7 +134,7 @@ define <4 x i32> @add_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
   ret <4 x i32> %res
 }
 
-define void @add_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
+define void @add_v8i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: add_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -143,10 +143,10 @@ define void @add_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; CHECK-NEXT:    add z1.s, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
-  %op2 = load <8 x i32>, <8 x i32>* %b
+  %op1 = load <8 x i32>, ptr %a
+  %op2 = load <8 x i32>, ptr %b
   %res = add <8 x i32> %op1, %op2
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
@@ -174,7 +174,7 @@ define <2 x i64> @add_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
   ret <2 x i64> %res
 }
 
-define void @add_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
+define void @add_v4i64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: add_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -183,10 +183,10 @@ define void @add_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 ; CHECK-NEXT:    add z1.d, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
-  %op2 = load <4 x i64>, <4 x i64>* %b
+  %op1 = load <4 x i64>, ptr %a
+  %op2 = load <4 x i64>, ptr %b
   %res = add <4 x i64> %op1, %op2
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 
@@ -233,7 +233,7 @@ define <16 x i8> @mul_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
   ret <16 x i8> %res
 }
 
-define void @mul_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
+define void @mul_v32i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: mul_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -243,10 +243,10 @@ define void @mul_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-NEXT:    mul z1.b, p0/m, z1.b, z3.b
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i8>, <32 x i8>* %a
-  %op2 = load <32 x i8>, <32 x i8>* %b
+  %op1 = load <32 x i8>, ptr %a
+  %op2 = load <32 x i8>, ptr %b
   %res = mul <32 x i8> %op1, %op2
-  store <32 x i8> %res, <32 x i8>* %a
+  store <32 x i8> %res, ptr %a
   ret void
 }
 
@@ -289,7 +289,7 @@ define <8 x i16> @mul_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
   ret <8 x i16> %res
 }
 
-define void @mul_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
+define void @mul_v16i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: mul_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -299,10 +299,10 @@ define void @mul_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-NEXT:    mul z1.h, p0/m, z1.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
-  %op2 = load <16 x i16>, <16 x i16>* %b
+  %op1 = load <16 x i16>, ptr %a
+  %op2 = load <16 x i16>, ptr %b
   %res = mul <16 x i16> %op1, %op2
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
@@ -332,7 +332,7 @@ define <4 x i32> @mul_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
   ret <4 x i32> %res
 }
 
-define void @mul_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
+define void @mul_v8i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: mul_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -342,10 +342,10 @@ define void @mul_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; CHECK-NEXT:    mul z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
-  %op2 = load <8 x i32>, <8 x i32>* %b
+  %op1 = load <8 x i32>, ptr %a
+  %op2 = load <8 x i32>, ptr %b
   %res = mul <8 x i32> %op1, %op2
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
@@ -375,7 +375,7 @@ define <2 x i64> @mul_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
   ret <2 x i64> %res
 }
 
-define void @mul_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
+define void @mul_v4i64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: mul_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -385,10 +385,10 @@ define void @mul_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 ; CHECK-NEXT:    mul z1.d, p0/m, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
-  %op2 = load <4 x i64>, <4 x i64>* %b
+  %op1 = load <4 x i64>, ptr %a
+  %op2 = load <4 x i64>, ptr %b
   %res = mul <4 x i64> %op1, %op2
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 
@@ -432,7 +432,7 @@ define <16 x i8> @sub_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
   ret <16 x i8> %res
 }
 
-define void @sub_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
+define void @sub_v32i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: sub_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -441,10 +441,10 @@ define void @sub_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-NEXT:    sub z1.b, z1.b, z3.b
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i8>, <32 x i8>* %a
-  %op2 = load <32 x i8>, <32 x i8>* %b
+  %op1 = load <32 x i8>, ptr %a
+  %op2 = load <32 x i8>, ptr %b
   %res = sub <32 x i8> %op1, %op2
-  store <32 x i8> %res, <32 x i8>* %a
+  store <32 x i8> %res, ptr %a
   ret void
 }
 
@@ -484,7 +484,7 @@ define <8 x i16> @sub_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
   ret <8 x i16> %res
 }
 
-define void @sub_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
+define void @sub_v16i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: sub_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -493,10 +493,10 @@ define void @sub_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-NEXT:    sub z1.h, z1.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
-  %op2 = load <16 x i16>, <16 x i16>* %b
+  %op1 = load <16 x i16>, ptr %a
+  %op2 = load <16 x i16>, ptr %b
   %res = sub <16 x i16> %op1, %op2
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
@@ -524,7 +524,7 @@ define <4 x i32> @sub_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
   ret <4 x i32> %res
 }
 
-define void @sub_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
+define void @sub_v8i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: sub_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -533,10 +533,10 @@ define void @sub_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; CHECK-NEXT:    sub z1.s, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
-  %op2 = load <8 x i32>, <8 x i32>* %b
+  %op1 = load <8 x i32>, ptr %a
+  %op2 = load <8 x i32>, ptr %b
   %res = sub <8 x i32> %op1, %op2
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
@@ -564,7 +564,7 @@ define <2 x i64> @sub_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
   ret <2 x i64> %res
 }
 
-define void @sub_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
+define void @sub_v4i64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: sub_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -573,10 +573,10 @@ define void @sub_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 ; CHECK-NEXT:    sub z1.d, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
-  %op2 = load <4 x i64>, <4 x i64>* %b
+  %op1 = load <4 x i64>, ptr %a
+  %op2 = load <4 x i64>, ptr %b
   %res = sub <4 x i64> %op1, %op2
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 
@@ -622,7 +622,7 @@ define <16 x i8> @abs_v16i8(<16 x i8> %op1) #0 {
   ret <16 x i8> %res
 }
 
-define void @abs_v32i8(<32 x i8>* %a) #0 {
+define void @abs_v32i8(ptr %a) #0 {
 ; CHECK-LABEL: abs_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -631,9 +631,9 @@ define void @abs_v32i8(<32 x i8>* %a) #0 {
 ; CHECK-NEXT:    abs z1.b, p0/m, z1.b
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i8>, <32 x i8>* %a
+  %op1 = load <32 x i8>, ptr %a
   %res = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %op1, i1 false)
-  store <32 x i8> %res, <32 x i8>* %a
+  store <32 x i8> %res, ptr %a
   ret void
 }
 
@@ -675,7 +675,7 @@ define <8 x i16> @abs_v8i16(<8 x i16> %op1) #0 {
   ret <8 x i16> %res
 }
 
-define void @abs_v16i16(<16 x i16>* %a) #0 {
+define void @abs_v16i16(ptr %a) #0 {
 ; CHECK-LABEL: abs_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -684,9 +684,9 @@ define void @abs_v16i16(<16 x i16>* %a) #0 {
 ; CHECK-NEXT:    abs z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
+  %op1 = load <16 x i16>, ptr %a
   %res = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %op1, i1 false)
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
@@ -714,7 +714,7 @@ define <4 x i32> @abs_v4i32(<4 x i32> %op1) #0 {
   ret <4 x i32> %res
 }
 
-define void @abs_v8i32(<8 x i32>* %a) #0 {
+define void @abs_v8i32(ptr %a) #0 {
 ; CHECK-LABEL: abs_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -723,9 +723,9 @@ define void @abs_v8i32(<8 x i32>* %a) #0 {
 ; CHECK-NEXT:    abs z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
+  %op1 = load <8 x i32>, ptr %a
   %res = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %op1, i1 false)
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
@@ -753,7 +753,7 @@ define <2 x i64> @abs_v2i64(<2 x i64> %op1) #0 {
   ret <2 x i64> %res
 }
 
-define void @abs_v4i64(<4 x i64>* %a) #0 {
+define void @abs_v4i64(ptr %a) #0 {
 ; CHECK-LABEL: abs_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -762,9 +762,9 @@ define void @abs_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-NEXT:    abs z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
+  %op1 = load <4 x i64>, ptr %a
   %res = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %op1, i1 false)
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 

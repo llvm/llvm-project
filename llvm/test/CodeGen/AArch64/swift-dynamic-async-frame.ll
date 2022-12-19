@@ -31,6 +31,6 @@
 ; CHECK-DYNAMIC-32: orr x29, x29, x16, lsl #32
 ; CHECK-DYNAMIC-32: .weak_reference _swift_async_extendedFramePointerFlags
 
-define void @foo(i8* swiftasync) "frame-pointer"="all" {
+define void @foo(ptr swiftasync) "frame-pointer"="all" {
   ret void
 }
