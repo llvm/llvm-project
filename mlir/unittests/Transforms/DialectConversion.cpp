@@ -37,10 +37,11 @@ TEST(DialectConversionTest, DynamicallyLegalOpCallbackOrder) {
   });
 
   int callbackCalled2 = 0;
-  target.addDynamicallyLegalOp<DummyOp>([&](Operation *) -> Optional<bool> {
-    callbackCalled2 = ++index;
-    return std::nullopt;
-  });
+  target.addDynamicallyLegalOp<DummyOp>(
+      [&](Operation *) -> std::optional<bool> {
+        callbackCalled2 = ++index;
+        return std::nullopt;
+      });
 
   auto *op = createOp(&context);
   EXPECT_TRUE(target.isLegal(op));
@@ -58,10 +59,11 @@ TEST(DialectConversionTest, DynamicallyLegalOpCallbackSkip) {
 
   int index = 0;
   int callbackCalled = 0;
-  target.addDynamicallyLegalOp<DummyOp>([&](Operation *) -> Optional<bool> {
-    callbackCalled = ++index;
-    return std::nullopt;
-  });
+  target.addDynamicallyLegalOp<DummyOp>(
+      [&](Operation *) -> std::optional<bool> {
+        callbackCalled = ++index;
+        return std::nullopt;
+      });
 
   auto *op = createOp(&context);
   EXPECT_FALSE(target.isLegal(op));
@@ -83,7 +85,7 @@ TEST(DialectConversionTest, DynamicallyLegalUnknownOpCallbackOrder) {
   });
 
   int callbackCalled2 = 0;
-  target.markUnknownOpDynamicallyLegal([&](Operation *) -> Optional<bool> {
+  target.markUnknownOpDynamicallyLegal([&](Operation *) -> std::optional<bool> {
     callbackCalled2 = ++index;
     return std::nullopt;
   });
@@ -103,7 +105,7 @@ TEST(DialectConversionTest, DynamicallyLegalReturnNone) {
   ConversionTarget target(context);
 
   target.addDynamicallyLegalOp<DummyOp>(
-      [&](Operation *) -> Optional<bool> { return std::nullopt; });
+      [&](Operation *) -> std::optional<bool> { return std::nullopt; });
 
   auto *op = createOp(&context);
   EXPECT_FALSE(target.isLegal(op));
@@ -120,7 +122,7 @@ TEST(DialectConversionTest, DynamicallyLegalUnknownReturnNone) {
   ConversionTarget target(context);
 
   target.markUnknownOpDynamicallyLegal(
-      [&](Operation *) -> Optional<bool> { return std::nullopt; });
+      [&](Operation *) -> std::optional<bool> { return std::nullopt; });
 
   auto *op = createOp(&context);
   EXPECT_FALSE(target.isLegal(op));
