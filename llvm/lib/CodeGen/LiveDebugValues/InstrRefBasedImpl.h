@@ -248,6 +248,11 @@ public:
     Indirect = MI.isDebugOffsetImm();
   }
 
+  bool isJoinable(const DbgValueProperties &Other) const {
+    return DIExpression::isEqualExpression(DIExpr, Indirect, Other.DIExpr,
+                                           Other.Indirect);
+  }
+
   bool operator==(const DbgValueProperties &Other) const {
     return std::tie(DIExpr, Indirect, IsVariadic) ==
            std::tie(Other.DIExpr, Other.Indirect, Other.IsVariadic);

@@ -2741,7 +2741,7 @@ bool InstrRefBasedLDV::pickVPHILoc(
     if (OutVal.isUnjoinedPHI() && OutVal.BlockNo != MBB.getNumber())
       return false;
 
-    if (FirstValue.Properties != OutVal.Properties)
+    if (!FirstValue.Properties.isJoinable(OutVal.Properties))
       return false;
 
     for (unsigned Idx = 0; Idx < FirstValue.getLocationOpCount(); ++Idx) {
@@ -2929,7 +2929,7 @@ bool InstrRefBasedLDV::vlocJoin(
   // different DIExpressions, different indirectness, or are mixed constants /
   // non-constants.
   for (const auto &V : Values) {
-    if (V.second->Properties != FirstVal.Properties)
+    if (!V.second->Properties.isJoinable(FirstVal.Properties))
       return false;
     if (V.second->Kind == DbgValue::NoVal)
       return false;
