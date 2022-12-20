@@ -93,7 +93,8 @@ std::string getNVPTXRegClassStr(TargetRegisterClass const *RC) {
 }
 }
 
-NVPTXRegisterInfo::NVPTXRegisterInfo() : NVPTXGenRegisterInfo(0) {}
+NVPTXRegisterInfo::NVPTXRegisterInfo()
+    : NVPTXGenRegisterInfo(0), StrPool(StrAlloc) {}
 
 #define GET_REGINFO_TARGET_DESC
 #include "NVPTXGenRegisterInfo.inc"

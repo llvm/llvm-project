@@ -124,7 +124,8 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
       is64bit(is64bit), UseShortPointers(UseShortPointersOpt),
       TLOF(std::make_unique<NVPTXTargetObjectFile>()),
-      Subtarget(TT, std::string(CPU), std::string(FS), *this) {
+      Subtarget(TT, std::string(CPU), std::string(FS), *this),
+      StrPool(StrAlloc) {
   if (TT.getOS() == Triple::NVCL)
     drvInterface = NVPTX::NVCL;
   else
