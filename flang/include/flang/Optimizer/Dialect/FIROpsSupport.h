@@ -88,9 +88,21 @@ static constexpr llvm::StringRef getHostAssocAttrName() {
   return "fir.host_assoc";
 }
 
+/// Attribute to mark an internal procedure.
+static constexpr llvm::StringRef getInternalProcedureAttrName() {
+  return "fir.internal_proc";
+}
+
 /// Does the function, \p func, have a host-associations tuple argument?
 /// Some internal procedures may have access to host procedure variables.
 bool hasHostAssociationArgument(mlir::func::FuncOp func);
+
+/// Is the function, \p func an internal procedure ?
+/// Some internal procedures may have access to saved host procedure
+/// variables even when they do not have a tuple argument.
+inline bool isInternalPorcedure(mlir::func::FuncOp func) {
+  return func->hasAttr(fir::getInternalProcedureAttrName());
+}
 
 /// Tell if \p value is:
 ///   - a function argument that has attribute \p attributeName

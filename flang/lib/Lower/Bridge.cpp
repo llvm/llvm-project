@@ -3212,9 +3212,7 @@ private:
           }
           addSymbol(arg.entity->get(), arg.firArgument);
         } else {
-          assert(funit.parentHasHostAssoc());
-          funit.parentHostAssoc().internalProcedureBindings(*this,
-                                                            localSymbols);
+          assert(funit.parentHasTupleHostAssoc() && "expect tuple argument");
         }
       }
     };
@@ -3260,6 +3258,10 @@ private:
 
     mapDummiesAndResults(funit, callee);
 
+    // Map host associated symbols from parent procedure if any.
+    if (funit.parentHasHostAssoc())
+      funit.parentHostAssoc().internalProcedureBindings(*this, localSymbols);
+
     // Non-primary results of a function with multiple entry points.
     // These result values share storage with the primary result.
     llvm::SmallVector<Fortran::lower::pft::Variable> deferredFuncResultList;
@@ -3302,9 +3304,7 @@ private:
         // to the host variable, which must be in the map.
         const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
         if (funit.parentHostAssoc().isAssociated(ultimate)) {
-          Fortran::lower::SymbolBox hostBox = lookupSymbol(ultimate);
-          assert(hostBox && "host association is not in map");
-          localSymbols.addSymbol(sym, hostBox.toExtendedValue());
+          copySymbolBinding(ultimate, sym);
           continue;
         }
       }
