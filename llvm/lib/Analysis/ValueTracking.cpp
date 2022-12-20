@@ -3804,6 +3804,7 @@ bool llvm::isKnownNeverInfinity(const Value *V, const TargetLibraryInfo *TLI,
     if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
       switch (II->getIntrinsicID()) {
       case Intrinsic::fabs:
+      case Intrinsic::sqrt:
       case Intrinsic::canonicalize:
       case Intrinsic::copysign:
       case Intrinsic::arithmetic_fence:
