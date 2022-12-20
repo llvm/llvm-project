@@ -1081,59 +1081,45 @@ declare <2 x float> @llvm.experimental.constrained.fma.v2f32(<2 x float>, <2 x f
 declare <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float>, <4 x float>, <4 x float>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double>, <2 x double>, <2 x double>, metadata, metadata)
 
-define <4 x i16> @mul_4h(ptr %A, ptr %B) nounwind {
+define <4 x i16> @mul_4h(<4 x i16> %A, <4 x i16> %B) nounwind {
 ; CHECK-LABEL: mul_4h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mul.4h v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i16>, ptr %A
-  %tmp2 = load <4 x i16>, ptr %B
-  %tmp3 = shufflevector <4 x i16> %tmp2, <4 x i16> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %tmp4 = mul <4 x i16> %tmp1, %tmp3
+  %tmp3 = shufflevector <4 x i16> %B, <4 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp4 = mul <4 x i16> %A, %tmp3
   ret <4 x i16> %tmp4
 }
 
-define <8 x i16> @mul_8h(ptr %A, ptr %B) nounwind {
+define <8 x i16> @mul_8h(<8 x i16> %A, <8 x i16> %B) nounwind {
 ; CHECK-LABEL: mul_8h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    mul.8h v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <8 x i16>, ptr %A
-  %tmp2 = load <8 x i16>, ptr %B
-  %tmp3 = shufflevector <8 x i16> %tmp2, <8 x i16> %tmp2, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  %tmp4 = mul <8 x i16> %tmp1, %tmp3
+  %tmp3 = shufflevector <8 x i16> %B, <8 x i16> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %tmp4 = mul <8 x i16> %A, %tmp3
   ret <8 x i16> %tmp4
 }
 
-define <2 x i32> @mul_2s(ptr %A, ptr %B) nounwind {
+define <2 x i32> @mul_2s(<2 x i32> %A, <2 x i32> %B) nounwind {
 ; CHECK-LABEL: mul_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mul.2s v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <2 x i32>, ptr %A
-  %tmp2 = load <2 x i32>, ptr %B
-  %tmp3 = shufflevector <2 x i32> %tmp2, <2 x i32> %tmp2, <2 x i32> <i32 1, i32 1>
-  %tmp4 = mul <2 x i32> %tmp1, %tmp3
+  %tmp3 = shufflevector <2 x i32> %B, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %tmp4 = mul <2 x i32> %A, %tmp3
   ret <2 x i32> %tmp4
 }
 
-define <4 x i32> @mul_4s(ptr %A, ptr %B) nounwind {
+define <4 x i32> @mul_4s(<4 x i32> %A, <4 x i32> %B) nounwind {
 ; CHECK-LABEL: mul_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    mul.4s v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i32>, ptr %A
-  %tmp2 = load <4 x i32>, ptr %B
-  %tmp3 = shufflevector <4 x i32> %tmp2, <4 x i32> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %tmp4 = mul <4 x i32> %tmp1, %tmp3
+  %tmp3 = shufflevector <4 x i32> %B, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp4 = mul <4 x i32> %A, %tmp3
   ret <4 x i32> %tmp4
 }
 
@@ -1153,45 +1139,34 @@ define <2 x i64> @mul_2d(<2 x i64> %A, <2 x i64> %B) nounwind {
   ret <2 x i64> %tmp1
 }
 
-define <2 x float> @fmul_lane_2s(ptr %A, ptr %B) nounwind {
+define <2 x float> @fmul_lane_2s(<2 x float> %A, <2 x float> %B) nounwind {
 ; CHECK-LABEL: fmul_lane_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmul.2s v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <2 x float>, ptr %A
-  %tmp2 = load <2 x float>, ptr %B
-  %tmp3 = shufflevector <2 x float> %tmp2, <2 x float> %tmp2, <2 x i32> <i32 1, i32 1>
-  %tmp4 = fmul <2 x float> %tmp1, %tmp3
+  %tmp3 = shufflevector <2 x float> %B, <2 x float> poison, <2 x i32> <i32 1, i32 1>
+  %tmp4 = fmul <2 x float> %A, %tmp3
   ret <2 x float> %tmp4
 }
 
-define <4 x float> @fmul_lane_4s(ptr %A, ptr %B) nounwind {
+define <4 x float> @fmul_lane_4s(<4 x float> %A, <4 x float> %B) nounwind {
 ; CHECK-LABEL: fmul_lane_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    fmul.4s v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x float>, ptr %A
-  %tmp2 = load <4 x float>, ptr %B
-  %tmp3 = shufflevector <4 x float> %tmp2, <4 x float> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %tmp4 = fmul <4 x float> %tmp1, %tmp3
+  %tmp3 = shufflevector <4 x float> %B, <4 x float> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp4 = fmul <4 x float> %A, %tmp3
   ret <4 x float> %tmp4
 }
 
-define <2 x double> @fmul_lane_2d(ptr %A, ptr %B) nounwind {
+define <2 x double> @fmul_lane_2d(<2 x double> %A, <2 x double> %B) nounwind {
 ; CHECK-LABEL: fmul_lane_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    fmul.2d v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <2 x double>, ptr %A
-  %tmp2 = load <2 x double>, ptr %B
-  %tmp3 = shufflevector <2 x double> %tmp2, <2 x double> %tmp2, <2 x i32> <i32 1, i32 1>
-  %tmp4 = fmul <2 x double> %tmp1, %tmp3
+  %tmp3 = shufflevector <2 x double> %B, <2 x double> poison, <2 x i32> <i32 1, i32 1>
+  %tmp4 = fmul <2 x double> %A, %tmp3
   ret <2 x double> %tmp4
 }
 
@@ -1217,101 +1192,76 @@ define double @fmul_lane_d(double %A, <2 x double> %vec) nounwind {
 
 
 
-define <2 x float> @fmulx_lane_2s(ptr %A, ptr %B) nounwind {
+define <2 x float> @fmulx_lane_2s(<2 x float> %A, <2 x float> %B) nounwind {
 ; CHECK-LABEL: fmulx_lane_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmulx.2s v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <2 x float>, ptr %A
-  %tmp2 = load <2 x float>, ptr %B
-  %tmp3 = shufflevector <2 x float> %tmp2, <2 x float> %tmp2, <2 x i32> <i32 1, i32 1>
-  %tmp4 = call <2 x float> @llvm.aarch64.neon.fmulx.v2f32(<2 x float> %tmp1, <2 x float> %tmp3)
+  %tmp3 = shufflevector <2 x float> %B, <2 x float> poison, <2 x i32> <i32 1, i32 1>
+  %tmp4 = call <2 x float> @llvm.aarch64.neon.fmulx.v2f32(<2 x float> %A, <2 x float> %tmp3)
   ret <2 x float> %tmp4
 }
 
-define <4 x float> @fmulx_lane_4s(ptr %A, ptr %B) nounwind {
+define <4 x float> @fmulx_lane_4s(<4 x float> %A, <4 x float> %B) nounwind {
 ; CHECK-LABEL: fmulx_lane_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    fmulx.4s v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x float>, ptr %A
-  %tmp2 = load <4 x float>, ptr %B
-  %tmp3 = shufflevector <4 x float> %tmp2, <4 x float> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %tmp4 = call <4 x float> @llvm.aarch64.neon.fmulx.v4f32(<4 x float> %tmp1, <4 x float> %tmp3)
+  %tmp3 = shufflevector <4 x float> %B, <4 x float> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp4 = call <4 x float> @llvm.aarch64.neon.fmulx.v4f32(<4 x float> %A, <4 x float> %tmp3)
   ret <4 x float> %tmp4
 }
 
-define <2 x double> @fmulx_lane_2d(ptr %A, ptr %B) nounwind {
+define <2 x double> @fmulx_lane_2d(<2 x double> %A, <2 x double> %B) nounwind {
 ; CHECK-LABEL: fmulx_lane_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    fmulx.2d v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <2 x double>, ptr %A
-  %tmp2 = load <2 x double>, ptr %B
-  %tmp3 = shufflevector <2 x double> %tmp2, <2 x double> %tmp2, <2 x i32> <i32 1, i32 1>
-  %tmp4 = call <2 x double> @llvm.aarch64.neon.fmulx.v2f64(<2 x double> %tmp1, <2 x double> %tmp3)
+  %tmp3 = shufflevector <2 x double> %B, <2 x double> poison, <2 x i32> <i32 1, i32 1>
+  %tmp4 = call <2 x double> @llvm.aarch64.neon.fmulx.v2f64(<2 x double> %A, <2 x double> %tmp3)
   ret <2 x double> %tmp4
 }
 
-define <4 x i16> @sqdmulh_lane_4h(ptr %A, ptr %B) nounwind {
+define <4 x i16> @sqdmulh_lane_4h(<4 x i16> %A, <4 x i16> %B) nounwind {
 ; CHECK-LABEL: sqdmulh_lane_4h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    sqdmulh.4h v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i16>, ptr %A
-  %tmp2 = load <4 x i16>, ptr %B
-  %tmp3 = shufflevector <4 x i16> %tmp2, <4 x i16> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %tmp4 = call <4 x i16> @llvm.aarch64.neon.sqdmulh.v4i16(<4 x i16> %tmp1, <4 x i16> %tmp3)
+  %tmp3 = shufflevector <4 x i16> %B, <4 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp4 = call <4 x i16> @llvm.aarch64.neon.sqdmulh.v4i16(<4 x i16> %A, <4 x i16> %tmp3)
   ret <4 x i16> %tmp4
 }
 
-define <8 x i16> @sqdmulh_lane_8h(ptr %A, ptr %B) nounwind {
+define <8 x i16> @sqdmulh_lane_8h(<8 x i16> %A, <8 x i16> %B) nounwind {
 ; CHECK-LABEL: sqdmulh_lane_8h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    sqdmulh.8h v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <8 x i16>, ptr %A
-  %tmp2 = load <8 x i16>, ptr %B
-  %tmp3 = shufflevector <8 x i16> %tmp2, <8 x i16> %tmp2, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  %tmp4 = call <8 x i16> @llvm.aarch64.neon.sqdmulh.v8i16(<8 x i16> %tmp1, <8 x i16> %tmp3)
+  %tmp3 = shufflevector <8 x i16> %B, <8 x i16> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %tmp4 = call <8 x i16> @llvm.aarch64.neon.sqdmulh.v8i16(<8 x i16> %A, <8 x i16> %tmp3)
   ret <8 x i16> %tmp4
 }
 
-define <2 x i32> @sqdmulh_lane_2s(ptr %A, ptr %B) nounwind {
+define <2 x i32> @sqdmulh_lane_2s(<2 x i32> %A, <2 x i32> %B) nounwind {
 ; CHECK-LABEL: sqdmulh_lane_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    sqdmulh.2s v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <2 x i32>, ptr %A
-  %tmp2 = load <2 x i32>, ptr %B
-  %tmp3 = shufflevector <2 x i32> %tmp2, <2 x i32> %tmp2, <2 x i32> <i32 1, i32 1>
-  %tmp4 = call <2 x i32> @llvm.aarch64.neon.sqdmulh.v2i32(<2 x i32> %tmp1, <2 x i32> %tmp3)
+  %tmp3 = shufflevector <2 x i32> %B, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %tmp4 = call <2 x i32> @llvm.aarch64.neon.sqdmulh.v2i32(<2 x i32> %A, <2 x i32> %tmp3)
   ret <2 x i32> %tmp4
 }
 
-define <4 x i32> @sqdmulh_lane_4s(ptr %A, ptr %B) nounwind {
+define <4 x i32> @sqdmulh_lane_4s(<4 x i32> %A, <4 x i32> %B) nounwind {
 ; CHECK-LABEL: sqdmulh_lane_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    sqdmulh.4s v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i32>, ptr %A
-  %tmp2 = load <4 x i32>, ptr %B
-  %tmp3 = shufflevector <4 x i32> %tmp2, <4 x i32> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %tmp4 = call <4 x i32> @llvm.aarch64.neon.sqdmulh.v4i32(<4 x i32> %tmp1, <4 x i32> %tmp3)
+  %tmp3 = shufflevector <4 x i32> %B, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp4 = call <4 x i32> @llvm.aarch64.neon.sqdmulh.v4i32(<4 x i32> %A, <4 x i32> %tmp3)
   ret <4 x i32> %tmp4
 }
 
@@ -1327,59 +1277,45 @@ define i32 @sqdmulh_lane_1s(i32 %A, <4 x i32> %B) nounwind {
   ret i32 %tmp2
 }
 
-define <4 x i16> @sqrdmulh_lane_4h(ptr %A, ptr %B) nounwind {
+define <4 x i16> @sqrdmulh_lane_4h(<4 x i16> %A, <4 x i16> %B) nounwind {
 ; CHECK-LABEL: sqrdmulh_lane_4h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    sqrdmulh.4h v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i16>, ptr %A
-  %tmp2 = load <4 x i16>, ptr %B
-  %tmp3 = shufflevector <4 x i16> %tmp2, <4 x i16> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %tmp4 = call <4 x i16> @llvm.aarch64.neon.sqrdmulh.v4i16(<4 x i16> %tmp1, <4 x i16> %tmp3)
+  %tmp3 = shufflevector <4 x i16> %B, <4 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp4 = call <4 x i16> @llvm.aarch64.neon.sqrdmulh.v4i16(<4 x i16> %A, <4 x i16> %tmp3)
   ret <4 x i16> %tmp4
 }
 
-define <8 x i16> @sqrdmulh_lane_8h(ptr %A, ptr %B) nounwind {
+define <8 x i16> @sqrdmulh_lane_8h(<8 x i16> %A, <8 x i16> %B) nounwind {
 ; CHECK-LABEL: sqrdmulh_lane_8h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    sqrdmulh.8h v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <8 x i16>, ptr %A
-  %tmp2 = load <8 x i16>, ptr %B
-  %tmp3 = shufflevector <8 x i16> %tmp2, <8 x i16> %tmp2, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  %tmp4 = call <8 x i16> @llvm.aarch64.neon.sqrdmulh.v8i16(<8 x i16> %tmp1, <8 x i16> %tmp3)
+  %tmp3 = shufflevector <8 x i16> %B, <8 x i16> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %tmp4 = call <8 x i16> @llvm.aarch64.neon.sqrdmulh.v8i16(<8 x i16> %A, <8 x i16> %tmp3)
   ret <8 x i16> %tmp4
 }
 
-define <2 x i32> @sqrdmulh_lane_2s(ptr %A, ptr %B) nounwind {
+define <2 x i32> @sqrdmulh_lane_2s(<2 x i32> %A, <2 x i32> %B) nounwind {
 ; CHECK-LABEL: sqrdmulh_lane_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    sqrdmulh.2s v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <2 x i32>, ptr %A
-  %tmp2 = load <2 x i32>, ptr %B
-  %tmp3 = shufflevector <2 x i32> %tmp2, <2 x i32> %tmp2, <2 x i32> <i32 1, i32 1>
-  %tmp4 = call <2 x i32> @llvm.aarch64.neon.sqrdmulh.v2i32(<2 x i32> %tmp1, <2 x i32> %tmp3)
+  %tmp3 = shufflevector <2 x i32> %B, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %tmp4 = call <2 x i32> @llvm.aarch64.neon.sqrdmulh.v2i32(<2 x i32> %A, <2 x i32> %tmp3)
   ret <2 x i32> %tmp4
 }
 
-define <4 x i32> @sqrdmulh_lane_4s(ptr %A, ptr %B) nounwind {
+define <4 x i32> @sqrdmulh_lane_4s(<4 x i32> %A, <4 x i32> %B) nounwind {
 ; CHECK-LABEL: sqrdmulh_lane_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    sqrdmulh.4s v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i32>, ptr %A
-  %tmp2 = load <4 x i32>, ptr %B
-  %tmp3 = shufflevector <4 x i32> %tmp2, <4 x i32> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %tmp4 = call <4 x i32> @llvm.aarch64.neon.sqrdmulh.v4i32(<4 x i32> %tmp1, <4 x i32> %tmp3)
+  %tmp3 = shufflevector <4 x i32> %B, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp4 = call <4 x i32> @llvm.aarch64.neon.sqrdmulh.v4i32(<4 x i32> %A, <4 x i32> %tmp3)
   ret <4 x i32> %tmp4
 }
 
@@ -1395,221 +1331,169 @@ define i32 @sqrdmulh_lane_1s(i32 %A, <4 x i32> %B) nounwind {
   ret i32 %tmp2
 }
 
-define <4 x i32> @sqdmull_lane_4s(ptr %A, ptr %B) nounwind {
+define <4 x i32> @sqdmull_lane_4s(<4 x i16> %A, <4 x i16> %B) nounwind {
 ; CHECK-LABEL: sqdmull_lane_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    sqdmull.4s v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i16>, ptr %A
-  %tmp2 = load <4 x i16>, ptr %B
-  %tmp3 = shufflevector <4 x i16> %tmp2, <4 x i16> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %tmp4 = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %tmp1, <4 x i16> %tmp3)
+  %tmp3 = shufflevector <4 x i16> %B, <4 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp4 = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %A, <4 x i16> %tmp3)
   ret <4 x i32> %tmp4
 }
 
-define <2 x i64> @sqdmull_lane_2d(ptr %A, ptr %B) nounwind {
+define <2 x i64> @sqdmull_lane_2d(<2 x i32> %A, <2 x i32> %B) nounwind {
 ; CHECK-LABEL: sqdmull_lane_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    sqdmull.2d v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <2 x i32>, ptr %A
-  %tmp2 = load <2 x i32>, ptr %B
-  %tmp3 = shufflevector <2 x i32> %tmp2, <2 x i32> %tmp2, <2 x i32> <i32 1, i32 1>
-  %tmp4 = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %tmp1, <2 x i32> %tmp3)
+  %tmp3 = shufflevector <2 x i32> %B, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %tmp4 = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %A, <2 x i32> %tmp3)
   ret <2 x i64> %tmp4
 }
 
-define <4 x i32> @sqdmull2_lane_4s(ptr %A, ptr %B) nounwind {
+define <4 x i32> @sqdmull2_lane_4s(<8 x i16> %A, <8 x i16> %B) nounwind {
 ; CHECK-LABEL: sqdmull2_lane_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0, #8]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    sqdmull.4s v0, v0, v1[1]
+; CHECK-NEXT:    sqdmull2.4s v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %load1 = load <8 x i16>, ptr %A
-  %load2 = load <8 x i16>, ptr %B
-  %tmp1 = shufflevector <8 x i16> %load1, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %tmp2 = shufflevector <8 x i16> %load2, <8 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp1 = shufflevector <8 x i16> %A, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %tmp2 = shufflevector <8 x i16> %B, <8 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %tmp4 = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %tmp1, <4 x i16> %tmp2)
   ret <4 x i32> %tmp4
 }
 
-define <2 x i64> @sqdmull2_lane_2d(ptr %A, ptr %B) nounwind {
+define <2 x i64> @sqdmull2_lane_2d(<4 x i32> %A, <4 x i32> %B) nounwind {
 ; CHECK-LABEL: sqdmull2_lane_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0, #8]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    sqdmull.2d v0, v0, v1[1]
+; CHECK-NEXT:    sqdmull2.2d v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %load1 = load <4 x i32>, ptr %A
-  %load2 = load <4 x i32>, ptr %B
-  %tmp1 = shufflevector <4 x i32> %load1, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
-  %tmp2 = shufflevector <4 x i32> %load2, <4 x i32> undef, <2 x i32> <i32 1, i32 1>
+  %tmp1 = shufflevector <4 x i32> %A, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+  %tmp2 = shufflevector <4 x i32> %B, <4 x i32> undef, <2 x i32> <i32 1, i32 1>
   %tmp4 = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %tmp1, <2 x i32> %tmp2)
   ret <2 x i64> %tmp4
 }
 
-define <4 x i32> @umull_lane_4s(ptr %A, ptr %B) nounwind {
+define <4 x i32> @umull_lane_4s(<4 x i16> %A, <4 x i16> %B) nounwind {
 ; CHECK-LABEL: umull_lane_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    umull.4s v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i16>, ptr %A
-  %tmp2 = load <4 x i16>, ptr %B
-  %tmp3 = shufflevector <4 x i16> %tmp2, <4 x i16> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %tmp4 = call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> %tmp1, <4 x i16> %tmp3)
+  %tmp3 = shufflevector <4 x i16> %B, <4 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp4 = call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> %A, <4 x i16> %tmp3)
   ret <4 x i32> %tmp4
 }
 
-define <2 x i64> @umull_lane_2d(ptr %A, ptr %B) nounwind {
+define <2 x i64> @umull_lane_2d(<2 x i32> %A, <2 x i32> %B) nounwind {
 ; CHECK-LABEL: umull_lane_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    umull.2d v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <2 x i32>, ptr %A
-  %tmp2 = load <2 x i32>, ptr %B
-  %tmp3 = shufflevector <2 x i32> %tmp2, <2 x i32> %tmp2, <2 x i32> <i32 1, i32 1>
-  %tmp4 = call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %tmp1, <2 x i32> %tmp3)
+  %tmp3 = shufflevector <2 x i32> %B, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %tmp4 = call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %A, <2 x i32> %tmp3)
   ret <2 x i64> %tmp4
 }
 
-define <4 x i32> @smull_lane_4s(ptr %A, ptr %B) nounwind {
+define <4 x i32> @smull_lane_4s(<4 x i16> %A, <4 x i16> %B) nounwind {
 ; CHECK-LABEL: smull_lane_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    smull.4s v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i16>, ptr %A
-  %tmp2 = load <4 x i16>, ptr %B
-  %tmp3 = shufflevector <4 x i16> %tmp2, <4 x i16> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %tmp4 = call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> %tmp1, <4 x i16> %tmp3)
+  %tmp3 = shufflevector <4 x i16> %B, <4 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp4 = call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> %A, <4 x i16> %tmp3)
   ret <4 x i32> %tmp4
 }
 
-define <2 x i64> @smull_lane_2d(ptr %A, ptr %B) nounwind {
+define <2 x i64> @smull_lane_2d(<2 x i32> %A, <2 x i32> %B) nounwind {
 ; CHECK-LABEL: smull_lane_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    smull.2d v0, v0, v1[1]
 ; CHECK-NEXT:    ret
-  %tmp1 = load <2 x i32>, ptr %A
-  %tmp2 = load <2 x i32>, ptr %B
-  %tmp3 = shufflevector <2 x i32> %tmp2, <2 x i32> %tmp2, <2 x i32> <i32 1, i32 1>
-  %tmp4 = call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %tmp1, <2 x i32> %tmp3)
+  %tmp3 = shufflevector <2 x i32> %B, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %tmp4 = call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %A, <2 x i32> %tmp3)
   ret <2 x i64> %tmp4
 }
 
-define <4 x i32> @smlal_lane_4s(ptr %A, ptr %B, ptr %C) nounwind {
+define <4 x i32> @smlal_lane_4s(<4 x i16> %A, <4 x i16> %B, <4 x i32> %C) nounwind {
 ; CHECK-LABEL: smlal_lane_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    smlal.4s v0, v2, v1[1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    smlal.4s v2, v0, v1[1]
+; CHECK-NEXT:    mov.16b v0, v2
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i16>, ptr %A
-  %tmp2 = load <4 x i16>, ptr %B
-  %tmp3 = load <4 x i32>, ptr %C
-  %tmp4 = shufflevector <4 x i16> %tmp2, <4 x i16> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %tmp5 = call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> %tmp1, <4 x i16> %tmp4)
-  %tmp6 = add <4 x i32> %tmp3, %tmp5
+  %tmp4 = shufflevector <4 x i16> %B, <4 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp5 = call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> %A, <4 x i16> %tmp4)
+  %tmp6 = add <4 x i32> %C, %tmp5
   ret <4 x i32> %tmp6
 }
 
-define <2 x i64> @smlal_lane_2d(ptr %A, ptr %B, ptr %C) nounwind {
+define <2 x i64> @smlal_lane_2d(<2 x i32> %A, <2 x i32> %B, <2 x i64> %C) nounwind {
 ; CHECK-LABEL: smlal_lane_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    smlal.2d v0, v2, v1[1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    smlal.2d v2, v0, v1[1]
+; CHECK-NEXT:    mov.16b v0, v2
 ; CHECK-NEXT:    ret
-  %tmp1 = load <2 x i32>, ptr %A
-  %tmp2 = load <2 x i32>, ptr %B
-  %tmp3 = load <2 x i64>, ptr %C
-  %tmp4 = shufflevector <2 x i32> %tmp2, <2 x i32> %tmp2, <2 x i32> <i32 1, i32 1>
-  %tmp5 = call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %tmp1, <2 x i32> %tmp4)
-  %tmp6 = add <2 x i64> %tmp3, %tmp5
+  %tmp4 = shufflevector <2 x i32> %B, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %tmp5 = call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %A, <2 x i32> %tmp4)
+  %tmp6 = add <2 x i64> %C, %tmp5
   ret <2 x i64> %tmp6
 }
 
-define <4 x i32> @sqdmlal_lane_4s(ptr %A, ptr %B, ptr %C) nounwind {
+define <4 x i32> @sqdmlal_lane_4s(<4 x i16> %A, <4 x i16> %B, <4 x i32> %C) nounwind {
 ; CHECK-LABEL: sqdmlal_lane_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    sqdmlal.4s v0, v2, v1[1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    sqdmlal.4s v2, v0, v1[1]
+; CHECK-NEXT:    mov.16b v0, v2
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i16>, ptr %A
-  %tmp2 = load <4 x i16>, ptr %B
-  %tmp3 = load <4 x i32>, ptr %C
-  %tmp4 = shufflevector <4 x i16> %tmp2, <4 x i16> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %tmp5 = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %tmp1, <4 x i16> %tmp4)
-  %tmp6 = call <4 x i32> @llvm.aarch64.neon.sqadd.v4i32(<4 x i32> %tmp3, <4 x i32> %tmp5)
+  %tmp4 = shufflevector <4 x i16> %B, <4 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp5 = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %A, <4 x i16> %tmp4)
+  %tmp6 = call <4 x i32> @llvm.aarch64.neon.sqadd.v4i32(<4 x i32> %C, <4 x i32> %tmp5)
   ret <4 x i32> %tmp6
 }
 
-define <2 x i64> @sqdmlal_lane_2d(ptr %A, ptr %B, ptr %C) nounwind {
+define <2 x i64> @sqdmlal_lane_2d(<2 x i32> %A, <2 x i32> %B, <2 x i64> %C) nounwind {
 ; CHECK-LABEL: sqdmlal_lane_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    sqdmlal.2d v0, v2, v1[1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    sqdmlal.2d v2, v0, v1[1]
+; CHECK-NEXT:    mov.16b v0, v2
 ; CHECK-NEXT:    ret
-  %tmp1 = load <2 x i32>, ptr %A
-  %tmp2 = load <2 x i32>, ptr %B
-  %tmp3 = load <2 x i64>, ptr %C
-  %tmp4 = shufflevector <2 x i32> %tmp2, <2 x i32> %tmp2, <2 x i32> <i32 1, i32 1>
-  %tmp5 = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %tmp1, <2 x i32> %tmp4)
-  %tmp6 = call <2 x i64> @llvm.aarch64.neon.sqadd.v2i64(<2 x i64> %tmp3, <2 x i64> %tmp5)
+  %tmp4 = shufflevector <2 x i32> %B, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %tmp5 = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %A, <2 x i32> %tmp4)
+  %tmp6 = call <2 x i64> @llvm.aarch64.neon.sqadd.v2i64(<2 x i64> %C, <2 x i64> %tmp5)
   ret <2 x i64> %tmp6
 }
 
-define <4 x i32> @sqdmlal2_lane_4s(ptr %A, ptr %B, ptr %C) nounwind {
+define <4 x i32> @sqdmlal2_lane_4s(<8 x i16> %A, <8 x i16> %B, <4 x i32> %C) nounwind {
 ; CHECK-LABEL: sqdmlal2_lane_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    ldr d1, [x0, #8]
-; CHECK-NEXT:    ldr d2, [x1]
-; CHECK-NEXT:    sqdmlal.4s v0, v1, v2[1]
+; CHECK-NEXT:    sqdmlal2.4s v2, v0, v1[1]
+; CHECK-NEXT:    mov.16b v0, v2
 ; CHECK-NEXT:    ret
-  %load1 = load <8 x i16>, ptr %A
-  %load2 = load <8 x i16>, ptr %B
-  %tmp3 = load <4 x i32>, ptr %C
-  %tmp1 = shufflevector <8 x i16> %load1, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %tmp2 = shufflevector <8 x i16> %load2, <8 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp1 = shufflevector <8 x i16> %A, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %tmp2 = shufflevector <8 x i16> %B, <8 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %tmp5 = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %tmp1, <4 x i16> %tmp2)
-  %tmp6 = call <4 x i32> @llvm.aarch64.neon.sqadd.v4i32(<4 x i32> %tmp3, <4 x i32> %tmp5)
+  %tmp6 = call <4 x i32> @llvm.aarch64.neon.sqadd.v4i32(<4 x i32> %C, <4 x i32> %tmp5)
   ret <4 x i32> %tmp6
 }
 
-define <2 x i64> @sqdmlal2_lane_2d(ptr %A, ptr %B, ptr %C) nounwind {
+define <2 x i64> @sqdmlal2_lane_2d(<4 x i32> %A, <4 x i32> %B, <2 x i64> %C) nounwind {
 ; CHECK-LABEL: sqdmlal2_lane_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    ldr d1, [x0, #8]
-; CHECK-NEXT:    ldr d2, [x1]
-; CHECK-NEXT:    sqdmlal.2d v0, v1, v2[1]
+; CHECK-NEXT:    sqdmlal2.2d v2, v0, v1[1]
+; CHECK-NEXT:    mov.16b v0, v2
 ; CHECK-NEXT:    ret
-  %load1 = load <4 x i32>, ptr %A
-  %load2 = load <4 x i32>, ptr %B
-  %tmp3 = load <2 x i64>, ptr %C
-  %tmp1 = shufflevector <4 x i32> %load1, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
-  %tmp2 = shufflevector <4 x i32> %load2, <4 x i32> undef, <2 x i32> <i32 1, i32 1>
+  %tmp1 = shufflevector <4 x i32> %A, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+  %tmp2 = shufflevector <4 x i32> %B, <4 x i32> undef, <2 x i32> <i32 1, i32 1>
   %tmp5 = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %tmp1, <2 x i32> %tmp2)
-  %tmp6 = call <2 x i64> @llvm.aarch64.neon.sqadd.v2i64(<2 x i64> %tmp3, <2 x i64> %tmp5)
+  %tmp6 = call <2 x i64> @llvm.aarch64.neon.sqadd.v2i64(<2 x i64> %C, <2 x i64> %tmp5)
   ret <2 x i64> %tmp6
 }
 
@@ -1715,176 +1599,134 @@ define i64 @sqdmlsl_lane_1d(i64 %A, i32 %B, <2 x i32> %C) nounwind {
 declare i64 @llvm.aarch64.neon.sqsub.i64(i64, i64)
 
 
-define <4 x i32> @umlal_lane_4s(ptr %A, ptr %B, ptr %C) nounwind {
+define <4 x i32> @umlal_lane_4s(<4 x i16> %A, <4 x i16> %B, <4 x i32> %C) nounwind {
 ; CHECK-LABEL: umlal_lane_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    umlal.4s v0, v2, v1[1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    umlal.4s v2, v0, v1[1]
+; CHECK-NEXT:    mov.16b v0, v2
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i16>, ptr %A
-  %tmp2 = load <4 x i16>, ptr %B
-  %tmp3 = load <4 x i32>, ptr %C
-  %tmp4 = shufflevector <4 x i16> %tmp2, <4 x i16> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %tmp5 = call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> %tmp1, <4 x i16> %tmp4)
-  %tmp6 = add <4 x i32> %tmp3, %tmp5
+  %tmp4 = shufflevector <4 x i16> %B, <4 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp5 = call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> %A, <4 x i16> %tmp4)
+  %tmp6 = add <4 x i32> %C, %tmp5
   ret <4 x i32> %tmp6
 }
 
-define <2 x i64> @umlal_lane_2d(ptr %A, ptr %B, ptr %C) nounwind {
+define <2 x i64> @umlal_lane_2d(<2 x i32> %A, <2 x i32> %B, <2 x i64> %C) nounwind {
 ; CHECK-LABEL: umlal_lane_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    umlal.2d v0, v2, v1[1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    umlal.2d v2, v0, v1[1]
+; CHECK-NEXT:    mov.16b v0, v2
 ; CHECK-NEXT:    ret
-  %tmp1 = load <2 x i32>, ptr %A
-  %tmp2 = load <2 x i32>, ptr %B
-  %tmp3 = load <2 x i64>, ptr %C
-  %tmp4 = shufflevector <2 x i32> %tmp2, <2 x i32> %tmp2, <2 x i32> <i32 1, i32 1>
-  %tmp5 = call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %tmp1, <2 x i32> %tmp4)
-  %tmp6 = add <2 x i64> %tmp3, %tmp5
+  %tmp4 = shufflevector <2 x i32> %B, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %tmp5 = call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %A, <2 x i32> %tmp4)
+  %tmp6 = add <2 x i64> %C, %tmp5
   ret <2 x i64> %tmp6
 }
 
 
-define <4 x i32> @smlsl_lane_4s(ptr %A, ptr %B, ptr %C) nounwind {
+define <4 x i32> @smlsl_lane_4s(<4 x i16> %A, <4 x i16> %B, <4 x i32> %C) nounwind {
 ; CHECK-LABEL: smlsl_lane_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    smlsl.4s v0, v2, v1[1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    smlsl.4s v2, v0, v1[1]
+; CHECK-NEXT:    mov.16b v0, v2
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i16>, ptr %A
-  %tmp2 = load <4 x i16>, ptr %B
-  %tmp3 = load <4 x i32>, ptr %C
-  %tmp4 = shufflevector <4 x i16> %tmp2, <4 x i16> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %tmp5 = call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> %tmp1, <4 x i16> %tmp4)
-  %tmp6 = sub <4 x i32> %tmp3, %tmp5
+  %tmp4 = shufflevector <4 x i16> %B, <4 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp5 = call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> %A, <4 x i16> %tmp4)
+  %tmp6 = sub <4 x i32> %C, %tmp5
   ret <4 x i32> %tmp6
 }
 
-define <2 x i64> @smlsl_lane_2d(ptr %A, ptr %B, ptr %C) nounwind {
+define <2 x i64> @smlsl_lane_2d(<2 x i32> %A, <2 x i32> %B, <2 x i64> %C) nounwind {
 ; CHECK-LABEL: smlsl_lane_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    smlsl.2d v0, v2, v1[1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    smlsl.2d v2, v0, v1[1]
+; CHECK-NEXT:    mov.16b v0, v2
 ; CHECK-NEXT:    ret
-  %tmp1 = load <2 x i32>, ptr %A
-  %tmp2 = load <2 x i32>, ptr %B
-  %tmp3 = load <2 x i64>, ptr %C
-  %tmp4 = shufflevector <2 x i32> %tmp2, <2 x i32> %tmp2, <2 x i32> <i32 1, i32 1>
-  %tmp5 = call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %tmp1, <2 x i32> %tmp4)
-  %tmp6 = sub <2 x i64> %tmp3, %tmp5
+  %tmp4 = shufflevector <2 x i32> %B, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %tmp5 = call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %A, <2 x i32> %tmp4)
+  %tmp6 = sub <2 x i64> %C, %tmp5
   ret <2 x i64> %tmp6
 }
 
-define <4 x i32> @sqdmlsl_lane_4s(ptr %A, ptr %B, ptr %C) nounwind {
+define <4 x i32> @sqdmlsl_lane_4s(<4 x i16> %A, <4 x i16> %B, <4 x i32> %C) nounwind {
 ; CHECK-LABEL: sqdmlsl_lane_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    sqdmlsl.4s v0, v2, v1[1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    sqdmlsl.4s v2, v0, v1[1]
+; CHECK-NEXT:    mov.16b v0, v2
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i16>, ptr %A
-  %tmp2 = load <4 x i16>, ptr %B
-  %tmp3 = load <4 x i32>, ptr %C
-  %tmp4 = shufflevector <4 x i16> %tmp2, <4 x i16> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %tmp5 = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %tmp1, <4 x i16> %tmp4)
-  %tmp6 = call <4 x i32> @llvm.aarch64.neon.sqsub.v4i32(<4 x i32> %tmp3, <4 x i32> %tmp5)
+  %tmp4 = shufflevector <4 x i16> %B, <4 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp5 = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %A, <4 x i16> %tmp4)
+  %tmp6 = call <4 x i32> @llvm.aarch64.neon.sqsub.v4i32(<4 x i32> %C, <4 x i32> %tmp5)
   ret <4 x i32> %tmp6
 }
 
-define <2 x i64> @sqdmlsl_lane_2d(ptr %A, ptr %B, ptr %C) nounwind {
+define <2 x i64> @sqdmlsl_lane_2d(<2 x i32> %A, <2 x i32> %B, <2 x i64> %C) nounwind {
 ; CHECK-LABEL: sqdmlsl_lane_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    sqdmlsl.2d v0, v2, v1[1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    sqdmlsl.2d v2, v0, v1[1]
+; CHECK-NEXT:    mov.16b v0, v2
 ; CHECK-NEXT:    ret
-  %tmp1 = load <2 x i32>, ptr %A
-  %tmp2 = load <2 x i32>, ptr %B
-  %tmp3 = load <2 x i64>, ptr %C
-  %tmp4 = shufflevector <2 x i32> %tmp2, <2 x i32> %tmp2, <2 x i32> <i32 1, i32 1>
-  %tmp5 = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %tmp1, <2 x i32> %tmp4)
-  %tmp6 = call <2 x i64> @llvm.aarch64.neon.sqsub.v2i64(<2 x i64> %tmp3, <2 x i64> %tmp5)
+  %tmp4 = shufflevector <2 x i32> %B, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %tmp5 = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %A, <2 x i32> %tmp4)
+  %tmp6 = call <2 x i64> @llvm.aarch64.neon.sqsub.v2i64(<2 x i64> %C, <2 x i64> %tmp5)
   ret <2 x i64> %tmp6
 }
 
-define <4 x i32> @sqdmlsl2_lane_4s(ptr %A, ptr %B, ptr %C) nounwind {
+define <4 x i32> @sqdmlsl2_lane_4s(<8 x i16> %A, <8 x i16> %B, <4 x i32> %C) nounwind {
 ; CHECK-LABEL: sqdmlsl2_lane_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    ldr d1, [x0, #8]
-; CHECK-NEXT:    ldr d2, [x1]
-; CHECK-NEXT:    sqdmlsl.4s v0, v1, v2[1]
+; CHECK-NEXT:    sqdmlsl2.4s v2, v0, v1[1]
+; CHECK-NEXT:    mov.16b v0, v2
 ; CHECK-NEXT:    ret
-  %load1 = load <8 x i16>, ptr %A
-  %load2 = load <8 x i16>, ptr %B
-  %tmp3 = load <4 x i32>, ptr %C
-  %tmp1 = shufflevector <8 x i16> %load1, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %tmp2 = shufflevector <8 x i16> %load2, <8 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp1 = shufflevector <8 x i16> %A, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %tmp2 = shufflevector <8 x i16> %B, <8 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %tmp5 = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %tmp1, <4 x i16> %tmp2)
-  %tmp6 = call <4 x i32> @llvm.aarch64.neon.sqsub.v4i32(<4 x i32> %tmp3, <4 x i32> %tmp5)
+  %tmp6 = call <4 x i32> @llvm.aarch64.neon.sqsub.v4i32(<4 x i32> %C, <4 x i32> %tmp5)
   ret <4 x i32> %tmp6
 }
 
-define <2 x i64> @sqdmlsl2_lane_2d(ptr %A, ptr %B, ptr %C) nounwind {
+define <2 x i64> @sqdmlsl2_lane_2d(<4 x i32> %A, <4 x i32> %B, <2 x i64> %C) nounwind {
 ; CHECK-LABEL: sqdmlsl2_lane_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    ldr d1, [x0, #8]
-; CHECK-NEXT:    ldr d2, [x1]
-; CHECK-NEXT:    sqdmlsl.2d v0, v1, v2[1]
+; CHECK-NEXT:    sqdmlsl2.2d v2, v0, v1[1]
+; CHECK-NEXT:    mov.16b v0, v2
 ; CHECK-NEXT:    ret
-  %load1 = load <4 x i32>, ptr %A
-  %load2 = load <4 x i32>, ptr %B
-  %tmp3 = load <2 x i64>, ptr %C
-  %tmp1 = shufflevector <4 x i32> %load1, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
-  %tmp2 = shufflevector <4 x i32> %load2, <4 x i32> undef, <2 x i32> <i32 1, i32 1>
+  %tmp1 = shufflevector <4 x i32> %A, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+  %tmp2 = shufflevector <4 x i32> %B, <4 x i32> undef, <2 x i32> <i32 1, i32 1>
   %tmp5 = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %tmp1, <2 x i32> %tmp2)
-  %tmp6 = call <2 x i64> @llvm.aarch64.neon.sqsub.v2i64(<2 x i64> %tmp3, <2 x i64> %tmp5)
+  %tmp6 = call <2 x i64> @llvm.aarch64.neon.sqsub.v2i64(<2 x i64> %C, <2 x i64> %tmp5)
   ret <2 x i64> %tmp6
 }
 
-define <4 x i32> @umlsl_lane_4s(ptr %A, ptr %B, ptr %C) nounwind {
+define <4 x i32> @umlsl_lane_4s(<4 x i16> %A, <4 x i16> %B, <4 x i32> %C) nounwind {
 ; CHECK-LABEL: umlsl_lane_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    umlsl.4s v0, v2, v1[1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    umlsl.4s v2, v0, v1[1]
+; CHECK-NEXT:    mov.16b v0, v2
 ; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i16>, ptr %A
-  %tmp2 = load <4 x i16>, ptr %B
-  %tmp3 = load <4 x i32>, ptr %C
-  %tmp4 = shufflevector <4 x i16> %tmp2, <4 x i16> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %tmp5 = call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> %tmp1, <4 x i16> %tmp4)
-  %tmp6 = sub <4 x i32> %tmp3, %tmp5
+  %tmp4 = shufflevector <4 x i16> %B, <4 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp5 = call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> %A, <4 x i16> %tmp4)
+  %tmp6 = sub <4 x i32> %C, %tmp5
   ret <4 x i32> %tmp6
 }
 
-define <2 x i64> @umlsl_lane_2d(ptr %A, ptr %B, ptr %C) nounwind {
+define <2 x i64> @umlsl_lane_2d(<2 x i32> %A, <2 x i32> %B, <2 x i64> %C) nounwind {
 ; CHECK-LABEL: umlsl_lane_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x0]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    umlsl.2d v0, v2, v1[1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    umlsl.2d v2, v0, v1[1]
+; CHECK-NEXT:    mov.16b v0, v2
 ; CHECK-NEXT:    ret
-  %tmp1 = load <2 x i32>, ptr %A
-  %tmp2 = load <2 x i32>, ptr %B
-  %tmp3 = load <2 x i64>, ptr %C
-  %tmp4 = shufflevector <2 x i32> %tmp2, <2 x i32> %tmp2, <2 x i32> <i32 1, i32 1>
-  %tmp5 = call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %tmp1, <2 x i32> %tmp4)
-  %tmp6 = sub <2 x i64> %tmp3, %tmp5
+  %tmp4 = shufflevector <2 x i32> %B, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %tmp5 = call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %A, <2 x i32> %tmp4)
+  %tmp6 = sub <2 x i64> %C, %tmp5
   ret <2 x i64> %tmp6
 }
 
