@@ -582,6 +582,9 @@ int main(int Argc, char **Argv) {
   InitializeAllTargets();
   InitializeAllTargetMCs();
 
+  // Register the Target and CPU printer for --version.
+  cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
+
   // Enable printing of available targets when flag --version is specified.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
