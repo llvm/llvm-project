@@ -63,6 +63,8 @@ FunctionPass *createHexagonISelDag(HexagonTargetMachine &TM,
 }
 }
 
+char HexagonDAGToDAGISel::ID = 0;
+
 void HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl) {
   SDValue Chain = LD->getChain();
   SDValue Base = LD->getBasePtr();

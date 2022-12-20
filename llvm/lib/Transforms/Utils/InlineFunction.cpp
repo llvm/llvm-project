@@ -2834,9 +2834,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // Now that the function is correct, make it a little bit nicer.  In
   // particular, move the basic blocks inserted from the end of the function
   // into the space made by splitting the source basic block.
-  Caller->getBasicBlockList().splice(AfterCallBB->getIterator(),
-                                     Caller->getBasicBlockList(), FirstNewBlock,
-                                     Caller->end());
+  Caller->splice(AfterCallBB->getIterator(), Caller, FirstNewBlock,
+                 Caller->end());
 
   // Handle all of the return instructions that we just cloned in, and eliminate
   // any users of the original call/invoke instruction.

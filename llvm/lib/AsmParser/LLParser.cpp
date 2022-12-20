@@ -3341,7 +3341,7 @@ BasicBlock *LLParser::PerFunctionState::defineBB(const std::string &Name,
 
   // Move the block to the end of the function.  Forward ref'd blocks are
   // inserted wherever they happen to be referenced.
-  F.getBasicBlockList().splice(F.end(), F.getBasicBlockList(), BB);
+  F.splice(F.end(), &F, BB->getIterator());
 
   // Remove the block from forward ref sets.
   if (Name.empty()) {
@@ -6334,7 +6334,7 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
       llvm_unreachable("Unknown parseInstruction result!");
     case InstError: return true;
     case InstNormal:
-      Inst->insertAt(BB, BB->end());
+      Inst->insertInto(BB, BB->end());
 
       // With a normal result, we check to see if the instruction is followed by
       // a comma and metadata.
@@ -6343,7 +6343,7 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
           return true;
       break;
     case InstExtraComma:
-      Inst->insertAt(BB, BB->end());
+      Inst->insertInto(BB, BB->end());
 
       // If the instruction parser ate an extra comma at the end of it, it
       // *must* be followed by metadata.

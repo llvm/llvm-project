@@ -722,6 +722,7 @@ def : ROSysReg<"ID_AA64MMFR0_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b000>;
 def : ROSysReg<"ID_AA64MMFR1_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b001>;
 def : ROSysReg<"ID_AA64MMFR2_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b010>;
 def : ROSysReg<"ID_AA64MMFR3_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b011>;
+def : ROSysReg<"ID_AA64MMFR4_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b100>;
 def : ROSysReg<"MVFR0_EL1",           0b11, 0b000, 0b0000, 0b0011, 0b000>;
 def : ROSysReg<"MVFR1_EL1",           0b11, 0b000, 0b0000, 0b0011, 0b001>;
 def : ROSysReg<"MVFR2_EL1",           0b11, 0b000, 0b0000, 0b0011, 0b010>;
@@ -820,10 +821,12 @@ def : RWSysReg<"SCXTNUM_EL12", 0b11, 0b101, 0b1101, 0b0000, 0b111>;
 
 // v9a Realm Management Extension registers
 let Requires = [{ {AArch64::FeatureRME} }] in {
-def : RWSysReg<"MFAR_EL3",  0b11, 0b110, 0b0110, 0b0000, 0b101>;
 def : RWSysReg<"GPCCR_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b110>;
 def : RWSysReg<"GPTBR_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b100>;
 }
+// MFAR_EL3 is part of both FEAT_RME and FEAT_PFAR (further below). The latter
+// is unconditional so this register has to be too.
+def : RWSysReg<"MFAR_EL3",  0b11, 0b110, 0b0110, 0b0000, 0b101>;
 
 // v9a Memory Encryption Contexts Extension registers
 let Requires = [{ {AArch64::FeatureMEC} }] in {
@@ -1863,3 +1866,14 @@ def : RWSysReg<"TRCITECR_EL2",      0b11, 0b100, 0b0001, 0b0010, 0b011>;
 // v8.9a/9.4a SPE Data Source Filtering (FEAT_SPE_FDS)
 //                                  Op0   Op1    CRn     CRm     Op2
 def : RWSysReg<"PMSDSFR_EL1",       0b11, 0b000, 0b1001, 0b1010, 0b100>;
+
+// v8.9a/9.4a RASv2 (FEAT_RASv2)
+//                                  Op0   Op1    CRn     CRm     Op2
+let Requires = [{ {AArch64::FeatureRASv2} }] in
+def : ROSysReg<"ERXGSR_EL1",        0b11, 0b000, 0b0101, 0b0011, 0b010>;
+
+// v8.9a/9.4a Physical Fault Address (FEAT_PFAR)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"PFAR_EL1",          0b11, 0b000, 0b0110, 0b0000, 0b101>;
+def : RWSysReg<"PFAR_EL12",         0b11, 0b101, 0b0110, 0b0000, 0b101>;
+def : RWSysReg<"PFAR_EL2",          0b11, 0b100, 0b0110, 0b0000, 0b101>;

@@ -573,40 +573,6 @@ TEST(OptionalTest, MoveValueOr) {
   EXPECT_EQ(2u, MoveOnly::Destructions);
 }
 
-TEST(OptionalTest, Transform) {
-  Optional<int> A;
-
-  Optional<int> B = A.transform([&](int N) { return N + 1; });
-  EXPECT_FALSE(B.has_value());
-
-  A = 3;
-  Optional<int> C = A.transform([&](int N) { return N + 1; });
-  EXPECT_TRUE(C.has_value());
-  EXPECT_EQ(4, C.value());
-}
-
-TEST(OptionalTest, MoveTransform) {
-  Optional<MoveOnly> A;
-
-  MoveOnly::ResetCounts();
-  Optional<int> B =
-      std::move(A).transform([&](const MoveOnly &M) { return M.val + 2; });
-  EXPECT_FALSE(B.has_value());
-  EXPECT_EQ(0u, MoveOnly::MoveConstructions);
-  EXPECT_EQ(0u, MoveOnly::MoveAssignments);
-  EXPECT_EQ(0u, MoveOnly::Destructions);
-
-  A = MoveOnly(5);
-  MoveOnly::ResetCounts();
-  Optional<int> C =
-      std::move(A).transform([&](const MoveOnly &M) { return M.val + 2; });
-  EXPECT_TRUE(C.has_value());
-  EXPECT_EQ(7, C.value());
-  EXPECT_EQ(0u, MoveOnly::MoveConstructions);
-  EXPECT_EQ(0u, MoveOnly::MoveAssignments);
-  EXPECT_EQ(0u, MoveOnly::Destructions);
-}
-
 struct EqualTo {
   template <typename T, typename U> static bool apply(const T &X, const U &Y) {
     return X == Y;

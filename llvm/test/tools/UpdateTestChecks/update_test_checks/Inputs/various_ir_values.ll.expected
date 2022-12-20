@@ -11,43 +11,45 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local void @foo(i32* %A) #0 !dbg !7 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32*, align 8
+; CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32*, align 8, !DIAssignID [[DIASSIGNID16:![0-9]+]]
 ; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32* [[A:%.*]], i32** [[A_ADDR]], align 8, !tbaa [[TBAA16:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.declare(metadata i32** [[A_ADDR]], metadata [[META13:![0-9]+]], metadata !DIExpression()), !dbg [[DBG20:![0-9]+]]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[I]] to i8*, !dbg [[DBG21:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP0]]) #[[ATTR3:[0-9]+]], !dbg [[DBG21]]
-; CHECK-NEXT:    call void @llvm.dbg.declare(metadata i32* [[I]], metadata [[META14:![0-9]+]], metadata !DIExpression()), !dbg [[DBG22:![0-9]+]]
-; CHECK-NEXT:    store i32 0, i32* [[I]], align 4, !dbg [[DBG22]], !tbaa [[TBAA23:![0-9]+]]
-; CHECK-NEXT:    br label [[FOR_COND:%.*]], !dbg [[DBG21]]
+; CHECK-NEXT:    call void @llvm.dbg.assign(metadata i1 undef, metadata [[META13:![0-9]+]], metadata !DIExpression(), metadata [[DIASSIGNID16]], metadata i32** [[A_ADDR]], metadata !DIExpression()), !dbg [[DBG17:![0-9]+]]
+; CHECK-NEXT:    store i32* [[A:%.*]], i32** [[A_ADDR]], align 8, !tbaa [[TBAA18:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.dbg.declare(metadata i32** [[A_ADDR]], metadata [[META13]], metadata !DIExpression()), !dbg [[DBG17]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[I]] to i8*, !dbg [[DBG22:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP0]]) #[[ATTR3:[0-9]+]], !dbg [[DBG22]]
+; CHECK-NEXT:    call void @llvm.dbg.declare(metadata i32* [[I]], metadata [[META14:![0-9]+]], metadata !DIExpression()), !dbg [[DBG23:![0-9]+]]
+; CHECK-NEXT:    store i32 0, i32* [[I]], align 4, !dbg [[DBG23]], !tbaa [[TBAA24:![0-9]+]]
+; CHECK-NEXT:    br label [[FOR_COND:%.*]], !dbg [[DBG22]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[I]], align 4, !dbg [[DBG25:![0-9]+]], !tbaa [[TBAA23]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[A_ADDR]], align 8, !dbg [[DBG27:![0-9]+]], !tbaa [[TBAA16]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP2]], align 4, !dbg [[DBG28:![0-9]+]], !tbaa [[TBAA23]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], [[TMP3]], !dbg [[DBG29:![0-9]+]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]], !dbg [[DBG30:![0-9]+]], !prof [[PROF31:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[I]], align 4, !dbg [[DBG26:![0-9]+]], !tbaa [[TBAA24]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[A_ADDR]], align 8, !dbg [[DBG28:![0-9]+]], !tbaa [[TBAA18]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP2]], align 4, !dbg [[DBG29:![0-9]+]], !tbaa [[TBAA24]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], [[TMP3]], !dbg [[DBG30:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]], !dbg [[DBG31:![0-9]+]], !prof [[PROF32:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[I]] to i8*, !dbg [[DBG32:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR3]], !dbg [[DBG32]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[I]] to i8*, !dbg [[DBG33:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR3]], !dbg [[DBG33]]
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[A_ADDR]], align 8, !dbg [[DBG33:![0-9]+]], !tbaa [[TBAA16]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[I]], align 4, !dbg [[DBG34:![0-9]+]], !tbaa [[TBAA23]]
-; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP6]] to i64, !dbg [[DBG33]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[TMP5]], i64 [[IDXPROM]], !dbg [[DBG33]]
-; CHECK-NEXT:    store i32 0, i32* [[ARRAYIDX]], align 4, !dbg [[DBG35:![0-9]+]], !tbaa [[TBAA23]]
-; CHECK-NEXT:    br label [[FOR_INC:%.*]], !dbg [[DBG33]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[A_ADDR]], align 8, !dbg [[DBG34:![0-9]+]], !tbaa [[TBAA18]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[I]], align 4, !dbg [[DBG35:![0-9]+]], !tbaa [[TBAA24]]
+; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP6]] to i64, !dbg [[DBG34]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[TMP5]], i64 [[IDXPROM]], !dbg [[DBG34]]
+; CHECK-NEXT:    store i32 0, i32* [[ARRAYIDX]], align 4, !dbg [[DBG36:![0-9]+]], !tbaa [[TBAA24]]
+; CHECK-NEXT:    br label [[FOR_INC:%.*]], !dbg [[DBG34]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[I]], align 4, !dbg [[DBG36:![0-9]+]], !tbaa [[TBAA23]]
-; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP7]], 1, !dbg [[DBG36]]
-; CHECK-NEXT:    store i32 [[INC]], i32* [[I]], align 4, !dbg [[DBG36]], !tbaa [[TBAA23]]
-; CHECK-NEXT:    br label [[FOR_COND]], !dbg [[DBG32]], !llvm.loop [[LOOP37:![0-9]+]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[I]], align 4, !dbg [[DBG37:![0-9]+]], !tbaa [[TBAA24]]
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP7]], 1, !dbg [[DBG37]]
+; CHECK-NEXT:    store i32 [[INC]], i32* [[I]], align 4, !dbg [[DBG37]], !tbaa [[TBAA24]]
+; CHECK-NEXT:    br label [[FOR_COND]], !dbg [[DBG33]], !llvm.loop [[LOOP38:![0-9]+]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret void, !dbg [[DBG39:![0-9]+]]
+; CHECK-NEXT:    ret void, !dbg [[DBG40:![0-9]+]]
 ;
 entry:
-  %A.addr = alloca i32*, align 8
+  %A.addr = alloca i32*, align 8, !DIAssignID !62
   %i = alloca i32, align 4
+  call void @llvm.dbg.assign(metadata i1 undef, metadata !13, metadata !DIExpression(), metadata !62, metadata i32** %A.addr, metadata !DIExpression()), !dbg !20
   store i32* %A, i32** %A.addr, align 8, !tbaa !16
   call void @llvm.dbg.declare(metadata i32** %A.addr, metadata !13, metadata !DIExpression()), !dbg !20
   %0 = bitcast i32* %i to i8*, !dbg !21
@@ -101,37 +103,37 @@ define dso_local void @bar(i32* %A) #0 !dbg !39 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32* [[A:%.*]], i32** [[A_ADDR]], align 8, !tbaa [[TBAA16]]
-; CHECK-NEXT:    call void @llvm.dbg.declare(metadata i32** [[A_ADDR]], metadata [[META42:![0-9]+]], metadata !DIExpression()), !dbg [[DBG45:![0-9]+]]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[I]] to i8*, !dbg [[DBG46:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP0]]) #[[ATTR3]], !dbg [[DBG46]]
-; CHECK-NEXT:    call void @llvm.dbg.declare(metadata i32* [[I]], metadata [[META43:![0-9]+]], metadata !DIExpression()), !dbg [[DBG47:![0-9]+]]
-; CHECK-NEXT:    store i32 0, i32* [[I]], align 4, !dbg [[DBG47]], !tbaa [[TBAA23]]
-; CHECK-NEXT:    br label [[FOR_COND:%.*]], !dbg [[DBG46]]
+; CHECK-NEXT:    store i32* [[A:%.*]], i32** [[A_ADDR]], align 8, !tbaa [[TBAA18]]
+; CHECK-NEXT:    call void @llvm.dbg.declare(metadata i32** [[A_ADDR]], metadata [[META43:![0-9]+]], metadata !DIExpression()), !dbg [[DBG46:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[I]] to i8*, !dbg [[DBG47:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP0]]) #[[ATTR3]], !dbg [[DBG47]]
+; CHECK-NEXT:    call void @llvm.dbg.declare(metadata i32* [[I]], metadata [[META44:![0-9]+]], metadata !DIExpression()), !dbg [[DBG48:![0-9]+]]
+; CHECK-NEXT:    store i32 0, i32* [[I]], align 4, !dbg [[DBG48]], !tbaa [[TBAA24]]
+; CHECK-NEXT:    br label [[FOR_COND:%.*]], !dbg [[DBG47]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[I]], align 4, !dbg [[DBG48:![0-9]+]], !tbaa [[TBAA23]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[A_ADDR]], align 8, !dbg [[DBG50:![0-9]+]], !tbaa [[TBAA16]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP2]], align 4, !dbg [[DBG51:![0-9]+]], !tbaa [[TBAA23]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], [[TMP3]], !dbg [[DBG52:![0-9]+]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]], !dbg [[DBG53:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[I]], align 4, !dbg [[DBG49:![0-9]+]], !tbaa [[TBAA24]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[A_ADDR]], align 8, !dbg [[DBG51:![0-9]+]], !tbaa [[TBAA18]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP2]], align 4, !dbg [[DBG52:![0-9]+]], !tbaa [[TBAA24]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], [[TMP3]], !dbg [[DBG53:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]], !dbg [[DBG54:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[I]] to i8*, !dbg [[DBG54:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR3]], !dbg [[DBG54]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[I]] to i8*, !dbg [[DBG55:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP4]]) #[[ATTR3]], !dbg [[DBG55]]
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[A_ADDR]], align 8, !dbg [[DBG55:![0-9]+]], !tbaa [[TBAA16]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[I]], align 4, !dbg [[DBG56:![0-9]+]], !tbaa [[TBAA23]]
-; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP6]] to i64, !dbg [[DBG55]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[TMP5]], i64 [[IDXPROM]], !dbg [[DBG55]]
-; CHECK-NEXT:    store i32 0, i32* [[ARRAYIDX]], align 4, !dbg [[DBG57:![0-9]+]], !tbaa [[TBAA23]]
-; CHECK-NEXT:    br label [[FOR_INC:%.*]], !dbg [[DBG55]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[A_ADDR]], align 8, !dbg [[DBG56:![0-9]+]], !tbaa [[TBAA18]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[I]], align 4, !dbg [[DBG57:![0-9]+]], !tbaa [[TBAA24]]
+; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP6]] to i64, !dbg [[DBG56]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[TMP5]], i64 [[IDXPROM]], !dbg [[DBG56]]
+; CHECK-NEXT:    store i32 0, i32* [[ARRAYIDX]], align 4, !dbg [[DBG58:![0-9]+]], !tbaa [[TBAA24]]
+; CHECK-NEXT:    br label [[FOR_INC:%.*]], !dbg [[DBG56]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[I]], align 4, !dbg [[DBG58:![0-9]+]], !tbaa [[TBAA23]]
-; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP7]], 1, !dbg [[DBG58]]
-; CHECK-NEXT:    store i32 [[INC]], i32* [[I]], align 4, !dbg [[DBG58]], !tbaa [[TBAA23]]
-; CHECK-NEXT:    br label [[FOR_COND]], !dbg [[DBG54]], !llvm.loop [[LOOP59:![0-9]+]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[I]], align 4, !dbg [[DBG59:![0-9]+]], !tbaa [[TBAA24]]
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP7]], 1, !dbg [[DBG59]]
+; CHECK-NEXT:    store i32 [[INC]], i32* [[I]], align 4, !dbg [[DBG59]], !tbaa [[TBAA24]]
+; CHECK-NEXT:    br label [[FOR_COND]], !dbg [[DBG55]], !llvm.loop [[LOOP60:![0-9]+]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret void, !dbg [[DBG61:![0-9]+]]
+; CHECK-NEXT:    ret void, !dbg [[DBG62:![0-9]+]]
 ;
 entry:
   %A.addr = alloca i32*, align 8
@@ -173,6 +175,8 @@ for.inc:                                          ; preds = %for.body
 for.end:                                          ; preds = %for.cond.cleanup
   ret void, !dbg !60
 }
+
+declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="ieee,ieee" "denormal-fp-math-f32"="ieee,ieee" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone speculatable willreturn }
@@ -245,3 +249,4 @@ attributes #3 = { nounwind }
 !59 = !DILocation(line: 10, column: 12, scope: !43)
 !60 = !DILocation(line: 11, column: 1, scope: !39)
 !61 = !{!"branch_weights", i32 1, i32 1048575}
+!62 = distinct !DIAssignID()

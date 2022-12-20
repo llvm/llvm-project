@@ -762,7 +762,7 @@ std::string yaml::escape(StringRef Input, bool EscapePrintable) {
   return EscapedInput;
 }
 
-llvm::Optional<bool> yaml::parseBool(StringRef S) {
+std::optional<bool> yaml::parseBool(StringRef S) {
   switch (S.size()) {
 // FIXME: SWDEV-268185.
 //  case 1:

@@ -139,10 +139,12 @@ defm FMIN_H   : FPALU_rr_m<0b0010110, 0b000, "fmin.h", HINX, /*Commutable*/1>;
 defm FMAX_H   : FPALU_rr_m<0b0010110, 0b001, "fmax.h", HINX, /*Commutable*/1>;
 }
 
+let IsSignExtendingOpW = 1 in
 defm FCVT_W_H : FPUnaryOp_r_frm_m<0b1100010, 0b00000, XHINX, "fcvt.w.h">,
                 Sched<[WriteFCvtF16ToI32, ReadFCvtF16ToI32]>;
 defm          : FPUnaryOpDynFrmAlias_m<FCVT_W_H, "fcvt.w.h", XHINX>;
 
+let IsSignExtendingOpW = 1 in
 defm FCVT_WU_H : FPUnaryOp_r_frm_m<0b1100010, 0b00001, XHINX, "fcvt.wu.h">,
                  Sched<[WriteFCvtF16ToI32, ReadFCvtF16ToI32]>;
 defm           : FPUnaryOpDynFrmAlias_m<FCVT_WU_H, "fcvt.wu.h", XHINX>;
@@ -163,7 +165,7 @@ defm FCVT_S_H : FPUnaryOp_r_m<0b0100000, 0b00010, 0b000, FHINXmin, "fcvt.s.h">,
                Sched<[WriteFCvtF16ToF32, ReadFCvtF16ToF32]>;
 
 let Predicates = [HasStdExtZfhOrZfhmin] in {
-let mayRaiseFPException = 0 in
+let mayRaiseFPException = 0, IsSignExtendingOpW = 1 in
 def FMV_X_H : FPUnaryOp_r<0b1110010, 0b00000, 0b000, GPR, FPR16, "fmv.x.h">,
               Sched<[WriteFMovF16ToI16, ReadFMovF16ToI16]>;
 

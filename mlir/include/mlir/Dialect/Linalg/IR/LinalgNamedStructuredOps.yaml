@@ -661,7 +661,7 @@ metadata: !LinalgOpMetadata
     The partial multiplication results are reduced into a 2D output.
 
     Numeric casting is performed on the operands to the inner multiply, promoting
-    them to the same data type as the accumulator/output."
+    them to the same data type as the accumulator/output.
   implements:
   - LinalgContractionOpInterface
 structured_op: !LinalgStructuredOpConfig
@@ -2279,38 +2279,39 @@ structured_op: !LinalgStructuredOpConfig
     name: I
     kind: input_tensor
     type_var: T1
-    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s9, s1 *
-      s2 + s3 * s4, s5 * s6 + s7 * s8)>
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s1, s2
+      * s3 + s4 * s5, s6 * s7 + s8 * s9)>
   - !LinalgOperandDefConfig
     name: K
     kind: input_tensor
     type_var: T2
-    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s9, s3, s7)>
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s1, s4, s8)>
   - !LinalgOperandDefConfig
     name: O
     kind: output_tensor
     type_var: U
-    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s9, s1, s5)>
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s0, s1, s2,
+      s6)>
   - !LinalgOperandDefConfig
     name: strides
     kind: index_attr
-    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s2,
-      s6)>
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s3,
+      s7)>
     default_indices:
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
     kind: index_attr
-    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s4,
-      s8)>
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9] -> (s5,
+      s9)>
     default_indices:
     - 1
     - 1
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9]
-      -> (d0, d3, d1 * s2 + d4 * s4, d2 * s6 + d5 * s8)>
+      -> (d0, d3, d1 * s3 + d4 * s5, d2 * s7 + d5 * s9)>
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9]
       -> (d3, d4, d5)>
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9]
@@ -3450,6 +3451,497 @@ structured_op: !LinalgStructuredOpConfig
   - parallel
   - parallel
   - reduction
+  - reduction
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      scalar_fn:
+        kind: binary
+        fn_name: min_unsigned
+        operands:
+        - !ScalarExpression
+          scalar_arg: O
+        - !ScalarExpression
+          scalar_fn:
+            kind: type
+            fn_name: cast_unsigned
+            type_var: U
+            operands:
+            - !ScalarExpression
+              scalar_arg: I
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: pooling_nwc_sum
+  cpp_class_name: PoolingNwcSumOp
+  doc: |-
+    Performs sum pooling.
+
+    Layout:
+      * Input: NWC.
+      * Kernel: W.
+
+    Numeric casting is performed on the input operand, promoting it to the same
+    data type as the accumulator/output.
+  implements:
+  - LinalgConvolutionOpInterface
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: I
+    kind: input_tensor
+    type_var: T1
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1 * s2 + s3 * s4, s5)>
+  - !LinalgOperandDefConfig
+    name: K
+    kind: input_tensor
+    type_var: T2
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s3)>
+  - !LinalgOperandDefConfig
+    name: O
+    kind: output_tensor
+    type_var: U
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1, s5)>
+  - !LinalgOperandDefConfig
+    name: strides
+    kind: index_attr
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s2)>
+    default_indices:
+    - 1
+  - !LinalgOperandDefConfig
+    name: dilations
+    kind: index_attr
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s4)>
+    default_indices:
+    - 1
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d0, d1 * s2 + d3 * s4,
+      d2)>
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d3)>
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d0, d1, d2)>
+  iterator_types:
+  - parallel
+  - parallel
+  - parallel
+  - reduction
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      scalar_fn:
+        kind: binary
+        fn_name: add
+        operands:
+        - !ScalarExpression
+          scalar_arg: O
+        - !ScalarExpression
+          scalar_fn:
+            kind: type
+            fn_name: cast_signed
+            type_var: U
+            operands:
+            - !ScalarExpression
+              scalar_arg: I
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: pooling_ncw_sum
+  cpp_class_name: PoolingNcwSumOp
+  doc: |-
+    Performs sum pooling.
+
+    Layout:
+      * Input: NCW.
+      * Kernel: W.
+
+    Numeric casting is performed on the input operand, promoting it to the same
+    data type as the accumulator/output.
+  implements:
+  - LinalgConvolutionOpInterface
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: I
+    kind: input_tensor
+    type_var: T1
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1, s2 * s3 + s4 * s5)>
+  - !LinalgOperandDefConfig
+    name: K
+    kind: input_tensor
+    type_var: T2
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s4)>
+  - !LinalgOperandDefConfig
+    name: O
+    kind: output_tensor
+    type_var: U
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1, s2)>
+  - !LinalgOperandDefConfig
+    name: strides
+    kind: index_attr
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s3)>
+    default_indices:
+    - 1
+  - !LinalgOperandDefConfig
+    name: dilations
+    kind: index_attr
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s5)>
+    default_indices:
+    - 1
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d0, d1, d2 * s3 + d3
+      * s5)>
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d3)>
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d0, d1, d2)>
+  iterator_types:
+  - parallel
+  - parallel
+  - parallel
+  - reduction
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      scalar_fn:
+        kind: binary
+        fn_name: add
+        operands:
+        - !ScalarExpression
+          scalar_arg: O
+        - !ScalarExpression
+          scalar_fn:
+            kind: type
+            fn_name: cast_signed
+            type_var: U
+            operands:
+            - !ScalarExpression
+              scalar_arg: I
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: pooling_nwc_max
+  cpp_class_name: PoolingNwcMaxOp
+  doc: |-
+    Performs max pooling.
+
+    Numeric casting is performed on the input operand, promoting it to the same
+    data type as the accumulator/output.
+  implements:
+  - LinalgConvolutionOpInterface
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: I
+    kind: input_tensor
+    type_var: T1
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1 * s2 + s3 * s4, s5)>
+  - !LinalgOperandDefConfig
+    name: K
+    kind: input_tensor
+    type_var: T2
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s3)>
+  - !LinalgOperandDefConfig
+    name: O
+    kind: output_tensor
+    type_var: U
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1, s5)>
+  - !LinalgOperandDefConfig
+    name: strides
+    kind: index_attr
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s2)>
+    default_indices:
+    - 1
+  - !LinalgOperandDefConfig
+    name: dilations
+    kind: index_attr
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s4)>
+    default_indices:
+    - 1
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d0, d1 * s2 + d3 * s4,
+      d2)>
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d3)>
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d0, d1, d2)>
+  iterator_types:
+  - parallel
+  - parallel
+  - parallel
+  - reduction
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      scalar_fn:
+        kind: binary
+        fn_name: max_signed
+        operands:
+        - !ScalarExpression
+          scalar_arg: O
+        - !ScalarExpression
+          scalar_fn:
+            kind: type
+            fn_name: cast_signed
+            type_var: U
+            operands:
+            - !ScalarExpression
+              scalar_arg: I
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: pooling_nwc_max_unsigned
+  cpp_class_name: PoolingNwcMaxUnsignedOp
+  doc: |-
+    Performs unsigned max pooling.
+
+    Numeric casting is performed on the input operand, promoting it to the same
+    data type as the accumulator/output.
+  implements:
+  - LinalgConvolutionOpInterface
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: I
+    kind: input_tensor
+    type_var: T1
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1 * s2 + s3 * s4, s5)>
+  - !LinalgOperandDefConfig
+    name: K
+    kind: input_tensor
+    type_var: T2
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s3)>
+  - !LinalgOperandDefConfig
+    name: O
+    kind: output_tensor
+    type_var: U
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1, s5)>
+  - !LinalgOperandDefConfig
+    name: strides
+    kind: index_attr
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s2)>
+    default_indices:
+    - 1
+  - !LinalgOperandDefConfig
+    name: dilations
+    kind: index_attr
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s4)>
+    default_indices:
+    - 1
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d0, d1 * s2 + d3 * s4,
+      d2)>
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d3)>
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d0, d1, d2)>
+  iterator_types:
+  - parallel
+  - parallel
+  - parallel
+  - reduction
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      scalar_fn:
+        kind: binary
+        fn_name: max_unsigned
+        operands:
+        - !ScalarExpression
+          scalar_arg: O
+        - !ScalarExpression
+          scalar_fn:
+            kind: type
+            fn_name: cast_unsigned
+            type_var: U
+            operands:
+            - !ScalarExpression
+              scalar_arg: I
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: pooling_ncw_max
+  cpp_class_name: PoolingNcwMaxOp
+  doc: |-
+    Performs max pooling.
+
+    Numeric casting is performed on the input operand, promoting it to the same
+    data type as the accumulator/output.
+  implements:
+  - LinalgConvolutionOpInterface
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: I
+    kind: input_tensor
+    type_var: T1
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1, s2 * s3 + s4 * s5)>
+  - !LinalgOperandDefConfig
+    name: K
+    kind: input_tensor
+    type_var: T2
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s4)>
+  - !LinalgOperandDefConfig
+    name: O
+    kind: output_tensor
+    type_var: U
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1, s2)>
+  - !LinalgOperandDefConfig
+    name: strides
+    kind: index_attr
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s3)>
+    default_indices:
+    - 1
+  - !LinalgOperandDefConfig
+    name: dilations
+    kind: index_attr
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s5)>
+    default_indices:
+    - 1
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d0, d1, d2 * s3 + d3
+      * s5)>
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d3)>
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d0, d1, d2)>
+  iterator_types:
+  - parallel
+  - parallel
+  - parallel
+  - reduction
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      scalar_fn:
+        kind: binary
+        fn_name: max_signed
+        operands:
+        - !ScalarExpression
+          scalar_arg: O
+        - !ScalarExpression
+          scalar_fn:
+            kind: type
+            fn_name: cast_signed
+            type_var: U
+            operands:
+            - !ScalarExpression
+              scalar_arg: I
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: pooling_nwc_min
+  cpp_class_name: PoolingNwcMinOp
+  doc: |-
+    Performs min pooling.
+
+    Numeric casting is performed on the input operand, promoting it to the same
+    data type as the accumulator/output.
+  implements:
+  - LinalgConvolutionOpInterface
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: I
+    kind: input_tensor
+    type_var: T1
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1 * s2 + s3 * s4, s5)>
+  - !LinalgOperandDefConfig
+    name: K
+    kind: input_tensor
+    type_var: T2
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s3)>
+  - !LinalgOperandDefConfig
+    name: O
+    kind: output_tensor
+    type_var: U
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1, s5)>
+  - !LinalgOperandDefConfig
+    name: strides
+    kind: index_attr
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s2)>
+    default_indices:
+    - 1
+  - !LinalgOperandDefConfig
+    name: dilations
+    kind: index_attr
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s4)>
+    default_indices:
+    - 1
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d0, d1 * s2 + d3 * s4,
+      d2)>
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d3)>
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d0, d1, d2)>
+  iterator_types:
+  - parallel
+  - parallel
+  - parallel
+  - reduction
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      scalar_fn:
+        kind: binary
+        fn_name: min_signed
+        operands:
+        - !ScalarExpression
+          scalar_arg: O
+        - !ScalarExpression
+          scalar_fn:
+            kind: type
+            fn_name: cast_signed
+            type_var: U
+            operands:
+            - !ScalarExpression
+              scalar_arg: I
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: pooling_nwc_min_unsigned
+  cpp_class_name: PoolingNwcMinUnsignedOp
+  doc: |-
+    Performs unsigned min pooling.
+
+    Numeric casting is performed on the input operand, promoting it to the same
+    data type as the accumulator/output.
+  implements:
+  - LinalgConvolutionOpInterface
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: I
+    kind: input_tensor
+    type_var: T1
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1 * s2 + s3 * s4, s5)>
+  - !LinalgOperandDefConfig
+    name: K
+    kind: input_tensor
+    type_var: T2
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s3)>
+  - !LinalgOperandDefConfig
+    name: O
+    kind: output_tensor
+    type_var: U
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1, s5)>
+  - !LinalgOperandDefConfig
+    name: strides
+    kind: index_attr
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s2)>
+    default_indices:
+    - 1
+  - !LinalgOperandDefConfig
+    name: dilations
+    kind: index_attr
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s4)>
+    default_indices:
+    - 1
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d0, d1 * s2 + d3 * s4,
+      d2)>
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d3)>
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] -> (d0, d1, d2)>
+  iterator_types:
+  - parallel
+  - parallel
+  - parallel
   - reduction
   assignments:
   - !ScalarAssign

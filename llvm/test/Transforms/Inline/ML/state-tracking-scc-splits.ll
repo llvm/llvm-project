@@ -1,7 +1,7 @@
 ; Based on llvm/test/Other/cgscc-iterate-function-mutation.ll
 ; RUN: opt -passes='default<O3>,print<inline-advisor>' -training-log=/dev/null \
 ; RUN:   -S -enable-ml-inliner=development -keep-inline-advisor-for-printing < %s 2>&1 | FileCheck %s
-; REQUIRES: have_tf_api
+; REQUIRES: have_tflite
 ;
 ; CHECK: [MLInlineAdvisor] Nodes: 36 Edges: 0
 

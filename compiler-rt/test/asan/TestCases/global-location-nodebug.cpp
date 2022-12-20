@@ -9,10 +9,10 @@
 // RUN: not %run %t l 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=LITERAL-NO-G
 
 /// Solaris ld -S has different semantics.
-// XFAIL: solaris
+// XFAIL: target={{.*solaris.*}}
 
 /// MSVC linker doesn't support `-S`.
-// UNSUPPORTED: windows
+// UNSUPPORTED: target={{.*windows.*}}
 
 // CHECK: AddressSanitizer: global-buffer-overflow
 // CLASS_STATIC-NO-G: 0x{{.*}} is located 4 bytes after global variable '{{.*}}C::array{{.*}}' defined in '{{.*}}global-location.cpp' {{.*}} of size 40

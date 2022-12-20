@@ -701,15 +701,15 @@ define <4 x i16> @dont_fold_srem_power_of_two(<4 x i16> %x) nounwind {
 ; RV64I-NEXT:    lh a3, 16(a1)
 ; RV64I-NEXT:    lh a1, 8(a1)
 ; RV64I-NEXT:    srli a4, a2, 58
-; RV64I-NEXT:    add a4, a2, a4
+; RV64I-NEXT:    addw a4, a2, a4
 ; RV64I-NEXT:    andi a4, a4, -64
 ; RV64I-NEXT:    subw s1, a2, a4
 ; RV64I-NEXT:    srli a2, a1, 59
-; RV64I-NEXT:    add a2, a1, a2
+; RV64I-NEXT:    addw a2, a1, a2
 ; RV64I-NEXT:    andi a2, a2, -32
 ; RV64I-NEXT:    subw s2, a1, a2
 ; RV64I-NEXT:    srli a1, a3, 61
-; RV64I-NEXT:    add a1, a3, a1
+; RV64I-NEXT:    addw a1, a3, a1
 ; RV64I-NEXT:    andi a1, a1, -8
 ; RV64I-NEXT:    subw s3, a3, a1
 ; RV64I-NEXT:    li a1, 95
@@ -743,15 +743,15 @@ define <4 x i16> @dont_fold_srem_power_of_two(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    mulw a3, a3, a6
 ; RV64IM-NEXT:    subw a2, a2, a3
 ; RV64IM-NEXT:    srli a3, a1, 58
-; RV64IM-NEXT:    add a3, a1, a3
+; RV64IM-NEXT:    addw a3, a1, a3
 ; RV64IM-NEXT:    andi a3, a3, -64
 ; RV64IM-NEXT:    subw a1, a1, a3
 ; RV64IM-NEXT:    srli a3, a5, 59
-; RV64IM-NEXT:    add a3, a5, a3
+; RV64IM-NEXT:    addw a3, a5, a3
 ; RV64IM-NEXT:    andi a3, a3, -32
 ; RV64IM-NEXT:    subw a5, a5, a3
 ; RV64IM-NEXT:    srli a3, a4, 61
-; RV64IM-NEXT:    add a3, a4, a3
+; RV64IM-NEXT:    addw a3, a4, a3
 ; RV64IM-NEXT:    andi a3, a3, -8
 ; RV64IM-NEXT:    subw a4, a4, a3
 ; RV64IM-NEXT:    sh a4, 4(a0)
@@ -1008,7 +1008,7 @@ define <4 x i16> @dont_fold_urem_i16_smax(<4 x i16> %x) nounwind {
 ; RV64I-NEXT:    lh s1, 24(a1)
 ; RV64I-NEXT:    lh a0, 16(a1)
 ; RV64I-NEXT:    srli a1, a2, 49
-; RV64I-NEXT:    add a1, a2, a1
+; RV64I-NEXT:    addw a1, a2, a1
 ; RV64I-NEXT:    lui a3, 8
 ; RV64I-NEXT:    and a1, a1, a3
 ; RV64I-NEXT:    subw s3, a2, a1
@@ -1057,7 +1057,7 @@ define <4 x i16> @dont_fold_urem_i16_smax(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    mulw a3, a3, a5
 ; RV64IM-NEXT:    subw a4, a4, a3
 ; RV64IM-NEXT:    srli a3, a1, 49
-; RV64IM-NEXT:    add a3, a1, a3
+; RV64IM-NEXT:    addw a3, a1, a3
 ; RV64IM-NEXT:    lui a5, 8
 ; RV64IM-NEXT:    and a3, a3, a5
 ; RV64IM-NEXT:    subw a1, a1, a3

@@ -7,17 +7,17 @@
 ; CHECK: Loop %for.body: backedge-taken count is %n
 ; CHECK: Loop %for.body: constant max backedge-taken count is 9223372036854775807
 
-define void @le(i64 %n, double* nocapture %p) nounwind {
+define void @le(i64 %n, ptr nocapture %p) nounwind {
 entry:
   %cmp6 = icmp slt i64 %n, 0                      ; <i1> [#uses=1]
   br i1 %cmp6, label %for.end, label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ] ; <i64> [#uses=2]
-  %arrayidx = getelementptr double, double* %p, i64 %i    ; <double*> [#uses=2]
-  %t4 = load double, double* %arrayidx                    ; <double> [#uses=1]
+  %arrayidx = getelementptr double, ptr %p, i64 %i    ; <ptr> [#uses=2]
+  %t4 = load double, ptr %arrayidx                    ; <double> [#uses=1]
   %mul = fmul double %t4, 2.200000e+00            ; <double> [#uses=1]
-  store double %mul, double* %arrayidx
+  store double %mul, ptr %arrayidx
   %i.next = add nsw i64 %i, 1                     ; <i64> [#uses=2]
   %cmp = icmp sgt i64 %i.next, %n                 ; <i1> [#uses=1]
   br i1 %cmp, label %for.end, label %for.body

@@ -64,6 +64,10 @@ def FeatureCRC : SubtargetFeature<"crc", "HasCRC", "true",
 def FeatureRAS : SubtargetFeature<"ras", "HasRAS", "true",
   "Enable ARMv8 Reliability, Availability and Serviceability Extensions (FEAT_RAS, FEAT_RASv1p1)">;
 
+def FeatureRASv2 : SubtargetFeature<"rasv2", "HasRASv2", "true",
+  "Enable ARMv8.9-A Reliability, Availability and Serviceability Extensions (FEAT_RASv2)",
+  [FeatureRAS]>;
+
 def FeatureLSE : SubtargetFeature<"lse", "HasLSE", "true",
   "Enable ARMv8.1 Large System Extension (LSE) atomic instructions (FEAT_LSE)">;
 
@@ -589,7 +593,7 @@ def HasV8_8aOps : SubtargetFeature<
 def HasV8_9aOps : SubtargetFeature<
   "v8.9a", "HasV8_9aOps", "true", "Support ARM v8.9a instructions",
   [HasV8_8aOps, FeatureCLRBHB, FeaturePRFM_SLC, FeatureSPECRES2,
-   FeatureCSSC]>;
+   FeatureCSSC, FeatureRASv2]>;
 
 def HasV9_0aOps : SubtargetFeature<
   "v9a", "HasV9_0aOps", "true", "Support ARM v9a instructions",

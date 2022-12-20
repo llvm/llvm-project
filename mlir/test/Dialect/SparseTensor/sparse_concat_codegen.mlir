@@ -79,8 +79,7 @@
 //       CHECK:    scf.yield %[[RET_6]]
 //       CHECK:  }
 //       CHECK:  %[[TMP_23:.*]] = sparse_tensor.load %[[RET_3]] hasInserts
-//       CHECK:  %[[TMP_22:.*]] = sparse_tensor.convert %[[TMP_23]] : tensor<9x4xf64, #sparse_tensor
-//       CHECK:  return %[[TMP_22]] : tensor<9x4xf64, #sparse_tensor
+//       CHECK:  return %[[TMP_23]] : tensor<9x4xf64, #sparse_tensor
 func.func @concat_sparse_sparse(%arg0: tensor<2x4xf64, #DCSR>,
                                 %arg1: tensor<3x4xf64, #DCSR>,
                                 %arg2: tensor<4x4xf64, #DCSR>)
@@ -166,8 +165,7 @@ func.func @concat_sparse_sparse(%arg0: tensor<2x4xf64, #DCSR>,
 //       CHECK:    scf.yield %[[RET_6]]
 //       CHECK:  }
 //       CHECK:  %[[TMP_23:.*]] = sparse_tensor.load %[[RET_3]] hasInserts
-//       CHECK:  %[[TMP_22:.*]] = sparse_tensor.convert %[[TMP_23]] : tensor<?x?xf64, #sparse_tensor
-//       CHECK:  return %[[TMP_22]] : tensor<?x?xf64, #sparse_tensor
+//       CHECK:  return %[[TMP_23]] : tensor<?x?xf64, #sparse_tensor
 func.func @concat_sparse_sparse_dynamic(%arg0: tensor<2x4xf64, #DCSR>,
                                 %arg1: tensor<3x4xf64, #DCSR>,
                                 %arg2: tensor<4x4xf64, #DCSR>)

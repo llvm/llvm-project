@@ -94,7 +94,7 @@ private:
   void onDocumentDidChange(const DidChangeTextDocumentParams &);
   void onDocumentDidClose(const DidCloseTextDocumentParams &);
   void onDocumentDidSave(const DidSaveTextDocumentParams &);
-  void onAST(const ASTParams &, Callback<llvm::Optional<ASTNode>>);
+  void onAST(const ASTParams &, Callback<std::optional<ASTNode>>);
   void onDocumentOnTypeFormatting(const DocumentOnTypeFormattingParams &,
                                   Callback<std::vector<TextEdit>>);
   void onDocumentRangeFormatting(const DocumentRangeFormattingParams &,
@@ -122,21 +122,21 @@ private:
                             Callback<std::vector<Location>>);
   void onReference(const ReferenceParams &, Callback<std::vector<Location>>);
   void onSwitchSourceHeader(const TextDocumentIdentifier &,
-                            Callback<llvm::Optional<URIForFile>>);
+                            Callback<std::optional<URIForFile>>);
   void onDocumentHighlight(const TextDocumentPositionParams &,
                            Callback<std::vector<DocumentHighlight>>);
   void onFileEvent(const DidChangeWatchedFilesParams &);
   void onWorkspaceSymbol(const WorkspaceSymbolParams &,
                          Callback<std::vector<SymbolInformation>>);
   void onPrepareRename(const TextDocumentPositionParams &,
-                       Callback<llvm::Optional<Range>>);
+                       Callback<std::optional<Range>>);
   void onRename(const RenameParams &, Callback<WorkspaceEdit>);
   void onHover(const TextDocumentPositionParams &,
-               Callback<llvm::Optional<Hover>>);
+               Callback<std::optional<Hover>>);
   void onPrepareTypeHierarchy(const TypeHierarchyPrepareParams &,
                               Callback<std::vector<TypeHierarchyItem>>);
   void onSuperTypes(const ResolveTypeHierarchyItemParams &,
-                    Callback<llvm::Optional<std::vector<TypeHierarchyItem>>>);
+                    Callback<std::optional<std::vector<TypeHierarchyItem>>>);
   void onSubTypes(const ResolveTypeHierarchyItemParams &,
                   Callback<std::vector<TypeHierarchyItem>>);
   void onTypeHierarchy(const TypeHierarchyPrepareParams &,

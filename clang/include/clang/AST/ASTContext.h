@@ -613,9 +613,6 @@ private:
   std::unique_ptr<CXXABI> ABI;
   CXXABI *createCXXABI(const TargetInfo &T);
 
-  /// The logical -> physical address space map.
-  const LangASMap *AddrSpaceMap = nullptr;
-
   /// Address space map mangling must be used with language specific
   /// address spaces (e.g. OpenCL/CUDA)
   bool AddrSpaceMapMangling;
@@ -2548,8 +2545,8 @@ public:
 
   bool hasSameNullabilityTypeQualifier(QualType SubT, QualType SuperT,
                                        bool IsParam) const {
-    auto SubTnullability = SubT->getNullability(*this);
-    auto SuperTnullability = SuperT->getNullability(*this);
+    auto SubTnullability = SubT->getNullability();
+    auto SuperTnullability = SuperT->getNullability();
     if (SubTnullability.has_value() == SuperTnullability.has_value()) {
       // Neither has nullability; return true
       if (!SubTnullability)

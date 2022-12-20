@@ -180,7 +180,7 @@ end subroutine
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}z"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<f32>
 ! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
-! CHECK:  %[[VAL_8:.*]] = fir.call @llvm.powi.f32.i32(%[[VAL_6]], %[[VAL_7]]) fastmath<contract> : (f32, i32) -> f32
+! CHECK:  %[[VAL_8:.*]] = math.fpowi %[[VAL_6]], %[[VAL_7]] fastmath<contract> : f32, i32
 
 subroutine complex_to_int_power(x, y, z)
   complex :: x, y

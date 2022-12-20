@@ -9,12 +9,12 @@
 ; Function Attrs: nounwind ssp uwtable
 define i32 @main() {
 ; CHECK-LABEL: Classifying expressions for: @main
-  store i8 0, i8* getelementptr inbounds (%struct.anon, %struct.anon* @a, i64 0, i32 0), align 1
+  store i8 0, ptr @a, align 1
   br label %loop
 
 loop:
   %storemerge1 = phi i8 [ 0, %0 ], [ %inc, %loop ]
-  %m = load volatile i32, i32* getelementptr inbounds (%struct.S, %struct.S* @b, i64 0, i32 0), align 4
+  %m = load volatile i32, ptr @b, align 4
   %inc = add nuw i8 %storemerge1, 1
 ; CHECK:   %inc = add nuw i8 %storemerge1, 1
 ; CHECK-NEXT: -->  {1,+,1}<nuw><%loop>
@@ -23,6 +23,6 @@ loop:
   br i1 %exitcond, label %exit, label %loop
 
 exit:
-  store i8 -128, i8* getelementptr inbounds (%struct.anon, %struct.anon* @a, i64 0, i32 0), align 1
+  store i8 -128, ptr @a, align 1
   ret i32 0
 }

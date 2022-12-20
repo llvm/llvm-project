@@ -14,7 +14,6 @@
 #define LLVM_ANALYSIS_INLINECOST_H
 
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/InlineModelFeatureMaps.h"
 #include "llvm/IR/PassManager.h"

@@ -21,7 +21,7 @@ func.func @interchange_generic(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
-  transform.structured.interchange %0 { iterator_interchange = [1, 0]}
+  transform.structured.interchange %0 iterator_interchange = [1, 0] 
 }
 
 // -----
@@ -36,5 +36,5 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
   // expected-error @below {{transform applied to the wrong op kind}}
-  transform.structured.interchange %0 { iterator_interchange = [1, 0]}
+  transform.structured.interchange %0 iterator_interchange = [1, 0]
 }

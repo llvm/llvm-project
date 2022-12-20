@@ -46,6 +46,7 @@ class Thread {
   uptr stack_size() { return stack_top() - stack_bottom(); }
   uptr tls_begin() { return tls_begin_; }
   uptr tls_end() { return tls_end_; }
+  DTLS *dtls() { return dtls_; }
   bool IsMainThread() { return unique_id_ == 0; }
 
   bool AddrIsInStack(uptr addr) {
@@ -81,6 +82,7 @@ class Thread {
   uptr stack_bottom_;
   uptr tls_begin_;
   uptr tls_end_;
+  DTLS *dtls_;
 
   u32 random_state_;
   u32 random_buffer_;

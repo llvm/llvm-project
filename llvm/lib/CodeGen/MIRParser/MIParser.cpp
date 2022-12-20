@@ -18,7 +18,6 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -755,7 +754,7 @@ bool MIParser::parseBasicBlockDefinition(
   MBB->setIsInlineAsmBrIndirectTarget(IsInlineAsmBrIndirectTarget);
   MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
   if (SectionID) {
-    MBB->setSectionID(SectionID.value());
+    MBB->setSectionID(*SectionID);
     MF.setBBSectionsType(BasicBlockSection::List);
   }
   return false;

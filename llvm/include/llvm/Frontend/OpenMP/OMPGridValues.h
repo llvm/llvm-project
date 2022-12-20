@@ -82,21 +82,21 @@ struct GV {
 
 /// For AMDGPU GPUs
 static constexpr GV AMDGPUGridValues64 = {
-    256,  // GV_Slot_Size
-    64,   // GV_Warp_Size
-    128,  // GV_Max_Teams
-    896,  // GV_SimpleBufferSize
-    1024, // GV_Max_WG_Size,
-    256,  // GV_Default_WG_Size
+    256,       // GV_Slot_Size
+    64,        // GV_Warp_Size
+    (1 << 16), // GV_Max_Teams
+    896,       // GV_SimpleBufferSize
+    1024,      // GV_Max_WG_Size,
+    256,       // GV_Default_WG_Size
 };
 
 static constexpr GV AMDGPUGridValues32 = {
-    256,  // GV_Slot_Size
-    32,   // GV_Warp_Size
-    128,  // GV_Max_Teams
-    896,  // GV_SimpleBufferSize
-    1024, // GV_Max_WG_Size,
-    256,  // GV_Default_WG_Size
+    256,       // GV_Slot_Size
+    32,        // GV_Warp_Size
+    (1 << 16), // GV_Max_Teams
+    896,       // GV_SimpleBufferSize
+    1024,      // GV_Max_WG_Size,
+    256,       // GV_Default_WG_Size
 };
 
 template <unsigned wavesize> constexpr const GV &getAMDGPUGridValues() {
@@ -106,12 +106,12 @@ template <unsigned wavesize> constexpr const GV &getAMDGPUGridValues() {
 
 /// For Nvidia GPUs
 static constexpr GV NVPTXGridValues = {
-    256,  // GV_Slot_Size
-    32,   // GV_Warp_Size
-    1024, // GV_Max_Teams
-    896,  // GV_SimpleBufferSize
-    1024, // GV_Max_WG_Size
-    128,  // GV_Default_WG_Size
+    256,       // GV_Slot_Size
+    32,        // GV_Warp_Size
+    (1 << 16), // GV_Max_Teams
+    896,       // GV_SimpleBufferSize
+    1024,      // GV_Max_WG_Size
+    128,       // GV_Default_WG_Size
 };
 
 } // namespace omp

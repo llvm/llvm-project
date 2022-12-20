@@ -1307,7 +1307,7 @@ define i1 @is_ascii_alphabetic_inverted(i32 %char) {
 define i1 @bitwise_and_bitwise_and_icmps(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_and_bitwise_and_icmps(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], [[TMP1]]
@@ -1328,7 +1328,7 @@ define i1 @bitwise_and_bitwise_and_icmps(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_and_bitwise_and_icmps_comm1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_and_bitwise_and_icmps_comm1(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], [[TMP1]]
@@ -1349,7 +1349,7 @@ define i1 @bitwise_and_bitwise_and_icmps_comm1(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_and_bitwise_and_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_and_bitwise_and_icmps_comm2(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], [[TMP1]]
@@ -1370,7 +1370,7 @@ define i1 @bitwise_and_bitwise_and_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_and_bitwise_and_icmps_comm3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_and_bitwise_and_icmps_comm3(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], [[TMP1]]
@@ -1391,7 +1391,7 @@ define i1 @bitwise_and_bitwise_and_icmps_comm3(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_and_logical_and_icmps(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_and_logical_and_icmps(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], [[TMP1]]
@@ -1412,7 +1412,7 @@ define i1 @bitwise_and_logical_and_icmps(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_and_logical_and_icmps_comm1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_and_logical_and_icmps_comm1(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], [[TMP1]]
@@ -1433,7 +1433,7 @@ define i1 @bitwise_and_logical_and_icmps_comm1(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_and_logical_and_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_and_logical_and_icmps_comm2(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i8 [[Z_SHIFT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], [[X:%.*]]
@@ -1455,7 +1455,7 @@ define i1 @bitwise_and_logical_and_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_and_logical_and_icmps_comm3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_and_logical_and_icmps_comm3(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], [[TMP1]]
@@ -1477,7 +1477,7 @@ define i1 @logical_and_bitwise_and_icmps(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @logical_and_bitwise_and_icmps(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ne i8 [[X_M1]], 0
 ; CHECK-NEXT:    [[C3:%.*]] = icmp ne i8 [[X_M2]], 0
@@ -1500,7 +1500,7 @@ define i1 @logical_and_bitwise_and_icmps_comm1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @logical_and_bitwise_and_icmps_comm1(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ne i8 [[X_M1]], 0
 ; CHECK-NEXT:    [[C3:%.*]] = icmp ne i8 [[X_M2]], 0
@@ -1523,7 +1523,7 @@ define i1 @logical_and_bitwise_and_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @logical_and_bitwise_and_icmps_comm2(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ne i8 [[X_M1]], 0
 ; CHECK-NEXT:    [[C3:%.*]] = icmp ne i8 [[X_M2]], 0
@@ -1546,7 +1546,7 @@ define i1 @logical_and_bitwise_and_icmps_comm3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @logical_and_bitwise_and_icmps_comm3(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ne i8 [[X_M1]], 0
 ; CHECK-NEXT:    [[C3:%.*]] = icmp ne i8 [[X_M2]], 0
@@ -1569,7 +1569,7 @@ define i1 @logical_and_logical_and_icmps(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @logical_and_logical_and_icmps(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ne i8 [[X_M1]], 0
 ; CHECK-NEXT:    [[C3:%.*]] = icmp ne i8 [[X_M2]], 0
@@ -1592,7 +1592,7 @@ define i1 @logical_and_logical_and_icmps_comm1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @logical_and_logical_and_icmps_comm1(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ne i8 [[X_M1]], 0
 ; CHECK-NEXT:    [[C3:%.*]] = icmp ne i8 [[X_M2]], 0
@@ -1615,7 +1615,7 @@ define i1 @logical_and_logical_and_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @logical_and_logical_and_icmps_comm2(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ne i8 [[X_M1]], 0
 ; CHECK-NEXT:    [[C3:%.*]] = icmp ne i8 [[X_M2]], 0
@@ -1637,7 +1637,7 @@ define i1 @logical_and_logical_and_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 define i1 @logical_and_logical_and_icmps_comm3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @logical_and_logical_and_icmps_comm3(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], [[TMP1]]
@@ -1658,7 +1658,7 @@ define i1 @logical_and_logical_and_icmps_comm3(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_or_bitwise_or_icmps(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_or_bitwise_or_icmps(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i8 [[TMP2]], [[TMP1]]
@@ -1679,7 +1679,7 @@ define i1 @bitwise_or_bitwise_or_icmps(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_or_bitwise_or_icmps_comm1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_or_bitwise_or_icmps_comm1(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i8 [[TMP2]], [[TMP1]]
@@ -1700,7 +1700,7 @@ define i1 @bitwise_or_bitwise_or_icmps_comm1(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_or_bitwise_or_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_or_bitwise_or_icmps_comm2(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i8 [[TMP2]], [[TMP1]]
@@ -1721,7 +1721,7 @@ define i1 @bitwise_or_bitwise_or_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_or_bitwise_or_icmps_comm3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_or_bitwise_or_icmps_comm3(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i8 [[TMP2]], [[TMP1]]
@@ -1742,7 +1742,7 @@ define i1 @bitwise_or_bitwise_or_icmps_comm3(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_or_logical_or_icmps(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_or_logical_or_icmps(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i8 [[TMP2]], [[TMP1]]
@@ -1763,7 +1763,7 @@ define i1 @bitwise_or_logical_or_icmps(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_or_logical_or_icmps_comm1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_or_logical_or_icmps_comm1(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i8 [[TMP2]], [[TMP1]]
@@ -1784,7 +1784,7 @@ define i1 @bitwise_or_logical_or_icmps_comm1(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_or_logical_or_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_or_logical_or_icmps_comm2(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i8 [[Z_SHIFT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], [[X:%.*]]
@@ -1806,7 +1806,7 @@ define i1 @bitwise_or_logical_or_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_or_logical_or_icmps_comm3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_or_logical_or_icmps_comm3(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i8 [[TMP2]], [[TMP1]]
@@ -1828,7 +1828,7 @@ define i1 @logical_or_bitwise_or_icmps(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @logical_or_bitwise_or_icmps(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[X_M1]], 0
 ; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 [[X_M2]], 0
@@ -1851,7 +1851,7 @@ define i1 @logical_or_bitwise_or_icmps_comm1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @logical_or_bitwise_or_icmps_comm1(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[X_M1]], 0
 ; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 [[X_M2]], 0
@@ -1874,7 +1874,7 @@ define i1 @logical_or_bitwise_or_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @logical_or_bitwise_or_icmps_comm2(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[X_M1]], 0
 ; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 [[X_M2]], 0
@@ -1897,7 +1897,7 @@ define i1 @logical_or_bitwise_or_icmps_comm3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @logical_or_bitwise_or_icmps_comm3(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[X_M1]], 0
 ; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 [[X_M2]], 0
@@ -1920,7 +1920,7 @@ define i1 @logical_or_logical_or_icmps(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @logical_or_logical_or_icmps(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[X_M1]], 0
 ; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 [[X_M2]], 0
@@ -1943,7 +1943,7 @@ define i1 @logical_or_logical_or_icmps_comm1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @logical_or_logical_or_icmps_comm1(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[X_M1]], 0
 ; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 [[X_M2]], 0
@@ -1966,7 +1966,7 @@ define i1 @logical_or_logical_or_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @logical_or_logical_or_icmps_comm2(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[X_M1]], 0
 ; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 [[X_M2]], 0
@@ -1988,7 +1988,7 @@ define i1 @logical_or_logical_or_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 define i1 @logical_or_logical_or_icmps_comm3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @logical_or_logical_or_icmps_comm3(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i8 [[TMP2]], [[TMP1]]

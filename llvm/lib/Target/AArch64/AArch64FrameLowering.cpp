@@ -606,7 +606,7 @@ void AArch64FrameLowering::resetCFIToInitialState(
   BuildMI(MBB, InsertPt, DL, CFIDesc).addCFIIndex(CFIIndex);
 
   // Flip the RA sign state.
-  if (MFI.shouldSignReturnAddress()) {
+  if (MFI.shouldSignReturnAddress(MF)) {
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
     BuildMI(MBB, InsertPt, DL, CFIDesc).addCFIIndex(CFIIndex);
   }
@@ -871,11 +871,8 @@ static bool windowsRequiresStackProbe(MachineFunction &MF,
   const Function &F = MF.getFunction();
   // TODO: When implementing stack protectors, take that into account
   // for the probe threshold.
-  unsigned StackProbeSize = 4096;
-  if (F.hasFnAttribute("stack-probe-size"))
-    F.getFnAttribute("stack-probe-size")
-        .getValueAsString()
-        .getAsInteger(0, StackProbeSize);
+  unsigned StackProbeSize =
+      F.getFnAttributeAsParsedInteger("stack-probe-size", 4096);
   return (StackSizeInBytes >= StackProbeSize) &&
          !F.hasFnAttribute("no-stack-arg-probe");
 }
@@ -1358,7 +1355,7 @@ static void emitShadowCallStackEpilogue(const TargetInstrInfo &TII,
       .addImm(-8)
       .setMIFlag(MachineInstr::FrameDestroy);
 
-  if (MF.getInfo<AArch64FunctionInfo>()->needsAsyncDwarfUnwindInfo()) {
+  if (MF.getInfo<AArch64FunctionInfo>()->needsAsyncDwarfUnwindInfo(MF)) {
     unsigned CFIIndex =
         MF.addFrameInst(MCCFIInstruction::createRestore(nullptr, 18));
     BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
@@ -1377,7 +1374,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   MachineModuleInfo &MMI = MF.getMMI();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  bool EmitCFI = AFI->needsDwarfUnwindInfo();
+  bool EmitCFI = AFI->needsDwarfUnwindInfo(MF);
   bool HasFP = hasFP(MF);
   bool NeedsWinCFI = needsWinCFI(MF);
   bool HasWinCFI = false;
@@ -1397,9 +1394,9 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   const auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
   if (needsShadowCallStackPrologueEpilogue(MF))
     emitShadowCallStackPrologue(*TII, MF, MBB, MBBI, DL, NeedsWinCFI,
-                                MFnI.needsDwarfUnwindInfo());
+                                MFnI.needsDwarfUnwindInfo(MF));
 
-  if (MFnI.shouldSignReturnAddress()) {
+  if (MFnI.shouldSignReturnAddress(MF)) {
     unsigned PACI;
     if (MFnI.shouldSignWithBKey()) {
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::EMITBKEY))
@@ -1871,7 +1868,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
 static void InsertReturnAddressAuth(MachineFunction &MF, MachineBasicBlock &MBB,
                                     bool NeedsWinCFI, bool *HasWinCFI) {
   const auto &MFI = *MF.getInfo<AArch64FunctionInfo>();
-  if (!MFI.shouldSignReturnAddress())
+  if (!MFI.shouldSignReturnAddress(MF))
     return;
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
@@ -1931,7 +1928,8 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL;
   bool NeedsWinCFI = needsWinCFI(MF);
-  bool EmitCFI = MF.getInfo<AArch64FunctionInfo>()->needsAsyncDwarfUnwindInfo();
+  bool EmitCFI =
+      MF.getInfo<AArch64FunctionInfo>()->needsAsyncDwarfUnwindInfo(MF);
   bool HasWinCFI = false;
   bool IsFunclet = false;
   auto WinCFI = make_scope_exit([&]() { assert(HasWinCFI == MF.hasWinCFI()); });
@@ -3747,11 +3745,11 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
     EndOffset = Instr.Offset + Instr.Size;
   }
 
+  const MachineFunction *MF = MBB->getParent();
   // Multiple FP/SP updates in a loop cannot be described by CFI instructions.
-  TSE.emitCode(InsertI, TFI, /*TryMergeSPUpdate = */
-               !MBB->getParent()
-                    ->getInfo<AArch64FunctionInfo>()
-                    ->needsAsyncDwarfUnwindInfo());
+  TSE.emitCode(
+      InsertI, TFI, /*TryMergeSPUpdate = */
+      !MF->getInfo<AArch64FunctionInfo>()->needsAsyncDwarfUnwindInfo(*MF));
 
   return InsertI;
 }

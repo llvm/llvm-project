@@ -14,7 +14,6 @@
 #include "StatepointLowering.h"
 #include "SelectionDAGBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -536,15 +535,13 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
     for (const Value *V : SI.Bases) {
       auto Opt = S.isGCManagedPointer(V->getType()->getScalarType());
       if (Opt) {
-        assert(Opt.value() &&
-               "non gc managed base pointer found in statepoint");
+        assert(*Opt && "non gc managed base pointer found in statepoint");
       }
     }
     for (const Value *V : SI.Ptrs) {
       auto Opt = S.isGCManagedPointer(V->getType()->getScalarType());
       if (Opt) {
-        assert(Opt.value() &&
-               "non gc managed derived pointer found in statepoint");
+        assert(*Opt && "non gc managed derived pointer found in statepoint");
       }
     }
     assert(SI.Bases.size() == SI.Ptrs.size() && "Pointer without base!");

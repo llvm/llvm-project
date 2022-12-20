@@ -45,7 +45,7 @@ struct HoverInfo {
     /// TemplateParameters), might be std::nullopt for macro parameters.
     llvm::Optional<PrintedType> Type;
     /// std::nullopt for unnamed parameters.
-    llvm::Optional<std::string> Name;
+    std::optional<std::string> Name;
     /// std::nullopt if no default is provided.
     llvm::Optional<std::string> Default;
   };
@@ -136,9 +136,9 @@ inline bool operator==(const HoverInfo::Param &LHS,
 }
 
 /// Get the hover information when hovering at \p Pos.
-llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
-                                   const format::FormatStyle &Style,
-                                   const SymbolIndex *Index);
+std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
+                                  const format::FormatStyle &Style,
+                                  const SymbolIndex *Index);
 
 } // namespace clangd
 } // namespace clang

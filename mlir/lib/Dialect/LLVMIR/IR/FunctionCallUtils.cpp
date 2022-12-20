@@ -28,6 +28,7 @@ static constexpr llvm::StringRef kPrintI64 = "printI64";
 static constexpr llvm::StringRef kPrintU64 = "printU64";
 static constexpr llvm::StringRef kPrintF32 = "printF32";
 static constexpr llvm::StringRef kPrintF64 = "printF64";
+static constexpr llvm::StringRef kPrintStr = "puts";
 static constexpr llvm::StringRef kPrintOpen = "printOpen";
 static constexpr llvm::StringRef kPrintClose = "printClose";
 static constexpr llvm::StringRef kPrintComma = "printComma";
@@ -76,6 +77,13 @@ LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintF64Fn(ModuleOp moduleOp) {
   return lookupOrCreateFn(moduleOp, kPrintF64,
                           Float64Type::get(moduleOp->getContext()),
                           LLVM::LLVMVoidType::get(moduleOp->getContext()));
+}
+
+LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintStrFn(ModuleOp moduleOp) {
+  return lookupOrCreateFn(
+      moduleOp, kPrintStr,
+      LLVM::LLVMPointerType::get(IntegerType::get(moduleOp->getContext(), 8)),
+      LLVM::LLVMVoidType::get(moduleOp->getContext()));
 }
 
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintOpenFn(ModuleOp moduleOp) {

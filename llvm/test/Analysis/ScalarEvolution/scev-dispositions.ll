@@ -1,6 +1,6 @@
 ; RUN: opt -disable-output "-passes=print<scalar-evolution>" < %s 2>&1 | FileCheck %s
 
-define void @single_loop(i32* %buf, i32 %start) {
+define void @single_loop(ptr %buf, i32 %start) {
 ; CHECK-LABEL: Classifying expressions for: @single_loop
  entry:
   %val = add i32 %start, 400
@@ -18,7 +18,7 @@ define void @single_loop(i32* %buf, i32 %start) {
 ; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %loop: Invariant }
 ; CHECK:  %idx.inc = add nsw i32 %idx, 1
 ; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %loop: Computable }
-; CHECK:  %val3 = load volatile i32, i32* %buf
+; CHECK:  %val3 = load volatile i32, ptr %buf
 ; CHECK-NEXT:  -->  {{.*}} LoopDispositions: { %loop: Variant }
 
   %val2 = add i32 %start, 400
@@ -26,7 +26,7 @@ define void @single_loop(i32* %buf, i32 %start) {
   %idx.inc.sext = sext i32 %idx.inc to i64
   %condition = icmp eq i32 %counter, 1
   %counter.inc = add i32 %counter, 1
-  %val3 = load volatile i32, i32* %buf
+  %val3 = load volatile i32, ptr %buf
   br i1 %condition, label %exit, label %loop
 
  exit:
@@ -34,7 +34,7 @@ define void @single_loop(i32* %buf, i32 %start) {
 }
 
 
-define void @nested_loop(double* %p, i64 %m) {
+define void @nested_loop(ptr %p, i64 %m) {
 ; CHECK-LABEL: Classifying expressions for: @nested_loop
 
 ; CHECK:  %j = phi i64 [ 0, %entry ], [ %j.next, %outer.latch ]

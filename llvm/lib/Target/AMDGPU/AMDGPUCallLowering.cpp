@@ -70,6 +70,18 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     const SIRegisterInfo *TRI
       = static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
     if (TRI->isSGPRReg(MRI, PhysReg)) {
+      LLT Ty = MRI.getType(ExtReg);
+      LLT S32 = LLT::scalar(32);
+      if (Ty != S32) {
+        // FIXME: We should probably support readfirstlane intrinsics with all
+        // legal 32-bit types.
+        assert(Ty.getSizeInBits() == 32);
+        if (Ty.isPointer())
+          ExtReg = MIRBuilder.buildPtrToInt(S32, ExtReg).getReg(0);
+        else
+          ExtReg = MIRBuilder.buildBitcast(S32, ExtReg).getReg(0);
+      }
+
       auto ToSGPR = MIRBuilder.buildIntrinsic(Intrinsic::amdgcn_readfirstlane,
                                               {MRI.getType(ExtReg)}, false)
         .addReg(ExtReg);
@@ -815,8 +827,8 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     } else if (InputID == AMDGPUFunctionArgInfo::LDS_KERNEL_ID) {
       std::optional<uint32_t> Id =
           AMDGPUMachineFunction::getLDSKernelIdMetadata(MF.getFunction());
-      if (Id.has_value()) {
-        MIRBuilder.buildConstant(InputReg, Id.value());
+      if (Id) {
+        MIRBuilder.buildConstant(InputReg, *Id);
       } else {
         MIRBuilder.buildUndef(InputReg);
       }

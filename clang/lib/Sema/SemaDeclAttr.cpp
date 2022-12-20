@@ -2634,7 +2634,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   if (II->isStr("fuchsia")) {
-    Optional<unsigned> Min, Sub;
+    std::optional<unsigned> Min, Sub;
     if ((Min = Introduced.Version.getMinor()) ||
         (Sub = Introduced.Version.getSubminor())) {
       S.Diag(AL.getLoc(), diag::warn_availability_fuchsia_unavailable_minor);
@@ -2677,7 +2677,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         if (IOSToWatchOSMapping) {
           if (auto MappedVersion = IOSToWatchOSMapping->map(
                   Version, MinimumWatchOSVersion, std::nullopt)) {
-            return MappedVersion.value();
+            return *MappedVersion;
           }
         }
 
@@ -2686,10 +2686,10 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         if (NewMajor >= 2) {
           if (Version.getMinor()) {
             if (Version.getSubminor())
-              return VersionTuple(NewMajor, Version.getMinor().value(),
-                                  Version.getSubminor().value());
+              return VersionTuple(NewMajor, *Version.getMinor(),
+                                  *Version.getSubminor());
             else
-              return VersionTuple(NewMajor, Version.getMinor().value());
+              return VersionTuple(NewMajor, *Version.getMinor());
           }
           return VersionTuple(NewMajor);
         }
@@ -8597,6 +8597,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_X86ForceAlignArgPointer:
     handleX86ForceAlignArgPointerAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_ReadOnlyPlacement:
+    handleSimpleAttribute<ReadOnlyPlacementAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_DLLExport:
   case ParsedAttr::AT_DLLImport:

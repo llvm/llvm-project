@@ -282,7 +282,8 @@ multiclass FPUnaryOpDynFrmAlias_m<FPUnaryOp_r_frm Inst, string OpcodeStr,
                                OpcodeStr, Ext.RdTy, Ext.Rs1Ty>;
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1,
+    IsSignExtendingOpW = 1 in
 class FPCmp_rr<bits<7> funct7, bits<3> funct3, string opcodestr,
                DAGOperand rty, bit Commutable>
     : RVInstR<funct7, funct3, OPC_OP_FP, (outs GPR:$rd),
@@ -362,15 +363,18 @@ defm FMIN_S   : FPALU_rr_m<0b0010100, 0b000, "fmin.s", FINX, /*Commutable*/1>;
 defm FMAX_S   : FPALU_rr_m<0b0010100, 0b001, "fmax.s", FINX, /*Commutable*/1>;
 }
 
+let IsSignExtendingOpW = 1 in
 defm FCVT_W_S : FPUnaryOp_r_frm_m<0b1100000, 0b00000, XFINX, "fcvt.w.s">,
                 Sched<[WriteFCvtF32ToI32, ReadFCvtF32ToI32]>;
 defm          : FPUnaryOpDynFrmAlias_m<FCVT_W_S, "fcvt.w.s", XFINX>;
 
+let IsSignExtendingOpW = 1 in
 defm FCVT_WU_S : FPUnaryOp_r_frm_m<0b1100000, 0b00001, XFINX, "fcvt.wu.s">,
                  Sched<[WriteFCvtF32ToI32, ReadFCvtF32ToI32]>;
 defm           : FPUnaryOpDynFrmAlias_m<FCVT_WU_S, "fcvt.wu.s", XFINX>;
 
-let Predicates = [HasStdExtF], mayRaiseFPException = 0 in
+let Predicates = [HasStdExtF], mayRaiseFPException = 0,
+    IsSignExtendingOpW = 1 in
 def FMV_X_W : FPUnaryOp_r<0b1110000, 0b00000, 0b000, GPR, FPR32, "fmv.x.w">,
               Sched<[WriteFMovF32ToI32, ReadFMovF32ToI32]>;
 

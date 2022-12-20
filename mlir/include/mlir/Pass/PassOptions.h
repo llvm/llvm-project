@@ -118,7 +118,7 @@ private:
     using llvm::cl::parser<DataType>::parser;
 
     /// Returns an argument name that maps to the specified value.
-    Optional<StringRef> findArgStrForValue(const DataType &value) {
+    std::optional<StringRef> findArgStrForValue(const DataType &value) {
       for (auto &it : this->Values)
         if (it.V.compare(value))
           return it.Name;
@@ -130,8 +130,8 @@ private:
   template <typename DataT>
   static void printValue(raw_ostream &os, GenericOptionParser<DataT> &parser,
                          const DataT &value) {
-    if (Optional<StringRef> argStr = parser.findArgStrForValue(value))
-      os << argStr;
+    if (std::optional<StringRef> argStr = parser.findArgStrForValue(value))
+      os << *argStr;
     else
       llvm_unreachable("unknown data value for option");
   }

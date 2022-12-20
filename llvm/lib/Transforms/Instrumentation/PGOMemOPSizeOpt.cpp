@@ -422,7 +422,7 @@ bool MemOPSizeOpt::perform(MemOp MO) {
     assert(SizeType && "Expected integer type size argument.");
     ConstantInt *CaseSizeId = ConstantInt::get(SizeType, SizeId);
     NewMO.setLength(CaseSizeId);
-    NewMO.I->insertAt(CaseBB, CaseBB->end());
+    NewMO.I->insertInto(CaseBB, CaseBB->end());
     IRBuilder<> IRBCase(CaseBB);
     IRBCase.CreateBr(MergeBB);
     SI->addCase(CaseSizeId, CaseBB);

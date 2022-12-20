@@ -82,6 +82,7 @@ add_llvm_library(omptarget.rtl.amdgpu SHARED
   ADDITIONAL_HEADER_DIRS
   ${LIBOMPTARGET_INCLUDE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/impl
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../plugins-nextgen/amdgpu/utils
 
   LINK_COMPONENTS
   Support
@@ -106,6 +107,7 @@ target_include_directories(
   PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/impl
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../plugins-nextgen/amdgpu/utils
 )
 
 # Don't override an externally defined RPATH

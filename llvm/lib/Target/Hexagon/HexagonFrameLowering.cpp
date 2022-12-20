@@ -1020,11 +1020,9 @@ findCFILocation(MachineBasicBlock &B) {
 }
 
 void HexagonFrameLowering::insertCFIInstructions(MachineFunction &MF) const {
-  for (auto &B : MF) {
-    auto At = findCFILocation(B);
-    if (At)
-      insertCFIInstructionsAt(B, At.value());
-  }
+    for (auto &B : MF)
+      if (auto At = findCFILocation(B))
+        insertCFIInstructionsAt(B, *At);
 }
 
 void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,

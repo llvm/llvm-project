@@ -1,6 +1,6 @@
 # Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
 # Notified per clause 4(b) of the license.
-if (DEFINED LLVM_HAVE_TF_AOT OR DEFINED LLVM_HAVE_TF_API)
+if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   include(TensorFlowCompile)
   set(LLVM_RAEVICT_MODEL_PATH_DEFAULT "models/regalloc-eviction")
 
@@ -19,7 +19,7 @@ if (DEFINED LLVM_HAVE_TF_AOT OR DEFINED LLVM_HAVE_TF_API)
     )
   endif()
 
-  if (DEFINED LLVM_HAVE_TF_API)
+  if (LLVM_HAVE_TFLITE)
     list(APPEND MLLinkDeps ${tensorflow_c_api} ${tensorflow_fx})
   endif()
 endif()

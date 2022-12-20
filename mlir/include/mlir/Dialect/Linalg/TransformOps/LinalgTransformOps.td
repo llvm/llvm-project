@@ -19,6 +19,10 @@ include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/RegionKindInterface.td"
 
+//===----------------------------------------------------------------------===//
+// DecomposeOp
+//===----------------------------------------------------------------------===//
+
 def DecomposeOp : Op<Transform_Dialect, "structured.decompose",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformOpInterface, TransformEachOpTrait]> {
@@ -48,6 +52,10 @@ def DecomposeOp : Op<Transform_Dialect, "structured.decompose",
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// FuseOp
+//===----------------------------------------------------------------------===//
+
 def FuseOp : Op<Transform_Dialect, "structured.fuse",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      DeclareOpInterfaceMethods<TransformOpInterface>]> {
@@ -66,6 +74,10 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// FuseIntoContainingOp
+//===----------------------------------------------------------------------===//
 
 def FuseIntoContainingOp :
     Op<Transform_Dialect, "structured.fuse_into_containing_op",
@@ -120,6 +132,10 @@ def FuseIntoContainingOp :
   ];
 }
 
+//===----------------------------------------------------------------------===//
+// GeneralizeOp
+//===----------------------------------------------------------------------===//
+
 def GeneralizeOp : Op<Transform_Dialect, "structured.generalize",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformOpInterface, TransformEachOpTrait]> {
@@ -149,6 +165,10 @@ def GeneralizeOp : Op<Transform_Dialect, "structured.generalize",
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// InterchangeOp
+//===----------------------------------------------------------------------===//
+
 def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
     TransformOpInterface, TransformEachOpTrait]> {
@@ -169,10 +189,14 @@ def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
 
   let arguments =
     (ins PDL_Operation:$target,
-         DefaultValuedAttr<I64ArrayAttr, "{}">:$iterator_interchange);
+         ConfinedAttr<DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">,
+                      [DenseArrayNonNegative<DenseI64ArrayAttr>]>:$iterator_interchange);
   let results = (outs PDL_Operation:$transformed);
 
-  let assemblyFormat = "$target attr-dict";
+  let assemblyFormat = [{ 
+    $target 
+    (`iterator_interchange` `=` $iterator_interchange^)? attr-dict
+  }];
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
@@ -182,6 +206,10 @@ def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
         ::mlir::transform::TransformState &state);
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// MatchOp
+//===----------------------------------------------------------------------===//
 
 def MatchInterfaceEnum : I32EnumAttr<"MatchInterfaceEnum", "An interface to match",
     [
@@ -244,6 +272,10 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
     `in` $target attr-dict
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// MultiTileSizesOp
+//===----------------------------------------------------------------------===//
 
 def MultiTileSizesOp : Op<Transform_Dialect, "structured.multitile_sizes",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
@@ -309,6 +341,10 @@ def MultiTileSizesOp : Op<Transform_Dialect, "structured.multitile_sizes",
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// PadOp
+//===----------------------------------------------------------------------===//
+
 def PadOp : Op<Transform_Dialect, "structured.pad",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformOpInterface, TransformEachOpTrait]> {
@@ -349,6 +385,10 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// PromoteOp
+//===----------------------------------------------------------------------===//
+
 def PromoteOp : Op<Transform_Dialect, "structured.promote",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
     TransformOpInterface, TransformEachOpTrait]> {
@@ -388,6 +428,10 @@ def PromoteOp : Op<Transform_Dialect, "structured.promote",
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// ReplaceOp
+//===----------------------------------------------------------------------===//
+
 def ReplaceOp : Op<Transform_Dialect, "structured.replace",
     [IsolatedFromAbove, DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>] # GraphRegionNoTerminator.traits> {
@@ -409,6 +453,10 @@ def ReplaceOp : Op<Transform_Dialect, "structured.replace",
   let assemblyFormat = "$target attr-dict-with-keyword regions";
   let hasVerifier = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// ScalarizeOp
+//===----------------------------------------------------------------------===//
 
 def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
@@ -449,6 +497,10 @@ def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// SplitOp
+//===----------------------------------------------------------------------===//
+
 def SplitOp : Op<Transform_Dialect, "structured.split",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<TransformOpInterface>]> {
@@ -480,6 +532,10 @@ def SplitOp : Op<Transform_Dialect, "structured.split",
   let hasVerifier = 1;
   let hasCustomAssemblyFormat = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// SplitReductionOp
+//===----------------------------------------------------------------------===//
 
 def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
        [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
@@ -649,6 +705,10 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// TileReductionUsingScfOp
+//===----------------------------------------------------------------------===//
+
 def TileReductionUsingScfOp : Op<Transform_Dialect, "structured.tile_reduction_using_scf",
        [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
         TransformEachOpTrait, TransformOpInterface]> {
@@ -747,6 +807,10 @@ def TileReductionUsingScfOp : Op<Transform_Dialect, "structured.tile_reduction_u
         ::mlir::transform::TransformState &state);
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// TileReductionUsingForeachThreadOp
+//===----------------------------------------------------------------------===//
 
 def TileReductionUsingForeachThreadOp :
   Op<Transform_Dialect, "structured.tile_reduction_using_foreach_thread",
@@ -853,6 +917,10 @@ def TileReductionUsingForeachThreadOp :
 
 }
 
+//===----------------------------------------------------------------------===//
+// TileOp
+//===----------------------------------------------------------------------===//
+
 def TileOp : Op<Transform_Dialect, "structured.tile",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
@@ -909,6 +977,10 @@ def TileOp : Op<Transform_Dialect, "structured.tile",
     SmallVector<OpFoldResult> getMixedSizes();
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// TileToForeachThreadOp
+//===----------------------------------------------------------------------===//
 
 def TileToForeachThreadOp :
     Op<Transform_Dialect, "structured.tile_to_foreach_thread_op",
@@ -1023,6 +1095,10 @@ def TileToForeachThreadOp :
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// TileToScfForOp
+//===----------------------------------------------------------------------===//
+
 def TileToScfForOp : Op<Transform_Dialect, "structured.tile_to_scf_for",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
@@ -1079,6 +1155,10 @@ def TileToScfForOp : Op<Transform_Dialect, "structured.tile_to_scf_for",
     SmallVector<OpFoldResult> getMixedSizes();
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// VectorizeOp
+//===----------------------------------------------------------------------===//
 
 def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,

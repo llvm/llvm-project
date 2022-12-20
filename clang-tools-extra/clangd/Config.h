@@ -56,7 +56,7 @@ struct Config {
   struct CDBSearchSpec {
     enum { Ancestors, FixedDir, NoCDBSearch } Policy = Ancestors;
     // Absolute, native slashes, no trailing slash.
-    llvm::Optional<std::string> FixedCDBPath;
+    std::optional<std::string> FixedCDBPath;
   };
 
   /// Controls how the compile command for the current file is determined.

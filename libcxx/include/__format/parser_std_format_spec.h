@@ -52,12 +52,12 @@ __parse_arg_id(const _CharT* __begin, const _CharT* __end, auto& __parse_ctx) {
   // This function is a wrapper to call the real parser. But it does the
   // validation for the pre-conditions and post-conditions.
   if (__begin == __end)
-    __throw_format_error("End of input while parsing format-spec arg-id");
+    std::__throw_format_error("End of input while parsing format-spec arg-id");
 
   __format::__parse_number_result __r = __format::__parse_arg_id(__begin, __end, __parse_ctx);
 
   if (__r.__ptr == __end || *__r.__ptr != _CharT('}'))
-    __throw_format_error("Invalid arg-id");
+    std::__throw_format_error("Invalid arg-id");
 
   ++__r.__ptr;
   return __r;
@@ -80,22 +80,19 @@ __substitute_arg_id(basic_format_arg<_Context> __format_arg) {
         if constexpr (integral<_Type>) {
           if constexpr (signed_integral<_Type>) {
             if (__arg < 0)
-              __throw_format_error("A format-spec arg-id replacement shouldn't "
-                                   "have a negative value");
+              std::__throw_format_error("A format-spec arg-id replacement shouldn't have a negative value");
           }
 
           using _CT = common_type_t<_Type, decltype(__format::__number_max)>;
           if (static_cast<_CT>(__arg) >
               static_cast<_CT>(__format::__number_max))
-            __throw_format_error("A format-spec arg-id replacement exceeds "
-                                 "the maximum supported value");
+            std::__throw_format_error("A format-spec arg-id replacement exceeds the maximum supported value");
 
           return __arg;
         } else if constexpr (same_as<_Type, monostate>)
-          __throw_format_error("Argument index out of bounds");
+          std::__throw_format_error("Argument index out of bounds");
         else
-          __throw_format_error("A format-spec arg-id replacement argument "
-                               "isn't an integral type");
+          std::__throw_format_error("A format-spec arg-id replacement argument isn't an integral type");
       },
       __format_arg);
 }
@@ -287,7 +284,7 @@ public:
       // parsing. In that case that parser should do the end of format string
       // validation.
       if (__begin != __end && *__begin != _CharT('}'))
-        __throw_format_error("The format-spec should consume the input or end with a '}'");
+        std::__throw_format_error("The format-spec should consume the input or end with a '}'");
     }
 
     return __begin;
@@ -373,7 +370,7 @@ private:
     if (__begin + 1 != __end) {
       if (__parse_alignment(*(__begin + 1))) {
         if (*__begin == _CharT('{') || *__begin == _CharT('}'))
-          __throw_format_error("The format-spec fill field contains an invalid character");
+          std::__throw_format_error("The format-spec fill field contains an invalid character");
 
         __fill_ = *__begin;
         __begin += 2;
@@ -427,7 +424,7 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_width(const _CharT*& __begin, const _CharT* __end, auto& __parse_ctx) {
     if (*__begin == _CharT('0'))
-      __throw_format_error("A format-spec width field shouldn't have a leading zero");
+      std::__throw_format_error("A format-spec width field shouldn't have a leading zero");
 
     if (*__begin == _CharT('{')) {
       __format::__parse_number_result __r = __format_spec::__parse_arg_id(++__begin, __end, __parse_ctx);
@@ -455,7 +452,7 @@ private:
 
     ++__begin;
     if (__begin == __end)
-      __throw_format_error("End of input while parsing format-spec precision");
+      std::__throw_format_error("End of input while parsing format-spec precision");
 
     if (*__begin == _CharT('{')) {
       __format::__parse_number_result __arg_id = __format_spec::__parse_arg_id(++__begin, __end, __parse_ctx);
@@ -466,7 +463,7 @@ private:
     }
 
     if (*__begin < _CharT('0') || *__begin > _CharT('9'))
-      __throw_format_error("The format-spec precision field doesn't contain a value or arg-id");
+      std::__throw_format_error("The format-spec precision field doesn't contain a value or arg-id");
 
     __format::__parse_number_result __r = __format::__parse_number(__begin, __end);
     __precision_ = __r.__value;

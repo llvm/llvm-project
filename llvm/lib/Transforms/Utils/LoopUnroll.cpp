@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -540,7 +539,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     for (LoopBlocksDFS::RPOIterator BB = BlockBegin; BB != BlockEnd; ++BB) {
       ValueToValueMapTy VMap;
       BasicBlock *New = CloneBasicBlock(*BB, VMap, "." + Twine(It));
-      Header->getParent()->insertBasicBlockAt(BlockInsertPt, New);
+      Header->getParent()->insert(BlockInsertPt, New);
 
       assert((*BB != Header || LI->getLoopFor(*BB) == L) &&
              "Header should not be in a sub-loop");

@@ -35,22 +35,30 @@ struct Rs {
                                             bool isDouble);
 };
 
+#define DERIVE_EQ(NAME)                                                        \
+  bool operator==(const NAME &r) const {                                       \
+    return std::memcmp(this, &r, sizeof(NAME)) == 0;                           \
+  }
+
 #define I_TYPE_INST(NAME)                                                      \
   struct NAME {                                                                \
     Rd rd;                                                                     \
     Rs rs1;                                                                    \
     uint32_t imm;                                                              \
+    DERIVE_EQ(NAME);                                                           \
   }
 #define S_TYPE_INST(NAME)                                                      \
   struct NAME {                                                                \
     Rs rs1;                                                                    \
     Rs rs2;                                                                    \
     uint32_t imm;                                                              \
+    DERIVE_EQ(NAME);                                                           \
   }
 #define U_TYPE_INST(NAME)                                                      \
   struct NAME {                                                                \
     Rd rd;                                                                     \
     uint32_t imm;                                                              \
+    DERIVE_EQ(NAME);                                                           \
   }
 /// The memory layout are the same in our code.
 #define J_TYPE_INST(NAME) U_TYPE_INST(NAME)
@@ -59,17 +67,20 @@ struct Rs {
     Rd rd;                                                                     \
     Rs rs1;                                                                    \
     Rs rs2;                                                                    \
+    DERIVE_EQ(NAME);                                                           \
   }
 #define R_SHAMT_TYPE_INST(NAME)                                                \
   struct NAME {                                                                \
     Rd rd;                                                                     \
     Rs rs1;                                                                    \
     uint32_t shamt;                                                            \
+    DERIVE_EQ(NAME);                                                           \
   }
 #define R_RS1_TYPE_INST(NAME)                                                  \
   struct NAME {                                                                \
     Rd rd;                                                                     \
     Rs rs1;                                                                    \
+    DERIVE_EQ(NAME);                                                           \
   }
 #define R4_TYPE_INST(NAME)                                                     \
   struct NAME {                                                                \
@@ -78,11 +89,13 @@ struct Rs {
     Rs rs2;                                                                    \
     Rs rs3;                                                                    \
     int32_t rm;                                                                \
+    DERIVE_EQ(NAME);                                                           \
   }
 /// The `inst` fields are used for debugging.
 #define INVALID_INST(NAME)                                                     \
   struct NAME {                                                                \
     uint32_t inst;                                                             \
+    DERIVE_EQ(NAME);                                                           \
   }
 
 // RV32I instructions (The base integer ISA)
@@ -91,6 +104,7 @@ struct B {
   Rs rs2;
   uint32_t imm;
   uint32_t funct3;
+  DERIVE_EQ(B);
 };
 U_TYPE_INST(LUI);
 U_TYPE_INST(AUIPC);
@@ -215,6 +229,42 @@ I_TYPE_INST(FCVT_LU_S);
 I_TYPE_INST(FCVT_S_L);
 I_TYPE_INST(FCVT_S_LU);
 
+// RV32D inst (Extension for Double-Precision Floating-Point)
+I_TYPE_INST(FLD);
+S_TYPE_INST(FSD);
+R4_TYPE_INST(FMADD_D);
+R4_TYPE_INST(FMSUB_D);
+R4_TYPE_INST(FNMSUB_D);
+R4_TYPE_INST(FNMADD_D);
+R_TYPE_INST(FADD_D);
+R_TYPE_INST(FSUB_D);
+R_TYPE_INST(FMUL_D);
+R_TYPE_INST(FDIV_D);
+I_TYPE_INST(FSQRT_D);
+R_TYPE_INST(FSGNJ_D);
+R_TYPE_INST(FSGNJN_D);
+R_TYPE_INST(FSGNJX_D);
+R_TYPE_INST(FMIN_D);
+R_TYPE_INST(FMAX_D);
+I_TYPE_INST(FCVT_S_D);
+I_TYPE_INST(FCVT_D_S);
+R_TYPE_INST(FEQ_D);
+R_TYPE_INST(FLT_D);
+R_TYPE_INST(FLE_D);
+I_TYPE_INST(FCLASS_D);
+I_TYPE_INST(FCVT_W_D);
+I_TYPE_INST(FCVT_WU_D);
+I_TYPE_INST(FCVT_D_W);
+I_TYPE_INST(FCVT_D_WU);
+
+// RV64D inst (Extension for Double-Precision Floating-Point)
+I_TYPE_INST(FCVT_L_D);
+I_TYPE_INST(FCVT_LU_D);
+I_TYPE_INST(FMV_X_D);
+I_TYPE_INST(FCVT_D_L);
+I_TYPE_INST(FCVT_D_LU);
+I_TYPE_INST(FMV_D_X);
+
 /// Invalid and reserved instructions, the `inst` fields are used for debugging.
 INVALID_INST(INVALID);
 INVALID_INST(RESERVED);
@@ -233,8 +283,12 @@ using RISCVInst = std::variant<
     AMOMAXU_D, FLW, FSW, FMADD_S, FMSUB_S, FNMADD_S, FNMSUB_S, FADD_S, FSUB_S,
     FMUL_S, FDIV_S, FSQRT_S, FSGNJ_S, FSGNJN_S, FSGNJX_S, FMIN_S, FMAX_S,
     FCVT_W_S, FCVT_WU_S, FMV_X_W, FEQ_S, FLT_S, FLE_S, FCLASS_S, FCVT_S_W,
-    FCVT_S_WU, FMV_W_X, FCVT_L_S, FCVT_LU_S, FCVT_S_L, FCVT_S_LU, INVALID,
-    EBREAK, RESERVED, HINT, NOP>;
+    FCVT_S_WU, FMV_W_X, FCVT_L_S, FCVT_LU_S, FCVT_S_L, FCVT_S_LU, FLD, FSD,
+    FMADD_D, FMSUB_D, FNMSUB_D, FNMADD_D, FADD_D, FSUB_D, FMUL_D, FDIV_D,
+    FSQRT_D, FSGNJ_D, FSGNJN_D, FSGNJX_D, FMIN_D, FMAX_D, FCVT_S_D, FCVT_D_S,
+    FEQ_D, FLT_D, FLE_D, FCLASS_D, FCVT_W_D, FCVT_WU_D, FCVT_D_W, FCVT_D_WU,
+    FCVT_L_D, FCVT_LU_D, FMV_X_D, FCVT_D_L, FCVT_D_LU, FMV_D_X, INVALID, EBREAK,
+    RESERVED, HINT, NOP>;
 
 constexpr uint8_t RV32 = 1;
 constexpr uint8_t RV64 = 2;
@@ -281,6 +335,18 @@ constexpr uint64_t NanBoxing(uint64_t val) {
 constexpr uint32_t NanUnBoxing(uint64_t val) {
   return val & (~0xFFFF'FFFF'0000'0000);
 }
+
+#undef R_TYPE_INST
+#undef R_SHAMT_TYPE_INST
+#undef R_RS1_TYPE_INST
+#undef R4_TYPE_INST
+#undef I_TYPE_INST
+#undef S_TYPE_INST
+#undef B_TYPE_INST
+#undef U_TYPE_INST
+#undef J_TYPE_INST
+#undef INVALID_INST
+#undef DERIVE_EQ
 
 } // namespace lldb_private
 #endif // LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVINSTRUCTION_H

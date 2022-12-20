@@ -3134,4 +3134,26 @@ TEST(APIntTest, DenseMap) {
   Map.find(ZeroWidthInt);
 }
 
+TEST(APIntTest, TryExt) {
+  APInt small(32, 42);
+  APInt large(128, {0xffff, 0xffff});
+  ASSERT_TRUE(small.tryZExtValue().has_value());
+  ASSERT_TRUE(small.trySExtValue().has_value());
+  ASSERT_FALSE(large.tryZExtValue().has_value());
+  ASSERT_FALSE(large.trySExtValue().has_value());
+  ASSERT_EQ(small.trySExtValue().value_or(41), 42);
+  ASSERT_EQ(large.trySExtValue().value_or(41), 41);
+
+  APInt negOne32(32, 0);
+  negOne32.setAllBits();
+  ASSERT_EQ(negOne32.trySExtValue().value_or(42), -1);
+  APInt negOne64(64, 0);
+  negOne64.setAllBits();
+  ASSERT_EQ(negOne64.trySExtValue().value_or(42), -1);
+  APInt negOne128(128, 0);
+  negOne128.setAllBits();
+  ASSERT_EQ(negOne128.trySExtValue().value_or(42), -1);
+  ASSERT_EQ(42, APInt(128, -1).trySExtValue().value_or(42));
+}
+
 } // end anonymous namespace

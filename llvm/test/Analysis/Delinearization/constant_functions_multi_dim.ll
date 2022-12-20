@@ -2,14 +2,14 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-; CHECK:      Inst:  %tmp = load float, float* %arrayidx, align 4
+; CHECK:      Inst:  %tmp = load float, ptr %arrayidx, align 4
 ; CHECK-NEXT: In Loop with Header: for.inc
 ; CHECK-NEXT: AccessFunction: {(4 * %N * %call),+,4}<nsw><%for.inc>
 ; CHECK-NEXT: Base offset: %A
 ; CHECK-NEXT: ArrayDecl[UnknownSize][%N] with elements of 4 bytes.
 ; CHECK-NEXT: ArrayRef[%call][{0,+,1}<nuw><nsw><%for.inc>]
 
-; CHECK:      Inst:  %tmp5 = load float, float* %arrayidx4, align 4
+; CHECK:      Inst:  %tmp5 = load float, ptr %arrayidx4, align 4
 ; CHECK-NEXT: In Loop with Header: for.inc
 ; CHECK-NEXT: AccessFunction: {(4 * %call1),+,(4 * %N)}<nsw><%for.inc>
 ; CHECK-NEXT: Base offset: %B
@@ -17,7 +17,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-NEXT: ArrayRef[{0,+,1}<nuw><nsw><%for.inc>][%call1]
 
 ; Function Attrs: noinline nounwind uwtable
-define void @mat_mul(float* %C, float* %A, float* %B, i64 %N) #0 !kernel_arg_addr_space !2 !kernel_arg_access_qual !3 !kernel_arg_type !4 !kernel_arg_base_type !4 !kernel_arg_type_qual !5 {
+define void @mat_mul(ptr %C, ptr %A, ptr %B, i64 %N) #0 !kernel_arg_addr_space !2 !kernel_arg_access_qual !3 !kernel_arg_type !4 !kernel_arg_base_type !4 !kernel_arg_type_qual !5 {
 entry:
   br label %entry.split
 
@@ -35,12 +35,12 @@ for.inc:                                          ; preds = %for.inc.lr.ph, %for
   %acc.03 = phi float [ 0.000000e+00, %for.inc.lr.ph ], [ %tmp6, %for.inc ]
   %m.02 = phi i64 [ 0, %for.inc.lr.ph ], [ %inc, %for.inc ]
   %add = add nsw i64 %m.02, %mul
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %add
-  %tmp = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %add
+  %tmp = load float, ptr %arrayidx, align 4
   %mul2 = mul nsw i64 %m.02, %N
   %add3 = add nsw i64 %mul2, %call1
-  %arrayidx4 = getelementptr inbounds float, float* %B, i64 %add3
-  %tmp5 = load float, float* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %B, i64 %add3
+  %tmp5 = load float, ptr %arrayidx4, align 4
   %tmp6 = tail call float @llvm.fmuladd.f32(float %tmp, float %tmp5, float %acc.03)
   %inc = add nuw nsw i64 %m.02, 1
   %exitcond = icmp ne i64 %inc, %N
@@ -53,8 +53,8 @@ for.cond.for.end_crit_edge:                       ; preds = %for.inc
 for.end:                                          ; preds = %for.cond.for.end_crit_edge, %entry.split
   %acc.0.lcssa = phi float [ %.lcssa, %for.cond.for.end_crit_edge ], [ 0.000000e+00, %entry.split ]
   %add7 = add nsw i64 %mul, %call1
-  %arrayidx8 = getelementptr inbounds float, float* %C, i64 %add7
-  store float %acc.0.lcssa, float* %arrayidx8, align 4
+  %arrayidx8 = getelementptr inbounds float, ptr %C, i64 %add7
+  store float %acc.0.lcssa, ptr %arrayidx8, align 4
   ret void
 }
 

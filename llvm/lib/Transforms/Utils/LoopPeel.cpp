@@ -11,7 +11,6 @@
 
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/Loads.h"
@@ -998,9 +997,8 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     InsertBot = SplitBlock(InsertBot, InsertBot->getTerminator(), &DT, LI);
     InsertBot->setName(Header->getName() + ".peel.next");
 
-    F->getBasicBlockList().splice(InsertTop->getIterator(),
-                                  F->getBasicBlockList(),
-                                  NewBlocks[0]->getIterator(), F->end());
+    F->splice(InsertTop->getIterator(), F, NewBlocks[0]->getIterator(),
+              F->end());
   }
 
   // Now adjust the phi nodes in the loop header to get their initial values

@@ -258,10 +258,6 @@ public:
     Storage.emplace(std::forward<ArgTypes>(Args)...);
   }
 
-  static constexpr Optional create(const T *y) {
-    return y ? Optional(*y) : Optional();
-  }
-
   Optional &operator=(const T &y) {
     Storage = y;
     return *this;
@@ -288,28 +284,11 @@ public:
     return has_value() ? value() : std::forward<U>(alt);
   }
 
-  /// Apply a function to the value if present; otherwise return std::nullopt.
-  template <class Function>
-  auto transform(const Function &F) const & -> Optional<decltype(F(value()))> {
-    if (*this)
-      return F(value());
-    return std::nullopt;
-  }
-
   T &&value() && { return std::move(Storage.value()); }
   T &&operator*() && { return std::move(Storage.value()); }
 
   template <typename U> T value_or(U &&alt) && {
     return has_value() ? std::move(value()) : std::forward<U>(alt);
-  }
-
-  /// Apply a function to the value if present; otherwise return std::nullopt.
-  template <class Function>
-  auto transform(
-      const Function &F) && -> Optional<decltype(F(std::move(*this).value()))> {
-    if (*this)
-      return F(std::move(*this).value());
-    return std::nullopt;
   }
 };
 

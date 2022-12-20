@@ -688,12 +688,12 @@ struct FormatStyle {
     ///   };
     /// \endcode
     SLS_Empty,
-    /// Merge lambda into a single line if argument of a function.
+    /// Merge lambda into a single line if the lambda is argument of a function.
     /// \code
-    ///   auto lambda = [](int a) {
-    ///       return a;
+    ///   auto lambda = [](int x, int y) {
+    ///       return x < y;
     ///   };
-    ///   sort(a.begin(), a.end(), []() { return x < y; });
+    ///   sort(a.begin(), a.end(), [](int x, int y) { return x < y; });
     /// \endcode
     SLS_Inline,
     /// Merge all lambdas fitting on a single line.

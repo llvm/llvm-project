@@ -136,6 +136,9 @@ void populateFoldUnitExtentDimsViaReshapesPatterns(RewritePatternSet &patterns);
 /// tensors via rank-reducing slices.
 void populateFoldUnitExtentDimsViaSlicesPatterns(RewritePatternSet &patterns);
 
+/// A pattern that converts init operands to input operands.
+void populateMoveInitOperandsToInputPattern(RewritePatternSet &patterns);
+
 /// Patterns that are used to inline constant operands into linalg generic ops.
 void populateInlineConstantOperandsPatterns(RewritePatternSet &patterns);
 
@@ -868,6 +871,16 @@ protected:
   Value createFillOrGenerateOp(PatternRewriter &rewriter, tensor::PadOp padOp,
                                Value dest,
                                const SmallVector<Value> &dynSizes) const;
+};
+
+/// Rewrites a tensor::PackOp into a sequence of tensor.pad + linalg.transpose +
+/// tensor.insert_slice ops, where the tensor::PackOp has outer dims being all
+/// 1s.
+struct GeneralizeOuterUnitDimsPackOpPattern
+    : public OpRewritePattern<tensor::PackOp> {
+  using OpRewritePattern<tensor::PackOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(tensor::PackOp packOp,
+                                PatternRewriter &rewriter) const override;
 };
 
 /// Populates `patterns` with patterns that vectorize tensor.pad.

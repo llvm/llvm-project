@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
@@ -36,6 +35,7 @@
 #include "impl_runtime.h"
 #include "interop_hsa.h"
 
+#include "UtilitiesRTL.h"
 #include "internal.h"
 #include "rt.h"
 #include "small_pool.h"
@@ -54,6 +54,7 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::ELF;
+using namespace llvm::omp::target::plugin::utils;
 
 #ifdef OMPT_SUPPORT
 #include <ompt_device_callbacks.h>
@@ -2865,101 +2866,6 @@ static hsa_status_t GetIsaInfo(hsa_isa_t isa, void *data) {
 }
 #endif
 
-/// Parse a TargetID to get processor arch and feature map.
-/// Returns processor subarch.
-/// Returns TargetID features in \p FeatureMap argument.
-/// If the \p TargetID contains feature+, FeatureMap it to true.
-/// If the \p TargetID contains feature-, FeatureMap it to false.
-/// If the \p TargetID does not contain a feature (default), do not map it.
-StringRef parseTargetID(StringRef TargetID, StringMap<bool> &FeatureMap) {
-  if (TargetID.empty())
-    return llvm::StringRef();
-
-  auto ArchFeature = TargetID.split(":");
-  auto Arch = ArchFeature.first;
-  auto Features = ArchFeature.second;
-  if (Features.empty())
-    return Arch;
-
-  if (Features.contains("sramecc+")) {
-    FeatureMap.insert(std::pair<std::string, bool>("sramecc", true));
-  } else if (Features.contains("sramecc-")) {
-    FeatureMap.insert(std::pair<std::string, bool>("sramecc", false));
-  }
-  if (Features.contains("xnack+")) {
-    FeatureMap.insert(std::pair<std::string, bool>("xnack", true));
-  } else if (Features.contains("xnack-")) {
-    FeatureMap.insert(std::pair<std::string, bool>("xnack", false));
-  }
-
-  return Arch;
-}
-
-/// Checks if an image \p ImgInfo is compatible with current
-/// system's environment \p EnvInfo
-bool IsImageCompatibleWithEnv(const char *ImgInfo, std::string EnvInfo) {
-  llvm::StringRef ImgTID(ImgInfo), EnvTID(EnvInfo);
-
-  // Compatible in case of exact match
-  if (ImgTID == EnvTID) {
-    DP("Compatible: Exact match \t[Image: %s]\t:\t[Environment: %s]\n",
-       ImgTID.data(), EnvTID.data());
-    return true;
-  }
-
-  // Incompatible if Archs mismatch.
-  StringMap<bool> ImgMap, EnvMap;
-  StringRef ImgArch = parseTargetID(ImgTID, ImgMap);
-  StringRef EnvArch = parseTargetID(EnvTID, EnvMap);
-
-  // Both EnvArch and ImgArch can't be empty here.
-  if (EnvArch.empty() || ImgArch.empty() || !ImgArch.contains(EnvArch)) {
-    DP("Incompatible: Processor mismatch \t[Image: %s]\t:\t[Environment: %s]\n",
-       ImgTID.data(), EnvTID.data());
-    return false;
-  }
-
-  // Incompatible if image has more features than the environment, irrespective
-  // of type or sign of features.
-  if (ImgMap.size() > EnvMap.size()) {
-    DP("Incompatible: Image has more features than the environment \t[Image: "
-       "%s]\t:\t[Environment: %s]\n",
-       ImgTID.data(), EnvTID.data());
-    return false;
-  }
-
-  // Compatible if each target feature specified by the environment is
-  // compatible with target feature of the image. The target feature is
-  // compatible if the iamge does not specify it (meaning Any), or if it
-  // specifies it with the same value (meaning On or Off).
-  for (const auto &ImgFeature : ImgMap) {
-    auto EnvFeature = EnvMap.find(ImgFeature.first());
-    if (EnvFeature == EnvMap.end()) {
-      DP("Incompatible: Value of Image's non-ANY feature is not matching with "
-         "the Environment feature's ANY value \t[Image: %s]\t:\t[Environment: "
-         "%s]\n",
-         ImgTID.data(), EnvTID.data());
-      return false;
-    } else if (EnvFeature->first() == ImgFeature.first() &&
-               EnvFeature->second != ImgFeature.second) {
-      DP("Incompatible: Value of Image's non-ANY feature is not matching with "
-         "the Environment feature's non-ANY value \t[Image: "
-         "%s]\t:\t[Environment: %s]\n",
-         ImgTID.data(), EnvTID.data());
-      return false;
-    }
-  }
-
-  // Image is compatible if all features of Environment are:
-  //   - either, present in the Image's features map with the same sign,
-  //   - or, the feature is missing from Image's features map i.e. it is
-  //   set to ANY
-  DP("Compatible: Target IDs are compatible \t[Image: %s]\t:\t[Environment: "
-     "%s]\n",
-     ImgTID.data(), EnvTID.data());
-  return true;
-}
-
 extern "C" {
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
   return elfMachineIdIsAmdgcn(Image);
@@ -2988,7 +2894,7 @@ int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *image,
       DP("Error iterating ISAs\n");
       return false;
     }
-    if (!IsImageCompatibleWithEnv(info->Arch, DeviceInfo().TargetID[DeviceId]))
+    if (!isImageCompatibleWithEnv(info, DeviceInfo().TargetID[DeviceId]))
       return false;
   }
   DP("Image has Target ID compatible with the current environment: %s\n",

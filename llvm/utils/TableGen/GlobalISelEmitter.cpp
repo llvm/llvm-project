@@ -2976,7 +2976,7 @@ public:
           << MatchTable::IntValue(RendererID);
     if (SubOperand)
       Table << MatchTable::Comment("SubOperand")
-            << MatchTable::IntValue(SubOperand.value());
+            << MatchTable::IntValue(*SubOperand);
     Table << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
   }
 };
@@ -4995,7 +4995,7 @@ Error GlobalISelEmitter::importDefaultOperandRenderers(
       auto Def = DefaultDefOp->getDef();
       if (Def->getName() == "undef_tied_input") {
         unsigned TempRegID = M.allocateTempRegID();
-        M.insertAction<MakeTempRegisterAction>(InsertPt, OpTyOrNone.value(),
+        M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTyOrNone,
                                                TempRegID);
         InsertPt = M.insertAction<BuildMIAction>(
           InsertPt, M.allocateOutputInsnID(),

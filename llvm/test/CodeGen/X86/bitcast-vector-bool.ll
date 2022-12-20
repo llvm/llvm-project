@@ -722,3 +722,66 @@ define [2 x i8] @PR58546(<16 x float> %a0) {
   %6 = insertvalue [2 x i8] %5, i8 %4, 1
   ret [2 x i8] %6
 }
+
+define i8 @PR59526(<8 x i32> %a, <8 x i32> %b, ptr %mask) {
+; SSE2-SSSE3-LABEL: PR59526:
+; SSE2-SSSE3:       # %bb.0:
+; SSE2-SSSE3-NEXT:    pcmpeqd %xmm3, %xmm1
+; SSE2-SSSE3-NEXT:    pcmpeqd %xmm2, %xmm0
+; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    movdqu (%rdi), %xmm1
+; SSE2-SSSE3-NEXT:    movdqu 16(%rdi), %xmm2
+; SSE2-SSSE3-NEXT:    pxor %xmm3, %xmm3
+; SSE2-SSSE3-NEXT:    pxor %xmm4, %xmm4
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm2, %xmm4
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm3
+; SSE2-SSSE3-NEXT:    packssdw %xmm4, %xmm3
+; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm3
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm3, %eax
+; SSE2-SSSE3-NEXT:    testl %eax, %eax
+; SSE2-SSSE3-NEXT:    setne %al
+; SSE2-SSSE3-NEXT:    retq
+;
+; AVX1-LABEL: PR59526:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vandps (%rdi), %ymm0, %ymm0
+; AVX1-NEXT:    vmovmskps %ymm0, %eax
+; AVX1-NEXT:    testl %eax, %eax
+; AVX1-NEXT:    setne %al
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR59526:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpand (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vmovmskps %ymm0, %eax
+; AVX2-NEXT:    testl %eax, %eax
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: PR59526:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpeqd %ymm1, %ymm0, %k1
+; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpcmpgtd (%rdi), %ymm0, %k0 {%k1}
+; AVX512-NEXT:    kmovd %k0, %eax
+; AVX512-NEXT:    testb %al, %al
+; AVX512-NEXT:    setne %al
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %cmp.eq = icmp eq <8 x i32> %a, %b
+  %load = load <8 x i32>, ptr %mask, align 1
+  %cmp.slt = icmp slt <8 x i32> %load, zeroinitializer
+  %sel = select <8 x i1> %cmp.eq, <8 x i1> %cmp.slt, <8 x i1> zeroinitializer
+  %bc = bitcast <8 x i1> %sel to i8
+  %cmp = icmp ne i8 %bc, 0
+  %conv = zext i1 %cmp to i8
+  ret i8 %conv
+}

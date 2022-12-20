@@ -125,7 +125,7 @@ define i1 @test11(i32 %C) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 255
 ; CHECK-NEXT:    [[MEMCHR_BOUNDS:%.*]] = icmp ult i16 [[TMP2]], 16
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i16 1, [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i16 1, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i16 [[TMP3]], 9217
 ; CHECK-NEXT:    [[MEMCHR_BITS:%.*]] = icmp ne i16 [[TMP4]], 0
 ; CHECK-NEXT:    [[MEMCHR:%.*]] = select i1 [[MEMCHR_BOUNDS]], i1 [[MEMCHR_BITS]], i1 false

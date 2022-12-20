@@ -25,7 +25,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/EquivalenceClasses.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -600,7 +599,7 @@ private:
                              : LLVMLoopDistributeFollowupCoincident});
     if (PartitionID) {
       Loop *NewLoop = Part->getDistributedLoop();
-      NewLoop->setLoopID(PartitionID.value());
+      NewLoop->setLoopID(*PartitionID);
     }
   }
 };
@@ -820,12 +819,10 @@ public:
       // The unversioned loop will not be changed, so we inherit all attributes
       // from the original loop, but remove the loop distribution metadata to
       // avoid to distribute it again.
-      MDNode *UnversionedLoopID =
-          makeFollowupLoopID(OrigLoopID,
-                             {LLVMLoopDistributeFollowupAll,
-                              LLVMLoopDistributeFollowupFallback},
-                             "llvm.loop.distribute.", true)
-              .value();
+      MDNode *UnversionedLoopID = *makeFollowupLoopID(
+          OrigLoopID,
+          {LLVMLoopDistributeFollowupAll, LLVMLoopDistributeFollowupFallback},
+          "llvm.loop.distribute.", true);
       LVer.getNonVersionedLoop()->setLoopID(UnversionedLoopID);
     }
 

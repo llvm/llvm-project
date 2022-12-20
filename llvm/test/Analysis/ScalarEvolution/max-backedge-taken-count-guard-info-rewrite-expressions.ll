@@ -44,7 +44,7 @@ exit:
 }
 
 ; Test case from PR40961.
-define i32 @rewrite_zext_min_max(i32 %N, i32* %arr) {
+define i32 @rewrite_zext_min_max(i32 %N, ptr %arr) {
 ; CHECK-LABEL: 'rewrite_zext_min_max'
 ; CHECK-NEXT:  Classifying expressions for: @rewrite_zext_min_max
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %N, i32 16)
@@ -55,7 +55,7 @@ define i32 @rewrite_zext_min_max(i32 %N, i32* %arr) {
 ; CHECK-NEXT:    --> (4 * ((zext i32 (16 umin %N) to i64) /u 4))<nuw><nsw> U: [0,17) S: [0,17)
 ; CHECK-NEXT:    %index = phi i64 [ 0, %loop.ph ], [ %index.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,4}<nuw><%loop> U: [0,13) S: [0,13) Exits: (4 * ((-4 + (4 * ((zext i32 (16 umin %N) to i64) /u 4))<nuw><nsw>)<nsw> /u 4))<nuw> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %gep = getelementptr inbounds i32, i32* %arr, i64 %index
+; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %arr, i64 %index
 ; CHECK-NEXT:    --> {%arr,+,16}<nuw><%loop> U: full-set S: full-set Exits: ((16 * ((-4 + (4 * ((zext i32 (16 umin %N) to i64) /u 4))<nuw><nsw>)<nsw> /u 4)) + %arr) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %index.next = add nuw i64 %index, 4
 ; CHECK-NEXT:    --> {4,+,4}<nuw><%loop> U: [4,17) S: [4,17) Exits: (4 + (4 * ((-4 + (4 * ((zext i32 (16 umin %N) to i64) /u 4))<nuw><nsw>)<nsw> /u 4))<nuw>) LoopDispositions: { %loop: Computable }
@@ -80,8 +80,8 @@ loop.ph:
 ; %n.vec is [4, 16) and a multiple of 4.
 loop:
   %index = phi i64 [ 0, %loop.ph ], [ %index.next, %loop ]
-  %gep = getelementptr inbounds i32, i32* %arr, i64 %index
-  store i32 0, i32* %gep
+  %gep = getelementptr inbounds i32, ptr %arr, i64 %index
+  store i32 0, ptr %gep
   %index.next = add nuw i64 %index, 4
   %ec = icmp eq i64 %index.next, %n.vec
   br i1 %ec, label %exit, label %loop

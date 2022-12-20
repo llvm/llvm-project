@@ -376,6 +376,13 @@ private:
         .getOrInsertEntryForFilename(Filename, Entry);
   }
 
+  void printImpl(raw_ostream &OS, PrintType Type,
+                 unsigned IndentLevel) const override {
+    printIndent(OS, IndentLevel);
+    OS << "DependencyScanningFilesystem\n";
+    getUnderlyingFS().print(OS, Type, IndentLevel + 1);
+  }
+
   /// The global cache shared between worker threads.
   DependencyScanningFilesystemSharedCache &SharedCache;
   /// The local cache is used by the worker thread to cache file system queries

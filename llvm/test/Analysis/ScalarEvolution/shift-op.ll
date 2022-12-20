@@ -51,11 +51,11 @@ define void @test2(i32 %init) {
   ret void
 }
 
-define void @test3(i32* %init.ptr) {
+define void @test3(ptr %init.ptr) {
 ; CHECK-LABEL: Determining loop execution counts for: @test3
 ; CHECK: Loop %loop: constant max backedge-taken count is 32
  entry:
-  %init = load i32, i32* %init.ptr, !range !0
+  %init = load i32, ptr %init.ptr, !range !0
   br label %loop
 
  loop:
@@ -68,11 +68,11 @@ define void @test3(i32* %init.ptr) {
   ret void
 }
 
-define void @test4(i32* %init.ptr) {
+define void @test4(ptr %init.ptr) {
 ; CHECK-LABEL: Classifying expressions for: @test4
 ; CHECK-LABEL: Loop %loop: constant max backedge-taken count is 32
  entry:
-  %init = load i32, i32* %init.ptr, !range !1
+  %init = load i32, ptr %init.ptr, !range !1
   br label %loop
 
  loop:
@@ -85,13 +85,13 @@ define void @test4(i32* %init.ptr) {
   ret void
 }
 
-define void @test5(i32* %init.ptr) {
+define void @test5(ptr %init.ptr) {
 ; CHECK-LABEL: Determining loop execution counts for: @test5
 ; CHECK: Loop %loop: Unpredictable constant max backedge-taken count.
 
 ; %iv will "stabilize" to -1, so this is an infinite loop
  entry:
-  %init = load i32, i32* %init.ptr, !range !1
+  %init = load i32, ptr %init.ptr, !range !1
   br label %loop
 
  loop:
