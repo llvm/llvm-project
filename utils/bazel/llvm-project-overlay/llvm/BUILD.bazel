@@ -3239,6 +3239,7 @@ cc_binary(
         ":IPO",
         ":IRPrinter",
         ":IRReader",
+        ":Passes",
         ":Support",
     ],
 )
