@@ -1816,3 +1816,29 @@ define i1 @isNotKnownNeverInfinity_maximum_rhs(double %x, double %y) {
 }
 
 declare double @llvm.maximum.f64(double, double)
+
+define i1 @isKnownNeverInfinity_sqrt(double %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_sqrt(
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.sqrt.f64(double [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf double %x, 1.0
+  %e = call double @llvm.sqrt.f64(double %a)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isNotKnownNeverInfinity_sqrt(double %x) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_sqrt(
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = call double @llvm.sqrt.f64(double %x)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+declare double @llvm.sqrt.f64(double)
