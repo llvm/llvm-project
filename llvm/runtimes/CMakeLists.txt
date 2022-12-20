@@ -180,6 +180,7 @@ foreach(entry ${runtimes})
   endif()
   if(canon_name STREQUAL "LLVMLIBC")
     list(APPEND prefixes "LLVM_LIBC")
+    list(APPEND prefixes "LIBC_")
   endif()
 
   string(FIND ${projName} "lib" LIB_IDX)
