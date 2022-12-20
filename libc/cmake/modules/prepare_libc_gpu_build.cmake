@@ -28,3 +28,22 @@ if(NOT LLVM_LIBC_FULL_BUILD)
   message(FATAL_ERROR "LLVM_LIBC_FULL_BUILD must be enabled to build libc for "
                       "GPU.")
 endif()
+
+# Identify any locally installed GPUs to use for testing.
+find_program(LIBC_AMDGPU_ARCH
+             NAMES amdgpu-arch
+             PATHS ${LLVM_BINARY_DIR}/bin /opt/rocm/llvm/bin/)
+if(LIBC_AMDGPU_ARCH)
+  execute_process(COMMAND ${LIBC_AMDGPU_ARCH}
+                  OUTPUT_VARIABLE LIBC_AMDGPU_ARCH_OUTPUT
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(FIND "${LIBC_AMDGPU_ARCH_OUTPUT}" "\n" first_arch_string)
+  string(SUBSTRING "${LIBC_AMDGPU_ARCH_OUTPUT}" 0 ${first_arch_string}
+         arch_string)
+  if(arch_string)
+    set(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU TRUE)
+    set(LIBC_GPU_TARGET_TRIPLE "amdgcn-amd-amdhsa")
+    set(LIBC_GPU_TARGET_ARCHITECTURE "${arch_string}")
+  endif()
+endif()
+# TODO: Check for Nvidia GPUs.
