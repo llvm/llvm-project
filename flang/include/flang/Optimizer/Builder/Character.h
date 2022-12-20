@@ -47,6 +47,13 @@ public:
   fir::CharBoxValue createSubstring(const fir::CharBoxValue &str,
                                     llvm::ArrayRef<mlir::Value> bounds);
 
+  /// Compute substring base address given the raw address (not fir.boxchar) of
+  /// a scalar string, a substring / lower bound, and the substring type.
+  mlir::Value genSubstringBase(mlir::Value stringRawAddr,
+                               mlir::Value lowerBound,
+                               mlir::Type substringAddrType,
+                               mlir::Value one = {});
+
   /// Return blank character of given \p type !fir.char<kind>
   mlir::Value createBlankConstant(fir::CharacterType type);
 

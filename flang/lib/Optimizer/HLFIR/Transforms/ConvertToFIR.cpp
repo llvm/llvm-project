@@ -8,6 +8,7 @@
 // This file defines a pass to lower HLFIR to FIR
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
@@ -183,11 +184,8 @@ public:
     auto module = designate->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
 
-    if (designate.getComponent() || designate.getComplexPart() ||
-        !designate.getSubstring().empty()) {
-      // build path.
-      TODO(loc, "hlfir::designate with complex part or substring or component");
-    }
+    if (designate.getComponent() || designate.getComplexPart())
+      TODO(loc, "hlfir::designate with complex part or component");
 
     hlfir::Entity baseEntity(designate.getMemref());
     if (baseEntity.isMutableBox())
@@ -216,8 +214,20 @@ public:
           triples.push_back(undef);
         }
       }
+      llvm::SmallVector<mlir::Value, 2> substring;
+      if (!designate.getSubstring().empty()) {
+        substring.push_back(designate.getSubstring()[0]);
+        mlir::Type idxTy = builder.getIndexType();
+        // fir.slice op substring expects the zero based lower bound.
+        mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+        substring[0] = builder.createConvert(loc, idxTy, substring[0]);
+        substring[0] =
+            builder.create<mlir::arith::SubIOp>(loc, substring[0], one);
+        substring.push_back(designate.getTypeparams()[0]);
+      }
+
       mlir::Value slice = builder.create<fir::SliceOp>(
-          loc, triples, /*path=*/mlir::ValueRange{});
+          loc, triples, /*fields=*/mlir::ValueRange{}, substring);
       llvm::SmallVector<mlir::Type> resultType{designateResultType};
       mlir::Value resultBox;
       if (base.getType().isa<fir::BoxType>())
@@ -230,29 +240,37 @@ public:
       return mlir::success();
     }
 
-    // Indexing a single element (use fir.array_coor of fir.coordinate_of).
+    // Otherwise, the result is the address of a scalar. The base may be an
+    // array, or a scalar.
+    mlir::Type resultAddressType = designateResultType;
+    if (auto boxCharType = designateResultType.dyn_cast<fir::BoxCharType>())
+      resultAddressType = fir::ReferenceType::get(boxCharType.getEleTy());
 
-    if (designate.getIndices().empty()) {
-      // Scalar substring or complex part.
-      // generate fir.coordinate_of.
-      TODO(loc, "hlfir::designate to fir.coordinate_of");
+    // Array element indexing.
+    if (!designate.getIndices().empty()) {
+      auto eleTy = hlfir::getFortranElementType(base.getType());
+      auto arrayCoorType = fir::ReferenceType::get(eleTy);
+      base = builder.create<fir::ArrayCoorOp>(loc, arrayCoorType, base, shape,
+                                              /*slice=*/mlir::Value{},
+                                              designate.getIndices(),
+                                              firBaseTypeParameters);
     }
 
-    // Generate fir.array_coor
-    mlir::Type resultType = designateResultType;
-    if (auto boxCharType = designateResultType.dyn_cast<fir::BoxCharType>())
-      resultType = fir::ReferenceType::get(boxCharType.getEleTy());
-    auto arrayCoor = builder.create<fir::ArrayCoorOp>(
-        loc, resultType, base, shape,
-        /*slice=*/mlir::Value{}, designate.getIndices(), firBaseTypeParameters);
+    // Scalar substring (potentially on the previously built array element).
+    if (!designate.getSubstring().empty())
+      base = fir::factory::CharacterExprHelper{builder, loc}.genSubstringBase(
+          base, designate.getSubstring()[0], resultAddressType);
+
+    // Cast/embox the computed scalar address if needed.
     if (designateResultType.isa<fir::BoxCharType>()) {
       assert(designate.getTypeparams().size() == 1 &&
              "must have character length");
       auto emboxChar = builder.create<fir::EmboxCharOp>(
-          loc, designateResultType, arrayCoor, designate.getTypeparams()[0]);
+          loc, designateResultType, base, designate.getTypeparams()[0]);
       rewriter.replaceOp(designate, emboxChar.getResult());
     } else {
-      rewriter.replaceOp(designate, arrayCoor.getResult());
+      base = builder.createConvert(loc, designateResultType, base);
+      rewriter.replaceOp(designate, base);
     }
     return mlir::success();
   }

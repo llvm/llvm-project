@@ -24,6 +24,7 @@
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 namespace {
 
@@ -65,6 +66,13 @@ public:
         designatorVariant);
   }
 
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::NamedEntity &namedEntity) {
+    if (namedEntity.IsSymbol())
+      return gen(Fortran::evaluate::SymbolRef{namedEntity.GetLastSymbol()});
+    return gen(namedEntity.GetComponent());
+  }
+
 private:
   /// Struct that is filled while visiting a part-ref (in the "visit" member
   /// function) before the top level "gen" generates an hlfir.declare for the
@@ -75,6 +83,7 @@ private:
     hlfir::DesignateOp::Subscripts subscripts;
     mlir::Value resultShape;
     llvm::SmallVector<mlir::Value> typeParams;
+    llvm::SmallVector<mlir::Value, 2> substring;
   };
 
   /// Generate an hlfir.declare for a part-ref given a filled PartInfo and the
@@ -100,11 +109,11 @@ private:
       resultType = fir::ReferenceType::get(resultValueType);
 
     std::optional<bool> complexPart;
-    llvm::SmallVector<mlir::Value> substring;
     auto designate = getBuilder().create<hlfir::DesignateOp>(
         getLoc(), resultType, partInfo.base.getBase(), "",
-        /*componentShape=*/mlir::Value{}, partInfo.subscripts, substring,
-        complexPart, partInfo.resultShape, partInfo.typeParams);
+        /*componentShape=*/mlir::Value{}, partInfo.subscripts,
+        partInfo.substring, complexPart, partInfo.resultShape,
+        partInfo.typeParams);
     return mlir::cast<fir::FortranVariableOpInterface>(
         designate.getOperation());
   }
@@ -132,6 +141,9 @@ private:
   gen(const Fortran::evaluate::CoarrayRef &coarrayRef) {
     TODO(getLoc(), "lowering CoarrayRef to HLFIR");
   }
+  mlir::Type visit(const Fortran::evaluate::CoarrayRef &, PartInfo &) {
+    TODO(getLoc(), "lowering CoarrayRef to HLFIR");
+  }
 
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::ComplexPart &complexPart) {
@@ -140,7 +152,95 @@ private:
 
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::Substring &substring) {
-    TODO(getLoc(), "lowering substrings to HLFIR");
+    PartInfo partInfo;
+    mlir::Type baseStringType = std::visit(
+        [&](const auto &x) { return visit(x, partInfo); }, substring.parent());
+    assert(partInfo.typeParams.size() == 1 && "expect base string length");
+    // Compute the substring lower and upper bound.
+    partInfo.substring.push_back(genSubscript(substring.lower()));
+    if (Fortran::evaluate::MaybeExtentExpr upperBound = substring.upper())
+      partInfo.substring.push_back(genSubscript(*upperBound));
+    else
+      partInfo.substring.push_back(partInfo.typeParams[0]);
+    fir::FirOpBuilder &builder = getBuilder();
+    mlir::Location loc = getLoc();
+    mlir::Type idxTy = builder.getIndexType();
+    partInfo.substring[0] =
+        builder.createConvert(loc, idxTy, partInfo.substring[0]);
+    partInfo.substring[1] =
+        builder.createConvert(loc, idxTy, partInfo.substring[1]);
+    // Try using constant length if available. mlir::arith folding would
+    // most likely be able to fold "max(ub-lb+1,0)" too, but getting
+    // the constant length in the FIR types would be harder.
+    std::optional<int64_t> cstLen =
+        Fortran::evaluate::ToInt64(Fortran::evaluate::Fold(
+            getConverter().getFoldingContext(), substring.LEN()));
+    if (cstLen) {
+      partInfo.typeParams[0] =
+          builder.createIntegerConstant(loc, idxTy, *cstLen);
+    } else {
+      // Compute "len = max(ub-lb+1,0)" (Fortran 2018 9.4.1).
+      mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+      auto boundsDiff = builder.create<mlir::arith::SubIOp>(
+          loc, partInfo.substring[1], partInfo.substring[0]);
+      auto rawLen = builder.create<mlir::arith::AddIOp>(loc, boundsDiff, one);
+      partInfo.typeParams[0] =
+          fir::factory::genMaxWithZero(builder, loc, rawLen);
+    }
+    mlir::Type resultType = changeLengthInCharacterType(
+        loc, baseStringType,
+        cstLen ? *cstLen : fir::CharacterType::unknownLen());
+    return genDeclare(resultType, partInfo);
+  }
+
+  static mlir::Type changeLengthInCharacterType(mlir::Location loc,
+                                                mlir::Type type,
+                                                int64_t newLen) {
+    return llvm::TypeSwitch<mlir::Type, mlir::Type>(type)
+        .Case<fir::CharacterType>([&](fir::CharacterType charTy) -> mlir::Type {
+          return fir::CharacterType::get(charTy.getContext(), charTy.getFKind(),
+                                         newLen);
+        })
+        .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
+          return fir::SequenceType::get(
+              seqTy.getShape(),
+              changeLengthInCharacterType(loc, seqTy.getEleTy(), newLen));
+        })
+        .Case<fir::PointerType, fir::HeapType, fir::ReferenceType,
+              fir::BoxType>([&](auto t) -> mlir::Type {
+          using FIRT = decltype(t);
+          return FIRT::get(
+              changeLengthInCharacterType(loc, t.getEleTy(), newLen));
+        })
+        .Default([loc](mlir::Type t) -> mlir::Type {
+          fir::emitFatalError(loc, "expected character type");
+        });
+  }
+
+  mlir::Type visit(const Fortran::evaluate::DataRef &dataRef,
+                   PartInfo &partInfo) {
+    return std::visit([&](const auto &x) { return visit(x, partInfo); },
+                      dataRef.u);
+  }
+
+  mlir::Type
+  visit(const Fortran::evaluate::StaticDataObject::Pointer &staticObject,
+        PartInfo &partInfo) {
+    fir::FirOpBuilder &builder = getBuilder();
+    mlir::Location loc = getLoc();
+    std::optional<std::string> string = staticObject->AsString();
+    // TODO: see if StaticDataObject can be replaced by something based on
+    // Constant<T> to avoid dealing with endianness here for KIND>1.
+    // This will also avoid making string copies here.
+    if (!string)
+      TODO(loc, "StaticDataObject::Pointer substring with kind > 1");
+    fir::ExtendedValue exv =
+        fir::factory::createStringLiteral(builder, getLoc(), *string);
+    auto flags = fir::FortranVariableFlagsAttr::get(
+        builder.getContext(), fir::FortranVariableFlagsEnum::parameter);
+    partInfo.base = hlfir::genDeclare(loc, builder, exv, ".stringlit", flags);
+    partInfo.typeParams.push_back(fir::getLen(exv));
+    return partInfo.base.getElementOrSequenceType();
   }
 
   mlir::Type visit(const Fortran::evaluate::SymbolRef &symbolRef,
@@ -845,7 +945,33 @@ private:
 
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::DescriptorInquiry &desc) {
-    TODO(getLoc(), "lowering descriptor inquiry to HLFIR");
+    mlir::Location loc = getLoc();
+    auto &builder = getBuilder();
+    hlfir::EntityWithAttributes entity =
+        HlfirDesignatorBuilder(getLoc(), getConverter(), getSymMap(),
+                               getStmtCtx())
+            .gen(desc.base());
+    using ResTy = Fortran::evaluate::DescriptorInquiry::Result;
+    mlir::Type resultType =
+        getConverter().genType(ResTy::category, ResTy::kind);
+    auto castResult = [&](mlir::Value v) {
+      return hlfir::EntityWithAttributes{
+          builder.createConvert(loc, resultType, v)};
+    };
+    switch (desc.field()) {
+    case Fortran::evaluate::DescriptorInquiry::Field::Len:
+      return castResult(hlfir::genCharLength(loc, builder, entity));
+    case Fortran::evaluate::DescriptorInquiry::Field::LowerBound:
+      TODO(loc, "lower bound inquiry in HLFIR");
+    case Fortran::evaluate::DescriptorInquiry::Field::Extent:
+      TODO(loc, "extent inquiry in HLFIR");
+    case Fortran::evaluate::DescriptorInquiry::Field::Rank:
+      TODO(loc, "rank inquiry on assumed rank");
+    case Fortran::evaluate::DescriptorInquiry::Field::Stride:
+      // So far the front end does not generate this inquiry.
+      TODO(loc, "stride inquiry");
+    }
+    llvm_unreachable("unknown descriptor inquiry");
   }
 
   hlfir::EntityWithAttributes

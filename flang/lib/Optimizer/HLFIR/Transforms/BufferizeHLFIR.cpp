@@ -220,7 +220,8 @@ struct ConcatOpConversion : public mlir::OpConversionPattern<hlfir::ConcatOp> {
     mlir::Value cast = builder.createConvert(loc, addrType, fir::getBase(res));
     res = fir::substBase(res, cast);
     auto hlfirTempRes = hlfir::genDeclare(loc, builder, res, "tmp",
-                                          fir::FortranVariableFlagsAttr{});
+                                          fir::FortranVariableFlagsAttr{})
+                            .getBase();
     mlir::Value bufferizedExpr =
         packageBufferizedExpr(loc, builder, hlfirTempRes, false);
     rewriter.replaceOp(concat, bufferizedExpr);
