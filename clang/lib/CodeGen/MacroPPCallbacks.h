@@ -14,7 +14,6 @@
 #define LLVM_CLANG_LIB_CODEGEN_MACROPPCALLBACKS_H
 
 #include "clang/Lex/PPCallbacks.h"
-#include <optional>
 
 namespace llvm {
 class DIMacroFile;
@@ -102,9 +101,8 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          std::optional<FileEntryRef> File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
 
   /// Hook called whenever a macro definition is seen.

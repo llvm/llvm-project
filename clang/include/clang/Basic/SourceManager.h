@@ -53,7 +53,6 @@
 #include <cstddef>
 #include <map>
 #include <memory>
-#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -1004,7 +1003,7 @@ public:
   /// is no such file in the filesystem.
   ///
   /// This should be called before parsing has begun.
-  std::optional<FileEntryRef> bypassFileContentsOverride(FileEntryRef File);
+  Optional<FileEntryRef> bypassFileContentsOverride(FileEntryRef File);
 
   /// Specify that a file is transient.
   void setFileIsTransient(const FileEntry *SourceFile);
@@ -1050,7 +1049,7 @@ public:
   }
 
   /// Returns the FileEntryRef for the provided FileID.
-  std::optional<FileEntryRef> getFileEntryRefForID(FileID FID) const {
+  Optional<FileEntryRef> getFileEntryRefForID(FileID FID) const {
     if (auto *Entry = getSLocEntryForFile(FID))
       return Entry->getFile().getContentCache().OrigEntry;
     return std::nullopt;

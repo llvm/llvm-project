@@ -70,8 +70,9 @@ class SparcAsmParser : public MCTargetAsmParser {
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+                     SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -106,7 +107,7 @@ class SparcAsmParser : public MCTargetAsmParser {
                                          const MCExpr *subExpr);
 
   // returns true if Tok is matched to a register and returns register in RegNo.
-  bool matchRegisterName(const AsmToken &Tok, unsigned &RegNo,
+  bool matchRegisterName(const AsmToken &Tok, MCRegister &RegNo,
                          unsigned &RegKind);
 
   bool matchSparcAsmModifiers(const MCExpr *&EVal, SMLoc &EndLoc);
@@ -693,14 +694,14 @@ bool SparcAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   llvm_unreachable("Implement any new match types added!");
 }
 
-bool SparcAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+bool SparcAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                    SMLoc &EndLoc) {
   if (tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success)
     return Error(StartLoc, "invalid register name");
   return false;
 }
 
-OperandMatchResultTy SparcAsmParser::tryParseRegister(unsigned &RegNo,
+OperandMatchResultTy SparcAsmParser::tryParseRegister(MCRegister &RegNo,
                                                       SMLoc &StartLoc,
                                                       SMLoc &EndLoc) {
   const AsmToken &Tok = Parser.getTok();
@@ -1050,7 +1051,8 @@ SparcAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
         return MatchOperand_NoMatch;
       Parser.Lex(); // eat %
 
-      unsigned RegNo, RegKind;
+      MCRegister RegNo;
+      unsigned RegKind;
       if (!matchRegisterName(Parser.getTok(), RegNo, RegKind))
         return MatchOperand_NoMatch;
 
@@ -1106,9 +1108,9 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op,
   switch (getLexer().getKind()) {
   default:  break;
 
-  case AsmToken::Percent:
+  case AsmToken::Percent: {
     Parser.Lex(); // Eat the '%'.
-    unsigned RegNo;
+    MCRegister RegNo;
     unsigned RegKind;
     if (matchRegisterName(Parser.getTok(), RegNo, RegKind)) {
       StringRef name = Parser.getTok().getString();
@@ -1156,6 +1158,7 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op,
       Op = SparcOperand::CreateImm(EVal, S, E);
     }
     break;
+  }
 
   case AsmToken::Plus:
   case AsmToken::Minus:
@@ -1203,7 +1206,7 @@ SparcAsmParser::parseBranchModifiers(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-bool SparcAsmParser::matchRegisterName(const AsmToken &Tok, unsigned &RegNo,
+bool SparcAsmParser::matchRegisterName(const AsmToken &Tok, MCRegister &RegNo,
                                        unsigned &RegKind) {
   int64_t intVal = 0;
   RegNo = 0;

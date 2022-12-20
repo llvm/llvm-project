@@ -12,6 +12,7 @@
 #include "PerfReader.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include <unordered_map>
 #include <unordered_set>
 
@@ -103,7 +104,7 @@ private:
 
   uint32_t CurSearchingDepth = 0;
 
-#ifndef NDEBUG
+#if LLVM_ENABLE_STATS
   DenseSet<std::pair<uint64_t, uint64_t>> ReachableViaUniquePaths;
   DenseSet<std::pair<uint64_t, uint64_t>> Unreachables;
   DenseSet<std::pair<uint64_t, uint64_t>> ReachableViaMultiPaths;
