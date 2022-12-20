@@ -339,7 +339,7 @@ if( LLVM_USING_GLIBC )
   list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
 # enable 64bit off_t on 32bit systems using glibc
   if (CMAKE_SIZEOF_VOID_P EQUAL 4)
-    add_definitions( -D_FILE_OFFSET_BITS=64 )
+    add_compile_definitions(_FILE_OFFSET_BITS=64)
     list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
   endif()
 endif()
