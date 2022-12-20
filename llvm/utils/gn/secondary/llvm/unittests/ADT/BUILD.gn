@@ -56,7 +56,6 @@ unittest("ADTTests") {
     "MapVectorTest.cpp",
     "MappedIteratorTest.cpp",
     "MoveOnly.cpp",
-    "OptionalTest.cpp",
     "PackedVectorTest.cpp",
     "PointerEmbeddedIntTest.cpp",
     "PointerIntPairTest.cpp",
