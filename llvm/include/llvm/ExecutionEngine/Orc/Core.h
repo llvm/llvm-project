@@ -101,8 +101,9 @@ private:
 class ResourceManager {
 public:
   virtual ~ResourceManager();
-  virtual Error handleRemoveResources(ResourceKey K) = 0;
-  virtual void handleTransferResources(ResourceKey DstK, ResourceKey SrcK) = 0;
+  virtual Error handleRemoveResources(JITDylib &JD, ResourceKey K) = 0;
+  virtual void handleTransferResources(JITDylib &JD, ResourceKey DstK,
+                                       ResourceKey SrcK) = 0;
 };
 
 /// A set of symbol names (represented by SymbolStringPtrs for
