@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Core
   IPO
   IRReader
+  IRPrinter
   Passes
   Support
   )
