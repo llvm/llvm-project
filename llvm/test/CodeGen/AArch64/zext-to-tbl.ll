@@ -144,7 +144,7 @@
 
 ; It's profitable to convert the zext to a shuffle, which in turn will be
 ; lowered to 4 tbl instructions. The masks are materialized outside the loop.
-define void @zext_v16i8_to_v16i32_in_loop(i8* %src, i32* %dst) {
+define void @zext_v16i8_to_v16i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v16i8_to_v16i32_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh0:
@@ -224,13 +224,11 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <16 x i8>*
-  %load = load <16 x i8>, <16 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <16 x i8>, ptr %src.gep
   %ext = zext <16 x i8> %load to <16 x i32>
-  %dst.gep = getelementptr i32, i32* %dst, i64 %iv
-  %dst.gep.cast = bitcast i32* %dst.gep to <16 x i32>*
-  store <16 x i32> %ext, <16 x i32>* %dst.gep.cast
+  %dst.gep = getelementptr i32, ptr %dst, i64 %iv
+  store <16 x i32> %ext, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -239,7 +237,7 @@ exit:
   ret void
 }
 
-define void @zext_v16i8_to_v16i32_in_loop_not_header(i8* %src, i32* %dst, i1 %c) {
+define void @zext_v16i8_to_v16i32_in_loop_not_header(ptr %src, ptr %dst, i1 %c) {
 ; CHECK-LABEL: zext_v16i8_to_v16i32_in_loop_not_header:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, xzr
@@ -309,13 +307,11 @@ loop:
   br i1 %c, label %then, label %loop.latch
 
 then:
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <16 x i8>*
-  %load = load <16 x i8>, <16 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <16 x i8>, ptr %src.gep
   %ext = zext <16 x i8> %load to <16 x i32>
-  %dst.gep = getelementptr i32, i32* %dst, i64 %iv
-  %dst.gep.cast = bitcast i32* %dst.gep to <16 x i32>*
-  store <16 x i32> %ext, <16 x i32>* %dst.gep.cast
+  %dst.gep = getelementptr i32, ptr %dst, i64 %iv
+  store <16 x i32> %ext, ptr %dst.gep
   br label %loop.latch
 
 loop.latch:
@@ -329,7 +325,7 @@ exit:
 
 ; Not profitable to use shuffle/tbl, as 4 tbls + materializing the masks
 ; require more instructions than lowering zext directly.
-define void @zext_v16i8_to_v16i32_no_loop(i8* %src, i32* %dst) {
+define void @zext_v16i8_to_v16i32_no_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v16i8_to_v16i32_no_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -361,16 +357,14 @@ define void @zext_v16i8_to_v16i32_no_loop(i8* %src, i32* %dst) {
 ; CHECK-BE-NEXT:    st1 { v0.4s }, [x1]
 ; CHECK-BE-NEXT:    ret
 entry:
-  %src.cast = bitcast i8* %src to <16 x i8>*
-  %load = load <16 x i8>, <16 x i8>* %src.cast
+  %load = load <16 x i8>, ptr %src
   %ext = zext <16 x i8> %load to <16 x i32>
-  %dst.cast = bitcast i32* %dst to <16 x i32>*
-  store <16 x i32> %ext, <16 x i32>* %dst.cast
+  store <16 x i32> %ext, ptr %dst
   ret void
 }
 
 ; Avoid using tbl when optimizing for size.
-define void @zext_v16i8_to_v16i32_in_loop_optsize(i8* %src, i32* %dst) optsize {
+define void @zext_v16i8_to_v16i32_in_loop_optsize(ptr %src, ptr %dst) optsize {
 ; CHECK-LABEL: zext_v16i8_to_v16i32_in_loop_optsize:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, xzr
@@ -422,13 +416,11 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <16 x i8>*
-  %load = load <16 x i8>, <16 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <16 x i8>, ptr %src.gep
   %ext = zext <16 x i8> %load to <16 x i32>
-  %dst.gep = getelementptr i32, i32* %dst, i64 %iv
-  %dst.gep.cast = bitcast i32* %dst.gep to <16 x i32>*
-  store <16 x i32> %ext, <16 x i32>* %dst.gep.cast
+  %dst.gep = getelementptr i32, ptr %dst, i64 %iv
+  store <16 x i32> %ext, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -438,7 +430,7 @@ exit:
 }
 
 ; Avoid using tbl when optimizing for size.
-define void @zext_v16i8_to_v16i32_in_loop_minsize(i8* %src, i32* %dst) minsize {
+define void @zext_v16i8_to_v16i32_in_loop_minsize(ptr %src, ptr %dst) minsize {
 ; CHECK-LABEL: zext_v16i8_to_v16i32_in_loop_minsize:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, xzr
@@ -490,13 +482,11 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <16 x i8>*
-  %load = load <16 x i8>, <16 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <16 x i8>, ptr %src.gep
   %ext = zext <16 x i8> %load to <16 x i32>
-  %dst.gep = getelementptr i32, i32* %dst, i64 %iv
-  %dst.gep.cast = bitcast i32* %dst.gep to <16 x i32>*
-  store <16 x i32> %ext, <16 x i32>* %dst.gep.cast
+  %dst.gep = getelementptr i32, ptr %dst, i64 %iv
+  store <16 x i32> %ext, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -505,7 +495,7 @@ exit:
   ret void
 }
 
-define void @zext_v16i8_to_v16i16_in_loop(i8* %src, i16* %dst) {
+define void @zext_v16i8_to_v16i16_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v16i8_to_v16i16_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, xzr
@@ -546,13 +536,11 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <16 x i8>*
-  %load = load <16 x i8>, <16 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <16 x i8>, ptr %src.gep
   %ext = zext <16 x i8> %load to <16 x i16>
-  %dst.gep = getelementptr i16, i16* %dst, i64 %iv
-  %dst.gep.cast = bitcast i16* %dst.gep to <16 x i16>*
-  store <16 x i16> %ext, <16 x i16>* %dst.gep.cast
+  %dst.gep = getelementptr i16, ptr %dst, i64 %iv
+  store <16 x i16> %ext, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -631,7 +619,7 @@ exit:
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	7                               // 0x7
 
-define void @zext_v8i8_to_v8i32_in_loop(i8* %src, i32* %dst) {
+define void @zext_v8i8_to_v8i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v8i8_to_v8i32_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh8:
@@ -686,13 +674,11 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <8 x i8>*
-  %load = load <8 x i8>, <8 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <8 x i8>, ptr %src.gep
   %ext = zext <8 x i8> %load to <8 x i32>
-  %dst.gep = getelementptr i32, i32* %dst, i64 %iv
-  %dst.gep.cast = bitcast i32* %dst.gep to <8 x i32>*
-  store <8 x i32> %ext, <8 x i32>* %dst.gep.cast
+  %dst.gep = getelementptr i32, ptr %dst, i64 %iv
+  store <8 x i32> %ext, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -701,7 +687,7 @@ exit:
   ret void
 }
 
-define void @zext_v16i8_to_v16i64_in_loop(i8* %src, i64* %dst) {
+define void @zext_v16i8_to_v16i64_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v16i8_to_v16i64_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, xzr
@@ -781,13 +767,11 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <16 x i8>*
-  %load = load <16 x i8>, <16 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <16 x i8>, ptr %src.gep
   %ext = zext <16 x i8> %load to <16 x i64>
-  %dst.gep = getelementptr i64, i64* %dst, i64 %iv
-  %dst.gep.cast = bitcast i64* %dst.gep to <16 x i64>*
-  store <16 x i64> %ext, <16 x i64>* %dst.gep.cast
+  %dst.gep = getelementptr i64, ptr %dst, i64 %iv
+  store <16 x i64> %ext, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -796,7 +780,7 @@ exit:
   ret void
 }
 
-define void @zext_v8i8_to_v8i64_in_loop(i8* %src, i64* %dst) {
+define void @zext_v8i8_to_v8i64_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v8i8_to_v8i64_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, xzr
@@ -852,13 +836,11 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <8 x i8>*
-  %load = load <8 x i8>, <8 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <8 x i8>, ptr %src.gep
   %ext = zext <8 x i8> %load to <8 x i64>
-  %dst.gep = getelementptr i64, i64* %dst, i64 %iv
-  %dst.gep.cast = bitcast i64* %dst.gep to <8 x i64>*
-  store <8 x i64> %ext, <8 x i64>* %dst.gep.cast
+  %dst.gep = getelementptr i64, ptr %dst, i64 %iv
+  store <8 x i64> %ext, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -867,7 +849,7 @@ exit:
   ret void
 }
 
-define void @zext_v8i8_to_v8i16_in_loop(i8* %src, i16* %dst) {
+define void @zext_v8i8_to_v8i16_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v8i8_to_v8i16_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, xzr
@@ -905,13 +887,11 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <8 x i8>*
-  %load = load <8 x i8>, <8 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <8 x i8>, ptr %src.gep
   %ext = zext <8 x i8> %load to <8 x i16>
-  %dst.gep = getelementptr i16, i16* %dst, i64 %iv
-  %dst.gep.cast = bitcast i16* %dst.gep to <8 x i16>*
-  store <8 x i16> %ext, <8 x i16>* %dst.gep.cast
+  %dst.gep = getelementptr i16, ptr %dst, i64 %iv
+  store <8 x i16> %ext, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -920,7 +900,7 @@ exit:
   ret void
 }
 
-define void @zext_v8i8_to_v8i20_in_loop(i8* %src, i20* %dst) {
+define void @zext_v8i8_to_v8i20_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v8i8_to_v8i20_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, xzr
@@ -932,24 +912,24 @@ define void @zext_v8i8_to_v8i20_in_loop(i8* %src, i20* %dst) {
 ; CHECK-NEXT:    ushll.8h v0, v0, #0
 ; CHECK-NEXT:    ushll2.4s v1, v0, #0
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    mov.s w10, v1[1]
+; CHECK-NEXT:    mov.s w11, v1[1]
 ; CHECK-NEXT:    mov.s w13, v0[1]
-; CHECK-NEXT:    fmov w11, s1
-; CHECK-NEXT:    mov.s w12, v1[2]
+; CHECK-NEXT:    fmov w12, s1
+; CHECK-NEXT:    mov.s w14, v1[2]
 ; CHECK-NEXT:    fmov w15, s0
 ; CHECK-NEXT:    mov.s w16, v0[2]
 ; CHECK-NEXT:    mov.s w9, v1[3]
-; CHECK-NEXT:    mov.s w14, v0[3]
-; CHECK-NEXT:    orr x10, x11, x10, lsl #20
-; CHECK-NEXT:    orr x11, x15, x13, lsl #20
-; CHECK-NEXT:    orr x10, x10, x12, lsl #40
-; CHECK-NEXT:    orr x11, x11, x16, lsl #40
-; CHECK-NEXT:    lsr x13, x9, #4
-; CHECK-NEXT:    lsr x12, x14, #4
-; CHECK-NEXT:    orr x9, x10, x9, lsl #60
-; CHECK-NEXT:    orr x10, x11, x14, lsl #60
+; CHECK-NEXT:    mov.s w10, v0[3]
+; CHECK-NEXT:    orr x11, x12, x11, lsl #20
+; CHECK-NEXT:    orr x12, x15, x13, lsl #20
+; CHECK-NEXT:    orr x11, x11, x14, lsl #40
+; CHECK-NEXT:    orr x12, x12, x16, lsl #40
+; CHECK-NEXT:    lsr w13, w9, #4
+; CHECK-NEXT:    lsr w14, w10, #4
+; CHECK-NEXT:    orr x9, x11, x9, lsl #60
+; CHECK-NEXT:    orr x10, x12, x10, lsl #60
 ; CHECK-NEXT:    strh w13, [x1, #18]
-; CHECK-NEXT:    strh w12, [x1, #8]
+; CHECK-NEXT:    strh w14, [x1, #8]
 ; CHECK-NEXT:    stur x9, [x1, #10]
 ; CHECK-NEXT:    str x10, [x1], #64
 ; CHECK-NEXT:    b.ne LBB10_1
@@ -1000,13 +980,11 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <8 x i8>*
-  %load = load <8 x i8>, <8 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <8 x i8>, ptr %src.gep
   %ext = zext <8 x i8> %load to <8 x i20>
-  %dst.gep = getelementptr i20, i20* %dst, i64 %iv
-  %dst.gep.cast = bitcast i20* %dst.gep to <8 x i20>*
-  store <8 x i20> %ext, <8 x i20>* %dst.gep.cast
+  %dst.gep = getelementptr i20, ptr %dst, i64 %iv
+  store <8 x i20> %ext, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -1051,7 +1029,7 @@ exit:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	3                               // 0x3
 
-define void @zext_v4i8_to_v4i32_in_loop(i8* %src, i32* %dst) {
+define void @zext_v4i8_to_v4i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v4i8_to_v4i32_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh12:
@@ -1096,13 +1074,11 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <4 x i8>*
-  %load = load <4 x i8>, <4 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <4 x i8>, ptr %src.gep
   %ext = zext <4 x i8> %load to <4 x i32>
-  %dst.gep = getelementptr i32, i32* %dst, i64 %iv
-  %dst.gep.cast = bitcast i32* %dst.gep to <4 x i32>*
-  store <4 x i32> %ext, <4 x i32>* %dst.gep.cast
+  %dst.gep = getelementptr i32, ptr %dst, i64 %iv
+  store <4 x i32> %ext, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -1215,7 +1191,7 @@ exit:
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	11                              // 0xb
 
-define void @zext_v12i8_to_v12i32_in_loop(i8* %src, i32* %dst) {
+define void @zext_v12i8_to_v12i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v12i8_to_v12i32_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh14:
@@ -1285,13 +1261,11 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <12 x i8>*
-  %load = load <12 x i8>, <12 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <12 x i8>, ptr %src.gep
   %ext = zext <12 x i8> %load to <12 x i32>
-  %dst.gep = getelementptr i32, i32* %dst, i64 %iv
-  %dst.gep.cast = bitcast i32* %dst.gep to <12 x i32>*
-  store <12 x i32> %ext, <12 x i32>* %dst.gep.cast
+  %dst.gep = getelementptr i32, ptr %dst, i64 %iv
+  store <12 x i32> %ext, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -1300,7 +1274,7 @@ exit:
   ret void
 }
 
-define void @zext_v16i4_to_v16i32_in_loop(i4* %src, i32* %dst) {
+define void @zext_v16i4_to_v16i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v16i4_to_v16i32_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi.4s v0, #15
@@ -1438,13 +1412,11 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i4, i4* %src, i64 %iv
-  %src.gep.cast = bitcast i4* %src.gep to <16 x i4>*
-  %load = load <16 x i4>, <16 x i4>* %src.gep.cast
+  %src.gep = getelementptr i4, ptr %src, i64 %iv
+  %load = load <16 x i4>, ptr %src.gep
   %ext = zext <16 x i4> %load to <16 x i32>
-  %dst.gep = getelementptr i32, i32* %dst, i64 %iv
-  %dst.gep.cast = bitcast i32* %dst.gep to <16 x i32>*
-  store <16 x i32> %ext, <16 x i32>* %dst.gep.cast
+  %dst.gep = getelementptr i32, ptr %dst, i64 %iv
+  store <16 x i32> %ext, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -1453,7 +1425,7 @@ exit:
   ret void
 }
 
-define void @zext_v16i16_to_v16i64_in_loop(i16* %src, i64* %dst) {
+define void @zext_v16i16_to_v16i64_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v16i16_to_v16i64_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, xzr
@@ -1532,13 +1504,11 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i16, i16* %src, i64 %iv
-  %src.gep.cast = bitcast i16* %src.gep to <16 x i16>*
-  %load = load <16 x i16>, <16 x i16>* %src.gep.cast
+  %src.gep = getelementptr i16, ptr %src, i64 %iv
+  %load = load <16 x i16>, ptr %src.gep
   %ext = zext <16 x i16> %load to <16 x i64>
-  %dst.gep = getelementptr i64, i64* %dst, i64 %iv
-  %dst.gep.cast = bitcast i64* %dst.gep to <16 x i64>*
-  store <16 x i64> %ext, <16 x i64>* %dst.gep.cast
+  %dst.gep = getelementptr i64, ptr %dst, i64 %iv
+  store <16 x i64> %ext, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -1547,7 +1517,7 @@ exit:
   ret void
 }
 
-define void @zext_v16i32_to_v16i64_in_loop(i32* %src, i64* %dst) {
+define void @zext_v16i32_to_v16i64_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v16i32_to_v16i64_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, xzr
@@ -1623,13 +1593,11 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i32, i32* %src, i64 %iv
-  %src.gep.cast = bitcast i32* %src.gep to <16 x i32>*
-  %load = load <16 x i32>, <16 x i32>* %src.gep.cast
+  %src.gep = getelementptr i32, ptr %src, i64 %iv
+  %load = load <16 x i32>, ptr %src.gep
   %ext = zext <16 x i32> %load to <16 x i64>
-  %dst.gep = getelementptr i64, i64* %dst, i64 %iv
-  %dst.gep.cast = bitcast i64* %dst.gep to <16 x i64>*
-  store <16 x i64> %ext, <16 x i64>* %dst.gep.cast
+  %dst.gep = getelementptr i64, ptr %dst, i64 %iv
+  store <16 x i64> %ext, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -1638,7 +1606,7 @@ exit:
   ret void
 }
 
-define void @zext_v8i8_to_v8i128_in_loop(i8* %src, i128* %dst) {
+define void @zext_v8i8_to_v8i128_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v8i8_to_v8i128_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, xzr
@@ -1726,13 +1694,11 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <8 x i8>*
-  %load = load <8 x i8>, <8 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <8 x i8>, ptr %src.gep
   %ext = zext <8 x i8> %load to <8 x i128>
-  %dst.gep = getelementptr i128, i128* %dst, i64 %iv
-  %dst.gep.cast = bitcast i128* %dst.gep to <8 x i128>*
-  store <8 x i128> %ext, <8 x i128>* %dst.gep.cast
+  %dst.gep = getelementptr i128, ptr %dst, i64 %iv
+  store <8 x i128> %ext, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -1742,7 +1708,7 @@ exit:
 }
 
 ; multiple back-to-back 'zext' of similar type of vectors combined with arithmetic operations
-define void @zext_v8i8_to_v8i64_with_add_in_sequence_in_loop(i8* %src, i64* %dst) {
+define void @zext_v8i8_to_v8i64_with_add_in_sequence_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v8i8_to_v8i64_with_add_in_sequence_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, xzr
@@ -1840,26 +1806,20 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <8 x i8>*
-  %load = load <8 x i8>, <8 x i8>* %src.gep.cast
-  %src.gep.2 = getelementptr i8, i8* %src.gep, i64 8
-  %src.gep.cast.2 = bitcast i8* %src.gep.2 to <8 x i8>*
-  %load.2 = load <8 x i8>, <8 x i8>* %src.gep.cast.2
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <8 x i8>, ptr %src.gep
+  %src.gep.2 = getelementptr i8, ptr %src.gep, i64 8
+  %load.2 = load <8 x i8>, ptr %src.gep.2
   %ext = zext <8 x i8> %load to <8 x i64>
   %ext.2 = zext <8 x i8> %load.2 to <8 x i64>
-  %dst.gep = getelementptr i64, i64* %dst, i64 %iv
-  %dst.gep.cast = bitcast i64* %dst.gep to <8 x i64>*
-  %load.dst = load <8 x i64>, <8 x i64>* %dst.gep.cast
-  %dst.gep.2 = getelementptr i64, i64* %dst.gep, i64 8
-  %dst.gep.cast.2 = bitcast i64* %dst.gep.2 to <8 x i64>*
-  %load.dst.2 = load <8 x i64>, <8 x i64>* %dst.gep.cast.2
+  %dst.gep = getelementptr i64, ptr %dst, i64 %iv
+  %load.dst = load <8 x i64>, ptr %dst.gep
+  %dst.gep.2 = getelementptr i64, ptr %dst.gep, i64 8
+  %load.dst.2 = load <8 x i64>, ptr %dst.gep.2
   %sum = add <8 x i64> %load.dst, %ext
   %sum.2 = add <8 x i64> %load.dst.2, %ext.2
-  %dst.gep.cast.3 = bitcast i64* %dst.gep to <8 x i64>*
-  store <8 x i64> %sum, <8 x i64>* %dst.gep.cast.3
-  %dst.gep.cast.4 = bitcast i64* %dst.gep.2 to <8 x i64>*
-  store <8 x i64> %sum.2, <8 x i64>* %dst.gep.cast.4
+  store <8 x i64> %sum, ptr %dst.gep
+  store <8 x i64> %sum.2, ptr %dst.gep.2
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -1869,7 +1829,7 @@ exit:
 }
 
 ; multiple back-to-back 'zext' of similar type of vectors
-define void @zext_v16i8_to_v16i64_in_sequence_in_loop(i8* %src, i64* %dst) {
+define void @zext_v16i8_to_v16i64_in_sequence_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v16i8_to_v16i64_in_sequence_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, xzr
@@ -2002,20 +1962,16 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <16 x i8>*
-  %load = load <16 x i8>, <16 x i8>* %src.gep.cast
-  %src.gep.2 = getelementptr i8, i8* %src.gep, i64 16
-  %src.gep.cast.2 = bitcast i8* %src.gep.2 to <16 x i8>*
-  %load.2 = load <16 x i8>, <16 x i8>* %src.gep.cast.2
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <16 x i8>, ptr %src.gep
+  %src.gep.2 = getelementptr i8, ptr %src.gep, i64 16
+  %load.2 = load <16 x i8>, ptr %src.gep.2
   %ext = zext <16 x i8> %load to <16 x i64>
   %ext.2 = zext <16 x i8> %load.2 to <16 x i64>
-  %dst.gep = getelementptr i64, i64* %dst, i64 %iv
-  %dst.gep.cast = bitcast i64* %dst.gep to <16 x i64>*
-  store <16 x i64> %ext, <16 x i64>* %dst.gep.cast
-  %dst.gep.2 = getelementptr i64, i64* %dst.gep, i64 16
-  %dst.gep.cast.2 = bitcast i64* %dst.gep.2 to <16 x i64>*
-  store <16 x i64> %ext.2, <16 x i64>* %dst.gep.cast.2
+  %dst.gep = getelementptr i64, ptr %dst, i64 %iv
+  store <16 x i64> %ext, ptr %dst.gep
+  %dst.gep.2 = getelementptr i64, ptr %dst.gep, i64 16
+  store <16 x i64> %ext.2, ptr %dst.gep.2
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -2024,7 +1980,7 @@ exit:
   ret void
 }
 
-define void @zext_v16i8_to_v16i32_in_loop_scalable_vectors(i8* %src, i32* %dst) {
+define void @zext_v16i8_to_v16i32_in_loop_scalable_vectors(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v16i8_to_v16i32_in_loop_scalable_vectors:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, xzr
@@ -2081,14 +2037,12 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <vscale x 16 x i8>*
-  %load = load <vscale x 16 x i8>, <vscale x 16 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <vscale x 16 x i8>, ptr %src.gep
   %ext = zext <vscale x 16 x i8> %load to <vscale x 16 x i32>
   %add = add <vscale x 16 x i32> %ext, %ext
-  %dst.gep = getelementptr i32, i32* %dst, i64 %iv
-  %dst.gep.cast = bitcast i32* %dst.gep to <vscale x 16 x i32>*
-  store <vscale x 16 x i32> %add, <vscale x 16 x i32>* %dst.gep.cast
+  %dst.gep = getelementptr i32, ptr %dst, i64 %iv
+  store <vscale x 16 x i32> %add, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -2235,7 +2189,7 @@ exit:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	15                              // 0xf
 
-define void @zext_v20i8_to_v20i24_in_loop(i8* %src, i24* %dst) {
+define void @zext_v20i8_to_v20i24_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v20i8_to_v20i24_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh20:
@@ -2326,13 +2280,11 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <20 x i8>*
-  %load = load <20 x i8>, <20 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <20 x i8>, ptr %src.gep
   %ext = zext <20 x i8> %load to <20 x i24>
-  %dst.gep = getelementptr i24, i24* %dst, i64 %iv
-  %dst.gep.cast = bitcast i24* %dst.gep to <20 x i24>*
-  store <20 x i24> %ext, <20 x i24>* %dst.gep.cast
+  %dst.gep = getelementptr i24, ptr %dst, i64 %iv
+  store <20 x i24> %ext, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -2564,7 +2516,7 @@ exit:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	15                              // 0xf
 
-define void @zext_v23i8_to_v23i48_in_loop(i8* %src, i48* %dst) {
+define void @zext_v23i8_to_v23i48_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v23i8_to_v23i48_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh28:
@@ -2701,13 +2653,11 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <23 x i8>*
-  %load = load <23 x i8>, <23 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <23 x i8>, ptr %src.gep
   %ext = zext <23 x i8> %load to <23 x i48>
-  %dst.gep = getelementptr i48, i48* %dst, i64 %iv
-  %dst.gep.cast = bitcast i48* %dst.gep to <23 x i48>*
-  store <23 x i48> %ext, <23 x i48>* %dst.gep.cast
+  %dst.gep = getelementptr i48, ptr %dst, i64 %iv
+  store <23 x i48> %ext, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -2716,7 +2666,7 @@ exit:
   ret void
 }
 
-define void @zext_v8i8_to_v8i33_in_loop(i8* %src, i33* %dst) {
+define void @zext_v8i8_to_v8i33_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v8i8_to_v8i33_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, xzr
@@ -2802,13 +2752,11 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <8 x i8>*
-  %load = load <8 x i8>, <8 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <8 x i8>, ptr %src.gep
   %ext = zext <8 x i8> %load to <8 x i33>
-  %dst.gep = getelementptr i33, i33* %dst, i64 %iv
-  %dst.gep.cast = bitcast i33* %dst.gep to <8 x i33>*
-  store <8 x i33> %ext, <8 x i33>* %dst.gep.cast
+  %dst.gep = getelementptr i33, ptr %dst, i64 %iv
+  store <8 x i33> %ext, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
