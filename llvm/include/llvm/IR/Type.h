@@ -187,6 +187,14 @@ public:
            getTypeID() == PPC_FP128TyID;
   }
 
+  /// Returns true if this is a floating-point type that is an unevaluated sum
+  /// of multiple floating-point units.
+  /// An example of such a type is ppc_fp128, also known as double-double, which
+  /// consists of two IEEE 754 doubles.
+  bool isMultiUnitFPType() const {
+    return getTypeID() == PPC_FP128TyID;
+  }
+
   const fltSemantics &getFltSemantics() const;
 
   /// Return true if this is X86 MMX.

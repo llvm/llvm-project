@@ -1373,10 +1373,7 @@ declare double @llvm.arithmetic.fence.f64(double)
 
 define i1 @isKnownNeverInfinity_floor(double %x) {
 ; CHECK-LABEL: @isKnownNeverInfinity_floor(
-; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = call double @llvm.floor.f64(double [[A]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.floor.f64(double %a)
@@ -1399,10 +1396,7 @@ declare double @llvm.floor.f64(double)
 
 define i1 @isKnownNeverInfinity_ceil(double %x) {
 ; CHECK-LABEL: @isKnownNeverInfinity_ceil(
-; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = call double @llvm.ceil.f64(double [[A]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.ceil.f64(double %a)
@@ -1425,10 +1419,7 @@ declare double @llvm.ceil.f64(double)
 
 define i1 @isKnownNeverInfinity_trunc(double %x) {
 ; CHECK-LABEL: @isKnownNeverInfinity_trunc(
-; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = call double @llvm.trunc.f64(double [[A]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.trunc.f64(double %a)
@@ -1451,10 +1442,7 @@ declare double @llvm.trunc.f64(double)
 
 define i1 @isKnownNeverInfinity_rint(double %x) {
 ; CHECK-LABEL: @isKnownNeverInfinity_rint(
-; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = call double @llvm.rint.f64(double [[A]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.rint.f64(double %a)
@@ -1477,10 +1465,7 @@ declare double @llvm.rint.f64(double)
 
 define i1 @isKnownNeverInfinity_nearbyint(double %x) {
 ; CHECK-LABEL: @isKnownNeverInfinity_nearbyint(
-; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = call double @llvm.nearbyint.f64(double [[A]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.nearbyint.f64(double %a)
@@ -1503,10 +1488,7 @@ declare double @llvm.nearbyint.f64(double)
 
 define i1 @isKnownNeverInfinity_round(double %x) {
 ; CHECK-LABEL: @isKnownNeverInfinity_round(
-; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = call double @llvm.round.f64(double [[A]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.round.f64(double %a)
@@ -1529,10 +1511,7 @@ declare double @llvm.round.f64(double)
 
 define i1 @isKnownNeverInfinity_roundeven(double %x) {
 ; CHECK-LABEL: @isKnownNeverInfinity_roundeven(
-; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = call double @llvm.roundeven.f64(double [[A]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.roundeven.f64(double %a)
@@ -1567,3 +1546,117 @@ define i1 @isNotKnownNeverInfinity_fptrunc_round(double %x) {
 }
 
 declare float @llvm.fptrunc.round.f32.f64(double, metadata)
+
+declare ppc_fp128 @llvm.floor.ppcf128(ppc_fp128)
+
+define i1 @isKnownNeverInfinity_floor_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_floor_ppcf128(
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], 0xM7FF00000000000000000000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  ret i1 %r
+}
+
+declare ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128)
+
+define i1 @isKnownNeverInfinity_ceil_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_ceil_ppcf128(
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], 0xM7FF00000000000000000000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  ret i1 %r
+}
+
+declare ppc_fp128 @llvm.rint.ppcf128(ppc_fp128)
+
+define i1 @isKnownNeverInfinity_rint_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_rint_ppcf128(
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], 0xM7FF00000000000000000000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  ret i1 %r
+}
+
+declare ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128)
+
+define i1 @isKnownNeverInfinity_nearbyint_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_nearbyint_ppcf128(
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], 0xM7FF00000000000000000000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  ret i1 %r
+}
+
+declare ppc_fp128 @llvm.round.ppcf128(ppc_fp128)
+
+define i1 @isKnownNeverInfinity_round_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_round_ppcf128(
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.round.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], 0xM7FF00000000000000000000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.round.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  ret i1 %r
+}
+
+declare ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128)
+
+define i1 @isKnownNeverInfinity_roundeven_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_roundeven_ppcf128(
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], 0xM7FF00000000000000000000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  ret i1 %r
+}
+
+declare ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128)
+
+define i1 @isKnownNeverInfinity_trunc_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_trunc_ppcf128(
+; CHECK-NEXT:    ret i1 true
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  ret i1 %r
+}
+
+declare x86_fp80 @llvm.ceil.f80(x86_fp80)
+
+define i1 @isKnownNeverInfinity_ceil_x86_fp80(x86_fp80 %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_ceil_x86_fp80(
+; CHECK-NEXT:    ret i1 true
+;
+  %a = fadd ninf x86_fp80 %x, %x
+  %e = call x86_fp80 @llvm.ceil.f80(x86_fp80 %a)
+  %r = fcmp une x86_fp80 %e, 0xK7FFF8000000000000000
+  ret i1 %r
+}
