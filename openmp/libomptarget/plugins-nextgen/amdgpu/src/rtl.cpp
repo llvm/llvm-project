@@ -400,6 +400,10 @@ struct AMDGPUKernelTy : public GenericKernelTy {
         return Err;
     }
 
+    // Account for user requested dynamic shared memory.
+    // TODO: This should be read from a per-kernel state flag.
+    GroupSize += Device.getDynamicMemorySize();
+
     // Make sure it is a kernel symbol.
     if (SymbolType != HSA_SYMBOL_KIND_KERNEL)
       return Plugin::error("Symbol %s is not a kernel function");
