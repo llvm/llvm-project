@@ -2219,8 +2219,8 @@ TEST_F(DIFileTest, EmptySource) {
   DIFile *N = DIFile::get(Context, "file", "dir");
   EXPECT_EQ(std::nullopt, N->getSource());
 
-  std::optional<DIFile::ChecksumInfo<StringRef>> Checksum = std::nullopt;
-  std::optional<StringRef> Source = std::nullopt;
+  std::optional<DIFile::ChecksumInfo<StringRef>> Checksum;
+  std::optional<StringRef> Source;
   N = DIFile::get(Context, "file", "dir", Checksum, Source);
   EXPECT_EQ(Source, N->getSource());
 
