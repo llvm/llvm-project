@@ -152,6 +152,7 @@ static_library("CodeGen") {
     "MachineStableHash.cpp",
     "MachineStripDebug.cpp",
     "MachineTraceMetrics.cpp",
+    "MachineUniformityAnalysis.cpp",
     "MachineVerifier.cpp",
     "MacroFusion.cpp",
     "ModuloSchedule.cpp",
