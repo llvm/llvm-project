@@ -850,6 +850,58 @@ void DWARFLinker::lookForDIEsToKeep(AddressesMap &AddressesMap,
   }
 }
 
+#ifndef NDEBUG
+/// A broken link in the keep chain. By recording both the parent and the child
+/// we can show only broken links for DIEs with multiple children.
+struct BrokenLink {
+  BrokenLink(DWARFDie Parent, DWARFDie Child) : Parent(Parent), Child(Child) {}
+  DWARFDie Parent;
+  DWARFDie Child;
+};
+
+/// Verify the keep chain by looking for DIEs that are kept but who's parent
+/// isn't.
+static void verifyKeepChain(CompileUnit &CU) {
+  std::vector<DWARFDie> Worklist;
+  Worklist.push_back(CU.getOrigUnit().getUnitDIE());
+
+  // List of broken links.
+  std::vector<BrokenLink> BrokenLinks;
+
+  while (!Worklist.empty()) {
+    const DWARFDie Current = Worklist.back();
+    Worklist.pop_back();
+
+    const bool CurrentDieIsKept = CU.getInfo(Current).Keep;
+
+    for (DWARFDie Child : reverse(Current.children())) {
+      Worklist.push_back(Child);
+
+      const bool ChildDieIsKept = CU.getInfo(Child).Keep;
+      if (!CurrentDieIsKept && ChildDieIsKept)
+        BrokenLinks.emplace_back(Current, Child);
+    }
+  }
+
+  if (!BrokenLinks.empty()) {
+    for (BrokenLink Link : BrokenLinks) {
+      WithColor::error() << formatv(
+          "Found invalid link in keep chain between {0:x} and {1:x}\n",
+          Link.Parent.getOffset(), Link.Child.getOffset());
+
+      errs() << "Parent:";
+      Link.Parent.dump(errs(), 0, {});
+      CU.getInfo(Link.Parent).dump();
+
+      errs() << "Child:";
+      Link.Child.dump(errs(), 2, {});
+      CU.getInfo(Link.Child).dump();
+    }
+    report_fatal_error("invalid keep chain");
+  }
+}
+#endif
+
 /// Assign an abbreviation number to \p Abbrev.
 ///
 /// Our DIEs get freed after every DebugMapObject has been processed,
@@ -2535,12 +2587,16 @@ Error DWARFLinker::link() {
         CurrentUnit->markEverythingAsKept();
       copyInvariantDebugSection(*OptContext.File.Dwarf);
     } else {
-      for (auto &CurrentUnit : OptContext.CompileUnits)
+      for (auto &CurrentUnit : OptContext.CompileUnits) {
         lookForDIEsToKeep(*OptContext.File.Addresses,
                           OptContext.File.Addresses->getValidAddressRanges(),
                           OptContext.CompileUnits,
                           CurrentUnit->getOrigUnit().getUnitDIE(),
                           OptContext.File, *CurrentUnit, 0);
+#ifndef NDEBUG
+        verifyKeepChain(*CurrentUnit);
+#endif
+      }
     }
 
     // The calls to applyValidRelocs inside cloneDIE will walk the reloc

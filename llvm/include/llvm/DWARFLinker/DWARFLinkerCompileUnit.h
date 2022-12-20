@@ -81,6 +81,10 @@ public:
 
     /// Is this a reference to a DIE that hasn't been cloned yet?
     bool UnclonedReference : 1;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    LLVM_DUMP_METHOD void dump();
+#endif // if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   };
 
   CompileUnit(DWARFUnit &OrigUnit, unsigned ID, bool CanUseODR,
