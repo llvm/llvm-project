@@ -3494,7 +3494,10 @@ cc_library(
     ]),
     hdrs = glob(["include/mlir/Support/*.h"]),
     includes = ["include"],
-    deps = ["//llvm:Support"],
+    deps = [
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
 )
 
 cc_library(
@@ -3512,6 +3515,7 @@ cc_library(
     deps = [
         ":Support",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -3587,6 +3591,7 @@ cc_library(
         ":IR",
         ":Support",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -7263,6 +7268,7 @@ cc_library(
         ":Support",
         "//llvm:Support",
         "//llvm:TableGen",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -7275,6 +7281,7 @@ cc_library(
         ":TableGen",
         "//llvm:Support",
         "//llvm:TableGen",
+        "//llvm:TargetParser",
         "//llvm:config",
     ],
 )
@@ -7291,6 +7298,7 @@ cc_binary(
         ":TableGen",
         "//llvm:Support",
         "//llvm:TableGen",
+        "//llvm:TargetParser",
         "//llvm:config",
     ],
 )
@@ -9738,6 +9746,7 @@ cc_library(
         ":ShapedOpInterfaces",
         ":ViewLikeInterface",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -10371,6 +10380,7 @@ cc_library(
     deps = [
         ":Support",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -10387,6 +10397,7 @@ cc_library(
     deps = [
         ":Support",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -10427,6 +10438,7 @@ cc_library(
         ":Support",
         ":TableGen",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:TableGen",
     ],
 )
