@@ -40,7 +40,6 @@
 #include <cstring>
 #include <iterator>
 #include <memory>
-#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -542,7 +541,7 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
           ExpectedLoc = SourceLocation();
         } else {
           // Lookup file via Preprocessor, like a #include.
-          std::optional<FileEntryRef> File =
+          Optional<FileEntryRef> File =
               PP->LookupFile(Pos, Filename, false, nullptr, nullptr, nullptr,
                              nullptr, nullptr, nullptr, nullptr, nullptr);
           if (!File) {

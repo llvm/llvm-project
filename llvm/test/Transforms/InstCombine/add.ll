@@ -2462,11 +2462,7 @@ define i9 @sext_zext_not_commute(i4 %x) {
 
 define i32 @floor_sdiv(i32 %x) {
 ; CHECK-LABEL: @floor_sdiv(
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[X:%.*]], 4
-; CHECK-NEXT:    [[A:%.*]] = and i32 [[X]], -2147483645
-; CHECK-NEXT:    [[I:%.*]] = icmp ugt i32 [[A]], -2147483648
-; CHECK-NEXT:    [[S:%.*]] = sext i1 [[I]] to i32
-; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[D]], [[S]]
+; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[X:%.*]], 2
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %d = sdiv i32 %x, 4
@@ -2477,6 +2473,23 @@ define i32 @floor_sdiv(i32 %x) {
   ret i32 %r
 }
 
+; vectors work too and commute is handled by complexity-based canonicalization
+
+define <2 x i32> @floor_sdiv_vec_commute(<2 x i32> %x) {
+; CHECK-LABEL: @floor_sdiv_vec_commute(
+; CHECK-NEXT:    [[R:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %d = sdiv <2 x i32> %x, <i32 4, i32 4>
+  %a = and <2 x i32> %x, <i32 -2147483645, i32 -2147483645>
+  %i = icmp ugt <2 x i32> %a, <i32 -2147483648, i32 -2147483648>
+  %s = sext <2 x i1> %i to <2 x i32>
+  %r = add <2 x i32> %s, %d
+  ret <2 x i32> %r
+}
+
+; extra uses are ok
+
 define i8 @floor_sdiv_uses(i8 %x) {
 ; CHECK-LABEL: @floor_sdiv_uses(
 ; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[X:%.*]], 16
@@ -2486,7 +2499,7 @@ define i8 @floor_sdiv_uses(i8 %x) {
 ; CHECK-NEXT:    [[I:%.*]] = icmp ugt i8 [[A]], -128
 ; CHECK-NEXT:    [[S:%.*]] = sext i1 [[I]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[D]], [[S]]
+; CHECK-NEXT:    [[R:%.*]] = ashr i8 [[X]], 4
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %d = sdiv i8 %x, 16
@@ -2499,6 +2512,8 @@ define i8 @floor_sdiv_uses(i8 %x) {
   %r = add i8 %d, %s
   ret i8 %r
 }
+
+; negative test
 
 define i32 @floor_sdiv_wrong_div(i32 %x) {
 ; CHECK-LABEL: @floor_sdiv_wrong_div(
@@ -2517,45 +2532,56 @@ define i32 @floor_sdiv_wrong_div(i32 %x) {
   ret i32 %r
 }
 
+; negative test
+
 define i32 @floor_sdiv_wrong_mask(i32 %x) {
 ; CHECK-LABEL: @floor_sdiv_wrong_mask(
 ; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[X:%.*]], 4
-; CHECK-NEXT:    ret i32 [[D]]
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[X]], -2147483644
+; CHECK-NEXT:    [[I:%.*]] = icmp ugt i32 [[A]], -2147483648
+; CHECK-NEXT:    [[S:%.*]] = sext i1 [[I]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[D]], [[S]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %d = sdiv i32 %x, 4
-  %a = and i32 %x, 3
+  %a = and i32 %x, -2147483644
   %i = icmp ugt i32 %a, -2147483648
   %s = sext i1 %i to i32
   %r = add i32 %d, %s
   ret i32 %r
 }
 
+; negative test
+
 define i32 @floor_sdiv_wrong_cmp(i32 %x) {
 ; CHECK-LABEL: @floor_sdiv_wrong_cmp(
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr i32 [[X]], 31
-; CHECK-NEXT:    [[X_LOBIT_NOT:%.*]] = xor i32 [[X_LOBIT]], -1
-; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[D]], [[X_LOBIT_NOT]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[X]], -2147483646
+; CHECK-NEXT:    [[I:%.*]] = icmp eq i32 [[A]], -2147483646
+; CHECK-NEXT:    [[S:%.*]] = sext i1 [[I]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[D]], [[S]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %d = sdiv i32 %x, 8
+  %d = sdiv i32 %x, 4
   %a = and i32 %x, -2147483645
-  %i = icmp ult i32 %a, -2147483648
+  %i = icmp ugt i32 %a, -2147483647
   %s = sext i1 %i to i32
   %r = add i32 %d, %s
   ret i32 %r
 }
 
+; negative test
+
 define i32 @floor_sdiv_wrong_ext(i32 %x) {
 ; CHECK-LABEL: @floor_sdiv_wrong_ext(
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[X:%.*]], 4
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[X]], -2147483645
 ; CHECK-NEXT:    [[I:%.*]] = icmp ugt i32 [[A]], -2147483648
 ; CHECK-NEXT:    [[S:%.*]] = zext i1 [[I]] to i32
 ; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[D]], [[S]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %d = sdiv i32 %x, 8
+  %d = sdiv i32 %x, 4
   %a = and i32 %x, -2147483645
   %i = icmp ugt i32 %a, -2147483648
   %s = zext i1 %i to i32
@@ -2563,16 +2589,18 @@ define i32 @floor_sdiv_wrong_ext(i32 %x) {
   ret i32 %r
 }
 
+; negative test
+
 define i32 @floor_sdiv_wrong_op(i32 %x, i32 %y) {
 ; CHECK-LABEL: @floor_sdiv_wrong_op(
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[X:%.*]], 4
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[Y:%.*]], -2147483645
 ; CHECK-NEXT:    [[I:%.*]] = icmp ugt i32 [[A]], -2147483648
 ; CHECK-NEXT:    [[S:%.*]] = zext i1 [[I]] to i32
 ; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[D]], [[S]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %d = sdiv i32 %x, 8
+  %d = sdiv i32 %x, 4
   %a = and i32 %y, -2147483645
   %i = icmp ugt i32 %a, -2147483648
   %s = zext i1 %i to i32

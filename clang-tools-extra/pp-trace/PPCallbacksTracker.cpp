@@ -17,7 +17,6 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Lex/MacroArgs.h"
 #include "llvm/Support/raw_ostream.h"
-#include <optional>
 
 namespace clang {
 namespace pp_trace {
@@ -134,10 +133,9 @@ void PPCallbacksTracker::FileSkipped(const FileEntryRef &SkippedFile,
 // of whether the inclusion will actually result in an inclusion.
 void PPCallbacksTracker::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, llvm::StringRef FileName,
-    bool IsAngled, CharSourceRange FilenameRange,
-    std::optional<FileEntryRef> File, llvm::StringRef SearchPath,
-    llvm::StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+    bool IsAngled, CharSourceRange FilenameRange, Optional<FileEntryRef> File,
+    llvm::StringRef SearchPath, llvm::StringRef RelativePath,
+    const Module *Imported, SrcMgr::CharacteristicKind FileType) {
   beginCallback("InclusionDirective");
   appendArgument("HashLoc", HashLoc);
   appendArgument("IncludeTok", IncludeTok);
@@ -488,7 +486,7 @@ void PPCallbacksTracker::appendArgument(const char *Name, FileID Value) {
 
 // Append a FileEntry argument to the top trace item.
 void PPCallbacksTracker::appendArgument(const char *Name,
-                                        std::optional<FileEntryRef> Value) {
+                                        Optional<FileEntryRef> Value) {
   if (!Value) {
     appendArgument(Name, "(null)");
     return;

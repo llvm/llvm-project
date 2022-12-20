@@ -48,7 +48,6 @@ unittest("PluginsTests") {
       ":DoublerPlugin",
       ":TestPlugin",
     ]
-    defines = [ "LLVM_ENABLE_PLUGINS" ]
   }
 
   if (host_os != "mac" && host_os != "win") {

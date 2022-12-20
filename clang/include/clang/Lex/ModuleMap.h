@@ -30,7 +30,6 @@
 #include "llvm/ADT/Twine.h"
 #include <ctime>
 #include <memory>
-#include <optional>
 #include <string>
 #include <utility>
 
@@ -607,8 +606,7 @@ public:
   ///
   /// \returns The file entry for the module map file containing the given
   /// module, or nullptr if the module definition was inferred.
-  std::optional<FileEntryRef>
-  getContainingModuleMapFile(const Module *Module) const;
+  Optional<FileEntryRef> getContainingModuleMapFile(const Module *Module) const;
 
   /// Get the module map file that (along with the module name) uniquely
   /// identifies this module.
@@ -619,8 +617,7 @@ public:
   /// of inferred modules, returns the module map that allowed the inference
   /// (e.g. contained 'module *'). Otherwise, returns
   /// getContainingModuleMapFile().
-  std::optional<FileEntryRef>
-  getModuleMapFileForUniquing(const Module *M) const;
+  Optional<FileEntryRef> getModuleMapFileForUniquing(const Module *M) const;
 
   void setInferredModuleAllowedBy(Module *M, const FileEntry *ModMap);
 
