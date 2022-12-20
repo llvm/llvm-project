@@ -11,23 +11,22 @@ define i1 @PR33605(i32 %a, i32 %b, ptr %c) {
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[OR]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[OR]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    store i32 [[OR]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    tail call void @foo()
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[CMP]], true
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[C]], align 4
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq i32 [[OR]], [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[C]], align 4
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq i32 [[OR]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[IF_END_1:%.*]], label [[IF_THEN_1:%.*]]
 ; CHECK:       if.then.1:
 ; CHECK-NEXT:    store i32 [[OR]], ptr [[C]], align 4
 ; CHECK-NEXT:    tail call void @foo()
 ; CHECK-NEXT:    br label [[IF_END_1]]
 ; CHECK:       if.end.1:
-; CHECK-NEXT:    [[CHANGED_1_OFF0_1:%.*]] = phi i1 [ true, [[IF_THEN_1]] ], [ [[TMP1]], [[IF_END]] ]
+; CHECK-NEXT:    [[CHANGED_1_OFF0_1:%.*]] = phi i1 [ true, [[IF_THEN_1]] ], [ [[CMP]], [[IF_END]] ]
 ; CHECK-NEXT:    ret i1 [[CHANGED_1_OFF0_1]]
 ;
 entry:

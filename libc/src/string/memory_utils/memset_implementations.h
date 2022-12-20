@@ -22,7 +22,7 @@ namespace __llvm_libc {
 
 [[maybe_unused]] inline static void
 inline_memset_embedded_tiny(Ptr dst, uint8_t value, size_t count) {
-#pragma nounroll
+  LLVM_LIBC_LOOP_NOUNROLL
   for (size_t offset = 0; offset < count; ++offset)
     generic::Memset<1, 1>::block(dst + offset, value);
 }

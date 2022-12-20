@@ -17,7 +17,6 @@
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/ADT/STLExtras.h"
 #include <memory>
-#include <optional>
 
 using namespace clang;
 using namespace clang::index;

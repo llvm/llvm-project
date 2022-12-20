@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Transforms.h"
+#include "clang/Analysis/RetainSummaryManager.h"
 #include "clang/ARCMigrate/ARCMT.h"
 #include "clang/ARCMigrate/ARCMTActions.h"
 #include "clang/AST/ASTConsumer.h"
@@ -16,7 +17,6 @@
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
-#include "clang/Analysis/RetainSummaryManager.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Edit/Commit.h"
 #include "clang/Edit/EditedSource.h"
@@ -32,7 +32,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
-#include <optional>
 
 using namespace clang;
 using namespace arcmt;
@@ -157,7 +156,7 @@ protected:
     return AllowListFilenames.find(llvm::sys::path::filename(Path)) !=
            AllowListFilenames.end();
   }
-  bool canModifyFile(std::optional<FileEntryRef> FE) {
+  bool canModifyFile(Optional<FileEntryRef> FE) {
     if (!FE)
       return false;
     return canModifyFile(FE->getName());
@@ -1959,8 +1958,7 @@ void ObjCMigrateASTConsumer::HandleTranslationUnit(ASTContext &Ctx) {
         I = rewriter.buffer_begin(), E = rewriter.buffer_end(); I != E; ++I) {
     FileID FID = I->first;
     RewriteBuffer &buf = I->second;
-    std::optional<FileEntryRef> file =
-        Ctx.getSourceManager().getFileEntryRefForID(FID);
+    Optional<FileEntryRef> file = Ctx.getSourceManager().getFileEntryRefForID(FID);
     assert(file);
     SmallString<512> newText;
     llvm::raw_svector_ostream vecOS(newText);
@@ -2030,7 +2028,7 @@ MigrateSourceAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
 namespace {
 struct EditEntry {
-  std::optional<FileEntryRef> File;
+  Optional<FileEntryRef> File;
   unsigned Offset = 0;
   unsigned RemoveLen = 0;
   std::string Text;

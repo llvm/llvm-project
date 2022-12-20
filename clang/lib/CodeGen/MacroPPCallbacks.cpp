@@ -15,7 +15,6 @@
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
-#include <optional>
 
 using namespace clang;
 
@@ -168,9 +167,8 @@ void MacroPPCallbacks::FileChanged(SourceLocation Loc, FileChangeReason Reason,
 
 void MacroPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
-    bool IsAngled, CharSourceRange FilenameRange,
-    std::optional<FileEntryRef> File, StringRef SearchPath,
-    StringRef RelativePath, const Module *Imported,
+    bool IsAngled, CharSourceRange FilenameRange, Optional<FileEntryRef> File,
+    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
 
   // Record the line location of the current included file.

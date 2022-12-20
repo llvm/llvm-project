@@ -471,7 +471,7 @@ FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
   return FileEntryRef(NamedFileEnt);
 }
 
-std::optional<FileEntryRef> FileManager::getBypassFile(FileEntryRef VF) {
+llvm::Optional<FileEntryRef> FileManager::getBypassFile(FileEntryRef VF) {
   // Stat of the file and return nullptr if it doesn't exist.
   llvm::vfs::Status Status;
   if (getStatValue(VF.getName(), Status, /*isFile=*/true, /*F=*/nullptr))
