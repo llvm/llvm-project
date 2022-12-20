@@ -3075,6 +3075,28 @@ static SDValue lowerVECTOR_SHUFFLEAsVNSRL(const SDLoc &DL, MVT VT,
   return convertFromScalableVector(VT, Res, DAG, Subtarget);
 }
 
+static SDValue getVSlidedown(SelectionDAG &DAG, const RISCVSubtarget &Subtarget,
+                             SDLoc DL, EVT VT, SDValue Merge, SDValue Op,
+                             SDValue Offset, SDValue Mask, SDValue VL,
+                             unsigned Policy = /* TUMU */ 0) {
+  if (Merge.isUndef())
+    Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
+  SDValue PolicyOp = DAG.getTargetConstant(Policy, DL, Subtarget.getXLenVT());
+  SDValue Ops[] = {Merge, Op, Offset, Mask, VL, PolicyOp};
+  return DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, VT, Ops);
+}
+
+static SDValue getVSlideup(SelectionDAG &DAG, const RISCVSubtarget &Subtarget,
+                           SDLoc DL, EVT VT, SDValue Merge, SDValue Op,
+                           SDValue Offset, SDValue Mask, SDValue VL,
+                           unsigned Policy = /* TUMU */ 0) {
+  if (Merge.isUndef())
+    Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
+  SDValue PolicyOp = DAG.getTargetConstant(Policy, DL, Subtarget.getXLenVT());
+  SDValue Ops[] = {Merge, Op, Offset, Mask, VL, PolicyOp};
+  return DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, VT, Ops);
+}
+
 // Lower the following shuffle to vslidedown.
 // a)
 // t49: v8i8 = extract_subvector t13, Constant:i64<0>
@@ -3142,10 +3164,10 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlidedown(const SDLoc &DL, MVT VT,
   MVT SrcVT = Src.getSimpleValueType();
   MVT ContainerVT = getContainerForFixedLengthVector(DAG, SrcVT, Subtarget);
   auto [TrueMask, VL] = getDefaultVLOps(SrcVT, ContainerVT, DL, DAG, Subtarget);
-  SDValue Slidedown = DAG.getNode(
-      RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-      convertToScalableVector(ContainerVT, Src, DAG, Subtarget),
-      DAG.getConstant(NewMask[0], DL, XLenVT), TrueMask, VL);
+  SDValue Slidedown =
+      getVSlidedown(DAG, Subtarget, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
+                    convertToScalableVector(ContainerVT, Src, DAG, Subtarget),
+                    DAG.getConstant(NewMask[0], DL, XLenVT), TrueMask, VL);
   return DAG.getNode(
       ISD::EXTRACT_SUBVECTOR, DL, VT,
       convertFromScalableVector(SrcVT, Slidedown, DAG, Subtarget),
@@ -3275,12 +3297,12 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       SDValue DownVL = VL;
       if (LoV)
         DownVL = DAG.getConstant(InvRotate, DL, XLenVT);
-      Res =
-          DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT, Res, HiV,
-                      DAG.getConstant(Rotation, DL, XLenVT), TrueMask, DownVL);
+      Res = getVSlidedown(DAG, Subtarget, DL, ContainerVT, Res, HiV,
+                          DAG.getConstant(Rotation, DL, XLenVT), TrueMask,
+                          DownVL);
     }
     if (LoV)
-      Res = DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, ContainerVT, Res, LoV,
+      Res = getVSlideup(DAG, Subtarget, DL, ContainerVT, Res, LoV,
                         DAG.getConstant(InvRotate, DL, XLenVT), TrueMask, VL);
 
     return convertFromScalableVector(VT, Res, DAG, Subtarget);
@@ -5225,8 +5247,8 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   // Now that the value is in a vector, slide it into position.
   SDValue InsertVL =
       DAG.getNode(ISD::ADD, DL, XLenVT, Idx, DAG.getConstant(1, DL, XLenVT));
-  SDValue Slideup = DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, ContainerVT, Vec,
-                                ValInVec, Idx, Mask, InsertVL);
+  SDValue Slideup = getVSlideup(DAG, Subtarget, DL, ContainerVT, Vec, ValInVec,
+                                Idx, Mask, InsertVL);
   if (!VecVT.isFixedLengthVector())
     return Slideup;
   return convertFromScalableVector(VecVT, Slideup, DAG, Subtarget);
@@ -5303,8 +5325,8 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   if (!isNullConstant(Idx)) {
     // Use a VL of 1 to avoid processing more elements than we need.
     auto [Mask, VL] = getDefaultVLOps(1, ContainerVT, DL, DAG, Subtarget);
-    Vec = DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT,
-                      DAG.getUNDEF(ContainerVT), Vec, Idx, Mask, VL);
+    Vec = getVSlidedown(DAG, Subtarget, DL, ContainerVT,
+                        DAG.getUNDEF(ContainerVT), Vec, Idx, Mask, VL);
   }
 
   if (!EltVT.isInteger()) {
@@ -6133,8 +6155,8 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
     SDValue VL =
         getVLOp(OrigIdx + SubVecVT.getVectorNumElements(), DL, DAG, Subtarget);
     SDValue SlideupAmt = DAG.getConstant(OrigIdx, DL, XLenVT);
-    SDValue Slideup = DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, ContainerVT, Vec,
-                                  SubVec, SlideupAmt, Mask, VL);
+    SDValue Slideup = getVSlideup(DAG, Subtarget, DL, ContainerVT, Vec, SubVec,
+                                  SlideupAmt, Mask, VL);
     if (VecVT.isFixedLengthVector())
       Slideup = convertFromScalableVector(VecVT, Slideup, DAG, Subtarget);
     return DAG.getBitcast(Op.getValueType(), Slideup);
@@ -6196,8 +6218,8 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
                        DAG.getUNDEF(InterSubVT), SubVec,
                        DAG.getConstant(0, DL, XLenVT));
 
-  SDValue Slideup = DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, InterSubVT,
-                                AlignedExtract, SubVec, SlideupAmt, Mask, VL);
+  SDValue Slideup = getVSlideup(DAG, Subtarget, DL, InterSubVT, AlignedExtract,
+                                SubVec, SlideupAmt, Mask, VL);
 
   // If required, insert this subvector back into the correct vector register.
   // This should resolve to an INSERT_SUBREG instruction.
@@ -6280,8 +6302,8 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
     SDValue VL = getVLOp(SubVecVT.getVectorNumElements(), DL, DAG, Subtarget);
     SDValue SlidedownAmt = DAG.getConstant(OrigIdx, DL, XLenVT);
     SDValue Slidedown =
-        DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT,
-                    DAG.getUNDEF(ContainerVT), Vec, SlidedownAmt, Mask, VL);
+        getVSlidedown(DAG, Subtarget, DL, ContainerVT,
+                      DAG.getUNDEF(ContainerVT), Vec, SlidedownAmt, Mask, VL);
     // Now we can use a cast-like subvector extract to get the result.
     Slidedown = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVecVT, Slidedown,
                             DAG.getConstant(0, DL, XLenVT));
@@ -6320,8 +6342,8 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
 
   auto [Mask, VL] = getDefaultScalableVLOps(InterSubVT, DL, DAG, Subtarget);
   SDValue Slidedown =
-      DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, InterSubVT,
-                  DAG.getUNDEF(InterSubVT), Vec, SlidedownAmt, Mask, VL);
+      getVSlidedown(DAG, Subtarget, DL, InterSubVT, DAG.getUNDEF(InterSubVT),
+                    Vec, SlidedownAmt, Mask, VL);
 
   // Now the vector is in the right position, extract our final subvector. This
   // should resolve to a COPY.
@@ -6470,9 +6492,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_SPLICE(SDValue Op,
   SDValue TrueMask = getAllOnesMask(VecVT, VLMax, DL, DAG);
 
   SDValue SlideDown =
-      DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, VecVT, DAG.getUNDEF(VecVT), V1,
-                  DownOffset, TrueMask, UpOffset);
-  return DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, VecVT, SlideDown, V2, UpOffset,
+      getVSlidedown(DAG, Subtarget, DL, VecVT, DAG.getUNDEF(VecVT), V1,
+                    DownOffset, TrueMask, UpOffset);
+  return getVSlideup(DAG, Subtarget, DL, VecVT, SlideDown, V2, UpOffset,
                      TrueMask, DAG.getRegister(RISCV::X0, XLenVT));
 }
 
@@ -7934,8 +7956,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     // Unless the index is known to be 0, we must slide the vector down to get
     // the desired element into index 0.
     if (!isNullConstant(Idx)) {
-      Vec = DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT,
-                        DAG.getUNDEF(ContainerVT), Vec, Idx, Mask, VL);
+      Vec = getVSlidedown(DAG, Subtarget, DL, ContainerVT,
+                          DAG.getUNDEF(ContainerVT), Vec, Idx, Mask, VL);
     }
 
     // Extract the lower XLEN bits of the correct vector element.
