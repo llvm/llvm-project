@@ -551,8 +551,85 @@ bool ByteCodeExprGen<Emitter>::VisitCharacterLiteral(
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitFloatCompoundAssignOperator(
+    const CompoundAssignOperator *E) {
+  assert(E->getType()->isFloatingType());
+
+  const Expr *LHS = E->getLHS();
+  const Expr *RHS = E->getRHS();
+  llvm::RoundingMode RM = getRoundingMode(E);
+  QualType LHSComputationType = E->getComputationLHSType();
+  QualType ResultType = E->getComputationResultType();
+  std::optional<PrimType> LT = classify(LHSComputationType);
+  std::optional<PrimType> RT = classify(ResultType);
+
+  if (!LT || !RT)
+    return false;
+
+  // First, visit LHS.
+  if (!visit(LHS))
+    return false;
+
+  if (!this->emitLoad(*LT, E))
+    return false;
+
+  // If necessary, convert LHS to its computation type.
+  if (LHS->getType() != LHSComputationType) {
+    const auto *TargetSemantics =
+        &Ctx.getASTContext().getFloatTypeSemantics(LHSComputationType);
+
+    if (!this->emitCastFP(TargetSemantics, RM, E))
+      return false;
+  }
+
+  // Now load RHS.
+  if (!visit(RHS))
+    return false;
+
+  switch (E->getOpcode()) {
+  case BO_AddAssign:
+    if (!this->emitAddf(RM, E))
+      return false;
+    break;
+  case BO_SubAssign:
+    if (!this->emitSubf(RM, E))
+      return false;
+    break;
+  case BO_MulAssign:
+    if (!this->emitMulf(RM, E))
+      return false;
+    break;
+  case BO_DivAssign:
+    if (!this->emitDivf(RM, E))
+      return false;
+    break;
+  default:
+    return false;
+  }
+
+  // If necessary, convert result to LHS's type.
+  if (LHS->getType() != ResultType) {
+    const auto *TargetSemantics =
+        &Ctx.getASTContext().getFloatTypeSemantics(LHS->getType());
+
+    if (!this->emitCastFP(TargetSemantics, RM, E))
+      return false;
+  }
+
+  if (DiscardResult)
+    return this->emitStorePop(*LT, E);
+  return this->emitStore(*LT, E);
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
     const CompoundAssignOperator *E) {
+
+  // Handle floating point operations separately here, since they
+  // require special care.
+  if (E->getType()->isFloatingType())
+    return VisitFloatCompoundAssignOperator(E);
+
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
   std::optional<PrimType> LHSComputationT =
@@ -567,8 +644,7 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
   assert(!E->getType()->isPointerType() &&
          "Support pointer arithmethic in compound assignment operators");
 
-  assert(!E->getType()->isFloatingType() &&
-         "Support floating types in compound assignment operators");
+  assert(!E->getType()->isFloatingType() && "Handled above");
 
   // Get LHS pointer, load its value and get RHS value.
   if (!visit(LHS))
