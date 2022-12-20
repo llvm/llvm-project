@@ -1201,6 +1201,7 @@ class binop_oneuse<SDPatternOperator operator>
   return N->hasOneUse();
 }]>;
 
+def and_oneuse : binop_oneuse<and>;
 def add_oneuse : binop_oneuse<add>;
 def mul_oneuse : binop_oneuse<mul>;
 
@@ -1237,6 +1238,12 @@ def : PatGprSimm12<xor, XORI>;
 def : PatGprUimmLog2XLen<shl, SLLI>;
 def : PatGprUimmLog2XLen<srl, SRLI>;
 def : PatGprUimmLog2XLen<sra, SRAI>;
+
+// negate of low bit can be done via two (compressible) shifts.  The negate
+// is never compressible since rs1 and rd can't be the same register.
+def : Pat<(XLenVT (sub 0, (and_oneuse GPR:$rs, 1))),
+          (SRAI (SLLI $rs, (ImmSubFromXLen (XLenVT 1))),
+                (ImmSubFromXLen (XLenVT 1)))>;
 
 // AND with leading/trailing ones mask exceeding simm32/simm12.
 def : Pat<(i64 (and GPR:$rs, LeadingOnesMask:$mask)),
