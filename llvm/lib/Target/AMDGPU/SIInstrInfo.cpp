@@ -3156,9 +3156,9 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
         return false;
 
       unsigned NewOpc =
-          IsFMA ? (IsF32 ? AMDGPU::V_FMAMK_F32
-                         : ST.hasTrue16BitInsts() ? AMDGPU::V_FMAMK_F16_t16
-                                                  : AMDGPU::V_FMAMK_F16)
+          IsFMA ? (IsF32                    ? AMDGPU::V_FMAMK_F32
+                   : ST.hasTrue16BitInsts() ? AMDGPU::V_FMAMK_F16_t16
+                                            : AMDGPU::V_FMAMK_F16)
                 : (IsF32 ? AMDGPU::V_MADMK_F32 : AMDGPU::V_MADMK_F16);
       if (pseudoToMCOpcode(NewOpc) == -1)
         return false;
@@ -3236,9 +3236,9 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       }
 
       unsigned NewOpc =
-          IsFMA ? (IsF32 ? AMDGPU::V_FMAAK_F32
-                         : ST.hasTrue16BitInsts() ? AMDGPU::V_FMAAK_F16_t16
-                                                  : AMDGPU::V_FMAAK_F16)
+          IsFMA ? (IsF32                    ? AMDGPU::V_FMAAK_F32
+                   : ST.hasTrue16BitInsts() ? AMDGPU::V_FMAAK_F16_t16
+                                            : AMDGPU::V_FMAAK_F16)
                 : (IsF32 ? AMDGPU::V_MADAK_F32 : AMDGPU::V_MADAK_F16);
       if (pseudoToMCOpcode(NewOpc) == -1)
         return false;
@@ -8393,6 +8393,125 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   }
 
   return SchedModel.computeInstrLatency(&MI);
+}
+
+InstructionUniformity
+SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
+  unsigned opcode = MI.getOpcode();
+  if (opcode == AMDGPU::G_INTRINSIC ||
+      opcode == AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS) {
+    return AMDGPU::isIntrinsicSourceOfDivergence(MI.getIntrinsicID())
+               ? InstructionUniformity::NeverUniform
+               : InstructionUniformity::AlwaysUniform;
+  }
+
+  // Loads from the private and flat address spaces are divergent, because
+  // threads can execute the load instruction with the same inputs and get
+  // different results.
+  //
+  // All other loads are not divergent, because if threads issue loads with the
+  // same arguments, they will always get the same result.
+  if (opcode == AMDGPU::G_LOAD) {
+    if (MI.memoperands_empty())
+      return InstructionUniformity::NeverUniform; // conservative assumption
+
+    if (llvm::any_of(MI.memoperands(), [](const MachineMemOperand *mmo) {
+          return mmo->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS ||
+                 mmo->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS;
+        })) {
+      // At least one MMO in a non-global address space.
+      return InstructionUniformity::NeverUniform;
+    }
+    return InstructionUniformity::Default;
+  }
+
+  if (SIInstrInfo::isGenericAtomicRMWOpcode(opcode) ||
+      opcode == AMDGPU::G_ATOMIC_CMPXCHG ||
+      opcode == AMDGPU::G_ATOMIC_CMPXCHG_WITH_SUCCESS) {
+    return InstructionUniformity::NeverUniform;
+  }
+  return InstructionUniformity::Default;
+}
+
+InstructionUniformity
+SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
+  if (MI.getDesc().TSFlags & SIInstrFlags::IsSourceOfDivergence)
+    return InstructionUniformity::NeverUniform;
+
+  // Atomics are divergent because they are executed sequentially: when an
+  // atomic operation refers to the same address in each thread, then each
+  // thread after the first sees the value written by the previous thread as
+  // original value.
+
+  if (isAtomic(MI))
+    return InstructionUniformity::NeverUniform;
+
+  // Loads from the private and flat address spaces are divergent, because
+  // threads can execute the load instruction with the same inputs and get
+  // different results.
+  if (isFLAT(MI) && MI.mayLoad()) {
+    if (MI.memoperands_empty())
+      return InstructionUniformity::NeverUniform; // conservative assumption
+
+    if (llvm::any_of(MI.memoperands(), [](const MachineMemOperand *mmo) {
+          return mmo->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS ||
+                 mmo->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS;
+        })) {
+      // At least one MMO in a non-global address space.
+      return InstructionUniformity::NeverUniform;
+    }
+
+    return InstructionUniformity::Default;
+  }
+
+  unsigned opcode = MI.getOpcode();
+  if (opcode == AMDGPU::COPY) {
+    const MachineOperand &srcOp = MI.getOperand(1);
+    if (srcOp.isReg() && srcOp.getReg().isPhysical()) {
+      const TargetRegisterClass *regClass = RI.getPhysRegClass(srcOp.getReg());
+      return RI.isSGPRClass(regClass) ? InstructionUniformity::AlwaysUniform
+                                      : InstructionUniformity::NeverUniform;
+    }
+    return InstructionUniformity::Default;
+  }
+  if (opcode == AMDGPU::INLINEASM || opcode == AMDGPU::INLINEASM_BR) {
+    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+    for (auto &op : MI.operands()) {
+      if (!op.isReg() || !op.isDef())
+        continue;
+      auto *RC = MRI.getRegClass(op.getReg());
+      if (!RC || RI.isDivergentRegClass(RC))
+        return InstructionUniformity::NeverUniform;
+    }
+    return InstructionUniformity::AlwaysUniform;
+  }
+  if (opcode == AMDGPU::V_READLANE_B32 || opcode == AMDGPU::V_READFIRSTLANE_B32)
+    return InstructionUniformity::AlwaysUniform;
+
+  if (opcode == AMDGPU::V_WRITELANE_B32)
+    return InstructionUniformity::NeverUniform;
+
+  // GMIR handling
+  if (SIInstrInfo::isGenericOpcode(opcode))
+    return SIInstrInfo::getGenericInstructionUniformity(MI);
+
+  // Handling $vpgr reads
+  for (auto srcOp : MI.operands()) {
+    if (srcOp.isReg() && srcOp.getReg().isPhysical()) {
+      const TargetRegisterClass *regClass = RI.getPhysRegClass(srcOp.getReg());
+      if (RI.isVGPRClass(regClass))
+        return InstructionUniformity::NeverUniform;
+    }
+  }
+
+  // TODO: Uniformity check condtions above can be rearranged for more
+  // redability
+
+  // TODO: amdgcn.{ballot, [if]cmp} should be AlwaysUniform, but they are
+  //       currently turned into no-op COPYs by SelectionDAG ISel and are
+  //       therefore no longer recognizable.
+
+  return InstructionUniformity::Default;
 }
 
 unsigned SIInstrInfo::getDSShaderTypeValue(const MachineFunction &MF) {
