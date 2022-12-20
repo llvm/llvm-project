@@ -1839,3 +1839,31 @@ define i1 @isNotKnownNeverInfinity_sqrt(double %x) {
 }
 
 declare double @llvm.sqrt.f64(double)
+
+; No source check required
+define i1 @isKnownNeverInfinity_sin(double %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_sin(
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.sin.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = call double @llvm.sin.f64(double %x)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+declare double @llvm.sin.f64(double)
+
+; No source check required
+define i1 @isKnownNeverInfinity_cos(double %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_cos(
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.cos.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = call double @llvm.cos.f64(double %x)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+declare double @llvm.cos.f64(double)
