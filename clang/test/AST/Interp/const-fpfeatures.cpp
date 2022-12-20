@@ -50,9 +50,6 @@ float V2 = add_round_up(1.0F, 0x0.000001p0F);
 // CHECK: @V2 = {{.*}} float 0x3FF0000020000000
 
 
-/// FIXME: The following tests need support for compound assign operators
-///   with LHS and RHS of different semantics.
-#if 0
 constexpr float add_cast_round_down(float x, double y) {
   #pragma STDC FENV_ROUND FE_DOWNWARD
   float res = x;
@@ -70,5 +67,5 @@ constexpr float add_cast_round_up(float x, double y) {
 float V3 = add_cast_round_down(1.0F, 0x0.000001p0F);
 float V4 = add_cast_round_up(1.0F, 0x0.000001p0F);
 
-
-#endif
+// CHECK: @V3 = {{.*}} float 1.000000e+00
+// CHECK: @V4 = {{.*}} float 0x3FF0000020000000

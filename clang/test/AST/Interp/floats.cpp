@@ -54,3 +54,27 @@ constexpr int someInt = fm; // ref-error {{must be initialized by a constant exp
                             // ref-note {{is outside the range of representable values}} \
                             // expected-error {{must be initialized by a constant expression}} \
                             // expected-note {{is outside the range of representable values}}
+
+namespace compound {
+  constexpr float f1() {
+    float f = 0;
+    f += 3.0;
+    f -= 3.0f;
+
+    f += 1;
+    f /= 1;
+    f /= 1.0;
+    f *= f;
+
+    f *= 2.0;
+    return f;
+  }
+  static_assert(f1() == 2, "");
+
+  constexpr float f2() {
+    float f = __FLT_MAX__;
+    f += 1.0;
+    return f;
+  }
+  static_assert(f2() == __FLT_MAX__, "");
+}
