@@ -63,6 +63,10 @@ namespace llvm {
   createMachineFunctionPrinterPass(raw_ostream &OS,
                                    const std::string &Banner ="");
 
+  /// StackFramePrinter pass - This pass prints out the machine function's
+  /// stack frame to the given stream as a debugging tool.
+  MachineFunctionPass *createStackFrameLayoutAnalysisPass();
+
   /// MIRPrinting pass - this pass prints out the LLVM IR into the given stream
   /// using the MIR serialization format.
   MachineFunctionPass *createPrintMIRPass(raw_ostream &OS);
@@ -263,6 +267,10 @@ namespace llvm {
   /// StackSlotColoring - This pass performs stack coloring and merging.
   /// It merges disjoint allocas to reduce the stack size.
   extern char &StackColoringID;
+
+  /// StackFramePrinter - This pass prints the stack frame layout and variable
+  /// mappings.
+  extern char &StackFrameLayoutAnalysisPassID;
 
   /// IfConverter - This pass performs machine code if conversion.
   extern char &IfConverterID;
