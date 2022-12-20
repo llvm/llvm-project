@@ -1078,19 +1078,19 @@ public:
   /// \returns The PointerAuth key.
   Optional<unsigned> getPtrAuthKey() const {
     if (auto PtrAuthData = getPtrAuthData())
-      return PtrAuthData->Payload.Data.Key;
+      return (unsigned)PtrAuthData->Payload.Data.Key;
     else return std::nullopt;
   }
   /// \returns The PointerAuth address discrimination bit.
   Optional<bool> isPtrAuthAddressDiscriminated() const {
     if (auto PtrAuthData = getPtrAuthData())
-      return PtrAuthData->Payload.Data.IsAddressDiscriminated;
+      return (bool)PtrAuthData->Payload.Data.IsAddressDiscriminated;
     else return std::nullopt;
   }
   /// \returns The PointerAuth extra discriminator.
   Optional<unsigned> getPtrAuthExtraDiscriminator() const {
     if (auto PtrAuthData = getPtrAuthData())
-      return PtrAuthData->Payload.Data.ExtraDiscriminator;
+      return (unsigned)PtrAuthData->Payload.Data.ExtraDiscriminator;
     else return std::nullopt;
   }
 
