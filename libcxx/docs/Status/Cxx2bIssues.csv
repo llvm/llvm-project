@@ -231,7 +231,7 @@
 "`3784 <https://wg21.link/LWG3784>`__","std.compat should not provide ``::byte`` and its friends", "November 2022","","",""
 "`3785 <https://wg21.link/LWG3785>`__","``ranges::to`` is over-constrained on the destination type being a range", "November 2022","","","|ranges|"
 "`3788 <https://wg21.link/LWG3788>`__","``jthread::operator=(jthread&&)`` postconditions are unimplementable under self-assignment", "November 2022","","",""
-"`3792 <https://wg21.link/LWG3792>`__","``__cpp_lib_constexpr_algorithms`` should also be defined in ``<utility>``", "November 2022","","",""
+"`3792 <https://wg21.link/LWG3792>`__","``__cpp_lib_constexpr_algorithms`` should also be defined in ``<utility>``", "November 2022","|Complete|","16.0",""
 "`3795 <https://wg21.link/LWG3795>`__","Self-move-assignment of ``std::future`` and ``std::shared_future`` have unimplementable postconditions", "November 2022","","",""
 "`3796 <https://wg21.link/LWG3796>`__","``movable-box`` as member should use ``default-initialization`` instead of ``copy-initialization``", "November 2022","","","|ranges|"
 "`3798 <https://wg21.link/LWG3798>`__","Rvalue reference and ``iterator_category``", "November 2022","","",""
