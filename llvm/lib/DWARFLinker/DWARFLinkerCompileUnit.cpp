@@ -94,8 +94,10 @@ void CompileUnit::fixupForwardReferences() {
       assert(Ctxt->getCanonicalDIEOffset() &&
              "Canonical die offset is not set");
       Attr.set(Ctxt->getCanonicalDIEOffset());
-    } else
+    } else {
+      assert(RefDie->getOffset() && "Referenced die offset is not set");
       Attr.set(RefDie->getOffset() + RefUnit->getStartOffset());
+    }
   }
 }
 
