@@ -4776,7 +4776,6 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
         OMPInfoCache.RFIs[OMPRTL___kmpc_target_init];
     InitRFI.foreachUse(SCC, CreateKernelInfoCB);
 
-    registerFoldRuntimeCall(OMPRTL___kmpc_is_generic_main_thread_id);
     registerFoldRuntimeCall(OMPRTL___kmpc_is_spmd_exec_mode);
     registerFoldRuntimeCall(OMPRTL___kmpc_parallel_level);
     registerFoldRuntimeCall(OMPRTL___kmpc_get_hardware_num_threads_in_block);
