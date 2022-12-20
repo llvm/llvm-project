@@ -1070,6 +1070,7 @@ void DXILBitcodeWriter::writeTypeTable() {
     case Type::BFloatTyID:
     case Type::X86_AMXTyID:
     case Type::TokenTyID:
+    case Type::TargetExtTyID:
       llvm_unreachable("These should never be used!!!");
       break;
     case Type::VoidTyID:
