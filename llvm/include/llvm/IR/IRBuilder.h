@@ -1592,6 +1592,19 @@ public:
                         Cond2, Name);
   }
 
+  Value *CreateLogicalOp(Instruction::BinaryOps Opc, Value *Cond1, Value *Cond2,
+                         const Twine &Name = "") {
+    switch (Opc) {
+    case Instruction::And:
+      return CreateLogicalAnd(Cond1, Cond2, Name);
+    case Instruction::Or:
+      return CreateLogicalOr(Cond1, Cond2, Name);
+    default:
+      break;
+    }
+    llvm_unreachable("Not a logical operation.");
+  }
+
   // NOTE: this is sequential, non-commutative, ordered reduction!
   Value *CreateLogicalOr(ArrayRef<Value *> Ops) {
     assert(!Ops.empty());

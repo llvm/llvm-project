@@ -13,8 +13,8 @@ declare void @use1(i1)
 define i32 @t0(i1 %i0, i32 %v0, i32 %v1, i32 %v2, i32 %v3) {
 ; CHECK-LABEL: @t0(
 ; CHECK-NEXT:    [[I1:%.*]] = icmp ne i32 [[V0:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[I1]], [[I0:%.*]]
-; CHECK-NEXT:    [[I4:%.*]] = select i1 [[TMP1]], i32 [[V3:%.*]], i32 [[V2:%.*]]
+; CHECK-NEXT:    [[I3_NOT:%.*]] = and i1 [[I1]], [[I0:%.*]]
+; CHECK-NEXT:    [[I4:%.*]] = select i1 [[I3_NOT]], i32 [[V3:%.*]], i32 [[V2:%.*]]
 ; CHECK-NEXT:    ret i32 [[I4]]
 ;
   %i1 = icmp eq i32 %v0, %v1
@@ -28,8 +28,8 @@ define i32 @t1(i32 %v0, i32 %v1, i32 %v2, i32 %v3, i32 %v4, i32 %v5) {
 ; CHECK-NEXT:    [[I0:%.*]] = icmp eq i32 [[V0:%.*]], [[V1:%.*]]
 ; CHECK-NEXT:    [[I1:%.*]] = icmp ne i32 [[V2:%.*]], [[V3:%.*]]
 ; CHECK-NEXT:    call void @use1(i1 [[I0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[I0]], [[I1]]
-; CHECK-NEXT:    [[I4:%.*]] = select i1 [[TMP1]], i32 [[V5:%.*]], i32 [[V4:%.*]]
+; CHECK-NEXT:    [[I3_NOT:%.*]] = and i1 [[I1]], [[I0]]
+; CHECK-NEXT:    [[I4:%.*]] = select i1 [[I3_NOT]], i32 [[V5:%.*]], i32 [[V4:%.*]]
 ; CHECK-NEXT:    ret i32 [[I4]]
 ;
   %i0 = icmp eq i32 %v0, %v1
