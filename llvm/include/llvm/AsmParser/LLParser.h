@@ -433,6 +433,7 @@ namespace llvm {
 
     bool parseArrayVectorType(Type *&Result, bool IsVector);
     bool parseFunctionType(Type *&Result);
+    bool parseTargetExtType(Type *&Result);
 
     // Function Semantic Analysis.
     class PerFunctionState {
