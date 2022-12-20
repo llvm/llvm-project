@@ -6,16 +6,16 @@
 define i16 @select_xor_1(i16 %A, i8 %cond) {
 ; RV32-LABEL: select_xor_1:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    andi a1, a1, 1
-; RV32-NEXT:    neg a1, a1
+; RV32-NEXT:    slli a1, a1, 31
+; RV32-NEXT:    srai a1, a1, 31
 ; RV32-NEXT:    andi a1, a1, 43
 ; RV32-NEXT:    xor a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; NOCONDOPS-LABEL: select_xor_1:
 ; NOCONDOPS:       # %bb.0: # %entry
-; NOCONDOPS-NEXT:    andi a1, a1, 1
-; NOCONDOPS-NEXT:    negw a1, a1
+; NOCONDOPS-NEXT:    slli a1, a1, 63
+; NOCONDOPS-NEXT:    srai a1, a1, 63
 ; NOCONDOPS-NEXT:    andi a1, a1, 43
 ; NOCONDOPS-NEXT:    xor a0, a1, a0
 ; NOCONDOPS-NEXT:    ret
@@ -41,16 +41,16 @@ entry:
 define i16 @select_xor_1b(i16 %A, i8 %cond) {
 ; RV32-LABEL: select_xor_1b:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    andi a1, a1, 1
-; RV32-NEXT:    neg a1, a1
+; RV32-NEXT:    slli a1, a1, 31
+; RV32-NEXT:    srai a1, a1, 31
 ; RV32-NEXT:    andi a1, a1, 43
 ; RV32-NEXT:    xor a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; NOCONDOPS-LABEL: select_xor_1b:
 ; NOCONDOPS:       # %bb.0: # %entry
-; NOCONDOPS-NEXT:    andi a1, a1, 1
-; NOCONDOPS-NEXT:    negw a1, a1
+; NOCONDOPS-NEXT:    slli a1, a1, 63
+; NOCONDOPS-NEXT:    srai a1, a1, 63
 ; NOCONDOPS-NEXT:    andi a1, a1, 43
 ; NOCONDOPS-NEXT:    xor a0, a1, a0
 ; NOCONDOPS-NEXT:    ret
@@ -73,16 +73,16 @@ entry:
 define i32 @select_xor_2(i32 %A, i32 %B, i8 %cond) {
 ; RV32-LABEL: select_xor_2:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    andi a2, a2, 1
-; RV32-NEXT:    neg a2, a2
+; RV32-NEXT:    slli a2, a2, 31
+; RV32-NEXT:    srai a2, a2, 31
 ; RV32-NEXT:    and a1, a2, a1
 ; RV32-NEXT:    xor a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; NOCONDOPS-LABEL: select_xor_2:
 ; NOCONDOPS:       # %bb.0: # %entry
-; NOCONDOPS-NEXT:    andi a2, a2, 1
-; NOCONDOPS-NEXT:    neg a2, a2
+; NOCONDOPS-NEXT:    slli a2, a2, 63
+; NOCONDOPS-NEXT:    srai a2, a2, 63
 ; NOCONDOPS-NEXT:    and a1, a2, a1
 ; NOCONDOPS-NEXT:    xor a0, a1, a0
 ; NOCONDOPS-NEXT:    ret
@@ -107,16 +107,16 @@ entry:
 define i32 @select_xor_2b(i32 %A, i32 %B, i8 %cond) {
 ; RV32-LABEL: select_xor_2b:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    andi a2, a2, 1
-; RV32-NEXT:    neg a2, a2
+; RV32-NEXT:    slli a2, a2, 31
+; RV32-NEXT:    srai a2, a2, 31
 ; RV32-NEXT:    and a1, a2, a1
 ; RV32-NEXT:    xor a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; NOCONDOPS-LABEL: select_xor_2b:
 ; NOCONDOPS:       # %bb.0: # %entry
-; NOCONDOPS-NEXT:    andi a2, a2, 1
-; NOCONDOPS-NEXT:    neg a2, a2
+; NOCONDOPS-NEXT:    slli a2, a2, 63
+; NOCONDOPS-NEXT:    srai a2, a2, 63
 ; NOCONDOPS-NEXT:    and a1, a2, a1
 ; NOCONDOPS-NEXT:    xor a0, a1, a0
 ; NOCONDOPS-NEXT:    ret
@@ -138,16 +138,16 @@ entry:
 define i32 @select_or(i32 %A, i32 %B, i8 %cond) {
 ; RV32-LABEL: select_or:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    andi a2, a2, 1
-; RV32-NEXT:    neg a2, a2
+; RV32-NEXT:    slli a2, a2, 31
+; RV32-NEXT:    srai a2, a2, 31
 ; RV32-NEXT:    and a1, a2, a1
 ; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; NOCONDOPS-LABEL: select_or:
 ; NOCONDOPS:       # %bb.0: # %entry
-; NOCONDOPS-NEXT:    andi a2, a2, 1
-; NOCONDOPS-NEXT:    neg a2, a2
+; NOCONDOPS-NEXT:    slli a2, a2, 63
+; NOCONDOPS-NEXT:    srai a2, a2, 63
 ; NOCONDOPS-NEXT:    and a1, a2, a1
 ; NOCONDOPS-NEXT:    or a0, a1, a0
 ; NOCONDOPS-NEXT:    ret
@@ -172,16 +172,16 @@ entry:
 define i32 @select_or_b(i32 %A, i32 %B, i8 %cond) {
 ; RV32-LABEL: select_or_b:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    andi a2, a2, 1
-; RV32-NEXT:    neg a2, a2
+; RV32-NEXT:    slli a2, a2, 31
+; RV32-NEXT:    srai a2, a2, 31
 ; RV32-NEXT:    and a1, a2, a1
 ; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; NOCONDOPS-LABEL: select_or_b:
 ; NOCONDOPS:       # %bb.0: # %entry
-; NOCONDOPS-NEXT:    andi a2, a2, 1
-; NOCONDOPS-NEXT:    neg a2, a2
+; NOCONDOPS-NEXT:    slli a2, a2, 63
+; NOCONDOPS-NEXT:    srai a2, a2, 63
 ; NOCONDOPS-NEXT:    and a1, a2, a1
 ; NOCONDOPS-NEXT:    or a0, a1, a0
 ; NOCONDOPS-NEXT:    ret
@@ -203,16 +203,16 @@ entry:
 define i32 @select_or_1(i32 %A, i32 %B, i32 %cond) {
 ; RV32-LABEL: select_or_1:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    andi a2, a2, 1
-; RV32-NEXT:    neg a2, a2
+; RV32-NEXT:    slli a2, a2, 31
+; RV32-NEXT:    srai a2, a2, 31
 ; RV32-NEXT:    and a1, a2, a1
 ; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; NOCONDOPS-LABEL: select_or_1:
 ; NOCONDOPS:       # %bb.0: # %entry
-; NOCONDOPS-NEXT:    andi a2, a2, 1
-; NOCONDOPS-NEXT:    neg a2, a2
+; NOCONDOPS-NEXT:    slli a2, a2, 63
+; NOCONDOPS-NEXT:    srai a2, a2, 63
 ; NOCONDOPS-NEXT:    and a1, a2, a1
 ; NOCONDOPS-NEXT:    or a0, a1, a0
 ; NOCONDOPS-NEXT:    ret
@@ -237,16 +237,16 @@ entry:
 define i32 @select_or_1b(i32 %A, i32 %B, i32 %cond) {
 ; RV32-LABEL: select_or_1b:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    andi a2, a2, 1
-; RV32-NEXT:    neg a2, a2
+; RV32-NEXT:    slli a2, a2, 31
+; RV32-NEXT:    srai a2, a2, 31
 ; RV32-NEXT:    and a1, a2, a1
 ; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; NOCONDOPS-LABEL: select_or_1b:
 ; NOCONDOPS:       # %bb.0: # %entry
-; NOCONDOPS-NEXT:    andi a2, a2, 1
-; NOCONDOPS-NEXT:    neg a2, a2
+; NOCONDOPS-NEXT:    slli a2, a2, 63
+; NOCONDOPS-NEXT:    srai a2, a2, 63
 ; NOCONDOPS-NEXT:    and a1, a2, a1
 ; NOCONDOPS-NEXT:    or a0, a1, a0
 ; NOCONDOPS-NEXT:    ret

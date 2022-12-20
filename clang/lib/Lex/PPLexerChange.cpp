@@ -94,7 +94,7 @@ bool Preprocessor::EnterSourceFile(FileID FID, ConstSearchDirIterator CurDir,
   Lexer *TheLexer = new Lexer(FID, *InputFile, *this, IsFirstIncludeOfFile);
   if (getPreprocessorOpts().DependencyDirectivesForFile &&
       FID != PredefinesFileID) {
-    if (Optional<FileEntryRef> File = SourceMgr.getFileEntryRefForID(FID)) {
+    if (OptionalFileEntryRef File = SourceMgr.getFileEntryRefForID(FID)) {
       if (Optional<ArrayRef<dependency_directives_scan::Directive>>
               DepDirectives =
                   getPreprocessorOpts().DependencyDirectivesForFile(*File)) {

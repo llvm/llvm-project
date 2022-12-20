@@ -17,7 +17,7 @@
 
 #pragma omp begin declare target device_type(nohost)
 
-using namespace _OMP;
+using namespace ompx;
 
 extern "C" __attribute__((weak)) int IsSPMDMode;
 
