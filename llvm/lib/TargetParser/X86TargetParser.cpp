@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/X86TargetParser.h"
+#include "llvm/TargetParser/X86TargetParser.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <numeric>
 
@@ -118,7 +118,7 @@ struct FeatureInfo {
 
 #define X86_FEATURE(ENUM, STRING)                                              \
   constexpr FeatureBitset Feature##ENUM = {X86::FEATURE_##ENUM};
-#include "llvm/Support/X86TargetParser.def"
+#include "llvm/TargetParser/X86TargetParser.def"
 
 // Pentium with MMX.
 constexpr FeatureBitset FeaturesPentiumMMX =
@@ -623,7 +623,7 @@ constexpr FeatureBitset ImpliedFeaturesAVXVNNI = FeatureAVX2;
 
 constexpr FeatureInfo FeatureInfos[X86::CPU_FEATURE_MAX] = {
 #define X86_FEATURE(ENUM, STR) {{STR}, ImpliedFeatures##ENUM},
-#include "llvm/Support/X86TargetParser.def"
+#include "llvm/TargetParser/X86TargetParser.def"
 };
 
 void llvm::X86::getFeaturesForCPU(StringRef CPU,
@@ -706,7 +706,7 @@ uint64_t llvm::X86::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
     unsigned Feature = StringSwitch<unsigned>(FeatureStr)
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY)                                \
   .Case(STR, llvm::X86::FEATURE_##ENUM)
-#include "llvm/Support/X86TargetParser.def"
+#include "llvm/TargetParser/X86TargetParser.def"
         ;
     FeaturesMask |= (1ULL << Feature);
   }
@@ -720,7 +720,7 @@ unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
   // starting from zero (0, 1, ..., num_features - 1).
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY) PRIORITY,
   unsigned Priorities[] = {
-#include "llvm/Support/X86TargetParser.def"
+#include "llvm/TargetParser/X86TargetParser.def"
       std::numeric_limits<unsigned>::max() // Need to consume last comma.
   };
   std::array<unsigned, std::size(Priorities) - 1> HelperList;
@@ -735,7 +735,7 @@ unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY)                                \
   case X86::FEATURE_##ENUM:                                                    \
     return PRIORITY;
-#include "llvm/Support/X86TargetParser.def"
+#include "llvm/TargetParser/X86TargetParser.def"
   default:
     llvm_unreachable("No Feature Priority for non-CPUSupports Features");
   }

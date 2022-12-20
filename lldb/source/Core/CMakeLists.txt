@@ -94,6 +94,7 @@ add_lldb_library(lldbCore
   LINK_COMPONENTS
     Support
     Demangle
+    TargetParser
   )
 
 add_dependencies(lldbCore

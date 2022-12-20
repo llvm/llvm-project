@@ -35,5 +35,6 @@ add_llvm_component_library(LLVMSelectionDAG
   MC
   Support
   Target
+  TargetParser
   TransformUtils
   )

@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 

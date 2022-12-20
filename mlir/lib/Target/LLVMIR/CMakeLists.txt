@@ -27,6 +27,7 @@ add_mlir_translation_library(MLIRTargetLLVMIRExport
   Core
   FrontendOpenMP
   TransformUtils
+  TargetParser
 
   LINK_LIBS PUBLIC
   MLIRDLTIDialect

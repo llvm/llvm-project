@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/Support/AArch64TargetParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
-#include "llvm/Support/ARMTargetParser.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
+#include "llvm/TargetParser/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/Triple.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <string>

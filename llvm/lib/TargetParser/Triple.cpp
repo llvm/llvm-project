@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/ARMTargetParser.h"
-#include "llvm/Support/ARMTargetParserCommon.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
+#include "llvm/TargetParser/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/Host.h"
 #include <cassert>
 #include <cstring>
 using namespace llvm;

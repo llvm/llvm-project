@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   MCParser
   Option
   Support
+  TargetParser
   )
 
 set(LLVM_TARGET_DEFINITIONS Opts.td)

@@ -59,4 +59,5 @@ add_lldb_library(lldbPluginExpressionParserClang
     ipo
     MCJIT
     Support
+    TargetParser
   )

@@ -9,7 +9,7 @@
 .globl  fn
 .type   fn, @function
 fn:
-  // These are in the same order as llvm/include/llvm/Support/AArch64TargetParser.def
+  // These are in the same order as llvm/include/llvm/TargetParser/AArch64TargetParser.def
   crc32b w0, w0, w0                   // CRC
   ldaddab w0, w0, [sp]                // LSE
   sqrdmlah v0.4h, v1.4h, v2.4h        // RDM
