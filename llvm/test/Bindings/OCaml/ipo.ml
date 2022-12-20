@@ -55,9 +55,6 @@ let test_transforms () =
            ++ add_global_dce
            ++ add_global_optimizer
            ++ add_ipsccp
-           ++ add_internalize ~all_but_main:true
-           ++ add_strip_dead_prototypes
-           ++ add_strip_symbols
            ++ PassManager.run_module m
            ++ PassManager.dispose)
 
