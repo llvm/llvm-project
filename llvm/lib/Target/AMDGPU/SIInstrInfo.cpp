@@ -712,13 +712,13 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MI,
                               const DebugLoc &DL, MCRegister DestReg,
                               MCRegister SrcReg, bool KillSrc) const {
-  const TargetRegisterClass *RC = RI.getPhysRegClass(DestReg);
+  const TargetRegisterClass *RC = RI.getPhysRegBaseClass(DestReg);
 
   // FIXME: This is hack to resolve copies between 16 bit and 32 bit
   // registers until all patterns are fixed.
   if (Fix16BitCopies &&
       ((RI.getRegSizeInBits(*RC) == 16) ^
-       (RI.getRegSizeInBits(*RI.getPhysRegClass(SrcReg)) == 16))) {
+       (RI.getRegSizeInBits(*RI.getPhysRegBaseClass(SrcReg)) == 16))) {
     MCRegister &RegToFix = (RI.getRegSizeInBits(*RC) == 16) ? DestReg : SrcReg;
     MCRegister Super = RI.get32BitRegister(RegToFix);
     assert(RI.getSubReg(Super, AMDGPU::lo16) == RegToFix);
@@ -730,7 +730,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       return;
     }
 
-    RC = RI.getPhysRegClass(DestReg);
+    RC = RI.getPhysRegBaseClass(DestReg);
   }
 
   if (RC == &AMDGPU::VGPR_32RegClass) {
@@ -920,7 +920,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  const TargetRegisterClass *SrcRC = RI.getPhysRegClass(SrcReg);
+  const TargetRegisterClass *SrcRC = RI.getPhysRegBaseClass(SrcReg);
   if (RC == RI.getVGPR64Class() && (SrcRC == RC || RI.isSGPRClass(SrcRC))) {
     if (ST.hasMovB64()) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B64_e32), DestReg)
@@ -3211,7 +3211,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
           Src0Inlined = true;
         } else if ((Src0->getReg().isPhysical() &&
                     (ST.getConstantBusLimit(Opc) <= 1 &&
-                     RI.isSGPRClass(RI.getPhysRegClass(Src0->getReg())))) ||
+                     RI.isSGPRClass(RI.getPhysRegBaseClass(Src0->getReg())))) ||
                    (Src0->getReg().isVirtual() &&
                     (ST.getConstantBusLimit(Opc) <= 1 &&
                      RI.isSGPRClass(MRI->getRegClass(Src0->getReg())))))
@@ -3228,7 +3228,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
             commuteInstruction(UseMI)) {
             Src0->ChangeToImmediate(Def->getOperand(1).getImm());
         } else if ((Src1->getReg().isPhysical() &&
-                    RI.isSGPRClass(RI.getPhysRegClass(Src1->getReg()))) ||
+                    RI.isSGPRClass(RI.getPhysRegBaseClass(Src1->getReg()))) ||
                    (Src1->getReg().isVirtual() &&
                     RI.isSGPRClass(MRI->getRegClass(Src1->getReg()))))
           return false;
@@ -4991,7 +4991,7 @@ const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
 
     if (Reg.isVirtual())
       return MRI.getRegClass(Reg);
-    return RI.getPhysRegClass(Reg);
+    return RI.getPhysRegBaseClass(Reg);
   }
 
   unsigned RCID = Desc.OpInfo[OpNo].RegClass;
@@ -8468,7 +8468,7 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
   if (opcode == AMDGPU::COPY) {
     const MachineOperand &srcOp = MI.getOperand(1);
     if (srcOp.isReg() && srcOp.getReg().isPhysical()) {
-      const TargetRegisterClass *regClass = RI.getPhysRegClass(srcOp.getReg());
+      const TargetRegisterClass *regClass = RI.getPhysRegBaseClass(srcOp.getReg());
       return RI.isSGPRClass(regClass) ? InstructionUniformity::AlwaysUniform
                                       : InstructionUniformity::NeverUniform;
     }
@@ -8498,7 +8498,7 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
   // Handling $vpgr reads
   for (auto srcOp : MI.operands()) {
     if (srcOp.isReg() && srcOp.getReg().isPhysical()) {
-      const TargetRegisterClass *regClass = RI.getPhysRegClass(srcOp.getReg());
+      const TargetRegisterClass *regClass = RI.getPhysRegBaseClass(srcOp.getReg());
       if (RI.isVGPRClass(regClass))
         return InstructionUniformity::NeverUniform;
     }
