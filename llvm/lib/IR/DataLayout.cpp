@@ -406,6 +406,9 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
         return reportError("Invalid ABI alignment, must be a 16bit integer");
       if (ABIAlign != 0 && !isPowerOf2_64(ABIAlign))
         return reportError("Invalid ABI alignment, must be a power of 2");
+      if (AlignType == INTEGER_ALIGN && Size == 8 && ABIAlign != 1)
+        return reportError(
+            "Invalid ABI alignment, i8 must be naturally aligned");
 
       // Preferred alignment.
       unsigned PrefAlign = ABIAlign;
