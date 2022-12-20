@@ -14,6 +14,7 @@ set(LLVM_LINK_COMPONENTS
   Passes
   Support
   Target
+  TargetParser
   TransformUtils
   IPO
   )

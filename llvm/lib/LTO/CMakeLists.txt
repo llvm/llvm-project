@@ -34,5 +34,6 @@ add_llvm_component_library(LLVMLTO
   Scalar
   Support
   Target
+  TargetParser
   TransformUtils
 )

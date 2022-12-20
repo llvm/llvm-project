@@ -12,6 +12,7 @@ set(LLVM_LINK_COMPONENTS
   Core
   MC
   Support
+  TargetParser
   )
 
 add_llvm_target_unittest(AMDGPUTests

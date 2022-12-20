@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   Option
   Support
   Target
+  TargetParser
   AllTargetsCodeGens
   AllTargetsDescs
   AllTargetsInfos

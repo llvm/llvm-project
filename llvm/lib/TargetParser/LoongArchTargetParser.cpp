@@ -11,20 +11,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/LoongArchTargetParser.h"
+#include "llvm/TargetParser/LoongArchTargetParser.h"
 
 using namespace llvm;
 using namespace llvm::LoongArch;
 
 const FeatureInfo AllFeatures[] = {
 #define LOONGARCH_FEATURE(NAME, KIND) {NAME, KIND},
-#include "llvm/Support/LoongArchTargetParser.def"
+#include "llvm/TargetParser/LoongArchTargetParser.def"
 };
 
 const ArchInfo AllArchs[] = {
 #define LOONGARCH_ARCH(NAME, KIND, FEATURES)                                   \
   {NAME, LoongArch::ArchKind::KIND, FEATURES},
-#include "llvm/Support/LoongArchTargetParser.def"
+#include "llvm/TargetParser/LoongArchTargetParser.def"
 };
 
 LoongArch::ArchKind LoongArch::parseArch(StringRef Arch) {

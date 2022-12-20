@@ -40,6 +40,7 @@ set(POLLY_COMPONENTS
     Object
     ProfileData
     Target
+    TargetParser
     Vectorize
 )
 

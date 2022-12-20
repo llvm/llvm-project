@@ -1,6 +1,9 @@
 find_package(Threads)
 
-set(LLVM_LINK_COMPONENTS Support)
+set(LLVM_LINK_COMPONENTS
+  Support
+  TargetParser
+  )
 
 #==============================================================================
 # Add Unit Testing Support

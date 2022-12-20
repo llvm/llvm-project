@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   FrontendOpenACC
   Support
   Passes
+  TargetParser
   TransformUtils
   )
 

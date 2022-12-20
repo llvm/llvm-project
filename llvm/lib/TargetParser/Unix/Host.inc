@@ -1,4 +1,4 @@
-//===- llvm/Support/Unix/Host.inc -------------------------------*- C++ -*-===//
+//===- llvm/TargetParser/Unix/Host.inc --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,12 +15,15 @@
 //===          is guaranteed to work on *all* UNIX variants.
 //===----------------------------------------------------------------------===//
 
-#include "Unix.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
 #include <cctype>
 #include <string>
 #include <sys/utsname.h>
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 using namespace llvm;
 

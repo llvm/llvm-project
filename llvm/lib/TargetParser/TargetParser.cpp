@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 using namespace AMDGPU;
@@ -266,7 +266,7 @@ struct CPUInfo {
 constexpr CPUInfo RISCVCPUInfo[] = {
 #define PROC(ENUM, NAME, FEATURES, DEFAULT_MARCH)                              \
   {NAME, CK_##ENUM, FEATURES, DEFAULT_MARCH},
-#include "llvm/Support/RISCVTargetParser.def"
+#include "llvm/TargetParser/RISCVTargetParser.def"
 };
 
 bool checkCPUKind(CPUKind Kind, bool IsRV64) {
@@ -279,14 +279,14 @@ bool checkTuneCPUKind(CPUKind Kind, bool IsRV64) {
   if (Kind == CK_INVALID)
     return false;
 #define TUNE_PROC(ENUM, NAME) if (Kind == CK_##ENUM) return true;
-#include "llvm/Support/RISCVTargetParser.def"
+#include "llvm/TargetParser/RISCVTargetParser.def"
   return RISCVCPUInfo[static_cast<unsigned>(Kind)].is64Bit() == IsRV64;
 }
 
 CPUKind parseCPUKind(StringRef CPU) {
   return llvm::StringSwitch<CPUKind>(CPU)
 #define PROC(ENUM, NAME, FEATURES, DEFAULT_MARCH) .Case(NAME, CK_##ENUM)
-#include "llvm/Support/RISCVTargetParser.def"
+#include "llvm/TargetParser/RISCVTargetParser.def"
       .Default(CK_INVALID);
 }
 
@@ -294,7 +294,7 @@ CPUKind parseTuneCPUKind(StringRef TuneCPU, bool IsRV64) {
   return llvm::StringSwitch<CPUKind>(TuneCPU)
 #define PROC(ENUM, NAME, FEATURES, DEFAULT_MARCH) .Case(NAME, CK_##ENUM)
 #define TUNE_PROC(ENUM, NAME) .Case(NAME, CK_##ENUM)
-#include "llvm/Support/RISCVTargetParser.def"
+#include "llvm/TargetParser/RISCVTargetParser.def"
       .Default(CK_INVALID);
 }
 
@@ -316,7 +316,7 @@ void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64) {
       Values.emplace_back(C.Name);
   }
 #define TUNE_PROC(ENUM, NAME) Values.emplace_back(StringRef(NAME));
-#include "llvm/Support/RISCVTargetParser.def"
+#include "llvm/TargetParser/RISCVTargetParser.def"
 }
 
 // Get all features except standard extension feature

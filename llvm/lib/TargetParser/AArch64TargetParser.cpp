@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/AArch64TargetParser.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/Support/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cctype>
 
 using namespace llvm;
@@ -34,7 +34,7 @@ uint64_t AArch64::getDefaultExtensions(StringRef CPU, AArch64::ArchKind AK) {
   .Case(NAME, AArch64ARCHNames[static_cast<unsigned>(ArchKind::ID)]            \
                       .ArchBaseExtensions |                                    \
                   DEFAULT_EXT)
-#include "../../include/llvm/Support/AArch64TargetParser.def"
+#include "../../include/llvm/TargetParser/AArch64TargetParser.def"
       .Default(AArch64::AEK_INVALID);
 }
 
@@ -44,7 +44,7 @@ AArch64::ArchKind AArch64::getCPUArchKind(StringRef CPU) {
 
   return StringSwitch<AArch64::ArchKind>(CPU)
 #define AARCH64_CPU_NAME(NAME, ID, DEFAULT_EXT) .Case(NAME, ArchKind::ID)
-#include "../../include/llvm/Support/AArch64TargetParser.def"
+#include "../../include/llvm/TargetParser/AArch64TargetParser.def"
       .Default(ArchKind::INVALID);
 }
 
@@ -67,7 +67,7 @@ bool AArch64::getExtensionFeatures(uint64_t Extensions,
     if (feature)                                                               \
       Features.push_back(feature);                                             \
   }
-#include "../../include/llvm/Support/AArch64TargetParser.def"
+#include "llvm/TargetParser/AArch64TargetParser.def"
 
   return true;
 }
@@ -75,7 +75,7 @@ bool AArch64::getExtensionFeatures(uint64_t Extensions,
 StringRef AArch64::resolveCPUAlias(StringRef CPU) {
   return StringSwitch<StringRef>(CPU)
 #define AARCH64_CPU_ALIAS(ALIAS, NAME) .Case(ALIAS, NAME)
-#include "../../include/llvm/Support/AArch64TargetParser.def"
+#include "../../include/llvm/TargetParser/AArch64TargetParser.def"
       .Default(CPU);
 }
 
