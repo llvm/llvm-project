@@ -81,6 +81,7 @@ target_link_libraries(libc-benchmark
     PUBLIC
     benchmark::benchmark
     LLVMSupport
+    LLVMTargetParser
     Threads::Threads
 )
 add_dependencies(libc-benchmark google-benchmark-libc)
