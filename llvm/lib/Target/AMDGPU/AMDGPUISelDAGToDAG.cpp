@@ -111,15 +111,14 @@ INITIALIZE_PASS_END(AMDGPUDAGToDAGISel, "amdgpu-isel",
 
 /// This pass converts a legalized DAG into a AMDGPU-specific
 // DAG, ready for instruction scheduling.
-FunctionPass *llvm::createAMDGPUISelDag(TargetMachine *TM,
+FunctionPass *llvm::createAMDGPUISelDag(TargetMachine &TM,
                                         CodeGenOpt::Level OptLevel) {
   return new AMDGPUDAGToDAGISel(TM, OptLevel);
 }
 
-AMDGPUDAGToDAGISel::AMDGPUDAGToDAGISel(
-    TargetMachine *TM /*= nullptr*/,
-    CodeGenOpt::Level OptLevel /*= CodeGenOpt::Default*/)
-    : SelectionDAGISel(ID, *TM, OptLevel) {
+AMDGPUDAGToDAGISel::AMDGPUDAGToDAGISel(TargetMachine &TM,
+                                       CodeGenOpt::Level OptLevel)
+    : SelectionDAGISel(ID, TM, OptLevel) {
   EnableLateStructurizeCFG = AMDGPUTargetMachine::EnableLateStructurizeCFG;
 }
 

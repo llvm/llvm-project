@@ -170,6 +170,8 @@ namespace {
   public:
     static char ID;
 
+    X86DAGToDAGISel() = delete;
+
     explicit X86DAGToDAGISel(X86TargetMachine &tm, CodeGenOpt::Level OptLevel)
         : SelectionDAGISel(ID, tm, OptLevel), Subtarget(nullptr),
           OptForMinSize(false), IndirectTlsSegRefs(false) {}

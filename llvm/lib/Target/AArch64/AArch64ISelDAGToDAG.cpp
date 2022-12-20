@@ -45,6 +45,8 @@ class AArch64DAGToDAGISel : public SelectionDAGISel {
 public:
   static char ID;
 
+  AArch64DAGToDAGISel() = delete;
+
   explicit AArch64DAGToDAGISel(AArch64TargetMachine &tm,
                                CodeGenOpt::Level OptLevel)
       : SelectionDAGISel(ID, tm, OptLevel), Subtarget(nullptr) {}
