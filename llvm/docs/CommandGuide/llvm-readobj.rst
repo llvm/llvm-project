@@ -342,6 +342,10 @@ The following options are implemented only for the XCOFF file format.
 
   Display symbol table of loader section.
 
+.. option:: --loader-section-relocations
+
+  Display relocation entries of loader section.
+
 EXIT STATUS
 -----------
 

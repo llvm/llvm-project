@@ -1,4 +1,4 @@
-; RUN: llvm-dis --opaque-pointers=0 < %s.bc | FileCheck %s
+; RUN: llvm-dis < %s.bc | FileCheck %s
 
 ; Check that metadata encoded in 3.5 is correctly understood going forward.
 ;
@@ -18,7 +18,7 @@ declare void @llvm.bar(metadata)
 
 @global = global i32 0
 
-; CHECK: !0 = !{!1, !2, i32* @global, null}
+; CHECK: !0 = !{!1, !2, ptr @global, null}
 ; CHECK: !1 = !{!2, null}
 ; CHECK: !2 = !{}
 !0 = metadata !{metadata !1, metadata !2, i32* @global, null}

@@ -8,104 +8,100 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @a = common local_unnamed_addr global [192 x [192 x i32]] zeroinitializer, align 16
 
-define i32 @main(i32* %ptr) {
+define i32 @main(ptr %ptr) {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[S:%.*]] = alloca i16, align 2
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[I]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull [[TMP0]])
-; CHECK-NEXT:    store i32 0, i32* [[I]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[S]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 2, i8* nonnull [[TMP1]])
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 (i32*, ...) bitcast (i32 (...)* @goo to i32 (i32*, ...)*)(i32* nonnull [[I]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[I]], align 4
-; CHECK-NEXT:    [[STOREMERGE6:%.*]] = trunc i32 [[TMP2]] to i16
-; CHECK-NEXT:    store i16 [[STOREMERGE6]], i16* [[S]], align 2
-; CHECK-NEXT:    [[CONV17:%.*]] = and i32 [[TMP2]], 65472
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[I]])
+; CHECK-NEXT:    store i32 0, ptr [[I]], align 4
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr nonnull [[S]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @goo(ptr nonnull [[I]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I]], align 4
+; CHECK-NEXT:    [[STOREMERGE6:%.*]] = trunc i32 [[TMP0]] to i16
+; CHECK-NEXT:    store i16 [[STOREMERGE6]], ptr [[S]], align 2
+; CHECK-NEXT:    [[CONV17:%.*]] = and i32 [[TMP0]], 65472
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp eq i32 [[CONV17]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END12:%.*]]
 ; CHECK:       for.body.lr.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[STOREMERGE_IN9:%.*]] = phi i32 [ [[TMP2]], [[FOR_BODY_LR_PH]] ], [ [[ADD:%.*]], [[FOR_INC9:%.*]] ]
+; CHECK-NEXT:    [[STOREMERGE_IN9:%.*]] = phi i32 [ [[TMP0]], [[FOR_BODY_LR_PH]] ], [ [[ADD:%.*]], [[FOR_INC9:%.*]] ]
 ; CHECK-NEXT:    [[CONV52:%.*]] = and i32 [[STOREMERGE_IN9]], 255
-; CHECK-NEXT:    [[CMP63:%.*]] = icmp ult i32 [[TMP2]], [[CONV52]]
+; CHECK-NEXT:    [[CMP63:%.*]] = icmp ult i32 [[TMP0]], [[CONV52]]
 ; CHECK-NEXT:    br i1 [[CMP63]], label [[FOR_BODY8_LR_PH:%.*]], label [[FOR_INC9]]
 ; CHECK:       for.body8.lr.ph:
 ; CHECK-NEXT:    [[CONV3:%.*]] = trunc i32 [[STOREMERGE_IN9]] to i8
-; CHECK-NEXT:    [[DOTPROMOTED:%.*]] = load i32, i32* getelementptr inbounds ([192 x [192 x i32]], [192 x [192 x i32]]* @a, i64 0, i64 0, i64 0), align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = add i8 [[CONV3]], -1
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], 1
-; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP2]], i32 [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP5]], [[UMIN1]]
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP6]], 32
+; CHECK-NEXT:    [[DOTPROMOTED:%.*]] = load i32, ptr @a, align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[CONV3]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
+; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP3]], [[UMIN1]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP4]], 32
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[TMP7:%.*]] = add i8 [[CONV3]], -1
-; CHECK-NEXT:    [[TMP8:%.*]] = zext i8 [[TMP7]] to i32
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP2]], i32 [[TMP8]])
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i32 [[TMP8]], [[UMIN]]
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc i32 [[TMP9]] to i8
-; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 1, i8 [[TMP10]])
+; CHECK-NEXT:    [[TMP5:%.*]] = add i8 [[CONV3]], -1
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP6]])
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP6]], [[UMIN]]
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP7]] to i8
+; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 1, i8 [[TMP8]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i8 [[TMP7]], [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ugt i8 [[TMP11]], [[TMP7]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP12]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp ugt i32 [[TMP9]], 255
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = add i32 [[DOTPROMOTED]], 1
-; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP16]], [[TMP9]]
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp slt i32 [[TMP17]], [[TMP16]]
-; CHECK-NEXT:    [[TMP19:%.*]] = or i1 [[TMP15]], [[TMP18]]
-; CHECK-NEXT:    br i1 [[TMP19]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i8 [[TMP5]], [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP9]], [[TMP5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP10]], [[MUL_OVERFLOW]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ugt i32 [[TMP7]], 255
+; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[DOTPROMOTED]], 1
+; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[TMP14]], [[TMP7]]
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp slt i32 [[TMP15]], [[TMP14]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP13]], [[TMP16]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP6]], 8
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP6]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP4]], 8
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP4]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[DOTPROMOTED]], [[N_VEC]]
-; CHECK-NEXT:    [[CAST_CRD:%.*]] = trunc i32 [[N_VEC]] to i8
-; CHECK-NEXT:    [[IND_END3:%.*]] = sub i8 [[CONV3]], [[CAST_CRD]]
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i8
+; CHECK-NEXT:    [[IND_END2:%.*]] = sub i8 [[CONV3]], [[DOTCAST]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[DOTPROMOTED]], [[INDEX]]
-; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP21:%.*]] = add i32 [[OFFSET_IDX]], 4
-; CHECK-NEXT:    [[TMP25:%.*]] = add i32 [[TMP20]], 1
-; CHECK-NEXT:    [[TMP26:%.*]] = add i32 [[TMP21]], 1
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i32 [[TMP25]]
-; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, i32* [[PTR]], i32 [[TMP26]]
-; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i32, i32* [[TMP29]], i32 0
-; CHECK-NEXT:    [[TMP32:%.*]] = bitcast i32* [[TMP31]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* [[TMP32]], align 4
-; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i32, i32* [[TMP29]], i32 4
-; CHECK-NEXT:    [[TMP34:%.*]] = bitcast i32* [[TMP33]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* [[TMP34]], align 4
+; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[OFFSET_IDX]], 0
+; CHECK-NEXT:    [[TMP19:%.*]] = add i32 [[OFFSET_IDX]], 4
+; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[TMP18]], 1
+; CHECK-NEXT:    [[TMP21:%.*]] = add i32 [[TMP19]], 1
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[PTR:%.*]], i32 [[TMP20]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i32 [[TMP21]]
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i32 0
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP24]], align 4
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i32 4
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP25]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP37:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP37]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP26]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP6]], [[N_VEC]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP4]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND4_FOR_INC9_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[DOTPROMOTED]], [[FOR_BODY8_LR_PH]] ], [ [[DOTPROMOTED]], [[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i8 [ [[IND_END3]], [[MIDDLE_BLOCK]] ], [ [[CONV3]], [[FOR_BODY8_LR_PH]] ], [ [[CONV3]], [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i8 [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[CONV3]], [[FOR_BODY8_LR_PH]] ], [ [[CONV3]], [[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY8:%.*]]
 ; CHECK:       for.body8:
 ; CHECK-NEXT:    [[INC5:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY8]] ]
-; CHECK-NEXT:    [[C_04:%.*]] = phi i8 [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ], [ [[DEC:%.*]], [[FOR_BODY8]] ]
+; CHECK-NEXT:    [[C_04:%.*]] = phi i8 [ [[BC_RESUME_VAL3]], [[SCALAR_PH]] ], [ [[DEC:%.*]], [[FOR_BODY8]] ]
 ; CHECK-NEXT:    [[INC]] = add i32 [[INC5]], 1
 ; CHECK-NEXT:    [[DEC]] = add i8 [[C_04]], -1
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32* [[PTR]], i32 [[INC]]
-; CHECK-NEXT:    store i32 0, i32* [[GEP]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i32 [[INC]]
+; CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CONV5:%.*]] = zext i8 [[DEC]] to i32
-; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP2]], [[CONV5]]
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP0]], [[CONV5]]
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY8]], label [[FOR_COND4_FOR_INC9_CRIT_EDGE]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       for.cond4.for.inc9_crit_edge:
 ; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], [[FOR_BODY8]] ], [ [[IND_END]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    store i32 [[INC_LCSSA]], i32* getelementptr inbounds ([192 x [192 x i32]], [192 x [192 x i32]]* @a, i64 0, i64 0, i64 0), align 16
+; CHECK-NEXT:    store i32 [[INC_LCSSA]], ptr @a, align 16
 ; CHECK-NEXT:    br label [[FOR_INC9]]
 ; CHECK:       for.inc9:
 ; CHECK-NEXT:    [[CONV10:%.*]] = and i32 [[STOREMERGE_IN9]], 65535
@@ -116,27 +112,25 @@ define i32 @main(i32* %ptr) {
 ; CHECK:       for.cond.for.end12_crit_edge:
 ; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_INC9]] ]
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = trunc i32 [[ADD_LCSSA]] to i16
-; CHECK-NEXT:    store i16 [[STOREMERGE]], i16* [[S]], align 2
+; CHECK-NEXT:    store i16 [[STOREMERGE]], ptr [[S]], align 2
 ; CHECK-NEXT:    br label [[FOR_END12]]
 ; CHECK:       for.end12:
-; CHECK-NEXT:    [[CALL13:%.*]] = call i32 (i16*, ...) bitcast (i32 (...)* @foo to i32 (i16*, ...)*)(i16* nonnull [[S]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 2, i8* nonnull [[TMP1]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[TMP0]])
+; CHECK-NEXT:    [[CALL13:%.*]] = call i32 (ptr, ...) @foo(ptr nonnull [[S]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr nonnull [[S]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[I]])
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %i = alloca i32, align 4
   %s = alloca i16, align 2
-  %0 = bitcast i32* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0) #3
-  store i32 0, i32* %i, align 4
-  %1 = bitcast i16* %s to i8*
-  call void @llvm.lifetime.start.p0i8(i64 2, i8* nonnull %1) #3
-  %call = call i32 (i32*, ...) bitcast (i32 (...)* @goo to i32 (i32*, ...)*)(i32* nonnull %i) #3
-  %2 = load i32, i32* %i, align 4
-  %storemerge6 = trunc i32 %2 to i16
-  store i16 %storemerge6, i16* %s, align 2
-  %conv17 = and i32 %2, 65472
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %i) #3
+  store i32 0, ptr %i, align 4
+  call void @llvm.lifetime.start.p0(i64 2, ptr nonnull %s) #3
+  %call = call i32 (ptr, ...) @goo(ptr nonnull %i) #3
+  %0 = load i32, ptr %i, align 4
+  %storemerge6 = trunc i32 %0 to i16
+  store i16 %storemerge6, ptr %s, align 2
+  %conv17 = and i32 %0, 65472
   %cmp8 = icmp eq i32 %conv17, 0
   br i1 %cmp8, label %for.body.lr.ph, label %for.end12
 
@@ -144,14 +138,14 @@ for.body.lr.ph:                                   ; preds = %entry
   br label %for.body
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.inc9
-  %storemerge.in9 = phi i32 [ %2, %for.body.lr.ph ], [ %add, %for.inc9 ]
+  %storemerge.in9 = phi i32 [ %0, %for.body.lr.ph ], [ %add, %for.inc9 ]
   %conv52 = and i32 %storemerge.in9, 255
-  %cmp63 = icmp ult i32 %2, %conv52
+  %cmp63 = icmp ult i32 %0, %conv52
   br i1 %cmp63, label %for.body8.lr.ph, label %for.inc9
 
 for.body8.lr.ph:                                  ; preds = %for.body
   %conv3 = trunc i32 %storemerge.in9 to i8
-  %.promoted = load i32, i32* getelementptr inbounds ([192 x [192 x i32]], [192 x [192 x i32]]* @a, i64 0, i64 0, i64 0), align 16
+  %.promoted = load i32, ptr @a, align 16
   br label %for.body8
 
 for.body8:                                        ; preds = %for.body8.lr.ph, %for.body8
@@ -159,15 +153,15 @@ for.body8:                                        ; preds = %for.body8.lr.ph, %f
   %c.04 = phi i8 [ %conv3, %for.body8.lr.ph ], [ %dec, %for.body8 ]
   %inc = add i32 %inc5, 1
   %dec = add i8 %c.04, -1
-  %gep = getelementptr inbounds i32, i32* %ptr, i32 %inc
-  store i32 0, i32* %gep
+  %gep = getelementptr inbounds i32, ptr %ptr, i32 %inc
+  store i32 0, ptr %gep
   %conv5 = zext i8 %dec to i32
-  %cmp6 = icmp ult i32 %2, %conv5
+  %cmp6 = icmp ult i32 %0, %conv5
   br i1 %cmp6, label %for.body8, label %for.cond4.for.inc9_crit_edge
 
 for.cond4.for.inc9_crit_edge:                     ; preds = %for.body8
   %inc.lcssa = phi i32 [ %inc, %for.body8 ]
-  store i32 %inc.lcssa, i32* getelementptr inbounds ([192 x [192 x i32]], [192 x [192 x i32]]* @a, i64 0, i64 0, i64 0), align 16
+  store i32 %inc.lcssa, ptr @a, align 16
   br label %for.inc9
 
 for.inc9:                                         ; preds = %for.cond4.for.inc9_crit_edge, %for.body
@@ -180,22 +174,22 @@ for.inc9:                                         ; preds = %for.cond4.for.inc9_
 for.cond.for.end12_crit_edge:                     ; preds = %for.inc9
   %add.lcssa = phi i32 [ %add, %for.inc9 ]
   %storemerge = trunc i32 %add.lcssa to i16
-  store i16 %storemerge, i16* %s, align 2
+  store i16 %storemerge, ptr %s, align 2
   br label %for.end12
 
 for.end12:                                        ; preds = %for.cond.for.end12_crit_edge, %entry
-  %call13 = call i32 (i16*, ...) bitcast (i32 (...)* @foo to i32 (i16*, ...)*)(i16* nonnull %s) #3
-  call void @llvm.lifetime.end.p0i8(i64 2, i8* nonnull %1) #3
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0) #3
+  %call13 = call i32 (ptr, ...) @foo(ptr nonnull %s) #3
+  call void @llvm.lifetime.end.p0(i64 2, ptr nonnull %s) #3
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %i) #3
   ret i32 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
 
 declare i32 @goo(...) local_unnamed_addr #2
 
 declare i32 @foo(...) local_unnamed_addr #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1

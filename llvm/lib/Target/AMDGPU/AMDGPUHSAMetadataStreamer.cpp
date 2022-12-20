@@ -35,7 +35,7 @@ static std::pair<Type *, Align> getArgumentTypeAlign(const Argument &Arg,
   if (!ArgAlign)
     ArgAlign = DL.getABITypeAlign(Ty);
 
-  return std::make_pair(Ty, *ArgAlign);
+  return std::pair(Ty, *ArgAlign);
 }
 
 namespace llvm {

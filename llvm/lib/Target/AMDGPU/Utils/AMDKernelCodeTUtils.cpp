@@ -47,8 +47,8 @@ static StringMap<int> createIndexMap(const ArrayRef<StringRef> &names,
   StringMap<int> map;
   assert(names.size() == altNames.size());
   for (unsigned i = 0; i < names.size(); ++i) {
-    map.insert(std::make_pair(names[i], i));
-    map.insert(std::make_pair(altNames[i], i));
+    map.insert(std::pair(names[i], i));
+    map.insert(std::pair(altNames[i], i));
   }
   return map;
 }

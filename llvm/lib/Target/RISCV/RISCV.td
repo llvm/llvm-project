@@ -547,6 +547,7 @@ include "RISCVInstrInfo.td"
 include "GISel/RISCVRegisterBanks.td"
 include "RISCVSchedRocket.td"
 include "RISCVSchedSiFive7.td"
+include "RISCVSchedSyntacoreSCR1.td"
 
 //===----------------------------------------------------------------------===//
 // RISC-V processors supported.
@@ -637,6 +638,14 @@ def : ProcessorModel<"sifive-u74", SiFive7Model, [Feature64Bit,
                                                   FeatureStdExtD,
                                                   FeatureStdExtC],
                      [TuneSiFive7]>;
+
+def : ProcessorModel<"syntacore-scr1-base", SyntacoreSCR1Model,
+                     [Feature32Bit, FeatureStdExtC],
+                     [TuneNoDefaultUnroll]>;
+
+def : ProcessorModel<"syntacore-scr1-max", SyntacoreSCR1Model,
+                     [Feature32Bit, FeatureStdExtM, FeatureStdExtC],
+                     [TuneNoDefaultUnroll]>;
 
 //===----------------------------------------------------------------------===//
 // Define the RISC-V target.

@@ -101,9 +101,6 @@ enum MachineConfiguration : unsigned {
 
   /// Global memory alignment for performance.
   GlobalMemoryAlignment = 128,
-
-  /// Maximal size of the shared memory buffer.
-  SharedMemorySize = 128,
 };
 
 static const ValueDecl *getPrivateItem(const Expr *RefExpr) {
@@ -1132,8 +1129,7 @@ void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
 void CGOpenMPRuntimeGPU::emitKernelInit(CodeGenFunction &CGF,
                                         EntryFunctionState &EST, bool IsSPMD) {
   CGBuilderTy &Bld = CGF.Builder;
-  Bld.restoreIP(OMPBuilder.createTargetInit(Bld, IsSPMD, true));
-  IsInTargetMasterThreadRegion = IsSPMD;
+  Bld.restoreIP(OMPBuilder.createTargetInit(Bld, IsSPMD));
   if (!IsSPMD)
     emitGenericVarsProlog(CGF, EST.Loc);
 }
@@ -1145,7 +1141,7 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
     emitGenericVarsEpilog(CGF);
 
   CGBuilderTy &Bld = CGF.Builder;
-  OMPBuilder.createTargetDeinit(Bld, IsSPMD, true);
+  OMPBuilder.createTargetDeinit(Bld, IsSPMD);
 }
 
 void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,
@@ -1277,34 +1273,6 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
          "Xteam reduction attribute not reset after emit");
 }
 
-namespace {
-LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
-/// Enum for accessing the reserved_2 field of the ident_t struct.
-enum ModeFlagsTy : unsigned {
-  /// Bit set to 1 when in SPMD mode.
-  KMP_IDENT_SPMD_MODE = 0x01,
-  /// Bit set to 1 when a simplified runtime is used.
-  KMP_IDENT_SIMPLE_RT_MODE = 0x02,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/KMP_IDENT_SIMPLE_RT_MODE)
-};
-
-/// Special mode Undefined. Is the combination of Non-SPMD mode + SimpleRuntime.
-static const ModeFlagsTy UndefinedMode =
-    (~KMP_IDENT_SPMD_MODE) & KMP_IDENT_SIMPLE_RT_MODE;
-} // anonymous namespace
-
-unsigned CGOpenMPRuntimeGPU::getDefaultLocationReserved2Flags() const {
-  switch (getExecutionMode()) {
-  case EM_SPMD:
-    return KMP_IDENT_SPMD_MODE & (~KMP_IDENT_SIMPLE_RT_MODE);
-  case EM_NonSPMD:
-    return (~KMP_IDENT_SPMD_MODE) & (~KMP_IDENT_SIMPLE_RT_MODE);
-  case EM_Unknown:
-    return UndefinedMode;
-  }
-  llvm_unreachable("Unknown flags are requested.");
-}
-
 CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
     : CGOpenMPRuntime(CGM) {
   llvm::OpenMPIRBuilderConfig Config(CGM.getLangOpts().OpenMPIsDevice, true,
@@ -1357,33 +1325,13 @@ llvm::Function *CGOpenMPRuntimeGPU::emitParallelOutlinedFunction(
     const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
     OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen) {
   // Emit target region as a standalone region.
-  class NVPTXPrePostActionTy : public PrePostActionTy {
-    bool &IsInParallelRegion;
-    bool PrevIsInParallelRegion;
-
-  public:
-    NVPTXPrePostActionTy(bool &IsInParallelRegion)
-        : IsInParallelRegion(IsInParallelRegion) {}
-    void Enter(CodeGenFunction &CGF) override {
-      PrevIsInParallelRegion = IsInParallelRegion;
-      IsInParallelRegion = true;
-    }
-    void Exit(CodeGenFunction &CGF) override {
-      IsInParallelRegion = PrevIsInParallelRegion;
-    }
-  } Action(IsInParallelRegion);
-  CodeGen.setAction(Action);
   bool PrevIsInTTDRegion = IsInTTDRegion;
   IsInTTDRegion = false;
-  bool PrevIsInTargetMasterThreadRegion = IsInTargetMasterThreadRegion;
-  IsInTargetMasterThreadRegion = false;
   auto *OutlinedFun =
       cast<llvm::Function>(CGOpenMPRuntime::emitParallelOutlinedFunction(
           D, ThreadIDVar, InnermostKind, CodeGen));
-  IsInTargetMasterThreadRegion = PrevIsInTargetMasterThreadRegion;
   IsInTTDRegion = PrevIsInTTDRegion;
-  if (getExecutionMode() != CGOpenMPRuntimeGPU::EM_SPMD &&
-      !IsInParallelRegion) {
+  if (getExecutionMode() != CGOpenMPRuntimeGPU::EM_SPMD) {
     llvm::Function *WrapperFun =
         createParallelDataSharingWrapper(OutlinedFun, D);
     WrapperFunctionsMap[OutlinedFun] = WrapperFun;
@@ -3782,16 +3730,6 @@ void CGOpenMPRuntimeGPU::emitFunctionProlog(CodeGenFunction &CGF,
   for (const ValueDecl *VD : VarChecker.getEscapedDecls()) {
     assert(VD->isCanonicalDecl() && "Expected canonical declaration");
     Data.insert(std::make_pair(VD, MappedVarData()));
-  }
-  if (!IsInTTDRegion && !NeedToDelayGlobalization && !IsInParallelRegion) {
-    CheckVarsEscapingDeclContext VarChecker(CGF, std::nullopt);
-    VarChecker.Visit(Body);
-    I->getSecond().SecondaryLocalVarData.emplace();
-    DeclToAddrMapTy &Data = *I->getSecond().SecondaryLocalVarData;
-    for (const ValueDecl *VD : VarChecker.getEscapedDecls()) {
-      assert(VD->isCanonicalDecl() && "Expected canonical declaration");
-      Data.insert(std::make_pair(VD, MappedVarData()));
-    }
   }
   if (!NeedToDelayGlobalization) {
     emitGenericVarsProlog(CGF, D->getBeginLoc(), /*WithSPMDCheck=*/true);

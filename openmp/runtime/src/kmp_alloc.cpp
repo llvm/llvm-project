@@ -1802,6 +1802,9 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
   if (ptr == NULL)
     return NULL;
 
+  if (is_pinned && kmp_target_lock_mem)
+    kmp_target_lock_mem(ptr, desc.size_a, default_device);
+
   addr = (kmp_uintptr_t)ptr;
   addr_align = (addr + sz_desc + align - 1) & ~(align - 1);
   addr_descr = addr_align - sz_desc;
@@ -1928,10 +1931,10 @@ void ___kmpc_free(int gtid, void *ptr, omp_allocator_handle_t allocator) {
     is_pinned = al->pinned;
   else if (allocator == ompx_pinned_mem_alloc)
     is_pinned = true;
-  if (is_pinned && kmp_target_unlock_mem) {
-    kmp_int32 default_device =
+  if (allocator > kmp_max_mem_alloc && kmp_target_unlock_mem && al->pinned) {
+    kmp_int32 device =
         __kmp_threads[gtid]->th.th_current_task->td_icvs.default_device;
-    kmp_target_unlock_mem(desc.ptr_align, default_device);
+    kmp_target_unlock_mem(desc.ptr_alloc, device);
   }
 
   if (__kmp_memkind_available) {

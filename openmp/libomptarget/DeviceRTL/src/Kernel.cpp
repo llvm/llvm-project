@@ -70,7 +70,7 @@ extern "C" {
 /// \param Ident               Source location identification, can be NULL.
 ///
 int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
-                           bool UseGenericStateMachine, bool) {
+                           bool UseGenericStateMachine) {
   FunctionTracingRAII();
 
   const bool IsSPMD = Mode & OMP_TGT_EXEC_MODE_SPMD;
@@ -137,7 +137,7 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
 ///
 /// \param Ident Source location identification, can be NULL.
 ///
-void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode, bool) {
+void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode) {
   FunctionTracingRAII();
   const bool IsSPMD = Mode & OMP_TGT_EXEC_MODE_SPMD;
   state::assumeInitialState(IsSPMD);
@@ -159,8 +159,7 @@ int32_t __kmpc_target_init_v1(int64_t *, int8_t Mode,
                               int8_t UseGenericStateMachine,
                               int8_t RequiresFullRuntime) {
   FunctionTracingRAII();
-  int32_t res = __kmpc_target_init(nullptr, Mode, UseGenericStateMachine,
-                                   RequiresFullRuntime);
+  int32_t res = __kmpc_target_init(nullptr, Mode, UseGenericStateMachine);
   if (Mode & OMP_TGT_EXEC_MODE_SPMD) {
 
     uint32_t TId = mapping::getThreadIdInBlock();
@@ -201,7 +200,7 @@ void __kmpc_target_deinit_v1(int64_t *, int8_t Mode,
   // otherwise the following assertions and the assumption in
   // __kmpc_target_deinit may not hold.
   synchronize::threadsAligned();
-  __kmpc_target_deinit(nullptr, Mode, RequiresFullRuntime);
+  __kmpc_target_deinit(nullptr, Mode);
 }
 
 #endif

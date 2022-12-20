@@ -61,9 +61,9 @@ private:
   uint8_t getSymbolType(const SymbolRef &Symbol) const;
 
   void printSymbols() override;
-  void printSymbols(Optional<SymbolComparator> SymComp) override;
+  void printSymbols(std::optional<SymbolComparator> SymComp) override;
   void printDynamicSymbols() override;
-  void printDynamicSymbols(Optional<SymbolComparator> SymComp) override;
+  void printDynamicSymbols(std::optional<SymbolComparator> SymComp) override;
   void printSymbol(const SymbolRef &Symbol, ScopedPrinter &W);
   void printSymbol(const SymbolRef &Symbol);
 
@@ -636,7 +636,7 @@ bool MachODumper::compareSymbolsByType(SymbolRef LHS, SymbolRef RHS) const {
 
 void MachODumper::printSymbols() { printSymbols(std::nullopt); }
 
-void MachODumper::printSymbols(Optional<SymbolComparator> SymComp) {
+void MachODumper::printSymbols(std::optional<SymbolComparator> SymComp) {
   ListScope Group(W, "Symbols");
   if (SymComp) {
     auto SymbolRange = Obj->symbols();
@@ -655,7 +655,7 @@ void MachODumper::printSymbols(Optional<SymbolComparator> SymComp) {
 void MachODumper::printDynamicSymbols() {
   ListScope Group(W, "DynamicSymbols");
 }
-void MachODumper::printDynamicSymbols(Optional<SymbolComparator> SymComp) {
+void MachODumper::printDynamicSymbols(std::optional<SymbolComparator> SymComp) {
   ListScope Group(W, "DynamicSymbols");
 }
 

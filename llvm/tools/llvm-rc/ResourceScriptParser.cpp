@@ -554,7 +554,7 @@ Expected<Control> RCParser::parseControl() {
   RETURN_IF_ERROR(consumeType(Kind::Comma));
 
   IntOrString Class;
-  Optional<IntWithNotMask> Style;
+  std::optional<IntWithNotMask> Style;
   if (ClassUpper == "CONTROL") {
     // CONTROL text, id, class, style, x, y, width, height [, exstyle] [, helpID]
     ASSIGN_OR_RETURN(ClassStr, readString());
@@ -577,12 +577,12 @@ Expected<Control> RCParser::parseControl() {
     }
   }
 
-  Optional<uint32_t> ExStyle;
+  std::optional<uint32_t> ExStyle;
   if (consumeOptionalType(Kind::Comma)) {
     ASSIGN_OR_RETURN(Val, readInt());
     ExStyle = *Val;
   }
-  Optional<uint32_t> HelpID;
+  std::optional<uint32_t> HelpID;
   if (consumeOptionalType(Kind::Comma)) {
     ASSIGN_OR_RETURN(Val, readInt());
     HelpID = *Val;

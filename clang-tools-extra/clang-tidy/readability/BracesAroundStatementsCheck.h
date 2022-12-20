@@ -55,7 +55,7 @@ private:
   template <typename IfOrWhileStmt>
   SourceLocation findRParenLoc(const IfOrWhileStmt *S, const SourceManager &SM,
                                const ASTContext *Context);
-  llvm::Optional<TraversalKind> getCheckTraversalKind() const override {
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
 

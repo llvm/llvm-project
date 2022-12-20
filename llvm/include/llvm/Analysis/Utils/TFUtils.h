@@ -86,7 +86,7 @@ public:
   /// evaluation fails or the model is invalid, or an EvaluationResult
   /// otherwise. The inputs are assumed to have been already provided via
   /// getInput(). When returning std::nullopt, it also invalidates this object.
-  Optional<EvaluationResult> evaluate();
+  std::optional<EvaluationResult> evaluate();
 
   /// Provides access to the input vector.
   template <typename T> T *getInput(size_t Index) {

@@ -626,45 +626,33 @@ std::optional<std::tuple<SIAtomicScope, SIAtomicAddrSpace, bool>>
 SIMemOpAccess::toSIAtomicScope(SyncScope::ID SSID,
                                SIAtomicAddrSpace InstrAddrSpace) const {
   if (SSID == SyncScope::System)
-    return std::make_tuple(SIAtomicScope::SYSTEM,
-                           SIAtomicAddrSpace::ATOMIC,
-                           true);
+    return std::tuple(SIAtomicScope::SYSTEM, SIAtomicAddrSpace::ATOMIC, true);
   if (SSID == MMI->getAgentSSID())
-    return std::make_tuple(SIAtomicScope::AGENT,
-                           SIAtomicAddrSpace::ATOMIC,
-                           true);
+    return std::tuple(SIAtomicScope::AGENT, SIAtomicAddrSpace::ATOMIC, true);
   if (SSID == MMI->getWorkgroupSSID())
-    return std::make_tuple(SIAtomicScope::WORKGROUP,
-                           SIAtomicAddrSpace::ATOMIC,
-                           true);
+    return std::tuple(SIAtomicScope::WORKGROUP, SIAtomicAddrSpace::ATOMIC,
+                      true);
   if (SSID == MMI->getWavefrontSSID())
-    return std::make_tuple(SIAtomicScope::WAVEFRONT,
-                           SIAtomicAddrSpace::ATOMIC,
-                           true);
+    return std::tuple(SIAtomicScope::WAVEFRONT, SIAtomicAddrSpace::ATOMIC,
+                      true);
   if (SSID == SyncScope::SingleThread)
-    return std::make_tuple(SIAtomicScope::SINGLETHREAD,
-                           SIAtomicAddrSpace::ATOMIC,
-                           true);
+    return std::tuple(SIAtomicScope::SINGLETHREAD, SIAtomicAddrSpace::ATOMIC,
+                      true);
   if (SSID == MMI->getSystemOneAddressSpaceSSID())
-    return std::make_tuple(SIAtomicScope::SYSTEM,
-                           SIAtomicAddrSpace::ATOMIC & InstrAddrSpace,
-                           false);
+    return std::tuple(SIAtomicScope::SYSTEM,
+                      SIAtomicAddrSpace::ATOMIC & InstrAddrSpace, false);
   if (SSID == MMI->getAgentOneAddressSpaceSSID())
-    return std::make_tuple(SIAtomicScope::AGENT,
-                           SIAtomicAddrSpace::ATOMIC & InstrAddrSpace,
-                           false);
+    return std::tuple(SIAtomicScope::AGENT,
+                      SIAtomicAddrSpace::ATOMIC & InstrAddrSpace, false);
   if (SSID == MMI->getWorkgroupOneAddressSpaceSSID())
-    return std::make_tuple(SIAtomicScope::WORKGROUP,
-                           SIAtomicAddrSpace::ATOMIC & InstrAddrSpace,
-                           false);
+    return std::tuple(SIAtomicScope::WORKGROUP,
+                      SIAtomicAddrSpace::ATOMIC & InstrAddrSpace, false);
   if (SSID == MMI->getWavefrontOneAddressSpaceSSID())
-    return std::make_tuple(SIAtomicScope::WAVEFRONT,
-                           SIAtomicAddrSpace::ATOMIC & InstrAddrSpace,
-                           false);
+    return std::tuple(SIAtomicScope::WAVEFRONT,
+                      SIAtomicAddrSpace::ATOMIC & InstrAddrSpace, false);
   if (SSID == MMI->getSingleThreadOneAddressSpaceSSID())
-    return std::make_tuple(SIAtomicScope::SINGLETHREAD,
-                           SIAtomicAddrSpace::ATOMIC & InstrAddrSpace,
-                           false);
+    return std::tuple(SIAtomicScope::SINGLETHREAD,
+                      SIAtomicAddrSpace::ATOMIC & InstrAddrSpace, false);
   return std::nullopt;
 }
 

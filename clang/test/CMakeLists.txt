@@ -15,6 +15,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_PER_TARGET_RUNTIME_DIR
   LLVM_ENABLE_THREADS
   LLVM_WITH_Z3
+  PPC_LINUX_DEFAULT_IEEELONGDOUBLE
   )
 
 configure_lit_site_cfg(

@@ -5,7 +5,7 @@
 ; the transformations done by SimplifyCFG, so this test is likely to rot
 ; quickly.
 
-define noalias i8* @func_29() nounwind {
+define noalias ptr @func_29() nounwind {
 ; CHECK: entry:
 ; CHECK-NEXT: unreachable
 entry:

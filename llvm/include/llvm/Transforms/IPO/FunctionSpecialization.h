@@ -60,18 +60,57 @@
 using namespace llvm;
 
 namespace llvm {
-// Bookkeeping struct to pass data from the analysis and profitability phase
-// to the actual transform helper functions.
-struct SpecializationInfo {
-  SmallVector<ArgInfo, 8> Args; // Stores the {formal,actual} argument pairs.
-  InstructionCost Gain;         // Profitability: Gain = Bonus - Cost.
-  Function *Clone;              // The definition of the specialized function.
+// Specialization signature, used to uniquely designate a specialization within
+// a function.
+struct SpecSig {
+  // Hashing support, used to distinguish between ordinary, empty, or tombstone
+  // keys.
+  unsigned Key = 0;
+  SmallVector<ArgInfo, 4> Args;
+
+  bool operator==(const SpecSig &Other) const {
+    if (Key != Other.Key || Args.size() != Other.Args.size())
+      return false;
+    for (size_t I = 0; I < Args.size(); ++I)
+      if (Args[I] != Other.Args[I])
+        return false;
+    return true;
+  }
+
+  friend hash_code hash_value(const SpecSig &S) {
+    return hash_combine(hash_value(S.Key),
+                        hash_combine_range(S.Args.begin(), S.Args.end()));
+  }
 };
 
-using CallSpecBinding = std::pair<CallBase *, SpecializationInfo>;
-// We are using MapVector because it guarantees deterministic iteration
-// order across executions.
-using SpecializationMap = SmallMapVector<CallBase *, SpecializationInfo, 8>;
+// Specialization instance.
+struct Spec {
+  // Original function.
+  Function *F;
+
+  // Cloned function, a specialized version of the original one.
+  Function *Clone = nullptr;
+
+  // Specialization signature.
+  SpecSig Sig;
+
+  // Profitability of the specialization.
+  InstructionCost Gain;
+
+  // List of call sites, matching this specialization.
+  SmallVector<CallBase *> CallSites;
+
+  Spec(Function *F, const SpecSig &S, InstructionCost G)
+      : F(F), Sig(S), Gain(G) {}
+  Spec(Function *F, const SpecSig &&S, InstructionCost G)
+      : F(F), Sig(S), Gain(G) {}
+};
+
+// Map of potential specializations for each function. The FunctionSpecializer
+// keeps the discovered specialisation opportunities for the module in a single
+// vector, where the specialisations of each function form a contiguous range.
+// This map's value is the beginning and the end of that range.
+using SpecMap = DenseMap<Function *, std::pair<unsigned, unsigned>>;
 
 class FunctionSpecializer {
 
@@ -137,18 +176,23 @@ private:
   // Compute the code metrics for function \p F.
   CodeMetrics &analyzeFunction(Function *F);
 
-  /// This function decides whether it's worthwhile to specialize function
-  /// \p F based on the known constant values its arguments can take on. It
-  /// only discovers potential specialization opportunities without actually
-  /// applying them.
-  ///
-  /// \returns true if any specializations have been found.
+  /// @brief  Find potential specialization opportunities.
+  /// @param F Function to specialize
+  /// @param Cost Cost of specializing a function. Final gain is this cost
+  /// minus benefit
+  /// @param AllSpecs A vector to add potential specializations to.
+  /// @param SM  A map for a function's specialisation range
+  /// @return True, if any potential specializations were found
   bool findSpecializations(Function *F, InstructionCost Cost,
-                           SmallVectorImpl<CallSpecBinding> &WorkList);
+                           SmallVectorImpl<Spec> &AllSpecs, SpecMap &SM);
 
   bool isCandidateFunction(Function *F);
 
-  Function *createSpecialization(Function *F, CallSpecBinding &Specialization);
+  /// @brief Create a specialization of \p F and prime the SCCPSolver
+  /// @param F Function to specialize
+  /// @param S Which specialization to create
+  /// @return The new, cloned function
+  Function *createSpecialization(Function *F, const SpecSig &S);
 
   /// Compute and return the cost of specializing function \p F.
   InstructionCost getSpecializationCost(Function *F);
@@ -165,9 +209,11 @@ private:
   /// have a constant value. Return that constant.
   Constant *getCandidateConstant(Value *V);
 
-  /// Redirects callsites of function \p F to its specialized copies.
-  void updateCallSites(Function *F,
-                       SmallVectorImpl<CallSpecBinding> &Specializations);
+  /// @brief Find and update calls to \p F, which match a specialization
+  /// @param F Orginal function
+  /// @param Begin Start of a range of possibly matching specialisations
+  /// @param End End of a range (exclusive) of possibly matching specialisations
+  void updateCallSites(Function *F, const Spec *Begin, const Spec *End);
 };
 } // namespace llvm
 
