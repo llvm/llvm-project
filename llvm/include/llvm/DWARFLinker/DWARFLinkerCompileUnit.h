@@ -78,6 +78,9 @@ public:
 
     /// Is ODR marking done?
     bool ODRMarkingDone : 1;
+
+    /// Is this a reference to a DIE that hasn't been cloned yet?
+    bool UnclonedReference : 1;
   };
 
   CompileUnit(DWARFUnit &OrigUnit, unsigned ID, bool CanUseODR,
