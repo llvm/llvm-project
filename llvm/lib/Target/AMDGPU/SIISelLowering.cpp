@@ -12342,7 +12342,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
 
   auto Ret = TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
   if (Ret.first)
-    Ret.second = TRI->getPhysRegClass(Ret.first);
+    Ret.second = TRI->getPhysRegBaseClass(Ret.first);
 
   return Ret;
 }

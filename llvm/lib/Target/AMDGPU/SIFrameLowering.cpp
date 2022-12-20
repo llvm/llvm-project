@@ -338,7 +338,7 @@ public:
         ST(MF.getSubtarget<GCNSubtarget>()), MFI(MF.getFrameInfo()),
         FuncInfo(MF.getInfo<SIMachineFunctionInfo>()), TII(TII), TRI(TRI),
         SuperReg(Reg), SI(SI), LiveRegs(LiveRegs), DL(DL), FrameReg(FrameReg) {
-    const TargetRegisterClass *RC = TRI.getPhysRegClass(SuperReg);
+    const TargetRegisterClass *RC = TRI.getPhysRegBaseClass(SuperReg);
     SplitParts = TRI.getRegSplitParts(RC, EltSize);
     NumSubRegs = SplitParts.empty() ? 1 : SplitParts.size();
 
@@ -1322,7 +1322,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   // Allocate spill slots for WWM reserved VGPRs.
   if (!FuncInfo->isEntryFunction()) {
     for (Register Reg : FuncInfo->getWWMReservedRegs()) {
-      const TargetRegisterClass *RC = TRI->getPhysRegClass(Reg);
+      const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
       FuncInfo->allocateWWMSpill(MF, Reg, TRI->getSpillSize(*RC),
                                  TRI->getSpillAlign(*RC));
     }
