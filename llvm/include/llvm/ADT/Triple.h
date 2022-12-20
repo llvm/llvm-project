@@ -8,7 +8,7 @@
 ///
 /// \file
 /// This header is deprecated in favour of
-/// `llvm/TargetParser/AArch64TargetParser.h`.
+/// `llvm/TargetParser/Triple.h`.
 ///
 //===----------------------------------------------------------------------===//
 
