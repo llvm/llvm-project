@@ -3679,9 +3679,10 @@ bool InstCombinerImpl::sinkNotIntoLogicalOp(Instruction &I) {
   // And can the operands be adapted?
   for (Value *Op : {Op0, Op1})
     if (!(InstCombiner::isFreeToInvert(Op, /*WillInvertAllUses=*/true) &&
-          (isa<Constant>(Op) ||
-           InstCombiner::canFreelyInvertAllUsersOf(cast<Instruction>(Op),
-                                                   /*IgnoredUser=*/&I))))
+          (match(Op, m_ImmConstant()) ||
+           (isa<Instruction>(Op) &&
+            InstCombiner::canFreelyInvertAllUsersOf(cast<Instruction>(Op),
+                                                    /*IgnoredUser=*/&I)))))
       return false;
 
   for (Value **Op : {&Op0, &Op1}) {
@@ -3733,15 +3734,18 @@ bool InstCombinerImpl::sinkNotIntoOtherHandOfLogicalOp(Instruction &I) {
   Value **OpToInvert = nullptr;
   if (match(Op0, m_Not(m_Value(NotOp0))) &&
       InstCombiner::isFreeToInvert(Op1, /*WillInvertAllUses=*/true) &&
-      (isa<Constant>(Op1) || InstCombiner::canFreelyInvertAllUsersOf(
-                                 cast<Instruction>(Op1), /*IgnoredUser=*/&I))) {
+      (match(Op1, m_ImmConstant()) ||
+       (isa<Instruction>(Op1) &&
+        InstCombiner::canFreelyInvertAllUsersOf(cast<Instruction>(Op1),
+                                                /*IgnoredUser=*/&I)))) {
     Op0 = NotOp0;
     OpToInvert = &Op1;
   } else if (match(Op1, m_Not(m_Value(NotOp1))) &&
              InstCombiner::isFreeToInvert(Op0, /*WillInvertAllUses=*/true) &&
-             (isa<Constant>(Op0) ||
-              InstCombiner::canFreelyInvertAllUsersOf(cast<Instruction>(Op0),
-                                                      /*IgnoredUser=*/&I))) {
+             (match(Op0, m_ImmConstant()) ||
+              (isa<Instruction>(Op0) &&
+               InstCombiner::canFreelyInvertAllUsersOf(cast<Instruction>(Op0),
+                                                       /*IgnoredUser=*/&I)))) {
     Op1 = NotOp1;
     OpToInvert = &Op0;
   } else
