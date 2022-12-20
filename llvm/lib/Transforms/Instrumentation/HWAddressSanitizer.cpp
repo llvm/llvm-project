@@ -818,11 +818,11 @@ Value *HWAddressSanitizer::memToShadow(Value *Mem, IRBuilder<> &IRB) {
 
 int64_t HWAddressSanitizer::getAccessInfo(bool IsWrite,
                                           unsigned AccessSizeIndex) {
-  return (CompileKernel << HWASanAccessInfo::CompileKernelShift) +
-         (HasMatchAllTag << HWASanAccessInfo::HasMatchAllShift) +
-         (MatchAllTag << HWASanAccessInfo::MatchAllShift) +
-         (Recover << HWASanAccessInfo::RecoverShift) +
-         (IsWrite << HWASanAccessInfo::IsWriteShift) +
+  return (CompileKernel << HWASanAccessInfo::CompileKernelShift) |
+         (HasMatchAllTag << HWASanAccessInfo::HasMatchAllShift) |
+         (MatchAllTag << HWASanAccessInfo::MatchAllShift) |
+         (Recover << HWASanAccessInfo::RecoverShift) |
+         (IsWrite << HWASanAccessInfo::IsWriteShift) |
          (AccessSizeIndex << HWASanAccessInfo::AccessSizeShift);
 }
 
