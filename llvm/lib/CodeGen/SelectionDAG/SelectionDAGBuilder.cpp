@@ -7437,6 +7437,16 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
 static unsigned getISDForVPIntrinsic(const VPIntrinsic &VPIntrin) {
   std::optional<unsigned> ResOPC;
   switch (VPIntrin.getIntrinsicID()) {
+  case Intrinsic::vp_ctlz: {
+    bool IsZeroUndef = cast<ConstantInt>(VPIntrin.getArgOperand(3))->isOne();
+    ResOPC = IsZeroUndef ? ISD::VP_CTLZ_ZERO_UNDEF : ISD::VP_CTLZ;
+    break;
+  }
+  case Intrinsic::vp_cttz: {
+    bool IsZeroUndef = cast<ConstantInt>(VPIntrin.getArgOperand(3))->isOne();
+    ResOPC = IsZeroUndef ? ISD::VP_CTTZ_ZERO_UNDEF : ISD::VP_CTTZ;
+    break;
+  }
 #define HELPER_MAP_VPID_TO_VPSD(VPID, VPSD)                                    \
   case Intrinsic::VPID:                                                        \
     ResOPC = ISD::VPSD;                                                        \
@@ -7769,6 +7779,16 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
     N = DAG.getVPZExtOrTrunc(getCurSDLoc(), DestVT, N, OpValues[1],
                              OpValues[2]);
     setValue(&VPIntrin, N);
+    break;
+  }
+  case ISD::VP_CTLZ:
+  case ISD::VP_CTLZ_ZERO_UNDEF:
+  case ISD::VP_CTTZ:
+  case ISD::VP_CTTZ_ZERO_UNDEF: {
+    // Pop is_zero_poison operand.
+    OpValues.pop_back();
+    SDValue Result = DAG.getNode(Opcode, DL, VTs, OpValues);
+    setValue(&VPIntrin, Result);
     break;
   }
   }
