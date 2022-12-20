@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
 #include <cstring>
-#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -36,7 +35,7 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           llvm::StringRef FileName, bool IsAngled,
                           CharSourceRange /*FilenameRange*/,
-                          std::optional<FileEntryRef> File,
+                          Optional<FileEntryRef> File,
                           llvm::StringRef /*SearchPath*/,
                           llvm::StringRef /*RelativePath*/,
                           const clang::Module * /*Imported*/,

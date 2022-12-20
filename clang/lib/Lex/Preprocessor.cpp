@@ -65,7 +65,6 @@
 #include <algorithm>
 #include <cassert>
 #include <memory>
-#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -581,7 +580,7 @@ void Preprocessor::EnterMainSourceFile() {
   if (!PPOpts->PCHThroughHeader.empty()) {
     // Lookup and save the FileID for the through header. If it isn't found
     // in the search path, it's a fatal error.
-    std::optional<FileEntryRef> File = LookupFile(
+    Optional<FileEntryRef> File = LookupFile(
         SourceLocation(), PPOpts->PCHThroughHeader,
         /*isAngled=*/false, /*FromDir=*/nullptr, /*FromFile=*/nullptr,
         /*CurDir=*/nullptr, /*SearchPath=*/nullptr, /*RelativePath=*/nullptr,

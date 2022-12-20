@@ -151,11 +151,9 @@ Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
 }
 
 Expected<BenchmarkRunner::RunnableConfiguration>
-BenchmarkRunner::getRunnableConfiguration(const BenchmarkCode &BC,
-                                          unsigned NumRepetitions,
-                                          unsigned LoopBodySize,
-                                          const SnippetRepetitor &Repetitor,
-                                          bool DumpObjectToDisk) const {
+BenchmarkRunner::getRunnableConfiguration(
+    const BenchmarkCode &BC, unsigned NumRepetitions, unsigned LoopBodySize,
+    const SnippetRepetitor &Repetitor) const {
   RunnableConfiguration RC;
 
   InstructionBenchmark &InstrBenchmark = RC.InstrBenchmark;
@@ -193,15 +191,6 @@ BenchmarkRunner::getRunnableConfiguration(const BenchmarkCode &BC,
                                    LoopBodySize);
     if (Error E = Snippet.takeError())
       return std::move(E);
-    if (DumpObjectToDisk) {
-      auto ObjectFilePath = writeObjectFile(*Snippet);
-      if (Error E = ObjectFilePath.takeError()) {
-        InstrBenchmark.Error = toString(std::move(E));
-        return std::move(RC);
-      }
-      outs() << "Check generated assembly with: /usr/bin/objdump -d "
-             << *ObjectFilePath << "\n";
-    }
     RC.ObjectFile = getObjectFromBuffer(*Snippet);
   }
 
@@ -209,9 +198,20 @@ BenchmarkRunner::getRunnableConfiguration(const BenchmarkCode &BC,
 }
 
 Expected<InstructionBenchmark>
-BenchmarkRunner::runConfiguration(RunnableConfiguration &&RC) const {
+BenchmarkRunner::runConfiguration(RunnableConfiguration &&RC,
+                                  bool DumpObjectToDisk) const {
   InstructionBenchmark &InstrBenchmark = RC.InstrBenchmark;
   object::OwningBinary<object::ObjectFile> &ObjectFile = RC.ObjectFile;
+
+  if (DumpObjectToDisk) {
+    auto ObjectFilePath = writeObjectFile(ObjectFile.getBinary()->getData());
+    if (Error E = ObjectFilePath.takeError()) {
+      InstrBenchmark.Error = toString(std::move(E));
+      return std::move(InstrBenchmark);
+    }
+    outs() << "Check generated assembly with: /usr/bin/objdump -d "
+           << *ObjectFilePath << "\n";
+  }
 
   if (BenchmarkSkipMeasurements) {
     InstrBenchmark.Error =

@@ -26,6 +26,7 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
+#include "src/__support/compiler_features.h"
 #include "src/__support/endian.h"
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/utils.h"
@@ -71,9 +72,34 @@ template <typename T> struct ScalarType {
   }
 };
 
+// GCC can only take literals as __vector_size__ argument so we have to use
+// template specialization.
+template <size_t Size> struct VectorValueType {};
+template <> struct VectorValueType<1> {
+  using type = uint8_t __attribute__((__vector_size__(1)));
+};
+template <> struct VectorValueType<2> {
+  using type = uint8_t __attribute__((__vector_size__(2)));
+};
+template <> struct VectorValueType<4> {
+  using type = uint8_t __attribute__((__vector_size__(4)));
+};
+template <> struct VectorValueType<8> {
+  using type = uint8_t __attribute__((__vector_size__(8)));
+};
+template <> struct VectorValueType<16> {
+  using type = uint8_t __attribute__((__vector_size__(16)));
+};
+template <> struct VectorValueType<32> {
+  using type = uint8_t __attribute__((__vector_size__(32)));
+};
+template <> struct VectorValueType<64> {
+  using type = uint8_t __attribute__((__vector_size__(64)));
+};
+
 // Implements load, store and splat for vector types.
 template <size_t Size> struct VectorType {
-  using Type = uint8_t __attribute__((__vector_size__(Size)));
+  using Type = typename VectorValueType<Size>::type;
   static inline Type load(CPtr src) { return ::__llvm_libc::load<Type>(src); }
   static inline void store(Ptr dst, Type value) {
     ::__llvm_libc::store<Type>(dst, value);
@@ -434,7 +460,7 @@ template <size_t Size, size_t MaxSize> struct Memmove {
     const size_t tail_offset = count - Size;
     const auto tail_value = T::load(src + tail_offset);
     size_t offset = 0;
-#pragma nounroll
+    LLVM_LIBC_LOOP_NOUNROLL
     do {
       block(dst + offset, src + offset);
       offset += Size;
@@ -460,7 +486,7 @@ template <size_t Size, size_t MaxSize> struct Memmove {
     static_assert(Size > 1, "a loop of size 1 does not need tail");
     const auto head_value = T::load(src);
     ptrdiff_t offset = count - Size;
-#pragma nounroll
+    LLVM_LIBC_LOOP_NOUNROLL
     do {
       block(dst + offset, src + offset);
       offset -= Size;
