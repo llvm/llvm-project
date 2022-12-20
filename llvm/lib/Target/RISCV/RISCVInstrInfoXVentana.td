@@ -35,6 +35,7 @@ multiclass XVentanaCondops_pats<SDPatternOperator Op, RVInst MI> {
            (MI $rs1, (VT_MASKCN $rs2, $rc))>;
 }
 
+let Predicates = [IsRV64, HasVendorXVentanaCondOps] in {
 // Directly use MASKC/MASKCN in case of any of the operands being 0.
 def: Pat<(select i64:$rc, i64:$rs1, (i64 0)),
          (VT_MASKC $rs1, $rc)>;
@@ -56,3 +57,4 @@ def: Pat<(select i64:$rc, i64:$rs1, (and i64:$rs1, i64:$rs2)),
 // Basic select pattern that selects between 2 registers.
 def: Pat<(select i64:$rc, i64:$rs1, i64:$rs2),
          (OR (VT_MASKC $rs1, $rc), (VT_MASKCN $rs2, $rc))>;
+} // Predicates = [IsRV64, HasVendorXVentanaCondOps]
