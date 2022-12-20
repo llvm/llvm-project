@@ -121,6 +121,20 @@ else()
           "Unsupported libc target architecture ${LIBC_TARGET_ARCHITECTURE}")
 endif()
 
+if(LIBC_TARGET_OS STREQUAL "baremetal")
+  set(LIBC_TARGET_OS_IS_BAREMETAL TRUE)
+elseif(LIBC_TARGET_OS STREQUAL "linux")
+  set(LIBC_TARGET_OS_IS_LINUX TRUE)
+elseif(LIBC_TARGET_OS STREQUAL "darwin")
+  set(LIBC_TARGET_OS_IS_DARWIN TRUE)
+elseif(LIBC_TARGET_OS STREQUAL "windows")
+  set(LIBC_TARGET_OS_IS_WINDOWS TRUE)
+else()
+  message(FATAL_ERROR
+          "Unsupported libc target operating system ${LIBC_TARGET_OS}")
+endif()
+
+
 # If the compiler target triple is not the same as the triple specified by
 # LIBC_TARGET_TRIPLE, we will add a --target option if the compiler is clang.
 # If the compiler is GCC we just error out as there is no equivalent of an
