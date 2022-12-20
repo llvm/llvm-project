@@ -11107,6 +11107,15 @@ StmtResult Sema::ActOnOpenMPErrorDirective(ArrayRef<OMPClause *> Clauses,
 StmtResult Sema::ActOnOpenMPTaskwaitDirective(ArrayRef<OMPClause *> Clauses,
                                               SourceLocation StartLoc,
                                               SourceLocation EndLoc) {
+  const OMPNowaitClause *NowaitC =
+      OMPExecutableDirective::getSingleClause<OMPNowaitClause>(Clauses);
+  const OMPDependClause *DependC =
+      OMPExecutableDirective::getSingleClause<OMPDependClause>(Clauses);
+  if (NowaitC && !DependC) {
+    Diag(StartLoc, diag::err_omp_nowait_clause_without_depend);
+    return StmtError();
+  }
+
   return OMPTaskwaitDirective::Create(Context, StartLoc, EndLoc, Clauses);
 }
 

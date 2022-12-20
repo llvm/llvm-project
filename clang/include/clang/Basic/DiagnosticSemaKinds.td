@@ -10733,6 +10733,8 @@ def note_omp_nested_statement_here : Note<
   "%select{statement|directive}0 outside teams construct here">;
 def err_omp_single_copyprivate_with_nowait : Error<
   "the 'copyprivate' clause must not be used with the 'nowait' clause">;
+def err_omp_nowait_clause_without_depend: Error<
+  "directive '#pragma omp taskwait' cannot use 'nowait' clause without 'depend' clause">;
 def note_omp_nowait_clause_here : Note<
   "'nowait' clause is here">;
 def err_omp_single_decl_in_declare_simd_variant : Error<
