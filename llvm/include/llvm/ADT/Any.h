@@ -107,6 +107,13 @@ public:
   void reset() { Storage.reset(); }
 
 private:
+  // Only used for the internal llvm::Any implementation
+  template <typename T> bool isa() const {
+    if (!Storage)
+      return false;
+    return Storage->id() == &Any::TypeId<remove_cvref_t<T>>::Id;
+  }
+
   template <class T> friend T any_cast(const Any &Value);
   template <class T> friend T any_cast(Any &Value);
   template <class T> friend T any_cast(Any &&Value);
@@ -119,36 +126,37 @@ private:
 
 template <typename T> char Any::TypeId<T>::Id = 0;
 
-template <typename T> bool any_isa(const Any &Value) {
-  if (!Value.Storage)
-    return false;
-  return Value.Storage->id() == &Any::TypeId<remove_cvref_t<T>>::Id;
+template <typename T>
+LLVM_DEPRECATED("Use any_cast(Any*) != nullptr instead", "any_cast")
+bool any_isa(const Any &Value) {
+  return Value.isa<T>();
 }
 
 template <class T> T any_cast(const Any &Value) {
+  assert(Value.isa<T>() && "Bad any cast!");
   return static_cast<T>(*any_cast<remove_cvref_t<T>>(&Value));
 }
 
 template <class T> T any_cast(Any &Value) {
+  assert(Value.isa<T>() && "Bad any cast!");
   return static_cast<T>(*any_cast<remove_cvref_t<T>>(&Value));
 }
 
 template <class T> T any_cast(Any &&Value) {
+  assert(Value.isa<T>() && "Bad any cast!");
   return static_cast<T>(std::move(*any_cast<remove_cvref_t<T>>(&Value)));
 }
 
 template <class T> const T *any_cast(const Any *Value) {
   using U = remove_cvref_t<T>;
-  assert(Value && any_isa<T>(*Value) && "Bad any cast!");
-  if (!Value || !any_isa<U>(*Value))
+  if (!Value || !Value->isa<U>())
     return nullptr;
   return &static_cast<Any::StorageImpl<U> &>(*Value->Storage).Value;
 }
 
 template <class T> T *any_cast(Any *Value) {
   using U = std::decay_t<T>;
-  assert(Value && any_isa<U>(*Value) && "Bad any cast!");
-  if (!Value || !any_isa<U>(*Value))
+  if (!Value || !Value->isa<U>())
     return nullptr;
   return &static_cast<Any::StorageImpl<U> &>(*Value->Storage).Value;
 }
