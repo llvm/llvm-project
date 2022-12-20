@@ -15,6 +15,7 @@ set( LLVM_LINK_COMPONENTS
   RemoteCachingService
   ScalarOpts
   Support
+  TargetParser
   TransformUtils
   Vectorize
   )

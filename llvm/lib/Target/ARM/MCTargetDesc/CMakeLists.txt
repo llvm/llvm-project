@@ -21,6 +21,7 @@ add_llvm_component_library(LLVMARMDesc
   MCDisassembler
   Support
   BinaryFormat
+  TargetParser
 
   ADD_TO_COMPONENT
   ARM

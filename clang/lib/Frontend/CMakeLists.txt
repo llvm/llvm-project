@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   Option
   ProfileData
   Support
+  TargetParser
   )
 
 add_clang_library(clangFrontend

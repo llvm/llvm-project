@@ -104,6 +104,7 @@ add_llvm_target(AArch64CodeGen
   SelectionDAG
   Support
   Target
+  TargetParser
   TransformUtils
   GlobalISel
   CFGuard

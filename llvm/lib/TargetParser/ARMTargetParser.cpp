@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/ARMTargetParser.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/Support/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cctype>
 
 using namespace llvm;
@@ -268,7 +268,7 @@ unsigned ARM::getDefaultFPU(StringRef CPU, ARM::ArchKind AK) {
   return StringSwitch<unsigned>(CPU)
 #define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)           \
   .Case(NAME, DEFAULT_FPU)
-#include "llvm/Support/ARMTargetParser.def"
+#include "llvm/TargetParser/ARMTargetParser.def"
    .Default(ARM::FK_INVALID);
 }
 
@@ -281,7 +281,7 @@ uint64_t ARM::getDefaultExtensions(StringRef CPU, ARM::ArchKind AK) {
   .Case(NAME,                                                                  \
         ARMArchNames[static_cast<unsigned>(ArchKind::ID)].ArchBaseExtensions | \
             DEFAULT_EXT)
-#include "llvm/Support/ARMTargetParser.def"
+#include "llvm/TargetParser/ARMTargetParser.def"
   .Default(ARM::AEK_INVALID);
 }
 
