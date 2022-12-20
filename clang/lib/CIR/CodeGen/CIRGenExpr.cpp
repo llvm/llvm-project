@@ -526,9 +526,10 @@ mlir::Value CIRGenFunction::evaluateExprAsBool(const Expr *E) {
   QualType BoolTy = getContext().BoolTy;
   SourceLocation Loc = E->getExprLoc();
   // TODO: CGFPOptionsRAII for FP stuff.
-  assert(!E->getType()->isAnyComplexType() &&
-         "complex to scalar not implemented");
-  return buildScalarConversion(buildScalarExpr(E), E->getType(), BoolTy, Loc);
+  if (!E->getType()->isAnyComplexType())
+    return buildScalarConversion(buildScalarExpr(E), E->getType(), BoolTy, Loc);
+
+  llvm_unreachable("complex to scalar not implemented");
 }
 
 LValue CIRGenFunction::buildUnaryOpLValue(const UnaryOperator *E) {
@@ -1565,8 +1566,33 @@ mlir::LogicalResult CIRGenFunction::buildIfOnBoolExpr(const Expr *cond,
   // TODO(CIR): scoped ApplyDebugLocation DL(*this, Cond);
   // TODO(CIR): __builtin_unpredictable and profile counts?
   cond = cond->IgnoreParens();
+
+  // if (const BinaryOperator *CondBOp = dyn_cast<BinaryOperator>(cond)) {
+  //   llvm_unreachable("binaryoperator ifstmt NYI");
+  // }
+
+  if (const UnaryOperator *CondUOp = dyn_cast<UnaryOperator>(cond)) {
+    llvm_unreachable("unaryoperator ifstmt NYI");
+  }
+
+  if (const ConditionalOperator *CondOp = dyn_cast<ConditionalOperator>(cond)) {
+    llvm_unreachable("conditionaloperator ifstmt NYI");
+  }
+
+  if (const CXXThrowExpr *Throw = dyn_cast<CXXThrowExpr>(cond)) {
+    llvm_unreachable("throw expr ifstmt nyi");
+  }
+
+  // Emit the code with the fully general case.
   mlir::Value condV = evaluateExprAsBool(cond);
   mlir::LogicalResult resThen = mlir::success(), resElse = mlir::success();
+
+  auto *Call = dyn_cast<CallExpr>(cond->IgnoreImpCasts());
+  if (Call && CGM.getCodeGenOpts().OptimizationLevel != 0) {
+    llvm_unreachable("NYI");
+  }
+
+  // TODO(CIR): emitCondLikelihoodViaExpectIntrinsic
 
   builder.create<mlir::cir::IfOp>(
       loc, condV, elseS,

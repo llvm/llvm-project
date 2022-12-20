@@ -45,6 +45,7 @@ public:
     return I;
   }
 
+  mlir::Type ConvertType(QualType T) { return CGF.ConvertType(T); }
   LValue buildLValue(const Expr *E) { return CGF.buildLValue(E); }
 
   //===--------------------------------------------------------------------===//
@@ -783,13 +784,11 @@ public:
     if (auto *MPT = llvm::dyn_cast<MemberPointerType>(SrcType))
       assert(0 && "not implemented");
 
-    assert((SrcType->isIntegerType() ||
-            Src.getType().isa<::mlir::cir::PointerType>()) &&
-           "Unknown scalar type to convert");
+    if (SrcType->isIntegerType())
+      return buildIntToBoolConversion(Src, loc);
 
-    assert(Src.getType().isa<mlir::IntegerType>() &&
-           "pointer source not implemented");
-    return buildIntToBoolConversion(Src, loc);
+    assert(Src.getType().isa<::mlir::cir::PointerType>());
+    llvm_unreachable("pointer source not implemented");
   }
 
   /// Emit a conversion from the specified type to the specified destination
@@ -801,9 +800,9 @@ public:
                         SourceLocation Loc,
                         ScalarConversionOpts Opts = ScalarConversionOpts()) {
     if (SrcType->isFixedPointType()) {
-      assert(0 && "not implemented");
+      llvm_unreachable("not implemented");
     } else if (DstType->isFixedPointType()) {
-      assert(0 && "not implemented");
+      llvm_unreachable("not implemented");
     }
 
     SrcType = CGF.getContext().getCanonicalType(SrcType);
@@ -813,6 +812,7 @@ public:
 
     if (DstType->isVoidType())
       return nullptr;
+
     mlir::Type SrcTy = Src.getType();
 
     // Handle conversions to bool first, they are special: comparisons against
@@ -820,32 +820,32 @@ public:
     if (DstType->isBooleanType())
       return buildConversionToBool(Src, SrcType, CGF.getLoc(Loc));
 
-    mlir::Type DstTy = CGF.getCIRType(DstType);
+    mlir::Type DstTy = ConvertType(DstType);
 
     // Cast from half through float if half isn't a native type.
     if (SrcType->isHalfType() &&
         !CGF.getContext().getLangOpts().NativeHalfType) {
-      assert(0 && "not implemented");
+      llvm_unreachable("not implemented");
     }
 
     // TODO(cir): LLVM codegen ignore conversions like int -> uint,
     // is there anything to be done for CIR here?
     if (SrcTy == DstTy) {
       if (Opts.EmitImplicitIntegerSignChangeChecks)
-        assert(0 && "not implemented");
+        llvm_unreachable("not implemented");
       return Src;
     }
 
     // Handle pointer conversions next: pointers can only be converted to/from
     // other pointers and integers.
     if (DstTy.isa<::mlir::cir::PointerType>()) {
-      assert(0 && "not implemented");
+      llvm_unreachable("not implemented");
     }
 
     if (SrcTy.isa<::mlir::cir::PointerType>()) {
       // Must be a ptr to int cast.
       assert(DstTy.isa<mlir::IntegerType>() && "not ptr->int?");
-      assert(0 && "not implemented");
+      llvm_unreachable("not implemented");
     }
 
     // A scalar can be splatted to an extended vector of the same element type
@@ -856,11 +856,13 @@ public:
                  SrcType.getTypePtr() &&
              "Splatted expr doesn't match with vector element type?");
 
-      assert(0 && "not implemented");
+      llvm_unreachable("not implemented");
     }
 
     if (SrcType->isMatrixType() && DstType->isMatrixType())
-      assert(0 && "not implemented");
+      llvm_unreachable("not implemented");
+
+    // TODO(CIR): Support VectorTypes
 
     // Finally, we have the arithmetic types: real int/float.
     mlir::Value Res = nullptr;

@@ -572,6 +572,8 @@ public:
   std::string getCounterRefTmpAsString();
   std::string getCounterAggTmpAsString();
 
+  mlir::Type ConvertType(clang::QualType T);
+
   ///  Return the TypeEvaluationKind of QualType \c T.
   static TypeEvaluationKind getEvaluationKind(clang::QualType T);
 
