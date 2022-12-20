@@ -231,3 +231,405 @@ define i64 @basic(i1 zeroext %rc, i64 %rs1, i64 %rs2) {
   %sel = select i1 %rc, i64 %rs1, i64 %rs2
   ret i64 %sel
 }
+
+define i64 @seteq(i64 %a, i64 %b, i64 %rs1, i64 %rs2) {
+; CHECK-LABEL: seteq:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    vt.maskcn a1, a3, a0
+; CHECK-NEXT:    vt.maskc a0, a2, a0
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ret
+  %rc = icmp eq i64 %a, %b
+  %sel = select i1 %rc, i64 %rs1, i64 %rs2
+  ret i64 %sel
+}
+
+define i64 @setne(i64 %a, i64 %b, i64 %rs1, i64 %rs2) {
+; CHECK-LABEL: setne:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    vt.maskcn a1, a3, a0
+; CHECK-NEXT:    vt.maskc a0, a2, a0
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ret
+  %rc = icmp ne i64 %a, %b
+  %sel = select i1 %rc, i64 %rs1, i64 %rs2
+  ret i64 %sel
+}
+
+define i64 @setgt(i64 %a, i64 %b, i64 %rs1, i64 %rs2) {
+; CHECK-LABEL: setgt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slt a0, a1, a0
+; CHECK-NEXT:    vt.maskcn a1, a3, a0
+; CHECK-NEXT:    vt.maskc a0, a2, a0
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ret
+  %rc = icmp sgt i64 %a, %b
+  %sel = select i1 %rc, i64 %rs1, i64 %rs2
+  ret i64 %sel
+}
+
+define i64 @setge(i64 %a, i64 %b, i64 %rs1, i64 %rs2) {
+; CHECK-LABEL: setge:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slt a0, a0, a1
+; CHECK-NEXT:    vt.maskcn a1, a2, a0
+; CHECK-NEXT:    vt.maskc a0, a3, a0
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ret
+  %rc = icmp sge i64 %a, %b
+  %sel = select i1 %rc, i64 %rs1, i64 %rs2
+  ret i64 %sel
+}
+
+define i64 @setlt(i64 %a, i64 %b, i64 %rs1, i64 %rs2) {
+; CHECK-LABEL: setlt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slt a0, a0, a1
+; CHECK-NEXT:    vt.maskcn a1, a3, a0
+; CHECK-NEXT:    vt.maskc a0, a2, a0
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ret
+  %rc = icmp slt i64 %a, %b
+  %sel = select i1 %rc, i64 %rs1, i64 %rs2
+  ret i64 %sel
+}
+
+define i64 @setle(i64 %a, i64 %b, i64 %rs1, i64 %rs2) {
+; CHECK-LABEL: setle:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slt a0, a1, a0
+; CHECK-NEXT:    vt.maskcn a1, a2, a0
+; CHECK-NEXT:    vt.maskc a0, a3, a0
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ret
+  %rc = icmp sle i64 %a, %b
+  %sel = select i1 %rc, i64 %rs1, i64 %rs2
+  ret i64 %sel
+}
+
+define i64 @setugt(i64 %a, i64 %b, i64 %rs1, i64 %rs2) {
+; CHECK-LABEL: setugt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sltu a0, a1, a0
+; CHECK-NEXT:    vt.maskcn a1, a3, a0
+; CHECK-NEXT:    vt.maskc a0, a2, a0
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ret
+  %rc = icmp ugt i64 %a, %b
+  %sel = select i1 %rc, i64 %rs1, i64 %rs2
+  ret i64 %sel
+}
+
+define i64 @setuge(i64 %a, i64 %b, i64 %rs1, i64 %rs2) {
+; CHECK-LABEL: setuge:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sltu a0, a0, a1
+; CHECK-NEXT:    vt.maskcn a1, a2, a0
+; CHECK-NEXT:    vt.maskc a0, a3, a0
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ret
+  %rc = icmp uge i64 %a, %b
+  %sel = select i1 %rc, i64 %rs1, i64 %rs2
+  ret i64 %sel
+}
+
+define i64 @setult(i64 %a, i64 %b, i64 %rs1, i64 %rs2) {
+; CHECK-LABEL: setult:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sltu a0, a0, a1
+; CHECK-NEXT:    vt.maskcn a1, a3, a0
+; CHECK-NEXT:    vt.maskc a0, a2, a0
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ret
+  %rc = icmp ult i64 %a, %b
+  %sel = select i1 %rc, i64 %rs1, i64 %rs2
+  ret i64 %sel
+}
+
+define i64 @setule(i64 %a, i64 %b, i64 %rs1, i64 %rs2) {
+; CHECK-LABEL: setule:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sltu a0, a1, a0
+; CHECK-NEXT:    vt.maskcn a1, a2, a0
+; CHECK-NEXT:    vt.maskc a0, a3, a0
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ret
+  %rc = icmp ule i64 %a, %b
+  %sel = select i1 %rc, i64 %rs1, i64 %rs2
+  ret i64 %sel
+}
+
+define i64 @seteq_zero(i64 %a, i64 %rs1, i64 %rs2) {
+; CHECK-LABEL: seteq_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    vt.maskcn a2, a2, a0
+; CHECK-NEXT:    vt.maskc a0, a1, a0
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    ret
+  %rc = icmp eq i64 %a, 0
+  %sel = select i1 %rc, i64 %rs1, i64 %rs2
+  ret i64 %sel
+}
+
+define i64 @setne_zero(i64 %a, i64 %rs1, i64 %rs2) {
+; CHECK-LABEL: setne_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    vt.maskcn a2, a2, a0
+; CHECK-NEXT:    vt.maskc a0, a1, a0
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    ret
+  %rc = icmp ne i64 %a, 0
+  %sel = select i1 %rc, i64 %rs1, i64 %rs2
+  ret i64 %sel
+}
+
+define i64 @seteq_constant(i64 %a, i64 %rs1, i64 %rs2) {
+; CHECK-LABEL: seteq_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, -123
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    vt.maskcn a2, a2, a0
+; CHECK-NEXT:    vt.maskc a0, a1, a0
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    ret
+  %rc = icmp eq i64 %a, 123
+  %sel = select i1 %rc, i64 %rs1, i64 %rs2
+  ret i64 %sel
+}
+
+define i64 @setne_constant(i64 %a, i64 %rs1, i64 %rs2) {
+; CHECK-LABEL: setne_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, -456
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    vt.maskcn a2, a2, a0
+; CHECK-NEXT:    vt.maskc a0, a1, a0
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    ret
+  %rc = icmp ne i64 %a, 456
+  %sel = select i1 %rc, i64 %rs1, i64 %rs2
+  ret i64 %sel
+}
+
+define i64 @seteq_neg2048(i64 %a, i64 %rs1, i64 %rs2) {
+; CHECK-LABEL: seteq_neg2048:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xori a0, a0, -2048
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    vt.maskcn a2, a2, a0
+; CHECK-NEXT:    vt.maskc a0, a1, a0
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    ret
+  %rc = icmp eq i64 %a, -2048
+  %sel = select i1 %rc, i64 %rs1, i64 %rs2
+  ret i64 %sel
+}
+
+define i64 @setne_neg2048(i64 %a, i64 %rs1, i64 %rs2) {
+; CHECK-LABEL: setne_neg2048:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xori a0, a0, -2048
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    vt.maskcn a2, a2, a0
+; CHECK-NEXT:    vt.maskc a0, a1, a0
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    ret
+  %rc = icmp ne i64 %a, -2048
+  %sel = select i1 %rc, i64 %rs1, i64 %rs2
+  ret i64 %sel
+}
+
+define i64 @zero1_seteq(i64 %a, i64 %b, i64 %rs1) {
+; CHECK-LABEL: zero1_seteq:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    vt.maskc a0, a2, a0
+; CHECK-NEXT:    ret
+  %rc = icmp eq i64 %a, %b
+  %sel = select i1 %rc, i64 %rs1, i64 0
+  ret i64 %sel
+}
+
+define i64 @zero2_seteq(i64 %a, i64 %b, i64 %rs1) {
+; CHECK-LABEL: zero2_seteq:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    vt.maskcn a0, a2, a0
+; CHECK-NEXT:    ret
+  %rc = icmp eq i64 %a, %b
+  %sel = select i1 %rc, i64 0, i64 %rs1
+  ret i64 %sel
+}
+
+define i64 @zero1_setne(i64 %a, i64 %b, i64 %rs1) {
+; CHECK-LABEL: zero1_setne:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    vt.maskc a0, a2, a0
+; CHECK-NEXT:    ret
+  %rc = icmp ne i64 %a, %b
+  %sel = select i1 %rc, i64 %rs1, i64 0
+  ret i64 %sel
+}
+
+define i64 @zero2_setne(i64 %a, i64 %b, i64 %rs1) {
+; CHECK-LABEL: zero2_setne:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    vt.maskcn a0, a2, a0
+; CHECK-NEXT:    ret
+  %rc = icmp ne i64 %a, %b
+  %sel = select i1 %rc, i64 0, i64 %rs1
+  ret i64 %sel
+}
+
+define i64 @zero1_seteq_zero(i64 %a, i64 %rs1) {
+; CHECK-LABEL: zero1_seteq_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    vt.maskc a0, a1, a0
+; CHECK-NEXT:    ret
+  %rc = icmp eq i64 %a, 0
+  %sel = select i1 %rc, i64 %rs1, i64 0
+  ret i64 %sel
+}
+
+define i64 @zero2_seteq_zero(i64 %a, i64 %rs1) {
+; CHECK-LABEL: zero2_seteq_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    vt.maskcn a0, a1, a0
+; CHECK-NEXT:    ret
+  %rc = icmp eq i64 %a, 0
+  %sel = select i1 %rc, i64 0, i64 %rs1
+  ret i64 %sel
+}
+
+define i64 @zero1_setne_zero(i64 %a, i64 %rs1) {
+; CHECK-LABEL: zero1_setne_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    vt.maskc a0, a1, a0
+; CHECK-NEXT:    ret
+  %rc = icmp ne i64 %a, 0
+  %sel = select i1 %rc, i64 %rs1, i64 0
+  ret i64 %sel
+}
+
+define i64 @zero2_setne_zero(i64 %a, i64 %rs1) {
+; CHECK-LABEL: zero2_setne_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    vt.maskcn a0, a1, a0
+; CHECK-NEXT:    ret
+  %rc = icmp ne i64 %a, 0
+  %sel = select i1 %rc, i64 0, i64 %rs1
+  ret i64 %sel
+}
+
+define i64 @zero1_seteq_constant(i64 %a, i64 %rs1) {
+; CHECK-LABEL: zero1_seteq_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 231
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    vt.maskc a0, a1, a0
+; CHECK-NEXT:    ret
+  %rc = icmp eq i64 %a, -231
+  %sel = select i1 %rc, i64 %rs1, i64 0
+  ret i64 %sel
+}
+
+define i64 @zero2_seteq_constant(i64 %a, i64 %rs1) {
+; CHECK-LABEL: zero2_seteq_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, -546
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    vt.maskcn a0, a1, a0
+; CHECK-NEXT:    ret
+  %rc = icmp eq i64 %a, 546
+  %sel = select i1 %rc, i64 0, i64 %rs1
+  ret i64 %sel
+}
+
+define i64 @zero1_setne_constant(i64 %a, i64 %rs1) {
+; CHECK-LABEL: zero1_setne_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, -321
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    vt.maskc a0, a1, a0
+; CHECK-NEXT:    ret
+  %rc = icmp ne i64 %a, 321
+  %sel = select i1 %rc, i64 %rs1, i64 0
+  ret i64 %sel
+}
+
+define i64 @zero2_setne_constant(i64 %a, i64 %rs1) {
+; CHECK-LABEL: zero2_setne_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 654
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    vt.maskcn a0, a1, a0
+; CHECK-NEXT:    ret
+  %rc = icmp ne i64 %a, -654
+  %sel = select i1 %rc, i64 0, i64 %rs1
+  ret i64 %sel
+}
+
+define i64 @zero1_seteq_neg2048(i64 %a, i64 %rs1) {
+; CHECK-LABEL: zero1_seteq_neg2048:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xori a0, a0, -2048
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    vt.maskc a0, a1, a0
+; CHECK-NEXT:    ret
+  %rc = icmp eq i64 %a, -2048
+  %sel = select i1 %rc, i64 %rs1, i64 0
+  ret i64 %sel
+}
+
+define i64 @zero2_seteq_neg2048(i64 %a, i64 %rs1) {
+; CHECK-LABEL: zero2_seteq_neg2048:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xori a0, a0, -2048
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    vt.maskcn a0, a1, a0
+; CHECK-NEXT:    ret
+  %rc = icmp eq i64 %a, -2048
+  %sel = select i1 %rc, i64 0, i64 %rs1
+  ret i64 %sel
+}
+
+define i64 @zero1_setne_neg2048(i64 %a, i64 %rs1) {
+; CHECK-LABEL: zero1_setne_neg2048:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xori a0, a0, -2048
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    vt.maskc a0, a1, a0
+; CHECK-NEXT:    ret
+  %rc = icmp ne i64 %a, -2048
+  %sel = select i1 %rc, i64 %rs1, i64 0
+  ret i64 %sel
+}
+
+define i64 @zero2_setne_neg2048(i64 %a, i64 %rs1) {
+; CHECK-LABEL: zero2_setne_neg2048:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xori a0, a0, -2048
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    vt.maskcn a0, a1, a0
+; CHECK-NEXT:    ret
+  %rc = icmp ne i64 %a, -2048
+  %sel = select i1 %rc, i64 0, i64 %rs1
+  ret i64 %sel
+}
