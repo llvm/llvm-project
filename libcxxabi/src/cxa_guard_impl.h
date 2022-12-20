@@ -56,6 +56,7 @@
 #endif
 
 #include <__threading_support>
+#include <cstdint>
 #include <cstring>
 #include <limits.h>
 #include <stdlib.h>
