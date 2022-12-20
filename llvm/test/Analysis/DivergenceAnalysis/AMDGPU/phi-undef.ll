@@ -1,14 +1,18 @@
-; RUN: opt -mtriple amdgcn-- -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgcn-- -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LOOPDA
+; RUN: opt -mtriple amdgcn-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CYCLEDA
 
 ; CHECK-LABEL: 'test1':
-; CHECK-NEXT: DIVERGENT: i32 %bound
-; CHECK: {{^  *}}%counter =
+; CHECK: DIVERGENT: i32 %bound
+; CYCLEDA: DIVERGENT: %counter =
+; LOOPDA: {{^  *}} %counter =
 ; CHECK-NEXT: DIVERGENT: %break = icmp sge i32 %counter, %bound
-; CHECK-NEXT: DIVERGENT: br i1 %break, label %footer, label %body
-; CHECK: {{^  *}}%counter.next =
-; CHECK: {{^  *}}%counter.footer =
-; CHECK: DIVERGENT: br i1 %break, label %end, label %header
+; CYCLEDA: DIVERGENT: %counter.next =
+; CYCLEDA: DIVERGENT: %counter.footer =
+; LOOPDA: {{^  *}}%counter.next =
+; LOOPDA: {{^  *}}%counter.footer =
+
 ; Note: %counter is not divergent!
+
 define amdgpu_ps void @test1(i32 %bound) {
 entry:
   br label %header

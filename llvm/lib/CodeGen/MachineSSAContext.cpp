@@ -21,20 +21,52 @@
 
 using namespace llvm;
 
-MachineBasicBlock *MachineSSAContext::getEntryBlock(MachineFunction &F) {
-  return &F.front();
-}
+const Register MachineSSAContext::ValueRefNull{};
 
 void MachineSSAContext::setFunction(MachineFunction &Fn) {
   MF = &Fn;
   RegInfo = &MF->getRegInfo();
 }
 
-Printable MachineSSAContext::print(MachineBasicBlock *Block) const {
+MachineBasicBlock *MachineSSAContext::getEntryBlock(MachineFunction &F) {
+  return &F.front();
+}
+
+void MachineSSAContext::appendBlockTerms(
+    SmallVectorImpl<const MachineInstr *> &terms,
+    const MachineBasicBlock &block) {
+  for (auto &T : block.terminators())
+    terms.push_back(&T);
+}
+
+void MachineSSAContext::appendBlockDefs(SmallVectorImpl<Register> &defs,
+                                        const MachineBasicBlock &block) {
+  for (const MachineInstr &instr : block.instrs()) {
+    for (const MachineOperand &op : instr.operands()) {
+      if (op.isReg() && op.isDef())
+        defs.push_back(op.getReg());
+    }
+  }
+}
+
+/// Get the defining block of a value.
+MachineBasicBlock *MachineSSAContext::getDefBlock(Register value) const {
+  if (!value)
+    return nullptr;
+  return RegInfo->getVRegDef(value)->getParent();
+}
+
+bool MachineSSAContext::isConstantValuePhi(const MachineInstr &Phi) {
+  return Phi.isConstantValuePHI();
+}
+
+Printable MachineSSAContext::print(const MachineBasicBlock *Block) const {
+  if (!Block)
+    return Printable([](raw_ostream &Out) { Out << "<nullptr>"; });
   return Printable([Block](raw_ostream &Out) { Block->printName(Out); });
 }
 
-Printable MachineSSAContext::print(MachineInstr *I) const {
+Printable MachineSSAContext::print(const MachineInstr *I) const {
   return Printable([I](raw_ostream &Out) { I->print(Out); });
 }
 
