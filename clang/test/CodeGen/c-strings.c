@@ -1,4 +1,4 @@
-// XFAIL: taraget=aarch64-pc-windows-{{.*}}
+// XFAIL: target=aarch64-pc-windows-{{.*}}
 // RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=ITANIUM
 // RUN: %clang_cc1 -triple %ms_abi_triple -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=MSABI
 
