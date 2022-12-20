@@ -3982,7 +3982,6 @@ KMP_EXPORT void __kmpc_omp_task_complete_if0(ident_t *loc_ref, kmp_int32 gtid,
 KMP_EXPORT kmp_int32 __kmpc_omp_task_parts(ident_t *loc_ref, kmp_int32 gtid,
                                            kmp_task_t *new_task);
 KMP_EXPORT kmp_int32 __kmpc_omp_taskwait(ident_t *loc_ref, kmp_int32 gtid);
-
 KMP_EXPORT kmp_int32 __kmpc_omp_taskyield(ident_t *loc_ref, kmp_int32 gtid,
                                           int end_part);
 
@@ -4006,6 +4005,15 @@ KMP_EXPORT void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid,
                                      kmp_depend_info_t *dep_list,
                                      kmp_int32 ndeps_noalias,
                                      kmp_depend_info_t *noalias_dep_list);
+/* __kmpc_omp_taskwait_deps_51 : Function for OpenMP 5.1 nowait clause.
+ *                               Placeholder for taskwait with nowait clause.*/
+KMP_EXPORT void __kmpc_omp_taskwait_deps_51(ident_t *loc_ref, kmp_int32 gtid,
+                                            kmp_int32 ndeps,
+                                            kmp_depend_info_t *dep_list,
+                                            kmp_int32 ndeps_noalias,
+                                            kmp_depend_info_t *noalias_dep_list,
+                                            kmp_int32 has_no_wait);
+
 extern kmp_int32 __kmp_omp_task(kmp_int32 gtid, kmp_task_t *new_task,
                                 bool serialize_immediate);
 
