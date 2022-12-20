@@ -24,8 +24,12 @@
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_sentinel.h>
 #include <__iterator/readable_traits.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/is_assignable.h>
+#include <__type_traits/is_constructible.h>
+#include <__type_traits/is_same.h>
+#include <__utility/declval.h>
 #include <__utility/move.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
