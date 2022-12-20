@@ -4522,9 +4522,6 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
     case OMPRTL___kmpc_is_spmd_exec_mode:
       Changed |= foldIsSPMDExecMode(A);
       break;
-    case OMPRTL___kmpc_is_generic_main_thread_id:
-      Changed |= foldIsGenericMainThread(A);
-      break;
     case OMPRTL___kmpc_parallel_level:
       Changed |= foldParallelLevel(A);
       break;
@@ -4634,28 +4631,6 @@ private:
       // must be none.
       assert(!SimplifiedValue && "SimplifiedValue should be none");
     }
-
-    return SimplifiedValue == SimplifiedValueBefore ? ChangeStatus::UNCHANGED
-                                                    : ChangeStatus::CHANGED;
-  }
-
-  /// Fold __kmpc_is_generic_main_thread_id into a constant if possible.
-  ChangeStatus foldIsGenericMainThread(Attributor &A) {
-    std::optional<Value *> SimplifiedValueBefore = SimplifiedValue;
-
-    CallBase &CB = cast<CallBase>(getAssociatedValue());
-    Function *F = CB.getFunction();
-    const auto &ExecutionDomainAA = A.getAAFor<AAExecutionDomain>(
-        *this, IRPosition::function(*F), DepClassTy::REQUIRED);
-
-    if (!ExecutionDomainAA.isValidState())
-      return indicatePessimisticFixpoint();
-
-    auto &Ctx = getAnchorValue().getContext();
-    if (ExecutionDomainAA.isExecutedByInitialThreadOnly(CB))
-      SimplifiedValue = ConstantInt::get(Type::getInt8Ty(Ctx), true);
-    else
-      return indicatePessimisticFixpoint();
 
     return SimplifiedValue == SimplifiedValueBefore ? ChangeStatus::UNCHANGED
                                                     : ChangeStatus::CHANGED;
