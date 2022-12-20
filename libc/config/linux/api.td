@@ -36,13 +36,6 @@ def StaticAssertMacro : MacroDef<"static_assert"> {
   }];
 }
 
-def NullMacro : MacroDef<"NULL"> {
-  let Defn = [{
-    #define __need_NULL
-    #include <stddef.h>
-  }];
-}
-
 def AssertAPI : PublicAPI<"assert.h"> {
   let Macros = [
     AssertMacro,
@@ -134,10 +127,6 @@ def FenvAPI: PublicAPI<"fenv.h"> {
 
 def StringAPI : PublicAPI<"string.h"> {
   let Types = ["size_t"];
-
-  let Macros = [
-    NullMacro,
-  ];
 }
 
 def StdIOAPI : PublicAPI<"stdio.h"> {

@@ -7,6 +7,12 @@ add_header(
 )
 
 add_header(
+  null_macro
+  HDR
+    null-macro.h
+)
+
+add_header(
   fcntl_macros
   HDR
     fcntl-macros.h
