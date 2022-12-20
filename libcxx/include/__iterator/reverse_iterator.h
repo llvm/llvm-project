@@ -29,8 +29,15 @@
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/subrange.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_assignable.h>
+#include <__type_traits/is_convertible.h>
+#include <__type_traits/is_nothrow_copy_constructible.h>
+#include <__type_traits/is_pointer.h>
+#include <__type_traits/is_same.h>
+#include <__utility/declval.h>
 #include <__utility/move.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -17,12 +17,14 @@
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_integral.h>
 #include <__utility/convert_to_integral.h>
+#include <__utility/declval.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <cstdlib>
 #include <limits>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
