@@ -41,45 +41,19 @@ private:
 /// Scope used to handle initialization methods.
 template <class Emitter> class OptionScope {
 public:
-  using InitFnRef = typename ByteCodeExprGen<Emitter>::InitFnRef;
-  using ChainedInitFnRef = std::function<bool(InitFnRef)>;
-
   /// Root constructor, compiling or discarding primitives.
   OptionScope(ByteCodeExprGen<Emitter> *Ctx, bool NewDiscardResult)
-      : Ctx(Ctx), OldDiscardResult(Ctx->DiscardResult),
-        OldInitFn(std::move(Ctx->InitFn)) {
+      : Ctx(Ctx), OldDiscardResult(Ctx->DiscardResult) {
     Ctx->DiscardResult = NewDiscardResult;
-    Ctx->InitFn = std::optional<InitFnRef>{};
   }
 
-  /// Root constructor, setting up compilation state.
-  OptionScope(ByteCodeExprGen<Emitter> *Ctx, InitFnRef NewInitFn)
-      : Ctx(Ctx), OldDiscardResult(Ctx->DiscardResult),
-        OldInitFn(std::move(Ctx->InitFn)) {
-    Ctx->DiscardResult = true;
-    Ctx->InitFn = NewInitFn;
-  }
-
-  /// Extends the chain of initialisation pointers.
-  OptionScope(ByteCodeExprGen<Emitter> *Ctx, ChainedInitFnRef NewInitFn)
-      : Ctx(Ctx), OldDiscardResult(Ctx->DiscardResult),
-        OldInitFn(std::move(Ctx->InitFn)) {
-    assert(OldInitFn && "missing initializer");
-    Ctx->InitFn = [this, NewInitFn] { return NewInitFn(*OldInitFn); };
-  }
-
-  ~OptionScope() {
-    Ctx->DiscardResult = OldDiscardResult;
-    Ctx->InitFn = std::move(OldInitFn);
-  }
+  ~OptionScope() { Ctx->DiscardResult = OldDiscardResult; }
 
 private:
   /// Parent context.
   ByteCodeExprGen<Emitter> *Ctx;
   /// Old discard flag to restore.
   bool OldDiscardResult;
-  /// Old pointer emitter to restore.
-  std::optional<InitFnRef> OldInitFn;
 };
 
 } // namespace interp
