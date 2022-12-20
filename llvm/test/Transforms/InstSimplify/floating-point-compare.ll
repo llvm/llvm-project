@@ -1660,3 +1660,175 @@ define i1 @isKnownNeverInfinity_ceil_x86_fp80(x86_fp80 %x) {
   %r = fcmp une x86_fp80 %e, 0xK7FFF8000000000000000
   ret i1 %r
 }
+
+define i1 @isKnownNeverInfinity_minnum(double %x, double %y) {
+; CHECK-LABEL: @isKnownNeverInfinity_minnum(
+; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[NINF_Y:%.*]] = fadd ninf double [[Y:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.minnum.f64(double [[NINF_X]], double [[NINF_Y]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ninf.x = fadd ninf double %x, 1.0
+  %ninf.y = fadd ninf double %y, 1.0
+  %op = call double @llvm.minnum.f64(double %ninf.x, double %ninf.y)
+  %cmp = fcmp une double %op, 0x7ff0000000000000
+  ret i1 %cmp
+}
+
+define i1 @isNotKnownNeverInfinity_minnum_lhs(double %x, double %y) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_minnum_lhs(
+; CHECK-NEXT:    [[NINF_Y:%.*]] = fadd ninf double [[Y:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.minnum.f64(double [[X:%.*]], double [[NINF_Y]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ninf.y = fadd ninf double %y, 1.0
+  %op = call double @llvm.minnum.f64(double %x, double %ninf.y)
+  %cmp = fcmp une double %op, 0x7ff0000000000000
+  ret i1 %cmp
+}
+
+define i1 @isNotKnownNeverInfinity_minnum_rhs(double %x, double %y) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_minnum_rhs(
+; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.minnum.f64(double [[NINF_X]], double [[Y:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ninf.x = fadd ninf double %x, 1.0
+  %op = call double @llvm.minnum.f64(double %ninf.x, double %y)
+  %cmp = fcmp une double %op, 0x7ff0000000000000
+  ret i1 %cmp
+}
+
+declare double @llvm.minnum.f64(double, double)
+
+define i1 @isKnownNeverInfinity_maxnum(double %x, double %y) {
+; CHECK-LABEL: @isKnownNeverInfinity_maxnum(
+; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[NINF_Y:%.*]] = fadd ninf double [[Y:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.maxnum.f64(double [[NINF_X]], double [[NINF_Y]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ninf.x = fadd ninf double %x, 1.0
+  %ninf.y = fadd ninf double %y, 1.0
+  %op = call double @llvm.maxnum.f64(double %ninf.x, double %ninf.y)
+  %cmp = fcmp une double %op, 0x7ff0000000000000
+  ret i1 %cmp
+}
+
+define i1 @isNotKnownNeverInfinity_maxnum_lhs(double %x, double %y) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_maxnum_lhs(
+; CHECK-NEXT:    [[NINF_Y:%.*]] = fadd ninf double [[Y:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.maxnum.f64(double [[X:%.*]], double [[NINF_Y]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ninf.y = fadd ninf double %y, 1.0
+  %op = call double @llvm.maxnum.f64(double %x, double %ninf.y)
+  %cmp = fcmp une double %op, 0x7ff0000000000000
+  ret i1 %cmp
+}
+
+define i1 @isNotKnownNeverInfinity_maxnum_rhs(double %x, double %y) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_maxnum_rhs(
+; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.maxnum.f64(double [[NINF_X]], double [[Y:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ninf.x = fadd ninf double %x, 1.0
+  %op = call double @llvm.maxnum.f64(double %ninf.x, double %y)
+  %cmp = fcmp une double %op, 0x7ff0000000000000
+  ret i1 %cmp
+}
+
+declare double @llvm.maxnum.f64(double, double)
+
+define i1 @isKnownNeverInfinity_minimum(double %x, double %y) {
+; CHECK-LABEL: @isKnownNeverInfinity_minimum(
+; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[NINF_Y:%.*]] = fadd ninf double [[Y:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.minimum.f64(double [[NINF_X]], double [[NINF_Y]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ninf.x = fadd ninf double %x, 1.0
+  %ninf.y = fadd ninf double %y, 1.0
+  %op = call double @llvm.minimum.f64(double %ninf.x, double %ninf.y)
+  %cmp = fcmp une double %op, 0x7ff0000000000000
+  ret i1 %cmp
+}
+
+define i1 @isNotKnownNeverInfinity_minimum_lhs(double %x, double %y) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_minimum_lhs(
+; CHECK-NEXT:    [[NINF_Y:%.*]] = fadd ninf double [[Y:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.minimum.f64(double [[X:%.*]], double [[NINF_Y]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ninf.y = fadd ninf double %y, 1.0
+  %op = call double @llvm.minimum.f64(double %x, double %ninf.y)
+  %cmp = fcmp une double %op, 0x7ff0000000000000
+  ret i1 %cmp
+}
+
+define i1 @isNotKnownNeverInfinity_minimum_rhs(double %x, double %y) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_minimum_rhs(
+; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.minimum.f64(double [[NINF_X]], double [[Y:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ninf.x = fadd ninf double %x, 1.0
+  %op = call double @llvm.minimum.f64(double %ninf.x, double %y)
+  %cmp = fcmp une double %op, 0x7ff0000000000000
+  ret i1 %cmp
+}
+
+declare double @llvm.minimum.f64(double, double)
+
+define i1 @isKnownNeverInfinity_maximum(double %x, double %y) {
+; CHECK-LABEL: @isKnownNeverInfinity_maximum(
+; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[NINF_Y:%.*]] = fadd ninf double [[Y:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.maximum.f64(double [[NINF_X]], double [[NINF_Y]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ninf.x = fadd ninf double %x, 1.0
+  %ninf.y = fadd ninf double %y, 1.0
+  %op = call double @llvm.maximum.f64(double %ninf.x, double %ninf.y)
+  %cmp = fcmp une double %op, 0x7ff0000000000000
+  ret i1 %cmp
+}
+
+define i1 @isNotKnownNeverInfinity_maximum_lhs(double %x, double %y) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_maximum_lhs(
+; CHECK-NEXT:    [[NINF_Y:%.*]] = fadd ninf double [[Y:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.maximum.f64(double [[X:%.*]], double [[NINF_Y]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ninf.y = fadd ninf double %y, 1.0
+  %op = call double @llvm.maximum.f64(double %x, double %ninf.y)
+  %cmp = fcmp une double %op, 0x7ff0000000000000
+  ret i1 %cmp
+}
+
+define i1 @isNotKnownNeverInfinity_maximum_rhs(double %x, double %y) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_maximum_rhs(
+; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.maximum.f64(double [[NINF_X]], double [[Y:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ninf.x = fadd ninf double %x, 1.0
+  %op = call double @llvm.maximum.f64(double %ninf.x, double %y)
+  %cmp = fcmp une double %op, 0x7ff0000000000000
+  ret i1 %cmp
+}
+
+declare double @llvm.maximum.f64(double, double)
