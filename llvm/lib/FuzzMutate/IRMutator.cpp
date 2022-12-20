@@ -102,7 +102,7 @@ std::vector<fuzzerop::OpDescriptor> InjectorIRStrategy::getDefaultOps() {
   return Ops;
 }
 
-Optional<fuzzerop::OpDescriptor>
+std::optional<fuzzerop::OpDescriptor>
 InjectorIRStrategy::chooseOperation(Value *Src, RandomIRBuilder &IB) {
   auto OpMatchesPred = [&Src](fuzzerop::OpDescriptor &Op) {
     return Op.SourcePreds[0].matches({}, Src);

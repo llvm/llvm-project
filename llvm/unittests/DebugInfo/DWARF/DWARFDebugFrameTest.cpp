@@ -128,7 +128,7 @@ TEST(DWARFDebugFrame, DumpEH64FDE) {
 }
 
 static Error parseCFI(dwarf::CIE &C, ArrayRef<uint8_t> Instructions,
-                      Optional<uint64_t> Size = std::nullopt) {
+                      std::optional<uint64_t> Size = std::nullopt) {
   DWARFDataExtractor Data(Instructions, /*IsLittleEndian=*/true,
                           /*AddressSize=*/8);
   uint64_t Offset = 0;
