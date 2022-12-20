@@ -914,30 +914,22 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
   SmallVector<PrototypeDescriptor> NewPrototype(Prototype.begin(),
                                                 Prototype.end());
   // Update DefaultPolicy if need (TA or TAMA) for compute builtin types.
-  switch (DefaultPolicy) {
-  case Policy::MA:
-    DefaultPolicy = Policy::TAMA;
-    break;
-  case Policy::TAM:
-    DefaultPolicy = Policy::TAMA;
-    break;
-  case Policy::PolicyNone:
-    // Masked with no policy would not be TAMA.
+  if (DefaultPolicy.isMAPolicy())
+    DefaultPolicy.TailPolicy = Policy::PolicyType::Agnostic; // TAMA
+  if (DefaultPolicy.isPolicyNonePolicy()) {
     if (!IsMasked) {
+      DefaultPolicy.PolicyNone = false;
       if (IsPrototypeDefaultTU)
-        DefaultPolicy = Policy::TU;
+        DefaultPolicy.TailPolicy = Policy::PolicyType::Undisturbed; // TU
       else
-        DefaultPolicy = Policy::TA;
+        DefaultPolicy.TailPolicy = Policy::PolicyType::Agnostic; // TA
     }
-    break;
-  default:
-    break;
   }
   bool HasPassthruOp = DefaultScheme == PolicyScheme::HasPassthruOperand;
   if (IsMasked) {
     // If HasMaskedOffOperand, insert result type as first input operand if
     // need.
-    if (HasMaskedOffOperand && DefaultPolicy != Policy::TAMA) {
+    if (HasMaskedOffOperand && !DefaultPolicy.isTAMAPolicy()) {
       if (NF == 1) {
         NewPrototype.insert(NewPrototype.begin() + 1, NewPrototype[0]);
       } else if (NF > 1) {
@@ -952,7 +944,7 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
       }
     }
     // Erase passthru operand for TAM
-    if (NF == 1 && IsPrototypeDefaultTU && DefaultPolicy == Policy::TAMA &&
+    if (NF == 1 && IsPrototypeDefaultTU && DefaultPolicy.isTAMAPolicy() &&
         HasPassthruOp && !HasMaskedOffOperand)
       NewPrototype.erase(NewPrototype.begin() + 1);
     if (HasMaskedOffOperand && NF > 1) {
@@ -969,21 +961,21 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
     }
   } else {
     if (NF == 1) {
-      if (DefaultPolicy == Policy::TU && HasPassthruOp && !IsPrototypeDefaultTU)
+      if (DefaultPolicy.isTUPolicy() && HasPassthruOp && !IsPrototypeDefaultTU)
         NewPrototype.insert(NewPrototype.begin(), NewPrototype[0]);
-      else if (DefaultPolicy == Policy::TA && HasPassthruOp &&
+      else if (DefaultPolicy.isTAPolicy() && HasPassthruOp &&
                IsPrototypeDefaultTU)
         NewPrototype.erase(NewPrototype.begin() + 1);
       if (DefaultScheme == PolicyScheme::HasPassthruOperandAtIdx1) {
-        if (DefaultPolicy == Policy::TU && !IsPrototypeDefaultTU) {
+        if (DefaultPolicy.isTUPolicy() && !IsPrototypeDefaultTU) {
           // Insert undisturbed output to index 1
           NewPrototype.insert(NewPrototype.begin() + 2, NewPrototype[0]);
-        } else if (DefaultPolicy == Policy::TA && IsPrototypeDefaultTU) {
+        } else if (DefaultPolicy.isTAPolicy() && IsPrototypeDefaultTU) {
           // Erase passthru for TA policy
           NewPrototype.erase(NewPrototype.begin() + 2);
         }
       }
-    } else if (DefaultPolicy == Policy::TU && HasPassthruOp) {
+    } else if (DefaultPolicy.isTUPolicy() && HasPassthruOp) {
       // NF > 1 cases for segment load operations.
       // Convert
       // (void, op0 address, op1 address, ...)
@@ -1006,10 +998,24 @@ llvm::SmallVector<Policy>
 RVVIntrinsic::getSupportedMaskedPolicies(bool HasTailPolicy,
                                          bool HasMaskPolicy) {
   if (HasTailPolicy && HasMaskPolicy)
-    return {Policy::TUMA, Policy::TAMA, Policy::TUMU, Policy::TAMU};
-  else if (HasTailPolicy)
-    return {Policy::TUM, Policy::TAM};
-  return {Policy::MA, Policy::MU};
+    return {Policy(Policy::PolicyType::Undisturbed,
+                   Policy::PolicyType::Agnostic), // TUMA
+            Policy(Policy::PolicyType::Agnostic,
+                   Policy::PolicyType::Agnostic), // TAMA
+            Policy(Policy::PolicyType::Undisturbed,
+                   Policy::PolicyType::Undisturbed), // TUMU
+            Policy(Policy::PolicyType::Agnostic,
+                   Policy::PolicyType::Undisturbed)}; // TAMU
+
+  if (HasTailPolicy)
+    return {Policy(Policy::PolicyType::Undisturbed,
+                   Policy::PolicyType::Agnostic, true), // TUM
+            Policy(Policy::PolicyType::Agnostic, Policy::PolicyType::Agnostic,
+                   true)}; // TAM
+
+  return {
+      Policy(Policy::PolicyType::Omit, Policy::PolicyType::Agnostic),     // MA
+      Policy(Policy::PolicyType::Omit, Policy::PolicyType::Undisturbed)}; // MU
 }
 
 void RVVIntrinsic::updateNamesAndPolicy(bool IsMasked, bool HasPolicy,
@@ -1025,59 +1031,50 @@ void RVVIntrinsic::updateNamesAndPolicy(bool IsMasked, bool HasPolicy,
     OverloadedName += suffix;
   };
 
-  switch (DefaultPolicy) {
-  case Policy::TU:
-    appendPolicySuffix("_tu");
-    break;
-  case Policy::TA:
-    appendPolicySuffix("_ta");
-    break;
-  case Policy::MU:
-    appendPolicySuffix("_mu");
-    DefaultPolicy = Policy::TAMU;
-    break;
-  case Policy::MA:
-    appendPolicySuffix("_ma");
-    DefaultPolicy = Policy::TAMA;
-    break;
-  case Policy::TUM:
-    appendPolicySuffix("_tum");
-    DefaultPolicy = Policy::TUMA;
-    break;
-  case Policy::TAM:
-    appendPolicySuffix("_tam");
-    DefaultPolicy = Policy::TAMA;
-    break;
-  case Policy::TUMU:
-    appendPolicySuffix("_tumu");
-    break;
-  case Policy::TAMU:
-    appendPolicySuffix("_tamu");
-    break;
-  case Policy::TUMA:
-    appendPolicySuffix("_tuma");
-    break;
-  case Policy::TAMA:
-    appendPolicySuffix("_tama");
-    break;
-  default:
+  if (DefaultPolicy.isPolicyNonePolicy()) {
+    DefaultPolicy.PolicyNone = false;
     if (IsMasked) {
       Name += "_m";
       // FIXME: Currently _m default policy implementation is different with
       // RVV intrinsic spec (TUMA)
-      DefaultPolicy = Policy::TUMU;
+      DefaultPolicy.TailPolicy = Policy::PolicyType::Undisturbed;
+      DefaultPolicy.MaskPolicy = Policy::PolicyType::Undisturbed;
       if (HasPolicy)
         BuiltinName += "_tumu";
       else
         BuiltinName += "_m";
     } else if (IsPrototypeDefaultTU) {
-      DefaultPolicy = Policy::TU;
+      DefaultPolicy.TailPolicy = Policy::PolicyType::Undisturbed;
       if (HasPolicy)
         BuiltinName += "_tu";
     } else {
-      DefaultPolicy = Policy::TA;
+      DefaultPolicy.TailPolicy = Policy::PolicyType::Agnostic;
       if (HasPolicy)
         BuiltinName += "_ta";
+    }
+  } else {
+    if (DefaultPolicy.isTUMPolicy())
+      appendPolicySuffix("_tum");
+    else if (DefaultPolicy.isTAMPolicy())
+      appendPolicySuffix("_tam");
+    else if (DefaultPolicy.isTUMUPolicy())
+      appendPolicySuffix("_tumu");
+    else if (DefaultPolicy.isTAMUPolicy())
+      appendPolicySuffix("_tamu");
+    else if (DefaultPolicy.isTUMAPolicy())
+      appendPolicySuffix("_tuma");
+    else if (DefaultPolicy.isTAMAPolicy())
+      appendPolicySuffix("_tama");
+    else if (DefaultPolicy.isTUPolicy())
+      appendPolicySuffix("_tu");
+    else if (DefaultPolicy.isTAPolicy())
+      appendPolicySuffix("_ta");
+    else if (DefaultPolicy.isMUPolicy()) {
+      appendPolicySuffix("_mu");
+      DefaultPolicy.TailPolicy = Policy::PolicyType::Agnostic;
+    } else if (DefaultPolicy.isMAPolicy()) {
+      appendPolicySuffix("_ma");
+      DefaultPolicy.TailPolicy = Policy::PolicyType::Agnostic;
     }
   }
 }
