@@ -41,6 +41,10 @@ clang::ASTContext &CIRGenFunction::getContext() const {
   return CGM.getASTContext();
 }
 
+mlir::Type CIRGenFunction::ConvertType(QualType T) {
+  return CGM.getTypes().ConvertType(T);
+}
+
 TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
   type = type.getCanonicalType();
   while (true) {

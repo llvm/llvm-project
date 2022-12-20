@@ -351,7 +351,9 @@ static mlir::Location getIfLocs(CIRGenFunction &CGF, const clang::Stmt *thenS,
 mlir::LogicalResult CIRGenFunction::buildIfStmt(const IfStmt &S) {
   // The else branch of a consteval if statement is always the only branch
   // that can be runtime evaluated.
-  assert(!S.isConsteval() && "not implemented");
+  if (S.isConsteval()) {
+    llvm_unreachable("consteval nyi");
+  }
   mlir::LogicalResult res = mlir::success();
 
   // C99 6.8.4.1: The first substatement is executed if the expression
@@ -370,7 +372,7 @@ mlir::LogicalResult CIRGenFunction::buildIfStmt(const IfStmt &S) {
     bool CondConstant;
     if (ConstantFoldsToSimpleInteger(S.getCond(), CondConstant,
                                      S.isConstexpr())) {
-      assert(0 && "not implemented");
+      llvm_unreachable("ConstantFoldsToSimpleInteger NYI");
     }
 
     // TODO: PGO and likelihood.
