@@ -805,14 +805,13 @@ std::unique_ptr<raw_pwrite_stream> CompilerInstance::createDefaultOutputFile(
     bool Binary, StringRef InFile, StringRef Extension, bool RemoveFileOnSignal,
     bool CreateMissingDirectories, bool ForceUseTemporary) {
   StringRef OutputPath = getFrontendOpts().OutputFile;
-  std::optional<SmallString<128>> PathStorage;
   if (OutputPath.empty()) {
     if (InFile == "-" || Extension.empty()) {
       OutputPath = "-";
     } else {
-      PathStorage.emplace(InFile);
-      llvm::sys::path::replace_extension(*PathStorage, Extension);
-      OutputPath = *PathStorage;
+      SmallString<128> PathStorage = InFile;
+      llvm::sys::path::replace_extension(PathStorage, Extension);
+      OutputPath = PathStorage;
     }
   }
 
