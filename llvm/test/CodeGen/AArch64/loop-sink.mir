@@ -8,19 +8,19 @@
 
   @A = external dso_local global [100 x i32], align 4
 
-  define void @cant_sink_adds_call_in_block(i8* nocapture readonly %input, %struct.A* %a) {
+  define void @cant_sink_adds_call_in_block(ptr nocapture readonly %input, ptr %a) {
   bb:
-    %i = getelementptr inbounds %struct.A, %struct.A* %a, i64 0, i32 1
-    %i1 = getelementptr inbounds %struct.A, %struct.A* %a, i64 0, i32 2
-    %i2 = getelementptr inbounds %struct.A, %struct.A* %a, i64 0, i32 3
-    %i3 = getelementptr inbounds %struct.A, %struct.A* %a, i64 0, i32 4
-    %i4 = getelementptr inbounds %struct.A, %struct.A* %a, i64 0, i32 5
-    %scevgep = getelementptr i8, i8* %input, i64 1
+    %i = getelementptr inbounds %struct.A, ptr %a, i64 0, i32 1
+    %i1 = getelementptr inbounds %struct.A, ptr %a, i64 0, i32 2
+    %i2 = getelementptr inbounds %struct.A, ptr %a, i64 0, i32 3
+    %i3 = getelementptr inbounds %struct.A, ptr %a, i64 0, i32 4
+    %i4 = getelementptr inbounds %struct.A, ptr %a, i64 0, i32 5
+    %scevgep = getelementptr i8, ptr %input, i64 1
     br label %.backedge
 
   .backedge:                                        ; preds = %.backedge.backedge, %bb
-    %lsr.iv = phi i8* [ %scevgep1, %.backedge.backedge ], [ %scevgep, %bb ]
-    %i5 = load i8, i8* %lsr.iv, align 1
+    %lsr.iv = phi ptr [ %scevgep1, %.backedge.backedge ], [ %scevgep, %bb ]
+    %i5 = load i8, ptr %lsr.iv, align 1
     %i6 = zext i8 %i5 to i32
     switch i32 %i6, label %.backedge.backedge [
       i32 0, label %bb7
@@ -32,32 +32,31 @@
     ]
 
   bb7:                                              ; preds = %.backedge
-    %i8 = bitcast %struct.A* %a to i32*
-    tail call void @_Z6assignPj(i32* %i8)
+    tail call void @_Z6assignPj(ptr %a)
     br label %.backedge.backedge
 
   bb9:                                              ; preds = %.backedge
-    tail call void @_Z6assignPj(i32* %i)
+    tail call void @_Z6assignPj(ptr %i)
     br label %.backedge.backedge
 
   bb10:                                             ; preds = %.backedge
-    tail call void @_Z6assignPj(i32* %i1)
+    tail call void @_Z6assignPj(ptr %i1)
     br label %.backedge.backedge
 
   bb11:                                             ; preds = %.backedge
-    tail call void @_Z6assignPj(i32* %i2)
+    tail call void @_Z6assignPj(ptr %i2)
     br label %.backedge.backedge
 
   bb12:                                             ; preds = %.backedge
-    tail call void @_Z6assignPj(i32* %i3)
+    tail call void @_Z6assignPj(ptr %i3)
     br label %.backedge.backedge
 
   bb13:                                             ; preds = %.backedge
-    tail call void @_Z6assignPj(i32* %i4)
+    tail call void @_Z6assignPj(ptr %i4)
     br label %.backedge.backedge
 
   .backedge.backedge:                               ; preds = %bb13, %bb12, %bb11, %bb10, %bb9, %bb7, %.backedge
-    %scevgep1 = getelementptr i8, i8* %lsr.iv, i64 1
+    %scevgep1 = getelementptr i8, ptr %lsr.iv, i64 1
     br label %.backedge
   }
 
@@ -67,7 +66,7 @@
     br i1 %cmp63, label %for.body.preheader, label %for.cond.cleanup
 
   for.body.preheader:                               ; preds = %entry
-    %i = load i32, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0), align 4
+    %i = load i32, ptr @A, align 4
     %call0 = tail call i32 @use(i32 %n)
     br label %for.body
 
@@ -90,7 +89,7 @@
     br i1 %cmp63, label %for.body.preheader, label %for.cond.cleanup
 
   for.body.preheader:                               ; preds = %entry
-    %i = load i32, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0), align 4
+    %i = load i32, ptr @A, align 4
     %call0 = tail call i32 @use(i32 %i)
     br label %for.body
 
@@ -113,7 +112,7 @@
     br i1 %cmp63, label %for.body.preheader, label %for.cond.cleanup
 
   for.body.preheader:                               ; preds = %entry
-    %i = load i32, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0), align 4
+    %i = load i32, ptr @A, align 4
     br label %for.body
 
   for.cond.cleanup:                                 ; preds = %for.body, %entry
@@ -137,7 +136,7 @@
     br i1 %cmp63, label %for.body.preheader, label %for.cond.cleanup
 
   for.body.preheader:                               ; preds = %entry
-    %i = load i32, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0), align 4
+    %i = load i32, ptr @A, align 4
     br label %for.body
 
   for.cond.cleanup:                                 ; preds = %for.body, %entry
@@ -153,9 +152,9 @@
     br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
   }
 
-  define dso_local void @sink_add(i32* noalias nocapture readonly %read, i32* noalias nocapture %write, i32 %n) local_unnamed_addr {
+  define dso_local void @sink_add(ptr noalias nocapture readonly %read, ptr noalias nocapture %write, i32 %n) local_unnamed_addr {
   entry:
-    %i = load i32, i32* %read, align 4, !tbaa !0
+    %i = load i32, ptr %read, align 4, !tbaa !0
     %cmp10 = icmp sgt i32 %n, 0
     br i1 %cmp10, label %for.body.preheader, label %for.cond.cleanup
 
@@ -165,7 +164,7 @@
 
   for.cond.cleanup:                                 ; preds = %for.body, %entry
     %sum.0.lcssa = phi i32 [ %n, %entry ], [ %div, %for.body ]
-    store i32 %sum.0.lcssa, i32* %write, align 4, !tbaa !0
+    store i32 %sum.0.lcssa, ptr %write, align 4, !tbaa !0
     ret void
 
   for.body:                                         ; preds = %for.body, %for.body.preheader
@@ -179,20 +178,20 @@
     br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
   }
 
-  define dso_local void @store_after_add(i32* noalias nocapture readonly %read, i32* noalias nocapture %write, i32* nocapture %store, i32 %n) local_unnamed_addr {
+  define dso_local void @store_after_add(ptr noalias nocapture readonly %read, ptr noalias nocapture %write, ptr nocapture %store, i32 %n) local_unnamed_addr {
   entry:
-    %i = load i32, i32* %read, align 4, !tbaa !0
+    %i = load i32, ptr %read, align 4, !tbaa !0
     %cmp10 = icmp sgt i32 %n, 0
     br i1 %cmp10, label %for.body.preheader, label %for.cond.cleanup
 
   for.body.preheader:                               ; preds = %entry
     %i1 = add i32 %i, 42
-    store i32 43, i32* %store, align 4, !tbaa !0
+    store i32 43, ptr %store, align 4, !tbaa !0
     br label %for.body
 
   for.cond.cleanup:                                 ; preds = %for.body, %entry
     %sum.0.lcssa = phi i32 [ %n, %entry ], [ %div, %for.body ]
-    store i32 %sum.0.lcssa, i32* %write, align 4, !tbaa !0
+    store i32 %sum.0.lcssa, ptr %write, align 4, !tbaa !0
     ret void
 
   for.body:                                         ; preds = %for.body, %for.body.preheader
@@ -206,20 +205,20 @@
     br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !4
   }
 
-  define dso_local void @aliased_store_after_add(i32* noalias nocapture readonly %read, i32* noalias nocapture %write, i32* nocapture %store, i32 %n) local_unnamed_addr {
+  define dso_local void @aliased_store_after_add(ptr noalias nocapture readonly %read, ptr noalias nocapture %write, ptr nocapture %store, i32 %n) local_unnamed_addr {
   entry:
-    %i = load i32, i32* %read, align 4, !tbaa !0
+    %i = load i32, ptr %read, align 4, !tbaa !0
     %cmp10 = icmp sgt i32 %n, 0
     br i1 %cmp10, label %for.body.preheader, label %for.cond.cleanup
 
   for.body.preheader:                               ; preds = %entry
     %i1 = add i32 %i, 42
-    store i32 43, i32* %read, align 4, !tbaa !0
+    store i32 43, ptr %read, align 4, !tbaa !0
     br label %for.body
 
   for.cond.cleanup:                                 ; preds = %for.body, %entry
     %sum.0.lcssa = phi i32 [ %n, %entry ], [ %div, %for.body ]
-    store i32 %sum.0.lcssa, i32* %write, align 4, !tbaa !0
+    store i32 %sum.0.lcssa, ptr %write, align 4, !tbaa !0
     ret void
 
   for.body:                                         ; preds = %for.body, %for.body.preheader
@@ -235,7 +234,7 @@
 
   declare i32 @use(i32)
 
-  declare void @_Z6assignPj(i32*)
+  declare void @_Z6assignPj(ptr)
 
   !0 = !{!1, !1, i64 0}
   !1 = !{!"int", !2, i64 0}
@@ -581,7 +580,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @A
-  ; CHECK-NEXT:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+  ; CHECK-NEXT:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from @A)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   $w0 = COPY [[COPY]]
   ; CHECK-NEXT:   BL @use, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
@@ -617,7 +616,7 @@ body:             |
     successors: %bb.3(0x80000000)
 
     %8:gpr64common = ADRP target-flags(aarch64-page) @A
-    %9:gpr32 = LDRWui killed %8, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+    %9:gpr32 = LDRWui killed %8, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from @A)
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     $w0 = COPY %6
     BL @use, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
@@ -708,7 +707,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @A
-  ; CHECK-NEXT:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+  ; CHECK-NEXT:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from @A)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   $w0 = COPY [[LDRWui]]
   ; CHECK-NEXT:   BL @use, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
@@ -744,7 +743,7 @@ body:             |
     successors: %bb.3(0x80000000)
 
     %8:gpr64common = ADRP target-flags(aarch64-page) @A
-    %9:gpr32 = LDRWui killed %8, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+    %9:gpr32 = LDRWui killed %8, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from @A)
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     $w0 = COPY %9
     BL @use, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
@@ -844,7 +843,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @A
-  ; CHECK-NEXT:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+  ; CHECK-NEXT:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from @A)
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr32all = COPY [[LDRWui]]
   ; CHECK-NEXT:   B %bb.3
   ; CHECK-NEXT: {{  $}}
@@ -887,7 +886,7 @@ body:             |
     successors: %bb.3(0x80000000)
 
     %11:gpr64common = ADRP target-flags(aarch64-page) @A
-    %12:gpr32 = LDRWui killed %11, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+    %12:gpr32 = LDRWui killed %11, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from @A)
     %0:gpr32all = COPY %12
     B %bb.3
 
@@ -978,7 +977,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @A
-  ; CHECK-NEXT:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+  ; CHECK-NEXT:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from @A)
   ; CHECK-NEXT:   B %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.for.cond.cleanup:
@@ -1010,7 +1009,7 @@ body:             |
     successors: %bb.3(0x80000000)
 
     %8:gpr64common = ADRP target-flags(aarch64-page) @A
-    %9:gpr32 = LDRWui killed %8, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+    %9:gpr32 = LDRWui killed %8, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from @A)
     B %bb.3
 
   bb.2.for.cond.cleanup:
