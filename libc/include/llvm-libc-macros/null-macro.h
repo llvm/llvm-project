@@ -1,4 +1,4 @@
-//===-- C standard library header string.h --------------------------------===//
+//===-- Definition of the NULL macro --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_STRING_H
-#define LLVM_LIBC_STRING_H
+#ifndef __LLVM_LIBC_MACROS_NULL_MACRO_H
+#define __LLVM_LIBC_MACROS_NULL_MACRO_H
 
-#include <__llvm-libc-common.h>
+#define __need_NULL
+#include <stddef.h>
 
-#include <llvm-libc-macros/null-macro.h>
-
-%%public_api()
-
-#endif // LLVM_LIBC_STRING_H
+#endif // __LLVM_LIBC_MACROS_NULL_MACRO_H

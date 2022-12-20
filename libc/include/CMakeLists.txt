@@ -91,6 +91,7 @@ add_gen_header(
   GEN_HDR string.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.null_macro
     .llvm-libc-types.size_t
 )
 
