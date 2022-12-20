@@ -3678,17 +3678,24 @@ bool InstCombinerImpl::sinkNotIntoLogicalOp(Instruction &I) {
 
   // And can the operands be adapted?
   for (Value *Op : {Op0, Op1})
-    if (!InstCombiner::isFreeToInvert(Op, /*WillInvertAllUses=*/true) ||
-        !InstCombiner::canFreelyInvertAllUsersOf(Op, /*IgnoredUser=*/&I))
+    if (!(InstCombiner::isFreeToInvert(Op, /*WillInvertAllUses=*/true) &&
+          (isa<Constant>(Op) ||
+           InstCombiner::canFreelyInvertAllUsersOf(cast<Instruction>(Op),
+                                                   /*IgnoredUser=*/&I))))
       return false;
 
   for (Value **Op : {&Op0, &Op1}) {
-    Builder.SetInsertPoint(
-        &*cast<Instruction>(*Op)->getInsertionPointAfterDef());
-    Value *NotOp = Builder.CreateNot(*Op, (*Op)->getName() + ".not");
-    (*Op)->replaceUsesWithIf(NotOp,
-                             [NotOp](Use &U) { return U.getUser() != NotOp; });
-    freelyInvertAllUsersOf(NotOp, /*IgnoredUser=*/&I);
+    Value *NotOp;
+    if (auto *C = dyn_cast<Constant>(*Op)) {
+      NotOp = ConstantExpr::getNot(C);
+    } else {
+      Builder.SetInsertPoint(
+          &*cast<Instruction>(*Op)->getInsertionPointAfterDef());
+      NotOp = Builder.CreateNot(*Op, (*Op)->getName() + ".not");
+      (*Op)->replaceUsesWithIf(
+          NotOp, [NotOp](Use &U) { return U.getUser() != NotOp; });
+      freelyInvertAllUsersOf(NotOp, /*IgnoredUser=*/&I);
+    }
     *Op = NotOp;
   }
 
@@ -3726,12 +3733,15 @@ bool InstCombinerImpl::sinkNotIntoOtherHandOfLogicalOp(Instruction &I) {
   Value **OpToInvert = nullptr;
   if (match(Op0, m_Not(m_Value(NotOp0))) &&
       InstCombiner::isFreeToInvert(Op1, /*WillInvertAllUses=*/true) &&
-      InstCombiner::canFreelyInvertAllUsersOf(Op1, /*IgnoredUser=*/&I)) {
+      (isa<Constant>(Op1) || InstCombiner::canFreelyInvertAllUsersOf(
+                                 cast<Instruction>(Op1), /*IgnoredUser=*/&I))) {
     Op0 = NotOp0;
     OpToInvert = &Op1;
   } else if (match(Op1, m_Not(m_Value(NotOp1))) &&
              InstCombiner::isFreeToInvert(Op0, /*WillInvertAllUses=*/true) &&
-             InstCombiner::canFreelyInvertAllUsersOf(Op0, /*IgnoredUser=*/&I)) {
+             (isa<Constant>(Op0) ||
+              InstCombiner::canFreelyInvertAllUsersOf(cast<Instruction>(Op0),
+                                                      /*IgnoredUser=*/&I))) {
     Op1 = NotOp1;
     OpToInvert = &Op0;
   } else
@@ -3741,15 +3751,19 @@ bool InstCombinerImpl::sinkNotIntoOtherHandOfLogicalOp(Instruction &I) {
   if (!InstCombiner::canFreelyInvertAllUsersOf(&I, /*IgnoredUser=*/nullptr))
     return false;
 
-  Builder.SetInsertPoint(
-      &*cast<Instruction>(*OpToInvert)->getInsertionPointAfterDef());
-  Value *NotOpToInvert =
-      Builder.CreateNot(*OpToInvert, (*OpToInvert)->getName() + ".not");
-  (*OpToInvert)->replaceUsesWithIf(NotOpToInvert, [NotOpToInvert](Use &U) {
-    return U.getUser() != NotOpToInvert;
-  });
-  freelyInvertAllUsersOf(NotOpToInvert, /*IgnoredUser=*/&I);
-  *OpToInvert = NotOpToInvert;
+  if (auto *C = dyn_cast<Constant>(*OpToInvert)) {
+    *OpToInvert = ConstantExpr::getNot(C);
+  } else {
+    Builder.SetInsertPoint(
+        &*cast<Instruction>(*OpToInvert)->getInsertionPointAfterDef());
+    Value *NotOpToInvert =
+        Builder.CreateNot(*OpToInvert, (*OpToInvert)->getName() + ".not");
+    (*OpToInvert)->replaceUsesWithIf(NotOpToInvert, [NotOpToInvert](Use &U) {
+      return U.getUser() != NotOpToInvert;
+    });
+    freelyInvertAllUsersOf(NotOpToInvert, /*IgnoredUser=*/&I);
+    *OpToInvert = NotOpToInvert;
+  }
 
   Builder.SetInsertPoint(&*I.getInsertionPointAfterDef());
   Value *NewBinOp;
@@ -3861,8 +3875,9 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
   // not (cmp A, B) = !cmp A, B
   CmpInst::Predicate Pred;
   if (match(NotOp, m_Cmp(Pred, m_Value(), m_Value())) &&
-      (NotOp->hasOneUse() || InstCombiner::canFreelyInvertAllUsersOf(
-                                 NotOp, /*IgnoredUser=*/nullptr))) {
+      (NotOp->hasOneUse() ||
+       InstCombiner::canFreelyInvertAllUsersOf(cast<Instruction>(NotOp),
+                                               /*IgnoredUser=*/nullptr))) {
     cast<CmpInst>(NotOp)->setPredicate(CmpInst::getInversePredicate(Pred));
     freelyInvertAllUsersOf(NotOp);
     return &I;
