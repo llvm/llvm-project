@@ -765,6 +765,7 @@ auto llvm::GenericSyncDependenceAnalysis<ContextT>::getJoinBlocks(
              << "):\n  JoinDivBlocks: " << printBlockSet(DivDesc->JoinDivBlocks)
              << "  CycleDivBlocks: " << printBlockSet(DivDesc->CycleDivBlocks)
              << "\n");
+  (void)printBlockSet;
 
   auto ItInserted =
       CachedControlDivDescs.try_emplace(DivTermBlock, std::move(DivDesc));
