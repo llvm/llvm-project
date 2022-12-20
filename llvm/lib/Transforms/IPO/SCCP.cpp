@@ -83,6 +83,14 @@ static void findReturnsToZap(Function &F,
                                  return !isOverdefined(LV);
                                });
                }
+
+               // We don't consider assume-like intrinsics to be actual address
+               // captures.
+               if (auto *II = dyn_cast<IntrinsicInst>(U)) {
+                 if (II->isAssumeLikeIntrinsic())
+                   return true;
+               }
+
                return !isOverdefined(Solver.getLatticeValueFor(U));
              }) &&
       "We can only zap functions where all live users have a concrete value");
@@ -336,10 +344,16 @@ static bool runIPSCCP(
     for (Argument &A : F->args())
       F->removeParamAttr(A.getArgNo(), Attribute::Returned);
     for (Use &U : F->uses()) {
-      // Skip over blockaddr users.
-      if (isa<BlockAddress>(U.getUser()))
+      CallBase *CB = dyn_cast<CallBase>(U.getUser());
+      if (!CB) {
+        assert(isa<BlockAddress>(U.getUser()) ||
+               (isa<Constant>(U.getUser()) &&
+                all_of(U.getUser()->users(), [](const User *UserUser) {
+                  return cast<IntrinsicInst>(UserUser)->isAssumeLikeIntrinsic();
+                })));
         continue;
-      CallBase *CB = cast<CallBase>(U.getUser());
+      }
+
       for (Use &Arg : CB->args())
         CB->removeParamAttr(CB->getArgOperandNo(&Arg), Attribute::Returned);
     }
