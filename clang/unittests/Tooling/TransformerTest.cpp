@@ -806,7 +806,7 @@ TEST_F(TransformerTest, WithMetadata) {
       "clang-tool", std::make_shared<PCHContainerOperations>(), {}));
   ASSERT_EQ(Changes.size(), 1u);
   const llvm::Any &Metadata = Changes[0].getMetadata();
-  ASSERT_TRUE(llvm::any_isa<int>(Metadata));
+  ASSERT_TRUE(llvm::any_cast<int>(&Metadata));
   EXPECT_THAT(llvm::any_cast<int>(Metadata), 5);
 }
 
