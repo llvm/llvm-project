@@ -118,8 +118,7 @@ MachineUniformityInfo
 llvm::computeMachineUniformityInfo(MachineFunction &F,
                                    const MachineCycleInfo &cycleInfo,
                                    const MachineDomTree &domTree) {
-  auto &MRI = F.getRegInfo();
-  assert(MRI.isSSA() && "Expected to be run on SSA form!");
+  assert(F.getRegInfo().isSSA() && "Expected to be run on SSA form!");
   return MachineUniformityInfo(F, domTree, cycleInfo);
 }
 
