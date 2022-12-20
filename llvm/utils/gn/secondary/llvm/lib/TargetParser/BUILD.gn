@@ -1,0 +1,21 @@
+static_library("TargetParser") {
+  output_name = "LLVMTargetParser"
+
+  # FIXME: Make this depend on Support.
+  include_dirs = [
+    "Unix",
+    "Windows",
+  ]
+  sources = [
+    "AArch64TargetParser.cpp",
+    "ARMTargetParserCommon.cpp",
+    "ARMTargetParser.cpp",
+    "CSKYTargetParser.cpp",
+    "Host.cpp",
+    "LoongArchTargetParser.cpp",
+    "RISCVISAInfo.cpp",
+    "TargetParser.cpp",
+    "Triple.cpp",
+    "X86TargetParser.cpp",
+  ]
+}
