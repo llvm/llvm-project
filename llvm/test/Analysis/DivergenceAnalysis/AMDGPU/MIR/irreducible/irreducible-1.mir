@@ -4,8 +4,8 @@
 # CHECK: CYCLES ASSSUMED DIVERGENT:
 # CHECK:   depth=1: entries(bb.2 bb.1) bb.3 bb.5 bb.4
 # CHECK: CYCLES WITH DIVERGENT EXIT:
-# CHECK:   depth=1: entries(bb.2 bb.1) bb.3 bb.5 bb.4
-# CHECK:   depth=2: entries(bb.3 bb.1) bb.5 bb.4
+# CHECK-DAG:   depth=1: entries(bb.2 bb.1) bb.3 bb.5 bb.4
+# CHECK-DAG:   depth=2: entries(bb.3 bb.1) bb.5 bb.4
 
 ---
 name:            irreducible

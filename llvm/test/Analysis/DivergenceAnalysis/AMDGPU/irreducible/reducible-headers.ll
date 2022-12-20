@@ -34,8 +34,8 @@ define amdgpu_kernel void @nested_irreducible(i32 %a, i32 %b, i32 %c) {
 ; CHECK=LABEL: UniformityInfo for function 'nested_irreducible':
 ; CHECK-NOT: CYCLES ASSSUMED DIVERGENT:
 ; CHECK: CYCLES WITH DIVERGENT EXIT:
-; CHECK:   depth=2: entries(P T) R Q
-; CHECK:   depth=1: entries(H) S P T R Q U
+; CHECK-DAG:   depth=2: entries(P T) R Q
+; CHECK-DAG:   depth=1: entries(H) S P T R Q U
 entry:
   %cond.uni = icmp slt i32 %a, 0
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
