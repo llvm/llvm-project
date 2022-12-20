@@ -33,6 +33,7 @@ unittest("AnalysisTests") {
     "//llvm/lib/IR",
     "//llvm/lib/Passes",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
     "//llvm/lib/Transforms/Utils",
   ]

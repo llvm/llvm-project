@@ -17,6 +17,7 @@ executable("dsymutil") {
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "BinaryHolder.cpp",

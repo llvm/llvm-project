@@ -10,6 +10,7 @@ static_library("Analysis") {
     "//llvm/lib/IR",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "AliasAnalysis.cpp",

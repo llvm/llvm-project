@@ -4,9 +4,6 @@ static_library("Support") {
     "BLAKE3",
     "//llvm/include/llvm/Config:config",
     "//llvm/lib/Demangle",
-
-    # FIXME: Remove this dep.
-    "//llvm/lib/TargetParser",
     "//llvm/utils/gn/build/libs/pthread",
     "//llvm/utils/gn/build/libs/terminfo",
     "//llvm/utils/gn/build/libs/zlib",

@@ -6,6 +6,7 @@ executable("llvm-gsymutil") {
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
   ]
   sources = [ "llvm-gsymutil.cpp" ]
 }

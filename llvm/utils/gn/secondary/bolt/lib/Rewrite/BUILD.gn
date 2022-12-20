@@ -15,6 +15,7 @@ static_library("Rewrite") {
     "//llvm/lib/MC",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
     "//llvm/utils/gn/build/libs/pthread",
   ]
   sources = [

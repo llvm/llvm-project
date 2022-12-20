@@ -7,6 +7,7 @@ static_library("DWARFLinker") {
     "//llvm/lib/MC",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "DWARFLinker.cpp",
