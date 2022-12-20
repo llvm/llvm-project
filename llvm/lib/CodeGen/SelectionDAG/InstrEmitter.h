@@ -44,10 +44,8 @@ class LLVM_LIBRARY_VISIBILITY InstrEmitter {
 
   /// EmitCopyFromReg - Generate machine code for an CopyFromReg node or an
   /// implicit physical register output.
-  void EmitCopyFromReg(SDNode *Node, unsigned ResNo,
-                       bool IsClone, bool IsCloned,
-                       Register SrcReg,
-                       DenseMap<SDValue, Register> &VRBaseMap);
+  void EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone,
+                       Register SrcReg, DenseMap<SDValue, Register> &VRBaseMap);
 
   void CreateVirtualRegisters(SDNode *Node,
                               MachineInstrBuilder &MIB,
