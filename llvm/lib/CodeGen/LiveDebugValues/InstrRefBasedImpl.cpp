@@ -275,7 +275,7 @@ public:
     ShouldEmitDebugEntryValues = TM.Options.ShouldEmitDebugEntryValues();
   }
 
-  bool isCalleeSaved(LocIdx L) {
+  bool isCalleeSaved(LocIdx L) const {
     unsigned Reg = MTracker->LocIdxToLocID[L];
     if (Reg >= MTracker->NumRegs)
       return false;
@@ -284,6 +284,56 @@ public:
         return true;
     return false;
   };
+
+  // An estimate of the expected lifespan of values at a machine location, with
+  // a greater value corresponding to a longer expected lifespan, i.e. spill
+  // slots generally live longer than callee-saved registers which generally
+  // live longer than non-callee-saved registers. The minimum value of 0
+  // corresponds to an illegal location that cannot have a "lifespan" at all.
+  enum class LocationQuality : unsigned char {
+    Illegal = 0,
+    Register,
+    CalleeSavedRegister,
+    SpillSlot,
+    Best = SpillSlot
+  };
+
+  class LocationAndQuality {
+    unsigned Location : 24;
+    unsigned Quality : 8;
+
+  public:
+    LocationAndQuality() : Location(0), Quality(0) {}
+    LocationAndQuality(LocIdx L, LocationQuality Q)
+        : Location(L.asU64()), Quality(static_cast<unsigned>(Q)) {}
+    LocIdx getLoc() const {
+      if (!Quality)
+        return LocIdx::MakeIllegalLoc();
+      return LocIdx(Location);
+    }
+    LocationQuality getQuality() const { return LocationQuality(Quality); }
+    bool isIllegal() const { return !Quality; }
+    bool isBest() const { return getQuality() == LocationQuality::Best; }
+  };
+
+  // Returns the LocationQuality for the location L iff the quality of L is
+  // is strictly greater than the provided minimum quality.
+  std::optional<LocationQuality>
+  getLocQualityIfBetter(LocIdx L, LocationQuality Min) const {
+    if (L.isIllegal())
+      return std::nullopt;
+    if (Min >= LocationQuality::SpillSlot)
+      return std::nullopt;
+    if (MTracker->isSpill(L))
+      return LocationQuality::SpillSlot;
+    if (Min >= LocationQuality::CalleeSavedRegister)
+      return std::nullopt;
+    if (isCalleeSaved(L))
+      return LocationQuality::CalleeSavedRegister;
+    if (Min >= LocationQuality::Register)
+      return std::nullopt;
+    return LocationQuality::Register;
+  }
 
   /// For a variable \p Var with the live-in value \p Value, attempts to resolve
   /// the DbgValue to a concrete DBG_VALUE, emitting that value and loading the
@@ -294,7 +344,7 @@ public:
   /// \p DbgOpStore is the map containing the DbgOpID->DbgOp mapping needed to
   ///    determine the values used by Value.
   void loadVarInloc(MachineBasicBlock &MBB, DbgOpIDMap &DbgOpStore,
-                    const DenseMap<ValueIDNum, LocIdx> &ValueToLoc,
+                    const DenseMap<ValueIDNum, LocationAndQuality> &ValueToLoc,
                     DebugVariable Var, DbgValue Value) {
     SmallVector<DbgOp> DbgOps;
     SmallVector<ResolvedDbgOp> ResolvedDbgOps;
@@ -343,7 +393,7 @@ public:
 
       // Defer modifying ActiveVLocs until after we've confirmed we have a
       // live range.
-      LocIdx M = ValuesPreferredLoc->second;
+      LocIdx M = ValuesPreferredLoc->second.getLoc();
       ResolvedDbgOps.push_back(M);
     }
 
@@ -390,7 +440,7 @@ public:
     UseBeforeDefVariables.clear();
 
     // Map of the preferred location for each value.
-    DenseMap<ValueIDNum, LocIdx> ValueToLoc;
+    DenseMap<ValueIDNum, LocationAndQuality> ValueToLoc;
 
     // Initialized the preferred-location map with illegal locations, to be
     // filled in later.
@@ -398,8 +448,7 @@ public:
       if (VLoc.second.Kind == DbgValue::Def)
         for (DbgOpID OpID : VLoc.second.getDbgOpIDs())
           if (!OpID.ID.IsConst)
-            ValueToLoc.insert(
-                {DbgOpStore.find(OpID).ID, LocIdx::MakeIllegalLoc()});
+            ValueToLoc.insert({DbgOpStore.find(OpID).ID, LocationAndQuality()});
 
     ActiveMLocs.reserve(VLocs.size());
     ActiveVLocs.reserve(VLocs.size());
@@ -419,16 +468,13 @@ public:
       if (VIt == ValueToLoc.end())
         continue;
 
-      LocIdx CurLoc = VIt->second;
-      // In order of preference, pick:
-      //  * Callee saved registers,
-      //  * Other registers,
-      //  * Spill slots.
-      if (CurLoc.isIllegal() || MTracker->isSpill(CurLoc) ||
-          (!isCalleeSaved(CurLoc) && isCalleeSaved(Idx.asU64()))) {
-        // Insert, or overwrite if insertion failed.
-        VIt->second = Idx;
-      }
+      auto &Previous = VIt->second;
+      // If this is the first location with that value, pick it. Otherwise,
+      // consider whether it's a "longer term" location.
+      std::optional<LocationQuality> ReplacementQuality =
+          getLocQualityIfBetter(Idx, Previous.getQuality());
+      if (ReplacementQuality)
+        Previous = LocationAndQuality(Idx, *ReplacementQuality);
     }
 
     // Now map variables to their picked LocIdxes.
@@ -458,7 +504,7 @@ public:
 
     // Map of values to the locations that store them for every value used by
     // the variables that may have become available.
-    SmallDenseMap<ValueIDNum, LocIdx> ValueToLoc;
+    SmallDenseMap<ValueIDNum, LocationAndQuality> ValueToLoc;
 
     // Populate ValueToLoc with illegal default mappings for every value used by
     // any UseBeforeDef variables for this instruction.
@@ -472,7 +518,7 @@ public:
         if (Op.IsConst)
           continue;
 
-        ValueToLoc.insert(std::make_pair(Op.ID, LocIdx::MakeIllegalLoc()));
+        ValueToLoc.insert({Op.ID, LocationAndQuality()});
       }
     }
 
@@ -490,16 +536,13 @@ public:
       if (VIt == ValueToLoc.end())
         continue;
 
-      LocIdx CurLoc = VIt->second;
-      // In order of preference, pick:
-      //  * Callee saved registers,
-      //  * Other registers,
-      //  * Spill slots.
-      if (CurLoc.isIllegal() || MTracker->isSpill(CurLoc) ||
-          (!isCalleeSaved(CurLoc) && isCalleeSaved(Idx.asU64()))) {
-        // Insert, or overwrite if insertion failed.
-        VIt->second = Idx;
-      }
+      auto &Previous = VIt->second;
+      // If this is the first location with that value, pick it. Otherwise,
+      // consider whether it's a "longer term" location.
+      std::optional<LocationQuality> ReplacementQuality =
+          getLocQualityIfBetter(Idx, Previous.getQuality());
+      if (ReplacementQuality)
+        Previous = LocationAndQuality(Idx, *ReplacementQuality);
     }
 
     // Using the map of values to locations, produce a final set of values for
@@ -515,7 +558,7 @@ public:
           DbgOps.push_back(Op.MO);
           continue;
         }
-        LocIdx NewLoc = ValueToLoc.find(Op.ID)->second;
+        LocIdx NewLoc = ValueToLoc.find(Op.ID)->second.getLoc();
         if (NewLoc.isIllegal())
           break;
         DbgOps.push_back(NewLoc);
@@ -1561,37 +1604,33 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
 
   // Pick a location for the machine value number, if such a location exists.
   // (This information could be stored in TransferTracker to make it faster).
-  std::optional<LocIdx> FoundLoc;
+  TransferTracker::LocationAndQuality FoundLoc;
   for (auto Location : MTracker->locations()) {
     LocIdx CurL = Location.Idx;
     ValueIDNum ID = MTracker->readMLoc(CurL);
     if (NewID && ID == NewID) {
       // If this is the first location with that value, pick it. Otherwise,
       // consider whether it's a "longer term" location.
-      if (!FoundLoc) {
-        FoundLoc = CurL;
-        continue;
+      std::optional<TransferTracker::LocationQuality> ReplacementQuality =
+          TTracker->getLocQualityIfBetter(CurL, FoundLoc.getQuality());
+      if (ReplacementQuality) {
+        FoundLoc =
+            TransferTracker::LocationAndQuality(CurL, *ReplacementQuality);
+        if (FoundLoc.isBest())
+          break;
       }
-
-      if (MTracker->isSpill(CurL))
-        FoundLoc = CurL; // Spills are a longer term location.
-      else if (!MTracker->isSpill(*FoundLoc) &&
-               !MTracker->isSpill(CurL) &&
-               !isCalleeSaved(*FoundLoc) &&
-               isCalleeSaved(CurL))
-        FoundLoc = CurL; // Callee saved regs are longer term than normal.
     }
   }
 
   SmallVector<ResolvedDbgOp> NewLocs;
-  if (FoundLoc)
-    NewLocs.push_back(*FoundLoc);
+  if (!FoundLoc.isIllegal())
+    NewLocs.push_back(FoundLoc.getLoc());
   // Tell transfer tracker that the variable value has changed.
   TTracker->redefVar(MI, Properties, NewLocs);
 
   // If there was a value with no location; but the value is defined in a
   // later instruction in this block, this is a block-local use-before-def.
-  if (!FoundLoc && NewID && NewID->getBlock() == CurBB &&
+  if (FoundLoc.isIllegal() && NewID && NewID->getBlock() == CurBB &&
       NewID->getInst() > CurInst) {
     SmallVector<DbgOp> UseBeforeDefLocs;
     UseBeforeDefLocs.push_back(*NewID);
@@ -1601,7 +1640,7 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
 
   // Produce a DBG_VALUE representing what this DBG_INSTR_REF meant.
   // This DBG_VALUE is potentially a $noreg / undefined location, if
-  // FoundLoc is None.
+  // FoundLoc is illegal.
   // (XXX -- could morph the DBG_INSTR_REF in the future).
   MachineInstr *DbgMI = MTracker->emitLoc(NewLocs, V, Properties);
 
