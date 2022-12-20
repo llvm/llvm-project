@@ -133,8 +133,7 @@ define float @lower_constantpool(float %a) nounwind {
 ; RV32I-MEDIUM:       # %bb.0:
 ; RV32I-MEDIUM-NEXT:  .Lpcrel_hi3:
 ; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(.LCPI3_0)
-; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi3)
-; RV32I-MEDIUM-NEXT:    flw ft0, 0(a0)
+; RV32I-MEDIUM-NEXT:    flw ft0, %pcrel_lo(.Lpcrel_hi3)(a0)
 ; RV32I-MEDIUM-NEXT:    fadd.s fa0, fa0, ft0
 ; RV32I-MEDIUM-NEXT:    ret
   %1 = fadd float %a, 1.0
