@@ -188,7 +188,7 @@ private:
 
   /// The AST file if this is a top-level module which has a
   /// corresponding serialized AST file, or null otherwise.
-  Optional<FileEntryRef> ASTFile;
+  OptionalFileEntryRef ASTFile;
 
   /// The \c ActionCache key for this module, if any.
   Optional<std::string> ModuleCacheKey;
@@ -623,7 +623,7 @@ public:
   }
 
   /// Set the serialized AST file for the top-level module of this module.
-  void setASTFile(Optional<FileEntryRef> File) {
+  void setASTFile(OptionalFileEntryRef File) {
     assert((!getASTFile() || getASTFile() == File) && "file path changed");
     getTopLevelModule()->ASTFile = File;
   }

@@ -511,7 +511,7 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
   }
 
   if (Opts.MaxBitIntWidth)
-    MaxBitIntWidth = Opts.MaxBitIntWidth;
+    MaxBitIntWidth = static_cast<unsigned>(Opts.MaxBitIntWidth);
 
   if (Opts.FakeAddressSpaceMap)
     AddrSpaceMap = &FakeAddrSpaceMap;
