@@ -43,13 +43,6 @@ def NullMacro : MacroDef<"NULL"> {
   }];
 }
 
-def ErrnoMacro : MacroDef<"errno"> {
-  let Defn = [{
-    extern _Thread_local int __llvmlibc_errno;
-    #define errno __llvmlibc_errno
-  }];
-}
-
 def AssertAPI : PublicAPI<"assert.h"> {
   let Macros = [
     AssertMacro,
@@ -180,25 +173,6 @@ def TimeAPI : PublicAPI<"time.h"> {
     "struct timespec",
     "struct timeval",
     "clockid_t",
-  ];
-}
-
-def ErrnoAPI : PublicAPI<"errno.h"> {
-  let Macros = [
-    ErrnoMacro,
-    // We largely depend on linux/errno.h to give us the
-    // various error macro definitions. However, some libc
-    // implementations have chosen to provide definitions
-    // for some of the error macros to account for the ones
-    // missing in linux/errno.h. There is no harm in doing
-    // the same here if we define the macros only when they
-    // are not already defined.
-    MacroDefineIfNot<"ENOTSUP", "EOPNOTSUPP">,
-    MacroDefineIfNot<"ECANCELED", "125">,
-    MacroDefineIfNot<"EOWNERDEAD", "130">,
-    MacroDefineIfNot<"ENOTRECOVERABLE", "131">,
-    MacroDefineIfNot<"ERFKILL", "132">,
-    MacroDefineIfNot<"EHWPOISON", "133">,
   ];
 }
 
