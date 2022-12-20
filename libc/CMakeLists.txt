@@ -55,16 +55,17 @@ option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc"
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 
-set(LLVM_LIBC_TARGET_OS ${CMAKE_SYSTEM_NAME} CACHE STRING "Target operating system for LLVM libc")
-string(TOLOWER ${LLVM_LIBC_TARGET_OS} LIBC_TARGET_OS)
+option(LIBC_GPU_BUILD "Build libc for the GPU. All CPU build options will be ignored." OFF)
+set(LIBC_TARGET_TRIPLE "" CACHE STRING "The target triple for the libc build.")
 
 # Defines LIBC_TARGET_ARCHITECTURE and associated macros.
 include(LLVMLibCArchitectures)
-include(LLVMLibCCheckMPFR)
 
 if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
   include(prepare_libc_gpu_build)
 endif()
+
+include(LLVMLibCCheckMPFR)
 
 if(LLVM_LIBC_CLANG_TIDY)
   set(LLVM_LIBC_ENABLE_LINTING ON)
