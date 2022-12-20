@@ -13,6 +13,7 @@ static_library("CodeGen") {
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/ObjCARC",
     "//llvm/lib/Transforms/Scalar",
     "//llvm/lib/Transforms/Utils",

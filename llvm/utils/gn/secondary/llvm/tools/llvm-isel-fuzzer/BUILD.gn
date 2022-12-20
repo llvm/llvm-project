@@ -15,6 +15,7 @@ fuzzer("llvm-isel-fuzzer") {
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/Scalar",
   ]
   dummy_main = "DummyISelFuzzer.cpp"
