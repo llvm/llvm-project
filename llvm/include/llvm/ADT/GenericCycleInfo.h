@@ -105,7 +105,9 @@ public:
   }
 
   /// \brief Return whether \p Block is an entry block of the cycle.
-  bool isEntry(BlockT *Block) const { return is_contained(Entries, Block); }
+  bool isEntry(const BlockT *Block) const {
+    return is_contained(Entries, Block);
+  }
 
   /// \brief Return whether \p Block is contained in the cycle.
   bool contains(const BlockT *Block) const {

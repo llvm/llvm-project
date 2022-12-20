@@ -1,13 +1,5 @@
 ; RUN: opt %s -mtriple amdgcn-- -passes='print<divergence>' -disable-output 2>&1 | FileCheck %s
-
-; NOTE: The new pass manager does not fall back on legacy divergence
-; analysis even when the function contains an irreducible loop. The
-; (new) divergence analysis conservatively reports all values as
-; divergent. This test does not check for this conservative
-; behaviour. Instead, it only checks for the values that are known to
-; be divergent according to the legacy analysis.
-
-; RUN: opt -mtriple amdgcn-- -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt %s -mtriple amdgcn-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
 
 ; This test contains an unstructured loop.
 ;           +-------------- entry ----------------+
@@ -21,21 +13,27 @@
 ;                             |
 ;                             V
 ;                        if (i3 == 5) // divergent
-; because sync dependent on (tid / i3).
+;                                        because sync dependent on (tid / i3).
+
 define i32 @unstructured_loop(i1 %entry_cond) {
-; CHECK-LABEL: Divergence Analysis' for function 'unstructured_loop'
+; CHECK-LABEL: for function 'unstructured_loop'
+; CHECK: DIVERGENT: i1 %entry_cond
+
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   br i1 %entry_cond, label %loop_entry_1, label %loop_entry_2
 loop_entry_1:
+; CHECK: DIVERGENT: %i1 =
   %i1 = phi i32 [ 0, %entry ], [ %i3, %loop_latch ]
   %j1 = add i32 %i1, 1
   br label %loop_body
 loop_entry_2:
+; CHECK: DIVERGENT: %i2 =
   %i2 = phi i32 [ 0, %entry ], [ %i3, %loop_latch ]
   %j2 = add i32 %i2, 2
   br label %loop_body
 loop_body:
+; CHECK: DIVERGENT: %i3 =
   %i3 = phi i32 [ %j1, %loop_entry_1 ], [ %j2, %loop_entry_2 ]
   br label %loop_latch
 loop_latch:
@@ -43,9 +41,10 @@ loop_latch:
   switch i32 %div, label %branch [ i32 1, label %loop_entry_1
                                    i32 2, label %loop_entry_2 ]
 branch:
+; CHECK: DIVERGENT: %cmp =
+; CHECK: DIVERGENT: br i1 %cmp,
   %cmp = icmp eq i32 %i3, 5
   br i1 %cmp, label %then, label %else
-; CHECK: DIVERGENT: br i1 %cmp,
 then:
   ret i32 0
 else:
