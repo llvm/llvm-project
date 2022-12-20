@@ -76,6 +76,7 @@ add_llvm_target(MipsCodeGen
   SelectionDAG
   Support
   Target
+  TargetParser
   GlobalISel
 
   ADD_TO_COMPONENT

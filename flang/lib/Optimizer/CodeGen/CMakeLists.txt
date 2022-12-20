@@ -30,4 +30,5 @@ add_flang_library(FIRCodeGen
   AsmParser
   AsmPrinter
   Remarks
+  TargetParser
 )

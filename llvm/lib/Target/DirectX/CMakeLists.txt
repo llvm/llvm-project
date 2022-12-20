@@ -35,6 +35,7 @@ add_llvm_target(DirectXCodeGen
   CodeGen
   SelectionDAG
   Support
+  TargetParser
   DirectXDesc
   DirectXInfo
   DirectXPointerTypeAnalysis

@@ -266,6 +266,7 @@ add_llvm_component_library(LLVMCodeGen
   Scalar
   Support
   Target
+  TargetParser
   TransformUtils
   )
 

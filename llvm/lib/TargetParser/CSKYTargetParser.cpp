@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/CSKYTargetParser.h"
+#include "llvm/TargetParser/CSKYTargetParser.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace llvm;
@@ -138,7 +138,7 @@ uint64_t CSKY::getDefaultExtensions(StringRef CPU) {
 #define CSKY_CPU_NAME(NAME, ID, DEFAULT_EXT)                                   \
   .Case(NAME, ARCHNames[static_cast<unsigned>(ArchKind::ID)].archBaseExt |     \
                   DEFAULT_EXT)
-#include "llvm/Support/CSKYTargetParser.def"
+#include "llvm/TargetParser/CSKYTargetParser.def"
       .Default(CSKY::AEK_INVALID);
 }
 
