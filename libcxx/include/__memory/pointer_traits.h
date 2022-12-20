@@ -12,8 +12,15 @@
 
 #include <__config>
 #include <__memory/addressof.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/conjunction.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/is_class.h>
+#include <__type_traits/is_function.h>
+#include <__type_traits/is_void.h>
+#include <__type_traits/void_t.h>
+#include <__utility/declval.h>
 #include <cstddef>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

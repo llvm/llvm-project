@@ -10,9 +10,15 @@
 #define _LIBCPP___FUNCTIONAL_HASH_H
 
 #include <__config>
+#include <__functional/invoke.h>
 #include <__functional/unary_function.h>
 #include <__fwd/hash.h>
 #include <__tuple_dir/sfinae_helpers.h>
+#include <__type_traits/is_copy_constructible.h>
+#include <__type_traits/is_default_constructible.h>
+#include <__type_traits/is_enum.h>
+#include <__type_traits/is_move_constructible.h>
+#include <__type_traits/underlying_type.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
@@ -21,7 +27,6 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

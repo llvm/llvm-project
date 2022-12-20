@@ -17,6 +17,7 @@
 #include <limits>
 #include <numeric>
 #include <cassert>
+#include <cstddef>
 #include "test_macros.h"
 
 template <typename T>

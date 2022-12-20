@@ -353,6 +353,7 @@ template <class T> unspecified2 end(const valarray<T>& v);
 #include <__functional/operations.h>
 #include <__memory/allocator.h>
 #include <__memory/uninitialized_algorithms.h>
+#include <__type_traits/remove_reference.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <cmath>
