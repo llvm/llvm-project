@@ -8,8 +8,8 @@ static_library("TargetParser") {
   ]
   sources = [
     "AArch64TargetParser.cpp",
-    "ARMTargetParserCommon.cpp",
     "ARMTargetParser.cpp",
+    "ARMTargetParserCommon.cpp",
     "CSKYTargetParser.cpp",
     "Host.cpp",
     "LoongArchTargetParser.cpp",
