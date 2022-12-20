@@ -30,5 +30,5 @@ still checked.
 
 This check does not propose any fixes.
 
-.. _Underscores are not allowed: https://github.com/google/googletest/blob/master/googletest/docs/faq.md#why-should-test-suite-names-and-test-names-not-contain-underscore
-.. _disable individual tests: https://github.com/google/googletest/blob/master/googletest/docs/faq.md#why-should-test-suite-names-and-test-names-not-contain-underscore
+.. _Underscores are not allowed: https://google.github.io/googletest/faq.html#why-should-test-suite-names-and-test-names-not-contain-underscore
+.. _disable individual tests: https://google.github.io/googletest/advanced.html#temporarily-disabling-tests

@@ -411,8 +411,12 @@ void SymbolReaper::markLive(SymbolRef sym) {
 }
 
 void SymbolReaper::markLive(const MemRegion *region) {
-  RegionRoots.insert(region->getBaseRegion());
+  LiveRegionRoots.insert(region->getBaseRegion());
   markElementIndicesLive(region);
+}
+
+void SymbolReaper::markLazilyCopied(const clang::ento::MemRegion *region) {
+  LazilyCopiedRegionRoots.insert(region->getBaseRegion());
 }
 
 void SymbolReaper::markElementIndicesLive(const MemRegion *region) {
@@ -437,8 +441,7 @@ bool SymbolReaper::isLiveRegion(const MemRegion *MR) {
   // is not used later in the path, we can diagnose a leak of a value within
   // that field earlier than, say, the variable that contains the field dies.
   MR = MR->getBaseRegion();
-
-  if (RegionRoots.count(MR))
+  if (LiveRegionRoots.count(MR))
     return true;
 
   if (const auto *SR = dyn_cast<SymbolicRegion>(MR))
@@ -454,6 +457,15 @@ bool SymbolReaper::isLiveRegion(const MemRegion *MR) {
   return isa<AllocaRegion, CXXThisRegion, MemSpaceRegion, CodeTextRegion>(MR);
 }
 
+bool SymbolReaper::isLazilyCopiedRegion(const MemRegion *MR) const {
+  // TODO: See comment in isLiveRegion.
+  return LazilyCopiedRegionRoots.count(MR->getBaseRegion());
+}
+
+bool SymbolReaper::isReadableRegion(const MemRegion *MR) {
+  return isLiveRegion(MR) || isLazilyCopiedRegion(MR);
+}
+
 bool SymbolReaper::isLive(SymbolRef sym) {
   if (TheLiving.count(sym)) {
     markDependentsLive(sym);
@@ -464,7 +476,7 @@ bool SymbolReaper::isLive(SymbolRef sym) {
 
   switch (sym->getKind()) {
   case SymExpr::SymbolRegionValueKind:
-    KnownLive = isLiveRegion(cast<SymbolRegionValue>(sym)->getRegion());
+    KnownLive = isReadableRegion(cast<SymbolRegionValue>(sym)->getRegion());
     break;
   case SymExpr::SymbolConjuredKind:
     KnownLive = false;

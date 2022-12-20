@@ -205,29 +205,6 @@ void testVariableLengthArrayCaptured() {
   clang_analyzer_eval(i == 7); // expected-warning{{TRUE}}
 }
 
-#if __cplusplus >= 201402L
-// Capture copy elided object.
-
-struct Elided{
-  int x = 0;
-  Elided(int) {}
-};
-
-void testCopyElidedObjectCaptured(int x) {
-  [e = Elided(x)] {
-    clang_analyzer_eval(e.x == 0); // expected-warning{{TRUE}}
-  }();
-}
-
-static auto MakeUniquePtr() { return std::make_unique<std::vector<int>>(); }
-
-void testCopyElidedUniquePtr() {
-  [uniquePtr = MakeUniquePtr()] {}();
-  clang_analyzer_warnIfReached(); // expected-warning{{TRUE}}
-}
-
-#endif
-
 // Test inline defensive checks
 int getNum();
 
