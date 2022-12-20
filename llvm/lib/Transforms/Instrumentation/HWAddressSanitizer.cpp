@@ -388,7 +388,7 @@ private:
   bool DetectUseAfterScope;
   bool UsePageAliases;
 
-  llvm::Optional<uint8_t> MatchAllTag;
+  std::optional<uint8_t> MatchAllTag;
 
   unsigned PointerTagShift;
   uint64_t TagMaskByte;

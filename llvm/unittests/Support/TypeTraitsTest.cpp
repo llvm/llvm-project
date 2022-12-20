@@ -120,7 +120,7 @@ TEST(Triviality, ADT) {
   TrivialityTester<llvm::PointerIntPair<int *, 2>, true, true>();
 #if defined(_LIBCPP_VERSION) ||                                                \
     (defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE >= 8)
-  TrivialityTester<llvm::Optional<int>, true, true>();
+  TrivialityTester<std::optional<int>, true, true>();
 #endif
 }
 
