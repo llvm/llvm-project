@@ -3763,12 +3763,9 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
 
   // not (cmp A, B) = !cmp A, B
   CmpInst::Predicate Pred;
-  if (match(NotOp, m_Cmp(Pred, m_Value(), m_Value())) &&
-      (NotOp->hasOneUse() || InstCombiner::canFreelyInvertAllUsersOf(
-                                 NotOp, /*IgnoredUser=*/nullptr))) {
+  if (match(NotOp, m_OneUse(m_Cmp(Pred, m_Value(), m_Value())))) {
     cast<CmpInst>(NotOp)->setPredicate(CmpInst::getInversePredicate(Pred));
-    freelyInvertAllUsersOf(NotOp);
-    return &I;
+    return replaceInstUsesWith(I, NotOp);
   }
 
   // Eliminate a bitwise 'not' op of 'not' min/max by inverting the min/max:
