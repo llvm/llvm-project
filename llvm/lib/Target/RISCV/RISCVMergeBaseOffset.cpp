@@ -88,41 +88,48 @@ INITIALIZE_PASS(RISCVMergeBaseOffsetOpt, DEBUG_TYPE,
 //    3) The offset value in the Global Address or Constant Pool is 0.
 bool RISCVMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi,
                                              MachineInstr *&Lo) {
+  if (Hi.getOpcode() != RISCV::LUI && Hi.getOpcode() != RISCV::AUIPC)
+    return false;
+
+  const MachineOperand &HiOp1 = Hi.getOperand(1);
+  unsigned ExpectedFlags =
+      Hi.getOpcode() == RISCV::AUIPC ? RISCVII::MO_PCREL_HI : RISCVII::MO_HI;
+  if (HiOp1.getTargetFlags() != ExpectedFlags)
+    return false;
+
+  if (!(HiOp1.isGlobal() || HiOp1.isCPI()) || HiOp1.getOffset() != 0)
+    return false;
+
+  Register HiDestReg = Hi.getOperand(0).getReg();
+  if (!MRI->hasOneUse(HiDestReg))
+    return false;
+
+  Lo = &*MRI->use_instr_begin(HiDestReg);
+  if (Lo->getOpcode() != RISCV::ADDI)
+    return false;
+
+  const MachineOperand &LoOp2 = Lo->getOperand(2);
   if (Hi.getOpcode() == RISCV::LUI) {
-    Register HiDestReg = Hi.getOperand(0).getReg();
-    const MachineOperand &HiOp1 = Hi.getOperand(1);
-    if (HiOp1.getTargetFlags() != RISCVII::MO_HI ||
-        !(HiOp1.isGlobal() || HiOp1.isCPI()) || HiOp1.getOffset() != 0 ||
-        !MRI->hasOneUse(HiDestReg))
-      return false;
-    Lo = &*MRI->use_instr_begin(HiDestReg);
-    if (Lo->getOpcode() != RISCV::ADDI)
-      return false;
-    const MachineOperand &LoOp2 = Lo->getOperand(2);
     if (LoOp2.getTargetFlags() != RISCVII::MO_LO ||
         !(LoOp2.isGlobal() || LoOp2.isCPI()) || LoOp2.getOffset() != 0)
       return false;
-    return true;
-  }
-
-  if (Hi.getOpcode() == RISCV::AUIPC) {
-    Register HiDestReg = Hi.getOperand(0).getReg();
-    const MachineOperand &HiOp1 = Hi.getOperand(1);
-    if (HiOp1.getTargetFlags() != RISCVII::MO_PCREL_HI ||
-        !(HiOp1.isGlobal() || HiOp1.isCPI()) || HiOp1.getOffset() != 0 ||
-        !MRI->hasOneUse(HiDestReg))
-      return false;
-    Lo = &*MRI->use_instr_begin(HiDestReg);
-    if (Lo->getOpcode() != RISCV::ADDI)
-      return false;
-    const MachineOperand &LoOp2 = Lo->getOperand(2);
+  } else {
+    assert(Hi.getOpcode() == RISCV::AUIPC);
     if (LoOp2.getTargetFlags() != RISCVII::MO_PCREL_LO ||
         LoOp2.getType() != MachineOperand::MO_MCSymbol)
       return false;
-    return true;
   }
 
-  return false;
+  if (HiOp1.isGlobal()) {
+    LLVM_DEBUG(dbgs() << "  Found lowered global address: "
+                      << *HiOp1.getGlobal() << "\n");
+  } else {
+    assert(HiOp1.isCPI());
+    LLVM_DEBUG(dbgs() << "  Found lowered constant pool: " << HiOp1.getIndex()
+                      << "\n");
+  }
+
+  return true;
 }
 
 // Update the offset in Hi and Lo instructions.
@@ -434,14 +441,6 @@ bool RISCVMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
       MachineInstr *Lo = nullptr;
       if (!detectFoldable(Hi, Lo))
         continue;
-      if (Hi.getOperand(1).isGlobal()) {
-        LLVM_DEBUG(dbgs() << "  Found lowered global address: "
-                          << *Hi.getOperand(1).getGlobal() << "\n");
-      } else {
-        assert(Hi.getOperand(1).isCPI());
-        LLVM_DEBUG(dbgs() << "  Found lowered constant pool: "
-                          << Hi.getOperand(1).getIndex() << "\n");
-      }
       MadeChange |= detectAndFoldOffset(Hi, *Lo);
       MadeChange |= foldIntoMemoryOps(Hi, *Lo);
     }
