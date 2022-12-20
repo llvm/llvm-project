@@ -394,6 +394,10 @@ bool Type::IsAggregateType() {
   return GetForwardCompilerType().IsAggregateType();
 }
 
+bool Type::IsTemplateType() {
+  return GetForwardCompilerType().IsTemplateType();
+}
+
 lldb::TypeSP Type::GetTypedefType() {
   lldb::TypeSP type_sp;
   if (IsTypedef()) {

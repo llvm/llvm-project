@@ -194,6 +194,8 @@ public:
 
   bool IsScalarType() const;
 
+  bool IsTemplateType() const;
+
   bool IsTypedefType() const;
 
   bool IsVoidType() const;
