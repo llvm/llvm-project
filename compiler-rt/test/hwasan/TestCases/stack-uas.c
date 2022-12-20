@@ -40,7 +40,7 @@ __attribute__((noinline)) void Unrelated3() {
 __attribute__((noinline)) char buggy() {
   char *volatile p;
   {
-    char zzz[0x1000];
+    char zzz[0x1000] = {};
     p = zzz;
   }
   return *p;

@@ -1,4 +1,4 @@
-; RUN: llvm-as --opaque-pointers=0 < %s | llvm-dis --opaque-pointers=0 | FileCheck %s
+; RUN: llvm-as < %s | llvm-dis | FileCheck %s
 
 ; Tests parsing for the dso_local keyword as well as the serialization/
 ; deserialization of the dso_local value on GlobalValues.
@@ -22,13 +22,13 @@
 ; CHECK: @protected_local_global = protected global i32 0
 
 @local_alias = dso_local alias i32, i32* @local_global
-; CHECK-DAG: @local_alias = dso_local alias i32, i32* @local_global
+; CHECK-DAG: @local_alias = dso_local alias i32, ptr @local_global
 
 @preemptable_alias = dso_preemptable alias i32, i32* @hidden_local_global
-; CHECK-DAG: @preemptable_alias = alias i32, i32* @hidden_local_global
+; CHECK-DAG: @preemptable_alias = alias i32, ptr @hidden_local_global
 
 @preemptable_ifunc = dso_preemptable ifunc void (), void ()* ()* @ifunc_resolver
-; CHECK-DAG: @preemptable_ifunc = ifunc void (), void ()* ()* @ifunc_resolver
+; CHECK-DAG: @preemptable_ifunc = ifunc void (), ptr @ifunc_resolver
 declare dso_local default void @default_local()
 ; CHECK: declare dso_local void @default_local()
 

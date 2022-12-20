@@ -465,13 +465,13 @@ define <32 x i16> @shuffle_v32i16_32_zz_33_zz_34_zz_35_zz_36_zz_37_zz_38_zz_39_z
 define <8 x i16> @pr32967(<32 x i16> %v) {
 ; KNL-LABEL: pr32967:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpsrld $16, %zmm0, %zmm0
+; KNL-NEXT:    vpsrlq $16, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovqw %zmm0, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: pr32967:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpsrld $16, %zmm0, %zmm0
+; SKX-NEXT:    vpsrlq $16, %zmm0, %zmm0
 ; SKX-NEXT:    vpmovqw %zmm0, %xmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq

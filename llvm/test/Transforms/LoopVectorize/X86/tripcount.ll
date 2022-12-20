@@ -22,10 +22,10 @@ for.body.preheader:
 
 for.body:
   %i.07 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds [0 x i32], [0 x i32]* @big, i32 0, i32 %i.07
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [0 x i32], ptr @big, i32 0, i32 %i.07
+  %0 = load i32, ptr %arrayidx, align 4
   %neg = xor i32 %0, -1
-  store i32 %neg, i32* %arrayidx, align 4
+  store i32 %neg, ptr %arrayidx, align 4
   %inc = add nsw i32 %i.07, 1
   %conv = sext i32 %inc to i64
   %cmp = icmp slt i64 %conv, %count

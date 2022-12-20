@@ -1244,12 +1244,8 @@ public:
 /// This wraps up a function call argument that was created from the
 /// corresponding parameter's default argument, when the call did not
 /// explicitly supply arguments for all of the parameters.
-class CXXDefaultArgExpr final
-    : public Expr,
-      private llvm::TrailingObjects<CXXDefaultArgExpr, Expr *> {
+class CXXDefaultArgExpr final : public Expr {
   friend class ASTStmtReader;
-  friend class ASTReader;
-  friend TrailingObjects;
 
   /// The parameter whose default is being used.
   ParmVarDecl *Param;
@@ -1258,7 +1254,7 @@ class CXXDefaultArgExpr final
   DeclContext *UsedContext;
 
   CXXDefaultArgExpr(StmtClass SC, SourceLocation Loc, ParmVarDecl *Param,
-                    Expr *RewrittenExpr, DeclContext *UsedContext)
+                    DeclContext *UsedContext)
       : Expr(SC,
              Param->hasUnparsedDefaultArg()
                  ? Param->getType().getNonReferenceType()
@@ -1267,58 +1263,28 @@ class CXXDefaultArgExpr final
              Param->getDefaultArg()->getObjectKind()),
         Param(Param), UsedContext(UsedContext) {
     CXXDefaultArgExprBits.Loc = Loc;
-    CXXDefaultArgExprBits.HasRewrittenInit = RewrittenExpr != nullptr;
-    if (RewrittenExpr)
-      *getTrailingObjects<Expr *>() = RewrittenExpr;
     setDependence(computeDependence(this));
   }
 
-  CXXDefaultArgExpr(EmptyShell Empty, bool HasRewrittenInit)
-      : Expr(CXXDefaultArgExprClass, Empty) {
-    CXXDefaultArgExprBits.HasRewrittenInit = HasRewrittenInit;
-  }
-
-  size_t numTrailingObjects() const {
-    return CXXDefaultArgExprBits.HasRewrittenInit;
-  }
-
 public:
-  static CXXDefaultArgExpr *CreateEmpty(const ASTContext &C,
-                                        bool HasRewrittenInit);
+  CXXDefaultArgExpr(EmptyShell Empty) : Expr(CXXDefaultArgExprClass, Empty) {}
 
   // \p Param is the parameter whose default argument is used by this
   // expression.
   static CXXDefaultArgExpr *Create(const ASTContext &C, SourceLocation Loc,
-                                   ParmVarDecl *Param, Expr *RewrittenExpr,
-                                   DeclContext *UsedContext);
+                                   ParmVarDecl *Param,
+                                   DeclContext *UsedContext) {
+    return new (C)
+        CXXDefaultArgExpr(CXXDefaultArgExprClass, Loc, Param, UsedContext);
+  }
+
   // Retrieve the parameter that the argument was created from.
   const ParmVarDecl *getParam() const { return Param; }
   ParmVarDecl *getParam() { return Param; }
 
-  bool hasRewrittenInit() const {
-    return CXXDefaultArgExprBits.HasRewrittenInit;
-  }
-
-  // Retrieve the argument to the function call.
-  Expr *getExpr();
-  const Expr *getExpr() const {
-    return const_cast<CXXDefaultArgExpr *>(this)->getExpr();
-  }
-
-  Expr *getRewrittenExpr() {
-    return hasRewrittenInit() ? *getTrailingObjects<Expr *>() : nullptr;
-  }
-
-  const Expr *getRewrittenExpr() const {
-    return const_cast<CXXDefaultArgExpr *>(this)->getRewrittenExpr();
-  }
-
-  // Retrieve the rewritten init expression (for an init expression containing
-  // immediate calls) with the top level FullExpr and ConstantExpr stripped off.
-  Expr *getAdjustedRewrittenExpr();
-  const Expr *getAdjustedRewrittenExpr() const {
-    return const_cast<CXXDefaultArgExpr *>(this)->getAdjustedRewrittenExpr();
-  }
+  // Retrieve the actual argument to the function call.
+  const Expr *getExpr() const { return getParam()->getDefaultArg(); }
+  Expr *getExpr() { return getParam()->getDefaultArg(); }
 
   const DeclContext *getUsedContext() const { return UsedContext; }
   DeclContext *getUsedContext() { return UsedContext; }
@@ -1355,13 +1321,10 @@ public:
 /// is implicitly used in a mem-initializer-list in a constructor
 /// (C++11 [class.base.init]p8) or in aggregate initialization
 /// (C++1y [dcl.init.aggr]p7).
-class CXXDefaultInitExpr final
-    : public Expr,
-      private llvm::TrailingObjects<CXXDefaultArgExpr, Expr *> {
-
-  friend class ASTStmtReader;
+class CXXDefaultInitExpr : public Expr {
   friend class ASTReader;
-  friend TrailingObjects;
+  friend class ASTStmtReader;
+
   /// The field whose default is being used.
   FieldDecl *Field;
 
@@ -1369,29 +1332,16 @@ class CXXDefaultInitExpr final
   DeclContext *UsedContext;
 
   CXXDefaultInitExpr(const ASTContext &Ctx, SourceLocation Loc,
-                     FieldDecl *Field, QualType Ty, DeclContext *UsedContext,
-                     Expr *RewrittenInitExpr);
+                     FieldDecl *Field, QualType Ty, DeclContext *UsedContext);
 
-  CXXDefaultInitExpr(EmptyShell Empty, bool HasRewrittenInit)
-      : Expr(CXXDefaultInitExprClass, Empty) {
-    CXXDefaultInitExprBits.HasRewrittenInit = HasRewrittenInit;
-  }
-
-  size_t numTrailingObjects() const {
-    return CXXDefaultInitExprBits.HasRewrittenInit;
-  }
+  CXXDefaultInitExpr(EmptyShell Empty) : Expr(CXXDefaultInitExprClass, Empty) {}
 
 public:
-  static CXXDefaultInitExpr *CreateEmpty(const ASTContext &C,
-                                         bool HasRewrittenInit);
   /// \p Field is the non-static data member whose default initializer is used
   /// by this expression.
   static CXXDefaultInitExpr *Create(const ASTContext &Ctx, SourceLocation Loc,
-                                    FieldDecl *Field, DeclContext *UsedContext,
-                                    Expr *RewrittenInitExpr);
-
-  bool hasRewrittenInit() const {
-    return CXXDefaultInitExprBits.HasRewrittenInit;
+                                    FieldDecl *Field, DeclContext *UsedContext) {
+    return new (Ctx) CXXDefaultInitExpr(Ctx, Loc, Field, Field->getType(), UsedContext);
   }
 
   /// Get the field whose initializer will be used.
@@ -1399,23 +1349,13 @@ public:
   const FieldDecl *getField() const { return Field; }
 
   /// Get the initialization expression that will be used.
-  Expr *getExpr();
   const Expr *getExpr() const {
-    return const_cast<CXXDefaultInitExpr *>(this)->getExpr();
+    assert(Field->getInClassInitializer() && "initializer hasn't been parsed");
+    return Field->getInClassInitializer();
   }
-
-  /// Retrieve the initializing expression with evaluated immediate calls, if
-  /// any.
-  const Expr *getRewrittenExpr() const {
-    assert(hasRewrittenInit() && "expected a rewritten init expression");
-    return *getTrailingObjects<Expr *>();
-  }
-
-  /// Retrieve the initializing expression with evaluated immediate calls, if
-  /// any.
-  Expr *getRewrittenExpr() {
-    assert(hasRewrittenInit() && "expected a rewritten init expression");
-    return *getTrailingObjects<Expr *>();
+  Expr *getExpr() {
+    assert(Field->getInClassInitializer() && "initializer hasn't been parsed");
+    return Field->getInClassInitializer();
   }
 
   const DeclContext *getUsedContext() const { return UsedContext; }
@@ -4770,6 +4710,130 @@ public:
 
   const_child_range children() const {
     return const_child_range(SubExprs, SubExprs + SubExpr::Count);
+  }
+};
+
+/// Represents a list-initialization with parenthesis.
+///
+/// As per P0960R3, this is a C++20 feature that allows aggregate to
+/// be initialized with a parenthesized list of values:
+/// ```
+/// struct A {
+///   int a;
+///   double b;
+/// };
+///
+/// void foo() {
+///   A a1(0);        // Well-formed in C++20
+///   A a2(1.5, 1.0); // Well-formed in C++20
+/// }
+/// ```
+/// It has some sort of similiarity to braced
+/// list-initialization, with some differences such as
+/// it allows narrowing conversion whilst braced
+/// list-initialization doesn't.
+/// ```
+/// struct A {
+///   char a;
+/// };
+/// void foo() {
+///   A a(1.5); // Well-formed in C++20
+///   A b{1.5}; // Ill-formed !
+/// }
+/// ```
+class CXXParenListInitExpr final
+    : public Expr,
+      private llvm::TrailingObjects<CXXParenListInitExpr, Expr *> {
+  friend class TrailingObjects;
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+
+  unsigned NumExprs;
+  unsigned NumUserSpecifiedExprs;
+  SourceLocation InitLoc, LParenLoc, RParenLoc;
+  Expr *ArrayFiller = nullptr;
+
+  CXXParenListInitExpr(ArrayRef<Expr *> Args, QualType T,
+                       unsigned NumUserSpecifiedExprs, SourceLocation InitLoc,
+                       SourceLocation LParenLoc, SourceLocation RParenLoc)
+      : Expr(CXXParenListInitExprClass, T,
+             T->isLValueReferenceType()   ? VK_LValue
+             : T->isRValueReferenceType() ? VK_XValue
+                                          : VK_PRValue,
+             OK_Ordinary),
+        NumExprs(Args.size()), NumUserSpecifiedExprs(NumUserSpecifiedExprs),
+        InitLoc(InitLoc), LParenLoc(LParenLoc), RParenLoc(RParenLoc) {
+    std::copy(Args.begin(), Args.end(), getTrailingObjects<Expr *>());
+    assert(NumExprs >= NumUserSpecifiedExprs &&
+           "number of user specified inits is greater than the number of "
+           "passed inits");
+    setDependence(computeDependence(this));
+  }
+
+  size_t numTrailingObjects(OverloadToken<Expr *>) const { return NumExprs; }
+
+public:
+  static CXXParenListInitExpr *
+  Create(ASTContext &C, ArrayRef<Expr *> Args, QualType T,
+         unsigned NumUserSpecifiedExprs, SourceLocation InitLoc,
+         SourceLocation LParenLoc, SourceLocation RParenLoc);
+
+  static CXXParenListInitExpr *CreateEmpty(ASTContext &C, unsigned numExprs,
+                                           EmptyShell Empty);
+
+  explicit CXXParenListInitExpr(EmptyShell Empty, unsigned NumExprs)
+      : Expr(CXXParenListInitExprClass, Empty), NumExprs(NumExprs),
+        NumUserSpecifiedExprs(0) {}
+
+  void updateDependence() { setDependence(computeDependence(this)); }
+
+  ArrayRef<Expr *> getInitExprs() {
+    return llvm::makeArrayRef(getTrailingObjects<Expr *>(), NumExprs);
+  }
+
+  const ArrayRef<Expr *> getInitExprs() const {
+    return llvm::makeArrayRef(getTrailingObjects<Expr *>(), NumExprs);
+  }
+
+  ArrayRef<Expr *> getUserSpecifiedInitExprs() {
+    return llvm::makeArrayRef(getTrailingObjects<Expr *>(),
+                              NumUserSpecifiedExprs);
+  }
+
+  const ArrayRef<Expr *> getUserSpecifiedInitExprs() const {
+    return llvm::makeArrayRef(getTrailingObjects<Expr *>(),
+                              NumUserSpecifiedExprs);
+  }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return LParenLoc; }
+
+  SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
+
+  SourceLocation getInitLoc() const LLVM_READONLY { return InitLoc; }
+
+  SourceRange getSourceRange() const LLVM_READONLY {
+    return SourceRange(getBeginLoc(), getEndLoc());
+  }
+
+  void setArrayFiller(Expr *E) { ArrayFiller = E; }
+
+  Expr *getArrayFiller() { return ArrayFiller; }
+
+  const Expr *getArrayFiller() const { return ArrayFiller; }
+
+  child_range children() {
+    Stmt **Begin = reinterpret_cast<Stmt **>(getTrailingObjects<Expr *>());
+    return child_range(Begin, Begin + NumExprs);
+  }
+
+  const_child_range children() const {
+    Stmt *const *Begin =
+        reinterpret_cast<Stmt *const *>(getTrailingObjects<Expr *>());
+    return const_child_range(Begin, Begin + NumExprs);
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXParenListInitExprClass;
   }
 };
 

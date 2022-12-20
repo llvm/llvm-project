@@ -7,7 +7,7 @@
 
 ; Test from PR45958.
 
-define void @test([2000 x i32]* %src, i64 %n) {
+define void @test(ptr %src, i64 %n) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 4
@@ -27,10 +27,10 @@ define void @test([2000 x i32]* %src, i64 %n) {
 ; CHECK-NEXT:    br label [[LOOP_32:%.*]]
 ; CHECK:       loop.32:
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i64> [ zeroinitializer, [[LOOP_2_HEADER1]] ], [ [[TMP2:%.*]], [[LOOP_32]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [2000 x i32], [2000 x i32]* [[SRC:%.*]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI3]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[TMP0]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [2000 x i32], ptr [[SRC:%.*]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI3]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP0]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw <4 x i32> [[WIDE_MASKED_GATHER]], <i32 10, i32 10, i32 10, i32 10>
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> [[TMP1]], <4 x i32*> [[TMP0]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP1]], <4 x ptr> [[TMP0]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
 ; CHECK-NEXT:    [[TMP2]] = add nuw nsw <4 x i64> [[VEC_PHI3]], <i64 1, i64 1, i64 1, i64 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i64> [[TMP2]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP3]], i32 0
@@ -61,10 +61,10 @@ define void @test([2000 x i32]* %src, i64 %n) {
 ; CHECK-NEXT:    br label [[LOOP_3:%.*]]
 ; CHECK:       loop.3:
 ; CHECK-NEXT:    [[IV_3:%.*]] = phi i64 [ 0, [[LOOP_2_HEADER]] ], [ [[IV_3_NEXT:%.*]], [[LOOP_3]] ]
-; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds [2000 x i32], [2000 x i32]* [[SRC]], i64 [[IV_1]], i64 [[IV_3]]
-; CHECK-NEXT:    [[L1:%.*]] = load i32, i32* [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds [2000 x i32], ptr [[SRC]], i64 [[IV_1]], i64 [[IV_3]]
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[GEP_SRC]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[L1]], 10
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[GEP_SRC]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[GEP_SRC]], align 4
 ; CHECK-NEXT:    [[IV_3_NEXT]] = add nuw nsw i64 [[IV_3]], 1
 ; CHECK-NEXT:    [[EC_3:%.*]] = icmp eq i64 [[IV_3_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC_3]], label [[LOOP_2_LATCH]], label [[LOOP_3]]
@@ -92,10 +92,10 @@ loop.2.header:
 
 loop.3:
   %iv.3 = phi i64 [ 0, %loop.2.header ], [ %iv.3.next, %loop.3 ]
-  %gep.src = getelementptr inbounds [2000 x i32], [2000 x i32]* %src, i64 %iv.1, i64 %iv.3
-  %l1 = load i32, i32* %gep.src, align 4
+  %gep.src = getelementptr inbounds [2000 x i32], ptr %src, i64 %iv.1, i64 %iv.3
+  %l1 = load i32, ptr %gep.src, align 4
   %mul = mul nsw i32 %l1, 10
-  store i32 %mul, i32* %gep.src, align 4
+  store i32 %mul, ptr %gep.src, align 4
   %iv.3.next = add nuw nsw i64 %iv.3, 1
   %ec.3 = icmp eq i64 %iv.3.next, %n
   br i1 %ec.3, label %loop.2.latch, label %loop.3

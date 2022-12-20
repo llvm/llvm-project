@@ -503,14 +503,14 @@ class ClobberWalker {
     // First. Also note that First and Last are inclusive.
     MemoryAccess *First;
     MemoryAccess *Last;
-    Optional<ListIndex> Previous;
+    std::optional<ListIndex> Previous;
 
     DefPath(const MemoryLocation &Loc, MemoryAccess *First, MemoryAccess *Last,
-            Optional<ListIndex> Previous)
+            std::optional<ListIndex> Previous)
         : Loc(Loc), First(First), Last(Last), Previous(Previous) {}
 
     DefPath(const MemoryLocation &Loc, MemoryAccess *Init,
-            Optional<ListIndex> Previous)
+            std::optional<ListIndex> Previous)
         : DefPath(Loc, Init, Init, Previous) {}
   };
 
@@ -622,7 +622,7 @@ class ClobberWalker {
   /// If this returns std::nullopt, NewPaused is a vector of searches that
   /// terminated at StopWhere. Otherwise, NewPaused is left in an unspecified
   /// state.
-  Optional<TerminatedPath>
+  std::optional<TerminatedPath>
   getBlockingAccess(const MemoryAccess *StopWhere,
                     SmallVectorImpl<ListIndex> &PausedSearches,
                     SmallVectorImpl<ListIndex> &NewPaused,
@@ -720,7 +720,7 @@ class ClobberWalker {
     T &curNode() const { return W->Paths[*N]; }
 
     Walker *W = nullptr;
-    Optional<ListIndex> N = std::nullopt;
+    std::optional<ListIndex> N = std::nullopt;
   };
 
   using def_path_iterator = generic_def_path_iterator<DefPath, ClobberWalker>;
@@ -809,7 +809,7 @@ class ClobberWalker {
       // FIXME: This is broken, because the Blocker may be reported to be
       // liveOnEntry, and we'll happily wait for that to disappear (read: never)
       // For the moment, this is fine, since we do nothing with blocker info.
-      if (Optional<TerminatedPath> Blocker = getBlockingAccess(
+      if (std::optional<TerminatedPath> Blocker = getBlockingAccess(
               Target, PausedSearches, NewPaused, TerminatedPaths)) {
 
         // Find the node we started at. We can't search based on N->Last, since

@@ -410,7 +410,7 @@ void DwarfLinkerForBinary::collectRelocationsToApplyToSwiftReflectionSections(
     }
 
     auto CalculateAddressOfSymbolInDwarfSegment =
-        [&]() -> llvm::Optional<int64_t> {
+        [&]() -> std::optional<int64_t> {
       auto Symbol = It->getSymbol();
       auto SymbolAbsoluteAddress = Symbol->getAddress();
       if (!SymbolAbsoluteAddress)
@@ -446,7 +446,7 @@ void DwarfLinkerForBinary::collectRelocationsToApplyToSwiftReflectionSections(
 
     bool ShouldSubtractDwarfVM = false;
     // For the second symbol there are two possibilities.
-    llvm::Optional<int64_t> SecondSymbolAddress;
+    std::optional<int64_t> SecondSymbolAddress;
     auto Sym = It->getSymbol();
     if (Sym != MO->symbol_end()) {
       Expected<StringRef> SymbolName = Sym->getName();

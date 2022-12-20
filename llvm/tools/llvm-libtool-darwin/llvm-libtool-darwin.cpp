@@ -126,7 +126,8 @@ struct Config {
 
 static Expected<std::string> searchForFile(const Twine &FileName) {
   auto FindLib =
-      [FileName](ArrayRef<std::string> SearchDirs) -> Optional<std::string> {
+      [FileName](
+          ArrayRef<std::string> SearchDirs) -> std::optional<std::string> {
     for (StringRef Dir : SearchDirs) {
       SmallString<128> Path;
       sys::path::append(Path, Dir, FileName);
@@ -139,7 +140,7 @@ static Expected<std::string> searchForFile(const Twine &FileName) {
     return std::nullopt;
   };
 
-  Optional<std::string> Found = FindLib(LibrarySearchDirs);
+  std::optional<std::string> Found = FindLib(LibrarySearchDirs);
   if (!Found)
     Found = FindLib(StandardSearchDirs);
   if (Found)

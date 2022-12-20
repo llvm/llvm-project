@@ -1,5 +1,5 @@
-; RUN: llvm-dis --opaque-pointers=0 < %s.bc | FileCheck %s
-; RUN: verify-uselistorder --opaque-pointers=0 %s.bc
+; RUN: llvm-dis < %s.bc | FileCheck %s
+; RUN: verify-uselistorder %s.bc
 
 ; Establish a stable order.
 !named = !{!0, !1, !2, !3, !4, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16}
@@ -19,7 +19,7 @@
 ; CHECK-NEXT: !8 = !DIObjCProperty(name: "P1", type: !1)
 ; CHECK-NEXT: !9 = !DITemplateTypeParameter(type: !1)
 ; CHECK-NEXT: !10 = !DIGlobalVariable(name: "G",{{.*}} type: !1,
-; CHECK-NEXT: !11 = !DITemplateValueParameter(type: !1, value: i32* @G1)
+; CHECK-NEXT: !11 = !DITemplateValueParameter(type: !1, value: ptr @G1)
 ; CHECK-NEXT: !12 = !DIImportedEntity(tag: DW_TAG_imported_module, name: "T2", scope: !0, entity: !1)
 ; CHECK-NEXT: !13 = !DICompositeType(tag: DW_TAG_structure_type, name: "T3", file: !0, elements: !14, identifier: "T3")
 ; CHECK-NEXT: !14 = !{!15}

@@ -11,8 +11,8 @@ void f() {
     int x = 3; // expected-note{{'x' declared here}}
     struct C {
       int& x2 = x; // expected-error{{reference to local variable 'x' declared in enclosing lambda expression}}
-    }c; // expected-note {{required here}}
+    };
   };
-  C(); // expected-note {{required here}}
+  C();
 }
 

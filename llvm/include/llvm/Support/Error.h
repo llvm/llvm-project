@@ -31,6 +31,7 @@
 #include <functional>
 #include <memory>
 #include <new>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <type_traits>
@@ -1051,6 +1052,13 @@ inline void consumeError(Error Err) {
 /// error should be propagated further, or the error-producer should just
 /// return an Optional in the first place.
 template <typename T> Optional<T> expectedToOptional(Expected<T> &&E) {
+  if (E)
+    return std::move(*E);
+  consumeError(E.takeError());
+  return std::nullopt;
+}
+
+template <typename T> std::optional<T> expectedToStdOptional(Expected<T> &&E) {
   if (E)
     return std::move(*E);
   consumeError(E.takeError());

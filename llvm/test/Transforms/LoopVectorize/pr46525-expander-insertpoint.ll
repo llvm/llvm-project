@@ -6,7 +6,7 @@
 ; `udiv i64 %y, %add` when expanding SCEV expressions. Make sure we pick %div,
 ; which dominates the vector loop.
 
-define void @test(i16 %x, i64 %y, i32* %ptr) {
+define void @test(i16 %x, i64 %y, ptr %ptr) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV19:%.*]] = sext i16 [[X:%.*]] to i64
@@ -27,7 +27,7 @@ define void @test(i16 %x, i64 %y, i32* %ptr) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    store i32 0, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -38,7 +38,7 @@ define void @test(i16 %x, i64 %y, i32* %ptr) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    store i32 0, i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[V2:%.*]] = trunc i64 [[IV]] to i8
 ; CHECK-NEXT:    [[V3:%.*]] = add i8 [[V2]], 1
 ; CHECK-NEXT:    [[CMP15:%.*]] = icmp slt i8 [[V3]], 5
@@ -72,7 +72,7 @@ loop.preheader:
 
 loop:
   %iv = phi i64 [ %iv.next, %loop ], [ 0, %loop.preheader ]
-  store i32 0, i32* %ptr, align 4
+  store i32 0, ptr %ptr, align 4
   %v2 = trunc i64 %iv to i8
   %v3 = add i8 %v2, 1
   %cmp15 = icmp slt i8 %v3, 5

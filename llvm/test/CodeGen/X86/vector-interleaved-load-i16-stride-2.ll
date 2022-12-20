@@ -117,11 +117,9 @@ define void @load_i16_stride2_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) nou
 ; AVX512-LABEL: load_i16_stride2_vf8:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512-NEXT:    vpsrld $16, 16(%rdi), %xmm1
-; AVX512-NEXT:    vpsrld $16, (%rdi), %xmm2
-; AVX512-NEXT:    vpackusdw %xmm1, %xmm2, %xmm1
+; AVX512-NEXT:    vpsrld $16, %ymm0, %ymm1
 ; AVX512-NEXT:    vpmovdw %ymm0, (%rsi)
-; AVX512-NEXT:    vmovdqa %xmm1, (%rdx)
+; AVX512-NEXT:    vpmovdw %ymm1, (%rdx)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %wide.vec = load <16 x i16>, ptr %in.vec, align 64
@@ -245,44 +243,14 @@ define void @load_i16_stride2_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; AVX2-FAST-PERLANE-NEXT:    vzeroupper
 ; AVX2-FAST-PERLANE-NEXT:    retq
 ;
-; AVX512F-SLOW-LABEL: load_i16_stride2_vf16:
-; AVX512F-SLOW:       # %bb.0:
-; AVX512F-SLOW-NEXT:    vmovdqa64 (%rdi), %zmm0
-; AVX512F-SLOW-NEXT:    vmovdqa (%rdi), %ymm1
-; AVX512F-SLOW-NEXT:    vmovdqa 32(%rdi), %ymm2
-; AVX512F-SLOW-NEXT:    vpshufb {{.*#+}} ymm2 = ymm2[u,u,u,u,u,u,u,u,2,3,6,7,10,11,14,15,u,u,u,u,u,u,u,u,18,19,22,23,26,27,30,31]
-; AVX512F-SLOW-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[2,3,6,7,10,11,14,15,u,u,u,u,u,u,u,u,18,19,22,23,26,27,30,31,u,u,u,u,u,u,u,u]
-; AVX512F-SLOW-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1],ymm2[2,3],ymm1[4,5],ymm2[6,7]
-; AVX512F-SLOW-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,1,3]
-; AVX512F-SLOW-NEXT:    vpmovdw %zmm0, (%rsi)
-; AVX512F-SLOW-NEXT:    vmovdqa %ymm1, (%rdx)
-; AVX512F-SLOW-NEXT:    vzeroupper
-; AVX512F-SLOW-NEXT:    retq
-;
-; AVX512F-FAST-LABEL: load_i16_stride2_vf16:
-; AVX512F-FAST:       # %bb.0:
-; AVX512F-FAST-NEXT:    vmovdqa64 (%rdi), %zmm0
-; AVX512F-FAST-NEXT:    vmovdqa (%rdi), %ymm1
-; AVX512F-FAST-NEXT:    vmovdqa 32(%rdi), %ymm2
-; AVX512F-FAST-NEXT:    vpshufb {{.*#+}} ymm2 = ymm2[u,u,u,u,u,u,u,u,2,3,6,7,10,11,14,15,u,u,u,u,u,u,u,u,18,19,22,23,26,27,30,31]
-; AVX512F-FAST-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[2,3,6,7,10,11,14,15,u,u,u,u,u,u,u,u,18,19,22,23,26,27,30,31,u,u,u,u,u,u,u,u]
-; AVX512F-FAST-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,2,5,7]
-; AVX512F-FAST-NEXT:    vpermi2q %ymm2, %ymm1, %ymm3
-; AVX512F-FAST-NEXT:    vpmovdw %zmm0, (%rsi)
-; AVX512F-FAST-NEXT:    vmovdqa %ymm3, (%rdx)
-; AVX512F-FAST-NEXT:    vzeroupper
-; AVX512F-FAST-NEXT:    retq
-;
-; AVX512BW-LABEL: load_i16_stride2_vf16:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa64 (%rdi), %zmm0
-; AVX512BW-NEXT:    vmovdqa (%rdi), %ymm1
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31]
-; AVX512BW-NEXT:    vpermi2w 32(%rdi), %ymm1, %ymm2
-; AVX512BW-NEXT:    vpmovdw %zmm0, (%rsi)
-; AVX512BW-NEXT:    vmovdqa %ymm2, (%rdx)
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: load_i16_stride2_vf16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm0
+; AVX512-NEXT:    vpsrld $16, %zmm0, %zmm1
+; AVX512-NEXT:    vpmovdw %zmm0, (%rsi)
+; AVX512-NEXT:    vpmovdw %zmm1, (%rdx)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %wide.vec = load <32 x i16>, ptr %in.vec, align 64
   %strided.vec0 = shufflevector <32 x i16> %wide.vec, <32 x i16> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
   %strided.vec1 = shufflevector <32 x i16> %wide.vec, <32 x i16> poison, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
@@ -1005,8 +973,10 @@ define void @load_i16_stride2_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; AVX512DQ-SLOW: {{.*}}
 ; AVX512DQBW-FAST: {{.*}}
 ; AVX512DQBW-SLOW: {{.*}}
+; AVX512F-FAST: {{.*}}
 ; AVX512F-ONLY-FAST: {{.*}}
 ; AVX512F-ONLY-SLOW: {{.*}}
+; AVX512F-SLOW: {{.*}}
 ; FALLBACK0: {{.*}}
 ; FALLBACK1: {{.*}}
 ; FALLBACK10: {{.*}}

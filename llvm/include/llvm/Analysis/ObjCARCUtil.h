@@ -40,7 +40,7 @@ inline bool hasAttachedCallOpBundle(const CallBase *CB) {
 
 /// This function returns operand bundle clang_arc_attachedcall's argument,
 /// which is the address of the ARC runtime function.
-inline Optional<Function *> getAttachedARCFunction(const CallBase *CB) {
+inline std::optional<Function *> getAttachedARCFunction(const CallBase *CB) {
   auto B = CB->getOperandBundle(LLVMContext::OB_clang_arc_attachedcall);
   if (!B)
     return std::nullopt;
@@ -58,7 +58,7 @@ inline bool isRetainOrClaimRV(ARCInstKind Kind) {
 /// have the operand bundle or the operand is null. Otherwise it returns either
 /// RetainRV or UnsafeClaimRV.
 inline ARCInstKind getAttachedARCFunctionKind(const CallBase *CB) {
-  Optional<Function *> Fn = getAttachedARCFunction(CB);
+  std::optional<Function *> Fn = getAttachedARCFunction(CB);
   if (!Fn)
     return ARCInstKind::None;
   auto FnClass = GetFunctionClass(*Fn);

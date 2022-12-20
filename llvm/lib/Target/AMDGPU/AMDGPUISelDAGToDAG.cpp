@@ -1358,7 +1358,7 @@ std::pair<SDValue, SDValue> AMDGPUDAGToDAGISel::foldFrameIndex(SDValue N) const 
   // use constant 0 for soffset. This value must be retained until
   // frame elimination and eliminateFrameIndex will choose the appropriate
   // frame register if need be.
-  return std::make_pair(TFI, CurDAG->getTargetConstant(0, DL, MVT::i32));
+  return std::pair(TFI, CurDAG->getTargetConstant(0, DL, MVT::i32));
 }
 
 bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Parent,

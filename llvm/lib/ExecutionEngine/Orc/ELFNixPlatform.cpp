@@ -111,7 +111,7 @@ Expected<std::unique_ptr<ELFNixPlatform>>
 ELFNixPlatform::Create(ExecutionSession &ES,
                        ObjectLinkingLayer &ObjLinkingLayer,
                        JITDylib &PlatformJD, const char *OrcRuntimePath,
-                       Optional<SymbolAliasMap> RuntimeAliases) {
+                       std::optional<SymbolAliasMap> RuntimeAliases) {
 
   auto &EPC = ES.getExecutorProcessControl();
 

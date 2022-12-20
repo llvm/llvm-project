@@ -16,9 +16,9 @@ using namespace llvm::orc::shared;
 namespace llvm {
 namespace orc {
 
-Expected<std::unique_ptr<EPCEHFrameRegistrar>>
-EPCEHFrameRegistrar::Create(ExecutionSession &ES,
-                            Optional<ExecutorAddr> RegistrationFunctionsDylib) {
+Expected<std::unique_ptr<EPCEHFrameRegistrar>> EPCEHFrameRegistrar::Create(
+    ExecutionSession &ES,
+    std::optional<ExecutorAddr> RegistrationFunctionsDylib) {
   // FIXME: Proper mangling here -- we really need to decouple linker mangling
   // from DataLayout.
 

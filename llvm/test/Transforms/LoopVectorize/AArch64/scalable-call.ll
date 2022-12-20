@@ -5,10 +5,10 @@
 ; RUN:     -prefer-predicate-over-epilogue=scalar-epilogue -pass-remarks-missed=loop-vectorize < %s 2>%t | FileCheck %s
 ; RUN: cat %t | FileCheck %s --check-prefix=CHECK-REMARKS
 
-define void @vec_load(i64 %N, double* nocapture %a, double* nocapture readonly %b) {
+define void @vec_load(i64 %N, ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: @vec_load
 ; CHECK: vector.body:
-; CHECK: %[[LOAD:.*]] = load <vscale x 2 x double>, <vscale x 2 x double>*
+; CHECK: %[[LOAD:.*]] = load <vscale x 2 x double>, ptr
 ; CHECK: call <vscale x 2 x double> @foo_vec(<vscale x 2 x double> %[[LOAD]])
 entry:
   %cmp7 = icmp sgt i64 %N, 0
@@ -16,12 +16,12 @@ entry:
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds double, double* %b, i64 %iv
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %b, i64 %iv
+  %0 = load double, ptr %arrayidx, align 8
   %1 = call double @foo(double %0) #0
   %add = fadd double %1, 1.000000e+00
-  %arrayidx2 = getelementptr inbounds double, double* %a, i64 %iv
-  store double %add, double* %arrayidx2, align 8
+  %arrayidx2 = getelementptr inbounds double, ptr %a, i64 %iv
+  store double %add, ptr %arrayidx2, align 8
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %N
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !1
@@ -30,7 +30,7 @@ for.end:                                 ; preds = %for.body, %entry
   ret void
 }
 
-define void @vec_scalar(i64 %N, double* nocapture %a) {
+define void @vec_scalar(i64 %N, ptr nocapture %a) {
 ; CHECK-LABEL: @vec_scalar
 ; CHECK: vector.body:
 ; CHECK: call <vscale x 2 x double> @foo_vec(<vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+01, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer))
@@ -42,8 +42,8 @@ for.body:                                         ; preds = %for.body.preheader,
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %0 = call double @foo(double 10.0) #0
   %sub = fsub double %0, 1.000000e+00
-  %arrayidx = getelementptr inbounds double, double* %a, i64 %iv
-  store double %sub, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %a, i64 %iv
+  store double %sub, ptr %arrayidx, align 8
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %N
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !1
@@ -52,22 +52,22 @@ for.end:                                 ; preds = %for.body, %entry
   ret void
 }
 
-define void @vec_ptr(i64 %N, i64* noalias %a, i64** readnone %b) {
+define void @vec_ptr(i64 %N, ptr noalias %a, ptr readnone %b) {
 ; CHECK-LABEL: @vec_ptr
 ; CHECK: vector.body:
-; CHECK: %[[LOAD:.*]] = load <vscale x 2 x i64*>, <vscale x 2 x i64*>*
-; CHECK: call <vscale x 2 x i64> @bar_vec(<vscale x 2 x i64*> %[[LOAD]])
+; CHECK: %[[LOAD:.*]] = load <vscale x 2 x ptr>, ptr
+; CHECK: call <vscale x 2 x i64> @bar_vec(<vscale x 2 x ptr> %[[LOAD]])
 entry:
   %cmp7 = icmp sgt i64 %N, 0
   br i1 %cmp7, label %for.body, label %for.end
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %gep = getelementptr i64*, i64** %b, i64 %iv
-  %load = load i64*, i64** %gep
-  %call = call i64 @bar(i64* %load) #1
-  %arrayidx = getelementptr inbounds i64, i64* %a, i64 %iv
-  store i64 %call, i64* %arrayidx
+  %gep = getelementptr ptr, ptr %b, i64 %iv
+  %load = load ptr, ptr %gep
+  %call = call i64 @bar(ptr %load) #1
+  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
+  store i64 %call, ptr %arrayidx
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !1
@@ -76,10 +76,10 @@ for.end:
   ret void
 }
 
-define void @vec_intrinsic(i64 %N, double* nocapture readonly %a) {
+define void @vec_intrinsic(i64 %N, ptr nocapture readonly %a) {
 ; CHECK-LABEL: @vec_intrinsic
 ; CHECK: vector.body:
-; CHECK: %[[LOAD:.*]] = load <vscale x 2 x double>, <vscale x 2 x double>*
+; CHECK: %[[LOAD:.*]] = load <vscale x 2 x double>, ptr
 ; CHECK: call fast <vscale x 2 x double> @sin_vec_nxv2f64(<vscale x 2 x double> %[[LOAD]])
 entry:
   %cmp7 = icmp sgt i64 %N, 0
@@ -87,11 +87,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds double, double* %a, i64 %iv
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %a, i64 %iv
+  %0 = load double, ptr %arrayidx, align 8
   %1 = call fast double @llvm.sin.f64(double %0) #2
   %add = fadd fast double %1, 1.000000e+00
-  store double %add, double* %arrayidx, align 8
+  store double %add, ptr %arrayidx, align 8
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !1
@@ -104,7 +104,7 @@ for.end:
 ; CHECK-REMARKS-NEXT: t.c:3:10: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): load
 ; CHECK-REMARKS-NEXT: t.c:3:20: Instruction with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
 ; CHECK-REMARKS-NEXT: t.c:3:30: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): store
-define void @vec_sin_no_mapping(float* noalias nocapture %dst, float* noalias nocapture readonly %src, i64 %n) {
+define void @vec_sin_no_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) {
 ; CHECK: @vec_sin_no_mapping
 ; CHECK: call fast <2 x float> @llvm.sin.v2f32
 ; CHECK-NOT: <vscale x
@@ -113,11 +113,11 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds float, float* %src, i64 %i.07
-  %0 = load float, float* %arrayidx, align 4, !dbg !11
+  %arrayidx = getelementptr inbounds float, ptr %src, i64 %i.07
+  %0 = load float, ptr %arrayidx, align 4, !dbg !11
   %1 = tail call fast float @llvm.sin.f32(float %0), !dbg !12
-  %arrayidx1 = getelementptr inbounds float, float* %dst, i64 %i.07
-  store float %1, float* %arrayidx1, align 4, !dbg !13
+  %arrayidx1 = getelementptr inbounds float, ptr %dst, i64 %i.07
+  store float %1, ptr %arrayidx1, align 4, !dbg !13
   %inc = add nuw nsw i64 %i.07, 1
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !1
@@ -131,7 +131,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 ; CHECK-REMARKS-NEXT: t.c:3:30: Instruction with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
 ; CHECK-REMARKS-NEXT: t.c:3:20: Instruction with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
 ; CHECK-REMARKS-NEXT: t.c:3:40: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): store
-define void @vec_sin_no_mapping_ite(float* noalias nocapture %dst, float* noalias nocapture readonly %src, i64 %n) {
+define void @vec_sin_no_mapping_ite(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) {
 ; CHECK: @vec_sin_no_mapping_ite
 ; CHECK-NOT: <vscale x
 ; CHECK: ret
@@ -140,8 +140,8 @@ entry:
 
 for.body:                                         ; preds = %entry, %if.end
   %i.07 = phi i64 [ %inc, %if.end ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds float, float* %src, i64 %i.07
-  %0 = load float, float* %arrayidx, align 4, !dbg !11
+  %arrayidx = getelementptr inbounds float, ptr %src, i64 %i.07
+  %0 = load float, ptr %arrayidx, align 4, !dbg !11
   %cmp = fcmp ugt float %0, 0.0000
   br i1 %cmp, label %if.then, label %if.else
 if.then:
@@ -152,8 +152,8 @@ if.else:
   br label %if.end
 if.end:
   %3 = phi float [%1, %if.then], [%2, %if.else]
-  %arrayidx1 = getelementptr inbounds float, float* %dst, i64 %i.07
-  store float %3, float* %arrayidx1, align 4, !dbg !14
+  %arrayidx1 = getelementptr inbounds float, ptr %dst, i64 %i.07
+  store float %3, ptr %arrayidx1, align 4, !dbg !14
   %inc = add nuw nsw i64 %i.07, 1
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !1
@@ -166,7 +166,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 ; CHECK-REMARKS-NEXT: t.c:3:10: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): load
 ; CHECK-REMARKS-NEXT: t.c:3:20: Instruction with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
 ; CHECK-REMARKS-NEXT: t.c:3:30: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): store
-define void @vec_sin_fixed_mapping(float* noalias nocapture %dst, float* noalias nocapture readonly %src, i64 %n) {
+define void @vec_sin_fixed_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) {
 ; CHECK: @vec_sin_fixed_mapping
 ; CHECK: call fast <2 x float> @llvm.sin.v2f32
 ; CHECK-NOT: <vscale x
@@ -175,11 +175,11 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds float, float* %src, i64 %i.07
-  %0 = load float, float* %arrayidx, align 4, !dbg !11
+  %arrayidx = getelementptr inbounds float, ptr %src, i64 %i.07
+  %0 = load float, ptr %arrayidx, align 4, !dbg !11
   %1 = tail call fast float @llvm.sin.f32(float %0) #3, !dbg !12
-  %arrayidx1 = getelementptr inbounds float, float* %dst, i64 %i.07
-  store float %1, float* %arrayidx1, align 4, !dbg !13
+  %arrayidx1 = getelementptr inbounds float, ptr %dst, i64 %i.07
+  store float %1, ptr %arrayidx1, align 4, !dbg !13
   %inc = add nuw nsw i64 %i.07, 1
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !1
@@ -191,7 +191,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 ; Even though there are no function mappings attached to the call
 ; in the loop below we can still vectorize the loop because SVE has
 ; hardware support in the form of the 'fqsrt' instruction.
-define void @vec_sqrt_no_mapping(float* noalias nocapture %dst, float* noalias nocapture readonly %src, i64 %n) #0 {
+define void @vec_sqrt_no_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) #0 {
 ; CHECK: @vec_sqrt_no_mapping
 ; CHECK: call fast <vscale x 2 x float> @llvm.sqrt.nxv2f32
 entry:
@@ -199,11 +199,11 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds float, float* %src, i64 %i.07
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %src, i64 %i.07
+  %0 = load float, ptr %arrayidx, align 4
   %1 = tail call fast float @llvm.sqrt.f32(float %0)
-  %arrayidx1 = getelementptr inbounds float, float* %dst, i64 %i.07
-  store float %1, float* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %dst, i64 %i.07
+  store float %1, ptr %arrayidx1, align 4
   %inc = add nuw nsw i64 %i.07, 1
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !1
@@ -214,13 +214,13 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 
 declare double @foo(double)
-declare i64 @bar(i64*)
+declare i64 @bar(ptr)
 declare double @llvm.sin.f64(double)
 declare float @llvm.sin.f32(float)
 declare float @llvm.sqrt.f32(float)
 
 declare <vscale x 2 x double> @foo_vec(<vscale x 2 x double>)
-declare <vscale x 2 x i64> @bar_vec(<vscale x 2 x i64*>)
+declare <vscale x 2 x i64> @bar_vec(<vscale x 2 x ptr>)
 declare <vscale x 2 x double> @sin_vec_nxv2f64(<vscale x 2 x double>)
 declare <2 x double> @sin_vec_v2f64(<2 x double>)
 

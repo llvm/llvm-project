@@ -271,9 +271,9 @@ uint32_t __kmpc_get_hardware_num_blocks();
 int8_t __kmpc_is_spmd_exec_mode();
 
 int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
-                           bool UseGenericStateMachine, bool);
+                           bool UseGenericStateMachine);
 
-void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode, bool);
+void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode);
 
 ///}
 

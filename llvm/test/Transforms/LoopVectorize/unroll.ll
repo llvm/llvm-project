@@ -12,7 +12,7 @@
 
 define void @foo() #0 {
 entry:
-  %0 = load i32, i32* @N, align 4
+  %0 = load i32, ptr @N, align 4
   %cmp5 = icmp sgt i32 %0, 0
   br i1 %cmp5, label %for.body.lr.ph, label %for.end
 
@@ -23,8 +23,8 @@ for.body.lr.ph:                                   ; preds = %entry
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %i.06 = phi i64 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
   %mul = mul nuw nsw i64 %i.06, 7
-  %arrayidx = getelementptr inbounds [1000 x i32], [1000 x i32]* @a, i64 0, i64 %mul
-  store i32 3, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [1000 x i32], ptr @a, i64 0, i64 %mul
+  store i32 3, ptr %arrayidx, align 4
   %inc = add nuw nsw i64 %i.06, 1
   %cmp = icmp slt i64 %inc, %conv
   br i1 %cmp, label %for.body, label %for.end.loopexit

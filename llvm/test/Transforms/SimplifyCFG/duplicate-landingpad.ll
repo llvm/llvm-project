@@ -6,7 +6,7 @@ declare i32 @__gxx_personality_v0(...)
 declare void @fn()
 
 
-define void @test1() personality i32 (...)* @__gxx_personality_v0 {
+define void @test1() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @fn()
@@ -17,7 +17,7 @@ define void @test1() personality i32 (...)* @__gxx_personality_v0 {
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       lpad2:
-; CHECK-NEXT:    [[EXN2:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EXN2:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @fn()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
@@ -34,12 +34,12 @@ invoke.cont:
   ret void
 
 lpad1:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
   cleanup
   br label %shared_resume
 
 lpad2:
-  %exn2 = landingpad {i8*, i32}
+  %exn2 = landingpad {ptr, i32}
   cleanup
   br label %shared_resume
 
@@ -49,7 +49,7 @@ shared_resume:
 }
 
 ; Don't trigger if blocks aren't the same/empty
-define void @neg1() personality i32 (...)* @__gxx_personality_v0 {
+define void @neg1() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @neg1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @fn()
@@ -60,12 +60,12 @@ define void @neg1() personality i32 (...)* @__gxx_personality_v0 {
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       lpad1:
-; CHECK-NEXT:    [[EXN:%.*]] = landingpad { i8*, i32 }
-; CHECK-NEXT:    filter [0 x i8*] zeroinitializer
+; CHECK-NEXT:    [[EXN:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    filter [0 x ptr] zeroinitializer
 ; CHECK-NEXT:    call void @fn()
 ; CHECK-NEXT:    br label [[SHARED_RESUME:%.*]]
 ; CHECK:       lpad2:
-; CHECK-NEXT:    [[EXN2:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EXN2:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    br label [[SHARED_RESUME]]
 ; CHECK:       shared_resume:
@@ -84,13 +84,13 @@ invoke.cont:
   ret void
 
 lpad1:
-  %exn = landingpad {i8*, i32}
-  filter [0 x i8*] zeroinitializer
+  %exn = landingpad {ptr, i32}
+  filter [0 x ptr] zeroinitializer
   call void @fn()
   br label %shared_resume
 
 lpad2:
-  %exn2 = landingpad {i8*, i32}
+  %exn2 = landingpad {ptr, i32}
   cleanup
   br label %shared_resume
 
@@ -100,7 +100,7 @@ shared_resume:
 }
 
 ; Should not trigger when the landing pads are not the exact same
-define void @neg2() personality i32 (...)* @__gxx_personality_v0 {
+define void @neg2() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @neg2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @fn()
@@ -111,11 +111,11 @@ define void @neg2() personality i32 (...)* @__gxx_personality_v0 {
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       lpad1:
-; CHECK-NEXT:    [[EXN:%.*]] = landingpad { i8*, i32 }
-; CHECK-NEXT:    filter [0 x i8*] zeroinitializer
+; CHECK-NEXT:    [[EXN:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    filter [0 x ptr] zeroinitializer
 ; CHECK-NEXT:    br label [[SHARED_RESUME:%.*]]
 ; CHECK:       lpad2:
-; CHECK-NEXT:    [[EXN2:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EXN2:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    br label [[SHARED_RESUME]]
 ; CHECK:       shared_resume:
@@ -134,12 +134,12 @@ invoke.cont:
   ret void
 
 lpad1:
-  %exn = landingpad {i8*, i32}
-  filter [0 x i8*] zeroinitializer
+  %exn = landingpad {ptr, i32}
+  filter [0 x ptr] zeroinitializer
   br label %shared_resume
 
 lpad2:
-  %exn2 = landingpad {i8*, i32}
+  %exn2 = landingpad {ptr, i32}
   cleanup
   br label %shared_resume
 
