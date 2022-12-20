@@ -52,7 +52,7 @@ class TargetLibraryInfoImpl {
   unsigned char AvailableArray[(NumLibFuncs+3)/4];
   DenseMap<unsigned, std::string> CustomNames;
   static StringLiteral const StandardNames[NumLibFuncs];
-  bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param;
+  bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param, ShouldSignExtI32Return;
   unsigned SizeOfInt;
 
   enum AvailabilityState {
@@ -187,6 +187,12 @@ public:
   /// attribute if they correspond to C-level int or unsigned int.
   void setShouldSignExtI32Param(bool Val) {
     ShouldSignExtI32Param = Val;
+  }
+
+  /// Set to true iff i32 results from library functions should have signext
+  /// attribute if they correspond to C-level int or unsigned int.
+  void setShouldSignExtI32Return(bool Val) {
+    ShouldSignExtI32Return = Val;
   }
 
   /// Returns the size of the wchar_t type in bytes or 0 if the size is unknown.
@@ -401,6 +407,8 @@ public:
   Attribute::AttrKind getExtAttrForI32Return(bool Signed = true) const {
     if (Impl->ShouldExtI32Return)
       return Signed ? Attribute::SExt : Attribute::ZExt;
+    if (Impl->ShouldSignExtI32Return)
+      return Attribute::SExt;
     return Attribute::None;
   }
 
