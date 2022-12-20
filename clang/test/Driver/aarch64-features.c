@@ -13,7 +13,7 @@
 // RUN: %clang -target aarch64-linux-android -rtlib=compiler-rt -mno-fmv \
 // RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-FMV-OFF %s
 
-// RUN: %clang -target aarch64-linux-gnu \
+// RUN: %clang -target aarch64-linux-gnu -rtlib=libgcc \
 // RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-FMV-OFF %s
 
 // RUN: %clang -target arm64-unknown-linux -rtlib=libgcc \
