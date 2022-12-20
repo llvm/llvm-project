@@ -472,6 +472,13 @@ namespace llvm {
 
     // Called by CodeGenRegBank::CodeGenRegBank().
     static void computeSubClasses(CodeGenRegBank&);
+
+    // Get ordering value among register base classes.
+    std::optional<int> getBaseClassOrder() const {
+      if (TheDef && !TheDef->isValueUnset("BaseClassOrder"))
+        return TheDef->getValueAsInt("BaseClassOrder");
+      return {};
+    }
   };
 
   // Register categories are used when we need to deterine the category a
