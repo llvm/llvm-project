@@ -39,6 +39,59 @@ using namespace llvm;
 namespace cir {
 namespace direct {
 
+class CIRScopeOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::ScopeOp> {
+public:
+  using OpConversionPattern<mlir::cir::ScopeOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::ScopeOp scopeOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    auto loc = scopeOp.getLoc();
+
+    // Split the current block before the ScopeOp to create the inlining point.
+    auto *currentBlock = rewriter.getInsertionBlock();
+    auto *remainingOpsBlock =
+        rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
+    mlir::Block *continueBlock;
+    if (scopeOp.getNumResults() == 0)
+      continueBlock = remainingOpsBlock;
+    else
+      llvm_unreachable("NYI");
+
+    // Inline body region.
+    auto *beforeBody = &scopeOp.getRegion().front();
+    auto *afterBody = &scopeOp.getRegion().back();
+    rewriter.inlineRegionBefore(scopeOp.getRegion(), continueBlock);
+
+    // Save stack and then branch into the body of the region.
+    rewriter.setInsertionPointToEnd(currentBlock);
+    // TODO(CIR): stackSaveOp
+    // auto stackSaveOp = rewriter.create<mlir::LLVM::StackSaveOp>(
+    //     loc, mlir::LLVM::LLVMPointerType::get(
+    //              mlir::IntegerType::get(scopeOp.getContext(), 8)));
+    rewriter.create<mlir::cir::BrOp>(loc, mlir::ValueRange(), beforeBody);
+
+    // Replace the scopeop return with a branch that jumps out of the body.
+    // Stack restore before leaving the body region.
+    rewriter.setInsertionPointToEnd(afterBody);
+    auto yieldOp = cast<mlir::cir::YieldOp>(afterBody->getTerminator());
+    auto branchOp = rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
+        yieldOp, yieldOp.getArgs(), continueBlock);
+
+    // // Insert stack restore before jumping out of the body of the region.
+    rewriter.setInsertionPoint(branchOp);
+    // TODO(CIR): stackrestore?
+    // rewriter.create<mlir::LLVM::StackRestoreOp>(loc, stackSaveOp);
+
+    // Replace the op with values return from the body region.
+    rewriter.replaceOp(scopeOp, continueBlock->getArguments());
+
+    return mlir::success();
+  }
+};
+
 class CIRReturnLowering
     : public mlir::OpConversionPattern<mlir::cir::ReturnOp> {
 public:
@@ -480,8 +533,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
   patterns.add<CIRBrOpLowering, CIRReturnLowering>(patterns.getContext());
   patterns.add<CIRCmpOpLowering, CIRCallLowering, CIRUnaryOpLowering,
                CIRBinOpLowering, CIRLoadLowering, CIRConstantLowering,
-               CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering>(
-      converter, patterns.getContext());
+               CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering,
+               CIRScopeOpLowering>(converter, patterns.getContext());
 }
 
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter) {
