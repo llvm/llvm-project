@@ -131,7 +131,7 @@ if [[ ! -d ${LLVM_BUILD} ]]; then
   $LLVM_SRC
 fi
 cd ${LLVM_BUILD}
-ninja LLVMSymbolize LLVMObject LLVMBinaryFormat LLVMDebugInfoDWARF LLVMSupport LLVMDebugInfoPDB LLVMDebuginfod LLVMMC LLVMDemangle LLVMTextAPI
+ninja LLVMSymbolize LLVMObject LLVMBinaryFormat LLVMDebugInfoDWARF LLVMSupport LLVMDebugInfoPDB LLVMDebuginfod LLVMMC LLVMDemangle LLVMTextAPI LLVMTargetParser
 
 cd ${BUILD_DIR}
 rm -rf ${SYMBOLIZER_BUILD}
@@ -167,6 +167,7 @@ $LINK $LIBCXX_ARCHIVE_DIR/libc++.a \
       $LLVM_BUILD/lib/libLLVMDemangle.a \
       $LLVM_BUILD/lib/libLLVMMC.a \
       $LLVM_BUILD/lib/libLLVMTextAPI.a \
+      $LLVM_BUILD/lib/libLLVMTargetParser.a \
       $ZLIB_BUILD/libz.a \
       symbolizer.a \
       -ignore-non-bitcode -o all.bc
