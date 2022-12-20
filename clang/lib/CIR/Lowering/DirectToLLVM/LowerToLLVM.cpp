@@ -39,6 +39,32 @@ using namespace llvm;
 namespace cir {
 namespace direct {
 
+class CIRCastOpLowering : public mlir::OpConversionPattern<mlir::cir::CastOp> {
+public:
+  using mlir::OpConversionPattern<mlir::cir::CastOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::CastOp castOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto src = castOp.getSrc();
+    switch (castOp.getKind()) {
+    case mlir::cir::CastKind::int_to_bool: {
+      auto zero = rewriter.create<mlir::cir::ConstantOp>(
+          src.getLoc(), src.getType(),
+          mlir::IntegerAttr::get(src.getType(), 0));
+      rewriter.replaceOpWithNewOp<mlir::cir::CmpOp>(
+          castOp, castOp.getSrc().getType(), mlir::cir::CmpOpKind::ne, src,
+          zero);
+      break;
+    }
+    default:
+      llvm_unreachable("NYI");
+    }
+
+    return mlir::success();
+  }
+};
+
 class CIRScopeOpLowering
     : public mlir::OpConversionPattern<mlir::cir::ScopeOp> {
 public:
@@ -534,7 +560,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
   patterns.add<CIRCmpOpLowering, CIRCallLowering, CIRUnaryOpLowering,
                CIRBinOpLowering, CIRLoadLowering, CIRConstantLowering,
                CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering,
-               CIRScopeOpLowering>(converter, patterns.getContext());
+               CIRScopeOpLowering, CIRCastOpLowering>(converter,
+                                                      patterns.getContext());
 }
 
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter) {
