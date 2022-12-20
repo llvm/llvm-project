@@ -5,18 +5,19 @@
 define i32 @foo(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[EQ_NOT:%.*]] = icmp ne i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[EQ]], label [[B:%.*]], label [[SWITCH:%.*]]
+; CHECK:       switch:
 ; CHECK-NEXT:    [[LT:%.*]] = icmp slt i64 [[X]], [[Y]]
-; CHECK-NEXT:    [[RETVAL_SEL:%.*]] = select i1 [[EQ_NOT]], i32 0, i32 2
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[EQ_NOT]], [[LT]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[A:%.*]], label [[B:%.*]]
+; CHECK-NEXT:    br i1 [[LT]], label [[A:%.*]], label [[B]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 1, [[A]] ], [ [[RETVAL_SEL]], [[B]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 1, [[A]] ], [ [[RETVAL:%.*]], [[B]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       a:
 ; CHECK-NEXT:    tail call void @bees.a() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       b:
+; CHECK-NEXT:    [[RETVAL]] = phi i32 [ 0, [[SWITCH]] ], [ 2, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    tail call void @bees.b() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
@@ -126,11 +127,10 @@ bees:
 define i32 @xyzzy(i64 %x, i64 %y) {
 ; CHECK-LABEL: @xyzzy(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[EQ_NOT:%.*]] = icmp ne i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i64 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[LT:%.*]] = icmp slt i64 [[X]], [[Y]]
-; CHECK-NEXT:    [[VAL_SEL:%.*]] = select i1 [[EQ_NOT]], i32 1, i32 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[EQ_NOT]], [[LT]]
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = select i1 [[OR_COND]], i32 -1, i32 [[VAL_SEL]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[LT]], i32 -1, i32 1
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = select i1 [[EQ]], i32 0, i32 [[SPEC_SELECT]]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ;
 entry:
