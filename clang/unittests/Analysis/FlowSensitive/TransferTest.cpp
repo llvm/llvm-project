@@ -4018,6 +4018,35 @@ TEST(TransferTest, ContextSensitiveOptionDisabled) {
       {TransferOptions{/*.ContextSensitiveOpts=*/std::nullopt}});
 }
 
+// This test is a regression test, based on a real crash.
+TEST(TransferTest, ContextSensitiveReturnReferenceFromNonReferenceLvalue) {
+  // This code exercises an unusual code path. If we return an lvalue directly,
+  // the code will catch that it's an l-value based on the `Value`'s kind. If we
+  // pass through a dummy function, the framework won't populate a value at
+  // all. In contrast, this code results in a (fresh) value, but it is not
+  // `ReferenceValue`. This test verifies that we catch this case as well.
+  std::string Code = R"(
+    class S {};
+    S& target(bool b, S &s) {
+      return b ? s : s;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Loc = Env.getReturnStorageLocation();
+        ASSERT_THAT(Loc, NotNull());
+
+        EXPECT_THAT(Env.getValue(*Loc), IsNull());
+      },
+      {TransferOptions{ContextSensitiveOptions{}}});
+}
+
 TEST(TransferTest, ContextSensitiveDepthZero) {
   std::string Code = R"(
     bool GiveBool();
