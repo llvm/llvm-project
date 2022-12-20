@@ -217,7 +217,8 @@ struct AliasingRegisterOperands {
 // to alias with Use registers of UseInstruction.
 struct AliasingConfigurations {
   AliasingConfigurations(const Instruction &DefInstruction,
-                         const Instruction &UseInstruction);
+                         const Instruction &UseInstruction,
+                         const BitVector &ForbiddenRegisters);
 
   bool empty() const; // True if no aliasing configuration is found.
   bool hasImplicitAliasing() const;
