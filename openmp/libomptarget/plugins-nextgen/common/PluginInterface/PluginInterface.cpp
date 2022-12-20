@@ -36,8 +36,6 @@ AsyncInfoWrapperTy::~AsyncInfoWrapperTy() {
 Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
                             DeviceImageTy &Image) {
   PreferredNumThreads = getDefaultNumThreads(GenericDevice);
-  if (isGenericMode())
-    PreferredNumThreads += GenericDevice.getWarpSize();
 
   MaxNumThreads = GenericDevice.getThreadLimit();
 
@@ -92,6 +90,9 @@ void *GenericKernelTy::prepareArgs(GenericDeviceTy &GenericDevice,
 
 uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
                                         uint32_t ThreadLimitClause) const {
+  if (ThreadLimitClause > 0 && isGenericMode())
+    ThreadLimitClause += GenericDevice.getWarpSize();
+
   return std::min(MaxNumThreads, (ThreadLimitClause > 0) ? ThreadLimitClause
                                                          : PreferredNumThreads);
 }
