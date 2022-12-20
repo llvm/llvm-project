@@ -116,17 +116,13 @@ entry:
 define <2 x i64> @dupzext_v2i16_v2i64(i16 %src, <2 x i16> %b) {
 ; CHECK-LABEL: dupzext_v2i16_v2i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi d1, #0x00ffff0000ffff
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    and x8, x0, #0xffff
+; CHECK-NEXT:    movi d1, #0x00ffff0000ffff
+; CHECK-NEXT:    dup v2.2d, x8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    mov x10, v0.d[1]
-; CHECK-NEXT:    mul x9, x8, x9
-; CHECK-NEXT:    mul x8, x8, x10
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    xtn v2.2s, v2.2d
+; CHECK-NEXT:    umull v0.2d, v2.2s, v0.2s
 ; CHECK-NEXT:    ret
 entry:
     %in = zext i16 %src to i64
@@ -225,12 +221,12 @@ define void @typei1_orig(i64 %a, ptr %p, ptr %q) {
 define <8 x i16> @typei1_v8i1_v8i16(i1 %src, <8 x i1> %b) {
 ; CHECK-LABEL: typei1_v8i1_v8i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.8b, #1
 ; CHECK-NEXT:    and w8, w0, #0x1
+; CHECK-NEXT:    movi v1.8b, #1
+; CHECK-NEXT:    dup v2.8h, w8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    dup v1.8h, w8
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    mul v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    xtn v2.8b, v2.8h
+; CHECK-NEXT:    umull v0.8h, v2.8b, v0.8b
 ; CHECK-NEXT:    ret
 entry:
     %in = zext i1 %src to i16
