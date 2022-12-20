@@ -1863,3 +1863,174 @@ define i1 @isKnownNeverInfinity_cos(double %x) {
 }
 
 declare double @llvm.cos.f64(double)
+
+define i1 @isKnownNeverInfinity_log(double %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_log(
+; CHECK-NEXT:    [[X_CLAMP_ZERO:%.*]] = call double @llvm.maxnum.f64(double [[X:%.*]], double 0.000000e+00)
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X_CLAMP_ZERO]], 1.000000e+00
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.log.f64(double [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x.clamp.zero = call double @llvm.maxnum.f64(double %x, double 0.0)
+  %a = fadd ninf double %x.clamp.zero, 1.0
+  %e = call double @llvm.log.f64(double %a)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isNotKnownNeverInfinity_log_maybe_negative(double %x) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_log_maybe_negative(
+; CHECK-NEXT:    [[X_NOT_INF:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.log.f64(double [[X_NOT_INF]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+
+  %x.not.inf = fadd ninf double %x, 1.0
+  %e = call double @llvm.log.f64(double %x.not.inf)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isNotKnownNeverInfinity_log_maybe_inf(double %x) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_log_maybe_inf(
+; CHECK-NEXT:    [[X_CLAMP_ZERO:%.*]] = call double @llvm.maxnum.f64(double [[X:%.*]], double 0.000000e+00)
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.log.f64(double [[X_CLAMP_ZERO]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x.clamp.zero = call double @llvm.maxnum.f64(double %x, double 0.0)
+  %e = call double @llvm.log.f64(double %x.clamp.zero)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isKnownNeverNegInfinity_log_maybe_0(double %x) {
+; CHECK-LABEL: @isKnownNeverNegInfinity_log_maybe_0(
+; CHECK-NEXT:    [[A:%.*]] = call ninf double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.log.f64(double [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0xFFF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = call ninf double @llvm.sqrt.f64(double %x) ; could be 0.0
+  %e = call double @llvm.log.f64(double %a) ; log(0.0) --> -inf
+  %r = fcmp une double %e, 0xfff0000000000000
+  ret i1 %r
+}
+
+declare double @llvm.log.f64(double)
+
+define i1 @isKnownNeverInfinity_log10(double %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_log10(
+; CHECK-NEXT:    [[X_CLAMP_ZERO:%.*]] = call double @llvm.maxnum.f64(double [[X:%.*]], double 0.000000e+00)
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X_CLAMP_ZERO]], 1.000000e+00
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.log10.f64(double [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x.clamp.zero = call double @llvm.maxnum.f64(double %x, double 0.0)
+  %a = fadd ninf double %x.clamp.zero, 1.0
+  %e = call double @llvm.log10.f64(double %a)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isNotKnownNeverInfinity_log10_maybe_negative(double %x) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_log10_maybe_negative(
+; CHECK-NEXT:    [[X_NOT_INF:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.log10.f64(double [[X_NOT_INF]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+
+  %x.not.inf = fadd ninf double %x, 1.0
+  %e = call double @llvm.log10.f64(double %x.not.inf)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isNotKnownNeverInfinity_log10_maybe_inf(double %x) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_log10_maybe_inf(
+; CHECK-NEXT:    [[X_CLAMP_ZERO:%.*]] = call double @llvm.maxnum.f64(double [[X:%.*]], double 0.000000e+00)
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.log10.f64(double [[X_CLAMP_ZERO]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x.clamp.zero = call double @llvm.maxnum.f64(double %x, double 0.0)
+  %e = call double @llvm.log10.f64(double %x.clamp.zero)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isKnownNeverNegInfinity_log10_maybe_0(double %x) {
+; CHECK-LABEL: @isKnownNeverNegInfinity_log10_maybe_0(
+; CHECK-NEXT:    [[A:%.*]] = call ninf double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.log10.f64(double [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0xFFF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = call ninf double @llvm.sqrt.f64(double %x) ; could be 0.0
+  %e = call double @llvm.log10.f64(double %a) ; log(0.0) --> -inf
+  %r = fcmp une double %e, 0xfff0000000000000
+  ret i1 %r
+}
+
+declare double @llvm.log10.f64(double)
+
+define i1 @isKnownNeverInfinity_log2(double %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_log2(
+; CHECK-NEXT:    [[X_CLAMP_ZERO:%.*]] = call double @llvm.maxnum.f64(double [[X:%.*]], double 0.000000e+00)
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X_CLAMP_ZERO]], 1.000000e+00
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.log2.f64(double [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x.clamp.zero = call double @llvm.maxnum.f64(double %x, double 0.0)
+  %a = fadd ninf double %x.clamp.zero, 1.0
+  %e = call double @llvm.log2.f64(double %a)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isNotKnownNeverInfinity_log2_maybe_negative(double %x) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_log2_maybe_negative(
+; CHECK-NEXT:    [[X_NOT_INF:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.log2.f64(double [[X_NOT_INF]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+
+  %x.not.inf = fadd ninf double %x, 1.0
+  %e = call double @llvm.log2.f64(double %x.not.inf)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isNotKnownNeverInfinity_log2_maybe_inf(double %x) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_log2_maybe_inf(
+; CHECK-NEXT:    [[X_CLAMP_ZERO:%.*]] = call double @llvm.maxnum.f64(double [[X:%.*]], double 0.000000e+00)
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.log2.f64(double [[X_CLAMP_ZERO]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x.clamp.zero = call double @llvm.maxnum.f64(double %x, double 0.0)
+  %e = call double @llvm.log2.f64(double %x.clamp.zero)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isKnownNeverNegInfinity_log2_maybe_0(double %x) {
+; CHECK-LABEL: @isKnownNeverNegInfinity_log2_maybe_0(
+; CHECK-NEXT:    [[A:%.*]] = call ninf double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.log2.f64(double [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0xFFF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = call ninf double @llvm.sqrt.f64(double %x) ; could be 0.0
+  %e = call double @llvm.log2.f64(double %a) ; log(0.0) --> -inf
+  %r = fcmp une double %e, 0xfff0000000000000
+  ret i1 %r
+}
+
+declare double @llvm.log2.f64(double)
