@@ -8,7 +8,7 @@ define i64 @foo(ptr nocapture readonly %ptr, i64 %a, i64 %b, i64 %c) local_unnam
 ; CHECK-NEXT:    ldr w8, [x0, #4]
 ; CHECK-NEXT:    lsr x9, x1, #32
 ; CHECK-NEXT:    cmn x3, x2
-; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    umull x8, w8, w9
 ; CHECK-NEXT:    cinc x0, x8, hs
 ; CHECK-NEXT:    ret
 entry:
