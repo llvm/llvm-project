@@ -57,6 +57,7 @@ static_library("LLVMARMCodeGen") {
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/CFGuard",
     "//llvm/lib/Transforms/IPO",
     "//llvm/lib/Transforms/Utils",

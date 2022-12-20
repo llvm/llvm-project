@@ -3,6 +3,7 @@ import("//third-party/unittest/unittest.gni")
 unittest("SupportTests") {
   deps = [
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
   ]
   sources = [

@@ -6,6 +6,7 @@ static_library("Instrumentation") {
     "//llvm/lib/MC",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/Utils",
   ]
   sources = [

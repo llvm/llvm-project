@@ -10,6 +10,7 @@ static_library("Linux") {
     "//lldb/source/Target",
     "//lldb/source/Utility",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
 
   # Uses source-relative includes for own headers.

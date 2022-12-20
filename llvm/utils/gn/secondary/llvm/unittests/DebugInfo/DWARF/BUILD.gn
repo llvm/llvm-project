@@ -9,6 +9,7 @@ unittest("DebugInfoDWARFTests") {
     "//llvm/lib/ObjectYAML",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
   ]
   sources = [

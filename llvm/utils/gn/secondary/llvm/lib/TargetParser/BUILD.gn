@@ -1,7 +1,6 @@
 static_library("TargetParser") {
   output_name = "LLVMTargetParser"
-
-  # FIXME: Make this depend on Support.
+  deps = [ "//llvm/lib/Support" ]
   include_dirs = [
     "Unix",
     "Windows",
