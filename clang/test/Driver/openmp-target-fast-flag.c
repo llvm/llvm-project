@@ -7,7 +7,7 @@
 // RUN:   | FileCheck -check-prefixes=TFast,EnV,TState,NestParallel %s
 
 // RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a -O4 %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=O4,NoTFast,EnV,NoTState,NoNestParallel %s
+// RUN:   | FileCheck -check-prefixes=O4,NoTFast,NoEnV,NoTState,NoNestParallel %s
 
 // RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a -O4 -fno-openmp-target-fast %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=O4,NoTFast,NoEnV,NoTState,NoNestParallel %s

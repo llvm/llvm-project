@@ -7923,7 +7923,8 @@ CodeGenModule::NoLoopXteamErr CodeGenModule::checkAndSetNoLoopTargetConstruct(
 CodeGenModule::NoLoopXteamErr
 CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
   NoLoopXteamErr NxStatus = NxSuccess;
-  if (!getLangOpts().OpenMPTargetIgnoreEnvVars)
+  if (!getLangOpts().OpenMPTargetIgnoreEnvVars ||
+      !getLangOpts().OpenMPNoNestedParallelism)
     return NxOptionDisabled;
 
   if (D.getDirectiveKind() !=
@@ -7977,7 +7978,8 @@ CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
 CodeGenModule::NoLoopXteamErr
 CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
   NoLoopXteamErr NxStatus = NxSuccess;
-  if (!getLangOpts().OpenMPTargetIgnoreEnvVars)
+  if (!getLangOpts().OpenMPTargetIgnoreEnvVars ||
+      !getLangOpts().OpenMPNoNestedParallelism)
     return NxOptionDisabled;
 
   // Allowing only a combined construct for now

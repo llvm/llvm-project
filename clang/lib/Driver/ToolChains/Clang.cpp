@@ -680,8 +680,8 @@ static bool isTargetFastUsed(const ArgList &Args) {
                       options::OPT_fno_openmp_target_fast, isOFastUsed(Args));
 }
 
-/// Ignore possibility of runtime environment variables during kernel code
-/// generation at -O3 (and above) and -Ofast
+/// Ignore possibility of environment variables if either
+/// -fopenmp-target-fast or -Ofast is used.
 static bool shouldIgnoreEnvVars(const ArgList &Args) {
   if (Args.hasFlag(options::OPT_fno_openmp_target_fast,
                    options::OPT_fopenmp_target_fast, false))
@@ -689,29 +689,6 @@ static bool shouldIgnoreEnvVars(const ArgList &Args) {
 
   if (isTargetFastUsed(Args))
     return true;
-
-  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    if (A->getOption().matches(options::OPT_O4))
-      return true;
-
-    if (A->getOption().matches(options::OPT_O0))
-      return false;
-
-    assert(A->getOption().matches(options::OPT_O) && "Must have a -O flag");
-
-    StringRef S(A->getValue());
-    if (S == "s")
-      return false;
-
-    if (S == "z")
-      return false;
-
-    unsigned OptLevel = 0;
-    if (S.getAsInteger(10, OptLevel))
-      return false;
-
-    return OptLevel > 2;
-  }
 
   return false;
 }

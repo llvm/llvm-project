@@ -3941,11 +3941,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Args, options::OPT_fopenmp_target_xteam_reduction_blocksize_EQ,
       Opts.OpenMPTargetXteamReductionBlockSize, Diags);
 
-  // Turn ON at -O3 (and above) and -Ofast
   Opts.OpenMPTargetIgnoreEnvVars =
       Args.hasFlag(options::OPT_fopenmp_target_ignore_env_vars,
-                   options::OPT_fno_openmp_target_ignore_env_vars,
-                   getOptimizationLevel(Args, IK, Diags) > 2);
+                   options::OPT_fno_openmp_target_ignore_env_vars, false);
 
   Opts.OpenMPTargetBigJumpLoop =
       Args.hasFlag(options::OPT_fopenmp_target_big_jump_loop,
