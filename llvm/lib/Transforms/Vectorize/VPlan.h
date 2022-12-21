@@ -1167,6 +1167,9 @@ public:
     return getNumOperands() == 0 ? nullptr : getOperand(0);
   }
 
+  /// Update the start value of the recipe.
+  void setStartValue(VPValue *V) { setOperand(0, V); }
+
   /// Returns the incoming value from the loop backedge.
   VPValue *getBackedgeValue() {
     return getOperand(1);
@@ -1208,6 +1211,9 @@ public:
 
   /// Returns true if only scalar values will be generated.
   bool onlyScalarsGenerated(ElementCount VF);
+
+  /// Returns the induction descriptor for the recipe.
+  const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
