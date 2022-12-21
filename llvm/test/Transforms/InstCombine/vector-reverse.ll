@@ -7,14 +7,13 @@
 
 define <vscale x 4 x i32> @binop_reverse(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: @binop_reverse(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
-; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
-; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 4 x i32> [[A_REV]], [[B_REV]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add nsw <vscale x 4 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[ADD1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
   %b.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %b)
-  %add = add <vscale x 4 x i32> %a.rev, %b.rev
+  %add = add nsw <vscale x 4 x i32> %a.rev, %b.rev
   ret <vscale x 4 x i32> %add
 }
 
@@ -22,9 +21,9 @@ define <vscale x 4 x i32> @binop_reverse(<vscale x 4 x i32> %a, <vscale x 4 x i3
 define <vscale x 4 x i32> @binop_reverse_1(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: @binop_reverse_1(
 ; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
-; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
 ; CHECK-NEXT:    call void @use_nxv4i32(<vscale x 4 x i32> [[A_REV]])
-; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 4 x i32> [[A_REV]], [[B_REV]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add <vscale x 4 x i32> [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[ADD1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
@@ -37,10 +36,10 @@ define <vscale x 4 x i32> @binop_reverse_1(<vscale x 4 x i32> %a, <vscale x 4 x 
 ; %b.rev has multiple uses
 define <vscale x 4 x i32> @binop_reverse_2(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: @binop_reverse_2(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
 ; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
 ; CHECK-NEXT:    call void @use_nxv4i32(<vscale x 4 x i32> [[B_REV]])
-; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 4 x i32> [[A_REV]], [[B_REV]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add <vscale x 4 x i32> [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[ADD:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[ADD1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
@@ -71,8 +70,8 @@ define <vscale x 4 x i32> @binop_reverse_3(<vscale x 4 x i32> %a, <vscale x 4 x 
 ; %a.rev used as both operands
 define <vscale x 4 x i32> @binop_reverse_4(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: @binop_reverse_4(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
-; CHECK-NEXT:    [[MUL:%.*]] = mul <vscale x 4 x i32> [[A_REV]], [[A_REV]]
+; CHECK-NEXT:    [[MUL1:%.*]] = mul <vscale x 4 x i32> [[A:%.*]], [[A]]
+; CHECK-NEXT:    [[MUL:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[MUL1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[MUL]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
@@ -80,12 +79,26 @@ define <vscale x 4 x i32> @binop_reverse_4(<vscale x 4 x i32> %a) {
   ret <vscale x 4 x i32> %mul
 }
 
+; %a.rev used as both operands along with a third use
+define <vscale x 4 x i32> @binop_reverse_5(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: @binop_reverse_5(
+; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
+; CHECK-NEXT:    call void @use_nxv4i32(<vscale x 4 x i32> [[A_REV]])
+; CHECK-NEXT:    [[MUL:%.*]] = mul <vscale x 4 x i32> [[A_REV]], [[A_REV]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[MUL]]
+;
+  %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
+  call void @use_nxv4i32(<vscale x 4 x i32> %a.rev)
+  %mul = mul <vscale x 4 x i32> %a.rev, %a.rev
+  ret <vscale x 4 x i32> %mul
+}
+
 define <vscale x 4 x i32> @binop_reverse_splat_RHS(<vscale x 4 x i32> %a, i32 %b) {
 ; CHECK-LABEL: @binop_reverse_splat_RHS(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
 ; CHECK-NEXT:    [[B_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[B_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[B_INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[DIV:%.*]] = udiv <vscale x 4 x i32> [[A_REV]], [[B_SPLAT]]
+; CHECK-NEXT:    [[DIV1:%.*]] = udiv <vscale x 4 x i32> [[A:%.*]], [[B_SPLAT]]
+; CHECK-NEXT:    [[DIV:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[DIV1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[DIV]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
@@ -115,10 +128,10 @@ define <vscale x 4 x i32> @binop_reverse_splat_RHS_1(<vscale x 4 x i32> %a, i32 
 
 define <vscale x 4 x i32> @binop_reverse_splat_LHS(<vscale x 4 x i32> %a, i32 %b) {
 ; CHECK-LABEL: @binop_reverse_splat_LHS(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
 ; CHECK-NEXT:    [[B_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[B_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[B_INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[DIV:%.*]] = udiv <vscale x 4 x i32> [[B_SPLAT]], [[A_REV]]
+; CHECK-NEXT:    [[DIV1:%.*]] = udiv <vscale x 4 x i32> [[B_SPLAT]], [[A:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[DIV1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[DIV]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
