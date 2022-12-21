@@ -902,11 +902,6 @@ define void @spill_func(ptr addrspace(1) %arg) #0 {
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_waitcnt expcnt(1)
 ; CHECK-NEXT:    v_writelane_b32 v0, s30, 0
 ; CHECK-NEXT:    v_writelane_b32 v0, s31, 1
@@ -982,6 +977,9 @@ define void @spill_func(ptr addrspace(1) %arg) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v0, s94, 63
 ; CHECK-NEXT:    v_writelane_b32 v1, s101, 6
 ; CHECK-NEXT:    s_cmp_eq_u32 s31, 0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    s_mov_b32 s0, 0
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    ;;#ASMEND

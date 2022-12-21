@@ -60,9 +60,6 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   Occupancy = ST.computeOccupancy(F, getLDSSize());
   CallingConv::ID CC = F.getCallingConv();
 
-  const_cast<MachineFunction &>(MF).getRegInfo().addDelegate(this);
-  VRegFlags.reserve(256);
-
   // FIXME: Should have analysis or something rather than attribute to detect
   // calls.
   const bool HasCalls = F.hasFnAttribute("amdgpu-calls");
@@ -310,11 +307,24 @@ bool SIMachineFunctionInfo::isCalleeSavedReg(const MCPhysReg *CSRegs,
 bool SIMachineFunctionInfo::allocateVGPRForSGPRSpills(MachineFunction &MF,
                                                       int FI,
                                                       unsigned LaneIndex) {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   Register LaneVGPR;
   if (!LaneIndex) {
-    LaneVGPR = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    LaneVGPR = TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF);
+    if (LaneVGPR == AMDGPU::NoRegister) {
+      // We have no VGPRs left for spilling SGPRs. Reset because we will not
+      // partially spill the SGPR to VGPRs.
+      SGPRSpillToVGPRLanes.erase(FI);
+      return false;
+    }
+
     SpillVGPRs.push_back(LaneVGPR);
+    // Add this register as live-in to all blocks to avoid machine verifier
+    // complaining about use of an undefined physical register.
+    for (MachineBasicBlock &BB : MF)
+      BB.addLiveIn(LaneVGPR);
   } else {
     LaneVGPR = SpillVGPRs.back();
   }
@@ -522,16 +532,6 @@ MCPhysReg SIMachineFunctionInfo::getNextSystemSGPR() const {
   return AMDGPU::SGPR0 + NumUserSGPRs + NumSystemSGPRs;
 }
 
-void SIMachineFunctionInfo::MRI_NoteNewVirtualRegister(Register Reg) {
-  VRegFlags.grow(Reg);
-}
-
-void SIMachineFunctionInfo::MRI_NotecloneVirtualRegister(Register NewReg,
-                                                         Register SrcReg) {
-  VRegFlags.grow(NewReg);
-  VRegFlags[NewReg] = VRegFlags[SrcReg];
-}
-
 Register
 SIMachineFunctionInfo::getGITPtrLoReg(const MachineFunction &MF) const {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -639,10 +639,6 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
 
   if (MFI.getVGPRForAGPRCopy())
     VGPRForAGPRCopy = regToString(MFI.getVGPRForAGPRCopy(), TRI);
-
-  if (MFI.getSGPRForEXECCopy())
-    SGPRForEXECCopy = regToString(MFI.getSGPRForEXECCopy(), TRI);
-
   auto SFI = MFI.getOptionalScavengeFI();
   if (SFI)
     ScavengeFI = yaml::FrameIndex(*SFI, MF.getFrameInfo());

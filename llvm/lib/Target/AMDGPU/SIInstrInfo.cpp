@@ -1567,28 +1567,6 @@ static unsigned getAVSpillSaveOpcode(unsigned Size) {
   }
 }
 
-static unsigned getWWMRegSpillSaveOpcode(unsigned Size) {
-  // Currently, there is only 32-bit WWM register spills needed.
-  if (Size != 4)
-    llvm_unreachable("unknown wwm register spill size");
-
-  return AMDGPU::SI_SPILL_WWM_V32_SAVE;
-}
-
-static unsigned getVectorRegSpillSaveOpcode(Register Reg,
-                                            const TargetRegisterClass *RC,
-                                            unsigned Size,
-                                            const SIRegisterInfo &TRI,
-                                            const SIMachineFunctionInfo &MFI) {
-  // Choose the right opcode if spilling a WWM register.
-  if (MFI.checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG))
-    return getWWMRegSpillSaveOpcode(Size);
-
-  return TRI.isVectorSuperClass(RC) ? getAVSpillSaveOpcode(Size)
-         : TRI.isAGPRClass(RC)      ? getAGPRSpillSaveOpcode(Size)
-                                    : getVGPRSpillSaveOpcode(Size);
-}
-
 void SIInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIndex, const TargetRegisterClass *RC,
@@ -1633,8 +1611,11 @@ void SIInstrInfo::storeRegToStackSlot(
     return;
   }
 
-  unsigned Opcode = getVectorRegSpillSaveOpcode(VReg ? VReg : SrcReg, RC,
-                                                SpillSize, RI, *MFI);
+  unsigned Opcode = RI.isVectorSuperClass(RC)
+                        ? getAVSpillSaveOpcode(SpillSize)
+                        : RI.isAGPRClass(RC)
+                              ? getAGPRSpillSaveOpcode(SpillSize)
+                              : getVGPRSpillSaveOpcode(SpillSize);
   MFI->setHasSpilledVGPRs();
 
   BuildMI(MBB, MI, DL, get(Opcode))
@@ -1785,27 +1766,6 @@ static unsigned getAVSpillRestoreOpcode(unsigned Size) {
   }
 }
 
-static unsigned getWWMRegSpillRestoreOpcode(unsigned Size) {
-  // Currently, there is only 32-bit WWM register spills needed.
-  if (Size != 4)
-    llvm_unreachable("unknown wwm register spill size");
-
-  return AMDGPU::SI_SPILL_WWM_V32_RESTORE;
-}
-
-static unsigned
-getVectorRegSpillRestoreOpcode(Register Reg, const TargetRegisterClass *RC,
-                               unsigned Size, const SIRegisterInfo &TRI,
-                               const SIMachineFunctionInfo &MFI) {
-  // Choose the right opcode if restoring a WWM register.
-  if (MFI.checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG))
-    return getWWMRegSpillRestoreOpcode(Size);
-
-  return TRI.isVectorSuperClass(RC) ? getAVSpillRestoreOpcode(Size)
-         : TRI.isAGPRClass(RC)      ? getAGPRSpillRestoreOpcode(Size)
-                                    : getVGPRSpillRestoreOpcode(Size);
-}
-
 void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MI,
                                        Register DestReg, int FrameIndex,
@@ -1849,9 +1809,11 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     return;
   }
 
-  unsigned Opcode = getVectorRegSpillRestoreOpcode(VReg ? VReg : DestReg, RC,
-                                                   SpillSize, RI, *MFI);
-
+  unsigned Opcode = RI.isVectorSuperClass(RC)
+                        ? getAVSpillRestoreOpcode(SpillSize)
+                        : RI.isAGPRClass(RC)
+                              ? getAGPRSpillRestoreOpcode(SpillSize)
+                              : getVGPRSpillRestoreOpcode(SpillSize);
   BuildMI(MBB, MI, DL, get(Opcode), DestReg)
       .addFrameIndex(FrameIndex)           // vaddr
       .addReg(MFI->getStackPtrOffsetReg()) // scratch_offset
