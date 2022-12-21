@@ -562,15 +562,21 @@ public:
   using OutputUpdater = function_ref<Value(OpBuilder &builder, Location loc,
                                            Value memref, Value tensor)>;
 
-  /// Constructor: take an array of tensors inputs, on which the generated
-  /// loops will iterate on. The index of the tensor in the array is also the
-  /// tensor id (tid) used in related functions.
-  /// If isSparseOut is set, loop emitter assume that the sparse output tensor
-  /// is empty, and will always generate loops on it based on the dim sizes.
-  /// An optional array could be provided (by sparsification) to indicate the
-  /// loop id sequence that will be generated. It is used to establish the
-  /// mapping between affineDimExpr to the corresponding loop index in the
-  /// loop stack that are maintained by the loop emitter.
+  SparseTensorLoopEmitter() = default;
+
+  /// Takes an array of tensors inputs, on which the generated loops will
+  /// iterate on. The index of the tensor in the array is also the tensor id
+  /// (tid) used in related functions. If isSparseOut is set, loop emitter
+  /// assume that the sparse output tensor is empty, and will always generate
+  /// loops on it based on the dim sizes. An optional array could be provided
+  /// (by sparsification) to indicate the loop id sequence that will be
+  /// generated. It is used to establish the mapping between affineDimExpr to
+  /// the corresponding loop index in the loop stack that are maintained by the
+  /// loop emitter.
+  void initialize(ValueRange tensors, StringAttr loopTag = nullptr,
+                  bool hasOutput = false, bool isSparseOut = false,
+                  ArrayRef<unsigned> topSort = {});
+
   explicit SparseTensorLoopEmitter(ValueRange tensors,
                                    StringAttr loopTag = nullptr,
                                    bool hasOutput = false,
