@@ -569,8 +569,8 @@ Also, it's generally better to write regular expressions that use entire
 triple components, than to do something clever to shorten them. For
 example, to match both freebsd and netbsd in an expression, you could write
 ``target={{.*(free|net)bsd.*}}`` and that would work. However, it would
-prevent a ``grep freebsd`` from finding this test. Better to use 
-``target={{.*(freebsd|netbsd).*}}`` in this case.
+prevent a ``grep freebsd`` from finding this test. Better to use:
+``target={{.+-freebsd.*}} || target={{.+-netbsd.*}}``
 
 
 Substitutions
