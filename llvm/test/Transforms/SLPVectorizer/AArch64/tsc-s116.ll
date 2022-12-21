@@ -30,11 +30,11 @@ define void @s116_modified(float* %a) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> [[TMP4]], <4 x i32> <i32 0, i32 undef, i32 1, i32 2>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[TMP10]], <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast <4 x float> [[TMP9]], [[SHUFFLE]]
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast float* [[GEP0]] to <4 x float>*
-; CHECK-NEXT:    store <4 x float> [[TMP11]], <4 x float>* [[TMP12]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP6]], <4 x float> [[TMP8]], <4 x i32> <i32 0, i32 undef, i32 2, i32 4>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP10]], <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul fast <4 x float> [[TMP9]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast float* [[GEP0]] to <4 x float>*
+; CHECK-NEXT:    store <4 x float> [[TMP12]], <4 x float>* [[TMP13]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %gep0 = getelementptr inbounds float, float* %a, i64 0
