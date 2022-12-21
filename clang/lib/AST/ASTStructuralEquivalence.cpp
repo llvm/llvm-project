@@ -103,6 +103,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      const TemplateArgument &Arg1,
                                      const TemplateArgument &Arg2);
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     const TemplateArgumentLoc &Arg1,
+                                     const TemplateArgumentLoc &Arg2);
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      NestedNameSpecifier *NNS1,
                                      NestedNameSpecifier *NNS2);
 static bool IsStructurallyEquivalent(const IdentifierInfo *Name1,
@@ -337,6 +340,30 @@ class StmtComparer {
 
   bool IsStmtEquivalent(const VAArgExpr *E1, const VAArgExpr *E2) {
     // Semantics only depend on children.
+    return true;
+  }
+
+  bool IsStmtEquivalent(const OverloadExpr *E1, const OverloadExpr *E2) {
+    if (!IsStructurallyEquivalent(Context, E1->getName(), E2->getName()))
+      return false;
+
+    if (static_cast<bool>(E1->getQualifier()) !=
+        static_cast<bool>(E2->getQualifier()))
+      return false;
+    if (E1->getQualifier() &&
+        !IsStructurallyEquivalent(Context, E1->getQualifier(),
+                                  E2->getQualifier()))
+      return false;
+
+    if (E1->getNumTemplateArgs() != E2->getNumTemplateArgs())
+      return false;
+    const TemplateArgumentLoc *Args1 = E1->getTemplateArgs();
+    const TemplateArgumentLoc *Args2 = E2->getTemplateArgs();
+    for (unsigned int ArgI = 0, ArgN = E1->getNumTemplateArgs(); ArgI < ArgN;
+         ++ArgI)
+      if (!IsStructurallyEquivalent(Context, Args1[ArgI], Args2[ArgI]))
+        return false;
+
     return true;
   }
 
@@ -597,6 +624,14 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
   }
   return true;
+}
+
+/// Determine whether two template argument locations are equivalent.
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     const TemplateArgumentLoc &Arg1,
+                                     const TemplateArgumentLoc &Arg2) {
+  return IsStructurallyEquivalent(Context, Arg1.getArgument(),
+                                  Arg2.getArgument());
 }
 
 /// Determine structural equivalence for the common part of array
