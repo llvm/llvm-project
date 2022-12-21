@@ -25549,8 +25549,8 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
                                 Sub.getValue(1));
       return DAG.getNode(ISD::OR, DL, VT, SBB, Y);
     } else if (!Subtarget.canUseCMOV() && CondCode == X86::COND_E &&
-               Cmp.getOperand(0).getOpcode() == ISD::AND &&
-               isOneConstant(Cmp.getOperand(0).getOperand(1))) {
+               CmpOp0.getOpcode() == ISD::AND &&
+               isOneConstant(CmpOp0.getOperand(1))) {
       SDValue Src1, Src2;
       // true if Op2 is XOR or OR operator and one of its operands
       // is equal to Op1
