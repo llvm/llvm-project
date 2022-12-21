@@ -43,6 +43,8 @@ def err_clang_cache_cannot_find_binary: Error<
   "clang-cache cannot find compiler binary %0">;
 def err_clang_cache_missing_compiler_command: Error<
   "missing compiler command for clang-cache">;
+def err_clang_cache_scanserve_missing_args: Error<
+  "missing arguments for dep-scanning server mode">;
 def err_caching_backend_fail: Error<
   "caching backend error: %0">, DefaultFatal;
 def err_caching_output_non_deterministic: Error<

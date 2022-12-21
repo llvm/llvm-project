@@ -105,9 +105,16 @@ Expected<OpenSocket> OpenSocket::create(StringRef BasePath) {
 
 Expected<ScanDaemon> ScanDaemon::connectToDaemon(StringRef BasePath,
                                                  bool ShouldWait) {
+  auto reportError = [BasePath](Error &&E) -> Error {
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        Twine("could not connect to scan daemon on path '") + BasePath +
+            "': " + toString(std::move(E)));
+  };
+
   Expected<OpenSocket> Socket = OpenSocket::create(BasePath);
   if (!Socket)
-    return Socket.takeError();
+    return reportError(Socket.takeError());
 
   // Wait up to 30 seconds.
   constexpr int MaxWait = 30 * 1000 * 1000;
@@ -127,12 +134,12 @@ Expected<ScanDaemon> ScanDaemon::connectToDaemon(StringRef BasePath,
       return ScanDaemon(std::move(*Socket));
 
     if (errno != ENOENT && errno != ECONNREFUSED)
-      return llvm::errorCodeToError(
-          std::error_code(errno, std::generic_category()));
+      return reportError(llvm::errorCodeToError(
+          std::error_code(errno, std::generic_category())));
   }
 
-  return llvm::errorCodeToError(
-      std::error_code(ENOENT, std::generic_category()));
+  return reportError(
+      llvm::errorCodeToError(std::error_code(ENOENT, std::generic_category())));
 }
 
 Expected<ScanDaemon> ScanDaemon::launchDaemon(StringRef BasePath,
@@ -142,31 +149,15 @@ Expected<ScanDaemon> ScanDaemon::launchDaemon(StringRef BasePath,
   const char *Args[] = {
       Arg0,
       "-cc1depscand",
-      "-run", // -launch if we want the daemon to fork itself.
+      "-run",
       BasePathCStr.c_str(),
   };
 
-  static bool LaunchTestDaemon =
-      llvm::sys::Process::GetEnv("__CLANG_TEST_CC1DEPSCAND_SHUTDOWN")
-          .has_value();
-  static std::optional<std::string> LaunchTestArgs =
-      llvm::sys::Process::GetEnv("__CLANG_TEST_CC1DEPSCAND_EXTRA_ARGS");
-
   ArrayRef<const char *> InitialArgs = makeArrayRef(Args);
   SmallVector<const char *> LaunchArgs(InitialArgs.begin(), InitialArgs.end());
-  if (LaunchTestDaemon)
-    LaunchArgs.push_back("-shutdown");
 
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Saver(Alloc);
-  if (LaunchTestArgs) {
-    StringRef Arg, Remaining = *LaunchTestArgs;
-    while (!Remaining.empty()) {
-      std::tie(Arg, Remaining) = Remaining.split(' ');
-      StringRef A = Saver.save(Arg);
-      LaunchArgs.push_back(A.data());
-    }
-  }
 
   if (Sharing.ShareViaIdentifier) {
     // Invocations that share state via identifier will be isolated from
@@ -176,9 +167,6 @@ Expected<ScanDaemon> ScanDaemon::launchDaemon(StringRef BasePath,
   LaunchArgs.push_back("-cas-args");
   LaunchArgs.append(Sharing.CASArgs);
   LaunchArgs.push_back(nullptr);
-
-  // Only do it the first time.
-  LaunchTestDaemon = false;
 
   // Spawn attributes
   posix_spawnattr_t Attrs;
@@ -204,14 +192,6 @@ Expected<ScanDaemon> ScanDaemon::launchDaemon(StringRef BasePath,
                          /*envp=*/nullptr);
   if (EC)
     return llvm::errorCodeToError(std::error_code(EC, std::generic_category()));
-
-  // If we use -launch above, we should do the following here:
-  //
-  // int Status;
-  // if (::waitpid(Pid, &Status, 0) != Pid)
-  //   return createStringError("failed to spawn clang -cc1depscand");
-  // if (!WIFEXITED(Status) || WEXITSTATUS(Status))
-  //   return createStringError("clang -cc1depscand failed to launch");
 
   return connectToJustLaunchedDaemon(BasePath);
 }

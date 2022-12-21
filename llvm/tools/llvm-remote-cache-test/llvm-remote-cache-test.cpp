@@ -114,10 +114,9 @@ int main(int Argc, const char **Argv) {
 
   remote::RemoteCacheServer Server(SocketPath, TempPath, std::move(*CAS),
                                    std::move(*Cache));
-  std::thread ServerThread([&Server]() {
-    Server.Start();
-    Server.Listen();
-  });
+  // Make sure to start the server before executing the command.
+  Server.Start();
+  std::thread ServerThread([&Server]() { Server.Listen(); });
 
   setenv("LLVM_CACHE_REMOTE_SERVICE_SOCKET_PATH", SocketPath.c_str(), true);
 
