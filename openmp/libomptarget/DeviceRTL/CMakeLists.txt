@@ -219,7 +219,6 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
       string(SUBSTRING ${target_cpu} 3 4 gfxnum)
     endif()
     get_target_property(oclc_isa_bc_file oclc_isa_version_${gfxnum} LOCATION)
-    get_target_property(oclc_abi_version_file oclc_abi_version_400 LOCATION)
 
     # Add custom target so targets from other directories
     # can be added as dependencies to ensure libm
