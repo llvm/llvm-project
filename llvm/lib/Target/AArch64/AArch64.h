@@ -82,6 +82,7 @@ void initializeAArch64CompressJumpTablesPass(PassRegistry&);
 void initializeAArch64CondBrTuningPass(PassRegistry &);
 void initializeAArch64ConditionOptimizerPass(PassRegistry&);
 void initializeAArch64ConditionalComparesPass(PassRegistry &);
+void initializeAArch64DAGToDAGISelPass(PassRegistry &);
 void initializeAArch64DeadRegisterDefinitionsPass(PassRegistry&);
 void initializeAArch64ExpandHardenedPseudosPass(PassRegistry&);
 void initializeAArch64ExpandPseudoPass(PassRegistry &);
