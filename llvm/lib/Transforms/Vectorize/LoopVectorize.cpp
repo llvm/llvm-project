@@ -3277,15 +3277,6 @@ InnerLoopVectorizer::createVectorizedLoopSkeleton() {
    ...
    */
 
-  // Workaround!  Compute the trip count of the original loop and cache it
-  // before we start modifying the CFG.  This code has a systemic problem
-  // wherein it tries to run analysis over partially constructed IR; this is
-  // wrong, and not simply for SCEV.  The trip count of the original loop
-  // simply happens to be prone to hitting this in practice.  In theory, we
-  // can hit the same issue for any SCEV, or ValueTracking query done during
-  // mutation.  See PR49900.
-  getOrCreateTripCount(OrigLoop->getLoopPreheader());
-
   // Create an empty vector loop, and prepare basic blocks for the runtime
   // checks.
   createVectorLoopSkeleton("");
@@ -7620,6 +7611,15 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << BestVF << ", UF=" << BestUF
                     << '\n');
 
+  // Workaround!  Compute the trip count of the original loop and cache it
+  // before we start modifying the CFG.  This code has a systemic problem
+  // wherein it tries to run analysis over partially constructed IR; this is
+  // wrong, and not simply for SCEV.  The trip count of the original loop
+  // simply happens to be prone to hitting this in practice.  In theory, we
+  // can hit the same issue for any SCEV, or ValueTracking query done during
+  // mutation.  See PR49900.
+  ILV.getOrCreateTripCount(OrigLoop->getLoopPreheader());
+
   // Perform the actual loop transformation.
 
   // 1. Set up the skeleton for vectorization, including vector pre-header and
@@ -7718,14 +7718,6 @@ Value *InnerLoopUnroller::getBroadcastInstrs(Value *V) { return V; }
 /// depicted in https://llvm.org/docs/Vectorizers.html#epilogue-vectorization.
 std::pair<BasicBlock *, Value *>
 EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton() {
-  // Workaround!  Compute the trip count of the original loop and cache it
-  // before we start modifying the CFG.  This code has a systemic problem
-  // wherein it tries to run analysis over partially constructed IR; this is
-  // wrong, and not simply for SCEV.  The trip count of the original loop
-  // simply happens to be prone to hitting this in practice.  In theory, we
-  // can hit the same issue for any SCEV, or ValueTracking query done during
-  // mutation.  See PR49900.
-  getOrCreateTripCount(OrigLoop->getLoopPreheader());
   createVectorLoopSkeleton("");
 
   // Generate the code to check the minimum iteration count of the vector
