@@ -930,6 +930,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                        ISD::VECTOR_SPLICE, ISD::SIGN_EXTEND_INREG,
                        ISD::CONCAT_VECTORS, ISD::EXTRACT_SUBVECTOR,
                        ISD::INSERT_SUBVECTOR, ISD::STORE, ISD::BUILD_VECTOR});
+  setTargetDAGCombine(ISD::TRUNCATE);
   setTargetDAGCombine(ISD::LOAD);
 
   setTargetDAGCombine(ISD::MSTORE);
@@ -17392,6 +17393,22 @@ static SDValue performBuildVectorCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue performTruncateCombine(SDNode *N,
+                                      SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
+  if (VT.isFixedLengthVector() && VT.is64BitVector() && N0.hasOneUse() &&
+      N0.getOpcode() == AArch64ISD::DUP) {
+    SDValue Op = N0.getOperand(0);
+    if (VT.getScalarType() == MVT::i32 &&
+        N0.getOperand(0).getValueType().getScalarType() == MVT::i64)
+      Op = DAG.getNode(ISD::TRUNCATE, SDLoc(N), MVT::i32, Op);
+    return DAG.getNode(N0.getOpcode(), SDLoc(N), VT, Op);
+  }
+
+  return SDValue();
+}
+
 // Check an node is an extend or shift operand
 static bool isExtendOrShiftOperand(SDValue N) {
   unsigned Opcode = N.getOpcode();
@@ -21192,6 +21209,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performAddSubCombine(N, DCI, DAG);
   case ISD::BUILD_VECTOR:
     return performBuildVectorCombine(N, DCI, DAG);
+  case ISD::TRUNCATE:
+    return performTruncateCombine(N, DAG);
   case AArch64ISD::ANDS:
     return performFlagSettingCombine(N, DCI, ISD::AND);
   case AArch64ISD::ADC:
