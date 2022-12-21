@@ -185,6 +185,8 @@ void InstallAtExitHandler() {}
 
 void HwasanInstallAtForkHandler() {}
 
+void InstallAtExitCheckLeaks() {}
+
 void InitializeOsSupport() {
 #ifdef __aarch64__
   uint32_t features = 0;

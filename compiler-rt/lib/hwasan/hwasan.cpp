@@ -388,9 +388,21 @@ __attribute__((constructor(0))) void __hwasan_init() {
   HwasanAllocatorInit();
   HwasanInstallAtForkHandler();
 
+  if (CAN_SANITIZE_LEAKS) {
+    __lsan::InitCommonLsan();
+    InstallAtExitCheckLeaks();
+  }
+
 #if HWASAN_CONTAINS_UBSAN
   __ubsan::InitAsPlugin();
 #endif
+
+  if (CAN_SANITIZE_LEAKS) {
+    __lsan::ScopedInterceptorDisabler disabler;
+    Symbolizer::LateInitialize();
+  } else {
+    Symbolizer::LateInitialize();
+  }
 
   VPrintf(1, "HWAddressSanitizer init done\n");
 
