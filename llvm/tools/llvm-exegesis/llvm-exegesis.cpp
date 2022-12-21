@@ -47,10 +47,6 @@
 namespace llvm {
 namespace exegesis {
 
-static cl::OptionCategory Options("llvm-exegesis options");
-static cl::OptionCategory BenchmarkOptions("llvm-exegesis benchmark options");
-static cl::OptionCategory AnalysisOptions("llvm-exegesis analysis options");
-
 static cl::opt<int> OpcodeIndex(
     "opcode-index",
     cl::desc("opcode to measure, by index, or -1 to measure all opcodes"),
