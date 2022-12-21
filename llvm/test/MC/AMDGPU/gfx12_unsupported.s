@@ -186,3 +186,6 @@ v_cmpx_f_u64 v[0:1], v[2:3]
 
 v_cmpx_t_u64 v[0:1], v[2:3]
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+buffer_atomic_cmpswap_f32 v[5:6], off, s[96:99], s3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

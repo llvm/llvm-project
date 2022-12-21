@@ -2907,3 +2907,2172 @@ buffer_store_format_xyzw v[1:4], off, s[12:15], s4 offset:8388607 th:TH_STORE_NT
 
 buffer_store_format_xyzw v[1:4], off, s[12:15], s4 offset:8388607 th:TH_STORE_BYPASS scope:SCOPE_SYS
 // GFX12: encoding: [0x04,0xc0,0x01,0xc4,0x01,0x18,0xbc,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x15,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_f32 v255, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x15,0xc4,0xff,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_f32 v5, off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x15,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_f32 v5, off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x15,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_f32 v5, off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x80,0x15,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_f32 v5, off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x80,0x15,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_f32 v5, off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_add_f32 v5, off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_add_f32 v5, off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_add_f32 v5, off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_add_f32 v5, v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x80,0x15,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_f32 v5, v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x80,0x15,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_f32 v5, off, s[8:11], s3
+// GFX12: encoding: [0x03,0x80,0x15,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x80,0x15,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x80,0x15,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x80,0x15,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x80,0x15,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x80,0x15,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:8388607 glc slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_add_u32 v5, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u32 v255, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x0d,0xc4,0xff,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u32 v5, off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x0d,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u32 v5, off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x0d,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u32 v5, off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x40,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u32 v5, off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x40,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u32 v5, off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_add_u32 v5, off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_add_u32 v5, off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_add_u32 v5, off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_add_u32 v5, v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x40,0x0d,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u32 v5, v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x40,0x0d,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u32 v5, off, s[8:11], s3
+// GFX12: encoding: [0x03,0x40,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_add_u32 v5, off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x40,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_add_u32 v5, off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x40,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_add_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x40,0x0d,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x40,0x0d,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x40,0x0d,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u32 v5, off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_add_u32 v5, off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_add_u32 v5, off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_add_u32 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_add_u64 v[5:6], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u64 v[254:255], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x10,0xc4,0xfe,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u64 v[5:6], off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x10,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u64 v[5:6], off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x10,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u64 v[5:6], off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0xc0,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u64 v[5:6], off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0xc0,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u64 v[5:6], off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_add_u64 v[5:6], off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_add_u64 v[5:6], off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_add_u64 v[5:6], off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_add_u64 v[5:6], v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x10,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u64 v[5:6], v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x10,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u64 v[5:6], off, s[8:11], s3
+// GFX12: encoding: [0x03,0xc0,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_add_u64 v[5:6], off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0xc0,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_add_u64 v[5:6], off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0xc0,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_add_u64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x10,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0xc0,0x10,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0xc0,0x10,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_add_u64 v[5:6], off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_add_u64 v[5:6], off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_add_u64 v[5:6], off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_add_u64 v[5:6], off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_and_b32 v5, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b32 v255, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x0f,0xc4,0xff,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b32 v5, off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x0f,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b32 v5, off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x0f,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b32 v5, off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x00,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b32 v5, off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x00,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b32 v5, off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_and_b32 v5, off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_and_b32 v5, off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_and_b32 v5, off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_and_b32 v5, v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x00,0x0f,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b32 v5, v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x00,0x0f,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b32 v5, off, s[8:11], s3
+// GFX12: encoding: [0x03,0x00,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_and_b32 v5, off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x00,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_and_b32 v5, off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x00,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_and_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x00,0x0f,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x00,0x0f,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x00,0x0f,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b32 v5, off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_and_b32 v5, off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_and_b32 v5, off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_and_b32 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_and_b64 v[5:6], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b64 v[254:255], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x12,0xc4,0xfe,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b64 v[5:6], off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x12,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b64 v[5:6], off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x12,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b64 v[5:6], off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x40,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b64 v[5:6], off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x40,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b64 v[5:6], off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_and_b64 v[5:6], off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_and_b64 v[5:6], off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_and_b64 v[5:6], off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_and_b64 v[5:6], v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x40,0x12,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b64 v[5:6], v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x40,0x12,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b64 v[5:6], off, s[8:11], s3
+// GFX12: encoding: [0x03,0x40,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_and_b64 v[5:6], off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x40,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_and_b64 v[5:6], off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x40,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_and_b64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x40,0x12,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x40,0x12,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x40,0x12,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_and_b64 v[5:6], off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_and_b64 v[5:6], off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_and_b64 v[5:6], off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_and_b64 v[5:6], off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b32 v[254:255], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x0d,0xc4,0xfe,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x0d,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x0d,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x00,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x00,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_cmpswap_b32 v[5:6], v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x00,0x0d,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b32 v[5:6], v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x00,0x0d,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[8:11], s3
+// GFX12: encoding: [0x03,0x00,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x00,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x00,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x00,0x0d,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x00,0x0d,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x00,0x0d,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_cmpswap_b32 v[5:6], off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b64 v[252:255], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x10,0xc4,0xfc,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x10,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x10,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x80,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x80,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_cmpswap_b64 v[5:8], v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x80,0x10,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b64 v[5:8], v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x80,0x10,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[8:11], s3
+// GFX12: encoding: [0x03,0x80,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x80,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x80,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x80,0x10,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x80,0x10,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x80,0x10,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_cmpswap_b64 v[5:8], off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+
+buffer_atomic_sub_clamp_u32 v255, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0xff,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_clamp_u32 v255, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0xff,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_clamp_u32 v255, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+
+buffer_atomic_sub_clamp_u32 v255, off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[12:15], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x18,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_clamp_u32 v5, off, s[12:15], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x18,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_clamp_u32 v5, off, s[12:15], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+
+buffer_atomic_sub_clamp_u32 v5, off, s[12:15], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[96:99], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0xc0,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_clamp_u32 v5, off, s[96:99], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0xc0,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_clamp_u32 v5, off, s[96:99], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+
+buffer_atomic_sub_clamp_u32 v5, off, s[96:99], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s101 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x65,0xc0,0x0d,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s101 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x65,0xc0,0x0d,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s101 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s101 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], m0 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x7d,0xc0,0x0d,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], m0 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x7d,0xc0,0x0d,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], m0 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], m0 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], 0 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], 0 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], 0 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], 0 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], -1 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], -1 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], -1 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], -1 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], 0.5 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], 0.5 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], 0.5 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], 0.5 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], -4.0 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], -4.0 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], -4.0 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], -4.0 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, v0, s[8:11], s3 idxen offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x90,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_clamp_u32 v5, v0, s[8:11], s3 idxen offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x94,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_clamp_u32 v5, v0, s[8:11], s3 idxen offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+
+buffer_atomic_sub_clamp_u32 v5, v0, s[8:11], s3 idxen offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, v0, s[8:11], s3 offen offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x90,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_clamp_u32 v5, v0, s[8:11], s3 offen offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x94,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_clamp_u32 v5, v0, s[8:11], s3 offen offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+
+buffer_atomic_sub_clamp_u32 v5, v0, s[8:11], s3 offen offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x90,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x94,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:0 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x90,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:0 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x94,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:0 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:0 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:7 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x90,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:7 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x94,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:7 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:7 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0xc0,0x0d,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use th:TH_ATOMIC_RETURN
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:8388607 glc slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:8388607 glc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_cond_sub_u32 v5, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cond_sub_u32 v255, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x14,0xc4,0xff,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cond_sub_u32 v5, off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x14,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cond_sub_u32 v5, off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x14,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cond_sub_u32 v5, off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x00,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cond_sub_u32 v5, off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x00,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cond_sub_u32 v5, off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_cond_sub_u32 v5, off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_cond_sub_u32 v5, off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_cond_sub_u32 v5, off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_cond_sub_u32 v5, v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x00,0x14,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cond_sub_u32 v5, v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x00,0x14,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cond_sub_u32 v5, off, s[8:11], s3
+// GFX12: encoding: [0x03,0x00,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_cond_sub_u32 v5, off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x00,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_cond_sub_u32 v5, off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x00,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_cond_sub_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x00,0x14,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cond_sub_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x00,0x14,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cond_sub_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x00,0x14,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_cond_sub_u32 v5, off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_cond_sub_u32 v5, off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_cond_sub_u32 v5, off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_cond_sub_u32 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_dec_u32 v5, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u32 v255, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x10,0xc4,0xff,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u32 v5, off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x10,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u32 v5, off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x10,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u32 v5, off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x00,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u32 v5, off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x00,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u32 v5, off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_dec_u32 v5, off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_dec_u32 v5, off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_dec_u32 v5, off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_dec_u32 v5, v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x00,0x10,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u32 v5, v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x00,0x10,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u32 v5, off, s[8:11], s3
+// GFX12: encoding: [0x03,0x00,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_dec_u32 v5, off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x00,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_dec_u32 v5, off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x00,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_dec_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x00,0x10,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x00,0x10,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x00,0x10,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u32 v5, off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_dec_u32 v5, off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_dec_u32 v5, off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_dec_u32 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_dec_u64 v[5:6], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x13,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u64 v[254:255], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x13,0xc4,0xfe,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u64 v[5:6], off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x13,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u64 v[5:6], off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x13,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u64 v[5:6], off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x40,0x13,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u64 v[5:6], off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x40,0x13,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u64 v[5:6], off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_dec_u64 v[5:6], off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_dec_u64 v[5:6], off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_dec_u64 v[5:6], off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_dec_u64 v[5:6], v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x40,0x13,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u64 v[5:6], v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x40,0x13,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u64 v[5:6], off, s[8:11], s3
+// GFX12: encoding: [0x03,0x40,0x13,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_dec_u64 v[5:6], off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x40,0x13,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_dec_u64 v[5:6], off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x40,0x13,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_dec_u64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x40,0x13,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x40,0x13,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x40,0x13,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_dec_u64 v[5:6], off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_dec_u64 v[5:6], off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_dec_u64 v[5:6], off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_dec_u64 v[5:6], off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_inc_u32 v5, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u32 v255, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x0f,0xc4,0xff,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u32 v5, off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x0f,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u32 v5, off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x0f,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u32 v5, off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0xc0,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u32 v5, off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0xc0,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u32 v5, off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_inc_u32 v5, off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_inc_u32 v5, off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_inc_u32 v5, off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_inc_u32 v5, v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x0f,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u32 v5, v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x0f,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u32 v5, off, s[8:11], s3
+// GFX12: encoding: [0x03,0xc0,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_inc_u32 v5, off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0xc0,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_inc_u32 v5, off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0xc0,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_inc_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0f,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0xc0,0x0f,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0xc0,0x0f,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u32 v5, off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_inc_u32 v5, off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_inc_u32 v5, off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_inc_u32 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_inc_u64 v[5:6], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x13,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u64 v[254:255], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x13,0xc4,0xfe,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u64 v[5:6], off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x13,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u64 v[5:6], off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x13,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u64 v[5:6], off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x00,0x13,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u64 v[5:6], off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x00,0x13,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u64 v[5:6], off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_inc_u64 v[5:6], off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_inc_u64 v[5:6], off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_inc_u64 v[5:6], off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_inc_u64 v[5:6], v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x00,0x13,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u64 v[5:6], v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x00,0x13,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u64 v[5:6], off, s[8:11], s3
+// GFX12: encoding: [0x03,0x00,0x13,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_inc_u64 v[5:6], off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x00,0x13,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_inc_u64 v[5:6], off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x00,0x13,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_inc_u64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x00,0x13,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x00,0x13,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x00,0x13,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_inc_u64 v[5:6], off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_inc_u64 v[5:6], off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_inc_u64 v[5:6], off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_inc_u64 v[5:6], off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_num_f32 v5, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_num_f32 v255, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x14,0xc4,0xff,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_num_f32 v5, off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x14,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_num_f32 v5, off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x14,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_num_f32 v5, off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x80,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_num_f32 v5, off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x80,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_num_f32 v5, off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_num_f32 v5, off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_num_f32 v5, off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_num_f32 v5, off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_num_f32 v5, v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x80,0x14,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_num_f32 v5, v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x80,0x14,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_num_f32 v5, off, s[8:11], s3
+// GFX12: encoding: [0x03,0x80,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_max_num_f32 v5, off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x80,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_max_num_f32 v5, off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x80,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_max_num_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x80,0x14,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_num_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x80,0x14,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_num_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x80,0x14,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_num_f32 v5, off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_num_f32 v5, off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_num_f32 v5, off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_num_f32 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_i32 v5, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i32 v255, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x0e,0xc4,0xff,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i32 v5, off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x0e,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i32 v5, off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x0e,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i32 v5, off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x80,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i32 v5, off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x80,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i32 v5, off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_max_i32 v5, off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_max_i32 v5, off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_max_i32 v5, off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_max_i32 v5, v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x80,0x0e,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i32 v5, v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x80,0x0e,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i32 v5, off, s[8:11], s3
+// GFX12: encoding: [0x03,0x80,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_max_i32 v5, off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x80,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_max_i32 v5, off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x80,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_max_i32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x80,0x0e,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x80,0x0e,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x80,0x0e,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i32 v5, off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_i32 v5, off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_i32 v5, off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_i32 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_i64 v[5:6], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i64 v[254:255], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x11,0xc4,0xfe,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i64 v[5:6], off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x11,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i64 v[5:6], off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x11,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i64 v[5:6], off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0xc0,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i64 v[5:6], off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0xc0,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i64 v[5:6], off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_max_i64 v[5:6], off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_max_i64 v[5:6], off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_max_i64 v[5:6], off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_max_i64 v[5:6], v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x11,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i64 v[5:6], v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x11,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i64 v[5:6], off, s[8:11], s3
+// GFX12: encoding: [0x03,0xc0,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_max_i64 v[5:6], off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0xc0,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_max_i64 v[5:6], off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0xc0,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_max_i64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x11,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0xc0,0x11,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0xc0,0x11,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_i64 v[5:6], off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_i64 v[5:6], off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_i64 v[5:6], off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_i64 v[5:6], off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_u32 v5, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u32 v255, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x0e,0xc4,0xff,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u32 v5, off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x0e,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u32 v5, off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x0e,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u32 v5, off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0xc0,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u32 v5, off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0xc0,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u32 v5, off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_max_u32 v5, off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_max_u32 v5, off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_max_u32 v5, off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_max_u32 v5, v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x0e,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u32 v5, v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x0e,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u32 v5, off, s[8:11], s3
+// GFX12: encoding: [0x03,0xc0,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_max_u32 v5, off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0xc0,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_max_u32 v5, off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0xc0,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_max_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0e,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0xc0,0x0e,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0xc0,0x0e,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u32 v5, off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_u32 v5, off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_u32 v5, off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_u32 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_u64 v[5:6], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u64 v[254:255], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x12,0xc4,0xfe,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u64 v[5:6], off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x12,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u64 v[5:6], off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x12,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u64 v[5:6], off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x00,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u64 v[5:6], off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x00,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u64 v[5:6], off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_max_u64 v[5:6], off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_max_u64 v[5:6], off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_max_u64 v[5:6], off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_max_u64 v[5:6], v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x00,0x12,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u64 v[5:6], v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x00,0x12,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u64 v[5:6], off, s[8:11], s3
+// GFX12: encoding: [0x03,0x00,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_max_u64 v[5:6], off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x00,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_max_u64 v[5:6], off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x00,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_max_u64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x00,0x12,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x00,0x12,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x00,0x12,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_max_u64 v[5:6], off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_u64 v[5:6], off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_u64 v[5:6], off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_max_u64 v[5:6], off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_f32 v255, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x14,0xc4,0xff,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_f32 v5, off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_f32 v5, off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_f32 v5, off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x40,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_f32 v5, off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x40,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_f32 v5, off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_f32 v5, off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_f32 v5, off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_f32 v5, off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_f32 v5, v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_f32 v5, v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_f32 v5, off, s[8:11], s3
+// GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x40,0x14,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_f32 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_i32 v5, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i32 v255, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x0e,0xc4,0xff,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i32 v5, off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x0e,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i32 v5, off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x0e,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i32 v5, off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x00,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i32 v5, off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x00,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i32 v5, off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_min_i32 v5, off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_min_i32 v5, off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_min_i32 v5, off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_min_i32 v5, v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x00,0x0e,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i32 v5, v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x00,0x0e,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i32 v5, off, s[8:11], s3
+// GFX12: encoding: [0x03,0x00,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_min_i32 v5, off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x00,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_min_i32 v5, off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x00,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_min_i32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x00,0x0e,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x00,0x0e,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x00,0x0e,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i32 v5, off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_i32 v5, off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_i32 v5, off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_i32 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_i64 v[5:6], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i64 v[254:255], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x11,0xc4,0xfe,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i64 v[5:6], off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x11,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i64 v[5:6], off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x11,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i64 v[5:6], off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x40,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i64 v[5:6], off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x40,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i64 v[5:6], off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_min_i64 v[5:6], off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_min_i64 v[5:6], off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_min_i64 v[5:6], off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_min_i64 v[5:6], v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x40,0x11,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i64 v[5:6], v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x40,0x11,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i64 v[5:6], off, s[8:11], s3
+// GFX12: encoding: [0x03,0x40,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_min_i64 v[5:6], off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x40,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_min_i64 v[5:6], off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x40,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_min_i64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x40,0x11,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x40,0x11,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x40,0x11,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_i64 v[5:6], off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_i64 v[5:6], off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_i64 v[5:6], off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_i64 v[5:6], off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_u32 v5, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u32 v255, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x0e,0xc4,0xff,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u32 v5, off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x0e,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u32 v5, off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x0e,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u32 v5, off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x40,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u32 v5, off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x40,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u32 v5, off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_min_u32 v5, off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_min_u32 v5, off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_min_u32 v5, off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_min_u32 v5, v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x40,0x0e,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u32 v5, v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x40,0x0e,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u32 v5, off, s[8:11], s3
+// GFX12: encoding: [0x03,0x40,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_min_u32 v5, off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x40,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_min_u32 v5, off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x40,0x0e,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_min_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x40,0x0e,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x40,0x0e,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x40,0x0e,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u32 v5, off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_u32 v5, off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_u32 v5, off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_u32 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_u64 v[5:6], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u64 v[254:255], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x11,0xc4,0xfe,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u64 v[5:6], off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x11,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u64 v[5:6], off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x11,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u64 v[5:6], off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x80,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u64 v[5:6], off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x80,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u64 v[5:6], off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_min_u64 v[5:6], off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_min_u64 v[5:6], off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_min_u64 v[5:6], off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_min_u64 v[5:6], v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x80,0x11,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u64 v[5:6], v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x80,0x11,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u64 v[5:6], off, s[8:11], s3
+// GFX12: encoding: [0x03,0x80,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_min_u64 v[5:6], off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x80,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_min_u64 v[5:6], off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x80,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_min_u64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x80,0x11,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x80,0x11,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x80,0x11,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_min_u64 v[5:6], off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_u64 v[5:6], off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_u64 v[5:6], off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_min_u64 v[5:6], off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_or_b32 v5, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b32 v255, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x0f,0xc4,0xff,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b32 v5, off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x0f,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b32 v5, off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x0f,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b32 v5, off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x40,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b32 v5, off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x40,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b32 v5, off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_or_b32 v5, off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_or_b32 v5, off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_or_b32 v5, off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_or_b32 v5, v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x40,0x0f,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b32 v5, v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x40,0x0f,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b32 v5, off, s[8:11], s3
+// GFX12: encoding: [0x03,0x40,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_or_b32 v5, off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x40,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_or_b32 v5, off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x40,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_or_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x40,0x0f,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x40,0x0f,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x40,0x0f,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b32 v5, off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_or_b32 v5, off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_or_b32 v5, off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_or_b32 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_or_b64 v[5:6], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b64 v[254:255], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x12,0xc4,0xfe,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b64 v[5:6], off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x12,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b64 v[5:6], off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x12,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b64 v[5:6], off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x80,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b64 v[5:6], off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x80,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b64 v[5:6], off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_or_b64 v[5:6], off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_or_b64 v[5:6], off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_or_b64 v[5:6], off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_or_b64 v[5:6], v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x80,0x12,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b64 v[5:6], v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x80,0x12,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b64 v[5:6], off, s[8:11], s3
+// GFX12: encoding: [0x03,0x80,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_or_b64 v[5:6], off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x80,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_or_b64 v[5:6], off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x80,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_or_b64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x80,0x12,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x80,0x12,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x80,0x12,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_or_b64 v[5:6], off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_or_b64 v[5:6], off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_or_b64 v[5:6], off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_or_b64 v[5:6], off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_u32 v5, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u32 v255, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x0d,0xc4,0xff,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u32 v5, off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x0d,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u32 v5, off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x0d,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u32 v5, off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x80,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u32 v5, off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x80,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u32 v5, off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_sub_u32 v5, off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_sub_u32 v5, off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_sub_u32 v5, off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_sub_u32 v5, v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x80,0x0d,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u32 v5, v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x80,0x0d,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u32 v5, off, s[8:11], s3
+// GFX12: encoding: [0x03,0x80,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_sub_u32 v5, off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x80,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_sub_u32 v5, off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x80,0x0d,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_sub_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x80,0x0d,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x80,0x0d,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x80,0x0d,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u32 v5, off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_u32 v5, off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_u32 v5, off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_u32 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_u64 v[5:6], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u64 v[254:255], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x11,0xc4,0xfe,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u64 v[5:6], off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x11,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u64 v[5:6], off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x00,0x11,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u64 v[5:6], off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x00,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u64 v[5:6], off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x00,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u64 v[5:6], off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_sub_u64 v[5:6], off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_sub_u64 v[5:6], off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_sub_u64 v[5:6], off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_sub_u64 v[5:6], v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x00,0x11,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u64 v[5:6], v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x00,0x11,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u64 v[5:6], off, s[8:11], s3
+// GFX12: encoding: [0x03,0x00,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_sub_u64 v[5:6], off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x00,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_sub_u64 v[5:6], off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x00,0x11,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_sub_u64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x00,0x11,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x00,0x11,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x00,0x11,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_sub_u64 v[5:6], off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_u64 v[5:6], off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_u64 v[5:6], off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_sub_u64 v[5:6], off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_swap_b32 v5, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x0c,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b32 v255, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x0c,0xc4,0xff,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b32 v5, off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x0c,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b32 v5, off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x0c,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b32 v5, off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0xc0,0x0c,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b32 v5, off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0xc0,0x0c,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b32 v5, off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_swap_b32 v5, off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_swap_b32 v5, off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_swap_b32 v5, off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_swap_b32 v5, v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x0c,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b32 v5, v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x0c,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b32 v5, off, s[8:11], s3
+// GFX12: encoding: [0x03,0xc0,0x0c,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_swap_b32 v5, off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0xc0,0x0c,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_swap_b32 v5, off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0xc0,0x0c,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_swap_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x0c,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0xc0,0x0c,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0xc0,0x0c,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b32 v5, off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_swap_b32 v5, off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_swap_b32 v5, off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_swap_b32 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_swap_b64 v[5:6], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b64 v[254:255], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x10,0xc4,0xfe,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b64 v[5:6], off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x10,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b64 v[5:6], off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x40,0x10,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b64 v[5:6], off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x40,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b64 v[5:6], off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x40,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b64 v[5:6], off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_swap_b64 v[5:6], off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_swap_b64 v[5:6], off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_swap_b64 v[5:6], off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_swap_b64 v[5:6], v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x40,0x10,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b64 v[5:6], v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x40,0x10,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b64 v[5:6], off, s[8:11], s3
+// GFX12: encoding: [0x03,0x40,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_swap_b64 v[5:6], off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x40,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_swap_b64 v[5:6], off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x40,0x10,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_swap_b64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x40,0x10,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x40,0x10,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x40,0x10,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_swap_b64 v[5:6], off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_swap_b64 v[5:6], off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_swap_b64 v[5:6], off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_swap_b64 v[5:6], off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_xor_b32 v5, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b32 v255, off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x0f,0xc4,0xff,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b32 v5, off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x0f,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b32 v5, off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0x80,0x0f,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b32 v5, off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0x80,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b32 v5, off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0x80,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b32 v5, off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_xor_b32 v5, off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_xor_b32 v5, off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_xor_b32 v5, off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_xor_b32 v5, v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0x80,0x0f,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b32 v5, v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0x80,0x0f,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b32 v5, off, s[8:11], s3
+// GFX12: encoding: [0x03,0x80,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_xor_b32 v5, off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0x80,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_xor_b32 v5, off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0x80,0x0f,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_xor_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0x80,0x0f,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0x80,0x0f,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0x80,0x0f,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b32 v5, off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_xor_b32 v5, off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_xor_b32 v5, off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_xor_b32 v5, off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_xor_b64 v[5:6], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b64 v[254:255], off, s[8:11], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x12,0xc4,0xfe,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b64 v[5:6], off, s[12:15], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x12,0xc4,0x05,0x18,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b64 v[5:6], off, s[96:99], s3 offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x12,0xc4,0x05,0xc0,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b64 v[5:6], off, s[8:11], s101 offset:8388607
+// GFX12: encoding: [0x65,0xc0,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b64 v[5:6], off, s[8:11], m0 offset:8388607
+// GFX12: encoding: [0x7d,0xc0,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b64 v[5:6], off, s[8:11], 0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_xor_b64 v[5:6], off, s[8:11], -1 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_xor_b64 v[5:6], off, s[8:11], 0.5 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_xor_b64 v[5:6], off, s[8:11], -4.0 offset:8388607
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+buffer_atomic_xor_b64 v[5:6], v0, s[8:11], s3 idxen offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x12,0xc4,0x05,0x10,0x80,0x80,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b64 v[5:6], v0, s[8:11], s3 offen offset:8388607
+// GFX12: encoding: [0x03,0xc0,0x12,0xc4,0x05,0x10,0x80,0x40,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b64 v[5:6], off, s[8:11], s3
+// GFX12: encoding: [0x03,0xc0,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_xor_b64 v[5:6], off, s[8:11], s3 offset:0
+// GFX12: encoding: [0x03,0xc0,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_xor_b64 v[5:6], off, s[8:11], s3 offset:7
+// GFX12: encoding: [0x03,0xc0,0x12,0xc4,0x05,0x10,0x80,0x00,0x00,0x07,0x00,0x00]
+
+buffer_atomic_xor_b64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RETURN
+// GFX12: encoding: [0x03,0xc0,0x12,0xc4,0x05,0x10,0x90,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RETURN scope:SCOPE_SE
+// GFX12: encoding: [0x03,0xc0,0x12,0xc4,0x05,0x10,0x94,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
+// GFX12: encoding: [0x03,0xc0,0x12,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_atomic_xor_b64 v[5:6], off, s[8:11], s3 offset:8388607 glc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_xor_b64 v[5:6], off, s[8:11], s3 offset:8388607 slc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_xor_b64 v[5:6], off, s[8:11], s3 offset:8388607 dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+buffer_atomic_xor_b64 v[5:6], off, s[8:11], s3 offset:8388607 glc slc dlc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
