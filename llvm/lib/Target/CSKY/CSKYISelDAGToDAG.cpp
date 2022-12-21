@@ -27,7 +27,10 @@ class CSKYDAGToDAGISel : public SelectionDAGISel {
   const CSKYSubtarget *Subtarget;
 
 public:
-  explicit CSKYDAGToDAGISel(CSKYTargetMachine &TM) : SelectionDAGISel(TM) {}
+  static char ID;
+
+  explicit CSKYDAGToDAGISel(CSKYTargetMachine &TM, CodeGenOpt::Level OptLevel)
+      : SelectionDAGISel(ID, TM, OptLevel) {}
 
   StringRef getPassName() const override {
     return "CSKY DAG->DAG Pattern Instruction Selection";
@@ -54,6 +57,8 @@ public:
 #include "CSKYGenDAGISel.inc"
 };
 } // namespace
+
+char CSKYDAGToDAGISel::ID = 0;
 
 void CSKYDAGToDAGISel::Select(SDNode *N) {
   // If we have a custom node, we have already selected
@@ -394,6 +399,7 @@ bool CSKYDAGToDAGISel::SelectInlineAsmMemoryOperand(
   return true;
 }
 
-FunctionPass *llvm::createCSKYISelDag(CSKYTargetMachine &TM) {
-  return new CSKYDAGToDAGISel(TM);
+FunctionPass *llvm::createCSKYISelDag(CSKYTargetMachine &TM,
+                                      CodeGenOpt::Level OptLevel) {
+  return new CSKYDAGToDAGISel(TM, OptLevel);
 }
