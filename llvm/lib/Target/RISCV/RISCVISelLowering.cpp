@@ -9846,19 +9846,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       };
 
       if (isOrXorPattern()) {
-        SDValue Neg;
-        unsigned CmpSz = LHS.getSimpleValueType().getSizeInBits();
-        // We need mask of all zeros or ones with same size of the other
-        // operands.
-        if (CmpSz > VT.getSizeInBits())
-          Neg = DAG.getNode(ISD::TRUNCATE, DL, VT, LHS);
-        else if (CmpSz < VT.getSizeInBits())
-          Neg = DAG.getNode(ISD::AND, DL, VT,
-                            DAG.getNode(ISD::ANY_EXTEND, DL, VT, LHS),
-                            DAG.getConstant(1, DL, VT));
-        else
-          Neg = LHS;
-        SDValue Mask = DAG.getNegative(Neg, DL, VT);               // -x
+        assert(LHS.getValueType() == VT && "Unexpected VT!");
+        SDValue Mask = DAG.getNegative(LHS, DL, VT);             // -x
         SDValue And = DAG.getNode(ISD::AND, DL, VT, Mask, Src1); // Mask & z
         return DAG.getNode(Opcode, DL, VT, And, Src2);           // And Op y
       }
