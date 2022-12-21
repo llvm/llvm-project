@@ -18,3 +18,10 @@ static cl::opt<bool, true> YkExtendedLLVMBBAddrMapSectionParser(
     "yk-extended-llvmbbaddrmap-section",
     cl::desc("Use the extended Yk `.llvmbbaddrmap` section format"),
     cl::NotHidden, cl::location(YkExtendedLLVMBBAddrMapSection));
+
+bool YkStackMapOffsetFix;
+static cl::opt<bool, true> YkStackMapOffsetFixParser(
+    "yk-stackmap-offset-fix",
+    cl::desc("Apply a fix to stackmaps that corrects the reported instruction "
+             "offset in the presence of calls."),
+    cl::NotHidden, cl::location(YkStackMapOffsetFix));

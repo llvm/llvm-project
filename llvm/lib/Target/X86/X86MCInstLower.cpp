@@ -1422,10 +1422,25 @@ void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
 void X86AsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
   SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
 
-  auto &Ctx = OutStreamer->getContext();
-  MCSymbol *MILabel = Ctx.createTempSymbol();
-  OutStreamer->emitLabel(MILabel);
-
+  // When the stackmap is attached to a function call, caller-saved register
+  // loads may be emitted in-between call and stackmap call, thus skewing the
+  // reported offset.
+  // This makes it impossible to reliably continue at the correct location after
+  // deoptimisation has occured. In order to fix this, we insert labels after
+  // every call that could lead to a guard failure, and store the last such
+  // label inside `YkLastCallLabel`. If `YkLastCallLabel` is set (i.e. the
+  // stackmap was inserted after a call) use it to calculate the stackmap
+  // offset, otherwise (i.e. the stackmap was inserted before a branch) generate
+  // a new label as per ususual.
+  MCSymbol *MILabel;
+  if (YkLastCallLabel != nullptr) {
+    MILabel = YkLastCallLabel;
+    YkLastCallLabel = nullptr;
+  } else {
+    auto &Ctx = OutStreamer->getContext();
+    MILabel = Ctx.createTempSymbol();
+    OutStreamer->emitLabel(MILabel);
+  }
   SM.recordStackMap(*MILabel, MI);
   unsigned NumShadowBytes = MI.getOperand(1).getImm();
   SMShadowTracker.reset(NumShadowBytes);

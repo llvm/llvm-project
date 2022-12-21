@@ -135,6 +135,7 @@ static cl::opt<bool>
 
 extern bool YkAllocLLVMBBAddrMapSection;
 extern bool YkExtendedLLVMBBAddrMapSection;
+extern bool YkStackMapOffsetFix;
 
 const char DWARFGroupName[] = "dwarf";
 const char DWARFGroupDescription[] = "DWARF Emission";
@@ -1699,6 +1700,9 @@ void AsmPrinter::emitFunctionBody() {
   bool HasAnyRealCode = false;
   int NumInstsInFunction = 0;
 
+  // Reset YkLastCallLabel so we don't use it across different functions.
+  YkLastCallLabel = nullptr;
+
   bool CanDoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
   for (auto &MBB : *MF) {
     // Print a label for the basic block.
@@ -1800,6 +1804,31 @@ void AsmPrinter::emitFunctionBody() {
         }
 
         emitInstruction(&MI);
+        // Generate labels for function calls so we can record the correct
+        // instruction offset. The conditions for generating the label must be
+        // the same as the ones for generating the stackmap call in
+        // `Transforms/Yk/Stackmaps.cpp`, as otherwise we could end up with
+        // wrong offsets (e.g. we create a label here but the corresponding
+        // stackmap call was ommitted, and this label is then used for the
+        // following stackmap call).
+
+        // Convoluted way of finding our whether this function call is an
+        // intrinsic.
+        bool IsIntrinsic = false;
+        if (MI.getNumExplicitDefs() < MI.getNumOperands()) {
+          IsIntrinsic = MI.getOperand(MI.getNumExplicitDefs()).isIntrinsicID();
+        }
+        if (YkStackMapOffsetFix && MI.isCall() && !MI.isInlineAsm() &&
+            (MI.getOpcode() != TargetOpcode::STACKMAP) &&
+            (MI.getOpcode() != TargetOpcode::PATCHPOINT) && !IsIntrinsic) {
+          // YKFIXME: We don't need to emit labels (and stackmap calls) for
+          // functions that cannot guard fail, e.g. inlined functions, or
+          // functions we don't have IR for.
+          MCSymbol *MILabel =
+              OutStreamer->getContext().createTempSymbol("ykstackcall", true);
+          OutStreamer->emitLabel(MILabel);
+          YkLastCallLabel = MILabel;
+        }
         if (CanDoExtraAnalysis) {
           MCInst MCI;
           MCI.setOpcode(MI.getOpcode());

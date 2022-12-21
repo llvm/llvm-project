@@ -45,17 +45,28 @@ public:
       return false;
     }
 
-    std::map<Instruction *, std::set<Value *>> SMCalls;
+    std::map<Instruction *, std::vector<Value *>> SMCalls;
     for (Function &F : M) {
       if (F.empty()) // skip declarations.
         continue;
       LivenessAnalysis LA(&F);
       for (BasicBlock &BB : F)
-        for (Instruction &I : BB)
-          if ((isa<CallInst>(I)) ||
-              ((isa<BranchInst>(I)) && (cast<BranchInst>(I).isConditional())) ||
-              isa<SwitchInst>(I))
+        for (Instruction &I : BB) {
+          if (isa<CallInst>(I)) {
+            CallInst &CI = cast<CallInst>(I);
+            if (CI.isInlineAsm())
+              continue;
+            if (CI.isIndirectCall())
+              continue;
+            if (CI.getCalledFunction()->isIntrinsic())
+              continue;
             SMCalls.insert({&I, LA.getLiveVarsBefore(&I)});
+          } else if ((isa<BranchInst>(I) &&
+                      cast<BranchInst>(I).isConditional()) ||
+                     isa<SwitchInst>(I)) {
+            SMCalls.insert({&I, LA.getLiveVarsBefore(&I)});
+          }
+        }
     }
 
     Function *SMFunc = Intrinsic::getDeclaration(&M, SMFuncID);
@@ -65,7 +76,7 @@ public:
     Value *Shadow = ConstantInt::get(Type::getInt32Ty(Context), 0);
     for (auto It : SMCalls) {
       Instruction *I = cast<Instruction>(It.first);
-      const std::set<Value *> L = It.second;
+      const std::vector<Value *> L = It.second;
 
       IRBuilder<> Bldr(I);
       Value *SMID = ConstantInt::get(Type::getInt64Ty(Context), Count);
@@ -73,6 +84,12 @@ public:
       for (Value *A : L)
         Args.push_back(A);
 
+      if (isa<CallInst>(I)) {
+        // Insert the stackmap call after (not before) the call instruction, so
+        // the offset of the stackmap entry will record the instruction after
+        // the call, which is where we want to continue after deoptimisation.
+        Bldr.SetInsertPoint(I->getNextNonDebugInstruction());
+      }
       Bldr.CreateCall(SMFunc->getFunctionType(), SMFunc,
                       ArrayRef<Value *>(Args));
       Count++;
