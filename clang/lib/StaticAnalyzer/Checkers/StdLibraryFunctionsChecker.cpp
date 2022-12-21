@@ -134,9 +134,18 @@ class StdLibraryFunctionsChecker
 
     virtual StringRef getName() const = 0;
 
+    // Represents that in which context do we require a description of the
+    // constraint.
+    enum class DescriptionKind {
+      // The constraint is violated.
+      Violation,
+      // We assume that the constraint is satisfied.
+      Assumption
+    };
+
     // Give a description that explains the constraint to the user. Used when
     // the bug is reported.
-    virtual std::string describe(ProgramStateRef State,
+    virtual std::string describe(DescriptionKind DK, ProgramStateRef State,
                                  const Summary &Summary) const {
       // There are some descendant classes that are not used as argument
       // constraints, e.g. ComparisonConstraint. In that case we can safely
@@ -174,7 +183,7 @@ class StdLibraryFunctionsChecker
     RangeConstraint(ArgNo ArgN, RangeKind Kind, const IntRangeVector &Ranges)
         : ValueConstraint(ArgN), Kind(Kind), Ranges(Ranges) {}
 
-    std::string describe(ProgramStateRef State,
+    std::string describe(DescriptionKind DK, ProgramStateRef State,
                          const Summary &Summary) const override;
 
     const IntRangeVector &getRanges() const { return Ranges; }
@@ -244,7 +253,7 @@ class StdLibraryFunctionsChecker
     bool CannotBeNull = true;
 
   public:
-    std::string describe(ProgramStateRef State,
+    std::string describe(DescriptionKind DK, ProgramStateRef State,
                          const Summary &Summary) const override;
     StringRef getName() const override { return "NonNull"; }
     ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
@@ -316,7 +325,7 @@ class StdLibraryFunctionsChecker
       return Result;
     }
 
-    std::string describe(ProgramStateRef State,
+    std::string describe(DescriptionKind DK, ProgramStateRef State,
                          const Summary &Summary) const override;
 
     ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
@@ -704,9 +713,12 @@ private:
     // Highlight the range of the argument that was violated.
     R->addRange(Call.getArgSourceRange(VC->getArgNo()));
 
-    // Describe the argument constraint in a note.
-    R->addNote(VC->describe(C.getState(), Summary), R->getLocation(),
-               Call.getArgSourceRange(VC->getArgNo()));
+    // Describe the argument constraint violation in a note.
+    std::string Descr = VC->describe(
+        ValueConstraint::DescriptionKind::Violation, C.getState(), Summary);
+    // Capitalize the first letter b/c we want a full sentence.
+    Descr[0] = toupper(Descr[0]);
+    R->addNote(Descr, R->getLocation(), Call.getArgSourceRange(VC->getArgNo()));
 
     C.emitReport(std::move(R));
   }
@@ -735,24 +747,26 @@ static BasicValueFactory &getBVF(ProgramStateRef State) {
 }
 
 std::string StdLibraryFunctionsChecker::NotNullConstraint::describe(
-    ProgramStateRef State, const Summary &Summary) const {
+    DescriptionKind DK, ProgramStateRef State, const Summary &Summary) const {
   SmallString<48> Result;
-  Result += "The ";
+  const auto Violation = ValueConstraint::DescriptionKind::Violation;
+  Result += "the ";
   Result += getArgDesc(ArgN);
-  Result += " should not be NULL";
+  Result += DK == Violation ? " should not be NULL" : " is not NULL";
   return Result.c_str();
 }
 
 std::string StdLibraryFunctionsChecker::RangeConstraint::describe(
-    ProgramStateRef State, const Summary &Summary) const {
+    DescriptionKind DK, ProgramStateRef State, const Summary &Summary) const {
 
   BasicValueFactory &BVF = getBVF(State);
 
   QualType T = Summary.getArgType(getArgNo());
   SmallString<48> Result;
-  Result += "The ";
+  const auto Violation = ValueConstraint::DescriptionKind::Violation;
+  Result += "the ";
   Result += getArgDesc(ArgN);
-  Result += " should be ";
+  Result += DK == Violation ? " should be " : " is ";
 
   // Range kind as a string.
   Kind == OutOfRange ? Result += "out of" : Result += "within";
@@ -784,16 +798,18 @@ StdLibraryFunctionsChecker::getArgDesc(StdLibraryFunctionsChecker::ArgNo ArgN) {
   SmallString<8> Result;
   Result += std::to_string(ArgN + 1);
   Result += llvm::getOrdinalSuffix(ArgN + 1);
-  Result += " arg";
+  Result += " argument";
   return Result;
 }
 
 std::string StdLibraryFunctionsChecker::BufferSizeConstraint::describe(
-    ProgramStateRef State, const Summary &Summary) const {
+    DescriptionKind DK, ProgramStateRef State, const Summary &Summary) const {
   SmallString<96> Result;
-  Result += "The size of the ";
+  const auto Violation = ValueConstraint::DescriptionKind::Violation;
+  Result += "the size of the ";
   Result += getArgDesc(ArgN);
-  Result += " should be equal to or less than the value of ";
+  Result += DK == Violation ? " should be " : " is ";
+  Result += "equal to or greater than the value of ";
   if (ConcreteSize) {
     ConcreteSize->toString(Result);
   } else if (SizeArgN) {
@@ -927,6 +943,7 @@ void StdLibraryFunctionsChecker::checkPreCall(const CallEvent &Call,
   ProgramStateRef State = C.getState();
 
   ProgramStateRef NewState = State;
+  ExplodedNode *NewNode = C.getPredecessor();
   for (const ValueConstraintPtr &Constraint : Summary.getArgConstraints()) {
     ProgramStateRef SuccessSt = Constraint->apply(NewState, Call, Summary, C);
     ProgramStateRef FailureSt =
@@ -936,17 +953,28 @@ void StdLibraryFunctionsChecker::checkPreCall(const CallEvent &Call,
       if (ExplodedNode *N = C.generateErrorNode(NewState))
         reportBug(Call, N, Constraint.get(), Summary, C);
       break;
-    } else {
-      // We will apply the constraint even if we cannot reason about the
-      // argument. This means both SuccessSt and FailureSt can be true. If we
-      // weren't applying the constraint that would mean that symbolic
-      // execution continues on a code whose behaviour is undefined.
-      assert(SuccessSt);
-      NewState = SuccessSt;
+    }
+    // We will apply the constraint even if we cannot reason about the
+    // argument. This means both SuccessSt and FailureSt can be true. If we
+    // weren't applying the constraint that would mean that symbolic
+    // execution continues on a code whose behaviour is undefined.
+    assert(SuccessSt);
+    NewState = SuccessSt;
+    if (NewState != State) {
+      SmallString<64> Msg;
+      Msg += "Assuming ";
+      Msg += Constraint->describe(ValueConstraint::DescriptionKind::Assumption,
+                                  NewState, Summary);
+      const auto ArgSVal = Call.getArgSVal(Constraint->getArgNo());
+      NewNode = C.addTransition(
+          NewState, NewNode,
+          C.getNoteTag([Msg = std::move(Msg), ArgSVal](
+                           PathSensitiveBugReport &BR, llvm::raw_ostream &OS) {
+            if (BR.isInteresting(ArgSVal))
+              OS << Msg;
+          }));
     }
   }
-  if (NewState && NewState != State)
-    C.addTransition(NewState);
 }
 
 void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
@@ -2882,6 +2910,10 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(EvalCallAsPure).ArgConstraint(NotNull(ArgNo(0))));
 
     // Test range values.
+    addToFunctionSummaryMap(
+        "__single_val_0", Signature(ArgTypes{IntTy}, RetType{IntTy}),
+        Summary(EvalCallAsPure)
+            .ArgConstraint(ArgumentCondition(0U, WithinRange, SingleValue(0))));
     addToFunctionSummaryMap(
         "__single_val_1", Signature(ArgTypes{IntTy}, RetType{IntTy}),
         Summary(EvalCallAsPure)

@@ -115,7 +115,8 @@ bool ExprInspectionChecker::evalCall(const CallEvent &Call,
           .Case("clang_analyzer_hashDump",
                 &ExprInspectionChecker::analyzerHashDump)
           .Case("clang_analyzer_denote", &ExprInspectionChecker::analyzerDenote)
-          .Case("clang_analyzer_express",
+          .Case("clang_analyzer_express", // This also marks the argument as
+                                          // interesting.
                 &ExprInspectionChecker::analyzerExpress)
           .StartsWith("clang_analyzer_isTainted",
                       &ExprInspectionChecker::analyzerIsTainted)
@@ -530,14 +531,14 @@ void ExprInspectionChecker::analyzerExpress(const CallExpr *CE,
   SVal ArgVal = C.getSVal(CE->getArg(0));
   SymbolRef Sym = ArgVal.getAsSymbol();
   if (!Sym) {
-    reportBug("Not a symbol", C);
+    reportBug("Not a symbol", C, ArgVal);
     return;
   }
 
   SymbolExpressor V(C.getState());
   auto Str = V.Visit(Sym);
   if (!Str) {
-    reportBug("Unable to express", C);
+    reportBug("Unable to express", C, ArgVal);
     return;
   }
 

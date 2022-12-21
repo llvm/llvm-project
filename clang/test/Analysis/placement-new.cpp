@@ -112,6 +112,10 @@ void f() {
 namespace testHeapAllocatedBuffer {
 void g2() {
   char *buf = new char[2];     // expected-note {{'buf' initialized here}}
+                               // FIXME: The message is misleading -- we should
+                               // state that a pointer to an uninitialized value
+                               // is stored.
+                               // expected-note@-4{{Storing uninitialized value}}
   long *lp = ::new (buf) long; // expected-warning{{Storage provided to placement new is only 2 bytes, whereas the allocated type requires 8 bytes}} expected-note 1 {{}}
   (void)lp;
 }

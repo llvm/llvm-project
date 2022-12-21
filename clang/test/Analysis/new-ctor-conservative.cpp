@@ -14,9 +14,12 @@ void checkConstructorInlining() {
   clang_analyzer_eval(s->x == 1); // expected-warning{{TRUE}}
 }
 
-void checkNewPOD() {
+void checkNewPODunit() {
   int *i = new int;
-  clang_analyzer_eval(*i == 0); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(*i == 0); // expected-warning{{The left operand of '==' is a garbage value [core.UndefinedBinaryOperatorResult]}}
+}
+
+void checkNewPOD() {
   int *j = new int();
   clang_analyzer_eval(*j == 0); // expected-warning{{TRUE}}
   int *k = new int(5);

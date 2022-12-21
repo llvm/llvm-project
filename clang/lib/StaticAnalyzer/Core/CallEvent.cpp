@@ -424,6 +424,38 @@ static SVal processArgument(SVal Value, const Expr *ArgumentExpr,
   return Value;
 }
 
+/// Cast the argument value to the type of the parameter at the function
+/// declaration.
+/// Returns the argument value if it didn't need a cast.
+/// Or returns the cast argument if it needed a cast.
+/// Or returns 'Unknown' if it would need a cast but the callsite and the
+/// runtime definition don't match in terms of argument and parameter count.
+static SVal castArgToParamTypeIfNeeded(const CallEvent &Call, unsigned ArgIdx,
+                                       SVal ArgVal, SValBuilder &SVB) {
+  const FunctionDecl *RTDecl =
+      Call.getRuntimeDefinition().getDecl()->getAsFunction();
+  const auto *CallExprDecl = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
+
+  if (!RTDecl || !CallExprDecl)
+    return ArgVal;
+
+  // The function decl of the Call (in the AST) will not have any parameter
+  // declarations, if it was 'only' declared without a prototype. However, the
+  // engine will find the appropriate runtime definition - basically a
+  // redeclaration, which has a function body (and a function prototype).
+  if (CallExprDecl->hasPrototype() || !RTDecl->hasPrototype())
+    return ArgVal;
+
+  // Only do this cast if the number arguments at the callsite matches with
+  // the parameters at the runtime definition.
+  if (Call.getNumArgs() != RTDecl->getNumParams())
+    return UnknownVal();
+
+  const Expr *ArgExpr = Call.getArgExpr(ArgIdx);
+  const ParmVarDecl *Param = RTDecl->getParamDecl(ArgIdx);
+  return SVB.evalCast(ArgVal, Param->getType(), ArgExpr->getType());
+}
+
 static void addParameterValuesToBindings(const StackFrameContext *CalleeCtx,
                                          CallEvent::BindingsTy &Bindings,
                                          SValBuilder &SVB,
@@ -449,12 +481,18 @@ static void addParameterValuesToBindings(const StackFrameContext *CalleeCtx,
     // which makes getArgSVal() fail and return UnknownVal.
     SVal ArgVal = Call.getArgSVal(Idx);
     const Expr *ArgExpr = Call.getArgExpr(Idx);
-    if (!ArgVal.isUnknown()) {
-      Loc ParamLoc = SVB.makeLoc(
-          MRMgr.getParamVarRegion(Call.getOriginExpr(), Idx, CalleeCtx));
-      Bindings.push_back(
-          std::make_pair(ParamLoc, processArgument(ArgVal, ArgExpr, *I, SVB)));
-    }
+
+    if (ArgVal.isUnknown())
+      continue;
+
+    // Cast the argument value to match the type of the parameter in some
+    // edge-cases.
+    ArgVal = castArgToParamTypeIfNeeded(Call, Idx, ArgVal, SVB);
+
+    Loc ParamLoc = SVB.makeLoc(
+        MRMgr.getParamVarRegion(Call.getOriginExpr(), Idx, CalleeCtx));
+    Bindings.push_back(
+        std::make_pair(ParamLoc, processArgument(ArgVal, ArgExpr, *I, SVB)));
   }
 
   // FIXME: Variadic arguments are not handled at all right now.
