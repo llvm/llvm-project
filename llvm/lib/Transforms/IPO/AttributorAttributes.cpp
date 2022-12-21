@@ -997,6 +997,8 @@ struct OffsetInfo {
     return Offsets == RHS.Offsets;
   }
 
+  bool operator!=(const OffsetInfo &RHS) const { return !(*this == RHS); }
+
   void insert(int64_t Offset) { Offsets.push_back(Offset); }
   bool isUnassigned() const { return Offsets.size() == 0; }
 
@@ -1348,7 +1350,11 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override;
 
-  void collectConstantsForGEP(Attributor &A, const DataLayout &DL,
+  /// If the indices to \p GEP can be traced to constants, incorporate all
+  /// of these into \p UsrOI.
+  ///
+  /// \return true iff \p UsrOI is updated.
+  bool collectConstantsForGEP(Attributor &A, const DataLayout &DL,
                               OffsetInfo &UsrOI, const OffsetInfo &PtrOI,
                               const GEPOperator *GEP);
 
@@ -1358,9 +1364,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
   }
 };
 
-/// If the indices to \p GEP can be traced to constants, incorporate all
-/// of these into \p UsrOI.
-void AAPointerInfoFloating::collectConstantsForGEP(Attributor &A,
+bool AAPointerInfoFloating::collectConstantsForGEP(Attributor &A,
                                                    const DataLayout &DL,
                                                    OffsetInfo &UsrOI,
                                                    const OffsetInfo &PtrOI,
@@ -1375,7 +1379,7 @@ void AAPointerInfoFloating::collectConstantsForGEP(Attributor &A,
 
   if (!GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset)) {
     UsrOI.setUnknown();
-    return;
+    return true;
   }
 
   LLVM_DEBUG(dbgs() << "[AAPointerInfo] GEP offset is "
@@ -1393,14 +1397,19 @@ void AAPointerInfoFloating::collectConstantsForGEP(Attributor &A,
         *this, IRPosition::value(*VI.first), DepClassTy::OPTIONAL);
     if (!PotentialConstantsAA.isValidState()) {
       UsrOI.setUnknown();
-      return;
+      return true;
     }
 
     auto &AssumedSet = PotentialConstantsAA.getAssumedSet();
 
-    // Nothing to pick if AssumedSet is empty, i.e., not yet discovered.
-    if (AssumedSet.empty())
-      continue;
+    // We need at least one constant in every set to compute an actual offset.
+    // Otherwise, we end up pessimizing AAPointerInfo by respecting offsets that
+    // don't actually exist. In other words, the absence of constant values
+    // implies that the operation can be assumed dead for now.
+    //
+    // UndefValue is treated as a zero.
+    if (!PotentialConstantsAA.undefIsContained() && AssumedSet.empty())
+      return false;
 
     OffsetInfo Product;
     for (const auto &ConstOffset : AssumedSet) {
@@ -1413,7 +1422,7 @@ void AAPointerInfoFloating::collectConstantsForGEP(Attributor &A,
   }
 
   UsrOI = std::move(Union);
-  return;
+  return true;
 }
 
 ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
@@ -1469,14 +1478,13 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
       if (UsrOI.isUnknown())
         return true;
 
-      Follow = true;
-
       if (PtrOI.isUnknown()) {
+        Follow = true;
         UsrOI.setUnknown();
         return true;
       }
 
-      collectConstantsForGEP(A, DL, UsrOI, PtrOI, GEP);
+      Follow = collectConstantsForGEP(A, DL, UsrOI, PtrOI, GEP);
       return true;
     }
     if (isa<PtrToIntInst>(Usr))
@@ -9108,11 +9116,15 @@ struct AAPotentialConstantValuesImpl : AAPotentialConstantValues {
   }
 
   bool fillSetWithConstantValues(Attributor &A, const IRPosition &IRP, SetTy &S,
-                                 bool &ContainsUndef) {
+                                 bool &ContainsUndef, bool ForSelf) {
     SmallVector<AA::ValueAndContext> Values;
     bool UsedAssumedInformation = false;
     if (!A.getAssumedSimplifiedValues(IRP, *this, Values, AA::Interprocedural,
                                       UsedAssumedInformation)) {
+      // Avoid recursion when the caller is computing constant values for this
+      // IRP itself.
+      if (ForSelf)
+        return false;
       if (!IRP.getAssociatedType()->isIntegerTy())
         return false;
       auto &PotentialValuesAA = A.getAAFor<AAPotentialConstantValues>(
@@ -9124,15 +9136,21 @@ struct AAPotentialConstantValuesImpl : AAPotentialConstantValues {
       return true;
     }
 
+    // Copy all the constant values, except UndefValue. ContainsUndef is true
+    // iff Values contains only UndefValue instances. If there are other known
+    // constants, then UndefValue is dropped.
+    ContainsUndef = false;
     for (auto &It : Values) {
-      if (isa<UndefValue>(It.getValue()))
+      if (isa<UndefValue>(It.getValue())) {
+        ContainsUndef = true;
         continue;
+      }
       auto *CI = dyn_cast<ConstantInt>(It.getValue());
       if (!CI)
         return false;
       S.insert(CI->getValue());
     }
-    ContainsUndef = S.empty();
+    ContainsUndef &= S.empty();
 
     return true;
   }
@@ -9328,9 +9346,9 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
     bool LHSContainsUndef = false, RHSContainsUndef = false;
     SetTy LHSAAPVS, RHSAAPVS;
     if (!fillSetWithConstantValues(A, IRPosition::value(*LHS), LHSAAPVS,
-                                   LHSContainsUndef) ||
+                                   LHSContainsUndef, /* ForSelf */ false) ||
         !fillSetWithConstantValues(A, IRPosition::value(*RHS), RHSAAPVS,
-                                   RHSContainsUndef))
+                                   RHSContainsUndef, /* ForSelf */ false))
       return indicatePessimisticFixpoint();
 
     // TODO: make use of undef flag to limit potential values aggressively.
@@ -9393,12 +9411,14 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
 
     bool LHSContainsUndef = false, RHSContainsUndef = false;
     SetTy LHSAAPVS, RHSAAPVS;
-    if (!OnlyRight && !fillSetWithConstantValues(A, IRPosition::value(*LHS),
-                                                 LHSAAPVS, LHSContainsUndef))
+    if (!OnlyRight &&
+        !fillSetWithConstantValues(A, IRPosition::value(*LHS), LHSAAPVS,
+                                   LHSContainsUndef, /* ForSelf */ false))
       return indicatePessimisticFixpoint();
 
-    if (!OnlyLeft && !fillSetWithConstantValues(A, IRPosition::value(*RHS),
-                                                RHSAAPVS, RHSContainsUndef))
+    if (!OnlyLeft &&
+        !fillSetWithConstantValues(A, IRPosition::value(*RHS), RHSAAPVS,
+                                   RHSContainsUndef, /* ForSelf */ false))
       return indicatePessimisticFixpoint();
 
     if (OnlyLeft || OnlyRight) {
@@ -9437,7 +9457,7 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
     bool SrcContainsUndef = false;
     SetTy SrcPVS;
     if (!fillSetWithConstantValues(A, IRPosition::value(*Src), SrcPVS,
-                                   SrcContainsUndef))
+                                   SrcContainsUndef, /* ForSelf */ false))
       return indicatePessimisticFixpoint();
 
     if (SrcContainsUndef)
@@ -9460,9 +9480,9 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
     bool LHSContainsUndef = false, RHSContainsUndef = false;
     SetTy LHSAAPVS, RHSAAPVS;
     if (!fillSetWithConstantValues(A, IRPosition::value(*LHS), LHSAAPVS,
-                                   LHSContainsUndef) ||
+                                   LHSContainsUndef, /* ForSelf */ false) ||
         !fillSetWithConstantValues(A, IRPosition::value(*RHS), RHSAAPVS,
-                                   RHSContainsUndef))
+                                   RHSContainsUndef, /* ForSelf */ false))
       return indicatePessimisticFixpoint();
 
     const APInt Zero = APInt(LHS->getType()->getIntegerBitWidth(), 0);
@@ -9493,6 +9513,23 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
                                          : ChangeStatus::CHANGED;
   }
 
+  ChangeStatus updateWithInstruction(Attributor &A, Instruction *Inst) {
+    auto AssumedBefore = getAssumed();
+    SetTy Incoming;
+    bool ContainsUndef;
+    if (!fillSetWithConstantValues(A, IRPosition::value(*Inst), Incoming,
+                                   ContainsUndef, /* ForSelf */ true))
+      return indicatePessimisticFixpoint();
+    if (ContainsUndef) {
+      unionAssumedWithUndef();
+    } else {
+      for (const auto &It : Incoming)
+        unionAssumed(It);
+    }
+    return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
+                                         : ChangeStatus::CHANGED;
+  }
+
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     Value &V = getAssociatedValue();
@@ -9509,6 +9546,9 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
 
     if (auto *BinOp = dyn_cast<BinaryOperator>(I))
       return updateWithBinaryOperator(A, BinOp);
+
+    if (isa<PHINode>(I) || isa<LoadInst>(I))
+      return updateWithInstruction(A, I);
 
     return indicatePessimisticFixpoint();
   }
