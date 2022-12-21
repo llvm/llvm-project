@@ -625,6 +625,46 @@ define void @load-2byte-chunk-of-8byte-alloca-with-2byte-step-variable-gep-of-se
   ret void
 }
 
+define void @load-ptr-chunk-of-16byte-alloca(ptr %src, i64 %byteOff) {
+; CHECK-ALL-LABEL: @load-ptr-chunk-of-16byte-alloca(
+; CHECK-ALL-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
+; CHECK-ALL-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-ALL-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
+; CHECK-ALL-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
+; CHECK-ALL-NEXT:    [[CHUNK:%.*]] = load <1 x ptr>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
+; CHECK-ALL-NEXT:    call void @use.v1ptr(<1 x ptr> [[CHUNK]])
+; CHECK-ALL-NEXT:    ret void
+;
+  %intermediate = alloca [16 x i8], align 64
+  %init = load <16 x i8>, ptr %src, align 1
+  store <16 x i8> %init, ptr %intermediate, align 64
+  %intermediate.off.addr = getelementptr inbounds i8, ptr %intermediate, i64 %byteOff
+  %chunk = load <1 x ptr>, ptr %intermediate.off.addr, align 1
+  call void @use.v1ptr(<1 x ptr> %chunk)
+  ret void
+}
+
+define void @load-float-chunk-of-16byte-alloca(ptr %src, i64 %byteOff) {
+; CHECK-ALL-LABEL: @load-float-chunk-of-16byte-alloca(
+; CHECK-ALL-NEXT:    [[INTERMEDIATE:%.*]] = alloca [16 x i8], align 64
+; CHECK-ALL-NEXT:    [[INIT:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-ALL-NEXT:    store <16 x i8> [[INIT]], ptr [[INTERMEDIATE]], align 64
+; CHECK-ALL-NEXT:    [[INTERMEDIATE_OFF_ADDR:%.*]] = getelementptr inbounds i8, ptr [[INTERMEDIATE]], i64 [[BYTEOFF:%.*]]
+; CHECK-ALL-NEXT:    [[CHUNK:%.*]] = load <1 x float>, ptr [[INTERMEDIATE_OFF_ADDR]], align 1
+; CHECK-ALL-NEXT:    call void @use.v1float(<1 x float> [[CHUNK]])
+; CHECK-ALL-NEXT:    ret void
+;
+  %intermediate = alloca [16 x i8], align 64
+  %init = load <16 x i8>, ptr %src, align 1
+  store <16 x i8> %init, ptr %intermediate, align 64
+  %intermediate.off.addr = getelementptr inbounds i8, ptr %intermediate, i64 %byteOff
+  %chunk = load <1 x float>, ptr %intermediate.off.addr, align 1
+  call void @use.v1float(<1 x float> %chunk)
+  ret void
+}
+
+declare void @use.v1ptr(<1 x ptr>)
+declare void @use.v1float(<1 x float>)
 declare void @use.v1i8(<1 x i8>)
 declare void @use.v2i8(<2 x i8>)
 declare void @use.v4i8(<4 x i8>)
