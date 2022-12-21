@@ -189,3 +189,20 @@ typedef struct { // expected-warning {{anonymous non-C-compatible type}}
   }
 } A; // expected-note {{given name 'A' for linkage purposes by this typedef}}
 }
+
+#if __cplusplus > 201103L
+namespace GH58800 {
+struct A {
+  union {
+    struct {
+      float red = 0.0f;
+    };
+  };
+};
+
+A GetA() {
+  A result{};
+  return result;
+}
+}
+#endif
