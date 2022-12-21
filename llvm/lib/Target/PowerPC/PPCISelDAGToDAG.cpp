@@ -3936,9 +3936,19 @@ bool PPCDAGToDAGISel::tryBitPermutation(SDNode *N) {
 
   switch (N->getOpcode()) {
   default: break;
+  case ISD::SRL:
+    // If we are on P10, we have a pattern for 32-bit (srl (bswap r), 16) that
+    // uses the BRH instruction.
+    if (Subtarget->isISA3_1() && N->getValueType(0) == MVT::i32 &&
+        N->getOperand(0).getOpcode() == ISD::BSWAP) {
+      auto &OpRight = N->getOperand(1);
+      ConstantSDNode *SRLConst = dyn_cast<ConstantSDNode>(OpRight);
+      if (SRLConst && SRLConst->getSExtValue() == 16)
+        return false;
+    }
+    LLVM_FALLTHROUGH;
   case ISD::ROTL:
   case ISD::SHL:
-  case ISD::SRL:
   case ISD::AND:
   case ISD::OR: {
     BitPermutationSelector BPS(CurDAG);
