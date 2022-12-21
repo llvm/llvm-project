@@ -38,9 +38,6 @@
 namespace llvm {
 namespace exegesis {
 
-static cl::OptionCategory
-    BenchmarkOptions("llvm-exegesis benchmark x86-options");
-
 // If a positive value is specified, we are going to use the LBR in
 // latency-mode.
 //
