@@ -457,16 +457,12 @@ join:
   ret i8 %i
 }
 
-; FIXME: This should be simplifiable. See comment inside.
-
-define i8 @phi_offsets_fixme(i1 %cnd1, i1 %cnd2) {
+define i8 @phi_offsets(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define {{[^@]+}}@phi_offsets_fixme
+; CHECK-LABEL: define {{[^@]+}}@phi_offsets
 ; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[GEP_FIXED:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 0
-; CHECK-NEXT:    store i8 100, i8* [[GEP_FIXED]], align 16
 ; CHECK-NEXT:    br i1 [[CND1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
@@ -475,9 +471,7 @@ define i8 @phi_offsets_fixme(i1 %cnd1, i1 %cnd2) {
 ; CHECK:       join:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 3, [[THEN]] ], [ 11, [[ELSE]] ]
 ; CHECK-NEXT:    [[GEP_PHI:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[PHI]]
-; CHECK-NEXT:    store i8 42, i8* [[GEP_PHI]], align 4
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[GEP_FIXED]], align 16
-; CHECK-NEXT:    ret i8 [[I]]
+; CHECK-NEXT:    ret i8 100
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
@@ -492,8 +486,6 @@ else:
   br label %join
 
 join:
-  ; FIXME: AAPotentialConstantValues does not detect the constant values for the
-  ; PHI below. It needs to rely on AAPotentialValues.
   %phi = phi i64 [ 3, %then ], [ 11, %else ]
   %gep.phi = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 %phi
   store i8 42, i8* %gep.phi, align 4
