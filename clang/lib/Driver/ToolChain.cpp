@@ -153,9 +153,9 @@ ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const {
 }
 
 const XRayArgs& ToolChain::getXRayArgs() const {
-  if (!XRayArguments.get())
+  if (!XRayArguments)
     XRayArguments.reset(new XRayArgs(*this, Args));
-  return *XRayArguments.get();
+  return *XRayArguments;
 }
 
 namespace {

@@ -107,6 +107,9 @@ enum ProcessorSubtypes {
   INTEL_COREI7_ALDERLAKE,
   AMDFAM19H_ZNVER3,
   INTEL_COREI7_ROCKETLAKE,
+  ZHAOXIN_FAM7H_LUJIAZUI,
+  AMDFAM19H_ZNVER4,
+  INTEL_COREI7_GRANITERAPIDS,
   CPU_SUBTYPE_MAX
 };
 
@@ -594,6 +597,14 @@ getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       // Family 19h Models 50h-5Fh - Zen3+
       *Subtype = AMDFAM19H_ZNVER3;
       break;
+    }
+    if ((Model >= 0x10 && Model <= 0x1f) ||
+        (Model >= 0x60 && Model <= 0x74) ||
+        (Model >= 0x78 && Model <= 0x7b) ||
+        (Model >= 0xA0 && Model <= 0xAf)) {
+      CPU = "znver4";
+      *Subtype = AMDFAM19H_ZNVER4;
+      break; //  "znver4"
     }
     break;
   default:

@@ -132,4 +132,5 @@ void verifycpustrings(void) {
   (void)__builtin_cpu_is("znver1");
   (void)__builtin_cpu_is("znver2");
   (void)__builtin_cpu_is("znver3");
+  (void)__builtin_cpu_is("znver4");
 }

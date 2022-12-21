@@ -39,14 +39,14 @@ namespace {
 /// at position \p Key.
 void serializeObject(Object &Paren, StringRef Key, Optional<Object> Obj) {
   if (Obj)
-    Paren[Key] = std::move(Obj.value());
+    Paren[Key] = std::move(*Obj);
 }
 
 /// Helper function to inject a JSON array \p Array into object \p Paren at
 /// position \p Key.
 void serializeArray(Object &Paren, StringRef Key, Optional<Array> Array) {
   if (Array)
-    Paren[Key] = std::move(Array.value());
+    Paren[Key] = std::move(*Array);
 }
 
 /// Serialize a \c VersionTuple \p V with the Symbol Graph semantic version

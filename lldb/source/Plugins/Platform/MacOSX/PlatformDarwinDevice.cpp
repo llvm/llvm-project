@@ -86,7 +86,7 @@ bool PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
       llvm::StringRef dirname = GetDeviceSupportDirectoryName();
       std::string local_sdk_cache_str = "~/Library/Developer/Xcode/";
       local_sdk_cache_str += std::string(dirname);
-      FileSpec local_sdk_cache(local_sdk_cache_str.c_str());
+      FileSpec local_sdk_cache(local_sdk_cache_str);
       FileSystem::Instance().Resolve(local_sdk_cache);
       if (FileSystem::Instance().Exists(local_sdk_cache)) {
         if (log) {
@@ -231,7 +231,7 @@ const char *PlatformDarwinDevice::GetDeviceSupportDirectory() {
   if (m_device_support_directory.empty()) {
     if (FileSpec fspec = HostInfo::GetXcodeDeveloperDirectory()) {
       m_device_support_directory = fspec.GetPath();
-      m_device_support_directory.append(platform_dir.c_str());
+      m_device_support_directory.append(platform_dir);
     } else {
       // Assign a single NULL character so we know we tried to find the device
       // support directory and we don't keep trying to find it over and over.

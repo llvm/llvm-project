@@ -706,7 +706,7 @@ public:
     if (!enc)
       return failure();
     // Only rewrite DimOp with constant index.
-    Optional<int64_t> dim = op.getConstantIndex();
+    std::optional<int64_t> dim = op.getConstantIndex();
     if (!dim)
       return failure();
     // Generate the call.

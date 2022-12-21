@@ -235,12 +235,13 @@ namespace detail {
 // TODO: Consider generating typedefs for trait member functions if this usage
 // becomes more common.
 LogicalResult inferReturnTensorTypes(
-    function_ref<LogicalResult(
-        MLIRContext *, Optional<Location> location, ValueShapeRange operands,
-        DictionaryAttr attributes, RegionRange regions,
-        SmallVectorImpl<ShapedTypeComponents> &retComponents)>
+    function_ref<
+        LogicalResult(MLIRContext *, std::optional<Location> location,
+                      ValueShapeRange operands, DictionaryAttr attributes,
+                      RegionRange regions,
+                      SmallVectorImpl<ShapedTypeComponents> &retComponents)>
         componentTypeFn,
-    MLIRContext *context, Optional<Location> location, ValueRange operands,
+    MLIRContext *context, std::optional<Location> location, ValueRange operands,
     DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes);
 
@@ -272,7 +273,7 @@ template <typename ConcreteType>
 class InferTensorType : public TraitBase<ConcreteType, InferTensorType> {
 public:
   static LogicalResult
-  inferReturnTypes(MLIRContext *context, Optional<Location> location,
+  inferReturnTypes(MLIRContext *context, std::optional<Location> location,
                    ValueRange operands, DictionaryAttr attributes,
                    RegionRange regions,
                    SmallVectorImpl<Type> &inferredReturnTypes) {

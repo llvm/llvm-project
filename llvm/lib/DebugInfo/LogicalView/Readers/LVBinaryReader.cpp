@@ -404,7 +404,7 @@ Error LVBinaryReader::createInstructions(LVScope *Scope,
       std::string Buffer;
       raw_string_ostream Stream(Buffer);
       StringRef AnnotationsStr = Annotations.str();
-      MIP.get()->printInst(&Instruction, Address, AnnotationsStr, *STI, Stream);
+      MIP->printInst(&Instruction, Address, AnnotationsStr, *STI, Stream);
       LLVM_DEBUG({
         std::string BufferCodes;
         raw_string_ostream StreamCodes(BufferCodes);

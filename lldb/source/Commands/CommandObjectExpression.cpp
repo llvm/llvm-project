@@ -477,7 +477,7 @@ void CommandObjectExpression::IOHandlerInputComplete(IOHandler &io_handler,
 
   CommandReturnObject return_obj(
       GetCommandInterpreter().GetDebugger().GetUseColor());
-  EvaluateExpression(line.c_str(), *output_sp, *error_sp, return_obj);
+  EvaluateExpression(line, *output_sp, *error_sp, return_obj);
   if (output_sp)
     output_sp->Flush();
   if (error_sp)

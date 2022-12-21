@@ -368,7 +368,7 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
 
   if (caller.mustSaveResult())
     builder.create<fir::SaveResultOp>(loc, callResult,
-                                      fir::getBase(allocatedResult.value()),
+                                      fir::getBase(*allocatedResult),
                                       arrayResultShape, resultLengths);
 
   if (allocatedResult) {

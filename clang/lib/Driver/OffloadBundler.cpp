@@ -1370,7 +1370,7 @@ Error OffloadBundler::UnbundleArchive() {
     std::unique_ptr<FileHandler> &FileHandler = *FileHandlerOrErr;
     assert(FileHandler);
 
-    if (Error ReadErr = FileHandler.get()->ReadHeader(*CodeObjectBuffer))
+    if (Error ReadErr = FileHandler->ReadHeader(*CodeObjectBuffer))
       return ReadErr;
 
     Expected<std::optional<StringRef>> CurBundleIDOrErr =
@@ -1395,8 +1395,7 @@ Error OffloadBundler::UnbundleArchive() {
                                              BundlerConfig)) {
         std::string BundleData;
         raw_string_ostream DataStream(BundleData);
-        if (Error Err =
-                FileHandler.get()->ReadBundle(DataStream, *CodeObjectBuffer))
+        if (Error Err = FileHandler->ReadBundle(DataStream, *CodeObjectBuffer))
           return Err;
 
         for (auto &CompatibleTarget : CompatibleTargets) {
@@ -1435,7 +1434,7 @@ Error OffloadBundler::UnbundleArchive() {
         }
       }
 
-      if (Error Err = FileHandler.get()->ReadBundleEnd(*CodeObjectBuffer))
+      if (Error Err = FileHandler->ReadBundleEnd(*CodeObjectBuffer))
         return Err;
 
       Expected<std::optional<StringRef>> NextTripleOrErr =

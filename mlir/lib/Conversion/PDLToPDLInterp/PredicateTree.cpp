@@ -81,7 +81,7 @@ static void getOperandTreePredicates(std::vector<PositionalPredicate> &predList,
                             builder.getType(pos));
       })
       .Case<pdl::ResultOp, pdl::ResultsOp>([&](auto op) {
-        Optional<unsigned> index = op.getIndex();
+        std::optional<unsigned> index = op.getIndex();
 
         // Prevent traversal into a null value if the result has a proper index.
         if (index)
@@ -106,11 +106,11 @@ static void getOperandTreePredicates(std::vector<PositionalPredicate> &predList,
       });
 }
 
-static void getTreePredicates(std::vector<PositionalPredicate> &predList,
-                              Value val, PredicateBuilder &builder,
-                              DenseMap<Value, Position *> &inputs,
-                              OperationPosition *pos,
-                              Optional<unsigned> ignoreOperand = std::nullopt) {
+static void
+getTreePredicates(std::vector<PositionalPredicate> &predList, Value val,
+                  PredicateBuilder &builder,
+                  DenseMap<Value, Position *> &inputs, OperationPosition *pos,
+                  std::optional<unsigned> ignoreOperand = std::nullopt) {
   assert(val.getType().isa<pdl::OperationType>() && "expected operation");
   pdl::OperationOp op = cast<pdl::OperationOp>(val.getDefiningOp());
   OperationPosition *opPos = cast<OperationPosition>(pos);
@@ -120,7 +120,7 @@ static void getTreePredicates(std::vector<PositionalPredicate> &predList,
     predList.emplace_back(pos, builder.getIsNotNull());
 
   // Check that this is the correct root operation.
-  if (Optional<StringRef> opName = op.getOpName())
+  if (std::optional<StringRef> opName = op.getOpName())
     predList.emplace_back(pos, builder.getOperationName(*opName));
 
   // Check that the operation has the proper number of operands. If there are
@@ -302,7 +302,7 @@ static void getResultPredicates(pdl::ResultsOp op,
   // Ensure that the result isn't null if the result has an index.
   auto *parentPos = cast<OperationPosition>(inputs.lookup(op.getParent()));
   bool isVariadic = op.getType().isa<pdl::RangeType>();
-  Optional<unsigned> index = op.getIndex();
+  std::optional<unsigned> index = op.getIndex();
   resultPos = builder.getResultGroup(parentPos, index, isVariadic);
   if (index)
     predList.emplace_back(resultPos, builder.getIsNotNull());
@@ -356,7 +356,7 @@ namespace {
 /// An op accepting a value at an optional index.
 struct OpIndex {
   Value parent;
-  Optional<unsigned> index;
+  std::optional<unsigned> index;
 };
 
 /// The parent and operand index of each operation for each root, stored
@@ -408,12 +408,13 @@ static void buildCostGraph(ArrayRef<Value> roots, RootOrderingGraph &graph,
   // * the operand index of the value in its parent;
   // * the depth of the visited value.
   struct Entry {
-    Entry(Value value, Value parent, Optional<unsigned> index, unsigned depth)
+    Entry(Value value, Value parent, std::optional<unsigned> index,
+          unsigned depth)
         : value(value), parent(parent), index(index), depth(depth) {}
 
     Value value;
     Value parent;
-    Optional<unsigned> index;
+    std::optional<unsigned> index;
     unsigned depth;
   };
 

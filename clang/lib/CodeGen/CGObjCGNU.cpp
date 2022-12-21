@@ -36,6 +36,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
 #include <cctype>
+#include <optional>
 
 using namespace clang;
 using namespace CodeGen;
@@ -3864,7 +3865,7 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
 
     // The path to the source file where this module was declared
     SourceManager &SM = CGM.getContext().getSourceManager();
-    Optional<FileEntryRef> mainFile =
+    std::optional<FileEntryRef> mainFile =
         SM.getFileEntryRefForID(SM.getMainFileID());
     std::string path =
         (mainFile->getDir().getName() + "/" + mainFile->getName()).str();

@@ -45,6 +45,9 @@ X86_CPU_TYPE(INTEL_GOLDMONT,      "goldmont")
 X86_CPU_TYPE(INTEL_GOLDMONT_PLUS, "goldmont-plus")
 X86_CPU_TYPE(INTEL_TREMONT,       "tremont")
 X86_CPU_TYPE(AMDFAM19H,           "amdfam19h")
+X86_CPU_TYPE(ZHAOXIN_FAM7H,       "zhaoxin_fam7h")
+X86_CPU_TYPE(INTEL_SIERRAFOREST,  "sierraforest")
+X86_CPU_TYPE(INTEL_GRANDRIDGE,    "grandridge")
 
 // Alternate names supported by __builtin_cpu_is and target multiversioning.
 X86_CPU_TYPE_ALIAS(INTEL_BONNELL,    "atom")
@@ -93,6 +96,9 @@ X86_CPU_SUBTYPE(INTEL_COREI7_SAPPHIRERAPIDS, "sapphirerapids")
 X86_CPU_SUBTYPE(INTEL_COREI7_ALDERLAKE,      "alderlake")
 X86_CPU_SUBTYPE(AMDFAM19H_ZNVER3,            "znver3")
 X86_CPU_SUBTYPE(INTEL_COREI7_ROCKETLAKE,     "rocketlake")
+X86_CPU_SUBTYPE(ZHAOXIN_FAM7H_LUJIAZUI,      "zhaoxin_fam7h_lujiazui")
+X86_CPU_SUBTYPE(AMDFAM19H_ZNVER4,            "znver4")
+X86_CPU_SUBTYPE(INTEL_COREI7_GRANITERAPIDS,  "graniterapids")
 
 // Alternate names supported by __builtin_cpu_is and target multiversioning.
 X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "raptorlake")

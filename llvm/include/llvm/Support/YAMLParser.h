@@ -611,7 +611,7 @@ public:
     return *this;
   }
 
-  Document &operator*() { return *Doc->get(); }
+  Document &operator*() { return **Doc; }
 
   std::unique_ptr<Document> &operator->() { return *Doc; }
 

@@ -57,6 +57,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/thread.h"
 #include <mutex>
+#include <optional>
 
 #if LLVM_ENABLE_THREADS != 0 && defined(__APPLE__)
 #define USE_DARWIN_THREADS
@@ -538,7 +539,7 @@ bool CursorVisitor::VisitChildren(CXCursor Cursor) {
             const Optional<bool> V = handleDeclForVisitation(*TL);
             if (!V)
               continue;
-            return V.value();
+            return *V;
           }
         } else if (VisitDeclContext(
                        CXXUnit->getASTContext().getTranslationUnitDecl()))
@@ -643,7 +644,7 @@ bool CursorVisitor::VisitDeclContext(DeclContext *DC) {
     const Optional<bool> V = handleDeclForVisitation(D);
     if (!V)
       continue;
-    return V.value();
+    return *V;
   }
   return false;
 }
@@ -677,7 +678,7 @@ Optional<bool> CursorVisitor::handleDeclForVisitation(const Decl *D) {
   const Optional<bool> V = shouldVisitCursor(Cursor);
   if (!V)
     return std::nullopt;
-  if (!V.value())
+  if (!*V)
     return false;
   if (Visit(Cursor, true))
     return true;
@@ -1076,7 +1077,7 @@ bool CursorVisitor::VisitObjCContainerDecl(ObjCContainerDecl *D) {
     const Optional<bool> &V = shouldVisitCursor(Cursor);
     if (!V)
       continue;
-    if (!V.value())
+    if (!*V)
       return false;
     if (Visit(Cursor, true))
       return true;
@@ -8531,7 +8532,7 @@ CXFile clang_getIncludedFile(CXCursor cursor) {
     return nullptr;
 
   const InclusionDirective *ID = getCursorInclusionDirective(cursor);
-  Optional<FileEntryRef> File = ID->getFile();
+  std::optional<FileEntryRef> File = ID->getFile();
   return const_cast<FileEntry *>(File ? &File->getFileEntry() : nullptr);
 }
 

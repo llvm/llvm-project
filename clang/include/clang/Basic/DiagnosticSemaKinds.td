@@ -11758,5 +11758,5 @@ def err_loongarch_builtin_requires_la64 : Error<
 // Unsafe buffer usage diagnostics.
 def warn_unsafe_buffer_usage : Warning<
   "unchecked operation on raw buffer in expression">,
-  InGroup<DiagGroup<"unsafe-buffer-usage">>, DefaultIgnore;
+  InGroup<DiagGroup<"unsafe-buffer-usage2">>, DefaultIgnore;
 } // end of sema component.

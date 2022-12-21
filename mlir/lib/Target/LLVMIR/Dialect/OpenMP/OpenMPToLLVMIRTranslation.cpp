@@ -27,7 +27,7 @@ using namespace mlir;
 
 namespace {
 static llvm::omp::ScheduleKind
-convertToScheduleKind(Optional<omp::ClauseScheduleKind> schedKind) {
+convertToScheduleKind(std::optional<omp::ClauseScheduleKind> schedKind) {
   if (!schedKind.has_value())
     return llvm::omp::OMP_SCHEDULE_Default;
   switch (schedKind.value()) {
@@ -398,7 +398,7 @@ static omp::ReductionDeclareOp findReductionDecl(omp::WsLoopOp container,
 static void
 collectReductionDecls(omp::WsLoopOp loop,
                       SmallVectorImpl<omp::ReductionDeclareOp> &reductions) {
-  Optional<ArrayAttr> attr = loop.getReductions();
+  std::optional<ArrayAttr> attr = loop.getReductions();
   if (!attr)
     return;
 
@@ -855,7 +855,8 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // TODO: Handle doacross loops when the ordered clause has a parameter.
   bool isOrdered = loop.getOrderedVal().has_value();
-  Optional<omp::ScheduleModifier> scheduleModifier = loop.getScheduleModifier();
+  std::optional<omp::ScheduleModifier> scheduleModifier =
+      loop.getScheduleModifier();
   bool isSimd = loop.getSimdModifier();
 
   ompBuilder->applyWorkshareLoop(
@@ -989,11 +990,11 @@ convertOmpSimdLoop(Operation &opInst, llvm::IRBuilderBase &builder,
       ompBuilder->collapseLoops(ompLoc.DL, loopInfos, {});
 
   llvm::ConstantInt *simdlen = nullptr;
-  if (llvm::Optional<uint64_t> simdlenVar = loop.getSimdlen())
+  if (std::optional<uint64_t> simdlenVar = loop.getSimdlen())
     simdlen = builder.getInt64(simdlenVar.value());
 
   llvm::ConstantInt *safelen = nullptr;
-  if (llvm::Optional<uint64_t> safelenVar = loop.getSafelen())
+  if (std::optional<uint64_t> safelenVar = loop.getSafelen())
     safelen = builder.getInt64(safelenVar.value());
 
   llvm::MapVector<llvm::Value *, llvm::Value *> alignedVars;
@@ -1009,7 +1010,7 @@ convertOmpSimdLoop(Operation &opInst, llvm::IRBuilderBase &builder,
 
 /// Convert an Atomic Ordering attribute to llvm::AtomicOrdering.
 llvm::AtomicOrdering
-convertAtomicOrdering(Optional<omp::ClauseMemoryOrderKind> ao) {
+convertAtomicOrdering(std::optional<omp::ClauseMemoryOrderKind> ao) {
   if (!ao)
     return llvm::AtomicOrdering::Monotonic; // Default Memory Ordering
 

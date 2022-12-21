@@ -223,7 +223,7 @@ public:
       // initialization of the result values.
       Attribute reduction = std::get<0>(pair);
       Type resultType = std::get<1>(pair);
-      Optional<arith::AtomicRMWKind> reductionOp =
+      std::optional<arith::AtomicRMWKind> reductionOp =
           arith::symbolizeAtomicRMWKind(
               static_cast<uint64_t>(reduction.cast<IntegerAttr>().getInt()));
       assert(reductionOp && "Reduction operation cannot be of None Type");
@@ -243,7 +243,7 @@ public:
            "Unequal number of reductions and operands.");
     for (unsigned i = 0, end = reductions.size(); i < end; i++) {
       // For each of the reduction operations get the respective mlir::Value.
-      Optional<arith::AtomicRMWKind> reductionOp =
+      std::optional<arith::AtomicRMWKind> reductionOp =
           arith::symbolizeAtomicRMWKind(
               reductions[i].cast<IntegerAttr>().getInt());
       assert(reductionOp && "Reduction Operation cannot be of None Type");

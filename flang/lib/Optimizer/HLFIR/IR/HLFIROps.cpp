@@ -87,7 +87,7 @@ void hlfir::DesignateOp::build(
     mlir::OpBuilder &builder, mlir::OperationState &result,
     mlir::Type result_type, mlir::Value memref, llvm::StringRef component,
     mlir::Value component_shape, llvm::ArrayRef<Subscript> subscripts,
-    mlir::ValueRange substring, llvm::Optional<bool> complex_part,
+    mlir::ValueRange substring, std::optional<bool> complex_part,
     mlir::Value shape, mlir::ValueRange typeparams,
     fir::FortranVariableFlagsAttr fortran_attrs) {
   auto componentAttr =
