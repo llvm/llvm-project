@@ -5,14 +5,14 @@
 ; instruction possibly aliasing any mul load operands; arguments are passed
 ; without 'restrict' enabled.
 ;
-define dso_local i32 @no_restrict(i32 %arg, i32* nocapture %arg1, i16* nocapture readonly %arg2, i16* nocapture readonly %arg3) {
+define dso_local i32 @no_restrict(i32 %arg, ptr nocapture %arg1, ptr nocapture readonly %arg2, ptr nocapture readonly %arg3) {
 ; CHECK-LABEL: @no_restrict(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP24:%.*]] = icmp sgt i32 [[ARG:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP24]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, i16* [[ARG3:%.*]], align 2
-; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, i16* [[ARG2:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, ptr [[ARG3:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, ptr [[ARG2:%.*]], align 2
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[MAC1_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD11:%.*]], [[FOR_BODY]] ]
@@ -20,19 +20,19 @@ define dso_local i32 @no_restrict(i32 %arg, i32* nocapture %arg1, i16* nocapture
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[MAC1_026:%.*]] = phi i32 [ [[ADD11]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_025:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[I_025]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
-; CHECK-NEXT:    store i16 42, i16* [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[I_025]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
+; CHECK-NEXT:    store i16 42, ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[I_025]], 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[ADD]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i16, i16* [[ARRAYIDX1]], align 2
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[I_025]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, i16* [[ARRAYIDX3]], align 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[ARRAYIDX1]], align 2
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[I_025]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[ARRAYIDX3]], align 2
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP2]] to i32
 ; CHECK-NEXT:    [[CONV4:%.*]] = sext i16 [[TMP0]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[CONV]], [[CONV4]]
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[ADD]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i16, i16* [[ARRAYIDX6]], align 2
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[ADD]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[ARRAYIDX6]], align 2
 ; CHECK-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[CONV8:%.*]] = sext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[CONV7]], [[CONV8]]
@@ -46,8 +46,8 @@ entry:
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:
-  %.pre = load i16, i16* %arg3, align 2
-  %.pre27 = load i16, i16* %arg2, align 2
+  %.pre = load i16, ptr %arg3, align 2
+  %.pre27 = load i16, ptr %arg2, align 2
   br label %for.body
 
 for.cond.cleanup:
@@ -57,22 +57,22 @@ for.cond.cleanup:
 for.body:
   %mac1.026 = phi i32 [ %add11, %for.body ], [ 0, %for.body.preheader ]
   %i.025 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i16, i16* %arg3, i32 %i.025
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %arg3, i32 %i.025
+  %0 = load i16, ptr %arrayidx, align 2
 
 ; Store inserted here, aliasing with arrayidx, arrayidx1, arrayidx3
-  store i16 42, i16* %arrayidx, align 2
+  store i16 42, ptr %arrayidx, align 2
 
   %add = add nuw nsw i32 %i.025, 1
-  %arrayidx1 = getelementptr inbounds i16, i16* %arg3, i32 %add
-  %1 = load i16, i16* %arrayidx1, align 2
-  %arrayidx3 = getelementptr inbounds i16, i16* %arg2, i32 %i.025
-  %2 = load i16, i16* %arrayidx3, align 2
+  %arrayidx1 = getelementptr inbounds i16, ptr %arg3, i32 %add
+  %1 = load i16, ptr %arrayidx1, align 2
+  %arrayidx3 = getelementptr inbounds i16, ptr %arg2, i32 %i.025
+  %2 = load i16, ptr %arrayidx3, align 2
   %conv = sext i16 %2 to i32
   %conv4 = sext i16 %0 to i32
   %mul = mul nsw i32 %conv, %conv4
-  %arrayidx6 = getelementptr inbounds i16, i16* %arg2, i32 %add
-  %3 = load i16, i16* %arrayidx6, align 2
+  %arrayidx6 = getelementptr inbounds i16, ptr %arg2, i32 %add
+  %3 = load i16, ptr %arrayidx6, align 2
   %conv7 = sext i16 %3 to i32
   %conv8 = sext i16 %1 to i32
   %mul9 = mul nsw i32 %conv7, %conv8
@@ -86,14 +86,14 @@ for.body:
 ; aliasing one of the mul load operands. Arguments are now annotated with
 ; 'noalias'.
 ;
-define dso_local i32 @restrict(i32 %arg, i32* noalias %arg1, i16* noalias readonly %arg2, i16* noalias %arg3) {
+define dso_local i32 @restrict(i32 %arg, ptr noalias %arg1, ptr noalias readonly %arg2, ptr noalias %arg3) {
 ; CHECK-LABEL: @restrict(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP24:%.*]] = icmp sgt i32 [[ARG:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP24]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, i16* [[ARG3:%.*]], align 2
-; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, i16* [[ARG2:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, ptr [[ARG3:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, ptr [[ARG2:%.*]], align 2
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[MAC1_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD11:%.*]], [[FOR_BODY]] ]
@@ -101,19 +101,19 @@ define dso_local i32 @restrict(i32 %arg, i32* noalias %arg1, i16* noalias readon
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[MAC1_026:%.*]] = phi i32 [ [[ADD11]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_025:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[I_025]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
-; CHECK-NEXT:    store i16 42, i16* [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[I_025]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
+; CHECK-NEXT:    store i16 42, ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[I_025]], 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[ADD]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i16, i16* [[ARRAYIDX1]], align 2
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[I_025]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, i16* [[ARRAYIDX3]], align 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[ARRAYIDX1]], align 2
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[I_025]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[ARRAYIDX3]], align 2
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP2]] to i32
 ; CHECK-NEXT:    [[CONV4:%.*]] = sext i16 [[TMP0]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[CONV]], [[CONV4]]
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[ADD]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i16, i16* [[ARRAYIDX6]], align 2
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[ADD]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[ARRAYIDX6]], align 2
 ; CHECK-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[CONV8:%.*]] = sext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[CONV7]], [[CONV8]]
@@ -127,8 +127,8 @@ entry:
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:
-  %.pre = load i16, i16* %arg3, align 2
-  %.pre27 = load i16, i16* %arg2, align 2
+  %.pre = load i16, ptr %arg3, align 2
+  %.pre27 = load i16, ptr %arg2, align 2
   br label %for.body
 
 for.cond.cleanup:
@@ -138,22 +138,22 @@ for.cond.cleanup:
 for.body:
   %mac1.026 = phi i32 [ %add11, %for.body ], [ 0, %for.body.preheader ]
   %i.025 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i16, i16* %arg3, i32 %i.025
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %arg3, i32 %i.025
+  %0 = load i16, ptr %arrayidx, align 2
 
 ; Store inserted here, aliasing only with loads from 'arrayidx'.
-  store i16 42, i16* %arrayidx, align 2
+  store i16 42, ptr %arrayidx, align 2
 
   %add = add nuw nsw i32 %i.025, 1
-  %arrayidx1 = getelementptr inbounds i16, i16* %arg3, i32 %add
-  %1 = load i16, i16* %arrayidx1, align 2
-  %arrayidx3 = getelementptr inbounds i16, i16* %arg2, i32 %i.025
-  %2 = load i16, i16* %arrayidx3, align 2
+  %arrayidx1 = getelementptr inbounds i16, ptr %arg3, i32 %add
+  %1 = load i16, ptr %arrayidx1, align 2
+  %arrayidx3 = getelementptr inbounds i16, ptr %arg2, i32 %i.025
+  %2 = load i16, ptr %arrayidx3, align 2
   %conv = sext i16 %2 to i32
   %conv4 = sext i16 %0 to i32
   %mul = mul nsw i32 %conv, %conv4
-  %arrayidx6 = getelementptr inbounds i16, i16* %arg2, i32 %add
-  %3 = load i16, i16* %arrayidx6, align 2
+  %arrayidx6 = getelementptr inbounds i16, ptr %arg2, i32 %add
+  %3 = load i16, ptr %arrayidx6, align 2
   %conv7 = sext i16 %3 to i32
   %conv8 = sext i16 %1 to i32
   %mul9 = mul nsw i32 %conv7, %conv8
@@ -166,14 +166,14 @@ for.body:
   br i1 %exitcond, label %for.body, label %for.cond.cleanup
 }
 
-define dso_local i32 @store_dominates_all(i32 %arg, i32* nocapture %arg1, i16* nocapture readonly %arg2, i16* nocapture readonly %arg3) {
+define dso_local i32 @store_dominates_all(i32 %arg, ptr nocapture %arg1, ptr nocapture readonly %arg2, ptr nocapture readonly %arg3) {
 ; CHECK-LABEL: @store_dominates_all(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP24:%.*]] = icmp sgt i32 [[ARG:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP24]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, i16* [[ARG3:%.*]], align 2
-; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, i16* [[ARG2:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, ptr [[ARG3:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, ptr [[ARG2:%.*]], align 2
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[MAC1_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP13:%.*]], [[FOR_BODY]] ]
@@ -181,23 +181,21 @@ define dso_local i32 @store_dominates_all(i32 %arg, i32* nocapture %arg1, i16* n
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[MAC1_026:%.*]] = phi i32 [ [[TMP13]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_025:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[I_025]]
-; CHECK-NEXT:    store i16 42, i16* [[ARRAYIDX]], align 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[ARRAYIDX]] to i32*
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[I_025]]
+; CHECK-NEXT:    store i16 42, ptr [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP2]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i16
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext i16 [[TMP6]] to i32
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[I_025]], 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[ADD]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i16, i16* [[ARRAYIDX1]], align 2
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[I_025]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load i16, i16* [[ARRAYIDX3]], align 2
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i16* [[ARRAYIDX3]] to i32*
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP10]], align 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[ADD]]
+; CHECK-NEXT:    [[TMP8:%.*]] = load i16, ptr [[ARRAYIDX1]], align 2
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[I_025]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load i16, ptr [[ARRAYIDX3]], align 2
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX3]], align 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = trunc i32 [[TMP11]] to i16
 ; CHECK-NEXT:    [[TMP13]] = call i32 @llvm.arm.smlad(i32 [[TMP11]], i32 [[TMP2]], i32 [[MAC1_026]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext i16 [[TMP12]] to i32
@@ -207,8 +205,8 @@ define dso_local i32 @store_dominates_all(i32 %arg, i32* nocapture %arg1, i16* n
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP9]] to i32
 ; CHECK-NEXT:    [[CONV4:%.*]] = sext i16 [[TMP0]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP14]], [[TMP4]]
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[ADD]]
-; CHECK-NEXT:    [[TMP18:%.*]] = load i16, i16* [[ARRAYIDX6]], align 2
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[ADD]]
+; CHECK-NEXT:    [[TMP18:%.*]] = load i16, ptr [[ARRAYIDX6]], align 2
 ; CHECK-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP18]] to i32
 ; CHECK-NEXT:    [[CONV8:%.*]] = sext i16 [[TMP8]] to i32
 ; CHECK-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[TMP17]], [[TMP7]]
@@ -222,8 +220,8 @@ entry:
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:
-  %.pre = load i16, i16* %arg3, align 2
-  %.pre27 = load i16, i16* %arg2, align 2
+  %.pre = load i16, ptr %arg3, align 2
+  %.pre27 = load i16, ptr %arg2, align 2
   br label %for.body
 
 for.cond.cleanup:
@@ -233,19 +231,19 @@ for.cond.cleanup:
 for.body:
   %mac1.026 = phi i32 [ %add11, %for.body ], [ 0, %for.body.preheader ]
   %i.025 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i16, i16* %arg3, i32 %i.025
-  store i16 42, i16* %arrayidx, align 2
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %arg3, i32 %i.025
+  store i16 42, ptr %arrayidx, align 2
+  %0 = load i16, ptr %arrayidx, align 2
   %add = add nuw nsw i32 %i.025, 1
-  %arrayidx1 = getelementptr inbounds i16, i16* %arg3, i32 %add
-  %1 = load i16, i16* %arrayidx1, align 2
-  %arrayidx3 = getelementptr inbounds i16, i16* %arg2, i32 %i.025
-  %2 = load i16, i16* %arrayidx3, align 2
+  %arrayidx1 = getelementptr inbounds i16, ptr %arg3, i32 %add
+  %1 = load i16, ptr %arrayidx1, align 2
+  %arrayidx3 = getelementptr inbounds i16, ptr %arg2, i32 %i.025
+  %2 = load i16, ptr %arrayidx3, align 2
   %conv = sext i16 %2 to i32
   %conv4 = sext i16 %0 to i32
   %mul = mul nsw i32 %conv, %conv4
-  %arrayidx6 = getelementptr inbounds i16, i16* %arg2, i32 %add
-  %3 = load i16, i16* %arrayidx6, align 2
+  %arrayidx6 = getelementptr inbounds i16, ptr %arg2, i32 %add
+  %3 = load i16, ptr %arrayidx6, align 2
   %conv7 = sext i16 %3 to i32
   %conv8 = sext i16 %1 to i32
   %mul9 = mul nsw i32 %conv7, %conv8
@@ -255,14 +253,14 @@ for.body:
   br i1 %exitcond, label %for.body, label %for.cond.cleanup
 }
 
-define dso_local i32 @loads_dominate(i32 %arg, i32* nocapture %arg1, i16* nocapture readonly %arg2, i16* nocapture readonly %arg3) {
+define dso_local i32 @loads_dominate(i32 %arg, ptr nocapture %arg1, ptr nocapture readonly %arg2, ptr nocapture readonly %arg3) {
 ; CHECK-LABEL: @loads_dominate(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP24:%.*]] = icmp sgt i32 [[ARG:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP24]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, i16* [[ARG3:%.*]], align 2
-; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, i16* [[ARG2:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, ptr [[ARG3:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, ptr [[ARG2:%.*]], align 2
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[MAC1_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP13:%.*]], [[FOR_BODY]] ]
@@ -270,22 +268,20 @@ define dso_local i32 @loads_dominate(i32 %arg, i32* nocapture %arg1, i16* nocapt
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[MAC1_026:%.*]] = phi i32 [ [[TMP13]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_025:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[I_025]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[ARRAYIDX]] to i32*
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[I_025]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP2]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i16
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext i16 [[TMP6]] to i32
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[I_025]], 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[ADD]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i16, i16* [[ARRAYIDX1]], align 2
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[I_025]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load i16, i16* [[ARRAYIDX3]], align 2
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i16* [[ARRAYIDX3]] to i32*
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP10]], align 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[ADD]]
+; CHECK-NEXT:    [[TMP8:%.*]] = load i16, ptr [[ARRAYIDX1]], align 2
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[I_025]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load i16, ptr [[ARRAYIDX3]], align 2
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX3]], align 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = trunc i32 [[TMP11]] to i16
 ; CHECK-NEXT:    [[TMP13]] = call i32 @llvm.arm.smlad(i32 [[TMP11]], i32 [[TMP2]], i32 [[MAC1_026]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext i16 [[TMP12]] to i32
@@ -295,14 +291,14 @@ define dso_local i32 @loads_dominate(i32 %arg, i32* nocapture %arg1, i16* nocapt
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP9]] to i32
 ; CHECK-NEXT:    [[CONV4:%.*]] = sext i16 [[TMP0]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP14]], [[TMP4]]
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[ADD]]
-; CHECK-NEXT:    [[TMP18:%.*]] = load i16, i16* [[ARRAYIDX6]], align 2
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[ADD]]
+; CHECK-NEXT:    [[TMP18:%.*]] = load i16, ptr [[ARRAYIDX6]], align 2
 ; CHECK-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP18]] to i32
 ; CHECK-NEXT:    [[CONV8:%.*]] = sext i16 [[TMP8]] to i32
 ; CHECK-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[TMP17]], [[TMP7]]
 ; CHECK-NEXT:    [[ADD10:%.*]] = add i32 [[MUL]], [[MAC1_026]]
 ; CHECK-NEXT:    [[ADD11:%.*]] = add i32 [[MUL9]], [[ADD10]]
-; CHECK-NEXT:    store i16 42, i16* [[ARRAYIDX]], align 2
+; CHECK-NEXT:    store i16 42, ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[ADD]], [[ARG]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP]]
 ;
@@ -311,8 +307,8 @@ entry:
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:
-  %.pre = load i16, i16* %arg3, align 2
-  %.pre27 = load i16, i16* %arg2, align 2
+  %.pre = load i16, ptr %arg3, align 2
+  %.pre27 = load i16, ptr %arg2, align 2
   br label %for.body
 
 for.cond.cleanup:
@@ -322,36 +318,36 @@ for.cond.cleanup:
 for.body:
   %mac1.026 = phi i32 [ %add11, %for.body ], [ 0, %for.body.preheader ]
   %i.025 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i16, i16* %arg3, i32 %i.025
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %arg3, i32 %i.025
+  %0 = load i16, ptr %arrayidx, align 2
   %add = add nuw nsw i32 %i.025, 1
-  %arrayidx1 = getelementptr inbounds i16, i16* %arg3, i32 %add
-  %1 = load i16, i16* %arrayidx1, align 2
-  %arrayidx3 = getelementptr inbounds i16, i16* %arg2, i32 %i.025
-  %2 = load i16, i16* %arrayidx3, align 2
+  %arrayidx1 = getelementptr inbounds i16, ptr %arg3, i32 %add
+  %1 = load i16, ptr %arrayidx1, align 2
+  %arrayidx3 = getelementptr inbounds i16, ptr %arg2, i32 %i.025
+  %2 = load i16, ptr %arrayidx3, align 2
   %conv = sext i16 %2 to i32
   %conv4 = sext i16 %0 to i32
   %mul = mul nsw i32 %conv, %conv4
-  %arrayidx6 = getelementptr inbounds i16, i16* %arg2, i32 %add
-  %3 = load i16, i16* %arrayidx6, align 2
+  %arrayidx6 = getelementptr inbounds i16, ptr %arg2, i32 %add
+  %3 = load i16, ptr %arrayidx6, align 2
   %conv7 = sext i16 %3 to i32
   %conv8 = sext i16 %1 to i32
   %mul9 = mul nsw i32 %conv7, %conv8
   %add10 = add i32 %mul, %mac1.026
   %add11 = add i32 %mul9, %add10
-  store i16 42, i16* %arrayidx, align 2
+  store i16 42, ptr %arrayidx, align 2
   %exitcond = icmp ne i32 %add, %arg
   br i1 %exitcond, label %for.body, label %for.cond.cleanup
 }
 
-define dso_local i32 @store_alias_arg3_legal_1(i32 %arg, i32* nocapture %arg1, i16* noalias nocapture readonly %arg2, i16* nocapture readonly %arg3) {
+define dso_local i32 @store_alias_arg3_legal_1(i32 %arg, ptr nocapture %arg1, ptr noalias nocapture readonly %arg2, ptr nocapture readonly %arg3) {
 ; CHECK-LABEL: @store_alias_arg3_legal_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP24:%.*]] = icmp sgt i32 [[ARG:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP24]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, i16* [[ARG3:%.*]], align 2
-; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, i16* [[ARG2:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, ptr [[ARG3:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, ptr [[ARG2:%.*]], align 2
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[MAC1_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP13:%.*]], [[FOR_BODY]] ]
@@ -359,22 +355,20 @@ define dso_local i32 @store_alias_arg3_legal_1(i32 %arg, i32* nocapture %arg1, i
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[MAC1_026:%.*]] = phi i32 [ [[TMP13]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_025:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[I_025]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[ARRAYIDX]] to i32*
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[I_025]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP2]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i16
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext i16 [[TMP6]] to i32
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[I_025]], 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[ADD]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i16, i16* [[ARRAYIDX1]], align 2
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[I_025]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load i16, i16* [[ARRAYIDX3]], align 2
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i16* [[ARRAYIDX3]] to i32*
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP10]], align 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[ADD]]
+; CHECK-NEXT:    [[TMP8:%.*]] = load i16, ptr [[ARRAYIDX1]], align 2
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[I_025]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load i16, ptr [[ARRAYIDX3]], align 2
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX3]], align 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = trunc i32 [[TMP11]] to i16
 ; CHECK-NEXT:    [[TMP13]] = call i32 @llvm.arm.smlad(i32 [[TMP11]], i32 [[TMP2]], i32 [[MAC1_026]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext i16 [[TMP12]] to i32
@@ -384,9 +378,9 @@ define dso_local i32 @store_alias_arg3_legal_1(i32 %arg, i32* nocapture %arg1, i
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP9]] to i32
 ; CHECK-NEXT:    [[CONV4:%.*]] = sext i16 [[TMP0]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP14]], [[TMP4]]
-; CHECK-NEXT:    store i16 42, i16* [[ARRAYIDX]], align 2
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[ADD]]
-; CHECK-NEXT:    [[TMP18:%.*]] = load i16, i16* [[ARRAYIDX6]], align 2
+; CHECK-NEXT:    store i16 42, ptr [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[ADD]]
+; CHECK-NEXT:    [[TMP18:%.*]] = load i16, ptr [[ARRAYIDX6]], align 2
 ; CHECK-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP18]] to i32
 ; CHECK-NEXT:    [[CONV8:%.*]] = sext i16 [[TMP8]] to i32
 ; CHECK-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[TMP17]], [[TMP7]]
@@ -400,8 +394,8 @@ entry:
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:
-  %.pre = load i16, i16* %arg3, align 2
-  %.pre27 = load i16, i16* %arg2, align 2
+  %.pre = load i16, ptr %arg3, align 2
+  %.pre27 = load i16, ptr %arg2, align 2
   br label %for.body
 
 for.cond.cleanup:
@@ -411,19 +405,19 @@ for.cond.cleanup:
 for.body:
   %mac1.026 = phi i32 [ %add11, %for.body ], [ 0, %for.body.preheader ]
   %i.025 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i16, i16* %arg3, i32 %i.025
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %arg3, i32 %i.025
+  %0 = load i16, ptr %arrayidx, align 2
   %add = add nuw nsw i32 %i.025, 1
-  %arrayidx1 = getelementptr inbounds i16, i16* %arg3, i32 %add
-  %1 = load i16, i16* %arrayidx1, align 2
-  %arrayidx3 = getelementptr inbounds i16, i16* %arg2, i32 %i.025
-  %2 = load i16, i16* %arrayidx3, align 2
+  %arrayidx1 = getelementptr inbounds i16, ptr %arg3, i32 %add
+  %1 = load i16, ptr %arrayidx1, align 2
+  %arrayidx3 = getelementptr inbounds i16, ptr %arg2, i32 %i.025
+  %2 = load i16, ptr %arrayidx3, align 2
   %conv = sext i16 %2 to i32
   %conv4 = sext i16 %0 to i32
   %mul = mul nsw i32 %conv, %conv4
-  store i16 42, i16* %arrayidx, align 2
-  %arrayidx6 = getelementptr inbounds i16, i16* %arg2, i32 %add
-  %3 = load i16, i16* %arrayidx6, align 2
+  store i16 42, ptr %arrayidx, align 2
+  %arrayidx6 = getelementptr inbounds i16, ptr %arg2, i32 %add
+  %3 = load i16, ptr %arrayidx6, align 2
   %conv7 = sext i16 %3 to i32
   %conv8 = sext i16 %1 to i32
   %mul9 = mul nsw i32 %conv7, %conv8
@@ -433,14 +427,14 @@ for.body:
   br i1 %exitcond, label %for.body, label %for.cond.cleanup
 }
 
-define dso_local i32 @store_alias_arg3_legal_2(i32 %arg, i32* nocapture %arg1, i16* noalias nocapture readonly %arg2, i16* nocapture readonly %arg3) {
+define dso_local i32 @store_alias_arg3_legal_2(i32 %arg, ptr nocapture %arg1, ptr noalias nocapture readonly %arg2, ptr nocapture readonly %arg3) {
 ; CHECK-LABEL: @store_alias_arg3_legal_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP24:%.*]] = icmp sgt i32 [[ARG:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP24]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, i16* [[ARG3:%.*]], align 2
-; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, i16* [[ARG2:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, ptr [[ARG3:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, ptr [[ARG2:%.*]], align 2
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[MAC1_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP13:%.*]], [[FOR_BODY]] ]
@@ -448,23 +442,21 @@ define dso_local i32 @store_alias_arg3_legal_2(i32 %arg, i32* nocapture %arg1, i
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[MAC1_026:%.*]] = phi i32 [ [[TMP13]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_025:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[I_025]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[ARRAYIDX]] to i32*
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[I_025]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP2]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i16
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext i16 [[TMP6]] to i32
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[I_025]], 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[ADD]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i16, i16* [[ARRAYIDX1]], align 2
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[I_025]]
-; CHECK-NEXT:    store i16 42, i16* [[ARRAYIDX]], align 2
-; CHECK-NEXT:    [[TMP9:%.*]] = load i16, i16* [[ARRAYIDX3]], align 2
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i16* [[ARRAYIDX3]] to i32*
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP10]], align 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[ADD]]
+; CHECK-NEXT:    [[TMP8:%.*]] = load i16, ptr [[ARRAYIDX1]], align 2
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[I_025]]
+; CHECK-NEXT:    store i16 42, ptr [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[TMP9:%.*]] = load i16, ptr [[ARRAYIDX3]], align 2
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX3]], align 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = trunc i32 [[TMP11]] to i16
 ; CHECK-NEXT:    [[TMP13]] = call i32 @llvm.arm.smlad(i32 [[TMP11]], i32 [[TMP2]], i32 [[MAC1_026]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext i16 [[TMP12]] to i32
@@ -474,8 +466,8 @@ define dso_local i32 @store_alias_arg3_legal_2(i32 %arg, i32* nocapture %arg1, i
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP9]] to i32
 ; CHECK-NEXT:    [[CONV4:%.*]] = sext i16 [[TMP0]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP14]], [[TMP4]]
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[ADD]]
-; CHECK-NEXT:    [[TMP18:%.*]] = load i16, i16* [[ARRAYIDX6]], align 2
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[ADD]]
+; CHECK-NEXT:    [[TMP18:%.*]] = load i16, ptr [[ARRAYIDX6]], align 2
 ; CHECK-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP18]] to i32
 ; CHECK-NEXT:    [[CONV8:%.*]] = sext i16 [[TMP8]] to i32
 ; CHECK-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[TMP17]], [[TMP7]]
@@ -489,8 +481,8 @@ entry:
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:
-  %.pre = load i16, i16* %arg3, align 2
-  %.pre27 = load i16, i16* %arg2, align 2
+  %.pre = load i16, ptr %arg3, align 2
+  %.pre27 = load i16, ptr %arg2, align 2
   br label %for.body
 
 for.cond.cleanup:
@@ -500,19 +492,19 @@ for.cond.cleanup:
 for.body:
   %mac1.026 = phi i32 [ %add11, %for.body ], [ 0, %for.body.preheader ]
   %i.025 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i16, i16* %arg3, i32 %i.025
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %arg3, i32 %i.025
+  %0 = load i16, ptr %arrayidx, align 2
   %add = add nuw nsw i32 %i.025, 1
-  %arrayidx1 = getelementptr inbounds i16, i16* %arg3, i32 %add
-  %1 = load i16, i16* %arrayidx1, align 2
-  %arrayidx3 = getelementptr inbounds i16, i16* %arg2, i32 %i.025
-  store i16 42, i16* %arrayidx, align 2
-  %2 = load i16, i16* %arrayidx3, align 2
+  %arrayidx1 = getelementptr inbounds i16, ptr %arg3, i32 %add
+  %1 = load i16, ptr %arrayidx1, align 2
+  %arrayidx3 = getelementptr inbounds i16, ptr %arg2, i32 %i.025
+  store i16 42, ptr %arrayidx, align 2
+  %2 = load i16, ptr %arrayidx3, align 2
   %conv = sext i16 %2 to i32
   %conv4 = sext i16 %0 to i32
   %mul = mul nsw i32 %conv, %conv4
-  %arrayidx6 = getelementptr inbounds i16, i16* %arg2, i32 %add
-  %3 = load i16, i16* %arrayidx6, align 2
+  %arrayidx6 = getelementptr inbounds i16, ptr %arg2, i32 %add
+  %3 = load i16, ptr %arrayidx6, align 2
   %conv7 = sext i16 %3 to i32
   %conv8 = sext i16 %1 to i32
   %mul9 = mul nsw i32 %conv7, %conv8
@@ -522,14 +514,14 @@ for.body:
   br i1 %exitcond, label %for.body, label %for.cond.cleanup
 }
 
-define dso_local i32 @store_alias_arg3_illegal_1(i32 %arg, i32* nocapture %arg1, i16* noalias nocapture readonly %arg2, i16* noalias nocapture %arg3) {
+define dso_local i32 @store_alias_arg3_illegal_1(i32 %arg, ptr nocapture %arg1, ptr noalias nocapture readonly %arg2, ptr noalias nocapture %arg3) {
 ; CHECK-LABEL: @store_alias_arg3_illegal_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP24:%.*]] = icmp sgt i32 [[ARG:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP24]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, i16* [[ARG3:%.*]], align 2
-; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, i16* [[ARG2:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, ptr [[ARG3:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, ptr [[ARG2:%.*]], align 2
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[MAC1_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD11:%.*]], [[FOR_BODY]] ]
@@ -537,19 +529,19 @@ define dso_local i32 @store_alias_arg3_illegal_1(i32 %arg, i32* nocapture %arg1,
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[MAC1_026:%.*]] = phi i32 [ [[ADD11]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_025:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[I_025]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[I_025]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[I_025]], 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[ADD]]
-; CHECK-NEXT:    store i16 42, i16* [[ARRAYIDX1]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load i16, i16* [[ARRAYIDX1]], align 2
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[I_025]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, i16* [[ARRAYIDX3]], align 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[ADD]]
+; CHECK-NEXT:    store i16 42, ptr [[ARRAYIDX1]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[ARRAYIDX1]], align 2
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[I_025]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[ARRAYIDX3]], align 2
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP2]] to i32
 ; CHECK-NEXT:    [[CONV4:%.*]] = sext i16 [[TMP0]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[CONV]], [[CONV4]]
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[ADD]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i16, i16* [[ARRAYIDX6]], align 2
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[ADD]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[ARRAYIDX6]], align 2
 ; CHECK-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[CONV8:%.*]] = sext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[CONV7]], [[CONV8]]
@@ -563,8 +555,8 @@ entry:
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:
-  %.pre = load i16, i16* %arg3, align 2
-  %.pre27 = load i16, i16* %arg2, align 2
+  %.pre = load i16, ptr %arg3, align 2
+  %.pre27 = load i16, ptr %arg2, align 2
   br label %for.body
 
 for.cond.cleanup:
@@ -574,19 +566,19 @@ for.cond.cleanup:
 for.body:
   %mac1.026 = phi i32 [ %add11, %for.body ], [ 0, %for.body.preheader ]
   %i.025 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i16, i16* %arg3, i32 %i.025
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %arg3, i32 %i.025
+  %0 = load i16, ptr %arrayidx, align 2
   %add = add nuw nsw i32 %i.025, 1
-  %arrayidx1 = getelementptr inbounds i16, i16* %arg3, i32 %add
-  store i16 42, i16* %arrayidx1, align 2
-  %1 = load i16, i16* %arrayidx1, align 2
-  %arrayidx3 = getelementptr inbounds i16, i16* %arg2, i32 %i.025
-  %2 = load i16, i16* %arrayidx3, align 2
+  %arrayidx1 = getelementptr inbounds i16, ptr %arg3, i32 %add
+  store i16 42, ptr %arrayidx1, align 2
+  %1 = load i16, ptr %arrayidx1, align 2
+  %arrayidx3 = getelementptr inbounds i16, ptr %arg2, i32 %i.025
+  %2 = load i16, ptr %arrayidx3, align 2
   %conv = sext i16 %2 to i32
   %conv4 = sext i16 %0 to i32
   %mul = mul nsw i32 %conv, %conv4
-  %arrayidx6 = getelementptr inbounds i16, i16* %arg2, i32 %add
-  %3 = load i16, i16* %arrayidx6, align 2
+  %arrayidx6 = getelementptr inbounds i16, ptr %arg2, i32 %add
+  %3 = load i16, ptr %arrayidx6, align 2
   %conv7 = sext i16 %3 to i32
   %conv8 = sext i16 %1 to i32
   %mul9 = mul nsw i32 %conv7, %conv8
@@ -596,14 +588,14 @@ for.body:
   br i1 %exitcond, label %for.body, label %for.cond.cleanup
 }
 
-define dso_local i32 @store_alias_arg3_illegal_2(i32 %arg, i32* nocapture %arg1, i16* noalias nocapture readonly %arg2, i16* noalias nocapture %arg3) {
+define dso_local i32 @store_alias_arg3_illegal_2(i32 %arg, ptr nocapture %arg1, ptr noalias nocapture readonly %arg2, ptr noalias nocapture %arg3) {
 ; CHECK-LABEL: @store_alias_arg3_illegal_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP24:%.*]] = icmp sgt i32 [[ARG:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP24]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, i16* [[ARG3:%.*]], align 2
-; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, i16* [[ARG2:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, ptr [[ARG3:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, ptr [[ARG2:%.*]], align 2
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[MAC1_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD11:%.*]], [[FOR_BODY]] ]
@@ -611,19 +603,19 @@ define dso_local i32 @store_alias_arg3_illegal_2(i32 %arg, i32* nocapture %arg1,
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[MAC1_026:%.*]] = phi i32 [ [[ADD11]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_025:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[I_025]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[I_025]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[I_025]], 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[ADD]]
-; CHECK-NEXT:    store i16 42, i16* [[ARRAYIDX]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load i16, i16* [[ARRAYIDX1]], align 2
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[I_025]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, i16* [[ARRAYIDX3]], align 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[ADD]]
+; CHECK-NEXT:    store i16 42, ptr [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[ARRAYIDX1]], align 2
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[I_025]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[ARRAYIDX3]], align 2
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP2]] to i32
 ; CHECK-NEXT:    [[CONV4:%.*]] = sext i16 [[TMP0]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[CONV]], [[CONV4]]
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[ADD]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i16, i16* [[ARRAYIDX6]], align 2
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[ADD]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[ARRAYIDX6]], align 2
 ; CHECK-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[CONV8:%.*]] = sext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[CONV7]], [[CONV8]]
@@ -637,8 +629,8 @@ entry:
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:
-  %.pre = load i16, i16* %arg3, align 2
-  %.pre27 = load i16, i16* %arg2, align 2
+  %.pre = load i16, ptr %arg3, align 2
+  %.pre27 = load i16, ptr %arg2, align 2
   br label %for.body
 
 for.cond.cleanup:
@@ -648,19 +640,19 @@ for.cond.cleanup:
 for.body:
   %mac1.026 = phi i32 [ %add11, %for.body ], [ 0, %for.body.preheader ]
   %i.025 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i16, i16* %arg3, i32 %i.025
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %arg3, i32 %i.025
+  %0 = load i16, ptr %arrayidx, align 2
   %add = add nuw nsw i32 %i.025, 1
-  %arrayidx1 = getelementptr inbounds i16, i16* %arg3, i32 %add
-  store i16 42, i16* %arrayidx, align 2
-  %1 = load i16, i16* %arrayidx1, align 2
-  %arrayidx3 = getelementptr inbounds i16, i16* %arg2, i32 %i.025
-  %2 = load i16, i16* %arrayidx3, align 2
+  %arrayidx1 = getelementptr inbounds i16, ptr %arg3, i32 %add
+  store i16 42, ptr %arrayidx, align 2
+  %1 = load i16, ptr %arrayidx1, align 2
+  %arrayidx3 = getelementptr inbounds i16, ptr %arg2, i32 %i.025
+  %2 = load i16, ptr %arrayidx3, align 2
   %conv = sext i16 %2 to i32
   %conv4 = sext i16 %0 to i32
   %mul = mul nsw i32 %conv, %conv4
-  %arrayidx6 = getelementptr inbounds i16, i16* %arg2, i32 %add
-  %3 = load i16, i16* %arrayidx6, align 2
+  %arrayidx6 = getelementptr inbounds i16, ptr %arg2, i32 %add
+  %3 = load i16, ptr %arrayidx6, align 2
   %conv7 = sext i16 %3 to i32
   %conv8 = sext i16 %1 to i32
   %mul9 = mul nsw i32 %conv7, %conv8
@@ -670,14 +662,14 @@ for.body:
   br i1 %exitcond, label %for.body, label %for.cond.cleanup
 }
 
-define dso_local i32 @store_alias_arg2_illegal_1(i32 %arg, i32* nocapture %arg1, i16* nocapture readonly %arg2, i16* nocapture readonly %arg3) {
+define dso_local i32 @store_alias_arg2_illegal_1(i32 %arg, ptr nocapture %arg1, ptr nocapture readonly %arg2, ptr nocapture readonly %arg3) {
 ; CHECK-LABEL: @store_alias_arg2_illegal_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP24:%.*]] = icmp sgt i32 [[ARG:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP24]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, i16* [[ARG3:%.*]], align 2
-; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, i16* [[ARG2:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, ptr [[ARG3:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, ptr [[ARG2:%.*]], align 2
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[MAC1_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD11:%.*]], [[FOR_BODY]] ]
@@ -685,19 +677,19 @@ define dso_local i32 @store_alias_arg2_illegal_1(i32 %arg, i32* nocapture %arg1,
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[MAC1_026:%.*]] = phi i32 [ [[ADD11]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_025:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[I_025]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[I_025]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[I_025]], 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[ADD]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i16, i16* [[ARRAYIDX1]], align 2
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[I_025]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, i16* [[ARRAYIDX3]], align 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[ARRAYIDX1]], align 2
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[I_025]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[ARRAYIDX3]], align 2
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP2]] to i32
 ; CHECK-NEXT:    [[CONV4:%.*]] = sext i16 [[TMP0]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[CONV]], [[CONV4]]
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[ADD]]
-; CHECK-NEXT:    store i16 42, i16* [[ARRAYIDX6]], align 2
-; CHECK-NEXT:    [[TMP3:%.*]] = load i16, i16* [[ARRAYIDX6]], align 2
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[ADD]]
+; CHECK-NEXT:    store i16 42, ptr [[ARRAYIDX6]], align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[ARRAYIDX6]], align 2
 ; CHECK-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[CONV8:%.*]] = sext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[CONV7]], [[CONV8]]
@@ -711,8 +703,8 @@ entry:
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:
-  %.pre = load i16, i16* %arg3, align 2
-  %.pre27 = load i16, i16* %arg2, align 2
+  %.pre = load i16, ptr %arg3, align 2
+  %.pre27 = load i16, ptr %arg2, align 2
   br label %for.body
 
 for.cond.cleanup:
@@ -722,19 +714,19 @@ for.cond.cleanup:
 for.body:
   %mac1.026 = phi i32 [ %add11, %for.body ], [ 0, %for.body.preheader ]
   %i.025 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i16, i16* %arg3, i32 %i.025
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %arg3, i32 %i.025
+  %0 = load i16, ptr %arrayidx, align 2
   %add = add nuw nsw i32 %i.025, 1
-  %arrayidx1 = getelementptr inbounds i16, i16* %arg3, i32 %add
-  %1 = load i16, i16* %arrayidx1, align 2
-  %arrayidx3 = getelementptr inbounds i16, i16* %arg2, i32 %i.025
-  %2 = load i16, i16* %arrayidx3, align 2
+  %arrayidx1 = getelementptr inbounds i16, ptr %arg3, i32 %add
+  %1 = load i16, ptr %arrayidx1, align 2
+  %arrayidx3 = getelementptr inbounds i16, ptr %arg2, i32 %i.025
+  %2 = load i16, ptr %arrayidx3, align 2
   %conv = sext i16 %2 to i32
   %conv4 = sext i16 %0 to i32
   %mul = mul nsw i32 %conv, %conv4
-  %arrayidx6 = getelementptr inbounds i16, i16* %arg2, i32 %add
-  store i16 42, i16* %arrayidx6, align 2
-  %3 = load i16, i16* %arrayidx6, align 2
+  %arrayidx6 = getelementptr inbounds i16, ptr %arg2, i32 %add
+  store i16 42, ptr %arrayidx6, align 2
+  %3 = load i16, ptr %arrayidx6, align 2
   %conv7 = sext i16 %3 to i32
   %conv8 = sext i16 %1 to i32
   %mul9 = mul nsw i32 %conv7, %conv8
@@ -744,14 +736,14 @@ for.body:
   br i1 %exitcond, label %for.body, label %for.cond.cleanup
 }
 
-define dso_local i32 @store_alias_arg2_illegal_2(i32 %arg, i32* nocapture %arg1, i16* nocapture readonly %arg2, i16* nocapture readonly %arg3) {
+define dso_local i32 @store_alias_arg2_illegal_2(i32 %arg, ptr nocapture %arg1, ptr nocapture readonly %arg2, ptr nocapture readonly %arg3) {
 ; CHECK-LABEL: @store_alias_arg2_illegal_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP24:%.*]] = icmp sgt i32 [[ARG:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP24]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, i16* [[ARG3:%.*]], align 2
-; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, i16* [[ARG2:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, ptr [[ARG3:%.*]], align 2
+; CHECK-NEXT:    [[DOTPRE27:%.*]] = load i16, ptr [[ARG2:%.*]], align 2
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[MAC1_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD11:%.*]], [[FOR_BODY]] ]
@@ -759,19 +751,19 @@ define dso_local i32 @store_alias_arg2_illegal_2(i32 %arg, i32* nocapture %arg1,
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[MAC1_026:%.*]] = phi i32 [ [[ADD11]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_025:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[I_025]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[I_025]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[I_025]], 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, i16* [[ARG3]], i32 [[ADD]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i16, i16* [[ARRAYIDX1]], align 2
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[I_025]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, i16* [[ARRAYIDX3]], align 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i32 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[ARRAYIDX1]], align 2
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[I_025]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[ARRAYIDX3]], align 2
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP2]] to i32
 ; CHECK-NEXT:    [[CONV4:%.*]] = sext i16 [[TMP0]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[CONV]], [[CONV4]]
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, i16* [[ARG2]], i32 [[ADD]]
-; CHECK-NEXT:    store i16 42, i16* [[ARRAYIDX3]], align 2
-; CHECK-NEXT:    [[TMP3:%.*]] = load i16, i16* [[ARRAYIDX6]], align 2
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i16, ptr [[ARG2]], i32 [[ADD]]
+; CHECK-NEXT:    store i16 42, ptr [[ARRAYIDX3]], align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[ARRAYIDX6]], align 2
 ; CHECK-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[CONV8:%.*]] = sext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[CONV7]], [[CONV8]]
@@ -785,8 +777,8 @@ entry:
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:
-  %.pre = load i16, i16* %arg3, align 2
-  %.pre27 = load i16, i16* %arg2, align 2
+  %.pre = load i16, ptr %arg3, align 2
+  %.pre27 = load i16, ptr %arg2, align 2
   br label %for.body
 
 for.cond.cleanup:
@@ -796,19 +788,19 @@ for.cond.cleanup:
 for.body:
   %mac1.026 = phi i32 [ %add11, %for.body ], [ 0, %for.body.preheader ]
   %i.025 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i16, i16* %arg3, i32 %i.025
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %arg3, i32 %i.025
+  %0 = load i16, ptr %arrayidx, align 2
   %add = add nuw nsw i32 %i.025, 1
-  %arrayidx1 = getelementptr inbounds i16, i16* %arg3, i32 %add
-  %1 = load i16, i16* %arrayidx1, align 2
-  %arrayidx3 = getelementptr inbounds i16, i16* %arg2, i32 %i.025
-  %2 = load i16, i16* %arrayidx3, align 2
+  %arrayidx1 = getelementptr inbounds i16, ptr %arg3, i32 %add
+  %1 = load i16, ptr %arrayidx1, align 2
+  %arrayidx3 = getelementptr inbounds i16, ptr %arg2, i32 %i.025
+  %2 = load i16, ptr %arrayidx3, align 2
   %conv = sext i16 %2 to i32
   %conv4 = sext i16 %0 to i32
   %mul = mul nsw i32 %conv, %conv4
-  %arrayidx6 = getelementptr inbounds i16, i16* %arg2, i32 %add
-  store i16 42, i16* %arrayidx3, align 2
-  %3 = load i16, i16* %arrayidx6, align 2
+  %arrayidx6 = getelementptr inbounds i16, ptr %arg2, i32 %add
+  store i16 42, ptr %arrayidx3, align 2
+  %3 = load i16, ptr %arrayidx6, align 2
   %conv7 = sext i16 %3 to i32
   %conv8 = sext i16 %1 to i32
   %mul9 = mul nsw i32 %conv7, %conv8
@@ -820,7 +812,7 @@ for.body:
 
 ; TODO: I think we should be able to generate one smlad here. The search fails
 ; when it finds the alias.
-define i32 @one_pair_alias(i16* noalias nocapture readonly %b, i16* noalias nocapture %c) {
+define i32 @one_pair_alias(ptr noalias nocapture readonly %b, ptr noalias nocapture %c) {
 ; CHECK-LABEL: @one_pair_alias(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -832,23 +824,23 @@ define i32 @one_pair_alias(i16* noalias nocapture readonly %b, i16* noalias noca
 ; CHECK-NEXT:    [[ADD3:%.*]] = or i32 [[I_050]], 1
 ; CHECK-NEXT:    [[ADD11:%.*]] = or i32 [[I_050]], 2
 ; CHECK-NEXT:    [[ADD19:%.*]] = or i32 [[I_050]], 3
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[B:%.*]], i32 [[I_050]]
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i16, i16* [[B]], i32 [[ADD3]]
-; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i16, i16* [[B]], i32 [[ADD11]]
-; CHECK-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i16, i16* [[B]], i32 [[ADD19]]
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, i16* [[C:%.*]], i32 [[I_050]]
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i16, i16* [[C]], i32 [[ADD3]]
-; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i16, i16* [[C]], i32 [[ADD11]]
-; CHECK-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds i16, i16* [[C]], i32 [[ADD19]]
-; CHECK-NEXT:    [[TMP:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, i16* [[ARRAYIDX4]], align 2
-; CHECK-NEXT:    [[TMP4:%.*]] = load i16, i16* [[ARRAYIDX12]], align 2
-; CHECK-NEXT:    [[TMP6:%.*]] = load i16, i16* [[ARRAYIDX20]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load i16, i16* [[ARRAYIDX1]], align 2
-; CHECK-NEXT:    store i16 43, i16* [[ARRAYIDX7]], align 2
-; CHECK-NEXT:    [[TMP3:%.*]] = load i16, i16* [[ARRAYIDX7]], align 2
-; CHECK-NEXT:    [[TMP5:%.*]] = load i16, i16* [[ARRAYIDX15]], align 2
-; CHECK-NEXT:    [[TMP7:%.*]] = load i16, i16* [[ARRAYIDX23]], align 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[B:%.*]], i32 [[I_050]]
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[ADD3]]
+; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[ADD11]]
+; CHECK-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[ADD19]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, ptr [[C:%.*]], i32 [[I_050]]
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i16, ptr [[C]], i32 [[ADD3]]
+; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i16, ptr [[C]], i32 [[ADD11]]
+; CHECK-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds i16, ptr [[C]], i32 [[ADD19]]
+; CHECK-NEXT:    [[TMP:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[ARRAYIDX4]], align 2
+; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[ARRAYIDX12]], align 2
+; CHECK-NEXT:    [[TMP6:%.*]] = load i16, ptr [[ARRAYIDX20]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[ARRAYIDX1]], align 2
+; CHECK-NEXT:    store i16 43, ptr [[ARRAYIDX7]], align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[ARRAYIDX7]], align 2
+; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[ARRAYIDX15]], align 2
+; CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr [[ARRAYIDX23]], align 2
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP]] to i32
 ; CHECK-NEXT:    [[CONV2:%.*]] = sext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[CONV2]], [[CONV]]
@@ -881,23 +873,23 @@ for.body:                                         ; preds = %for.body, %entry
   %add3 = or i32 %i.050, 1
   %add11 = or i32 %i.050, 2
   %add19 = or i32 %i.050, 3
-  %arrayidx = getelementptr inbounds i16, i16* %b, i32 %i.050
-  %arrayidx4 = getelementptr inbounds i16, i16* %b, i32 %add3
-  %arrayidx12 = getelementptr inbounds i16, i16* %b, i32 %add11
-  %arrayidx20 = getelementptr inbounds i16, i16* %b, i32 %add19
-  %arrayidx1 = getelementptr inbounds i16, i16* %c, i32 %i.050
-  %arrayidx7 = getelementptr inbounds i16, i16* %c, i32 %add3
-  %arrayidx15 = getelementptr inbounds i16, i16* %c, i32 %add11
-  %arrayidx23 = getelementptr inbounds i16, i16* %c, i32 %add19
-  %tmp = load i16, i16* %arrayidx, align 2
-  %tmp2 = load i16, i16* %arrayidx4, align 2
-  %tmp4 = load i16, i16* %arrayidx12, align 2
-  %tmp6 = load i16, i16* %arrayidx20, align 2
-  %tmp1 = load i16, i16* %arrayidx1, align 2
-  store i16 43, i16 *%arrayidx7
-  %tmp3 = load i16, i16* %arrayidx7, align 2
-  %tmp5 = load i16, i16* %arrayidx15, align 2
-  %tmp7 = load i16, i16* %arrayidx23, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %b, i32 %i.050
+  %arrayidx4 = getelementptr inbounds i16, ptr %b, i32 %add3
+  %arrayidx12 = getelementptr inbounds i16, ptr %b, i32 %add11
+  %arrayidx20 = getelementptr inbounds i16, ptr %b, i32 %add19
+  %arrayidx1 = getelementptr inbounds i16, ptr %c, i32 %i.050
+  %arrayidx7 = getelementptr inbounds i16, ptr %c, i32 %add3
+  %arrayidx15 = getelementptr inbounds i16, ptr %c, i32 %add11
+  %arrayidx23 = getelementptr inbounds i16, ptr %c, i32 %add19
+  %tmp = load i16, ptr %arrayidx, align 2
+  %tmp2 = load i16, ptr %arrayidx4, align 2
+  %tmp4 = load i16, ptr %arrayidx12, align 2
+  %tmp6 = load i16, ptr %arrayidx20, align 2
+  %tmp1 = load i16, ptr %arrayidx1, align 2
+  store i16 43, ptr %arrayidx7
+  %tmp3 = load i16, ptr %arrayidx7, align 2
+  %tmp5 = load i16, ptr %arrayidx15, align 2
+  %tmp7 = load i16, ptr %arrayidx23, align 2
   %conv = sext i16 %tmp to i32
   %conv2 = sext i16 %tmp1 to i32
   %mul = mul nsw i32 %conv2, %conv
