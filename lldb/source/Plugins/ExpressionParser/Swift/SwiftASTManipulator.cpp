@@ -73,10 +73,10 @@ void SwiftASTManipulatorBase::VariableInfo::Print(
   else
     stream.PutCString("<no type>");
 
-  if (MetadataIs<VariableMetadataResult>())
+  if (llvm::isa<VariableMetadataResult>(m_metadata.get()))
     stream.Printf(", is_result");
 
-  if (MetadataIs<VariableMetadataError>())
+  if (llvm::isa<VariableMetadataError>(m_metadata.get()))
     stream.Printf(", is_error");
 
   stream.PutChar(']');
