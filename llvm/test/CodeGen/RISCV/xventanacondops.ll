@@ -633,3 +633,79 @@ define i64 @zero2_setne_neg2048(i64 %a, i64 %rs1) {
   %sel = select i1 %rc, i64 0, i64 %rs1
   ret i64 %sel
 }
+
+; Test that we are able to convert the sext.w int he loop to mv.
+define void @sextw_removal_maskc(i1 %c, i32 signext %arg, i32 signext %arg1) nounwind {
+; CHECK-LABEL: sextw_removal_maskc:
+; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    addi sp, sp, -32
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    mv s0, a2
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    vt.maskc s1, a1, a0
+; CHECK-NEXT:  .LBB53_1: # %bb2
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    mv a0, s1
+; CHECK-NEXT:    call bar@plt
+; CHECK-NEXT:    sllw s1, s1, s0
+; CHECK-NEXT:    bnez a0, .LBB53_1
+; CHECK-NEXT:  # %bb.2: # %bb7
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:    ret
+bb:
+  %i = select i1 %c, i32 %arg, i32 0
+  br label %bb2
+
+bb2:                                              ; preds = %bb2, %bb
+  %i3 = phi i32 [ %i, %bb ], [ %i5, %bb2 ]
+  %i4 = tail call signext i32 @bar(i32 signext %i3)
+  %i5 = shl i32 %i3, %arg1
+  %i6 = icmp eq i32 %i4, 0
+  br i1 %i6, label %bb7, label %bb2
+
+bb7:                                              ; preds = %bb2
+  ret void
+}
+declare signext i32 @bar(i32 signext)
+
+define void @sextw_removal_maskcn(i1 %c, i32 signext %arg, i32 signext %arg1) nounwind {
+; CHECK-LABEL: sextw_removal_maskcn:
+; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    addi sp, sp, -32
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    mv s0, a2
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    vt.maskcn s1, a1, a0
+; CHECK-NEXT:  .LBB54_1: # %bb2
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    mv a0, s1
+; CHECK-NEXT:    call bar@plt
+; CHECK-NEXT:    sllw s1, s1, s0
+; CHECK-NEXT:    bnez a0, .LBB54_1
+; CHECK-NEXT:  # %bb.2: # %bb7
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:    ret
+bb:
+  %i = select i1 %c, i32 0, i32 %arg
+  br label %bb2
+
+bb2:                                              ; preds = %bb2, %bb
+  %i3 = phi i32 [ %i, %bb ], [ %i5, %bb2 ]
+  %i4 = tail call signext i32 @bar(i32 signext %i3)
+  %i5 = shl i32 %i3, %arg1
+  %i6 = icmp eq i32 %i4, 0
+  br i1 %i6, label %bb7, label %bb2
+
+bb7:                                              ; preds = %bb2
+  ret void
+}
