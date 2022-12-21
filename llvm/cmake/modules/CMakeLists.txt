@@ -108,6 +108,7 @@ file(COPY .
   NO_SOURCE_PERMISSIONS
   FILES_MATCHING PATTERN *.cmake
   PATTERN CMakeFiles EXCLUDE
+  PATTERN llvm-driver-template.cpp.in
   )
 
 #
