@@ -22,22 +22,20 @@ define weak_odr ptr @h(ptr %0) {
 
 !0 = !{i32 7, !"openmp", i32 50}
 !1 = !{i32 7, !"openmp-device", i32 50}
-; CHECK: Function Attrs: norecurse
+; CHECK: Function Attrs: norecurse nounwind memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@f
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @g(ptr [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK: Function Attrs: norecurse
+; CHECK: Function Attrs: norecurse nounwind memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@g
 ; CHECK-SAME: (ptr [[TMP0:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @h.internalized(ptr [[TMP0]])
 ; CHECK-NEXT:    ret double 0.000000e+00
 ;
 ;
-; CHECK: Function Attrs: norecurse nosync
+; CHECK: Function Attrs: norecurse nosync nounwind memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@h.internalized
 ; CHECK-SAME: (ptr [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr double, ptr [[TMP0]], i64 undef
@@ -51,8 +49,8 @@ define weak_odr ptr @h(ptr %0) {
 ; CHECK-NEXT:    ret ptr [[TMP3]]
 ;
 ;.
-; CHECK: attributes #[[ATTR0]] = { norecurse }
-; CHECK: attributes #[[ATTR1]] = { norecurse nosync }
+; CHECK: attributes #[[ATTR0]] = { norecurse nounwind memory(none) }
+; CHECK: attributes #[[ATTR1]] = { norecurse nosync nounwind memory(none) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}

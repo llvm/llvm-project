@@ -1050,11 +1050,17 @@ struct AAPointerInfoImpl
         IRPosition::function(Scope), &QueryingAA, DepClassTy::OPTIONAL);
     bool AllInSameNoSyncFn = NoSyncAA.isAssumedNoSync();
 
+    InformationCache &InfoCache = A.getInfoCache();
+    bool IsThreadLocalObj =
+        AA::isAssumedThreadLocalObject(A, getAssociatedValue(), *this);
+
     // Helper to determine if we need to consider threading, which we cannot
     // right now. However, if the function is (assumed) nosync or the thread
     // executing all instructions is the main thread only we can ignore
-    // threading.
+    // threading. Also, thread-local objects do not require threading reasoning.
     auto CanIgnoreThreading = [&](const Instruction &I) -> bool {
+      if (IsThreadLocalObj)
+        return true;
       if (ExecDomainAA && ExecDomainAA->isExecutedByInitialThreadOnly(I))
         return true;
       return false;
@@ -1076,17 +1082,8 @@ struct AAPointerInfoImpl
     const bool UseDominanceReasoning =
         FindInterferingWrites && NoRecurseAA.isKnownNoRecurse();
     const bool CanUseCFGResoning = CanIgnoreThreading(I);
-    InformationCache &InfoCache = A.getInfoCache();
     const DominatorTree *DT =
         InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(Scope);
-
-    enum class GPUAddressSpace : unsigned {
-      Generic = 0,
-      Global = 1,
-      Shared = 3,
-      Constant = 4,
-      Local = 5,
-    };
 
     // Helper to check if a value has "kernel lifetime", that is it will not
     // outlive a GPU kernel. This is true for shared, constant, and local
@@ -1095,10 +1092,10 @@ struct AAPointerInfoImpl
       Triple T(M.getTargetTriple());
       if (!(T.isAMDGPU() || T.isNVPTX()))
         return false;
-      switch (GPUAddressSpace(V->getType()->getPointerAddressSpace())) {
-      case GPUAddressSpace::Shared:
-      case GPUAddressSpace::Constant:
-      case GPUAddressSpace::Local:
+      switch (AA::GPUAddressSpace(V->getType()->getPointerAddressSpace())) {
+      case AA::GPUAddressSpace::Shared:
+      case AA::GPUAddressSpace::Constant:
+      case AA::GPUAddressSpace::Local:
         return true;
       default:
         return false;
@@ -1192,7 +1189,7 @@ struct AAPointerInfoImpl
     // succeeded for all or not.
     unsigned NumInterferingAccesses = InterferingAccesses.size();
     for (auto &It : InterferingAccesses) {
-      if (!AllInSameNoSyncFn ||
+      if ((!AllInSameNoSyncFn && !IsThreadLocalObj) ||
           NumInterferingAccesses > MaxInterferingAccesses ||
           !CanSkipAccess(*It.first, It.second)) {
         if (!UserCB(*It.first, It.second))
