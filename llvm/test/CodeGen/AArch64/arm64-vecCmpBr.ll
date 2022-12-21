@@ -18,7 +18,7 @@ entry:
   br i1 %tobool, label %if.then, label %return
 
 if.then:                                          ; preds = %entry
-  %call1 = tail call i32 bitcast (i32 (...)* @bar to i32 ()*)() #4
+  %call1 = tail call i32 @bar() #4
   br label %return
 
 return:                                           ; preds = %entry, %if.then
@@ -44,7 +44,7 @@ entry:
   br i1 %tobool, label %if.then, label %return
 
 if.then:                                          ; preds = %entry
-  %call1 = tail call i32 bitcast (i32 (...)* @bar to i32 ()*)() #4
+  %call1 = tail call i32 @bar() #4
   br label %return
 
 return:                                           ; preds = %entry, %if.then
@@ -68,7 +68,7 @@ entry:
   br i1 %tobool, label %return, label %if.then
 
 if.then:                                          ; preds = %entry
-  %call1 = tail call i32 bitcast (i32 (...)* @bar to i32 ()*)() #4
+  %call1 = tail call i32 @bar() #4
   br label %return
 
 return:                                           ; preds = %entry, %if.then
@@ -91,7 +91,7 @@ entry:
   br i1 %tobool, label %return, label %if.then
 
 if.then:                                          ; preds = %entry
-  %call1 = tail call i32 bitcast (i32 (...)* @bar to i32 ()*)() #4
+  %call1 = tail call i32 @bar() #4
   br label %return
 
 return:                                           ; preds = %entry, %if.then
@@ -114,7 +114,7 @@ entry:
   br i1 %tobool, label %if.then, label %return
 
 if.then:                                          ; preds = %entry
-  %call1 = tail call i32 bitcast (i32 (...)* @bar to i32 ()*)() #4
+  %call1 = tail call i32 @bar() #4
   br label %return
 
 return:                                           ; preds = %entry, %if.then
@@ -137,7 +137,7 @@ entry:
   br i1 %tobool, label %if.then, label %return
 
 if.then:                                          ; preds = %entry
-  %call1 = tail call i32 bitcast (i32 (...)* @bar to i32 ()*)() #4
+  %call1 = tail call i32 @bar() #4
   br label %return
 
 return:                                           ; preds = %entry, %if.then
@@ -160,7 +160,7 @@ entry:
   br i1 %tobool, label %return, label %if.then
 
 if.then:                                          ; preds = %entry
-  %call1 = tail call i32 bitcast (i32 (...)* @bar to i32 ()*)() #4
+  %call1 = tail call i32 @bar() #4
   br label %return
 
 return:                                           ; preds = %entry, %if.then
@@ -183,7 +183,7 @@ entry:
   br i1 %tobool, label %return, label %if.then
 
 if.then:                                          ; preds = %entry
-  %call1 = tail call i32 bitcast (i32 (...)* @bar to i32 ()*)() #4
+  %call1 = tail call i32 @bar() #4
   br label %return
 
 return:                                           ; preds = %entry, %if.then

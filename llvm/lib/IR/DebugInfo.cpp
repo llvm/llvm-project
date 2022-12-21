@@ -1830,7 +1830,7 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
   for (auto BBI = Start; BBI != End; ++BBI) {
     for (Instruction &I : *BBI) {
 
-      std::optional<AssignmentInfo> Info = std::nullopt;
+      std::optional<AssignmentInfo> Info;
       Value *ValueComponent = nullptr;
       Value *DestComponent = nullptr;
       if (auto *AI = dyn_cast<AllocaInst>(&I)) {

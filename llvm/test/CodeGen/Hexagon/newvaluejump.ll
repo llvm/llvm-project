@@ -10,10 +10,10 @@ define i32 @f0(i32 %a0) #0 {
 b0:
   %v0 = alloca i32, align 4
   %v1 = alloca i32, align 4
-  %v2 = load i32, i32* @g0, align 4
-  store i32 %v2, i32* %v0, align 4
+  %v2 = load i32, ptr @g0, align 4
+  store i32 %v2, ptr %v0, align 4
   call void @f2(i32 1, i32 2)
-  %v3 = load i32, i32* @g1, align 4
+  %v3 = load i32, ptr @g1, align 4
   %v4 = icmp ne i32 %v3, 0
   br i1 %v4, label %b1, label %b2
 

@@ -102,7 +102,7 @@ if (OPENMP_ENABLE_LIBOMPTARGET)
   if (APPLE OR WIN32)
     message(FATAL_ERROR "libomptarget cannot be built on Windows and MacOS X!")
   elseif (NOT OPENMP_HAVE_STD_CPP17_FLAG)
-    message(FATAL_ERROR "Host compiler must support C++14 to build libomptarget!")
+    message(FATAL_ERROR "Host compiler must support C++17 to build libomptarget!")
   endif()
 
   add_subdirectory(libomptarget)

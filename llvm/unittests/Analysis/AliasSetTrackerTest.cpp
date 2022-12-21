@@ -83,7 +83,7 @@ TEST(AliasSetTracker, AliasUnknownInst) {
     for (AliasSet &AS : AST) {
       if (!Inst.mayReadOrWriteMemory())
         continue;
-      if (!AS.aliasesUnknownInst(&Inst, BatchAA))
+      if (!isModOrRefSet(AS.aliasesUnknownInst(&Inst, BatchAA)))
         continue;
       ASSERT_NE(FoundAS, true);
       FoundAS = true;

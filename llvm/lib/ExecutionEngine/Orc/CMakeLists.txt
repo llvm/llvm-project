@@ -68,6 +68,7 @@ add_llvm_component_library(LLVMOrcJIT
   RuntimeDyld
   Support
   Target
+  TargetParser
   TransformUtils
   )
 

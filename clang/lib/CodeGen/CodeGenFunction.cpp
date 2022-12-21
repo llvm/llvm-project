@@ -499,7 +499,9 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   // 4. Width of vector arguments and return types for this function.
   // 5. Width of vector aguments and return types for functions called by this
   //    function.
-  CurFn->addFnAttr("min-legal-vector-width", llvm::utostr(LargestVectorWidth));
+  if (getContext().getTargetInfo().getTriple().isX86())
+    CurFn->addFnAttr("min-legal-vector-width",
+                     llvm::utostr(LargestVectorWidth));
 
   // Add vscale_range attribute if appropriate.
   Optional<std::pair<unsigned, unsigned>> VScaleRange =

@@ -20,7 +20,7 @@ b2:                                               ; preds = %b2, %b1
   %v3 = phi i32 [ 0, %b1 ], [ %v17, %b2 ]
   %v4 = phi i32 [ 0, %b1 ], [ %v16, %b2 ]
   %v5 = phi i32 [ undef, %b1 ], [ %v18, %b2 ]
-  %v6 = load i32, i32* undef, align 8
+  %v6 = load i32, ptr undef, align 8
   %v7 = icmp sgt i32 %v6, undef
   %v8 = select i1 %v7, i32 %v3, i32 %v4
   %v9 = select i1 undef, i32 0, i32 %v8
@@ -37,8 +37,8 @@ b2:                                               ; preds = %b2, %b1
   br i1 %v19, label %b20, label %b2
 
 b20:                                              ; preds = %b2
-  %v21 = getelementptr inbounds [80 x i32], [80 x i32]* @x, i32 0, i32 %v16
-  store i32 -2000, i32* %v21, align 4
+  %v21 = getelementptr inbounds [80 x i32], ptr @x, i32 0, i32 %v16
+  store i32 -2000, ptr %v21, align 4
   br label %b1
 }
 

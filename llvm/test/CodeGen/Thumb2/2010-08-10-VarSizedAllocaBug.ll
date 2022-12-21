@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=thumbv7-apple-darwin -mcpu=cortex-a8 -O3 | FileCheck %s
 
-@.str = private constant [4 x i8] c"%d\0A\00", align 4 ; <[4 x i8]*> [#uses=1]
+@.str = private constant [4 x i8] c"%d\0A\00", align 4 ; <ptr> [#uses=1]
 
 define internal fastcc i32 @Callee(i32 %i) nounwind {
 entry:
@@ -13,10 +13,10 @@ entry:
   br i1 %0, label %bb2, label %bb
 
 bb:                                               ; preds = %entry
-  %1 = alloca [1000 x i8], align 4                ; <[1000 x i8]*> [#uses=1]
-  %.sub = getelementptr inbounds [1000 x i8], [1000 x i8]* %1, i32 0, i32 0 ; <i8*> [#uses=2]
-  %2 = call i32 (i8*, i32, i32, i8*, ...) @__sprintf_chk(i8* %.sub, i32 0, i32 1000, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 %i) nounwind ; <i32> [#uses=0]
-  %3 = load i8, i8* %.sub, align 4                    ; <i8> [#uses=1]
+  %1 = alloca [1000 x i8], align 4                ; <ptr> [#uses=1]
+  %.sub = getelementptr inbounds [1000 x i8], ptr %1, i32 0, i32 0 ; <ptr> [#uses=2]
+  %2 = call i32 (ptr, i32, i32, ptr, ...) @__sprintf_chk(ptr %.sub, i32 0, i32 1000, ptr @.str, i32 %i) nounwind ; <i32> [#uses=0]
+  %3 = load i8, ptr %.sub, align 4                    ; <i8> [#uses=1]
   %4 = sext i8 %3 to i32                          ; <i32> [#uses=1]
   ret i32 %4
 
@@ -30,7 +30,7 @@ bb2:                                              ; preds = %entry
   ret i32 0
 }
 
-declare i32 @__sprintf_chk(i8*, i32, i32, i8*, ...) nounwind
+declare i32 @__sprintf_chk(ptr, i32, i32, ptr, ...) nounwind
 
 define i32 @main() nounwind {
 ; CHECK-LABEL: main:
@@ -52,8 +52,8 @@ bb2:                                              ; preds = %bb
 ; CHECK-NOT: mov sp, r7
 ; CHECK-NOT: sub sp, #12
 ; CHECK: pop
-  %4 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 %2) nounwind ; <i32> [#uses=0]
+  %4 = tail call i32 (ptr, ...) @printf(ptr @.str, i32 %2) nounwind ; <i32> [#uses=0]
   ret i32 0
 }
 
-declare i32 @printf(i8* nocapture, ...) nounwind
+declare i32 @printf(ptr nocapture, ...) nounwind

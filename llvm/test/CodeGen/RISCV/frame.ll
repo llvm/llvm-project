@@ -42,13 +42,12 @@ define i32 @test() nounwind {
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 32
 ; RV32I-WITHFP-NEXT:    ret
   %key = alloca %struct.key_t, align 4
-  %1 = bitcast %struct.key_t* %key to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 4 %1, i8 0, i64 20, i1 false)
-  %2 = getelementptr inbounds %struct.key_t, %struct.key_t* %key, i64 0, i32 1, i64 0
-  call void @test1(i8* %2)
+  call void @llvm.memset.p0.i64(ptr align 4 %key, i8 0, i64 20, i1 false)
+  %1 = getelementptr inbounds %struct.key_t, ptr %key, i64 0, i32 1, i64 0
+  call void @test1(ptr %1)
   ret i32 0
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1)
 
-declare void @test1(i8*)
+declare void @test1(ptr)

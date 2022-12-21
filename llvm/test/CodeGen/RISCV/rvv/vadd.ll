@@ -1905,7 +1905,7 @@ entry:
   ret <vscale x 1 x i64> %a
 }
 
-define <vscale x 1 x i64> @intrinsic_vadd_vx_sextload_nxv1i64_nxv1i64_i64(<vscale x 1 x i64> %0, i32* %1, iXLen %2) nounwind {
+define <vscale x 1 x i64> @intrinsic_vadd_vx_sextload_nxv1i64_nxv1i64_i64(<vscale x 1 x i64> %0, ptr %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vadd_vx_sextload_nxv1i64_nxv1i64_i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lw a0, 0(a0)
@@ -1913,7 +1913,7 @@ define <vscale x 1 x i64> @intrinsic_vadd_vx_sextload_nxv1i64_nxv1i64_i64(<vscal
 ; CHECK-NEXT:    vadd.vx v8, v8, a0
 ; CHECK-NEXT:    ret
 entry:
-  %load = load i32, i32* %1
+  %load = load i32, ptr %1
   %ext = sext i32 %load to i64
   %a = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.i64(
     <vscale x 1 x i64> undef,

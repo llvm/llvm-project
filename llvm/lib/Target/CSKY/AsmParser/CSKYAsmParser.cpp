@@ -70,7 +70,8 @@ class CSKYAsmParser : public MCTargetAsmParser {
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+                     SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -81,7 +82,7 @@ class CSKYAsmParser : public MCTargetAsmParser {
   // possible, compression of the instruction is performed.
   void emitToStreamer(MCStreamer &S, const MCInst &Inst);
 
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override;
 
   bool processInstruction(MCInst &Inst, SMLoc IDLoc, OperandVector &Operands,
@@ -1008,7 +1009,7 @@ static bool matchRegisterNameHelper(const MCSubtargetInfo &STI,
   return RegNo == CSKY::NoRegister;
 }
 
-bool CSKYAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+bool CSKYAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                   SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
@@ -1599,7 +1600,7 @@ bool CSKYAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   return false;
 }
 
-OperandMatchResultTy CSKYAsmParser::tryParseRegister(unsigned &RegNo,
+OperandMatchResultTy CSKYAsmParser::tryParseRegister(MCRegister &RegNo,
                                                      SMLoc &StartLoc,
                                                      SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();

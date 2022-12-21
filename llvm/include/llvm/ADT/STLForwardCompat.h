@@ -61,26 +61,6 @@ auto transformOptional(std::optional<T> &&O, const Function &F)
   return std::nullopt;
 }
 
-// TODO: Remove this once the migration from llvm::Optional to std::optional is
-// complete.
-template <typename T, typename Function>
-auto transformOptional(const Optional<T> &O, const Function &F)
-    -> Optional<decltype(F(*O))> {
-  if (O)
-    return F(*O);
-  return std::nullopt;
-}
-
-// TODO: Remove this once the migration from llvm::Optional to std::optional is
-// complete.
-template <typename T, typename Function>
-auto transformOptional(Optional<T> &&O, const Function &F)
-    -> Optional<decltype(F(*std::move(O)))> {
-  if (O)
-    return F(*std::move(O));
-  return std::nullopt;
-}
-
 } // namespace llvm
 
 #endif // LLVM_ADT_STLFORWARDCOMPAT_H

@@ -3,11 +3,11 @@
 ; AAPCS mandates an 8-byte stack alignment.  The alloca is implicitly aligned,
 ; and no bic is required.
 
-declare void @callee(i8 *%i)
+declare void @callee(ptr %i)
 
 define void @caller() {
   %i = alloca i8, align 8
-  call void @callee(i8* %i)
+  call void @callee(ptr %i)
   ret void
 }
 

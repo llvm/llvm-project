@@ -208,13 +208,28 @@ SparseTensorLoopEmitter::SparseTensorLoopEmitter(ValueRange tensors,
                                                  StringAttr loopTag,
                                                  bool hasOutput,
                                                  bool isSparseOut,
-                                                 ArrayRef<unsigned> topSort)
-    : loopTag(loopTag), hasOutput(hasOutput), isSparseOut(isSparseOut),
-      tensors(tensors.begin(), tensors.end()), dimTypes(tensors.size()),
-      pidxs(tensors.size()), coord(tensors.size()), highs(tensors.size()),
-      ptrBuffer(tensors.size()), idxBuffer(tensors.size()),
-      valBuffer(tensors.size()), loopStack(),
-      sparsiferLoopLvlMap(topSort.size(), 0) {
+                                                 ArrayRef<unsigned> topSort) {
+  initialize(tensors, loopTag, hasOutput, isSparseOut, topSort);
+}
+
+void SparseTensorLoopEmitter::initialize(ValueRange tensors, StringAttr loopTag,
+                                         bool hasOutput, bool isSparseOut,
+                                         ArrayRef<unsigned> topSort) {
+  // First initializes fields.
+  this->loopTag = loopTag;
+  this->hasOutput = hasOutput;
+  this->isSparseOut = isSparseOut;
+  this->tensors.assign(tensors.begin(), tensors.end());
+  this->dimTypes.assign(tensors.size(), std::vector<DimLevelType>());
+  this->pidxs.assign(tensors.size(), std::vector<Value>());
+  this->coord.assign(tensors.size(), std::vector<Value>());
+  this->highs.assign(tensors.size(), std::vector<Value>());
+  this->ptrBuffer.assign(tensors.size(), std::vector<Value>());
+  this->idxBuffer.assign(tensors.size(), std::vector<Value>());
+  this->valBuffer.assign(tensors.size(), nullptr);
+  this->loopStack.reserve(topSort.size());
+  this->sparsiferLoopLvlMap.assign(topSort.size(), 0);
+
   for (size_t tid = 0, e = tensors.size(); tid < e; tid++) {
     auto t = tensors[tid];
     // a scalar or 0-dimension tensors
@@ -239,6 +254,7 @@ SparseTensorLoopEmitter::SparseTensorLoopEmitter(ValueRange tensors,
     idxBuffer[tid].assign(rank, Value());
   }
 
+  // FIXME: This map should be maintained outside loop emitter.
   for (unsigned i = 0, e = topSort.size(); i < e; i++) {
     // This is an inverse map of the topologically sorted loop index from
     // sparsifier. This is needed to map the AffineDimExpr back to the loopStack

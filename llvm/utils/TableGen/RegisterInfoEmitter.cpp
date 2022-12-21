@@ -1195,10 +1195,14 @@ RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, CodeGenTarget &Target,
      << "  bool isConstantPhysReg(MCRegister PhysReg) const override final;\n"
      << "  /// Devirtualized TargetFrameLowering.\n"
      << "  static const " << TargetName << "FrameLowering *getFrameLowering(\n"
-     << "      const MachineFunction &MF);\n"
-     << "};\n\n";
+     << "      const MachineFunction &MF);\n";
 
   const auto &RegisterClasses = RegBank.getRegClasses();
+  if (llvm::any_of(RegisterClasses, [](const auto &RC) { return RC.getBaseClassOrder(); })) {
+    OS << "  const TargetRegisterClass *getPhysRegBaseClass(MCRegister Reg) const override;\n";
+  }
+
+  OS << "};\n\n";
 
   if (!RegisterClasses.empty()) {
     OS << "namespace " << RegisterClasses.front().Namespace
@@ -1594,6 +1598,54 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
   }
 
   EmitRegUnitPressure(OS, RegBank, ClassName);
+
+  // Emit register base class mapper
+  if (!RegisterClasses.empty()) {
+    // Collect base classes
+    SmallVector<const CodeGenRegisterClass*> BaseClasses;
+    for (const auto &RC : RegisterClasses) {
+      if (RC.getBaseClassOrder())
+        BaseClasses.push_back(&RC);
+    }
+    if (!BaseClasses.empty()) {
+      // Represent class indexes with uint8_t and allocate one index for nullptr
+      assert(BaseClasses.size() <= UINT8_MAX && "Too many base register classes");
+
+      // Apply order
+      struct BaseClassOrdering {
+        bool operator()(const CodeGenRegisterClass *LHS, const CodeGenRegisterClass *RHS) const {
+          return std::pair(*LHS->getBaseClassOrder(), LHS->EnumValue)
+               < std::pair(*RHS->getBaseClassOrder(), RHS->EnumValue);
+        }
+      };
+      llvm::stable_sort(BaseClasses, BaseClassOrdering());
+
+      // Build mapping for Regs (+1 for NoRegister)
+      std::vector<uint8_t> Mapping(Regs.size() + 1, 0);
+      for (int RCIdx = BaseClasses.size() - 1; RCIdx >= 0; --RCIdx) {
+        for (const auto Reg : BaseClasses[RCIdx]->getMembers())
+          Mapping[Reg->EnumValue] = RCIdx + 1;
+      }
+
+      OS << "\n// Register to base register class mapping\n\n";
+      OS << "\n";
+      OS << "const TargetRegisterClass *" << ClassName
+         << "::getPhysRegBaseClass(MCRegister Reg)"
+         << " const {\n";
+      OS << "  static const TargetRegisterClass *BaseClasses[" << (BaseClasses.size() + 1) << "] = {\n";
+      OS << "    nullptr,\n";
+      for (const auto RC : BaseClasses)
+        OS << "    &" << RC->getQualifiedName() << "RegClass,\n";
+      OS << "  };\n";
+      OS << "  static const uint8_t Mapping[" << Mapping.size() << "] = {\n    ";
+      for (const uint8_t Value : Mapping)
+        OS << (unsigned)Value << ",";
+      OS << "  };\n\n";
+      OS << "  assert(Reg < sizeof(Mapping));\n";
+      OS << "  return BaseClasses[Mapping[Reg]];\n";
+      OS << "}\n";
+    }
+  }
 
   // Emit the constructor of the class...
   OS << "extern const MCRegisterDesc " << TargetName << "RegDesc[];\n";

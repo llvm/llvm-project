@@ -302,7 +302,7 @@ private:
   /// If notes have been materialized from the diagnostic, then this will
   /// be populated with the corresponding objects (all castable to
   /// PyDiagnostic).
-  llvm::Optional<pybind11::tuple> materializedNotes;
+  std::optional<pybind11::tuple> materializedNotes;
   bool valid = true;
 };
 

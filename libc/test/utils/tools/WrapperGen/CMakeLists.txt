@@ -1,3 +1,7 @@
+if(LIBC_TARGET_OS_IS_BAREMETAL)
+  return()
+endif()
+
 add_libc_tool_unittest(
   wrappergen_test
   SRCS 

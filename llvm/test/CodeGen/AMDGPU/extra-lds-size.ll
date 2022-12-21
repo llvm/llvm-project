@@ -18,7 +18,7 @@
 @lds = internal addrspace(3) global [4096 x i8] undef
 
 define amdgpu_ps void @global_store_saddr_uniform_ptr_in_vgprs(i32 %voffset) {
-  %ptr = getelementptr [4096 x i8], [4096 x i8] addrspace(3)* @lds, i32 0, i32 %voffset
-  store i8 0, i8 addrspace(3)* %ptr
+  %ptr = getelementptr [4096 x i8], ptr addrspace(3) @lds, i32 0, i32 %voffset
+  store i8 0, ptr addrspace(3) %ptr
   ret void
 }

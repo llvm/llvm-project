@@ -7,7 +7,7 @@
 ; latency, v0 and v1 should be added first, and its result is added to t2
 ; later.
 
-define void @add8(i8 %x0, i8 %x1, i8 %x2, i8* %p) {
+define void @add8(i8 %x0, i8 %x1, i8 %x2, ptr %p) {
 ; CHECK-LABEL: add8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    orb $16, %dil
@@ -27,11 +27,11 @@ define void @add8(i8 %x0, i8 %x1, i8 %x2, i8* %p) {
   %t2 = mul i8 %t1, 100
   %t3 = add i8 %t2, %v1
   %t4 = add i8 %t3, %v0
-  store i8 %t4, i8* %p, align 4
+  store i8 %t4, ptr %p, align 4
   ret void
 }
 
-define void @add16(i16 %x0, i16 %x1, i16 %x2, i16* %p) {
+define void @add16(i16 %x0, i16 %x1, i16 %x2, ptr %p) {
 ; CHECK-LABEL: add16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    orl $16, %edi
@@ -50,11 +50,11 @@ define void @add16(i16 %x0, i16 %x1, i16 %x2, i16* %p) {
   %t2 = mul i16 %t1, 100
   %t3 = add i16 %t2, %v1
   %t4 = add i16 %t3, %v0
-  store i16 %t4, i16* %p, align 4
+  store i16 %t4, ptr %p, align 4
   ret void
 }
 
-define void @add32(i32 %x0, i32 %x1, i32 %x2, i32* %p) {
+define void @add32(i32 %x0, i32 %x1, i32 %x2, ptr %p) {
 ; CHECK-LABEL: add32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    orl $16, %edi
@@ -73,11 +73,11 @@ define void @add32(i32 %x0, i32 %x1, i32 %x2, i32* %p) {
   %t2 = mul i32 %t1, 100
   %t3 = add i32 %t2, %v1
   %t4 = add i32 %t3, %v0
-  store i32 %t4, i32* %p, align 4
+  store i32 %t4, ptr %p, align 4
   ret void
 }
 
-define void @add64(i64 %x0, i64 %x1, i64 %x2, i64* %p) {
+define void @add64(i64 %x0, i64 %x1, i64 %x2, ptr %p) {
 ; CHECK-LABEL: add64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    orq $16, %rdi
@@ -96,12 +96,12 @@ define void @add64(i64 %x0, i64 %x1, i64 %x2, i64* %p) {
   %t2 = mul i64 %t1, 100
   %t3 = add i64 %t2, %v1
   %t4 = add i64 %t3, %v0
-  store i64 %t4, i64* %p, align 4
+  store i64 %t4, ptr %p, align 4
   ret void
 }
 
 ; Negative test. Original sequence has shorter latency, don't transform it.
-define void @add64_negative(i64 %x0, i64 %x1, i64 %x2, i64* %p) {
+define void @add64_negative(i64 %x0, i64 %x1, i64 %x2, ptr %p) {
 ; CHECK-LABEL: add64_negative:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    orq $16, %rdi
@@ -120,6 +120,6 @@ define void @add64_negative(i64 %x0, i64 %x1, i64 %x2, i64* %p) {
   %t2 = mul i64 %t1, 100
   %t3 = add i64 %v0, %v1
   %t4 = add i64 %t3, %t2
-  store i64 %t4, i64* %p, align 4
+  store i64 %t4, ptr %p, align 4
   ret void
 }

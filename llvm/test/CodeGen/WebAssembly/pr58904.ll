@@ -14,7 +14,7 @@ define i64 @PR58904() {
 ; CHECK-NEXT:    # fallthrough-return
 BB:
   %A = alloca i64
-  %C2 = ptrtoint i64* %A to i64
+  %C2 = ptrtoint ptr %A to i64
   %B2 = urem i64 %C2, -1
   ret i64 %B2
 }

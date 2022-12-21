@@ -175,7 +175,7 @@ static void TestRange(const ConstantRange &CR, const SmallBitVector &Elems,
 }
 
 using UnaryRangeFn = llvm::function_ref<ConstantRange(const ConstantRange &)>;
-using UnaryIntFn = llvm::function_ref<Optional<APInt>(const APInt &)>;
+using UnaryIntFn = llvm::function_ref<std::optional<APInt>(const APInt &)>;
 
 static void TestUnaryOpExhaustive(UnaryRangeFn RangeFn, UnaryIntFn IntFn,
                                   PreferFn PreferenceFn = PreferSmallest) {
@@ -183,7 +183,7 @@ static void TestUnaryOpExhaustive(UnaryRangeFn RangeFn, UnaryIntFn IntFn,
   EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
     SmallBitVector Elems(1 << Bits);
     ForeachNumInConstantRange(CR, [&](const APInt &N) {
-      if (Optional<APInt> ResultN = IntFn(N))
+      if (std::optional<APInt> ResultN = IntFn(N))
         Elems.set(ResultN->getZExtValue());
     });
     TestRange(RangeFn(CR), Elems, PreferenceFn, {CR});
@@ -192,8 +192,8 @@ static void TestUnaryOpExhaustive(UnaryRangeFn RangeFn, UnaryIntFn IntFn,
 
 using BinaryRangeFn = llvm::function_ref<ConstantRange(const ConstantRange &,
                                                        const ConstantRange &)>;
-using BinaryIntFn = llvm::function_ref<Optional<APInt>(const APInt &,
-                                                       const APInt &)>;
+using BinaryIntFn =
+    llvm::function_ref<std::optional<APInt>(const APInt &, const APInt &)>;
 using BinaryCheckFn = llvm::function_ref<bool(const ConstantRange &,
                                               const ConstantRange &)>;
 
@@ -233,7 +233,7 @@ static void TestBinaryOpExhaustive(BinaryRangeFn RangeFn, BinaryIntFn IntFn,
         SmallBitVector Elems(1 << Bits);
         ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
           ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
-            if (Optional<APInt> ResultN = IntFn(N1, N2))
+            if (std::optional<APInt> ResultN = IntFn(N1, N2))
               Elems.set(ResultN->getZExtValue());
           });
         });
@@ -773,15 +773,14 @@ TEST_F(ConstantRangeTest, AddWithNoWrap) {
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.addWithNoWrap(CR2, OBO::NoSignedWrap);
       },
-      [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         bool IsOverflow;
         APInt Res = N1.sadd_ov(N2, IsOverflow);
         if (IsOverflow)
           return std::nullopt;
         return Res;
       },
-      PreferSmallest,
-      CheckNonSignWrappedOnly);
+      PreferSmallest, CheckNonSignWrappedOnly);
 
   EXPECT_EQ(Empty.addWithNoWrap(Some, OBO::NoUnsignedWrap), Empty);
   EXPECT_EQ(Some.addWithNoWrap(Empty, OBO::NoUnsignedWrap), Empty);
@@ -827,15 +826,14 @@ TEST_F(ConstantRangeTest, AddWithNoWrap) {
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.addWithNoWrap(CR2, OBO::NoUnsignedWrap);
       },
-      [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         bool IsOverflow;
         APInt Res = N1.uadd_ov(N2, IsOverflow);
         if (IsOverflow)
           return std::nullopt;
         return Res;
       },
-      PreferSmallest,
-      CheckNonWrappedOnly);
+      PreferSmallest, CheckNonWrappedOnly);
 
   EXPECT_EQ(ConstantRange(APInt(8, 50), APInt(8, 100))
                 .addWithNoWrap(ConstantRange(APInt(8, 20), APInt(8, 70)),
@@ -867,7 +865,7 @@ TEST_F(ConstantRangeTest, AddWithNoWrap) {
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.addWithNoWrap(CR2, OBO::NoUnsignedWrap | OBO::NoSignedWrap);
       },
-      [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         bool IsOverflow1, IsOverflow2;
         APInt Res1 = N1.uadd_ov(N2, IsOverflow1);
         APInt Res2 = N1.sadd_ov(N2, IsOverflow2);
@@ -876,8 +874,7 @@ TEST_F(ConstantRangeTest, AddWithNoWrap) {
         assert(Res1 == Res2 && "Addition results differ?");
         return Res1;
       },
-      PreferSmallest,
-      CheckNonWrappedOrSignWrappedOnly);
+      PreferSmallest, CheckNonWrappedOrSignWrappedOnly);
 }
 
 TEST_F(ConstantRangeTest, Sub) {
@@ -916,33 +913,31 @@ TEST_F(ConstantRangeTest, SubWithNoWrap) {
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.subWithNoWrap(CR2, OBO::NoSignedWrap);
       },
-      [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         bool IsOverflow;
         APInt Res = N1.ssub_ov(N2, IsOverflow);
         if (IsOverflow)
           return std::nullopt;
         return Res;
       },
-      PreferSmallest,
-      CheckNonSignWrappedOnly);
+      PreferSmallest, CheckNonSignWrappedOnly);
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.subWithNoWrap(CR2, OBO::NoUnsignedWrap);
       },
-      [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         bool IsOverflow;
         APInt Res = N1.usub_ov(N2, IsOverflow);
         if (IsOverflow)
           return std::nullopt;
         return Res;
       },
-      PreferSmallest,
-      CheckNonWrappedOnly);
+      PreferSmallest, CheckNonWrappedOnly);
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.subWithNoWrap(CR2, OBO::NoUnsignedWrap | OBO::NoSignedWrap);
       },
-      [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         bool IsOverflow1, IsOverflow2;
         APInt Res1 = N1.usub_ov(N2, IsOverflow1);
         APInt Res2 = N1.ssub_ov(N2, IsOverflow2);
@@ -951,8 +946,7 @@ TEST_F(ConstantRangeTest, SubWithNoWrap) {
         assert(Res1 == Res2 && "Subtraction results differ?");
         return Res1;
       },
-      PreferSmallest,
-      CheckNonWrappedOrSignWrappedOnly);
+      PreferSmallest, CheckNonWrappedOrSignWrappedOnly);
 }
 
 TEST_F(ConstantRangeTest, Multiply) {
@@ -1246,13 +1240,12 @@ TEST_F(ConstantRangeTest, URem) {
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.urem(CR2);
       },
-      [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         if (N2.isZero())
           return std::nullopt;
         return N1.urem(N2);
       },
-      PreferSmallest,
-      CheckSingleElementsOnly);
+      PreferSmallest, CheckSingleElementsOnly);
 }
 
 TEST_F(ConstantRangeTest, SRem) {
@@ -1322,13 +1315,12 @@ TEST_F(ConstantRangeTest, SRem) {
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.srem(CR2);
       },
-      [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         if (N2.isZero())
           return std::nullopt;
         return N1.srem(N2);
       },
-      PreferSmallest,
-      CheckSingleElementsOnly);
+      PreferSmallest, CheckSingleElementsOnly);
 }
 
 TEST_F(ConstantRangeTest, Shl) {
@@ -1360,7 +1352,7 @@ TEST_F(ConstantRangeTest, Shl) {
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.shl(CR2);
       },
-      [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         if (N2.uge(N2.getBitWidth()))
           return std::nullopt;
         return N1.shl(N2);
@@ -2397,7 +2389,7 @@ TEST_F(ConstantRangeTest, Abs) {
 
   TestUnaryOpExhaustive(
       [](const ConstantRange &CR) { return CR.abs(/*IntMinIsPoison=*/true); },
-      [](const APInt &N) -> Optional<APInt> {
+      [](const APInt &N) -> std::optional<APInt> {
         if (N.isMinSignedValue())
           return std::nullopt;
         return N.abs();

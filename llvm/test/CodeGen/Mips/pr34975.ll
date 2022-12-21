@@ -8,7 +8,7 @@
 
 define void @e() !dbg !19 {
 entry:
-  %0 = load i32, i32* @c, align 4, !dbg !28, !tbaa !31
+  %0 = load i32, ptr @c, align 4, !dbg !28, !tbaa !31
   %tobool8 = icmp eq i32 %0, 0, !dbg !35
   br i1 %tobool8, label %for.end, label %for.body.preheader, !dbg !35
 
@@ -16,7 +16,7 @@ for.body.preheader:                               ; preds = %entry
   br label %for.body, !dbg !36
 
 for.body:                                         ; preds = %for.body.preheader
-  %1 = load i8, i8* undef, align 1, !dbg !36, !tbaa !38
+  %1 = load i8, ptr undef, align 1, !dbg !36, !tbaa !38
   %conv = zext i8 %1 to i32, !dbg !36
   %cmp = icmp sgt i32 %0, %conv, !dbg !39
   br i1 %cmp, label %if.end, label %if.then, !dbg !40
@@ -24,7 +24,7 @@ for.body:                                         ; preds = %for.body.preheader
 if.then:                                          ; preds = %for.body
   tail call void @llvm.dbg.value(metadata i32 %conv, metadata !41, metadata !DIExpression()), !dbg !43
   %idxprom5 = zext i8 %1 to i64, !dbg !44
-  %call = tail call i32 bitcast (i32 (...)* @g to i32 (i32)*)(i32 signext undef) #3, !dbg !45
+  %call = tail call i32 @g(i32 signext undef) #3, !dbg !45
   br label %if.end, !dbg !46
 
 if.end:                                           ; preds = %if.then, %for.body

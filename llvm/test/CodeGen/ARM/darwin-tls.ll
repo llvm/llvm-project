@@ -86,7 +86,7 @@ define i32 @test_local_tls() {
 ; ARM-LIT-STATIC-NEXT: .long _local_tls_var
 
 
-  %val = load i32, i32* @local_tls_var, align 4
+  %val = load i32, ptr @local_tls_var, align 4
   ret i32 %val
 }
 
@@ -162,13 +162,13 @@ define i32 @test_external_tls() {
 ; ARM-LIT-STATIC: [[EXTERNAL_VAR_ADDR]]:
 ; ARM-LIT-STATIC-NEXT: .long _external_tls_var
 
-  %val = load i32, i32* @external_tls_var, align 4
+  %val = load i32, ptr @external_tls_var, align 4
   ret i32 %val
 }
 
 ; Just need something to trigger an indirect reference to the var.
 define i32 @use_hidden_external_tls() {
-  %val = load i32, i32* @hidden_external_tls_var, align 4
+  %val = load i32, ptr @hidden_external_tls_var, align 4
   ret i32 %val
 }
 

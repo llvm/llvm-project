@@ -12,6 +12,7 @@ static_library("Utility") {
     #"//lldb/source/Target", # Dependency cycle.
     "//lldb/source/Utility",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
 
   # Uses source-relative includes for own headers.

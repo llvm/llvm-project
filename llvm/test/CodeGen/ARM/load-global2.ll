@@ -30,14 +30,14 @@ define signext i8 @foo() {
 ; LINUX-PIC-NEXT:  .Ltmp0:
 ; LINUX-PIC-NEXT:    .long x(GOT_PREL)-((.LPC0_0+8)-.Ltmp0)
 entry:
-  %0 = load i8, i8* @x
+  %0 = load i8, ptr @x
   %tobool = icmp eq i8 %0, 0
   br i1 %tobool, label %bb1, label %bb2
 
 bb1:
   call void @bar()
 ; No more pc-relative loads! Reuse r[[B]].
-  %1 = load i8, i8* @x
+  %1 = load i8, ptr @x
   ret i8 %1
 
 bb2:

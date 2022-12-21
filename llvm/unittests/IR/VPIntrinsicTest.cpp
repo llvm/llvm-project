@@ -163,7 +163,7 @@ protected:
 
 /// Check that the property scopes include/llvm/IR/VPIntrinsics.def are closed.
 TEST_F(VPIntrinsicTest, VPIntrinsicsDefScopes) {
-  Optional<Intrinsic::ID> ScopeVPID;
+  std::optional<Intrinsic::ID> ScopeVPID;
 #define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...)                                 \
   ASSERT_FALSE(ScopeVPID.has_value());                                         \
   ScopeVPID = Intrinsic::VPID;
@@ -172,7 +172,7 @@ TEST_F(VPIntrinsicTest, VPIntrinsicsDefScopes) {
   ASSERT_EQ(*ScopeVPID, Intrinsic::VPID);                                      \
   ScopeVPID = std::nullopt;
 
-  Optional<ISD::NodeType> ScopeOPC;
+  std::optional<ISD::NodeType> ScopeOPC;
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...)                                   \
   ASSERT_FALSE(ScopeOPC.has_value());                                          \
   ScopeOPC = ISD::SDOPC;

@@ -14,6 +14,7 @@ add_llvm_component_library(LLVMAVRDesc
   MC
   AVRInfo
   Support
+  TargetParser
 
   ADD_TO_COMPONENT
   AVR

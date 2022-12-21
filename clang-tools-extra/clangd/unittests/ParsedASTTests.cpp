@@ -380,9 +380,8 @@ TEST(ParsedASTTest, ReplayPreambleForTidyCheckers) {
 
     void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                             StringRef FileName, bool IsAngled,
-                            CharSourceRange FilenameRange,
-                            Optional<FileEntryRef>, StringRef, StringRef,
-                            const clang::Module *,
+                            CharSourceRange FilenameRange, OptionalFileEntryRef,
+                            StringRef, StringRef, const clang::Module *,
                             SrcMgr::CharacteristicKind) override {
       Includes.emplace_back(SM, HashLoc, IncludeTok, FileName, IsAngled,
                             FilenameRange);

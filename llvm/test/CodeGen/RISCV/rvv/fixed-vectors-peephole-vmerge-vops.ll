@@ -159,9 +159,9 @@ define <8 x float> @vpmerge_vpfptrunc(<8 x float> %passthru, <8 x double> %x, <8
 }
 
 ; Test load operation by vp.load.
-declare <8 x i32> @llvm.vp.load.v8i32.p0v8i32(<8 x i32>*, <8 x i1>, i32)
+declare <8 x i32> @llvm.vp.load.v8i32.p0(ptr, <8 x i1>, i32)
 
-define <8 x i32> @vpmerge_vpload(<8 x i32> %passthru, <8 x i32>* %p, <8 x i1> %m, i32 zeroext %vl) {
+define <8 x i32> @vpmerge_vpload(<8 x i32> %passthru, ptr %p, <8 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpmerge_vpload:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, mu
@@ -169,13 +169,13 @@ define <8 x i32> @vpmerge_vpload(<8 x i32> %passthru, <8 x i32>* %p, <8 x i1> %m
 ; CHECK-NEXT:    ret
   %splat = insertelement <8 x i1> poison, i1 true, i32 0
   %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i32> @llvm.vp.load.v8i32.p0v8i32(<8 x i32>* %p, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x i32> @llvm.vp.load.v8i32.p0(ptr %p, <8 x i1> %mask, i32 %vl)
   %b = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> %m, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
   ret <8 x i32> %b
 }
 
 ; Test result have chain and glued node.
-define <8 x i32> @vpmerge_vpload2(<8 x i32> %passthru, <8 x i32>* %p, <8 x i32> %x, <8 x i32> %y, i32 zeroext %vl) {
+define <8 x i32> @vpmerge_vpload2(<8 x i32> %passthru, ptr %p, <8 x i32> %x, <8 x i32> %y, i32 zeroext %vl) {
 ; CHECK-LABEL: vpmerge_vpload2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
@@ -185,7 +185,7 @@ define <8 x i32> @vpmerge_vpload2(<8 x i32> %passthru, <8 x i32>* %p, <8 x i32> 
 ; CHECK-NEXT:    ret
   %splat = insertelement <8 x i1> poison, i1 true, i32 0
   %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i32> @llvm.vp.load.v8i32.p0v8i32(<8 x i32>* %p, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x i32> @llvm.vp.load.v8i32.p0(ptr %p, <8 x i1> %mask, i32 %vl)
   %m = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %x, <8 x i32> %y, metadata !"eq", <8 x i1> %mask, i32 %vl)
   %b = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> %m, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
   ret <8 x i32> %b
@@ -339,7 +339,7 @@ define <8 x float> @vpselect_vpfptrunc(<8 x float> %passthru, <8 x double> %x, <
 }
 
 ; Test load operation by vp.load.
-define <8 x i32> @vpselect_vpload(<8 x i32> %passthru, <8 x i32>* %p, <8 x i1> %m, i32 zeroext %vl) {
+define <8 x i32> @vpselect_vpload(<8 x i32> %passthru, ptr %p, <8 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpload:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
@@ -347,13 +347,13 @@ define <8 x i32> @vpselect_vpload(<8 x i32> %passthru, <8 x i32>* %p, <8 x i1> %
 ; CHECK-NEXT:    ret
   %splat = insertelement <8 x i1> poison, i1 true, i32 0
   %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i32> @llvm.vp.load.v8i32.p0v8i32(<8 x i32>* %p, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x i32> @llvm.vp.load.v8i32.p0(ptr %p, <8 x i1> %mask, i32 %vl)
   %b = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> %m, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
   ret <8 x i32> %b
 }
 
 ; Test result have chain and glued node.
-define <8 x i32> @vpselect_vpload2(<8 x i32> %passthru, <8 x i32>* %p, <8 x i32> %x, <8 x i32> %y, i32 zeroext %vl) {
+define <8 x i32> @vpselect_vpload2(<8 x i32> %passthru, ptr %p, <8 x i32> %x, <8 x i32> %y, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpload2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
@@ -362,7 +362,7 @@ define <8 x i32> @vpselect_vpload2(<8 x i32> %passthru, <8 x i32>* %p, <8 x i32>
 ; CHECK-NEXT:    ret
   %splat = insertelement <8 x i1> poison, i1 true, i32 0
   %mask = shufflevector <8 x i1> %splat, <8 x i1> poison, <8 x i32> zeroinitializer
-  %a = call <8 x i32> @llvm.vp.load.v8i32.p0v8i32(<8 x i32>* %p, <8 x i1> %mask, i32 %vl)
+  %a = call <8 x i32> @llvm.vp.load.v8i32.p0(ptr %p, <8 x i1> %mask, i32 %vl)
   %m = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %x, <8 x i32> %y, metadata !"eq", <8 x i1> %mask, i32 %vl)
   %b = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> %m, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)
   ret <8 x i32> %b

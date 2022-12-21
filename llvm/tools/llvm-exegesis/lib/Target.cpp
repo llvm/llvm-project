@@ -17,6 +17,10 @@
 namespace llvm {
 namespace exegesis {
 
+cl::OptionCategory Options("llvm-exegesis options");
+cl::OptionCategory BenchmarkOptions("llvm-exegesis benchmark options");
+cl::OptionCategory AnalysisOptions("llvm-exegesis analysis options");
+
 ExegesisTarget::~ExegesisTarget() {} // anchor.
 
 static ExegesisTarget *FirstTarget = nullptr;

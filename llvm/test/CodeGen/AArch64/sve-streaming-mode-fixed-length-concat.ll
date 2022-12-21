@@ -57,24 +57,24 @@ define <16 x i8> @concat_v16i8(<8 x i8> %op1, <8 x i8> %op2)  #0 {
   ret <16 x i8> %res
 }
 
-define void @concat_v32i8(<16 x i8>* %a, <16 x i8>* %b, <32 x i8>* %c)  #0 {
+define void @concat_v32i8(ptr %a, ptr %b, ptr %c)  #0 {
 ; CHECK-LABEL: concat_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ldr q1, [x0]
 ; CHECK-NEXT:    stp q1, q0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i8>, <16 x i8>* %a
-  %op2 = load <16 x i8>, <16 x i8>* %b
+  %op1 = load <16 x i8>, ptr %a
+  %op2 = load <16 x i8>, ptr %b
   %res = shufflevector <16 x i8> %op1, <16 x i8> %op2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                                                    i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
                                                                    i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23,
                                                                    i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  store <32 x i8> %res, <32 x i8>* %c
+  store <32 x i8> %res, ptr %c
   ret void
 }
 
-define void @concat_v64i8(<32 x i8>* %a, <32 x i8>* %b, <64 x i8>* %c) #0 {
+define void @concat_v64i8(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: concat_v64i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x1]
@@ -82,8 +82,8 @@ define void @concat_v64i8(<32 x i8>* %a, <32 x i8>* %b, <64 x i8>* %c) #0 {
 ; CHECK-NEXT:    stp q0, q1, [x2, #32]
 ; CHECK-NEXT:    stp q2, q3, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i8>, <32 x i8>* %a
-  %op2 = load <32 x i8>, <32 x i8>* %b
+  %op1 = load <32 x i8>, ptr %a
+  %op2 = load <32 x i8>, ptr %b
   %res = shufflevector <32 x i8> %op1, <32 x i8> %op2, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                                                    i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
                                                                    i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23,
@@ -92,7 +92,7 @@ define void @concat_v64i8(<32 x i8>* %a, <32 x i8>* %b, <64 x i8>* %c) #0 {
                                                                    i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47,
                                                                    i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55,
                                                                    i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-  store <64 x i8> %res, <64 x i8>* %c
+  store <64 x i8> %res, ptr %c
   ret void
 }
 
@@ -138,22 +138,22 @@ define <8 x i16> @concat_v8i16(<4 x i16> %op1, <4 x i16> %op2)  #0 {
   ret <8 x i16> %res
 }
 
-define void @concat_v16i16(<8 x i16>* %a, <8 x i16>* %b, <16 x i16>* %c)  #0 {
+define void @concat_v16i16(ptr %a, ptr %b, ptr %c)  #0 {
 ; CHECK-LABEL: concat_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ldr q1, [x0]
 ; CHECK-NEXT:    stp q1, q0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i16>, <8 x i16>* %a
-  %op2 = load <8 x i16>, <8 x i16>* %b
+  %op1 = load <8 x i16>, ptr %a
+  %op2 = load <8 x i16>, ptr %b
   %res = shufflevector <8 x i16> %op1, <8 x i16> %op2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                                                    i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  store <16 x i16> %res, <16 x i16>* %c
+  store <16 x i16> %res, ptr %c
   ret void
 }
 
-define void @concat_v32i16(<16 x i16>* %a, <16 x i16>* %b, <32 x i16>* %c) #0 {
+define void @concat_v32i16(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: concat_v32i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x1]
@@ -161,13 +161,13 @@ define void @concat_v32i16(<16 x i16>* %a, <16 x i16>* %b, <32 x i16>* %c) #0 {
 ; CHECK-NEXT:    stp q0, q1, [x2, #32]
 ; CHECK-NEXT:    stp q2, q3, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
-  %op2 = load <16 x i16>, <16 x i16>* %b
+  %op1 = load <16 x i16>, ptr %a
+  %op2 = load <16 x i16>, ptr %b
   %res = shufflevector <16 x i16> %op1, <16 x i16> %op2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                                                      i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
                                                                      i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23,
                                                                      i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  store <32 x i16> %res, <32 x i16>* %c
+  store <32 x i16> %res, ptr %c
   ret void
 }
 
@@ -202,21 +202,21 @@ define <4 x i32> @concat_v4i32(<2 x i32> %op1, <2 x i32> %op2)  #0 {
   ret <4 x i32> %res
 }
 
-define void @concat_v8i32(<4 x i32>* %a, <4 x i32>* %b, <8 x i32>* %c)  #0 {
+define void @concat_v8i32(ptr %a, ptr %b, ptr %c)  #0 {
 ; CHECK-LABEL: concat_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ldr q1, [x0]
 ; CHECK-NEXT:    stp q1, q0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i32>, <4 x i32>* %a
-  %op2 = load <4 x i32>, <4 x i32>* %b
+  %op1 = load <4 x i32>, ptr %a
+  %op2 = load <4 x i32>, ptr %b
   %res = shufflevector <4 x i32> %op1, <4 x i32> %op2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  store <8 x i32> %res, <8 x i32>* %c
+  store <8 x i32> %res, ptr %c
   ret void
 }
 
-define void @concat_v16i32(<8 x i32>* %a, <8 x i32>* %b, <16 x i32>* %c) #0 {
+define void @concat_v16i32(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: concat_v16i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x1]
@@ -224,11 +224,11 @@ define void @concat_v16i32(<8 x i32>* %a, <8 x i32>* %b, <16 x i32>* %c) #0 {
 ; CHECK-NEXT:    stp q0, q1, [x2, #32]
 ; CHECK-NEXT:    stp q2, q3, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
-  %op2 = load <8 x i32>, <8 x i32>* %b
+  %op1 = load <8 x i32>, ptr %a
+  %op2 = load <8 x i32>, ptr %b
   %res = shufflevector <8 x i32> %op1, <8 x i32> %op2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                                                    i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  store <16 x i32> %res, <16 x i32>* %c
+  store <16 x i32> %res, ptr %c
   ret void
 }
 
@@ -250,21 +250,21 @@ define <2 x i64> @concat_v2i64(<1 x i64> %op1, <1 x i64> %op2)  #0 {
   ret <2 x i64> %res
 }
 
-define void @concat_v4i64(<2 x i64>* %a, <2 x i64>* %b, <4 x i64>* %c)  #0 {
+define void @concat_v4i64(ptr %a, ptr %b, ptr %c)  #0 {
 ; CHECK-LABEL: concat_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ldr q1, [x0]
 ; CHECK-NEXT:    stp q1, q0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <2 x i64>, <2 x i64>* %a
-  %op2 = load <2 x i64>, <2 x i64>* %b
+  %op1 = load <2 x i64>, ptr %a
+  %op2 = load <2 x i64>, ptr %b
   %res = shufflevector <2 x i64> %op1, <2 x i64> %op2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  store <4 x i64> %res, <4 x i64>* %c
+  store <4 x i64> %res, ptr %c
   ret void
 }
 
-define void @concat_v8i64(<4 x i64>* %a, <4 x i64>* %b, <8 x i64>* %c) #0 {
+define void @concat_v8i64(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: concat_v8i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x1]
@@ -272,10 +272,10 @@ define void @concat_v8i64(<4 x i64>* %a, <4 x i64>* %b, <8 x i64>* %c) #0 {
 ; CHECK-NEXT:    stp q0, q1, [x2, #32]
 ; CHECK-NEXT:    stp q2, q3, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
-  %op2 = load <4 x i64>, <4 x i64>* %b
+  %op1 = load <4 x i64>, ptr %a
+  %op2 = load <4 x i64>, ptr %b
   %res = shufflevector <4 x i64> %op1, <4 x i64> %op2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  store <8 x i64> %res, <8 x i64>* %c
+  store <8 x i64> %res, ptr %c
   ret void
 }
 
@@ -316,22 +316,22 @@ define <8 x half> @concat_v8f16(<4 x half> %op1, <4 x half> %op2)  #0 {
   ret <8 x half> %res
 }
 
-define void @concat_v16f16(<8 x half>* %a, <8 x half>* %b, <16 x half>* %c)  #0 {
+define void @concat_v16f16(ptr %a, ptr %b, ptr %c)  #0 {
 ; CHECK-LABEL: concat_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ldr q1, [x0]
 ; CHECK-NEXT:    stp q1, q0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x half>, <8 x half>* %a
-  %op2 = load <8 x half>, <8 x half>* %b
+  %op1 = load <8 x half>, ptr %a
+  %op2 = load <8 x half>, ptr %b
   %res = shufflevector <8 x half> %op1, <8 x half> %op2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                                                      i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  store <16 x half> %res, <16 x half>* %c
+  store <16 x half> %res, ptr %c
   ret void
 }
 
-define void @concat_v32f16(<16 x half>* %a, <16 x half>* %b, <32 x half>* %c) #0 {
+define void @concat_v32f16(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: concat_v32f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x1]
@@ -339,13 +339,13 @@ define void @concat_v32f16(<16 x half>* %a, <16 x half>* %b, <32 x half>* %c) #0
 ; CHECK-NEXT:    stp q0, q1, [x2, #32]
 ; CHECK-NEXT:    stp q2, q3, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %res = shufflevector <16 x half> %op1, <16 x half> %op2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                                                        i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
                                                                        i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23,
                                                                        i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  store <32 x half> %res, <32 x half>* %c
+  store <32 x half> %res, ptr %c
   ret void
 }
 
@@ -380,21 +380,21 @@ define <4 x float> @concat_v4f32(<2 x float> %op1, <2 x float> %op2)  #0 {
   ret <4 x float> %res
 }
 
-define void @concat_v8f32(<4 x float>* %a, <4 x float>* %b, <8 x float>* %c)  #0 {
+define void @concat_v8f32(ptr %a, ptr %b, ptr %c)  #0 {
 ; CHECK-LABEL: concat_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ldr q1, [x0]
 ; CHECK-NEXT:    stp q1, q0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x float>, <4 x float>* %a
-  %op2 = load <4 x float>, <4 x float>* %b
+  %op1 = load <4 x float>, ptr %a
+  %op2 = load <4 x float>, ptr %b
   %res = shufflevector <4 x float> %op1, <4 x float> %op2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  store <8 x float> %res, <8 x float>* %c
+  store <8 x float> %res, ptr %c
   ret void
 }
 
-define void @concat_v16f32(<8 x float>* %a, <8 x float>* %b, <16 x float>* %c) #0 {
+define void @concat_v16f32(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: concat_v16f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x1]
@@ -402,11 +402,11 @@ define void @concat_v16f32(<8 x float>* %a, <8 x float>* %b, <16 x float>* %c) #
 ; CHECK-NEXT:    stp q0, q1, [x2, #32]
 ; CHECK-NEXT:    stp q2, q3, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x float>, <8 x float>* %a
-  %op2 = load <8 x float>, <8 x float>* %b
+  %op1 = load <8 x float>, ptr %a
+  %op2 = load <8 x float>, ptr %b
   %res = shufflevector <8 x float> %op1, <8 x float> %op2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                                                        i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  store <16 x float> %res, <16 x float>* %c
+  store <16 x float> %res, ptr %c
   ret void
 }
 
@@ -428,21 +428,21 @@ define <2 x double> @concat_v2f64(<1 x double> %op1, <1 x double> %op2)  #0 {
   ret <2 x double> %res
 }
 
-define void @concat_v4f64(<2 x double>* %a, <2 x double>* %b, <4 x double>* %c)  #0 {
+define void @concat_v4f64(ptr %a, ptr %b, ptr %c)  #0 {
 ; CHECK-LABEL: concat_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ldr q1, [x0]
 ; CHECK-NEXT:    stp q1, q0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <2 x double>, <2 x double>* %a
-  %op2 = load <2 x double>, <2 x double>* %b
+  %op1 = load <2 x double>, ptr %a
+  %op2 = load <2 x double>, ptr %b
   %res = shufflevector <2 x double> %op1, <2 x double> %op2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  store <4 x double> %res, <4 x double>* %c
+  store <4 x double> %res, ptr %c
   ret void
 }
 
-define void @concat_v8f64(<4 x double>* %a, <4 x double>* %b, <8 x double>* %c) #0 {
+define void @concat_v8f64(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: concat_v8f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x1]
@@ -450,10 +450,10 @@ define void @concat_v8f64(<4 x double>* %a, <4 x double>* %b, <8 x double>* %c) 
 ; CHECK-NEXT:    stp q0, q1, [x2, #32]
 ; CHECK-NEXT:    stp q2, q3, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x double>, <4 x double>* %a
-  %op2 = load <4 x double>, <4 x double>* %b
+  %op1 = load <4 x double>, ptr %a
+  %op2 = load <4 x double>, ptr %b
   %res = shufflevector <4 x double> %op1, <4 x double> %op2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  store <8 x double> %res, <8 x double>* %c
+  store <8 x double> %res, ptr %c
   ret void
 }
 
@@ -461,55 +461,55 @@ define void @concat_v8f64(<4 x double>* %a, <4 x double>* %b, <8 x double>* %c) 
 ; undef
 ;
 
-define void @concat_v32i8_undef(<16 x i8>* %a, <32 x i8>* %b)  #0 {
+define void @concat_v32i8_undef(ptr %a, ptr %b)  #0 {
 ; CHECK-LABEL: concat_v32i8_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i8>, <16 x i8>* %a
+  %op1 = load <16 x i8>, ptr %a
   %res = shufflevector <16 x i8> %op1, <16 x i8> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                                                     i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
                                                                     i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23,
                                                                     i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  store <32 x i8> %res, <32 x i8>* %b
+  store <32 x i8> %res, ptr %b
   ret void
 }
 
-define void @concat_v16i16_undef(<8 x i16>* %a, <16 x i16>* %b)  #0 {
+define void @concat_v16i16_undef(ptr %a, ptr %b)  #0 {
 ; CHECK-LABEL: concat_v16i16_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i16>, <8 x i16>* %a
+  %op1 = load <8 x i16>, ptr %a
   %res = shufflevector <8 x i16> %op1, <8 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                                                     i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  store <16 x i16> %res, <16 x i16>* %b
+  store <16 x i16> %res, ptr %b
   ret void
 }
 
-define void @concat_v8i32_undef(<4 x i32>* %a, <8 x i32>* %b)  #0 {
+define void @concat_v8i32_undef(ptr %a, ptr %b)  #0 {
 ; CHECK-LABEL: concat_v8i32_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i32>, <4 x i32>* %a
+  %op1 = load <4 x i32>, ptr %a
   %res = shufflevector <4 x i32> %op1, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  store <8 x i32> %res, <8 x i32>* %b
+  store <8 x i32> %res, ptr %b
   ret void
 }
 
-define void @concat_v4i64_undef(<2 x i64>* %a, <4 x i64>* %b)  #0 {
+define void @concat_v4i64_undef(ptr %a, ptr %b)  #0 {
 ; CHECK-LABEL: concat_v4i64_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <2 x i64>, <2 x i64>* %a
+  %op1 = load <2 x i64>, ptr %a
   %res = shufflevector <2 x i64> %op1, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  store <4 x i64> %res, <4 x i64>* %b
+  store <4 x i64> %res, ptr %b
   ret void
 }
 
@@ -517,60 +517,60 @@ define void @concat_v4i64_undef(<2 x i64>* %a, <4 x i64>* %b)  #0 {
 ; > 2 operands
 ;
 
-define void @concat_v32i8_4op(<8 x i8>* %a, <32 x i8>* %b)  #0 {
+define void @concat_v32i8_4op(ptr %a, ptr %b)  #0 {
 ; CHECK-LABEL: concat_v32i8_4op:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i8>, <8 x i8>* %a
+  %op1 = load <8 x i8>, ptr %a
   %shuffle = shufflevector <8 x i8> %op1, <8 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                                                       i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %res = shufflevector <16 x i8> %shuffle, <16 x i8> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                                                         i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
                                                                         i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23,
                                                                         i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  store <32 x i8> %res, <32 x i8>* %b
+  store <32 x i8> %res, ptr %b
   ret void
 }
 
-define void @concat_v16i16_4op(<4 x i16>* %a, <16 x i16>* %b)  #0 {
+define void @concat_v16i16_4op(ptr %a, ptr %b)  #0 {
 ; CHECK-LABEL: concat_v16i16_4op:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i16>, <4 x i16>* %a
+  %op1 = load <4 x i16>, ptr %a
   %shuffle = shufflevector <4 x i16> %op1, <4 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %res = shufflevector <8 x i16> %shuffle, <8 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                                                         i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  store <16 x i16> %res, <16 x i16>* %b
+  store <16 x i16> %res, ptr %b
   ret void
 }
 
-define void @concat_v8i32_4op(<2 x i32>* %a, <8 x i32>* %b)  #0 {
+define void @concat_v8i32_4op(ptr %a, ptr %b)  #0 {
 ; CHECK-LABEL: concat_v8i32_4op:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <2 x i32>, <2 x i32>* %a
+  %op1 = load <2 x i32>, ptr %a
   %shuffle = shufflevector <2 x i32> %op1, <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = shufflevector <4 x i32> %shuffle, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  store <8 x i32> %res, <8 x i32>* %b
+  store <8 x i32> %res, ptr %b
   ret void
 }
 
-define void @concat_v4i64_4op(<1 x i64>* %a, <4 x i64>* %b)  #0 {
+define void @concat_v4i64_4op(ptr %a, ptr %b)  #0 {
 ; CHECK-LABEL: concat_v4i64_4op:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %op1 = load <1 x i64>, <1 x i64>* %a
+  %op1 = load <1 x i64>, ptr %a
   %shuffle = shufflevector <1 x i64> %op1, <1 x i64> undef, <2 x i32> <i32 0, i32 1>
   %res = shufflevector <2 x i64> %shuffle, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  store <4 x i64> %res, <4 x i64>* %b
+  store <4 x i64> %res, ptr %b
   ret void
 }
 

@@ -30,7 +30,7 @@
 
 define i32 @test_local_exec() {
 ; CHECK-LABEL: test_local_exec:
-  %val = load i32, i32* @local_exec_var
+  %val = load i32, ptr @local_exec_var
 
 ; CHECK-12: mrs x[[R1:[0-9]+]], TPIDR_EL0
 ; CHECK-12: add x[[R2:[0-9]+]], x[[R1]], :tprel_lo12:local_exec_var
@@ -66,9 +66,9 @@ define i32 @test_local_exec() {
   ret i32 %val
 }
 
-define i32* @test_local_exec_addr() {
+define ptr @test_local_exec_addr() {
 ; CHECK-LABEL: test_local_exec_addr:
-  ret i32* @local_exec_var
+  ret ptr @local_exec_var
 
 ; CHECK-12: mrs x[[R1:[0-9]+]], TPIDR_EL0
 ; CHECK-12: add x0, x[[R1]], :tprel_lo12:local_exec_var

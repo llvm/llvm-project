@@ -14,6 +14,7 @@ static_library("MinGW") {
     "//lld/Common",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [ "Driver.cpp" ]
 }

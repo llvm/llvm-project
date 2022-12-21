@@ -5,9 +5,9 @@
 ; rdar://7354376
 ; rdar://8887598
 
-@GV = external global i32                         ; <i32*> [#uses=2]
+@GV = external global i32                         ; <ptr> [#uses=2]
 
-define void @t(i32* nocapture %vals, i32 %c) nounwind {
+define void @t(ptr nocapture %vals, i32 %c) nounwind {
 entry:
 ; ARM-LABEL: t:
 ; ARM: ldr [[REGISTER_1:r[0-9]+]], LCPI0_0
@@ -39,16 +39,16 @@ bb.nph:                                           ; preds = %entry
 ; THUMB: LCPI0_0:
 ; THUMB-NOT: LCPI0_1:
 ; THUMB: .section
-  %.pre = load i32, i32* @GV, align 4                  ; <i32> [#uses=1]
+  %.pre = load i32, ptr @GV, align 4                  ; <i32> [#uses=1]
   br label %bb
 
 bb:                                               ; preds = %bb, %bb.nph
   %1 = phi i32 [ %.pre, %bb.nph ], [ %3, %bb ]    ; <i32> [#uses=1]
   %i.03 = phi i32 [ 0, %bb.nph ], [ %4, %bb ]     ; <i32> [#uses=2]
-  %scevgep = getelementptr i32, i32* %vals, i32 %i.03  ; <i32*> [#uses=1]
-  %2 = load i32, i32* %scevgep, align 4                ; <i32> [#uses=1]
+  %scevgep = getelementptr i32, ptr %vals, i32 %i.03  ; <ptr> [#uses=1]
+  %2 = load i32, ptr %scevgep, align 4                ; <i32> [#uses=1]
   %3 = add nsw i32 %1, %2                         ; <i32> [#uses=2]
-  store i32 %3, i32* @GV, align 4
+  store i32 %3, ptr @GV, align 4
   %4 = add i32 %i.03, 1                           ; <i32> [#uses=2]
   %exitcond = icmp eq i32 %4, %c                  ; <i1> [#uses=1]
   br i1 %exitcond, label %return, label %bb

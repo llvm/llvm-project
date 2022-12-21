@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   OrcJIT
   OrcTargetProcess
   Support
+  TargetParser
   nativecodegen
   )
 

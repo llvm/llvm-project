@@ -9,7 +9,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+unaligned-scratch-access -mattr=+enable-flat-scratch < %s | FileCheck --check-prefix=GFX11-FLASTSCR %s
 
 ; Should not merge this to a dword load
-define i32 @private_load_2xi16_align2(i16 addrspace(5)* %p) #0 {
+define i32 @private_load_2xi16_align2(ptr addrspace(5) %p) #0 {
 ; GFX7-ALIGNED-LABEL: private_load_2xi16_align2:
 ; GFX7-ALIGNED:       ; %bb.0:
 ; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -95,9 +95,9 @@ define i32 @private_load_2xi16_align2(i16 addrspace(5)* %p) #0 {
 ; GFX11-FLASTSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FLASTSCR-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
 ; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
-  %gep.p = getelementptr i16, i16 addrspace(5)* %p, i64 1
-  %p.0 = load i16, i16 addrspace(5)* %p, align 2
-  %p.1 = load i16, i16 addrspace(5)* %gep.p, align 2
+  %gep.p = getelementptr i16, ptr addrspace(5) %p, i64 1
+  %p.0 = load i16, ptr addrspace(5) %p, align 2
+  %p.1 = load i16, ptr addrspace(5) %gep.p, align 2
   %zext.0 = zext i16 %p.0 to i32
   %zext.1 = zext i16 %p.1 to i32
   %shl.1 = shl i32 %zext.1, 16
@@ -106,7 +106,7 @@ define i32 @private_load_2xi16_align2(i16 addrspace(5)* %p) #0 {
 }
 
 ; Should not merge this to a dword store
-define void @private_store_2xi16_align2(i16 addrspace(5)* %p, i16 addrspace(5)* %r) #0 {
+define void @private_store_2xi16_align2(ptr addrspace(5) %p, ptr addrspace(5) %r) #0 {
 ; GFX7-ALIGNED-LABEL: private_store_2xi16_align2:
 ; GFX7-ALIGNED:       ; %bb.0:
 ; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -194,14 +194,14 @@ define void @private_store_2xi16_align2(i16 addrspace(5)* %p, i16 addrspace(5)* 
 ; GFX11-FLASTSCR-NEXT:    scratch_store_b16 v1, v2, off offset:2
 ; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
-  %gep.r = getelementptr i16, i16 addrspace(5)* %r, i64 1
-  store i16 1, i16 addrspace(5)* %r, align 2
-  store i16 2, i16 addrspace(5)* %gep.r, align 2
+  %gep.r = getelementptr i16, ptr addrspace(5) %r, i64 1
+  store i16 1, ptr addrspace(5) %r, align 2
+  store i16 2, ptr addrspace(5) %gep.r, align 2
   ret void
 }
 
 ; Should produce align 1 dword when legal
-define i32 @private_load_2xi16_align1(i16 addrspace(5)* %p) #0 {
+define i32 @private_load_2xi16_align1(ptr addrspace(5) %p) #0 {
 ; GFX7-ALIGNED-LABEL: private_load_2xi16_align1:
 ; GFX7-ALIGNED:       ; %bb.0:
 ; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -292,9 +292,9 @@ define i32 @private_load_2xi16_align1(i16 addrspace(5)* %p) #0 {
 ; GFX11-FLASTSCR-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLASTSCR-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
 ; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
-  %gep.p = getelementptr i16, i16 addrspace(5)* %p, i64 1
-  %p.0 = load i16, i16 addrspace(5)* %p, align 1
-  %p.1 = load i16, i16 addrspace(5)* %gep.p, align 1
+  %gep.p = getelementptr i16, ptr addrspace(5) %p, i64 1
+  %p.0 = load i16, ptr addrspace(5) %p, align 1
+  %p.1 = load i16, ptr addrspace(5) %gep.p, align 1
   %zext.0 = zext i16 %p.0 to i32
   %zext.1 = zext i16 %p.1 to i32
   %shl.1 = shl i32 %zext.1, 16
@@ -303,7 +303,7 @@ define i32 @private_load_2xi16_align1(i16 addrspace(5)* %p) #0 {
 }
 
 ; Should produce align 1 dword when legal
-define void @private_store_2xi16_align1(i16 addrspace(5)* %p, i16 addrspace(5)* %r) #0 {
+define void @private_store_2xi16_align1(ptr addrspace(5) %p, ptr addrspace(5) %r) #0 {
 ; GFX7-ALIGNED-LABEL: private_store_2xi16_align1:
 ; GFX7-ALIGNED:       ; %bb.0:
 ; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -379,14 +379,14 @@ define void @private_store_2xi16_align1(i16 addrspace(5)* %p, i16 addrspace(5)* 
 ; GFX11-FLASTSCR-NEXT:    scratch_store_b32 v1, v0, off
 ; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
-  %gep.r = getelementptr i16, i16 addrspace(5)* %r, i64 1
-  store i16 1, i16 addrspace(5)* %r, align 1
-  store i16 2, i16 addrspace(5)* %gep.r, align 1
+  %gep.r = getelementptr i16, ptr addrspace(5) %r, i64 1
+  store i16 1, ptr addrspace(5) %r, align 1
+  store i16 2, ptr addrspace(5) %gep.r, align 1
   ret void
 }
 
 ; Should merge this to a dword load
-define i32 @private_load_2xi16_align4(i16 addrspace(5)* %p) #0 {
+define i32 @private_load_2xi16_align4(ptr addrspace(5) %p) #0 {
 ; GFX7-ALIGNED-LABEL: private_load_2xi16_align4:
 ; GFX7-ALIGNED:       ; %bb.0:
 ; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -446,9 +446,9 @@ define i32 @private_load_2xi16_align4(i16 addrspace(5)* %p) #0 {
 ; GFX11-FLASTSCR-NEXT:    scratch_load_b32 v0, v0, off
 ; GFX11-FLASTSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
-  %gep.p = getelementptr i16, i16 addrspace(5)* %p, i64 1
-  %p.0 = load i16, i16 addrspace(5)* %p, align 4
-  %p.1 = load i16, i16 addrspace(5)* %gep.p, align 2
+  %gep.p = getelementptr i16, ptr addrspace(5) %p, i64 1
+  %p.0 = load i16, ptr addrspace(5) %p, align 4
+  %p.1 = load i16, ptr addrspace(5) %gep.p, align 2
   %zext.0 = zext i16 %p.0 to i32
   %zext.1 = zext i16 %p.1 to i32
   %shl.1 = shl i32 %zext.1, 16
@@ -457,7 +457,7 @@ define i32 @private_load_2xi16_align4(i16 addrspace(5)* %p) #0 {
 }
 
 ; Should merge this to a dword store
-define void @private_store_2xi16_align4(i16 addrspace(5)* %p, i16 addrspace(5)* %r) #0 {
+define void @private_store_2xi16_align4(ptr addrspace(5) %p, ptr addrspace(5) %r) #0 {
 ; GFX7-LABEL: private_store_2xi16_align4:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
@@ -535,8 +535,8 @@ define void @private_store_2xi16_align4(i16 addrspace(5)* %p, i16 addrspace(5)* 
 ; GFX11-FLASTSCR-NEXT:    scratch_store_b32 v1, v0, off
 ; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
-  %gep.r = getelementptr i16, i16 addrspace(5)* %r, i64 1
-  store i16 1, i16 addrspace(5)* %r, align 4
-  store i16 2, i16 addrspace(5)* %gep.r, align 2
+  %gep.r = getelementptr i16, ptr addrspace(5) %r, i64 1
+  store i16 1, ptr addrspace(5) %r, align 4
+  store i16 2, ptr addrspace(5) %gep.r, align 2
   ret void
 }

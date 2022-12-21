@@ -16,6 +16,6 @@ BB:
   br label %BB1
 
 BB1:                                              ; preds = %BB
-  store <1 x float> %B, <1 x float>* %PTR
+  store <1 x float> %B, ptr %PTR
   ret void
 }

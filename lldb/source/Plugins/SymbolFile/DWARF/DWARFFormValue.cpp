@@ -190,7 +190,7 @@ static FormSize g_form_sizes[] = {
 llvm::Optional<uint8_t>
 DWARFFormValue::GetFixedSize(dw_form_t form, const DWARFUnit *u) {
   if (form <= DW_FORM_ref_sig8 && g_form_sizes[form].valid)
-    return g_form_sizes[form].size;
+    return static_cast<uint8_t>(g_form_sizes[form].size);
   if (form == DW_FORM_addr && u)
     return u->GetAddressByteSize();
   return std::nullopt;

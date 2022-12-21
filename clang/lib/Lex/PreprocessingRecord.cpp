@@ -42,7 +42,7 @@ ExternalPreprocessingRecordSource::~ExternalPreprocessingRecordSource() =
 InclusionDirective::InclusionDirective(PreprocessingRecord &PPRec,
                                        InclusionKind Kind, StringRef FileName,
                                        bool InQuotes, bool ImportedModule,
-                                       Optional<FileEntryRef> File,
+                                       OptionalFileEntryRef File,
                                        SourceRange Range)
     : PreprocessingDirective(InclusionDirectiveKind, Range), InQuotes(InQuotes),
       Kind(Kind), ImportedModule(ImportedModule), File(File) {
@@ -475,15 +475,9 @@ void PreprocessingRecord::MacroUndefined(const Token &Id,
 }
 
 void PreprocessingRecord::InclusionDirective(
-    SourceLocation HashLoc,
-    const Token &IncludeTok,
-    StringRef FileName,
-    bool IsAngled,
-    CharSourceRange FilenameRange,
-    Optional<FileEntryRef> File,
-    StringRef SearchPath,
-    StringRef RelativePath,
-    const Module *Imported,
+    SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
+    bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
+    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
   InclusionDirective::InclusionKind Kind = InclusionDirective::Include;
 

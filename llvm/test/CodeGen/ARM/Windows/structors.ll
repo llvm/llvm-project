@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple thumbv7-windows-gnu -o - %s \
 ; RUN:   | FileCheck %s -check-prefix CHECK-GNU
 
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @function, i8* null }]
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @function, ptr null }]
 
 define arm_aapcs_vfpcc void @function() {
 entry:

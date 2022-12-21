@@ -16,5 +16,6 @@ add_llvm_component_library(LLVMDXILBitWriter
   MC
   Object
   Support
+  TargetParser
   TransformUtils
   )

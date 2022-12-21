@@ -24,8 +24,8 @@ using namespace llvm;
 
 static void check(remarks::Format SerializerFormat,
                   remarks::SerializerMode Mode, ArrayRef<remarks::Remark> Rs,
-                  StringRef ExpectedR, Optional<StringRef> ExpectedMeta,
-                  Optional<remarks::StringTable> StrTab = std::nullopt) {
+                  StringRef ExpectedR, std::optional<StringRef> ExpectedMeta,
+                  std::optional<remarks::StringTable> StrTab = std::nullopt) {
   std::string Buf;
   raw_string_ostream OS(Buf);
   Expected<std::unique_ptr<remarks::RemarkSerializer>> MaybeS = [&] {
@@ -53,7 +53,7 @@ static void check(remarks::Format SerializerFormat,
 
 static void check(remarks::Format SerializerFormat, const remarks::Remark &R,
                   StringRef ExpectedR, StringRef ExpectedMeta,
-                  Optional<remarks::StringTable> StrTab = std::nullopt) {
+                  std::optional<remarks::StringTable> StrTab = std::nullopt) {
   return check(SerializerFormat, remarks::SerializerMode::Separate,
                makeArrayRef(&R, &R + 1), ExpectedR, ExpectedMeta,
                std::move(StrTab));
@@ -62,7 +62,7 @@ static void check(remarks::Format SerializerFormat, const remarks::Remark &R,
 static void
 checkStandalone(remarks::Format SerializerFormat, const remarks::Remark &R,
                 StringRef ExpectedR,
-                Optional<remarks::StringTable> StrTab = std::nullopt) {
+                std::optional<remarks::StringTable> StrTab = std::nullopt) {
   return check(SerializerFormat, remarks::SerializerMode::Standalone,
                makeArrayRef(&R, &R + 1), ExpectedR,
                /*ExpectedMeta=*/std::nullopt, std::move(StrTab));

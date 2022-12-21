@@ -109,31 +109,29 @@
 
 define i32 @sum(i32 %count, ...) !dbg !4 {
 entry:
-  %vl = alloca i8*, align 4
-  %vl1 = bitcast i8** %vl to i8*
-  call void @llvm.va_start(i8* %vl1)
+  %vl = alloca ptr, align 4
+  call void @llvm.va_start(ptr %vl)
   %cmp4 = icmp sgt i32 %count, 0
   br i1 %cmp4, label %for.body, label %for.end
 
 for.body:                                         ; preds = %entry, %for.body
   %i.05 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-  %ap.cur = load i8*, i8** %vl, align 4
-  %ap.next = getelementptr i8, i8* %ap.cur, i32 4
-  store i8* %ap.next, i8** %vl, align 4
-  %0 = bitcast i8* %ap.cur to i32*
-  %1 = load i32, i32* %0, align 4
-  %call = call i32 @foo(i32 %1) #1
+  %ap.cur = load ptr, ptr %vl, align 4
+  %ap.next = getelementptr i8, ptr %ap.cur, i32 4
+  store ptr %ap.next, ptr %vl, align 4
+  %0 = load i32, ptr %ap.cur, align 4
+  %call = call i32 @foo(i32 %0) #1
   %inc = add nsw i32 %i.05, 1
   %exitcond = icmp eq i32 %inc, %count
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body, %entry
-  call void @llvm.va_end(i8* %vl1)
+  call void @llvm.va_end(ptr %vl)
   ret i32 undef
 }
 
-declare void @llvm.va_start(i8*) nounwind
+declare void @llvm.va_start(ptr) nounwind
 
 declare i32 @foo(i32)
 
-declare void @llvm.va_end(i8*) nounwind
+declare void @llvm.va_end(ptr) nounwind

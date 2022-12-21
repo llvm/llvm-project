@@ -5,7 +5,7 @@
 ; Source Code:
 ;   #define _(x) (__builtin_preserve_access_index(x))
 ;   struct s {int a; int b;};
-;   const void *test(struct s *arg) { return _(&arg->b); }
+;   const ptr test(struct s *arg) { return _(&arg->b); }
 ; Compiler flag to generate IR:
 ;   clang -target bpf -S -O2 -g -emit-llvm -Xclang -disable-llvm-passes test.c
 
@@ -14,12 +14,11 @@ target triple = "bpf"
 %struct.s = type { i32, i32 }
 
 ; Function Attrs: nounwind readnone
-define dso_local i8* @test(%struct.s* readnone %arg) local_unnamed_addr #0 !dbg !7 {
+define dso_local ptr @test(ptr readnone %arg) local_unnamed_addr #0 !dbg !7 {
 entry:
-  call void @llvm.dbg.value(metadata %struct.s* %arg, metadata !19, metadata !DIExpression()), !dbg !20
-  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.ss(%struct.s* elementtype(%struct.s) %arg, i32 1, i32 1), !dbg !21, !llvm.preserve.access.index !13
-  %1 = bitcast i32* %0 to i8*, !dbg !21
-  ret i8* %1, !dbg !22
+  call void @llvm.dbg.value(metadata ptr %arg, metadata !19, metadata !DIExpression()), !dbg !20
+  %0 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr elementtype(%struct.s) %arg, i32 1, i32 1), !dbg !21, !llvm.preserve.access.index !13
+  ret ptr %0, !dbg !22
 }
 
 ; CHECK-LABEL: test
@@ -43,7 +42,7 @@ entry:
 ; CHECK-NEXT:  .long   0
 
 ; Function Attrs: nounwind readnone
-declare i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.ss(%struct.s*, i32, i32) #1
+declare ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr, i32, i32) #1
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2

@@ -14,7 +14,7 @@ uint64x1_t test_vceq_p64(poly64x1_t a, poly64x1_t b) {
   return vceq_p64(a, b);
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vceqq_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vceqq_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #0 {
 // CHECK:   [[CMP_I:%.*]] = icmp eq <2 x i64> %a, %b
 // CHECK:   [[SEXT_I:%.*]] = sext <2 x i1> [[CMP_I]] to <2 x i64>
 // CHECK:   ret <2 x i64> [[SEXT_I]]
@@ -31,7 +31,7 @@ uint64x1_t test_vtst_p64(poly64x1_t a, poly64x1_t b) {
   return vtst_p64(a, b);
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vtstq_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vtstq_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #0 {
 // CHECK:   [[TMP4:%.*]] = and <2 x i64> %a, %b
 // CHECK:   [[TMP5:%.*]] = icmp ne <2 x i64> [[TMP4]], zeroinitializer
 // CHECK:   [[VTST_I:%.*]] = sext <2 x i1> [[TMP5]] to <2 x i64>
@@ -50,7 +50,7 @@ poly64x1_t test_vbsl_p64(poly64x1_t a, poly64x1_t b, poly64x1_t c) {
   return vbsl_p64(a, b, c);
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vbslq_p64(<2 x i64> noundef %a, <2 x i64> noundef %b, <2 x i64> noundef %c) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vbslq_p64(<2 x i64> noundef %a, <2 x i64> noundef %b, <2 x i64> noundef %c) #0 {
 // CHECK:   [[VBSL3_I:%.*]] = and <2 x i64> %a, %b
 // CHECK:   [[TMP3:%.*]] = xor <2 x i64> %a, <i64 -1, i64 -1>
 // CHECK:   [[VBSL4_I:%.*]] = and <2 x i64> [[TMP3]], %c
@@ -67,7 +67,7 @@ poly64_t test_vget_lane_p64(poly64x1_t v) {
   return vget_lane_p64(v, 0);
 }
 
-// CHECK-LABEL: define{{.*}} i64 @test_vgetq_lane_p64(<2 x i64> noundef %v) #1 {
+// CHECK-LABEL: define{{.*}} i64 @test_vgetq_lane_p64(<2 x i64> noundef %v) #0 {
 // CHECK:   [[VGETQ_LANE:%.*]] = extractelement <2 x i64> %v, i32 1
 // CHECK:   ret i64 [[VGETQ_LANE]]
 poly64_t test_vgetq_lane_p64(poly64x2_t v) {
@@ -81,7 +81,7 @@ poly64x1_t test_vset_lane_p64(poly64_t a, poly64x1_t v) {
   return vset_lane_p64(a, v, 0);
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vsetq_lane_p64(i64 noundef %a, <2 x i64> noundef %v) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vsetq_lane_p64(i64 noundef %a, <2 x i64> noundef %v) #0 {
 // CHECK:   [[VSET_LANE:%.*]] = insertelement <2 x i64> %v, i64 %a, i32 1
 // CHECK:   ret <2 x i64> [[VSET_LANE]]
 poly64x2_t test_vsetq_lane_p64(poly64_t a, poly64x2_t v) {
@@ -97,7 +97,7 @@ poly64x1_t test_vcopy_lane_p64(poly64x1_t a, poly64x1_t b) {
 
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vcopyq_lane_p64(<2 x i64> noundef %a, <1 x i64> noundef %b) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vcopyq_lane_p64(<2 x i64> noundef %a, <1 x i64> noundef %b) #0 {
 // CHECK:   [[VGET_LANE:%.*]] = extractelement <1 x i64> %b, i32 0
 // CHECK:   [[VSET_LANE:%.*]] = insertelement <2 x i64> %a, i64 [[VGET_LANE]], i32 1
 // CHECK:   ret <2 x i64> [[VSET_LANE]]
@@ -105,7 +105,7 @@ poly64x2_t test_vcopyq_lane_p64(poly64x2_t a, poly64x1_t b) {
   return vcopyq_lane_p64(a, 1, b, 0);
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vcopyq_laneq_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vcopyq_laneq_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #0 {
 // CHECK:   [[VGETQ_LANE:%.*]] = extractelement <2 x i64> %b, i32 1
 // CHECK:   [[VSET_LANE:%.*]] = insertelement <2 x i64> %a, i64 [[VGETQ_LANE]], i32 1
 // CHECK:   ret <2 x i64> [[VSET_LANE]]
@@ -126,7 +126,7 @@ poly64x1_t test_vcreate_p64(uint64_t a) {
 poly64x1_t test_vdup_n_p64(poly64_t a) {
   return vdup_n_p64(a);
 }
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vdupq_n_p64(i64 noundef %a) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vdupq_n_p64(i64 noundef %a) #0 {
 // CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i64> undef, i64 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i64> [[VECINIT_I]], i64 %a, i32 1
 // CHECK:   ret <2 x i64> [[VECINIT1_I]]
@@ -141,7 +141,7 @@ poly64x1_t test_vmov_n_p64(poly64_t a) {
   return vmov_n_p64(a);
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vmovq_n_p64(i64 noundef %a) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vmovq_n_p64(i64 noundef %a) #0 {
 // CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i64> undef, i64 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i64> [[VECINIT_I]], i64 %a, i32 1
 // CHECK:   ret <2 x i64> [[VECINIT1_I]]
@@ -158,7 +158,7 @@ poly64x1_t test_vdup_lane_p64(poly64x1_t vec) {
   return vdup_lane_p64(vec, 0);
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vdupq_lane_p64(<1 x i64> noundef %vec) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vdupq_lane_p64(<1 x i64> noundef %vec) #0 {
 // CHECK:    [[TMP0:%.*]] = bitcast <1 x i64> [[VEC:%.*]] to <8 x i8>
 // CHECK:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
 // CHECK:    [[LANE:%.*]] = shufflevector <1 x i64> [[TMP1]], <1 x i64> [[TMP1]], <2 x i32> zeroinitializer
@@ -167,7 +167,7 @@ poly64x2_t test_vdupq_lane_p64(poly64x1_t vec) {
   return vdupq_lane_p64(vec, 0);
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vdupq_laneq_p64(<2 x i64> noundef %vec) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vdupq_laneq_p64(<2 x i64> noundef %vec) #0 {
 // CHECK:    [[TMP0:%.*]] = bitcast <2 x i64> [[VEC:%.*]] to <16 x i8>
 // CHECK:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
 // CHECK:    [[LANE:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> [[TMP1]], <2 x i32> <i32 1, i32 1>
@@ -176,7 +176,7 @@ poly64x2_t test_vdupq_laneq_p64(poly64x2_t vec) {
   return vdupq_laneq_p64(vec, 1);
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vcombine_p64(<1 x i64> noundef %low, <1 x i64> noundef %high) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vcombine_p64(<1 x i64> noundef %low, <1 x i64> noundef %high) #0 {
 // CHECK:   [[SHUFFLE_I:%.*]] = shufflevector <1 x i64> %low, <1 x i64> %high, <2 x i32> <i32 0, i32 1>
 // CHECK:   ret <2 x i64> [[SHUFFLE_I]]
 poly64x2_t test_vcombine_p64(poly64x1_t low, poly64x1_t high) {
@@ -190,7 +190,7 @@ poly64x1_t test_vld1_p64(poly64_t const * ptr) {
   return vld1_p64(ptr);
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vld1q_p64(ptr noundef %ptr) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vld1q_p64(ptr noundef %ptr) #0 {
 // CHECK:   [[TMP2:%.*]] = load <2 x i64>, ptr %ptr
 // CHECK:   ret <2 x i64> [[TMP2]]
 poly64x2_t test_vld1q_p64(poly64_t const * ptr) {
@@ -206,7 +206,7 @@ void test_vst1_p64(poly64_t * ptr, poly64x1_t val) {
   return vst1_p64(ptr, val);
 }
 
-// CHECK-LABEL: define{{.*}} void @test_vst1q_p64(ptr noundef %ptr, <2 x i64> noundef %val) #1 {
+// CHECK-LABEL: define{{.*}} void @test_vst1q_p64(ptr noundef %ptr, <2 x i64> noundef %val) #0 {
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %val to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
 // CHECK:   store <2 x i64> [[TMP3]], ptr %ptr
@@ -215,7 +215,7 @@ void test_vst1q_p64(poly64_t * ptr, poly64x2_t val) {
   return vst1q_p64(ptr, val);
 }
 
-// CHECK-LABEL: define{{.*}} %struct.poly64x1x2_t @test_vld2_p64(ptr noundef %ptr) #2 {
+// CHECK-LABEL: define{{.*}} %struct.poly64x1x2_t @test_vld2_p64(ptr noundef %ptr) #0 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly64x1x2_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly64x1x2_t, align 8
 // CHECK:   [[VLD2:%.*]] = call { <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld2.v1i64.p0(ptr %ptr)
@@ -227,7 +227,7 @@ poly64x1x2_t test_vld2_p64(poly64_t const * ptr) {
   return vld2_p64(ptr);
 }
 
-// CHECK-LABEL: define{{.*}} %struct.poly64x2x2_t @test_vld2q_p64(ptr noundef %ptr) #2 {
+// CHECK-LABEL: define{{.*}} %struct.poly64x2x2_t @test_vld2q_p64(ptr noundef %ptr) #0 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly64x2x2_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly64x2x2_t, align 16
 // CHECK:   [[VLD2:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld2.v2i64.p0(ptr %ptr)
@@ -239,7 +239,7 @@ poly64x2x2_t test_vld2q_p64(poly64_t const * ptr) {
   return vld2q_p64(ptr);
 }
 
-// CHECK-LABEL: define{{.*}} %struct.poly64x1x3_t @test_vld3_p64(ptr noundef %ptr) #2 {
+// CHECK-LABEL: define{{.*}} %struct.poly64x1x3_t @test_vld3_p64(ptr noundef %ptr) #0 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly64x1x3_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly64x1x3_t, align 8
 // CHECK:   [[VLD3:%.*]] = call { <1 x i64>, <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld3.v1i64.p0(ptr %ptr)
@@ -251,7 +251,7 @@ poly64x1x3_t test_vld3_p64(poly64_t const * ptr) {
   return vld3_p64(ptr);
 }
 
-// CHECK-LABEL: define{{.*}} %struct.poly64x2x3_t @test_vld3q_p64(ptr noundef %ptr) #2 {
+// CHECK-LABEL: define{{.*}} %struct.poly64x2x3_t @test_vld3q_p64(ptr noundef %ptr) #0 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly64x2x3_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly64x2x3_t, align 16
 // CHECK:   [[VLD3:%.*]] = call { <2 x i64>, <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld3.v2i64.p0(ptr %ptr)
@@ -263,7 +263,7 @@ poly64x2x3_t test_vld3q_p64(poly64_t const * ptr) {
   return vld3q_p64(ptr);
 }
 
-// CHECK-LABEL: define{{.*}} %struct.poly64x1x4_t @test_vld4_p64(ptr noundef %ptr) #2 {
+// CHECK-LABEL: define{{.*}} %struct.poly64x1x4_t @test_vld4_p64(ptr noundef %ptr) #0 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly64x1x4_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly64x1x4_t, align 8
 // CHECK:   [[VLD4:%.*]] = call { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld4.v1i64.p0(ptr %ptr)
@@ -275,7 +275,7 @@ poly64x1x4_t test_vld4_p64(poly64_t const * ptr) {
   return vld4_p64(ptr);
 }
 
-// CHECK-LABEL: define{{.*}} %struct.poly64x2x4_t @test_vld4q_p64(ptr noundef %ptr) #2 {
+// CHECK-LABEL: define{{.*}} %struct.poly64x2x4_t @test_vld4q_p64(ptr noundef %ptr) #0 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly64x2x4_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly64x2x4_t, align 16
 // CHECK:   [[VLD4:%.*]] = call { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld4.v2i64.p0(ptr %ptr)
@@ -287,7 +287,7 @@ poly64x2x4_t test_vld4q_p64(poly64_t const * ptr) {
   return vld4q_p64(ptr);
 }
 
-// CHECK-LABEL: define{{.*}} void @test_vst2_p64(ptr noundef %ptr, [2 x <1 x i64>] %val.coerce) #2 {
+// CHECK-LABEL: define{{.*}} void @test_vst2_p64(ptr noundef %ptr, [2 x <1 x i64>] %val.coerce) #0 {
 // CHECK:   [[VAL:%.*]] = alloca %struct.poly64x1x2_t, align 8
 // CHECK:   [[__S1:%.*]] = alloca %struct.poly64x1x2_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x1x2_t, ptr [[VAL]], i32 0, i32 0
@@ -309,7 +309,7 @@ void test_vst2_p64(poly64_t * ptr, poly64x1x2_t val) {
   return vst2_p64(ptr, val);
 }
 
-// CHECK-LABEL: define{{.*}} void @test_vst2q_p64(ptr noundef %ptr, [2 x <2 x i64>] %val.coerce) #2 {
+// CHECK-LABEL: define{{.*}} void @test_vst2q_p64(ptr noundef %ptr, [2 x <2 x i64>] %val.coerce) #0 {
 // CHECK:   [[VAL:%.*]] = alloca %struct.poly64x2x2_t, align 16
 // CHECK:   [[__S1:%.*]] = alloca %struct.poly64x2x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x2x2_t, ptr [[VAL]], i32 0, i32 0
@@ -331,7 +331,7 @@ void test_vst2q_p64(poly64_t * ptr, poly64x2x2_t val) {
   return vst2q_p64(ptr, val);
 }
 
-// CHECK-LABEL: define{{.*}} void @test_vst3_p64(ptr noundef %ptr, [3 x <1 x i64>] %val.coerce) #2 {
+// CHECK-LABEL: define{{.*}} void @test_vst3_p64(ptr noundef %ptr, [3 x <1 x i64>] %val.coerce) #0 {
 // CHECK:   [[VAL:%.*]] = alloca %struct.poly64x1x3_t, align 8
 // CHECK:   [[__S1:%.*]] = alloca %struct.poly64x1x3_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x1x3_t, ptr [[VAL]], i32 0, i32 0
@@ -358,7 +358,7 @@ void test_vst3_p64(poly64_t * ptr, poly64x1x3_t val) {
   return vst3_p64(ptr, val);
 }
 
-// CHECK-LABEL: define{{.*}} void @test_vst3q_p64(ptr noundef %ptr, [3 x <2 x i64>] %val.coerce) #2 {
+// CHECK-LABEL: define{{.*}} void @test_vst3q_p64(ptr noundef %ptr, [3 x <2 x i64>] %val.coerce) #0 {
 // CHECK:   [[VAL:%.*]] = alloca %struct.poly64x2x3_t, align 16
 // CHECK:   [[__S1:%.*]] = alloca %struct.poly64x2x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x2x3_t, ptr [[VAL]], i32 0, i32 0
@@ -385,7 +385,7 @@ void test_vst3q_p64(poly64_t * ptr, poly64x2x3_t val) {
   return vst3q_p64(ptr, val);
 }
 
-// CHECK-LABEL: define{{.*}} void @test_vst4_p64(ptr noundef %ptr, [4 x <1 x i64>] %val.coerce) #2 {
+// CHECK-LABEL: define{{.*}} void @test_vst4_p64(ptr noundef %ptr, [4 x <1 x i64>] %val.coerce) #0 {
 // CHECK:   [[VAL:%.*]] = alloca %struct.poly64x1x4_t, align 8
 // CHECK:   [[__S1:%.*]] = alloca %struct.poly64x1x4_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x1x4_t, ptr [[VAL]], i32 0, i32 0
@@ -417,7 +417,7 @@ void test_vst4_p64(poly64_t * ptr, poly64x1x4_t val) {
   return vst4_p64(ptr, val);
 }
 
-// CHECK-LABEL: define{{.*}} void @test_vst4q_p64(ptr noundef %ptr, [4 x <2 x i64>] %val.coerce) #2 {
+// CHECK-LABEL: define{{.*}} void @test_vst4q_p64(ptr noundef %ptr, [4 x <2 x i64>] %val.coerce) #0 {
 // CHECK:   [[VAL:%.*]] = alloca %struct.poly64x2x4_t, align 16
 // CHECK:   [[__S1:%.*]] = alloca %struct.poly64x2x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x2x4_t, ptr [[VAL]], i32 0, i32 0
@@ -461,7 +461,7 @@ poly64x1_t test_vext_p64(poly64x1_t a, poly64x1_t b) {
 
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vextq_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vextq_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #0 {
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %b to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
@@ -472,42 +472,42 @@ poly64x2_t test_vextq_p64(poly64x2_t a, poly64x2_t b) {
   return vextq_p64(a, b, 1);
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vzip1q_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vzip1q_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #0 {
 // CHECK:   [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 0, i32 2>
 // CHECK:   ret <2 x i64> [[SHUFFLE_I]]
 poly64x2_t test_vzip1q_p64(poly64x2_t a, poly64x2_t b) {
   return vzip1q_p64(a, b);
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vzip2q_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vzip2q_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #0 {
 // CHECK:   [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 1, i32 3>
 // CHECK:   ret <2 x i64> [[SHUFFLE_I]]
 poly64x2_t test_vzip2q_p64(poly64x2_t a, poly64x2_t b) {
   return vzip2q_u64(a, b);
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vuzp1q_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vuzp1q_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #0 {
 // CHECK:   [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 0, i32 2>
 // CHECK:   ret <2 x i64> [[SHUFFLE_I]]
 poly64x2_t test_vuzp1q_p64(poly64x2_t a, poly64x2_t b) {
   return vuzp1q_p64(a, b);
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vuzp2q_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vuzp2q_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #0 {
 // CHECK:   [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 1, i32 3>
 // CHECK:   ret <2 x i64> [[SHUFFLE_I]]
 poly64x2_t test_vuzp2q_p64(poly64x2_t a, poly64x2_t b) {
   return vuzp2q_u64(a, b);
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vtrn1q_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vtrn1q_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #0 {
 // CHECK:   [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 0, i32 2>
 // CHECK:   ret <2 x i64> [[SHUFFLE_I]]
 poly64x2_t test_vtrn1q_p64(poly64x2_t a, poly64x2_t b) {
   return vtrn1q_p64(a, b);
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vtrn2q_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vtrn2q_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #0 {
 // CHECK:   [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 1, i32 3>
 // CHECK:   ret <2 x i64> [[SHUFFLE_I]]
 poly64x2_t test_vtrn2q_p64(poly64x2_t a, poly64x2_t b) {
@@ -525,7 +525,7 @@ poly64x1_t test_vsri_n_p64(poly64x1_t a, poly64x1_t b) {
   return vsri_n_p64(a, b, 33);
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vsriq_n_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #1 {
+// CHECK-LABEL: define{{.*}} <2 x i64> @test_vsriq_n_p64(<2 x i64> noundef %a, <2 x i64> noundef %b) #0 {
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %b to <16 x i8>
 // CHECK:   [[VSRI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
@@ -535,7 +535,3 @@ poly64x1_t test_vsri_n_p64(poly64x1_t a, poly64x1_t b) {
 poly64x2_t test_vsriq_n_p64(poly64x2_t a, poly64x2_t b) {
   return vsriq_n_p64(a, b, 64);
 }
-
-// CHECK: attributes #0 ={{.*}}"min-legal-vector-width"="64"
-// CHECK: attributes #1 ={{.*}}"min-legal-vector-width"="128"
-// CHECK: attributes #2 ={{.*}}"min-legal-vector-width"="0"

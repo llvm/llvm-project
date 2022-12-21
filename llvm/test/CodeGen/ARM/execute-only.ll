@@ -13,7 +13,7 @@ define i32 @global() minsize {
 ; CHECK: movw [[GLOBDEST:r[0-9]+]], :lower16:var
 ; CHECK: movt [[GLOBDEST]], :upper16:var
 
-  %val = load i32, i32* @var
+  %val = load i32, ptr @var
   ret i32 %val
 }
 
@@ -77,10 +77,10 @@ return:                                           ; preds = %entry, %sw.bb8, %sw
 
 @.str = private unnamed_addr constant [4 x i8] c"FOO\00", align 1
 
-define hidden i8* @string_literal() {
+define hidden ptr @string_literal() {
 entry:
 ; CHECK-LABEL: string_literal:
 ; CHECK-NOT: .asciz
 ; CHECK: .fnend
-    ret i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0)
+    ret ptr @.str
 }

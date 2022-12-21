@@ -93,8 +93,9 @@ class AMDGPUDAGToDAGISel : public SelectionDAGISel {
 public:
   static char ID;
 
-  explicit AMDGPUDAGToDAGISel(TargetMachine *TM = nullptr,
-                              CodeGenOpt::Level OptLevel = CodeGenOpt::Default);
+  AMDGPUDAGToDAGISel() = delete;
+
+  explicit AMDGPUDAGToDAGISel(TargetMachine &TM, CodeGenOpt::Level OptLevel);
   ~AMDGPUDAGToDAGISel() override = default;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;

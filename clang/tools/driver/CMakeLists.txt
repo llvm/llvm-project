@@ -13,6 +13,7 @@ set( LLVM_LINK_COMPONENTS
   Option
   ScalarOpts
   Support
+  TargetParser
   TransformUtils
   Vectorize
   )

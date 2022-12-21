@@ -40,7 +40,7 @@ entry:
 define void @vf(float %x) #0 {
 entry:
   %x.addr = alloca float, align 4
-  store float %x, float* %x.addr, align 4
+  store float %x, ptr %x.addr, align 4
   ret void
 }
 
@@ -58,7 +58,7 @@ entry:
 define void @vd(double %x) #0 {
 entry:
   %x.addr = alloca double, align 8
-  store double %x, double* %x.addr, align 8
+  store double %x, ptr %x.addr, align 8
   ret void
 }
 
@@ -75,11 +75,11 @@ entry:
 
 define void @foo1() #0 {
 entry:
-  store float 1.000000e+00, float* @zz, align 4
-  %0 = load float, float* @y, align 4
-  %1 = load float, float* @x, align 4
+  store float 1.000000e+00, ptr @zz, align 4
+  %0 = load float, ptr @y, align 4
+  %1 = load float, ptr @x, align 4
   %add = fadd float %0, %1
-  store float %add, float* @z, align 4
+  store float %add, ptr @z, align 4
   ret void
 }
 
@@ -96,7 +96,7 @@ entry:
 
 define void @foo2() #0 {
 entry:
-  %0 = load float, float* @x, align 4
+  %0 = load float, ptr @x, align 4
   call void @vf(float %0)
   ret void
 }
@@ -116,7 +116,7 @@ entry:
 define void @foo3() #0 {
 entry:
   %call = call float @fv()
-  store float %call, float* @x, align 4
+  store float %call, ptr @x, align 4
   ret void
 }
 

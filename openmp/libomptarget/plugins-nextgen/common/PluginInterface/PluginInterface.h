@@ -372,8 +372,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return GridValues.GV_Default_WG_Size;
   }
   uint64_t getDefaultNumBlocks() const {
-    // TODO: Introduce a default num blocks value.
-    return GridValues.GV_Default_WG_Size;
+    return GridValues.GV_Default_Num_Teams;
   }
   uint32_t getDynamicMemorySize() const { return OMPX_SharedMemorySize; }
 

@@ -5,31 +5,31 @@
 @"bfloat_array" = addrspace(1) constant [4 x bfloat]
                 [bfloat 0xR0201, bfloat 0xR0403, bfloat 0xR0605, bfloat 0xR0807]
 
-define void @test_load_store(bfloat addrspace(1)* %in, bfloat addrspace(1)* %out) {
+define void @test_load_store(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; CHECK-LABEL: @test_load_store
 ; CHECK: ld.global.b16 [[TMP:%h[0-9]+]], [{{%r[0-9]+}}]
 ; CHECK: st.global.b16 [{{%r[0-9]+}}], [[TMP]]
-  %val = load bfloat, bfloat addrspace(1)* %in
-  store bfloat %val, bfloat addrspace(1) * %out
+  %val = load bfloat, ptr addrspace(1) %in
+  store bfloat %val, ptr addrspace(1) %out
   ret void
 }
 
-define void @test_bitcast_from_bfloat(bfloat addrspace(1)* %in, i16 addrspace(1)* %out) {
+define void @test_bitcast_from_bfloat(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; CHECK-LABEL: @test_bitcast_from_bfloat
 ; CHECK: ld.global.b16 [[TMP:%h[0-9]+]], [{{%r[0-9]+}}]
 ; CHECK: st.global.b16 [{{%r[0-9]+}}], [[TMP]]
-  %val = load bfloat, bfloat addrspace(1) * %in
+  %val = load bfloat, ptr addrspace(1) %in
   %val_int = bitcast bfloat %val to i16
-  store i16 %val_int, i16 addrspace(1)* %out
+  store i16 %val_int, ptr addrspace(1) %out
   ret void
 }
 
-define void @test_bitcast_to_bfloat(bfloat addrspace(1)* %out, i16 addrspace(1)* %in) {
+define void @test_bitcast_to_bfloat(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; CHECK-LABEL: @test_bitcast_to_bfloat
 ; CHECK: ld.global.u16 [[TMP:%rs[0-9]+]], [{{%r[0-9]+}}]
 ; CHECK: st.global.u16 [{{%r[0-9]+}}], [[TMP]]
-  %val = load i16, i16 addrspace(1)* %in
+  %val = load i16, ptr addrspace(1) %in
   %val_fp = bitcast i16 %val to bfloat
-  store bfloat %val_fp, bfloat addrspace(1)* %out
+  store bfloat %val_fp, ptr addrspace(1) %out
   ret void
 }

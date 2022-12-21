@@ -5,9 +5,8 @@
 target triple = "hexagon"
 
 ; Function Attrs: nounwind
-define void @f0(i8* nocapture readnone %a0, i32 %a1, i32 %a2, i32 %a3, i32* nocapture %a4, i32 %a5) #0 {
+define void @f0(ptr nocapture readnone %a0, i32 %a1, i32 %a2, i32 %a3, ptr nocapture %a4, i32 %a5) #0 {
 b0:
-  %v0 = bitcast i32* %a4 to <16 x i32>*
   %v1 = mul i32 %a5, -2
   %v2 = add i32 %v1, %a1
   %v3 = and i32 %a5, 63
@@ -40,30 +39,29 @@ b3:                                               ; preds = %b2
   %v21 = lshr i32 %v20, 9
   %v22 = mul i32 %v21, 16
   %v23 = add nuw nsw i32 %v22, 16
-  %v24 = getelementptr i32, i32* %a4, i32 %v23
+  %v24 = getelementptr i32, ptr %a4, i32 %v23
   br label %b4
 
 b4:                                               ; preds = %b4, %b3
   %v25 = phi i32 [ %v4, %b3 ], [ %v30, %b4 ]
   %v26 = phi <16 x i32> [ %v17, %b3 ], [ %v5, %b4 ]
-  %v27 = phi <16 x i32>* [ %v0, %b3 ], [ %v29, %b4 ]
+  %v27 = phi ptr [ %a4, %b3 ], [ %v29, %b4 ]
   %v28 = tail call <16 x i32> @llvm.hexagon.V6.vand(<16 x i32> undef, <16 x i32> %v26)
-  %v29 = getelementptr inbounds <16 x i32>, <16 x i32>* %v27, i32 1
-  store <16 x i32> %v28, <16 x i32>* %v27, align 64, !tbaa !0
+  %v29 = getelementptr inbounds <16 x i32>, ptr %v27, i32 1
+  store <16 x i32> %v28, ptr %v27, align 64, !tbaa !0
   %v30 = add nsw i32 %v25, -512
   %v31 = icmp sgt i32 %v30, 0
   br i1 %v31, label %b4, label %b5
 
 b5:                                               ; preds = %b4
-  %v32 = bitcast i32* %v24 to <16 x i32>*
   br label %b6
 
 b6:                                               ; preds = %b5, %b2
-  %v33 = phi <16 x i32>* [ %v32, %b5 ], [ %v0, %b2 ]
-  %v34 = load <16 x i32>, <16 x i32>* %v33, align 64, !tbaa !0
+  %v33 = phi ptr [ %v24, %b5 ], [ %a4, %b2 ]
+  %v34 = load <16 x i32>, ptr %v33, align 64, !tbaa !0
   %v35 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %v13)
   %v36 = tail call <16 x i32> @llvm.hexagon.V6.vand(<16 x i32> %v34, <16 x i32> %v35)
-  store <16 x i32> %v36, <16 x i32>* %v33, align 64, !tbaa !0
+  store <16 x i32> %v36, ptr %v33, align 64, !tbaa !0
   ret void
 }
 

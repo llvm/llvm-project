@@ -15,6 +15,7 @@ unittest("CodeGenTests") {
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
   ]
   sources = [

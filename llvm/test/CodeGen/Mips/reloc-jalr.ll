@@ -146,30 +146,30 @@ entry:
 ; Previously we were adding them for local dynamic TLS function pointers and
 ; function pointers with internal linkage.
 
-@fnptr_internal = internal global void()* @checkFunctionPointerCall
-@fnptr_internal_const = internal constant void()* @checkFunctionPointerCall
-@fnptr_const = constant void()* @checkFunctionPointerCall
-@fnptr_global = global void()* @checkFunctionPointerCall
+@fnptr_internal = internal global ptr @checkFunctionPointerCall
+@fnptr_internal_const = internal constant ptr @checkFunctionPointerCall
+@fnptr_const = constant ptr @checkFunctionPointerCall
+@fnptr_global = global ptr @checkFunctionPointerCall
 
 define void @checkFunctionPointerCall() {
 entry:
 ; ALL-LABEL: checkFunctionPointerCall:
 ; ALL-NOT: MIPS_JALR
-  %func_internal = load void()*, void()** @fnptr_internal
+  %func_internal = load ptr, ptr @fnptr_internal
   call void %func_internal()
-  %func_internal_const = load void()*, void()** @fnptr_internal_const
+  %func_internal_const = load ptr, ptr @fnptr_internal_const
   call void %func_internal_const()
-  %func_const = load void()*, void()** @fnptr_const
+  %func_const = load ptr, ptr @fnptr_const
   call void %func_const()
-  %func_global = load void()*, void()** @fnptr_global
+  %func_global = load ptr, ptr @fnptr_global
   call void %func_global()
   ret void
 }
 
-@tls_fnptr_gd = thread_local global void()* @checkTlsFunctionPointerCall
-@tls_fnptr_ld = thread_local(localdynamic) global void()* @checkTlsFunctionPointerCall
-@tls_fnptr_ie = thread_local(initialexec) global void()* @checkTlsFunctionPointerCall
-@tls_fnptr_le = thread_local(localexec) global void()* @checkTlsFunctionPointerCall
+@tls_fnptr_gd = thread_local global ptr @checkTlsFunctionPointerCall
+@tls_fnptr_ld = thread_local(localdynamic) global ptr @checkTlsFunctionPointerCall
+@tls_fnptr_ie = thread_local(initialexec) global ptr @checkTlsFunctionPointerCall
+@tls_fnptr_le = thread_local(localexec) global ptr @checkTlsFunctionPointerCall
 
 define void @checkTlsFunctionPointerCall() {
 entry:
@@ -182,13 +182,13 @@ entry:
 ; JALR-ALL: .reloc {{.+}}MIPS_JALR, __tls_get_addr
 ; NORELOC-NOT:   .reloc
 ; ALL-NOT: _MIPS_JALR
-  %func_gd = load void()*, void()** @tls_fnptr_gd
+  %func_gd = load ptr, ptr @tls_fnptr_gd
   call void %func_gd()
-  %func_ld = load void()*, void()** @tls_fnptr_ld
+  %func_ld = load ptr, ptr @tls_fnptr_ld
   call void %func_ld()
-  %func_ie = load void()*, void()** @tls_fnptr_ie
+  %func_ie = load ptr, ptr @tls_fnptr_ie
   call void %func_ie()
-  %func_le = load void()*, void()** @tls_fnptr_le
+  %func_le = load ptr, ptr @tls_fnptr_le
   call void %func_le()
   ret void
 }

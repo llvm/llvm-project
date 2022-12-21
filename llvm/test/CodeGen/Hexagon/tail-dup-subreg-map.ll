@@ -12,11 +12,11 @@ target triple = "hexagon"
 %struct.0 = type { i64, i16 }
 %struct.1 = type { i64, i64 }
 
-declare hidden fastcc void @foo(%struct.0* noalias nocapture, i8 signext, i8 zeroext, i32, i64, i64) unnamed_addr #0
+declare hidden fastcc void @foo(ptr noalias nocapture, i8 signext, i8 zeroext, i32, i64, i64) unnamed_addr #0
 
-define void @fred(%struct.0* noalias nocapture sret(%struct.0) %agg.result, %struct.1* byval(%struct.1) nocapture readonly align 8 %a, i32 %a0) #1 {
+define void @fred(ptr noalias nocapture sret(%struct.0) %agg.result, ptr byval(%struct.1) nocapture readonly align 8 %a, i32 %a0) #1 {
 entry:
-  %0 = load i64, i64* undef, align 8
+  %0 = load i64, ptr undef, align 8
   switch i32 %a0, label %if.else [
     i32 32767, label %if.then
     i32 0, label %if.then7
@@ -59,7 +59,7 @@ if.end13:                                         ; preds = %if.else, %if.else16
   %shl2.i = shl i64 %aSig0.2, 15
   %shr.i = lshr i64 %aSig1.1, 49
   %or.i = or i64 %shl2.i, %shr.i
-  tail call fastcc void @foo(%struct.0* noalias %agg.result, i8 signext 80, i8 zeroext undef, i32 %aExp.0, i64 %or.i, i64 undef)
+  tail call fastcc void @foo(ptr noalias %agg.result, i8 signext 80, i8 zeroext undef, i32 %aExp.0, i64 %or.i, i64 undef)
   unreachable
 }
 

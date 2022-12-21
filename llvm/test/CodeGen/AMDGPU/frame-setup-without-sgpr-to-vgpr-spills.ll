@@ -96,7 +96,7 @@ define void @callee_with_stack_and_call() #0 {
 ; NO-SPILL-TO-VGPR-NEXT:    s_mov_b32 s33, s4
 ; NO-SPILL-TO-VGPR-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca i32, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
   call void @external_void_func_void()
   ret void
 }

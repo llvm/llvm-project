@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=arm64-apple-ios %s -o - | FileCheck %s
 
-define swifttailcc void @foo(i8* %call) ssp {
+define swifttailcc void @foo(ptr %call) ssp {
 ; CHECK-LABEL: foo:
   %var = alloca [28 x i8], align 16
   br i1 undef, label %if.then, label %if.end
@@ -12,13 +12,13 @@ if.end:
   ; CHECK: mov x[[NULL:[0-9]+]], xzr
   ; CHECK: ldr [[FPTR:x[0-9]+]], [x[[NULL]]]
   ; CHECK: br [[FPTR]]
-  call void @llvm.dbg.value(metadata i8* %call, metadata !19, metadata !DIExpression()), !dbg !21
-  %fptr = load void (i8*)*, void (i8*)** null, align 8
-  musttail call swifttailcc void %fptr(i8* null)
+  call void @llvm.dbg.value(metadata ptr %call, metadata !19, metadata !DIExpression()), !dbg !21
+  %fptr = load ptr, ptr null, align 8
+  musttail call swifttailcc void %fptr(ptr null)
   ret void
 }
 
-declare i8* @pthread_getspecific()
+declare ptr @pthread_getspecific()
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1

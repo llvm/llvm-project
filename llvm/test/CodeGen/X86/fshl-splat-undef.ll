@@ -17,7 +17,7 @@
 ; (We can not convert t2 to {i64 undef, i64 undef, ...})
 ; That is not equal with the origin result)
 ;
-define void @test_fshl(<8 x i64> %lo, <8 x i64> %hi, <8 x i64>* %arr) {
+define void @test_fshl(<8 x i64> %lo, <8 x i64> %hi, ptr %arr) {
 ; CHECK-LABEL: test_fshl:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -30,7 +30,7 @@ define void @test_fshl(<8 x i64> %lo, <8 x i64> %hi, <8 x i64>* %arr) {
 entry:
   %fshl = call <8 x i64> @llvm.fshl.v8i64(<8 x i64> %hi, <8 x i64> %lo, <8 x i64> <i64 12, i64 12, i64 12, i64 12, i64 12, i64 12, i64 12, i64 12>)
   %res = shufflevector <8 x i64> %fshl, <8 x i64> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 12, i32 13, i32 6, i32 7>
-  store <8 x i64> %res, <8 x i64>* %arr, align 64
+  store <8 x i64> %res, ptr %arr, align 64
   ret void
 }
 

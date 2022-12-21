@@ -311,7 +311,7 @@ define <vscale x 4 x i32> @invoke_callee_may_throw_sve(<vscale x 4 x i32> %v) uw
 .Lcontinue:
   ret <vscale x 4 x i32> %result
 .Lunwind:
-  %lp = landingpad { i8*, i32 } cleanup
+  %lp = landingpad { ptr, i32 } cleanup
   ret <vscale x 4 x i32> %v;
 }
 
@@ -537,7 +537,7 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 .Lcontinue:
   ret <4 x i32> %result
 .Lunwind:
-  %lp = landingpad { i8*, i32 } cleanup
+  %lp = landingpad { ptr, i32 } cleanup
   ret <4 x i32> %v;
 }
 

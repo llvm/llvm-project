@@ -24,8 +24,8 @@ entry:
 ; CHECK-ARMV4T-NEXT:  ldr [[R0:r[0-9]+]], [[[ADDR0]], #4]
 ; CHECK-ARMV4T-NEXT:  str [[R0]], [[[ADDR1]], #4]
 ; CHECK-ARMV4T-NEXT:  str [[R1]], [[[ADDR1]]]
-  %0 = load volatile i64, i64* @x, align 8
-  store volatile i64 %0, i64* @y, align 8
+  %0 = load volatile i64, ptr @x, align 8
+  store volatile i64 %0, ptr @y, align 8
   ret void
 }
 
@@ -48,8 +48,8 @@ entry:
 ; CHECK-ARMV4T-NEXT:  ldr [[R1:r[0-9]+]], [[[ADDR0]]]
 ; CHECK-ARMV4T-NEXT:  str [[R1]], [[[ADDR1]]]
 ; CHECK-ARMV4T-NEXT:  str [[R0]], [[[ADDR1]], #-4]
-  %0 = load volatile i64, i64* bitcast (i8* getelementptr (i8, i8* bitcast (i64* @x to i8*), i32 -4) to i64*), align 8
-  store volatile i64 %0, i64* bitcast (i8* getelementptr (i8, i8* bitcast (i64* @y to i8*), i32 -4) to i64*), align 8
+  %0 = load volatile i64, ptr getelementptr (i8, ptr @x, i32 -4), align 8
+  store volatile i64 %0, ptr getelementptr (i8, ptr @y, i32 -4), align 8
   ret void
 }
 
@@ -70,8 +70,8 @@ define void @test_offset_1() {
 ; CHECK-ARMV4T-NEXT:  str [[R1]], [[[ADDR1]], #259]
 ; CHECK-ARMV4T-NEXT:  str [[R0]], [[[ADDR1]], #255]
 entry:
-  %0 = load volatile i64, i64* bitcast (i8* getelementptr (i8, i8* bitcast (i64* @x to i8*), i32 255) to i64*), align 8
-  store volatile i64 %0, i64* bitcast (i8* getelementptr (i8, i8* bitcast (i64* @y to i8*), i32 255) to i64*), align 8
+  %0 = load volatile i64, ptr getelementptr (i8, ptr @x, i32 255), align 8
+  store volatile i64 %0, ptr getelementptr (i8, ptr @y, i32 255), align 8
   ret void
 }
 
@@ -96,8 +96,8 @@ define void @test_offset_2() {
 ; CHECK-ARMV4T-NEXT:  str [[R1]], [[[ADDR1]], #260]
 ; CHECK-ARMV4T-NEXT:  str [[R0]], [[[ADDR1]], #256]
 entry:
-  %0 = load volatile i64, i64* bitcast (i8* getelementptr (i8, i8* bitcast (i64* @x to i8*), i32 256) to i64*), align 8
-  store volatile i64 %0, i64* bitcast (i8* getelementptr (i8, i8* bitcast (i64* @y to i8*), i32 256) to i64*), align 8
+  %0 = load volatile i64, ptr getelementptr (i8, ptr @x, i32 256), align 8
+  store volatile i64 %0, ptr getelementptr (i8, ptr @y, i32 256), align 8
   ret void
 }
 
@@ -122,8 +122,8 @@ define void @test_offset_3() {
 ; CHECK-ARMV4T-NEXT:  str [[R1]], [[[ADDR1]], #1024]
 ; CHECK-ARMV4T-NEXT:  str [[R0]], [[[ADDR1]], #1020]
 entry:
-  %0 = load volatile i64, i64* bitcast (i8* getelementptr (i8, i8* bitcast (i64* @x to i8*), i32 1020) to i64*), align 8
-  store volatile i64 %0, i64* bitcast (i8* getelementptr (i8, i8* bitcast (i64* @y to i8*), i32 1020) to i64*), align 8
+  %0 = load volatile i64, ptr getelementptr (i8, ptr @x, i32 1020), align 8
+  store volatile i64 %0, ptr getelementptr (i8, ptr @y, i32 1020), align 8
   ret void
 }
 
@@ -150,8 +150,8 @@ define void @test_offset_4() {
 ; CHECK-ARMV4T-NEXT:  str [[R1]], [[[ADDR1]], #1028]
 ; CHECK-ARMV4T-NEXT:  str [[R0]], [[[ADDR1]], #1024]
 entry:
-  %0 = load volatile i64, i64* bitcast (i8* getelementptr (i8, i8* bitcast (i64* @x to i8*), i32 1024) to i64*), align 8
-  store volatile i64 %0, i64* bitcast (i8* getelementptr (i8, i8* bitcast (i64* @y to i8*), i32 1024) to i64*), align 8
+  %0 = load volatile i64, ptr getelementptr (i8, ptr @x, i32 1024), align 8
+  store volatile i64 %0, ptr getelementptr (i8, ptr @y, i32 1024), align 8
   ret void
 }
 
@@ -182,10 +182,10 @@ define i64 @test_stack() {
 ; CHECK-ARMV4T-NEXT: bx lr
 entry:
   %a = alloca [10 x i64], align 8
-  %arrayidx = getelementptr inbounds [10 x i64], [10 x i64]* %a, i32 0, i32 1
-  store volatile i64 1, i64* %arrayidx, align 8
-  %arrayidx1 = getelementptr inbounds [10 x i64], [10 x i64]* %a, i32 0, i32 1
-  %0 = load volatile i64, i64* %arrayidx1, align 8
+  %arrayidx = getelementptr inbounds [10 x i64], ptr %a, i32 0, i32 1
+  store volatile i64 1, ptr %arrayidx, align 8
+  %arrayidx1 = getelementptr inbounds [10 x i64], ptr %a, i32 0, i32 1
+  %0 = load volatile i64, ptr %arrayidx1, align 8
   ret i64 %0
 }
 

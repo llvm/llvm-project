@@ -246,7 +246,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                               // the full source path remap.
                               if (do_truncate_remapping_names) {
                                 FileSpec build_path(key.AsCString());
-                                FileSpec source_path(DBGSourcePath);
+                                FileSpec source_path(DBGSourcePath.c_str());
                                 build_path.RemoveLastPathComponent();
                                 build_path.RemoveLastPathComponent();
                                 source_path.RemoveLastPathComponent();

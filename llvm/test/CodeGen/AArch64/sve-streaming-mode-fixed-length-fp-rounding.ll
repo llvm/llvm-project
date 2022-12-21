@@ -43,7 +43,7 @@ define <8 x half> @frintp_v8f16(<8 x half> %op) #0 {
   ret <8 x half> %res
 }
 
-define void @frintp_v16f16(<16 x half>* %a) #0 {
+define void @frintp_v16f16(ptr %a) #0 {
 ; CHECK-LABEL: frintp_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -52,9 +52,9 @@ define void @frintp_v16f16(<16 x half>* %a) #0 {
 ; CHECK-NEXT:    frintp z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x half>, <16 x half>* %a
+  %op = load <16 x half>, ptr %a
   %res = call <16 x half> @llvm.ceil.v16f16(<16 x half> %op)
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
@@ -82,7 +82,7 @@ define <4 x float> @frintp_v4f32(<4 x float> %op) #0 {
   ret <4 x float> %res
 }
 
-define void @frintp_v8f32(<8 x float>* %a) #0 {
+define void @frintp_v8f32(ptr %a) #0 {
 ; CHECK-LABEL: frintp_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -91,9 +91,9 @@ define void @frintp_v8f32(<8 x float>* %a) #0 {
 ; CHECK-NEXT:    frintp z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <8 x float>, <8 x float>* %a
+  %op = load <8 x float>, ptr %a
   %res = call <8 x float> @llvm.ceil.v8f32(<8 x float> %op)
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
@@ -119,7 +119,7 @@ define <2 x double> @frintp_v2f64(<2 x double> %op) #0 {
   ret <2 x double> %res
 }
 
-define void @frintp_v4f64(<4 x double>* %a) #0 {
+define void @frintp_v4f64(ptr %a) #0 {
 ; CHECK-LABEL: frintp_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -128,9 +128,9 @@ define void @frintp_v4f64(<4 x double>* %a) #0 {
 ; CHECK-NEXT:    frintp z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <4 x double>, <4 x double>* %a
+  %op = load <4 x double>, ptr %a
   %res = call <4 x double> @llvm.ceil.v4f64(<4 x double> %op)
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 
@@ -174,7 +174,7 @@ define <8 x half> @frintm_v8f16(<8 x half> %op) #0 {
   ret <8 x half> %res
 }
 
-define void @frintm_v16f16(<16 x half>* %a) #0 {
+define void @frintm_v16f16(ptr %a) #0 {
 ; CHECK-LABEL: frintm_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -183,9 +183,9 @@ define void @frintm_v16f16(<16 x half>* %a) #0 {
 ; CHECK-NEXT:    frintm z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x half>, <16 x half>* %a
+  %op = load <16 x half>, ptr %a
   %res = call <16 x half> @llvm.floor.v16f16(<16 x half> %op)
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
@@ -213,7 +213,7 @@ define <4 x float> @frintm_v4f32(<4 x float> %op) #0 {
   ret <4 x float> %res
 }
 
-define void @frintm_v8f32(<8 x float>* %a) #0 {
+define void @frintm_v8f32(ptr %a) #0 {
 ; CHECK-LABEL: frintm_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -222,9 +222,9 @@ define void @frintm_v8f32(<8 x float>* %a) #0 {
 ; CHECK-NEXT:    frintm z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <8 x float>, <8 x float>* %a
+  %op = load <8 x float>, ptr %a
   %res = call <8 x float> @llvm.floor.v8f32(<8 x float> %op)
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
@@ -250,7 +250,7 @@ define <2 x double> @frintm_v2f64(<2 x double> %op) #0 {
   ret <2 x double> %res
 }
 
-define void @frintm_v4f64(<4 x double>* %a) #0 {
+define void @frintm_v4f64(ptr %a) #0 {
 ; CHECK-LABEL: frintm_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -259,9 +259,9 @@ define void @frintm_v4f64(<4 x double>* %a) #0 {
 ; CHECK-NEXT:    frintm z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <4 x double>, <4 x double>* %a
+  %op = load <4 x double>, ptr %a
   %res = call <4 x double> @llvm.floor.v4f64(<4 x double> %op)
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 
@@ -305,7 +305,7 @@ define <8 x half> @frinti_v8f16(<8 x half> %op) #0 {
   ret <8 x half> %res
 }
 
-define void @frinti_v16f16(<16 x half>* %a) #0 {
+define void @frinti_v16f16(ptr %a) #0 {
 ; CHECK-LABEL: frinti_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -314,9 +314,9 @@ define void @frinti_v16f16(<16 x half>* %a) #0 {
 ; CHECK-NEXT:    frinti z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x half>, <16 x half>* %a
+  %op = load <16 x half>, ptr %a
   %res = call <16 x half> @llvm.nearbyint.v16f16(<16 x half> %op)
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
@@ -344,7 +344,7 @@ define <4 x float> @frinti_v4f32(<4 x float> %op) #0 {
   ret <4 x float> %res
 }
 
-define void @frinti_v8f32(<8 x float>* %a) #0 {
+define void @frinti_v8f32(ptr %a) #0 {
 ; CHECK-LABEL: frinti_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -353,9 +353,9 @@ define void @frinti_v8f32(<8 x float>* %a) #0 {
 ; CHECK-NEXT:    frinti z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <8 x float>, <8 x float>* %a
+  %op = load <8 x float>, ptr %a
   %res = call <8 x float> @llvm.nearbyint.v8f32(<8 x float> %op)
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
@@ -381,7 +381,7 @@ define <2 x double> @frinti_v2f64(<2 x double> %op) #0 {
   ret <2 x double> %res
 }
 
-define void @frinti_v4f64(<4 x double>* %a) #0 {
+define void @frinti_v4f64(ptr %a) #0 {
 ; CHECK-LABEL: frinti_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -390,9 +390,9 @@ define void @frinti_v4f64(<4 x double>* %a) #0 {
 ; CHECK-NEXT:    frinti z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <4 x double>, <4 x double>* %a
+  %op = load <4 x double>, ptr %a
   %res = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> %op)
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 
@@ -436,7 +436,7 @@ define <8 x half> @frintx_v8f16(<8 x half> %op) #0 {
   ret <8 x half> %res
 }
 
-define void @frintx_v16f16(<16 x half>* %a) #0 {
+define void @frintx_v16f16(ptr %a) #0 {
 ; CHECK-LABEL: frintx_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -445,9 +445,9 @@ define void @frintx_v16f16(<16 x half>* %a) #0 {
 ; CHECK-NEXT:    frintx z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x half>, <16 x half>* %a
+  %op = load <16 x half>, ptr %a
   %res = call <16 x half> @llvm.rint.v16f16(<16 x half> %op)
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
@@ -475,7 +475,7 @@ define <4 x float> @frintx_v4f32(<4 x float> %op) #0 {
   ret <4 x float> %res
 }
 
-define void @frintx_v8f32(<8 x float>* %a) #0 {
+define void @frintx_v8f32(ptr %a) #0 {
 ; CHECK-LABEL: frintx_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -484,9 +484,9 @@ define void @frintx_v8f32(<8 x float>* %a) #0 {
 ; CHECK-NEXT:    frintx z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <8 x float>, <8 x float>* %a
+  %op = load <8 x float>, ptr %a
   %res = call <8 x float> @llvm.rint.v8f32(<8 x float> %op)
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
@@ -512,7 +512,7 @@ define <2 x double> @frintx_v2f64(<2 x double> %op) #0 {
   ret <2 x double> %res
 }
 
-define void @frintx_v4f64(<4 x double>* %a) #0 {
+define void @frintx_v4f64(ptr %a) #0 {
 ; CHECK-LABEL: frintx_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -521,9 +521,9 @@ define void @frintx_v4f64(<4 x double>* %a) #0 {
 ; CHECK-NEXT:    frintx z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <4 x double>, <4 x double>* %a
+  %op = load <4 x double>, ptr %a
   %res = call <4 x double> @llvm.rint.v4f64(<4 x double> %op)
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 
@@ -567,7 +567,7 @@ define <8 x half> @frinta_v8f16(<8 x half> %op) #0 {
   ret <8 x half> %res
 }
 
-define void @frinta_v16f16(<16 x half>* %a) #0 {
+define void @frinta_v16f16(ptr %a) #0 {
 ; CHECK-LABEL: frinta_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -576,9 +576,9 @@ define void @frinta_v16f16(<16 x half>* %a) #0 {
 ; CHECK-NEXT:    frinta z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x half>, <16 x half>* %a
+  %op = load <16 x half>, ptr %a
   %res = call <16 x half> @llvm.round.v16f16(<16 x half> %op)
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
@@ -606,7 +606,7 @@ define <4 x float> @frinta_v4f32(<4 x float> %op) #0 {
   ret <4 x float> %res
 }
 
-define void @frinta_v8f32(<8 x float>* %a) #0 {
+define void @frinta_v8f32(ptr %a) #0 {
 ; CHECK-LABEL: frinta_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -615,9 +615,9 @@ define void @frinta_v8f32(<8 x float>* %a) #0 {
 ; CHECK-NEXT:    frinta z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <8 x float>, <8 x float>* %a
+  %op = load <8 x float>, ptr %a
   %res = call <8 x float> @llvm.round.v8f32(<8 x float> %op)
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
@@ -643,7 +643,7 @@ define <2 x double> @frinta_v2f64(<2 x double> %op) #0 {
   ret <2 x double> %res
 }
 
-define void @frinta_v4f64(<4 x double>* %a) #0 {
+define void @frinta_v4f64(ptr %a) #0 {
 ; CHECK-LABEL: frinta_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -652,9 +652,9 @@ define void @frinta_v4f64(<4 x double>* %a) #0 {
 ; CHECK-NEXT:    frinta z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <4 x double>, <4 x double>* %a
+  %op = load <4 x double>, ptr %a
   %res = call <4 x double> @llvm.round.v4f64(<4 x double> %op)
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 
@@ -698,7 +698,7 @@ define <8 x half> @frintn_v8f16(<8 x half> %op) #0 {
   ret <8 x half> %res
 }
 
-define void @frintn_v16f16(<16 x half>* %a) #0 {
+define void @frintn_v16f16(ptr %a) #0 {
 ; CHECK-LABEL: frintn_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -707,9 +707,9 @@ define void @frintn_v16f16(<16 x half>* %a) #0 {
 ; CHECK-NEXT:    frintn z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x half>, <16 x half>* %a
+  %op = load <16 x half>, ptr %a
   %res = call <16 x half> @llvm.roundeven.v16f16(<16 x half> %op)
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
@@ -737,7 +737,7 @@ define <4 x float> @frintn_v4f32(<4 x float> %op) #0 {
   ret <4 x float> %res
 }
 
-define void @frintn_v8f32(<8 x float>* %a) #0 {
+define void @frintn_v8f32(ptr %a) #0 {
 ; CHECK-LABEL: frintn_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -746,9 +746,9 @@ define void @frintn_v8f32(<8 x float>* %a) #0 {
 ; CHECK-NEXT:    frintn z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <8 x float>, <8 x float>* %a
+  %op = load <8 x float>, ptr %a
   %res = call <8 x float> @llvm.roundeven.v8f32(<8 x float> %op)
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
@@ -774,7 +774,7 @@ define <2 x double> @frintn_v2f64(<2 x double> %op) #0 {
   ret <2 x double> %res
 }
 
-define void @frintn_v4f64(<4 x double>* %a) #0 {
+define void @frintn_v4f64(ptr %a) #0 {
 ; CHECK-LABEL: frintn_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -783,9 +783,9 @@ define void @frintn_v4f64(<4 x double>* %a) #0 {
 ; CHECK-NEXT:    frintn z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <4 x double>, <4 x double>* %a
+  %op = load <4 x double>, ptr %a
   %res = call <4 x double> @llvm.roundeven.v4f64(<4 x double> %op)
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 
@@ -829,7 +829,7 @@ define <8 x half> @frintz_v8f16(<8 x half> %op) #0 {
   ret <8 x half> %res
 }
 
-define void @frintz_v16f16(<16 x half>* %a) #0 {
+define void @frintz_v16f16(ptr %a) #0 {
 ; CHECK-LABEL: frintz_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -838,9 +838,9 @@ define void @frintz_v16f16(<16 x half>* %a) #0 {
 ; CHECK-NEXT:    frintz z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x half>, <16 x half>* %a
+  %op = load <16 x half>, ptr %a
   %res = call <16 x half> @llvm.trunc.v16f16(<16 x half> %op)
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
@@ -868,7 +868,7 @@ define <4 x float> @frintz_v4f32(<4 x float> %op) #0 {
   ret <4 x float> %res
 }
 
-define void @frintz_v8f32(<8 x float>* %a) #0 {
+define void @frintz_v8f32(ptr %a) #0 {
 ; CHECK-LABEL: frintz_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -877,9 +877,9 @@ define void @frintz_v8f32(<8 x float>* %a) #0 {
 ; CHECK-NEXT:    frintz z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <8 x float>, <8 x float>* %a
+  %op = load <8 x float>, ptr %a
   %res = call <8 x float> @llvm.trunc.v8f32(<8 x float> %op)
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
@@ -905,7 +905,7 @@ define <2 x double> @frintz_v2f64(<2 x double> %op) #0 {
   ret <2 x double> %res
 }
 
-define void @frintz_v4f64(<4 x double>* %a) #0 {
+define void @frintz_v4f64(ptr %a) #0 {
 ; CHECK-LABEL: frintz_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -914,9 +914,9 @@ define void @frintz_v4f64(<4 x double>* %a) #0 {
 ; CHECK-NEXT:    frintz z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <4 x double>, <4 x double>* %a
+  %op = load <4 x double>, ptr %a
   %res = call <4 x double> @llvm.trunc.v4f64(<4 x double> %op)
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 

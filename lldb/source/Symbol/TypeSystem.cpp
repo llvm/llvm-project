@@ -116,6 +116,10 @@ CompilerType TypeSystem::GetTypeForFormatters(void *type) {
   return CompilerType(weak_from_this(), type);
 }
 
+bool TypeSystem::IsTemplateType(lldb::opaque_compiler_type_t type) {
+  return false;
+}
+
 size_t TypeSystem::GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
                                            bool expand_pack) {
   return 0;

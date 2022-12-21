@@ -385,7 +385,7 @@ void AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
     for (auto [index, block] : llvm::enumerate(op->getSuccessors())) {
       SuccessorOperands successorOperands = branch.getSuccessorOperands(index);
       OperandRange forwarded = successorOperands.getForwardedOperands();
-      if (forwarded.size()) {
+      if (!forwarded.empty()) {
         MutableArrayRef<OpOperand> operands = op->getOpOperands().slice(
             forwarded.getBeginOperandIndex(), forwarded.size());
         for (OpOperand &operand : operands) {

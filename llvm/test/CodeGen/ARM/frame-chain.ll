@@ -48,8 +48,8 @@ define dso_local noundef i32 @leaf(i32 noundef %0) {
 ; LEAF-NOFP-AAPCS-NEXT:    add sp, sp, #4
 ; LEAF-NOFP-AAPCS-NEXT:    mov pc, lr
   %2 = alloca i32, align 4
-  store i32 %0, i32* %2, align 4
-  %3 = load i32, i32* %2, align 4
+  store i32 %0, ptr %2, align 4
+  %3 = load i32, ptr %2, align 4
   %4 = add nsw i32 %3, 4
   ret i32 %4
 }
@@ -111,14 +111,14 @@ define dso_local noundef i32 @non_leaf(i32 noundef %0) {
 ; NOFP-AAPCS-NEXT:    pop {r11, lr}
 ; NOFP-AAPCS-NEXT:    mov pc, lr
   %2 = alloca i32, align 4
-  store i32 %0, i32* %2, align 4
-  %3 = load i32, i32* %2, align 4
+  store i32 %0, ptr %2, align 4
+  %3 = load i32, ptr %2, align 4
   %4 = call noundef i32 @leaf(i32 noundef %3)
   %5 = add nsw i32 %4, 1
   ret i32 %5
 }
 
-declare i8* @llvm.stacksave()
+declare ptr @llvm.stacksave()
 define dso_local void @required_fp(i32 %0, i32 %1) {
 ; LEAF-FP-LABEL: required_fp:
 ; LEAF-FP:       @ %bb.0:
@@ -209,15 +209,15 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
 ; LEAF-NOFP-AAPCS-NEXT:    mov pc, lr
   %3 = alloca i32, align 4
   %4 = alloca i32, align 4
-  %5 = alloca i8*, align 8
+  %5 = alloca ptr, align 8
   %6 = alloca i64, align 8
-  store i32 %0, i32* %3, align 4
-  store i32 %1, i32* %4, align 4
-  %7 = load i32, i32* %3, align 4
+  store i32 %0, ptr %3, align 4
+  store i32 %1, ptr %4, align 4
+  %7 = load i32, ptr %3, align 4
   %8 = zext i32 %7 to i64
-  %9 = call i8* @llvm.stacksave()
-  store i8* %9, i8** %5, align 8
+  %9 = call ptr @llvm.stacksave()
+  store ptr %9, ptr %5, align 8
   %10 = alloca i32, i64 %8, align 4
-  store i64 %8, i64* %6, align 8
+  store i64 %8, ptr %6, align 8
   ret void
 }

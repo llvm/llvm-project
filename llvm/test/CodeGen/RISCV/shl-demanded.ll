@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64I
 
-define void @sext_shl_trunc_same_size(i16 %x, i32 %y, i16* %res) {
+define void @sext_shl_trunc_same_size(i16 %x, i32 %y, ptr %res) {
 ; RV32I-LABEL: sext_shl_trunc_same_size:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sll a0, a0, a1
@@ -19,11 +19,11 @@ define void @sext_shl_trunc_same_size(i16 %x, i32 %y, i16* %res) {
   %conv = sext i16 %x to i32
   %shl = shl i32 %conv, %y
   %t = trunc i32 %shl to i16
-  store i16 %t, i16* %res
+  store i16 %t, ptr %res
   ret void
 }
 
-define void @zext_shl_trunc_same_size(i16 %x, i32 %y, i16* %res) {
+define void @zext_shl_trunc_same_size(i16 %x, i32 %y, ptr %res) {
 ; RV32I-LABEL: zext_shl_trunc_same_size:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sll a0, a0, a1
@@ -38,11 +38,11 @@ define void @zext_shl_trunc_same_size(i16 %x, i32 %y, i16* %res) {
   %conv = zext i16 %x to i32
   %shl = shl i32 %conv, %y
   %t = trunc i32 %shl to i16
-  store i16 %t, i16* %res
+  store i16 %t, ptr %res
   ret void
 }
 
-define void @sext_shl_trunc_smaller(i16 %x, i32 %y, i8* %res) {
+define void @sext_shl_trunc_smaller(i16 %x, i32 %y, ptr %res) {
 ; RV32I-LABEL: sext_shl_trunc_smaller:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sll a0, a0, a1
@@ -57,11 +57,11 @@ define void @sext_shl_trunc_smaller(i16 %x, i32 %y, i8* %res) {
   %conv = sext i16 %x to i32
   %shl = shl i32 %conv, %y
   %t = trunc i32 %shl to i8
-  store i8 %t, i8* %res
+  store i8 %t, ptr %res
   ret void
 }
 
-define void @zext_shl_trunc_smaller(i16 %x, i32 %y, i8* %res) {
+define void @zext_shl_trunc_smaller(i16 %x, i32 %y, ptr %res) {
 ; RV32I-LABEL: zext_shl_trunc_smaller:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sll a0, a0, a1
@@ -76,7 +76,7 @@ define void @zext_shl_trunc_smaller(i16 %x, i32 %y, i8* %res) {
   %conv = zext i16 %x to i32
   %shl = shl i32 %conv, %y
   %t = trunc i32 %shl to i8
-  store i8 %t, i8* %res
+  store i8 %t, ptr %res
   ret void
 }
 

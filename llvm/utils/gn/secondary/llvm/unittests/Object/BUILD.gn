@@ -5,6 +5,7 @@ unittest("ObjectTests") {
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Object",
     "//llvm/lib/ObjectYAML",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
   ]
   sources = [

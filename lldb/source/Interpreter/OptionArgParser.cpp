@@ -222,7 +222,7 @@ lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
       std::string str_offset = matches[3].str();
       if (!llvm::StringRef(str_offset).getAsInteger(0, offset)) {
         Status error;
-        addr = ToAddress(exe_ctx, name, LLDB_INVALID_ADDRESS, &error);
+        addr = ToAddress(exe_ctx, name.c_str(), LLDB_INVALID_ADDRESS, &error);
         if (addr != LLDB_INVALID_ADDRESS) {
           if (sign[0] == '+')
             return addr + offset;

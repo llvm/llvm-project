@@ -28,10 +28,15 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace exegesis {
+
+extern cl::OptionCategory Options;
+extern cl::OptionCategory BenchmarkOptions;
+extern cl::OptionCategory AnalysisOptions;
 
 struct PfmCountersInfo {
   // An optional name of a performance counter that can be used to measure

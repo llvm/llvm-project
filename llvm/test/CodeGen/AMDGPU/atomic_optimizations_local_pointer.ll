@@ -14,7 +14,7 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 
 ; Show what the atomic optimization pass will do for local pointers.
 
-define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: add_i32_constant:
@@ -230,12 +230,12 @@ define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out) {
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw add i32 addrspace(3)* @local_var32, i32 5 acq_rel
-  store i32 %old, i32 addrspace(1)* %out
+  %old = atomicrmw add ptr addrspace(3) @local_var32, i32 5 acq_rel
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 %additive) {
+define amdgpu_kernel void @add_i32_uniform(ptr addrspace(1) %out, i32 %additive) {
 ;
 ;
 ; GFX7LESS-LABEL: add_i32_uniform:
@@ -468,12 +468,12 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 %additive
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw add i32 addrspace(3)* @local_var32, i32 %additive acq_rel
-  store i32 %old, i32 addrspace(1)* %out
+  %old = atomicrmw add ptr addrspace(3) @local_var32, i32 %additive acq_rel
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @add_i32_varying(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: add_i32_varying:
@@ -814,8 +814,8 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out) {
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw add i32 addrspace(3)* @local_var32, i32 %lane acq_rel
-  store i32 %old, i32 addrspace(1)* %out
+  %old = atomicrmw add ptr addrspace(3) @local_var32, i32 %lane acq_rel
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
@@ -1043,11 +1043,11 @@ define amdgpu_kernel void @add_i32_varying_nouse() {
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw add i32 addrspace(3)* @local_var32, i32 %lane acq_rel
+  %old = atomicrmw add ptr addrspace(3) @local_var32, i32 %lane acq_rel
   ret void
 }
 
-define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @add_i64_constant(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: add_i64_constant:
@@ -1283,12 +1283,12 @@ define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out) {
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw add i64 addrspace(3)* @local_var64, i64 5 acq_rel
-  store i64 %old, i64 addrspace(1)* %out
+  %old = atomicrmw add ptr addrspace(3) @local_var64, i64 5 acq_rel
+  store i64 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 %additive) {
+define amdgpu_kernel void @add_i64_uniform(ptr addrspace(1) %out, i64 %additive) {
 ;
 ;
 ; GFX7LESS-LABEL: add_i64_uniform:
@@ -1570,12 +1570,12 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 %additive
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw add i64 addrspace(3)* @local_var64, i64 %additive acq_rel
-  store i64 %old, i64 addrspace(1)* %out
+  %old = atomicrmw add ptr addrspace(3) @local_var64, i64 %additive acq_rel
+  store i64 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_i64_varying(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @add_i64_varying(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: add_i64_varying:
@@ -1647,12 +1647,12 @@ define amdgpu_kernel void @add_i64_varying(i64 addrspace(1)* %out) {
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
   %zext = zext i32 %lane to i64
-  %old = atomicrmw add i64 addrspace(3)* @local_var64, i64 %zext acq_rel
-  store i64 %old, i64 addrspace(1)* %out
+  %old = atomicrmw add ptr addrspace(3) @local_var64, i64 %zext acq_rel
+  store i64 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @sub_i32_constant(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: sub_i32_constant:
@@ -1875,12 +1875,12 @@ define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out) {
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw sub i32 addrspace(3)* @local_var32, i32 5 acq_rel
-  store i32 %old, i32 addrspace(1)* %out
+  %old = atomicrmw sub ptr addrspace(3) @local_var32, i32 5 acq_rel
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 %subitive) {
+define amdgpu_kernel void @sub_i32_uniform(ptr addrspace(1) %out, i32 %subitive) {
 ;
 ;
 ; GFX7LESS-LABEL: sub_i32_uniform:
@@ -2117,12 +2117,12 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 %subitive
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw sub i32 addrspace(3)* @local_var32, i32 %subitive acq_rel
-  store i32 %old, i32 addrspace(1)* %out
+  %old = atomicrmw sub ptr addrspace(3) @local_var32, i32 %subitive acq_rel
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: sub_i32_varying:
@@ -2463,8 +2463,8 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out) {
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw sub i32 addrspace(3)* @local_var32, i32 %lane acq_rel
-  store i32 %old, i32 addrspace(1)* %out
+  %old = atomicrmw sub ptr addrspace(3) @local_var32, i32 %lane acq_rel
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
@@ -2692,11 +2692,11 @@ define amdgpu_kernel void @sub_i32_varying_nouse() {
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw sub i32 addrspace(3)* @local_var32, i32 %lane acq_rel
+  %old = atomicrmw sub ptr addrspace(3) @local_var32, i32 %lane acq_rel
   ret void
 }
 
-define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @sub_i64_constant(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: sub_i64_constant:
@@ -2944,12 +2944,12 @@ define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out) {
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw sub i64 addrspace(3)* @local_var64, i64 5 acq_rel
-  store i64 %old, i64 addrspace(1)* %out
+  %old = atomicrmw sub ptr addrspace(3) @local_var64, i64 5 acq_rel
+  store i64 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 %subitive) {
+define amdgpu_kernel void @sub_i64_uniform(ptr addrspace(1) %out, i64 %subitive) {
 ;
 ;
 ; GFX7LESS-LABEL: sub_i64_uniform:
@@ -3244,12 +3244,12 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 %subitive
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw sub i64 addrspace(3)* @local_var64, i64 %subitive acq_rel
-  store i64 %old, i64 addrspace(1)* %out
+  %old = atomicrmw sub ptr addrspace(3) @local_var64, i64 %subitive acq_rel
+  store i64 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @sub_i64_varying(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @sub_i64_varying(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: sub_i64_varying:
@@ -3321,12 +3321,12 @@ define amdgpu_kernel void @sub_i64_varying(i64 addrspace(1)* %out) {
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
   %zext = zext i32 %lane to i64
-  %old = atomicrmw sub i64 addrspace(3)* @local_var64, i64 %zext acq_rel
-  store i64 %old, i64 addrspace(1)* %out
+  %old = atomicrmw sub ptr addrspace(3) @local_var64, i64 %zext acq_rel
+  store i64 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @and_i32_varying(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @and_i32_varying(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: and_i32_varying:
@@ -3671,12 +3671,12 @@ define amdgpu_kernel void @and_i32_varying(i32 addrspace(1)* %out) {
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw and i32 addrspace(3)* @local_var32, i32 %lane acq_rel
-  store i32 %old, i32 addrspace(1)* %out
+  %old = atomicrmw and ptr addrspace(3) @local_var32, i32 %lane acq_rel
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @or_i32_varying(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @or_i32_varying(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: or_i32_varying:
@@ -4017,12 +4017,12 @@ define amdgpu_kernel void @or_i32_varying(i32 addrspace(1)* %out) {
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw or i32 addrspace(3)* @local_var32, i32 %lane acq_rel
-  store i32 %old, i32 addrspace(1)* %out
+  %old = atomicrmw or ptr addrspace(3) @local_var32, i32 %lane acq_rel
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @xor_i32_varying(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @xor_i32_varying(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: xor_i32_varying:
@@ -4363,12 +4363,12 @@ define amdgpu_kernel void @xor_i32_varying(i32 addrspace(1)* %out) {
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw xor i32 addrspace(3)* @local_var32, i32 %lane acq_rel
-  store i32 %old, i32 addrspace(1)* %out
+  %old = atomicrmw xor ptr addrspace(3) @local_var32, i32 %lane acq_rel
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @max_i32_varying(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @max_i32_varying(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: max_i32_varying:
@@ -4713,12 +4713,12 @@ define amdgpu_kernel void @max_i32_varying(i32 addrspace(1)* %out) {
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw max i32 addrspace(3)* @local_var32, i32 %lane acq_rel
-  store i32 %old, i32 addrspace(1)* %out
+  %old = atomicrmw max ptr addrspace(3) @local_var32, i32 %lane acq_rel
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @max_i64_constant(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @max_i64_constant(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: max_i64_constant:
@@ -4964,12 +4964,12 @@ define amdgpu_kernel void @max_i64_constant(i64 addrspace(1)* %out) {
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw max i64 addrspace(3)* @local_var64, i64 5 acq_rel
-  store i64 %old, i64 addrspace(1)* %out
+  %old = atomicrmw max ptr addrspace(3) @local_var64, i64 5 acq_rel
+  store i64 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @min_i32_varying(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @min_i32_varying(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: min_i32_varying:
@@ -5314,12 +5314,12 @@ define amdgpu_kernel void @min_i32_varying(i32 addrspace(1)* %out) {
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw min i32 addrspace(3)* @local_var32, i32 %lane acq_rel
-  store i32 %old, i32 addrspace(1)* %out
+  %old = atomicrmw min ptr addrspace(3) @local_var32, i32 %lane acq_rel
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @min_i64_constant(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @min_i64_constant(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: min_i64_constant:
@@ -5565,12 +5565,12 @@ define amdgpu_kernel void @min_i64_constant(i64 addrspace(1)* %out) {
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw min i64 addrspace(3)* @local_var64, i64 5 acq_rel
-  store i64 %old, i64 addrspace(1)* %out
+  %old = atomicrmw min ptr addrspace(3) @local_var64, i64 5 acq_rel
+  store i64 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @umax_i32_varying(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @umax_i32_varying(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: umax_i32_varying:
@@ -5911,12 +5911,12 @@ define amdgpu_kernel void @umax_i32_varying(i32 addrspace(1)* %out) {
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw umax i32 addrspace(3)* @local_var32, i32 %lane acq_rel
-  store i32 %old, i32 addrspace(1)* %out
+  %old = atomicrmw umax ptr addrspace(3) @local_var32, i32 %lane acq_rel
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @umax_i64_constant(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @umax_i64_constant(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: umax_i64_constant:
@@ -6157,12 +6157,12 @@ define amdgpu_kernel void @umax_i64_constant(i64 addrspace(1)* %out) {
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw umax i64 addrspace(3)* @local_var64, i64 5 acq_rel
-  store i64 %old, i64 addrspace(1)* %out
+  %old = atomicrmw umax ptr addrspace(3) @local_var64, i64 5 acq_rel
+  store i64 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @umin_i32_varying(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @umin_i32_varying(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: umin_i32_varying:
@@ -6507,12 +6507,12 @@ define amdgpu_kernel void @umin_i32_varying(i32 addrspace(1)* %out) {
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw umin i32 addrspace(3)* @local_var32, i32 %lane acq_rel
-  store i32 %old, i32 addrspace(1)* %out
+  %old = atomicrmw umin ptr addrspace(3) @local_var32, i32 %lane acq_rel
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @umin_i64_constant(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @umin_i64_constant(ptr addrspace(1) %out) {
 ;
 ;
 ; GFX7LESS-LABEL: umin_i64_constant:
@@ -6753,7 +6753,7 @@ define amdgpu_kernel void @umin_i64_constant(i64 addrspace(1)* %out) {
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw umin i64 addrspace(3)* @local_var64, i64 5 acq_rel
-  store i64 %old, i64 addrspace(1)* %out
+  %old = atomicrmw umin ptr addrspace(3) @local_var64, i64 5 acq_rel
+  store i64 %old, ptr addrspace(1) %out
   ret void
 }

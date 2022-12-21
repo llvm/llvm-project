@@ -78,7 +78,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
   %sz = transform.structured.match ops{["test.dummy"]} in %arg1
-  %1:2 = transform.structured.tile_to_foreach_thread_op %0 tile_sizes [%sz]
+  %1:2 = transform.structured.tile_to_foreach_thread_op %0 tile_sizes %sz
 }
 
 // -----

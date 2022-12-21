@@ -238,11 +238,11 @@ class SPIRVOpInterface<string name> : OpInterface<name> {
 // Remove them once we are able to support dialect-specific contents in ODS.
 def QueryMinVersionInterface : SPIRVOpInterface<"QueryMinVersionInterface"> {
   let methods = [InterfaceMethod<
-    "", "::llvm::Optional<::mlir::spirv::Version>", "getMinVersion">];
+    "", "::std::optional<::mlir::spirv::Version>", "getMinVersion">];
 }
 def QueryMaxVersionInterface : SPIRVOpInterface<"QueryMaxVersionInterface"> {
   let methods = [InterfaceMethod<
-    "", "::llvm::Optional<::mlir::spirv::Version>", "getMaxVersion">];
+    "", "::std::optional<::mlir::spirv::Version>", "getMaxVersion">];
 }
 def QueryExtensionInterface : SPIRVOpInterface<"QueryExtensionInterface"> {
   let methods = [InterfaceMethod<

@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   MCParser
   MC
   Support
+  TargetParser
   )
 
 add_llvm_unittest(SystemZAsmLexerTests

@@ -15,13 +15,13 @@
 ; CHECK-NEXT:  Data
 ; CHECK-SAME:  Latency=0
 
-define double @foo(double* %a) nounwind optsize {
+define double @foo(ptr %a) nounwind optsize {
 entry:
-  %b = getelementptr double, double* %a, i32 1
-  %c = getelementptr double, double* %a, i32 2 
-  %0 = load double, double* %a, align 4
-  %1 = load double, double* %b, align 4
-  %2 = load double, double* %c, align 4
+  %b = getelementptr double, ptr %a, i32 1
+  %c = getelementptr double, ptr %a, i32 2 
+  %0 = load double, ptr %a, align 4
+  %1 = load double, ptr %b, align 4
+  %2 = load double, ptr %c, align 4
 
   %mul1 = fmul double %0, %1
   %mul2 = fmul double %mul1, %2

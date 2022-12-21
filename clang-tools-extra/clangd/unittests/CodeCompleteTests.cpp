@@ -1100,6 +1100,21 @@ TEST(CompletionTests, EmptySnippetDoesNotCrash) {
     )cpp");
 }
 
+TEST(CompletionTest, Issue1427Crash) {
+    // Need to provide main file signals to ensure that the branch in
+    // SymbolRelevanceSignals::computeASTSignals() that tries to
+    // compute a symbol ID is taken.
+    ASTSignals MainFileSignals;
+    CodeCompleteOptions Opts;
+    Opts.MainFileSignals = &MainFileSignals;
+    completions(R"cpp(
+      auto f = []() {
+        1.0_^
+      };
+    )cpp",
+                {}, Opts);
+}
+
 TEST(CompletionTest, BacktrackCrashes) {
   // Sema calls code completion callbacks twice in these cases.
   auto Results = completions(R"cpp(

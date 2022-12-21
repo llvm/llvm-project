@@ -17,7 +17,7 @@
 
 ; external address
 
-define i32* @f1() nounwind {
+define ptr @f1() nounwind {
 ; RV32-STATIC-LABEL: f1:
 ; RV32-STATIC:       # %bb.0: # %entry
 ; RV32-STATIC-NEXT:    lui a0, %hi(external_var)
@@ -44,13 +44,13 @@ define i32* @f1() nounwind {
 ; RV64-PIC-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi0)(a0)
 ; RV64-PIC-NEXT:    ret
 entry:
-  ret i32* @external_var
+  ret ptr @external_var
 }
 
 
 ; internal address
 
-define i32* @f2() nounwind {
+define ptr @f2() nounwind {
 ; RV32-STATIC-LABEL: f2:
 ; RV32-STATIC:       # %bb.0: # %entry
 ; RV32-STATIC-NEXT:    lui a0, %hi(internal_var)
@@ -77,5 +77,5 @@ define i32* @f2() nounwind {
 ; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi1)
 ; RV64-PIC-NEXT:    ret
 entry:
-  ret i32* @internal_var
+  ret ptr @internal_var
 }

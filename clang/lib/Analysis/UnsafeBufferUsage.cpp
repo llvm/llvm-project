@@ -245,7 +245,11 @@ public:
   void discoverDecl(const DeclStmt *DS) {
     for (const Decl *D : DS->decls()) {
       if (const auto *VD = dyn_cast<VarDecl>(D)) {
-        assert(Defs.count(VD) == 0 && "Definition already discovered!");
+        // FIXME: Assertion temporarily disabled due to a bug in
+        // ASTMatcher internal behavior in presence of GNU
+        // statement-expressions. We need to properly investigate this
+        // because it can screw up our algorithm in other ways.
+        // assert(Defs.count(VD) == 0 && "Definition already discovered!");
         Defs[VD] = DS;
       }
     }

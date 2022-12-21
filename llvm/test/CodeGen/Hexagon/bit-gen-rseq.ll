@@ -6,9 +6,9 @@
 
 target triple = "hexagon"
 
-define i32 @fred(i32* nocapture readonly %p, i32 %n) #0 {
+define i32 @fred(ptr nocapture readonly %p, i32 %n) #0 {
 entry:
-  %t.sroa.0.048 = load i32, i32* %p, align 4
+  %t.sroa.0.048 = load i32, ptr %p, align 4
   %cmp49 = icmp ugt i32 %n, 1
   br i1 %cmp49, label %for.body, label %for.end
 
@@ -20,9 +20,9 @@ for.body:                                         ; preds = %entry, %for.body
   %t.sroa.0.0.insert.insert = or i64 %t.sroa.0.0.insert.ext, %t.sroa.11.051
   %0 = tail call i64 @llvm.hexagon.A2.addp(i64 %t.sroa.0.0.insert.insert, i64 %t.sroa.0.0.insert.insert)
   %t.sroa.11.0.extract.shift = and i64 %0, -4294967296
-  %arrayidx4 = getelementptr inbounds i32, i32* %p, i32 %i.050
+  %arrayidx4 = getelementptr inbounds i32, ptr %p, i32 %i.050
   %inc = add nuw i32 %i.050, 1
-  %t.sroa.0.0 = load i32, i32* %arrayidx4, align 4
+  %t.sroa.0.0 = load i32, ptr %arrayidx4, align 4
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.end, label %for.body
 

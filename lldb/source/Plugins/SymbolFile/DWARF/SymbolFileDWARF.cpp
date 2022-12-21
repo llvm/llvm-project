@@ -2501,12 +2501,24 @@ void SymbolFileDWARF::FindTypes(
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
     return;
 
+  // Unlike FindFunctions(), FindTypes() following cannot produce false
+  // positives.
+
+  const llvm::StringRef name_ref = name.GetStringRef();
+  auto name_bracket_index = name_ref.find('<');
   m_index->GetTypes(name, [&](DWARFDIE die) {
     if (!DIEInDeclContext(parent_decl_ctx, die))
       return true; // The containing decl contexts don't match
 
     Type *matching_type = ResolveType(die, true, true);
     if (!matching_type)
+      return true;
+
+    // With -gsimple-template-names, a templated type's DW_AT_name will not
+    // contain the template parameters. Make sure that if the original query
+    // didn't contain a '<', we filter out entries with template parameters.
+    if (name_bracket_index == llvm::StringRef::npos &&
+        matching_type->IsTemplateType())
       return true;
 
     // We found a type pointer, now find the shared pointer form our type
@@ -2519,11 +2531,11 @@ void SymbolFileDWARF::FindTypes(
   // contain the template parameters. Try again stripping '<' and anything
   // after, filtering out entries with template parameters that don't match.
   if (types.GetSize() < max_matches) {
-    const llvm::StringRef name_ref = name.GetStringRef();
-    auto it = name_ref.find('<');
-    if (it != llvm::StringRef::npos) {
-      const llvm::StringRef name_no_template_params = name_ref.slice(0, it);
-      const llvm::StringRef template_params = name_ref.slice(it, name_ref.size());
+    if (name_bracket_index != llvm::StringRef::npos) {
+      const llvm::StringRef name_no_template_params =
+          name_ref.slice(0, name_bracket_index);
+      const llvm::StringRef template_params =
+          name_ref.slice(name_bracket_index, name_ref.size());
       m_index->GetTypes(ConstString(name_no_template_params), [&](DWARFDIE die) {
         if (!DIEInDeclContext(parent_decl_ctx, die))
           return true; // The containing decl contexts don't match

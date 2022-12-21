@@ -390,7 +390,7 @@ protected:
             module_sp->SetSymbolFileFileSpec(symfile);
           if (remote_file) {
             std::string remote_path = remote_file.GetPath();
-            target_sp->SetArg0(remote_path);
+            target_sp->SetArg0(remote_path.c_str());
             module_sp->SetPlatformFileSpec(remote_file);
           }
         }

@@ -158,18 +158,6 @@ Pass *createLoopExtractorPass();
 ///
 Pass *createSingleLoopExtractorPass();
 
-/// createBlockExtractorPass - This pass extracts all the specified blocks
-/// from the functions in the module.
-///
-ModulePass *createBlockExtractorPass();
-ModulePass *
-createBlockExtractorPass(const SmallVectorImpl<BasicBlock *> &BlocksToExtract,
-                         bool EraseFunctions);
-ModulePass *
-createBlockExtractorPass(const SmallVectorImpl<SmallVector<BasicBlock *, 16>>
-                             &GroupsOfBlocksToExtract,
-                         bool EraseFunctions);
-
 /// createStripDeadPrototypesPass - This pass removes any function declarations
 /// (prototypes) that are not used.
 ModulePass *createStripDeadPrototypesPass();

@@ -10,7 +10,7 @@
 
 ; FIXME: We are over-aligning the stack on V, wasting stack space.
 
-define i64* @scalar_stack_align16() nounwind {
+define ptr @scalar_stack_align16() nounwind {
 ; RV32-LABEL: scalar_stack_align16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -48
@@ -47,7 +47,7 @@ define i64* @scalar_stack_align16() nounwind {
   %a = alloca <vscale x 2 x i32>
   %c = alloca i64, align 16
   call void @extern(<vscale x 2 x i32>* %a)
-  ret i64* %c
+  ret ptr %c
 }
 
 declare void @extern(<vscale x 2 x i32>*)

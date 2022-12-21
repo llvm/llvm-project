@@ -22,17 +22,16 @@ target triple = "armv7l-unknown-linux-gnueabihf"
 ; Function Attrs: nounwind
 define void @set_stored_macroblock_parameters(i16 %a0, i32 %a1) #1 {
 entry:
-  %0 = load i32, i32* @luma_transform_size_8x8_flag, align 4
+  %0 = load i32, ptr @luma_transform_size_8x8_flag, align 4
   tail call void asm sideeffect "", "~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11}"()
-  tail call void @RestoreMVBlock8x8(i32 1, i32 2, %structN* byval(%structN) @tr8x8, i32 0)
-  %arrayidx313 = getelementptr inbounds i8*, i8** null, i32 %0
-  %1 = load i8*, i8** %arrayidx313, align 4
-  %arrayidx314 = getelementptr inbounds i8, i8* %1, i32 0
-  store i8 -1, i8* %arrayidx314, align 1
+  tail call void @RestoreMVBlock8x8(i32 1, i32 2, ptr byval(%structN) @tr8x8, i32 0)
+  %arrayidx313 = getelementptr inbounds ptr, ptr null, i32 %0
+  %1 = load ptr, ptr %arrayidx313, align 4
+  store i8 -1, ptr %1, align 1
   ret void
 }
 
 ; Function Attrs: nounwind
-declare void @RestoreMVBlock8x8(i32, i32, %structN* byval(%structN) nocapture, i32) #1
+declare void @RestoreMVBlock8x8(i32, i32, ptr byval(%structN) nocapture, i32) #1
 
 attributes #1 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }

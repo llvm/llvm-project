@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=ve | FileCheck %s
 
-@addr = global i8* null, align 8
+@addr = global ptr null, align 8
 
 ; Function Attrs: nofree norecurse nounwind writeonly
 define void @test() {
@@ -20,6 +20,6 @@ entry:
   br label %test1
 
 test1:
-  store i8* blockaddress(@test, %test1), i8** @addr, align 8
+  store ptr blockaddress(@test, %test1), ptr @addr, align 8
   ret void
 }
