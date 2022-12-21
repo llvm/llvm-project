@@ -48,7 +48,7 @@ float64x2_t test_vmovq_n_f64(float64_t w) {
   return vmovq_n_f64(w);
 }
 
-// CHECK-LABEL: define{{.*}} <4 x half> @test_vmov_n_f16(ptr noundef %a1) #1 {
+// CHECK-LABEL: define{{.*}} <4 x half> @test_vmov_n_f16(ptr noundef %a1) #0 {
 // CHECK:   [[TMP0:%.*]] = load half, ptr %a1, align 2
 // CHECK:   [[VECINIT:%.*]] = insertelement <4 x half> undef, half [[TMP0]], i32 0
 // CHECK:   [[VECINIT1:%.*]] = insertelement <4 x half> [[VECINIT]], half [[TMP0]], i32 1
@@ -79,6 +79,3 @@ float64x1_t test_vmov_n_f64(float64_t a1) {
 float16x8_t test_vmovq_n_f16(float16_t *a1) {
   return vmovq_n_f16(*a1);
 }
-
-// CHECK: attributes #0 ={{.*}}"min-legal-vector-width"="128"
-// CHECK: attributes #1 ={{.*}}"min-legal-vector-width"="64"
