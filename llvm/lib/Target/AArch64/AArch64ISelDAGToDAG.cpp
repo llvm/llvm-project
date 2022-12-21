@@ -29,6 +29,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-isel"
+#define PASS_NAME "AArch64 Instruction Selection"
 
 //===--------------------------------------------------------------------===//
 /// AArch64DAGToDAGISel - AArch64 specific code to select AArch64 machine
@@ -50,10 +51,6 @@ public:
   explicit AArch64DAGToDAGISel(AArch64TargetMachine &tm,
                                CodeGenOpt::Level OptLevel)
       : SelectionDAGISel(ID, tm, OptLevel), Subtarget(nullptr) {}
-
-  StringRef getPassName() const override {
-    return "AArch64 Instruction Selection";
-  }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<AArch64Subtarget>();
@@ -424,6 +421,8 @@ private:
 } // end anonymous namespace
 
 char AArch64DAGToDAGISel::ID = 0;
+
+INITIALIZE_PASS(AArch64DAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// isIntImmediate - This method tests to see if the node is a constant
 /// operand. If so Imm will receive the 32-bit value.
