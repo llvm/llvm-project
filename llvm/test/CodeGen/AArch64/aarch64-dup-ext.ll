@@ -116,12 +116,10 @@ entry:
 define <2 x i64> @dupzext_v2i16_v2i64(i16 %src, <2 x i16> %b) {
 ; CHECK-LABEL: dupzext_v2i16_v2i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    and x8, x0, #0xffff
+; CHECK-NEXT:    and w8, w0, #0xffff
 ; CHECK-NEXT:    movi d1, #0x00ffff0000ffff
-; CHECK-NEXT:    dup v2.2d, x8
+; CHECK-NEXT:    dup v2.2s, w8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    xtn v2.2s, v2.2d
 ; CHECK-NEXT:    umull v0.2d, v2.2s, v0.2s
 ; CHECK-NEXT:    ret
 entry:
@@ -223,9 +221,8 @@ define <8 x i16> @typei1_v8i1_v8i16(i1 %src, <8 x i1> %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and w8, w0, #0x1
 ; CHECK-NEXT:    movi v1.8b, #1
-; CHECK-NEXT:    dup v2.8h, w8
+; CHECK-NEXT:    dup v2.8b, w8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    xtn v2.8b, v2.8h
 ; CHECK-NEXT:    umull v0.8h, v2.8b, v0.8b
 ; CHECK-NEXT:    ret
 entry:

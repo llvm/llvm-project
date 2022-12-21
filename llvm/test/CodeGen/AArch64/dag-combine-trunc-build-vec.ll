@@ -11,8 +11,7 @@ define void @no_combine(i32 %p) local_unnamed_addr {
 ; CHECK-LABEL: no_combine:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.4h, #4
-; CHECK-NEXT:    dup v1.4s, w0
-; CHECK-NEXT:    xtn v1.4h, v1.4s
+; CHECK-NEXT:    dup v1.4h, w0
 ; CHECK-NEXT:    mov v1.d[1], v0.d[0]
 ; CHECK-NEXT:    uzp1 v0.16b, v1.16b, v1.16b
 ; CHECK-NEXT:    str q0, [x8]
