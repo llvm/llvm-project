@@ -10511,6 +10511,14 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
         DAG.ComputeNumSignBits(Op.getOperand(4), DemandedElts, Depth + 1);
     return std::min(Tmp, Tmp2);
   }
+  case RISCVISD::ABSW: {
+    // We expand this at isel to negw+max. The result will have 33 sign bits
+    // if the input has at least 33 sign bits.
+    unsigned Tmp =
+        DAG.ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    if (Tmp < 33) return 1;
+    return 33;
+  }
   case RISCVISD::SLLW:
   case RISCVISD::SRAW:
   case RISCVISD::SRLW:
@@ -10519,7 +10527,6 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   case RISCVISD::REMUW:
   case RISCVISD::ROLW:
   case RISCVISD::RORW:
-  case RISCVISD::ABSW:
   case RISCVISD::FCVT_W_RV64:
   case RISCVISD::FCVT_WU_RV64:
   case RISCVISD::STRICT_FCVT_W_RV64:
