@@ -11,6 +11,7 @@
 
 #include "ARCTargetMachine.h"
 #include "ARC.h"
+#include "ARCMachineFunctionInfo.h"
 #include "ARCTargetTransformInfo.h"
 #include "TargetInfo/ARCTargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
