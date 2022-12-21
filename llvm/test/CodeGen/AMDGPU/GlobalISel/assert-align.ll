@@ -13,7 +13,6 @@ define ptr addrspace(1) @call_assert_align() {
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
-; CHECK-NEXT:    ; implicit-def: $vgpr40
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0

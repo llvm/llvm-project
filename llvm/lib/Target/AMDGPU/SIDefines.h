@@ -909,13 +909,6 @@ enum Offset_COV5 : unsigned {
 };
 
 } // namespace ImplicitArg
-
-namespace VirtRegFlag {
-// Virtual Register Flags.
-enum Register_Flag : uint8_t { WWM_REG = 0 };
-
-} // namespace VirtRegFlag
-
 } // namespace AMDGPU
 
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028
