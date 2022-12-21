@@ -8,7 +8,7 @@ declare_args() {
 }
 
 # FIXME: Port the remaining targets.
-llvm_all_targets = [
+llvm_all_stable_targets = [
   "AArch64",
   "AMDGPU",
   "ARM",
@@ -27,6 +27,10 @@ llvm_all_targets = [
   "X86",
 ]
 
+llvm_all_experimental_targets = [ "RISCV" ]
+
+llvm_all_targets = llvm_all_stable_targets + llvm_all_experimental_targets
+
 # FIXME: This should be based off target_cpu once cross compiles work.
 if (host_cpu == "arm64") {
   native_target = "AArch64"
@@ -43,6 +47,8 @@ if (host_cpu == "arm64") {
 if (llvm_targets_to_build == "host") {
   llvm_targets_to_build = [ native_target ]
 } else if (llvm_targets_to_build == "all") {
+  llvm_targets_to_build = llvm_all_stable_targets
+} else if (llvm_targets_to_build == "experimental") {
   llvm_targets_to_build = llvm_all_targets
 }
 
