@@ -1206,13 +1206,11 @@ define i32 @select_replace_fold(i32 %x, i32 %y, i32 %z) {
 
 
 ; Case where the use of %x is in a nested instruction.
-; FIXME: We only perform replacements one level up right now.
 define i32 @select_replace_nested(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_replace_nested(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[Y:%.*]], [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SUB]], [[Z:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[ADD]], i32 [[Y]]
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[C]], i32 [[Z:%.*]], i32 0
+; CHECK-NEXT:    [[S:%.*]] = add i32 [[ADD]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
   %c = icmp eq i32 %x, 0
@@ -1242,7 +1240,7 @@ define i32 @select_replace_nested_extra_use(i32 %x, i32 %y, i32 %z) {
 define i32 @select_replace_nested_no_simplify(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_replace_nested_no_simplify(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[Y:%.*]], -1
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SUB]], [[Z:%.*]]
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[ADD]], i32 [[Y]]
 ; CHECK-NEXT:    ret i32 [[S]]
@@ -1254,6 +1252,7 @@ define i32 @select_replace_nested_no_simplify(i32 %x, i32 %y, i32 %z) {
   ret i32 %s
 }
 
+; FIXME: We only perform replacements two levels up right now.
 define i32 @select_replace_deeply_nested(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_replace_deeply_nested(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
