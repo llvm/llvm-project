@@ -20,7 +20,6 @@ llvm_all_stable_targets = [
   "Mips",
   "NVPTX",
   "PowerPC",
-  "RISCV",
   "Sparc",
   "SystemZ",
   "WebAssembly",
