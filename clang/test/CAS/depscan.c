@@ -6,7 +6,9 @@
 //
 // Check that inline/daemon have identical output.
 // RUN: %clang -cc1depscan -o %t/inline.rsp -fdepscan=inline -cc1-args -triple x86_64-apple-macos11.0 -x c %s -o %s.o -MT %s.o -dependency-file %t/inline.d -fcas-path %t/cas
-// RUN: %clang -cc1depscan -o %t/daemon.rsp -fdepscan=daemon -cc1-args -triple x86_64-apple-macos11.0 -x c %s -o %s.o -MT %s.o -dependency-file %t/daemon.d -fcas-path %t/cas
+// RUN: %clang -cc1depscand -execute %{clang-daemon-dir}/%basename_t -cas-args -fcas-path %t/cas -- \
+// RUN:   %clang -cc1depscan -o %t/daemon.rsp -fdepscan=daemon -fdepscan-daemon=%{clang-daemon-dir}/%basename_t -cc1-args \
+// RUN:     -triple x86_64-apple-macos11.0 -x c %s -o %s.o -MT %s.o -dependency-file %t/daemon.d -fcas-path %t/cas
 // RUN: diff %t/inline.rsp %t/daemon.rsp
 // RUN: diff %t/inline.d %t/daemon.d
 

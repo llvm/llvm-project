@@ -163,17 +163,6 @@ static void ensureSufficientStack() {
 static void ensureSufficientStack() {}
 #endif
 
-static void reportAsFatalIfError(llvm::Error E) {
-  if (E)
-    llvm::report_fatal_error(std::move(E));
-}
-
-template <typename T> static T reportAsFatalIfError(Expected<T> ValOrErr) {
-  if (!ValOrErr)
-    reportAsFatalIfError(ValOrErr.takeError());
-  return std::move(*ValOrErr);
-}
-
 namespace {
 class OneOffCompilationDatabase : public tooling::CompilationDatabase {
 public:
@@ -380,35 +369,6 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     SmallVectorImpl<const char *> &OutputArgs,
     const DepscanPrefixMapping &PrefixMapping, llvm::cas::ObjectStore &DB,
     llvm::function_ref<const char *(const Twine &)> SaveArg);
-
-static void shutdownCC1ScanDepsDaemon(StringRef Path) {
-  using namespace clang::cc1depscand;
-  SmallString<128> WorkingDirectory;
-  reportAsFatalIfError(
-      llvm::errorCodeToError(llvm::sys::fs::current_path(WorkingDirectory)));
-
-  // llvm::dbgs() << "connecting to daemon...\n";
-  auto Daemon = ScanDaemon::connectToDaemonAndShakeHands(Path);
-
-  if (!Daemon) {
-    logAllUnhandledErrors(Daemon.takeError(), llvm::errs(),
-                          "Cannot connect to the daemon to shutdown: ");
-    return;
-  }
-  CC1DepScanDProtocol Comms(*Daemon);
-
-  DepscanPrefixMapping Mapping;
-  const char *Args[] = {"-shutdown", nullptr};
-  // llvm::dbgs() << "sending shutdown request...\n";
-  reportAsFatalIfError(Comms.putCommand(WorkingDirectory, Args[0], Mapping));
-
-  // Wait for the ack before return.
-  CC1DepScanDProtocol::ResultKind Result;
-  reportAsFatalIfError(Comms.getResultKind(Result));
-
-  if (Result != CC1DepScanDProtocol::SuccessResult)
-    llvm::report_fatal_error("Daemon shutdown failed");
-}
 
 static llvm::Expected<llvm::cas::CASID> scanAndUpdateCC1UsingDaemon(
     const char *Exec, ArrayRef<const char *> OldArgs,
@@ -698,24 +658,79 @@ int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
   return 0;
 }
 
+namespace {
+struct ScanServer {
+  const char *Argv0 = nullptr;
+  SmallString<128> BasePath;
+  /// List of cas options.
+  ArrayRef<const char *> CASArgs;
+  int PidFD = -1;
+  int ListenSocket = -1;
+  /// \p std::nullopt means it runs indefinitely.
+  std::optional<unsigned> TimeoutSeconds;
+  std::atomic<bool> ShutDown{false};
+
+  ~ScanServer() { shutdown(); }
+
+  void start(bool Exclusive);
+  int listen();
+
+  /// Tear down the socket and bind file immediately but wait till all existing
+  /// jobs to finish.
+  void shutdown() {
+    ShutDown.store(true);
+    cc1depscand::unlinkBoundSocket(BasePath);
+    // Clean up the pidfile when we're done.
+    if (PidFD != -1)
+      ::close(PidFD);
+    ::shutdown(ListenSocket, SHUT_RD);
+    ::close(ListenSocket);
+  }
+};
+} // anonymous namespace
+
+static llvm::ExitOnError ExitOnErr("clang -cc1depscand: ");
+
+static void reportError(const llvm::Twine &Message) {
+  ExitOnErr(llvm::createStringError(llvm::inconvertibleErrorCode(), Message));
+}
+
+/// Accepted options are:
+///
+/// * -run <path> [-long-running] [-cas-args ...]
+/// Runs the daemon until a timeout is reached without a new connection.
+/// "-long-running" increases the timeout. stdout/stderr are redirected to files
+/// relative to <path>. This is how the clang driver auto-spawns a new daemon.
+///
+/// * -serve <path> [-cas-args ...]
+/// Runs indefinitely (until ctrl+c or the process is killed). There's no
+/// stdout/stderr redirection. Useful for debugging and for starting a permanent
+/// daemon before directing clang invocations to connect to it.
+///
+/// * -execute <path> [-cas-args ...] -- <command ...>
+/// Sets up the socket path, sets \p CLANG_CACHE_SCAN_DAEMON_SOCKET_PATH
+/// enviroment variable to the socket path, and executes the provided command.
+/// It exits with the same exit code as the command. Useful for lit testing.
 int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
                      void *MainAddr) {
   ensureSufficientStack();
 
   if (Argv.size() < 2)
-    llvm::report_fatal_error(
-        "clang -cc1depscand: missing command and base-path");
+    reportError("missing command and base-path");
+
+  ScanServer Server;
+  Server.Argv0 = Argv0;
 
   StringRef Command = Argv[0];
-  StringRef BasePath = Argv[1];
+  Server.BasePath = Argv[1];
 
-  // Shutdown test mode. In shutdown test mode, daemon will open acception, but
-  // not replying anything, just tear down the connect immediately.
-  bool ShutDownTest = false;
-  bool KeepAlive = false;
-  bool Detached = false;
-  bool Debug = false;
-  bool SingleCommandMode = false;
+  ArrayRef<const char *> CommandArgsToExecute;
+  auto Sep = llvm::find_if(
+      Argv, [](const char *Arg) { return StringRef(Arg) == "--"; });
+  if (Sep != Argv.end()) {
+    CommandArgsToExecute = Argv.drop_front(Sep - Argv.begin() + 1);
+    Argv = Argv.slice(0, Sep - Argv.begin());
+  }
 
   // Whether the daemon can safely stay alive a longer period of time.
   // FIXME: Consider designing a mechanism to notify daemons, started for a
@@ -723,98 +738,68 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
   // session is finished.
   bool LongRunning = false;
 
-  // List of cas options.
-  ArrayRef<const char *> CASArgs;
-
   for (const auto *A = Argv.begin() + 2; A != Argv.end(); ++A) {
     StringRef Arg(*A);
-    if (Arg == "-shutdown")
-      ShutDownTest = true;
-    else if (Arg == "-detach")
-      Detached = true;
-    else if (Arg == "-long-running")
+    if (Arg == "-long-running")
       LongRunning = true;
-    else if (Arg == "-single-command")
-      SingleCommandMode = true;
-    else if (Arg == "-debug") {
-      // Debug mode. Running in detach mode.
-      Debug = true;
-      Detached = true;
-    } else if (Arg == "-cas-args") {
-      CASArgs = llvm::makeArrayRef(A + 1, Argv.end());
+    else if (Arg == "-cas-args") {
+      Server.CASArgs = llvm::makeArrayRef(A + 1, Argv.end());
       break;
     }
   }
 
-  auto formSpawnArgsForCommand =
-      [&](const char *Command) -> SmallVector<const char *> {
-    SmallVector<const char *> Args{Argv0,     "-cc1depscand",
-                                   Command,   BasePath.begin(),
-                                   "-detach", "-cas-args"};
-    Args.append(CASArgs.begin(), CASArgs.end());
-    Args.push_back(nullptr);
-    return Args;
-  };
+  // Create the base directory if necessary.
+  StringRef BaseDir = llvm::sys::path::parent_path(Server.BasePath);
+  if (std::error_code EC = llvm::sys::fs::create_directories(BaseDir))
+    reportError(Twine("cannot create basedir: ") + EC.message());
 
-  if (Command == "-launch") {
-    signal(SIGCHLD, SIG_IGN);
-    auto Args = formSpawnArgsForCommand("-run");
-    int IgnoredPid;
-    int EC = ::posix_spawn(&IgnoredPid, Args[0], /*file_actions=*/nullptr,
-                           /*attrp=*/nullptr, const_cast<char **>(Args.data()),
-                           /*envp=*/nullptr);
-    if (EC)
-      llvm::report_fatal_error("clang -cc1depscand: failed to daemonize");
-    ::exit(0);
-  }
+  if (Command == "-serve") {
+    Server.start(/*Exclusive*/ true);
+    return Server.listen();
 
-  if (Command == "-start") {
-    KeepAlive = true;
-    llvm::EnableStatistics(/*DoPrintOnExit=*/true);
-    if (!Detached) {
-      signal(SIGCHLD, SIG_IGN);
-      auto Args = formSpawnArgsForCommand("-start");
-      int IgnoredPid;
-      int EC =
-          ::posix_spawn(&IgnoredPid, Args[0], /*file_actions=*/nullptr,
-                        /*attrp=*/nullptr, const_cast<char **>(Args.data()),
-                        /*envp=*/nullptr);
-      if (EC)
-        llvm::report_fatal_error("clang -cc1depscand: failed to daemonize");
-      ::exit(0);
+  } else if (Command == "-execute") {
+    SmallVector<StringRef, 32> RefArgs;
+    RefArgs.reserve(CommandArgsToExecute.size());
+    for (const char *Arg : CommandArgsToExecute) {
+      RefArgs.push_back(Arg);
     }
+
+    // Make sure to start the server before executing the command.
+    Server.start(/*Exclusive*/ true);
+    std::thread ServerThread([&Server]() { Server.listen(); });
+
+    setenv("CLANG_CACHE_SCAN_DAEMON_SOCKET_PATH", Server.BasePath.c_str(),
+           true);
+
+    std::string ErrMsg;
+    int Result = llvm::sys::ExecuteAndWait(
+        RefArgs.front(), RefArgs, /*Env*/ std::nullopt,
+        /*Redirects*/ {}, /*SecondsToWait*/ 0,
+        /*MemoryLimit*/ 0, &ErrMsg);
+
+    Server.shutdown();
+    ServerThread.join();
+
+    if (!ErrMsg.empty())
+      reportError("failed executing command: " + ErrMsg);
+    return Result;
+
+  } else if (Command != "-run") {
+    reportError("unknown command '" + Command + "'");
   }
 
-  if (Command == "-shutdown") {
-    // When shutdown command is received, connect to daemon and sent shuwdown
-    // command.
-    shutdownCC1ScanDepsDaemon(BasePath);
-    ::exit(0);
-  }
-
-  if (Command != "-run" && Command != "-start")
-    llvm::report_fatal_error("clang -cc1depscand: unknown command '" + Command +
-                             "'");
+  Server.TimeoutSeconds = LongRunning ? 45 : 15;
 
   // Daemonize.
   if (::signal(SIGHUP, SIG_IGN) == SIG_ERR)
-    llvm::report_fatal_error("clang -cc1depscand: failed to ignore SIGHUP");
-  if (!Debug) {
-    if (::setsid() == -1)
-      llvm::report_fatal_error("clang -cc1depscand: setsid failed");
-  }
+    reportError("failed to ignore SIGHUP");
+  if (::setsid() == -1)
+    reportError("setsid failed");
 
   // Check the pidfile.
-  SmallString<128> PidPath, LogOutPath, LogErrPath;
-  (BasePath + ".pid").toVector(PidPath);
-  (BasePath + ".out").toVector(LogOutPath);
-  (BasePath + ".err").toVector(LogErrPath);
-
-  // Create the base directory if necessary.
-  StringRef BaseDir = llvm::sys::path::parent_path(BasePath);
-  if (std::error_code EC = llvm::sys::fs::create_directories(BaseDir))
-    llvm::report_fatal_error(
-        Twine("clang -cc1depscand: cannot create basedir: ") + EC.message());
+  SmallString<128> LogOutPath, LogErrPath;
+  (Server.BasePath + ".out").toVector(LogOutPath);
+  (Server.BasePath + ".err").toVector(LogErrPath);
 
   auto openAndReplaceFD = [&](int ReplacedFD, StringRef Path) {
     int FD;
@@ -831,65 +816,44 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
   openAndReplaceFD(1, LogOutPath);
   openAndReplaceFD(2, LogErrPath);
 
-  bool ShouldKeepOutputs = true;
-  auto DropOutputs = llvm::make_scope_exit([&]() {
-    if (ShouldKeepOutputs)
-      return;
-    ::unlink(LogOutPath.c_str());
-    ::unlink(LogErrPath.c_str());
-  });
+  Server.start(/*Exclusive*/ false);
+  return Server.listen();
+}
 
-  int PidFD;
+void ScanServer::start(bool Exclusive) {
+  // Check the pidfile.
+  SmallString<128> PidPath;
+  (BasePath + ".pid").toVector(PidPath);
+
   [&]() {
     if (std::error_code EC = llvm::sys::fs::openFile(
             PidPath, PidFD, llvm::sys::fs::CD_OpenAlways,
             llvm::sys::fs::FA_Write, llvm::sys::fs::OF_None))
-      llvm::report_fatal_error("clang -cc1depscand: cannot open pidfile");
+      reportError("cannot open pidfile");
 
     // Try to lock; failure means there's another daemon running.
-    if (::flock(PidFD, LOCK_EX | LOCK_NB))
+    if (::flock(PidFD, LOCK_EX | LOCK_NB)) {
+      if (Exclusive)
+        reportError("another daemon using the base path");
       ::exit(0);
+    }
 
     // FIXME: Should we actually write the pid here? Maybe we don't care.
   }();
 
-  // Clean up the pidfile when we're done.
-  auto ClosePidFile = [&]() {
-    if (PidFD != -1)
-      ::close(PidFD);
-    PidFD = -1;
-  };
-  auto ClosePidFileAtExit = llvm::make_scope_exit([&]() { ClosePidFile(); });
-
   // Open the socket and start listening.
-  int ListenSocket = cc1depscand::createSocket();
+  ListenSocket = cc1depscand::createSocket();
   if (ListenSocket == -1)
-    llvm::report_fatal_error("clang -cc1depscand: cannot open socket");
+    reportError("cannot open socket");
 
   if (cc1depscand::bindToSocket(BasePath, ListenSocket))
-    llvm::report_fatal_error(StringRef() +
-                             "clang -cc1depscand: cannot bind to socket" +
-                             ": " + strerror(errno));
-  bool IsBound = true;
-  auto RemoveBindFile = [&] {
-    assert(IsBound);
-    cc1depscand::unlinkBoundSocket(BasePath);
-    IsBound = false;
-  };
-  auto RemoveBindFileAtExit = llvm::make_scope_exit([&]() {
-    if (IsBound)
-      RemoveBindFile();
-  });
+    reportError(StringRef() + "cannot bind to socket" + ": " + strerror(errno));
+}
 
+int ScanServer::listen() {
   llvm::ThreadPool Pool;
   if (::listen(ListenSocket, /*MaxBacklog=*/Pool.getThreadCount() * 16))
-    llvm::report_fatal_error("clang -cc1depscand: cannot listen to socket");
-
-  auto ShutdownCleanUp = [&]() {
-    RemoveBindFile();
-    ClosePidFile();
-    ::close(ListenSocket);
-  };
+    reportError("cannot listen to socket");
 
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions());
   CASOptions CASOpts;
@@ -905,12 +869,12 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
   std::shared_ptr<llvm::cas::ObjectStore> CAS =
       CASOpts.getOrCreateObjectStore(Diags);
   if (!CAS)
-    llvm::report_fatal_error("clang -cc1depscand: cannot create CAS");
+    reportError("cannot create CAS");
 
   std::shared_ptr<llvm::cas::ActionCache> Cache =
       CASOpts.getOrCreateActionCache(Diags);
   if (!Cache)
-    llvm::report_fatal_error("clang -cc1depscand: cannot create ActionCache");
+    reportError("cannot create ActionCache");
 
   IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
   if (!ProduceIncludeTree)
@@ -924,7 +888,6 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
       /*ReuseFileManager=*/false,
       /*SkipExcludedPPRanges=*/true);
 
-  std::atomic<bool> ShutDown(false);
   std::atomic<int> NumRunning(0);
 
   std::chrono::steady_clock::time_point Start =
@@ -933,15 +896,8 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
 
   SharedStream SharedOS(llvm::errs());
 
-#ifndef NDEBUG
-  if (ShutDownTest)
-    llvm::outs() << "launched in shutdown test state\n";
-#endif
-
-  auto ServiceLoop = [&CAS, &Service, &ShutDown, &ListenSocket, &NumRunning,
-                      &Start, &SecondsSinceLastClose, Argv0, &SharedOS,
-                      ShutDownTest, &ShutdownCleanUp,
-                      SingleCommandMode](unsigned I) {
+  auto ServiceLoop = [this, &CAS, &Service, &NumRunning, &Start,
+                      &SecondsSinceLastClose, &SharedOS](unsigned I) {
     Optional<tooling::dependencies::DependencyScanningTool> Tool;
     SmallString<256> Message;
     while (true) {
@@ -966,12 +922,6 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
       {
         ++NumRunning;
 
-        // In test mode, just tear down everything.
-        if (ShutDownTest) {
-          ShutdownCleanUp();
-          ShutDown.store(true);
-          continue;
-        }
         // Check again for shutdown, since the main thread could have
         // requested it before we created the service.
         //
@@ -1006,14 +956,6 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
           logAllUnhandledErrors(std::move(E), OS);
         });
         continue; // FIXME: Tell the client something went wrong.
-      }
-
-      if (StringRef(Args[0]) == "-shutdown") {
-        consumeError(Comms.putResultKind(
-            cc1depscand::CC1DepScanDProtocol::SuccessResult));
-        ShutdownCleanUp();
-        ShutDown.store(true);
-        continue;
       }
 
       // cc1 request.
@@ -1087,26 +1029,20 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
         printComputedCC1(OS);
       });
 #endif
-      if (SingleCommandMode) {
-        ShutdownCleanUp();
-        ShutDown.store(true);
-        return;
-      }
     }
   };
-
-  if (SingleCommandMode) {
-    // If in run once mode. Run it single thread then exit.
-    ServiceLoop(0);
-    ::exit(0);
-  }
 
   for (unsigned I = 0; I < Pool.getThreadCount(); ++I)
     Pool.async(ServiceLoop, I);
 
+  if (!TimeoutSeconds) {
+    Pool.wait();
+    return 0;
+  }
+
   // Wait for the work to finish.
   const uint64_t SecondsBetweenAttempts = 5;
-  const uint64_t SecondsBeforeDestruction = LongRunning ? 45 : 15;
+  const uint64_t SecondsBeforeDestruction = *TimeoutSeconds;
   uint64_t SleepTime = SecondsBeforeDestruction;
   while (true) {
     ::sleep(SleepTime);
@@ -1117,9 +1053,6 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
 
     if (ShutDown.load())
       break;
-
-    if (KeepAlive)
-      continue;
 
     // Figure out the latest access time that we'll delete.
     uint64_t LastAccessToDestroy =
@@ -1133,15 +1066,10 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
     if (LastAccessToDestroy < SecondsSinceLastClose)
       continue;
 
-    // Tear down the socket and bind file immediately but wait till all existing
-    // jobs to finish.
-    ShutdownCleanUp();
-    ShutDown.store(true);
+    shutdown();
   }
 
-  // Exit instead of return. Otherwise, it will wait on ~ThreadPool() which will
-  // never return since all threads might still be sleeping on ::accept().
-  ::exit(0);
+  return 0;
 }
 
 static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(

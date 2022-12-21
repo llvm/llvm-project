@@ -31,6 +31,13 @@
 // SESSION: "-fcas-path" "[[PREFIX]]/cas/cas" "-faction-cache-path" "[[PREFIX]]/cas/actioncache"
 // SESSION: "-greproducible"
 
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas CLANG_CACHE_SCAN_DAEMON_SOCKET_PATH=%t/scand cache-build-session %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=SPECIFIC-DAEMON -DPREFIX=%t
+// SPECIFIC-DAEMON-NOT: "-fdepscan-share-identifier"
+// SPECIFIC-DAEMON: "-cc1depscan" "-fdepscan=daemon" "-fdepscan-daemon=[[PREFIX]]/scand"
+
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas LLVM_CACHE_REMOTE_SERVICE_SOCKET_PATH=%t/ccremote %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=REMOTE -DPREFIX=%t
+// REMOTE: "-fcompilation-caching-service-path" "[[PREFIX]]/ccremote"
+
 // Using multi-arch invocation.
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache %clang -target x86_64-apple-macos12 -arch x86_64 -arch arm64 -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=MULTIARCH
 // MULTIARCH: "-cc1depscan" "-fdepscan=auto"
