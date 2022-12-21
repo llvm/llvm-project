@@ -7,7 +7,7 @@
 
 # RUN: %lld -dylib %t/baz.o -o %t/libbaz.dylib
 # RUN: %lld -demangle -map %t/map %t/test.o %t/foo.o %t/c-string-literal.o \
-# RUN:   %t/libbaz.dylib --time-trace -o %t/test
+# RUN:   %t/libbaz.dylib --time-trace -o %t/test --no-deduplicate-strings
 # RUN: llvm-objdump --syms --section-headers %t/test > %t/objdump
 ## Check that symbols in cstring sections aren't emitted
 ## Also check that we don't have redundant EH_Frame symbols (regression test)

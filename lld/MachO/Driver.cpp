@@ -1209,8 +1209,7 @@ static void foldIdenticalLiterals() {
   // Either way, we must unconditionally finalize it here.
   in.cStringSection->finalizeContents();
   in.objcMethnameSection->finalizeContents();
-  if (in.wordLiteralSection)
-    in.wordLiteralSection->finalizeContents();
+  in.wordLiteralSection->finalizeContents();
 }
 
 static void addSynthenticMethnames() {
@@ -1552,9 +1551,8 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->emitInitOffsets =
       config->emitChainedFixups || args.hasArg(OPT_init_offsets);
   config->icfLevel = getICFLevel(args);
-  config->dedupLiterals =
-      args.hasFlag(OPT_deduplicate_literals, OPT_icf_eq, false) ||
-      config->icfLevel != ICFLevel::none;
+  config->dedupStrings =
+      args.hasFlag(OPT_deduplicate_strings, OPT_no_deduplicate_strings, true);
   config->deadStripDuplicates = args.hasArg(OPT_dead_strip_duplicates);
   config->warnDylibInstallName = args.hasFlag(
       OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);
@@ -1863,7 +1861,7 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       if (config->icfLevel == ICFLevel::safe)
         markAddrSigSymbols();
       foldIdenticalSections(/*onlyCfStrings=*/false);
-    } else if (config->dedupLiterals) {
+    } else if (config->dedupStrings) {
       foldIdenticalSections(/*onlyCfStrings=*/true);
     }
 
