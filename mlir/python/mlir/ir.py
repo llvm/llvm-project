@@ -4,3 +4,44 @@
 
 from ._mlir_libs._mlir.ir import *
 from ._mlir_libs._mlir.ir import _GlobalDebug
+
+
+# Convenience decorator for registering user-friendly Attribute builders.
+def register_attribute_builder(kind):
+  def decorator_builder(func):
+    AttrBuilder.insert(kind, func)
+    return func
+  return decorator_builder
+
+
+@register_attribute_builder("BoolAttr")
+def _boolAttr(x: bool, context: Context):
+  return BoolAttr.get(x, context=context)
+
+@register_attribute_builder("IndexAttr")
+def _indexAttr(x: int, context: Context):
+  return IntegerAttr.get(IndexType.get(context=context), x)
+
+@register_attribute_builder("I32Attr")
+def _i32Attr(x: int, context: Context):
+  return IntegerAttr.get(
+      IntegerType.get_signless(32, context=context), x)
+
+@register_attribute_builder("I64Attr")
+def _i64Attr(x: int, context: Context):
+  return IntegerAttr.get(
+      IntegerType.get_signless(64, context=context), x)
+
+@register_attribute_builder("SymbolNameAttr")
+def _symbolNameAttr(x: str, context: Context):
+  return StringAttr.get(x, context=context)
+
+try:
+  import numpy as np
+  @register_attribute_builder("IndexElementsAttr")
+  def _indexElementsAttr(x: list[int], context: Context):
+    return DenseElementsAttr.get(
+        np.array(x, dtype=np.int64), type=IndexType.get(context=context),
+        context=context)
+except ImportError:
+  pass
