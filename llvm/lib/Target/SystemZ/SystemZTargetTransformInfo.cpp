@@ -996,7 +996,8 @@ InstructionCost SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
 }
 
 InstructionCost SystemZTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                                   unsigned Index) {
+                                                   unsigned Index, Value *Op0,
+                                                   Value *Op1) {
   // vlvgp will insert two grs into a vector register, so only count half the
   // number of instructions.
   if (Opcode == Instruction::InsertElement && Val->isIntOrIntVectorTy(64))
@@ -1012,7 +1013,7 @@ InstructionCost SystemZTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     return Cost;
   }
 
-  return BaseT::getVectorInstrCost(Opcode, Val, Index);
+  return BaseT::getVectorInstrCost(Opcode, Val, Index, Op0, Op1);
 }
 
 // Check if a load may be folded as a memory operand in its user.
