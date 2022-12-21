@@ -544,25 +544,25 @@ define void @exclusion_set2(i1 %c1, i1 %c2, i1 %c3) {
 ; TUNIT-LABEL: define {{[^@]+}}@exclusion_set2
 ; TUNIT-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]]) #[[ATTR7:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    call void @use_4_i8(i8 1, i8 2, i8 3, i8 4)
-; TUNIT-NEXT:    call void @use_4_i8(i8 noundef 1, i8 2, i8 3, i8 4)
+; TUNIT-NEXT:    call void @use_4_i8(i8 undef, i8 undef, i8 undef, i8 undef)
+; TUNIT-NEXT:    call void @use_4_i8(i8 noundef 1, i8 undef, i8 undef, i8 undef)
 ; TUNIT-NEXT:    br i1 [[C1]], label [[IF_MERGE1:%.*]], label [[IF_THEN:%.*]]
 ; TUNIT:       if.then:
-; TUNIT-NEXT:    call void @use_4_i8(i8 noundef 1, i8 2, i8 3, i8 4)
-; TUNIT-NEXT:    call void @use_4_i8(i8 noundef 1, i8 noundef 2, i8 3, i8 4)
+; TUNIT-NEXT:    call void @use_4_i8(i8 noundef 1, i8 undef, i8 undef, i8 undef)
+; TUNIT-NEXT:    call void @use_4_i8(i8 noundef 1, i8 noundef 2, i8 undef, i8 undef)
 ; TUNIT-NEXT:    br i1 [[C1]], label [[IF_MERGE1]], label [[IF_THEN2:%.*]]
 ; TUNIT:       if.then2:
-; TUNIT-NEXT:    call void @use_4_i8(i8 noundef 1, i8 noundef 2, i8 3, i8 4)
-; TUNIT-NEXT:    call void @use_4_i8(i8 noundef 1, i8 noundef 2, i8 noundef 3, i8 4)
+; TUNIT-NEXT:    call void @use_4_i8(i8 noundef 1, i8 noundef 2, i8 undef, i8 undef)
+; TUNIT-NEXT:    call void @use_4_i8(i8 noundef 1, i8 noundef 2, i8 noundef 3, i8 undef)
 ; TUNIT-NEXT:    br i1 [[C2]], label [[IF_MERGE2:%.*]], label [[IF_THEN3:%.*]]
 ; TUNIT:       if.merge1:
-; TUNIT-NEXT:    call void @use_4_i8(i8 noundef 1, i8 2, i8 3, i8 4)
+; TUNIT-NEXT:    call void @use_4_i8(i8 noundef 1, i8 2, i8 undef, i8 undef)
 ; TUNIT-NEXT:    br label [[IF_MERGE2]]
 ; TUNIT:       if.merge2:
-; TUNIT-NEXT:    call void @use_4_i8(i8 noundef 1, i8 2, i8 3, i8 4)
+; TUNIT-NEXT:    call void @use_4_i8(i8 noundef 1, i8 2, i8 3, i8 undef)
 ; TUNIT-NEXT:    br label [[IF_END:%.*]]
 ; TUNIT:       if.then3:
-; TUNIT-NEXT:    call void @use_4_i8(i8 noundef 1, i8 noundef 2, i8 noundef 3, i8 4)
+; TUNIT-NEXT:    call void @use_4_i8(i8 noundef 1, i8 noundef 2, i8 noundef 3, i8 undef)
 ; TUNIT-NEXT:    call void @use_4_i8(i8 noundef 1, i8 noundef 2, i8 noundef 3, i8 noundef 4)
 ; TUNIT-NEXT:    br label [[IF_END]]
 ; TUNIT:       if.end:
@@ -573,25 +573,25 @@ define void @exclusion_set2(i1 %c1, i1 %c2, i1 %c3) {
 ; CGSCC-LABEL: define {{[^@]+}}@exclusion_set2
 ; CGSCC-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]]) #[[ATTR8:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    call void @use_4_i8(i8 1, i8 2, i8 3, i8 4)
-; CGSCC-NEXT:    call void @use_4_i8(i8 noundef 1, i8 2, i8 3, i8 4)
+; CGSCC-NEXT:    call void @use_4_i8(i8 undef, i8 undef, i8 undef, i8 undef)
+; CGSCC-NEXT:    call void @use_4_i8(i8 noundef 1, i8 undef, i8 undef, i8 undef)
 ; CGSCC-NEXT:    br i1 [[C1]], label [[IF_MERGE1:%.*]], label [[IF_THEN:%.*]]
 ; CGSCC:       if.then:
-; CGSCC-NEXT:    call void @use_4_i8(i8 noundef 1, i8 2, i8 3, i8 4)
-; CGSCC-NEXT:    call void @use_4_i8(i8 noundef 1, i8 noundef 2, i8 3, i8 4)
+; CGSCC-NEXT:    call void @use_4_i8(i8 noundef 1, i8 undef, i8 undef, i8 undef)
+; CGSCC-NEXT:    call void @use_4_i8(i8 noundef 1, i8 noundef 2, i8 undef, i8 undef)
 ; CGSCC-NEXT:    br i1 [[C1]], label [[IF_MERGE1]], label [[IF_THEN2:%.*]]
 ; CGSCC:       if.then2:
-; CGSCC-NEXT:    call void @use_4_i8(i8 noundef 1, i8 noundef 2, i8 3, i8 4)
-; CGSCC-NEXT:    call void @use_4_i8(i8 noundef 1, i8 noundef 2, i8 noundef 3, i8 4)
+; CGSCC-NEXT:    call void @use_4_i8(i8 noundef 1, i8 noundef 2, i8 undef, i8 undef)
+; CGSCC-NEXT:    call void @use_4_i8(i8 noundef 1, i8 noundef 2, i8 noundef 3, i8 undef)
 ; CGSCC-NEXT:    br i1 [[C2]], label [[IF_MERGE2:%.*]], label [[IF_THEN3:%.*]]
 ; CGSCC:       if.merge1:
-; CGSCC-NEXT:    call void @use_4_i8(i8 noundef 1, i8 2, i8 3, i8 4)
+; CGSCC-NEXT:    call void @use_4_i8(i8 noundef 1, i8 2, i8 undef, i8 undef)
 ; CGSCC-NEXT:    br label [[IF_MERGE2]]
 ; CGSCC:       if.merge2:
-; CGSCC-NEXT:    call void @use_4_i8(i8 noundef 1, i8 2, i8 3, i8 4)
+; CGSCC-NEXT:    call void @use_4_i8(i8 noundef 1, i8 2, i8 3, i8 undef)
 ; CGSCC-NEXT:    br label [[IF_END:%.*]]
 ; CGSCC:       if.then3:
-; CGSCC-NEXT:    call void @use_4_i8(i8 noundef 1, i8 noundef 2, i8 noundef 3, i8 4)
+; CGSCC-NEXT:    call void @use_4_i8(i8 noundef 1, i8 noundef 2, i8 noundef 3, i8 undef)
 ; CGSCC-NEXT:    call void @use_4_i8(i8 noundef 1, i8 noundef 2, i8 noundef 3, i8 noundef 4)
 ; CGSCC-NEXT:    br label [[IF_END]]
 ; CGSCC:       if.end:
