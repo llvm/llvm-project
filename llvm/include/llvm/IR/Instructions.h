@@ -3612,7 +3612,7 @@ public:
 /// their prof branch_weights metadata.
 class SwitchInstProfUpdateWrapper {
   SwitchInst &SI;
-  std::optional<SmallVector<uint32_t, 8>> Weights = std::nullopt;
+  std::optional<SmallVector<uint32_t, 8>> Weights;
   bool Changed = false;
 
 protected:

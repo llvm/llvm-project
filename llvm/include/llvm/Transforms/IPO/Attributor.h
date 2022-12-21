@@ -1385,7 +1385,7 @@ struct AttributorConfig {
   DenseSet<const char *> *Allowed = nullptr;
 
   /// Maximum number of iterations to run until fixpoint.
-  std::optional<unsigned> MaxFixpointIterations = std::nullopt;
+  std::optional<unsigned> MaxFixpointIterations;
 
   /// A callback function that returns an ORE object from a Function pointer.
   ///{
