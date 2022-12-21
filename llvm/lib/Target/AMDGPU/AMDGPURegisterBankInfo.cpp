@@ -3512,7 +3512,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       DstBank = SrcBank;
 
     unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
-    if (cannotCopy(*DstBank, *SrcBank, Size))
+    if (MI.getOpcode() != AMDGPU::G_FREEZE &&
+        cannotCopy(*DstBank, *SrcBank, Size))
       return getInvalidInstructionMapping();
 
     const ValueMapping &ValMap = getValueMapping(0, Size, *DstBank);
