@@ -14,8 +14,8 @@ define void @test1() {
 ; CHECK-NEXT:    ldp x8, x9, [x8]
 ; CHECK-NEXT:    stp x8, x9, [x10]
 ; CHECK-NEXT:    ret
-  %tmp = load volatile i128, i128* @x
-  store volatile i128 %tmp, i128* @y
+  %tmp = load volatile i128, ptr @x
+  store volatile i128 %tmp, ptr @y
   ret void
 }
 
@@ -29,8 +29,8 @@ define void @test2() {
 ; CHECK-NEXT:    ldp x8, x9, [x8, #504]
 ; CHECK-NEXT:    stp x8, x9, [x10, #504]
 ; CHECK-NEXT:    ret
-  %tmp = load volatile i128, i128* bitcast (i8* getelementptr (i8, i8* bitcast (i128* @x to i8*), i64 504) to i128*)
-  store volatile i128 %tmp, i128* bitcast (i8* getelementptr (i8, i8* bitcast (i128* @y to i8*), i64 504) to i128*)
+  %tmp = load volatile i128, ptr getelementptr (i8, ptr @x, i64 504)
+  store volatile i128 %tmp, ptr getelementptr (i8, ptr @y, i64 504)
   ret void
 }
 
@@ -46,8 +46,8 @@ define void @test3() {
 ; CHECK-NEXT:    ldp x8, x9, [x8]
 ; CHECK-NEXT:    stp x8, x9, [x10]
 ; CHECK-NEXT:    ret
-  %tmp = load volatile i128, i128* bitcast (i8* getelementptr (i8, i8* bitcast (i128* @x to i8*), i64 512) to i128*)
-  store volatile i128 %tmp, i128* bitcast (i8* getelementptr (i8, i8* bitcast (i128* @y to i8*), i64 512) to i128*)
+  %tmp = load volatile i128, ptr getelementptr (i8, ptr @x, i64 512)
+  store volatile i128 %tmp, ptr getelementptr (i8, ptr @y, i64 512)
   ret void
 }
 
@@ -61,8 +61,8 @@ define void @test4() {
 ; CHECK-NEXT:    ldp x8, x9, [x8, #-512]
 ; CHECK-NEXT:    stp x8, x9, [x10, #-512]
 ; CHECK-NEXT:    ret
-  %tmp = load volatile i128, i128* bitcast (i8* getelementptr (i8, i8* bitcast (i128* @x to i8*), i64 -512) to i128*)
-  store volatile i128 %tmp, i128* bitcast (i8* getelementptr (i8, i8* bitcast (i128* @y to i8*), i64 -512) to i128*)
+  %tmp = load volatile i128, ptr getelementptr (i8, ptr @x, i64 -512)
+  store volatile i128 %tmp, ptr getelementptr (i8, ptr @y, i64 -512)
   ret void
 }
 
@@ -78,8 +78,8 @@ define void @test5() {
 ; CHECK-NEXT:    ldp x8, x9, [x8]
 ; CHECK-NEXT:    stp x8, x9, [x10]
 ; CHECK-NEXT:    ret
-  %tmp = load volatile i128, i128* bitcast (i8* getelementptr (i8, i8* bitcast (i128* @x to i8*), i64 -520) to i128*)
-  store volatile i128 %tmp, i128* bitcast (i8* getelementptr (i8, i8* bitcast (i128* @y to i8*), i64 -520) to i128*)
+  %tmp = load volatile i128, ptr getelementptr (i8, ptr @x, i64 -520)
+  store volatile i128 %tmp, ptr getelementptr (i8, ptr @y, i64 -520)
   ret void
 }
 
@@ -95,8 +95,8 @@ define void @test6() {
 ; CHECK-NEXT:    ldp x8, x9, [x8]
 ; CHECK-NEXT:    stp x8, x9, [x10]
 ; CHECK-NEXT:    ret
-  %tmp = load volatile i128, i128* bitcast (i8* getelementptr (i8, i8* bitcast (i128* @x to i8*), i64 -520) to i128*)
-  store volatile i128 %tmp, i128* bitcast (i8* getelementptr (i8, i8* bitcast (i128* @y to i8*), i64 -520) to i128*)
+  %tmp = load volatile i128, ptr getelementptr (i8, ptr @x, i64 -520)
+  store volatile i128 %tmp, ptr getelementptr (i8, ptr @y, i64 -520)
   ret void
 }
 
@@ -112,7 +112,7 @@ define void @test7() {
 ; CHECK-NEXT:    ldp x8, x9, [x8]
 ; CHECK-NEXT:    stp x8, x9, [x10]
 ; CHECK-NEXT:    ret
-  %tmp = load volatile i128, i128* bitcast (i8* getelementptr (i8, i8* bitcast (i128* @x to i8*), i64 503) to i128*)
-  store volatile i128 %tmp, i128* bitcast (i8* getelementptr (i8, i8* bitcast (i128* @y to i8*), i64 503) to i128*)
+  %tmp = load volatile i128, ptr getelementptr (i8, ptr @x, i64 503)
+  store volatile i128 %tmp, ptr getelementptr (i8, ptr @y, i64 503)
   ret void
 }

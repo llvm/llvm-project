@@ -9,25 +9,24 @@
 ;;           causes llc to produces an invalid register <NULL VALUE>
 ;;           for the phi arguments.
 
-        %struct..packet = type { %struct..packet*, i32, i32, i32, [4 x i8] }
-        %struct..task = type { %struct..task*, i32, i32, %struct..packet*, i32, %struct..task* (%struct..packet*)*, i32, i32 }
-@v1 = external global i32               ; <i32*> [#uses=1]
-@v2 = external global i32               ; <i32*> [#uses=1]
+        %struct..packet = type { ptr, i32, i32, i32, [4 x i8] }
+        %struct..task = type { ptr, i32, i32, ptr, i32, ptr, i32, i32 }
+@v1 = external global i32               ; <ptr> [#uses=1]
+@v2 = external global i32               ; <ptr> [#uses=1]
 
-define %struct..task* @handlerfn(%struct..packet* %pkt.2) {
+define ptr @handlerfn(ptr %pkt.2) {
 entry:
-        %tmp.1 = icmp ne %struct..packet* %pkt.2, null          ; <i1> [#uses=1]
+        %tmp.1 = icmp ne ptr %pkt.2, null          ; <i1> [#uses=1]
         br i1 %tmp.1, label %cond_false, label %cond_continue
 
 cond_false:             ; preds = %entry
         br label %cond_continue
 
 cond_continue:          ; preds = %cond_false, %entry
-        %mem_tmp.0 = phi i32* [ @v2, %cond_false ], [ @v1, %entry ]             ; <i32*> [#uses=1]
-        %tmp.12 = bitcast i32* %mem_tmp.0 to %struct..packet*           ; <%struct..packet*> [#uses=1]
-        call void @append( %struct..packet* %pkt.2, %struct..packet* %tmp.12 )
-        ret %struct..task* null
+        %mem_tmp.0 = phi ptr [ @v2, %cond_false ], [ @v1, %entry ]             ; <ptr> [#uses=1]
+        call void @append( ptr %pkt.2, ptr %mem_tmp.0 )
+        ret ptr null
 }
 
-declare void @append(%struct..packet*, %struct..packet*)
+declare void @append(ptr, ptr)
 

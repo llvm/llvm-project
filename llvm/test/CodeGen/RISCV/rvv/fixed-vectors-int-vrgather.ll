@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX1
 ; RUN: llc -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX1
 
-define void @gather_const_v16i8(<16 x i8>* %x) {
+define void @gather_const_v16i8(ptr %x) {
 ; CHECK-LABEL: gather_const_v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, a0, 12
@@ -12,15 +12,15 @@ define void @gather_const_v16i8(<16 x i8>* %x) {
 ; CHECK-NEXT:    vlse8.v v8, (a1), zero
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = load <16 x i8>, <16 x i8>* %x
+  %a = load <16 x i8>, ptr %x
   %b = extractelement <16 x i8> %a, i32 12
   %c = insertelement <16 x i8> poison, i8 %b, i32 0
   %d = shufflevector <16 x i8> %c, <16 x i8> poison, <16 x i32> zeroinitializer
-  store <16 x i8> %d, <16 x i8>* %x
+  store <16 x i8> %d, ptr %x
   ret void
 }
 
-define void @gather_const_v8i16(<8 x i16>* %x) {
+define void @gather_const_v8i16(ptr %x) {
 ; CHECK-LABEL: gather_const_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, a0, 10
@@ -28,15 +28,15 @@ define void @gather_const_v8i16(<8 x i16>* %x) {
 ; CHECK-NEXT:    vlse16.v v8, (a1), zero
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = load <8 x i16>, <8 x i16>* %x
+  %a = load <8 x i16>, ptr %x
   %b = extractelement <8 x i16> %a, i32 5
   %c = insertelement <8 x i16> poison, i16 %b, i32 0
   %d = shufflevector <8 x i16> %c, <8 x i16> poison, <8 x i32> zeroinitializer
-  store <8 x i16> %d, <8 x i16>* %x
+  store <8 x i16> %d, ptr %x
   ret void
 }
 
-define void @gather_const_v4i32(<4 x i32>* %x) {
+define void @gather_const_v4i32(ptr %x) {
 ; CHECK-LABEL: gather_const_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, a0, 12
@@ -44,15 +44,15 @@ define void @gather_const_v4i32(<4 x i32>* %x) {
 ; CHECK-NEXT:    vlse32.v v8, (a1), zero
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = load <4 x i32>, <4 x i32>* %x
+  %a = load <4 x i32>, ptr %x
   %b = extractelement <4 x i32> %a, i32 3
   %c = insertelement <4 x i32> poison, i32 %b, i32 0
   %d = shufflevector <4 x i32> %c, <4 x i32> poison, <4 x i32> zeroinitializer
-  store <4 x i32> %d, <4 x i32>* %x
+  store <4 x i32> %d, ptr %x
   ret void
 }
 
-define void @gather_const_v2i64(<2 x i64>* %x) {
+define void @gather_const_v2i64(ptr %x) {
 ; CHECK-LABEL: gather_const_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, a0, 8
@@ -60,15 +60,15 @@ define void @gather_const_v2i64(<2 x i64>* %x) {
 ; CHECK-NEXT:    vlse64.v v8, (a1), zero
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = load <2 x i64>, <2 x i64>* %x
+  %a = load <2 x i64>, ptr %x
   %b = extractelement <2 x i64> %a, i32 1
   %c = insertelement <2 x i64> poison, i64 %b, i32 0
   %d = shufflevector <2 x i64> %c, <2 x i64> poison, <2 x i32> zeroinitializer
-  store <2 x i64> %d, <2 x i64>* %x
+  store <2 x i64> %d, ptr %x
   ret void
 }
 
-define void @gather_const_v64i8(<64 x i8>* %x) {
+define void @gather_const_v64i8(ptr %x) {
 ; LMULMAX4-LABEL: gather_const_v64i8:
 ; LMULMAX4:       # %bb.0:
 ; LMULMAX4-NEXT:    li a1, 64
@@ -90,15 +90,15 @@ define void @gather_const_v64i8(<64 x i8>* %x) {
 ; LMULMAX1-NEXT:    vse8.v v8, (a0)
 ; LMULMAX1-NEXT:    vse8.v v8, (a2)
 ; LMULMAX1-NEXT:    ret
-  %a = load <64 x i8>, <64 x i8>* %x
+  %a = load <64 x i8>, ptr %x
   %b = extractelement <64 x i8> %a, i32 32
   %c = insertelement <64 x i8> poison, i8 %b, i32 0
   %d = shufflevector <64 x i8> %c, <64 x i8> poison, <64 x i32> zeroinitializer
-  store <64 x i8> %d, <64 x i8>* %x
+  store <64 x i8> %d, ptr %x
   ret void
 }
 
-define void @gather_const_v16i16(<32 x i16>* %x) {
+define void @gather_const_v16i16(ptr %x) {
 ; LMULMAX4-LABEL: gather_const_v16i16:
 ; LMULMAX4:       # %bb.0:
 ; LMULMAX4-NEXT:    li a1, 32
@@ -121,15 +121,15 @@ define void @gather_const_v16i16(<32 x i16>* %x) {
 ; LMULMAX1-NEXT:    vse16.v v8, (a0)
 ; LMULMAX1-NEXT:    vse16.v v8, (a2)
 ; LMULMAX1-NEXT:    ret
-  %a = load <32 x i16>, <32 x i16>* %x
+  %a = load <32 x i16>, ptr %x
   %b = extractelement <32 x i16> %a, i32 25
   %c = insertelement <32 x i16> poison, i16 %b, i32 0
   %d = shufflevector <32 x i16> %c, <32 x i16> poison, <32 x i32> zeroinitializer
-  store <32 x i16> %d, <32 x i16>* %x
+  store <32 x i16> %d, ptr %x
   ret void
 }
 
-define void @gather_const_v16i32(<16 x i32>* %x) {
+define void @gather_const_v16i32(ptr %x) {
 ; LMULMAX4-LABEL: gather_const_v16i32:
 ; LMULMAX4:       # %bb.0:
 ; LMULMAX4-NEXT:    addi a1, a0, 36
@@ -151,15 +151,15 @@ define void @gather_const_v16i32(<16 x i32>* %x) {
 ; LMULMAX1-NEXT:    vse32.v v8, (a0)
 ; LMULMAX1-NEXT:    vse32.v v8, (a2)
 ; LMULMAX1-NEXT:    ret
-  %a = load <16 x i32>, <16 x i32>* %x
+  %a = load <16 x i32>, ptr %x
   %b = extractelement <16 x i32> %a, i32 9
   %c = insertelement <16 x i32> poison, i32 %b, i32 0
   %d = shufflevector <16 x i32> %c, <16 x i32> poison, <16 x i32> zeroinitializer
-  store <16 x i32> %d, <16 x i32>* %x
+  store <16 x i32> %d, ptr %x
   ret void
 }
 
-define void @gather_const_v8i64(<8 x i64>* %x) {
+define void @gather_const_v8i64(ptr %x) {
 ; LMULMAX4-LABEL: gather_const_v8i64:
 ; LMULMAX4:       # %bb.0:
 ; LMULMAX4-NEXT:    addi a1, a0, 24
@@ -181,15 +181,15 @@ define void @gather_const_v8i64(<8 x i64>* %x) {
 ; LMULMAX1-NEXT:    vse64.v v8, (a0)
 ; LMULMAX1-NEXT:    vse64.v v8, (a1)
 ; LMULMAX1-NEXT:    ret
-  %a = load <8 x i64>, <8 x i64>* %x
+  %a = load <8 x i64>, ptr %x
   %b = extractelement <8 x i64> %a, i32 3
   %c = insertelement <8 x i64> poison, i64 %b, i32 0
   %d = shufflevector <8 x i64> %c, <8 x i64> poison, <8 x i32> zeroinitializer
-  store <8 x i64> %d, <8 x i64>* %x
+  store <8 x i64> %d, ptr %x
   ret void
 }
 
-define void @splat_concat_low(<4 x i16>* %x, <4 x i16>* %y, <8 x i16>* %z) {
+define void @splat_concat_low(ptr %x, ptr %y, ptr %z) {
 ; CHECK-LABEL: splat_concat_low:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a0, a0, 2
@@ -197,15 +197,15 @@ define void @splat_concat_low(<4 x i16>* %x, <4 x i16>* %y, <8 x i16>* %z) {
 ; CHECK-NEXT:    vlse16.v v8, (a0), zero
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
-  %a = load <4 x i16>, <4 x i16>* %x
-  %b = load <4 x i16>, <4 x i16>* %y
+  %a = load <4 x i16>, ptr %x
+  %b = load <4 x i16>, ptr %y
   %c = shufflevector <4 x i16> %a, <4 x i16> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %d = shufflevector <8 x i16> %c, <8 x i16> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  store <8 x i16> %d, <8 x i16>* %z
+  store <8 x i16> %d, ptr %z
   ret void
 }
 
-define void @splat_concat_high(<4 x i16>* %x, <4 x i16>* %y, <8 x i16>* %z) {
+define void @splat_concat_high(ptr %x, ptr %y, ptr %z) {
 ; CHECK-LABEL: splat_concat_high:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, a1, 2
@@ -213,10 +213,10 @@ define void @splat_concat_high(<4 x i16>* %x, <4 x i16>* %y, <8 x i16>* %z) {
 ; CHECK-NEXT:    vlse16.v v8, (a1), zero
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
-  %a = load <4 x i16>, <4 x i16>* %x
-  %b = load <4 x i16>, <4 x i16>* %y
+  %a = load <4 x i16>, ptr %x
+  %b = load <4 x i16>, ptr %y
   %c = shufflevector <4 x i16> %a, <4 x i16> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %d = shufflevector <8 x i16> %c, <8 x i16> poison, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
-  store <8 x i16> %d, <8 x i16>* %z
+  store <8 x i16> %d, ptr %z
   ret void
 }

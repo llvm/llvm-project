@@ -1078,7 +1078,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     SimpleFinishLegalizing = false;
     break;
   case ISD::EXTRACT_ELEMENT:
-  case ISD::FLT_ROUNDS_:
+  case ISD::GET_ROUNDING:
   case ISD::MERGE_VALUES:
   case ISD::EH_RETURN:
   case ISD::FRAME_TO_ARGS_OFFSET:
@@ -2741,7 +2741,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
                                   FA, Offset));
     break;
   }
-  case ISD::FLT_ROUNDS_:
+  case ISD::GET_ROUNDING:
     Results.push_back(DAG.getConstant(1, dl, Node->getValueType(0)));
     Results.push_back(Node->getOperand(0));
     break;

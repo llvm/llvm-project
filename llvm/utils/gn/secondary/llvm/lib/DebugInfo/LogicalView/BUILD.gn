@@ -9,6 +9,7 @@ static_library("LogicalView") {
     "//llvm/lib/MC",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "Core/LVCompare.cpp",

@@ -116,7 +116,7 @@ std::shared_ptr<ClangModulesDeclVendor>
 ClangPersistentVariables::GetClangModulesDeclVendor() {
   if (!m_modules_decl_vendor_sp) {
     m_modules_decl_vendor_sp.reset(
-        ClangModulesDeclVendor::Create(*m_target_sp));
+        ClangModulesDeclVendor::Create(*m_target_sp.get()));
   }
   return m_modules_decl_vendor_sp;
 }

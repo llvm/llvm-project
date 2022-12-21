@@ -24,16 +24,15 @@
 ; Pointer replacement code should be added.
 define internal void @function() {
 ; CHECK-LABEL: entry:
-; CHECK:   %0 = load i16, i16 addrspace(3)* @lds_used_within_function.ptr, align 2
-; CHECK:   %1 = getelementptr i8, i8 addrspace(3)* null, i16 %0
-; CHECK:   %2 = bitcast i8 addrspace(3)* %1 to [4 x i32] addrspace(3)*
-; CHECK:   %3 = getelementptr inbounds [4 x i32], [4 x i32] addrspace(3)* %2, i32 0, i32 2
-; CHECK:   %4 = addrspacecast i32 addrspace(3)* %3 to i32*
-; CHECK:   %5 = ptrtoint i32* %4 to i32
-; CHECK:   %6 = add i32 %5, ptrtoint (i32 addrspace(1)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(1)* @global_var, i32 0, i32 2) to i32)
+; CHECK:   %0 = load i16, ptr addrspace(3) @lds_used_within_function.ptr, align 2
+; CHECK:   %1 = getelementptr i8, ptr addrspace(3) null, i16 %0
+; CHECK:   %2 = getelementptr inbounds [4 x i32], ptr addrspace(3) %1, i32 0, i32 2
+; CHECK:   %3 = addrspacecast ptr addrspace(3) %2 to ptr
+; CHECK:   %4 = ptrtoint ptr %3 to i32
+; CHECK:   %5 = add i32 %4, ptrtoint (ptr addrspace(1) getelementptr inbounds ([4 x i32], ptr addrspace(1) @global_var, i32 0, i32 2) to i32)
 ; CHECK:   ret void
 entry:
-  %0 = add i32 ptrtoint (i32* addrspacecast (i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @lds_used_within_function, i32 0, i32 2) to i32*) to i32), ptrtoint (i32 addrspace(1)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(1)* @global_var, i32 0, i32 2) to i32)
+  %0 = add i32 ptrtoint (ptr addrspacecast (ptr addrspace(3) getelementptr inbounds ([4 x i32], ptr addrspace(3) @lds_used_within_function, i32 0, i32 2) to ptr) to i32), ptrtoint (ptr addrspace(1) getelementptr inbounds ([4 x i32], ptr addrspace(1) @global_var, i32 0, i32 2) to i32)
   ret void
 }
 
@@ -45,7 +44,7 @@ define protected amdgpu_kernel void @kernel() {
 ; CHECK:   br i1 %1, label %2, label %3
 ;
 ; CHECK-LABEL: 2:
-; CHECK:   store i16 ptrtoint ([4 x i32] addrspace(3)* @lds_used_within_function to i16), i16 addrspace(3)* @lds_used_within_function.ptr, align 2
+; CHECK:   store i16 ptrtoint (ptr addrspace(3) @lds_used_within_function to i16), ptr addrspace(3) @lds_used_within_function.ptr, align 2
 ; CHECK:   br label %3
 ;
 ; CHECK-LABEL: 3:

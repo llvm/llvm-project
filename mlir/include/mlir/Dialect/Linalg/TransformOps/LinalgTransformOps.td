@@ -1054,6 +1054,8 @@ def TileToForeachThreadOp :
   let arguments = (ins PDL_Operation:$target,
                    Variadic<PDL_Operation>:$num_threads,
                    Variadic<PDL_Operation>:$tile_sizes,
+                   Optional<PDL_Operation>:$packed_num_threads,
+                   Optional<PDL_Operation>:$packed_tile_sizes,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_num_threads,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_tile_sizes,
                    OptionalAttr<DeviceMappingArrayAttr>:$mapping);
@@ -1085,10 +1087,12 @@ def TileToForeachThreadOp :
 
   let assemblyFormat = [{
     $target oilist(
-        `num_threads` custom<DynamicIndexList>($num_threads,
-                                               $static_num_threads) |
-         `tile_sizes` custom<DynamicIndexList>($tile_sizes,
-                                               $static_tile_sizes))
+        `num_threads` custom<PackedOrDynamicIndexList>($packed_num_threads,
+                                                       $num_threads,
+                                                       $static_num_threads) |
+         `tile_sizes` custom<PackedOrDynamicIndexList>($packed_tile_sizes,
+                                                       $tile_sizes,
+                                                       $static_tile_sizes))
     (`(` `mapping` `=` $mapping^ `)`)? attr-dict
   }];
   let hasVerifier = 1;

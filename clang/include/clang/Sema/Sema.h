@@ -8509,8 +8509,8 @@ public:
       concepts::Requirement::SubstitutionDiagnostic *SubstDiag);
   concepts::NestedRequirement *BuildNestedRequirement(Expr *E);
   concepts::NestedRequirement *
-  BuildNestedRequirement(
-      concepts::Requirement::SubstitutionDiagnostic *SubstDiag);
+  BuildNestedRequirement(StringRef InvalidConstraintEntity,
+                         const ASTConstraintSatisfaction &Satisfaction);
   ExprResult ActOnRequiresExpr(SourceLocation RequiresKWLoc,
                                RequiresExprBodyDecl *Body,
                                ArrayRef<ParmVarDecl *> LocalParameters,

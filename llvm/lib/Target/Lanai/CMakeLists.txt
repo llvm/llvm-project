@@ -42,6 +42,7 @@ add_llvm_target(LanaiCodeGen
   SelectionDAG
   Support
   Target
+  TargetParser
   TransformUtils
 
   ADD_TO_COMPONENT

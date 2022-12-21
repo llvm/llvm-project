@@ -37,7 +37,7 @@ define <8 x half> @fma_v8f16(<8 x half> %op1, <8 x half> %op2, <8 x half> %op3) 
   ret <8 x half> %res
 }
 
-define void @fma_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x half>* %c) #0 {
+define void @fma_v16f16(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fma_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q3, [x1]
@@ -49,12 +49,12 @@ define void @fma_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x half>* %c) #0 {
 ; CHECK-NEXT:    fmla z1.h, p0/m, z2.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
-  %op3 = load <16 x half>, <16 x half>* %c
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
+  %op3 = load <16 x half>, ptr %c
   %mul = fmul contract <16 x half> %op1, %op2
   %res = fadd contract <16 x half> %mul, %op3
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
@@ -88,7 +88,7 @@ define <4 x float> @fma_v4f32(<4 x float> %op1, <4 x float> %op2, <4 x float> %o
   ret <4 x float> %res
 }
 
-define void @fma_v8f32(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) #0 {
+define void @fma_v8f32(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fma_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q3, [x1]
@@ -100,12 +100,12 @@ define void @fma_v8f32(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) #0 {
 ; CHECK-NEXT:    fmla z1.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x float>, <8 x float>* %a
-  %op2 = load <8 x float>, <8 x float>* %b
-  %op3 = load <8 x float>, <8 x float>* %c
+  %op1 = load <8 x float>, ptr %a
+  %op2 = load <8 x float>, ptr %b
+  %op3 = load <8 x float>, ptr %c
   %mul = fmul contract <8 x float> %op1, %op2
   %res = fadd contract <8 x float> %mul, %op3
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
@@ -137,7 +137,7 @@ define <2 x double> @fma_v2f64(<2 x double> %op1, <2 x double> %op2, <2 x double
   ret <2 x double> %res
 }
 
-define void @fma_v4f64(<4 x double>* %a, <4 x double>* %b, <4 x double>* %c) #0 {
+define void @fma_v4f64(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fma_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q3, [x1]
@@ -149,12 +149,12 @@ define void @fma_v4f64(<4 x double>* %a, <4 x double>* %b, <4 x double>* %c) #0 
 ; CHECK-NEXT:    fmla z1.d, p0/m, z2.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x double>, <4 x double>* %a
-  %op2 = load <4 x double>, <4 x double>* %b
-  %op3 = load <4 x double>, <4 x double>* %c
+  %op1 = load <4 x double>, ptr %a
+  %op2 = load <4 x double>, ptr %b
+  %op3 = load <4 x double>, ptr %c
   %mul = fmul contract <4 x double> %op1, %op2
   %res = fadd contract <4 x double> %mul, %op3
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 

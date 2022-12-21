@@ -22,10 +22,10 @@ target triple = "bpf"
 ; Function Attrs: nounwind readnone
 define dso_local i32 @test() local_unnamed_addr #0 !dbg !18 {
 entry:
-  %0 = tail call i64 @llvm.bpf.preserve.enum.value(i32 0, i8* getelementptr inbounds ([10 x i8], [10 x i8]* @0, i64 0, i64 0), i64 0), !dbg !23, !llvm.preserve.access.index !3
-  %1 = tail call i64 @llvm.bpf.preserve.enum.value(i32 1, i8* getelementptr inbounds ([16 x i8], [16 x i8]* @1, i64 0, i64 0), i64 1), !dbg !24, !llvm.preserve.access.index !3
+  %0 = tail call i64 @llvm.bpf.preserve.enum.value(i32 0, ptr @0, i64 0), !dbg !23, !llvm.preserve.access.index !3
+  %1 = tail call i64 @llvm.bpf.preserve.enum.value(i32 1, ptr @1, i64 1), !dbg !24, !llvm.preserve.access.index !3
   %add = add i64 %1, %0, !dbg !25
-  %2 = tail call i64 @llvm.bpf.preserve.enum.value(i32 2, i8* getelementptr inbounds ([18 x i8], [18 x i8]* @2, i64 0, i64 0), i64 1), !dbg !26, !llvm.preserve.access.index !13
+  %2 = tail call i64 @llvm.bpf.preserve.enum.value(i32 2, ptr @2, i64 1), !dbg !26, !llvm.preserve.access.index !13
   %add1 = add i64 %add, %2, !dbg !27
   %conv = trunc i64 %add1 to i32, !dbg !23
   ret i32 %conv, !dbg !28
@@ -81,7 +81,7 @@ entry:
 ; CHECK-NEXT:        .long   11
 
 ; Function Attrs: nounwind readnone
-declare i64 @llvm.bpf.preserve.enum.value(i32, i8*, i64) #1
+declare i64 @llvm.bpf.preserve.enum.value(i32, ptr, i64) #1
 
 attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

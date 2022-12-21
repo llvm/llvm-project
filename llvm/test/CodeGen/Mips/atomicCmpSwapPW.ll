@@ -6,7 +6,7 @@
 ; RUN: llc -O0 -mtriple=mips64el-unknown-linux-gnu -mcpu=mips64r2 -target-abi=n64 < %s -filetype=asm -o - \
 ; RUN:   | FileCheck -check-prefixes=N64 %s
 
-@sym = external global i32 *
+@sym = external global ptr
 
 define void @foo(i32 %new, i32 %old) {
 ; O32-LABEL: foo:
@@ -84,8 +84,8 @@ define void @foo(i32 %new, i32 %old) {
 ; N64-NEXT:    jr $ra
 ; N64-NEXT:    nop
 entry:
-  %0 = load i32 *, i32 ** @sym
-  cmpxchg i32 * %0, i32 %new, i32 %old seq_cst seq_cst
+  %0 = load ptr, ptr @sym
+  cmpxchg ptr %0, i32 %new, i32 %old seq_cst seq_cst
   ret void
 }
 

@@ -12,7 +12,7 @@
 
 declare i32 @foo(i32, i32) #0
 
-define i32 @fred(i32 %a0, i32 %a1, i32* %p) #0 {
+define i32 @fred(i32 %a0, i32 %a1, ptr %p) #0 {
 entry:
   %call24 = tail call i32 @foo(i32 %a0, i32 1) #0
   %tobool26 = icmp eq i32 %call24, 0
@@ -32,7 +32,7 @@ while.body.us.preheader:                          ; preds = %while.body.lr.ph
 
 while.body.us:                                    ; preds = %while.body.us.preheader, %while.cond.backedge.us
   %call27.us = phi i32 [ %call.us, %while.cond.backedge.us ], [ %call24, %while.body.us.preheader ]
-  %x0 = load i32, i32* %p, align 4, !tbaa !4
+  %x0 = load i32, ptr %p, align 4, !tbaa !4
   %cmp.us = icmp sgt i32 %x0, 0
   br i1 %cmp.us, label %if.then.us, label %if.end.us
 
@@ -43,17 +43,17 @@ if.then.us:                                       ; preds = %while.body.us
   br label %if.end.us
 
 if.end.us:                                        ; preds = %if.then.us, %while.body.us
-  %x1 = load i32, i32* %p, align 4, !tbaa !4
+  %x1 = load i32, ptr %p, align 4, !tbaa !4
   %call8.us = tail call i32 @foo(i32 %sub, i32 %a1) #0
   %tobool11.us = icmp eq i32 %call8.us, 0
   br i1 %tobool11.us, label %while.cond.backedge.us, label %if.then12.us
 
 if.then12.us:                                     ; preds = %if.end.us
-  %x3 = load i32, i32* %p, align 4, !tbaa !4
+  %x3 = load i32, ptr %p, align 4, !tbaa !4
   %sub13.us = sub i32 %x3, %x1
-  %x4 = load i32, i32* @global_1, align 4, !tbaa !4
-  %arrayidx.us = getelementptr inbounds [128 x i32], [128 x i32]* @global_2, i32 0, i32 %x4
-  store i32 %sub13.us, i32* %arrayidx.us, align 4, !tbaa !4
+  %x4 = load i32, ptr @global_1, align 4, !tbaa !4
+  %arrayidx.us = getelementptr inbounds [128 x i32], ptr @global_2, i32 0, i32 %x4
+  store i32 %sub13.us, ptr %arrayidx.us, align 4, !tbaa !4
   br label %while.cond.backedge.us
 
 while.cond.backedge.us:                           ; preds = %if.then12.us, %if.end.us
@@ -63,7 +63,7 @@ while.cond.backedge.us:                           ; preds = %if.then12.us, %if.e
 
 while.body:                                       ; preds = %while.body.preheader, %while.cond.backedge
   %call27 = phi i32 [ %call, %while.cond.backedge ], [ %call24, %while.body.preheader ]
-  %x5 = load i32, i32* %p, align 4, !tbaa !4
+  %x5 = load i32, ptr %p, align 4, !tbaa !4
   %cmp = icmp sgt i32 %x5, 0
   br i1 %cmp, label %if.then, label %if.end
 
@@ -78,9 +78,9 @@ if.end:                                           ; preds = %if.then, %while.bod
   br i1 %tobool11, label %while.cond.backedge, label %if.then12
 
 if.then12:                                        ; preds = %if.end
-  %x7 = load i32, i32* @global_1, align 4, !tbaa !4
-  %arrayidx = getelementptr inbounds [128 x i32], [128 x i32]* @global_2, i32 0, i32 %x7
-  store i32 0, i32* %arrayidx, align 4, !tbaa !4
+  %x7 = load i32, ptr @global_1, align 4, !tbaa !4
+  %arrayidx = getelementptr inbounds [128 x i32], ptr @global_2, i32 0, i32 %x7
+  store i32 0, ptr %arrayidx, align 4, !tbaa !4
   br label %while.cond.backedge
 
 while.cond.backedge:                              ; preds = %if.then12, %if.end

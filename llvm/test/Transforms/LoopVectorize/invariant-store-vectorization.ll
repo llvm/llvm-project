@@ -333,7 +333,6 @@ for.end:                                          ; preds = %for.body
 }
 
 ; Multiple variant stores to the same uniform address
-; We do not vectorize such loops currently.
 ;  for(; i < itr; i++) {
 ;    for(; j < itr; j++) {
 ;      var1[i] = var2[j] + var1[i];
@@ -347,28 +346,80 @@ define i32 @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly 
 ; CHECK-NEXT:    [[CMP20:%.*]] = icmp eq i32 [[ITR:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP20]], label [[FOR_END10:%.*]], label [[FOR_COND1_PREHEADER_PREHEADER:%.*]]
 ; CHECK:       for.cond1.preheader.preheader:
+; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[VAR2:%.*]], i64 4
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
 ; CHECK:       for.cond1.preheader:
 ; CHECK-NEXT:    [[INDVARS_IV23:%.*]] = phi i64 [ [[INDVARS_IV_NEXT24:%.*]], [[FOR_INC8:%.*]] ], [ 0, [[FOR_COND1_PREHEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[J_022:%.*]] = phi i32 [ [[J_1_LCSSA:%.*]], [[FOR_INC8]] ], [ 0, [[FOR_COND1_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[INDVARS_IV23]], 2
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[VAR1:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i64 [[TMP0]], 4
+; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[VAR1]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[CMP218:%.*]] = icmp ult i32 [[J_022]], [[ITR]]
 ; CHECK-NEXT:    br i1 [[CMP218]], label [[FOR_BODY3_LR_PH:%.*]], label [[FOR_INC8]]
 ; CHECK:       for.body3.lr.ph:
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[VAR1:%.*]], i64 [[INDVARS_IV23]]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[J_022]] to i64
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[VAR1]], i64 [[INDVARS_IV23]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[J_022]] to i64
+; CHECK-NEXT:    [[ARRAYIDX5_PROMOTED:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[J_022]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], [[ITR]]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw i64 [[TMP5]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP4]], 3
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK:       vector.memcheck:
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP2]], 2
+; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[VAR2]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = xor i32 [[J_022]], -1
+; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TMP8]], [[ITR]]
+; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
+; CHECK-NEXT:    [[TMP11:%.*]] = add nuw nsw i64 [[TMP2]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shl nuw nsw i64 [[TMP11]], 2
+; CHECK-NEXT:    [[UGLYGEP4:%.*]] = getelementptr i8, ptr [[UGLYGEP3]], i64 [[TMP12]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[UGLYGEP]], [[UGLYGEP4]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[UGLYGEP2]], [[UGLYGEP1]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP6]], -4
+; CHECK-NEXT:    [[IND_END:%.*]] = add nuw nsw i64 [[N_VEC]], [[TMP2]]
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, i32 [[ARRAYIDX5_PROMOTED]], i64 0
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ [[TMP13]], [[VECTOR_PH]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[INDEX]], [[TMP2]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[VAR2]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP14]], align 4, !alias.scope !22
+; CHECK-NEXT:    [[TMP15:%.*]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP16]] = add <4 x i32> [[TMP15]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi <4 x i32> [ [[TMP16]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[DOTLCSSA]])
+; CHECK-NEXT:    store i32 [[TMP18]], ptr [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP6]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_INC8_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[TMP2]], [[FOR_BODY3_LR_PH]] ], [ [[TMP2]], [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP18]], [[MIDDLE_BLOCK]] ], [ [[ARRAYIDX5_PROMOTED]], [[FOR_BODY3_LR_PH]] ], [ [[ARRAYIDX5_PROMOTED]], [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY3:%.*]]
 ; CHECK:       for.body3:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[FOR_BODY3_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY3]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[VAR2:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[ADD]], 1
-; CHECK-NEXT:    store i32 [[TMP3]], ptr [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    [[TMP19:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[TMP21:%.*]], [[FOR_BODY3]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY3]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[VAR2]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP19]], [[TMP20]]
+; CHECK-NEXT:    [[TMP21]] = add nsw i32 [[ADD]], 1
+; CHECK-NEXT:    store i32 [[TMP21]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[ITR]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_INC8_LOOPEXIT:%.*]], label [[FOR_BODY3]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_INC8_LOOPEXIT_LOOPEXIT:%.*]], label [[FOR_BODY3]], !llvm.loop [[LOOP26:![0-9]+]]
+; CHECK:       for.inc8.loopexit.loopexit:
+; CHECK-NEXT:    br label [[FOR_INC8_LOOPEXIT]]
 ; CHECK:       for.inc8.loopexit:
 ; CHECK-NEXT:    br label [[FOR_INC8]]
 ; CHECK:       for.inc8:
@@ -440,21 +491,22 @@ define i32 @multiple_uniform_stores_conditional(ptr nocapture %var1, ptr nocaptu
 ; CHECK:       for.body3.lr.ph:
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[VAR1:%.*]], i64 [[INDVARS_IV23]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[J_022]] to i64
+; CHECK-NEXT:    [[ARRAYIDX5_PROMOTED:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY3:%.*]]
 ; CHECK:       for.body3:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[FOR_BODY3_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[ARRAYIDX5_PROMOTED]], [[FOR_BODY3_LR_PH]] ], [ [[TMP5:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[FOR_BODY3_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LATCH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[VAR2:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[ADD]], 42
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[COND_STORE:%.*]], label [[LATCH]]
 ; CHECK:       cond_store:
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i32 [[ADD]], 1
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ [[TMP4]], [[COND_STORE]] ], [ [[ADD]], [[FOR_BODY3]] ]
-; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    [[TMP5]] = phi i32 [ [[TMP4]], [[COND_STORE]] ], [ [[ADD]], [[FOR_BODY3]] ]
+; CHECK-NEXT:    store i32 [[TMP5]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[ITR]]

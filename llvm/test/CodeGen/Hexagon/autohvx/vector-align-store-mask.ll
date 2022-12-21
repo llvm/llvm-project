@@ -14,19 +14,17 @@ target triple = "hexagon"
 ; CHECK: [[QREG:q[0-3]+]] = vand([[VREG2]],r{{[0-9]+}})
 ; CHECK: if ([[QREG]]) vmem({{.*}}) = v{{[0-9]+}}
 
-define dllexport void @f0(i32* %a0) local_unnamed_addr #0 {
+define dllexport void @f0(ptr %a0) local_unnamed_addr #0 {
 b0:
   br label %b1
 
 b1:                                               ; preds = %b1, %b0
   %v0 = or i32 -1, 40
-  %v1 = getelementptr inbounds i32, i32* %a0, i32 %v0
-  %v2 = bitcast i32* %v1 to <8 x i32>*
-  store <8 x i32> undef, <8 x i32>* %v2, align 32
+  %v1 = getelementptr inbounds i32, ptr %a0, i32 %v0
+  store <8 x i32> undef, ptr %v1, align 32
   %v3 = or i32 0, 48
-  %v4 = getelementptr inbounds i32, i32* %a0, i32 %v3
-  %v5 = bitcast i32* %v4 to <8 x i32>*
-  store <8 x i32> undef, <8 x i32>* %v5, align 64
+  %v4 = getelementptr inbounds i32, ptr %a0, i32 %v3
+  store <8 x i32> undef, ptr %v4, align 64
   br i1 undef, label %b2, label %b1
 
 b2:                                               ; preds = %b1

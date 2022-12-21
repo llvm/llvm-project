@@ -4,27 +4,27 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+experimental-zvfh,+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=2 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX2
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+experimental-zvfh,+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX1
 
-define <4 x i8> @ret_v4i8(<4 x i8>* %p) {
+define <4 x i8> @ret_v4i8(ptr %p) {
 ; CHECK-LABEL: ret_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %v = load <4 x i8>, <4 x i8>* %p
+  %v = load <4 x i8>, ptr %p
   ret <4 x i8> %v
 }
 
-define <4 x i32> @ret_v4i32(<4 x i32>* %p) {
+define <4 x i32> @ret_v4i32(ptr %p) {
 ; CHECK-LABEL: ret_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %v = load <4 x i32>, <4 x i32>* %p
+  %v = load <4 x i32>, ptr %p
   ret <4 x i32> %v
 }
 
-define <8 x i32> @ret_v8i32(<8 x i32>* %p) {
+define <8 x i32> @ret_v8i32(ptr %p) {
 ; LMULMAX8-LABEL: ret_v8i32:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -50,11 +50,11 @@ define <8 x i32> @ret_v8i32(<8 x i32>* %p) {
 ; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vle32.v v9, (a0)
 ; LMULMAX1-NEXT:    ret
-  %v = load <8 x i32>, <8 x i32>* %p
+  %v = load <8 x i32>, ptr %p
   ret <8 x i32> %v
 }
 
-define <16 x i64> @ret_v16i64(<16 x i64>* %p) {
+define <16 x i64> @ret_v16i64(ptr %p) {
 ; LMULMAX8-LABEL: ret_v16i64:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
@@ -100,21 +100,21 @@ define <16 x i64> @ret_v16i64(<16 x i64>* %p) {
 ; LMULMAX1-NEXT:    addi a0, a0, 112
 ; LMULMAX1-NEXT:    vle64.v v15, (a0)
 ; LMULMAX1-NEXT:    ret
-  %v = load <16 x i64>, <16 x i64>* %p
+  %v = load <16 x i64>, ptr %p
   ret <16 x i64> %v
 }
 
-define <8 x i1> @ret_mask_v8i1(<8 x i1>* %p) {
+define <8 x i1> @ret_mask_v8i1(ptr %p) {
 ; CHECK-LABEL: ret_mask_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    ret
-  %v = load <8 x i1>, <8 x i1>* %p
+  %v = load <8 x i1>, ptr %p
   ret <8 x i1> %v
 }
 
-define <32 x i1> @ret_mask_v32i1(<32 x i1>* %p) {
+define <32 x i1> @ret_mask_v32i1(ptr %p) {
 ; LMULMAX8-LABEL: ret_mask_v32i1:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a1, 32
@@ -143,12 +143,12 @@ define <32 x i1> @ret_mask_v32i1(<32 x i1>* %p) {
 ; LMULMAX1-NEXT:    addi a0, a0, 2
 ; LMULMAX1-NEXT:    vlm.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
-  %v = load <32 x i1>, <32 x i1>* %p
+  %v = load <32 x i1>, ptr %p
   ret <32 x i1> %v
 }
 
 ; Return the vector via registers v8-v23
-define <64 x i32> @ret_split_v64i32(<64 x i32>* %x) {
+define <64 x i32> @ret_split_v64i32(ptr %x) {
 ; LMULMAX8-LABEL: ret_split_v64i32:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a1, 32
@@ -225,12 +225,12 @@ define <64 x i32> @ret_split_v64i32(<64 x i32>* %x) {
 ; LMULMAX1-NEXT:    addi a0, a0, 240
 ; LMULMAX1-NEXT:    vle32.v v23, (a0)
 ; LMULMAX1-NEXT:    ret
-  %v = load <64 x i32>, <64 x i32>* %x
+  %v = load <64 x i32>, ptr %x
   ret <64 x i32> %v
 }
 
 ; Return the vector fully via the stack
-define <128 x i32> @ret_split_v128i32(<128 x i32>* %x) {
+define <128 x i32> @ret_split_v128i32(ptr %x) {
 ; LMULMAX8-LABEL: ret_split_v128i32:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    addi a2, a1, 128
@@ -483,7 +483,7 @@ define <128 x i32> @ret_split_v128i32(<128 x i32>* %x) {
 ; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vse32.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
-  %v = load <128 x i32>, <128 x i32>* %x
+  %v = load <128 x i32>, ptr %x
   ret <128 x i32> %v
 }
 
@@ -1019,7 +1019,7 @@ define <32 x i32> @split_vector_args(<2 x i32>,<2 x i32>,<2 x i32>,<2 x i32>,<2 
   ret <32 x i32> %v0
 }
 
-define <32 x i32> @call_split_vector_args(<2 x i32>* %pa, <32 x i32>* %pb) {
+define <32 x i32> @call_split_vector_args(ptr %pa, ptr %pb) {
 ; LMULMAX8-LABEL: call_split_vector_args:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    addi sp, sp, -256
@@ -1176,8 +1176,8 @@ define <32 x i32> @call_split_vector_args(<2 x i32>* %pa, <32 x i32>* %pb) {
 ; LMULMAX1-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
 ; LMULMAX1-NEXT:    addi sp, sp, 128
 ; LMULMAX1-NEXT:    ret
-  %a = load <2 x i32>, <2 x i32>* %pa
-  %b = load <32 x i32>, <32 x i32>* %pb
+  %a = load <2 x i32>, ptr %pa
+  %b = load <32 x i32>, ptr %pb
   %r = call <32 x i32> @split_vector_args(<2 x i32> %a, <2 x i32> %a, <2 x i32> %a, <2 x i32> %a, <2 x i32> %a, <32 x i32> %b, <32 x i32> %b)
   ret <32 x i32> %r
 }

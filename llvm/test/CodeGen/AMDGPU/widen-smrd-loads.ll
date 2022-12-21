@@ -2,7 +2,7 @@
 ; RUN: llc -amdgpu-codegenprepare-widen-constant-loads=0 -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=SI %s
 ; RUN: llc -amdgpu-codegenprepare-widen-constant-loads=0 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=VI %s
 
-define amdgpu_kernel void @widen_i16_constant_load(i16 addrspace(4)* %arg) {
+define amdgpu_kernel void @widen_i16_constant_load(ptr addrspace(4) %arg) {
 ; SI-LABEL: widen_i16_constant_load:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -32,14 +32,14 @@ define amdgpu_kernel void @widen_i16_constant_load(i16 addrspace(4)* %arg) {
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_short v[0:1], v2
 ; VI-NEXT:    s_endpgm
-  %load = load i16, i16 addrspace(4)* %arg, align 4
+  %load = load i16, ptr addrspace(4) %arg, align 4
   %add = add i16 %load, 999
   %or = or i16 %add, 4
-  store i16 %or, i16 addrspace(1)* null
+  store i16 %or, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_kernel void @widen_i16_constant_load_zext_i32(i16 addrspace(4)* %arg) {
+define amdgpu_kernel void @widen_i16_constant_load_zext_i32(ptr addrspace(4) %arg) {
 ; SI-LABEL: widen_i16_constant_load_zext_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -71,15 +71,15 @@ define amdgpu_kernel void @widen_i16_constant_load_zext_i32(i16 addrspace(4)* %a
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
-  %load = load i16, i16 addrspace(4)* %arg, align 4
+  %load = load i16, ptr addrspace(4) %arg, align 4
   %ext = zext i16 %load to i32
   %add = add i32 %ext, 999
   %or = or i32 %add, 4
-  store i32 %or, i32 addrspace(1)* null
+  store i32 %or, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_kernel void @widen_i16_constant_load_sext_i32(i16 addrspace(4)* %arg) {
+define amdgpu_kernel void @widen_i16_constant_load_sext_i32(ptr addrspace(4) %arg) {
 ; SI-LABEL: widen_i16_constant_load_sext_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -111,15 +111,15 @@ define amdgpu_kernel void @widen_i16_constant_load_sext_i32(i16 addrspace(4)* %a
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
-  %load = load i16, i16 addrspace(4)* %arg, align 4
+  %load = load i16, ptr addrspace(4) %arg, align 4
   %ext = sext i16 %load to i32
   %add = add i32 %ext, 999
   %or = or i32 %add, 4
-  store i32 %or, i32 addrspace(1)* null
+  store i32 %or, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_kernel void @widen_i17_constant_load(i17 addrspace(4)* %arg) {
+define amdgpu_kernel void @widen_i17_constant_load(ptr addrspace(4) %arg) {
 ; SI-LABEL: widen_i17_constant_load:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -162,14 +162,14 @@ define amdgpu_kernel void @widen_i17_constant_load(i17 addrspace(4)* %arg) {
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    flat_store_byte v[2:3], v0
 ; VI-NEXT:    s_endpgm
-  %load = load i17, i17 addrspace(4)* %arg, align 4
+  %load = load i17, ptr addrspace(4) %arg, align 4
   %add = add i17 %load, 34
   %or = or i17 %add, 4
-  store i17 %or, i17 addrspace(1)* null
+  store i17 %or, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_kernel void @widen_f16_constant_load(half addrspace(4)* %arg) {
+define amdgpu_kernel void @widen_f16_constant_load(ptr addrspace(4) %arg) {
 ; SI-LABEL: widen_f16_constant_load:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -197,14 +197,14 @@ define amdgpu_kernel void @widen_f16_constant_load(half addrspace(4)* %arg) {
 ; VI-NEXT:    v_add_f16_e64 v2, s0, 4.0
 ; VI-NEXT:    flat_store_short v[0:1], v2
 ; VI-NEXT:    s_endpgm
-  %load = load half, half addrspace(4)* %arg, align 4
+  %load = load half, ptr addrspace(4) %arg, align 4
   %add = fadd half %load, 4.0
-  store half %add, half addrspace(1)* null
+  store half %add, ptr addrspace(1) null
   ret void
 }
 
 ; FIXME: valu usage on VI
-define amdgpu_kernel void @widen_v2i8_constant_load(<2 x i8> addrspace(4)* %arg) {
+define amdgpu_kernel void @widen_v2i8_constant_load(ptr addrspace(4) %arg) {
 ; SI-LABEL: widen_v2i8_constant_load:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -245,14 +245,14 @@ define amdgpu_kernel void @widen_v2i8_constant_load(<2 x i8> addrspace(4)* %arg)
 ; VI-NEXT:    v_or_b32_sdwa v2, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; VI-NEXT:    flat_store_short v[0:1], v2
 ; VI-NEXT:    s_endpgm
-  %load = load <2 x i8>, <2 x i8> addrspace(4)* %arg, align 4
+  %load = load <2 x i8>, ptr addrspace(4) %arg, align 4
   %add = add <2 x i8> %load, <i8 12, i8 44>
   %or = or <2 x i8> %add, <i8 4, i8 3>
-  store <2 x i8> %or, <2 x i8> addrspace(1)* null
+  store <2 x i8> %or, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_kernel void @no_widen_i16_constant_divergent_load(i16 addrspace(4)* %arg) {
+define amdgpu_kernel void @no_widen_i16_constant_divergent_load(ptr addrspace(4) %arg) {
 ; SI-LABEL: no_widen_i16_constant_divergent_load:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -290,15 +290,15 @@ define amdgpu_kernel void @no_widen_i16_constant_divergent_load(i16 addrspace(4)
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = zext i32 %tid to i64
-  %gep.arg = getelementptr inbounds i16, i16 addrspace(4)* %arg, i64 %tid.ext
-  %load = load i16, i16 addrspace(4)* %gep.arg, align 4
+  %gep.arg = getelementptr inbounds i16, ptr addrspace(4) %arg, i64 %tid.ext
+  %load = load i16, ptr addrspace(4) %gep.arg, align 4
   %add = add i16 %load, 999
   %or = or i16 %add, 4
-  store i16 %or, i16 addrspace(1)* null
+  store i16 %or, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_kernel void @widen_i1_constant_load(i1 addrspace(4)* %arg) {
+define amdgpu_kernel void @widen_i1_constant_load(ptr addrspace(4) %arg) {
 ; SI-LABEL: widen_i1_constant_load:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -326,13 +326,13 @@ define amdgpu_kernel void @widen_i1_constant_load(i1 addrspace(4)* %arg) {
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_byte v[0:1], v2
 ; VI-NEXT:    s_endpgm
-  %load = load i1, i1 addrspace(4)* %arg, align 4
+  %load = load i1, ptr addrspace(4) %arg, align 4
   %and = and i1 %load, true
-  store i1 %and, i1 addrspace(1)* null
+  store i1 %and, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_kernel void @widen_i16_zextload_i64_constant_load(i16 addrspace(4)* %arg) {
+define amdgpu_kernel void @widen_i16_zextload_i64_constant_load(ptr addrspace(4) %arg) {
 ; SI-LABEL: widen_i16_zextload_i64_constant_load:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -364,15 +364,15 @@ define amdgpu_kernel void @widen_i16_zextload_i64_constant_load(i16 addrspace(4)
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
-  %load = load i16, i16 addrspace(4)* %arg, align 4
+  %load = load i16, ptr addrspace(4) %arg, align 4
   %zext = zext i16 %load to i32
   %add = add i32 %zext, 999
   %or = or i32 %add, 4
-  store i32 %or, i32 addrspace(1)* null
+  store i32 %or, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_kernel void @widen_i1_zext_to_i64_constant_load(i1 addrspace(4)* %arg) {
+define amdgpu_kernel void @widen_i1_zext_to_i64_constant_load(ptr addrspace(4) %arg) {
 ; SI-LABEL: widen_i1_zext_to_i64_constant_load:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -406,14 +406,14 @@ define amdgpu_kernel void @widen_i1_zext_to_i64_constant_load(i1 addrspace(4)* %
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; VI-NEXT:    s_endpgm
-  %load = load i1, i1 addrspace(4)* %arg, align 4
+  %load = load i1, ptr addrspace(4) %arg, align 4
   %zext = zext i1 %load to i64
   %add = add i64 %zext, 999
-  store i64 %add, i64 addrspace(1)* null
+  store i64 %add, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_kernel void @widen_i16_constant32_load(i16 addrspace(6)* %arg) {
+define amdgpu_kernel void @widen_i16_constant32_load(ptr addrspace(6) %arg) {
 ; SI-LABEL: widen_i16_constant32_load:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s0, s[0:1], 0x9
@@ -444,14 +444,14 @@ define amdgpu_kernel void @widen_i16_constant32_load(i16 addrspace(6)* %arg) {
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_short v[0:1], v2
 ; VI-NEXT:    s_endpgm
-  %load = load i16, i16 addrspace(6)* %arg, align 4
+  %load = load i16, ptr addrspace(6) %arg, align 4
   %add = add i16 %load, 999
   %or = or i16 %add, 4
-  store i16 %or, i16 addrspace(1)* null
+  store i16 %or, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_kernel void @widen_i16_global_invariant_load(i16 addrspace(1)* %arg) {
+define amdgpu_kernel void @widen_i16_global_invariant_load(ptr addrspace(1) %arg) {
 ; SI-LABEL: widen_i16_global_invariant_load:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -481,10 +481,10 @@ define amdgpu_kernel void @widen_i16_global_invariant_load(i16 addrspace(1)* %ar
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_short v[0:1], v2
 ; VI-NEXT:    s_endpgm
-  %load = load i16, i16 addrspace(1)* %arg, align 4, !invariant.load !0
+  %load = load i16, ptr addrspace(1) %arg, align 4, !invariant.load !0
   %add = add i16 %load, 999
   %or = or i16 %add, 1
-  store i16 %or, i16 addrspace(1)* null
+  store i16 %or, ptr addrspace(1) null
   ret void
 }
 

@@ -142,6 +142,7 @@ add_llvm_component_library(LLVMAnalysis
   TrainingLogger.cpp
   TypeBasedAliasAnalysis.cpp
   TypeMetadataUtils.cpp
+  UniformityAnalysis.cpp
   ScopedNoAliasAA.cpp
   ValueLattice.cpp
   ValueLatticeUtils.cpp
@@ -166,4 +167,5 @@ add_llvm_component_library(LLVMAnalysis
   Object
   ProfileData
   Support
+  TargetParser
   )

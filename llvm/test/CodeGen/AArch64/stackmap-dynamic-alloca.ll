@@ -23,7 +23,7 @@
 define void @f(i32 %nelems) {
 entry:
   %mem = alloca i32, i32 %nelems
-  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 0, i32 0, i32* %mem)
+  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 0, i32 0, ptr %mem)
   ret void
 }
 

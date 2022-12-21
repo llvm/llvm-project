@@ -9,10 +9,10 @@
 define i32 @f0(i32 %a0) #0 {
 b0:
   %v0 = alloca i32, align 4
-  store i32 %a0, i32* %v0, align 4
+  store i32 %a0, ptr %v0, align 4
   %v1 = call <16 x i32> @llvm.hexagon.V6.vd0()
-  store <16 x i32> %v1, <16 x i32>* @g0, align 64
-  ret i32 ptrtoint (<16 x i32>* @g0 to i32)
+  store <16 x i32> %v1, ptr @g0, align 64
+  ret i32 ptrtoint (ptr @g0 to i32)
 }
 
 ; Function Attrs: nounwind readnone

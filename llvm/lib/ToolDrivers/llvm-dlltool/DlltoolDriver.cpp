@@ -94,7 +94,7 @@ MachineTypes getDefaultMachine() {
   return getMachine(Triple(sys::getDefaultTargetTriple()));
 }
 
-Optional<std::string> getPrefix(StringRef Argv0) {
+std::optional<std::string> getPrefix(StringRef Argv0) {
   StringRef ProgName = llvm::sys::path::stem(Argv0);
   // x86_64-w64-mingw32-dlltool -> x86_64-w64-mingw32
   // llvm-dlltool -> None
@@ -149,7 +149,7 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
   }
 
   COFF::MachineTypes Machine = getDefaultMachine();
-  if (Optional<std::string> Prefix = getPrefix(ArgsArr[0])) {
+  if (std::optional<std::string> Prefix = getPrefix(ArgsArr[0])) {
     Triple T(*Prefix);
     if (T.getArch() != Triple::UnknownArch)
       Machine = getMachine(T);

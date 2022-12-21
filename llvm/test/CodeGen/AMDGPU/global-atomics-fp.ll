@@ -5,7 +5,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
 
-define amdgpu_kernel void @global_atomic_fadd_ret_f32(float addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fadd_ret_f32(ptr addrspace(1) %ptr) #0 {
 ; GFX900-LABEL: global_atomic_fadd_ret_f32:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -142,12 +142,12 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32(float addrspace(1)* %ptr) 
 ; GFX11-NEXT:    global_store_b32 v[0:1], v1, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 seq_cst
-  store float %result, float addrspace(1)* undef
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 seq_cst
+  store float %result, ptr addrspace(1) undef
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_ret_f32_ieee(float addrspace(1)* %ptr) #2 {
+define amdgpu_kernel void @global_atomic_fadd_ret_f32_ieee(ptr addrspace(1) %ptr) #2 {
 ; GFX900-LABEL: global_atomic_fadd_ret_f32_ieee:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -253,12 +253,12 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_ieee(float addrspace(1)* %
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
-  store float %result, float addrspace(1)* undef
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 syncscope("agent") seq_cst
+  store float %result, ptr addrspace(1) undef
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_noret_f32(float addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fadd_noret_f32(ptr addrspace(1) %ptr) #0 {
 ; GFX900-LABEL: global_atomic_fadd_noret_f32:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -342,11 +342,11 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32(float addrspace(1)* %ptr
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 syncscope("agent") seq_cst
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_noret_f32_ieee(float addrspace(1)* %ptr) #2 {
+define amdgpu_kernel void @global_atomic_fadd_noret_f32_ieee(ptr addrspace(1) %ptr) #2 {
 ; GFX900-LABEL: global_atomic_fadd_noret_f32_ieee:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -430,11 +430,11 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_ieee(float addrspace(1)*
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 syncscope("agent") seq_cst
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_ret_f32_agent(float addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fadd_ret_f32_agent(ptr addrspace(1) %ptr) #0 {
 ; GFX900-LABEL: global_atomic_fadd_ret_f32_agent:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -540,12 +540,12 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_agent(float addrspace(1)* 
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
-  store float %result, float addrspace(1)* undef
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 syncscope("agent") seq_cst
+  store float %result, ptr addrspace(1) undef
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_ret_f32_system(float addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @global_atomic_fadd_ret_f32_system(ptr addrspace(1) %ptr) #0 {
 ; GFX900-LABEL: global_atomic_fadd_ret_f32_system:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -682,12 +682,12 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_system(float addrspace(1)*
 ; GFX11-NEXT:    global_store_b32 v[0:1], v1, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("one-as") seq_cst
-  store float %result, float addrspace(1)* undef
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 syncscope("one-as") seq_cst
+  store float %result, ptr addrspace(1) undef
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_ret_f32_wrong_subtarget(float addrspace(1)* %ptr) #1 {
+define amdgpu_kernel void @global_atomic_fadd_ret_f32_wrong_subtarget(ptr addrspace(1) %ptr) #1 {
 ; GCN-LABEL: global_atomic_fadd_ret_f32_wrong_subtarget:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -739,12 +739,12 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_wrong_subtarget(float addr
 ; GFX11-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX11-NEXT:    global_store_dword v[0:1], v1, off
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
-  store float %result, float addrspace(1)* undef
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 syncscope("agent") seq_cst
+  store float %result, ptr addrspace(1) undef
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_noret_f32_wrong_subtarget(float addrspace(1)* %ptr) #1 {
+define amdgpu_kernel void @global_atomic_fadd_noret_f32_wrong_subtarget(ptr addrspace(1) %ptr) #1 {
 ; GCN-LABEL: global_atomic_fadd_noret_f32_wrong_subtarget:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -766,11 +766,11 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_wrong_subtarget(float ad
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_wbinvl1_vol
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 syncscope("agent") seq_cst
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_noret_f32_safe(float addrspace(1)* %ptr) {
+define amdgpu_kernel void @global_atomic_fadd_noret_f32_safe(ptr addrspace(1) %ptr) {
 ; GFX900-LABEL: global_atomic_fadd_noret_f32_safe:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -894,11 +894,11 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_safe(float addrspace(1)*
 ; GFX11-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 syncscope("agent") seq_cst
   ret void
 }
 
-define amdgpu_kernel void @infer_as_before_atomic(float* addrspace(4)* %arg) #0 {
+define amdgpu_kernel void @infer_as_before_atomic(ptr addrspace(4) %arg) #0 {
 ; GFX900-LABEL: infer_as_before_atomic:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -979,8 +979,8 @@ define amdgpu_kernel void @infer_as_before_atomic(float* addrspace(4)* %arg) #0 
 ; GFX11-NEXT:    global_atomic_add_f32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %load = load float*, float* addrspace(4)* %arg
-  %v = atomicrmw fadd float* %load, float 1.0 syncscope("agent-one-as") monotonic, align 4
+  %load = load ptr, ptr addrspace(4) %arg
+  %v = atomicrmw fadd ptr %load, float 1.0 syncscope("agent-one-as") monotonic, align 4
   ret void
 }
 

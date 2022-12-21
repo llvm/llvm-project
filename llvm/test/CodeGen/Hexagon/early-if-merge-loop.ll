@@ -10,23 +10,22 @@
 
 target triple = "hexagon"
 
-define i32 @fred(i32 %a0, i64* nocapture readonly %a1) #0 {
+define i32 @fred(i32 %a0, ptr nocapture readonly %a1) #0 {
 b2:
-  %v3 = bitcast i64* %a1 to i32*
-  %v4 = getelementptr inbounds i32, i32* %v3, i32 1
+  %v4 = getelementptr inbounds i32, ptr %a1, i32 1
   %v5 = zext i32 %a0 to i64
   br label %loop
 
 loop:                                             ; preds = %should_merge, %b2
   %v7 = phi i32 [ 0, %b2 ], [ %v49, %should_merge ]
   %v8 = phi i32 [ 0, %b2 ], [ %v42, %should_merge ]
-  %v9 = phi i32* [ %v4, %b2 ], [ %v53, %should_merge ]
+  %v9 = phi ptr [ %v4, %b2 ], [ %v53, %should_merge ]
   %v10 = phi i32 [ 0, %b2 ], [ %v30, %should_merge ]
-  %v11 = phi i32* [ %v3, %b2 ], [ %v51, %should_merge ]
+  %v11 = phi ptr [ %a1, %b2 ], [ %v51, %should_merge ]
   %v12 = phi i32 [ 0, %b2 ], [ %v23, %should_merge ]
   %v13 = phi i32 [ 2, %b2 ], [ %v54, %should_merge ]
-  %v14 = load i32, i32* %v11, align 4, !tbaa !0
-  %v15 = load i32, i32* %v9, align 4, !tbaa !0
+  %v14 = load i32, ptr %v11, align 4, !tbaa !0
+  %v15 = load i32, ptr %v9, align 4, !tbaa !0
   %v16 = icmp ult i32 %v13, 30
   %v17 = zext i32 %v12 to i64
   %v18 = shl nuw i64 %v17, 32
@@ -42,11 +41,11 @@ loop:                                             ; preds = %should_merge, %b2
   %v28 = tail call i64 @llvm.hexagon.A2.addp(i64 %v27, i64 %v5)
   %v29 = lshr i64 %v28, 32
   %v30 = trunc i64 %v29 to i32
-  %v31 = getelementptr inbounds i32, i32* %v3, i32 %v13
-  %v32 = load i32, i32* %v31, align 4, !tbaa !0
+  %v31 = getelementptr inbounds i32, ptr %a1, i32 %v13
+  %v32 = load i32, ptr %v31, align 4, !tbaa !0
   %v33 = or i32 %v13, 1
-  %v34 = getelementptr inbounds i32, i32* %v3, i32 %v33
-  %v35 = load i32, i32* %v34, align 4, !tbaa !0
+  %v34 = getelementptr inbounds i32, ptr %a1, i32 %v33
+  %v35 = load i32, ptr %v34, align 4, !tbaa !0
   %v36 = zext i32 %v8 to i64
   %v37 = shl nuw i64 %v36, 32
   %v38 = zext i32 %v32 to i64
@@ -65,9 +64,9 @@ loop:                                             ; preds = %should_merge, %b2
 
 should_merge:                                     ; preds = %loop
   %v50 = add nuw nsw i32 %v13, 2
-  %v51 = getelementptr inbounds i32, i32* %v3, i32 %v50
+  %v51 = getelementptr inbounds i32, ptr %a1, i32 %v50
   %v52 = add nuw nsw i32 %v13, 3
-  %v53 = getelementptr inbounds i32, i32* %v3, i32 %v52
+  %v53 = getelementptr inbounds i32, ptr %a1, i32 %v52
   %v54 = add nuw nsw i32 %v13, 4
   br label %loop
 

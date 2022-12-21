@@ -34,6 +34,7 @@ set(LLVM_LINK_COMPONENTS
   ObjectYAML
   RuntimeDyld
   Support
+  TargetParser
   )
 
 set(libs)

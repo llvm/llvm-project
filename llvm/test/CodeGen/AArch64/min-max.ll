@@ -132,7 +132,7 @@ define <16 x i8> @smax16i8(<16 x i8> %a, <16 x i8> %b) {
 
 declare <32 x i8> @llvm.smax.v32i8(<32 x i8> %a, <32 x i8> %b) readnone
 
-define void @smax32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8>* %p) {
+define void @smax32i8(<32 x i8> %a, <32 x i8> %b, ptr %p) {
 ; CHECK-ISEL-LABEL: smax32i8:
 ; CHECK-ISEL:       // %bb.0:
 ; CHECK-ISEL-NEXT:    smax v1.16b, v1.16b, v3.16b
@@ -154,7 +154,7 @@ define void @smax32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8>* %p) {
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call <32 x i8> @llvm.smax.v32i8(<32 x i8> %a, <32 x i8> %b)
-  store <32 x i8> %c, <32 x i8>* %p
+  store <32 x i8> %c, ptr %p
   ret void
 }
 
@@ -182,7 +182,7 @@ define <8 x i16> @smax8i16(<8 x i16> %a, <8 x i16> %b) {
 
 declare <16 x i16> @llvm.smax.v16i16(<16 x i16> %a, <16 x i16> %b) readnone
 
-define void @smax16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16>* %p) {
+define void @smax16i16(<16 x i16> %a, <16 x i16> %b, ptr %p) {
 ; CHECK-ISEL-LABEL: smax16i16:
 ; CHECK-ISEL:       // %bb.0:
 ; CHECK-ISEL-NEXT:    smax v1.8h, v1.8h, v3.8h
@@ -204,7 +204,7 @@ define void @smax16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16>* %p) {
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call <16 x i16> @llvm.smax.v16i16(<16 x i16> %a, <16 x i16> %b)
-  store <16 x i16> %c, <16 x i16>* %p
+  store <16 x i16> %c, ptr %p
   ret void
 }
 
@@ -232,7 +232,7 @@ define <4 x i32> @smax4i32(<4 x i32> %a, <4 x i32> %b) {
 
 declare <8 x i32> @llvm.smax.v8i32(<8 x i32> %a, <8 x i32> %b) readnone
 
-define void @smax8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32>* %p) {
+define void @smax8i32(<8 x i32> %a, <8 x i32> %b, ptr %p) {
 ; CHECK-ISEL-LABEL: smax8i32:
 ; CHECK-ISEL:       // %bb.0:
 ; CHECK-ISEL-NEXT:    smax v1.4s, v1.4s, v3.4s
@@ -254,7 +254,7 @@ define void @smax8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32>* %p) {
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call <8 x i32>@llvm.smax.v8i32(<8 x i32> %a, <8 x i32> %b)
-  store <8 x i32> %c, <8 x i32>* %p
+  store <8 x i32> %c, ptr %p
   ret void
 }
 
@@ -310,7 +310,7 @@ define <2 x i64> @smax2i64(<2 x i64> %a, <2 x i64> %b) {
 
 declare <4 x i64> @llvm.smax.v4i64(<4 x i64> %a, <4 x i64> %b) readnone
 
-define void @smax4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64>* %p) {
+define void @smax4i64(<4 x i64> %a, <4 x i64> %b, ptr %p) {
 ; CHECK-ISEL-LABEL: smax4i64:
 ; CHECK-ISEL:       // %bb.0:
 ; CHECK-ISEL-NEXT:    cmgt v4.2d, v1.2d, v3.2d
@@ -338,7 +338,7 @@ define void @smax4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64>* %p) {
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %a, <4 x i64> %b)
-  store <4 x i64> %c, <4 x i64>* %p
+  store <4 x i64> %c, ptr %p
   ret void
 }
 
@@ -468,7 +468,7 @@ define <16 x i8> @umax16i8(<16 x i8> %a, <16 x i8> %b) {
 
 declare <32 x i8> @llvm.umax.v32i8(<32 x i8> %a, <32 x i8> %b) readnone
 
-define void @umax32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8>* %p) {
+define void @umax32i8(<32 x i8> %a, <32 x i8> %b, ptr %p) {
 ; CHECK-ISEL-LABEL: umax32i8:
 ; CHECK-ISEL:       // %bb.0:
 ; CHECK-ISEL-NEXT:    umax v1.16b, v1.16b, v3.16b
@@ -490,7 +490,7 @@ define void @umax32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8>* %p) {
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call <32 x i8> @llvm.umax.v32i8(<32 x i8> %a, <32 x i8> %b)
-  store <32 x i8> %c, <32 x i8>* %p
+  store <32 x i8> %c, ptr %p
   ret void
 }
 
@@ -518,7 +518,7 @@ define <8 x i16> @umax8i16(<8 x i16> %a, <8 x i16> %b) {
 
 declare <16 x i16> @llvm.umax.v16i16(<16 x i16> %a, <16 x i16> %b) readnone
 
-define void @umax16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16>* %p) {
+define void @umax16i16(<16 x i16> %a, <16 x i16> %b, ptr %p) {
 ; CHECK-ISEL-LABEL: umax16i16:
 ; CHECK-ISEL:       // %bb.0:
 ; CHECK-ISEL-NEXT:    umax v1.8h, v1.8h, v3.8h
@@ -540,7 +540,7 @@ define void @umax16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16>* %p) {
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call <16 x i16> @llvm.umax.v16i16(<16 x i16> %a, <16 x i16> %b)
-  store <16 x i16> %c, <16 x i16>* %p
+  store <16 x i16> %c, ptr %p
   ret void
 }
 
@@ -568,7 +568,7 @@ define <4 x i32> @umax4i32(<4 x i32> %a, <4 x i32> %b) {
 
 declare <8 x i32> @llvm.umax.v8i32(<8 x i32> %a, <8 x i32> %b) readnone
 
-define void @umax8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32>* %p) {
+define void @umax8i32(<8 x i32> %a, <8 x i32> %b, ptr %p) {
 ; CHECK-ISEL-LABEL: umax8i32:
 ; CHECK-ISEL:       // %bb.0:
 ; CHECK-ISEL-NEXT:    umax v1.4s, v1.4s, v3.4s
@@ -590,7 +590,7 @@ define void @umax8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32>* %p) {
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call <8 x i32>@llvm.umax.v8i32(<8 x i32> %a, <8 x i32> %b)
-  store <8 x i32> %c, <8 x i32>* %p
+  store <8 x i32> %c, ptr %p
   ret void
 }
 
@@ -646,7 +646,7 @@ define <2 x i64> @umax2i64(<2 x i64> %a, <2 x i64> %b) {
 
 declare <4 x i64> @llvm.umax.v4i64(<4 x i64> %a, <4 x i64> %b) readnone
 
-define void @umax4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64>* %p) {
+define void @umax4i64(<4 x i64> %a, <4 x i64> %b, ptr %p) {
 ; CHECK-ISEL-LABEL: umax4i64:
 ; CHECK-ISEL:       // %bb.0:
 ; CHECK-ISEL-NEXT:    cmhi v4.2d, v1.2d, v3.2d
@@ -674,7 +674,7 @@ define void @umax4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64>* %p) {
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call <4 x i64> @llvm.umax.v4i64(<4 x i64> %a, <4 x i64> %b)
-  store <4 x i64> %c, <4 x i64>* %p
+  store <4 x i64> %c, ptr %p
   ret void
 }
 
@@ -804,7 +804,7 @@ define <16 x i8> @smin16i8(<16 x i8> %a, <16 x i8> %b) {
 
 declare <32 x i8> @llvm.smin.v32i8(<32 x i8> %a, <32 x i8> %b) readnone
 
-define void @smin32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8>* %p) {
+define void @smin32i8(<32 x i8> %a, <32 x i8> %b, ptr %p) {
 ; CHECK-ISEL-LABEL: smin32i8:
 ; CHECK-ISEL:       // %bb.0:
 ; CHECK-ISEL-NEXT:    smin v1.16b, v1.16b, v3.16b
@@ -826,7 +826,7 @@ define void @smin32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8>* %p) {
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call <32 x i8> @llvm.smin.v32i8(<32 x i8> %a, <32 x i8> %b)
-  store <32 x i8> %c, <32 x i8>* %p
+  store <32 x i8> %c, ptr %p
   ret void
 }
 
@@ -854,7 +854,7 @@ define <8 x i16> @smin8i16(<8 x i16> %a, <8 x i16> %b) {
 
 declare <16 x i16> @llvm.smin.v16i16(<16 x i16> %a, <16 x i16> %b) readnone
 
-define void @smin16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16>* %p) {
+define void @smin16i16(<16 x i16> %a, <16 x i16> %b, ptr %p) {
 ; CHECK-ISEL-LABEL: smin16i16:
 ; CHECK-ISEL:       // %bb.0:
 ; CHECK-ISEL-NEXT:    smin v1.8h, v1.8h, v3.8h
@@ -876,7 +876,7 @@ define void @smin16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16>* %p) {
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call <16 x i16> @llvm.smin.v16i16(<16 x i16> %a, <16 x i16> %b)
-  store <16 x i16> %c, <16 x i16>* %p
+  store <16 x i16> %c, ptr %p
   ret void
 }
 
@@ -904,7 +904,7 @@ define <4 x i32> @smin4i32(<4 x i32> %a, <4 x i32> %b) {
 
 declare <8 x i32> @llvm.smin.v8i32(<8 x i32> %a, <8 x i32> %b) readnone
 
-define void @smin8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32>* %p) {
+define void @smin8i32(<8 x i32> %a, <8 x i32> %b, ptr %p) {
 ; CHECK-ISEL-LABEL: smin8i32:
 ; CHECK-ISEL:       // %bb.0:
 ; CHECK-ISEL-NEXT:    smin v1.4s, v1.4s, v3.4s
@@ -926,7 +926,7 @@ define void @smin8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32>* %p) {
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call <8 x i32>@llvm.smin.v8i32(<8 x i32> %a, <8 x i32> %b)
-  store <8 x i32> %c, <8 x i32>* %p
+  store <8 x i32> %c, ptr %p
   ret void
 }
 
@@ -982,7 +982,7 @@ define <2 x i64> @smin2i64(<2 x i64> %a, <2 x i64> %b) {
 
 declare <4 x i64> @llvm.smin.v4i64(<4 x i64> %a, <4 x i64> %b) readnone
 
-define void @smin4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64>* %p) {
+define void @smin4i64(<4 x i64> %a, <4 x i64> %b, ptr %p) {
 ; CHECK-ISEL-LABEL: smin4i64:
 ; CHECK-ISEL:       // %bb.0:
 ; CHECK-ISEL-NEXT:    cmgt v4.2d, v3.2d, v1.2d
@@ -1010,7 +1010,7 @@ define void @smin4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64>* %p) {
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %a, <4 x i64> %b)
-  store <4 x i64> %c, <4 x i64>* %p
+  store <4 x i64> %c, ptr %p
   ret void
 }
 
@@ -1140,7 +1140,7 @@ define <16 x i8> @umin16i8(<16 x i8> %a, <16 x i8> %b) {
 
 declare <32 x i8> @llvm.umin.v32i8(<32 x i8> %a, <32 x i8> %b) readnone
 
-define void @umin32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8>* %p) {
+define void @umin32i8(<32 x i8> %a, <32 x i8> %b, ptr %p) {
 ; CHECK-ISEL-LABEL: umin32i8:
 ; CHECK-ISEL:       // %bb.0:
 ; CHECK-ISEL-NEXT:    umin v1.16b, v1.16b, v3.16b
@@ -1162,7 +1162,7 @@ define void @umin32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8>* %p) {
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call <32 x i8> @llvm.umin.v32i8(<32 x i8> %a, <32 x i8> %b)
-  store <32 x i8> %c, <32 x i8>* %p
+  store <32 x i8> %c, ptr %p
   ret void
 }
 
@@ -1190,7 +1190,7 @@ define <8 x i16> @umin8i16(<8 x i16> %a, <8 x i16> %b) {
 
 declare <16 x i16> @llvm.umin.v16i16(<16 x i16> %a, <16 x i16> %b) readnone
 
-define void @umin16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16>* %p) {
+define void @umin16i16(<16 x i16> %a, <16 x i16> %b, ptr %p) {
 ; CHECK-ISEL-LABEL: umin16i16:
 ; CHECK-ISEL:       // %bb.0:
 ; CHECK-ISEL-NEXT:    umin v1.8h, v1.8h, v3.8h
@@ -1212,7 +1212,7 @@ define void @umin16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16>* %p) {
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call <16 x i16> @llvm.umin.v16i16(<16 x i16> %a, <16 x i16> %b)
-  store <16 x i16> %c, <16 x i16>* %p
+  store <16 x i16> %c, ptr %p
   ret void
 }
 
@@ -1240,7 +1240,7 @@ define <4 x i32> @umin4i32(<4 x i32> %a, <4 x i32> %b) {
 
 declare <8 x i32> @llvm.umin.v8i32(<8 x i32> %a, <8 x i32> %b) readnone
 
-define void @umin8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32>* %p) {
+define void @umin8i32(<8 x i32> %a, <8 x i32> %b, ptr %p) {
 ; CHECK-ISEL-LABEL: umin8i32:
 ; CHECK-ISEL:       // %bb.0:
 ; CHECK-ISEL-NEXT:    umin v1.4s, v1.4s, v3.4s
@@ -1262,7 +1262,7 @@ define void @umin8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32>* %p) {
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call <8 x i32>@llvm.umin.v8i32(<8 x i32> %a, <8 x i32> %b)
-  store <8 x i32> %c, <8 x i32>* %p
+  store <8 x i32> %c, ptr %p
   ret void
 }
 
@@ -1318,7 +1318,7 @@ define <2 x i64> @umin2i64(<2 x i64> %a, <2 x i64> %b) {
 
 declare <4 x i64> @llvm.umin.v4i64(<4 x i64> %a, <4 x i64> %b) readnone
 
-define void @umin4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64>* %p) {
+define void @umin4i64(<4 x i64> %a, <4 x i64> %b, ptr %p) {
 ; CHECK-ISEL-LABEL: umin4i64:
 ; CHECK-ISEL:       // %bb.0:
 ; CHECK-ISEL-NEXT:    cmhi v4.2d, v3.2d, v1.2d
@@ -1346,6 +1346,6 @@ define void @umin4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64>* %p) {
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %a, <4 x i64> %b)
-  store <4 x i64> %c, <4 x i64>* %p
+  store <4 x i64> %c, ptr %p
   ret void
 }

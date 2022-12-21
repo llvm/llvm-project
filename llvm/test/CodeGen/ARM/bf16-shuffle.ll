@@ -458,13 +458,13 @@ entry:
   ret <8 x bfloat> %shuffle.i
 }
 
-define <4 x bfloat> @test_vld_dup1_4xbfloat(bfloat* %b) {
+define <4 x bfloat> @test_vld_dup1_4xbfloat(ptr %b) {
 ; CHECK-LABEL: test_vld_dup1_4xbfloat:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.16 {d0[]}, [r0:16]
 ; CHECK-NEXT:    bx lr
 entry:
-  %b1 = load bfloat, bfloat* %b, align 2
+  %b1 = load bfloat, ptr %b, align 2
   %vecinit = insertelement <4 x bfloat> undef, bfloat %b1, i32 0
   %vecinit2 = insertelement <4 x bfloat> %vecinit, bfloat %b1, i32 1
   %vecinit3 = insertelement <4 x bfloat> %vecinit2, bfloat %b1, i32 2
@@ -472,13 +472,13 @@ entry:
   ret <4 x bfloat> %vecinit4
 }
 
-define <8 x bfloat> @test_vld_dup1_8xbfloat(bfloat* %b) local_unnamed_addr {
+define <8 x bfloat> @test_vld_dup1_8xbfloat(ptr %b) local_unnamed_addr {
 ; CHECK-LABEL: test_vld_dup1_8xbfloat:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.16 {d0[], d1[]}, [r0:16]
 ; CHECK-NEXT:    bx lr
 entry:
-  %b1 = load bfloat, bfloat* %b, align 2
+  %b1 = load bfloat, ptr %b, align 2
   %vecinit = insertelement <8 x bfloat> undef, bfloat %b1, i32 0
   %vecinit8 = shufflevector <8 x bfloat> %vecinit, <8 x bfloat> undef, <8 x i32> zeroinitializer
   ret <8 x bfloat> %vecinit8

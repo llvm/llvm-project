@@ -104,6 +104,10 @@ Changes to the LLVM IR
 
   * ``fneg``
 
+* Target extension types have been added, which allow targets to have
+  types that need to be preserved through the optimizer, but otherwise are not
+  introspectable by target-independent optimizations.
+
 Changes to building LLVM
 ------------------------
 

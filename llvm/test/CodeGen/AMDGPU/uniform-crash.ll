@@ -6,14 +6,14 @@
 ; GCN: s_cbranch_scc1 [[LABEL:.LBB[0-9_A-Z]+]]
 ; GCN: [[LABEL]]:
 ; GCN-NEXT: s_endpgm
-define amdgpu_kernel void @icmp_2_users(i32 addrspace(1)* %out, i32 %cond) {
+define amdgpu_kernel void @icmp_2_users(ptr addrspace(1) %out, i32 %cond) {
 main_body:
   %0 = icmp sgt i32 %cond, 0
   %1 = sext i1 %0 to i32
   br i1 %0, label %IF, label %ENDIF
 
 IF:
-  store i32 %1, i32 addrspace(1)* %out
+  store i32 %1, ptr addrspace(1) %out
   br label %ENDIF
 
 ENDIF:                                            ; preds = %IF, %main_body
@@ -35,7 +35,7 @@ bb2:                                              ; preds = %bb
   br label %bb3
 
 bb3:                                              ; preds = %bb3, %bb2
-  %val = load volatile i32, i32 addrspace(4)* undef
+  %val = load volatile i32, ptr addrspace(4) undef
   %tmp4 = icmp eq i32 %val, %arg1
   br i1 %tmp4, label %bb5, label %bb3
 

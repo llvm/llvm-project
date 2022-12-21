@@ -680,12 +680,12 @@ Error ObjectLinkingLayer::notifyEmitted(MaterializationResponsibility &MR,
       [&](ResourceKey K) { Allocs[K].push_back(std::move(FA)); });
 }
 
-Error ObjectLinkingLayer::handleRemoveResources(ResourceKey K) {
+Error ObjectLinkingLayer::handleRemoveResources(JITDylib &JD, ResourceKey K) {
 
   {
     Error Err = Error::success();
     for (auto &P : Plugins)
-      Err = joinErrors(std::move(Err), P->notifyRemovingResources(K));
+      Err = joinErrors(std::move(Err), P->notifyRemovingResources(JD, K));
     if (Err)
       return Err;
   }
@@ -705,7 +705,8 @@ Error ObjectLinkingLayer::handleRemoveResources(ResourceKey K) {
   return MemMgr.deallocate(std::move(AllocsToRemove));
 }
 
-void ObjectLinkingLayer::handleTransferResources(ResourceKey DstKey,
+void ObjectLinkingLayer::handleTransferResources(JITDylib &JD,
+                                                 ResourceKey DstKey,
                                                  ResourceKey SrcKey) {
   auto I = Allocs.find(SrcKey);
   if (I != Allocs.end()) {
@@ -721,7 +722,7 @@ void ObjectLinkingLayer::handleTransferResources(ResourceKey DstKey,
   }
 
   for (auto &P : Plugins)
-    P->notifyTransferringResources(DstKey, SrcKey);
+    P->notifyTransferringResources(JD, DstKey, SrcKey);
 }
 
 EHFrameRegistrationPlugin::EHFrameRegistrationPlugin(
@@ -773,7 +774,8 @@ Error EHFrameRegistrationPlugin::notifyFailed(
   return Error::success();
 }
 
-Error EHFrameRegistrationPlugin::notifyRemovingResources(ResourceKey K) {
+Error EHFrameRegistrationPlugin::notifyRemovingResources(JITDylib &JD,
+                                                         ResourceKey K) {
   std::vector<ExecutorAddrRange> RangesToRemove;
 
   ES.runSessionLocked([&] {
@@ -797,7 +799,7 @@ Error EHFrameRegistrationPlugin::notifyRemovingResources(ResourceKey K) {
 }
 
 void EHFrameRegistrationPlugin::notifyTransferringResources(
-    ResourceKey DstKey, ResourceKey SrcKey) {
+    JITDylib &JD, ResourceKey DstKey, ResourceKey SrcKey) {
   auto SI = EHFrameRanges.find(SrcKey);
   if (SI == EHFrameRanges.end())
     return;

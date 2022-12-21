@@ -10,7 +10,10 @@
 #define _LIBCPP___CONCEPTS_CLASS_OR_ENUM_H
 
 #include <__config>
-#include <type_traits>
+#include <__type_traits/is_class.h>
+#include <__type_traits/is_enum.h>
+#include <__type_traits/is_union.h>
+#include <__type_traits/remove_cvref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

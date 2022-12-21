@@ -214,8 +214,13 @@ static DecodeStatus DecodeUnconditionalBranch(MCInst &Inst, uint32_t insn,
                                               uint64_t Address,
                                               const MCDisassembler *Decoder);
 static DecodeStatus
-DecodeSystemPStateInstruction(MCInst &Inst, uint32_t insn, uint64_t Address,
-                              const MCDisassembler *Decoder);
+DecodeSystemPStateImm0_15Instruction(MCInst &Inst, uint32_t insn,
+                                     uint64_t Address,
+                                     const MCDisassembler *Decoder);
+static DecodeStatus
+DecodeSystemPStateImm0_1Instruction(MCInst &Inst, uint32_t insn,
+                                    uint64_t Address,
+                                    const MCDisassembler *Decoder);
 static DecodeStatus DecodeTestAndBranch(MCInst &Inst, uint32_t insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder);
@@ -1814,29 +1819,49 @@ static DecodeStatus DecodeUnconditionalBranch(MCInst &Inst, uint32_t insn,
   return Success;
 }
 
+static bool isInvalidPState(uint64_t Op1, uint64_t Op2) {
+  return Op1 == 0b000 && (Op2 == 0b000 || // CFINV
+                          Op2 == 0b001 || // XAFlag
+                          Op2 == 0b010);  // AXFlag
+}
+
 static DecodeStatus
-DecodeSystemPStateInstruction(MCInst &Inst, uint32_t insn, uint64_t Addr,
-                              const MCDisassembler *Decoder) {
+DecodeSystemPStateImm0_15Instruction(MCInst &Inst, uint32_t insn, uint64_t Addr,
+                                     const MCDisassembler *Decoder) {
   uint64_t op1 = fieldFromInstruction(insn, 16, 3);
   uint64_t op2 = fieldFromInstruction(insn, 5, 3);
-  uint64_t crm = fieldFromInstruction(insn, 8, 4);
+  uint64_t imm = fieldFromInstruction(insn, 8, 4);
   uint64_t pstate_field = (op1 << 3) | op2;
 
-  switch (pstate_field) {
-  case 0x01: // XAFlag
-  case 0x02: // AXFlag
-    return Fail;
-  }
-
-  if ((pstate_field == AArch64PState::PAN  ||
-       pstate_field == AArch64PState::UAO  ||
-       pstate_field == AArch64PState::SSBS) && crm > 1)
+  if (isInvalidPState(op1, op2))
     return Fail;
 
   Inst.addOperand(MCOperand::createImm(pstate_field));
-  Inst.addOperand(MCOperand::createImm(crm));
+  Inst.addOperand(MCOperand::createImm(imm));
 
-  auto PState = AArch64PState::lookupPStateByEncoding(pstate_field);
+  auto PState = AArch64PState::lookupPStateImm0_15ByEncoding(pstate_field);
+  if (PState &&
+      PState->haveFeatures(Decoder->getSubtargetInfo().getFeatureBits()))
+    return Success;
+  return Fail;
+}
+
+static DecodeStatus
+DecodeSystemPStateImm0_1Instruction(MCInst &Inst, uint32_t insn, uint64_t Addr,
+                                    const MCDisassembler *Decoder) {
+  uint64_t op1 = fieldFromInstruction(insn, 16, 3);
+  uint64_t op2 = fieldFromInstruction(insn, 5, 3);
+  uint64_t crm_high = fieldFromInstruction(insn, 9, 3);
+  uint64_t imm = fieldFromInstruction(insn, 8, 1);
+  uint64_t pstate_field = (crm_high << 6) | (op1 << 3) | op2;
+
+  if (isInvalidPState(op1, op2))
+    return Fail;
+
+  Inst.addOperand(MCOperand::createImm(pstate_field));
+  Inst.addOperand(MCOperand::createImm(imm));
+
+  auto PState = AArch64PState::lookupPStateImm0_1ByEncoding(pstate_field);
   if (PState &&
       PState->haveFeatures(Decoder->getSubtargetInfo().getFeatureBits()))
     return Success;

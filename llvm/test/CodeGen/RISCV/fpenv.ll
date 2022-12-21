@@ -22,7 +22,7 @@ define i32 @func_01() {
 ; RV64IF-NEXT:    srl a0, a1, a0
 ; RV64IF-NEXT:    andi a0, a0, 7
 ; RV64IF-NEXT:    ret
-  %rm = call i32 @llvm.flt.rounds()
+  %rm = call i32 @llvm.get.rounding()
   ret i32 %rm
 }
 
@@ -122,4 +122,4 @@ define void @func_07() {
 }
 
 declare void @llvm.set.rounding(i32)
-declare i32 @llvm.flt.rounds()
+declare i32 @llvm.get.rounding()

@@ -1125,23 +1125,6 @@ bool TargetLowering::SimplifyDemandedBits(
 
   KnownBits Known2;
   switch (Op.getOpcode()) {
-  case ISD::VSCALE: {
-    Function const &F = TLO.DAG.getMachineFunction().getFunction();
-    Attribute const &Attr = F.getFnAttribute(Attribute::VScaleRange);
-    if (!Attr.isValid())
-      return false;
-    std::optional<unsigned> MaxVScale = Attr.getVScaleRangeMax();
-    if (!MaxVScale.has_value())
-      return false;
-    APInt VScaleResultUpperbound = *MaxVScale * Op.getConstantOperandAPInt(0);
-    bool Negative = VScaleResultUpperbound.isNegative();
-    if (Negative)
-      VScaleResultUpperbound = ~VScaleResultUpperbound;
-    unsigned RequiredBits = VScaleResultUpperbound.getActiveBits();
-    if (RequiredBits < BitWidth)
-      (Negative ? Known.One : Known.Zero).setHighBits(BitWidth - RequiredBits);
-    return false;
-  }
   case ISD::SCALAR_TO_VECTOR: {
     if (VT.isScalableVector())
       return false;
@@ -2630,6 +2613,11 @@ bool TargetLowering::SimplifyDemandedBits(
       }
       return true;
     }
+
+    // neg x with only low bit demanded is simply x.
+    if (Op.getOpcode() == ISD::SUB && DemandedBits.isOne() &&
+        isa<ConstantSDNode>(Op0) && cast<ConstantSDNode>(Op0)->isZero())
+      return TLO.CombineTo(Op, Op1);
 
     // Attempt to avoid multi-use ops if we don't need anything from them.
     if (!LoMask.isAllOnes() || !DemandedElts.isAllOnes()) {
@@ -7005,6 +6993,41 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
                                             OptForSize, Cost, Depth))
       return DAG.getNode(ISD::FP_ROUND, DL, VT, NegV, Op.getOperand(1));
     break;
+  case ISD::SELECT:
+  case ISD::VSELECT: {
+    // fold (fneg (select C, LHS, RHS)) -> (select C, (fneg LHS), (fneg RHS))
+    // iff at least one cost is cheaper and the other is neutral/cheaper
+    SDValue LHS = Op.getOperand(1);
+    NegatibleCost CostLHS = NegatibleCost::Expensive;
+    SDValue NegLHS =
+        getNegatedExpression(LHS, DAG, LegalOps, OptForSize, CostLHS, Depth);
+    if (!NegLHS || CostLHS > NegatibleCost::Neutral) {
+      RemoveDeadNode(NegLHS);
+      break;
+    }
+
+    // Prevent this node from being deleted by the next call.
+    Handles.emplace_back(NegLHS);
+
+    SDValue RHS = Op.getOperand(2);
+    NegatibleCost CostRHS = NegatibleCost::Expensive;
+    SDValue NegRHS =
+        getNegatedExpression(RHS, DAG, LegalOps, OptForSize, CostRHS, Depth);
+
+    // We're done with the handles.
+    Handles.clear();
+
+    if (!NegRHS || CostRHS > NegatibleCost::Neutral ||
+        (CostLHS != NegatibleCost::Cheaper &&
+         CostRHS != NegatibleCost::Cheaper)) {
+      RemoveDeadNode(NegLHS);
+      RemoveDeadNode(NegRHS);
+      break;
+    }
+
+    Cost = std::min(CostLHS, CostRHS);
+    return DAG.getSelect(DL, VT, Op.getOperand(0), NegLHS, NegRHS);
+  }
   }
 
   return SDValue();

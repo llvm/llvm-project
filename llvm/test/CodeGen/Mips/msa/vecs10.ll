@@ -7,7 +7,7 @@
 
 define i32 @llvm_mips_bnz_v_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_bnz_v_ARG1
+  %0 = load <16 x i8>, ptr @llvm_mips_bnz_v_ARG1
   %1 = tail call i32 @llvm.mips.bnz.v(<16 x i8> %0)
   %2 = icmp eq i32 %1, 0
   br i1 %2, label %true, label %false
@@ -28,7 +28,7 @@ declare i32 @llvm.mips.bnz.v(<16 x i8>) nounwind
 
 define i32 @llvm_mips_bz_v_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_bz_v_ARG1
+  %0 = load <16 x i8>, ptr @llvm_mips_bz_v_ARG1
   %1 = tail call i32 @llvm.mips.bz.v(<16 x i8> %0)
   %2 = icmp eq i32 %1, 0
   br i1 %2, label %true, label %false

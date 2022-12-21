@@ -12,10 +12,10 @@
 ;;        is wrong because the value being compared (int euclid = x*x + y*y)
 ;;	  overflows, so that the 64-bit and 32-bit compares are not equal.
 
-@.str_1 = internal constant [6 x i8] c"true\0A\00"              ; <[6 x i8]*> [#uses=1]
-@.str_2 = internal constant [7 x i8] c"false\0A\00"             ; <[7 x i8]*> [#uses=1]
+@.str_1 = internal constant [6 x i8] c"true\0A\00"              ; <ptr> [#uses=1]
+@.str_2 = internal constant [7 x i8] c"false\0A\00"             ; <ptr> [#uses=1]
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
 define internal void @__main() {
 entry:
@@ -31,11 +31,11 @@ entry:
         br i1 %tmp.8, label %then, label %else
 
 then:           ; preds = %entry
-        %tmp.11 = call i32 (i8*, ...) @printf( i8* getelementptr ([6 x i8], [6 x i8]* @.str_1, i64 0, i64 0) )           ; <i32> [#uses=0]
+        %tmp.11 = call i32 (ptr, ...) @printf( ptr @.str_1 )           ; <i32> [#uses=0]
         br label %UnifiedExitNode
 
 else:           ; preds = %entry
-        %tmp.13 = call i32 (i8*, ...) @printf( i8* getelementptr ([7 x i8], [7 x i8]* @.str_2, i64 0, i64 0) )           ; <i32> [#uses=0]
+        %tmp.13 = call i32 (ptr, ...) @printf( ptr @.str_2 )           ; <i32> [#uses=0]
         br label %UnifiedExitNode
 
 UnifiedExitNode:                ; preds = %else, %then

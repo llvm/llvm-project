@@ -7,6 +7,7 @@ set(LIBS
   FIRSupport
   HLFIRDialect
   ${dialect_libs}
+  LLVMTargetParser
 )
 
 add_flang_unittest(FlangOptimizerTests

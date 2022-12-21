@@ -47,7 +47,7 @@ public:
 
   ~DNBTimer() {}
 
-  bool IsThreadSafe() const { return m_mutexAP != NULL; }
+  bool IsThreadSafe() const { return m_mutexAP.get() != NULL; }
   // Reset the time value to now
   void Reset() {
     PTHREAD_MUTEX_LOCKER(locker, m_mutexAP.get());

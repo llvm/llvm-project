@@ -16,7 +16,7 @@ for.body9.us:
   %2 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %1)
   %3 = tail call <32 x i32> @llvm.hexagon.V6.vshuffvdd(<16 x i32> undef, <16 x i32> %2, i32 62)
   %4 = tail call <16 x i32> @llvm.hexagon.V6.hi(<32 x i32> %3)
-  store <16 x i32> %4, <16 x i32>* undef, align 64
+  store <16 x i32> %4, ptr undef, align 64
   br i1 undef, label %for.body9.us, label %for.body43.us.preheader
 
 for.body43.us.preheader:                          ; preds = %for.body9.us

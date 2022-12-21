@@ -319,7 +319,7 @@ function(add_libc_fuzzer target_name)
     "LIBC_FUZZER"
     "" # No optional arguments
     "" # Single value arguments
-    "SRCS;HDRS;DEPENDS" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS" # Multi-value arguments
     ${ARGN}
   )
   if(NOT LIBC_FUZZER_SRCS)
@@ -374,6 +374,11 @@ function(add_libc_fuzzer target_name)
     ${fq_deps_list}
   )
   add_dependencies(libc-fuzzer ${fq_target_name})
+
+  target_compile_options(${fq_target_name}
+    PRIVATE
+    ${LIBC_FUZZER_COMPILE_OPTIONS})
+
 endfunction(add_libc_fuzzer)
 
 # Rule to add an integration test. An integration test is like a unit test

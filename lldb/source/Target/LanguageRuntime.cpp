@@ -300,7 +300,7 @@ void LanguageRuntime::InitializeCommands(CommandObject *parent) {
         // and cached because we may create multiple debuggers and need one
         // instance of the command each - the implementing function is meant to
         // create a new instance of the command each time it is invoked.
-        parent->LoadSubCommand(command->GetCommandName().str(), command);
+        parent->LoadSubCommand(command->GetCommandName().str().c_str(), command);
       }
     }
   }

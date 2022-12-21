@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   Passes
   RuntimeDyld
   Support
+  TargetParser
   native
   )
 

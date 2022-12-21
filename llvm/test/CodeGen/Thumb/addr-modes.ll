@@ -15,20 +15,20 @@ target triple = "thumbv6m-arm-none-eabi"
 ; Test case 01: %n is scaled by 4 (size of i32).
 ; Expected: GEP cannot be folded into LOAD.
 ; CHECK: local addrmode: [inbounds Base:%arrayidx]
-define i32 @load01(i32* %p, i32 %n) nounwind {
+define i32 @load01(ptr %p, i32 %n) nounwind {
 entry:
-  %arrayidx = getelementptr inbounds i32, i32* %p, i32 %n
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %p, i32 %n
+  %0 = load i32, ptr %arrayidx, align 4
   ret i32 %0
 }
 
 ; Test case 02: No scale of %n is needed because the size of i8 is 1.
 ; Expected: GEP can be folded into LOAD.
 ; CHECK: local addrmode: [inbounds Base:%p + 1*%n]
-define i8 @load02(i8* %p, i32 %n) nounwind {
+define i8 @load02(ptr %p, i32 %n) nounwind {
 entry:
-  %arrayidx = getelementptr inbounds i8, i8* %p, i32 %n
-  %0 = load i8, i8* %arrayidx
+  %arrayidx = getelementptr inbounds i8, ptr %p, i32 %n
+  %0 = load i8, ptr %arrayidx
   ret i8 %0
 }
 
@@ -38,8 +38,8 @@ entry:
 define i32 @load03(i32 %x) nounwind {
 entry:
   %mul = shl nsw i32 %x, 1
-  %0 = inttoptr i32 %mul to i32*
-  %1 = load i32, i32* %0, align 4
+  %0 = inttoptr i32 %mul to ptr
+  %1 = load i32, ptr %0, align 4
   ret i32 %1
 }
 

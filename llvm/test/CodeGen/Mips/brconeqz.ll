@@ -5,13 +5,13 @@
 
 define void @test() nounwind {
 entry:
-  %0 = load i32, i32* @i, align 4
+  %0 = load i32, ptr @i, align 4
   %cmp = icmp eq i32 %0, 0
   br i1 %cmp, label %if.end, label %if.then
 ; 16:	beqz	${{[0-9]+}}, $[[LABEL:[0-9A-Ba-b_]+]]
 ; 16: $[[LABEL]]:
 if.then:                                          ; preds = %entry
-  store i32 1, i32* @result, align 4
+  store i32 1, ptr @result, align 4
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then

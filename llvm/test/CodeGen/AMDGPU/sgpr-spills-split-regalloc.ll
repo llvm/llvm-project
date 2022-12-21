@@ -278,7 +278,7 @@ define void @spill_sgpr_with_no_lower_vgpr_available() #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
 
   call void asm sideeffect "",
   "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9}
@@ -575,7 +575,7 @@ define void @spill_to_lowest_available_vgpr() #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
 
   call void asm sideeffect "",
   "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9}
@@ -865,7 +865,7 @@ define void @spill_sgpr_with_sgpr_uses() #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
 
   call void asm sideeffect "",
   "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9}
@@ -1145,7 +1145,7 @@ define void @spill_sgpr_with_tail_call() #0 {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[4:5]
   %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
 
   call void asm sideeffect "",
   "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9}
@@ -1178,7 +1178,7 @@ define void @spill_sgpr_with_tail_call() #0 {
   ret void
 }
 
-define void @spill_sgpr_no_free_vgpr(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) #0 {
+define void @spill_sgpr_no_free_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; GCN-LABEL: spill_sgpr_no_free_vgpr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1464,7 +1464,7 @@ define void @spill_sgpr_no_free_vgpr(<4 x i32> addrspace(1)* %out, <4 x i32> add
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %a = load <4 x i32>, <4 x i32> addrspace(1)* %in
+  %a = load <4 x i32>, ptr addrspace(1) %in
   call void asm sideeffect "",
   "~{v6},~{v7},~{v8},~{v9}
   ,~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19}
@@ -1496,7 +1496,7 @@ define void @spill_sgpr_no_free_vgpr(<4 x i32> addrspace(1)* %out, <4 x i32> add
   call void asm sideeffect "",
   "~{s34},~{s35},~{s36},~{s37}" () #0
 
-  store <4 x i32> %a, <4 x i32> addrspace(1)* %out
+  store <4 x i32> %a, ptr addrspace(1) %out
   ret void
 }
 

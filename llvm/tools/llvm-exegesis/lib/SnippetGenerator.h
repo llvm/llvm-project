@@ -35,7 +35,8 @@ std::vector<CodeTemplate> getSingleton(CodeTemplate &&CT);
 
 // Generates code templates that has a self-dependency.
 Expected<std::vector<CodeTemplate>>
-generateSelfAliasingCodeTemplates(InstructionTemplate Variant);
+generateSelfAliasingCodeTemplates(InstructionTemplate Variant,
+                                  const BitVector &ForbiddenRegisters);
 
 // Generates code templates without assignment constraints.
 Expected<std::vector<CodeTemplate>>

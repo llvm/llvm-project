@@ -15,7 +15,7 @@
 ; visited while it wasn't "dead". At the point of visiting the constant, we
 ; crashed.
 
-define void @constant_folding_crash(i8* %v54, <4 x <4 x i32>*> %lanes.a, <4 x <4 x i32>*> %lanes.b, <4 x i1> %sel) {
+define void @constant_folding_crash(ptr %v54, <4 x ptr> %lanes.a, <4 x ptr> %lanes.b, <4 x i1> %sel) {
 ; RV32-LABEL: constant_folding_crash:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    lw a0, 8(a0)
@@ -70,16 +70,15 @@ define void @constant_folding_crash(i8* %v54, <4 x <4 x i32>*> %lanes.a, <4 x <4
 ; RV64-NEXT:    vse32.v v8, (a0), v0.t
 ; RV64-NEXT:    ret
 entry:
-  %sunkaddr = getelementptr i8, i8* %v54, i64 8
-  %v55 = bitcast i8* %sunkaddr to i64*
-  %v56 = load i64, i64* %v55, align 8
+  %sunkaddr = getelementptr i8, ptr %v54, i64 8
+  %v56 = load i64, ptr %sunkaddr, align 8
   %trunc = and i64 %v56, 1
   %cmp = icmp eq i64 %trunc, 0
-  %ptrs = select i1 %cmp, <4 x <4 x i32>*> %lanes.a, <4 x <4 x i32>*> %lanes.b
-  %v67 = extractelement <4 x <4 x i32>*> %ptrs, i64 0
+  %ptrs = select i1 %cmp, <4 x ptr> %lanes.a, <4 x ptr> %lanes.b
+  %v67 = extractelement <4 x ptr> %ptrs, i64 0
   %mask = shufflevector <4 x i1> %sel, <4 x i1> undef, <4 x i32> zeroinitializer
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> <i32 10, i32 10, i32 10, i32 10>, <4 x i32>* %v67, i32 16, <4 x i1> %mask)
+  call void @llvm.masked.store.v4i32.p0(<4 x i32> <i32 10, i32 10, i32 10, i32 10>, ptr %v67, i32 16, <4 x i1> %mask)
   ret void
 }
 
-declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32, <4 x i1>)
+declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32, <4 x i1>)

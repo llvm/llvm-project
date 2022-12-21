@@ -7,6 +7,6 @@ define void @f0(i32 %a0) {
 b0:
   %v0 = add i32 16777279, %a0
   %v1 = alloca i32, align 4
-  store i32 %v0, i32* %v1, align 4
+  store i32 %v0, ptr %v1, align 4
   ret void
 }

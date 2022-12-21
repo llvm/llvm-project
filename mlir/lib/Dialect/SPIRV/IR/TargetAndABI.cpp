@@ -101,7 +101,7 @@ StringRef spirv::getInterfaceVarABIAttrName() {
 
 spirv::InterfaceVarABIAttr
 spirv::getInterfaceVarABIAttr(unsigned descriptorSet, unsigned binding,
-                              Optional<spirv::StorageClass> storageClass,
+                              std::optional<spirv::StorageClass> storageClass,
                               MLIRContext *context) {
   return spirv::InterfaceVarABIAttr::get(descriptorSet, binding, storageClass,
                                          context);
@@ -122,7 +122,7 @@ StringRef spirv::getEntryPointABIAttrName() { return "spirv.entry_point_abi"; }
 spirv::EntryPointABIAttr
 spirv::getEntryPointABIAttr(MLIRContext *context,
                             ArrayRef<int32_t> workgroupSize,
-                            llvm::Optional<int> subgroupSize) {
+                            std::optional<int> subgroupSize) {
   DenseI32ArrayAttr workgroupSizeAttr;
   if (!workgroupSize.empty()) {
     assert(workgroupSize.size() == 3);

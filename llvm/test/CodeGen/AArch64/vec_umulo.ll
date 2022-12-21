@@ -16,7 +16,7 @@ declare {<4 x i24>, <4 x i1>} @llvm.umul.with.overflow.v4i24(<4 x i24>, <4 x i24
 declare {<4 x i1>, <4 x i1>} @llvm.umul.with.overflow.v4i1(<4 x i1>, <4 x i1>)
 declare {<2 x i128>, <2 x i1>} @llvm.umul.with.overflow.v2i128(<2 x i128>, <2 x i128>)
 
-define <1 x i32> @umulo_v1i32(<1 x i32> %a0, <1 x i32> %a1, <1 x i32>* %p2) nounwind {
+define <1 x i32> @umulo_v1i32(<1 x i32> %a0, <1 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: umulo_v1i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
@@ -29,11 +29,11 @@ define <1 x i32> @umulo_v1i32(<1 x i32> %a0, <1 x i32> %a1, <1 x i32>* %p2) noun
   %val = extractvalue {<1 x i32>, <1 x i1>} %t, 0
   %obit = extractvalue {<1 x i32>, <1 x i1>} %t, 1
   %res = sext <1 x i1> %obit to <1 x i32>
-  store <1 x i32> %val, <1 x i32>* %p2
+  store <1 x i32> %val, ptr %p2
   ret <1 x i32> %res
 }
 
-define <2 x i32> @umulo_v2i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32>* %p2) nounwind {
+define <2 x i32> @umulo_v2i32(<2 x i32> %a0, <2 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: umulo_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
@@ -46,11 +46,11 @@ define <2 x i32> @umulo_v2i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32>* %p2) noun
   %val = extractvalue {<2 x i32>, <2 x i1>} %t, 0
   %obit = extractvalue {<2 x i32>, <2 x i1>} %t, 1
   %res = sext <2 x i1> %obit to <2 x i32>
-  store <2 x i32> %val, <2 x i32>* %p2
+  store <2 x i32> %val, ptr %p2
   ret <2 x i32> %res
 }
 
-define <3 x i32> @umulo_v3i32(<3 x i32> %a0, <3 x i32> %a1, <3 x i32>* %p2) nounwind {
+define <3 x i32> @umulo_v3i32(<3 x i32> %a0, <3 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: umulo_v3i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umull2 v2.2d, v0.4s, v1.4s
@@ -67,11 +67,11 @@ define <3 x i32> @umulo_v3i32(<3 x i32> %a0, <3 x i32> %a1, <3 x i32>* %p2) noun
   %val = extractvalue {<3 x i32>, <3 x i1>} %t, 0
   %obit = extractvalue {<3 x i32>, <3 x i1>} %t, 1
   %res = sext <3 x i1> %obit to <3 x i32>
-  store <3 x i32> %val, <3 x i32>* %p2
+  store <3 x i32> %val, ptr %p2
   ret <3 x i32> %res
 }
 
-define <4 x i32> @umulo_v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x i32>* %p2) nounwind {
+define <4 x i32> @umulo_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: umulo_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umull2 v2.2d, v0.4s, v1.4s
@@ -86,11 +86,11 @@ define <4 x i32> @umulo_v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x i32>* %p2) noun
   %val = extractvalue {<4 x i32>, <4 x i1>} %t, 0
   %obit = extractvalue {<4 x i32>, <4 x i1>} %t, 1
   %res = sext <4 x i1> %obit to <4 x i32>
-  store <4 x i32> %val, <4 x i32>* %p2
+  store <4 x i32> %val, ptr %p2
   ret <4 x i32> %res
 }
 
-define <6 x i32> @umulo_v6i32(<6 x i32> %a0, <6 x i32> %a1, <6 x i32>* %p2) nounwind {
+define <6 x i32> @umulo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: umulo_v6i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s0, w6
@@ -132,11 +132,11 @@ define <6 x i32> @umulo_v6i32(<6 x i32> %a0, <6 x i32> %a1, <6 x i32>* %p2) noun
   %val = extractvalue {<6 x i32>, <6 x i1>} %t, 0
   %obit = extractvalue {<6 x i32>, <6 x i1>} %t, 1
   %res = sext <6 x i1> %obit to <6 x i32>
-  store <6 x i32> %val, <6 x i32>* %p2
+  store <6 x i32> %val, ptr %p2
   ret <6 x i32> %res
 }
 
-define <8 x i32> @umulo_v8i32(<8 x i32> %a0, <8 x i32> %a1, <8 x i32>* %p2) nounwind {
+define <8 x i32> @umulo_v8i32(<8 x i32> %a0, <8 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: umulo_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umull2 v4.2d, v1.4s, v3.4s
@@ -157,11 +157,11 @@ define <8 x i32> @umulo_v8i32(<8 x i32> %a0, <8 x i32> %a1, <8 x i32>* %p2) noun
   %val = extractvalue {<8 x i32>, <8 x i1>} %t, 0
   %obit = extractvalue {<8 x i32>, <8 x i1>} %t, 1
   %res = sext <8 x i1> %obit to <8 x i32>
-  store <8 x i32> %val, <8 x i32>* %p2
+  store <8 x i32> %val, ptr %p2
   ret <8 x i32> %res
 }
 
-define <16 x i32> @umulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, <16 x i8>* %p2) nounwind {
+define <16 x i32> @umulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: umulo_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umull2 v2.8h, v0.16b, v1.16b
@@ -192,11 +192,11 @@ define <16 x i32> @umulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, <16 x i8>* %p2) nou
   %val = extractvalue {<16 x i8>, <16 x i1>} %t, 0
   %obit = extractvalue {<16 x i8>, <16 x i1>} %t, 1
   %res = sext <16 x i1> %obit to <16 x i32>
-  store <16 x i8> %val, <16 x i8>* %p2
+  store <16 x i8> %val, ptr %p2
   ret <16 x i32> %res
 }
 
-define <8 x i32> @umulo_v8i16(<8 x i16> %a0, <8 x i16> %a1, <8 x i16>* %p2) nounwind {
+define <8 x i32> @umulo_v8i16(<8 x i16> %a0, <8 x i16> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: umulo_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umull2 v2.4s, v0.8h, v1.8h
@@ -221,11 +221,11 @@ define <8 x i32> @umulo_v8i16(<8 x i16> %a0, <8 x i16> %a1, <8 x i16>* %p2) noun
   %val = extractvalue {<8 x i16>, <8 x i1>} %t, 0
   %obit = extractvalue {<8 x i16>, <8 x i1>} %t, 1
   %res = sext <8 x i1> %obit to <8 x i32>
-  store <8 x i16> %val, <8 x i16>* %p2
+  store <8 x i16> %val, ptr %p2
   ret <8 x i32> %res
 }
 
-define <2 x i32> @umulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, <2 x i64>* %p2) nounwind {
+define <2 x i32> @umulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: umulo_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, v1.d[1]
@@ -251,11 +251,11 @@ define <2 x i32> @umulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, <2 x i64>* %p2) noun
   %val = extractvalue {<2 x i64>, <2 x i1>} %t, 0
   %obit = extractvalue {<2 x i64>, <2 x i1>} %t, 1
   %res = sext <2 x i1> %obit to <2 x i32>
-  store <2 x i64> %val, <2 x i64>* %p2
+  store <2 x i64> %val, ptr %p2
   ret <2 x i32> %res
 }
 
-define <4 x i32> @umulo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) nounwind {
+define <4 x i32> @umulo_v4i24(<4 x i24> %a0, <4 x i24> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: umulo_v4i24:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bic v1.4s, #255, lsl #24
@@ -289,11 +289,11 @@ define <4 x i32> @umulo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) noun
   %val = extractvalue {<4 x i24>, <4 x i1>} %t, 0
   %obit = extractvalue {<4 x i24>, <4 x i1>} %t, 1
   %res = sext <4 x i1> %obit to <4 x i32>
-  store <4 x i24> %val, <4 x i24>* %p2
+  store <4 x i24> %val, ptr %p2
   ret <4 x i32> %res
 }
 
-define <4 x i32> @umulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind {
+define <4 x i32> @umulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: umulo_v4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov d2, d0
@@ -314,11 +314,11 @@ define <4 x i32> @umulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
   %val = extractvalue {<4 x i1>, <4 x i1>} %t, 0
   %obit = extractvalue {<4 x i1>, <4 x i1>} %t, 1
   %res = sext <4 x i1> %obit to <4 x i32>
-  store <4 x i1> %val, <4 x i1>* %p2
+  store <4 x i1> %val, ptr %p2
   ret <4 x i32> %res
 }
 
-define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) nounwind {
+define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: umulo_v2i128:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mul x8, x7, x2
@@ -361,6 +361,6 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
   %val = extractvalue {<2 x i128>, <2 x i1>} %t, 0
   %obit = extractvalue {<2 x i128>, <2 x i1>} %t, 1
   %res = sext <2 x i1> %obit to <2 x i32>
-  store <2 x i128> %val, <2 x i128>* %p2
+  store <2 x i128> %val, ptr %p2
   ret <2 x i32> %res
 }

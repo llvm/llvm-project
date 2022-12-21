@@ -360,7 +360,7 @@ private:
 
     SmallVector<Operation *, 8> symbolDefWorklist = {kernelFunc};
     while (!symbolDefWorklist.empty()) {
-      if (Optional<SymbolTable::UseRange> symbolUses =
+      if (std::optional<SymbolTable::UseRange> symbolUses =
               SymbolTable::getSymbolUses(symbolDefWorklist.pop_back_val())) {
         for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
           StringRef symbolName =

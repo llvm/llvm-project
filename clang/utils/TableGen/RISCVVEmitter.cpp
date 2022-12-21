@@ -164,8 +164,8 @@ void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
   if (RVVI->getNF() >= 2)
     OS << "  NF = " + utostr(RVVI->getNF()) + ";\n";
   // We had initialized DefaultPolicy as TU/TUMU in CodeGen function.
-  if (RVVI->getDefaultPolicy() != Policy::TU &&
-      RVVI->getDefaultPolicy() != Policy::TUMU && !RVVI->hasPassthruOperand() &&
+  if (!RVVI->getDefaultPolicy().isTUPolicy() &&
+      !RVVI->getDefaultPolicy().isTUMUPolicy() && !RVVI->hasPassthruOperand() &&
       !RVVI->hasManualCodegen() && RVVI->hasVL())
     OS << "  DefaultPolicy = " << RVVI->getDefaultPolicyBits() << ";\n";
 
@@ -193,11 +193,11 @@ void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
         OS << "  Ops.push_back(ConstantInt::get(Ops.back()->getType(),"
               " DefaultPolicy));\n";
       if (RVVI->hasMaskedOffOperand() &&
-          RVVI->getDefaultPolicy() == Policy::TAMA)
+          RVVI->getDefaultPolicy().isTAMAPolicy())
         OS << "  Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));\n";
       // Masked reduction cases.
       if (!RVVI->hasMaskedOffOperand() && RVVI->hasPassthruOperand() &&
-          RVVI->getDefaultPolicy() == Policy::TAMA)
+          RVVI->getDefaultPolicy().isTAMAPolicy())
         OS << "  Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));\n";
     } else {
       OS << "  std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end());\n";
@@ -207,7 +207,7 @@ void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
       OS << "  Ops.push_back(ConstantInt::get(Ops.back()->getType(), "
             "DefaultPolicy));\n";
     else if (RVVI->hasPassthruOperand() &&
-             RVVI->getDefaultPolicy() == Policy::TA)
+             RVVI->getDefaultPolicy().isTAPolicy())
       OS << "  Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));\n";
   }
 
@@ -527,7 +527,11 @@ void RVVEmitter::createRVVIntrinsics(
     unsigned NF = R->getValueAsInt("NF");
 
     // If unmasked builtin supports policy, they should be TU or TA.
-    SmallVector<Policy> SupportedUnMaskedPolicies = {Policy::TU, Policy::TA};
+    llvm::SmallVector<Policy> SupportedUnMaskedPolicies;
+    SupportedUnMaskedPolicies.emplace_back(Policy(
+        Policy::PolicyType::Undisturbed, Policy::PolicyType::Omit)); // TU
+    SupportedUnMaskedPolicies.emplace_back(
+        Policy(Policy::PolicyType::Agnostic, Policy::PolicyType::Omit)); // TA
     SmallVector<Policy> SupportedMaskedPolicies =
         RVVIntrinsic::getSupportedMaskedPolicies(HasTailPolicy, HasMaskPolicy);
 
@@ -544,10 +548,10 @@ void RVVEmitter::createRVVIntrinsics(
     auto Prototype = RVVIntrinsic::computeBuiltinTypes(
         BasicPrototype, /*IsMasked=*/false,
         /*HasMaskedOffOperand=*/false, HasVL, NF, IsPrototypeDefaultTU,
-        UnMaskedPolicyScheme);
+        UnMaskedPolicyScheme, Policy());
     auto MaskedPrototype = RVVIntrinsic::computeBuiltinTypes(
         BasicPrototype, /*IsMasked=*/true, HasMaskedOffOperand, HasVL, NF,
-        IsPrototypeDefaultTU, MaskedPolicyScheme);
+        IsPrototypeDefaultTU, MaskedPolicyScheme, Policy());
 
     // Create Intrinsics for each type and LMUL.
     for (char I : TypeRange) {
@@ -569,7 +573,7 @@ void RVVEmitter::createRVVIntrinsics(
             /*IsMasked=*/false, /*HasMaskedOffOperand=*/false, HasVL,
             UnMaskedPolicyScheme, SupportOverloading, HasBuiltinAlias,
             ManualCodegen, *Types, IntrinsicTypes, RequiredFeatures, NF,
-            Policy::PolicyNone, IsPrototypeDefaultTU));
+            Policy(), IsPrototypeDefaultTU));
         if (UnMaskedPolicyScheme != PolicyScheme::SchemeNone)
           for (auto P : SupportedUnMaskedPolicies) {
             SmallVector<PrototypeDescriptor> PolicyPrototype =
@@ -596,7 +600,7 @@ void RVVEmitter::createRVVIntrinsics(
             /*IsMasked=*/true, HasMaskedOffOperand, HasVL, MaskedPolicyScheme,
             SupportOverloading, HasBuiltinAlias, MaskedManualCodegen,
             *MaskTypes, IntrinsicTypes, RequiredFeatures, NF,
-            Policy::PolicyNone, IsPrototypeDefaultTU));
+            Policy(), IsPrototypeDefaultTU));
         if (MaskedPolicyScheme == PolicyScheme::SchemeNone)
           continue;
         for (auto P : SupportedMaskedPolicies) {

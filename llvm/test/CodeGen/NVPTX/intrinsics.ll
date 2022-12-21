@@ -75,12 +75,12 @@ define i32 @test_popc64_trunc(i64 %a) {
 ; llvm.ctpop.i16 is implemenented by converting to i32, running popc.b32, and
 ; then converting back to i16.
 ; CHECK-LABEL: test_popc16
-define void @test_popc16(i16 %a, i16* %b) {
+define void @test_popc16(i16 %a, ptr %b) {
 ; CHECK: cvt.u32.u16
 ; CHECK: popc.b32
 ; CHECK: cvt.u16.u32
   %val = call i16 @llvm.ctpop.i16(i16 %a)
-  store i16 %val, i16* %b
+  store i16 %val, ptr %b
   ret void
 }
 

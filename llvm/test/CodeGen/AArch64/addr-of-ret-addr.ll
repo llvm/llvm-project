@@ -2,22 +2,22 @@
 
 ; Test generated from C code:
 ; #include <stdarg.h>
-; void *foo() {
+; ptr foo() {
 ;   return _AddressOfReturnAddress();
 ; }
-; int bar(int x(va_list, void*), ...) {
+; int bar(int x(va_list, ptr), ...) {
 ;   va_list y;
 ;   va_start(y, x);
 ;   return x(y, _AddressOfReturnAddress()) + 1;
 ; }
 
-declare void @llvm.va_start(i8*)
-declare i8* @llvm.addressofreturnaddress()
+declare void @llvm.va_start(ptr)
+declare ptr @llvm.addressofreturnaddress()
 
-define dso_local i8* @"foo"() {
+define dso_local ptr @"foo"() {
 entry:
-  %0 = call i8* @llvm.addressofreturnaddress()
-  ret i8* %0
+  %0 = call ptr @llvm.addressofreturnaddress()
+  ret ptr %0
 
 ; CHECK-LABEL: foo
 ; CHECK: stp x29, x30, [sp, #-16]!
@@ -26,17 +26,16 @@ entry:
 ; CHECK: ldp x29, x30, [sp], #16
 }
 
-define dso_local i32 @"bar"(i32 (i8*, i8*)* %x, ...) {
+define dso_local i32 @"bar"(ptr %x, ...) {
 entry:
-  %x.addr = alloca i32 (i8*, i8*)*, align 8
-  %y = alloca i8*, align 8
-  store i32 (i8*, i8*)* %x, i32 (i8*, i8*)** %x.addr, align 8
-  %y1 = bitcast i8** %y to i8*
-  call void @llvm.va_start(i8* %y1)
-  %0 = load i32 (i8*, i8*)*, i32 (i8*, i8*)** %x.addr, align 8
-  %1 = call i8* @llvm.addressofreturnaddress()
-  %2 = load i8*, i8** %y, align 8
-  %call = call i32 %0(i8* %2, i8* %1)
+  %x.addr = alloca ptr, align 8
+  %y = alloca ptr, align 8
+  store ptr %x, ptr %x.addr, align 8
+  call void @llvm.va_start(ptr %y)
+  %0 = load ptr, ptr %x.addr, align 8
+  %1 = call ptr @llvm.addressofreturnaddress()
+  %2 = load ptr, ptr %y, align 8
+  %call = call i32 %0(ptr %2, ptr %1)
   %add = add nsw i32 %call, 1
   ret i32 %add
 

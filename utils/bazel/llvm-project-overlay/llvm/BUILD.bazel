@@ -186,6 +186,10 @@ cc_library(
         "lib/Support/*.inc",
         # To avoid a dependency cycle.
         "include/llvm/Option/*.h",
+        # FIXME Move to :TargetParser
+        "lib/TargetParser/**/*.cpp",
+        "lib/TargetParser/**/*.h",
+        "lib/TargetParser/**/*.inc",
     ]) + select({
         "@bazel_tools//src/conditions:windows": glob([
             "lib/Support/Windows/*.h",
@@ -216,6 +220,9 @@ cc_library(
     hdrs = glob([
         "include/llvm/Support/**/*.h",
         "include/llvm/ADT/*.h",
+        # FIXME Move to :TargetParser
+        "include/llvm/TargetParser/*.def",
+        "include/llvm/TargetParser/*.h",
     ]) + [
         "include/llvm-c/Core.h",
         "include/llvm-c/DataTypes.h",
@@ -373,6 +380,7 @@ cc_library(
     ]),
     deps = [
         ":Support",
+        ":TargetParser",
     ],
 )
 
@@ -1052,6 +1060,34 @@ cc_library(
         ":MC",
         ":Support",
         ":config",
+    ],
+)
+
+cc_library(
+    name = "TargetParser",
+    srcs = glob([
+        "lib/TargetParser/*.cpp",
+        "lib/TargetParser/*.h",
+    ]) + select({
+        "@bazel_tools//src/conditions:windows": glob([
+            "lib/TargetParser/Windows/*.h",
+            "lib/TargetParser/Windows/*.inc",
+        ]),
+        "//conditions:default": glob([
+            "lib/TargetParser/Unix/*.h",
+            "lib/TargetParser/Unix/*.inc",
+        ]),
+    }),
+    hdrs = glob([
+        "include/llvm/TargetParser/*.h",
+    ]),
+    textual_hdrs = glob([
+        "include/llvm/TargetParser/*.def",
+    ]),
+    includes = ["include"],
+    copts = llvm_copts,
+    deps = [
+        ":Support",
     ],
 )
 
@@ -2595,6 +2631,7 @@ cc_library(
     deps = [
         ":Option",
         ":Support",
+        ":TargetParser",
     ],
 )
 
@@ -3044,6 +3081,7 @@ cc_binary(
         ":Demangle",
         ":Option",
         ":Support",
+        ":TargetParser",
     ],
 )
 
@@ -3201,6 +3239,7 @@ cc_binary(
         ":IPO",
         ":IRPrinter",
         ":IRReader",
+        ":Passes",
         ":Support",
     ],
 )

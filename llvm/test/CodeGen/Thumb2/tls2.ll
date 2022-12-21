@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=thumbv7-linux-gnueabi | FileCheck %s -check-prefix=CHECK-NOT-PIC
 ; RUN: llc < %s -mtriple=thumbv7-linux-gnueabi -relocation-model=pic | FileCheck %s -check-prefix=CHECK-PIC
 
-@i = external thread_local global i32		; <i32*> [#uses=2]
+@i = external thread_local global i32		; <ptr> [#uses=2]
 
 define i32 @f() {
 entry:
@@ -12,11 +12,11 @@ entry:
 
 ; CHECK-PIC-LABEL: f:
 ; CHECK-PIC: bl __tls_get_addr
-	%tmp1 = load i32, i32* @i		; <i32> [#uses=1]
+	%tmp1 = load i32, ptr @i		; <i32> [#uses=1]
 	ret i32 %tmp1
 }
 
-define i32* @g() {
+define ptr @g() {
 entry:
 ; CHECK-NOT-PIC-LABEL: g:
 ; CHECK-NOT-PIC: add r0, pc
@@ -25,5 +25,5 @@ entry:
 
 ; CHECK-PIC-LABEL: g:
 ; CHECK-PIC: bl __tls_get_addr
-	ret i32* @i
+	ret ptr @i
 }

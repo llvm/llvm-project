@@ -429,7 +429,7 @@ GDBRemoteCommunicationServerPlatform::Handle_qPathComplete(
     separator = ",";
     // encode result strings into hex bytes to avoid unexpected error caused by
     // special characters like '$'.
-    response.PutStringAsRawHex8(match);
+    response.PutStringAsRawHex8(match.c_str());
   }
 
   return SendPacketNoLock(response.GetString());
@@ -586,7 +586,8 @@ GDBRemoteCommunicationServerPlatform::GetDomainSocketPath(const char *prefix) {
   FileSpec socket_path_spec(GetDomainSocketDir());
   socket_path_spec.AppendPathComponent(socket_name.c_str());
 
-  llvm::sys::fs::createUniqueFile(socket_path_spec.GetPath(), socket_path);
+  llvm::sys::fs::createUniqueFile(socket_path_spec.GetPath().c_str(),
+                                  socket_path);
   return FileSpec(socket_path.c_str());
 }
 

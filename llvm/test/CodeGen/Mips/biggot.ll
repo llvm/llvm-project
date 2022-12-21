@@ -27,7 +27,7 @@ entry:
 ; N64-DAG: ld  ${{[0-9]+}}, %got_lo(v0)($[[R1]])
 ; N64-DAG: ld  ${{[0-9]+}}, %call_lo(foo0)($[[R3]])
 
-  %0 = load i32, i32* @v0, align 4
+  %0 = load i32, ptr @v0, align 4
   tail call void @foo0(i32 %0) nounwind
   ret void
 }
@@ -36,7 +36,7 @@ declare void @foo0(i32)
 
 ; call to external function.
 
-define void @foo2(i32* nocapture %d, i32* nocapture %s, i32 %n) nounwind {
+define void @foo2(ptr nocapture %d, ptr nocapture %s, i32 %n) nounwind {
 entry:
 ; O32-LABEL: foo2:
 ; O32: lui $[[R2:[0-9]+]], %call_hi(memcpy)
@@ -48,10 +48,8 @@ entry:
 ; N64: daddu  $[[R3:[0-9]+]], $[[R2]], ${{[a-z0-9]+}}
 ; N64: ld  ${{[0-9]+}}, %call_lo(memcpy)($[[R3]])
 
-  %0 = bitcast i32* %d to i8*
-  %1 = bitcast i32* %s to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %0, i8* align 4 %1, i32 %n, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 4 %s, i32 %n, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind

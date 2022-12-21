@@ -6,7 +6,7 @@ target triple = "hexagon"
 ; Function Attrs: nounwind optsize readonly
 define void @f0() #0 align 2 {
 b0:
-  %v0 = load i32, i32* undef, align 8
+  %v0 = load i32, ptr undef, align 8
   %v1 = zext i32 %v0 to i64
   %v2 = add nuw nsw i64 %v1, 63
   %v3 = lshr i64 %v2, 6

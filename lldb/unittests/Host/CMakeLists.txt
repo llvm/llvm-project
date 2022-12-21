@@ -36,4 +36,5 @@ add_lldb_unittest(HostTests
     lldbUtilityHelpers
     lldbHostHelpers
     LLVMTestingSupport
+    LLVMTargetParser
   )

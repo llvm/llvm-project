@@ -411,7 +411,7 @@ void PlatformDarwinKernel::AddSDKSubdirsToSearchPaths(const std::string &dir) {
   const bool find_files = false;
   const bool find_other = false;
   FileSystem::Instance().EnumerateDirectory(
-      dir, find_directories, find_files, find_other,
+      dir.c_str(), find_directories, find_files, find_other,
       FindKDKandSDKDirectoriesInDirectory, this);
 }
 
@@ -442,7 +442,7 @@ void PlatformDarwinKernel::SearchForKextsAndKernelsRecursively() {
     const bool find_files = true;
     const bool find_other = true; // I think eFileTypeSymbolicLink are "other"s.
     FileSystem::Instance().EnumerateDirectory(
-        dir.GetPath(), find_directories, find_files, find_other,
+        dir.GetPath().c_str(), find_directories, find_files, find_other,
         GetKernelsAndKextsInDirectoryWithRecursion, this);
   }
   const uint32_t num_dirs_no_recurse = m_search_directories_no_recursing.size();
@@ -452,7 +452,7 @@ void PlatformDarwinKernel::SearchForKextsAndKernelsRecursively() {
     const bool find_files = true;
     const bool find_other = true; // I think eFileTypeSymbolicLink are "other"s.
     FileSystem::Instance().EnumerateDirectory(
-        dir.GetPath(), find_directories, find_files, find_other,
+        dir.GetPath().c_str(), find_directories, find_files, find_other,
         GetKernelsAndKextsInDirectoryNoRecursion, this);
   }
 }
@@ -545,7 +545,7 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
           const bool find_files = false;
           const bool find_other = false;
           FileSystem::Instance().EnumerateDirectory(
-              search_here_too, find_directories, find_files, find_other,
+              search_here_too.c_str(), find_directories, find_files, find_other,
               recurse ? GetKernelsAndKextsInDirectoryWithRecursion
                       : GetKernelsAndKextsInDirectoryNoRecursion,
               baton);
@@ -874,7 +874,8 @@ std::vector<lldb_private::FileSpec>
 PlatformDarwinKernel::SearchForExecutablesRecursively(const std::string &dir) {
   std::vector<FileSpec> executables;
   std::error_code EC;
-  for (llvm::sys::fs::recursive_directory_iterator it(dir, EC), end;
+  for (llvm::sys::fs::recursive_directory_iterator it(dir.c_str(), EC),
+       end;
        it != end && !EC; it.increment(EC)) {
     auto status = it->status();
     if (!status)

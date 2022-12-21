@@ -536,7 +536,7 @@ entry:
   ret i32 %saturateUp
 }
 
-define void @extended(i32 %xx, i16 signext %y, i8* nocapture %z) {
+define void @extended(i32 %xx, i16 signext %y, ptr nocapture %z) {
 ; V4T-LABEL: extended:
 ; V4T:       @ %bb.0: @ %entry
 ; V4T-NEXT:    add r0, r1, r0, lsr #16
@@ -571,7 +571,7 @@ entry:
   %cmp.i11 = icmp sgt i16 %cond.i, -128
   %cond.i12 = select i1 %cmp.i11, i16 %cond.i, i16 -128
   %conv5 = trunc i16 %cond.i12 to i8
-  store i8 %conv5, i8* %z, align 1
+  store i8 %conv5, ptr %z, align 1
   ret void
 }
 

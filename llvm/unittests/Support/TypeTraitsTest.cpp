@@ -118,7 +118,10 @@ TEST(Triviality, ADT) {
   TrivialityTester<llvm::StringRef, true, true>();
   TrivialityTester<llvm::ArrayRef<int>, true, true>();
   TrivialityTester<llvm::PointerIntPair<int *, 2>, true, true>();
-  TrivialityTester<llvm::Optional<int>, true, true>();
+#if defined(_LIBCPP_VERSION) ||                                                \
+    (defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE >= 8)
+  TrivialityTester<std::optional<int>, true, true>();
+#endif
 }
 
 } // namespace triviality

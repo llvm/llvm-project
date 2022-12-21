@@ -7,7 +7,7 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-none-linux-gnu"
 
-  define void @ham(i8 addrspace(1)* %arg) gc "statepoint-example" {
+  define void @ham(ptr addrspace(1) %arg) gc "statepoint-example" {
   bb:
     br i1 undef, label %bb27.preheader, label %bb23
 
@@ -66,7 +66,7 @@
     unreachable
   }
 
-  declare i8 addrspace(1)* @bar(i64, i64, i64, i32*)
+  declare ptr addrspace(1) @bar(i64, i64, i64, ptr)
   declare void @wombat()
   declare void @blam.1()
   declare void @blam(i32)
@@ -303,7 +303,7 @@ body:             |
   ; CHECK-NEXT: bb.1.bb27.preheader:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $x24 = LDRXui undef renamable $x8, 0 :: (load unordered (s64) from `i64 addrspace(1)* undef`, addrspace 1)
+  ; CHECK-NEXT:   renamable $x24 = LDRXui undef renamable $x8, 0 :: (load unordered (s64) from `ptr addrspace(1) undef`, addrspace 1)
   ; CHECK-NEXT:   renamable $w21 = MOVi32imm -8280
   ; CHECK-NEXT:   renamable $w23 = MOVi32imm -6
   ; CHECK-NEXT:   renamable $w25 = MOVi32imm 3, implicit-def $x25
@@ -479,13 +479,13 @@ body:             |
   ; CHECK-NEXT:   liveins: $fp, $w20, $w23, $x10, $x19, $x22, $x24, $x25, $x26, $x27
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $x8 = COPY $xzr
-  ; CHECK-NEXT:   renamable $w9 = LDRWui renamable $x8, 0 :: (load unordered (s32) from `i32 addrspace(1)* null`, addrspace 1)
+  ; CHECK-NEXT:   renamable $w9 = LDRWui renamable $x8, 0 :: (load unordered (s32) from `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   renamable $w9 = MADDWrrr killed renamable $w9, renamable $w10, $wzr
   ; CHECK-NEXT:   renamable $w23 = nsw SUBWri killed renamable $w23, 2, 0
   ; CHECK-NEXT:   dead $xzr = SUBSXri killed renamable $x25, 107, 0, implicit-def $nzcv
   ; CHECK-NEXT:   renamable $x25 = COPY killed renamable $fp
   ; CHECK-NEXT:   renamable $w21 = MOVi32imm 2
-  ; CHECK-NEXT:   STRWui killed renamable $w9, killed renamable $x8, 0 :: (store unordered (s32) into `i32 addrspace(1)* null`, addrspace 1)
+  ; CHECK-NEXT:   STRWui killed renamable $w9, killed renamable $x8, 0 :: (store unordered (s32) into `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   Bcc 8, %bb.16, implicit killed $nzcv
   ; CHECK-NEXT:   B %bb.3
   ; CHECK-NEXT: {{  $}}
@@ -532,7 +532,7 @@ body:             |
   bb.1.bb27.preheader:
     successors: %bb.3(0x80000000)
 
-    %74:gpr64 = LDRXui undef %75:gpr64sp, 0 :: (load unordered (s64) from `i64 addrspace(1)* undef`, addrspace 1)
+    %74:gpr64 = LDRXui undef %75:gpr64sp, 0 :: (load unordered (s64) from `ptr addrspace(1) undef`, addrspace 1)
     %13:gpr32 = MOVi32imm -8280
     %130:gpr32common = MOVi32imm -6
     undef %129.sub_32:gpr64common = MOVi32imm 3
@@ -671,13 +671,13 @@ body:             |
     successors: %bb.14(0x00000000), %bb.3(0x80000000)
 
     %115:gpr64sp = COPY $xzr
-    %116:gpr32 = LDRWui %115, 0 :: (load unordered (s32) from `i32 addrspace(1)* null`, addrspace 1)
+    %116:gpr32 = LDRWui %115, 0 :: (load unordered (s32) from `ptr addrspace(1) null`, addrspace 1)
     %117:gpr32 = MADDWrrr %116, %42.sub_32, $wzr
     %130:gpr32common = nsw SUBWri %130, 2, 0
     dead $xzr = SUBSXri %129, 107, 0, implicit-def $nzcv
     %129:gpr64common = COPY %14
     %13:gpr32 = MOVi32imm 2
-    STRWui %117, %115, 0 :: (store unordered (s32) into `i32 addrspace(1)* null`, addrspace 1)
+    STRWui %117, %115, 0 :: (store unordered (s32) into `ptr addrspace(1) null`, addrspace 1)
     Bcc 8, %bb.14, implicit killed $nzcv
     B %bb.3
 

@@ -2335,6 +2335,146 @@ define i8 @mul_not_negpow2(i8 %x) {
   ret i8 %a
 }
 
+define i16 @add_sub_zext(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_sub_zext(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i16 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    ret i16 [[TMP4]]
+;
+  %1 = sub nuw i8 %y, %x
+  %2 = zext i8 %1 to i16
+  %3 = zext i8 %x to i16
+  %4 = add i16 %2, %3
+  ret i16 %4
+}
+
+define i16 @add_commute_sub_zext(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_commute_sub_zext(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i16 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    ret i16 [[TMP4]]
+;
+  %1 = sub nuw i8 %y, %x
+  %2 = zext i8 %1 to i16
+  %3 = zext i8 %x to i16
+  %4 = add i16 %3, %2
+  ret i16 %4
+}
+
+define <2 x i8> @add_sub_2xi5_zext(<2 x i5> %x, <2 x i5> %y) {
+; CHECK-LABEL: @add_sub_2xi5_zext(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw <2 x i5> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i5> [[TMP1]] to <2 x i8>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i5> [[X]] to <2 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i8> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x i8> [[TMP4]]
+;
+  %1 = sub nuw <2 x i5> %y, %x
+  %2 = zext <2 x i5> %1 to <2 x i8>
+  %3 = zext <2 x i5> %x to <2 x i8>
+  %4 = add <2 x i8> %3, %2
+  ret <2 x i8> %4
+}
+
+
+define i3 @add_commute_sub_i2_zext_i3(i2 %x, i2 %y) {
+; CHECK-LABEL: @add_commute_sub_i2_zext_i3(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw i2 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i2 [[TMP1]] to i3
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i2 [[X]] to i3
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i3 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    ret i3 [[TMP4]]
+;
+  %1 = sub nuw i2 %y, %x
+  %2 = zext i2 %1 to i3
+  %3 = zext i2 %x to i3
+  %4 = add i3 %3, %2
+  ret i3 %4
+}
+
+define i16 @add_sub_use_zext(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_sub_use_zext(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i16 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    ret i16 [[TMP4]]
+;
+  %1 = sub nuw i8 %y, %x
+  call void @use(i8 %1)
+  %2 = zext i8 %1 to i16
+  %3 = zext i8 %x to i16
+  %4 = add i16 %2, %3
+  ret i16 %4
+}
+
+; Negative test: x - y + x  != y
+define i16 @add_sub_commute_zext(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_sub_commute_zext(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i16 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    ret i16 [[TMP4]]
+;
+  %1 = sub nuw i8 %x, %y
+  %2 = zext i8 %1 to i16
+  %3 = zext i8 %x to i16
+  %4 = add i16 %2, %3
+  ret i16 %4
+}
+
+; Negative test: no nuw flags
+define i16 @add_no_nuw_sub_zext(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_no_nuw_sub_zext(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i16 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    ret i16 [[TMP4]]
+;
+  %1 = sub i8 %y, %x
+  %2 = zext i8 %1 to i16
+  %3 = zext i8 %x to i16
+  %4 = add i16 %3, %2
+  ret i16 %4
+}
+
+define i16 @add_no_nuw_sub_commute_zext(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_no_nuw_sub_commute_zext(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i16 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    ret i16 [[TMP4]]
+;
+  %1 = sub i8 %x, %y
+  %2 = zext i8 %1 to i16
+  %3 = zext i8 %x to i16
+  %4 = add i16 %3, %2
+  ret i16 %4
+}
+
+define i16 @add_sub_zext_constant(i8 %x) {
+; CHECK-LABEL: @add_sub_zext_constant(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw i8 -2, [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i16 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    ret i16 [[TMP4]]
+;
+  %1 = sub nuw i8 254, %x
+  %2 = zext i8 %1 to i16
+  %3 = zext i8 %x to i16
+  %4 = add i16 %2, %3
+  ret i16 %4
+}
+
 define <vscale x 1 x i32> @add_to_or_scalable(<vscale x 1 x i32> %in) {
 ; CHECK-LABEL: @add_to_or_scalable(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 1 x i32> [[IN:%.*]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 1, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)

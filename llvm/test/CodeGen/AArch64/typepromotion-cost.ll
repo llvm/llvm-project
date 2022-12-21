@@ -6,30 +6,41 @@
 define i32 @needless_promotion(ptr nocapture noundef readonly %S, i64 noundef %red_cost) {
 ; CHECK-O2-LABEL: needless_promotion:
 ; CHECK-O2:       // %bb.0: // %entry
-; CHECK-O2-NEXT:    ldrsh w9, [x0, #4]
-; CHECK-O2-NEXT:    mov w8, #1
-; CHECK-O2-NEXT:    mov w10, #-1
-; CHECK-O2-NEXT:    cmp w9, #0
-; CHECK-O2-NEXT:    cinc w8, w8, ge
-; CHECK-O2-NEXT:    cmp w8, w9, uxth
-; CHECK-O2-NEXT:    cset w8, eq
-; CHECK-O2-NEXT:    cmp x1, #0
-; CHECK-O2-NEXT:    ccmp w9, w10, #4, eq
-; CHECK-O2-NEXT:    csel w0, wzr, w8, gt
+; CHECK-O2-NEXT:    ldrsh w8, [x0, #4]
+; CHECK-O2-NEXT:    tbnz w8, #31, .LBB0_3
+; CHECK-O2-NEXT:  // %bb.1: // %lor.rhs
+; CHECK-O2-NEXT:    cbz x1, .LBB0_5
+; CHECK-O2-NEXT:  // %bb.2:
+; CHECK-O2-NEXT:    mov w9, #2
+; CHECK-O2-NEXT:    b .LBB0_4
+; CHECK-O2-NEXT:  .LBB0_3:
+; CHECK-O2-NEXT:    mov w9, #1
+; CHECK-O2-NEXT:  .LBB0_4: // %lor.end.sink.split
+; CHECK-O2-NEXT:    cmp w8, w9
+; CHECK-O2-NEXT:    cset w0, eq
+; CHECK-O2-NEXT:    ret
+; CHECK-O2-NEXT:  .LBB0_5:
+; CHECK-O2-NEXT:    mov w0, wzr
 ; CHECK-O2-NEXT:    ret
 ;
 ; CHECK-O3-LABEL: needless_promotion:
 ; CHECK-O3:       // %bb.0: // %entry
-; CHECK-O3-NEXT:    ldrsh w9, [x0, #4]
-; CHECK-O3-NEXT:    mov w8, #1
-; CHECK-O3-NEXT:    mov w10, #-1
-; CHECK-O3-NEXT:    cmp w9, #0
-; CHECK-O3-NEXT:    cinc w8, w8, ge
-; CHECK-O3-NEXT:    cmp w8, w9, uxth
-; CHECK-O3-NEXT:    cset w8, eq
-; CHECK-O3-NEXT:    cmp x1, #0
-; CHECK-O3-NEXT:    ccmp w9, w10, #4, eq
-; CHECK-O3-NEXT:    csel w0, wzr, w8, gt
+; CHECK-O3-NEXT:    ldrsh w8, [x0, #4]
+; CHECK-O3-NEXT:    tbnz w8, #31, .LBB0_3
+; CHECK-O3-NEXT:  // %bb.1: // %lor.rhs
+; CHECK-O3-NEXT:    cbz x1, .LBB0_4
+; CHECK-O3-NEXT:  // %bb.2:
+; CHECK-O3-NEXT:    mov w9, #2
+; CHECK-O3-NEXT:    cmp w8, w9
+; CHECK-O3-NEXT:    cset w0, eq
+; CHECK-O3-NEXT:    ret
+; CHECK-O3-NEXT:  .LBB0_3:
+; CHECK-O3-NEXT:    mov w9, #1
+; CHECK-O3-NEXT:    cmp w8, w9
+; CHECK-O3-NEXT:    cset w0, eq
+; CHECK-O3-NEXT:    ret
+; CHECK-O3-NEXT:  .LBB0_4:
+; CHECK-O3-NEXT:    mov w0, wzr
 ; CHECK-O3-NEXT:    ret
 entry:
   %ident = getelementptr inbounds %struct.S, ptr %S, i64 0, i32 1

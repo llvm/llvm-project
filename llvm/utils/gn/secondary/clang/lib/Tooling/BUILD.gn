@@ -26,6 +26,7 @@ static_library("Tooling") {
     "//clang/lib/Lex",
     "//clang/lib/Rewrite",
     "//clang/lib/Tooling/Core",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ target_gen_dir ]
   sources = [

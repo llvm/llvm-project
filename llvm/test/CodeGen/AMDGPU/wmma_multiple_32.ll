@@ -20,7 +20,7 @@ declare <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4(i1 immarg, <2 x i32>, i1 im
 
 ; @llvm.amdgcn.wmma.f32.16x16x16.f16
 
-define amdgpu_ps void @test_wmma_f32_16x16x16_f16(<16 x half> %A, <16 x half> %B, <8 x float> %C, <8 x float> addrspace(1)* %out, <8 x float> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_f32_16x16x16_f16(<16 x half> %A, <16 x half> %B, <8 x float> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_f32_16x16x16_f16:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_f32_16x16x16_f16 v[28:35], v[0:7], v[8:15], v[16:23]
@@ -36,14 +36,14 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_f16(<16 x half> %A, <16 x half> %B
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16(<16 x half> %A, <16 x half> %B, <8 x float> %C)
   %res2 = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16(<16 x half> %B, <16 x half> %B, <8 x float> %C)
-  store <8 x float> %res, <8 x float> addrspace(1)* %out, align 32
-  store <8 x float> %res2, <8 x float> addrspace(1)* %out2, align 32
+  store <8 x float> %res, ptr addrspace(1) %out, align 32
+  store <8 x float> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
 ; @llvm.amdgcn.wmma.f32.16x16x16.bf16
 
-define amdgpu_ps void @test_wmma_f32_16x16x16_bf16(<16 x i16> %A, <16 x i16> %B, <8 x float> %C, <8 x float> addrspace(1)* %out, <8 x float> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_f32_16x16x16_bf16(<16 x i16> %A, <16 x i16> %B, <8 x float> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_f32_16x16x16_bf16:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_f32_16x16x16_bf16 v[28:35], v[0:7], v[8:15], v[16:23]
@@ -59,14 +59,14 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_bf16(<16 x i16> %A, <16 x i16> %B,
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16(<16 x i16> %A, <16 x i16> %B, <8 x float> %C)
   %res2 = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16(<16 x i16> %B, <16 x i16> %B, <8 x float> %C)
-  store <8 x float> %res, <8 x float> addrspace(1)* %out, align 32
-  store <8 x float> %res2, <8 x float> addrspace(1)* %out2, align 32
+  store <8 x float> %res, ptr addrspace(1) %out, align 32
+  store <8 x float> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
 ; @llvm.amdgcn.wmma.f16.16x16x16.f16
 
-define amdgpu_ps void @test_wmma_f16_16x16x16_f16_lo(<16 x half> %A, <16 x half> %B, <16 x half> %C, <16 x half> addrspace(1)* %out, <16 x half> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_f16_16x16x16_f16_lo(<16 x half> %A, <16 x half> %B, <16 x half> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_f16_16x16x16_f16_lo:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_f16_16x16x16_f16 v[28:35], v[0:7], v[8:15], v[16:23]
@@ -82,12 +82,12 @@ define amdgpu_ps void @test_wmma_f16_16x16x16_f16_lo(<16 x half> %A, <16 x half>
 bb:
   %res = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %A, <16 x half> %B, <16 x half> %C, i1 0)
   %res2 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %B, <16 x half> %B, <16 x half> %C, i1 0)
-  store <16 x half> %res, <16 x half> addrspace(1)* %out, align 32
-  store <16 x half> %res2, <16 x half> addrspace(1)* %out2, align 32
+  store <16 x half> %res, ptr addrspace(1) %out, align 32
+  store <16 x half> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
-define amdgpu_ps void @test_wmma_f16_16x16x16_f16_hi(<16 x half> %A, <16 x half> %B, <16 x half> %C, <16 x half> addrspace(1)* %out, <16 x half> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_f16_16x16x16_f16_hi(<16 x half> %A, <16 x half> %B, <16 x half> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_f16_16x16x16_f16_hi:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_f16_16x16x16_f16 v[28:35], v[0:7], v[8:15], v[16:23] op_sel:[0,0,1]
@@ -103,14 +103,14 @@ define amdgpu_ps void @test_wmma_f16_16x16x16_f16_hi(<16 x half> %A, <16 x half>
 bb:
   %res = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %A, <16 x half> %B, <16 x half> %C, i1 1)
   %res2 = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16(<16 x half> %B, <16 x half> %B, <16 x half> %C, i1 1)
-  store <16 x half> %res, <16 x half> addrspace(1)* %out, align 32
-  store <16 x half> %res2, <16 x half> addrspace(1)* %out2, align 32
+  store <16 x half> %res, ptr addrspace(1) %out, align 32
+  store <16 x half> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
 ; @llvm.amdgcn.wmma.bf16.16x16x16.bf16
 
-define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_lo(<16 x i16> %A, <16 x i16> %B, <16 x i16> %C, <16 x i16> addrspace(1)* %out, <16 x i16> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_lo(<16 x i16> %A, <16 x i16> %B, <16 x i16> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_bf16_16x16x16_bf16_lo:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_bf16_16x16x16_bf16 v[28:35], v[0:7], v[8:15], v[16:23]
@@ -126,12 +126,12 @@ define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_lo(<16 x i16> %A, <16 x i16>
 bb:
   %res = call <16 x i16> @llvm.amdgcn.wmma.bf16.16x16x16.bf16(<16 x i16> %A, <16 x i16> %B, <16 x i16> %C, i1 0)
   %res2 = call <16 x i16> @llvm.amdgcn.wmma.bf16.16x16x16.bf16(<16 x i16> %B, <16 x i16> %B, <16 x i16> %C, i1 0)
-  store <16 x i16> %res, <16 x i16> addrspace(1)* %out, align 32
-  store <16 x i16> %res2, <16 x i16> addrspace(1)* %out2, align 32
+  store <16 x i16> %res, ptr addrspace(1) %out, align 32
+  store <16 x i16> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
-define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_hi(<16 x i16> %A, <16 x i16> %B, <16 x i16> %C, <16 x i16> addrspace(1)* %out, <16 x i16> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_hi(<16 x i16> %A, <16 x i16> %B, <16 x i16> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_bf16_16x16x16_bf16_hi:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_bf16_16x16x16_bf16 v[28:35], v[0:7], v[8:15], v[16:23] op_sel:[0,0,1]
@@ -147,14 +147,14 @@ define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_hi(<16 x i16> %A, <16 x i16>
 bb:
   %res = call <16 x i16> @llvm.amdgcn.wmma.bf16.16x16x16.bf16(<16 x i16> %A, <16 x i16> %B, <16 x i16> %C, i1 1)
   %res2 = call <16 x i16> @llvm.amdgcn.wmma.bf16.16x16x16.bf16(<16 x i16> %B, <16 x i16> %B, <16 x i16> %C, i1 1)
-  store <16 x i16> %res, <16 x i16> addrspace(1)* %out, align 32
-  store <16 x i16> %res2, <16 x i16> addrspace(1)* %out2, align 32
+  store <16 x i16> %res, ptr addrspace(1) %out, align 32
+  store <16 x i16> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
 ; @llvm.amdgcn.wmma.i32.16x16x16.iu8
 
-define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_unsigned(<4 x i32> %A, <4 x i32> %B, <8 x i32> %C, <8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_unsigned(<4 x i32> %A, <4 x i32> %B, <8 x i32> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_i32_16x16x16_ui8_unsigned_unsigned:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu8 v[20:27], v[0:3], v[4:7], v[8:15]
@@ -170,12 +170,12 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_unsigned(<4 x i32> %A
 bb:
   %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8(i1 0, <4 x i32> %A, i1 0, <4 x i32> %B, <8 x i32> %C, i1 0)
   %res2 = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8(i1 0, <4 x i32> %B, i1 0, <4 x i32> %B, <8 x i32> %C, i1 0)
-  store <8 x i32> %res, <8 x i32> addrspace(1)* %out, align 32
-  store <8 x i32> %res2, <8 x i32> addrspace(1)* %out2, align 32
+  store <8 x i32> %res, ptr addrspace(1) %out, align 32
+  store <8 x i32> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
-define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_signed(<4 x i32> %A, <4 x i32> %B, <8 x i32> %C, <8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_signed(<4 x i32> %A, <4 x i32> %B, <8 x i32> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_i32_16x16x16_ui8_unsigned_signed:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu8 v[20:27], v[0:3], v[4:7], v[8:15] neg_lo:[0,1,0]
@@ -191,12 +191,12 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_signed(<4 x i32> %A, 
 bb:
   %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8(i1 0, <4 x i32> %A, i1 1, <4 x i32> %B, <8 x i32> %C, i1 0)
   %res2 = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8(i1 0, <4 x i32> %B, i1 1, <4 x i32> %B, <8 x i32> %C, i1 0)
-  store <8 x i32> %res, <8 x i32> addrspace(1)* %out, align 32
-  store <8 x i32> %res2, <8 x i32> addrspace(1)* %out2, align 32
+  store <8 x i32> %res, ptr addrspace(1) %out, align 32
+  store <8 x i32> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
-define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_unsigned(<4 x i32> %A, <4 x i32> %B, <8 x i32> %C, <8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_unsigned(<4 x i32> %A, <4 x i32> %B, <8 x i32> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_i32_16x16x16_ui8_signed_unsigned:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu8 v[20:27], v[0:3], v[4:7], v[8:15] neg_lo:[1,0,0]
@@ -212,12 +212,12 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_unsigned(<4 x i32> %A, 
 bb:
   %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8(i1 1, <4 x i32> %A, i1 0, <4 x i32> %B, <8 x i32> %C, i1 0)
   %res2 = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8(i1 1, <4 x i32> %B, i1 0, <4 x i32> %B, <8 x i32> %C, i1 0)
-  store <8 x i32> %res, <8 x i32> addrspace(1)* %out, align 32
-  store <8 x i32> %res2, <8 x i32> addrspace(1)* %out2, align 32
+  store <8 x i32> %res, ptr addrspace(1) %out, align 32
+  store <8 x i32> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
-define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_signed(<4 x i32> %A, <4 x i32> %B, <8 x i32> %C, <8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_signed(<4 x i32> %A, <4 x i32> %B, <8 x i32> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_i32_16x16x16_ui8_signed_signed:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu8 v[20:27], v[0:3], v[4:7], v[8:15] neg_lo:[1,1,0]
@@ -233,12 +233,12 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_signed(<4 x i32> %A, <4
 bb:
   %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8(i1 1, <4 x i32> %A, i1 1, <4 x i32> %B, <8 x i32> %C, i1 0)
   %res2 = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8(i1 1, <4 x i32> %B, i1 1, <4 x i32> %B, <8 x i32> %C, i1 0)
-  store <8 x i32> %res, <8 x i32> addrspace(1)* %out, align 32
-  store <8 x i32> %res2, <8 x i32> addrspace(1)* %out2, align 32
+  store <8 x i32> %res, ptr addrspace(1) %out, align 32
+  store <8 x i32> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
-define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_unsigned_clamp(<4 x i32> %A, <4 x i32> %B, <8 x i32> %C, <8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_unsigned_clamp(<4 x i32> %A, <4 x i32> %B, <8 x i32> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_i32_16x16x16_ui8_unsigned_unsigned_clamp:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu8 v[20:27], v[0:3], v[4:7], v[8:15] clamp
@@ -254,12 +254,12 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_unsigned_clamp(<4 x i
 bb:
   %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8(i1 0, <4 x i32> %A, i1 0, <4 x i32> %B, <8 x i32> %C, i1 1)
   %res2 = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8(i1 0, <4 x i32> %B, i1 0, <4 x i32> %B, <8 x i32> %C, i1 1)
-  store <8 x i32> %res, <8 x i32> addrspace(1)* %out, align 32
-  store <8 x i32> %res2, <8 x i32> addrspace(1)* %out2, align 32
+  store <8 x i32> %res, ptr addrspace(1) %out, align 32
+  store <8 x i32> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
-define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_signed_clamp(<4 x i32> %A, <4 x i32> %B, <8 x i32> %C, <8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_signed_clamp(<4 x i32> %A, <4 x i32> %B, <8 x i32> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_i32_16x16x16_ui8_unsigned_signed_clamp:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu8 v[20:27], v[0:3], v[4:7], v[8:15] neg_lo:[0,1,0] clamp
@@ -275,12 +275,12 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_signed_clamp(<4 x i32
 bb:
   %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8(i1 0, <4 x i32> %A, i1 1, <4 x i32> %B, <8 x i32> %C, i1 1)
   %res2 = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8(i1 0, <4 x i32> %B, i1 1, <4 x i32> %B, <8 x i32> %C, i1 1)
-  store <8 x i32> %res, <8 x i32> addrspace(1)* %out, align 32
-  store <8 x i32> %res2, <8 x i32> addrspace(1)* %out2, align 32
+  store <8 x i32> %res, ptr addrspace(1) %out, align 32
+  store <8 x i32> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
-define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_unsigned_clamp(<4 x i32> %A, <4 x i32> %B, <8 x i32> %C, <8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_unsigned_clamp(<4 x i32> %A, <4 x i32> %B, <8 x i32> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_i32_16x16x16_ui8_signed_unsigned_clamp:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu8 v[20:27], v[0:3], v[4:7], v[8:15] neg_lo:[1,0,0] clamp
@@ -296,12 +296,12 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_unsigned_clamp(<4 x i32
 bb:
   %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8(i1 1, <4 x i32> %A, i1 0, <4 x i32> %B, <8 x i32> %C, i1 1)
   %res2 = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8(i1 1, <4 x i32> %B, i1 0, <4 x i32> %B, <8 x i32> %C, i1 1)
-  store <8 x i32> %res, <8 x i32> addrspace(1)* %out, align 32
-  store <8 x i32> %res2, <8 x i32> addrspace(1)* %out2, align 32
+  store <8 x i32> %res, ptr addrspace(1) %out, align 32
+  store <8 x i32> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
-define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_signed_clamp(<4 x i32> %A, <4 x i32> %B, <8 x i32> %C, <8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_signed_clamp(<4 x i32> %A, <4 x i32> %B, <8 x i32> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_i32_16x16x16_ui8_signed_signed_clamp:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu8 v[20:27], v[0:3], v[4:7], v[8:15] neg_lo:[1,1,0] clamp
@@ -317,14 +317,14 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_signed_clamp(<4 x i32> 
 bb:
   %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8(i1 1, <4 x i32> %A, i1 1, <4 x i32> %B, <8 x i32> %C, i1 1)
   %res2 = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8(i1 1, <4 x i32> %B, i1 1, <4 x i32> %B, <8 x i32> %C, i1 1)
-  store <8 x i32> %res, <8 x i32> addrspace(1)* %out, align 32
-  store <8 x i32> %res2, <8 x i32> addrspace(1)* %out2, align 32
+  store <8 x i32> %res, ptr addrspace(1) %out, align 32
+  store <8 x i32> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
 ; @llvm.amdgcn.wmma.i32.16x16x16.iu4
 
-define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_unsigned(<2 x i32> %A, <2 x i32> %B, <8 x i32> %C, <8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_unsigned(<2 x i32> %A, <2 x i32> %B, <8 x i32> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_i32_16x16x16_ui4_unsigned_unsigned:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu4 v[16:23], v[0:1], v[2:3], v[4:11]
@@ -340,12 +340,12 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_unsigned(<2 x i32> %A
 bb:
   %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4(i1 0, <2 x i32> %A, i1 0, <2 x i32> %B, <8 x i32> %C, i1 0)
   %res2 = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4(i1 0, <2 x i32> %B, i1 0, <2 x i32> %B, <8 x i32> %C, i1 0)
-  store <8 x i32> %res, <8 x i32> addrspace(1)* %out, align 32
-  store <8 x i32> %res2, <8 x i32> addrspace(1)* %out2, align 32
+  store <8 x i32> %res, ptr addrspace(1) %out, align 32
+  store <8 x i32> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
-define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_signed(<2 x i32> %A, <2 x i32> %B, <8 x i32> %C, <8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_signed(<2 x i32> %A, <2 x i32> %B, <8 x i32> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_i32_16x16x16_ui4_unsigned_signed:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu4 v[16:23], v[0:1], v[2:3], v[4:11] neg_lo:[0,1,0]
@@ -361,12 +361,12 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_signed(<2 x i32> %A, 
 bb:
   %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4(i1 0, <2 x i32> %A, i1 1, <2 x i32> %B, <8 x i32> %C, i1 0)
   %res2 = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4(i1 0, <2 x i32> %B, i1 1, <2 x i32> %B, <8 x i32> %C, i1 0)
-  store <8 x i32> %res, <8 x i32> addrspace(1)* %out, align 32
-  store <8 x i32> %res2, <8 x i32> addrspace(1)* %out2, align 32
+  store <8 x i32> %res, ptr addrspace(1) %out, align 32
+  store <8 x i32> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
-define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_unsigned(<2 x i32> %A, <2 x i32> %B, <8 x i32> %C, <8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_unsigned(<2 x i32> %A, <2 x i32> %B, <8 x i32> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_i32_16x16x16_ui4_signed_unsigned:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu4 v[16:23], v[0:1], v[2:3], v[4:11] neg_lo:[1,0,0]
@@ -382,12 +382,12 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_unsigned(<2 x i32> %A, 
 bb:
   %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4(i1 1, <2 x i32> %A, i1 0, <2 x i32> %B, <8 x i32> %C, i1 0)
   %res2 = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4(i1 1, <2 x i32> %B, i1 0, <2 x i32> %B, <8 x i32> %C, i1 0)
-  store <8 x i32> %res, <8 x i32> addrspace(1)* %out, align 32
-  store <8 x i32> %res2, <8 x i32> addrspace(1)* %out2, align 32
+  store <8 x i32> %res, ptr addrspace(1) %out, align 32
+  store <8 x i32> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
-define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_signed(<2 x i32> %A, <2 x i32> %B, <8 x i32> %C, <8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_signed(<2 x i32> %A, <2 x i32> %B, <8 x i32> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_i32_16x16x16_ui4_signed_signed:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu4 v[16:23], v[0:1], v[2:3], v[4:11] neg_lo:[1,1,0]
@@ -403,13 +403,13 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_signed(<2 x i32> %A, <2
 bb:
   %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4(i1 1, <2 x i32> %A, i1 1, <2 x i32> %B, <8 x i32> %C, i1 0)
   %res2 = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4(i1 1, <2 x i32> %B, i1 1, <2 x i32> %B, <8 x i32> %C, i1 0)
-  store <8 x i32> %res, <8 x i32> addrspace(1)* %out, align 32
-  store <8 x i32> %res2, <8 x i32> addrspace(1)* %out2, align 32
+  store <8 x i32> %res, ptr addrspace(1) %out, align 32
+  store <8 x i32> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
 
-define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_unsigned_clamp(<2 x i32> %A, <2 x i32> %B, <8 x i32> %C, <8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_unsigned_clamp(<2 x i32> %A, <2 x i32> %B, <8 x i32> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_i32_16x16x16_ui4_unsigned_unsigned_clamp:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu4 v[16:23], v[0:1], v[2:3], v[4:11] clamp
@@ -425,12 +425,12 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_unsigned_clamp(<2 x i
 bb:
   %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4(i1 0, <2 x i32> %A, i1 0, <2 x i32> %B, <8 x i32> %C, i1 1)
   %res2 = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4(i1 0, <2 x i32> %B, i1 0, <2 x i32> %B, <8 x i32> %C, i1 1)
-  store <8 x i32> %res, <8 x i32> addrspace(1)* %out, align 32
-  store <8 x i32> %res2, <8 x i32> addrspace(1)* %out2, align 32
+  store <8 x i32> %res, ptr addrspace(1) %out, align 32
+  store <8 x i32> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
-define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_signed_clamp(<2 x i32> %A, <2 x i32> %B, <8 x i32> %C, <8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_signed_clamp(<2 x i32> %A, <2 x i32> %B, <8 x i32> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_i32_16x16x16_ui4_unsigned_signed_clamp:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu4 v[16:23], v[0:1], v[2:3], v[4:11] neg_lo:[0,1,0] clamp
@@ -446,12 +446,12 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_signed_clamp(<2 x i32
 bb:
   %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4(i1 0, <2 x i32> %A, i1 1, <2 x i32> %B, <8 x i32> %C, i1 1)
   %res2 = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4(i1 0, <2 x i32> %B, i1 1, <2 x i32> %B, <8 x i32> %C, i1 1)
-  store <8 x i32> %res, <8 x i32> addrspace(1)* %out, align 32
-  store <8 x i32> %res2, <8 x i32> addrspace(1)* %out2, align 32
+  store <8 x i32> %res, ptr addrspace(1) %out, align 32
+  store <8 x i32> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
-define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_unsigned_clamp(<2 x i32> %A, <2 x i32> %B, <8 x i32> %C, <8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_unsigned_clamp(<2 x i32> %A, <2 x i32> %B, <8 x i32> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_i32_16x16x16_ui4_signed_unsigned_clamp:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu4 v[16:23], v[0:1], v[2:3], v[4:11] neg_lo:[1,0,0] clamp
@@ -467,12 +467,12 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_unsigned_clamp(<2 x i32
 bb:
   %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4(i1 1, <2 x i32> %A, i1 0, <2 x i32> %B, <8 x i32> %C, i1 1)
   %res2 = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4(i1 1, <2 x i32> %B, i1 0, <2 x i32> %B, <8 x i32> %C, i1 1)
-  store <8 x i32> %res, <8 x i32> addrspace(1)* %out, align 32
-  store <8 x i32> %res2, <8 x i32> addrspace(1)* %out2, align 32
+  store <8 x i32> %res, ptr addrspace(1) %out, align 32
+  store <8 x i32> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 
-define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_signed_clamp(<2 x i32> %A, <2 x i32> %B, <8 x i32> %C, <8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %out2) {
+define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_signed_clamp(<2 x i32> %A, <2 x i32> %B, <8 x i32> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W32-LABEL: test_wmma_i32_16x16x16_ui4_signed_signed_clamp:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu4 v[16:23], v[0:1], v[2:3], v[4:11] neg_lo:[1,1,0] clamp
@@ -488,8 +488,8 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_signed_clamp(<2 x i32> 
 bb:
   %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4(i1 1, <2 x i32> %A, i1 1, <2 x i32> %B, <8 x i32> %C, i1 1)
   %res2 = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4(i1 1, <2 x i32> %B, i1 1, <2 x i32> %B, <8 x i32> %C, i1 1)
-  store <8 x i32> %res, <8 x i32> addrspace(1)* %out, align 32
-  store <8 x i32> %res2, <8 x i32> addrspace(1)* %out2, align 32
+  store <8 x i32> %res, ptr addrspace(1) %out, align 32
+  store <8 x i32> %res2, ptr addrspace(1) %out2, align 32
   ret void
 }
 

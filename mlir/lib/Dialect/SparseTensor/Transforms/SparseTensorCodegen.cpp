@@ -178,7 +178,7 @@ static void createPushback(OpBuilder &builder, Location loc,
 }
 
 /// Maps a sparse tensor type to the appropriate compounded buffers.
-static Optional<LogicalResult>
+static std::optional<LogicalResult>
 convertSparseTensorType(Type type, SmallVectorImpl<Type> &fields) {
   auto enc = getSparseTensorEncoding(type);
   if (!enc)
@@ -1039,7 +1039,7 @@ mlir::SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
   // Required by scf.for 1:N type conversion.
   addSourceMaterialization([](OpBuilder &builder, RankedTensorType tp,
                               ValueRange inputs,
-                              Location loc) -> Optional<Value> {
+                              Location loc) -> std::optional<Value> {
     if (!getSparseTensorEncoding(tp))
       // Not a sparse tensor.
       return std::nullopt;

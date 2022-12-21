@@ -22,8 +22,8 @@
 
 define fp128 @addLD() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
-  %1 = load fp128, fp128* @gld1, align 16
+  %0 = load fp128, ptr @gld0, align 16
+  %1 = load fp128, ptr @gld1, align 16
   %add = fadd fp128 %0, %1
   ret fp128 %add
 }
@@ -33,8 +33,8 @@ entry:
 
 define fp128 @subLD() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
-  %1 = load fp128, fp128* @gld1, align 16
+  %0 = load fp128, ptr @gld0, align 16
+  %1 = load fp128, ptr @gld1, align 16
   %sub = fsub fp128 %0, %1
   ret fp128 %sub
 }
@@ -44,8 +44,8 @@ entry:
 
 define fp128 @mulLD() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
-  %1 = load fp128, fp128* @gld1, align 16
+  %0 = load fp128, ptr @gld0, align 16
+  %1 = load fp128, ptr @gld1, align 16
   %mul = fmul fp128 %0, %1
   ret fp128 %mul
 }
@@ -55,8 +55,8 @@ entry:
 
 define fp128 @divLD() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
-  %1 = load fp128, fp128* @gld1, align 16
+  %0 = load fp128, ptr @gld0, align 16
+  %1 = load fp128, ptr @gld1, align 16
   %div = fdiv fp128 %0, %1
   ret fp128 %div
 }
@@ -255,7 +255,7 @@ entry:
 
 define fp128 @libcall1_fabsl() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
+  %0 = load fp128, ptr @gld0, align 16
   %call = tail call fp128 @fabsl(fp128 %0) nounwind readnone
   ret fp128 %call
 }
@@ -267,7 +267,7 @@ declare fp128 @fabsl(fp128) #1
 
 define fp128 @libcall1_ceill() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
+  %0 = load fp128, ptr @gld0, align 16
   %call = tail call fp128 @ceill(fp128 %0) nounwind readnone
   ret fp128 %call
 }
@@ -279,7 +279,7 @@ declare fp128 @ceill(fp128) #1
 
 define fp128 @libcall1_sinl() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
+  %0 = load fp128, ptr @gld0, align 16
   %call = tail call fp128 @sinl(fp128 %0) nounwind
   ret fp128 %call
 }
@@ -291,7 +291,7 @@ declare fp128 @sinl(fp128) #2
 
 define fp128 @libcall1_cosl() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
+  %0 = load fp128, ptr @gld0, align 16
   %call = tail call fp128 @cosl(fp128 %0) nounwind
   ret fp128 %call
 }
@@ -303,7 +303,7 @@ declare fp128 @cosl(fp128) #2
 
 define fp128 @libcall1_expl() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
+  %0 = load fp128, ptr @gld0, align 16
   %call = tail call fp128 @expl(fp128 %0) nounwind
   ret fp128 %call
 }
@@ -315,7 +315,7 @@ declare fp128 @expl(fp128) #2
 
 define fp128 @libcall1_exp2l() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
+  %0 = load fp128, ptr @gld0, align 16
   %call = tail call fp128 @exp2l(fp128 %0) nounwind
   ret fp128 %call
 }
@@ -327,7 +327,7 @@ declare fp128 @exp2l(fp128) #2
 
 define fp128 @libcall1_logl() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
+  %0 = load fp128, ptr @gld0, align 16
   %call = tail call fp128 @logl(fp128 %0) nounwind
   ret fp128 %call
 }
@@ -339,7 +339,7 @@ declare fp128 @logl(fp128) #2
 
 define fp128 @libcall1_log2l() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
+  %0 = load fp128, ptr @gld0, align 16
   %call = tail call fp128 @log2l(fp128 %0) nounwind
   ret fp128 %call
 }
@@ -351,7 +351,7 @@ declare fp128 @log2l(fp128) #2
 
 define fp128 @libcall1_log10l() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
+  %0 = load fp128, ptr @gld0, align 16
   %call = tail call fp128 @log10l(fp128 %0) nounwind
   ret fp128 %call
 }
@@ -363,7 +363,7 @@ declare fp128 @log10l(fp128) #2
 
 define fp128 @libcall1_nearbyintl() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
+  %0 = load fp128, ptr @gld0, align 16
   %call = tail call fp128 @nearbyintl(fp128 %0) nounwind readnone
   ret fp128 %call
 }
@@ -375,7 +375,7 @@ declare fp128 @nearbyintl(fp128) #1
 
 define fp128 @libcall1_floorl() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
+  %0 = load fp128, ptr @gld0, align 16
   %call = tail call fp128 @floorl(fp128 %0) nounwind readnone
   ret fp128 %call
 }
@@ -387,7 +387,7 @@ declare fp128 @floorl(fp128) #1
 
 define fp128 @libcall1_sqrtl() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
+  %0 = load fp128, ptr @gld0, align 16
   %call = tail call fp128 @sqrtl(fp128 %0) nounwind
   ret fp128 %call
 }
@@ -399,7 +399,7 @@ declare fp128 @sqrtl(fp128) #2
 
 define fp128 @libcall1_rintl() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
+  %0 = load fp128, ptr @gld0, align 16
   %call = tail call fp128 @rintl(fp128 %0) nounwind readnone
   ret fp128 %call
 }
@@ -433,8 +433,8 @@ declare fp128 @llvm.powi.f128.i32(fp128, i32) #3
 
 define fp128 @libcall2_copysignl() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
-  %1 = load fp128, fp128* @gld1, align 16
+  %0 = load fp128, ptr @gld0, align 16
+  %1 = load fp128, ptr @gld1, align 16
   %call = tail call fp128 @copysignl(fp128 %0, fp128 %1) nounwind readnone
   ret fp128 %call
 }
@@ -446,8 +446,8 @@ declare fp128 @copysignl(fp128, fp128) #1
 
 define fp128 @libcall2_powl() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
-  %1 = load fp128, fp128* @gld1, align 16
+  %0 = load fp128, ptr @gld0, align 16
+  %1 = load fp128, ptr @gld1, align 16
   %call = tail call fp128 @powl(fp128 %0, fp128 %1) nounwind
   ret fp128 %call
 }
@@ -459,8 +459,8 @@ declare fp128 @powl(fp128, fp128) #2
 
 define fp128 @libcall2_fmodl() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
-  %1 = load fp128, fp128* @gld1, align 16
+  %0 = load fp128, ptr @gld0, align 16
+  %1 = load fp128, ptr @gld1, align 16
   %call = tail call fp128 @fmodl(fp128 %0, fp128 %1) nounwind
   ret fp128 %call
 }
@@ -472,9 +472,9 @@ declare fp128 @fmodl(fp128, fp128) #2
 
 define fp128 @libcall3_fmal() {
 entry:
-  %0 = load fp128, fp128* @gld0, align 16
-  %1 = load fp128, fp128* @gld2, align 16
-  %2 = load fp128, fp128* @gld1, align 16
+  %0 = load fp128, ptr @gld0, align 16
+  %1 = load fp128, ptr @gld2, align 16
+  %2 = load fp128, ptr @gld1, align 16
   %3 = tail call fp128 @llvm.fma.f128(fp128 %0, fp128 %2, fp128 %1)
   ret fp128 %3
 }
@@ -548,7 +548,7 @@ entry:
 
 define fp128 @load_LD_LD() {
 entry:
-  %0 = load fp128, fp128* @gld1, align 16
+  %0 = load fp128, ptr @gld1, align 16
   ret fp128 %0
 }
 
@@ -561,7 +561,7 @@ entry:
 
 define fp128 @load_LD_float() {
 entry:
-  %0 = load float, float* @gf1, align 4
+  %0 = load float, ptr @gf1, align 4
   %conv = fpext float %0 to fp128
   ret fp128 %conv
 }
@@ -575,7 +575,7 @@ entry:
 
 define fp128 @load_LD_double() {
 entry:
-  %0 = load double, double* @gd1, align 8
+  %0 = load double, ptr @gd1, align 8
   %conv = fpext double %0 to fp128
   ret fp128 %conv
 }
@@ -590,8 +590,8 @@ entry:
 
 define void @store_LD_LD() {
 entry:
-  %0 = load fp128, fp128* @gld1, align 16
-  store fp128 %0, fp128* @gld0, align 16
+  %0 = load fp128, ptr @gld1, align 16
+  store fp128 %0, ptr @gld0, align 16
   ret void
 }
 
@@ -607,9 +607,9 @@ entry:
 
 define void @store_LD_float() {
 entry:
-  %0 = load fp128, fp128* @gld1, align 16
+  %0 = load fp128, ptr @gld1, align 16
   %conv = fptrunc fp128 %0 to float
-  store float %conv, float* @gf1, align 4
+  store float %conv, ptr @gf1, align 4
   ret void
 }
 
@@ -625,9 +625,9 @@ entry:
 
 define void @store_LD_double() {
 entry:
-  %0 = load fp128, fp128* @gld1, align 16
+  %0 = load fp128, ptr @gld1, align 16
   %conv = fptrunc fp128 %0 to double
-  store double %conv, double* @gd1, align 8
+  store double %conv, ptr @gd1, align 8
   ret void
 }
 

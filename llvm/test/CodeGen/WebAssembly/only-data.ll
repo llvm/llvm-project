@@ -4,7 +4,7 @@
 ;      CHECK: .type foo,@object
 ; CHECK-NEXT: .section .data.foo,"",@
 ; CHECK-NEXT: .globl foo
-@foo = local_unnamed_addr global i32 (i32)* @bar, align 4
+@foo = local_unnamed_addr global ptr @bar, align 4
 
 ; CHECK-LABEL: foo:
 ;  CHECK-NEXT: .int32 bar

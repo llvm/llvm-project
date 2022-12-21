@@ -14,4 +14,5 @@ add_llvm_component_library(LLVMSymbolize
   Object
   Support
   Demangle
+  TargetParser
   )

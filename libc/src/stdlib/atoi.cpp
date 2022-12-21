@@ -13,11 +13,13 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, atoi, (const char *str)) {
-  auto result = internal::strtointeger<int>(str, 10);
+  // This is done because the standard specifies that atoi is identical to
+  // (int)(strtol).
+  auto result = internal::strtointeger<long>(str, 10);
   if (result.has_error())
     errno = result.error;
 
-  return result;
+  return static_cast<int>(result);
 }
 
 } // namespace __llvm_libc
