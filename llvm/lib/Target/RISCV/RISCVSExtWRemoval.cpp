@@ -222,6 +222,13 @@ static bool hasAllWUsers(const MachineInstr &OrigMI, MachineRegisterInfo &MRI) {
           return false;
         Worklist.push_back(UserMI);
         break;
+
+      case RISCV::VT_MASKC:
+      case RISCV::VT_MASKCN:
+        if (OpIdx != 1)
+          return false;
+        Worklist.push_back(UserMI);
+        break;
       }
     }
   }
@@ -409,6 +416,14 @@ static bool isSignExtendedW(Register SrcReg, MachineRegisterInfo &MRI,
 
       break;
     }
+
+    case RISCV::VT_MASKC:
+    case RISCV::VT_MASKCN:
+      // Instructions return zero or operand 1. Result is sign extended if
+      // operand 1 is sign extended.
+      if (!AddRegDefToWorkList(MI->getOperand(1).getReg()))
+        return false;
+      break;
 
     // With these opcode, we can "fix" them with the W-version
     // if we know all users of the result only rely on bits 31:0
