@@ -4123,8 +4123,8 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
     return F;
   }
 
-  llvm::Type *PTy = llvm::PointerType::getUnqual(Ty);
-  return llvm::ConstantExpr::getBitCast(F, PTy);
+  return llvm::ConstantExpr::getBitCast(F,
+                                        Ty->getPointerTo(F->getAddressSpace()));
 }
 
 /// GetAddrOfFunction - Return the address of the given function.  If Ty is
