@@ -921,9 +921,6 @@ _Bool __aarch64_have_lse_atomics
 #define AT_HWCAP 16
 #endif
 
-#ifndef HWCAP_CPUID
-#define HWCAP_CPUID (1 << 11)
-#endif
 #ifndef HWCAP_FP
 #define HWCAP_FP (1 << 0)
 #endif
