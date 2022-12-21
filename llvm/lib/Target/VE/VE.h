@@ -22,14 +22,16 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
-class FunctionPass;
-class VETargetMachine;
 class AsmPrinter;
+class FunctionPass;
 class MCInst;
 class MachineInstr;
+class PassRegistry;
+class VETargetMachine;
 
 FunctionPass *createVEISelDag(VETargetMachine &TM);
 FunctionPass *createLVLGenPass();
+void initializeVEDAGToDAGISelPass(PassRegistry &);
 
 void LowerVEMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                  AsmPrinter &AP);

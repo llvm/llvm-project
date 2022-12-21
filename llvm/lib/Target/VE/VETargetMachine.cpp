@@ -28,6 +28,9 @@ using namespace llvm;
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVETarget() {
   // Register the target.
   RegisterTargetMachine<VETargetMachine> X(getTheVETarget());
+
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeVEDAGToDAGISelPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &T) {

@@ -27,6 +27,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTarget() {
   RegisterTargetMachine<SparcV8TargetMachine> X(getTheSparcTarget());
   RegisterTargetMachine<SparcV9TargetMachine> Y(getTheSparcV9Target());
   RegisterTargetMachine<SparcelTargetMachine> Z(getTheSparcelTarget());
+
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeSparcDAGToDAGISelPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &T, bool is64Bit) {
