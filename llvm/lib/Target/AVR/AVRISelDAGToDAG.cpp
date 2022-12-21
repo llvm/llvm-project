@@ -20,20 +20,21 @@
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "avr-isel"
+#define PASS_NAME "AVR DAG->DAG Instruction Selection"
 
-namespace llvm {
+using namespace llvm;
+
+namespace {
 
 /// Lowers LLVM IR (in DAG form) to AVR MC instructions (in DAG form).
 class AVRDAGToDAGISel : public SelectionDAGISel {
 public:
   static char ID;
 
+  AVRDAGToDAGISel() = delete;
+
   AVRDAGToDAGISel(AVRTargetMachine &TM, CodeGenOpt::Level OptLevel)
       : SelectionDAGISel(ID, TM, OptLevel), Subtarget(nullptr) {}
-
-  StringRef getPassName() const override {
-    return "AVR DAG->DAG Instruction Selection";
-  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -58,7 +59,11 @@ private:
   const AVRSubtarget *Subtarget;
 };
 
+} // namespace
+
 char AVRDAGToDAGISel::ID = 0;
+
+INITIALIZE_PASS(AVRDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 bool AVRDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<AVRSubtarget>();
@@ -579,10 +584,7 @@ bool AVRDAGToDAGISel::trySelect(SDNode *N) {
   }
 }
 
-FunctionPass *createAVRISelDag(AVRTargetMachine &TM,
-                               CodeGenOpt::Level OptLevel) {
+FunctionPass *llvm::createAVRISelDag(AVRTargetMachine &TM,
+                                     CodeGenOpt::Level OptLevel) {
   return new AVRDAGToDAGISel(TM, OptLevel);
 }
-
-} // end of namespace llvm
-

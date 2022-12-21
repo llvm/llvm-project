@@ -30,6 +30,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTarget() {
   RegisterTargetMachine<LoongArchTargetMachine> Y(getTheLoongArch64Target());
   auto *PR = PassRegistry::getPassRegistry();
   initializeLoongArchPreRAExpandPseudoPass(*PR);
+  initializeLoongArchDAGToDAGISelPass(*PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
