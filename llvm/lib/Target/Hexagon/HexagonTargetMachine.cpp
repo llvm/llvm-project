@@ -14,6 +14,7 @@
 #include "Hexagon.h"
 #include "HexagonISelLowering.h"
 #include "HexagonLoopIdiomRecognition.h"
+#include "HexagonMachineFunctionInfo.h"
 #include "HexagonMachineScheduler.h"
 #include "HexagonTargetObjectFile.h"
 #include "HexagonTargetTransformInfo.h"
@@ -287,6 +288,13 @@ void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 TargetTransformInfo
 HexagonTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(HexagonTTIImpl(this, F));
+}
+
+MachineFunctionInfo *HexagonTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return HexagonMachineFunctionInfo::create<HexagonMachineFunctionInfo>(
+      Allocator, F, STI);
 }
 
 HexagonTargetMachine::~HexagonTargetMachine() = default;

@@ -12,6 +12,7 @@
 #include "VETargetMachine.h"
 #include "TargetInfo/VETargetInfo.h"
 #include "VE.h"
+#include "VEMachineFunctionInfo.h"
 #include "VETargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
@@ -96,6 +97,13 @@ VETargetMachine::~VETargetMachine() = default;
 TargetTransformInfo
 VETargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(VETTIImpl(this, F));
+}
+
+MachineFunctionInfo *VETargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return VEMachineFunctionInfo::create<VEMachineFunctionInfo>(Allocator, F,
+                                                              STI);
 }
 
 namespace {
