@@ -326,18 +326,17 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::FSIN, ISD::FCOS,       ISD::FSINCOS,   ISD::FPOW,
       ISD::FREM, ISD::FP16_TO_FP, ISD::FP_TO_FP16};
 
+  static const unsigned FPRndMode[] = {
+      ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FRINT, ISD::FROUND,
+      ISD::FROUNDEVEN};
+
   if (Subtarget.hasStdExtZfhOrZfhmin())
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
 
   if (Subtarget.hasStdExtZfhOrZfhmin()) {
     if (Subtarget.hasStdExtZfh()) {
       setOperationAction(FPLegalNodeTypes, MVT::f16, Legal);
-      setOperationAction(ISD::FCEIL, MVT::f16, Custom);
-      setOperationAction(ISD::FFLOOR, MVT::f16, Custom);
-      setOperationAction(ISD::FTRUNC, MVT::f16, Custom);
-      setOperationAction(ISD::FRINT, MVT::f16, Custom);
-      setOperationAction(ISD::FROUND, MVT::f16, Custom);
-      setOperationAction(ISD::FROUNDEVEN, MVT::f16, Custom);
+      setOperationAction(FPRndMode, MVT::f16, Custom);
       setOperationAction(ISD::SELECT, MVT::f16, Custom);
     } else {
       static const unsigned ZfhminPromoteOps[] = {
@@ -386,12 +385,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtF()) {
     setOperationAction(FPLegalNodeTypes, MVT::f32, Legal);
-    setOperationAction(ISD::FCEIL, MVT::f32, Custom);
-    setOperationAction(ISD::FFLOOR, MVT::f32, Custom);
-    setOperationAction(ISD::FTRUNC, MVT::f32, Custom);
-    setOperationAction(ISD::FRINT, MVT::f32, Custom);
-    setOperationAction(ISD::FROUND, MVT::f32, Custom);
-    setOperationAction(ISD::FROUNDEVEN, MVT::f32, Custom);
+    setOperationAction(FPRndMode, MVT::f32, Custom);
     setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
     setOperationAction(ISD::SELECT, MVT::f32, Custom);
@@ -407,12 +401,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtD()) {
     setOperationAction(FPLegalNodeTypes, MVT::f64, Legal);
     if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::FCEIL, MVT::f64, Custom);
-      setOperationAction(ISD::FFLOOR, MVT::f64, Custom);
-      setOperationAction(ISD::FTRUNC, MVT::f64, Custom);
-      setOperationAction(ISD::FRINT, MVT::f64, Custom);
-      setOperationAction(ISD::FROUND, MVT::f64, Custom);
-      setOperationAction(ISD::FROUNDEVEN, MVT::f64, Custom);
+      setOperationAction(FPRndMode, MVT::f64, Custom);
     }
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
