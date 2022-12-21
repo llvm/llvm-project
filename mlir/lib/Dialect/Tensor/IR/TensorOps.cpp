@@ -3017,6 +3017,44 @@ OpFoldResult SplatOp::fold(ArrayRef<Attribute> operands) {
 // PackOp/UnPackOp Common
 //===----------------------------------------------------------------------===//
 
+namespace {
+
+/// Packing one-dimensional tensor can be expressed as an expand shape op.
+struct SimplifyPackToExandShape : public OpRewritePattern<PackOp> {
+  using OpRewritePattern<PackOp>::OpRewritePattern;
+
+  Value insertExpand(RewriterBase &rewriter, Location loc, Value operand,
+                     Type newOperandType, ArrayAttr reassociation) const {
+    if (operand.getType() == newOperandType)
+      return operand;
+    return rewriter.create<tensor::ExpandShapeOp>(loc, newOperandType, operand,
+                                                  reassociation);
+  }
+
+  LogicalResult matchAndRewrite(PackOp packOp,
+                                PatternRewriter &rewriter) const override {
+    RankedTensorType sourceType = packOp.getSourceType();
+    RankedTensorType destType = packOp.getDestType();
+    if (sourceType.getRank() != 1 || packOp.getPaddingValue())
+      return failure();
+    auto reassociation =
+        getReassociationIndicesForReshape(sourceType, destType);
+    if (!reassociation)
+      return failure();
+    Value expanded = insertExpand(
+        rewriter, packOp.getLoc(), packOp.getSource(), destType,
+        getReassociationIndicesAttribute(rewriter, *reassociation));
+    rewriter.replaceOp(packOp, expanded);
+    return success();
+  }
+};
+
+} // namespace
+
+void mlir::tensor::populateSimplifyTensorPack(RewritePatternSet &patterns) {
+  patterns.add<SimplifyPackToExandShape>(patterns.getContext());
+}
+
 template <typename OpTy>
 static LogicalResult
 reifyResultShapesImpl(OpTy op, OpBuilder &builder,
@@ -3376,6 +3414,41 @@ Speculation::Speculatability PackOp::getSpeculatability() {
   return Speculation::Speculatable;
 }
 
+// Return true if `inner_dims_pos` and `outer_dims_perm` target the same
+// dimensions for pack and unpack.
+static bool hasSameInnerOuterAttribute(PackOp packOp, UnPackOp unPackOp) {
+  if (packOp.getInnerDimsPos() != unPackOp.getInnerDimsPos())
+    return false;
+  return packOp.getOuterDimsPerm() == unPackOp.getOuterDimsPerm();
+}
+
+// Return true if pack and unpack have the same tiles.
+// Same SSA values or same integer constants.
+static bool haveSameTiles(PackOp packOp, UnPackOp unPackOp) {
+  auto packTiles = packOp.getMixedTiles();
+  auto unPackTiles = unPackOp.getMixedTiles();
+  if (packTiles.size() != unPackTiles.size())
+    return false;
+  for (size_t i = 0, e = packTiles.size(); i < e; i++) {
+    if (!isEqualConstantIntOrValue(packTiles[i], unPackTiles[i]))
+      return false;
+  }
+  return true;
+}
+
+/// Fold an unpack(pack(x)) to x.
+LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
+  UnPackOp unPackOp = packOp.getSource().getDefiningOp<UnPackOp>();
+  if (!unPackOp || unPackOp.getSourceType() != packOp.getDestType())
+    return failure();
+  if (packOp.getPaddingValue() ||
+      !hasSameInnerOuterAttribute(packOp, unPackOp) ||
+      !haveSameTiles(packOp, unPackOp))
+    return failure();
+  rewriter.replaceOp(packOp, unPackOp.getSource());
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // UnPackOp
 //===----------------------------------------------------------------------===//
@@ -3433,16 +3506,16 @@ void UnPackOp::build(OpBuilder &builder, OperationState &state, Value source,
 }
 
 /// pack(unpack(x)) -> x
-LogicalResult UnPackOp::canonicalize(UnPackOp unpackOp,
+LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
                                      PatternRewriter &rewriter) {
-  PackOp packOp = unpackOp.getSource().getDefiningOp<tensor::PackOp>();
-  if (!packOp || packOp.getDestType() != unpackOp.getSourceType())
+  PackOp packOp = unPackOp.getSource().getDefiningOp<tensor::PackOp>();
+  if (!packOp || packOp.getDestType() != unPackOp.getSourceType())
     return failure();
-  if (packOp.getInnerDimsPos() != unpackOp.getInnerDimsPos())
+  if (packOp.getPaddingValue() ||
+      !hasSameInnerOuterAttribute(packOp, unPackOp) ||
+      !haveSameTiles(packOp, unPackOp))
     return failure();
-  if (packOp.getOuterDimsPerm() != unpackOp.getOuterDimsPerm())
-    return failure();
-  rewriter.replaceOp(unpackOp, packOp.getSource());
+  rewriter.replaceOp(unPackOp, packOp.getSource());
   return success();
 }
 
