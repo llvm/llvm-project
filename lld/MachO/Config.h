@@ -135,7 +135,7 @@ struct Configuration {
   bool emitChainedFixups = false;
   bool timeTraceEnabled = false;
   bool dataConst = false;
-  bool dedupLiterals = true;
+  bool dedupStrings = true;
   bool deadStripDuplicates = false;
   bool omitDebugInfo = false;
   bool warnDylibInstallName = false;
