@@ -89,6 +89,8 @@ MachineFunctionInfo *ARCTargetMachine::createMachineFunctionInfo(
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARCTarget() {
   RegisterTargetMachine<ARCTargetMachine> X(getTheARCTarget());
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeARCDAGToDAGISelPass(PR);
 }
 
 TargetTransformInfo

@@ -21,6 +21,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "systemz-isel"
+#define PASS_NAME "SystemZ DAG->DAG Pattern Instruction Selection"
 
 namespace {
 // Used to build addressing modes.
@@ -347,6 +348,8 @@ class SystemZDAGToDAGISel : public SelectionDAGISel {
 public:
   static char ID;
 
+  SystemZDAGToDAGISel() = delete;
+
   SystemZDAGToDAGISel(SystemZTargetMachine &TM, CodeGenOpt::Level OptLevel)
       : SelectionDAGISel(ID, TM, OptLevel) {}
 
@@ -363,11 +366,6 @@ public:
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
 
-  // Override MachineFunctionPass.
-  StringRef getPassName() const override {
-    return "SystemZ DAG->DAG Pattern Instruction Selection";
-  }
-
   // Override SelectionDAGISel.
   void Select(SDNode *Node) override;
   bool SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
@@ -381,6 +379,8 @@ public:
 } // end anonymous namespace
 
 char SystemZDAGToDAGISel::ID = 0;
+
+INITIALIZE_PASS(SystemZDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 FunctionPass *llvm::createSystemZISelDag(SystemZTargetMachine &TM,
                                          CodeGenOpt::Level OptLevel) {

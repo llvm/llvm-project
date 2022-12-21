@@ -18,9 +18,6 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
-class RISCVRegisterBankInfo;
-class RISCVSubtarget;
-class RISCVTargetMachine;
 class AsmPrinter;
 class FunctionPass;
 class InstructionSelector;
@@ -29,6 +26,9 @@ class MCOperand;
 class MachineInstr;
 class MachineOperand;
 class PassRegistry;
+class RISCVRegisterBankInfo;
+class RISCVSubtarget;
+class RISCVTargetMachine;
 
 FunctionPass *createRISCVCodeGenPreparePass();
 void initializeRISCVCodeGenPreparePass(PassRegistry &);
@@ -71,6 +71,7 @@ void initializeRISCVRedundantCopyEliminationPass(PassRegistry &);
 InstructionSelector *createRISCVInstructionSelector(const RISCVTargetMachine &,
                                                     RISCVSubtarget &,
                                                     RISCVRegisterBankInfo &);
-}
+void initializeRISCVDAGToDAGISelPass(PassRegistry &);
+} // namespace llvm
 
 #endif
