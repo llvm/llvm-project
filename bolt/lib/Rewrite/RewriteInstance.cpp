@@ -2933,7 +2933,7 @@ void RewriteInstance::disassembleFunctions() {
     }
 
     if (opts::PrintAll || opts::PrintDisasm)
-      Function.print(outs(), "after disassembly", true);
+      Function.print(outs(), "after disassembly");
   }
 
   BC->processInterproceduralReferences();
@@ -3000,7 +3000,7 @@ void RewriteInstance::buildFunctionsCFG() {
 
         if (opts::PrintAll) {
           auto L = BC->scopeLock();
-          BF.print(outs(), "while building cfg", true);
+          BF.print(outs(), "while building cfg");
         }
       };
 
@@ -3033,7 +3033,7 @@ void RewriteInstance::postProcessFunctions() {
     Function.postProcessCFG();
 
     if (opts::PrintAll || opts::PrintCFG)
-      Function.print(outs(), "after building cfg", true);
+      Function.print(outs(), "after building cfg");
 
     if (opts::DumpDotAll)
       Function.dumpGraphForPass("00_build-cfg");
