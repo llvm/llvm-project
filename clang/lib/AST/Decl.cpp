@@ -3347,8 +3347,6 @@ bool FunctionDecl::isNoReturn() const {
 MultiVersionKind FunctionDecl::getMultiVersionKind() const {
   if (hasAttr<TargetAttr>())
     return MultiVersionKind::Target;
-  if (hasAttr<TargetVersionAttr>())
-    return MultiVersionKind::TargetVersion;
   if (hasAttr<CPUDispatchAttr>())
     return MultiVersionKind::CPUDispatch;
   if (hasAttr<CPUSpecificAttr>())
@@ -3367,8 +3365,7 @@ bool FunctionDecl::isCPUSpecificMultiVersion() const {
 }
 
 bool FunctionDecl::isTargetMultiVersion() const {
-  return isMultiVersion() &&
-         (hasAttr<TargetAttr>() || hasAttr<TargetVersionAttr>());
+  return isMultiVersion() && hasAttr<TargetAttr>();
 }
 
 bool FunctionDecl::isTargetClonesMultiVersion() const {

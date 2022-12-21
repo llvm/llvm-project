@@ -183,7 +183,6 @@
 // CHECK-NEXT: TLSModel (SubjectMatchRule_variable_is_thread_local)
 // CHECK-NEXT: Target (SubjectMatchRule_function)
 // CHECK-NEXT: TargetClones (SubjectMatchRule_function)
-// CHECK-NEXT: TargetVersion (SubjectMatchRule_function)
 // CHECK-NEXT: TestTypestate (SubjectMatchRule_function_is_member)
 // CHECK-NEXT: TrivialABI (SubjectMatchRule_record)
 // CHECK-NEXT: Uninitialized (SubjectMatchRule_variable_is_local)

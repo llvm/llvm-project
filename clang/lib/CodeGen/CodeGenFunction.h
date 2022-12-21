@@ -4813,12 +4813,6 @@ public:
   // last (if it exists).
   void EmitMultiVersionResolver(llvm::Function *Resolver,
                                 ArrayRef<MultiVersionResolverOption> Options);
-  void
-  EmitX86MultiVersionResolver(llvm::Function *Resolver,
-                              ArrayRef<MultiVersionResolverOption> Options);
-  void
-  EmitAArch64MultiVersionResolver(llvm::Function *Resolver,
-                                  ArrayRef<MultiVersionResolverOption> Options);
 
 private:
   QualType getVarArgType(const Expr *Arg);
@@ -4837,11 +4831,7 @@ private:
   llvm::Value *EmitX86CpuSupports(ArrayRef<StringRef> FeatureStrs);
   llvm::Value *EmitX86CpuSupports(uint64_t Mask);
   llvm::Value *EmitX86CpuInit();
-  llvm::Value *FormX86ResolverCondition(const MultiVersionResolverOption &RO);
-  llvm::Value *EmitAArch64CpuInit();
-  llvm::Value *
-  FormAArch64ResolverCondition(const MultiVersionResolverOption &RO);
-  llvm::Value *EmitAArch64CpuSupports(ArrayRef<StringRef> FeatureStrs);
+  llvm::Value *FormResolverCondition(const MultiVersionResolverOption &RO);
 };
 
 

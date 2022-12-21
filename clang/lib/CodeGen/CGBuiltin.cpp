@@ -52,7 +52,6 @@
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
-#include "llvm/Support/AArch64TargetParser.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/X86TargetParser.h"
@@ -13035,16 +13034,6 @@ llvm::Value *CodeGenFunction::EmitX86CpuSupports(uint64_t FeaturesMask) {
   return Result;
 }
 
-Value *CodeGenFunction::EmitAArch64CpuInit() {
-  llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
-  llvm::FunctionCallee Func =
-      CGM.CreateRuntimeFunction(FTy, "init_cpu_features_resolver");
-  cast<llvm::GlobalValue>(Func.getCallee())->setDSOLocal(true);
-  cast<llvm::GlobalValue>(Func.getCallee())
-      ->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
-  return Builder.CreateCall(Func);
-}
-
 Value *CodeGenFunction::EmitX86CpuInit() {
   llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy,
                                                     /*Variadic*/ false);
@@ -13054,32 +13043,6 @@ Value *CodeGenFunction::EmitX86CpuInit() {
   cast<llvm::GlobalValue>(Func.getCallee())
       ->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
   return Builder.CreateCall(Func);
-}
-
-llvm::Value *
-CodeGenFunction::EmitAArch64CpuSupports(ArrayRef<StringRef> FeaturesStrs) {
-  uint64_t FeaturesMask = llvm::AArch64::getCpuSupportsMask(FeaturesStrs);
-  Value *Result = Builder.getTrue();
-  if (FeaturesMask != 0) {
-    // Get features from structure in runtime library
-    // struct {
-    //   unsigned long long features;
-    // } __aarch64_cpu_features;
-    llvm::Type *STy = llvm::StructType::get(Int64Ty);
-    llvm::Constant *AArch64CPUFeatures =
-        CGM.CreateRuntimeVariable(STy, "__aarch64_cpu_features");
-    cast<llvm::GlobalValue>(AArch64CPUFeatures)->setDSOLocal(true);
-    llvm::Value *CpuFeatures = Builder.CreateGEP(
-        STy, AArch64CPUFeatures,
-        {ConstantInt::get(Int32Ty, 0), ConstantInt::get(Int32Ty, 0)});
-    Value *Features = Builder.CreateAlignedLoad(Int64Ty, CpuFeatures,
-                                                CharUnits::fromQuantity(8));
-    Value *Mask = Builder.getInt64(FeaturesMask);
-    Value *Bitset = Builder.CreateAnd(Features, Mask);
-    Value *Cmp = Builder.CreateICmpEQ(Bitset, Mask);
-    Result = Builder.CreateAnd(Result, Cmp);
-  }
-  return Result;
 }
 
 Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
