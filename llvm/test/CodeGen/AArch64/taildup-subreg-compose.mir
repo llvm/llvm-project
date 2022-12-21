@@ -23,7 +23,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $q1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fpr128 = COPY $q1
-  ; CHECK-NEXT:   $s1 = COPY [[COPY]].dsub
+  ; CHECK-NEXT:   $s1 = COPY [[COPY]].ssub
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:fpr64 = COPY [[COPY]].dsub
   ; CHECK-NEXT:   B %bb.4
   ; CHECK-NEXT: {{  $}}
@@ -31,7 +31,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-  ; CHECK-NEXT:   $s1 = COPY [[DEF]].dsub
+  ; CHECK-NEXT:   $s1 = COPY [[DEF]].ssub
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fpr64 = COPY [[DEF]].dsub
   ; CHECK-NEXT:   B %bb.4
   ; CHECK-NEXT: {{  $}}
