@@ -1518,14 +1518,6 @@ static void speculateSelectInstLoads(SelectInst &SI, LoadInst &LI,
 
   assert(LI.isSimple() && "We only speculate simple loads");
 
-  if (auto *TypedPtrTy = LI.getType()->getPointerTo();
-      SI.getType() != TypedPtrTy) {
-    TV = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(TV, TypedPtrTy, "",
-                                                          &LI);
-    FV = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(FV, TypedPtrTy, "",
-                                                          &LI);
-  }
-
   IRB.SetInsertPoint(&LI);
   LoadInst *TL =
       IRB.CreateAlignedLoad(LI.getType(), TV, LI.getAlign(),
