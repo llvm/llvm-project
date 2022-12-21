@@ -136,12 +136,12 @@ uint64_t mlir::getLargestDivisorOfTripCount(AffineForOp forOp) {
       thisGcd = resultExpr.getLargestKnownDivisor();
     }
     if (gcd.has_value())
-      gcd = std::gcd(gcd.value(), thisGcd);
+      gcd = std::gcd(*gcd, thisGcd);
     else
       gcd = thisGcd;
   }
   assert(gcd.has_value() && "value expected per above logic");
-  return gcd.value();
+  return *gcd;
 }
 
 /// Given an induction variable `iv` of type AffineForOp and an access `index`

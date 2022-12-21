@@ -77,7 +77,7 @@ LogicalResult ScalarOpToLibmCall<Op, TypeResolver>::matchAndRewrite(
   if (!isDouble.has_value())
     return failure();
 
-  auto name = isDouble.value() ? doubleFunc : floatFunc;
+  auto name = *isDouble ? doubleFunc : floatFunc;
 
   auto opFunc = dyn_cast_or_null<SymbolOpInterface>(
       SymbolTable::lookupSymbolIn(module, name));

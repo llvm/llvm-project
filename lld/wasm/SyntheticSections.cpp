@@ -236,8 +236,8 @@ void ImportSection::writeBody() {
 
   if (config->memoryImport) {
     WasmImport import;
-    import.Module = config->memoryImport.value().first;
-    import.Field = config->memoryImport.value().second;
+    import.Module = config->memoryImport->first;
+    import.Field = config->memoryImport->second;
     import.Kind = WASM_EXTERNAL_MEMORY;
     import.Memory.Flags = 0;
     import.Memory.Minimum = out.memorySec->numMemoryPages;

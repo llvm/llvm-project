@@ -3,25 +3,17 @@
 
 ; Based on reproduced from https://reviews.llvm.org/D139275#4001580
 ; FIXME: this is a miscompile.
-define float @D139275_c4001580(float %arg) {
+define i8 @D139275_c4001580(i1 %c0, i1 %c1, i1 %c2, i8 %inner.sel.trueval, i8 %inner.sel.falseval, i8 %outer.sel.trueval) {
 ; CHECK-LABEL: @D139275_c4001580(
-; CHECK-NEXT:    [[I:%.*]] = fcmp ugt float [[ARG:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[I1:%.*]] = fcmp ult float [[ARG]], 1.000000e+00
-; CHECK-NEXT:    [[I2:%.*]] = and i1 [[I]], [[I1]]
-; CHECK-NEXT:    [[I3:%.*]] = fcmp uge float [[ARG]], 0x3FB99999A0000000
-; CHECK-NEXT:    [[I7:%.*]] = fadd float [[ARG]], 0xBFB99999A0000000
-; CHECK-NEXT:    [[I5:%.*]] = select i1 [[I3]], float [[I7]], float 0x3FB99999A0000000
-; CHECK-NEXT:    [[I8:%.*]] = select i1 [[I2]], float [[I5]], float 0.000000e+00
-; CHECK-NEXT:    ret float [[I8]]
+; CHECK-NEXT:    [[INNER_COND:%.*]] = xor i1 [[C0:%.*]], [[C1:%.*]]
+; CHECK-NEXT:    [[OUTER_COND:%.*]] = and i1 [[C2:%.*]], [[C1]]
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[INNER_COND]], i8 [[INNER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[OUTER_COND]], i8 [[OUTER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL]]
+; CHECK-NEXT:    ret i8 [[OUTER_SEL]]
 ;
-  %i = fcmp ugt float %arg, 0.000000e+00
-  %i1 = fcmp ult float %arg, 1.000000e+00
-  %i2 = and i1 %i, %i1
-  %i3 = fcmp uge float %arg, 0x3FB99999A0000000
-  %i4 = xor i1 %i, %i2
-  %i5 = select i1 %i4, float 0x3FB99999A0000000, float 0.000000e+00
-  %i6 = and i1 %i3, %i2
-  %i7 = fadd float %arg, 0xBFB99999A0000000
-  %i8 = select i1 %i6, float %i7, float %i5
-  ret float %i8
+  %inner.cond = xor i1 %c0, %c1
+  %outer.cond = and i1 %c2, %c1
+  %inner.sel = select i1 %inner.cond, i8 %inner.sel.trueval, i8 %inner.sel.falseval
+  %outer.sel = select i1 %outer.cond, i8 %outer.sel.trueval, i8 %inner.sel
+  ret i8 %outer.sel
 }
