@@ -1,3 +1,4 @@
+# REQUIRES: shell
 # RUN: llvm-reduce --delta-passes=global-variables --test %python --test-arg %p/Inputs/test-crash-vars.py %p/Inputs/test-output-format.ll 2>&1 | FileCheck -check-prefix=INTERESTING %s
 
 # RUN: env LLVM_DISABLE_CRASH_REPORT=0 llvm-reduce --delta-passes=global-variables --test %python --test-arg %p/Inputs/test-crash-vars.py %p/Inputs/test-output-format.ll 2>&1 | FileCheck -check-prefix=INTERESTING %s
