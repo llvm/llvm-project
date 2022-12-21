@@ -174,12 +174,12 @@ public:
   }
 
   void noteNewVirtualRegister(Register Reg) {
-    for (const auto &TheDelegate : TheDelegates)
+    for (auto *TheDelegate : TheDelegates)
       TheDelegate->MRI_NoteNewVirtualRegister(Reg);
   }
 
   void noteCloneVirtualRegister(Register NewReg, Register SrcReg) {
-    for (const auto &TheDelegate : TheDelegates)
+    for (auto *TheDelegate : TheDelegates)
       TheDelegate->MRI_NotecloneVirtualRegister(NewReg, SrcReg);
   }
 
