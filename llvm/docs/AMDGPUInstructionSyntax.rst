@@ -13,6 +13,9 @@ Instructions
 Syntax
 ~~~~~~
 
+Syntax of Regular Instructions
+------------------------------
+
 An instruction has the following syntax:
 
   | ``<``\ *opcode mnemonic*\ ``>    <``\ *operand0*\ ``>,
@@ -23,6 +26,21 @@ An instruction has the following syntax:
 
 The order of *operands* and *modifiers* is fixed.
 Most *modifiers* are optional and may be omitted.
+
+Syntax of VOPD Instructions
+---------------------------
+
+*VOPDX* and *VOPDY* instructions must be concatenated with the :: operator to form a single *VOPD* instruction:
+
+    ``<``\ *VOPDX instruction*\ ``>  ::  <``\ *VOPDY instruction*\ ``>``
+
+An example:
+
+.. parsed-literal::
+
+    v_dual_add_f32 v255, v255, v2 :: v_dual_fmaak_f32 v6, v2, v3, 1.0
+
+Note that *VOPDX* and *VOPDY* instructions cannot be used as separate opcodes.
 
 .. _amdgpu_syn_instruction_mnemo:
 
@@ -102,6 +120,10 @@ The size of typeless data is specified by size suffices:
     d16_xy            b16x2               2 for GFX8.0, 1 for GFX8.1 and GFX9+
     d16_xyz           b16x3               3 for GFX8.0, 2 for GFX8.1 and GFX9+
     d16_xyzw          b16x4               4 for GFX8.0, 2 for GFX8.1 and GFX9+
+    d16_format_x      b16                 1
+    d16_format_xy     b16x2               1
+    d16_format_xyz    b16x3               2
+    d16_format_xyzw   b16x4               2
     ================= =================== =====================================
 
 .. WARNING::
@@ -158,6 +180,7 @@ To force specific encoding, one can add a suffix to the opcode of the instructio
     *VOP3* (64-bit) encoding                            _e64
     *DPP* encoding                                      _dpp
     *SDWA* encoding                                     _sdwa
+    *VOP3 DPP* encoding                                 _e64_dpp
     =================================================== =================
 
 This reference uses encoding suffices to specify which encoding is implied.
