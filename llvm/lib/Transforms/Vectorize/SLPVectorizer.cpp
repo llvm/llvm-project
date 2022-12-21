@@ -8663,6 +8663,11 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx) {
                   return TE->isOperandGatherNode({E, NodeIdx}) &&
                          VE->isSame(TE->Scalars);
                 }))) {
+      auto FinalShuffle = [&](Value *V, ArrayRef<int> Mask) {
+        ShuffleInstructionBuilder ShuffleBuilder(Builder, *this);
+        ShuffleBuilder.add(V, Mask);
+        return ShuffleBuilder.finalize(std::nullopt);
+      };
       Value *V = vectorizeTree(VE);
       if (VF != cast<FixedVectorType>(V->getType())->getNumElements()) {
         if (!VE->ReuseShuffleIndices.empty()) {
@@ -8696,18 +8701,14 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx) {
           assert(VF >= UsedIdxs.size() && "Expected vectorization factor "
                                           "less than original vector size.");
           UniqueIdxs.append(VF - UsedIdxs.size(), UndefMaskElem);
-          V = Builder.CreateShuffleVector(V, UniqueIdxs, "shrink.shuffle");
+          V = FinalShuffle(V, UniqueIdxs);
         } else {
           assert(VF < cast<FixedVectorType>(V->getType())->getNumElements() &&
                  "Expected vectorization factor less "
                  "than original vector size.");
           SmallVector<int> UniformMask(VF, 0);
           std::iota(UniformMask.begin(), UniformMask.end(), 0);
-          V = Builder.CreateShuffleVector(V, UniformMask, "shrink.shuffle");
-        }
-        if (auto *I = dyn_cast<Instruction>(V)) {
-          GatherShuffleExtractSeq.insert(I);
-          CSEBlocks.insert(I->getParent());
+          V = FinalShuffle(V, UniformMask);
         }
       }
       return V;

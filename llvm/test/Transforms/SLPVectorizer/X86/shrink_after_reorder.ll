@@ -5,15 +5,15 @@ define void @wombat(ptr %ptr, ptr %ptr1) {
 ; CHECK-LABEL: @wombat(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[PTR1:%.*]], i32 3
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
-; CHECK-NEXT:    [[SHRINK_SHUFFLE:%.*]] = shufflevector <4 x i32> [[SHUFFLE]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[SHRINK_SHUFFLE]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i32> [[SHUFFLE]], undef
-; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> undef, <4 x i32> [[SHUFFLE1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> zeroinitializer, <4 x i32> zeroinitializer, <4 x i32> [[TMP4]]
-; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[TMP27]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i32> [[TMP2]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <4 x i32> [[TMP1]], undef
+; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> undef, <4 x i32> [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> zeroinitializer, <4 x i32> zeroinitializer, <4 x i32> [[TMP6]]
+; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP27]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -58,12 +58,11 @@ define internal i32 @ipvideo_decode_block_opcode_0xD_16() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i16> [ undef, [[ENTRY:%.*]] ], [ [[SHRINK_SHUFFLE:%.*]], [[IF_END:%.*]] ]
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[TMP0]], <2 x i16> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i16> [ undef, [[ENTRY:%.*]] ], [ [[TMP0]], [[IF_END:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i16> [[TMP0]], <2 x i16> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    store <8 x i16> [[SHUFFLE]], ptr undef, align 2
-; CHECK-NEXT:    [[SHRINK_SHUFFLE]] = shufflevector <8 x i16> [[SHUFFLE]], <8 x i16> poison, <2 x i32> <i32 0, i32 4>
+; CHECK-NEXT:    store <8 x i16> [[TMP1]], ptr undef, align 2
 ; CHECK-NEXT:    br label [[FOR_BODY]]
 ;
 entry:
