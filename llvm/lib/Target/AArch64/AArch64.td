@@ -77,9 +77,6 @@ def FeatureLSE2 : SubtargetFeature<"lse2", "HasLSE2", "true",
 def FeatureOutlineAtomics : SubtargetFeature<"outline-atomics", "OutlineAtomics", "true",
   "Enable out of line atomics to support LSE instructions">;
 
-def FeatureFMV : SubtargetFeature<"fmv", "HasFMV", "true",
-  "Enable Function Multi Versioning support.">;
-
 def FeatureRDM : SubtargetFeature<"rdm", "HasRDM", "true",
   "Enable ARMv8.1 Rounding Double Multiply Add/Subtract instructions (FEAT_RDM)">;
 
