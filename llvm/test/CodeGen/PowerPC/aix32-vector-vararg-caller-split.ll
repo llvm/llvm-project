@@ -17,12 +17,14 @@ declare <4 x i32> @split_spill(double, double, double, ...)
 ; CHECK:     STXVW4X killed [[VECCONST]], $r1, killed [[STACKOFFSET]] :: (store (s128))
 ; CHECK-DAG: [[ELEMENT1:%[0-9]+]]:gprc = LWZ 48, $r1 :: (load (s32))
 ; CHECK-DAG: [[ELEMENT2:%[0-9]+]]:gprc = LWZ 52, $r1 :: (load (s32))
-; CHECK:     [[FLOAT1ADDR:%[0-9]+]]:gprc_and_gprc_nor0 = LWZtoc %const.1, $r2 :: (load (s32) from got)
-; CHECK:     [[FLOAT1:%[0-9]+]]:f4rc = LFS 0, killed [[FLOAT1ADDR]] :: (load (s32) from constant-pool)
-; CHECK:     [[DOUBLE1:%[0-9]+]]:f8rc = COPY [[FLOAT1]]
-; CHECK:     [[FLOAT2ADDR:%[0-9]+]]:gprc_and_gprc_nor0 = LWZtoc %const.2, $r2 :: (load (s32) from got)
-; CHECK:     [[FLOAT2:%[0-9]+]]:f4rc = LFS 0, killed [[FLOAT2ADDR]] :: (load (s32) from constant-pool)
-; CHECK:     [[DOUBLE2:%[0-9]+]]:f8rc = COPY [[FLOAT2]]
+; CHECK:     [[FLOAT1SPLAT:%[0-9]+]]:vrrc = VSPLTISW 1
+; CHECK:     [[FLOAT1COPY:%[0-9]+]]:vsrc = COPY [[FLOAT1SPLAT]]
+; CHECK:     [[DOUBLE1:%[0-9]+]]:vsrc = XVCVSXWDP killed [[FLOAT1COPY]], implicit $rm
+; CHECK:     [[DOUBLE1COPY:%[0-9]+]]:vsfrc = COPY [[DOUBLE1]]
+; CHECK:     [[FLOAT2SPLAT:%[0-9]+]]:vrrc = VSPLTISW 2
+; CHECK:     [[FLOAT2COPY:%[0-9]+]]:vsrc = COPY [[FLOAT2SPLAT]]
+; CHECK:     [[DOUBLE2:%[0-9]+]]:vsrc = XVCVSXWDP killed [[FLOAT2COPY]], implicit $rm
+; CHECK:     [[DOUBLE2COPY:%[0-9]+]]:vsfrc = COPY [[DOUBLE2]]
 
 ; CHECK:     [[DZERO:%[0-9]+]]:vsfrc = XXLXORdpz
 ; CHECK:     [[DTOI1:%[0-9]+]]:gprc = LIS 16368
@@ -33,11 +35,11 @@ declare <4 x i32> @split_spill(double, double, double, ...)
 ; CHECK-DAG: $r3 = COPY [[IZERO]]
 ; CHECK-DAG: $r4 = COPY [[IZERO]]
 
-; CHECK-DAG: $f2 = COPY [[DOUBLE1]]
+; CHECK-DAG: $f2 = COPY [[DOUBLE1COPY]]
 ; CHECK-DAG: $r5 = COPY [[DTOI1]]
 ; CHECK-DAG: $r6 = COPY [[IZERO]]
 
-; CHECK-DAG: $f3 = COPY [[DOUBLE2]]
+; CHECK-DAG: $f3 = COPY [[DOUBLE2COPY]]
 ; CHECK-DAG: $r7 = COPY [[DTOI2]]
 ; CHECK-DAG: $r8 = COPY [[IZERO]]
 
