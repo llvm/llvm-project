@@ -58,91 +58,6 @@ static StringRef getArchVersionString(llvm::AArch64::ArchKind Kind) {
   }
 }
 
-void AArch64TargetInfo::setArchFeatures() {
-  switch (ArchKind) {
-  case llvm::AArch64::ArchKind::ARMV8_9A:
-  case llvm::AArch64::ArchKind::ARMV8_8A:
-  case llvm::AArch64::ArchKind::ARMV8_7A:
-    HasWFxT = true;
-    LLVM_FALLTHROUGH;
-  case llvm::AArch64::ArchKind::ARMV8_6A:
-    HasBFloat16 = true;
-    HasMatMul = true;
-    LLVM_FALLTHROUGH;
-  case llvm::AArch64::ArchKind::ARMV8_5A:
-    HasAlternativeNZCV = true;
-    HasFRInt3264 = true;
-    HasSSBS = true;
-    HasSB = true;
-    HasPredRes = true;
-    HasBTI = true;
-    LLVM_FALLTHROUGH;
-  case llvm::AArch64::ArchKind::ARMV8_4A:
-    HasDotProd = true;
-    HasDIT = true;
-    HasFlagM = true;
-    LLVM_FALLTHROUGH;
-  case llvm::AArch64::ArchKind::ARMV8_3A:
-    HasRCPC = true;
-    FPU |= NeonMode;
-    LLVM_FALLTHROUGH;
-  case llvm::AArch64::ArchKind::ARMV8_2A:
-    HasCCPP = true;
-    LLVM_FALLTHROUGH;
-  case llvm::AArch64::ArchKind::ARMV8_1A:
-    HasCRC = true;
-    HasLSE = true;
-    HasRDM = true;
-    return;
-  default:
-    break;
-  }
-  switch (ArchKind) {
-  case llvm::AArch64::ArchKind::ARMV9_4A:
-  case llvm::AArch64::ArchKind::ARMV9_3A:
-  case llvm::AArch64::ArchKind::ARMV9_2A:
-    HasWFxT = true;
-    LLVM_FALLTHROUGH;
-  case llvm::AArch64::ArchKind::ARMV9_1A:
-    HasBFloat16 = true;
-    HasMatMul = true;
-    LLVM_FALLTHROUGH;
-  case llvm::AArch64::ArchKind::ARMV9A:
-    FPU |= SveMode;
-    HasSVE2 = true;
-    HasFullFP16 = true;
-    HasAlternativeNZCV = true;
-    HasFRInt3264 = true;
-    HasSSBS = true;
-    HasSB = true;
-    HasPredRes = true;
-    HasBTI = true;
-    HasDotProd = true;
-    HasDIT = true;
-    HasFlagM = true;
-    HasRCPC = true;
-    FPU |= NeonMode;
-    HasCCPP = true;
-    HasCRC = true;
-    HasLSE = true;
-    HasRDM = true;
-    return;
-  default:
-    break;
-  }
-  if (ArchKind == llvm::AArch64::ArchKind::ARMV8R) {
-    HasDotProd = true;
-    HasDIT = true;
-    HasFlagM = true;
-    HasRCPC = true;
-    FPU |= NeonMode;
-    HasCCPP = true;
-    HasCRC = true;
-    HasLSE = true;
-    HasRDM = true;
-  }
-}
-
 StringRef AArch64TargetInfo::getArchProfile() const {
   switch (ArchKind) {
   case llvm::AArch64::ArchKind::ARMV8R:
@@ -451,9 +366,6 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasRCPC)
     Builder.defineMacro("__ARM_FEATURE_RCPC", "1");
 
-  if (HasFMV)
-    Builder.defineMacro("__HAVE_FUNCTION_MULTI_VERSIONING", "1");
-
   // The __ARM_FEATURE_CRYPTO is deprecated in favor of finer grained feature
   // macros for AES, SHA2, SHA3 and SM4
   if (HasAES && HasSHA2)
@@ -640,95 +552,13 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
   return std::nullopt;
 }
 
-unsigned AArch64TargetInfo::multiVersionSortPriority(StringRef Name) const {
-  if (Name == "default")
-    return 0;
-  unsigned Priority = llvm::StringSwitch<unsigned>(Name)
-#define AARCH64_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE, FMV_ID,           \
-                              DEP_FEATURES, FMV_PRIORITY)                      \
-  .Case(NAME, FMV_PRIORITY)
-#include "../../../../llvm/include/llvm/TargetParser/AArch64TargetParser.def"
-      ;
-  assert((Name == "none" || Priority < multiVersionFeatureCost()) &&
-         "FMV priority is out of bounds!");
-  return Priority;
-}
-
-unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
-  // Take the maximum priority as per feature cost, so more features win.
-  // AARCH64_ARCH_EXT_NAME "none" feature must have top priority, use it.
-  return multiVersionSortPriority("none");
-}
-
-bool AArch64TargetInfo::getFeatureDepOptions(StringRef Name,
-                                             std::string &FeatureVec) const {
-  FeatureVec = llvm::StringSwitch<std::string>(Name)
-#define AARCH64_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE, FMV_ID,           \
-                              DEP_FEATURES, FMV_PRIORITY)                      \
-  .Case(NAME, DEP_FEATURES)
-#include "../../../../llvm/include/llvm/TargetParser/AArch64TargetParser.def"
-                   .Default("");
-  return FeatureVec != "";
-}
-
-bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
-  unsigned Feat = llvm::StringSwitch<unsigned>(FeatureStr)
-#define AARCH64_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE, FMV_ID,           \
-                              DEP_FEATURES, FMV_PRIORITY)                      \
-  .Case(NAME, llvm::AArch64::FEAT_##FMV_ID)
-#include "../../../../llvm/include/llvm/TargetParser/AArch64TargetParser.def"
-                      .Default(llvm::AArch64::FEAT_MAX);
-  return Feat != llvm::AArch64::FEAT_MAX;
-}
-
 bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
-      .Cases("aarch64", "arm64", "arm", true)
-      .Case("fmv", HasFMV)
-      .Cases("neon", "fp", "simd", FPU & NeonMode)
-      .Case("jscvt", HasJSCVT)
-      .Case("fcma", HasFCMA)
-      .Case("rng", HasRandGen)
-      .Case("flagm", HasFlagM)
-      .Case("flagm2", HasAlternativeNZCV)
-      .Case("fp16fml", HasFP16FML)
-      .Case("dotprod", HasDotProd)
-      .Case("sm4", HasSM4)
-      .Case("rdm", HasRDM)
-      .Case("lse", HasLSE)
-      .Case("crc", HasCRC)
-      .Case("sha2", HasSHA2)
-      .Case("sha3", HasSHA3)
-      .Cases("aes", "pmull", HasAES)
-      .Cases("fp16", "fullfp16", HasFullFP16)
-      .Case("dit", HasDIT)
-      .Case("dpb", HasCCPP)
-      .Case("dpb2", HasCCDP)
-      .Case("rcpc", HasRCPC)
-      .Case("frintts", HasFRInt3264)
-      .Case("i8mm", HasMatMul)
-      .Case("bf16", HasBFloat16)
-      .Case("sve", FPU & SveMode)
-      .Case("sve-bf16", FPU & SveMode && HasBFloat16)
-      .Case("sve-i8mm", FPU & SveMode && HasMatMul)
-      .Case("f32mm", FPU & SveMode && HasMatmulFP32)
-      .Case("f64mm", FPU & SveMode && HasMatmulFP64)
-      .Case("sve2", FPU & SveMode && HasSVE2)
-      .Case("sve2-pmull128", FPU & SveMode && HasSVE2AES)
-      .Case("sve2-bitperm", FPU & SveMode && HasSVE2BitPerm)
-      .Case("sve2-sha3", FPU & SveMode && HasSVE2SHA3)
-      .Case("sve2-sm4", FPU & SveMode && HasSVE2SM4)
-      .Case("sme", HasSME)
-      .Case("sme-f64f64", HasSMEF64)
-      .Case("sme-i16i64", HasSMEI64)
-      .Cases("memtag", "memtag2", HasMTE)
-      .Case("sb", HasSB)
-      .Case("predres", HasPredRes)
-      .Cases("ssbs", "ssbs2", HasSSBS)
-      .Case("bti", HasBTI)
-      .Cases("ls64", "ls64_v", "ls64_accdata", HasLS64)
-      .Case("wfxt", HasWFxT)
-      .Default(false);
+    .Cases("aarch64", "arm64", "arm", true)
+    .Case("neon", FPU & NeonMode)
+    .Cases("sve", "sve2", "sve2-bitperm", "sve2-aes", "sve2-sha3", "sve2-sm4", "f64mm", "f32mm", "i8mm", "bf16", FPU & SveMode)
+    .Case("ls64", HasLS64)
+    .Default(false);
 }
 
 void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
@@ -750,134 +580,63 @@ void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
 bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
                                              DiagnosticsEngine &Diags) {
   for (const auto &Feature : Features) {
-    if (Feature == "-neon")
-      HasNoNeon = true;
-    if (Feature == "-sve")
-      HasNoSVE = true;
-
-    if (Feature == "+neon" || Feature == "+fp-armv8")
+    if (Feature == "+neon")
       FPU |= NeonMode;
-    if (Feature == "+jscvt") {
-      HasJSCVT = true;
-      FPU |= NeonMode;
-    }
-    if (Feature == "+fcma") {
-      HasFCMA = true;
-      FPU |= NeonMode;
-    }
-
     if (Feature == "+sve") {
-      FPU |= NeonMode;
       FPU |= SveMode;
       HasFullFP16 = true;
     }
     if (Feature == "+sve2") {
-      FPU |= NeonMode;
       FPU |= SveMode;
       HasFullFP16 = true;
       HasSVE2 = true;
     }
     if (Feature == "+sve2-aes") {
-      FPU |= NeonMode;
       FPU |= SveMode;
       HasFullFP16 = true;
       HasSVE2 = true;
       HasSVE2AES = true;
     }
     if (Feature == "+sve2-sha3") {
-      FPU |= NeonMode;
       FPU |= SveMode;
       HasFullFP16 = true;
       HasSVE2 = true;
       HasSVE2SHA3 = true;
     }
     if (Feature == "+sve2-sm4") {
-      FPU |= NeonMode;
       FPU |= SveMode;
       HasFullFP16 = true;
       HasSVE2 = true;
       HasSVE2SM4 = true;
     }
     if (Feature == "+sve2-bitperm") {
-      FPU |= NeonMode;
       FPU |= SveMode;
       HasFullFP16 = true;
       HasSVE2 = true;
       HasSVE2BitPerm = true;
     }
     if (Feature == "+f32mm") {
-      FPU |= NeonMode;
       FPU |= SveMode;
-      HasFullFP16 = true;
       HasMatmulFP32 = true;
     }
     if (Feature == "+f64mm") {
-      FPU |= NeonMode;
       FPU |= SveMode;
-      HasFullFP16 = true;
       HasMatmulFP64 = true;
     }
-    if (Feature == "+sme") {
-      HasSME = true;
-      HasBFloat16 = true;
-    }
-    if (Feature == "+sme-f64f64") {
-      HasSME = true;
-      HasSMEF64 = true;
-      HasBFloat16 = true;
-    }
-    if (Feature == "+sme-i16i64") {
-      HasSME = true;
-      HasSMEI64 = true;
-      HasBFloat16 = true;
-    }
-    if (Feature == "+sb")
-      HasSB = true;
-    if (Feature == "+predres")
-      HasPredRes = true;
-    if (Feature == "+ssbs")
-      HasSSBS = true;
-    if (Feature == "+bti")
-      HasBTI = true;
-    if (Feature == "+wfxt")
-      HasWFxT = true;
-    if (Feature == "-fmv")
-      HasFMV = false;
     if (Feature == "+crc")
       HasCRC = true;
     if (Feature == "+rcpc")
       HasRCPC = true;
-    if (Feature == "+aes") {
-      FPU |= NeonMode;
+    if (Feature == "+aes")
       HasAES = true;
-    }
-    if (Feature == "+sha2") {
-      FPU |= NeonMode;
+    if (Feature == "+sha2")
       HasSHA2 = true;
-    }
     if (Feature == "+sha3") {
-      FPU |= NeonMode;
       HasSHA2 = true;
       HasSHA3 = true;
     }
-    if (Feature == "+rdm") {
-      FPU |= NeonMode;
-      HasRDM = true;
-    }
-    if (Feature == "+dit")
-      HasDIT = true;
-    if (Feature == "+cccp")
-      HasCCPP = true;
-    if (Feature == "+ccdp") {
-      HasCCPP = true;
-      HasCCDP = true;
-    }
-    if (Feature == "+fptoint")
-      HasFRInt3264 = true;
-    if (Feature == "+sm4") {
-      FPU |= NeonMode;
+    if (Feature == "+sm4")
       HasSM4 = true;
-    }
     if (Feature == "+strict-align")
       HasUnaligned = false;
     // All predecessor archs are added but select the latest one for ArchKind.
@@ -913,19 +672,12 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       ArchKind = llvm::AArch64::ArchKind::ARMV9_4A;
     if (Feature == "+v8r")
       ArchKind = llvm::AArch64::ArchKind::ARMV8R;
-    if (Feature == "+fullfp16") {
-      FPU |= NeonMode;
+    if (Feature == "+fullfp16")
       HasFullFP16 = true;
-    }
-    if (Feature == "+dotprod") {
-      FPU |= NeonMode;
+    if (Feature == "+dotprod")
       HasDotProd = true;
-    }
-    if (Feature == "+fp16fml") {
-      FPU |= NeonMode;
-      HasFullFP16 = true;
+    if (Feature == "+fp16fml")
       HasFP16FML = true;
-    }
     if (Feature == "+mte")
       HasMTE = true;
     if (Feature == "+tme")
@@ -944,10 +696,6 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasRandGen = true;
     if (Feature == "+flagm")
       HasFlagM = true;
-    if (Feature == "+altnzcv") {
-      HasFlagM = true;
-      HasAlternativeNZCV = true;
-    }
     if (Feature == "+mops")
       HasMOPS = true;
     if (Feature == "+d128")
@@ -963,14 +711,6 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   }
 
   setDataLayout();
-  setArchFeatures();
-
-  if (HasNoNeon) {
-    FPU &= ~NeonMode;
-    FPU &= ~SveMode;
-  }
-  if (HasNoSVE)
-    FPU &= ~SveMode;
 
   return true;
 }
@@ -978,7 +718,6 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 bool AArch64TargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
-  std::vector<std::string> UpdatedFeaturesVec;
   // Parse the CPU and add any implied features.
   llvm::AArch64::ArchKind Arch = llvm::AArch64::parseCPUArch(CPU);
   if (Arch != llvm::AArch64::ArchKind::INVALID) {
@@ -987,33 +726,11 @@ bool AArch64TargetInfo::initFeatureMap(
     llvm::AArch64::getExtensionFeatures(Exts, CPUFeats);
     for (auto F : CPUFeats) {
       assert((F[0] == '+' || F[0] == '-') && "Expected +/- in target feature!");
-      UpdatedFeaturesVec.push_back(F.str());
+      setFeatureEnabled(Features, F.drop_front(), F[0] == '+');
     }
   }
 
-  // Process target and dependent features. This is done in two loops collecting
-  // them into UpdatedFeaturesVec: first to add dependent '+'features,
-  // second to add target '+/-'features that can later disable some of
-  // features added on the first loop.
-  for (const auto &Feature : FeaturesVec)
-    if ((Feature[0] == '?' || Feature[0] == '+')) {
-      std::string Options;
-      if (AArch64TargetInfo::getFeatureDepOptions(Feature.substr(1), Options)) {
-        SmallVector<StringRef, 1> AttrFeatures;
-        StringRef(Options).split(AttrFeatures, ",");
-        for (auto F : AttrFeatures)
-          UpdatedFeaturesVec.push_back(F.str());
-      }
-    }
-  for (const auto &Feature : FeaturesVec)
-    if (Feature[0] == '+') {
-      std::string F;
-      llvm::AArch64::getFeatureOption(Feature, F);
-      UpdatedFeaturesVec.push_back(F);
-    } else if (Feature[0] != '?')
-      UpdatedFeaturesVec.push_back(Feature);
-
-  return TargetInfo::initFeatureMap(Features, Diags, CPU, UpdatedFeaturesVec);
+  return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
 }
 
 // Parse AArch64 Target attributes, which are a comma separated list of:

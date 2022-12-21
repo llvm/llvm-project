@@ -4657,14 +4657,10 @@ public:
   llvm::Error isValidSectionSpecifier(StringRef Str);
   bool checkSectionName(SourceLocation LiteralLoc, StringRef Str);
   bool checkTargetAttr(SourceLocation LiteralLoc, StringRef Str);
-  bool checkTargetVersionAttr(SourceLocation LiteralLoc, StringRef &Str,
-                              bool &isDefault);
-  bool
-  checkTargetClonesAttrString(SourceLocation LiteralLoc, StringRef Str,
-                              const StringLiteral *Literal, bool &HasDefault,
-                              bool &HasCommas, bool &HasNotDefault,
-                              SmallVectorImpl<StringRef> &Strings,
-                              SmallVectorImpl<SmallString<64>> &StringsBuffer);
+  bool checkTargetClonesAttrString(SourceLocation LiteralLoc, StringRef Str,
+                                   const StringLiteral *Literal,
+                                   bool &HasDefault, bool &HasCommas,
+                                   SmallVectorImpl<StringRef> &Strings);
   bool checkMSInheritanceAttrOnDefinition(
       CXXRecordDecl *RD, SourceRange Range, bool BestCase,
       MSInheritanceModel SemanticSpelling);

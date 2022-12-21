@@ -1337,20 +1337,6 @@ static void AppendCPUSpecificCPUDispatchMangling(const CodeGenModule &CGM,
     Out << ".resolver";
 }
 
-static void AppendTargetVersionMangling(const CodeGenModule &CGM,
-                                        const TargetVersionAttr *Attr,
-                                        raw_ostream &Out) {
-  if (Attr->isDefaultVersion())
-    return;
-  Out << "._";
-  llvm::SmallVector<StringRef, 8> Feats;
-  Attr->getFeatures(Feats);
-  for (const auto &Feat : Feats) {
-    Out << 'M';
-    Out << Feat;
-  }
-}
-
 static void AppendTargetMangling(const CodeGenModule &CGM,
                                  const TargetAttr *Attr, raw_ostream &Out) {
   if (Attr->isDefaultVersion())
@@ -1396,27 +1382,14 @@ static void AppendTargetClonesMangling(const CodeGenModule &CGM,
                                        const TargetClonesAttr *Attr,
                                        unsigned VersionIndex,
                                        raw_ostream &Out) {
-  if (CGM.getTarget().getTriple().isAArch64()) {
-    StringRef FeatureStr = Attr->getFeatureStr(VersionIndex);
-    if (FeatureStr == "default")
-      return;
-    Out << "._";
-    SmallVector<StringRef, 8> Features;
-    FeatureStr.split(Features, "+");
-    for (auto &Feat : Features) {
-      Out << 'M';
-      Out << Feat;
-    }
-  } else {
-    Out << '.';
-    StringRef FeatureStr = Attr->getFeatureStr(VersionIndex);
-    if (FeatureStr.startswith("arch="))
-      Out << "arch_" << FeatureStr.substr(sizeof("arch=") - 1);
-    else
-      Out << FeatureStr;
+  Out << '.';
+  StringRef FeatureStr = Attr->getFeatureStr(VersionIndex);
+  if (FeatureStr.startswith("arch="))
+    Out << "arch_" << FeatureStr.substr(sizeof("arch=") - 1);
+  else
+    Out << FeatureStr;
 
-    Out << '.' << Attr->getMangledIndex(VersionIndex);
-  }
+  Out << '.' << Attr->getMangledIndex(VersionIndex);
 }
 
 static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
@@ -1471,9 +1444,6 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
         break;
       case MultiVersionKind::Target:
         AppendTargetMangling(CGM, FD->getAttr<TargetAttr>(), Out);
-        break;
-      case MultiVersionKind::TargetVersion:
-        AppendTargetVersionMangling(CGM, FD->getAttr<TargetVersionAttr>(), Out);
         break;
       case MultiVersionKind::TargetClones:
         AppendTargetClonesMangling(CGM, FD->getAttr<TargetClonesAttr>(),
@@ -2196,12 +2166,10 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
   const auto *FD = dyn_cast_or_null<FunctionDecl>(GD.getDecl());
   FD = FD ? FD->getMostRecentDecl() : FD;
   const auto *TD = FD ? FD->getAttr<TargetAttr>() : nullptr;
-  const auto *TV = FD ? FD->getAttr<TargetVersionAttr>() : nullptr;
-  assert((!TD || !TV) && "both target_version and target specified");
   const auto *SD = FD ? FD->getAttr<CPUSpecificAttr>() : nullptr;
   const auto *TC = FD ? FD->getAttr<TargetClonesAttr>() : nullptr;
   bool AddedAttr = false;
-  if (TD || TV || SD || TC) {
+  if (TD || SD || TC) {
     llvm::StringMap<bool> FeatureMap;
     getContext().getFunctionFeatureMap(FeatureMap, GD);
 
@@ -3655,18 +3623,12 @@ static unsigned
 TargetMVPriority(const TargetInfo &TI,
                  const CodeGenFunction::MultiVersionResolverOption &RO) {
   unsigned Priority = 0;
-  unsigned NumFeatures = 0;
-  for (StringRef Feat : RO.Conditions.Features) {
+  for (StringRef Feat : RO.Conditions.Features)
     Priority = std::max(Priority, TI.multiVersionSortPriority(Feat));
-    NumFeatures++;
-  }
 
   if (!RO.Conditions.Architecture.empty())
     Priority = std::max(
         Priority, TI.multiVersionSortPriority(RO.Conditions.Architecture));
-
-  Priority += TI.multiVersionFeatureCost() * NumFeatures;
-
   return Priority;
 }
 
@@ -3711,19 +3673,13 @@ void CodeGenModule::emitMultiVersionFunctions() {
               }
               assert(Func && "This should have just been created");
             }
-            if (CurFD->getMultiVersionKind() == MultiVersionKind::Target) {
-              const auto *TA = CurFD->getAttr<TargetAttr>();
-              llvm::SmallVector<StringRef, 8> Feats;
-              TA->getAddedFeatures(Feats);
-              Options.emplace_back(cast<llvm::Function>(Func),
-                                   TA->getArchitecture(), Feats);
-            } else {
-              const auto *TVA = CurFD->getAttr<TargetVersionAttr>();
-              llvm::SmallVector<StringRef, 8> Feats;
-              TVA->getFeatures(Feats);
-              Options.emplace_back(cast<llvm::Function>(Func),
-                                   /*Architecture*/ "", Feats);
-            }
+
+            const auto *TA = CurFD->getAttr<TargetAttr>();
+            llvm::SmallVector<StringRef, 8> Feats;
+            TA->getAddedFeatures(Feats);
+
+            Options.emplace_back(cast<llvm::Function>(Func),
+                                 TA->getArchitecture(), Feats);
           });
     } else if (FD->isTargetClonesMultiVersion()) {
       const auto *TC = FD->getAttr<TargetClonesAttr>();
@@ -3753,19 +3709,10 @@ void CodeGenModule::emitMultiVersionFunctions() {
         StringRef Architecture;
         llvm::SmallVector<StringRef, 1> Feature;
 
-        if (getTarget().getTriple().isAArch64()) {
-          if (Version != "default") {
-            llvm::SmallVector<StringRef, 8> VerFeats;
-            Version.split(VerFeats, "+");
-            for (auto &CurFeat : VerFeats)
-              Feature.push_back(CurFeat.trim());
-          }
-        } else {
-          if (Version.startswith("arch="))
-            Architecture = Version.drop_front(sizeof("arch=") - 1);
-          else if (Version != "default")
-            Feature.push_back(Version);
-        }
+        if (Version.startswith("arch="))
+          Architecture = Version.drop_front(sizeof("arch=") - 1);
+        else if (Version != "default")
+          Feature.push_back(Version);
 
         Options.emplace_back(cast<llvm::Function>(Func), Architecture, Feature);
       }

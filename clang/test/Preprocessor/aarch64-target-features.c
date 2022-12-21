@@ -150,13 +150,8 @@
 // RUN: %clang -target aarch64 -mtune=cyclone -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MTUNE-CYCLONE %s
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE %s
-// CHECK-SVE: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
-// CHECK-SVE: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
 // CHECK-SVE: __ARM_FEATURE_SVE 1
 // CHECK-SVE: __ARM_FEATURE_SVE_VECTOR_OPERATORS 2
-// CHECK-SVE: __ARM_NEON 1
-// CHECK-SVE: __ARM_NEON_FP 0xE
-// CHECK-SVE: __ARM_NEON_SVE_BRIDGE 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve+bf16 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-BF16 %s
 // CHECK-SVE-BF16: __ARM_FEATURE_BF16_SCALAR_ARITHMETIC 1
@@ -195,18 +190,7 @@
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
-// CHECK-SVE2: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
-// CHECK-SVE2: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
-// CHECK-SVE2: __ARM_FEATURE_SVE 1
 // CHECK-SVE2: __ARM_FEATURE_SVE2 1
-// CHECK-SVE2: __ARM_NEON 1
-// CHECK-SVE2: __ARM_NEON_FP 0xE
-// CHECK-SVE2: __ARM_NEON_SVE_BRIDGE 1
-
-// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+nosimd -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NONEON %s
-// CHECK-NONEON-NOT: __ARM_FEATURE_SVE 1
-// CHECK-NONEON-NOT: __ARM_NEON 1
-
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2-aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2AES %s
 // CHECK-SVE2AES: __ARM_FEATURE_SVE2_AES 1
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2-sha3 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2SHA3 %s
@@ -218,8 +202,6 @@
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.2a+dotprod -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-DOTPROD %s
 // CHECK-DOTPROD: __ARM_FEATURE_DOTPROD 1
-// CHECK-DOTPROD: __ARM_NEON 1
-// CHECK-DOTPROD: __ARM_NEON_FP 0xE
 
 // On ARMv8.2-A and above, +fp16fml implies +fp16.
 // On ARMv8.4-A and above, +fp16 implies +fp16fml.

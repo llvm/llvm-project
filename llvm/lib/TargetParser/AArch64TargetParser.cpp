@@ -38,15 +38,6 @@ uint64_t AArch64::getDefaultExtensions(StringRef CPU, AArch64::ArchKind AK) {
       .Default(AArch64::AEK_INVALID);
 }
 
-void AArch64::getFeatureOption(StringRef Name, std::string &Feature) {
-  Feature = llvm::StringSwitch<std::string>(Name.substr(1))
-#define AARCH64_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE, FMV_ID,           \
-                              DEP_FEATURES, FMV_PRIORITY)                      \
-  .Case(NAME, FEATURE)
-#include "../../include/llvm/TargetParser/AArch64TargetParser.def"
-                .Default(Name.str());
-}
-
 AArch64::ArchKind AArch64::getCPUArchKind(StringRef CPU) {
   if (CPU == "generic")
     return ArchKind::ARMV8A;
@@ -64,27 +55,12 @@ AArch64::ArchKind AArch64::getSubArchArchKind(StringRef SubArch) {
   return ArchKind::INVALID;
 }
 
-uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
-  uint64_t FeaturesMask = 0;
-  for (const StringRef &FeatureStr : FeatureStrs) {
-    unsigned Feature = StringSwitch<unsigned>(FeatureStr)
-#define AARCH64_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE, FMV_ID,           \
-                              DEP_FEATURES, FMV_PRIORITY)                      \
-  .Case(NAME, llvm::AArch64::FEAT_##FMV_ID)
-#include "../../include/llvm/TargetParser/AArch64TargetParser.def"
-        ;
-    FeaturesMask |= (1ULL << Feature);
-  }
-  return FeaturesMask;
-}
-
 bool AArch64::getExtensionFeatures(uint64_t Extensions,
                                    std::vector<StringRef> &Features) {
   if (Extensions == AArch64::AEK_INVALID)
     return false;
 
-#define AARCH64_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE, FMV_ID,           \
-                              DEP_FEATURES, FMV_PRIORITY)                      \
+#define AARCH64_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE)                   \
   if (Extensions & ID) {                                                       \
     const char *feature = FEATURE;                                             \
     /* INVALID and NONE have no feature name. */                               \
