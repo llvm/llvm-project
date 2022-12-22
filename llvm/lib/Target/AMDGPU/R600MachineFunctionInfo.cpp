@@ -8,8 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "R600MachineFunctionInfo.h"
+#include "R600Subtarget.h"
 
 using namespace llvm;
 
-R600MachineFunctionInfo::R600MachineFunctionInfo(const MachineFunction &MF)
-  : AMDGPUMachineFunction(MF) { }
+R600MachineFunctionInfo::R600MachineFunctionInfo(const Function &F,
+                                                 const R600Subtarget *STI)
+    : AMDGPUMachineFunction(F, *STI) {}

@@ -324,8 +324,13 @@ void Resources::write(Module &M) const {
   if (!UAVMDs.empty())
     ResourceMDs[1] = MDNode::get(M.getContext(), UAVMDs);
 
-  NamedMDNode *DXResMD = M.getOrInsertNamedMetadata("dx.resources");
-  DXResMD->addOperand(MDNode::get(M.getContext(), ResourceMDs));
+  bool HasResource = ResourceMDs[0] != nullptr || ResourceMDs[1] != nullptr ||
+                     ResourceMDs[2] != nullptr || ResourceMDs[3] != nullptr;
+
+  if (HasResource) {
+    NamedMDNode *DXResMD = M.getOrInsertNamedMetadata("dx.resources");
+    DXResMD->addOperand(MDNode::get(M.getContext(), ResourceMDs));
+  }
 
   NamedMDNode *Entry = M.getNamedMetadata("hlsl.uavs");
   if (Entry)

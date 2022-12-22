@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H
 
 #include "SIDefines.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/Alignment.h"
 #include <array>
@@ -1299,21 +1300,17 @@ struct SIModeRegisterDefaults {
 
   /// If this is set, neither input or output denormals are flushed for most f32
   /// instructions.
-  bool FP32InputDenormals : 1;
-  bool FP32OutputDenormals : 1;
+  DenormalMode FP32Denormals;
 
   /// If this is set, neither input or output denormals are flushed for both f64
   /// and f16/v2f16 instructions.
-  bool FP64FP16InputDenormals : 1;
-  bool FP64FP16OutputDenormals : 1;
+  DenormalMode FP64FP16Denormals;
 
   SIModeRegisterDefaults() :
     IEEE(true),
     DX10Clamp(true),
-    FP32InputDenormals(true),
-    FP32OutputDenormals(true),
-    FP64FP16InputDenormals(true),
-    FP64FP16OutputDenormals(true) {}
+    FP32Denormals(DenormalMode::getIEEE()),
+    FP64FP16Denormals(DenormalMode::getIEEE()) {}
 
   SIModeRegisterDefaults(const Function &F);
 
@@ -1325,42 +1322,40 @@ struct SIModeRegisterDefaults {
 
   bool operator ==(const SIModeRegisterDefaults Other) const {
     return IEEE == Other.IEEE && DX10Clamp == Other.DX10Clamp &&
-           FP32InputDenormals == Other.FP32InputDenormals &&
-           FP32OutputDenormals == Other.FP32OutputDenormals &&
-           FP64FP16InputDenormals == Other.FP64FP16InputDenormals &&
-           FP64FP16OutputDenormals == Other.FP64FP16OutputDenormals;
+           FP32Denormals == Other.FP32Denormals &&
+           FP64FP16Denormals == Other.FP64FP16Denormals;
   }
 
   bool allFP32Denormals() const {
-    return FP32InputDenormals && FP32OutputDenormals;
+    return FP32Denormals == DenormalMode::getIEEE();
   }
 
   bool allFP64FP16Denormals() const {
-    return FP64FP16InputDenormals && FP64FP16OutputDenormals;
+    return FP64FP16Denormals == DenormalMode::getIEEE();
   }
 
   /// Get the encoding value for the FP_DENORM bits of the mode register for the
   /// FP32 denormal mode.
   uint32_t fpDenormModeSPValue() const {
-    if (FP32InputDenormals && FP32OutputDenormals)
-      return FP_DENORM_FLUSH_NONE;
-    if (FP32InputDenormals)
+    if (FP32Denormals == DenormalMode::getPreserveSign())
+      return FP_DENORM_FLUSH_IN_FLUSH_OUT;
+    if (FP32Denormals.Output == DenormalMode::PreserveSign)
       return FP_DENORM_FLUSH_OUT;
-    if (FP32OutputDenormals)
+    if (FP32Denormals.Input == DenormalMode::PreserveSign)
       return FP_DENORM_FLUSH_IN;
-    return FP_DENORM_FLUSH_IN_FLUSH_OUT;
+    return FP_DENORM_FLUSH_NONE;
   }
 
   /// Get the encoding value for the FP_DENORM bits of the mode register for the
   /// FP64/FP16 denormal mode.
   uint32_t fpDenormModeDPValue() const {
-    if (FP64FP16InputDenormals && FP64FP16OutputDenormals)
-      return FP_DENORM_FLUSH_NONE;
-    if (FP64FP16InputDenormals)
+    if (FP64FP16Denormals == DenormalMode::getPreserveSign())
+      return FP_DENORM_FLUSH_IN_FLUSH_OUT;
+    if (FP64FP16Denormals.Output == DenormalMode::PreserveSign)
       return FP_DENORM_FLUSH_OUT;
-    if (FP64FP16OutputDenormals)
+    if (FP64FP16Denormals.Input == DenormalMode::PreserveSign)
       return FP_DENORM_FLUSH_IN;
-    return FP_DENORM_FLUSH_IN_FLUSH_OUT;
+    return FP_DENORM_FLUSH_NONE;
   }
 
   /// Returns true if a flag is compatible if it's enabled in the callee, but
@@ -1378,10 +1373,20 @@ struct SIModeRegisterDefaults {
       return false;
 
     // Allow inlining denormals enabled into denormals flushed functions.
-    return oneWayCompatible(FP64FP16InputDenormals, CalleeMode.FP64FP16InputDenormals) &&
-           oneWayCompatible(FP64FP16OutputDenormals, CalleeMode.FP64FP16OutputDenormals) &&
-           oneWayCompatible(FP32InputDenormals, CalleeMode.FP32InputDenormals) &&
-           oneWayCompatible(FP32OutputDenormals, CalleeMode.FP32OutputDenormals);
+    return oneWayCompatible(FP64FP16Denormals.Input !=
+                                DenormalMode::PreserveSign,
+                            CalleeMode.FP64FP16Denormals.Input !=
+                                DenormalMode::PreserveSign) &&
+           oneWayCompatible(FP64FP16Denormals.Output !=
+                                DenormalMode::PreserveSign,
+                            CalleeMode.FP64FP16Denormals.Output !=
+                                DenormalMode::PreserveSign) &&
+           oneWayCompatible(FP32Denormals.Input != DenormalMode::PreserveSign,
+                            CalleeMode.FP32Denormals.Input !=
+                                DenormalMode::PreserveSign) &&
+           oneWayCompatible(FP32Denormals.Output != DenormalMode::PreserveSign,
+                            CalleeMode.FP32Denormals.Output !=
+                                DenormalMode::PreserveSign);
   }
 };
 

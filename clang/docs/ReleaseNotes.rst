@@ -326,6 +326,9 @@ Bug Fixes
 - Fix bug where constant evaluation treated a pointer to member that points to
   a weak member as never being null. Such comparisons are now treated as
   non-constant.
+- Fix sanity check when value initializing an empty union so that it takes into
+  account anonymous structs which is a GNU extension. This fixes
+  `Issue 58800 <https://github.com/llvm/llvm-project/issues/58800>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

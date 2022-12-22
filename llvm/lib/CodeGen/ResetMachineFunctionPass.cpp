@@ -66,6 +66,8 @@ namespace {
         LLVM_DEBUG(dbgs() << "Resetting: " << MF.getName() << '\n');
         ++NumFunctionsReset;
         MF.reset();
+        MF.initTargetMachineFunctionInfo(MF.getSubtarget());
+
         if (EmitFallbackDiag) {
           const Function &F = MF.getFunction();
           DiagnosticInfoISelFallback DiagFallback(F);

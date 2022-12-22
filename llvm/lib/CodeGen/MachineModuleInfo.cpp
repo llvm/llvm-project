@@ -118,6 +118,7 @@ MachineFunction &MachineModuleInfo::getOrCreateMachineFunction(Function &F) {
     // No pre-existing machine function, create a new one.
     const TargetSubtargetInfo &STI = *TM.getSubtargetImpl(F);
     MF = new MachineFunction(F, TM, STI, NextFnNum++, *this);
+    MF->initTargetMachineFunctionInfo(STI);
     // Update the set entry.
     I.first->second.reset(MF);
   } else {

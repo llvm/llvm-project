@@ -3712,6 +3712,7 @@ the configuration (without a prefix: ``Auto``).
     * const
     * inline
     * static
+    * friend
     * constexpr
     * volatile
     * restrict
