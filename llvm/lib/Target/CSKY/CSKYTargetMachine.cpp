@@ -12,6 +12,7 @@
 
 #include "CSKYTargetMachine.h"
 #include "CSKY.h"
+#include "CSKYMachineFunctionInfo.h"
 #include "CSKYSubtarget.h"
 #include "CSKYTargetObjectFile.h"
 #include "TargetInfo/CSKYTargetInfo.h"
@@ -86,6 +87,13 @@ CSKYTargetMachine::getSubtargetImpl(const Function &F) const {
                 " set to Soft-float\n";
   }
   return I.get();
+}
+
+MachineFunctionInfo *CSKYTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return CSKYMachineFunctionInfo::create<CSKYMachineFunctionInfo>(Allocator, F,
+                                                                  STI);
 }
 
 namespace {
