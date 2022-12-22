@@ -13,6 +13,7 @@
 
 #include "M68kTargetMachine.h"
 #include "M68k.h"
+#include "M68kMachineFunction.h"
 #include "M68kSubtarget.h"
 #include "M68kTargetObjectFile.h"
 #include "TargetInfo/M68kTargetInfo.h"
@@ -126,6 +127,13 @@ M68kTargetMachine::getSubtargetImpl(const Function &F) const {
     I = std::make_unique<M68kSubtarget>(TargetTriple, CPU, FS, *this);
   }
   return I.get();
+}
+
+MachineFunctionInfo *M68kTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return M68kMachineFunctionInfo::create<M68kMachineFunctionInfo>(Allocator, F,
+                                                                  STI);
 }
 
 //===----------------------------------------------------------------------===//
