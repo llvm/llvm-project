@@ -64,6 +64,8 @@
 ;; that this test can run on Windows.
 ; RUN: llvm-ar rcs %t/Foo.framework/Foo %t/foo.o
 ; RUN: llc %t/load-framework-foo.ll -o %t/load-framework-foo.o -filetype=obj
+; RUN: llc %t/load-framework-undefined-symbol.ll -o %t/load-framework-undefined-symbol.o -filetype=obj
+; RUN: llc %t/load-missing.ll -o %t/load-missing.o -filetype=obj
 ; RUN: llc %t/main.ll -o %t/main.o -filetype=obj
 ; RUN: %lld %t/load-framework-foo.o %t/main.o -o %t/main -F%t
 ; RUN: llvm-objdump --macho --syms %t/main | FileCheck %s --check-prefix=SYMS
@@ -134,6 +136,26 @@
 ; RUN: %lld %t/main -F %t -framework Foo -framework Foo -o /dev/null
 ; RUN: %lld -F %t -framework Foo -framework Foo %t/main -o /dev/null
 
+;; Checks that "framework not found" errors from LC_LINKER_OPTIONS are not
+;; emitted unless the link fails or --strict-auto-link is passed.
+; RUN: %lld -ObjC %t/load-framework-foo.o %t/main.o -o %t/main-no-foo.out
+; RUN: llvm-objdump --macho --syms %t/main-no-foo.out | FileCheck %s --check-prefix=SYMS-NO-FOO
+; RUN: not %lld --strict-auto-link -ObjC %t/load-missing.o %t/main.o -o %t/main-no-foo.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=MISSING-AUTO-LINK
+; RUN: %no-fatal-warnings-lld --strict-auto-link -ObjC %t/load-missing.o %t/main.o -o %t/main-no-foo.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=MISSING-AUTO-LINK
+; RUN: not %lld -ObjC %t/load-framework-undefined-symbol.o %t/load-missing.o %t/main.o -o %t/main-no-foo.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefixes=UNDEFINED-SYMBOL,MISSING-AUTO-LINK
+
+;; Verify that nothing from the framework is included.
+; SYMS-NO-FOO:       SYMBOL TABLE:
+; SYMS-NO-FOO-NEXT:  g     F __TEXT,__text _main
+; SYMS-NO-FOO-NOT:   g     O __DATA,__objc_data _OBJC_CLASS_$_TestClass
+
+; UNDEFINED-SYMBOL: undefined symbol: __SomeUndefinedSymbol
+; MISSING-AUTO-LINK: {{.+}}load-missing.o: auto-linked framework not found for -framework Foo
+; MISSING-AUTO-LINK: {{.+}}load-missing.o: auto-linked library not found for -lBar
+
 ;--- framework.ll
 target triple = "x86_64-apple-macosx10.15.0"
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -183,6 +205,24 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 !0 = !{!"-framework", !"Foo"}
 !llvm.linker.options = !{!0}
+
+;--- load-missing.ll
+target triple = "x86_64-apple-macosx10.15.0"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
+!0 = !{!"-framework", !"Foo"}
+!1 = !{!"-lBar"}
+!llvm.linker.options = !{!0, !1}
+
+;--- load-framework-undefined-symbol.ll
+target triple = "x86_64-apple-macosx10.15.0"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
+declare void @_SomeUndefinedSymbol(...)
+define void @foo() {
+  call void @_SomeUndefinedSymbol()
+  ret void
+}
 
 ;--- load-framework-twice.ll
 target triple = "x86_64-apple-macosx10.15.0"
