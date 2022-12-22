@@ -224,8 +224,8 @@ void test_P2286() {
 
   assert_is_not_formattable<std::valarray<int>, CharT>();
 
-  assert_is_not_formattable<std::pair<int, int>, CharT>();
-  assert_is_not_formattable<std::tuple<int>, CharT>();
+  assert_is_formattable<std::pair<int, int>, CharT>();
+  assert_is_formattable<std::tuple<int>, CharT>();
 }
 
 class c {

@@ -207,7 +207,8 @@ void format_test_string(const W& world, const U& universe, TestFunction check, E
   check(SV("hello _world__"), SV("hello {:_^8}"), world);
   check(SV("hello world___"), SV("hello {:_<8}"), world);
 
-  check(SV("hello >>>world"), SV("hello {:>>8}"), world);
+  // The fill character ':' is allowed here (P0645) but not in ranges (P2286).
+  check(SV("hello :::world"), SV("hello {::>8}"), world);
   check(SV("hello <<<world"), SV("hello {:<>8}"), world);
   check(SV("hello ^^^world"), SV("hello {:^>8}"), world);
 
@@ -441,9 +442,10 @@ void format_test_bool(TestFunction check, ExceptionTest check_exception) {
   check(SV("answer is 'false   '"), SV("answer is '{:<8s}'"), false);
   check(SV("answer is ' false  '"), SV("answer is '{:^8s}'"), false);
 
-  check(SV("answer is '---true'"), SV("answer is '{:->7}'"), true);
-  check(SV("answer is 'true---'"), SV("answer is '{:-<7}'"), true);
-  check(SV("answer is '-true--'"), SV("answer is '{:-^7}'"), true);
+  // The fill character ':' is allowed here (P0645) but not in ranges (P2286).
+  check(SV("answer is ':::true'"), SV("answer is '{::>7}'"), true);
+  check(SV("answer is 'true:::'"), SV("answer is '{::<7}'"), true);
+  check(SV("answer is ':true::'"), SV("answer is '{::^7}'"), true);
 
   check(SV("answer is '---false'"), SV("answer is '{:->8s}'"), false);
   check(SV("answer is 'false---'"), SV("answer is '{:-<8s}'"), false);
@@ -495,9 +497,10 @@ void format_test_bool_as_integer(TestFunction check, ExceptionTest check_excepti
   check(SV("answer is '1     '"), SV("answer is '{:<6d}'"), true);
   check(SV("answer is '  1   '"), SV("answer is '{:^6d}'"), true);
 
-  check(SV("answer is '*****0'"), SV("answer is '{:*>6d}'"), false);
-  check(SV("answer is '0*****'"), SV("answer is '{:*<6d}'"), false);
-  check(SV("answer is '**0***'"), SV("answer is '{:*^6d}'"), false);
+  // The fill character ':' is allowed here (P0645) but not in ranges (P2286).
+  check(SV("answer is ':::::0'"), SV("answer is '{::>6d}'"), false);
+  check(SV("answer is '0:::::'"), SV("answer is '{::<6d}'"), false);
+  check(SV("answer is '::0:::'"), SV("answer is '{::^6d}'"), false);
 
   // Test whether zero padding is ignored
   check(SV("answer is '     1'"), SV("answer is '{:>06d}'"), true);
@@ -581,9 +584,10 @@ void format_test_integer_as_integer(TestFunction check, ExceptionTest check_exce
   check(SV("answer is '42     '"), SV("answer is '{:<7}'"), I(42));
   check(SV("answer is '  42   '"), SV("answer is '{:^7}'"), I(42));
 
-  check(SV("answer is '*****42'"), SV("answer is '{:*>7}'"), I(42));
-  check(SV("answer is '42*****'"), SV("answer is '{:*<7}'"), I(42));
-  check(SV("answer is '**42***'"), SV("answer is '{:*^7}'"), I(42));
+  // The fill character ':' is allowed here (P0645) but not in ranges (P2286).
+  check(SV("answer is ':::::42'"), SV("answer is '{::>7}'"), I(42));
+  check(SV("answer is '42:::::'"), SV("answer is '{::<7}'"), I(42));
+  check(SV("answer is '::42:::'"), SV("answer is '{::^7}'"), I(42));
 
   // Test whether zero padding is ignored
   check(SV("answer is '     42'"), SV("answer is '{:>07}'"), I(42));
@@ -709,9 +713,10 @@ void format_test_integer_as_char(TestFunction check, ExceptionTest check_excepti
   check(SV("answer is '*     '"), SV("answer is '{:<6c}'"), I(42));
   check(SV("answer is '  *   '"), SV("answer is '{:^6c}'"), I(42));
 
-  check(SV("answer is '-----*'"), SV("answer is '{:->6c}'"), I(42));
-  check(SV("answer is '*-----'"), SV("answer is '{:-<6c}'"), I(42));
-  check(SV("answer is '--*---'"), SV("answer is '{:-^6c}'"), I(42));
+  // The fill character ':' is allowed here (P0645) but not in ranges (P2286).
+  check(SV("answer is ':::::*'"), SV("answer is '{::>6c}'"), I(42));
+  check(SV("answer is '*:::::'"), SV("answer is '{::<6c}'"), I(42));
+  check(SV("answer is '::*:::'"), SV("answer is '{::^6c}'"), I(42));
 
   // *** Sign ***
   check(SV("answer is *"), SV("answer is {:c}"), I(42));
@@ -893,9 +898,10 @@ void format_test_char(TestFunction check, ExceptionTest check_exception) {
   check(SV("answer is '*     '"), SV("answer is '{:<6c}'"), CharT('*'));
   check(SV("answer is '  *   '"), SV("answer is '{:^6c}'"), CharT('*'));
 
-  check(SV("answer is '-----*'"), SV("answer is '{:->6}'"), CharT('*'));
-  check(SV("answer is '*-----'"), SV("answer is '{:-<6}'"), CharT('*'));
-  check(SV("answer is '--*---'"), SV("answer is '{:-^6}'"), CharT('*'));
+  // The fill character ':' is allowed here (P0645) but not in ranges (P2286).
+  check(SV("answer is ':::::*'"), SV("answer is '{::>6}'"), CharT('*'));
+  check(SV("answer is '*:::::'"), SV("answer is '{::<6}'"), CharT('*'));
+  check(SV("answer is '::*:::'"), SV("answer is '{::^6}'"), CharT('*'));
 
   check(SV("answer is '-----*'"), SV("answer is '{:->6c}'"), CharT('*'));
   check(SV("answer is '*-----'"), SV("answer is '{:-<6c}'"), CharT('*'));
@@ -955,9 +961,10 @@ void format_test_char_as_integer(TestFunction check, ExceptionTest check_excepti
   check(SV("answer is '42     '"), SV("answer is '{:<7d}'"), CharT('*'));
   check(SV("answer is '  42   '"), SV("answer is '{:^7d}'"), CharT('*'));
 
-  check(SV("answer is '*****42'"), SV("answer is '{:*>7d}'"), CharT('*'));
-  check(SV("answer is '42*****'"), SV("answer is '{:*<7d}'"), CharT('*'));
-  check(SV("answer is '**42***'"), SV("answer is '{:*^7d}'"), CharT('*'));
+  // The fill character ':' is allowed here (P0645) but not in ranges (P2286).
+  check(SV("answer is ':::::42'"), SV("answer is '{::>7d}'"), CharT('*'));
+  check(SV("answer is '42:::::'"), SV("answer is '{::<7d}'"), CharT('*'));
+  check(SV("answer is '::42:::'"), SV("answer is '{::^7d}'"), CharT('*'));
 
   // Test whether zero padding is ignored
   check(SV("answer is '     42'"), SV("answer is '{:>07d}'"), CharT('*'));
@@ -1029,9 +1036,10 @@ void format_test_floating_point_hex_lower_case(TestFunction check) {
   check(SV("answer is '1p-2   '"), SV("answer is '{:<7a}'"), F(0.25));
   check(SV("answer is ' 1p-2  '"), SV("answer is '{:^7a}'"), F(0.25));
 
-  check(SV("answer is '---1p-3'"), SV("answer is '{:->7a}'"), F(125e-3));
-  check(SV("answer is '1p-3---'"), SV("answer is '{:-<7a}'"), F(125e-3));
-  check(SV("answer is '-1p-3--'"), SV("answer is '{:-^7a}'"), F(125e-3));
+  // The fill character ':' is allowed here (P0645) but not in ranges (P2286).
+  check(SV("answer is ':::1p-3'"), SV("answer is '{::>7a}'"), F(125e-3));
+  check(SV("answer is '1p-3:::'"), SV("answer is '{::<7a}'"), F(125e-3));
+  check(SV("answer is ':1p-3::'"), SV("answer is '{::^7a}'"), F(125e-3));
 
   check(SV("answer is '***inf'"), SV("answer is '{:*>6a}'"), std::numeric_limits<F>::infinity());
   check(SV("answer is 'inf***'"), SV("answer is '{:*<6a}'"), std::numeric_limits<F>::infinity());
@@ -2591,9 +2599,10 @@ void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
   check(SV("answer is '0x0   '"), SV("answer is '{:<6}'"), P(nullptr));
   check(SV("answer is ' 0x0  '"), SV("answer is '{:^6}'"), P(nullptr));
 
-  check(SV("answer is '---0x0'"), SV("answer is '{:->6}'"), P(nullptr));
-  check(SV("answer is '0x0---'"), SV("answer is '{:-<6}'"), P(nullptr));
-  check(SV("answer is '-0x0--'"), SV("answer is '{:-^6}'"), P(nullptr));
+  // The fill character ':' is allowed here (P0645) but not in ranges (P2286).
+  check(SV("answer is ':::0x0'"), SV("answer is '{::>6}'"), P(nullptr));
+  check(SV("answer is '0x0:::'"), SV("answer is '{::<6}'"), P(nullptr));
+  check(SV("answer is ':0x0::'"), SV("answer is '{::^6}'"), P(nullptr));
 
   // *** Sign ***
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:-}"), P(nullptr));
