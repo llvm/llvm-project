@@ -111,3 +111,7 @@ void lddir_d(long int a, int b) {
 void ldpte_d(long int a, int b) {
   __builtin_loongarch_ldpte_d(a, 1); // expected-error {{this builtin requires target: loongarch64}}
 }
+
+void rdtime_d() {
+  __rdtime_d(); // expected-error {{call to undeclared function '__rdtime_d'}}
+}
