@@ -392,16 +392,15 @@ define void @freeze_two_buildvectors_only_one_frozen(ptr %origin0, ptr %origin1,
 ; X86-NEXT:    movl (%edx), %edx
 ; X86-NEXT:    andl $15, %edx
 ; X86-NEXT:    vmovd %eax, %xmm0
-; X86-NEXT:    vpinsrd $1, %edx, %xmm0, %xmm1
-; X86-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; X86-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; X86-NEXT:    vmovdqa {{.*#+}} xmm2 = [7,7,7,7]
-; X86-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; X86-NEXT:    vmovdqa %xmm1, (%ecx)
-; X86-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; X86-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
+; X86-NEXT:    vpinsrd $1, %edx, %xmm0, %xmm0
+; X86-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
 ; X86-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
-; X86-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; X86-NEXT:    vmovdqa {{.*#+}} xmm1 = [7,7,7,7]
+; X86-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vmovdqa %xmm0, (%ecx)
+; X86-NEXT:    vmovd %edx, %xmm0
+; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X86-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -410,16 +409,15 @@ define void @freeze_two_buildvectors_only_one_frozen(ptr %origin0, ptr %origin1,
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    andl $15, %eax
 ; X64-NEXT:    vmovd %eax, %xmm0
-; X64-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm1
-; X64-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; X64-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [7,7,7,7]
-; X64-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; X64-NEXT:    vmovdqa %xmm1, (%rdx)
 ; X64-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; X64-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
 ; X64-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
-; X64-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
+; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vmovdqa %xmm0, (%rdx)
+; X64-NEXT:    vmovd %eax, %xmm0
+; X64-NEXT:    vpbroadcastd %xmm0, %xmm0
+; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rcx)
 ; X64-NEXT:    retq
   %i0.src = load i32, ptr %origin0

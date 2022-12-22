@@ -14277,6 +14277,9 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
          "Should have found maybe-poison operands.");
 
   for (SDValue MaybePoisonOperand : MaybePoisonOperands) {
+    // Don't replace every single UNDEF everywhere with frozen UNDEF, though.
+    if (MaybePoisonOperand.getOpcode() == ISD::UNDEF)
+      continue;
     // First, freeze each offending operand.
     SDValue FrozenMaybePoisonOperand = DAG.getFreeze(MaybePoisonOperand);
     // Then, change all other uses of unfrozen operand to use frozen operand.
@@ -14290,6 +14293,11 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   // Finally, recreate the node, it's operands were updated to use
   // frozen operands, so we just need to use it's "original" operands.
   SmallVector<SDValue> Ops(N0->op_begin(), N0->op_end());
+  // Special-handle ISD::UNDEF, each single one of them can be it's own thing.
+  for (SDValue &Op : Ops) {
+    if (Op.getOpcode() == ISD::UNDEF)
+      Op = DAG.getFreeze(Op);
+  }
   // TODO: Just strip poison generating flags?
   SDValue R = DAG.getNode(N0.getOpcode(), SDLoc(N0), N0->getVTList(), Ops);
   assert(DAG.isGuaranteedNotToBeUndefOrPoison(R, /*PoisonOnly*/ false) &&
