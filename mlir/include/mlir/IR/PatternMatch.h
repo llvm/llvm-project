@@ -1638,12 +1638,15 @@ public:
 
   // Add a matchAndRewrite style pattern represented as a C function pointer.
   template <typename OpType>
-  RewritePatternSet &add(LogicalResult (*implFn)(OpType,
-                                                 PatternRewriter &rewriter)) {
+  RewritePatternSet &
+  add(LogicalResult (*implFn)(OpType, PatternRewriter &rewriter),
+      PatternBenefit benefit = 1, ArrayRef<StringRef> generatedNames = {}) {
     struct FnPattern final : public OpRewritePattern<OpType> {
       FnPattern(LogicalResult (*implFn)(OpType, PatternRewriter &rewriter),
-                MLIRContext *context)
-          : OpRewritePattern<OpType>(context), implFn(implFn) {}
+                MLIRContext *context, PatternBenefit benefit,
+                ArrayRef<StringRef> generatedNames)
+          : OpRewritePattern<OpType>(context, benefit, generatedNames),
+            implFn(implFn) {}
 
       LogicalResult matchAndRewrite(OpType op,
                                     PatternRewriter &rewriter) const override {
@@ -1653,7 +1656,8 @@ public:
     private:
       LogicalResult (*implFn)(OpType, PatternRewriter &rewriter);
     };
-    add(std::make_unique<FnPattern>(std::move(implFn), getContext()));
+    add(std::make_unique<FnPattern>(std::move(implFn), getContext(), benefit,
+                                    generatedNames));
     return *this;
   }
 

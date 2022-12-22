@@ -17,126 +17,15 @@
 #include <cstdint>
 #include <iterator>
 
-#include "make_string.h"
 #include "string_literal.h"
 #include "test_macros.h"
+#include "format.functions.common.h"
 
 // In this file the following template types are used:
 // TestFunction must be callable as check(expected-result, string-to-format, args-to-format...)
 // ExceptionTest must be callable as check_exception(expected-exception, string-to-format, args-to-format...)
 
-#define STR(S) MAKE_STRING(CharT, S)
-#define SV(S) MAKE_STRING_VIEW(CharT, S)
-#define CSTR(S) MAKE_CSTRING(CharT, S)
-
-template <class T>
-struct context {};
-
-template <>
-struct context<char> {
-  using type = std::format_context;
-};
-
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-template <>
-struct context<wchar_t> {
-  using type = std::wformat_context;
-};
-#endif
-
-template <class T>
-using context_t = typename context<T>::type;
-
-// A user-defined type used to test the handle formatter.
-enum class status : uint16_t { foo = 0xAAAA, bar = 0x5555, foobar = 0xAA55 };
-
-// The formatter for a user-defined type used to test the handle formatter.
-template <class CharT>
-struct std::formatter<status, CharT> {
-  int type = 0;
-
-  constexpr auto parse(basic_format_parse_context<CharT>& parse_ctx) -> decltype(parse_ctx.begin()) {
-    auto begin = parse_ctx.begin();
-    auto end = parse_ctx.end();
-    if (begin == end)
-      return begin;
-
-    switch (*begin) {
-    case CharT('x'):
-      break;
-    case CharT('X'):
-      type = 1;
-      break;
-    case CharT('s'):
-      type = 2;
-      break;
-    case CharT('}'):
-      return begin;
-    default:
-      throw_format_error("The format-spec type has a type not supported for a status argument");
-    }
-
-    ++begin;
-    if (begin != end && *begin != CharT('}'))
-      throw_format_error("The format-spec should consume the input or end with a '}'");
-
-    return begin;
-  }
-
-  template <class Out>
-  auto format(status s, basic_format_context<Out, CharT>& ctx) const -> decltype(ctx.out()) {
-    const char* names[] = {"foo", "bar", "foobar"};
-    char buffer[7];
-    const char* begin = names[0];
-    const char* end = names[0];
-    switch (type) {
-    case 0:
-      begin = buffer;
-      buffer[0] = '0';
-      buffer[1] = 'x';
-      end = std::to_chars(&buffer[2], std::end(buffer), static_cast<uint16_t>(s), 16).ptr;
-      buffer[6] = '\0';
-      break;
-
-    case 1:
-      begin = buffer;
-      buffer[0] = '0';
-      buffer[1] = 'X';
-      end = std::to_chars(&buffer[2], std::end(buffer), static_cast<uint16_t>(s), 16).ptr;
-      std::transform(static_cast<const char*>(&buffer[2]), end, &buffer[2], [](char c) {
-        return static_cast<char>(std::toupper(c)); });
-      buffer[6] = '\0';
-      break;
-
-    case 2:
-      switch (s) {
-      case status::foo:
-        begin = names[0];
-        break;
-      case status::bar:
-        begin = names[1];
-        break;
-      case status::foobar:
-        begin = names[2];
-        break;
-      }
-      end = begin + strlen(begin);
-      break;
-    }
-
-    return std::copy(begin, end, ctx.out());
-  }
-
-private:
-  void throw_format_error(const char* s) {
-#ifndef TEST_HAS_NO_EXCEPTIONS
-    throw std::format_error(s);
-#else
-    (void)s;
-    std::abort();
-#endif
-  }
-};
+enum class execution_modus { partial, full };
 
 template <class CharT>
 std::vector<std::basic_string_view<CharT>> invalid_types(std::string_view valid) {
@@ -207,7 +96,8 @@ void format_test_string(const W& world, const U& universe, TestFunction check, E
   check(SV("hello _world__"), SV("hello {:_^8}"), world);
   check(SV("hello world___"), SV("hello {:_<8}"), world);
 
-  check(SV("hello >>>world"), SV("hello {:>>8}"), world);
+  // The fill character ':' is allowed here (P0645) but not in ranges (P2286).
+  check(SV("hello :::world"), SV("hello {::>8}"), world);
   check(SV("hello <<<world"), SV("hello {:<>8}"), world);
   check(SV("hello ^^^world"), SV("hello {:^>8}"), world);
 
@@ -441,9 +331,10 @@ void format_test_bool(TestFunction check, ExceptionTest check_exception) {
   check(SV("answer is 'false   '"), SV("answer is '{:<8s}'"), false);
   check(SV("answer is ' false  '"), SV("answer is '{:^8s}'"), false);
 
-  check(SV("answer is '---true'"), SV("answer is '{:->7}'"), true);
-  check(SV("answer is 'true---'"), SV("answer is '{:-<7}'"), true);
-  check(SV("answer is '-true--'"), SV("answer is '{:-^7}'"), true);
+  // The fill character ':' is allowed here (P0645) but not in ranges (P2286).
+  check(SV("answer is ':::true'"), SV("answer is '{::>7}'"), true);
+  check(SV("answer is 'true:::'"), SV("answer is '{::<7}'"), true);
+  check(SV("answer is ':true::'"), SV("answer is '{::^7}'"), true);
 
   check(SV("answer is '---false'"), SV("answer is '{:->8s}'"), false);
   check(SV("answer is 'false---'"), SV("answer is '{:-<8s}'"), false);
@@ -495,9 +386,10 @@ void format_test_bool_as_integer(TestFunction check, ExceptionTest check_excepti
   check(SV("answer is '1     '"), SV("answer is '{:<6d}'"), true);
   check(SV("answer is '  1   '"), SV("answer is '{:^6d}'"), true);
 
-  check(SV("answer is '*****0'"), SV("answer is '{:*>6d}'"), false);
-  check(SV("answer is '0*****'"), SV("answer is '{:*<6d}'"), false);
-  check(SV("answer is '**0***'"), SV("answer is '{:*^6d}'"), false);
+  // The fill character ':' is allowed here (P0645) but not in ranges (P2286).
+  check(SV("answer is ':::::0'"), SV("answer is '{::>6d}'"), false);
+  check(SV("answer is '0:::::'"), SV("answer is '{::<6d}'"), false);
+  check(SV("answer is '::0:::'"), SV("answer is '{::^6d}'"), false);
 
   // Test whether zero padding is ignored
   check(SV("answer is '     1'"), SV("answer is '{:>06d}'"), true);
@@ -581,9 +473,10 @@ void format_test_integer_as_integer(TestFunction check, ExceptionTest check_exce
   check(SV("answer is '42     '"), SV("answer is '{:<7}'"), I(42));
   check(SV("answer is '  42   '"), SV("answer is '{:^7}'"), I(42));
 
-  check(SV("answer is '*****42'"), SV("answer is '{:*>7}'"), I(42));
-  check(SV("answer is '42*****'"), SV("answer is '{:*<7}'"), I(42));
-  check(SV("answer is '**42***'"), SV("answer is '{:*^7}'"), I(42));
+  // The fill character ':' is allowed here (P0645) but not in ranges (P2286).
+  check(SV("answer is ':::::42'"), SV("answer is '{::>7}'"), I(42));
+  check(SV("answer is '42:::::'"), SV("answer is '{::<7}'"), I(42));
+  check(SV("answer is '::42:::'"), SV("answer is '{::^7}'"), I(42));
 
   // Test whether zero padding is ignored
   check(SV("answer is '     42'"), SV("answer is '{:>07}'"), I(42));
@@ -709,9 +602,10 @@ void format_test_integer_as_char(TestFunction check, ExceptionTest check_excepti
   check(SV("answer is '*     '"), SV("answer is '{:<6c}'"), I(42));
   check(SV("answer is '  *   '"), SV("answer is '{:^6c}'"), I(42));
 
-  check(SV("answer is '-----*'"), SV("answer is '{:->6c}'"), I(42));
-  check(SV("answer is '*-----'"), SV("answer is '{:-<6c}'"), I(42));
-  check(SV("answer is '--*---'"), SV("answer is '{:-^6c}'"), I(42));
+  // The fill character ':' is allowed here (P0645) but not in ranges (P2286).
+  check(SV("answer is ':::::*'"), SV("answer is '{::>6c}'"), I(42));
+  check(SV("answer is '*:::::'"), SV("answer is '{::<6c}'"), I(42));
+  check(SV("answer is '::*:::'"), SV("answer is '{::^6c}'"), I(42));
 
   // *** Sign ***
   check(SV("answer is *"), SV("answer is {:c}"), I(42));
@@ -893,9 +787,10 @@ void format_test_char(TestFunction check, ExceptionTest check_exception) {
   check(SV("answer is '*     '"), SV("answer is '{:<6c}'"), CharT('*'));
   check(SV("answer is '  *   '"), SV("answer is '{:^6c}'"), CharT('*'));
 
-  check(SV("answer is '-----*'"), SV("answer is '{:->6}'"), CharT('*'));
-  check(SV("answer is '*-----'"), SV("answer is '{:-<6}'"), CharT('*'));
-  check(SV("answer is '--*---'"), SV("answer is '{:-^6}'"), CharT('*'));
+  // The fill character ':' is allowed here (P0645) but not in ranges (P2286).
+  check(SV("answer is ':::::*'"), SV("answer is '{::>6}'"), CharT('*'));
+  check(SV("answer is '*:::::'"), SV("answer is '{::<6}'"), CharT('*'));
+  check(SV("answer is '::*:::'"), SV("answer is '{::^6}'"), CharT('*'));
 
   check(SV("answer is '-----*'"), SV("answer is '{:->6c}'"), CharT('*'));
   check(SV("answer is '*-----'"), SV("answer is '{:-<6c}'"), CharT('*'));
@@ -955,9 +850,10 @@ void format_test_char_as_integer(TestFunction check, ExceptionTest check_excepti
   check(SV("answer is '42     '"), SV("answer is '{:<7d}'"), CharT('*'));
   check(SV("answer is '  42   '"), SV("answer is '{:^7d}'"), CharT('*'));
 
-  check(SV("answer is '*****42'"), SV("answer is '{:*>7d}'"), CharT('*'));
-  check(SV("answer is '42*****'"), SV("answer is '{:*<7d}'"), CharT('*'));
-  check(SV("answer is '**42***'"), SV("answer is '{:*^7d}'"), CharT('*'));
+  // The fill character ':' is allowed here (P0645) but not in ranges (P2286).
+  check(SV("answer is ':::::42'"), SV("answer is '{::>7d}'"), CharT('*'));
+  check(SV("answer is '42:::::'"), SV("answer is '{::<7d}'"), CharT('*'));
+  check(SV("answer is '::42:::'"), SV("answer is '{::^7d}'"), CharT('*'));
 
   // Test whether zero padding is ignored
   check(SV("answer is '     42'"), SV("answer is '{:>07d}'"), CharT('*'));
@@ -1029,9 +925,10 @@ void format_test_floating_point_hex_lower_case(TestFunction check) {
   check(SV("answer is '1p-2   '"), SV("answer is '{:<7a}'"), F(0.25));
   check(SV("answer is ' 1p-2  '"), SV("answer is '{:^7a}'"), F(0.25));
 
-  check(SV("answer is '---1p-3'"), SV("answer is '{:->7a}'"), F(125e-3));
-  check(SV("answer is '1p-3---'"), SV("answer is '{:-<7a}'"), F(125e-3));
-  check(SV("answer is '-1p-3--'"), SV("answer is '{:-^7a}'"), F(125e-3));
+  // The fill character ':' is allowed here (P0645) but not in ranges (P2286).
+  check(SV("answer is ':::1p-3'"), SV("answer is '{::>7a}'"), F(125e-3));
+  check(SV("answer is '1p-3:::'"), SV("answer is '{::<7a}'"), F(125e-3));
+  check(SV("answer is ':1p-3::'"), SV("answer is '{::^7a}'"), F(125e-3));
 
   check(SV("answer is '***inf'"), SV("answer is '{:*>6a}'"), std::numeric_limits<F>::infinity());
   check(SV("answer is 'inf***'"), SV("answer is '{:*<6a}'"), std::numeric_limits<F>::infinity());
@@ -2591,9 +2488,10 @@ void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
   check(SV("answer is '0x0   '"), SV("answer is '{:<6}'"), P(nullptr));
   check(SV("answer is ' 0x0  '"), SV("answer is '{:^6}'"), P(nullptr));
 
-  check(SV("answer is '---0x0'"), SV("answer is '{:->6}'"), P(nullptr));
-  check(SV("answer is '0x0---'"), SV("answer is '{:-<6}'"), P(nullptr));
-  check(SV("answer is '-0x0--'"), SV("answer is '{:-^6}'"), P(nullptr));
+  // The fill character ':' is allowed here (P0645) but not in ranges (P2286).
+  check(SV("answer is ':::0x0'"), SV("answer is '{::>6}'"), P(nullptr));
+  check(SV("answer is '0x0:::'"), SV("answer is '{::<6}'"), P(nullptr));
+  check(SV("answer is ':0x0::'"), SV("answer is '{::^6}'"), P(nullptr));
 
   // *** Sign ***
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:-}"), P(nullptr));
@@ -2713,7 +2611,7 @@ void format_test_buffer_optimizations(TestFunction check) {
   check(std::basic_string_view<CharT>{fill + str}, SV("{:*>{}}"), str, minimum + str.size());
 }
 
-template <class CharT, class TestFunction, class ExceptionTest>
+template <class CharT, execution_modus modus, class TestFunction, class ExceptionTest>
 void format_tests(TestFunction check, ExceptionTest check_exception) {
   // *** Test escaping  ***
 
@@ -2788,8 +2686,10 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
         CharT('A'),
         CharT('Z'),
         CharT('!'));
-  format_test_char<CharT>(check, check_exception);
-  format_test_char_as_integer<CharT>(check, check_exception);
+  if constexpr (modus == execution_modus::full) {
+    format_test_char<CharT>(check, check_exception);
+    format_test_char_as_integer<CharT>(check, check_exception);
+  }
 
   // *** Test string format argument ***
   {
@@ -2811,13 +2711,16 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
     std::basic_string_view<CharT> data = buffer;
     check(SV("hello world"), SV("hello {}"), data);
   }
-  format_string_tests<CharT>(check, check_exception);
+  if constexpr (modus == execution_modus::full)
+    format_string_tests<CharT>(check, check_exception);
 
   // *** Test Boolean format argument ***
   check(SV("hello false true"), SV("hello {} {}"), false, true);
 
-  format_test_bool<CharT>(check, check_exception);
-  format_test_bool_as_integer<CharT>(check, check_exception);
+  if constexpr (modus == execution_modus::full) {
+    format_test_bool<CharT>(check, check_exception);
+    format_test_bool_as_integer<CharT>(check, check_exception);
+  }
 
   // *** Test signed integral format argument ***
   check(SV("hello 42"), SV("hello {}"), static_cast<signed char>(42));
@@ -2828,7 +2731,8 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
 #ifndef TEST_HAS_NO_INT128
   check(SV("hello 42"), SV("hello {}"), static_cast<__int128_t>(42));
 #endif
-  format_test_signed_integer<CharT>(check, check_exception);
+  if constexpr (modus == execution_modus::full)
+    format_test_signed_integer<CharT>(check, check_exception);
 
   // ** Test unsigned integral format argument ***
   check(SV("hello 42"), SV("hello {}"), static_cast<unsigned char>(42));
@@ -2839,25 +2743,29 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
 #ifndef TEST_HAS_NO_INT128
   check(SV("hello 42"), SV("hello {}"), static_cast<__uint128_t>(42));
 #endif
-  format_test_unsigned_integer<CharT>(check, check_exception);
+  if constexpr (modus == execution_modus::full)
+    format_test_unsigned_integer<CharT>(check, check_exception);
 
   // *** Test floating point format argument ***
   check(SV("hello 42"), SV("hello {}"), static_cast<float>(42));
   check(SV("hello 42"), SV("hello {}"), static_cast<double>(42));
   check(SV("hello 42"), SV("hello {}"), static_cast<long double>(42));
-  format_test_floating_point<CharT>(check, check_exception);
+  if constexpr (modus == execution_modus::full)
+    format_test_floating_point<CharT>(check, check_exception);
 
   // *** Test pointer formater argument ***
   check(SV("hello 0x0"), SV("hello {}"), nullptr);
   check(SV("hello 0x42"), SV("hello {}"), reinterpret_cast<void*>(0x42));
   check(SV("hello 0x42"), SV("hello {}"), reinterpret_cast<const void*>(0x42));
-  format_test_pointer<CharT>(check, check_exception);
+  if constexpr (modus == execution_modus::full)
+    format_test_pointer<CharT>(check, check_exception);
 
   // *** Test handle formatter argument ***
   format_test_handle<CharT>(check, check_exception);
 
   // *** Test the interal buffer optimizations ***
-  format_test_buffer_optimizations<CharT>(check);
+  if constexpr (modus == execution_modus::full)
+    format_test_buffer_optimizations<CharT>(check);
 }
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
@@ -2868,4 +2776,4 @@ void format_tests_char_to_wchar_t(TestFunction check) {
 }
 #endif
 
-#endif
+#endif // TEST_STD_UTILITIES_FORMAT_FORMAT_FUNCTIONS_FORMAT_TESTS_H

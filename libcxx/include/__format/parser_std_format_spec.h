@@ -101,6 +101,7 @@ __substitute_arg_id(basic_format_arg<_Context> __format_arg) {
 ///
 /// They default to false so when a new field is added it needs to be opted in
 /// explicitly.
+// TODO FMT Use an ABI tag for this struct.
 struct __fields {
   uint8_t __sign_ : 1 {false};
   uint8_t __alternate_form_ : 1 {false};
@@ -108,6 +109,13 @@ struct __fields {
   uint8_t __precision_ : 1 {false};
   uint8_t __locale_specific_form_ : 1 {false};
   uint8_t __type_ : 1 {false};
+  // Determines the valid values for fill.
+  //
+  // Originally the fill could be any character except { and }. Range-based
+  // formatters use the colon to mark the beginning of the
+  // underlying-format-spec. To avoid parsing ambiguities these formatter
+  // specializations prohibit the use of the colon as a fill character.
+  uint8_t __allow_colon_in_fill_ : 1 {false};
 };
 
 // By not placing this constant in the formatter class it's not duplicated for
@@ -127,6 +135,10 @@ inline constexpr __fields __fields_floating_point{
     .__type_                 = true};
 inline constexpr __fields __fields_string{.__precision_ = true, .__type_ = true};
 inline constexpr __fields __fields_pointer{.__type_ = true};
+
+#  if _LIBCPP_STD_VER > 20
+inline constexpr __fields __fields_tuple{.__type_ = false, .__allow_colon_in_fill_ = true};
+#  endif
 
 enum class _LIBCPP_ENUM_VIS __alignment : uint8_t {
   /// No alignment is set in the format string.
@@ -256,7 +268,7 @@ public:
     if (__begin == __end)
       return __begin;
 
-    if (__parse_fill_align(__begin, __end) && __begin == __end)
+    if (__parse_fill_align(__begin, __end, __fields.__allow_colon_in_fill_) && __begin == __end)
       return __begin;
 
     if (__fields.__sign_ && __parse_sign(__begin) && __begin == __end)
@@ -364,12 +376,16 @@ private:
     return false;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(const _CharT*& __begin, const _CharT* __end) {
+  // range-fill and tuple-fill are identical
+  _LIBCPP_HIDE_FROM_ABI constexpr bool
+  __parse_fill_align(const _CharT*& __begin, const _CharT* __end, bool __use_range_fill) {
     _LIBCPP_ASSERT(__begin != __end, "when called with an empty input the function will cause "
                                      "undefined behavior by evaluating data not in the input");
     if (__begin + 1 != __end) {
       if (__parse_alignment(*(__begin + 1))) {
-        if (*__begin == _CharT('{') || *__begin == _CharT('}'))
+        if (__use_range_fill && (*__begin == _CharT('{') || *__begin == _CharT('}') || *__begin == _CharT(':')))
+          std::__throw_format_error("The format-spec range-fill field contains an invalid character");
+        else if (*__begin == _CharT('{') || *__begin == _CharT('}'))
           std::__throw_format_error("The format-spec fill field contains an invalid character");
 
         __fill_ = *__begin;

@@ -49,6 +49,7 @@ __umoddi3 U
 _exit U
 abort U
 access U
+aligned_alloc U
 bcmp U
 calloc U
 catclose U
