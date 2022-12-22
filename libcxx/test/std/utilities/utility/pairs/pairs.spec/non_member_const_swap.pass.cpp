@@ -14,6 +14,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 #include <cassert>
+#include <type_traits>
 #include <utility>
 
 #include "test_macros.h"
