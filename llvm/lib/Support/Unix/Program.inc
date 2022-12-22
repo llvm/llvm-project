@@ -1,5 +1,4 @@
-//===- llvm/Support/Unix/Program.cpp -----------------------------*- C++
-//-*-===//
+//===- llvm/Support/Unix/Program.inc ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-//=== WARNING: Implementation here must contain only generic UNIX code that
-//===          is guaranteed to work on *all* UNIX variants.
+//=== WARNING: Implementation here must contain only generic UNIX
+//===          code that is guaranteed to work on *all* UNIX variants.
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Program.h"

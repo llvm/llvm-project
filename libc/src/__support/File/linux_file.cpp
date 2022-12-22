@@ -8,12 +8,12 @@
 
 #include "file.h"
 
+#include "src/__support/CPP/new.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 
 #include <errno.h> // For error macros
 #include <fcntl.h> // For mode_t and other flags to the open syscall
 #include <stdio.h>
-#include <stdlib.h>      // For malloc
 #include <sys/syscall.h> // For syscall numbers
 
 namespace __llvm_libc {
@@ -32,19 +32,11 @@ class LinuxFile : public File {
   int fd;
 
 public:
-  constexpr LinuxFile(int file_descriptor, void *buffer, size_t buffer_size,
+  constexpr LinuxFile(int file_descriptor, uint8_t *buffer, size_t buffer_size,
                       int buffer_mode, bool owned, File::ModeFlags modeflags)
       : File(&write_func, &read_func, &seek_func, &close_func, flush_func,
              buffer, buffer_size, buffer_mode, owned, modeflags),
         fd(file_descriptor) {}
-
-  static void init(LinuxFile *f, int file_descriptor, void *buffer,
-                   size_t buffer_size, int buffer_mode, bool owned,
-                   File::ModeFlags modeflags) {
-    File::init(f, &write_func, &read_func, &seek_func, &close_func, &flush_func,
-               buffer, buffer_size, buffer_mode, owned, modeflags);
-    f->fd = file_descriptor;
-  }
 
   int get_fd() const { return fd; }
 };
@@ -149,15 +141,21 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
 #error "SYS_open and SYS_openat syscalls not available to perform a file open."
 #endif
 
-  if (fd < 0) {
+  if (fd < 0)
     return Error(-fd);
-    // return {nullptr, -fd};
-  }
 
-  void *buffer = malloc(File::DEFAULT_BUFFER_SIZE);
-  auto *file = reinterpret_cast<LinuxFile *>(malloc(sizeof(LinuxFile)));
-  LinuxFile::init(file, fd, buffer, File::DEFAULT_BUFFER_SIZE, _IOFBF, true,
-                  modeflags);
+  uint8_t *buffer;
+  {
+    AllocChecker ac;
+    buffer = new (ac) uint8_t[File::DEFAULT_BUFFER_SIZE];
+    if (!ac)
+      return Error(ENOMEM);
+  }
+  AllocChecker ac;
+  auto *file = new (ac)
+      LinuxFile(fd, buffer, File::DEFAULT_BUFFER_SIZE, _IOFBF, true, modeflags);
+  if (!ac)
+    return Error(ENOMEM);
   return file;
 }
 
@@ -167,13 +165,13 @@ int get_fileno(File *f) {
 }
 
 constexpr size_t STDIN_BUFFER_SIZE = 512;
-char stdin_buffer[STDIN_BUFFER_SIZE];
+uint8_t stdin_buffer[STDIN_BUFFER_SIZE];
 static LinuxFile StdIn(0, stdin_buffer, STDIN_BUFFER_SIZE, _IOFBF, false,
                        File::ModeFlags(File::OpenMode::READ));
 File *stdin = &StdIn;
 
 constexpr size_t STDOUT_BUFFER_SIZE = 1024;
-char stdout_buffer[STDOUT_BUFFER_SIZE];
+uint8_t stdout_buffer[STDOUT_BUFFER_SIZE];
 static LinuxFile StdOut(1, stdout_buffer, STDOUT_BUFFER_SIZE, _IOLBF, false,
                         File::ModeFlags(File::OpenMode::APPEND));
 File *stdout = &StdOut;

@@ -2498,6 +2498,10 @@ class VPlan {
   /// Holds the VFs applicable to this VPlan.
   SmallSetVector<ElementCount, 2> VFs;
 
+  /// Holds the UFs applicable to this VPlan. If empty, the VPlan is valid for
+  /// any UF.
+  SmallSetVector<unsigned, 2> UFs;
+
   /// Holds the name of the VPlan, for printing.
   std::string Name;
 
@@ -2600,6 +2604,14 @@ public:
   bool hasVF(ElementCount VF) { return VFs.count(VF); }
 
   bool hasScalarVFOnly() const { return VFs.size() == 1 && VFs[0].isScalar(); }
+
+  bool hasUF(unsigned UF) const { return UFs.empty() || UFs.contains(UF); }
+
+  void setUF(unsigned UF) {
+    assert(hasUF(UF) && "Cannot set the UF not already in plan");
+    UFs.clear();
+    UFs.insert(UF);
+  }
 
   /// Return a string with the name of the plan and the applicable VFs and UFs.
   std::string getName() const;

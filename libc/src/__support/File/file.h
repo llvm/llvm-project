@@ -89,9 +89,9 @@ private:
   // For files which are readable, we should be able to support one ungetc
   // operation even if |buf| is nullptr. So, in the constructor of File, we
   // set |buf| to point to this buffer character.
-  char ungetc_buf;
+  uint8_t ungetc_buf;
 
-  void *buf;      // Pointer to the stream buffer for buffered streams
+  uint8_t *buf;   // Pointer to the stream buffer for buffered streams
   size_t bufsize; // Size of the buffer pointed to by |buf|.
 
   // Buffering mode to used to buffer.
@@ -151,7 +151,7 @@ public:
   // is zero. This way, we will not have to employ the semantics of
   // the set_buffer method and allocate a buffer.
   constexpr File(WriteFunc *wf, ReadFunc *rf, SeekFunc *sf, CloseFunc *cf,
-                 FlushFunc *ff, void *buffer, size_t buffer_size,
+                 FlushFunc *ff, uint8_t *buffer, size_t buffer_size,
                  int buffer_mode, bool owned, ModeFlags modeflags)
       : platform_write(wf), platform_read(rf), platform_seek(sf),
         platform_close(cf), platform_flush(ff), mutex(false, false, false),
@@ -159,31 +159,6 @@ public:
         own_buf(owned), mode(modeflags), pos(0), prev_op(FileOp::NONE),
         read_limit(0), eof(false), err(false) {
     adjust_buf();
-  }
-
-  // This function helps initialize the various fields of the File data
-  // structure after a allocating memory for it via a call to malloc.
-  static void init(File *f, WriteFunc *wf, ReadFunc *rf, SeekFunc *sf,
-                   CloseFunc *cf, FlushFunc *ff, void *buffer,
-                   size_t buffer_size, int buffer_mode, bool owned,
-                   ModeFlags modeflags) {
-    Mutex::init(&f->mutex, false, false, false);
-    f->platform_write = wf;
-    f->platform_read = rf;
-    f->platform_seek = sf;
-    f->platform_close = cf;
-    f->platform_flush = ff;
-    f->buf = reinterpret_cast<uint8_t *>(buffer);
-    f->bufsize = buffer_size;
-    f->bufmode = buffer_mode;
-    f->own_buf = owned;
-    f->mode = modeflags;
-
-    f->prev_op = FileOp::NONE;
-    f->read_limit = f->pos = 0;
-    f->eof = f->err = false;
-
-    f->adjust_buf();
   }
 
   // Buffered write of |len| bytes from |data| without the file lock.
@@ -234,7 +209,9 @@ public:
   // if:
   //   1. |buffer| is not a nullptr but |size| is zero.
   //   2. |buffer_mode| is not one of _IOLBF, IOFBF or _IONBF.
-  // In both the above cases, error returned in EINVAL.
+  //   3. If an allocation was required but the allocation failed.
+  // For cases 1 and 2, the error returned in EINVAL. For case 3, error returned
+  // is ENOMEM.
   int set_buffer(void *buffer, size_t size, int buffer_mode);
 
   // Closes the file stream and frees up all resources owned by it.
