@@ -39,10 +39,10 @@ TEST(AnOpRewritePatternTest, PatternFuncAttributes) {
 
   patterns.add(anOpRewritePatternFunc, /*benefit=*/3,
                /*generatedNames=*/{test::OpB::getOperationName()});
-  ASSERT_EQ(patterns.getNativePatterns().size(), 1);
+  ASSERT_EQ(patterns.getNativePatterns().size(), 1U);
   auto &pattern = patterns.getNativePatterns().front();
   ASSERT_EQ(pattern->getBenefit(), 3);
-  ASSERT_EQ(pattern->getGeneratedOps().size(), 1);
+  ASSERT_EQ(pattern->getGeneratedOps().size(), 1U);
   ASSERT_EQ(pattern->getGeneratedOps().front().getStringRef(),
             test::OpB::getOperationName());
 }
