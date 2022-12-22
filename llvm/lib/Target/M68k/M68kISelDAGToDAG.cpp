@@ -314,9 +314,9 @@ private:
 
 char M68kDAGToDAGISel::ID;
 
-INITIALIZE_PASS(M68kDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
-
 } // namespace
+
+INITIALIZE_PASS(M68kDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 bool M68kDAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U,
                                           SDNode *Root) const {
