@@ -6361,9 +6361,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         Args.MakeArgString(Twine("-fcf-protection=") + A->getValue()));
   }
 
-  if (IsUsingLTO)
-    Args.AddLastArg(CmdArgs, options::OPT_mibt_seal);
-
   if (Arg *A = Args.getLastArg(options::OPT_mfunction_return_EQ))
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-mfunction-return=") + A->getValue()));
