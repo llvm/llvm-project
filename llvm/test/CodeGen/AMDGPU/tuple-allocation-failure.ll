@@ -31,7 +31,7 @@ bb:
   unreachable
 }
 
-define amdgpu_kernel void @kernel(i32 addrspace(1)* %arg1.global, i1 %tmp3.i.i, i32 %tmp5.i.i, i32 %tmp427.i, i1 %tmp438.i, double %tmp27.i, i1 %tmp48.i) {
+define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i32 %tmp5.i.i, i32 %tmp427.i, i1 %tmp438.i, double %tmp27.i, i1 %tmp48.i) {
 ; GLOBALNESS1-LABEL: kernel:
 ; GLOBALNESS1:       ; %bb.0: ; %bb
 ; GLOBALNESS1-NEXT:    s_mov_b64 s[54:55], s[6:7]
@@ -804,15 +804,15 @@ define amdgpu_kernel void @kernel(i32 addrspace(1)* %arg1.global, i1 %tmp3.i.i, 
 ; GLOBALNESS0-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GLOBALNESS0-NEXT:  .LBB1_34: ; %UnifiedUnreachableBlock
 bb:
-  store i32 0, i32 addrspace(1)* null, align 4
-  %tmp4 = load i32, i32 addrspace(1)* %arg1.global, align 4
+  store i32 0, ptr addrspace(1) null, align 4
+  %tmp4 = load i32, ptr addrspace(1) %arg1.global, align 4
   br label %bb5
 
 bb5:                                              ; preds = %bb5.backedge, %bb
   %tmp4.i.sroa.0.0 = phi <9 x double> [ undef, %bb ], [ %tmp4.i.sroa.0.1, %bb5.backedge ]
-  %tmp14.1.i = load i32, i32* inttoptr (i64 128 to i32*), align 128
-  store i32 0, i32 addrspace(5)* null, align 4
-  %tmp14.2.i = load i32, i32* inttoptr (i64 128 to i32*), align 128
+  %tmp14.1.i = load i32, ptr inttoptr (i64 128 to ptr), align 128
+  store i32 0, ptr addrspace(5) null, align 4
+  %tmp14.2.i = load i32, ptr inttoptr (i64 128 to ptr), align 128
   %tmp15.2.i = icmp eq i32 %tmp14.2.i, 0
   %spec.select.2.i = select i1 %tmp15.2.i, i32 0, i32 %tmp14.1.i
   tail call void @wobble()
@@ -833,8 +833,8 @@ bb11.i.i:                                         ; preds = %bb4.i.i
   unreachable
 
 baz.exit.i:                                       ; preds = %bb4.i.i, %bb5
-  %tmp26.i = load i32, i32* null, align 4
-  %tmp27.i4 = load double, double addrspace(1)* null, align 8
+  %tmp26.i = load i32, ptr null, align 4
+  %tmp27.i4 = load double, ptr addrspace(1) null, align 8
   %tmp31.i = icmp slt i32 %tmp26.i, 0
   br i1 %tmp31.i, label %bb33.i, label %bb64.i
 
@@ -843,7 +843,7 @@ bb33.i:                                           ; preds = %baz.exit.i
   br i1 %tmp38.i, label %bb39.i, label %bb44.lr.ph.i
 
 bb39.i:                                           ; preds = %bb33.i
-  store double 0.000000e+00, double addrspace(1)* null, align 8
+  store double 0.000000e+00, ptr addrspace(1) null, align 8
   br label %bb44.lr.ph.i
 
 bb44.lr.ph.i:                                     ; preds = %bb39.i, %bb33.i
@@ -883,13 +883,13 @@ spam.exit.i:                                      ; preds = %bb8.i.i, %bb6.i.i, 
 bb55.i:                                           ; preds = %spam.exit.i
   tail call void @wobble()
   %tmp0 = extractelement <9 x double> %tmp4.i.sroa.0.0, i32 0
-  store double %tmp0, double addrspace(1)* null, align 8
+  store double %tmp0, ptr addrspace(1) null, align 8
   tail call void @wobble()
   %tmp61.i = icmp eq i32 %spec.select.2.i, 0
   br i1 %tmp61.i, label %bb62.i, label %bb63.i
 
 bb62.i:                                           ; preds = %bb55.i
-  store double 0.000000e+00, double addrspace(1)* null, align 8
+  store double 0.000000e+00, ptr addrspace(1) null, align 8
   br label %bb63.i
 
 bb63.i:                                           ; preds = %bb62.i, %bb55.i, %spam.exit.i, %bb46.i, %bb44.i
@@ -907,7 +907,7 @@ bb67.i:                                           ; preds = %bb64.i
   br i1 %tmp68.i, label %bb69.i, label %bb70.i
 
 bb69.i:                                           ; preds = %bb67.i
-  store double 0.000000e+00, double addrspace(1)* null, align 8
+  store double 0.000000e+00, ptr addrspace(1) null, align 8
   br label %bb70.i
 
 bb70.i:                                           ; preds = %bb69.i, %bb67.i
@@ -915,6 +915,6 @@ bb70.i:                                           ; preds = %bb69.i, %bb67.i
   br i1 %tmp3.i.i2, label %bb73.i, label %bb5.backedge
 
 bb73.i:                                           ; preds = %bb70.i
-  store double 0.000000e+00, double addrspace(1)* null, align 8
+  store double 0.000000e+00, ptr addrspace(1) null, align 8
   br label %bb5.backedge
 }

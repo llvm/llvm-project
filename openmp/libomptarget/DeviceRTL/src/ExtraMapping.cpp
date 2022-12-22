@@ -5,9 +5,9 @@
 
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
-using namespace _OMP;
+using namespace ompx::mapping;
 
-namespace _OMP {
+namespace ompx::mapping {
 namespace impl {
 
 /// AMDGCN Implementation
@@ -98,19 +98,19 @@ static uint32_t getGenericModeMainThreadId() {
 ///}
 
 } // namespace impl
-} // namespace _OMP
+} // namespace ompx::mapping
 
 extern "C" {
 
 /// Extra API calls for ROCm
 
 int omp_ext_get_warp_id() {
-  int rc = mapping::getWarpId();
+  int rc = ompx::mapping::getWarpId();
   return rc;
 }
 
 int omp_ext_get_lane_id() {
-  int rc = mapping::getThreadIdInWarp();
+  int rc = ompx::mapping::getThreadIdInWarp();
   return rc;
 }
 
@@ -127,14 +127,14 @@ int omp_ext_is_spmd_mode() {
 // The following extra call only works for generic mode
 int omp_ext_get_master_thread_id() {
   // thread 0 is main thread in SPMD mode
-  if (mapping::isSPMDMode())
+  if (ompx::mapping::isSPMDMode())
     return 0;
 
   return impl::getGenericModeMainThreadId();
 }
 
 unsigned long long omp_ext_get_active_threads_mask() {
-  unsigned long long rc = mapping::activemask();
+  unsigned long long rc = ompx::mapping::activemask();
   return rc;
 }
 

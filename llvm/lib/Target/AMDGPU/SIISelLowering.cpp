@@ -398,8 +398,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, {MVT::i32, MVT::i64},
                      Expand);
 
-  if (Subtarget->hasFlatAddressSpace())
-    setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
+  setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
 
   setOperationAction(ISD::BITREVERSE, {MVT::i32, MVT::i64}, Legal);
 
@@ -4895,7 +4894,8 @@ SDValue SITargetLowering::lowerIntrinsicLoad(MemSDNode *M, bool IsFormat,
                 : AMDGPUISD::BUFFER_LOAD_FORMAT;
   } else {
     // TODO: Support non-format TFE loads.
-    assert(!IsTFE);
+    if (IsTFE)
+      return SDValue();
     Opc = AMDGPUISD::BUFFER_LOAD;
   }
 
@@ -12342,7 +12342,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
 
   auto Ret = TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
   if (Ret.first)
-    Ret.second = TRI->getPhysRegClass(Ret.first);
+    Ret.second = TRI->getPhysRegBaseClass(Ret.first);
 
   return Ret;
 }

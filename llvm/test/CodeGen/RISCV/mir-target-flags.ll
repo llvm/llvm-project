@@ -55,12 +55,12 @@ define i32 @caller(i32 %a) nounwind {
 ; RV32-MED-NEXT: target-flags(riscv-tprel-lo) @t_le
 ; RV32-MED:      target-flags(riscv-plt) @callee
 ;
-  %b = load i32, i32* @g_e
-  %c = load i32, i32* @g_i
-  %d = load i32, i32* @t_un
-  %e = load i32, i32* @t_ld
-  %f = load i32, i32* @t_ie
-  %g = load i32, i32* @t_le
+  %b = load i32, ptr @g_e
+  %c = load i32, ptr @g_i
+  %d = load i32, ptr @t_un
+  %e = load i32, ptr @t_ld
+  %f = load i32, ptr @t_ie
+  %g = load i32, ptr @t_le
   %sum = bitcast i32 0 to i32
   %sum.a = add i32 %sum, %a
   %sum.b = add i32 %sum.a, %b

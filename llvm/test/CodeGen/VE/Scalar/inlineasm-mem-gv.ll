@@ -12,6 +12,6 @@ define i64 @leam(i64 %x) nounwind {
 ; CHECK-NEXT:    lea %s0, (%s0)
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %asmtmp = tail call i64 asm "lea $0, $1", "=r,*m"(i64* elementtype(i64) @A) nounwind
+  %asmtmp = tail call i64 asm "lea $0, $1", "=r,*m"(ptr elementtype(i64) @A) nounwind
   ret i64 %asmtmp
 }

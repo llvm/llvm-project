@@ -46,6 +46,7 @@ public:
   WalkResult(InFlightDiagnostic &&) : result(Interrupt) {}
 
   bool operator==(const WalkResult &rhs) const { return result == rhs.result; }
+  bool operator!=(const WalkResult &rhs) const { return result != rhs.result; }
 
   static WalkResult interrupt() { return {Interrupt}; }
   static WalkResult advance() { return {Advance}; }

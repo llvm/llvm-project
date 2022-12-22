@@ -2234,14 +2234,6 @@ example:
     unbounded. If the optional max value is omitted then max is set to the
     value of min. If the attribute is not present, no assumptions are made
     about the range of vscale.
-``"min-legal-vector-width"="<size>"``
-    This attribute indicates the minimum legal vector width required by the
-    calling convension. It is the maximum width of vector arguments and
-    returnings in the function and functions called by this function. Because
-    all the vectors are supposed to be legal type for compatibility.
-    Backends are free to ignore the attribute if they don't need to support
-    different maximum legal vector types or such information can be inferred by
-    other attributes.
 
 Call Site Attributes
 ----------------------
@@ -3632,6 +3624,53 @@ Prior to LLVM 15, pointer types also specified a pointee type, such as
 ``i8*``, ``[4 x i32]*`` or ``i32 (i32*)*``. In LLVM 15, such "typed
 pointers" are still supported under non-default options. See the
 `opaque pointers document <OpaquePointers.html>`__ for more information.
+
+.. _t_target_type:
+
+Target Extension Type
+"""""""""""""""""""""
+
+:Overview:
+
+Target extension types represent types that must be preserved through
+optimization, but are otherwise generally opaque to the compiler. They may be
+used as function parameters or arguments, and in :ref:`phi <i_phi>` or
+:ref:`select <i_select>` instructions. Some types may be also used in
+:ref:`alloca <i_alloca>` instructions or as global values, and correspondingly
+it is legal to use :ref:`load <i_load>` and :ref:`store <i_store>` instructions
+on them. Full semantics for these types are defined by the target.
+
+The only constants that target extension types may have are ``zeroinitializer``,
+``undef``, and ``poison``. Other possible values for target extension types may
+arise from target-specific intrinsics and functions.
+
+These types cannot be converted to other types. As such, it is not legal to use
+them in :ref:`bitcast <i_bitcast>` instructions (as a source or target type),
+nor is it legal to use them in :ref:`ptrtoint <i_ptrtoint>` or
+:ref:`inttoptr <i_inttoptr>` instructions. Similarly, they are not legal to use
+in an :ref:`icmp <i_icmp>` instruction.
+
+Target extension types have a name and optional type or integer parameters. The
+meanings of name and parameters are defined by the target. When being defined in
+LLVM IR, all of the type parameters must precede all of the integer parameters.
+
+Specific target extension types are registered with LLVM as having specific
+properties. These properties can be used to restrict the type from appearing in
+certain contexts, such as being the type of a global variable or having a
+``zeroinitializer`` constant be valid. A complete list of type properties may be
+found in the documentation for ``llvm::TargetExtType::Property`` (`doxygen
+<https://llvm.org/doxygen/classllvm_1_1TargetExtType.html>`_).
+
+:Syntax:
+
+.. code-block:: llvm
+
+      target("label")
+      target("label", void)
+      target("label", void, i32)
+      target("label", 0, 1, 2)
+      target("label", void, i32, 0, 1, 2)
+
 
 .. _t_vector:
 
@@ -24604,25 +24643,25 @@ These functions read or write floating point environment, such as rounding
 mode or state of floating point exceptions. Altering the floating point
 environment requires special care. See :ref:`Floating Point Environment <floatenv>`.
 
-'``llvm.flt.rounds``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.get.rounding``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
 ::
 
-      declare i32 @llvm.flt.rounds()
+      declare i32 @llvm.get.rounding()
 
 Overview:
 """""""""
 
-The '``llvm.flt.rounds``' intrinsic reads the current rounding mode.
+The '``llvm.get.rounding``' intrinsic reads the current rounding mode.
 
 Semantics:
 """"""""""
 
-The '``llvm.flt.rounds``' intrinsic returns the current rounding mode.
+The '``llvm.get.rounding``' intrinsic returns the current rounding mode.
 Encoding of the returned values is same as the result of ``FLT_ROUNDS``,
 specified by C standard:
 
@@ -24636,7 +24675,6 @@ specified by C standard:
 
 Other values may be used to represent additional rounding modes, supported by a
 target. These values are target-specific.
-
 
 '``llvm.set.rounding``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -24657,7 +24695,7 @@ Arguments:
 """"""""""
 
 The argument is the required rounding mode. Encoding of rounding mode is
-the same as used by '``llvm.flt.rounds``'.
+the same as used by '``llvm.get.rounding``'.
 
 Semantics:
 """"""""""

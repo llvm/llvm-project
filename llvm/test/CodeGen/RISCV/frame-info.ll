@@ -139,7 +139,7 @@ define void @stack_alloc(i32 signext %size) {
 ; RV64-WITHFP-NEXT:    ret
 entry:
   %0 = alloca i8, i32 %size, align 16
-  call void @callee_with_args(i8* nonnull %0)
+  call void @callee_with_args(ptr nonnull %0)
   ret void
 }
 
@@ -228,4 +228,4 @@ red_pill:
 
 declare void @callee1()
 declare void @callee2()
-declare void @callee_with_args(i8*)
+declare void @callee_with_args(ptr)

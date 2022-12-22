@@ -8,10 +8,10 @@
 ; GCN: {{flat|global}}_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[MASKED]]
 define amdgpu_kernel void @scratch_buffer_known_high_masklo14() #0 {
   %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
-  %toint = ptrtoint i32 addrspace(5)* %alloca to i32
+  store volatile i32 0, ptr addrspace(5) %alloca
+  %toint = ptrtoint ptr addrspace(5) %alloca to i32
   %masked = and i32 %toint, 16383
-  store volatile i32 %masked, i32 addrspace(1)* undef
+  store volatile i32 %masked, ptr addrspace(1) undef
   ret void
 }
 
@@ -21,10 +21,10 @@ define amdgpu_kernel void @scratch_buffer_known_high_masklo14() #0 {
 ; GCN: {{flat|global}}_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[MASKED]]
 define amdgpu_kernel void @scratch_buffer_known_high_masklo16() #0 {
   %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
-  %toint = ptrtoint i32 addrspace(5)* %alloca to i32
+  store volatile i32 0, ptr addrspace(5) %alloca
+  %toint = ptrtoint ptr addrspace(5) %alloca to i32
   %masked = and i32 %toint, 65535
-  store volatile i32 %masked, i32 addrspace(1)* undef
+  store volatile i32 %masked, ptr addrspace(1) undef
   ret void
 }
 
@@ -37,10 +37,10 @@ define amdgpu_kernel void @scratch_buffer_known_high_masklo16() #0 {
 ; WAVE32: {{flat|global}}_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[MASKED]]
 define amdgpu_kernel void @scratch_buffer_known_high_masklo17() #0 {
   %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
-  %toint = ptrtoint i32 addrspace(5)* %alloca to i32
+  store volatile i32 0, ptr addrspace(5) %alloca
+  %toint = ptrtoint ptr addrspace(5) %alloca to i32
   %masked = and i32 %toint, 131071
-  store volatile i32 %masked, i32 addrspace(1)* undef
+  store volatile i32 %masked, ptr addrspace(1) undef
   ret void
 }
 
@@ -50,10 +50,10 @@ define amdgpu_kernel void @scratch_buffer_known_high_masklo17() #0 {
 ; GCN: {{flat|global}}_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[FI]]
 define amdgpu_kernel void @scratch_buffer_known_high_mask18() #0 {
   %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
-  %toint = ptrtoint i32 addrspace(5)* %alloca to i32
+  store volatile i32 0, ptr addrspace(5) %alloca
+  %toint = ptrtoint ptr addrspace(5) %alloca to i32
   %masked = and i32 %toint, 262143
-  store volatile i32 %masked, i32 addrspace(1)* undef
+  store volatile i32 %masked, ptr addrspace(1) undef
   ret void
 }
 

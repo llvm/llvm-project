@@ -449,6 +449,11 @@ transform::MergeHandlesOp::apply(transform::TransformResults &results,
   return DiagnosedSilenceableFailure::success();
 }
 
+bool transform::MergeHandlesOp::allowsRepeatedHandleOperands() {
+  // Handles may be the same if deduplicating is enabled.
+  return getDeduplicate();
+}
+
 void transform::MergeHandlesOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   consumesHandle(getHandles(), effects);

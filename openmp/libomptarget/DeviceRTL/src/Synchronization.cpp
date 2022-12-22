@@ -23,7 +23,7 @@
 
 #pragma omp begin declare target device_type(nohost)
 
-using namespace _OMP;
+using namespace ompx;
 
 namespace impl {
 

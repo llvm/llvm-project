@@ -28,10 +28,10 @@ define void @test_illegal_build_vector() nounwind {
 ; CHECK-LABEL: test_illegal_build_vector:
 ; CHECK:       @ %bb.0: @ %entry
 entry:
-  store <2 x i64> undef, <2 x i64>* undef, align 16
-  %0 = load <16 x i8>, <16 x i8>* undef, align 16            ; <<16 x i8>> [#uses=1]
+  store <2 x i64> undef, ptr undef, align 16
+  %0 = load <16 x i8>, ptr undef, align 16            ; <<16 x i8>> [#uses=1]
   %1 = or <16 x i8> zeroinitializer, %0           ; <<16 x i8>> [#uses=1]
-  store <16 x i8> %1, <16 x i8>* undef, align 16
+  store <16 x i8> %1, ptr undef, align 16
   ret void
 }
 
@@ -41,7 +41,7 @@ define void @test_pr22678() {
 ; CHECK-LABEL: test_pr22678:
 ; CHECK:       @ %bb.0:
   %1 = fptoui <16 x float> undef to <16 x i8>
-  store <16 x i8> %1, <16 x i8>* undef
+  store <16 x i8> %1, ptr undef
   ret void
 }
 
@@ -81,7 +81,7 @@ bb2:
 
 ; Test trying to do a ShiftCombine on illegal types.
 ; The vector should be split first.
-define void @lshrIllegalType(<8 x i32>* %A) nounwind {
+define void @lshrIllegalType(ptr %A) nounwind {
 ; CHECK-LABEL: lshrIllegalType:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0:128]
@@ -91,9 +91,9 @@ define void @lshrIllegalType(<8 x i32>* %A) nounwind {
 ; CHECK-NEXT:    vshr.u32 q8, q8, #3
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0:128]
 ; CHECK-NEXT:    bx lr
-       %tmp1 = load <8 x i32>, <8 x i32>* %A
+       %tmp1 = load <8 x i32>, ptr %A
        %tmp2 = lshr <8 x i32> %tmp1, < i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
-       store <8 x i32> %tmp2, <8 x i32>* %A
+       store <8 x i32> %tmp2, ptr %A
        ret void
 }
 
@@ -111,54 +111,54 @@ entry:
   %2 = shufflevector <4 x i16> %1, <4 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %3 = add <8 x i16> %2, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %4 = trunc <8 x i16> %3 to <8 x i8>
-  tail call void @llvm.arm.neon.vst1.p0i8.v8i8(i8* undef, <8 x i8> %4, i32 1)
+  tail call void @llvm.arm.neon.vst1.p0.v8i8(ptr undef, <8 x i8> %4, i32 1)
   ret void
 }
 
-declare void @llvm.arm.neon.vst1.p0i8.v8i8(i8*, <8 x i8>, i32) nounwind
+declare void @llvm.arm.neon.vst1.p0.v8i8(ptr, <8 x i8>, i32) nounwind
 
 ; Test that loads and stores of i64 vector elements are handled as f64 values
 ; so they are not split up into i32 values.  Radar 8755338.
-define void @i64_buildvector(i64* %ptr, <2 x i64>* %vp) nounwind {
+define void @i64_buildvector(ptr %ptr, ptr %vp) nounwind {
 ; CHECK-LABEL: i64_buildvector:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    bx lr
-  %t0 = load i64, i64* %ptr, align 4
+  %t0 = load i64, ptr %ptr, align 4
   %t1 = insertelement <2 x i64> undef, i64 %t0, i32 0
-  store <2 x i64> %t1, <2 x i64>* %vp
+  store <2 x i64> %t1, ptr %vp
   ret void
 }
 
-define void @i64_insertelement(i64* %ptr, <2 x i64>* %vp) nounwind {
+define void @i64_insertelement(ptr %ptr, ptr %vp) nounwind {
 ; CHECK-LABEL: i64_insertelement:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    bx lr
-  %t0 = load i64, i64* %ptr, align 4
-  %vec = load <2 x i64>, <2 x i64>* %vp
+  %t0 = load i64, ptr %ptr, align 4
+  %vec = load <2 x i64>, ptr %vp
   %t1 = insertelement <2 x i64> %vec, i64 %t0, i32 0
-  store <2 x i64> %t1, <2 x i64>* %vp
+  store <2 x i64> %t1, ptr %vp
   ret void
 }
 
-define void @i64_extractelement(i64* %ptr, <2 x i64>* %vp) nounwind {
+define void @i64_extractelement(ptr %ptr, ptr %vp) nounwind {
 ; CHECK-LABEL: i64_extractelement:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vstr d16, [r0]
 ; CHECK-NEXT:    bx lr
-  %vec = load <2 x i64>, <2 x i64>* %vp
+  %vec = load <2 x i64>, ptr %vp
   %t1 = extractelement <2 x i64> %vec, i32 0
-  store i64 %t1, i64* %ptr
+  store i64 %t1, ptr %ptr
   ret void
 }
 
 ; Test trying to do a AND Combine on illegal types.
-define void @andVec(<3 x i8>* %A) nounwind {
+define void @andVec(ptr %A) nounwind {
 ; CHECK-LABEL: andVec:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .pad #8
@@ -182,15 +182,15 @@ define void @andVec(<3 x i8>* %A) nounwind {
 ; CHECK-NEXT:    strh r2, [r0]
 ; CHECK-NEXT:    add sp, sp, #8
 ; CHECK-NEXT:    bx lr
-  %tmp = load <3 x i8>, <3 x i8>* %A, align 4
+  %tmp = load <3 x i8>, ptr %A, align 4
   %and = and <3 x i8> %tmp, <i8 7, i8 7, i8 7>
-  store <3 x i8> %and, <3 x i8>* %A
+  store <3 x i8> %and, ptr %A
   ret void
 }
 
 
 ; Test trying to do an OR Combine on illegal types.
-define void @orVec(<3 x i8>* %A) nounwind {
+define void @orVec(ptr %A) nounwind {
 ; CHECK-LABEL: orVec:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .pad #8
@@ -213,9 +213,9 @@ define void @orVec(<3 x i8>* %A) nounwind {
 ; CHECK-NEXT:    strh r2, [r0]
 ; CHECK-NEXT:    add sp, sp, #8
 ; CHECK-NEXT:    bx lr
-  %tmp = load <3 x i8>, <3 x i8>* %A, align 4
+  %tmp = load <3 x i8>, ptr %A, align 4
   %or = or <3 x i8> %tmp, <i8 7, i8 7, i8 7>
-  store <3 x i8> %or, <3 x i8>* %A
+  store <3 x i8> %or, ptr %A
   ret void
 }
 
@@ -236,7 +236,7 @@ define i16 @foldBuildVectors() {
 
 ; Test that we are generating vrev and vext for reverse shuffles of v8i16
 ; shuffles.
-define void @reverse_v8i16(<8 x i16>* %loadaddr, <8 x i16>* %storeaddr) {
+define void @reverse_v8i16(ptr %loadaddr, ptr %storeaddr) {
 ; CHECK-LABEL: reverse_v8i16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -244,16 +244,16 @@ define void @reverse_v8i16(<8 x i16>* %loadaddr, <8 x i16>* %storeaddr) {
 ; CHECK-NEXT:    vext.16 q8, q8, q8, #4
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    bx lr
-  %v0 = load <8 x i16>, <8 x i16>* %loadaddr
+  %v0 = load <8 x i16>, ptr %loadaddr
   %v1 = shufflevector <8 x i16> %v0, <8 x i16> undef,
               <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-  store <8 x i16> %v1, <8 x i16>* %storeaddr
+  store <8 x i16> %v1, ptr %storeaddr
   ret void
 }
 
 ; Test that we are generating vrev and vext for reverse shuffles of v16i8
 ; shuffles.
-define void @reverse_v16i8(<16 x i8>* %loadaddr, <16 x i8>* %storeaddr) {
+define void @reverse_v16i8(ptr %loadaddr, ptr %storeaddr) {
 ; CHECK-LABEL: reverse_v16i8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -261,11 +261,11 @@ define void @reverse_v16i8(<16 x i8>* %loadaddr, <16 x i8>* %storeaddr) {
 ; CHECK-NEXT:    vext.8 q8, q8, q8, #8
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    bx lr
-  %v0 = load <16 x i8>, <16 x i8>* %loadaddr
+  %v0 = load <16 x i8>, ptr %loadaddr
   %v1 = shufflevector <16 x i8> %v0, <16 x i8> undef,
        <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8,
                    i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-  store <16 x i8> %v1, <16 x i8>* %storeaddr
+  store <16 x i8> %v1, ptr %storeaddr
   ret void
 }
 
@@ -273,7 +273,7 @@ define void @reverse_v16i8(<16 x i8>* %loadaddr, <16 x i8>* %storeaddr) {
 ; vldr cannot handle unaligned loads.
 ; Fall back to vld1.32, which can, instead of using the general purpose loads
 ; followed by a costly sequence of instructions to build the vector register.
-define <8 x i16> @t3(i8 zeroext %xf, i8* nocapture %sp0, i8* nocapture %sp1, i32* nocapture %outp) {
+define <8 x i16> @t3(i8 zeroext %xf, ptr nocapture %sp0, ptr nocapture %sp1, ptr nocapture %outp) {
 ; CHECK-LABEL: t3:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.32 {d16[0]}, [r1]
@@ -283,10 +283,8 @@ define <8 x i16> @t3(i8 zeroext %xf, i8* nocapture %sp0, i8* nocapture %sp1, i32
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    bx lr
 entry:
-  %pix_sp0.0.cast = bitcast i8* %sp0 to i32*
-  %pix_sp0.0.copyload = load i32, i32* %pix_sp0.0.cast, align 1
-  %pix_sp1.0.cast = bitcast i8* %sp1 to i32*
-  %pix_sp1.0.copyload = load i32, i32* %pix_sp1.0.cast, align 1
+  %pix_sp0.0.copyload = load i32, ptr %sp0, align 1
+  %pix_sp1.0.copyload = load i32, ptr %sp1, align 1
   %vecinit = insertelement <2 x i32> undef, i32 %pix_sp0.0.copyload, i32 0
   %vecinit1 = insertelement <2 x i32> %vecinit, i32 %pix_sp1.0.copyload, i32 1
   %0 = bitcast <2 x i32> %vecinit1 to <8 x i8>
@@ -299,7 +297,7 @@ declare <8 x i16> @llvm.arm.neon.vmullu.v8i16(<8 x i8>, <8 x i8>)
 
 ; Check that (insert_vector_elt (load)) => (vector_load).
 ; Thus, check that scalar_to_vector do not interfer with that.
-define <8 x i16> @t4(i8* nocapture %sp0) {
+define <8 x i16> @t4(ptr nocapture %sp0) {
 ; CHECK-LABEL: t4:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.32 {d16[0]}, [r0]
@@ -308,8 +306,7 @@ define <8 x i16> @t4(i8* nocapture %sp0) {
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    bx lr
 entry:
-  %pix_sp0.0.cast = bitcast i8* %sp0 to i32*
-  %pix_sp0.0.copyload = load i32, i32* %pix_sp0.0.cast, align 1
+  %pix_sp0.0.copyload = load i32, ptr %sp0, align 1
   %vec = insertelement <2 x i32> undef, i32 %pix_sp0.0.copyload, i32 0
   %0 = bitcast <2 x i32> %vec to <8 x i8>
   %vmull.i = tail call <8 x i16> @llvm.arm.neon.vmullu.v8i16(<8 x i8> %0, <8 x i8> %0)
@@ -319,7 +316,7 @@ entry:
 ; Make sure vector load is used for all three loads.
 ; Lowering to build vector was breaking the single use property of the load of
 ;  %pix_sp0.0.copyload.
-define <8 x i16> @t5(i8* nocapture %sp0, i8* nocapture %sp1, i8* nocapture %sp2) {
+define <8 x i16> @t5(ptr nocapture %sp0, ptr nocapture %sp1, ptr nocapture %sp2) {
 ; CHECK-LABEL: t5:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.32 {d16[1]}, [r0]
@@ -331,12 +328,9 @@ define <8 x i16> @t5(i8* nocapture %sp0, i8* nocapture %sp1, i8* nocapture %sp2)
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    bx lr
 entry:
-  %pix_sp0.0.cast = bitcast i8* %sp0 to i32*
-  %pix_sp0.0.copyload = load i32, i32* %pix_sp0.0.cast, align 1
-  %pix_sp1.0.cast = bitcast i8* %sp1 to i32*
-  %pix_sp1.0.copyload = load i32, i32* %pix_sp1.0.cast, align 1
-  %pix_sp2.0.cast = bitcast i8* %sp2 to i32*
-  %pix_sp2.0.copyload = load i32, i32* %pix_sp2.0.cast, align 1
+  %pix_sp0.0.copyload = load i32, ptr %sp0, align 1
+  %pix_sp1.0.copyload = load i32, ptr %sp1, align 1
+  %pix_sp2.0.copyload = load i32, ptr %sp2, align 1
   %vec = insertelement <2 x i32> undef, i32 %pix_sp0.0.copyload, i32 1
   %vecinit1 = insertelement <2 x i32> %vec, i32 %pix_sp1.0.copyload, i32 0
   %vecinit2 = insertelement <2 x i32> %vec, i32 %pix_sp2.0.copyload, i32 0

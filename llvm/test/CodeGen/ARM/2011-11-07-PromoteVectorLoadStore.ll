@@ -7,18 +7,18 @@
 
 define void @test_neon_vector_add_2xi8() nounwind {
 ; CHECK-LABEL: test_neon_vector_add_2xi8:
-  %1 = load <2 x i8>, <2 x i8>* @i8_src1
-  %2 = load <2 x i8>, <2 x i8>* @i8_src2
+  %1 = load <2 x i8>, ptr @i8_src1
+  %2 = load <2 x i8>, ptr @i8_src2
   %3 = add <2 x i8> %1, %2
-  store <2 x i8> %3, <2 x i8>* @i8_res
+  store <2 x i8> %3, ptr @i8_res
   ret void
 }
 
 define void @test_neon_ld_st_volatile_with_ashr_2xi8() {
 ; CHECK-LABEL: test_neon_ld_st_volatile_with_ashr_2xi8:
-  %1 = load volatile <2 x i8>, <2 x i8>* @i8_src1
-  %2 = load volatile <2 x i8>, <2 x i8>* @i8_src2
+  %1 = load volatile <2 x i8>, ptr @i8_src1
+  %2 = load volatile <2 x i8>, ptr @i8_src2
   %3 = ashr <2 x i8> %1, %2
-  store volatile <2 x i8> %3, <2 x i8>* @i8_res
+  store volatile <2 x i8> %3, ptr @i8_res
   ret void
 }

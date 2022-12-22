@@ -765,3 +765,81 @@ follow_2:
   %vv = load i32, i32* %x, align 4
   ret i32 %vv
 }
+
+declare i1 @foo()
+declare i1 @bar()
+
+; %v3 is partially redundant, bb3 has multiple predecessors coming through
+; critical edges. The other successors of those predecessors have same loads.
+; We can move all loads into predecessors.
+
+define void @test17(i64* %p1, i64* %p2, i64* %p3, i64* %p4)
+; CHECK-LABEL: @test17(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V1:%.*]] = load i64, i64* [[P1:%.*]], align 8
+; CHECK-NEXT:    [[COND1:%.*]] = icmp sgt i64 [[V1]], 200
+; CHECK-NEXT:    br i1 [[COND1]], label [[BB200:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[COND2:%.*]] = icmp sgt i64 [[V1]], 100
+; CHECK-NEXT:    br i1 [[COND2]], label [[BB100:%.*]], label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[V2:%.*]] = add nsw i64 [[V1]], 1
+; CHECK-NEXT:    store i64 [[V2]], i64* [[P1]], align 8
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[V3:%.*]] = load i64, i64* [[P1]], align 8
+; CHECK-NEXT:    store i64 [[V3]], i64* [[P2:%.*]], align 8
+; CHECK-NEXT:    ret void
+; CHECK:       bb100:
+; CHECK-NEXT:    [[COND3:%.*]] = call i1 @foo()
+; CHECK-NEXT:    br i1 [[COND3]], label [[BB3]], label [[BB101:%.*]]
+; CHECK:       bb101:
+; CHECK-NEXT:    [[V4:%.*]] = load i64, i64* [[P1]], align 8
+; CHECK-NEXT:    store i64 [[V4]], i64* [[P3:%.*]], align 8
+; CHECK-NEXT:    ret void
+; CHECK:       bb200:
+; CHECK-NEXT:    [[COND4:%.*]] = call i1 @bar()
+; CHECK-NEXT:    br i1 [[COND4]], label [[BB3]], label [[BB201:%.*]]
+; CHECK:       bb201:
+; CHECK-NEXT:    [[V5:%.*]] = load i64, i64* [[P1]], align 8
+; CHECK-NEXT:    store i64 [[V5]], i64* [[P4:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+{
+entry:
+  %v1 = load i64, i64* %p1, align 8
+  %cond1 = icmp sgt i64 %v1, 200
+  br i1 %cond1, label %bb200, label %bb1
+
+bb1:
+  %cond2 = icmp sgt i64 %v1, 100
+  br i1 %cond2, label %bb100, label %bb2
+
+bb2:
+  %v2 = add nsw i64 %v1, 1
+  store i64 %v2, i64* %p1, align 8
+  br label %bb3
+
+bb3:
+  %v3 = load i64, i64* %p1, align 8
+  store i64 %v3, i64* %p2, align 8
+  ret void
+
+bb100:
+  %cond3 = call i1 @foo()
+  br i1 %cond3, label %bb3, label %bb101
+
+bb101:
+  %v4 = load i64, i64* %p1, align 8
+  store i64 %v4, i64* %p3, align 8
+  ret void
+
+bb200:
+  %cond4 = call i1 @bar()
+  br i1 %cond4, label %bb3, label %bb201
+
+bb201:
+  %v5 = load i64, i64* %p1, align 8
+  store i64 %v5, i64* %p4, align 8
+  ret void
+}

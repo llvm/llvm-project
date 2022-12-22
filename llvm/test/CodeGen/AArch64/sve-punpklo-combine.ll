@@ -2,7 +2,7 @@
 ; RUN: llc < %s | FileCheck %s
 target triple = "aarch64-unknown-linux-gnu"
 
-define <vscale x 8 x i1> @masked_load_sext_i8i16(i8* %ap, <vscale x 16 x i8> %b) #0 {
+define <vscale x 8 x i1> @masked_load_sext_i8i16(ptr %ap, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: masked_load_sext_i8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -19,7 +19,7 @@ define <vscale x 8 x i1> @masked_load_sext_i8i16(i8* %ap, <vscale x 16 x i8> %b)
 }
 
 ; This negative test ensures the two ptrues have the same vl
-define <vscale x 8 x i1> @masked_load_sext_i8i16_ptrue_vl(i8* %ap, <vscale x 16 x i8> %b) #0 {
+define <vscale x 8 x i1> @masked_load_sext_i8i16_ptrue_vl(ptr %ap, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: masked_load_sext_i8i16_ptrue_vl:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
@@ -38,7 +38,7 @@ define <vscale x 8 x i1> @masked_load_sext_i8i16_ptrue_vl(i8* %ap, <vscale x 16 
 }
 
 ; This negative test enforces that both predicates are ptrues
-define <vscale x 8 x i1> @masked_load_sext_i8i16_parg(i8* %ap, <vscale x 16 x i8> %b, <vscale x 16 x i1> %p0) #0 {
+define <vscale x 8 x i1> @masked_load_sext_i8i16_parg(ptr %ap, <vscale x 16 x i8> %b, <vscale x 16 x i1> %p0) #0 {
 ; CHECK-LABEL: masked_load_sext_i8i16_parg:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
@@ -54,7 +54,7 @@ define <vscale x 8 x i1> @masked_load_sext_i8i16_parg(i8* %ap, <vscale x 16 x i8
   ret <vscale x 8 x i1> %cmp1
 }
 
-define <vscale x 4 x i1> @masked_load_sext_i8i32(i8* %ap, <vscale x 16 x i8> %b) #0 {
+define <vscale x 4 x i1> @masked_load_sext_i8i32(ptr %ap, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: masked_load_sext_i8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -72,7 +72,7 @@ define <vscale x 4 x i1> @masked_load_sext_i8i32(i8* %ap, <vscale x 16 x i8> %b)
 }
 
 ; This negative test ensures the two ptrues have the same vl
-define <vscale x 4 x i1> @masked_load_sext_i8i32_ptrue_vl(i8* %ap, <vscale x 16 x i8> %b) #0 {
+define <vscale x 4 x i1> @masked_load_sext_i8i32_ptrue_vl(ptr %ap, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: masked_load_sext_i8i32_ptrue_vl:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
@@ -92,7 +92,7 @@ define <vscale x 4 x i1> @masked_load_sext_i8i32_ptrue_vl(i8* %ap, <vscale x 16 
 }
 
 ; This negative test enforces that both predicates are ptrues
-define <vscale x 4 x i1> @masked_load_sext_i8i32_parg(i8* %ap, <vscale x 16 x i8> %b, <vscale x 16 x i1> %p0) #0 {
+define <vscale x 4 x i1> @masked_load_sext_i8i32_parg(ptr %ap, <vscale x 16 x i8> %b, <vscale x 16 x i1> %p0) #0 {
 ; CHECK-LABEL: masked_load_sext_i8i32_parg:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
@@ -109,7 +109,7 @@ define <vscale x 4 x i1> @masked_load_sext_i8i32_parg(i8* %ap, <vscale x 16 x i8
   ret <vscale x 4 x i1> %cmp1
 }
 
-define <vscale x 2 x i1> @masked_load_sext_i8i64(i8* %ap, <vscale x 16 x i8> %b) #0 {
+define <vscale x 2 x i1> @masked_load_sext_i8i64(ptr %ap, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: masked_load_sext_i8i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -128,7 +128,7 @@ define <vscale x 2 x i1> @masked_load_sext_i8i64(i8* %ap, <vscale x 16 x i8> %b)
 }
 
 ; This negative test ensures the two ptrues have the same vl
-define <vscale x 2 x i1> @masked_load_sext_i8i64_ptrue_vl(i8* %ap, <vscale x 16 x i8> %b) #0 {
+define <vscale x 2 x i1> @masked_load_sext_i8i64_ptrue_vl(ptr %ap, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: masked_load_sext_i8i64_ptrue_vl:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
@@ -149,7 +149,7 @@ define <vscale x 2 x i1> @masked_load_sext_i8i64_ptrue_vl(i8* %ap, <vscale x 16 
 }
 
 ; This negative test enforces that both predicates are ptrues
-define <vscale x 2 x i1> @masked_load_sext_i8i64_parg(i8* %ap, <vscale x 16 x i8> %b, <vscale x 16 x i1> %p0) #0 {
+define <vscale x 2 x i1> @masked_load_sext_i8i64_parg(ptr %ap, <vscale x 16 x i8> %b, <vscale x 16 x i1> %p0) #0 {
 ; CHECK-LABEL: masked_load_sext_i8i64_parg:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
@@ -168,7 +168,7 @@ define <vscale x 2 x i1> @masked_load_sext_i8i64_parg(i8* %ap, <vscale x 16 x i8
 }
 
 ; This negative test enforces that the ptrues have a specified vl
-define <vscale x 8 x i1> @masked_load_sext_i8i16_ptrue_all(i8* %ap, <vscale x 16 x i8> %b) #0 {
+define <vscale x 8 x i1> @masked_load_sext_i8i16_ptrue_all(ptr %ap, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: masked_load_sext_i8i16_ptrue_all:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
@@ -187,7 +187,7 @@ define <vscale x 8 x i1> @masked_load_sext_i8i16_ptrue_all(i8* %ap, <vscale x 16
 }
 
 ; This negative test enforces that the ptrues have a specified vl
-define <vscale x 4 x i1> @masked_load_sext_i8i32_ptrue_all(i8* %ap, <vscale x 16 x i8> %b) #0 {
+define <vscale x 4 x i1> @masked_load_sext_i8i32_ptrue_all(ptr %ap, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: masked_load_sext_i8i32_ptrue_all:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
@@ -207,7 +207,7 @@ define <vscale x 4 x i1> @masked_load_sext_i8i32_ptrue_all(i8* %ap, <vscale x 16
 }
 
 ; This negative test enforces that the ptrues have a specified vl
-define <vscale x 2 x i1> @masked_load_sext_i8i64_ptrue_all(i8* %ap, <vscale x 16 x i8> %b) #0 {
+define <vscale x 2 x i1> @masked_load_sext_i8i64_ptrue_all(ptr %ap, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: masked_load_sext_i8i64_ptrue_all:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b

@@ -21,7 +21,7 @@
 
 #define __XTEAM_SHARED_LDS volatile __attribute__((address_space(3)))
 
-using namespace _OMP;
+using namespace  ompx::mapping;
 
 #pragma omp begin declare target device_type(nohost)
 
@@ -38,7 +38,7 @@ float _Complex xteamr_shfl_xor_cf(float _Complex var, const int lane_mask,
 
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 int xteamr_shfl_xor_int(int var, const int lane_mask, const uint32_t width) {
-  int self = mapping::getThreadIdInWarp(); // __lane_id();
+  int self = ompx::mapping::getThreadIdInWarp(); // __lane_id();
   int index = self ^ lane_mask;
   index = index >= ((self + width) & ~(width - 1)) ? self : index;
   return __builtin_amdgcn_ds_bpermute(index << 2, var);
@@ -208,7 +208,7 @@ __attribute__((flatten, always_inline)) void _iteam_reduction(
     xwave_lds[wave_num] = val;
 
   // Binary reduce all wave values into wave_lds[0]
-  _OMP::synchronize::threadsAligned();
+   ompx::synchronize::threadsAligned();
   for (unsigned int offset = _NW / 2; offset > 0; offset >>= 1) {
     if (omp_thread_num < offset)
       (*_rf_lds)(&(xwave_lds[omp_thread_num]),
@@ -219,7 +219,7 @@ __attribute__((flatten, always_inline)) void _iteam_reduction(
   if (omp_thread_num == 0)
     *r_ptr = xwave_lds[0];
 
-  _OMP::synchronize::threadsAligned();
+   ompx::synchronize::threadsAligned();
 }
 
 /// Templated internal function used by all extern typed reductions
@@ -271,7 +271,7 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
     xwave_lds[wave_num] = val;
 
   // Binary reduce all wave values into wave_lds[0]
-  _OMP::synchronize::threadsAligned();
+   ompx::synchronize::threadsAligned();
   for (unsigned int offset = _NW / 2; offset > 0; offset >>= 1) {
     if (omp_thread_num < offset)
       (*_rf_lds)(&(xwave_lds[omp_thread_num]),
@@ -285,12 +285,12 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
   static __XTEAM_SHARED_LDS uint32_t td;
   if (omp_thread_num == 0) {
     team_vals[omp_team_num] = xwave_lds[0];
-    td = atomic::inc(teams_done_ptr, NumTeams - 1u, atomic::seq_cst);
+    td = ompx::atomic::inc(teams_done_ptr, NumTeams - 1u, ompx::atomic::seq_cst);
   }
 
   // This sync needed so all threads from last team see the shared volatile
   // value td (teams done counter) so they know they are in the last team.
-  _OMP::synchronize::threadsAligned();
+   ompx::synchronize::threadsAligned();
 
   // If td counter reaches NumTeams-1, this is the last team.
   // The team number of this last team is nondeterministic.
@@ -303,7 +303,7 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
     val = (omp_thread_num < NumTeams) ? team_vals[omp_thread_num] : rnv;
 
     // Need sync here to prepare for TLS shfl reduce.
-    _OMP::synchronize::threadsAligned();
+     ompx::synchronize::threadsAligned();
 
     // Reduce each wave into xwave_lds[wave_num]
     for (unsigned int offset = _WSZ / 2; offset > 0; offset >>= 1)
@@ -312,7 +312,7 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
       xwave_lds[wave_num] = val;
 
     // Binary reduce all wave values into wave_lds[0]
-    _OMP::synchronize::threadsAligned();
+     ompx::synchronize::threadsAligned();
     for (unsigned int offset = _NW / 2; offset > 0; offset >>= 1) {
       if (omp_thread_num < offset)
         (*_rf_lds)(&(xwave_lds[omp_thread_num]),
@@ -335,7 +335,7 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
 
     // This sync needed to prevent warps in last team from starting
     // if there was another reduction.
-    _OMP::synchronize::threadsAligned();
+     ompx::synchronize::threadsAligned();
   }
 }
 

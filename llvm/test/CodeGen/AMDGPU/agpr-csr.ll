@@ -92,7 +92,7 @@ define amdgpu_kernel void @test_call_empty() #0 {
 bb:
   %reg = call <32 x float> asm sideeffect "; def $0", "=a"()
   call void @func_empty()
-  store volatile <32 x float> %reg, <32 x float> addrspace(1)* undef
+  store volatile <32 x float> %reg, ptr addrspace(1) undef
   ret void
 }
 
@@ -114,7 +114,7 @@ define amdgpu_kernel void @test_call_areg4() #0 {
 bb:
   %reg = call <32 x float> asm sideeffect "; def $0", "=a"()
   call void @func_areg_4()
-  store volatile <32 x float> %reg, <32 x float> addrspace(1)* undef
+  store volatile <32 x float> %reg, ptr addrspace(1) undef
   ret void
 }
 
@@ -136,7 +136,7 @@ define amdgpu_kernel void @test_call_areg32() #0 {
 bb:
   %reg = call <32 x float> asm sideeffect "; def $0", "=a"()
   call void @func_areg_32()
-  store volatile <32 x float> %reg, <32 x float> addrspace(1)* undef
+  store volatile <32 x float> %reg, ptr addrspace(1) undef
   ret void
 }
 
@@ -157,7 +157,7 @@ define amdgpu_kernel void @test_call_areg64() #0 {
 bb:
   %reg = call <32 x float> asm sideeffect "; def $0", "=a"()
   call void @func_areg_64()
-  store volatile <32 x float> %reg, <32 x float> addrspace(1)* undef
+  store volatile <32 x float> %reg, ptr addrspace(1) undef
   ret void
 }
 
@@ -179,7 +179,7 @@ define amdgpu_kernel void @test_call_areg31_63() #0 {
 bb:
   %reg = call <32 x float> asm sideeffect "; def $0", "=a"()
   call void @func_areg_31_63()
-  store volatile <32 x float> %reg, <32 x float> addrspace(1)* undef
+  store volatile <32 x float> %reg, ptr addrspace(1) undef
   ret void
 }
 
@@ -201,7 +201,7 @@ define amdgpu_kernel void @test_call_unknown() #0 {
 bb:
   %reg = call <32 x float> asm sideeffect "; def $0", "=a"()
   call void @func_unknown()
-  store volatile <32 x float> %reg, <32 x float> addrspace(1)* undef
+  store volatile <32 x float> %reg, ptr addrspace(1) undef
   ret void
 }
 

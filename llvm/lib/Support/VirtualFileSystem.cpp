@@ -1638,7 +1638,7 @@ class llvm::vfs::RedirectingFileSystemParser {
     return std::nullopt;
   }
 
-  Optional<RedirectingFileSystem::RootRelativeKind>
+  std::optional<RedirectingFileSystem::RootRelativeKind>
   parseRootRelativeKind(yaml::Node *N) {
     SmallString<12> Storage;
     StringRef Value;

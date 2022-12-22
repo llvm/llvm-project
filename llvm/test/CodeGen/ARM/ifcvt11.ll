@@ -5,7 +5,7 @@
 
 %struct.xyz_t = type { double, double, double }
 
-define i32 @effie(i32 %tsets, %struct.xyz_t* nocapture %p, i32 %a, i32 %b, i32 %c) nounwind readonly noinline {
+define i32 @effie(i32 %tsets, ptr nocapture %p, i32 %a, i32 %b, i32 %c) nounwind readonly noinline {
 ; CHECK-LABEL: effie:
 entry:
   %0 = icmp sgt i32 %tsets, 0
@@ -21,10 +21,10 @@ bb:                                               ; preds = %bb4, %bb.nph
 ; CHECK: vmrs APSR_nzcv, fpscr
   %r.19 = phi i32 [ 0, %bb.nph ], [ %r.0, %bb4 ]
   %n.08 = phi i32 [ 0, %bb.nph ], [ %10, %bb4 ]
-  %scevgep10 = getelementptr inbounds %struct.xyz_t, %struct.xyz_t* %p, i32 %n.08, i32 0
-  %scevgep11 = getelementptr %struct.xyz_t, %struct.xyz_t* %p, i32 %n.08, i32 1
-  %3 = load double, double* %scevgep10, align 4
-  %4 = load double, double* %scevgep11, align 4
+  %scevgep10 = getelementptr inbounds %struct.xyz_t, ptr %p, i32 %n.08, i32 0
+  %scevgep11 = getelementptr %struct.xyz_t, ptr %p, i32 %n.08, i32 1
+  %3 = load double, ptr %scevgep10, align 4
+  %4 = load double, ptr %scevgep11, align 4
   %5 = fcmp uge double %3, %4
   br i1 %5, label %bb3, label %bb1
 
@@ -34,8 +34,8 @@ bb1:                                              ; preds = %bb
 ; CHECK-NOT: vmrsmi
 ; CHECK: vcmp.f64
 ; CHECK: vmrs APSR_nzcv, fpscr
-  %scevgep12 = getelementptr %struct.xyz_t, %struct.xyz_t* %p, i32 %n.08, i32 2
-  %6 = load double, double* %scevgep12, align 4
+  %scevgep12 = getelementptr %struct.xyz_t, ptr %p, i32 %n.08, i32 2
+  %6 = load double, ptr %scevgep12, align 4
   %7 = fcmp uge double %3, %6
   br i1 %7, label %bb3, label %bb2
 

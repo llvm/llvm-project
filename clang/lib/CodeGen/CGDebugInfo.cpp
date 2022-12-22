@@ -538,7 +538,7 @@ void CGDebugInfo::CreateCompileUnit() {
   // a relative path, so we look into the actual file entry for the main
   // file to determine the real absolute path for the file.
   std::string MainFileDir;
-  if (std::optional<FileEntryRef> MainFile =
+  if (OptionalFileEntryRef MainFile =
           SM.getFileEntryRefForID(SM.getMainFileID())) {
     MainFileDir = std::string(MainFile->getDir().getName());
     if (!llvm::sys::path::is_absolute(MainFileName)) {
@@ -2931,6 +2931,9 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
       Flags = llvm::DINode::FlagPrivate;
     else if (Field->getAccessControl() == ObjCIvarDecl::Public)
       Flags = llvm::DINode::FlagPublic;
+
+    if (Field->isBitField())
+      Flags |= llvm::DINode::FlagBitField;
 
     llvm::MDNode *PropertyNode = nullptr;
     if (ObjCImplementationDecl *ImpD = ID->getImplementation()) {

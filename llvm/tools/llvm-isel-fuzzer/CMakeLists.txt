@@ -17,6 +17,7 @@ set(LLVM_LINK_COMPONENTS
     SelectionDAG
     Support
     Target
+    TargetParser
 )
 add_llvm_fuzzer(llvm-isel-fuzzer
   llvm-isel-fuzzer.cpp

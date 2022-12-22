@@ -1653,6 +1653,12 @@ Fortran::lower::pft::FunctionLikeUnit::parentHostAssoc() {
   llvm::report_fatal_error("parent is not a function");
 }
 
+bool Fortran::lower::pft::FunctionLikeUnit::parentHasTupleHostAssoc() {
+  if (auto *par = parent.getIf<FunctionLikeUnit>())
+    return par->hostAssociations.hasTupleAssociations();
+  return false;
+}
+
 bool Fortran::lower::pft::FunctionLikeUnit::parentHasHostAssoc() {
   if (auto *par = parent.getIf<FunctionLikeUnit>())
     return !par->hostAssociations.empty();

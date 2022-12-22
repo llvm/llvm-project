@@ -33,7 +33,7 @@ define amdgpu_kernel void @insertelement_v2f32_0(ptr addrspace(1) %out, <2 x flo
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <2 x float> %a, float 5.000000e+00, i32 0
-  store <2 x float> %vecins, <2 x float> addrspace(1)* %out, align 16
+  store <2 x float> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -64,7 +64,7 @@ define amdgpu_kernel void @insertelement_v2f32_1(ptr addrspace(1) %out, <2 x flo
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <2 x float> %a, float 5.000000e+00, i32 1
-  store <2 x float> %vecins, <2 x float> addrspace(1)* %out, align 16
+  store <2 x float> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -95,7 +95,7 @@ define amdgpu_kernel void @insertelement_v2i32_0(ptr addrspace(1) %out, <2 x i32
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <2 x i32> %a, i32 999, i32 0
-  store <2 x i32> %vecins, <2 x i32> addrspace(1)* %out, align 16
+  store <2 x i32> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -126,7 +126,7 @@ define amdgpu_kernel void @insertelement_v2i32_1(ptr addrspace(1) %out, <2 x i32
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <2 x i32> %a, i32 999, i32 1
-  store <2 x i32> %vecins, <2 x i32> addrspace(1)* %out, align 16
+  store <2 x i32> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -163,7 +163,7 @@ define amdgpu_kernel void @insertelement_v4f32_0(ptr addrspace(1) %out, <4 x flo
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <4 x float> %a, float 5.000000e+00, i32 0
-  store <4 x float> %vecins, <4 x float> addrspace(1)* %out, align 16
+  store <4 x float> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -198,7 +198,7 @@ define amdgpu_kernel void @insertelement_v4f32_1(ptr addrspace(1) %out, <4 x flo
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <4 x float> %a, float 5.000000e+00, i32 1
-  store <4 x float> %vecins, <4 x float> addrspace(1)* %out, align 16
+  store <4 x float> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -233,7 +233,7 @@ define amdgpu_kernel void @insertelement_v4f32_2(ptr addrspace(1) %out, <4 x flo
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <4 x float> %a, float 5.000000e+00, i32 2
-  store <4 x float> %vecins, <4 x float> addrspace(1)* %out, align 16
+  store <4 x float> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -268,7 +268,7 @@ define amdgpu_kernel void @insertelement_v4f32_3(ptr addrspace(1) %out, <4 x flo
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <4 x float> %a, float 5.000000e+00, i32 3
-  store <4 x float> %vecins, <4 x float> addrspace(1)* %out, align 16
+  store <4 x float> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -303,7 +303,7 @@ define amdgpu_kernel void @insertelement_v4i32_0(ptr addrspace(1) %out, <4 x i32
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <4 x i32> %a, i32 999, i32 0
-  store <4 x i32> %vecins, <4 x i32> addrspace(1)* %out, align 16
+  store <4 x i32> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -334,7 +334,7 @@ define amdgpu_kernel void @insertelement_v3f32_1(ptr addrspace(1) %out, <3 x flo
 ; VI-NEXT:    buffer_store_dwordx3 v[0:2], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <3 x float> %a, float 5.000000e+00, i32 1
-  store <3 x float> %vecins, <3 x float> addrspace(1)* %out, align 16
+  store <3 x float> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -365,7 +365,7 @@ define amdgpu_kernel void @insertelement_v3f32_2(ptr addrspace(1) %out, <3 x flo
 ; VI-NEXT:    buffer_store_dwordx3 v[0:2], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <3 x float> %a, float 5.000000e+00, i32 2
-  store <3 x float> %vecins, <3 x float> addrspace(1)* %out, align 16
+  store <3 x float> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -374,7 +374,7 @@ define amdgpu_kernel void @insertelement_v3f32_3(ptr addrspace(1) %out, <3 x flo
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_endpgm
   %vecins = insertelement <3 x float> %a, float 5.000000e+00, i32 3
-  store <3 x float> %vecins, <3 x float> addrspace(1)* %out, align 16
+  store <3 x float> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -388,7 +388,7 @@ define <4 x float> @insertelement_to_sgpr() nounwind {
 ; GCN-NEXT:    image_gather4_lz v[0:3], v[0:1], s[4:11], s[4:7] dmask:0x1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %tmp = load <4 x i32>, <4 x i32> addrspace(4)* undef
+  %tmp = load <4 x i32>, ptr addrspace(4) undef
   %tmp1 = insertelement <4 x i32> %tmp, i32 0, i32 0
   %tmp2 = call <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32(i32 1, float undef, float undef, <8 x i32> undef, <4 x i32> %tmp1, i1 0, i32 0, i32 0)
   ret <4 x float> %tmp2
@@ -412,7 +412,7 @@ define <9 x float> @insertelement_to_v9f32_undef() nounwind {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v8, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %tmp = load <9 x float>, <9 x float> addrspace(4)* undef
+  %tmp = load <9 x float>, ptr addrspace(4) undef
   %tmp1 = insertelement <9 x float> %tmp, float 5.000, i32 0
   %tmp2 = insertelement <9 x float> %tmp1, float -5.000, i32 2
   %tmp3 = insertelement <9 x float> %tmp2, float 17.000, i32 7
@@ -438,7 +438,7 @@ define <10 x float> @insertelement_to_v10f32_undef() nounwind {
 ; GCN-NEXT:    v_mov_b32_e32 v8, s12
 ; GCN-NEXT:    v_mov_b32_e32 v9, s13
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %tmp = load <10 x float>, <10 x float> addrspace(4)* undef
+  %tmp = load <10 x float>, ptr addrspace(4) undef
   %tmp1 = insertelement <10 x float> %tmp, float 2.0, i32 0
   ret <10 x float> %tmp1
 }
@@ -463,7 +463,7 @@ define <11 x float> @insertelement_to_v11f32_undef() nounwind {
 ; GCN-NEXT:    v_mov_b32_e32 v9, s13
 ; GCN-NEXT:    v_mov_b32_e32 v10, s14
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %tmp = load <11 x float>, <11 x float> addrspace(4)* undef
+  %tmp = load <11 x float>, ptr addrspace(4) undef
   %tmp1 = insertelement <11 x float> %tmp, float 1.000, i32 0
   ret <11 x float> %tmp1
 }
@@ -489,7 +489,7 @@ define <12 x float> @insertelement_to_v12f32_undef() nounwind {
 ; GCN-NEXT:    v_mov_b32_e32 v10, s14
 ; GCN-NEXT:    v_mov_b32_e32 v11, s15
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %tmp = load <12 x float>, <12 x float> addrspace(4)* undef
+  %tmp = load <12 x float>, ptr addrspace(4) undef
   %tmp1 = insertelement <12 x float> %tmp, float 4.0, i32 0
   ret <12 x float> %tmp1
 }
@@ -537,7 +537,7 @@ define amdgpu_kernel void @dynamic_insertelement_v2f32(ptr addrspace(1) %out, <2
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <2 x float> %a, float 5.000000e+00, i32 %b
-  store <2 x float> %vecins, <2 x float> addrspace(1)* %out, align 8
+  store <2 x float> %vecins, ptr addrspace(1) %out, align 8
   ret void
 }
 
@@ -590,7 +590,7 @@ define amdgpu_kernel void @dynamic_insertelement_v3f32(ptr addrspace(1) %out, <3
 ; VI-NEXT:    buffer_store_dwordx3 v[0:2], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <3 x float> %a, float 5.000000e+00, i32 %b
-  store <3 x float> %vecins, <3 x float> addrspace(1)* %out, align 16
+  store <3 x float> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -651,7 +651,7 @@ define amdgpu_kernel void @dynamic_insertelement_v4f32(ptr addrspace(1) %out, <4
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <4 x float> %a, float 5.000000e+00, i32 %b
-  store <4 x float> %vecins, <4 x float> addrspace(1)* %out, align 16
+  store <4 x float> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -702,7 +702,7 @@ define amdgpu_kernel void @dynamic_insertelement_v8f32(ptr addrspace(1) %out, <8
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <8 x float> %a, float 5.000000e+00, i32 %b
-  store <8 x float> %vecins, <8 x float> addrspace(1)* %out, align 32
+  store <8 x float> %vecins, ptr addrspace(1) %out, align 32
   ret void
 }
 
@@ -759,7 +759,7 @@ define amdgpu_kernel void @dynamic_insertelement_v9f32(ptr addrspace(1) %out, <9
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <9 x float> %a, float 5.000000e+00, i32 %b
-  store <9 x float> %vecins, <9 x float> addrspace(1)* %out, align 32
+  store <9 x float> %vecins, ptr addrspace(1) %out, align 32
   ret void
 }
 
@@ -818,7 +818,7 @@ define amdgpu_kernel void @dynamic_insertelement_v10f32(ptr addrspace(1) %out, <
 ; VI-NEXT:    buffer_store_dwordx2 v[8:9], off, s[0:3], 0 offset:32
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <10 x float> %a, float 5.000000e+00, i32 %b
-  store <10 x float> %vecins, <10 x float> addrspace(1)* %out, align 32
+  store <10 x float> %vecins, ptr addrspace(1) %out, align 32
   ret void
 }
 
@@ -880,7 +880,7 @@ define amdgpu_kernel void @dynamic_insertelement_v11f32(ptr addrspace(1) %out, <
 ; VI-NEXT:    buffer_store_dwordx3 v[8:10], off, s[0:3], 0 offset:32
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <11 x float> %a, float 5.000000e+00, i32 %b
-  store <11 x float> %vecins, <11 x float> addrspace(1)* %out, align 32
+  store <11 x float> %vecins, ptr addrspace(1) %out, align 32
   ret void
 }
 
@@ -944,7 +944,7 @@ define amdgpu_kernel void @dynamic_insertelement_v12f32(ptr addrspace(1) %out, <
 ; VI-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], 0 offset:32
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <12 x float> %a, float 5.000000e+00, i32 %b
-  store <12 x float> %vecins, <12 x float> addrspace(1)* %out, align 32
+  store <12 x float> %vecins, ptr addrspace(1) %out, align 32
   ret void
 }
 
@@ -1015,7 +1015,7 @@ define amdgpu_kernel void @dynamic_insertelement_v16f32(ptr addrspace(1) %out, <
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <16 x float> %a, float 5.000000e+00, i32 %b
-  store <16 x float> %vecins, <16 x float> addrspace(1)* %out, align 64
+  store <16 x float> %vecins, ptr addrspace(1) %out, align 64
   ret void
 }
 
@@ -1056,7 +1056,7 @@ define amdgpu_kernel void @dynamic_insertelement_v2i32(ptr addrspace(1) %out, <2
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <2 x i32> %a, i32 5, i32 %b
-  store <2 x i32> %vecins, <2 x i32> addrspace(1)* %out, align 8
+  store <2 x i32> %vecins, ptr addrspace(1) %out, align 8
   ret void
 }
 
@@ -1101,7 +1101,7 @@ define amdgpu_kernel void @dynamic_insertelement_v3i32(ptr addrspace(1) %out, <3
 ; VI-NEXT:    buffer_store_dwordx3 v[0:2], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <3 x i32> %a, i32 5, i32 %b
-  store <3 x i32> %vecins, <3 x i32> addrspace(1)* %out, align 16
+  store <3 x i32> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -1154,7 +1154,7 @@ define amdgpu_kernel void @dynamic_insertelement_v4i32(ptr addrspace(1) %out, <4
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <4 x i32> %a, i32 %val, i32 %b
-  store <4 x i32> %vecins, <4 x i32> addrspace(1)* %out, align 16
+  store <4 x i32> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -1203,7 +1203,7 @@ define amdgpu_kernel void @dynamic_insertelement_v8i32(ptr addrspace(1) %out, <8
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <8 x i32> %a, i32 5, i32 %b
-  store <8 x i32> %vecins, <8 x i32> addrspace(1)* %out, align 32
+  store <8 x i32> %vecins, ptr addrspace(1) %out, align 32
   ret void
 }
 
@@ -1258,7 +1258,7 @@ define amdgpu_kernel void @dynamic_insertelement_v9i32(ptr addrspace(1) %out, <9
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <9 x i32> %a, i32 5, i32 %b
-  store <9 x i32> %vecins, <9 x i32> addrspace(1)* %out, align 32
+  store <9 x i32> %vecins, ptr addrspace(1) %out, align 32
   ret void
 }
 
@@ -1315,7 +1315,7 @@ define amdgpu_kernel void @dynamic_insertelement_v10i32(ptr addrspace(1) %out, <
 ; VI-NEXT:    buffer_store_dwordx2 v[8:9], off, s[0:3], 0 offset:32
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <10 x i32> %a, i32 5, i32 %b
-  store <10 x i32> %vecins, <10 x i32> addrspace(1)* %out, align 32
+  store <10 x i32> %vecins, ptr addrspace(1) %out, align 32
   ret void
 }
 
@@ -1375,7 +1375,7 @@ define amdgpu_kernel void @dynamic_insertelement_v11i32(ptr addrspace(1) %out, <
 ; VI-NEXT:    buffer_store_dwordx3 v[8:10], off, s[0:3], 0 offset:32
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <11 x i32> %a, i32 5, i32 %b
-  store <11 x i32> %vecins, <11 x i32> addrspace(1)* %out, align 32
+  store <11 x i32> %vecins, ptr addrspace(1) %out, align 32
   ret void
 }
 
@@ -1437,7 +1437,7 @@ define amdgpu_kernel void @dynamic_insertelement_v12i32(ptr addrspace(1) %out, <
 ; VI-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], 0 offset:32
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <12 x i32> %a, i32 5, i32 %b
-  store <12 x i32> %vecins, <12 x i32> addrspace(1)* %out, align 32
+  store <12 x i32> %vecins, ptr addrspace(1) %out, align 32
   ret void
 }
 
@@ -1506,7 +1506,7 @@ define amdgpu_kernel void @dynamic_insertelement_v16i32(ptr addrspace(1) %out, <
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <16 x i32> %a, i32 5, i32 %b
-  store <16 x i32> %vecins, <16 x i32> addrspace(1)* %out, align 64
+  store <16 x i32> %vecins, ptr addrspace(1) %out, align 64
   ret void
 }
 
@@ -1545,7 +1545,7 @@ define amdgpu_kernel void @dynamic_insertelement_v2i16(ptr addrspace(1) %out, <2
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <2 x i16> %a, i16 5, i32 %b
-  store <2 x i16> %vecins, <2 x i16> addrspace(1)* %out, align 8
+  store <2 x i16> %vecins, ptr addrspace(1) %out, align 8
   ret void
 }
 
@@ -1595,7 +1595,7 @@ define amdgpu_kernel void @dynamic_insertelement_v3i16(ptr addrspace(1) %out, <3
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <3 x i16> %a, i16 5, i32 %b
-  store <3 x i16> %vecins, <3 x i16> addrspace(1)* %out, align 8
+  store <3 x i16> %vecins, ptr addrspace(1) %out, align 8
   ret void
 }
 
@@ -1635,7 +1635,7 @@ define amdgpu_kernel void @dynamic_insertelement_v2i8(ptr addrspace(1) %out, [8 
 ; VI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <2 x i8> %a, i8 5, i32 %b
-  store <2 x i8> %vecins, <2 x i8> addrspace(1)* %out, align 8
+  store <2 x i8> %vecins, ptr addrspace(1) %out, align 8
   ret void
 }
 
@@ -1682,7 +1682,7 @@ define amdgpu_kernel void @dynamic_insertelement_v3i8(ptr addrspace(1) %out, [8 
 ; VI-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:2
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <3 x i8> %a, i8 5, i32 %b
-  store <3 x i8> %vecins, <3 x i8> addrspace(1)* %out, align 4
+  store <3 x i8> %vecins, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -1721,11 +1721,11 @@ define amdgpu_kernel void @dynamic_insertelement_v4i8(ptr addrspace(1) %out, [8 
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <4 x i8> %a, i8 5, i32 %b
-  store <4 x i8> %vecins, <4 x i8> addrspace(1)* %out, align 4
+  store <4 x i8> %vecins, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @s_dynamic_insertelement_v8i8(ptr addrspace(1) %out, <8 x i8> addrspace(4)* %a.ptr, i32 %b) nounwind {
+define amdgpu_kernel void @s_dynamic_insertelement_v8i8(ptr addrspace(1) %out, ptr addrspace(4) %a.ptr, i32 %b) nounwind {
 ; SI-LABEL: s_dynamic_insertelement_v8i8:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -1771,9 +1771,9 @@ define amdgpu_kernel void @s_dynamic_insertelement_v8i8(ptr addrspace(1) %out, <
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
-  %a = load <8 x i8>, <8 x i8> addrspace(4)* %a.ptr, align 4
+  %a = load <8 x i8>, ptr addrspace(4) %a.ptr, align 4
   %vecins = insertelement <8 x i8> %a, i8 5, i32 %b
-  store <8 x i8> %vecins, <8 x i8> addrspace(1)* %out, align 8
+  store <8 x i8> %vecins, ptr addrspace(1) %out, align 8
   ret void
 }
 
@@ -1980,13 +1980,13 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(ptr addrspace(1) %out, <1
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <16 x i8> %a, i8 5, i32 %b
-  store <16 x i8> %vecins, <16 x i8> addrspace(1)* %out, align 16
+  store <16 x i8> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
 ; This test requires handling INSERT_SUBREG in SIFixSGPRCopies.  Check that
 ; the compiler doesn't crash.
-define amdgpu_kernel void @insert_split_bb(ptr addrspace(1) %out, i32 addrspace(1)* %in, i32 %a, i32 %b) {
+define amdgpu_kernel void @insert_split_bb(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %a, i32 %b) {
 ; SI-LABEL: insert_split_bb:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dword s6, s[4:5], 0x4
@@ -2043,19 +2043,19 @@ entry:
   br i1 %1, label %if, label %else
 
 if:
-  %2 = load i32, i32 addrspace(1)* %in
+  %2 = load i32, ptr addrspace(1) %in
   %3 = insertelement <2 x i32> %0, i32 %2, i32 1
   br label %endif
 
 else:
-  %4 = getelementptr i32, i32 addrspace(1)* %in, i32 1
-  %5 = load i32, i32 addrspace(1)* %4
+  %4 = getelementptr i32, ptr addrspace(1) %in, i32 1
+  %5 = load i32, ptr addrspace(1) %4
   %6 = insertelement <2 x i32> %0, i32 %5, i32 1
   br label %endif
 
 endif:
   %7 = phi <2 x i32> [%3, %if], [%6, %else]
-  store <2 x i32> %7, <2 x i32> addrspace(1)* %out
+  store <2 x i32> %7, ptr addrspace(1) %out
   ret void
 }
 
@@ -2102,7 +2102,7 @@ define amdgpu_kernel void @dynamic_insertelement_v2f64(ptr addrspace(1) %out, [8
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <2 x double> %a, double 8.0, i32 %b
-  store <2 x double> %vecins, <2 x double> addrspace(1)* %out, align 16
+  store <2 x double> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -2149,7 +2149,7 @@ define amdgpu_kernel void @dynamic_insertelement_v2i64(ptr addrspace(1) %out, <2
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <2 x i64> %a, i64 5, i32 %b
-  store <2 x i64> %vecins, <2 x i64> addrspace(1)* %out, align 8
+  store <2 x i64> %vecins, ptr addrspace(1) %out, align 8
   ret void
 }
 
@@ -2210,7 +2210,7 @@ define amdgpu_kernel void @dynamic_insertelement_v3i64(ptr addrspace(1) %out, <3
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <3 x i64> %a, i64 5, i32 %b
-  store <3 x i64> %vecins, <3 x i64> addrspace(1)* %out, align 32
+  store <3 x i64> %vecins, ptr addrspace(1) %out, align 32
   ret void
 }
 
@@ -2281,7 +2281,7 @@ define amdgpu_kernel void @dynamic_insertelement_v4f64(ptr addrspace(1) %out, <4
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <4 x double> %a, double 8.0, i32 %b
-  store <4 x double> %vecins, <4 x double> addrspace(1)* %out, align 16
+  store <4 x double> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -2356,7 +2356,7 @@ define amdgpu_kernel void @dynamic_insertelement_v8f64(ptr addrspace(1) %out, <8
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <8 x double> %a, double 8.0, i32 %b
-  store <8 x double> %vecins, <8 x double> addrspace(1)* %out, align 16
+  store <8 x double> %vecins, ptr addrspace(1) %out, align 16
   ret void
 }
 

@@ -2150,10 +2150,19 @@ public:
   UnsafeBufferUsageReporter(Sema &S) : S(S) {}
 
   void handleUnsafeOperation(const Stmt *Operation) override {
-#if MIPOPEN_FIXED
-    S.Diag(Operation->getBeginLoc(), diag::warn_unsafe_buffer_usage)
+#ifdef MIOPEN_GTEST_FIXED
+    S.Diag(Operation->getBeginLoc(), diag::warn_unsafe_buffer_expression)
         << Operation->getSourceRange();
 #endif
+  }
+
+  void handleFixableVariable(const VarDecl *Variable,
+                             FixItList &&Fixes) override {
+    const auto &D =
+        S.Diag(Variable->getBeginLoc(), diag::warn_unsafe_buffer_variable);
+    D << Variable << Variable->getSourceRange();
+    for (const auto &F: Fixes)
+      D << F;
   }
 };
 
@@ -2449,13 +2458,14 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
       if (S.getLangOpts().CPlusPlus && isNoexcept(FD))
         checkThrowInNonThrowingFunc(S, FD, AC);
-
+#ifdef MIOPEN_GTEST_FIXED
   // Emit unsafe buffer usage warnings and fixits.
-  if (!Diags.isIgnored(diag::warn_unsafe_buffer_usage, D->getBeginLoc())) {
+  if (!Diags.isIgnored(diag::warn_unsafe_buffer_expression, D->getBeginLoc()) ||
+      !Diags.isIgnored(diag::warn_unsafe_buffer_variable, D->getBeginLoc())) {
     UnsafeBufferUsageReporter R(S);
     checkUnsafeBufferUsage(D, R);
   }
-
+#endif
   // If none of the previous checks caused a CFG build, trigger one here
   // for the logical error handler.
   if (LogicalErrorHandler::hasActiveDiagnostics(Diags, D->getBeginLoc())) {

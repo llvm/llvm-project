@@ -28,7 +28,7 @@ ValuesEqual(T x1, T x2) {
 template <typename T>
 __llvm_libc::cpp::enable_if_t<__llvm_libc::cpp::is_integral_v<T>, bool>
 ValuesEqual(T x1, T x2) {
-  return x1 == x1;
+  return x1 == x2;
 }
 
 #endif // LLVM_LIBC_FUZZING_MATH_COMPARE_H

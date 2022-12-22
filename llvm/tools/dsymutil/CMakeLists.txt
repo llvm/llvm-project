@@ -16,6 +16,7 @@ set(LLVM_LINK_COMPONENTS
   Remarks
   Support
   Target
+  TargetParser
   )
 
 add_llvm_tool(dsymutil

@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=ve-unknown-unknown | FileCheck %s
 
-declare void @bar(i8*, i64)
+declare void @bar(ptr, i64)
 
 ; Function Attrs: nounwind
 define void @test(i64 %n) {
@@ -24,6 +24,6 @@ define void @test(i64 %n) {
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %dyna = alloca i8, i64 %n, align 32
-  call void @bar(i8* %dyna, i64 %n)
+  call void @bar(ptr %dyna, i64 %n)
   ret void
 }

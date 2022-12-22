@@ -2714,6 +2714,24 @@ void Sema::finalizeOpenMPDelayedAnalysis(const FunctionDecl *Caller,
   }
   if (!LangOpts.OpenMPIsDevice && !LangOpts.OpenMPOffloadMandatory && DevTy &&
       *DevTy == OMPDeclareTargetDeclAttr::DT_NoHost) {
+    // In OpenMP 5.2 or later, if the function has a host variant then allow
+    // that to be called instead
+    auto &&HasHostAttr = [](const FunctionDecl *Callee) {
+      for (OMPDeclareVariantAttr *A :
+           Callee->specific_attrs<OMPDeclareVariantAttr>()) {
+        auto *DeclRefVariant = cast<DeclRefExpr>(A->getVariantFuncRef());
+        auto *VariantFD = cast<FunctionDecl>(DeclRefVariant->getDecl());
+        Optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
+            OMPDeclareTargetDeclAttr::getDeviceType(
+                VariantFD->getMostRecentDecl());
+        if (!DevTy || *DevTy == OMPDeclareTargetDeclAttr::DT_Host)
+          return true;
+      }
+      return false;
+    };
+    if (getLangOpts().OpenMP >= 52 &&
+        Callee->hasAttr<OMPDeclareVariantAttr>() && HasHostAttr(Callee))
+      return;
     // Diagnose nohost function called during host codegen.
     StringRef NoHostDevTy = getOpenMPSimpleClauseTypeName(
         OMPC_device_type, OMPC_DEVICE_TYPE_nohost);
@@ -11101,6 +11119,15 @@ StmtResult Sema::ActOnOpenMPErrorDirective(ArrayRef<OMPClause *> Clauses,
 StmtResult Sema::ActOnOpenMPTaskwaitDirective(ArrayRef<OMPClause *> Clauses,
                                               SourceLocation StartLoc,
                                               SourceLocation EndLoc) {
+  const OMPNowaitClause *NowaitC =
+      OMPExecutableDirective::getSingleClause<OMPNowaitClause>(Clauses);
+  const OMPDependClause *DependC =
+      OMPExecutableDirective::getSingleClause<OMPDependClause>(Clauses);
+  if (NowaitC && !DependC) {
+    Diag(StartLoc, diag::err_omp_nowait_clause_without_depend);
+    return StmtError();
+  }
+
   return OMPTaskwaitDirective::Create(Context, StartLoc, EndLoc, Clauses);
 }
 

@@ -7,7 +7,7 @@
 define void @f0(i32 %a0) #0 {
 b0:
   %v0 = add nsw i32 %a0, 3
-  %v1 = tail call i32 bitcast (i32 (...)* @f1 to i32 (i32)*)(i32 %v0) #0
+  %v1 = tail call i32 @f1(i32 %v0) #0
   ret void
 }
 

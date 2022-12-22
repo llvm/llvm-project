@@ -631,7 +631,7 @@ define i64 @mad_i64_i32_unpack_i64ops(i64 %arg0) #0 {
   ret i64 %mad
 }
 
-define amdgpu_kernel void @mad_i64_i32_uniform(i64 addrspace(1)* %out, i32 %arg0, i32 %arg1, i64 %arg2) #0 {
+define amdgpu_kernel void @mad_i64_i32_uniform(ptr addrspace(1) %out, i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; CI-LABEL: mad_i64_i32_uniform:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -700,7 +700,7 @@ define amdgpu_kernel void @mad_i64_i32_uniform(i64 addrspace(1)* %out, i32 %arg0
   %ext1 = zext i32 %arg1 to i64
   %mul = mul i64 %ext0, %ext1
   %mad = add i64 %mul, %arg2
-  store i64 %mad, i64 addrspace(1)* %out
+  store i64 %mad, ptr addrspace(1) %out
   ret void
 }
 

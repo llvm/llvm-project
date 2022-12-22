@@ -115,6 +115,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/IPO",
     "//llvm/lib/Transforms/Scalar",
     "//llvm/lib/Transforms/Utils",

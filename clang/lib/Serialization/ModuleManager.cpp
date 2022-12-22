@@ -35,7 +35,6 @@
 #include <algorithm>
 #include <cassert>
 #include <memory>
-#include <optional>
 #include <string>
 #include <system_error>
 
@@ -445,14 +444,14 @@ void ModuleManager::visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
 
 bool ModuleManager::lookupModuleFile(StringRef FileName, off_t ExpectedSize,
                                      time_t ExpectedModTime,
-                                     std::optional<FileEntryRef> &File) {
+                                     OptionalFileEntryRef &File) {
   File = std::nullopt;
   if (FileName == "-")
     return false;
 
   // Open the file immediately to ensure there is no race between stat'ing and
   // opening the file.
-  Optional<FileEntryRef> FileOrErr =
+  OptionalFileEntryRef FileOrErr =
       expectedToOptional(FileMgr.getFileRef(FileName, /*OpenFile=*/true,
                                             /*CacheFailure=*/false));
   if (!FileOrErr)

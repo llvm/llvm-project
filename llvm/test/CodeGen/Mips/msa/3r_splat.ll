@@ -11,9 +11,9 @@
 
 define void @llvm_mips_splat_b_test(i32 %a) nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_splat_b_ARG1
+  %0 = load <16 x i8>, ptr @llvm_mips_splat_b_ARG1
   %1 = tail call <16 x i8> @llvm.mips.splat.b(<16 x i8> %0, i32 %a)
-  store <16 x i8> %1, <16 x i8>* @llvm_mips_splat_b_RES
+  store <16 x i8> %1, ptr @llvm_mips_splat_b_RES
   ret void
 }
 
@@ -32,9 +32,9 @@ declare <16 x i8> @llvm.mips.splat.b(<16 x i8>, i32) nounwind
 
 define void @llvm_mips_splat_h_test(i32 %a) nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_splat_h_ARG1
+  %0 = load <8 x i16>, ptr @llvm_mips_splat_h_ARG1
   %1 = tail call <8 x i16> @llvm.mips.splat.h(<8 x i16> %0, i32 %a)
-  store <8 x i16> %1, <8 x i16>* @llvm_mips_splat_h_RES
+  store <8 x i16> %1, ptr @llvm_mips_splat_h_RES
   ret void
 }
 
@@ -53,9 +53,9 @@ declare <8 x i16> @llvm.mips.splat.h(<8 x i16>, i32) nounwind
 
 define void @llvm_mips_splat_w_test(i32 %a) nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_splat_w_ARG1
+  %0 = load <4 x i32>, ptr @llvm_mips_splat_w_ARG1
   %1 = tail call <4 x i32> @llvm.mips.splat.w(<4 x i32> %0, i32 %a)
-  store <4 x i32> %1, <4 x i32>* @llvm_mips_splat_w_RES
+  store <4 x i32> %1, ptr @llvm_mips_splat_w_RES
   ret void
 }
 
@@ -74,9 +74,9 @@ declare <4 x i32> @llvm.mips.splat.w(<4 x i32>, i32) nounwind
 
 define void @llvm_mips_splat_d_test(i32 %a) nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_splat_d_ARG1
+  %0 = load <2 x i64>, ptr @llvm_mips_splat_d_ARG1
   %1 = tail call <2 x i64> @llvm.mips.splat.d(<2 x i64> %0, i32 %a)
-  store <2 x i64> %1, <2 x i64>* @llvm_mips_splat_d_RES
+  store <2 x i64> %1, ptr @llvm_mips_splat_d_RES
   ret void
 }
 
@@ -93,7 +93,7 @@ declare <2 x i64> @llvm.mips.splat.d(<2 x i64>, i32) nounwind
 define void @llvm_mips_splat_d_arg_test(i32 %arg) {
 entry:
   %0 = tail call <2 x i64> @llvm.mips.splat.d(<2 x i64> <i64 12720328, i64 10580959>, i32 %arg)
-  store volatile <2 x i64> %0, <2 x i64>* @llvm_mips_splat_d_RES
+  store volatile <2 x i64> %0, ptr @llvm_mips_splat_d_RES
   ret void
 }
 ; MIPS32-LABEL: llvm_mips_splat_d_arg_test
@@ -108,7 +108,7 @@ entry:
 define void @llvm_mips_splat_d_imm_test() {
 entry:
   %0 = tail call <2 x i64> @llvm.mips.splat.d(<2 x i64> <i64 12720328, i64 10580959>, i32 76)
-  store volatile<2 x i64> %0, <2 x i64>* @llvm_mips_splat_d_RES
+  store volatile<2 x i64> %0, ptr @llvm_mips_splat_d_RES
   ret void
 }
 ; MIPS32-LABEL: llvm_mips_splat_d_imm_test

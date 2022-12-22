@@ -144,6 +144,7 @@ add_llvm_component_library(LLVMCodeGen
   MachineSSAUpdater.cpp
   MachineStripDebug.cpp
   MachineTraceMetrics.cpp
+  MachineUniformityAnalysis.cpp
   MachineVerifier.cpp
   MIRFSDiscriminator.cpp
   MIRSampleProfile.cpp
@@ -268,6 +269,7 @@ add_llvm_component_library(LLVMCodeGen
   Scalar
   Support
   Target
+  TargetParser
   TransformUtils
   )
 

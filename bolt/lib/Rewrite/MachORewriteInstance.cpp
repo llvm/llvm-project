@@ -334,7 +334,7 @@ void MachORewriteInstance::disassembleFunctions() {
       continue;
     Function.disassemble();
     if (opts::PrintDisasm)
-      Function.print(outs(), "after disassembly", true);
+      Function.print(outs(), "after disassembly");
   }
 }
 
@@ -357,7 +357,7 @@ void MachORewriteInstance::postProcessFunctions() {
       continue;
     Function.postProcessCFG();
     if (opts::PrintCFG)
-      Function.print(outs(), "after building cfg", true);
+      Function.print(outs(), "after building cfg");
   }
 }
 

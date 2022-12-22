@@ -13,7 +13,7 @@ entry:
   br i1 %tobool, label %return, label %if.then
 
 if.then:
-  %call1 = tail call i32 bitcast (i32 (...)* @bar to i32 ()*)() nounwind
+  %call1 = tail call i32 @bar() nounwind
   br label %return
 
 return:
@@ -36,7 +36,7 @@ entry:
   br i1 %tobool, label %return, label %if.then
 
 if.then:
-  %call1 = tail call i32 bitcast (i32 (...)* @bar to i32 ()*)() nounwind
+  %call1 = tail call i32 @bar() nounwind
   br label %return
 
 return:
@@ -57,7 +57,7 @@ entry:
   br i1 %tobool, label %return, label %if.then
 
 if.then:
-  %call1 = tail call i32 bitcast (i32 (...)* @bar to i32 ()*)() nounwind
+  %call1 = tail call i32 @bar() nounwind
   br label %return
 
 return:
@@ -78,7 +78,7 @@ entry:
   br i1 %tobool, label %return, label %if.then
 
 if.then:
-  %call1 = tail call i32 bitcast (i32 (...)* @bar to i32 ()*)() nounwind
+  %call1 = tail call i32 @bar() nounwind
   br label %return
 
 return:

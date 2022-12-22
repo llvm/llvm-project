@@ -179,6 +179,9 @@ VectorizationState::initState(RewriterBase &rewriter, LinalgOp linalgOp,
   LLVM_DEBUG(llvm::interleaveComma(canonicalVecShape, llvm::dbgs()));
   LLVM_DEBUG(llvm::dbgs() << "\n");
 
+  if (ShapedType::isDynamicShape(canonicalVecShape))
+    return failure();
+
   // Initialize iteration space static sizes.
   initIterSpaceStaticSizes(linalgOp);
 
@@ -187,8 +190,6 @@ VectorizationState::initState(RewriterBase &rewriter, LinalgOp linalgOp,
   if (failed(precomputeIterSpaceDynamicSizes(rewriter, linalgOp)))
     return failure();
 
-  if (ShapedType::isDynamicShape(canonicalVecShape))
-    return failure();
   return success();
 }
 

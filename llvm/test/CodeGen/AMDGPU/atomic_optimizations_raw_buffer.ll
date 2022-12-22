@@ -13,7 +13,7 @@ declare i32 @llvm.amdgcn.raw.buffer.atomic.sub(i32, <4 x i32>, i32, i32, i32)
 
 ; Show what the atomic optimization pass will do for raw buffers.
 
-define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, <4 x i32> %inout) {
+define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, <4 x i32> %inout) {
 ; GFX6-LABEL: add_i32_constant:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_mov_b64 s[4:5], exec
@@ -214,11 +214,11 @@ define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, <4 x i32> %i
 ; GFX11W32-NEXT:    s_endpgm
 entry:
   %old = call i32 @llvm.amdgcn.raw.buffer.atomic.add(i32 5, <4 x i32> %inout, i32 0, i32 0, i32 0)
-  store i32 %old, i32 addrspace(1)* %out
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, <4 x i32> %inout, i32 %additive) {
+define amdgpu_kernel void @add_i32_uniform(ptr addrspace(1) %out, <4 x i32> %inout, i32 %additive) {
 ; GFX6-LABEL: add_i32_uniform:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_mov_b64 s[4:5], exec
@@ -429,11 +429,11 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, <4 x i32> %in
 ; GFX11W32-NEXT:    s_endpgm
 entry:
   %old = call i32 @llvm.amdgcn.raw.buffer.atomic.add(i32 %additive, <4 x i32> %inout, i32 0, i32 0, i32 0)
-  store i32 %old, i32 addrspace(1)* %out
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_i32_varying_vdata(i32 addrspace(1)* %out, <4 x i32> %inout) {
+define amdgpu_kernel void @add_i32_varying_vdata(ptr addrspace(1) %out, <4 x i32> %inout) {
 ; GFX6-LABEL: add_i32_varying_vdata:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xd
@@ -760,11 +760,11 @@ define amdgpu_kernel void @add_i32_varying_vdata(i32 addrspace(1)* %out, <4 x i3
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
   %old = call i32 @llvm.amdgcn.raw.buffer.atomic.add(i32 %lane, <4 x i32> %inout, i32 0, i32 0, i32 0)
-  store i32 %old, i32 addrspace(1)* %out
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_i32_varying_offset(i32 addrspace(1)* %out, <4 x i32> %inout) {
+define amdgpu_kernel void @add_i32_varying_offset(ptr addrspace(1) %out, <4 x i32> %inout) {
 ; GFX6-LABEL: add_i32_varying_offset:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xd
@@ -830,11 +830,11 @@ define amdgpu_kernel void @add_i32_varying_offset(i32 addrspace(1)* %out, <4 x i
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
   %old = call i32 @llvm.amdgcn.raw.buffer.atomic.add(i32 1, <4 x i32> %inout, i32 %lane, i32 0, i32 0)
-  store i32 %old, i32 addrspace(1)* %out
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, <4 x i32> %inout) {
+define amdgpu_kernel void @sub_i32_constant(ptr addrspace(1) %out, <4 x i32> %inout) {
 ; GFX6-LABEL: sub_i32_constant:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_mov_b64 s[4:5], exec
@@ -1042,11 +1042,11 @@ define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, <4 x i32> %i
 ; GFX11W32-NEXT:    s_endpgm
 entry:
   %old = call i32 @llvm.amdgcn.raw.buffer.atomic.sub(i32 5, <4 x i32> %inout, i32 0, i32 0, i32 0)
-  store i32 %old, i32 addrspace(1)* %out
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, <4 x i32> %inout, i32 %subitive) {
+define amdgpu_kernel void @sub_i32_uniform(ptr addrspace(1) %out, <4 x i32> %inout, i32 %subitive) {
 ; GFX6-LABEL: sub_i32_uniform:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_mov_b64 s[4:5], exec
@@ -1261,11 +1261,11 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, <4 x i32> %in
 ; GFX11W32-NEXT:    s_endpgm
 entry:
   %old = call i32 @llvm.amdgcn.raw.buffer.atomic.sub(i32 %subitive, <4 x i32> %inout, i32 0, i32 0, i32 0)
-  store i32 %old, i32 addrspace(1)* %out
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @sub_i32_varying_vdata(i32 addrspace(1)* %out, <4 x i32> %inout) {
+define amdgpu_kernel void @sub_i32_varying_vdata(ptr addrspace(1) %out, <4 x i32> %inout) {
 ; GFX6-LABEL: sub_i32_varying_vdata:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xd
@@ -1592,11 +1592,11 @@ define amdgpu_kernel void @sub_i32_varying_vdata(i32 addrspace(1)* %out, <4 x i3
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
   %old = call i32 @llvm.amdgcn.raw.buffer.atomic.sub(i32 %lane, <4 x i32> %inout, i32 0, i32 0, i32 0)
-  store i32 %old, i32 addrspace(1)* %out
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @sub_i32_varying_offset(i32 addrspace(1)* %out, <4 x i32> %inout) {
+define amdgpu_kernel void @sub_i32_varying_offset(ptr addrspace(1) %out, <4 x i32> %inout) {
 ; GFX6-LABEL: sub_i32_varying_offset:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xd
@@ -1662,6 +1662,6 @@ define amdgpu_kernel void @sub_i32_varying_offset(i32 addrspace(1)* %out, <4 x i
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
   %old = call i32 @llvm.amdgcn.raw.buffer.atomic.sub(i32 1, <4 x i32> %inout, i32 %lane, i32 0, i32 0)
-  store i32 %old, i32 addrspace(1)* %out
+  store i32 %old, ptr addrspace(1) %out
   ret void
 }

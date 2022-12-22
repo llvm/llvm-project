@@ -205,6 +205,16 @@ LatPoint::LatPoint(unsigned n, unsigned e, unsigned b)
 
 LatPoint::LatPoint(const BitVector &b, unsigned e) : bits(b), exp(e) {}
 
+Merger::Merger(unsigned t, unsigned l, unsigned fl)
+    : outTensor(t - 1), syntheticTensor(t), numTensors(t + 1),
+      numNativeLoops(l), numLoops(l + fl), hasSparseOut(false),
+      dimTypes(numTensors,
+               std::vector<DimLevelType>(numLoops, DimLevelType::Undef)),
+      loopIdxToDim(numTensors,
+                   std::vector<Optional<unsigned>>(numLoops, std::nullopt)),
+      dimToLoopIdx(numTensors,
+                   std::vector<Optional<unsigned>>(numLoops, std::nullopt)) {}
+
 //===----------------------------------------------------------------------===//
 // Lattice methods.
 //===----------------------------------------------------------------------===//
@@ -740,17 +750,7 @@ void Merger::dumpBits(const BitVector &bits) const {
       unsigned t = tensor(b);
       unsigned i = index(b);
       DimLevelType dlt = dimTypes[t][i];
-      llvm::dbgs() << " i_" << t << "_" << i << "_";
-      if (isDenseDLT(dlt))
-        llvm::dbgs() << "D";
-      else if (isCompressedDLT(dlt))
-        llvm::dbgs() << "C";
-      else if (isSingletonDLT(dlt))
-        llvm::dbgs() << "S";
-      else if (isUndefDLT(dlt))
-        llvm::dbgs() << "U";
-      llvm::dbgs() << "[O=" << isOrderedDLT(dlt) << ",U=" << isUniqueDLT(dlt)
-                   << "]";
+      llvm::dbgs() << " i_" << t << "_" << i << "_" << toMLIRString(dlt);
     }
   }
 }

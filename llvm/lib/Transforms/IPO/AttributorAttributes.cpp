@@ -30,6 +30,7 @@
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
@@ -998,6 +999,8 @@ struct OffsetInfo {
     return Offsets == RHS.Offsets;
   }
 
+  bool operator!=(const OffsetInfo &RHS) const { return !(*this == RHS); }
+
   void insert(int64_t Offset) { Offsets.push_back(Offset); }
   bool isUnassigned() const { return Offsets.size() == 0; }
 
@@ -1076,25 +1079,23 @@ struct AAPointerInfoImpl
         QueryingAA, IRPosition::function(Scope), DepClassTy::OPTIONAL);
     const auto *ExecDomainAA = A.lookupAAFor<AAExecutionDomain>(
         IRPosition::function(Scope), &QueryingAA, DepClassTy::OPTIONAL);
-    const bool NoSync = NoSyncAA.isAssumedNoSync();
+    bool AllInSameNoSyncFn = NoSyncAA.isAssumedNoSync();
 
     // Helper to determine if we need to consider threading, which we cannot
     // right now. However, if the function is (assumed) nosync or the thread
     // executing all instructions is the main thread only we can ignore
     // threading.
     auto CanIgnoreThreading = [&](const Instruction &I) -> bool {
-      if (NoSync)
-        return true;
       if (ExecDomainAA && ExecDomainAA->isExecutedByInitialThreadOnly(I))
         return true;
       return false;
     };
 
     // Helper to determine if the access is executed by the same thread as the
-    // load, for now it is sufficient to avoid any potential threading effects
-    // as we cannot deal with them anyway.
-    auto IsSameThreadAsLoad = [&](const Access &Acc) -> bool {
-      return CanIgnoreThreading(*Acc.getLocalInst());
+    // given instruction, for now it is sufficient to avoid any potential
+    // threading effects as we cannot deal with them anyway.
+    auto IsSameThreadAsInst = [&](const Access &Acc) -> bool {
+      return AllInSameNoSyncFn || CanIgnoreThreading(*Acc.getLocalInst());
     };
 
     // TODO: Use inter-procedural reachability and dominance.
@@ -1171,10 +1172,14 @@ struct AAPointerInfoImpl
       if (FindInterferingWrites && Dominates)
         HasBeenWrittenTo = true;
 
+      // Track if all interesting accesses are in the same `nosync` function as
+      // the given instruction.
+      AllInSameNoSyncFn &= Acc.getRemoteInst()->getFunction() == &Scope;
+
       // For now we only filter accesses based on CFG reasoning which does not
       // work yet if we have threading effects, or the access is complicated.
       if (CanUseCFGResoning && Dominates && UseDominanceReasoning &&
-          IsSameThreadAsLoad(Acc))
+          IsSameThreadAsInst(Acc))
         DominatingWrites.insert(&Acc);
 
       InterferingAccesses.push_back({&Acc, Exact});
@@ -1187,6 +1192,8 @@ struct AAPointerInfoImpl
     // the worst case quadratic as we are looking for another write that will
     // hide the effect of this one.
     auto CanSkipAccess = [&](const Access &Acc, bool Exact) {
+      if (!IsSameThreadAsInst(Acc))
+        return false;
       if ((!Acc.isWriteOrAssumption() ||
            !AA::isPotentiallyReachable(A, *Acc.getLocalInst(), I, QueryingAA,
                                        IsLiveInCalleeCB)) &&
@@ -1196,8 +1203,6 @@ struct AAPointerInfoImpl
         return true;
 
       if (!DT || !UseDominanceReasoning)
-        return false;
-      if (!IsSameThreadAsLoad(Acc))
         return false;
       if (!DominatingWrites.count(&Acc))
         return false;
@@ -1218,7 +1223,8 @@ struct AAPointerInfoImpl
     // succeeded for all or not.
     unsigned NumInterferingAccesses = InterferingAccesses.size();
     for (auto &It : InterferingAccesses) {
-      if (!CanUseCFGResoning || NumInterferingAccesses > MaxInterferingAccesses ||
+      if (!AllInSameNoSyncFn ||
+          NumInterferingAccesses > MaxInterferingAccesses ||
           !CanSkipAccess(*It.first, It.second)) {
         if (!UserCB(*It.first, It.second))
           return false;
@@ -1344,7 +1350,11 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override;
 
-  void collectConstantsForGEP(Attributor &A, const DataLayout &DL,
+  /// If the indices to \p GEP can be traced to constants, incorporate all
+  /// of these into \p UsrOI.
+  ///
+  /// \return true iff \p UsrOI is updated.
+  bool collectConstantsForGEP(Attributor &A, const DataLayout &DL,
                               OffsetInfo &UsrOI, const OffsetInfo &PtrOI,
                               const GEPOperator *GEP);
 
@@ -1354,9 +1364,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
   }
 };
 
-/// If the indices to \p GEP can be traced to constants, incorporate all
-/// of these into \p UsrOI.
-void AAPointerInfoFloating::collectConstantsForGEP(Attributor &A,
+bool AAPointerInfoFloating::collectConstantsForGEP(Attributor &A,
                                                    const DataLayout &DL,
                                                    OffsetInfo &UsrOI,
                                                    const OffsetInfo &PtrOI,
@@ -1371,7 +1379,7 @@ void AAPointerInfoFloating::collectConstantsForGEP(Attributor &A,
 
   if (!GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset)) {
     UsrOI.setUnknown();
-    return;
+    return true;
   }
 
   LLVM_DEBUG(dbgs() << "[AAPointerInfo] GEP offset is "
@@ -1389,14 +1397,19 @@ void AAPointerInfoFloating::collectConstantsForGEP(Attributor &A,
         *this, IRPosition::value(*VI.first), DepClassTy::OPTIONAL);
     if (!PotentialConstantsAA.isValidState()) {
       UsrOI.setUnknown();
-      return;
+      return true;
     }
 
     auto &AssumedSet = PotentialConstantsAA.getAssumedSet();
 
-    // Nothing to pick if AssumedSet is empty, i.e., not yet discovered.
-    if (AssumedSet.empty())
-      continue;
+    // We need at least one constant in every set to compute an actual offset.
+    // Otherwise, we end up pessimizing AAPointerInfo by respecting offsets that
+    // don't actually exist. In other words, the absence of constant values
+    // implies that the operation can be assumed dead for now.
+    //
+    // UndefValue is treated as a zero.
+    if (!PotentialConstantsAA.undefIsContained() && AssumedSet.empty())
+      return false;
 
     OffsetInfo Product;
     for (const auto &ConstOffset : AssumedSet) {
@@ -1409,7 +1422,7 @@ void AAPointerInfoFloating::collectConstantsForGEP(Attributor &A,
   }
 
   UsrOI = std::move(Union);
-  return;
+  return true;
 }
 
 ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
@@ -1430,10 +1443,13 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     return true;
   };
 
+  const auto *F = getAnchorScope();
+  const auto *CI =
+      F ? A.getInfoCache().getAnalysisResultForFunction<CycleAnalysis>(*F)
+        : nullptr;
   const auto *TLI =
-      getAnchorScope()
-          ? A.getInfoCache().getTargetLibraryInfoForFunction(*getAnchorScope())
-          : nullptr;
+      F ? A.getInfoCache().getTargetLibraryInfoForFunction(*F) : nullptr;
+
   auto UsePred = [&](const Use &U, bool &Follow) -> bool {
     Value *CurPtr = U.get();
     User *Usr = U.getUser();
@@ -1462,14 +1478,13 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
       if (UsrOI.isUnknown())
         return true;
 
-      Follow = true;
-
       if (PtrOI.isUnknown()) {
+        Follow = true;
         UsrOI.setUnknown();
         return true;
       }
 
-      collectConstantsForGEP(A, DL, UsrOI, PtrOI, GEP);
+      Follow = collectConstantsForGEP(A, DL, UsrOI, PtrOI, GEP);
       return true;
     }
     if (isa<PtrToIntInst>(Usr))
@@ -1505,14 +1520,39 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
         return true;
       }
 
-      // Check if the PHI operand is not dependent on the PHI itself.
+      // Check if the PHI operand can be traced back to AssociatedValue.
       APInt Offset(
           DL.getIndexSizeInBits(CurPtr->getType()->getPointerAddressSpace()),
           0);
       Value *CurPtrBase = CurPtr->stripAndAccumulateConstantOffsets(
           DL, Offset, /* AllowNonInbounds */ true);
       auto It = OffsetInfoMap.find(CurPtrBase);
-      if (It != OffsetInfoMap.end()) {
+      if (It == OffsetInfoMap.end()) {
+        LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand is too complex "
+                          << *CurPtr << " in " << *Usr << "\n");
+        UsrOI.setUnknown();
+        Follow = true;
+        return true;
+      }
+
+      auto mayBeInCycleHeader = [](const CycleInfo *CI, const Instruction *I) {
+        if (!CI)
+          return true;
+        auto *BB = I->getParent();
+        auto *C = CI->getCycle(BB);
+        if (!C)
+          return false;
+        return BB == C->getHeader();
+      };
+
+      // Check if the PHI operand is not dependent on the PHI itself. Every
+      // recurrence is a cyclic net of PHIs in the data flow, and has an
+      // equivalent Cycle in the control flow. One of those PHIs must be in the
+      // header of that control flow Cycle. This is independent of the choice of
+      // Cycles reported by CycleInfo. It is sufficient to check the PHIs in
+      // every Cycle header; if such a node is marked unknown, this will
+      // eventually propagate through the whole net of PHIs in the recurrence.
+      if (mayBeInCycleHeader(CI, cast<Instruction>(Usr))) {
         auto BaseOI = It->getSecond();
         BaseOI.addToAll(Offset.getZExtValue());
         if (IsFirstPHIUser || BaseOI == UsrOI) {
@@ -1520,16 +1560,16 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
                             << " in " << *Usr << "\n");
           return HandlePassthroughUser(Usr, PtrOI, Follow);
         }
+
         LLVM_DEBUG(
             dbgs() << "[AAPointerInfo] PHI operand pointer offset mismatch "
                    << *CurPtr << " in " << *Usr << "\n");
-      } else {
-        LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand is too complex "
-                          << *CurPtr << " in " << *Usr << "\n");
+        UsrOI.setUnknown();
+        Follow = true;
+        return true;
       }
 
-      // TODO: Approximate in case we know the direction of the recurrence.
-      UsrOI.setUnknown();
+      UsrOI.merge(PtrOI);
       Follow = true;
       return true;
     }
@@ -9077,11 +9117,15 @@ struct AAPotentialConstantValuesImpl : AAPotentialConstantValues {
   }
 
   bool fillSetWithConstantValues(Attributor &A, const IRPosition &IRP, SetTy &S,
-                                 bool &ContainsUndef) {
+                                 bool &ContainsUndef, bool ForSelf) {
     SmallVector<AA::ValueAndContext> Values;
     bool UsedAssumedInformation = false;
     if (!A.getAssumedSimplifiedValues(IRP, *this, Values, AA::Interprocedural,
                                       UsedAssumedInformation)) {
+      // Avoid recursion when the caller is computing constant values for this
+      // IRP itself.
+      if (ForSelf)
+        return false;
       if (!IRP.getAssociatedType()->isIntegerTy())
         return false;
       auto &PotentialValuesAA = A.getAAFor<AAPotentialConstantValues>(
@@ -9093,15 +9137,21 @@ struct AAPotentialConstantValuesImpl : AAPotentialConstantValues {
       return true;
     }
 
+    // Copy all the constant values, except UndefValue. ContainsUndef is true
+    // iff Values contains only UndefValue instances. If there are other known
+    // constants, then UndefValue is dropped.
+    ContainsUndef = false;
     for (auto &It : Values) {
-      if (isa<UndefValue>(It.getValue()))
+      if (isa<UndefValue>(It.getValue())) {
+        ContainsUndef = true;
         continue;
+      }
       auto *CI = dyn_cast<ConstantInt>(It.getValue());
       if (!CI)
         return false;
       S.insert(CI->getValue());
     }
-    ContainsUndef = S.empty();
+    ContainsUndef &= S.empty();
 
     return true;
   }
@@ -9297,9 +9347,9 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
     bool LHSContainsUndef = false, RHSContainsUndef = false;
     SetTy LHSAAPVS, RHSAAPVS;
     if (!fillSetWithConstantValues(A, IRPosition::value(*LHS), LHSAAPVS,
-                                   LHSContainsUndef) ||
+                                   LHSContainsUndef, /* ForSelf */ false) ||
         !fillSetWithConstantValues(A, IRPosition::value(*RHS), RHSAAPVS,
-                                   RHSContainsUndef))
+                                   RHSContainsUndef, /* ForSelf */ false))
       return indicatePessimisticFixpoint();
 
     // TODO: make use of undef flag to limit potential values aggressively.
@@ -9362,12 +9412,14 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
 
     bool LHSContainsUndef = false, RHSContainsUndef = false;
     SetTy LHSAAPVS, RHSAAPVS;
-    if (!OnlyRight && !fillSetWithConstantValues(A, IRPosition::value(*LHS),
-                                                 LHSAAPVS, LHSContainsUndef))
+    if (!OnlyRight &&
+        !fillSetWithConstantValues(A, IRPosition::value(*LHS), LHSAAPVS,
+                                   LHSContainsUndef, /* ForSelf */ false))
       return indicatePessimisticFixpoint();
 
-    if (!OnlyLeft && !fillSetWithConstantValues(A, IRPosition::value(*RHS),
-                                                RHSAAPVS, RHSContainsUndef))
+    if (!OnlyLeft &&
+        !fillSetWithConstantValues(A, IRPosition::value(*RHS), RHSAAPVS,
+                                   RHSContainsUndef, /* ForSelf */ false))
       return indicatePessimisticFixpoint();
 
     if (OnlyLeft || OnlyRight) {
@@ -9406,7 +9458,7 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
     bool SrcContainsUndef = false;
     SetTy SrcPVS;
     if (!fillSetWithConstantValues(A, IRPosition::value(*Src), SrcPVS,
-                                   SrcContainsUndef))
+                                   SrcContainsUndef, /* ForSelf */ false))
       return indicatePessimisticFixpoint();
 
     if (SrcContainsUndef)
@@ -9429,9 +9481,9 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
     bool LHSContainsUndef = false, RHSContainsUndef = false;
     SetTy LHSAAPVS, RHSAAPVS;
     if (!fillSetWithConstantValues(A, IRPosition::value(*LHS), LHSAAPVS,
-                                   LHSContainsUndef) ||
+                                   LHSContainsUndef, /* ForSelf */ false) ||
         !fillSetWithConstantValues(A, IRPosition::value(*RHS), RHSAAPVS,
-                                   RHSContainsUndef))
+                                   RHSContainsUndef, /* ForSelf */ false))
       return indicatePessimisticFixpoint();
 
     const APInt Zero = APInt(LHS->getType()->getIntegerBitWidth(), 0);
@@ -9462,6 +9514,23 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
                                          : ChangeStatus::CHANGED;
   }
 
+  ChangeStatus updateWithInstruction(Attributor &A, Instruction *Inst) {
+    auto AssumedBefore = getAssumed();
+    SetTy Incoming;
+    bool ContainsUndef;
+    if (!fillSetWithConstantValues(A, IRPosition::value(*Inst), Incoming,
+                                   ContainsUndef, /* ForSelf */ true))
+      return indicatePessimisticFixpoint();
+    if (ContainsUndef) {
+      unionAssumedWithUndef();
+    } else {
+      for (const auto &It : Incoming)
+        unionAssumed(It);
+    }
+    return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
+                                         : ChangeStatus::CHANGED;
+  }
+
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     Value &V = getAssociatedValue();
@@ -9478,6 +9547,9 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
 
     if (auto *BinOp = dyn_cast<BinaryOperator>(I))
       return updateWithBinaryOperator(A, BinOp);
+
+    if (isa<PHINode>(I) || isa<LoadInst>(I))
+      return updateWithInstruction(A, I);
 
     return indicatePessimisticFixpoint();
   }

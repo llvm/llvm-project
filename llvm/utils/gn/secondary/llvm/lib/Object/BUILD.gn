@@ -10,6 +10,7 @@ static_library("Object") {
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/TextAPI",
   ]
 

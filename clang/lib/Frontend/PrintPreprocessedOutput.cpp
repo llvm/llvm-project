@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Frontend/Utils.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
-#include "clang/Frontend/Utils.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Pragma.h"
@@ -27,7 +27,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
-#include <optional>
 using namespace clang;
 
 /// PrintMacroDefinition - Print a macro definition in a form that will be
@@ -147,9 +146,8 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          std::optional<FileEntryRef> File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          OptionalFileEntryRef File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
   void Ident(SourceLocation Loc, StringRef str) override;
   void PragmaMessage(SourceLocation Loc, StringRef Namespace,
@@ -392,9 +390,8 @@ void PrintPPOutputPPCallbacks::FileChanged(SourceLocation Loc,
 
 void PrintPPOutputPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
-    bool IsAngled, CharSourceRange FilenameRange,
-    std::optional<FileEntryRef> File, StringRef SearchPath,
-    StringRef RelativePath, const Module *Imported,
+    bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
+    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
   // In -dI mode, dump #include directives prior to dumping their content or
   // interpretation.

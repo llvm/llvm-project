@@ -118,6 +118,10 @@ std::string RISCVTargetInfo::convertConstraint(const char *&Constraint) const {
   return R;
 }
 
+static unsigned getVersionValue(unsigned MajorVersion, unsigned MinorVersion) {
+  return MajorVersion * 1000000 + MinorVersion * 1000;
+}
+
 void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
                                        MacroBuilder &Builder) const {
   Builder.defineMacro("__ELF__");
@@ -153,10 +157,10 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   for (auto &Extension : ISAInfo->getExtensions()) {
     auto ExtName = Extension.first;
     auto ExtInfo = Extension.second;
-    unsigned Version =
-        (ExtInfo.MajorVersion * 1000000) + (ExtInfo.MinorVersion * 1000);
 
-    Builder.defineMacro(Twine("__riscv_", ExtName), Twine(Version));
+    Builder.defineMacro(
+        Twine("__riscv_", ExtName),
+        Twine(getVersionValue(ExtInfo.MajorVersion, ExtInfo.MinorVersion)));
   }
 
   if (ISAInfo->hasExtension("m") || ISAInfo->hasExtension("zmmul"))
@@ -194,8 +198,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (ISAInfo->hasExtension("zve32x")) {
     Builder.defineMacro("__riscv_vector");
     // Currently we support the v0.10 RISC-V V intrinsics.
-    unsigned Version = (0 * 1000000) + (10 * 1000);
-    Builder.defineMacro("__riscv_v_intrinsic", Twine(Version));
+    Builder.defineMacro("__riscv_v_intrinsic", Twine(getVersionValue(0, 10)));
   }
 }
 

@@ -27,7 +27,7 @@ define i32 @foo(i32 %x) {
 ; NOBTI-NOT:   bti
 
 entry:
-  %call = call i32 @setjmp(i64* getelementptr inbounds ([20 x i64], [20 x i64]* @buf, i32 0, i32 0)) #0
+  %call = call i32 @setjmp(ptr @buf) #0
   %tobool.not = icmp eq i32 %call, 0
   br i1 %tobool.not, label %if.else, label %if.end
 
@@ -41,7 +41,7 @@ if.end:                                           ; preds = %entry, %if.else
 }
 
 declare void @bar(i32)
-declare i32 @setjmp(i64*) #0
+declare i32 @setjmp(ptr) #0
 
 attributes #0 = { returns_twice }
 

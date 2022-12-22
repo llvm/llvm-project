@@ -5,8 +5,8 @@
 ; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-ctor-dtor,amdgpu-lower-ctor-dtor < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readelf -s - 2>&1 | FileCheck %s -check-prefix=VISIBILITY
 
-@llvm.global_ctors = appending addrspace(1) global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* @foo, i8* null }]
-@llvm.global_dtors = appending addrspace(1) global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* @bar, i8* null }]
+@llvm.global_ctors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @foo, ptr null }]
+@llvm.global_dtors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @bar, ptr null }]
 
 ; CHECK-NOT: @llvm.global_ctors
 ; CHECK-NOT: @llvm.global_dtors

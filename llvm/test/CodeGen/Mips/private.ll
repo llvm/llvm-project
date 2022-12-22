@@ -15,6 +15,6 @@ define i32 @bar() {
 ; CHECK: lw $[[R0:[0-9]+]], %got($baz)($
 ; CHECK: lw ${{[0-9]+}}, %lo($baz)($[[R0]])
   call void @foo()
-  %1 = load i32, i32* @baz, align 4
+  %1 = load i32, ptr @baz, align 4
   ret i32 %1
 }

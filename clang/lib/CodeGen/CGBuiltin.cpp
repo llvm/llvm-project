@@ -3327,7 +3327,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
 
   case Builtin::BI__builtin_flt_rounds: {
-    Function *F = CGM.getIntrinsic(Intrinsic::flt_rounds);
+    Function *F = CGM.getIntrinsic(Intrinsic::get_rounding);
 
     llvm::Type *ResultType = ConvertType(E->getType());
     Value *Result = Builder.CreateCall(F);
@@ -12968,7 +12968,7 @@ Value *CodeGenFunction::EmitX86CpuIs(StringRef CPUStr) {
   .Case(ALIAS, {2u, static_cast<unsigned>(llvm::X86::ENUM)})
 #define X86_CPU_SUBTYPE(ENUM, STR)                                             \
   .Case(STR, {2u, static_cast<unsigned>(llvm::X86::ENUM)})
-#include "llvm/Support/X86TargetParser.def"
+#include "llvm/TargetParser/X86TargetParser.def"
                                .Default({0, 0});
   assert(Value != 0 && "Invalid CPUStr passed to CpuIs");
 

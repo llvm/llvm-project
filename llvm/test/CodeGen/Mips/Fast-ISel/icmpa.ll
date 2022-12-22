@@ -14,8 +14,8 @@ define void @eq()  {
 entry:
 ; CHECK-LABEL:  .ent  eq
 
-  %0 = load i32, i32* @c, align 4
-  %1 = load i32, i32* @d, align 4
+  %0 = load i32, ptr @c, align 4
+  %1 = load i32, ptr @d, align 4
   %cmp = icmp eq i32 %0, %1
   %conv = zext i1 %cmp to i32
 ; CHECK-DAG:  lw	$[[REG_D_GOT:[0-9+]]], %got(d)(${{[0-9]+}})
@@ -27,7 +27,7 @@ entry:
 ; FIXME: This instruction is redundant. The sltiu can only produce 0 and 1.
 ; CHECK:  andi  ${{[0-9]+}}, $[[REG2]], 1
 
-  store i32 %conv, i32* @b1, align 4
+  store i32 %conv, ptr @b1, align 4
   ret void
 }
 
@@ -35,8 +35,8 @@ entry:
 define void @ne()  {
 entry:
 ; CHECK-LABEL:  .ent  ne
-  %0 = load i32, i32* @c, align 4
-  %1 = load i32, i32* @d, align 4
+  %0 = load i32, ptr @c, align 4
+  %1 = load i32, ptr @d, align 4
   %cmp = icmp ne i32 %0, %1
   %conv = zext i1 %cmp to i32
 ; CHECK-DAG:  lw	$[[REG_D_GOT:[0-9+]]], %got(d)(${{[0-9]+}})
@@ -48,7 +48,7 @@ entry:
 ; FIXME: This instruction is redundant. The sltu can only produce 0 and 1.
 ; CHECK:  andi  ${{[0-9]+}}, $[[REG2]], 1
 
-  store i32 %conv, i32* @b1, align 4
+  store i32 %conv, ptr @b1, align 4
   ret void
 }
 
@@ -56,8 +56,8 @@ entry:
 define void @ugt()  {
 entry:
 ; CHECK-LABEL:  .ent  ugt
-  %0 = load i32, i32* @uc, align 4
-  %1 = load i32, i32* @ud, align 4
+  %0 = load i32, ptr @uc, align 4
+  %1 = load i32, ptr @ud, align 4
   %cmp = icmp ugt i32 %0, %1
   %conv = zext i1 %cmp to i32
 ; CHECK:  lw	$[[REG_UC_GOT:[0-9+]]], %got(uc)(${{[0-9]+}})
@@ -68,7 +68,7 @@ entry:
 ; FIXME: This instruction is redundant. The sltu can only produce 0 and 1.
 ; CHECK:  andi  ${{[0-9]+}}, $[[REG1]], 1
 
-  store i32 %conv, i32* @b1, align 4
+  store i32 %conv, ptr @b1, align 4
   ret void
 }
 
@@ -76,8 +76,8 @@ entry:
 define void @ult()  {
 entry:
 ; CHECK-LABEL:  .ent  ult
-  %0 = load i32, i32* @uc, align 4
-  %1 = load i32, i32* @ud, align 4
+  %0 = load i32, ptr @uc, align 4
+  %1 = load i32, ptr @ud, align 4
   %cmp = icmp ult i32 %0, %1
   %conv = zext i1 %cmp to i32
 ; CHECK-DAG:  lw	$[[REG_UD_GOT:[0-9+]]], %got(ud)(${{[0-9]+}})
@@ -87,7 +87,7 @@ entry:
 ; CHECK:  sltu  $[[REG1:[0-9]+]], $[[REG_UC]], $[[REG_UD]]
 ; FIXME: This instruction is redundant. The sltu can only produce 0 and 1.
 ; CHECK:  andi  ${{[0-9]+}}, $[[REG1]], 1
-  store i32 %conv, i32* @b1, align 4
+  store i32 %conv, ptr @b1, align 4
   ret void
 }
 
@@ -95,8 +95,8 @@ entry:
 define void @uge()  {
 entry:
 ; CHECK-LABEL:  .ent  uge
-  %0 = load i32, i32* @uc, align 4
-  %1 = load i32, i32* @ud, align 4
+  %0 = load i32, ptr @uc, align 4
+  %1 = load i32, ptr @ud, align 4
   %cmp = icmp uge i32 %0, %1
   %conv = zext i1 %cmp to i32
 ; CHECK-DAG:  lw	$[[REG_UD_GOT:[0-9+]]], %got(ud)(${{[0-9]+}})
@@ -107,7 +107,7 @@ entry:
 ; CHECK:  xori  $[[REG2:[0-9]+]], $[[REG1]], 1
 ; FIXME: This instruction is redundant. The sltu can only produce 0 and 1.
 ; CHECK:  andi  ${{[0-9]+}}, $[[REG2]], 1
-  store i32 %conv, i32* @b1, align 4
+  store i32 %conv, ptr @b1, align 4
   ret void
 }
 
@@ -115,8 +115,8 @@ entry:
 define void @ule()  {
 entry:
 ; CHECK-LABEL:  .ent  ule
-  %0 = load i32, i32* @uc, align 4
-  %1 = load i32, i32* @ud, align 4
+  %0 = load i32, ptr @uc, align 4
+  %1 = load i32, ptr @ud, align 4
   %cmp = icmp ule i32 %0, %1
   %conv = zext i1 %cmp to i32
 ; CHECK:  lw	$[[REG_UC_GOT:[0-9+]]], %got(uc)(${{[0-9]+}})
@@ -127,7 +127,7 @@ entry:
 ; CHECK:  xori  $[[REG2:[0-9]+]], $[[REG1]], 1
 ; FIXME: This instruction is redundant. The sltu can only produce 0 and 1.
 ; CHECK:  andi  ${{[0-9]+}}, $[[REG2]], 1
-  store i32 %conv, i32* @b1, align 4
+  store i32 %conv, ptr @b1, align 4
   ret void
 }
 
@@ -135,8 +135,8 @@ entry:
 define void @sgt()  {
 entry:
 ; CHECK-LABEL:  .ent sgt
-  %0 = load i32, i32* @c, align 4
-  %1 = load i32, i32* @d, align 4
+  %0 = load i32, ptr @c, align 4
+  %1 = load i32, ptr @d, align 4
   %cmp = icmp sgt i32 %0, %1
   %conv = zext i1 %cmp to i32
 ; CHECK:  lw	$[[REG_C_GOT:[0-9+]]], %got(c)(${{[0-9]+}})
@@ -146,7 +146,7 @@ entry:
 ; CHECK:  slt  $[[REG1:[0-9]+]], $[[REG_D]], $[[REG_C]]
 ; FIXME: This instruction is redundant. The slt can only produce 0 and 1.
 ; CHECK:  andi  ${{[0-9]+}}, $[[REG1]], 1
-  store i32 %conv, i32* @b1, align 4
+  store i32 %conv, ptr @b1, align 4
   ret void
 }
 
@@ -154,8 +154,8 @@ entry:
 define void @slt()  {
 entry:
 ; CHECK-LABEL:  .ent slt
-  %0 = load i32, i32* @c, align 4
-  %1 = load i32, i32* @d, align 4
+  %0 = load i32, ptr @c, align 4
+  %1 = load i32, ptr @d, align 4
   %cmp = icmp slt i32 %0, %1
   %conv = zext i1 %cmp to i32
 ; CHECK-DAG:  lw	$[[REG_D_GOT:[0-9+]]], %got(d)(${{[0-9]+}})
@@ -165,7 +165,7 @@ entry:
 ; CHECK:  slt  $[[REG1:[0-9]+]], $[[REG_C]], $[[REG_D]]
 ; FIXME: This instruction is redundant. The slt can only produce 0 and 1.
 ; CHECK:  andi  ${{[0-9]+}}, $[[REG1]], 1
-  store i32 %conv, i32* @b1, align 4
+  store i32 %conv, ptr @b1, align 4
   ret void
 }
 
@@ -173,11 +173,11 @@ entry:
 define void @sge()  {
 entry:
 ; CHECK-LABEL:  .ent sge
-  %0 = load i32, i32* @c, align 4
-  %1 = load i32, i32* @d, align 4
+  %0 = load i32, ptr @c, align 4
+  %1 = load i32, ptr @d, align 4
   %cmp = icmp sge i32 %0, %1
   %conv = zext i1 %cmp to i32
-  store i32 %conv, i32* @b1, align 4
+  store i32 %conv, ptr @b1, align 4
 ; CHECK-DAG:  lw	$[[REG_D_GOT:[0-9+]]], %got(d)(${{[0-9]+}})
 ; CHECK-DAG:  lw	$[[REG_C_GOT:[0-9+]]], %got(c)(${{[0-9]+}})
 ; CHECK-DAG:  lw	$[[REG_D:[0-9]+]], 0($[[REG_D_GOT]])
@@ -193,8 +193,8 @@ entry:
 define void @sle()  {
 entry:
 ; CHECK-LABEL:  .ent sle
-  %0 = load i32, i32* @c, align 4
-  %1 = load i32, i32* @d, align 4
+  %0 = load i32, ptr @c, align 4
+  %1 = load i32, ptr @d, align 4
   %cmp = icmp sle i32 %0, %1
   %conv = zext i1 %cmp to i32
 ; CHECK:  lw	$[[REG_C_GOT:[0-9+]]], %got(c)(${{[0-9]+}})
@@ -205,6 +205,6 @@ entry:
 ; CHECK:        xori    $[[REG2:[0-9]+]], $[[REG1]], 1
 ; FIXME: This instruction is redundant. The slt can only produce 0 and 1.
 ; CHECK:        andi    ${{[0-9]+}}, $[[REG2]], 1
-  store i32 %conv, i32* @b1, align 4
+  store i32 %conv, ptr @b1, align 4
   ret void
 }

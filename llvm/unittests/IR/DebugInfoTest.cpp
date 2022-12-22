@@ -198,8 +198,8 @@ TEST(DIBuiler, CreateFile) {
   DIFile *F = DIB.createFile("main.c", "/");
   EXPECT_EQ(std::nullopt, F->getSource());
 
-  std::optional<DIFile::ChecksumInfo<StringRef>> Checksum = std::nullopt;
-  std::optional<StringRef> Source = std::nullopt;
+  std::optional<DIFile::ChecksumInfo<StringRef>> Checksum;
+  std::optional<StringRef> Source;
   F = DIB.createFile("main.c", "/", Checksum, Source);
   EXPECT_EQ(Source, F->getSource());
 

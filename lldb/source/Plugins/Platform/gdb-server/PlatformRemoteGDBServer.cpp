@@ -87,7 +87,7 @@ llvm::StringRef PlatformRemoteGDBServer::GetDescription() {
   }
 
   if (!m_platform_description.empty())
-    return m_platform_description;
+    return m_platform_description.c_str();
   return GetDescriptionStatic();
 }
 
@@ -423,10 +423,10 @@ PlatformRemoteGDBServer::DebugProcess(ProcessLaunchInfo &launch_info,
         if (process_sp) {
           process_sp->HijackProcessEvents(launch_info.GetHijackListener());
 
-          error = process_sp->ConnectRemote(connect_url);
+          error = process_sp->ConnectRemote(connect_url.c_str());
           // Retry the connect remote one time...
           if (error.Fail())
-            error = process_sp->ConnectRemote(connect_url);
+            error = process_sp->ConnectRemote(connect_url.c_str());
           if (error.Success())
             error = process_sp->Launch(launch_info);
           else if (debugserver_pid != LLDB_INVALID_PROCESS_ID) {
@@ -509,7 +509,7 @@ lldb::ProcessSP PlatformRemoteGDBServer::Attach(
               target->CreateProcess(attach_info.GetListenerForProcess(debugger),
                                     "gdb-remote", nullptr, true);
           if (process_sp) {
-            error = process_sp->ConnectRemote(connect_url);
+            error = process_sp->ConnectRemote(connect_url.c_str());
             if (error.Success()) {
               ListenerSP listener_sp = attach_info.GetHijackListener();
               if (listener_sp)
@@ -794,7 +794,7 @@ size_t PlatformRemoteGDBServer::ConnectToWaitingProcesses(Debugger &debugger,
   GetPendingGdbServerList(connection_urls);
 
   for (size_t i = 0; i < connection_urls.size(); ++i) {
-    ConnectProcess(connection_urls[i], "gdb-remote", debugger, nullptr, error);
+    ConnectProcess(connection_urls[i].c_str(), "gdb-remote", debugger, nullptr, error);
     if (error.Fail())
       return i; // We already connected to i process successfully
   }

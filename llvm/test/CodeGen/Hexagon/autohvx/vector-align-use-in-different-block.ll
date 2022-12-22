@@ -17,13 +17,11 @@ b0:
 
 b1:                                               ; preds = %b0
   %v0 = mul nsw i32 -4, %a0
-  %v1 = getelementptr inbounds i8, i8* null, i32 %v0
-  %v2 = getelementptr inbounds i8, i8* %v1, i32 -64
-  %v3 = bitcast i8* %v2 to <16 x i32>*
-  %v4 = load <16 x i32>, <16 x i32>* %v3, align 64
-  %v5 = getelementptr inbounds i8, i8* %v1, i32 64
-  %v6 = bitcast i8* %v5 to <16 x i32>*
-  %v7 = load <16 x i32>, <16 x i32>* %v6, align 64
+  %v1 = getelementptr inbounds i8, ptr null, i32 %v0
+  %v2 = getelementptr inbounds i8, ptr %v1, i32 -64
+  %v4 = load <16 x i32>, ptr %v2, align 64
+  %v5 = getelementptr inbounds i8, ptr %v1, i32 64
+  %v7 = load <16 x i32>, ptr %v5, align 64
   br label %b2
 
 b2:                                               ; preds = %b2, %b1

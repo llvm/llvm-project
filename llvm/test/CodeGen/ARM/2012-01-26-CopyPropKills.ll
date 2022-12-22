@@ -6,7 +6,7 @@ target triple = "armv7-none-linux-gnueabi"
 ; This test case exercises the MachineCopyPropagation pass by disabling the
 ; RegisterCoalescer.
 
-define arm_aapcs_vfpcc void @foo(i8* %arg) nounwind uwtable align 2 {
+define arm_aapcs_vfpcc void @foo(ptr %arg) nounwind uwtable align 2 {
 bb:
   br i1 undef, label %bb1, label %bb2
 
@@ -56,9 +56,9 @@ bb3:                                              ; preds = %bb2
   %tmp39 = shufflevector <2 x i64> %tmp38, <2 x i64> undef, <1 x i32> zeroinitializer
   %tmp40 = bitcast <1 x i64> %tmp39 to <2 x float>
   %tmp41 = shufflevector <2 x float> %tmp40, <2 x float> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  %tmp42 = load <4 x float>, <4 x float>* null, align 16
+  %tmp42 = load <4 x float>, ptr null, align 16
   %tmp43 = fmul <4 x float> %tmp42, %tmp41
-  %tmp44 = load <4 x float>, <4 x float>* undef, align 16
+  %tmp44 = load <4 x float>, ptr undef, align 16
   %tmp45 = fadd <4 x float> undef, %tmp43
   %tmp46 = fadd <4 x float> undef, %tmp45
   %tmp47 = bitcast <4 x float> %tmp36 to <2 x i64>
@@ -76,8 +76,8 @@ bb3:                                              ; preds = %bb2
   %tmp59 = fmul <4 x float> undef, %tmp58
   %tmp60 = fadd <4 x float> %tmp59, undef
   %tmp61 = fadd <4 x float> %tmp60, zeroinitializer
-  %tmp62 = load void (i8*, i8*)*, void (i8*, i8*)** undef, align 4
-  call arm_aapcs_vfpcc  void %tmp62(i8* sret(i8) undef, i8* undef) nounwind
+  %tmp62 = load ptr, ptr undef, align 4
+  call arm_aapcs_vfpcc  void %tmp62(ptr sret(i8) undef, ptr undef) nounwind
   %tmp63 = bitcast <4 x float> %tmp46 to i128
   %tmp64 = bitcast <4 x float> %tmp54 to i128
   %tmp65 = bitcast <4 x float> %tmp61 to i128
@@ -93,10 +93,9 @@ bb3:                                              ; preds = %bb2
   %tmp75 = insertvalue [8 x i64] %tmp74, i64 undef, 5
   %tmp76 = insertvalue [8 x i64] %tmp75, i64 undef, 6
   %tmp77 = insertvalue [8 x i64] %tmp76, i64 undef, 7
-  call arm_aapcs_vfpcc  void @bar(i8* sret(i8) null, [8 x i64] %tmp77) nounwind
-  %tmp78 = call arm_aapcs_vfpcc  i8* null(i8* null) nounwind
-  %tmp79 = bitcast i8* %tmp78 to i512*
-  %tmp80 = load i512, i512* %tmp79, align 16
+  call arm_aapcs_vfpcc  void @bar(ptr sret(i8) null, [8 x i64] %tmp77) nounwind
+  %tmp78 = call arm_aapcs_vfpcc  ptr null(ptr null) nounwind
+  %tmp80 = load i512, ptr %tmp78, align 16
   %tmp81 = lshr i512 %tmp80, 128
   %tmp82 = trunc i512 %tmp80 to i128
   %tmp83 = trunc i512 %tmp81 to i128
@@ -108,11 +107,11 @@ bb3:                                              ; preds = %bb2
   %tmp89 = fmul <4 x float> undef, %tmp88
   %tmp90 = fadd <4 x float> %tmp89, undef
   %tmp91 = fadd <4 x float> undef, %tmp90
-  store <4 x float> %tmp91, <4 x float>* undef, align 16
+  store <4 x float> %tmp91, ptr undef, align 16
   unreachable
 
 bb92:                                             ; preds = %bb2
   ret void
 }
 
-declare arm_aapcs_vfpcc void @bar(i8* noalias nocapture sret(i8), [8 x i64]) nounwind uwtable inlinehint
+declare arm_aapcs_vfpcc void @bar(ptr noalias nocapture sret(i8), [8 x i64]) nounwind uwtable inlinehint

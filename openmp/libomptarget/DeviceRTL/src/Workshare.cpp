@@ -22,7 +22,7 @@
 #include "Types.h"
 #include "Utils.h"
 
-using namespace _OMP;
+using namespace ompx;
 
 // TODO:
 struct DynamicScheduleTracker {

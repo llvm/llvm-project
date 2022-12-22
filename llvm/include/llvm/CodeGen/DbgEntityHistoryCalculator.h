@@ -12,6 +12,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include <utility>
 
 namespace llvm {
@@ -21,7 +22,6 @@ class LexicalScopes;
 class DINode;
 class MachineBasicBlock;
 class MachineFunction;
-class MachineInstr;
 class TargetRegisterInfo;
 class DILifetime;
 

@@ -12,6 +12,7 @@ add_llvm_component_library(LLVMSPIRVDesc
   MC
   SPIRVInfo
   Support
+  TargetParser
 
   ADD_TO_COMPONENT
   SPIRV

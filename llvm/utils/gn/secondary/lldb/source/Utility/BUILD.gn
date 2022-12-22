@@ -4,6 +4,7 @@ static_library("Utility") {
   deps = [
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "ArchSpec.cpp",

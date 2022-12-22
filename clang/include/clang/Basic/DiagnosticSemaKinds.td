@@ -2893,7 +2893,7 @@ def note_type_requirement_substitution_error : Note<
 def note_type_requirement_unknown_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid">;
 def note_nested_requirement_substitution_error : Note<
-  "%select{and|because}0 '%1' would be invalid: %2">;
+  "%select{and|because}0 '%1' would be invalid%2">;
 def note_nested_requirement_unknown_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid">;
 def note_ambiguous_atomic_constraints : Note<
@@ -10733,6 +10733,8 @@ def note_omp_nested_statement_here : Note<
   "%select{statement|directive}0 outside teams construct here">;
 def err_omp_single_copyprivate_with_nowait : Error<
   "the 'copyprivate' clause must not be used with the 'nowait' clause">;
+def err_omp_nowait_clause_without_depend: Error<
+  "directive '#pragma omp taskwait' cannot use 'nowait' clause without 'depend' clause">;
 def note_omp_nowait_clause_here : Note<
   "'nowait' clause is here">;
 def err_omp_single_decl_in_declare_simd_variant : Error<
@@ -11756,7 +11758,10 @@ def err_loongarch_builtin_requires_la64 : Error<
   "this builtin requires target: loongarch64">;
 
 // Unsafe buffer usage diagnostics.
-def warn_unsafe_buffer_usage : Warning<
+def warn_unsafe_buffer_expression : Warning<
   "unchecked operation on raw buffer in expression">,
-  InGroup<DiagGroup<"unsafe-buffer-usage2">>, DefaultIgnore;
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_unsafe_buffer_variable : Warning<
+  "variable %0 participates in unchecked buffer operations">,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
 } // end of sema component.

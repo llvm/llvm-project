@@ -7,7 +7,7 @@ target triple = "hexagon"
 
 define void @bad_store(i32 %a0) #0 !dbg !10 {
 entry:
-  store i32 %a0, i32* inttoptr (i32 74565 to i32*), align 4, !dbg !13, !tbaa !14
+  store i32 %a0, ptr inttoptr (i32 74565 to ptr), align 4, !dbg !13, !tbaa !14
   ret void, !dbg !18
 }
 

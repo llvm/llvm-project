@@ -118,7 +118,7 @@ bool R600PassConfig::addPreISel() {
 }
 
 bool R600PassConfig::addInstSelector() {
-  addPass(createR600ISelDag(&getAMDGPUTargetMachine(), getOptLevel()));
+  addPass(createR600ISelDag(getAMDGPUTargetMachine(), getOptLevel()));
   return false;
 }
 

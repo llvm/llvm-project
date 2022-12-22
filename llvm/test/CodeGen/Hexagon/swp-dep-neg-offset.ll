@@ -14,7 +14,7 @@
 @g0 = external global [1000000 x i8], align 8
 
 ; Function Attrs: nounwind
-define void @f0(i32 %a0, [1000 x i8]* %a1, [1000 x i8]* %a2) #0 {
+define void @f0(i32 %a0, ptr %a1, ptr %a2) #0 {
 b0:
   br i1 undef, label %b1, label %b7
 
@@ -28,20 +28,20 @@ b3:                                               ; preds = %b3, %b2
   %v0 = phi i32 [ %v17, %b3 ], [ 1, %b2 ]
   %v1 = phi i32 [ %v16, %b3 ], [ 0, %b2 ]
   %v2 = add nsw i32 %v0, -1
-  %v3 = getelementptr inbounds [1000 x i8], [1000 x i8]* %a1, i32 undef, i32 %v2
-  %v4 = load i8, i8* %v3, align 1, !tbaa !0
+  %v3 = getelementptr inbounds [1000 x i8], ptr %a1, i32 undef, i32 %v2
+  %v4 = load i8, ptr %v3, align 1, !tbaa !0
   %v5 = zext i8 %v4 to i32
-  %v6 = getelementptr inbounds [1000000 x i8], [1000000 x i8]* @g0, i32 0, i32 %v1
-  %v7 = load i8, i8* %v6, align 1, !tbaa !0
+  %v6 = getelementptr inbounds [1000000 x i8], ptr @g0, i32 0, i32 %v1
+  %v7 = load i8, ptr %v6, align 1, !tbaa !0
   %v8 = sext i8 %v7 to i32
-  %v9 = getelementptr inbounds [1000 x i8], [1000 x i8]* %a2, i32 undef, i32 %v0
-  %v10 = load i8, i8* %v9, align 1, !tbaa !0
+  %v9 = getelementptr inbounds [1000 x i8], ptr %a2, i32 undef, i32 %v0
+  %v10 = load i8, ptr %v9, align 1, !tbaa !0
   %v11 = sext i8 %v10 to i32
   %v12 = mul nsw i32 %v11, %v8
   %v13 = add nsw i32 %v12, %v5
   %v14 = trunc i32 %v13 to i8
-  %v15 = getelementptr inbounds [1000 x i8], [1000 x i8]* %a1, i32 undef, i32 %v0
-  store i8 %v14, i8* %v15, align 1, !tbaa !0
+  %v15 = getelementptr inbounds [1000 x i8], ptr %a1, i32 undef, i32 %v0
+  store i8 %v14, ptr %v15, align 1, !tbaa !0
   %v16 = add nsw i32 %v1, 1
   %v17 = add nsw i32 %v0, 1
   %v18 = icmp eq i32 %v17, %a0

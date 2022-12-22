@@ -5,7 +5,7 @@
 
 @__md0 = external global [137 x i8]
 
-define internal void @stretch(<4 x i8> addrspace(1)* %src, <4 x i8> addrspace(1)* %dst, i32 %width, i32 %height, i32 %iLS, i32 %oLS, <2 x float> %c, <4 x float> %param) nounwind {
+define internal void @stretch(ptr addrspace(1) %src, ptr addrspace(1) %dst, i32 %width, i32 %height, i32 %iLS, i32 %oLS, <2 x float> %c, <4 x float> %param) nounwind {
 entry:
   ret void
 }
@@ -15,8 +15,8 @@ entry:
   ret i32 undef
 }
 
-define void @wrap(i8 addrspace(1)* addrspace(1)* %arglist, i32 addrspace(1)* %gtid) nounwind ssp {
+define void @wrap(ptr addrspace(1) %arglist, ptr addrspace(1) %gtid) nounwind ssp {
 entry:
-  call void @stretch(<4 x i8> addrspace(1)* undef, <4 x i8> addrspace(1)* undef, i32 undef, i32 undef, i32 undef, i32 undef, <2 x float> undef, <4 x float> undef)
+  call void @stretch(ptr addrspace(1) undef, ptr addrspace(1) undef, i32 undef, i32 undef, i32 undef, i32 undef, <2 x float> undef, <4 x float> undef)
   ret void
 }

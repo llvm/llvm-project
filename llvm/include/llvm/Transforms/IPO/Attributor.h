@@ -128,6 +128,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
+#include <limits>
 #include <map>
 #include <optional>
 
@@ -274,11 +275,13 @@ struct RangeTy {
   }
 
   /// Constants used to represent special offsets or sizes.
-  /// - This assumes that Offset and Size are non-negative.
+  /// - We cannot assume that Offsets and Size are non-negative.
   /// - The constants should not clash with DenseMapInfo, such as EmptyKey
   ///   (INT64_MAX) and TombstoneKey (INT64_MIN).
-  static constexpr int64_t Unassigned = -1;
-  static constexpr int64_t Unknown = -2;
+  /// We use values "in the middle" of the 64 bit range to represent these
+  /// special cases.
+  static constexpr int64_t Unassigned = std::numeric_limits<int32_t>::min();
+  static constexpr int64_t Unknown = std::numeric_limits<int32_t>::max();
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const RangeTy &R) {
@@ -1050,21 +1053,46 @@ public:
   iterator end() { return IRPositions.end(); }
 };
 
-/// Wrapper for FunctoinAnalysisManager.
+/// Wrapper for FunctionAnalysisManager.
 struct AnalysisGetter {
+  // The client may be running the old pass manager, in which case, we need to
+  // map the requested Analysis to its equivalent wrapper in the old pass
+  // manager. The scheme implemented here does not require every Analysis to be
+  // updated. Only those new analyses that the client cares about in the old
+  // pass manager need to expose a LegacyWrapper type, and that wrapper should
+  // support a getResult() method that matches the new Analysis.
+  //
+  // We need SFINAE to check for the LegacyWrapper, but function templates don't
+  // allow partial specialization, which is needed in this case. So instead, we
+  // use a constexpr bool to perform the SFINAE, and then use this information
+  // inside the function template.
+  template <typename, typename = void> static constexpr bool HasLegacyWrapper = false;
+
   template <typename Analysis>
   typename Analysis::Result *getAnalysis(const Function &F) {
-    if (!FAM || !F.getParent())
-      return nullptr;
-    return &FAM->getResult<Analysis>(const_cast<Function &>(F));
+    if (FAM)
+      return &FAM->getResult<Analysis>(const_cast<Function &>(F));
+    if constexpr (HasLegacyWrapper<Analysis>)
+      if (LegacyPass)
+        return &LegacyPass
+                    ->getAnalysis<typename Analysis::LegacyWrapper>(
+                        const_cast<Function &>(F))
+                    .getResult();
+    return nullptr;
   }
 
   AnalysisGetter(FunctionAnalysisManager &FAM) : FAM(&FAM) {}
+  AnalysisGetter(Pass *P) : LegacyPass(P) {}
   AnalysisGetter() = default;
 
 private:
   FunctionAnalysisManager *FAM = nullptr;
+  Pass *LegacyPass = nullptr;
 };
+
+template <typename Analysis>
+constexpr bool AnalysisGetter::HasLegacyWrapper<
+      Analysis, std::void_t<typename Analysis::LegacyWrapper>> = true;
 
 /// Data structure to hold cached (LLVM-IR) information.
 ///
@@ -1357,7 +1385,7 @@ struct AttributorConfig {
   DenseSet<const char *> *Allowed = nullptr;
 
   /// Maximum number of iterations to run until fixpoint.
-  std::optional<unsigned> MaxFixpointIterations = std::nullopt;
+  std::optional<unsigned> MaxFixpointIterations;
 
   /// A callback function that returns an ORE object from a Function pointer.
   ///{

@@ -298,7 +298,7 @@ void BinaryFunctionPassManager::runPasses() {
       if (!Pass->shouldPrint(Function))
         continue;
 
-      Function.print(outs(), Message, true);
+      Function.print(outs(), Message);
 
       if (opts::DumpDotAll)
         Function.dumpGraphForPass(PassIdName);

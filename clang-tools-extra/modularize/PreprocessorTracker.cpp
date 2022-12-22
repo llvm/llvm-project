@@ -251,7 +251,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/raw_ostream.h"
-#include <optional>
 
 namespace Modularize {
 
@@ -735,7 +734,7 @@ public:
                           const clang::Token &IncludeTok,
                           llvm::StringRef FileName, bool IsAngled,
                           clang::CharSourceRange FilenameRange,
-                          std::optional<clang::FileEntryRef> File,
+                          clang::OptionalFileEntryRef File,
                           llvm::StringRef SearchPath,
                           llvm::StringRef RelativePath,
                           const clang::Module *Imported,
@@ -1278,10 +1277,9 @@ PreprocessorTracker *PreprocessorTracker::create(
 void PreprocessorCallbacks::InclusionDirective(
     clang::SourceLocation HashLoc, const clang::Token &IncludeTok,
     llvm::StringRef FileName, bool IsAngled,
-    clang::CharSourceRange FilenameRange,
-    std::optional<clang::FileEntryRef> File, llvm::StringRef SearchPath,
-    llvm::StringRef RelativePath, const clang::Module *Imported,
-    clang::SrcMgr::CharacteristicKind FileType) {
+    clang::CharSourceRange FilenameRange, clang::OptionalFileEntryRef File,
+    llvm::StringRef SearchPath, llvm::StringRef RelativePath,
+    const clang::Module *Imported, clang::SrcMgr::CharacteristicKind FileType) {
   int DirectiveLine, DirectiveColumn;
   std::string HeaderPath = getSourceLocationFile(PP, HashLoc);
   getSourceLocationLineAndColumn(PP, HashLoc, DirectiveLine, DirectiveColumn);

@@ -12,7 +12,7 @@
 define void @store_int_float_(float %a) {
 entry:
   %conv = fptosi float %a to i32
-  store i32 %conv, i32* @gint_, align 4
+  store i32 %conv, ptr @gint_, align 4
   ret void
 }
 
@@ -26,7 +26,7 @@ entry:
 define void @store_int_double_(double %a) {
 entry:
   %conv = fptosi double %a to i32
-  store i32 %conv, i32* @gint_, align 4
+  store i32 %conv, ptr @gint_, align 4
   ret void
 }
 
@@ -37,7 +37,7 @@ entry:
 define void @store_LL_float_(float %a) {
 entry:
   %conv = fptosi float %a to i64
-  store i64 %conv, i64* @gLL_, align 8
+  store i64 %conv, ptr @gLL_, align 8
   ret void
 }
 
@@ -48,6 +48,6 @@ entry:
 define void @store_LL_double_(double %a) {
 entry:
   %conv = fptosi double %a to i64
-  store i64 %conv, i64* @gLL_, align 8
+  store i64 %conv, ptr @gLL_, align 8
   ret void
 }

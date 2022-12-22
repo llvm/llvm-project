@@ -77,6 +77,16 @@ def CSE : Pass<"cse"> {
   ];
 }
 
+def GenerateRuntimeVerification : Pass<"generate-runtime-verification"> {
+  let summary = "Generate additional runtime op verification checks";
+  let description = [{
+    This pass generates op-specific runtime checks using the
+    `RuntimeVerifiableOpInterface`. It can be run for debugging purposes after
+    passes that are suspected to introduce faulty IR.
+  }];
+  let constructor = "mlir::createGenerateRuntimeVerificationPass()";
+}
+
 def Inliner : Pass<"inline"> {
   let summary = "Inline function calls";
   let constructor = "mlir::createInlinerPass()";

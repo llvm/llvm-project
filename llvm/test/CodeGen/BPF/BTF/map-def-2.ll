@@ -6,14 +6,14 @@
 ;     int a1;
 ;   };
 ;   typedef struct map_type {
-;     struct key_type *key;
+;     struct key_ptr key;
 ;   } _map_type;
 ;   typedef _map_type __map_type;
 ;   __map_type __attribute__((section(".maps"))) hash_map;
 ; Compilation flag:
 ;   clang -target bpf -O2 -g -S -emit-llvm t2.c
 
-%struct.map_type = type { %struct.key_type* }
+%struct.map_type = type { ptr }
 %struct.key_type = type { i32 }
 
 @hash_map = dso_local local_unnamed_addr global %struct.map_type zeroinitializer, section ".maps", align 8, !dbg !0

@@ -30,7 +30,6 @@
 #include "llvm/ADT/Twine.h"
 #include <ctime>
 #include <memory>
-#include <optional>
 #include <string>
 #include <utility>
 
@@ -334,7 +333,7 @@ private:
   /// \param NeedsFramework If M is not a framework but a missing header would
   ///        be found in case M was, set it to true. False otherwise.
   /// \return The resolved file, if any.
-  Optional<FileEntryRef>
+  OptionalFileEntryRef
   findHeader(Module *M, const Module::UnresolvedHeaderDirective &Header,
              SmallVectorImpl<char> &RelativePathName, bool &NeedsFramework);
 
@@ -607,8 +606,7 @@ public:
   ///
   /// \returns The file entry for the module map file containing the given
   /// module, or nullptr if the module definition was inferred.
-  std::optional<FileEntryRef>
-  getContainingModuleMapFile(const Module *Module) const;
+  OptionalFileEntryRef getContainingModuleMapFile(const Module *Module) const;
 
   /// Get the module map file that (along with the module name) uniquely
   /// identifies this module.
@@ -619,8 +617,7 @@ public:
   /// of inferred modules, returns the module map that allowed the inference
   /// (e.g. contained 'module *'). Otherwise, returns
   /// getContainingModuleMapFile().
-  std::optional<FileEntryRef>
-  getModuleMapFileForUniquing(const Module *M) const;
+  OptionalFileEntryRef getModuleMapFileForUniquing(const Module *M) const;
 
   void setInferredModuleAllowedBy(Module *M, const FileEntry *ModMap);
 

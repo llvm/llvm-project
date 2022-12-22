@@ -105,16 +105,15 @@ define i64 @mul_p5(i64 %a) {
 ; LA32-LABEL: mul_p5:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ori $a2, $zero, 5
-; LA32-NEXT:    mul.w $a1, $a1, $a2
-; LA32-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32-NEXT:    add.w $a1, $a3, $a1
-; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    mulh.wu $a2, $a0, $a2
+; LA32-NEXT:    alsl.w $a1, $a1, $a1, 2
+; LA32-NEXT:    add.w $a1, $a2, $a1
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: mul_p5:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a1, $zero, 5
-; LA64-NEXT:    mul.d $a0, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 2
 ; LA64-NEXT:    ret
   %1 = mul i64 %a, 5
   ret i64 %1

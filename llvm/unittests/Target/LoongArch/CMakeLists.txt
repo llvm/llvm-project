@@ -7,9 +7,14 @@ set(LLVM_LINK_COMPONENTS
   LoongArchCodeGen
   LoongArchDesc
   LoongArchInfo
+  CodeGen
+  Core
   MC
   MIRParser
+  SelectionDAG
   Support
+  Target
+  TargetParser
   )
 
 add_llvm_target_unittest(LoongArchTests

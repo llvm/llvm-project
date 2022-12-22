@@ -5,7 +5,7 @@
 
 @var = global i128 0
 
-define i128 @val_compare_and_swap(i128* %p, i128 %oldval, i128 %newval) {
+define i128 @val_compare_and_swap(ptr %p, i128 %oldval, i128 %newval) {
 ; NOOUTLINE-LABEL: val_compare_and_swap:
 ; NOOUTLINE:       // %bb.0:
 ; NOOUTLINE-NEXT:  .LBB0_1: // =>This Inner Loop Header: Depth=1
@@ -51,12 +51,12 @@ define i128 @val_compare_and_swap(i128* %p, i128 %oldval, i128 %newval) {
 ; LSE-NEXT:    mov x0, x2
 ; LSE-NEXT:    mov x1, x3
 ; LSE-NEXT:    ret
-  %pair = cmpxchg i128* %p, i128 %oldval, i128 %newval acquire acquire
+  %pair = cmpxchg ptr %p, i128 %oldval, i128 %newval acquire acquire
   %val = extractvalue { i128, i1 } %pair, 0
   ret i128 %val
 }
 
-define i128 @val_compare_and_swap_seqcst(i128* %p, i128 %oldval, i128 %newval) {
+define i128 @val_compare_and_swap_seqcst(ptr %p, i128 %oldval, i128 %newval) {
 ; NOOUTLINE-LABEL: val_compare_and_swap_seqcst:
 ; NOOUTLINE:       // %bb.0:
 ; NOOUTLINE-NEXT:  .LBB1_1: // =>This Inner Loop Header: Depth=1
@@ -102,12 +102,12 @@ define i128 @val_compare_and_swap_seqcst(i128* %p, i128 %oldval, i128 %newval) {
 ; LSE-NEXT:    mov x0, x2
 ; LSE-NEXT:    mov x1, x3
 ; LSE-NEXT:    ret
-  %pair = cmpxchg i128* %p, i128 %oldval, i128 %newval seq_cst seq_cst
+  %pair = cmpxchg ptr %p, i128 %oldval, i128 %newval seq_cst seq_cst
   %val = extractvalue { i128, i1 } %pair, 0
   ret i128 %val
 }
 
-define i128 @val_compare_and_swap_release(i128* %p, i128 %oldval, i128 %newval) {
+define i128 @val_compare_and_swap_release(ptr %p, i128 %oldval, i128 %newval) {
 ; NOOUTLINE-LABEL: val_compare_and_swap_release:
 ; NOOUTLINE:       // %bb.0:
 ; NOOUTLINE-NEXT:  .LBB2_1: // =>This Inner Loop Header: Depth=1
@@ -153,12 +153,12 @@ define i128 @val_compare_and_swap_release(i128* %p, i128 %oldval, i128 %newval) 
 ; LSE-NEXT:    mov x0, x2
 ; LSE-NEXT:    mov x1, x3
 ; LSE-NEXT:    ret
-  %pair = cmpxchg i128* %p, i128 %oldval, i128 %newval release monotonic
+  %pair = cmpxchg ptr %p, i128 %oldval, i128 %newval release monotonic
   %val = extractvalue { i128, i1 } %pair, 0
   ret i128 %val
 }
 
-define i128 @val_compare_and_swap_monotonic(i128* %p, i128 %oldval, i128 %newval) {
+define i128 @val_compare_and_swap_monotonic(ptr %p, i128 %oldval, i128 %newval) {
 ; NOOUTLINE-LABEL: val_compare_and_swap_monotonic:
 ; NOOUTLINE:       // %bb.0:
 ; NOOUTLINE-NEXT:  .LBB3_1: // =>This Inner Loop Header: Depth=1
@@ -204,12 +204,12 @@ define i128 @val_compare_and_swap_monotonic(i128* %p, i128 %oldval, i128 %newval
 ; LSE-NEXT:    mov x0, x2
 ; LSE-NEXT:    mov x1, x3
 ; LSE-NEXT:    ret
-  %pair = cmpxchg i128* %p, i128 %oldval, i128 %newval monotonic monotonic
+  %pair = cmpxchg ptr %p, i128 %oldval, i128 %newval monotonic monotonic
   %val = extractvalue { i128, i1 } %pair, 0
   ret i128 %val
 }
 
-define void @fetch_and_nand(i128* %p, i128 %bits) {
+define void @fetch_and_nand(ptr %p, i128 %bits) {
 ; NOOUTLINE-LABEL: fetch_and_nand:
 ; NOOUTLINE:       // %bb.0:
 ; NOOUTLINE-NEXT:  .LBB4_1: // %atomicrmw.start
@@ -267,12 +267,12 @@ define void @fetch_and_nand(i128* %p, i128 %bits) {
 ; LSE-NEXT:    stp x4, x5, [x8]
 ; LSE-NEXT:    ret
 
-  %val = atomicrmw nand i128* %p, i128 %bits release
-  store i128 %val, i128* @var, align 16
+  %val = atomicrmw nand ptr %p, i128 %bits release
+  store i128 %val, ptr @var, align 16
   ret void
 }
 
-define void @fetch_and_or(i128* %p, i128 %bits) {
+define void @fetch_and_or(ptr %p, i128 %bits) {
 ; NOOUTLINE-LABEL: fetch_and_or:
 ; NOOUTLINE:       // %bb.0:
 ; NOOUTLINE-NEXT:  .LBB5_1: // %atomicrmw.start
@@ -324,12 +324,12 @@ define void @fetch_and_or(i128* %p, i128 %bits) {
 ; LSE-NEXT:    stp x4, x5, [x8]
 ; LSE-NEXT:    ret
 
-  %val = atomicrmw or i128* %p, i128 %bits seq_cst
-  store i128 %val, i128* @var, align 16
+  %val = atomicrmw or ptr %p, i128 %bits seq_cst
+  store i128 %val, ptr @var, align 16
   ret void
 }
 
-define void @fetch_and_add(i128* %p, i128 %bits) {
+define void @fetch_and_add(ptr %p, i128 %bits) {
 ; NOOUTLINE-LABEL: fetch_and_add:
 ; NOOUTLINE:       // %bb.0:
 ; NOOUTLINE-NEXT:  .LBB6_1: // %atomicrmw.start
@@ -380,12 +380,12 @@ define void @fetch_and_add(i128* %p, i128 %bits) {
 ; LSE-NEXT:    ldr x8, [x8, :got_lo12:var]
 ; LSE-NEXT:    stp x4, x5, [x8]
 ; LSE-NEXT:    ret
-  %val = atomicrmw add i128* %p, i128 %bits seq_cst
-  store i128 %val, i128* @var, align 16
+  %val = atomicrmw add ptr %p, i128 %bits seq_cst
+  store i128 %val, ptr @var, align 16
   ret void
 }
 
-define void @fetch_and_sub(i128* %p, i128 %bits) {
+define void @fetch_and_sub(ptr %p, i128 %bits) {
 ; NOOUTLINE-LABEL: fetch_and_sub:
 ; NOOUTLINE:       // %bb.0:
 ; NOOUTLINE-NEXT:  .LBB7_1: // %atomicrmw.start
@@ -436,12 +436,12 @@ define void @fetch_and_sub(i128* %p, i128 %bits) {
 ; LSE-NEXT:    ldr x8, [x8, :got_lo12:var]
 ; LSE-NEXT:    stp x4, x5, [x8]
 ; LSE-NEXT:    ret
-  %val = atomicrmw sub i128* %p, i128 %bits seq_cst
-  store i128 %val, i128* @var, align 16
+  %val = atomicrmw sub ptr %p, i128 %bits seq_cst
+  store i128 %val, ptr @var, align 16
   ret void
 }
 
-define void @fetch_and_min(i128* %p, i128 %bits) {
+define void @fetch_and_min(ptr %p, i128 %bits) {
 ; NOOUTLINE-LABEL: fetch_and_min:
 ; NOOUTLINE:       // %bb.0:
 ; NOOUTLINE-NEXT:  .LBB8_1: // %atomicrmw.start
@@ -498,12 +498,12 @@ define void @fetch_and_min(i128* %p, i128 %bits) {
 ; LSE-NEXT:    ldr x8, [x8, :got_lo12:var]
 ; LSE-NEXT:    stp x4, x5, [x8]
 ; LSE-NEXT:    ret
-  %val = atomicrmw min i128* %p, i128 %bits seq_cst
-  store i128 %val, i128* @var, align 16
+  %val = atomicrmw min ptr %p, i128 %bits seq_cst
+  store i128 %val, ptr @var, align 16
   ret void
 }
 
-define void @fetch_and_max(i128* %p, i128 %bits) {
+define void @fetch_and_max(ptr %p, i128 %bits) {
 ; NOOUTLINE-LABEL: fetch_and_max:
 ; NOOUTLINE:       // %bb.0:
 ; NOOUTLINE-NEXT:  .LBB9_1: // %atomicrmw.start
@@ -560,12 +560,12 @@ define void @fetch_and_max(i128* %p, i128 %bits) {
 ; LSE-NEXT:    ldr x8, [x8, :got_lo12:var]
 ; LSE-NEXT:    stp x4, x5, [x8]
 ; LSE-NEXT:    ret
-  %val = atomicrmw max i128* %p, i128 %bits seq_cst
-  store i128 %val, i128* @var, align 16
+  %val = atomicrmw max ptr %p, i128 %bits seq_cst
+  store i128 %val, ptr @var, align 16
   ret void
 }
 
-define void @fetch_and_umin(i128* %p, i128 %bits) {
+define void @fetch_and_umin(ptr %p, i128 %bits) {
 ; NOOUTLINE-LABEL: fetch_and_umin:
 ; NOOUTLINE:       // %bb.0:
 ; NOOUTLINE-NEXT:  .LBB10_1: // %atomicrmw.start
@@ -622,12 +622,12 @@ define void @fetch_and_umin(i128* %p, i128 %bits) {
 ; LSE-NEXT:    ldr x8, [x8, :got_lo12:var]
 ; LSE-NEXT:    stp x4, x5, [x8]
 ; LSE-NEXT:    ret
-  %val = atomicrmw umin i128* %p, i128 %bits seq_cst
-  store i128 %val, i128* @var, align 16
+  %val = atomicrmw umin ptr %p, i128 %bits seq_cst
+  store i128 %val, ptr @var, align 16
   ret void
 }
 
-define void @fetch_and_umax(i128* %p, i128 %bits) {
+define void @fetch_and_umax(ptr %p, i128 %bits) {
 ; NOOUTLINE-LABEL: fetch_and_umax:
 ; NOOUTLINE:       // %bb.0:
 ; NOOUTLINE-NEXT:  .LBB11_1: // %atomicrmw.start
@@ -684,12 +684,12 @@ define void @fetch_and_umax(i128* %p, i128 %bits) {
 ; LSE-NEXT:    ldr x8, [x8, :got_lo12:var]
 ; LSE-NEXT:    stp x4, x5, [x8]
 ; LSE-NEXT:    ret
-  %val = atomicrmw umax i128* %p, i128 %bits seq_cst
-  store i128 %val, i128* @var, align 16
+  %val = atomicrmw umax ptr %p, i128 %bits seq_cst
+  store i128 %val, ptr @var, align 16
   ret void
 }
 
-define i128 @atomic_load_seq_cst(i128* %p) {
+define i128 @atomic_load_seq_cst(ptr %p) {
 ; NOOUTLINE-LABEL: atomic_load_seq_cst:
 ; NOOUTLINE:       // %bb.0:
 ; NOOUTLINE-NEXT:    mov x8, x0
@@ -720,11 +720,11 @@ define i128 @atomic_load_seq_cst(i128* %p) {
 ; LSE-NEXT:    mov x0, x2
 ; LSE-NEXT:    mov x1, x3
 ; LSE-NEXT:    ret
-   %r = load atomic i128, i128* %p seq_cst, align 16
+   %r = load atomic i128, ptr %p seq_cst, align 16
    ret i128 %r
 }
 
-define i128 @atomic_load_relaxed(i64, i64, i128* %p) {
+define i128 @atomic_load_relaxed(i64, i64, ptr %p) {
 ; NOOUTLINE-LABEL: atomic_load_relaxed:
 ; NOOUTLINE:       // %bb.0:
 ; NOOUTLINE-NEXT:  .LBB13_1: // %atomicrmw.start
@@ -751,12 +751,12 @@ define i128 @atomic_load_relaxed(i64, i64, i128* %p) {
 ; LSE-NEXT:    mov x1, #0
 ; LSE-NEXT:    casp x0, x1, x0, x1, [x2]
 ; LSE-NEXT:    ret
-    %r = load atomic i128, i128* %p monotonic, align 16
+    %r = load atomic i128, ptr %p monotonic, align 16
     ret i128 %r
 }
 
 
-define void @atomic_store_seq_cst(i128 %in, i128* %p) {
+define void @atomic_store_seq_cst(i128 %in, ptr %p) {
 ; NOOUTLINE-LABEL: atomic_store_seq_cst:
 ; NOOUTLINE:       // %bb.0:
 ; NOOUTLINE-NEXT:  .LBB14_1: // %atomicrmw.start
@@ -794,11 +794,11 @@ define void @atomic_store_seq_cst(i128 %in, i128* %p) {
 ; LSE-NEXT:    b.ne .LBB14_1
 ; LSE-NEXT:  // %bb.2: // %atomicrmw.end
 ; LSE-NEXT:    ret
-   store atomic i128 %in, i128* %p seq_cst, align 16
+   store atomic i128 %in, ptr %p seq_cst, align 16
    ret void
 }
 
-define void @atomic_store_release(i128 %in, i128* %p) {
+define void @atomic_store_release(i128 %in, ptr %p) {
 ; NOOUTLINE-LABEL: atomic_store_release:
 ; NOOUTLINE:       // %bb.0:
 ; NOOUTLINE-NEXT:  .LBB15_1: // %atomicrmw.start
@@ -836,11 +836,11 @@ define void @atomic_store_release(i128 %in, i128* %p) {
 ; LSE-NEXT:    b.ne .LBB15_1
 ; LSE-NEXT:  // %bb.2: // %atomicrmw.end
 ; LSE-NEXT:    ret
-   store atomic i128 %in, i128* %p release, align 16
+   store atomic i128 %in, ptr %p release, align 16
    ret void
 }
 
-define void @atomic_store_relaxed(i128 %in, i128* %p) {
+define void @atomic_store_relaxed(i128 %in, ptr %p) {
 ; NOOUTLINE-LABEL: atomic_store_relaxed:
 ; NOOUTLINE:       // %bb.0:
 ; NOOUTLINE-NEXT:  .LBB16_1: // %atomicrmw.start
@@ -878,13 +878,13 @@ define void @atomic_store_relaxed(i128 %in, i128* %p) {
 ; LSE-NEXT:    b.ne .LBB16_1
 ; LSE-NEXT:  // %bb.2: // %atomicrmw.end
 ; LSE-NEXT:    ret
-   store atomic i128 %in, i128* %p unordered, align 16
+   store atomic i128 %in, ptr %p unordered, align 16
    ret void
 }
 
 ; Since we store the original value to ensure no tearing for the unsuccessful
 ; case, the register used must not be xzr.
-define void @cmpxchg_dead(i128* %ptr, i128 %desired, i128 %new) {
+define void @cmpxchg_dead(ptr %ptr, i128 %desired, i128 %new) {
 ; NOOUTLINE-LABEL: cmpxchg_dead:
 ; NOOUTLINE:       // %bb.0:
 ; NOOUTLINE-NEXT:  .LBB17_1: // =>This Inner Loop Header: Depth=1
@@ -927,6 +927,6 @@ define void @cmpxchg_dead(i128* %ptr, i128 %desired, i128 %new) {
 ; LSE-NEXT:    // kill: def $x2 killed $x2 killed $x2_x3 def $x2_x3
 ; LSE-NEXT:    casp x2, x3, x4, x5, [x0]
 ; LSE-NEXT:    ret
-  cmpxchg i128* %ptr, i128 %desired, i128 %new monotonic monotonic
+  cmpxchg ptr %ptr, i128 %desired, i128 %new monotonic monotonic
   ret void
 }

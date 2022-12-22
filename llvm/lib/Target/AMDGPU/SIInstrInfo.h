@@ -1183,6 +1183,12 @@ public:
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
 
+  InstructionUniformity
+  getInstructionUniformity(const MachineInstr &MI) const override final;
+
+  InstructionUniformity
+  getGenericInstructionUniformity(const MachineInstr &MI) const;
+
   const MIRFormatter *getMIRFormatter() const override {
     if (!Formatter.get())
       Formatter = std::make_unique<AMDGPUMIRFormatter>();

@@ -5,7 +5,7 @@
 ; reset the variable introduced to record and accumulate the number of threads
 ; which have already exited the loop.
 
-define amdgpu_kernel void @multiple_backedges(i32 %arg, i32* %arg1) {
+define amdgpu_kernel void @multiple_backedges(i32 %arg, ptr %arg1) {
 ; OPT-LABEL: @multiple_backedges(
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -29,9 +29,9 @@ define amdgpu_kernel void @multiple_backedges(i32 %arg, i32* %arg1) {
 ; OPT:       loop_exit:
 ; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP7]])
 ; OPT-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP]] to i64
-; OPT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, i32* [[ARG1:%.*]], i64 [[TMP12]]
-; OPT-NEXT:    [[TMP14:%.*]] = addrspacecast i32* [[TMP13]] to i32 addrspace(1)*
-; OPT-NEXT:    store i32 [[TMP5]], i32 addrspace(1)* [[TMP14]], align 4
+; OPT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[ARG1:%.*]], i64 [[TMP12]]
+; OPT-NEXT:    [[TMP14:%.*]] = addrspacecast ptr [[TMP13]] to ptr addrspace(1)
+; OPT-NEXT:    store i32 [[TMP5]], ptr addrspace(1) [[TMP14]], align 4
 ; OPT-NEXT:    ret void
 ;
 entry:
@@ -51,9 +51,9 @@ loop_end:
 
 loop_exit:
   %tmp12 = zext i32 %tmp to i64
-  %tmp13 = getelementptr inbounds i32, i32* %arg1, i64 %tmp12
-  %tmp14 = addrspacecast i32* %tmp13 to i32 addrspace(1)*
-  store i32 %tmp5, i32 addrspace(1)* %tmp14, align 4
+  %tmp13 = getelementptr inbounds i32, ptr %arg1, i64 %tmp12
+  %tmp14 = addrspacecast ptr %tmp13 to ptr addrspace(1)
+  store i32 %tmp5, ptr addrspace(1) %tmp14, align 4
   ret void
 }
 

@@ -67,7 +67,7 @@ if.end:
   ret void
 }
 
-declare void @notdead(i8*)
+declare void @notdead(ptr)
 
 define void @conditional_alloca(i32 %n) nounwind {
 ; RV32I-SW-NO-LABEL: conditional_alloca:
@@ -157,7 +157,7 @@ define void @conditional_alloca(i32 %n) nounwind {
 
 if.then:
   %addr = alloca i8, i32 %n
-  call void @notdead(i8* %addr)
+  call void @notdead(ptr %addr)
   br label %if.end
 
 if.end:

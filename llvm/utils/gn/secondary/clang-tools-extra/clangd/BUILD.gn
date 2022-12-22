@@ -62,6 +62,7 @@ static_library("clangd") {
     "//clang/lib/Tooling/Syntax",
     "//llvm/lib/Support",
     "//llvm/lib/Target:AllTargetsInfos",
+    "//llvm/lib/TargetParser",
     "//llvm/utils/gn/build/libs/pthread",
   ]
   include_dirs = [

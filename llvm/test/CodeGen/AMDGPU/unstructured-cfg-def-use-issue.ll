@@ -143,7 +143,7 @@ define hidden void @widget() {
 ; GCN-NEXT:    s_branch .LBB0_4
 ; SI-OPT-LABEL: @widget(
 ; SI-OPT-NEXT:  bb:
-; SI-OPT-NEXT:    [[TMP:%.*]] = load i32, i32 addrspace(1)* null, align 16
+; SI-OPT-NEXT:    [[TMP:%.*]] = load i32, ptr addrspace(1) null, align 16
 ; SI-OPT-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP]], 21
 ; SI-OPT-NEXT:    br i1 [[TMP1]], label [[BB4:%.*]], label [[BB2:%.*]]
 ; SI-OPT:       bb2:
@@ -168,10 +168,10 @@ define hidden void @widget() {
 ; SI-OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]])
 ; SI-OPT-NEXT:    br label [[BB12]]
 ; SI-OPT:       bb12:
-; SI-OPT-NEXT:    store float 0.000000e+00, float addrspace(1)* null, align 8
+; SI-OPT-NEXT:    store float 0.000000e+00, ptr addrspace(1) null, align 8
 ; SI-OPT-NEXT:    ret void
 bb:
-  %tmp = load i32, i32 addrspace(1)* null, align 16
+  %tmp = load i32, ptr addrspace(1) null, align 16
   %tmp1 = icmp slt i32 %tmp, 21
   br i1 %tmp1, label %bb4, label %bb2
 
@@ -196,7 +196,7 @@ bb9:                                              ; preds = %bb4, %bb2
   br i1 %tmp11, label %bb6, label %bb12
 
 bb12:                                             ; preds = %bb9, %bb2
-  store float 0.000000e+00, float addrspace(1)* null, align 8
+  store float 0.000000e+00, ptr addrspace(1) null, align 8
   ret void
 }
 
@@ -206,15 +206,15 @@ declare hidden float @wibble() local_unnamed_addr
 define hidden void @blam() {
 ; SI-OPT-LABEL: @blam(
 ; SI-OPT-NEXT:  bb:
-; SI-OPT-NEXT:    [[TMP:%.*]] = load float, float* null, align 16
+; SI-OPT-NEXT:    [[TMP:%.*]] = load float, ptr null, align 16
 ; SI-OPT-NEXT:    br label [[BB2:%.*]]
 ; SI-OPT:       bb1:
 ; SI-OPT-NEXT:    br label [[BB2]]
 ; SI-OPT:       bb2:
 ; SI-OPT-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; SI-OPT-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* null, i32 [[TID]]
-; SI-OPT-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(1)* [[GEP]], align 16
-; SI-OPT-NEXT:    store float 0.000000e+00, float addrspace(5)* null, align 8
+; SI-OPT-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr addrspace(1) null, i32 [[TID]]
+; SI-OPT-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 16
+; SI-OPT-NEXT:    store float 0.000000e+00, ptr addrspace(5) null, align 8
 ; SI-OPT-NEXT:    br label [[BB4:%.*]]
 ; SI-OPT:       bb4:
 ; SI-OPT-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[TMP3]], 3
@@ -236,7 +236,7 @@ define hidden void @blam() {
 ; SI-OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP5]])
 ; SI-OPT-NEXT:    br label [[BB1]]
 ; SI-OPT:       bb10:
-; SI-OPT-NEXT:    store float 0x7FF8000000000000, float addrspace(5)* null, align 16
+; SI-OPT-NEXT:    store float 0x7FF8000000000000, ptr addrspace(5) null, align 16
 ; SI-OPT-NEXT:    br label [[BB18:%.*]]
 ; SI-OPT:       bb11:
 ; SI-OPT-NEXT:    [[TMP12:%.*]] = call float @spam()
@@ -254,13 +254,13 @@ define hidden void @blam() {
 ; SI-OPT-NEXT:    br i1 [[TMP10]], label [[BB17:%.*]], label [[BB16:%.*]]
 ; SI-OPT:       bb16:
 ; SI-OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP11]])
-; SI-OPT-NEXT:    store float 0x7FF8000000000000, float addrspace(5)* null, align 16
+; SI-OPT-NEXT:    store float 0x7FF8000000000000, ptr addrspace(5) null, align 16
 ; SI-OPT-NEXT:    br label [[BB17]]
 ; SI-OPT:       bb17:
-; SI-OPT-NEXT:    store float [[TMP]], float addrspace(5)* null, align 16
+; SI-OPT-NEXT:    store float [[TMP]], ptr addrspace(5) null, align 16
 ; SI-OPT-NEXT:    br label [[BB18]]
 ; SI-OPT:       bb18:
-; SI-OPT-NEXT:    store float 0x7FF8000000000000, float addrspace(5)* null, align 4
+; SI-OPT-NEXT:    store float 0x7FF8000000000000, ptr addrspace(5) null, align 4
 ; SI-OPT-NEXT:    br label [[BB2]]
 ;
 ; GCN-LABEL: blam:
@@ -391,7 +391,7 @@ define hidden void @blam() {
 ; GCN-NEXT:    buffer_store_dword v43, off, s[0:3], 0
 ; GCN-NEXT:    s_branch .LBB1_2
 bb:
-  %tmp = load float, float* null, align 16
+  %tmp = load float, ptr null, align 16
   br label %bb2
 
 bb1:                                              ; preds = %bb8, %bb6
@@ -399,9 +399,9 @@ bb1:                                              ; preds = %bb8, %bb6
 
 bb2:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep  = getelementptr inbounds i32, i32 addrspace(1)* null, i32 %tid
-  %tmp3 = load i32, i32 addrspace(1)* %gep, align 16
-  store float 0.000000e+00, float addrspace(5)* null, align 8
+  %gep  = getelementptr inbounds i32, ptr addrspace(1) null, i32 %tid
+  %tmp3 = load i32, ptr addrspace(1) %gep, align 16
+  store float 0.000000e+00, ptr addrspace(5) null, align 8
   br label %bb4
 
 bb4:                                              ; preds = %bb2
@@ -417,7 +417,7 @@ bb8:                                              ; preds = %bb4
   br i1 %tmp9, label %bb10, label %bb1
 
 bb10:                                             ; preds = %bb8
-  store float 0x7FF8000000000000, float addrspace(5)* null, align 16
+  store float 0x7FF8000000000000, ptr addrspace(5) null, align 16
   br label %bb18
 
 bb11:                                             ; preds = %bb6
@@ -430,15 +430,15 @@ bb14:                                             ; preds = %bb11
   br i1 %tmp15, label %bb17, label %bb16
 
 bb16:                                             ; preds = %bb14
-  store float 0x7FF8000000000000, float addrspace(5)* null, align 16
+  store float 0x7FF8000000000000, ptr addrspace(5) null, align 16
   br label %bb17
 
 bb17:                                             ; preds = %bb16, %bb14
-  store float %tmp, float addrspace(5)* null, align 16
+  store float %tmp, ptr addrspace(5) null, align 16
   br label %bb18
 
 bb18:                                             ; preds = %bb17, %bb10
-  store float 0x7FF8000000000000, float addrspace(5)* null, align 4
+  store float 0x7FF8000000000000, ptr addrspace(5) null, align 4
   br label %bb2
 }
 

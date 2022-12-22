@@ -3,6 +3,9 @@
 #define INCLUDED
 #pragma clang system_header
 
+// Xfail buffer warns until MIOPEN GTEST compiles ok
+// XFAIL: * 
+
 // no spanification warnings for system headers
 void foo(...);  // let arguments of `foo` to hold testing expressions
 void testAsSystemHeader(char *p) {
@@ -17,9 +20,6 @@ void testAsSystemHeader(char *p) {
 }
 
 #else
-
-// need to teenable warning after MIOpen gtest wont fail
-// XFAIL:*
 
 void testIncrement(char *p) {
   ++p; // expected-warning{{unchecked operation on raw buffer in expression}}

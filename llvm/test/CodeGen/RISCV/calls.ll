@@ -88,7 +88,7 @@ define i32 @test_call_defined(i32 %a) nounwind {
   ret i32 %1
 }
 
-define i32 @test_call_indirect(i32 (i32)* %a, i32 %b) nounwind {
+define i32 @test_call_indirect(ptr %a, i32 %b) nounwind {
 ; RV32I-LABEL: test_call_indirect:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -116,7 +116,7 @@ define i32 @test_call_indirect(i32 (i32)* %a, i32 %b) nounwind {
 
 ; Make sure we don't use t0 as the source for jalr as that is a hint to pop the
 ; return address stack on some microarchitectures.
-define i32 @test_call_indirect_no_t0(i32 (i32, i32, i32, i32, i32, i32, i32)* %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) nounwind {
+define i32 @test_call_indirect_no_t0(ptr %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) nounwind {
 ; RV32I-LABEL: test_call_indirect_no_t0:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16

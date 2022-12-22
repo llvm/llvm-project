@@ -687,7 +687,7 @@ conservativeCallConflict(llvm::ArrayRef<mlir::Operation *> reaches) {
       if (auto callee =
               call.getCallableForCallee().dyn_cast<mlir::SymbolRefAttr>()) {
         auto module = op->getParentOfType<mlir::ModuleOp>();
-        return hasHostAssociationArgument(
+        return isInternalPorcedure(
             module.lookupSymbol<mlir::func::FuncOp>(callee));
       }
     return false;

@@ -1,0 +1,79 @@
+# RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+# CHECK-LABEL: MachineUniformityInfo for function: hidden_diverge
+# CHECK-LABEL: BLOCK bb.0
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1) = G_ICMP intpred(slt)
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1) = G_XOR %{{[0-9]*}}:_, %{{[0-9]*}}:_
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
+# CHECK: DIVERGENT: G_BRCOND %{{[0-9]*}}:_(s1), %bb.1
+# CHECK: DIVERGENT: G_BR %bb.2
+# CHECK-LABEL: BLOCK bb.1
+# CHECK-LABEL: BLOCK bb.2
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_PHI %{{[0-9]*}}:_(s32), %bb.1, %{{[0-9]*}}:_(s32), %bb.0
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1) = G_PHI %{{[0-9]*}}:_(s1), %bb.1, %{{[0-9]*}}:_(s1), %bb.0
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
+# CHECK: DIVERGENT: G_BRCOND %{{[0-9]*}}:_(s1), %bb.3
+# CHECK: DIVERGENT: G_BR %bb.4
+# CHECK-LABEL: BLOCK bb.3
+# CHECK-LABEL: BLOCK bb.4
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_PHI %{{[0-9]*}}:_(s32), %bb.2, %{{[0-9]*}}:_(s32), %bb.3
+
+---
+name:            hidden_diverge
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+    liveins: $sgpr4_sgpr5
+
+    %4:_(p4) = COPY $sgpr4_sgpr5
+    %15:_(s32) = G_CONSTANT i32 0
+    %17:_(s1) = G_CONSTANT i1 true
+    %23:_(s32) = G_CONSTANT i32 1
+    %30:_(s32) = G_CONSTANT i32 2
+    %32:_(p1) = G_IMPLICIT_DEF
+    %33:_(s32) = G_IMPLICIT_DEF
+    %8:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
+    %9:_(<3 x s32>) = G_LOAD %8(p4) :: (dereferenceable invariant load (<3 x s32>), align 16, addrspace 4)
+    %10:_(s64) = G_CONSTANT i64 4
+    %11:_(p4) = G_PTR_ADD %8, %10(s64)
+    %12:_(s64) = G_CONSTANT i64 8
+    %13:_(p4) = G_PTR_ADD %8, %12(s64)
+    %14:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
+    %16:_(s1) = G_ICMP intpred(slt), %14(s32), %15
+    %18:_(s1) = G_XOR %16, %17
+    %19:_(s1), %20:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %16(s1)
+    G_BRCOND %19(s1), %bb.2
+    G_BR %bb.3
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+
+    %21:_(s32) = G_EXTRACT_VECTOR_ELT %9(<3 x s32>), %15(s32)
+    %22:_(s32) = G_EXTRACT_VECTOR_ELT %9(<3 x s32>), %23(s32)
+    %24:_(s1) = G_ICMP intpred(slt), %21(s32), %15
+
+  bb.3:
+    successors: %bb.4(0x40000000), %bb.5(0x40000000)
+
+    %25:_(s32) = G_PHI %22(s32), %bb.2, %33(s32), %bb.1
+    %26:_(s1) = G_PHI %24(s1), %bb.2, %18(s1), %bb.1
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %20(s64)
+    %27:_(s1), %28:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %26(s1)
+    G_BRCOND %27(s1), %bb.4
+    G_BR %bb.5
+
+  bb.4:
+    successors: %bb.5(0x80000000)
+
+    %29:_(s32) = G_EXTRACT_VECTOR_ELT %9(<3 x s32>), %30(s32)
+
+  bb.5:
+    %31:_(s32) = G_PHI %25(s32), %bb.3, %29(s32), %bb.4
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %28(s64)
+    G_STORE %31(s32), %32(p1) :: (volatile store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+    S_ENDPGM 0
+
+...

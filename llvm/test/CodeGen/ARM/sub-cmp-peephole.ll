@@ -137,7 +137,7 @@ entry:
 ; V8: vsel
   %cmp = icmp sgt i32 %a, %b
   %sub = sub i32 %a, %b
-  store i32 %sub, i32* @t
+  store i32 %sub, ptr @t
   %ret = select i1 %cmp, double %x, double %y
   ret double %ret
 }
@@ -154,7 +154,7 @@ entry:
   %cmp = icmp sgt i32 %a, %b
   %sub = sub i32 %b, %a
   %ret = select i1 %cmp, double %x, double %y
-  store i32 %sub, i32* @t
+  store i32 %sub, ptr @t
   ret double %ret
 }
 
@@ -169,7 +169,7 @@ entry:
 ; CHECK: sub
 ; CHECK: cmn
 ; CHECK: ble
-  %load = load i32, i32* @t, align 4
+  %load = load i32, ptr @t, align 4
   %sub = sub i32 %load, 17
   %cmp = icmp slt i32 %sub, 0
   br i1 %cmp, label %if.then, label %if.else
@@ -191,7 +191,7 @@ entry:
 ; CHECK: sub
 ; CHECK: cmp
 ; CHECK: bhs
-  %load = load i32, i32* @t, align 4
+  %load = load i32, ptr @t, align 4
   %sub = sub i32 %load, 17
   %cmp = icmp ult i32 %sub, 0
   br i1 %cmp, label %if.then, label %if.else

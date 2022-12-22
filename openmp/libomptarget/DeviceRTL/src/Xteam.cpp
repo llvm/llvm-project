@@ -41,7 +41,7 @@
 #define __XTEAM_MAXW_PERTEAM 32
 #define __XTEAM_SHARED volatile __attribute__((address_space(3)))
 
-using namespace _OMP;
+using namespace  ompx::mapping;
 
 #pragma omp declare target
 
@@ -73,27 +73,27 @@ void __xteam_get_mem(uint64_t team_proc_num, void *data, uint64_t length,
 
 // Headers for specialized shfl_xor
 double __shfl_xor_d(double var, int lane_mask,
-                    int width = mapping::getWarpSize());
+                    int width = ompx::mapping::getWarpSize());
 float __shfl_xor_f(float var, int lane_mask,
-                   int width = mapping::getWarpSize());
-int __shfl_xor_int(int var, int lane_mask, int width = mapping::getWarpSize());
+                   int width = ompx::mapping::getWarpSize());
+int __shfl_xor_int(int var, int lane_mask, int width = ompx::mapping::getWarpSize());
 double _Complex __shfl_xor_cd(double _Complex var, int lane_mask,
-                              int width = mapping::getWarpSize());
+                              int width = ompx::mapping::getWarpSize());
 float _Complex __shfl_xor_cf(float _Complex var, int lane_mask,
-                             int width = mapping::getWarpSize());
+                             int width = ompx::mapping::getWarpSize());
 
 // Define the arch variants of shfl
 
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 
-int __shfl_xor_int(int var, int lane_mask, int width = mapping::getWarpSize()) {
-  int self = mapping::getThreadIdInWarp(); // __lane_id();
+int __shfl_xor_int(int var, int lane_mask, int width = ompx::mapping::getWarpSize()) {
+  int self = ompx::mapping::getThreadIdInWarp(); // __lane_id();
   int index = self ^ lane_mask;
   index = index >= ((self + width) & ~(width - 1)) ? self : index;
   return __builtin_amdgcn_ds_bpermute(index << 2, var);
 }
 float __shfl_xor_f(float var, int lane_mask,
-                   int width = mapping::getWarpSize()) {
+                   int width = ompx::mapping::getWarpSize()) {
   union {
     int i;
     unsigned u;
@@ -104,7 +104,7 @@ float __shfl_xor_f(float var, int lane_mask,
   return tmp.f;
 }
 double __shfl_xor_d(double var, int lane_mask,
-                    int width = mapping::getWarpSize()) {
+                    int width = ompx::mapping::getWarpSize()) {
   static_assert(sizeof(double) == 2 * sizeof(int), "");
   static_assert(sizeof(double) == sizeof(uint64_t), "");
 
@@ -121,13 +121,13 @@ double __shfl_xor_d(double var, int lane_mask,
 }
 
 double _Complex __shfl_xor_cd(double _Complex var, int lane_mask,
-                              int width = mapping::getWarpSize()) {
+                              int width = ompx::mapping::getWarpSize()) {
   __real__(var) = __shfl_xor_d(__real__(var), lane_mask, width);
   __imag__(var) = __shfl_xor_d(__imag__(var), lane_mask, width);
   return var;
 }
 float _Complex __shfl_xor_cf(float _Complex var, int lane_mask,
-                             int width = mapping::getWarpSize()) {
+                             int width = ompx::mapping::getWarpSize()) {
   __real__(var) = __shfl_xor_f(__real__(var), lane_mask, width);
   __imag__(var) = __shfl_xor_f(__imag__(var), lane_mask, width);
   return var;
@@ -142,7 +142,7 @@ int __shfl_xor_int(int var, int lane_mask, int width) {
   return __nvvm_shfl_sync_bfly_i32(0xFFFFFFFF, var, lane_mask, c);
 }
 float __shfl_xor_f(float var, int lane_mask,
-                   int width = mapping::getWarpSize()) {
+                   int width = ompx::mapping::getWarpSize()) {
   union {
     int i;
     unsigned u;
@@ -153,7 +153,7 @@ float __shfl_xor_f(float var, int lane_mask,
   return tmp.f;
 }
 double __shfl_xor_d(double var, int laneMask,
-                    int width = mapping::getWarpSize()) {
+                    int width = ompx::mapping::getWarpSize()) {
   unsigned lo, hi;
   asm volatile("mov.b64 {%0,%1}, %2;" : "=r"(lo), "=r"(hi) : "d"(var));
   hi = __shfl_xor_int(hi, laneMask, width);
@@ -162,13 +162,13 @@ double __shfl_xor_d(double var, int laneMask,
   return var;
 }
 double _Complex __shfl_xor_cd(double _Complex var, int lane_mask,
-                              int width = mapping::getWarpSize()) {
+                              int width = ompx::mapping::getWarpSize()) {
   __real__(var) = __shfl_xor_d(__real__(var), lane_mask, width);
   __imag__(var) = __shfl_xor_d(__imag__(var), lane_mask, width);
   return var;
 }
 float _Complex __shfl_xor_cf(float _Complex var, int lane_mask,
-                             int width = mapping::getWarpSize()) {
+                             int width = ompx::mapping::getWarpSize()) {
   __real__(var) = __shfl_xor_f(__real__(var), lane_mask, width);
   __imag__(var) = __shfl_xor_f(__imag__(var), lane_mask, width);
   return var;
@@ -273,13 +273,13 @@ template <typename T> void __local_xteam_sum(T inval, T *result_value) {
 #pragma omp allocate(val) allocator(omp_thread_mem_alloc)
   val = inval;
 
-  const int32_t omp_thread_num = mapping::getThreadIdInBlock();
-  const int32_t omp_team_num = mapping::getBlockId();
-  const int32_t wave_num = mapping::getWarpId();         // 0 15
-  const int32_t lane_num = mapping::getThreadIdInWarp(); //  0 63
-  const int32_t wsz = mapping::getWarpSize();
+  const int32_t omp_thread_num = ompx::mapping::getThreadIdInBlock();
+  const int32_t omp_team_num = ompx::mapping::getBlockId();
+  const int32_t wave_num = ompx::mapping::getWarpId();         // 0 15
+  const int32_t lane_num = ompx::mapping::getThreadIdInWarp(); //  0 63
+  const int32_t wsz = ompx::mapping::getWarpSize();
   constexpr int32_t NumThreads = __XTEAM_NTHREADS;
-  const int32_t NumTeams = mapping::getNumberOfBlocks();
+  const int32_t NumTeams = ompx::mapping::getNumberOfBlocks();
   const int32_t num_waves = NumThreads / wsz;
   static __XTEAM_SHARED T psums[__XTEAM_MAXW_PERTEAM];
 
@@ -307,7 +307,7 @@ template <typename T> void __local_xteam_sum(T inval, T *result_value) {
   if (omp_thread_num == 0) {
     T teamval = psums[0];
     __xteam_set_mem(omp_team_num, &teamval, sizeof(T), 0);
-    uint32_t td = atomic::inc(&teams_done, NumTeams - 1u, atomic::seq_cst);
+    uint32_t td = ompx::atomic::inc(&teams_done, NumTeams - 1u, ompx::atomic::seq_cst);
     if (td == (NumTeams - 1u))
       __is_last_team = true;
   }
@@ -343,13 +343,13 @@ template <typename T> void __local_xteam_max(T inval, T *result_value) {
 #pragma omp allocate(val) allocator(omp_thread_mem_alloc)
   val = inval;
 
-  const int32_t omp_thread_num = mapping::getThreadIdInBlock();
-  const int32_t omp_team_num = mapping::getBlockId();
-  const int32_t wave_num = mapping::getWarpId();         // 0 15
-  const int32_t lane_num = mapping::getThreadIdInWarp(); //  0 63
-  const int32_t wsz = mapping::getWarpSize();
+  const int32_t omp_thread_num = ompx::mapping::getThreadIdInBlock();
+  const int32_t omp_team_num = ompx::mapping::getBlockId();
+  const int32_t wave_num = ompx::mapping::getWarpId();         // 0 15
+  const int32_t lane_num = ompx::mapping::getThreadIdInWarp(); //  0 63
+  const int32_t wsz = ompx::mapping::getWarpSize();
   constexpr int32_t NumThreads = __XTEAM_NTHREADS;
-  const int32_t NumTeams = mapping::getNumberOfBlocks();
+  const int32_t NumTeams = ompx::mapping::getNumberOfBlocks();
   const int32_t num_waves = NumThreads / wsz;
   static __XTEAM_SHARED T psums[__XTEAM_MAXW_PERTEAM];
 
@@ -381,7 +381,7 @@ template <typename T> void __local_xteam_max(T inval, T *result_value) {
   if (omp_thread_num == 0) {
     T teamval = psums[0];
     __xteam_set_mem(omp_team_num, &teamval, sizeof(T), 0);
-    uint32_t td = atomic::inc(&teams_done, NumTeams - 1u, atomic::seq_cst);
+    uint32_t td = ompx::atomic::inc(&teams_done, NumTeams - 1u, ompx::atomic::seq_cst);
     if (td == (NumTeams - 1u))
       __is_last_team = true;
   }
@@ -423,13 +423,13 @@ template <typename T> void __local_xteam_min(T inval, T *result_value) {
 #pragma omp allocate(val) allocator(omp_thread_mem_alloc)
   val = inval;
 
-  const int32_t omp_thread_num = mapping::getThreadIdInBlock();
-  const int32_t omp_team_num = mapping::getBlockId();
-  const int32_t wave_num = mapping::getWarpId();         // 0 15
-  const int32_t lane_num = mapping::getThreadIdInWarp(); //  0 63
-  const int32_t wsz = mapping::getWarpSize();
+  const int32_t omp_thread_num = ompx::mapping::getThreadIdInBlock();
+  const int32_t omp_team_num = ompx::mapping::getBlockId();
+  const int32_t wave_num = ompx::mapping::getWarpId();         // 0 15
+  const int32_t lane_num = ompx::mapping::getThreadIdInWarp(); //  0 63
+  const int32_t wsz = ompx::mapping::getWarpSize();
   constexpr int32_t NumThreads = __XTEAM_NTHREADS;
-  const int32_t NumTeams = mapping::getNumberOfBlocks();
+  const int32_t NumTeams = ompx::mapping::getNumberOfBlocks();
   const int32_t num_waves = NumThreads / wsz;
   static __XTEAM_SHARED T psums[__XTEAM_MAXW_PERTEAM];
 
@@ -461,7 +461,7 @@ template <typename T> void __local_xteam_min(T inval, T *result_value) {
   if (omp_thread_num == 0) {
     T teamval = psums[0];
     __xteam_set_mem(omp_team_num, &teamval, sizeof(T), 0);
-    uint32_t td = atomic::inc(&teams_done, NumTeams - 1u, atomic::seq_cst);
+    uint32_t td = ompx::atomic::inc(&teams_done, NumTeams - 1u, ompx::atomic::seq_cst);
     if (td == (NumTeams - 1u))
       __is_last_team = true;
   }

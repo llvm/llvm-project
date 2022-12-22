@@ -5,29 +5,27 @@
 
 ; CHECK: .address_size [[BITS:32|64]]
 
-%struct.__va_list_tag = type { i8*, i8*, i32, i32 }
+%struct.__va_list_tag = type { ptr, ptr, i32, i32 }
 
-@foo_ptr = internal addrspace(1) global i32 (i32, ...)* @foo, align 8
+@foo_ptr = internal addrspace(1) global ptr @foo, align 8
 
 define i32 @foo(i32 %a, ...) {
 entry:
   %al = alloca [1 x %struct.__va_list_tag], align 8
-  %ap = bitcast [1 x %struct.__va_list_tag]* %al to i8*
   %al2 = alloca [1 x %struct.__va_list_tag], align 8
-  %ap2 = bitcast [1 x %struct.__va_list_tag]* %al2 to i8*
 
 ; Test va_start
 ; CHECK:         .param .align 8 .b8 foo_vararg[]
 ; CHECK:         mov.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], foo_vararg;
 ; CHECK-NEXT:    st.u[[BITS]] [%SP+0], [[VA_PTR]];
 
-  call void @llvm.va_start(i8* %ap)
+  call void @llvm.va_start(ptr %al)
 
 ; Test va_copy()
 ; CHECK-NEXT:	 ld.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], [%SP+0];
 ; CHECK-NEXT:	 st.u[[BITS]] [%SP+{{[0-9]+}}], [[VA_PTR]];
 
-  call void @llvm.va_copy(i8* %ap2, i8* %ap)
+  call void @llvm.va_copy(ptr %al2, ptr %al)
 
 ; Test va_arg(ap, int32_t)
 ; CHECK-NEXT:    ld.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], [%SP+0];
@@ -37,7 +35,7 @@ entry:
 ; CHECK-NEXT:    st.u[[BITS]] [%SP+0], [[VA_PTR_NEXT]];
 ; CHECK-NEXT:    ld.local.u32 %r{{[0-9]+}}, [[[VA_PTR_ALIGN]]];
 
-  %0 = va_arg i8* %ap, i32
+  %0 = va_arg ptr %al, i32
 
 ; Test va_arg(ap, int64_t)
 ; CHECK-NEXT:    ld.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], [%SP+0];
@@ -47,7 +45,7 @@ entry:
 ; CHECK-NEXT:    st.u[[BITS]] [%SP+0], [[VA_PTR_NEXT]];
 ; CHECK-NEXT:    ld.local.u64 %rd{{[0-9]+}}, [[[VA_PTR_ALIGN]]];
 
-  %1 = va_arg i8* %ap, i64
+  %1 = va_arg ptr %al, i64
 
 ; Test va_arg(ap, double)
 ; CHECK-NEXT:    ld.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], [%SP+0];
@@ -57,9 +55,9 @@ entry:
 ; CHECK-NEXT:    st.u[[BITS]] [%SP+0], [[VA_PTR_NEXT]];
 ; CHECK-NEXT:    ld.local.f64 %fd{{[0-9]+}}, [[[VA_PTR_ALIGN]]];
 
-  %2 = va_arg i8* %ap, double
+  %2 = va_arg ptr %al, double
 
-; Test va_arg(ap, void *)
+; Test va_arg(ap, ptr)
 ; CHECK-NEXT:    ld.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], [%SP+0];
 ; CHECK32-NEXT:  add.s32 [[VA_PTR_TMP:%r[0-9]+]], [[VA_PTR]], 3;
 ; CHECK64-NEXT:  add.s64 [[VA_PTR_TMP:%rd[0-9]+]], [[VA_PTR]], 7;
@@ -70,17 +68,17 @@ entry:
 ; CHECK-NEXT:    st.u[[BITS]] [%SP+0], [[VA_PTR_NEXT]];
 ; CHECK-NEXT:    ld.local.u[[BITS]] %{{(r|rd)[0-9]+}}, [[[VA_PTR_ALIGN]]];
 
-  %3 = va_arg i8* %ap, i8*
-  %call = call i32 @bar(i32 %a, i32 %0, i64 %1, double %2, i8* %3)
+  %3 = va_arg ptr %al, ptr
+  %call = call i32 @bar(i32 %a, i32 %0, i64 %1, double %2, ptr %3)
 
-  call void @llvm.va_end(i8* %ap)
-  %4 =  va_arg i8* %ap2, i32
-  call void @llvm.va_end(i8* %ap2)
+  call void @llvm.va_end(ptr %al)
+  %4 =  va_arg ptr %al2, i32
+  call void @llvm.va_end(ptr %al2)
   %5 = add i32 %call, %4
   ret i32 %5
 }
 
-define i32 @test_foo(i32 %i, i64 %l, double %d, i8* %p) {
+define i32 @test_foo(i32 %i, i64 %l, double %d, ptr %p) {
 ; Test indirect variadic function call.
 
 ; Load arguments to temporary variables
@@ -101,12 +99,12 @@ define i32 @test_foo(i32 %i, i64 %l, double %d, i8* %p) {
 ; CHECK-NEXT:    prototype_1 : .callprototype (.param .b32 _) _ (.param .b32 _, .param .align 8 .b8 _[]
 
 entry:
-  %ptr = load i32 (i32, ...)*, i32 (i32, ...)** addrspacecast (i32 (i32, ...)* addrspace(1)* @foo_ptr to i32 (i32, ...)**), align 8
-  %call = call i32 (i32, ...) %ptr(i32 4, i32 %i, i64 %l, double %d, i8* %p)
+  %ptr = load ptr, ptr addrspacecast (ptr addrspace(1) @foo_ptr to ptr), align 8
+  %call = call i32 (i32, ...) %ptr(i32 4, i32 %i, i64 %l, double %d, ptr %p)
   ret i32 %call
 }
 
-declare void @llvm.va_start(i8*)
-declare void @llvm.va_end(i8*)
-declare void @llvm.va_copy(i8*, i8*)
-declare i32 @bar(i32, i32, i64, double, i8*)
+declare void @llvm.va_start(ptr)
+declare void @llvm.va_end(ptr)
+declare void @llvm.va_copy(ptr, ptr)
+declare i32 @bar(i32, i32, i64, double, ptr)

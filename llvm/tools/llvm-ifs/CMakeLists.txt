@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   InterfaceStub
   Object
   Support
+  TargetParser
   TextAPI
   ObjectYAML
   Option

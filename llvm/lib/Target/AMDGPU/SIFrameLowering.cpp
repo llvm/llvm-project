@@ -321,7 +321,7 @@ class PrologEpilogSGPRSpillBuilder {
         .addReg(SuperReg)
         .setMIFlag(MachineInstr::FrameSetup);
     if (NeedsFrameMoves) {
-      const TargetRegisterClass *RC = TRI.getPhysRegClass(DstReg);
+      const TargetRegisterClass *RC = TRI.getPhysRegBaseClass(DstReg);
       ArrayRef<int16_t> DstSplitParts = TRI.getRegSplitParts(RC, EltSize);
       unsigned DstNumSubRegs = DstSplitParts.empty() ? 1 : DstSplitParts.size();
       assert(NumSubRegs == DstNumSubRegs);
@@ -407,7 +407,7 @@ public:
         TFI(ST.getFrameLowering()), SuperReg(Reg), SI(SI), LiveRegs(LiveRegs),
         DL(DL), FrameReg(FrameReg),
         IsFramePtrPrologSpill(IsFramePtrPrologSpill) {
-    const TargetRegisterClass *RC = TRI.getPhysRegClass(SuperReg);
+    const TargetRegisterClass *RC = TRI.getPhysRegBaseClass(SuperReg);
     SplitParts = TRI.getRegSplitParts(RC, EltSize);
     NumSubRegs = SplitParts.empty() ? 1 : SplitParts.size();
 
@@ -1514,7 +1514,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   // Allocate spill slots for WWM reserved VGPRs.
   if (!FuncInfo->isEntryFunction()) {
     for (Register Reg : FuncInfo->getWWMReservedRegs()) {
-      const TargetRegisterClass *RC = TRI->getPhysRegClass(Reg);
+      const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
       FuncInfo->allocateWWMSpill(MF, Reg, TRI->getSpillSize(*RC),
                                  TRI->getSpillAlign(*RC));
     }

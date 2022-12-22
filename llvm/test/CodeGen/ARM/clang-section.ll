@@ -25,23 +25,23 @@ target triple = "armv7-arm-none-eabi"
 ; Function Attrs: noinline nounwind
 define i32 @foo() #4 {
 entry:
-  %0 = load i32, i32* @b, align 4
+  %0 = load i32, ptr @b, align 4
   ret i32 %0
 }
 
 ; Function Attrs: noinline
 define i32 @goo() #5 {
 entry:
-  %call = call i32 @zoo(i32* getelementptr inbounds ([2 x i32], [2 x i32]* @_ZL1g, i32 0, i32 0), i32* @_ZZ3gooE7lstat_h)
+  %call = call i32 @zoo(ptr @_ZL1g, ptr @_ZZ3gooE7lstat_h)
   ret i32 %call
 }
 
-declare i32 @zoo(i32*, i32*) #6
+declare i32 @zoo(ptr, ptr) #6
 
 ; Function Attrs: noinline nounwind
 define i32 @hoo() #7 {
 entry:
-  %0 = load i32, i32* @b, align 4
+  %0 = load i32, ptr @b, align 4
   ret i32 %0
 }
 

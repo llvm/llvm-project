@@ -60,7 +60,7 @@ class MinVersionBase<string name, EnumAttr scheme, I32EnumAttrCase min>
     : Availability {
   let interfaceName = name;
 
-  let queryFnRetType = "llvm::Optional<" # scheme.returnType # ">";
+  let queryFnRetType = "std::optional<" # scheme.returnType # ">";
   let queryFnName = "getMinVersion";
 
   let mergeAction = "{ "
@@ -79,7 +79,7 @@ class MaxVersionBase<string name, EnumAttr scheme, I32EnumAttrCase max>
     : Availability {
   let interfaceName = name;
 
-  let queryFnRetType = "llvm::Optional<" # scheme.returnType # ">";
+  let queryFnRetType = "std::optional<" # scheme.returnType # ">";
   let queryFnName = "getMaxVersion";
 
   let mergeAction = "{ "

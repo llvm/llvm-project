@@ -326,7 +326,7 @@ define amdgpu_ps float @mad_i32_vvv_multiuse(i32 %a, i32 %b, i32 %c) {
 ; GFX11-NEXT:    ; return to shader part epilog
   %mul = mul i32 %a, %b
   %add = add i32 %mul, %c
-  store i32 %mul, i32* undef
+  store i32 %mul, ptr undef
   %cast = bitcast i32 %add to float
   ret float %cast
 }

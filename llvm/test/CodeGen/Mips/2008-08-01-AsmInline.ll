@@ -26,28 +26,28 @@ entry:
 define void @foo0() nounwind {
 entry:
 ; CHECK: addu
-  %0 = load i32, i32* @gi1, align 4
-  %1 = load i32, i32* @gi0, align 4
+  %0 = load i32, ptr @gi1, align 4
+  %1 = load i32, ptr @gi0, align 4
   %2 = tail call i32 asm "addu $0, $1, $2", "=r,r,r"(i32 %0, i32 %1) nounwind
-  store i32 %2, i32* @gi2, align 4
+  store i32 %2, ptr @gi2, align 4
   ret void
 }
 
 define void @foo2() nounwind {
 entry:
 ; CHECK: neg.s
-  %0 = load float, float* @gf1, align 4
+  %0 = load float, ptr @gf1, align 4
   %1 = tail call float asm "neg.s $0, $1", "=f,f"(float %0) nounwind
-  store float %1, float* @gf0, align 4
+  store float %1, ptr @gf0, align 4
   ret void
 }
 
 define void @foo3() nounwind {
 entry:
 ; CHECK: neg.d
-  %0 = load double, double* @gd1, align 8
+  %0 = load double, ptr @gd1, align 8
   %1 = tail call double asm "neg.d $0, $1", "=f,f"(double %0) nounwind
-  store double %1, double* @gd0, align 8
+  store double %1, ptr @gd0, align 8
   ret void
 }
 
@@ -63,9 +63,9 @@ entry:
 define void @foo4() {
 entry:
   %0 = tail call i32 asm sideeffect "ulh $0,16($$sp)\0A\09", "=r,~{$2}"()
-  store i32 %0, i32* @gi2, align 4
-  %1 = load float, float* @gf0, align 4
+  store i32 %0, ptr @gi2, align 4
+  %1 = load float, ptr @gf0, align 4
   %2 = tail call double asm sideeffect "cvt.d.s $0, $1\0A\09", "=f,f,~{$f0}"(float %1)
-  store double %2, double* @gd0, align 8
+  store double %2, ptr @gd0, align 8
   ret void
 }

@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_BASIC_FILEENTRY_H
 #define LLVM_CLANG_BASIC_FILEENTRY_H
 
+#include "clang/Basic/CustomizableOptional.h"
 #include "clang/Basic/DirectoryEntry.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -24,7 +25,6 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
 
-#include <optional>
 #include <utility>
 
 namespace llvm {
@@ -42,19 +42,12 @@ namespace clang {
 
 class FileEntryRef;
 
-} // namespace clang
-
-namespace llvm {
 namespace optional_detail {
 
 /// Forward declare a template specialization for OptionalStorage.
-template <>
-class OptionalStorage<clang::FileEntryRef, /*is_trivially_copyable*/ true>;
+template <> class OptionalStorage<clang::FileEntryRef>;
 
 } // namespace optional_detail
-} // namespace llvm
-
-namespace clang {
 
 class FileEntry;
 
@@ -130,7 +123,7 @@ public:
     llvm::PointerUnion<FileEntry *, const void *> V;
 
     /// Directory the file was found in. Set if and only if V is a FileEntry.
-    Optional<DirectoryEntryRef> Dir;
+    OptionalDirectoryEntryRef Dir;
 
     MapValue() = delete;
     MapValue(FileEntry &FE, DirectoryEntryRef Dir) : V(&FE), Dir(Dir) {}
@@ -208,9 +201,8 @@ static_assert(sizeof(FileEntryRef) == sizeof(const FileEntry *),
 static_assert(std::is_trivially_copyable<FileEntryRef>::value,
               "FileEntryRef must be trivially copyable");
 
-} // end namespace clang
+using OptionalFileEntryRef = CustomizableOptional<FileEntryRef>;
 
-namespace llvm {
 namespace optional_detail {
 
 /// Customize OptionalStorage<FileEntryRef> to use FileEntryRef and its
@@ -234,15 +226,16 @@ public:
   }
 };
 
-static_assert(sizeof(Optional<clang::FileEntryRef>) ==
-                  sizeof(clang::FileEntryRef),
-              "Optional<FileEntryRef> must avoid size overhead");
+static_assert(sizeof(OptionalFileEntryRef) == sizeof(FileEntryRef),
+              "OptionalFileEntryRef must avoid size overhead");
 
-static_assert(std::is_trivially_copyable<Optional<clang::FileEntryRef>>::value,
-              "Optional<FileEntryRef> should be trivially copyable");
+static_assert(std::is_trivially_copyable<OptionalFileEntryRef>::value,
+              "OptionalFileEntryRef should be trivially copyable");
 
 } // end namespace optional_detail
+} // namespace clang
 
+namespace llvm {
 /// Specialisation of DenseMapInfo for FileEntryRef.
 template <> struct DenseMapInfo<clang::FileEntryRef> {
   static inline clang::FileEntryRef getEmptyKey() {
@@ -275,18 +268,18 @@ template <> struct DenseMapInfo<clang::FileEntryRef> {
 
 namespace clang {
 
-/// Wrapper around Optional<FileEntryRef> that degrades to 'const FileEntry*',
+/// Wrapper around OptionalFileEntryRef that degrades to 'const FileEntry*',
 /// facilitating incremental patches to propagate FileEntryRef.
 ///
 /// This class can be used as return value or field where it's convenient for
-/// an Optional<FileEntryRef> to degrade to a 'const FileEntry*'. The purpose
+/// an OptionalFileEntryRef to degrade to a 'const FileEntry*'. The purpose
 /// is to avoid code churn due to dances like the following:
 /// \code
 /// // Old code.
 /// lvalue = rvalue;
 ///
 /// // Temporary code from an incremental patch.
-/// Optional<FileEntryRef> MaybeF = rvalue;
+/// OptionalFileEntryRef MaybeF = rvalue;
 /// lvalue = MaybeF ? &MaybeF.getFileEntry() : nullptr;
 ///
 /// // Final code.
@@ -295,9 +288,8 @@ namespace clang {
 ///
 /// FIXME: Once FileEntryRef is "everywhere" and FileEntry::LastRef and
 /// FileEntry::getName have been deleted, delete this class and replace
-/// instances with std::optional<FileEntryRef>.
-class OptionalFileEntryRefDegradesToFileEntryPtr
-    : public std::optional<FileEntryRef> {
+/// instances with OptionalFileEntryRef.
+class OptionalFileEntryRefDegradesToFileEntryPtr : public OptionalFileEntryRef {
 public:
   OptionalFileEntryRefDegradesToFileEntryPtr() = default;
   OptionalFileEntryRefDegradesToFileEntryPtr(
@@ -311,75 +303,47 @@ public:
 
   OptionalFileEntryRefDegradesToFileEntryPtr(std::nullopt_t) {}
   OptionalFileEntryRefDegradesToFileEntryPtr(FileEntryRef Ref)
-      : std::optional<FileEntryRef>(Ref) {}
-  OptionalFileEntryRefDegradesToFileEntryPtr(
-      std::optional<FileEntryRef> MaybeRef)
-      : std::optional<FileEntryRef>(MaybeRef) {}
+      : OptionalFileEntryRef(Ref) {}
+  OptionalFileEntryRefDegradesToFileEntryPtr(OptionalFileEntryRef MaybeRef)
+      : OptionalFileEntryRef(MaybeRef) {}
 
   OptionalFileEntryRefDegradesToFileEntryPtr &operator=(std::nullopt_t) {
-    std::optional<FileEntryRef>::operator=(std::nullopt);
+    OptionalFileEntryRef::operator=(std::nullopt);
     return *this;
   }
   OptionalFileEntryRefDegradesToFileEntryPtr &operator=(FileEntryRef Ref) {
-    std::optional<FileEntryRef>::operator=(Ref);
+    OptionalFileEntryRef::operator=(Ref);
     return *this;
   }
   OptionalFileEntryRefDegradesToFileEntryPtr &
-  operator=(std::optional<FileEntryRef> MaybeRef) {
-    std::optional<FileEntryRef>::operator=(MaybeRef);
+  operator=(OptionalFileEntryRef MaybeRef) {
+    OptionalFileEntryRef::operator=(MaybeRef);
     return *this;
   }
 
   /// Degrade to 'const FileEntry *' to allow  FileEntry::LastRef and
   /// FileEntry::getName have been deleted, delete this class and replace
-  /// instances with std::optional<FileEntryRef>
+  /// instances with OptionalFileEntryRef
   operator const FileEntry *() const {
     return has_value() ? &(*this)->getFileEntry() : nullptr;
   }
 };
-
-// Add these operators to resolve ambiguities appearing after replacing
-// llvm::Optional with std::optional.
-constexpr bool operator==(const std::optional<FileEntryRef> &X,
-                          const std::optional<FileEntryRef> &Y) {
-  // Copied from llvm::Optional.
-  if (X && Y)
-    return *X == *Y;
-  return X.has_value() == Y.has_value();
-}
-constexpr bool operator==(const OptionalFileEntryRefDegradesToFileEntryPtr &X,
-                          const OptionalFileEntryRefDegradesToFileEntryPtr &Y) {
-  return static_cast<const std::optional<FileEntryRef> &>(X) ==
-         static_cast<const std::optional<FileEntryRef> &>(Y);
-}
-constexpr bool operator==(const OptionalFileEntryRefDegradesToFileEntryPtr &X,
-                          const std::optional<FileEntryRef> &Y) {
-  return static_cast<const std::optional<FileEntryRef> &>(X) == Y;
-}
-constexpr bool operator==(const std::optional<FileEntryRef> &X,
-                          const OptionalFileEntryRefDegradesToFileEntryPtr &Y) {
-  return X == static_cast<const std::optional<FileEntryRef> &>(Y);
-}
 
 static_assert(
     std::is_trivially_copyable<
         OptionalFileEntryRefDegradesToFileEntryPtr>::value,
     "OptionalFileEntryRefDegradesToFileEntryPtr should be trivially copyable");
 
-inline bool operator==(const FileEntry *LHS,
-                       const std::optional<FileEntryRef> &RHS) {
+inline bool operator==(const FileEntry *LHS, const OptionalFileEntryRef &RHS) {
   return LHS == (RHS ? &RHS->getFileEntry() : nullptr);
 }
-inline bool operator==(const std::optional<FileEntryRef> &LHS,
-                       const FileEntry *RHS) {
+inline bool operator==(const OptionalFileEntryRef &LHS, const FileEntry *RHS) {
   return (LHS ? &LHS->getFileEntry() : nullptr) == RHS;
 }
-inline bool operator!=(const FileEntry *LHS,
-                       const std::optional<FileEntryRef> &RHS) {
+inline bool operator!=(const FileEntry *LHS, const OptionalFileEntryRef &RHS) {
   return !(LHS == RHS);
 }
-inline bool operator!=(const std::optional<FileEntryRef> &LHS,
-                       const FileEntry *RHS) {
+inline bool operator!=(const OptionalFileEntryRef &LHS, const FileEntry *RHS) {
   return !(LHS == RHS);
 }
 
@@ -415,7 +379,7 @@ class FileEntry {
   // default constructor). It should always have a value in practice.
   //
   // TODO: remove this once everyone that needs a name uses FileEntryRef.
-  Optional<FileEntryRef> LastRef;
+  OptionalFileEntryRef LastRef;
 
 public:
   ~FileEntry();

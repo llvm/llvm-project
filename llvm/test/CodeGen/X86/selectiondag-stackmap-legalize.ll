@@ -113,43 +113,19 @@
 ;         CHECK-NEXT: .short  0
 ;         CHECK-NEXT: .long   0
 
-@p32 = external global i8 addrspace(270)*
+@p32 = external global ptr addrspace(270)
 
 %struct1 = type {i32, i64}
 %struct2 = type {i1, i1, i1}
 
 declare void @llvm.experimental.stackmap(i64, i32, ...)
 
-define dso_local i32 @main(i32 %argc, i8** %argv) {
-; CHECK-LABEL: main:
-; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq %rsp, %rbp
-; CHECK-NEXT:    .cfi_def_cfa_register %rbp
-; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_offset %rbx, -32
-; CHECK-NEXT:    .cfi_offset %r14, -24
-; CHECK-NEXT:    movl %edi, %ebx
-; CHECK-NEXT:    cmpl $5, %edi
-; CHECK-NEXT:    sete %r14b
-; CHECK-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
-; CHECK-NEXT:    callq ___truncsfhf2
-; CHECK-NEXT:    movq _p32@GOTPCREL(%rip), %rcx
-; CHECK-NEXT:    movl (%rcx), %ecx
-; CHECK-NEXT:  Ltmp0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:    retq
+define dso_local i32 @main(i32 %argc, ptr %argv) {
 entry:
   %i1reg = icmp eq i32 %argc, 5
   %i7reg = zext i1 %i1reg to i7
   %halfreg = sitofp i32 %argc to half
-  %ptr32 = load i8 addrspace(270)*, i8 addrspace(270)** @p32
+  %ptr32 = load ptr addrspace(270), ptr @p32
   %structreg1 = insertvalue %struct1 zeroinitializer, i32 %argc, 0
   %structreg2 = insertvalue %struct2 zeroinitializer, i1 %i1reg, 0
   call void (i64, i32, ...) @llvm.experimental.stackmap(
@@ -167,7 +143,7 @@ entry:
     ; FIXME: test non-constant i128 once these are fixed:
     ;  - https://github.com/llvm/llvm-project/issues/26431
     ;  - https://github.com/llvm/llvm-project/issues/55957
-    i8 addrspace(270)* %ptr32,
+    ptr addrspace(270) %ptr32,
     ; FIXME: The stackmap record generated for structs is incorrect:
     ;  - https://github.com/llvm/llvm-project/issues/55649
     ;  - https://github.com/llvm/llvm-project/issues/55957

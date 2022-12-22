@@ -3,7 +3,7 @@
 // Test that va_arg shadow from a signal handler does not leak outside.
 
 // Reported deadly signal due to stack-overflow
-// XFAIL: netbsd
+// XFAIL: target={{.*netbsd.*}}
 
 #include <signal.h>
 #include <stdarg.h>

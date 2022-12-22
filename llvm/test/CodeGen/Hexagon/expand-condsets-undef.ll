@@ -7,7 +7,7 @@ target triple = "hexagon"
 ; Function Attrs: nounwind optsize ssp
 define internal fastcc void @foo() nounwind {
 if.else473:
-  %0 = load i64, i64* undef, align 8
+  %0 = load i64, ptr undef, align 8
   %sub = sub nsw i64 undef, %0
   %conv476 = sitofp i64 %sub to double
   %mul477 = fmul double %conv476, 0x3F50624DE0000000

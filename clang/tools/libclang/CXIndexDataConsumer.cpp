@@ -14,7 +14,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/Frontend/ASTUnit.h"
-#include <optional>
 
 using namespace clang;
 using namespace clang::index;
@@ -465,7 +464,7 @@ void CXIndexDataConsumer::enteredMainFile(const FileEntry *File) {
 
 void CXIndexDataConsumer::ppIncludedFile(SourceLocation hashLoc,
                                          StringRef filename,
-                                         std::optional<FileEntryRef> File,
+                                         OptionalFileEntryRef File,
                                          bool isImport, bool isAngled,
                                          bool isModuleImport) {
   if (!CB.ppIncludedFile)

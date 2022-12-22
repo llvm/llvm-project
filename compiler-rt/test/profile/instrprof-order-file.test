@@ -1,4 +1,4 @@
-// UNSUPPORTED: windows
+// UNSUPPORTED: target={{.*windows.*}}
 // REQUIRES: darwin
 // RUN: rm -rf %t.dir && mkdir -p %t.dir
 // RUN: cd %t.dir

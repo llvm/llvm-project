@@ -4,7 +4,7 @@
 
 @x1 = external hidden global [2 x i64]
 @x2 = external hidden global [16777216 x i64]
-@x3 = external hidden global { [9 x i8*], [8 x i8*] }
+@x3 = external hidden global { [9 x ptr], [8 x ptr] }
 
 define i64 @f1() {
 ; CHECK-LABEL: f1:
@@ -18,7 +18,7 @@ define i64 @f1() {
 ; GISEL-NEXT:    adrp x8, x1+16
 ; GISEL-NEXT:    ldr x0, [x8, :lo12:x1+16]
 ; GISEL-NEXT:    ret
-  %l = load i64, i64* getelementptr ([2 x i64], [2 x i64]* @x1, i64 0, i64 2)
+  %l = load i64, ptr getelementptr ([2 x i64], ptr @x1, i64 0, i64 2)
   ret i64 %l
 }
 
@@ -37,7 +37,7 @@ define i64 @f2() {
 ; GISEL-NEXT:    ldr x0, [x8, #24]
 ; GISEL-NEXT:    ret
 
-  %l = load i64, i64* getelementptr ([2 x i64], [2 x i64]* @x1, i64 0, i64 3)
+  %l = load i64, ptr getelementptr ([2 x i64], ptr @x1, i64 0, i64 3)
   ret i64 %l
 }
 
@@ -55,7 +55,7 @@ define i64 @f3() {
 ; GISEL-NEXT:    add x8, x8, :lo12:x1+1
 ; GISEL-NEXT:    ldr x0, [x8]
 ; GISEL-NEXT:    ret
-  %l = load i64, i64* bitcast (i8* getelementptr (i8, i8* bitcast ([2 x i64]* @x1 to i8*), i64 1) to i64*)
+  %l = load i64, ptr getelementptr (i8, ptr @x1, i64 1)
   ret i64 %l
 }
 
@@ -77,7 +77,7 @@ define [2 x i64] @f4() {
 ; GISEL-NEXT:    ldr x0, [x8, :lo12:x2+8]
 ; GISEL-NEXT:    ldr x1, [x9, #8]
 ; GISEL-NEXT:    ret
-  %l = load [2 x i64], [2 x i64]* bitcast (i8* getelementptr (i8, i8* bitcast ([16777216 x i64]* @x2 to i8*), i64 8) to [2 x i64]*)
+  %l = load [2 x i64], ptr getelementptr (i8, ptr @x2, i64 8)
   ret [2 x i64] %l
 }
 
@@ -93,7 +93,7 @@ define i64 @f5() {
 ; GISEL-NEXT:    adrp x8, x2+1048568
 ; GISEL-NEXT:    ldr x0, [x8, :lo12:x2+1048568]
 ; GISEL-NEXT:    ret
-  %l = load i64, i64* getelementptr ([16777216 x i64], [16777216 x i64]* @x2, i64 0, i64 131071)
+  %l = load i64, ptr getelementptr ([16777216 x i64], ptr @x2, i64 0, i64 131071)
   ret i64 %l
 }
 
@@ -113,7 +113,7 @@ define i64 @f6() {
 ; GISEL-NEXT:    add x9, x9, :lo12:x2
 ; GISEL-NEXT:    ldr x0, [x9, x8]
 ; GISEL-NEXT:    ret
-  %l = load i64, i64* getelementptr ([16777216 x i64], [16777216 x i64]* @x2, i64 0, i64 131072)
+  %l = load i64, ptr getelementptr ([16777216 x i64], ptr @x2, i64 0, i64 131072)
   ret i64 %l
 }
 
@@ -131,6 +131,6 @@ define i32 @f7() {
 ; GISEL-NEXT:    ret
 
 entry:
-  %l = load i32, i32* getelementptr (i32, i32* inttoptr (i64 trunc (i128 lshr (i128 bitcast (<2 x i64> <i64 undef, i64 ptrtoint (i8** getelementptr inbounds ({ [9 x i8*], [8 x i8*] }, { [9 x i8*], [8 x i8*] }* @x3, i64 0, inrange i32 1, i64 2) to i64)> to i128), i128 64) to i64) to i32*), i64 5)
+  %l = load i32, ptr getelementptr (i32, ptr inttoptr (i64 trunc (i128 lshr (i128 bitcast (<2 x i64> <i64 undef, i64 ptrtoint (ptr getelementptr inbounds ({ [9 x ptr], [8 x ptr] }, ptr @x3, i64 0, inrange i32 1, i64 2) to i64)> to i128), i128 64) to i64) to ptr), i64 5)
   ret i32 %l
 }

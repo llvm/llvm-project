@@ -16,7 +16,7 @@
 
 #include "Types.h"
 
-namespace _OMP {
+namespace ompx {
 
 namespace synchronize {
 
@@ -145,6 +145,6 @@ void system(atomic::OrderingTy Ordering);
 
 } // namespace fence
 
-} // namespace _OMP
+} // namespace ompx
 
 #endif

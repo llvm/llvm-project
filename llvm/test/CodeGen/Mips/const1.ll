@@ -12,10 +12,10 @@ target triple = "mipsel-unknown-linux"
 ; Function Attrs: nounwind
 define void @t() #0 {
 entry:
-  store i32 -559023410, i32* @i, align 4
-  store i32 -559023410, i32* @j, align 4
-  store i32 -87105875, i32* @k, align 4
-  store i32 262991277, i32* @l, align 4
+  store i32 -559023410, ptr @i, align 4
+  store i32 -559023410, ptr @j, align 4
+  store i32 -87105875, ptr @k, align 4
+  store i32 262991277, ptr @l, align 4
   ret void
 ; CHECK: 	lw	${{[0-9]+}}, $CPI0_0
 ; CHECK:	lw	${{[0-9]+}}, $CPI0_1

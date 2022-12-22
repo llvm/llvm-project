@@ -74,9 +74,8 @@ private:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          std::optional<FileEntryRef> File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          OptionalFileEntryRef File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
   void If(SourceLocation Loc, SourceRange ConditionRange,
           ConditionValueKind ConditionValue) override;
@@ -186,7 +185,7 @@ void InclusionRewriter::FileSkipped(const FileEntryRef & /*SkippedFile*/,
 void InclusionRewriter::InclusionDirective(
     SourceLocation HashLoc, const Token & /*IncludeTok*/,
     StringRef /*FileName*/, bool /*IsAngled*/,
-    CharSourceRange /*FilenameRange*/, std::optional<FileEntryRef> /*File*/,
+    CharSourceRange /*FilenameRange*/, OptionalFileEntryRef /*File*/,
     StringRef /*SearchPath*/, StringRef /*RelativePath*/,
     const Module *Imported, SrcMgr::CharacteristicKind FileType) {
   if (Imported) {

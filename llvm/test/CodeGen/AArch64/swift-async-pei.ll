@@ -5,13 +5,12 @@
 ; RUN: llc -mtriple arm64_32-apple-watchos -filetype asm -o - %s -swift-async-fp never | FileCheck %s -check-prefix CHECK-WATCHOS-NEVER
 ; RUN: llc -mtriple arm64_32-apple-watchos -filetype asm -o - %s -swift-async-fp auto | FileCheck %s -check-prefix CHECK-WATCHOS-AUTO
 
-declare i8** @llvm.swift.async.context.addr()
+declare ptr @llvm.swift.async.context.addr()
 
-define swifttailcc void @f(i8* swiftasync %ctx) {
-  %1 = bitcast i8* %ctx to i8**
-  %2 = load i8*, i8** %1, align 8
-  %3 = tail call i8** @llvm.swift.async.context.addr()
-  store i8* %2, i8** %3, align 8
+define swifttailcc void @f(ptr swiftasync %ctx) {
+  %1 = load ptr, ptr %ctx, align 8
+  %2 = tail call ptr @llvm.swift.async.context.addr()
+  store ptr %1, ptr %2, align 8
   ret void
 }
 

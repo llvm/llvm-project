@@ -123,6 +123,7 @@ struct OMPTaskDataTy final {
   bool Nogroup = false;
   bool IsReductionWithTaskMod = false;
   bool IsWorksharingReduction = false;
+  bool HasNowaitClause = false;
 };
 
 /// Class intended to support codegen of all kind of the reduction clauses.

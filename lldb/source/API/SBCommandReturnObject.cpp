@@ -292,7 +292,7 @@ void SBCommandReturnObject::PutCString(const char *string, int len) {
     return;
   } else if (len > 0) {
     std::string buffer(string, len);
-    ref().AppendMessage(buffer);
+    ref().AppendMessage(buffer.c_str());
   } else
     ref().AppendMessage(string);
 }

@@ -2586,6 +2586,25 @@ m_c_LogicalOr(const LHS &L, const RHS &R) {
   return LogicalOp_match<LHS, RHS, Instruction::Or, true>(L, R);
 }
 
+/// Matches either L && R or L || R,
+/// either one being in the either binary or logical form.
+/// Note that the latter form is poison-blocking.
+template <typename LHS, typename RHS, bool Commutable = false>
+inline auto m_LogicalOp(const LHS &L, const RHS &R) {
+  return m_CombineOr(
+      LogicalOp_match<LHS, RHS, Instruction::And, Commutable>(L, R),
+      LogicalOp_match<LHS, RHS, Instruction::Or, Commutable>(L, R));
+}
+
+/// Matches either L && R or L || R where L and R are arbitrary values.
+inline auto m_LogicalOp() { return m_LogicalOp(m_Value(), m_Value()); }
+
+/// Matches either L && R or L || R with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline auto m_c_LogicalOp(const LHS &L, const RHS &R) {
+  return m_LogicalOp<LHS, RHS, /*Commutable=*/true>(L, R);
+}
+
 } // end namespace PatternMatch
 } // end namespace llvm
 

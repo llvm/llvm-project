@@ -234,7 +234,7 @@ if.else:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.else, %if.then
   %call6.sink = phi <3 x i16> [ %call6, %if.else ], [ zeroinitializer, %if.then ]
-  store <3 x i16> %call6.sink, <3 x i16> addrspace(1)* undef
+  store <3 x i16> %call6.sink, ptr addrspace(1) undef
   ret void
 }
 
@@ -287,7 +287,7 @@ if.else:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.else, %if.then
   %call6.sink = phi <3 x half> [ %call6, %if.else ], [ zeroinitializer, %if.then ]
-  store <3 x half> %call6.sink, <3 x half> addrspace(1)* undef
+  store <3 x half> %call6.sink, ptr addrspace(1) undef
   ret void
 }
 

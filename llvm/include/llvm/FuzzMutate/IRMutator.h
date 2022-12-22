@@ -77,8 +77,8 @@ public:
 class InjectorIRStrategy : public IRMutationStrategy {
   std::vector<fuzzerop::OpDescriptor> Operations;
 
-  Optional<fuzzerop::OpDescriptor> chooseOperation(Value *Src,
-                                                   RandomIRBuilder &IB);
+  std::optional<fuzzerop::OpDescriptor> chooseOperation(Value *Src,
+                                                        RandomIRBuilder &IB);
 
 public:
   InjectorIRStrategy(std::vector<fuzzerop::OpDescriptor> &&Operations)

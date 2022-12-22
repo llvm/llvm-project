@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMDirectXDesc
   DirectXInfo
   MC
   Support
+  TargetParser
 
   ADD_TO_COMPONENT
   DirectX

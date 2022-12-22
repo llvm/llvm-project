@@ -92,19 +92,80 @@ enum class TypeModifier : uint8_t {
   LLVM_MARK_AS_BITMASK_ENUM(LMUL1),
 };
 
-// The Lowerest two bit equal to policy value.
-enum Policy : uint8_t {
-  TU = 0, // For unmasked TU, last two bit is TUMU
-  TA = 1, // // For unmasked TA, last two bit is TAMU
-  TUMA = 2,
-  TAMA = 3,
-  TUMU = 4,
-  TAMU = 5,
-  MU = 6,   // For masked MU, last two bit is TAMU
-  MA = 7,   // For masked MA, last two bit is TAMA
-  TUM = 10, // For masked MA, last two bit is TUMA
-  TAM = 11, // For masked MA, last two bit is TAMA
-  PolicyNone,
+struct Policy {
+  bool PolicyNone = false;
+  enum PolicyType {
+    Undisturbed,
+    Agnostic,
+    Omit, // No policy required.
+  };
+  PolicyType TailPolicy = Omit;
+  PolicyType MaskPolicy = Omit;
+  bool IntrinsicWithoutMU = false;
+  Policy() : PolicyNone(true) {}
+  Policy(PolicyType _TailPolicy, PolicyType _MaskPolicy,
+         bool _IntrinsicWithoutMU = false)
+      : TailPolicy(_TailPolicy), MaskPolicy(_MaskPolicy),
+        IntrinsicWithoutMU(_IntrinsicWithoutMU) {}
+
+  bool isTAMAPolicy() const {
+    return TailPolicy == Agnostic && MaskPolicy == Agnostic;
+  }
+
+  bool isTAMUPolicy() const {
+    return TailPolicy == Agnostic && MaskPolicy == Undisturbed;
+  }
+
+  bool isTUMAPolicy() const {
+    return TailPolicy == Undisturbed && MaskPolicy == Agnostic;
+  }
+
+  bool isTUMUPolicy() const {
+    return TailPolicy == Undisturbed && MaskPolicy == Undisturbed;
+  }
+
+  bool isTUMPolicy() const {
+    return TailPolicy == Undisturbed && MaskPolicy == Agnostic &&
+           IntrinsicWithoutMU;
+  }
+
+  bool isTAMPolicy() const {
+    return TailPolicy == Agnostic && MaskPolicy == Agnostic &&
+           IntrinsicWithoutMU;
+  }
+
+  bool isTAPolicy() const {
+    return TailPolicy == Agnostic && MaskPolicy == Omit;
+  }
+
+  bool isTUPolicy() const {
+    return TailPolicy == Undisturbed && MaskPolicy == Omit;
+  }
+
+  bool isMAPolicy() const {
+    return MaskPolicy == Agnostic && TailPolicy == Omit;
+  }
+
+  bool isMUPolicy() const {
+    return MaskPolicy == Undisturbed && TailPolicy == Omit;
+  }
+
+  bool isPolicyNonePolicy() const { return PolicyNone; }
+
+  bool operator==(const Policy &Other) const {
+    return PolicyNone == Other.PolicyNone && TailPolicy == Other.TailPolicy &&
+           MaskPolicy == Other.MaskPolicy &&
+           IntrinsicWithoutMU == Other.IntrinsicWithoutMU;
+  }
+
+  bool operator!=(const Policy &Other) const { return !(*this == Other); }
+
+  bool operator<(const Policy &Other) const {
+    // Just for maintain the old order for quick test.
+    if (MaskPolicy != Other.MaskPolicy)
+      return Other.MaskPolicy < MaskPolicy;
+    return TailPolicy < Other.TailPolicy;
+  }
 };
 
 // PrototypeDescriptor is used to compute type info of arguments or return
@@ -333,7 +394,7 @@ private:
   // InputTypes. -1 means the return type.
   std::vector<int64_t> IntrinsicTypes;
   unsigned NF = 1;
-  Policy DefaultPolicy = Policy::PolicyNone;
+  Policy DefaultPolicy;
 
 public:
   RVVIntrinsic(llvm::StringRef Name, llvm::StringRef Suffix,
@@ -373,12 +434,33 @@ public:
     return IntrinsicTypes;
   }
   Policy getDefaultPolicy() const {
-    assert(DefaultPolicy != Policy::PolicyNone);
+    assert(DefaultPolicy.PolicyNone == false);
     return DefaultPolicy;
   }
   unsigned getDefaultPolicyBits() const {
-    assert(DefaultPolicy != Policy::PolicyNone);
-    return static_cast<unsigned>(DefaultPolicy) & 3;
+    // Return following value.
+    // constexpr unsigned TAIL_UNDISTURBED = 0;
+    // constexpr unsigned TAIL_AGNOSTIC = 1;
+    // constexpr unsigned TAIL_AGNOSTIC_MASK_AGNOSTIC = 3;
+    // FIXME: how about value 2
+    // int DefaultPolicy = TAIL_UNDISTURBED;
+    assert(DefaultPolicy.PolicyNone == false);
+
+    if (DefaultPolicy.isTUMAPolicy())
+      return 2;
+    if (DefaultPolicy.isTAMAPolicy())
+      return 3;
+    if (DefaultPolicy.isTUMUPolicy())
+      return 0;
+    if (DefaultPolicy.isTAMUPolicy())
+      return 1;
+    if (DefaultPolicy.isTUPolicy())
+      return 0;
+    if (DefaultPolicy.isTAPolicy())
+      return 1;
+
+    llvm_unreachable("unsupport policy");
+    return 0;
   }
 
   // Return the type string for a BUILTIN() macro in Builtins.def.
@@ -393,7 +475,7 @@ public:
                           bool IsMasked, bool HasMaskedOffOperand, bool HasVL,
                           unsigned NF, bool IsPrototypeDefaultTU,
                           PolicyScheme DefaultScheme,
-                          Policy DefaultPolicy = Policy::PolicyNone);
+                          Policy DefaultPolicy);
   static llvm::SmallVector<Policy>
       getSupportedMaskedPolicies(bool HasTailPolicy, bool HasMaskPolicy);
 

@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=RV32,LMULMAX1-RV32
 ; RUN: llc -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=RV64,LMULMAX1-RV64
 
-define void @bitreverse_v8i16(<8 x i16>* %x, <8 x i16>* %y) {
+define void @bitreverse_v8i16(ptr %x, ptr %y) {
 ; RV32-LABEL: bitreverse_v8i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -66,15 +66,15 @@ define void @bitreverse_v8i16(<8 x i16>* %x, <8 x i16>* %y) {
 ; RV64-NEXT:    vor.vv v8, v9, v8
 ; RV64-NEXT:    vse16.v v8, (a0)
 ; RV64-NEXT:    ret
-  %a = load <8 x i16>, <8 x i16>* %x
-  %b = load <8 x i16>, <8 x i16>* %y
+  %a = load <8 x i16>, ptr %x
+  %b = load <8 x i16>, ptr %y
   %c = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> %a)
-  store <8 x i16> %c, <8 x i16>* %x
+  store <8 x i16> %c, ptr %x
   ret void
 }
 declare <8 x i16> @llvm.bitreverse.v8i16(<8 x i16>)
 
-define void @bitreverse_v4i32(<4 x i32>* %x, <4 x i32>* %y) {
+define void @bitreverse_v4i32(ptr %x, ptr %y) {
 ; RV32-LABEL: bitreverse_v4i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -152,15 +152,15 @@ define void @bitreverse_v4i32(<4 x i32>* %x, <4 x i32>* %y) {
 ; RV64-NEXT:    vor.vv v8, v9, v8
 ; RV64-NEXT:    vse32.v v8, (a0)
 ; RV64-NEXT:    ret
-  %a = load <4 x i32>, <4 x i32>* %x
-  %b = load <4 x i32>, <4 x i32>* %y
+  %a = load <4 x i32>, ptr %x
+  %b = load <4 x i32>, ptr %y
   %c = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> %a)
-  store <4 x i32> %c, <4 x i32>* %x
+  store <4 x i32> %c, ptr %x
   ret void
 }
 declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>)
 
-define void @bitreverse_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
+define void @bitreverse_v2i64(ptr %x, ptr %y) {
 ; RV32-LABEL: bitreverse_v2i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
@@ -286,15 +286,15 @@ define void @bitreverse_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; RV64-NEXT:    vor.vv v8, v9, v8
 ; RV64-NEXT:    vse64.v v8, (a0)
 ; RV64-NEXT:    ret
-  %a = load <2 x i64>, <2 x i64>* %x
-  %b = load <2 x i64>, <2 x i64>* %y
+  %a = load <2 x i64>, ptr %x
+  %b = load <2 x i64>, ptr %y
   %c = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> %a)
-  store <2 x i64> %c, <2 x i64>* %x
+  store <2 x i64> %c, ptr %x
   ret void
 }
 declare <2 x i64> @llvm.bitreverse.v2i64(<2 x i64>)
 
-define void @bitreverse_v16i16(<16 x i16>* %x, <16 x i16>* %y) {
+define void @bitreverse_v16i16(ptr %x, ptr %y) {
 ; LMULMAX2-RV32-LABEL: bitreverse_v16i16:
 ; LMULMAX2-RV32:       # %bb.0:
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
@@ -460,15 +460,15 @@ define void @bitreverse_v16i16(<16 x i16>* %x, <16 x i16>* %y) {
 ; LMULMAX1-RV64-NEXT:    vse16.v v9, (a0)
 ; LMULMAX1-RV64-NEXT:    vse16.v v8, (a1)
 ; LMULMAX1-RV64-NEXT:    ret
-  %a = load <16 x i16>, <16 x i16>* %x
-  %b = load <16 x i16>, <16 x i16>* %y
+  %a = load <16 x i16>, ptr %x
+  %b = load <16 x i16>, ptr %y
   %c = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %a)
-  store <16 x i16> %c, <16 x i16>* %x
+  store <16 x i16> %c, ptr %x
   ret void
 }
 declare <16 x i16> @llvm.bitreverse.v16i16(<16 x i16>)
 
-define void @bitreverse_v8i32(<8 x i32>* %x, <8 x i32>* %y) {
+define void @bitreverse_v8i32(ptr %x, ptr %y) {
 ; LMULMAX2-RV32-LABEL: bitreverse_v8i32:
 ; LMULMAX2-RV32:       # %bb.0:
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -678,15 +678,15 @@ define void @bitreverse_v8i32(<8 x i32>* %x, <8 x i32>* %y) {
 ; LMULMAX1-RV64-NEXT:    vse32.v v9, (a0)
 ; LMULMAX1-RV64-NEXT:    vse32.v v8, (a1)
 ; LMULMAX1-RV64-NEXT:    ret
-  %a = load <8 x i32>, <8 x i32>* %x
-  %b = load <8 x i32>, <8 x i32>* %y
+  %a = load <8 x i32>, ptr %x
+  %b = load <8 x i32>, ptr %y
   %c = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %a)
-  store <8 x i32> %c, <8 x i32>* %x
+  store <8 x i32> %c, ptr %x
   ret void
 }
 declare <8 x i32> @llvm.bitreverse.v8i32(<8 x i32>)
 
-define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
+define void @bitreverse_v4i64(ptr %x, ptr %y) {
 ; LMULMAX2-RV32-LABEL: bitreverse_v4i64:
 ; LMULMAX2-RV32:       # %bb.0:
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -1016,10 +1016,10 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    vse64.v v8, (a0)
 ; LMULMAX1-RV64-NEXT:    vse64.v v9, (a1)
 ; LMULMAX1-RV64-NEXT:    ret
-  %a = load <4 x i64>, <4 x i64>* %x
-  %b = load <4 x i64>, <4 x i64>* %y
+  %a = load <4 x i64>, ptr %x
+  %b = load <4 x i64>, ptr %y
   %c = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %a)
-  store <4 x i64> %c, <4 x i64>* %x
+  store <4 x i64> %c, ptr %x
   ret void
 }
 declare <4 x i64> @llvm.bitreverse.v4i64(<4 x i64>)

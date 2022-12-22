@@ -1,4 +1,8 @@
-set(LLVM_LINK_COMPONENTS Object Support)
+set(LLVM_LINK_COMPONENTS
+  Object
+  Support
+  TargetParser
+  )
 
 add_clang_tool(clang-offload-bundler
   ClangOffloadBundler.cpp
