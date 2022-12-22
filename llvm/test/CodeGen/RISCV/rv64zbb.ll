@@ -981,8 +981,8 @@ define void @bswap_i32_nosext(i32 signext %a, ptr %x) nounwind {
 ; RV64I-NEXT:    srliw a4, a0, 24
 ; RV64I-NEXT:    or a2, a2, a4
 ; RV64I-NEXT:    and a3, a0, a3
-; RV64I-NEXT:    slliw a3, a3, 8
-; RV64I-NEXT:    slliw a0, a0, 24
+; RV64I-NEXT:    slli a3, a3, 8
+; RV64I-NEXT:    slli a0, a0, 24
 ; RV64I-NEXT:    or a0, a0, a3
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    sw a0, 0(a1)

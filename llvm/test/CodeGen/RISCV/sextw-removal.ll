@@ -196,7 +196,7 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    and a0, a0, s1
 ; RV64I-NEXT:    add a0, a2, a0
 ; RV64I-NEXT:    srli a2, a0, 4
-; RV64I-NEXT:    addw a0, a0, a2
+; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    and a0, a0, s2
 ; RV64I-NEXT:    mulw a0, a0, s3
 ; RV64I-NEXT:    srliw a0, a0, 24
@@ -792,7 +792,7 @@ define signext i32 @test14b(i32 %0, i32 signext %1) {
 ; CHECK-NEXT:    sext.w a4, a0
 ; CHECK-NEXT:    blt a3, a4, .LBB14_5
 ; CHECK-NEXT:  # %bb.3: # in Loop: Header=BB14_2 Depth=1
-; CHECK-NEXT:    addw a0, a2, a0
+; CHECK-NEXT:    add a0, a2, a0
 ; CHECK-NEXT:    addiw a2, a2, 1
 ; CHECK-NEXT:    blt a2, a1, .LBB14_2
 ; CHECK-NEXT:  .LBB14_4:
@@ -814,7 +814,7 @@ define signext i32 @test14b(i32 %0, i32 signext %1) {
 ; NOREMOVAL-NEXT:    sext.w a4, a0
 ; NOREMOVAL-NEXT:    blt a3, a4, .LBB14_5
 ; NOREMOVAL-NEXT:  # %bb.3: # in Loop: Header=BB14_2 Depth=1
-; NOREMOVAL-NEXT:    addw a0, a2, a0
+; NOREMOVAL-NEXT:    add a0, a2, a0
 ; NOREMOVAL-NEXT:    addiw a2, a2, 1
 ; NOREMOVAL-NEXT:    blt a2, a1, .LBB14_2
 ; NOREMOVAL-NEXT:  .LBB14_4:
@@ -858,7 +858,7 @@ define signext i32 @test14c(i32 zeroext %0, i32 signext %1) {
 ; CHECK-NEXT:    sext.w a4, a0
 ; CHECK-NEXT:    blt a3, a4, .LBB15_5
 ; CHECK-NEXT:  # %bb.3: # in Loop: Header=BB15_2 Depth=1
-; CHECK-NEXT:    addw a0, a2, a0
+; CHECK-NEXT:    add a0, a2, a0
 ; CHECK-NEXT:    addiw a2, a2, 1
 ; CHECK-NEXT:    blt a2, a1, .LBB15_2
 ; CHECK-NEXT:  .LBB15_4:
@@ -880,7 +880,7 @@ define signext i32 @test14c(i32 zeroext %0, i32 signext %1) {
 ; NOREMOVAL-NEXT:    sext.w a4, a0
 ; NOREMOVAL-NEXT:    blt a3, a4, .LBB15_5
 ; NOREMOVAL-NEXT:  # %bb.3: # in Loop: Header=BB15_2 Depth=1
-; NOREMOVAL-NEXT:    addw a0, a2, a0
+; NOREMOVAL-NEXT:    add a0, a2, a0
 ; NOREMOVAL-NEXT:    addiw a2, a2, 1
 ; NOREMOVAL-NEXT:    blt a2, a1, .LBB15_2
 ; NOREMOVAL-NEXT:  .LBB15_4:
@@ -1043,7 +1043,7 @@ define signext i32 @bug(i32 signext %x) {
 ; CHECK-NEXT:  .LBB18_6: # %if.end
 ; CHECK-NEXT:    addiw a2, a2, -1
 ; CHECK-NEXT:    andi a2, a2, -8
-; CHECK-NEXT:    addw a1, a1, a2
+; CHECK-NEXT:    add a1, a1, a2
 ; CHECK-NEXT:    srliw a3, a0, 28
 ; CHECK-NEXT:    snez a2, a3
 ; CHECK-NEXT:    bnez a3, .LBB18_8
@@ -1052,7 +1052,7 @@ define signext i32 @bug(i32 signext %x) {
 ; CHECK-NEXT:  .LBB18_8: # %if.end
 ; CHECK-NEXT:    addiw a2, a2, -1
 ; CHECK-NEXT:    andi a2, a2, -4
-; CHECK-NEXT:    addw a1, a1, a2
+; CHECK-NEXT:    add a1, a1, a2
 ; CHECK-NEXT:    srliw a3, a0, 30
 ; CHECK-NEXT:    snez a2, a3
 ; CHECK-NEXT:    bnez a3, .LBB18_10
@@ -1061,7 +1061,7 @@ define signext i32 @bug(i32 signext %x) {
 ; CHECK-NEXT:  .LBB18_10: # %if.end
 ; CHECK-NEXT:    addiw a2, a2, -1
 ; CHECK-NEXT:    andi a2, a2, -2
-; CHECK-NEXT:    addw a1, a1, a2
+; CHECK-NEXT:    add a1, a1, a2
 ; CHECK-NEXT:    not a0, a0
 ; CHECK-NEXT:    srli a0, a0, 31
 ; CHECK-NEXT:    addw a0, a1, a0
@@ -1078,27 +1078,27 @@ define signext i32 @bug(i32 signext %x) {
 ; NOREMOVAL-NEXT:    li a1, 32
 ; NOREMOVAL-NEXT:    j .LBB18_4
 ; NOREMOVAL-NEXT:  .LBB18_3:
-; NOREMOVAL-NEXT:    slliw a0, a0, 16
+; NOREMOVAL-NEXT:    slli a0, a0, 16
 ; NOREMOVAL-NEXT:    li a1, 16
 ; NOREMOVAL-NEXT:  .LBB18_4: # %if.end
 ; NOREMOVAL-NEXT:    srliw a3, a0, 24
 ; NOREMOVAL-NEXT:    snez a2, a3
 ; NOREMOVAL-NEXT:    bnez a3, .LBB18_6
 ; NOREMOVAL-NEXT:  # %bb.5:
-; NOREMOVAL-NEXT:    slliw a0, a0, 8
+; NOREMOVAL-NEXT:    slli a0, a0, 8
 ; NOREMOVAL-NEXT:  .LBB18_6: # %if.end
 ; NOREMOVAL-NEXT:    addiw a2, a2, -1
 ; NOREMOVAL-NEXT:    andi a2, a2, -8
-; NOREMOVAL-NEXT:    addw a1, a1, a2
+; NOREMOVAL-NEXT:    add a1, a1, a2
 ; NOREMOVAL-NEXT:    srliw a3, a0, 28
 ; NOREMOVAL-NEXT:    snez a2, a3
 ; NOREMOVAL-NEXT:    bnez a3, .LBB18_8
 ; NOREMOVAL-NEXT:  # %bb.7:
-; NOREMOVAL-NEXT:    slliw a0, a0, 4
+; NOREMOVAL-NEXT:    slli a0, a0, 4
 ; NOREMOVAL-NEXT:  .LBB18_8: # %if.end
 ; NOREMOVAL-NEXT:    addiw a2, a2, -1
 ; NOREMOVAL-NEXT:    andi a2, a2, -4
-; NOREMOVAL-NEXT:    addw a1, a1, a2
+; NOREMOVAL-NEXT:    add a1, a1, a2
 ; NOREMOVAL-NEXT:    srliw a3, a0, 30
 ; NOREMOVAL-NEXT:    snez a2, a3
 ; NOREMOVAL-NEXT:    bnez a3, .LBB18_10
@@ -1108,7 +1108,7 @@ define signext i32 @bug(i32 signext %x) {
 ; NOREMOVAL-NEXT:    sext.w a0, a0
 ; NOREMOVAL-NEXT:    addiw a2, a2, -1
 ; NOREMOVAL-NEXT:    andi a2, a2, -2
-; NOREMOVAL-NEXT:    addw a1, a1, a2
+; NOREMOVAL-NEXT:    add a1, a1, a2
 ; NOREMOVAL-NEXT:    not a0, a0
 ; NOREMOVAL-NEXT:    srli a0, a0, 31
 ; NOREMOVAL-NEXT:    addw a0, a1, a0
@@ -1333,13 +1333,13 @@ declare i64 @llvm.riscv.sha256sig0.i64(i64)
 define signext i32 @sextw_sh2add(i1 zeroext %0, ptr %1, i32 signext %2, i32 signext %3, i32 signext %4) {
 ; RV64I-LABEL: sextw_sh2add:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a2, a2, 2
-; RV64I-NEXT:    addw a2, a2, a3
+; RV64I-NEXT:    slli a2, a2, 2
+; RV64I-NEXT:    add a3, a2, a3
 ; RV64I-NEXT:    beqz a0, .LBB22_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    sw a2, 0(a1)
+; RV64I-NEXT:    sw a3, 0(a1)
 ; RV64I-NEXT:  .LBB22_2:
-; RV64I-NEXT:    addw a0, a2, a4
+; RV64I-NEXT:    addw a0, a3, a4
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: sextw_sh2add:

@@ -11,7 +11,7 @@ define i32 @foo(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    mulw a0, a0, a0
 ; CHECK-NEXT:    addiw a0, a0, 1
 ; CHECK-NEXT:    mulw a0, a0, a0
-; CHECK-NEXT:    addw a0, a0, a2
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    addiw a0, a0, 1
 ; CHECK-NEXT:    sllw a0, a0, a1
 ; CHECK-NEXT:    ret
