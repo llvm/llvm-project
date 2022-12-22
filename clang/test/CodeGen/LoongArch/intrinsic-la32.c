@@ -154,3 +154,15 @@ void iocsrwr_w(unsigned int a, unsigned int b) {
   __iocsrwr_w(a, b);
   __builtin_loongarch_iocsrwr_w(a, b);
 }
+
+// LA32-LABEL: @cpucfg(
+// LA32-NEXT:  entry:
+// LA32-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.cpucfg(i32 [[A:%.*]])
+// LA32-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.cpucfg(i32 [[A]])
+// LA32-NEXT:    ret i32 0
+//
+unsigned int cpucfg(unsigned int a) {
+  unsigned int b = __cpucfg(a);
+  unsigned int c = __builtin_loongarch_cpucfg(a);
+  return 0;
+}

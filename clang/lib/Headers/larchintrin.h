@@ -139,12 +139,38 @@ extern __inline void
   __builtin_loongarch_iocsrwr_w((unsigned int)_1, (unsigned int)_2);
 }
 
+extern __inline unsigned int
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __cpucfg(unsigned int _1) {
+  return (unsigned int)__builtin_loongarch_cpucfg((unsigned int)_1);
+}
+
 #if __loongarch_grlen == 64
 extern __inline void
     __attribute__((__gnu_inline__, __always_inline__, __artificial__))
     __iocsrwr_d(unsigned long int _1, unsigned int _2) {
   __builtin_loongarch_iocsrwr_d((unsigned long int)_1, (unsigned int)_2);
 }
+
+extern __inline void
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __asrtgt_d(long int _1, long int _2) {
+  __builtin_loongarch_asrtgt_d((long int)_1, (long int)_2);
+}
+
+extern __inline void
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __asrtle_d(long int _1, long int _2) {
+  __builtin_loongarch_asrtle_d((long int)_1, (long int)_2);
+}
+#endif
+
+#if __loongarch_grlen == 64
+#define __lddir_d(/*long int*/ _1, /*ui5*/ _2)                                 \
+  ((long int)__builtin_loongarch_lddir_d((long int)(_1), (_2)))
+
+#define __ldpte_d(/*long int*/ _1, /*ui5*/ _2)                                 \
+  ((void)__builtin_loongarch_ldpte_d((long int)(_1), (_2)))
 #endif
 
 #ifdef __cplusplus
