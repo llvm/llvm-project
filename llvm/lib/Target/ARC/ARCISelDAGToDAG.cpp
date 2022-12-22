@@ -62,9 +62,9 @@ public:
 
 char ARCDAGToDAGISel::ID;
 
-INITIALIZE_PASS(ARCDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
-
 } // end anonymous namespace
+
+INITIALIZE_PASS(ARCDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// This pass converts a legalized DAG into a ARC-specific DAG, ready for
 /// instruction scheduling.
