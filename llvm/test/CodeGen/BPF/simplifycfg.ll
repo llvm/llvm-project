@@ -35,87 +35,78 @@
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
-%struct.FrameData = type { i8* }
+%struct.FrameData = type { ptr }
 
 ; Function Attrs: nounwind
 define dso_local i32 @test() #0 {
 entry:
-  %frame_ptr = alloca i8*, align 8
+  %frame_ptr = alloca ptr, align 8
   %frame = alloca %struct.FrameData, align 8
   %i = alloca i32, align 4
-  %0 = bitcast i8** %frame_ptr to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %0) #3
-  %1 = bitcast %struct.FrameData* %frame to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %1) #3
-  %2 = bitcast i8** %frame_ptr to i8*
-  call void @get_frame_ptr(i8* %2)
-  %3 = bitcast i32* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %3) #3
-  store i32 0, i32* %i, align 4, !tbaa !2
+  call void @llvm.lifetime.start.p0(i64 8, ptr %frame_ptr) #3
+  call void @llvm.lifetime.start.p0(i64 8, ptr %frame) #3
+  call void @get_frame_ptr(ptr %frame_ptr)
+  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #3
+  store i32 0, ptr %i, align 4, !tbaa !2
   br label %for.cond
 
 ; CHECK-LABEL:    entry
-; CHECK:          %{{[0-9]+}} = load i8*, i8** %frame_ptr, align 8
-; CHECK:          %{{[0-9a-z.]+}} = icmp eq i8* %2, null
+; CHECK:          %[[PTR:[0-9]+]] = load ptr, ptr %frame_ptr, align 8
+; CHECK:          %{{[0-9a-z.]+}} = icmp eq ptr %[[PTR]], null
 ; CHECK:          br label
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %4 = load i32, i32* %i, align 4, !tbaa !2
-  %cmp = icmp slt i32 %4, 6
+  %0 = load i32, ptr %i, align 4, !tbaa !2
+  %cmp = icmp slt i32 %0, 6
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  %5 = bitcast i32* %i to i8*
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %5) #3
+  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #3
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %6 = load i8*, i8** %frame_ptr, align 8, !tbaa !6
-  %tobool = icmp ne i8* %6, null
+  %1 = load ptr, ptr %frame_ptr, align 8, !tbaa !6
+  %tobool = icmp ne ptr %1, null
   br i1 %tobool, label %land.lhs.true, label %if.end
 
 land.lhs.true:                                    ; preds = %for.body
-  %7 = load i8*, i8** %frame_ptr, align 8, !tbaa !6
-  %8 = bitcast %struct.FrameData* %frame to i8*
-  %call = call i32 @get_data(i8* %7, i8* %8)
+  %2 = load ptr, ptr %frame_ptr, align 8, !tbaa !6
+  %call = call i32 @get_data(ptr %2, ptr %frame)
   %tobool1 = icmp ne i32 %call, 0
   br i1 %tobool1, label %if.then, label %if.end
 
 if.then:                                          ; preds = %land.lhs.true
-  %f_back = getelementptr inbounds %struct.FrameData, %struct.FrameData* %frame, i32 0, i32 0
-  %9 = load i8*, i8** %f_back, align 8, !tbaa !8
-  store i8* %9, i8** %frame_ptr, align 8, !tbaa !6
+  %3 = load ptr, ptr %frame, align 8, !tbaa !8
+  store ptr %3, ptr %frame_ptr, align 8, !tbaa !6
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %land.lhs.true, %for.body
   br label %for.inc
 
 for.inc:                                          ; preds = %if.end
-  %10 = load i32, i32* %i, align 4, !tbaa !2
-  %inc = add nsw i32 %10, 1
-  store i32 %inc, i32* %i, align 4, !tbaa !2
+  %4 = load i32, ptr %i, align 4, !tbaa !2
+  %inc = add nsw i32 %4, 1
+  store i32 %inc, ptr %i, align 4, !tbaa !2
   br label %for.cond, !llvm.loop !10
 
 for.end:                                          ; preds = %for.cond.cleanup
-  %11 = load i8*, i8** %frame_ptr, align 8, !tbaa !6
-  %cmp2 = icmp eq i8* %11, null
+  %5 = load ptr, ptr %frame_ptr, align 8, !tbaa !6
+  %cmp2 = icmp eq ptr %5, null
   %conv = zext i1 %cmp2 to i32
-  %12 = bitcast %struct.FrameData* %frame to i8*
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %12) #3
-  %13 = bitcast i8** %frame_ptr to i8*
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %13) #3
+  call void @llvm.lifetime.end.p0(i64 8, ptr %frame) #3
+  call void @llvm.lifetime.end.p0(i64 8, ptr %frame_ptr) #3
   ret i32 %conv
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
-declare dso_local void @get_frame_ptr(i8*) #2
+declare dso_local void @get_frame_ptr(ptr) #2
 
-declare dso_local i32 @get_data(i8*, i8*) #2
+declare dso_local i32 @get_data(ptr, ptr) #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind willreturn }
