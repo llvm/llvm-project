@@ -792,12 +792,21 @@ void VPlan::print(raw_ostream &O) const {
 std::string VPlan::getName() const {
   std::string Out;
   raw_string_ostream RSO(Out);
-  RSO << Name;
+  RSO << Name << " for ";
   if (!VFs.empty()) {
-    RSO << " for VF={" << VFs[0];
+    RSO << "VF={" << VFs[0];
     for (ElementCount VF : drop_begin(VFs))
       RSO << "," << VF;
-    RSO << "},UF>=1";
+    RSO << "},";
+  }
+
+  if (UFs.empty()) {
+    RSO << "UF>=1";
+  } else {
+    RSO << "UF={" << UFs[0];
+    for (unsigned UF : drop_begin(UFs))
+      RSO << "," << UF;
+    RSO << "}";
   }
 
   return Out;
