@@ -26,13 +26,11 @@ class RISCVDAGToDAGISel : public SelectionDAGISel {
 public:
   static char ID;
 
+  RISCVDAGToDAGISel() = delete;
+
   explicit RISCVDAGToDAGISel(RISCVTargetMachine &TargetMachine,
                              CodeGenOpt::Level OptLevel)
       : SelectionDAGISel(ID, TargetMachine, OptLevel) {}
-
-  StringRef getPassName() const override {
-    return "RISCV DAG->DAG Pattern Instruction Selection";
-  }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<RISCVSubtarget>();

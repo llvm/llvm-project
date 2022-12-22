@@ -7038,7 +7038,8 @@ static SDValue getEXTEND_VECTOR_INREG(unsigned Opcode, const SDLoc &DL, EVT VT,
 static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
   V = peekThroughBitcasts(V);
   if (V.getOpcode() == ISD::XOR &&
-      ISD::isBuildVectorAllOnes(V.getOperand(1).getNode()))
+      (ISD::isBuildVectorAllOnes(V.getOperand(1).getNode()) ||
+       isAllOnesConstant(V.getOperand(1))))
     return V.getOperand(0);
   if (V.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       (isNullConstant(V.getOperand(1)) || V.getOperand(0).hasOneUse())) {
@@ -48177,7 +48178,7 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
 
 /// Try to fold: (and (xor X, -1), Y) -> (andnp X, Y).
 static SDValue combineAndNotIntoANDNP(SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == ISD::AND);
+  assert(N->getOpcode() == ISD::AND && "Unexpected opcode combine into ANDNP");
 
   MVT VT = N->getSimpleValueType(0);
   if (!VT.is128BitVector() && !VT.is256BitVector() && !VT.is512BitVector())
@@ -48187,22 +48188,68 @@ static SDValue combineAndNotIntoANDNP(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
-  auto GetNot = [&VT, &DAG](SDValue V) {
-    // Basic X = NOT(Y) detection.
-    if (SDValue Not = IsNOT(V, DAG))
-      return Not;
-    // Fold BROADCAST(NOT(Y)) -> BROADCAST(Y).
-    if (V.getOpcode() == X86ISD::VBROADCAST) {
-      SDValue Src = V.getOperand(0);
-      EVT SrcVT = Src.getValueType();
-      if (!SrcVT.isVector())
-        return SDValue();
-      if (SDValue Not = IsNOT(Src, DAG))
-        return DAG.getNode(X86ISD::VBROADCAST, SDLoc(V), VT,
-                           DAG.getBitcast(SrcVT, Not));
+  if (SDValue Not = IsNOT(N0, DAG)) {
+    X = Not;
+    Y = N1;
+  } else if (SDValue Not = IsNOT(N1, DAG)) {
+    X = Not;
+    Y = N0;
+  } else
+    return SDValue();
+
+  X = DAG.getBitcast(VT, X);
+  Y = DAG.getBitcast(VT, Y);
+  return DAG.getNode(X86ISD::ANDNP, SDLoc(N), VT, X, Y);
+}
+
+/// Try to fold:
+///   and (vector_shuffle<Z,...,Z>
+///            (insert_vector_elt undef, (xor X, -1), Z), undef), Y
+///   ->
+///   andnp (vector_shuffle<Z,...,Z>
+///              (insert_vector_elt undef, X, Z), undef), Y
+static SDValue combineAndShuffleNot(SDNode *N, SelectionDAG &DAG,
+                                    const X86Subtarget &Subtarget) {
+  assert(N->getOpcode() == ISD::AND && "Unexpected opcode combine into ANDNP");
+
+  EVT VT = N->getValueType(0);
+  // Do not split 256 and 512 bit vectors with SSE2 as they overwrite original
+  // value and require extra moves.
+  if (!((VT.is128BitVector() && Subtarget.hasSSE2()) ||
+        ((VT.is256BitVector() || VT.is512BitVector()) && Subtarget.hasAVX())))
+    return SDValue();
+
+  auto GetNot = [&DAG](SDValue V) {
+    auto *SVN = dyn_cast<ShuffleVectorSDNode>(peekThroughOneUseBitcasts(V));
+    // TODO: SVN->hasOneUse() is a strong condition. It can be relaxed if all
+    // end-users are ISD::AND including cases
+    // (and(extract_vector_element(SVN), Y)).
+    if (!SVN || !SVN->hasOneUse() || !SVN->isSplat() ||
+        !SVN->getOperand(1).isUndef()) {
+      return SDValue();
+    }
+    SDValue IVEN = SVN->getOperand(0);
+    if (IVEN.getOpcode() != ISD::INSERT_VECTOR_ELT ||
+        !IVEN.getOperand(0).isUndef() || !IVEN.hasOneUse())
+      return SDValue();
+    if (!isa<ConstantSDNode>(IVEN.getOperand(2)) ||
+        IVEN.getConstantOperandAPInt(2) != SVN->getSplatIndex())
+      return SDValue();
+    SDValue Src = IVEN.getOperand(1);
+    if (SDValue Not = IsNOT(Src, DAG)) {
+      SDValue NotSrc = DAG.getBitcast(Src.getValueType(), Not);
+      SDValue NotIVEN =
+          DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(IVEN), IVEN.getValueType(),
+                      IVEN.getOperand(0), NotSrc, IVEN.getOperand(2));
+      return DAG.getVectorShuffle(SVN->getValueType(0), SDLoc(SVN), NotIVEN,
+                                  SVN->getOperand(1), SVN->getMask());
     }
     return SDValue();
   };
+
+  SDValue X, Y;
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
 
   if (SDValue Not = GetNot(N0)) {
     X = Not;
@@ -48215,7 +48262,20 @@ static SDValue combineAndNotIntoANDNP(SDNode *N, SelectionDAG &DAG) {
 
   X = DAG.getBitcast(VT, X);
   Y = DAG.getBitcast(VT, Y);
-  return DAG.getNode(X86ISD::ANDNP, SDLoc(N), VT, X, Y);
+  SDLoc DL(N);
+  // We do not split for SSE at all, but we need to split vectors for AVX1 and
+  // AVX2.
+  if (!Subtarget.useAVX512Regs() && VT.is512BitVector()) {
+    SDValue LoX, HiX;
+    std::tie(LoX, HiX) = splitVector(X, DAG, DL);
+    SDValue LoY, HiY;
+    std::tie(LoY, HiY) = splitVector(Y, DAG, DL);
+    EVT SplitVT = LoX.getValueType();
+    SDValue LoV = DAG.getNode(X86ISD::ANDNP, DL, SplitVT, {LoX, LoY});
+    SDValue HiV = DAG.getNode(X86ISD::ANDNP, DL, SplitVT, {HiX, HiY});
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, {LoV, HiV});
+  }
+  return DAG.getNode(X86ISD::ANDNP, DL, VT, {X, Y});
 }
 
 // Try to widen AND, OR and XOR nodes to VT in order to remove casts around
@@ -48794,6 +48854,9 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue FPLogic = convertIntLogicToFPLogic(N, DAG, DCI, Subtarget))
     return FPLogic;
+
+  if (SDValue R = combineAndShuffleNot(N, DAG, Subtarget))
+    return R;
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();

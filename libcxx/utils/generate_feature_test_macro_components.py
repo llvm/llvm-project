@@ -213,7 +213,7 @@ feature_test_macros = [ add_version_header(x) for x in [
   }, {
     "name": "__cpp_lib_constexpr_algorithms",
     "values": { "c++20": 201806 },
-    "headers": ["algorithm"],
+    "headers": ["algorithm", "utility"],
   }, {
     "name": "__cpp_lib_constexpr_bitset",
     "values": { "c++2b": 202207 },

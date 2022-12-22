@@ -12,6 +12,7 @@
 #include "VETargetMachine.h"
 #include "TargetInfo/VETargetInfo.h"
 #include "VE.h"
+#include "VEMachineFunctionInfo.h"
 #include "VETargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
@@ -27,6 +28,9 @@ using namespace llvm;
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVETarget() {
   // Register the target.
   RegisterTargetMachine<VETargetMachine> X(getTheVETarget());
+
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeVEDAGToDAGISelPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &T) {
@@ -96,6 +100,13 @@ VETargetMachine::~VETargetMachine() = default;
 TargetTransformInfo
 VETargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(VETTIImpl(this, F));
+}
+
+MachineFunctionInfo *VETargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return VEMachineFunctionInfo::create<VEMachineFunctionInfo>(Allocator, F,
+                                                              STI);
 }
 
 namespace {

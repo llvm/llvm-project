@@ -163,3 +163,20 @@ void func() {
 }
 }
 }
+
+namespace no_crash_D138914 {
+// https://reviews.llvm.org/D138914
+template <class a, a> struct b;
+template <bool c> using d = b<bool, c>;
+template <class a, class e> using f = d<__is_same(a, e)>;
+template <class a, class e>
+concept g = f<a, e>::h;
+template <class a, class e>
+concept i = g<e, a>;
+template <typename> class j { // expected-note {{candidate template ignored}}
+  template <typename k>
+  requires requires { requires i<j, k>; }
+  j(); // expected-note {{candidate template ignored}}
+};
+template <> j(); // expected-error {{deduction guide declaration without trailing return type}} // expected-error {{no function template}}
+}

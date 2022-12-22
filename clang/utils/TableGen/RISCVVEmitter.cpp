@@ -171,6 +171,10 @@ void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
 
   if (RVVI->hasManualCodegen()) {
     OS << "  DefaultPolicy = " << RVVI->getDefaultPolicyBits() << ";\n";
+    if (RVVI->isMasked())
+      OS << "IsMasked = true;\n";
+    else
+      OS << "IsMasked = false;\n";
     OS << RVVI->getManualCodegen();
     OS << "break;\n";
     return;
@@ -517,7 +521,6 @@ void RVVEmitter::createRVVIntrinsics(
     bool SupportOverloading = R->getValueAsBit("SupportOverloading");
     bool HasBuiltinAlias = R->getValueAsBit("HasBuiltinAlias");
     StringRef ManualCodegen = R->getValueAsString("ManualCodegen");
-    StringRef MaskedManualCodegen = R->getValueAsString("MaskedManualCodegen");
     std::vector<int64_t> IntrinsicTypes =
         R->getValueAsListOfInts("IntrinsicTypes");
     std::vector<StringRef> RequiredFeatures =
@@ -598,7 +601,7 @@ void RVVEmitter::createRVVIntrinsics(
         Out.push_back(std::make_unique<RVVIntrinsic>(
             Name, SuffixStr, OverloadedName, OverloadedSuffixStr, MaskedIRName,
             /*IsMasked=*/true, HasMaskedOffOperand, HasVL, MaskedPolicyScheme,
-            SupportOverloading, HasBuiltinAlias, MaskedManualCodegen,
+            SupportOverloading, HasBuiltinAlias, ManualCodegen,
             *MaskTypes, IntrinsicTypes, RequiredFeatures, NF,
             Policy(), IsPrototypeDefaultTU));
         if (MaskedPolicyScheme == PolicyScheme::SchemeNone)
@@ -614,7 +617,7 @@ void RVVEmitter::createRVVIntrinsics(
               Name, SuffixStr, OverloadedName, OverloadedSuffixStr,
               MaskedIRName, /*IsMasked=*/true, HasMaskedOffOperand, HasVL,
               MaskedPolicyScheme, SupportOverloading, HasBuiltinAlias,
-              MaskedManualCodegen, *PolicyTypes, IntrinsicTypes,
+              ManualCodegen, *PolicyTypes, IntrinsicTypes,
               RequiredFeatures, NF, P, IsPrototypeDefaultTU));
         }
       } // End for Log2LMULList

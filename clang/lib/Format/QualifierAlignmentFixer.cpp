@@ -414,6 +414,7 @@ tok::TokenKind LeftRightQualifierAlignmentFixer::getTokenFromQualifier(
       .Case("inline", tok::kw_inline)
       .Case("constexpr", tok::kw_constexpr)
       .Case("restrict", tok::kw_restrict)
+      .Case("friend", tok::kw_friend)
       .Default(tok::identifier);
 }
 

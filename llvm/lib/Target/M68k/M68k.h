@@ -22,6 +22,7 @@ class InstructionSelector;
 class M68kRegisterBankInfo;
 class M68kSubtarget;
 class M68kTargetMachine;
+class PassRegistry;
 
 /// This pass converts a legalized DAG into a M68k-specific DAG, ready for
 /// instruction scheduling.
@@ -51,6 +52,8 @@ FunctionPass *createM68kConvertMOVToMOVMPass();
 InstructionSelector *
 createM68kInstructionSelector(const M68kTargetMachine &, const M68kSubtarget &,
                               const M68kRegisterBankInfo &);
+
+void initializeM68kDAGToDAGISelPass(PassRegistry &);
 
 } // namespace llvm
 
