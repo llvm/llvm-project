@@ -2535,6 +2535,7 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
     // Enable all kernel agents to access the host pinned buffer.
     if (auto Err = MemoryPool->enableAccess(Alloc, Size, KernelAgents)) {
       REPORT("%s\n", toString(std::move(Err)).data());
+      return nullptr;
     }
 
     // Keep track of the host pinned allocations for optimizations in transfers.
