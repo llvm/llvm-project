@@ -171,6 +171,22 @@ static void printLinearClause(OpAsmPrinter &p, Operation *op,
 }
 
 //===----------------------------------------------------------------------===//
+// Verifier for Nontemporal Clause
+//===----------------------------------------------------------------------===//
+
+static LogicalResult
+verifyNontemporalClause(Operation *op, OperandRange nontemporalVariables) {
+
+  // Check if each var is unique - OpenMP 5.0 -> 2.9.3.1 section
+  DenseSet<Value> nontemporalItems;
+  for (const auto &it : nontemporalVariables)
+    if (!nontemporalItems.insert(it).second)
+      return op->emitOpError() << "nontemporal variable used more than once";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Parser, verifier and printer for Aligned Clause
 //===----------------------------------------------------------------------===//
 static LogicalResult
@@ -658,8 +674,13 @@ LogicalResult SimdLoopOp::verify() {
            << "simdlen clause and safelen clause are both present, but the "
               "simdlen value is not less than or equal to safelen value";
   }
-  return verifyAlignedClause(*this, this->getAlignmentValues(),
-                             this->getAlignedVars());
+  if (verifyAlignedClause(*this, this->getAlignmentValues(),
+                          this->getAlignedVars())
+          .failed())
+    return failure();
+  if (verifyNontemporalClause(*this, this->getNontemporalVars()).failed())
+    return failure();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
