@@ -764,6 +764,48 @@ No successors
     EXPECT_EQ("EMIT vp<%4> = mul vp<%2> vp<%1>", I4Dump);
   }
 }
+
+TEST(VPBasicBlockTest, printPlanWithVFsAndUFs) {
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
+
+  VPBasicBlock *VPBB1 = new VPBasicBlock();
+  VPBB1->appendRecipe(I1);
+  VPBB1->setName("bb1");
+
+  VPlan Plan;
+  Plan.setName("TestPlan");
+  Plan.addVF(ElementCount::getFixed(4));
+  Plan.setEntry(VPBB1);
+
+  {
+    std::string FullDump;
+    raw_string_ostream OS(FullDump);
+    Plan.print(OS);
+
+    const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4},UF>=1' {
+bb1:
+  EMIT vp<%1> = add
+No successors
+}
+)";
+    EXPECT_EQ(ExpectedStr, FullDump);
+  }
+
+  {
+    Plan.addVF(ElementCount::getScalable(8));
+    std::string FullDump;
+    raw_string_ostream OS(FullDump);
+    Plan.print(OS);
+
+    const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4,vscale x 8},UF>=1' {
+bb1:
+  EMIT vp<%1> = add
+No successors
+}
+)";
+    EXPECT_EQ(ExpectedStr, FullDump);
+  }
+}
 #endif
 
 TEST(VPRecipeTest, CastVPInstructionToVPUser) {
