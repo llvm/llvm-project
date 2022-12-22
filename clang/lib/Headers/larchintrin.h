@@ -14,6 +14,46 @@
 extern "C" {
 #endif
 
+typedef struct rdtime {
+  unsigned int value;
+  unsigned int timeid;
+} __rdtime_t;
+
+#if __loongarch_grlen == 64
+typedef struct drdtime {
+  unsigned long dvalue;
+  unsigned long dtimeid;
+} __drdtime_t;
+
+extern __inline __drdtime_t
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __rdtime_d(void) {
+  __drdtime_t __drdtime;
+  __asm__ volatile(
+      "rdtime.d %[val], %[tid]\n\t"
+      : [val] "=&r"(__drdtime.dvalue), [tid] "=&r"(__drdtime.dtimeid));
+  return __drdtime;
+}
+#endif
+
+extern __inline __rdtime_t
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __rdtimeh_w(void) {
+  __rdtime_t __rdtime;
+  __asm__ volatile("rdtimeh.w %[val], %[tid]\n\t"
+                   : [val] "=&r"(__rdtime.value), [tid] "=&r"(__rdtime.timeid));
+  return __rdtime;
+}
+
+extern __inline __rdtime_t
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __rdtimel_w(void) {
+  __rdtime_t __rdtime;
+  __asm__ volatile("rdtimel.w %[val], %[tid]\n\t"
+                   : [val] "=&r"(__rdtime.value), [tid] "=&r"(__rdtime.timeid));
+  return __rdtime;
+}
+
 #if __loongarch_grlen == 64
 extern __inline int
     __attribute__((__gnu_inline__, __always_inline__, __artificial__))

@@ -373,3 +373,23 @@ unsigned int cpucfg(unsigned int a) {
   unsigned int c = __builtin_loongarch_cpucfg(a);
   return 0;
 }
+
+// CHECK-LABEL: @rdtime_d(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i64, i64 } asm sideeffect "rdtime.d $0, $1\0A\09", "=&r,=&r"() #[[ATTR1:[0-9]+]], !srcloc !2
+// CHECK-NEXT:    ret void
+//
+void rdtime_d() {
+  __rdtime_d();
+}
+
+// CHECK-LABEL: @rdtime(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimeh.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1]], !srcloc !3
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimel.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1]], !srcloc !4
+// CHECK-NEXT:    ret void
+//
+void rdtime() {
+  __rdtimeh_w();
+  __rdtimel_w();
+}
