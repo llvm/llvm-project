@@ -4088,6 +4088,7 @@ struct FormatStyle {
            IndentRequiresClause == R.IndentRequiresClause &&
            IndentWidth == R.IndentWidth &&
            IndentWrappedFunctionNames == R.IndentWrappedFunctionNames &&
+           InsertBraces == R.InsertBraces &&
            JavaImportGroups == R.JavaImportGroups &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
