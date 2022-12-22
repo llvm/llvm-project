@@ -27,15 +27,15 @@ target datalayout = "E-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 !5 = !{!0}
 !6 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "S", file: !3, line: 1, size: 32, elements: !7)
 !7 = !{!8, !10, !11, !12}
-!8 = !DIDerivedType(tag: DW_TAG_member, name: "j", scope: !6, file: !3, line: 2, baseType: !9, size: 5)
+!8 = !DIDerivedType(tag: DW_TAG_member, name: "j", scope: !6, file: !3, line: 2, baseType: !9, size: 5, flags: DIFlagBitField)
 ; CHECK: DW_TAG_member
 ; CHECK-NEXT: DW_AT_name{{.*}}"j"
 ; CHECK-NOT:  DW_TAG
 ; CHECK:      DW_AT_data_bit_offset      [DW_FORM_data1]	(0x00)
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!10 = !DIDerivedType(tag: DW_TAG_member, name: "k", scope: !6, file: !3, line: 3, baseType: !9, size: 6, offset: 5)
-!11 = !DIDerivedType(tag: DW_TAG_member, name: "m", scope: !6, file: !3, line: 4, baseType: !9, size: 5, offset: 11)
-!12 = !DIDerivedType(tag: DW_TAG_member, name: "n", scope: !6, file: !3, line: 5, baseType: !9, size: 8, offset: 16)
+!10 = !DIDerivedType(tag: DW_TAG_member, name: "k", scope: !6, file: !3, line: 3, baseType: !9, size: 6, offset: 5, flags: DIFlagBitField)
+!11 = !DIDerivedType(tag: DW_TAG_member, name: "m", scope: !6, file: !3, line: 4, baseType: !9, size: 5, offset: 11, flags: DIFlagBitField)
+!12 = !DIDerivedType(tag: DW_TAG_member, name: "n", scope: !6, file: !3, line: 5, baseType: !9, size: 8, offset: 16, flags: DIFlagBitField)
 !13 = !{i32 2, !"Dwarf Version", i32 4}
 ; CHECK: DW_TAG_member
 ; CHECK-NEXT: DW_AT_name{{.*}}"k"
