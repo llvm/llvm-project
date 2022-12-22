@@ -162,8 +162,8 @@ VoidTask silly_task() {
 // the suspend_always struct to use for cir.await. Note that we return by-value since we defer ABI lowering
 // to later passes, same is done elsewhere.
 
-// CHECK:   %15 = cir.call @_ZN5folly4coro4TaskIvE12promise_type15initial_suspendEv(%2)
-// CHECK:   cir.store %15, %[[#SuspendAlwaysAddr]] : !ty_22struct2Estd3A3Asuspend_always22, cir.ptr <!ty_22struct2Estd3A3Asuspend_always22>
+// CHECK:   %[[#Tmp0:]] = cir.call @_ZN5folly4coro4TaskIvE12promise_type15initial_suspendEv(%[[#VoidPromisseAddr]])
+// CHECK:   cir.store %[[#Tmp0]], %[[#SuspendAlwaysAddr]]
 
 //
 // Here we start mapping co_await to cir.await.
@@ -172,8 +172,8 @@ VoidTask silly_task() {
 // First regions `ready` has a special cir.yield code to veto suspension.
 
 // CHECK:   cir.await(ready : {
-// CHECK:     %16 = cir.call @_ZNSt14suspend_always11await_readyEv(%12) : (!cir.ptr<!ty_22struct2Estd3A3Asuspend_always22>) -> !cir.bool
-// CHECK:     cir.if %16 {
+// CHECK:     %[[#ReadyVeto:]] = cir.call @_ZNSt14suspend_always11await_readyEv(%[[#SuspendAlwaysAddr]])
+// CHECK:     cir.if %[[#ReadyVeto]] {
 // CHECK:       cir.yield break
 // CHECK:     }
 // CHECK:     cir.yield
@@ -185,12 +185,11 @@ VoidTask silly_task() {
 //   specialization to a void one.
 // - Call suspend_always::await_suspend() passing the handle.
 //
-// FIXME: add missing builtin calls.
 // FIXME: add veto support for non-void await_suspends.
 
 // CHECK:   }, suspend : {
-// CHECK:     %16 = cir.call @_ZNSt16coroutine_handleIN5folly4coro4TaskIvE12promise_typeEE12from_addressEPv(%[[#CoroFrameAddr]])
-// CHECK:     cir.store %16, %[[#CoroHandlePromiseAddr]] : ![[CoroHandlePromise]]
+// CHECK:     %[[#FromAddrRes:]] = cir.call @_ZNSt16coroutine_handleIN5folly4coro4TaskIvE12promise_typeEE12from_addressEPv(%[[#CoroFrameAddr]])
+// CHECK:     cir.store %[[#FromAddrRes]], %[[#CoroHandlePromiseAddr]] : ![[CoroHandlePromise]]
 // CHECK:     %[[#CoroHandlePromiseReload:]] = cir.load %[[#CoroHandlePromiseAddr]]
 // CHECK:     cir.call @_ZNSt16coroutine_handleIvEC1IN5folly4coro4TaskIvE12promise_typeEEES_IT_E(%[[#CoroHandleVoidAddr]], %[[#CoroHandlePromiseReload]])
 // CHECK:     %[[#CoroHandleVoidReload:]] = cir.load %[[#CoroHandleVoidAddr]] : cir.ptr <![[CoroHandleVoid]]>, ![[CoroHandleVoid]]
@@ -198,8 +197,6 @@ VoidTask silly_task() {
 // CHECK:     cir.yield
 
 // Third region `resume` handles coroutine resuming logic.
-//
-// FIXME: add missing builtin calls.
 
 // CHECK:   }, resume : {
 // CHECK:     cir.call @_ZNSt14suspend_always12await_resumeEv(%[[#SuspendAlwaysAddr]])
@@ -207,4 +204,33 @@ VoidTask silly_task() {
 // CHECK:   },)
 // CHECK: }
 
+// Since we already tested cir.await guts above, the remaining checks for:
+// - The actual user written co_await
+// - The promise call
+// - The final suspend co_await
+// - Return
+
+// The actual user written co_await
+// CHECK: cir.scope {
+// CHECK:   cir.await(ready : {
+// CHECK:   }, suspend : {
+// CHECK:   }, resume : {
+// CHECK:   },)
 // CHECK: }
+
+// The promise call
+// CHECK: cir.call @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv(%[[#VoidPromisseAddr]])
+
+// The final suspend co_await
+// CHECK: cir.scope {
+// CHECK:   cir.await(ready : {
+// CHECK:   }, suspend : {
+// CHECK:   }, resume : {
+// CHECK:   },)
+// CHECK: }
+
+// Return
+// FIXME: add missing builtin calls
+// CHECK: %[[#Tmp1:]] = cir.load %[[#VoidTaskAddr]]
+// CHECK-NEXT: cir.return %[[#Tmp1]]
+// CHECK-NEXT: }

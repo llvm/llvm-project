@@ -1362,7 +1362,7 @@ def AwaitOp : CIR_Op<"await",
     Breaking this up in regions allow individual scrutiny of conditions
     which might lead to folding some of them out. Lowerings coming out
     of CIR, e.g. LLVM, should use the `suspend` region to track more
-    lower level codegen (e.g. intrinsic emission for saving/suspending).
+    lower level codegen (e.g. intrinsic emission for coro.save/coro.suspend).
 
     From the C++ snippet we get:
 
