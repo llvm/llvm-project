@@ -14252,44 +14252,40 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   // conditions 1) one-use, 2) does not produce poison, and 3) has all but one
   // guaranteed-non-poison operands then push the freeze through to the one
   // operand that is not guaranteed non-poison.
-  if (!DAG.canCreateUndefOrPoison(N0, /*PoisonOnly*/ false,
-                                  /*ConsiderFlags*/ false) &&
-      N0->getNumValues() == 1 && N0->hasOneUse()) {
-    SDValue MaybePoisonOperand;
-    SmallVector<SDValue> Ops(N0->op_begin(), N0->op_end());
-    for (SDValue Op : Ops) {
-      if (DAG.isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly*/ false,
-                                               /*Depth*/ 1))
-        continue;
-      if (!MaybePoisonOperand || MaybePoisonOperand == Op) {
-        MaybePoisonOperand = Op;
-        continue;
-      }
-      // Multiple maybe-poison ops - bail out.
-      MaybePoisonOperand = SDValue();
-      break;
-    }
-    if (MaybePoisonOperand) {
-      // First, freeze the offending operand.
-      SDValue FrozenMaybePoisonOperand = DAG.getFreeze(MaybePoisonOperand);
-      // Then, change all other uses of unfrozen operand to use frozen operand.
-      DAG.ReplaceAllUsesOfValueWith(MaybePoisonOperand,
-                                    FrozenMaybePoisonOperand);
-      // But, that also updated the use in the freeze we just created, thus
-      // creating a cycle in a DAG. Let's undo that by mutating the freeze.
-      DAG.UpdateNodeOperands(FrozenMaybePoisonOperand.getNode(),
-                             MaybePoisonOperand);
-      // Finally, recreate the node with the frozen maybe-poison operand.
-      SmallVector<SDValue> Ops(N0->op_begin(), N0->op_end());
-      // TODO: Just strip poison generating flags?
-      SDValue R = DAG.getNode(N0.getOpcode(), SDLoc(N0), N0->getVTList(), Ops);
-      assert(DAG.isGuaranteedNotToBeUndefOrPoison(R, /*PoisonOnly*/ false) &&
-             "Can't create node that may be undef/poison!");
-      return R;
-    }
-  }
+  if (DAG.canCreateUndefOrPoison(N0, /*PoisonOnly*/ false,
+                                 /*ConsiderFlags*/ false) ||
+      N0->getNumValues() != 1 || !N0->hasOneUse())
+    return SDValue();
 
-  return SDValue();
+  SDValue MaybePoisonOperand;
+  for (SDValue Op : N0->ops()) {
+    if (DAG.isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly*/ false,
+                                             /*Depth*/ 1))
+      continue;
+    if (!MaybePoisonOperand || MaybePoisonOperand == Op) {
+      MaybePoisonOperand = Op;
+      continue;
+    }
+    // Multiple maybe-poison ops - bail out.
+    return SDValue();
+  }
+  assert(MaybePoisonOperand && "Should have found maybe-poison operand.");
+
+  // First, freeze the offending operand.
+  SDValue FrozenMaybePoisonOperand = DAG.getFreeze(MaybePoisonOperand);
+  // Then, change all other uses of unfrozen operand to use frozen operand.
+  DAG.ReplaceAllUsesOfValueWith(MaybePoisonOperand, FrozenMaybePoisonOperand);
+  // But, that also updated the use in the freeze we just created, thus
+  // creating a cycle in a DAG. Let's undo that by mutating the freeze.
+  DAG.UpdateNodeOperands(FrozenMaybePoisonOperand.getNode(),
+                         MaybePoisonOperand);
+  // Finally, recreate the node with the frozen maybe-poison operand.
+  SmallVector<SDValue> Ops(N0->op_begin(), N0->op_end());
+  // TODO: Just strip poison generating flags?
+  SDValue R = DAG.getNode(N0.getOpcode(), SDLoc(N0), N0->getVTList(), Ops);
+  assert(DAG.isGuaranteedNotToBeUndefOrPoison(R, /*PoisonOnly*/ false) &&
+         "Can't create node that may be undef/poison!");
+  return R;
 }
 
 /// We know that BV is a build_vector node with Constant, ConstantFP or Undef
