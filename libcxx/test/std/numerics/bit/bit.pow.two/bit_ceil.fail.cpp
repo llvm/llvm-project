@@ -20,8 +20,6 @@
 #include <cstdint>
 #include <limits>
 
-#include "test_macros.h"
-
 class A{};
 enum       E1 : unsigned char { rEd };
 enum class E2 : unsigned char { red };

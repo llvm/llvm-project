@@ -11,8 +11,18 @@
 #define _LIBCPP___NUMERIC_MIDPOINT_H
 
 #include <__config>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_floating_point.h>
+#include <__type_traits/is_integral.h>
+#include <__type_traits/is_null_pointer.h>
+#include <__type_traits/is_object.h>
+#include <__type_traits/is_pointer.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/is_void.h>
+#include <__type_traits/make_unsigned.h>
+#include <__type_traits/remove_pointer.h>
+#include <cstddef>
 #include <limits>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
