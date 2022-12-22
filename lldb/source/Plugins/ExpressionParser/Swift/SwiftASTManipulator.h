@@ -20,6 +20,8 @@
 #include "swift/AST/Decl.h"
 #include "swift/Basic/SourceLoc.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Casting.h"
+
 
 namespace swift {
 class CaseStmt;
@@ -38,9 +40,9 @@ class SwiftASTManipulatorBase {
 public:
   class VariableMetadata {
   public:
-    VariableMetadata() {}
-    virtual ~VariableMetadata() {}
-    virtual unsigned GetType() = 0;
+    VariableMetadata() = default;
+    virtual ~VariableMetadata() = default;
+    virtual unsigned GetType() const = 0;
   };
 
   class VariableMetadataResult
@@ -48,7 +50,10 @@ public:
   public:
     virtual ~VariableMetadataResult();
     constexpr static unsigned Type() { return 'Resu'; }
-    unsigned GetType() override { return Type(); }
+    unsigned GetType() const override { return Type(); }
+    static bool classof(const VariableMetadata *VM) {
+      return VM->GetType() == Type();
+    }
   };
 
   class VariableMetadataError
@@ -56,7 +61,10 @@ public:
   public:
     virtual ~VariableMetadataError();
     constexpr static unsigned Type() { return 'Erro'; }
-    unsigned GetType() override { return Type(); }
+    unsigned GetType() const override { return Type(); }
+    static bool classof(const VariableMetadata *VM) {
+      return VM->GetType() == Type();
+    }
   };
 
   class VariableMetadataPersistent
@@ -67,7 +75,10 @@ public:
         : m_persistent_variable_sp(persistent_variable_sp) {}
 
     static constexpr unsigned Type() { return 'Pers'; }
-    unsigned GetType() override { return Type(); }
+    unsigned GetType() const override { return Type(); }
+    static bool classof(const VariableMetadata *VM) {
+      return VM->GetType() == Type();
+    }
     lldb::ExpressionVariableSP m_persistent_variable_sp;
   };
 
@@ -78,7 +89,10 @@ public:
         : m_variable_sp(variable_sp) {}
 
     static constexpr unsigned Type() { return 'Vari'; }
-    unsigned GetType() override { return Type(); }
+    unsigned GetType() const override { return Type(); }
+    static bool classof(const VariableMetadata *VM) {
+      return VM->GetType() == Type();
+    }
     lldb::VariableSP m_variable_sp;
   };
 
@@ -106,10 +120,6 @@ public:
                  bool is_capture_list = false)
         : m_type(type), m_name(name), m_var_introducer(introducer),
           m_is_capture_list(is_capture_list), m_metadata(metadata) {}
-
-    template <class T> bool MetadataIs() const {
-      return (m_metadata && m_metadata->GetType() == T::Type());
-    }
 
     void Print(Stream &stream) const;
 
