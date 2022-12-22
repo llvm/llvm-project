@@ -13,14 +13,14 @@
 %struct.s1 = type { i32, i32 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @foo(%struct.s1* %arg) #0 !dbg !7 {
+define dso_local i32 @foo(ptr %arg) #0 !dbg !7 {
 entry:
-  %arg.addr = alloca %struct.s1*, align 8
-  store %struct.s1* %arg, %struct.s1** %arg.addr, align 8, !tbaa !18
-  call void @llvm.dbg.declare(metadata %struct.s1** %arg.addr, metadata !17, metadata !DIExpression()), !dbg !22
-  %0 = load %struct.s1*, %struct.s1** %arg.addr, align 8, !dbg !23, !tbaa !18
-  %1 = call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %0, i32 0, i32 0), !dbg !24, !llvm.preserve.access.index !12
-  %2 = load i32, i32* %1, align 4, !dbg !24, !tbaa !25
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8, !tbaa !18
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !17, metadata !DIExpression()), !dbg !22
+  %0 = load ptr, ptr %arg.addr, align 8, !dbg !23, !tbaa !18
+  %1 = call ptr @llvm.preserve.struct.access.index.p0.p0.s1s(ptr elementtype(%struct.s1) %0, i32 0, i32 0), !dbg !24, !llvm.preserve.access.index !12
+  %2 = load i32, ptr %1, align 4, !dbg !24, !tbaa !25
   ret i32 %2, !dbg !28
 }
 
@@ -28,17 +28,17 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind readnone
-declare i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1*, i32 immarg, i32 immarg) #2
+declare ptr @llvm.preserve.struct.access.index.p0.p0.s1s(ptr, i32 immarg, i32 immarg) #2
 
 ; Function Attrs: nounwind
-define dso_local i32 @bar(%struct.s1* %arg) #0 !dbg !29 {
+define dso_local i32 @bar(ptr %arg) #0 !dbg !29 {
 entry:
-  %arg.addr = alloca %struct.s1*, align 8
-  store %struct.s1* %arg, %struct.s1** %arg.addr, align 8, !tbaa !18
-  call void @llvm.dbg.declare(metadata %struct.s1** %arg.addr, metadata !31, metadata !DIExpression()), !dbg !32
-  %0 = load %struct.s1*, %struct.s1** %arg.addr, align 8, !dbg !33, !tbaa !18
-  %1 = call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %0, i32 0, i32 0), !dbg !34, !llvm.preserve.access.index !12
-  %2 = load i32, i32* %1, align 4, !dbg !34, !tbaa !25
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8, !tbaa !18
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !31, metadata !DIExpression()), !dbg !32
+  %0 = load ptr, ptr %arg.addr, align 8, !dbg !33, !tbaa !18
+  %1 = call ptr @llvm.preserve.struct.access.index.p0.p0.s1s(ptr elementtype(%struct.s1) %0, i32 0, i32 0), !dbg !34, !llvm.preserve.access.index !12
+  %2 = load i32, ptr %1, align 4, !dbg !34, !tbaa !25
   ret i32 %2, !dbg !35
 }
 

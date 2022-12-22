@@ -10,12 +10,12 @@ define ghccc void @test_direct_tail() {
   ret void
 }
 
-@ind_func = global void()* zeroinitializer
+@ind_func = global ptr zeroinitializer
 
 define ghccc void @test_indirect_tail() {
 ; CHECK-LABEL: test_indirect_tail:
 ; CHECK: bx {{r[0-9]+}}
-  %func = load void()*, void()** @ind_func
+  %func = load ptr, ptr @ind_func
   tail call ghccc void() %func()
   ret void
 }

@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mcpu=hawaii -start-before=amdgpu-unify-divergent-exit-nodes -mattr=+flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-SAFE,SI %s
-; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=hawaii -mattr=+flat-for-global -start-before=amdgpu-unify-divergent-exit-nodes -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-NSZ,SI %s
+; RUN: llc -march=amdgcn -mcpu=hawaii -start-before=amdgpu-unify-divergent-exit-nodes -mattr=+flat-for-global < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-SAFE,SI %s
+; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=hawaii -mattr=+flat-for-global -start-before=amdgpu-unify-divergent-exit-nodes < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-NSZ,SI %s
 
-; RUN: llc -march=amdgcn -mcpu=fiji -start-before=amdgpu-unify-divergent-exit-nodes --verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-SAFE,VI %s
-; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=fiji -start-before=amdgpu-unify-divergent-exit-nodes -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-NSZ,VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -start-before=amdgpu-unify-divergent-exit-nodes < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-SAFE,VI %s
+; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=fiji -start-before=amdgpu-unify-divergent-exit-nodes < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-NSZ,VI %s
 
 ; --------------------------------------------------------------------------------
 ; fadd tests
@@ -2643,6 +2643,92 @@ define float @flush_snan_fmul_neg1_to_fneg(float %x, float %y) #0 {
   %mul = fmul float %quiet, -1.0
   %add = fmul float %mul, %y
   ret float %add
+}
+
+; GCN-LABEL: {{^}}fadd_select_fneg_fneg_f32:
+; GCN: v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN-NEXT: v_cndmask_b32_e32 v0, v2, v1, vcc
+; GCN-NEXT: v_sub_f32_e32 v0, v3, v0
+; GCN-NEXT: s_setpc_b64
+define float @fadd_select_fneg_fneg_f32(i32 %arg0, float %x, float %y, float %z) {
+  %cmp = icmp eq i32 %arg0, 0
+  %neg.x = fneg float %x
+  %neg.y  = fneg float %y
+  %select = select i1 %cmp, float %neg.x, float %neg.y
+  %add = fadd float %select, %z
+  ret float %add
+}
+
+; GCN-LABEL: {{^}}fadd_select_fneg_fneg_f64:
+; GCN: v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN-NEXT: v_cndmask_b32_e32 v2, v4, v2, vcc
+; GCN-NEXT: v_cndmask_b32_e32 v1, v3, v1, vcc
+; GCN-NEXT: v_add_f64 v[0:1], v[5:6], -v[1:2]
+; GCN-NEXT: s_setpc_b64
+define double @fadd_select_fneg_fneg_f64(i32 %arg0, double %x, double %y, double %z) {
+  %cmp = icmp eq i32 %arg0, 0
+  %neg.x = fneg double %x
+  %neg.y  = fneg double %y
+  %select = select i1 %cmp, double %neg.x, double %neg.y
+  %add = fadd double %select, %z
+  ret double %add
+}
+
+; GCN-LABEL: {{^}}fadd_select_fneg_fneg_f16:
+; SI: v_cvt_f16_f32
+; SI: v_cvt_f16_f32
+; SI: v_cvt_f16_f32
+; SI: v_cmp_eq_u32
+; SI: v_cvt_f32_f16
+; SI: v_cvt_f32_f16
+; SI: v_cvt_f32_f16
+; SI: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
+; SI-NEXT: v_sub_f32_e32
+; SI-NEXT: s_setpc_b64
+
+; VI: v_cmp_eq_u32_e32 vcc, 0, v0
+; VI-NEXT: v_cndmask_b32_e32 v0, v2, v1, vcc
+; VI-NEXT: v_sub_f16_e32 v0, v3, v0
+; VI-NEXT: s_setpc_b64
+define half @fadd_select_fneg_fneg_f16(i32 %arg0, half %x, half %y, half %z) {
+  %cmp = icmp eq i32 %arg0, 0
+  %neg.x = fneg half %x
+  %neg.y = fneg half %y
+  %select = select i1 %cmp, half %neg.x, half %neg.y
+  %add = fadd half %select, %z
+  ret half %add
+}
+
+; FIXME: Terrible code for SI
+; GCN-LABEL: {{^}}fadd_select_fneg_fneg_v2f16:
+; SI: v_cvt_f16_f32
+; SI: v_cvt_f16_f32
+; SI: v_cvt_f16_f32
+; SI: v_cvt_f16_f32
+; SI: v_cmp_eq_u32
+; SI: v_lshlrev_b32_e32
+; SI: v_or_b32_e32
+; SI: v_cndmask_b32
+; SI: v_lshrrev_b32
+; SI: v_cvt_f32_f16
+; SI: v_cvt_f32_f16
+; SI: v_cvt_f32_f16
+; SI: v_cvt_f32_f16
+; SI: v_sub_f32
+; SI: v_sub_f32
+
+; VI: v_cmp_eq_u32_e32 vcc, 0, v0
+; VI-NEXT: v_cndmask_b32_e32 v0, v2, v1, vcc
+; VI-NEXT: v_sub_f16_sdwa v1, v3, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT: v_sub_f16_e32 v0, v3, v0
+; VI-NEXT: v_or_b32_e32 v0, v0, v1
+define <2 x half> @fadd_select_fneg_fneg_v2f16(i32 %arg0, <2 x half> %x, <2 x half> %y, <2 x half> %z) {
+  %cmp = icmp eq i32 %arg0, 0
+  %neg.x = fneg <2 x half> %x
+  %neg.y = fneg <2 x half> %y
+  %select = select i1 %cmp, <2 x half> %neg.x, <2 x half> %neg.y
+  %add = fadd <2 x half> %select, %z
+  ret <2 x half> %add
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1

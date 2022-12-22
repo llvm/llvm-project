@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32I
 
-declare void @notdead(i8*)
+declare void @notdead(ptr)
 
 ; These tests must ensure the stack pointer is restored using the frame
 ; pointer
@@ -25,12 +25,12 @@ define void @simple_alloca(i32 %n) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
   %1 = alloca i8, i32 %n
-  call void @notdead(i8* %1)
+  call void @notdead(ptr %1)
   ret void
 }
 
-declare i8* @llvm.stacksave()
-declare void @llvm.stackrestore(i8*)
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr)
 
 define void @scoped_alloca(i32 %n) nounwind {
 ; RV32I-LABEL: scoped_alloca:
@@ -53,14 +53,14 @@ define void @scoped_alloca(i32 %n) nounwind {
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
-  %sp = call i8* @llvm.stacksave()
+  %sp = call ptr @llvm.stacksave()
   %addr = alloca i8, i32 %n
-  call void @notdead(i8* %addr)
-  call void @llvm.stackrestore(i8* %sp)
+  call void @notdead(ptr %addr)
+  call void @llvm.stackrestore(ptr %sp)
   ret void
 }
 
-declare void @func(i8*, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)
+declare void @func(ptr, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)
 
 ; Check that outgoing arguments passed on the stack do not corrupt a
 ; variable-sized stack object.
@@ -99,7 +99,7 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
   %1 = alloca i8, i32 %n
-  call void @func(i8* %1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8,
+  call void @func(ptr %1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8,
                   i32 9, i32 10, i32 11, i32 12)
   ret void
 }

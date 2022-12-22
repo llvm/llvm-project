@@ -39,7 +39,7 @@ namespace {
 //===----------------------------------------------------------------------===//
 
 /// Maps each sparse tensor type to an opaque pointer.
-static Optional<Type> convertSparseTensorTypes(Type type) {
+static std::optional<Type> convertSparseTensorTypes(Type type) {
   if (getSparseTensorEncoding(type) != nullptr)
     return LLVM::LLVMPointerType::get(IntegerType::get(type.getContext(), 8));
   return std::nullopt;

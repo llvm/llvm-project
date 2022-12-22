@@ -57,8 +57,11 @@ bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
 
   // The implementation below uses inttoptr for vectors of unequal size; we
   // can't allow this for non integral pointers. We could teach it to extract
-  // exact subvectors if desired. 
+  // exact subvectors if desired.
   if (StoredNI && StoreSize != DL.getTypeSizeInBits(LoadTy).getFixedSize())
+    return false;
+
+  if (StoredTy->isTargetExtTy() || LoadTy->isTargetExtTy())
     return false;
 
   return true;

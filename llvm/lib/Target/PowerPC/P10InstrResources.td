@@ -1002,7 +1002,6 @@ def : InstRW<[P10W_FX_3C, P10W_DISP_ANY, P10FX_Read, P10FX_Read],
     CRANDC,
     CRNAND,
     CRNOR,
-    CRNOT,
     CROR,
     CRORC,
     CR6UNSET, CRUNSET, CRXOR,
@@ -1713,9 +1712,7 @@ def : InstRW<[P10W_PM_4C, P10W_DISP_ANY, P10PM_Read, P10PM_Read],
     XXGENPCVWM,
     XXMRGHW,
     XXMRGLW,
-    XXPERM,
     XXPERMDI, XXPERMDIs,
-    XXPERMR,
     XXSLDWI, XXSLDWIs,
     XXSPLTW, XXSPLTWs
 )>;
@@ -1755,7 +1752,9 @@ def : InstRW<[P10W_PM_4C, P10W_DISP_ANY, P10PM_Read, P10PM_Read, P10PM_Read],
     VSLDBI,
     VSLDOI,
     VSRDBI,
-    XXINSERTW
+    XXINSERTW,
+    XXPERM,
+    XXPERMR
 )>;
 
 // 2-way crack instructions
@@ -1975,6 +1974,7 @@ def : InstRW<[P10W_SX, P10W_DISP_ANY],
       (instrs
     ATTN,
     CP_ABORT,
+    CRNOT,
     DCBA,
     DCBI,
     DCBZL,

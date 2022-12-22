@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=wasm32-unknown-unknown -asm-verbose=false < %s | FileCheck %s --check-prefix=CHECKCG
 ; RUN: llc -mtriple=wasm32-unknown-unknown -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=CHECKISEL
 
-%f32_cell = type float addrspace(1)*
+%f32_cell = type ptr addrspace(1)
 
 ; CHECKISEL-LABEL: name: ir_local_f32
 ; CHECKISEL:       stack:

@@ -1,10 +1,10 @@
 ; RUN: llc -mtriple thumbv7--windows-itanium -filetype asm -o - %s | FileCheck %s
 
-declare void @llvm.eh.sjlj.longjmp(i8*)
+declare void @llvm.eh.sjlj.longjmp(ptr)
 
-define arm_aapcs_vfpcc void @test___builtin_longjump(i8* %b) {
+define arm_aapcs_vfpcc void @test___builtin_longjump(ptr %b) {
 entry:
-  tail call void @llvm.eh.sjlj.longjmp(i8* %b)
+  tail call void @llvm.eh.sjlj.longjmp(ptr %b)
   unreachable
 }
 

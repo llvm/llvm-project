@@ -6,14 +6,14 @@
 ; RUN: llc -mtriple=aarch64-none-linux -tail-dup-placement-threshold=4 < %s | FileCheck %s --check-prefix=CHECK-O2
 ; RUN: llc -mtriple=aarch64-none-linux -tail-dup-placement-threshold=6 < %s | FileCheck %s --check-prefix=CHECK-O3
 
-%a = type { %a*, i32, %b }
+%a = type { ptr, i32, %b }
 %b = type { %c }
 %c = type { i32, i32, [31 x i8] }
 
-@global_ptr = dso_local local_unnamed_addr global %a* null, align 8
+@global_ptr = dso_local local_unnamed_addr global ptr null, align 8
 @global_int = dso_local local_unnamed_addr global i32 0, align 4
 
-define dso_local void @testcase(%a** nocapture %arg){
+define dso_local void @testcase(ptr nocapture %arg){
 ; CHECK-O2-LABEL: testcase:
 ; CHECK-O2:       // %bb.0: // %entry
 ; CHECK-O2-NEXT:    adrp x8, global_ptr
@@ -55,23 +55,22 @@ define dso_local void @testcase(%a** nocapture %arg){
 ; CHECK-O3-NEXT:    ldr w1, [x9, :lo12:global_int]
 ; CHECK-O3-NEXT:    b externalfunc
 entry:
-  %0 = load %a*, %a** @global_ptr, align 8
-  %cmp.not = icmp eq %a* %0, null
+  %0 = load ptr, ptr @global_ptr, align 8
+  %cmp.not = icmp eq ptr %0, null
   br i1 %cmp.not, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  %1 = getelementptr inbounds %a, %a* %0, i64 0, i32 0
-  %2 = load %a*, %a** %1, align 8
-  store %a* %2, %a** %arg, align 8
-  %.pre = load %a*, %a** @global_ptr, align 8
+  %1 = load ptr, ptr %0, align 8
+  store ptr %1, ptr %arg, align 8
+  %.pre = load ptr, ptr @global_ptr, align 8
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  %3 = phi %a* [ %.pre, %if.then ], [ null, %entry ]
-  %4 = load i32, i32* @global_int, align 4
-  %5 = getelementptr inbounds %a, %a* %3, i64 0, i32 2, i32 0, i32 1
-  tail call void @externalfunc(i32 10, i32 %4, i32* nonnull %5)
+  %2 = phi ptr [ %.pre, %if.then ], [ null, %entry ]
+  %3 = load i32, ptr @global_int, align 4
+  %4 = getelementptr inbounds %a, ptr %2, i64 0, i32 2, i32 0, i32 1
+  tail call void @externalfunc(i32 10, i32 %3, ptr nonnull %4)
   ret void
 }
 
-declare dso_local void @externalfunc(i32, i32, i32*)
+declare dso_local void @externalfunc(i32, i32, ptr)

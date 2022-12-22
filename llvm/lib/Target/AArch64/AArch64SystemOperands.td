@@ -397,35 +397,55 @@ def : ExactFPImm<"two",  "2.0", 0x3>;
 // PState instruction options.
 //===----------------------------------------------------------------------===//
 
-class PState<string name, bits<5> encoding> : SearchableTable {
+class PStateImm0_15<string name, bits<3> op1, bits<3> op2> : SearchableTable {
   let SearchableFields = ["Name", "Encoding"];
   let EnumValueField = "Encoding";
 
   string Name = name;
-  bits<5> Encoding;
-  let Encoding = encoding;
+  bits<6> Encoding;
+  let Encoding{5-3} = op1;
+  let Encoding{2-0} = op2;
   code Requires = [{ {} }];
 }
 
-def : PState<"SPSel",   0b00101>;
-def : PState<"DAIFSet", 0b11110>;
-def : PState<"DAIFClr", 0b11111>;
+class PStateImm0_1<string name, bits<3> op1, bits<3> op2, bits<3> crm_high> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<9> Encoding;
+  let Encoding{8-6} = crm_high;
+  let Encoding{5-3} = op1;
+  let Encoding{2-0} = op2;
+  code Requires = [{ {} }];
+}
+
+//                   Name,     Op1,   Op2
+def : PStateImm0_15<"SPSel",   0b000, 0b101>;
+def : PStateImm0_15<"DAIFSet", 0b011, 0b110>;
+def : PStateImm0_15<"DAIFClr", 0b011, 0b111>;
 // v8.1a "Privileged Access Never" extension-specific PStates
 let Requires = [{ {AArch64::FeaturePAN} }] in
-def : PState<"PAN",     0b00100>;
+def : PStateImm0_15<"PAN",     0b000, 0b100>;
 
 // v8.2a "User Access Override" extension-specific PStates
 let Requires = [{ {AArch64::FeaturePsUAO} }] in
-def : PState<"UAO",     0b00011>;
+def : PStateImm0_15<"UAO",     0b000, 0b011>;
 // v8.4a timing insensitivity of data processing instructions
 let Requires = [{ {AArch64::FeatureDIT} }] in
-def : PState<"DIT",     0b11010>;
+def : PStateImm0_15<"DIT",     0b011, 0b010>;
 // v8.5a Spectre Mitigation
 let Requires = [{ {AArch64::FeatureSSBS} }] in
-def : PState<"SSBS",    0b11001>;
+def : PStateImm0_15<"SSBS",    0b011, 0b001>;
 // v8.5a Memory Tagging Extension
 let Requires = [{ {AArch64::FeatureMTE} }] in
-def : PState<"TCO",     0b11100>;
+def : PStateImm0_15<"TCO",     0b011, 0b100>;
+// v8.8a Non-Maskable Interrupts
+let Requires = [{ {AArch64::FeatureNMI} }] in
+def : PStateImm0_1<"ALLINT",   0b001, 0b000, 0b000>;
+// v9.4a Exception-based event profiling
+//                  Name,      Op1,   Op2,   Crm_high
+def : PStateImm0_1<"PM",       0b001, 0b000, 0b001>;
 
 //===----------------------------------------------------------------------===//
 // SVCR instruction options.
@@ -1734,6 +1754,13 @@ let Requires = [{ {AArch64::FeatureMPAM, AArch64::FeatureSME} }] in {
 def : RWSysReg<"MPAMSM_EL1",    0b11, 0b000, 0b1010, 0b0101, 0b011>;
 } // HasMPAM, HasSME
 
+// v8.8a Non-Maskable Interrupts
+let Requires = [{ {AArch64::FeatureNMI} }] in {
+  //                               Op0   Op1    CRn     CRm     Op2
+  def : RWSysReg<"ALLINT",         0b11, 0b000, 0b0100, 0b0011, 0b000>;
+  def : ROSysReg<"ICC_NMIAR1_EL1", 0b11, 0b000, 0b1100, 0b1001, 0b101>; // FEAT_GICv3_NMI
+}
+
 // v8.9a/v9.4a Memory Attribute Index Enhancement (FEAT_AIE)
 //                            Op0   Op1    CRn     CRm     Op2
 def : RWSysReg<"AMAIR2_EL1",  0b11, 0b000, 0b1010, 0b0011, 0b001>;
@@ -1877,3 +1904,7 @@ def : ROSysReg<"ERXGSR_EL1",        0b11, 0b000, 0b0101, 0b0011, 0b010>;
 def : RWSysReg<"PFAR_EL1",          0b11, 0b000, 0b0110, 0b0000, 0b101>;
 def : RWSysReg<"PFAR_EL12",         0b11, 0b101, 0b0110, 0b0000, 0b101>;
 def : RWSysReg<"PFAR_EL2",          0b11, 0b100, 0b0110, 0b0000, 0b101>;
+
+// v9.4a Exception-based event profiling (FEAT_EBEP)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"PM",                0b11, 0b000, 0b0100, 0b0011, 0b001>;

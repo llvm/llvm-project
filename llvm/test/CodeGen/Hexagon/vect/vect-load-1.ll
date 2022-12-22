@@ -4,7 +4,7 @@
 
 target triple = "hexagon-unknown-linux-gnu"
 
-define void @foo(<2 x i8>* %p) nounwind {
+define void @foo(ptr %p) nounwind {
 entry:
   br label %polly.loop_header
 
@@ -16,10 +16,10 @@ polly.loop_header:                                ; preds = %polly.loop_body, %e
   br i1 %0, label %polly.loop_body, label %polly.loop_after
 
 polly.loop_body:                                  ; preds = %polly.loop_header
-  %_p_vec_full = load <2 x i8>, <2 x i8>* %p, align 8
+  %_p_vec_full = load <2 x i8>, ptr %p, align 8
   %1 = sext <2 x i8> %_p_vec_full to <2 x i32>
   %p_vec = mul <2 x i32> %1, <i32 3, i32 3>
   %mulp_vec = add <2 x i32> %p_vec, <i32 21, i32 21>
-  store <2 x i32> %mulp_vec, <2 x i32>* undef, align 8
+  store <2 x i32> %mulp_vec, ptr undef, align 8
   br label %polly.loop_header
 }

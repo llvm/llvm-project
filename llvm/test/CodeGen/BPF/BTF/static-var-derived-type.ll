@@ -11,24 +11,24 @@
 ; Compilation flag:
 ;   clang -target bpf -O2 -g -S -emit-llvm test.c
 
-@v1 = internal global i32* null, align 8, !dbg !0
-@v2 = internal global i32* null, align 8, !dbg !8
-@v3 = internal global i32* null, align 8, !dbg !14
-@v4 = internal constant i32* null, align 8, !dbg !19
+@v1 = internal global ptr null, align 8, !dbg !0
+@v2 = internal global ptr null, align 8, !dbg !8
+@v3 = internal global ptr null, align 8, !dbg !14
+@v4 = internal constant ptr null, align 8, !dbg !19
 
 ; Function Attrs: norecurse nounwind
 define dso_local i64 @foo() local_unnamed_addr #0 !dbg !27 {
-  %1 = load volatile i32*, i32** @v1, align 8, !dbg !29, !tbaa !30
-  %2 = load volatile i32*, i32** @v2, align 8, !dbg !34, !tbaa !30
-  %3 = ptrtoint i32* %1 to i64, !dbg !35
-  %4 = ptrtoint i32* %2 to i64, !dbg !35
+  %1 = load volatile ptr, ptr @v1, align 8, !dbg !29, !tbaa !30
+  %2 = load volatile ptr, ptr @v2, align 8, !dbg !34, !tbaa !30
+  %3 = ptrtoint ptr %1 to i64, !dbg !35
+  %4 = ptrtoint ptr %2 to i64, !dbg !35
   %5 = sub i64 %3, %4, !dbg !35
   %6 = ashr exact i64 %5, 2, !dbg !35
-  %7 = load volatile i32*, i32** @v3, align 8, !dbg !36, !tbaa !30
-  %8 = getelementptr inbounds i32, i32* %7, i64 %6, !dbg !37
-  %9 = load volatile i32*, i32** @v4, align 8, !dbg !38, !tbaa !30
-  %10 = ptrtoint i32* %8 to i64, !dbg !39
-  %11 = ptrtoint i32* %9 to i64, !dbg !39
+  %7 = load volatile ptr, ptr @v3, align 8, !dbg !36, !tbaa !30
+  %8 = getelementptr inbounds i32, ptr %7, i64 %6, !dbg !37
+  %9 = load volatile ptr, ptr @v4, align 8, !dbg !38, !tbaa !30
+  %10 = ptrtoint ptr %8 to i64, !dbg !39
+  %11 = ptrtoint ptr %9 to i64, !dbg !39
   %12 = sub i64 %10, %11, !dbg !39
   %13 = ashr exact i64 %12, 2, !dbg !39
   ret i64 %13, !dbg !40

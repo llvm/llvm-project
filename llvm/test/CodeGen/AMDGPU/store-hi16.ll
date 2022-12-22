@@ -13,12 +13,12 @@
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_global_hi_v2i16(i16 addrspace(1)* %out, i32 %arg) #0 {
+define void @store_global_hi_v2i16(ptr addrspace(1) %out, i32 %arg) #0 {
 entry:
   ; FIXME: ABI for pre-gfx9
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  store i16 %hi, i16 addrspace(1)* %out
+  store i16 %hi, ptr addrspace(1) %out
   ret void
 }
 
@@ -32,12 +32,12 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_global_hi_v2f16(half addrspace(1)* %out, i32 %arg) #0 {
+define void @store_global_hi_v2f16(ptr addrspace(1) %out, i32 %arg) #0 {
 entry:
   ; FIXME: ABI for pre-gfx9
   %value = bitcast i32 %arg to <2 x half>
   %hi = extractelement <2 x half> %value, i32 1
-  store half %hi, half addrspace(1)* %out
+  store half %hi, ptr addrspace(1) %out
   ret void
 }
 
@@ -51,11 +51,11 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_global_hi_i32_shift(i16 addrspace(1)* %out, i32 %value) #0 {
+define void @store_global_hi_i32_shift(ptr addrspace(1) %out, i32 %value) #0 {
 entry:
   %hi32 = lshr i32 %value, 16
   %hi = trunc i32 %hi32 to i16
-  store i16 %hi, i16 addrspace(1)* %out
+  store i16 %hi, ptr addrspace(1) %out
   ret void
 }
 
@@ -69,12 +69,12 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_global_hi_v2i16_i8(i8 addrspace(1)* %out, i32 %arg) #0 {
+define void @store_global_hi_v2i16_i8(ptr addrspace(1) %out, i32 %arg) #0 {
 entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
   %trunc = trunc i16 %hi to i8
-  store i8 %trunc, i8 addrspace(1)* %out
+  store i8 %trunc, ptr addrspace(1) %out
   ret void
 }
 
@@ -88,11 +88,11 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_global_hi_i8_shift(i8 addrspace(1)* %out, i32 %value) #0 {
+define void @store_global_hi_i8_shift(ptr addrspace(1) %out, i32 %value) #0 {
 entry:
   %hi32 = lshr i32 %value, 16
   %hi = trunc i32 %hi32 to i8
-  store i8 %hi, i8 addrspace(1)* %out
+  store i8 %hi, ptr addrspace(1) %out
   ret void
 }
 
@@ -107,13 +107,13 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_global_hi_v2i16_max_offset(i16 addrspace(1)* %out, i32 %arg) #0 {
+define void @store_global_hi_v2i16_max_offset(ptr addrspace(1) %out, i32 %arg) #0 {
 entry:
   ; FIXME: ABI for pre-gfx9
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  %gep = getelementptr inbounds i16, i16 addrspace(1)* %out, i64 2047
-  store i16 %hi, i16 addrspace(1)* %gep
+  %gep = getelementptr inbounds i16, ptr addrspace(1) %out, i64 2047
+  store i16 %hi, ptr addrspace(1) %gep
   ret void
 }
 
@@ -128,12 +128,12 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_global_hi_v2i16_min_offset(i16 addrspace(1)* %out, i32 %arg) #0 {
+define void @store_global_hi_v2i16_min_offset(ptr addrspace(1) %out, i32 %arg) #0 {
 entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  %gep = getelementptr inbounds i16, i16 addrspace(1)* %out, i64 -2048
-  store i16 %hi, i16 addrspace(1)* %gep
+  %gep = getelementptr inbounds i16, ptr addrspace(1) %out, i64 -2048
+  store i16 %hi, ptr addrspace(1) %gep
   ret void
 }
 
@@ -148,13 +148,13 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_global_hi_v2i16_i8_max_offset(i8 addrspace(1)* %out, i32 %arg) #0 {
+define void @store_global_hi_v2i16_i8_max_offset(ptr addrspace(1) %out, i32 %arg) #0 {
 entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
   %trunc = trunc i16 %hi to i8
-  %gep = getelementptr inbounds i8, i8 addrspace(1)* %out, i64 4095
-  store i8 %trunc, i8 addrspace(1)* %gep
+  %gep = getelementptr inbounds i8, ptr addrspace(1) %out, i64 4095
+  store i8 %trunc, ptr addrspace(1) %gep
   ret void
 }
 
@@ -169,13 +169,13 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_global_hi_v2i16_i8_min_offset(i8 addrspace(1)* %out, i32 %arg) #0 {
+define void @store_global_hi_v2i16_i8_min_offset(ptr addrspace(1) %out, i32 %arg) #0 {
 entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
   %trunc = trunc i16 %hi to i8
-  %gep = getelementptr inbounds i8, i8 addrspace(1)* %out, i64 -4095
-  store i8 %trunc, i8 addrspace(1)* %gep
+  %gep = getelementptr inbounds i8, ptr addrspace(1) %out, i64 -4095
+  store i8 %trunc, ptr addrspace(1) %gep
   ret void
 }
 
@@ -189,11 +189,11 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_flat_hi_v2i16(i16* %out, i32 %arg) #0 {
+define void @store_flat_hi_v2i16(ptr %out, i32 %arg) #0 {
 entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  store i16 %hi, i16* %out
+  store i16 %hi, ptr %out
   ret void
 }
 
@@ -207,11 +207,11 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_flat_hi_v2f16(half* %out, i32 %arg) #0 {
+define void @store_flat_hi_v2f16(ptr %out, i32 %arg) #0 {
 entry:
   %value = bitcast i32 %arg to <2 x half>
   %hi = extractelement <2 x half> %value, i32 1
-  store half %hi, half* %out
+  store half %hi, ptr %out
   ret void
 }
 
@@ -225,11 +225,11 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_flat_hi_i32_shift(i16* %out, i32 %value) #0 {
+define void @store_flat_hi_i32_shift(ptr %out, i32 %value) #0 {
 entry:
   %hi32 = lshr i32 %value, 16
   %hi = trunc i32 %hi32 to i16
-  store i16 %hi, i16* %out
+  store i16 %hi, ptr %out
   ret void
 }
 
@@ -243,12 +243,12 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_flat_hi_v2i16_i8(i8* %out, i32 %arg) #0 {
+define void @store_flat_hi_v2i16_i8(ptr %out, i32 %arg) #0 {
 entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
   %trunc = trunc i16 %hi to i8
-  store i8 %trunc, i8* %out
+  store i8 %trunc, ptr %out
   ret void
 }
 
@@ -262,11 +262,11 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_flat_hi_i8_shift(i8* %out, i32 %value) #0 {
+define void @store_flat_hi_i8_shift(ptr %out, i32 %value) #0 {
 entry:
   %hi32 = lshr i32 %value, 16
   %hi = trunc i32 %hi32 to i8
-  store i8 %hi, i8* %out
+  store i8 %hi, ptr %out
   ret void
 }
 
@@ -281,12 +281,12 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_flat_hi_v2i16_max_offset(i16* %out, i32 %arg) #0 {
+define void @store_flat_hi_v2i16_max_offset(ptr %out, i32 %arg) #0 {
 entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  %gep = getelementptr inbounds i16, i16* %out, i64 2047
-  store i16 %hi, i16* %gep
+  %gep = getelementptr inbounds i16, ptr %out, i64 2047
+  store i16 %hi, ptr %gep
   ret void
 }
 
@@ -302,12 +302,12 @@ entry:
 ; GFX803: flat_store_short v[0:1], v2{{$}}
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_flat_hi_v2i16_neg_offset(i16* %out, i32 %arg) #0 {
+define void @store_flat_hi_v2i16_neg_offset(ptr %out, i32 %arg) #0 {
 entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  %gep = getelementptr inbounds i16, i16* %out, i64 -1023
-  store i16 %hi, i16* %gep
+  %gep = getelementptr inbounds i16, ptr %out, i64 -1023
+  store i16 %hi, ptr %gep
   ret void
 }
 
@@ -322,13 +322,13 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_flat_hi_v2i16_i8_max_offset(i8* %out, i32 %arg) #0 {
+define void @store_flat_hi_v2i16_i8_max_offset(ptr %out, i32 %arg) #0 {
 entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
   %trunc = trunc i16 %hi to i8
-  %gep = getelementptr inbounds i8, i8* %out, i64 4095
-  store i8 %trunc, i8* %gep
+  %gep = getelementptr inbounds i8, ptr %out, i64 4095
+  store i8 %trunc, ptr %gep
   ret void
 }
 
@@ -348,13 +348,13 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_flat_hi_v2i16_i8_neg_offset(i8* %out, i32 %arg) #0 {
+define void @store_flat_hi_v2i16_i8_neg_offset(ptr %out, i32 %arg) #0 {
 entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
   %trunc = trunc i16 %hi to i8
-  %gep = getelementptr inbounds i8, i8* %out, i64 -4095
-  store i8 %trunc, i8* %gep
+  %gep = getelementptr inbounds i8, ptr %out, i64 -4095
+  store i8 %trunc, ptr %gep
   ret void
 }
 
@@ -369,12 +369,12 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_private_hi_v2i16(i16 addrspace(5)* %out, i32 %arg) #0 {
+define void @store_private_hi_v2i16(ptr addrspace(5) %out, i32 %arg) #0 {
 entry:
   ; FIXME: ABI for pre-gfx9
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  store i16 %hi, i16 addrspace(5)* %out
+  store i16 %hi, ptr addrspace(5) %out
   ret void
 }
 
@@ -389,12 +389,12 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_private_hi_v2f16(half addrspace(5)* %out, i32 %arg) #0 {
+define void @store_private_hi_v2f16(ptr addrspace(5) %out, i32 %arg) #0 {
 entry:
   ; FIXME: ABI for pre-gfx9
   %value = bitcast i32 %arg to <2 x half>
   %hi = extractelement <2 x half> %value, i32 1
-  store half %hi, half addrspace(5)* %out
+  store half %hi, ptr addrspace(5) %out
   ret void
 }
 
@@ -409,11 +409,11 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_private_hi_i32_shift(i16 addrspace(5)* %out, i32 %value) #0 {
+define void @store_private_hi_i32_shift(ptr addrspace(5) %out, i32 %value) #0 {
 entry:
   %hi32 = lshr i32 %value, 16
   %hi = trunc i32 %hi32 to i16
-  store i16 %hi, i16 addrspace(5)* %out
+  store i16 %hi, ptr addrspace(5) %out
   ret void
 }
 
@@ -428,12 +428,12 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_private_hi_v2i16_i8(i8 addrspace(5)* %out, i32 %arg) #0 {
+define void @store_private_hi_v2i16_i8(ptr addrspace(5) %out, i32 %arg) #0 {
 entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
   %trunc = trunc i16 %hi to i8
-  store i8 %trunc, i8 addrspace(5)* %out
+  store i8 %trunc, ptr addrspace(5) %out
   ret void
 }
 
@@ -448,11 +448,11 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_private_hi_i8_shift(i8 addrspace(5)* %out, i32 %value) #0 {
+define void @store_private_hi_i8_shift(ptr addrspace(5) %out, i32 %value) #0 {
 entry:
   %hi32 = lshr i32 %value, 16
   %hi = trunc i32 %hi32 to i8
-  store i8 %hi, i8 addrspace(5)* %out
+  store i8 %hi, ptr addrspace(5) %out
   ret void
 }
 
@@ -466,12 +466,12 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_private_hi_v2i16_max_offset(i16 addrspace(5)* byval(i16) %out, i32 %arg) #0 {
+define void @store_private_hi_v2i16_max_offset(ptr addrspace(5) byval(i16) %out, i32 %arg) #0 {
 entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  %gep = getelementptr inbounds i16, i16 addrspace(5)* %out, i64 2047
-  store i16 %hi, i16 addrspace(5)* %gep
+  %gep = getelementptr inbounds i16, ptr addrspace(5) %out, i64 2047
+  store i16 %hi, ptr addrspace(5) %gep
   ret void
 }
 
@@ -494,7 +494,7 @@ entry:
   ; FIXME: ABI for pre-gfx9
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  store volatile i16 %hi, i16 addrspace(5)* null
+  store volatile i16 %hi, ptr addrspace(5) null
   ret void
 }
 
@@ -516,7 +516,7 @@ entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
   %trunc = trunc i16 %hi to i8
-  store volatile i8 %trunc, i8 addrspace(5)* null
+  store volatile i8 %trunc, ptr addrspace(5) null
   ret void
 }
 
@@ -530,12 +530,12 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_local_hi_v2i16(i16 addrspace(3)* %out, i32 %arg) #0 {
+define void @store_local_hi_v2i16(ptr addrspace(3) %out, i32 %arg) #0 {
 entry:
   ; FIXME: ABI for pre-gfx9
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  store i16 %hi, i16 addrspace(3)* %out
+  store i16 %hi, ptr addrspace(3) %out
   ret void
 }
 
@@ -549,12 +549,12 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_local_hi_v2f16(half addrspace(3)* %out, i32 %arg) #0 {
+define void @store_local_hi_v2f16(ptr addrspace(3) %out, i32 %arg) #0 {
 entry:
   ; FIXME: ABI for pre-gfx9
   %value = bitcast i32 %arg to <2 x half>
   %hi = extractelement <2 x half> %value, i32 1
-  store half %hi, half addrspace(3)* %out
+  store half %hi, ptr addrspace(3) %out
   ret void
 }
 
@@ -568,11 +568,11 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_local_hi_i32_shift(i16 addrspace(3)* %out, i32 %value) #0 {
+define void @store_local_hi_i32_shift(ptr addrspace(3) %out, i32 %value) #0 {
 entry:
   %hi32 = lshr i32 %value, 16
   %hi = trunc i32 %hi32 to i16
-  store i16 %hi, i16 addrspace(3)* %out
+  store i16 %hi, ptr addrspace(3) %out
   ret void
 }
 
@@ -586,12 +586,12 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_local_hi_v2i16_i8(i8 addrspace(3)* %out, i32 %arg) #0 {
+define void @store_local_hi_v2i16_i8(ptr addrspace(3) %out, i32 %arg) #0 {
 entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
   %trunc = trunc i16 %hi to i8
-  store i8 %trunc, i8 addrspace(3)* %out
+  store i8 %trunc, ptr addrspace(3) %out
   ret void
 }
 
@@ -604,13 +604,13 @@ entry:
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_local_hi_v2i16_max_offset(i16 addrspace(3)* %out, i32 %arg) #0 {
+define void @store_local_hi_v2i16_max_offset(ptr addrspace(3) %out, i32 %arg) #0 {
 entry:
   ; FIXME: ABI for pre-gfx9
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  %gep = getelementptr inbounds i16, i16 addrspace(3)* %out, i64 32767
-  store i16 %hi, i16 addrspace(3)* %gep
+  %gep = getelementptr inbounds i16, ptr addrspace(3) %out, i64 32767
+  store i16 %hi, ptr addrspace(3) %gep
   ret void
 }
 
@@ -624,15 +624,14 @@ entry:
 ; GFX9-FLATSCR-NEXT: s_waitcnt vmcnt(0)
 ; GFX9-FLATSCR-NEXT: scratch_store_short_d16_hi off, v0, s32 offset:4058
 ; GFX9-FLATSCR-NEXT: s_waitcnt vmcnt(0)
-define void @store_private_hi_v2i16_to_offset(i32 %arg, [10 x i32] addrspace(5)* %obj0) #0 {
+define void @store_private_hi_v2i16_to_offset(i32 %arg, ptr addrspace(5) %obj0) #0 {
 entry:
   %obj1 = alloca [4096 x i16], align 2, addrspace(5)
-  %bc = bitcast [10 x i32] addrspace(5)* %obj0 to i32 addrspace(5)*
-  store volatile i32 123, i32 addrspace(5)* %bc
+  store volatile i32 123, ptr addrspace(5) %obj0
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  %gep = getelementptr inbounds [4096 x i16], [4096 x i16] addrspace(5)* %obj1, i32 0, i32 2027
-  store i16 %hi, i16 addrspace(5)* %gep
+  %gep = getelementptr inbounds [4096 x i16], ptr addrspace(5) %obj1, i32 0, i32 2027
+  store i16 %hi, ptr addrspace(5) %gep
   ret void
 }
 
@@ -645,16 +644,15 @@ entry:
 ; GFX9-FLATSCR-NEXT: s_waitcnt vmcnt(0)
 ; GFX9-FLATSCR-NEXT: scratch_store_byte_d16_hi off, v0, s32 offset:4059
 ; GFX9-FLATSCR-NEXT: s_waitcnt vmcnt(0)
-define void @store_private_hi_v2i16_i8_to_offset(i32 %arg, [10 x i32] addrspace(5)* %obj0) #0 {
+define void @store_private_hi_v2i16_i8_to_offset(i32 %arg, ptr addrspace(5) %obj0) #0 {
 entry:
   %obj1 = alloca [4096 x i8], align 2, addrspace(5)
-  %bc = bitcast [10 x i32] addrspace(5)* %obj0 to i32 addrspace(5)*
-  store volatile i32 123, i32 addrspace(5)* %bc
+  store volatile i32 123, ptr addrspace(5) %obj0
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  %gep = getelementptr inbounds [4096 x i8], [4096 x i8] addrspace(5)* %obj1, i32 0, i32 4055
+  %gep = getelementptr inbounds [4096 x i8], ptr addrspace(5) %obj1, i32 0, i32 4055
   %trunc = trunc i16 %hi to i8
-  store i8 %trunc, i8 addrspace(5)* %gep
+  store i8 %trunc, ptr addrspace(5) %gep
   ret void
 }
 

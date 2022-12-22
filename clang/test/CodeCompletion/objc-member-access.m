@@ -15,7 +15,7 @@ int getFoo(id object) {
   return foo;
 }
 
-// RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:14:19 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:%(line-4):19 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
 // CHECK-CC1-NOT: [#int#]_bar
 // CHECK-CC1-NOT: [#int#]_foo
 // CHECK-CC1: [#int#]bar

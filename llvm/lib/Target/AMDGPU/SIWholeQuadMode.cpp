@@ -609,7 +609,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
             Register Reg = MO.getReg();
 
             if (!Reg.isVirtual() &&
-                TRI->hasVectorRegisters(TRI->getPhysRegClass(Reg))) {
+                TRI->hasVectorRegisters(TRI->getPhysRegBaseClass(Reg))) {
               Flags = StateWQM;
               break;
             }

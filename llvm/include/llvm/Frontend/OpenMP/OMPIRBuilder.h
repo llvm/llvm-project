@@ -94,7 +94,7 @@ public:
   std::optional<bool> HasRequiresUnifiedSharedMemory;
 
   // Flag for specifying if offloading is mandatory.
-  Optional<bool> OpenMPOffloadMandatory;
+  std::optional<bool> OpenMPOffloadMandatory;
 
   /// First separator used between the initial two parts of a name.
   std::optional<StringRef> FirstSeparator;

@@ -71,9 +71,9 @@
 ; HSA: .Lfunc_end0:
 ; HSA: .size   simple, .Lfunc_end0-simple
 
-define amdgpu_kernel void @simple(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @simple(ptr addrspace(1) %out) {
 entry:
-  store i32 0, i32 addrspace(1)* %out
+  store i32 0, ptr addrspace(1) %out
   ret void
 }
 
@@ -81,6 +81,6 @@ entry:
 ; HSA: enable_sgpr_kernarg_segment_ptr = 0
 define amdgpu_kernel void @simple_no_kernargs() {
 entry:
-  store volatile i32 0, i32 addrspace(1)* undef
+  store volatile i32 0, ptr addrspace(1) undef
   ret void
 }

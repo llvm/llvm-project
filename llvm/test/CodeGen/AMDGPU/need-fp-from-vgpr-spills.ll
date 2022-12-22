@@ -16,7 +16,7 @@ define hidden fastcc void @callee_has_fp() #1 {
 ; CHECK-NEXT:    s_mov_b32 s33, s4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca i32, addrspace(5)
-  store volatile i32 1, i32 addrspace(5)* %alloca
+  store volatile i32 1, ptr addrspace(5) %alloca
   ret void
 }
 

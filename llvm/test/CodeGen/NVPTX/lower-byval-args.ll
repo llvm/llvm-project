@@ -21,15 +21,15 @@
 ; CHECK: ld.param.u32    [[value:%r[0-9]+]], [%[[param_addr1]]+12];
 ; CHECK: st.global.u32   [[[result_addr_g]]], [[value]];
 ; Function Attrs: nofree norecurse nounwind willreturn mustprogress
-define dso_local void @static_offset(i32* nocapture %arg, %struct.ham* nocapture readonly byval(%struct.ham) align 4 %arg1, i32 %arg2) local_unnamed_addr #0 {
+define dso_local void @static_offset(ptr nocapture %arg, ptr nocapture readonly byval(%struct.ham) align 4 %arg1, i32 %arg2) local_unnamed_addr #0 {
 bb:
   %tmp = icmp eq i32 %arg2, 3
   br i1 %tmp, label %bb3, label %bb6
 
 bb3:                                              ; preds = %bb
-  %tmp4 = getelementptr inbounds %struct.ham, %struct.ham* %arg1, i64 0, i32 0, i64 3
-  %tmp5 = load i32, i32* %tmp4, align 4
-  store i32 %tmp5, i32* %arg, align 4
+  %tmp4 = getelementptr inbounds %struct.ham, ptr %arg1, i64 0, i32 0, i64 3
+  %tmp5 = load i32, ptr %tmp4, align 4
+  store i32 %tmp5, ptr %arg, align 4
   br label %bb6
 
 bb6:                                              ; preds = %bb3, %bb
@@ -55,12 +55,12 @@ bb6:                                              ; preds = %bb3, %bb
 ; CHECK: st.global.u32   [[[result_addr_g]]], [[value]];
 
 ; Function Attrs: nofree norecurse nounwind willreturn mustprogress
-define dso_local void @dynamic_offset(i32* nocapture %arg, %struct.ham* nocapture readonly byval(%struct.ham) align 4 %arg1, i32 %arg2) local_unnamed_addr #0 {
+define dso_local void @dynamic_offset(ptr nocapture %arg, ptr nocapture readonly byval(%struct.ham) align 4 %arg1, i32 %arg2) local_unnamed_addr #0 {
 bb:
   %tmp = sext i32 %arg2 to i64
-  %tmp3 = getelementptr inbounds %struct.ham, %struct.ham* %arg1, i64 0, i32 0, i64 %tmp
-  %tmp4 = load i32, i32* %tmp3, align 4
-  store i32 %tmp4, i32* %arg, align 4
+  %tmp3 = getelementptr inbounds %struct.ham, ptr %arg1, i64 0, i32 0, i64 %tmp
+  %tmp4 = load i32, ptr %tmp3, align 4
+  store i32 %tmp4, ptr %arg, align 4
   ret void
 }
 
@@ -80,13 +80,12 @@ bb:
 ; CHECK32:     st.global.u8    [{{%r[0-9]+}}], [[value]];
 ;
 ; Function Attrs: nofree norecurse nounwind willreturn mustprogress
-define dso_local void @gep_bitcast(i8* nocapture %out,  %struct.ham* nocapture readonly byval(%struct.ham) align 4 %in, i32 %n) local_unnamed_addr #0 {
+define dso_local void @gep_bitcast(ptr nocapture %out,  ptr nocapture readonly byval(%struct.ham) align 4 %in, i32 %n) local_unnamed_addr #0 {
 bb:
   %n64 = sext i32 %n to i64
-  %gep = getelementptr inbounds %struct.ham, %struct.ham* %in, i64 0, i32 0, i64 %n64
-  %bc = bitcast i32* %gep to i8*
-  %load = load i8, i8* %bc, align 4
-  store i8 %load, i8* %out, align 4
+  %gep = getelementptr inbounds %struct.ham, ptr %in, i64 0, i32 0, i64 %n64
+  %load = load i8, ptr %gep, align 4
+  store i8 %load, ptr %out, align 4
   ret void
 }
 
@@ -106,14 +105,13 @@ bb:
 ; CHECK32:     st.global.u8    [{{%r[0-9]+}}], [[value]];
 ;
 ; Function Attrs: nofree norecurse nounwind willreturn mustprogress
-define dso_local void @gep_bitcast_asc(i8* nocapture %out,  %struct.ham* nocapture readonly byval(%struct.ham) align 4 %in, i32 %n) local_unnamed_addr #0 {
+define dso_local void @gep_bitcast_asc(ptr nocapture %out,  ptr nocapture readonly byval(%struct.ham) align 4 %in, i32 %n) local_unnamed_addr #0 {
 bb:
   %n64 = sext i32 %n to i64
-  %gep = getelementptr inbounds %struct.ham, %struct.ham* %in, i64 0, i32 0, i64 %n64
-  %bc = bitcast i32* %gep to i8*
-  %asc = addrspacecast i8* %bc to i8 addrspace(101)*
-  %load = load i8, i8 addrspace(101)* %asc, align 4
-  store i8 %load, i8* %out, align 4
+  %gep = getelementptr inbounds %struct.ham, ptr %in, i64 0, i32 0, i64 %n64
+  %asc = addrspacecast ptr %gep to ptr addrspace(101)
+  %load = load i8, ptr addrspace(101) %asc, align 4
+  store i8 %load, ptr %out, align 4
   ret void
 }
 
@@ -141,18 +139,18 @@ bb:
 ; CHECK: st.global.u32   [[[result_addr_g]]], [[value]];
 
 ; Function Attrs: convergent norecurse nounwind mustprogress
-define dso_local void @pointer_escapes(i32* nocapture %arg, %struct.ham* byval(%struct.ham) align 4 %arg1, i32 %arg2) local_unnamed_addr #1 {
+define dso_local void @pointer_escapes(ptr nocapture %arg, ptr byval(%struct.ham) align 4 %arg1, i32 %arg2) local_unnamed_addr #1 {
 bb:
   %tmp = sext i32 %arg2 to i64
-  %tmp3 = getelementptr inbounds %struct.ham, %struct.ham* %arg1, i64 0, i32 0, i64 %tmp
-  %tmp4 = load i32, i32* %tmp3, align 4
-  store i32 %tmp4, i32* %arg, align 4
-  %tmp5 = call i32* @escape(i32* nonnull %tmp3) #3
+  %tmp3 = getelementptr inbounds %struct.ham, ptr %arg1, i64 0, i32 0, i64 %tmp
+  %tmp4 = load i32, ptr %tmp3, align 4
+  store i32 %tmp4, ptr %arg, align 4
+  %tmp5 = call ptr @escape(ptr nonnull %tmp3) #3
   ret void
 }
 
 ; Function Attrs: convergent nounwind
-declare dso_local i32* @escape(i32*) local_unnamed_addr
+declare dso_local ptr @escape(ptr) local_unnamed_addr
 
 
 !llvm.module.flags = !{!0, !1, !2}
@@ -161,8 +159,8 @@ declare dso_local i32* @escape(i32*) local_unnamed_addr
 !0 = !{i32 2, !"SDK Version", [2 x i32] [i32 9, i32 1]}
 !1 = !{i32 1, !"wchar_size", i32 4}
 !2 = !{i32 4, !"nvvm-reflect-ftz", i32 0}
-!3 = !{void (i32*, %struct.ham*, i32)* @static_offset, !"kernel", i32 1}
-!4 = !{void (i32*, %struct.ham*, i32)* @dynamic_offset, !"kernel", i32 1}
-!5 = !{void (i32*, %struct.ham*, i32)* @pointer_escapes, !"kernel", i32 1}
-!6 = !{void (i8*, %struct.ham*, i32)* @gep_bitcast, !"kernel", i32 1}
-!7 = !{void (i8*, %struct.ham*, i32)* @gep_bitcast_asc, !"kernel", i32 1}
+!3 = !{ptr @static_offset, !"kernel", i32 1}
+!4 = !{ptr @dynamic_offset, !"kernel", i32 1}
+!5 = !{ptr @pointer_escapes, !"kernel", i32 1}
+!6 = !{ptr @gep_bitcast, !"kernel", i32 1}
+!7 = !{ptr @gep_bitcast_asc, !"kernel", i32 1}

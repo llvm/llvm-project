@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Core
   OrcJIT
   Support
+  TargetParser
   )
 
 add_clang_unittest(ClangReplInterpreterTests

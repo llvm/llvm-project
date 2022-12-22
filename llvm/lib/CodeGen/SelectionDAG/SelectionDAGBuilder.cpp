@@ -6826,8 +6826,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::gcread:
   case Intrinsic::gcwrite:
     llvm_unreachable("GC failed to lower gcread/gcwrite intrinsics!");
-  case Intrinsic::flt_rounds:
-    Res = DAG.getNode(ISD::FLT_ROUNDS_, sdl, {MVT::i32, MVT::Other}, getRoot());
+  case Intrinsic::get_rounding:
+    Res = DAG.getNode(ISD::GET_ROUNDING, sdl, {MVT::i32, MVT::Other}, getRoot());
     setValue(&I, Res);
     DAG.setRoot(Res.getValue(1));
     return;

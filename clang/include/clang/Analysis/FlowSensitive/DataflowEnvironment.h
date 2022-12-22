@@ -137,10 +137,6 @@ public:
     ///
     /// Requirements:
     ///
-    ///  `Prev` must precede `Current` in the value ordering. Widening is *not*
-    ///  called when the current value is already equivalent to the previous
-    ///  value.
-    ///
     ///  `Prev` and `Current` must model values of type `Type`.
     ///
     ///  `Prev` and `Current` must be assigned to the same storage location in
@@ -229,7 +225,7 @@ public:
   ///
   /// Requirements:
   ///
-  ///  `PrevEnv` must precede `this` in the environment ordering.
+  ///  `PrevEnv` must be the immediate previous version of the environment.
   ///  `PrevEnv` and `this` must use the same `DataflowAnalysisContext`.
   LatticeJoinEffect widen(const Environment &PrevEnv,
                           Environment::ValueModel &Model);

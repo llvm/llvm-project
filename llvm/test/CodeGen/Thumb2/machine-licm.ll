@@ -3,9 +3,9 @@
 ; rdar://7353541
 ; rdar://7354376
 
-@GV = external global i32                         ; <i32*> [#uses=2]
+@GV = external global i32                         ; <ptr> [#uses=2]
 
-define void @t1(i32* nocapture %vals, i32 %c) nounwind {
+define void @t1(ptr nocapture %vals, i32 %c) nounwind {
 entry:
 ; CHECK-LABEL: t1:
 ; CHECK: bxeq lr
@@ -29,16 +29,16 @@ bb.nph:                                           ; preds = %entry
 ; PIC: LBB0_
 ; PIC-NOT: LCPI0_0:
 ; PIC: .section
-  %.pre = load i32, i32* @GV, align 4                  ; <i32> [#uses=1]
+  %.pre = load i32, ptr @GV, align 4                  ; <i32> [#uses=1]
   br label %bb
 
 bb:                                               ; preds = %bb, %bb.nph
   %1 = phi i32 [ %.pre, %bb.nph ], [ %3, %bb ]    ; <i32> [#uses=1]
   %i.03 = phi i32 [ 0, %bb.nph ], [ %4, %bb ]     ; <i32> [#uses=2]
-  %scevgep = getelementptr i32, i32* %vals, i32 %i.03  ; <i32*> [#uses=1]
-  %2 = load i32, i32* %scevgep, align 4                ; <i32> [#uses=1]
+  %scevgep = getelementptr i32, ptr %vals, i32 %i.03  ; <ptr> [#uses=1]
+  %2 = load i32, ptr %scevgep, align 4                ; <i32> [#uses=1]
   %3 = add nsw i32 %1, %2                         ; <i32> [#uses=2]
-  store i32 %3, i32* @GV, align 4
+  store i32 %3, ptr @GV, align 4
   %4 = add i32 %i.03, 1                           ; <i32> [#uses=2]
   %exitcond = icmp eq i32 %4, %c                  ; <i1> [#uses=1]
   br i1 %exitcond, label %return, label %bb
@@ -48,7 +48,7 @@ return:                                           ; preds = %bb, %entry
 }
 
 ; rdar://8001136
-define void @t2(i8* %ptr1, i8* %ptr2) nounwind {
+define void @t2(ptr %ptr1, ptr %ptr2) nounwind {
 entry:
 ; CHECK-LABEL: t2:
 ; CHECK: vmov.f32 q{{.*}}, #1.000000e+00
@@ -58,11 +58,11 @@ bb1:
 ; CHECK: %bb1
   %indvar = phi i32 [ %indvar.next, %bb1 ], [ 0, %entry ]
   %tmp1 = shl i32 %indvar, 2
-  %gep1 = getelementptr i8, i8* %ptr1, i32 %tmp1
-  %tmp2 = call <4 x float> @llvm.arm.neon.vld1.v4f32.p0i8(i8* %gep1, i32 1)
+  %gep1 = getelementptr i8, ptr %ptr1, i32 %tmp1
+  %tmp2 = call <4 x float> @llvm.arm.neon.vld1.v4f32.p0(ptr %gep1, i32 1)
   %tmp3 = call <4 x float> @llvm.arm.neon.vmaxs.v4f32(<4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <4 x float> %tmp2)
-  %gep2 = getelementptr i8, i8* %ptr2, i32 %tmp1
-  call void @llvm.arm.neon.vst1.p0i8.v4f32(i8* %gep2, <4 x float> %tmp3, i32 1)
+  %gep2 = getelementptr i8, ptr %ptr2, i32 %tmp1
+  call void @llvm.arm.neon.vst1.p0.v4f32(ptr %gep2, <4 x float> %tmp3, i32 1)
   %indvar.next = add i32 %indvar, 1
   %cond = icmp eq i32 %indvar.next, 10
   br i1 %cond, label %bb2, label %bb1
@@ -73,9 +73,9 @@ bb2:
 
 ; CHECK-NOT: LCPI1_0:
 
-declare <4 x float> @llvm.arm.neon.vld1.v4f32.p0i8(i8*, i32) nounwind readonly
+declare <4 x float> @llvm.arm.neon.vld1.v4f32.p0(ptr, i32) nounwind readonly
 
-declare void @llvm.arm.neon.vst1.p0i8.v4f32(i8*, <4 x float>, i32) nounwind
+declare void @llvm.arm.neon.vst1.p0.v4f32(ptr, <4 x float>, i32) nounwind
 
 declare <4 x float> @llvm.arm.neon.vmaxs.v4f32(<4 x float>, <4 x float>) nounwind readnone
 

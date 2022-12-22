@@ -6,7 +6,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; Make sure callers set up the arguments correctly - tests AArch64ISelLowering::LowerCALL
 
-define float @foo1(double* %x0, double* %x1, double* %x2) nounwind {
+define float @foo1(ptr %x0, ptr %x1, ptr %x2) nounwind {
 ; CHECK-LABEL: foo1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -29,9 +29,9 @@ define float @foo1(double* %x0, double* %x1, double* %x2) nounwind {
 entry:
   %0 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %1 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %0)
-  %2 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, double* %x0)
-  %3 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, double* %x1)
-  %4 = call <vscale x 2 x double> @llvm.aarch64.sve.ld1.nxv2f64(<vscale x 2 x i1> %1, double* %x2)
+  %2 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, ptr %x0)
+  %3 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, ptr %x1)
+  %4 = call <vscale x 2 x double> @llvm.aarch64.sve.ld1.nxv2f64(<vscale x 2 x i1> %1, ptr %x2)
   %5 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  0
   %6 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  1
   %7 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  2
@@ -52,7 +52,7 @@ entry:
   ret float %call
 }
 
-define float @foo2(double* %x0, double* %x1) nounwind {
+define float @foo2(ptr %x0, ptr %x1) nounwind {
 ; CHECK-LABEL: foo2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -86,8 +86,8 @@ define float @foo2(double* %x0, double* %x1) nounwind {
 entry:
   %0 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %1 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %0)
-  %2 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, double* %x0)
-  %3 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, double* %x1)
+  %2 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, ptr %x0)
+  %3 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, ptr %x1)
   %4 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  0
   %5 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  1
   %6 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  2
@@ -108,7 +108,7 @@ entry:
   ret float %call
 }
 
-define float @foo3(double* %x0, double* %x1, double* %x2) nounwind {
+define float @foo3(ptr %x0, ptr %x1, ptr %x2) nounwind {
 ; CHECK-LABEL: foo3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -131,9 +131,9 @@ define float @foo3(double* %x0, double* %x1, double* %x2) nounwind {
 entry:
   %0 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %1 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %0)
-  %2 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, double* %x0)
-  %3 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld3.sret.nxv2f64(<vscale x 2 x i1> %1, double* %x1)
-  %4 = call <vscale x 2 x double> @llvm.aarch64.sve.ld1.nxv2f64(<vscale x 2 x i1> %1, double* %x2)
+  %2 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, ptr %x0)
+  %3 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld3.sret.nxv2f64(<vscale x 2 x i1> %1, ptr %x1)
+  %4 = call <vscale x 2 x double> @llvm.aarch64.sve.ld1.nxv2f64(<vscale x 2 x i1> %1, ptr %x2)
   %5 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  0
   %6 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  1
   %7 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  2
@@ -154,7 +154,7 @@ entry:
 
 ; Make sure callees read the arguments correctly - tests AArch64ISelLowering::LowerFormalArguments
 
-define double @foo4(double %x0, double * %ptr1, double * %ptr2, double * %ptr3, <vscale x 8 x double> %x1, <vscale x 8 x double> %x2, <vscale x 2 x double> %x3) nounwind {
+define double @foo4(double %x0, ptr %ptr1, ptr %ptr2, ptr %ptr3, <vscale x 8 x double> %x1, <vscale x 8 x double> %x2, <vscale x 2 x double> %x3) nounwind {
 ; CHECK-LABEL: foo4:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
@@ -173,16 +173,13 @@ define double @foo4(double %x0, double * %ptr1, double * %ptr2, double * %ptr3, 
 ; CHECK-NEXT:    st1d { z5.d }, p0, [x2]
 ; CHECK-NEXT:    ret
 entry:
-  %ptr1.bc = bitcast double * %ptr1 to <vscale x 8 x double> *
-  store volatile <vscale x 8 x double> %x1, <vscale x 8 x double>* %ptr1.bc
-  %ptr2.bc = bitcast double * %ptr2 to <vscale x 8 x double> *
-  store volatile <vscale x 8 x double> %x2, <vscale x 8 x double>* %ptr2.bc
-  %ptr3.bc = bitcast double * %ptr3 to <vscale x 2 x double> *
-  store volatile <vscale x 2 x double> %x3, <vscale x 2 x double>* %ptr3.bc
+  store volatile <vscale x 8 x double> %x1, <vscale x 8 x double>* %ptr1
+  store volatile <vscale x 8 x double> %x2, <vscale x 8 x double>* %ptr2
+  store volatile <vscale x 2 x double> %x3, <vscale x 2 x double>* %ptr3
   ret double %x0
 }
 
-define double @foo5(i32 %i0, i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, double * %ptr1, double * %ptr2, double %x0, <vscale x 8 x double> %x1, <vscale x 8 x double> %x2) nounwind {
+define double @foo5(i32 %i0, i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, ptr %ptr1, ptr %ptr2, double %x0, <vscale x 8 x double> %x1, <vscale x 8 x double> %x2) nounwind {
 ; CHECK-LABEL: foo5:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr x8, [sp]
@@ -201,14 +198,12 @@ define double @foo5(i32 %i0, i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, double
 ; CHECK-NEXT:    st1d { z5.d }, p0, [x7, #1, mul vl]
 ; CHECK-NEXT:    ret
 entry:
-  %ptr1.bc = bitcast double * %ptr1 to <vscale x 8 x double> *
-  store volatile <vscale x 8 x double> %x1, <vscale x 8 x double>* %ptr1.bc
-  %ptr2.bc = bitcast double * %ptr2 to <vscale x 8 x double> *
-  store volatile <vscale x 8 x double> %x2, <vscale x 8 x double>* %ptr2.bc
+  store volatile <vscale x 8 x double> %x1, <vscale x 8 x double>* %ptr1
+  store volatile <vscale x 8 x double> %x2, <vscale x 8 x double>* %ptr2
   ret double %x0
 }
 
-define double @foo6(double %x0, double %x1, double * %ptr1, double * %ptr2, <vscale x 8 x double> %x2, <vscale x 6 x double> %x3) nounwind {
+define double @foo6(double %x0, double %x1, ptr %ptr1, ptr %ptr2, <vscale x 8 x double> %x2, <vscale x 6 x double> %x3) nounwind {
 ; CHECK-LABEL: foo6:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
@@ -224,16 +219,14 @@ define double @foo6(double %x0, double %x1, double * %ptr1, double * %ptr2, <vsc
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x1]
 ; CHECK-NEXT:    ret
 entry:
-  %ptr1.bc = bitcast double * %ptr1 to <vscale x 8 x double> *
-  store volatile <vscale x 8 x double> %x2, <vscale x 8 x double>* %ptr1.bc
-  %ptr2.bc = bitcast double * %ptr2 to <vscale x 6 x double> *
-  store volatile <vscale x 6 x double> %x3, <vscale x 6 x double>* %ptr2.bc
+  store volatile <vscale x 8 x double> %x2, <vscale x 8 x double>* %ptr1
+  store volatile <vscale x 6 x double> %x3, <vscale x 6 x double>* %ptr2
   ret double %x0
 }
 
 ; Use AAVPCS, SVE register in z0 - z7 used
 
-define void @aavpcs1(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32 %s6, <vscale x 4 x i32> %s7, <vscale x 4 x i32> %s8, <vscale x 4 x i32> %s9, <vscale x 4 x i32> %s10, <vscale x 4 x i32> %s11, <vscale x 4 x i32> %s12, <vscale x 4 x i32> %s13, <vscale x 4 x i32> %s14, <vscale x 4 x i32> %s15, <vscale x 4 x i32> %s16, i32 * %ptr) nounwind {
+define void @aavpcs1(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32 %s6, <vscale x 4 x i32> %s7, <vscale x 4 x i32> %s8, <vscale x 4 x i32> %s9, <vscale x 4 x i32> %s10, <vscale x 4 x i32> %s11, <vscale x 4 x i32> %s12, <vscale x 4 x i32> %s13, <vscale x 4 x i32> %s14, <vscale x 4 x i32> %s15, <vscale x 4 x i32> %s16, ptr %ptr) nounwind {
 ; CHECK-LABEL: aavpcs1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldp x8, x9, [sp]
@@ -251,22 +244,21 @@ define void @aavpcs1(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32 %
 ; CHECK-NEXT:    st1w { z3.s }, p0, [x9]
 ; CHECK-NEXT:    ret
 entry:
-  %ptr1.bc = bitcast i32 * %ptr to <vscale x 4 x i32> *
-  store volatile <vscale x 4 x i32> %s7, <vscale x 4 x i32>* %ptr1.bc
-  store volatile <vscale x 4 x i32> %s8, <vscale x 4 x i32>* %ptr1.bc
-  store volatile <vscale x 4 x i32> %s9, <vscale x 4 x i32>* %ptr1.bc
-  store volatile <vscale x 4 x i32> %s11, <vscale x 4 x i32>* %ptr1.bc
-  store volatile <vscale x 4 x i32> %s12, <vscale x 4 x i32>* %ptr1.bc
-  store volatile <vscale x 4 x i32> %s13, <vscale x 4 x i32>* %ptr1.bc
-  store volatile <vscale x 4 x i32> %s14, <vscale x 4 x i32>* %ptr1.bc
-  store volatile <vscale x 4 x i32> %s15, <vscale x 4 x i32>* %ptr1.bc
-  store volatile <vscale x 4 x i32> %s16, <vscale x 4 x i32>* %ptr1.bc
+  store volatile <vscale x 4 x i32> %s7, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s8, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s9, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s11, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s12, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s13, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s14, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s15, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s16, <vscale x 4 x i32>* %ptr
   ret void
 }
 
 ; Use AAVPCS, SVE register in z0 - z7 used
 
-define void @aavpcs2(float %s0, float %s1, float %s2, float %s3, float %s4, float %s5, float %s6, <vscale x 4 x float> %s7, <vscale x 4 x float> %s8, <vscale x 4 x float> %s9, <vscale x 4 x float> %s10, <vscale x 4 x float> %s11, <vscale x 4 x float> %s12,<vscale x 4 x float> %s13,<vscale x 4 x float> %s14,<vscale x 4 x float> %s15,<vscale x 4 x float> %s16,float * %ptr) nounwind {
+define void @aavpcs2(float %s0, float %s1, float %s2, float %s3, float %s4, float %s5, float %s6, <vscale x 4 x float> %s7, <vscale x 4 x float> %s8, <vscale x 4 x float> %s9, <vscale x 4 x float> %s10, <vscale x 4 x float> %s11, <vscale x 4 x float> %s12,<vscale x 4 x float> %s13,<vscale x 4 x float> %s14,<vscale x 4 x float> %s15,<vscale x 4 x float> %s16,ptr %ptr) nounwind {
 ; CHECK-LABEL: aavpcs2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldp x8, x9, [sp]
@@ -290,22 +282,21 @@ define void @aavpcs2(float %s0, float %s1, float %s2, float %s3, float %s4, floa
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x9]
 ; CHECK-NEXT:    ret
 entry:
-  %ptr1.bc = bitcast float * %ptr to <vscale x 4 x float> *
-  store volatile <vscale x 4 x float> %s7, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s8, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s9, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s11, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s12, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s13, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s14, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s15, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s16, <vscale x 4 x float>* %ptr1.bc
+  store volatile <vscale x 4 x float> %s7, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s8, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s9, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s11, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s12, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s13, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s14, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s15, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s16, <vscale x 4 x float>* %ptr
   ret void
 }
 
 ; Use AAVPCS, no SVE register in z0 - z7 used (floats occupy z0 - z7) but predicate arg is used
 
-define void @aavpcs3(float %s0, float %s1, float %s2, float %s3, float %s4, float %s5, float %s6, float %s7, <vscale x 4 x float> %s8, <vscale x 4 x float> %s9, <vscale x 4 x float> %s10, <vscale x 4 x float> %s11, <vscale x 4 x float> %s12, <vscale x 4 x float> %s13, <vscale x 4 x float> %s14, <vscale x 4 x float> %s15, <vscale x 4 x float> %s16, <vscale x 4 x float> %s17, <vscale x 16 x i1> %p0, float * %ptr) nounwind {
+define void @aavpcs3(float %s0, float %s1, float %s2, float %s3, float %s4, float %s5, float %s6, float %s7, <vscale x 4 x float> %s8, <vscale x 4 x float> %s9, <vscale x 4 x float> %s10, <vscale x 4 x float> %s11, <vscale x 4 x float> %s12, <vscale x 4 x float> %s13, <vscale x 4 x float> %s14, <vscale x 4 x float> %s15, <vscale x 4 x float> %s16, <vscale x 4 x float> %s17, <vscale x 16 x i1> %p0, ptr %ptr) nounwind {
 ; CHECK-LABEL: aavpcs3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr x8, [sp]
@@ -331,22 +322,21 @@ define void @aavpcs3(float %s0, float %s1, float %s2, float %s3, float %s4, floa
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x8]
 ; CHECK-NEXT:    ret
 entry:
-  %ptr1.bc = bitcast float * %ptr to <vscale x 4 x float> *
-  store volatile <vscale x 4 x float> %s8, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s9, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s10, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s11, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s12, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s13, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s14, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s15, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s16, <vscale x 4 x float>* %ptr1.bc
+  store volatile <vscale x 4 x float> %s8, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s9, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s10, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s11, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s12, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s13, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s14, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s15, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s16, <vscale x 4 x float>* %ptr
   ret void
 }
 
 ; use AAVPCS, SVE register in z0 - z7 used (i32s dont occupy z0 - z7)
 
-define void @aavpcs4(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32 %s6, i32 %s7, <vscale x 4 x i32> %s8, <vscale x 4 x i32> %s9, <vscale x 4 x i32> %s10, <vscale x 4 x i32> %s11, <vscale x 4 x i32> %s12, <vscale x 4 x i32> %s13, <vscale x 4 x i32> %s14, <vscale x 4 x i32> %s15, <vscale x 4 x i32> %s16, <vscale x 4 x i32> %s17, i32 * %ptr) nounwind {
+define void @aavpcs4(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32 %s6, i32 %s7, <vscale x 4 x i32> %s8, <vscale x 4 x i32> %s9, <vscale x 4 x i32> %s10, <vscale x 4 x i32> %s11, <vscale x 4 x i32> %s12, <vscale x 4 x i32> %s13, <vscale x 4 x i32> %s14, <vscale x 4 x i32> %s15, <vscale x 4 x i32> %s16, <vscale x 4 x i32> %s17, ptr %ptr) nounwind {
 ; CHECK-LABEL: aavpcs4:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr x8, [sp]
@@ -364,22 +354,21 @@ define void @aavpcs4(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32 %
 ; CHECK-NEXT:    st1w { z24.s }, p0, [x9]
 ; CHECK-NEXT:    ret
 entry:
-  %ptr1.bc = bitcast i32 * %ptr to <vscale x 4 x i32> *
-  store volatile <vscale x 4 x i32> %s8, <vscale x 4 x i32>* %ptr1.bc
-  store volatile <vscale x 4 x i32> %s9, <vscale x 4 x i32>* %ptr1.bc
-  store volatile <vscale x 4 x i32> %s10, <vscale x 4 x i32>* %ptr1.bc
-  store volatile <vscale x 4 x i32> %s11, <vscale x 4 x i32>* %ptr1.bc
-  store volatile <vscale x 4 x i32> %s12, <vscale x 4 x i32>* %ptr1.bc
-  store volatile <vscale x 4 x i32> %s13, <vscale x 4 x i32>* %ptr1.bc
-  store volatile <vscale x 4 x i32> %s14, <vscale x 4 x i32>* %ptr1.bc
-  store volatile <vscale x 4 x i32> %s15, <vscale x 4 x i32>* %ptr1.bc
-  store volatile <vscale x 4 x i32> %s16, <vscale x 4 x i32>* %ptr1.bc
+  store volatile <vscale x 4 x i32> %s8, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s9, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s10, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s11, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s12, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s13, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s14, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s15, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s16, <vscale x 4 x i32>* %ptr
   ret void
 }
 
 ; Use AAVPCS, SVE register used in return
 
-define <vscale x 4 x float> @aavpcs5(float %s0, float %s1, float %s2, float %s3, float %s4, float %s5, float %s6, float %s7, <vscale x 4 x float> %s8, <vscale x 4 x float> %s9, <vscale x 4 x float> %s10, <vscale x 4 x float> %s11, <vscale x 4 x float> %s12, <vscale x 4 x float> %s13, <vscale x 4 x float> %s14, <vscale x 4 x float> %s15, <vscale x 4 x float> %s16, <vscale x 4 x float> %s17, float * %ptr) nounwind {
+define <vscale x 4 x float> @aavpcs5(float %s0, float %s1, float %s2, float %s3, float %s4, float %s5, float %s6, float %s7, <vscale x 4 x float> %s8, <vscale x 4 x float> %s9, <vscale x 4 x float> %s10, <vscale x 4 x float> %s11, <vscale x 4 x float> %s12, <vscale x 4 x float> %s13, <vscale x 4 x float> %s14, <vscale x 4 x float> %s15, <vscale x 4 x float> %s16, <vscale x 4 x float> %s17, ptr %ptr) nounwind {
 ; CHECK-LABEL: aavpcs5:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr x8, [sp]
@@ -405,20 +394,19 @@ define <vscale x 4 x float> @aavpcs5(float %s0, float %s1, float %s2, float %s3,
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x8]
 ; CHECK-NEXT:    ret
 entry:
-  %ptr1.bc = bitcast float * %ptr to <vscale x 4 x float> *
-  store volatile <vscale x 4 x float> %s8, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s9, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s10, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s11, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s12, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s13, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s14, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s15, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s16, <vscale x 4 x float>* %ptr1.bc
+  store volatile <vscale x 4 x float> %s8, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s9, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s10, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s11, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s12, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s13, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s14, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s15, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s16, <vscale x 4 x float>* %ptr
   ret <vscale x 4 x float> %s8
 }
 
-define void @aapcs1(float %s0, float %s1, float %s2, float %s3, float %s4, float %s5, float %s6, float %s7, <vscale x 4 x float> %s8, <vscale x 4 x float> %s9, <vscale x 4 x float> %s10, <vscale x 4 x float> %s11, <vscale x 4 x float> %s12, <vscale x 4 x float> %s13, <vscale x 4 x float> %s14, <vscale x 4 x float> %s15, <vscale x 4 x float> %s16, <vscale x 4 x float> %s17, float * %ptr) nounwind {
+define void @aapcs1(float %s0, float %s1, float %s2, float %s3, float %s4, float %s5, float %s6, float %s7, <vscale x 4 x float> %s8, <vscale x 4 x float> %s9, <vscale x 4 x float> %s10, <vscale x 4 x float> %s11, <vscale x 4 x float> %s12, <vscale x 4 x float> %s13, <vscale x 4 x float> %s14, <vscale x 4 x float> %s15, <vscale x 4 x float> %s16, <vscale x 4 x float> %s17, ptr %ptr) nounwind {
 ; CHECK-LABEL: aapcs1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr x8, [sp]
@@ -444,16 +432,15 @@ define void @aapcs1(float %s0, float %s1, float %s2, float %s3, float %s4, float
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x8]
 ; CHECK-NEXT:    ret
 entry:
-  %ptr1.bc = bitcast float * %ptr to <vscale x 4 x float> *
-  store volatile <vscale x 4 x float> %s8, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s9, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s10, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s11, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s12, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s13, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s14, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s15, <vscale x 4 x float>* %ptr1.bc
-  store volatile <vscale x 4 x float> %s16, <vscale x 4 x float>* %ptr1.bc
+  store volatile <vscale x 4 x float> %s8, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s9, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s10, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s11, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s12, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s13, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s14, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s15, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s16, <vscale x 4 x float>* %ptr
   ret void
 }
 
@@ -719,9 +706,9 @@ declare float @callee3(float, float, <vscale x 8 x double>, <vscale x 6 x double
 
 declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 immarg)
 declare <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1>)
-declare {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1>, double*)
-declare {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld3.sret.nxv2f64(<vscale x 2 x i1>, double*)
-declare <vscale x 2 x double> @llvm.aarch64.sve.ld1.nxv2f64(<vscale x 2 x i1>, double*)
+declare {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1>, ptr)
+declare {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld3.sret.nxv2f64(<vscale x 2 x i1>, ptr)
+declare <vscale x 2 x double> @llvm.aarch64.sve.ld1.nxv2f64(<vscale x 2 x i1>, ptr)
 declare double @llvm.aarch64.sve.faddv.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>)
 declare <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double>, <vscale x 2 x double>, i64)
 declare <vscale x 6 x double> @llvm.vector.insert.nxv6f64.nx2f64(<vscale x 6 x double>, <vscale x 2 x double>, i64)

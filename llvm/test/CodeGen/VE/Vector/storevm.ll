@@ -5,7 +5,7 @@
 @v512i1 = common dso_local local_unnamed_addr global <512 x i1> zeroinitializer, align 4
 
 ; Function Attrs: norecurse nounwind readonly
-define fastcc void @storev256i1(<256 x i1>* nocapture %mp, <256 x i1> %m) {
+define fastcc void @storev256i1(ptr nocapture %mp, <256 x i1> %m) {
 ; CHECK-LABEL: storev256i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    svm %s1, %vm1, 3
@@ -17,7 +17,7 @@ define fastcc void @storev256i1(<256 x i1>* nocapture %mp, <256 x i1> %m) {
 ; CHECK-NEXT:    svm %s1, %vm1, 0
 ; CHECK-NEXT:    st %s1, (, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  store <256 x i1> %m, <256 x i1>* %mp, align 16
+  store <256 x i1> %m, ptr %mp, align 16
   ret void
 }
 
@@ -37,12 +37,12 @@ define fastcc void @storev256i1com(<256 x i1> %m) {
 ; CHECK-NEXT:    svm %s0, %vm1, 0
 ; CHECK-NEXT:    st %s0, (, %s1)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  store <256 x i1> %m, <256 x i1>* @v256i1, align 16
+  store <256 x i1> %m, ptr @v256i1, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define fastcc void @storev512i1(<512 x i1>* nocapture %mp, <512 x i1> %m) {
+define fastcc void @storev512i1(ptr nocapture %mp, <512 x i1> %m) {
 ; CHECK-LABEL: storev512i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    svm %s1, %vm2, 3
@@ -62,7 +62,7 @@ define fastcc void @storev512i1(<512 x i1>* nocapture %mp, <512 x i1> %m) {
 ; CHECK-NEXT:    svm %s1, %vm3, 0
 ; CHECK-NEXT:    st %s1, (, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  store <512 x i1> %m, <512 x i1>* %mp, align 16
+  store <512 x i1> %m, ptr %mp, align 16
   ret void
 }
 
@@ -90,6 +90,6 @@ define fastcc void @storev512i1com(<512 x i1> %m) {
 ; CHECK-NEXT:    svm %s0, %vm3, 0
 ; CHECK-NEXT:    st %s0, (, %s1)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  store <512 x i1> %m, <512 x i1>* @v512i1, align 16
+  store <512 x i1> %m, ptr @v512i1, align 16
   ret void
 }

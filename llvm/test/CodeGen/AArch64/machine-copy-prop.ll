@@ -14,7 +14,7 @@
 ; CHECK-LABEL: foo:
 ; CHECK: ld2
 ; CHECK-NOT: // kill: def D{{[0-9]+}} killed D{{[0-9]+}}
-define void @foo(<2 x i32> %shuffle251, <8 x i8> %vtbl1.i, i8* %t2, <2 x i32> %vrsubhn_v2.i1364) {
+define void @foo(<2 x i32> %shuffle251, <8 x i8> %vtbl1.i, ptr %t2, <2 x i32> %vrsubhn_v2.i1364) {
 entry:
   %val0 = alloca [2 x i64], align 8
   %val1 = alloca <2 x i64>, align 16
@@ -24,7 +24,7 @@ entry:
   br i1 %cmp, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  store i1 true, i1* @failed, align 1
+  store i1 true, ptr @failed, align 1
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -36,18 +36,16 @@ if.end:                                           ; preds = %if.then, %entry
   %sub = add <2 x i32> %0, <i32 1, i32 0>
   %sext = sext <2 x i32> %sub to <2 x i64>
   %vset_lane603 = shufflevector <2 x i64> %sext, <2 x i64> undef, <1 x i32> zeroinitializer
-  %t1 = bitcast [2 x i64]* %val0 to i8*
-  call void @llvm.aarch64.neon.st2lane.v2i64.p0i8(<2 x i64> zeroinitializer, <2 x i64> zeroinitializer, i64 1, i8* %t1)
-  call void @llvm.aarch64.neon.st2lane.v1i64.p0i8(<1 x i64> <i64 4096>, <1 x i64> <i64 -1>, i64 0, i8* %t2)
-  %vld2_lane = call { <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld2lane.v1i64.p0i8(<1 x i64> <i64 11>, <1 x i64> <i64 11>, i64 0, i8* %t2)
+  call void @llvm.aarch64.neon.st2lane.v2i64.p0(<2 x i64> zeroinitializer, <2 x i64> zeroinitializer, i64 1, ptr %val0)
+  call void @llvm.aarch64.neon.st2lane.v1i64.p0(<1 x i64> <i64 4096>, <1 x i64> <i64 -1>, i64 0, ptr %t2)
+  %vld2_lane = call { <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld2lane.v1i64.p0(<1 x i64> <i64 11>, <1 x i64> <i64 11>, i64 0, ptr %t2)
   %vld2_lane.0.extract = extractvalue { <1 x i64>, <1 x i64> } %vld2_lane, 0
   %vld2_lane.1.extract = extractvalue { <1 x i64>, <1 x i64> } %vld2_lane, 1
-  %vld2_lane1 = call { <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld2lane.v1i64.p0i8(<1 x i64> %vld2_lane.0.extract, <1 x i64> %vld2_lane.1.extract, i64 0, i8* %t1)
+  %vld2_lane1 = call { <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld2lane.v1i64.p0(<1 x i64> %vld2_lane.0.extract, <1 x i64> %vld2_lane.1.extract, i64 0, ptr %val0)
   %vld2_lane1.0.extract = extractvalue { <1 x i64>, <1 x i64> } %vld2_lane1, 0
   %vld2_lane1.1.extract = extractvalue { <1 x i64>, <1 x i64> } %vld2_lane1, 1
-  %t3 = bitcast <2 x i64>* %val1 to i8*
-  call void @llvm.aarch64.neon.st2.v1i64.p0i8(<1 x i64> %vld2_lane1.0.extract, <1 x i64> %vld2_lane1.1.extract, i8* %t3)
-  %t4 = load <2 x i64>, <2 x i64>* %val1, align 16
+  call void @llvm.aarch64.neon.st2.v1i64.p0(<1 x i64> %vld2_lane1.0.extract, <1 x i64> %vld2_lane1.1.extract, ptr %val1)
+  %t4 = load <2 x i64>, ptr %val1, align 16
   %vsubhn = sub <2 x i64> <i64 11, i64 0>, %t4
   %vsubhn1 = lshr <2 x i64> %vsubhn, <i64 32, i64 32>
   %vsubhn2 = trunc <2 x i64> %vsubhn1 to <2 x i32>
@@ -65,7 +63,7 @@ if.end:                                           ; preds = %if.then, %entry
   br i1 %cmp2, label %if.end2, label %if.then2
 
 if.then2:                                       ; preds = %if.end
-  store i1 true, i1* @failed, align 1
+  store i1 true, ptr @failed, align 1
   br label %if.end2
 
 if.end2:                                        ; preds = %if.then682, %if.end
@@ -84,13 +82,13 @@ declare void @f2()
 
 declare <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16>, <4 x i16>)
 
-declare void @llvm.aarch64.neon.st2lane.v2i64.p0i8(<2 x i64>, <2 x i64>, i64, i8* nocapture)
+declare void @llvm.aarch64.neon.st2lane.v2i64.p0(<2 x i64>, <2 x i64>, i64, ptr nocapture)
 
-declare void @llvm.aarch64.neon.st2lane.v1i64.p0i8(<1 x i64>, <1 x i64>, i64, i8* nocapture)
+declare void @llvm.aarch64.neon.st2lane.v1i64.p0(<1 x i64>, <1 x i64>, i64, ptr nocapture)
 
-declare { <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld2lane.v1i64.p0i8(<1 x i64>, <1 x i64>, i64, i8*)
+declare { <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld2lane.v1i64.p0(<1 x i64>, <1 x i64>, i64, ptr)
 
-declare void @llvm.aarch64.neon.st2.v1i64.p0i8(<1 x i64>, <1 x i64>, i8* nocapture)
+declare void @llvm.aarch64.neon.st2.v1i64.p0(<1 x i64>, <1 x i64>, ptr nocapture)
 
 declare <1 x i64> @llvm.aarch64.neon.usqadd.v1i64(<1 x i64>, <1 x i64>)
 

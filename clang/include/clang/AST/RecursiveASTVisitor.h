@@ -600,7 +600,7 @@ bool RecursiveASTVisitor<Derived>::TraverseConceptExprRequirement(
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseConceptNestedRequirement(
     concepts::NestedRequirement *R) {
-  if (!R->isSubstitutionFailure())
+  if (!R->hasInvalidConstraint())
     return getDerived().TraverseStmt(R->getConstraintExpr());
   return true;
 }

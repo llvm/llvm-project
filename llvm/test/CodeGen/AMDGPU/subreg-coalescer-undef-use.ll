@@ -4,7 +4,7 @@
 ; register coalescer because it is hidden with subregister insert/extract.
 target triple="amdgcn--"
 
-define amdgpu_kernel void @foobar(float %a0, float %a1, float addrspace(1)* %out) nounwind {
+define amdgpu_kernel void @foobar(float %a0, float %a1, ptr addrspace(1) %out) nounwind {
 ; CHECK-LABEL: foobar:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -49,7 +49,7 @@ ift:
 ife:
   %val = phi <4 x float> [ %v1, %ift ], [ %v0, %entry ]
   %v2 = extractelement <4 x float> %val, i32 1
-  store float %v2, float addrspace(1)* %out, align 4
+  store float %v2, ptr addrspace(1) %out, align 4
   ret void
 }
 

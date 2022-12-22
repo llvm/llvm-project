@@ -99,7 +99,7 @@ define amdgpu_kernel void @test_kernel() !dbg !3 {
   call void asm sideeffect "; clobber v8", "~{v8}"()
   call void asm sideeffect "; clobber s23", "~{s23}"()
   call void asm sideeffect "; clobber a42", "~{a42}"()
-  call void asm sideeffect "; use $0", "v"([128 x i32] addrspace(3)* @lds)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) @lds)
   ret void
 }
 

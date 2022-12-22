@@ -3,7 +3,7 @@
 ;
 ; Source code:
 ;   extern int do_work(int) __attribute__((section(".callback_fn")));
-;   long bpf_helper(void *callback_fn);
+;   long bpf_helper(ptr callback_fn);
 ;   long prog() {
 ;       return bpf_helper(&do_work);
 ;   }
@@ -13,7 +13,7 @@
 ; Function Attrs: nounwind
 define dso_local i64 @prog() local_unnamed_addr #0 !dbg !7 {
 entry:
-  %call = tail call i64 @bpf_helper(i8* bitcast (i32 (i32)* @do_work to i8*)) #2, !dbg !11
+  %call = tail call i64 @bpf_helper(ptr @do_work) #2, !dbg !11
   ret i64 %call, !dbg !12
 }
 
@@ -41,7 +41,7 @@ entry:
 ; CHECK:             .ascii  "do_work"                       # string offset=55
 ; CHECK:             .ascii  ".callback_fn"                  # string offset=74
 
-declare !dbg !13 dso_local i64 @bpf_helper(i8*) local_unnamed_addr #1
+declare !dbg !13 dso_local i64 @bpf_helper(ptr) local_unnamed_addr #1
 
 declare !dbg !17 dso_local i32 @do_work(i32) #1 section ".callback_fn"
 

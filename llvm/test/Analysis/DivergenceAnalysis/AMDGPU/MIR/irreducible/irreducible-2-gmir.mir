@@ -1,0 +1,89 @@
+# RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+
+#        bb0(div)
+#       /    \
+#     bb1 <-> bb2
+#              |
+#             bb3
+# CHECK-LABEL: MachineUniformityInfo for function: cycle_diverge_enter
+# CHECK-NEXT: CYCLES ASSSUMED DIVERGENT:
+# CHECK-NEXT: depth=1: entries(bb.2 bb.1)
+# CHECK-NEXT: CYCLES WITH DIVERGENT EXIT:
+# CHECK-NEXT: depth=1: entries(bb.2 bb.1)
+---
+name:            cycle_diverge_enter
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s32) = G_CONSTANT i32 0
+    %2:_(s32) = G_IMPLICIT_DEF
+    %3:_(s32) = G_CONSTANT i32 1
+    %4:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
+    %6:_(s1) = G_ICMP intpred(slt), %4(s32), %1 ; DIVERGENT CONDITION
+    %7:_(s1) = G_ICMP intpred(slt), %2(s32), %1 ; UNIFORM CONDITION
+    G_BRCOND %6(s1), %bb.1 ; divergent branch
+    G_BR %bb.2
+  bb.1:
+    successors: %bb.2
+
+    %8:_(s32) = G_PHI %1(s32), %bb.0, %0(s32), %bb.2
+    G_BR %bb.2
+  bb.2:
+    successors: %bb.1, %bb.3
+
+    %9:_(s32) = G_PHI %2(s32), %bb.1, %3(s32), %bb.0
+    %10:_(s1) = G_ICMP intpred(eq), %9(s32), %1(s32)
+    G_BRCOND %10(s1), %bb.3  ; divergent branch
+    G_BR %bb.1
+
+  bb.3:
+    %11:_(s32), %12:_(s1) = G_UADDO %9, %3
+    S_ENDPGM 0
+
+...
+
+
+# CHECK-LABEL: MachineUniformityInfo for function: cycle_diverge_exit
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32), %{{[0-9]*}}:_(s1) = G_UADDO %8:_, %{{[0-9]*}}:_
+#        bb0
+#       /    \
+#     bb1 <-> bb2(div)
+#              |
+#             bb3
+---
+name:            cycle_diverge_exit
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s32) = G_CONSTANT i32 0
+    %2:_(s32) = G_IMPLICIT_DEF
+    %3:_(s32) = G_CONSTANT i32 1
+    %4:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
+    %6:_(s1) = G_ICMP intpred(slt), %4(s32), %1 ; DIVERGENT CONDITION
+    %7:_(s1) = G_ICMP intpred(slt), %2(s32), %1 ; UNIFORM CONDITION
+    G_BRCOND %7(s1), %bb.1 ; uniform branch
+    G_BR %bb.2
+  bb.1:
+    successors: %bb.2
+
+    %8:_(s32) = G_PHI %1(s32), %bb.0, %0(s32), %bb.2
+    G_BR %bb.2
+  bb.2:
+    successors: %bb.1, %bb.3
+
+    %9:_(s32) = G_PHI %2(s32), %bb.1, %3(s32), %bb.0
+    %10:_(s1) = G_ICMP intpred(sgt), %9(s32), %1(s32)
+    G_BRCOND %6(s1), %bb.3  ; divergent branch
+    G_BR %bb.1
+
+  bb.3:
+    %11:_(s32), %12:_(s1) = G_UADDO %9, %3
+    S_ENDPGM 0
+
+...

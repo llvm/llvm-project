@@ -1,5 +1,5 @@
 /// atexit(3) not supported in dlopen(3)ed+dlclose(3)d DSO
-// XFAIL: netbsd
+// XFAIL: target={{.*netbsd.*}}
 
 // RUN: mkdir -p %t.d && cd %t.d
 

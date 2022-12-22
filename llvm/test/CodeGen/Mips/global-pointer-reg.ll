@@ -15,10 +15,10 @@ entry:
 ; CHECK: addu   $[[GP:[0-9]+]], $[[R1]], $25
 ; CHECK: lw     ${{[0-9]+}}, %call16(foo2)($[[GP]])
 
-  tail call void @foo2(i32* @g0) nounwind
-  tail call void @foo2(i32* @g1) nounwind
-  tail call void @foo2(i32* @g2) nounwind
+  tail call void @foo2(ptr @g0) nounwind
+  tail call void @foo2(ptr @g1) nounwind
+  tail call void @foo2(ptr @g2) nounwind
   ret void
 }
 
-declare void @foo2(i32*)
+declare void @foo2(ptr)

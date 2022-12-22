@@ -13,14 +13,14 @@ target triple = "aarch64-arm-none-eabi"
 ; which increases the number of potential ways they could be called, and
 ; weakens the security protections.
 
-define void @bti_disabled(void ()* %p) {
+define void @bti_disabled(ptr %p) {
 entry:
   tail call void %p()
 ; CHECK: br x0
   ret void
 }
 
-define void @bti_enabled(void ()* %p) "branch-target-enforcement"="true" {
+define void @bti_enabled(ptr %p) "branch-target-enforcement"="true" {
 entry:
   tail call void %p()
 ; CHECK: br {{x16|x17}}

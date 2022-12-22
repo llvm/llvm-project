@@ -162,7 +162,7 @@ void ExpandModularHeadersPPCallbacks::FileChanged(
 void ExpandModularHeadersPPCallbacks::InclusionDirective(
     SourceLocation DirectiveLoc, const Token &IncludeToken,
     StringRef IncludedFilename, bool IsAngled, CharSourceRange FilenameRange,
-    Optional<FileEntryRef> IncludedFile, StringRef SearchPath,
+    OptionalFileEntryRef IncludedFile, StringRef SearchPath,
     StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
   if (Imported) {
@@ -224,7 +224,7 @@ void ExpandModularHeadersPPCallbacks::PragmaDiagnostic(SourceLocation Loc,
   parseToLocation(Loc);
 }
 void ExpandModularHeadersPPCallbacks::HasInclude(SourceLocation Loc, StringRef,
-                                                 bool, Optional<FileEntryRef>,
+                                                 bool, OptionalFileEntryRef,
                                                  SrcMgr::CharacteristicKind) {
   parseToLocation(Loc);
 }

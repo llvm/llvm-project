@@ -16,7 +16,7 @@ b0:
   %v3 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v2, i32 -1)
   %v4 = tail call <64 x i1> @llvm.hexagon.V6.pred.and(<64 x i1> %v1, <64 x i1> %v3)
   %v5 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v4, i32 -1)
-  store <16 x i32> %v5, <16 x i32>* @g0, align 64, !tbaa !0
+  store <16 x i32> %v5, ptr @g0, align 64, !tbaa !0
   ret i32 0
 }
 

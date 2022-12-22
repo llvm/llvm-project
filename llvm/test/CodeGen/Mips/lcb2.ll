@@ -9,13 +9,13 @@
 ; Function Attrs: nounwind optsize
 define i32 @bnez() #0 {
 entry:
-  %0 = load i32, i32* @i, align 4, !tbaa !1
+  %0 = load i32, ptr @i, align 4, !tbaa !1
   %cmp = icmp eq i32 %0, 0
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
   tail call void asm sideeffect ".space 10000", ""() #1, !srcloc !5
-  store i32 0, i32* @i, align 4, !tbaa !1
+  store i32 0, ptr @i, align 4, !tbaa !1
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -31,17 +31,17 @@ if.end:                                           ; preds = %if.then, %entry
 ; Function Attrs: nounwind optsize
 define i32 @beqz() #0 {
 entry:
-  %0 = load i32, i32* @i, align 4, !tbaa !1
+  %0 = load i32, ptr @i, align 4, !tbaa !1
   %cmp = icmp eq i32 %0, 0
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  store i32 10, i32* @j, align 4, !tbaa !1
+  store i32 10, ptr @j, align 4, !tbaa !1
   tail call void asm sideeffect ".space 10000", ""() #1, !srcloc !6
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  store i32 55, i32* @j, align 4, !tbaa !1
+  store i32 55, ptr @j, align 4, !tbaa !1
   tail call void asm sideeffect ".space 10000", ""() #1, !srcloc !7
   br label %if.end
 
@@ -60,19 +60,19 @@ if.end:                                           ; preds = %if.else, %if.then
 ; Function Attrs: nounwind optsize
 define void @bteqz() #0 {
 entry:
-  %0 = load i32, i32* @i, align 4, !tbaa !1
-  %1 = load i32, i32* @j, align 4, !tbaa !1
+  %0 = load i32, ptr @i, align 4, !tbaa !1
+  %1 = load i32, ptr @j, align 4, !tbaa !1
   %cmp = icmp eq i32 %0, %1
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  store i32 1, i32* @k, align 4, !tbaa !1
+  store i32 1, ptr @k, align 4, !tbaa !1
   tail call void asm sideeffect ".space 1000", ""() #1, !srcloc !8
   br label %if.end
 
 if.else:                                          ; preds = %entry
   tail call void asm sideeffect ".space 1000", ""() #1, !srcloc !9
-  store i32 2, i32* @k, align 4, !tbaa !1
+  store i32 2, ptr @k, align 4, !tbaa !1
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
@@ -90,15 +90,15 @@ if.end:                                           ; preds = %if.else, %if.then
 ; Function Attrs: nounwind optsize
 define void @btz() #0 {
 entry:
-  %0 = load i32, i32* @i, align 4, !tbaa !1
-  %1 = load i32, i32* @j, align 4, !tbaa !1
+  %0 = load i32, ptr @i, align 4, !tbaa !1
+  %1 = load i32, ptr @j, align 4, !tbaa !1
   %cmp1 = icmp sgt i32 %0, %1
   br i1 %cmp1, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry, %if.then
   tail call void asm sideeffect ".space 60000", ""() #1, !srcloc !10
-  %2 = load i32, i32* @i, align 4, !tbaa !1
-  %3 = load i32, i32* @j, align 4, !tbaa !1
+  %2 = load i32, ptr @i, align 4, !tbaa !1
+  %3 = load i32, ptr @j, align 4, !tbaa !1
   %cmp = icmp sgt i32 %2, %3
   br i1 %cmp, label %if.then, label %if.end
 

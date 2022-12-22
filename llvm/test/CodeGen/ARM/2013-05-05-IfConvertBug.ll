@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=thumbv8 | FileCheck -check-prefix=CHECK-V8 %s
 ; RUN: llc < %s -mtriple=thumbv7 -arm-restrict-it | FileCheck -check-prefix=CHECK-RESTRICT-IT %s
 
-define i32 @t1(i32 %a, i32 %b, i8** %retaddr) {
+define i32 @t1(i32 %a, i32 %b, ptr %retaddr) {
 ; CHECK-LABEL: t1:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldr r3, LCPI0_0
@@ -58,7 +58,7 @@ define i32 @t1(i32 %a, i32 %b, i8** %retaddr) {
 ; CHECK-RESTRICT-IT-NEXT:  @ %bb.2:
 ; CHECK-RESTRICT-IT-NEXT:  .LCPI0_0:
 ; CHECK-RESTRICT-IT-NEXT:    .long .Ltmp0
-  store i8* blockaddress(@t1, %cond_true), i8** %retaddr
+  store ptr blockaddress(@t1, %cond_true), ptr %retaddr
   %tmp2 = icmp eq i32 %a, 0
   br i1 %tmp2, label %cond_false, label %cond_true
 
@@ -71,7 +71,7 @@ cond_false:
   ret i32 %tmp7
 }
 
-define i32 @t2(i32 %a, i32 %b, i32 %c, i32 %d, i8** %retaddr) {
+define i32 @t2(i32 %a, i32 %b, i32 %c, i32 %d, ptr %retaddr) {
 ; CHECK-LABEL: t2:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldr.w r9, [sp]
@@ -145,7 +145,7 @@ define i32 @t2(i32 %a, i32 %b, i32 %c, i32 %d, i8** %retaddr) {
 ; CHECK-RESTRICT-IT-NEXT:  @ %bb.4:
 ; CHECK-RESTRICT-IT-NEXT:  .LCPI1_0:
 ; CHECK-RESTRICT-IT-NEXT:    .long .Ltmp1
-  store i8* blockaddress(@t2, %cond_true), i8** %retaddr
+  store ptr blockaddress(@t2, %cond_true), ptr %retaddr
   %tmp2 = icmp sgt i32 %c, 10
   %tmp5 = icmp slt i32 %d, 4
   %tmp8 = and i1 %tmp5, %tmp2
@@ -161,7 +161,7 @@ UnifiedReturnBlock:
   ret i32 %tmp13
 }
 
-define hidden fastcc void @t3(i8** %retaddr, i1 %tst, i8* %p8) {
+define hidden fastcc void @t3(ptr %retaddr, i1 %tst, ptr %p8) {
 ; CHECK-LABEL: t3:
 ; CHECK:       @ %bb.0: @ %bb
 ; CHECK-NEXT:    ldr r1, LCPI2_0
@@ -202,7 +202,7 @@ define hidden fastcc void @t3(i8** %retaddr, i1 %tst, i8* %p8) {
 ; CHECK-RESTRICT-IT-NEXT:  .LCPI2_0:
 ; CHECK-RESTRICT-IT-NEXT:    .long .Ltmp2
 bb:
-  store i8* blockaddress(@t3, %KBBlockZero_return_1), i8** %retaddr
+  store ptr blockaddress(@t3, %KBBlockZero_return_1), ptr %retaddr
   br i1 %tst, label %bb77, label %bb7.i
 
 bb7.i:                                            ; preds = %bb35
@@ -224,11 +224,11 @@ bb6.i350:                                         ; preds = %bb2.i
   br label %bb2.i
 
 KBBlockZero.exit:                                 ; preds = %bb2.i
-  indirectbr i8* %p8, [label %KBBlockZero_return_1, label %KBBlockZero_return_0]
+  indirectbr ptr %p8, [label %KBBlockZero_return_1, label %KBBlockZero_return_0]
 }
 
-@foo = global i32 ()* null
-define i32 @t4(i32 %x, i32 ()* %p_foo) {
+@foo = global ptr null
+define i32 @t4(i32 %x, ptr %p_foo) {
 ; CHECK-LABEL: t4:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r4, lr}

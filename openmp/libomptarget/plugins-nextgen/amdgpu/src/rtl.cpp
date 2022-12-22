@@ -121,6 +121,8 @@ struct AMDGPUResourceRef : public GenericDeviceResourceRef {
   /// Create a reference to an existing resource.
   AMDGPUResourceRef(ResourceTy *Resource) : Resource(Resource) {}
 
+  virtual ~AMDGPUResourceRef() {}
+
   /// Create a new resource and save the reference. The reference must be empty
   /// before calling to this function.
   Error create(GenericDeviceTy &Device) override;
@@ -398,6 +400,10 @@ struct AMDGPUKernelTy : public GenericKernelTy {
         return Err;
     }
 
+    // Account for user requested dynamic shared memory.
+    // TODO: This should be read from a per-kernel state flag.
+    GroupSize += Device.getDynamicMemorySize();
+
     // Make sure it is a kernel symbol.
     if (SymbolType != HSA_SYMBOL_KIND_KERNEL)
       return Plugin::error("Symbol %s is not a kernel function");
@@ -539,6 +545,10 @@ struct AMDGPUQueueTy {
     // the addition of other packets to the queue. The following piece of code
     // should be lightweight; do not block the thread, allocate memory, etc.
     std::lock_guard<std::mutex> Lock(Mutex);
+
+    // Avoid defining the input dependency if already satisfied.
+    if (InputSignal && !InputSignal->load())
+      InputSignal = nullptr;
 
     // Add a barrier packet before the kernel packet in case there is a pending
     // preceding operation. The barrier packet will delay the processing of
@@ -786,8 +796,18 @@ private:
         return Plugin::success();
 
       // Perform the action.
-      if (auto Err = (*ActionFunction)(&ActionArgs))
-        return Err;
+      if (ActionFunction == memcpyAction) {
+        if (auto Err = memcpyAction(&ActionArgs))
+          return Err;
+      } else if (ActionFunction == releaseBufferAction) {
+        if (auto Err = releaseBufferAction(&ActionArgs))
+          return Err;
+      } else if (ActionFunction == releaseSignalAction) {
+        if (auto Err = releaseSignalAction(&ActionArgs))
+          return Err;
+      } else {
+        return Plugin::error("Unknown action function!");
+      }
 
       // Invalidate the action.
       ActionFunction = nullptr;
@@ -989,10 +1009,6 @@ public:
 
     // Consume stream slot and compute dependencies.
     auto [Curr, InputSignal] = consume(OutputSignal);
-
-    // Avoid defining the input dependency if already satisfied.
-    if (InputSignal && !InputSignal->load())
-      InputSignal = nullptr;
 
     // Setup the post action to release the kernel args buffer.
     if (auto Err = Slots[Curr].schedReleaseBuffer(KernelArgs, MemoryManager))
@@ -1485,8 +1501,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   AMDGPUDeviceTy(int32_t DeviceId, int32_t NumDevices,
                  AMDHostDeviceTy &HostDevice, hsa_agent_t Agent)
       : GenericDeviceTy(DeviceId, NumDevices, {0}), AMDGenericDeviceTy(),
-        OMPX_NumQueues("LIBOMPTARGET_AMDGPU_NUM_HSA_QUEUES", 8),
-        OMPX_QueueSize("LIBOMPTARGET_AMDGPU_HSA_QUEUE_SIZE", 1024),
+        OMPX_NumQueues("LIBOMPTARGET_AMDGPU_NUM_HSA_QUEUES", 4),
+        OMPX_QueueSize("LIBOMPTARGET_AMDGPU_HSA_QUEUE_SIZE", 512),
+        OMPX_DefaultTeamsPerCU("LIBOMPTARGET_AMDGPU_TEAMS_PER_CU", 4),
         OMPX_MaxAsyncCopyBytes("LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES",
                                1 * 1024 * 1024), // 1MB
         OMPX_InitialNumSignals("LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS",
@@ -1528,9 +1545,17 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     hsa_dim3_t GridMaxDim;
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_GRID_MAX_DIM, GridMaxDim))
       return Err;
+
     GridValues.GV_Max_Teams = GridMaxDim.x / GridValues.GV_Max_WG_Size;
     if (GridValues.GV_Max_Teams == 0)
       return Plugin::error("Maximum number of teams cannot be zero");
+
+    // Compute the default number of teams.
+    uint32_t ComputeUnits = 0;
+    if (auto Err =
+            getDeviceAttr(HSA_AMD_AGENT_INFO_COMPUTE_UNIT_COUNT, ComputeUnits))
+      return Err;
+    GridValues.GV_Default_Num_Teams = ComputeUnits * OMPX_DefaultTeamsPerCU;
 
     // Get maximum size of any device queues and maximum number of queues.
     uint32_t MaxQueueSize;
@@ -2014,6 +2039,11 @@ private:
   /// process them.
   UInt32Envar OMPX_QueueSize;
 
+  /// Envar for controlling the default number of teams relative to the number
+  /// of compute units (CUs) the device has:
+  ///   #default_teams = OMPX_DefaultTeamsPerCU * #CUs.
+  UInt32Envar OMPX_DefaultTeamsPerCU;
+
   /// Envar specifying the maximum size in bytes where the memory copies are
   /// asynchronous operations. Up to this transfer size, the memory copies are
   /// asychronous operations pushed to the corresponding stream. For larger
@@ -2226,9 +2256,9 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
       // Classify the agents into kernel (GPU) and host (CPU) kernels.
       if (DeviceType == HSA_DEVICE_TYPE_GPU) {
         // Ensure that the GPU agent supports kernel dispatch packets.
-        hsa_agent_feature_t features;
-        Status = hsa_agent_get_info(Agent, HSA_AGENT_INFO_FEATURE, &features);
-        if (features & HSA_AGENT_FEATURE_KERNEL_DISPATCH)
+        hsa_agent_feature_t Features;
+        Status = hsa_agent_get_info(Agent, HSA_AGENT_INFO_FEATURE, &Features);
+        if (Features & HSA_AGENT_FEATURE_KERNEL_DISPATCH)
           KernelAgents.push_back(Agent);
       } else if (DeviceType == HSA_DEVICE_TYPE_CPU) {
         HostAgents.push_back(Agent);
@@ -2405,11 +2435,11 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   std::memset(ImplArgs, 0, ImplicitArgsSize);
 
   // Copy the explicit arguments.
-  for (int32_t ArgId = 0; ArgId < NumKernelArgs; ++ArgId) {
-    void *Dst = (char *)AllArgs + sizeof(void *) * ArgId;
-    void *Src = *((void **)KernelArgs + ArgId);
-    std::memcpy(Dst, Src, sizeof(void *));
-  }
+  // TODO: We should expose the args memory manager alloc to the common part as
+  // 	   alternative to copying them twice.
+  if (NumKernelArgs)
+    std::memcpy(AllArgs, *static_cast<void **>(KernelArgs),
+                sizeof(void *) * NumKernelArgs);
 
   AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(GenericDevice);
   AMDGPUStreamTy &Stream = AMDGPUDevice.getStream(AsyncInfoWrapper);

@@ -3130,19 +3130,14 @@ entry:
   ret i8 %i
 }
 
-; FIXME: This should be simplifiable. See comment inside.
-
 define i8 @gep_index_from_memory(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@gep_index_from_memory
 ; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[GEP_FIXED:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 12
 ; CHECK-NEXT:    [[GEP_LOADED:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 12
-; CHECK-NEXT:    store i8 100, i8* [[GEP_LOADED]], align 4
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[GEP_FIXED]], align 4
-; CHECK-NEXT:    ret i8 [[I]]
+; CHECK-NEXT:    ret i8 100
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
@@ -3152,8 +3147,6 @@ entry:
   %offset = load i64, i64* %gep.addr, align 8
   %gep.fixed = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 12
 
-  ; FIXME: AAPotentialConstantValues does not detect the constant offset being
-  ; passed to this GEP. It needs to rely on AAPotentialValues.
   %gep.loaded = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 %offset
   store i8 100, i8* %gep.loaded, align 4
 

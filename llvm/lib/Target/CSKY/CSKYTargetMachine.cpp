@@ -114,7 +114,7 @@ void CSKYPassConfig::addIRPasses() {
 }
 
 bool CSKYPassConfig::addInstSelector() {
-  addPass(createCSKYISelDag(getCSKYTargetMachine()));
+  addPass(createCSKYISelDag(getCSKYTargetMachine(), getOptLevel()));
 
   return false;
 }

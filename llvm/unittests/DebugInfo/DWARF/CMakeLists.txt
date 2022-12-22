@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   Object
   ObjectYAML
   Support
+  TargetParser
   )
 
 add_llvm_unittest(DebugInfoDWARFTests

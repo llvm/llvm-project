@@ -462,6 +462,33 @@ struct TestVectorTransferFullPartialSplitPatterns
   }
 };
 
+struct TestScalarVectorTransferLoweringPatterns
+    : public PassWrapper<TestScalarVectorTransferLoweringPatterns,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestScalarVectorTransferLoweringPatterns)
+
+  StringRef getArgument() const final {
+    return "test-scalar-vector-transfer-lowering";
+  }
+  StringRef getDescription() const final {
+    return "Test lowering of scalar vector transfers to memref loads/stores.";
+  }
+  TestScalarVectorTransferLoweringPatterns() = default;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<AffineDialect, memref::MemRefDialect, tensor::TensorDialect,
+                    vector::VectorDialect>();
+  }
+
+  void runOnOperation() override {
+    MLIRContext *ctx = &getContext();
+    RewritePatternSet patterns(ctx);
+    vector::populateScalarVectorTransferLoweringPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
 struct TestVectorTransferOpt
     : public PassWrapper<TestVectorTransferOpt, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorTransferOpt)
@@ -868,6 +895,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorTransferUnrollingPatterns>();
 
   PassRegistration<TestVectorTransferFullPartialSplitPatterns>();
+
+  PassRegistration<TestScalarVectorTransferLoweringPatterns>();
 
   PassRegistration<TestVectorTransferOpt>();
 

@@ -5,7 +5,7 @@
 define void @ham() {
 bb:
   %tmp = alloca i32, align 4
-  %tmp13 = ptrtoint i32* %tmp to i32
+  %tmp13 = ptrtoint ptr %tmp to i32
   %tmp70 = icmp eq i32 undef, -1
   br i1 %tmp70, label %bb72, label %bb40
 
@@ -14,13 +14,13 @@ bb72:                                             ; preds = %bb72, %bb
 
 bb40:                                             ; preds = %bb72, %bb
   %tmp41 = phi i32 [ %tmp13, %bb72 ], [ %tmp13, %bb ]
-  %tmp55 = inttoptr i32 %tmp41 to i32*
-  %tmp58 = insertelement <2 x i32*> undef, i32* %tmp55, i32 1
+  %tmp55 = inttoptr i32 %tmp41 to ptr
+  %tmp58 = insertelement <2 x ptr> undef, ptr %tmp55, i32 1
   br label %bb59
 
 bb59:                                             ; preds = %bb59, %bb40
-  %tmp60 = phi <2 x i32*> [ %tmp61, %bb59 ], [ %tmp58, %bb40 ]
-  %tmp61 = getelementptr i32, <2 x i32*> %tmp60, <2 x i32> <i32 -1, i32 1>
-  %tmp62 = extractelement <2 x i32*> %tmp61, i32 1
+  %tmp60 = phi <2 x ptr> [ %tmp61, %bb59 ], [ %tmp58, %bb40 ]
+  %tmp61 = getelementptr i32, <2 x ptr> %tmp60, <2 x i32> <i32 -1, i32 1>
+  %tmp62 = extractelement <2 x ptr> %tmp61, i32 1
   br label %bb59
 }

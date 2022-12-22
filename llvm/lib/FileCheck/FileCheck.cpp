@@ -695,14 +695,14 @@ Pattern::parseCallExpr(StringRef &Expr, StringRef FuncName,
   Expr = Expr.ltrim(SpaceChars);
   assert(Expr.startswith("("));
 
-  auto OptFunc = StringSwitch<Optional<binop_eval_t>>(FuncName)
+  auto OptFunc = StringSwitch<binop_eval_t>(FuncName)
                      .Case("add", operator+)
                      .Case("div", operator/)
                      .Case("max", max)
                      .Case("min", min)
                      .Case("mul", operator*)
                      .Case("sub", operator-)
-                     .Default(std::nullopt);
+                     .Default(nullptr);
 
   if (!OptFunc)
     return ErrorDiagnostic::get(

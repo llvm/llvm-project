@@ -1084,7 +1084,7 @@ ThreadPlanStack &Thread::GetPlans() const {
   // queries GetDescription makes, and only assert if you try to run the thread.
   if (!m_null_plan_stack_up)
     m_null_plan_stack_up = std::make_unique<ThreadPlanStack>(*this, true);
-  return *(m_null_plan_stack_up);
+  return *(m_null_plan_stack_up.get());
 }
 
 void Thread::PushPlan(ThreadPlanSP thread_plan_sp) {

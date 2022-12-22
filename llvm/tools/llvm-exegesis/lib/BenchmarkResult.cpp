@@ -349,7 +349,7 @@ InstructionBenchmark::readYaml(const LLVMState &State, MemoryBufferRef Buffer) {
     yaml::yamlize(Yin, Benchmark, /*unused*/ true, Context);
   if (!Context.getLastError().empty())
     return make_error<Failure>(Context.getLastError());
-  return Benchmark;
+  return std::move(Benchmark);
 }
 
 Expected<std::vector<InstructionBenchmark>>
@@ -367,7 +367,7 @@ InstructionBenchmark::readYamls(const LLVMState &State,
       return make_error<Failure>(Context.getLastError());
     Yin.nextDocument();
   }
-  return Benchmarks;
+  return std::move(Benchmarks);
 }
 
 Error InstructionBenchmark::writeYamlTo(const LLVMState &State,

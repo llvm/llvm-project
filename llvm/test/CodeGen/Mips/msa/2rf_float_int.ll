@@ -9,9 +9,9 @@
 
 define void @llvm_mips_ffint_s_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_ffint_s_w_ARG1
+  %0 = load <4 x i32>, ptr @llvm_mips_ffint_s_w_ARG1
   %1 = tail call <4 x float> @llvm.mips.ffint.s.w(<4 x i32> %0)
-  store <4 x float> %1, <4 x float>* @llvm_mips_ffint_s_w_RES
+  store <4 x float> %1, ptr @llvm_mips_ffint_s_w_RES
   ret void
 }
 
@@ -30,9 +30,9 @@ declare <4 x float> @llvm.mips.ffint.s.w(<4 x i32>) nounwind
 
 define void @llvm_mips_ffint_s_d_test() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_ffint_s_d_ARG1
+  %0 = load <2 x i64>, ptr @llvm_mips_ffint_s_d_ARG1
   %1 = tail call <2 x double> @llvm.mips.ffint.s.d(<2 x i64> %0)
-  store <2 x double> %1, <2 x double>* @llvm_mips_ffint_s_d_RES
+  store <2 x double> %1, ptr @llvm_mips_ffint_s_d_RES
   ret void
 }
 
@@ -51,9 +51,9 @@ declare <2 x double> @llvm.mips.ffint.s.d(<2 x i64>) nounwind
 
 define void @llvm_mips_ffint_u_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_ffint_u_w_ARG1
+  %0 = load <4 x i32>, ptr @llvm_mips_ffint_u_w_ARG1
   %1 = tail call <4 x float> @llvm.mips.ffint.u.w(<4 x i32> %0)
-  store <4 x float> %1, <4 x float>* @llvm_mips_ffint_u_w_RES
+  store <4 x float> %1, ptr @llvm_mips_ffint_u_w_RES
   ret void
 }
 
@@ -72,9 +72,9 @@ declare <4 x float> @llvm.mips.ffint.u.w(<4 x i32>) nounwind
 
 define void @llvm_mips_ffint_u_d_test() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_ffint_u_d_ARG1
+  %0 = load <2 x i64>, ptr @llvm_mips_ffint_u_d_ARG1
   %1 = tail call <2 x double> @llvm.mips.ffint.u.d(<2 x i64> %0)
-  store <2 x double> %1, <2 x double>* @llvm_mips_ffint_u_d_RES
+  store <2 x double> %1, ptr @llvm_mips_ffint_u_d_RES
   ret void
 }
 

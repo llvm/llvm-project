@@ -20,7 +20,7 @@ subroutine test1
   print *, i
 contains
   ! CHECK-LABEL: func @_QFtest1Ptest1_internal(
-  ! CHECK-SAME: %[[arg:[^:]*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) {
+  ! CHECK-SAME: %[[arg:[^:]*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) attributes {fir.internal_proc} {
   ! CHECK: %[[iaddr:.*]] = fir.coordinate_of %[[arg]], %c0
   ! CHECK: %[[i:.*]] = fir.load %[[iaddr]] : !fir.llvm_ptr<!fir.ref<i32>>
   ! CHECK: %[[val:.*]] = fir.call @_QPifoo() {{.*}}: () -> i32
@@ -47,7 +47,7 @@ subroutine test2
   print *, a, b
 contains
   ! CHECK-LABEL: func @_QFtest2Ptest2_internal(
-  ! CHECK-SAME: %[[arg:[^:]*]]: !fir.ref<tuple<!fir.ref<f32>, !fir.ref<f32>>> {fir.host_assoc}) {
+  ! CHECK-SAME: %[[arg:[^:]*]]: !fir.ref<tuple<!fir.ref<f32>, !fir.ref<f32>>> {fir.host_assoc}) attributes {fir.internal_proc} {
   subroutine test2_internal
     ! CHECK: %[[a:.*]] = fir.coordinate_of %[[arg]], %c0
     ! CHECK: %[[aa:.*]] = fir.load %[[a]] : !fir.llvm_ptr<!fir.ref<f32>>
@@ -62,7 +62,7 @@ contains
   end subroutine test2_internal
 
   ! CHECK-LABEL: func @_QFtest2Ptest2_inner(
-  ! CHECK-SAME: %[[arg:[^:]*]]: !fir.ref<tuple<!fir.ref<f32>, !fir.ref<f32>>> {fir.host_assoc}) {
+  ! CHECK-SAME: %[[arg:[^:]*]]: !fir.ref<tuple<!fir.ref<f32>, !fir.ref<f32>>> {fir.host_assoc}) attributes {fir.internal_proc} {
   subroutine test2_inner
     ! CHECK: %[[a:.*]] = fir.coordinate_of %[[arg]], %c0
     ! CHECK: %[[aa:.*]] = fir.load %[[a]] : !fir.llvm_ptr<!fir.ref<f32>>
@@ -96,7 +96,7 @@ subroutine test6(c)
 
 contains
   ! CHECK-LABEL: func @_QFtest6Ptest6_inner(
-  ! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.boxchar<1>>> {fir.host_assoc}) {
+  ! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.boxchar<1>>> {fir.host_assoc}) attributes {fir.internal_proc} {
   subroutine test6_inner
     ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[tup]], %c0{{.*}} : (!fir.ref<tuple<!fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
     ! CHECK: %[[load:.*]] = fir.load %[[coor]] : !fir.ref<!fir.boxchar<1>>
@@ -138,7 +138,7 @@ subroutine test3(p,q,i)
   
 contains
   ! CHECK-LABEL: func @_QFtest3Ptest3_inner(
-  ! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>>> {fir.host_assoc}) {
+  ! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>>> {fir.host_assoc}) attributes {fir.internal_proc} {
   subroutine test3_inner
     ! CHECK: %[[pcoor:.*]] = fir.coordinate_of %[[tup]], %c0{{.*}} : (!fir.ref<tuple<!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>>>, i32) -> !fir.ref<!fir.box<!fir.array<?xf32>>>
     ! CHECK: %[[p:.*]] = fir.load %[[pcoor]] : !fir.ref<!fir.box<!fir.array<?xf32>>>
@@ -185,7 +185,7 @@ subroutine test3a(p)
   
 contains
   ! CHECK: func @_QFtest3aPtest3a_inner(
-  ! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.box<!fir.array<10xf32>>, !fir.box<!fir.array<10xf32>>>> {fir.host_assoc}) {
+  ! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.box<!fir.array<10xf32>>, !fir.box<!fir.array<10xf32>>>> {fir.host_assoc}) attributes {fir.internal_proc} {
   subroutine test3a_inner
     ! CHECK: %[[pcoor:.*]] = fir.coordinate_of %[[tup]], %c0{{.*}} : (!fir.ref<tuple<!fir.box<!fir.array<10xf32>>, !fir.box<!fir.array<10xf32>>>>, i32) -> !fir.ref<!fir.box<!fir.array<10xf32>>>
     ! CHECK: %[[p:.*]] = fir.load %[[pcoor]] : !fir.ref<!fir.box<!fir.array<10xf32>>>
@@ -229,7 +229,7 @@ subroutine test4
   
 contains
   ! CHECK-LABEL: func @_QFtest4Ptest4_inner(
-  ! CHECK-SAME:%[[tup:.*]]: !fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>>> {fir.host_assoc}) {
+  ! CHECK-SAME:%[[tup:.*]]: !fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>>> {fir.host_assoc}) attributes {fir.internal_proc} {
   subroutine test4_inner
     ! CHECK: %[[ptup:.*]] = fir.coordinate_of %[[tup]], %c0{{.*}} : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<f32>>>>
     ! CHECK: %[[p:.*]] = fir.load %[[ptup]] : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<f32>>>>
@@ -271,7 +271,7 @@ subroutine test5
   
 contains
   ! CHECK-LABEL: func @_QFtest5Ptest5_inner(
-  ! CHECK-SAME:%[[tup:.*]]: !fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>> {fir.host_assoc}) {
+  ! CHECK-SAME:%[[tup:.*]]: !fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>> {fir.host_assoc}) attributes {fir.internal_proc} {
   subroutine test5_inner
     ! CHECK: %[[ptup:.*]] = fir.coordinate_of %[[tup]], %c0{{.*}} : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>>
     ! CHECK: %[[p:.*]] = fir.load %[[ptup]] : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>>
@@ -309,7 +309,7 @@ subroutine test7(j, k)
 contains
 
 ! CHECK-LABEL: func @_QFtest7Ptest7_inner(
-! CHECK-SAME: %[[i:.*]]: !fir.ref<i32>{{.*}}, %[[tup:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) -> i32 {
+! CHECK-SAME: %[[i:.*]]: !fir.ref<i32>{{.*}}, %[[tup:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) -> i32 attributes {fir.internal_proc} {
 elemental integer function test7_inner(i)
   implicit none
   integer, intent(in) :: i
@@ -330,7 +330,7 @@ subroutine issue990()
   call bar()
 contains
 ! CHECK-LABEL: func @_QFissue990Pbar(
-! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) {
+! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) attributes {fir.internal_proc} {
 subroutine bar()
   integer :: stmt_func, i
   stmt_func(i) = i + captured
@@ -352,7 +352,7 @@ subroutine issue990b()
   call bar()
 contains
 ! CHECK-LABEL: func @_QFissue990bPbar(
-! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) {
+! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) attributes {fir.internal_proc} {
 subroutine bar()
   ! CHECK: %[[tupAddr:.*]] = fir.coordinate_of %[[tup]], %c0{{.*}} : (!fir.ref<tuple<!fir.ref<i32>>>, i32) -> !fir.llvm_ptr<!fir.ref<i32>>
   ! CHECK: %[[addr:.*]] = fir.load %[[tupAddr]] : !fir.llvm_ptr<!fir.ref<i32>>
@@ -373,7 +373,7 @@ subroutine test8(dummy_proc)
  call bar()
 contains
 ! CHECK-LABEL: func @_QFtest8Pbar(
-! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.boxproc<() -> ()>>> {fir.host_assoc}) {
+! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.boxproc<() -> ()>>> {fir.host_assoc}) attributes {fir.internal_proc} {
 subroutine bar()
   ! CHECK: %[[tupAddr:.*]] = fir.coordinate_of %[[tup]], %c0{{.*}} : (!fir.ref<tuple<!fir.boxproc<() -> ()>>>, i32) -> !fir.ref<!fir.boxproc<() -> ()>>
   ! CHECK: %[[dummyProc:.*]] = fir.load %[[tupAddr]] : !fir.ref<!fir.boxproc<() -> ()>>
@@ -393,7 +393,7 @@ subroutine test9(dummy_proc)
  call bar()
 contains
 ! CHECK-LABEL: func @_QFtest9Pbar(
-! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.boxproc<() -> ()>>> {fir.host_assoc}) {
+! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.boxproc<() -> ()>>> {fir.host_assoc}) attributes {fir.internal_proc} {
 subroutine bar()
   ! CHECK: %[[tupAddr:.*]] = fir.coordinate_of %[[tup]], %c0{{.*}} : (!fir.ref<tuple<!fir.boxproc<() -> ()>>>, i32) -> !fir.ref<!fir.boxproc<() -> ()>>
   ! CHECK: %[[dummyProc:.*]] = fir.load %[[tupAddr]] : !fir.ref<!fir.boxproc<() -> ()>>
@@ -416,7 +416,7 @@ subroutine test10(i)
  call bar()
 contains
 ! CHECK-LABEL: func @_QFtest10Pbar(
-! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>> {fir.host_assoc}) {
+! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>> {fir.host_assoc}) attributes {fir.internal_proc} {
 subroutine bar()
   ! CHECK: %[[tupAddr:.*]] = fir.coordinate_of %[[tup]], %c0{{.*}} : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>
   ! CHECK: fir.load %[[tupAddr]] : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>
@@ -435,7 +435,7 @@ end subroutine
 
 ! CHECK-LABEL: func @_QFtest_proc_dummyPtest_proc_dummy_a(
 ! CHECK-SAME:          %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "j"},
-! CHECK-SAME:          %[[VAL_1:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) {
+! CHECK-SAME:          %[[VAL_1:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) attributes {fir.internal_proc} {
 ! CHECK:         %[[VAL_2:.*]] = arith.constant 0 : i32
 ! CHECK:         %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<tuple<!fir.ref<i32>>>, i32) -> !fir.llvm_ptr<!fir.ref<i32>>
 ! CHECK:         %[[VAL_4:.*]] = fir.load %[[VAL_3]] : !fir.llvm_ptr<!fir.ref<i32>>
@@ -529,17 +529,17 @@ end subroutine test_proc_dummy_other
 ! CHECK-LABEL: func @_QFtest_proc_dummy_charPgen_message(
 ! CHECK-SAME:                                            %[[VAL_0:.*]]: !fir.ref<!fir.char<1,10>>,
 ! CHECK-SAME:                                            %[[VAL_1:.*]]: index,
-! CHECK-SAME:                                            %[[VAL_2:.*]]: !fir.ref<tuple<!fir.boxchar<1>>> {fir.host_assoc}) -> !fir.boxchar<1> {
+! CHECK-SAME:                                            %[[VAL_2:.*]]: !fir.ref<tuple<!fir.boxchar<1>>> {fir.host_assoc}) -> !fir.boxchar<1> attributes {fir.internal_proc} {
 ! CHECK-DAG:         %[[VAL_3:.*]] = arith.constant 0 : i32
 ! CHECK-DAG:         %[[VAL_4:.*]] = arith.constant 10 : index
 ! CHECK-DAG:         %[[VAL_5:.*]] = arith.constant false
 ! CHECK-DAG:         %[[VAL_6:.*]] = arith.constant 1 : index
 ! CHECK-DAG:         %[[VAL_7:.*]] = arith.constant 32 : i8
 ! CHECK-DAG:         %[[VAL_8:.*]] = arith.constant 0 : index
+! CHECK:         %[[VAL_12:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:         %[[VAL_9:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_3]] : (!fir.ref<tuple<!fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
 ! CHECK:         %[[VAL_10:.*]] = fir.load %[[VAL_9]] : !fir.ref<!fir.boxchar<1>>
 ! CHECK:         %[[VAL_11:.*]]:2 = fir.unboxchar %[[VAL_10]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK:         %[[VAL_12:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:         %[[VAL_13:.*]] = arith.cmpi sgt, %[[VAL_11]]#1, %[[VAL_4]] : index
 ! CHECK:         %[[VAL_14:.*]] = arith.select %[[VAL_13]], %[[VAL_4]], %[[VAL_11]]#1 : index
 ! CHECK:         %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (index) -> i64

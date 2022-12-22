@@ -53,6 +53,20 @@ static cl::opt<bool>
                           cl::desc("Enable the machine combiner pass"),
                           cl::init(true), cl::Hidden);
 
+static cl::opt<unsigned> RVVVectorBitsMaxOpt(
+    "riscv-v-vector-bits-max",
+    cl::desc("Assume V extension vector registers are at most this big, "
+             "with zero meaning no maximum size is assumed."),
+    cl::init(0), cl::Hidden);
+
+static cl::opt<int> RVVVectorBitsMinOpt(
+    "riscv-v-vector-bits-min",
+    cl::desc("Assume V extension vector registers are at least this big, "
+             "with zero meaning no minimum size is assumed. A value of -1 "
+             "means use Zvl*b extension. This is primarily used to enable "
+             "autovectorization with fixed width vectors."),
+    cl::init(-1), cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
@@ -109,7 +123,45 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
       TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
-  std::string Key = CPU + TuneCPU + FS;
+
+  unsigned RVVBitsMin = RVVVectorBitsMinOpt;
+  unsigned RVVBitsMax = RVVVectorBitsMaxOpt;
+
+  if (RVVBitsMin != -1U) {
+    // FIXME: Change to >= 32 when VLEN = 32 is supported.
+    assert((RVVBitsMin == 0 || (RVVBitsMin >= 64 && RVVBitsMin <= 65536 &&
+                                isPowerOf2_32(RVVBitsMin))) &&
+           "V or Zve* extension requires vector length to be in the range of "
+           "64 to 65536 and a power 2!");
+    assert((RVVBitsMax >= RVVBitsMin || RVVBitsMax == 0) &&
+           "Minimum V extension vector length should not be larger than its "
+           "maximum!");
+  }
+  assert((RVVBitsMax == 0 || (RVVBitsMax >= 64 && RVVBitsMax <= 65536 &&
+                              isPowerOf2_32(RVVBitsMax))) &&
+         "V or Zve* extension requires vector length to be in the range of "
+         "64 to 65536 and a power 2!");
+
+  if (RVVBitsMin != -1U) {
+    if (RVVBitsMax != 0) {
+      RVVBitsMin = std::min(RVVBitsMin, RVVBitsMax);
+      RVVBitsMax = std::max(RVVBitsMin, RVVBitsMax);
+    }
+
+    RVVBitsMin =
+        PowerOf2Floor((RVVBitsMin < 64 || RVVBitsMin > 65536) ? 0 : RVVBitsMin);
+  }
+  RVVBitsMax =
+      PowerOf2Floor((RVVBitsMax < 64 || RVVBitsMax > 65536) ? 0 : RVVBitsMax);
+
+  SmallString<512> Key;
+  Key += "RVVMin";
+  Key += std::to_string(RVVBitsMin);
+  Key += "RVVMax";
+  Key += std::to_string(RVVBitsMax);
+  Key += CPU;
+  Key += TuneCPU;
+  Key += FS;
   auto &I = SubtargetMap[Key];
   if (!I) {
     // This needs to be done before we create a new subtarget since any
@@ -126,7 +178,8 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
       }
       ABIName = ModuleTargetABI->getString();
     }
-    I = std::make_unique<RISCVSubtarget>(TargetTriple, CPU, TuneCPU, FS, ABIName, *this);
+    I = std::make_unique<RISCVSubtarget>(
+        TargetTriple, CPU, TuneCPU, FS, ABIName, RVVBitsMin, RVVBitsMax, *this);
   }
   return I.get();
 }

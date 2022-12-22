@@ -25,16 +25,15 @@
 @gbl = common local_unnamed_addr global i32 0, align 4
 
 ; Function Attrs: norecurse nounwind readonly
-define i32 @xdp_dummy(%struct.xdp_md* nocapture readonly %xdp) local_unnamed_addr #0 {
+define i32 @xdp_dummy(ptr nocapture readonly %xdp) local_unnamed_addr #0 {
 entry:
-  %data = getelementptr inbounds %struct.xdp_md, %struct.xdp_md* %xdp, i64 0, i32 0
-  %0 = load i32, i32* %data, align 4
+  %0 = load i32, ptr %xdp, align 4
   %conv = zext i32 %0 to i64
-  %1 = inttoptr i64 %conv to i8*
-  %2 = load i8, i8* %1, align 1
+  %1 = inttoptr i64 %conv to ptr
+  %2 = load i8, ptr %1, align 1
 ; CHECK:  r1 = *(u32 *)(r1 + 0)
 ; CHECK:  r1 = *(u8 *)(r1 + 0)
-  %3 = load i32, i32* @gbl, align 4
+  %3 = load i32, ptr @gbl, align 4
   switch i32 %3, label %if.end [
     i32 0, label %if.else
     i32 1, label %cleanup

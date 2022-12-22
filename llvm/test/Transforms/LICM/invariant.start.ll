@@ -87,8 +87,7 @@ define void @test4(i1 %cond, ptr %ptr) {
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[X_INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    store i32 0, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[PTR]])
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR]], align 4
-; CHECK-NEXT:    [[X_INC]] = add i32 [[X]], [[VAL]]
+; CHECK-NEXT:    [[X_INC]] = add i32 [[X]], 0
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:

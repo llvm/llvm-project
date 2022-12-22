@@ -651,7 +651,7 @@ struct FunctionLikeUnit : public ProgramUnit {
 
   void setHostAssociatedSymbols(
       const llvm::SetVector<const semantics::Symbol *> &symbols) {
-    hostAssociations.addSymbolsToBind(symbols);
+    hostAssociations.addSymbolsToBind(symbols, getScope());
   }
 
   /// Return the host associations, if any, from the parent (host) procedure.
@@ -659,7 +659,12 @@ struct FunctionLikeUnit : public ProgramUnit {
   HostAssociations &parentHostAssoc();
 
   /// Return true iff the parent is a procedure and the parent has a non-empty
-  /// set of host associations.
+  /// set of host associations that are conveyed through an extra tuple
+  /// argument.
+  bool parentHasTupleHostAssoc();
+
+  /// Return true iff the parent is a procedure and the parent has a non-empty
+  /// set of host associations for variables.
   bool parentHasHostAssoc();
 
   /// Return the host associations for this function like unit. The list of host

@@ -3,6 +3,7 @@ static_library("MCA") {
   deps = [
     "//llvm/lib/Target/AMDGPU/MCTargetDesc",
     "//llvm/lib/Target/AMDGPU/Utils",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ ".." ]
   sources = [ "AMDGPUCustomBehaviour.cpp" ]

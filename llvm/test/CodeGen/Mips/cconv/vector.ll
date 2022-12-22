@@ -2165,7 +2165,7 @@ define void @float_2(<2 x float> %a, <2 x float> %b) {
 ; MIPS64R5EL-NEXT:    jr $ra
 ; MIPS64R5EL-NEXT:    nop
   %1 = fadd <2 x float> %a, %b
-  store <2 x float> %1, <2 x float> * @float_res_v2f32
+  store <2 x float> %1, ptr @float_res_v2f32
   ret void
 }
 
@@ -2325,7 +2325,7 @@ define void @float_4(<4 x float> %a, <4 x float> %b) {
 ; MIPS64R5EL-NEXT:    jr $ra
 ; MIPS64R5EL-NEXT:    nop
   %1 = fadd <4 x float> %a, %b
-  store <4 x float> %1, <4 x float> * @float_res_v4f32
+  store <4 x float> %1, ptr @float_res_v4f32
   ret void
 }
 
@@ -2438,7 +2438,7 @@ define void @double_2(<2 x double> %a, <2 x double> %b) {
 ; MIPS32R5EL-NEXT:    jr $ra
 ; MIPS32R5EL-NEXT:    nop
   %1 = fadd <2 x double> %a, %b
-  store <2 x double> %1, <2 x double> * @double_v2f64
+  store <2 x double> %1, ptr @double_v2f64
   ret void
 }
 
@@ -2497,7 +2497,7 @@ define <2 x i8> @ret_2_i8() {
 ; MIPS64R5-NEXT:    lh $2, 0($1)
 ; MIPS64R5-NEXT:    jr $ra
 ; MIPS64R5-NEXT:    nop
-  %1 = load <2 x i8>, <2 x i8> * @gv2i8
+  %1 = load <2 x i8>, ptr @gv2i8
   ret <2 x i8> %1
 }
 
@@ -2535,7 +2535,7 @@ define <4 x i8> @ret_4_i8() {
 ; MIPS64R5-NEXT:    lw $2, 0($1)
 ; MIPS64R5-NEXT:    jr $ra
 ; MIPS64R5-NEXT:    nop
-  %1 = load <4 x i8>, <4 x i8> * @gv4i8
+  %1 = load <4 x i8>, ptr @gv4i8
   ret <4 x i8> %1
 }
 
@@ -2624,7 +2624,7 @@ define <8 x i8> @ret_8_i8() {
 ; MIPS32R5EL-NEXT:    addiu $sp, $sp, 32
 ; MIPS32R5EL-NEXT:    jr $ra
 ; MIPS32R5EL-NEXT:    nop
-  %1 = load <8 x i8>, <8 x i8> * @gv8i8
+  %1 = load <8 x i8>, ptr @gv8i8
   ret <8 x i8> %1
 }
 
@@ -2674,7 +2674,7 @@ define <16 x i8> @ret_16_i8() {
 ; MIPS64R5-NEXT:    copy_s.d $3, $w0[1]
 ; MIPS64R5-NEXT:    jr $ra
 ; MIPS64R5-NEXT:    nop
-  %1 = load <16 x i8>, <16 x i8> * @gv16i8
+  %1 = load <16 x i8>, ptr @gv16i8
   ret <16 x i8> %1
 }
 
@@ -2712,7 +2712,7 @@ define <2 x i16> @ret_2_i16() {
 ; MIPS64R5-NEXT:    lw $2, 0($1)
 ; MIPS64R5-NEXT:    jr $ra
 ; MIPS64R5-NEXT:    nop
-  %1 = load <2 x i16>, <2 x i16> * @gv2i16
+  %1 = load <2 x i16>, ptr @gv2i16
   ret <2 x i16> %1
 }
 
@@ -2801,7 +2801,7 @@ define <4 x i16> @ret_4_i16() {
 ; MIPS32R5EL-NEXT:    addiu $sp, $sp, 32
 ; MIPS32R5EL-NEXT:    jr $ra
 ; MIPS32R5EL-NEXT:    nop
-  %1 = load <4 x i16>, <4 x i16> * @gv4i16
+  %1 = load <4 x i16>, ptr @gv4i16
   ret <4 x i16> %1
 }
 
@@ -2851,7 +2851,7 @@ define <8 x i16> @ret_8_i16() {
 ; MIPS64R5-NEXT:    copy_s.d $3, $w0[1]
 ; MIPS64R5-NEXT:    jr $ra
 ; MIPS64R5-NEXT:    nop
-  %1 = load <8 x i16>, <8 x i16> * @gv8i16
+  %1 = load <8 x i16>, ptr @gv8i16
   ret <8 x i16> %1
 }
 
@@ -2940,7 +2940,7 @@ define <2 x i32> @ret_2_i32() {
 ; MIPS32R5EL-NEXT:    addiu $sp, $sp, 32
 ; MIPS32R5EL-NEXT:    jr $ra
 ; MIPS32R5EL-NEXT:    nop
-  %1 = load <2 x i32>, <2 x i32> * @gv2i32
+  %1 = load <2 x i32>, ptr @gv2i32
   ret <2 x i32> %1
 }
 
@@ -2990,7 +2990,7 @@ define <4 x i32> @ret_4_i32() {
 ; MIPS64R5-NEXT:    copy_s.d $3, $w0[1]
 ; MIPS64R5-NEXT:    jr $ra
 ; MIPS64R5-NEXT:    nop
-  %1 = load <4 x i32>, <4 x i32> * @gv4i32
+  %1 = load <4 x i32>, ptr @gv4i32
   ret <4 x i32> %1
 }
 
@@ -3040,7 +3040,7 @@ define <2 x i64> @ret_2_i64() {
 ; MIPS64R5-NEXT:    copy_s.d $3, $w0[1]
 ; MIPS64R5-NEXT:    jr $ra
 ; MIPS64R5-NEXT:    nop
-  %1 = load <2 x i64>, <2 x i64> * @gv2i64
+  %1 = load <2 x i64>, ptr @gv2i64
   ret <2 x i64> %1
 }
 
@@ -3090,7 +3090,7 @@ define <2 x float> @ret_float_2() {
 ; MIPS64R5-NEXT:    jr $ra
 ; MIPS64R5-NEXT:    nop
 entry:
-  %0 = load <2 x float>, <2 x float> * @gv2f32
+  %0 = load <2 x float>, ptr @gv2f32
   ret <2 x float> %0
 }
 
@@ -3142,7 +3142,7 @@ define <4 x float> @ret_float_4() {
 ; MIPS64R5-NEXT:    jr $ra
 ; MIPS64R5-NEXT:    nop
 entry:
-  %0 = load <4 x float>, <4 x float> * @gv4f32
+  %0 = load <4 x float>, ptr @gv4f32
   ret <4 x float> %0
 }
 
@@ -3192,7 +3192,7 @@ define <2 x double> @ret_double_2() {
 ; MIPS64R5-NEXT:    jr $ra
 ; MIPS64R5-NEXT:    nop
 entry:
-  %0 = load <2 x double>, <2 x double> * @gv2f64
+  %0 = load <2 x double>, ptr @gv2f64
   ret <2 x double> %0
 }
 
@@ -3372,7 +3372,7 @@ define void @call_i8_2() {
 ; MIPS64R5EL-NEXT:    nop
 entry:
   %0 = call <2 x i8> @i8_2(<2 x i8> <i8 6, i8 7>, <2 x i8> <i8 12, i8 8>)
-  store <2 x i8> %0, <2 x i8> * @gv2i8
+  store <2 x i8> %0, ptr @gv2i8
   ret void
 }
 
@@ -3554,7 +3554,7 @@ define void @call_i8_4() {
 ; MIPS64R5EL-NEXT:    nop
 entry:
   %0 = call <4 x i8> @i8_4(<4 x i8> <i8 6, i8 7, i8 9, i8 10>, <4 x i8> <i8 12, i8 8, i8 9, i8 10>)
-  store <4 x i8> %0, <4 x i8> * @gv4i8
+  store <4 x i8> %0, ptr @gv4i8
   ret void
 }
 
@@ -3776,7 +3776,7 @@ define void @call_i8_8() {
 ; MIPS64R5EL-NEXT:    nop
 entry:
   %0 = call <8 x i8> @i8_8(<8 x i8> <i8 6, i8 7, i8 9, i8 10, i8 6, i8 7, i8 9, i8 10>, <8 x i8> <i8 12, i8 8, i8 9, i8 10, i8 6, i8 7, i8 9, i8 10>)
-  store <8 x i8> %0, <8 x i8> * @gv8i8
+  store <8 x i8> %0, ptr @gv8i8
   ret void
 }
 
@@ -4007,7 +4007,7 @@ define void @calli8_16() {
 ; MIPS64EL-NEXT:    nop
 entry:
   %0 = call <16 x i8> @i8_16(<16 x i8> <i8 6, i8 7,i8 6, i8 7,i8 6, i8 7,i8 6, i8 7,i8 6, i8 7,i8 6, i8 7, i8 6, i8 7, i8 9, i8 10>, <16 x i8> <i8 7, i8 9,i8 7, i8 9,i8 7, i8 9,i8 7, i8 9,i8 7, i8 9,i8 7, i8 9,i8 12, i8 8, i8 9, i8 10>)
-  store <16 x i8> %0, <16 x i8> * @gv16i8
+  store <16 x i8> %0, ptr @gv16i8
   ret void
 }
 
@@ -4193,7 +4193,7 @@ define void @calli16_2() {
 ; MIPS64R5EL-NEXT:    nop
 entry:
   %0 = call <2 x i16> @i16_2(<2 x i16> <i16 6, i16 7>, <2 x i16> <i16 12, i16 8>)
-  store <2 x i16> %0, <2 x i16> * @gv2i16
+  store <2 x i16> %0, ptr @gv2i16
   ret void
 }
 
@@ -4431,7 +4431,7 @@ define void @calli16_4() {
 ; MIPS64R5EL-NEXT:    nop
 entry:
   %0 = call <4 x i16> @i16_4(<4 x i16> <i16 6, i16 7, i16 9, i16 10>, <4 x i16> <i16 12, i16 8, i16 9, i16 10>)
-  store <4 x i16> %0, <4 x i16> * @gv4i16
+  store <4 x i16> %0, ptr @gv4i16
   ret void
 }
 
@@ -4731,7 +4731,7 @@ define void @calli16_8() {
 ; MIPS64R5EL-NEXT:    nop
 entry:
   %0 = call <8 x i16> @i16_8(<8 x i16> <i16 6, i16 7, i16 9, i16 10, i16 6, i16 7, i16 9, i16 10>, <8 x i16> <i16 6, i16 7, i16 9, i16 10, i16 12, i16 8, i16 9, i16 10>)
-  store <8 x i16> %0, <8 x i16> * @gv8i16
+  store <8 x i16> %0, ptr @gv8i16
   ret void
 }
 
@@ -4889,7 +4889,7 @@ define void @calli32_2() {
 ; MIPS64R5EL-NEXT:    nop
 entry:
   %0 = call <2 x i32> @i32_2(<2 x i32> <i32 6, i32 7>, <2 x i32> <i32 12, i32 8>)
-  store <2 x i32> %0, <2 x i32> * @gv2i32
+  store <2 x i32> %0, ptr @gv2i32
   ret void
 }
 
@@ -5057,7 +5057,7 @@ define void @calli32_4() {
 ; MIPS64EL-NEXT:    nop
 entry:
   %0 = call <4 x i32> @i32_4(<4 x i32> <i32 6, i32 7, i32 9, i32 10>, <4 x i32> <i32 12, i32 8, i32 9, i32 10>)
-  store <4 x i32> %0, <4 x i32> * @gv4i32
+  store <4 x i32> %0, ptr @gv4i32
   ret void
 }
 
@@ -5214,7 +5214,7 @@ define void @calli64_2() {
 ; MIPS32EL-NEXT:    nop
 entry:
   %0 = call <2 x i64> @i64_2(<2 x i64> <i64 6, i64 7>, <2 x i64> <i64 12, i64 8>)
-  store <2 x i64> %0, <2 x i64> * @gv2i64
+  store <2 x i64> %0, ptr @gv2i64
   ret void
 }
 
@@ -5362,7 +5362,7 @@ define void @callfloat_2() {
 ; MIPS64EL-NEXT:    nop
 entry:
   %0 = call <2 x float> @float2_extern(<2 x float> <float 0.0, float -1.0>, <2 x float> <float 12.0, float 14.0>)
-  store <2 x float> %0, <2 x float> * @gv2f32
+  store <2 x float> %0, ptr @gv2f32
   ret void
 }
 
@@ -5568,7 +5568,7 @@ define void @callfloat_4() {
 ; MIPS64EL-NEXT:    nop
 entry:
   %0 = call <4 x float> @float4_extern(<4 x float> <float 0.0, float -1.0, float 2.0, float 4.0>, <4 x float> <float 12.0, float 14.0, float 15.0, float 16.0>)
-  store <4 x float> %0, <4 x float> * @gv4f32
+  store <4 x float> %0, ptr @gv4f32
   ret void
 }
 
@@ -5762,7 +5762,7 @@ define void @calldouble_2() {
 ; MIPS32EL-NEXT:    nop
 entry:
   %0 = call <2 x double> @double2_extern(<2 x double> <double 0.0, double -1.0>, <2 x double> <double 12.0, double 14.0>)
-  store <2 x double> %0, <2 x double> * @gv2f64
+  store <2 x double> %0, ptr @gv2f64
   ret void
 }
 
@@ -7005,6 +7005,6 @@ define void @call_i24x2() {
 ; MIPS64R5EL-NEXT:    nop
 entry:
   %0 = call <2 x i24> @i24x2(<2 x i24> <i24 6, i24 7>, <2 x i24> <i24 12, i24 8>)
-  store <2 x i24> %0, <2 x i24> * @gv2i24
+  store <2 x i24> %0, ptr @gv2i24
   ret void
 }

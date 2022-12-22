@@ -117,7 +117,7 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
   // will crash in clang.
   clang::OverloadedOperatorKind op_kind = clang::NUM_OVERLOADED_OPERATORS;
   if (func_proto_type &&
-      TypeSystemClang::IsOperator(decl_name.getAsString(), op_kind)) {
+      TypeSystemClang::IsOperator(decl_name.getAsString().c_str(), op_kind)) {
     if (!TypeSystemClang::CheckOverloadedOperatorKindParameterCount(
             false, op_kind, func_proto_type->getNumParams()))
       return nullptr;

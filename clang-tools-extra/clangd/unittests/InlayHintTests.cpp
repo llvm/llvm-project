@@ -1361,6 +1361,29 @@ TEST(TypeHints, Aliased) {
   EXPECT_THAT(hintsOfKind(AST, InlayHintKind::Type), IsEmpty());
 }
 
+TEST(TypeHints, Decltype) {
+  assertTypeHints(R"cpp(
+    $a[[decltype(0)]] a;
+    // FIXME: will be nice to show `: int` instead
+    $b[[decltype(a)]] b;
+    const $c[[decltype(0)]] &c = b;
+
+    // Don't show for dependent type
+    template <class T>
+    constexpr decltype(T{}) d;
+
+    $e[[decltype(0)]] e();
+    auto f() -> $f[[decltype(0)]];
+
+    template <class, class> struct Foo;
+    using G = Foo<$g[[decltype(0)]], float>;
+  )cpp",
+                  ExpectedHint{": int", "a"},
+                  ExpectedHint{": decltype(0)", "b"},
+                  ExpectedHint{": int", "c"}, ExpectedHint{": int", "e"},
+                  ExpectedHint{": int", "f"}, ExpectedHint{": int", "g"});
+}
+
 TEST(DesignatorHints, Basic) {
   assertDesignatorHints(R"cpp(
     struct S { int x, y, z; };

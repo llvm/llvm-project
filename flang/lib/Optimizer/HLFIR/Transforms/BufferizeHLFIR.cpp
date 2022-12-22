@@ -220,10 +220,41 @@ struct ConcatOpConversion : public mlir::OpConversionPattern<hlfir::ConcatOp> {
     mlir::Value cast = builder.createConvert(loc, addrType, fir::getBase(res));
     res = fir::substBase(res, cast);
     auto hlfirTempRes = hlfir::genDeclare(loc, builder, res, "tmp",
-                                          fir::FortranVariableFlagsAttr{});
+                                          fir::FortranVariableFlagsAttr{})
+                            .getBase();
     mlir::Value bufferizedExpr =
         packageBufferizedExpr(loc, builder, hlfirTempRes, false);
     rewriter.replaceOp(concat, bufferizedExpr);
+    return mlir::success();
+  }
+};
+
+struct SetLengthOpConversion
+    : public mlir::OpConversionPattern<hlfir::SetLengthOp> {
+  using mlir::OpConversionPattern<hlfir::SetLengthOp>::OpConversionPattern;
+  explicit SetLengthOpConversion(mlir::MLIRContext *ctx)
+      : mlir::OpConversionPattern<hlfir::SetLengthOp>{ctx} {}
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::SetLengthOp setLength, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = setLength->getLoc();
+    auto module = setLength->getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+    // Create a temp with the new length.
+    hlfir::Entity string{getBufferizedExprStorage(adaptor.getString())};
+    auto charType = hlfir::getFortranElementType(setLength.getType());
+    llvm::StringRef tmpName{".tmp"};
+    llvm::SmallVector<mlir::Value, 1> lenParams{adaptor.getLength()};
+    auto alloca = builder.createTemporary(loc, charType, tmpName,
+                                          /*shape=*/std::nullopt, lenParams);
+    auto declareOp = builder.create<hlfir::DeclareOp>(
+        loc, alloca, tmpName, /*shape=*/mlir::Value{}, lenParams,
+        fir::FortranVariableFlagsAttr{});
+    // Assign string value to the created temp.
+    builder.create<hlfir::AssignOp>(loc, string, declareOp.getBase());
+    mlir::Value bufferizedExpr =
+        packageBufferizedExpr(loc, builder, alloca, false);
+    rewriter.replaceOp(setLength, bufferizedExpr);
     return mlir::success();
   }
 };
@@ -288,7 +319,7 @@ struct EndAssociateOpConversion
         TODO(loc, "unbox");
       rewriter.create<fir::FreeMemOp>(loc, var);
     };
-    if (auto cstMustFree = fir::factory::getIntIfConstant(mustFree)) {
+    if (auto cstMustFree = fir::getIntIfConstant(mustFree)) {
       if (*cstMustFree != 0)
         genFree();
       // else, nothing to do.
@@ -401,10 +432,11 @@ public:
     patterns.insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
                     AssociateOpConversion, ConcatOpConversion,
                     ElementalOpConversion, EndAssociateOpConversion,
-                    NoReassocOpConversion>(context);
+                    NoReassocOpConversion, SetLengthOpConversion>(context);
     mlir::ConversionTarget target(*context);
     target.addIllegalOp<hlfir::ApplyOp, hlfir::AssociateOp, hlfir::ElementalOp,
-                        hlfir::EndAssociateOp, hlfir::YieldElementOp>();
+                        hlfir::EndAssociateOp, hlfir::SetLengthOp,
+                        hlfir::YieldElementOp>();
     target.markUnknownOpDynamicallyLegal([](mlir::Operation *op) {
       return llvm::all_of(
                  op->getResultTypes(),

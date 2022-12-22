@@ -13,8 +13,8 @@ define void @fun(i32 %val) {
 ; MM6-LABEL: <fun>:
 ; MM6:         fb fd 00 14 sw $ra, 20($sp)
 entry:
-  call i32* @fun1()
+  call ptr @fun1()
   ret void
 }
 
-declare i32* @fun1()
+declare ptr @fun1()

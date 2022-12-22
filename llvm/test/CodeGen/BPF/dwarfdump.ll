@@ -13,10 +13,10 @@ target triple = "bpf"
 define i32 @testprog(i32, i32) local_unnamed_addr #0 !dbg !2 {
   tail call void @llvm.dbg.value(metadata i32 %0, i64 0, metadata !11, metadata !16), !dbg !17
   tail call void @llvm.dbg.value(metadata i32 %1, i64 0, metadata !12, metadata !16), !dbg !18
-  %3 = load i32, i32* @testprog.myvar_c, align 4, !dbg !19, !tbaa !20
+  %3 = load i32, ptr @testprog.myvar_c, align 4, !dbg !19, !tbaa !20
   %4 = add i32 %1, %0, !dbg !24
   %5 = add i32 %4, %3, !dbg !25
-  store i32 %5, i32* @testprog.myvar_c, align 4, !dbg !26, !tbaa !20
+  store i32 %5, ptr @testprog.myvar_c, align 4, !dbg !26, !tbaa !20
   ret i32 %5, !dbg !27
 }
 

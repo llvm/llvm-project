@@ -233,7 +233,7 @@ __DEVICE__
 float expm1f(float __x) { return __ocml_expm1_f32(__x); }
 
 __DEVICE__
-float fabsf(float __x) { return __ocml_fabs_f32(__x); }
+float fabsf(float __x) { return __builtin_fabsf(__x); }
 
 __DEVICE__
 float fdimf(float __x, float __y) { return __ocml_fdim_f32(__x, __y); }
@@ -792,7 +792,7 @@ __DEVICE__
 double expm1(double __x) { return __ocml_expm1_f64(__x); }
 
 __DEVICE__
-double fabs(double __x) { return __ocml_fabs_f64(__x); }
+double fabs(double __x) { return __builtin_fabs(__x); }
 
 __DEVICE__
 double fdim(double __x, double __y) { return __ocml_fdim_f64(__x, __y); }

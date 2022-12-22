@@ -39,6 +39,7 @@ add_llvm_target(SparcCodeGen
   SparcInfo
   Support
   Target
+  TargetParser
 
   ADD_TO_COMPONENT
   Sparc

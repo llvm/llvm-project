@@ -4,14 +4,14 @@
 
 ; CHECK: .globl	foo
 ; CHECK-NEXT: .p2align	2
-define i32* @foo() {
-  ret i32* @x
+define ptr @foo() {
+  ret ptr @x
 }
 
 ; CHECK: .globl	bar
 ; CHECK-NEXT: .p2align	1
-define i32* @bar() {
-  ret i32* zeroinitializer
+define ptr @bar() {
+  ret ptr zeroinitializer
 }
 
 @a = external global i32
@@ -25,7 +25,7 @@ define i32* @bar() {
 ; CHECK-NEXT: .p2align	2
 ; CHECK: tbb
 define i32 @baz() {
-  %1 = load i32, i32* @c, align 4
+  %1 = load i32, ptr @c, align 4
   switch i32 %1, label %7 [
     i32 1, label %2
     i32 4, label %5
@@ -34,13 +34,13 @@ define i32 @baz() {
   ]
 
 ; <label>:2
-  %3 = load i32, i32* @a, align 4
-  %4 = tail call i32 bitcast (i32 (...)* @fn2 to i32 (i32 (...)*, i32, i32)*)(i32 (...)* bitcast (i32 ()* @baz to i32 (...)*), i32 0, i32 %3) #2
+  %3 = load i32, ptr @a, align 4
+  %4 = tail call i32 @fn2(ptr @baz, i32 0, i32 %3) #2
   br label %8
 
 ; <label>:5
-  %6 = load i32, i32* @d, align 4
-  store i32 %6, i32* @b, align 4
+  %6 = load i32, ptr @d, align 4
+  store i32 %6, ptr @b, align 4
   br label %8
 
 ; <label>:7

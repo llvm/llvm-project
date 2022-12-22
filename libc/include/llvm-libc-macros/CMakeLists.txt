@@ -1,6 +1,18 @@
 add_subdirectory(linux)
 
 add_header(
+  generic_error_number_macros
+  HDR
+    generic-error-number-macros.h
+)
+
+add_header(
+  null_macro
+  HDR
+    null-macro.h
+)
+
+add_header(
   fcntl_macros
   HDR
     fcntl-macros.h

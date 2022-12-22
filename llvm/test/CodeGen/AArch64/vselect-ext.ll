@@ -330,7 +330,7 @@ define <16 x i32> @same_zext_used_in_cmp_ne_and_select_v8i32(<16 x i8> %a) {
 
 ; A variation of @same_zext_used_in_cmp_unsigned_pred_and_select, with with
 ; multiple users of the compare.
-define <16 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_other_use(<16 x i8> %a, <16 x i64> %v, <16 x i64>* %ptr) {
+define <16 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_other_use(<16 x i8> %a, <16 x i64> %v, ptr %ptr) {
 ; CHECK-LABEL: same_zext_used_in_cmp_unsigned_pred_and_select_other_use:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov.16b v16, v2
@@ -380,7 +380,7 @@ entry:
   %cmp = icmp ugt <16 x i8> %a, <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
   %sel = select <16 x i1> %cmp, <16 x i32> %ext, <16 x i32> zeroinitializer
   %sel.2 = select <16 x i1> %cmp, <16 x i64> %v, <16 x i64> zeroinitializer
-  store <16 x i64> %sel.2, <16 x i64>* %ptr
+  store <16 x i64> %sel.2, ptr %ptr
   ret <16 x i32> %sel
 }
 
@@ -570,7 +570,7 @@ entry:
   ret <16 x i32> %sel
 }
 
-define void @extension_in_loop_v16i8_to_v16i32(i8* %src, i32* %dst) {
+define void @extension_in_loop_v16i8_to_v16i32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: extension_in_loop_v16i8_to_v16i32:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh2:
@@ -625,15 +625,13 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <16 x i8>*
-  %load = load <16 x i8>, <16 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <16 x i8>, ptr %src.gep
   %cmp = icmp sgt <16 x i8> %load,  <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %ext = zext <16 x i8> %load to <16 x i32>
   %sel = select <16 x i1> %cmp, <16 x i32> %ext, <16 x i32> zeroinitializer
-  %dst.gep = getelementptr i32, i32* %dst, i64 %iv
-  %dst.gep.cast = bitcast i32* %dst.gep to <16 x i32>*
-  store <16 x i32> %sel, <16 x i32>* %dst.gep.cast
+  %dst.gep = getelementptr i32, ptr %dst, i64 %iv
+  store <16 x i32> %sel, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -642,7 +640,7 @@ exit:
   ret void
 }
 
-define void @extension_in_loop_as_shuffle_v16i8_to_v16i32(i8* %src, i32* %dst) {
+define void @extension_in_loop_as_shuffle_v16i8_to_v16i32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: extension_in_loop_as_shuffle_v16i8_to_v16i32:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh10:
@@ -697,16 +695,14 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <16 x i8>*
-  %load = load <16 x i8>, <16 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <16 x i8>, ptr %src.gep
   %cmp = icmp sgt <16 x i8> %load,  <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %ext.shuf = shufflevector <16 x i8> %load, <16 x i8> zeroinitializer, <64 x i32> <i32 16, i32 16, i32 16, i32 0, i32 16, i32 16, i32 16, i32 1, i32 16, i32 16, i32 16, i32 2, i32 16, i32 16, i32 16, i32 3, i32 16, i32 16, i32 16, i32 4, i32 16, i32 16, i32 16, i32 5, i32 16, i32 16, i32 16, i32 6, i32 16, i32 16, i32 16, i32 7, i32 16, i32 16, i32 16, i32 8, i32 16, i32 16, i32 16, i32 9, i32 16, i32 16, i32 16, i32 10, i32 16, i32 16, i32 16, i32 11, i32 16, i32 16, i32 16, i32 12, i32 16, i32 16, i32 16, i32 13, i32 16, i32 16, i32 16, i32 14, i32 16, i32 16, i32 16, i32 15>
   %ext = bitcast <64 x i8> %ext.shuf to <16 x i32>
   %sel = select <16 x i1> %cmp, <16 x i32> %ext, <16 x i32> zeroinitializer
-  %dst.gep = getelementptr i32, i32* %dst, i64 %iv
-  %dst.gep.cast = bitcast i32* %dst.gep to <16 x i32>*
-  store <16 x i32> %sel, <16 x i32>* %dst.gep.cast
+  %dst.gep = getelementptr i32, ptr %dst, i64 %iv
+  store <16 x i32> %sel, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop
@@ -715,7 +711,7 @@ exit:
   ret void
 }
 
-define void @shuffle_in_loop_is_no_extend_v16i8_to_v16i32(i8* %src, i32* %dst) {
+define void @shuffle_in_loop_is_no_extend_v16i8_to_v16i32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: shuffle_in_loop_is_no_extend_v16i8_to_v16i32:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh18:
@@ -770,16 +766,14 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %src.gep = getelementptr i8, i8* %src, i64 %iv
-  %src.gep.cast = bitcast i8* %src.gep to <16 x i8>*
-  %load = load <16 x i8>, <16 x i8>* %src.gep.cast
+  %src.gep = getelementptr i8, ptr %src, i64 %iv
+  %load = load <16 x i8>, ptr %src.gep
   %cmp = icmp sgt <16 x i8> %load,  <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %ext.shuf = shufflevector <16 x i8> %load, <16 x i8> zeroinitializer, <64 x i32> <i32 1, i32 16, i32 16, i32 0, i32 16, i32 16, i32 16, i32 1, i32 16, i32 16, i32 16, i32 2, i32 16, i32 16, i32 16, i32 3, i32 16, i32 16, i32 16, i32 4, i32 16, i32 16, i32 16, i32 5, i32 16, i32 16, i32 16, i32 6, i32 16, i32 16, i32 16, i32 7, i32 16, i32 16, i32 16, i32 8, i32 16, i32 16, i32 16, i32 9, i32 16, i32 16, i32 16, i32 10, i32 16, i32 16, i32 16, i32 11, i32 16, i32 16, i32 16, i32 12, i32 16, i32 16, i32 16, i32 13, i32 16, i32 16, i32 16, i32 14, i32 16, i32 16, i32 16, i32 15>
   %ext = bitcast <64 x i8> %ext.shuf to <16 x i32>
   %sel = select <16 x i1> %cmp, <16 x i32> %ext, <16 x i32> zeroinitializer
-  %dst.gep = getelementptr i32, i32* %dst, i64 %iv
-  %dst.gep.cast = bitcast i32* %dst.gep to <16 x i32>*
-  store <16 x i32> %sel, <16 x i32>* %dst.gep.cast
+  %dst.gep = getelementptr i32, ptr %dst, i64 %iv
+  store <16 x i32> %sel, ptr %dst.gep
   %iv.next = add nuw i64 %iv, 16
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %loop

@@ -26,9 +26,9 @@
 
 namespace clang::include_cleaner {
 namespace {
+using testing::AllOf;
 using testing::Contains;
 using testing::ElementsAre;
-using testing::AllOf;
 using testing::Pair;
 using testing::UnorderedElementsAre;
 
@@ -181,6 +181,7 @@ TEST(Analyze, Basic) {
   Inputs.Code = R"cpp(
 #include "a.h"
 #include "b.h"
+#include "keep.h" // IWYU pragma: keep
 
 int x = a + c;
 )cpp";
@@ -190,28 +191,32 @@ int x = a + c;
     int b;
   )cpp");
   Inputs.ExtraFiles["c.h"] = guard("int c;");
+  Inputs.ExtraFiles["keep.h"] = guard("");
 
   RecordedPP PP;
-  Inputs.MakeAction = [&PP] {
+  PragmaIncludes PI;
+  Inputs.MakeAction = [&PP, &PI] {
     struct Hook : public SyntaxOnlyAction {
     public:
-      Hook(RecordedPP &PP) : PP(PP) {}
+      Hook(RecordedPP &PP, PragmaIncludes &PI) : PP(PP), PI(PI) {}
       bool BeginSourceFileAction(clang::CompilerInstance &CI) override {
         CI.getPreprocessor().addPPCallbacks(PP.record(CI.getPreprocessor()));
+        PI.record(CI);
         return true;
       }
 
       RecordedPP &PP;
+      PragmaIncludes &PI;
     };
-    return std::make_unique<Hook>(PP);
+    return std::make_unique<Hook>(PP, PI);
   };
 
   TestAST AST(Inputs);
   auto Decls = AST.context().getTranslationUnitDecl()->decls();
   auto Results =
       analyze(std::vector<Decl *>{Decls.begin(), Decls.end()},
-              PP.MacroReferences, PP.Includes, /*PragmaIncludes=*/nullptr,
-              AST.sourceManager(), AST.preprocessor().getHeaderSearchInfo());
+              PP.MacroReferences, PP.Includes, &PI, AST.sourceManager(),
+              AST.preprocessor().getHeaderSearchInfo());
 
   const Include *B = PP.Includes.atLine(3);
   ASSERT_EQ(B->Spelled, "b.h");

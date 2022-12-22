@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64 %s
 
-define signext i16 @func(i16* %a, i16* %b) {
+define signext i16 @func(ptr %a, ptr %b) {
 ; RV32-LABEL: func:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    lh a0, 0(a0)
@@ -29,9 +29,9 @@ define signext i16 @func(i16* %a, i16* %b) {
 ; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    ret
 entry:
-  %0 = load i16, i16* %a
+  %0 = load i16, ptr %a
   %cmp = icmp sgt i16 %0, -1
-  %tobool.not = icmp eq i16* %b, null
+  %tobool.not = icmp eq ptr %b, null
   br i1 %cmp, label %.LBB0_1, label %return
 
 .LBB0_1:
