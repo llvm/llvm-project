@@ -20,3 +20,15 @@ void csrxchg_d(unsigned long int a, unsigned long int b) {
   __builtin_loongarch_csrxchg_d(a, b, -1); // expected-error {{argument value 4294967295 is outside the valid range [0, 16383]}}
   __builtin_loongarch_csrxchg_d(a, b, b); // expected-error {{argument to '__builtin_loongarch_csrxchg_d' must be a constant integer}}
 }
+
+void lddir_d(long int a, int b) {
+  __builtin_loongarch_lddir_d(a, 32); // expected-error {{argument value 32 is outside the valid range [0, 31]}}
+  __builtin_loongarch_lddir_d(a, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 31]}}
+  __builtin_loongarch_lddir_d(a, b); // expected-error {{argument to '__builtin_loongarch_lddir_d' must be a constant integer}}
+}
+
+void ldpte_d(long int a, int b) {
+  __builtin_loongarch_ldpte_d(a, 32); // expected-error {{argument value 32 is outside the valid range [0, 31]}}
+  __builtin_loongarch_ldpte_d(a, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 31]}}
+  __builtin_loongarch_ldpte_d(a, b); // expected-error {{argument to '__builtin_loongarch_ldpte_d' must be a constant integer}}
+}

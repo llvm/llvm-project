@@ -1092,6 +1092,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
   unsigned VWidth = IIVTy->getNumElements();
   if (VWidth == 1)
     return nullptr;
+  Type *EltTy = IIVTy->getElementType();
 
   IRBuilderBase::InsertPointGuard Guard(IC.Builder);
   IC.Builder.SetInsertPoint(&II);
@@ -1139,9 +1140,9 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       if (OffsetIdx != InvalidOffsetIdx) {
         // Clear demanded bits and update the offset.
         DemandedElts &= ~((1 << UnusedComponentsAtFront) - 1);
-        auto *Offset = II.getArgOperand(OffsetIdx);
+        auto *Offset = Args[OffsetIdx];
         unsigned SingleComponentSizeInBits =
-            IC.getDataLayout().getTypeSizeInBits(II.getType()->getScalarType());
+            IC.getDataLayout().getTypeSizeInBits(EltTy);
         unsigned OffsetAdd =
             UnusedComponentsAtFront * SingleComponentSizeInBits / 8;
         auto *OffsetAddVal = ConstantInt::get(Offset->getType(), OffsetAdd);
@@ -1151,7 +1152,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
   } else {
     // Image case.
 
-    ConstantInt *DMask = cast<ConstantInt>(II.getArgOperand(DMaskIdx));
+    ConstantInt *DMask = cast<ConstantInt>(Args[DMaskIdx]);
     unsigned DMaskVal = DMask->getZExtValue() & 0xf;
 
     // Mask off values that are undefined because the dmask doesn't cover them
@@ -1174,7 +1175,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
 
   unsigned NewNumElts = DemandedElts.countPopulation();
   if (!NewNumElts)
-    return UndefValue::get(II.getType());
+    return UndefValue::get(IIVTy);
 
   if (NewNumElts >= VWidth && DemandedElts.isMask()) {
     if (DMaskIdx >= 0)
@@ -1188,22 +1189,18 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
   if (!Intrinsic::getIntrinsicSignature(II.getCalledFunction(), OverloadTys))
     return nullptr;
 
-  Module *M = II.getParent()->getParent()->getParent();
-  Type *EltTy = IIVTy->getElementType();
   Type *NewTy =
       (NewNumElts == 1) ? EltTy : FixedVectorType::get(EltTy, NewNumElts);
-
   OverloadTys[0] = NewTy;
-  Function *NewIntrin =
-      Intrinsic::getDeclaration(M, II.getIntrinsicID(), OverloadTys);
 
+  Function *NewIntrin = Intrinsic::getDeclaration(
+      II.getModule(), II.getIntrinsicID(), OverloadTys);
   CallInst *NewCall = IC.Builder.CreateCall(NewIntrin, Args);
   NewCall->takeName(&II);
   NewCall->copyMetadata(II);
 
   if (NewNumElts == 1) {
-    return IC.Builder.CreateInsertElement(UndefValue::get(II.getType()),
-                                          NewCall,
+    return IC.Builder.CreateInsertElement(UndefValue::get(IIVTy), NewCall,
                                           DemandedElts.countTrailingZeros());
   }
 
