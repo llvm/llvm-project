@@ -412,6 +412,10 @@ public:
   GetNonTriviallyManagedReferenceKind(
       lldb::opaque_compiler_type_t type) override;
 
+  /// Creates a GenericTypeParamType with the desired depth and index.
+  CompilerType CreateGenericTypeParamType(unsigned int depth,
+                                               unsigned int index) override;
+
   CompilerType GetErrorType() override;
 
   bool HasErrors();

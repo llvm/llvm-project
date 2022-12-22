@@ -147,6 +147,10 @@ public:
   virtual llvm::Optional<NonTriviallyManagedReferenceKind>
   GetNonTriviallyManagedReferenceKind(lldb::opaque_compiler_type_t type) = 0;
 
+  /// Creates a GenericTypeParamType with the desired depth and index.
+  virtual CompilerType CreateGenericTypeParamType(unsigned int depth,
+                                                       unsigned int index) = 0;
+                                                       
   using TypeSystem::DumpTypeDescription;
   virtual void DumpTypeDescription(
       lldb::opaque_compiler_type_t type, bool print_help_if_available,
