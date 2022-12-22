@@ -34,6 +34,11 @@ struct cir::CGCoroData {
   // Stores the result of __builtin_coro_begin call.
   mlir::Value CoroBegin = nullptr;
 
+  // Stores the insertion point for final suspend, this happens after the
+  // promise call (return_xxx promise member) but before a cir.br to the return
+  // block.
+  mlir::Operation *FinalSuspendInsPoint;
+
   // How many co_return statements are in the coroutine. Used to decide whether
   // we need to add co_return; equivalent at the end of the user authored body.
   unsigned CoreturnCount = 0;
@@ -334,8 +339,13 @@ CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
     const bool HasCoreturns = CurCoro.Data->CoreturnCount > 0;
     if (CanFallthrough || HasCoreturns) {
       CurCoro.Data->CurrentAwaitKind = AwaitKind::Final;
-      if (buildStmt(S.getFinalSuspendStmt(), /*useCurrentScope=*/true).failed())
-        return mlir::failure();
+      {
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPoint(CurCoro.Data->FinalSuspendInsPoint);
+        if (buildStmt(S.getFinalSuspendStmt(), /*useCurrentScope=*/true)
+                .failed())
+          return mlir::failure();
+      }
     }
   }
   return mlir::success();
@@ -415,6 +425,10 @@ static LValueOrRValue buildSuspendExpression(
       },
       /*suspendBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
+        // Note that differently from LLVM codegen we do not emit coro.save
+        // and coro.suspend here, that should be done as part of lowering this
+        // to LLVM dialect (or some other MLIR dialect)
+
         // A invalid suspendRet indicates "void returning await_suspend"
         auto suspendRet = CGF.buildScalarExpr(S.getSuspendExpr());
 
@@ -500,17 +514,16 @@ mlir::LogicalResult CIRGenFunction::buildCoreturnStmt(CoreturnStmt const &S) {
   }
   if (buildStmt(S.getPromiseCall(), /*useCurrentScope=*/true).failed())
     return mlir::failure();
-  // FIXME: do the proper things like ReturnStmt does
-  // EmitBranchThroughCleanup(CurCoro.Data->FinalJD);
-
   // Create a new return block (if not existent) and add a branch to
   // it. The actual return instruction is only inserted during current
   // scope cleanup handling.
   auto loc = getLoc(S.getSourceRange());
   auto *retBlock = currLexScope->getOrCreateRetBlock(*this, loc);
-  builder.create<mlir::cir::BrOp>(loc, retBlock);
+  CurCoro.Data->FinalSuspendInsPoint =
+      builder.create<mlir::cir::BrOp>(loc, retBlock);
 
-  // Insert the new block to continue codegen after branch to ret block.
+  // Insert the new block to continue codegen after branch to ret block,
+  // this will likely be an empty block.
   builder.createBlock(builder.getBlock()->getParent());
 
   // TODO(cir): LLVM codegen for a cleanup on cleanupScope here.
