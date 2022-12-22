@@ -221,9 +221,12 @@ public:
 
   bool FixCaptures();
 
-  swift::ValueDecl *MakeGlobalTypealias(swift::Identifier name,
-                                        CompilerType &type,
-                                        bool make_private = true);
+  /// Makes a typealias binding name to type in the scope of the decl_ctx. If
+  /// decl_ctx is a nullptr this is a global typealias.
+  swift::TypeAliasDecl *MakeTypealias(swift::Identifier name,
+                                      CompilerType &type,
+                                      bool make_private = true,
+                                      swift::DeclContext *decl_ctx = nullptr);
 
   bool FixupResultAfterTypeChecking(Status &error);
 

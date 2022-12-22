@@ -1905,6 +1905,25 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::DemangleCanonicalType(
   return GetDemangledType(dem, type.GetMangledTypeName().GetStringRef());
 }
 
+CompilerType
+TypeSystemSwiftTypeRef::CreateGenericTypeParamType(unsigned int depth,
+                                                   unsigned int index) {
+  Demangler dem;
+  NodePointer type_node = dem.createNode(Node::Kind::Type);
+
+  NodePointer dep_type_node =
+      dem.createNode(Node::Kind::DependentGenericParamType);
+  type_node->addChild(dep_type_node, dem);
+
+  NodePointer depth_node = dem.createNode(Node::Kind::Index, depth);
+  NodePointer index_node = dem.createNode(Node::Kind::Index, index);
+
+  dep_type_node->addChild(depth_node, dem);
+  dep_type_node->addChild(index_node, dem);
+  auto type = RemangleAsType(dem, type_node);
+  return type;
+}
+
 bool TypeSystemSwiftTypeRef::IsArrayType(opaque_compiler_type_t type,
                                          CompilerType *element_type,
                                          uint64_t *size, bool *is_incomplete) {
