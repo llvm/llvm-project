@@ -12,6 +12,7 @@
 
 #include "MSP430TargetMachine.h"
 #include "MSP430.h"
+#include "MSP430MachineFunctionInfo.h"
 #include "TargetInfo/MSP430TargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
@@ -25,6 +26,8 @@ using namespace llvm;
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMSP430Target() {
   // Register the target.
   RegisterTargetMachine<MSP430TargetMachine> X(getTheMSP430Target());
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeMSP430DAGToDAGISelPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -70,6 +73,13 @@ public:
 
 TargetPassConfig *MSP430TargetMachine::createPassConfig(PassManagerBase &PM) {
   return new MSP430PassConfig(*this, PM);
+}
+
+MachineFunctionInfo *MSP430TargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return MSP430MachineFunctionInfo::create<MSP430MachineFunctionInfo>(Allocator,
+                                                                      F, STI);
 }
 
 bool MSP430PassConfig::addInstSelector() {

@@ -8445,6 +8445,10 @@ public:
       LargeRet = true;
       return getNaturalAlignIndirect(Ty);
     }
+    // An i8 return value should not be extended to i16, since AVR has 8-bit
+    // registers.
+    if (Ty->isIntegralOrEnumerationType() && getContext().getTypeSize(Ty) <= 8)
+      return ABIArgInfo::getDirect();
     // Otherwise we follow the default way which is compatible.
     return DefaultABIInfo::classifyReturnType(Ty);
   }

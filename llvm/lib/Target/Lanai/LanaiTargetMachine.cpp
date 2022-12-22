@@ -13,6 +13,7 @@
 #include "LanaiTargetMachine.h"
 
 #include "Lanai.h"
+#include "LanaiMachineFunctionInfo.h"
 #include "LanaiTargetObjectFile.h"
 #include "LanaiTargetTransformInfo.h"
 #include "TargetInfo/LanaiTargetInfo.h"
@@ -35,6 +36,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLanaiTarget() {
   // Register the target.
   RegisterTargetMachine<LanaiTargetMachine> registered_target(
       getTheLanaiTarget());
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeLanaiDAGToDAGISelPass(PR);
 }
 
 static std::string computeDataLayout() {
@@ -70,6 +73,13 @@ LanaiTargetMachine::LanaiTargetMachine(
 TargetTransformInfo
 LanaiTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(LanaiTTIImpl(this, F));
+}
+
+MachineFunctionInfo *LanaiTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return LanaiMachineFunctionInfo::create<LanaiMachineFunctionInfo>(Allocator,
+                                                                    F, STI);
 }
 
 namespace {

@@ -499,10 +499,10 @@ will be a failure if its execution succeeds.
 
     ; This test will be only enabled in the build with asserts.
     ; REQUIRES: asserts
-    ; This test is disabled on Linux.
-    ; UNSUPPORTED: -linux-
-    ; This test is expected to fail on PowerPC.
-    ; XFAIL: powerpc
+    ; This test is disabled when running on Linux.
+    ; UNSUPPORTED: system-linux
+    ; This test is expected to fail when targeting PowerPC.
+    ; XFAIL: target=powerpc{{.*}}
 
 ``REQUIRES`` and ``UNSUPPORTED`` and ``XFAIL`` all accept a comma-separated
 list of boolean expressions. The values in each expression may be:
@@ -513,7 +513,10 @@ list of boolean expressions. The values in each expression may be:
   expression is satisfied if any feature matches the regular expression. Regular
   expressions can appear inside an identifier, so for example ``he{{l+}}o`` would match
   ``helo``, ``hello``, ``helllo``, and so on.
-- Substrings of the target triple (``UNSUPPORTED`` and ``XFAIL`` only).
+- The default target triple, preceded by the string ``target=`` (for example,
+  ``target=x86_64-pc-windows-msvc``). Typically regular expressions are used
+  to match parts of the triple (for example, ``target={{.*}}-windows{{.*}}``
+  to match any Windows target triple).
 
 | ``REQUIRES`` enables the test if all expressions are true.
 | ``UNSUPPORTED`` disables the test if any expression is true.
@@ -523,11 +526,51 @@ As a special case, ``XFAIL: *`` is expected to fail everywhere.
 
 .. code-block:: llvm
 
-    ; This test is disabled on Windows,
-    ; and is disabled on Linux, except for Android Linux.
-    ; UNSUPPORTED: windows, linux && !android
-    ; This test is expected to fail on both PowerPC and ARM.
-    ; XFAIL: powerpc || arm
+    ; This test is disabled when running on Windows,
+    ; and is disabled when targeting Linux, except for Android Linux.
+    ; UNSUPPORTED: system-windows, target={{.*linux.*}} && !target={{.*android.*}}
+    ; This test is expected to fail when targeting PowerPC or running on Darwin.
+    ; XFAIL: target=powerpc{{.*}}, system-darwin
+
+
+Tips for writing constraints
+----------------------------
+
+**``REQUIRES`` and ``UNSUPPORTED``**
+
+These are logical inverses. In principle, ``UNSUPPORTED`` isn't absolutely
+necessary (the logical negation could be used with ``REQUIRES`` to get
+exactly the same effect), but it can make these clauses easier to read and
+understand. Generally, people use ``REQUIRES`` to state things that the test
+depends on to operate correctly, and ``UNSUPPORTED`` to exclude cases where
+the test is expected never to work.
+
+**``UNSUPPORTED`` and ``XFAIL``**
+
+Both of these indicate that the test isn't expected to work; however, they
+have different effects. ``UNSUPPORTED`` causes the test to be skipped;
+this saves execution time, but then you'll never know whether the test
+actually would start working. Conversely, ``XFAIL`` actually runs the test
+but expects a failure output, taking extra execution time but alerting you
+if/when the test begins to behave correctly (an XPASS test result). You
+need to decide which is more appropriate in each case.
+
+**Using ``target=...``**
+
+Checking the target triple can be tricky; it's easy to mis-specify. For
+example, ``target=mips{{.*}}`` will match not only mips, but also mipsel,
+mips64, and mips64el. ``target={{.*}}-linux-gnu`` will match
+x86_64-unknown-linux-gnu, but not armv8l-unknown-linux-gnueabihf.
+Prefer to use hyphens to delimit triple components (``target=mips-{{.*}}``)
+and it's generally a good idea to use a trailing wildcard to allow for
+unexpected suffixes.
+
+Also, it's generally better to write regular expressions that use entire
+triple components, than to do something clever to shorten them. For
+example, to match both freebsd and netbsd in an expression, you could write
+``target={{.*(free|net)bsd.*}}`` and that would work. However, it would
+prevent a ``grep freebsd`` from finding this test. Better to use:
+``target={{.+-freebsd.*}} || target={{.+-netbsd.*}}``
 
 
 Substitutions

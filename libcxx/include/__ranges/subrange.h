@@ -28,8 +28,8 @@
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
-#include <__tuple/tuple_element.h>
-#include <__tuple/tuple_size.h>
+#include <__tuple_dir/tuple_element.h>
+#include <__tuple_dir/tuple_size.h>
 #include <__utility/move.h>
 #include <type_traits>
 

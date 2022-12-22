@@ -1626,6 +1626,9 @@ def : InstRW<[P10W_PM_4C, P10W_DISP_ANY],
 // 4 Cycles Permute operations, 1 input operands
 def : InstRW<[P10W_PM_4C, P10W_DISP_ANY, P10PM_Read],
       (instrs
+    BRD,
+    BRH, BRH8,
+    BRW, BRW8,
     LVSL,
     LVSR,
     LXVKQ,

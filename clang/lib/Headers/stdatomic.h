@@ -20,7 +20,7 @@
  */
 #if __STDC_HOSTED__ &&                                                         \
     __has_include_next(<stdatomic.h>) &&                                       \
-    !(defined(_MSC_VER) && defined(__cplusplus) && __cplusplus < 202002L)
+    (!defined(_MSC_VER) || (defined(__cplusplus) && __cplusplus >= 202002L))
 # include_next <stdatomic.h>
 #else
 

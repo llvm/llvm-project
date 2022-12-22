@@ -11,6 +11,7 @@
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCDwarf.h"
@@ -21,6 +22,7 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Target/TargetOptions.h"
 
@@ -109,6 +111,8 @@ bool DwarfStreamer::init(Triple TheTriple,
   LineSectionSize = 0;
   FrameSectionSize = 0;
   DebugInfoSectionSize = 0;
+  MacInfoSectionSize = 0;
+  MacroSectionSize = 0;
 
   return true;
 }
@@ -804,6 +808,225 @@ void DwarfStreamer::emitFDE(uint32_t CIEOffset, uint32_t AddrSize,
   MS->emitIntValue(Address, AddrSize);
   MS->emitBytes(FDEBytes);
   FrameSectionSize += FDEBytes.size() + 8 + AddrSize;
+}
+
+void DwarfStreamer::emitMacroTables(DWARFContext *Context,
+                                    const Offset2UnitMap &UnitMacroMap,
+                                    OffsetsStringPool &StringPool) {
+  assert(Context != nullptr && "Empty DWARF context");
+
+  // Check for .debug_macinfo table.
+  if (const DWARFDebugMacro *Table = Context->getDebugMacinfo()) {
+    MS->switchSection(MC->getObjectFileInfo()->getDwarfMacinfoSection());
+    emitMacroTableImpl(Table, UnitMacroMap, StringPool, MacInfoSectionSize);
+  }
+
+  // Check for .debug_macro table.
+  if (const DWARFDebugMacro *Table = Context->getDebugMacro()) {
+    MS->switchSection(MC->getObjectFileInfo()->getDwarfMacroSection());
+    emitMacroTableImpl(Table, UnitMacroMap, StringPool, MacroSectionSize);
+  }
+}
+
+void DwarfStreamer::emitMacroTableImpl(const DWARFDebugMacro *MacroTable,
+                                       const Offset2UnitMap &UnitMacroMap,
+                                       OffsetsStringPool &StringPool,
+                                       uint64_t &OutOffset) {
+  bool DefAttributeIsReported = false;
+  bool UndefAttributeIsReported = false;
+  bool ImportAttributeIsReported = false;
+  for (const DWARFDebugMacro::MacroList &List : MacroTable->MacroLists) {
+    Offset2UnitMap::const_iterator UnitIt = UnitMacroMap.find(List.Offset);
+    if (UnitIt == UnitMacroMap.end()) {
+      warn(formatv(
+          "couldn`t find compile unit for the macro table with offset = {0:x}",
+          List.Offset));
+      continue;
+    }
+
+    // Skip macro table if the unit was not cloned.
+    DIE *OutputUnitDIE = UnitIt->second->getOutputUnitDIE();
+    if (OutputUnitDIE == nullptr)
+      continue;
+
+    // Update macro attribute of cloned compile unit with the proper offset to
+    // the macro table.
+    bool hasDWARFv5Header = false;
+    for (auto &V : OutputUnitDIE->values()) {
+      if (V.getAttribute() == dwarf::DW_AT_macro_info) {
+        V = DIEValue(V.getAttribute(), V.getForm(), DIEInteger(OutOffset));
+        break;
+      } else if (V.getAttribute() == dwarf::DW_AT_macros) {
+        hasDWARFv5Header = true;
+        V = DIEValue(V.getAttribute(), V.getForm(), DIEInteger(OutOffset));
+        break;
+      }
+    }
+
+    // Write DWARFv5 header.
+    if (hasDWARFv5Header) {
+      // Write header version.
+      MS->emitIntValue(List.Header.Version, sizeof(List.Header.Version));
+      OutOffset += sizeof(List.Header.Version);
+
+      uint8_t Flags = List.Header.Flags;
+
+      // Check for OPCODE_OPERANDS_TABLE.
+      if (Flags &
+          DWARFDebugMacro::HeaderFlagMask::MACRO_OPCODE_OPERANDS_TABLE) {
+        Flags &= ~DWARFDebugMacro::HeaderFlagMask::MACRO_OPCODE_OPERANDS_TABLE;
+        warn("opcode_operands_table is not supported yet.");
+      }
+
+      // Check for DEBUG_LINE_OFFSET.
+      std::optional<uint64_t> StmtListOffset;
+      if (Flags & DWARFDebugMacro::HeaderFlagMask::MACRO_DEBUG_LINE_OFFSET) {
+        // Get offset to the line table from the cloned compile unit.
+        for (auto &V : OutputUnitDIE->values()) {
+          if (V.getAttribute() == dwarf::DW_AT_stmt_list) {
+            StmtListOffset = V.getDIEInteger().getValue();
+            break;
+          }
+        }
+
+        if (!StmtListOffset) {
+          Flags &= ~DWARFDebugMacro::HeaderFlagMask::MACRO_DEBUG_LINE_OFFSET;
+          warn("couldn`t find line table for macro table.");
+        }
+      }
+
+      // Write flags.
+      MS->emitIntValue(Flags, sizeof(Flags));
+      OutOffset += sizeof(Flags);
+
+      // Write offset to line table.
+      if (StmtListOffset) {
+        MS->emitIntValue(*StmtListOffset, List.Header.getOffsetByteSize());
+        OutOffset += List.Header.getOffsetByteSize();
+      }
+    }
+
+    // Write macro entries.
+    for (const DWARFDebugMacro::Entry &MacroEntry : List.Macros) {
+      if (MacroEntry.Type == 0) {
+        OutOffset += MS->emitULEB128IntValue(MacroEntry.Type);
+        continue;
+      }
+
+      uint8_t MacroType = MacroEntry.Type;
+      switch (MacroType) {
+      default: {
+        bool HasVendorSpecificExtension =
+            (!hasDWARFv5Header && MacroType == dwarf::DW_MACINFO_vendor_ext) ||
+            (hasDWARFv5Header && (MacroType >= dwarf::DW_MACRO_lo_user &&
+                                  MacroType <= dwarf::DW_MACRO_hi_user));
+
+        if (HasVendorSpecificExtension) {
+          // Write macinfo type.
+          MS->emitIntValue(MacroType, 1);
+          OutOffset++;
+
+          // Write vendor extension constant.
+          OutOffset += MS->emitULEB128IntValue(MacroEntry.ExtConstant);
+
+          // Write vendor extension string.
+          StringRef String = MacroEntry.ExtStr;
+          MS->emitBytes(String);
+          MS->emitIntValue(0, 1);
+          OutOffset += String.size() + 1;
+        } else
+          warn("unknown macro type. skip.");
+      } break;
+      // debug_macro and debug_macinfo share some common encodings.
+      // DW_MACRO_define     == DW_MACINFO_define
+      // DW_MACRO_undef      == DW_MACINFO_undef
+      // DW_MACRO_start_file == DW_MACINFO_start_file
+      // DW_MACRO_end_file   == DW_MACINFO_end_file
+      // For readibility/uniformity we are using DW_MACRO_*.
+      case dwarf::DW_MACRO_define:
+      case dwarf::DW_MACRO_undef: {
+        // Write macinfo type.
+        MS->emitIntValue(MacroType, 1);
+        OutOffset++;
+
+        // Write source line.
+        OutOffset += MS->emitULEB128IntValue(MacroEntry.Line);
+
+        // Write macro string.
+        StringRef String = MacroEntry.MacroStr;
+        MS->emitBytes(String);
+        MS->emitIntValue(0, 1);
+        OutOffset += String.size() + 1;
+      } break;
+      case dwarf::DW_MACRO_define_strp:
+      case dwarf::DW_MACRO_undef_strp:
+      case dwarf::DW_MACRO_define_strx:
+      case dwarf::DW_MACRO_undef_strx: {
+        assert(UnitIt->second->getOrigUnit().getVersion() >= 5);
+
+        // DW_MACRO_*_strx forms are not supported currently.
+        // Convert to *_strp.
+        switch (MacroType) {
+        case dwarf::DW_MACRO_define_strx: {
+          MacroType = dwarf::DW_MACRO_define_strp;
+          if (!DefAttributeIsReported) {
+            warn("DW_MACRO_define_strx unsupported yet. Convert to "
+                 "DW_MACRO_define_strp.");
+            DefAttributeIsReported = true;
+          }
+        } break;
+        case dwarf::DW_MACRO_undef_strx: {
+          MacroType = dwarf::DW_MACRO_undef_strp;
+          if (!UndefAttributeIsReported) {
+            warn("DW_MACRO_undef_strx unsupported yet. Convert to "
+                 "DW_MACRO_undef_strp.");
+            UndefAttributeIsReported = true;
+          }
+        } break;
+        default:
+          // Nothing to do.
+          break;
+        }
+
+        // Write macinfo type.
+        MS->emitIntValue(MacroType, 1);
+        OutOffset++;
+
+        // Write source line.
+        OutOffset += MS->emitULEB128IntValue(MacroEntry.Line);
+
+        // Write macro string.
+        DwarfStringPoolEntryRef EntryRef =
+            StringPool.getEntry(MacroEntry.MacroStr);
+        MS->emitIntValue(EntryRef.getOffset(), List.Header.getOffsetByteSize());
+        OutOffset += List.Header.getOffsetByteSize();
+        break;
+      }
+      case dwarf::DW_MACRO_start_file: {
+        // Write macinfo type.
+        MS->emitIntValue(MacroType, 1);
+        OutOffset++;
+        // Write source line.
+        OutOffset += MS->emitULEB128IntValue(MacroEntry.Line);
+        // Write source file id.
+        OutOffset += MS->emitULEB128IntValue(MacroEntry.File);
+      } break;
+      case dwarf::DW_MACRO_end_file: {
+        // Write macinfo type.
+        MS->emitIntValue(MacroType, 1);
+        OutOffset++;
+      } break;
+      case dwarf::DW_MACRO_import:
+      case dwarf::DW_MACRO_import_sup: {
+        if (!ImportAttributeIsReported) {
+          warn("DW_MACRO_import and DW_MACRO_import_sup are unsupported yet. "
+               "remove.");
+          ImportAttributeIsReported = true;
+        }
+      } break;
+      }
+    }
+  }
 }
 
 } // namespace llvm

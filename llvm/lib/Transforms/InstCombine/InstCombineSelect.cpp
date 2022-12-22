@@ -19,6 +19,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/OverflowInstAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
@@ -1169,6 +1170,28 @@ static Instruction *canonicalizeSPF(SelectInst &Sel, ICmpInst &Cmp,
   return nullptr;
 }
 
+static bool replaceInInstruction(Value *V, Value *Old, Value *New,
+                                 InstCombiner &IC, unsigned Depth = 0) {
+  // Conservatively limit replacement to two instructions upwards.
+  if (Depth == 2)
+    return false;
+
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || !I->hasOneUse() || !isSafeToSpeculativelyExecute(I))
+    return false;
+
+  bool Changed = false;
+  for (Use &U : I->operands()) {
+    if (U == Old) {
+      IC.replaceUse(U, New);
+      Changed = true;
+    } else {
+      Changed |= replaceInInstruction(U, Old, New, IC, Depth + 1);
+    }
+  }
+  return Changed;
+}
+
 /// If we have a select with an equality comparison, then we know the value in
 /// one of the arms of the select. See if substituting this value into an arm
 /// and simplifying the result yields the same value as the other arm.
@@ -1216,17 +1239,11 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     // with different operands, which should not cause side-effects or trigger
     // undefined behavior). Only do this if CmpRHS is a constant, as
     // profitability is not clear for other cases.
-    // FIXME: The replacement could be performed recursively.
     // FIXME: Support vectors.
     if (match(CmpRHS, m_ImmConstant()) && !match(CmpLHS, m_ImmConstant()) &&
         !Cmp.getType()->isVectorTy())
-      if (auto *I = dyn_cast<Instruction>(TrueVal))
-        if (I->hasOneUse() && isSafeToSpeculativelyExecute(I))
-          for (Use &U : I->operands())
-            if (U == CmpLHS) {
-              replaceUse(U, CmpRHS);
-              return &Sel;
-            }
+      if (replaceInInstruction(TrueVal, CmpLHS, CmpRHS, *this))
+        return &Sel;
   }
   if (TrueVal != CmpRHS &&
       isGuaranteedNotToBeUndefOrPoison(CmpLHS, SQ.AC, &Sel, &DT))
@@ -2336,6 +2353,41 @@ static Instruction *foldSelectToCopysign(SelectInst &Sel,
 }
 
 Instruction *InstCombinerImpl::foldVectorSelect(SelectInst &Sel) {
+  if (!isa<VectorType>(Sel.getType()))
+    return nullptr;
+
+  Value *Cond = Sel.getCondition();
+  Value *TVal = Sel.getTrueValue();
+  Value *FVal = Sel.getFalseValue();
+  Value *C, *X, *Y;
+
+  if (match(Cond, m_VecReverse(m_Value(C)))) {
+    auto createSelReverse = [&](Value *C, Value *X, Value *Y) {
+      Value *V = Builder.CreateSelect(C, X, Y, Sel.getName(), &Sel);
+      if (auto *I = dyn_cast<Instruction>(V))
+        I->copyIRFlags(&Sel);
+      Module *M = Sel.getModule();
+      Function *F = Intrinsic::getDeclaration(
+          M, Intrinsic::experimental_vector_reverse, V->getType());
+      return CallInst::Create(F, V);
+    };
+
+    if (match(TVal, m_VecReverse(m_Value(X)))) {
+      // select rev(C), rev(X), rev(Y) --> rev(select C, X, Y)
+      if (match(FVal, m_VecReverse(m_Value(Y))) &&
+          (Cond->hasOneUse() || TVal->hasOneUse() || FVal->hasOneUse()))
+        return createSelReverse(C, X, Y);
+
+      // select rev(C), rev(X), FValSplat --> rev(select C, X, FValSplat)
+      if ((Cond->hasOneUse() || TVal->hasOneUse()) && isSplatValue(FVal))
+        return createSelReverse(C, X, FVal);
+    }
+    // select rev(C), TValSplat, rev(Y) --> rev(select C, TValSplat, Y)
+    else if (isSplatValue(TVal) && match(FVal, m_VecReverse(m_Value(Y))) &&
+             (Cond->hasOneUse() || FVal->hasOneUse()))
+      return createSelReverse(C, TVal, Y);
+  }
+
   auto *VecTy = dyn_cast<FixedVectorType>(Sel.getType());
   if (!VecTy)
     return nullptr;
@@ -2352,10 +2404,6 @@ Instruction *InstCombinerImpl::foldVectorSelect(SelectInst &Sel) {
   // A select of a "select shuffle" with a common operand can be rearranged
   // to select followed by "select shuffle". Because of poison, this only works
   // in the case of a shuffle with no undefined mask elements.
-  Value *Cond = Sel.getCondition();
-  Value *TVal = Sel.getTrueValue();
-  Value *FVal = Sel.getFalseValue();
-  Value *X, *Y;
   ArrayRef<int> Mask;
   if (match(TVal, m_OneUse(m_Shuffle(m_Value(X), m_Value(Y), m_Mask(Mask)))) &&
       !is_contained(Mask, UndefMaskElem) &&

@@ -70,7 +70,7 @@ static uint64_t getCallStackHash(const MachineBasicBlock &BB,
 bool MIRAddFSDiscriminators::runOnMachineFunction(MachineFunction &MF) {
   if (!EnableFSDiscriminator)
     return false;
-  if (!MF.getFunction().isDebugInfoForProfiling())
+  if (!MF.getFunction().shouldEmitDebugInfoForProfiling())
     return false;
 
   bool Changed = false;
