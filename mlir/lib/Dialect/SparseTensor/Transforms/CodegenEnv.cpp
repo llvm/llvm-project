@@ -37,6 +37,27 @@ void CodegenEnv::startEmit(OpOperand *so, unsigned lv,
   }
 }
 
+Optional<Operation *> CodegenEnv::genLoopBoundary(
+    function_ref<Optional<Operation *>(MutableArrayRef<Value> parameters)>
+        callback) {
+  SmallVector<Value> params;
+  if (isReduc())
+    params.push_back(redVal);
+  if (isExpand())
+    params.push_back(expCount);
+  if (insChain != nullptr)
+    params.push_back(insChain);
+  auto r = callback(params); // may update parameters
+  unsigned i = 0;
+  if (isReduc())
+    updateReduc(params[i++]);
+  if (isExpand())
+    updateExpandCount(params[i++]);
+  if (insChain != nullptr)
+    updateInsertionChain(params[i]);
+  return r;
+}
+
 //===----------------------------------------------------------------------===//
 // Code generation environment topological sort methods
 //===----------------------------------------------------------------------===//
