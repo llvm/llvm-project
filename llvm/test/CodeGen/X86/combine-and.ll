@@ -519,9 +519,8 @@ define <8 x i64> @neg_scalar_broadcast_v8i64_arg(i64 %a0, <8 x i64> %a1) {
 ;
 ; AVX512-LABEL: neg_scalar_broadcast_v8i64_arg:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    notq %rdi
 ; AVX512-NEXT:    vpbroadcastq %rdi, %zmm1
-; AVX512-NEXT:    vpandq %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vpandnq %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %1 = xor i64 %a0, -1
   %2 = insertelement <8 x i64> undef, i64 %1, i64 0
@@ -549,38 +548,35 @@ define <8 x i64> @neg_scalar_broadcast_v8i64(i64 %a0, <2 x i64> %a1) {
 ; AVX1-LABEL: neg_scalar_broadcast_v8i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX1-NEXT:    notq %rdi
-; AVX1-NEXT:    vmovq %rdi, %xmm1
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[0,1,0,1]
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm2
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,3]
-; AVX1-NEXT:    vandpd %ymm1, %ymm0, %ymm0
-; AVX1-NEXT:    vandpd %ymm1, %ymm2, %ymm1
+; AVX1-NEXT:    vmovq %rdi, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,1,0,1]
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm2, %ymm2
+; AVX1-NEXT:    vandnpd %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    vandnpd %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: neg_scalar_broadcast_v8i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX2-NEXT:    notq %rdi
-; AVX2-NEXT:    vmovq %rdi, %xmm1
-; AVX2-NEXT:    vpbroadcastq %xmm1, %ymm1
-; AVX2-NEXT:    vpermq {{.*#+}} ymm2 = ymm0[0,1,0,0]
+; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[0,1,0,0]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[1,0,1,1]
-; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpand %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vmovq %rdi, %xmm2
+; AVX2-NEXT:    vpbroadcastq %xmm2, %ymm2
+; AVX2-NEXT:    vpandn %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpandn %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: neg_scalar_broadcast_v8i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512-NEXT:    notq %rdi
 ; AVX512-NEXT:    vpbroadcastq %rdi, %zmm1
 ; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [1,0,1,1,0,1,0,0]
 ; AVX512-NEXT:    vpermq %zmm0, %zmm2, %zmm0
-; AVX512-NEXT:    vpandq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpandnq %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %1 = xor i64 %a0, -1
   %2 = insertelement <8 x i64> undef, i64 %1, i64 0
@@ -602,26 +598,23 @@ define <4 x i64> @neg_scalar_broadcast_v4i64_arg(i64 %a0, <4 x i64> %a1) {
 ;
 ; AVX1-LABEL: neg_scalar_broadcast_v4i64_arg:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    notq %rdi
 ; AVX1-NEXT:    vmovq %rdi, %xmm1
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
-; AVX1-NEXT:    vandps %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    vandnps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: neg_scalar_broadcast_v4i64_arg:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    notq %rdi
 ; AVX2-NEXT:    vmovq %rdi, %xmm1
 ; AVX2-NEXT:    vpbroadcastq %xmm1, %ymm1
-; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpandn %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: neg_scalar_broadcast_v4i64_arg:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    notq %rdi
 ; AVX512-NEXT:    vpbroadcastq %rdi, %ymm1
-; AVX512-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    vpandn %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %1 = xor i64 %a0, -1
   %2 = insertelement <4 x i64> undef, i64 %1, i64 0
@@ -645,32 +638,29 @@ define <4 x i64> @neg_scalar_broadcast_v4i64(i64 %a0, <2 x i64> %a1) {
 ; AVX1-LABEL: neg_scalar_broadcast_v4i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX1-NEXT:    notq %rdi
 ; AVX1-NEXT:    vmovq %rdi, %xmm1
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,3]
-; AVX1-NEXT:    vandpd %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    vandnpd %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: neg_scalar_broadcast_v4i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX2-NEXT:    notq %rdi
 ; AVX2-NEXT:    vmovq %rdi, %xmm1
 ; AVX2-NEXT:    vpbroadcastq %xmm1, %ymm1
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[1,0,1,1]
-; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpandn %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: neg_scalar_broadcast_v4i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX512-NEXT:    notq %rdi
 ; AVX512-NEXT:    vpbroadcastq %rdi, %ymm1
 ; AVX512-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[1,0,1,1]
-; AVX512-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpandn %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %1 = xor i64 %a0, -1
   %2 = insertelement <4 x i64> undef, i64 %1, i64 0
@@ -683,33 +673,30 @@ define <4 x i64> @neg_scalar_broadcast_v4i64(i64 %a0, <2 x i64> %a1) {
 define <2 x i64> @neg_scalar_broadcast_v2i64(i64 %a0, <2 x i64> %a1) {
 ; SSE-LABEL: neg_scalar_broadcast_v2i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    notq %rdi
 ; SSE-NEXT:    movq %rdi, %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
-; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    pandn %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: neg_scalar_broadcast_v2i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    notq %rdi
 ; AVX1-NEXT:    vmovq %rdi, %xmm1
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
-; AVX1-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: neg_scalar_broadcast_v2i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    notq %rdi
 ; AVX2-NEXT:    vmovq %rdi, %xmm1
 ; AVX2-NEXT:    vpbroadcastq %xmm1, %xmm1
-; AVX2-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: neg_scalar_broadcast_v2i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    notq %rdi
 ; AVX512-NEXT:    vpbroadcastq %rdi, %xmm1
-; AVX512-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %1 = xor i64 %a0, -1
   %2 = insertelement <2 x i64> undef, i64 %1, i64 0
@@ -762,26 +749,23 @@ define <8 x i32> @neg_scalar_broadcast_v8i32(i32 %a0, <8 x i32> %a1) {
 ;
 ; AVX1-LABEL: neg_scalar_broadcast_v8i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    notl %edi
 ; AVX1-NEXT:    vmovd %edi, %xmm1
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
-; AVX1-NEXT:    vandps %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    vandnps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: neg_scalar_broadcast_v8i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    notl %edi
 ; AVX2-NEXT:    vmovd %edi, %xmm1
 ; AVX2-NEXT:    vpbroadcastd %xmm1, %ymm1
-; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpandn %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: neg_scalar_broadcast_v8i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    notl %edi
 ; AVX512-NEXT:    vpbroadcastd %edi, %ymm1
-; AVX512-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    vpandn %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %1 = xor i32 %a0, -1
   %2 = insertelement <8 x i32> undef, i32 %1, i64 0
@@ -793,35 +777,32 @@ define <8 x i32> @neg_scalar_broadcast_v8i32(i32 %a0, <8 x i32> %a1) {
 define <8 x i16> @neg_scalar_broadcast_v8i16(i16 %a0, <8 x i16> %a1) {
 ; SSE-LABEL: neg_scalar_broadcast_v8i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    notl %edi
 ; SSE-NEXT:    movd %edi, %xmm1
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,0,0,0,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    pandn %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: neg_scalar_broadcast_v8i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    notl %edi
 ; AVX1-NEXT:    vmovd %edi, %xmm1
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[0,0,0,0,4,5,6,7]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; AVX1-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: neg_scalar_broadcast_v8i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    notl %edi
 ; AVX2-NEXT:    vmovd %edi, %xmm1
 ; AVX2-NEXT:    vpbroadcastw %xmm1, %xmm1
-; AVX2-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: neg_scalar_broadcast_v8i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    notl %edi
 ; AVX512-NEXT:    vpbroadcastw %edi, %xmm1
-; AVX512-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %1 = xor i16 %a0, -1
   %2 = insertelement <8 x i16> undef, i16 %1, i64 0
@@ -833,36 +814,32 @@ define <8 x i16> @neg_scalar_broadcast_v8i16(i16 %a0, <8 x i16> %a1) {
 define <16 x i8> @neg_scalar_broadcast_v16i8(i8 %a0, <16 x i8> %a1) {
 ; SSE-LABEL: neg_scalar_broadcast_v16i8:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    notb %dil
-; SSE-NEXT:    movzbl %dil, %eax
-; SSE-NEXT:    movd %eax, %xmm1
+; SSE-NEXT:    movd %edi, %xmm1
 ; SSE-NEXT:    pxor %xmm2, %xmm2
 ; SSE-NEXT:    pshufb %xmm2, %xmm1
-; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    pandn %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: neg_scalar_broadcast_v16i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    notb %dil
 ; AVX1-NEXT:    vmovd %edi, %xmm1
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: neg_scalar_broadcast_v16i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    notb %dil
 ; AVX2-NEXT:    vmovd %edi, %xmm1
 ; AVX2-NEXT:    vpbroadcastb %xmm1, %xmm1
-; AVX2-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: neg_scalar_broadcast_v16i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    notb %dil
 ; AVX512-NEXT:    vpbroadcastb %edi, %xmm1
-; AVX512-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %1 = xor i8 %a0, -1
   %2 = insertelement <16 x i8> undef, i8 %1, i64 0
@@ -907,9 +884,8 @@ define <64 x i8> @neg_scalar_broadcast_v64i8(i8 %a0, <64 x i8> %a1) {
 ;
 ; AVX512-LABEL: neg_scalar_broadcast_v64i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    notb %dil
 ; AVX512-NEXT:    vpbroadcastb %edi, %zmm1
-; AVX512-NEXT:    vpandq %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vpandnq %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %1 = xor i8 %a0, -1
   %2 = insertelement <64 x i8> undef, i8 %1, i64 0
@@ -954,9 +930,8 @@ define <8 x i64> @neg_scalar_broadcast_v64i8_v8i64(i8 %a0, <8 x i64> %a1) {
 ;
 ; AVX512-LABEL: neg_scalar_broadcast_v64i8_v8i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    notb %dil
 ; AVX512-NEXT:    vpbroadcastb %edi, %zmm1
-; AVX512-NEXT:    vpandq %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vpandnq %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %1 = xor i8 %a0, -1
   %2 = insertelement <64 x i8> undef, i8 %1, i64 0
@@ -980,27 +955,24 @@ define <4 x i64> @neg_scalar_broadcast_v32i8_v4i64(i8 %a0, <4 x i64> %a1) {
 ;
 ; AVX1-LABEL: neg_scalar_broadcast_v32i8_v4i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    notb %dil
 ; AVX1-NEXT:    vmovd %edi, %xmm1
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
-; AVX1-NEXT:    vandps %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    vandnps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: neg_scalar_broadcast_v32i8_v4i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    notb %dil
 ; AVX2-NEXT:    vmovd %edi, %xmm1
 ; AVX2-NEXT:    vpbroadcastb %xmm1, %ymm1
-; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpandn %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: neg_scalar_broadcast_v32i8_v4i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    notb %dil
 ; AVX512-NEXT:    vpbroadcastb %edi, %ymm1
-; AVX512-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    vpandn %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %1 = xor i8 %a0, -1
   %2 = insertelement <32 x i8> undef, i8 %1, i64 0
@@ -1013,36 +985,32 @@ define <4 x i64> @neg_scalar_broadcast_v32i8_v4i64(i8 %a0, <4 x i64> %a1) {
 define <2 x i64> @neg_scalar_broadcast_v16i8_v2i64(i8 %a0, <2 x i64> %a1) {
 ; SSE-LABEL: neg_scalar_broadcast_v16i8_v2i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    notb %dil
-; SSE-NEXT:    movzbl %dil, %eax
-; SSE-NEXT:    movd %eax, %xmm1
+; SSE-NEXT:    movd %edi, %xmm1
 ; SSE-NEXT:    pxor %xmm2, %xmm2
 ; SSE-NEXT:    pshufb %xmm2, %xmm1
-; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    pandn %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: neg_scalar_broadcast_v16i8_v2i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    notb %dil
 ; AVX1-NEXT:    vmovd %edi, %xmm1
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: neg_scalar_broadcast_v16i8_v2i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    notb %dil
 ; AVX2-NEXT:    vmovd %edi, %xmm1
 ; AVX2-NEXT:    vpbroadcastb %xmm1, %xmm1
-; AVX2-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: neg_scalar_broadcast_v16i8_v2i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    notb %dil
 ; AVX512-NEXT:    vpbroadcastb %edi, %xmm1
-; AVX512-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %1 = xor i8 %a0, -1
   %2 = insertelement <16 x i8> undef, i8 %1, i64 0
@@ -1064,26 +1032,23 @@ define <4 x i64> @neg_scalar_broadcast_v8i32_v4i64(i32 %a0, <4 x i64> %a1) {
 ;
 ; AVX1-LABEL: neg_scalar_broadcast_v8i32_v4i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    notl %edi
 ; AVX1-NEXT:    vmovd %edi, %xmm1
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
-; AVX1-NEXT:    vandps %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    vandnps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: neg_scalar_broadcast_v8i32_v4i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    notl %edi
 ; AVX2-NEXT:    vmovd %edi, %xmm1
 ; AVX2-NEXT:    vpbroadcastd %xmm1, %ymm1
-; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpandn %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: neg_scalar_broadcast_v8i32_v4i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    notl %edi
 ; AVX512-NEXT:    vpbroadcastd %edi, %ymm1
-; AVX512-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    vpandn %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %1 = xor i32 %a0, -1
   %2 = insertelement <8 x i32> undef, i32 %1, i64 0
