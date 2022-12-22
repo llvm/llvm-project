@@ -14,6 +14,10 @@ declare i64 @llvm.loongarch.csrwr.d(i64, i32 immarg)
 declare i64 @llvm.loongarch.csrxchg.d(i64, i64, i32 immarg)
 declare i64 @llvm.loongarch.iocsrrd.d(i32)
 declare void @llvm.loongarch.iocsrwr.d(i64, i32)
+declare void @llvm.loongarch.asrtle.d(i64, i64)
+declare void @llvm.loongarch.asrtgt.d(i64, i64)
+declare i64 @llvm.loongarch.lddir.d(i64, i64)
+declare void @llvm.loongarch.ldpte.d(i64, i64)
 
 define i32 @crc_w_b_w(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: crc_w_b_w:
@@ -134,5 +138,45 @@ define void @iocsrwr_d(i64 %a, i32 signext %b) {
 ; CHECK-NEXT:    ret
 entry:
   tail call void @llvm.loongarch.iocsrwr.d(i64 %a, i32 %b)
+  ret void
+}
+
+define void @asrtle_d(i64 %a, i64 %b) {
+; CHECK-LABEL: asrtle_d:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    asrtle.d $a0, $a1
+; CHECK-NEXT:    ret
+entry:
+  tail call void @llvm.loongarch.asrtle.d(i64 %a, i64 %b)
+  ret void
+}
+
+define void @asrtgt_d(i64 %a, i64 %b) {
+; CHECK-LABEL: asrtgt_d:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    asrtgt.d $a0, $a1
+; CHECK-NEXT:    ret
+entry:
+  tail call void @llvm.loongarch.asrtgt.d(i64 %a, i64 %b)
+  ret void
+}
+
+define i64 @lddir_d(i64 %a) {
+; CHECK-LABEL: lddir_d:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lddir $a0, $a0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.loongarch.lddir.d(i64 %a, i64 1)
+  ret i64 %0
+}
+
+define void @ldpte_d(i64 %a) {
+; CHECK-LABEL: ldpte_d:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ldpte $a0, 1
+; CHECK-NEXT:    ret
+entry:
+  tail call void @llvm.loongarch.ldpte.d(i64 %a, i64 1)
   ret void
 }
