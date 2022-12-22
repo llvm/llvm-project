@@ -581,3 +581,123 @@ define signext i32 @zext_abs16(i16 signext %x) {
   %b = zext i16 %a to i32
   ret i32 %b
 }
+
+define i64 @zext64_abs8(i8 signext %x) {
+; RV32I-LABEL: zext64_abs8:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srai a1, a0, 7
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    sub a0, a0, a1
+; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: zext64_abs8:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    neg a1, a0
+; RV32ZBB-NEXT:    max a0, a0, a1
+; RV32ZBB-NEXT:    andi a0, a0, 255
+; RV32ZBB-NEXT:    li a1, 0
+; RV32ZBB-NEXT:    ret
+;
+; RV64I-LABEL: zext64_abs8:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srai a1, a0, 7
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    andi a0, a0, 255
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: zext64_abs8:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    neg a1, a0
+; RV64ZBB-NEXT:    max a0, a0, a1
+; RV64ZBB-NEXT:    andi a0, a0, 255
+; RV64ZBB-NEXT:    ret
+  %a = call i8 @llvm.abs.i8(i8 %x, i1 false)
+  %b = zext i8 %a to i64
+  ret i64 %b
+}
+
+define i64 @zext64_abs16(i16 signext %x) {
+; RV32I-LABEL: zext64_abs16:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srai a1, a0, 15
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    sub a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: zext64_abs16:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    neg a1, a0
+; RV32ZBB-NEXT:    max a0, a0, a1
+; RV32ZBB-NEXT:    zext.h a0, a0
+; RV32ZBB-NEXT:    li a1, 0
+; RV32ZBB-NEXT:    ret
+;
+; RV64I-LABEL: zext64_abs16:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srai a1, a0, 15
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: zext64_abs16:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    neg a1, a0
+; RV64ZBB-NEXT:    max a0, a0, a1
+; RV64ZBB-NEXT:    zext.h a0, a0
+; RV64ZBB-NEXT:    ret
+  %a = call i16 @llvm.abs.i16(i16 %x, i1 false)
+  %b = zext i16 %a to i64
+  ret i64 %b
+}
+
+define void @zext16_abs8(i8 %x, ptr %p) {
+; RV32I-LABEL: zext16_abs8:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a2, a0, 24
+; RV32I-NEXT:    srai a2, a2, 31
+; RV32I-NEXT:    xor a0, a0, a2
+; RV32I-NEXT:    sub a0, a0, a2
+; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    sh a0, 0(a1)
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: zext16_abs8:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    sext.b a0, a0
+; RV32ZBB-NEXT:    neg a2, a0
+; RV32ZBB-NEXT:    max a0, a0, a2
+; RV32ZBB-NEXT:    andi a0, a0, 255
+; RV32ZBB-NEXT:    sh a0, 0(a1)
+; RV32ZBB-NEXT:    ret
+;
+; RV64I-LABEL: zext16_abs8:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a2, a0, 56
+; RV64I-NEXT:    srai a2, a2, 63
+; RV64I-NEXT:    xor a0, a0, a2
+; RV64I-NEXT:    subw a0, a0, a2
+; RV64I-NEXT:    andi a0, a0, 255
+; RV64I-NEXT:    sh a0, 0(a1)
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: zext16_abs8:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    sext.b a0, a0
+; RV64ZBB-NEXT:    neg a2, a0
+; RV64ZBB-NEXT:    max a0, a0, a2
+; RV64ZBB-NEXT:    andi a0, a0, 255
+; RV64ZBB-NEXT:    sh a0, 0(a1)
+; RV64ZBB-NEXT:    ret
+  %a = call i8 @llvm.abs.i8(i8 %x, i1 false)
+  %b = zext i8 %a to i16
+  store i16 %b, ptr %p
+  ret void
+}
