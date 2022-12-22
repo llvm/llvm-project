@@ -2335,7 +2335,8 @@ TemplateInstantiator::TransformNestedRequirement(
     llvm::SmallVector<Expr *> Result;
     if (!SemaRef.CheckConstraintSatisfaction(
             nullptr, {Req->getConstraintExpr()}, Result, TemplateArgs,
-            Req->getConstraintExpr()->getSourceRange(), Satisfaction))
+            Req->getConstraintExpr()->getSourceRange(), Satisfaction) &&
+        !Result.empty())
       TransConstraint = Result[0];
     assert(!Trap.hasErrorOccurred() && "Substitution failures must be handled "
                                        "by CheckConstraintSatisfaction.");
