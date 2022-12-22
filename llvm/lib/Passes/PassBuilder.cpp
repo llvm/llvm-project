@@ -835,6 +835,23 @@ Expected<GVNOptions> parseGVNOptions(StringRef Params) {
   return Result;
 }
 
+Expected<IPSCCPOptions> parseIPSCCPOptions(StringRef Params) {
+  IPSCCPOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "func-spec")
+      Result.setFuncSpec(Enable);
+    else
+      return make_error<StringError>(
+          formatv("invalid IPSCCP pass parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+  }
+  return Result;
+}
+
 Expected<SROAOptions> parseSROAOptions(StringRef Params) {
   if (Params.empty() || Params == "modify-cfg")
     return SROAOptions::ModifyCFG;
