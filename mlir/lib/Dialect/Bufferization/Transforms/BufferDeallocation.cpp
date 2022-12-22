@@ -628,11 +628,12 @@ private:
 struct DefaultAllocationInterface
     : public bufferization::AllocationOpInterface::ExternalModel<
           DefaultAllocationInterface, memref::AllocOp> {
-  static Optional<Operation *> buildDealloc(OpBuilder &builder, Value alloc) {
+  static std::optional<Operation *> buildDealloc(OpBuilder &builder,
+                                                 Value alloc) {
     return builder.create<memref::DeallocOp>(alloc.getLoc(), alloc)
         .getOperation();
   }
-  static Optional<Value> buildClone(OpBuilder &builder, Value alloc) {
+  static std::optional<Value> buildClone(OpBuilder &builder, Value alloc) {
     return builder.create<bufferization::CloneOp>(alloc.getLoc(), alloc)
         .getResult();
   }

@@ -88,8 +88,8 @@ define amdgpu_ps void @load_1d_f16_tfe_dmask0(<8 x i32> inreg %rsrc, i32 %s) {
   %v = call { half, i32 } @llvm.amdgcn.image.load.1d.sl_f16i32s.i32(i32 0, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
   %v.data = extractvalue { half, i32 } %v, 0
   %v.err = extractvalue { half, i32 } %v, 1
-  store volatile half %v.data, half addrspace(1)* undef
-  store volatile i32 %v.err, i32 addrspace(1)* undef
+  store volatile half %v.data, ptr addrspace(1) undef
+  store volatile i32 %v.err, ptr addrspace(1) undef
   ret void
 }
 
@@ -177,8 +177,8 @@ define amdgpu_ps void @load_1d_f16_tfe_dmask1(<8 x i32> inreg %rsrc, i32 %s) {
   %v = call { half, i32 } @llvm.amdgcn.image.load.1d.sl_f16i32s.i32(i32 1, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
   %v.data = extractvalue { half, i32 } %v, 0
   %v.err = extractvalue { half, i32 } %v, 1
-  store volatile half %v.data, half addrspace(1)* undef
-  store volatile i32 %v.err, i32 addrspace(1)* undef
+  store volatile half %v.data, ptr addrspace(1) undef
+  store volatile i32 %v.err, ptr addrspace(1) undef
   ret void
 }
 
@@ -266,8 +266,8 @@ define amdgpu_ps void @load_1d_v2f16_tfe_dmask0(<8 x i32> inreg %rsrc, i32 %s) {
   %v = call { <2 x half>, i32 } @llvm.amdgcn.image.load.1d.sl_v2f16i32s.i32(i32 0, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
   %v.data = extractvalue { <2 x half>, i32 } %v, 0
   %v.err = extractvalue { <2 x half>, i32 } %v, 1
-  store volatile <2 x half> %v.data, <2 x half> addrspace(1)* undef
-  store volatile i32 %v.err, i32 addrspace(1)* undef
+  store volatile <2 x half> %v.data, ptr addrspace(1) undef
+  store volatile i32 %v.err, ptr addrspace(1) undef
   ret void
 }
 
@@ -355,8 +355,8 @@ define amdgpu_ps void @load_1d_v2f16_tfe_dmask1(<8 x i32> inreg %rsrc, i32 %s) {
   %v = call { <2 x half>, i32 } @llvm.amdgcn.image.load.1d.sl_v2f16i32s.i32(i32 1, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
   %v.data = extractvalue { <2 x half>, i32 } %v, 0
   %v.err = extractvalue { <2 x half>, i32 } %v, 1
-  store volatile <2 x half> %v.data, <2 x half> addrspace(1)* undef
-  store volatile i32 %v.err, i32 addrspace(1)* undef
+  store volatile <2 x half> %v.data, ptr addrspace(1) undef
+  store volatile i32 %v.err, ptr addrspace(1) undef
   ret void
 }
 
@@ -447,8 +447,8 @@ define amdgpu_ps void @load_1d_v2f16_tfe_dmask3(<8 x i32> inreg %rsrc, i32 %s) {
   %v = call { <2 x half>, i32 } @llvm.amdgcn.image.load.1d.sl_v2f16i32s.i32(i32 3, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
   %v.data = extractvalue { <2 x half>, i32 } %v, 0
   %v.err = extractvalue { <2 x half>, i32 } %v, 1
-  store volatile <2 x half> %v.data, <2 x half> addrspace(1)* undef
-  store volatile i32 %v.err, i32 addrspace(1)* undef
+  store volatile <2 x half> %v.data, ptr addrspace(1) undef
+  store volatile i32 %v.err, ptr addrspace(1) undef
   ret void
 }
 
@@ -551,8 +551,8 @@ define amdgpu_ps void @load_1d_v3f16_tfe_dmask7(<8 x i32> inreg %rsrc, i32 %s) {
   %v = call { <3 x half>, i32 } @llvm.amdgcn.image.load.1d.sl_v3f16i32s.i32(i32 7, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
   %v.data = extractvalue { <3 x half>, i32 } %v, 0
   %v.err = extractvalue { <3 x half>, i32 } %v, 1
-  store volatile <3 x half> %v.data, <3 x half> addrspace(1)* undef
-  store volatile i32 %v.err, i32 addrspace(1)* undef
+  store volatile <3 x half> %v.data, ptr addrspace(1) undef
+  store volatile i32 %v.err, ptr addrspace(1) undef
   ret void
 }
 
@@ -650,8 +650,8 @@ define amdgpu_ps void @load_1d_v4f16_tfe_dmask15(<8 x i32> inreg %rsrc, i32 %s) 
   %v = call { <4 x half>, i32 } @llvm.amdgcn.image.load.1d.sl_v4f16i32s.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
   %v.data = extractvalue { <4 x half>, i32 } %v, 0
   %v.err = extractvalue { <4 x half>, i32 } %v, 1
-  store volatile <4 x half> %v.data, <4 x half> addrspace(1)* undef
-  store volatile i32 %v.err, i32 addrspace(1)* undef
+  store volatile <4 x half> %v.data, ptr addrspace(1) undef
+  store volatile i32 %v.err, ptr addrspace(1) undef
   ret void
 }
 

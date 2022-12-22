@@ -1572,9 +1572,7 @@ void PPCLinuxAsmPrinter::emitStartOfAsmFile(Module &M) {
   if (static_cast<const PPCTargetMachine &>(TM).isELFv2ABI()) {
     PPCTargetStreamer *TS =
       static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
-
-    if (TS)
-      TS->emitAbiVersion(2);
+    TS->emitAbiVersion(2);
   }
 
   if (static_cast<const PPCTargetMachine &>(TM).isPPC64() ||
@@ -1700,7 +1698,7 @@ void PPCLinuxAsmPrinter::emitEndOfAsmFile(Module &M) {
       MCSymbol *const TOCEntryLabel = TOCMapPair.second;
 
       OutStreamer->emitLabel(TOCEntryLabel);
-      if (isPPC64 && TS != nullptr)
+      if (isPPC64)
         TS->emitTCEntry(*TOCEntryTarget, TOCMapPair.first.second);
       else
         OutStreamer->emitSymbolValue(TOCEntryTarget, 4);
@@ -1806,9 +1804,7 @@ void PPCLinuxAsmPrinter::emitFunctionBodyStart() {
 
     PPCTargetStreamer *TS =
       static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
-
-    if (TS)
-      TS->emitLocalEntry(cast<MCSymbolELF>(CurrentFnSym), LocalOffsetExp);
+    TS->emitLocalEntry(cast<MCSymbolELF>(CurrentFnSym), LocalOffsetExp);
   } else if (Subtarget->isUsingPCRelativeCalls()) {
     // When generating the entry point for a function we have a few scenarios
     // based on whether or not that function uses R2 and whether or not that
@@ -1835,9 +1831,8 @@ void PPCLinuxAsmPrinter::emitFunctionBodyStart() {
         MF->hasInlineAsm() || (!PPCFI->usesTOCBasePtr() && UsesX2OrR2)) {
       PPCTargetStreamer *TS =
           static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
-      if (TS)
-        TS->emitLocalEntry(cast<MCSymbolELF>(CurrentFnSym),
-                           MCConstantExpr::create(1, OutContext));
+      TS->emitLocalEntry(cast<MCSymbolELF>(CurrentFnSym),
+                         MCConstantExpr::create(1, OutContext));
     }
   }
 }
@@ -2568,8 +2563,7 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
     OutStreamer->switchSection(TCEntry);
 
     OutStreamer->emitLabel(I.second);
-    if (TS != nullptr)
-      TS->emitTCEntry(*I.first.first, I.first.second);
+    TS->emitTCEntry(*I.first.first, I.first.second);
   }
 
   for (const auto *GV : TOCDataGlobalVars)

@@ -3,7 +3,7 @@
 
 ; Check that <24 x i32> is treated as an HVX vector type.
 
-define <24 x i32> @f0(<24 x i32>* %a0, <24 x i32> %a1, <24 x i32> %a2) #0 {
+define <24 x i32> @f0(ptr %a0, <24 x i32> %a1, <24 x i32> %a2) #0 {
 ; CHECK-LABEL: f0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    {
@@ -11,11 +11,11 @@ define <24 x i32> @f0(<24 x i32>* %a0, <24 x i32> %a1, <24 x i32> %a2) #0 {
 ; CHECK-NEXT:     v0 = vmemu(r0+#0)
 ; CHECK-NEXT:    }
   %v1 = icmp ne <24 x i32> %a1, zeroinitializer
-  %v2 = call <24 x i32> @llvm.masked.load.v24i1.p0v24i1(<24 x i32>* %a0, i32 4, <24 x i1> %v1, <24 x i32> undef)
+  %v2 = call <24 x i32> @llvm.masked.load.v24i1.p0(ptr %a0, i32 4, <24 x i1> %v1, <24 x i32> undef)
   ret <24 x i32> %v2
 }
 
-declare <24 x i32> @llvm.masked.load.v24i1.p0v24i1(<24 x i32>*, i32, <24 x i1>, <24 x i32>)
+declare <24 x i32> @llvm.masked.load.v24i1.p0(ptr, i32, <24 x i1>, <24 x i32>)
 
 attributes #0 = { nounwind readnone "target-cpu"="hexagonv62" "target-features"="+hvx,+hvx-length128b" }
 

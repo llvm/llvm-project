@@ -21,6 +21,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
+#include "llvm/Support/ModRef.h"
 
 using namespace llvm;
 
@@ -49,19 +50,20 @@ bool SPIRVCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
 
 // Based on the LLVM function attributes, get a SPIR-V FunctionControl.
 static uint32_t getFunctionControl(const Function &F) {
+  MemoryEffects MemEffects = F.getMemoryEffects();
+
   uint32_t FuncControl = static_cast<uint32_t>(SPIRV::FunctionControl::None);
-  if (F.hasFnAttribute(Attribute::AttrKind::AlwaysInline)) {
-    FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Inline);
-  }
-  if (F.hasFnAttribute(Attribute::AttrKind::ReadNone)) {
-    FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Pure);
-  }
-  if (F.hasFnAttribute(Attribute::AttrKind::ReadOnly)) {
-    FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Const);
-  }
-  if (F.hasFnAttribute(Attribute::AttrKind::NoInline)) {
+
+  if (F.hasFnAttribute(Attribute::AttrKind::NoInline))
     FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::DontInline);
-  }
+  else if (F.hasFnAttribute(Attribute::AttrKind::AlwaysInline))
+    FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Inline);
+
+  if (MemEffects.doesNotAccessMemory())
+    FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Pure);
+  else if (MemEffects.onlyReadsMemory())
+    FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Const);
+
   return FuncControl;
 }
 

@@ -16,6 +16,7 @@ set(LLVM_LINK_COMPONENTS
   SelectionDAG
   Support
   Target
+  TargetParser
   TransformUtils
   Vectorize
   )

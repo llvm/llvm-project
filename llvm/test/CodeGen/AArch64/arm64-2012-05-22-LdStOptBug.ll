@@ -11,27 +11,22 @@
 
 @"OBJC_IVAR_$_UIScreen._bounds" = external hidden global i64, section "__DATA, __objc_ivar", align 8
 
-define hidden %struct.CGRect @t(%0* nocapture %self, i8* nocapture %_cmd) nounwind readonly optsize ssp {
+define hidden %struct.CGRect @t(ptr nocapture %self, ptr nocapture %_cmd) nounwind readonly optsize ssp {
 entry:
 ; CHECK-LABEL: t:
 ; CHECK: ldp d{{[0-9]+}}, d{{[0-9]+}}
-  %ivar = load i64, i64* @"OBJC_IVAR_$_UIScreen._bounds", align 8, !invariant.load !4
-  %0 = bitcast %0* %self to i8*
-  %add.ptr = getelementptr inbounds i8, i8* %0, i64 %ivar
-  %add.ptr10.0 = bitcast i8* %add.ptr to double*
-  %tmp11 = load double, double* %add.ptr10.0, align 8
+  %ivar = load i64, ptr @"OBJC_IVAR_$_UIScreen._bounds", align 8, !invariant.load !4
+  %add.ptr = getelementptr inbounds i8, ptr %self, i64 %ivar
+  %tmp11 = load double, ptr %add.ptr, align 8
   %add.ptr.sum = add i64 %ivar, 8
-  %add.ptr10.1 = getelementptr inbounds i8, i8* %0, i64 %add.ptr.sum
-  %1 = bitcast i8* %add.ptr10.1 to double*
-  %tmp12 = load double, double* %1, align 8
+  %add.ptr10.1 = getelementptr inbounds i8, ptr %self, i64 %add.ptr.sum
+  %tmp12 = load double, ptr %add.ptr10.1, align 8
   %add.ptr.sum17 = add i64 %ivar, 16
-  %add.ptr4.1 = getelementptr inbounds i8, i8* %0, i64 %add.ptr.sum17
-  %add.ptr4.1.0 = bitcast i8* %add.ptr4.1 to double*
-  %tmp = load double, double* %add.ptr4.1.0, align 8
+  %add.ptr4.1 = getelementptr inbounds i8, ptr %self, i64 %add.ptr.sum17
+  %tmp = load double, ptr %add.ptr4.1, align 8
   %add.ptr4.1.sum = add i64 %ivar, 24
-  %add.ptr4.1.1 = getelementptr inbounds i8, i8* %0, i64 %add.ptr4.1.sum
-  %2 = bitcast i8* %add.ptr4.1.1 to double*
-  %tmp5 = load double, double* %2, align 8
+  %add.ptr4.1.1 = getelementptr inbounds i8, ptr %self, i64 %add.ptr4.1.sum
+  %tmp5 = load double, ptr %add.ptr4.1.1, align 8
   %insert14 = insertvalue %struct.CGPoint undef, double %tmp11, 0
   %insert16 = insertvalue %struct.CGPoint %insert14, double %tmp12, 1
   %insert = insertvalue %struct.CGRect undef, %struct.CGPoint %insert16, 0

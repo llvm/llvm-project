@@ -580,7 +580,7 @@ void Preprocessor::EnterMainSourceFile() {
   if (!PPOpts->PCHThroughHeader.empty()) {
     // Lookup and save the FileID for the through header. If it isn't found
     // in the search path, it's a fatal error.
-    Optional<FileEntryRef> File = LookupFile(
+    OptionalFileEntryRef File = LookupFile(
         SourceLocation(), PPOpts->PCHThroughHeader,
         /*isAngled=*/false, /*FromDir=*/nullptr, /*FromFile=*/nullptr,
         /*CurDir=*/nullptr, /*SearchPath=*/nullptr, /*RelativePath=*/nullptr,

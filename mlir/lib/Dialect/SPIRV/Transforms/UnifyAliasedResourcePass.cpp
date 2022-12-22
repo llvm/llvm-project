@@ -84,7 +84,8 @@ static Type getRuntimeArrayElementType(Type type) {
 /// Given a list of resource element `types`, returns the index of the canonical
 /// resource that all resources should be unified into. Returns std::nullopt if
 /// unable to unify.
-static Optional<int> deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
+static std::optional<int>
+deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
   // scalarNumBits: contains all resources' scalar types' bit counts.
   // vectorNumBits: only contains resources whose element types are vectors.
   // vectorIndices: each vector's original index in `types`.
@@ -101,7 +102,7 @@ static Optional<int> deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
         return std::nullopt; // Odd-sized vector has special layout
                              // requirements.
 
-      Optional<int64_t> numBytes = type.getSizeInBytes();
+      std::optional<int64_t> numBytes = type.getSizeInBytes();
       if (!numBytes)
         return std::nullopt;
 
@@ -280,7 +281,7 @@ void ResourceAliasAnalysis::recordIfUnifiable(
     elementTypes.push_back(type);
   }
 
-  Optional<int> index = deduceCanonicalResource(elementTypes);
+  std::optional<int> index = deduceCanonicalResource(elementTypes);
   if (!index)
     return;
 

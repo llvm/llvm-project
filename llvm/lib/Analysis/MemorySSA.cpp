@@ -719,7 +719,7 @@ class ClobberWalker {
     T &curNode() const { return W->Paths[*N]; }
 
     Walker *W = nullptr;
-    std::optional<ListIndex> N = std::nullopt;
+    std::optional<ListIndex> N;
   };
 
   using def_path_iterator = generic_def_path_iterator<DefPath, ClobberWalker>;

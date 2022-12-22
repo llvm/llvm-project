@@ -643,11 +643,6 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::SGPRSpill;
   }
 
-  static bool isWWMRegSpillOpcode(uint16_t Opcode) {
-    return Opcode == AMDGPU::SI_SPILL_WWM_V32_SAVE ||
-           Opcode == AMDGPU::SI_SPILL_WWM_V32_RESTORE;
-  }
-
   static bool isDPP(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::DPP;
   }
@@ -1181,6 +1176,12 @@ public:
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
+
+  InstructionUniformity
+  getInstructionUniformity(const MachineInstr &MI) const override final;
+
+  InstructionUniformity
+  getGenericInstructionUniformity(const MachineInstr &MI) const;
 
   const MIRFormatter *getMIRFormatter() const override {
     if (!Formatter.get())

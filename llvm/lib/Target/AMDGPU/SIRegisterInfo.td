@@ -373,6 +373,7 @@ def SCC_CLASS : SIRegisterClass<"AMDGPU", [i1], 1, (add SCC)> {
   let CopyCost = -1;
   let isAllocatable = 0;
   let HasSGPR = 1;
+  let BaseClassOrder = 10000;
 }
 
 def M0_CLASS : SIRegisterClass<"AMDGPU", [i32], 32, (add M0)> {
@@ -598,6 +599,7 @@ def VGPR_LO16 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
   let AllocationPriority = 0;
   let Size = 16;
   let GeneratePressureSet = 0;
+  let BaseClassOrder = 16;
 }
 
 def VGPR_HI16 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
@@ -605,6 +607,7 @@ def VGPR_HI16 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
   let AllocationPriority = 0;
   let Size = 16;
   let GeneratePressureSet = 0;
+  let BaseClassOrder = 17;
 }
 
 // VGPR 32-bit registers
@@ -614,6 +617,7 @@ def VGPR_32 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types
   let AllocationPriority = 0;
   let Size = 32;
   let Weight = 1;
+  let BaseClassOrder = 32;
 }
 
 // Identical to VGPR_32 except it only contains the low 128 (Lo128) registers.
@@ -671,6 +675,7 @@ def AGPR_LO16 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
   let isAllocatable = 0;
   let Size = 16;
   let GeneratePressureSet = 0;
+  let BaseClassOrder = 16;
 }
 
 // AccVGPR 32-bit registers
@@ -679,6 +684,7 @@ def AGPR_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
   let AllocationPriority = 0;
   let Size = 32;
   let Weight = 1;
+  let BaseClassOrder = 32;
 }
 } // End HasAGPR = 1
 
@@ -730,6 +736,7 @@ def Pseudo_SReg_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16
   let isAllocatable = 0;
   let CopyCost = -1;
   let HasSGPR = 1;
+  let BaseClassOrder = 10000;
 }
 
 def Pseudo_SReg_128 : SIRegisterClass<"AMDGPU", [v4i32, v2i64, v2f64, v8i16, v8f16], 32,
@@ -737,6 +744,7 @@ def Pseudo_SReg_128 : SIRegisterClass<"AMDGPU", [v4i32, v2i64, v2f64, v8i16, v8f
   let isAllocatable = 0;
   let CopyCost = -1;
   let HasSGPR = 1;
+  let BaseClassOrder = 10000;
 }
 
 def LDS_DIRECT_CLASS : RegisterClass<"AMDGPU", [i32], 32,
@@ -767,6 +775,7 @@ def SReg_LO16 : SIRegisterClass<"AMDGPU", [i16, f16], 16,
    SRC_EXECZ_LO16, SRC_SCC_LO16, EXEC_LO_LO16, EXEC_HI_LO16, M0_CLASS_LO16)> {
   let Size = 16;
   let AllocationPriority = 0;
+  let BaseClassOrder = 16;
 }
 
 def SReg_32_XEXEC : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32,
@@ -791,6 +800,7 @@ def SReg_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 
   (add SReg_32_XM0, M0_CLASS)> {
   let AllocationPriority = 0;
   let HasSGPR = 1;
+  let BaseClassOrder = 32;
 }
 
 let GeneratePressureSet = 0 in {
@@ -826,6 +836,7 @@ def SReg_64 : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f1
   let CopyCost = 1;
   let AllocationPriority = 1;
   let HasSGPR = 1;
+  let BaseClassOrder = 64;
 }
 
 def SReg_1_XEXEC : SIRegisterClass<"AMDGPU", [i1], 32,
@@ -869,6 +880,7 @@ multiclass SRegClass<int numRegs,
                         !dag(add, [!cast<RegisterClass>(ttmpName)], ["ttmp"]),
                         (add)))> {
       let isAllocatable = 0;
+      let BaseClassOrder = !mul(numRegs, 32);
     }
   }
 }
@@ -911,10 +923,15 @@ class VRegClassBase<int numRegs, list<ValueType> regTypes, dag regList> :
 multiclass VRegClass<int numRegs, list<ValueType> regTypes, dag regList> {
   let HasVGPR = 1 in {
     // Define the regular class.
-    def "" : VRegClassBase<numRegs, regTypes, regList>;
+    def "" : VRegClassBase<numRegs, regTypes, regList> {
+      let BaseClassOrder = !mul(numRegs, 32);
+    }
 
     // Define 2-aligned variant
-    def _Align2 : VRegClassBase<numRegs, regTypes, (decimate regList, 2)>;
+    def _Align2 : VRegClassBase<numRegs, regTypes, (decimate regList, 2)> {
+      // Give aligned class higher priority in base class resolution
+      let BaseClassOrder = !sub(!mul(numRegs, 32), 1);
+    }
   }
 }
 
@@ -940,10 +957,15 @@ defm VReg_1024 : VRegClass<32, [v32i32, v32f32, v16i64, v16f64], (add VGPR_1024)
 multiclass ARegClass<int numRegs, list<ValueType> regTypes, dag regList> {
   let CopyCost = !add(numRegs, numRegs, 1), HasAGPR = 1 in {
     // Define the regular class.
-    def "" : VRegClassBase<numRegs, regTypes, regList>;
+    def "" : VRegClassBase<numRegs, regTypes, regList> {
+      let BaseClassOrder = !mul(numRegs, 32);
+    }
 
     // Define 2-aligned variant
-    def _Align2 : VRegClassBase<numRegs, regTypes, (decimate regList, 2)>;
+    def _Align2 : VRegClassBase<numRegs, regTypes, (decimate regList, 2)> {
+      // Give aligned class higher priority in base class resolution
+      let BaseClassOrder = !sub(!mul(numRegs, 32), 1);
+    }
   }
 }
 

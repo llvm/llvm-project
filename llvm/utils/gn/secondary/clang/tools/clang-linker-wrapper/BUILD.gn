@@ -24,6 +24,7 @@ executable("clang-linker-wrapper") {
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/Utils",
   ]
   sources = [

@@ -288,14 +288,14 @@ public:
     auto addUnrealizedCast = [](OpBuilder &builder, Type type,
                                 ValueRange inputs, Location loc) {
       auto cast = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
-      return Optional<Value>(cast.getResult(0));
+      return std::optional<Value>(cast.getResult(0));
     };
 
     addSourceMaterialization(addUnrealizedCast);
     addTargetMaterialization(addUnrealizedCast);
   }
 
-  static Optional<Type> convertAsyncTypes(Type type) {
+  static std::optional<Type> convertAsyncTypes(Type type) {
     if (type.isa<TokenType, GroupType, ValueType>())
       return AsyncAPI::opaquePointerType(type.getContext());
 

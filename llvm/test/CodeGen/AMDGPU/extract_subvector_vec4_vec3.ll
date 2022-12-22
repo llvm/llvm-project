@@ -5,7 +5,7 @@
 ; Specifically, we do not want to see a BUFFER_STORE that says "store into
 ; stack" in the middle.
 
-define amdgpu_hs void @main([0 x i8] addrspace(6)* inreg %arg) {
+define amdgpu_hs void @main(ptr addrspace(6) inreg %arg) {
   ; GCN-LABEL: name: main
   ; GCN: bb.0.main_body:
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0

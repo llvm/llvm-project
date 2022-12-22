@@ -37,6 +37,7 @@ add_mlir_library(MLIRExecutionEngineUtils
   TransformUtils
   IPO
   Passes
+  TargetParser
   )
 
 if(NOT MLIR_ENABLE_EXECUTION_ENGINE)

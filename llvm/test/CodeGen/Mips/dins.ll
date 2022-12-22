@@ -34,28 +34,28 @@ define i64 @f123(i64 inreg %bufptr.coerce0, i64 inreg %bufptr.coerce1) local_unn
 entry:
   %bufptr.sroa.0 = alloca i64, align 8
   %bufptr.sroa.4 = alloca i64, align 8
-  store i64 %bufptr.coerce0, i64* %bufptr.sroa.0, align 8
-  store i64 %bufptr.coerce1, i64* %bufptr.sroa.4, align 8
-  %bufptr.sroa.0.0.bufptr.sroa.0.0.bufptr.sroa.0.0.bf.load = load volatile i64, i64* %bufptr.sroa.0, align 8
+  store i64 %bufptr.coerce0, ptr %bufptr.sroa.0, align 8
+  store i64 %bufptr.coerce1, ptr %bufptr.sroa.4, align 8
+  %bufptr.sroa.0.0.bufptr.sroa.0.0.bufptr.sroa.0.0.bf.load = load volatile i64, ptr %bufptr.sroa.0, align 8
   %bf.clear = and i64 %bufptr.sroa.0.0.bufptr.sroa.0.0.bufptr.sroa.0.0.bf.load, 134217727
   %bf.set = or i64 %bf.clear, 16508780544
-  store volatile i64 %bf.set, i64* %bufptr.sroa.0, align 8
-  %bufptr.sroa.4.0.bufptr.sroa.4.0.bufptr.sroa.4.8.bf.load2 = load volatile i64, i64* %bufptr.sroa.4, align 8
+  store volatile i64 %bf.set, ptr %bufptr.sroa.0, align 8
+  %bufptr.sroa.4.0.bufptr.sroa.4.0.bufptr.sroa.4.8.bf.load2 = load volatile i64, ptr %bufptr.sroa.4, align 8
   %bf.clear3 = and i64 %bufptr.sroa.4.0.bufptr.sroa.4.0.bufptr.sroa.4.8.bf.load2, -16911433729
   %bf.set4 = or i64 %bf.clear3, 1073741824
-  store volatile i64 %bf.set4, i64* %bufptr.sroa.4, align 8
-  %bufptr.sroa.4.0.bufptr.sroa.4.0.bufptr.sroa.4.8.bf.load6 = load volatile i64, i64* %bufptr.sroa.4, align 8
+  store volatile i64 %bf.set4, ptr %bufptr.sroa.4, align 8
+  %bufptr.sroa.4.0.bufptr.sroa.4.0.bufptr.sroa.4.8.bf.load6 = load volatile i64, ptr %bufptr.sroa.4, align 8
   %bf.clear7 = and i64 %bufptr.sroa.4.0.bufptr.sroa.4.0.bufptr.sroa.4.8.bf.load6, 1125899906842623
   %bf.set8 = or i64 %bf.clear7, 5629499534213120
-  store volatile i64 %bf.set8, i64* %bufptr.sroa.4, align 8
-  %bufptr.sroa.4.0.bufptr.sroa.4.0.bufptr.sroa.4.8.bf.load11 = load volatile i64, i64* %bufptr.sroa.4, align 8
+  store volatile i64 %bf.set8, ptr %bufptr.sroa.4, align 8
+  %bufptr.sroa.4.0.bufptr.sroa.4.0.bufptr.sroa.4.8.bf.load11 = load volatile i64, ptr %bufptr.sroa.4, align 8
   %bf.lshr = lshr i64 %bufptr.sroa.4.0.bufptr.sroa.4.0.bufptr.sroa.4.8.bf.load11, 50
-  %bufptr.sroa.4.0.bufptr.sroa.4.0.bufptr.sroa.4.8.bf.load13 = load volatile i64, i64* %bufptr.sroa.4, align 8
+  %bufptr.sroa.4.0.bufptr.sroa.4.0.bufptr.sroa.4.8.bf.load13 = load volatile i64, ptr %bufptr.sroa.4, align 8
   %bf.shl = shl nuw nsw i64 %bf.lshr, 34
   %bf.clear14 = and i64 %bufptr.sroa.4.0.bufptr.sroa.4.0.bufptr.sroa.4.8.bf.load13, -1125882726973441
   %bf.set15 = or i64 %bf.clear14, %bf.shl
-  store volatile i64 %bf.set15, i64* %bufptr.sroa.4, align 8
-  %bufptr.sroa.0.0.bufptr.sroa.0.0.bufptr.sroa.0.0.bf.load17 = load volatile i64, i64* %bufptr.sroa.0, align 8
+  store volatile i64 %bf.set15, ptr %bufptr.sroa.4, align 8
+  %bufptr.sroa.0.0.bufptr.sroa.0.0.bufptr.sroa.0.0.bf.load17 = load volatile i64, ptr %bufptr.sroa.0, align 8
   %bf.lshr18 = lshr i64 %bufptr.sroa.0.0.bufptr.sroa.0.0.bufptr.sroa.0.0.bf.load17, 27
   ret i64 %bf.lshr18
 }
@@ -84,11 +84,11 @@ entry:
 define i32 @foo(i32 signext %x) {
 entry:
   %x.addr = alloca i32, align 4
-  store volatile i32 %x, i32* %x.addr, align 4
-  %x.addr.0.x.addr.0. = load volatile i32, i32* %x.addr, align 4
+  store volatile i32 %x, ptr %x.addr, align 4
+  %x.addr.0.x.addr.0. = load volatile i32, ptr %x.addr, align 4
   %and = and i32 %x.addr.0.x.addr.0., -4
   %or = or i32 %and, 8
-  store volatile i32 %or, i32* %x.addr, align 4
+  store volatile i32 %or, ptr %x.addr, align 4
   ret i32 %and
 }
 

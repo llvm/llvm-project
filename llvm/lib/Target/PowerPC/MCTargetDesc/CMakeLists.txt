@@ -16,6 +16,7 @@ add_llvm_component_library(LLVMPowerPCDesc
   PowerPCInfo
   Support
   BinaryFormat
+  TargetParser
 
   ADD_TO_COMPONENT
   PowerPC

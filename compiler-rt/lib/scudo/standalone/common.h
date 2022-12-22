@@ -149,6 +149,7 @@ bool getRandom(void *Buffer, uptr Length, bool Blocking = false);
 #define MAP_NOACCESS (1U << 1)
 #define MAP_RESIZABLE (1U << 2)
 #define MAP_MEMTAG (1U << 3)
+#define MAP_PRECOMMIT (1U << 4)
 
 // Our platform memory mapping use is restricted to 3 scenarios:
 // - reserve memory at a random address (MAP_NOACCESS);

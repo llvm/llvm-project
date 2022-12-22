@@ -5,7 +5,7 @@ target triple = "arm64-apple-ios"
 ; rdar://12462006
 ; CSE between "icmp reg reg" and "sub reg reg".
 ; Both can be in the same basic block or in different basic blocks.
-define i8* @t1(i8* %base, i32* nocapture %offset, i32 %size) nounwind {
+define ptr @t1(ptr %base, ptr nocapture %offset, i32 %size) nounwind {
 ; CHECK-LABEL: t1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldr w9, [x1]
@@ -20,7 +20,7 @@ define i8* @t1(i8* %base, i32* nocapture %offset, i32 %size) nounwind {
 ; CHECK-NEXT:    str w9, [x1]
 ; CHECK-NEXT:    ret
 entry:
- %0 = load i32, i32* %offset, align 4
+ %0 = load i32, ptr %offset, align 4
  %cmp = icmp slt i32 %0, %size
  %s = sub nsw i32 %0, %size
  br i1 %cmp, label %return, label %if.end
@@ -29,17 +29,17 @@ if.end:
  %sub = sub nsw i32 %0, %size
  %s2 = sub nsw i32 %s, %size
  %s3 = sub nsw i32 %sub, %s2
- store i32 %s3, i32* %offset, align 4
- %add.ptr = getelementptr inbounds i8, i8* %base, i32 %sub
+ store i32 %s3, ptr %offset, align 4
+ %add.ptr = getelementptr inbounds i8, ptr %base, i32 %sub
  br label %return
 
 return:
- %retval.0 = phi i8* [ %add.ptr, %if.end ], [ null, %entry ]
- ret i8* %retval.0
+ %retval.0 = phi ptr [ %add.ptr, %if.end ], [ null, %entry ]
+ ret ptr %retval.0
 }
 
 ; CSE between "icmp reg imm" and "sub reg imm".
-define i8* @t2(i8* %base, i32* nocapture %offset) nounwind {
+define ptr @t2(ptr %base, ptr nocapture %offset) nounwind {
 ; CHECK-LABEL: t2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldr w8, [x1]
@@ -53,17 +53,17 @@ define i8* @t2(i8* %base, i32* nocapture %offset) nounwind {
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    ret
 entry:
- %0 = load i32, i32* %offset, align 4
+ %0 = load i32, ptr %offset, align 4
  %cmp = icmp slt i32 %0, 1
  br i1 %cmp, label %return, label %if.end
 
 if.end:
  %sub = sub nsw i32 %0, 1
- store i32 %sub, i32* %offset, align 4
- %add.ptr = getelementptr inbounds i8, i8* %base, i32 %sub
+ store i32 %sub, ptr %offset, align 4
+ %add.ptr = getelementptr inbounds i8, ptr %base, i32 %sub
  br label %return
 
 return:
- %retval.0 = phi i8* [ %add.ptr, %if.end ], [ null, %entry ]
- ret i8* %retval.0
+ %retval.0 = phi ptr [ %add.ptr, %if.end ], [ null, %entry ]
+ ret ptr %retval.0
 }

@@ -29,7 +29,7 @@ cond.true77:                                      ; preds = %while.cond38
   br i1 %cmp79, label %cond.end84, label %cond.false81
 
 cond.false81:                                     ; preds = %cond.true77
-  %0 = load i32, i32* null, align 4
+  %0 = load i32, ptr null, align 4
   br label %cond.end84
 
 cond.end84:                                       ; preds = %cond.false81, %cond.true77
@@ -45,14 +45,14 @@ cond.false91:                                     ; preds = %cond.false87
 
 cond.false101:                                    ; preds = %cond.false91, %cond.false87, %cond.end84
   %cond97 = phi i32 [ %neg86, %cond.end84 ], [ %b, %cond.false91 ], [ 0, %cond.false87 ]
-  %1 = load i32, i32* null, align 4
+  %1 = load i32, ptr null, align 4
   %and106 = and i32 %cond97, %1
   %and107 = and i32 %and106, 2
   %tobool108 = icmp ne i32 %and107, 0
   br i1 %tobool108, label %if.then109, label %if.end111
 
 if.then109:                                       ; preds = %cond.false101
-  store i32 0, i32* undef, align 4
+  store i32 0, ptr undef, align 4
   br label %if.end111
 
 if.end111:                                        ; preds = %if.then109, %cond.false101

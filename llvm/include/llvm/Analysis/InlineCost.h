@@ -102,7 +102,7 @@ class InlineCost {
   const char *Reason = nullptr;
 
   /// The cost-benefit pair computed by cost-benefit analysis.
-  std::optional<CostBenefitPair> CostBenefit = std::nullopt;
+  std::optional<CostBenefitPair> CostBenefit;
 
   // Trivial constructor, interesting logic in the factory functions below.
   InlineCost(int Cost, int Threshold, int StaticBonusApplied,

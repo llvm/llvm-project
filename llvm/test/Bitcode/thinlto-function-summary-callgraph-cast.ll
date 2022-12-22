@@ -7,7 +7,7 @@
 ; CHECK-NEXT:    <VERSION
 ; CHECK-NEXT:    <FLAGS
 ; "op7" is a call to "callee" function.
-; CHECK-NEXT:    <PERMODULE {{.*}} op9=3 op10=[[ALIASID:[0-9]+]]/>
+; CHECK-NEXT:    <PERMODULE {{.*}} op7=3 op8=[[ALIASID:[0-9]+]]/>
 ; "another_caller" has only references but no calls.
 ; CHECK-NEXT:    <PERMODULE {{.*}} op4=3 {{.*}} op9={{[0-9]+}}/>
 ; CHECK-NEXT:    <PERMODULE {{.*}} op0=[[ALIASEEID:[0-9]+]]
@@ -20,20 +20,20 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 define void @caller() {
-    call void bitcast (void (...)* @callee to void ()*)()
-    call void bitcast (void (...)* @analias to void ()*)()
+    call void @callee()
+    call void @analias()
     ret void
 }
 
 define void @another_caller() {
     ; Test calls that aren't handled either as direct or indirect.
-    call void select (i1 icmp eq (i32* @global, i32* null), void ()* @f, void ()* @g)()
+    call void select (i1 icmp eq (ptr @global, ptr null), ptr @f, ptr @g)()
     ret void
 }
 
 declare void @callee(...)
 
-@analias = alias void (...), bitcast (void ()* @aliasee to void (...)*)
+@analias = alias void (...), ptr @aliasee
 
 define void @aliasee() {
 entry:

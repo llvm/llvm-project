@@ -80,7 +80,7 @@ public:
     unsigned NextCascade = 1;
 
   public:
-    ExtraRegInfo() = default;
+    ExtraRegInfo() {}
     ExtraRegInfo(const ExtraRegInfo &) = delete;
 
     LiveRangeStage getStage(Register Reg) const { return Info[Reg].Stage; }
@@ -185,7 +185,7 @@ private:
   std::unique_ptr<Spiller> SpillerInstance;
   PQueue Queue;
   std::unique_ptr<VirtRegAuxInfo> VRAI;
-  Optional<ExtraRegInfo> ExtraInfo;
+  std::optional<ExtraRegInfo> ExtraInfo;
   std::unique_ptr<RegAllocEvictionAdvisor> EvictAdvisor;
 
   std::unique_ptr<RegAllocPriorityAdvisor> PriorityAdvisor;

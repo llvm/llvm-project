@@ -10,17 +10,16 @@ define void @sgpr_spill_writelane() {
 ; GCN-LABEL: sgpr_spill_writelane:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_xor_saveexec_b64 s[6:7], -1
+; GCN-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; GCN-NEXT:    s_mov_b64 exec, s[6:7]
-; GCN-NEXT:    ; implicit-def: $vgpr0
+; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    v_writelane_b32 v0, s35, 0
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    v_readlane_b32 s35, v0, 0
-; GCN-NEXT:    s_xor_saveexec_b64 s[6:7], -1
+; GCN-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
-; GCN-NEXT:    s_mov_b64 exec, s[6:7]
+; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   call void asm sideeffect "", "~{s35}"()
@@ -29,7 +28,7 @@ define void @sgpr_spill_writelane() {
 
 ; FIXME: The writelane intrinsic doesn't really overwrite any inactive lanes
 ; and hence there is no need to preserve the VGPR it modifies.
-define void @device_writelane_intrinsic(i32 addrspace(1)* %out, i32 %src) {
+define void @device_writelane_intrinsic(ptr addrspace(1) %out, i32 %src) {
 ; GCN-LABEL: device_writelane_intrinsic:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -46,11 +45,11 @@ define void @device_writelane_intrinsic(i32 addrspace(1)* %out, i32 %src) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %writelane = call i32 @llvm.amdgcn.writelane(i32 %src, i32 23, i32 15)
-  store i32 %writelane, i32 addrspace(1)* %out, align 4
+  store i32 %writelane, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @kernel_writelane_intrinsic(i32 addrspace(1)* %out, i32 %src0, i32 %src1) {
+define amdgpu_kernel void @kernel_writelane_intrinsic(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
 ; GCN-LABEL: kernel_writelane_intrinsic:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -62,6 +61,6 @@ define amdgpu_kernel void @kernel_writelane_intrinsic(i32 addrspace(1)* %out, i3
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GCN-NEXT:    s_endpgm
   %writelane = call i32 @llvm.amdgcn.writelane(i32 %src0, i32 %src1, i32 45)
-  store i32 %writelane, i32 addrspace(1)* %out, align 4
+  store i32 %writelane, ptr addrspace(1) %out, align 4
   ret void
 }

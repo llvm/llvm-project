@@ -6,13 +6,13 @@
 
 ; CHECK-LABEL: {{^}}test:
 ; CHECK: MEM_RAT_CACHELESS STORE_RAW
-define amdgpu_kernel void @test(<4 x i8> addrspace(1)* %out, i32 %cond, <4 x i8> %in) {
+define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %cond, <4 x i8> %in) {
 entry:
   %0 = icmp eq i32 %cond, 0
   br i1 %0, label %if, label %done
 
 if:
-  store <4 x i8> %in, <4 x i8> addrspace(1)* %out
+  store <4 x i8> %in, ptr addrspace(1) %out
   br label %done
 
 done:

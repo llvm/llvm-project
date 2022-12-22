@@ -181,6 +181,7 @@ add_llvm_target(AMDGPUCodeGen
   SelectionDAG
   Support
   Target
+  TargetParser
   TransformUtils
   Vectorize
   GlobalISel

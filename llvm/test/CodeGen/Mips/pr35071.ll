@@ -13,19 +13,19 @@ entry:
   br i1 %tobool, label %if.end, label %cleanup7.critedge, !dbg !21
 
 if.end:                                           ; preds = %entry
-  %call6 = call i32 bitcast (i32 (...)* @j to i32 (i32)*)(i32 signext %conv)
+  %call6 = call i32 @j(i32 signext %conv)
 #4, !dbg !22
   br label %cleanup7, !dbg !23
 
 cleanup7.critedge:                                ; preds = %entry
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull undef) #4, !dbg !24
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull undef) #4, !dbg !24
   br label %cleanup7
 
 cleanup7:                                         ; preds = %cleanup7.critedge,
   ret void
 }
 
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
 declare i32 @j(...)
 

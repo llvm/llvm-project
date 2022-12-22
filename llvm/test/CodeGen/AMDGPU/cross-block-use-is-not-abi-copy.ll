@@ -33,7 +33,6 @@ define float @call_split_type_used_outside_block_v2f32() #0 {
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[18:19]
-; GCN-NEXT:    ; implicit-def: $vgpr40
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    v_writelane_b32 v41, s16, 0
@@ -72,7 +71,6 @@ define float @call_split_type_used_outside_block_v3f32() #0 {
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[18:19]
-; GCN-NEXT:    ; implicit-def: $vgpr40
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    v_writelane_b32 v41, s16, 0
@@ -111,7 +109,6 @@ define half @call_split_type_used_outside_block_v4f16() #0 {
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[18:19]
-; GCN-NEXT:    ; implicit-def: $vgpr40
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    v_writelane_b32 v41, s16, 0
@@ -150,7 +147,6 @@ define { i32, half } @call_split_type_used_outside_block_struct() #0 {
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[18:19]
-; GCN-NEXT:    ; implicit-def: $vgpr40
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    v_writelane_b32 v41, s16, 0
@@ -234,7 +230,7 @@ if.else:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.else, %if.then
   %call6.sink = phi <3 x i16> [ %call6, %if.else ], [ zeroinitializer, %if.then ]
-  store <3 x i16> %call6.sink, <3 x i16> addrspace(1)* undef
+  store <3 x i16> %call6.sink, ptr addrspace(1) undef
   ret void
 }
 
@@ -287,7 +283,7 @@ if.else:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.else, %if.then
   %call6.sink = phi <3 x half> [ %call6, %if.else ], [ zeroinitializer, %if.then ]
-  store <3 x half> %call6.sink, <3 x half> addrspace(1)* undef
+  store <3 x half> %call6.sink, ptr addrspace(1) undef
   ret void
 }
 

@@ -240,12 +240,12 @@ class Token;
     unsigned ImportedModule : 1;
 
     /// The file that was included.
-    Optional<FileEntryRef> File;
+    OptionalFileEntryRef File;
 
   public:
     InclusionDirective(PreprocessingRecord &PPRec, InclusionKind Kind,
                        StringRef FileName, bool InQuotes, bool ImportedModule,
-                       Optional<FileEntryRef> File, SourceRange Range);
+                       OptionalFileEntryRef File, SourceRange Range);
 
     /// Determine what kind of inclusion directive this is.
     InclusionKind getKind() const { return static_cast<InclusionKind>(Kind); }
@@ -263,7 +263,7 @@ class Token;
 
     /// Retrieve the file entry for the actual file that was included
     /// by this directive.
-    Optional<FileEntryRef> getFile() const { return File; }
+    OptionalFileEntryRef getFile() const { return File; }
 
     // Implement isa/cast/dyncast/etc.
     static bool classof(const PreprocessedEntity *PE) {
@@ -528,7 +528,7 @@ class Token;
     void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                             StringRef FileName, bool IsAngled,
                             CharSourceRange FilenameRange,
-                            Optional<FileEntryRef> File, StringRef SearchPath,
+                            OptionalFileEntryRef File, StringRef SearchPath,
                             StringRef RelativePath, const Module *Imported,
                             SrcMgr::CharacteristicKind FileType) override;
     void Ifdef(SourceLocation Loc, const Token &MacroNameTok,

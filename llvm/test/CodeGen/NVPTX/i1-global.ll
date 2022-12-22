@@ -8,13 +8,13 @@ target triple = "nvptx-nvidia-cuda"
 @mypred = addrspace(1) global i1 true, align 1
 
 
-define void @foo(i1 %p, i32* %out) {
-  %ld = load i1, i1 addrspace(1)* @mypred
+define void @foo(i1 %p, ptr %out) {
+  %ld = load i1, ptr addrspace(1) @mypred
   %val = zext i1 %ld to i32
-  store i32 %val, i32* %out
+  store i32 %val, ptr %out
   ret void
 }
 
 
 !nvvm.annotations = !{!0}
-!0 = !{void (i1, i32*)* @foo, !"kernel", i32 1}
+!0 = !{ptr @foo, !"kernel", i32 1}

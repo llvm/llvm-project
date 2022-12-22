@@ -21,10 +21,9 @@ define dso_local i32 @_Z5func1i(i32 %x) #0 {
 entry:
   %mul = mul nsw i32 %x, %x
   %add = add nuw nsw i32 %mul, 1
-  %exception = tail call i8* @__cxa_allocate_exception(i64 4) #1
-  %0 = bitcast i8* %exception to i32*
-  store i32 %add, i32* %0, align 16
-  tail call void @__cxa_throw(i8* %exception, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #2
+  %exception = tail call ptr @__cxa_allocate_exception(i64 4) #1
+  store i32 %add, ptr %exception, align 16
+  tail call void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #2
   unreachable
 }
 
@@ -45,10 +44,9 @@ entry:
   %conv = zext i8 %x to i32
   %mul = mul nuw nsw i32 %conv, %conv
   %add = add nuw nsw i32 %mul, 1
-  %exception = tail call i8* @__cxa_allocate_exception(i64 4) #1
-  %0 = bitcast i8* %exception to i32*
-  store i32 %add, i32* %0, align 16
-  tail call void @__cxa_throw(i8* %exception, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #2
+  %exception = tail call ptr @__cxa_allocate_exception(i64 4) #1
+  store i32 %add, ptr %exception, align 16
+  tail call void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #2
   unreachable
 }
 
@@ -62,9 +60,9 @@ entry:
 ; CHECK:      .cfi_endproc
 
 
-@_ZTIi = external dso_local constant i8*
-declare dso_local i8* @__cxa_allocate_exception(i64) local_unnamed_addr
-declare dso_local void @__cxa_throw(i8*, i8*, i8*) local_unnamed_addr
+@_ZTIi = external dso_local constant ptr
+declare dso_local ptr @__cxa_allocate_exception(i64) local_unnamed_addr
+declare dso_local void @__cxa_throw(ptr, ptr, ptr) local_unnamed_addr
 
 attributes #0 = { minsize noreturn optsize }
 attributes #1 = { nounwind }

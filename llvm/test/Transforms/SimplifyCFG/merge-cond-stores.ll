@@ -81,12 +81,12 @@ define void @test_recursive(ptr %p, i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[DOTNOT]], label [[TMP4:%.*]], label [[TMP3:%.*]]
 ; CHECK:       3:
-; CHECK-NEXT:    [[X4:%.*]] = icmp eq i32 [[D]], 0
-; CHECK-NEXT:    [[X3:%.*]] = icmp eq i32 [[C]], 0
+; CHECK-NEXT:    [[X4_NOT:%.*]] = icmp eq i32 [[D]], 0
+; CHECK-NEXT:    [[X3_NOT:%.*]] = icmp eq i32 [[C]], 0
 ; CHECK-NEXT:    [[X2:%.*]] = icmp ne i32 [[B]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = zext i1 [[X2]] to i32
-; CHECK-NEXT:    [[SPEC_SELECT1:%.*]] = select i1 [[X3]], i32 [[SPEC_SELECT]], i32 2
-; CHECK-NEXT:    [[SPEC_SELECT2:%.*]] = select i1 [[X4]], i32 [[SPEC_SELECT1]], i32 3
+; CHECK-NEXT:    [[SPEC_SELECT1:%.*]] = select i1 [[X3_NOT]], i32 [[SPEC_SELECT]], i32 2
+; CHECK-NEXT:    [[SPEC_SELECT2:%.*]] = select i1 [[X4_NOT]], i32 [[SPEC_SELECT1]], i32 3
 ; CHECK-NEXT:    store i32 [[SPEC_SELECT2]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[TMP4]]
 ; CHECK:       4:
@@ -267,17 +267,16 @@ declare void @f()
 define i32 @test_diamond_simple(ptr %p, ptr %q, i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_diamond_simple(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X2:%.*]] = icmp eq i32 [[B:%.*]], 0
+; CHECK-NEXT:    [[X2:%.*]] = icmp ne i32 [[B:%.*]], 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = or i32 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[DOTNOT]], label [[TMP2:%.*]], label [[TMP1:%.*]]
 ; CHECK:       1:
-; CHECK-NEXT:    [[NOT_X2:%.*]] = xor i1 [[X2]], true
-; CHECK-NEXT:    [[SIMPLIFYCFG_MERGE:%.*]] = zext i1 [[NOT_X2]] to i32
+; CHECK-NEXT:    [[SIMPLIFYCFG_MERGE:%.*]] = zext i1 [[X2]] to i32
 ; CHECK-NEXT:    store i32 [[SIMPLIFYCFG_MERGE]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[TMP2]]
 ; CHECK:       2:
-; CHECK-NEXT:    [[Z4:%.*]] = select i1 [[X2]], i32 0, i32 3
+; CHECK-NEXT:    [[Z4:%.*]] = select i1 [[X2]], i32 3, i32 0
 ; CHECK-NEXT:    ret i32 [[Z4]]
 ;
 entry:

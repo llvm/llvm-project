@@ -693,6 +693,14 @@ public:
   static void dumpReg(Register Reg, unsigned SubRegIndex = 0,
                       const TargetRegisterInfo *TRI = nullptr);
 
+  /// Return target defined base register class for a physical register.
+  /// This is the register class with the lowest BaseClassOrder containing the
+  /// register.
+  /// Will be nullptr if the register is not in any base register class.
+  virtual const TargetRegisterClass *getPhysRegBaseClass(MCRegister Reg) const {
+    return nullptr;
+  }
+
 protected:
   /// Overridden by TableGen in targets that have sub-registers.
   virtual unsigned composeSubRegIndicesImpl(unsigned, unsigned) const {

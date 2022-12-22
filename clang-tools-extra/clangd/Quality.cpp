@@ -303,6 +303,8 @@ void SymbolRelevanceSignals::computeASTSignals(
       (SemaResult.Kind != CodeCompletionResult::RK_Pattern))
     return;
   if (const NamedDecl *ND = SemaResult.getDeclaration()) {
+    if (hasUnstableLinkage(ND))
+      return;
     auto ID = getSymbolID(ND);
     if (!ID)
       return;

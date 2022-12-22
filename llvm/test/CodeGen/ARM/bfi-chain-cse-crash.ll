@@ -3,7 +3,7 @@
 target datalayout = "e-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
 target triple = "thumbv7s-apple-ios3.1.3"
 
-define void @bfi_chain_cse_crash(i8* %0, i8 *%ptr) {
+define void @bfi_chain_cse_crash(ptr %0, ptr %ptr) {
 ; CHECK-LABEL: bfi_chain_cse_crash:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrb r2, [r0]
@@ -16,7 +16,7 @@ define void @bfi_chain_cse_crash(i8* %0, i8 *%ptr) {
 ; CHECK-NEXT:    strb r0, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
-  %1 = load i8, i8* %0, align 1
+  %1 = load i8, ptr %0, align 1
   %2 = and i8 %1, 1
   %3 = select i1 false, i8 %2, i8 0
   %4 = and i8 %1, 4
@@ -35,7 +35,7 @@ entry:
   %17 = trunc i32 %16 to i8
   %18 = select i1 %11, i8 %2, i8 %14
   %19 = select i1 %11, i8 %9, i8 %17
-  store i8 %18, i8* %0, align 1
-  store i8 %19, i8* %ptr, align 1
+  store i8 %18, ptr %0, align 1
+  store i8 %19, ptr %ptr, align 1
   ret void
 }

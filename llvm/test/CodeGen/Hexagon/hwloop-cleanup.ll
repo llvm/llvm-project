@@ -9,7 +9,7 @@
 ; CHECK-NOT: cmp.eq
 ; CHECK: endloop0
 
-define i32 @f0(i32* nocapture %a0, i32 %a1) #0 {
+define i32 @f0(ptr nocapture %a0, i32 %a1) #0 {
 b0:
   %v0 = icmp sgt i32 %a1, 0
   br i1 %v0, label %b1, label %b4
@@ -19,13 +19,13 @@ b1:                                               ; preds = %b0
 
 b2:                                               ; preds = %b2, %b1
   %v1 = phi i32 [ %v5, %b2 ], [ 0, %b1 ]
-  %v2 = phi i32* [ %v8, %b2 ], [ %a0, %b1 ]
+  %v2 = phi ptr [ %v8, %b2 ], [ %a0, %b1 ]
   %v3 = phi i32 [ %v6, %b2 ], [ 0, %b1 ]
-  %v4 = load i32, i32* %v2, align 4
+  %v4 = load i32, ptr %v2, align 4
   %v5 = add nsw i32 %v4, %v1
   %v6 = add nsw i32 %v3, 1
   %v7 = icmp eq i32 %v6, %a1
-  %v8 = getelementptr i32, i32* %v2, i32 1
+  %v8 = getelementptr i32, ptr %v2, i32 1
   br i1 %v7, label %b3, label %b2
 
 b3:                                               ; preds = %b2
@@ -44,19 +44,19 @@ b4:                                               ; preds = %b3, %b0
 ; CHECK-NOT: cmp.eq
 ; CHECK: endloop0
 
-define i32 @f1(i32* nocapture %a0) #0 {
+define i32 @f1(ptr nocapture %a0) #0 {
 b0:
   br label %b1
 
 b1:                                               ; preds = %b1, %b0
   %v0 = phi i32 [ 0, %b0 ], [ %v4, %b1 ]
-  %v1 = phi i32* [ %a0, %b0 ], [ %v7, %b1 ]
+  %v1 = phi ptr [ %a0, %b0 ], [ %v7, %b1 ]
   %v2 = phi i32 [ 0, %b0 ], [ %v5, %b1 ]
-  %v3 = load i32, i32* %v1, align 4
+  %v3 = load i32, ptr %v1, align 4
   %v4 = add nsw i32 %v3, %v0
   %v5 = add nsw i32 %v2, 1
   %v6 = icmp eq i32 %v5, 40
-  %v7 = getelementptr i32, i32* %v1, i32 1
+  %v7 = getelementptr i32, ptr %v1, i32 1
   br i1 %v6, label %b2, label %b1
 
 b2:                                               ; preds = %b1
@@ -70,17 +70,17 @@ b2:                                               ; preds = %b1
 ; CHECK-NOT: cmp.eq
 ; CHECK: endloop0
 
-define i32 @f2(i32* nocapture %a0) #1 {
+define i32 @f2(ptr nocapture %a0) #1 {
 b0:
   br label %b1
 
 b1:                                               ; preds = %b1, %b0
-  %v0 = phi i32* [ %a0, %b0 ], [ %v4, %b1 ]
+  %v0 = phi ptr [ %a0, %b0 ], [ %v4, %b1 ]
   %v1 = phi i32 [ 0, %b0 ], [ %v2, %b1 ]
-  store i32 %v1, i32* %v0, align 4
+  store i32 %v1, ptr %v0, align 4
   %v2 = add nsw i32 %v1, 1
   %v3 = icmp eq i32 %v2, 40
-  %v4 = getelementptr i32, i32* %v0, i32 1
+  %v4 = getelementptr i32, ptr %v0, i32 1
   br i1 %v3, label %b2, label %b1
 
 b2:                                               ; preds = %b1

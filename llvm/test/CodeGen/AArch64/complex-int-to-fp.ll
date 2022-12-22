@@ -3,10 +3,10 @@
 ; CHECK: autogen_SD19655
 ; CHECK: scvtf
 ; CHECK: ret
-define void @autogen_SD19655(<2 x i64>* %addr, <2 x float>* %addrfloat) {
-  %T = load <2 x i64>, <2 x i64>* %addr
+define void @autogen_SD19655(ptr %addr, ptr %addrfloat) {
+  %T = load <2 x i64>, ptr %addr
   %F = sitofp <2 x i64> %T to <2 x float>
-  store <2 x float> %F, <2 x float>* %addrfloat
+  store <2 x float> %F, ptr %addrfloat
   ret void
 }
 

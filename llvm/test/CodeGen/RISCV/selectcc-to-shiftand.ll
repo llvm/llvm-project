@@ -216,12 +216,19 @@ define i32 @sub_clamp_zero(i32 signext %x, i32 signext %y) {
 }
 
 define i8 @sel_shift_bool_i8(i1 %t) {
-; CHECK-LABEL: sel_shift_bool_i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    andi a0, a0, -128
-; CHECK-NEXT:    ret
+; RV32-LABEL: sel_shift_bool_i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a0, a0, 31
+; RV32-NEXT:    srai a0, a0, 31
+; RV32-NEXT:    andi a0, a0, -128
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: sel_shift_bool_i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 63
+; RV64-NEXT:    srai a0, a0, 63
+; RV64-NEXT:    andi a0, a0, -128
+; RV64-NEXT:    ret
   %shl = select i1 %t, i8 128, i8 0
   ret i8 %shl
 }

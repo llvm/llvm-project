@@ -11,20 +11,20 @@
 ; CHECK-NOT: {
 ; CHECK: :endloop0
 
-define void @test(i64* nocapture %v1, i64 %v2, i32 %len) local_unnamed_addr #0 {
+define void @test(ptr nocapture %v1, i64 %v2, i32 %len) local_unnamed_addr #0 {
 entry:
   %cmp7 = icmp sgt i32 %len, 0
   br i1 %cmp7, label %for.body, label %for.end
 
 for.body:
-  %arrayidx.phi = phi i64* [ %arrayidx.inc, %for.body ], [ %v1, %entry ]
+  %arrayidx.phi = phi ptr [ %arrayidx.inc, %for.body ], [ %v1, %entry ]
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-  %0 = load i64, i64* %arrayidx.phi, align 8
+  %0 = load i64, ptr %arrayidx.phi, align 8
   %1 = tail call i64 @llvm.hexagon.M2.mmpyul.rs1(i64 %0, i64 %v2)
-  store i64 %1, i64* %arrayidx.phi, align 8
+  store i64 %1, ptr %arrayidx.phi, align 8
   %inc = add nuw nsw i32 %i.08, 1
   %exitcond = icmp eq i32 %inc, %len
-  %arrayidx.inc = getelementptr i64, i64* %arrayidx.phi, i32 1
+  %arrayidx.inc = getelementptr i64, ptr %arrayidx.phi, i32 1
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:

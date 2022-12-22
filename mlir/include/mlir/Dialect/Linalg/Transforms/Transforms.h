@@ -882,6 +882,16 @@ struct GeneralizeOuterUnitDimsPackOpPattern
                                 PatternRewriter &rewriter) const override;
 };
 
+/// Rewrites a tensor::UnPackOp into a sequence of rank-reduced extract_slice op
+/// + transpose op + insert_slice op, where the tensor::UnPackOp has outer dims
+/// being all 1s.
+struct GeneralizeOuterUnitDimsUnPackOpPattern
+    : public OpRewritePattern<tensor::UnPackOp> {
+  using OpRewritePattern<tensor::UnPackOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(tensor::UnPackOp unpackOp,
+                                PatternRewriter &rewriter) const override;
+};
+
 /// Populates `patterns` with patterns that vectorize tensor.pad.
 /// These patterns are meant to apply in a complementary fashion. Benefits
 /// are used to encode a certain ordering of pattern application. To avoid

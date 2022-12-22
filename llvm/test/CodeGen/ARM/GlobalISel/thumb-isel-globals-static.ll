@@ -20,7 +20,7 @@ define i32 @test_internal_global() {
 ; DARWIN-NOMOVT-NEXT: .long _internal_global
 
 entry:
-  %v = load i32, i32* @internal_global
+  %v = load i32, ptr @internal_global
   ret i32 %v
 }
 
@@ -40,7 +40,7 @@ define i32 @test_external_global() {
 ; DARWIN-NOMOVT: [[LABEL]]:
 ; DARWIN-NOMOVT: .long _external_global
 entry:
-  %v = load i32, i32* @external_global
+  %v = load i32, ptr @external_global
   ret i32 %v
 }
 

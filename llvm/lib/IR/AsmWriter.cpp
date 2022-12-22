@@ -622,6 +622,17 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
        << TPTy->getAddressSpace() << ")";
     return;
   }
+  case Type::TargetExtTyID:
+    TargetExtType *TETy = cast<TargetExtType>(Ty);
+    OS << "target(\"";
+    printEscapedString(Ty->getTargetExtName(), OS);
+    OS << "\"";
+    for (Type *Inner : TETy->type_params())
+      OS << ", " << *Inner;
+    for (unsigned IntParam : TETy->int_params())
+      OS << ", " << IntParam;
+    OS << ")";
+    return;
   }
   llvm_unreachable("Invalid TypeID");
 }
@@ -1438,7 +1449,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     return;
   }
 
-  if (isa<ConstantAggregateZero>(CV)) {
+  if (isa<ConstantAggregateZero>(CV) || isa<ConstantTargetNone>(CV)) {
     Out << "zeroinitializer";
     return;
   }

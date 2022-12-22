@@ -13,8 +13,8 @@
 define i32 @k() {
 entry:
   %h = alloca i32, align 4
-  %call = call i32 @g(i32* %h)
+  %call = call i32 @g(ptr %h)
   ret i32 %call
 }
 
-declare i32 @g(i32*)
+declare i32 @g(ptr)

@@ -15,8 +15,8 @@ define dllexport amdgpu_vs void @_amdgpu_vs_main(i32 inreg %arg, i32 inreg %arg1
 .entry:
   %tmp = add i32 %arg4, %arg8
   %tmp9 = sext i32 %tmp to i64
-  %tmp10 = getelementptr [6 x <2 x float>], [6 x <2 x float>] addrspace(4)* @0, i64 0, i64 %tmp9
-  %tmp11 = load <2 x float>, <2 x float> addrspace(4)* %tmp10, align 8
+  %tmp10 = getelementptr [6 x <2 x float>], ptr addrspace(4) @0, i64 0, i64 %tmp9
+  %tmp11 = load <2 x float>, ptr addrspace(4) %tmp10, align 8
   %tmp12 = fadd nnan arcp contract <2 x float> zeroinitializer, %tmp11
   %tmp13 = extractelement <2 x float> %tmp12, i32 1
   call void @llvm.amdgcn.exp.f32(i32 12, i32 15, float undef, float %tmp13, float 0.000000e+00, float 1.000000e+00, i1 true, i1 false) #1

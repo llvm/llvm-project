@@ -11,7 +11,7 @@ define void @foo() nounwind optsize "frame-pointer"="all" {
 ; CHECK: add r7, sp
 ; CHECK: sub sp, #4
 entry:
-  %m.i = alloca %struct.buf*, align 4
+  %m.i = alloca ptr, align 4
   br label %bb
 
 bb:

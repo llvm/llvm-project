@@ -3,7 +3,7 @@
 // RUN: %deflake %run %t 1 | FileCheck %s
 
 // The pthread_mutex_lock interceptor assumes incompatible internals w/ NetBSD
-// XFAIL: netbsd
+// XFAIL: target={{.*netbsd.*}}
 
 #include <pthread.h>
 #include <stdio.h>

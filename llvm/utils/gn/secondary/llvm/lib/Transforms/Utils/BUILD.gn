@@ -4,6 +4,7 @@ static_library("Utils") {
     "//llvm/lib/Analysis",
     "//llvm/lib/IR",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "AMDGPUEmitPrintf.cpp",

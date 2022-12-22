@@ -9,10 +9,10 @@
 ; CHECK: v[[V1:[0-9]+]].b = vpacke({{.*}},v[[V0]].h)
 ; CHECK: q[[Q0:[0-3]]] = vsetq(r[[R0]])
 ; CHECK: if (q[[Q0]]) vmem(r1+#0) = v[[V1]]
-define void @f0(<32 x i16>* %a0, <32 x i8>* %a1) #0 {
-  %v0 = load <32 x i16>, <32 x i16>* %a0, align 128
+define void @f0(ptr %a0, ptr %a1) #0 {
+  %v0 = load <32 x i16>, ptr %a0, align 128
   %v1 = trunc <32 x i16> %v0 to <32 x i8>
-  store <32 x i8> %v1, <32 x i8>* %a1, align 128
+  store <32 x i8> %v1, ptr %a1, align 128
   ret void
 }
 
@@ -23,10 +23,10 @@ define void @f0(<32 x i16>* %a0, <32 x i8>* %a1) #0 {
 ; CHECK: v[[V1:[0-9]+]].b = vdeale({{.*}},v[[V0]].b)
 ; CHECK: q[[Q0:[0-3]]] = vsetq(r[[R0]])
 ; CHECK: if (q[[Q0]]) vmem(r1+#0) = v[[V1]]
-define void @f1(<32 x i32>* %a0, <32 x i8>* %a1) #0 {
-  %v0 = load <32 x i32>, <32 x i32>* %a0, align 128
+define void @f1(ptr %a0, ptr %a1) #0 {
+  %v0 = load <32 x i32>, ptr %a0, align 128
   %v1 = trunc <32 x i32> %v0 to <32 x i8>
-  store <32 x i8> %v1, <32 x i8>* %a1, align 128
+  store <32 x i8> %v1, ptr %a1, align 128
   ret void
 }
 
@@ -37,10 +37,10 @@ define void @f1(<32 x i32>* %a0, <32 x i8>* %a1) #0 {
 ; CHECK: v[[V1:[0-9]+]].b = vpacke({{.*}},v[[V0]].h)
 ; CHECK: q[[Q0:[0-3]]] = vsetq(r[[R0]])
 ; CHECK: if (q[[Q0]]) vmem(r1+#0) = v[[V1]]
-define void @f2(<64 x i16>* %a0, <64 x i8>* %a1) #0 {
-  %v0 = load <64 x i16>, <64 x i16>* %a0, align 128
+define void @f2(ptr %a0, ptr %a1) #0 {
+  %v0 = load <64 x i16>, ptr %a0, align 128
   %v1 = trunc <64 x i16> %v0 to <64 x i8>
-  store <64 x i8> %v1, <64 x i8>* %a1, align 128
+  store <64 x i8> %v1, ptr %a1, align 128
   ret void
 }
 
@@ -52,10 +52,10 @@ define void @f2(<64 x i16>* %a0, <64 x i8>* %a1) #0 {
 ; CHECK: v[[V2:[0-9]+]].h = vpacke(v[[V1]].w,v[[V0]].w)
 ; CHECK: v[[V3:[0-9]+]].b = vpacke({{.*}},v[[V2]].h)
 ; CHECK: if (q[[Q0]]) vmem(r1+#0) = v[[V3]]
-define void @f3(<64 x i32>* %a0, <64 x i8>* %a1) #0 {
-  %v0 = load <64 x i32>, <64 x i32>* %a0, align 128
+define void @f3(ptr %a0, ptr %a1) #0 {
+  %v0 = load <64 x i32>, ptr %a0, align 128
   %v1 = trunc <64 x i32> %v0 to <64 x i8>
-  store <64 x i8> %v1, <64 x i8>* %a1, align 128
+  store <64 x i8> %v1, ptr %a1, align 128
   ret void
 }
 
@@ -66,10 +66,10 @@ define void @f3(<64 x i32>* %a0, <64 x i8>* %a1) #0 {
 ; CHECK: v[[V1:[0-9]+]].h = vpacke({{.*}},v[[V0]].w)
 ; CHECK: q[[Q0:[0-3]]] = vsetq(r[[R0]])
 ; CHECK: if (q[[Q0]]) vmem(r1+#0) = v[[V1]]
-define void @f4(<16 x i32>* %a0, <16 x i16>* %a1) #0 {
-  %v0 = load <16 x i32>, <16 x i32>* %a0, align 128
+define void @f4(ptr %a0, ptr %a1) #0 {
+  %v0 = load <16 x i32>, ptr %a0, align 128
   %v1 = trunc <16 x i32> %v0 to <16 x i16>
-  store <16 x i16> %v1, <16 x i16>* %a1, align 128
+  store <16 x i16> %v1, ptr %a1, align 128
   ret void
 }
 
@@ -80,10 +80,10 @@ define void @f4(<16 x i32>* %a0, <16 x i16>* %a1) #0 {
 ; CHECK: v[[V1:[0-9]+]].h = vpacke({{.*}},v[[V0]].w)
 ; CHECK: q[[Q0:[0-3]]] = vsetq(r[[R0]])
 ; CHECK: if (q[[Q0]]) vmem(r1+#0) = v[[V1]]
-define void @f5(<32 x i32>* %a0, <32 x i16>* %a1) #0 {
-  %v0 = load <32 x i32>, <32 x i32>* %a0, align 128
+define void @f5(ptr %a0, ptr %a1) #0 {
+  %v0 = load <32 x i32>, ptr %a0, align 128
   %v1 = trunc <32 x i32> %v0 to <32 x i16>
-  store <32 x i16> %v1, <32 x i16>* %a1, align 128
+  store <32 x i16> %v1, ptr %a1, align 128
   ret void
 }
 
@@ -95,10 +95,10 @@ define void @f5(<32 x i32>* %a0, <32 x i16>* %a1) #0 {
 ; CHECK-DAG: r[[R1:[0-9]+]] = memw(r[[R0]]+#0)
 ; CHECK-DAG: r[[R2:[0-9]+]] = memw(r[[R0]]+#4)
 ; CHECK:     memd(r1+#0) = r[[R2]]:[[R1]]
-define void @f6(<8 x i32>* %a0, <8 x i8>* %a1) #0 {
-  %v0 = load <8 x i32>, <8 x i32>* %a0, align 128
+define void @f6(ptr %a0, ptr %a1) #0 {
+  %v0 = load <8 x i32>, ptr %a0, align 128
   %v1 = trunc <8 x i32> %v0 to <8 x i8>
-  store <8 x i8> %v1, <8 x i8>* %a1, align 128
+  store <8 x i8> %v1, ptr %a1, align 128
   ret void
 }
 

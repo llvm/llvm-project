@@ -107,9 +107,15 @@ public:
       Buffer = &StaticBuffer[0];
       memset(Buffer, 0, BufferSize);
     } else {
+      // When using a heap-based buffer, precommit the pages backing the
+      // Vmar by passing |MAP_PRECOMMIT| flag. This allows an optimization
+      // where page fault exceptions are skipped as the allocated memory
+      // is accessed.
+      const uptr MmapFlags =
+          MAP_ALLOWNOMEM | (SCUDO_FUCHSIA ? MAP_PRECOMMIT : 0);
       Buffer = reinterpret_cast<uptr *>(
           map(nullptr, roundUpTo(BufferSize, getPageSizeCached()),
-              "scudo:counters", MAP_ALLOWNOMEM, &MapData));
+              "scudo:counters", MmapFlags, &MapData));
     }
   }
 

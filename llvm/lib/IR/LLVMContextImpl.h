@@ -17,7 +17,6 @@
 #include "ConstantsContext.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Any.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -187,6 +186,55 @@ struct FunctionTypeKeyInfo {
   }
 
   static bool isEqual(const FunctionType *LHS, const FunctionType *RHS) {
+    return LHS == RHS;
+  }
+};
+
+struct TargetExtTypeKeyInfo {
+  struct KeyTy {
+    StringRef Name;
+    ArrayRef<Type *> TypeParams;
+    ArrayRef<unsigned> IntParams;
+
+    KeyTy(StringRef N, const ArrayRef<Type *> &TP, const ArrayRef<unsigned> &IP)
+        : Name(N), TypeParams(TP), IntParams(IP) {}
+    KeyTy(const TargetExtType *TT)
+        : Name(TT->getName()), TypeParams(TT->type_params()),
+          IntParams(TT->int_params()) {}
+
+    bool operator==(const KeyTy &that) const {
+      return Name == that.Name && TypeParams == that.TypeParams &&
+             IntParams == that.IntParams;
+    }
+    bool operator!=(const KeyTy &that) const { return !this->operator==(that); }
+  };
+
+  static inline TargetExtType *getEmptyKey() {
+    return DenseMapInfo<TargetExtType *>::getEmptyKey();
+  }
+
+  static inline TargetExtType *getTombstoneKey() {
+    return DenseMapInfo<TargetExtType *>::getTombstoneKey();
+  }
+
+  static unsigned getHashValue(const KeyTy &Key) {
+    return hash_combine(
+        Key.Name,
+        hash_combine_range(Key.TypeParams.begin(), Key.TypeParams.end()),
+        hash_combine_range(Key.IntParams.begin(), Key.IntParams.end()));
+  }
+
+  static unsigned getHashValue(const TargetExtType *FT) {
+    return getHashValue(KeyTy(FT));
+  }
+
+  static bool isEqual(const KeyTy &LHS, const TargetExtType *RHS) {
+    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
+      return false;
+    return LHS == KeyTy(RHS);
+  }
+
+  static bool isEqual(const TargetExtType *LHS, const TargetExtType *RHS) {
     return LHS == RHS;
   }
 };
@@ -1440,6 +1488,8 @@ public:
 
   DenseMap<PointerType *, std::unique_ptr<ConstantPointerNull>> CPNConstants;
 
+  DenseMap<TargetExtType *, std::unique_ptr<ConstantTargetNone>> CTNConstants;
+
   DenseMap<Type *, std::unique_ptr<UndefValue>> UVConstants;
 
   DenseMap<Type *, std::unique_ptr<PoisonValue>> PVConstants;
@@ -1479,6 +1529,9 @@ public:
   StructTypeSet AnonStructTypes;
   StringMap<StructType *> NamedStructTypes;
   unsigned NamedStructTypesUniqueID = 0;
+
+  using TargetExtTypeSet = DenseSet<TargetExtType *, TargetExtTypeKeyInfo>;
+  TargetExtTypeSet TargetExtTypes;
 
   DenseMap<std::pair<Type *, uint64_t>, ArrayType *> ArrayTypes;
   DenseMap<std::pair<Type *, ElementCount>, VectorType *> VectorTypes;

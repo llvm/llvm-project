@@ -97,38 +97,38 @@ define void @func() {
   %stackspace = alloca[1024 x i32], align 4
 
   ;; Load values to increase register pressure.
-  %v0 = load volatile i32, i32* @var
-  %v1 = load volatile i32, i32* @var
-  %v2 = load volatile i32, i32* @var
-  %v3 = load volatile i32, i32* @var
-  %v4 = load volatile i32, i32* @var
-  %v5 = load volatile i32, i32* @var
-  %v6 = load volatile i32, i32* @var
-  %v7 = load volatile i32, i32* @var
-  %v8 = load volatile i32, i32* @var
-  %v9 = load volatile i32, i32* @var
-  %v10 = load volatile i32, i32* @var
-  %v11 = load volatile i32, i32* @var
-  %v12 = load volatile i32, i32* @var
-  %v13 = load volatile i32, i32* @var
+  %v0 = load volatile i32, ptr @var
+  %v1 = load volatile i32, ptr @var
+  %v2 = load volatile i32, ptr @var
+  %v3 = load volatile i32, ptr @var
+  %v4 = load volatile i32, ptr @var
+  %v5 = load volatile i32, ptr @var
+  %v6 = load volatile i32, ptr @var
+  %v7 = load volatile i32, ptr @var
+  %v8 = load volatile i32, ptr @var
+  %v9 = load volatile i32, ptr @var
+  %v10 = load volatile i32, ptr @var
+  %v11 = load volatile i32, ptr @var
+  %v12 = load volatile i32, ptr @var
+  %v13 = load volatile i32, ptr @var
 
-  store volatile i32 %v0, i32* %space
+  store volatile i32 %v0, ptr %space
 
   ;; store values so they are used.
-  store volatile i32 %v0, i32* @var
-  store volatile i32 %v1, i32* @var
-  store volatile i32 %v2, i32* @var
-  store volatile i32 %v3, i32* @var
-  store volatile i32 %v4, i32* @var
-  store volatile i32 %v5, i32* @var
-  store volatile i32 %v6, i32* @var
-  store volatile i32 %v7, i32* @var
-  store volatile i32 %v8, i32* @var
-  store volatile i32 %v9, i32* @var
-  store volatile i32 %v10, i32* @var
-  store volatile i32 %v11, i32* @var
-  store volatile i32 %v12, i32* @var
-  store volatile i32 %v13, i32* @var
+  store volatile i32 %v0, ptr @var
+  store volatile i32 %v1, ptr @var
+  store volatile i32 %v2, ptr @var
+  store volatile i32 %v3, ptr @var
+  store volatile i32 %v4, ptr @var
+  store volatile i32 %v5, ptr @var
+  store volatile i32 %v6, ptr @var
+  store volatile i32 %v7, ptr @var
+  store volatile i32 %v8, ptr @var
+  store volatile i32 %v9, ptr @var
+  store volatile i32 %v10, ptr @var
+  store volatile i32 %v11, ptr @var
+  store volatile i32 %v12, ptr @var
+  store volatile i32 %v13, ptr @var
 
   ret void
 }
@@ -238,38 +238,38 @@ define void @shrink_wrap(i1 %c) {
 bar:
 
   ;; Load values to increase register pressure.
-  %v0 = load volatile i32, i32* @var
-  %v1 = load volatile i32, i32* @var
-  %v2 = load volatile i32, i32* @var
-  %v3 = load volatile i32, i32* @var
-  %v4 = load volatile i32, i32* @var
-  %v5 = load volatile i32, i32* @var
-  %v6 = load volatile i32, i32* @var
-  %v7 = load volatile i32, i32* @var
-  %v8 = load volatile i32, i32* @var
-  %v9 = load volatile i32, i32* @var
-  %v10 = load volatile i32, i32* @var
-  %v11 = load volatile i32, i32* @var
-  %v12 = load volatile i32, i32* @var
-  %v13 = load volatile i32, i32* @var
+  %v0 = load volatile i32, ptr @var
+  %v1 = load volatile i32, ptr @var
+  %v2 = load volatile i32, ptr @var
+  %v3 = load volatile i32, ptr @var
+  %v4 = load volatile i32, ptr @var
+  %v5 = load volatile i32, ptr @var
+  %v6 = load volatile i32, ptr @var
+  %v7 = load volatile i32, ptr @var
+  %v8 = load volatile i32, ptr @var
+  %v9 = load volatile i32, ptr @var
+  %v10 = load volatile i32, ptr @var
+  %v11 = load volatile i32, ptr @var
+  %v12 = load volatile i32, ptr @var
+  %v13 = load volatile i32, ptr @var
 
-  store volatile i32 %v0, i32* %space
+  store volatile i32 %v0, ptr %space
 
   ;; store values so they are used.
-  store volatile i32 %v0, i32* @var
-  store volatile i32 %v1, i32* @var
-  store volatile i32 %v2, i32* @var
-  store volatile i32 %v3, i32* @var
-  store volatile i32 %v4, i32* @var
-  store volatile i32 %v5, i32* @var
-  store volatile i32 %v6, i32* @var
-  store volatile i32 %v7, i32* @var
-  store volatile i32 %v8, i32* @var
-  store volatile i32 %v9, i32* @var
-  store volatile i32 %v10, i32* @var
-  store volatile i32 %v11, i32* @var
-  store volatile i32 %v12, i32* @var
-  store volatile i32 %v13, i32* @var
+  store volatile i32 %v0, ptr @var
+  store volatile i32 %v1, ptr @var
+  store volatile i32 %v2, ptr @var
+  store volatile i32 %v3, ptr @var
+  store volatile i32 %v4, ptr @var
+  store volatile i32 %v5, ptr @var
+  store volatile i32 %v6, ptr @var
+  store volatile i32 %v7, ptr @var
+  store volatile i32 %v8, ptr @var
+  store volatile i32 %v9, ptr @var
+  store volatile i32 %v10, ptr @var
+  store volatile i32 %v11, ptr @var
+  store volatile i32 %v12, ptr @var
+  store volatile i32 %v13, ptr @var
   br label %foo
 
 foo:

@@ -92,6 +92,7 @@ static_library("MCTargetDesc") {
     "//llvm/lib/Support",
     "//llvm/lib/Target/AMDGPU/TargetInfo",
     "//llvm/lib/Target/AMDGPU/Utils",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ ".." ]
   sources = [

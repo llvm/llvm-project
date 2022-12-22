@@ -143,6 +143,9 @@ public:
 
   bool IsAggregateType();
 
+  // Returns if the type is a templated decl. Does not look through typedefs.
+  bool IsTemplateType();
+
   bool IsValidType() { return m_encoding_uid_type != eEncodingInvalid; }
 
   bool IsTypedef() { return m_encoding_uid_type == eEncodingIsTypedefUID; }

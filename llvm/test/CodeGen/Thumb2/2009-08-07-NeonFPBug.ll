@@ -1,44 +1,43 @@
 ; RUN: llc < %s -mtriple=thumbv7-apple-darwin10 -mcpu=cortex-a8
 
-	%struct.FILE = type { i8*, i32, i32, i16, i16, %struct.__sbuf, i32, i8*, i32 (i8*)*, i32 (i8*, i8*, i32)*, i64 (i8*, i64, i32)*, i32 (i8*, i8*, i32)*, %struct.__sbuf, %struct.__sFILEX*, i32, [3 x i8], [1 x i8], %struct.__sbuf, i32, i64 }
+	%struct.FILE = type { ptr, i32, i32, i16, i16, %struct.__sbuf, i32, ptr, ptr, ptr, ptr, ptr, %struct.__sbuf, ptr, i32, [3 x i8], [1 x i8], %struct.__sbuf, i32, i64 }
 	%struct.JHUFF_TBL = type { [17 x i8], [256 x i8], i32 }
 	%struct.JQUANT_TBL = type { [64 x i16], i32 }
 	%struct.__sFILEX = type opaque
-	%struct.__sbuf = type { i8*, i32 }
+	%struct.__sbuf = type { ptr, i32 }
 	%struct.anon = type { [8 x i32], [48 x i8] }
-	%struct.backing_store_info = type { void (%struct.jpeg_common_struct*, %struct.backing_store_info*, i8*, i32, i32)*, void (%struct.jpeg_common_struct*, %struct.backing_store_info*, i8*, i32, i32)*, void (%struct.jpeg_common_struct*, %struct.backing_store_info*)*, %struct.FILE*, [64 x i8] }
-	%struct.jpeg_color_deconverter = type { void (%struct.jpeg_decompress_struct*)*, void (%struct.jpeg_decompress_struct*, i8***, i32, i8**, i32)* }
-	%struct.jpeg_color_quantizer = type { void (%struct.jpeg_decompress_struct*, i32)*, void (%struct.jpeg_decompress_struct*, i8**, i8**, i32)*, void (%struct.jpeg_decompress_struct*)*, void (%struct.jpeg_decompress_struct*)* }
-	%struct.jpeg_common_struct = type { %struct.jpeg_error_mgr*, %struct.jpeg_memory_mgr*, %struct.jpeg_progress_mgr*, i32, i32 }
-	%struct.jpeg_component_info = type { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, %struct.JQUANT_TBL*, i8* }
-	%struct.jpeg_d_coef_controller = type { void (%struct.jpeg_decompress_struct*)*, i32 (%struct.jpeg_decompress_struct*)*, void (%struct.jpeg_decompress_struct*)*, i32 (%struct.jpeg_decompress_struct*, i8***)*, %struct.jvirt_barray_control** }
-	%struct.jpeg_d_main_controller = type { void (%struct.jpeg_decompress_struct*, i32)*, void (%struct.jpeg_decompress_struct*, i8**, i32*, i32)* }
-	%struct.jpeg_d_post_controller = type { void (%struct.jpeg_decompress_struct*, i32)*, void (%struct.jpeg_decompress_struct*, i8***, i32*, i32, i8**, i32*, i32)* }
-	%struct.jpeg_decomp_master = type { void (%struct.jpeg_decompress_struct*)*, void (%struct.jpeg_decompress_struct*)*, i32 }
-	%struct.jpeg_decompress_struct = type { %struct.jpeg_error_mgr*, %struct.jpeg_memory_mgr*, %struct.jpeg_progress_mgr*, i32, i32, %struct.jpeg_source_mgr*, i32, i32, i32, i32, i32, i32, i32, double, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i8**, i32, i32, i32, i32, i32, [64 x i32]*, [4 x %struct.JQUANT_TBL*], [4 x %struct.JHUFF_TBL*], [4 x %struct.JHUFF_TBL*], i32, %struct.jpeg_component_info*, i32, i32, [16 x i8], [16 x i8], [16 x i8], i32, i32, i8, i16, i16, i32, i8, i32, i32, i32, i32, i32, i8*, i32, [4 x %struct.jpeg_component_info*], i32, i32, i32, [10 x i32], i32, i32, i32, i32, i32, %struct.jpeg_decomp_master*, %struct.jpeg_d_main_controller*, %struct.jpeg_d_coef_controller*, %struct.jpeg_d_post_controller*, %struct.jpeg_input_controller*, %struct.jpeg_marker_reader*, %struct.jpeg_entropy_decoder*, %struct.jpeg_inverse_dct*, %struct.jpeg_upsampler*, %struct.jpeg_color_deconverter*, %struct.jpeg_color_quantizer* }
-	%struct.jpeg_entropy_decoder = type { void (%struct.jpeg_decompress_struct*)*, i32 (%struct.jpeg_decompress_struct*, [64 x i16]**)* }
-	%struct.jpeg_error_mgr = type { void (%struct.jpeg_common_struct*)*, void (%struct.jpeg_common_struct*, i32)*, void (%struct.jpeg_common_struct*)*, void (%struct.jpeg_common_struct*, i8*)*, void (%struct.jpeg_common_struct*)*, i32, %struct.anon, i32, i32, i8**, i32, i8**, i32, i32 }
-	%struct.jpeg_input_controller = type { i32 (%struct.jpeg_decompress_struct*)*, void (%struct.jpeg_decompress_struct*)*, void (%struct.jpeg_decompress_struct*)*, void (%struct.jpeg_decompress_struct*)*, i32, i32 }
-	%struct.jpeg_inverse_dct = type { void (%struct.jpeg_decompress_struct*)*, [10 x void (%struct.jpeg_decompress_struct*, %struct.jpeg_component_info*, i16*, i8**, i32)*] }
-	%struct.jpeg_marker_reader = type { void (%struct.jpeg_decompress_struct*)*, i32 (%struct.jpeg_decompress_struct*)*, i32 (%struct.jpeg_decompress_struct*)*, i32 (%struct.jpeg_decompress_struct*)*, [16 x i32 (%struct.jpeg_decompress_struct*)*], i32, i32, i32, i32 }
-	%struct.jpeg_memory_mgr = type { i8* (%struct.jpeg_common_struct*, i32, i32)*, i8* (%struct.jpeg_common_struct*, i32, i32)*, i8** (%struct.jpeg_common_struct*, i32, i32, i32)*, [64 x i16]** (%struct.jpeg_common_struct*, i32, i32, i32)*, %struct.jvirt_sarray_control* (%struct.jpeg_common_struct*, i32, i32, i32, i32, i32)*, %struct.jvirt_barray_control* (%struct.jpeg_common_struct*, i32, i32, i32, i32, i32)*, void (%struct.jpeg_common_struct*)*, i8** (%struct.jpeg_common_struct*, %struct.jvirt_sarray_control*, i32, i32, i32)*, [64 x i16]** (%struct.jpeg_common_struct*, %struct.jvirt_barray_control*, i32, i32, i32)*, void (%struct.jpeg_common_struct*, i32)*, void (%struct.jpeg_common_struct*)*, i32 }
-	%struct.jpeg_progress_mgr = type { void (%struct.jpeg_common_struct*)*, i32, i32, i32, i32 }
-	%struct.jpeg_source_mgr = type { i8*, i32, void (%struct.jpeg_decompress_struct*)*, i32 (%struct.jpeg_decompress_struct*)*, void (%struct.jpeg_decompress_struct*, i32)*, i32 (%struct.jpeg_decompress_struct*, i32)*, void (%struct.jpeg_decompress_struct*)* }
-	%struct.jpeg_upsampler = type { void (%struct.jpeg_decompress_struct*)*, void (%struct.jpeg_decompress_struct*, i8***, i32*, i32, i8**, i32*, i32)*, i32 }
-	%struct.jvirt_barray_control = type { [64 x i16]**, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, %struct.jvirt_barray_control*, %struct.backing_store_info }
-	%struct.jvirt_sarray_control = type { i8**, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, %struct.jvirt_sarray_control*, %struct.backing_store_info }
+	%struct.backing_store_info = type { ptr, ptr, ptr, ptr, [64 x i8] }
+	%struct.jpeg_color_deconverter = type { ptr, ptr }
+	%struct.jpeg_color_quantizer = type { ptr, ptr, ptr, ptr }
+	%struct.jpeg_common_struct = type { ptr, ptr, ptr, i32, i32 }
+	%struct.jpeg_component_info = type { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, ptr, ptr }
+	%struct.jpeg_d_coef_controller = type { ptr, ptr, ptr, ptr, ptr }
+	%struct.jpeg_d_main_controller = type { ptr, ptr }
+	%struct.jpeg_d_post_controller = type { ptr, ptr }
+	%struct.jpeg_decomp_master = type { ptr, ptr, i32 }
+	%struct.jpeg_decompress_struct = type { ptr, ptr, ptr, i32, i32, ptr, i32, i32, i32, i32, i32, i32, i32, double, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, ptr, i32, i32, i32, i32, i32, ptr, [4 x ptr], [4 x ptr], [4 x ptr], i32, ptr, i32, i32, [16 x i8], [16 x i8], [16 x i8], i32, i32, i8, i16, i16, i32, i8, i32, i32, i32, i32, i32, ptr, i32, [4 x ptr], i32, i32, i32, [10 x i32], i32, i32, i32, i32, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr }
+	%struct.jpeg_entropy_decoder = type { ptr, ptr }
+	%struct.jpeg_error_mgr = type { ptr, ptr, ptr, ptr, ptr, i32, %struct.anon, i32, i32, ptr, i32, ptr, i32, i32 }
+	%struct.jpeg_input_controller = type { ptr, ptr, ptr, ptr, i32, i32 }
+	%struct.jpeg_inverse_dct = type { ptr, [10 x ptr] }
+	%struct.jpeg_marker_reader = type { ptr, ptr, ptr, ptr, [16 x ptr], i32, i32, i32, i32 }
+	%struct.jpeg_memory_mgr = type { ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32 }
+	%struct.jpeg_progress_mgr = type { ptr, i32, i32, i32, i32 }
+	%struct.jpeg_source_mgr = type { ptr, i32, ptr, ptr, ptr, ptr, ptr }
+	%struct.jpeg_upsampler = type { ptr, ptr, i32 }
+	%struct.jvirt_barray_control = type { ptr, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, ptr, %struct.backing_store_info }
+	%struct.jvirt_sarray_control = type { ptr, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, ptr, %struct.backing_store_info }
 
-define void @jpeg_idct_float(%struct.jpeg_decompress_struct* nocapture %cinfo, %struct.jpeg_component_info* nocapture %compptr, i16* nocapture %coef_block, i8** nocapture %output_buf, i32 %output_col) nounwind {
+define void @jpeg_idct_float(ptr nocapture %cinfo, ptr nocapture %compptr, ptr nocapture %coef_block, ptr nocapture %output_buf, i32 %output_col) nounwind {
 entry:
 	br label %bb
 
 bb:		; preds = %bb, %entry
-	%0 = load float, float* undef, align 4		; <float> [#uses=1]
+	%0 = load float, ptr undef, align 4		; <float> [#uses=1]
 	%1 = fmul float undef, %0		; <float> [#uses=2]
 	%tmp73 = add i32 0, 224		; <i32> [#uses=1]
-	%scevgep74 = getelementptr i8, i8* null, i32 %tmp73		; <i8*> [#uses=1]
-	%scevgep7475 = bitcast i8* %scevgep74 to float*		; <float*> [#uses=1]
-	%2 = load float, float* null, align 4		; <float> [#uses=1]
+	%scevgep74 = getelementptr i8, ptr null, i32 %tmp73		; <ptr> [#uses=1]
+	%2 = load float, ptr null, align 4		; <float> [#uses=1]
 	%3 = fmul float 0.000000e+00, %2		; <float> [#uses=2]
 	%4 = fadd float %1, %3		; <float> [#uses=1]
 	%5 = fsub float %1, %3		; <float> [#uses=2]
@@ -51,7 +50,7 @@ bb:		; preds = %bb, %entry
 	%12 = sitofp i16 undef to float		; <float> [#uses=1]
 	%13 = fmul float %12, 0.000000e+00		; <float> [#uses=2]
 	%14 = sitofp i16 undef to float		; <float> [#uses=1]
-	%15 = load float, float* %scevgep7475, align 4		; <float> [#uses=1]
+	%15 = load float, ptr %scevgep74, align 4		; <float> [#uses=1]
 	%16 = fmul float %14, %15		; <float> [#uses=2]
 	%17 = fadd float undef, undef		; <float> [#uses=2]
 	%18 = fadd float %13, %16		; <float> [#uses=2]
@@ -67,14 +66,14 @@ bb:		; preds = %bb, %entry
 	%28 = fsub float %22, %27		; <float> [#uses=2]
 	%29 = fadd float %25, %28		; <float> [#uses=1]
 	%30 = fadd float undef, %20		; <float> [#uses=1]
-	store float %30, float* undef, align 4
+	store float %30, ptr undef, align 4
 	%31 = fadd float %10, %27		; <float> [#uses=1]
-	store float %31, float* undef, align 4
+	store float %31, ptr undef, align 4
 	%32 = fsub float %10, %27		; <float> [#uses=1]
-	store float %32, float* undef, align 4
+	store float %32, ptr undef, align 4
 	%33 = fadd float %11, %28		; <float> [#uses=1]
-	store float %33, float* undef, align 4
+	store float %33, ptr undef, align 4
 	%34 = fsub float %9, %29		; <float> [#uses=1]
-	store float %34, float* undef, align 4
+	store float %34, ptr undef, align 4
 	br label %bb
 }

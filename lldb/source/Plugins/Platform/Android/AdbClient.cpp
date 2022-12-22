@@ -134,7 +134,7 @@ Status AdbClient::Connect() {
     port = env_port;
   }
   std::string uri = "connect://127.0.0.1:" + port;
-  m_conn->Connect(uri, &error);
+  m_conn->Connect(uri.c_str(), &error);
 
   return error;
 }
@@ -304,7 +304,8 @@ Status AdbClient::GetResponseError(const char *response_id) {
   std::vector<char> error_message;
   auto error = ReadMessage(error_message);
   if (error.Success())
-    error.SetErrorString(std::string(&error_message[0], error_message.size()));
+    error.SetErrorString(
+        std::string(&error_message[0], error_message.size()).c_str());
 
   return error;
 }

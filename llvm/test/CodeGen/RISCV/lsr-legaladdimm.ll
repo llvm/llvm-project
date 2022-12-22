@@ -35,10 +35,10 @@ entry:
 for.body:
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %sub = add nsw i32 %i.08, -2048
-  %arrayidx = getelementptr inbounds [4096 x i32], [4096 x i32]* @a, i32 0, i32 %i.08
-  store i32 %sub, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds [4096 x i32], [4096 x i32]* @b, i32 0, i32 %i.08
-  store i32 %i.08, i32* %arrayidx1, align 4
+  %arrayidx = getelementptr inbounds [4096 x i32], ptr @a, i32 0, i32 %i.08
+  store i32 %sub, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds [4096 x i32], ptr @b, i32 0, i32 %i.08
+  store i32 %i.08, ptr %arrayidx1, align 4
   %inc = add nuw nsw i32 %i.08, 1
   %exitcond = icmp eq i32 %inc, 4096
   br i1 %exitcond, label %for.end, label %for.body

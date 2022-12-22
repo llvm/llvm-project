@@ -5,7 +5,7 @@
 %st_t = type { i32, i32 }
 @static_val = constant %st_t { i32 777, i32 888}
 
-declare void @fooUseStruct(%st_t*)
+declare void @fooUseStruct(ptr)
 
 define void @foo(double %vfp0,     ; --> D0,     NSAA=SP
                  double %vfp1,     ; --> D1,     NSAA=SP
@@ -17,7 +17,7 @@ define void @foo(double %vfp0,     ; --> D0,     NSAA=SP
 		 double %vfp7,     ; --> D7,     NSAA=SP
 		 double %vfp8,     ; --> SP,     NSAA=SP+8 (!)
                  i32 %p0,          ; --> R0,     NSAA=SP+8
-		 %st_t* byval(%st_t) %p1, ; --> R1, R2, NSAA=SP+8
+		 ptr byval(%st_t) %p1, ; --> R1, R2, NSAA=SP+8
 		 i32 %p2,          ; --> R3,     NSAA=SP+8
                  i32 %p3) #0 {     ; --> SP+4,   NSAA=SP+12
 entry:
@@ -27,7 +27,7 @@ entry:
   ;CHECK: add r0, sp, #12
   ;CHECK: strd r1, r2, [sp, #12]
   ;CHECK: bl  fooUseStruct
-  call void @fooUseStruct(%st_t* %p1)
+  call void @fooUseStruct(ptr %p1)
   ret void
 }
 
@@ -42,7 +42,7 @@ entry:
                  double 23.6,
                  double 23.7,
                  double 23.8,
-                 i32 0, %st_t* byval(%st_t) @static_val, i32 1, i32 2)
+                 i32 0, ptr byval(%st_t) @static_val, i32 1, i32 2)
   ret void
 }
 

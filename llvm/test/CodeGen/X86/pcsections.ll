@@ -69,7 +69,7 @@ define i64 @multiple() !pcsections !0 {
 ; CHECK-NEXT:  .long	21264
 ; CHECK-NEXT:  .text
 entry:
-  %0 = load i64, i64* @bar, align 8, !pcsections !2
+  %0 = load i64, ptr @bar, align 8, !pcsections !2
   ret i64 %0
 }
 
@@ -87,8 +87,8 @@ define i64 @test_simple_atomic() {
 ; LARGE-NEXT:  .quad	.Lpcsection1-.Lpcsection_base5
 ; CHECK-NEXT:  .text
 entry:
-  %0 = load atomic i64, i64* @foo monotonic, align 8, !pcsections !0
-  %1 = load i64, i64* @bar, align 8
+  %0 = load atomic i64, ptr @foo monotonic, align 8, !pcsections !0
+  %1 = load i64, ptr @bar, align 8
   %add = add nsw i64 %1, %0
   ret i64 %add
 }
@@ -109,10 +109,10 @@ define i64 @test_complex_atomic() {
 ; LARGE-NEXT:  .quad	.Lpcsection2-.Lpcsection_base6
 ; CHECK-NEXT:  .text
 entry:
-  %0 = atomicrmw add i64* @foo, i64 1 monotonic, align 8, !pcsections !0
-  %1 = load i64, i64* @bar, align 8
+  %0 = atomicrmw add ptr @foo, i64 1 monotonic, align 8, !pcsections !0
+  %1 = load i64, ptr @bar, align 8
   %inc = add nsw i64 %1, 1
-  store i64 %inc, i64* @bar, align 8
+  store i64 %inc, ptr @bar, align 8
   %add = add nsw i64 %1, %0
   ret i64 %add
 }

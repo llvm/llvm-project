@@ -7,7 +7,7 @@
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "arm64--linux-gnueabi"
 
-define void @test(i64 %a, i64* %ptr1, i64* %ptr2) #0 align 2 {
+define void @test(i64 %a, ptr %ptr1, ptr %ptr2) #0 align 2 {
 entry:
   %conv = and i64 %a, 4294967295
   %add = add nsw i64 %conv, -1
@@ -24,8 +24,8 @@ if.then:
 exit:                 
   %__n = phi i64 [ %add3, %if.then ], [ %div, %entry ]
   %__n.0 = phi i64 [ %add2, %if.then ], [ %rem, %entry ]
-  store i64 %__n, i64* %ptr1
-  store i64 %__n.0, i64* %ptr2
+  store i64 %__n, ptr %ptr1
+  store i64 %__n.0, ptr %ptr2
   ret void 
 }
 

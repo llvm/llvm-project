@@ -35,7 +35,7 @@ class SPIRV_Attr<string attrName, string attrMnemonic>
 def SPIRV_EntryPointABIAttr : SPIRV_Attr<"EntryPointABI", "entry_point_abi"> {
   let parameters = (ins
     OptionalParameter<"DenseI32ArrayAttr">:$workgroup_size,
-    OptionalParameter<"llvm::Optional<int>">:$subgroup_size
+    OptionalParameter<"std::optional<int>">:$subgroup_size
   );
   let assemblyFormat = "`<` struct(params) `>`";
 }
@@ -116,9 +116,9 @@ def SPIRV_ResourceLimitsAttr : SPIRV_Attr<"ResourceLimits", "resource_limits"> {
     DefaultValuedParameter<"int", "32">:$subgroup_size,
 
     // The minimum supported size if the subgroup size is controllable.
-    OptionalParameter<"mlir::Optional<int>">:$min_subgroup_size,
+    OptionalParameter<"std::optional<int>">:$min_subgroup_size,
     // The maximum supported size if the subgroup size is controllable.
-    OptionalParameter<"mlir::Optional<int>">:$max_subgroup_size,
+    OptionalParameter<"std::optional<int>">:$max_subgroup_size,
 
     // The configurations of cooperative matrix operations
     // supported. Default is an empty list.

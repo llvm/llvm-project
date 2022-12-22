@@ -5,7 +5,7 @@
 declare void @llvm.trap()
 declare i32 @llvm.amdgcn.workitem.id.x()
 
-define amdgpu_kernel void @kernel(i32 %a, i32 addrspace(1)* %x, i32 noundef %n) {
+define amdgpu_kernel void @kernel(i32 %a, ptr addrspace(1) %x, i32 noundef %n) {
 ; This used to bypass the structurization process because structurizer is unable to
 ; handle multiple-exits CFG. This should be correctly structurized.
 ; UNIFY-LABEL: define amdgpu_kernel void @kernel
@@ -29,12 +29,11 @@ define amdgpu_kernel void @kernel(i32 %a, i32 addrspace(1)* %x, i32 noundef %n) 
 ; UNIFY-NEXT:    call void @llvm.trap()
 ; UNIFY-NEXT:    br label %UnifiedUnreachableBlock
 ; UNIFY-LABEL: if.end6.sink.split:
-; UNIFY-NEXT:    %x.kernarg.offset = getelementptr inbounds i8, i8 addrspace(4)* %kernel.kernarg.segment, i64 8
-; UNIFY-NEXT:    %x.kernarg.offset.cast = bitcast i8 addrspace(4)* %x.kernarg.offset to i32 addrspace(1)* addrspace(4)*
-; UNIFY-NEXT:    %x.load = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* %x.kernarg.offset.cast, align 8, !invariant.load !0
+; UNIFY-NEXT:    %x.kernarg.offset = getelementptr inbounds i8, ptr addrspace(4) %kernel.kernarg.segment, i64 8
+; UNIFY-NEXT:    %x.load = load ptr addrspace(1), ptr addrspace(4) %x.kernarg.offset, align 8, !invariant.load !0
 ; UNIFY-NEXT:    %idxprom = sext i32 %tid to i64
-; UNIFY-NEXT:    %x1 = getelementptr inbounds i32, i32 addrspace(1)* %x.load, i64 %idxprom
-; UNIFY-NEXT:    store i32 %a.load, i32 addrspace(1)* %x1, align 4
+; UNIFY-NEXT:    %x1 = getelementptr inbounds i32, ptr addrspace(1) %x.load, i64 %idxprom
+; UNIFY-NEXT:    store i32 %a.load, ptr addrspace(1) %x1, align 4
 ; UNIFY-NEXT:    br label %UnifiedReturnBlock
 ; UNIFY-LABEL: UnifiedUnreachableBlock:
 ; UNIFY-NEXT:    call void @llvm.amdgcn.unreachable()
@@ -130,8 +129,8 @@ cond.false.i8:
   unreachable
 
 if.end6.sink.split:
-  %x1 = getelementptr inbounds i32, i32 addrspace(1)* %x, i32 %tid
-  store i32 %a, i32 addrspace(1)* %x1, align 4
+  %x1 = getelementptr inbounds i32, ptr addrspace(1) %x, i32 %tid
+  store i32 %a, ptr addrspace(1) %x1, align 4
   br label %if.end6
 
 if.end6:

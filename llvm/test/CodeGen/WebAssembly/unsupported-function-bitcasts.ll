@@ -6,7 +6,7 @@
 target triple = "wasm32-unknown-unknown"
 
 declare i32 @has_i64_arg(i64)
-declare i32 @has_ptr_arg(i8*)
+declare i32 @has_ptr_arg(ptr)
 
 ; CHECK-LABEL: test_invalid_rtn:
 ; CHECK:      i32.const   $push[[L0:[0-9]+]]=, 0{{$}}
@@ -18,15 +18,15 @@ declare i32 @has_ptr_arg(i8*)
 ; CHECK-NEXT: end_function
 define void @test_invalid_rtn() {
 entry:
-  call i32 bitcast (i32 (i64)* @has_i64_arg to i32 (i32)*)(i32 0)
-  call [1 x i64] bitcast (i32 (i64)* @has_i64_arg to [1 x i64] (i64)*)(i64 0)
+  call i32 @has_i64_arg(i32 0)
+  call [1 x i64] @has_i64_arg(i64 0)
   ret void
 }
 
 ; CHECK-LABEL: test_struct_rtn:
 ; CHECK: 	call    	has_i64_arg, $pop6, $pop0
 define void @test_struct_rtn() {
-  call {i32, i32} bitcast (i32 (i64)* @has_i64_arg to {i32, i32} (i64)*)(i64 0)
+  call {i32, i32} @has_i64_arg(i64 0)
   ret void
 }
 
@@ -43,9 +43,9 @@ define void @test_struct_rtn() {
 ; CHECK-NEXT: 	end_function
 define void @test_invalid_arg() {
 entry:
-  call i32 bitcast (i32 (i8*)* @has_ptr_arg to i32 (i8)*)(i8 2)
-  call i32 bitcast (i32 (i8*)* @has_ptr_arg to i32 (i32)*)(i32 2)
-  call i32 bitcast (i32 (i8*)* @has_ptr_arg to i32 (i64)*)(i64 3)
+  call i32 @has_ptr_arg(i8 2)
+  call i32 @has_ptr_arg(i32 2)
+  call i32 @has_ptr_arg(i64 3)
   ret void
 }
 

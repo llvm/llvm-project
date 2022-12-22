@@ -17,9 +17,9 @@ define i8 @test_register_wrangling() {
   %var3 = alloca i8
   %dummy = alloca i8, i32 4100
 
-  %var1p1 = getelementptr i8, i8* %var1, i32 1
-  %val1 = load i8, i8* %var1
-  %val2 = load i8, i8* %var3
+  %var1p1 = getelementptr i8, ptr %var1, i32 1
+  %val1 = load i8, ptr %var1
+  %val2 = load i8, ptr %var3
 
   %sum = add i8 %val1, %val2
   ret i8 %sum

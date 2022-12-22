@@ -473,6 +473,17 @@ fir::CharBoxValue fir::factory::CharacterExprHelper::createConcatenate(
   return temp;
 }
 
+mlir::Value fir::factory::CharacterExprHelper::genSubstringBase(
+    mlir::Value stringRawAddr, mlir::Value lowerBound,
+    mlir::Type substringAddrType, mlir::Value one) {
+  if (!one)
+    one = builder.createIntegerConstant(loc, lowerBound.getType(), 1);
+  auto offset =
+      builder.create<mlir::arith::SubIOp>(loc, lowerBound, one).getResult();
+  auto addr = createElementAddr(stringRawAddr, offset);
+  return builder.createConvert(loc, substringAddrType, addr);
+}
+
 fir::CharBoxValue fir::factory::CharacterExprHelper::createSubstring(
     const fir::CharBoxValue &box, llvm::ArrayRef<mlir::Value> bounds) {
   // Constant need to be materialize in memory to use fir.coordinate_of.
@@ -488,14 +499,12 @@ fir::CharBoxValue fir::factory::CharacterExprHelper::createSubstring(
         builder.createConvert(loc, builder.getCharacterLengthType(), bound));
   auto lowerBound = castBounds[0];
   // FIR CoordinateOp is zero based but Fortran substring are one based.
-  auto one = builder.createIntegerConstant(loc, lowerBound.getType(), 1);
-  auto offset =
-      builder.create<mlir::arith::SubIOp>(loc, lowerBound, one).getResult();
-  auto addr = createElementAddr(box.getBuffer(), offset);
   auto kind = getCharacterKind(box.getBuffer().getType());
   auto charTy = fir::CharacterType::getUnknownLen(builder.getContext(), kind);
   auto resultType = builder.getRefType(charTy);
-  auto substringRef = builder.createConvert(loc, resultType, addr);
+  auto one = builder.createIntegerConstant(loc, lowerBound.getType(), 1);
+  auto substringRef =
+      genSubstringBase(box.getBuffer(), lowerBound, resultType, one);
 
   // Compute the length.
   mlir::Value substringLen;

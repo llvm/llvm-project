@@ -1441,6 +1441,48 @@ bool DIExpression::isComplex() const {
   return false;
 }
 
+void DIExpression::canonicalizeExpressionOps(SmallVectorImpl<uint64_t> &Ops,
+                                             const DIExpression *Expr,
+                                             bool IsIndirect) {
+  // If Expr is not already variadic, insert the implied `DW_OP_LLVM_arg 0`
+  // to the existing expression ops.
+  if (none_of(Expr->expr_ops(), [](auto ExprOp) {
+        return ExprOp.getOp() == dwarf::DW_OP_LLVM_arg;
+      }))
+    Ops.append({dwarf::DW_OP_LLVM_arg, 0});
+  // If Expr is not indirect, we only need to insert the expression elements and
+  // we're done.
+  if (!IsIndirect) {
+    Ops.append(Expr->elements_begin(), Expr->elements_end());
+    return;
+  }
+  // If Expr is indirect, insert the implied DW_OP_deref at the end of the
+  // expression but before DW_OP_{stack_value, LLVM_fragment} if they are
+  // present.
+  for (auto Op : Expr->expr_ops()) {
+    if (Op.getOp() == dwarf::DW_OP_stack_value ||
+        Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
+      Ops.push_back(dwarf::DW_OP_deref);
+      IsIndirect = false;
+    }
+    Op.appendToVector(Ops);
+  }
+  if (IsIndirect)
+    Ops.push_back(dwarf::DW_OP_deref);
+}
+
+bool DIExpression::isEqualExpression(const DIExpression *FirstExpr,
+                                     bool FirstIndirect,
+                                     const DIExpression *SecondExpr,
+                                     bool SecondIndirect) {
+  SmallVector<uint64_t> FirstOps;
+  DIExpression::canonicalizeExpressionOps(FirstOps, FirstExpr, FirstIndirect);
+  SmallVector<uint64_t> SecondOps;
+  DIExpression::canonicalizeExpressionOps(SecondOps, SecondExpr,
+                                          SecondIndirect);
+  return FirstOps == SecondOps;
+}
+
 std::optional<DIExpression::FragmentInfo>
 DIExpression::getFragmentInfo(expr_op_iterator Start, expr_op_iterator End) {
   for (auto I = Start; I != End; ++I)

@@ -4,7 +4,7 @@ id testCompleteAfterAtSign() {
   return @"";
 }
 
-// RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:4:11 %s -fno-const-strings -o - | FileCheck -check-prefix=CHECK-AT %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:%(line-3):11 %s -fno-const-strings -o - | FileCheck -check-prefix=CHECK-AT %s
 // CHECK-AT: COMPLETION: Pattern : [#NSString *#]"<#string#>"
 // CHECK-AT: COMPLETION: Pattern : [#id#](<#expression#>)
 // CHECK-AT: COMPLETION: Pattern : [#NSArray *#][<#objects, ...#>]
@@ -13,5 +13,5 @@ id testCompleteAfterAtSign() {
 // CHECK-AT: COMPLETION: Pattern : [#SEL#]selector(<#selector#>)
 // CHECK-AT: COMPLETION: Pattern : [#NSDictionary *#]{<#key#>: <#object, ...#>}
 
-// RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:4:11 %s -fconst-strings -o - | FileCheck -check-prefix=CHECK-CONST-STRINGS %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:%(line-12):11 %s -fconst-strings -o - | FileCheck -check-prefix=CHECK-CONST-STRINGS %s
 // CHECK-CONST-STRINGS: COMPLETION: Pattern : [#const char[]#]encode(<#type-name#>)

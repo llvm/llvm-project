@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=arm-darwin -mattr=v6 | FileCheck %s --check-prefixes=CHECK
 ; RUN: llc < %s -mtriple=thumb-darwin -mattr=v6 | FileCheck %s --check-prefixes=CHECK
 
-define void @test1(i16* nocapture %data) {
+define void @test1(ptr nocapture %data) {
 ; CHECK-LABEL: test1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrh r1, [r0]
@@ -10,13 +10,13 @@ define void @test1(i16* nocapture %data) {
 ; CHECK-NEXT:    strh r1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* %data, align 2
+  %0 = load i16, ptr %data, align 2
   %1 = tail call i16 @llvm.bswap.i16(i16 %0)
-  store i16 %1, i16* %data, align 2
+  store i16 %1, ptr %data, align 2
   ret void
 }
 
-define void @test2(i16* nocapture %data, i16 zeroext %in) {
+define void @test2(ptr nocapture %data, i16 zeroext %in) {
 ; CHECK-LABEL: test2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    rev16 r1, r1
@@ -24,18 +24,18 @@ define void @test2(i16* nocapture %data, i16 zeroext %in) {
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = tail call i16 @llvm.bswap.i16(i16 %in)
-  store i16 %0, i16* %data, align 2
+  store i16 %0, ptr %data, align 2
   ret void
 }
 
-define i16 @test3(i16* nocapture %data) {
+define i16 @test3(ptr nocapture %data) {
 ; CHECK-LABEL: test3:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrh r0, [r0]
 ; CHECK-NEXT:    rev16 r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* %data, align 2
+  %0 = load i16, ptr %data, align 2
   %1 = tail call i16 @llvm.bswap.i16(i16 %0)
   ret i16 %1
 }

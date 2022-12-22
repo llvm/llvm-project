@@ -947,8 +947,10 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
 
 /// Freely adapt every user of V as-if V was changed to !V.
 /// WARNING: only if canFreelyInvertAllUsersOf() said this can be done.
-void InstCombinerImpl::freelyInvertAllUsersOf(Value *I) {
-  for (User *U : I->users()) {
+void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
+  for (User *U : make_early_inc_range(I->users())) {
+    if (U == IgnoredUser)
+      continue; // Don't consider this user.
     switch (cast<Instruction>(U)->getOpcode()) {
     case Instruction::Select: {
       auto *SI = cast<SelectInst>(U);

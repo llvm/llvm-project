@@ -37,22 +37,21 @@ define void @float_va_fn(float %a, i32 %b, ...) nounwind {
 ; O0-NEXT:    add sp, sp, #80
 ; O0-NEXT:    ret
 entry:
-  %ap = alloca i8*, align 8
-  %0 = bitcast i8** %ap to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0)
-  call void @llvm.va_start(i8* nonnull %0)
-  %1 = load i8*, i8** %ap, align 8
-  call void @f_va_list(float %a, i8* %1)
-  call void @llvm.va_end(i8* nonnull %0)
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %0)
+  %ap = alloca ptr, align 8
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %ap)
+  call void @llvm.va_start(ptr nonnull %ap)
+  %0 = load ptr, ptr %ap, align 8
+  call void @f_va_list(float %a, ptr %0)
+  call void @llvm.va_end(ptr nonnull %ap)
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %ap)
   ret void
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
-declare void @llvm.va_start(i8*)
-declare void @f_va_list(float, i8*)
-declare void @llvm.va_end(i8*)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.va_start(ptr)
+declare void @f_va_list(float, ptr)
+declare void @llvm.va_end(ptr)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 define void @double_va_fn(double %a, i32 %b, ...) nounwind {
 ; DAGISEL-LABEL: double_va_fn:
@@ -88,18 +87,17 @@ define void @double_va_fn(double %a, i32 %b, ...) nounwind {
 ; O0-NEXT:    add sp, sp, #80
 ; O0-NEXT:    ret
 entry:
-  %ap = alloca i8*, align 8
-  %0 = bitcast i8** %ap to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0)
-  call void @llvm.va_start(i8* nonnull %0)
-  %1 = load i8*, i8** %ap, align 8
-  call void @d_va_list(double %a, i8* %1)
-  call void @llvm.va_end(i8* nonnull %0)
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %0)
+  %ap = alloca ptr, align 8
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %ap)
+  call void @llvm.va_start(ptr nonnull %ap)
+  %0 = load ptr, ptr %ap, align 8
+  call void @d_va_list(double %a, ptr %0)
+  call void @llvm.va_end(ptr nonnull %ap)
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %ap)
   ret void
 }
 
-declare void @d_va_list(double, i8*)
+declare void @d_va_list(double, ptr)
 
 define void @call_f_va() nounwind {
 ; DAGISEL-LABEL: call_f_va:

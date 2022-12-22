@@ -11,7 +11,7 @@
 define dso_local void @floating_lits() optsize {
 ; CHECK-LABEL: floating_lits:
 
-  %floatval = load float, float* @varfloat
+  %floatval = load float, ptr @varfloat
   %newfloat = fadd float %floatval, 511.0
 ; CHECK: adrp x[[LITBASE:[0-9]+]], [[CURLIT:.LCPI[0-9]+_[0-9]+]]
 ; CHECK: ldr [[LIT128:s[0-9]+]], [x[[LITBASE]], {{#?}}:lo12:[[CURLIT]]]
@@ -29,9 +29,9 @@ define dso_local void @floating_lits() optsize {
 ; CHECK-NOFP-LARGE-NOT: ldr {{s[0-9]+}},
 ; CHECK-NOFP-LARGE-NOT: fadd
 
-  store float %newfloat, float* @varfloat
+  store float %newfloat, ptr @varfloat
 
-  %doubleval = load double, double* @vardouble
+  %doubleval = load double, ptr @vardouble
   %newdouble = fadd double %doubleval, 511.0
 ; CHECK: adrp x[[LITBASE:[0-9]+]], [[CURLIT:.LCPI[0-9]+_[0-9]+]]
 ; CHECK: ldr [[LIT129:d[0-9]+]], [x[[LITBASE]], {{#?}}:lo12:[[CURLIT]]]
@@ -49,7 +49,7 @@ define dso_local void @floating_lits() optsize {
 ; CHECK-LARGE: ldr {{d[0-9]+}}, [x[[LITADDR]]]
 ; CHECK-NOFP-LARGE-NOT: ldr {{d[0-9]+}},
 
-  store double %newdouble, double* @vardouble
+  store double %newdouble, ptr @vardouble
 
   ret void
 }

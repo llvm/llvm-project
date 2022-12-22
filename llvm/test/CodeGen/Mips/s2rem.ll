@@ -11,7 +11,7 @@
 define void @it() #0 {
 entry:
   %call = call i32 @i(i32 1)
-  store i32 %call, i32* @xi, align 4
+  store i32 %call, ptr @xi, align 4
   ret void
 ; PIC: 	.ent	it
 ; STATIC: 	.ent	it
@@ -29,7 +29,7 @@ declare i32 @i(i32) #1
 define void @ft() #0 {
 entry:
   %call = call float @f()
-  store float %call, float* @x, align 4
+  store float %call, ptr @x, align 4
   ret void
 ; PIC: 	.ent	ft
 ; PIC: 	save	$16, $17, $ra, $18, [[FS:[0-9]+]]
@@ -43,7 +43,7 @@ declare float @f() #1
 define void @dt() #0 {
 entry:
   %call = call double @d()
-  store double %call, double* @xd, align 8
+  store double %call, ptr @xd, align 8
   ret void
 ; PIC: 	.ent	dt
 ; PIC: 	save	$16, $17, $ra, $18, [[FS:[0-9]+]]
@@ -56,9 +56,9 @@ declare double @d() #1
 ; Function Attrs: nounwind
 define void @fft() #0 {
 entry:
-  %0 = load float, float* @x, align 4
+  %0 = load float, ptr @x, align 4
   %call = call float @ff(float %0)
-  store float %call, float* @x, align 4
+  store float %call, ptr @x, align 4
   ret void
 ; PIC: 	.ent	fft
 ; PIC: 	save	$16, $17, $ra, $18, [[FS:[0-9]+]]
@@ -71,7 +71,7 @@ declare float @ff(float) #1
 ; Function Attrs: nounwind
 define void @vft() #0 {
 entry:
-  %0 = load float, float* @x, align 4
+  %0 = load float, ptr @x, align 4
   call void @vf(float %0)
   ret void
 ; PIC: 	.ent	vft

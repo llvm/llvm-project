@@ -18,13 +18,17 @@
 #include "ReducerWorkItem.h"
 #include "TestRunner.h"
 #include "llvm/CodeGen/CommandFlags.h"
-
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
 #include <vector>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 using namespace llvm;
 
@@ -34,6 +38,12 @@ static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden,
                           cl::cat(LLVMReduceOptions));
 static cl::opt<bool> Version("v", cl::desc("Alias for -version"), cl::Hidden,
                              cl::cat(LLVMReduceOptions));
+
+static cl::opt<bool> PreserveDebugEnvironment(
+    "preserve-debug-environment",
+    cl::desc("Don't disable features used for crash "
+             "debugging (crash reports, llvm-symbolizer and core dumps)"),
+    cl::cat(LLVMReduceOptions));
 
 static cl::opt<bool>
     PrintDeltaPasses("print-delta-passes",
@@ -93,6 +103,23 @@ static codegen::RegisterCodeGenFlags CGF;
 
 bool isReduced(ReducerWorkItem &M, const TestRunner &Test);
 
+/// Turn off crash debugging features
+///
+/// Crash is expected, so disable crash reports and symbolization to reduce
+/// output clutter and avoid potentially slow symbolization.
+static void disableEnvironmentDebugFeatures() {
+  sys::Process::PreventCoreFiles();
+
+  // TODO: Copied from not. Should have a wrapper around setenv.
+#ifdef _WIN32
+  SetEnvironmentVariableA("LLVM_DISABLE_CRASH_REPORT", "1");
+  SetEnvironmentVariableA("LLVM_DISABLE_SYMBOLIZATION", "1");
+#else
+  setenv("LLVM_DISABLE_CRASH_REPORT", "1", /*overwrite=*/1);
+  setenv("LLVM_DISABLE_SYMBOLIZATION", "1", /*overwrite=*/1);
+#endif
+}
+
 static std::pair<StringRef, bool> determineOutputType(bool IsMIR,
                                                       bool InputIsBitcode) {
   bool OutputBitcode = ForceOutputBitcode || InputIsBitcode;
@@ -145,6 +172,9 @@ int main(int Argc, char **Argv) {
     printDeltaPasses(errs());
     return 0;
   }
+
+  if (!PreserveDebugEnvironment)
+    disableEnvironmentDebugFeatures();
 
   LLVMContext Context;
   std::unique_ptr<TargetMachine> TM;

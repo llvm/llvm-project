@@ -8,7 +8,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zfhmin -verify-machineinstrs \
 ; RUN:   -target-abi lp64f < %s | FileCheck -check-prefixes=CHECKIZFHMIN,RV64IZFHMIN %s
 
-define half @flh(half *%a) nounwind {
+define half @flh(ptr %a) nounwind {
 ; CHECKIZFH-LABEL: flh:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    flh ft0, 0(a0)
@@ -25,16 +25,16 @@ define half @flh(half *%a) nounwind {
 ; CHECKIZFHMIN-NEXT:    fadd.s ft0, ft1, ft0
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, ft0
 ; CHECKIZFHMIN-NEXT:    ret
-  %1 = load half, half* %a
-  %2 = getelementptr half, half* %a, i32 3
-  %3 = load half, half* %2
+  %1 = load half, ptr %a
+  %2 = getelementptr half, ptr %a, i32 3
+  %3 = load half, ptr %2
 ; Use both loaded values in an FP op to ensure an flh is used, even for the
 ; soft half ABI
   %4 = fadd half %1, %3
   ret half %4
 }
 
-define dso_local void @fsh(half *%a, half %b, half %c) nounwind {
+define dso_local void @fsh(ptr %a, half %b, half %c) nounwind {
 ; Use %b and %c in an FP op to ensure half precision floating point registers
 ; are used, even for the soft half ABI
 ; CHECKIZFH-LABEL: fsh:
@@ -54,9 +54,9 @@ define dso_local void @fsh(half *%a, half %b, half %c) nounwind {
 ; CHECKIZFHMIN-NEXT:    fsh ft0, 16(a0)
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = fadd half %b, %c
-  store half %1, half* %a
-  %2 = getelementptr half, half* %a, i32 8
-  store half %1, half* %2
+  store half %1, ptr %a
+  %2 = getelementptr half, ptr %a, i32 8
+  store half %1, ptr %2
   ret void
 }
 
@@ -91,11 +91,11 @@ define half @flh_fsh_global(half %a, half %b) nounwind {
 ; CHECKIZFHMIN-NEXT:    fsh fa0, 18(a1)
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = fadd half %a, %b
-  %2 = load volatile half, half* @G
-  store half %1, half* @G
-  %3 = getelementptr half, half* @G, i32 9
-  %4 = load volatile half, half* %3
-  store half %1, half* %3
+  %2 = load volatile half, ptr @G
+  store half %1, ptr @G
+  %3 = getelementptr half, ptr @G, i32 9
+  %4 = load volatile half, ptr %3
+  store half %1, ptr %3
   ret half %1
 }
 
@@ -140,14 +140,14 @@ define half @flh_fsh_constant(half %a) nounwind {
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, ft0
 ; RV64IZFHMIN-NEXT:    fsh fa0, -273(a0)
 ; RV64IZFHMIN-NEXT:    ret
-  %1 = inttoptr i32 3735928559 to half*
-  %2 = load volatile half, half* %1
+  %1 = inttoptr i32 3735928559 to ptr
+  %2 = load volatile half, ptr %1
   %3 = fadd half %a, %2
-  store half %3, half* %1
+  store half %3, ptr %1
   ret half %3
 }
 
-declare void @notdead(i8*)
+declare void @notdead(ptr)
 
 define half @flh_stack(half %a) nounwind {
 ; RV32IZFH-LABEL: flh_stack:
@@ -216,11 +216,10 @@ define half @flh_stack(half %a) nounwind {
 ; RV64IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV64IZFHMIN-NEXT:    ret
   %1 = alloca half, align 4
-  %2 = bitcast half* %1 to i8*
-  call void @notdead(i8* %2)
-  %3 = load half, half* %1
-  %4 = fadd half %3, %a ; force load in to FPR16
-  ret half %4
+  call void @notdead(ptr %1)
+  %2 = load half, ptr %1
+  %3 = fadd half %2, %a ; force load in to FPR16
+  ret half %3
 }
 
 define dso_local void @fsh_stack(half %a, half %b) nounwind {
@@ -279,8 +278,7 @@ define dso_local void @fsh_stack(half %a, half %b) nounwind {
 ; RV64IZFHMIN-NEXT:    ret
   %1 = fadd half %a, %b ; force store from FPR16
   %2 = alloca half, align 4
-  store half %1, half* %2
-  %3 = bitcast half* %2 to i8*
-  call void @notdead(i8* %3)
+  store half %1, ptr %2
+  call void @notdead(ptr %2)
   ret void
 }

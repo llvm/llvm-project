@@ -2,8 +2,8 @@
 target datalayout = "e-m:e-p:32:32-i1:8:32-i8:8:32-i16:16:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv6m-none--eabi"
 
-@a = external global i32*
-@b = external global i32*
+@a = external global ptr
+@b = external global ptr
 
 ; Function Attrs: nounwind
 define void @foo24() #0 {
@@ -17,13 +17,11 @@ entry:
 ; CHECK-NEXT: stm r[[NSB]]!, {r[[R1]], r[[R2]], r[[R3]]}
 ; CHECK-NEXT: ldm r[[NLB]]!, {r[[R1:[0-9]]], r[[R2:[0-9]]], r[[R3:[0-9]]]}
 ; CHECK-NEXT: stm r[[NSB]]!, {r[[R1]], r[[R2]], r[[R3]]}
-  %0 = load i32*, i32** @a, align 4
-  %arrayidx = getelementptr inbounds i32, i32* %0, i32 1
-  %1 = bitcast i32* %arrayidx to i8*
-  %2 = load i32*, i32** @b, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %2, i32 1
-  %3 = bitcast i32* %arrayidx1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %1, i8* align 4 %3, i32 24, i1 false)
+  %0 = load ptr, ptr @a, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %0, i32 1
+  %1 = load ptr, ptr @b, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %1, i32 1
+  tail call void @llvm.memcpy.p0.p0.i32(ptr align 4 %arrayidx, ptr align 4 %arrayidx1, i32 24, i1 false)
   ret void
 }
 
@@ -38,13 +36,11 @@ entry:
 ; CHECK-NEXT: stm r[[NSB]]!, {r[[R1]], r[[R2]], r[[R3]]}
 ; CHECK-NEXT: ldm r[[NLB]]!, {r[[R1:[0-9]]], r[[R2:[0-9]]], r[[R3:[0-9]]], r[[R4:[0-9]]]}
 ; CHECK-NEXT: stm r[[NSB]]!, {r[[R1]], r[[R2]], r[[R3]], r[[R4]]}
-  %0 = load i32*, i32** @a, align 4
-  %arrayidx = getelementptr inbounds i32, i32* %0, i32 1
-  %1 = bitcast i32* %arrayidx to i8*
-  %2 = load i32*, i32** @b, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %2, i32 1
-  %3 = bitcast i32* %arrayidx1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %1, i8* align 4 %3, i32 28, i1 false)
+  %0 = load ptr, ptr @a, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %0, i32 1
+  %1 = load ptr, ptr @b, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %1, i32 1
+  tail call void @llvm.memcpy.p0.p0.i32(ptr align 4 %arrayidx, ptr align 4 %arrayidx1, i32 28, i1 false)
   ret void
 }
 
@@ -59,13 +55,11 @@ entry:
 ; CHECK-NEXT: stm r[[NSB]]!, {r[[R1]], r[[R2]], r[[R3]], r[[R4]]}
 ; CHECK-NEXT: ldm r[[NLB]]!, {r[[R1:[0-9]]], r[[R2:[0-9]]], r[[R3:[0-9]]], r[[R4:[0-9]]]}
 ; CHECK-NEXT: stm r[[NSB]]!, {r[[R1]], r[[R2]], r[[R3]], r[[R4]]}
-  %0 = load i32*, i32** @a, align 4
-  %arrayidx = getelementptr inbounds i32, i32* %0, i32 1
-  %1 = bitcast i32* %arrayidx to i8*
-  %2 = load i32*, i32** @b, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %2, i32 1
-  %3 = bitcast i32* %arrayidx1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %1, i8* align 4 %3, i32 32, i1 false)
+  %0 = load ptr, ptr @a, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %0, i32 1
+  %1 = load ptr, ptr @b, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %1, i32 1
+  tail call void @llvm.memcpy.p0.p0.i32(ptr align 4 %arrayidx, ptr align 4 %arrayidx1, i32 32, i1 false)
   ret void
 }
 
@@ -82,15 +76,13 @@ entry:
 ; CHECK-NEXT: stm r[[NSB]]!, {r[[R1]], r[[R2]], r[[R3]]}
 ; CHECK-NEXT: ldm r[[NLB]]!, {r[[R1:[0-9]]], r[[R2:[0-9]]], r[[R3:[0-9]]]}
 ; CHECK-NEXT: stm r[[NSB]]!, {r[[R1]], r[[R2]], r[[R3]]}
-  %0 = load i32*, i32** @a, align 4
-  %arrayidx = getelementptr inbounds i32, i32* %0, i32 1
-  %1 = bitcast i32* %arrayidx to i8*
-  %2 = load i32*, i32** @b, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %2, i32 1
-  %3 = bitcast i32* %arrayidx1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %1, i8* align 4 %3, i32 36, i1 false)
+  %0 = load ptr, ptr @a, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %0, i32 1
+  %1 = load ptr, ptr @b, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %1, i32 1
+  tail call void @llvm.memcpy.p0.p0.i32(ptr align 4 %arrayidx, ptr align 4 %arrayidx1, i32 36, i1 false)
   ret void
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1) #1
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture readonly, i32, i1) #1

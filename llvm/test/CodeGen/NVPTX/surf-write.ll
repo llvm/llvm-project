@@ -13,5 +13,5 @@ define void @foo(i64 %img, i32 %val, i32 %idx) {
 }
 
 !nvvm.annotations = !{!1, !2}
-!1 = !{void (i64, i32, i32)* @foo, !"kernel", i32 1}
-!2 = !{void (i64, i32, i32)* @foo, !"wroimage", i32 0}
+!1 = !{ptr @foo, !"kernel", i32 1}
+!2 = !{ptr @foo, !"wroimage", i32 0}

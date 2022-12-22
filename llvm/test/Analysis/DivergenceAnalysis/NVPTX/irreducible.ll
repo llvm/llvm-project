@@ -1,4 +1,5 @@
 ; RUN: opt %s -passes='print<divergence>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt %s -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
 
 ; NOTE: The new pass manager does not fall back on legacy divergence
 ; analysis even when the function contains an irreducible loop. The
@@ -24,7 +25,7 @@ target triple = "nvptx64-nvidia-cuda"
 ;                        if (i3 == 5) // divergent
 ; because sync dependent on (tid / i3).
 define i32 @unstructured_loop(i1 %entry_cond) {
-; CHECK-LABEL: Divergence Analysis' for function 'unstructured_loop'
+; CHECK-LABEL: for function 'unstructured_loop'
 entry:
   %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   br i1 %entry_cond, label %loop_entry_1, label %loop_entry_2
@@ -46,6 +47,7 @@ loop_latch:
 branch:
   %cmp = icmp eq i32 %i3, 5
   br i1 %cmp, label %then, label %else
+; CHECK:  DIVERGENT: %cmp =
 ; CHECK: DIVERGENT: br i1 %cmp,
 then:
   ret i32 0

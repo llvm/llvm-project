@@ -13,7 +13,7 @@
 ; GFX10:          s_sleep 0
 ; GFX10:          s_cbranch_scc0 [[L1]]
 ; GFX10-NEXT:     s_endpgm
-define amdgpu_kernel void @test_loop_64(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @test_loop_64(ptr addrspace(1) nocapture %arg) {
 bb:
   br label %bb2
 
@@ -38,7 +38,7 @@ bb2:                                              ; preds = %bb2, %bb
 ; GFX10:          s_sleep 0
 ; GFX10:          s_cbranch_scc0 [[L1]]
 ; GFX10-NEXT:     s_endpgm
-define amdgpu_kernel void @test_loop_128(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @test_loop_128(ptr addrspace(1) nocapture %arg) {
 bb:
   br label %bb2
 
@@ -80,7 +80,7 @@ bb2:                                              ; preds = %bb2, %bb
 ; GFX10:          s_cbranch_scc0 [[L1]]
 ; GFX10-NEXT:     s_inst_prefetch 0x2
 ; GFX10-NEXT:     s_endpgm
-define amdgpu_kernel void @test_loop_192(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @test_loop_192(ptr addrspace(1) nocapture %arg) {
 bb:
   br label %bb2
 
@@ -136,7 +136,7 @@ bb2:                                              ; preds = %bb2, %bb
 ; GFX10:          s_sleep 0
 ; GFX10:          s_cbranch_scc0 [[L1]]
 ; GFX10-NEXT:     s_endpgm
-define amdgpu_kernel void @test_loop_256(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @test_loop_256(ptr addrspace(1) nocapture %arg) {
 bb:
   br label %bb2
 
@@ -220,7 +220,7 @@ bb2:                                              ; preds = %bb2, %bb
 ; GFX10:          s_cbranch_scc{{[01]}} [[L1]]
 ; GFX10-NEXT:     s_inst_prefetch 0x2
 ; GFX10-NEXT:     s_endpgm
-define amdgpu_kernel void @test_loop_prefetch_inner_outer(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @test_loop_prefetch_inner_outer(ptr addrspace(1) nocapture %arg) {
 bb:
   br label %bb2
 
@@ -303,7 +303,7 @@ bb4:
 ; GFX10-NEXT:     s_inst_prefetch 0x2
 ; GFX10:          s_cbranch_scc{{[01]}} [[L0]]
 ; GFX10-NEXT:     s_endpgm
-define amdgpu_kernel void @test_loop_prefetch_inner_outer_noouter(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @test_loop_prefetch_inner_outer_noouter(ptr addrspace(1) nocapture %arg) {
 bb:
   br label %bb2
 

@@ -422,7 +422,7 @@ entry:
 }
 
 ; ARM scheduler emits icmp/zext before both calls, so isn't relevant
-define void @t9(i8* %a, i8 %b) {
+define void @t9(ptr %a, i8 %b) {
 ; ARM-LABEL: t9:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    .save {r4, lr}
@@ -542,7 +542,7 @@ define void @t9(i8* %a, i8 %b) {
 ; V8MBASE-NEXT:  .LBB8_3: @ %while.end
 ; V8MBASE-NEXT:    pop {r4, pc}
 entry:
-  %0 = load i8, i8* %a
+  %0 = load i8, ptr %a
   %conv = sext i8 %0 to i32
   %conv119 = zext i8 %0 to i32
   %conv522 = and i32 %conv, 255
@@ -667,10 +667,10 @@ define i1 @t10() {
 entry:
   %q = alloca i32
   %p = alloca i32
-  store i32 -3, i32* %q
-  store i32 -8, i32* %p
-  %0 = load i32, i32* %q
-  %1 = load i32, i32* %p
+  store i32 -3, ptr %q
+  store i32 -8, ptr %p
+  %0 = load i32, ptr %q
+  %1 = load i32, ptr %p
   %div = sdiv i32 %0, %1
   %mul = mul nsw i32 %div, %1
   %rem = srem i32 %0, %1
@@ -805,18 +805,18 @@ define i1 @t11() {
 ; V8MBASE-NEXT:    bx lr
 entry:
   %bit = alloca i32
-  %load = load i32, i32* %bit
+  %load = load i32, ptr %bit
   %clear = and i32 %load, -4096
   %set = or i32 %clear, 33
-  store i32 %set, i32* %bit
-  %load1 = load i32, i32* %bit
+  store i32 %set, ptr %bit
+  %load1 = load i32, ptr %bit
   %clear2 = and i32 %load1, -33550337
   %set3 = or i32 %clear2, 40960
   %clear5 = and i32 %set3, 4095
   %rem = srem i32 %clear5, 10
   %clear9 = and i32 %set3, -4096
   %set10 = or i32 %clear9, %rem
-  store i32 %set10, i32* %bit
+  store i32 %set10, ptr %bit
   %clear12 = and i32 %set10, 4095
   %cmp = icmp eq i32 %clear12, 3
   ret i1 %cmp

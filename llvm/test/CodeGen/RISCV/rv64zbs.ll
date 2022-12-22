@@ -46,7 +46,7 @@ define signext i32 @bclr_i32_no_mask(i32 signext %a, i32 signext %b) nounwind {
   ret i32 %and1
 }
 
-define signext i32 @bclr_i32_load(i32* %p, i32 signext %b) nounwind {
+define signext i32 @bclr_i32_load(ptr %p, i32 signext %b) nounwind {
 ; RV64I-LABEL: bclr_i32_load:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lw a0, 0(a0)
@@ -62,7 +62,7 @@ define signext i32 @bclr_i32_load(i32* %p, i32 signext %b) nounwind {
 ; RV64ZBS-NEXT:    bclr a0, a0, a1
 ; RV64ZBS-NEXT:    sext.w a0, a0
 ; RV64ZBS-NEXT:    ret
-  %a = load i32, i32* %p
+  %a = load i32, ptr %p
   %shl = shl i32 1, %b
   %neg = xor i32 %shl, -1
   %and1 = and i32 %neg, %a
@@ -146,7 +146,7 @@ define signext i32 @bset_i32_no_mask(i32 signext %a, i32 signext %b) nounwind {
   ret i32 %or
 }
 
-define signext i32 @bset_i32_load(i32* %p, i32 signext %b) nounwind {
+define signext i32 @bset_i32_load(ptr %p, i32 signext %b) nounwind {
 ; RV64I-LABEL: bset_i32_load:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lw a0, 0(a0)
@@ -161,7 +161,7 @@ define signext i32 @bset_i32_load(i32* %p, i32 signext %b) nounwind {
 ; RV64ZBS-NEXT:    bset a0, a0, a1
 ; RV64ZBS-NEXT:    sext.w a0, a0
 ; RV64ZBS-NEXT:    ret
-  %a = load i32, i32* %p
+  %a = load i32, ptr %p
   %shl = shl i32 1, %b
   %or = or i32 %shl, %a
   ret i32 %or
@@ -273,7 +273,7 @@ define signext i32 @binv_i32_no_mask(i32 signext %a, i32 signext %b) nounwind {
   ret i32 %xor
 }
 
-define signext i32 @binv_i32_load(i32* %p, i32 signext %b) nounwind {
+define signext i32 @binv_i32_load(ptr %p, i32 signext %b) nounwind {
 ; RV64I-LABEL: binv_i32_load:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lw a0, 0(a0)
@@ -288,7 +288,7 @@ define signext i32 @binv_i32_load(i32* %p, i32 signext %b) nounwind {
 ; RV64ZBS-NEXT:    binv a0, a0, a1
 ; RV64ZBS-NEXT:    sext.w a0, a0
 ; RV64ZBS-NEXT:    ret
-  %a = load i32, i32* %p
+  %a = load i32, ptr %p
   %shl = shl i32 1, %b
   %xor = xor i32 %shl, %a
   ret i32 %xor

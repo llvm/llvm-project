@@ -142,6 +142,11 @@ void populateVectorMaskOpLoweringPatterns(RewritePatternSet &patterns,
 void populateVectorShapeCastLoweringPatterns(RewritePatternSet &patterns,
                                              PatternBenefit benefit = 1);
 
+/// Collects patterns that lower scalar vector transfer ops to memref loads and
+/// stores when beneficial.
+void populateScalarVectorTransferLoweringPatterns(RewritePatternSet &patterns,
+                                                  PatternBenefit benefit = 1);
+
 /// Returns the integer type required for subscripts in the vector dialect.
 IntegerType getVectorSubscriptType(Builder &builder);
 
