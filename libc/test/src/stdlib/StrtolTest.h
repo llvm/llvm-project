@@ -70,9 +70,13 @@ struct StrtoTest : public __llvm_libc::testing::Test {
     // wide, strtol will return LONG_MAX.
     const char *bigger_number = "12345678900";
     errno = 0;
-    ASSERT_EQ(func(bigger_number, &str_end, 10),
-              ((sizeof(ReturnT) < 8) ? T_MAX : ReturnT(12345678900)));
-    ASSERT_EQ(errno, 0);
+    if constexpr (sizeof(ReturnT) < 8) {
+      ASSERT_EQ(func(bigger_number, &str_end, 10), T_MAX);
+      ASSERT_EQ(errno, ERANGE);
+    } else {
+      ASSERT_EQ(func(bigger_number, &str_end, 10), ReturnT(12345678900));
+      ASSERT_EQ(errno, 0);
+    }
     EXPECT_EQ(str_end - bigger_number, ptrdiff_t(11));
 
     const char *too_big_number = "123456789012345678901";
