@@ -788,7 +788,12 @@ bool ByteCodeExprGen<Emitter>::VisitExprWithCleanups(
   const Expr *SubExpr = E->getSubExpr();
 
   assert(E->getNumObjects() == 0 && "TODO: Implement cleanups");
-  return this->visit(SubExpr);
+  if (!this->visit(SubExpr))
+    return false;
+
+  if (DiscardResult)
+    return this->emitPopPtr(E);
+  return true;
 }
 
 template <class Emitter>
