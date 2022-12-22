@@ -79,6 +79,10 @@ class MemDepResult {
     ///      the calls are the same.
     Def,
 
+    /// This marker indicates that the query has dependency from select
+    /// instruction.
+    Select,
+
     /// This marker indicates that the query has no known dependency in the
     /// specified block.
     ///
@@ -106,6 +110,7 @@ class MemDepResult {
       DepType, PointerSumTypeMember<Invalid, Instruction *>,
       PointerSumTypeMember<Clobber, Instruction *>,
       PointerSumTypeMember<Def, Instruction *>,
+      PointerSumTypeMember<Select, Instruction *>,
       PointerSumTypeMember<Other, PointerEmbeddedInt<OtherType, 3>>>;
   ValueTy Value;
 
@@ -124,6 +129,9 @@ public:
     assert(Inst && "Clobber requires inst");
     return MemDepResult(ValueTy::create<Clobber>(Inst));
   }
+  static MemDepResult getSelect(Instruction *Inst) {
+    return MemDepResult(ValueTy::create<Select>(Inst));
+  }
   static MemDepResult getNonLocal() {
     return MemDepResult(ValueTy::create<Other>(NonLocal));
   }
@@ -141,6 +149,13 @@ public:
   /// Tests if this MemDepResult represents a query that is an instruction
   /// definition dependency.
   bool isDef() const { return Value.is<Def>(); }
+
+  /// Tests if this MemDepResult represents a query that is an instruction
+  /// select dependency.
+  bool isSelect() const { return Value.is<Select>(); }
+
+  /// Tests if this MemDepResult represents a local query (Clobber/Def/Select).
+  bool isLocal() const { return isClobber() || isDef() || isSelect(); }
 
   /// Tests if this MemDepResult represents a query that is transparent to the
   /// start of the block, but where a non-local hasn't been done.
@@ -170,6 +185,8 @@ public:
       return Value.cast<Clobber>();
     case Def:
       return Value.cast<Def>();
+    case Select:
+      return Value.cast<Select>();
     case Other:
       return nullptr;
     }
