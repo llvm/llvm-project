@@ -90,26 +90,26 @@
 // RUN:       -emit-obj %t/src/main.c -o %t/out/main.o -include-pch %t/out/prefix.h.pch -I %t/src/inc
 // RUN: %clang @%t/t3.rsp 2> %t/output3.txt
 
-// RN: cat %t/output3.txt | sed \
-// RN:   -e "s/^.*miss for '//" \
-// RN:   -e "s/' .*$//" > %t/cache-key3
+// RUN: cat %t/output3.txt | sed \
+// RUN:   -e "s/^.*miss for '//" \
+// RUN:   -e "s/' .*$//" > %t/cache-key3
 
-// RN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree \
-// RN:   -fdepscan-prefix-map=%t/src2=/^src -fdepscan-prefix-map=%t/out2=/^out -fdepscan-prefix-map-toolchain=/^toolchain -fdepscan-prefix-map-sdk=/^sdk \
-// RN:   -o %t/t4.rsp -cc1-args \
-// RN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -faction-cache-path %t/cache -Rcompile-job-cache \
-// RN:       -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
-// RN:       -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
-// RN:       -debug-info-kind=standalone -dwarf-version=4 -debugger-tuning=lldb -fdebug-compilation-dir=%t/out2 \
-// RN:       -emit-obj %t/src2/main.c -o %t/out2/main.o -include-pch %t/out2/prefix.h.pch -I %t/src2/inc
-// RN: %clang @%t/t4.rsp 2> %t/output4.txt
+// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree \
+// RUN:   -fdepscan-prefix-map=%t/src2=/^src -fdepscan-prefix-map=%t/out2=/^out -fdepscan-prefix-map-toolchain=/^toolchain -fdepscan-prefix-map-sdk=/^sdk \
+// RUN:   -o %t/t4.rsp -cc1-args \
+// RUN:     -cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -faction-cache-path %t/cache -Rcompile-job-cache \
+// RUN:       -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
+// RUN:       -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
+// RUN:       -debug-info-kind=standalone -dwarf-version=4 -debugger-tuning=lldb -fdebug-compilation-dir=%t/out2 \
+// RUN:       -emit-obj %t/src2/main.c -o %t/out2/main.o -include-pch %t/out2/prefix.h.pch -I %t/src2/inc
+// RUN: %clang @%t/t4.rsp 2> %t/output4.txt
 
-// RN: cat %t/output4.txt | sed \
-// RN:   -e "s/^.*hit for '//" \
-// RN:   -e "s/' .*$//" > %t/cache-key4
+// RUN: cat %t/output4.txt | sed \
+// RUN:   -e "s/^.*hit for '//" \
+// RUN:   -e "s/' .*$//" > %t/cache-key4
 
-// RN: diff -u %t/cache-key3 %t/cache-key4
-// RN: diff %t/out/main.o %t/out2/main.o
+// RUN: diff -u %t/cache-key3 %t/cache-key4
+// RUN: diff %t/out/main.o %t/out2/main.o
 
 //--- main.c
 #include "t.h"
