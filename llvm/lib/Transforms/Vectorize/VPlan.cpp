@@ -757,7 +757,7 @@ LLVM_DUMP_METHOD
 void VPlan::print(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
 
-  O << "VPlan '" << Name << "' {";
+  O << "VPlan '" << getName() << "' {";
 
   if (VectorTripCount.getNumUsers() > 0) {
     O << "\nLive-in ";
@@ -787,6 +787,20 @@ void VPlan::print(raw_ostream &O) const {
   }
 
   O << "}\n";
+}
+
+std::string VPlan::getName() const {
+  std::string Out;
+  raw_string_ostream RSO(Out);
+  RSO << Name;
+  if (!VFs.empty()) {
+    RSO << " for VF={" << VFs[0];
+    for (ElementCount VF : drop_begin(VFs))
+      RSO << "," << VF;
+    RSO << "},UF>=1";
+  }
+
+  return Out;
 }
 
 LLVM_DUMP_METHOD
