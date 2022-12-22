@@ -154,3 +154,26 @@ void iocsrwr_w(unsigned int a, unsigned int b) {
   __iocsrwr_w(a, b);
   __builtin_loongarch_iocsrwr_w(a, b);
 }
+
+// LA32-LABEL: @cpucfg(
+// LA32-NEXT:  entry:
+// LA32-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.cpucfg(i32 [[A:%.*]])
+// LA32-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.cpucfg(i32 [[A]])
+// LA32-NEXT:    ret i32 0
+//
+unsigned int cpucfg(unsigned int a) {
+  unsigned int b = __cpucfg(a);
+  unsigned int c = __builtin_loongarch_cpucfg(a);
+  return 0;
+}
+
+// LA32-LABEL: @rdtime(
+// LA32-NEXT:  entry:
+// LA32-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimeh.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1:[0-9]+]], !srcloc !2
+// LA32-NEXT:    [[TMP1:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimel.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1]], !srcloc !3
+// LA32-NEXT:    ret void
+//
+void rdtime() {
+  __rdtimeh_w();
+  __rdtimel_w();
+}
