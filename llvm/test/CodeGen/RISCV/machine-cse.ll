@@ -19,7 +19,7 @@ define void @commute_add_i32(i32 signext %x, i32 signext %y, ptr %p1, ptr %p2, i
 ;
 ; RV64-LABEL: commute_add_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    sw a0, 0(a2)
 ; RV64-NEXT:    beqz a4, .LBB0_2
 ; RV64-NEXT:  # %bb.1: # %trueblock

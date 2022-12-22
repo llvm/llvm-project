@@ -99,7 +99,7 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV64IA-LABEL: cmpxchg_masked_and_branch1:
 ; RV64IA:       # %bb.0: # %entry
 ; RV64IA-NEXT:    andi a3, a0, -4
-; RV64IA-NEXT:    slliw a4, a0, 3
+; RV64IA-NEXT:    slli a4, a0, 3
 ; RV64IA-NEXT:    li a0, 255
 ; RV64IA-NEXT:    sllw a0, a0, a4
 ; RV64IA-NEXT:    andi a1, a1, 255
@@ -172,7 +172,7 @@ define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV64IA-LABEL: cmpxchg_masked_and_branch2:
 ; RV64IA:       # %bb.0: # %entry
 ; RV64IA-NEXT:    andi a3, a0, -4
-; RV64IA-NEXT:    slliw a4, a0, 3
+; RV64IA-NEXT:    slli a4, a0, 3
 ; RV64IA-NEXT:    li a0, 255
 ; RV64IA-NEXT:    sllw a0, a0, a4
 ; RV64IA-NEXT:    andi a1, a1, 255

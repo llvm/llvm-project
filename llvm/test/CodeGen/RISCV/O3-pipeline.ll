@@ -102,6 +102,7 @@
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine InstCombiner
 ; RV64-NEXT:        RISCV sext.w Removal
+; RV64-NEXT:        RISCV Strip W Suffix
 ; CHECK-NEXT:       RISCV Pre-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       RISCV Merge Base Offset
 ; CHECK-NEXT:       RISCV Insert VSETVLI pass
