@@ -403,3 +403,16 @@ void __kmp_expand_file_name(char *result, size_t rlen, char *pattern) {
 
   *pos = '\0';
 }
+
+#if !OMPT_SUPPORT
+extern "C" {
+typedef struct ompt_start_tool_result_t ompt_start_tool_result_t;
+// Define symbols expected by VERSION script
+ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
+                                          const char *runtime_version) {
+  return nullptr;
+}
+
+void ompt_libomp_connect(ompt_start_tool_result_t *result) { result = nullptr; }
+}
+#endif
