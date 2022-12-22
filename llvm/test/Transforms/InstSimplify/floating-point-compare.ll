@@ -1264,6 +1264,30 @@ define i1 @isKnownNeverInfinity_fpext_sitofp(i16 %x) {
   ret i1 %r
 }
 
+define i1 @isKnownNeverInfinity_fptrunc(double %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_fptrunc(
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[E:%.*]] = fptrunc double [[A]] to float
+; CHECK-NEXT:    [[R:%.*]] = fcmp une float [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf double %x, 1.0
+  %e = fptrunc double %a to float
+  %r = fcmp une float %e, 0x7FF0000000000000
+  ret i1 %r
+}
+
+define i1 @isNotKnownNeverInfinity_fptrunc(double %unknown) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_fptrunc(
+; CHECK-NEXT:    [[E:%.*]] = fptrunc double [[UNKNOWN:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = fcmp une float [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = fptrunc double %unknown to float
+  %r = fcmp une float %e, 0x7FF0000000000000
+  ret i1 %r
+}
+
 define i1 @isKnownNeverInfinity_canonicalize(double %x) {
 ; CHECK-LABEL: @isKnownNeverInfinity_canonicalize(
 ; CHECK-NEXT:    ret i1 true
