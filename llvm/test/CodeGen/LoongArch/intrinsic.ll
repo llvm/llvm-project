@@ -15,6 +15,7 @@ declare i32 @llvm.loongarch.iocsrrd.w(i32)
 declare void @llvm.loongarch.iocsrwr.b(i32, i32)
 declare void @llvm.loongarch.iocsrwr.h(i32, i32)
 declare void @llvm.loongarch.iocsrwr.w(i32, i32)
+declare i32 @llvm.loongarch.cpucfg(i32)
 
 define void @foo() nounwind {
 ; CHECK-LABEL: foo:
@@ -144,4 +145,14 @@ define void @iocsrwr_w(i32 %a, i32 %b) {
 entry:
   tail call void @llvm.loongarch.iocsrwr.w(i32 %a, i32 %b)
   ret void
+}
+
+define i32 @cpucfg(i32 %a) {
+; CHECK-LABEL: cpucfg:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cpucfg $a0, $a0
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i32 @llvm.loongarch.cpucfg(i32 %a)
+  ret i32 %0
 }

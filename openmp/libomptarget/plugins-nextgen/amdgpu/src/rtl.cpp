@@ -17,7 +17,6 @@
 #include <hsa.h>
 #include <hsa_ext_amd.h>
 #include <mutex>
-#include <shared_mutex>
 #include <string>
 #include <unistd.h>
 #include <unordered_map>
@@ -1721,15 +1720,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return OFFLOAD_FAIL;
     }
 
-    if (Kind == TARGET_ALLOC_HOST) {
-      std::lock_guard<std::shared_mutex> Lock(HostAllocationsMutex);
-      size_t Erased = HostAllocations.erase(TgtPtr);
-      if (!Erased) {
-        REPORT("Cannot find a host allocation in the map\n");
-        return OFFLOAD_FAIL;
-      }
-    }
-
     return OFFLOAD_SUCCESS;
   }
 
@@ -1779,7 +1769,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
 
     // Use one-step asynchronous operation when host memory is already pinned.
-    if (isHostPinnedMemory(HstPtr)) {
+    if (isHostPinnedMemoryBuffer(HstPtr)) {
       AMDGPUStreamTy &Stream = getStream(AsyncInfoWrapper);
       return Stream.pushPinnedMemoryCopyAsync(TgtPtr, HstPtr, Size);
     }
@@ -1833,7 +1823,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Retrieve data from the device (device to host transfer).
   Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    if (isHostPinnedMemory(HstPtr)) {
+
+    // Use one-step asynchronous operation when host memory is already pinned.
+    if (isHostPinnedMemoryBuffer(HstPtr)) {
       // Use one-step asynchronous operation when host memory is already pinned.
       AMDGPUStreamTy &Stream = getStream(AsyncInfoWrapper);
       return Stream.pushPinnedMemoryCopyAsync(HstPtr, TgtPtr, Size);
@@ -2005,23 +1997,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Queues[Current % Queues.size()];
   }
 
-  /// Check whether a buffer is a host pinned buffer.
-  bool isHostPinnedMemory(const void *Ptr) const {
-    bool Found = false;
-    HostAllocationsMutex.lock_shared();
-    if (!HostAllocations.empty()) {
-      auto It = HostAllocations.lower_bound((const void *)Ptr);
-      if (It != HostAllocations.end() && It->first == Ptr) {
-        Found = true;
-      } else if (It != HostAllocations.begin()) {
-        --It;
-        Found = ((const char *)It->first + It->second > (const char *)Ptr);
-      }
-    }
-    HostAllocationsMutex.unlock_shared();
-    return Found;
-  }
-
 private:
   using AMDGPUStreamRef = AMDGPUResourceRef<AMDGPUStreamTy>;
   using AMDGPUEventRef = AMDGPUResourceRef<AMDGPUEventTy>;
@@ -2073,12 +2048,6 @@ private:
 
   /// List of device packet queues.
   std::vector<AMDGPUQueueTy> Queues;
-
-  /// Map of host pinned allocations. We track these pinned allocations so that
-  /// memory transfers involving these allocations do not need a two-step copy
-  /// with an intermediate pinned buffer.
-  std::map<const void *, size_t> HostAllocations;
-  mutable std::shared_mutex HostAllocationsMutex;
 };
 
 Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
@@ -2535,11 +2504,8 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
     // Enable all kernel agents to access the host pinned buffer.
     if (auto Err = MemoryPool->enableAccess(Alloc, Size, KernelAgents)) {
       REPORT("%s\n", toString(std::move(Err)).data());
+      return nullptr;
     }
-
-    // Keep track of the host pinned allocations for optimizations in transfers.
-    std::lock_guard<std::shared_mutex> Lock(HostAllocationsMutex);
-    HostAllocations.insert({Alloc, Size});
   }
 
   return Alloc;

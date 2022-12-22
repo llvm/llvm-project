@@ -1,0 +1,180 @@
+## This test checks DWARFv4 DW_MACINFO_start_file
+## , DW_MACINFO_end_file, DW_MACINFO_define,
+## DW_MACINFO_UNDEF attributes.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-dwarfutil %t.o %t1
+# RUN: llvm-dwarfdump --verify %t1 | FileCheck --check-prefix=VERIFY %s
+# RUN: llvm-dwarfdump -a %t1 | FileCheck %s
+
+# VERIFY: No errors.
+
+##  Content:        "03000201064400020744000400":
+#
+##  .byte   3    # DW_MACINFO_start_file
+##  .byte   0    # Line Number
+##  .byte   2    # File Number
+##  .byte   1    # DW_MACINFO_define
+##  .byte   6    # Line Number
+##  .asciz  "D"  # Macro String
+##  .byte   2    # DW_MACINFO_undef
+##  .byte   7    # Line Number
+##  .asciz  "D"  # Macro String
+##  .byte   4    # DW_MACINFO_end_file
+##  .byte   0    # End Of Macro List Mark
+
+#CHECK: .debug_info contents:
+#CHECK:  DW_TAG_compile_unit
+#CHECK:    DW_AT_name        ("CU1")
+#CHECK:    DW_AT_macro_info  (0x00000000)
+#CHECK: .debug_macinfo contents:
+#CHECK: 0x00000000:
+#CHECK: DW_MACINFO_start_file - lineno: 0 filenum: 2
+#CHECK:   DW_MACINFO_define - lineno: 6 macro: D
+#CHECK:   DW_MACINFO_undef - lineno: 7 macro: D
+#CHECK: DW_MACINFO_end_file
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    Size:            0x1b
+  - Name:            .debug_macinfo
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "03000201064400020744000400"
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_macro_info
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_declaration
+            Form:      DW_FORM_flag_present
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_declaration
+            Form:      DW_FORM_flag_present
+      - Tag:      DW_TAG_template_type_parameter
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_pointer_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_data4
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+  debug_info:
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU1
+            - Value:  0x1000
+            - Value:  0x1b
+            - Value:  0x0
+        - AbbrCode: 2
+          Values:
+            - CStr: class1
+        - AbbrCode: 3
+          Values:
+            - Value:  0x00000051
+            - CStr: member1
+        - AbbrCode: 3
+          Values:
+            - Value:  0x00000056
+            - CStr: member2
+        - AbbrCode: 0
+        - AbbrCode: 7
+          Values:
+            - CStr: int
+        - AbbrCode: 7
+          Values:
+            - CStr: char
+        - AbbrCode: 7
+          Values:
+            - CStr: float
+        - AbbrCode: 8
+          Values:
+            - Value:  0x0000002a
+        - AbbrCode: 9
+          Values:
+            - CStr: var1
+            - Value:  0x00000000
+            - Value:  0x00000051
+        - AbbrCode: 10
+          Values:
+            - CStr: foo1
+            - Value:  0x1000
+            - Value:  0x10
+            - Value:  0x0000002e
+        - AbbrCode: 0
+        - AbbrCode: 0
+...

@@ -67,13 +67,9 @@ void call_exit_callbacks() {
 } // namespace internal
 
 static int add_atexit_unit(const AtExitUnit &unit) {
-  // TODO: Use the return value of push_back and bubble it to the public
-  // function as error return value. Note that a BlockStore push_back can
-  // fail because of allocation failure. Likewise, a FixedVector push_back
-  // can fail when it is full.
-  handler_list_mtx.lock();
-  exit_callbacks.push_back(unit);
-  handler_list_mtx.unlock();
+  MutexLock lock(&handler_list_mtx);
+  if (!exit_callbacks.push_back(unit))
+    return -1;
   return 0;
 }
 

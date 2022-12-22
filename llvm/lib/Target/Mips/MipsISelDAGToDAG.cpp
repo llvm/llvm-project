@@ -36,6 +36,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "mips-isel"
+#define PASS_NAME "MIPS DAG->DAG Pattern Instruction Selection"
 
 //===----------------------------------------------------------------------===//
 // Instruction Selector Implementation
@@ -324,3 +325,5 @@ SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
 }
 
 char MipsDAGToDAGISel::ID = 0;
+
+INITIALIZE_PASS(MipsDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)

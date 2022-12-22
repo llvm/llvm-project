@@ -60,7 +60,7 @@ void test_v85(float32x4_t v4f32) {
   vrnd32xq_f32(v4f32);
 }
 
-void undefined(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t v16i8, uint8x8_t v8i8, float32x2_t v2f32, float32x4_t v4f32, float16x4_t v4f16, float64x2_t v2f64, bfloat16x4_t v4bf16, __bf16 bf16) {
+void undefined(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t v16i8, uint8x8_t v8i8, float32x2_t v2f32, float32x4_t v4f32, float16x4_t v4f16, float64x2_t v2f64, bfloat16x4_t v4bf16, __bf16 bf16, poly64_t poly64, poly64x2_t poly64x2) {
   // dotprod
   vdot_u32(v2i32, v8i8, v8i8); // expected-error {{always_inline function 'vdot_u32' requires target feature 'dotprod'}}
   vdot_laneq_u32(v2i32, v8i8, v16i8, 1); // expected-error {{always_inline function 'vdot_u32' requires target feature 'dotprod'}}
@@ -92,4 +92,8 @@ void undefined(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t 
   vcmlaq_rot270_laneq_f64(v2f64, v2f64, v2f64, 1); // expected-error {{always_inline function 'vcmlaq_rot270_f64' requires target feature 'v8.3a'}}
   // 8.5 - frint
   vrnd32xq_f32(v4f32); // expected-error {{always_inline function 'vrnd32xq_f32' requires target feature 'v8.5a'}}
+
+  vmull_p64(poly64, poly64);  // expected-error {{always_inline function 'vmull_p64' requires target feature 'aes'}}
+  vmull_high_p64(poly64x2, poly64x2);  // expected-error {{always_inline function 'vmull_high_p64' requires target feature 'aes'}}
+
 }

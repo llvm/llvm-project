@@ -1972,7 +1972,7 @@ def : Pat<(i64 (ineg (mul top32Zero:$Rn, (zext GPR32:$Rm)))),
 
 def : Pat<(i64 (sub GPR64:$Ra, (mul top32Zero:$Rn, top32Zero:$Rm))),
           (UMSUBLrrr (EXTRACT_SUBREG $Rn, sub_32), (EXTRACT_SUBREG $Rm, sub_32), GPR64:$Ra)>;
-def : Pat<(i64 (sub GPR64:$Ra, (mul GPR64:$Rn, (zext GPR32:$Rm)))),
+def : Pat<(i64 (sub GPR64:$Ra, (mul top32Zero:$Rn, (zext GPR32:$Rm)))),
           (UMSUBLrrr (EXTRACT_SUBREG $Rn, sub_32), $Rm, GPR64:$Ra)>;
 } // AddedComplexity = 5
 

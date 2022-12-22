@@ -13,6 +13,8 @@
 
 #include "TestAliasAnalysis.h"
 #include "mlir/Analysis/AliasAnalysis.h"
+#include "mlir/Analysis/AliasAnalysis/LocalAliasAnalysis.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
@@ -149,14 +151,76 @@ struct TestAliasAnalysisModRefPass
 } // namespace
 
 //===----------------------------------------------------------------------===//
+// Testing LocalAliasAnalysis extending
+//===----------------------------------------------------------------------===//
+
+/// Check if value is function argument.
+static bool isFuncArg(Value val) {
+  auto blockArg = val.dyn_cast<BlockArgument>();
+  if (!blockArg)
+    return false;
+
+  return mlir::isa_and_nonnull<FunctionOpInterface>(
+      blockArg.getOwner()->getParentOp());
+}
+
+/// Check if value has "restrict" attribute. Value must be a function argument.
+static bool isRestrict(Value val) {
+  auto blockArg = val.cast<BlockArgument>();
+  auto func =
+      mlir::cast<FunctionOpInterface>(blockArg.getOwner()->getParentOp());
+  return !!func.getArgAttr(blockArg.getArgNumber(),
+                           "local_alias_analysis.restrict");
+}
+
+namespace {
+/// LocalAliasAnalysis extended to support "restrict" attreibute.
+class LocalAliasAnalysisRestrict : public LocalAliasAnalysis {
+protected:
+  AliasResult aliasImpl(Value lhs, Value rhs) override {
+    if (lhs == rhs)
+      return AliasResult::MustAlias;
+
+    // Assume no aliasing if both values are function arguments and any of them
+    // have restrict attr.
+    if (isFuncArg(lhs) && isFuncArg(rhs))
+      if (isRestrict(lhs) || isRestrict(rhs))
+        return AliasResult::NoAlias;
+
+    return LocalAliasAnalysis::aliasImpl(lhs, rhs);
+  }
+};
+
+/// This pass tests adding additional analysis impls to the AliasAnalysis.
+struct TestAliasAnalysisExtendingPass
+    : public test::TestAliasAnalysisBase,
+      PassWrapper<TestAliasAnalysisExtendingPass, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestAliasAnalysisExtendingPass)
+
+  StringRef getArgument() const final {
+    return "test-alias-analysis-extending";
+  }
+  StringRef getDescription() const final {
+    return "Test alias analysis extending.";
+  }
+  void runOnOperation() override {
+    AliasAnalysis aliasAnalysis(getOperation());
+    aliasAnalysis.addAnalysisImplementation(LocalAliasAnalysisRestrict());
+    runAliasAnalysisOnOperation(getOperation(), aliasAnalysis);
+  }
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // Pass Registration
 //===----------------------------------------------------------------------===//
 
 namespace mlir {
 namespace test {
 void registerTestAliasAnalysisPass() {
-  PassRegistration<TestAliasAnalysisPass>();
+  PassRegistration<TestAliasAnalysisExtendingPass>();
   PassRegistration<TestAliasAnalysisModRefPass>();
+  PassRegistration<TestAliasAnalysisPass>();
 }
 } // namespace test
 } // namespace mlir

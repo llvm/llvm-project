@@ -201,8 +201,13 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
         opResult.getUses(), [](OpOperand &use) { return &use; }));
     for (OpOperand *use : uses) {
       // Do not update the alloc_tensor op that we just created.
-      if (use->getOwner() != copy->getDefiningOp())
-        rewriter.updateRootInPlace(use->getOwner(), [&]() { use->set(*copy); });
+      if (use->getOwner() == copy->getDefiningOp())
+        continue;
+      // tensor.dim ops may have been created to be used as alloc_tensor op
+      // dynamic extents. Do not update these either.
+      if (isa<tensor::DimOp>(use->getOwner()))
+        continue;
+      rewriter.updateRootInPlace(use->getOwner(), [&]() { use->set(*copy); });
     }
   }
 

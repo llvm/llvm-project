@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <list>
 #include <map>
+#include <shared_mutex>
 #include <vector>
 
 #include "Debug.h"
@@ -405,6 +406,12 @@ private:
   /// setupDeviceEnvironment() function.
   virtual bool shouldSetupDeviceEnvironment() const { return true; }
 
+  /// Register a host buffer as host pinned allocation.
+  Error registerHostPinnedMemoryBuffer(const void *Buffer, size_t Size);
+
+  /// Unregister a host pinned allocations.
+  Error unregisterHostPinnedMemoryBuffer(const void *Buffer);
+
   /// Pointer to the memory manager or nullptr if not available.
   MemoryManagerTy *MemoryManager;
 
@@ -419,7 +426,40 @@ private:
   UInt64Envar OMPX_TargetStackSize;
   UInt64Envar OMPX_TargetHeapSize;
 
+  /// Map of host pinned allocations. We track these pinned allocations so that
+  /// memory transfers involving these allocations can be optimized.
+  std::map<const void *, size_t> HostAllocations;
+  mutable std::shared_mutex HostAllocationsMutex;
+
 protected:
+  /// Check whether a buffer has been registered as host pinned memory.
+  bool isHostPinnedMemoryBuffer(const void *Buffer) const {
+    std::shared_lock<std::shared_mutex> Lock(HostAllocationsMutex);
+
+    if (HostAllocations.empty())
+      return false;
+
+    // Search the first allocation with starting address that is not less than
+    // the buffer address.
+    auto It = HostAllocations.lower_bound(Buffer);
+
+    // Direct match of starting addresses.
+    if (It != HostAllocations.end() && It->first == Buffer)
+      return true;
+
+    // Not direct match but may be a previous pinned allocation in the map which
+    // contains the buffer. Return false if there is no such a previous
+    // allocation.
+    if (It == HostAllocations.begin())
+      return false;
+
+    // Move to the previous pinned allocation.
+    --It;
+
+    // Evaluate whether the buffer is contained in the pinned allocation.
+    return ((const char *)It->first + It->second > (const char *)Buffer);
+  }
+
   /// Environment variables defined by the LLVM OpenMP implementation
   /// regarding the initial number of streams and events.
   UInt32Envar OMPX_InitialNumStreams;
