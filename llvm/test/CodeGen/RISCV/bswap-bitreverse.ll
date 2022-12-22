@@ -1512,7 +1512,7 @@ define i32 @pr55484(i32 %0) {
 ; RV64ZBB-LABEL: pr55484:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    srli a1, a0, 8
-; RV64ZBB-NEXT:    slliw a0, a0, 8
+; RV64ZBB-NEXT:    slli a0, a0, 8
 ; RV64ZBB-NEXT:    or a0, a1, a0
 ; RV64ZBB-NEXT:    sext.h a0, a0
 ; RV64ZBB-NEXT:    ret

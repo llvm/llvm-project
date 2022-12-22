@@ -65,7 +65,7 @@ define i8 @test_cttz_i8(i8 %a) nounwind {
 ; RV64NOZBB-NEXT:    andi a0, a0, 51
 ; RV64NOZBB-NEXT:    add a0, a1, a0
 ; RV64NOZBB-NEXT:    srli a1, a0, 4
-; RV64NOZBB-NEXT:    addw a0, a0, a1
+; RV64NOZBB-NEXT:    add a0, a0, a1
 ; RV64NOZBB-NEXT:    andi a0, a0, 15
 ; RV64NOZBB-NEXT:    ret
 ; RV64NOZBB-NEXT:  .LBB0_2:
@@ -140,7 +140,7 @@ define i16 @test_cttz_i16(i16 %a) nounwind {
 ; RV64NOZBB-NEXT:    and a0, a0, a1
 ; RV64NOZBB-NEXT:    add a0, a2, a0
 ; RV64NOZBB-NEXT:    srli a1, a0, 4
-; RV64NOZBB-NEXT:    addw a0, a0, a1
+; RV64NOZBB-NEXT:    add a0, a0, a1
 ; RV64NOZBB-NEXT:    andi a1, a0, 15
 ; RV64NOZBB-NEXT:    slli a0, a0, 52
 ; RV64NOZBB-NEXT:    srli a0, a0, 60
@@ -445,7 +445,7 @@ define i8 @test_cttz_i8_zero_undef(i8 %a) nounwind {
 ; RV64NOZBB-NEXT:    andi a0, a0, 51
 ; RV64NOZBB-NEXT:    add a0, a1, a0
 ; RV64NOZBB-NEXT:    srli a1, a0, 4
-; RV64NOZBB-NEXT:    addw a0, a0, a1
+; RV64NOZBB-NEXT:    add a0, a0, a1
 ; RV64NOZBB-NEXT:    andi a0, a0, 15
 ; RV64NOZBB-NEXT:    ret
 ;
@@ -504,7 +504,7 @@ define i16 @test_cttz_i16_zero_undef(i16 %a) nounwind {
 ; RV64NOZBB-NEXT:    and a0, a0, a1
 ; RV64NOZBB-NEXT:    add a0, a2, a0
 ; RV64NOZBB-NEXT:    srli a1, a0, 4
-; RV64NOZBB-NEXT:    addw a0, a0, a1
+; RV64NOZBB-NEXT:    add a0, a0, a1
 ; RV64NOZBB-NEXT:    andi a1, a0, 15
 ; RV64NOZBB-NEXT:    slli a0, a0, 52
 ; RV64NOZBB-NEXT:    srli a0, a0, 60
@@ -783,7 +783,7 @@ define i8 @test_ctlz_i8(i8 %a) nounwind {
 ; RV64NOZBB-NEXT:    andi a0, a0, 51
 ; RV64NOZBB-NEXT:    add a0, a1, a0
 ; RV64NOZBB-NEXT:    srli a1, a0, 4
-; RV64NOZBB-NEXT:    addw a0, a0, a1
+; RV64NOZBB-NEXT:    add a0, a0, a1
 ; RV64NOZBB-NEXT:    andi a0, a0, 15
 ; RV64NOZBB-NEXT:    ret
 ; RV64NOZBB-NEXT:  .LBB8_2:
@@ -878,7 +878,7 @@ define i16 @test_ctlz_i16(i16 %a) nounwind {
 ; RV64NOZBB-NEXT:    and a0, a0, a1
 ; RV64NOZBB-NEXT:    add a0, a2, a0
 ; RV64NOZBB-NEXT:    srli a1, a0, 4
-; RV64NOZBB-NEXT:    addw a0, a0, a1
+; RV64NOZBB-NEXT:    add a0, a0, a1
 ; RV64NOZBB-NEXT:    andi a1, a0, 15
 ; RV64NOZBB-NEXT:    slli a0, a0, 52
 ; RV64NOZBB-NEXT:    srli a0, a0, 60
@@ -1063,7 +1063,7 @@ define i32 @test_ctlz_i32(i32 %a) nounwind {
 ; RV64M-NEXT:    and a0, a0, a1
 ; RV64M-NEXT:    add a0, a2, a0
 ; RV64M-NEXT:    srli a1, a0, 4
-; RV64M-NEXT:    addw a0, a0, a1
+; RV64M-NEXT:    add a0, a0, a1
 ; RV64M-NEXT:    lui a1, 61681
 ; RV64M-NEXT:    addiw a1, a1, -241
 ; RV64M-NEXT:    and a0, a0, a1
@@ -1397,7 +1397,7 @@ define i8 @test_ctlz_i8_zero_undef(i8 %a) nounwind {
 ; RV64NOZBB-NEXT:    andi a0, a0, 51
 ; RV64NOZBB-NEXT:    add a0, a1, a0
 ; RV64NOZBB-NEXT:    srli a1, a0, 4
-; RV64NOZBB-NEXT:    addw a0, a0, a1
+; RV64NOZBB-NEXT:    add a0, a0, a1
 ; RV64NOZBB-NEXT:    andi a0, a0, 15
 ; RV64NOZBB-NEXT:    ret
 ;
@@ -1480,7 +1480,7 @@ define i16 @test_ctlz_i16_zero_undef(i16 %a) nounwind {
 ; RV64NOZBB-NEXT:    and a0, a0, a1
 ; RV64NOZBB-NEXT:    add a0, a2, a0
 ; RV64NOZBB-NEXT:    srli a1, a0, 4
-; RV64NOZBB-NEXT:    addw a0, a0, a1
+; RV64NOZBB-NEXT:    add a0, a0, a1
 ; RV64NOZBB-NEXT:    andi a1, a0, 15
 ; RV64NOZBB-NEXT:    slli a0, a0, 52
 ; RV64NOZBB-NEXT:    srli a0, a0, 60
@@ -1643,7 +1643,7 @@ define i32 @test_ctlz_i32_zero_undef(i32 %a) nounwind {
 ; RV64M-NEXT:    and a0, a0, a1
 ; RV64M-NEXT:    add a0, a2, a0
 ; RV64M-NEXT:    srli a1, a0, 4
-; RV64M-NEXT:    addw a0, a0, a1
+; RV64M-NEXT:    add a0, a0, a1
 ; RV64M-NEXT:    lui a1, 61681
 ; RV64M-NEXT:    addiw a1, a1, -241
 ; RV64M-NEXT:    and a0, a0, a1
@@ -1944,7 +1944,7 @@ define i8 @test_ctpop_i8(i8 %a) nounwind {
 ; RV64NOZBB-NEXT:    andi a0, a0, 51
 ; RV64NOZBB-NEXT:    add a0, a1, a0
 ; RV64NOZBB-NEXT:    srli a1, a0, 4
-; RV64NOZBB-NEXT:    addw a0, a0, a1
+; RV64NOZBB-NEXT:    add a0, a0, a1
 ; RV64NOZBB-NEXT:    andi a0, a0, 15
 ; RV64NOZBB-NEXT:    ret
 ;
@@ -1999,7 +1999,7 @@ define i16 @test_ctpop_i16(i16 %a) nounwind {
 ; RV64NOZBB-NEXT:    and a0, a0, a1
 ; RV64NOZBB-NEXT:    add a0, a2, a0
 ; RV64NOZBB-NEXT:    srli a1, a0, 4
-; RV64NOZBB-NEXT:    addw a0, a0, a1
+; RV64NOZBB-NEXT:    add a0, a0, a1
 ; RV64NOZBB-NEXT:    andi a1, a0, 15
 ; RV64NOZBB-NEXT:    slli a0, a0, 52
 ; RV64NOZBB-NEXT:    srli a0, a0, 60
@@ -2116,7 +2116,7 @@ define i32 @test_ctpop_i32(i32 %a) nounwind {
 ; RV64M-NEXT:    and a0, a0, a1
 ; RV64M-NEXT:    add a0, a2, a0
 ; RV64M-NEXT:    srli a1, a0, 4
-; RV64M-NEXT:    addw a0, a0, a1
+; RV64M-NEXT:    add a0, a0, a1
 ; RV64M-NEXT:    lui a1, 61681
 ; RV64M-NEXT:    addiw a1, a1, -241
 ; RV64M-NEXT:    and a0, a0, a1
