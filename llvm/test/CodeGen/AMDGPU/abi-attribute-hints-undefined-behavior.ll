@@ -23,7 +23,6 @@ define void @parent_func_missing_inputs() #0 {
 ; FIXEDABI-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; FIXEDABI-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; FIXEDABI-NEXT:    s_mov_b64 exec, s[18:19]
-; FIXEDABI-NEXT:    ; implicit-def: $vgpr40
 ; FIXEDABI-NEXT:    s_addk_i32 s32, 0x400
 ; FIXEDABI-NEXT:    v_writelane_b32 v40, s30, 0
 ; FIXEDABI-NEXT:    v_writelane_b32 v41, s16, 0
