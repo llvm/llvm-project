@@ -75,7 +75,6 @@
 #include "swift/ClangImporter/ClangImporter.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/Frontend/Frontend.h"
-#include "swift/Parse/LocalContext.h"
 #include "swift/Parse/PersistentParserState.h"
 #include "swift/SIL/SILDebuggerClient.h"
 #include "swift/SIL/SILFunction.h"
