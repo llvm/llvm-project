@@ -12,6 +12,7 @@
 
 #include "LoongArchTargetMachine.h"
 #include "LoongArch.h"
+#include "LoongArchMachineFunctionInfo.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
