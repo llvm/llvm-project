@@ -959,7 +959,7 @@ def int_expect : DefaultAttrsIntrinsic<[llvm_anyint_ty],
 
 def int_expect_with_probability : DefaultAttrsIntrinsic<[llvm_anyint_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_double_ty],
-  [IntrNoMem, IntrWillReturn]>;
+  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<2>>]>;
 
 //===-------------------- Bit Manipulation Intrinsics ---------------------===//
 //
