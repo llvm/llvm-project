@@ -23,6 +23,8 @@ namespace mlir {
 /// checks to see if they alias.
 class LocalAliasAnalysis {
 public:
+  virtual ~LocalAliasAnalysis() = default;
+
   /// Given two values, return their aliasing behavior.
   AliasResult alias(Value lhs, Value rhs);
 
