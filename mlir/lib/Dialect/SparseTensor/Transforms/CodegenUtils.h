@@ -623,11 +623,10 @@ public:
   /// The function will also perform in-place update on the `reduc` vector to
   /// return the reduction variable used inside the generated loop.
   Operation *enterLoopOverTensorAtDim(OpBuilder &builder, Location loc,
-                                      size_t tid, size_t dim,
+                                      ArrayRef<size_t> tids,
+                                      ArrayRef<size_t> dims,
                                       MutableArrayRef<Value> reduc = {},
-                                      bool isParallel = false,
-                                      ArrayRef<size_t> extraTids = {},
-                                      ArrayRef<size_t> extraDims = {});
+                                      bool isParallel = false);
 
   Operation *enterFilterLoopOverTensorAtDim(OpBuilder &builder, Location loc,
                                             size_t tid, size_t dim,
@@ -641,8 +640,7 @@ public:
   /// Emits a co-iteration loop over a set of tensors.
   Operation *enterCoIterationOverTensorsAtDims(
       OpBuilder &builder, Location loc, ArrayRef<size_t> tids,
-      ArrayRef<size_t> dims, bool needsUniv, MutableArrayRef<Value> reduc = {},
-      ArrayRef<size_t> extraTids = {}, ArrayRef<size_t> extraDims = {});
+      ArrayRef<size_t> dims, bool needsUniv, MutableArrayRef<Value> reduc = {});
 
   void exitCurrentLoop(RewriterBase &rewriter, Location loc,
                        MutableArrayRef<Value> reduc = {});
