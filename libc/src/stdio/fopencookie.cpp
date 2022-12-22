@@ -32,8 +32,9 @@ public:
   CookieFile(void *c, cookie_io_functions_t cops, uint8_t *buffer,
              size_t bufsize, File::ModeFlags mode)
       : File(&cookie_write, &cookie_read, &CookieFile::cookie_seek,
-             &cookie_close, &cookie_flush, buffer, bufsize,
-             0 /* default buffering mode */, true /* File owns buffer */, mode),
+             &cookie_close, &cookie_flush, &cleanup_file<CookieFile>, buffer,
+             bufsize, 0 /* default buffering mode */,
+             true /* File owns buffer */, mode),
         cookie(c), ops(cops) {}
 };
 

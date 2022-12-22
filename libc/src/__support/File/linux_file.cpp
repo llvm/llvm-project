@@ -35,7 +35,8 @@ public:
   constexpr LinuxFile(int file_descriptor, uint8_t *buffer, size_t buffer_size,
                       int buffer_mode, bool owned, File::ModeFlags modeflags)
       : File(&write_func, &read_func, &seek_func, &close_func, flush_func,
-             buffer, buffer_size, buffer_mode, owned, modeflags),
+             &cleanup_file<LinuxFile>, buffer, buffer_size, buffer_mode, owned,
+             modeflags),
         fd(file_descriptor) {}
 
   int get_fd() const { return fd; }
