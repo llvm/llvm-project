@@ -15,6 +15,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprConcepts.h"
@@ -1362,7 +1363,22 @@ namespace {
 
     ExprResult TransformRequiresExpr(RequiresExpr *E) {
       LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
-      return inherited::TransformRequiresExpr(E);
+      auto TransReq = inherited::TransformRequiresExpr(E);
+      if (TransReq.isInvalid())
+        return TransReq;
+      assert(TransReq.get() != E &&
+             "Do not change value of isSatisfied for the existing expression. "
+             "Create a new expression instead.");
+      if (E->getBody()->isDependentContext()) {
+        Sema::SFINAETrap Trap(SemaRef);
+        // We recreate the RequiresExpr body, but not by instantiating it.
+        // Produce pending diagnostics for dependent access check.
+        SemaRef.PerformDependentDiagnostics(E->getBody(), TemplateArgs);
+        // FIXME: Store SFINAE diagnostics in RequiresExpr for diagnosis.
+        if (Trap.hasErrorOccurred())
+          TransReq.getAs<RequiresExpr>()->setSatisfied(false);
+      }
+      return TransReq;
     }
 
     bool TransformRequiresExprRequirements(
