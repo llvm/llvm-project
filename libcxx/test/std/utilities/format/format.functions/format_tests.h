@@ -17,126 +17,15 @@
 #include <cstdint>
 #include <iterator>
 
-#include "make_string.h"
 #include "string_literal.h"
 #include "test_macros.h"
+#include "format.functions.common.h"
 
 // In this file the following template types are used:
 // TestFunction must be callable as check(expected-result, string-to-format, args-to-format...)
 // ExceptionTest must be callable as check_exception(expected-exception, string-to-format, args-to-format...)
 
-#define STR(S) MAKE_STRING(CharT, S)
-#define SV(S) MAKE_STRING_VIEW(CharT, S)
-#define CSTR(S) MAKE_CSTRING(CharT, S)
-
-template <class T>
-struct context {};
-
-template <>
-struct context<char> {
-  using type = std::format_context;
-};
-
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-template <>
-struct context<wchar_t> {
-  using type = std::wformat_context;
-};
-#endif
-
-template <class T>
-using context_t = typename context<T>::type;
-
-// A user-defined type used to test the handle formatter.
-enum class status : uint16_t { foo = 0xAAAA, bar = 0x5555, foobar = 0xAA55 };
-
-// The formatter for a user-defined type used to test the handle formatter.
-template <class CharT>
-struct std::formatter<status, CharT> {
-  int type = 0;
-
-  constexpr auto parse(basic_format_parse_context<CharT>& parse_ctx) -> decltype(parse_ctx.begin()) {
-    auto begin = parse_ctx.begin();
-    auto end = parse_ctx.end();
-    if (begin == end)
-      return begin;
-
-    switch (*begin) {
-    case CharT('x'):
-      break;
-    case CharT('X'):
-      type = 1;
-      break;
-    case CharT('s'):
-      type = 2;
-      break;
-    case CharT('}'):
-      return begin;
-    default:
-      throw_format_error("The format-spec type has a type not supported for a status argument");
-    }
-
-    ++begin;
-    if (begin != end && *begin != CharT('}'))
-      throw_format_error("The format-spec should consume the input or end with a '}'");
-
-    return begin;
-  }
-
-  template <class Out>
-  auto format(status s, basic_format_context<Out, CharT>& ctx) const -> decltype(ctx.out()) {
-    const char* names[] = {"foo", "bar", "foobar"};
-    char buffer[7];
-    const char* begin = names[0];
-    const char* end = names[0];
-    switch (type) {
-    case 0:
-      begin = buffer;
-      buffer[0] = '0';
-      buffer[1] = 'x';
-      end = std::to_chars(&buffer[2], std::end(buffer), static_cast<uint16_t>(s), 16).ptr;
-      buffer[6] = '\0';
-      break;
-
-    case 1:
-      begin = buffer;
-      buffer[0] = '0';
-      buffer[1] = 'X';
-      end = std::to_chars(&buffer[2], std::end(buffer), static_cast<uint16_t>(s), 16).ptr;
-      std::transform(static_cast<const char*>(&buffer[2]), end, &buffer[2], [](char c) {
-        return static_cast<char>(std::toupper(c)); });
-      buffer[6] = '\0';
-      break;
-
-    case 2:
-      switch (s) {
-      case status::foo:
-        begin = names[0];
-        break;
-      case status::bar:
-        begin = names[1];
-        break;
-      case status::foobar:
-        begin = names[2];
-        break;
-      }
-      end = begin + strlen(begin);
-      break;
-    }
-
-    return std::copy(begin, end, ctx.out());
-  }
-
-private:
-  void throw_format_error(const char* s) {
-#ifndef TEST_HAS_NO_EXCEPTIONS
-    throw std::format_error(s);
-#else
-    (void)s;
-    std::abort();
-#endif
-  }
-};
+enum class execution_modus { partial, full };
 
 template <class CharT>
 std::vector<std::basic_string_view<CharT>> invalid_types(std::string_view valid) {
@@ -2722,7 +2611,7 @@ void format_test_buffer_optimizations(TestFunction check) {
   check(std::basic_string_view<CharT>{fill + str}, SV("{:*>{}}"), str, minimum + str.size());
 }
 
-template <class CharT, class TestFunction, class ExceptionTest>
+template <class CharT, execution_modus modus, class TestFunction, class ExceptionTest>
 void format_tests(TestFunction check, ExceptionTest check_exception) {
   // *** Test escaping  ***
 
@@ -2797,8 +2686,10 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
         CharT('A'),
         CharT('Z'),
         CharT('!'));
-  format_test_char<CharT>(check, check_exception);
-  format_test_char_as_integer<CharT>(check, check_exception);
+  if constexpr (modus == execution_modus::full) {
+    format_test_char<CharT>(check, check_exception);
+    format_test_char_as_integer<CharT>(check, check_exception);
+  }
 
   // *** Test string format argument ***
   {
@@ -2820,13 +2711,16 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
     std::basic_string_view<CharT> data = buffer;
     check(SV("hello world"), SV("hello {}"), data);
   }
-  format_string_tests<CharT>(check, check_exception);
+  if constexpr (modus == execution_modus::full)
+    format_string_tests<CharT>(check, check_exception);
 
   // *** Test Boolean format argument ***
   check(SV("hello false true"), SV("hello {} {}"), false, true);
 
-  format_test_bool<CharT>(check, check_exception);
-  format_test_bool_as_integer<CharT>(check, check_exception);
+  if constexpr (modus == execution_modus::full) {
+    format_test_bool<CharT>(check, check_exception);
+    format_test_bool_as_integer<CharT>(check, check_exception);
+  }
 
   // *** Test signed integral format argument ***
   check(SV("hello 42"), SV("hello {}"), static_cast<signed char>(42));
@@ -2837,7 +2731,8 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
 #ifndef TEST_HAS_NO_INT128
   check(SV("hello 42"), SV("hello {}"), static_cast<__int128_t>(42));
 #endif
-  format_test_signed_integer<CharT>(check, check_exception);
+  if constexpr (modus == execution_modus::full)
+    format_test_signed_integer<CharT>(check, check_exception);
 
   // ** Test unsigned integral format argument ***
   check(SV("hello 42"), SV("hello {}"), static_cast<unsigned char>(42));
@@ -2848,25 +2743,29 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
 #ifndef TEST_HAS_NO_INT128
   check(SV("hello 42"), SV("hello {}"), static_cast<__uint128_t>(42));
 #endif
-  format_test_unsigned_integer<CharT>(check, check_exception);
+  if constexpr (modus == execution_modus::full)
+    format_test_unsigned_integer<CharT>(check, check_exception);
 
   // *** Test floating point format argument ***
   check(SV("hello 42"), SV("hello {}"), static_cast<float>(42));
   check(SV("hello 42"), SV("hello {}"), static_cast<double>(42));
   check(SV("hello 42"), SV("hello {}"), static_cast<long double>(42));
-  format_test_floating_point<CharT>(check, check_exception);
+  if constexpr (modus == execution_modus::full)
+    format_test_floating_point<CharT>(check, check_exception);
 
   // *** Test pointer formater argument ***
   check(SV("hello 0x0"), SV("hello {}"), nullptr);
   check(SV("hello 0x42"), SV("hello {}"), reinterpret_cast<void*>(0x42));
   check(SV("hello 0x42"), SV("hello {}"), reinterpret_cast<const void*>(0x42));
-  format_test_pointer<CharT>(check, check_exception);
+  if constexpr (modus == execution_modus::full)
+    format_test_pointer<CharT>(check, check_exception);
 
   // *** Test handle formatter argument ***
   format_test_handle<CharT>(check, check_exception);
 
   // *** Test the interal buffer optimizations ***
-  format_test_buffer_optimizations<CharT>(check);
+  if constexpr (modus == execution_modus::full)
+    format_test_buffer_optimizations<CharT>(check);
 }
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
@@ -2877,4 +2776,4 @@ void format_tests_char_to_wchar_t(TestFunction check) {
 }
 #endif
 
-#endif
+#endif // TEST_STD_UTILITIES_FORMAT_FORMAT_FUNCTIONS_FORMAT_TESTS_H
