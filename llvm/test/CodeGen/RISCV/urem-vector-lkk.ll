@@ -529,13 +529,13 @@ define <4 x i16> @combine_urem_udiv(<4 x i16> %x) nounwind {
 ; RV64I-NEXT:    li a1, 95
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call __udivdi3@plt
-; RV64I-NEXT:    addw a0, s8, a0
-; RV64I-NEXT:    addw a1, s7, s2
-; RV64I-NEXT:    addw a2, s6, s3
-; RV64I-NEXT:    addw a3, s5, s4
-; RV64I-NEXT:    sh a3, 6(s0)
-; RV64I-NEXT:    sh a2, 4(s0)
-; RV64I-NEXT:    sh a1, 2(s0)
+; RV64I-NEXT:    add a0, s8, a0
+; RV64I-NEXT:    add s2, s7, s2
+; RV64I-NEXT:    add s3, s6, s3
+; RV64I-NEXT:    add s4, s5, s4
+; RV64I-NEXT:    sh s4, 6(s0)
+; RV64I-NEXT:    sh s3, 4(s0)
+; RV64I-NEXT:    sh s2, 2(s0)
 ; RV64I-NEXT:    sh a0, 0(s0)
 ; RV64I-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
@@ -587,13 +587,13 @@ define <4 x i16> @combine_urem_udiv(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    srli a3, a3, 6
 ; RV64IM-NEXT:    mulw a7, a3, a7
 ; RV64IM-NEXT:    subw a4, a4, a7
-; RV64IM-NEXT:    addw a3, a4, a3
-; RV64IM-NEXT:    addw a4, a5, t1
-; RV64IM-NEXT:    addw a1, a1, t0
-; RV64IM-NEXT:    addw a2, a2, a6
+; RV64IM-NEXT:    add a3, a4, a3
+; RV64IM-NEXT:    add a5, a5, t1
+; RV64IM-NEXT:    add a1, a1, t0
+; RV64IM-NEXT:    add a2, a2, a6
 ; RV64IM-NEXT:    sh a2, 6(a0)
 ; RV64IM-NEXT:    sh a1, 4(a0)
-; RV64IM-NEXT:    sh a4, 2(a0)
+; RV64IM-NEXT:    sh a5, 2(a0)
 ; RV64IM-NEXT:    sh a3, 0(a0)
 ; RV64IM-NEXT:    ret
   %1 = urem <4 x i16> %x, <i16 95, i16 95, i16 95, i16 95>

@@ -122,7 +122,6 @@ complex stdexcept
 complex type_traits
 complex version
 concepts cstddef
-concepts type_traits
 concepts version
 condition_variable atomic
 condition_variable cstddef
@@ -197,7 +196,6 @@ experimental/functional vector
 experimental/iterator cstddef
 experimental/iterator iosfwd
 experimental/iterator iterator
-experimental/iterator type_traits
 experimental/list experimental/memory_resource
 experimental/list list
 experimental/map experimental/memory_resource
@@ -381,7 +379,6 @@ iterator version
 latch atomic
 latch limits
 latch version
-limits type_traits
 limits version
 list compare
 list cstddef
@@ -445,7 +442,6 @@ memory_resource mutex
 memory_resource new
 memory_resource stdexcept
 memory_resource tuple
-memory_resource type_traits
 memory_resource version
 mutex atomic
 mutex cstddef
@@ -598,7 +594,6 @@ sstream cstddef
 sstream istream
 sstream ostream
 sstream string
-sstream type_traits
 sstream version
 stack compare
 stack cstddef
@@ -717,7 +712,6 @@ utility cstddef
 utility cstdlib
 utility initializer_list
 utility limits
-utility type_traits
 utility version
 valarray cmath
 valarray cstddef

@@ -338,26 +338,6 @@ int File::flush_unlocked() {
   return 0;
 }
 
-int File::close() {
-  {
-    FileLock lock(this);
-    if (prev_op == FileOp::WRITE && pos > 0) {
-      auto buf_result = platform_write(this, buf, pos);
-      if (buf_result.has_error() || buf_result.value < pos) {
-        err = true;
-        return buf_result.error;
-      }
-    }
-    int result = platform_close(this);
-    if (result != 0)
-      return result;
-    if (own_buf)
-      free(buf);
-  }
-  free(this);
-  return 0;
-}
-
 int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
   // We do not need to lock the file as this method should be called before
   // other operations are performed on the file.

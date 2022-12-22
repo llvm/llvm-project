@@ -858,7 +858,7 @@ define void @strided_load_startval_add_with_splat(ptr noalias nocapture %arg, pt
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lb a3, 0(a1)
 ; CHECK-NEXT:    lb a4, 0(a0)
-; CHECK-NEXT:    addw a3, a4, a3
+; CHECK-NEXT:    add a3, a4, a3
 ; CHECK-NEXT:    sb a3, 0(a0)
 ; CHECK-NEXT:    addiw a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 1

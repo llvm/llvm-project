@@ -1387,7 +1387,10 @@ module std [system] {
     module is_abstract                         { private header "__type_traits/is_abstract.h" }
     module is_aggregate                        { private header "__type_traits/is_aggregate.h" }
     module is_allocator                        { private header "__type_traits/is_allocator.h" }
-    module is_arithmetic                       { private header "__type_traits/is_arithmetic.h" }
+    module is_arithmetic {
+      private header "__type_traits/is_arithmetic.h"
+      export integral_constant
+    }
     module is_array                            { private header "__type_traits/is_array.h" }
     module is_assignable                       { private header "__type_traits/is_assignable.h" }
     module is_base_of                          { private header "__type_traits/is_base_of.h" }
