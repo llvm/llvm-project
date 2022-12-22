@@ -1400,15 +1400,16 @@ bool AAPointerInfoFloating::collectConstantsForGEP(Attributor &A,
       return true;
     }
 
-    auto &AssumedSet = PotentialConstantsAA.getAssumedSet();
+    // UndefValue is treated as a zero, which leaves Union as is.
+    if (PotentialConstantsAA.undefIsContained())
+      continue;
 
     // We need at least one constant in every set to compute an actual offset.
     // Otherwise, we end up pessimizing AAPointerInfo by respecting offsets that
     // don't actually exist. In other words, the absence of constant values
     // implies that the operation can be assumed dead for now.
-    //
-    // UndefValue is treated as a zero.
-    if (!PotentialConstantsAA.undefIsContained() && AssumedSet.empty())
+    auto &AssumedSet = PotentialConstantsAA.getAssumedSet();
+    if (AssumedSet.empty())
       return false;
 
     OffsetInfo Product;
