@@ -94,6 +94,13 @@ LoongArchTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+MachineFunctionInfo *LoongArchTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return LoongArchMachineFunctionInfo::create<LoongArchMachineFunctionInfo>(
+      Allocator, F, STI);
+}
+
 namespace {
 class LoongArchPassConfig : public TargetPassConfig {
 public:
