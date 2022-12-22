@@ -18,9 +18,10 @@
 using ModeFlags = __llvm_libc::File::ModeFlags;
 using MemoryView = __llvm_libc::memory::testing::MemoryView;
 using __llvm_libc::ErrorOr;
+using __llvm_libc::File;
 using __llvm_libc::FileIOResult;
 
-class StringFile : public __llvm_libc::File {
+class StringFile : public File {
   static constexpr size_t SIZE = 512;
   size_t pos;
   char str[SIZE] = {0};
@@ -38,8 +39,9 @@ public:
   explicit StringFile(char *buffer, size_t buflen, int bufmode, bool owned,
                       ModeFlags modeflags)
       : __llvm_libc::File(&str_write, &str_read, &str_seek, &str_close,
-                          &str_flush, reinterpret_cast<uint8_t *>(buffer),
-                          buflen, bufmode, owned, modeflags),
+                          &str_flush, &__llvm_libc::cleanup_file<StringFile>,
+                          reinterpret_cast<uint8_t *>(buffer), buflen, bufmode,
+                          owned, modeflags),
         pos(0), eof_marker(0), write_append(false) {
     if (modeflags & static_cast<ModeFlags>(__llvm_libc::File::OpenMode::APPEND))
       write_append = true;
@@ -144,7 +146,7 @@ TEST(LlvmLibcFileTest, WriteOnly) {
     EXPECT_TRUE(result.has_error());
   }
 
-  ASSERT_EQ(f->close(), 0);
+  ASSERT_EQ(File::cleanup(f), 0);
 }
 
 TEST(LlvmLibcFileTest, WriteLineBuffered) {
@@ -203,8 +205,8 @@ TEST(LlvmLibcFileTest, WriteLineBuffered) {
   EXPECT_MEM_EQ(src3, dst_line_final);
   EXPECT_MEM_EQ(src3, dst_full_final);
 
-  ASSERT_EQ(f_line->close(), 0);
-  ASSERT_EQ(f_full->close(), 0);
+  ASSERT_EQ(File::cleanup(f_line), 0);
+  ASSERT_EQ(File::cleanup(f_full), 0);
 }
 
 TEST(LlvmLibcFileTest, WriteUnbuffered) {
@@ -219,7 +221,7 @@ TEST(LlvmLibcFileTest, WriteUnbuffered) {
             sizeof(data)); // no buffering means this is written immediately.
   EXPECT_STREQ(f->get_str(), data);
 
-  ASSERT_EQ(f->close(), 0);
+  ASSERT_EQ(File::cleanup(f), 0);
 }
 
 TEST(LlvmLibcFileTest, ReadOnly) {
@@ -272,7 +274,7 @@ TEST(LlvmLibcFileTest, ReadOnly) {
     EXPECT_TRUE(result.has_error());
   }
 
-  ASSERT_EQ(f->close(), 0);
+  ASSERT_EQ(File::cleanup(f), 0);
 }
 
 TEST(LlvmLibcFileTest, ReadSeekCurAndRead) {
@@ -294,7 +296,7 @@ TEST(LlvmLibcFileTest, ReadSeekCurAndRead) {
   ASSERT_EQ(f->seek(-5, SEEK_CUR).value(), 0);
   ASSERT_EQ(f->read(data, READ_SIZE - 1).value, READ_SIZE - 1);
   ASSERT_STREQ(data, "9098");
-  ASSERT_EQ(f->close(), 0);
+  ASSERT_EQ(File::cleanup(f), 0);
 }
 
 TEST(LlvmLibcFileTest, AppendOnly) {
@@ -324,7 +326,7 @@ TEST(LlvmLibcFileTest, AppendOnly) {
   EXPECT_EQ(f->flush(), int(0));
   EXPECT_EQ(f->get_pos(), sizeof(write_data) + sizeof(initial_content));
 
-  ASSERT_EQ(f->close(), 0);
+  ASSERT_EQ(File::cleanup(f), 0);
 }
 
 TEST(LlvmLibcFileTest, WriteUpdate) {
@@ -344,7 +346,7 @@ TEST(LlvmLibcFileTest, WriteUpdate) {
   ASSERT_EQ(f->read(read_data, sizeof(data)).value, sizeof(data));
   EXPECT_STREQ(read_data, data);
 
-  ASSERT_EQ(f->close(), 0);
+  ASSERT_EQ(File::cleanup(f), 0);
 }
 
 TEST(LlvmLibcFileTest, ReadUpdate) {
@@ -377,7 +379,7 @@ TEST(LlvmLibcFileTest, ReadUpdate) {
       src2(write_data, sizeof(write_data));
   EXPECT_MEM_EQ(src2, dst2);
 
-  ASSERT_EQ(f->close(), 0);
+  ASSERT_EQ(File::cleanup(f), 0);
 }
 
 TEST(LlvmLibcFileTest, AppendUpdate) {
@@ -419,7 +421,7 @@ TEST(LlvmLibcFileTest, AppendUpdate) {
   MemoryView src4(initial_content, READ_SIZE), dst4(read_data, READ_SIZE);
   EXPECT_MEM_EQ(src4, dst4);
 
-  ASSERT_EQ(f->close(), 0);
+  ASSERT_EQ(File::cleanup(f), 0);
 }
 
 TEST(LlvmLibcFileTest, SmallBuffer) {
@@ -436,7 +438,7 @@ TEST(LlvmLibcFileTest, SmallBuffer) {
   EXPECT_EQ(f->get_pos(), sizeof(WRITE_DATA));
   ASSERT_STREQ(f->get_str(), WRITE_DATA);
 
-  ASSERT_EQ(f->close(), 0);
+  ASSERT_EQ(File::cleanup(f), 0);
 }
 
 TEST(LlvmLibcFileTest, ZeroLengthBuffer) {
@@ -458,9 +460,9 @@ TEST(LlvmLibcFileTest, ZeroLengthBuffer) {
   ASSERT_STREQ(f_lbf->get_str(), WRITE_DATA);
   ASSERT_STREQ(f_nbf->get_str(), WRITE_DATA);
 
-  ASSERT_EQ(f_fbf->close(), 0);
-  ASSERT_EQ(f_lbf->close(), 0);
-  ASSERT_EQ(f_nbf->close(), 0);
+  ASSERT_EQ(File::cleanup(f_fbf), 0);
+  ASSERT_EQ(File::cleanup(f_lbf), 0);
+  ASSERT_EQ(File::cleanup(f_nbf), 0);
 }
 
 TEST(LlvmLibcFileTest, WriteNothing) {
@@ -485,7 +487,7 @@ TEST(LlvmLibcFileTest, WriteNothing) {
   ASSERT_FALSE(f_lbf->error_unlocked());
   ASSERT_FALSE(f_nbf->error_unlocked());
 
-  ASSERT_EQ(f_fbf->close(), 0);
-  ASSERT_EQ(f_lbf->close(), 0);
-  ASSERT_EQ(f_nbf->close(), 0);
+  ASSERT_EQ(File::cleanup(f_fbf), 0);
+  ASSERT_EQ(File::cleanup(f_lbf), 0);
+  ASSERT_EQ(File::cleanup(f_nbf), 0);
 }
