@@ -65,13 +65,13 @@ define void @freeze_bitcast_from_wider_elt(ptr %origin, ptr %dst) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    vmovlps %xmm0, (%eax)
+; X86-NEXT:    vmovsd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_bitcast_from_wider_elt:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    vmovlps %xmm0, (%rsi)
+; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    movq %rax, (%rsi)
 ; X64-NEXT:    retq
   %i0 = load <4 x i16>, ptr %origin
   %i1 = bitcast <4 x i16> %i0 to <8 x i8>
@@ -88,15 +88,14 @@ define void @freeze_bitcast_from_wider_elt_escape(ptr %origin, ptr %escape, ptr 
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vmovsd %xmm0, (%ecx)
-; X86-NEXT:    vmovlps %xmm0, (%eax)
+; X86-NEXT:    vmovsd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_bitcast_from_wider_elt_escape:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %rax
-; X64-NEXT:    vmovq %rax, %xmm0
 ; X64-NEXT:    movq %rax, (%rsi)
-; X64-NEXT:    vmovq %xmm0, (%rdx)
+; X64-NEXT:    movq %rax, (%rdx)
 ; X64-NEXT:    retq
   %i0 = load <4 x i16>, ptr %origin
   %i1 = bitcast <4 x i16> %i0 to <8 x i8>
@@ -113,13 +112,13 @@ define void @freeze_bitcast_to_wider_elt(ptr %origin, ptr %dst) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    vmovlps %xmm0, (%eax)
+; X86-NEXT:    vmovsd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_bitcast_to_wider_elt:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    vmovlps %xmm0, (%rsi)
+; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    movq %rax, (%rsi)
 ; X64-NEXT:    retq
   %i0 = load <8 x i8>, ptr %origin
   %i1 = bitcast <8 x i8> %i0 to <4 x i16>
@@ -136,15 +135,14 @@ define void @freeze_bitcast_to_wider_elt_escape(ptr %origin, ptr %escape, ptr %d
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vmovsd %xmm0, (%ecx)
-; X86-NEXT:    vmovlps %xmm0, (%eax)
+; X86-NEXT:    vmovsd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_bitcast_to_wider_elt_escape:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %rax
-; X64-NEXT:    vmovq %rax, %xmm0
 ; X64-NEXT:    movq %rax, (%rsi)
-; X64-NEXT:    vmovq %xmm0, (%rdx)
+; X64-NEXT:    movq %rax, (%rdx)
 ; X64-NEXT:    retq
   %i0 = load <8 x i8>, ptr %origin
   %i1 = bitcast <8 x i8> %i0 to <4 x i16>
@@ -163,14 +161,16 @@ define void @freeze_extractelement(ptr %origin0, ptr %origin1, ptr %dst) nounwin
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    vmovdqa (%edx), %xmm0
 ; X86-NEXT:    vpand (%ecx), %xmm0, %xmm0
-; X86-NEXT:    vpextrb $6, %xmm0, (%eax)
+; X86-NEXT:    vpextrb $6, %xmm0, %ecx
+; X86-NEXT:    movb %cl, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_extractelement:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovdqa (%rdi), %xmm0
 ; X64-NEXT:    vpand (%rsi), %xmm0, %xmm0
-; X64-NEXT:    vpextrb $6, %xmm0, (%rdx)
+; X64-NEXT:    vpextrb $6, %xmm0, %eax
+; X64-NEXT:    movb %al, (%rdx)
 ; X64-NEXT:    retq
   %i0 = load <16 x i8>, ptr %origin0
   %i1 = load <16 x i8>, ptr %origin1
@@ -211,6 +211,8 @@ define void @freeze_extractelement_escape(ptr %origin0, ptr %origin1, ptr %dst, 
   store i8 %i4, ptr %dst
   ret void
 }
+
+; It would be a miscompilation to pull freeze out of extractelement here.
 define void @freeze_extractelement_extra_use(ptr %origin0, ptr %origin1, i64 %idx0, i64 %idx1, ptr %dst, ptr %escape) nounwind {
 ; X86-LABEL: freeze_extractelement_extra_use:
 ; X86:       # %bb.0:
