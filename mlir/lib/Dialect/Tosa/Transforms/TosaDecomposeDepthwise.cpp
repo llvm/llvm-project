@@ -95,7 +95,7 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
 
     auto padAttr = op.getPad();
     llvm::SmallVector<int64_t> pad(10, 0);
-    for (auto it : llvm::enumerate(padAttr.getValue()))
+    for (const auto &it : llvm::enumerate(padAttr.getValue()))
       pad[it.index() + 2] =
           it.value().cast<IntegerAttr>().getValue().getSExtValue();
 
