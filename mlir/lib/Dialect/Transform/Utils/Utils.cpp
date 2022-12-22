@@ -36,7 +36,7 @@ ParseResult transform::parsePackedOrDynamicIndexList(
     DenseI64ArrayAttr &integers) {
   OpAsmParser::UnresolvedOperand packedOperand;
   if (parser.parseOptionalOperand(packedOperand).has_value()) {
-    packed.emplace(std::move(packedOperand));
+    packed.emplace(packedOperand);
     integers = parser.getBuilder().getDenseI64ArrayAttr({});
     return success();
   }
