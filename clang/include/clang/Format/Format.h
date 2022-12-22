@@ -2970,6 +2970,7 @@ struct FormatStyle {
   ///   * const
   ///   * inline
   ///   * static
+  ///   * friend
   ///   * constexpr
   ///   * volatile
   ///   * restrict
