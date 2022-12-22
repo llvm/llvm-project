@@ -203,7 +203,7 @@
 "`3732 <https://wg21.link/LWG3732>`__","``prepend_range`` and ``append_range`` can't be amortized constant time", "November 2022","|Nothing to do|","","|ranges|"
 "`3736 <https://wg21.link/LWG3736>`__","``move_iterator`` missing ``disable_sized_sentinel_for`` specialization", "November 2022","","","|ranges|"
 "`3737 <https://wg21.link/LWG3737>`__","``take_view::sentinel`` should provide ``operator-``", "November 2022","","","|ranges|"
-"`3738 <https://wg21.link/LWG3738>`__","Missing preconditions for ``take_view`` constructor", "November 2022","","","|ranges|"
+"`3738 <https://wg21.link/LWG3738>`__","Missing preconditions for ``take_view`` constructor", "November 2022","|Complete|","16.0","|ranges|"
 "`3743 <https://wg21.link/LWG3743>`__","``ranges::to``'s reserve may be ill-formed", "November 2022","","","|ranges|"
 "`3745 <https://wg21.link/LWG3745>`__","``std::atomic_wait`` and its friends lack ``noexcept``", "November 2022","|Complete|","16.0",""
 "`3746 <https://wg21.link/LWG3746>`__","``optional``'s spaceship with ``U`` with a type derived from optional causes infinite constraint meta-recursion", "November 2022","","","|spaceship|"
