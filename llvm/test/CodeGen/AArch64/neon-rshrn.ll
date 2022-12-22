@@ -4,11 +4,8 @@
 define <16 x i8> @rshrn_v16i16_1(<16 x i16> %a) {
 ; CHECK-LABEL: rshrn_v16i16_1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.8h, #1
-; CHECK-NEXT:    add v0.8h, v0.8h, v2.8h
-; CHECK-NEXT:    add v1.8h, v1.8h, v2.8h
-; CHECK-NEXT:    shrn v0.8b, v0.8h, #1
-; CHECK-NEXT:    shrn2 v0.16b, v1.8h, #1
+; CHECK-NEXT:    rshrn v0.8b, v0.8h, #1
+; CHECK-NEXT:    rshrn2 v0.16b, v1.8h, #1
 ; CHECK-NEXT:    ret
 entry:
   %b = add <16 x i16> %a, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
@@ -20,11 +17,8 @@ entry:
 define <16 x i8> @rshrn_v16i16_2(<16 x i16> %a) {
 ; CHECK-LABEL: rshrn_v16i16_2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.8h, #2
-; CHECK-NEXT:    add v0.8h, v0.8h, v2.8h
-; CHECK-NEXT:    add v1.8h, v1.8h, v2.8h
-; CHECK-NEXT:    shrn v0.8b, v0.8h, #2
-; CHECK-NEXT:    shrn2 v0.16b, v1.8h, #2
+; CHECK-NEXT:    rshrn v0.8b, v0.8h, #2
+; CHECK-NEXT:    rshrn2 v0.16b, v1.8h, #2
 ; CHECK-NEXT:    ret
 entry:
   %b = add <16 x i16> %a, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
@@ -36,11 +30,8 @@ entry:
 define <16 x i8> @rshrn_v16i16_3(<16 x i16> %a) {
 ; CHECK-LABEL: rshrn_v16i16_3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.8h, #4
-; CHECK-NEXT:    add v0.8h, v0.8h, v2.8h
-; CHECK-NEXT:    add v1.8h, v1.8h, v2.8h
-; CHECK-NEXT:    shrn v0.8b, v0.8h, #3
-; CHECK-NEXT:    shrn2 v0.16b, v1.8h, #3
+; CHECK-NEXT:    rshrn v0.8b, v0.8h, #3
+; CHECK-NEXT:    rshrn2 v0.16b, v1.8h, #3
 ; CHECK-NEXT:    ret
 entry:
   %b = add <16 x i16> %a, <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>
@@ -52,11 +43,8 @@ entry:
 define <16 x i8> @rshrn_v16i16_4(<16 x i16> %a) {
 ; CHECK-LABEL: rshrn_v16i16_4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.8h, #8
-; CHECK-NEXT:    add v0.8h, v0.8h, v2.8h
-; CHECK-NEXT:    add v1.8h, v1.8h, v2.8h
-; CHECK-NEXT:    shrn v0.8b, v0.8h, #4
-; CHECK-NEXT:    shrn2 v0.16b, v1.8h, #4
+; CHECK-NEXT:    rshrn v0.8b, v0.8h, #4
+; CHECK-NEXT:    rshrn2 v0.16b, v1.8h, #4
 ; CHECK-NEXT:    ret
 entry:
   %b = add <16 x i16> %a, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
@@ -68,11 +56,8 @@ entry:
 define <16 x i8> @rshrn_v16i16_5(<16 x i16> %a) {
 ; CHECK-LABEL: rshrn_v16i16_5:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.8h, #16
-; CHECK-NEXT:    add v0.8h, v0.8h, v2.8h
-; CHECK-NEXT:    add v1.8h, v1.8h, v2.8h
-; CHECK-NEXT:    shrn v0.8b, v0.8h, #5
-; CHECK-NEXT:    shrn2 v0.16b, v1.8h, #5
+; CHECK-NEXT:    rshrn v0.8b, v0.8h, #5
+; CHECK-NEXT:    rshrn2 v0.16b, v1.8h, #5
 ; CHECK-NEXT:    ret
 entry:
   %b = add <16 x i16> %a, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
@@ -84,11 +69,8 @@ entry:
 define <16 x i8> @rshrn_v16i16_6(<16 x i16> %a) {
 ; CHECK-LABEL: rshrn_v16i16_6:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.8h, #32
-; CHECK-NEXT:    add v0.8h, v0.8h, v2.8h
-; CHECK-NEXT:    add v1.8h, v1.8h, v2.8h
-; CHECK-NEXT:    shrn v0.8b, v0.8h, #6
-; CHECK-NEXT:    shrn2 v0.16b, v1.8h, #6
+; CHECK-NEXT:    rshrn v0.8b, v0.8h, #6
+; CHECK-NEXT:    rshrn2 v0.16b, v1.8h, #6
 ; CHECK-NEXT:    ret
 entry:
   %b = add <16 x i16> %a, <i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32>
@@ -100,11 +82,8 @@ entry:
 define <16 x i8> @rshrn_v16i16_7(<16 x i16> %a) {
 ; CHECK-LABEL: rshrn_v16i16_7:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.8h, #64
-; CHECK-NEXT:    add v0.8h, v0.8h, v2.8h
-; CHECK-NEXT:    add v1.8h, v1.8h, v2.8h
-; CHECK-NEXT:    shrn v0.8b, v0.8h, #7
-; CHECK-NEXT:    shrn2 v0.16b, v1.8h, #7
+; CHECK-NEXT:    rshrn v0.8b, v0.8h, #7
+; CHECK-NEXT:    rshrn2 v0.16b, v1.8h, #7
 ; CHECK-NEXT:    ret
 entry:
   %b = add <16 x i16> %a, <i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64>
@@ -116,9 +95,9 @@ entry:
 define <16 x i8> @rshrn_v16i16_8(<16 x i16> %a) {
 ; CHECK-LABEL: rshrn_v16i16_8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.8h, #128
-; CHECK-NEXT:    addhn v0.8b, v0.8h, v2.8h
-; CHECK-NEXT:    addhn2 v0.16b, v1.8h, v2.8h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    raddhn v0.8b, v0.8h, v2.8h
+; CHECK-NEXT:    raddhn2 v0.16b, v1.8h, v2.8h
 ; CHECK-NEXT:    ret
 entry:
   %b = add <16 x i16> %a, <i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128>
@@ -147,11 +126,8 @@ entry:
 define <8 x i16> @rshrn_v8i32_1(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #1
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #1
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #1
+; CHECK-NEXT:    rshrn v0.4h, v0.4s, #1
+; CHECK-NEXT:    rshrn2 v0.8h, v1.4s, #1
 ; CHECK-NEXT:    ret
 entry:
   %b = add <8 x i32> %a, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
@@ -163,11 +139,8 @@ entry:
 define <8 x i16> @rshrn_v8i32_2(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #2
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #2
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #2
+; CHECK-NEXT:    rshrn v0.4h, v0.4s, #2
+; CHECK-NEXT:    rshrn2 v0.8h, v1.4s, #2
 ; CHECK-NEXT:    ret
 entry:
   %b = add <8 x i32> %a, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
@@ -179,11 +152,8 @@ entry:
 define <8 x i16> @rshrn_v8i32_3(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #4
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #3
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #3
+; CHECK-NEXT:    rshrn v0.4h, v0.4s, #3
+; CHECK-NEXT:    rshrn2 v0.8h, v1.4s, #3
 ; CHECK-NEXT:    ret
 entry:
   %b = add <8 x i32> %a, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
@@ -195,11 +165,8 @@ entry:
 define <8 x i16> @rshrn_v8i32_4(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #8
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #4
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #4
+; CHECK-NEXT:    rshrn v0.4h, v0.4s, #4
+; CHECK-NEXT:    rshrn2 v0.8h, v1.4s, #4
 ; CHECK-NEXT:    ret
 entry:
   %b = add <8 x i32> %a, <i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
@@ -211,11 +178,8 @@ entry:
 define <8 x i16> @rshrn_v8i32_5(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_5:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #16
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #5
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #5
+; CHECK-NEXT:    rshrn v0.4h, v0.4s, #5
+; CHECK-NEXT:    rshrn2 v0.8h, v1.4s, #5
 ; CHECK-NEXT:    ret
 entry:
   %b = add <8 x i32> %a, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
@@ -227,11 +191,8 @@ entry:
 define <8 x i16> @rshrn_v8i32_6(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_6:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #32
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #6
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #6
+; CHECK-NEXT:    rshrn v0.4h, v0.4s, #6
+; CHECK-NEXT:    rshrn2 v0.8h, v1.4s, #6
 ; CHECK-NEXT:    ret
 entry:
   %b = add <8 x i32> %a, <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
@@ -243,11 +204,8 @@ entry:
 define <8 x i16> @rshrn_v8i32_7(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_7:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #64
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #7
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #7
+; CHECK-NEXT:    rshrn v0.4h, v0.4s, #7
+; CHECK-NEXT:    rshrn2 v0.8h, v1.4s, #7
 ; CHECK-NEXT:    ret
 entry:
   %b = add <8 x i32> %a, <i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64>
@@ -259,11 +217,8 @@ entry:
 define <8 x i16> @rshrn_v8i32_8(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #128
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #8
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #8
+; CHECK-NEXT:    rshrn v0.4h, v0.4s, #8
+; CHECK-NEXT:    rshrn2 v0.8h, v1.4s, #8
 ; CHECK-NEXT:    ret
 entry:
   %b = add <8 x i32> %a, <i32 128, i32 128, i32 128, i32 128, i32 128, i32 128, i32 128, i32 128>
@@ -275,11 +230,8 @@ entry:
 define <8 x i16> @rshrn_v8i32_9(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_9:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #1, lsl #8
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #9
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #9
+; CHECK-NEXT:    rshrn v0.4h, v0.4s, #9
+; CHECK-NEXT:    rshrn2 v0.8h, v1.4s, #9
 ; CHECK-NEXT:    ret
 entry:
   %b = add <8 x i32> %a, <i32 256, i32 256, i32 256, i32 256, i32 256, i32 256, i32 256, i32 256>
@@ -291,11 +243,8 @@ entry:
 define <8 x i16> @rshrn_v8i32_10(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_10:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #2, lsl #8
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #10
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #10
+; CHECK-NEXT:    rshrn v0.4h, v0.4s, #10
+; CHECK-NEXT:    rshrn2 v0.8h, v1.4s, #10
 ; CHECK-NEXT:    ret
 entry:
   %b = add <8 x i32> %a, <i32 512, i32 512, i32 512, i32 512, i32 512, i32 512, i32 512, i32 512>
@@ -307,11 +256,8 @@ entry:
 define <8 x i16> @rshrn_v8i32_11(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_11:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #4, lsl #8
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #11
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #11
+; CHECK-NEXT:    rshrn v0.4h, v0.4s, #11
+; CHECK-NEXT:    rshrn2 v0.8h, v1.4s, #11
 ; CHECK-NEXT:    ret
 entry:
   %b = add <8 x i32> %a, <i32 1024, i32 1024, i32 1024, i32 1024, i32 1024, i32 1024, i32 1024, i32 1024>
@@ -323,11 +269,8 @@ entry:
 define <8 x i16> @rshrn_v8i32_12(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_12:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #8, lsl #8
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #12
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #12
+; CHECK-NEXT:    rshrn v0.4h, v0.4s, #12
+; CHECK-NEXT:    rshrn2 v0.8h, v1.4s, #12
 ; CHECK-NEXT:    ret
 entry:
   %b = add <8 x i32> %a, <i32 2048, i32 2048, i32 2048, i32 2048, i32 2048, i32 2048, i32 2048, i32 2048>
@@ -339,11 +282,8 @@ entry:
 define <8 x i16> @rshrn_v8i32_13(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_13:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #16, lsl #8
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #13
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #13
+; CHECK-NEXT:    rshrn v0.4h, v0.4s, #13
+; CHECK-NEXT:    rshrn2 v0.8h, v1.4s, #13
 ; CHECK-NEXT:    ret
 entry:
   %b = add <8 x i32> %a, <i32 4096, i32 4096, i32 4096, i32 4096, i32 4096, i32 4096, i32 4096, i32 4096>
@@ -355,11 +295,8 @@ entry:
 define <8 x i16> @rshrn_v8i32_14(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_14:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #32, lsl #8
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #14
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #14
+; CHECK-NEXT:    rshrn v0.4h, v0.4s, #14
+; CHECK-NEXT:    rshrn2 v0.8h, v1.4s, #14
 ; CHECK-NEXT:    ret
 entry:
   %b = add <8 x i32> %a, <i32 8192, i32 8192, i32 8192, i32 8192, i32 8192, i32 8192, i32 8192, i32 8192>
@@ -371,11 +308,8 @@ entry:
 define <8 x i16> @rshrn_v8i32_15(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_15:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #64, lsl #8
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #15
-; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #15
+; CHECK-NEXT:    rshrn v0.4h, v0.4s, #15
+; CHECK-NEXT:    rshrn2 v0.8h, v1.4s, #15
 ; CHECK-NEXT:    ret
 entry:
   %b = add <8 x i32> %a, <i32 16384, i32 16384, i32 16384, i32 16384, i32 16384, i32 16384, i32 16384, i32 16384>
@@ -387,9 +321,9 @@ entry:
 define <8 x i16> @rshrn_v8i32_16(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #128, lsl #8
-; CHECK-NEXT:    addhn v0.4h, v0.4s, v2.4s
-; CHECK-NEXT:    addhn2 v0.8h, v1.4s, v2.4s
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    raddhn v0.4h, v0.4s, v2.4s
+; CHECK-NEXT:    raddhn2 v0.8h, v1.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
   %b = add <8 x i32> %a, <i32 32768, i32 32768, i32 32768, i32 32768, i32 32768, i32 32768, i32 32768, i32 32768>
@@ -418,12 +352,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_1(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #1
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #1
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #1
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #1
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 1, i64 1, i64 1, i64 1>
@@ -435,12 +365,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_2(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #2
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #2
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #2
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #2
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #2
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 2, i64 2, i64 2, i64 2>
@@ -452,12 +378,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_3(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #4
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #3
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #3
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #3
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #3
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 4, i64 4, i64 4, i64 4>
@@ -469,12 +391,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_4(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #8
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #4
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #4
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #4
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #4
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 8, i64 8, i64 8, i64 8>
@@ -486,12 +404,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_5(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_5:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #16
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #5
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #5
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #5
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #5
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 16, i64 16, i64 16, i64 16>
@@ -503,12 +417,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_6(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_6:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #32
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #6
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #6
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #6
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #6
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 32, i64 32, i64 32, i64 32>
@@ -520,12 +430,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_7(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_7:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #64
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #7
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #7
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #7
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #7
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 64, i64 64, i64 64, i64 64>
@@ -537,12 +443,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_8(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #128
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #8
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #8
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #8
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #8
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 128, i64 128, i64 128, i64 128>
@@ -554,12 +456,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_9(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_9:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #256
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #9
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #9
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #9
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #9
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 256, i64 256, i64 256, i64 256>
@@ -571,12 +469,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_10(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_10:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #512
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #10
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #10
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #10
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #10
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 512, i64 512, i64 512, i64 512>
@@ -588,12 +482,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_11(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_11:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1024
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #11
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #11
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #11
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #11
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 1024, i64 1024, i64 1024, i64 1024>
@@ -605,12 +495,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_12(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_12:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #2048
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #12
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #12
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #12
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #12
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 2048, i64 2048, i64 2048, i64 2048>
@@ -622,12 +508,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_13(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_13:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #4096
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #13
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #13
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #13
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #13
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 4096, i64 4096, i64 4096, i64 4096>
@@ -639,12 +521,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_14(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_14:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #8192
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #14
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #14
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #14
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #14
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 8192, i64 8192, i64 8192, i64 8192>
@@ -656,12 +534,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_15(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_15:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #16384
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #15
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #15
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #15
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #15
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 16384, i64 16384, i64 16384, i64 16384>
@@ -673,12 +547,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_16(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #32768
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #16
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #16
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #16
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #16
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 32768, i64 32768, i64 32768, i64 32768>
@@ -690,12 +560,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_17(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_17:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #65536
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #17
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #17
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #17
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #17
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 65536, i64 65536, i64 65536, i64 65536>
@@ -707,12 +573,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_18(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_18:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #131072
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #18
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #18
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #18
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #18
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 131072, i64 131072, i64 131072, i64 131072>
@@ -724,12 +586,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_19(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_19:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #262144
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #19
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #19
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #19
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #19
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 262144, i64 262144, i64 262144, i64 262144>
@@ -741,12 +599,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_20(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_20:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #524288
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #20
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #20
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #20
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #20
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 524288, i64 524288, i64 524288, i64 524288>
@@ -758,12 +612,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_21(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_21:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1048576
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #21
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #21
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #21
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #21
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 1048576, i64 1048576, i64 1048576, i64 1048576>
@@ -775,12 +625,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_22(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_22:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #2097152
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #22
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #22
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #22
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #22
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 2097152, i64 2097152, i64 2097152, i64 2097152>
@@ -792,12 +638,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_23(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_23:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #4194304
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #23
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #23
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #23
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #23
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 4194304, i64 4194304, i64 4194304, i64 4194304>
@@ -809,12 +651,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_24(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_24:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #8388608
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #24
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #24
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #24
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #24
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 8388608, i64 8388608, i64 8388608, i64 8388608>
@@ -826,12 +664,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_25(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_25:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #16777216
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #25
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #25
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #25
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #25
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 16777216, i64 16777216, i64 16777216, i64 16777216>
@@ -843,12 +677,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_26(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_26:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #33554432
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #26
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #26
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #26
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #26
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 33554432, i64 33554432, i64 33554432, i64 33554432>
@@ -860,12 +690,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_27(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_27:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #67108864
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #27
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #27
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #27
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #27
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 67108864, i64 67108864, i64 67108864, i64 67108864>
@@ -877,12 +703,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_28(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_28:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #134217728
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #28
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #28
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #28
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #28
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 134217728, i64 134217728, i64 134217728, i64 134217728>
@@ -894,12 +716,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_29(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_29:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #268435456
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #29
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #29
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #29
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #29
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 268435456, i64 268435456, i64 268435456, i64 268435456>
@@ -911,12 +729,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_30(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_30:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #536870912
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #30
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #30
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #30
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #30
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 536870912, i64 536870912, i64 536870912, i64 536870912>
@@ -928,12 +742,8 @@ entry:
 define <4 x i32> @rshrn_v4i64_31(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_31:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1073741824
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #31
-; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #31
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #31
+; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #31
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 1073741824, i64 1073741824, i64 1073741824, i64 1073741824>
@@ -945,10 +755,9 @@ entry:
 define <4 x i32> @rshrn_v4i64_32(<4 x i64> %a) {
 ; CHECK-LABEL: rshrn_v4i64_32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #-2147483648
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    addhn v0.2s, v0.2d, v2.2d
-; CHECK-NEXT:    addhn2 v0.4s, v1.2d, v2.2d
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    raddhn v0.2s, v0.2d, v2.2d
+; CHECK-NEXT:    raddhn2 v0.4s, v1.2d, v2.2d
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i64> %a, <i64 2147483648, i64 2147483648, i64 2147483648, i64 2147483648>

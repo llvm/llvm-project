@@ -40,8 +40,6 @@ define i16 @foo2(i16 %a, i16 %b, i16 %c) {
 
 ; NOTE:  %a(i16), %b(i16) and %c(i16) each costs two registers,
 ;        while %d(i16) is passed via the stack.
-; FIXME: The `ldd` instruction is invalid on avrtiny, this test just shows
-;        how arguments are passed.
 define i16 @foo3(i16 %a, i16 %b, i16 %c, i16 %d) {
 ; CHECK-LABEL: foo3:
 ; CHECK:       ; %bb.0:
@@ -49,8 +47,16 @@ define i16 @foo3(i16 %a, i16 %b, i16 %c, i16 %d) {
 ; CHECK-NEXT:    push r29
 ; CHECK-NEXT:    in r28, 61
 ; CHECK-NEXT:    in r29, 62
-; CHECK-NEXT:    ldd r30, Y+5
-; CHECK-NEXT:    ldd r31, Y+6
+; CHECK-NEXT:    in r16, 63
+; CHECK-NEXT:    subi r28, 251
+; CHECK-NEXT:    sbci r29, 255
+; CHECK-NEXT:    ld r30, Y+
+; CHECK-NEXT:    ld r31, Y+
+; CHECK-NEXT:    subi r28, 2
+; CHECK-NEXT:    sbci r29, 0
+; CHECK-NEXT:    subi r28, 5
+; CHECK-NEXT:    sbci r29, 0
+; CHECK-NEXT:    out 63, r16
 ; CHECK-NEXT:    sub r20, r30
 ; CHECK-NEXT:    sbc r21, r31
 ; CHECK-NEXT:    sub r24, r22
@@ -67,8 +73,6 @@ define i16 @foo3(i16 %a, i16 %b, i16 %c, i16 %d) {
 }
 
 ; NOTE: %a(i32) costs four registers, while %b(i32) is passed via the stack.
-; FIXME: The `ldd` instruction is invalid on avrtiny, this test just shows
-;        how arguments are passed.
 define i32 @foo4(i32 %a, i32 %b) {
 ; CHECK-LABEL: foo4:
 ; CHECK:       ; %bb.0:
@@ -76,10 +80,26 @@ define i32 @foo4(i32 %a, i32 %b) {
 ; CHECK-NEXT:    push r29
 ; CHECK-NEXT:    in r28, 61
 ; CHECK-NEXT:    in r29, 62
-; CHECK-NEXT:    ldd r20, Y+5
-; CHECK-NEXT:    ldd r21, Y+6
-; CHECK-NEXT:    ldd r30, Y+7
-; CHECK-NEXT:    ldd r31, Y+8
+; CHECK-NEXT:    in r16, 63
+; CHECK-NEXT:    subi r28, 251
+; CHECK-NEXT:    sbci r29, 255
+; CHECK-NEXT:    ld r20, Y+
+; CHECK-NEXT:    ld r21, Y+
+; CHECK-NEXT:    subi r28, 2
+; CHECK-NEXT:    sbci r29, 0
+; CHECK-NEXT:    subi r28, 5
+; CHECK-NEXT:    sbci r29, 0
+; CHECK-NEXT:    out 63, r16
+; CHECK-NEXT:    in r16, 63
+; CHECK-NEXT:    subi r28, 249
+; CHECK-NEXT:    sbci r29, 255
+; CHECK-NEXT:    ld r30, Y+
+; CHECK-NEXT:    ld r31, Y+
+; CHECK-NEXT:    subi r28, 2
+; CHECK-NEXT:    sbci r29, 0
+; CHECK-NEXT:    subi r28, 7
+; CHECK-NEXT:    sbci r29, 0
+; CHECK-NEXT:    out 63, r16
 ; CHECK-NEXT:    sub r20, r22
 ; CHECK-NEXT:    sbc r21, r23
 ; CHECK-NEXT:    sbc r30, r24
@@ -96,8 +116,6 @@ define i32 @foo4(i32 %a, i32 %b) {
 }
 
 ; NOTE: %0 costs six registers, while %1 is passed via the stack.
-; FIXME: The `ldd` instruction is invalid on avrtiny, this test just shows
-;        how arguments are passed.
 define i8 @foo5([5 x i8] %0, i8 %1) {
 ; CHECK-LABEL: foo5:
 ; CHECK:       ; %bb.0:
@@ -105,7 +123,11 @@ define i8 @foo5([5 x i8] %0, i8 %1) {
 ; CHECK-NEXT:    push r29
 ; CHECK-NEXT:    in r28, 61
 ; CHECK-NEXT:    in r29, 62
-; CHECK-NEXT:    ldd r24, Y+5
+; CHECK-NEXT:    mov r26, r28
+; CHECK-NEXT:    mov r27, r29
+; CHECK-NEXT:    subi r26, 251
+; CHECK-NEXT:    sbci r27, 255
+; CHECK-NEXT:    ld r24, X
 ; CHECK-NEXT:    add r24, r20
 ; CHECK-NEXT:    pop r29
 ; CHECK-NEXT:    pop r28
@@ -129,8 +151,6 @@ define i8 @foo6([2 x i8] %0, [4 x i8] %1) {
 
 ; NOTE: %0 cost four registers, while %1 is passed via the stack,
 ;       though there are two vacant registers.
-; FIXME: The `ldd` instruction is invalid on avrtiny, this test just shows
-;        how arguments are passed.
 define i8 @foo7([3 x i8] %0, [3 x i8] %1) {
 ; CHECK-LABEL: foo7:
 ; CHECK:       ; %bb.0:
@@ -138,7 +158,11 @@ define i8 @foo7([3 x i8] %0, [3 x i8] %1) {
 ; CHECK-NEXT:    push r29
 ; CHECK-NEXT:    in r28, 61
 ; CHECK-NEXT:    in r29, 62
-; CHECK-NEXT:    ldd r24, Y+5
+; CHECK-NEXT:    mov r26, r28
+; CHECK-NEXT:    mov r27, r29
+; CHECK-NEXT:    subi r26, 251
+; CHECK-NEXT:    sbci r27, 255
+; CHECK-NEXT:    ld r24, X
 ; CHECK-NEXT:    add r24, r22
 ; CHECK-NEXT:    pop r29
 ; CHECK-NEXT:    pop r28
@@ -151,8 +175,6 @@ define i8 @foo7([3 x i8] %0, [3 x i8] %1) {
 
 ; NOTE: %0 costs four registers, and %1 costs two registers, while %2 is
 ;       passed via the stack, though there is one vacant register.
-; FIXME: The `ldd` instruction is invalid on avrtiny, this test just shows
-;        how arguments are passed.
 define i8 @foo8([3 x i8] %0, i8 %1, i8 %2) {
 ; CHECK-LABEL: foo8:
 ; CHECK:       ; %bb.0:
@@ -161,7 +183,11 @@ define i8 @foo8([3 x i8] %0, i8 %1, i8 %2) {
 ; CHECK-NEXT:    in r28, 61
 ; CHECK-NEXT:    in r29, 62
 ; CHECK-NEXT:    add r22, r20
-; CHECK-NEXT:    ldd r24, Y+5
+; CHECK-NEXT:    mov r26, r28
+; CHECK-NEXT:    mov r27, r29
+; CHECK-NEXT:    subi r26, 251
+; CHECK-NEXT:    sbci r27, 255
+; CHECK-NEXT:    ld r24, X
 ; CHECK-NEXT:    sub r24, r22
 ; CHECK-NEXT:    pop r29
 ; CHECK-NEXT:    pop r28
@@ -173,8 +199,6 @@ define i8 @foo8([3 x i8] %0, i8 %1, i8 %2) {
 }
 
 ; NOTE: %0 is passed via registers, though there are 6 vacant registers.
-; FIXME: The `ldd` instruction is invalid on avrtiny, this test just shows
-;        how arguments are passed.
 define i8 @foo9([7 x i8] %0) {
 ; CHECK-LABEL: foo9:
 ; CHECK:       ; %bb.0:
@@ -182,8 +206,16 @@ define i8 @foo9([7 x i8] %0) {
 ; CHECK-NEXT:    push r29
 ; CHECK-NEXT:    in r28, 61
 ; CHECK-NEXT:    in r29, 62
-; CHECK-NEXT:    ldd r25, Y+6
-; CHECK-NEXT:    ldd r24, Y+5
+; CHECK-NEXT:    mov r26, r28
+; CHECK-NEXT:    mov r27, r29
+; CHECK-NEXT:    subi r26, 250
+; CHECK-NEXT:    sbci r27, 255
+; CHECK-NEXT:    ld r25, X
+; CHECK-NEXT:    mov r26, r28
+; CHECK-NEXT:    mov r27, r29
+; CHECK-NEXT:    subi r26, 251
+; CHECK-NEXT:    sbci r27, 255
+; CHECK-NEXT:    ld r24, X
 ; CHECK-NEXT:    add r24, r25
 ; CHECK-NEXT:    pop r29
 ; CHECK-NEXT:    pop r28
@@ -195,8 +227,6 @@ define i8 @foo9([7 x i8] %0) {
 }
 
 ; NOTE: %0 costs six registers, while %1 and %2 are passed via the stack.
-; FIXME: The `ldd` instruction is invalid on avrtiny, this test just shows
-;        how arguments are passed.
 define i8 @fooa([6 x i8] %0, i8 %1, i8 %2) {
 ; CHECK-LABEL: fooa:
 ; CHECK:       ; %bb.0:
@@ -204,8 +234,16 @@ define i8 @fooa([6 x i8] %0, i8 %1, i8 %2) {
 ; CHECK-NEXT:    push r29
 ; CHECK-NEXT:    in r28, 61
 ; CHECK-NEXT:    in r29, 62
-; CHECK-NEXT:    ldd r25, Y+5
-; CHECK-NEXT:    ldd r24, Y+6
+; CHECK-NEXT:    mov r26, r28
+; CHECK-NEXT:    mov r27, r29
+; CHECK-NEXT:    subi r26, 251
+; CHECK-NEXT:    sbci r27, 255
+; CHECK-NEXT:    ld r25, X
+; CHECK-NEXT:    mov r26, r28
+; CHECK-NEXT:    mov r27, r29
+; CHECK-NEXT:    subi r26, 250
+; CHECK-NEXT:    sbci r27, 255
+; CHECK-NEXT:    ld r24, X
 ; CHECK-NEXT:    sub r24, r25
 ; CHECK-NEXT:    sub r24, r20
 ; CHECK-NEXT:    pop r29
