@@ -12,10 +12,10 @@
 ; FRAME-NEXT: cmdsize
 ; FRAME-NEXT:    name /System/Library/Frameworks/CoreFoundation.framework/CoreFoundation
 
-; RUN: not %lld %t/framework.o -o %t/frame_no_autolink -ignore_auto_link 2>&1 | FileCheck --check-prefix=NO_AUTOLINK %s
-; RUN: not %lld %t/framework.o -o %t/frame_no_autolink --ignore-auto-link-option CoreFoundation 2>&1 | FileCheck --check-prefix=NO_AUTOLINK %s
-; RUN: not %lld %t/framework.o -o %t/frame_no_autolink --ignore-auto-link-option=CoreFoundation 2>&1 | FileCheck --check-prefix=NO_AUTOLINK %s
-; NO_AUTOLINK: error: undefined symbol: __CFBigNumGetInt128
+; RUN: not %lld %t/framework.o -o %t/frame_no_autolink -ignore_auto_link 2>&1 | FileCheck --check-prefix=NO-AUTOLINK %s
+; RUN: not %lld %t/framework.o -o %t/frame_no_autolink --ignore-auto-link-option CoreFoundation 2>&1 | FileCheck --check-prefix=NO-AUTOLINK %s
+; RUN: not %lld %t/framework.o -o %t/frame_no_autolink --ignore-auto-link-option=CoreFoundation 2>&1 | FileCheck --check-prefix=NO-AUTOLINK %s
+; NO-AUTOLINK: error: undefined symbol: __CFBigNumGetInt128
 
 ; RUN: llvm-as %t/l.ll -o %t/l.o
 ;; The dynamic call to _CFBigNumGetInt128 uses dyld_stub_binder,
@@ -87,39 +87,39 @@
 
 ;; Make sure -all_load has effect when libraries are loaded via LC_LINKER_OPTION flags and explicitly passed as well
 ; RUN: %lld -all_load %t/load-framework-foo.o %t/load-library-foo.o %t/main.o -o %t/main -F%t -L%t -lfoo
-; RUN: llvm-objdump --macho --syms %t/main | FileCheck %s --check-prefix=SYMS_ALL_LOAD
+; RUN: llvm-objdump --macho --syms %t/main | FileCheck %s --check-prefix=SYMS-ALL-LOAD
 
 ;; Note that _OBJC_CLASS_$_TestClass is *included* here.
-; SYMS_ALL_LOAD:       SYMBOL TABLE:
-; SYMS_ALL_LOAD-NEXT:  g     F __TEXT,__text _main
-; SYMS_ALL_LOAD-NEXT:  g     O __DATA,__objc_data _OBJC_CLASS_$_TestClass
-; SYMS_ALL_LOAD-NEXT:  g     F __TEXT,__text __mh_execute_header
-; SYMS_ALL_LOAD-NEXT:  *UND* dyld_stub_binder
-; SYMS_ALL_LOAD-EMPTY:
+; SYMS-ALL-LOAD:       SYMBOL TABLE:
+; SYMS-ALL-LOAD-NEXT:  g     F __TEXT,__text _main
+; SYMS-ALL-LOAD-NEXT:  g     O __DATA,__objc_data _OBJC_CLASS_$_TestClass
+; SYMS-ALL-LOAD-NEXT:  g     F __TEXT,__text __mh_execute_header
+; SYMS-ALL-LOAD-NEXT:  *UND* dyld_stub_binder
+; SYMS-ALL-LOAD-EMPTY:
 
 ;; Make sure -force_load has effect when libraries are loaded via LC_LINKER_OPTION flags and explicitly passed as well
 ; RUN: %lld %t/load-library-foo.o %t/main.o -o %t/main -F%t -L%t -force_load %t/libfoo.a
-; RUN: llvm-objdump --macho --syms %t/main | FileCheck %s --check-prefix=SYMS_FORCE_LOAD
+; RUN: llvm-objdump --macho --syms %t/main | FileCheck %s --check-prefix=SYMS-FORCE-LOAD
 
 ;; Note that _OBJC_CLASS_$_TestClass is *included* here.
-; SYMS_FORCE_LOAD:       SYMBOL TABLE:
-; SYMS_FORCE_LOAD-NEXT:  g     F __TEXT,__text _main
-; SYMS_FORCE_LOAD-NEXT:  g     O __DATA,__objc_data _OBJC_CLASS_$_TestClass
-; SYMS_FORCE_LOAD-NEXT:  g     F __TEXT,__text __mh_execute_header
-; SYMS_FORCE_LOAD-NEXT:  *UND* dyld_stub_binder
-; SYMS_FORCE_LOAD-EMPTY:
+; SYMS-FORCE-LOAD:       SYMBOL TABLE:
+; SYMS-FORCE-LOAD-NEXT:  g     F __TEXT,__text _main
+; SYMS-FORCE-LOAD-NEXT:  g     O __DATA,__objc_data _OBJC_CLASS_$_TestClass
+; SYMS-FORCE-LOAD-NEXT:  g     F __TEXT,__text __mh_execute_header
+; SYMS-FORCE-LOAD-NEXT:  *UND* dyld_stub_binder
+; SYMS-FORCE-LOAD-EMPTY:
 
 ;; Make sure -ObjC has effect when frameworks are loaded via LC_LINKER_OPTION flags and explicitly passed as well
 ; RUN: %lld -ObjC %t/load-framework-foo.o %t/load-library-foo.o %t/main.o -o %t/main -F%t -L%t -framework Foo
-; RUN: llvm-objdump --macho --syms %t/main | FileCheck %s --check-prefix=SYMS_OBJC_LOAD
+; RUN: llvm-objdump --macho --syms %t/main | FileCheck %s --check-prefix=SYMS-OBJC-LOAD
 
 ;; Note that _OBJC_CLASS_$_TestClass is *included* here.
-; SYMS_OBJC_LOAD:       SYMBOL TABLE:
-; SYMS_OBJC_LOAD-NEXT:  g     F __TEXT,__text _main
-; SYMS_OBJC_LOAD-NEXT:  g     O __DATA,__objc_data _OBJC_CLASS_$_TestClass
-; SYMS_OBJC_LOAD-NEXT:  g     F __TEXT,__text __mh_execute_header
-; SYMS_OBJC_LOAD-NEXT:  *UND* dyld_stub_binder
-; SYMS_OBJC_LOAD-EMPTY:
+; SYMS-OBJC-LOAD:       SYMBOL TABLE:
+; SYMS-OBJC-LOAD-NEXT:  g     F __TEXT,__text _main
+; SYMS-OBJC-LOAD-NEXT:  g     O __DATA,__objc_data _OBJC_CLASS_$_TestClass
+; SYMS-OBJC-LOAD-NEXT:  g     F __TEXT,__text __mh_execute_header
+; SYMS-OBJC-LOAD-NEXT:  *UND* dyld_stub_binder
+; SYMS-OBJC-LOAD-EMPTY:
 
 ;; Make sure that frameworks containing object files or bitcode instead of
 ;; dylibs or archives do not cause duplicate symbol errors
