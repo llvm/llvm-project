@@ -1290,8 +1290,8 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    addi a3, a0, 8
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    sd a3, 8(sp)
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    ld a0, 0(a0)
-; LP64-LP64F-LP64D-FPELIM-NEXT:    addw a1, a1, s0
-; LP64-LP64F-LP64D-FPELIM-NEXT:    addw a1, a1, a2
+; LP64-LP64F-LP64D-FPELIM-NEXT:    add a1, a1, s0
+; LP64-LP64F-LP64D-FPELIM-NEXT:    add a1, a1, a2
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    addw a0, a1, a0
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
@@ -1333,8 +1333,8 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi a3, a0, 8
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    sd a3, -32(s0)
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld a0, 0(a0)
-; LP64-LP64F-LP64D-WITHFP-NEXT:    addw a1, a1, s1
-; LP64-LP64F-LP64D-WITHFP-NEXT:    addw a1, a1, a2
+; LP64-LP64F-LP64D-WITHFP-NEXT:    add a1, a1, s1
+; LP64-LP64F-LP64D-WITHFP-NEXT:    add a1, a1, a2
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addw a0, a1, a0
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload

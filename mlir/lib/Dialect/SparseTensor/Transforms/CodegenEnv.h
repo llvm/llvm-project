@@ -28,59 +28,93 @@ namespace sparse_tensor {
 /// sparsification. This environment simplifies passing around such
 /// data during sparsification (rather than passing around all the
 /// individual compoments where needed). Furthermore, it provides
-/// a number of delegate and convience methods that keep some of the
-/// implementation details transparent to sparsification.
+/// convience methods that keep implementation details transparent
+/// to sparsification while asserting on internal consistency.
 class CodegenEnv {
 public:
+  /// Constructs a code generation environment which can be
+  /// passed around during sparsification for bookkeeping
+  /// together with some consistency asserts.
   CodegenEnv(linalg::GenericOp linop, SparsificationOptions opts,
              unsigned numTensors, unsigned numLoops, unsigned numFilterLoops);
 
-  // Start emitting.
-  void startEmit(SparseTensorLoopEmitter *le);
+  //
+  // General methods.
+  //
 
-  // Delegate methods to merger.
-  TensorExp &exp(unsigned e) { return merger.exp(e); }
-  LatPoint &lat(unsigned l) { return merger.lat(l); }
-  SmallVector<unsigned> &set(unsigned s) { return merger.set(s); }
-  DimLevelType dimLevelType(unsigned t, unsigned i) const {
-    return merger.getDimLevelType(t, i);
-  }
-  DimLevelType dimLevelType(unsigned b) const {
-    return merger.getDimLevelType(b);
-  }
-  bool isFilterLoop(unsigned i) const { return merger.isFilterLoop(i); }
+  linalg::GenericOp op() const { return linalgOp; }
+  const SparsificationOptions &options() const { return sparseOptions; }
+  Merger &merger() { return latticeMerger; }
+  SparseTensorLoopEmitter *emitter() { return loopEmitter; }
 
-  // Delegate methods to loop emitter.
-  Value getLoopIV(unsigned i) const { return loopEmitter->getLoopIV(i); }
-  const std::vector<Value> &getValBuffer() const {
-    return loopEmitter->getValBuffer();
-  }
+  void startEmit(OpOperand *so, unsigned lv, SparseTensorLoopEmitter *le);
 
-  // Convenience method to slice topsort.
-  ArrayRef<unsigned> getTopSortSlice(size_t n, size_t m) const {
-    return ArrayRef<unsigned>(topSort).slice(n, m);
-  }
+  /// Generates loop boundary statements (entering/exiting loops). The function
+  /// passes and updates the passed-in parameters.
+  Optional<Operation *> genLoopBoundary(
+      function_ref<Optional<Operation *>(MutableArrayRef<Value> parameters)>
+          callback);
 
-  // Convenience method to get current loop stack.
-  ArrayRef<unsigned> getLoopCurStack() const {
-    return getTopSortSlice(0, loopEmitter->getCurrentDepth());
-  }
+  //
+  // Merger delegates.
+  //
 
-  // Convenience method to get the IV of the given loop index.
-  Value getLoopIdxValue(size_t loopIdx) const {
-    for (unsigned lv = 0, lve = topSort.size(); lv < lve; lv++)
-      if (topSort[lv] == loopIdx)
-        return getLoopIV(lv);
-    llvm_unreachable("invalid loop index");
+  TensorExp &exp(unsigned e) { return latticeMerger.exp(e); }
+  LatPoint &lat(unsigned l) { return latticeMerger.lat(l); }
+  SmallVector<unsigned> &set(unsigned s) { return latticeMerger.set(s); }
+  DimLevelType dlt(unsigned t, unsigned i) const {
+    return latticeMerger.getDimLevelType(t, i);
+  }
+  DimLevelType dlt(unsigned b) const {
+    return latticeMerger.getDimLevelType(b);
   }
 
   //
-  // Reductions.
+  // Topological delegate and sort methods.
+  //
+
+  // TODO: get rid of this one!
+  std::vector<unsigned> &topSortRef() { return topSort; }
+
+  size_t topSortSize() const { return topSort.size(); }
+  unsigned topSortAt(unsigned i) const { return topSort.at(i); }
+  void topSortPushBack(unsigned i) { topSort.push_back(i); }
+  void topSortClear(unsigned capacity = 0) {
+    topSort.clear();
+    topSort.reserve(capacity);
+  }
+
+  ArrayRef<unsigned> getTopSortSlice(size_t n, size_t m) const;
+  ArrayRef<unsigned> getLoopCurStack() const;
+  Value getLoopIdxValue(size_t loopIdx) const;
+
+  //
+  // Sparse tensor output and expansion methods.
+  //
+
+  bool hasSparseOutput() const { return sparseOut != nullptr; }
+  bool isSparseOutput(OpOperand *o) const { return sparseOut == o; }
+
+  Value getInsertionChain() const { return insChain; }
+  void updateInsertionChain(Value chain);
+
+  bool atExpandLevel(OpOperand *o, unsigned rank, unsigned lv) const;
+  void startExpand(Value values, Value filled, Value added, Value count);
+  bool isExpand() const { return expValues != nullptr; }
+  void updateExpandCount(Value count);
+  Value getExpandValues() const { return expValues; }
+  Value getExpandFilled() const { return expFilled; }
+  Value getExpandAdded() const { return expAdded; }
+  Value getExpandCount() const { return expCount; }
+  void endExpand();
+
+  //
+  // Reduction methods.
   //
 
   void startReduc(unsigned exp, Value val);
-  void updateReduc(Value val);
   bool isReduc() const { return redExp != -1u; }
+  void updateReduc(Value val);
   Value getReduc() const { return redVal; }
   Value endReduc();
 
@@ -89,39 +123,34 @@ public:
   Value getCustomRedId();
   void endCustomReduc();
 
-public:
-  //
-  // TODO make this section private too, using similar refactoring as for reduc
-  //
-
+private:
   // Linalg operation.
   linalg::GenericOp linalgOp;
 
   // Sparsification options.
-  SparsificationOptions options;
-
-  // Topological sort.
-  std::vector<unsigned> topSort;
+  SparsificationOptions sparseOptions;
 
   // Merger helper class.
-  Merger merger;
+  Merger latticeMerger;
 
   // Loop emitter helper class (keep reference in scope!).
   // TODO: move emitter constructor up in time?
   SparseTensorLoopEmitter *loopEmitter;
 
+  // Topological sort.
+  std::vector<unsigned> topSort;
+
   // Sparse tensor as output. Implemented either through direct injective
-  // insertion in lexicographic index order or through access pattern expansion
-  // in the innermost loop nest (`expValues` through `expCount`).
+  // insertion in lexicographic index order or through access pattern
+  // expansion in the innermost loop nest (`expValues` through `expCount`).
   OpOperand *sparseOut;
   unsigned outerParNest;
-  Value insChain; // bookkeeping for insertion chain
+  Value insChain;
   Value expValues;
   Value expFilled;
   Value expAdded;
   Value expCount;
 
-private:
   // Bookkeeping for reductions (up-to-date value of the reduction, and indices
   // into the merger's expression tree. When the indices of a tensor reduction
   // expression are exhausted, all inner loops can use a scalarized reduction.

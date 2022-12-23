@@ -767,6 +767,7 @@ extern "C" __device__ float test_exp2f(float x) {
   return exp2f(x);
 }
 
+//
 // DEFAULT-LABEL: @test_exp2(
 // DEFAULT-NEXT:  entry:
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_exp2_f64(double noundef [[X:%.*]]) #[[ATTR14]]
@@ -3386,6 +3387,20 @@ extern "C" __device__ float test___fmul_rn(float x, float y) {
 //
 extern "C" __device__ float test___frcp_rn(float x) {
   return __frcp_rn(x);
+}
+
+// DEFAULT-LABEL: @test___frsqrt_rn(
+// DEFAULT-NEXT:  entry:
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.amdgcn.rsq.f32(float [[X:%.*]])
+// DEFAULT-NEXT:    ret float [[TMP0]]
+//
+// FINITEONLY-LABEL: @test___frsqrt_rn(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.amdgcn.rsq.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    ret float [[TMP0]]
+//
+extern "C" __device__ float test___frsqrt_rn(float x) {
+  return __frsqrt_rn(x);
 }
 
 // DEFAULT-LABEL: @test___fsqrt_rn(

@@ -318,7 +318,7 @@ LogicalResult
 AbstractSparseBackwardDataFlowAnalysis::visit(ProgramPoint point) {
   if (Operation *op = point.dyn_cast<Operation *>())
     visitOperation(op);
-  else if (Block *block = point.dyn_cast<Block *>())
+  else if (point.dyn_cast<Block *>())
     // For backward dataflow, we don't have to do any work for the blocks
     // themselves. CFG edges between blocks are processed by the BranchOp
     // logic in `visitOperation`, and entry blocks for functions are tied

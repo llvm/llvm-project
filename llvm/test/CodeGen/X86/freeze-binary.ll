@@ -20,6 +20,46 @@ define i32 @freeze_and(i32 %a0) nounwind {
   ret i32 %z
 }
 
+define i32 @freeze_and_extra_use(i32 %a0, ptr %escape) nounwind {
+; X86-LABEL: freeze_and_extra_use:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %eax, (%ecx)
+; X86-NEXT:    andl $7, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_and_extra_use:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl %edi, (%rsi)
+; X64-NEXT:    andl $7, %eax
+; X64-NEXT:    retq
+  store i32 %a0, ptr %escape
+  %x = and i32 %a0, 15
+  %y = freeze i32 %x
+  %z = and i32 %y, 7
+  ret i32 %z
+}
+define i32 @freeze_and_extra_use2(i32 %a0, ptr %escape) nounwind {
+; X86-LABEL: freeze_and_extra_use2:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $15, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_and_extra_use2:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl $15, %eax
+; X64-NEXT:    retq
+  %x = and i32 %a0, 15
+  %y = freeze i32 %x
+  %z = and i32 %y, 7
+  %w = and i32 %y, %a0
+  ret i32 %w
+}
+
 define <2 x i64> @freeze_and_vec(<2 x i64> %a0) nounwind {
 ; X86-LABEL: freeze_and_vec:
 ; X86:       # %bb.0:

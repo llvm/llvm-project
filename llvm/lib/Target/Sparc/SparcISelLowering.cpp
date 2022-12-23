@@ -2646,8 +2646,16 @@ static SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG,
   if (LHS.getValueType().isInteger()) {
     // On V9 processors running in 64-bit mode, if CC compares two `i64`s
     // and the RHS is zero we might be able to use a specialized select.
+    // All SELECT_CC between any two scalar integer types are eligible for
+    // lowering to specialized instructions. Additionally, f32 and f64 types
+    // are also eligible, but for f128 we can only use the specialized
+    // instruction when we have hardquad.
+    EVT ValType = TrueVal.getValueType();
+    bool IsEligibleType = ValType.isScalarInteger() || ValType == MVT::f32 ||
+                          ValType == MVT::f64 ||
+                          (ValType == MVT::f128 && hasHardQuad);
     if (is64Bit && isV9 && LHS.getValueType() == MVT::i64 &&
-        isNullConstant(RHS) && !ISD::isUnsignedIntSetCC(CC))
+        isNullConstant(RHS) && !ISD::isUnsignedIntSetCC(CC) && IsEligibleType)
       return DAG.getNode(
           SPISD::SELECT_REG, dl, TrueVal.getValueType(), TrueVal, FalseVal,
           DAG.getConstant(intCondCCodeToRcond(CC), dl, MVT::i32), LHS);

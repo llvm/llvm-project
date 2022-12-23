@@ -1399,6 +1399,7 @@ public:
                    return inst.rd.Write(m_emu, rs1.compare(rs2) !=
                                                    APFloat::cmpGreaterThan);
                  }
+                 llvm_unreachable("unsupported F_CMP");
                })
         .value_or(false);
   }

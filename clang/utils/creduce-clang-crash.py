@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Calls C-Reduce to create a minimal reproducer for clang crashes.
 
 Output files:
@@ -396,8 +396,8 @@ def main():
   parser.add_argument('--creduce', dest='creduce', type=str,
                       help="The path to the `creduce` executable. "
                       "Required if `creduce` is not in PATH environment.")
-  parser.add_argument('--n', dest='core_number', type=int, 
-                      default=max(4, multiprocessing.cpu_count() / 2),
+  parser.add_argument('--n', dest='core_number', type=int,
+                      default=max(4, multiprocessing.cpu_count() // 2),
                       help="Number of cores to use.")
   parser.add_argument('-v', '--verbose', action='store_true')
   args = parser.parse_args()

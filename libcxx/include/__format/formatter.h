@@ -38,7 +38,16 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter {
   formatter& operator=(const formatter&) = delete;
 };
 
-#endif //_LIBCPP_STD_VER > 17
+#  if _LIBCPP_STD_VER > 20
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr void __set_debug_format(_Tp& __formatter) {
+  if constexpr (requires { __formatter.set_debug_format(); })
+    __formatter.set_debug_format();
+}
+
+#  endif // _LIBCPP_STD_VER > 20
+#endif   // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 
