@@ -62,9 +62,7 @@ static_assert(!std::is_move_constructible_v<std::expected<NonMovable, NonMovable
 // Test: This constructor is trivial if
 // - is_trivially_move_constructible_v<T> is true and
 // - is_trivially_move_constructible_v<E> is true.
-#if __cpp_concepts >= 202002
 static_assert(std::is_trivially_move_constructible_v<std::expected<int, int>>);
-#endif
 static_assert(!std::is_trivially_move_constructible_v<std::expected<MovableNonTrivial, int>>);
 static_assert(!std::is_trivially_move_constructible_v<std::expected<int, MovableNonTrivial>>);
 static_assert(!std::is_trivially_move_constructible_v<std::expected<MovableNonTrivial, MovableNonTrivial>>);
