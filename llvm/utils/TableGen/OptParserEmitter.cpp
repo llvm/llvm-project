@@ -54,10 +54,9 @@ static std::string getOptionSpelling(const Record &R) {
 
 static void emitNameUsingSpelling(raw_ostream &OS, const Record &R) {
   size_t PrefixLength;
-  OS << "llvm::StringLiteral(";
-  write_cstring(
-      OS, StringRef(getOptionSpelling(R, PrefixLength)).substr(PrefixLength));
-  OS << ")";
+  OS << "llvm::StringRef(&";
+  write_cstring(OS, StringRef(getOptionSpelling(R, PrefixLength)));
+  OS << "[" << PrefixLength << "], " << R.getValueAsString("Name").size() << ")";
 }
 
 class MarshallingInfo {
@@ -252,8 +251,8 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     // Prefix values.
     OS << ", {";
     for (const auto &PrefixKey : Prefix.first)
-      OS << "llvm::StringLiteral(\"" << PrefixKey << "\") COMMA ";
-    OS << "})\n";
+      OS << "\"" << PrefixKey << "\" COMMA ";
+    OS << "nullptr})\n";
   }
   OS << "#undef COMMA\n";
   OS << "#endif // PREFIX\n\n";
@@ -266,7 +265,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     OS << "OPTION(";
 
     // The option prefix;
-    OS << "{}";
+    OS << "nullptr";
 
     // The option string.
     OS << ", \"" << R.getValueAsString("Name") << '"';

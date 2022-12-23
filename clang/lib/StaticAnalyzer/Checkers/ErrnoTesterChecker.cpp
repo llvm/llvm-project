@@ -69,13 +69,13 @@ private:
 
   using EvalFn = std::function<void(CheckerContext &, const CallEvent &)>;
   const CallDescriptionMap<EvalFn> TestCalls{
-      {{{"ErrnoTesterChecker_setErrno"}, 1}, &ErrnoTesterChecker::evalSetErrno},
-      {{{"ErrnoTesterChecker_getErrno"}, 0}, &ErrnoTesterChecker::evalGetErrno},
-      {{{"ErrnoTesterChecker_setErrnoIfError"}, 0},
+      {{"ErrnoTesterChecker_setErrno", 1}, &ErrnoTesterChecker::evalSetErrno},
+      {{"ErrnoTesterChecker_getErrno", 0}, &ErrnoTesterChecker::evalGetErrno},
+      {{"ErrnoTesterChecker_setErrnoIfError", 0},
        &ErrnoTesterChecker::evalSetErrnoIfError},
-      {{{"ErrnoTesterChecker_setErrnoIfErrorRange"}, 0},
+      {{"ErrnoTesterChecker_setErrnoIfErrorRange", 0},
        &ErrnoTesterChecker::evalSetErrnoIfErrorRange},
-      {{{"ErrnoTesterChecker_setErrnoCheckState"}, 0},
+      {{"ErrnoTesterChecker_setErrnoCheckState", 0},
        &ErrnoTesterChecker::evalSetErrnoCheckState}};
 };
 
