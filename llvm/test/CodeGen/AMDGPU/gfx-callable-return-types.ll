@@ -82,7 +82,7 @@ define amdgpu_gfx void @call_i1() #0 {
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_mov_b32 s3, s33
+; GFX11-NEXT:    s_mov_b32 s2, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX11-NEXT:    scratch_store_b32 off, v1, s33 ; 4-byte Folded Spill
@@ -102,7 +102,7 @@ define amdgpu_gfx void @call_i1() #0 {
 ; GFX11-NEXT:    scratch_load_b32 v1, off, s33 ; 4-byte Folded Reload
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX11-NEXT:    s_add_i32 s32, s32, -16
-; GFX11-NEXT:    s_mov_b32 s33, s3
+; GFX11-NEXT:    s_mov_b32 s33, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -189,7 +189,7 @@ define amdgpu_gfx void @call_i16() #0 {
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_mov_b32 s3, s33
+; GFX11-NEXT:    s_mov_b32 s2, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX11-NEXT:    scratch_store_b32 off, v1, s33 ; 4-byte Folded Spill
@@ -209,7 +209,7 @@ define amdgpu_gfx void @call_i16() #0 {
 ; GFX11-NEXT:    scratch_load_b32 v1, off, s33 ; 4-byte Folded Reload
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX11-NEXT:    s_add_i32 s32, s32, -16
-; GFX11-NEXT:    s_mov_b32 s33, s3
+; GFX11-NEXT:    s_mov_b32 s33, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -296,7 +296,7 @@ define amdgpu_gfx void @call_2xi16() #0 {
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_mov_b32 s3, s33
+; GFX11-NEXT:    s_mov_b32 s2, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX11-NEXT:    scratch_store_b32 off, v1, s33 ; 4-byte Folded Spill
@@ -316,7 +316,7 @@ define amdgpu_gfx void @call_2xi16() #0 {
 ; GFX11-NEXT:    scratch_load_b32 v1, off, s33 ; 4-byte Folded Reload
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX11-NEXT:    s_add_i32 s32, s32, -16
-; GFX11-NEXT:    s_mov_b32 s33, s3
+; GFX11-NEXT:    s_mov_b32 s33, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -412,7 +412,7 @@ define amdgpu_gfx void @call_3xi16() #0 {
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_mov_b32 s3, s33
+; GFX11-NEXT:    s_mov_b32 s2, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX11-NEXT:    scratch_store_b32 off, v2, s33 ; 4-byte Folded Spill
@@ -432,7 +432,7 @@ define amdgpu_gfx void @call_3xi16() #0 {
 ; GFX11-NEXT:    scratch_load_b32 v2, off, s33 ; 4-byte Folded Reload
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX11-NEXT:    s_add_i32 s32, s32, -16
-; GFX11-NEXT:    s_mov_b32 s33, s3
+; GFX11-NEXT:    s_mov_b32 s33, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
