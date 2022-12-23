@@ -61,13 +61,12 @@ enum {
 };
 
 // Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr std::initializer_list<llvm::StringLiteral> NAME = VALUE;
+#define PREFIX(NAME, VALUE) static const char *const NAME[] = VALUE;
 #include "Options.inc"
 #undef PREFIX
 
 // Create table mapping all options defined in Options.td
-static constexpr std::initializer_list<opt::OptTable::Info> infoTable = {
+static constexpr opt::OptTable::Info infoTable[] = {
 #define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
   {X1, X2, X10,         X11,         OPT_##ID, opt::Option::KIND##Class,       \
    X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
