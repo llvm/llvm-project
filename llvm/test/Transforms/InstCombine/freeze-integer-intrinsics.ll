@@ -242,9 +242,9 @@ define i32 @fptosi_sat(float %arg) {
 
 define i32 @sadd_sat_i32(i32 %arg0, i32 noundef %arg1) {
 ; CHECK-LABEL: @sadd_sat_i32(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[ARG0:%.*]], i32 [[ARG1:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i32 [[CALL]]
-; CHECK-NEXT:    ret i32 [[FREEZE]]
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze i32 [[ARG0:%.*]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[ARG0_FR]], i32 [[ARG1:%.*]])
+; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call i32 @llvm.sadd.sat.i32(i32 %arg0, i32 %arg1)
   %freeze = freeze i32 %call
@@ -253,9 +253,9 @@ define i32 @sadd_sat_i32(i32 %arg0, i32 noundef %arg1) {
 
 define i32 @uadd_sat_i32(i32 %arg0, i32 noundef %arg1) {
 ; CHECK-LABEL: @uadd_sat_i32(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[ARG0:%.*]], i32 [[ARG1:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i32 [[CALL]]
-; CHECK-NEXT:    ret i32 [[FREEZE]]
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze i32 [[ARG0:%.*]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[ARG0_FR]], i32 [[ARG1:%.*]])
+; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call i32 @llvm.uadd.sat.i32(i32 %arg0, i32 %arg1)
   %freeze = freeze i32 %call
@@ -264,9 +264,9 @@ define i32 @uadd_sat_i32(i32 %arg0, i32 noundef %arg1) {
 
 define i32 @ssub_sat_i32(i32 %arg0, i32 noundef %arg1) {
 ; CHECK-LABEL: @ssub_sat_i32(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.ssub.sat.i32(i32 [[ARG0:%.*]], i32 [[ARG1:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i32 [[CALL]]
-; CHECK-NEXT:    ret i32 [[FREEZE]]
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze i32 [[ARG0:%.*]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.ssub.sat.i32(i32 [[ARG0_FR]], i32 [[ARG1:%.*]])
+; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call i32 @llvm.ssub.sat.i32(i32 %arg0, i32 %arg1)
   %freeze = freeze i32 %call
@@ -275,9 +275,9 @@ define i32 @ssub_sat_i32(i32 %arg0, i32 noundef %arg1) {
 
 define i32 @usub_sat_i32(i32 %arg0, i32 noundef %arg1) {
 ; CHECK-LABEL: @usub_sat_i32(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[ARG0:%.*]], i32 [[ARG1:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i32 [[CALL]]
-; CHECK-NEXT:    ret i32 [[FREEZE]]
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze i32 [[ARG0:%.*]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[ARG0_FR]], i32 [[ARG1:%.*]])
+; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call i32 @llvm.usub.sat.i32(i32 %arg0, i32 %arg1)
   %freeze = freeze i32 %call
@@ -286,9 +286,9 @@ define i32 @usub_sat_i32(i32 %arg0, i32 noundef %arg1) {
 
 define i32 @sshl_sat_i32(i32 %arg0, i32 noundef %arg1) {
 ; CHECK-LABEL: @sshl_sat_i32(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.sshl.sat.i32(i32 [[ARG0:%.*]], i32 [[ARG1:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i32 [[CALL]]
-; CHECK-NEXT:    ret i32 [[FREEZE]]
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze i32 [[ARG0:%.*]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.sshl.sat.i32(i32 [[ARG0_FR]], i32 [[ARG1:%.*]])
+; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call i32 @llvm.sshl.sat.i32(i32 %arg0, i32 %arg1)
   %freeze = freeze i32 %call
@@ -297,9 +297,9 @@ define i32 @sshl_sat_i32(i32 %arg0, i32 noundef %arg1) {
 
 define i32 @ushl_sat_i32(i32 %arg0, i32 noundef %arg1) {
 ; CHECK-LABEL: @ushl_sat_i32(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.ushl.sat.i32(i32 [[ARG0:%.*]], i32 [[ARG1:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i32 [[CALL]]
-; CHECK-NEXT:    ret i32 [[FREEZE]]
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze i32 [[ARG0:%.*]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.ushl.sat.i32(i32 [[ARG0_FR]], i32 [[ARG1:%.*]])
+; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call i32 @llvm.ushl.sat.i32(i32 %arg0, i32 %arg1)
   %freeze = freeze i32 %call
