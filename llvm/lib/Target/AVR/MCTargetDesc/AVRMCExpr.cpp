@@ -42,12 +42,12 @@ const AVRMCExpr *AVRMCExpr::create(VariantKind Kind, const MCExpr *Expr,
 
 void AVRMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   assert(Kind != VK_AVR_None);
-
-  if (isNegated())
-    OS << '-';
-
   OS << getName() << '(';
+  if (isNegated())
+    OS << '-' << '(';
   getSubExpr()->print(OS, MAI);
+  if (isNegated())
+    OS << ')';
   OS << ')';
 }
 
