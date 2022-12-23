@@ -24,6 +24,7 @@
 
 extern template class llvm::DominatorTreeBase<mlir::Block, false>;
 extern template class llvm::DominatorTreeBase<mlir::Block, true>;
+extern template class llvm::DomTreeNodeBase<mlir::Block>;
 
 namespace mlir {
 using DominanceInfoNode = llvm::DomTreeNodeBase<Block>;
@@ -109,6 +110,9 @@ protected:
   mutable DenseMap<Region *, llvm::PointerIntPair<DomTree *, 1, bool>>
       dominanceInfos;
 };
+
+extern template class DominanceInfoBase</*IsPostDom=*/true>;
+extern template class DominanceInfoBase</*IsPostDom=*/false>;
 } // namespace detail
 
 /// A class for computing basic dominance information. Note that this
