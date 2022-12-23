@@ -11,7 +11,7 @@
 
 #include <__config>
 #include <__type_traits/make_const_lvalue_ref.h>
-#include <type_traits>
+#include <__utility/declval.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

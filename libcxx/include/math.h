@@ -307,10 +307,13 @@ long double    truncl(long double x);
 // back to C++ linkage before including these C++ headers.
 extern "C++" {
 
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_floating_point.h>
+#include <__type_traits/is_integral.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/promote.h>
 #include <limits>
 #include <stdlib.h>
-#include <type_traits>
 
 
 #    ifdef fpclassify

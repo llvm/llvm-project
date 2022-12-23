@@ -16,9 +16,12 @@
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__ranges/access.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/make_signed.h>
+#include <__type_traits/make_unsigned.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/auto_cast.h>
 #include <cstddef>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -1391,7 +1391,10 @@ module std [system] {
       private header "__type_traits/is_arithmetic.h"
       export integral_constant
     }
-    module is_array                            { private header "__type_traits/is_array.h" }
+    module is_array                            {
+      private header "__type_traits/is_array.h"
+      export integral_constant
+    }
     module is_assignable                       { private header "__type_traits/is_assignable.h" }
     module is_base_of                          { private header "__type_traits/is_base_of.h" }
     module is_bounded_array                    { private header "__type_traits/is_bounded_array.h" }
