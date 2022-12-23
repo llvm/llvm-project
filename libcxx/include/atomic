@@ -377,23 +377,23 @@ template<class T>
                               memory_order) noexcept;
 
 template<class T>
-  void atomic_wait(const volatile atomic<T>*, atomic<T>::value_type);
+  void atomic_wait(const volatile atomic<T>*, atomic<T>::value_type) noexcept;
 template<class T>
-  void atomic_wait(const atomic<T>*, atomic<T>::value_type);
+  void atomic_wait(const atomic<T>*, atomic<T>::value_type) noexcept;
 template<class T>
   void atomic_wait_explicit(const volatile atomic<T>*, atomic<T>::value_type,
-                            memory_order);
+                            memory_order) noexcept;
 template<class T>
   void atomic_wait_explicit(const atomic<T>*, atomic<T>::value_type,
-                            memory_order);
+                            memory_order) noexcept;
 template<class T>
-  void atomic_notify_one(volatile atomic<T>*);
+  void atomic_notify_one(volatile atomic<T>*) noexcept;
 template<class T>
-  void atomic_notify_one(atomic<T>*);
+  void atomic_notify_one(atomic<T>*) noexcept;
 template<class T>
-  void atomic_notify_all(volatile atomic<T>*);
+  void atomic_notify_all(volatile atomic<T>*) noexcept;
 template<class T>
-  void atomic_notify_all(atomic<T>*);
+  void atomic_notify_all(atomic<T>*) noexcept;
 
 // Atomics for standard typedef types
 
@@ -2099,7 +2099,7 @@ void atomic_notify_one(atomic<_Tp>* __o) _NOEXCEPT
     __o->notify_one();
 }
 
-// atomic_notify_one
+// atomic_notify_all
 
 template <class _Tp>
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
