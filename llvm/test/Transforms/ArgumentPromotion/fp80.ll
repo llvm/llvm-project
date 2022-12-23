@@ -14,100 +14,90 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @run() {
 ; CHECK-LABEL: define {{[^@]+}}@run() {
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast %union.u* bitcast (%struct.s* @b to %union.u*) to i8*
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, i8* [[TMP0]], i64 10
-; CHECK-NEXT:    [[DOTVAL:%.*]] = load i8, i8* [[TMP1]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call i8 @UseLongDoubleUnsafely(i8 [[DOTVAL]])
-; CHECK-NEXT:    [[DOT0:%.*]] = getelementptr [[UNION_U:%.*]], %union.u* bitcast (%struct.s* @b to %union.u*), i64 0, i32 0
-; CHECK-NEXT:    [[DOT0_VAL:%.*]] = load x86_fp80, x86_fp80* [[DOT0]], align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_fp80 @UseLongDoubleSafely(x86_fp80 [[DOT0_VAL]])
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_fp80 @UseLongDoubleSafelyNoPromotion(%union.u* byval(%union.u) align 16 bitcast (%struct.s* @b to %union.u*))
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast %struct.Foo* @a to i64*
-; CHECK-NEXT:    [[A_VAL:%.*]] = load i64, i64* [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @AccessPaddingOfStruct(i64 [[A_VAL]])
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @CaptureAStruct(%struct.Foo* byval([[STRUCT_FOO:%.*]]) @a)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr @b, i64 10
+; CHECK-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i8 @UseLongDoubleUnsafely(i8 [[B_VAL]])
+; CHECK-NEXT:    [[B_VAL1:%.*]] = load x86_fp80, ptr @b, align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_fp80 @UseLongDoubleSafely(x86_fp80 [[B_VAL1]])
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_fp80 @UseLongDoubleSafelyNoPromotion(ptr byval([[UNION_U:%.*]]) align 16 @b)
+; CHECK-NEXT:    [[A_VAL:%.*]] = load i64, ptr @a, align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @AccessPaddingOfStruct(i64 [[A_VAL]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @CaptureAStruct(ptr byval([[STRUCT_FOO:%.*]]) @a)
 ; CHECK-NEXT:    ret void
 ;
-  tail call i8 @UseLongDoubleUnsafely(%union.u* byval(%union.u) align 16 bitcast (%struct.s* @b to %union.u*))
-  tail call x86_fp80 @UseLongDoubleSafely(%union.u* byval(%union.u) align 16 bitcast (%struct.s* @b to %union.u*))
-  tail call x86_fp80 @UseLongDoubleSafelyNoPromotion(%union.u* byval(%union.u) align 16 bitcast (%struct.s* @b to %union.u*))
-  call i64 @AccessPaddingOfStruct(%struct.Foo* byval(%struct.Foo) @a)
-  call i64 @CaptureAStruct(%struct.Foo* byval(%struct.Foo) @a)
+  tail call i8 @UseLongDoubleUnsafely(ptr byval(%union.u) align 16 @b)
+  tail call x86_fp80 @UseLongDoubleSafely(ptr byval(%union.u) align 16 @b)
+  tail call x86_fp80 @UseLongDoubleSafelyNoPromotion(ptr byval(%union.u) align 16 @b)
+  call i64 @AccessPaddingOfStruct(ptr byval(%struct.Foo) @a)
+  call i64 @CaptureAStruct(ptr byval(%struct.Foo) @a)
   ret void
 }
 
-define internal i8 @UseLongDoubleUnsafely(%union.u* byval(%union.u) align 16 %arg) {
+define internal i8 @UseLongDoubleUnsafely(ptr byval(%union.u) align 16 %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@UseLongDoubleUnsafely
-; CHECK-SAME: (i8 [[ARG_0_VAL:%.*]]) {
-; CHECK-NEXT:    ret i8 [[ARG_0_VAL]]
+; CHECK-SAME: (i8 [[ARG_10_VAL:%.*]]) {
+; CHECK-NEXT:    ret i8 [[ARG_10_VAL]]
 ;
-  %bitcast = bitcast %union.u* %arg to %struct.s*
-  %gep = getelementptr inbounds %struct.s, %struct.s* %bitcast, i64 0, i32 2
-  %result = load i8, i8* %gep
+  %gep = getelementptr inbounds %struct.s, ptr %arg, i64 0, i32 2
+  %result = load i8, ptr %gep
   ret i8 %result
 }
 
-define internal x86_fp80 @UseLongDoubleSafely(%union.u* byval(%union.u) align 16 %arg) {
+define internal x86_fp80 @UseLongDoubleSafely(ptr byval(%union.u) align 16 %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@UseLongDoubleSafely
 ; CHECK-SAME: (x86_fp80 [[ARG_0_VAL:%.*]]) {
 ; CHECK-NEXT:    ret x86_fp80 [[ARG_0_VAL]]
 ;
-  %gep = getelementptr inbounds %union.u, %union.u* %arg, i64 0, i32 0
-  %fp80 = load x86_fp80, x86_fp80* %gep
+  %fp80 = load x86_fp80, ptr %arg
   ret x86_fp80 %fp80
 }
 
-define internal x86_fp80 @UseLongDoubleSafelyNoPromotion(%union.u* byval(%union.u) align 16 %arg) {
+define internal x86_fp80 @UseLongDoubleSafelyNoPromotion(ptr byval(%union.u) align 16 %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@UseLongDoubleSafelyNoPromotion
-; CHECK-SAME: ([[UNION_U]]* byval([[UNION_U]]) align 16 [[ARG:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[UNION_U]], [[UNION_U]]* [[ARG]], i64 0, i32 0
-; CHECK-NEXT:    [[TMP_IDX:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    store i64 0, i64* [[TMP_IDX]], align 8
-; CHECK-NEXT:    [[IDX:%.*]] = load i64, i64* [[TMP_IDX]], align 8
-; CHECK-NEXT:    [[GEP_IDX:%.*]] = getelementptr inbounds [[UNION_U]], [[UNION_U]]* [[ARG]], i64 [[IDX]], i32 0
-; CHECK-NEXT:    [[FP80:%.*]] = load x86_fp80, x86_fp80* [[GEP]]
+; CHECK-SAME: (ptr byval([[UNION_U:%.*]]) align 16 [[ARG:%.*]]) {
+; CHECK-NEXT:    [[IDX_SLOT:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i64 0, ptr [[IDX_SLOT]], align 8
+; CHECK-NEXT:    [[IDX:%.*]] = load i64, ptr [[IDX_SLOT]], align 8
+; CHECK-NEXT:    [[GEP_IDX:%.*]] = getelementptr inbounds [[UNION_U]], ptr [[ARG]], i64 [[IDX]], i32 0
+; CHECK-NEXT:    [[FP80:%.*]] = load x86_fp80, ptr [[ARG]], align 16
 ; CHECK-NEXT:    ret x86_fp80 [[FP80]]
 ;
-  %gep = getelementptr inbounds %union.u, %union.u* %arg, i64 0, i32 0
   %idx_slot = alloca i64, align 8
-  store i64 0, i64* %idx_slot, align 8
-  %idx = load i64, i64* %idx_slot, align 8
-  %gep_idx = getelementptr inbounds %union.u, %union.u* %arg, i64 %idx, i32 0 ; to protect from promotion
-  %fp80 = load x86_fp80, x86_fp80* %gep
+  store i64 0, ptr %idx_slot, align 8
+  %idx = load i64, ptr %idx_slot, align 8
+  %gep_idx = getelementptr inbounds %union.u, ptr %arg, i64 %idx, i32 0 ; to protect from promotion
+  %fp80 = load x86_fp80, ptr %arg
   ret x86_fp80 %fp80
 }
 
-define internal i64 @AccessPaddingOfStruct(%struct.Foo* byval(%struct.Foo) %a) {
+define internal i64 @AccessPaddingOfStruct(ptr byval(%struct.Foo) %a) {
 ; CHECK-LABEL: define {{[^@]+}}@AccessPaddingOfStruct
 ; CHECK-SAME: (i64 [[A_0_VAL:%.*]]) {
 ; CHECK-NEXT:    ret i64 [[A_0_VAL]]
 ;
-  %p = bitcast %struct.Foo* %a to i64*
-  %v = load i64, i64* %p
+  %v = load i64, ptr %a
   ret i64 %v
 }
 
-define internal i64 @CaptureAStruct(%struct.Foo* byval(%struct.Foo) %a) {
+define internal i64 @CaptureAStruct(ptr byval(%struct.Foo) %a) {
 ; CHECK-LABEL: define {{[^@]+}}@CaptureAStruct
-; CHECK-SAME: (%struct.Foo* byval([[STRUCT_FOO:%.*]]) [[A:%.*]]) {
+; CHECK-SAME: (ptr byval([[STRUCT_FOO:%.*]]) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_PTR:%.*]] = alloca %struct.Foo*, align 8
+; CHECK-NEXT:    [[A_PTR:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PHI:%.*]] = phi %struct.Foo* [ null, [[ENTRY:%.*]] ], [ [[GEP:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi %struct.Foo* [ [[A]], [[ENTRY]] ], [ [[TMP0]], [[LOOP]] ]
-; CHECK-NEXT:    store %struct.Foo* [[PHI]], %struct.Foo** [[A_PTR]], align 8
-; CHECK-NEXT:    [[GEP]] = getelementptr [[STRUCT_FOO]], %struct.Foo* [[A]], i64 0
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ null, [[ENTRY:%.*]] ], [ [[A]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi ptr [ [[A]], [[ENTRY]] ], [ [[TMP0]], [[LOOP]] ]
+; CHECK-NEXT:    store ptr [[PHI]], ptr [[A_PTR]], align 8
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
-  %a_ptr = alloca %struct.Foo*
+  %a_ptr = alloca ptr
   br label %loop
 
 loop:
-  %phi = phi %struct.Foo* [ null, %entry ], [ %gep, %loop ]
-  %0   = phi %struct.Foo* [ %a, %entry ],   [ %0, %loop ]
-  store %struct.Foo* %phi, %struct.Foo** %a_ptr
-  %gep = getelementptr %struct.Foo, %struct.Foo* %a, i64 0
+  %phi = phi ptr [ null, %entry ], [ %a, %loop ]
+  %0   = phi ptr [ %a, %entry ],   [ %0, %loop ]
+  store ptr %phi, ptr %a_ptr
   br label %loop
 }
