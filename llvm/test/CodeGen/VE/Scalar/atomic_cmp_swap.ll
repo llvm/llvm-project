@@ -78,25 +78,26 @@
 @gv_u128 = global %"struct.std::__1::atomic.45" zeroinitializer, align 16
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i1 @_Z26atomic_cmp_swap_relaxed_i1RNSt3__16atomicIbEERbb(%"struct.std::__1::atomic"* nocapture nonnull align 1 dereferenceable(1) %arg, i8* nocapture nonnull align 1 dereferenceable(1) %arg1, i1 zeroext %arg2) {
+define zeroext i1 @_Z26atomic_cmp_swap_relaxed_i1RNSt3__16atomicIbEERbb(ptr nocapture nonnull align 1 dereferenceable(1) %arg, ptr nocapture nonnull align 1 dereferenceable(1) %arg1, i1 zeroext %arg2) {
 ; CHECK-LABEL: _Z26atomic_cmp_swap_relaxed_i1RNSt3__16atomicIbEERbb:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    ld1b.zx %s3, (, %s1)
-; CHECK-NEXT:    and %s4, -4, %s0
+; CHECK-NEXT:    ld1b.zx %s4, (, %s1)
+; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
-; CHECK-NEXT:    ldl.sx %s5, (, %s4)
+; CHECK-NEXT:    ldl.sx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (56)0, %s0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
-; CHECK-NEXT:    sla.w.sx %s3, %s3, %s0
+; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s6, %s5
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    or %s2, %s5, %s2
-; CHECK-NEXT:    or %s5, %s5, %s3
-; CHECK-NEXT:    cas.w %s2, (%s4), %s5
-; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s5
+; CHECK-NEXT:    or %s4, %s5, %s4
+; CHECK-NEXT:    cas.w %s2, (%s3), %s4
+; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s4
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    cmov.w.eq %s3, (63)0, %s4
-; CHECK-NEXT:    breq.w %s2, %s5, .LBB0_2
+; CHECK-NEXT:    brne.w 0, %s3, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %bb7
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    srl %s0, %s2, %s0
@@ -106,15 +107,14 @@ define zeroext i1 @_Z26atomic_cmp_swap_relaxed_i1RNSt3__16atomicIbEERbb(%"struct
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = zext i1 %arg2 to i8
-  %i3 = getelementptr inbounds %"struct.std::__1::atomic", %"struct.std::__1::atomic"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0
-  %i4 = load i8, i8* %arg1, align 1
-  %i5 = cmpxchg weak i8* %i3, i8 %i4, i8 %i monotonic monotonic, align 1
+  %i4 = load i8, ptr %arg1, align 1
+  %i5 = cmpxchg weak ptr %arg, i8 %i4, i8 %i monotonic monotonic, align 1
   %i6 = extractvalue { i8, i1 } %i5, 1
   br i1 %i6, label %bb9, label %bb7
 
 bb7:                                              ; preds = %bb
   %i8 = extractvalue { i8, i1 } %i5, 0
-  store i8 %i8, i8* %arg1, align 1
+  store i8 %i8, ptr %arg1, align 1
   br label %bb9
 
 bb9:                                              ; preds = %bb7, %bb
@@ -122,26 +122,27 @@ bb9:                                              ; preds = %bb7, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i8 @_Z26atomic_cmp_swap_relaxed_i8RNSt3__16atomicIcEERcc(%"struct.std::__1::atomic.0"* nocapture nonnull align 1 dereferenceable(1) %arg, i8* nocapture nonnull align 1 dereferenceable(1) %arg1, i8 signext %arg2) {
+define signext i8 @_Z26atomic_cmp_swap_relaxed_i8RNSt3__16atomicIcEERcc(ptr nocapture nonnull align 1 dereferenceable(1) %arg, ptr nocapture nonnull align 1 dereferenceable(1) %arg1, i8 signext %arg2) {
 ; CHECK-LABEL: _Z26atomic_cmp_swap_relaxed_i8RNSt3__16atomicIcEERcc:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    ld1b.zx %s3, (, %s1)
-; CHECK-NEXT:    and %s4, -4, %s0
+; CHECK-NEXT:    ld1b.zx %s4, (, %s1)
+; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s5, (56)0, %s0
-; CHECK-NEXT:    ldl.sx %s6, (, %s4)
+; CHECK-NEXT:    ldl.sx %s6, (, %s3)
 ; CHECK-NEXT:    and %s2, %s2, (56)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
-; CHECK-NEXT:    sla.w.sx %s3, %s3, %s0
+; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s5, %s6
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    or %s2, %s5, %s2
-; CHECK-NEXT:    or %s5, %s5, %s3
-; CHECK-NEXT:    cas.w %s2, (%s4), %s5
-; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s5
+; CHECK-NEXT:    or %s4, %s5, %s4
+; CHECK-NEXT:    cas.w %s2, (%s3), %s4
+; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s4
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    cmov.w.eq %s3, (63)0, %s4
-; CHECK-NEXT:    breq.w %s2, %s5, .LBB1_2
+; CHECK-NEXT:    brne.w 0, %s3, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %bb6
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    srl %s0, %s2, %s0
@@ -150,15 +151,14 @@ define signext i8 @_Z26atomic_cmp_swap_relaxed_i8RNSt3__16atomicIcEERcc(%"struct
 ; CHECK-NEXT:    adds.w.zx %s0, %s3, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.0", %"struct.std::__1::atomic.0"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i8, i8* %arg1, align 1
-  %i4 = cmpxchg weak i8* %i, i8 %i3, i8 %arg2 monotonic monotonic, align 1
+  %i3 = load i8, ptr %arg1, align 1
+  %i4 = cmpxchg weak ptr %arg, i8 %i3, i8 %arg2 monotonic monotonic, align 1
   %i5 = extractvalue { i8, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i8, i1 } %i4, 0
-  store i8 %i7, i8* %arg1, align 1
+  store i8 %i7, ptr %arg1, align 1
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -167,25 +167,26 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i8 @_Z26atomic_cmp_swap_relaxed_u8RNSt3__16atomicIhEERhh(%"struct.std::__1::atomic.5"* nocapture nonnull align 1 dereferenceable(1) %arg, i8* nocapture nonnull align 1 dereferenceable(1) %arg1, i8 zeroext %arg2) {
+define zeroext i8 @_Z26atomic_cmp_swap_relaxed_u8RNSt3__16atomicIhEERhh(ptr nocapture nonnull align 1 dereferenceable(1) %arg, ptr nocapture nonnull align 1 dereferenceable(1) %arg1, i8 zeroext %arg2) {
 ; CHECK-LABEL: _Z26atomic_cmp_swap_relaxed_u8RNSt3__16atomicIhEERhh:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    ld1b.zx %s3, (, %s1)
-; CHECK-NEXT:    and %s4, -4, %s0
+; CHECK-NEXT:    ld1b.zx %s4, (, %s1)
+; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
-; CHECK-NEXT:    ldl.sx %s5, (, %s4)
+; CHECK-NEXT:    ldl.sx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (56)0, %s0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
-; CHECK-NEXT:    sla.w.sx %s3, %s3, %s0
+; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s6, %s5
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    or %s2, %s5, %s2
-; CHECK-NEXT:    or %s5, %s5, %s3
-; CHECK-NEXT:    cas.w %s2, (%s4), %s5
-; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s5
+; CHECK-NEXT:    or %s4, %s5, %s4
+; CHECK-NEXT:    cas.w %s2, (%s3), %s4
+; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s4
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    cmov.w.eq %s3, (63)0, %s4
-; CHECK-NEXT:    breq.w %s2, %s5, .LBB2_2
+; CHECK-NEXT:    brne.w 0, %s3, .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %bb6
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    srl %s0, %s2, %s0
@@ -194,15 +195,14 @@ define zeroext i8 @_Z26atomic_cmp_swap_relaxed_u8RNSt3__16atomicIhEERhh(%"struct
 ; CHECK-NEXT:    adds.w.zx %s0, %s3, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.5", %"struct.std::__1::atomic.5"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i8, i8* %arg1, align 1
-  %i4 = cmpxchg weak i8* %i, i8 %i3, i8 %arg2 monotonic monotonic, align 1
+  %i3 = load i8, ptr %arg1, align 1
+  %i4 = cmpxchg weak ptr %arg, i8 %i3, i8 %arg2 monotonic monotonic, align 1
   %i5 = extractvalue { i8, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i8, i1 } %i4, 0
-  store i8 %i7, i8* %arg1, align 1
+  store i8 %i7, ptr %arg1, align 1
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -211,26 +211,27 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i16 @_Z27atomic_cmp_swap_relaxed_i16RNSt3__16atomicIsEERss(%"struct.std::__1::atomic.10"* nocapture nonnull align 2 dereferenceable(2) %arg, i16* nocapture nonnull align 2 dereferenceable(2) %arg1, i16 signext %arg2) {
+define signext i16 @_Z27atomic_cmp_swap_relaxed_i16RNSt3__16atomicIsEERss(ptr nocapture nonnull align 2 dereferenceable(2) %arg, ptr nocapture nonnull align 2 dereferenceable(2) %arg1, i16 signext %arg2) {
 ; CHECK-LABEL: _Z27atomic_cmp_swap_relaxed_i16RNSt3__16atomicIsEERss:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    ld2b.zx %s3, (, %s1)
-; CHECK-NEXT:    and %s4, -4, %s0
+; CHECK-NEXT:    ld2b.zx %s4, (, %s1)
+; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s5, (48)0, %s0
-; CHECK-NEXT:    ldl.sx %s6, (, %s4)
+; CHECK-NEXT:    ldl.sx %s6, (, %s3)
 ; CHECK-NEXT:    and %s2, %s2, (48)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
-; CHECK-NEXT:    sla.w.sx %s3, %s3, %s0
+; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s5, %s6
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    or %s2, %s5, %s2
-; CHECK-NEXT:    or %s5, %s5, %s3
-; CHECK-NEXT:    cas.w %s2, (%s4), %s5
-; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s5
+; CHECK-NEXT:    or %s4, %s5, %s4
+; CHECK-NEXT:    cas.w %s2, (%s3), %s4
+; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s4
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    cmov.w.eq %s3, (63)0, %s4
-; CHECK-NEXT:    breq.w %s2, %s5, .LBB3_2
+; CHECK-NEXT:    brne.w 0, %s3, .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %bb6
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    srl %s0, %s2, %s0
@@ -239,15 +240,14 @@ define signext i16 @_Z27atomic_cmp_swap_relaxed_i16RNSt3__16atomicIsEERss(%"stru
 ; CHECK-NEXT:    adds.w.zx %s0, %s3, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.10", %"struct.std::__1::atomic.10"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i16, i16* %arg1, align 2
-  %i4 = cmpxchg weak i16* %i, i16 %i3, i16 %arg2 monotonic monotonic, align 2
+  %i3 = load i16, ptr %arg1, align 2
+  %i4 = cmpxchg weak ptr %arg, i16 %i3, i16 %arg2 monotonic monotonic, align 2
   %i5 = extractvalue { i16, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i16, i1 } %i4, 0
-  store i16 %i7, i16* %arg1, align 2
+  store i16 %i7, ptr %arg1, align 2
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -256,25 +256,26 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i16 @_Z27atomic_cmp_swap_relaxed_u16RNSt3__16atomicItEERtt(%"struct.std::__1::atomic.15"* nocapture nonnull align 2 dereferenceable(2) %arg, i16* nocapture nonnull align 2 dereferenceable(2) %arg1, i16 zeroext %arg2) {
+define zeroext i16 @_Z27atomic_cmp_swap_relaxed_u16RNSt3__16atomicItEERtt(ptr nocapture nonnull align 2 dereferenceable(2) %arg, ptr nocapture nonnull align 2 dereferenceable(2) %arg1, i16 zeroext %arg2) {
 ; CHECK-LABEL: _Z27atomic_cmp_swap_relaxed_u16RNSt3__16atomicItEERtt:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    ld2b.zx %s3, (, %s1)
-; CHECK-NEXT:    and %s4, -4, %s0
+; CHECK-NEXT:    ld2b.zx %s4, (, %s1)
+; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
-; CHECK-NEXT:    ldl.sx %s5, (, %s4)
+; CHECK-NEXT:    ldl.sx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (48)0, %s0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
-; CHECK-NEXT:    sla.w.sx %s3, %s3, %s0
+; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s6, %s5
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    or %s2, %s5, %s2
-; CHECK-NEXT:    or %s5, %s5, %s3
-; CHECK-NEXT:    cas.w %s2, (%s4), %s5
-; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s5
+; CHECK-NEXT:    or %s4, %s5, %s4
+; CHECK-NEXT:    cas.w %s2, (%s3), %s4
+; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s4
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    cmov.w.eq %s3, (63)0, %s4
-; CHECK-NEXT:    breq.w %s2, %s5, .LBB4_2
+; CHECK-NEXT:    brne.w 0, %s3, .LBB4_2
 ; CHECK-NEXT:  # %bb.1: # %bb6
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    srl %s0, %s2, %s0
@@ -283,15 +284,14 @@ define zeroext i16 @_Z27atomic_cmp_swap_relaxed_u16RNSt3__16atomicItEERtt(%"stru
 ; CHECK-NEXT:    adds.w.zx %s0, %s3, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.15", %"struct.std::__1::atomic.15"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i16, i16* %arg1, align 2
-  %i4 = cmpxchg weak i16* %i, i16 %i3, i16 %arg2 monotonic monotonic, align 2
+  %i3 = load i16, ptr %arg1, align 2
+  %i4 = cmpxchg weak ptr %arg, i16 %i3, i16 %arg2 monotonic monotonic, align 2
   %i5 = extractvalue { i16, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i16, i1 } %i4, 0
-  store i16 %i7, i16* %arg1, align 2
+  store i16 %i7, ptr %arg1, align 2
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -300,7 +300,7 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i32 @_Z27atomic_cmp_swap_relaxed_i32RNSt3__16atomicIiEERii(%"struct.std::__1::atomic.20"* nocapture nonnull align 4 dereferenceable(4) %arg, i32* nocapture nonnull align 4 dereferenceable(4) %arg1, i32 signext %arg2) {
+define signext i32 @_Z27atomic_cmp_swap_relaxed_i32RNSt3__16atomicIiEERii(ptr nocapture nonnull align 4 dereferenceable(4) %arg, ptr nocapture nonnull align 4 dereferenceable(4) %arg1, i32 signext %arg2) {
 ; CHECK-LABEL: _Z27atomic_cmp_swap_relaxed_i32RNSt3__16atomicIiEERii:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    ldl.sx %s3, (, %s1)
@@ -315,15 +315,14 @@ define signext i32 @_Z27atomic_cmp_swap_relaxed_i32RNSt3__16atomicIiEERii(%"stru
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.20", %"struct.std::__1::atomic.20"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i32, i32* %arg1, align 4
-  %i4 = cmpxchg weak i32* %i, i32 %i3, i32 %arg2 monotonic monotonic, align 4
+  %i3 = load i32, ptr %arg1, align 4
+  %i4 = cmpxchg weak ptr %arg, i32 %i3, i32 %arg2 monotonic monotonic, align 4
   %i5 = extractvalue { i32, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i32, i1 } %i4, 0
-  store i32 %i7, i32* %arg1, align 4
+  store i32 %i7, ptr %arg1, align 4
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -332,7 +331,7 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i32 @_Z27atomic_cmp_swap_relaxed_u32RNSt3__16atomicIjEERjj(%"struct.std::__1::atomic.25"* nocapture nonnull align 4 dereferenceable(4) %arg, i32* nocapture nonnull align 4 dereferenceable(4) %arg1, i32 zeroext %arg2) {
+define zeroext i32 @_Z27atomic_cmp_swap_relaxed_u32RNSt3__16atomicIjEERjj(ptr nocapture nonnull align 4 dereferenceable(4) %arg, ptr nocapture nonnull align 4 dereferenceable(4) %arg1, i32 zeroext %arg2) {
 ; CHECK-LABEL: _Z27atomic_cmp_swap_relaxed_u32RNSt3__16atomicIjEERjj:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    ldl.sx %s3, (, %s1)
@@ -347,15 +346,14 @@ define zeroext i32 @_Z27atomic_cmp_swap_relaxed_u32RNSt3__16atomicIjEERjj(%"stru
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.25", %"struct.std::__1::atomic.25"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i32, i32* %arg1, align 4
-  %i4 = cmpxchg weak i32* %i, i32 %i3, i32 %arg2 monotonic monotonic, align 4
+  %i3 = load i32, ptr %arg1, align 4
+  %i4 = cmpxchg weak ptr %arg, i32 %i3, i32 %arg2 monotonic monotonic, align 4
   %i5 = extractvalue { i32, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i32, i1 } %i4, 0
-  store i32 %i7, i32* %arg1, align 4
+  store i32 %i7, ptr %arg1, align 4
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -364,7 +362,7 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define i64 @_Z27atomic_cmp_swap_relaxed_i64RNSt3__16atomicIlEERll(%"struct.std::__1::atomic.30"* nocapture nonnull align 8 dereferenceable(8) %arg, i64* nocapture nonnull align 8 dereferenceable(8) %arg1, i64 %arg2) {
+define i64 @_Z27atomic_cmp_swap_relaxed_i64RNSt3__16atomicIlEERll(ptr nocapture nonnull align 8 dereferenceable(8) %arg, ptr nocapture nonnull align 8 dereferenceable(8) %arg1, i64 %arg2) {
 ; CHECK-LABEL: _Z27atomic_cmp_swap_relaxed_i64RNSt3__16atomicIlEERll:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    ld %s3, (, %s1)
@@ -379,15 +377,14 @@ define i64 @_Z27atomic_cmp_swap_relaxed_i64RNSt3__16atomicIlEERll(%"struct.std::
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.30", %"struct.std::__1::atomic.30"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i64, i64* %arg1, align 8
-  %i4 = cmpxchg weak i64* %i, i64 %i3, i64 %arg2 monotonic monotonic, align 8
+  %i3 = load i64, ptr %arg1, align 8
+  %i4 = cmpxchg weak ptr %arg, i64 %i3, i64 %arg2 monotonic monotonic, align 8
   %i5 = extractvalue { i64, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i64, i1 } %i4, 0
-  store i64 %i7, i64* %arg1, align 8
+  store i64 %i7, ptr %arg1, align 8
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -396,7 +393,7 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define i64 @_Z27atomic_cmp_swap_relaxed_u64RNSt3__16atomicImEERmm(%"struct.std::__1::atomic.35"* nocapture nonnull align 8 dereferenceable(8) %arg, i64* nocapture nonnull align 8 dereferenceable(8) %arg1, i64 %arg2) {
+define i64 @_Z27atomic_cmp_swap_relaxed_u64RNSt3__16atomicImEERmm(ptr nocapture nonnull align 8 dereferenceable(8) %arg, ptr nocapture nonnull align 8 dereferenceable(8) %arg1, i64 %arg2) {
 ; CHECK-LABEL: _Z27atomic_cmp_swap_relaxed_u64RNSt3__16atomicImEERmm:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    ld %s3, (, %s1)
@@ -411,15 +408,14 @@ define i64 @_Z27atomic_cmp_swap_relaxed_u64RNSt3__16atomicImEERmm(%"struct.std::
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.35", %"struct.std::__1::atomic.35"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i64, i64* %arg1, align 8
-  %i4 = cmpxchg weak i64* %i, i64 %i3, i64 %arg2 monotonic monotonic, align 8
+  %i3 = load i64, ptr %arg1, align 8
+  %i4 = cmpxchg weak ptr %arg, i64 %i3, i64 %arg2 monotonic monotonic, align 8
   %i5 = extractvalue { i64, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i64, i1 } %i4, 0
-  store i64 %i7, i64* %arg1, align 8
+  store i64 %i7, ptr %arg1, align 8
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -428,7 +424,7 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nounwind mustprogress
-define i128 @_Z28atomic_cmp_swap_relaxed_i128RNSt3__16atomicInEERnn(%"struct.std::__1::atomic.40"* nonnull align 16 dereferenceable(16) %arg, i128* nonnull align 16 dereferenceable(16) %arg1, i128 %arg2) {
+define i128 @_Z28atomic_cmp_swap_relaxed_i128RNSt3__16atomicInEERnn(ptr nonnull align 16 dereferenceable(16) %arg, ptr nonnull align 16 dereferenceable(16) %arg1, i128 %arg2) {
 ; CHECK-LABEL: _Z28atomic_cmp_swap_relaxed_i128RNSt3__16atomicInEERnn:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -466,19 +462,16 @@ define i128 @_Z28atomic_cmp_swap_relaxed_i128RNSt3__16atomicInEERnn(%"struct.std
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = alloca i128, align 16
-  %i3 = bitcast i128* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %i3)
-  store i128 %arg2, i128* %i, align 16, !tbaa !0
-  %i4 = bitcast %"struct.std::__1::atomic.40"* %arg to i8*
-  %i5 = bitcast i128* %arg1 to i8*
-  %i6 = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* nonnull %i4, i8* nonnull %i5, i8* nonnull %i3, i32 signext 0, i32 signext 0)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %i3)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %i)
+  store i128 %arg2, ptr %i, align 16, !tbaa !0
+  %i6 = call zeroext i1 @__atomic_compare_exchange(i64 16, ptr nonnull %arg, ptr nonnull %arg1, ptr nonnull %i, i32 signext 0, i32 signext 0)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %i)
   %i7 = zext i1 %i6 to i128
   ret i128 %i7
 }
 
 ; Function Attrs: nounwind mustprogress
-define i128 @_Z28atomic_cmp_swap_relaxed_u128RNSt3__16atomicIoEERoo(%"struct.std::__1::atomic.45"* nonnull align 16 dereferenceable(16) %arg, i128* nonnull align 16 dereferenceable(16) %arg1, i128 %arg2) {
+define i128 @_Z28atomic_cmp_swap_relaxed_u128RNSt3__16atomicIoEERoo(ptr nonnull align 16 dereferenceable(16) %arg, ptr nonnull align 16 dereferenceable(16) %arg1, i128 %arg2) {
 ; CHECK-LABEL: _Z28atomic_cmp_swap_relaxed_u128RNSt3__16atomicIoEERoo:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -516,38 +509,36 @@ define i128 @_Z28atomic_cmp_swap_relaxed_u128RNSt3__16atomicIoEERoo(%"struct.std
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = alloca i128, align 16
-  %i3 = bitcast i128* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %i3)
-  store i128 %arg2, i128* %i, align 16, !tbaa !0
-  %i4 = bitcast %"struct.std::__1::atomic.45"* %arg to i8*
-  %i5 = bitcast i128* %arg1 to i8*
-  %i6 = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* nonnull %i4, i8* nonnull %i5, i8* nonnull %i3, i32 signext 0, i32 signext 0)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %i3)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %i)
+  store i128 %arg2, ptr %i, align 16, !tbaa !0
+  %i6 = call zeroext i1 @__atomic_compare_exchange(i64 16, ptr nonnull %arg, ptr nonnull %arg1, ptr nonnull %i, i32 signext 0, i32 signext 0)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %i)
   %i7 = zext i1 %i6 to i128
   ret i128 %i7
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i1 @_Z26atomic_cmp_swap_acquire_i1RNSt3__16atomicIbEERbb(%"struct.std::__1::atomic"* nocapture nonnull align 1 dereferenceable(1) %arg, i8* nocapture nonnull align 1 dereferenceable(1) %arg1, i1 zeroext %arg2) {
+define zeroext i1 @_Z26atomic_cmp_swap_acquire_i1RNSt3__16atomicIbEERbb(ptr nocapture nonnull align 1 dereferenceable(1) %arg, ptr nocapture nonnull align 1 dereferenceable(1) %arg1, i1 zeroext %arg2) {
 ; CHECK-LABEL: _Z26atomic_cmp_swap_acquire_i1RNSt3__16atomicIbEERbb:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    ld1b.zx %s3, (, %s1)
-; CHECK-NEXT:    and %s4, -4, %s0
+; CHECK-NEXT:    ld1b.zx %s4, (, %s1)
+; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
-; CHECK-NEXT:    ldl.sx %s5, (, %s4)
+; CHECK-NEXT:    ldl.sx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (56)0, %s0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
-; CHECK-NEXT:    sla.w.sx %s3, %s3, %s0
+; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s6, %s5
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    or %s2, %s5, %s2
-; CHECK-NEXT:    or %s5, %s5, %s3
-; CHECK-NEXT:    cas.w %s2, (%s4), %s5
-; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s5
+; CHECK-NEXT:    or %s4, %s5, %s4
+; CHECK-NEXT:    cas.w %s2, (%s3), %s4
+; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s4
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    cmov.w.eq %s3, (63)0, %s4
 ; CHECK-NEXT:    fencem 2
-; CHECK-NEXT:    breq.w %s2, %s5, .LBB11_2
+; CHECK-NEXT:    brne.w 0, %s3, .LBB11_2
 ; CHECK-NEXT:  # %bb.1: # %bb7
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    srl %s0, %s2, %s0
@@ -557,15 +548,14 @@ define zeroext i1 @_Z26atomic_cmp_swap_acquire_i1RNSt3__16atomicIbEERbb(%"struct
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = zext i1 %arg2 to i8
-  %i3 = getelementptr inbounds %"struct.std::__1::atomic", %"struct.std::__1::atomic"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0
-  %i4 = load i8, i8* %arg1, align 1
-  %i5 = cmpxchg weak i8* %i3, i8 %i4, i8 %i acquire acquire, align 1
+  %i4 = load i8, ptr %arg1, align 1
+  %i5 = cmpxchg weak ptr %arg, i8 %i4, i8 %i acquire acquire, align 1
   %i6 = extractvalue { i8, i1 } %i5, 1
   br i1 %i6, label %bb9, label %bb7
 
 bb7:                                              ; preds = %bb
   %i8 = extractvalue { i8, i1 } %i5, 0
-  store i8 %i8, i8* %arg1, align 1
+  store i8 %i8, ptr %arg1, align 1
   br label %bb9
 
 bb9:                                              ; preds = %bb7, %bb
@@ -573,27 +563,28 @@ bb9:                                              ; preds = %bb7, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i8 @_Z26atomic_cmp_swap_acquire_i8RNSt3__16atomicIcEERcc(%"struct.std::__1::atomic.0"* nocapture nonnull align 1 dereferenceable(1) %arg, i8* nocapture nonnull align 1 dereferenceable(1) %arg1, i8 signext %arg2) {
+define signext i8 @_Z26atomic_cmp_swap_acquire_i8RNSt3__16atomicIcEERcc(ptr nocapture nonnull align 1 dereferenceable(1) %arg, ptr nocapture nonnull align 1 dereferenceable(1) %arg1, i8 signext %arg2) {
 ; CHECK-LABEL: _Z26atomic_cmp_swap_acquire_i8RNSt3__16atomicIcEERcc:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    ld1b.zx %s3, (, %s1)
-; CHECK-NEXT:    and %s4, -4, %s0
+; CHECK-NEXT:    ld1b.zx %s4, (, %s1)
+; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s5, (56)0, %s0
-; CHECK-NEXT:    ldl.sx %s6, (, %s4)
+; CHECK-NEXT:    ldl.sx %s6, (, %s3)
 ; CHECK-NEXT:    and %s2, %s2, (56)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
-; CHECK-NEXT:    sla.w.sx %s3, %s3, %s0
+; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s5, %s6
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    or %s2, %s5, %s2
-; CHECK-NEXT:    or %s5, %s5, %s3
-; CHECK-NEXT:    cas.w %s2, (%s4), %s5
-; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s5
+; CHECK-NEXT:    or %s4, %s5, %s4
+; CHECK-NEXT:    cas.w %s2, (%s3), %s4
+; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s4
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    cmov.w.eq %s3, (63)0, %s4
 ; CHECK-NEXT:    fencem 2
-; CHECK-NEXT:    breq.w %s2, %s5, .LBB12_2
+; CHECK-NEXT:    brne.w 0, %s3, .LBB12_2
 ; CHECK-NEXT:  # %bb.1: # %bb6
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    srl %s0, %s2, %s0
@@ -602,15 +593,14 @@ define signext i8 @_Z26atomic_cmp_swap_acquire_i8RNSt3__16atomicIcEERcc(%"struct
 ; CHECK-NEXT:    adds.w.zx %s0, %s3, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.0", %"struct.std::__1::atomic.0"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i8, i8* %arg1, align 1
-  %i4 = cmpxchg weak i8* %i, i8 %i3, i8 %arg2 acquire acquire, align 1
+  %i3 = load i8, ptr %arg1, align 1
+  %i4 = cmpxchg weak ptr %arg, i8 %i3, i8 %arg2 acquire acquire, align 1
   %i5 = extractvalue { i8, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i8, i1 } %i4, 0
-  store i8 %i7, i8* %arg1, align 1
+  store i8 %i7, ptr %arg1, align 1
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -619,26 +609,27 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i8 @_Z26atomic_cmp_swap_acquire_u8RNSt3__16atomicIhEERhh(%"struct.std::__1::atomic.5"* nocapture nonnull align 1 dereferenceable(1) %arg, i8* nocapture nonnull align 1 dereferenceable(1) %arg1, i8 zeroext %arg2) {
+define zeroext i8 @_Z26atomic_cmp_swap_acquire_u8RNSt3__16atomicIhEERhh(ptr nocapture nonnull align 1 dereferenceable(1) %arg, ptr nocapture nonnull align 1 dereferenceable(1) %arg1, i8 zeroext %arg2) {
 ; CHECK-LABEL: _Z26atomic_cmp_swap_acquire_u8RNSt3__16atomicIhEERhh:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    ld1b.zx %s3, (, %s1)
-; CHECK-NEXT:    and %s4, -4, %s0
+; CHECK-NEXT:    ld1b.zx %s4, (, %s1)
+; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
-; CHECK-NEXT:    ldl.sx %s5, (, %s4)
+; CHECK-NEXT:    ldl.sx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (56)0, %s0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
-; CHECK-NEXT:    sla.w.sx %s3, %s3, %s0
+; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s6, %s5
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    or %s2, %s5, %s2
-; CHECK-NEXT:    or %s5, %s5, %s3
-; CHECK-NEXT:    cas.w %s2, (%s4), %s5
-; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s5
+; CHECK-NEXT:    or %s4, %s5, %s4
+; CHECK-NEXT:    cas.w %s2, (%s3), %s4
+; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s4
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    cmov.w.eq %s3, (63)0, %s4
 ; CHECK-NEXT:    fencem 2
-; CHECK-NEXT:    breq.w %s2, %s5, .LBB13_2
+; CHECK-NEXT:    brne.w 0, %s3, .LBB13_2
 ; CHECK-NEXT:  # %bb.1: # %bb6
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    srl %s0, %s2, %s0
@@ -647,15 +638,14 @@ define zeroext i8 @_Z26atomic_cmp_swap_acquire_u8RNSt3__16atomicIhEERhh(%"struct
 ; CHECK-NEXT:    adds.w.zx %s0, %s3, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.5", %"struct.std::__1::atomic.5"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i8, i8* %arg1, align 1
-  %i4 = cmpxchg weak i8* %i, i8 %i3, i8 %arg2 acquire acquire, align 1
+  %i3 = load i8, ptr %arg1, align 1
+  %i4 = cmpxchg weak ptr %arg, i8 %i3, i8 %arg2 acquire acquire, align 1
   %i5 = extractvalue { i8, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i8, i1 } %i4, 0
-  store i8 %i7, i8* %arg1, align 1
+  store i8 %i7, ptr %arg1, align 1
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -664,27 +654,28 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i16 @_Z27atomic_cmp_swap_acquire_i16RNSt3__16atomicIsEERss(%"struct.std::__1::atomic.10"* nocapture nonnull align 2 dereferenceable(2) %arg, i16* nocapture nonnull align 2 dereferenceable(2) %arg1, i16 signext %arg2) {
+define signext i16 @_Z27atomic_cmp_swap_acquire_i16RNSt3__16atomicIsEERss(ptr nocapture nonnull align 2 dereferenceable(2) %arg, ptr nocapture nonnull align 2 dereferenceable(2) %arg1, i16 signext %arg2) {
 ; CHECK-LABEL: _Z27atomic_cmp_swap_acquire_i16RNSt3__16atomicIsEERss:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    ld2b.zx %s3, (, %s1)
-; CHECK-NEXT:    and %s4, -4, %s0
+; CHECK-NEXT:    ld2b.zx %s4, (, %s1)
+; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s5, (48)0, %s0
-; CHECK-NEXT:    ldl.sx %s6, (, %s4)
+; CHECK-NEXT:    ldl.sx %s6, (, %s3)
 ; CHECK-NEXT:    and %s2, %s2, (48)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
-; CHECK-NEXT:    sla.w.sx %s3, %s3, %s0
+; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s5, %s6
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    or %s2, %s5, %s2
-; CHECK-NEXT:    or %s5, %s5, %s3
-; CHECK-NEXT:    cas.w %s2, (%s4), %s5
-; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s5
+; CHECK-NEXT:    or %s4, %s5, %s4
+; CHECK-NEXT:    cas.w %s2, (%s3), %s4
+; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s4
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    cmov.w.eq %s3, (63)0, %s4
 ; CHECK-NEXT:    fencem 2
-; CHECK-NEXT:    breq.w %s2, %s5, .LBB14_2
+; CHECK-NEXT:    brne.w 0, %s3, .LBB14_2
 ; CHECK-NEXT:  # %bb.1: # %bb6
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    srl %s0, %s2, %s0
@@ -693,15 +684,14 @@ define signext i16 @_Z27atomic_cmp_swap_acquire_i16RNSt3__16atomicIsEERss(%"stru
 ; CHECK-NEXT:    adds.w.zx %s0, %s3, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.10", %"struct.std::__1::atomic.10"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i16, i16* %arg1, align 2
-  %i4 = cmpxchg weak i16* %i, i16 %i3, i16 %arg2 acquire acquire, align 2
+  %i3 = load i16, ptr %arg1, align 2
+  %i4 = cmpxchg weak ptr %arg, i16 %i3, i16 %arg2 acquire acquire, align 2
   %i5 = extractvalue { i16, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i16, i1 } %i4, 0
-  store i16 %i7, i16* %arg1, align 2
+  store i16 %i7, ptr %arg1, align 2
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -710,26 +700,27 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i16 @_Z27atomic_cmp_swap_acquire_u16RNSt3__16atomicItEERtt(%"struct.std::__1::atomic.15"* nocapture nonnull align 2 dereferenceable(2) %arg, i16* nocapture nonnull align 2 dereferenceable(2) %arg1, i16 zeroext %arg2) {
+define zeroext i16 @_Z27atomic_cmp_swap_acquire_u16RNSt3__16atomicItEERtt(ptr nocapture nonnull align 2 dereferenceable(2) %arg, ptr nocapture nonnull align 2 dereferenceable(2) %arg1, i16 zeroext %arg2) {
 ; CHECK-LABEL: _Z27atomic_cmp_swap_acquire_u16RNSt3__16atomicItEERtt:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    ld2b.zx %s3, (, %s1)
-; CHECK-NEXT:    and %s4, -4, %s0
+; CHECK-NEXT:    ld2b.zx %s4, (, %s1)
+; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
-; CHECK-NEXT:    ldl.sx %s5, (, %s4)
+; CHECK-NEXT:    ldl.sx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (48)0, %s0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
-; CHECK-NEXT:    sla.w.sx %s3, %s3, %s0
+; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s6, %s5
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    or %s2, %s5, %s2
-; CHECK-NEXT:    or %s5, %s5, %s3
-; CHECK-NEXT:    cas.w %s2, (%s4), %s5
-; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s5
+; CHECK-NEXT:    or %s4, %s5, %s4
+; CHECK-NEXT:    cas.w %s2, (%s3), %s4
+; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s4
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    cmov.w.eq %s3, (63)0, %s4
 ; CHECK-NEXT:    fencem 2
-; CHECK-NEXT:    breq.w %s2, %s5, .LBB15_2
+; CHECK-NEXT:    brne.w 0, %s3, .LBB15_2
 ; CHECK-NEXT:  # %bb.1: # %bb6
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    srl %s0, %s2, %s0
@@ -738,15 +729,14 @@ define zeroext i16 @_Z27atomic_cmp_swap_acquire_u16RNSt3__16atomicItEERtt(%"stru
 ; CHECK-NEXT:    adds.w.zx %s0, %s3, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.15", %"struct.std::__1::atomic.15"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i16, i16* %arg1, align 2
-  %i4 = cmpxchg weak i16* %i, i16 %i3, i16 %arg2 acquire acquire, align 2
+  %i3 = load i16, ptr %arg1, align 2
+  %i4 = cmpxchg weak ptr %arg, i16 %i3, i16 %arg2 acquire acquire, align 2
   %i5 = extractvalue { i16, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i16, i1 } %i4, 0
-  store i16 %i7, i16* %arg1, align 2
+  store i16 %i7, ptr %arg1, align 2
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -755,7 +745,7 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i32 @_Z27atomic_cmp_swap_acquire_i32RNSt3__16atomicIiEERii(%"struct.std::__1::atomic.20"* nocapture nonnull align 4 dereferenceable(4) %arg, i32* nocapture nonnull align 4 dereferenceable(4) %arg1, i32 signext %arg2) {
+define signext i32 @_Z27atomic_cmp_swap_acquire_i32RNSt3__16atomicIiEERii(ptr nocapture nonnull align 4 dereferenceable(4) %arg, ptr nocapture nonnull align 4 dereferenceable(4) %arg1, i32 signext %arg2) {
 ; CHECK-LABEL: _Z27atomic_cmp_swap_acquire_i32RNSt3__16atomicIiEERii:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    ldl.sx %s3, (, %s1)
@@ -771,15 +761,14 @@ define signext i32 @_Z27atomic_cmp_swap_acquire_i32RNSt3__16atomicIiEERii(%"stru
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.20", %"struct.std::__1::atomic.20"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i32, i32* %arg1, align 4
-  %i4 = cmpxchg weak i32* %i, i32 %i3, i32 %arg2 acquire acquire, align 4
+  %i3 = load i32, ptr %arg1, align 4
+  %i4 = cmpxchg weak ptr %arg, i32 %i3, i32 %arg2 acquire acquire, align 4
   %i5 = extractvalue { i32, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i32, i1 } %i4, 0
-  store i32 %i7, i32* %arg1, align 4
+  store i32 %i7, ptr %arg1, align 4
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -788,7 +777,7 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i32 @_Z27atomic_cmp_swap_acquire_u32RNSt3__16atomicIjEERjj(%"struct.std::__1::atomic.25"* nocapture nonnull align 4 dereferenceable(4) %arg, i32* nocapture nonnull align 4 dereferenceable(4) %arg1, i32 zeroext %arg2) {
+define zeroext i32 @_Z27atomic_cmp_swap_acquire_u32RNSt3__16atomicIjEERjj(ptr nocapture nonnull align 4 dereferenceable(4) %arg, ptr nocapture nonnull align 4 dereferenceable(4) %arg1, i32 zeroext %arg2) {
 ; CHECK-LABEL: _Z27atomic_cmp_swap_acquire_u32RNSt3__16atomicIjEERjj:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    ldl.sx %s3, (, %s1)
@@ -804,15 +793,14 @@ define zeroext i32 @_Z27atomic_cmp_swap_acquire_u32RNSt3__16atomicIjEERjj(%"stru
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.25", %"struct.std::__1::atomic.25"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i32, i32* %arg1, align 4
-  %i4 = cmpxchg weak i32* %i, i32 %i3, i32 %arg2 acquire acquire, align 4
+  %i3 = load i32, ptr %arg1, align 4
+  %i4 = cmpxchg weak ptr %arg, i32 %i3, i32 %arg2 acquire acquire, align 4
   %i5 = extractvalue { i32, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i32, i1 } %i4, 0
-  store i32 %i7, i32* %arg1, align 4
+  store i32 %i7, ptr %arg1, align 4
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -821,7 +809,7 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define i64 @_Z27atomic_cmp_swap_acquire_i64RNSt3__16atomicIlEERll(%"struct.std::__1::atomic.30"* nocapture nonnull align 8 dereferenceable(8) %arg, i64* nocapture nonnull align 8 dereferenceable(8) %arg1, i64 %arg2) {
+define i64 @_Z27atomic_cmp_swap_acquire_i64RNSt3__16atomicIlEERll(ptr nocapture nonnull align 8 dereferenceable(8) %arg, ptr nocapture nonnull align 8 dereferenceable(8) %arg1, i64 %arg2) {
 ; CHECK-LABEL: _Z27atomic_cmp_swap_acquire_i64RNSt3__16atomicIlEERll:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    ld %s3, (, %s1)
@@ -837,15 +825,14 @@ define i64 @_Z27atomic_cmp_swap_acquire_i64RNSt3__16atomicIlEERll(%"struct.std::
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.30", %"struct.std::__1::atomic.30"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i64, i64* %arg1, align 8
-  %i4 = cmpxchg weak i64* %i, i64 %i3, i64 %arg2 acquire acquire, align 8
+  %i3 = load i64, ptr %arg1, align 8
+  %i4 = cmpxchg weak ptr %arg, i64 %i3, i64 %arg2 acquire acquire, align 8
   %i5 = extractvalue { i64, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i64, i1 } %i4, 0
-  store i64 %i7, i64* %arg1, align 8
+  store i64 %i7, ptr %arg1, align 8
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -854,7 +841,7 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define i64 @_Z27atomic_cmp_swap_acquire_u64RNSt3__16atomicImEERmm(%"struct.std::__1::atomic.35"* nocapture nonnull align 8 dereferenceable(8) %arg, i64* nocapture nonnull align 8 dereferenceable(8) %arg1, i64 %arg2) {
+define i64 @_Z27atomic_cmp_swap_acquire_u64RNSt3__16atomicImEERmm(ptr nocapture nonnull align 8 dereferenceable(8) %arg, ptr nocapture nonnull align 8 dereferenceable(8) %arg1, i64 %arg2) {
 ; CHECK-LABEL: _Z27atomic_cmp_swap_acquire_u64RNSt3__16atomicImEERmm:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    ld %s3, (, %s1)
@@ -870,15 +857,14 @@ define i64 @_Z27atomic_cmp_swap_acquire_u64RNSt3__16atomicImEERmm(%"struct.std::
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.35", %"struct.std::__1::atomic.35"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i64, i64* %arg1, align 8
-  %i4 = cmpxchg weak i64* %i, i64 %i3, i64 %arg2 acquire acquire, align 8
+  %i3 = load i64, ptr %arg1, align 8
+  %i4 = cmpxchg weak ptr %arg, i64 %i3, i64 %arg2 acquire acquire, align 8
   %i5 = extractvalue { i64, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i64, i1 } %i4, 0
-  store i64 %i7, i64* %arg1, align 8
+  store i64 %i7, ptr %arg1, align 8
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -887,7 +873,7 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nounwind mustprogress
-define i128 @_Z28atomic_cmp_swap_acquire_i128RNSt3__16atomicInEERnn(%"struct.std::__1::atomic.40"* nonnull align 16 dereferenceable(16) %arg, i128* nonnull align 16 dereferenceable(16) %arg1, i128 %arg2) {
+define i128 @_Z28atomic_cmp_swap_acquire_i128RNSt3__16atomicInEERnn(ptr nonnull align 16 dereferenceable(16) %arg, ptr nonnull align 16 dereferenceable(16) %arg1, i128 %arg2) {
 ; CHECK-LABEL: _Z28atomic_cmp_swap_acquire_i128RNSt3__16atomicInEERnn:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -925,19 +911,16 @@ define i128 @_Z28atomic_cmp_swap_acquire_i128RNSt3__16atomicInEERnn(%"struct.std
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = alloca i128, align 16
-  %i3 = bitcast i128* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %i3)
-  store i128 %arg2, i128* %i, align 16, !tbaa !0
-  %i4 = bitcast %"struct.std::__1::atomic.40"* %arg to i8*
-  %i5 = bitcast i128* %arg1 to i8*
-  %i6 = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* nonnull %i4, i8* nonnull %i5, i8* nonnull %i3, i32 signext 2, i32 signext 2)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %i3)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %i)
+  store i128 %arg2, ptr %i, align 16, !tbaa !0
+  %i6 = call zeroext i1 @__atomic_compare_exchange(i64 16, ptr nonnull %arg, ptr nonnull %arg1, ptr nonnull %i, i32 signext 2, i32 signext 2)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %i)
   %i7 = zext i1 %i6 to i128
   ret i128 %i7
 }
 
 ; Function Attrs: nounwind mustprogress
-define i128 @_Z28atomic_cmp_swap_acquire_u128RNSt3__16atomicIoEERoo(%"struct.std::__1::atomic.45"* nonnull align 16 dereferenceable(16) %arg, i128* nonnull align 16 dereferenceable(16) %arg1, i128 %arg2) {
+define i128 @_Z28atomic_cmp_swap_acquire_u128RNSt3__16atomicIoEERoo(ptr nonnull align 16 dereferenceable(16) %arg, ptr nonnull align 16 dereferenceable(16) %arg1, i128 %arg2) {
 ; CHECK-LABEL: _Z28atomic_cmp_swap_acquire_u128RNSt3__16atomicIoEERoo:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -975,39 +958,37 @@ define i128 @_Z28atomic_cmp_swap_acquire_u128RNSt3__16atomicIoEERoo(%"struct.std
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = alloca i128, align 16
-  %i3 = bitcast i128* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %i3)
-  store i128 %arg2, i128* %i, align 16, !tbaa !0
-  %i4 = bitcast %"struct.std::__1::atomic.45"* %arg to i8*
-  %i5 = bitcast i128* %arg1 to i8*
-  %i6 = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* nonnull %i4, i8* nonnull %i5, i8* nonnull %i3, i32 signext 2, i32 signext 2)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %i3)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %i)
+  store i128 %arg2, ptr %i, align 16, !tbaa !0
+  %i6 = call zeroext i1 @__atomic_compare_exchange(i64 16, ptr nonnull %arg, ptr nonnull %arg1, ptr nonnull %i, i32 signext 2, i32 signext 2)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %i)
   %i7 = zext i1 %i6 to i128
   ret i128 %i7
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i1 @_Z26atomic_cmp_swap_seq_cst_i1RNSt3__16atomicIbEERbb(%"struct.std::__1::atomic"* nocapture nonnull align 1 dereferenceable(1) %arg, i8* nocapture nonnull align 1 dereferenceable(1) %arg1, i1 zeroext %arg2) {
+define zeroext i1 @_Z26atomic_cmp_swap_seq_cst_i1RNSt3__16atomicIbEERbb(ptr nocapture nonnull align 1 dereferenceable(1) %arg, ptr nocapture nonnull align 1 dereferenceable(1) %arg1, i1 zeroext %arg2) {
 ; CHECK-LABEL: _Z26atomic_cmp_swap_seq_cst_i1RNSt3__16atomicIbEERbb:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    ld1b.zx %s3, (, %s1)
+; CHECK-NEXT:    ld1b.zx %s4, (, %s1)
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    and %s4, -4, %s0
+; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
-; CHECK-NEXT:    ldl.sx %s5, (, %s4)
+; CHECK-NEXT:    ldl.sx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (56)0, %s0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
-; CHECK-NEXT:    sla.w.sx %s3, %s3, %s0
+; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s6, %s5
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    or %s2, %s5, %s2
-; CHECK-NEXT:    or %s5, %s5, %s3
-; CHECK-NEXT:    cas.w %s2, (%s4), %s5
-; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s5
+; CHECK-NEXT:    or %s4, %s5, %s4
+; CHECK-NEXT:    cas.w %s2, (%s3), %s4
+; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s4
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    cmov.w.eq %s3, (63)0, %s4
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    breq.w %s2, %s5, .LBB22_2
+; CHECK-NEXT:    brne.w 0, %s3, .LBB22_2
 ; CHECK-NEXT:  # %bb.1: # %bb7
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    srl %s0, %s2, %s0
@@ -1017,15 +998,14 @@ define zeroext i1 @_Z26atomic_cmp_swap_seq_cst_i1RNSt3__16atomicIbEERbb(%"struct
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = zext i1 %arg2 to i8
-  %i3 = getelementptr inbounds %"struct.std::__1::atomic", %"struct.std::__1::atomic"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0
-  %i4 = load i8, i8* %arg1, align 1
-  %i5 = cmpxchg weak i8* %i3, i8 %i4, i8 %i seq_cst seq_cst, align 1
+  %i4 = load i8, ptr %arg1, align 1
+  %i5 = cmpxchg weak ptr %arg, i8 %i4, i8 %i seq_cst seq_cst, align 1
   %i6 = extractvalue { i8, i1 } %i5, 1
   br i1 %i6, label %bb9, label %bb7
 
 bb7:                                              ; preds = %bb
   %i8 = extractvalue { i8, i1 } %i5, 0
-  store i8 %i8, i8* %arg1, align 1
+  store i8 %i8, ptr %arg1, align 1
   br label %bb9
 
 bb9:                                              ; preds = %bb7, %bb
@@ -1033,28 +1013,29 @@ bb9:                                              ; preds = %bb7, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i8 @_Z26atomic_cmp_swap_seq_cst_i8RNSt3__16atomicIcEERcc(%"struct.std::__1::atomic.0"* nocapture nonnull align 1 dereferenceable(1) %arg, i8* nocapture nonnull align 1 dereferenceable(1) %arg1, i8 signext %arg2) {
+define signext i8 @_Z26atomic_cmp_swap_seq_cst_i8RNSt3__16atomicIcEERcc(ptr nocapture nonnull align 1 dereferenceable(1) %arg, ptr nocapture nonnull align 1 dereferenceable(1) %arg1, i8 signext %arg2) {
 ; CHECK-LABEL: _Z26atomic_cmp_swap_seq_cst_i8RNSt3__16atomicIcEERcc:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    ld1b.zx %s3, (, %s1)
+; CHECK-NEXT:    ld1b.zx %s4, (, %s1)
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    and %s4, -4, %s0
+; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s5, (56)0, %s0
-; CHECK-NEXT:    ldl.sx %s6, (, %s4)
+; CHECK-NEXT:    ldl.sx %s6, (, %s3)
 ; CHECK-NEXT:    and %s2, %s2, (56)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
-; CHECK-NEXT:    sla.w.sx %s3, %s3, %s0
+; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s5, %s6
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    or %s2, %s5, %s2
-; CHECK-NEXT:    or %s5, %s5, %s3
-; CHECK-NEXT:    cas.w %s2, (%s4), %s5
-; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s5
+; CHECK-NEXT:    or %s4, %s5, %s4
+; CHECK-NEXT:    cas.w %s2, (%s3), %s4
+; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s4
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    cmov.w.eq %s3, (63)0, %s4
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    breq.w %s2, %s5, .LBB23_2
+; CHECK-NEXT:    brne.w 0, %s3, .LBB23_2
 ; CHECK-NEXT:  # %bb.1: # %bb6
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    srl %s0, %s2, %s0
@@ -1063,15 +1044,14 @@ define signext i8 @_Z26atomic_cmp_swap_seq_cst_i8RNSt3__16atomicIcEERcc(%"struct
 ; CHECK-NEXT:    adds.w.zx %s0, %s3, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.0", %"struct.std::__1::atomic.0"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i8, i8* %arg1, align 1
-  %i4 = cmpxchg weak i8* %i, i8 %i3, i8 %arg2 seq_cst seq_cst, align 1
+  %i3 = load i8, ptr %arg1, align 1
+  %i4 = cmpxchg weak ptr %arg, i8 %i3, i8 %arg2 seq_cst seq_cst, align 1
   %i5 = extractvalue { i8, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i8, i1 } %i4, 0
-  store i8 %i7, i8* %arg1, align 1
+  store i8 %i7, ptr %arg1, align 1
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -1080,27 +1060,28 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i8 @_Z26atomic_cmp_swap_seq_cst_u8RNSt3__16atomicIhEERhh(%"struct.std::__1::atomic.5"* nocapture nonnull align 1 dereferenceable(1) %arg, i8* nocapture nonnull align 1 dereferenceable(1) %arg1, i8 zeroext %arg2) {
+define zeroext i8 @_Z26atomic_cmp_swap_seq_cst_u8RNSt3__16atomicIhEERhh(ptr nocapture nonnull align 1 dereferenceable(1) %arg, ptr nocapture nonnull align 1 dereferenceable(1) %arg1, i8 zeroext %arg2) {
 ; CHECK-LABEL: _Z26atomic_cmp_swap_seq_cst_u8RNSt3__16atomicIhEERhh:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    ld1b.zx %s3, (, %s1)
+; CHECK-NEXT:    ld1b.zx %s4, (, %s1)
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    and %s4, -4, %s0
+; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
-; CHECK-NEXT:    ldl.sx %s5, (, %s4)
+; CHECK-NEXT:    ldl.sx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (56)0, %s0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
-; CHECK-NEXT:    sla.w.sx %s3, %s3, %s0
+; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s6, %s5
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    or %s2, %s5, %s2
-; CHECK-NEXT:    or %s5, %s5, %s3
-; CHECK-NEXT:    cas.w %s2, (%s4), %s5
-; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s5
+; CHECK-NEXT:    or %s4, %s5, %s4
+; CHECK-NEXT:    cas.w %s2, (%s3), %s4
+; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s4
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    cmov.w.eq %s3, (63)0, %s4
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    breq.w %s2, %s5, .LBB24_2
+; CHECK-NEXT:    brne.w 0, %s3, .LBB24_2
 ; CHECK-NEXT:  # %bb.1: # %bb6
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    srl %s0, %s2, %s0
@@ -1109,15 +1090,14 @@ define zeroext i8 @_Z26atomic_cmp_swap_seq_cst_u8RNSt3__16atomicIhEERhh(%"struct
 ; CHECK-NEXT:    adds.w.zx %s0, %s3, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.5", %"struct.std::__1::atomic.5"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i8, i8* %arg1, align 1
-  %i4 = cmpxchg weak i8* %i, i8 %i3, i8 %arg2 seq_cst seq_cst, align 1
+  %i3 = load i8, ptr %arg1, align 1
+  %i4 = cmpxchg weak ptr %arg, i8 %i3, i8 %arg2 seq_cst seq_cst, align 1
   %i5 = extractvalue { i8, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i8, i1 } %i4, 0
-  store i8 %i7, i8* %arg1, align 1
+  store i8 %i7, ptr %arg1, align 1
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -1126,28 +1106,29 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i16 @_Z27atomic_cmp_swap_seq_cst_i16RNSt3__16atomicIsEERss(%"struct.std::__1::atomic.10"* nocapture nonnull align 2 dereferenceable(2) %arg, i16* nocapture nonnull align 2 dereferenceable(2) %arg1, i16 signext %arg2) {
+define signext i16 @_Z27atomic_cmp_swap_seq_cst_i16RNSt3__16atomicIsEERss(ptr nocapture nonnull align 2 dereferenceable(2) %arg, ptr nocapture nonnull align 2 dereferenceable(2) %arg1, i16 signext %arg2) {
 ; CHECK-LABEL: _Z27atomic_cmp_swap_seq_cst_i16RNSt3__16atomicIsEERss:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    ld2b.zx %s3, (, %s1)
+; CHECK-NEXT:    ld2b.zx %s4, (, %s1)
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    and %s4, -4, %s0
+; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
 ; CHECK-NEXT:    sla.w.sx %s5, (48)0, %s0
-; CHECK-NEXT:    ldl.sx %s6, (, %s4)
+; CHECK-NEXT:    ldl.sx %s6, (, %s3)
 ; CHECK-NEXT:    and %s2, %s2, (48)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
-; CHECK-NEXT:    sla.w.sx %s3, %s3, %s0
+; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s5, %s6
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    or %s2, %s5, %s2
-; CHECK-NEXT:    or %s5, %s5, %s3
-; CHECK-NEXT:    cas.w %s2, (%s4), %s5
-; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s5
+; CHECK-NEXT:    or %s4, %s5, %s4
+; CHECK-NEXT:    cas.w %s2, (%s3), %s4
+; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s4
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    cmov.w.eq %s3, (63)0, %s4
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    breq.w %s2, %s5, .LBB25_2
+; CHECK-NEXT:    brne.w 0, %s3, .LBB25_2
 ; CHECK-NEXT:  # %bb.1: # %bb6
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    srl %s0, %s2, %s0
@@ -1156,15 +1137,14 @@ define signext i16 @_Z27atomic_cmp_swap_seq_cst_i16RNSt3__16atomicIsEERss(%"stru
 ; CHECK-NEXT:    adds.w.zx %s0, %s3, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.10", %"struct.std::__1::atomic.10"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i16, i16* %arg1, align 2
-  %i4 = cmpxchg weak i16* %i, i16 %i3, i16 %arg2 seq_cst seq_cst, align 2
+  %i3 = load i16, ptr %arg1, align 2
+  %i4 = cmpxchg weak ptr %arg, i16 %i3, i16 %arg2 seq_cst seq_cst, align 2
   %i5 = extractvalue { i16, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i16, i1 } %i4, 0
-  store i16 %i7, i16* %arg1, align 2
+  store i16 %i7, ptr %arg1, align 2
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -1173,27 +1153,28 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i16 @_Z27atomic_cmp_swap_seq_cst_u16RNSt3__16atomicItEERtt(%"struct.std::__1::atomic.15"* nocapture nonnull align 2 dereferenceable(2) %arg, i16* nocapture nonnull align 2 dereferenceable(2) %arg1, i16 zeroext %arg2) {
+define zeroext i16 @_Z27atomic_cmp_swap_seq_cst_u16RNSt3__16atomicItEERtt(ptr nocapture nonnull align 2 dereferenceable(2) %arg, ptr nocapture nonnull align 2 dereferenceable(2) %arg1, i16 zeroext %arg2) {
 ; CHECK-LABEL: _Z27atomic_cmp_swap_seq_cst_u16RNSt3__16atomicItEERtt:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    ld2b.zx %s3, (, %s1)
+; CHECK-NEXT:    ld2b.zx %s4, (, %s1)
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    and %s4, -4, %s0
+; CHECK-NEXT:    and %s3, -4, %s0
 ; CHECK-NEXT:    and %s0, 3, %s0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 3
-; CHECK-NEXT:    ldl.sx %s5, (, %s4)
+; CHECK-NEXT:    ldl.sx %s5, (, %s3)
 ; CHECK-NEXT:    sla.w.sx %s6, (48)0, %s0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, %s0
-; CHECK-NEXT:    sla.w.sx %s3, %s3, %s0
+; CHECK-NEXT:    sla.w.sx %s4, %s4, %s0
 ; CHECK-NEXT:    nnd %s5, %s6, %s5
+; CHECK-NEXT:    and %s5, %s5, (32)0
 ; CHECK-NEXT:    or %s2, %s5, %s2
-; CHECK-NEXT:    or %s5, %s5, %s3
-; CHECK-NEXT:    cas.w %s2, (%s4), %s5
-; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s5
+; CHECK-NEXT:    or %s4, %s5, %s4
+; CHECK-NEXT:    cas.w %s2, (%s3), %s4
+; CHECK-NEXT:    cmps.w.sx %s4, %s2, %s4
 ; CHECK-NEXT:    or %s3, 0, (0)1
 ; CHECK-NEXT:    cmov.w.eq %s3, (63)0, %s4
 ; CHECK-NEXT:    fencem 3
-; CHECK-NEXT:    breq.w %s2, %s5, .LBB26_2
+; CHECK-NEXT:    brne.w 0, %s3, .LBB26_2
 ; CHECK-NEXT:  # %bb.1: # %bb6
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    srl %s0, %s2, %s0
@@ -1202,15 +1183,14 @@ define zeroext i16 @_Z27atomic_cmp_swap_seq_cst_u16RNSt3__16atomicItEERtt(%"stru
 ; CHECK-NEXT:    adds.w.zx %s0, %s3, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.15", %"struct.std::__1::atomic.15"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i16, i16* %arg1, align 2
-  %i4 = cmpxchg weak i16* %i, i16 %i3, i16 %arg2 seq_cst seq_cst, align 2
+  %i3 = load i16, ptr %arg1, align 2
+  %i4 = cmpxchg weak ptr %arg, i16 %i3, i16 %arg2 seq_cst seq_cst, align 2
   %i5 = extractvalue { i16, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i16, i1 } %i4, 0
-  store i16 %i7, i16* %arg1, align 2
+  store i16 %i7, ptr %arg1, align 2
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -1219,7 +1199,7 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i32 @_Z27atomic_cmp_swap_seq_cst_i32RNSt3__16atomicIiEERii(%"struct.std::__1::atomic.20"* nocapture nonnull align 4 dereferenceable(4) %arg, i32* nocapture nonnull align 4 dereferenceable(4) %arg1, i32 signext %arg2) {
+define signext i32 @_Z27atomic_cmp_swap_seq_cst_i32RNSt3__16atomicIiEERii(ptr nocapture nonnull align 4 dereferenceable(4) %arg, ptr nocapture nonnull align 4 dereferenceable(4) %arg1, i32 signext %arg2) {
 ; CHECK-LABEL: _Z27atomic_cmp_swap_seq_cst_i32RNSt3__16atomicIiEERii:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    ldl.sx %s3, (, %s1)
@@ -1236,15 +1216,14 @@ define signext i32 @_Z27atomic_cmp_swap_seq_cst_i32RNSt3__16atomicIiEERii(%"stru
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.20", %"struct.std::__1::atomic.20"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i32, i32* %arg1, align 4
-  %i4 = cmpxchg weak i32* %i, i32 %i3, i32 %arg2 seq_cst seq_cst, align 4
+  %i3 = load i32, ptr %arg1, align 4
+  %i4 = cmpxchg weak ptr %arg, i32 %i3, i32 %arg2 seq_cst seq_cst, align 4
   %i5 = extractvalue { i32, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i32, i1 } %i4, 0
-  store i32 %i7, i32* %arg1, align 4
+  store i32 %i7, ptr %arg1, align 4
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -1253,7 +1232,7 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i32 @_Z27atomic_cmp_swap_seq_cst_u32RNSt3__16atomicIjEERjj(%"struct.std::__1::atomic.25"* nocapture nonnull align 4 dereferenceable(4) %arg, i32* nocapture nonnull align 4 dereferenceable(4) %arg1, i32 zeroext %arg2) {
+define zeroext i32 @_Z27atomic_cmp_swap_seq_cst_u32RNSt3__16atomicIjEERjj(ptr nocapture nonnull align 4 dereferenceable(4) %arg, ptr nocapture nonnull align 4 dereferenceable(4) %arg1, i32 zeroext %arg2) {
 ; CHECK-LABEL: _Z27atomic_cmp_swap_seq_cst_u32RNSt3__16atomicIjEERjj:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    ldl.sx %s3, (, %s1)
@@ -1270,15 +1249,14 @@ define zeroext i32 @_Z27atomic_cmp_swap_seq_cst_u32RNSt3__16atomicIjEERjj(%"stru
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.25", %"struct.std::__1::atomic.25"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i32, i32* %arg1, align 4
-  %i4 = cmpxchg weak i32* %i, i32 %i3, i32 %arg2 seq_cst seq_cst, align 4
+  %i3 = load i32, ptr %arg1, align 4
+  %i4 = cmpxchg weak ptr %arg, i32 %i3, i32 %arg2 seq_cst seq_cst, align 4
   %i5 = extractvalue { i32, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i32, i1 } %i4, 0
-  store i32 %i7, i32* %arg1, align 4
+  store i32 %i7, ptr %arg1, align 4
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -1287,7 +1265,7 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define i64 @_Z27atomic_cmp_swap_seq_cst_i64RNSt3__16atomicIlEERll(%"struct.std::__1::atomic.30"* nocapture nonnull align 8 dereferenceable(8) %arg, i64* nocapture nonnull align 8 dereferenceable(8) %arg1, i64 %arg2) {
+define i64 @_Z27atomic_cmp_swap_seq_cst_i64RNSt3__16atomicIlEERll(ptr nocapture nonnull align 8 dereferenceable(8) %arg, ptr nocapture nonnull align 8 dereferenceable(8) %arg1, i64 %arg2) {
 ; CHECK-LABEL: _Z27atomic_cmp_swap_seq_cst_i64RNSt3__16atomicIlEERll:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    ld %s3, (, %s1)
@@ -1304,15 +1282,14 @@ define i64 @_Z27atomic_cmp_swap_seq_cst_i64RNSt3__16atomicIlEERll(%"struct.std::
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.30", %"struct.std::__1::atomic.30"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i64, i64* %arg1, align 8
-  %i4 = cmpxchg weak i64* %i, i64 %i3, i64 %arg2 seq_cst seq_cst, align 8
+  %i3 = load i64, ptr %arg1, align 8
+  %i4 = cmpxchg weak ptr %arg, i64 %i3, i64 %arg2 seq_cst seq_cst, align 8
   %i5 = extractvalue { i64, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i64, i1 } %i4, 0
-  store i64 %i7, i64* %arg1, align 8
+  store i64 %i7, ptr %arg1, align 8
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -1321,7 +1298,7 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define i64 @_Z27atomic_cmp_swap_seq_cst_u64RNSt3__16atomicImEERmm(%"struct.std::__1::atomic.35"* nocapture nonnull align 8 dereferenceable(8) %arg, i64* nocapture nonnull align 8 dereferenceable(8) %arg1, i64 %arg2) {
+define i64 @_Z27atomic_cmp_swap_seq_cst_u64RNSt3__16atomicImEERmm(ptr nocapture nonnull align 8 dereferenceable(8) %arg, ptr nocapture nonnull align 8 dereferenceable(8) %arg1, i64 %arg2) {
 ; CHECK-LABEL: _Z27atomic_cmp_swap_seq_cst_u64RNSt3__16atomicImEERmm:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    ld %s3, (, %s1)
@@ -1338,15 +1315,14 @@ define i64 @_Z27atomic_cmp_swap_seq_cst_u64RNSt3__16atomicImEERmm(%"struct.std::
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = getelementptr inbounds %"struct.std::__1::atomic.35", %"struct.std::__1::atomic.35"* %arg, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i3 = load i64, i64* %arg1, align 8
-  %i4 = cmpxchg weak i64* %i, i64 %i3, i64 %arg2 seq_cst seq_cst, align 8
+  %i3 = load i64, ptr %arg1, align 8
+  %i4 = cmpxchg weak ptr %arg, i64 %i3, i64 %arg2 seq_cst seq_cst, align 8
   %i5 = extractvalue { i64, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i64, i1 } %i4, 0
-  store i64 %i7, i64* %arg1, align 8
+  store i64 %i7, ptr %arg1, align 8
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
@@ -1355,7 +1331,7 @@ bb8:                                              ; preds = %bb6, %bb
 }
 
 ; Function Attrs: nounwind mustprogress
-define i128 @_Z28atomic_cmp_swap_seq_cst_i128RNSt3__16atomicInEERnn(%"struct.std::__1::atomic.40"* nonnull align 16 dereferenceable(16) %arg, i128* nonnull align 16 dereferenceable(16) %arg1, i128 %arg2) {
+define i128 @_Z28atomic_cmp_swap_seq_cst_i128RNSt3__16atomicInEERnn(ptr nonnull align 16 dereferenceable(16) %arg, ptr nonnull align 16 dereferenceable(16) %arg1, i128 %arg2) {
 ; CHECK-LABEL: _Z28atomic_cmp_swap_seq_cst_i128RNSt3__16atomicInEERnn:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -1393,19 +1369,16 @@ define i128 @_Z28atomic_cmp_swap_seq_cst_i128RNSt3__16atomicInEERnn(%"struct.std
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = alloca i128, align 16
-  %i3 = bitcast i128* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %i3)
-  store i128 %arg2, i128* %i, align 16, !tbaa !0
-  %i4 = bitcast %"struct.std::__1::atomic.40"* %arg to i8*
-  %i5 = bitcast i128* %arg1 to i8*
-  %i6 = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* nonnull %i4, i8* nonnull %i5, i8* nonnull %i3, i32 signext 5, i32 signext 5)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %i3)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %i)
+  store i128 %arg2, ptr %i, align 16, !tbaa !0
+  %i6 = call zeroext i1 @__atomic_compare_exchange(i64 16, ptr nonnull %arg, ptr nonnull %arg1, ptr nonnull %i, i32 signext 5, i32 signext 5)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %i)
   %i7 = zext i1 %i6 to i128
   ret i128 %i7
 }
 
 ; Function Attrs: nounwind mustprogress
-define i128 @_Z28atomic_cmp_swap_seq_cst_u128RNSt3__16atomicIoEERoo(%"struct.std::__1::atomic.45"* nonnull align 16 dereferenceable(16) %arg, i128* nonnull align 16 dereferenceable(16) %arg1, i128 %arg2) {
+define i128 @_Z28atomic_cmp_swap_seq_cst_u128RNSt3__16atomicIoEERoo(ptr nonnull align 16 dereferenceable(16) %arg, ptr nonnull align 16 dereferenceable(16) %arg1, i128 %arg2) {
 ; CHECK-LABEL: _Z28atomic_cmp_swap_seq_cst_u128RNSt3__16atomicIoEERoo:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -1443,19 +1416,16 @@ define i128 @_Z28atomic_cmp_swap_seq_cst_u128RNSt3__16atomicIoEERoo(%"struct.std
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = alloca i128, align 16
-  %i3 = bitcast i128* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %i3)
-  store i128 %arg2, i128* %i, align 16, !tbaa !0
-  %i4 = bitcast %"struct.std::__1::atomic.45"* %arg to i8*
-  %i5 = bitcast i128* %arg1 to i8*
-  %i6 = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* nonnull %i4, i8* nonnull %i5, i8* nonnull %i3, i32 signext 5, i32 signext 5)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %i3)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %i)
+  store i128 %arg2, ptr %i, align 16, !tbaa !0
+  %i6 = call zeroext i1 @__atomic_compare_exchange(i64 16, ptr nonnull %arg, ptr nonnull %arg1, ptr nonnull %i, i32 signext 5, i32 signext 5)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %i)
   %i7 = zext i1 %i6 to i128
   ret i128 %i7
 }
 
 ; Function Attrs: nofree nounwind mustprogress
-define zeroext i1 @_Z30atomic_cmp_swap_relaxed_stk_i1Rbb(i8* nocapture nonnull align 1 dereferenceable(1) %arg, i1 zeroext %arg1) {
+define zeroext i1 @_Z30atomic_cmp_swap_relaxed_stk_i1Rbb(ptr nocapture nonnull align 1 dereferenceable(1) %arg, i1 zeroext %arg1) {
 ; CHECK-LABEL: _Z30atomic_cmp_swap_relaxed_stk_i1Rbb:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
@@ -1470,18 +1440,21 @@ define zeroext i1 @_Z30atomic_cmp_swap_relaxed_stk_i1Rbb(i8* nocapture nonnull a
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB33_4: # %bb
-; CHECK-NEXT:    ld1b.zx %s2, (, %s0)
-; CHECK-NEXT:    ldl.zx %s3, 8(, %s11)
-; CHECK-NEXT:    lea %s4, -256
+; CHECK-NEXT:    and %s1, %s1, (32)0
+; CHECK-NEXT:    ld1b.zx %s3, (, %s0)
+; CHECK-NEXT:    ldl.zx %s4, 8(, %s11)
+; CHECK-NEXT:    lea %s2, 8(, %s11)
+; CHECK-NEXT:    lea %s5, -256
+; CHECK-NEXT:    and %s5, %s5, (32)0
+; CHECK-NEXT:    and %s4, %s4, %s5
 ; CHECK-NEXT:    and %s4, %s4, (32)0
-; CHECK-NEXT:    and %s3, %s3, %s4
-; CHECK-NEXT:    or %s1, %s3, %s1
-; CHECK-NEXT:    or %s3, %s3, %s2
-; CHECK-NEXT:    cas.w %s1, 8(%s11), %s3
-; CHECK-NEXT:    cmps.w.sx %s4, %s1, %s3
+; CHECK-NEXT:    or %s1, %s4, %s1
+; CHECK-NEXT:    or %s3, %s4, %s3
+; CHECK-NEXT:    cas.w %s1, (%s2), %s3
+; CHECK-NEXT:    cmps.w.sx %s3, %s1, %s3
 ; CHECK-NEXT:    or %s2, 0, (0)1
-; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s4
-; CHECK-NEXT:    breq.w %s1, %s3, .LBB33_2
+; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s3
+; CHECK-NEXT:    brne.w 0, %s2, .LBB33_2
 ; CHECK-NEXT:  # %bb.1: # %bb7
 ; CHECK-NEXT:    st1b %s1, (, %s0)
 ; CHECK-NEXT:  .LBB33_2: # %bb9
@@ -1490,32 +1463,31 @@ define zeroext i1 @_Z30atomic_cmp_swap_relaxed_stk_i1Rbb(i8* nocapture nonnull a
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = alloca %"struct.std::__1::atomic", align 1
-  %i2 = getelementptr inbounds %"struct.std::__1::atomic", %"struct.std::__1::atomic"* %i, i64 0, i32 0, i32 0, i32 0, i32 0
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %i2)
+  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %i)
   %i3 = zext i1 %arg1 to i8
-  %i4 = load i8, i8* %arg, align 1
-  %i5 = cmpxchg weak volatile i8* %i2, i8 %i4, i8 %i3 monotonic monotonic, align 1
+  %i4 = load i8, ptr %arg, align 1
+  %i5 = cmpxchg weak volatile ptr %i, i8 %i4, i8 %i3 monotonic monotonic, align 1
   %i6 = extractvalue { i8, i1 } %i5, 1
   br i1 %i6, label %bb9, label %bb7
 
 bb7:                                              ; preds = %bb
   %i8 = extractvalue { i8, i1 } %i5, 0
-  store i8 %i8, i8* %arg, align 1
+  store i8 %i8, ptr %arg, align 1
   br label %bb9
 
 bb9:                                              ; preds = %bb7, %bb
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull %i2)
+  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %i)
   ret i1 %i6
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: nofree nounwind mustprogress
-define signext i8 @_Z30atomic_cmp_swap_relaxed_stk_i8Rcc(i8* nocapture nonnull align 1 dereferenceable(1) %arg, i8 signext %arg1) {
+define signext i8 @_Z30atomic_cmp_swap_relaxed_stk_i8Rcc(ptr nocapture nonnull align 1 dereferenceable(1) %arg, i8 signext %arg1) {
 ; CHECK-LABEL: _Z30atomic_cmp_swap_relaxed_stk_i8Rcc:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
@@ -1530,19 +1502,22 @@ define signext i8 @_Z30atomic_cmp_swap_relaxed_stk_i8Rcc(i8* nocapture nonnull a
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB34_4: # %bb
-; CHECK-NEXT:    ld1b.zx %s2, (, %s0)
-; CHECK-NEXT:    ldl.zx %s3, 8(, %s11)
+; CHECK-NEXT:    ld1b.zx %s3, (, %s0)
+; CHECK-NEXT:    lea %s2, 8(, %s11)
 ; CHECK-NEXT:    and %s1, %s1, (56)0
-; CHECK-NEXT:    lea %s4, -256
+; CHECK-NEXT:    ldl.zx %s4, 8(, %s11)
+; CHECK-NEXT:    and %s1, %s1, (32)0
+; CHECK-NEXT:    lea %s5, -256
+; CHECK-NEXT:    and %s5, %s5, (32)0
+; CHECK-NEXT:    and %s4, %s4, %s5
 ; CHECK-NEXT:    and %s4, %s4, (32)0
-; CHECK-NEXT:    and %s3, %s3, %s4
-; CHECK-NEXT:    or %s1, %s3, %s1
-; CHECK-NEXT:    or %s3, %s3, %s2
-; CHECK-NEXT:    cas.w %s1, 8(%s11), %s3
-; CHECK-NEXT:    cmps.w.sx %s4, %s1, %s3
+; CHECK-NEXT:    or %s1, %s4, %s1
+; CHECK-NEXT:    or %s3, %s4, %s3
+; CHECK-NEXT:    cas.w %s1, (%s2), %s3
+; CHECK-NEXT:    cmps.w.sx %s3, %s1, %s3
 ; CHECK-NEXT:    or %s2, 0, (0)1
-; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s4
-; CHECK-NEXT:    breq.w %s1, %s3, .LBB34_2
+; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s3
+; CHECK-NEXT:    brne.w 0, %s2, .LBB34_2
 ; CHECK-NEXT:  # %bb.1: # %bb6
 ; CHECK-NEXT:    st1b %s1, (, %s0)
 ; CHECK-NEXT:  .LBB34_2: # %bb8
@@ -1551,26 +1526,25 @@ define signext i8 @_Z30atomic_cmp_swap_relaxed_stk_i8Rcc(i8* nocapture nonnull a
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = alloca %"struct.std::__1::atomic.0", align 1
-  %i2 = getelementptr inbounds %"struct.std::__1::atomic.0", %"struct.std::__1::atomic.0"* %i, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %i2)
-  %i3 = load i8, i8* %arg, align 1
-  %i4 = cmpxchg weak volatile i8* %i2, i8 %i3, i8 %arg1 monotonic monotonic, align 1
+  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %i)
+  %i3 = load i8, ptr %arg, align 1
+  %i4 = cmpxchg weak volatile ptr %i, i8 %i3, i8 %arg1 monotonic monotonic, align 1
   %i5 = extractvalue { i8, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i8, i1 } %i4, 0
-  store i8 %i7, i8* %arg, align 1
+  store i8 %i7, ptr %arg, align 1
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
   %i9 = zext i1 %i5 to i8
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull %i2)
+  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %i)
   ret i8 %i9
 }
 
 ; Function Attrs: nofree nounwind mustprogress
-define zeroext i8 @_Z30atomic_cmp_swap_relaxed_stk_u8Rhh(i8* nocapture nonnull align 1 dereferenceable(1) %arg, i8 zeroext %arg1) {
+define zeroext i8 @_Z30atomic_cmp_swap_relaxed_stk_u8Rhh(ptr nocapture nonnull align 1 dereferenceable(1) %arg, i8 zeroext %arg1) {
 ; CHECK-LABEL: _Z30atomic_cmp_swap_relaxed_stk_u8Rhh:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
@@ -1585,18 +1559,21 @@ define zeroext i8 @_Z30atomic_cmp_swap_relaxed_stk_u8Rhh(i8* nocapture nonnull a
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB35_4: # %bb
-; CHECK-NEXT:    ld1b.zx %s2, (, %s0)
-; CHECK-NEXT:    ldl.zx %s3, 8(, %s11)
-; CHECK-NEXT:    lea %s4, -256
+; CHECK-NEXT:    and %s1, %s1, (32)0
+; CHECK-NEXT:    ld1b.zx %s3, (, %s0)
+; CHECK-NEXT:    ldl.zx %s4, 8(, %s11)
+; CHECK-NEXT:    lea %s2, 8(, %s11)
+; CHECK-NEXT:    lea %s5, -256
+; CHECK-NEXT:    and %s5, %s5, (32)0
+; CHECK-NEXT:    and %s4, %s4, %s5
 ; CHECK-NEXT:    and %s4, %s4, (32)0
-; CHECK-NEXT:    and %s3, %s3, %s4
-; CHECK-NEXT:    or %s1, %s3, %s1
-; CHECK-NEXT:    or %s3, %s3, %s2
-; CHECK-NEXT:    cas.w %s1, 8(%s11), %s3
-; CHECK-NEXT:    cmps.w.sx %s4, %s1, %s3
+; CHECK-NEXT:    or %s1, %s4, %s1
+; CHECK-NEXT:    or %s3, %s4, %s3
+; CHECK-NEXT:    cas.w %s1, (%s2), %s3
+; CHECK-NEXT:    cmps.w.sx %s3, %s1, %s3
 ; CHECK-NEXT:    or %s2, 0, (0)1
-; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s4
-; CHECK-NEXT:    breq.w %s1, %s3, .LBB35_2
+; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s3
+; CHECK-NEXT:    brne.w 0, %s2, .LBB35_2
 ; CHECK-NEXT:  # %bb.1: # %bb6
 ; CHECK-NEXT:    st1b %s1, (, %s0)
 ; CHECK-NEXT:  .LBB35_2: # %bb8
@@ -1605,26 +1582,25 @@ define zeroext i8 @_Z30atomic_cmp_swap_relaxed_stk_u8Rhh(i8* nocapture nonnull a
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = alloca %"struct.std::__1::atomic.5", align 1
-  %i2 = getelementptr inbounds %"struct.std::__1::atomic.5", %"struct.std::__1::atomic.5"* %i, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %i2)
-  %i3 = load i8, i8* %arg, align 1
-  %i4 = cmpxchg weak volatile i8* %i2, i8 %i3, i8 %arg1 monotonic monotonic, align 1
+  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %i)
+  %i3 = load i8, ptr %arg, align 1
+  %i4 = cmpxchg weak volatile ptr %i, i8 %i3, i8 %arg1 monotonic monotonic, align 1
   %i5 = extractvalue { i8, i1 } %i4, 1
   br i1 %i5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb
   %i7 = extractvalue { i8, i1 } %i4, 0
-  store i8 %i7, i8* %arg, align 1
+  store i8 %i7, ptr %arg, align 1
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb
   %i9 = zext i1 %i5 to i8
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull %i2)
+  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %i)
   ret i8 %i9
 }
 
 ; Function Attrs: nofree nounwind mustprogress
-define signext i16 @_Z31atomic_cmp_swap_relaxed_stk_i16Rss(i16* nocapture nonnull align 2 dereferenceable(2) %arg, i16 signext %arg1) {
+define signext i16 @_Z31atomic_cmp_swap_relaxed_stk_i16Rss(ptr nocapture nonnull align 2 dereferenceable(2) %arg, i16 signext %arg1) {
 ; CHECK-LABEL: _Z31atomic_cmp_swap_relaxed_stk_i16Rss:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
@@ -1639,19 +1615,22 @@ define signext i16 @_Z31atomic_cmp_swap_relaxed_stk_i16Rss(i16* nocapture nonnul
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB36_4: # %bb
-; CHECK-NEXT:    ld2b.zx %s2, (, %s0)
-; CHECK-NEXT:    ldl.zx %s3, 8(, %s11)
+; CHECK-NEXT:    ld2b.zx %s3, (, %s0)
+; CHECK-NEXT:    lea %s2, 8(, %s11)
 ; CHECK-NEXT:    and %s1, %s1, (48)0
-; CHECK-NEXT:    lea %s4, -65536
+; CHECK-NEXT:    ldl.zx %s4, 8(, %s11)
+; CHECK-NEXT:    and %s1, %s1, (32)0
+; CHECK-NEXT:    lea %s5, -65536
+; CHECK-NEXT:    and %s5, %s5, (32)0
+; CHECK-NEXT:    and %s4, %s4, %s5
 ; CHECK-NEXT:    and %s4, %s4, (32)0
-; CHECK-NEXT:    and %s3, %s3, %s4
-; CHECK-NEXT:    or %s1, %s3, %s1
-; CHECK-NEXT:    or %s3, %s3, %s2
-; CHECK-NEXT:    cas.w %s1, 8(%s11), %s3
-; CHECK-NEXT:    cmps.w.sx %s4, %s1, %s3
+; CHECK-NEXT:    or %s1, %s4, %s1
+; CHECK-NEXT:    or %s3, %s4, %s3
+; CHECK-NEXT:    cas.w %s1, (%s2), %s3
+; CHECK-NEXT:    cmps.w.sx %s3, %s1, %s3
 ; CHECK-NEXT:    or %s2, 0, (0)1
-; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s4
-; CHECK-NEXT:    breq.w %s1, %s3, .LBB36_2
+; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s3
+; CHECK-NEXT:    brne.w 0, %s2, .LBB36_2
 ; CHECK-NEXT:  # %bb.1: # %bb7
 ; CHECK-NEXT:    st2b %s1, (, %s0)
 ; CHECK-NEXT:  .LBB36_2: # %bb9
@@ -1660,27 +1639,25 @@ define signext i16 @_Z31atomic_cmp_swap_relaxed_stk_i16Rss(i16* nocapture nonnul
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = alloca %"struct.std::__1::atomic.10", align 2
-  %i2 = bitcast %"struct.std::__1::atomic.10"* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 2, i8* nonnull %i2)
-  %i3 = getelementptr inbounds %"struct.std::__1::atomic.10", %"struct.std::__1::atomic.10"* %i, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i4 = load i16, i16* %arg, align 2
-  %i5 = cmpxchg weak volatile i16* %i3, i16 %i4, i16 %arg1 monotonic monotonic, align 2
+  call void @llvm.lifetime.start.p0(i64 2, ptr nonnull %i)
+  %i4 = load i16, ptr %arg, align 2
+  %i5 = cmpxchg weak volatile ptr %i, i16 %i4, i16 %arg1 monotonic monotonic, align 2
   %i6 = extractvalue { i16, i1 } %i5, 1
   br i1 %i6, label %bb9, label %bb7
 
 bb7:                                              ; preds = %bb
   %i8 = extractvalue { i16, i1 } %i5, 0
-  store i16 %i8, i16* %arg, align 2
+  store i16 %i8, ptr %arg, align 2
   br label %bb9
 
 bb9:                                              ; preds = %bb7, %bb
   %i10 = zext i1 %i6 to i16
-  call void @llvm.lifetime.end.p0i8(i64 2, i8* nonnull %i2)
+  call void @llvm.lifetime.end.p0(i64 2, ptr nonnull %i)
   ret i16 %i10
 }
 
 ; Function Attrs: nofree nounwind mustprogress
-define zeroext i16 @_Z31atomic_cmp_swap_relaxed_stk_u16Rtt(i16* nocapture nonnull align 2 dereferenceable(2) %arg, i16 zeroext %arg1) {
+define zeroext i16 @_Z31atomic_cmp_swap_relaxed_stk_u16Rtt(ptr nocapture nonnull align 2 dereferenceable(2) %arg, i16 zeroext %arg1) {
 ; CHECK-LABEL: _Z31atomic_cmp_swap_relaxed_stk_u16Rtt:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
@@ -1695,18 +1672,21 @@ define zeroext i16 @_Z31atomic_cmp_swap_relaxed_stk_u16Rtt(i16* nocapture nonnul
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB37_4: # %bb
-; CHECK-NEXT:    ld2b.zx %s2, (, %s0)
-; CHECK-NEXT:    ldl.zx %s3, 8(, %s11)
-; CHECK-NEXT:    lea %s4, -65536
+; CHECK-NEXT:    and %s1, %s1, (32)0
+; CHECK-NEXT:    ld2b.zx %s3, (, %s0)
+; CHECK-NEXT:    ldl.zx %s4, 8(, %s11)
+; CHECK-NEXT:    lea %s2, 8(, %s11)
+; CHECK-NEXT:    lea %s5, -65536
+; CHECK-NEXT:    and %s5, %s5, (32)0
+; CHECK-NEXT:    and %s4, %s4, %s5
 ; CHECK-NEXT:    and %s4, %s4, (32)0
-; CHECK-NEXT:    and %s3, %s3, %s4
-; CHECK-NEXT:    or %s1, %s3, %s1
-; CHECK-NEXT:    or %s3, %s3, %s2
-; CHECK-NEXT:    cas.w %s1, 8(%s11), %s3
-; CHECK-NEXT:    cmps.w.sx %s4, %s1, %s3
+; CHECK-NEXT:    or %s1, %s4, %s1
+; CHECK-NEXT:    or %s3, %s4, %s3
+; CHECK-NEXT:    cas.w %s1, (%s2), %s3
+; CHECK-NEXT:    cmps.w.sx %s3, %s1, %s3
 ; CHECK-NEXT:    or %s2, 0, (0)1
-; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s4
-; CHECK-NEXT:    breq.w %s1, %s3, .LBB37_2
+; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s3
+; CHECK-NEXT:    brne.w 0, %s2, .LBB37_2
 ; CHECK-NEXT:  # %bb.1: # %bb7
 ; CHECK-NEXT:    st2b %s1, (, %s0)
 ; CHECK-NEXT:  .LBB37_2: # %bb9
@@ -1715,27 +1695,25 @@ define zeroext i16 @_Z31atomic_cmp_swap_relaxed_stk_u16Rtt(i16* nocapture nonnul
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = alloca %"struct.std::__1::atomic.15", align 2
-  %i2 = bitcast %"struct.std::__1::atomic.15"* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 2, i8* nonnull %i2)
-  %i3 = getelementptr inbounds %"struct.std::__1::atomic.15", %"struct.std::__1::atomic.15"* %i, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i4 = load i16, i16* %arg, align 2
-  %i5 = cmpxchg weak volatile i16* %i3, i16 %i4, i16 %arg1 monotonic monotonic, align 2
+  call void @llvm.lifetime.start.p0(i64 2, ptr nonnull %i)
+  %i4 = load i16, ptr %arg, align 2
+  %i5 = cmpxchg weak volatile ptr %i, i16 %i4, i16 %arg1 monotonic monotonic, align 2
   %i6 = extractvalue { i16, i1 } %i5, 1
   br i1 %i6, label %bb9, label %bb7
 
 bb7:                                              ; preds = %bb
   %i8 = extractvalue { i16, i1 } %i5, 0
-  store i16 %i8, i16* %arg, align 2
+  store i16 %i8, ptr %arg, align 2
   br label %bb9
 
 bb9:                                              ; preds = %bb7, %bb
   %i10 = zext i1 %i6 to i16
-  call void @llvm.lifetime.end.p0i8(i64 2, i8* nonnull %i2)
+  call void @llvm.lifetime.end.p0(i64 2, ptr nonnull %i)
   ret i16 %i10
 }
 
 ; Function Attrs: nofree nounwind mustprogress
-define signext i32 @_Z31atomic_cmp_swap_relaxed_stk_i32Rii(i32* nocapture nonnull align 4 dereferenceable(4) %arg, i32 signext %arg1) {
+define signext i32 @_Z31atomic_cmp_swap_relaxed_stk_i32Rii(ptr nocapture nonnull align 4 dereferenceable(4) %arg, i32 signext %arg1) {
 ; CHECK-LABEL: _Z31atomic_cmp_swap_relaxed_stk_i32Rii:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
@@ -1764,27 +1742,25 @@ define signext i32 @_Z31atomic_cmp_swap_relaxed_stk_i32Rii(i32* nocapture nonnul
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = alloca %"struct.std::__1::atomic.20", align 4
-  %i2 = bitcast %"struct.std::__1::atomic.20"* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %i2)
-  %i3 = getelementptr inbounds %"struct.std::__1::atomic.20", %"struct.std::__1::atomic.20"* %i, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i4 = load i32, i32* %arg, align 4
-  %i5 = cmpxchg weak volatile i32* %i3, i32 %i4, i32 %arg1 monotonic monotonic, align 4
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %i)
+  %i4 = load i32, ptr %arg, align 4
+  %i5 = cmpxchg weak volatile ptr %i, i32 %i4, i32 %arg1 monotonic monotonic, align 4
   %i6 = extractvalue { i32, i1 } %i5, 1
   br i1 %i6, label %bb9, label %bb7
 
 bb7:                                              ; preds = %bb
   %i8 = extractvalue { i32, i1 } %i5, 0
-  store i32 %i8, i32* %arg, align 4
+  store i32 %i8, ptr %arg, align 4
   br label %bb9
 
 bb9:                                              ; preds = %bb7, %bb
   %i10 = zext i1 %i6 to i32
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %i2)
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %i)
   ret i32 %i10
 }
 
 ; Function Attrs: nofree nounwind mustprogress
-define zeroext i32 @_Z31atomic_cmp_swap_relaxed_stk_u32Rjj(i32* nocapture nonnull align 4 dereferenceable(4) %arg, i32 zeroext %arg1) {
+define zeroext i32 @_Z31atomic_cmp_swap_relaxed_stk_u32Rjj(ptr nocapture nonnull align 4 dereferenceable(4) %arg, i32 zeroext %arg1) {
 ; CHECK-LABEL: _Z31atomic_cmp_swap_relaxed_stk_u32Rjj:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
@@ -1813,27 +1789,25 @@ define zeroext i32 @_Z31atomic_cmp_swap_relaxed_stk_u32Rjj(i32* nocapture nonnul
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = alloca %"struct.std::__1::atomic.25", align 4
-  %i2 = bitcast %"struct.std::__1::atomic.25"* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %i2)
-  %i3 = getelementptr inbounds %"struct.std::__1::atomic.25", %"struct.std::__1::atomic.25"* %i, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i4 = load i32, i32* %arg, align 4
-  %i5 = cmpxchg weak volatile i32* %i3, i32 %i4, i32 %arg1 monotonic monotonic, align 4
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %i)
+  %i4 = load i32, ptr %arg, align 4
+  %i5 = cmpxchg weak volatile ptr %i, i32 %i4, i32 %arg1 monotonic monotonic, align 4
   %i6 = extractvalue { i32, i1 } %i5, 1
   br i1 %i6, label %bb9, label %bb7
 
 bb7:                                              ; preds = %bb
   %i8 = extractvalue { i32, i1 } %i5, 0
-  store i32 %i8, i32* %arg, align 4
+  store i32 %i8, ptr %arg, align 4
   br label %bb9
 
 bb9:                                              ; preds = %bb7, %bb
   %i10 = zext i1 %i6 to i32
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %i2)
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %i)
   ret i32 %i10
 }
 
 ; Function Attrs: nofree nounwind mustprogress
-define i64 @_Z31atomic_cmp_swap_relaxed_stk_i64Rll(i64* nocapture nonnull align 8 dereferenceable(8) %arg, i64 %arg1) {
+define i64 @_Z31atomic_cmp_swap_relaxed_stk_i64Rll(ptr nocapture nonnull align 8 dereferenceable(8) %arg, i64 %arg1) {
 ; CHECK-LABEL: _Z31atomic_cmp_swap_relaxed_stk_i64Rll:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
@@ -1862,27 +1836,25 @@ define i64 @_Z31atomic_cmp_swap_relaxed_stk_i64Rll(i64* nocapture nonnull align 
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = alloca %"struct.std::__1::atomic.30", align 8
-  %i2 = bitcast %"struct.std::__1::atomic.30"* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %i2)
-  %i3 = getelementptr inbounds %"struct.std::__1::atomic.30", %"struct.std::__1::atomic.30"* %i, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i4 = load i64, i64* %arg, align 8
-  %i5 = cmpxchg weak volatile i64* %i3, i64 %i4, i64 %arg1 monotonic monotonic, align 8
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %i)
+  %i4 = load i64, ptr %arg, align 8
+  %i5 = cmpxchg weak volatile ptr %i, i64 %i4, i64 %arg1 monotonic monotonic, align 8
   %i6 = extractvalue { i64, i1 } %i5, 1
   br i1 %i6, label %bb9, label %bb7
 
 bb7:                                              ; preds = %bb
   %i8 = extractvalue { i64, i1 } %i5, 0
-  store i64 %i8, i64* %arg, align 8
+  store i64 %i8, ptr %arg, align 8
   br label %bb9
 
 bb9:                                              ; preds = %bb7, %bb
   %i10 = zext i1 %i6 to i64
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %i2)
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %i)
   ret i64 %i10
 }
 
 ; Function Attrs: nofree nounwind mustprogress
-define i64 @_Z31atomic_cmp_swap_relaxed_stk_u64Rmm(i64* nocapture nonnull align 8 dereferenceable(8) %arg, i64 %arg1) {
+define i64 @_Z31atomic_cmp_swap_relaxed_stk_u64Rmm(ptr nocapture nonnull align 8 dereferenceable(8) %arg, i64 %arg1) {
 ; CHECK-LABEL: _Z31atomic_cmp_swap_relaxed_stk_u64Rmm:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
@@ -1911,27 +1883,25 @@ define i64 @_Z31atomic_cmp_swap_relaxed_stk_u64Rmm(i64* nocapture nonnull align 
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = alloca %"struct.std::__1::atomic.35", align 8
-  %i2 = bitcast %"struct.std::__1::atomic.35"* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %i2)
-  %i3 = getelementptr inbounds %"struct.std::__1::atomic.35", %"struct.std::__1::atomic.35"* %i, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %i4 = load i64, i64* %arg, align 8
-  %i5 = cmpxchg weak volatile i64* %i3, i64 %i4, i64 %arg1 monotonic monotonic, align 8
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %i)
+  %i4 = load i64, ptr %arg, align 8
+  %i5 = cmpxchg weak volatile ptr %i, i64 %i4, i64 %arg1 monotonic monotonic, align 8
   %i6 = extractvalue { i64, i1 } %i5, 1
   br i1 %i6, label %bb9, label %bb7
 
 bb7:                                              ; preds = %bb
   %i8 = extractvalue { i64, i1 } %i5, 0
-  store i64 %i8, i64* %arg, align 8
+  store i64 %i8, ptr %arg, align 8
   br label %bb9
 
 bb9:                                              ; preds = %bb7, %bb
   %i10 = zext i1 %i6 to i64
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %i2)
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %i)
   ret i64 %i10
 }
 
 ; Function Attrs: nounwind mustprogress
-define i128 @_Z32atomic_cmp_swap_relaxed_stk_i128Rnn(i128* nonnull align 16 dereferenceable(16) %arg, i128 %arg1) {
+define i128 @_Z32atomic_cmp_swap_relaxed_stk_i128Rnn(ptr nonnull align 16 dereferenceable(16) %arg, i128 %arg1) {
 ; CHECK-LABEL: _Z32atomic_cmp_swap_relaxed_stk_i128Rnn:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -1970,21 +1940,18 @@ define i128 @_Z32atomic_cmp_swap_relaxed_stk_i128Rnn(i128* nonnull align 16 dere
 bb:
   %i = alloca i128, align 16
   %i2 = alloca %"struct.std::__1::atomic.40", align 16
-  %i3 = bitcast %"struct.std::__1::atomic.40"* %i2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %i3)
-  %i4 = bitcast i128* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %i4)
-  store i128 %arg1, i128* %i, align 16, !tbaa !0
-  %i5 = bitcast i128* %arg to i8*
-  %i6 = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* nonnull %i3, i8* nonnull %i5, i8* nonnull %i4, i32 signext 0, i32 signext 0)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %i4)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %i2)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %i)
+  store i128 %arg1, ptr %i, align 16, !tbaa !0
+  %i6 = call zeroext i1 @__atomic_compare_exchange(i64 16, ptr nonnull %i2, ptr nonnull %arg, ptr nonnull %i, i32 signext 0, i32 signext 0)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %i)
   %i7 = zext i1 %i6 to i128
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %i3)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %i2)
   ret i128 %i7
 }
 
 ; Function Attrs: nounwind mustprogress
-define i128 @_Z32atomic_cmp_swap_relaxed_stk_u128Roo(i128* nonnull align 16 dereferenceable(16) %arg, i128 %arg1) {
+define i128 @_Z32atomic_cmp_swap_relaxed_stk_u128Roo(ptr nonnull align 16 dereferenceable(16) %arg, i128 %arg1) {
 ; CHECK-LABEL: _Z32atomic_cmp_swap_relaxed_stk_u128Roo:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -2023,54 +1990,53 @@ define i128 @_Z32atomic_cmp_swap_relaxed_stk_u128Roo(i128* nonnull align 16 dere
 bb:
   %i = alloca i128, align 16
   %i2 = alloca %"struct.std::__1::atomic.45", align 16
-  %i3 = bitcast %"struct.std::__1::atomic.45"* %i2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %i3)
-  %i4 = bitcast i128* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %i4)
-  store i128 %arg1, i128* %i, align 16, !tbaa !0
-  %i5 = bitcast i128* %arg to i8*
-  %i6 = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* nonnull %i3, i8* nonnull %i5, i8* nonnull %i4, i32 signext 0, i32 signext 0)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %i4)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %i2)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %i)
+  store i128 %arg1, ptr %i, align 16, !tbaa !0
+  %i6 = call zeroext i1 @__atomic_compare_exchange(i64 16, ptr nonnull %i2, ptr nonnull %arg, ptr nonnull %i, i32 signext 0, i32 signext 0)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %i)
   %i7 = zext i1 %i6 to i128
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %i3)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %i2)
   ret i128 %i7
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i1 @_Z29atomic_cmp_swap_relaxed_gv_i1Rbb(i8* nocapture nonnull align 1 dereferenceable(1) %arg, i1 zeroext %arg1) {
+define zeroext i1 @_Z29atomic_cmp_swap_relaxed_gv_i1Rbb(ptr nocapture nonnull align 1 dereferenceable(1) %arg, i1 zeroext %arg1) {
 ; CHECK-LABEL: _Z29atomic_cmp_swap_relaxed_gv_i1Rbb:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    lea %s2, gv_i1@lo
-; CHECK-NEXT:    and %s2, %s2, (32)0
-; CHECK-NEXT:    lea.sl %s2, gv_i1@hi(, %s2)
-; CHECK-NEXT:    and %s2, -4, %s2
-; CHECK-NEXT:    ldl.zx %s3, (, %s2)
-; CHECK-NEXT:    lea %s4, -256
-; CHECK-NEXT:    ld1b.zx %s5, (, %s0)
+; CHECK-NEXT:    and %s2, %s1, (32)0
+; CHECK-NEXT:    lea %s1, gv_i1@lo
+; CHECK-NEXT:    and %s1, %s1, (32)0
+; CHECK-NEXT:    lea.sl %s1, gv_i1@hi(, %s1)
+; CHECK-NEXT:    and %s1, -4, %s1
+; CHECK-NEXT:    ldl.zx %s4, (, %s1)
+; CHECK-NEXT:    ld1b.zx %s3, (, %s0)
+; CHECK-NEXT:    lea %s5, -256
+; CHECK-NEXT:    and %s5, %s5, (32)0
+; CHECK-NEXT:    and %s4, %s4, %s5
 ; CHECK-NEXT:    and %s4, %s4, (32)0
-; CHECK-NEXT:    and %s3, %s3, %s4
-; CHECK-NEXT:    or %s1, %s3, %s1
-; CHECK-NEXT:    or %s3, %s3, %s5
-; CHECK-NEXT:    cas.w %s1, (%s2), %s3
-; CHECK-NEXT:    cmps.w.sx %s4, %s1, %s3
-; CHECK-NEXT:    or %s2, 0, (0)1
-; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s4
-; CHECK-NEXT:    breq.w %s1, %s3, .LBB44_2
+; CHECK-NEXT:    or %s2, %s4, %s2
+; CHECK-NEXT:    or %s3, %s4, %s3
+; CHECK-NEXT:    cas.w %s2, (%s1), %s3
+; CHECK-NEXT:    cmps.w.sx %s3, %s2, %s3
+; CHECK-NEXT:    or %s1, 0, (0)1
+; CHECK-NEXT:    cmov.w.eq %s1, (63)0, %s3
+; CHECK-NEXT:    brne.w 0, %s1, .LBB44_2
 ; CHECK-NEXT:  # %bb.1: # %bb5
-; CHECK-NEXT:    st1b %s1, (, %s0)
+; CHECK-NEXT:    st1b %s2, (, %s0)
 ; CHECK-NEXT:  .LBB44_2: # %bb7
-; CHECK-NEXT:    adds.w.zx %s0, %s2, (0)1
+; CHECK-NEXT:    adds.w.zx %s0, %s1, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = zext i1 %arg1 to i8
-  %i2 = load i8, i8* %arg, align 1
-  %i3 = cmpxchg weak i8* getelementptr inbounds (%"struct.std::__1::atomic", %"struct.std::__1::atomic"* @gv_i1, i64 0, i32 0, i32 0, i32 0, i32 0), i8 %i2, i8 %i monotonic monotonic, align 1
+  %i2 = load i8, ptr %arg, align 1
+  %i3 = cmpxchg weak ptr @gv_i1, i8 %i2, i8 %i monotonic monotonic, align 1
   %i4 = extractvalue { i8, i1 } %i3, 1
   br i1 %i4, label %bb7, label %bb5
 
 bb5:                                              ; preds = %bb
   %i6 = extractvalue { i8, i1 } %i3, 0
-  store i8 %i6, i8* %arg, align 1
+  store i8 %i6, ptr %arg, align 1
   br label %bb7
 
 bb7:                                              ; preds = %bb5, %bb
@@ -2078,40 +2044,42 @@ bb7:                                              ; preds = %bb5, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i8 @_Z29atomic_cmp_swap_relaxed_gv_i8Rcc(i8* nocapture nonnull align 1 dereferenceable(1) %arg, i8 signext %arg1) {
+define signext i8 @_Z29atomic_cmp_swap_relaxed_gv_i8Rcc(ptr nocapture nonnull align 1 dereferenceable(1) %arg, i8 signext %arg1) {
 ; CHECK-LABEL: _Z29atomic_cmp_swap_relaxed_gv_i8Rcc:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    lea %s2, gv_i8@lo
-; CHECK-NEXT:    and %s2, %s2, (32)0
-; CHECK-NEXT:    lea.sl %s2, gv_i8@hi(, %s2)
-; CHECK-NEXT:    and %s2, -4, %s2
+; CHECK-NEXT:    ld1b.zx %s2, (, %s0)
+; CHECK-NEXT:    lea %s3, gv_i8@lo
+; CHECK-NEXT:    and %s3, %s3, (32)0
+; CHECK-NEXT:    lea.sl %s3, gv_i8@hi(, %s3)
+; CHECK-NEXT:    and %s3, -4, %s3
 ; CHECK-NEXT:    and %s1, %s1, (56)0
-; CHECK-NEXT:    ldl.zx %s3, (, %s2)
-; CHECK-NEXT:    lea %s4, -256
-; CHECK-NEXT:    ld1b.zx %s5, (, %s0)
+; CHECK-NEXT:    ldl.zx %s4, (, %s3)
+; CHECK-NEXT:    and %s1, %s1, (32)0
+; CHECK-NEXT:    lea %s5, -256
+; CHECK-NEXT:    and %s5, %s5, (32)0
+; CHECK-NEXT:    and %s4, %s4, %s5
 ; CHECK-NEXT:    and %s4, %s4, (32)0
-; CHECK-NEXT:    and %s3, %s3, %s4
-; CHECK-NEXT:    or %s1, %s3, %s1
-; CHECK-NEXT:    or %s3, %s3, %s5
-; CHECK-NEXT:    cas.w %s1, (%s2), %s3
-; CHECK-NEXT:    cmps.w.sx %s4, %s1, %s3
+; CHECK-NEXT:    or %s1, %s4, %s1
+; CHECK-NEXT:    or %s2, %s4, %s2
+; CHECK-NEXT:    cas.w %s1, (%s3), %s2
+; CHECK-NEXT:    cmps.w.sx %s3, %s1, %s2
 ; CHECK-NEXT:    or %s2, 0, (0)1
-; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s4
-; CHECK-NEXT:    breq.w %s1, %s3, .LBB45_2
+; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s3
+; CHECK-NEXT:    brne.w 0, %s2, .LBB45_2
 ; CHECK-NEXT:  # %bb.1: # %bb4
 ; CHECK-NEXT:    st1b %s1, (, %s0)
 ; CHECK-NEXT:  .LBB45_2: # %bb6
 ; CHECK-NEXT:    adds.w.zx %s0, %s2, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = load i8, i8* %arg, align 1
-  %i2 = cmpxchg weak i8* getelementptr inbounds (%"struct.std::__1::atomic.0", %"struct.std::__1::atomic.0"* @gv_i8, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0), i8 %i, i8 %arg1 monotonic monotonic, align 1
+  %i = load i8, ptr %arg, align 1
+  %i2 = cmpxchg weak ptr @gv_i8, i8 %i, i8 %arg1 monotonic monotonic, align 1
   %i3 = extractvalue { i8, i1 } %i2, 1
   br i1 %i3, label %bb6, label %bb4
 
 bb4:                                              ; preds = %bb
   %i5 = extractvalue { i8, i1 } %i2, 0
-  store i8 %i5, i8* %arg, align 1
+  store i8 %i5, ptr %arg, align 1
   br label %bb6
 
 bb6:                                              ; preds = %bb4, %bb
@@ -2120,39 +2088,41 @@ bb6:                                              ; preds = %bb4, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i8 @_Z29atomic_cmp_swap_relaxed_gv_u8Rhh(i8* nocapture nonnull align 1 dereferenceable(1) %arg, i8 zeroext %arg1) {
+define zeroext i8 @_Z29atomic_cmp_swap_relaxed_gv_u8Rhh(ptr nocapture nonnull align 1 dereferenceable(1) %arg, i8 zeroext %arg1) {
 ; CHECK-LABEL: _Z29atomic_cmp_swap_relaxed_gv_u8Rhh:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    lea %s2, gv_u8@lo
-; CHECK-NEXT:    and %s2, %s2, (32)0
-; CHECK-NEXT:    lea.sl %s2, gv_u8@hi(, %s2)
-; CHECK-NEXT:    and %s2, -4, %s2
-; CHECK-NEXT:    ldl.zx %s3, (, %s2)
-; CHECK-NEXT:    lea %s4, -256
-; CHECK-NEXT:    ld1b.zx %s5, (, %s0)
+; CHECK-NEXT:    and %s2, %s1, (32)0
+; CHECK-NEXT:    lea %s1, gv_u8@lo
+; CHECK-NEXT:    and %s1, %s1, (32)0
+; CHECK-NEXT:    lea.sl %s1, gv_u8@hi(, %s1)
+; CHECK-NEXT:    and %s1, -4, %s1
+; CHECK-NEXT:    ldl.zx %s4, (, %s1)
+; CHECK-NEXT:    ld1b.zx %s3, (, %s0)
+; CHECK-NEXT:    lea %s5, -256
+; CHECK-NEXT:    and %s5, %s5, (32)0
+; CHECK-NEXT:    and %s4, %s4, %s5
 ; CHECK-NEXT:    and %s4, %s4, (32)0
-; CHECK-NEXT:    and %s3, %s3, %s4
-; CHECK-NEXT:    or %s1, %s3, %s1
-; CHECK-NEXT:    or %s3, %s3, %s5
-; CHECK-NEXT:    cas.w %s1, (%s2), %s3
-; CHECK-NEXT:    cmps.w.sx %s4, %s1, %s3
-; CHECK-NEXT:    or %s2, 0, (0)1
-; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s4
-; CHECK-NEXT:    breq.w %s1, %s3, .LBB46_2
+; CHECK-NEXT:    or %s2, %s4, %s2
+; CHECK-NEXT:    or %s3, %s4, %s3
+; CHECK-NEXT:    cas.w %s2, (%s1), %s3
+; CHECK-NEXT:    cmps.w.sx %s3, %s2, %s3
+; CHECK-NEXT:    or %s1, 0, (0)1
+; CHECK-NEXT:    cmov.w.eq %s1, (63)0, %s3
+; CHECK-NEXT:    brne.w 0, %s1, .LBB46_2
 ; CHECK-NEXT:  # %bb.1: # %bb4
-; CHECK-NEXT:    st1b %s1, (, %s0)
+; CHECK-NEXT:    st1b %s2, (, %s0)
 ; CHECK-NEXT:  .LBB46_2: # %bb6
-; CHECK-NEXT:    adds.w.zx %s0, %s2, (0)1
+; CHECK-NEXT:    adds.w.zx %s0, %s1, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = load i8, i8* %arg, align 1
-  %i2 = cmpxchg weak i8* getelementptr inbounds (%"struct.std::__1::atomic.5", %"struct.std::__1::atomic.5"* @gv_u8, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0), i8 %i, i8 %arg1 monotonic monotonic, align 1
+  %i = load i8, ptr %arg, align 1
+  %i2 = cmpxchg weak ptr @gv_u8, i8 %i, i8 %arg1 monotonic monotonic, align 1
   %i3 = extractvalue { i8, i1 } %i2, 1
   br i1 %i3, label %bb6, label %bb4
 
 bb4:                                              ; preds = %bb
   %i5 = extractvalue { i8, i1 } %i2, 0
-  store i8 %i5, i8* %arg, align 1
+  store i8 %i5, ptr %arg, align 1
   br label %bb6
 
 bb6:                                              ; preds = %bb4, %bb
@@ -2161,38 +2131,39 @@ bb6:                                              ; preds = %bb4, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i16 @_Z30atomic_cmp_swap_relaxed_gv_i16Rss(i16* nocapture nonnull align 2 dereferenceable(2) %arg, i16 signext %arg1) {
+define signext i16 @_Z30atomic_cmp_swap_relaxed_gv_i16Rss(ptr nocapture nonnull align 2 dereferenceable(2) %arg, i16 signext %arg1) {
 ; CHECK-LABEL: _Z30atomic_cmp_swap_relaxed_gv_i16Rss:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    lea %s2, gv_i16@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s2, gv_i16@hi(, %s2)
 ; CHECK-NEXT:    and %s2, -4, %s2
-; CHECK-NEXT:    ld2b.zx %s3, 2(, %s2)
-; CHECK-NEXT:    ld2b.zx %s4, (, %s0)
+; CHECK-NEXT:    ld2b.zx %s4, 2(, %s2)
+; CHECK-NEXT:    ld2b.zx %s3, (, %s0)
 ; CHECK-NEXT:    and %s1, %s1, (48)0
-; CHECK-NEXT:    sla.w.sx %s3, %s3, 16
-; CHECK-NEXT:    or %s1, %s3, %s1
-; CHECK-NEXT:    or %s3, %s3, %s4
+; CHECK-NEXT:    and %s1, %s1, (32)0
+; CHECK-NEXT:    sla.w.sx %s4, %s4, 16
+; CHECK-NEXT:    or %s1, %s4, %s1
+; CHECK-NEXT:    or %s3, %s4, %s3
 ; CHECK-NEXT:    cas.w %s1, (%s2), %s3
-; CHECK-NEXT:    cmps.w.sx %s4, %s1, %s3
+; CHECK-NEXT:    cmps.w.sx %s3, %s1, %s3
 ; CHECK-NEXT:    or %s2, 0, (0)1
-; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s4
-; CHECK-NEXT:    breq.w %s1, %s3, .LBB47_2
+; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s3
+; CHECK-NEXT:    brne.w 0, %s2, .LBB47_2
 ; CHECK-NEXT:  # %bb.1: # %bb4
 ; CHECK-NEXT:    st2b %s1, (, %s0)
 ; CHECK-NEXT:  .LBB47_2: # %bb6
 ; CHECK-NEXT:    adds.w.zx %s0, %s2, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = load i16, i16* %arg, align 2
-  %i2 = cmpxchg weak i16* getelementptr inbounds (%"struct.std::__1::atomic.10", %"struct.std::__1::atomic.10"* @gv_i16, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0), i16 %i, i16 %arg1 monotonic monotonic, align 2
+  %i = load i16, ptr %arg, align 2
+  %i2 = cmpxchg weak ptr @gv_i16, i16 %i, i16 %arg1 monotonic monotonic, align 2
   %i3 = extractvalue { i16, i1 } %i2, 1
   br i1 %i3, label %bb6, label %bb4
 
 bb4:                                              ; preds = %bb
   %i5 = extractvalue { i16, i1 } %i2, 0
-  store i16 %i5, i16* %arg, align 2
+  store i16 %i5, ptr %arg, align 2
   br label %bb6
 
 bb6:                                              ; preds = %bb4, %bb
@@ -2201,37 +2172,38 @@ bb6:                                              ; preds = %bb4, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i16 @_Z30atomic_cmp_swap_relaxed_gv_u16Rtt(i16* nocapture nonnull align 2 dereferenceable(2) %arg, i16 zeroext %arg1) {
+define zeroext i16 @_Z30atomic_cmp_swap_relaxed_gv_u16Rtt(ptr nocapture nonnull align 2 dereferenceable(2) %arg, i16 zeroext %arg1) {
 ; CHECK-LABEL: _Z30atomic_cmp_swap_relaxed_gv_u16Rtt:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    lea %s2, gv_u16@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s2, gv_u16@hi(, %s2)
 ; CHECK-NEXT:    and %s2, -4, %s2
-; CHECK-NEXT:    ld2b.zx %s3, 2(, %s2)
-; CHECK-NEXT:    ld2b.zx %s4, (, %s0)
-; CHECK-NEXT:    sla.w.sx %s3, %s3, 16
-; CHECK-NEXT:    or %s1, %s3, %s1
-; CHECK-NEXT:    or %s3, %s3, %s4
+; CHECK-NEXT:    ld2b.zx %s4, 2(, %s2)
+; CHECK-NEXT:    ld2b.zx %s3, (, %s0)
+; CHECK-NEXT:    and %s1, %s1, (32)0
+; CHECK-NEXT:    sla.w.sx %s4, %s4, 16
+; CHECK-NEXT:    or %s1, %s4, %s1
+; CHECK-NEXT:    or %s3, %s4, %s3
 ; CHECK-NEXT:    cas.w %s1, (%s2), %s3
-; CHECK-NEXT:    cmps.w.sx %s4, %s1, %s3
+; CHECK-NEXT:    cmps.w.sx %s3, %s1, %s3
 ; CHECK-NEXT:    or %s2, 0, (0)1
-; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s4
-; CHECK-NEXT:    breq.w %s1, %s3, .LBB48_2
+; CHECK-NEXT:    cmov.w.eq %s2, (63)0, %s3
+; CHECK-NEXT:    brne.w 0, %s2, .LBB48_2
 ; CHECK-NEXT:  # %bb.1: # %bb4
 ; CHECK-NEXT:    st2b %s1, (, %s0)
 ; CHECK-NEXT:  .LBB48_2: # %bb6
 ; CHECK-NEXT:    adds.w.zx %s0, %s2, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = load i16, i16* %arg, align 2
-  %i2 = cmpxchg weak i16* getelementptr inbounds (%"struct.std::__1::atomic.15", %"struct.std::__1::atomic.15"* @gv_u16, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0), i16 %i, i16 %arg1 monotonic monotonic, align 2
+  %i = load i16, ptr %arg, align 2
+  %i2 = cmpxchg weak ptr @gv_u16, i16 %i, i16 %arg1 monotonic monotonic, align 2
   %i3 = extractvalue { i16, i1 } %i2, 1
   br i1 %i3, label %bb6, label %bb4
 
 bb4:                                              ; preds = %bb
   %i5 = extractvalue { i16, i1 } %i2, 0
-  store i16 %i5, i16* %arg, align 2
+  store i16 %i5, ptr %arg, align 2
   br label %bb6
 
 bb6:                                              ; preds = %bb4, %bb
@@ -2240,7 +2212,7 @@ bb6:                                              ; preds = %bb4, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define signext i32 @_Z30atomic_cmp_swap_relaxed_gv_i32Rii(i32* nocapture nonnull align 4 dereferenceable(4) %arg, i32 signext %arg1) {
+define signext i32 @_Z30atomic_cmp_swap_relaxed_gv_i32Rii(ptr nocapture nonnull align 4 dereferenceable(4) %arg, i32 signext %arg1) {
 ; CHECK-LABEL: _Z30atomic_cmp_swap_relaxed_gv_i32Rii:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    ldl.sx %s3, (, %s0)
@@ -2258,14 +2230,14 @@ define signext i32 @_Z30atomic_cmp_swap_relaxed_gv_i32Rii(i32* nocapture nonnull
 ; CHECK-NEXT:    adds.w.zx %s0, %s2, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = load i32, i32* %arg, align 4
-  %i2 = cmpxchg weak i32* getelementptr inbounds (%"struct.std::__1::atomic.20", %"struct.std::__1::atomic.20"* @gv_i32, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0), i32 %i, i32 %arg1 monotonic monotonic, align 4
+  %i = load i32, ptr %arg, align 4
+  %i2 = cmpxchg weak ptr @gv_i32, i32 %i, i32 %arg1 monotonic monotonic, align 4
   %i3 = extractvalue { i32, i1 } %i2, 1
   br i1 %i3, label %bb6, label %bb4
 
 bb4:                                              ; preds = %bb
   %i5 = extractvalue { i32, i1 } %i2, 0
-  store i32 %i5, i32* %arg, align 4
+  store i32 %i5, ptr %arg, align 4
   br label %bb6
 
 bb6:                                              ; preds = %bb4, %bb
@@ -2274,7 +2246,7 @@ bb6:                                              ; preds = %bb4, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define zeroext i32 @_Z30atomic_cmp_swap_relaxed_gv_u32Rjj(i32* nocapture nonnull align 4 dereferenceable(4) %arg, i32 zeroext %arg1) {
+define zeroext i32 @_Z30atomic_cmp_swap_relaxed_gv_u32Rjj(ptr nocapture nonnull align 4 dereferenceable(4) %arg, i32 zeroext %arg1) {
 ; CHECK-LABEL: _Z30atomic_cmp_swap_relaxed_gv_u32Rjj:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    ldl.sx %s3, (, %s0)
@@ -2292,14 +2264,14 @@ define zeroext i32 @_Z30atomic_cmp_swap_relaxed_gv_u32Rjj(i32* nocapture nonnull
 ; CHECK-NEXT:    adds.w.zx %s0, %s2, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = load i32, i32* %arg, align 4
-  %i2 = cmpxchg weak i32* getelementptr inbounds (%"struct.std::__1::atomic.25", %"struct.std::__1::atomic.25"* @gv_u32, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0), i32 %i, i32 %arg1 monotonic monotonic, align 4
+  %i = load i32, ptr %arg, align 4
+  %i2 = cmpxchg weak ptr @gv_u32, i32 %i, i32 %arg1 monotonic monotonic, align 4
   %i3 = extractvalue { i32, i1 } %i2, 1
   br i1 %i3, label %bb6, label %bb4
 
 bb4:                                              ; preds = %bb
   %i5 = extractvalue { i32, i1 } %i2, 0
-  store i32 %i5, i32* %arg, align 4
+  store i32 %i5, ptr %arg, align 4
   br label %bb6
 
 bb6:                                              ; preds = %bb4, %bb
@@ -2308,7 +2280,7 @@ bb6:                                              ; preds = %bb4, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define i64 @_Z30atomic_cmp_swap_relaxed_gv_i64Rll(i64* nocapture nonnull align 8 dereferenceable(8) %arg, i64 %arg1) {
+define i64 @_Z30atomic_cmp_swap_relaxed_gv_i64Rll(ptr nocapture nonnull align 8 dereferenceable(8) %arg, i64 %arg1) {
 ; CHECK-LABEL: _Z30atomic_cmp_swap_relaxed_gv_i64Rll:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    ld %s3, (, %s0)
@@ -2326,14 +2298,14 @@ define i64 @_Z30atomic_cmp_swap_relaxed_gv_i64Rll(i64* nocapture nonnull align 8
 ; CHECK-NEXT:    adds.w.zx %s0, %s2, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = load i64, i64* %arg, align 8
-  %i2 = cmpxchg weak i64* getelementptr inbounds (%"struct.std::__1::atomic.30", %"struct.std::__1::atomic.30"* @gv_i64, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0), i64 %i, i64 %arg1 monotonic monotonic, align 8
+  %i = load i64, ptr %arg, align 8
+  %i2 = cmpxchg weak ptr @gv_i64, i64 %i, i64 %arg1 monotonic monotonic, align 8
   %i3 = extractvalue { i64, i1 } %i2, 1
   br i1 %i3, label %bb6, label %bb4
 
 bb4:                                              ; preds = %bb
   %i5 = extractvalue { i64, i1 } %i2, 0
-  store i64 %i5, i64* %arg, align 8
+  store i64 %i5, ptr %arg, align 8
   br label %bb6
 
 bb6:                                              ; preds = %bb4, %bb
@@ -2342,7 +2314,7 @@ bb6:                                              ; preds = %bb4, %bb
 }
 
 ; Function Attrs: nofree norecurse nounwind mustprogress
-define i64 @_Z30atomic_cmp_swap_relaxed_gv_u64Rmm(i64* nocapture nonnull align 8 dereferenceable(8) %arg, i64 %arg1) {
+define i64 @_Z30atomic_cmp_swap_relaxed_gv_u64Rmm(ptr nocapture nonnull align 8 dereferenceable(8) %arg, i64 %arg1) {
 ; CHECK-LABEL: _Z30atomic_cmp_swap_relaxed_gv_u64Rmm:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    ld %s3, (, %s0)
@@ -2360,14 +2332,14 @@ define i64 @_Z30atomic_cmp_swap_relaxed_gv_u64Rmm(i64* nocapture nonnull align 8
 ; CHECK-NEXT:    adds.w.zx %s0, %s2, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
-  %i = load i64, i64* %arg, align 8
-  %i2 = cmpxchg weak i64* getelementptr inbounds (%"struct.std::__1::atomic.35", %"struct.std::__1::atomic.35"* @gv_u64, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0), i64 %i, i64 %arg1 monotonic monotonic, align 8
+  %i = load i64, ptr %arg, align 8
+  %i2 = cmpxchg weak ptr @gv_u64, i64 %i, i64 %arg1 monotonic monotonic, align 8
   %i3 = extractvalue { i64, i1 } %i2, 1
   br i1 %i3, label %bb6, label %bb4
 
 bb4:                                              ; preds = %bb
   %i5 = extractvalue { i64, i1 } %i2, 0
-  store i64 %i5, i64* %arg, align 8
+  store i64 %i5, ptr %arg, align 8
   br label %bb6
 
 bb6:                                              ; preds = %bb4, %bb
@@ -2376,7 +2348,7 @@ bb6:                                              ; preds = %bb4, %bb
 }
 
 ; Function Attrs: nounwind mustprogress
-define i128 @_Z31atomic_cmp_swap_relaxed_gv_i128Rnn(i128* nonnull align 16 dereferenceable(16) %arg, i128 %arg1) {
+define i128 @_Z31atomic_cmp_swap_relaxed_gv_i128Rnn(ptr nonnull align 16 dereferenceable(16) %arg, i128 %arg1) {
 ; CHECK-LABEL: _Z31atomic_cmp_swap_relaxed_gv_i128Rnn:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -2416,18 +2388,16 @@ define i128 @_Z31atomic_cmp_swap_relaxed_gv_i128Rnn(i128* nonnull align 16 deref
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = alloca i128, align 16
-  %i2 = bitcast i128* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %i2)
-  store i128 %arg1, i128* %i, align 16, !tbaa !0
-  %i3 = bitcast i128* %arg to i8*
-  %i4 = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* nonnull bitcast (%"struct.std::__1::atomic.40"* @gv_i128 to i8*), i8* nonnull %i3, i8* nonnull %i2, i32 signext 0, i32 signext 0)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %i2)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %i)
+  store i128 %arg1, ptr %i, align 16, !tbaa !0
+  %i4 = call zeroext i1 @__atomic_compare_exchange(i64 16, ptr nonnull @gv_i128, ptr nonnull %arg, ptr nonnull %i, i32 signext 0, i32 signext 0)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %i)
   %i5 = zext i1 %i4 to i128
   ret i128 %i5
 }
 
 ; Function Attrs: nounwind mustprogress
-define i128 @_Z31atomic_cmp_swap_relaxed_gv_u128Roo(i128* nonnull align 16 dereferenceable(16) %arg, i128 %arg1) {
+define i128 @_Z31atomic_cmp_swap_relaxed_gv_u128Roo(ptr nonnull align 16 dereferenceable(16) %arg, i128 %arg1) {
 ; CHECK-LABEL: _Z31atomic_cmp_swap_relaxed_gv_u128Roo:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -2467,18 +2437,16 @@ define i128 @_Z31atomic_cmp_swap_relaxed_gv_u128Roo(i128* nonnull align 16 deref
 ; CHECK-NEXT:    b.l.t (, %s10)
 bb:
   %i = alloca i128, align 16
-  %i2 = bitcast i128* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %i2)
-  store i128 %arg1, i128* %i, align 16, !tbaa !0
-  %i3 = bitcast i128* %arg to i8*
-  %i4 = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* nonnull bitcast (%"struct.std::__1::atomic.45"* @gv_u128 to i8*), i8* nonnull %i3, i8* nonnull %i2, i32 signext 0, i32 signext 0)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %i2)
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %i)
+  store i128 %arg1, ptr %i, align 16, !tbaa !0
+  %i4 = call zeroext i1 @__atomic_compare_exchange(i64 16, ptr nonnull @gv_u128, ptr nonnull %arg, ptr nonnull %i, i32 signext 0, i32 signext 0)
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %i)
   %i5 = zext i1 %i4 to i128
   ret i128 %i5
 }
 
 ; Function Attrs: nounwind willreturn
-declare i1 @__atomic_compare_exchange(i64, i8*, i8*, i8*, i32, i32)
+declare i1 @__atomic_compare_exchange(i64, ptr, ptr, ptr, i32, i32)
 
 !0 = !{!1, !1, i64 0}
 !1 = !{!"__int128", !2, i64 0}
