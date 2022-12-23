@@ -4,10 +4,10 @@
 
 ; FIXME: icmp folding is missing
 
-define i1 @invokecaller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
+define i1 @invokecaller(i1 %C) personality ptr @__gxx_personality_v0 {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@invokecaller
-; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] personality i32 (...)* @__gxx_personality_v0 {
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] personality ptr @__gxx_personality_v0 {
 ; TUNIT-NEXT:    [[X:%.*]] = call i32 @foo(i1 [[C]]) #[[ATTR1:[0-9]+]]
 ; TUNIT-NEXT:    br label [[OK:%.*]]
 ; TUNIT:       OK:
@@ -17,7 +17,7 @@ define i1 @invokecaller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@invokecaller
-; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] personality i32 (...)* @__gxx_personality_v0 {
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] personality ptr @__gxx_personality_v0 {
 ; CGSCC-NEXT:    [[X:%.*]] = call i32 @foo(i1 [[C]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    br label [[OK:%.*]]
 ; CGSCC:       OK:
@@ -31,7 +31,7 @@ OK:
   %Y = icmp ne i32 %X, 0          ; <i1> [#uses=1]
   ret i1 %Y
 FAIL:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
   cleanup
   ret i1 false
 }
