@@ -5,27 +5,27 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 @G = external dso_local global i32, align 4
 
-declare noalias i8* @malloc(i64) inaccessiblememonly
+declare noalias ptr @malloc(i64) inaccessiblememonly
 
 ;.
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external dso_local global i32, align 4
 ;.
-define dso_local i8* @internal_only(i32 %arg) {
+define dso_local ptr @internal_only(i32 %arg) {
 ; CHECK: Function Attrs: memory(inaccessiblemem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@internal_only
 ; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @malloc(i64 [[CONV]])
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 [[CONV]])
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
   %conv = sext i32 %arg to i64
-  %call = call i8* @malloc(i64 %conv)
-  ret i8* %call
+  %call = call ptr @malloc(i64 %conv)
+  ret ptr %call
 }
 
-define dso_local i8* @internal_only_rec(i32 %arg) {
+define dso_local ptr @internal_only_rec(i32 %arg) {
 ; CHECK: Function Attrs: memory(inaccessiblemem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@internal_only_rec
 ; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
@@ -35,15 +35,15 @@ define dso_local i8* @internal_only_rec(i32 %arg) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[ARG]], 2
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_only_rec(i32 [[DIV]])
+; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_only_rec(i32 [[DIV]])
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
-; CHECK-NEXT:    [[CALL1:%.*]] = call noalias i8* @malloc(i64 [[CONV]])
+; CHECK-NEXT:    [[CALL1:%.*]] = call noalias ptr @malloc(i64 [[CONV]])
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i8* [ [[CALL]], [[IF_THEN]] ], [ [[CALL1]], [[IF_END]] ]
-; CHECK-NEXT:    ret i8* [[RETVAL_0]]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ [[CALL]], [[IF_THEN]] ], [ [[CALL1]], [[IF_END]] ]
+; CHECK-NEXT:    ret ptr [[RETVAL_0]]
 ;
 entry:
   %rem = srem i32 %arg, 2
@@ -52,33 +52,33 @@ entry:
 
 if.then:                                          ; preds = %entry
   %div = sdiv i32 %arg, 2
-  %call = call i8* @internal_only_rec(i32 %div)
+  %call = call ptr @internal_only_rec(i32 %div)
   br label %return
 
 if.end:                                           ; preds = %entry
   %conv = sext i32 %arg to i64
-  %call1 = call i8* @malloc(i64 %conv)
+  %call1 = call ptr @malloc(i64 %conv)
   br label %return
 
 return:                                           ; preds = %if.end, %if.then
-  %retval.0 = phi i8* [ %call, %if.then ], [ %call1, %if.end ]
-  ret i8* %retval.0
+  %retval.0 = phi ptr [ %call, %if.then ], [ %call1, %if.end ]
+  ret ptr %retval.0
 }
 
-define dso_local i8* @internal_only_rec_static_helper(i32 %arg) {
+define dso_local ptr @internal_only_rec_static_helper(i32 %arg) {
 ; CHECK: Function Attrs: memory(inaccessiblemem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@internal_only_rec_static_helper
 ; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_only_rec_static(i32 [[ARG]])
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_only_rec_static(i32 [[ARG]])
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
-  %call = call i8* @internal_only_rec_static(i32 %arg)
-  ret i8* %call
+  %call = call ptr @internal_only_rec_static(i32 %arg)
+  ret ptr %call
 }
 
-define internal i8* @internal_only_rec_static(i32 %arg) {
+define internal ptr @internal_only_rec_static(i32 %arg) {
 ; CHECK: Function Attrs: memory(inaccessiblemem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@internal_only_rec_static
 ; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
@@ -88,15 +88,15 @@ define internal i8* @internal_only_rec_static(i32 %arg) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[ARG]], 2
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_only_rec(i32 [[DIV]])
+; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_only_rec(i32 [[DIV]])
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
-; CHECK-NEXT:    [[CALL1:%.*]] = call noalias i8* @malloc(i64 [[CONV]])
+; CHECK-NEXT:    [[CALL1:%.*]] = call noalias ptr @malloc(i64 [[CONV]])
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i8* [ [[CALL]], [[IF_THEN]] ], [ [[CALL1]], [[IF_END]] ]
-; CHECK-NEXT:    ret i8* [[RETVAL_0]]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ [[CALL]], [[IF_THEN]] ], [ [[CALL1]], [[IF_END]] ]
+; CHECK-NEXT:    ret ptr [[RETVAL_0]]
 ;
 entry:
   %rem = srem i32 %arg, 2
@@ -105,33 +105,33 @@ entry:
 
 if.then:                                          ; preds = %entry
   %div = sdiv i32 %arg, 2
-  %call = call i8* @internal_only_rec(i32 %div)
+  %call = call ptr @internal_only_rec(i32 %div)
   br label %return
 
 if.end:                                           ; preds = %entry
   %conv = sext i32 %arg to i64
-  %call1 = call i8* @malloc(i64 %conv)
+  %call1 = call ptr @malloc(i64 %conv)
   br label %return
 
 return:                                           ; preds = %if.end, %if.then
-  %retval.0 = phi i8* [ %call, %if.then ], [ %call1, %if.end ]
-  ret i8* %retval.0
+  %retval.0 = phi ptr [ %call, %if.then ], [ %call1, %if.end ]
+  ret ptr %retval.0
 }
 
-define dso_local i8* @internal_only_rec_static_helper_malloc_noescape(i32 %arg) {
+define dso_local ptr @internal_only_rec_static_helper_malloc_noescape(i32 %arg) {
 ; FIXME: This is actually inaccessiblememonly because the malloced memory does not escape
 ; CHECK-LABEL: define {{[^@]+}}@internal_only_rec_static_helper_malloc_noescape
 ; CHECK-SAME: (i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_only_rec_static_malloc_noescape(i32 [[ARG]])
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_only_rec_static_malloc_noescape(i32 [[ARG]])
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
-  %call = call i8* @internal_only_rec_static_malloc_noescape(i32 %arg)
-  ret i8* %call
+  %call = call ptr @internal_only_rec_static_malloc_noescape(i32 %arg)
+  ret ptr %call
 }
 
-define internal i8* @internal_only_rec_static_malloc_noescape(i32 %arg) {
+define internal ptr @internal_only_rec_static_malloc_noescape(i32 %arg) {
 ; FIXME: This is actually inaccessiblememonly because the malloced memory does not escape
 ; CHECK-LABEL: define {{[^@]+}}@internal_only_rec_static_malloc_noescape
 ; CHECK-SAME: (i32 [[ARG:%.*]]) {
@@ -141,15 +141,15 @@ define internal i8* @internal_only_rec_static_malloc_noescape(i32 %arg) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[ARG]], 2
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_only_rec(i32 [[DIV]])
+; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_only_rec(i32 [[DIV]])
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
-; CHECK-NEXT:    [[CALL1:%.*]] = call noalias i8* @malloc(i64 [[CONV]])
+; CHECK-NEXT:    [[CALL1:%.*]] = call noalias ptr @malloc(i64 [[CONV]])
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i8* [ [[CALL]], [[IF_THEN]] ], [ null, [[IF_END]] ]
-; CHECK-NEXT:    ret i8* [[RETVAL_0]]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ [[CALL]], [[IF_THEN]] ], [ null, [[IF_END]] ]
+; CHECK-NEXT:    ret ptr [[RETVAL_0]]
 ;
 entry:
   %rem = srem i32 %arg, 2
@@ -158,101 +158,101 @@ entry:
 
 if.then:                                          ; preds = %entry
   %div = sdiv i32 %arg, 2
-  %call = call i8* @internal_only_rec(i32 %div)
+  %call = call ptr @internal_only_rec(i32 %div)
   br label %return
 
 if.end:                                           ; preds = %entry
   %conv = sext i32 %arg to i64
-  %call1 = call i8* @malloc(i64 %conv)
-  store i8 0, i8* %call1
+  %call1 = call ptr @malloc(i64 %conv)
+  store i8 0, ptr %call1
   br label %return
 
 return:                                           ; preds = %if.end, %if.then
-  %retval.0 = phi i8* [ %call, %if.then ], [ null, %if.end ]
-  ret i8* %retval.0
+  %retval.0 = phi ptr [ %call, %if.then ], [ null, %if.end ]
+  ret ptr %retval.0
 }
 
-define dso_local i8* @internal_argmem_only_read(i32* %arg) {
+define dso_local ptr @internal_argmem_only_read(ptr %arg) {
 ; CHECK: Function Attrs: memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@internal_argmem_only_read
-; CHECK-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* [[ARG]], align 4
+; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr [[ARG]], align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP]] to i64
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @malloc(i64 [[CONV]])
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 [[CONV]])
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
-  %tmp = load i32, i32* %arg, align 4
+  %tmp = load i32, ptr %arg, align 4
   %conv = sext i32 %tmp to i64
-  %call = call i8* @malloc(i64 %conv)
-  ret i8* %call
+  %call = call ptr @malloc(i64 %conv)
+  ret ptr %call
 }
 
-define dso_local i8* @internal_argmem_only_write(i32* %arg) {
+define dso_local ptr @internal_argmem_only_write(ptr %arg) {
 ; CHECK: Function Attrs: memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@internal_argmem_only_write
-; CHECK-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 10, i32* [[ARG]], align 4
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias dereferenceable_or_null(10) i8* @malloc(i64 noundef 10)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    store i32 10, ptr [[ARG]], align 4
+; CHECK-NEXT:    [[CALL:%.*]] = call noalias dereferenceable_or_null(10) ptr @malloc(i64 noundef 10)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
-  store i32 10, i32* %arg, align 4
-  %call = call dereferenceable_or_null(10) i8* @malloc(i64 10)
-  ret i8* %call
+  store i32 10, ptr %arg, align 4
+  %call = call dereferenceable_or_null(10) ptr @malloc(i64 10)
+  ret ptr %call
 }
 
-define dso_local i8* @internal_argmem_only_rec(i32* %arg) {
+define dso_local ptr @internal_argmem_only_rec(ptr %arg) {
 ; TUNIT: Function Attrs: memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@internal_argmem_only_rec
-; TUNIT-SAME: (i32* nocapture nofree [[ARG:%.*]]) #[[ATTR1]] {
+; TUNIT-SAME: (ptr nocapture nofree [[ARG:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_1(i32* nocapture nofree align 4 [[ARG]])
-; TUNIT-NEXT:    ret i8* [[CALL]]
+; TUNIT-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_argmem_only_rec_1(ptr nocapture nofree align 4 [[ARG]])
+; TUNIT-NEXT:    ret ptr [[CALL]]
 ;
 ; CGSCC: Function Attrs: memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@internal_argmem_only_rec
-; CGSCC-SAME: (i32* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
+; CGSCC-SAME: (ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_1(i32* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ARG]])
-; CGSCC-NEXT:    ret i8* [[CALL]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_argmem_only_rec_1(ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ARG]])
+; CGSCC-NEXT:    ret ptr [[CALL]]
 ;
 entry:
-  %call = call i8* @internal_argmem_only_rec_1(i32* %arg)
-  ret i8* %call
+  %call = call ptr @internal_argmem_only_rec_1(ptr %arg)
+  ret ptr %call
 }
 
-define internal i8* @internal_argmem_only_rec_1(i32* %arg) {
+define internal ptr @internal_argmem_only_rec_1(ptr %arg) {
 ; CHECK: Function Attrs: memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@internal_argmem_only_rec_1
-; CHECK-SAME: (i32* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* [[ARG]], align 4
+; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr [[ARG]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARG]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARG]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TMP1]], 1
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
 ; CHECK:       if.then2:
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 -1
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_2(i32* nocapture nofree nonnull align 4 dereferenceable(4) [[ADD_PTR]])
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARG]], i64 -1
+; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_argmem_only_rec_2(ptr nocapture nofree nonnull align 4 dereferenceable(4) [[ADD_PTR]])
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       if.end3:
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARG]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARG]], align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[CALL4:%.*]] = call noalias i8* @malloc(i64 [[CONV]])
+; CHECK-NEXT:    [[CALL4:%.*]] = call noalias ptr @malloc(i64 [[CONV]])
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i8* [ null, [[IF_THEN]] ], [ [[CALL]], [[IF_THEN2]] ], [ [[CALL4]], [[IF_END3]] ]
-; CHECK-NEXT:    ret i8* [[RETVAL_0]]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ null, [[IF_THEN]] ], [ [[CALL]], [[IF_THEN2]] ], [ [[CALL4]], [[IF_END3]] ]
+; CHECK-NEXT:    ret ptr [[RETVAL_0]]
 ;
 entry:
-  %tmp = load i32, i32* %arg, align 4
+  %tmp = load i32, ptr %arg, align 4
   %cmp = icmp eq i32 %tmp, 0
   br i1 %cmp, label %if.then, label %if.end
 
@@ -260,66 +260,66 @@ if.then:                                          ; preds = %entry
   br label %return
 
 if.end:                                           ; preds = %entry
-  %tmp1 = load i32, i32* %arg, align 4
+  %tmp1 = load i32, ptr %arg, align 4
   %cmp1 = icmp eq i32 %tmp1, 1
   br i1 %cmp1, label %if.then2, label %if.end3
 
 if.then2:                                         ; preds = %if.end
-  %add.ptr = getelementptr inbounds i32, i32* %arg, i64 -1
-  %call = call i8* @internal_argmem_only_rec_2(i32* nonnull %add.ptr)
+  %add.ptr = getelementptr inbounds i32, ptr %arg, i64 -1
+  %call = call ptr @internal_argmem_only_rec_2(ptr nonnull %add.ptr)
   br label %return
 
 if.end3:                                          ; preds = %if.end
-  %tmp2 = load i32, i32* %arg, align 4
+  %tmp2 = load i32, ptr %arg, align 4
   %conv = sext i32 %tmp2 to i64
-  %call4 = call i8* @malloc(i64 %conv)
+  %call4 = call ptr @malloc(i64 %conv)
   br label %return
 
 return:                                           ; preds = %if.end3, %if.then2, %if.then
-  %retval.0 = phi i8* [ null, %if.then ], [ %call, %if.then2 ], [ %call4, %if.end3 ]
-  ret i8* %retval.0
+  %retval.0 = phi ptr [ null, %if.then ], [ %call, %if.then2 ], [ %call4, %if.end3 ]
+  ret ptr %retval.0
 }
 
-define internal i8* @internal_argmem_only_rec_2(i32* %arg) {
+define internal ptr @internal_argmem_only_rec_2(ptr %arg) {
 ; CHECK: Function Attrs: memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@internal_argmem_only_rec_2
-; CHECK-SAME: (i32* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 0, i32* [[ARG]], align 4
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 -1
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_1(i32* nocapture nofree nonnull align 4 dereferenceable(4) [[ADD_PTR]])
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    store i32 0, ptr [[ARG]], align 4
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARG]], i64 -1
+; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_argmem_only_rec_1(ptr nocapture nofree nonnull align 4 dereferenceable(4) [[ADD_PTR]])
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
-  store i32 0, i32* %arg, align 4
-  %add.ptr = getelementptr inbounds i32, i32* %arg, i64 -1
-  %call = call i8* @internal_argmem_only_rec_1(i32* nonnull %add.ptr)
-  ret i8* %call
+  store i32 0, ptr %arg, align 4
+  %add.ptr = getelementptr inbounds i32, ptr %arg, i64 -1
+  %call = call ptr @internal_argmem_only_rec_1(ptr nonnull %add.ptr)
+  ret ptr %call
 }
 
-declare i8* @unknown_ptr() readnone
-declare i8* @argmem_only(i8* %arg) argmemonly
-declare i8* @inaccesible_argmem_only_decl(i8* %arg) inaccessiblemem_or_argmemonly
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) nounwind argmemonly willreturn
+declare ptr @unknown_ptr() readnone
+declare ptr @argmem_only(ptr %arg) argmemonly
+declare ptr @inaccesible_argmem_only_decl(ptr %arg) inaccessiblemem_or_argmemonly
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) nounwind argmemonly willreturn
 
-define void @callerA1(i8* %arg) {
+define void @callerA1(ptr %arg) {
 ; CHECK: Function Attrs: memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@callerA1
-; CHECK-SAME: (i8* [[ARG:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @argmem_only(i8* [[ARG]])
+; CHECK-SAME: (ptr [[ARG:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @argmem_only(ptr [[ARG]])
 ; CHECK-NEXT:    ret void
 ;
-  call i8* @argmem_only(i8* %arg)
+  call ptr @argmem_only(ptr %arg)
   ret void
 }
-define void @callerA2(i8* %arg) {
+define void @callerA2(ptr %arg) {
 ; CHECK: Function Attrs: memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@callerA2
-; CHECK-SAME: (i8* [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @inaccesible_argmem_only_decl(i8* [[ARG]])
+; CHECK-SAME: (ptr [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @inaccesible_argmem_only_decl(ptr [[ARG]])
 ; CHECK-NEXT:    ret void
 ;
-  call i8* @inaccesible_argmem_only_decl(i8* %arg)
+  call ptr @inaccesible_argmem_only_decl(ptr %arg)
   ret void
 }
 define void @callerB1() {
@@ -327,11 +327,11 @@ define void @callerB1() {
 ; CHECK-LABEL: define {{[^@]+}}@callerB1
 ; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[STACK:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @argmem_only(i8* noundef nonnull dereferenceable(1) [[STACK]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @argmem_only(ptr noundef nonnull dereferenceable(1) [[STACK]])
 ; CHECK-NEXT:    ret void
 ;
   %stack = alloca i8
-  call i8* @argmem_only(i8* %stack)
+  call ptr @argmem_only(ptr %stack)
   ret void
 }
 define void @callerB2() {
@@ -339,61 +339,61 @@ define void @callerB2() {
 ; CHECK-LABEL: define {{[^@]+}}@callerB2
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    [[STACK:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @inaccesible_argmem_only_decl(i8* noundef nonnull dereferenceable(1) [[STACK]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @inaccesible_argmem_only_decl(ptr noundef nonnull dereferenceable(1) [[STACK]])
 ; CHECK-NEXT:    ret void
 ;
   %stack = alloca i8
-  call i8* @inaccesible_argmem_only_decl(i8* %stack)
+  call ptr @inaccesible_argmem_only_decl(ptr %stack)
   ret void
 }
 define void @callerC1() {
 ; CHECK-LABEL: define {{[^@]+}}@callerC1() {
-; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @unknown_ptr()
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @argmem_only(i8* [[UNKNOWN]])
+; CHECK-NEXT:    [[UNKNOWN:%.*]] = call ptr @unknown_ptr()
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @argmem_only(ptr [[UNKNOWN]])
 ; CHECK-NEXT:    ret void
 ;
-  %unknown = call i8* @unknown_ptr()
-  call i8* @argmem_only(i8* %unknown)
+  %unknown = call ptr @unknown_ptr()
+  call ptr @argmem_only(ptr %unknown)
   ret void
 }
 define void @callerC2() {
 ; CHECK-LABEL: define {{[^@]+}}@callerC2() {
-; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @unknown_ptr()
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @inaccesible_argmem_only_decl(i8* [[UNKNOWN]])
+; CHECK-NEXT:    [[UNKNOWN:%.*]] = call ptr @unknown_ptr()
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @inaccesible_argmem_only_decl(ptr [[UNKNOWN]])
 ; CHECK-NEXT:    ret void
 ;
-  %unknown = call i8* @unknown_ptr()
-  call i8* @inaccesible_argmem_only_decl(i8* %unknown)
+  %unknown = call ptr @unknown_ptr()
+  call ptr @inaccesible_argmem_only_decl(ptr %unknown)
   ret void
 }
 define void @callerD1() {
 ; CHECK-LABEL: define {{[^@]+}}@callerD1() {
-; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @argmem_only(i8* noalias nocapture noundef align 4294967296 null)
-; CHECK-NEXT:    store i8 0, i8* [[UNKNOWN]], align 1
+; CHECK-NEXT:    [[UNKNOWN:%.*]] = call ptr @argmem_only(ptr noalias nocapture noundef align 4294967296 null)
+; CHECK-NEXT:    store i8 0, ptr [[UNKNOWN]], align 1
 ; CHECK-NEXT:    ret void
 ;
-  %unknown = call i8* @argmem_only(i8* null)
-  store i8 0, i8* %unknown
+  %unknown = call ptr @argmem_only(ptr null)
+  store i8 0, ptr %unknown
   ret void
 }
 define void @callerD2() {
 ; CHECK-LABEL: define {{[^@]+}}@callerD2() {
-; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @inaccesible_argmem_only_decl(i8* noalias nocapture noundef align 4294967296 null)
-; CHECK-NEXT:    store i8 0, i8* [[UNKNOWN]], align 1
+; CHECK-NEXT:    [[UNKNOWN:%.*]] = call ptr @inaccesible_argmem_only_decl(ptr noalias nocapture noundef align 4294967296 null)
+; CHECK-NEXT:    store i8 0, ptr [[UNKNOWN]], align 1
 ; CHECK-NEXT:    ret void
 ;
-  %unknown = call i8* @inaccesible_argmem_only_decl(i8* null)
-  store i8 0, i8* %unknown
+  %unknown = call ptr @inaccesible_argmem_only_decl(ptr null)
+  store i8 0, ptr %unknown
   ret void
 }
 
-define void @callerE(i8* %arg) {
+define void @callerE(ptr %arg) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@callerE
-; CHECK-SAME: (i8* nocapture nofree readnone [[ARG:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-SAME: (ptr nocapture nofree readnone [[ARG:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %arg)
+  call void @llvm.lifetime.start.p0(i64 4, ptr %arg)
   ret void
 }
 
@@ -402,30 +402,30 @@ define void @write_global() {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@write_global
 ; CHECK-SAME: () #[[ATTR6:[0-9]+]] {
-; CHECK-NEXT:    store i32 0, i32* @G, align 4
+; CHECK-NEXT:    store i32 0, ptr @G, align 4
 ; CHECK-NEXT:    ret void
 ;
-  store i32 0, i32* @G, align 4
+  store i32 0, ptr @G, align 4
   ret void
 }
-define void @write_global_via_arg(i32* %GPtr) {
+define void @write_global_via_arg(ptr %GPtr) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@write_global_via_arg
-; CHECK-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[GPTR:%.*]]) #[[ATTR7:[0-9]+]] {
-; CHECK-NEXT:    store i32 0, i32* [[GPTR]], align 4
+; CHECK-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[GPTR:%.*]]) #[[ATTR7:[0-9]+]] {
+; CHECK-NEXT:    store i32 0, ptr [[GPTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  store i32 0, i32* %GPtr, align 4
+  store i32 0, ptr %GPtr, align 4
   ret void
 }
-define internal void @write_global_via_arg_internal(i32* %GPtr) {
+define internal void @write_global_via_arg_internal(ptr %GPtr) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@write_global_via_arg_internal
 ; CHECK-SAME: () #[[ATTR6]] {
-; CHECK-NEXT:    store i32 0, i32* @G, align 4
+; CHECK-NEXT:    store i32 0, ptr @G, align 4
 ; CHECK-NEXT:    ret void
 ;
-  store i32 0, i32* %GPtr, align 4
+  store i32 0, ptr %GPtr, align 4
   ret void
 }
 
@@ -449,16 +449,16 @@ define void @writeonly_global_via_arg() {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@writeonly_global_via_arg
 ; TUNIT-SAME: () #[[ATTR6]] {
-; TUNIT-NEXT:    call void @write_global_via_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) @G) #[[ATTR10]]
+; TUNIT-NEXT:    call void @write_global_via_arg(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) @G) #[[ATTR10]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@writeonly_global_via_arg
 ; CGSCC-SAME: () #[[ATTR8]] {
-; CGSCC-NEXT:    call void @write_global_via_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) @G) #[[ATTR11]]
+; CGSCC-NEXT:    call void @write_global_via_arg(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) @G) #[[ATTR11]]
 ; CGSCC-NEXT:    ret void
 ;
-  call void @write_global_via_arg(i32* @G)
+  call void @write_global_via_arg(ptr @G)
   ret void
 }
 
@@ -476,79 +476,79 @@ define void @writeonly_global_via_arg_internal() {
 ; CGSCC-NEXT:    call void @write_global_via_arg_internal() #[[ATTR11]]
 ; CGSCC-NEXT:    ret void
 ;
-  call void @write_global_via_arg_internal(i32* @G)
+  call void @write_global_via_arg_internal(ptr @G)
   ret void
 }
 
-define i8 @recursive_not_readnone(i8* %ptr, i1 %c) {
+define i8 @recursive_not_readnone(ptr %ptr, i1 %c) {
 ; TUNIT: Function Attrs: nofree nosync nounwind memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@recursive_not_readnone
-; TUNIT-SAME: (i8* nocapture nofree writeonly [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR8:[0-9]+]] {
+; TUNIT-SAME: (ptr nocapture nofree writeonly [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR8:[0-9]+]] {
 ; TUNIT-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
-; TUNIT-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) #[[ATTR11:[0-9]+]]
+; TUNIT-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) #[[ATTR11:[0-9]+]]
 ; TUNIT-NEXT:    ret i8 1
 ; TUNIT:       f:
-; TUNIT-NEXT:    store i8 1, i8* [[PTR]], align 1
+; TUNIT-NEXT:    store i8 1, ptr [[PTR]], align 1
 ; TUNIT-NEXT:    ret i8 0
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@recursive_not_readnone
-; CGSCC-SAME: (i8* nocapture nofree writeonly [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR9:[0-9]+]] {
+; CGSCC-SAME: (ptr nocapture nofree writeonly [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR9:[0-9]+]] {
 ; CGSCC-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
-; CGSCC-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) #[[ATTR12:[0-9]+]]
+; CGSCC-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) #[[ATTR12:[0-9]+]]
 ; CGSCC-NEXT:    ret i8 1
 ; CGSCC:       f:
-; CGSCC-NEXT:    store i8 1, i8* [[PTR]], align 1
+; CGSCC-NEXT:    store i8 1, ptr [[PTR]], align 1
 ; CGSCC-NEXT:    ret i8 0
 ;
   %alloc = alloca i8
   br i1 %c, label %t, label %f
 t:
-  call i8 @recursive_not_readnone(i8* %alloc, i1 false)
-  %r = load i8, i8* %alloc
+  call i8 @recursive_not_readnone(ptr %alloc, i1 false)
+  %r = load i8, ptr %alloc
   ret i8 %r
 f:
-  store i8 1, i8* %ptr
+  store i8 1, ptr %ptr
   ret i8 0
 }
 
-define internal i8 @recursive_not_readnone_internal(i8* %ptr, i1 %c) {
+define internal i8 @recursive_not_readnone_internal(ptr %ptr, i1 %c) {
 ; TUNIT: Function Attrs: nofree nosync nounwind memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@recursive_not_readnone_internal
-; TUNIT-SAME: (i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR8]] {
+; TUNIT-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR8]] {
 ; TUNIT-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
-; TUNIT-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) #[[ATTR11]]
+; TUNIT-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) #[[ATTR11]]
 ; TUNIT-NEXT:    ret i8 1
 ; TUNIT:       f:
-; TUNIT-NEXT:    store i8 1, i8* [[PTR]], align 1
+; TUNIT-NEXT:    store i8 1, ptr [[PTR]], align 1
 ; TUNIT-NEXT:    ret i8 0
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@recursive_not_readnone_internal
-; CGSCC-SAME: (i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR9]] {
+; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR9]] {
 ; CGSCC-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
-; CGSCC-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) #[[ATTR12]]
+; CGSCC-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) #[[ATTR12]]
 ; CGSCC-NEXT:    ret i8 1
 ; CGSCC:       f:
-; CGSCC-NEXT:    store i8 1, i8* [[PTR]], align 1
+; CGSCC-NEXT:    store i8 1, ptr [[PTR]], align 1
 ; CGSCC-NEXT:    ret i8 0
 ;
   %alloc = alloca i8
   br i1 %c, label %t, label %f
 t:
-  call i8 @recursive_not_readnone_internal(i8* %alloc, i1 false)
-  %r = load i8, i8* %alloc
+  call i8 @recursive_not_readnone_internal(ptr %alloc, i1 false)
+  %r = load i8, ptr %alloc
   ret i8 %r
 f:
-  store i8 1, i8* %ptr
+  store i8 1, ptr %ptr
   ret i8 0
 }
 
@@ -557,54 +557,54 @@ define i8 @readnone_caller(i1 %c) {
 ; TUNIT-LABEL: define {{[^@]+}}@readnone_caller
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR9:[0-9]+]] {
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i8, align 1
-; TUNIT-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[A]], i1 [[C]]) #[[ATTR11]]
+; TUNIT-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[A]], i1 [[C]]) #[[ATTR11]]
 ; TUNIT-NEXT:    ret i8 [[R]]
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@readnone_caller
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR10:[0-9]+]] {
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i8, align 1
-; CGSCC-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[A]], i1 [[C]]) #[[ATTR13:[0-9]+]]
+; CGSCC-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[A]], i1 [[C]]) #[[ATTR13:[0-9]+]]
 ; CGSCC-NEXT:    ret i8 [[R]]
 ;
   %a = alloca i8
-  %r = call i8 @recursive_not_readnone_internal(i8* %a, i1 %c)
+  %r = call i8 @recursive_not_readnone_internal(ptr %a, i1 %c)
   ret i8 %r
 }
 
-define internal i8 @recursive_readnone_internal2(i8* %ptr, i1 %c) {
+define internal i8 @recursive_readnone_internal2(ptr %ptr, i1 %c) {
 ; TUNIT: Function Attrs: nofree nosync nounwind memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@recursive_readnone_internal2
-; TUNIT-SAME: (i8* nocapture nofree nonnull writeonly [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR8]] {
+; TUNIT-SAME: (ptr nocapture nofree nonnull writeonly [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR8]] {
 ; TUNIT-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
-; TUNIT-NEXT:    [[TMP1:%.*]] = call i8 @recursive_readnone_internal2(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) #[[ATTR11]]
+; TUNIT-NEXT:    [[TMP1:%.*]] = call i8 @recursive_readnone_internal2(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) #[[ATTR11]]
 ; TUNIT-NEXT:    ret i8 1
 ; TUNIT:       f:
-; TUNIT-NEXT:    store i8 1, i8* [[PTR]], align 1
+; TUNIT-NEXT:    store i8 1, ptr [[PTR]], align 1
 ; TUNIT-NEXT:    ret i8 0
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@recursive_readnone_internal2
-; CGSCC-SAME: (i8* nocapture nofree nonnull writeonly [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR9]] {
+; CGSCC-SAME: (ptr nocapture nofree nonnull writeonly [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR9]] {
 ; CGSCC-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
-; CGSCC-NEXT:    [[TMP1:%.*]] = call i8 @recursive_readnone_internal2(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) #[[ATTR12]]
+; CGSCC-NEXT:    [[TMP1:%.*]] = call i8 @recursive_readnone_internal2(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) #[[ATTR12]]
 ; CGSCC-NEXT:    ret i8 1
 ; CGSCC:       f:
-; CGSCC-NEXT:    store i8 1, i8* [[PTR]], align 1
+; CGSCC-NEXT:    store i8 1, ptr [[PTR]], align 1
 ; CGSCC-NEXT:    ret i8 0
 ;
   %alloc = alloca i8
   br i1 %c, label %t, label %f
 t:
-  call i8 @recursive_readnone_internal2(i8* %alloc, i1 false)
-  %r = load i8, i8* %alloc
+  call i8 @recursive_readnone_internal2(ptr %alloc, i1 false)
+  %r = load i8, ptr %alloc
   ret i8 %r
 f:
-  store i8 1, i8* %ptr
+  store i8 1, ptr %ptr
   ret i8 0
 }
 
@@ -612,52 +612,52 @@ define i8 @readnone_caller2(i1 %c) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@readnone_caller2
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR9]] {
-; TUNIT-NEXT:    [[R:%.*]] = call i8 @recursive_readnone_internal2(i8* undef, i1 [[C]]) #[[ATTR11]]
+; TUNIT-NEXT:    [[R:%.*]] = call i8 @recursive_readnone_internal2(ptr undef, i1 [[C]]) #[[ATTR11]]
 ; TUNIT-NEXT:    ret i8 [[R]]
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@readnone_caller2
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR10]] {
-; CGSCC-NEXT:    [[R:%.*]] = call i8 @recursive_readnone_internal2(i8* undef, i1 [[C]]) #[[ATTR13]]
+; CGSCC-NEXT:    [[R:%.*]] = call i8 @recursive_readnone_internal2(ptr undef, i1 [[C]]) #[[ATTR13]]
 ; CGSCC-NEXT:    ret i8 [[R]]
 ;
-  %r = call i8 @recursive_readnone_internal2(i8* undef, i1 %c)
+  %r = call i8 @recursive_readnone_internal2(ptr undef, i1 %c)
   ret i8 %r
 }
 
-define internal i8 @recursive_not_readnone_internal3(i8* %ptr, i1 %c) {
+define internal i8 @recursive_not_readnone_internal3(ptr %ptr, i1 %c) {
 ; TUNIT: Function Attrs: nofree nosync nounwind memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@recursive_not_readnone_internal3
-; TUNIT-SAME: (i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR8]] {
+; TUNIT-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR8]] {
 ; TUNIT-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
-; TUNIT-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal3(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) #[[ATTR11]]
+; TUNIT-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal3(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) #[[ATTR11]]
 ; TUNIT-NEXT:    ret i8 1
 ; TUNIT:       f:
-; TUNIT-NEXT:    store i8 1, i8* [[PTR]], align 1
+; TUNIT-NEXT:    store i8 1, ptr [[PTR]], align 1
 ; TUNIT-NEXT:    ret i8 0
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@recursive_not_readnone_internal3
-; CGSCC-SAME: (i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR9]] {
+; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR9]] {
 ; CGSCC-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
-; CGSCC-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal3(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) #[[ATTR12]]
+; CGSCC-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal3(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) #[[ATTR12]]
 ; CGSCC-NEXT:    ret i8 1
 ; CGSCC:       f:
-; CGSCC-NEXT:    store i8 1, i8* [[PTR]], align 1
+; CGSCC-NEXT:    store i8 1, ptr [[PTR]], align 1
 ; CGSCC-NEXT:    ret i8 0
 ;
   %alloc = alloca i8
   br i1 %c, label %t, label %f
 t:
-  call i8 @recursive_not_readnone_internal3(i8* %alloc, i1 false)
-  %r = load i8, i8* %alloc
+  call i8 @recursive_not_readnone_internal3(ptr %alloc, i1 false)
+  %r = load i8, ptr %alloc
   ret i8 %r
 f:
-  store i8 1, i8* %ptr
+  store i8 1, ptr %ptr
   ret i8 0
 }
 
@@ -666,29 +666,29 @@ define i8 @readnone_caller3(i1 %c) {
 ; TUNIT-LABEL: define {{[^@]+}}@readnone_caller3
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR9]] {
 ; TUNIT-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
-; TUNIT-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal3(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 [[C]]) #[[ATTR11]]
+; TUNIT-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal3(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 [[C]]) #[[ATTR11]]
 ; TUNIT-NEXT:    ret i8 [[R]]
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@readnone_caller3
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR10]] {
 ; CGSCC-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
-; CGSCC-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal3(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 [[C]]) #[[ATTR13]]
+; CGSCC-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal3(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 [[C]]) #[[ATTR13]]
 ; CGSCC-NEXT:    ret i8 [[R]]
 ;
   %alloc = alloca i8
-  %r = call i8 @recursive_not_readnone_internal3(i8* %alloc, i1 %c)
+  %r = call i8 @recursive_not_readnone_internal3(ptr %alloc, i1 %c)
   ret i8 %r
 }
 
-define internal void @argmemonly_before_ipconstprop(i32* %p) argmemonly {
+define internal void @argmemonly_before_ipconstprop(ptr %p) argmemonly {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@argmemonly_before_ipconstprop
 ; CHECK-SAME: () #[[ATTR6]] {
-; CHECK-NEXT:    store i32 0, i32* @G, align 4
+; CHECK-NEXT:    store i32 0, ptr @G, align 4
 ; CHECK-NEXT:    ret void
 ;
-  store i32 0, i32* %p
+  store i32 0, ptr %p
   ret void
 }
 
@@ -705,7 +705,7 @@ define void @argmemonky_caller() {
 ; CGSCC-NEXT:    call void @argmemonly_before_ipconstprop() #[[ATTR11]]
 ; CGSCC-NEXT:    ret void
 ;
-  call void @argmemonly_before_ipconstprop(i32* @G)
+  call void @argmemonly_before_ipconstprop(ptr @G)
   ret void
 }
 ;.

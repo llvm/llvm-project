@@ -3,15 +3,15 @@
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes="gvn<load-pre>" -enable-load-pre=false -S | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
-define i32 @test1(i32* %p, i1 %C) {
+define i32 @test1(ptr %p, i1 %C) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  block1:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BLOCK2:%.*]], label [[BLOCK3:%.*]]
 ; CHECK:       block2:
-; CHECK-NEXT:    [[PRE_PRE:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[PRE_PRE:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[BLOCK4:%.*]]
 ; CHECK:       block3:
-; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[BLOCK4]]
 ; CHECK:       block4:
 ; CHECK-NEXT:    [[PRE:%.*]] = phi i32 [ 0, [[BLOCK3]] ], [ [[PRE_PRE]], [[BLOCK2]] ]
@@ -24,28 +24,28 @@ block2:
   br label %block4
 
 block3:
-  store i32 0, i32* %p
+  store i32 0, ptr %p
   br label %block4
 
 block4:
-  %PRE = load i32, i32* %p
+  %PRE = load i32, ptr %p
   ret i32 %PRE
 }
 
 ; This is a simple phi translation case.
-define i32 @test2(i32* %p, i32* %q, i1 %C) {
+define i32 @test2(ptr %p, ptr %q, i1 %C) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  block1:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BLOCK2:%.*]], label [[BLOCK3:%.*]]
 ; CHECK:       block2:
-; CHECK-NEXT:    [[PRE_PRE:%.*]] = load i32, i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    [[PRE_PRE:%.*]] = load i32, ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    br label [[BLOCK4:%.*]]
 ; CHECK:       block3:
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[BLOCK4]]
 ; CHECK:       block4:
 ; CHECK-NEXT:    [[PRE:%.*]] = phi i32 [ 0, [[BLOCK3]] ], [ [[PRE_PRE]], [[BLOCK2]] ]
-; CHECK-NEXT:    [[P2:%.*]] = phi i32* [ [[P]], [[BLOCK3]] ], [ [[Q]], [[BLOCK2]] ]
+; CHECK-NEXT:    [[P2:%.*]] = phi ptr [ [[P]], [[BLOCK3]] ], [ [[Q]], [[BLOCK2]] ]
 ; CHECK-NEXT:    ret i32 [[PRE]]
 ;
 block1:
@@ -55,75 +55,75 @@ block2:
   br label %block4
 
 block3:
-  store i32 0, i32* %p
+  store i32 0, ptr %p
   br label %block4
 
 block4:
-  %P2 = phi i32* [%p, %block3], [%q, %block2]
-  %PRE = load i32, i32* %P2
+  %P2 = phi ptr [%p, %block3], [%q, %block2]
+  %PRE = load i32, ptr %P2
   ret i32 %PRE
 }
 
 ; This is a PRE case that requires phi translation through a GEP.
-define i32 @test3(i32* %p, i32* %q, i32** %Hack, i1 %C) {
+define i32 @test3(ptr %p, ptr %q, ptr %Hack, i1 %C) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  block1:
-; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, i32* [[Q:%.*]], i32 1
-; CHECK-NEXT:    store i32* [[B]], i32** [[HACK:%.*]], align 8
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[Q:%.*]], i32 1
+; CHECK-NEXT:    store ptr [[B]], ptr [[HACK:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BLOCK2:%.*]], label [[BLOCK3:%.*]]
 ; CHECK:       block2:
-; CHECK-NEXT:    [[PRE_PRE:%.*]] = load i32, i32* [[B]], align 4
+; CHECK-NEXT:    [[PRE_PRE:%.*]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    br label [[BLOCK4:%.*]]
 ; CHECK:       block3:
-; CHECK-NEXT:    [[A:%.*]] = getelementptr i32, i32* [[P:%.*]], i32 1
-; CHECK-NEXT:    store i32 0, i32* [[A]], align 4
+; CHECK-NEXT:    [[A:%.*]] = getelementptr i32, ptr [[P:%.*]], i32 1
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[BLOCK4]]
 ; CHECK:       block4:
 ; CHECK-NEXT:    [[PRE:%.*]] = phi i32 [ 0, [[BLOCK3]] ], [ [[PRE_PRE]], [[BLOCK2]] ]
-; CHECK-NEXT:    [[P2:%.*]] = phi i32* [ [[P]], [[BLOCK3]] ], [ [[Q]], [[BLOCK2]] ]
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i32, i32* [[P2]], i32 1
+; CHECK-NEXT:    [[P2:%.*]] = phi ptr [ [[P]], [[BLOCK3]] ], [ [[Q]], [[BLOCK2]] ]
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr i32, ptr [[P2]], i32 1
 ; CHECK-NEXT:    ret i32 [[PRE]]
 ;
 block1:
-  %B = getelementptr i32, i32* %q, i32 1
-  store i32* %B, i32** %Hack
+  %B = getelementptr i32, ptr %q, i32 1
+  store ptr %B, ptr %Hack
   br i1 %C, label %block2, label %block3
 
 block2:
   br label %block4
 
 block3:
-  %A = getelementptr i32, i32* %p, i32 1
-  store i32 0, i32* %A
+  %A = getelementptr i32, ptr %p, i32 1
+  store i32 0, ptr %A
   br label %block4
 
 block4:
-  %P2 = phi i32* [%p, %block3], [%q, %block2]
-  %P3 = getelementptr i32, i32* %P2, i32 1
-  %PRE = load i32, i32* %P3
+  %P2 = phi ptr [%p, %block3], [%q, %block2]
+  %P3 = getelementptr i32, ptr %P2, i32 1
+  %PRE = load i32, ptr %P3
   ret i32 %PRE
 }
 
 ;; Here the loaded address is available, but the computation is in 'block3'
 ;; which does not dominate 'block2'.
-define i32 @test4(i32* %p, i32* %q, i32** %Hack, i1 %C) {
+define i32 @test4(ptr %p, ptr %q, ptr %Hack, i1 %C) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  block1:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BLOCK2:%.*]], label [[BLOCK3:%.*]]
 ; CHECK:       block2:
-; CHECK-NEXT:    [[P3_PHI_TRANS_INSERT:%.*]] = getelementptr i32, i32* [[Q:%.*]], i32 1
-; CHECK-NEXT:    [[PRE_PRE:%.*]] = load i32, i32* [[P3_PHI_TRANS_INSERT]], align 4
+; CHECK-NEXT:    [[P3_PHI_TRANS_INSERT:%.*]] = getelementptr i32, ptr [[Q:%.*]], i32 1
+; CHECK-NEXT:    [[PRE_PRE:%.*]] = load i32, ptr [[P3_PHI_TRANS_INSERT]], align 4
 ; CHECK-NEXT:    br label [[BLOCK4:%.*]]
 ; CHECK:       block3:
-; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, i32* [[Q]], i32 1
-; CHECK-NEXT:    store i32* [[B]], i32** [[HACK:%.*]], align 8
-; CHECK-NEXT:    [[A:%.*]] = getelementptr i32, i32* [[P:%.*]], i32 1
-; CHECK-NEXT:    store i32 0, i32* [[A]], align 4
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[Q]], i32 1
+; CHECK-NEXT:    store ptr [[B]], ptr [[HACK:%.*]], align 8
+; CHECK-NEXT:    [[A:%.*]] = getelementptr i32, ptr [[P:%.*]], i32 1
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[BLOCK4]]
 ; CHECK:       block4:
 ; CHECK-NEXT:    [[PRE:%.*]] = phi i32 [ 0, [[BLOCK3]] ], [ [[PRE_PRE]], [[BLOCK2]] ]
-; CHECK-NEXT:    [[P2:%.*]] = phi i32* [ [[P]], [[BLOCK3]] ], [ [[Q]], [[BLOCK2]] ]
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i32, i32* [[P2]], i32 1
+; CHECK-NEXT:    [[P2:%.*]] = phi ptr [ [[P]], [[BLOCK3]] ], [ [[Q]], [[BLOCK2]] ]
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr i32, ptr [[P2]], i32 1
 ; CHECK-NEXT:    ret i32 [[PRE]]
 ;
 block1:
@@ -133,27 +133,27 @@ block2:
   br label %block4
 
 block3:
-  %B = getelementptr i32, i32* %q, i32 1
-  store i32* %B, i32** %Hack
+  %B = getelementptr i32, ptr %q, i32 1
+  store ptr %B, ptr %Hack
 
-  %A = getelementptr i32, i32* %p, i32 1
-  store i32 0, i32* %A
+  %A = getelementptr i32, ptr %p, i32 1
+  store i32 0, ptr %A
   br label %block4
 
 block4:
-  %P2 = phi i32* [%p, %block3], [%q, %block2]
-  %P3 = getelementptr i32, i32* %P2, i32 1
-  %PRE = load i32, i32* %P3
+  %P2 = phi ptr [%p, %block3], [%q, %block2]
+  %P3 = getelementptr i32, ptr %P2, i32 1
+  %PRE = load i32, ptr %P3
   ret i32 %PRE
 }
 
-;void test5(int N, double *G) {
+;void test5(int N, ptr G) {
 ;  int j;
 ;  for (j = 0; j < N - 1; j++)
 ;    G[j] = G[j] + G[j+1];
 ;}
 
-define void @test5(i32 %N, double* nocapture %G) nounwind ssp {
+define void @test5(i32 %N, ptr nocapture %G) nounwind ssp {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N:%.*]], -1
@@ -161,17 +161,17 @@ define void @test5(i32 %N, double* nocapture %G) nounwind ssp {
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB_NPH:%.*]], label [[RETURN:%.*]]
 ; CHECK:       bb.nph:
 ; CHECK-NEXT:    [[TMP:%.*]] = zext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load double, double* [[G:%.*]], align 8
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load double, ptr [[G:%.*]], align 8
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[DOTPRE]], [[BB_NPH]] ], [ [[TMP3:%.*]], [[BB]] ]
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH]] ], [ [[TMP6:%.*]], [[BB]] ]
 ; CHECK-NEXT:    [[TMP6]] = add i64 [[INDVAR]], 1
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr double, double* [[G]], i64 [[TMP6]]
-; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr double, double* [[G]], i64 [[INDVAR]]
-; CHECK-NEXT:    [[TMP3]] = load double, double* [[SCEVGEP]], align 8
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr double, ptr [[G]], i64 [[TMP6]]
+; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr double, ptr [[G]], i64 [[INDVAR]]
+; CHECK-NEXT:    [[TMP3]] = load double, ptr [[SCEVGEP]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd double [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    store double [[TMP4]], double* [[SCEVGEP7]], align 8
+; CHECK-NEXT:    store double [[TMP4]], ptr [[SCEVGEP7]], align 8
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[TMP6]], [[TMP]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[RETURN]], label [[BB]]
 ; CHECK:       return:
@@ -190,12 +190,12 @@ bb.nph:
 bb:
   %indvar = phi i64 [ 0, %bb.nph ], [ %tmp6, %bb ]
   %tmp6 = add i64 %indvar, 1
-  %scevgep = getelementptr double, double* %G, i64 %tmp6
-  %scevgep7 = getelementptr double, double* %G, i64 %indvar
-  %2 = load double, double* %scevgep7, align 8
-  %3 = load double, double* %scevgep, align 8
+  %scevgep = getelementptr double, ptr %G, i64 %tmp6
+  %scevgep7 = getelementptr double, ptr %G, i64 %indvar
+  %2 = load double, ptr %scevgep7, align 8
+  %3 = load double, ptr %scevgep, align 8
   %4 = fadd double %2, %3
-  store double %4, double* %scevgep7, align 8
+  store double %4, ptr %scevgep7, align 8
   %exitcond = icmp eq i64 %tmp6, %tmp
   br i1 %exitcond, label %return, label %bb
 
@@ -205,13 +205,13 @@ return:
   ret void
 }
 
-;void test6(int N, double *G) {
+;void test6(int N, ptr G) {
 ;  int j;
 ;  for (j = 0; j < N - 1; j++)
 ;    G[j+1] = G[j] + G[j+1];
 ;}
 
-define void @test6(i32 %N, double* nocapture %G) nounwind ssp {
+define void @test6(i32 %N, ptr nocapture %G) nounwind ssp {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N:%.*]], -1
@@ -219,17 +219,17 @@ define void @test6(i32 %N, double* nocapture %G) nounwind ssp {
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB_NPH:%.*]], label [[RETURN:%.*]]
 ; CHECK:       bb.nph:
 ; CHECK-NEXT:    [[TMP:%.*]] = zext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load double, double* [[G:%.*]], align 8
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load double, ptr [[G:%.*]], align 8
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[DOTPRE]], [[BB_NPH]] ], [ [[TMP4:%.*]], [[BB]] ]
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH]] ], [ [[TMP6:%.*]], [[BB]] ]
 ; CHECK-NEXT:    [[TMP6]] = add i64 [[INDVAR]], 1
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr double, double* [[G]], i64 [[TMP6]]
-; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr double, double* [[G]], i64 [[INDVAR]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load double, double* [[SCEVGEP]], align 8
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr double, ptr [[G]], i64 [[TMP6]]
+; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr double, ptr [[G]], i64 [[INDVAR]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr [[SCEVGEP]], align 8
 ; CHECK-NEXT:    [[TMP4]] = fadd double [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    store double [[TMP4]], double* [[SCEVGEP]], align 8
+; CHECK-NEXT:    store double [[TMP4]], ptr [[SCEVGEP]], align 8
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[TMP6]], [[TMP]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[RETURN]], label [[BB]]
 ; CHECK:       return:
@@ -248,12 +248,12 @@ bb.nph:
 bb:
   %indvar = phi i64 [ 0, %bb.nph ], [ %tmp6, %bb ]
   %tmp6 = add i64 %indvar, 1
-  %scevgep = getelementptr double, double* %G, i64 %tmp6
-  %scevgep7 = getelementptr double, double* %G, i64 %indvar
-  %2 = load double, double* %scevgep7, align 8
-  %3 = load double, double* %scevgep, align 8
+  %scevgep = getelementptr double, ptr %G, i64 %tmp6
+  %scevgep7 = getelementptr double, ptr %G, i64 %indvar
+  %2 = load double, ptr %scevgep7, align 8
+  %3 = load double, ptr %scevgep, align 8
   %4 = fadd double %2, %3
-  store double %4, double* %scevgep, align 8
+  store double %4, ptr %scevgep, align 8
   %exitcond = icmp eq i64 %tmp6, %tmp
   br i1 %exitcond, label %return, label %bb
 
@@ -263,7 +263,7 @@ return:
   ret void
 }
 
-;void test7(int N, double* G) {
+;void test7(int N, ptr G) {
 ;  long j;
 ;  G[1] = 1;
 ;  for (j = 1; j < N - 1; j++)
@@ -271,11 +271,11 @@ return:
 ;}
 
 ; This requires phi translation of the adds.
-define void @test7(i32 %N, double* nocapture %G) nounwind ssp {
+define void @test7(i32 %N, ptr nocapture %G) nounwind ssp {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, double* [[G:%.*]], i64 1
-; CHECK-NEXT:    store double 1.000000e+00, double* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[G:%.*]], i64 1
+; CHECK-NEXT:    store double 1.000000e+00, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[N:%.*]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], 1
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[BB_NPH:%.*]], label [[RETURN:%.*]]
@@ -287,20 +287,20 @@ define void @test7(i32 %N, double* nocapture %G) nounwind ssp {
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ 1.000000e+00, [[BB_NPH]] ], [ [[TMP5:%.*]], [[BB]] ]
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH]] ], [ [[TMP9:%.*]], [[BB]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDVAR]], 2
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr double, double* [[G]], i64 [[TMP8]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr double, ptr [[G]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[INDVAR]], 1
-; CHECK-NEXT:    [[SCEVGEP10:%.*]] = getelementptr double, double* [[G]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load double, double* [[SCEVGEP]], align 8
+; CHECK-NEXT:    [[SCEVGEP10:%.*]] = getelementptr double, ptr [[G]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr [[SCEVGEP]], align 8
 ; CHECK-NEXT:    [[TMP5]] = fadd double [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    store double [[TMP5]], double* [[SCEVGEP]], align 8
+; CHECK-NEXT:    store double [[TMP5]], ptr [[SCEVGEP]], align 8
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[TMP9]], [[TMP7]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[RETURN]], label [[BB]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = getelementptr inbounds double, double* %G, i64 1
-  store double 1.000000e+00, double* %0, align 8
+  %0 = getelementptr inbounds double, ptr %G, i64 1
+  store double 1.000000e+00, ptr %0, align 8
   %1 = add i32 %N, -1
   %2 = icmp sgt i32 %1, 1
   br i1 %2, label %bb.nph, label %return
@@ -313,13 +313,13 @@ bb.nph:
 bb:
   %indvar = phi i64 [ 0, %bb.nph ], [ %tmp9, %bb ]
   %tmp8 = add i64 %indvar, 2
-  %scevgep = getelementptr double, double* %G, i64 %tmp8
+  %scevgep = getelementptr double, ptr %G, i64 %tmp8
   %tmp9 = add i64 %indvar, 1
-  %scevgep10 = getelementptr double, double* %G, i64 %tmp9
-  %3 = load double, double* %scevgep10, align 8
-  %4 = load double, double* %scevgep, align 8
+  %scevgep10 = getelementptr double, ptr %G, i64 %tmp9
+  %3 = load double, ptr %scevgep10, align 8
+  %4 = load double, ptr %scevgep, align 8
   %5 = fadd double %3, %4
-  store double %5, double* %scevgep, align 8
+  store double %5, ptr %scevgep, align 8
   %exitcond = icmp eq i64 %tmp9, %tmp7
   br i1 %exitcond, label %return, label %bb
 
@@ -331,22 +331,22 @@ return:
 
 ;; Here the loaded address isn't available in 'block2' at all, requiring a new
 ;; GEP to be inserted into it.
-define i32 @test8(i32* %p, i32* %q, i32** %Hack, i1 %C) {
+define i32 @test8(ptr %p, ptr %q, ptr %Hack, i1 %C) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  block1:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BLOCK2:%.*]], label [[BLOCK3:%.*]]
 ; CHECK:       block2:
-; CHECK-NEXT:    [[P3_PHI_TRANS_INSERT:%.*]] = getelementptr i32, i32* [[Q:%.*]], i32 1
-; CHECK-NEXT:    [[PRE_PRE:%.*]] = load i32, i32* [[P3_PHI_TRANS_INSERT]], align 4
+; CHECK-NEXT:    [[P3_PHI_TRANS_INSERT:%.*]] = getelementptr i32, ptr [[Q:%.*]], i32 1
+; CHECK-NEXT:    [[PRE_PRE:%.*]] = load i32, ptr [[P3_PHI_TRANS_INSERT]], align 4
 ; CHECK-NEXT:    br label [[BLOCK4:%.*]]
 ; CHECK:       block3:
-; CHECK-NEXT:    [[A:%.*]] = getelementptr i32, i32* [[P:%.*]], i32 1
-; CHECK-NEXT:    store i32 0, i32* [[A]], align 4
+; CHECK-NEXT:    [[A:%.*]] = getelementptr i32, ptr [[P:%.*]], i32 1
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[BLOCK4]]
 ; CHECK:       block4:
 ; CHECK-NEXT:    [[PRE:%.*]] = phi i32 [ 0, [[BLOCK3]] ], [ [[PRE_PRE]], [[BLOCK2]] ]
-; CHECK-NEXT:    [[P2:%.*]] = phi i32* [ [[P]], [[BLOCK3]] ], [ [[Q]], [[BLOCK2]] ]
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i32, i32* [[P2]], i32 1
+; CHECK-NEXT:    [[P2:%.*]] = phi ptr [ [[P]], [[BLOCK3]] ], [ [[Q]], [[BLOCK2]] ]
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr i32, ptr [[P2]], i32 1
 ; CHECK-NEXT:    ret i32 [[PRE]]
 ;
 block1:
@@ -356,25 +356,25 @@ block2:
   br label %block4
 
 block3:
-  %A = getelementptr i32, i32* %p, i32 1
-  store i32 0, i32* %A
+  %A = getelementptr i32, ptr %p, i32 1
+  store i32 0, ptr %A
   br label %block4
 
 block4:
-  %P2 = phi i32* [%p, %block3], [%q, %block2]
-  %P3 = getelementptr i32, i32* %P2, i32 1
-  %PRE = load i32, i32* %P3
+  %P2 = phi ptr [%p, %block3], [%q, %block2]
+  %P3 = getelementptr i32, ptr %P2, i32 1
+  %PRE = load i32, ptr %P3
   ret i32 %PRE
 }
 
-;void test9(int N, double* G) {
+;void test9(int N, ptr G) {
 ;  long j;
 ;  for (j = 1; j < N - 1; j++)
 ;      G[j+1] = G[j] + G[j+1];
 ;}
 
 ; This requires phi translation of the adds.
-define void @test9(i32 %N, double* nocapture %G) nounwind ssp {
+define void @test9(i32 %N, ptr nocapture %G) nounwind ssp {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N:%.*]], -1
@@ -383,19 +383,19 @@ define void @test9(i32 %N, double* nocapture %G) nounwind ssp {
 ; CHECK:       bb.nph:
 ; CHECK-NEXT:    [[TMP:%.*]] = sext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP]], -1
-; CHECK-NEXT:    [[SCEVGEP10_PHI_TRANS_INSERT:%.*]] = getelementptr double, double* [[G:%.*]], i64 1
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load double, double* [[SCEVGEP10_PHI_TRANS_INSERT]], align 8
+; CHECK-NEXT:    [[SCEVGEP10_PHI_TRANS_INSERT:%.*]] = getelementptr double, ptr [[G:%.*]], i64 1
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load double, ptr [[SCEVGEP10_PHI_TRANS_INSERT]], align 8
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[DOTPRE]], [[BB_NPH]] ], [ [[TMP4:%.*]], [[BB]] ]
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH]] ], [ [[TMP9:%.*]], [[BB]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDVAR]], 2
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr double, double* [[G]], i64 [[TMP8]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr double, ptr [[G]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[INDVAR]], 1
-; CHECK-NEXT:    [[SCEVGEP10:%.*]] = getelementptr double, double* [[G]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load double, double* [[SCEVGEP]], align 8
+; CHECK-NEXT:    [[SCEVGEP10:%.*]] = getelementptr double, ptr [[G]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr [[SCEVGEP]], align 8
 ; CHECK-NEXT:    [[TMP4]] = fadd double [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    store double [[TMP4]], double* [[SCEVGEP]], align 8
+; CHECK-NEXT:    store double [[TMP4]], ptr [[SCEVGEP]], align 8
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[TMP9]], [[TMP7]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[RETURN]], label [[BB]]
 ; CHECK:       return:
@@ -416,13 +416,13 @@ bb.nph:
 bb:
   %indvar = phi i64 [ 0, %bb.nph ], [ %tmp9, %bb ]
   %tmp8 = add i64 %indvar, 2
-  %scevgep = getelementptr double, double* %G, i64 %tmp8
+  %scevgep = getelementptr double, ptr %G, i64 %tmp8
   %tmp9 = add i64 %indvar, 1
-  %scevgep10 = getelementptr double, double* %G, i64 %tmp9
-  %3 = load double, double* %scevgep10, align 8
-  %4 = load double, double* %scevgep, align 8
+  %scevgep10 = getelementptr double, ptr %G, i64 %tmp9
+  %3 = load double, ptr %scevgep10, align 8
+  %4 = load double, ptr %scevgep, align 8
   %5 = fadd double %3, %4
-  store double %5, double* %scevgep, align 8
+  store double %5, ptr %scevgep, align 8
   %exitcond = icmp eq i64 %tmp9, %tmp7
   br i1 %exitcond, label %return, label %bb
 
@@ -432,14 +432,14 @@ return:
   ret void
 }
 
-;void test10(int N, double* G) {
+;void test10(int N, ptr G) {
 ;  long j;
 ;  for (j = 1; j < N - 1; j++)
 ;      G[j] = G[j] + G[j+1] + G[j-1];
 ;}
 
 ; PR5501
-define void @test10(i32 %N, double* nocapture %G) nounwind ssp {
+define void @test10(i32 %N, ptr nocapture %G) nounwind ssp {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N:%.*]], -1
@@ -448,23 +448,23 @@ define void @test10(i32 %N, double* nocapture %G) nounwind ssp {
 ; CHECK:       bb.nph:
 ; CHECK-NEXT:    [[TMP:%.*]] = sext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP]], -1
-; CHECK-NEXT:    [[SCEVGEP12_PHI_TRANS_INSERT:%.*]] = getelementptr double, double* [[G:%.*]], i64 1
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load double, double* [[SCEVGEP12_PHI_TRANS_INSERT]], align 8
-; CHECK-NEXT:    [[DOTPRE1:%.*]] = load double, double* [[G]], align 8
+; CHECK-NEXT:    [[SCEVGEP12_PHI_TRANS_INSERT:%.*]] = getelementptr double, ptr [[G:%.*]], i64 1
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load double, ptr [[SCEVGEP12_PHI_TRANS_INSERT]], align 8
+; CHECK-NEXT:    [[DOTPRE1:%.*]] = load double, ptr [[G]], align 8
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[DOTPRE1]], [[BB_NPH]] ], [ [[TMP6:%.*]], [[BB]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[DOTPRE]], [[BB_NPH]] ], [ [[TMP4:%.*]], [[BB]] ]
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH]] ], [ [[TMP11:%.*]], [[BB]] ]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr double, double* [[G]], i64 [[INDVAR]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr double, ptr [[G]], i64 [[INDVAR]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDVAR]], 2
-; CHECK-NEXT:    [[SCEVGEP10:%.*]] = getelementptr double, double* [[G]], i64 [[TMP9]]
+; CHECK-NEXT:    [[SCEVGEP10:%.*]] = getelementptr double, ptr [[G]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11]] = add i64 [[INDVAR]], 1
-; CHECK-NEXT:    [[SCEVGEP12:%.*]] = getelementptr double, double* [[G]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP4]] = load double, double* [[SCEVGEP10]], align 8
+; CHECK-NEXT:    [[SCEVGEP12:%.*]] = getelementptr double, ptr [[G]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP4]] = load double, ptr [[SCEVGEP10]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd double [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6]] = fadd double [[TMP5]], [[TMP2]]
-; CHECK-NEXT:    store double [[TMP6]], double* [[SCEVGEP12]], align 8
+; CHECK-NEXT:    store double [[TMP6]], ptr [[SCEVGEP12]], align 8
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[TMP11]], [[TMP8]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[RETURN]], label [[BB]]
 ; CHECK:       return:
@@ -483,17 +483,17 @@ bb.nph:
 
 bb:
   %indvar = phi i64 [ 0, %bb.nph ], [ %tmp11, %bb ]
-  %scevgep = getelementptr double, double* %G, i64 %indvar
+  %scevgep = getelementptr double, ptr %G, i64 %indvar
   %tmp9 = add i64 %indvar, 2
-  %scevgep10 = getelementptr double, double* %G, i64 %tmp9
+  %scevgep10 = getelementptr double, ptr %G, i64 %tmp9
   %tmp11 = add i64 %indvar, 1
-  %scevgep12 = getelementptr double, double* %G, i64 %tmp11
-  %2 = load double, double* %scevgep12, align 8
-  %3 = load double, double* %scevgep10, align 8
+  %scevgep12 = getelementptr double, ptr %G, i64 %tmp11
+  %2 = load double, ptr %scevgep12, align 8
+  %3 = load double, ptr %scevgep10, align 8
   %4 = fadd double %2, %3
-  %5 = load double, double* %scevgep, align 8
+  %5 = load double, ptr %scevgep, align 8
   %6 = fadd double %4, %5
-  store double %6, double* %scevgep12, align 8
+  store double %6, ptr %scevgep12, align 8
   %exitcond = icmp eq i64 %tmp11, %tmp8
   br i1 %exitcond, label %return, label %bb
 
@@ -504,7 +504,7 @@ return:
 }
 
 ; Test critical edge splitting.
-define i32 @test11(i32* %p, i1 %C, i32 %N) {
+define i32 @test11(ptr %p, i1 %C, i32 %N) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  block1:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BLOCK2:%.*]], label [[BLOCK3:%.*]]
@@ -512,10 +512,10 @@ define i32 @test11(i32* %p, i1 %C, i32 %N) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[N:%.*]], 1
 ; CHECK-NEXT:    br i1 [[COND]], label [[BLOCK2_BLOCK4_CRIT_EDGE:%.*]], label [[BLOCK5:%.*]]
 ; CHECK:       block2.block4_crit_edge:
-; CHECK-NEXT:    [[PRE_PRE:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[PRE_PRE:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[BLOCK4:%.*]]
 ; CHECK:       block3:
-; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[BLOCK4]]
 ; CHECK:       block4:
 ; CHECK-NEXT:    [[PRE:%.*]] = phi i32 [ [[PRE_PRE]], [[BLOCK2_BLOCK4_CRIT_EDGE]] ], [ 0, [[BLOCK3]] ]
@@ -532,11 +532,11 @@ block2:
   br i1 %cond, label %block4, label %block5
 
 block3:
-  store i32 0, i32* %p
+  store i32 0, ptr %p
   br label %block4
 
 block4:
-  %PRE = load i32, i32* %p
+  %PRE = load i32, ptr %p
   br label %block5
 
 block5:
@@ -549,7 +549,7 @@ declare void @g(i32)
 declare i32 @__CxxFrameHandler3(...)
 
 ; Test that loads aren't PRE'd into EH pads.
-define void @test12(i32* %p) personality i32 (...)* @__CxxFrameHandler3 {
+define void @test12(ptr %p) personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:  block1:
 ; CHECK-NEXT:    invoke void @f()
@@ -566,11 +566,11 @@ define void @test12(i32* %p) personality i32 (...)* @__CxxFrameHandler3 {
 ; CHECK-NEXT:    catchret from [[C]] to label [[BLOCK2]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    [[C1:%.*]] = cleanuppad within none []
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    cleanupret from [[C1]] unwind label [[CLEANUP2]]
 ; CHECK:       cleanup2:
 ; CHECK-NEXT:    [[C2:%.*]] = cleanuppad within none []
-; CHECK-NEXT:    [[NOTPRE:%.*]] = load i32, i32* [[P]], align 4
+; CHECK-NEXT:    [[NOTPRE:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    call void @g(i32 [[NOTPRE]])
 ; CHECK-NEXT:    cleanupret from [[C2]] unwind to caller
 ;
@@ -594,30 +594,30 @@ catch:
 
 cleanup:
   %c1 = cleanuppad within none []
-  store i32 0, i32* %p
+  store i32 0, ptr %p
   cleanupret from %c1 unwind label %cleanup2
 
 cleanup2:
   %c2 = cleanuppad within none []
-  %NOTPRE = load i32, i32* %p
+  %NOTPRE = load i32, ptr %p
   call void @g(i32 %NOTPRE)
   cleanupret from %c2 unwind to caller
 }
 
 ; Don't PRE load across potentially throwing calls.
 
-define i32 @test13(i32* noalias nocapture readonly %x, i32* noalias nocapture %r, i32 %a) {
+define i32 @test13(ptr noalias nocapture readonly %x, ptr noalias nocapture %r, i32 %a) {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[UU:%.*]] = load i32, i32* [[X:%.*]], align 4
-; CHECK-NEXT:    store i32 [[UU]], i32* [[R:%.*]], align 4
+; CHECK-NEXT:    [[UU:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    store i32 [[UU]], ptr [[R:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @f()
-; CHECK-NEXT:    [[VV:%.*]] = load i32, i32* [[X]], align 4
+; CHECK-NEXT:    [[VV:%.*]] = load i32, ptr [[X]], align 4
 ; CHECK-NEXT:    ret i32 [[VV]]
 ;
 
@@ -627,32 +627,32 @@ entry:
 
 
 if.then:
-  %uu = load i32, i32* %x, align 4
-  store i32 %uu, i32* %r, align 4
+  %uu = load i32, ptr %x, align 4
+  store i32 %uu, ptr %r, align 4
   br label %if.end
 
 
 if.end:
   call void @f()
-  %vv = load i32, i32* %x, align 4
+  %vv = load i32, ptr %x, align 4
   ret i32 %vv
 }
 
 ; Same as test13, but now the blocking function is not immediately in load's
 ; block.
 
-define i32 @test14(i32* noalias nocapture readonly %x, i32* noalias nocapture %r, i32 %a) {
+define i32 @test14(ptr noalias nocapture readonly %x, ptr noalias nocapture %r, i32 %a) {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[UU:%.*]] = load i32, i32* [[X:%.*]], align 4
-; CHECK-NEXT:    store i32 [[UU]], i32* [[R:%.*]], align 4
+; CHECK-NEXT:    [[UU:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    store i32 [[UU]], ptr [[R:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @f()
-; CHECK-NEXT:    [[VV:%.*]] = load i32, i32* [[X]], align 4
+; CHECK-NEXT:    [[VV:%.*]] = load i32, ptr [[X]], align 4
 ; CHECK-NEXT:    ret i32 [[VV]]
 ;
 
@@ -662,8 +662,8 @@ entry:
 
 
 if.then:
-  %uu = load i32, i32* %x, align 4
-  store i32 %uu, i32* %r, align 4
+  %uu = load i32, ptr %x, align 4
+  store i32 %uu, ptr %r, align 4
   br label %if.end
 
 
@@ -675,7 +675,7 @@ follow_1:
   br label %follow_2
 
 follow_2:
-  %vv = load i32, i32* %x, align 4
+  %vv = load i32, ptr %x, align 4
   ret i32 %vv
 }
 
@@ -683,17 +683,17 @@ follow_2:
 ; dereferenceable can be loaded from speculatively without a risk of trapping.
 ; Since it is OK to speculate, PRE is allowed.
 
-define i32 @test15(i32* noalias nocapture readonly dereferenceable(8) align 4 %x, i32* noalias nocapture %r, i32 %a) nofree nosync {
+define i32 @test15(ptr noalias nocapture readonly dereferenceable(8) align 4 %x, ptr noalias nocapture %r, i32 %a) nofree nosync {
 ; CHECK-LABEL: @test15(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[ENTRY_IF_END_CRIT_EDGE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       entry.if.end_crit_edge:
-; CHECK-NEXT:    [[VV_PRE:%.*]] = load i32, i32* [[X:%.*]], align 4
+; CHECK-NEXT:    [[VV_PRE:%.*]] = load i32, ptr [[X:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[UU:%.*]] = load i32, i32* [[X]], align 4
-; CHECK-NEXT:    store i32 [[UU]], i32* [[R:%.*]], align 4
+; CHECK-NEXT:    [[UU:%.*]] = load i32, ptr [[X]], align 4
+; CHECK-NEXT:    store i32 [[UU]], ptr [[R:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[VV:%.*]] = phi i32 [ [[VV_PRE]], [[ENTRY_IF_END_CRIT_EDGE]] ], [ [[UU]], [[IF_THEN]] ]
@@ -707,14 +707,14 @@ entry:
 
 
 if.then:
-  %uu = load i32, i32* %x, align 4
-  store i32 %uu, i32* %r, align 4
+  %uu = load i32, ptr %x, align 4
+  store i32 %uu, ptr %r, align 4
   br label %if.end
 
 
 if.end:
   call void @f()
-  %vv = load i32, i32* %x, align 4
+  %vv = load i32, ptr %x, align 4
   ret i32 %vv
 
 
@@ -724,17 +724,17 @@ if.end:
 ; dereferenceable can be loaded from speculatively without a risk of trapping.
 ; Since it is OK to speculate, PRE is allowed.
 
-define i32 @test16(i32* noalias nocapture readonly dereferenceable(8) align 4 %x, i32* noalias nocapture %r, i32 %a) nofree nosync {
+define i32 @test16(ptr noalias nocapture readonly dereferenceable(8) align 4 %x, ptr noalias nocapture %r, i32 %a) nofree nosync {
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[ENTRY_IF_END_CRIT_EDGE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       entry.if.end_crit_edge:
-; CHECK-NEXT:    [[VV_PRE:%.*]] = load i32, i32* [[X:%.*]], align 4
+; CHECK-NEXT:    [[VV_PRE:%.*]] = load i32, ptr [[X:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[UU:%.*]] = load i32, i32* [[X]], align 4
-; CHECK-NEXT:    store i32 [[UU]], i32* [[R:%.*]], align 4
+; CHECK-NEXT:    [[UU:%.*]] = load i32, ptr [[X]], align 4
+; CHECK-NEXT:    store i32 [[UU]], ptr [[R:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[VV:%.*]] = phi i32 [ [[VV_PRE]], [[ENTRY_IF_END_CRIT_EDGE]] ], [ [[UU]], [[IF_THEN]] ]
@@ -748,8 +748,8 @@ entry:
 
 
 if.then:
-  %uu = load i32, i32* %x, align 4
-  store i32 %uu, i32* %r, align 4
+  %uu = load i32, ptr %x, align 4
+  store i32 %uu, ptr %r, align 4
   br label %if.end
 
 
@@ -762,7 +762,7 @@ follow_1:
   br label %follow_2
 
 follow_2:
-  %vv = load i32, i32* %x, align 4
+  %vv = load i32, ptr %x, align 4
   ret i32 %vv
 }
 
@@ -773,10 +773,10 @@ declare i1 @bar()
 ; critical edges. The other successors of those predecessors have same loads.
 ; We can move all loads into predecessors.
 
-define void @test17(i64* %p1, i64* %p2, i64* %p3, i64* %p4)
+define void @test17(ptr %p1, ptr %p2, ptr %p3, ptr %p4)
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[V1:%.*]] = load i64, i64* [[P1:%.*]], align 8
+; CHECK-NEXT:    [[V1:%.*]] = load i64, ptr [[P1:%.*]], align 8
 ; CHECK-NEXT:    [[COND1:%.*]] = icmp sgt i64 [[V1]], 200
 ; CHECK-NEXT:    br i1 [[COND1]], label [[BB200:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
@@ -784,30 +784,30 @@ define void @test17(i64* %p1, i64* %p2, i64* %p3, i64* %p4)
 ; CHECK-NEXT:    br i1 [[COND2]], label [[BB100:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[V2:%.*]] = add nsw i64 [[V1]], 1
-; CHECK-NEXT:    store i64 [[V2]], i64* [[P1]], align 8
+; CHECK-NEXT:    store i64 [[V2]], ptr [[P1]], align 8
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[V3:%.*]] = load i64, i64* [[P1]], align 8
-; CHECK-NEXT:    store i64 [[V3]], i64* [[P2:%.*]], align 8
+; CHECK-NEXT:    [[V3:%.*]] = load i64, ptr [[P1]], align 8
+; CHECK-NEXT:    store i64 [[V3]], ptr [[P2:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb100:
 ; CHECK-NEXT:    [[COND3:%.*]] = call i1 @foo()
 ; CHECK-NEXT:    br i1 [[COND3]], label [[BB3]], label [[BB101:%.*]]
 ; CHECK:       bb101:
-; CHECK-NEXT:    [[V4:%.*]] = load i64, i64* [[P1]], align 8
-; CHECK-NEXT:    store i64 [[V4]], i64* [[P3:%.*]], align 8
+; CHECK-NEXT:    [[V4:%.*]] = load i64, ptr [[P1]], align 8
+; CHECK-NEXT:    store i64 [[V4]], ptr [[P3:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb200:
 ; CHECK-NEXT:    [[COND4:%.*]] = call i1 @bar()
 ; CHECK-NEXT:    br i1 [[COND4]], label [[BB3]], label [[BB201:%.*]]
 ; CHECK:       bb201:
-; CHECK-NEXT:    [[V5:%.*]] = load i64, i64* [[P1]], align 8
-; CHECK-NEXT:    store i64 [[V5]], i64* [[P4:%.*]], align 8
+; CHECK-NEXT:    [[V5:%.*]] = load i64, ptr [[P1]], align 8
+; CHECK-NEXT:    store i64 [[V5]], ptr [[P4:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 {
 entry:
-  %v1 = load i64, i64* %p1, align 8
+  %v1 = load i64, ptr %p1, align 8
   %cond1 = icmp sgt i64 %v1, 200
   br i1 %cond1, label %bb200, label %bb1
 
@@ -817,12 +817,12 @@ bb1:
 
 bb2:
   %v2 = add nsw i64 %v1, 1
-  store i64 %v2, i64* %p1, align 8
+  store i64 %v2, ptr %p1, align 8
   br label %bb3
 
 bb3:
-  %v3 = load i64, i64* %p1, align 8
-  store i64 %v3, i64* %p2, align 8
+  %v3 = load i64, ptr %p1, align 8
+  store i64 %v3, ptr %p2, align 8
   ret void
 
 bb100:
@@ -830,8 +830,8 @@ bb100:
   br i1 %cond3, label %bb3, label %bb101
 
 bb101:
-  %v4 = load i64, i64* %p1, align 8
-  store i64 %v4, i64* %p3, align 8
+  %v4 = load i64, ptr %p1, align 8
+  store i64 %v4, ptr %p3, align 8
   ret void
 
 bb200:
@@ -839,7 +839,7 @@ bb200:
   br i1 %cond4, label %bb3, label %bb201
 
 bb201:
-  %v5 = load i64, i64* %p1, align 8
-  store i64 %v5, i64* %p4, align 8
+  %v5 = load i64, ptr %p1, align 8
+  store i64 %v5, ptr %p4, align 8
   ret void
 }

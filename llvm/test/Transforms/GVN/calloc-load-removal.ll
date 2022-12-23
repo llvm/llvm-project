@@ -5,14 +5,13 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; Function Attrs: nounwind uwtable
 define i32 @test1() {
-  %1 = tail call noalias i8* @calloc(i64 1, i64 4)
-  %2 = bitcast i8* %1 to i32*
+  %1 = tail call noalias ptr @calloc(i64 1, i64 4)
   ; This load is trivially constant zero
-  %3 = load i32, i32* %2, align 4
-  ret i32 %3
+  %2 = load i32, ptr %1, align 4
+  ret i32 %2
 
 ; CHECK-LABEL: @test1(
-; CHECK-NOT: %3 = load i32, i32* %2, align 4
+; CHECK-NOT: %2 = load i32, ptr %1, align 4
 ; CHECK: ret i32 0
 
 ; CHECK_NO_LIBCALLS-LABEL: @test1(
@@ -21,23 +20,22 @@ define i32 @test1() {
 
 }
 
-define i32 @as_invoke(i1 %c) personality i32 (...)* undef {
+define i32 @as_invoke(i1 %c) personality ptr undef {
 bb3:
-  %mem = invoke noalias i8* @calloc(i64 1, i64 4)
+  %mem = invoke noalias ptr @calloc(i64 1, i64 4)
   to label %bb4 unwind label %bb1
 
 bb1:
-  %lp = landingpad { i8*, i32 } cleanup
+  %lp = landingpad { ptr, i32 } cleanup
   ret i32 0
 
 bb4:
-  %mem.i32 = bitcast i8* %mem to i32*
   ; This load is trivially constant zero
-  %res = load i32, i32* %mem.i32, align 4
+  %res = load i32, ptr %mem, align 4
   ret i32 %res
 
 ; CHECK-LABEL: @as_invoke(
-; CHECK-NOT: %3 = load i32, i32* %2, align 4
+; CHECK-NOT: %3 = load i32, ptr %2, align 4
 ; CHECK: ret i32 0
 
 ; CHECK_NO_LIBCALLS-LABEL: @as_invoke(
@@ -45,4 +43,4 @@ bb4:
 ; CHECK_NO_LIBCALLS: ret i32 %
 }
 
-declare noalias i8* @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0,1)
+declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0,1)

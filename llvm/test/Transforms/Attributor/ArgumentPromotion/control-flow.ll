@@ -3,16 +3,16 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 
 ; Don't promote around control flow.
-define internal i32 @callee(i1 %C, i32* %P) {
+define internal i32 @callee(i1 %C, ptr %P) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: define {{[^@]+}}@callee
-; CHECK-SAME: (i1 [[C:%.*]], i32* nocapture nofree readonly [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (i1 [[C:%.*]], ptr nocapture nofree readonly [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
 ; CHECK-NEXT:    ret i32 17
 ; CHECK:       F:
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
 entry:
@@ -22,27 +22,27 @@ T:
   ret i32 17
 
 F:
-  %X = load i32, i32* %P
+  %X = load i32, ptr %P
   ret i32 %X
 }
 
-define i32 @foo(i1 %C, i32* %P) {
+define i32 @foo(i1 %C, ptr %P) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; TUNIT-LABEL: define {{[^@]+}}@foo
-; TUNIT-SAME: (i1 [[C:%.*]], i32* nocapture nofree readonly [[P:%.*]]) #[[ATTR0]] {
+; TUNIT-SAME: (i1 [[C:%.*]], ptr nocapture nofree readonly [[P:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[X:%.*]] = call i32 @callee(i1 [[C]], i32* nocapture nofree readonly [[P]]) #[[ATTR1:[0-9]+]]
+; TUNIT-NEXT:    [[X:%.*]] = call i32 @callee(i1 [[C]], ptr nocapture nofree readonly [[P]]) #[[ATTR1:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[X]]
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@foo
-; CGSCC-SAME: (i1 [[C:%.*]], i32* nocapture nofree readonly [[P:%.*]]) #[[ATTR1:[0-9]+]] {
+; CGSCC-SAME: (i1 [[C:%.*]], ptr nocapture nofree readonly [[P:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[X:%.*]] = call i32 @callee(i1 [[C]], i32* nocapture nofree readonly [[P]]) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    [[X:%.*]] = call i32 @callee(i1 [[C]], ptr nocapture nofree readonly [[P]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[X]]
 ;
 entry:
-  %X = call i32 @callee(i1 %C, i32* %P)
+  %X = call i32 @callee(i1 %C, ptr %P)
   ret i32 %X
 }
 
