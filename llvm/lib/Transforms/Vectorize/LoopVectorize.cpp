@@ -7611,6 +7611,11 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
                                            InnerLoopVectorizer &ILV,
                                            DominatorTree *DT,
                                            bool IsEpilogueVectorization) {
+  assert(BestVPlan.hasVF(BestVF) &&
+         "Trying to execute plan with unsupported VF");
+  assert(BestVPlan.hasUF(BestUF) &&
+         "Trying to execute plan with unsupported UF");
+
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << BestVF << ", UF=" << BestUF
                     << '\n');
 
