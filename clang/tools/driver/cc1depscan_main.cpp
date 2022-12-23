@@ -848,12 +848,15 @@ void ScanServer::start(bool Exclusive) {
 
   if (cc1depscand::bindToSocket(BasePath, ListenSocket))
     reportError(StringRef() + "cannot bind to socket" + ": " + strerror(errno));
+
+  unsigned MaxBacklog =
+      llvm::hardware_concurrency().compute_thread_count() * 16;
+  if (::listen(ListenSocket, MaxBacklog))
+    reportError("cannot listen to socket");
 }
 
 int ScanServer::listen() {
   llvm::ThreadPool Pool;
-  if (::listen(ListenSocket, /*MaxBacklog=*/Pool.getThreadCount() * 16))
-    reportError("cannot listen to socket");
 
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions());
   CASOptions CASOpts;
