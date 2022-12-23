@@ -270,7 +270,7 @@ static std::optional<size_t> getRecordSize(StringRef segname, StringRef name) {
     if (segname == segment_names::ld)
       return target->wordSize == 8 ? 32 : 20;
   }
-  if (!config->dedupLiterals)
+  if (!config->dedupStrings)
     return {};
 
   if (name == section_names::cfString && segname == segment_names::data)
@@ -342,25 +342,25 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
       section.doneSplitting = true;
     };
 
-    if (sectionType(sec.flags) == S_CSTRING_LITERALS ||
-        (config->dedupLiterals && isWordLiteralSection(sec.flags))) {
-      if (sec.nreloc && config->dedupLiterals)
+    if (sectionType(sec.flags) == S_CSTRING_LITERALS) {
+      if (sec.nreloc && config->dedupStrings)
         fatal(toString(this) + " contains relocations in " + sec.segname + "," +
               sec.sectname +
-              ", so LLD cannot deduplicate literals. Try re-running without "
-              "--deduplicate-literals.");
+              ", so LLD cannot deduplicate strings. Try re-running with "
+              "--no-deduplicate-strings.");
 
-      InputSection *isec;
-      if (sectionType(sec.flags) == S_CSTRING_LITERALS) {
-        isec = make<CStringInputSection>(section, data, align,
-                                         /*dedupLiterals=*/name ==
-                                                 section_names::objcMethname ||
-                                             config->dedupLiterals);
-        // FIXME: parallelize this?
-        cast<CStringInputSection>(isec)->splitIntoPieces();
-      } else {
-        isec = make<WordLiteralInputSection>(section, data, align);
-      }
+      InputSection *isec = make<CStringInputSection>(
+          section, data, align,
+          /*dedupLiterals=*/name == section_names::objcMethname ||
+              config->dedupStrings);
+      // FIXME: parallelize this?
+      cast<CStringInputSection>(isec)->splitIntoPieces();
+      section.subsections.push_back({0, isec});
+    } else if (isWordLiteralSection(sec.flags)) {
+      if (sec.nreloc)
+        fatal(toString(this) + " contains unsupported relocations in " +
+              sec.segname + "," + sec.sectname);
+      InputSection *isec = make<WordLiteralInputSection>(section, data, align);
       section.subsections.push_back({0, isec});
     } else if (auto recordSize = getRecordSize(segname, name)) {
       splitRecords(*recordSize);

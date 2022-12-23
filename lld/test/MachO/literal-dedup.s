@@ -2,32 +2,13 @@
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/qux.s -o %t/qux.o
-# RUN: %lld -dylib --deduplicate-literals %t/test.o %t/qux.o -o %t/test
+# RUN: %lld -dylib %t/test.o %t/qux.o -o %t/test
 # RUN: llvm-objdump --macho --section="__TEXT,__literals" --section="__DATA,ptrs" --syms %t/test | FileCheck %s
 # RUN: llvm-readobj --section-headers %t/test | FileCheck %s --check-prefix=HEADER
 
-## Make sure literal deduplication can be overridden or that the later flag wins.
-# RUN: %lld -dylib --deduplicate-literals -no_deduplicate %t/test.o %t/qux.o -o %t/no-dedup-test
-# RUN: llvm-objdump --macho --section="__TEXT,__literals" --section="__DATA,ptrs" %t/no-dedup-test | FileCheck %s --check-prefix=NO-DEDUP
-
-# RUN: %lld -dylib -no_deduplicate --deduplicate-literals %t/test.o %t/qux.o -o %t/test
+# RUN: %lld -dylib -no_deduplicate %t/test.o %t/qux.o -o %t/test
 # RUN: llvm-objdump --macho --section="__TEXT,__literals" --section="__DATA,ptrs" --syms %t/test | FileCheck %s
 # RUN: llvm-readobj --section-headers %t/test | FileCheck %s --check-prefix=HEADER
-
-# NO-DEDUP-NOT:  Contents of (__TEXT,__literals) section
-# NO-DEDUP:      Contents of (__DATA,ptrs) section
-# NO-DEDUP-NEXT: __TEXT:__literal16:0xdeadbeef 0xdeadbeef 0xdeadbeef 0xdeadbeef
-# NO-DEDUP-NEXT: __TEXT:__literal16:0xdeadbeef 0xdeadbeef 0xdeadbeef 0xdeadbeef
-# NO-DEDUP-NEXT: __TEXT:__literal16:0xfeedface 0xfeedface 0xfeedface 0xfeedface
-# NO-DEDUP-NEXT: __TEXT:__literal16:0xdeadbeef 0xdeadbeef 0xdeadbeef 0xdeadbeef
-# NO-DEDUP-NEXT: __TEXT:__literal8:0xdeadbeef 0xdeadbeef
-# NO-DEDUP-NEXT: __TEXT:__literal8:0xdeadbeef 0xdeadbeef
-# NO-DEDUP-NEXT: __TEXT:__literal8:0xfeedface 0xfeedface
-# NO-DEDUP-NEXT: __TEXT:__literal8:0xdeadbeef 0xdeadbeef
-# NO-DEDUP-NEXT: __TEXT:__literal4:0xdeadbeef
-# NO-DEDUP-NEXT: __TEXT:__literal4:0xdeadbeef
-# NO-DEDUP-NEXT: __TEXT:__literal4:0xfeedface
-# NO-DEDUP-NEXT: __TEXT:__literal4:0xdeadbeef
 
 # CHECK:      Contents of (__TEXT,__literals) section
 # CHECK-NEXT: [[#%.16x,DEADBEEF16:]] ef be ad de ef be ad de ef be ad de ef be ad de

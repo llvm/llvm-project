@@ -2,7 +2,7 @@
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/more-foo.s -o %t/more-foo.o
-# RUN: %lld -dylib --deduplicate-literals %t/test.o %t/more-foo.o -o %t/test
+# RUN: %lld -dylib %t/test.o %t/more-foo.o -o %t/test
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/test | \
 # RUN:   FileCheck %s --check-prefix=STR --implicit-check-not foo --implicit-check-not bar
 # RUN: llvm-objdump --macho --section="__DATA,ptrs" --syms %t/test | FileCheck %s

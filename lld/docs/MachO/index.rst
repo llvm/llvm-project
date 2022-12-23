@@ -51,9 +51,6 @@ LLD can be used by adding ``-fuse-ld=/path/to/ld64.lld`` to the linker flags.
 For Xcode, this can be done by adding it to "Other linker flags" in the build
 settings. For Bazel, this can be done with ``--linkopt`` or with
 `rules_apple_linker <https://github.com/keith/rules_apple_linker>`_.
-The user may also need to add ``-Wl,--deduplicate-literals`` in order
-to match Apple's linker behavior more closely (otherwise problems
-can occur, for instance, in unit tests).
 
 .. seealso::
 
