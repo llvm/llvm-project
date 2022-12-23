@@ -109,11 +109,11 @@ define internal amdgpu_kernel void @1(<{ i32, i32, ptr addrspace(1), i8 }> %arg)
 attributes #0 = { "enqueued-block" }
 ;.
 ; CHECK: @[[KERNEL_ADDRESS_USER:[a-zA-Z0-9_$"\\.-]+]] = global [1 x ptr] [ptr addrspacecast (ptr addrspace(1) @block_has_used_kernel_address.runtime_handle to ptr)]
-; CHECK: @[[__TEST_BLOCK_INVOKE_KERNEL_RUNTIME_HANDLE:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) global [[BLOCK_RUNTIME_HANDLE_T:%.*]] zeroinitializer
-; CHECK: @[[__TEST_BLOCK_INVOKE_2_KERNEL_RUNTIME_HANDLE:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) global [[BLOCK_RUNTIME_HANDLE_T:%.*]] zeroinitializer
-; CHECK: @[[BLOCK_HAS_USED_KERNEL_ADDRESS_RUNTIME_HANDLE:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) global [[BLOCK_RUNTIME_HANDLE_T:%.*]] zeroinitializer
-; CHECK: @[[__AMDGPU_ENQUEUED_KERNEL_RUNTIME_HANDLE:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) global [[BLOCK_RUNTIME_HANDLE_T:%.*]] zeroinitializer
-; CHECK: @[[__AMDGPU_ENQUEUED_KERNEL_1_RUNTIME_HANDLE:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) global [[BLOCK_RUNTIME_HANDLE_T:%.*]] zeroinitializer
+; CHECK: @[[__TEST_BLOCK_INVOKE_KERNEL_RUNTIME_HANDLE:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) externally_initialized constant [[BLOCK_RUNTIME_HANDLE_T:%.*]] zeroinitializer
+; CHECK: @[[__TEST_BLOCK_INVOKE_2_KERNEL_RUNTIME_HANDLE:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) externally_initialized constant [[BLOCK_RUNTIME_HANDLE_T:%.*]] zeroinitializer
+; CHECK: @[[BLOCK_HAS_USED_KERNEL_ADDRESS_RUNTIME_HANDLE:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) externally_initialized constant [[BLOCK_RUNTIME_HANDLE_T:%.*]] zeroinitializer
+; CHECK: @[[__AMDGPU_ENQUEUED_KERNEL_RUNTIME_HANDLE:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) externally_initialized constant [[BLOCK_RUNTIME_HANDLE_T:%.*]] zeroinitializer
+; CHECK: @[[__AMDGPU_ENQUEUED_KERNEL_1_RUNTIME_HANDLE:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) externally_initialized constant [[BLOCK_RUNTIME_HANDLE_T:%.*]] zeroinitializer
 ;.
 ; CHECK-LABEL: define {{[^@]+}}@non_caller
 ; CHECK-SAME: (ptr addrspace(1) [[A:%.*]], i8 [[B:%.*]], ptr addrspace(1) [[C:%.*]], i64 [[D:%.*]]) {
