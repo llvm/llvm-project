@@ -78,11 +78,6 @@ static bool first_call = true;
 static hsa_status_t get_isa_info(hsa_isa_t isa, void *data) {
   hsa_status_t err;
   amdgpu_features_t isa_i;
-  int *isa_int = reinterpret_cast<int *>(data);
-  (*isa_int)++;
-
-  std::string isa_str("ISA ");
-  isa_str += std::to_string(*isa_int);
 
   uint32_t name_len;
   err = _dl_hsa_isa_get_info_alt(isa, HSA_ISA_INFO_NAME_LENGTH, &name_len);
@@ -171,14 +166,19 @@ std::string getAMDGPUCapabilities(uint16_t vid, uint16_t devid,
       amdgpu_capabilities.append(" HSAERROR-INITIALIZATION");
       return amdgpu_capabilities;
     }
+  } else {
+    // Make sure that previous calls' results don't interfere
+    AMDGPU_FEATUREs.clear();
+    HSA_AGENTs.clear();
   }
+
   std::vector<std::string> GPUs;
   hsa_status_t Status = _dl_hsa_iterate_agents(
       [](hsa_agent_t Agent, void *Data) {
         hsa_device_type_t DeviceType;
         hsa_status_t Status =
             _dl_hsa_agent_get_info(Agent, HSA_AGENT_INFO_DEVICE, &DeviceType);
-        // continue only if device type if GPU
+        // continue only if device type is GPU
         if (Status != HSA_STATUS_SUCCESS || DeviceType != HSA_DEVICE_TYPE_GPU) {
           return Status;
         }
@@ -188,8 +188,10 @@ std::string getAMDGPUCapabilities(uint16_t vid, uint16_t devid,
         Status = _dl_hsa_agent_get_info(Agent, HSA_AGENT_INFO_NAME, GPUName);
         if (Status != HSA_STATUS_SUCCESS)
           return Status;
-        GPUs->push_back(GPUName);
-        HSA_AGENTs.push_back(Agent);
+        if (GPUName == offload_arch_requested) {
+          GPUs->push_back(GPUName);
+          HSA_AGENTs.push_back(Agent);
+        }
         return HSA_STATUS_SUCCESS;
       },
       &GPUs);
@@ -199,20 +201,21 @@ std::string getAMDGPUCapabilities(uint16_t vid, uint16_t devid,
     return amdgpu_capabilities;
   }
   if (GPUs.size() == 0) {
-    amdgpu_capabilities.append("NOT_VISIBLE");
+    amdgpu_capabilities.append("NOT-VISIBLE");
     return amdgpu_capabilities;
   }
 
-  int isa_number = 0;
-  hsa_agent_t xagent = HSA_AGENTs[isa_number];
-  Status = _dl_hsa_agent_iterate_isas(xagent, get_isa_info, &isa_number);
+  // Select first detected HSA agent
+  // TODO Select the one matching the given PCI ID instead
+  hsa_agent_t xagent = *HSA_AGENTs.begin();
+  Status = _dl_hsa_agent_iterate_isas(xagent, get_isa_info, nullptr);
   if (Status == HSA_STATUS_ERROR_INVALID_AGENT) {
     amdgpu_capabilities.append(" HSAERROR-INVALID_AGENT");
     return amdgpu_capabilities;
   }
 
   // parse features from field name_str of last amdgpu_features_t found
-  llvm::StringRef Target(AMDGPU_FEATUREs[isa_number - 1].name_str);
+  llvm::StringRef Target(AMDGPU_FEATUREs.rbegin()->name_str);
   auto TargetFeatures = Target.split(':');
   auto TripleOrGPU = TargetFeatures.first.rsplit('-');
   auto TargetID = Target.substr(Target.find(TripleOrGPU.second));

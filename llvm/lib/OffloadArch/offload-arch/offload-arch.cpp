@@ -204,21 +204,17 @@ int main(int argc, char **argv) {
         xinfo.append(" ").append(PCI_ID);
       if (print_triple)
         xinfo.append(" ").append(getTriple(vid, devid));
-      if (print_runtime_capabilities || AOT_get_first_capable_device) {
-        std::string caps = getVendorCapabilities(vid, devid, offload_arch);
-        std::size_t found_loc = caps.find("NOT-VISIBLE");
-        if (found_loc == std::string::npos) {
-          if (print_runtime_capabilities) {
-            xinfo.clear();
-            xinfo = std::move(caps);
-            printf("%s\n", xinfo.c_str());
-          } else {
-            printf("%s%s\n", offload_arch.c_str(), xinfo.c_str());
-          }
-          first_device_printed = true;
+
+      std::string caps = getVendorCapabilities(vid, devid, offload_arch);
+      std::size_t found_loc = caps.find("NOT-VISIBLE");
+      if (found_loc == std::string::npos) {
+        if (print_runtime_capabilities) {
+          xinfo.clear();
+          xinfo = std::move(caps);
+          printf("%s\n", xinfo.c_str());
+        } else {
+          printf("%s%s\n", offload_arch.c_str(), xinfo.c_str());
         }
-      } else {
-        printf("%s%s\n", offload_arch.c_str(), xinfo.c_str());
         first_device_printed = true;
       }
     }
