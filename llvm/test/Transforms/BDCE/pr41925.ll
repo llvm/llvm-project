@@ -21,7 +21,7 @@ entry:
 ;CHECK: call void @llvm.dbg.value(metadata i8 2
 ;CHECK: call void @llvm.dbg.value(metadata i8 2
   call void @llvm.dbg.value(metadata i8 2, metadata !17, metadata !DIExpression()), !dbg !18
-  %.pr = load i8, i8* @b, align 1, !dbg !19
+  %.pr = load i8, ptr @b, align 1, !dbg !19
   call void @llvm.dbg.value(metadata i8 2, metadata !17, metadata !DIExpression()), !dbg !18
   %cmp5 = icmp slt i8 %.pr, 1, !dbg !22
   br i1 %cmp5, label %for.cond2thread-pre-split.preheader, label %for.end9, !dbg !23
@@ -33,7 +33,7 @@ for.cond2thread-pre-split:                        ; preds = %for.cond2thread-pre
   %l_177.06 = phi i8 [ %l_177.1.lcssa, %for.inc7 ], [ 2, %for.cond2thread-pre-split.preheader ]
   call void @llvm.dbg.value(metadata i8 %l_177.06, metadata !17, metadata !DIExpression()), !dbg !18
 ;CHECK: call void @llvm.dbg.value(metadata i8 undef
-  %.pr1 = load i8, i8* @a, align 1, !dbg !24
+  %.pr1 = load i8, ptr @a, align 1, !dbg !24
   call void @llvm.dbg.value(metadata i8 %l_177.06, metadata !17, metadata !DIExpression()), !dbg !18
   %cmp42 = icmp sgt i8 %.pr1, -1, !dbg !27
   br i1 %cmp42, label %for.body6.preheader, label %for.inc7, !dbg !28
@@ -49,9 +49,9 @@ for.body6:                                        ; preds = %for.body6.preheader
   call void @llvm.dbg.value(metadata i8 %l_177.13, metadata !17, metadata !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value)), !dbg !18
   tail call void (...) @optimize_me_not(),  !dbg !29
   %inc = add i8 %l_177.13, 1, !dbg !31
-  %0 = load i8, i8* @a, align 1, !dbg !32
+  %0 = load i8, ptr @a, align 1, !dbg !32
   %dec = add i8 %0, -1, !dbg !32
-  store i8 %dec, i8* @a, align 1, !dbg !32
+  store i8 %dec, ptr @a, align 1, !dbg !32
   call void @llvm.dbg.value(metadata i8 %inc, metadata !17, metadata !DIExpression()), !dbg !18
   %cmp4 = icmp sgt i8 %dec, -1, !dbg !27
   br i1 %cmp4, label %for.body6, label %for.inc7.loopexit, !dbg !28, !llvm.loop !33
@@ -63,9 +63,9 @@ for.inc7.loopexit:                                ; preds = %for.body6
 for.inc7:                                         ; preds = %for.inc7.loopexit, %for.cond2thread-pre-split
 ;CHECK: call void @llvm.dbg.value(metadata i8 undef
   %l_177.1.lcssa = phi i8 [ %l_177.06, %for.cond2thread-pre-split ], [ %inc.lcssa, %for.inc7.loopexit ], !dbg !18
-  %1 = load i8, i8* @b, align 1, !dbg !35
+  %1 = load i8, ptr @b, align 1, !dbg !35
   %inc8 = add i8 %1, 1, !dbg !35
-  store i8 %inc8, i8* @b, align 1, !dbg !35
+  store i8 %inc8, ptr @b, align 1, !dbg !35
   call void @llvm.dbg.value(metadata i8 %l_177.1.lcssa, metadata !17, metadata !DIExpression()), !dbg !18
   %cmp = icmp slt i8 %inc8, 1, !dbg !22
   br i1 %cmp, label %for.cond2thread-pre-split, label %for.end9.loopexit, !dbg !23, !llvm.loop !36
