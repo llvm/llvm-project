@@ -1546,8 +1546,8 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
             TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
           if (FuncInfo->allocateVGPRSpillToAGPR(MF, FI,
                                                 TRI->isAGPR(MRI, VReg))) {
-            RS->enterBasicBlockEnd(MBB);
-            RS->backward(MI);
+            // FIXME: change to enterBasicBlockEnd()
+            RS->enterBasicBlock(MBB);
             TRI->eliminateFrameIndex(MI, 0, FIOp, RS);
             SpillFIs.set(FI);
             continue;
@@ -1651,10 +1651,8 @@ void SIFrameLowering::processFunctionBeforeFrameIndicesReplaced(
 // The special SGPR spills like the one needed for FP, BP or any reserved
 // registers delayed until frame lowering.
 void SIFrameLowering::determinePrologEpilogSGPRSaves(
-    MachineFunction &MF, BitVector &SavedVGPRs,
-    bool NeedExecCopyReservedReg) const {
+    MachineFunction &MF, BitVector &SavedVGPRs) const {
   MachineFrameInfo &FrameInfo = MF.getFrameInfo();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
@@ -1669,25 +1667,6 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
   const TargetRegisterClass &RC = ST.isWave32()
                                       ? AMDGPU::SReg_32_XM0_XEXECRegClass
                                       : AMDGPU::SGPR_64RegClass;
-
-  if (NeedExecCopyReservedReg) {
-    Register ReservedReg = MFI->getSGPRForEXECCopy();
-    assert(ReservedReg && "Should have reserved an SGPR for EXEC copy.");
-    Register UnusedScratchReg = findUnusedRegister(MRI, LiveRegs, RC);
-    if (UnusedScratchReg) {
-      // If found any unused scratch SGPR, reserve the register itself for Exec
-      // copy and there is no need for any spills in that case.
-      MFI->setSGPRForEXECCopy(UnusedScratchReg);
-      LiveRegs.addReg(UnusedScratchReg);
-    } else {
-      // Needs spill.
-      assert(!MFI->hasPrologEpilogSGPRSpillEntry(ReservedReg) &&
-             "Re-reserving spill slot for EXEC copy register");
-      getVGPRSpillLaneOrTempRegister(MF, LiveRegs, ReservedReg, RC,
-                                     /* IncludeScratchCopy */ false);
-    }
-  }
-
   if (TRI->isCFISavedRegsSpillEnabled()) {
     Register Exec = TRI->getExec();
     assert(!MFI->hasPrologEpilogSGPRSpillEntry(Exec) &&
@@ -1737,8 +1716,6 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
-  const SIInstrInfo *TII = ST.getInstrInfo();
-  bool NeedExecCopyReservedReg = false;
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
@@ -1756,8 +1733,6 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
         MFI->allocateWWMSpill(MF, MI.getOperand(0).getReg());
       else if (MI.getOpcode() == AMDGPU::V_READLANE_B32)
         MFI->allocateWWMSpill(MF, MI.getOperand(1).getReg());
-      else if (TII->isWWMRegSpillOpcode(MI.getOpcode()))
-        NeedExecCopyReservedReg = true;
     }
   }
 
@@ -1770,7 +1745,7 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (!ST.hasGFX90AInsts())
     SavedVGPRs.clearBitsInMask(TRI->getAllAGPRRegMask());
 
-  determinePrologEpilogSGPRSaves(MF, SavedVGPRs, NeedExecCopyReservedReg);
+  determinePrologEpilogSGPRSaves(MF, SavedVGPRs);
 
   // The Whole-Wave VGPRs need to be specially inserted in the prolog, so don't
   // allow the default insertion to handle them.

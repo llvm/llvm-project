@@ -12,17 +12,16 @@ define amdgpu_kernel void @kernel() {
 ; GCN-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GCN-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
 ; GCN-NEXT:    s_mov_b32 s38, -1
-; GCN-NEXT:    ; implicit-def: $vgpr3
 ; GCN-NEXT:    s_mov_b32 s39, 0xe00000
-; GCN-NEXT:    v_writelane_b32 v3, s4, 0
+; GCN-NEXT:    v_writelane_b32 v40, s4, 0
 ; GCN-NEXT:    s_add_u32 s36, s36, s11
-; GCN-NEXT:    v_writelane_b32 v3, s5, 1
+; GCN-NEXT:    v_writelane_b32 v40, s5, 1
 ; GCN-NEXT:    s_addc_u32 s37, s37, 0
 ; GCN-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GCN-NEXT:    v_readlane_b32 s0, v3, 0
+; GCN-NEXT:    v_readlane_b32 s0, v40, 0
 ; GCN-NEXT:    s_mov_b32 s13, s9
 ; GCN-NEXT:    s_mov_b32 s12, s8
-; GCN-NEXT:    v_readlane_b32 s1, v3, 1
+; GCN-NEXT:    v_readlane_b32 s1, v40, 1
 ; GCN-NEXT:    s_add_u32 s8, s0, 36
 ; GCN-NEXT:    s_addc_u32 s9, s1, 0
 ; GCN-NEXT:    s_getpc_b64 s[0:1]

@@ -10,17 +10,16 @@ define void @sgpr_spill_writelane() {
 ; GCN-LABEL: sgpr_spill_writelane:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_xor_saveexec_b64 s[6:7], -1
+; GCN-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; GCN-NEXT:    s_mov_b64 exec, s[6:7]
-; GCN-NEXT:    ; implicit-def: $vgpr0
+; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    v_writelane_b32 v0, s35, 0
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    v_readlane_b32 s35, v0, 0
-; GCN-NEXT:    s_xor_saveexec_b64 s[6:7], -1
+; GCN-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
-; GCN-NEXT:    s_mov_b64 exec, s[6:7]
+; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   call void asm sideeffect "", "~{s35}"()
