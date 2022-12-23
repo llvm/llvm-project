@@ -161,10 +161,12 @@ bool AVRAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   // for registers.
   if (MI->getOperand(OpNum).getReg() == AVR::R31R30) {
     O << "Z";
-  } else {
-    assert(MI->getOperand(OpNum).getReg() == AVR::R29R28 &&
-           "Wrong register class for memory operand.");
+  } else if (MI->getOperand(OpNum).getReg() == AVR::R29R28) {
     O << "Y";
+  } else if (MI->getOperand(OpNum).getReg() == AVR::R27R26) {
+    O << "X";
+  } else {
+    assert(false && "Wrong register class for memory operand.");
   }
 
   // If NumOpRegs == 2, then we assume it is product of a FrameIndex expansion
@@ -173,6 +175,8 @@ bool AVRAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   unsigned NumOpRegs = InlineAsm::getNumOperandRegisters(OpFlags);
 
   if (NumOpRegs == 2) {
+    assert(MI->getOperand(OpNum).getReg() != AVR::R27R26 &&
+           "Base register X can not have offset/displacement.");
     O << '+' << MI->getOperand(OpNum + 1).getImm();
   }
 
