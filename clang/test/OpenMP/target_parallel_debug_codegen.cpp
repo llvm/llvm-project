@@ -112,14 +112,14 @@ int main() {
 // CHECK1-NEXT:    store ptr [[TMP4]], ptr [[TMP15]], align 8, !dbg [[DBG48]]
 // CHECK1-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [4 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 3, !dbg [[DBG48]]
 // CHECK1-NEXT:    store ptr [[TMP7]], ptr [[TMP16]], align 8, !dbg [[DBG48]]
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB3]], i32 [[TMP9]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 4), !dbg [[DBG48]]
+// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB3]], i32 [[TMP9]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l23_debug___omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 4), !dbg [[DBG48]]
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB5:[0-9]+]], i8 2), !dbg [[DBG49:![0-9]+]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG51:![0-9]+]]
 // CHECK1:       worker.exit:
 // CHECK1-NEXT:    ret void, !dbg [[DBG47]]
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@__omp_outlined___debug__
+// CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l23_debug___omp_outlined_debug__
 // CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr addrspace(1) noalias noundef [[C:%.*]], i32 noundef [[A:%.*]], ptr noalias noundef [[B:%.*]], ptr addrspace(1) noalias noundef [[BB:%.*]]) #[[ATTR0]] !dbg [[DBG52:![0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -212,7 +212,7 @@ int main() {
 // CHECK1-NEXT:    ret void, !dbg [[DBG99:![0-9]+]]
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@__omp_outlined__
+// CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l23_debug___omp_outlined
 // CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4000) [[C:%.*]], i64 noundef [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(400) [[B:%.*]], ptr noundef nonnull align 1 dereferenceable(1) [[BB:%.*]]) #[[ATTR0]] !dbg [[DBG100:![0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -244,7 +244,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[BB_ADDR]], align 8, !dbg [[DBG114]]
 // CHECK1-NEXT:    [[TMP9:%.*]] = addrspacecast ptr [[TMP5]] to ptr addrspace(1), !dbg [[DBG114]]
 // CHECK1-NEXT:    [[TMP10:%.*]] = addrspacecast ptr [[TMP8]] to ptr addrspace(1), !dbg [[DBG114]]
-// CHECK1-NEXT:    call void @__omp_outlined___debug__(ptr [[TMP3]], ptr [[TMP4]], ptr addrspace(1) [[TMP9]], i32 [[TMP6]], ptr [[TMP7]], ptr addrspace(1) [[TMP10]]) #[[ATTR3:[0-9]+]], !dbg [[DBG114]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l23_debug___omp_outlined_debug__(ptr [[TMP3]], ptr [[TMP4]], ptr addrspace(1) [[TMP9]], i32 [[TMP6]], ptr [[TMP7]], ptr addrspace(1) [[TMP10]]) #[[ATTR3:[0-9]+]], !dbg [[DBG114]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG114]]
 //
 //
@@ -325,14 +325,14 @@ int main() {
 // CHECK1-NEXT:    store ptr [[TMP5]], ptr [[TMP16]], align 8, !dbg [[DBG138]]
 // CHECK1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [4 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 3, !dbg [[DBG138]]
 // CHECK1-NEXT:    store ptr [[TMP8]], ptr [[TMP17]], align 8, !dbg [[DBG138]]
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB9]], i32 [[TMP10]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__2, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 4), !dbg [[DBG138]]
+// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB9]], i32 [[TMP10]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_debug___omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 4), !dbg [[DBG138]]
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB11:[0-9]+]], i8 2), !dbg [[DBG139:![0-9]+]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG141:![0-9]+]]
 // CHECK1:       worker.exit:
 // CHECK1-NEXT:    ret void, !dbg [[DBG137]]
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@__omp_outlined___debug__1
+// CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_debug___omp_outlined_debug__
 // CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr addrspace(1) noalias noundef [[C:%.*]], i32 noundef [[A:%.*]], ptr addrspace(1) noalias noundef [[B:%.*]], ptr addrspace(1) noalias noundef [[BB:%.*]]) #[[ATTR0]] !dbg [[DBG142:![0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -415,7 +415,7 @@ int main() {
 // CHECK1-NEXT:    ret void, !dbg [[DBG182:![0-9]+]]
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@__omp_outlined__2
+// CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_debug___omp_outlined
 // CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4000) [[C:%.*]], i64 noundef [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(400) [[B:%.*]], ptr noundef nonnull align 1 dereferenceable(1) [[BB:%.*]]) #[[ATTR0]] !dbg [[DBG183:![0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -448,7 +448,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP9:%.*]] = addrspacecast ptr [[TMP5]] to ptr addrspace(1), !dbg [[DBG191]]
 // CHECK1-NEXT:    [[TMP10:%.*]] = addrspacecast ptr [[TMP7]] to ptr addrspace(1), !dbg [[DBG191]]
 // CHECK1-NEXT:    [[TMP11:%.*]] = addrspacecast ptr [[TMP8]] to ptr addrspace(1), !dbg [[DBG191]]
-// CHECK1-NEXT:    call void @__omp_outlined___debug__1(ptr [[TMP3]], ptr [[TMP4]], ptr addrspace(1) [[TMP9]], i32 [[TMP6]], ptr addrspace(1) [[TMP10]], ptr addrspace(1) [[TMP11]]) #[[ATTR3]], !dbg [[DBG191]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_debug___omp_outlined_debug__(ptr [[TMP3]], ptr [[TMP4]], ptr addrspace(1) [[TMP9]], i32 [[TMP6]], ptr addrspace(1) [[TMP10]], ptr addrspace(1) [[TMP11]]) #[[ATTR3]], !dbg [[DBG191]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG191]]
 //
 //
@@ -530,14 +530,14 @@ int main() {
 // CHECK1-NEXT:    store ptr [[TMP8]], ptr [[TMP16]], align 8, !dbg [[DBG213]]
 // CHECK1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [4 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 3, !dbg [[DBG213]]
 // CHECK1-NEXT:    store ptr [[TMP11]], ptr [[TMP17]], align 8, !dbg [[DBG213]]
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB15]], i32 [[TMP13]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__4, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 4), !dbg [[DBG213]]
+// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB15]], i32 [[TMP13]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l51_debug___omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 4), !dbg [[DBG213]]
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB17:[0-9]+]], i8 2), !dbg [[DBG214:![0-9]+]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG216:![0-9]+]]
 // CHECK1:       worker.exit:
 // CHECK1-NEXT:    ret void, !dbg [[DBG212]]
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@__omp_outlined___debug__3
+// CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l51_debug___omp_outlined_debug__
 // CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr addrspace(1) noalias noundef [[C:%.*]], ptr addrspace(1) noalias noundef [[A:%.*]], ptr addrspace(1) noalias noundef [[B:%.*]], ptr addrspace(1) noalias noundef [[BB:%.*]]) #[[ATTR0]] !dbg [[DBG217:![0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -629,7 +629,7 @@ int main() {
 // CHECK1-NEXT:    ret void, !dbg [[DBG258:![0-9]+]]
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@__omp_outlined__4
+// CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l51_debug___omp_outlined
 // CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4000) [[C:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(400) [[B:%.*]], ptr noundef nonnull align 1 dereferenceable(1) [[BB:%.*]]) #[[ATTR0]] !dbg [[DBG259:![0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -664,7 +664,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP11:%.*]] = addrspacecast ptr [[TMP7]] to ptr addrspace(1), !dbg [[DBG269]]
 // CHECK1-NEXT:    [[TMP12:%.*]] = addrspacecast ptr [[TMP8]] to ptr addrspace(1), !dbg [[DBG269]]
 // CHECK1-NEXT:    [[TMP13:%.*]] = addrspacecast ptr [[TMP9]] to ptr addrspace(1), !dbg [[DBG269]]
-// CHECK1-NEXT:    call void @__omp_outlined___debug__3(ptr [[TMP4]], ptr [[TMP5]], ptr addrspace(1) [[TMP10]], ptr addrspace(1) [[TMP11]], ptr addrspace(1) [[TMP12]], ptr addrspace(1) [[TMP13]]) #[[ATTR3]], !dbg [[DBG269]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l51_debug___omp_outlined_debug__(ptr [[TMP4]], ptr [[TMP5]], ptr addrspace(1) [[TMP10]], ptr addrspace(1) [[TMP11]], ptr addrspace(1) [[TMP12]], ptr addrspace(1) [[TMP13]]) #[[ATTR3]], !dbg [[DBG269]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG269]]
 //
 //
