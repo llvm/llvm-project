@@ -20,12 +20,21 @@
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/voidify.h>
+#include <__type_traits/extent.h>
+#include <__type_traits/is_array.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__type_traits/is_trivially_copy_assignable.h>
+#include <__type_traits/is_trivially_copy_constructible.h>
+#include <__type_traits/is_trivially_move_assignable.h>
+#include <__type_traits/is_trivially_move_constructible.h>
+#include <__type_traits/is_unbounded_array.h>
+#include <__type_traits/negation.h>
+#include <__type_traits/remove_const.h>
+#include <__type_traits/remove_extent.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/transaction.h>
 #include <new>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

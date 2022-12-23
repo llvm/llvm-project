@@ -725,6 +725,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <memory>
 #  include <ratio>
 #  include <stdexcept>
+#  include <type_traits>
 #  include <variant>
 #endif
 

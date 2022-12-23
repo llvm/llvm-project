@@ -11,10 +11,13 @@
 #define _LIBCPP___FUNCTIONAL_REFERENCE_WRAPPER_H
 
 #include <__config>
+#include <__functional/invoke.h>
 #include <__functional/weak_result_type.h>
 #include <__memory/addressof.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/remove_cvref.h>
+#include <__utility/declval.h>
 #include <__utility/forward.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -187,6 +187,16 @@ static void fixup_port6(const MCFixup &Fixup, uint64_t &Value,
   Value = ((Value & 0x30) << 5) | (Value & 0x0f);
 }
 
+/// 7-bit data space address fixup for the LDS/STS instructions on AVRTiny.
+///
+/// Resolves to:
+/// 1010 ikkk dddd kkkk
+static void fixup_lds_sts_16(const MCFixup &Fixup, uint64_t &Value,
+                             MCContext *Ctx = nullptr) {
+  unsigned_width(7, Value, std::string("immediate"), Fixup, Ctx);
+  Value = ((Value & 0x70) << 8) | (Value & 0x0f);
+}
+
 /// Adjusts a program memory address.
 /// This is a simple right-shift.
 static void pm(uint64_t &Value) { Value >>= 1; }
@@ -341,6 +351,10 @@ void AVRAsmBackend::adjustFixupValue(const MCFixup &Fixup,
 
   case AVR::fixup_port6:
     adjust::fixup_port6(Fixup, Value, Ctx);
+    break;
+
+  case AVR::fixup_lds_sts_16:
+    adjust::fixup_lds_sts_16(Fixup, Value, Ctx);
     break;
 
   // Fixups which do not require adjustments.
