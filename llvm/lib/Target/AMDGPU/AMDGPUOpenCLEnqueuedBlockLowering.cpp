@@ -125,16 +125,15 @@ bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
 
       for (auto *U : F.users()) {
         auto *UU = &*U;
-        if (!isa<ConstantExpr>(UU))
-          continue;
-        collectFunctionUsers(UU, Callers);
-        auto *BitCast = cast<ConstantExpr>(UU);
-        auto *NewPtr = ConstantExpr::getPointerCast(GV, BitCast->getType());
-        BitCast->replaceAllUsesWith(NewPtr);
-        F.addFnAttr("runtime-handle", RuntimeHandle);
-        F.setLinkage(GlobalValue::ExternalLinkage);
-        Changed = true;
+
+        if (isa<Constant>(UU))
+          collectFunctionUsers(UU, Callers);
       }
+
+      F.replaceAllUsesWith(ConstantExpr::getAddrSpaceCast(GV, F.getType()));
+      F.addFnAttr("runtime-handle", RuntimeHandle);
+      F.setLinkage(GlobalValue::ExternalLinkage);
+      Changed = true;
     }
   }
 

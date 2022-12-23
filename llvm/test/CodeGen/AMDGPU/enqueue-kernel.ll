@@ -83,6 +83,21 @@ entry:
   ret void
 }
 
+@kernel_address_user = global [1 x ptr] [ ptr @block_has_used_kernel_address ]
+
+define internal amdgpu_kernel void @block_has_used_kernel_address(<{ i32, i32, ptr addrspace(1), i8 }> %arg) #0 {
+entry:
+  %.fca.3.extract = extractvalue <{ i32, i32, ptr addrspace(1), i8 }> %arg, 2
+  %.fca.4.extract = extractvalue <{ i32, i32, ptr addrspace(1), i8 }> %arg, 3
+  store i8 %.fca.4.extract, ptr addrspace(1) %.fca.3.extract, align 1
+  ret void
+}
+
+define amdgpu_kernel void @user_of_kernel_address(ptr addrspace(1) %arg) {
+  store ptr @block_has_used_kernel_address, ptr addrspace(1) %arg
+  ret void
+}
+
 define internal amdgpu_kernel void @0(<{ i32, i32, ptr addrspace(1), i8 }> %arg) #0 {
   ret void
 }
@@ -93,8 +108,10 @@ define internal amdgpu_kernel void @1(<{ i32, i32, ptr addrspace(1), i8 }> %arg)
 
 attributes #0 = { "enqueued-block" }
 ;.
+; CHECK: @[[KERNEL_ADDRESS_USER:[a-zA-Z0-9_$"\\.-]+]] = global [1 x ptr] [ptr addrspacecast (ptr addrspace(1) @block_has_used_kernel_address.runtime_handle to ptr)]
 ; CHECK: @[[__TEST_BLOCK_INVOKE_KERNEL_RUNTIME_HANDLE:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) global [2 x i64] zeroinitializer
 ; CHECK: @[[__TEST_BLOCK_INVOKE_2_KERNEL_RUNTIME_HANDLE:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) global [2 x i64] zeroinitializer
+; CHECK: @[[BLOCK_HAS_USED_KERNEL_ADDRESS_RUNTIME_HANDLE:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) global [2 x i64] zeroinitializer
 ; CHECK: @[[__AMDGPU_ENQUEUED_KERNEL_RUNTIME_HANDLE:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) global [2 x i64] zeroinitializer
 ; CHECK: @[[__AMDGPU_ENQUEUED_KERNEL_1_RUNTIME_HANDLE:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) global [2 x i64] zeroinitializer
 ;.
@@ -125,10 +142,10 @@ attributes #0 = { "enqueued-block" }
 ; CHECK-NEXT:    [[BLOCK_CAPTURED1:%.*]] = getelementptr inbounds <{ i32, i32, ptr addrspace(1), i8 }>, ptr addrspace(5) [[BLOCK]], i32 0, i32 3
 ; CHECK-NEXT:    store i8 [[B]], ptr addrspace(5) [[BLOCK_CAPTURED1]], align 8
 ; CHECK-NEXT:    [[INST4:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK]] to ptr
-; CHECK-NEXT:    [[INST5:%.*]] = call i32 @__enqueue_kernel_basic(ptr addrspace(1) undef, i32 0, ptr addrspace(5) nonnull byval([[STRUCT_NDRANGE_T]]) [[INST]], ptr @__test_block_invoke_kernel, ptr nonnull [[INST4]])
-; CHECK-NEXT:    [[INST10:%.*]] = call i32 @__enqueue_kernel_basic(ptr addrspace(1) undef, i32 0, ptr addrspace(5) nonnull byval([[STRUCT_NDRANGE_T]]) [[INST]], ptr @__test_block_invoke_kernel, ptr nonnull [[INST4]])
-; CHECK-NEXT:    [[INST11:%.*]] = call i32 @__enqueue_kernel_basic(ptr addrspace(1) undef, i32 0, ptr addrspace(5) nonnull byval([[STRUCT_NDRANGE_T]]) [[INST]], ptr @__amdgpu_enqueued_kernel, ptr nonnull [[INST4]])
-; CHECK-NEXT:    [[INST12:%.*]] = call i32 @__enqueue_kernel_basic(ptr addrspace(1) undef, i32 0, ptr addrspace(5) nonnull byval([[STRUCT_NDRANGE_T]]) [[INST]], ptr @__amdgpu_enqueued_kernel.1, ptr nonnull [[INST4]])
+; CHECK-NEXT:    [[INST5:%.*]] = call i32 @__enqueue_kernel_basic(ptr addrspace(1) undef, i32 0, ptr addrspace(5) nonnull byval([[STRUCT_NDRANGE_T]]) [[INST]], ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_kernel.runtime_handle to ptr), ptr nonnull [[INST4]])
+; CHECK-NEXT:    [[INST10:%.*]] = call i32 @__enqueue_kernel_basic(ptr addrspace(1) undef, i32 0, ptr addrspace(5) nonnull byval([[STRUCT_NDRANGE_T]]) [[INST]], ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_kernel.runtime_handle to ptr), ptr nonnull [[INST4]])
+; CHECK-NEXT:    [[INST11:%.*]] = call i32 @__enqueue_kernel_basic(ptr addrspace(1) undef, i32 0, ptr addrspace(5) nonnull byval([[STRUCT_NDRANGE_T]]) [[INST]], ptr addrspacecast (ptr addrspace(1) @__amdgpu_enqueued_kernel.runtime_handle to ptr), ptr nonnull [[INST4]])
+; CHECK-NEXT:    [[INST12:%.*]] = call i32 @__enqueue_kernel_basic(ptr addrspace(1) undef, i32 0, ptr addrspace(5) nonnull byval([[STRUCT_NDRANGE_T]]) [[INST]], ptr addrspacecast (ptr addrspace(1) @__amdgpu_enqueued_kernel.1.runtime_handle to ptr), ptr nonnull [[INST4]])
 ; CHECK-NEXT:    [[BLOCK_SIZE4:%.*]] = getelementptr inbounds <{ i32, i32, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr addrspace(5) [[BLOCK2]], i32 0, i32 0
 ; CHECK-NEXT:    store i32 41, ptr addrspace(5) [[BLOCK_SIZE4]], align 8
 ; CHECK-NEXT:    [[BLOCK_ALIGN5:%.*]] = getelementptr inbounds <{ i32, i32, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr addrspace(5) [[BLOCK2]], i32 0, i32 1
@@ -142,7 +159,7 @@ attributes #0 = { "enqueued-block" }
 ; CHECK-NEXT:    [[BLOCK_CAPTURED10:%.*]] = getelementptr inbounds <{ i32, i32, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr addrspace(5) [[BLOCK2]], i32 0, i32 4
 ; CHECK-NEXT:    store i64 [[D]], ptr addrspace(5) [[BLOCK_CAPTURED10]], align 8
 ; CHECK-NEXT:    [[INST8:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK2]] to ptr
-; CHECK-NEXT:    [[INST9:%.*]] = call i32 @__enqueue_kernel_basic(ptr addrspace(1) undef, i32 0, ptr addrspace(5) nonnull byval([[STRUCT_NDRANGE_T]]) [[INST3]], ptr @__test_block_invoke_2_kernel, ptr nonnull [[INST8]])
+; CHECK-NEXT:    [[INST9:%.*]] = call i32 @__enqueue_kernel_basic(ptr addrspace(1) undef, i32 0, ptr addrspace(5) nonnull byval([[STRUCT_NDRANGE_T]]) [[INST3]], ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_2_kernel.runtime_handle to ptr), ptr nonnull [[INST8]])
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -175,17 +192,35 @@ attributes #0 = { "enqueued-block" }
 ; CHECK-NEXT:    ret void
 ;
 ;
+; CHECK-LABEL: define {{[^@]+}}@block_has_used_kernel_address
+; CHECK-SAME: (<{ i32, i32, ptr addrspace(1), i8 }> [[ARG:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTFCA_3_EXTRACT:%.*]] = extractvalue <{ i32, i32, ptr addrspace(1), i8 }> [[ARG]], 2
+; CHECK-NEXT:    [[DOTFCA_4_EXTRACT:%.*]] = extractvalue <{ i32, i32, ptr addrspace(1), i8 }> [[ARG]], 3
+; CHECK-NEXT:    store i8 [[DOTFCA_4_EXTRACT]], ptr addrspace(1) [[DOTFCA_3_EXTRACT]], align 1
+; CHECK-NEXT:    ret void
+;
+;
+; CHECK-LABEL: define {{[^@]+}}@user_of_kernel_address
+; CHECK-SAME: (ptr addrspace(1) [[ARG:%.*]]) {
+; CHECK-NEXT:    store ptr addrspacecast (ptr addrspace(1) @block_has_used_kernel_address.runtime_handle to ptr), ptr addrspace(1) [[ARG]], align 8
+; CHECK-NEXT:    ret void
+;
+;
 ; CHECK-LABEL: define {{[^@]+}}@__amdgpu_enqueued_kernel
-; CHECK-SAME: (<{ i32, i32, ptr addrspace(1), i8 }> [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (<{ i32, i32, ptr addrspace(1), i8 }> [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@__amdgpu_enqueued_kernel.1
-; CHECK-SAME: (<{ i32, i32, ptr addrspace(1), i8 }> [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (<{ i32, i32, ptr addrspace(1), i8 }> [[ARG:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "calls-enqueue-kernel" }
 ; CHECK: attributes #[[ATTR1]] = { "enqueued-block" "runtime-handle"="__test_block_invoke_kernel.runtime_handle" }
-; CHECK: attributes #[[ATTR2]] = { "enqueued-block" }
+; CHECK: attributes #[[ATTR2]] = { "enqueued-block" "runtime-handle"="__test_block_invoke_2_kernel.runtime_handle" }
+; CHECK: attributes #[[ATTR3]] = { "enqueued-block" "runtime-handle"="block_has_used_kernel_address.runtime_handle" }
+; CHECK: attributes #[[ATTR4]] = { "enqueued-block" "runtime-handle"="__amdgpu_enqueued_kernel.runtime_handle" }
+; CHECK: attributes #[[ATTR5]] = { "enqueued-block" "runtime-handle"="__amdgpu_enqueued_kernel.1.runtime_handle" }
 ;.
