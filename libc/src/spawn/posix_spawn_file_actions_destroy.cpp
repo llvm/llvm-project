@@ -30,7 +30,6 @@ LLVM_LIBC_FUNCTION(int, posix_spawn_file_actions_destroy,
   if (act == nullptr)
     return 0;
 
-  act = act->next;
   while (act != nullptr) {
     auto *temp = act;
     act = act->next;
