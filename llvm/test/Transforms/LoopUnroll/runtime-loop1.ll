@@ -34,7 +34,7 @@
 
 ; PROLOG-DAG: [[PH_LOC]] = !DILocation(line: 102, column: 1, scope: !{{.*}})
 
-define i32 @test(i32* nocapture %a, i32 %n) nounwind uwtable readonly !dbg !6 {
+define i32 @test(ptr nocapture %a, i32 %n) nounwind uwtable readonly !dbg !6 {
 entry:
   %cmp1 = icmp eq i32 %n, 0, !dbg !7
   br i1 %cmp1, label %for.end, label %for.body, !dbg !7
@@ -42,8 +42,8 @@ entry:
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %sum.02 = phi i32 [ %add, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv, !dbg !8
-  %0 = load i32, i32* %arrayidx, align 4, !dbg !8
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv, !dbg !8
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !8
   %add = add nsw i32 %0, %sum.02, !dbg !8
   %indvars.iv.next = add i64 %indvars.iv, 1, !dbg !9
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !9

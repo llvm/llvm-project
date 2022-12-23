@@ -9,7 +9,7 @@
 ; CHECK: ![[#PROF]] = !{!"branch_weights", i32 1, i32 9999}
 ; CHECK: ![[#PROF2]] = !{!"branch_weights", i32 3, i32 1}
 
-define i3 @test(i3* %a, i3 %n) {
+define i3 @test(ptr %a, i3 %n) {
 entry:
   %cmp1 = icmp eq i3 %n, 0
   br i1 %cmp1, label %for.end, label %for.body
@@ -17,8 +17,8 @@ entry:
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %sum.02 = phi i3 [ %add, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i3, i3* %a, i64 %indvars.iv
-  %0 = load i3, i3* %arrayidx
+  %arrayidx = getelementptr inbounds i3, ptr %a, i64 %indvars.iv
+  %0 = load i3, ptr %arrayidx
   %add = add nsw i3 %0, %sum.02
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i3

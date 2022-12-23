@@ -6,7 +6,7 @@
 ; RUN: opt -mtriple=thumbv7em -mcpu=cortex-m7 -passes=loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL
 
 ; CHECK-LABEL: partial
-define arm_aapcs_vfpcc void @partial(i32* nocapture %C, i32* nocapture readonly %A, i32* nocapture readonly %B) local_unnamed_addr #0 {
+define arm_aapcs_vfpcc void @partial(ptr nocapture %C, ptr nocapture readonly %A, ptr nocapture readonly %B) local_unnamed_addr #0 {
 entry:
   br label %for.body
 
@@ -40,13 +40,13 @@ for.body:
 ; CHECK-UNROLL: br i1 [[CMP]], label [[END:%[a-z.]+]], label %for.body
 
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %i.08
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %B, i32 %i.08
-  %1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.08
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %B, i32 %i.08
+  %1 = load i32, ptr %arrayidx1, align 4
   %mul = mul nsw i32 %1, %0
-  %arrayidx2 = getelementptr inbounds i32, i32* %C, i32 %i.08
-  store i32 %mul, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %C, i32 %i.08
+  store i32 %mul, ptr %arrayidx2, align 4
   %inc = add nuw nsw i32 %i.08, 1
   %exitcond = icmp eq i32 %inc, 1024
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
@@ -56,7 +56,7 @@ for.cond.cleanup:
 }
 
 ; CHECK-LABEL: runtime
-define arm_aapcs_vfpcc void @runtime(i32* nocapture %C, i32* nocapture readonly %A, i32* nocapture readonly %B, i32 %N) local_unnamed_addr #0 {
+define arm_aapcs_vfpcc void @runtime(ptr nocapture %C, ptr nocapture readonly %A, ptr nocapture readonly %B, i32 %N) local_unnamed_addr #0 {
 entry:
   %cmp8 = icmp eq i32 %N, 0
   br i1 %cmp8, label %for.cond.cleanup, label %for.body
@@ -80,13 +80,13 @@ for.body:
 ; CHECK-UNROLL: for.body.epil.2:
 
   %i.09 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %i.09
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %B, i32 %i.09
-  %1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.09
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %B, i32 %i.09
+  %1 = load i32, ptr %arrayidx1, align 4
   %mul = mul nsw i32 %1, %0
-  %arrayidx2 = getelementptr inbounds i32, i32* %C, i32 %i.09
-  store i32 %mul, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %C, i32 %i.09
+  store i32 %mul, ptr %arrayidx2, align 4
   %inc = add nuw i32 %i.09, 1
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
@@ -96,7 +96,7 @@ for.cond.cleanup:
 }
 
 ; CHECK-LABEL: nested_runtime
-define arm_aapcs_vfpcc void @nested_runtime(i32* nocapture %C, i16* nocapture readonly %A, i16* nocapture readonly %B, i32 %N) local_unnamed_addr #0 {
+define arm_aapcs_vfpcc void @nested_runtime(ptr nocapture %C, ptr nocapture readonly %A, ptr nocapture readonly %B, i32 %N) local_unnamed_addr #0 {
 entry:
   %cmp25 = icmp eq i32 %N, 0
   br i1 %cmp25, label %for.cond.cleanup, label %for.body4.lr.ph
@@ -132,24 +132,24 @@ for.body4:
 
   %w.024 = phi i32 [ 0, %for.body4.lr.ph ], [ %inc, %for.body4 ]
   %add = add i32 %w.024, %mul
-  %arrayidx = getelementptr inbounds i16, i16* %A, i32 %add
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %A, i32 %add
+  %0 = load i16, ptr %arrayidx, align 2
   %conv = sext i16 %0 to i32
-  %arrayidx5 = getelementptr inbounds i16, i16* %B, i32 %w.024
-  %1 = load i16, i16* %arrayidx5, align 2
+  %arrayidx5 = getelementptr inbounds i16, ptr %B, i32 %w.024
+  %1 = load i16, ptr %arrayidx5, align 2
   %conv6 = sext i16 %1 to i32
   %mul7 = mul nsw i32 %conv6, %conv
-  %arrayidx8 = getelementptr inbounds i32, i32* %C, i32 %w.024
-  %2 = load i32, i32* %arrayidx8, align 4
+  %arrayidx8 = getelementptr inbounds i32, ptr %C, i32 %w.024
+  %2 = load i32, ptr %arrayidx8, align 4
   %add9 = add nsw i32 %mul7, %2
-  store i32 %add9, i32* %arrayidx8, align 4
+  store i32 %add9, ptr %arrayidx8, align 4
   %inc = add nuw i32 %w.024, 1
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.cond.cleanup3, label %for.body4
 }
 
 ; CHECK-LABEL: loop_call
-define arm_aapcs_vfpcc void @loop_call(i32* nocapture %C, i32* nocapture readonly %A, i32* nocapture readonly %B) local_unnamed_addr #1 {
+define arm_aapcs_vfpcc void @loop_call(ptr nocapture %C, ptr nocapture readonly %A, ptr nocapture readonly %B) local_unnamed_addr #1 {
 entry:
   br label %for.body
 
@@ -169,55 +169,54 @@ for.body:
 ; CHECK-UNROLL: br
 
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %i.08
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %B, i32 %i.08
-  %1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.08
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %B, i32 %i.08
+  %1 = load i32, ptr %arrayidx1, align 4
   %call = tail call arm_aapcs_vfpcc i32 @some_func(i32 %0, i32 %1) #3
-  %arrayidx2 = getelementptr inbounds i32, i32* %C, i32 %i.08
-  store i32 %call, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %C, i32 %i.08
+  store i32 %call, ptr %arrayidx2, align 4
   %inc = add nuw nsw i32 %i.08, 1
   %exitcond = icmp eq i32 %inc, 1024
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
 ; CHECK-LABEL: iterate_inc
-; CHECK-NOUNROLL: %n.addr.04 = phi %struct.Node* [ %1, %while.body ], [ %n, %while.body.preheader ]
-; CHECK-NOUNROLL: %tobool = icmp eq %struct.Node* %1, null
+; CHECK-NOUNROLL: %n.addr.04 = phi ptr [ %1, %while.body ], [ %n, %while.body.preheader ]
+; CHECK-NOUNROLL: %tobool = icmp eq ptr %1, null
 ; CHECK-NOUNROLL: br i1 %tobool
 ; CHECK-NOUNROLL-NOT: load
 
-; CHECK-UNROLL: [[CMP0:%[a-z.0-9]+]] = icmp eq %struct.Node* [[VAR0:%[a-z.0-9]+]], null
+; CHECK-UNROLL: [[CMP0:%[a-z.0-9]+]] = icmp eq ptr [[VAR0:%[a-z.0-9]+]], null
 ; CHECK-UNROLL: br i1 [[CMP0]], label [[END:%[a-z.0-9]+]]
-; CHECK-UNROLL: [[CMP1:%[a-z.0-9]+]] = icmp eq %struct.Node* [[VAR1:%[a-z.0-9]+]], null
+; CHECK-UNROLL: [[CMP1:%[a-z.0-9]+]] = icmp eq ptr [[VAR1:%[a-z.0-9]+]], null
 ; CHECK-UNROLL: br i1 [[CMP1]], label [[END]]
-; CHECK-UNROLL: [[CMP2:%[a-z.0-9]+]] = icmp eq %struct.Node* [[VAR2:%[a-z.0-9]+]], null
+; CHECK-UNROLL: [[CMP2:%[a-z.0-9]+]] = icmp eq ptr [[VAR2:%[a-z.0-9]+]], null
 ; CHECK-UNROLL: br i1 [[CMP2]], label [[END]]
-; CHECK-UNROLL: [[CMP3:%[a-z.0-9]+]] = icmp eq %struct.Node* [[VAR3:%[a-z.0-9]+]], null
+; CHECK-UNROLL: [[CMP3:%[a-z.0-9]+]] = icmp eq ptr [[VAR3:%[a-z.0-9]+]], null
 ; CHECK-UNROLL: br i1 [[CMP3]], label [[END]]
-; CHECK-UNROLL: [[CMP4:%[a-z.0-9]+]] = icmp eq %struct.Node* [[VAR4:%[a-z.0-9]+]], null
+; CHECK-UNROLL: [[CMP4:%[a-z.0-9]+]] = icmp eq ptr [[VAR4:%[a-z.0-9]+]], null
 ; CHECK-UNROLL: br i1 [[CMP4]], label [[END]]
 ; CHECK-UNROLL-NOT: load
 
-%struct.Node = type { %struct.Node*, i32 }
+%struct.Node = type { ptr, i32 }
 
-define arm_aapcscc void @iterate_inc(%struct.Node* %n) local_unnamed_addr #0 {
+define arm_aapcscc void @iterate_inc(ptr %n) local_unnamed_addr #0 {
 entry:
-  %tobool3 = icmp eq %struct.Node* %n, null
+  %tobool3 = icmp eq ptr %n, null
   br i1 %tobool3, label %while.end, label %while.body.preheader
 
 while.body.preheader:
   br label %while.body
 
 while.body:
-  %n.addr.04 = phi %struct.Node* [ %1, %while.body ], [ %n, %while.body.preheader ]
-  %val = getelementptr inbounds %struct.Node, %struct.Node* %n.addr.04, i32 0, i32 1
-  %0 = load i32, i32* %val, align 4
+  %n.addr.04 = phi ptr [ %1, %while.body ], [ %n, %while.body.preheader ]
+  %val = getelementptr inbounds %struct.Node, ptr %n.addr.04, i32 0, i32 1
+  %0 = load i32, ptr %val, align 4
   %add = add nsw i32 %0, 1
-  store i32 %add, i32* %val, align 4
-  %next = getelementptr inbounds %struct.Node, %struct.Node* %n.addr.04, i32 0, i32 0
-  %1 = load %struct.Node*, %struct.Node** %next, align 4
-  %tobool = icmp eq %struct.Node* %1, null
+  store i32 %add, ptr %val, align 4
+  %1 = load ptr, ptr %n.addr.04, align 4
+  %tobool = icmp eq ptr %1, null
   br i1 %tobool, label %while.end, label %while.body
 
 while.end:
