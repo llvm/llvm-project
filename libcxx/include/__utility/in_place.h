@@ -10,7 +10,8 @@
 #define _LIBCPP___UTILITY_IN_PLACE_H
 
 #include <__config>
-#include <type_traits>
+#include <__type_traits/remove_cvref.h>
+#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

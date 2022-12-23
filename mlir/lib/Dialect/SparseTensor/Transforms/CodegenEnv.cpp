@@ -12,27 +12,105 @@ using namespace mlir;
 using namespace mlir::sparse_tensor;
 
 //===----------------------------------------------------------------------===//
-// Code generation environment constructor and setup
+// Code generation environment constructor and general methods
 //===----------------------------------------------------------------------===//
 
 CodegenEnv::CodegenEnv(linalg::GenericOp linop, SparsificationOptions opts,
                        unsigned numTensors, unsigned numLoops,
                        unsigned numFilterLoops)
-    : linalgOp(linop), options(opts), topSort(),
-      merger(numTensors, numLoops, numFilterLoops), loopEmitter(nullptr),
-      sparseOut(nullptr), redVal(nullptr), redExp(-1u), redCustom(-1u) {}
+    : linalgOp(linop), sparseOptions(opts),
+      latticeMerger(numTensors, numLoops, numFilterLoops), loopEmitter(nullptr),
+      topSort(), sparseOut(nullptr), outerParNest(-1u), insChain(), expValues(),
+      expFilled(), expAdded(), expCount(), redVal(), redExp(-1u),
+      redCustom(-1u) {}
 
-void CodegenEnv::startEmit(SparseTensorLoopEmitter *le) {
-  assert(!loopEmitter && "must only start emitting once");
+void CodegenEnv::startEmit(OpOperand *so, unsigned lv,
+                           SparseTensorLoopEmitter *le) {
+  assert(sparseOut == nullptr && loopEmitter == nullptr &&
+         insChain == nullptr && "must only start emitting once");
+  sparseOut = so;
+  outerParNest = lv;
   loopEmitter = le;
   if (sparseOut) {
     insChain = sparseOut->get();
-    merger.setHasSparseOut(true);
+    latticeMerger.setHasSparseOut(true);
   }
 }
 
+Optional<Operation *> CodegenEnv::genLoopBoundary(
+    function_ref<Optional<Operation *>(MutableArrayRef<Value> parameters)>
+        callback) {
+  SmallVector<Value> params;
+  if (isReduc())
+    params.push_back(redVal);
+  if (isExpand())
+    params.push_back(expCount);
+  if (insChain != nullptr)
+    params.push_back(insChain);
+  auto r = callback(params); // may update parameters
+  unsigned i = 0;
+  if (isReduc())
+    updateReduc(params[i++]);
+  if (isExpand())
+    updateExpandCount(params[i++]);
+  if (insChain != nullptr)
+    updateInsertionChain(params[i]);
+  return r;
+}
+
 //===----------------------------------------------------------------------===//
-// Code generation environment methods
+// Code generation environment topological sort methods
+//===----------------------------------------------------------------------===//
+
+ArrayRef<unsigned> CodegenEnv::getTopSortSlice(size_t n, size_t m) const {
+  return ArrayRef<unsigned>(topSort).slice(n, m);
+}
+
+ArrayRef<unsigned> CodegenEnv::getLoopCurStack() const {
+  return getTopSortSlice(0, loopEmitter->getCurrentDepth());
+}
+
+Value CodegenEnv::getLoopIdxValue(size_t loopIdx) const {
+  for (unsigned lv = 0, lve = topSort.size(); lv < lve; lv++)
+    if (topSort[lv] == loopIdx)
+      return loopEmitter->getLoopIV(lv);
+  llvm_unreachable("invalid loop index");
+}
+
+//===----------------------------------------------------------------------===//
+// Code generation environment sparse tensor output and expansion methods
+//===----------------------------------------------------------------------===//
+
+void CodegenEnv::updateInsertionChain(Value chain) {
+  assert(sparseOut != nullptr && insChain != nullptr);
+  insChain = chain;
+}
+
+bool CodegenEnv::atExpandLevel(OpOperand *o, unsigned rank, unsigned lv) const {
+  return sparseOut == o && outerParNest == rank - 1 && outerParNest == lv;
+}
+
+void CodegenEnv::startExpand(Value values, Value filled, Value added,
+                             Value count) {
+  assert(sparseOut != nullptr && expValues == nullptr);
+  expValues = values;
+  expFilled = filled;
+  expAdded = added;
+  expCount = count;
+}
+
+void CodegenEnv::updateExpandCount(Value count) {
+  assert(sparseOut != nullptr && expValues != nullptr);
+  expCount = count;
+}
+
+void CodegenEnv::endExpand() {
+  assert(sparseOut != nullptr && expValues != nullptr);
+  expValues = expFilled = expAdded = expCount = Value();
+}
+
+//===----------------------------------------------------------------------===//
+// Code generation environment reduction methods
 //===----------------------------------------------------------------------===//
 
 void CodegenEnv::startReduc(unsigned exp, Value val) {

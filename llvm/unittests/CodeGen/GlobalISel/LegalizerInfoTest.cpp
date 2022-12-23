@@ -321,6 +321,27 @@ TEST(LegalizerInfoTest, RuleSets) {
     EXPECT_ACTION(Unsupported, 0, LLT(), LegalityQuery(G_OR, {v2s16}));
   }
 
+  // Test minScalarIf
+  {
+    bool IfCond = true;
+    LegalizerInfo LI;
+    auto &LegacyInfo = LI.getLegacyLegalizerInfo();
+    LI.getActionDefinitionsBuilder(G_OR)
+      .legalFor({s32})
+      .minScalarIf([&](const LegalityQuery &Query) {
+                     return IfCond;
+                   }, 0, s32);
+    LegacyInfo.computeTables();
+
+    // Only handle scalars, ignore vectors.
+    EXPECT_ACTION(WidenScalar, 0, s32, LegalityQuery(G_OR, {s16}));
+    EXPECT_ACTION(Unsupported, 0, LLT(), LegalityQuery(G_OR, {v2s16}));
+
+    IfCond = false;
+    EXPECT_ACTION(Unsupported, 0, LLT(), LegalityQuery(G_OR, {s16}));
+    EXPECT_ACTION(Unsupported, 0, LLT(), LegalityQuery(G_OR, {v2s16}));
+  }
+
   // Test maxScalar
   {
     LegalizerInfo LI;

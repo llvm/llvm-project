@@ -232,8 +232,8 @@ define void @add32_reject() nounwind {
 ; RV64I-NEXT:    lw a3, %lo(gb)(a2)
 ; RV64I-NEXT:    lui a4, 1
 ; RV64I-NEXT:    addiw a4, a4, -1096
-; RV64I-NEXT:    addw a1, a1, a4
-; RV64I-NEXT:    addw a3, a3, a4
+; RV64I-NEXT:    add a1, a1, a4
+; RV64I-NEXT:    add a3, a3, a4
 ; RV64I-NEXT:    sw a1, %lo(ga)(a0)
 ; RV64I-NEXT:    sw a3, %lo(gb)(a2)
 ; RV64I-NEXT:    ret

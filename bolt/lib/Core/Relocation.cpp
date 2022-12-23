@@ -171,11 +171,11 @@ bool skipRelocationTypeAArch64(uint64_t Type) {
   return Type == ELF::R_AARCH64_NONE || Type == ELF::R_AARCH64_LD_PREL_LO19;
 }
 
-bool skipRelocationProcessX86(uint64_t Type, uint64_t Contents) {
+bool skipRelocationProcessX86(uint64_t &Type, uint64_t Contents) {
   return false;
 }
 
-bool skipRelocationProcessAArch64(uint64_t Type, uint64_t Contents) {
+bool skipRelocationProcessAArch64(uint64_t &Type, uint64_t Contents) {
   auto IsMov = [](uint64_t Contents) -> bool {
     // The bits 28-23 are 0b100101
     return (Contents & 0x1f800000) == 0x12800000;
@@ -191,11 +191,24 @@ bool skipRelocationProcessAArch64(uint64_t Type, uint64_t Contents) {
     return (Contents & 0x9f000000) == 0x10000000;
   };
 
+  auto IsAddImm = [](uint64_t Contents) -> bool {
+    // The bits 30-23 are 0b00100010
+    return (Contents & 0x7F800000) == 0x11000000;
+  };
+
   auto IsNop = [](uint64_t Contents) -> bool { return Contents == 0xd503201f; };
 
   // The linker might eliminate the instruction and replace it with NOP, ignore
   if (IsNop(Contents))
     return true;
+
+  // The linker might relax ADRP+LDR instruction sequence for loading symbol
+  // address from GOT table to ADRP+ADD sequence that would point to the
+  // binary-local symbol. Change relocation type in order to process it right.
+  if (Type == ELF::R_AARCH64_LD64_GOT_LO12_NC && IsAddImm(Contents)) {
+    Type = ELF::R_AARCH64_ADD_ABS_LO12_NC;
+    return false;
+  }
 
   // The linker might perform TLS relocations relaxations, such as
   // changed TLS access model (e.g. changed global dynamic model
@@ -548,7 +561,7 @@ bool Relocation::skipRelocationType(uint64_t Type) {
   return skipRelocationTypeX86(Type);
 }
 
-bool Relocation::skipRelocationProcess(uint64_t Type, uint64_t Contents) {
+bool Relocation::skipRelocationProcess(uint64_t &Type, uint64_t Contents) {
   if (Arch == Triple::aarch64)
     return skipRelocationProcessAArch64(Type, Contents);
   return skipRelocationProcessX86(Type, Contents);

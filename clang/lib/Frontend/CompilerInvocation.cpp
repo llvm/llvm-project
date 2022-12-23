@@ -1495,9 +1495,6 @@ void CompilerInvocation::GenerateCodeGenArgs(
   else if (Opts.CFProtectionBranch)
     GenerateArg(Args, OPT_fcf_protection_EQ, "branch", SA);
 
-  if (Opts.IBTSeal)
-    GenerateArg(Args, OPT_mibt_seal, SA);
-
   if (Opts.FunctionReturnThunks)
     GenerateArg(Args, OPT_mfunction_return_EQ, "thunk-extern", SA);
 
@@ -1856,9 +1853,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     else
       Opts.FunctionReturnThunks = static_cast<unsigned>(Val);
   }
-
-  if (Opts.PrepareForLTO && Args.hasArg(OPT_mibt_seal))
-    Opts.IBTSeal = 1;
 
   for (auto *A :
        Args.filtered(OPT_mlink_bitcode_file, OPT_mlink_builtin_bitcode)) {

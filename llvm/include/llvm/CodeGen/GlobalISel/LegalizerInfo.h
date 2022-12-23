@@ -950,6 +950,22 @@ public:
                     changeTo(typeIdx(TypeIdx), Ty));
   }
 
+  /// Ensure the scalar is at least as wide as Ty if condition is met.
+  LegalizeRuleSet &minScalarIf(LegalityPredicate Predicate, unsigned TypeIdx,
+                               const LLT Ty) {
+    using namespace LegalityPredicates;
+    using namespace LegalizeMutations;
+    return actionIf(
+        LegalizeAction::WidenScalar,
+        [=](const LegalityQuery &Query) {
+          const LLT QueryTy = Query.Types[TypeIdx];
+          return QueryTy.isScalar() &&
+                 QueryTy.getSizeInBits() < Ty.getSizeInBits() &&
+                 Predicate(Query);
+        },
+        changeTo(typeIdx(TypeIdx), Ty));
+  }
+
   /// Ensure the scalar is at most as wide as Ty.
   LegalizeRuleSet &maxScalarOrElt(unsigned TypeIdx, const LLT Ty) {
     using namespace LegalityPredicates;

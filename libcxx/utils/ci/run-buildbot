@@ -32,8 +32,23 @@ ${PROGNAME} [options] <BUILDER>
                     them from Green Dragon. This is only relevant at all when
                     running back-deployment testing if one wants to override
                     the old dylibs we use to run the tests with different ones.
+Environment variables
+CC                  The C compiler to use, this value is used by CMake. This
+                    variable is optional.
+CXX                 The C++ compiler to use, this value is used by CMake. This
+                    variable is optional.
+
+GIT_CLANG_FORMAT    The git-clang-format binary to use in the 'format' builder.
+                    When the value is omitted, it defaults to
+                    'git-clang-format'. This variable or its fallback must work
+                    when running the 'format' builder.
 EOF
 }
+
+if [[ $# == 0 ]]; then
+   usage
+   exit 0
+fi
 
 while [[ $# -gt 0 ]]; do
     case ${1} in
@@ -194,6 +209,7 @@ check-generated-output)
            --exclude '*.dat' \
            --exclude 'escaped_output.*.pass.cpp' \
            --exclude 'format_tests.h' \
+           --exclude 'format.functions.tests.h' \
            --exclude 'formatter.*.pass.cpp' \
            --exclude 'grep.pass.cpp' \
            --exclude 'locale-specific_form.pass.cpp' \

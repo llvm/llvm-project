@@ -79,7 +79,7 @@ define signext i32 @add_large_const(i32 signext %a) nounwind {
 ; RV64C:       # %bb.0:
 ; RV64C-NEXT:    c.lui a1, 1
 ; RV64C-NEXT:    c.addiw a1, -1
-; RV64C-NEXT:    c.addw a0, a1
+; RV64C-NEXT:    c.add a0, a1
 ; RV64C-NEXT:    c.slli a0, 48
 ; RV64C-NEXT:    c.srai a0, 48
 ; RV64C-NEXT:    c.jr ra
@@ -119,7 +119,7 @@ define signext i32 @add_huge_const(i32 signext %a) nounwind {
 ; RV64C:       # %bb.0:
 ; RV64C-NEXT:    c.lui a1, 8
 ; RV64C-NEXT:    c.addiw a1, -1
-; RV64C-NEXT:    c.addw a0, a1
+; RV64C-NEXT:    c.add a0, a1
 ; RV64C-NEXT:    c.slli a0, 48
 ; RV64C-NEXT:    c.srai a0, 48
 ; RV64C-NEXT:    c.jr ra
