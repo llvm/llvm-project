@@ -7628,6 +7628,9 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
   // mutation.  See PR49900.
   ILV.getOrCreateTripCount(OrigLoop->getLoopPreheader());
 
+  if (!IsEpilogueVectorization)
+    VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
+
   // Perform the actual loop transformation.
 
   // 1. Set up the skeleton for vectorization, including vector pre-header and

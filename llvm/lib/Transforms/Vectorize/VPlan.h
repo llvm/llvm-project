@@ -2601,6 +2601,12 @@ public:
 
   void addVF(ElementCount VF) { VFs.insert(VF); }
 
+  void setVF(ElementCount VF) {
+    assert(hasVF(VF) && "Cannot set VF not already in plan");
+    VFs.clear();
+    VFs.insert(VF);
+  }
+
   bool hasVF(ElementCount VF) { return VFs.count(VF); }
 
   bool hasScalarVFOnly() const { return VFs.size() == 1 && VFs[0].isScalar(); }
