@@ -331,7 +331,7 @@ static void createBinarySearchFunc(OpBuilder &builder, ModuleOp module,
   Location loc = func.getLoc();
   ValueRange args = entryBlock->getArguments();
   Value p = args[hiIdx];
-  SmallVector<Type, 2> types(2, p.getType());  // only two
+  SmallVector<Type, 2> types(2, p.getType()); // only two
   scf::WhileOp whileOp = builder.create<scf::WhileOp>(
       loc, types, SmallVector<Value, 2>{args[loIdx], args[hiIdx]});
 
@@ -490,7 +490,7 @@ static void createPartitionFunc(OpBuilder &builder, ModuleOp module,
 
   Value i = lo;
   Value j = builder.create<arith::SubIOp>(loc, hi, c1);
-  SmallVector<Value, 3> operands{i, j, p};  // exactly three
+  SmallVector<Value, 3> operands{i, j, p}; // exactly three
   SmallVector<Type, 3> types{i.getType(), j.getType(), p.getType()};
   scf::WhileOp whileOp = builder.create<scf::WhileOp>(loc, types, operands);
 
@@ -770,9 +770,7 @@ public:
     Value c0 = constantIndex(rewriter, loc, 0);
     Value buffer = op.getInBuffer();
     Value capacity = rewriter.create<memref::DimOp>(loc, buffer, c0);
-    Value idx = constantIndex(rewriter, loc, op.getIdx().getZExtValue());
-    Value bufferSizes = op.getBufferSizes();
-    Value size = rewriter.create<memref::LoadOp>(loc, bufferSizes, idx);
+    Value size = op.getCurSize();
     Value value = op.getValue();
 
     Value n = op.getN() ? op.getN() : constantIndex(rewriter, loc, 1);
@@ -852,8 +850,7 @@ public:
     }
 
     // Update the buffer size.
-    rewriter.create<memref::StoreOp>(loc, newSize, bufferSizes, idx);
-    rewriter.replaceOp(op, buffer);
+    rewriter.replaceOp(op, {buffer, newSize});
     return success();
   }
 

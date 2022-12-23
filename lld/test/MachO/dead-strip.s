@@ -318,7 +318,7 @@
 
 # RUN: llvm-mc -g -filetype=obj -triple=x86_64-apple-macos \
 # RUN:     %t/literals.s -o %t/literals.o
-# RUN: %lld -dylib -dead_strip --deduplicate-literals %t/literals.o -o %t/literals
+# RUN: %lld -dylib -dead_strip %t/literals.o -o %t/literals
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" --section="__DATA,str_ptrs" \
 # RUN:   --section="__TEXT,__literals" %t/literals | FileCheck %s --check-prefix=LIT
 # LIT:      Contents of (__TEXT,__cstring) section

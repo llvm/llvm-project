@@ -135,7 +135,7 @@ struct Configuration {
   bool emitChainedFixups = false;
   bool timeTraceEnabled = false;
   bool dataConst = false;
-  bool dedupLiterals = true;
+  bool dedupStrings = true;
   bool deadStripDuplicates = false;
   bool omitDebugInfo = false;
   bool warnDylibInstallName = false;
@@ -174,6 +174,7 @@ struct Configuration {
   // exist. This allows users to ignore the specific invalid options in the case
   // they can't easily fix them.
   llvm::StringSet<> ignoreAutoLinkOptions;
+  bool strictAutoLink = false;
   PlatformInfo platformInfo;
   std::optional<PlatformInfo> secondaryPlatformInfo;
   NamespaceKind namespaceKind = NamespaceKind::twolevel;
