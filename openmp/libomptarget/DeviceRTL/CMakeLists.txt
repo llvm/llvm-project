@@ -327,9 +327,6 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
                     ${LIBOMPTARGET_LIBRARY_DIR})
   add_dependencies("omptarget.devicertl.${target_name}" "${bclib_target_name}")
 
-  # Install bitcode library under the lib destination folder.
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name} DESTINATION "${DEVEL_PACKAGE}${OPENMP_INSTALL_LIBDIR}")
-
   # _____________________________________________________________________________
   # ------  SUPPORT FOR OLD DRIVER bc files
   if( ${target_name} STREQUAL "amdgpu" )
