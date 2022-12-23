@@ -116,7 +116,6 @@ clang/bindings/python/tests/cindex/INPUTS/header3.h
 clang/examples/Attribute/Attribute.cpp
 clang/examples/CallSuperAttribute/CallSuperAttrInfo.cpp
 clang/examples/PluginsOrder/PluginsOrder.cpp
-clang/include/clang/Analysis/AnalysisDiagnostic.h
 clang/include/clang/Analysis/BodyFarm.h
 clang/include/clang/Analysis/IssueHash.h
 clang/include/clang/Analysis/MacroExpansionContext.h
