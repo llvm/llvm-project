@@ -859,13 +859,6 @@ class APFloat : public APFloatBase {
     APFLOAT_DISPATCH_ON_SEMANTICS(makeSmallestNormalized(Neg));
   }
 
-  // FIXME: This is due to clang 3.3 (or older version) always checks for the
-  // default constructor in an array aggregate initialization, even if no
-  // elements in the array is default initialized.
-  APFloat() : U(IEEEdouble()) {
-    llvm_unreachable("This is a workaround for old clang.");
-  }
-
   explicit APFloat(IEEEFloat F, const fltSemantics &S) : U(std::move(F), S) {}
   explicit APFloat(DoubleAPFloat F, const fltSemantics &S)
       : U(std::move(F), S) {}
