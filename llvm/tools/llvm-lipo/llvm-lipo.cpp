@@ -73,27 +73,26 @@ enum LipoID {
 #undef OPTION
 };
 
-namespace lipo {
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr std::initializer_list<llvm::StringLiteral> NAME = VALUE;
+// LipoInfoTable below references LIPO_##PREFIX. OptionGroup has prefix nullptr.
+constexpr const char *const *LIPO_nullptr = nullptr;
+#define PREFIX(NAME, VALUE) const char *const LIPO_##NAME[] = VALUE;
 #include "LipoOpts.inc"
 #undef PREFIX
 
-static constexpr std::initializer_list<opt::OptTable::Info> LipoInfoTable = {
+static constexpr opt::OptTable::Info LipoInfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
-  {PREFIX,       NAME,      HELPTEXT,                                          \
-   METAVAR,      LIPO_##ID, opt::Option::KIND##Class,                          \
-   PARAM,        FLAGS,     LIPO_##GROUP,                                      \
-   LIPO_##ALIAS, ALIASARGS, VALUES},
+  {LIPO_##PREFIX, NAME,      HELPTEXT,                                         \
+   METAVAR,       LIPO_##ID, opt::Option::KIND##Class,                         \
+   PARAM,         FLAGS,     LIPO_##GROUP,                                     \
+   LIPO_##ALIAS,  ALIASARGS, VALUES},
 #include "LipoOpts.inc"
 #undef OPTION
 };
-} // namespace lipo
 
 class LipoOptTable : public opt::OptTable {
 public:
-  LipoOptTable() : OptTable(lipo::LipoInfoTable) {}
+  LipoOptTable() : OptTable(LipoInfoTable) {}
 };
 
 enum class LipoAction {
