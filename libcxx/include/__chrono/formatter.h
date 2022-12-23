@@ -195,7 +195,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
         // FMT honours precision and has a bug for separator
         // https://godbolt.org/z/78b7sMxns
         if constexpr (chrono::__is_duration<_Tp>::value) {
-          __sstr << format(_LIBCPP_STATICALLY_WIDEN(_CharT, "{}"), __value.count());
+          __sstr << std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "{}"), __value.count());
           break;
         }
         __builtin_unreachable();

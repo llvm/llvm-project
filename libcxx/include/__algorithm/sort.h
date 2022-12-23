@@ -343,7 +343,8 @@ void __insertion_sort(_BidirectionalIterator __first, _BidirectionalIterator __l
 // Assumes that there is an element in the position (__first - 1) and that each
 // element in the input range is greater or equal to the element at __first - 1.
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
-void __insertion_sort_unguarded(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp) {
+_LIBCPP_HIDE_FROM_ABI void
+__insertion_sort_unguarded(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp) {
   using _Ops = _IterOps<_AlgPolicy>;
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   typedef typename iterator_traits<_RandomAccessIterator>::value_type value_type;
@@ -543,7 +544,7 @@ inline _LIBCPP_HIDE_FROM_ABI void __bitset_partition_partial_blocks(
       --__iter;
     }
   }
-  __swap_bitmap_pos<_AlgPolicy, _RandomAccessIterator>(__first, __lm1, __left_bitset, __right_bitset);
+  std::__swap_bitmap_pos<_AlgPolicy, _RandomAccessIterator>(__first, __lm1, __left_bitset, __right_bitset);
   __first += (__left_bitset == 0) ? __l_size : 0;
   __lm1 -= (__right_bitset == 0) ? __r_size : 0;
 }
@@ -636,14 +637,14 @@ __bitset_partition(_RandomAccessIterator __first, _RandomAccessIterator __last, 
     // Record the comparison outcomes for the elements currently on the left
     // side.
     if (__left_bitset == 0)
-      __populate_left_bitset<_Compare>(__first, __comp, __pivot, __left_bitset);
+      std::__populate_left_bitset<_Compare>(__first, __comp, __pivot, __left_bitset);
     // Record the comparison outcomes for the elements currently on the right
     // side.
     if (__right_bitset == 0)
-      __populate_right_bitset<_Compare>(__lm1, __comp, __pivot, __right_bitset);
+      std::__populate_right_bitset<_Compare>(__lm1, __comp, __pivot, __right_bitset);
     // Swap the elements recorded to be the candidates for swapping in the
     // bitsets.
-    __swap_bitmap_pos<_AlgPolicy, _RandomAccessIterator>(__first, __lm1, __left_bitset, __right_bitset);
+    std::__swap_bitmap_pos<_AlgPolicy, _RandomAccessIterator>(__first, __lm1, __left_bitset, __right_bitset);
     // Only advance the iterator if all the elements that need to be moved to
     // other side were moved.
     __first += (__left_bitset == 0) ? difference_type(__detail::__block_size) : difference_type(0);
@@ -651,11 +652,11 @@ __bitset_partition(_RandomAccessIterator __first, _RandomAccessIterator __last, 
   }
   // Now, we have a less-than a block worth of elements on at least one of the
   // sides.
-  __bitset_partition_partial_blocks<_AlgPolicy, _Compare>(
+  std::__bitset_partition_partial_blocks<_AlgPolicy, _Compare>(
       __first, __lm1, __comp, __pivot, __left_bitset, __right_bitset);
   // At least one the bitsets would be empty.  For the non-empty one, we need to
   // properly partition the elements that appear within that bitset.
-  __swap_bitmap_pos_within<_AlgPolicy>(__first, __lm1, __left_bitset, __right_bitset);
+  std::__swap_bitmap_pos_within<_AlgPolicy>(__first, __lm1, __left_bitset, __right_bitset);
 
   // Move the pivot to its correct position.
   _RandomAccessIterator __pivot_pos = __first - difference_type(1);
@@ -843,15 +844,15 @@ void __introsort(_RandomAccessIterator __first,
     // partitioned.  This also means that we do not need to sort the left
     // side of the partition.
     if (!__leftmost && !__comp(*(__first - difference_type(1)), *__first)) {
-      __first = __partition_with_equals_on_left<_AlgPolicy, _RandomAccessIterator, _Comp_ref>(
+      __first = std::__partition_with_equals_on_left<_AlgPolicy, _RandomAccessIterator, _Comp_ref>(
           __first, __last, _Comp_ref(__comp));
       continue;
     }
     // Use bitset partition only if asked for.
     auto __ret =
         _UseBitSetPartition
-            ? __bitset_partition<_AlgPolicy, _RandomAccessIterator, _Compare>(__first, __last, __comp)
-            : __partition_with_equals_on_right<_AlgPolicy, _RandomAccessIterator, _Compare>(__first, __last, __comp);
+            ? std::__bitset_partition<_AlgPolicy, _RandomAccessIterator, _Compare>(__first, __last, __comp)
+            : std::__partition_with_equals_on_right<_AlgPolicy, _RandomAccessIterator, _Compare>(__first, __last, __comp);
     _RandomAccessIterator __i = __ret.first;
     // [__first, __i) < *__i and *__i <= [__i+1, __last)
     // If we were given a perfect partition, see if insertion sort is quick...
@@ -901,7 +902,8 @@ inline _LIBCPP_HIDE_FROM_ABI _Number __log2i(_Number __n) {
 template <class _WrappedComp, class _RandomAccessIterator>
 _LIBCPP_HIDDEN void __sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _WrappedComp __wrapped_comp) {
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
-  difference_type __depth_limit = 2 * __log2i(__last - __first);
+  difference_type __depth_limit = 2 * std::__log2i(__last - __first);
+
   using _Unwrap = _UnwrapAlgPolicy<_WrappedComp>;
   using _AlgPolicy = typename _Unwrap::_AlgPolicy;
   using _Compare = typename _Unwrap::_Comp;
