@@ -955,9 +955,7 @@ public:
   ///
   /// Perform an unsigned remainder operation on this APInt with RHS being the
   /// divisor. Both this and RHS are treated as unsigned quantities for purposes
-  /// of this operation. Note that this is a true remainder operation and not a
-  /// modulo operation because the sign follows the sign of the dividend which
-  /// is *this.
+  /// of this operation.
   ///
   /// \returns a new APInt value containing the remainder result
   APInt urem(const APInt &RHS) const;
@@ -966,6 +964,9 @@ public:
   /// Function for signed remainder operation.
   ///
   /// Signed remainder operation on APInt.
+  ///
+  /// Note that this is a true remainder operation and not a modulo operation
+  /// because the sign follows the sign of the dividend which is *this.
   APInt srem(const APInt &RHS) const;
   int64_t srem(int64_t RHS) const;
 
