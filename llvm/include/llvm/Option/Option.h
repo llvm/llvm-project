@@ -124,9 +124,8 @@ public:
 
   /// Get the default prefix for this option.
   StringRef getPrefix() const {
-    return Info->Prefixes.empty()
-               ? StringRef()
-               : static_cast<const StringRef &>(Info->Prefixes[0]);
+    const char *Prefix = *Info->Prefixes;
+    return Prefix ? Prefix : StringRef();
   }
 
   /// Get the name of this option with the default prefix.
