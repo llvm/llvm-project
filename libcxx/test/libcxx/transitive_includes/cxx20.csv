@@ -219,7 +219,6 @@ expected cstdlib
 expected exception
 expected initializer_list
 expected new
-expected type_traits
 expected version
 experimental/algorithm algorithm
 experimental/algorithm cstddef
@@ -576,7 +575,6 @@ memory_resource mutex
 memory_resource new
 memory_resource stdexcept
 memory_resource tuple
-memory_resource type_traits
 memory_resource version
 mutex atomic
 mutex concepts

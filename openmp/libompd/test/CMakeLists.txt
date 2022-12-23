@@ -22,6 +22,12 @@ find_program(FILECHECK_EXECUTABLE
 if(LLVM_FILECHECK_PATH)
   set(LLVM_EXTERNAL_FILECHECK ${LLVM_FILECHECK_PATH})
 endif()
+=======
+if(NOT OPENMP_TEST_COMPILER_ID STREQUAL "Clang")
+  message(STATUS "LIBOMPD: Can only test with Clang compiler")
+  message(WARNING "LIBOMPD: The check-libompd target will not be available!")
+  return()
+endif()
 
 set(PYTHON_PLUGIN ${ompd_BINARY_DIR}/gdb-plugin/python-module)
 

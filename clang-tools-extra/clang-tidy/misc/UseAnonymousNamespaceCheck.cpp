@@ -29,10 +29,6 @@ AST_MATCHER(FunctionDecl, isMemberFunction) {
   return llvm::isa<CXXMethodDecl>(&Node);
 }
 AST_MATCHER(VarDecl, isStaticDataMember) { return Node.isStaticDataMember(); }
-
-AST_MATCHER(Decl, isInAnonymousNamespace) {
-  return Node.isInAnonymousNamespace();
-}
 } // namespace
 
 UseAnonymousNamespaceCheck::UseAnonymousNamespaceCheck(

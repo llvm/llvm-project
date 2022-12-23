@@ -3,30 +3,30 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 
 %struct.test.b = type { i32, i32 }
-%struct.test.a = type { %struct.test.b, i32, i8*}
+%struct.test.a = type { %struct.test.b, i32, ptr}
 
-define void @foo(i8* %ptr) {
+define void @foo(ptr %ptr) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@foo
-; TUNIT-SAME: (i8* nocapture nofree readnone [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
+; TUNIT-SAME: (ptr nocapture nofree readnone [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[TMP0:%.*]] = alloca [[STRUCT_TEST_A:%.*]], align 8
 ; TUNIT-NEXT:    br label [[CALL_BR:%.*]]
 ; TUNIT:       call.br:
-; TUNIT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_TEST_A]], %struct.test.a* [[TMP0]], i64 0, i32 2
-; TUNIT-NEXT:    tail call void @bar(%struct.test.a* noalias nocapture nofree noundef nonnull readonly byval([[STRUCT_TEST_A]]) align 8 dereferenceable(24) [[TMP0]]) #[[ATTR2:[0-9]+]]
+; TUNIT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_TEST_A]], ptr [[TMP0]], i64 0, i32 2
+; TUNIT-NEXT:    tail call void @bar(ptr noalias nocapture nofree noundef nonnull readonly byval([[STRUCT_TEST_A]]) align 8 dereferenceable(24) [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@foo
-; CGSCC-SAME: (i8* nocapture nofree writeonly [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
+; CGSCC-SAME: (ptr nocapture nofree writeonly [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[TMP0:%.*]] = alloca [[STRUCT_TEST_A:%.*]], align 8
 ; CGSCC-NEXT:    br label [[CALL_BR:%.*]]
 ; CGSCC:       call.br:
-; CGSCC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_TEST_A]], %struct.test.a* [[TMP0]], i64 0, i32 2
-; CGSCC-NEXT:    store i8* [[PTR]], i8** [[TMP1]], align 8
-; CGSCC-NEXT:    tail call void @bar(%struct.test.a* noalias nocapture nofree noundef nonnull readnone byval([[STRUCT_TEST_A]]) align 8 dereferenceable(24) [[TMP0]]) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_TEST_A]], ptr [[TMP0]], i64 0, i32 2
+; CGSCC-NEXT:    store ptr [[PTR]], ptr [[TMP1]], align 8
+; CGSCC-NEXT:    tail call void @bar(ptr noalias nocapture nofree noundef nonnull readnone byval([[STRUCT_TEST_A]]) align 8 dereferenceable(24) [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:
@@ -34,24 +34,22 @@ entry:
   br label %call.br
 
 call.br:
-  %1 = getelementptr inbounds %struct.test.a, %struct.test.a* %0, i64 0, i32 2
-  store i8* %ptr, i8** %1
-  tail call void @bar(%struct.test.a* noundef byval(%struct.test.a) align 8 %0)
+  %1 = getelementptr inbounds %struct.test.a, ptr %0, i64 0, i32 2
+  store ptr %ptr, ptr %1
+  tail call void @bar(ptr noundef byval(%struct.test.a) align 8 %0)
   ret void
 }
 
-define void @bar(%struct.test.a* noundef byval(%struct.test.a) align 8 %dev) {
+define void @bar(ptr noundef byval(%struct.test.a) align 8 %dev) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@bar
-; CHECK-SAME: (%struct.test.a* noalias nocapture nofree noundef nonnull writeonly byval([[STRUCT_TEST_A:%.*]]) align 8 dereferenceable(24) [[DEV:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_TEST_A]], %struct.test.a* [[DEV]], i64 0, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_TEST_B:%.*]], %struct.test.b* [[TMP1]], i64 0, i32 1
-; CHECK-NEXT:    store i32 1, i32* [[TMP2]], align 4
+; CHECK-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly byval([[STRUCT_TEST_A:%.*]]) align 8 dereferenceable(24) [[DEV:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_TEST_B:%.*]], ptr [[DEV]], i64 0, i32 1
+; CHECK-NEXT:    store i32 1, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %1 = getelementptr inbounds %struct.test.a, %struct.test.a* %dev, i64 0, i32 0
-  %2 = getelementptr inbounds %struct.test.b, %struct.test.b* %1, i64 0, i32 1
-  store i32 1, i32* %2
+  %1 = getelementptr inbounds %struct.test.b, ptr %dev, i64 0, i32 1
+  store i32 1, ptr %1
   ret void
 }
 ;.

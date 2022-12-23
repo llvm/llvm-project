@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/foo2.s -o %t/foo2.o
 # RUN: %lld -dylib --icf=all -framework CoreFoundation %t/foo1.o %t/foo2.o -o %t/foo
 # RUN: llvm-objdump --no-print-imm-hex --macho --rebase --bind --syms -d %t/foo | FileCheck %s --check-prefixes=CHECK,LITERALS
-# RUN: %lld -dylib --deduplicate-literals -framework CoreFoundation %t/foo1.o %t/foo2.o -o %t/foo
+# RUN: %lld -dylib -framework CoreFoundation %t/foo1.o %t/foo2.o -o %t/foo
 # RUN: llvm-objdump --no-print-imm-hex --macho --rebase --bind --syms -d %t/foo | FileCheck %s --check-prefix=LITERALS
 
 # CHECK:       (__TEXT,__text) section

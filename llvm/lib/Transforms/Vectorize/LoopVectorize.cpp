@@ -7611,6 +7611,11 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
                                            InnerLoopVectorizer &ILV,
                                            DominatorTree *DT,
                                            bool IsEpilogueVectorization) {
+  assert(BestVPlan.hasVF(BestVF) &&
+         "Trying to execute plan with unsupported VF");
+  assert(BestVPlan.hasUF(BestUF) &&
+         "Trying to execute plan with unsupported UF");
+
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << BestVF << ", UF=" << BestUF
                     << '\n');
 
@@ -7622,6 +7627,9 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
   // can hit the same issue for any SCEV, or ValueTracking query done during
   // mutation.  See PR49900.
   ILV.getOrCreateTripCount(OrigLoop->getLoopPreheader());
+
+  if (!IsEpilogueVectorization)
+    VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
 
   // Perform the actual loop transformation.
 
@@ -9130,18 +9138,10 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
       }
   }
 
-  std::string PlanName;
-  raw_string_ostream RSO(PlanName);
-  ElementCount VF = Range.Start;
-  Plan->addVF(VF);
-  RSO << "Initial VPlan for VF={" << VF;
-  for (VF *= 2; ElementCount::isKnownLT(VF, Range.End); VF *= 2) {
+  for (ElementCount VF = Range.Start; ElementCount::isKnownLT(VF, Range.End);
+       VF *= 2)
     Plan->addVF(VF);
-    RSO << "," << VF;
-  }
-  RSO << "},UF>=1";
-  RSO.flush();
-  Plan->setName(PlanName);
+  Plan->setName("Initial VPlan");
 
   // From this point onwards, VPlan-to-VPlan transformations may change the plan
   // in ways that accessing values using original IR values is incorrect.

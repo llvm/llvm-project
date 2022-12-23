@@ -585,44 +585,10 @@ VPActiveLaneMaskPHIRecipe *VPlan::getActiveLaneMaskPhi() {
   return nullptr;
 }
 
-static bool canSimplifyBranchOnCond(VPInstruction *Term) {
-  VPInstruction *Not = dyn_cast<VPInstruction>(Term->getOperand(0));
-  if (!Not || Not->getOpcode() != VPInstruction::Not)
-    return false;
-
-  VPInstruction *ALM = dyn_cast<VPInstruction>(Not->getOperand(0));
-  return ALM && ALM->getOpcode() == VPInstruction::ActiveLaneMask;
-}
-
 void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
                              Value *CanonicalIVStartValue,
                              VPTransformState &State,
                              bool IsEpilogueVectorization) {
-
-  VPBasicBlock *ExitingVPBB = getVectorLoopRegion()->getExitingBasicBlock();
-  auto *Term = dyn_cast<VPInstruction>(&ExitingVPBB->back());
-  // Try to simplify the branch condition if TC <= VF * UF when preparing to
-  // execute the plan for the main vector loop. We only do this if the
-  // terminator is:
-  //  1. BranchOnCount, or
-  //  2. BranchOnCond where the input is Not(ActiveLaneMask).
-  if (!IsEpilogueVectorization && Term && isa<ConstantInt>(TripCountV) &&
-      (Term->getOpcode() == VPInstruction::BranchOnCount ||
-       (Term->getOpcode() == VPInstruction::BranchOnCond &&
-        canSimplifyBranchOnCond(Term)))) {
-    ConstantInt *C = cast<ConstantInt>(TripCountV);
-    uint64_t TCVal = C->getZExtValue();
-    if (TCVal && TCVal <= State.VF.getKnownMinValue() * State.UF) {
-      auto *BOC =
-          new VPInstruction(VPInstruction::BranchOnCond,
-                            {getOrAddExternalDef(State.Builder.getTrue())});
-      Term->eraseFromParent();
-      ExitingVPBB->appendRecipe(BOC);
-      // TODO: Further simplifications are possible
-      //      1. Replace inductions with constants.
-      //      2. Replace vector loop region with VPBasicBlock.
-    }
-  }
 
   // Check if the trip count is needed, and if so build it.
   if (TripCount && TripCount->getNumUsers()) {
@@ -757,7 +723,7 @@ LLVM_DUMP_METHOD
 void VPlan::print(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
 
-  O << "VPlan '" << Name << "' {";
+  O << "VPlan '" << getName() << "' {";
 
   if (VectorTripCount.getNumUsers() > 0) {
     O << "\nLive-in ";
@@ -787,6 +753,29 @@ void VPlan::print(raw_ostream &O) const {
   }
 
   O << "}\n";
+}
+
+std::string VPlan::getName() const {
+  std::string Out;
+  raw_string_ostream RSO(Out);
+  RSO << Name << " for ";
+  if (!VFs.empty()) {
+    RSO << "VF={" << VFs[0];
+    for (ElementCount VF : drop_begin(VFs))
+      RSO << "," << VF;
+    RSO << "},";
+  }
+
+  if (UFs.empty()) {
+    RSO << "UF>=1";
+  } else {
+    RSO << "UF={" << UFs[0];
+    for (unsigned UF : drop_begin(UFs))
+      RSO << "," << UF;
+    RSO << "}";
+  }
+
+  return Out;
 }
 
 LLVM_DUMP_METHOD

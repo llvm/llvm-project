@@ -160,6 +160,16 @@ TEST(SimplePackedSerializationTest, StdPairSerialization) {
                              std::pair<int32_t, std::string>>(P);
 }
 
+TEST(SimplePackedSerializationTest, StdOptionalNoValueSerialization) {
+  std::optional<int64_t> NoValue;
+  blobSerializationRoundTrip<SPSOptional<int64_t>>(NoValue);
+}
+
+TEST(SimplePackedSerializationTest, StdOptionalValueSerialization) {
+  std::optional<int64_t> Value(42);
+  blobSerializationRoundTrip<SPSOptional<int64_t>>(Value);
+}
+
 TEST(SimplePackedSerializationTest, ArgListSerialization) {
   using BAL = SPSArgList<bool, int32_t, SPSString>;
 

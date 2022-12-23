@@ -3098,6 +3098,11 @@ def SPIRV_EM_SchedulerTargetFmaxMhzINTEL      : I32EnumAttrCase<"SchedulerTarget
     Capability<[SPIRV_C_FPGAKernelAttributesINTEL]>
   ];
 }
+def SPIRV_EM_StreamingInterfaceINTEL          : I32EnumAttrCase<"StreamingInterfaceINTEL", 6154> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_FPGAKernelAttributesINTEL]>
+  ];
+}
 def SPIRV_EM_NamedBarrierCountINTEL           : I32EnumAttrCase<"NamedBarrierCountINTEL", 6417> {
   list<Availability> availability = [
     Capability<[SPIRV_C_VectorComputeINTEL]>
@@ -3135,7 +3140,8 @@ def SPIRV_ExecutionModeAttr :
       SPIRV_EM_FloatingPointModeALTINTEL, SPIRV_EM_FloatingPointModeIEEEINTEL,
       SPIRV_EM_MaxWorkgroupSizeINTEL, SPIRV_EM_MaxWorkDimINTEL,
       SPIRV_EM_NoGlobalOffsetINTEL, SPIRV_EM_NumSIMDWorkitemsINTEL,
-      SPIRV_EM_SchedulerTargetFmaxMhzINTEL, SPIRV_EM_NamedBarrierCountINTEL
+      SPIRV_EM_SchedulerTargetFmaxMhzINTEL, SPIRV_EM_StreamingInterfaceINTEL,
+      SPIRV_EM_NamedBarrierCountINTEL
     ]>;
 
 def SPIRV_EM_Vertex                 : I32EnumAttrCase<"Vertex", 0> {

@@ -32,8 +32,23 @@ ${PROGNAME} [options] <BUILDER>
                     them from Green Dragon. This is only relevant at all when
                     running back-deployment testing if one wants to override
                     the old dylibs we use to run the tests with different ones.
+Environment variables
+CC                  The C compiler to use, this value is used by CMake. This
+                    variable is optional.
+CXX                 The C++ compiler to use, this value is used by CMake. This
+                    variable is optional.
+
+GIT_CLANG_FORMAT    The git-clang-format binary to use in the 'format' builder.
+                    When the value is omitted, it defaults to
+                    'git-clang-format'. This variable or its fallback must work
+                    when running the 'format' builder.
 EOF
 }
+
+if [[ $# == 0 ]]; then
+   usage
+   exit 0
+fi
 
 while [[ $# -gt 0 ]]; do
     case ${1} in
@@ -194,6 +209,7 @@ check-generated-output)
            --exclude '*.dat' \
            --exclude 'escaped_output.*.pass.cpp' \
            --exclude 'format_tests.h' \
+           --exclude 'format.functions.tests.h' \
            --exclude 'formatter.*.pass.cpp' \
            --exclude 'grep.pass.cpp' \
            --exclude 'locale-specific_form.pass.cpp' \
@@ -210,37 +226,43 @@ check-generated-output)
 #
 generic-cxx03)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake" \
+                   -DLIBCXX_ENABLE_CLANG_TIDY=ON
     check-runtimes
     check-abi-list
 ;;
 generic-cxx11)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake" \
+                   -DLIBCXX_ENABLE_CLANG_TIDY=ON
     check-runtimes
     check-abi-list
 ;;
 generic-cxx14)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx14.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx14.cmake" \
+                   -DLIBCXX_ENABLE_CLANG_TIDY=ON
     check-runtimes
     check-abi-list
 ;;
 generic-cxx17)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx17.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx17.cmake" \
+                   -DLIBCXX_ENABLE_CLANG_TIDY=ON
     check-runtimes
     check-abi-list
 ;;
 generic-cxx20)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx20.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx20.cmake" \
+                   -DLIBCXX_ENABLE_CLANG_TIDY=ON
     check-runtimes
     check-abi-list
 ;;
 generic-cxx2b)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx2b.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx2b.cmake" \
+                   -DLIBCXX_ENABLE_CLANG_TIDY=ON
     check-runtimes
     check-abi-list
 ;;
@@ -398,7 +420,8 @@ generic-no-experimental)
 ;;
 generic-noexceptions)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake" \
+                   -DLIBCXX_ENABLE_CLANG_TIDY=ON
     check-runtimes
     check-abi-list
 ;;
@@ -409,6 +432,12 @@ generic-abi-unstable)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-abi-unstable.cmake"
     check-runtimes
+;;
+apple-cxx20)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx20.cmake"
+    check-runtimes
+    check-abi-list
 ;;
 apple-system)
     clean

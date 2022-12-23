@@ -353,6 +353,7 @@ template <class T> unspecified2 end(const valarray<T>& v);
 #include <__functional/operations.h>
 #include <__memory/allocator.h>
 #include <__memory/uninitialized_algorithms.h>
+#include <__type_traits/remove_reference.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <cmath>
@@ -545,7 +546,7 @@ struct __abs_expr
     typedef _Tp __result_type;
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator()(const _Tp& __x) const
-        {return abs(__x);}
+        {return std::abs(__x);}
 };
 
 template <class _Tp>
@@ -554,7 +555,7 @@ struct __acos_expr
     typedef _Tp __result_type;
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator()(const _Tp& __x) const
-        {return acos(__x);}
+        {return std::acos(__x);}
 };
 
 template <class _Tp>
@@ -563,7 +564,7 @@ struct __asin_expr
     typedef _Tp __result_type;
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator()(const _Tp& __x) const
-        {return asin(__x);}
+        {return std::asin(__x);}
 };
 
 template <class _Tp>
@@ -572,7 +573,7 @@ struct __atan_expr
     typedef _Tp __result_type;
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator()(const _Tp& __x) const
-        {return atan(__x);}
+        {return std::atan(__x);}
 };
 
 template <class _Tp>
@@ -581,7 +582,7 @@ struct __atan2_expr
     typedef _Tp __result_type;
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator()(const _Tp& __x, const _Tp& __y) const
-        {return atan2(__x, __y);}
+        {return std::atan2(__x, __y);}
 };
 
 template <class _Tp>
@@ -590,7 +591,7 @@ struct __cos_expr
     typedef _Tp __result_type;
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator()(const _Tp& __x) const
-        {return cos(__x);}
+        {return std::cos(__x);}
 };
 
 template <class _Tp>
@@ -599,7 +600,7 @@ struct __cosh_expr
     typedef _Tp __result_type;
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator()(const _Tp& __x) const
-        {return cosh(__x);}
+        {return std::cosh(__x);}
 };
 
 template <class _Tp>
@@ -608,7 +609,7 @@ struct __exp_expr
     typedef _Tp __result_type;
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator()(const _Tp& __x) const
-        {return exp(__x);}
+        {return std::exp(__x);}
 };
 
 template <class _Tp>
@@ -617,7 +618,7 @@ struct __log_expr
     typedef _Tp __result_type;
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator()(const _Tp& __x) const
-        {return log(__x);}
+        {return std::log(__x);}
 };
 
 template <class _Tp>
@@ -626,7 +627,7 @@ struct __log10_expr
     typedef _Tp __result_type;
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator()(const _Tp& __x) const
-        {return log10(__x);}
+        {return std::log10(__x);}
 };
 
 template <class _Tp>
@@ -635,7 +636,7 @@ struct __pow_expr
     typedef _Tp __result_type;
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator()(const _Tp& __x, const _Tp& __y) const
-        {return pow(__x, __y);}
+        {return std::pow(__x, __y);}
 };
 
 template <class _Tp>
@@ -644,7 +645,7 @@ struct __sin_expr
     typedef _Tp __result_type;
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator()(const _Tp& __x) const
-        {return sin(__x);}
+        {return std::sin(__x);}
 };
 
 template <class _Tp>
@@ -653,7 +654,7 @@ struct __sinh_expr
     typedef _Tp __result_type;
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator()(const _Tp& __x) const
-        {return sinh(__x);}
+        {return std::sinh(__x);}
 };
 
 template <class _Tp>
@@ -662,7 +663,7 @@ struct __sqrt_expr
     typedef _Tp __result_type;
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator()(const _Tp& __x) const
-        {return sqrt(__x);}
+        {return std::sqrt(__x);}
 };
 
 template <class _Tp>
@@ -671,7 +672,7 @@ struct __tan_expr
     typedef _Tp __result_type;
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator()(const _Tp& __x) const
-        {return tan(__x);}
+        {return std::tan(__x);}
 };
 
 template <class _Tp>
@@ -680,7 +681,7 @@ struct __tanh_expr
     typedef _Tp __result_type;
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator()(const _Tp& __x) const
-        {return tanh(__x);}
+        {return std::tanh(__x);}
 };
 
 template <class _ValExpr>

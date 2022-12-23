@@ -14,8 +14,8 @@
 define linkonce i32 @inner1() {
 entry:
   %a = alloca i32
-  store i32 1, i32* %a
-  %b = load i32, i32* %a
+  store i32 1, ptr %a
+  %b = load i32, ptr %a
   ret i32 %b
 }
 
@@ -66,20 +66,20 @@ entry:
 define linkonce i32 @inner3(i32) {
 entry:
   %1 = alloca i32
-  store i32 %0, i32* %1
+  store i32 %0, ptr %1
   br label %2
 2:
-  %3 = load i32, i32* %1
+  %3 = load i32, ptr %1
   %4 = icmp slt i32 %3, 4
   br i1 %4, label %5, label %9
 5:
-  %6 = load i32, i32* %1
+  %6 = load i32, ptr %1
   %7 = add nsw i32 %6, 1
   %8 = call i32 @inner3(i32 %7)
-  store i32 %8, i32* %1
+  store i32 %8, ptr %1
   br label %2
 9:
-  %10 = load i32, i32* %1
+  %10 = load i32, ptr %1
   ret i32 %10
 }
 

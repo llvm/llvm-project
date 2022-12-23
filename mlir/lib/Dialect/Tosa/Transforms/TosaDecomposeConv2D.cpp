@@ -59,7 +59,7 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
 
     auto padAttr = op.getPad();
     llvm::SmallVector<int64_t> pad(8, 0);
-    for (auto it : llvm::enumerate(padAttr.getValue()))
+    for (const auto &it : llvm::enumerate(padAttr.getValue()))
       pad[it.index() + 2] =
           it.value().cast<IntegerAttr>().getValue().getSExtValue();
 

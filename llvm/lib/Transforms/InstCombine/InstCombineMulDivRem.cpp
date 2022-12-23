@@ -888,9 +888,13 @@ static Instruction *foldIDivShl(BinaryOperator &I,
     auto *Shl0 = cast<OverflowingBinaryOperator>(Op0);
     auto *Shl1 = cast<OverflowingBinaryOperator>(Op1);
 
-    // For unsigned div, we need 'nuw' on both shifts.
+    // For unsigned div, we need 'nuw' on both shifts or
+    // 'nsw' on both shifts + 'nuw' on the dividend.
     // (X << Z) / (Y << Z) --> X / Y
-    if (!IsSigned && Shl0->hasNoUnsignedWrap() && Shl1->hasNoUnsignedWrap())
+    if (!IsSigned &&
+        ((Shl0->hasNoUnsignedWrap() && Shl1->hasNoUnsignedWrap()) ||
+         (Shl0->hasNoUnsignedWrap() && Shl0->hasNoSignedWrap() &&
+          Shl1->hasNoSignedWrap())))
       Ret = BinaryOperator::CreateUDiv(X, Y);
 
     // For signed div, we need 'nsw' on both shifts + 'nuw' on the divisor.

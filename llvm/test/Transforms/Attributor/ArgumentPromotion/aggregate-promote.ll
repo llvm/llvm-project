@@ -8,7 +8,7 @@
 ;.
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = constant [[T:%.*]] { i32 0, i32 0, i32 17, i32 25 }
 ;.
-define internal i32 @test(%T* %p) {
+define internal i32 @test(ptr %p) {
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@test
 ; CGSCC-SAME: () #[[ATTR0:[0-9]+]] {
@@ -16,10 +16,10 @@ define internal i32 @test(%T* %p) {
 ; CGSCC-NEXT:    ret i32 42
 ;
 entry:
-  %a.gep = getelementptr %T, %T* %p, i64 0, i32 3
-  %b.gep = getelementptr %T, %T* %p, i64 0, i32 2
-  %a = load i32, i32* %a.gep
-  %b = load i32, i32* %b.gep
+  %a.gep = getelementptr %T, ptr %p, i64 0, i32 3
+  %b.gep = getelementptr %T, ptr %p, i64 0, i32 2
+  %a = load i32, ptr %a.gep
+  %b = load i32, ptr %b.gep
   %v = add i32 %a, %b
   ret i32 %v
 }
@@ -40,7 +40,7 @@ define i32 @caller() {
 ; CGSCC-NEXT:    ret i32 [[V]]
 ;
 entry:
-  %v = call i32 @test(%T* @G)
+  %v = call i32 @test(ptr @G)
   ret i32 %v
 }
 ;.

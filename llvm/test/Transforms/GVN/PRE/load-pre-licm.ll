@@ -8,21 +8,21 @@ target triple = "i386-apple-darwin11.0.0"
 define void @Bubble() nounwind noinline {
 ; CHECK-LABEL: @Bubble(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP7_PRE:%.*]] = load i32, i32* getelementptr inbounds ([5001 x i32], [5001 x i32]* @sortlist, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP7_PRE:%.*]] = load i32, ptr getelementptr inbounds ([5001 x i32], ptr @sortlist, i32 0, i32 1), align 4
 ; CHECK-NEXT:    br label [[WHILE_BODY5:%.*]]
 ; CHECK:       while.body5:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP7_PRE]], [[ENTRY:%.*]] ], [ [[TMP71:%.*]], [[IF_END:%.*]] ]
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP6:%.*]], [[IF_END]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[INDVAR]], 2
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr [5001 x i32], [5001 x i32]* @sortlist, i32 0, i32 [[TMP5]]
+; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr [5001 x i32], ptr @sortlist, i32 0, i32 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6]] = add i32 [[INDVAR]], 1
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [5001 x i32], [5001 x i32]* @sortlist, i32 0, i32 [[TMP6]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, i32* [[ARRAYIDX9]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [5001 x i32], ptr @sortlist, i32 0, i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX9]], align 4
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[TMP7]], [[TMP10]]
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[IF_THEN:%.*]], label [[IF_END]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i32 [[TMP10]], i32* [[ARRAYIDX]], align 4
-; CHECK-NEXT:    store i32 [[TMP7]], i32* [[ARRAYIDX9]], align 4
+; CHECK-NEXT:    store i32 [[TMP10]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[TMP7]], ptr [[ARRAYIDX9]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP71]] = phi i32 [ [[TMP7]], [[IF_THEN]] ], [ [[TMP10]], [[WHILE_BODY5]] ]
@@ -37,17 +37,17 @@ entry:
 while.body5:
   %indvar = phi i32 [ 0, %entry ], [ %tmp6, %if.end ]
   %tmp5 = add i32 %indvar, 2
-  %arrayidx9 = getelementptr [5001 x i32], [5001 x i32]* @sortlist, i32 0, i32 %tmp5
+  %arrayidx9 = getelementptr [5001 x i32], ptr @sortlist, i32 0, i32 %tmp5
   %tmp6 = add i32 %indvar, 1
-  %arrayidx = getelementptr [5001 x i32], [5001 x i32]* @sortlist, i32 0, i32 %tmp6
-  %tmp7 = load i32, i32* %arrayidx, align 4
-  %tmp10 = load i32, i32* %arrayidx9, align 4
+  %arrayidx = getelementptr [5001 x i32], ptr @sortlist, i32 0, i32 %tmp6
+  %tmp7 = load i32, ptr %arrayidx, align 4
+  %tmp10 = load i32, ptr %arrayidx9, align 4
   %cmp11 = icmp sgt i32 %tmp7, %tmp10
   br i1 %cmp11, label %if.then, label %if.end
 
 if.then:
-  store i32 %tmp10, i32* %arrayidx, align 4
-  store i32 %tmp7, i32* %arrayidx9, align 4
+  store i32 %tmp10, ptr %arrayidx, align 4
+  store i32 %tmp7, ptr %arrayidx9, align 4
   br label %if.end
 
 if.end:
@@ -62,10 +62,10 @@ declare void @hold(i32) readonly
 declare void @clobber()
 
 ; This is a classic LICM case
-define i32 @test1(i1 %cnd, i32* %p) {
+define i32 @test1(i1 %cnd, ptr %p) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[V1_PRE:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[V1_PRE:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    call void @hold(i32 [[V1_PRE]])
@@ -75,7 +75,7 @@ entry:
   br label %header
 
 header:
-  %v1 = load i32, i32* %p
+  %v1 = load i32, ptr %p
   call void @hold(i32 %v1)
   br label %header
 }
@@ -85,10 +85,10 @@ header:
 ; can compute availability for internal control flow.  In this case, because
 ; the value is fully available across the backedge, we only need to establish
 ; anticipation for the preheader block (which is trivial in this case.)
-define i32 @test2(i1 %cnd, i32* %p) {
+define i32 @test2(i1 %cnd, ptr %p) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[V1_PRE:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[V1_PRE:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    call void @hold(i32 [[V1_PRE]])
@@ -104,7 +104,7 @@ entry:
   br label %header
 
 header:
-  %v1 = load i32, i32* %p
+  %v1 = load i32, ptr %p
   call void @hold(i32 %v1)
   br i1 %cnd, label %bb1, label %bb2
 
@@ -123,7 +123,7 @@ merge:
 ; other than straight-line unconditional fallthrough.  This particular
 ; case could be solved through either a backwards anticipation walk or
 ; use of the "safe to speculate" status (if we annotate the param)
-define i32 @test3(i1 %cnd, i32* %p) {
+define i32 @test3(i1 %cnd, ptr %p) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
@@ -134,7 +134,7 @@ define i32 @test3(i1 %cnd, i32* %p) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    call void @hold(i32 [[V1]])
 ; CHECK-NEXT:    br label [[HEADER]]
 ;
@@ -151,17 +151,17 @@ bb2:
   br label %merge
 
 merge:
-  %v1 = load i32, i32* %p
+  %v1 = load i32, ptr %p
   call void @hold(i32 %v1)
   br label %header
 }
 
 ; Highlight that we can PRE into a latch block when there are multiple
 ; latches only one of which clobbers an otherwise invariant value.
-define i32 @test4(i1 %cnd, i32* %p) {
+define i32 @test4(i1 %cnd, ptr %p) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    call void @hold(i32 [[V1]])
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
@@ -172,16 +172,16 @@ define i32 @test4(i1 %cnd, i32* %p) {
 ; CHECK-NEXT:    br label [[HEADER]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    call void @clobber()
-; CHECK-NEXT:    [[V2_PRE]] = load i32, i32* [[P]], align 4
+; CHECK-NEXT:    [[V2_PRE]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[HEADER]]
 ;
 entry:
-  %v1 = load i32, i32* %p
+  %v1 = load i32, ptr %p
   call void @hold(i32 %v1)
   br label %header
 
 header:
-  %v2 = load i32, i32* %p
+  %v2 = load i32, ptr %p
   call void @hold(i32 %v2)
   br i1 %cnd, label %bb1, label %bb2
 
@@ -197,10 +197,10 @@ bb2:
 ; Highlight the fact that we can PRE into a single clobbering latch block
 ; even in loop simplify form (though multiple applications of the same
 ; transformation).
-define i32 @test5(i1 %cnd, i32* %p) {
+define i32 @test5(i1 %cnd, ptr %p) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    call void @hold(i32 [[V1]])
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
@@ -211,19 +211,19 @@ define i32 @test5(i1 %cnd, i32* %p) {
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    call void @clobber()
-; CHECK-NEXT:    [[V2_PRE_PRE:%.*]] = load i32, i32* [[P]], align 4
+; CHECK-NEXT:    [[V2_PRE_PRE:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[V2_PRE]] = phi i32 [ [[V2_PRE_PRE]], [[BB2]] ], [ [[V2_PRE2]], [[BB1]] ]
 ; CHECK-NEXT:    br label [[HEADER]]
 ;
 entry:
-  %v1 = load i32, i32* %p
+  %v1 = load i32, ptr %p
   call void @hold(i32 %v1)
   br label %header
 
 header:
-  %v2 = load i32, i32* %p
+  %v2 = load i32, ptr %p
   call void @hold(i32 %v2)
   br i1 %cnd, label %bb1, label %bb2
 
@@ -243,13 +243,13 @@ declare void @llvm.experimental.guard(i1 %cnd, ...)
 
 ; These two tests highlight speculation safety when we can not establish
 ; anticipation (since the original load might actually not execcute)
-define i32 @test6a(i1 %cnd, i32* %p) {
+define i32 @test6a(i1 %cnd, ptr %p) {
 ; CHECK-LABEL: @test6a(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[CND:%.*]]) [ "deopt"() ]
-; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    call void @hold(i32 [[V1]])
 ; CHECK-NEXT:    br label [[HEADER]]
 ;
@@ -258,15 +258,15 @@ entry:
 
 header:
   call void (i1, ...) @llvm.experimental.guard(i1 %cnd) ["deopt"()]
-  %v1 = load i32, i32* %p
+  %v1 = load i32, ptr %p
   call void @hold(i32 %v1)
   br label %header
 }
 
-define i32 @test6b(i1 %cnd, i32* dereferenceable(8) align 4 %p) nofree nosync {
+define i32 @test6b(i1 %cnd, ptr dereferenceable(8) align 4 %p) nofree nosync {
 ; CHECK-LABEL: @test6b(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[V1_PRE:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[V1_PRE:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[CND:%.*]]) [ "deopt"() ]
@@ -278,7 +278,7 @@ entry:
 
 header:
   call void (i1, ...) @llvm.experimental.guard(i1 %cnd) ["deopt"()]
-  %v1 = load i32, i32* %p
+  %v1 = load i32, ptr %p
   call void @hold(i32 %v1)
   br label %header
 }

@@ -8,18 +8,18 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define void @vector() {
 ; CHECK-LABEL: @vector(
-; CHECK-NEXT:    [[LOAD0:%.*]] = tail call <16 x i8> @vector.load(<16 x i8>* undef, i32 1)
-; CHECK-NEXT:    [[LOAD1:%.*]] = tail call <16 x i8> @vector.load(<16 x i8>* undef, i32 2)
+; CHECK-NEXT:    [[LOAD0:%.*]] = tail call <16 x i8> @vector.load(ptr undef, i32 1)
+; CHECK-NEXT:    [[LOAD1:%.*]] = tail call <16 x i8> @vector.load(ptr undef, i32 2)
 ; CHECK-NEXT:    [[ADD:%.*]] = add <16 x i8> [[LOAD1]], [[LOAD0]]
-; CHECK-NEXT:    tail call void @vector.store(<16 x i8> [[ADD]], <16 x i8>* undef, i32 1)
+; CHECK-NEXT:    tail call void @vector.store(<16 x i8> [[ADD]], ptr undef, i32 1)
 ; CHECK-NEXT:    ret void
 ;
-  %load0 = tail call <16 x i8> @vector.load(<16 x i8> *undef, i32 1)
-  %load1 = tail call <16 x i8> @vector.load(<16 x i8> *undef, i32 2)
+  %load0 = tail call <16 x i8> @vector.load(ptr undef, i32 1)
+  %load1 = tail call <16 x i8> @vector.load(ptr undef, i32 2)
   %add = add <16 x i8> %load1, %load0
-  tail call void @vector.store(<16 x i8> %add, <16 x i8>* undef, i32 1)
+  tail call void @vector.store(<16 x i8> %add, ptr undef, i32 1)
   ret void
 }
 
-declare <16 x i8> @vector.load(<16 x i8>*, i32)
-declare void @vector.store(<16 x i8>, <16 x i8>*, i32)
+declare <16 x i8> @vector.load(ptr, i32)
+declare void @vector.store(<16 x i8>, ptr, i32)

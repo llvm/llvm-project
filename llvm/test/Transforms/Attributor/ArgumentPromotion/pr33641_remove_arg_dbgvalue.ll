@@ -8,26 +8,26 @@
 ; The %p argument should be removed, and the use of it in dbg.value should be
 ; changed to undef.
 
-%p_t = type i16*
-%fun_t = type void (%p_t)*
+%p_t = type ptr
+%fun_t = type ptr
 
 define void @foo() {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP:%.*]] = alloca void (i16*)*, align 8
+; CHECK-NEXT:    [[TMP:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca %fun_t
-  store %fun_t @bar, %fun_t* %tmp
+  store %fun_t @bar, ptr %tmp
   ret void
 }
 
 define internal void @bar(%p_t %p)  {
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@bar
-; CGSCC-SAME: (i16* nocapture nofree readnone [[P:%.*]]) #[[ATTR0]] {
-; CGSCC-NEXT:    call void @llvm.dbg.value(metadata i16* [[P]], metadata [[META3:![0-9]+]], metadata !DIExpression()) #[[ATTR2:[0-9]+]], !dbg [[DBG5:![0-9]+]]
+; CGSCC-SAME: (ptr nocapture nofree readnone [[P:%.*]]) #[[ATTR0]] {
+; CGSCC-NEXT:    call void @llvm.dbg.value(metadata ptr [[P]], metadata [[META3:![0-9]+]], metadata !DIExpression()) #[[ATTR2:[0-9]+]], !dbg [[DBG5:![0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @llvm.dbg.value(metadata %p_t %p, metadata !4, metadata !5), !dbg !6

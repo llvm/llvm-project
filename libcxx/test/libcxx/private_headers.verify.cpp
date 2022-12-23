@@ -345,6 +345,7 @@ END-SCRIPT
 #include <__format/formatter_output.h> // expected-error@*:* {{use of private header from outside its module: '__format/formatter_output.h'}}
 #include <__format/formatter_pointer.h> // expected-error@*:* {{use of private header from outside its module: '__format/formatter_pointer.h'}}
 #include <__format/formatter_string.h> // expected-error@*:* {{use of private header from outside its module: '__format/formatter_string.h'}}
+#include <__format/formatter_tuple.h> // expected-error@*:* {{use of private header from outside its module: '__format/formatter_tuple.h'}}
 #include <__format/parser_std_format_spec.h> // expected-error@*:* {{use of private header from outside its module: '__format/parser_std_format_spec.h'}}
 #include <__format/range_default_formatter.h> // expected-error@*:* {{use of private header from outside its module: '__format/range_default_formatter.h'}}
 #include <__format/unicode.h> // expected-error@*:* {{use of private header from outside its module: '__format/unicode.h'}}

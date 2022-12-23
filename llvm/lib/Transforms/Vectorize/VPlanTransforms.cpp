@@ -451,3 +451,52 @@ void VPlanTransforms::removeRedundantExpandSCEVRecipes(VPlan &Plan) {
     ExpR->eraseFromParent();
   }
 }
+
+static bool canSimplifyBranchOnCond(VPInstruction *Term) {
+  VPInstruction *Not = dyn_cast<VPInstruction>(Term->getOperand(0));
+  if (!Not || Not->getOpcode() != VPInstruction::Not)
+    return false;
+
+  VPInstruction *ALM = dyn_cast<VPInstruction>(Not->getOperand(0));
+  return ALM && ALM->getOpcode() == VPInstruction::ActiveLaneMask;
+}
+
+void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
+                                         unsigned BestUF,
+                                         PredicatedScalarEvolution &PSE) {
+  assert(Plan.hasVF(BestVF) && "BestVF is not available in Plan");
+  assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
+  VPBasicBlock *ExitingVPBB =
+      Plan.getVectorLoopRegion()->getExitingBasicBlock();
+  auto *Term = dyn_cast<VPInstruction>(&ExitingVPBB->back());
+  // Try to simplify the branch condition if TC <= VF * UF when preparing to
+  // execute the plan for the main vector loop. We only do this if the
+  // terminator is:
+  //  1. BranchOnCount, or
+  //  2. BranchOnCond where the input is Not(ActiveLaneMask).
+  if (!Term || (Term->getOpcode() != VPInstruction::BranchOnCount &&
+                (Term->getOpcode() != VPInstruction::BranchOnCond ||
+                 !canSimplifyBranchOnCond(Term))))
+    return;
+
+  Type *IdxTy =
+      Plan.getCanonicalIV()->getStartValue()->getLiveInIRValue()->getType();
+  const SCEV *TripCount = createTripCountSCEV(IdxTy, PSE);
+  auto *C = dyn_cast<SCEVConstant>(TripCount);
+  ScalarEvolution &SE = *PSE.getSE();
+  if (!C || TripCount->isZero() ||
+      C->getAPInt().getZExtValue() > BestVF.getKnownMinValue() * BestUF)
+    return;
+
+  LLVMContext &Ctx = SE.getContext();
+  auto *BOC =
+      new VPInstruction(VPInstruction::BranchOnCond,
+                        {Plan.getOrAddExternalDef(ConstantInt::getTrue(Ctx))});
+  Term->eraseFromParent();
+  ExitingVPBB->appendRecipe(BOC);
+  Plan.setVF(BestVF);
+  Plan.setUF(BestUF);
+  // TODO: Further simplifications are possible
+  //      1. Replace inductions with constants.
+  //      2. Replace vector loop region with VPBasicBlock.
+}

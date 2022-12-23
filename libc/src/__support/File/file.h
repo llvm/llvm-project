@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_FILE_H
 #define LLVM_LIBC_SRC_SUPPORT_OSUTIL_FILE_H
 
+#include "src/__support/CPP/new.h"
 #include "src/__support/error_or.h"
 #include "src/__support/threads/mutex.h"
 
@@ -46,6 +47,16 @@ public:
   using SeekFunc = ErrorOr<long>(File *, long, int);
   using CloseFunc = int(File *);
   using FlushFunc = int(File *);
+  // CleanupFunc is a function which does the equivalent of this:
+  //
+  // void my_file_cleanup(File *f) {
+  //   MyFile *file = reinterpret_cast<MyFile *>(f);
+  //   delete file;
+  // }
+  //
+  // Essentially, it a function which calls the delete operator on the
+  // platform file object to cleanup resources held by it.
+  using CleanupFunc = void(File *);
 
   using ModeFlags = uint32_t;
 
@@ -83,15 +94,16 @@ private:
   SeekFunc *platform_seek;
   CloseFunc *platform_close;
   FlushFunc *platform_flush;
+  CleanupFunc *platform_cleanup;
 
   Mutex mutex;
 
   // For files which are readable, we should be able to support one ungetc
   // operation even if |buf| is nullptr. So, in the constructor of File, we
   // set |buf| to point to this buffer character.
-  char ungetc_buf;
+  uint8_t ungetc_buf;
 
-  void *buf;      // Pointer to the stream buffer for buffered streams
+  uint8_t *buf;   // Pointer to the stream buffer for buffered streams
   size_t bufsize; // Size of the buffer pointed to by |buf|.
 
   // Buffering mode to used to buffer.
@@ -130,6 +142,26 @@ private:
     FileLock(FileLock &&) = delete;
   };
 
+  // This is private function and is not to be called by the users of
+  // File and its derived classes. The correct way to close a file is
+  // to call the File::cleanup function.
+  int close() {
+    {
+      FileLock lock(this);
+      if (prev_op == FileOp::WRITE && pos > 0) {
+        auto buf_result = platform_write(this, buf, pos);
+        if (buf_result.has_error() || buf_result.value < pos) {
+          err = true;
+          return buf_result.error;
+        }
+      }
+      int result = platform_close(this);
+      if (result != 0)
+        return result;
+    }
+    return 0;
+  }
+
 protected:
   constexpr bool write_allowed() const {
     return mode & (static_cast<ModeFlags>(OpenMode::WRITE) |
@@ -142,6 +174,11 @@ protected:
                    static_cast<ModeFlags>(OpenMode::PLUS));
   }
 
+  ~File() {
+    if (own_buf)
+      delete buf;
+  }
+
 public:
   // We want this constructor to be constexpr so that global file objects
   // like stdout do not require invocation of the constructor which can
@@ -151,39 +188,27 @@ public:
   // is zero. This way, we will not have to employ the semantics of
   // the set_buffer method and allocate a buffer.
   constexpr File(WriteFunc *wf, ReadFunc *rf, SeekFunc *sf, CloseFunc *cf,
-                 FlushFunc *ff, void *buffer, size_t buffer_size,
-                 int buffer_mode, bool owned, ModeFlags modeflags)
+                 FlushFunc *ff, CleanupFunc *clf, uint8_t *buffer,
+                 size_t buffer_size, int buffer_mode, bool owned,
+                 ModeFlags modeflags)
       : platform_write(wf), platform_read(rf), platform_seek(sf),
-        platform_close(cf), platform_flush(ff), mutex(false, false, false),
-        ungetc_buf(0), buf(buffer), bufsize(buffer_size), bufmode(buffer_mode),
-        own_buf(owned), mode(modeflags), pos(0), prev_op(FileOp::NONE),
-        read_limit(0), eof(false), err(false) {
+        platform_close(cf), platform_flush(ff), platform_cleanup(clf),
+        mutex(false, false, false), ungetc_buf(0), buf(buffer),
+        bufsize(buffer_size), bufmode(buffer_mode), own_buf(owned),
+        mode(modeflags), pos(0), prev_op(FileOp::NONE), read_limit(0),
+        eof(false), err(false) {
     adjust_buf();
   }
 
-  // This function helps initialize the various fields of the File data
-  // structure after a allocating memory for it via a call to malloc.
-  static void init(File *f, WriteFunc *wf, ReadFunc *rf, SeekFunc *sf,
-                   CloseFunc *cf, FlushFunc *ff, void *buffer,
-                   size_t buffer_size, int buffer_mode, bool owned,
-                   ModeFlags modeflags) {
-    Mutex::init(&f->mutex, false, false, false);
-    f->platform_write = wf;
-    f->platform_read = rf;
-    f->platform_seek = sf;
-    f->platform_close = cf;
-    f->platform_flush = ff;
-    f->buf = reinterpret_cast<uint8_t *>(buffer);
-    f->bufsize = buffer_size;
-    f->bufmode = buffer_mode;
-    f->own_buf = owned;
-    f->mode = modeflags;
-
-    f->prev_op = FileOp::NONE;
-    f->read_limit = f->pos = 0;
-    f->eof = f->err = false;
-
-    f->adjust_buf();
+  // Close |f| and cleanup resources held by it.
+  // Returns the non-zero error value if an error occurs when closing the
+  // file.
+  static constexpr int cleanup(File *f) {
+    int close_result = f->close();
+    if (close_result != 0)
+      return close_result;
+    f->platform_cleanup(f);
+    return 0;
   }
 
   // Buffered write of |len| bytes from |data| without the file lock.
@@ -234,11 +259,10 @@ public:
   // if:
   //   1. |buffer| is not a nullptr but |size| is zero.
   //   2. |buffer_mode| is not one of _IOLBF, IOFBF or _IONBF.
-  // In both the above cases, error returned in EINVAL.
+  //   3. If an allocation was required but the allocation failed.
+  // For cases 1 and 2, the error returned in EINVAL. For case 3, error returned
+  // is ENOMEM.
   int set_buffer(void *buffer, size_t size, int buffer_mode);
-
-  // Closes the file stream and frees up all resources owned by it.
-  int close();
 
   void lock() { mutex.lock(); }
   void unlock() { mutex.unlock(); }
@@ -295,6 +319,15 @@ private:
     }
   }
 };
+
+// Platform specific file implementations can simply pass a pointer to a
+// a specialization of this function as the CleanupFunc argument to the
+// File constructor. The template type argument FileType should replaced
+// with the type of the platform specific file implementation.
+template <typename FileType> void cleanup_file(File *f) {
+  auto *file = reinterpret_cast<FileType *>(f);
+  delete file;
+}
 
 // The implementaiton of this function is provided by the platfrom_file
 // library.

@@ -20,7 +20,8 @@ _msvcVersion  = lambda cfg: (int(compilerMacros(cfg)['_MSC_VER']) // 100, int(co
 
 def _hasSuitableClangTidy(cfg):
   try:
-    return int(re.search('[0-9]+', commandOutput(cfg, ['clang-tidy --version'])).group()) >= 13
+    return int(re.search('[0-9]+', commandOutput(cfg, ['clang-tidy --version'])).group()) >= 13 and runScriptExitCode(
+      cfg, ['stat %{test-tools}/clang_tidy_checks/libcxx-tidy.plugin']) == 0
   except ConfigurationRuntimeError:
     return False
 

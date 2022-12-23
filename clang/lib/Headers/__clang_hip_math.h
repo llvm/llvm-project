@@ -94,9 +94,9 @@ __DEVICE__ void __static_assert_equal_size() {
 #endif
 
 __DEVICE_NOCE__
-uint64_t __make_mantissa_base8(const char *__tagp) {
+uint64_t __make_mantissa_base8(const char *__tagp __attribute__((nonnull))) {
   uint64_t __r = 0;
-  while (__tagp) {
+  while (*__tagp != '\0') {
     char __tmp = *__tagp;
 
     if (__tmp >= '0' && __tmp <= '7')
@@ -111,9 +111,9 @@ uint64_t __make_mantissa_base8(const char *__tagp) {
 }
 
 __DEVICE_NOCE__
-uint64_t __make_mantissa_base10(const char *__tagp) {
+uint64_t __make_mantissa_base10(const char *__tagp __attribute__((nonnull))) {
   uint64_t __r = 0;
-  while (__tagp) {
+  while (*__tagp != '\0') {
     char __tmp = *__tagp;
 
     if (__tmp >= '0' && __tmp <= '9')
@@ -128,9 +128,9 @@ uint64_t __make_mantissa_base10(const char *__tagp) {
 }
 
 __DEVICE_NOCE__
-uint64_t __make_mantissa_base16(const char *__tagp) {
+uint64_t __make_mantissa_base16(const char *__tagp __attribute__((nonnull))) {
   uint64_t __r = 0;
-  while (__tagp) {
+  while (*__tagp != '\0') {
     char __tmp = *__tagp;
 
     if (__tmp >= '0' && __tmp <= '9')
@@ -149,10 +149,7 @@ uint64_t __make_mantissa_base16(const char *__tagp) {
 }
 
 __DEVICE__
-uint64_t __make_mantissa(const char *__tagp) {
-  if (!__tagp)
-    return 0u;
-
+uint64_t __make_mantissa(const char *__tagp __attribute__((nonnull))) {
   if (*__tagp == '0') {
     ++__tagp;
 
@@ -386,7 +383,7 @@ float modff(float __x, float *__iptr) {
 // FIXME need a c version of nanf
 #if defined(__cplusplus)
 __DEVICE__
-float nanf(const char *__tagp) {
+float nanf(const char *__tagp __attribute__((nonnull))) {
   union {
     float val;
     struct ieee_float {

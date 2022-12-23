@@ -5,15 +5,6 @@ ld64 vs LLD-MachO
 This doc lists all significant deliberate differences in behavior between ld64
 and LLD-MachO.
 
-String Literal Deduplication
-****************************
-ld64 always deduplicates string literals. LLD only does it when the ``--icf=``
-or the ``--deduplicate-literals`` flag is passed. Omitting deduplication by
-default ensures that our link is as fast as possible. However, it may also break
-some programs which have (incorrectly) relied on string deduplication always
-occurring. In particular, programs which compare string literals via pointer
-equality must be fixed to use value equality instead.
-
 Dead Stripping Duplicate Symbols
 ********************************
 ld64 strips dead code before reporting duplicate symbols. By default, LLD does

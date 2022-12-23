@@ -685,7 +685,7 @@ __assoc_state<_Rp>::move()
     unique_lock<mutex> __lk(this->__mut_);
     this->__sub_wait(__lk);
     if (this->__exception_ != nullptr)
-        rethrow_exception(this->__exception_);
+        std::rethrow_exception(this->__exception_);
     return _VSTD::move(*reinterpret_cast<_Rp*>(&__value_));
 }
 
@@ -696,7 +696,7 @@ __assoc_state<_Rp>::copy()
     unique_lock<mutex> __lk(this->__mut_);
     this->__sub_wait(__lk);
     if (this->__exception_ != nullptr)
-        rethrow_exception(this->__exception_);
+        std::rethrow_exception(this->__exception_);
     return *reinterpret_cast<_Rp*>(&__value_);
 }
 
@@ -756,7 +756,7 @@ __assoc_state<_Rp&>::copy()
     unique_lock<mutex> __lk(this->__mut_);
     this->__sub_wait(__lk);
     if (this->__exception_ != nullptr)
-        rethrow_exception(this->__exception_);
+        std::rethrow_exception(this->__exception_);
     return *__value_;
 }
 

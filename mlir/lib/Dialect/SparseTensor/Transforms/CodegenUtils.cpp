@@ -90,116 +90,6 @@ static Value genIndexAndValueForDense(OpBuilder &builder, Location loc,
   return val;
 }
 
-void sparse_tensor::foreachFieldInSparseTensor(
-    const SparseTensorEncodingAttr enc,
-    llvm::function_ref<bool(unsigned, SparseTensorFieldKind, unsigned,
-                            DimLevelType)>
-        callback) {
-  assert(enc);
-
-#define RETURN_ON_FALSE(idx, kind, dim, dlt)                                   \
-  if (!(callback(idx, kind, dim, dlt)))                                        \
-    return;
-
-  RETURN_ON_FALSE(dimSizesIdx, SparseTensorFieldKind::DimSizes, -1u,
-                  DimLevelType::Undef);
-  RETURN_ON_FALSE(memSizesIdx, SparseTensorFieldKind::MemSizes, -1u,
-                  DimLevelType::Undef);
-
-  static_assert(dataFieldIdx == memSizesIdx + 1);
-  unsigned fieldIdx = dataFieldIdx;
-  // Per-dimension storage.
-  for (unsigned r = 0, rank = enc.getDimLevelType().size(); r < rank; r++) {
-    // Dimension level types apply in order to the reordered dimension.
-    // As a result, the compound type can be constructed directly in the given
-    // order.
-    auto dlt = getDimLevelType(enc, r);
-    if (isCompressedDLT(dlt)) {
-      RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::PtrMemRef, r, dlt);
-      RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::IdxMemRef, r, dlt);
-    } else if (isSingletonDLT(dlt)) {
-      RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::IdxMemRef, r, dlt);
-    } else {
-      assert(isDenseDLT(dlt)); // no fields
-    }
-  }
-  // The values array.
-  RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::ValMemRef, -1u,
-                  DimLevelType::Undef);
-
-#undef RETURN_ON_FALSE
-}
-
-void sparse_tensor::foreachFieldAndTypeInSparseTensor(
-    RankedTensorType rType,
-    llvm::function_ref<bool(Type, unsigned, SparseTensorFieldKind, unsigned,
-                            DimLevelType)>
-        callback) {
-  auto enc = getSparseTensorEncoding(rType);
-  assert(enc);
-  // Construct the basic types.
-  Type indexType = IndexType::get(enc.getContext());
-  Type idxType = enc.getIndexType();
-  Type ptrType = enc.getPointerType();
-  Type eltType = rType.getElementType();
-  unsigned rank = rType.getShape().size();
-  // memref<rank x index> dimSizes
-  Type dimSizeType = MemRefType::get({rank}, indexType);
-  // memref<n x index> memSizes
-  Type memSizeType =
-      MemRefType::get({getNumDataFieldsFromEncoding(enc)}, indexType);
-  // memref<? x ptr>  pointers
-  Type ptrMemType = MemRefType::get({ShapedType::kDynamic}, ptrType);
-  // memref<? x idx>  indices
-  Type idxMemType = MemRefType::get({ShapedType::kDynamic}, idxType);
-  // memref<? x eltType> values
-  Type valMemType = MemRefType::get({ShapedType::kDynamic}, eltType);
-
-  foreachFieldInSparseTensor(
-      enc,
-      [dimSizeType, memSizeType, ptrMemType, idxMemType, valMemType,
-       callback](unsigned fieldIdx, SparseTensorFieldKind fieldKind,
-                 unsigned dim, DimLevelType dlt) -> bool {
-        switch (fieldKind) {
-        case SparseTensorFieldKind::DimSizes:
-          return callback(dimSizeType, fieldIdx, fieldKind, dim, dlt);
-        case SparseTensorFieldKind::MemSizes:
-          return callback(memSizeType, fieldIdx, fieldKind, dim, dlt);
-        case SparseTensorFieldKind::PtrMemRef:
-          return callback(ptrMemType, fieldIdx, fieldKind, dim, dlt);
-        case SparseTensorFieldKind::IdxMemRef:
-          return callback(idxMemType, fieldIdx, fieldKind, dim, dlt);
-        case SparseTensorFieldKind::ValMemRef:
-          return callback(valMemType, fieldIdx, fieldKind, dim, dlt);
-        };
-        llvm_unreachable("unrecognized field kind");
-      });
-}
-
-unsigned sparse_tensor::getNumFieldsFromEncoding(SparseTensorEncodingAttr enc) {
-  unsigned numFields = 0;
-  foreachFieldInSparseTensor(enc,
-                             [&numFields](unsigned, SparseTensorFieldKind,
-                                          unsigned, DimLevelType) -> bool {
-                               numFields++;
-                               return true;
-                             });
-  return numFields;
-}
-
-unsigned
-sparse_tensor::getNumDataFieldsFromEncoding(SparseTensorEncodingAttr enc) {
-  unsigned numFields = 0; // one value memref
-  foreachFieldInSparseTensor(enc,
-                             [&numFields](unsigned fidx, SparseTensorFieldKind,
-                                          unsigned, DimLevelType) -> bool {
-                               if (fidx >= dataFieldIdx)
-                                 numFields++;
-                               return true;
-                             });
-  assert(numFields == getNumFieldsFromEncoding(enc) - dataFieldIdx);
-  return numFields;
-}
 //===----------------------------------------------------------------------===//
 // Sparse tensor loop emitter class implementations
 //===----------------------------------------------------------------------===//
@@ -333,7 +223,7 @@ void SparseTensorLoopEmitter::initializeLoopEmit(
       auto sparseTp = MemRefType::get(dynShape, elementType);
       valBuffer[t] = builder.create<ToValuesOp>(loc, sparseTp, tensor);
     }
-    // NOTE: we can also prepares for 0 dim here in advance, this will hosit
+    // NOTE: we can also prepare for 0 dim here in advance, this will hosit
     // some loop preparation from tensor iteration, but will also (undesirably)
     // hosit the code ouside if conditions.
   }
@@ -380,22 +270,32 @@ Value SparseTensorLoopEmitter::genAffine(OpBuilder &builder, AffineExpr a,
 }
 
 Operation *SparseTensorLoopEmitter::enterLoopOverTensorAtDim(
-    OpBuilder &builder, Location loc, size_t tid, size_t dim,
-    MutableArrayRef<Value> reduc, bool isParallel, ArrayRef<size_t> extraTids,
-    ArrayRef<size_t> extraDims) {
-
-  assert(dimTypes[tid].size() > dim);
-  // We can not re-enter the same level.
-  assert(!coord[tid][dim]);
+    OpBuilder &builder, Location loc, ArrayRef<size_t> tids,
+    ArrayRef<size_t> dims, MutableArrayRef<Value> reduc, bool isParallel) {
   // TODO: support multiple return on parallel for?
   assert(!isParallel || reduc.size() <= 1);
 
-  Value step = constantIndex(builder, loc, 1);
-  auto dimType = dimTypes[tid][dim];
-  bool isSparseInput = isCompressedDLT(dimType) || isSingletonDLT(dimType);
-  assert(isDenseDLT(dimType) || isCompressedDLT(dimType) ||
-         isSingletonDLT(dimType));
+  bool isSparseInput = false;
+  size_t tid = tids.front(), dim = dims.front();
+  for (auto [t, d] : llvm::zip(tids, dims)) {
+    assert(dimTypes[t].size() > d); // Must be a valid tid, dim pair
+    assert(!coord[t][d]);           // We cannot re-enter the same level
+    auto dimType = dimTypes[t][d];
+    // Must be a recognizable DLT.
+    assert(isDenseDLT(dimType) || isCompressedDLT(dimType) ||
+           isSingletonDLT(dimType));
+    bool isSparse = isCompressedDLT(dimType) || isSingletonDLT(dimType);
+    // We can at most have one sparse input, otherwise, a while loop is required
+    // to co-iterate multiple sparse tensors.
+    assert(!isSparseInput || !isSparse);
+    if (isSparse) {
+      tid = t;
+      dim = d;
+    }
+    isSparseInput = isSparseInput || isSparse;
+  }
 
+  Value step = constantIndex(builder, loc, 1);
   Value lo = isSparseInput ? pidxs[tid][dim]      // current offset
                            : loopSeqStack.back(); // univeral tid
   Value hi = highs[tid][dim];
@@ -439,18 +339,13 @@ Operation *SparseTensorLoopEmitter::enterLoopOverTensorAtDim(
   } else {
     // Dense tensor, the coordinates is the inducation variable.
     coord[tid][dim] = iv;
-    // generate pidx for dense dim (pidx = i * sz + j)
-    auto enc = getSparseTensorEncoding(tensors[tid].getType());
-    if (enc && !isSparseOutput(tid))
-      pidxs[tid][dim] = genAddress(builder, loc, tid, dim, iv);
   }
-
-  // NOTE: we can also prepares for next dim here in advance
+  // NOTE: we can also prepare for next dim here in advance
   // Push the loop into stack
   loopStack.emplace_back(ArrayRef<size_t>(tid), ArrayRef<size_t>(dim), loop,
                          coord[tid][dim], loopTag);
   // Emit extra locals.
-  emitExtraLocalsForTensorsAtDenseDims(builder, loc, extraTids, extraDims);
+  emitExtraLocalsForTensorsAtDenseDims(builder, loc, tids, dims);
 
   return loop;
 }
@@ -515,7 +410,7 @@ Operation *SparseTensorLoopEmitter::enterFilterLoopOverTensorAtDim(
   // Set the insert point to matched branch.
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
-  // NOTE: we can also prepares for next dim here in advance
+  // NOTE: we can also prepare for next dim here in advance
   // Push the loop into stack
   loopStack.emplace_back(ArrayRef<size_t>(tid), ArrayRef<size_t>(dim), forOp,
                          coord[tid][dim], nullptr);
@@ -531,8 +426,7 @@ void SparseTensorLoopEmitter::genDenseAffineAddressAtCurLevel(
 
 Operation *SparseTensorLoopEmitter::enterCoIterationOverTensorsAtDims(
     OpBuilder &builder, Location loc, ArrayRef<size_t> tids,
-    ArrayRef<size_t> dims, bool needsUniv, MutableArrayRef<Value> reduc,
-    ArrayRef<size_t> extraTids, ArrayRef<size_t> extraDims) {
+    ArrayRef<size_t> dims, bool needsUniv, MutableArrayRef<Value> reduc) {
   assert(tids.size() == dims.size());
   SmallVector<Type> types;
   SmallVector<Value> operands;
@@ -611,24 +505,12 @@ Operation *SparseTensorLoopEmitter::enterCoIterationOverTensorsAtDims(
     min = after->getArguments().back();
   }
 
-  for (auto [tid, dim] : llvm::zip(tids, dims)) {
-    // All dense dim (as well as sparse output tensor) shared the same pidx in
-    // the while loop.
-    if (isDenseDLT(dimTypes[tid][dim])) {
-      pidxs[tid][dim] = min;
-      // generate pidx for dense dim (pidx = i * sz + j)
-      auto enc = getSparseTensorEncoding(tensors[tid].getType());
-      if (enc && !isSparseOutput(tid))
-        pidxs[tid][dim] = genAddress(builder, loc, tid, dim, min);
-    }
-    // NOTE: we can also prepares for next dim here in advance
-  }
   // Sets up the loop stack.
   loopStack.emplace_back(tids, dims, whileOp, min, loopTag);
   assert(loopStack.size() == loopSeqStack.size());
 
   // Emits extra locals
-  emitExtraLocalsForTensorsAtDenseDims(builder, loc, extraTids, extraDims);
+  emitExtraLocalsForTensorsAtDenseDims(builder, loc, tids, dims);
 
   // Updates reduction variables
   assert(after->getNumArguments() == o + reduc.size() + (needsUniv ? 1 : 0));
@@ -682,18 +564,20 @@ void SparseTensorLoopEmitter::emitExtraLocalsForTensorsAtDenseDims(
   // output tensor unconditionally, since they may not appear in the lattice,
   // but may be needed for linearized codegen.
   for (auto [tid, dim] : llvm::zip(tids, dims)) {
-    assert(isDenseDLT(dimTypes[tid][dim]));
-    auto enc = getSparseTensorEncoding(tensors[tid].getType());
-    if (enc && !isSparseOutput(tid)) {
-      bool validPidx = dim == 0 || pidxs[tid][dim - 1];
-      if (!validPidx) {
-        // We might not find the pidx for the sparse output tensor as it is
-        // unconditionally required by the sparsification.
-        assert(isOutputTensor(tid));
-        continue;
+    if (isDenseDLT(dimTypes[tid][dim])) {
+      auto enc = getSparseTensorEncoding(tensors[tid].getType());
+      if (enc && !isSparseOutput(tid)) {
+        bool validPidx = dim == 0 || pidxs[tid][dim - 1];
+        if (!validPidx) {
+          // We might not find the pidx for the sparse output tensor as it is
+          // unconditionally required by the sparsification.
+          assert(isOutputTensor(tid));
+          continue;
+        }
+        pidxs[tid][dim] =
+            genAddress(builder, loc, tid, dim, loopStack.back().iv);
+        // NOTE: we can also prepare for next dim here in advance
       }
-      pidxs[tid][dim] = genAddress(builder, loc, tid, dim, loopStack.back().iv);
-      // NOTE: we can also prepares for next dim here in advance
     }
   }
 }

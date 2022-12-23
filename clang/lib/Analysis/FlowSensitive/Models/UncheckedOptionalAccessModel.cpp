@@ -438,12 +438,11 @@ void transferCallReturningOptional(const CallExpr *E,
       Loc, createOptionalValue(State.Env, State.Env.makeAtomicBoolValue()));
 }
 
-void assignOptionalValue(const Expr &E, LatticeTransferState &State,
+void assignOptionalValue(const Expr &E, Environment &Env,
                          BoolValue &HasValueVal) {
   if (auto *OptionalLoc =
-          State.Env.getStorageLocation(E, SkipPast::ReferenceThenPointer)) {
-    State.Env.setValue(*OptionalLoc,
-                       createOptionalValue(State.Env, HasValueVal));
+          Env.getStorageLocation(E, SkipPast::ReferenceThenPointer)) {
+    Env.setValue(*OptionalLoc, createOptionalValue(Env, HasValueVal));
   }
 }
 
@@ -479,7 +478,7 @@ void transferValueOrConversionConstructor(
     LatticeTransferState &State) {
   assert(E->getNumArgs() > 0);
 
-  assignOptionalValue(*E, State,
+  assignOptionalValue(*E, State.Env,
                       valueOrConversionHasValue(*E->getConstructor(),
                                                 *E->getArg(0), MatchRes,
                                                 State));
@@ -647,34 +646,34 @@ auto buildTransferMatchSwitch() {
       // make_optional
       .CaseOfCFGStmt<CallExpr>(isMakeOptionalCall(), transferMakeOptionalCall)
 
-      // optional::optional
+      // optional::optional (in place)
       .CaseOfCFGStmt<CXXConstructExpr>(
           isOptionalInPlaceConstructor(),
           [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
-            assignOptionalValue(*E, State, State.Env.getBoolLiteralValue(true));
+            assignOptionalValue(*E, State.Env,
+                                State.Env.getBoolLiteralValue(true));
           })
+      // nullopt_t::nullopt_t
       .CaseOfCFGStmt<CXXConstructExpr>(
           isNulloptConstructor(),
           [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
-            assignOptionalValue(*E, State,
+            assignOptionalValue(*E, State.Env,
                                 State.Env.getBoolLiteralValue(false));
           })
+      // optional::optional(nullopt_t)
       .CaseOfCFGStmt<CXXConstructExpr>(
           isOptionalNulloptConstructor(),
           [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
-            // Shares a temporary with the underlying `nullopt_t` instance.
-            if (auto *OptionalLoc =
-                    State.Env.getStorageLocation(*E, SkipPast::None)) {
-              State.Env.setValue(
-                  *OptionalLoc,
-                  *State.Env.getValue(*E->getArg(0), SkipPast::None));
-            }
+            assignOptionalValue(*E, State.Env,
+                                State.Env.getBoolLiteralValue(false));
           })
+      // optional::optional (value/conversion)
       .CaseOfCFGStmt<CXXConstructExpr>(isOptionalValueOrConversionConstructor(),
                                        transferValueOrConversionConstructor)
+
 
       // optional::operator=
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
@@ -714,7 +713,7 @@ auto buildTransferMatchSwitch() {
           isOptionalMemberCallWithName("emplace"),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
-            assignOptionalValue(*E->getImplicitObjectArgument(), State,
+            assignOptionalValue(*E->getImplicitObjectArgument(), State.Env,
                                 State.Env.getBoolLiteralValue(true));
           })
 
@@ -723,7 +722,7 @@ auto buildTransferMatchSwitch() {
           isOptionalMemberCallWithName("reset"),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
-            assignOptionalValue(*E->getImplicitObjectArgument(), State,
+            assignOptionalValue(*E->getImplicitObjectArgument(), State.Env,
                                 State.Env.getBoolLiteralValue(false));
           })
 

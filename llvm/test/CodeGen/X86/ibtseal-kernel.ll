@@ -3,7 +3,7 @@
 ; CHECK-KERNEL-IBTSEAL: foo:
 ; CHECK-KERNEL-IBTSEAL: endbr
 ; CHECK-KERNEL-IBTSEAL: bar:
-; CHECK-KERNEL-IBTSEAL-NOT: endbr
+; CHECK-KERNEL-IBTSEAL-NOT: endbr{{$}}
 
 target triple = "x86_64-unknown-linux-gnu"
 

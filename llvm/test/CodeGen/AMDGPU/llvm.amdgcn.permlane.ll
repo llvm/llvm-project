@@ -34,7 +34,7 @@ define amdgpu_kernel void @v_permlane16_b32_vss(ptr addrspace(1) %out, i32 %src0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[4:5]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 0, i1 0)
+  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -64,7 +64,7 @@ define amdgpu_kernel void @v_permlane16_b32_vii(ptr addrspace(1) %out, i32 %src0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 1, i32 2, i1 0, i1 0)
+  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 1, i32 2, i1 false, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -97,7 +97,7 @@ define amdgpu_kernel void @v_permlane16_b32_vll(ptr addrspace(1) %out, i32 %src0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 4660, i32 49617, i1 0, i1 0)
+  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 4660, i32 49617, i1 false, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -156,7 +156,7 @@ define amdgpu_kernel void @v_permlane16_b32_vvv(ptr addrspace(1) %out, i32 %src0
 ; GFX11-GISEL-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
-  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %tidx, i32 %tidy, i1 0, i1 0)
+  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %tidx, i32 %tidy, i1 false, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -209,7 +209,7 @@ define amdgpu_kernel void @v_permlane16_b32_vvs(ptr addrspace(1) %out, i32 %src0
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
-  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %tidx, i32 %src2, i1 0, i1 0)
+  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %tidx, i32 %src2, i1 false, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -265,7 +265,7 @@ define amdgpu_kernel void @v_permlane16_b32_vsv(ptr addrspace(1) %out, i32 %src0
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
-  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %tidy, i1 0, i1 0)
+  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %tidy, i1 false, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -295,7 +295,7 @@ define amdgpu_kernel void @v_permlane16_b32_vss_fi(ptr addrspace(1) %out, i32 %s
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[4:5]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 1, i1 0)
+  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 true, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -325,7 +325,7 @@ define amdgpu_kernel void @v_permlane16_b32_vss_bc(ptr addrspace(1) %out, i32 %s
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[4:5]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 0, i1 1)
+  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 true)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -355,7 +355,7 @@ define amdgpu_kernel void @v_permlane16_b32_vss_fi_bc(ptr addrspace(1) %out, i32
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[4:5]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 1, i1 1)
+  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 true, i1 true)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -385,7 +385,7 @@ define amdgpu_kernel void @v_permlanex16_b32_vss(ptr addrspace(1) %out, i32 %src
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[4:5]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 0, i1 0)
+  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -415,7 +415,7 @@ define amdgpu_kernel void @v_permlanex16_b32_vii(ptr addrspace(1) %out, i32 %src
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 1, i32 2, i1 0, i1 0)
+  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 1, i32 2, i1 false, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -448,7 +448,7 @@ define amdgpu_kernel void @v_permlanex16_b32_vll(ptr addrspace(1) %out, i32 %src
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 4660, i32 49617, i1 0, i1 0)
+  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 4660, i32 49617, i1 false, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -507,7 +507,7 @@ define amdgpu_kernel void @v_permlanex16_b32_vvv(ptr addrspace(1) %out, i32 %src
 ; GFX11-GISEL-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
-  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %tidx, i32 %tidy, i1 0, i1 0)
+  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %tidx, i32 %tidy, i1 false, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -560,7 +560,7 @@ define amdgpu_kernel void @v_permlanex16_b32_vvs(ptr addrspace(1) %out, i32 %src
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
-  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %tidx, i32 %src2, i1 0, i1 0)
+  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %tidx, i32 %src2, i1 false, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -616,7 +616,7 @@ define amdgpu_kernel void @v_permlanex16_b32_vsv(ptr addrspace(1) %out, i32 %src
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
-  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %tidy, i1 0, i1 0)
+  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %tidy, i1 false, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -646,7 +646,7 @@ define amdgpu_kernel void @v_permlanex16_b32_vss_fi(ptr addrspace(1) %out, i32 %
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[4:5]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 1, i1 0)
+  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 true, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -676,7 +676,7 @@ define amdgpu_kernel void @v_permlanex16_b32_vss_bc(ptr addrspace(1) %out, i32 %
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[4:5]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 0, i1 1)
+  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 true)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -706,7 +706,7 @@ define amdgpu_kernel void @v_permlanex16_b32_vss_fi_bc(ptr addrspace(1) %out, i3
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[4:5]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 1, i1 1)
+  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 true, i1 true)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -735,7 +735,7 @@ define amdgpu_kernel void @v_permlane16_b32_tid_tid(ptr addrspace(1) %out, i32 %
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
-  %v = call i32 @llvm.amdgcn.permlane16(i32 %tidx, i32 %tidx, i32 %src1, i32 %src2, i1 0, i1 0)
+  %v = call i32 @llvm.amdgcn.permlane16(i32 %tidx, i32 %tidx, i32 %src1, i32 %src2, i1 false, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -764,7 +764,8 @@ define amdgpu_kernel void @v_permlane16_b32_undef_tid(ptr addrspace(1) %out, i32
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
-  %v = call i32 @llvm.amdgcn.permlane16(i32 undef, i32 %tidx, i32 %src1, i32 %src2, i1 0, i1 0)
+  %undef = freeze i32 poison
+  %v = call i32 @llvm.amdgcn.permlane16(i32 %undef, i32 %tidx, i32 %src1, i32 %src2, i1 false, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -821,7 +822,7 @@ define amdgpu_kernel void @v_permlane16_b32_i_tid(ptr addrspace(1) %out, i32 %sr
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
-  %v = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %tidx, i32 %src1, i32 %src2, i1 0, i1 0)
+  %v = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %tidx, i32 %src1, i32 %src2, i1 false, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -850,7 +851,8 @@ define amdgpu_kernel void @v_permlane16_b32_i_tid_fi(ptr addrspace(1) %out, i32 
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
-  %v = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %tidx, i32 %src1, i32 %src2, i1 1, i1 0)
+  %undef = freeze i32 poison
+  %v = call i32 @llvm.amdgcn.permlane16(i32 %undef, i32 %tidx, i32 %src1, i32 %src2, i1 true, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -879,7 +881,8 @@ define amdgpu_kernel void @v_permlane16_b32_i_tid_bc(ptr addrspace(1) %out, i32 
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
-  %v = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %tidx, i32 %src1, i32 %src2, i1 0, i1 1)
+  %undef = freeze i32 poison
+  %v = call i32 @llvm.amdgcn.permlane16(i32 %undef, i32 %tidx, i32 %src1, i32 %src2, i1 false, i1 true)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -908,7 +911,8 @@ define amdgpu_kernel void @v_permlane16_b32_i_tid_fi_bc(ptr addrspace(1) %out, i
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
-  %v = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %tidx, i32 %src1, i32 %src2, i1 1, i1 1)
+  %undef = freeze i32 poison
+  %v = call i32 @llvm.amdgcn.permlane16(i32 %undef, i32 %tidx, i32 %src1, i32 %src2, i1 true, i1 true)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -937,7 +941,7 @@ define amdgpu_kernel void @v_permlanex16_b32_tid_tid(ptr addrspace(1) %out, i32 
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
-  %v = call i32 @llvm.amdgcn.permlanex16(i32 %tidx, i32 %tidx, i32 %src1, i32 %src2, i1 0, i1 0)
+  %v = call i32 @llvm.amdgcn.permlanex16(i32 %tidx, i32 %tidx, i32 %src1, i32 %src2, i1 false, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -966,7 +970,8 @@ define amdgpu_kernel void @v_permlanex16_b32_undef_tid(ptr addrspace(1) %out, i3
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
-  %v = call i32 @llvm.amdgcn.permlanex16(i32 undef, i32 %tidx, i32 %src1, i32 %src2, i1 0, i1 0)
+  %undef = freeze i32 poison
+  %v = call i32 @llvm.amdgcn.permlanex16(i32 %undef, i32 %tidx, i32 %src1, i32 %src2, i1 false, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -1023,7 +1028,7 @@ define amdgpu_kernel void @v_permlanex16_b32_i_tid(ptr addrspace(1) %out, i32 %s
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
-  %v = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %tidx, i32 %src1, i32 %src2, i1 0, i1 0)
+  %v = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %tidx, i32 %src1, i32 %src2, i1 false, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -1052,7 +1057,8 @@ define amdgpu_kernel void @v_permlanex16_b32_i_tid_fi(ptr addrspace(1) %out, i32
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
-  %v = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %tidx, i32 %src1, i32 %src2, i1 1, i1 0)
+  %undef = freeze i32 poison
+  %v = call i32 @llvm.amdgcn.permlanex16(i32 %undef, i32 %tidx, i32 %src1, i32 %src2, i1 true, i1 false)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -1081,7 +1087,8 @@ define amdgpu_kernel void @v_permlanex16_b32_i_tid_bc(ptr addrspace(1) %out, i32
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
-  %v = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %tidx, i32 %src1, i32 %src2, i1 0, i1 1)
+  %undef = freeze i32 poison
+  %v = call i32 @llvm.amdgcn.permlanex16(i32 %undef, i32 %tidx, i32 %src1, i32 %src2, i1 false, i1 true)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -1110,7 +1117,8 @@ define amdgpu_kernel void @v_permlanex16_b32_i_tid_fi_bc(ptr addrspace(1) %out, 
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
-  %v = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %tidx, i32 %src1, i32 %src2, i1 1, i1 1)
+  %undef = freeze i32 poison
+  %v = call i32 @llvm.amdgcn.permlanex16(i32 %undef, i32 %tidx, i32 %src1, i32 %src2, i1 true, i1 true)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
