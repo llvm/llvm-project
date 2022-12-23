@@ -965,7 +965,7 @@ unsigned ByteCodeExprGen<Emitter>::allocateLocalPrimitive(DeclTy &&Src,
   Descriptor *D = P.createDescriptor(Src, Ty, Descriptor::InlineDescMD, IsConst,
                                      Src.is<const Expr *>());
   Scope::Local Local = this->createLocal(D);
-  if (auto *VD = dyn_cast_or_null<ValueDecl>(Src.dyn_cast<const Decl *>()))
+  if (auto *VD = dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>()))
     Locals.insert({VD, Local});
   VarScope->add(Local, IsExtended);
   return Local.Offset;
@@ -1433,7 +1433,7 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     return VisitBuiltinCallExpr(E);
 
   const Decl *Callee = E->getCalleeDecl();
-  if (const auto *FuncDecl = dyn_cast_or_null<FunctionDecl>(Callee)) {
+  if (const auto *FuncDecl = dyn_cast_if_present<FunctionDecl>(Callee)) {
     const Function *Func = getFunction(FuncDecl);
     if (!Func)
       return false;
