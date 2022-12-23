@@ -30,10 +30,12 @@ def Canonicalizer : Pass<"canonicalize"> {
            "Seed the worklist in general top-down order">,
     Option<"enableRegionSimplification", "region-simplify", "bool",
            /*default=*/"true",
-           "Seed the worklist in general top-down order">,
+           "Perform control flow optimizations to the region tree">,
     Option<"maxIterations", "max-iterations", "int64_t",
            /*default=*/"10",
-           "Seed the worklist in general top-down order">
+           "Max. iterations between applying patterns / simplifying regions">,
+    Option<"maxNumRewrites", "max-num-rewrites", "int64_t", /*default=*/"-1",
+           "Max. number of pattern rewrites within an iteration">
   ] # RewritePassUtils.options;
 }
 
