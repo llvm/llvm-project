@@ -836,10 +836,9 @@ define void @pr59676_nsw_frozen(ptr %dst, i32 %x.orig) {
 ; X86-LABEL: pr59676_nsw_frozen:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    imull $42, %edx, %eax
-; X86-NEXT:    imull %edx, %eax
-; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    imull %eax, %eax
+; X86-NEXT:    imull $84, %eax, %eax
 ; X86-NEXT:    movl $818089009, %edx # imm = 0x30C30C31
 ; X86-NEXT:    imull %edx
 ; X86-NEXT:    movl %edx, %eax
@@ -851,9 +850,8 @@ define void @pr59676_nsw_frozen(ptr %dst, i32 %x.orig) {
 ;
 ; X64-LABEL: pr59676_nsw_frozen:
 ; X64:       # %bb.0:
-; X64-NEXT:    imull $42, %esi, %eax
-; X64-NEXT:    imull %esi, %eax
-; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    imull %esi, %esi
+; X64-NEXT:    imull $84, %esi, %eax
 ; X64-NEXT:    cltq
 ; X64-NEXT:    imulq $818089009, %rax, %rax # imm = 0x30C30C31
 ; X64-NEXT:    movq %rax, %rcx
@@ -875,11 +873,10 @@ define void @pr59676_nsw_frozen(ptr %dst, i32 %x.orig) {
 define void @pr59676_nsw(ptr %dst, i32 %x) {
 ; X86-LABEL: pr59676_nsw:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    imull $42, %edx, %eax
-; X86-NEXT:    imull %edx, %eax
-; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    imull %eax, %eax
+; X86-NEXT:    imull $84, %eax, %eax
 ; X86-NEXT:    movl $818089009, %edx # imm = 0x30C30C31
 ; X86-NEXT:    imull %edx
 ; X86-NEXT:    movl %edx, %eax
@@ -891,9 +888,8 @@ define void @pr59676_nsw(ptr %dst, i32 %x) {
 ;
 ; X64-LABEL: pr59676_nsw:
 ; X64:       # %bb.0:
-; X64-NEXT:    imull $42, %esi, %eax
-; X64-NEXT:    imull %esi, %eax
-; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    imull %esi, %esi
+; X64-NEXT:    imull $84, %esi, %eax
 ; X64-NEXT:    cltq
 ; X64-NEXT:    imulq $818089009, %rax, %rax # imm = 0x30C30C31
 ; X64-NEXT:    movq %rax, %rcx
