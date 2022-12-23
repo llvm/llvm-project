@@ -49,7 +49,7 @@ my_barrier(void)
 }
 
 #define AGEN(T,OP) \
-__attribute__((convergent)) T \
+T \
 C(__ockl_wgred_,C(OP,T##_suf))(int a) \
 { \
     uint n = my_num_sub_groups(); \

@@ -85,13 +85,13 @@ multi_grid_sync(__global struct mg_sync *s, uint members)
     }
 }
 
-__attribute__((convergent)) void
+void
 __ockl_gws_init(uint nwm1, uint rid)
 {
     __builtin_amdgcn_ds_gws_init(nwm1, rid);
 }
 
-__attribute__((convergent)) void
+void
 __ockl_gws_barrier(uint nwm1, uint rid)
 {
     __builtin_amdgcn_ds_gws_barrier(nwm1, rid);
@@ -103,7 +103,7 @@ __ockl_grid_is_valid(void)
     return get_mg_info_arg() != 0UL;
 }
 
-__attribute__((convergent)) void
+void
 __ockl_grid_sync(void)
 {
     __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "agent");
@@ -157,7 +157,7 @@ __ockl_multi_grid_is_valid(void)
     }
 }
 
-__attribute__((convergent)) void
+void
 __ockl_multi_grid_sync(void)
 {
     __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "");

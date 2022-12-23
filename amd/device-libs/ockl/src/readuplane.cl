@@ -7,9 +7,7 @@
 
 #include "ockl.h"
 
-#define WAVESIZE 64 
-
-#define ATTR __attribute__((convergent))
+#define WAVESIZE 64
 
 
 // Function to exchange data between different lanes
@@ -17,7 +15,7 @@
 // offset: To be added to the lane id to obtain final index
 // return a int value correspoding to the lane
 
-ATTR int
+int
 __ockl_readuplane_i32(int var, int offset)
 {
 
@@ -33,7 +31,7 @@ __ockl_readuplane_i32(int var, int offset)
 // offset: To be added to the lane id to obtain final index
 // return a long value correspoding to the lane
 
-ATTR long
+long
 __ockl_readuplane_i64(long var, int offset) {
   int lane_id = __ockl_lane_u32();
   int index = lane_id + offset;
