@@ -19,19 +19,18 @@ using namespace llvm;
 /// the divisor not be 0, 1, or -1.  Taken from "Hacker's Delight", Henry S.
 /// Warren, Jr., Chapter 10.
 SignedDivisionByConstantInfo SignedDivisionByConstantInfo::get(const APInt &D) {
-  unsigned P;
-  APInt AD, ANC, Delta, Q1, R1, Q2, R2, T;
+  APInt Delta;
   APInt SignedMin = APInt::getSignedMinValue(D.getBitWidth());
   struct SignedDivisionByConstantInfo Retval;
 
-  AD = D.abs();
-  T = SignedMin + (D.lshr(D.getBitWidth() - 1));
-  ANC = T - 1 - T.urem(AD);  // absolute value of NC
-  P = D.getBitWidth() - 1;   // initialize P
-  Q1 = SignedMin.udiv(ANC);  // initialize Q1 = 2P/abs(NC)
-  R1 = SignedMin - Q1 * ANC; // initialize R1 = rem(2P,abs(NC))
-  Q2 = SignedMin.udiv(AD);   // initialize Q2 = 2P/abs(D)
-  R2 = SignedMin - Q2 * AD;  // initialize R2 = rem(2P,abs(D))
+  APInt AD = D.abs();
+  APInt T = SignedMin + (D.lshr(D.getBitWidth() - 1));
+  APInt ANC = T - 1 - T.urem(AD);   // absolute value of NC
+  unsigned P = D.getBitWidth() - 1; // initialize P
+  APInt Q1 = SignedMin.udiv(ANC);   // initialize Q1 = 2P/abs(NC)
+  APInt R1 = SignedMin - Q1 * ANC;  // initialize R1 = rem(2P,abs(NC))
+  APInt Q2 = SignedMin.udiv(AD);    // initialize Q2 = 2P/abs(D)
+  APInt R2 = SignedMin - Q2 * AD;   // initialize R2 = rem(2P,abs(D))
   do {
     P = P + 1;
     Q1 = Q1 << 1;      // update Q1 = 2P/abs(NC)
@@ -64,20 +63,19 @@ SignedDivisionByConstantInfo SignedDivisionByConstantInfo::get(const APInt &D) {
 /// of the divided value are known zero.
 UnsignedDivisionByConstantInfo
 UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros) {
-  unsigned P;
-  APInt NC, Delta, Q1, R1, Q2, R2;
+  APInt Delta;
   struct UnsignedDivisionByConstantInfo Retval;
   Retval.IsAdd = false; // initialize "add" indicator
   APInt AllOnes = APInt::getAllOnes(D.getBitWidth()).lshr(LeadingZeros);
   APInt SignedMin = APInt::getSignedMinValue(D.getBitWidth());
   APInt SignedMax = APInt::getSignedMaxValue(D.getBitWidth());
 
-  NC = AllOnes - (AllOnes - D).urem(D);
-  P = D.getBitWidth() - 1;  // initialize P
-  Q1 = SignedMin.udiv(NC);  // initialize Q1 = 2P/NC
-  R1 = SignedMin - Q1 * NC; // initialize R1 = rem(2P,NC)
-  Q2 = SignedMax.udiv(D);   // initialize Q2 = (2P-1)/D
-  R2 = SignedMax - Q2 * D;  // initialize R2 = rem((2P-1),D)
+  APInt NC = AllOnes - (AllOnes - D).urem(D);
+  unsigned P = D.getBitWidth() - 1; // initialize P
+  APInt Q1 = SignedMin.udiv(NC);    // initialize Q1 = 2P/NC
+  APInt R1 = SignedMin - Q1 * NC;   // initialize R1 = rem(2P,NC)
+  APInt Q2 = SignedMax.udiv(D);     // initialize Q2 = (2P-1)/D
+  APInt R2 = SignedMax - Q2 * D;    // initialize R2 = rem((2P-1),D)
   do {
     P = P + 1;
     if (R1.uge(NC - R1)) {
