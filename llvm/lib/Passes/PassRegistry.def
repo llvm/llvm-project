@@ -75,7 +75,6 @@ MODULE_PASS("instrorderfile", InstrOrderFilePass())
 MODULE_PASS("instrprof", InstrProfiling())
 MODULE_PASS("internalize", InternalizePass())
 MODULE_PASS("invalidate<all>", InvalidateAllAnalysesPass())
-MODULE_PASS("ipsccp", IPSCCPPass())
 MODULE_PASS("iroutliner", IROutlinerPass())
 MODULE_PASS("print-ir-similarity", IRSimilarityAnalysisPrinterPass(dbgs()))
 MODULE_PASS("lower-global-dtors", LowerGlobalDtorsPass())
@@ -161,6 +160,13 @@ MODULE_PASS_WITH_PARAMS("msan",
                         },
                         parseMSanPassOptions,
                         "recover;kernel;eager-checks;track-origins=N")
+MODULE_PASS_WITH_PARAMS("ipsccp",
+                        "IPSCCPPass",
+                        [](IPSCCPOptions Opts) {
+                          return IPSCCPPass(Opts);
+                        },
+                        parseIPSCCPOptions,
+                        "no-func-spec;func-spec")
 #undef MODULE_PASS_WITH_PARAMS
 
 #ifndef CGSCC_ANALYSIS
