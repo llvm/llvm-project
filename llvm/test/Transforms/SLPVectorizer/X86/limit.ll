@@ -19,53 +19,53 @@ define void @addsub() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([4 x i32]* @b to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([4 x i32]* @c to <4 x i32>*), align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @b, align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @c, align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([4 x i32]* @d to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([4 x i32]* @e to <4 x i32>*), align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr @d, align 16
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr @e, align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[TMP2]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub nsw <4 x i32> [[TMP2]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* bitcast ([4 x i32]* @a to <4 x i32>*), align 16
+; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr @a, align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
   br label %bb1
 
 bb1:
-  %0 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @b, i64 0, i64 0), align 16
-  %1 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @c, i64 0, i64 0), align 16
+  %0 = load i32, ptr @b, align 16
+  %1 = load i32, ptr @c, align 16
   %add = add nsw i32 %0, %1
-  %2 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @d, i64 0, i64 0), align 16
-  %3 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @e, i64 0, i64 0), align 16
+  %2 = load i32, ptr @d, align 16
+  %3 = load i32, ptr @e, align 16
   %add1 = add nsw i32 %2, %3
   %add2 = add nsw i32 %add, %add1
-  store i32 %add2, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 0), align 16
-  %4 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @b, i64 0, i64 1), align 4
-  %5 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @c, i64 0, i64 1), align 4
+  store i32 %add2, ptr @a, align 16
+  %4 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @b, i64 0, i64 1), align 4
+  %5 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @c, i64 0, i64 1), align 4
   %add3 = add nsw i32 %4, %5
-  %6 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @d, i64 0, i64 1), align 4
-  %7 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @e, i64 0, i64 1), align 4
+  %6 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @d, i64 0, i64 1), align 4
+  %7 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @e, i64 0, i64 1), align 4
   %add4 = add nsw i32 %6, %7
   %sub = sub nsw i32 %add3, %add4
-  store i32 %sub, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1), align 4
-  %8 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @b, i64 0, i64 2), align 8
-  %9 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @c, i64 0, i64 2), align 8
+  store i32 %sub, ptr getelementptr inbounds ([4 x i32], ptr @a, i64 0, i64 1), align 4
+  %8 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @b, i64 0, i64 2), align 8
+  %9 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @c, i64 0, i64 2), align 8
   %add5 = add nsw i32 %8, %9
-  %10 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @d, i64 0, i64 2), align 8
-  %11 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @e, i64 0, i64 2), align 8
+  %10 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @d, i64 0, i64 2), align 8
+  %11 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @e, i64 0, i64 2), align 8
   %add6 = add nsw i32 %10, %11
   %add7 = add nsw i32 %add5, %add6
-  store i32 %add7, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 2), align 8
-  %12 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @b, i64 0, i64 3), align 4
-  %13 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @c, i64 0, i64 3), align 4
+  store i32 %add7, ptr getelementptr inbounds ([4 x i32], ptr @a, i64 0, i64 2), align 8
+  %12 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @b, i64 0, i64 3), align 4
+  %13 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @c, i64 0, i64 3), align 4
   %add8 = add nsw i32 %12, %13
-  %14 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @d, i64 0, i64 3), align 4
-  %15 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @e, i64 0, i64 3), align 4
+  %14 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @d, i64 0, i64 3), align 4
+  %15 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @e, i64 0, i64 3), align 4
   %add9 = add nsw i32 %14, %15
   %sub10 = sub nsw i32 %add8, %add9
-  store i32 %sub10, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 3), align 4
+  store i32 %sub10, ptr getelementptr inbounds ([4 x i32], ptr @a, i64 0, i64 3), align 4
   ret void
 }
