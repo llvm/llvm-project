@@ -57,11 +57,11 @@ public:
 
 private:
   // FIXME: Names from `ErrnoLocationFuncNames` are used to build this set.
-  CallDescriptionSet ErrnoLocationCalls{{{"__errno_location"}, 0, 0},
-                                        {{"___errno"}, 0, 0},
-                                        {{"__errno"}, 0, 0},
-                                        {{"_errno"}, 0, 0},
-                                        {{"__error"}, 0, 0}};
+  CallDescriptionSet ErrnoLocationCalls{{"__errno_location", 0, 0},
+                                        {"___errno", 0, 0},
+                                        {"__errno", 0, 0},
+                                        {"_errno", 0, 0},
+                                        {"__error", 0, 0}};
 };
 
 } // namespace

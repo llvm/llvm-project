@@ -16,12 +16,11 @@ using namespace clang::driver;
 using namespace clang::driver::options;
 using namespace llvm::opt;
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr std::initializer_list<llvm::StringLiteral> NAME = VALUE;
+#define PREFIX(NAME, VALUE) static const char *const NAME[] = VALUE;
 #include "clang/Driver/Options.inc"
 #undef PREFIX
 
-static constexpr std::initializer_list<OptTable::Info> InfoTable = {
+static constexpr  OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {PREFIX, NAME,  HELPTEXT,    METAVAR,     OPT_##ID,  Option::KIND##Class,    \

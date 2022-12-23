@@ -74,12 +74,12 @@ namespace llvm {
       : Data(&OneElt), Length(1) {}
 
     /// Construct an ArrayRef from a pointer and length.
-    constexpr /*implicit*/ ArrayRef(const T *data, size_t length)
-        : Data(data), Length(length) {}
+    /*implicit*/ ArrayRef(const T *data, size_t length)
+      : Data(data), Length(length) {}
 
     /// Construct an ArrayRef from a range.
-    constexpr ArrayRef(const T *begin, const T *end)
-        : Data(begin), Length(end - begin) {}
+    ArrayRef(const T *begin, const T *end)
+      : Data(begin), Length(end - begin) {}
 
     /// Construct an ArrayRef from a SmallVector. This is templated in order to
     /// avoid instantiating SmallVectorTemplateCommon<T> whenever we
@@ -111,9 +111,9 @@ namespace llvm {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winit-list-lifetime"
 #endif
-    constexpr /*implicit*/ ArrayRef(const std::initializer_list<T> &Vec)
-        : Data(Vec.begin() == Vec.end() ? (T *)nullptr : Vec.begin()),
-          Length(Vec.size()) {}
+    /*implicit*/ ArrayRef(const std::initializer_list<T> &Vec)
+    : Data(Vec.begin() == Vec.end() ? (T*)nullptr : Vec.begin()),
+      Length(Vec.size()) {}
 #if LLVM_GNUC_PREREQ(9, 0, 0)
 #pragma GCC diagnostic pop
 #endif
