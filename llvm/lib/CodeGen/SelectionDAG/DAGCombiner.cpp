@@ -14286,10 +14286,13 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     SDValue FrozenMaybePoisonOperand = DAG.getFreeze(MaybePoisonOperand);
     // Then, change all other uses of unfrozen operand to use frozen operand.
     DAG.ReplaceAllUsesOfValueWith(MaybePoisonOperand, FrozenMaybePoisonOperand);
-    // But, that also updated the use in the freeze we just created, thus
-    // creating a cycle in a DAG. Let's undo that by mutating the freeze.
-    DAG.UpdateNodeOperands(FrozenMaybePoisonOperand.getNode(),
-                           MaybePoisonOperand);
+    if (FrozenMaybePoisonOperand.getOpcode() == ISD::FREEZE &&
+        FrozenMaybePoisonOperand.getOperand(0) == FrozenMaybePoisonOperand) {
+      // But, that also updated the use in the freeze we just created, thus
+      // creating a cycle in a DAG. Let's undo that by mutating the freeze.
+      DAG.UpdateNodeOperands(FrozenMaybePoisonOperand.getNode(),
+                             MaybePoisonOperand);
+    }
   }
 
   // Finally, recreate the node, it's operands were updated to use
