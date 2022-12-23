@@ -185,14 +185,14 @@ int bar(int n){
 // CHECK45-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK45-64:       user_code.entry:
 // CHECK45-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK45-64-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
+// CHECK45-64-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l27_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
 // CHECK45-64-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 // CHECK45-64-NEXT:    ret void
 // CHECK45-64:       worker.exit:
 // CHECK45-64-NEXT:    ret void
 //
 //
-// CHECK45-64-LABEL: define {{[^@]+}}@__omp_outlined__
+// CHECK45-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l27_omp_outlined
 // CHECK45-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK45-64-NEXT:  entry:
 // CHECK45-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -220,14 +220,14 @@ int bar(int n){
 // CHECK45-64-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
 // CHECK45-64-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP3]] to ptr
 // CHECK45-64-NEXT:    store ptr [[TMP5]], ptr [[TMP4]], align 8
-// CHECK45-64-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 1)
+// CHECK45-64-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l31_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 1)
 // CHECK45-64-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 // CHECK45-64-NEXT:    ret void
 // CHECK45-64:       worker.exit:
 // CHECK45-64-NEXT:    ret void
 //
 //
-// CHECK45-64-LABEL: define {{[^@]+}}@__omp_outlined__1
+// CHECK45-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l31_omp_outlined
 // CHECK45-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[AA:%.*]]) #[[ATTR1]] {
 // CHECK45-64-NEXT:  entry:
 // CHECK45-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -276,14 +276,14 @@ int bar(int n){
 // CHECK45-64-NEXT:    store ptr [[TMP10]], ptr [[TMP9]], align 8
 // CHECK45-64-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [3 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 2
 // CHECK45-64-NEXT:    store ptr [[TMP0]], ptr [[TMP11]], align 8
-// CHECK45-64-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__2, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 3)
+// CHECK45-64-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l36_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 3)
 // CHECK45-64-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 // CHECK45-64-NEXT:    ret void
 // CHECK45-64:       worker.exit:
 // CHECK45-64-NEXT:    ret void
 //
 //
-// CHECK45-64-LABEL: define {{[^@]+}}@__omp_outlined__2
+// CHECK45-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l36_omp_outlined
 // CHECK45-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]], i64 noundef [[AA:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[B:%.*]]) #[[ATTR1]] {
 // CHECK45-64-NEXT:  entry:
 // CHECK45-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -321,14 +321,14 @@ int bar(int n){
 // CHECK45-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK45-32:       user_code.entry:
 // CHECK45-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK45-32-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 0)
+// CHECK45-32-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l27_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 0)
 // CHECK45-32-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 // CHECK45-32-NEXT:    ret void
 // CHECK45-32:       worker.exit:
 // CHECK45-32-NEXT:    ret void
 //
 //
-// CHECK45-32-LABEL: define {{[^@]+}}@__omp_outlined__
+// CHECK45-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l27_omp_outlined
 // CHECK45-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK45-32-NEXT:  entry:
 // CHECK45-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -356,14 +356,14 @@ int bar(int n){
 // CHECK45-32-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK45-32-NEXT:    [[TMP5:%.*]] = inttoptr i32 [[TMP3]] to ptr
 // CHECK45-32-NEXT:    store ptr [[TMP5]], ptr [[TMP4]], align 4
-// CHECK45-32-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 1)
+// CHECK45-32-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l31_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 1)
 // CHECK45-32-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 // CHECK45-32-NEXT:    ret void
 // CHECK45-32:       worker.exit:
 // CHECK45-32-NEXT:    ret void
 //
 //
-// CHECK45-32-LABEL: define {{[^@]+}}@__omp_outlined__1
+// CHECK45-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l31_omp_outlined
 // CHECK45-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[AA:%.*]]) #[[ATTR1]] {
 // CHECK45-32-NEXT:  entry:
 // CHECK45-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -412,14 +412,14 @@ int bar(int n){
 // CHECK45-32-NEXT:    store ptr [[TMP10]], ptr [[TMP9]], align 4
 // CHECK45-32-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [3 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 2
 // CHECK45-32-NEXT:    store ptr [[TMP0]], ptr [[TMP11]], align 4
-// CHECK45-32-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__2, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 3)
+// CHECK45-32-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l36_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 3)
 // CHECK45-32-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 // CHECK45-32-NEXT:    ret void
 // CHECK45-32:       worker.exit:
 // CHECK45-32-NEXT:    ret void
 //
 //
-// CHECK45-32-LABEL: define {{[^@]+}}@__omp_outlined__2
+// CHECK45-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l36_omp_outlined
 // CHECK45-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]], i32 noundef [[AA:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[B:%.*]]) #[[ATTR1]] {
 // CHECK45-32-NEXT:  entry:
 // CHECK45-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -457,14 +457,14 @@ int bar(int n){
 // CHECK45-32-EX-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK45-32-EX:       user_code.entry:
 // CHECK45-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK45-32-EX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 0)
+// CHECK45-32-EX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l27_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 0)
 // CHECK45-32-EX-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 // CHECK45-32-EX-NEXT:    ret void
 // CHECK45-32-EX:       worker.exit:
 // CHECK45-32-EX-NEXT:    ret void
 //
 //
-// CHECK45-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__
+// CHECK45-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l27_omp_outlined
 // CHECK45-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK45-32-EX-NEXT:  entry:
 // CHECK45-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -492,14 +492,14 @@ int bar(int n){
 // CHECK45-32-EX-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK45-32-EX-NEXT:    [[TMP5:%.*]] = inttoptr i32 [[TMP3]] to ptr
 // CHECK45-32-EX-NEXT:    store ptr [[TMP5]], ptr [[TMP4]], align 4
-// CHECK45-32-EX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 1)
+// CHECK45-32-EX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l31_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 1)
 // CHECK45-32-EX-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 // CHECK45-32-EX-NEXT:    ret void
 // CHECK45-32-EX:       worker.exit:
 // CHECK45-32-EX-NEXT:    ret void
 //
 //
-// CHECK45-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__1
+// CHECK45-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l31_omp_outlined
 // CHECK45-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[AA:%.*]]) #[[ATTR1]] {
 // CHECK45-32-EX-NEXT:  entry:
 // CHECK45-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -548,14 +548,14 @@ int bar(int n){
 // CHECK45-32-EX-NEXT:    store ptr [[TMP10]], ptr [[TMP9]], align 4
 // CHECK45-32-EX-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [3 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 2
 // CHECK45-32-EX-NEXT:    store ptr [[TMP0]], ptr [[TMP11]], align 4
-// CHECK45-32-EX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__2, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 3)
+// CHECK45-32-EX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l36_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 3)
 // CHECK45-32-EX-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 // CHECK45-32-EX-NEXT:    ret void
 // CHECK45-32-EX:       worker.exit:
 // CHECK45-32-EX-NEXT:    ret void
 //
 //
-// CHECK45-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__2
+// CHECK45-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l36_omp_outlined
 // CHECK45-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]], i32 noundef [[AA:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[B:%.*]]) #[[ATTR1]] {
 // CHECK45-32-EX-NEXT:  entry:
 // CHECK45-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -593,14 +593,14 @@ int bar(int n){
 // CHECK-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l27_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l27_omp_outlined
 // CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -628,14 +628,14 @@ int bar(int n){
 // CHECK-64-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
 // CHECK-64-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP3]] to ptr
 // CHECK-64-NEXT:    store ptr [[TMP5]], ptr [[TMP4]], align 8
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 1)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l31_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 1)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__1
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l31_omp_outlined
 // CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[AA:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -684,14 +684,14 @@ int bar(int n){
 // CHECK-64-NEXT:    store ptr [[TMP10]], ptr [[TMP9]], align 8
 // CHECK-64-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [3 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 2
 // CHECK-64-NEXT:    store ptr [[TMP0]], ptr [[TMP11]], align 8
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__2, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 3)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l36_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 3)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__2
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l36_omp_outlined
 // CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]], i64 noundef [[AA:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[B:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -729,14 +729,14 @@ int bar(int n){
 // CHECK-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l27_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l27_omp_outlined
 // CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -764,14 +764,14 @@ int bar(int n){
 // CHECK-32-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK-32-NEXT:    [[TMP5:%.*]] = inttoptr i32 [[TMP3]] to ptr
 // CHECK-32-NEXT:    store ptr [[TMP5]], ptr [[TMP4]], align 4
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 1)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l31_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 1)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__1
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l31_omp_outlined
 // CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[AA:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -820,14 +820,14 @@ int bar(int n){
 // CHECK-32-NEXT:    store ptr [[TMP10]], ptr [[TMP9]], align 4
 // CHECK-32-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [3 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 2
 // CHECK-32-NEXT:    store ptr [[TMP0]], ptr [[TMP11]], align 4
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__2, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 3)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l36_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 3)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__2
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l36_omp_outlined
 // CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]], i32 noundef [[AA:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[B:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -865,14 +865,14 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l27_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l27_omp_outlined
 // CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -900,14 +900,14 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK-32-EX-NEXT:    [[TMP5:%.*]] = inttoptr i32 [[TMP3]] to ptr
 // CHECK-32-EX-NEXT:    store ptr [[TMP5]], ptr [[TMP4]], align 4
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 1)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l31_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 1)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__1
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l31_omp_outlined
 // CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[AA:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -956,14 +956,14 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    store ptr [[TMP10]], ptr [[TMP9]], align 4
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [3 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 2
 // CHECK-32-EX-NEXT:    store ptr [[TMP0]], ptr [[TMP11]], align 4
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__2, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 3)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l36_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 3)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__2
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l36_omp_outlined
 // CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]], i32 noundef [[AA:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[B:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
