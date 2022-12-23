@@ -913,15 +913,6 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
   TS->outputDwarfFileDirectives();
 
   return ret;
-
-  //bool Result = AsmPrinter::doFinalization(M);
-  // Instead of calling the parents doFinalization, we may
-  // clone parents doFinalization and customize here.
-  // Currently, we if NVISA out the EmitGlobals() in
-  // parent's doFinalization, which is too intrusive.
-  //
-  // Same for the doInitialization.
-  //return Result;
 }
 
 // This function emits appropriate linkage directives for
