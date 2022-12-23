@@ -94,10 +94,7 @@ module Clang_Diagnostics {
   requires cplusplus
 
   module All { header "Basic/AllDiagnostics.h" export * }
-  module Analysis {
-    header "Analysis/AnalysisDiagnostic.h" export *
-    textual header "Analysis/Analyses/UnsafeBufferUsageGadgets.def"
-  }
+  module Analysis { textual header "Analysis/Analyses/UnsafeBufferUsageGadgets.def" }
   module AST { header "AST/ASTDiagnostic.h" export * }
   module Comment { header "AST/CommentDiagnostic.h" export * }
   module Driver { header "Driver/DriverDiagnostic.h" export * }
