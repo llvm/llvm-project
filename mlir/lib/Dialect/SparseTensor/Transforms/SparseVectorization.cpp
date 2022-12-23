@@ -50,6 +50,16 @@ static bool isIntValue(Value val, int64_t idx) {
   return false;
 }
 
+/// Helper test for invariant value (defined outside given block).
+static bool isInvariantValue(Value val, Block *block) {
+  return val.getDefiningOp() && val.getDefiningOp()->getBlock() != block;
+}
+
+/// Helper test for invariant argument (defined outside given block).
+static bool isInvariantArg(BlockArgument arg, Block *block) {
+  return arg.getOwner() != block;
+}
+
 /// Constructs vector type for element type.
 static VectorType vectorType(VL vl, Type etp) {
   unsigned numScalableDims = vl.enableVLAVectorization;
@@ -236,13 +246,15 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
                                 Value vmask, SmallVectorImpl<Value> &idxs) {
   unsigned d = 0;
   unsigned dim = subs.size();
+  Block *block = &forOp.getRegion().front();
   for (auto sub : subs) {
     bool innermost = ++d == dim;
     // Invariant subscripts in outer dimensions simply pass through.
     // Note that we rely on LICM to hoist loads where all subscripts
     // are invariant in the innermost loop.
-    if (sub.getDefiningOp() &&
-        sub.getDefiningOp()->getBlock() != &forOp.getRegion().front()) {
+    // Example:
+    //   a[inv][i] for inv
+    if (isInvariantValue(sub, block)) {
       if (innermost)
         return false;
       if (codegen)
@@ -252,9 +264,10 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
     // Invariant block arguments (including outer loop indices) in outer
     // dimensions simply pass through. Direct loop indices in the
     // innermost loop simply pass through as well.
-    if (auto barg = sub.dyn_cast<BlockArgument>()) {
-      bool invariant = barg.getOwner() != &forOp.getRegion().front();
-      if (invariant == innermost)
+    // Example:
+    //   a[i][j] for both i and j
+    if (auto arg = sub.dyn_cast<BlockArgument>()) {
+      if (isInvariantArg(arg, block) == innermost)
         return false;
       if (codegen)
         idxs.push_back(sub);
@@ -281,6 +294,8 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
     // values, there is no good way to state that the indices are unsigned,
     // which creates the potential of incorrect address calculations in the
     // unlikely case we need such extremely large offsets.
+    // Example:
+    //    a[ ind[i] ]
     if (auto load = cast.getDefiningOp<memref::LoadOp>()) {
       if (!innermost)
         return false;
@@ -303,18 +318,20 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
       continue; // success so far
     }
     // Address calculation 'i = add inv, idx' (after LICM).
+    // Example:
+    //    a[base + i]
     if (auto load = cast.getDefiningOp<arith::AddIOp>()) {
       Value inv = load.getOperand(0);
       Value idx = load.getOperand(1);
-      if (inv.getDefiningOp() &&
-          inv.getDefiningOp()->getBlock() != &forOp.getRegion().front() &&
-          idx.dyn_cast<BlockArgument>()) {
-        if (!innermost)
-          return false;
-        if (codegen)
-          idxs.push_back(
-              rewriter.create<arith::AddIOp>(forOp.getLoc(), inv, idx));
-        continue; // success so far
+      if (isInvariantValue(inv, block)) {
+        if (auto arg = idx.dyn_cast<BlockArgument>()) {
+          if (isInvariantArg(arg, block) || !innermost)
+            return false;
+          if (codegen)
+            idxs.push_back(
+                rewriter.create<arith::AddIOp>(forOp.getLoc(), inv, idx));
+          continue; // success so far
+        }
       }
     }
     return false;
@@ -389,7 +406,8 @@ static bool vectorizeExpr(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
   }
   // Something defined outside the loop-body is invariant.
   Operation *def = exp.getDefiningOp();
-  if (def->getBlock() != &forOp.getRegion().front()) {
+  Block *block = &forOp.getRegion().front();
+  if (def->getBlock() != block) {
     if (codegen)
       vexp = genVectorInvariantValue(rewriter, vl, exp);
     return true;
@@ -450,6 +468,17 @@ static bool vectorizeExpr(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
                       vx) &&
         vectorizeExpr(rewriter, forOp, vl, def->getOperand(1), codegen, vmask,
                       vy)) {
+      // We only accept shift-by-invariant (where the same shift factor applies
+      // to all packed elements). In the vector dialect, this is still
+      // represented with an expanded vector at the right-hand-side, however,
+      // so that we do not have to special case the code generation.
+      if (isa<arith::ShLIOp>(def) || isa<arith::ShRUIOp>(def) ||
+          isa<arith::ShRSIOp>(def)) {
+        Value shiftFactor = def->getOperand(1);
+        if (!isInvariantValue(shiftFactor, block))
+          return false;
+      }
+      // Generate code.
       BINOP(arith::MulFOp)
       BINOP(arith::MulIOp)
       BINOP(arith::DivFOp)
@@ -462,8 +491,10 @@ static bool vectorizeExpr(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
       BINOP(arith::AndIOp)
       BINOP(arith::OrIOp)
       BINOP(arith::XOrIOp)
+      BINOP(arith::ShLIOp)
+      BINOP(arith::ShRUIOp)
+      BINOP(arith::ShRSIOp)
       // TODO: complex?
-      // TODO: shift by invariant?
     }
   }
   return false;
