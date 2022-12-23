@@ -8,8 +8,8 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 define void @caller() #0 {
 ; TUNIT-LABEL: define {{[^@]+}}@caller() {
 ; TUNIT-NEXT:    [[X:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    store i32 42, i32* [[X]], align 4
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, i32* [[X]], align 4
+; TUNIT-NEXT:    store i32 42, ptr [[X]], align 4
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4
 ; TUNIT-NEXT:    call void @promote_i32_ptr(i32 [[TMP1]]), !prof [[PROF0:![0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
@@ -18,21 +18,21 @@ define void @caller() #0 {
 ; CGSCC-NEXT:    ret void
 ;
   %x = alloca i32
-  store i32 42, i32* %x
-  call void @promote_i32_ptr(i32* %x), !prof !0
+  store i32 42, ptr %x
+  call void @promote_i32_ptr(ptr %x), !prof !0
   ret void
 }
 
-define internal void @promote_i32_ptr(i32* %xp) {
+define internal void @promote_i32_ptr(ptr %xp) {
 ; CHECK-LABEL: define {{[^@]+}}@promote_i32_ptr
 ; CHECK-SAME: (i32 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[XP_PRIV:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[XP_PRIV]], align 4
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[XP_PRIV]], align 4
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[XP_PRIV]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[XP_PRIV]], align 4
 ; CHECK-NEXT:    call void @use_i32(i32 [[X]])
 ; CHECK-NEXT:    ret void
 ;
-  %x = load i32, i32* %xp
+  %x = load i32, ptr %xp
   call void @use_i32(i32 %x)
   ret void
 }

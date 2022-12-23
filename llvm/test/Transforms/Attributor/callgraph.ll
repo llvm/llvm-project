@@ -39,17 +39,17 @@ define dso_local void @func2() {
 define void @func5(i32 %0) {
 ; CHECK-LABEL: define {{[^@]+}}@func5(
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP0:%.*]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], void ()* @func4, void ()* @func3
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], ptr @func4, ptr @func3
 ; CHECK-NEXT:    call void [[TMP3]]()
 ; CHECK-NEXT:    ret void
 ;
   %2 = icmp ne i32 %0, 0
-  %3 = select i1 %2, void ()* @func4, void ()* @func3
+  %3 = select i1 %2, ptr @func4, ptr @func3
   call void () %3()
   ret void
 }
 
-define void @broker(void ()* %unknown) !callback !0 {
+define void @broker(ptr %unknown) !callback !0 {
 ; CHECK-LABEL: define {{[^@]+}}@broker(
 ; CHECK-NEXT:    call void [[UNKNOWN:%.*]]()
 ; CHECK-NEXT:    ret void
@@ -60,14 +60,14 @@ define void @broker(void ()* %unknown) !callback !0 {
 
 define void @func6() {
 ; CHECK-LABEL: define {{[^@]+}}@func6(
-; CHECK-NEXT:    call void @broker(void ()* nocapture nofree noundef @func3)
+; CHECK-NEXT:    call void @broker(ptr nocapture nofree noundef @func3)
 ; CHECK-NEXT:    ret void
 ;
-  call void @broker(void ()* @func3)
+  call void @broker(ptr @func3)
   ret void
 }
 
-define void @func7(void ()* %unknown) {
+define void @func7(ptr %unknown) {
 ; CHECK-LABEL: define {{[^@]+}}@func7(
 ; CHECK-NEXT:    call void [[UNKNOWN:%.*]](), !callees !2
 ; CHECK-NEXT:    ret void
@@ -80,18 +80,18 @@ define void @func7(void ()* %unknown) {
 define void @undef_in_callees() {
 ; CHECK-LABEL: define {{[^@]+}}@undef_in_callees(
 ; CHECK-NEXT:  cond.end.i:
-; CHECK-NEXT:    call void undef(i8* undef, i32 undef, i8* undef), !callees !3
+; CHECK-NEXT:    call void undef(ptr undef, i32 undef, ptr undef), !callees !3
 ; CHECK-NEXT:    ret void
 ;
 cond.end.i:
-  call void undef(i8* undef, i32 undef, i8* undef), !callees !3
+  call void undef(ptr undef, i32 undef, ptr undef), !callees !3
   ret void
 }
 
 !0 = !{!1}
 !1 = !{i64 0, i1 false}
-!2 = !{void ()* @func3, void ()* @func4}
-!3 = distinct !{void (i8*, i32, i8*)* undef, void (i8*, i32, i8*)* null}
+!2 = !{ptr @func3, ptr @func4}
+!3 = distinct !{ptr undef, ptr null}
 
 ; UTC_ARGS: --disable
 

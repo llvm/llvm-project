@@ -10,7 +10,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 %struct.tt0 = type { i64, i64 }
-%struct.__va_list_tag = type { i32, i32, i8*, i8* }
+%struct.__va_list_tag = type { i32, i32, ptr, ptr }
 
 @t45 = internal global %struct.tt0 { i64 1335139741, i64 438042995 }, align 8
 
@@ -18,22 +18,22 @@ target triple = "x86_64-unknown-linux-gnu"
 ;.
 ; CHECK: @[[T45:[a-zA-Z0-9_$"\\.-]+]] = internal global [[STRUCT_TT0:%.*]] { i64 1335139741, i64 438042995 }, align 8
 ;.
-define i32 @main(i32 %argc, i8** nocapture readnone %argv) #0 {
+define i32 @main(i32 %argc, ptr nocapture readnone %argv) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@main
-; CHECK-SAME: (i32 [[ARGC:%.*]], i8** nocapture nofree readnone [[ARGV:%.*]]) {
+; CHECK-SAME: (i32 [[ARGC:%.*]], ptr nocapture nofree readnone [[ARGV:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void (i8*, i8*, i8*, i8*, i8*, ...) @callee_t0f(i8* undef, i8* undef, i8* undef, i8* undef, i8* undef, %struct.tt0* noundef nonnull byval([[STRUCT_TT0:%.*]]) align 8 dereferenceable(16) @t45)
+; CHECK-NEXT:    tail call void (ptr, ptr, ptr, ptr, ptr, ...) @callee_t0f(ptr undef, ptr undef, ptr undef, ptr undef, ptr undef, ptr noundef nonnull byval([[STRUCT_TT0:%.*]]) align 8 dereferenceable(16) @t45)
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  tail call void (i8*, i8*, i8*, i8*, i8*, ...) @callee_t0f(i8* undef, i8* undef, i8* undef, i8* undef, i8* undef, %struct.tt0* byval(%struct.tt0) align 8 @t45)
+  tail call void (ptr, ptr, ptr, ptr, ptr, ...) @callee_t0f(ptr undef, ptr undef, ptr undef, ptr undef, ptr undef, ptr byval(%struct.tt0) align 8 @t45)
   ret i32 0
 }
 
 ; Function Attrs: nounwind uwtable
-define internal void @callee_t0f(i8* nocapture readnone %tp13, i8* nocapture readnone %tp14, i8* nocapture readnone %tp15, i8* nocapture readnone %tp16, i8* nocapture readnone %tp17, ...) {
+define internal void @callee_t0f(ptr nocapture readnone %tp13, ptr nocapture readnone %tp14, ptr nocapture readnone %tp15, ptr nocapture readnone %tp16, ptr nocapture readnone %tp17, ...) {
 ; CHECK-LABEL: define {{[^@]+}}@callee_t0f
-; CHECK-SAME: (i8* noalias nocapture nofree nonnull readnone align 4294967296 [[TP13:%.*]], i8* noalias nocapture nofree nonnull readnone align 4294967296 [[TP14:%.*]], i8* noalias nocapture nofree nonnull readnone align 4294967296 [[TP15:%.*]], i8* noalias nocapture nofree nonnull readnone align 4294967296 [[TP16:%.*]], i8* noalias nocapture nofree nonnull readnone align 4294967296 [[TP17:%.*]], ...) {
+; CHECK-SAME: (ptr noalias nocapture nofree nonnull readnone align 4294967296 [[TP13:%.*]], ptr noalias nocapture nofree nonnull readnone align 4294967296 [[TP14:%.*]], ptr noalias nocapture nofree nonnull readnone align 4294967296 [[TP15:%.*]], ptr noalias nocapture nofree nonnull readnone align 4294967296 [[TP16:%.*]], ptr noalias nocapture nofree nonnull readnone align 4294967296 [[TP17:%.*]], ...) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @sink(i32 noundef 0)
 ; CHECK-NEXT:    ret void
