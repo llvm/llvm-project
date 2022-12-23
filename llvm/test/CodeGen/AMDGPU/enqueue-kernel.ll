@@ -8,11 +8,6 @@ define amdgpu_kernel void @non_caller(ptr addrspace(1) %a, i8 %b, ptr addrspace(
   ret void
 }
 
-define amdgpu_kernel void @caller_indirect(ptr addrspace(1) %a, i8 %b, ptr addrspace(1) %c, i64 %d) {
-  call void @caller(ptr addrspace(1) %a, i8 %b, ptr addrspace(1) %c, i64 %d)
-  ret void
-}
-
 define amdgpu_kernel void @caller(ptr addrspace(1) %a, i8 %b, ptr addrspace(1) %c, i64 %d) {
 entry:
   %block = alloca <{ i32, i32, ptr addrspace(1), i8 }>, align 8, addrspace(5)
@@ -117,12 +112,6 @@ attributes #0 = { "enqueued-block" }
 ;.
 ; CHECK-LABEL: define {{[^@]+}}@non_caller
 ; CHECK-SAME: (ptr addrspace(1) [[A:%.*]], i8 [[B:%.*]], ptr addrspace(1) [[C:%.*]], i64 [[D:%.*]]) {
-; CHECK-NEXT:    ret void
-;
-;
-; CHECK-LABEL: define {{[^@]+}}@caller_indirect
-; CHECK-SAME: (ptr addrspace(1) [[A:%.*]], i8 [[B:%.*]], ptr addrspace(1) [[C:%.*]], i64 [[D:%.*]]) {
-; CHECK-NEXT:    call void @caller(ptr addrspace(1) [[A]], i8 [[B]], ptr addrspace(1) [[C]], i64 [[D]])
 ; CHECK-NEXT:    ret void
 ;
 ;
