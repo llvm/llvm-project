@@ -33,24 +33,27 @@ SignedDivisionByConstantInfo SignedDivisionByConstantInfo::get(const APInt &D) {
   APInt R2 = SignedMin - Q2 * AD;   // initialize R2 = rem(2P,abs(D))
   do {
     P = P + 1;
-    Q1 = Q1 << 1;      // update Q1 = 2P/abs(NC)
-    R1 = R1 << 1;      // update R1 = rem(2P/abs(NC))
+    Q1 <<= 1;      // update Q1 = 2P/abs(NC)
+    R1 <<= 1;      // update R1 = rem(2P/abs(NC))
     if (R1.uge(ANC)) { // must be unsigned comparison
-      Q1 = Q1 + 1;
-      R1 = R1 - ANC;
+      ++Q1;
+      R1 -= ANC;
     }
-    Q2 = Q2 << 1;     // update Q2 = 2P/abs(D)
-    R2 = R2 << 1;     // update R2 = rem(2P/abs(D))
+    Q2 <<= 1;     // update Q2 = 2P/abs(D)
+    R2 <<= 1;     // update R2 = rem(2P/abs(D))
     if (R2.uge(AD)) { // must be unsigned comparison
-      Q2 = Q2 + 1;
-      R2 = R2 - AD;
+      ++Q2;
+      R2 -= AD;
     }
-    Delta = AD - R2;
-  } while (Q1.ult(Delta) || (Q1 == Delta && R1 == 0));
+    // Delta = AD - R2
+    Delta = AD;
+    Delta -= R2;
+  } while (Q1.ult(Delta) || (Q1 == Delta && R1.isZero()));
 
-  Retval.Magic = Q2 + 1;
+  Retval.Magic = std::move(Q2);
+  ++Retval.Magic;
   if (D.isNegative())
-    Retval.Magic = -Retval.Magic;           // resulting magic number
+    Retval.Magic.negate();                  // resulting magic number
   Retval.ShiftAmount = P - D.getBitWidth(); // resulting shift
   return Retval;
 }
@@ -79,27 +82,43 @@ UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros) {
   do {
     P = P + 1;
     if (R1.uge(NC - R1)) {
-      Q1 = Q1 + Q1 + 1;  // update Q1
-      R1 = R1 + R1 - NC; // update R1
+      // update Q1
+      Q1 <<= 1;
+      ++Q1;
+      // update R1
+      R1 <<= 1;
+      R1 -= NC;
     } else {
-      Q1 = Q1 + Q1; // update Q1
-      R1 = R1 + R1; // update R1
+      Q1 <<= 1; // update Q1
+      R1 <<= 1; // update R1
     }
     if ((R2 + 1).uge(D - R2)) {
       if (Q2.uge(SignedMax))
         Retval.IsAdd = true;
-      Q2 = Q2 + Q2 + 1;     // update Q2
-      R2 = R2 + R2 + 1 - D; // update R2
+      // update Q2
+      Q2 <<= 1;
+      ++Q2;
+      // update R2
+      R2 <<= 1;
+      ++R2;
+      R2 -= D;
     } else {
       if (Q2.uge(SignedMin))
         Retval.IsAdd = true;
-      Q2 = Q2 + Q2;     // update Q2
-      R2 = R2 + R2 + 1; // update R2
+      // update Q2
+      Q2 <<= 1;
+      // update R2
+      R2 <<= 1;
+      ++R2;
     }
-    Delta = D - 1 - R2;
+    // Delta = D - 1 - R2
+    Delta = D;
+    --Delta;
+    Delta -= R2;
   } while (P < D.getBitWidth() * 2 &&
-           (Q1.ult(Delta) || (Q1 == Delta && R1 == 0)));
-  Retval.Magic = Q2 + 1;                    // resulting magic number
+           (Q1.ult(Delta) || (Q1 == Delta && R1.isZero())));
+  Retval.Magic = std::move(Q2);             // resulting magic number
+  ++Retval.Magic;
   Retval.ShiftAmount = P - D.getBitWidth(); // resulting shift
   return Retval;
 }
