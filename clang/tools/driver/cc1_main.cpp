@@ -245,7 +245,7 @@ protected:
   clang::cas::CompileJobCacheResult::Builder CachedResultBuilder;
   std::string OutputFile;
   std::string DependenciesFile;
-  std::unique_ptr<cas::CachingDiagnosticsProcessor> DiagProcessor;
+  std::unique_ptr<clang::cas::CachingDiagnosticsProcessor> DiagProcessor;
 };
 
 /// Store and retrieve compilation artifacts using \p llvm::cas::ObjectStore and
@@ -552,8 +552,8 @@ CachingOutputs::CachingOutputs(CompilerInstance &Clang,
   OutputFile = fixupRelativePath(FrontendOpts.OutputFile, FM);
   DependenciesFile =
       fixupRelativePath(Invocation.getDependencyOutputOpts().OutputFile, FM);
-  DiagProcessor =
-      std::make_unique<cas::CachingDiagnosticsProcessor>(PrefixMapper, FM);
+  DiagProcessor = std::make_unique<clang::cas::CachingDiagnosticsProcessor>(
+      PrefixMapper, FM);
 }
 
 Expected<bool> ObjectStoreCachingOutputs::tryReplayCachedResult(
