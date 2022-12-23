@@ -343,18 +343,20 @@ def SparseTensor_PushBackOp : SparseTensor_Op<"push_back",
                     "inBuffer", "value",
                     "$_self.cast<ShapedType>().getElementType()">,
      AllTypesMatch<["inBuffer", "outBuffer"]>]>,
-    Arguments<(ins StridedMemRefRankOf<[Index], [1]>:$bufferSizes,
+    Arguments<(ins Index:$curSize,
                StridedMemRefRankOf<[AnyType], [1]>:$inBuffer,
-               AnyType:$value, IndexAttr:$idx, Optional<Index>:$n,
+               AnyType:$value, Optional<Index>:$n,
                UnitAttr:$inbounds)>,
-    Results<(outs StridedMemRefRankOf<[AnyType], [1]>:$outBuffer)>  {
+    Results<(outs StridedMemRefRankOf<[AnyType], [1]>:$outBuffer,
+             Index:$newSize)>  {
   string summary = "Pushes a value to the back of a given buffer";
   string description = [{
-    Push `value` to the end of the given sparse tensor storage buffer
-    `inBuffer` and update the size of the buffer in `bufferSizes[idx]`. The
-    capacity of the buffer is recorded in the memref type of `inBuffer `. If the
-    current buffer is full, then `inBuffer.realloc` is called before pushing the
-    data to the buffer. This is similar to std::vector push_back.
+    Pushes `value` to the end of the given sparse tensor storage buffer
+    `inBuffer` as indicated by the value of `curSize` and returns the
+    new size of the buffer in `newSize` (`newSize = curSize + n`).
+    The capacity of the buffer is recorded in the memref type of `inBuffer`.
+    If the current buffer is full, then `inBuffer.realloc` is called before
+    pushing the data to the buffer. This is similar to std::vector push_back.
 
     The optional input `n` specifies the number of times to repeately push
     the value to the back of the tensor. When `n` is a compile-time constant,
@@ -376,29 +378,28 @@ def SparseTensor_PushBackOp : SparseTensor_Op<"push_back",
     Example:
 
     ```mlir
-    %r = sparse_tensor.push_back %bufferSizes, %buffer, %val
-      {idx = 0 : index} : memref<?xindex>, memref<?xf64>, f64
+    %buf, %newSize = sparse_tensor.push_back %curSize, %buffer, %val
+       : index, memref<?xf64>, f64
     ```
 
     ```mlir
-    %r = sparse_tensor.push_back inbounds %bufferSizes, %buffer, %val
-      {idx = 0 : index} : memref<?xindex>, memref<?xf64>, f64
+    %buf, %newSize = sparse_tensor.push_back inbounds %curSize, %buffer, %val
+       : xindex, memref<?xf64>, f64
     ```
 
     ```mlir
-    %r = sparse_tensor.push_back inbounds %bufferSizes, %buffer, %val, %n
-      {idx = 0 : index} : memref<?xindex>, memref<?xf64>, f64
+    %buf, %newSize = sparse_tensor.push_back inbounds %curSize, %buffer, %val, %n
+       : xindex, memref<?xf64>, f64
     ```
   }];
-  let assemblyFormat = "(`inbounds` $inbounds^)? $bufferSizes `,` $inBuffer"
+  let assemblyFormat = "(`inbounds` $inbounds^)? $curSize `,` $inBuffer"
                        " `,` $value (`,` $n^ )?  attr-dict `:`"
-                       " type($bufferSizes) `,` type($inBuffer) `,`"
-                       " type($value)  (`,` type($n)^ )?";
+                       " type($curSize) `,` type($inBuffer) `,`"
+                       " type($value) (`,` type($n)^ )?";
 
   let builders = [
-    //Build an op without input `n`.
-    OpBuilder<(ins "Type":$outBuffer, "Value":$bufferSizes, "Value":$inBuffer,
-                   "Value":$value, "APInt":$idx)>
+    // Build an op (reusing type from curSize and inBuffer) without input `n`
+    OpBuilder<(ins "Value":$curSize, "Value":$inBuffer, "Value":$value)>
   ];
 
   let hasVerifier = 1;
