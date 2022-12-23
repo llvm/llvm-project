@@ -538,3 +538,51 @@ define void @freeze_buildvector_extrause(ptr %origin0, ptr %origin1, ptr %origin
   store <4 x i32> %i9, ptr %dst
   ret void
 }
+
+define void @pr59677(i32 %x, ptr %out) nounwind {
+; X86-LABEL: pr59677:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    orl $1, %eax
+; X86-NEXT:    vmovd %eax, %xmm1
+; X86-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X86-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
+; X86-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; X86-NEXT:    vmovss %xmm0, (%esp)
+; X86-NEXT:    calll sinf
+; X86-NEXT:    fstps (%esi)
+; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: pr59677:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    movq %rsi, %rbx
+; X64-NEXT:    vmovd %edi, %xmm0
+; X64-NEXT:    orl $1, %edi
+; X64-NEXT:    vmovd %edi, %xmm1
+; X64-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X64-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X64-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; X64-NEXT:    callq sinf@PLT
+; X64-NEXT:    vmovss %xmm0, (%rbx)
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
+  %i0 = or i32 %x, 1
+  %i1 = insertelement <4 x i32> zeroinitializer, i32 %x, i64 0
+  %i2 = insertelement <4 x i32> %i1, i32 %i0, i64 1
+  %i3 = shl <4 x i32> %i2, <i32 1, i32 1, i32 1, i32 1>
+  %i4 = sitofp <4 x i32> %i3 to <4 x float>
+  %i5 = tail call <4 x float> @llvm.sin.v4f32(<4 x float> %i4)
+  %i6 = extractelement <4 x float> %i5, i64 0
+  store float %i6, ptr %out, align 4
+  ret void
+}
+declare <4 x float> @llvm.sin.v4f32(<4 x float>)
