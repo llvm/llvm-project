@@ -36,7 +36,7 @@ void NORETURN dieOnMapUnmapError(uptr SizeIfOOM) {
 }
 
 #if !SCUDO_LINUX
-u64 GetRSS() { return 0; }
+uptr GetRSS() { return 0; }
 #endif
 
 } // namespace scudo
