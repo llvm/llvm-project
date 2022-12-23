@@ -66,6 +66,9 @@ unsigned getMultigridSyncArgImplicitArgPosition();
 /// \returns The offset of the hostcall pointer argument from implicitarg_ptr
 unsigned getHostcallImplicitArgPosition();
 
+unsigned getDefaultQueueImplicitArgPosition();
+unsigned getCompletionActionImplicitArgPosition();
+
 /// \returns Code object version.
 unsigned getAmdhsaCodeObjectVersion();
 
