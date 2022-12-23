@@ -14273,8 +14273,8 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
       return SDValue();
     }
   }
-  assert(!MaybePoisonOperands.empty() &&
-         "Should have found maybe-poison operands.");
+  if (MaybePoisonOperands.empty())
+    return SDValue();
 
   for (SDValue MaybePoisonOperand : MaybePoisonOperands) {
     // Don't replace every single UNDEF everywhere with frozen UNDEF, though.
