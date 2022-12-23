@@ -297,9 +297,9 @@ _LIBCPP_INLINE_VISIBILITY
 void __do_deallocate_handle_size(void *__ptr, size_t __size, _Args ...__args) {
 #ifdef _LIBCPP_HAS_NO_SIZED_DEALLOCATION
   (void)__size;
-  return __libcpp_operator_delete(__ptr, __args...);
+  return std::__libcpp_operator_delete(__ptr, __args...);
 #else
-  return __libcpp_operator_delete(__ptr, __size, __args...);
+  return std::__libcpp_operator_delete(__ptr, __size, __args...);
 #endif
 }
 

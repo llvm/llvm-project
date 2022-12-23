@@ -43,7 +43,7 @@ analyzeFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx,
   using llvm::Expected;
 
   Expected<ControlFlowContext> Context =
-      ControlFlowContext::build(&FuncDecl, FuncDecl.getBody(), &ASTCtx);
+      ControlFlowContext::build(&FuncDecl, *FuncDecl.getBody(), ASTCtx);
   if (!Context)
     return std::nullopt;
 

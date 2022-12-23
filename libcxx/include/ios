@@ -766,7 +766,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 char
 basic_ios<_CharT, _Traits>::narrow(char_type __c, char __dfault) const
 {
-    return use_facet<ctype<char_type> >(getloc()).narrow(__c, __dfault);
+    return std::use_facet<ctype<char_type> >(getloc()).narrow(__c, __dfault);
 }
 
 template <class _CharT, class _Traits>
@@ -774,7 +774,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 _CharT
 basic_ios<_CharT, _Traits>::widen(char __c) const
 {
-    return use_facet<ctype<char_type> >(getloc()).widen(__c);
+    return std::use_facet<ctype<char_type> >(getloc()).widen(__c);
 }
 
 template <class _CharT, class _Traits>

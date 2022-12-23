@@ -891,7 +891,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_CharT> __estimate_column_
   // unit is non-ASCII we omit the current code unit and let the Grapheme
   // clustering algorithm do its work.
   const _CharT* __it = __str.begin();
-  if (__is_ascii(*__it)) {
+  if (__format_spec::__is_ascii(*__it)) {
     do {
       --__maximum;
       ++__it;
@@ -899,12 +899,12 @@ _LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_CharT> __estimate_column_
         return {__str.size(), __str.end()};
 
       if (__maximum == 0) {
-        if (__is_ascii(*__it))
+        if (__format_spec::__is_ascii(*__it))
           return {static_cast<size_t>(__it - __str.begin()), __it};
 
         break;
       }
-    } while (__is_ascii(*__it));
+    } while (__format_spec::__is_ascii(*__it));
     --__it;
     ++__maximum;
   }

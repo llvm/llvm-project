@@ -226,37 +226,43 @@ check-generated-output)
 #
 generic-cxx03)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake" \
+                   -DLIBCXX_ENABLE_CLANG_TIDY=ON
     check-runtimes
     check-abi-list
 ;;
 generic-cxx11)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake" \
+                   -DLIBCXX_ENABLE_CLANG_TIDY=ON
     check-runtimes
     check-abi-list
 ;;
 generic-cxx14)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx14.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx14.cmake" \
+                   -DLIBCXX_ENABLE_CLANG_TIDY=ON
     check-runtimes
     check-abi-list
 ;;
 generic-cxx17)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx17.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx17.cmake" \
+                   -DLIBCXX_ENABLE_CLANG_TIDY=ON
     check-runtimes
     check-abi-list
 ;;
 generic-cxx20)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx20.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx20.cmake" \
+                   -DLIBCXX_ENABLE_CLANG_TIDY=ON
     check-runtimes
     check-abi-list
 ;;
 generic-cxx2b)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx2b.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx2b.cmake" \
+                   -DLIBCXX_ENABLE_CLANG_TIDY=ON
     check-runtimes
     check-abi-list
 ;;
@@ -414,7 +420,8 @@ generic-no-experimental)
 ;;
 generic-noexceptions)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake" \
+                   -DLIBCXX_ENABLE_CLANG_TIDY=ON
     check-runtimes
     check-abi-list
 ;;
@@ -425,6 +432,12 @@ generic-abi-unstable)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-abi-unstable.cmake"
     check-runtimes
+;;
+apple-cxx20)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx20.cmake"
+    check-runtimes
+    check-abi-list
 ;;
 apple-system)
     clean
