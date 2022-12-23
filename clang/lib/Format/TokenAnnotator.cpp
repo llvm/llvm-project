@@ -321,6 +321,8 @@ private:
     } else if (isLambdaParameterList(&OpeningParen)) {
       // This is a parameter list of a lambda expression.
       Contexts.back().IsExpression = false;
+    } else if (OpeningParen.is(TT_RequiresExpressionLParen)) {
+      Contexts.back().IsExpression = false;
     } else if (Line.InPPDirective &&
                (!OpeningParen.Previous ||
                 !OpeningParen.Previous->is(tok::identifier))) {

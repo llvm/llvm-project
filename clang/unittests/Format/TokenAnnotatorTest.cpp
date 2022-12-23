@@ -711,19 +711,50 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::kw_requires, TT_RequiresExpression);
   EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[6], tok::star, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[10], tok::l_brace, TT_RequiresExpressionLBrace);
 
   Tokens = annotate("foo(requires(T const* volatile t) {});");
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::kw_requires, TT_RequiresExpression);
   EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[6], tok::star, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[10], tok::l_brace, TT_RequiresExpressionLBrace);
+
+  Tokens = annotate("foo(requires(T& t) {});");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[5], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_RequiresExpressionLBrace);
+
+  Tokens = annotate("foo(requires(T&& t) {});");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[5], tok::ampamp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_RequiresExpressionLBrace);
+
+  Tokens = annotate("bool foo = requires(T& t) {};");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[6], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[9], tok::l_brace, TT_RequiresExpressionLBrace);
+
+  Tokens = annotate("bool foo = requires(T&& t) {};");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[6], tok::ampamp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[9], tok::l_brace, TT_RequiresExpressionLBrace);
 
   Tokens =
       annotate("foo(requires(const typename Outer<T>::Inner * const t) {});");
   ASSERT_EQ(Tokens.size(), 21u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::kw_requires, TT_RequiresExpression);
   EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[12], tok::star, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[16], tok::l_brace, TT_RequiresExpressionLBrace);
 
   Tokens = annotate("template <typename T>\n"
