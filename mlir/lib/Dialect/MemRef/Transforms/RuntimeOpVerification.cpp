@@ -36,6 +36,7 @@ struct ExpandShapeOpInterface
           // Keep this assert here in case the op is extended in the future.
           assert(!foundDynamicDim &&
                  "more than one dynamic dim found in reassoc group");
+          (void)foundDynamicDim;
           foundDynamicDim = true;
           continue;
         }

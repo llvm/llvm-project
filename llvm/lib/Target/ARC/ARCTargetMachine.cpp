@@ -11,6 +11,7 @@
 
 #include "ARCTargetMachine.h"
 #include "ARC.h"
+#include "ARCMachineFunctionInfo.h"
 #include "ARCTargetTransformInfo.h"
 #include "TargetInfo/ARCTargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -79,9 +80,17 @@ void ARCPassConfig::addPreRegAlloc() {
     addPass(createARCOptAddrMode());
 }
 
+MachineFunctionInfo *ARCTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+    return ARCFunctionInfo::create<ARCFunctionInfo>(Allocator, F, STI);
+}
+
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARCTarget() {
   RegisterTargetMachine<ARCTargetMachine> X(getTheARCTarget());
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeARCDAGToDAGISelPass(PR);
 }
 
 TargetTransformInfo

@@ -27,6 +27,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "nvptx-isel"
+#define PASS_NAME "NVPTX DAG->DAG Pattern Instruction Selection"
 
 /// createNVPTXISelDag - This pass converts a legalized DAG into a
 /// NVPTX-specific DAG, ready for instruction scheduling.
@@ -36,6 +37,8 @@ FunctionPass *llvm::createNVPTXISelDag(NVPTXTargetMachine &TM,
 }
 
 char NVPTXDAGToDAGISel::ID = 0;
+
+INITIALIZE_PASS(NVPTXDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 NVPTXDAGToDAGISel::NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
                                      CodeGenOpt::Level OptLevel)

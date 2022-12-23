@@ -19,6 +19,9 @@
 
 namespace llvm {
 
+class AMDGPUSubtarget;
+class GCNSubtarget;
+
 class AMDGPUMachineFunction : public MachineFunctionInfo {
   /// A map to keep track of local memory objects and their offsets within the
   /// local memory space.
@@ -60,7 +63,7 @@ protected:
   bool WaveLimiter = false;
 
 public:
-  AMDGPUMachineFunction(const MachineFunction &MF);
+  AMDGPUMachineFunction(const Function &F, const AMDGPUSubtarget &ST);
 
   uint64_t getExplicitKernArgSize() const {
     return ExplicitKernArgSize;

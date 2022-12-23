@@ -917,7 +917,7 @@ public:
   DISubprogram *getSubprogram() const;
 
   /// Returns true if we should emit debug info for profiling.
-  bool isDebugInfoForProfiling() const;
+  bool shouldEmitDebugInfoForProfiling() const;
 
   /// Check if null pointer dereferencing is considered undefined behavior for
   /// the function.

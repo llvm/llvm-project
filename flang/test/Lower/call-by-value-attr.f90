@@ -74,11 +74,11 @@ program call_by_value_attr
   !CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[BOX]], %[[CONST_0]] : (!fir.box<!fir.array<11xi32>>, index) -> (index, index, index)
   !CHECK: %[[ARRAY_COPY_2:.*]] = fir.allocmem !fir.array<11xi32>, %[[DIMS]]#1 {uniq_name = ".copy"}
   !CHECK: %[[SHAPE_8:.*]] = fir.shape %[[DIMS]]#1 : (index) -> !fir.shape<1>
-  !CHECK: %[[ARRAY_LOAD_7:.*]] = fir.array_load %[[ARRAY_COPY_2]](%[[SHAPE_8]]) : (!fir.heap<!fir.array<11xi32>>, !fir.shape<1>) -> !fir.array<11xi32>
-  !CHECK: %[[ARRAY_LOAD_8:.*]] = fir.array_load %[[BOX]] : (!fir.box<!fir.array<11xi32>>) -> !fir.array<11xi32>
-  !CHECK: %[[DO_4:.*]] = fir.do_loop {{.*}} {
-  !CHECK: }
-  !CHECK: fir.array_merge_store %[[ARRAY_LOAD_7]], %[[DO_4]] to %[[ARRAY_COPY_2]] : !fir.array<11xi32>, !fir.array<11xi32>, !fir.heap<!fir.array<11xi32>>
+  !CHECK: %[[TEMP_BOX:.*]] = fir.embox %[[ARRAY_COPY_2]](%[[SHAPE_8]]) : (!fir.heap<!fir.array<11xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<11xi32>>
+  !CHECK: fir.store %[[TEMP_BOX]] to %[[TEMP_BOX_LOC:.*]] : !fir.ref<!fir.box<!fir.array<11xi32>>>
+  !CHECK: %[[TEMP_BOX_ADDR:.*]] = fir.convert %[[TEMP_BOX_LOC]] : (!fir.ref<!fir.box<!fir.array<11xi32>>>) -> !fir.ref<!fir.box<none>>
+  !CHECK: %[[BOX_ADDR:.*]] = fir.convert %[[BOX]] : (!fir.box<!fir.array<11xi32>>) -> !fir.box<none>
+  !CHECK: fir.call @_FortranAAssign(%[[TEMP_BOX_ADDR]], %[[BOX_ADDR]], %{{.*}}, %{{.*}}){{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
   !CHECK: fir.result %[[ARRAY_COPY_2]] : !fir.heap<!fir.array<11xi32>>
   !CHECK: %[[CONVERT_B:.*]] = fir.convert %[[ADDR]] : (!fir.heap<!fir.array<11xi32>>) -> !fir.ref<!fir.array<10xi32>>
   !CHECK: fir.call @_QPsubra(%[[CONVERT_B]])

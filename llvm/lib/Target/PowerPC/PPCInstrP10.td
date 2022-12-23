@@ -1744,6 +1744,21 @@ let Predicates = [IsISA3_1] in {
                                v2i64:$vB))]>;
   def XVTLSBB : XX2_BF3_XO5_XB6_XO9<60, 2, 475, (outs crrc:$BF), (ins vsrc:$XB),
                                     "xvtlsbb $BF, $XB", IIC_VecGeneral, []>;
+  def BRH : XForm_11<31, 219, (outs gprc:$RA), (ins gprc:$RS),
+                     "brh $RA, $RS", IIC_IntRotate,
+                     [(set i32:$RA, (srl (bswap i32:$RS), (i32 16)))]>;
+  def BRW : XForm_11<31, 155, (outs gprc:$RA), (ins gprc:$RS),
+                     "brw $RA, $RS", IIC_IntRotate,
+                     [(set i32:$RA, (bswap i32:$RS))]>;
+  let isCodeGenOnly = 1 in {
+    def BRH8 : XForm_11<31, 219, (outs g8rc:$RA), (ins g8rc:$RS),
+                        "brh $RA, $RS", IIC_IntRotate, []>;
+    def BRW8 : XForm_11<31, 155, (outs g8rc:$RA), (ins g8rc:$RS),
+                        "brw $RA, $RS", IIC_IntRotate, []>;
+  }
+  def BRD : XForm_11<31, 187, (outs g8rc:$RA), (ins g8rc:$RS),
+                     "brd $RA, $RS", IIC_IntRotate,
+                     [(set i64:$RA, (bswap i64:$RS))]>;
 
   // The XFormMemOp flag for the following 8 instructions is set on
   // the instruction format.

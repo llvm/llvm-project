@@ -21,7 +21,7 @@ public:
   void populate_and_iterate() {
     __llvm_libc::cpp::BlockStore<Element, BLOCK_SIZE, REVERSE> block_store;
     for (int i = 0; i < int(ELEMENT_COUNT); ++i)
-      block_store.push_back({i, 2 * i, 3 * unsigned(i)});
+      ASSERT_TRUE(block_store.push_back({i, 2 * i, 3 * unsigned(i)}));
     auto end = block_store.end();
     int i = 0;
     for (auto iter = block_store.begin(); iter != end; ++iter, ++i) {
@@ -46,7 +46,7 @@ public:
     using __llvm_libc::cpp::BlockStore;
     BlockStore<int, 4, REVERSE> block_store;
     for (int i = 0; i < 20; i++)
-      block_store.push_back(i);
+      ASSERT_TRUE(block_store.push_back(i));
     for (int i = 19; i >= 0; i--, block_store.pop_back())
       ASSERT_EQ(block_store.back(), i);
     block_store.destroy(&block_store);
@@ -57,9 +57,11 @@ public:
     BlockStore<int, 2, REVERSE> block_store;
 
     ASSERT_TRUE(block_store.empty());
-    block_store.push_back(1);
-    for (int i = 0; i < 10; i++, block_store.push_back(1))
+    ASSERT_TRUE(block_store.push_back(1));
+    for (int i = 0; i < 10; i++) {
       ASSERT_FALSE(block_store.empty());
+      ASSERT_TRUE(block_store.push_back(1));
+    }
     block_store.destroy(&block_store);
   }
 };

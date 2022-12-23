@@ -37,7 +37,8 @@ private:
   int BranchRelaxationSpillFrameIndex = -1;
 
 public:
-  LoongArchMachineFunctionInfo(const MachineFunction &MF) {}
+  LoongArchMachineFunctionInfo(const Function &F,
+                               const TargetSubtargetInfo *STI) {}
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,

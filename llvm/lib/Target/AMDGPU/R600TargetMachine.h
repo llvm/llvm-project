@@ -43,6 +43,10 @@ public:
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   bool isMachineVerifierClean() const override { return false; }
+
+  MachineFunctionInfo *
+  createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
+                            const TargetSubtargetInfo *STI) const override;
 };
 
 } // end namespace llvm

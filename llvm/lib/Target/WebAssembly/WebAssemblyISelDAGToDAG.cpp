@@ -29,6 +29,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-isel"
+#define PASS_NAME "WebAssembly Instruction Selection"
 
 //===--------------------------------------------------------------------===//
 /// WebAssembly-specific code to select WebAssembly machine instructions for
@@ -43,13 +44,11 @@ class WebAssemblyDAGToDAGISel final : public SelectionDAGISel {
 public:
   static char ID;
 
+  WebAssemblyDAGToDAGISel() = delete;
+
   WebAssemblyDAGToDAGISel(WebAssemblyTargetMachine &TM,
                           CodeGenOpt::Level OptLevel)
       : SelectionDAGISel(ID, TM, OptLevel), Subtarget(nullptr) {}
-
-  StringRef getPassName() const override {
-    return "WebAssembly Instruction Selection";
-  }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     LLVM_DEBUG(dbgs() << "********** ISelDAGToDAG **********\n"
@@ -85,6 +84,8 @@ private:
 } // end anonymous namespace
 
 char WebAssemblyDAGToDAGISel::ID;
+
+INITIALIZE_PASS(WebAssemblyDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 void WebAssemblyDAGToDAGISel::PreprocessISelDAG() {
   // Stack objects that should be allocated to locals are hoisted to WebAssembly

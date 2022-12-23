@@ -1,5 +1,5 @@
 /// Fast unwinder does not work with Thumb code
-// UNSUPPORTED: target={{.*thumb.*}}
+// UNSUPPORTED: target=thumb{{.*}}
 // UNSUPPORTED: android
 
 // RUN: %clangxx -fsanitize=return %gmlt -O2 -fno-omit-frame-pointer -fasynchronous-unwind-tables %s -o %t

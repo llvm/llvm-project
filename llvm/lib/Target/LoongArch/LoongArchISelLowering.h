@@ -88,6 +88,9 @@ enum NodeType : unsigned {
   IOCSRWR_H,
   IOCSRWR_W,
   IOCSRWR_D,
+
+  // Read CPU configuration information operation
+  CPUCFG,
 };
 } // end namespace LoongArchISD
 

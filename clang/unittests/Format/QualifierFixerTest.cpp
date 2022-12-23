@@ -133,6 +133,8 @@ TEST_F(QualifierFixerTest, RotateTokens) {
             tok::kw_static);
   EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("restrict"),
             tok::kw_restrict);
+  EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("friend"),
+            tok::kw_friend);
 }
 
 TEST_F(QualifierFixerTest, FailQualifierInvalidConfiguration) {
@@ -196,8 +198,8 @@ TEST_F(QualifierFixerTest, QualifierRight) {
 TEST_F(QualifierFixerTest, QualifiersCustomOrder) {
   FormatStyle Style = getLLVMStyle();
   Style.QualifierAlignment = FormatStyle::QAS_Left;
-  Style.QualifierOrder = {"inline", "constexpr", "static",
-                          "const",  "volatile",  "type"};
+  Style.QualifierOrder = {"friend", "inline",   "constexpr", "static",
+                          "const",  "volatile", "type"};
 
   verifyFormat("const volatile int a;", "const volatile int a;", Style);
   verifyFormat("const volatile int a;", "volatile const int a;", Style);
@@ -216,6 +218,15 @@ TEST_F(QualifierFixerTest, QualifiersCustomOrder) {
   verifyFormat("constexpr static LPINT Bar;", "static constexpr LPINT Bar;",
                Style);
   verifyFormat("const const int a;", "const int const a;", Style);
+
+  verifyFormat(
+      "friend constexpr auto operator<=>(const foo &, const foo &) = default;",
+      "constexpr friend auto operator<=>(const foo &, const foo &) = default;",
+      Style);
+  verifyFormat(
+      "friend constexpr bool operator==(const foo &, const foo &) = default;",
+      "constexpr bool friend operator==(const foo &, const foo &) = default;",
+      Style);
 }
 
 TEST_F(QualifierFixerTest, LeftRightQualifier) {
@@ -723,9 +734,10 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
   ConfiguredTokens.push_back(tok::kw_inline);
   ConfiguredTokens.push_back(tok::kw_restrict);
   ConfiguredTokens.push_back(tok::kw_constexpr);
+  ConfiguredTokens.push_back(tok::kw_friend);
 
-  auto Tokens =
-      annotate("const static inline auto restrict int double long constexpr");
+  auto Tokens = annotate(
+      "const static inline auto restrict int double long constexpr friend");
 
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
       Tokens[0], ConfiguredTokens));
@@ -745,6 +757,8 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
       Tokens[7], ConfiguredTokens));
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
       Tokens[8], ConfiguredTokens));
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
+      Tokens[9], ConfiguredTokens));
 
   auto NotTokens = annotate("for while do Foo Bar ");
 

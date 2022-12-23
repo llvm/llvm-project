@@ -15,7 +15,7 @@
 // UNSUPPORTED: target={{.*(freebsd|solaris).*}}, darwin
 
 // THUMB starts background thead only for Asan.
-// XFAIL: target={{.*thumb.*}} && !asan
+// XFAIL: target=thumb{{.*}} && !asan
 
 #include <string.h>
 #include <stdio.h>

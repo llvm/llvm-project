@@ -356,6 +356,27 @@ Error GenericDeviceTy::registerKernelOffloadEntry(
   return Plugin::success();
 }
 
+Error GenericDeviceTy::registerHostPinnedMemoryBuffer(const void *Buffer,
+                                                      size_t Size) {
+  std::lock_guard<std::shared_mutex> Lock(HostAllocationsMutex);
+
+  auto Res = HostAllocations.insert({Buffer, Size});
+  if (!Res.second)
+    return Plugin::error("Registering an already registered pinned buffer");
+
+  return Plugin::success();
+}
+
+Error GenericDeviceTy::unregisterHostPinnedMemoryBuffer(const void *Buffer) {
+  std::lock_guard<std::shared_mutex> Lock(HostAllocationsMutex);
+
+  size_t Erased = HostAllocations.erase(Buffer);
+  if (!Erased)
+    return Plugin::error("Cannot find a registered host pinned buffer");
+
+  return Plugin::success();
+}
+
 Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo) {
   if (!AsyncInfo || !AsyncInfo->Queue)
     return Plugin::error("Invalid async info queue");
@@ -391,14 +412,18 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
       return Plugin::error("Failed to allocate from device allocator");
   }
 
-  // Sucessful and valid allocation.
-  if (Alloc)
-    return Alloc;
+  // Report error if the memory manager or the device allocator did not return
+  // any memory buffer.
+  if (!Alloc)
+    return Plugin::error("Invalid target data allocation kind or requested "
+                         "allocator not implemented yet");
 
-  // At this point means that we did not tried to allocate from the memory
-  // manager nor the device allocator.
-  return Plugin::error("Invalid target data allocation kind or requested "
-                       "allocator not implemented yet");
+  // Register allocated buffer as pinned memory if the type is host memory.
+  if (Kind == TARGET_ALLOC_HOST)
+    if (auto Err = registerHostPinnedMemoryBuffer(Alloc, Size))
+      return Err;
+
+  return Alloc;
 }
 
 Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
@@ -410,6 +435,11 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
 
   if (Res)
     return Plugin::error("Failure to deallocate device pointer %p", TgtPtr);
+
+  // Unregister deallocated pinned memory buffer if the type is host memory.
+  if (Kind == TARGET_ALLOC_HOST)
+    if (auto Err = unregisterHostPinnedMemoryBuffer(TgtPtr))
+      return std::move(Err);
 
   return Plugin::success();
 }

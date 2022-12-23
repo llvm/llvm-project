@@ -58,6 +58,11 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
+
+  MachineFunctionInfo *
+  createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
+                            const TargetSubtargetInfo *STI) const override;
+
   bool isELFv2ABI() const { return TargetABI == PPC_ABI_ELFv2; }
   bool isPPC64() const {
     const Triple &TT = getTargetTriple();

@@ -9,6 +9,7 @@
 #include "SystemZTargetMachine.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "SystemZ.h"
+#include "SystemZMachineFunctionInfo.h"
 #include "SystemZMachineScheduler.h"
 #include "SystemZTargetTransformInfo.h"
 #include "TargetInfo/SystemZTargetInfo.h"
@@ -40,6 +41,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTarget() {
   initializeSystemZShortenInstPass(PR);
   initializeSystemZPostRewritePass(PR);
   initializeSystemZTDCPassPass(PR);
+  initializeSystemZDAGToDAGISelPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -309,4 +311,11 @@ TargetPassConfig *SystemZTargetMachine::createPassConfig(PassManagerBase &PM) {
 TargetTransformInfo
 SystemZTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(SystemZTTIImpl(this, F));
+}
+
+MachineFunctionInfo *SystemZTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return SystemZMachineFunctionInfo::create<SystemZMachineFunctionInfo>(
+      Allocator, F, STI);
 }

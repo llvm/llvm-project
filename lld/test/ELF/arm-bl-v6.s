@@ -38,13 +38,13 @@ thumbfunc:
  bl farthumbfunc
 
 // CHECK-THUMB1: <thumbfunc>:
-// CHECK-THUMB1-NEXT:    21008: f200 e800 	 	blx	0x22100c <__ARMv5ABSLongThunk_farthumbfunc>
+// CHECK-THUMB1-NEXT:    21008: f200 e800 	 	blx	0x22100c <__ARMv5LongLdrPcThunk_farthumbfunc>
 /// 6 Megabytes, enough to make farthumbfunc out of range of caller
 /// on a v6 Arm, but not on a v7 Arm.
 
  .section .text.3, "ax", %progbits
  .space 0x200000
-// CHECK-ARM2: <__ARMv5ABSLongThunk_farthumbfunc>:
+// CHECK-ARM2: <__ARMv5LongLdrPcThunk_farthumbfunc>:
 // CHECK-ARM2-NEXT:   22100c:   e51ff004        ldr     pc, [pc, #-4]
 // CHECK-ARM2: <$d>:
 // CHECK-ARM2-NEXT:   221010:   01 20 62 00     .word   0x00622001

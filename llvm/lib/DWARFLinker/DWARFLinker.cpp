@@ -16,6 +16,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
@@ -1232,6 +1233,24 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
     unsigned AttrSize, AttributesInfo &Info) {
   uint64_t Value;
 
+  // Check for the offset to the macro table. If offset is incorrect then we
+  // need to remove the attribute.
+  if (AttrSpec.Attr == dwarf::DW_AT_macro_info) {
+    if (std::optional<uint64_t> Offset = Val.getAsSectionOffset()) {
+      const DWARFDebugMacro *Macro = File.Dwarf->getDebugMacinfo();
+      if (Macro == nullptr || !Macro->hasEntryForOffset(*Offset))
+        return 0;
+    }
+  }
+
+  if (AttrSpec.Attr == dwarf::DW_AT_macros) {
+    if (std::optional<uint64_t> Offset = Val.getAsSectionOffset()) {
+      const DWARFDebugMacro *Macro = File.Dwarf->getDebugMacro();
+      if (Macro == nullptr || !Macro->hasEntryForOffset(*Offset))
+        return 0;
+    }
+  }
+
   if (LLVM_UNLIKELY(Linker.Options.Update)) {
     if (auto OptionalValue = Val.getAsUnsignedConstant())
       Value = *OptionalValue;
@@ -1866,6 +1885,23 @@ void DWARFLinker::patchLineTableForUnit(CompileUnit &Unit,
   }
 }
 
+void DWARFLinker::DIECloner::rememberUnitForMacroOffset(CompileUnit &Unit) {
+  DWARFUnit &OrigUnit = Unit.getOrigUnit();
+  DWARFDie OrigUnitDie = OrigUnit.getUnitDIE();
+
+  if (std::optional<uint64_t> MacroAttr =
+          dwarf::toSectionOffset(OrigUnitDie.find(dwarf::DW_AT_macros))) {
+    UnitMacroMap.insert(std::make_pair(*MacroAttr, &Unit));
+    return;
+  }
+
+  if (std::optional<uint64_t> MacroAttr =
+          dwarf::toSectionOffset(OrigUnitDie.find(dwarf::DW_AT_macro_info))) {
+    UnitMacroMap.insert(std::make_pair(*MacroAttr, &Unit));
+    return;
+  }
+}
+
 void DWARFLinker::emitAcceleratorEntriesForUnit(CompileUnit &Unit) {
   for (DwarfLinkerAccelTableKind AccelTableKind : Options.AccelTables) {
     switch (AccelTableKind) {
@@ -2231,6 +2267,7 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
       // Clone the InputDIE into your Unit DIE in our compile unit since it
       // already has a DIE inside of it.
       CurrentUnit->createOutputDIE();
+      rememberUnitForMacroOffset(*CurrentUnit);
       cloneDIE(InputDIE, File, *CurrentUnit, StringPool, 0 /* PC offset */,
                UnitHeaderSize, 0, IsLittleEndian,
                CurrentUnit->getOutputUnitDIE());
@@ -2267,6 +2304,9 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
 
   if (!Linker.Options.NoOutput) {
     assert(Emitter);
+    // Emit macro tables.
+    Emitter->emitMacroTables(File.Dwarf, UnitMacroMap, StringPool);
+
     // Emit all the compile unit's debug information.
     for (auto &CurrentUnit : CompileUnits) {
       if (LLVM_LIKELY(!Linker.Options.Update))
@@ -2473,25 +2513,6 @@ Error DWARFLinker::link() {
                     OptContext.File);
       OptContext.Skip = true;
       continue;
-    }
-
-    if (!OptContext.File.Dwarf->getDWARFObj().getMacroSection().Data.empty()) {
-      reportWarning("'.debug_macro' is not currently supported: file "
-                    "will be skipped",
-                    OptContext.File);
-      OptContext.Skip = true;
-      continue;
-    }
-
-    if (OptContext.File.Dwarf->getDWARFObj().getMacinfoSection().size() > 0) {
-      if (OptContext.File.Dwarf->getDWARFObj().getMacinfoSection().find_if(
-              [](char Sym) { return Sym != 0; }) != StringRef::npos) {
-        reportWarning("'.debug_macinfo' is not currently supported: file "
-                      "will be skipped",
-                      OptContext.File);
-        OptContext.Skip = true;
-        continue;
-      }
     }
 
     // In a first phase, just read in the debug info and load all clang modules.

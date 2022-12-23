@@ -1,7 +1,7 @@
 // Tests trace pc guard coverage collection.
 
 // REQUIRES: has_sancovcc
-// UNSUPPORTED: ubsan,i386-darwin,target={{(powerpc64|s390x).*}},target={{.*thumb.*}}
+// UNSUPPORTED: ubsan,i386-darwin,target={{(powerpc64|s390x|thumb).*}}
 // XFAIL: tsan
 // XFAIL: android && asan
 

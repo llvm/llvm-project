@@ -63,7 +63,7 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
                        ClangdServer::Callbacks *ServerCallbacks,
                        const ThreadsafeFS &TFS, AsyncTaskRunner *Tasks)
       : FIndex(FIndex), ServerCallbacks(ServerCallbacks), TFS(TFS),
-        Tasks(Tasks) {}
+        Stdlib{std::make_shared<StdLibSet>()}, Tasks(Tasks) {}
 
   void onPreambleAST(PathRef Path, llvm::StringRef Version,
                      const CompilerInvocation &CI, ASTContext &Ctx,
@@ -71,7 +71,7 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
                      const CanonicalIncludes &CanonIncludes) override {
     // If this preamble uses a standard library we haven't seen yet, index it.
     if (FIndex)
-      if (auto Loc = Stdlib.add(*CI.getLangOpts(), PP.getHeaderSearchInfo()))
+      if (auto Loc = Stdlib->add(*CI.getLangOpts(), PP.getHeaderSearchInfo()))
         indexStdlib(CI, std::move(*Loc));
 
     if (FIndex)
@@ -79,11 +79,20 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
   }
 
   void indexStdlib(const CompilerInvocation &CI, StdLibLocation Loc) {
-    auto Task = [this, LO(*CI.getLangOpts()), Loc(std::move(Loc)),
-                 CI(std::make_unique<CompilerInvocation>(CI))]() mutable {
+    // This task is owned by Tasks, which outlives the TUScheduler and
+    // therefore the UpdateIndexCallbacks.
+    // We must be careful that the references we capture outlive TUScheduler.
+    auto Task = [LO(*CI.getLangOpts()), Loc(std::move(Loc)),
+                 CI(std::make_unique<CompilerInvocation>(CI)),
+                 // External values that outlive ClangdServer
+                 TFS(&TFS),
+                 // Index outlives TUScheduler (declared first)
+                 FIndex(FIndex),
+                 // shared_ptr extends lifetime
+                 Stdlib(Stdlib)]() mutable {
       IndexFileIn IF;
-      IF.Symbols = indexStandardLibrary(std::move(CI), Loc, TFS);
-      if (Stdlib.isBest(LO))
+      IF.Symbols = indexStandardLibrary(std::move(CI), Loc, *TFS);
+      if (Stdlib->isBest(LO))
         FIndex->updatePreamble(std::move(IF));
     };
     if (Tasks)
@@ -128,7 +137,7 @@ private:
   FileIndex *FIndex;
   ClangdServer::Callbacks *ServerCallbacks;
   const ThreadsafeFS &TFS;
-  StdLibSet Stdlib;
+  std::shared_ptr<StdLibSet> Stdlib;
   AsyncTaskRunner *Tasks;
 };
 

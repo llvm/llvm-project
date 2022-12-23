@@ -95,3 +95,23 @@ unsigned long int iocsrrd_d(unsigned int a) {
 void iocsrwr_d(unsigned long int a, unsigned int b) {
   __builtin_loongarch_iocsrwr_d(a, b); // expected-error {{this builtin requires target: loongarch64}}
 }
+
+void asrtle_d(long int a, long int b) {
+  __builtin_loongarch_asrtle_d(a, b); // expected-error {{this builtin requires target: loongarch64}}
+}
+
+void asrtgt_d(long int a, long int b) {
+  __builtin_loongarch_asrtgt_d(a, b); // expected-error {{this builtin requires target: loongarch64}}
+}
+
+void lddir_d(long int a, int b) {
+  __builtin_loongarch_lddir_d(a, 1); // expected-error {{this builtin requires target: loongarch64}}
+}
+
+void ldpte_d(long int a, int b) {
+  __builtin_loongarch_ldpte_d(a, 1); // expected-error {{this builtin requires target: loongarch64}}
+}
+
+void rdtime_d() {
+  __rdtime_d(); // expected-error {{call to undeclared function '__rdtime_d'}}
+}

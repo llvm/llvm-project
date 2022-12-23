@@ -1384,3 +1384,18 @@ entry:
   %mul = mul i64 %and, %zext4
   ret i64 %mul
 }
+
+define i64 @regression_umsubl(i64 %a, i32 %b, i64 %c) {
+; CHECK-LABEL: regression_umsubl:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, w1
+; CHECK-NEXT:    udiv x9, x0, x8
+; CHECK-NEXT:    msub x0, x9, x8, x2
+; CHECK-NEXT:    ret
+entry:
+  %zext1 = zext i32 %b to i64
+  %res = udiv i64 %a, %zext1
+  %mul = mul i64 %res, %zext1
+  %sub = sub i64 %c, %mul
+  ret i64 %sub
+}

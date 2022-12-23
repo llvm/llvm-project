@@ -78,6 +78,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   const bool HasFP16 = ST.hasFullFP16();
   const LLT &MinFPScalar = HasFP16 ? s16 : s32;
 
+  const bool HasCSSC = ST.hasCSSC();
+
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
       .legalFor({p0, s8, s16, s32, s64})
       .legalFor(PackedVectorAllTypeList)
@@ -668,7 +670,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lowerIf(isVector(0))
       .clampScalar(0, s32, s64)
       .scalarSameSizeAs(1, 0)
-      .customFor({s32, s64});
+      .legalIf([=](const LegalityQuery &Query) {
+        return (HasCSSC && typeInSet(0, {s32, s64})(Query));
+      })
+      .customIf([=](const LegalityQuery &Query) {
+        return (!HasCSSC && typeInSet(0, {s32, s64})(Query));
+      });
 
   getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
       .legalIf([=](const LegalityQuery &Query) {

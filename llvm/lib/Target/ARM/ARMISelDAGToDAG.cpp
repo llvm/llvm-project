@@ -40,6 +40,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "arm-isel"
+#define PASS_NAME "ARM Instruction Selection"
 
 static cl::opt<bool>
 DisableShifterOp("disable-shifter-op", cl::Hidden,
@@ -60,6 +61,8 @@ class ARMDAGToDAGISel : public SelectionDAGISel {
 public:
   static char ID;
 
+  ARMDAGToDAGISel() = delete;
+
   explicit ARMDAGToDAGISel(ARMBaseTargetMachine &tm, CodeGenOpt::Level OptLevel)
       : SelectionDAGISel(ID, tm, OptLevel) {}
 
@@ -69,8 +72,6 @@ public:
     SelectionDAGISel::runOnMachineFunction(MF);
     return true;
   }
-
-  StringRef getPassName() const override { return "ARM Instruction Selection"; }
 
   void PreprocessISelDAG() override;
 
@@ -363,6 +364,8 @@ private:
 }
 
 char ARMDAGToDAGISel::ID = 0;
+
+INITIALIZE_PASS(ARMDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// isInt32Immediate - This method tests to see if the node is a 32-bit constant
 /// operand. If so Imm will receive the 32-bit value.

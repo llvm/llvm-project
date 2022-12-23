@@ -1003,7 +1003,7 @@ class DebugAbbrevWriter {
   DWARFContext &Context;
 
   /// DWO ID used to identify unit contribution in DWP.
-  Optional<uint64_t> DWOId;
+  std::optional<uint64_t> DWOId;
 
   /// Add abbreviations from compile/type \p Unit to the writer.
   void addUnitAbbreviations(DWARFUnit &Unit);
@@ -1020,7 +1020,7 @@ public:
   ///       If type units are used, the caller is responsible for verifying
   ///       that abbreviations are shared by CU and TUs.
   DebugAbbrevWriter(DWARFContext &Context,
-                    Optional<uint64_t> DWOId = std::nullopt)
+                    std::optional<uint64_t> DWOId = std::nullopt)
       : Context(Context), DWOId(DWOId) {}
 
   DebugAbbrevWriter(const DebugAbbrevWriter &) = delete;

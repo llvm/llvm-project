@@ -1038,11 +1038,9 @@ define <8 x i32> @umull_and_v8i32_dup(<8 x i16> %src1, i32 %src2) {
 ; CHECK-LABEL: umull_and_v8i32_dup:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    dup v2.4s, w8
-; CHECK-NEXT:    xtn v2.4h, v2.4s
+; CHECK-NEXT:    dup v2.8h, w8
+; CHECK-NEXT:    umull2 v1.4s, v0.8h, v2.8h
 ; CHECK-NEXT:    umull v0.4s, v0.4h, v2.4h
-; CHECK-NEXT:    umull v1.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
 entry:
   %in1 = zext <8 x i16> %src1 to <8 x i32>
@@ -1090,12 +1088,10 @@ entry:
 define <4 x i64> @umull_and_v4i64_dup(<4 x i32> %src1, i64 %src2) {
 ; CHECK-LABEL: umull_and_v4i64_dup:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    and x8, x0, #0xff
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    xtn v2.2s, v2.2d
+; CHECK-NEXT:    and w8, w0, #0xff
+; CHECK-NEXT:    dup v2.4s, w8
+; CHECK-NEXT:    umull2 v1.2d, v0.4s, v2.4s
 ; CHECK-NEXT:    umull v0.2d, v0.2s, v2.2s
-; CHECK-NEXT:    umull v1.2d, v1.2s, v2.2s
 ; CHECK-NEXT:    ret
 entry:
   %in1 = zext <4 x i32> %src1 to <4 x i64>

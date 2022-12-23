@@ -53,7 +53,7 @@ define i32 @simple_switch(i32 %arg1) {
   %1 = add i32 %arg1, 42
   %2 = sub i32 %arg1, 42
   %3 = mul i32 %arg1, 42
-  ; CHECK: llvm.switch %arg0 : i32, ^[[BBD:.+]] [
+  ; CHECK: llvm.switch %[[ARG1]] : i32, ^[[BBD:.+]] [
   ; CHECK:   0: ^[[BB1:.+]],
   ; CHECK:   9: ^[[BB2:.+]]
   ; CHECK: ]
@@ -87,7 +87,7 @@ entry:
   %0 = add i32 %arg1, 42
   %1 = sub i32 %arg1, 42
   %2 = mul i32 %arg1, 42
-  ; CHECK: llvm.switch %arg0 : i32, ^[[BBD:.+]](%[[VAL3]] : i32) [
+  ; CHECK: llvm.switch %[[ARG1]] : i32, ^[[BBD:.+]](%[[VAL3]] : i32) [
   ; CHECK:   0: ^[[BB1:.+]](%[[VAL1]], %[[VAL2]] : i32, i32)
   ; CHECK: ]
   switch i32 %arg1, label %bbd [

@@ -8,35 +8,30 @@ define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[VAR:%.*]] = load atomic i32, ptr addrspace(1) poison unordered, align 8, !range [[RNG0:![0-9]+]], !invariant.load !1, !noundef !1
-; CHECK-NEXT:    [[VAR1:%.*]] = add nsw i32 [[VAR]], -1
 ; CHECK-NEXT:    [[VAR2:%.*]] = icmp eq i32 [[VAR]], 0
 ; CHECK-NEXT:    br i1 [[VAR2]], label [[BB18:%.*]], label [[BB19:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[BB19]] ], [ [[INDVARS_IV_NEXT:%.*]], [[BB12:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i64 [[TMP3:%.*]], [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[VAR6:%.*]] = icmp ult i32 [[TMP1]], [[VAR]]
-; CHECK-NEXT:    br i1 [[VAR6]], label [[BB8:%.*]], label [[BB7:%.*]]
+; CHECK-NEXT:    br i1 true, label [[BB8:%.*]], label [[BB7:%.*]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb8:
 ; CHECK-NEXT:    [[VAR9:%.*]] = load atomic i32, ptr addrspace(1) poison unordered, align 8, !range [[RNG0]], !invariant.load !1, !noundef !1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[VAR9]] to i64
-; CHECK-NEXT:    [[VAR10:%.*]] = icmp ult i64 [[INDVARS_IV]], [[TMP2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[VAR9]] to i64
+; CHECK-NEXT:    [[VAR10:%.*]] = icmp ult i64 [[INDVARS_IV]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[VAR10]], label [[BB12]], label [[BB11:%.*]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb12:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT:%.*]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[TMP1:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[BB3:%.*]], label [[BB17:%.*]]
 ; CHECK:       bb17:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb18:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb19:
-; CHECK-NEXT:    [[TMP3]] = sext i32 [[VAR1]] to i64
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT]] = zext i32 [[VAR]] to i64
+; CHECK-NEXT:    [[TMP1]] = zext i32 [[VAR]] to i64
 ; CHECK-NEXT:    br label [[BB3]]
 ;
 bb:

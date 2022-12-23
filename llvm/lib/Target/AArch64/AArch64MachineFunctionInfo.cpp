@@ -82,16 +82,14 @@ static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
   return Key.equals_insensitive("b_key");
 }
 
-AArch64FunctionInfo::AArch64FunctionInfo(MachineFunction &MF) {
-  const Function &F = MF.getFunction();
-  const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
-
+AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
+                                         const AArch64Subtarget *STI) {
   // If we already know that the function doesn't have a redzone, set
   // HasRedZone here.
   if (F.hasFnAttribute(Attribute::NoRedZone))
     HasRedZone = false;
   std::tie(SignReturnAddress, SignReturnAddressAll) = GetSignReturnAddress(F);
-  SignWithBKey = ShouldSignWithBKey(F, STI);
+  SignWithBKey = ShouldSignWithBKey(F, *STI);
   // TODO: skip functions that have no instrumented allocas for optimization
   IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 

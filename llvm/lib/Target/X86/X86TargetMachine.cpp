@@ -16,6 +16,7 @@
 #include "X86.h"
 #include "X86CallLowering.h"
 #include "X86LegalizerInfo.h"
+#include "X86MachineFunctionInfo.h"
 #include "X86MacroFusion.h"
 #include "X86Subtarget.h"
 #include "X86TargetObjectFile.h"
@@ -424,6 +425,13 @@ INITIALIZE_PASS_END(X86ExecutionDomainFix, "x86-execution-domain-fix",
 
 TargetPassConfig *X86TargetMachine::createPassConfig(PassManagerBase &PM) {
   return new X86PassConfig(*this, PM);
+}
+
+MachineFunctionInfo *X86TargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return X86MachineFunctionInfo::create<X86MachineFunctionInfo>(Allocator, F,
+                                                                STI);
 }
 
 void X86PassConfig::addIRPasses() {

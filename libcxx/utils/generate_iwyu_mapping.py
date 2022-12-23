@@ -30,8 +30,10 @@ def generate_map(include):
             c_headers.append(i.name)
 
     result = []
+    temporary_mappings = {'__tuple_dir': 'tuple'}
     for i in detail_directories:
-        result.append(f'{generate(f"@<{i}/.*>", i[2:])},')
+        public_header = temporary_mappings.get(i, i.lstrip('_'))
+        result.append(f'{generate(f"@<{i}/.*>", public_header)},')
 
     for i in detail_files:
         public = []

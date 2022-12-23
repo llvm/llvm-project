@@ -452,14 +452,19 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::FROUND, MVT::f32, Legal);
   }
 
-  // PowerPC does not have BSWAP, but we can use vector BSWAP instruction xxbrd
-  // to speed up scalar BSWAP64.
+  // Prior to P10, PowerPC does not have BSWAP, but we can use vector BSWAP
+  // instruction xxbrd to speed up scalar BSWAP64.
+  if (Subtarget.isISA3_1()) {
+    setOperationAction(ISD::BSWAP, MVT::i32, Legal);
+    setOperationAction(ISD::BSWAP, MVT::i64, Legal);
+  } else {
+    setOperationAction(ISD::BSWAP, MVT::i32, Expand);
+    setOperationAction(
+        ISD::BSWAP, MVT::i64,
+        (Subtarget.hasP9Vector() && Subtarget.isPPC64()) ? Custom : Expand);
+  }
+
   // CTPOP or CTTZ were introduced in P8/P9 respectively
-  setOperationAction(ISD::BSWAP, MVT::i32  , Expand);
-  if (Subtarget.hasP9Vector() && Subtarget.isPPC64())
-    setOperationAction(ISD::BSWAP, MVT::i64  , Custom);
-  else
-    setOperationAction(ISD::BSWAP, MVT::i64  , Expand);
   if (Subtarget.isISA3_0()) {
     setOperationAction(ISD::CTTZ , MVT::i32  , Legal);
     setOperationAction(ISD::CTTZ , MVT::i64  , Legal);

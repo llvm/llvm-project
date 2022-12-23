@@ -159,20 +159,22 @@ void MCStreamer::emitIntValue(APInt Value) {
 
 /// EmitULEB128IntValue - Special case of EmitULEB128Value that avoids the
 /// client having to pass in a MCExpr for constant integers.
-void MCStreamer::emitULEB128IntValue(uint64_t Value, unsigned PadTo) {
+unsigned MCStreamer::emitULEB128IntValue(uint64_t Value, unsigned PadTo) {
   SmallString<128> Tmp;
   raw_svector_ostream OSE(Tmp);
   encodeULEB128(Value, OSE, PadTo);
   emitBytes(OSE.str());
+  return Tmp.size();
 }
 
 /// EmitSLEB128IntValue - Special case of EmitSLEB128Value that avoids the
 /// client having to pass in a MCExpr for constant integers.
-void MCStreamer::emitSLEB128IntValue(int64_t Value) {
+unsigned MCStreamer::emitSLEB128IntValue(int64_t Value) {
   SmallString<128> Tmp;
   raw_svector_ostream OSE(Tmp);
   encodeSLEB128(Value, OSE);
   emitBytes(OSE.str());
+  return Tmp.size();
 }
 
 void MCStreamer::emitValue(const MCExpr *Value, unsigned Size, SMLoc Loc) {

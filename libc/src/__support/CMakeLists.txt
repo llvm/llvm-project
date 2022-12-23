@@ -4,6 +4,8 @@ add_header_library(
   blockstore
   HDRS
     blockstore.h
+  DEPENDS
+    libc.src.__support.CPP.new
 )
 
 add_header_library(

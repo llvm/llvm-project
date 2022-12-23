@@ -163,12 +163,6 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_cpp_vector",
-    hdrs = ["src/__support/CPP/vector.h"],
-    deps = [":libc_root"],
-)
-
-libc_support_library(
     name = "__support_cpp_atomic",
     hdrs = ["src/__support/CPP/atomic.h"],
     deps = [

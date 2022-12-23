@@ -1045,34 +1045,51 @@ static std::optional<Instruction *> instCombineSVEPTest(InstCombiner &IC,
   return std::nullopt;
 }
 
+template <Intrinsic::ID MulOpc, typename Intrinsic::ID FuseOpc>
 static std::optional<Instruction *>
-instCombineSVEVectorFMLA(InstCombiner &IC, IntrinsicInst &II) {
-  // fold (fadd p a (fmul p b c)) -> (fma p a b c)
+instCombineSVEVectorFuseMulAddSub(InstCombiner &IC, IntrinsicInst &II,
+                                  bool MergeIntoAddendOp) {
   Value *P = II.getOperand(0);
-  Value *A = II.getOperand(1);
-  auto FMul = II.getOperand(2);
-  Value *B, *C;
-  if (!match(FMul, m_Intrinsic<Intrinsic::aarch64_sve_fmul>(
-                       m_Specific(P), m_Value(B), m_Value(C))))
+  Value *MulOp0, *MulOp1, *AddendOp, *Mul;
+  if (MergeIntoAddendOp) {
+    AddendOp = II.getOperand(1);
+    Mul = II.getOperand(2);
+  } else {
+    AddendOp = II.getOperand(2);
+    Mul = II.getOperand(1);
+  }
+
+  if (!match(Mul, m_Intrinsic<MulOpc>(m_Specific(P), m_Value(MulOp0),
+                                      m_Value(MulOp1))))
     return std::nullopt;
 
-  if (!FMul->hasOneUse())
+  if (!Mul->hasOneUse())
     return std::nullopt;
 
-  llvm::FastMathFlags FAddFlags = II.getFastMathFlags();
-  // Stop the combine when the flags on the inputs differ in case dropping flags
-  // would lead to us missing out on more beneficial optimizations.
-  if (FAddFlags != cast<CallInst>(FMul)->getFastMathFlags())
-    return std::nullopt;
-  if (!FAddFlags.allowContract())
-    return std::nullopt;
+  Instruction *FMFSource = nullptr;
+  if (II.getType()->isFPOrFPVectorTy()) {
+    llvm::FastMathFlags FAddFlags = II.getFastMathFlags();
+    // Stop the combine when the flags on the inputs differ in case dropping
+    // flags would lead to us missing out on more beneficial optimizations.
+    if (FAddFlags != cast<CallInst>(Mul)->getFastMathFlags())
+      return std::nullopt;
+    if (!FAddFlags.allowContract())
+      return std::nullopt;
+    FMFSource = &II;
+  }
 
   IRBuilder<> Builder(II.getContext());
   Builder.SetInsertPoint(&II);
-  auto FMLA = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_fmla,
-                                      {II.getType()}, {P, A, B, C}, &II);
-  FMLA->setFastMathFlags(FAddFlags);
-  return IC.replaceInstUsesWith(II, FMLA);
+
+  CallInst *Res;
+  if (MergeIntoAddendOp)
+    Res = Builder.CreateIntrinsic(FuseOpc, {II.getType()},
+                                  {P, AddendOp, MulOp0, MulOp1}, FMFSource);
+  else
+    Res = Builder.CreateIntrinsic(FuseOpc, {II.getType()},
+                                  {P, MulOp0, MulOp1, AddendOp}, FMFSource);
+
+  return IC.replaceInstUsesWith(II, Res);
 }
 
 static bool isAllActivePredicate(Value *Pred) {
@@ -1166,10 +1183,45 @@ instCombineSVEVectorBinOp(InstCombiner &IC, IntrinsicInst &II) {
   return IC.replaceInstUsesWith(II, BinOp);
 }
 
-static std::optional<Instruction *>
-instCombineSVEVectorFAdd(InstCombiner &IC, IntrinsicInst &II) {
-  if (auto FMLA = instCombineSVEVectorFMLA(IC, II))
+static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
+                                                            IntrinsicInst &II) {
+  if (auto FMLA =
+          instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul,
+                                            Intrinsic::aarch64_sve_fmla>(IC, II,
+                                                                         true))
     return FMLA;
+  if (auto MLA = instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul,
+                                                   Intrinsic::aarch64_sve_mla>(
+          IC, II, true))
+    return MLA;
+  if (auto FMAD =
+          instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul,
+                                            Intrinsic::aarch64_sve_fmad>(IC, II,
+                                                                         false))
+    return FMAD;
+  if (auto MAD = instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul,
+                                                   Intrinsic::aarch64_sve_mad>(
+          IC, II, false))
+    return MAD;
+  return instCombineSVEVectorBinOp(IC, II);
+}
+
+static std::optional<Instruction *> instCombineSVEVectorSub(InstCombiner &IC,
+                                                            IntrinsicInst &II) {
+  if (auto FMLS =
+          instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul,
+                                            Intrinsic::aarch64_sve_fmls>(IC, II,
+                                                                         true))
+    return FMLS;
+  if (auto MLS = instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul,
+                                                   Intrinsic::aarch64_sve_mls>(
+          IC, II, true))
+    return MLS;
+  if (auto FMSB =
+          instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul,
+                                            Intrinsic::aarch64_sve_fnmsb>(
+              IC, II, false))
+    return FMSB;
   return instCombineSVEVectorBinOp(IC, II);
 }
 
@@ -1470,9 +1522,11 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_fmul:
     return instCombineSVEVectorMul(IC, II);
   case Intrinsic::aarch64_sve_fadd:
-    return instCombineSVEVectorFAdd(IC, II);
+  case Intrinsic::aarch64_sve_add:
+    return instCombineSVEVectorAdd(IC, II);
   case Intrinsic::aarch64_sve_fsub:
-    return instCombineSVEVectorBinOp(IC, II);
+  case Intrinsic::aarch64_sve_sub:
+    return instCombineSVEVectorSub(IC, II);
   case Intrinsic::aarch64_sve_tbl:
     return instCombineSVETBL(IC, II);
   case Intrinsic::aarch64_sve_uunpkhi:

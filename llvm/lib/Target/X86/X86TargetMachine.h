@@ -54,6 +54,10 @@ public:
     return TLOF.get();
   }
 
+  MachineFunctionInfo *
+  createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
+                            const TargetSubtargetInfo *STI) const override;
+
   bool isJIT() const { return IsJIT; }
 
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;

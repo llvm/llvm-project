@@ -22,6 +22,8 @@
 
 namespace llvm {
 
+class ARMSubtarget;
+
 /// ARMFunctionInfo - This class is derived from MachineFunctionInfo and
 /// contains private ARM-specific information for each MachineFunction.
 class ARMFunctionInfo : public MachineFunctionInfo {
@@ -157,7 +159,7 @@ class ARMFunctionInfo : public MachineFunctionInfo {
 public:
   ARMFunctionInfo() = default;
 
-  explicit ARMFunctionInfo(MachineFunction &MF);
+  explicit ARMFunctionInfo(const Function &F, const ARMSubtarget *STI);
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,

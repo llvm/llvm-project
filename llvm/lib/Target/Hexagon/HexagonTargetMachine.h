@@ -45,6 +45,10 @@ public:
   HexagonTargetObjectFile *getObjFileLowering() const override {
     return static_cast<HexagonTargetObjectFile*>(TLOF.get());
   }
+
+  MachineFunctionInfo *
+  createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
+                            const TargetSubtargetInfo *STI) const override;
 };
 
 } // end namespace llvm

@@ -1511,7 +1511,6 @@ static void speculateSelectInstLoads(SelectInst &SI, LoadInst &LI,
                                      IRBuilderTy &IRB) {
   LLVM_DEBUG(dbgs() << "    original load: " << SI << "\n");
 
-  IRB.SetInsertPoint(&SI);
   Value *TV = SI.getTrueValue();
   Value *FV = SI.getFalseValue();
   // Replace the given load of the select with a select of two loads.
@@ -1519,6 +1518,13 @@ static void speculateSelectInstLoads(SelectInst &SI, LoadInst &LI,
   assert(LI.isSimple() && "We only speculate simple loads");
 
   IRB.SetInsertPoint(&LI);
+
+  if (auto *TypedPtrTy = LI.getPointerOperandType();
+      !TypedPtrTy->isOpaquePointerTy() && SI.getType() != TypedPtrTy) {
+    TV = IRB.CreateBitOrPointerCast(TV, TypedPtrTy, "");
+    FV = IRB.CreateBitOrPointerCast(FV, TypedPtrTy, "");
+  }
+
   LoadInst *TL =
       IRB.CreateAlignedLoad(LI.getType(), TV, LI.getAlign(),
                             LI.getName() + ".sroa.speculate.load.true");

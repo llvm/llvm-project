@@ -21,6 +21,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "csky-isel"
+#define PASS_NAME "CSKY DAG->DAG Pattern Instruction Selection"
 
 namespace {
 class CSKYDAGToDAGISel : public SelectionDAGISel {
@@ -31,10 +32,6 @@ public:
 
   explicit CSKYDAGToDAGISel(CSKYTargetMachine &TM, CodeGenOpt::Level OptLevel)
       : SelectionDAGISel(ID, TM, OptLevel) {}
-
-  StringRef getPassName() const override {
-    return "CSKY DAG->DAG Pattern Instruction Selection";
-  }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     // Reset the subtarget each time through.
@@ -59,6 +56,8 @@ public:
 } // namespace
 
 char CSKYDAGToDAGISel::ID = 0;
+
+INITIALIZE_PASS(CSKYDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 void CSKYDAGToDAGISel::Select(SDNode *N) {
   // If we have a custom node, we have already selected

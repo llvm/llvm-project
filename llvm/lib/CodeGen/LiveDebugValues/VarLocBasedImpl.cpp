@@ -386,7 +386,7 @@ private:
     /// emitting a debug value.
     SmallVector<unsigned, 8> OrigLocMap;
 
-    VarLoc(const MachineInstr &MI, LexicalScopes &LS)
+    VarLoc(const MachineInstr &MI)
         : Var(MI.getDebugVariable(), MI.getDebugExpression(),
               MI.getDebugLoc()->getInlinedAt()),
           Expr(MI.getDebugExpression()), MI(MI) {
@@ -436,9 +436,9 @@ private:
 
     /// Take the variable and machine-location in DBG_VALUE MI, and build an
     /// entry location using the given expression.
-    static VarLoc CreateEntryLoc(const MachineInstr &MI, LexicalScopes &LS,
+    static VarLoc CreateEntryLoc(const MachineInstr &MI,
                                  const DIExpression *EntryExpr, Register Reg) {
-      VarLoc VL(MI, LS);
+      VarLoc VL(MI);
       assert(VL.Locs.size() == 1 &&
              VL.Locs[0].Kind == MachineLocKind::RegisterKind);
       VL.EVKind = EntryValueLocKind::EntryValueKind;
@@ -452,9 +452,8 @@ private:
     /// location will turn into the normal location if the backup is valid at
     /// the time of the primary location clobbering.
     static VarLoc CreateEntryBackupLoc(const MachineInstr &MI,
-                                       LexicalScopes &LS,
                                        const DIExpression *EntryExpr) {
-      VarLoc VL(MI, LS);
+      VarLoc VL(MI);
       assert(VL.Locs.size() == 1 &&
              VL.Locs[0].Kind == MachineLocKind::RegisterKind);
       VL.EVKind = EntryValueLocKind::EntryValueBackupKind;
@@ -466,10 +465,9 @@ private:
     /// function entry), and build a copy of an entry value backup location by
     /// setting the register location to NewReg.
     static VarLoc CreateEntryCopyBackupLoc(const MachineInstr &MI,
-                                           LexicalScopes &LS,
                                            const DIExpression *EntryExpr,
                                            Register NewReg) {
-      VarLoc VL(MI, LS);
+      VarLoc VL(MI);
       assert(VL.Locs.size() == 1 &&
              VL.Locs[0].Kind == MachineLocKind::RegisterKind);
       VL.EVKind = EntryValueLocKind::EntryValueCopyBackupKind;
@@ -1344,7 +1342,7 @@ void VarLocBasedLDV::transferDebugValue(const MachineInstr &MI,
                MO.isCImm();
       })) {
     // Use normal VarLoc constructor for registers and immediates.
-    VarLoc VL(MI, LS);
+    VarLoc VL(MI);
     // End all previous ranges of VL.Var.
     OpenRanges.erase(VL);
 
@@ -1357,7 +1355,7 @@ void VarLocBasedLDV::transferDebugValue(const MachineInstr &MI,
     // This must be an undefined location. If it has an open range, erase it.
     assert(MI.isUndefDebugValue() &&
            "Unexpected non-undef DBG_VALUE encountered");
-    VarLoc VL(MI, LS);
+    VarLoc VL(MI);
     OpenRanges.erase(VL);
   }
 }
@@ -1407,7 +1405,7 @@ void VarLocBasedLDV::emitEntryValues(MachineInstr &MI,
       continue;
 
     const VarLoc &EntryVL = VarLocIDs[EntryValBackupIDs->back()];
-    VarLoc EntryLoc = VarLoc::CreateEntryLoc(EntryVL.MI, LS, EntryVL.Expr,
+    VarLoc EntryLoc = VarLoc::CreateEntryLoc(EntryVL.MI, EntryVL.Expr,
                                              EntryVL.Locs[0].Value.RegNo);
     LocIndices EntryValueIDs = VarLocIDs.insert(EntryLoc);
     assert(EntryValueIDs.size() == 1 &&
@@ -1777,7 +1775,7 @@ void VarLocBasedLDV::transferRegisterCopy(MachineInstr &MI,
       if (VL.isEntryValueBackupReg(SrcReg)) {
         LLVM_DEBUG(dbgs() << "Copy of the entry value: "; MI.dump(););
         VarLoc EntryValLocCopyBackup =
-            VarLoc::CreateEntryCopyBackupLoc(VL.MI, LS, VL.Expr, DestReg);
+            VarLoc::CreateEntryCopyBackupLoc(VL.MI, VL.Expr, DestReg);
         // Stop tracking the original entry value.
         OpenRanges.erase(VL);
 
@@ -2090,7 +2088,7 @@ void VarLocBasedLDV::recordEntryValue(const MachineInstr &MI,
   // valid. It is valid until a parameter is not changed.
   DIExpression *NewExpr =
       DIExpression::prepend(MI.getDebugExpression(), DIExpression::EntryValue);
-  VarLoc EntryValLocAsBackup = VarLoc::CreateEntryBackupLoc(MI, LS, NewExpr);
+  VarLoc EntryValLocAsBackup = VarLoc::CreateEntryBackupLoc(MI, NewExpr);
   LocIndices EntryValLocIDs = VarLocIDs.insert(EntryValLocAsBackup);
   OpenRanges.insert(EntryValLocIDs, EntryValLocAsBackup);
 }

@@ -212,5 +212,5 @@
 // RELOCATABLE:     "-r"
 // RELOCATABLE-NOT: "-dynamic-linker"
 // RELOCATABLE-NOT: "-l
-// RELOCATABLE-NOT: crt{{[^./]+}}.o
+// RELOCATABLE-NOT: crt{{[^./\\]+}}.o
 

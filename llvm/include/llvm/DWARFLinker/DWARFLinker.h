@@ -10,6 +10,7 @@
 #define LLVM_DWARFLINKER_DWARFLINKER_H
 
 #include "llvm/ADT/AddressRanges.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
@@ -78,6 +79,8 @@ public:
   /// Erases all data.
   virtual void clear() = 0;
 };
+
+using Offset2UnitMap = DenseMap<uint64_t, CompileUnit *>;
 
 /// DwarfEmitter presents interface to generate all debug info tables.
 class DwarfEmitter {
@@ -175,6 +178,15 @@ public:
   /// Recursively emit the DIE tree rooted at \p Die.
   virtual void emitDIE(DIE &Die) = 0;
 
+  /// Emit all available macro tables(DWARFv4 and DWARFv5).
+  /// Use \p UnitMacroMap to get compilation unit by macro table offset.
+  /// Side effects: Fill \p StringPool with macro strings, update
+  /// DW_AT_macro_info, DW_AT_macros attributes for corresponding compile
+  /// units.
+  virtual void emitMacroTables(DWARFContext *Context,
+                               const Offset2UnitMap &UnitMacroMap,
+                               OffsetsStringPool &StringPool) = 0;
+
   /// Returns size of generated .debug_line section.
   virtual uint64_t getLineSectionSize() const = 0;
 
@@ -186,6 +198,12 @@ public:
 
   /// Returns size of generated .debug_info section.
   virtual uint64_t getDebugInfoSectionSize() const = 0;
+
+  /// Returns size of generated .debug_macinfo section.
+  virtual uint64_t getDebugMacInfoSectionSize() const = 0;
+
+  /// Returns size of generated .debug_macro section.
+  virtual uint64_t getDebugMacroSectionSize() const = 0;
 };
 
 using UnitListTy = std::vector<std::unique_ptr<CompileUnit>>;
@@ -566,6 +584,10 @@ private:
 
     std::vector<std::unique_ptr<CompileUnit>> &CompileUnits;
 
+    /// Keeps mapping from offset of the macro table to corresponding
+    /// compile unit.
+    Offset2UnitMap UnitMacroMap;
+
     bool Update;
 
   public:
@@ -710,6 +732,8 @@ private:
     void addObjCAccelerator(CompileUnit &Unit, const DIE *Die,
                             DwarfStringPoolEntryRef Name,
                             OffsetsStringPool &StringPool, bool SkipPubSection);
+
+    void rememberUnitForMacroOffset(CompileUnit &Unit);
   };
 
   /// Assign an abbreviation number to \p Abbrev

@@ -131,6 +131,8 @@ def loongarch_iocsrwr_w : SDNode<"LoongArchISD::IOCSRWR_W",
 def loongarch_iocsrwr_d : SDNode<"LoongArchISD::IOCSRWR_D",
                                   SDT_LoongArchIocsrwr,
                                   [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_cpucfg : SDNode<"LoongArchISD::CPUCFG", SDTUnaryOp,
+                               [SDNPHasChain, SDNPSideEffect]>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -194,7 +196,7 @@ def uimm6 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<6>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<6>;
 }
 
-def uimm8 : Operand<GRLenVT> {
+def uimm8 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<8>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<8>;
 }
 
@@ -1700,7 +1702,17 @@ def : Pat<(loongarch_iocsrwr_b GPR:$rd, GPR:$rj), (IOCSRWR_B GPR:$rd, GPR:$rj)>;
 def : Pat<(loongarch_iocsrwr_h GPR:$rd, GPR:$rj), (IOCSRWR_H GPR:$rd, GPR:$rj)>;
 def : Pat<(loongarch_iocsrwr_w GPR:$rd, GPR:$rj), (IOCSRWR_W GPR:$rd, GPR:$rj)>;
 
+def : Pat<(loongarch_cpucfg GPR:$rj), (CPUCFG GPR:$rj)>;
+
 let Predicates = [IsLA64] in {
 def : Pat<(loongarch_iocsrrd_d GPR:$rj), (IOCSRRD_D GPR:$rj)>;
 def : Pat<(loongarch_iocsrwr_d GPR:$rd, GPR:$rj), (IOCSRWR_D GPR:$rd, GPR:$rj)>;
+def : Pat<(int_loongarch_asrtle_d GPR:$rj, GPR:$rk),
+          (ASRTLE_D GPR:$rj, GPR:$rk)>;
+def : Pat<(int_loongarch_asrtgt_d GPR:$rj, GPR:$rk),
+          (ASRTGT_D GPR:$rj, GPR:$rk)>;
+def : Pat<(int_loongarch_lddir_d GPR:$rj, timm:$imm8),
+          (LDDIR GPR:$rj, uimm8:$imm8)>;
+def : Pat<(int_loongarch_ldpte_d GPR:$rj, timm:$imm8),
+          (LDPTE GPR:$rj, uimm8:$imm8)>;
 } // Predicates = [IsLA64]

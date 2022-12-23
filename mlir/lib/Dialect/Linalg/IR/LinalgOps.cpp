@@ -252,7 +252,8 @@ static void printNamedStructuredOp(OpAsmPrinter &p, Operation *op,
   p.printOptionalAttrDict(
       op->getAttrs(),
       /*elidedAttrs=*/{"operand_segment_sizes",
-                       // See generated code in mlir-linalg-yaml-gen.cpp
+                       // See generated code in
+                       // LinalgNamedStructuredOps.yamlgen.cpp.inc
                        "linalg.memoized_indexing_maps"});
 
   // Printing is shared with generic ops, except for the region and
@@ -270,7 +271,8 @@ static void printNamedStructuredOp(OpAsmPrinter &p, Operation *op,
 // TODO: Move this to a utility library.
 // The public methods on this class are referenced directly from generated code.
 // Helper build the unary, binary, and type conversion functions defined by the
-// DSL. See mlir-linalg-ods-yaml-gen.cpp for the code that uses this class.
+// DSL. See LinalgNamedStructuredOps.yamlgen.cpp.inc for the code that uses this
+// class.
 //
 // Implementations of the math functions must be polymorphic over numeric types,
 // internally performing necessary casts. If the function application makes no

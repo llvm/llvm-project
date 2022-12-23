@@ -16,17 +16,15 @@
 
 using namespace llvm;
 
-AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF)
-    : IsEntryFunction(AMDGPU::isEntryFunctionCC(
-                                  MF.getFunction().getCallingConv())),
+AMDGPUMachineFunction::AMDGPUMachineFunction(const Function &F,
+                                             const AMDGPUSubtarget &ST)
+    : IsEntryFunction(AMDGPU::isEntryFunctionCC(F.getCallingConv())),
       IsModuleEntryFunction(
-          AMDGPU::isModuleEntryFunctionCC(MF.getFunction().getCallingConv())),
-      NoSignedZerosFPMath(MF.getTarget().Options.NoSignedZerosFPMath) {
-  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(MF);
+          AMDGPU::isModuleEntryFunctionCC(F.getCallingConv())),
+      NoSignedZerosFPMath(false) {
 
   // FIXME: Should initialize KernArgSize based on ExplicitKernelArgOffset,
   // except reserved size is not correctly aligned.
-  const Function &F = MF.getFunction();
 
   Attribute MemBoundAttr = F.getFnAttribute("amdgpu-memory-bound");
   MemoryBound = MemBoundAttr.getValueAsBool();
@@ -46,6 +44,11 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF)
   CallingConv::ID CC = F.getCallingConv();
   if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL)
     ExplicitKernArgSize = ST.getExplicitKernArgSize(F, MaxKernArgAlign);
+
+  // FIXME: Shouldn't be target specific
+  Attribute NSZAttr = F.getFnAttribute("no-signed-zeros-fp-math");
+  NoSignedZerosFPMath =
+      NSZAttr.isStringAttribute() && NSZAttr.getValueAsString() == "true";
 }
 
 unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,

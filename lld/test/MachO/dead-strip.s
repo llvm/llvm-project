@@ -48,12 +48,12 @@
 
 # MAP:        _main
 # MAP-LABEL: Dead Stripped Symbols
-# MAP-DAG:   <<dead>> 0x00000001 [ 1] _unref_com
-# MAP-DAG:   <<dead>> 0x00000008 [ 1] _unref_data
-# MAP-DAG:   <<dead>> 0x00000006 [ 1] _unref_extern
-# MAP-DAG:   <<dead>> 0x00000001 [ 1] _unref_local
-# MAP-DAG:   <<dead>> 0x00000007 [ 1] _unref_private_extern
-# MAP-DAG:   <<dead>> 0x00000008 [ 1] l_unref_data
+# MAP-DAG:   <<dead>> 0x00000001 [ 2] _unref_com
+# MAP-DAG:   <<dead>> 0x00000008 [ 2] _unref_data
+# MAP-DAG:   <<dead>> 0x00000006 [ 2] _unref_extern
+# MAP-DAG:   <<dead>> 0x00000001 [ 2] _unref_local
+# MAP-DAG:   <<dead>> 0x00000007 [ 2] _unref_private_extern
+# MAP-DAG:   <<dead>> 0x00000008 [ 2] l_unref_data
 
 ## Run dead stripping on code without any dead symbols.
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
@@ -347,7 +347,7 @@
 # RUN: FileCheck --check-prefix=DUPMAP %s < %t/stripped-duplicate-map
 # DUPMAP: _main
 # DUPMAP-LABEL: Dead Stripped Symbols
-# DUPMAP: <<dead>> 0x00000001 [ 2] _foo
+# DUPMAP: <<dead>> 0x00000001 [ 3] _foo
 
 #--- duplicate1.s
 .text

@@ -316,3 +316,80 @@ void iocsrwr_d(unsigned long int a, unsigned int b) {
   __iocsrwr_d(a, b);
   __builtin_loongarch_iocsrwr_d(a, b);
 }
+
+// CHECK-LABEL: @asrtle_d(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.loongarch.asrtle.d(i64 [[A:%.*]], i64 [[B:%.*]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.asrtle.d(i64 [[A]], i64 [[B]])
+// CHECK-NEXT:    ret void
+//
+void asrtle_d(long int a, long int b) {
+  __asrtle_d(a, b);
+  __builtin_loongarch_asrtle_d(a, b);
+}
+
+// CHECK-LABEL: @asrtgt_d(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.loongarch.asrtgt.d(i64 [[A:%.*]], i64 [[B:%.*]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.asrtgt.d(i64 [[A]], i64 [[B]])
+// CHECK-NEXT:    ret void
+//
+void asrtgt_d(long int a, long int b) {
+  __asrtgt_d(a, b);
+  __builtin_loongarch_asrtgt_d(a, b);
+}
+
+// CHECK-LABEL: @lddir_d(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.loongarch.lddir.d(i64 [[A:%.*]], i64 1)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.loongarch.lddir.d(i64 [[A]], i64 1)
+// CHECK-NEXT:    ret i64 0
+//
+long int lddir_d(long int a) {
+  long int b = __lddir_d(a, 1);
+  long int c = __builtin_loongarch_lddir_d(a, 1);
+  return 0;
+}
+
+// CHECK-LABEL: @ldpte_d(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.loongarch.ldpte.d(i64 [[A:%.*]], i64 1)
+// CHECK-NEXT:    tail call void @llvm.loongarch.ldpte.d(i64 [[A]], i64 1)
+// CHECK-NEXT:    ret void
+//
+void ldpte_d(long int a) {
+  __ldpte_d(a, 1);
+  __builtin_loongarch_ldpte_d(a, 1);
+}
+
+// CHECK-LABEL: @cpucfg(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.cpucfg(i32 [[A:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.cpucfg(i32 [[A]])
+// CHECK-NEXT:    ret i32 0
+//
+unsigned int cpucfg(unsigned int a) {
+  unsigned int b = __cpucfg(a);
+  unsigned int c = __builtin_loongarch_cpucfg(a);
+  return 0;
+}
+
+// CHECK-LABEL: @rdtime_d(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i64, i64 } asm sideeffect "rdtime.d $0, $1\0A\09", "=&r,=&r"() #[[ATTR1:[0-9]+]], !srcloc !2
+// CHECK-NEXT:    ret void
+//
+void rdtime_d() {
+  __rdtime_d();
+}
+
+// CHECK-LABEL: @rdtime(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimeh.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1]], !srcloc !3
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { i32, i32 } asm sideeffect "rdtimel.w $0, $1\0A\09", "=&r,=&r"() #[[ATTR1]], !srcloc !4
+// CHECK-NEXT:    ret void
+//
+void rdtime() {
+  __rdtimeh_w();
+  __rdtimel_w();
+}

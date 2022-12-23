@@ -13,6 +13,10 @@ declare i64 @llvm.loongarch.csrwr.d(i64, i32 immarg)
 declare i64 @llvm.loongarch.csrxchg.d(i64, i64, i32 immarg)
 declare i64 @llvm.loongarch.iocsrrd.d(i32)
 declare void @llvm.loongarch.iocsrwr.d(i64, i32)
+declare void @llvm.loongarch.asrtle.d(i64, i64)
+declare void @llvm.loongarch.asrtgt.d(i64, i64)
+declare i64 @llvm.loongarch.lddir.d(i64, i32)
+declare void @llvm.loongarch.ldpte.d(i64, i32)
 
 define i32 @crc_w_b_w(i32 %a, i32 %b) nounwind {
 ; CHECK: llvm.loongarch.crc.w.b.w requires target: loongarch64
@@ -102,5 +106,33 @@ define void @iocsrwr_d(i64 %a, i32 signext %b) {
 ; CHECK: llvm.loongarch.iocsrwr.d requires target: loongarch64
 entry:
   tail call void @llvm.loongarch.iocsrwr.d(i64 %a, i32 %b)
+  ret void
+}
+
+define void @asrtle_d(i64 %a, i64 %b) {
+; CHECK: llvm.loongarch.asrtle.d requires target: loongarch64
+entry:
+  tail call void @llvm.loongarch.asrtle.d(i64 %a, i64 %b)
+  ret void
+}
+
+define void @asrtgt_d(i64 %a, i64 %b) {
+; CHECK: llvm.loongarch.asrtgt.d requires target: loongarch64
+entry:
+  tail call void @llvm.loongarch.asrtgt.d(i64 %a, i64 %b)
+  ret void
+}
+
+define i64 @lddir_d(i64 %a) {
+; CHECK: llvm.loongarch.lddir.d requires target: loongarch64
+entry:
+  %0 = tail call i64 @llvm.loongarch.lddir.d(i64 %a, i32 1)
+  ret i64 %0
+}
+
+define void @ldpte_d(i64 %a) {
+; CHECK: llvm.loongarch.ldpte.d requires target: loongarch64
+entry:
+  tail call void @llvm.loongarch.ldpte.d(i64 %a, i32 1)
   ret void
 }

@@ -82,6 +82,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyMCLowerPrePassPass(PR);
   initializeWebAssemblyLowerRefTypesIntPtrConvPass(PR);
   initializeWebAssemblyFixBrTableDefaultsPass(PR);
+  initializeWebAssemblyDAGToDAGISelPass(PR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -339,6 +340,13 @@ public:
   bool addRegAssignAndRewriteOptimized() override { return false; }
 };
 } // end anonymous namespace
+
+MachineFunctionInfo *WebAssemblyTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return WebAssemblyFunctionInfo::create<WebAssemblyFunctionInfo>(Allocator, F,
+                                                                  STI);
+}
 
 TargetTransformInfo
 WebAssemblyTargetMachine::getTargetTransformInfo(const Function &F) const {

@@ -639,8 +639,11 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
                                              rounding halfway cases to even (that is, to the nearest value
                                              that is an even integer), regardless of the current rounding
                                              direction.
- T__builtin_elementwise_trunc(T x)           return the integral value nearest to but no larger in            floating point types
+ T __builtin_elementwise_trunc(T x)          return the integral value nearest to but no larger in            floating point types
                                              magnitude than x
+ T __builtin_elementwise_canonicalize(T x)   return the platform specific canonical encoding                  floating point types
+                                             of a floating-point number
+ T __builtin_elementwise_copysign(T x, T y)  return the magnitude of x with the sign of y.                    floating point types
  T __builtin_elementwise_max(T x, T y)       return x or y, whichever is larger                               integer and floating point types
  T __builtin_elementwise_min(T x, T y)       return x or y, whichever is smaller                              integer and floating point types
  T __builtin_elementwise_add_sat(T x, T y)   return the sum of x and y, clamped to the range of               integer types
@@ -4203,7 +4206,7 @@ these values is same as for `constrained floating point intrinsics <http://llvm.
     #pragma clang fp exceptions(strict)
     z = x + y;
     if (fetestexcept(FE_OVERFLOW))
-	  ...
+      ...
   }
 
 A ``#pragma clang fp`` pragma may contain any number of options:

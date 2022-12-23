@@ -194,6 +194,29 @@ struct PyGlobalDebugFlag {
   }
 };
 
+struct PyAttrBuilderMap {
+  static bool dunderContains(const std::string &attributeKind) {
+    return PyGlobals::get().lookupAttributeBuilder(attributeKind).has_value();
+  }
+  static py::function dundeGetItemNamed(const std::string &attributeKind) {
+    auto builder = PyGlobals::get().lookupAttributeBuilder(attributeKind);
+    if (!builder)
+      throw py::key_error();
+    return *builder;
+  }
+  static void dundeSetItemNamed(const std::string &attributeKind,
+                                py::function func) {
+    PyGlobals::get().registerAttributeBuilder(attributeKind, std::move(func));
+  }
+
+  static void bind(py::module &m) {
+    py::class_<PyAttrBuilderMap>(m, "AttrBuilder", py::module_local())
+        .def_static("contains", &PyAttrBuilderMap::dunderContains)
+        .def_static("get", &PyAttrBuilderMap::dundeGetItemNamed)
+        .def_static("insert", &PyAttrBuilderMap::dundeSetItemNamed);
+  }
+};
+
 //------------------------------------------------------------------------------
 // Collections.
 //------------------------------------------------------------------------------
@@ -3283,4 +3306,7 @@ void mlir::python::populateIRCore(py::module &m) {
 
   // Debug bindings.
   PyGlobalDebugFlag::bind(m);
+
+  // Attribute builder getter.
+  PyAttrBuilderMap::bind(m);
 }

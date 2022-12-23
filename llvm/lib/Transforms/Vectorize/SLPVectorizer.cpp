@@ -6286,6 +6286,276 @@ TTI::OperandValueInfo BoUpSLP::getOperandInfo(ArrayRef<Value *> VL,
   return {VK, VP};
 }
 
+namespace {
+/// The base class for shuffle instruction emission and shuffle cost estimation.
+class BaseShuffleAnalysis {
+protected:
+  /// Checks if the mask is an identity mask.
+  /// \param IsStrict if is true the function returns false if mask size does
+  /// not match vector size.
+  static bool isIdentityMask(ArrayRef<int> Mask, const FixedVectorType *VecTy,
+                             bool IsStrict) {
+    int Limit = Mask.size();
+    int VF = VecTy->getNumElements();
+    return (VF == Limit || !IsStrict) &&
+           all_of(Mask, [Limit](int Idx) { return Idx < Limit; }) &&
+           ShuffleVectorInst::isIdentityMask(Mask);
+  }
+
+  /// Tries to combine 2 different masks into single one.
+  /// \param LocalVF Vector length of the permuted input vector. \p Mask may
+  /// change the size of the vector, \p LocalVF is the original size of the
+  /// shuffled vector.
+  static void combineMasks(unsigned LocalVF, SmallVectorImpl<int> &Mask,
+                           ArrayRef<int> ExtMask) {
+    unsigned VF = Mask.size();
+    SmallVector<int> NewMask(ExtMask.size(), UndefMaskElem);
+    for (int I = 0, Sz = ExtMask.size(); I < Sz; ++I) {
+      if (ExtMask[I] == UndefMaskElem)
+        continue;
+      int MaskedIdx = Mask[ExtMask[I] % VF];
+      NewMask[I] =
+          MaskedIdx == UndefMaskElem ? UndefMaskElem : MaskedIdx % LocalVF;
+    }
+    Mask.swap(NewMask);
+  }
+
+  /// Looks through shuffles trying to reduce final number of shuffles in the
+  /// code. The function looks through the previously emitted shuffle
+  /// instructions and properly mark indices in mask as undef.
+  /// For example, given the code
+  /// \code
+  /// %s1 = shufflevector <2 x ty> %0, poison, <1, 0>
+  /// %s2 = shufflevector <2 x ty> %1, poison, <1, 0>
+  /// \endcode
+  /// and if need to emit shuffle of %s1 and %s2 with mask <1, 0, 3, 2>, it will
+  /// look through %s1 and %s2 and select vectors %0 and %1 with mask
+  /// <0, 1, 2, 3> for the shuffle.
+  /// If 2 operands are of different size, the smallest one will be resized and
+  /// the mask recalculated properly.
+  /// For example, given the code
+  /// \code
+  /// %s1 = shufflevector <2 x ty> %0, poison, <1, 0, 1, 0>
+  /// %s2 = shufflevector <2 x ty> %1, poison, <1, 0, 1, 0>
+  /// \endcode
+  /// and if need to emit shuffle of %s1 and %s2 with mask <1, 0, 5, 4>, it will
+  /// look through %s1 and %s2 and select vectors %0 and %1 with mask
+  /// <0, 1, 2, 3> for the shuffle.
+  /// So, it tries to transform permutations to simple vector merge, if
+  /// possible.
+  /// \param V The input vector which must be shuffled using the given \p Mask.
+  /// If the better candidate is found, \p V is set to this best candidate
+  /// vector.
+  /// \param Mask The input mask for the shuffle. If the best candidate is found
+  /// during looking-through-shuffles attempt, it is updated accordingly.
+  /// \param SinglePermute true if the shuffle operation is originally a
+  /// single-value-permutation. In this case the look-through-shuffles procedure
+  /// may look for resizing shuffles as the best candidates.
+  /// \return true if the shuffle results in the non-resizing identity shuffle
+  /// (and thus can be ignored), false - otherwise.
+  static bool peekThroughShuffles(Value *&V, SmallVectorImpl<int> &Mask,
+                                  bool SinglePermute) {
+    Value *Op = V;
+    ShuffleVectorInst *IdentityOp = nullptr;
+    SmallVector<int> IdentityMask;
+    while (auto *SV = dyn_cast<ShuffleVectorInst>(Op)) {
+      // Exit if not a fixed vector type or changing size shuffle.
+      auto *SVTy = dyn_cast<FixedVectorType>(SV->getType());
+      if (!SVTy)
+        break;
+      // Remember the identity or broadcast mask, if it is not a resizing
+      // shuffle. If no better candidates are found, this Op and Mask will be
+      // used in the final shuffle.
+      if (isIdentityMask(Mask, SVTy, /*IsStrict=*/false)) {
+        if (!IdentityOp || !SinglePermute ||
+            (isIdentityMask(Mask, SVTy, /*IsStrict=*/true) &&
+             !ShuffleVectorInst::isZeroEltSplatMask(IdentityMask))) {
+          IdentityOp = SV;
+          // Store current mask in the IdentityMask so later we did not lost
+          // this info if IdentityOp is selected as the best candidate for the
+          // permutation.
+          IdentityMask.assign(Mask);
+        }
+      }
+      // Remember the broadcast mask. If no better candidates are found, this Op
+      // and Mask will be used in the final shuffle.
+      // Zero splat can be used as identity too, since it might be used with
+      // mask <0, 1, 2, ...>, i.e. identity mask without extra reshuffling.
+      // E.g. if need to shuffle the vector with the mask <3, 1, 2, 0>, which is
+      // expensive, the analysis founds out, that the source vector is just a
+      // broadcast, this original mask can be transformed to identity mask <0,
+      // 1, 2, 3>.
+      // \code
+      // %0 = shuffle %v, poison, zeroinitalizer
+      // %res = shuffle %0, poison, <3, 1, 2, 0>
+      // \endcode
+      // may be transformed to
+      // \code
+      // %0 = shuffle %v, poison, zeroinitalizer
+      // %res = shuffle %0, poison, <0, 1, 2, 3>
+      // \endcode
+      if (SV->isZeroEltSplat()) {
+        IdentityOp = SV;
+        IdentityMask.assign(Mask);
+      }
+      int LocalVF = Mask.size();
+      if (auto *SVOpTy =
+              dyn_cast<FixedVectorType>(SV->getOperand(0)->getType()))
+        LocalVF = SVOpTy->getNumElements();
+      bool IsOp1Undef =
+          isUndefVector(SV->getOperand(0),
+                        buildUseMask(LocalVF, Mask, UseMask::FirstArg))
+              .all();
+      bool IsOp2Undef =
+          isUndefVector(SV->getOperand(1),
+                        buildUseMask(LocalVF, Mask, UseMask::SecondArg))
+              .all();
+      if (!IsOp1Undef && !IsOp2Undef) {
+        // Update mask and mark undef elems.
+        for (auto [Idx, I] : enumerate(Mask)) {
+          if (I == UndefMaskElem)
+            continue;
+          if (SV->getShuffleMask()[I % SV->getShuffleMask().size()] ==
+              UndefMaskElem)
+            I = UndefMaskElem;
+        }
+        break;
+      }
+      SmallVector<int> ShuffleMask(SV->getShuffleMask().begin(),
+                                   SV->getShuffleMask().end());
+      combineMasks(LocalVF, ShuffleMask, Mask);
+      Mask.swap(ShuffleMask);
+      if (IsOp2Undef)
+        Op = SV->getOperand(0);
+      else
+        Op = SV->getOperand(1);
+    }
+    if (auto *OpTy = dyn_cast<FixedVectorType>(Op->getType());
+        !OpTy || !isIdentityMask(Mask, OpTy, SinglePermute)) {
+      if (IdentityOp) {
+        V = IdentityOp;
+        assert(Mask.size() == IdentityMask.size() &&
+               "Expected masks of same sizes.");
+        // Clear known poison elements.
+        for (auto [I, Idx] : enumerate(Mask))
+          if (Idx == UndefMaskElem)
+            IdentityMask[I] = UndefMaskElem;
+        Mask.swap(IdentityMask);
+        auto *Shuffle = dyn_cast<ShuffleVectorInst>(V);
+        return SinglePermute &&
+               (isIdentityMask(Mask, cast<FixedVectorType>(V->getType()),
+                               /*IsStrict=*/true) ||
+                (Shuffle && Mask.size() == Shuffle->getShuffleMask().size() &&
+                 Shuffle->isZeroEltSplat() &&
+                 ShuffleVectorInst::isZeroEltSplatMask(Mask)));
+      }
+      V = Op;
+      return false;
+    }
+    V = Op;
+    return true;
+  }
+
+  /// Smart shuffle instruction emission, walks through shuffles trees and
+  /// tries to find the best matching vector for the actual shuffle
+  /// instruction.
+  template <typename ShuffleBuilderTy>
+  static Value *createShuffle(Value *V1, Value *V2, ArrayRef<int> Mask,
+                              ShuffleBuilderTy &Builder) {
+    assert(V1 && "Expected at least one vector value.");
+    int VF = Mask.size();
+    if (auto *FTy = dyn_cast<FixedVectorType>(V1->getType()))
+      VF = FTy->getNumElements();
+    if (V2 &&
+        !isUndefVector(V2, buildUseMask(VF, Mask, UseMask::SecondArg)).all()) {
+      // Peek through shuffles.
+      Value *Op1 = V1;
+      Value *Op2 = V2;
+      int VF =
+          cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
+      SmallVector<int> CombinedMask1(Mask.size(), UndefMaskElem);
+      SmallVector<int> CombinedMask2(Mask.size(), UndefMaskElem);
+      for (int I = 0, E = Mask.size(); I < E; ++I) {
+        if (Mask[I] < VF)
+          CombinedMask1[I] = Mask[I];
+        else
+          CombinedMask2[I] = Mask[I] - VF;
+      }
+      Value *PrevOp1;
+      Value *PrevOp2;
+      do {
+        PrevOp1 = Op1;
+        PrevOp2 = Op2;
+        (void)peekThroughShuffles(Op1, CombinedMask1, /*SinglePermute=*/false);
+        (void)peekThroughShuffles(Op2, CombinedMask2, /*SinglePermute=*/false);
+        // Check if we have 2 resizing shuffles - need to peek through operands
+        // again.
+        if (auto *SV1 = dyn_cast<ShuffleVectorInst>(Op1))
+          if (auto *SV2 = dyn_cast<ShuffleVectorInst>(Op2)) {
+            SmallBitVector UseMask1 = buildUseMask(
+                cast<FixedVectorType>(SV1->getOperand(1)->getType())
+                    ->getNumElements(),
+                CombinedMask1, UseMask::FirstArg);
+            SmallBitVector UseMask2 = buildUseMask(
+                cast<FixedVectorType>(SV2->getOperand(1)->getType())
+                    ->getNumElements(),
+                CombinedMask2, UseMask::FirstArg);
+            if (SV1->getOperand(0)->getType() ==
+                    SV2->getOperand(0)->getType() &&
+                SV1->getOperand(0)->getType() != SV1->getType() &&
+                isUndefVector(SV1->getOperand(1), UseMask1).all() &&
+                isUndefVector(SV2->getOperand(1), UseMask2).all()) {
+              Op1 = SV1->getOperand(0);
+              Op2 = SV2->getOperand(0);
+              SmallVector<int> ShuffleMask1(SV1->getShuffleMask().begin(),
+                                            SV1->getShuffleMask().end());
+              int LocalVF = ShuffleMask1.size();
+              if (auto *FTy = dyn_cast<FixedVectorType>(Op1->getType()))
+                LocalVF = FTy->getNumElements();
+              combineMasks(LocalVF, ShuffleMask1, CombinedMask1);
+              CombinedMask1.swap(ShuffleMask1);
+              SmallVector<int> ShuffleMask2(SV2->getShuffleMask().begin(),
+                                            SV2->getShuffleMask().end());
+              LocalVF = ShuffleMask2.size();
+              if (auto *FTy = dyn_cast<FixedVectorType>(Op2->getType()))
+                LocalVF = FTy->getNumElements();
+              combineMasks(LocalVF, ShuffleMask2, CombinedMask2);
+              CombinedMask2.swap(ShuffleMask2);
+            }
+          }
+      } while (PrevOp1 != Op1 || PrevOp2 != Op2);
+      Builder.resizeToMatch(Op1, Op2);
+      VF = std::max(cast<VectorType>(Op1->getType())
+                        ->getElementCount()
+                        .getKnownMinValue(),
+                    cast<VectorType>(Op2->getType())
+                        ->getElementCount()
+                        .getKnownMinValue());
+      for (int I = 0, E = Mask.size(); I < E; ++I) {
+        if (CombinedMask2[I] != UndefMaskElem) {
+          assert(CombinedMask1[I] == UndefMaskElem &&
+                 "Expected undefined mask element");
+          CombinedMask1[I] = CombinedMask2[I] + (Op1 == Op2 ? 0 : VF);
+        }
+      }
+      return Builder.createShuffleVector(
+          Op1, Op1 == Op2 ? PoisonValue::get(Op1->getType()) : Op2,
+          CombinedMask1);
+    }
+    if (isa<PoisonValue>(V1))
+      return PoisonValue::get(FixedVectorType::get(
+          cast<VectorType>(V1->getType())->getElementType(), Mask.size()));
+    SmallVector<int> NewMask(Mask.begin(), Mask.end());
+    bool IsIdentity = peekThroughShuffles(V1, NewMask, /*SinglePermute=*/true);
+    assert(V1 && "Expected non-null value after looking through shuffles.");
+
+    if (!IsIdentity)
+      return Builder.createShuffleVector(V1, NewMask);
+    return V1;
+  }
+};
+} // namespace
+
 InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
                                       ArrayRef<Value *> VectorizedVals) {
   ArrayRef<Value *> VL = E->Scalars;
@@ -8146,7 +8416,7 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL) {
 /// %res = shufflevector <2 x ty> %0, %1, <0, 1, 2, 3>
 /// \endcode
 /// instead.
-class BoUpSLP::ShuffleInstructionBuilder {
+class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
   bool IsFinalized = false;
   /// Combined mask for all applied operands and masks. It is built during
   /// analysis and actual emission of shuffle vector instructions.
@@ -8155,7 +8425,7 @@ class BoUpSLP::ShuffleInstructionBuilder {
   /// operands, if the 3rd is going to be added, the first 2 are combined into
   /// shuffle with \p CommonMask mask, the first operand sets to be the
   /// resulting shuffle and the second operand sets to be the newly added
-  /// operand. The \p CombinedMask is transformed in the proper way after that.
+  /// operand. The \p CommonMask is transformed in the proper way after that.
   SmallVector<Value *, 2> InVectors;
   IRBuilderBase &Builder;
   BoUpSLP &R;
@@ -8199,6 +8469,29 @@ class BoUpSLP::ShuffleInstructionBuilder {
       }
       return Vec;
     }
+    /// Resizes 2 input vector to match the sizes, if the they are not equal
+    /// yet. The smallest vector is resized to the size of the larger vector.
+    void resizeToMatch(Value *&V1, Value *&V2) {
+      if (V1->getType() == V2->getType())
+        return;
+      int V1VF = cast<FixedVectorType>(V1->getType())->getNumElements();
+      int V2VF = cast<FixedVectorType>(V2->getType())->getNumElements();
+      int VF = std::max(V1VF, V2VF);
+      int MinVF = std::min(V1VF, V2VF);
+      SmallVector<int> IdentityMask(VF, UndefMaskElem);
+      std::iota(IdentityMask.begin(), std::next(IdentityMask.begin(), MinVF),
+                0);
+      Value *&Op = MinVF == V1VF ? V1 : V2;
+      Op = Builder.CreateShuffleVector(Op, IdentityMask);
+      if (auto *I = dyn_cast<Instruction>(Op)) {
+        GatherShuffleExtractSeq.insert(I);
+        CSEBlocks.insert(I->getParent());
+      }
+      if (MinVF == V1VF)
+        V1 = Op;
+      else
+        V2 = Op;
+    }
   };
 
   /// Smart shuffle instruction emission, walks through shuffles trees and
@@ -8208,9 +8501,7 @@ class BoUpSLP::ShuffleInstructionBuilder {
     assert(V1 && "Expected at least one vector value.");
     ShuffleIRBuilder ShuffleBuilder(Builder, R.GatherShuffleExtractSeq,
                                     R.CSEBlocks);
-    if (V2)
-      return ShuffleBuilder.createShuffleVector(V1, V2, Mask);
-    return ShuffleBuilder.createShuffleVector(V1, Mask);
+    return BaseShuffleAnalysis::createShuffle(V1, V2, Mask, ShuffleBuilder);
   }
 
   /// Transforms mask \p CommonMask per given \p Mask to make proper set after
@@ -9433,157 +9724,21 @@ Value *BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues,
     LLVM_DEBUG(dbgs() << "SLP: Replaced:" << *User << ".\n");
   }
 
-  // Checks if the mask is an identity mask.
-  auto &&IsIdentityMask = [](ArrayRef<int> Mask, FixedVectorType *VecTy) {
-    int Limit = Mask.size();
-    return VecTy->getNumElements() == Mask.size() &&
-           all_of(Mask, [Limit](int Idx) { return Idx < Limit; }) &&
-           ShuffleVectorInst::isIdentityMask(Mask);
-  };
-  // Tries to combine 2 different masks into single one.
-  auto &&CombineMasks = [](SmallVectorImpl<int> &Mask, ArrayRef<int> ExtMask) {
-    SmallVector<int> NewMask(ExtMask.size(), UndefMaskElem);
-    for (int I = 0, Sz = ExtMask.size(); I < Sz; ++I) {
-      if (ExtMask[I] == UndefMaskElem)
-        continue;
-      NewMask[I] = Mask[ExtMask[I]];
+  auto CreateShuffle = [&](Value *V1, Value *V2, ArrayRef<int> Mask) {
+    SmallVector<int> CombinedMask1(Mask.size(), UndefMaskElem);
+    SmallVector<int> CombinedMask2(Mask.size(), UndefMaskElem);
+    int VF = cast<FixedVectorType>(V1->getType())->getNumElements();
+    for (int I = 0, E = Mask.size(); I < E; ++I) {
+      if (Mask[I] < VF)
+        CombinedMask1[I] = Mask[I];
+      else
+        CombinedMask2[I] = Mask[I] - VF;
     }
-    Mask.swap(NewMask);
-  };
-  // Peek through shuffles, trying to simplify the final shuffle code.
-  auto &&PeekThroughShuffles =
-      [&IsIdentityMask, &CombineMasks](Value *&V, SmallVectorImpl<int> &Mask,
-                                       bool CheckForLengthChange = false) {
-        while (auto *SV = dyn_cast<ShuffleVectorInst>(V)) {
-          // Exit if not a fixed vector type or changing size shuffle.
-          if (!isa<FixedVectorType>(SV->getType()) ||
-              (CheckForLengthChange && SV->changesLength()))
-            break;
-          // Exit if the identity or broadcast mask is found.
-          if (IsIdentityMask(Mask, cast<FixedVectorType>(SV->getType())) ||
-              SV->isZeroEltSplat())
-            break;
-          int LocalVF = Mask.size();
-          if (auto *SVOpTy =
-                  dyn_cast<FixedVectorType>(SV->getOperand(0)->getType()))
-            LocalVF = SVOpTy->getNumElements();
-          bool IsOp1Undef =
-              isUndefVector(SV->getOperand(0),
-                            buildUseMask(LocalVF, Mask, UseMask::FirstArg))
-                  .all();
-          bool IsOp2Undef =
-              isUndefVector(SV->getOperand(1),
-                            buildUseMask(LocalVF, Mask, UseMask::SecondArg))
-                  .all();
-          if (!IsOp1Undef && !IsOp2Undef)
-            break;
-          SmallVector<int> ShuffleMask(SV->getShuffleMask().begin(),
-                                       SV->getShuffleMask().end());
-          CombineMasks(ShuffleMask, Mask);
-          Mask.swap(ShuffleMask);
-          if (IsOp2Undef)
-            V = SV->getOperand(0);
-          else
-            V = SV->getOperand(1);
-        }
-      };
-  // Smart shuffle instruction emission, walks through shuffles trees and
-  // tries to find the best matching vector for the actual shuffle
-  // instruction.
-  auto &&CreateShuffle = [this, &IsIdentityMask, &PeekThroughShuffles,
-                          &CombineMasks](Value *V1, Value *V2,
-                                         ArrayRef<int> Mask) -> Value * {
-    assert(V1 && "Expected at least one vector value.");
-    int VF = Mask.size();
-    if (auto *FTy = dyn_cast<FixedVectorType>(V1->getType()))
-      VF = FTy->getNumElements();
-    if (V2 &&
-        !isUndefVector(V2, buildUseMask(VF, Mask, UseMask::SecondArg)).all()) {
-      // Peek through shuffles.
-      Value *Op1 = V1;
-      Value *Op2 = V2;
-      int VF =
-          cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
-      SmallVector<int> CombinedMask1(Mask.size(), UndefMaskElem);
-      SmallVector<int> CombinedMask2(Mask.size(), UndefMaskElem);
-      for (int I = 0, E = Mask.size(); I < E; ++I) {
-        if (Mask[I] < VF)
-          CombinedMask1[I] = Mask[I];
-        else
-          CombinedMask2[I] = Mask[I] - VF;
-      }
-      Value *PrevOp1;
-      Value *PrevOp2;
-      do {
-        PrevOp1 = Op1;
-        PrevOp2 = Op2;
-        PeekThroughShuffles(Op1, CombinedMask1, /*CheckForLengthChange=*/true);
-        PeekThroughShuffles(Op2, CombinedMask2, /*CheckForLengthChange=*/true);
-        // Check if we have 2 resizing shuffles - need to peek through operands
-        // again.
-        if (auto *SV1 = dyn_cast<ShuffleVectorInst>(Op1))
-          if (auto *SV2 = dyn_cast<ShuffleVectorInst>(Op2)) {
-            SmallBitVector UseMask1 = buildUseMask(
-                cast<FixedVectorType>(SV1->getOperand(1)->getType())
-                    ->getNumElements(),
-                CombinedMask1, UseMask::FirstArg);
-            SmallBitVector UseMask2 = buildUseMask(
-                cast<FixedVectorType>(SV2->getOperand(1)->getType())
-                    ->getNumElements(),
-                CombinedMask2, UseMask::FirstArg);
-            if (SV1->getOperand(0)->getType() ==
-                    SV2->getOperand(0)->getType() &&
-                SV1->getOperand(0)->getType() != SV1->getType() &&
-                isUndefVector(SV1->getOperand(1), UseMask1).all() &&
-                isUndefVector(SV2->getOperand(1), UseMask2).all()) {
-              Op1 = SV1->getOperand(0);
-              Op2 = SV2->getOperand(0);
-              SmallVector<int> ShuffleMask1(SV1->getShuffleMask().begin(),
-                                            SV1->getShuffleMask().end());
-              CombineMasks(ShuffleMask1, CombinedMask1);
-              CombinedMask1.swap(ShuffleMask1);
-              SmallVector<int> ShuffleMask2(SV2->getShuffleMask().begin(),
-                                            SV2->getShuffleMask().end());
-              CombineMasks(ShuffleMask2, CombinedMask2);
-              CombinedMask2.swap(ShuffleMask2);
-            }
-          }
-      } while (PrevOp1 != Op1 || PrevOp2 != Op2);
-      VF = cast<VectorType>(Op1->getType())
-               ->getElementCount()
-               .getKnownMinValue();
-      for (int I = 0, E = Mask.size(); I < E; ++I) {
-        if (CombinedMask2[I] != UndefMaskElem) {
-          assert(CombinedMask1[I] == UndefMaskElem &&
-                 "Expected undefined mask element");
-          CombinedMask1[I] = CombinedMask2[I] + (Op1 == Op2 ? 0 : VF);
-        }
-      }
-      Value *Vec = Builder.CreateShuffleVector(
-          Op1, Op1 == Op2 ? PoisonValue::get(Op1->getType()) : Op2,
-          CombinedMask1);
-      if (auto *I = dyn_cast<Instruction>(Vec)) {
-        GatherShuffleExtractSeq.insert(I);
-        CSEBlocks.insert(I->getParent());
-      }
-      return Vec;
-    }
-    if (isa<PoisonValue>(V1))
-      return PoisonValue::get(FixedVectorType::get(
-          cast<VectorType>(V1->getType())->getElementType(), Mask.size()));
-    Value *Op = V1;
-    SmallVector<int> CombinedMask(Mask);
-    PeekThroughShuffles(Op, CombinedMask);
-    if (!isa<FixedVectorType>(Op->getType()) ||
-        !IsIdentityMask(CombinedMask, cast<FixedVectorType>(Op->getType()))) {
-      Value *Vec = Builder.CreateShuffleVector(Op, CombinedMask);
-      if (auto *I = dyn_cast<Instruction>(Vec)) {
-        GatherShuffleExtractSeq.insert(I);
-        CSEBlocks.insert(I->getParent());
-      }
-      return Vec;
-    }
-    return Op;
+    ShuffleInstructionBuilder ShuffleBuilder(Builder, *this);
+    ShuffleBuilder.add(V1, CombinedMask1);
+    if (V2)
+      ShuffleBuilder.add(V2, CombinedMask2);
+    return ShuffleBuilder.finalize(std::nullopt);
   };
 
   auto &&ResizeToVF = [&CreateShuffle](Value *Vec, ArrayRef<int> Mask,

@@ -15,10 +15,10 @@
 #include <__functional/unwrap_ref.h>
 #include <__fwd/get.h>
 #include <__fwd/tuple.h>
-#include <__tuple/sfinae_helpers.h>
-#include <__tuple/tuple_element.h>
-#include <__tuple/tuple_indices.h>
-#include <__tuple/tuple_size.h>
+#include <__tuple_dir/sfinae_helpers.h>
+#include <__tuple_dir/tuple_element.h>
+#include <__tuple_dir/tuple_indices.h>
+#include <__tuple_dir/tuple_size.h>
 #include <__type_traits/is_implicitly_default_constructible.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
