@@ -39,12 +39,12 @@ for.end11:
 ; every root in the vectorizable tree when computing minimum sizes since one
 ; root may require fewer bits than another.
 ;
-define void @PR26629(i32* %c) {
+define void @PR26629(ptr %c) {
 ; CHECK-LABEL: @PR26629(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 undef, label [[FOR_PH:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[C:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C:%.*]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[D:%.*]] = phi i72 [ 576507472957710340, [[FOR_PH]] ], [ [[BF_SET17:%.*]], [[FOR_BODY]] ]
@@ -62,7 +62,7 @@ entry:
   br i1 undef, label %for.ph, label %for.end
 
 for.ph:
-  %0 = load i32, i32* %c, align 4
+  %0 = load i32, ptr %c, align 4
   br label %for.body
 
 for.body:
