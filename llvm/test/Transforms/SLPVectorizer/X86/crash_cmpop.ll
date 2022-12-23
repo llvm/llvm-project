@@ -5,7 +5,7 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"
 
-define void @testfunc(float* nocapture %dest, float* nocapture readonly %src) {
+define void @testfunc(ptr nocapture %dest, ptr nocapture readonly %src) {
 ; CHECK-LABEL: @testfunc(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -13,11 +13,11 @@ define void @testfunc(float* nocapture %dest, float* nocapture readonly %src) {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ACC1_056:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD13:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ zeroinitializer, [[ENTRY]] ], [ [[TMP18:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[SRC:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[DEST:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store float [[ACC1_056]], float* [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[DEST:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store float [[ACC1_056]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i32 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[TMP0]], [[SHUFFLE]]
@@ -51,11 +51,11 @@ for.body:
   %acc1.056 = phi float [ 0.000000e+00, %entry ], [ %add13, %for.body ]
   %s1.055 = phi float [ 0.000000e+00, %entry ], [ %cond.i40, %for.body ]
   %s0.054 = phi float [ 0.000000e+00, %entry ], [ %cond.i44, %for.body ]
-  %arrayidx = getelementptr inbounds float, float* %src, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %src, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %arrayidx2 = getelementptr inbounds float, float* %dest, i64 %indvars.iv
-  store float %acc1.056, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %dest, i64 %indvars.iv
+  store float %acc1.056, ptr %arrayidx2, align 4
   %add = fadd float %s0.054, %0
   %add3 = fadd float %s1.055, %0
   %mul = fmul float %s0.054, 0.000000e+00
