@@ -3,42 +3,42 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 
 ;; This function returns its second argument on all return statements
-define internal i32* @incdec(i1 %C, i32* %V) {
+define internal ptr @incdec(i1 %C, ptr %V) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@incdec
-; TUNIT-SAME: (i1 [[C:%.*]], i32* noalias nofree noundef nonnull returned writeonly align 4 dereferenceable(4) "no-capture-maybe-returned" [[V:%.*]]) #[[ATTR0:[0-9]+]] {
+; TUNIT-SAME: (i1 [[C:%.*]], ptr noalias nofree noundef nonnull returned writeonly align 4 dereferenceable(4) "no-capture-maybe-returned" [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       T:
-; TUNIT-NEXT:    ret i32* [[V]]
+; TUNIT-NEXT:    ret ptr [[V]]
 ; TUNIT:       F:
-; TUNIT-NEXT:    ret i32* [[V]]
+; TUNIT-NEXT:    ret ptr [[V]]
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@incdec
-; CGSCC-SAME: (i1 [[C:%.*]], i32* nofree noundef nonnull returned align 4 dereferenceable(4) "no-capture-maybe-returned" [[V:%.*]]) #[[ATTR0:[0-9]+]] {
-; CGSCC-NEXT:    [[X:%.*]] = load i32, i32* [[V]], align 4
+; CGSCC-SAME: (i1 [[C:%.*]], ptr nofree noundef nonnull returned align 4 dereferenceable(4) "no-capture-maybe-returned" [[V:%.*]]) #[[ATTR0:[0-9]+]] {
+; CGSCC-NEXT:    [[X:%.*]] = load i32, ptr [[V]], align 4
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       T:
 ; CGSCC-NEXT:    [[X1:%.*]] = add i32 [[X]], 1
-; CGSCC-NEXT:    store i32 [[X1]], i32* [[V]], align 4
-; CGSCC-NEXT:    ret i32* [[V]]
+; CGSCC-NEXT:    store i32 [[X1]], ptr [[V]], align 4
+; CGSCC-NEXT:    ret ptr [[V]]
 ; CGSCC:       F:
 ; CGSCC-NEXT:    [[X2:%.*]] = sub i32 [[X]], 1
-; CGSCC-NEXT:    store i32 [[X2]], i32* [[V]], align 4
-; CGSCC-NEXT:    ret i32* [[V]]
+; CGSCC-NEXT:    store i32 [[X2]], ptr [[V]], align 4
+; CGSCC-NEXT:    ret ptr [[V]]
 ;
-  %X = load i32, i32* %V
+  %X = load i32, ptr %V
   br i1 %C, label %T, label %F
 
 T:              ; preds = %0
   %X1 = add i32 %X, 1
-  store i32 %X1, i32* %V
-  ret i32* %V
+  store i32 %X1, ptr %V
+  ret ptr %V
 
 F:              ; preds = %0
   %X2 = sub i32 %X, 1
-  store i32 %X2, i32* %V
-  ret i32* %V
+  store i32 %X2, ptr %V
+  ret ptr %V
 }
 
 ;; This function returns its first argument as a part of a multiple return
@@ -58,12 +58,12 @@ define internal { i32, i32 } @foo(i32 %A, i32 %B) {
   ret { i32, i32 } %Z
 }
 
-define void @caller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
+define void @caller(i1 %C) personality ptr @__gxx_personality_v0 {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@caller
-; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] personality i32 (...)* @__gxx_personality_v0 {
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] personality ptr @__gxx_personality_v0 {
 ; TUNIT-NEXT:    [[Q:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* noalias nofree noundef nonnull writeonly align 4 dereferenceable(4) "no-capture-maybe-returned" [[Q]]) #[[ATTR2:[0-9]+]]
+; TUNIT-NEXT:    [[W:%.*]] = call align 4 ptr @incdec(i1 [[C]], ptr noalias nofree noundef nonnull writeonly align 4 dereferenceable(4) "no-capture-maybe-returned" [[Q]]) #[[ATTR2:[0-9]+]]
 ; TUNIT-NEXT:    br label [[OK:%.*]]
 ; TUNIT:       OK:
 ; TUNIT-NEXT:    br label [[RET:%.*]]
@@ -74,9 +74,9 @@ define void @caller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@caller
-; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] personality i32 (...)* @__gxx_personality_v0 {
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] personality ptr @__gxx_personality_v0 {
 ; CGSCC-NEXT:    [[Q:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[Q]]) #[[ATTR3:[0-9]+]]
+; CGSCC-NEXT:    [[W:%.*]] = call align 4 ptr @incdec(i1 [[C]], ptr nofree noundef nonnull align 4 dereferenceable(4) [[Q]]) #[[ATTR3:[0-9]+]]
 ; CGSCC-NEXT:    [[S1:%.*]] = call { i32, i32 } @foo(i32 noundef 1, i32 noundef 2) #[[ATTR4:[0-9]+]]
 ; CGSCC-NEXT:    [[X1:%.*]] = extractvalue { i32, i32 } [[S1]], 0
 ; CGSCC-NEXT:    [[S2:%.*]] = call { i32, i32 } @foo(i32 noundef 3, i32 noundef 4) #[[ATTR3]]
@@ -84,7 +84,7 @@ define void @caller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
 ; CGSCC:       OK:
 ; CGSCC-NEXT:    [[X2:%.*]] = extractvalue { i32, i32 } [[S2]], 0
 ; CGSCC-NEXT:    [[Z:%.*]] = add i32 [[X1]], [[X2]]
-; CGSCC-NEXT:    store i32 [[Z]], i32* [[W]], align 4
+; CGSCC-NEXT:    store i32 [[Z]], ptr [[W]], align 4
 ; CGSCC-NEXT:    br label [[RET:%.*]]
 ; CGSCC:       LPAD:
 ; CGSCC-NEXT:    unreachable
@@ -93,7 +93,7 @@ define void @caller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
 ;
   %Q = alloca i32
   ;; Call incdec to see if %W is properly replaced by %Q
-  %W = call i32* @incdec(i1 %C, i32* %Q )             ; <i32> [#uses=1]
+  %W = call ptr @incdec(i1 %C, ptr %Q )             ; <i32> [#uses=1]
   ;; Call @foo twice, to prevent the arguments from propagating into the
   ;; function (so we can check the returned argument is properly
   ;; propagated per-caller).
@@ -104,11 +104,11 @@ define void @caller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
 OK:
   %X2 = extractvalue { i32, i32 } %S2, 0
   %Z  = add i32 %X1, %X2
-  store i32 %Z, i32* %W
+  store i32 %Z, ptr %W
   br label %RET
 
 LPAD:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
   cleanup
   br label %RET
 

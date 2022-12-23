@@ -5,7 +5,7 @@
 %struct.wobble = type { i32 }
 %struct.zot = type { %struct.wobble, %struct.wobble, %struct.wobble }
 
-declare dso_local fastcc float @bar(%struct.wobble* noalias, <8 x i32>) unnamed_addr
+declare dso_local fastcc float @bar(ptr noalias, <8 x i32>) unnamed_addr
 
 define %struct.zot @widget(<8 x i32> %arg) local_unnamed_addr {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)

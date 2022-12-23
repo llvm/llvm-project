@@ -5,52 +5,52 @@
 
 define internal void @dead() {
 ; CGSCC-LABEL: define {{[^@]+}}@dead() {
-; CGSCC-NEXT:    [[TMP1:%.*]] = call i32 @test(i32* noalias noundef align 4294967296 null)
+; CGSCC-NEXT:    [[TMP1:%.*]] = call i32 @test(ptr noalias noundef align 4294967296 null)
 ; CGSCC-NEXT:    ret void
 ;
-  call i32 @test(i32* null, i32* null)
+  call i32 @test(ptr null, ptr null)
   ret void
 }
 
-define internal i32 @test(i32* %X, i32* %Y) {
+define internal i32 @test(ptr %X, ptr %Y) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@test
-; CHECK-SAME: (i32* noalias nocapture nofree noundef writeonly align 4 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr noalias nocapture nofree noundef writeonly align 4 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    br i1 true, label [[LIVE:%.*]], label [[DEAD:%.*]]
 ; CHECK:       live:
-; CHECK-NEXT:    store i32 0, i32* [[X]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[X]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ; CHECK:       dead:
 ; CHECK-NEXT:    unreachable
 ;
   br i1 true, label %live, label %dead
 live:
-  store i32 0, i32* %X
+  store i32 0, ptr %X
   ret i32 0
 dead:
-  call i32 @caller(i32* null)
+  call i32 @caller(ptr null)
   call void @dead()
   ret i32 1
 }
 
-define internal i32 @caller(i32* %B) {
+define internal i32 @caller(ptr %B) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@caller
-; TUNIT-SAME: (i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0]] {
+; TUNIT-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B]]) #[[ATTR2:[0-9]+]]
+; TUNIT-NEXT:    [[C:%.*]] = call i32 @test(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B]]) #[[ATTR2:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 undef
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@caller
-; CGSCC-SAME: (i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0]] {
+; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B]]) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    [[C:%.*]] = call i32 @test(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 0
 ;
   %A = alloca i32
-  store i32 1, i32* %A
-  %C = call i32 @test(i32* %B, i32* %A)
+  store i32 1, ptr %A
+  %C = call i32 @test(ptr %B, ptr %A)
   ret i32 %C
 }
 
@@ -59,20 +59,20 @@ define i32 @callercaller() {
 ; TUNIT-LABEL: define {{[^@]+}}@callercaller
 ; TUNIT-SAME: () #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:    [[B:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    [[X:%.*]] = call i32 @caller(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B]]) #[[ATTR2]]
+; TUNIT-NEXT:    [[X:%.*]] = call i32 @caller(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B]]) #[[ATTR2]]
 ; TUNIT-NEXT:    ret i32 0
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@callercaller
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:    [[B:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    store i32 2, i32* [[B]], align 4
-; CGSCC-NEXT:    [[X:%.*]] = call noundef i32 @caller(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B]]) #[[ATTR3:[0-9]+]]
+; CGSCC-NEXT:    store i32 2, ptr [[B]], align 4
+; CGSCC-NEXT:    [[X:%.*]] = call noundef i32 @caller(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B]]) #[[ATTR3:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[X]]
 ;
   %B = alloca i32
-  store i32 2, i32* %B
-  %X = call i32 @caller(i32* %B)
+  store i32 2, ptr %B
+  %X = call i32 @caller(ptr %B)
   ret i32 %X
 }
 
