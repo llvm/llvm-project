@@ -1,10 +1,10 @@
 # REQUIRES: x86
-## This test checks that when we coalesce weak definitions, any private-label
-## aliases to those weak defs don't cause the coalesced data to be retained.
-## This test explicitly creates those private-label symbols, but it was actually
-## motivated by MC's aarch64 backend which automatically creates them when
-## emitting object files. I've chosen to explicitly create them here since we
-## can then reference those symbols for a more complete test.
+## This test checks that when we coalesce weak definitions, any flag-less
+## private-label aliases to those weak defs don't cause the coalesced data to be
+## retained. This test explicitly creates those private-label symbols, but it
+## was actually motivated by MC's aarch64 backend which automatically creates
+## them when emitting object files. I've chosen to explicitly create them here
+## since we can then reference those symbols for a more complete test.
 ##
 ## Not retaining the data matters for more than just size -- we have a use case
 ## that depends on proper data coalescing to emit a valid file format.
@@ -25,8 +25,11 @@
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/weak-then-private.s -o %t/weak-then-private.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/private-then-weak.s -o %t/private-then-weak.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/no-dead-strip.s -o %t/no-dead-strip.o
 # RUN: %lld -dylib %t/weak-then-private.o %t/private-then-weak.o -o %t/test1
 # RUN: %lld -dylib %t/private-then-weak.o %t/weak-then-private.o -o %t/test2
+# RUN: %lld -dead_strip %t/no-dead-strip.o -o %t/no-dead-strip
+
 # RUN: llvm-objdump --macho --syms --section="__DATA,__data" --weak-bind %t/test1 | FileCheck %s
 # RUN: llvm-objdump --macho --syms --section="__DATA,__data" --weak-bind %t/test2 | FileCheck %s
 
@@ -47,6 +50,14 @@
 # CHECK-NEXT:  segment  section            address     type       addend   symbol
 # CHECK-NEXT:  __DATA   __data             0x00001008 pointer         0   _weak
 # CHECK-NEXT:  __DATA   __data             0x00001010 pointer         0   _weak
+
+## Verify that we don't drop any flags that private-label aliases have (such as
+## .no_dead_strip). This is a regression test. We previously had subsections
+## that were mistakenly stripped.
+
+# RUN: llvm-objdump --macho --section-headers %t/no-dead-strip | FileCheck %s \
+# RUN:   --check-prefix=NO-DEAD-STRIP
+# NO-DEAD-STRIP: __data        00000010
 
 #--- weak-then-private.s
 .globl _weak
@@ -71,5 +82,24 @@ _weak:
 
 _ref:
   .quad l_ignored
+
+.subsections_via_symbols
+
+#--- no-dead-strip.s
+.globl _main
+
+_main:
+  ret
+
+.data
+.no_dead_strip l_foo, l_bar
+
+_foo:
+l_foo:
+  .quad 0x123
+
+l_bar:
+_bar:
+  .quad 0x123
 
 .subsections_via_symbols
