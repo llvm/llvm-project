@@ -41,7 +41,7 @@ define void @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[C3:%.*]] = call i1 @unknown(i32 [[D_0]])
 ; CHECK-NEXT:    br i1 [[C3]], label [[LATCH1]], label [[PH2]]
 ; CHECK:       latch1:
-; CHECK-NEXT:    [[TMP0]] = load i32, i32* @b, align 4
+; CHECK-NEXT:    [[TMP0]] = load i32, ptr @b, align 4
 ; CHECK-NEXT:    br label [[H1]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    [[D_0_LCSSA_PH:%.*]] = phi i32 [ [[D_0]], [[H3]] ]
@@ -88,7 +88,7 @@ exit2:
   br i1 %c3, label %latch1, label %ph2
 
 latch1:                 ; preds = %exit2
-  %1 = load i32, i32* @b, align 4
+  %1 = load i32, ptr @b, align 4
   br label %h1
 
 exit:

@@ -49,7 +49,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; NOPROLOG-NOT: for.body.prol:
 
 
-define i32 @test(i32* nocapture %a, i32 %n) nounwind uwtable readonly {
+define i32 @test(ptr nocapture %a, i32 %n) nounwind uwtable readonly {
 entry:
   %cmp1 = icmp eq i32 %n, 0
   br i1 %cmp1, label %for.end, label %for.body
@@ -57,8 +57,8 @@ entry:
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %sum.02 = phi i32 [ %add, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %0, %sum.02
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
@@ -79,15 +79,15 @@ for.end:                                          ; preds = %for.body, %entry
 ; COMMON-NOT: for.body.epil:
 ; COMMON-NOT: for.body.prol:
 
-define i32 @test1(i32* nocapture %a) nounwind uwtable readonly {
+define i32 @test1(ptr nocapture %a) nounwind uwtable readonly {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %sum.01 = phi i32 [ 0, %entry ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %0, %sum.01
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
@@ -140,17 +140,17 @@ cond_true138:
 ; NOPROLOG: for.body:
 ; NOPROLOG-NOT: for.body.prol:
 
-define zeroext i16 @down(i16* nocapture %p, i32 %len) nounwind uwtable readonly {
+define zeroext i16 @down(ptr nocapture %p, i32 %len) nounwind uwtable readonly {
 entry:
   %cmp2 = icmp eq i32 %len, 0
   br i1 %cmp2, label %for.end, label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
-  %p.addr.05 = phi i16* [ %incdec.ptr, %for.body ], [ %p, %entry ]
+  %p.addr.05 = phi ptr [ %incdec.ptr, %for.body ], [ %p, %entry ]
   %len.addr.04 = phi i32 [ %sub, %for.body ], [ %len, %entry ]
   %res.03 = phi i32 [ %add, %for.body ], [ 0, %entry ]
-  %incdec.ptr = getelementptr inbounds i16, i16* %p.addr.05, i64 1
-  %0 = load i16, i16* %p.addr.05, align 2
+  %incdec.ptr = getelementptr inbounds i16, ptr %p.addr.05, i64 1
+  %0 = load i16, ptr %p.addr.05, align 2
   %conv = zext i16 %0 to i32
   %add = add i32 %conv, %res.03
   %sub = add nsw i32 %len.addr.04, -2
@@ -181,17 +181,17 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 ; NOPROLOG: for.body:
 ; NOPROLOG-NOT: for.body.prol:
 
-define zeroext i16 @test2(i16* nocapture %p, i32 %len) nounwind uwtable readonly {
+define zeroext i16 @test2(ptr nocapture %p, i32 %len) nounwind uwtable readonly {
 entry:
   %cmp2 = icmp eq i32 %len, 0
   br i1 %cmp2, label %for.end, label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
-  %p.addr.05 = phi i16* [ %incdec.ptr, %for.body ], [ %p, %entry ]
+  %p.addr.05 = phi ptr [ %incdec.ptr, %for.body ], [ %p, %entry ]
   %len.addr.04 = phi i32 [ %sub, %for.body ], [ %len, %entry ]
   %res.03 = phi i32 [ %add, %for.body ], [ 0, %entry ]
-  %incdec.ptr = getelementptr inbounds i16, i16* %p.addr.05, i64 1
-  %0 = load i16, i16* %p.addr.05, align 2
+  %incdec.ptr = getelementptr inbounds i16, ptr %p.addr.05, i64 1
+  %0 = load i16, ptr %p.addr.05, align 2
   %conv = zext i16 %0 to i32
   %add = add i32 %conv, %res.03
   %sub = add nsw i32 %len.addr.04, -2

@@ -3,47 +3,47 @@
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 
-define hidden void @compile_time_full(i8* nocapture %a, i8* nocapture readonly %b) {
+define hidden void @compile_time_full(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: @compile_time_full(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[B:%.*]], align 1
-; CHECK-NEXT:    store i8 [[I]], i8* [[A:%.*]], align 1
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, i8* [[B]], i32 1
-; CHECK-NEXT:    [[I_1:%.*]] = load i8, i8* [[ARRAYIDX_1]], align 1
-; CHECK-NEXT:    [[ARRAYIDX1_1:%.*]] = getelementptr inbounds i8, i8* [[A]], i32 1
-; CHECK-NEXT:    store i8 [[I_1]], i8* [[ARRAYIDX1_1]], align 1
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i8, i8* [[B]], i32 2
-; CHECK-NEXT:    [[I_2:%.*]] = load i8, i8* [[ARRAYIDX_2]], align 1
-; CHECK-NEXT:    [[ARRAYIDX1_2:%.*]] = getelementptr inbounds i8, i8* [[A]], i32 2
-; CHECK-NEXT:    store i8 [[I_2]], i8* [[ARRAYIDX1_2]], align 1
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i8, i8* [[B]], i32 3
-; CHECK-NEXT:    [[I_3:%.*]] = load i8, i8* [[ARRAYIDX_3]], align 1
-; CHECK-NEXT:    [[ARRAYIDX1_3:%.*]] = getelementptr inbounds i8, i8* [[A]], i32 3
-; CHECK-NEXT:    store i8 [[I_3]], i8* [[ARRAYIDX1_3]], align 1
-; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i8, i8* [[B]], i32 4
-; CHECK-NEXT:    [[I_4:%.*]] = load i8, i8* [[ARRAYIDX_4]], align 1
-; CHECK-NEXT:    [[ARRAYIDX1_4:%.*]] = getelementptr inbounds i8, i8* [[A]], i32 4
-; CHECK-NEXT:    store i8 [[I_4]], i8* [[ARRAYIDX1_4]], align 1
-; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i8, i8* [[B]], i32 5
-; CHECK-NEXT:    [[I_5:%.*]] = load i8, i8* [[ARRAYIDX_5]], align 1
-; CHECK-NEXT:    [[ARRAYIDX1_5:%.*]] = getelementptr inbounds i8, i8* [[A]], i32 5
-; CHECK-NEXT:    store i8 [[I_5]], i8* [[ARRAYIDX1_5]], align 1
-; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i8, i8* [[B]], i32 6
-; CHECK-NEXT:    [[I_6:%.*]] = load i8, i8* [[ARRAYIDX_6]], align 1
-; CHECK-NEXT:    [[ARRAYIDX1_6:%.*]] = getelementptr inbounds i8, i8* [[A]], i32 6
-; CHECK-NEXT:    store i8 [[I_6]], i8* [[ARRAYIDX1_6]], align 1
-; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i8, i8* [[B]], i32 7
-; CHECK-NEXT:    [[I_7:%.*]] = load i8, i8* [[ARRAYIDX_7]], align 1
-; CHECK-NEXT:    [[ARRAYIDX1_7:%.*]] = getelementptr inbounds i8, i8* [[A]], i32 7
-; CHECK-NEXT:    store i8 [[I_7]], i8* [[ARRAYIDX1_7]], align 1
-; CHECK-NEXT:    [[ARRAYIDX_8:%.*]] = getelementptr inbounds i8, i8* [[B]], i32 8
-; CHECK-NEXT:    [[I_8:%.*]] = load i8, i8* [[ARRAYIDX_8]], align 1
-; CHECK-NEXT:    [[ARRAYIDX1_8:%.*]] = getelementptr inbounds i8, i8* [[A]], i32 8
-; CHECK-NEXT:    store i8 [[I_8]], i8* [[ARRAYIDX1_8]], align 1
-; CHECK-NEXT:    [[ARRAYIDX_9:%.*]] = getelementptr inbounds i8, i8* [[B]], i32 9
-; CHECK-NEXT:    [[I_9:%.*]] = load i8, i8* [[ARRAYIDX_9]], align 1
-; CHECK-NEXT:    [[ARRAYIDX1_9:%.*]] = getelementptr inbounds i8, i8* [[A]], i32 9
-; CHECK-NEXT:    store i8 [[I_9]], i8* [[ARRAYIDX1_9]], align 1
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[B:%.*]], align 1
+; CHECK-NEXT:    store i8 [[I]], ptr [[A:%.*]], align 1
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 1
+; CHECK-NEXT:    [[I_1:%.*]] = load i8, ptr [[ARRAYIDX_1]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 1
+; CHECK-NEXT:    store i8 [[I_1]], ptr [[ARRAYIDX1_1]], align 1
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 2
+; CHECK-NEXT:    [[I_2:%.*]] = load i8, ptr [[ARRAYIDX_2]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1_2:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 2
+; CHECK-NEXT:    store i8 [[I_2]], ptr [[ARRAYIDX1_2]], align 1
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 3
+; CHECK-NEXT:    [[I_3:%.*]] = load i8, ptr [[ARRAYIDX_3]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1_3:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 3
+; CHECK-NEXT:    store i8 [[I_3]], ptr [[ARRAYIDX1_3]], align 1
+; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 4
+; CHECK-NEXT:    [[I_4:%.*]] = load i8, ptr [[ARRAYIDX_4]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1_4:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 4
+; CHECK-NEXT:    store i8 [[I_4]], ptr [[ARRAYIDX1_4]], align 1
+; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 5
+; CHECK-NEXT:    [[I_5:%.*]] = load i8, ptr [[ARRAYIDX_5]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1_5:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 5
+; CHECK-NEXT:    store i8 [[I_5]], ptr [[ARRAYIDX1_5]], align 1
+; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 6
+; CHECK-NEXT:    [[I_6:%.*]] = load i8, ptr [[ARRAYIDX_6]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1_6:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 6
+; CHECK-NEXT:    store i8 [[I_6]], ptr [[ARRAYIDX1_6]], align 1
+; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 7
+; CHECK-NEXT:    [[I_7:%.*]] = load i8, ptr [[ARRAYIDX_7]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1_7:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 7
+; CHECK-NEXT:    store i8 [[I_7]], ptr [[ARRAYIDX1_7]], align 1
+; CHECK-NEXT:    [[ARRAYIDX_8:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 8
+; CHECK-NEXT:    [[I_8:%.*]] = load i8, ptr [[ARRAYIDX_8]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1_8:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 8
+; CHECK-NEXT:    store i8 [[I_8]], ptr [[ARRAYIDX1_8]], align 1
+; CHECK-NEXT:    [[ARRAYIDX_9:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 9
+; CHECK-NEXT:    [[I_9:%.*]] = load i8, ptr [[ARRAYIDX_9]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1_9:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 9
+; CHECK-NEXT:    store i8 [[I_9]], ptr [[ARRAYIDX1_9]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -54,16 +54,16 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %i.06 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %b, i32 %i.06
-  %i = load i8, i8* %arrayidx, align 1
-  %arrayidx1 = getelementptr inbounds i8, i8* %a, i32 %i.06
-  store i8 %i, i8* %arrayidx1, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %b, i32 %i.06
+  %i = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %a, i32 %i.06
+  store i8 %i, ptr %arrayidx1, align 1
   %inc = add nuw nsw i32 %i.06, 1
   %exitcond.not = icmp eq i32 %inc, 10
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-define hidden void @compile_time_partial(i16* nocapture %a, i16* nocapture readonly %b) {
+define hidden void @compile_time_partial(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: @compile_time_partial(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -71,29 +71,29 @@ define hidden void @compile_time_partial(i16* nocapture %a, i16* nocapture reado
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_07:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC_3:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, i16* [[B:%.*]], i32 [[I_07]]
-; CHECK-NEXT:    [[I:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[B:%.*]], i32 [[I_07]]
+; CHECK-NEXT:    [[I:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[I]], 1
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i16, i16* [[A:%.*]], i32 [[I_07]]
-; CHECK-NEXT:    store i16 [[ADD]], i16* [[ARRAYIDX2]], align 2
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i16, ptr [[A:%.*]], i32 [[I_07]]
+; CHECK-NEXT:    store i16 [[ADD]], ptr [[ARRAYIDX2]], align 2
 ; CHECK-NEXT:    [[INC:%.*]] = or i32 [[I_07]], 1
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i16, i16* [[B]], i32 [[INC]]
-; CHECK-NEXT:    [[I_1:%.*]] = load i16, i16* [[ARRAYIDX_1]], align 2
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[INC]]
+; CHECK-NEXT:    [[I_1:%.*]] = load i16, ptr [[ARRAYIDX_1]], align 2
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add i16 [[I_1]], 1
-; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i16, i16* [[A]], i32 [[INC]]
-; CHECK-NEXT:    store i16 [[ADD_1]], i16* [[ARRAYIDX2_1]], align 2
+; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i16, ptr [[A]], i32 [[INC]]
+; CHECK-NEXT:    store i16 [[ADD_1]], ptr [[ARRAYIDX2_1]], align 2
 ; CHECK-NEXT:    [[INC_1:%.*]] = or i32 [[I_07]], 2
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i16, i16* [[B]], i32 [[INC_1]]
-; CHECK-NEXT:    [[I_2:%.*]] = load i16, i16* [[ARRAYIDX_2]], align 2
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[INC_1]]
+; CHECK-NEXT:    [[I_2:%.*]] = load i16, ptr [[ARRAYIDX_2]], align 2
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add i16 [[I_2]], 1
-; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds i16, i16* [[A]], i32 [[INC_1]]
-; CHECK-NEXT:    store i16 [[ADD_2]], i16* [[ARRAYIDX2_2]], align 2
+; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds i16, ptr [[A]], i32 [[INC_1]]
+; CHECK-NEXT:    store i16 [[ADD_2]], ptr [[ARRAYIDX2_2]], align 2
 ; CHECK-NEXT:    [[INC_2:%.*]] = or i32 [[I_07]], 3
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i16, i16* [[B]], i32 [[INC_2]]
-; CHECK-NEXT:    [[I_3:%.*]] = load i16, i16* [[ARRAYIDX_3]], align 2
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[INC_2]]
+; CHECK-NEXT:    [[I_3:%.*]] = load i16, ptr [[ARRAYIDX_3]], align 2
 ; CHECK-NEXT:    [[ADD_3:%.*]] = add i16 [[I_3]], 1
-; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds i16, i16* [[A]], i32 [[INC_2]]
-; CHECK-NEXT:    store i16 [[ADD_3]], i16* [[ARRAYIDX2_3]], align 2
+; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds i16, ptr [[A]], i32 [[INC_2]]
+; CHECK-NEXT:    store i16 [[ADD_3]], ptr [[ARRAYIDX2_3]], align 2
 ; CHECK-NEXT:    [[INC_3]] = add nuw nsw i32 [[I_07]], 4
 ; CHECK-NEXT:    [[EXITCOND_NOT_3:%.*]] = icmp eq i32 [[INC_3]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT_3]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
@@ -106,17 +106,17 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %i.07 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i16, i16* %b, i32 %i.07
-  %i = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %b, i32 %i.07
+  %i = load i16, ptr %arrayidx, align 2
   %add = add i16 %i, 1
-  %arrayidx2 = getelementptr inbounds i16, i16* %a, i32 %i.07
-  store i16 %add, i16* %arrayidx2, align 2
+  %arrayidx2 = getelementptr inbounds i16, ptr %a, i32 %i.07
+  store i16 %add, ptr %arrayidx2, align 2
   %inc = add nuw nsw i32 %i.07, 1
   %exitcond.not = icmp eq i32 %inc, 1000
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-define hidden void @runtime(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
+define hidden void @runtime(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %N) {
 ; CHECK-LABEL: @runtime(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP8_NOT:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -133,34 +133,34 @@ define hidden void @runtime(i32* nocapture %a, i32* nocapture readonly %b, i32* 
 ; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i32 [[XTRAITER]], 0
 ; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_EPIL:%.*]]
 ; CHECK:       for.body.epil:
-; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i32 [[I_09_UNR]]
-; CHECK-NEXT:    [[I_EPIL:%.*]] = load i32, i32* [[ARRAYIDX_EPIL]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1_EPIL:%.*]] = getelementptr inbounds i32, i32* [[C:%.*]], i32 [[I_09_UNR]]
-; CHECK-NEXT:    [[I1_EPIL:%.*]] = load i32, i32* [[ARRAYIDX1_EPIL]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[I_09_UNR]]
+; CHECK-NEXT:    [[I_EPIL:%.*]] = load i32, ptr [[ARRAYIDX_EPIL]], align 4
+; CHECK-NEXT:    [[ARRAYIDX1_EPIL:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i32 [[I_09_UNR]]
+; CHECK-NEXT:    [[I1_EPIL:%.*]] = load i32, ptr [[ARRAYIDX1_EPIL]], align 4
 ; CHECK-NEXT:    [[MUL_EPIL:%.*]] = mul nsw i32 [[I1_EPIL]], [[I_EPIL]]
-; CHECK-NEXT:    [[ARRAYIDX2_EPIL:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[I_09_UNR]]
-; CHECK-NEXT:    store i32 [[MUL_EPIL]], i32* [[ARRAYIDX2_EPIL]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2_EPIL:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[I_09_UNR]]
+; CHECK-NEXT:    store i32 [[MUL_EPIL]], ptr [[ARRAYIDX2_EPIL]], align 4
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_09:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[INC_1]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[NITER:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[NITER_NEXT_1:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[B]], i32 [[I_09]]
-; CHECK-NEXT:    [[I:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[C]], i32 [[I_09]]
-; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[I_09]]
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[C]], i32 [[I_09]]
+; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I1]], [[I]]
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[I_09]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[I_09]]
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[INC:%.*]] = or i32 [[I_09]], 1
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, i32* [[B]], i32 [[INC]]
-; CHECK-NEXT:    [[I_1:%.*]] = load i32, i32* [[ARRAYIDX_1]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1_1:%.*]] = getelementptr inbounds i32, i32* [[C]], i32 [[INC]]
-; CHECK-NEXT:    [[I1_1:%.*]] = load i32, i32* [[ARRAYIDX1_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[INC]]
+; CHECK-NEXT:    [[I_1:%.*]] = load i32, ptr [[ARRAYIDX_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX1_1:%.*]] = getelementptr inbounds i32, ptr [[C]], i32 [[INC]]
+; CHECK-NEXT:    [[I1_1:%.*]] = load i32, ptr [[ARRAYIDX1_1]], align 4
 ; CHECK-NEXT:    [[MUL_1:%.*]] = mul nsw i32 [[I1_1]], [[I_1]]
-; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[INC]]
-; CHECK-NEXT:    store i32 [[MUL_1]], i32* [[ARRAYIDX2_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INC]]
+; CHECK-NEXT:    store i32 [[MUL_1]], ptr [[ARRAYIDX2_1]], align 4
 ; CHECK-NEXT:    [[INC_1]] = add nuw i32 [[I_09]], 2
 ; CHECK-NEXT:    [[NITER_NEXT_1]] = add i32 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i32 [[NITER_NEXT_1]], [[UNROLL_ITER]]
@@ -175,19 +175,19 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.body, %entry
   %i.09 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %b, i32 %i.09
-  %i = load i32, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %c, i32 %i.09
-  %i1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %b, i32 %i.09
+  %i = load i32, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %c, i32 %i.09
+  %i1 = load i32, ptr %arrayidx1, align 4
   %mul = mul nsw i32 %i1, %i
-  %arrayidx2 = getelementptr inbounds i32, i32* %a, i32 %i.09
-  store i32 %mul, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %a, i32 %i.09
+  store i32 %mul, ptr %arrayidx2, align 4
   %inc = add nuw i32 %i.09, 1
   %exitcond.not = icmp eq i32 %inc, %N
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-define hidden void @dont_unroll_call(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
+define hidden void @dont_unroll_call(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %N) {
 ; CHECK-LABEL: @dont_unroll_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP12_NOT:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -196,14 +196,14 @@ define hidden void @dont_unroll_call(i32* nocapture %a, i32* nocapture readonly 
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_013:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i32 [[I_013]]
-; CHECK-NEXT:    [[I:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[C:%.*]], i32 [[I_013]]
-; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[I_013]]
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i32 [[I_013]]
+; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I1]], [[I]]
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[I_013]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    call i32 (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 [[I_013]], i32 [[MUL]])
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[I_013]]
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str, i32 [[I_013]], i32 [[MUL]])
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_013]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
@@ -217,20 +217,20 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.body, %entry
   %i.013 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %b, i32 %i.013
-  %i = load i32, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %c, i32 %i.013
-  %i1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %b, i32 %i.013
+  %i = load i32, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %c, i32 %i.013
+  %i1 = load i32, ptr %arrayidx1, align 4
   %mul = mul nsw i32 %i1, %i
-  %arrayidx2 = getelementptr inbounds i32, i32* %a, i32 %i.013
-  store i32 %mul, i32* %arrayidx2, align 4
-  call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 %i.013, i32 %mul)
+  %arrayidx2 = getelementptr inbounds i32, ptr %a, i32 %i.013
+  store i32 %mul, ptr %arrayidx2, align 4
+  call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str, i32 %i.013, i32 %mul)
   %inc = add nuw i32 %i.013, 1
   %exitcond.not = icmp eq i32 %inc, %N
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-define hidden void @dont_unroll_optsize(i8* nocapture %a, i8* nocapture readonly %b) #0 {
+define hidden void @dont_unroll_optsize(ptr nocapture %a, ptr nocapture readonly %b) #0 {
 ; CHECK-LABEL: @dont_unroll_optsize(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -238,10 +238,10 @@ define hidden void @dont_unroll_optsize(i8* nocapture %a, i8* nocapture readonly
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[B:%.*]], i32 [[I_06]]
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i32 [[I_06]]
-; CHECK-NEXT:    store i8 [[I]], i8* [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i32 [[I_06]]
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[I_06]]
+; CHECK-NEXT:    store i8 [[I]], ptr [[ARRAYIDX1]], align 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_06]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], 10
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
@@ -254,16 +254,16 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %i.06 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %b, i32 %i.06
-  %i = load i8, i8* %arrayidx, align 1
-  %arrayidx1 = getelementptr inbounds i8, i8* %a, i32 %i.06
-  store i8 %i, i8* %arrayidx1, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %b, i32 %i.06
+  %i = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %a, i32 %i.06
+  store i8 %i, ptr %arrayidx1, align 1
   %inc = add nuw nsw i32 %i.06, 1
   %exitcond.not = icmp eq i32 %inc, 10
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-define hidden void @dont_unroll_minsize(i8* nocapture %a, i8* nocapture readonly %b) #1 {
+define hidden void @dont_unroll_minsize(ptr nocapture %a, ptr nocapture readonly %b) #1 {
 ; CHECK-LABEL: @dont_unroll_minsize(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -271,10 +271,10 @@ define hidden void @dont_unroll_minsize(i8* nocapture %a, i8* nocapture readonly
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[B:%.*]], i32 [[I_06]]
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i32 [[I_06]]
-; CHECK-NEXT:    store i8 [[I]], i8* [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i32 [[I_06]]
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[I_06]]
+; CHECK-NEXT:    store i8 [[I]], ptr [[ARRAYIDX1]], align 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_06]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], 10
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
@@ -287,10 +287,10 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %i.06 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %b, i32 %i.06
-  %i = load i8, i8* %arrayidx, align 1
-  %arrayidx1 = getelementptr inbounds i8, i8* %a, i32 %i.06
-  store i8 %i, i8* %arrayidx1, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %b, i32 %i.06
+  %i = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %a, i32 %i.06
+  store i8 %i, ptr %arrayidx1, align 1
   %inc = add nuw nsw i32 %i.06, 1
   %exitcond.not = icmp eq i32 %inc, 10
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
@@ -300,4 +300,4 @@ attributes #0 = { optsize }
 attributes #1 = { minsize }
 
 @.str = private unnamed_addr constant [12 x i8] c"a[%d] = %d\0A\00", align 1
-declare i32 @printf(i8* nocapture readonly, ...)
+declare i32 @printf(ptr nocapture readonly, ...)

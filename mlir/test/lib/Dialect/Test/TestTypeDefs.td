@@ -218,9 +218,14 @@ def TestTypeStructCaptureAll : Test_Type<"TestStructTypeCaptureAll"> {
 }
 
 def TestTypeOptionalParam : Test_Type<"TestTypeOptionalParam"> {
-  let parameters = (ins OptionalParameter<"mlir::Optional<int>">:$a, "int":$b);
+  let parameters = (ins
+    OptionalParameter<"mlir::Optional<int>">:$a,
+    "int":$b,
+    DefaultValuedParameter<"std::optional<::mlir::Attribute>",
+                           "std::nullopt">:$c
+  );
   let mnemonic = "optional_param";
-  let assemblyFormat = "`<` $a `,` $b `>`";
+  let assemblyFormat = "`<` $a `,` $b ( `,` $c^)? `>`";
 }
 
 def TestTypeOptionalParams : Test_Type<"TestTypeOptionalParams"> {

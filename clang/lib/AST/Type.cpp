@@ -4157,10 +4157,6 @@ Optional<NullabilityKind> Type::getNullability() const {
   }
   return std::nullopt;
 }
-// TODO: Remove overload.
-Optional<NullabilityKind> Type::getNullability(const ASTContext &) const {
-  return getNullability();
-}
 
 bool Type::canHaveNullability(bool ResultIfUnknown) const {
   QualType type = getCanonicalTypeInternal();

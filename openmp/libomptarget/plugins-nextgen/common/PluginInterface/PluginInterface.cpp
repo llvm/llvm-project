@@ -439,7 +439,7 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
   // Unregister deallocated pinned memory buffer if the type is host memory.
   if (Kind == TARGET_ALLOC_HOST)
     if (auto Err = unregisterHostPinnedMemoryBuffer(TgtPtr))
-      return std::move(Err);
+      return Err;
 
   return Plugin::success();
 }
