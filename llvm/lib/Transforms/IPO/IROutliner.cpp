@@ -2426,6 +2426,7 @@ void IROutliner::pruneIncompatibleRegions(
     PreviouslyOutlined = false;
     unsigned StartIdx = IRSC.getStartIdx();
     unsigned EndIdx = IRSC.getEndIdx();
+    const Function &FnForCurrCand = *IRSC.getFunction();
 
     for (unsigned Idx = StartIdx; Idx <= EndIdx; Idx++)
       if (Outlined.contains(Idx)) {
@@ -2445,8 +2446,16 @@ void IROutliner::pruneIncompatibleRegions(
     if (BBHasAddressTaken)
       continue;
 
-    if (IRSC.getFunction()->hasOptNone())
+    if (FnForCurrCand.hasOptNone())
       continue;
+
+    if (FnForCurrCand.hasFnAttribute("nooutline")) {
+      LLVM_DEBUG({
+        dbgs() << "... Skipping function with nooutline attribute: "
+               << FnForCurrCand.getName() << "\n";
+      });
+      continue;
+    }
 
     if (IRSC.front()->Inst->getFunction()->hasLinkOnceODRLinkage() &&
         !OutlineFromLinkODRs)

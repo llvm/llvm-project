@@ -20,7 +20,7 @@ TEST(LlvmLibcPlatformFileTest, CreateWriteCloseAndReadBack) {
   File *file = __llvm_libc::openfile(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   ASSERT_EQ(file->write(TEXT, TEXT_SIZE).value, TEXT_SIZE);
-  ASSERT_EQ(file->close(), 0);
+  ASSERT_EQ(File::cleanup(file), 0);
 
   file = __llvm_libc::openfile(FILENAME, "r");
   ASSERT_FALSE(file == nullptr);
@@ -33,7 +33,7 @@ TEST(LlvmLibcPlatformFileTest, CreateWriteCloseAndReadBack) {
   ASSERT_EQ(file->read(data, TEXT_SIZE).value, size_t(0));
   ASSERT_TRUE(file->iseof());
 
-  ASSERT_EQ(file->close(), 0);
+  ASSERT_EQ(File::cleanup(file), 0);
 }
 
 TEST(LlvmLibcPlatformFileTest, CreateWriteSeekAndReadBack) {
@@ -53,7 +53,7 @@ TEST(LlvmLibcPlatformFileTest, CreateWriteSeekAndReadBack) {
   ASSERT_EQ(file->read(data, TEXT_SIZE).value, size_t(0));
   ASSERT_TRUE(file->iseof());
 
-  ASSERT_EQ(file->close(), 0);
+  ASSERT_EQ(File::cleanup(file), 0);
 }
 
 TEST(LlvmLibcPlatformFileTest, CreateAppendCloseAndReadBack) {
@@ -61,14 +61,14 @@ TEST(LlvmLibcPlatformFileTest, CreateAppendCloseAndReadBack) {
   File *file = __llvm_libc::openfile(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   ASSERT_EQ(file->write(TEXT, TEXT_SIZE).value, TEXT_SIZE);
-  ASSERT_EQ(file->close(), 0);
+  ASSERT_EQ(File::cleanup(file), 0);
 
   file = __llvm_libc::openfile(FILENAME, "a");
   ASSERT_FALSE(file == nullptr);
   constexpr char APPEND_TEXT[] = " Append Text";
   constexpr size_t APPEND_TEXT_SIZE = sizeof(APPEND_TEXT) - 1;
   ASSERT_EQ(file->write(APPEND_TEXT, APPEND_TEXT_SIZE).value, APPEND_TEXT_SIZE);
-  ASSERT_EQ(file->close(), 0);
+  ASSERT_EQ(File::cleanup(file), 0);
 
   file = __llvm_libc::openfile(FILENAME, "r");
   ASSERT_FALSE(file == nullptr);
@@ -82,7 +82,7 @@ TEST(LlvmLibcPlatformFileTest, CreateAppendCloseAndReadBack) {
   ASSERT_EQ(file->read(data, READ_SIZE).value, size_t(0));
   ASSERT_TRUE(file->iseof());
 
-  ASSERT_EQ(file->close(), 0);
+  ASSERT_EQ(File::cleanup(file), 0);
 }
 
 TEST(LlvmLibcPlatformFileTest, CreateAppendSeekAndReadBack) {
@@ -90,7 +90,7 @@ TEST(LlvmLibcPlatformFileTest, CreateAppendSeekAndReadBack) {
   File *file = __llvm_libc::openfile(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   ASSERT_EQ(file->write(TEXT, TEXT_SIZE).value, TEXT_SIZE);
-  ASSERT_EQ(file->close(), 0);
+  ASSERT_EQ(File::cleanup(file), 0);
 
   file = __llvm_libc::openfile(FILENAME, "a+");
   ASSERT_FALSE(file == nullptr);
@@ -108,7 +108,7 @@ TEST(LlvmLibcPlatformFileTest, CreateAppendSeekAndReadBack) {
   ASSERT_EQ(file->read(data, APPEND_TEXT_SIZE).value, size_t(0));
   ASSERT_TRUE(file->iseof());
 
-  ASSERT_EQ(file->close(), 0);
+  ASSERT_EQ(File::cleanup(file), 0);
 }
 
 TEST(LlvmLibcPlatformFileTest, LargeFile) {
@@ -126,7 +126,7 @@ TEST(LlvmLibcPlatformFileTest, LargeFile) {
   for (int i = 0; i < REPEAT; ++i) {
     ASSERT_EQ(file->write(write_data, DATA_SIZE).value, DATA_SIZE);
   }
-  ASSERT_EQ(file->close(), 0);
+  ASSERT_EQ(File::cleanup(file), 0);
 
   file = __llvm_libc::openfile(FILENAME, "r");
   ASSERT_FALSE(file == nullptr);
@@ -141,7 +141,7 @@ TEST(LlvmLibcPlatformFileTest, LargeFile) {
   ASSERT_EQ(file->read(data, 1).value, size_t(0));
   ASSERT_TRUE(file->iseof());
 
-  ASSERT_EQ(file->close(), 0);
+  ASSERT_EQ(File::cleanup(file), 0);
 }
 
 TEST(LlvmLibcPlatformFileTest, ReadSeekCurAndRead) {
@@ -151,7 +151,7 @@ TEST(LlvmLibcPlatformFileTest, ReadSeekCurAndRead) {
   constexpr char CONTENT[] = "1234567890987654321";
   ASSERT_EQ(sizeof(CONTENT) - 1,
             file->write(CONTENT, sizeof(CONTENT) - 1).value);
-  ASSERT_EQ(0, file->close());
+  ASSERT_EQ(0, File::cleanup(file));
 
   file = __llvm_libc::openfile(FILENAME, "r");
   ASSERT_FALSE(file == nullptr);
@@ -168,7 +168,7 @@ TEST(LlvmLibcPlatformFileTest, ReadSeekCurAndRead) {
   ASSERT_EQ(file->read(data, READ_SIZE - 1).value, READ_SIZE - 1);
   ASSERT_STREQ(data, "9098");
 
-  ASSERT_EQ(file->close(), 0);
+  ASSERT_EQ(File::cleanup(file), 0);
 }
 
 TEST(LlvmLibcPlatformFileTest, IncorrectOperation) {
@@ -180,21 +180,21 @@ TEST(LlvmLibcPlatformFileTest, IncorrectOperation) {
   ASSERT_EQ(file->read(data, 1).value, size_t(0)); // Cannot read
   ASSERT_FALSE(file->iseof());
   ASSERT_TRUE(file->error());
-  ASSERT_EQ(file->close(), 0);
+  ASSERT_EQ(File::cleanup(file), 0);
 
   file = __llvm_libc::openfile(FILENAME, "r");
   ASSERT_FALSE(file == nullptr);
   ASSERT_EQ(file->write(data, 1).value, size_t(0)); // Cannot write
   ASSERT_FALSE(file->iseof());
   ASSERT_TRUE(file->error());
-  ASSERT_EQ(file->close(), 0);
+  ASSERT_EQ(File::cleanup(file), 0);
 
   file = __llvm_libc::openfile(FILENAME, "a");
   ASSERT_FALSE(file == nullptr);
   ASSERT_EQ(file->read(data, 1).value, size_t(0)); // Cannot read
   ASSERT_FALSE(file->iseof());
   ASSERT_TRUE(file->error());
-  ASSERT_EQ(file->close(), 0);
+  ASSERT_EQ(File::cleanup(file), 0);
 }
 
 TEST(LlvmLibcPlatformFileTest, StdOutStdErrSmokeTest) {

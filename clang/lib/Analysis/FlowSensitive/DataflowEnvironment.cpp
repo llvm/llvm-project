@@ -233,6 +233,15 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
       }
     }
   }
+
+  // Look for global variable references in the constructor-initializers.
+  if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(&DeclCtx)) {
+    for (const auto *Init : CtorDecl->inits()) {
+      const Expr *E = Init->getInit();
+      assert(E != nullptr);
+      initGlobalVars(*E, *this);
+    }
+  }
 }
 
 bool Environment::canDescend(unsigned MaxDepth,

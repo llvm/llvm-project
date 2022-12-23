@@ -14,6 +14,8 @@ add_header_library(
   atoi_test_support
   HDRS
     AtoiTest.h
+  DEPENDS
+    libc.src.__support.CPP.type_traits
 )
 
 add_libc_unittest(
@@ -69,6 +71,17 @@ add_libc_unittest(
     libc.src.stdlib.strtof
 )
 
+add_header_library(
+  strtol_test_support
+  HDRS
+    StrtolTest.h
+  DEPENDS
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.type_traits
+    libc.include.errno
+    libc.src.errno.errno
+)
+
 add_libc_unittest(
   strtol_test
   SUITE
@@ -77,6 +90,7 @@ add_libc_unittest(
     strtol_test.cpp
   DEPENDS
     libc.src.stdlib.strtol
+    .strtol_test_support
 )
 
 add_libc_unittest(
@@ -98,6 +112,7 @@ add_libc_unittest(
     strtoll_test.cpp
   DEPENDS
     libc.src.stdlib.strtoll
+    .strtol_test_support
 )
 
 add_libc_unittest(
@@ -108,6 +123,7 @@ add_libc_unittest(
     strtoul_test.cpp
   DEPENDS
     libc.src.stdlib.strtoul
+    .strtol_test_support
 )
 
 add_libc_unittest(
@@ -118,6 +134,7 @@ add_libc_unittest(
     strtoull_test.cpp
   DEPENDS
     libc.src.stdlib.strtoull
+    .strtol_test_support
 )
 
 add_libc_unittest(

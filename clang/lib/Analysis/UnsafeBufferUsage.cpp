@@ -427,7 +427,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
     if (!any_of(VDGadgets, [](const Gadget *G) { return !G->isSafe(); }))
       continue;
 
-    std::optional<FixItList> Fixes = std::nullopt;
+    std::optional<FixItList> Fixes;
 
     // Avoid suggesting fixes if not all uses of the variable are identified
     // as known gadgets.
