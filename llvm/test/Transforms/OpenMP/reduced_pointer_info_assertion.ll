@@ -12,6 +12,7 @@ define internal i32 @nblist() {
   ret i32 0
 }
 
+
 define fastcc void @rec(ptr %0, i64 %1) {
 ; CHECK-LABEL: define {{[^@]+}}@rec(
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[TMP0:%.*]], i64 [[TMP1:%.*]]
