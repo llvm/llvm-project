@@ -50,6 +50,9 @@ LLVMModuleRef createDemoModule(LLVMContextRef Ctx) {
   //  - Build the return instruction.
   LLVMBuildRet(Builder, Result);
 
+  //  - Free the builder.
+  LLVMDisposeBuilder(Builder);
+
   return M;
 }
 
@@ -107,6 +110,12 @@ int main(int argc, char *argv[]) {
       LLVMContextDispose(Ctx);
       goto jit_cleanup;
     }
+
+    // CodeGen succeeded -- We have our module, so free the Module, LLVMContext,
+    // and TargetMachine.
+    LLVMDisposeModule(M);
+    LLVMContextDispose(Ctx);
+    LLVMDisposeTargetMachine(TM);
   }
 
   // Add our object file buffer to the JIT.
