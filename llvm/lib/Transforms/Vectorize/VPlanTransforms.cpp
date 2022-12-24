@@ -482,10 +482,11 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   Type *IdxTy =
       Plan.getCanonicalIV()->getStartValue()->getLiveInIRValue()->getType();
   const SCEV *TripCount = createTripCountSCEV(IdxTy, PSE);
-  auto *C = dyn_cast<SCEVConstant>(TripCount);
   ScalarEvolution &SE = *PSE.getSE();
-  if (!C || TripCount->isZero() ||
-      C->getAPInt().getZExtValue() > BestVF.getKnownMinValue() * BestUF)
+  const SCEV *C =
+      SE.getConstant(TripCount->getType(), BestVF.getKnownMinValue() * BestUF);
+  if (TripCount->isZero() ||
+      !SE.isKnownPredicate(CmpInst::ICMP_ULE, TripCount, C))
     return;
 
   LLVMContext &Ctx = SE.getContext();
