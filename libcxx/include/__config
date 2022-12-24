@@ -166,6 +166,12 @@
 #    if defined(__FreeBSD__)
 #      define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
 #    endif
+// For XCOFF linkers, we have problems if we see a weak hidden version of a symbol
+// in user code (like you get with -fvisibility-inlines-hidden) and then a strong def
+// in the library, so we need to always rely on the library version.
+#    if defined(_AIX)
+#      define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
+#    endif
 #  endif
 
 #  if defined(_LIBCPP_BUILDING_LIBRARY) || _LIBCPP_ABI_VERSION >= 2
