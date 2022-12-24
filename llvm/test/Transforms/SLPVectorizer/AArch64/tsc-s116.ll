@@ -15,16 +15,13 @@
 ; are not selected for vectorization. Instead we should vectorize with
 ; contiguous loads, from %a plus offsets 0 to 3, or offsets 1 to 4.
 
-define void @s116_modified(float* %a) {
+define void @s116_modified(ptr %a) {
 ; CHECK-LABEL: @s116_modified(
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 0
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, float* [[A]], i64 1
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds float, float* [[A]], i64 3
-; CHECK-NEXT:    [[LD0:%.*]] = load float, float* [[GEP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[GEP1]] to <2 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[GEP3]] to <2 x float>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, <2 x float>* [[TMP3]], align 4
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 1
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 3
+; CHECK-NEXT:    [[LD0:%.*]] = load float, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[GEP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> poison, float [[LD0]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 undef>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>
@@ -33,28 +30,26 @@ define void @s116_modified(float* %a) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP6]], <4 x float> [[TMP8]], <4 x i32> <i32 0, i32 undef, i32 2, i32 4>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP10]], <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP12:%.*]] = fmul fast <4 x float> [[TMP9]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast float* [[GEP0]] to <4 x float>*
-; CHECK-NEXT:    store <4 x float> [[TMP12]], <4 x float>* [[TMP13]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP12]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %gep0 = getelementptr inbounds float, float* %a, i64 0
-  %gep1 = getelementptr inbounds float, float* %a, i64 1
-  %gep2 = getelementptr inbounds float, float* %a, i64 2
-  %gep3 = getelementptr inbounds float, float* %a, i64 3
-  %gep4 = getelementptr inbounds float, float* %a, i64 4
-  %ld0 = load float, float* %gep0
-  %ld1 = load float, float* %gep1
-  %ld2 = load float, float* %gep2
-  %ld3 = load float, float* %gep3
-  %ld4 = load float, float* %gep4
+  %gep1 = getelementptr inbounds float, ptr %a, i64 1
+  %gep2 = getelementptr inbounds float, ptr %a, i64 2
+  %gep3 = getelementptr inbounds float, ptr %a, i64 3
+  %gep4 = getelementptr inbounds float, ptr %a, i64 4
+  %ld0 = load float, ptr %a
+  %ld1 = load float, ptr %gep1
+  %ld2 = load float, ptr %gep2
+  %ld3 = load float, ptr %gep3
+  %ld4 = load float, ptr %gep4
   %mul0 = fmul fast float %ld0, %ld1
   %mul1 = fmul fast float %ld2, %ld1
   %mul2 = fmul fast float %ld3, %ld2
   %mul3 = fmul fast float %ld4, %ld3
-  store float %mul0, float* %gep0
-  store float %mul1, float* %gep1
-  store float %mul2, float* %gep2
-  store float %mul3, float* %gep3
+  store float %mul0, ptr %a
+  store float %mul1, ptr %gep1
+  store float %mul2, ptr %gep2
+  store float %mul3, ptr %gep3
   ret void
 }
 

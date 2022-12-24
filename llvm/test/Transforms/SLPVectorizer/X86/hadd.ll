@@ -141,24 +141,23 @@ define <8 x i16> @test_v8i16(<8 x i16> %a, <8 x i16> %b) {
 }
 
 ; PR41892
-define void @test_v4f32_v2f32_store(<4 x float> %f, float* %p){
+define void @test_v4f32_v2f32_store(<4 x float> %f, ptr %p){
 ; CHECK-LABEL: @test_v4f32_v2f32_store(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[F:%.*]], <4 x float> undef, <2 x i32> <i32 1, i32 2>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[F]], <4 x float> undef, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float* [[P:%.*]] to <2 x float>*
-; CHECK-NEXT:    store <2 x float> [[TMP3]], <2 x float>* [[TMP4]], align 4
+; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %x0 = extractelement <4 x float> %f, i64 0
   %x1 = extractelement <4 x float> %f, i64 1
   %add01 = fadd float %x0, %x1
-  store float %add01, float* %p, align 4
+  store float %add01, ptr %p, align 4
   %x2 = extractelement <4 x float> %f, i64 2
   %x3 = extractelement <4 x float> %f, i64 3
   %add23 = fadd float %x2, %x3
-  %p23 = getelementptr inbounds float, float* %p, i64 1
-  store float %add23, float * %p23, align 4
+  %p23 = getelementptr inbounds float, ptr %p, i64 1
+  store float %add23, ptr %p23, align 4
   ret void
 }
 

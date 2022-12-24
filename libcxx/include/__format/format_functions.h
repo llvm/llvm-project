@@ -304,7 +304,7 @@ __vformat_to(_ParseCtx&& __parse_ctx, _Ctx&& __ctx) {
       if (*__begin != _CharT('{')) [[likely]] {
         __ctx.advance_to(_VSTD::move(__out_it));
         __begin =
-            __handle_replacement_field(__begin, __end, __parse_ctx, __ctx);
+            __format::__handle_replacement_field(__begin, __end, __parse_ctx, __ctx);
         __out_it = __ctx.out();
 
         // The output is written and __begin points to the next character. So

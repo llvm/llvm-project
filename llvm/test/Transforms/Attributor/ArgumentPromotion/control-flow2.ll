@@ -4,17 +4,17 @@
 
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
-define internal i32 @callee(i1 %C, i32* %P) {
+define internal i32 @callee(i1 %C, ptr %P) {
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@callee
 ; CGSCC-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:    [[P_PRIV:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    store i32 [[TMP0]], i32* [[P_PRIV]], align 4
+; CGSCC-NEXT:    store i32 [[TMP0]], ptr [[P_PRIV]], align 4
 ; CGSCC-NEXT:    br label [[F:%.*]]
 ; CGSCC:       T:
 ; CGSCC-NEXT:    unreachable
 ; CGSCC:       F:
-; CGSCC-NEXT:    [[X:%.*]] = load i32, i32* [[P_PRIV]], align 4
+; CGSCC-NEXT:    [[X:%.*]] = load i32, ptr [[P_PRIV]], align 4
 ; CGSCC-NEXT:    ret i32 [[X]]
 ;
   br i1 %C, label %T, label %F
@@ -23,7 +23,7 @@ T:              ; preds = %0
   ret i32 17
 
 F:              ; preds = %0
-  %X = load i32, i32* %P               ; <i32> [#uses=1]
+  %X = load i32, ptr %P               ; <i32> [#uses=1]
   ret i32 %X
 }
 
@@ -40,9 +40,9 @@ define i32 @foo() {
 ; CGSCC-NEXT:    [[X:%.*]] = call i32 @callee(i32 noundef 17) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[X]]
 ;
-  %A = alloca i32         ; <i32*> [#uses=2]
-  store i32 17, i32* %A
-  %X = call i32 @callee( i1 false, i32* %A )              ; <i32> [#uses=1]
+  %A = alloca i32         ; <ptr> [#uses=2]
+  store i32 17, ptr %A
+  %X = call i32 @callee( i1 false, ptr %A )              ; <i32> [#uses=1]
   ret i32 %X
 }
 

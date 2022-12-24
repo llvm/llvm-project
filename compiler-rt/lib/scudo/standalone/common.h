@@ -132,7 +132,7 @@ u32 getNumberOfCPUs();
 
 const char *getEnv(const char *Name);
 
-u64 GetRSS();
+uptr GetRSS();
 
 u64 getMonotonicTime();
 

@@ -22,15 +22,51 @@ static Value createIndexCast(OpBuilder &builder, Location loc, Value value,
   return value;
 }
 
-static IntegerAttr fromOptionalInt(MLIRContext *ctx, Optional<unsigned> dim) {
+static IntegerAttr fromOptionalInt(MLIRContext *ctx,
+                                   std::optional<unsigned> dim) {
   if (!dim)
     return nullptr;
   return IntegerAttr::get(IndexType::get(ctx), dim.value());
 }
 
-unsigned
-builder::StorageLayout::getMemRefFieldIndex(SparseTensorFieldKind kind,
-                                            Optional<unsigned> dim) const {
+static std::optional<LogicalResult>
+convertSparseTensorType(RankedTensorType rtp, SmallVectorImpl<Type> &fields) {
+  auto enc = getSparseTensorEncoding(rtp);
+  if (!enc)
+    return std::nullopt;
+
+  foreachFieldAndTypeInSparseTensor(
+      rtp,
+      [&fields](Type fieldType, unsigned fieldIdx,
+                SparseTensorFieldKind /*fieldKind*/, unsigned /*dim*/,
+                DimLevelType /*dlt*/) -> bool {
+        assert(fieldIdx == fields.size());
+        fields.push_back(fieldType);
+        return true;
+      });
+  return success();
+}
+
+SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
+  addConversion([](Type type) { return type; });
+  addConversion([&](RankedTensorType rtp, SmallVectorImpl<Type> &fields) {
+    return convertSparseTensorType(rtp, fields);
+  });
+
+  // Required by scf.for 1:N type conversion.
+  addSourceMaterialization([](OpBuilder &builder, RankedTensorType tp,
+                              ValueRange inputs,
+                              Location loc) -> std::optional<Value> {
+    if (!getSparseTensorEncoding(tp))
+      // Not a sparse tensor.
+      return std::nullopt;
+    // Sparse compiler knows how to cancel out these casts.
+    return genTuple(builder, loc, tp, inputs);
+  });
+}
+
+unsigned StorageLayout::getMemRefFieldIndex(SparseTensorFieldKind kind,
+                                            std::optional<unsigned> dim) const {
   unsigned fieldIdx = -1u;
   foreachFieldInSparseTensor(
       enc,
@@ -48,22 +84,20 @@ builder::StorageLayout::getMemRefFieldIndex(SparseTensorFieldKind kind,
   return fieldIdx;
 }
 
-unsigned
-builder::StorageLayout::getMemRefFieldIndex(StorageSpecifierKind kind,
-                                            Optional<unsigned> dim) const {
+unsigned StorageLayout::getMemRefFieldIndex(StorageSpecifierKind kind,
+                                            std::optional<unsigned> dim) const {
   return getMemRefFieldIndex(toFieldKind(kind), dim);
 }
 
-Value builder::SparseTensorSpecifier::getInitValue(OpBuilder &builder,
-                                                   Location loc,
-                                                   RankedTensorType rtp) {
+Value SparseTensorSpecifier::getInitValue(OpBuilder &builder, Location loc,
+                                          RankedTensorType rtp) {
   return builder.create<StorageSpecifierInitOp>(
       loc, StorageSpecifierType::get(getSparseTensorEncoding(rtp)));
 }
 
-Value builder::SparseTensorSpecifier::getSpecifierField(
-    OpBuilder &builder, Location loc, StorageSpecifierKind kind,
-    Optional<unsigned> dim) {
+Value SparseTensorSpecifier::getSpecifierField(OpBuilder &builder, Location loc,
+                                               StorageSpecifierKind kind,
+                                               std::optional<unsigned> dim) {
   return createIndexCast(builder, loc,
                          builder.create<GetStorageSpecifierOp>(
                              loc, getFieldType(kind, dim), specifier, kind,
@@ -71,9 +105,10 @@ Value builder::SparseTensorSpecifier::getSpecifierField(
                          builder.getIndexType());
 }
 
-void builder::SparseTensorSpecifier::setSpecifierField(
-    OpBuilder &builder, Location loc, Value v, StorageSpecifierKind kind,
-    Optional<unsigned> dim) {
+void SparseTensorSpecifier::setSpecifierField(OpBuilder &builder, Location loc,
+                                              Value v,
+                                              StorageSpecifierKind kind,
+                                              std::optional<unsigned> dim) {
   specifier = builder.create<SetStorageSpecifierOp>(
       loc, specifier, kind, fromOptionalInt(specifier.getContext(), dim),
       createIndexCast(builder, loc, v, getFieldType(kind, dim)));
@@ -81,7 +116,7 @@ void builder::SparseTensorSpecifier::setSpecifierField(
 
 constexpr uint64_t kDataFieldStartingIdx = 0;
 
-void sparse_tensor::builder::foreachFieldInSparseTensor(
+void sparse_tensor::foreachFieldInSparseTensor(
     const SparseTensorEncodingAttr enc,
     llvm::function_ref<bool(unsigned, SparseTensorFieldKind, unsigned,
                             DimLevelType)>
@@ -120,7 +155,7 @@ void sparse_tensor::builder::foreachFieldInSparseTensor(
 #undef RETURN_ON_FALSE
 }
 
-void sparse_tensor::builder::foreachFieldAndTypeInSparseTensor(
+void sparse_tensor::foreachFieldAndTypeInSparseTensor(
     RankedTensorType rType,
     llvm::function_ref<bool(Type, unsigned, SparseTensorFieldKind, unsigned,
                             DimLevelType)>
@@ -159,8 +194,7 @@ void sparse_tensor::builder::foreachFieldAndTypeInSparseTensor(
       });
 }
 
-unsigned
-sparse_tensor::builder::getNumFieldsFromEncoding(SparseTensorEncodingAttr enc) {
+unsigned sparse_tensor::getNumFieldsFromEncoding(SparseTensorEncodingAttr enc) {
   unsigned numFields = 0;
   foreachFieldInSparseTensor(enc,
                              [&numFields](unsigned, SparseTensorFieldKind,
@@ -171,8 +205,8 @@ sparse_tensor::builder::getNumFieldsFromEncoding(SparseTensorEncodingAttr enc) {
   return numFields;
 }
 
-unsigned sparse_tensor::builder::getNumDataFieldsFromEncoding(
-    SparseTensorEncodingAttr enc) {
+unsigned
+sparse_tensor::getNumDataFieldsFromEncoding(SparseTensorEncodingAttr enc) {
   unsigned numFields = 0; // one value memref
   foreachFieldInSparseTensor(enc,
                              [&numFields](unsigned fidx, SparseTensorFieldKind,
@@ -183,6 +217,6 @@ unsigned sparse_tensor::builder::getNumDataFieldsFromEncoding(
                              });
   numFields -= 1; // the last field is MetaData field
   assert(numFields ==
-         builder::getNumFieldsFromEncoding(enc) - kDataFieldStartingIdx - 1);
+         getNumFieldsFromEncoding(enc) - kDataFieldStartingIdx - 1);
   return numFields;
 }

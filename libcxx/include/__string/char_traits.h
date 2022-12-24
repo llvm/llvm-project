@@ -671,7 +671,7 @@ __str_find(const _CharT *__p, _SizeT __sz,
     if (__n == 0) // There is nothing to search, just return __pos.
         return __pos;
 
-    const _CharT *__r = __search_substring<_CharT, _Traits>(
+    const _CharT *__r = std::__search_substring<_CharT, _Traits>(
         __p + __pos, __p + __sz, __s, __s + __n);
 
     if (__r == __p + __sz)

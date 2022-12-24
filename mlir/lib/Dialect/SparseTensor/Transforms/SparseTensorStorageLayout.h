@@ -22,8 +22,6 @@
 namespace mlir {
 namespace sparse_tensor {
 
-// FIXME: this is a tmp namespace
-namespace builder {
 //===----------------------------------------------------------------------===//
 // SparseTensorDescriptor and helpers, manage the sparse tensor memory layout
 // scheme.
@@ -171,7 +169,7 @@ public:
   SparseTensorDescriptorImpl(Type tp, ValueArrayRef fields)
       : rType(tp.cast<RankedTensorType>()), fields(fields) {
     assert(getSparseTensorEncoding(tp) &&
-           builder::getNumFieldsFromEncoding(getSparseTensorEncoding(tp)) ==
+           getNumFieldsFromEncoding(getSparseTensorEncoding(tp)) ==
                fields.size());
     // We should make sure the class is trivially copyable (and should be small
     // enough) such that we can pass it by value.
@@ -355,7 +353,6 @@ getMutDescriptorFromTensorTuple(Value tensor, SmallVectorImpl<Value> &fields) {
   return MutSparseTensorDescriptor(tuple.getResultTypes()[0], fields);
 }
 
-} // namespace builder
 } // namespace sparse_tensor
 } // namespace mlir
 #endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_SPARSETENSORBUILDER_H_

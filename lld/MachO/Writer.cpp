@@ -1319,15 +1319,14 @@ void macho::resetWriter() { LCDylib::resetInstanceCount(); }
 
 void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();
-  if (config->dedupLiterals)
+  if (config->dedupStrings)
     in.cStringSection =
         make<DeduplicatedCStringSection>(section_names::cString);
   else
     in.cStringSection = make<CStringSection>(section_names::cString);
   in.objcMethnameSection =
       make<DeduplicatedCStringSection>(section_names::objcMethname);
-  in.wordLiteralSection =
-      config->dedupLiterals ? make<WordLiteralSection>() : nullptr;
+  in.wordLiteralSection = make<WordLiteralSection>();
   if (config->emitChainedFixups) {
     in.chainedFixups = make<ChainedFixupsSection>();
   } else {

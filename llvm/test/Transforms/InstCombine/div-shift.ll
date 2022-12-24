@@ -951,13 +951,9 @@ define i8 @udiv_shl_shl_nsw_nuw(i8 %x, i8 %y, i8 %z) {
   ret i8 %d
 }
 
-; TODO: This could fold.
-
 define i8 @udiv_shl_shl_nuw_nsw2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_shl_shl_nuw_nsw2(
-; CHECK-NEXT:    [[XZ:%.*]] = shl nuw nsw i8 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[YZ:%.*]] = shl nsw i8 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[XZ]], [[YZ]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %xz = shl nuw nsw i8 %x, %z

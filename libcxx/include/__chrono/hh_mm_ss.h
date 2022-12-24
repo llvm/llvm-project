@@ -58,10 +58,10 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI constexpr explicit hh_mm_ss(_Duration __d) noexcept :
         __is_neg_(__d < _Duration(0)),
-        __h_(duration_cast<chrono::hours>  (abs(__d))),
-        __m_(duration_cast<chrono::minutes>(abs(__d) - hours())),
-        __s_(duration_cast<chrono::seconds>(abs(__d) - hours() - minutes())),
-        __f_(duration_cast<precision>      (abs(__d) - hours() - minutes() - seconds()))
+        __h_(chrono::duration_cast<chrono::hours>  (chrono::abs(__d))),
+        __m_(chrono::duration_cast<chrono::minutes>(chrono::abs(__d) - hours())),
+        __s_(chrono::duration_cast<chrono::seconds>(chrono::abs(__d) - hours() - minutes())),
+        __f_(chrono::duration_cast<precision>      (chrono::abs(__d) - hours() - minutes() - seconds()))
         {}
 
     _LIBCPP_HIDE_FROM_ABI constexpr bool is_negative()        const noexcept { return __is_neg_; }

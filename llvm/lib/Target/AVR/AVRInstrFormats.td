@@ -502,6 +502,29 @@ class F32DM<bit f, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{15 - 0} = k;
 }
 
+//===---------------------------------------------------------------------===//
+// Special format for the LDS/STS instructions on AVRTiny.
+// <|1010|ikkk|dddd|kkkk>
+// d = R16 ~ R31
+// i = 0 - lds, 1 - sts
+// k = 7-bit data space address
+//===---------------------------------------------------------------------===//
+class FLDSSTSTINY<bit i, dag outs, dag ins, string asmstr, list<dag> pattern>
+    : AVRInst16<outs, ins, asmstr, pattern> {
+  bits<5> rd;
+  bits<7> k;
+
+  let Inst{15 - 12} = 0b1010;
+
+  let Inst{11} = i;
+
+  let Inst{10 - 8} = k{6 - 4};
+  let Inst{7 - 4} = rd{3 - 0};
+  let Inst{3 - 0} = k{3 - 0};
+
+  let DecoderNamespace = "AVRTiny";
+}
+
 // <|1001|0100|bfff|1000>
 class FS<bit b, dag outs, dag ins, string asmstr, list<dag> pattern>
     : AVRInst16<outs, ins, asmstr, pattern> {

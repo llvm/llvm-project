@@ -8,17 +8,17 @@
 define i32 @bar() {
 ; CHECK-LABEL: define {{[^@]+}}@bar() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo(i32* @g)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo(ptr @g)
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
 entry:
-  %call = call i32 @foo(i32* @g)
+  %call = call i32 @foo(ptr @g)
   ret i32 %call
 }
 
-define internal i32 @foo(i32*) #0 {
+define internal i32 @foo(ptr) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: (i32* [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void asm sideeffect "ldr r0, [r0] \0Abx lr \0A", ""()

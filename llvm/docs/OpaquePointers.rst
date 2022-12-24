@@ -268,19 +268,26 @@ Version Support
 **LLVM 15:** Opaque pointers are enabled by default. Typed pointers are still
 supported.
 
-**LLVM 16:** Only opaque pointers will be supported. Typed pointers will not be supported.
+**LLVM 16:** Opaque pointers are enabled by default. Typed pointers are
+supported on a best-effort basis only and not tested.
+
+**LLVM 17:** Only opaque pointers are supported. Typed pointers are not
+supported.
 
 Transition State
 ================
 
-As of December 2022 (LLVM 16):
-
-Typed pointers are currently still supported on a best-effort basis. Patches to
-fix typed pointer support are accepted, but must not include test coverage.
+As of December 2022:
 
 Tests are in the process of being converted to opaque pointers. All new tests
-must use opaque pointers. Typed pointer support will be removed as soon as test
-migration finishes.
+must use opaque pointers.
+
+Typed pointers are supported on a best-effort basis in LLVM 16, but are *not*
+supported in LLVM 17. Fixes for typed pointer support will be accepted on the
+``main`` branch only until the creation of the ``release/16.x`` branch
+(expected on Jan 24th 2023). After that point, typed pointer support on the
+``main`` branch will only be retained to the degree that is necessary to not
+break tests that haven't been migrated yet.
 
 The following typed pointer functionality has already been removed:
 

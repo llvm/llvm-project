@@ -10,37 +10,37 @@ define i8 @select_offsets_simplifiable_1(i1 %cnd1, i1 %cnd2) {
 ; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 23
-; CHECK-NEXT:    store i8 23, i8* [[GEP23]], align 4
-; CHECK-NEXT:    [[GEP29:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 29
-; CHECK-NEXT:    store i8 29, i8* [[GEP29]], align 4
-; CHECK-NEXT:    [[GEP7:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 7
-; CHECK-NEXT:    store i8 7, i8* [[GEP7]], align 4
-; CHECK-NEXT:    [[GEP31:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 31
+; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
+; CHECK-NEXT:    store i8 23, ptr [[GEP23]], align 4
+; CHECK-NEXT:    [[GEP29:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 29
+; CHECK-NEXT:    store i8 29, ptr [[GEP29]], align 4
+; CHECK-NEXT:    [[GEP7:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 7
+; CHECK-NEXT:    store i8 7, ptr [[GEP7]], align 4
+; CHECK-NEXT:    [[GEP31:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 31
 ; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[CND1]], i64 23, i64 29
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CND2]], i64 [[SEL0]], i64 7
-; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[SEL1]]
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[GEP_SEL]], align 4
+; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[SEL1]]
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[GEP_SEL]], align 4
 ; CHECK-NEXT:    ret i8 [[I]]
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
 
-  %gep23 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 23
-  store i8 23, i8* %gep23, align 4
-  %gep29 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 29
-  store i8 29, i8* %gep29, align 4
-  %gep7 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 7
-  store i8 7, i8* %gep7, align 4
+  %gep23 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 23
+  store i8 23, ptr %gep23, align 4
+  %gep29 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 29
+  store i8 29, ptr %gep29, align 4
+  %gep7 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 7
+  store i8 7, ptr %gep7, align 4
 
   ;; This store is redundant, hence removed.
-  %gep31 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 31
-  store i8 42, i8* %gep31, align 4
+  %gep31 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 31
+  store i8 42, ptr %gep31, align 4
 
   %sel0 = select i1 %cnd1, i64 23, i64 29
   %sel1 = select i1 %cnd2, i64 %sel0, i64 7
-  %gep.sel = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 %sel1
-  %i = load i8, i8* %gep.sel, align 4
+  %gep.sel = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 %sel1
+  %i = load i8, ptr %gep.sel, align 4
   ret i8 %i
 }
 
@@ -50,40 +50,40 @@ define i8 @select_offsets_simplifiable_2(i1 %cnd1, i1 %cnd2) {
 ; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 23
-; CHECK-NEXT:    store i8 23, i8* [[GEP23]], align 4
-; CHECK-NEXT:    [[GEP29:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 29
-; CHECK-NEXT:    store i8 29, i8* [[GEP29]], align 4
-; CHECK-NEXT:    [[GEP7:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 7
-; CHECK-NEXT:    store i8 7, i8* [[GEP7]], align 4
-; CHECK-NEXT:    [[GEP31:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 31
+; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
+; CHECK-NEXT:    store i8 23, ptr [[GEP23]], align 4
+; CHECK-NEXT:    [[GEP29:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 29
+; CHECK-NEXT:    store i8 29, ptr [[GEP29]], align 4
+; CHECK-NEXT:    [[GEP7:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 7
+; CHECK-NEXT:    store i8 7, ptr [[GEP7]], align 4
+; CHECK-NEXT:    [[GEP31:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 31
 ; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[CND1]], i64 20, i64 26
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CND2]], i64 [[SEL0]], i64 4
-; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[SEL1]]
-; CHECK-NEXT:    [[GEP_PLUS:%.*]] = getelementptr inbounds i8, i8* [[GEP_SEL]], i64 3
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[GEP_PLUS]], align 4
+; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[SEL1]]
+; CHECK-NEXT:    [[GEP_PLUS:%.*]] = getelementptr inbounds i8, ptr [[GEP_SEL]], i64 3
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[GEP_PLUS]], align 4
 ; CHECK-NEXT:    ret i8 [[I]]
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
 
-  %gep23 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 23
-  store i8 23, i8* %gep23, align 4
-  %gep29 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 29
-  store i8 29, i8* %gep29, align 4
-  %gep7 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 7
-  store i8 7, i8* %gep7, align 4
+  %gep23 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 23
+  store i8 23, ptr %gep23, align 4
+  %gep29 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 29
+  store i8 29, ptr %gep29, align 4
+  %gep7 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 7
+  store i8 7, ptr %gep7, align 4
 
   ;; This store is redundant, hence removed.
-  %gep31 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 31
-  store i8 42, i8* %gep31, align 4
+  %gep31 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 31
+  store i8 42, ptr %gep31, align 4
 
   ;; Adjust the offsets so that they match the stores after adding 3
   %sel0 = select i1 %cnd1, i64 20, i64 26
   %sel1 = select i1 %cnd2, i64 %sel0, i64 4
-  %gep.sel = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 %sel1
-  %gep.plus = getelementptr inbounds i8, i8* %gep.sel, i64 3
-  %i = load i8, i8* %gep.plus, align 4
+  %gep.sel = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 %sel1
+  %gep.plus = getelementptr inbounds i8, ptr %gep.sel, i64 3
+  %i = load i8, ptr %gep.plus, align 4
   ret i8 %i
 }
 
@@ -95,18 +95,18 @@ define i8 @select_offsets_simplifiable_3(i1 %cnd1, i1 %cnd2) {
 ; CHECK-NEXT:    [[BUNDLE:%.*]] = alloca [[STRUCT_T:%.*]], align 64
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CND1]], i64 1, i64 3
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CND2]], i64 5, i64 11
-; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [[STRUCT_T]], %struct.T* [[BUNDLE]], i64 0, i32 1, i64 [[SEL1]], i64 [[SEL2]]
+; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [[STRUCT_T]], ptr [[BUNDLE]], i64 0, i32 1, i64 [[SEL1]], i64 [[SEL2]]
 ; CHECK-NEXT:    ret i8 100
 ;
 entry:
   %bundle = alloca %struct.T, align 64
-  %gep.fixed = getelementptr inbounds %struct.T, %struct.T* %bundle, i64 0, i32 1, i64 1, i64 1
-  store i8 100, i8* %gep.fixed, align 4
+  %gep.fixed = getelementptr inbounds %struct.T, ptr %bundle, i64 0, i32 1, i64 1, i64 1
+  store i8 100, ptr %gep.fixed, align 4
   %sel1 = select i1 %cnd1, i64 1, i64 3
   %sel2 = select i1 %cnd2, i64 5, i64 11
-  %gep.sel = getelementptr inbounds %struct.T, %struct.T* %bundle, i64 0, i32 1, i64 %sel1, i64 %sel2
-  store i8 42, i8* %gep.sel, align 4
-  %i = load i8, i8* %gep.fixed, align 4
+  %gep.sel = getelementptr inbounds %struct.T, ptr %bundle, i64 0, i32 1, i64 %sel1, i64 %sel2
+  store i8 42, ptr %gep.sel, align 4
+  %i = load i8, ptr %gep.fixed, align 4
   ret i8 %i
 }
 
@@ -118,20 +118,20 @@ define i8 @select_offsets_not_simplifiable_1(i1 %cnd1, i1 %cnd2) {
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[CND1]], i64 23, i64 29
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CND2]], i64 [[SEL0]], i64 7
-; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 23
-; CHECK-NEXT:    store i8 100, i8* [[GEP23]], align 4
-; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[SEL1]]
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[GEP_SEL]], align 4
+; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
+; CHECK-NEXT:    store i8 100, ptr [[GEP23]], align 4
+; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[SEL1]]
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[GEP_SEL]], align 4
 ; CHECK-NEXT:    ret i8 [[I]]
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
   %sel0 = select i1 %cnd1, i64 23, i64 29
   %sel1 = select i1 %cnd2, i64 %sel0, i64 7
-  %gep23 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 23
-  store i8 100, i8* %gep23, align 4
-  %gep.sel = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 %sel1
-  %i = load i8, i8* %gep.sel, align 4
+  %gep23 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 23
+  store i8 100, ptr %gep23, align 4
+  %gep.sel = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 %sel1
+  %i = load i8, ptr %gep.sel, align 4
   ret i8 %i
 }
 
@@ -143,22 +143,22 @@ define i8 @select_offsets_not_simplifiable_2(i1 %cnd1, i1 %cnd2) {
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[CND1]], i64 23, i64 29
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CND2]], i64 [[SEL0]], i64 7
-; CHECK-NEXT:    [[GEP32:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 32
-; CHECK-NEXT:    store i8 100, i8* [[GEP32]], align 16
-; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[SEL1]]
-; CHECK-NEXT:    [[GEP_PLUS:%.*]] = getelementptr inbounds i8, i8* [[GEP_SEL]], i64 3
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[GEP_PLUS]], align 4
+; CHECK-NEXT:    [[GEP32:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 32
+; CHECK-NEXT:    store i8 100, ptr [[GEP32]], align 16
+; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[SEL1]]
+; CHECK-NEXT:    [[GEP_PLUS:%.*]] = getelementptr inbounds i8, ptr [[GEP_SEL]], i64 3
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[GEP_PLUS]], align 4
 ; CHECK-NEXT:    ret i8 [[I]]
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
   %sel0 = select i1 %cnd1, i64 23, i64 29
   %sel1 = select i1 %cnd2, i64 %sel0, i64 7
-  %gep32 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 32
-  store i8 100, i8* %gep32, align 4
-  %gep.sel = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 %sel1
-  %gep.plus = getelementptr inbounds i8, i8* %gep.sel, i64 3
-  %i = load i8, i8* %gep.plus, align 4
+  %gep32 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 32
+  store i8 100, ptr %gep32, align 4
+  %gep.sel = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 %sel1
+  %gep.plus = getelementptr inbounds i8, ptr %gep.sel, i64 3
+  %i = load i8, ptr %gep.plus, align 4
   ret i8 %i
 }
 
@@ -170,20 +170,20 @@ define i8 @select_offsets_not_simplifiable_3(i1 %cnd1, i1 %cnd2) {
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[CND1]], i64 23, i64 29
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CND2]], i64 [[SEL0]], i64 7
-; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[SEL1]]
-; CHECK-NEXT:    store i8 100, i8* [[GEP_SEL]], align 4
-; CHECK-NEXT:    [[GEP29:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 29
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[GEP29]], align 4
+; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[SEL1]]
+; CHECK-NEXT:    store i8 100, ptr [[GEP_SEL]], align 4
+; CHECK-NEXT:    [[GEP29:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 29
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[GEP29]], align 4
 ; CHECK-NEXT:    ret i8 [[I]]
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
   %sel0 = select i1 %cnd1, i64 23, i64 29
   %sel1 = select i1 %cnd2, i64 %sel0, i64 7
-  %gep.sel = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 %sel1
-  store i8 100, i8* %gep.sel, align 4
-  %gep29 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 29
-  %i = load i8, i8* %gep29, align 4
+  %gep.sel = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 %sel1
+  store i8 100, ptr %gep.sel, align 4
+  %gep29 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 29
+  %i = load i8, ptr %gep29, align 4
   ret i8 %i
 }
 
@@ -195,22 +195,22 @@ define i8 @select_offsets_not_simplifiable_4(i1 %cnd1, i1 %cnd2) {
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[CND1]], i64 23, i64 29
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CND2]], i64 [[SEL0]], i64 7
-; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[SEL1]]
-; CHECK-NEXT:    [[GEP_PLUS:%.*]] = getelementptr inbounds i8, i8* [[GEP_SEL]], i64 3
-; CHECK-NEXT:    store i8 100, i8* [[GEP_PLUS]], align 4
-; CHECK-NEXT:    [[GEP32:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 32
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[GEP32]], align 16
+; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[SEL1]]
+; CHECK-NEXT:    [[GEP_PLUS:%.*]] = getelementptr inbounds i8, ptr [[GEP_SEL]], i64 3
+; CHECK-NEXT:    store i8 100, ptr [[GEP_PLUS]], align 4
+; CHECK-NEXT:    [[GEP32:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 32
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[GEP32]], align 16
 ; CHECK-NEXT:    ret i8 [[I]]
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
   %sel0 = select i1 %cnd1, i64 23, i64 29
   %sel1 = select i1 %cnd2, i64 %sel0, i64 7
-  %gep.sel = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 %sel1
-  %gep.plus = getelementptr inbounds i8, i8* %gep.sel, i64 3
-  store i8 100, i8* %gep.plus, align 4
-  %gep32 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 32
-  %i = load i8, i8* %gep32, align 4
+  %gep.sel = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 %sel1
+  %gep.plus = getelementptr inbounds i8, ptr %gep.sel, i64 3
+  store i8 100, ptr %gep.plus, align 4
+  %gep32 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 32
+  %i = load i8, ptr %gep32, align 4
   ret i8 %i
 }
 
@@ -220,27 +220,27 @@ define i8 @select_offsets_not_simplifiable_5(i1 %cnd1, i1 %cnd2) {
 ; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BUNDLE:%.*]] = alloca [[STRUCT_T:%.*]], align 64
-; CHECK-NEXT:    [[GEP_FIXED:%.*]] = getelementptr inbounds [[STRUCT_T]], %struct.T* [[BUNDLE]], i64 0, i32 1, i64 3, i64 5
-; CHECK-NEXT:    store i8 100, i8* [[GEP_FIXED]], align 4
+; CHECK-NEXT:    [[GEP_FIXED:%.*]] = getelementptr inbounds [[STRUCT_T]], ptr [[BUNDLE]], i64 0, i32 1, i64 3, i64 5
+; CHECK-NEXT:    store i8 100, ptr [[GEP_FIXED]], align 4
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CND1]], i64 1, i64 3
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CND2]], i64 5, i64 11
-; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [[STRUCT_T]], %struct.T* [[BUNDLE]], i64 0, i32 1, i64 [[SEL1]], i64 [[SEL2]]
-; CHECK-NEXT:    store i8 42, i8* [[GEP_SEL]], align 4
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[GEP_FIXED]], align 4
+; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [[STRUCT_T]], ptr [[BUNDLE]], i64 0, i32 1, i64 [[SEL1]], i64 [[SEL2]]
+; CHECK-NEXT:    store i8 42, ptr [[GEP_SEL]], align 4
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[GEP_FIXED]], align 4
 ; CHECK-NEXT:    ret i8 [[I]]
 ;
 entry:
   %bundle = alloca %struct.T, align 64
-  %gep.fixed = getelementptr inbounds %struct.T, %struct.T* %bundle, i64 0, i32 1, i64 3, i64 5
-  store i8 100, i8* %gep.fixed, align 4
+  %gep.fixed = getelementptr inbounds %struct.T, ptr %bundle, i64 0, i32 1, i64 3, i64 5
+  store i8 100, ptr %gep.fixed, align 4
   %sel1 = select i1 %cnd1, i64 1, i64 3
   %sel2 = select i1 %cnd2, i64 5, i64 11
-  %gep.sel = getelementptr inbounds %struct.T, %struct.T* %bundle, i64 0, i32 1, i64 %sel1, i64 %sel2
+  %gep.sel = getelementptr inbounds %struct.T, ptr %bundle, i64 0, i32 1, i64 %sel1, i64 %sel2
 
   ;; This store prevents the constant 100 from being propagated to ret
-  store i8 42, i8* %gep.sel, align 4
+  store i8 42, ptr %gep.sel, align 4
 
-  %i = load i8, i8* %gep.fixed, align 4
+  %i = load i8, ptr %gep.fixed, align 4
   ret i8 %i
 }
 
@@ -250,21 +250,21 @@ define i8 @select_gep_simplifiable_1(i1 %cnd1, i1 %cnd2) {
 ; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[GEP7:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 7
-; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 23
-; CHECK-NEXT:    [[SEL_PTR:%.*]] = select i1 [[CND1]], i8* [[GEP7]], i8* [[GEP23]]
-; CHECK-NEXT:    store i8 42, i8* [[SEL_PTR]], align 4
+; CHECK-NEXT:    [[GEP7:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 7
+; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
+; CHECK-NEXT:    [[SEL_PTR:%.*]] = select i1 [[CND1]], ptr [[GEP7]], ptr [[GEP23]]
+; CHECK-NEXT:    store i8 42, ptr [[SEL_PTR]], align 4
 ; CHECK-NEXT:    ret i8 21
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
-  %gep3 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 3
-  store i8 21, i8* %gep3, align 4
-  %gep7 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 7
-  %gep23 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 23
-  %sel.ptr = select i1 %cnd1, i8* %gep7, i8* %gep23
-  store i8 42, i8* %sel.ptr, align 4
-  %i = load i8, i8* %gep3, align 4
+  %gep3 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 3
+  store i8 21, ptr %gep3, align 4
+  %gep7 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 7
+  %gep23 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 23
+  %sel.ptr = select i1 %cnd1, ptr %gep7, ptr %gep23
+  store i8 42, ptr %sel.ptr, align 4
+  %i = load i8, ptr %gep3, align 4
   ret i8 %i
 }
 
@@ -274,20 +274,20 @@ define i8 @select_gep_not_simplifiable_1(i1 %cnd1, i1 %cnd2) {
 ; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[GEP7:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 7
-; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 23
-; CHECK-NEXT:    [[SEL_PTR:%.*]] = select i1 [[CND1]], i8* [[GEP7]], i8* [[GEP23]]
-; CHECK-NEXT:    store i8 42, i8* [[SEL_PTR]], align 4
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[GEP7]], align 4
+; CHECK-NEXT:    [[GEP7:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 7
+; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
+; CHECK-NEXT:    [[SEL_PTR:%.*]] = select i1 [[CND1]], ptr [[GEP7]], ptr [[GEP23]]
+; CHECK-NEXT:    store i8 42, ptr [[SEL_PTR]], align 4
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[GEP7]], align 4
 ; CHECK-NEXT:    ret i8 [[I]]
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
-  %gep7 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 7
-  %gep23 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 23
-  %sel.ptr = select i1 %cnd1, i8* %gep7, i8* %gep23
-  store i8 42, i8* %sel.ptr, align 4
-  %i = load i8, i8* %gep7, align 4
+  %gep7 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 7
+  %gep23 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 23
+  %sel.ptr = select i1 %cnd1, ptr %gep7, ptr %gep23
+  store i8 42, ptr %sel.ptr, align 4
+  %i = load i8, ptr %gep7, align 4
   ret i8 %i
 }
 
@@ -301,17 +301,17 @@ define i8 @phi_gep_simplifiable_1(i1 %cnd1, i1 %cnd2) {
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    br i1 [[CND1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 23
-; CHECK-NEXT:    store i8 21, i8* [[GEP23]], align 4
+; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
+; CHECK-NEXT:    store i8 21, ptr [[GEP23]], align 4
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[GEP31:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 31
-; CHECK-NEXT:    store i8 21, i8* [[GEP31]], align 4
+; CHECK-NEXT:    [[GEP31:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 31
+; CHECK-NEXT:    store i8 21, ptr [[GEP31]], align 4
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI_PTR:%.*]] = phi i8* [ [[GEP23]], [[THEN]] ], [ [[GEP31]], [[ELSE]] ]
-; CHECK-NEXT:    [[GEP29:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 29
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[PHI_PTR]], align 4
+; CHECK-NEXT:    [[PHI_PTR:%.*]] = phi ptr [ [[GEP23]], [[THEN]] ], [ [[GEP31]], [[ELSE]] ]
+; CHECK-NEXT:    [[GEP29:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 29
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[PHI_PTR]], align 4
 ; CHECK-NEXT:    ret i8 [[I]]
 ;
 entry:
@@ -319,21 +319,21 @@ entry:
   br i1 %cnd1, label %then, label %else
 
 then:
-  %gep23 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 23
-  store i8 21, i8* %gep23, align 4
+  %gep23 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 23
+  store i8 21, ptr %gep23, align 4
   br label %join
 
 else:
-  %gep31 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 31
-  store i8 21, i8* %gep31, align 4
+  %gep31 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 31
+  store i8 21, ptr %gep31, align 4
   br label %join
 
 join:
-  %phi.ptr = phi i8* [%gep23, %then], [%gep31, %else]
+  %phi.ptr = phi ptr [%gep23, %then], [%gep31, %else]
   ;; This store is eliminated
-  %gep29 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 29
-  store i8 42, i8* %gep29, align 4
-  %i = load i8, i8* %phi.ptr, align 4
+  %gep29 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 29
+  store i8 42, ptr %gep29, align 4
+  %i = load i8, ptr %phi.ptr, align 4
   ret i8 %i
 }
 
@@ -347,36 +347,36 @@ define i8 @phi_gep_simplifiable_2(i1 %cnd1, i1 %cnd2) {
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    br i1 [[CND1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 23
+; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[GEP31:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 31
+; CHECK-NEXT:    [[GEP31:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 31
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI_PTR:%.*]] = phi i8* [ [[GEP23]], [[THEN]] ], [ [[GEP31]], [[ELSE]] ]
-; CHECK-NEXT:    store i8 21, i8* [[PHI_PTR]], align 4
+; CHECK-NEXT:    [[PHI_PTR:%.*]] = phi ptr [ [[GEP23]], [[THEN]] ], [ [[GEP31]], [[ELSE]] ]
+; CHECK-NEXT:    store i8 21, ptr [[PHI_PTR]], align 4
 ; CHECK-NEXT:    ret i8 42
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
-  %gep29 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 29
+  %gep29 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 29
   ;; This store is propagated to the load.
-  store i8 42, i8* %gep29, align 4
+  store i8 42, ptr %gep29, align 4
   br i1 %cnd1, label %then, label %else
 
 then:
-  %gep23 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 23
+  %gep23 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 23
   br label %join
 
 else:
-  %gep31 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 31
+  %gep31 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 31
   br label %join
 
 join:
-  %phi.ptr = phi i8* [%gep23, %then], [%gep31, %else]
-  store i8 21, i8* %phi.ptr, align 4
+  %phi.ptr = phi ptr [%gep23, %then], [%gep31, %else]
+  store i8 21, ptr %phi.ptr, align 4
   ;; Replaced with the constant, and both store/load are eliminated.
-  %i = load i8, i8* %gep29, align 4
+  %i = load i8, ptr %gep29, align 4
   ret i8 %i
 }
 
@@ -386,36 +386,36 @@ define i8 @phi_gep_not_simplifiable_1(i1 %cnd1, i1 %cnd2) {
 ; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 23
+; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
 ; CHECK-NEXT:    br i1 [[CND1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[GEP31:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 31
+; CHECK-NEXT:    [[GEP31:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 31
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI_PTR:%.*]] = phi i8* [ [[GEP23]], [[THEN]] ], [ [[GEP31]], [[ELSE]] ]
-; CHECK-NEXT:    store i8 42, i8* [[GEP23]], align 4
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[PHI_PTR]], align 4
+; CHECK-NEXT:    [[PHI_PTR:%.*]] = phi ptr [ [[GEP23]], [[THEN]] ], [ [[GEP31]], [[ELSE]] ]
+; CHECK-NEXT:    store i8 42, ptr [[GEP23]], align 4
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[PHI_PTR]], align 4
 ; CHECK-NEXT:    ret i8 [[I]]
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
-  %gep23 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 23
+  %gep23 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 23
   br i1 %cnd1, label %then, label %else
 
 then:
   br label %join
 
 else:
-  %gep31 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 31
+  %gep31 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 31
   br label %join
 
 join:
-  %phi.ptr = phi i8* [%gep23, %then], [%gep31, %else]
+  %phi.ptr = phi ptr [%gep23, %then], [%gep31, %else]
   ;; This store cannot be eliminated
-  store i8 42, i8* %gep23, align 4
-  %i = load i8, i8* %phi.ptr, align 4
+  store i8 42, ptr %gep23, align 4
+  %i = load i8, ptr %phi.ptr, align 4
   ret i8 %i
 }
 
@@ -425,35 +425,35 @@ define i8 @phi_gep_not_simplifiable_2(i1 %cnd1, i1 %cnd2) {
 ; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 23
+; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
 ; CHECK-NEXT:    br i1 [[CND1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[GEP31:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 31
+; CHECK-NEXT:    [[GEP31:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 31
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI_PTR:%.*]] = phi i8* [ [[GEP23]], [[THEN]] ], [ [[GEP31]], [[ELSE]] ]
-; CHECK-NEXT:    store i8 21, i8* [[PHI_PTR]], align 4
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[GEP23]], align 4
+; CHECK-NEXT:    [[PHI_PTR:%.*]] = phi ptr [ [[GEP23]], [[THEN]] ], [ [[GEP31]], [[ELSE]] ]
+; CHECK-NEXT:    store i8 21, ptr [[PHI_PTR]], align 4
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[GEP23]], align 4
 ; CHECK-NEXT:    ret i8 [[I]]
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
-  %gep23 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 23
+  %gep23 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 23
   br i1 %cnd1, label %then, label %else
 
 then:
   br label %join
 
 else:
-  %gep31 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 31
+  %gep31 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 31
   br label %join
 
 join:
-  %phi.ptr = phi i8* [%gep23, %then], [%gep31, %else]
-  store i8 21, i8* %phi.ptr, align 4
-  %i = load i8, i8* %gep23, align 4
+  %phi.ptr = phi ptr [%gep23, %then], [%gep31, %else]
+  store i8 21, ptr %phi.ptr, align 4
+  %i = load i8, ptr %gep23, align 4
   ret i8 %i
 }
 
@@ -470,13 +470,12 @@ define i8 @phi_offsets(i1 %cnd1, i1 %cnd2) {
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 3, [[THEN]] ], [ 11, [[ELSE]] ]
-; CHECK-NEXT:    [[GEP_PHI:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[PHI]]
+; CHECK-NEXT:    [[GEP_PHI:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[PHI]]
 ; CHECK-NEXT:    ret i8 100
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
-  %gep.fixed = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 0
-  store i8 100, i8* %gep.fixed, align 4
+  store i8 100, ptr %Bytes, align 4
   br i1 %cnd1, label %then, label %else
 
 then:
@@ -487,9 +486,9 @@ else:
 
 join:
   %phi = phi i64 [ 3, %then ], [ 11, %else ]
-  %gep.phi = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 %phi
-  store i8 42, i8* %gep.phi, align 4
-  %i = load i8, i8* %gep.fixed, align 4
+  %gep.phi = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 %phi
+  store i8 42, ptr %gep.phi, align 4
+  %i = load i8, ptr %Bytes, align 4
   ret i8 %i
 }
 

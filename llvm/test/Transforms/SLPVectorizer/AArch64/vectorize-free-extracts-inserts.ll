@@ -8,11 +8,11 @@ declare void @use(double)
 
 ; The extracts %v1.lane.0 and %v1.lane.1 should be considered free during SLP,
 ; because they will be directly in a vector register on AArch64.
-define void @noop_extracts_first_2_lanes(<2 x double>* %ptr.1, <4 x double>* %ptr.2) {
+define void @noop_extracts_first_2_lanes(ptr %ptr.1, ptr %ptr.2) {
 ; CHECK-LABEL: @noop_extracts_first_2_lanes(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[V_1:%.*]] = load <2 x double>, <2 x double>* [[PTR_1:%.*]], align 8
-; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, <4 x double>* [[PTR_2:%.*]], align 16
+; CHECK-NEXT:    [[V_1:%.*]] = load <2 x double>, ptr [[PTR_1:%.*]], align 8
+; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, ptr [[PTR_2:%.*]], align 16
 ; CHECK-NEXT:    [[V2_LANE_2:%.*]] = extractelement <4 x double> [[V_2]], i32 2
 ; CHECK-NEXT:    [[V2_LANE_3:%.*]] = extractelement <4 x double> [[V_2]], i32 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V2_LANE_2]], i32 0
@@ -22,15 +22,15 @@ define void @noop_extracts_first_2_lanes(<2 x double>* %ptr.1, <4 x double>* %pt
 ; CHECK-NEXT:    call void @use(double [[TMP3]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[V_1]], i32 1
 ; CHECK-NEXT:    call void @use(double [[TMP4]])
-; CHECK-NEXT:    store <2 x double> [[TMP2]], <2 x double>* [[PTR_1]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %v.1 = load <2 x double>, <2 x double>* %ptr.1, align 8
+  %v.1 = load <2 x double>, ptr %ptr.1, align 8
   %v1.lane.0 = extractelement <2 x double> %v.1, i32 0
   %v1.lane.1 = extractelement <2 x double> %v.1, i32 1
 
-  %v.2 = load <4 x double>, <4 x double>* %ptr.2, align 16
+  %v.2 = load <4 x double>, ptr %ptr.2, align 16
   %v2.lane.2 = extractelement <4 x double> %v.2, i32 2
   %v2.lane.3 = extractelement <4 x double> %v.2, i32 3
 
@@ -43,19 +43,19 @@ bb:
   call void @use(double %v1.lane.0)
   call void @use(double %v1.lane.1)
 
-  store <2 x double> %a.ins.1, <2 x double>* %ptr.1, align 8
+  store <2 x double> %a.ins.1, ptr %ptr.1, align 8
   ret void
 }
 
 ; Extracts of consecutive indices, but different vector operand.
-define void @extracts_first_2_lanes_different_vectors(<2 x double>* %ptr.1, <4 x double>* %ptr.2, <2 x double>* %ptr.3) {
+define void @extracts_first_2_lanes_different_vectors(ptr %ptr.1, ptr %ptr.2, ptr %ptr.3) {
 ; CHECK-LABEL: @extracts_first_2_lanes_different_vectors(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[V_1:%.*]] = load <2 x double>, <2 x double>* [[PTR_1:%.*]], align 8
+; CHECK-NEXT:    [[V_1:%.*]] = load <2 x double>, ptr [[PTR_1:%.*]], align 8
 ; CHECK-NEXT:    [[V1_LANE_0:%.*]] = extractelement <2 x double> [[V_1]], i32 0
-; CHECK-NEXT:    [[V_3:%.*]] = load <2 x double>, <2 x double>* [[PTR_3:%.*]], align 8
+; CHECK-NEXT:    [[V_3:%.*]] = load <2 x double>, ptr [[PTR_3:%.*]], align 8
 ; CHECK-NEXT:    [[V3_LANE_1:%.*]] = extractelement <2 x double> [[V_3]], i32 1
-; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, <4 x double>* [[PTR_2:%.*]], align 16
+; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, ptr [[PTR_2:%.*]], align 16
 ; CHECK-NEXT:    [[V2_LANE_2:%.*]] = extractelement <4 x double> [[V_2]], i32 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V1_LANE_0]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V3_LANE_1]], i32 1
@@ -64,16 +64,16 @@ define void @extracts_first_2_lanes_different_vectors(<2 x double>* %ptr.1, <4 x
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP1]], [[SHUFFLE]]
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_0]])
 ; CHECK-NEXT:    call void @use(double [[V3_LANE_1]])
-; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[PTR_1]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %v.1 = load <2 x double>, <2 x double>* %ptr.1, align 8
+  %v.1 = load <2 x double>, ptr %ptr.1, align 8
   %v1.lane.0 = extractelement <2 x double> %v.1, i32 0
-  %v.3 = load <2 x double>, <2 x double>* %ptr.3, align 8
+  %v.3 = load <2 x double>, ptr %ptr.3, align 8
   %v3.lane.1 = extractelement <2 x double> %v.3, i32 1
 
-  %v.2 = load <4 x double>, <4 x double>* %ptr.2, align 16
+  %v.2 = load <4 x double>, ptr %ptr.2, align 16
   %v2.lane.2 = extractelement <4 x double> %v.2, i32 2
 
   %a.lane.0 = fmul double %v1.lane.0, %v2.lane.2
@@ -85,19 +85,19 @@ bb:
   call void @use(double %v1.lane.0)
   call void @use(double %v3.lane.1)
 
-  store <2 x double> %a.ins.1, <2 x double>* %ptr.1, align 8
+  store <2 x double> %a.ins.1, ptr %ptr.1, align 8
   ret void
 }
 
 ; The extracts %v1.lane.2 and %v1.lane.3 should be considered free during SLP,
 ; because they will be directly in a vector register on AArch64.
-define void @noop_extract_second_2_lanes(<4 x double>* %ptr.1, <4 x double>* %ptr.2) {
+define void @noop_extract_second_2_lanes(ptr %ptr.1, ptr %ptr.2) {
 ; CHECK-LABEL: @noop_extract_second_2_lanes(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[V_1:%.*]] = load <4 x double>, <4 x double>* [[PTR_1:%.*]], align 8
+; CHECK-NEXT:    [[V_1:%.*]] = load <4 x double>, ptr [[PTR_1:%.*]], align 8
 ; CHECK-NEXT:    [[V1_LANE_2:%.*]] = extractelement <4 x double> [[V_1]], i32 2
 ; CHECK-NEXT:    [[V1_LANE_3:%.*]] = extractelement <4 x double> [[V_1]], i32 3
-; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, <4 x double>* [[PTR_2:%.*]], align 16
+; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, ptr [[PTR_2:%.*]], align 16
 ; CHECK-NEXT:    [[V2_LANE_2:%.*]] = extractelement <4 x double> [[V_2]], i32 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V1_LANE_2]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V1_LANE_3]], i32 1
@@ -107,15 +107,15 @@ define void @noop_extract_second_2_lanes(<4 x double>* %ptr.1, <4 x double>* %pt
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_2]])
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_3]])
-; CHECK-NEXT:    store <4 x double> [[TMP4]], <4 x double>* [[PTR_1]], align 8
+; CHECK-NEXT:    store <4 x double> [[TMP4]], ptr [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %v.1 = load <4 x double>, <4 x double>* %ptr.1, align 8
+  %v.1 = load <4 x double>, ptr %ptr.1, align 8
   %v1.lane.2 = extractelement <4 x double> %v.1, i32 2
   %v1.lane.3 = extractelement <4 x double> %v.1, i32 3
 
-  %v.2 = load <4 x double>, <4 x double>* %ptr.2, align 16
+  %v.2 = load <4 x double>, ptr %ptr.2, align 16
   %v2.lane.2 = extractelement <4 x double> %v.2, i32 2
 
   %a.lane.0 = fmul double %v1.lane.2, %v2.lane.2
@@ -126,17 +126,17 @@ bb:
 
   call void @use(double %v1.lane.2)
   call void @use(double %v1.lane.3)
-  store <4 x double> %a.ins.1, <4 x double>* %ptr.1, align 8
+  store <4 x double> %a.ins.1, ptr %ptr.1, align 8
   ret void
 }
 
 ; %v1.lane.0 and %v1.lane.1 are used in reverse-order, so they won't be
 ; directly in a vector register on AArch64.
-define void @extract_reverse_order(<2 x double>* %ptr.1, <4 x double>* %ptr.2) {
+define void @extract_reverse_order(ptr %ptr.1, ptr %ptr.2) {
 ; CHECK-LABEL: @extract_reverse_order(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[V_1:%.*]] = load <2 x double>, <2 x double>* [[PTR_1:%.*]], align 8
-; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, <4 x double>* [[PTR_2:%.*]], align 16
+; CHECK-NEXT:    [[V_1:%.*]] = load <2 x double>, ptr [[PTR_1:%.*]], align 8
+; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, ptr [[PTR_2:%.*]], align 16
 ; CHECK-NEXT:    [[V2_LANE_2:%.*]] = extractelement <4 x double> [[V_2]], i32 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V2_LANE_2]], i32 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
@@ -146,15 +146,15 @@ define void @extract_reverse_order(<2 x double>* %ptr.1, <4 x double>* %ptr.2) {
 ; CHECK-NEXT:    call void @use(double [[TMP3]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[V_1]], i32 1
 ; CHECK-NEXT:    call void @use(double [[TMP4]])
-; CHECK-NEXT:    store <2 x double> [[TMP2]], <2 x double>* [[PTR_1]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %v.1 = load <2 x double>, <2 x double>* %ptr.1, align 8
+  %v.1 = load <2 x double>, ptr %ptr.1, align 8
   %v1.lane.0 = extractelement <2 x double> %v.1, i32 0
   %v1.lane.1 = extractelement <2 x double> %v.1, i32 1
 
-  %v.2 = load <4 x double>, <4 x double>* %ptr.2, align 16
+  %v.2 = load <4 x double>, ptr %ptr.2, align 16
   %v2.lane.2 = extractelement <4 x double> %v.2, i32 2
 
   %a.lane.0 = fmul double %v1.lane.1, %v2.lane.2
@@ -166,18 +166,18 @@ bb:
   call void @use(double %v1.lane.0)
   call void @use(double %v1.lane.1)
 
-  store <2 x double> %a.ins.1, <2 x double>* %ptr.1, align 8
+  store <2 x double> %a.ins.1, ptr %ptr.1, align 8
   ret void
 }
 
 ; %v1.lane.1 and %v1.lane.2 are extracted from different vector registers on AArch64.
-define void @extract_lanes_1_and_2(<4 x double>* %ptr.1, <4 x double>* %ptr.2) {
+define void @extract_lanes_1_and_2(ptr %ptr.1, ptr %ptr.2) {
 ; CHECK-LABEL: @extract_lanes_1_and_2(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[V_1:%.*]] = load <4 x double>, <4 x double>* [[PTR_1:%.*]], align 8
+; CHECK-NEXT:    [[V_1:%.*]] = load <4 x double>, ptr [[PTR_1:%.*]], align 8
 ; CHECK-NEXT:    [[V1_LANE_1:%.*]] = extractelement <4 x double> [[V_1]], i32 1
 ; CHECK-NEXT:    [[V1_LANE_2:%.*]] = extractelement <4 x double> [[V_1]], i32 2
-; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, <4 x double>* [[PTR_2:%.*]], align 16
+; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, ptr [[PTR_2:%.*]], align 16
 ; CHECK-NEXT:    [[V2_LANE_2:%.*]] = extractelement <4 x double> [[V_2]], i32 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V1_LANE_1]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V1_LANE_2]], i32 1
@@ -187,15 +187,15 @@ define void @extract_lanes_1_and_2(<4 x double>* %ptr.1, <4 x double>* %ptr.2) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_1]])
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_2]])
-; CHECK-NEXT:    store <4 x double> [[TMP4]], <4 x double>* [[PTR_1]], align 8
+; CHECK-NEXT:    store <4 x double> [[TMP4]], ptr [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %v.1 = load <4 x double>, <4 x double>* %ptr.1, align 8
+  %v.1 = load <4 x double>, ptr %ptr.1, align 8
   %v1.lane.1 = extractelement <4 x double> %v.1, i32 1
   %v1.lane.2 = extractelement <4 x double> %v.1, i32 2
 
-  %v.2 = load <4 x double>, <4 x double>* %ptr.2, align 16
+  %v.2 = load <4 x double>, ptr %ptr.2, align 16
   %v2.lane.2 = extractelement <4 x double> %v.2, i32 2
 
   %a.lane.0 = fmul double %v1.lane.1, %v2.lane.2
@@ -207,22 +207,22 @@ bb:
   call void @use(double %v1.lane.1)
   call void @use(double %v1.lane.2)
 
-  store <4 x double> %a.ins.1, <4 x double>* %ptr.1, align 8
+  store <4 x double> %a.ins.1, ptr %ptr.1, align 8
   ret void
 }
 
 ; More complex case where the extracted lanes are directly from a vector
 ; register on AArch64 and should be considered free, because we can
 ; directly use the source vector register.
-define void @noop_extracts_existing_vector_4_lanes(<9 x double>* %ptr.1, <4 x double>* %ptr.2) {
+define void @noop_extracts_existing_vector_4_lanes(ptr %ptr.1, ptr %ptr.2) {
 ; CHECK-LABEL: @noop_extracts_existing_vector_4_lanes(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[V_1:%.*]] = load <9 x double>, <9 x double>* [[PTR_1:%.*]], align 8
+; CHECK-NEXT:    [[V_1:%.*]] = load <9 x double>, ptr [[PTR_1:%.*]], align 8
 ; CHECK-NEXT:    [[V1_LANE_0:%.*]] = extractelement <9 x double> [[V_1]], i32 0
 ; CHECK-NEXT:    [[V1_LANE_1:%.*]] = extractelement <9 x double> [[V_1]], i32 1
 ; CHECK-NEXT:    [[V1_LANE_2:%.*]] = extractelement <9 x double> [[V_1]], i32 2
 ; CHECK-NEXT:    [[V1_LANE_3:%.*]] = extractelement <9 x double> [[V_1]], i32 3
-; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, <4 x double>* [[PTR_2:%.*]], align 16
+; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, ptr [[PTR_2:%.*]], align 16
 ; CHECK-NEXT:    [[V2_LANE_0:%.*]] = extractelement <4 x double> [[V_2]], i32 0
 ; CHECK-NEXT:    [[V2_LANE_1:%.*]] = extractelement <4 x double> [[V_2]], i32 1
 ; CHECK-NEXT:    [[V2_LANE_2:%.*]] = extractelement <4 x double> [[V_2]], i32 2
@@ -239,16 +239,16 @@ define void @noop_extracts_existing_vector_4_lanes(<9 x double>* %ptr.1, <4 x do
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_1]])
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_2]])
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_3]])
-; CHECK-NEXT:    store <9 x double> [[TMP7]], <9 x double>* [[PTR_1]], align 8
+; CHECK-NEXT:    store <9 x double> [[TMP7]], ptr [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %v.1 = load <9 x double>, <9 x double>* %ptr.1, align 8
+  %v.1 = load <9 x double>, ptr %ptr.1, align 8
   %v1.lane.0 = extractelement <9 x double> %v.1, i32 0
   %v1.lane.1 = extractelement <9 x double> %v.1, i32 1
   %v1.lane.2 = extractelement <9 x double> %v.1, i32 2
   %v1.lane.3 = extractelement <9 x double> %v.1, i32 3
-  %v.2 = load <4 x double>, <4 x double>* %ptr.2, align 16
+  %v.2 = load <4 x double>, ptr %ptr.2, align 16
   %v2.lane.0 = extractelement <4 x double> %v.2, i32 0
   %v2.lane.1 = extractelement <4 x double> %v.2, i32 1
   %v2.lane.2 = extractelement <4 x double> %v.2, i32 2
@@ -264,21 +264,21 @@ bb:
   call void @use(double %v1.lane.1)
   call void @use(double %v1.lane.2)
   call void @use(double %v1.lane.3)
-  store <9 x double> %a.ins.3, <9 x double>* %ptr.1, align 8
+  store <9 x double> %a.ins.3, ptr %ptr.1, align 8
   ret void
 }
 
 ; Extracted lanes are not used in the right order, so we cannot reuse the
 ; source vector registers directly.
-define void @extracts_jumbled_4_lanes(<9 x double>* %ptr.1, <4 x double>* %ptr.2) {
+define void @extracts_jumbled_4_lanes(ptr %ptr.1, ptr %ptr.2) {
 ; CHECK-LABEL: @extracts_jumbled_4_lanes(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[V_1:%.*]] = load <9 x double>, <9 x double>* [[PTR_1:%.*]], align 8
+; CHECK-NEXT:    [[V_1:%.*]] = load <9 x double>, ptr [[PTR_1:%.*]], align 8
 ; CHECK-NEXT:    [[V1_LANE_0:%.*]] = extractelement <9 x double> [[V_1]], i32 0
 ; CHECK-NEXT:    [[V1_LANE_1:%.*]] = extractelement <9 x double> [[V_1]], i32 1
 ; CHECK-NEXT:    [[V1_LANE_2:%.*]] = extractelement <9 x double> [[V_1]], i32 2
 ; CHECK-NEXT:    [[V1_LANE_3:%.*]] = extractelement <9 x double> [[V_1]], i32 3
-; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, <4 x double>* [[PTR_2:%.*]], align 16
+; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, ptr [[PTR_2:%.*]], align 16
 ; CHECK-NEXT:    [[V2_LANE_0:%.*]] = extractelement <4 x double> [[V_2]], i32 0
 ; CHECK-NEXT:    [[V2_LANE_1:%.*]] = extractelement <4 x double> [[V_2]], i32 1
 ; CHECK-NEXT:    [[V2_LANE_2:%.*]] = extractelement <4 x double> [[V_2]], i32 2
@@ -296,16 +296,16 @@ define void @extracts_jumbled_4_lanes(<9 x double>* %ptr.1, <4 x double>* %ptr.2
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_1]])
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_2]])
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_3]])
-; CHECK-NEXT:    store <9 x double> [[TMP8]], <9 x double>* [[PTR_1]], align 8
+; CHECK-NEXT:    store <9 x double> [[TMP8]], ptr [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %v.1 = load <9 x double>, <9 x double>* %ptr.1, align 8
+  %v.1 = load <9 x double>, ptr %ptr.1, align 8
   %v1.lane.0 = extractelement <9 x double> %v.1, i32 0
   %v1.lane.1 = extractelement <9 x double> %v.1, i32 1
   %v1.lane.2 = extractelement <9 x double> %v.1, i32 2
   %v1.lane.3 = extractelement <9 x double> %v.1, i32 3
-  %v.2 = load <4 x double>, <4 x double>* %ptr.2, align 16
+  %v.2 = load <4 x double>, ptr %ptr.2, align 16
   %v2.lane.0 = extractelement <4 x double> %v.2, i32 0
   %v2.lane.1 = extractelement <4 x double> %v.2, i32 1
   %v2.lane.2 = extractelement <4 x double> %v.2, i32 2
@@ -321,7 +321,7 @@ bb:
   call void @use(double %v1.lane.1)
   call void @use(double %v1.lane.2)
   call void @use(double %v1.lane.3)
-  store <9 x double> %a.ins.3, <9 x double>* %ptr.1, align 8
+  store <9 x double> %a.ins.3, ptr %ptr.1, align 8
   ret void
 }
 
@@ -329,10 +329,10 @@ bb:
 ; Even more complex case where the extracted lanes are directly from a vector
 ; register on AArch64 and should be considered free, because we can
 ; directly use the source vector register.
-define void @noop_extracts_9_lanes(<9 x double>* %ptr.1, <4 x double>* %ptr.2) {
+define void @noop_extracts_9_lanes(ptr %ptr.1, ptr %ptr.2) {
 ; CHECK-LABEL: @noop_extracts_9_lanes(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[V_1:%.*]] = load <9 x double>, <9 x double>* [[PTR_1:%.*]], align 8
+; CHECK-NEXT:    [[V_1:%.*]] = load <9 x double>, ptr [[PTR_1:%.*]], align 8
 ; CHECK-NEXT:    [[V1_LANE_0:%.*]] = extractelement <9 x double> [[V_1]], i32 0
 ; CHECK-NEXT:    [[V1_LANE_1:%.*]] = extractelement <9 x double> [[V_1]], i32 1
 ; CHECK-NEXT:    [[V1_LANE_2:%.*]] = extractelement <9 x double> [[V_1]], i32 2
@@ -342,7 +342,7 @@ define void @noop_extracts_9_lanes(<9 x double>* %ptr.1, <4 x double>* %ptr.2) {
 ; CHECK-NEXT:    [[V1_LANE_6:%.*]] = extractelement <9 x double> [[V_1]], i32 6
 ; CHECK-NEXT:    [[V1_LANE_7:%.*]] = extractelement <9 x double> [[V_1]], i32 7
 ; CHECK-NEXT:    [[V1_LANE_8:%.*]] = extractelement <9 x double> [[V_1]], i32 8
-; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, <4 x double>* [[PTR_2:%.*]], align 16
+; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, ptr [[PTR_2:%.*]], align 16
 ; CHECK-NEXT:    [[V2_LANE_0:%.*]] = extractelement <4 x double> [[V_2]], i32 0
 ; CHECK-NEXT:    [[V2_LANE_1:%.*]] = extractelement <4 x double> [[V_2]], i32 1
 ; CHECK-NEXT:    [[V2_LANE_2:%.*]] = extractelement <4 x double> [[V_2]], i32 2
@@ -379,11 +379,11 @@ define void @noop_extracts_9_lanes(<9 x double>* %ptr.1, <4 x double>* %ptr.2) {
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <8 x double> [[TMP24]], <8 x double> poison, <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef>
 ; CHECK-NEXT:    [[B_INS_8:%.*]] = insertelement <9 x double> [[TMP25]], double [[B_LANE_8]], i32 8
 ; CHECK-NEXT:    [[RES:%.*]] = fsub <9 x double> [[A_INS_8]], [[B_INS_8]]
-; CHECK-NEXT:    store <9 x double> [[RES]], <9 x double>* [[PTR_1]], align 8
+; CHECK-NEXT:    store <9 x double> [[RES]], ptr [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %v.1 = load <9 x double>, <9 x double>* %ptr.1, align 8
+  %v.1 = load <9 x double>, ptr %ptr.1, align 8
   %v1.lane.0 = extractelement <9 x double> %v.1, i32 0
   %v1.lane.1 = extractelement <9 x double> %v.1, i32 1
   %v1.lane.2 = extractelement <9 x double> %v.1, i32 2
@@ -394,7 +394,7 @@ bb:
   %v1.lane.7 = extractelement <9 x double> %v.1, i32 7
   %v1.lane.8 = extractelement <9 x double> %v.1, i32 8
 
-  %v.2 = load <4 x double>, <4 x double>* %ptr.2, align 16
+  %v.2 = load <4 x double>, ptr %ptr.2, align 16
   %v2.lane.0 = extractelement <4 x double> %v.2, i32 0
   %v2.lane.1 = extractelement <4 x double> %v.2, i32 1
   %v2.lane.2 = extractelement <4 x double> %v.2, i32 2
@@ -440,16 +440,16 @@ bb:
   %b.ins.8 = insertelement <9 x double> %b.ins.7, double %b.lane.8, i32 8
 
   %res = fsub <9 x double> %a.ins.8, %b.ins.8
-  store <9 x double> %res, <9 x double>* %ptr.1, align 8
+  store <9 x double> %res, ptr %ptr.1, align 8
   ret void
 }
 
 ; Extracted lanes used in first fmul chain are not used in the right order, so
 ; we cannot reuse the source vector registers directly.
-define void @first_mul_chain_jumbled(<9 x double>* %ptr.1, <4 x double>* %ptr.2) {
+define void @first_mul_chain_jumbled(ptr %ptr.1, ptr %ptr.2) {
 ; CHECK-LABEL: @first_mul_chain_jumbled(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[V_1:%.*]] = load <9 x double>, <9 x double>* [[PTR_1:%.*]], align 8
+; CHECK-NEXT:    [[V_1:%.*]] = load <9 x double>, ptr [[PTR_1:%.*]], align 8
 ; CHECK-NEXT:    [[V1_LANE_0:%.*]] = extractelement <9 x double> [[V_1]], i32 0
 ; CHECK-NEXT:    [[V1_LANE_1:%.*]] = extractelement <9 x double> [[V_1]], i32 1
 ; CHECK-NEXT:    [[V1_LANE_2:%.*]] = extractelement <9 x double> [[V_1]], i32 2
@@ -459,7 +459,7 @@ define void @first_mul_chain_jumbled(<9 x double>* %ptr.1, <4 x double>* %ptr.2)
 ; CHECK-NEXT:    [[V1_LANE_6:%.*]] = extractelement <9 x double> [[V_1]], i32 6
 ; CHECK-NEXT:    [[V1_LANE_7:%.*]] = extractelement <9 x double> [[V_1]], i32 7
 ; CHECK-NEXT:    [[V1_LANE_8:%.*]] = extractelement <9 x double> [[V_1]], i32 8
-; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, <4 x double>* [[PTR_2:%.*]], align 16
+; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, ptr [[PTR_2:%.*]], align 16
 ; CHECK-NEXT:    [[V2_LANE_0:%.*]] = extractelement <4 x double> [[V_2]], i32 0
 ; CHECK-NEXT:    [[V2_LANE_1:%.*]] = extractelement <4 x double> [[V_2]], i32 1
 ; CHECK-NEXT:    [[V2_LANE_2:%.*]] = extractelement <4 x double> [[V_2]], i32 2
@@ -492,11 +492,11 @@ define void @first_mul_chain_jumbled(<9 x double>* %ptr.1, <4 x double>* %ptr.2)
 ; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <8 x double> [[TMP21]], <8 x double> poison, <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef>
 ; CHECK-NEXT:    [[B_INS_8:%.*]] = insertelement <9 x double> [[TMP22]], double [[B_LANE_8]], i32 8
 ; CHECK-NEXT:    [[RES:%.*]] = fsub <9 x double> [[A_INS_8]], [[B_INS_8]]
-; CHECK-NEXT:    store <9 x double> [[RES]], <9 x double>* [[PTR_1]], align 8
+; CHECK-NEXT:    store <9 x double> [[RES]], ptr [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %v.1 = load <9 x double>, <9 x double>* %ptr.1, align 8
+  %v.1 = load <9 x double>, ptr %ptr.1, align 8
   %v1.lane.0 = extractelement <9 x double> %v.1, i32 0
   %v1.lane.1 = extractelement <9 x double> %v.1, i32 1
   %v1.lane.2 = extractelement <9 x double> %v.1, i32 2
@@ -507,7 +507,7 @@ bb:
   %v1.lane.7 = extractelement <9 x double> %v.1, i32 7
   %v1.lane.8 = extractelement <9 x double> %v.1, i32 8
 
-  %v.2 = load <4 x double>, <4 x double>* %ptr.2, align 16
+  %v.2 = load <4 x double>, ptr %ptr.2, align 16
   %v2.lane.0 = extractelement <4 x double> %v.2, i32 0
   %v2.lane.1 = extractelement <4 x double> %v.2, i32 1
   %v2.lane.2 = extractelement <4 x double> %v.2, i32 2
@@ -553,16 +553,16 @@ bb:
   %b.ins.8 = insertelement <9 x double> %b.ins.7, double %b.lane.8, i32 8
 
   %res = fsub <9 x double> %a.ins.8, %b.ins.8
-  store <9 x double> %res, <9 x double>* %ptr.1, align 8
+  store <9 x double> %res, ptr %ptr.1, align 8
   ret void
 }
 
 ; Extracted lanes used in both fmul chain are not used in the right order, so
 ; we cannot reuse the source vector registers directly.
-define void @first_and_second_mul_chain_jumbled(<9 x double>* %ptr.1, <4 x double>* %ptr.2) {
+define void @first_and_second_mul_chain_jumbled(ptr %ptr.1, ptr %ptr.2) {
 ; CHECK-LABEL: @first_and_second_mul_chain_jumbled(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[V_1:%.*]] = load <9 x double>, <9 x double>* [[PTR_1:%.*]], align 8
+; CHECK-NEXT:    [[V_1:%.*]] = load <9 x double>, ptr [[PTR_1:%.*]], align 8
 ; CHECK-NEXT:    [[V1_LANE_0:%.*]] = extractelement <9 x double> [[V_1]], i32 0
 ; CHECK-NEXT:    [[V1_LANE_1:%.*]] = extractelement <9 x double> [[V_1]], i32 1
 ; CHECK-NEXT:    [[V1_LANE_2:%.*]] = extractelement <9 x double> [[V_1]], i32 2
@@ -572,7 +572,7 @@ define void @first_and_second_mul_chain_jumbled(<9 x double>* %ptr.1, <4 x doubl
 ; CHECK-NEXT:    [[V1_LANE_6:%.*]] = extractelement <9 x double> [[V_1]], i32 6
 ; CHECK-NEXT:    [[V1_LANE_7:%.*]] = extractelement <9 x double> [[V_1]], i32 7
 ; CHECK-NEXT:    [[V1_LANE_8:%.*]] = extractelement <9 x double> [[V_1]], i32 8
-; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, <4 x double>* [[PTR_2:%.*]], align 16
+; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, ptr [[PTR_2:%.*]], align 16
 ; CHECK-NEXT:    [[V2_LANE_0:%.*]] = extractelement <4 x double> [[V_2]], i32 0
 ; CHECK-NEXT:    [[V2_LANE_1:%.*]] = extractelement <4 x double> [[V_2]], i32 1
 ; CHECK-NEXT:    [[V2_LANE_2:%.*]] = extractelement <4 x double> [[V_2]], i32 2
@@ -609,11 +609,11 @@ define void @first_and_second_mul_chain_jumbled(<9 x double>* %ptr.1, <4 x doubl
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <8 x double> [[TMP24]], <8 x double> poison, <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef>
 ; CHECK-NEXT:    [[B_INS_8:%.*]] = insertelement <9 x double> [[TMP25]], double [[B_LANE_8]], i32 8
 ; CHECK-NEXT:    [[RES:%.*]] = fsub <9 x double> [[A_INS_8]], [[B_INS_8]]
-; CHECK-NEXT:    store <9 x double> [[RES]], <9 x double>* [[PTR_1]], align 8
+; CHECK-NEXT:    store <9 x double> [[RES]], ptr [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %v.1 = load <9 x double>, <9 x double>* %ptr.1, align 8
+  %v.1 = load <9 x double>, ptr %ptr.1, align 8
   %v1.lane.0 = extractelement <9 x double> %v.1, i32 0
   %v1.lane.1 = extractelement <9 x double> %v.1, i32 1
   %v1.lane.2 = extractelement <9 x double> %v.1, i32 2
@@ -624,7 +624,7 @@ bb:
   %v1.lane.7 = extractelement <9 x double> %v.1, i32 7
   %v1.lane.8 = extractelement <9 x double> %v.1, i32 8
 
-  %v.2 = load <4 x double>, <4 x double>* %ptr.2, align 16
+  %v.2 = load <4 x double>, ptr %ptr.2, align 16
   %v2.lane.0 = extractelement <4 x double> %v.2, i32 0
   %v2.lane.1 = extractelement <4 x double> %v.2, i32 1
   %v2.lane.2 = extractelement <4 x double> %v.2, i32 2
@@ -670,6 +670,6 @@ bb:
   %b.ins.8 = insertelement <9 x double> %b.ins.7, double %b.lane.8, i32 8
 
   %res = fsub <9 x double> %a.ins.8, %b.ins.8
-  store <9 x double> %res, <9 x double>* %ptr.1, align 8
+  store <9 x double> %res, ptr %ptr.1, align 8
   ret void
 }

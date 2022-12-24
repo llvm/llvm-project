@@ -22,7 +22,7 @@ void never_throws() throw () {
 
 int main(int argc, char **argv)
 {
-  for(unsigned i = 0; i < 1000000; ++i) {
+  for (unsigned i = 0; i < 1000; ++i) {
     try {
       if (argc == 2) {
         never_throws(); // should be cold

@@ -17,10 +17,6 @@ namespace clang {
 namespace tidy {
 namespace readability {
 
-AST_MATCHER(NamedDecl, isInAnonymousNamespace) {
-  return Node.isInAnonymousNamespace();
-}
-
 void StaticDefinitionInAnonymousNamespaceCheck::registerMatchers(
     MatchFinder *Finder) {
   Finder->addMatcher(

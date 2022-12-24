@@ -694,10 +694,8 @@ LogicalResult InsertOp::verify() {
 }
 
 void PushBackOp::build(OpBuilder &builder, OperationState &result,
-                       Type outBuffer, Value bufferSizes, Value inBuffer,
-                       Value value, APInt idx) {
-  build(builder, result, outBuffer, bufferSizes, inBuffer, value,
-        std::move(idx), Value());
+                       Value curSize, Value inBuffer, Value value) {
+  build(builder, result, curSize, inBuffer, value, Value());
 }
 
 LogicalResult PushBackOp::verify() {

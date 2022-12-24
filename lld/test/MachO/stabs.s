@@ -5,8 +5,8 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/foo.s -o %t/foo.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/no-debug.s -o %t/no-debug.o
 ## Set modtimes of the files for deterministic test output.
-# RUN: env TZ=UTC touch -t "197001010000.16" %t/test.o
-# RUN: env TZ=UTC touch -t "197001010000.32" %t/foo.o
+# RUN: env TZ=GMT touch -t "197001010000.16" %t/test.o
+# RUN: env TZ=GMT touch -t "197001010000.32" %t/foo.o
 # RUN: llvm-ar rcsU %t/foo.a %t/foo.o
 
 # RUN: ZERO_AR_DATE=0 %lld -lSystem %t/test.o %t/foo.o %t/no-debug.o -o %t/test

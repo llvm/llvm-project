@@ -1149,7 +1149,7 @@ public:
 #endif
     _LIBCPP_INLINE_VISIBILITY
     ~unordered_map() {
-        static_assert(sizeof(__diagnose_unordered_container_requirements<_Key, _Hash, _Pred>(0)), "");
+        static_assert(sizeof(std::__diagnose_unordered_container_requirements<_Key, _Hash, _Pred>(0)), "");
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -2041,7 +2041,7 @@ private:
 #endif
     _LIBCPP_INLINE_VISIBILITY
     ~unordered_multimap() {
-        static_assert(sizeof(__diagnose_unordered_container_requirements<_Key, _Hash, _Pred>(0)), "");
+        static_assert(sizeof(std::__diagnose_unordered_container_requirements<_Key, _Hash, _Pred>(0)), "");
     }
 
     _LIBCPP_INLINE_VISIBILITY

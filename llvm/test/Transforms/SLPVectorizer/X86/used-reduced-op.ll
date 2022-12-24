@@ -8,20 +8,20 @@
 define void @n() local_unnamed_addr #0 {
 ; CHECK-LABEL: @n(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x [4 x i32]]* @k to <4 x i32>*), align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 1, i64 0), align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 1, i64 1), align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 1, i64 2), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 1, i64 3), align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 2, i64 0), align 16
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 2, i64 1), align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 2, i64 2), align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 2, i64 3), align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 3, i64 0), align 16
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 3, i64 1), align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 3, i64 2), align 8
-; CHECK-NEXT:    [[TMP12:%.*]] = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 3, i64 3), align 4
-; CHECK-NEXT:    [[TMP13:%.*]] = load <16 x i32>, <16 x i32>* bitcast (i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 4, i64 0) to <16 x i32>*), align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @k, align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 1, i64 0), align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 1, i64 1), align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 1, i64 2), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 1, i64 3), align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 2, i64 0), align 16
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 2, i64 1), align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 2, i64 2), align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 2, i64 3), align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 3, i64 0), align 16
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 3, i64 1), align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 3, i64 2), align 8
+; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 3, i64 3), align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = load <16 x i32>, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 4, i64 0), align 16
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_COND]] ], [ 0, [[ENTRY:%.*]] ]
@@ -237,44 +237,44 @@ define void @n() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP114:%.*]] = or i1 [[CMP12_3_7]], [[TMP110]]
 ; CHECK-NEXT:    [[SPEC_SELECT_3_7:%.*]] = select i1 [[TMP114]], i32 7, i32 [[SPEC_SELECT_3_6]]
 ; CHECK-NEXT:    [[SPEC_SELECT8_3_7]] = select i1 [[CMP12_3_7]], i32 [[TMP113]], i32 [[SPEC_SELECT8_2_7]]
-; CHECK-NEXT:    [[K:%.*]] = getelementptr inbounds [366 x i32], [366 x i32]* @l, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i32 [[SPEC_SELECT_3_7]], i32* [[K]], align 4
+; CHECK-NEXT:    [[K:%.*]] = getelementptr inbounds [366 x i32], ptr @l, i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store i32 [[SPEC_SELECT_3_7]], ptr [[K]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ;
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 0, i64 0), align 16
-  %1 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 0, i64 1), align 4
-  %2 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 0, i64 2), align 8
-  %3 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 0, i64 3), align 4
-  %4 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 1, i64 0), align 16
-  %5 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 1, i64 1), align 4
-  %6 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 1, i64 2), align 8
-  %7 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 1, i64 3), align 4
-  %8 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 2, i64 0), align 16
-  %9 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 2, i64 1), align 4
-  %10 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 2, i64 2), align 8
-  %11 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 2, i64 3), align 4
-  %12 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 3, i64 0), align 16
-  %13 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 3, i64 1), align 4
-  %14 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 3, i64 2), align 8
-  %15 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 3, i64 3), align 4
-  %16 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 4, i64 0), align 16
-  %17 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 4, i64 1), align 4
-  %18 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 4, i64 2), align 8
-  %19 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 4, i64 3), align 4
-  %20 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 5, i64 0), align 16
-  %21 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 5, i64 1), align 4
-  %22 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 5, i64 2), align 8
-  %23 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 5, i64 3), align 4
-  %24 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 6, i64 0), align 16
-  %25 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 6, i64 1), align 4
-  %26 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 6, i64 2), align 8
-  %27 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 6, i64 3), align 4
-  %28 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 7, i64 0), align 16
-  %29 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 7, i64 1), align 4
-  %30 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 7, i64 2), align 8
-  %31 = load i32, i32* getelementptr inbounds ([8 x [4 x i32]], [8 x [4 x i32]]* @k, i64 0, i64 7, i64 3), align 4
+  %0 = load i32, ptr @k, align 16
+  %1 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 0, i64 1), align 4
+  %2 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 0, i64 2), align 8
+  %3 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 0, i64 3), align 4
+  %4 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 1, i64 0), align 16
+  %5 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 1, i64 1), align 4
+  %6 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 1, i64 2), align 8
+  %7 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 1, i64 3), align 4
+  %8 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 2, i64 0), align 16
+  %9 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 2, i64 1), align 4
+  %10 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 2, i64 2), align 8
+  %11 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 2, i64 3), align 4
+  %12 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 3, i64 0), align 16
+  %13 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 3, i64 1), align 4
+  %14 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 3, i64 2), align 8
+  %15 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 3, i64 3), align 4
+  %16 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 4, i64 0), align 16
+  %17 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 4, i64 1), align 4
+  %18 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 4, i64 2), align 8
+  %19 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 4, i64 3), align 4
+  %20 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 5, i64 0), align 16
+  %21 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 5, i64 1), align 4
+  %22 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 5, i64 2), align 8
+  %23 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 5, i64 3), align 4
+  %24 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 6, i64 0), align 16
+  %25 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 6, i64 1), align 4
+  %26 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 6, i64 2), align 8
+  %27 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 6, i64 3), align 4
+  %28 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 7, i64 0), align 16
+  %29 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 7, i64 1), align 4
+  %30 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 7, i64 2), align 8
+  %31 = load i32, ptr getelementptr inbounds ([8 x [4 x i32]], ptr @k, i64 0, i64 7, i64 3), align 4
   br label %for.cond
 
 for.cond:                                         ; preds = %for.cond, %entry
@@ -502,8 +502,8 @@ for.cond:                                         ; preds = %for.cond, %entry
   %115 = or i1 %cmp12.3.7, %112
   %spec.select.3.7 = select i1 %115, i32 7, i32 %spec.select.3.6
   %spec.select8.3.7 = select i1 %cmp12.3.7, i32 %114, i32 %spec.select8.2.7
-  %k = getelementptr inbounds [366 x i32], [366 x i32]* @l, i64 0, i64 %indvars.iv
-  store i32 %spec.select.3.7, i32* %k, align 4
+  %k = getelementptr inbounds [366 x i32], ptr @l, i64 0, i64 %indvars.iv
+  store i32 %spec.select.3.7, ptr %k, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   br label %for.cond
 }

@@ -17,11 +17,11 @@
 
 // template<class T>
 //     void
-//     atomic_notify_one(volatile atomic<T>*);
+//     atomic_notify_one(volatile atomic<T>*) noexcept;
 //
 // template<class T>
 //     void
-//     atomic_notify_one(atomic<T>*);
+//     atomic_notify_one(atomic<T>*) noexcept;
 
 #include <atomic>
 #include <type_traits>
@@ -39,6 +39,7 @@ struct TestFn {
 
     {
       A a(T(1));
+      static_assert(noexcept(std::atomic_notify_one(&a)), "");
       std::thread t = support::make_test_thread([&]() {
         std::atomic_store(&a, T(3));
         std::atomic_notify_one(&a);
@@ -49,6 +50,7 @@ struct TestFn {
     }
     {
       volatile A a(T(2));
+      static_assert(noexcept(std::atomic_notify_one(&a)), "");
       std::thread t = support::make_test_thread([&]() {
         std::atomic_store(&a, T(4));
         std::atomic_notify_one(&a);

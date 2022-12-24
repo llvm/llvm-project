@@ -7,7 +7,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 %class.btVector3.23.221.463.485.507.573.595.683.727.749.815.837.991.1585.1607.1629.1651.1849.2047.2069.2091.2113 = type { [4 x float] }
 
 ; Function Attrs: ssp uwtable
-define void @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(%class.btVector3.23.221.463.485.507.573.595.683.727.749.815.837.991.1585.1607.1629.1651.1849.2047.2069.2091.2113* %vertices) #0 align 2 {
+define void @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(ptr %vertices) #0 align 2 {
 ; CHECK-LABEL: @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 undef, label [[RETURN:%.*]], label [[IF_END:%.*]]
@@ -42,9 +42,7 @@ define void @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(%class.
 ; CHECK:       if.end332:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x float> [ [[TMP1]], [[IF_THEN329]] ], [ [[TMP1]], [[IF_END327]] ], [ <float 0x3F847AE140000000, float 0x3F847AE140000000>, [[IF_THEN291]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x float> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[ARRAYIDX_I_I606:%.*]] = getelementptr inbounds [[CLASS_BTVECTOR3_23_221_463_485_507_573_595_683_727_749_815_837_991_1585_1607_1629_1651_1849_2047_2069_2091_2113:%.*]], %class.btVector3.23.221.463.485.507.573.595.683.727.749.815.837.991.1585.1607.1629.1651.1849.2047.2069.2091.2113* [[VERTICES:%.*]], i64 0, i32 0, i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast float* [[ARRAYIDX_I_I606]] to <2 x float>*
-; CHECK-NEXT:    store <2 x float> [[TMP5]], <2 x float>* [[TMP6]], align 4
+; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr [[VERTICES:%.*]], align 4
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
@@ -109,10 +107,9 @@ if.end332:                                        ; preds = %if.then329, %if.end
   %dy276.1 = phi float [ undef, %if.then329 ], [ undef, %if.end327 ], [ 0x3F847AE140000000, %if.then291 ]
   %sub334 = fsub float %add294, %dx272.1
   %sub338 = fsub float %add297, %dy276.1
-  %arrayidx.i.i606 = getelementptr inbounds %class.btVector3.23.221.463.485.507.573.595.683.727.749.815.837.991.1585.1607.1629.1651.1849.2047.2069.2091.2113, %class.btVector3.23.221.463.485.507.573.595.683.727.749.815.837.991.1585.1607.1629.1651.1849.2047.2069.2091.2113* %vertices, i64 0, i32 0, i64 0
-  store float %sub334, float* %arrayidx.i.i606, align 4
-  %arrayidx3.i607 = getelementptr inbounds %class.btVector3.23.221.463.485.507.573.595.683.727.749.815.837.991.1585.1607.1629.1651.1849.2047.2069.2091.2113, %class.btVector3.23.221.463.485.507.573.595.683.727.749.815.837.991.1585.1607.1629.1651.1849.2047.2069.2091.2113* %vertices, i64 0, i32 0, i64 1
-  store float %sub338, float* %arrayidx3.i607, align 4
+  store float %sub334, ptr %vertices, align 4
+  %arrayidx3.i607 = getelementptr inbounds %class.btVector3.23.221.463.485.507.573.595.683.727.749.815.837.991.1585.1607.1629.1651.1849.2047.2069.2091.2113, ptr %vertices, i64 0, i32 0, i64 1
+  store float %sub338, ptr %arrayidx3.i607, align 4
   br label %return
 
 return:                                           ; preds = %if.end332, %for.end271, %entry
