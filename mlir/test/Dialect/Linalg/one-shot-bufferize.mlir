@@ -363,7 +363,7 @@ func.func @reduce(%input: tensor<16x32x64xf32>,
       outs(%init:tensor<16x64xf32>)
       dimensions = [1]
       (%in: f32, %out: f32) {
-        %0 = arith.addf %out, %in: f32
+        %0 = arith.addf %in, %out: f32
         linalg.yield %0: f32
       }
   func.return %reduce : tensor<16x64xf32>
