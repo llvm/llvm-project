@@ -211,6 +211,18 @@ nocaptures:
   ret void
 }
 
+define void @source_alignment(ptr noalias dereferenceable(128) %dst) {
+; CHECK-LABEL: @source_alignment(
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [128 x i8], align 4
+; CHECK-NEXT:    call void @accept_ptr(ptr nocapture [[DST:%.*]]) #[[ATTR3]]
+; CHECK-NEXT:    ret void
+;
+  %src = alloca [128 x i8], align 4
+  call void @accept_ptr(ptr nocapture %src) nounwind
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dst, ptr %src, i64 128, i1 false)
+  ret void
+}
+
 declare void @may_throw()
 declare void @accept_ptr(ptr)
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
