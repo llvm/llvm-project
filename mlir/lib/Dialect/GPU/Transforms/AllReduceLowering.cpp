@@ -158,8 +158,8 @@ private:
   /// Adds type to funcOp's workgroup attributions.
   Value createWorkgroupBuffer() {
     // TODO: Pick a proper location for the attribution.
-    int workgroupMemoryAddressSpace =
-        gpu::GPUDialect::getWorkgroupAddressSpace();
+    auto workgroupMemoryAddressSpace = gpu::AddressSpaceAttr::get(
+        funcOp->getContext(), gpu::GPUDialect::getWorkgroupAddressSpace());
     auto bufferType = MemRefType::get({kSubgroupSize}, valueType, AffineMap{},
                                       workgroupMemoryAddressSpace);
     return funcOp.addWorkgroupAttribution(bufferType, rewriter.getUnknownLoc());
@@ -404,7 +404,7 @@ struct GpuAllReduceConversion : public RewritePattern {
       return WalkResult::advance();
     };
 
-    if (funcOp.walk(callback).wasInterrupted())
+    if (funcOp.walk(callback).wasInterrupted() || reduceOps.empty())
       return rewriter.notifyMatchFailure(
           op, "Non uniform reductions are not supported yet.");
 

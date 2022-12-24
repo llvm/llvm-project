@@ -121,13 +121,41 @@ struct LowerGpuOpsToROCDLOpsPass
       }
     }
 
+    // Apply in-dialect lowering. In-dialect lowering will replace
+    // ops which need to be lowered further, which is not supported by a
+    // single conversion pass.
+    {
+      RewritePatternSet patterns(ctx);
+      populateGpuRewritePatterns(patterns);
+      (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
+    }
+
+    // Apply memory space lowering. The target uses 3 for workgroup memory and 5
+    // for private memory.
+    {
+      RewritePatternSet patterns(ctx);
+      TypeConverter typeConverter;
+      typeConverter.addConversion([](Type t) { return t; });
+      gpu::populateMemorySpaceAttributeTypeConversions(
+          typeConverter, [](gpu::AddressSpace space) {
+            switch (space) {
+            case gpu::AddressSpace::Global:
+              return 1;
+            case gpu::AddressSpace::Workgroup:
+              return 3;
+            case gpu::AddressSpace::Private:
+              return 5;
+            }
+          });
+      ConversionTarget target(getContext());
+      gpu::populateLowerMemorySpaceOpLegality(target);
+      gpu::populateMemorySpaceLoweringPatterns(typeConverter, patterns);
+      if (failed(applyFullConversion(m, target, std::move(patterns))))
+        return signalPassFailure();
+    }
+
     LLVMTypeConverter converter(ctx, options);
-
-    RewritePatternSet patterns(ctx);
     RewritePatternSet llvmPatterns(ctx);
-
-    populateGpuRewritePatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
 
     mlir::arith::populateArithToLLVMConversionPatterns(converter, llvmPatterns);
     populateAMDGPUToROCDLConversionPatterns(converter, llvmPatterns,
@@ -208,7 +236,9 @@ void mlir::populateGpuToROCDLConversionPatterns(
                                        ROCDL::GridDimYOp, ROCDL::GridDimZOp>,
            GPUReturnOpLowering>(converter);
   patterns.add<GPUFuncOpLowering>(
-      converter, /*allocaAddrSpace=*/5,
+      converter,
+      /*allocaAddrSpace=*/ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace,
+      /*workgroupAddrSpace=*/ROCDL::ROCDLDialect::kSharedMemoryAddressSpace,
       StringAttr::get(&converter.getContext(),
                       ROCDL::ROCDLDialect::getKernelFuncAttrName()));
   if (Runtime::HIP == runtime) {

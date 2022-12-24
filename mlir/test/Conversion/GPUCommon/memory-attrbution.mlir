@@ -3,7 +3,7 @@
 
 gpu.module @kernel {
   // NVVM-LABEL:  llvm.func @private
-  gpu.func @private(%arg0: f32) private(%arg1: memref<4xf32, 5>) {
+  gpu.func @private(%arg0: f32) private(%arg1: memref<4xf32, #gpu.address_space<private>>) {
     // Allocate private memory inside the function.
     // NVVM: %[[size:.*]] = llvm.mlir.constant(4 : i64) : i64
     // NVVM: %[[raw:.*]] = llvm.alloca %[[size]] x f32 : (i64) -> !llvm.ptr<f32>
@@ -42,7 +42,7 @@ gpu.module @kernel {
     // ROCDL: llvm.getelementptr
     // ROCDL: llvm.store
     %c0 = arith.constant 0 : index
-    memref.store %arg0, %arg1[%c0] : memref<4xf32, 5>
+    memref.store %arg0, %arg1[%c0] : memref<4xf32, #gpu.address_space<private>>
 
     "terminator"() : () -> ()
   }
@@ -65,7 +65,7 @@ gpu.module @kernel {
 
   // ROCDL-LABEL: llvm.func @workgroup
   // ROCDL-SAME: {
-  gpu.func @workgroup(%arg0: f32) workgroup(%arg1: memref<4xf32, 3>) {
+  gpu.func @workgroup(%arg0: f32) workgroup(%arg1: memref<4xf32, #gpu.address_space<workgroup>>) {
     // Get the address of the first element in the global array.
     // NVVM: %[[addr:.*]] = llvm.mlir.addressof @[[$buffer]] : !llvm.ptr<array<4 x f32>, 3>
     // NVVM: %[[raw:.*]] = llvm.getelementptr %[[addr]][0, 0]
@@ -106,7 +106,7 @@ gpu.module @kernel {
     // ROCDL: llvm.getelementptr
     // ROCDL: llvm.store
     %c0 = arith.constant 0 : index
-    memref.store %arg0, %arg1[%c0] : memref<4xf32, 3>
+    memref.store %arg0, %arg1[%c0] : memref<4xf32, #gpu.address_space<workgroup>>
 
     "terminator"() : () -> ()
   }
@@ -126,7 +126,7 @@ gpu.module @kernel {
 
   // NVVM-LABEL: llvm.func @workgroup3d
   // ROCDL-LABEL: llvm.func @workgroup3d
-  gpu.func @workgroup3d(%arg0: f32) workgroup(%arg1: memref<4x2x6xf32, 3>) {
+  gpu.func @workgroup3d(%arg0: f32) workgroup(%arg1: memref<4x2x6xf32, #gpu.address_space<workgroup>>) {
     // Get the address of the first element in the global array.
     // NVVM: %[[addr:.*]] = llvm.mlir.addressof @[[$buffer]] : !llvm.ptr<array<48 x f32>, 3>
     // NVVM: %[[raw:.*]] = llvm.getelementptr %[[addr]][0, 0]
@@ -174,7 +174,7 @@ gpu.module @kernel {
     // ROCDL: %[[descr10:.*]] = llvm.insertvalue %[[c1]], %[[descr9]][4, 2]
 
     %c0 = arith.constant 0 : index
-    memref.store %arg0, %arg1[%c0,%c0,%c0] : memref<4x2x6xf32, 3>
+    memref.store %arg0, %arg1[%c0,%c0,%c0] : memref<4x2x6xf32, #gpu.address_space<workgroup>>
     "terminator"() : () -> ()
   }
 }
@@ -196,8 +196,8 @@ gpu.module @kernel {
   // NVVM-LABEL: llvm.func @multiple
   // ROCDL-LABEL: llvm.func @multiple
   gpu.func @multiple(%arg0: f32)
-      workgroup(%arg1: memref<1xf32, 3>, %arg2: memref<2xf32, 3>)
-      private(%arg3: memref<3xf32, 5>, %arg4: memref<4xf32, 5>) {
+      workgroup(%arg1: memref<1xf32, #gpu.address_space<workgroup>>, %arg2: memref<2xf32, #gpu.address_space<workgroup>>)
+      private(%arg3: memref<3xf32, #gpu.address_space<private>>, %arg4: memref<4xf32, #gpu.address_space<private>>) {
 
     // Workgroup buffers.
     // NVVM: llvm.mlir.addressof @[[$buffer1]]
@@ -218,10 +218,10 @@ gpu.module @kernel {
     // ROCDL: llvm.alloca %[[c4]] x f32 : (i64) -> !llvm.ptr<f32, 5>
 
     %c0 = arith.constant 0 : index
-    memref.store %arg0, %arg1[%c0] : memref<1xf32, 3>
-    memref.store %arg0, %arg2[%c0] : memref<2xf32, 3>
-    memref.store %arg0, %arg3[%c0] : memref<3xf32, 5>
-    memref.store %arg0, %arg4[%c0] : memref<4xf32, 5>
+    memref.store %arg0, %arg1[%c0] : memref<1xf32, #gpu.address_space<workgroup>>
+    memref.store %arg0, %arg2[%c0] : memref<2xf32, #gpu.address_space<workgroup>>
+    memref.store %arg0, %arg3[%c0] : memref<3xf32, #gpu.address_space<private>>
+    memref.store %arg0, %arg4[%c0] : memref<4xf32, #gpu.address_space<private>>
     "terminator"() : () -> ()
   }
 }
