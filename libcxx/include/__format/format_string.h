@@ -73,7 +73,7 @@ __parse_automatic(const _CharT* __begin, const _CharT*, auto& __parse_ctx) {
 template <class _CharT>
 _LIBCPP_HIDE_FROM_ABI constexpr __parse_number_result<_CharT>
 __parse_manual(const _CharT* __begin, const _CharT* __end, auto& __parse_ctx) {
-  __parse_number_result<_CharT> __r = __parse_number(__begin, __end);
+  __parse_number_result<_CharT> __r = __format::__parse_number(__begin, __end);
   __parse_ctx.check_arg_id(__r.__value);
   return __r;
 }

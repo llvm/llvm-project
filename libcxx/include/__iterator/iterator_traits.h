@@ -21,8 +21,21 @@
 #include <__fwd/pair.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/readable_traits.h>
+#include <__type_traits/add_const.h>
+#include <__type_traits/common_reference.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/disjunction.h>
+#include <__type_traits/is_convertible.h>
+#include <__type_traits/is_object.h>
+#include <__type_traits/is_primary_template.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/is_valid_expansion.h>
+#include <__type_traits/remove_const.h>
+#include <__type_traits/remove_cv.h>
+#include <__type_traits/remove_cvref.h>
+#include <__type_traits/void_t.h>
+#include <__utility/declval.h>
 #include <cstddef>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

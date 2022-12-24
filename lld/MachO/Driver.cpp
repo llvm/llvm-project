@@ -406,9 +406,10 @@ static InputFile *addFile(StringRef path, LoadType loadType,
   return newFile;
 }
 
+static std::vector<StringRef> missingAutolinkWarnings;
 static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
                        bool isReexport, bool isHidden, bool isExplicit,
-                       LoadType loadType) {
+                       LoadType loadType, InputFile *originFile = nullptr) {
   if (std::optional<StringRef> path = findLibrary(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
             addFile(*path, loadType, /*isLazy=*/false, isExplicit,
@@ -424,12 +425,20 @@ static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
     }
     return;
   }
+  if (loadType == LoadType::LCLinkerOption) {
+    assert(originFile);
+    missingAutolinkWarnings.push_back(
+        saver().save(toString(originFile) +
+                     ": auto-linked library not found for -l" + name));
+    return;
+  }
   error("library not found for -l" + name);
 }
 
 static DenseSet<StringRef> loadedObjectFrameworks;
 static void addFramework(StringRef name, bool isNeeded, bool isWeak,
-                         bool isReexport, bool isExplicit, LoadType loadType) {
+                         bool isReexport, bool isExplicit, LoadType loadType,
+                         InputFile *originFile = nullptr) {
   if (std::optional<StringRef> path = findFramework(name)) {
     if (loadedObjectFrameworks.contains(*path))
       return;
@@ -454,6 +463,13 @@ static void addFramework(StringRef name, bool isNeeded, bool isWeak,
       // forceNeeded by subsequent loads
       loadedObjectFrameworks.insert(*path);
     }
+    return;
+  }
+  if (loadType == LoadType::LCLinkerOption) {
+    assert(originFile);
+    missingAutolinkWarnings.push_back(saver().save(
+        toString(originFile) +
+        ": auto-linked framework not found for -framework " + name));
     return;
   }
   error("framework not found for -framework " + name);
@@ -482,14 +498,14 @@ void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
       return;
     addLibrary(arg, /*isNeeded=*/false, /*isWeak=*/false,
                /*isReexport=*/false, /*isHidden=*/false, /*isExplicit=*/false,
-               LoadType::LCLinkerOption);
+               LoadType::LCLinkerOption, f);
   } else if (arg == "-framework") {
     StringRef name = argv[++i];
     if (config->ignoreAutoLinkOptions.contains(name))
       return;
     addFramework(name, /*isNeeded=*/false, /*isWeak=*/false,
                  /*isReexport=*/false, /*isExplicit=*/false,
-                 LoadType::LCLinkerOption);
+                 LoadType::LCLinkerOption, f);
   } else {
     error(arg + " is not allowed in LC_LINKER_OPTION");
   }
@@ -1209,8 +1225,7 @@ static void foldIdenticalLiterals() {
   // Either way, we must unconditionally finalize it here.
   in.cStringSection->finalizeContents();
   in.objcMethnameSection->finalizeContents();
-  if (in.wordLiteralSection)
-    in.wordLiteralSection->finalizeContents();
+  in.wordLiteralSection->finalizeContents();
 }
 
 static void addSynthenticMethnames() {
@@ -1348,6 +1363,7 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     inputSections.clear();
     loadedArchives.clear();
     loadedObjectFrameworks.clear();
+    missingAutolinkWarnings.clear();
     syntheticSections.clear();
     thunkMap.clear();
 
@@ -1552,9 +1568,8 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->emitInitOffsets =
       config->emitChainedFixups || args.hasArg(OPT_init_offsets);
   config->icfLevel = getICFLevel(args);
-  config->dedupLiterals =
-      args.hasFlag(OPT_deduplicate_literals, OPT_icf_eq, false) ||
-      config->icfLevel != ICFLevel::none;
+  config->dedupStrings =
+      args.hasFlag(OPT_deduplicate_strings, OPT_no_deduplicate_strings, true);
   config->deadStripDuplicates = args.hasArg(OPT_dead_strip_duplicates);
   config->warnDylibInstallName = args.hasFlag(
       OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);
@@ -1568,6 +1583,7 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->ignoreAutoLink = args.hasArg(OPT_ignore_auto_link);
   for (const Arg *arg : args.filtered(OPT_ignore_auto_link_option))
     config->ignoreAutoLinkOptions.insert(arg->getValue());
+  config->strictAutoLink = args.hasArg(OPT_strict_auto_link);
 
   for (const Arg *arg : args.filtered(OPT_alias)) {
     config->aliasedSymbols.push_back(
@@ -1863,7 +1879,7 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       if (config->icfLevel == ICFLevel::safe)
         markAddrSigSymbols();
       foldIdenticalSections(/*onlyCfStrings=*/false);
-    } else if (config->dedupLiterals) {
+    } else if (config->dedupStrings) {
       foldIdenticalSections(/*onlyCfStrings=*/true);
     }
 
@@ -1882,5 +1898,10 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     timeTraceProfilerCleanup();
   }
+
+  if (errorCount() != 0 || config->strictAutoLink)
+    for (const auto &warning : missingAutolinkWarnings)
+      warn(warning);
+
   return errorCount() == 0;
 }

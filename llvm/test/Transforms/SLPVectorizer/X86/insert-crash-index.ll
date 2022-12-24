@@ -3,19 +3,19 @@
 
 ; These all crashing before patch
 
-define  <2 x i8> @negative_index(<2 x i8> %aux_vec, i8* %in) {
+define  <2 x i8> @negative_index(<2 x i8> %aux_vec, ptr %in) {
 ; CHECK-LABEL: @negative_index(
-; CHECK-NEXT:    [[IN0:%.*]] = load i8, i8* [[IN:%.*]], align 4
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i8, i8* [[IN]], i64 1
-; CHECK-NEXT:    [[IN1:%.*]] = load i8, i8* [[G1]], align 4
+; CHECK-NEXT:    [[IN0:%.*]] = load i8, ptr [[IN:%.*]], align 4
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 1
+; CHECK-NEXT:    [[IN1:%.*]] = load i8, ptr [[G1]], align 4
 ; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i8> [[AUX_VEC:%.*]], i8 [[IN0]], i8 -1
 ; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x i8> [[V0]], i8 [[IN1]], i64 1
 ; CHECK-NEXT:    [[OUT:%.*]] = add <2 x i8> [[V1]], [[V1]]
 ; CHECK-NEXT:    ret <2 x i8> [[OUT]]
 ;
-  %in0 = load i8, i8* %in, align 4
-  %g1 = getelementptr inbounds i8, i8* %in, i64 1
-  %in1 = load i8, i8* %g1, align 4
+  %in0 = load i8, ptr %in, align 4
+  %g1 = getelementptr inbounds i8, ptr %in, i64 1
+  %in1 = load i8, ptr %g1, align 4
 
   %v0 = insertelement <2 x i8> %aux_vec, i8 %in0, i8 -1
   %v1 = insertelement <2 x i8> %v0, i8 %in1, i64 1
@@ -24,19 +24,19 @@ define  <2 x i8> @negative_index(<2 x i8> %aux_vec, i8* %in) {
   ret <2 x i8> %out
 }
 
-define  <2 x i8> @exceed_index(<2 x i8> %aux_vec, i8* %in) {
+define  <2 x i8> @exceed_index(<2 x i8> %aux_vec, ptr %in) {
 ; CHECK-LABEL: @exceed_index(
-; CHECK-NEXT:    [[IN0:%.*]] = load i8, i8* [[IN:%.*]], align 4
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i8, i8* [[IN]], i64 1
-; CHECK-NEXT:    [[IN1:%.*]] = load i8, i8* [[G1]], align 4
+; CHECK-NEXT:    [[IN0:%.*]] = load i8, ptr [[IN:%.*]], align 4
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 1
+; CHECK-NEXT:    [[IN1:%.*]] = load i8, ptr [[G1]], align 4
 ; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i8> [[AUX_VEC:%.*]], i8 [[IN0]], i8 2
 ; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x i8> [[V0]], i8 [[IN1]], i64 1
 ; CHECK-NEXT:    [[OUT:%.*]] = add <2 x i8> [[V1]], [[V1]]
 ; CHECK-NEXT:    ret <2 x i8> [[OUT]]
 ;
-  %in0 = load i8, i8* %in, align 4
-  %g1 = getelementptr inbounds i8, i8* %in, i64 1
-  %in1 = load i8, i8* %g1, align 4
+  %in0 = load i8, ptr %in, align 4
+  %g1 = getelementptr inbounds i8, ptr %in, i64 1
+  %in1 = load i8, ptr %g1, align 4
 
   %v0 = insertelement <2 x i8> %aux_vec, i8 %in0, i8 2
   %v1 = insertelement <2 x i8> %v0, i8 %in1, i64 1
@@ -45,19 +45,19 @@ define  <2 x i8> @exceed_index(<2 x i8> %aux_vec, i8* %in) {
   ret <2 x i8> %out
 }
 
-define  <2 x i8> @poison_index(<2 x i8> %aux_vec, i8* %in) {
+define  <2 x i8> @poison_index(<2 x i8> %aux_vec, ptr %in) {
 ; CHECK-LABEL: @poison_index(
-; CHECK-NEXT:    [[IN0:%.*]] = load i8, i8* [[IN:%.*]], align 4
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i8, i8* [[IN]], i64 1
-; CHECK-NEXT:    [[IN1:%.*]] = load i8, i8* [[G1]], align 4
+; CHECK-NEXT:    [[IN0:%.*]] = load i8, ptr [[IN:%.*]], align 4
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 1
+; CHECK-NEXT:    [[IN1:%.*]] = load i8, ptr [[G1]], align 4
 ; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i8> [[AUX_VEC:%.*]], i8 [[IN0]], i8 poison
 ; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x i8> [[V0]], i8 [[IN1]], i64 1
 ; CHECK-NEXT:    [[OUT:%.*]] = add <2 x i8> [[V1]], [[V1]]
 ; CHECK-NEXT:    ret <2 x i8> [[OUT]]
 ;
-  %in0 = load i8, i8* %in, align 4
-  %g1 = getelementptr inbounds i8, i8* %in, i64 1
-  %in1 = load i8, i8* %g1, align 4
+  %in0 = load i8, ptr %in, align 4
+  %g1 = getelementptr inbounds i8, ptr %in, i64 1
+  %in1 = load i8, ptr %g1, align 4
 
   %v0 = insertelement <2 x i8> %aux_vec, i8 %in0, i8 poison
   %v1 = insertelement <2 x i8> %v0, i8 %in1, i64 1

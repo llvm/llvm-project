@@ -270,7 +270,7 @@ static std::optional<size_t> getRecordSize(StringRef segname, StringRef name) {
     if (segname == segment_names::ld)
       return target->wordSize == 8 ? 32 : 20;
   }
-  if (!config->dedupLiterals)
+  if (!config->dedupStrings)
     return {};
 
   if (name == section_names::cfString && segname == segment_names::data)
@@ -342,25 +342,25 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
       section.doneSplitting = true;
     };
 
-    if (sectionType(sec.flags) == S_CSTRING_LITERALS ||
-        (config->dedupLiterals && isWordLiteralSection(sec.flags))) {
-      if (sec.nreloc && config->dedupLiterals)
+    if (sectionType(sec.flags) == S_CSTRING_LITERALS) {
+      if (sec.nreloc && config->dedupStrings)
         fatal(toString(this) + " contains relocations in " + sec.segname + "," +
               sec.sectname +
-              ", so LLD cannot deduplicate literals. Try re-running without "
-              "--deduplicate-literals.");
+              ", so LLD cannot deduplicate strings. Try re-running with "
+              "--no-deduplicate-strings.");
 
-      InputSection *isec;
-      if (sectionType(sec.flags) == S_CSTRING_LITERALS) {
-        isec = make<CStringInputSection>(section, data, align,
-                                         /*dedupLiterals=*/name ==
-                                                 section_names::objcMethname ||
-                                             config->dedupLiterals);
-        // FIXME: parallelize this?
-        cast<CStringInputSection>(isec)->splitIntoPieces();
-      } else {
-        isec = make<WordLiteralInputSection>(section, data, align);
-      }
+      InputSection *isec = make<CStringInputSection>(
+          section, data, align,
+          /*dedupLiterals=*/name == section_names::objcMethname ||
+              config->dedupStrings);
+      // FIXME: parallelize this?
+      cast<CStringInputSection>(isec)->splitIntoPieces();
+      section.subsections.push_back({0, isec});
+    } else if (isWordLiteralSection(sec.flags)) {
+      if (sec.nreloc)
+        fatal(toString(this) + " contains unsupported relocations in " +
+              sec.segname + "," + sec.sectname);
+      InputSection *isec = make<WordLiteralInputSection>(section, data, align);
       section.subsections.push_back({0, isec});
     } else if (auto recordSize = getRecordSize(segname, name)) {
       splitRecords(*recordSize);
@@ -628,6 +628,12 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
   }
 }
 
+// Symbols with `l` or `L` as a prefix are linker-private and never appear in
+// the output.
+static bool isPrivateLabel(StringRef name) {
+  return name.startswith("l") || name.startswith("L");
+}
+
 template <class NList>
 static macho::Symbol *createDefined(const NList &sym, StringRef name,
                                     InputSection *isec, uint64_t value,
@@ -697,8 +703,7 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
   }
   assert(!isWeakDefCanBeHidden &&
          "weak_def_can_be_hidden on already-hidden symbol?");
-  bool includeInSymtab =
-      !name.startswith("l") && !name.startswith("L") && !isEhFrameSection(isec);
+  bool includeInSymtab = !isPrivateLabel(name) && !isEhFrameSection(isec);
   return make<Defined>(
       name, isec->getFile(), isec, value, size, sym.n_desc & N_WEAK_DEF,
       /*isExternal=*/false, /*isPrivateExtern=*/false, includeInSymtab,
@@ -831,17 +836,30 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
     }
     sections[i]->doneSplitting = true;
 
+    auto getSymName = [strtab](const NList& sym) -> StringRef {
+      return StringRef(strtab + sym.n_strx);
+    };
+
     // Calculate symbol sizes and create subsections by splitting the sections
     // along symbol boundaries.
     // We populate subsections by repeatedly splitting the last (highest
     // address) subsection.
     llvm::stable_sort(symbolIndices, [&](uint32_t lhs, uint32_t rhs) {
+      // Put private-label symbols that have no flags after other symbols at the
+      // same address.
+      StringRef lhsName = getSymName(nList[lhs]);
+      StringRef rhsName = getSymName(nList[rhs]);
+      if (nList[lhs].n_value == nList[rhs].n_value) {
+        if (isPrivateLabel(lhsName) && isPrivateLabel(rhsName))
+          return nList[lhs].n_desc > nList[rhs].n_desc;
+        return !isPrivateLabel(lhsName) && isPrivateLabel(rhsName);
+      }
       return nList[lhs].n_value < nList[rhs].n_value;
     });
     for (size_t j = 0; j < symbolIndices.size(); ++j) {
       const uint32_t symIndex = symbolIndices[j];
       const NList &sym = nList[symIndex];
-      StringRef name = strtab + sym.n_strx;
+      StringRef name = getSymName(sym);
       Subsection &subsec = subsections.back();
       InputSection *isec = subsec.isec;
 
@@ -861,8 +879,17 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       if (!subsectionsViaSymbols || symbolOffset == 0 ||
           sym.n_desc & N_ALT_ENTRY || !isa<ConcatInputSection>(isec)) {
         isec->hasAltEntry = symbolOffset != 0;
-        symbols[symIndex] = createDefined(sym, name, isec, symbolOffset,
-                                          symbolSize, forceHidden);
+        // If we have an private-label symbol that's an alias, and that alias
+        // doesn't have any flags of its own, then we can just reuse the aliased
+        // symbol. Our sorting step above ensures that any such symbols will
+        // appear after the non-private-label ones. See weak-def-alias-ignored.s
+        // for the motivation behind this.
+        if (symbolOffset == 0 && isPrivateLabel(name) && j != 0 &&
+            sym.n_desc == 0)
+          symbols[symIndex] = symbols[symbolIndices[j - 1]];
+        else
+          symbols[symIndex] = createDefined(sym, name, isec, symbolOffset,
+                                            symbolSize, forceHidden);
         continue;
       }
       auto *concatIsec = cast<ConcatInputSection>(isec);

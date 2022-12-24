@@ -100,7 +100,6 @@ chrono tuple
 chrono type_traits
 chrono version
 cinttypes cstdint
-cmath type_traits
 cmath version
 codecvt cctype
 codecvt cstddef
@@ -113,7 +112,6 @@ compare cmath
 compare cstddef
 compare cstdint
 compare limits
-compare type_traits
 compare version
 complex cmath
 complex iosfwd
@@ -135,7 +133,6 @@ condition_variable new
 condition_variable ratio
 condition_variable stdexcept
 condition_variable system_error
-condition_variable type_traits
 condition_variable typeinfo
 condition_variable version
 coroutine compare
@@ -164,7 +161,6 @@ deque type_traits
 deque version
 exception cstddef
 exception cstdlib
-exception type_traits
 exception version
 execution version
 expected cstddef
@@ -172,7 +168,6 @@ expected cstdlib
 expected exception
 expected initializer_list
 expected new
-expected type_traits
 expected version
 experimental/algorithm algorithm
 experimental/algorithm cstddef
@@ -364,7 +359,6 @@ iostream version
 istream cstddef
 istream iosfwd
 istream ostream
-istream type_traits
 istream version
 iterator compare
 iterator concepts
@@ -432,7 +426,6 @@ memory limits
 memory new
 memory stdexcept
 memory tuple
-memory type_traits
 memory typeinfo
 memory version
 memory_resource cstddef
@@ -456,13 +449,11 @@ mutex ratio
 mutex stdexcept
 mutex system_error
 mutex tuple
-mutex type_traits
 mutex typeinfo
 mutex version
 new cstddef
 new cstdlib
 new exception
-new type_traits
 new version
 numbers type_traits
 numbers version
@@ -495,7 +486,6 @@ ostream locale
 ostream new
 ostream stdexcept
 ostream streambuf
-ostream type_traits
 ostream typeinfo
 ostream version
 queue compare
@@ -557,7 +547,6 @@ scoped_allocator cstddef
 scoped_allocator limits
 scoped_allocator new
 scoped_allocator tuple
-scoped_allocator type_traits
 scoped_allocator version
 semaphore atomic
 semaphore ctime

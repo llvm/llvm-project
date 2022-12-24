@@ -13,9 +13,16 @@
 #include <__config>
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_copy_constructible.h>
+#include <__type_traits/is_empty.h>
+#include <__type_traits/is_move_constructible.h>
+#include <__type_traits/make_unsigned.h>
+#include <__type_traits/remove_reference.h>
+#include <__type_traits/void_t.h>
+#include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <limits>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

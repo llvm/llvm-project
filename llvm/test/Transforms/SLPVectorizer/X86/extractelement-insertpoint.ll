@@ -12,7 +12,7 @@ define i32 @crash() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[ADD1:%.*]] = fadd double [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[MUL1:%.*]] = fmul double [[ADD1]], 0.000000e+00
-; CHECK-NEXT:    store double [[MUL1]], double* null, align 16
+; CHECK-NEXT:    store double [[MUL1]], ptr null, align 16
 ; CHECK-NEXT:    ret i32 0
 ;
 label:
@@ -26,6 +26,6 @@ label:
   %mul = fmul double %extract0, %0
   %add1 = fadd double %2, %mul
   %mul1 = fmul double %add1, 0.000000e+00
-  store double %mul1, double* null, align 16
+  store double %mul1, ptr null, align 16
   ret i32 0
 }

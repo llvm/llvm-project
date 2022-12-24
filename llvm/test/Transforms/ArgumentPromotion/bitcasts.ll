@@ -5,62 +5,54 @@
 
 %opaque = type opaque
 
-define internal i32 @callee_basic(i8* %p) {
+define internal i32 @callee_basic(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@callee_basic
 ; CHECK-SAME: (i32 [[P_0_VAL:%.*]], i32 [[P_4_VAL:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = add i32 [[P_0_VAL]], [[P_4_VAL]]
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
-  %p.32 = bitcast i8* %p to i32*
-  %x = load i32, i32* %p.32
-  %p1 = getelementptr i8, i8* %p, i64 4
-  %p1.32 = bitcast i8* %p1 to i32*
-  %y = load i32, i32* %p1.32
+  %x = load i32, ptr %p
+  %p1 = getelementptr i8, ptr %p, i64 4
+  %y = load i32, ptr %p1
   %z = add i32 %x, %y
   ret i32 %z
 }
 
-define void @caller_basic(i8* %p) {
+define void @caller_basic(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@caller_basic
-; CHECK-SAME: (i8* [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[P]] to i32*
-; CHECK-NEXT:    [[P_VAL:%.*]] = load i32, i32* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, i8* [[P]], i64 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to i32*
-; CHECK-NEXT:    [[P_VAL1:%.*]] = load i32, i32* [[TMP3]], align 4
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[P_VAL:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[P_VAL1:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @callee_basic(i32 [[P_VAL]], i32 [[P_VAL1]])
 ; CHECK-NEXT:    ret void
 ;
-  call i32 @callee_basic(i8* %p)
+  call i32 @callee_basic(ptr %p)
   ret void
 }
 
-define internal i32 @callee_opaque(%opaque* %p) {
+define internal i32 @callee_opaque(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@callee_opaque
 ; CHECK-SAME: (i32 [[P_0_VAL:%.*]], i32 [[P_4_VAL:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = add i32 [[P_0_VAL]], [[P_4_VAL]]
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
-  %p.32 = bitcast %opaque* %p to i32*
-  %x = load i32, i32* %p.32
-  %p1.32 = getelementptr i32, i32* %p.32, i64 1
-  %y = load i32, i32* %p1.32
+  %x = load i32, ptr %p
+  %p1.32 = getelementptr i32, ptr %p, i64 1
+  %y = load i32, ptr %p1.32
   %z = add i32 %x, %y
   ret i32 %z
 }
 
-define void @caller_opaque(%opaque* %p) {
+define void @caller_opaque(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@caller_opaque
-; CHECK-SAME: (%opaque* [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast %opaque* [[P]] to i32*
-; CHECK-NEXT:    [[P_VAL:%.*]] = load i32, i32* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast %opaque* [[P]] to i8*
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* [[TMP2]], i64 4
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP3]] to i32*
-; CHECK-NEXT:    [[P_VAL1:%.*]] = load i32, i32* [[TMP4]], align 4
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[P_VAL:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[P_VAL1:%.*]] = load i32, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @callee_opaque(i32 [[P_VAL]], i32 [[P_VAL1]])
 ; CHECK-NEXT:    ret void
 ;
-  call i32 @callee_opaque(%opaque* %p)
+  call i32 @callee_opaque(ptr %p)
   ret void
 }

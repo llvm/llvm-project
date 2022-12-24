@@ -793,3 +793,117 @@ define i32 @freeze_fshr(i32 %a0, i32 %a1, i32 %a2) nounwind {
   %z = call i32 @llvm.fshr.i32(i32 %y, i32 %f2, i32 31)
   ret i32 %z
 }
+
+define void @pr59676_frozen(ptr %dst, i32 %x.orig) {
+; X86-LABEL: pr59676_frozen:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    imull %eax, %eax
+; X86-NEXT:    imull $84, %eax, %eax
+; X86-NEXT:    movl $818089009, %edx # imm = 0x30C30C31
+; X86-NEXT:    imull %edx
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    shrl $31, %eax
+; X86-NEXT:    sarl $3, %edx
+; X86-NEXT:    addl %eax, %edx
+; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    retl
+;
+; X64-LABEL: pr59676_frozen:
+; X64:       # %bb.0:
+; X64-NEXT:    imull %esi, %esi
+; X64-NEXT:    imull $84, %esi, %eax
+; X64-NEXT:    cltq
+; X64-NEXT:    imulq $818089009, %rax, %rax # imm = 0x30C30C31
+; X64-NEXT:    movq %rax, %rcx
+; X64-NEXT:    shrq $63, %rcx
+; X64-NEXT:    sarq $35, %rax
+; X64-NEXT:    addl %ecx, %eax
+; X64-NEXT:    movl %eax, (%rdi)
+; X64-NEXT:    retq
+  %x = freeze i32 %x.orig
+  %mul = mul i32 %x, 42
+  %shl = shl i32 %x, 1
+  %mul.frozen = freeze i32 %mul
+  %shl.frozen = freeze i32 %shl
+  %area = mul i32 %mul.frozen, %shl.frozen
+  %div = sdiv i32 %area, 42
+  store i32 %div, ptr %dst, align 4
+  ret void
+}
+define void @pr59676_nsw_frozen(ptr %dst, i32 %x.orig) {
+; X86-LABEL: pr59676_nsw_frozen:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    imull %eax, %eax
+; X86-NEXT:    imull $84, %eax, %eax
+; X86-NEXT:    movl $818089009, %edx # imm = 0x30C30C31
+; X86-NEXT:    imull %edx
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    shrl $31, %eax
+; X86-NEXT:    sarl $3, %edx
+; X86-NEXT:    addl %eax, %edx
+; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    retl
+;
+; X64-LABEL: pr59676_nsw_frozen:
+; X64:       # %bb.0:
+; X64-NEXT:    imull %esi, %esi
+; X64-NEXT:    imull $84, %esi, %eax
+; X64-NEXT:    cltq
+; X64-NEXT:    imulq $818089009, %rax, %rax # imm = 0x30C30C31
+; X64-NEXT:    movq %rax, %rcx
+; X64-NEXT:    shrq $63, %rcx
+; X64-NEXT:    sarq $35, %rax
+; X64-NEXT:    addl %ecx, %eax
+; X64-NEXT:    movl %eax, (%rdi)
+; X64-NEXT:    retq
+  %x = freeze i32 %x.orig
+  %mul = mul nsw i32 %x, 42
+  %shl = shl i32 %x, 1
+  %mul.frozen = freeze i32 %mul
+  %shl.frozen = freeze i32 %shl
+  %area = mul i32 %mul.frozen, %shl.frozen
+  %div = sdiv i32 %area, 42
+  store i32 %div, ptr %dst, align 4
+  ret void
+}
+define void @pr59676_nsw(ptr %dst, i32 %x) {
+; X86-LABEL: pr59676_nsw:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    imull %eax, %eax
+; X86-NEXT:    imull $84, %eax, %eax
+; X86-NEXT:    movl $818089009, %edx # imm = 0x30C30C31
+; X86-NEXT:    imull %edx
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    shrl $31, %eax
+; X86-NEXT:    sarl $3, %edx
+; X86-NEXT:    addl %eax, %edx
+; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    retl
+;
+; X64-LABEL: pr59676_nsw:
+; X64:       # %bb.0:
+; X64-NEXT:    imull %esi, %esi
+; X64-NEXT:    imull $84, %esi, %eax
+; X64-NEXT:    cltq
+; X64-NEXT:    imulq $818089009, %rax, %rax # imm = 0x30C30C31
+; X64-NEXT:    movq %rax, %rcx
+; X64-NEXT:    shrq $63, %rcx
+; X64-NEXT:    sarq $35, %rax
+; X64-NEXT:    addl %ecx, %eax
+; X64-NEXT:    movl %eax, (%rdi)
+; X64-NEXT:    retq
+  %mul = mul nsw i32 %x, 42
+  %shl = shl i32 %x, 1
+  %mul.frozen = freeze i32 %mul
+  %shl.frozen = freeze i32 %shl
+  %area = mul i32 %mul.frozen, %shl.frozen
+  %div = sdiv i32 %area, 42
+  store i32 %div, ptr %dst, align 4
+  ret void
+}
