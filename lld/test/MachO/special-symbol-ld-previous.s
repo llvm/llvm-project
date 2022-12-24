@@ -59,9 +59,9 @@
 # RUN: %no-fatal-warnings-lld -o %t/libfoo1.dylib %t/libLDPreviousInvalid.tbd %t/ref_xxx.o -dylib \
 # RUN:  -platform_version macos 11.0.0 11.0.0 2>&1 | FileCheck --check-prefix=INVALID-VERSION %s
 
-# INVALID-VERSION-DAG: failed to parse start version, symbol '$ld$previous$/New$1.2.3$1$3.a$14.0$$' ignored
-# INVALID-VERSION-DAG: failed to parse end version, symbol '$ld$previous$/New$1.2.3$1$3.0$14.b$$' ignored
-# INVALID-VERSION-DAG: failed to parse compatibility version, symbol '$ld$previous$/New$1.2.c$1$3.0$14.0$$' ignored
+# INVALID-VERSION-DAG: libLDPreviousInvalid.tbd(/Old): failed to parse start version, symbol '$ld$previous$/New$1.2.3$1$3.a$14.0$$' ignored
+# INVALID-VERSION-DAG: libLDPreviousInvalid.tbd(/Old): failed to parse end version, symbol '$ld$previous$/New$1.2.3$1$3.0$14.b$$' ignored
+# INVALID-VERSION-DAG: libLDPreviousInvalid.tbd(/Old): failed to parse compatibility version, symbol '$ld$previous$/New$1.2.c$1$3.0$14.0$$' ignored
 
 #--- ref_xxx.s
 .long	_xxx@GOTPCREL
