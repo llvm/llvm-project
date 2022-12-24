@@ -33,11 +33,15 @@ public:
   bool enableRegionSimplification = true;
 
   /// This specifies the maximum number of times the rewriter will iterate
-  /// between applying patterns and simplifying regions. Use `kNoIterationLimit`
-  /// to disable this iteration limit.
+  /// between applying patterns and simplifying regions. Use `kNoLimit` to
+  /// disable this iteration limit.
   int64_t maxIterations = 10;
 
-  static constexpr int64_t kNoIterationLimit = -1;
+  /// This specifies the maximum number of rewrites within an iteration. Use
+  /// `kNoLimit` to disable this limit.
+  int64_t maxNumRewrites = kNoLimit;
+
+  static constexpr int64_t kNoLimit = -1;
 };
 
 //===----------------------------------------------------------------------===//

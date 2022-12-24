@@ -7,23 +7,23 @@
 ; the cost of entire "aggregate build" sequence while
 ; building vectorizable tree from only a portion of it.
 
-define void @test(i32* nocapture %t2) {
+define void @test(ptr nocapture %t2) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[T3:%.*]] = load i32, i32* [[T2:%.*]], align 4
-; CHECK-NEXT:    [[T4:%.*]] = getelementptr inbounds i32, i32* [[T2]], i64 7
-; CHECK-NEXT:    [[T5:%.*]] = load i32, i32* [[T4]], align 4
-; CHECK-NEXT:    [[T8:%.*]] = getelementptr inbounds i32, i32* [[T2]], i64 1
-; CHECK-NEXT:    [[T9:%.*]] = load i32, i32* [[T8]], align 4
-; CHECK-NEXT:    [[T10:%.*]] = getelementptr inbounds i32, i32* [[T2]], i64 6
-; CHECK-NEXT:    [[T11:%.*]] = load i32, i32* [[T10]], align 4
-; CHECK-NEXT:    [[T14:%.*]] = getelementptr inbounds i32, i32* [[T2]], i64 2
-; CHECK-NEXT:    [[T15:%.*]] = load i32, i32* [[T14]], align 4
-; CHECK-NEXT:    [[T16:%.*]] = getelementptr inbounds i32, i32* [[T2]], i64 5
-; CHECK-NEXT:    [[T17:%.*]] = load i32, i32* [[T16]], align 4
-; CHECK-NEXT:    [[T20:%.*]] = getelementptr inbounds i32, i32* [[T2]], i64 3
-; CHECK-NEXT:    [[T21:%.*]] = load i32, i32* [[T20]], align 4
-; CHECK-NEXT:    [[T22:%.*]] = getelementptr inbounds i32, i32* [[T2]], i64 4
-; CHECK-NEXT:    [[T23:%.*]] = load i32, i32* [[T22]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = load i32, ptr [[T2:%.*]], align 4
+; CHECK-NEXT:    [[T4:%.*]] = getelementptr inbounds i32, ptr [[T2]], i64 7
+; CHECK-NEXT:    [[T5:%.*]] = load i32, ptr [[T4]], align 4
+; CHECK-NEXT:    [[T8:%.*]] = getelementptr inbounds i32, ptr [[T2]], i64 1
+; CHECK-NEXT:    [[T9:%.*]] = load i32, ptr [[T8]], align 4
+; CHECK-NEXT:    [[T10:%.*]] = getelementptr inbounds i32, ptr [[T2]], i64 6
+; CHECK-NEXT:    [[T11:%.*]] = load i32, ptr [[T10]], align 4
+; CHECK-NEXT:    [[T14:%.*]] = getelementptr inbounds i32, ptr [[T2]], i64 2
+; CHECK-NEXT:    [[T15:%.*]] = load i32, ptr [[T14]], align 4
+; CHECK-NEXT:    [[T16:%.*]] = getelementptr inbounds i32, ptr [[T2]], i64 5
+; CHECK-NEXT:    [[T17:%.*]] = load i32, ptr [[T16]], align 4
+; CHECK-NEXT:    [[T20:%.*]] = getelementptr inbounds i32, ptr [[T2]], i64 3
+; CHECK-NEXT:    [[T21:%.*]] = load i32, ptr [[T20]], align 4
+; CHECK-NEXT:    [[T22:%.*]] = getelementptr inbounds i32, ptr [[T2]], i64 4
+; CHECK-NEXT:    [[T23:%.*]] = load i32, ptr [[T22]], align 4
 ; CHECK-NEXT:    [[T24:%.*]] = add nsw i32 [[T23]], [[T21]]
 ; CHECK-NEXT:    [[T25:%.*]] = sub nsw i32 [[T21]], [[T23]]
 ; CHECK-NEXT:    [[T27:%.*]] = sub nsw i32 [[T3]], [[T24]]
@@ -52,25 +52,24 @@ define void @test(i32* nocapture %t2) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 undef, i32 3>
 ; CHECK-NEXT:    [[T71:%.*]] = insertelement <8 x i32> [[TMP11]], i32 [[T34]], i32 6
 ; CHECK-NEXT:    [[T76:%.*]] = shl <8 x i32> [[T71]], <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
-; CHECK-NEXT:    [[T79:%.*]] = bitcast i32* [[T2]] to <8 x i32>*
-; CHECK-NEXT:    store <8 x i32> [[T76]], <8 x i32>* [[T79]], align 4
+; CHECK-NEXT:    store <8 x i32> [[T76]], ptr [[T2]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %t3 = load i32, i32* %t2, align 4
-  %t4 = getelementptr inbounds i32, i32* %t2, i64 7
-  %t5 = load i32, i32* %t4, align 4
-  %t8 = getelementptr inbounds i32, i32* %t2, i64 1
-  %t9 = load i32, i32* %t8, align 4
-  %t10 = getelementptr inbounds i32, i32* %t2, i64 6
-  %t11 = load i32, i32* %t10, align 4
-  %t14 = getelementptr inbounds i32, i32* %t2, i64 2
-  %t15 = load i32, i32* %t14, align 4
-  %t16 = getelementptr inbounds i32, i32* %t2, i64 5
-  %t17 = load i32, i32* %t16, align 4
-  %t20 = getelementptr inbounds i32, i32* %t2, i64 3
-  %t21 = load i32, i32* %t20, align 4
-  %t22 = getelementptr inbounds i32, i32* %t2, i64 4
-  %t23 = load i32, i32* %t22, align 4
+  %t3 = load i32, ptr %t2, align 4
+  %t4 = getelementptr inbounds i32, ptr %t2, i64 7
+  %t5 = load i32, ptr %t4, align 4
+  %t8 = getelementptr inbounds i32, ptr %t2, i64 1
+  %t9 = load i32, ptr %t8, align 4
+  %t10 = getelementptr inbounds i32, ptr %t2, i64 6
+  %t11 = load i32, ptr %t10, align 4
+  %t14 = getelementptr inbounds i32, ptr %t2, i64 2
+  %t15 = load i32, ptr %t14, align 4
+  %t16 = getelementptr inbounds i32, ptr %t2, i64 5
+  %t17 = load i32, ptr %t16, align 4
+  %t20 = getelementptr inbounds i32, ptr %t2, i64 3
+  %t21 = load i32, ptr %t20, align 4
+  %t22 = getelementptr inbounds i32, ptr %t2, i64 4
+  %t23 = load i32, ptr %t22, align 4
   %t24 = add nsw i32 %t23, %t21
   %t25 = sub nsw i32 %t21, %t23
   %t27 = sub nsw i32 %t3, %t24
@@ -99,7 +98,6 @@ define void @test(i32* nocapture %t2) {
   %t71 = insertelement <8 x i32> %t70, i32 %t34, i32 6
   %t72 = insertelement <8 x i32> %t71, i32 %t49, i32 7
   %t76 = shl <8 x i32> %t72, <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
-  %t79 = bitcast i32* %t2 to <8 x i32>*
-  store <8 x i32> %t76, <8 x i32>* %t79, align 4
+  store <8 x i32> %t76, ptr %t2, align 4
   ret void
 }

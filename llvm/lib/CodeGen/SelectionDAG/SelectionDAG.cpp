@@ -4736,6 +4736,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::SIGN_EXTEND_VECTOR_INREG:
   case ISD::ZERO_EXTEND_VECTOR_INREG:
   case ISD::BITCAST:
+  case ISD::BUILD_VECTOR:
     return false;
 
   case ISD::ADD:

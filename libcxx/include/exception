@@ -80,9 +80,15 @@ template <class E> void rethrow_if_nested(const E& e);
 #include <__availability>
 #include <__config>
 #include <__memory/addressof.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/is_base_of.h>
+#include <__type_traits/is_class.h>
+#include <__type_traits/is_convertible.h>
+#include <__type_traits/is_copy_constructible.h>
+#include <__type_traits/is_final.h>
+#include <__type_traits/is_polymorphic.h>
 #include <cstddef>
 #include <cstdlib>
-#include <type_traits>
 #include <version>
 
 // <vcruntime_exception.h> defines its own std::exception and std::bad_exception types,
@@ -370,5 +376,9 @@ rethrow_if_nested(const _Ep&,
 }
 
 } // namespace std
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <type_traits>
+#endif
 
 #endif // _LIBCPP_EXCEPTION

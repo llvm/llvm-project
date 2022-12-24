@@ -5,7 +5,7 @@
 ; This test is primarily interested in making sure that latches are not
 ; folded incorrectly, not that a transform occurs.
 
-define i1 @test(i64* %a1, i64* %a2) {
+define i1 @test(ptr %a1, ptr %a2) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -14,40 +14,40 @@ define i1 @test(i64* %a1, i64* %a2) {
 ; CHECK-NEXT:    br label [[LATCH:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i64, i64* [[A1:%.*]], i64 [[IV]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i64, i64* [[A2:%.*]], i64 [[IV]]
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, i64* [[GEP1]], align 8
-; CHECK-NEXT:    [[LOAD2:%.*]] = load i64, i64* [[GEP2]], align 8
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i64, ptr [[A1:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i64, ptr [[A2:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, ptr [[GEP1]], align 8
+; CHECK-NEXT:    [[LOAD2:%.*]] = load i64, ptr [[GEP2]], align 8
 ; CHECK-NEXT:    [[EXITCOND2:%.*]] = icmp eq i64 [[LOAD1]], [[LOAD2]]
 ; CHECK-NEXT:    br i1 [[EXITCOND2]], label [[LOOP_1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.1:
 ; CHECK-NEXT:    br label [[LATCH_1:%.*]]
 ; CHECK:       latch.1:
 ; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV_NEXT]], 1
-; CHECK-NEXT:    [[GEP1_1:%.*]] = getelementptr inbounds i64, i64* [[A1]], i64 [[IV_NEXT]]
-; CHECK-NEXT:    [[GEP2_1:%.*]] = getelementptr inbounds i64, i64* [[A2]], i64 [[IV_NEXT]]
-; CHECK-NEXT:    [[LOAD1_1:%.*]] = load i64, i64* [[GEP1_1]], align 8
-; CHECK-NEXT:    [[LOAD2_1:%.*]] = load i64, i64* [[GEP2_1]], align 8
+; CHECK-NEXT:    [[GEP1_1:%.*]] = getelementptr inbounds i64, ptr [[A1]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[GEP2_1:%.*]] = getelementptr inbounds i64, ptr [[A2]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[LOAD1_1:%.*]] = load i64, ptr [[GEP1_1]], align 8
+; CHECK-NEXT:    [[LOAD2_1:%.*]] = load i64, ptr [[GEP2_1]], align 8
 ; CHECK-NEXT:    [[EXITCOND2_1:%.*]] = icmp eq i64 [[LOAD1_1]], [[LOAD2_1]]
 ; CHECK-NEXT:    br i1 [[EXITCOND2_1]], label [[LOOP_2:%.*]], label [[EXIT]]
 ; CHECK:       loop.2:
 ; CHECK-NEXT:    br label [[LATCH_2:%.*]]
 ; CHECK:       latch.2:
 ; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV_NEXT_1]], 1
-; CHECK-NEXT:    [[GEP1_2:%.*]] = getelementptr inbounds i64, i64* [[A1]], i64 [[IV_NEXT_1]]
-; CHECK-NEXT:    [[GEP2_2:%.*]] = getelementptr inbounds i64, i64* [[A2]], i64 [[IV_NEXT_1]]
-; CHECK-NEXT:    [[LOAD1_2:%.*]] = load i64, i64* [[GEP1_2]], align 8
-; CHECK-NEXT:    [[LOAD2_2:%.*]] = load i64, i64* [[GEP2_2]], align 8
+; CHECK-NEXT:    [[GEP1_2:%.*]] = getelementptr inbounds i64, ptr [[A1]], i64 [[IV_NEXT_1]]
+; CHECK-NEXT:    [[GEP2_2:%.*]] = getelementptr inbounds i64, ptr [[A2]], i64 [[IV_NEXT_1]]
+; CHECK-NEXT:    [[LOAD1_2:%.*]] = load i64, ptr [[GEP1_2]], align 8
+; CHECK-NEXT:    [[LOAD2_2:%.*]] = load i64, ptr [[GEP2_2]], align 8
 ; CHECK-NEXT:    [[EXITCOND2_2:%.*]] = icmp eq i64 [[LOAD1_2]], [[LOAD2_2]]
 ; CHECK-NEXT:    br i1 [[EXITCOND2_2]], label [[LOOP_3:%.*]], label [[EXIT]]
 ; CHECK:       loop.3:
 ; CHECK-NEXT:    br label [[LATCH_3:%.*]]
 ; CHECK:       latch.3:
 ; CHECK-NEXT:    [[IV_NEXT_3:%.*]] = add nuw nsw i64 [[IV_NEXT_2]], 1
-; CHECK-NEXT:    [[GEP1_3:%.*]] = getelementptr inbounds i64, i64* [[A1]], i64 [[IV_NEXT_2]]
-; CHECK-NEXT:    [[GEP2_3:%.*]] = getelementptr inbounds i64, i64* [[A2]], i64 [[IV_NEXT_2]]
-; CHECK-NEXT:    [[LOAD1_3:%.*]] = load i64, i64* [[GEP1_3]], align 8
-; CHECK-NEXT:    [[LOAD2_3:%.*]] = load i64, i64* [[GEP2_3]], align 8
+; CHECK-NEXT:    [[GEP1_3:%.*]] = getelementptr inbounds i64, ptr [[A1]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[GEP2_3:%.*]] = getelementptr inbounds i64, ptr [[A2]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[LOAD1_3:%.*]] = load i64, ptr [[GEP1_3]], align 8
+; CHECK-NEXT:    [[LOAD2_3:%.*]] = load i64, ptr [[GEP2_3]], align 8
 ; CHECK-NEXT:    [[EXITCOND2_3:%.*]] = icmp eq i64 [[LOAD1_3]], [[LOAD2_3]]
 ; CHECK-NEXT:    br i1 [[EXITCOND2_3]], label [[LOOP_4:%.*]], label [[EXIT]]
 ; CHECK:       loop.4:
@@ -55,10 +55,10 @@ define i1 @test(i64* %a1, i64* %a2) {
 ; CHECK-NEXT:    br i1 [[EXITCOND_4]], label [[EXIT]], label [[LATCH_4]]
 ; CHECK:       latch.4:
 ; CHECK-NEXT:    [[IV_NEXT_4]] = add nuw nsw i64 [[IV_NEXT_3]], 1
-; CHECK-NEXT:    [[GEP1_4:%.*]] = getelementptr inbounds i64, i64* [[A1]], i64 [[IV_NEXT_3]]
-; CHECK-NEXT:    [[GEP2_4:%.*]] = getelementptr inbounds i64, i64* [[A2]], i64 [[IV_NEXT_3]]
-; CHECK-NEXT:    [[LOAD1_4:%.*]] = load i64, i64* [[GEP1_4]], align 8
-; CHECK-NEXT:    [[LOAD2_4:%.*]] = load i64, i64* [[GEP2_4]], align 8
+; CHECK-NEXT:    [[GEP1_4:%.*]] = getelementptr inbounds i64, ptr [[A1]], i64 [[IV_NEXT_3]]
+; CHECK-NEXT:    [[GEP2_4:%.*]] = getelementptr inbounds i64, ptr [[A2]], i64 [[IV_NEXT_3]]
+; CHECK-NEXT:    [[LOAD1_4:%.*]] = load i64, ptr [[GEP1_4]], align 8
+; CHECK-NEXT:    [[LOAD2_4:%.*]] = load i64, ptr [[GEP2_4]], align 8
 ; CHECK-NEXT:    [[EXITCOND2_4:%.*]] = icmp eq i64 [[LOAD1_4]], [[LOAD2_4]]
 ; CHECK-NEXT:    br i1 [[EXITCOND2_4]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
@@ -75,10 +75,10 @@ loop:
 
 latch:
   %iv.next = add nuw nsw i64 %iv, 1
-  %gep1 = getelementptr inbounds i64, i64* %a1, i64 %iv
-  %gep2 = getelementptr inbounds i64, i64* %a2, i64 %iv
-  %load1 = load i64, i64* %gep1, align 8
-  %load2 = load i64, i64* %gep2, align 8
+  %gep1 = getelementptr inbounds i64, ptr %a1, i64 %iv
+  %gep2 = getelementptr inbounds i64, ptr %a2, i64 %iv
+  %load1 = load i64, ptr %gep1, align 8
+  %load2 = load i64, ptr %gep2, align 8
   %exitcond2 = icmp eq i64 %load1, %load2
   br i1 %exitcond2, label %loop, label %exit
 

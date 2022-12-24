@@ -925,7 +925,7 @@ constexpr typename std::enable_if<std::is_arithmetic<_To>::value &&
                                       std::is_arithmetic<_From>::value,
                                   bool>::type
 __is_non_narrowing_arithmetic_convertible() {
-  return __is_non_narrowing_convertible_impl<_To>(_From{});
+  return experimental::__is_non_narrowing_convertible_impl<_To>(_From{});
 }
 
 template <class _From, class _To>
@@ -944,7 +944,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp __variadic_sum() {
 
 template <class _Tp, class _Up, class... _Args>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp __variadic_sum(_Up __first, _Args... __rest) {
-  return static_cast<_Tp>(__first) + __variadic_sum<_Tp>(__rest...);
+  return static_cast<_Tp>(__first) + experimental::__variadic_sum<_Tp>(__rest...);
 }
 
 template <class _Tp>
@@ -1170,12 +1170,12 @@ array<_SimdType, simd_size<typename _SimdType::value_type, _Abi>::value /
 split(const simd_mask<typename _SimdType::value_type, _Abi>&);
 
 template <class _Tp, class... _Abis>
-simd<_Tp, abi_for_size_t<_Tp, __variadic_sum(simd_size<_Tp, _Abis>::value...)>>
+simd<_Tp, abi_for_size_t<_Tp, experimental::__variadic_sum(simd_size<_Tp, _Abis>::value...)>>
 concat(const simd<_Tp, _Abis>&...);
 
 template <class _Tp, class... _Abis>
 simd_mask<_Tp,
-          abi_for_size_t<_Tp, __variadic_sum(simd_size<_Tp, _Abis>::value...)>>
+          abi_for_size_t<_Tp, experimental::__variadic_sum(simd_size<_Tp, _Abis>::value...)>>
 concat(const simd_mask<_Tp, _Abis>&...);
 
 // reductions [simd.mask.reductions]
@@ -1379,7 +1379,7 @@ private:
           std::integral_constant<size_t, __indicies>())...),
       bool())
   __can_generate(std::index_sequence<__indicies...>) {
-    return !__variadic_sum<bool>(
+    return !experimental::__variadic_sum<bool>(
         !__can_broadcast<decltype(std::declval<_Generator>()(
             std::integral_constant<size_t, __indicies>()))>()...);
   }

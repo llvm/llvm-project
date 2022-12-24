@@ -212,6 +212,11 @@ def call_target : Operand<iPTR> {
 // A 16-bit address (which can lead to an R_AVR_16 relocation).
 def imm16 : Operand<i16> { let EncoderMethod = "encodeImm<AVR::fixup_16, 2>"; }
 
+// A 7-bit address (which can lead to an R_AVR_LDS_STS_16 relocation).
+def imm7tiny : Operand<i16> {
+  let EncoderMethod = "encodeImm<AVR::fixup_lds_sts_16, 0>";
+}
+
 /// A 6-bit immediate used in the ADIW/SBIW instructions.
 def imm_arith6 : Operand<i16> {
   let EncoderMethod = "encodeImm<AVR::fixup_6_adiw, 0>";
@@ -321,7 +326,7 @@ def HasTinyEncoding : Predicate<"Subtarget->hasTinyEncoding()">,
                       AssemblerPredicate<(all_of FeatureTinyEncoding)>;
 
 def HasNonTinyEncoding : Predicate<"!Subtarget->hasTinyEncoding()">,
-                         AssemblerPredicate<(all_of (not FeatureTinyEncoding))>;
+                         AssemblerPredicate<(any_of (not FeatureTinyEncoding))>;
 
 // AVR specific condition code. These correspond to AVR_*_COND in
 // AVRInstrInfo.td. They must be kept in synch.
@@ -1288,6 +1293,12 @@ let canFoldAsLoad = 1, isReMaterializable = 1 in {
                                                : $k))]>,
                Requires<[HasSRAM, HasNonTinyEncoding]>;
 
+  // Load from data space into register, which is only available on AVRTiny.
+  def LDSRdKTiny : FLDSSTSTINY<0b0, (outs LD8:$rd), (ins imm7tiny:$k),
+                               "lds\t$rd, $k",
+                               [(set i8:$rd, (load imm:$k))]>,
+                   Requires<[HasSRAM, HasTinyEncoding]>;
+
   // LDSW Rd+1:Rd, K+1:K
   //
   // Expands to:
@@ -1505,6 +1516,11 @@ def STSKRr : F32DM<0b1, (outs),
                                      : $rd, imm
                                      : $k)]>,
              Requires<[HasSRAM, HasNonTinyEncoding]>;
+
+// Store from register to data space, which is only available on AVRTiny.
+def STSKRrTiny : FLDSSTSTINY<0b1, (outs), (ins imm7tiny:$k, LD8:$rd),
+                             "sts\t$k, $rd", [(store i8:$rd, imm:$k)]>,
+                 Requires<[HasSRAM, HasTinyEncoding]>;
 
 // STSW K+1:K, Rr+1:Rr
 //
@@ -2506,12 +2522,18 @@ def : Pat<(add i16
 def : Pat<(i8(load(AVRWrapper tglobaladdr:$dst))),
           (LDSRdK tglobaladdr:$dst)>,
           Requires<[HasSRAM, HasNonTinyEncoding]>;
+def : Pat<(i8(load(AVRWrapper tglobaladdr:$dst))),
+          (LDSRdKTiny tglobaladdr:$dst)>,
+          Requires<[HasSRAM, HasTinyEncoding]>;
 def : Pat<(i16(load(AVRWrapper tglobaladdr:$dst))),
           (LDSWRdK tglobaladdr:$dst)>,
           Requires<[HasSRAM, HasNonTinyEncoding]>;
 def : Pat<(store i8:$src, (i16(AVRWrapper tglobaladdr:$dst))),
           (STSKRr tglobaladdr:$dst, i8:$src)>,
           Requires<[HasSRAM, HasNonTinyEncoding]>;
+def : Pat<(store i8:$src, (i16(AVRWrapper tglobaladdr:$dst))),
+          (STSKRrTiny tglobaladdr:$dst, i8:$src)>,
+          Requires<[HasSRAM, HasTinyEncoding]>;
 def : Pat<(store i16:$src, (i16(AVRWrapper tglobaladdr:$dst))),
           (STSWKRr tglobaladdr:$dst, i16:$src)>,
           Requires<[HasSRAM, HasNonTinyEncoding]>;

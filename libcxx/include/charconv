@@ -231,7 +231,7 @@ template <typename _Tp, typename _Up>
 inline _LIBCPP_HIDE_FROM_ABI bool
 _LIBCPP_CONSTEXPR_SINCE_CXX23 __mul_overflowed(_Tp __a, _Up __b, _Tp& __r)
 {
-    return __mul_overflowed(__a, static_cast<_Tp>(__b), __r);
+    return __itoa::__mul_overflowed(__a, static_cast<_Tp>(__b), __r);
 }
 
 template <typename _Tp>
@@ -257,7 +257,7 @@ struct _LIBCPP_HIDDEN __traits : __traits_base<_Tp>
 
         __a = __inner_product(__cprod + __i + 1, __cprod + __j, __pow() + 1,
                               __cprod[__i]);
-        if (__mul_overflowed(__cprod[__j], __pow()[__j - __i], __b))
+        if (__itoa::__mul_overflowed(__cprod[__j], __pow()[__j - __i], __b))
             --__p;
         return __p;
     }
@@ -284,16 +284,20 @@ __complement(_Tp __x)
 
 template <typename _Tp>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
+__to_chars_itoa(char* __first, char* __last, _Tp __value, false_type);
+
+template <typename _Tp>
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
 __to_chars_itoa(char* __first, char* __last, _Tp __value, true_type)
 {
-    auto __x = __to_unsigned_like(__value);
+    auto __x = std::__to_unsigned_like(__value);
     if (__value < 0 && __first != __last)
     {
         *__first++ = '-';
-        __x = __complement(__x);
+        __x = std::__complement(__x);
     }
 
-    return __to_chars_itoa(__first, __last, __x, false_type());
+    return std::__to_chars_itoa(__first, __last, __x, false_type());
 }
 
 template <typename _Tp>
@@ -331,19 +335,23 @@ __to_chars_itoa(char* __first, char* __last, __uint128_t __value, false_type)
 }
 #endif
 
+template <class _Tp>
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
+__to_chars_integral(char* __first, char* __last, _Tp __value, int __base, false_type);
+
 template <typename _Tp>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
 __to_chars_integral(char* __first, char* __last, _Tp __value, int __base,
                     true_type)
 {
-    auto __x = __to_unsigned_like(__value);
+    auto __x = std::__to_unsigned_like(__value);
     if (__value < 0 && __first != __last)
     {
         *__first++ = '-';
-        __x = __complement(__x);
+        __x = std::__complement(__x);
     }
 
-    return __to_chars_integral(__first, __last, __x, __base, false_type());
+    return std::__to_chars_integral(__first, __last, __x, __base, false_type());
 }
 
 namespace __itoa {
@@ -521,19 +529,19 @@ __to_chars_integral(char* __first, char* __last, _Tp __value, int __base,
                     false_type)
 {
   if (__base == 10) [[likely]]
-    return __to_chars_itoa(__first, __last, __value, false_type());
+    return std::__to_chars_itoa(__first, __last, __value, false_type());
 
   switch (__base) {
   case 2:
-    return __to_chars_integral<2>(__first, __last, __value);
+    return std::__to_chars_integral<2>(__first, __last, __value);
   case 8:
-    return __to_chars_integral<8>(__first, __last, __value);
+    return std::__to_chars_integral<8>(__first, __last, __value);
   case 16:
-    return __to_chars_integral<16>(__first, __last, __value);
+    return std::__to_chars_integral<16>(__first, __last, __value);
   }
 
   ptrdiff_t __cap = __last - __first;
-  int __n = __to_chars_integral_width(__value, __base);
+  int __n = std::__to_chars_integral_width(__value, __base);
   if (__n > __cap)
     return {__last, errc::value_too_large};
 
@@ -571,7 +579,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
 __sign_combinator(_It __first, _It __last, _Tp& __value, _Fn __f, _Ts... __args)
 {
     using __tl = numeric_limits<_Tp>;
-    decltype(__to_unsigned_like(__value)) __x;
+    decltype(std::__to_unsigned_like(__value)) __x;
 
     bool __neg = (__first != __last && *__first == '-');
     auto __r = __f(__neg ? __first + 1 : __first, __last, __x, __args...);
@@ -587,16 +595,16 @@ __sign_combinator(_It __first, _It __last, _Tp& __value, _Fn __f, _Ts... __args)
 
     if (__neg)
     {
-        if (__x <= __complement(__to_unsigned_like(__tl::min())))
+        if (__x <= std::__complement(std::__to_unsigned_like(__tl::min())))
         {
-            __x = __complement(__x);
+            __x = std::__complement(__x);
             std::copy_n(std::addressof(__x), 1, std::addressof(__value));
             return __r;
         }
     }
     else
     {
-        if (__x <= __to_unsigned_like(__tl::max()))
+        if (__x <= std::__to_unsigned_like(__tl::max()))
         {
             __value = __x;
             return __r;
@@ -627,7 +635,7 @@ __in_pattern(_Tp __c, int __base)
 {
     if (__base <= 10)
         return {'0' <= __c && __c < '0' + __base, __c - '0'};
-    else if (__in_pattern(__c))
+    else if (std::__in_pattern(__c))
         return {true, __c - '0'};
     else if ('a' <= __c && __c < 'a' + __base - 10)
         return {true, __c - 'a' + 10};
@@ -648,7 +656,7 @@ __subject_seq_combinator(_It __first, _It __last, _Tp& __value, _Fn __f,
     };
 
     auto __p = __find_non_zero(__first, __last);
-    if (__p == __last || !__in_pattern(*__p, __args...))
+    if (__p == __last || !std::__in_pattern(*__p, __args...))
     {
         if (__p == __first)
             return {__first, errc::invalid_argument};
@@ -664,7 +672,7 @@ __subject_seq_combinator(_It __first, _It __last, _Tp& __value, _Fn __f,
     {
         for (; __r.ptr != __last; ++__r.ptr)
         {
-            if (!__in_pattern(*__r.ptr, __args...))
+            if (!std::__in_pattern(*__r.ptr, __args...))
                 break;
         }
     }
@@ -679,13 +687,13 @@ __from_chars_atoi(const char* __first, const char* __last, _Tp& __value)
     using __tx = __itoa::__traits<_Tp>;
     using __output_type = typename __tx::type;
 
-    return __subject_seq_combinator(
+    return std::__subject_seq_combinator(
         __first, __last, __value,
         [](const char* __f, const char* __l,
            _Tp& __val) -> from_chars_result {
             __output_type __a, __b;
             auto __p = __tx::__read(__f, __l, __a, __b);
-            if (__p == __l || !__in_pattern(*__p))
+            if (__p == __l || !std::__in_pattern(*__p))
             {
                 __output_type __m = numeric_limits<_Tp>::max();
                 if (__m >= __a && __m - __a >= __b)
@@ -702,8 +710,8 @@ template <typename _Tp, typename enable_if<is_signed<_Tp>::value, int>::type = 0
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
 __from_chars_atoi(const char* __first, const char* __last, _Tp& __value)
 {
-    using __t = decltype(__to_unsigned_like(__value));
-    return __sign_combinator(__first, __last, __value, __from_chars_atoi<__t>);
+    using __t = decltype(std::__to_unsigned_like(__value));
+    return std::__sign_combinator(__first, __last, __value, __from_chars_atoi<__t>);
 }
 
 
@@ -731,9 +739,9 @@ __from_chars_integral(const char* __first, const char* __last, _Tp& __value,
                       int __base)
 {
     if (__base == 10)
-        return __from_chars_atoi(__first, __last, __value);
+        return std::__from_chars_atoi(__first, __last, __value);
 
-    return __subject_seq_combinator(
+    return std::__subject_seq_combinator(
         __first, __last, __value,
         [](const char* __p, const char* __lastp, _Tp& __val,
            int __b) -> from_chars_result {
@@ -778,16 +786,16 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
 __from_chars_integral(const char* __first, const char* __last, _Tp& __value,
                       int __base)
 {
-    using __t = decltype(__to_unsigned_like(__value));
-    return __sign_combinator(__first, __last, __value,
-                             __from_chars_integral<__t>, __base);
+    using __t = decltype(std::__to_unsigned_like(__value));
+    return std::__sign_combinator(__first, __last, __value,
+                                  __from_chars_integral<__t>, __base);
 }
 
 template <typename _Tp, typename enable_if<is_integral<_Tp>::value, int>::type = 0>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
 from_chars(const char* __first, const char* __last, _Tp& __value)
 {
-    return __from_chars_atoi(__first, __last, __value);
+    return std::__from_chars_atoi(__first, __last, __value);
 }
 
 template <typename _Tp, typename enable_if<is_integral<_Tp>::value, int>::type = 0>
@@ -795,7 +803,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
 from_chars(const char* __first, const char* __last, _Tp& __value, int __base)
 {
     _LIBCPP_ASSERT(2 <= __base && __base <= 36, "base not in [2, 36]");
-    return __from_chars_integral(__first, __last, __value, __base);
+    return std::__from_chars_integral(__first, __last, __value, __base);
 }
 
 _LIBCPP_AVAILABILITY_TO_CHARS_FLOATING_POINT _LIBCPP_FUNC_VIS

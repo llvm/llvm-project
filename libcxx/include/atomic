@@ -377,23 +377,23 @@ template<class T>
                               memory_order) noexcept;
 
 template<class T>
-  void atomic_wait(const volatile atomic<T>*, atomic<T>::value_type);
+  void atomic_wait(const volatile atomic<T>*, atomic<T>::value_type) noexcept;
 template<class T>
-  void atomic_wait(const atomic<T>*, atomic<T>::value_type);
+  void atomic_wait(const atomic<T>*, atomic<T>::value_type) noexcept;
 template<class T>
   void atomic_wait_explicit(const volatile atomic<T>*, atomic<T>::value_type,
-                            memory_order);
+                            memory_order) noexcept;
 template<class T>
   void atomic_wait_explicit(const atomic<T>*, atomic<T>::value_type,
-                            memory_order);
+                            memory_order) noexcept;
 template<class T>
-  void atomic_notify_one(volatile atomic<T>*);
+  void atomic_notify_one(volatile atomic<T>*) noexcept;
 template<class T>
-  void atomic_notify_one(atomic<T>*);
+  void atomic_notify_one(atomic<T>*) noexcept;
 template<class T>
-  void atomic_notify_all(volatile atomic<T>*);
+  void atomic_notify_all(volatile atomic<T>*) noexcept;
 template<class T>
-  void atomic_notify_all(atomic<T>*);
+  void atomic_notify_all(atomic<T>*) noexcept;
 
 // Atomics for standard typedef types
 
@@ -1452,10 +1452,10 @@ struct __libcpp_atomic_wait_backoff_impl {
     {
         if(__elapsed > chrono::microseconds(64))
         {
-            auto const __monitor = __libcpp_atomic_monitor(__a);
+            auto const __monitor = std::__libcpp_atomic_monitor(__a);
             if(__test_fn())
                 return true;
-            __libcpp_atomic_wait(__a, __monitor);
+            std::__libcpp_atomic_wait(__a, __monitor);
         }
         else if(__elapsed > chrono::microseconds(4))
             __libcpp_thread_yield();
@@ -1470,7 +1470,7 @@ _LIBCPP_AVAILABILITY_SYNC
 _LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp* __a, _Fn && __test_fn)
 {
     __libcpp_atomic_wait_backoff_impl<_Atp, typename decay<_Fn>::type> __backoff_fn = {__a, __test_fn};
-    return __libcpp_thread_poll_with_backoff(__test_fn, __backoff_fn);
+    return std::__libcpp_thread_poll_with_backoff(__test_fn, __backoff_fn);
 }
 
 #else // _LIBCPP_HAS_NO_THREADS
@@ -1494,7 +1494,7 @@ struct __cxx_atomic_wait_test_fn_impl {
     memory_order __order;
     _LIBCPP_INLINE_VISIBILITY bool operator()() const
     {
-        return !__cxx_nonatomic_compare_equal(__cxx_atomic_load(__a, __order), __val);
+        return !std::__cxx_nonatomic_compare_equal(std::__cxx_atomic_load(__a, __order), __val);
     }
 };
 
@@ -1503,7 +1503,7 @@ _LIBCPP_AVAILABILITY_SYNC
 _LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp* __a, _Tp const __val, memory_order __order)
 {
     __cxx_atomic_wait_test_fn_impl<_Atp, _Tp> __test_fn = {__a, __val, __order};
-    return __cxx_atomic_wait(__a, __test_fn);
+    return std::__cxx_atomic_wait(__a, __test_fn);
 }
 
 // general atomic<T>
@@ -1526,78 +1526,78 @@ struct __atomic_base  // false
     _LIBCPP_INLINE_VISIBILITY
     void store(_Tp __d, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT
       _LIBCPP_CHECK_STORE_MEMORY_ORDER(__m)
-        {__cxx_atomic_store(&__a_, __d, __m);}
+        {std::__cxx_atomic_store(&__a_, __d, __m);}
     _LIBCPP_INLINE_VISIBILITY
     void store(_Tp __d, memory_order __m = memory_order_seq_cst) _NOEXCEPT
       _LIBCPP_CHECK_STORE_MEMORY_ORDER(__m)
-        {__cxx_atomic_store(&__a_, __d, __m);}
+        {std::__cxx_atomic_store(&__a_, __d, __m);}
     _LIBCPP_INLINE_VISIBILITY
     _Tp load(memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT
       _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m)
-        {return __cxx_atomic_load(&__a_, __m);}
+        {return std::__cxx_atomic_load(&__a_, __m);}
     _LIBCPP_INLINE_VISIBILITY
     _Tp load(memory_order __m = memory_order_seq_cst) const _NOEXCEPT
       _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m)
-        {return __cxx_atomic_load(&__a_, __m);}
+        {return std::__cxx_atomic_load(&__a_, __m);}
     _LIBCPP_INLINE_VISIBILITY
     operator _Tp() const volatile _NOEXCEPT {return load();}
     _LIBCPP_INLINE_VISIBILITY
     operator _Tp() const _NOEXCEPT          {return load();}
     _LIBCPP_INLINE_VISIBILITY
     _Tp exchange(_Tp __d, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT
-        {return __cxx_atomic_exchange(&__a_, __d, __m);}
+        {return std::__cxx_atomic_exchange(&__a_, __d, __m);}
     _LIBCPP_INLINE_VISIBILITY
     _Tp exchange(_Tp __d, memory_order __m = memory_order_seq_cst) _NOEXCEPT
-        {return __cxx_atomic_exchange(&__a_, __d, __m);}
+        {return std::__cxx_atomic_exchange(&__a_, __d, __m);}
     _LIBCPP_INLINE_VISIBILITY
     bool compare_exchange_weak(_Tp& __e, _Tp __d,
                                memory_order __s, memory_order __f) volatile _NOEXCEPT
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f)
-        {return __cxx_atomic_compare_exchange_weak(&__a_, &__e, __d, __s, __f);}
+        {return std::__cxx_atomic_compare_exchange_weak(&__a_, &__e, __d, __s, __f);}
     _LIBCPP_INLINE_VISIBILITY
     bool compare_exchange_weak(_Tp& __e, _Tp __d,
                                memory_order __s, memory_order __f) _NOEXCEPT
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f)
-        {return __cxx_atomic_compare_exchange_weak(&__a_, &__e, __d, __s, __f);}
+        {return std::__cxx_atomic_compare_exchange_weak(&__a_, &__e, __d, __s, __f);}
     _LIBCPP_INLINE_VISIBILITY
     bool compare_exchange_strong(_Tp& __e, _Tp __d,
                                  memory_order __s, memory_order __f) volatile _NOEXCEPT
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f)
-        {return __cxx_atomic_compare_exchange_strong(&__a_, &__e, __d, __s, __f);}
+        {return std::__cxx_atomic_compare_exchange_strong(&__a_, &__e, __d, __s, __f);}
     _LIBCPP_INLINE_VISIBILITY
     bool compare_exchange_strong(_Tp& __e, _Tp __d,
                                  memory_order __s, memory_order __f) _NOEXCEPT
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f)
-        {return __cxx_atomic_compare_exchange_strong(&__a_, &__e, __d, __s, __f);}
+        {return std::__cxx_atomic_compare_exchange_strong(&__a_, &__e, __d, __s, __f);}
     _LIBCPP_INLINE_VISIBILITY
     bool compare_exchange_weak(_Tp& __e, _Tp __d,
                               memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT
-        {return __cxx_atomic_compare_exchange_weak(&__a_, &__e, __d, __m, __m);}
+        {return std::__cxx_atomic_compare_exchange_weak(&__a_, &__e, __d, __m, __m);}
     _LIBCPP_INLINE_VISIBILITY
     bool compare_exchange_weak(_Tp& __e, _Tp __d,
                                memory_order __m = memory_order_seq_cst) _NOEXCEPT
-        {return __cxx_atomic_compare_exchange_weak(&__a_, &__e, __d, __m, __m);}
+        {return std::__cxx_atomic_compare_exchange_weak(&__a_, &__e, __d, __m, __m);}
     _LIBCPP_INLINE_VISIBILITY
     bool compare_exchange_strong(_Tp& __e, _Tp __d,
                               memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT
-        {return __cxx_atomic_compare_exchange_strong(&__a_, &__e, __d, __m, __m);}
+        {return std::__cxx_atomic_compare_exchange_strong(&__a_, &__e, __d, __m, __m);}
     _LIBCPP_INLINE_VISIBILITY
     bool compare_exchange_strong(_Tp& __e, _Tp __d,
                                  memory_order __m = memory_order_seq_cst) _NOEXCEPT
-        {return __cxx_atomic_compare_exchange_strong(&__a_, &__e, __d, __m, __m);}
+        {return std::__cxx_atomic_compare_exchange_strong(&__a_, &__e, __d, __m, __m);}
 
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY void wait(_Tp __v, memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT
-        {__cxx_atomic_wait(&__a_, __v, __m);}
+        {std::__cxx_atomic_wait(&__a_, __v, __m);}
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY void wait(_Tp __v, memory_order __m = memory_order_seq_cst) const _NOEXCEPT
-        {__cxx_atomic_wait(&__a_, __v, __m);}
+        {std::__cxx_atomic_wait(&__a_, __v, __m);}
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY void notify_one() volatile _NOEXCEPT
-        {__cxx_atomic_notify_one(&__a_);}
+        {std::__cxx_atomic_notify_one(&__a_);}
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY void notify_one() _NOEXCEPT
-        {__cxx_atomic_notify_one(&__a_);}
+        {std::__cxx_atomic_notify_one(&__a_);}
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY void notify_all() volatile _NOEXCEPT
-        {__cxx_atomic_notify_all(&__a_);}
+        {std::__cxx_atomic_notify_all(&__a_);}
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY void notify_all() _NOEXCEPT
-        {__cxx_atomic_notify_all(&__a_);}
+        {std::__cxx_atomic_notify_all(&__a_);}
 
 #if _LIBCPP_STD_VER > 17
     _LIBCPP_INLINE_VISIBILITY constexpr
@@ -1634,34 +1634,34 @@ struct __atomic_base<_Tp, true>
 
     _LIBCPP_INLINE_VISIBILITY
     _Tp fetch_add(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT
-        {return __cxx_atomic_fetch_add(&this->__a_, __op, __m);}
+        {return std::__cxx_atomic_fetch_add(&this->__a_, __op, __m);}
     _LIBCPP_INLINE_VISIBILITY
     _Tp fetch_add(_Tp __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT
-        {return __cxx_atomic_fetch_add(&this->__a_, __op, __m);}
+        {return std::__cxx_atomic_fetch_add(&this->__a_, __op, __m);}
     _LIBCPP_INLINE_VISIBILITY
     _Tp fetch_sub(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT
-        {return __cxx_atomic_fetch_sub(&this->__a_, __op, __m);}
+        {return std::__cxx_atomic_fetch_sub(&this->__a_, __op, __m);}
     _LIBCPP_INLINE_VISIBILITY
     _Tp fetch_sub(_Tp __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT
-        {return __cxx_atomic_fetch_sub(&this->__a_, __op, __m);}
+        {return std::__cxx_atomic_fetch_sub(&this->__a_, __op, __m);}
     _LIBCPP_INLINE_VISIBILITY
     _Tp fetch_and(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT
-        {return __cxx_atomic_fetch_and(&this->__a_, __op, __m);}
+        {return std::__cxx_atomic_fetch_and(&this->__a_, __op, __m);}
     _LIBCPP_INLINE_VISIBILITY
     _Tp fetch_and(_Tp __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT
-        {return __cxx_atomic_fetch_and(&this->__a_, __op, __m);}
+        {return std::__cxx_atomic_fetch_and(&this->__a_, __op, __m);}
     _LIBCPP_INLINE_VISIBILITY
     _Tp fetch_or(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT
-        {return __cxx_atomic_fetch_or(&this->__a_, __op, __m);}
+        {return std::__cxx_atomic_fetch_or(&this->__a_, __op, __m);}
     _LIBCPP_INLINE_VISIBILITY
     _Tp fetch_or(_Tp __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT
-        {return __cxx_atomic_fetch_or(&this->__a_, __op, __m);}
+        {return std::__cxx_atomic_fetch_or(&this->__a_, __op, __m);}
     _LIBCPP_INLINE_VISIBILITY
     _Tp fetch_xor(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT
-        {return __cxx_atomic_fetch_xor(&this->__a_, __op, __m);}
+        {return std::__cxx_atomic_fetch_xor(&this->__a_, __op, __m);}
     _LIBCPP_INLINE_VISIBILITY
     _Tp fetch_xor(_Tp __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT
-        {return __cxx_atomic_fetch_xor(&this->__a_, __op, __m);}
+        {return std::__cxx_atomic_fetch_xor(&this->__a_, __op, __m);}
 
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator++(int) volatile _NOEXCEPT      {return fetch_add(_Tp(1));}
@@ -1760,28 +1760,28 @@ struct atomic<_Tp*>
     _Tp* fetch_add(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
         // __atomic_fetch_add accepts function pointers, guard against them.
         static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
-        return __cxx_atomic_fetch_add(&this->__a_, __op, __m);
+        return std::__cxx_atomic_fetch_add(&this->__a_, __op, __m);
     }
 
     _LIBCPP_INLINE_VISIBILITY
     _Tp* fetch_add(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
         // __atomic_fetch_add accepts function pointers, guard against them.
         static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
-        return __cxx_atomic_fetch_add(&this->__a_, __op, __m);
+        return std::__cxx_atomic_fetch_add(&this->__a_, __op, __m);
     }
 
     _LIBCPP_INLINE_VISIBILITY
     _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
         // __atomic_fetch_add accepts function pointers, guard against them.
         static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
-        return __cxx_atomic_fetch_sub(&this->__a_, __op, __m);
+        return std::__cxx_atomic_fetch_sub(&this->__a_, __op, __m);
     }
 
     _LIBCPP_INLINE_VISIBILITY
     _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
         // __atomic_fetch_add accepts function pointers, guard against them.
         static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
-        return __cxx_atomic_fetch_sub(&this->__a_, __op, __m);
+        return std::__cxx_atomic_fetch_sub(&this->__a_, __op, __m);
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1838,7 +1838,7 @@ _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_INLINE_VISIBILITY
 void
 atomic_init(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
-    __cxx_atomic_init(&__o->__a_, __d);
+    std::__cxx_atomic_init(&__o->__a_, __d);
 }
 
 template <class _Tp>
@@ -1846,7 +1846,7 @@ _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_INLINE_VISIBILITY
 void
 atomic_init(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
-    __cxx_atomic_init(&__o->__a_, __d);
+    std::__cxx_atomic_init(&__o->__a_, __d);
 }
 
 // atomic_store
@@ -2099,7 +2099,7 @@ void atomic_notify_one(atomic<_Tp>* __o) _NOEXCEPT
     __o->notify_one();
 }
 
-// atomic_notify_one
+// atomic_notify_all
 
 template <class _Tp>
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY

@@ -4,10 +4,10 @@
 define void @foo() local_unnamed_addr {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load volatile double, double* poison, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load volatile double, double* poison, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load volatile double, double* poison, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load volatile double, double* poison, align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load volatile double, ptr poison, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load volatile double, ptr poison, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load volatile double, ptr poison, align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load volatile double, ptr poison, align 8
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[D30_0734:%.*]] = phi double [ undef, [[FOR_BODY]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
@@ -17,10 +17,10 @@ define void @foo() local_unnamed_addr {
 ; CHECK-NEXT:    br label [[FOR_BODY]]
 ;
 entry:
-  %0 = load volatile double, double* poison, align 8
-  %1 = load volatile double, double* poison, align 8
-  %2 = load volatile double, double* poison, align 8
-  %3 = load volatile double, double* poison, align 8
+  %0 = load volatile double, ptr poison, align 8
+  %1 = load volatile double, ptr poison, align 8
+  %2 = load volatile double, ptr poison, align 8
+  %3 = load volatile double, ptr poison, align 8
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry

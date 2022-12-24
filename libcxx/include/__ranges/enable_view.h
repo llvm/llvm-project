@@ -13,7 +13,9 @@
 #include <__concepts/derived_from.h>
 #include <__concepts/same_as.h>
 #include <__config>
-#include <type_traits>
+#include <__type_traits/is_class.h>
+#include <__type_traits/is_convertible.h>
+#include <__type_traits/remove_cv.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -8,35 +8,35 @@
 ; This testing case makes sure that we correctly transfer the tbaa tags from the
 ; original loads to the newly-created loads when promoting pointer arguments.
 
-@a = global i32* null, align 8
-@e = global i32** @a, align 8
+@a = global ptr null, align 8
+@e = global ptr @a, align 8
 @g = global i32 0, align 4
 @c = global i64 0, align 8
 @d = global i8 0, align 1
 
 ;.
-; CHECK: @[[A:[a-zA-Z0-9_$"\\.-]+]] = global i32* null, align 8
-; CHECK: @[[E:[a-zA-Z0-9_$"\\.-]+]] = global i32** @a, align 8
+; CHECK: @[[A:[a-zA-Z0-9_$"\\.-]+]] = global ptr null, align 8
+; CHECK: @[[E:[a-zA-Z0-9_$"\\.-]+]] = global ptr @a, align 8
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = global i32 0, align 4
 ; CHECK: @[[C:[a-zA-Z0-9_$"\\.-]+]] = global i64 0, align 8
 ; CHECK: @[[D:[a-zA-Z0-9_$"\\.-]+]] = global i8 0, align 1
 ;.
-define internal fastcc void @fn(i32* nocapture readonly %p1, i64* nocapture readonly %p2) {
+define internal fastcc void @fn(ptr nocapture readonly %p1, ptr nocapture readonly %p2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@fn
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @g, align 4, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @g, align 4, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[CONV1:%.*]] = trunc i32 [[TMP0]] to i8
-; CHECK-NEXT:    store i8 [[CONV1]], i8* @d, align 1, !tbaa [[TBAA4:![0-9]+]]
+; CHECK-NEXT:    store i8 [[CONV1]], ptr @d, align 1, !tbaa [[TBAA4:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load i64, i64* %p2, align 8, !tbaa !1
+  %0 = load i64, ptr %p2, align 8, !tbaa !1
   %conv = trunc i64 %0 to i32
-  %1 = load i32, i32* %p1, align 4, !tbaa !5
+  %1 = load i32, ptr %p1, align 4, !tbaa !5
   %conv1 = trunc i32 %1 to i8
-  store i8 %conv1, i8* @d, align 1, !tbaa !7
+  store i8 %conv1, ptr @d, align 1, !tbaa !7
   ret void
 }
 
@@ -45,10 +45,10 @@ define i32 @main() {
 ; TUNIT-LABEL: define {{[^@]+}}@main
 ; TUNIT-SAME: () #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i32**, i32*** @e, align 8, !tbaa [[TBAA5:![0-9]+]]
-; TUNIT-NEXT:    store i32* @g, i32** [[TMP0]], align 8, !tbaa [[TBAA5]]
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32*, i32** @a, align 8, !tbaa [[TBAA5]]
-; TUNIT-NEXT:    store i32 1, i32* [[TMP1]], align 4, !tbaa [[TBAA0]]
+; TUNIT-NEXT:    [[TMP0:%.*]] = load ptr, ptr @e, align 8, !tbaa [[TBAA5:![0-9]+]]
+; TUNIT-NEXT:    store ptr @g, ptr [[TMP0]], align 8, !tbaa [[TBAA5]]
+; TUNIT-NEXT:    [[TMP1:%.*]] = load ptr, ptr @a, align 8, !tbaa [[TBAA5]]
+; TUNIT-NEXT:    store i32 1, ptr [[TMP1]], align 4, !tbaa [[TBAA0]]
 ; TUNIT-NEXT:    call fastcc void @fn() #[[ATTR1:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 0
 ;
@@ -56,19 +56,19 @@ define i32 @main() {
 ; CGSCC-LABEL: define {{[^@]+}}@main
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[TMP0:%.*]] = load i32**, i32*** @e, align 8, !tbaa [[TBAA5:![0-9]+]]
-; CGSCC-NEXT:    store i32* @g, i32** [[TMP0]], align 8, !tbaa [[TBAA5]]
-; CGSCC-NEXT:    [[TMP1:%.*]] = load i32*, i32** @a, align 8, !tbaa [[TBAA5]]
-; CGSCC-NEXT:    store i32 1, i32* [[TMP1]], align 4, !tbaa [[TBAA0]]
+; CGSCC-NEXT:    [[TMP0:%.*]] = load ptr, ptr @e, align 8, !tbaa [[TBAA5:![0-9]+]]
+; CGSCC-NEXT:    store ptr @g, ptr [[TMP0]], align 8, !tbaa [[TBAA5]]
+; CGSCC-NEXT:    [[TMP1:%.*]] = load ptr, ptr @a, align 8, !tbaa [[TBAA5]]
+; CGSCC-NEXT:    store i32 1, ptr [[TMP1]], align 4, !tbaa [[TBAA0]]
 ; CGSCC-NEXT:    call fastcc void @fn() #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 0
 ;
 entry:
-  %0 = load i32**, i32*** @e, align 8, !tbaa !8
-  store i32* @g, i32** %0, align 8, !tbaa !8
-  %1 = load i32*, i32** @a, align 8, !tbaa !8
-  store i32 1, i32* %1, align 4, !tbaa !5
-  call fastcc void @fn(i32* @g, i64* @c)
+  %0 = load ptr, ptr @e, align 8, !tbaa !8
+  store ptr @g, ptr %0, align 8, !tbaa !8
+  %1 = load ptr, ptr @a, align 8, !tbaa !8
+  store i32 1, ptr %1, align 4, !tbaa !5
+  call fastcc void @fn(ptr @g, ptr @c)
 
   ret i32 0
 }

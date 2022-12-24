@@ -6176,7 +6176,11 @@ void InitializationSequence::InitializeFrom(Sema &S,
       // constructors. For example, conversion function.
       if (const auto *RD =
               dyn_cast<CXXRecordDecl>(DestType->getAs<RecordType>()->getDecl());
-          S.getLangOpts().CPlusPlus20 && RD && RD->isAggregate() && Failed() &&
+          // In general, we should call isCompleteType for RD to check its
+          // completeness, we don't call it here as it was already called in the
+          // above TryConstructorInitialization.
+          S.getLangOpts().CPlusPlus20 && RD && RD->hasDefinition() &&
+          RD->isAggregate() && Failed() &&
           getFailureKind() == FK_ConstructorOverloadFailed) {
         // C++20 [dcl.init] 17.6.2.2:
         //   - Otherwise, if no constructor is viable, the destination type is

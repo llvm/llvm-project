@@ -3,7 +3,7 @@
 
 %struct.complex = type { float, float }
 
-define  void @foo (%struct.complex* %A, %struct.complex* %B, %struct.complex* %Result) {
+define  void @foo (ptr %A, ptr %B, ptr %Result) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 256, 0
@@ -11,13 +11,12 @@ define  void @foo (%struct.complex* %A, %struct.complex* %B, %struct.complex* %R
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[TMP18:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x float> [ zeroinitializer, [[ENTRY]] ], [ [[TMP17:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX:%.*]], %struct.complex* [[A:%.*]], i64 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[B:%.*]], i64 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[B]], i64 [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float* [[TMP3]] to <2 x float>*
-; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x float>, <2 x float>* [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX:%.*]], ptr [[A:%.*]], i64 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], ptr [[B:%.*]], i64 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], ptr [[B]], i64 [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x float>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> poison, float [[TMP5]], i32 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul <2 x float> [[TMP9]], [[SHUFFLE]]
@@ -33,9 +32,7 @@ define  void @foo (%struct.complex* %A, %struct.complex* %B, %struct.complex* %R
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[TMP18]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[RESULT:%.*]], i32 0, i32 0
-; CHECK-NEXT:    [[TMP21:%.*]] = bitcast float* [[TMP20]] to <2 x float>*
-; CHECK-NEXT:    store <2 x float> [[TMP17]], <2 x float>* [[TMP21]], align 4
+; CHECK-NEXT:    store <2 x float> [[TMP17]], ptr [[RESULT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -46,14 +43,14 @@ loop:
   %1 = phi i64 [ 0, %entry ], [ %20, %loop ]
   %2 = phi float [ 0.000000e+00, %entry ], [ %19, %loop ]
   %3 = phi float [ 0.000000e+00, %entry ], [ %18, %loop ]
-  %4 = getelementptr inbounds %"struct.complex", %"struct.complex"* %A, i64 %1, i32 0
-  %5 = load float, float* %4, align 4
-  %6 = getelementptr inbounds %"struct.complex", %"struct.complex"* %A, i64 %1, i32 1
-  %7 = load float, float* %6, align 4
-  %8 = getelementptr inbounds %"struct.complex", %"struct.complex"* %B, i64 %1, i32 0
-  %9 = load float, float* %8, align 4
-  %10 = getelementptr inbounds %"struct.complex", %"struct.complex"* %B, i64 %1, i32 1
-  %11 = load float, float* %10, align 4
+  %4 = getelementptr inbounds %"struct.complex", ptr %A, i64 %1, i32 0
+  %5 = load float, ptr %4, align 4
+  %6 = getelementptr inbounds %"struct.complex", ptr %A, i64 %1, i32 1
+  %7 = load float, ptr %6, align 4
+  %8 = getelementptr inbounds %"struct.complex", ptr %B, i64 %1, i32 0
+  %9 = load float, ptr %8, align 4
+  %10 = getelementptr inbounds %"struct.complex", ptr %B, i64 %1, i32 1
+  %11 = load float, ptr %10, align 4
   %12 = fmul float %5, %9
   %13 = fmul float %7, %11
   %14 = fsub float %12, %13
@@ -67,10 +64,9 @@ loop:
   br i1 %21, label %exit, label %loop
 
 exit:
-  %22 = getelementptr inbounds %"struct.complex", %"struct.complex"* %Result,  i32 0, i32 0
-  store float %18, float* %22, align 4
-  %23 = getelementptr inbounds %"struct.complex", %"struct.complex"* %Result,  i32 0, i32 1
-  store float %19, float* %23, align 4
+  store float %18, ptr %Result, align 4
+  %22 = getelementptr inbounds %"struct.complex", ptr %Result,  i32 0, i32 1
+  store float %19, ptr %22, align 4
   ret void
 }
 

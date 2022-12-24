@@ -43,7 +43,7 @@ bb1:                                              ; preds = %bb1, %bb
   br label %bb1
 }
 
-define void @test_2(i8 addrspace(1)* %arg, i32 %arg1) #0 {
+define void @test_2(ptr addrspace(1) %arg, i32 %arg1) #0 {
 ; CHECK-LABEL: @test_2(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB2:%.*]]

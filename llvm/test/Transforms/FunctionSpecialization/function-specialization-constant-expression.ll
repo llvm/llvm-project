@@ -4,7 +4,7 @@
 ; Note that this test case shows that function specialization pass would
 ; transform the function even if no specialization happened.
 
-; RUN: opt -passes=ipsccp -specialize-functions -force-function-specialization -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<func-spec>" -force-function-specialization -S < %s | FileCheck %s
 
 %struct = type { i8, i16, i32, i64, i64}
 @Global = internal constant %struct {i8 0, i16 1, i32 2, i64 3, i64 4}
