@@ -67,6 +67,7 @@ Deprecations and Removals
   includes are removed based on the language version used. Incidental transitive
   inclusions of the following headers have been removed:
 
+  - C++11, C++14, and C++17: ``chrono``
   - C++20: ``chrono``
   - C++2b: ``algorithm``, ``array``, ``atomic``, ``bit``, ``chrono``,
     ``climits``, ``cmath``, ``compare``, ``concepts``, ``cstdarg``, ``cstddef``,
