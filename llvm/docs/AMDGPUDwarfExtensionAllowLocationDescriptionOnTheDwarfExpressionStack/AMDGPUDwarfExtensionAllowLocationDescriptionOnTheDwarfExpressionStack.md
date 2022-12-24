@@ -1538,8 +1538,13 @@ elements that can be specified are:
 
     If specified:
 
-    - If the current thread is specified, then the current target architecture
-      must be the same as the target architecture of the current thread.
+    - If the current frame is specified, then the current target architecture
+      must be the same as the target architecture of the current frame.
+
+    - If the current frame is specified and is the top frame, and if the current
+      thread is specified, then the current target architecture must be the same
+      as the target architecture of the current thread.
+
     - If the current compilation unit is specified, then the current target
       architecture default address space address size must be the same as the
       `address_size` field in the header of the current compilation unit and any
@@ -1568,7 +1573,7 @@ elements that can be specified are:
     descriptor as the current object when it evaluates its associated
     expression.</i>
 
-    The result is undefined if the location descriptor is invalid (see [3.5.3
+    The result is undefined if the location description is invalid (see [2.5.3
     DWARF Location Description](#dwarf-location-description)).
 
 8.  <i>An initial stack</i>
@@ -1581,7 +1586,7 @@ elements that can be specified are:
     expression value with initial stack entries. In all other cases the initial
     stack is empty.
 
-    The result is undefined if any location descriptors are invalid (see [3.5.3
+    The result is undefined if any location descriptions are invalid (see [2.5.3
     DWARF Location Description](#dwarf-location-description)).
 
 If the evaluation requires a context element that is not specified, then the
@@ -1955,7 +1960,7 @@ expression.
 5.  `DW_OP_call2, DW_OP_call4, DW_OP_call_ref`
 
     `DW_OP_call2`, `DW_OP_call4`, and `DW_OP_call_ref` perform DWARF procedure
-    calls during evaluation of a DWARF expression.
+    calls during evaluation of a DWARF operation expression.
 
     `DW_OP_call2` and `DW_OP_call4`, have one operand that is, respectively, a
     2-byte or 4-byte unsigned offset DR that represents the byte offset of a
@@ -2240,7 +2245,7 @@ There are these special value operations currently defined:
     > Removing use of the target hook does not cause any test failures in common
     > architectures. If the compiler for a target architecture did want some
     > form of conversion, including a larger result type, it could always
-    > explicitly used the `DW_OP_convert` operation.
+    > explicitly use the `DW_OP_convert` operation.
     >
     > If T is a larger type than the register size, then the default GDB
     > register hook reads bytes from the next register (or reads out of bounds
@@ -2437,7 +2442,7 @@ There are these special value operations currently defined:
     architecture specific base type of T, then the contents of the register are
     retrieved as if a `DW_OP_deref_type DR` operation was performed where DR is
     the offset of a hypothetical debug information entry in the current
-    compilation unit for T. The resulting value V s pushed on the stack.
+    compilation unit for T. The resulting value V is pushed on the stack.
 
     <i>Using `DW_OP_reg*` provides a more compact form for the case where the
     value was in a register on entry to the subprogram.</i>
@@ -2654,7 +2659,7 @@ type.
     corresponding to the executable or shared library containing this DWARF
     expression is used.
 
-    <i>Some implementations of C, C++, Fortran, and other languages support a
+    <i>Some implementations of C, C++, Fortran, and other languages, support a
     thread-local storage class. Variables with this storage class have distinct
     values and addresses in distinct threads, much as automatic variables have
     distinct values and addresses in each subprogram invocation. Typically,
@@ -2826,10 +2831,9 @@ implicit storage value starting at the bit offset.
     location description specifies the actual value of the object, rather than
     specifying the memory or register storage that holds the value.</i>
 
-    See [2.5.4.4.5 Implicit Location Description
-    Operations](#implicit-location-description-operations) for special
-    rules concerning implicit pointer values produced by dereferencing implicit
-    location descriptions created by the `DW_OP_implicit_pointer` operation.
+    See `DW_OP_implicit_pointer` (following) for special rules concerning
+    implicit pointer values produced by dereferencing implicit location
+    descriptions created by the `DW_OP_implicit_pointer` operation.
 
     > NOTE: Since location descriptions are allowed on the stack, the
     > `DW_OP_stack_value` operation no longer terminates the DWARF operation
@@ -2857,7 +2861,7 @@ implicit storage value starting at the bit offset.
     that contains the current compilation unit. The second operand is a signed
     LEB128 integer that represents a byte displacement B.
 
-    <i>Note that D may not be in the current compilation unit.</i>
+    <i>Note that D might not be in the current compilation unit.</i>
 
     <i>The first operand interpretation is exactly like that for
     `DW_FORM_ref_addr`.</i>
@@ -2884,7 +2888,7 @@ implicit storage value starting at the bit offset.
 
         <i>Note that all bits do not have to come from the same implicit
         location description, as L' may involve composite location
-        descriptors.</i>
+        descriptions.</i>
 
     2.  The bits come from consecutive ascending offsets within their respective
         implicit location storage.
@@ -3245,7 +3249,7 @@ location list expressions.</i>
     elements corresponding to the source language thread of execution upon which
     the user is focused, if any.
 
-    The DWARF is ill-formed if E contains an `DW_OP_fbreg` operation, or the
+    The DWARF is ill-formed if E contains a `DW_OP_fbreg` operation, or the
     resulting location description L is not comprised of one single location
     description SL.
 
@@ -3488,7 +3492,9 @@ location list expressions.</i>
     description of the member of the class to which the pointer to member entry
     points.
 
-### A.5.16 Dynamic Type Entries
+### A.5.18 Dynamic Properties of Types
+
+#### A.5.18.1 Data Location
 
 1.  The `DW_AT_data_location` attribute may be used with any type that provides one
     or more levels of hidden indirection and/or run-time parameters in its
