@@ -373,6 +373,19 @@ define i1 @gep_add_1_ult_var_idx_no_inbounds(ptr %dst, ptr %upper, i8 %len, i8 %
 }
 
 define i1 @test_chained_no_inbounds(ptr %A, ptr %B) {
+; CHECK-LABEL: @test_chained_no_inbounds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B_1:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 1
+; CHECK-NEXT:    [[B_2:%.*]] = getelementptr i8, ptr [[B_1]], i64 1
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt ptr [[A:%.*]], null
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt ptr [[B_1]], [[B_2]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    br i1 [[OR]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
 entry:
   %B.1 = getelementptr i8, ptr %B, i64 1
   %B.2 = getelementptr i8, ptr %B.1, i64 1
