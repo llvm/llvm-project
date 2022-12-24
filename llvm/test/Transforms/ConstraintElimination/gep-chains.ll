@@ -371,3 +371,19 @@ define i1 @gep_add_1_ult_var_idx_no_inbounds(ptr %dst, ptr %upper, i8 %len, i8 %
   %res.2 = xor i1 %res.1, %cmp.idx.3
   ret i1 %res.2
 }
+
+define i1 @test_chained_no_inbounds(ptr %A, ptr %B) {
+entry:
+  %B.1 = getelementptr i8, ptr %B, i64 1
+  %B.2 = getelementptr i8, ptr %B.1, i64 1
+  %c.1 = icmp ugt ptr %A, null
+  %c.2 = icmp ugt ptr %B.1, %B.2
+  %or = or i1 %c.1, %c.2
+  br i1 %or, label %then, label %else
+
+then:
+  ret i1 true
+
+else:
+  ret i1 false
+}
