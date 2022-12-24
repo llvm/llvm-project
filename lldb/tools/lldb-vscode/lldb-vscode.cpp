@@ -79,7 +79,10 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) constexpr llvm::StringLiteral NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
+  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
+      NAME##_init, std::size(NAME##_init) - 1);
 #include "Options.inc"
 #undef PREFIX
 
