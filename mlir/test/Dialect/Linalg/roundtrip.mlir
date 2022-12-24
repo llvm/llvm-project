@@ -414,7 +414,7 @@ func.func @reduce(%input: tensor<16x32x64xf32>,
       outs(%init:tensor<16x64xf32>)
       dimensions = [1]
       (%in: f32, %out: f32) {
-        %0 = arith.addf %out, %in: f32
+        %0 = arith.addf %in, %out: f32
         linalg.yield %0: f32
       }
   func.return %reduce : tensor<16x64xf32>
@@ -433,7 +433,7 @@ func.func @reduce_memref(%input: memref<16x32x64xf32>,
       outs(%init:memref<16x64xf32>)
       dimensions = [1]
       (%in: f32, %out: f32) {
-        %0 = arith.addf %out, %in: f32
+        %0 = arith.addf %in, %out: f32
         linalg.yield %0: f32
       }
   func.return
@@ -587,7 +587,7 @@ func.func @reduce_arith_with_attr(%input: tensor<16x32x64xf32>,
       outs(%init:tensor<16x64xf32>)
       dimensions = [1]
       (%in: f32, %out: f32) {
-        %0 = arith.addf %out, %in fastmath<fast> : f32
+        %0 = arith.addf %in, %out fastmath<fast> : f32
         linalg.yield %0: f32
       }
   func.return %reduce : tensor<16x64xf32>
