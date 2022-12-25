@@ -14475,11 +14475,6 @@ CXXMethodDecl *Sema::DeclareImplicitCopyAssignment(CXXRecordDecl *ClassDecl) {
                                                nullptr);
   CopyAssignment->setParams(FromParam);
 
-  CopyAssignment->setTrivial(
-    ClassDecl->needsOverloadResolutionForCopyAssignment()
-      ? SpecialMemberIsTrivial(CopyAssignment, CXXCopyAssignment)
-      : ClassDecl->hasTrivialCopyAssignment());
-
   // Note that we have added this copy-assignment operator.
   ++getASTContext().NumImplicitCopyAssignmentOperatorsDeclared;
 
@@ -14489,6 +14484,11 @@ CXXMethodDecl *Sema::DeclareImplicitCopyAssignment(CXXRecordDecl *ClassDecl) {
   if (ShouldDeleteSpecialMember(CopyAssignment, CXXCopyAssignment)) {
     ClassDecl->setImplicitCopyAssignmentIsDeleted();
     SetDeclDeleted(CopyAssignment, ClassLoc);
+  } else {
+    CopyAssignment->setTrivial(
+        ClassDecl->needsOverloadResolutionForCopyAssignment()
+            ? SpecialMemberIsTrivial(CopyAssignment, CXXCopyAssignment)
+            : ClassDecl->hasTrivialCopyAssignment());
   }
 
   if (S)
@@ -14813,11 +14813,6 @@ CXXMethodDecl *Sema::DeclareImplicitMoveAssignment(CXXRecordDecl *ClassDecl) {
                                                nullptr);
   MoveAssignment->setParams(FromParam);
 
-  MoveAssignment->setTrivial(
-    ClassDecl->needsOverloadResolutionForMoveAssignment()
-      ? SpecialMemberIsTrivial(MoveAssignment, CXXMoveAssignment)
-      : ClassDecl->hasTrivialMoveAssignment());
-
   // Note that we have added this copy-assignment operator.
   ++getASTContext().NumImplicitMoveAssignmentOperatorsDeclared;
 
@@ -14827,6 +14822,11 @@ CXXMethodDecl *Sema::DeclareImplicitMoveAssignment(CXXRecordDecl *ClassDecl) {
   if (ShouldDeleteSpecialMember(MoveAssignment, CXXMoveAssignment)) {
     ClassDecl->setImplicitMoveAssignmentIsDeleted();
     SetDeclDeleted(MoveAssignment, ClassLoc);
+  } else {
+    MoveAssignment->setTrivial(
+        ClassDecl->needsOverloadResolutionForMoveAssignment()
+            ? SpecialMemberIsTrivial(MoveAssignment, CXXMoveAssignment)
+            : ClassDecl->hasTrivialMoveAssignment());
   }
 
   if (S)
@@ -15197,18 +15197,6 @@ CXXConstructorDecl *Sema::DeclareImplicitCopyConstructor(
                           /*TInfo=*/TSI, SC_None, nullptr);
   CopyConstructor->setParams(FromParam);
 
-  CopyConstructor->setTrivial(
-      ClassDecl->needsOverloadResolutionForCopyConstructor()
-          ? SpecialMemberIsTrivial(CopyConstructor, CXXCopyConstructor)
-          : ClassDecl->hasTrivialCopyConstructor());
-
-  CopyConstructor->setTrivialForCall(
-      ClassDecl->hasAttr<TrivialABIAttr>() ||
-      (ClassDecl->needsOverloadResolutionForCopyConstructor()
-           ? SpecialMemberIsTrivial(CopyConstructor, CXXCopyConstructor,
-             TAH_ConsiderTrivialABI)
-           : ClassDecl->hasTrivialCopyConstructorForCall()));
-
   // Note that we have declared this constructor.
   ++getASTContext().NumImplicitCopyConstructorsDeclared;
 
@@ -15218,6 +15206,18 @@ CXXConstructorDecl *Sema::DeclareImplicitCopyConstructor(
   if (ShouldDeleteSpecialMember(CopyConstructor, CXXCopyConstructor)) {
     ClassDecl->setImplicitCopyConstructorIsDeleted();
     SetDeclDeleted(CopyConstructor, ClassLoc);
+  } else {
+    CopyConstructor->setTrivial(
+        ClassDecl->needsOverloadResolutionForCopyConstructor()
+            ? SpecialMemberIsTrivial(CopyConstructor, CXXCopyConstructor)
+            : ClassDecl->hasTrivialCopyConstructor());
+
+    CopyConstructor->setTrivialForCall(
+        ClassDecl->hasAttr<TrivialABIAttr>() ||
+        (ClassDecl->needsOverloadResolutionForCopyConstructor()
+             ? SpecialMemberIsTrivial(CopyConstructor, CXXCopyConstructor,
+                                      TAH_ConsiderTrivialABI)
+             : ClassDecl->hasTrivialCopyConstructorForCall()));
   }
 
   if (S)
@@ -15331,18 +15331,6 @@ CXXConstructorDecl *Sema::DeclareImplicitMoveConstructor(
                                                SC_None, nullptr);
   MoveConstructor->setParams(FromParam);
 
-  MoveConstructor->setTrivial(
-      ClassDecl->needsOverloadResolutionForMoveConstructor()
-          ? SpecialMemberIsTrivial(MoveConstructor, CXXMoveConstructor)
-          : ClassDecl->hasTrivialMoveConstructor());
-
-  MoveConstructor->setTrivialForCall(
-      ClassDecl->hasAttr<TrivialABIAttr>() ||
-      (ClassDecl->needsOverloadResolutionForMoveConstructor()
-           ? SpecialMemberIsTrivial(MoveConstructor, CXXMoveConstructor,
-                                    TAH_ConsiderTrivialABI)
-           : ClassDecl->hasTrivialMoveConstructorForCall()));
-
   // Note that we have declared this constructor.
   ++getASTContext().NumImplicitMoveConstructorsDeclared;
 
@@ -15352,6 +15340,18 @@ CXXConstructorDecl *Sema::DeclareImplicitMoveConstructor(
   if (ShouldDeleteSpecialMember(MoveConstructor, CXXMoveConstructor)) {
     ClassDecl->setImplicitMoveConstructorIsDeleted();
     SetDeclDeleted(MoveConstructor, ClassLoc);
+  } else {
+    MoveConstructor->setTrivial(
+        ClassDecl->needsOverloadResolutionForMoveConstructor()
+            ? SpecialMemberIsTrivial(MoveConstructor, CXXMoveConstructor)
+            : ClassDecl->hasTrivialMoveConstructor());
+
+    MoveConstructor->setTrivialForCall(
+        ClassDecl->hasAttr<TrivialABIAttr>() ||
+        (ClassDecl->needsOverloadResolutionForMoveConstructor()
+             ? SpecialMemberIsTrivial(MoveConstructor, CXXMoveConstructor,
+                                      TAH_ConsiderTrivialABI)
+             : ClassDecl->hasTrivialMoveConstructorForCall()));
   }
 
   if (S)
@@ -17569,6 +17569,9 @@ void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc) {
   //  A deleted function is implicitly inline.
   Fn->setImplicitlyInline();
   Fn->setDeletedAsWritten();
+
+  Fn->setTrivial(true);
+  Fn->setTrivialForCall(true);
 }
 
 void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
