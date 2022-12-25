@@ -33,6 +33,7 @@ unittest("SupportTests") {
     "DataExtractorTest.cpp",
     "DebugCounterTest.cpp",
     "DebugTest.cpp",
+    "DivisionByConstantTest.cpp",
     "ELFAttributeParserTest.cpp",
     "EndianStreamTest.cpp",
     "EndianTest.cpp",
