@@ -166,6 +166,50 @@ TEST_F(BasicTest, widenShuffleMaskElts) {
   EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({-2,-3}));
 }
 
+TEST_F(BasicTest, getShuffleMaskWithWidestElts) {
+  SmallVector<int, 16> WideMask;
+
+  // can not widen anything here.
+  getShuffleMaskWithWidestElts({3, 2, 0, -1}, WideMask);
+  EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({3, 2, 0, -1}));
+
+  // can't widen non-consecutive 3/2
+  getShuffleMaskWithWidestElts({3, 2, 0, -1}, WideMask);
+  EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({3, 2, 0, -1}));
+
+  // can always widen identity to single element
+  getShuffleMaskWithWidestElts({0, 1, 2}, WideMask);
+  EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({0}));
+
+  // groups of 4 must be consecutive/undef
+  getShuffleMaskWithWidestElts(
+      {12, 13, 14, 15, 8, 9, 10, 11, 0, 1, 2, 3, -1, -1, -1, -1}, WideMask);
+  EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({3, 2, 0, -1}));
+
+  // groups of 2 must be consecutive/undef
+  getShuffleMaskWithWidestElts(
+      {12, 12, 14, 15, 8, 9, 10, 11, 0, 1, 2, 3, -1, -1, -1, -1}, WideMask);
+  EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({12, 12, 14, 15, 8, 9, 10, 11,
+                                                  0, 1, 2, 3, -1, -1, -1, -1}));
+
+  // groups of 3 must be consecutive/undef
+  getShuffleMaskWithWidestElts({6, 7, 8, 0, 1, 2, -1, -1, -1}, WideMask);
+  EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({2, 0, -1}));
+
+  // groups of 3 must be consecutive/undef (partial undefs are not ok)
+  getShuffleMaskWithWidestElts({-1, 7, 8, 0, -1, 2, -1, -1, -1}, WideMask);
+  EXPECT_EQ(makeArrayRef(WideMask),
+            makeArrayRef({-1, 7, 8, 0, -1, 2, -1, -1, -1}));
+
+  // negative indexes must match across a wide element
+  getShuffleMaskWithWidestElts({-1, -2, -1, -1}, WideMask);
+  EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({-1, -2, -1, -1}));
+
+  // negative indexes must match across a wide element
+  getShuffleMaskWithWidestElts({-2, -2, -3, -3}, WideMask);
+  EXPECT_EQ(makeArrayRef(WideMask), makeArrayRef({-2, -3}));
+}
+
 TEST_F(BasicTest, getShuffleDemandedElts) {
   APInt LHS, RHS;
 
