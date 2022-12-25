@@ -35,7 +35,7 @@ class Module;
 struct IPSCCPOptions {
   bool AllowFuncSpec;
 
-  IPSCCPOptions(bool AllowFuncSpec = false) : AllowFuncSpec(AllowFuncSpec) {}
+  IPSCCPOptions(bool AllowFuncSpec = true) : AllowFuncSpec(AllowFuncSpec) {}
 
   /// Enables or disables Specialization of Functions.
   IPSCCPOptions &setFuncSpec(bool FuncSpec) {
