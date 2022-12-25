@@ -33,6 +33,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 
+#include <numeric>
+
 // Include this before the using namespace lines below to
 // test that we don't have namespace dependencies.
 #include "TestOpsDialect.cpp.inc"
@@ -1124,6 +1126,25 @@ OpFoldResult TestOpInPlaceFold::fold(ArrayRef<Attribute> operands) {
 
 OpFoldResult TestPassthroughFold::fold(ArrayRef<Attribute> operands) {
   return getOperand();
+}
+
+OpFoldResult TestOpFoldWithFoldAdaptor::fold(FoldAdaptor adaptor) {
+  int64_t sum = 0;
+  if (auto value = dyn_cast_or_null<IntegerAttr>(adaptor.getOp()))
+    sum += value.getValue().getSExtValue();
+
+  for (Attribute attr : adaptor.getVariadic())
+    if (auto value = dyn_cast_or_null<IntegerAttr>(attr))
+      sum += 2 * value.getValue().getSExtValue();
+
+  for (ArrayRef<Attribute> attrs : adaptor.getVarOfVar())
+    for (Attribute attr : attrs)
+      if (auto value = dyn_cast_or_null<IntegerAttr>(attr))
+        sum += 3 * value.getValue().getSExtValue();
+
+  sum += 4 * std::distance(adaptor.getBody().begin(), adaptor.getBody().end());
+
+  return IntegerAttr::get(getType(), sum);
 }
 
 LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(

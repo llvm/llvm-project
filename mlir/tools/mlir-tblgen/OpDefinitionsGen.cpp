@@ -2326,25 +2326,29 @@ void OpEmitter::genCanonicalizerDecls() {
 }
 
 void OpEmitter::genFolderDecls() {
+  if (!op.hasFolder())
+    return;
+
+  Dialect::FolderAPI folderApi = op.getDialect().getFolderAPI();
+  SmallVector<MethodParameter> paramList;
+  if (folderApi == Dialect::FolderAPI::RawAttributes)
+    paramList.emplace_back("::llvm::ArrayRef<::mlir::Attribute>", "operands");
+  else
+    paramList.emplace_back("FoldAdaptor", "adaptor");
+
+  StringRef retType;
   bool hasSingleResult =
       op.getNumResults() == 1 && op.getNumVariableLengthResults() == 0;
-
-  if (def.getValueAsBit("hasFolder")) {
-    if (hasSingleResult) {
-      auto *m = opClass.declareMethod(
-          "::mlir::OpFoldResult", "fold",
-          MethodParameter("::llvm::ArrayRef<::mlir::Attribute>", "operands"));
-      ERROR_IF_PRUNED(m, "operands", op);
-    } else {
-      SmallVector<MethodParameter> paramList;
-      paramList.emplace_back("::llvm::ArrayRef<::mlir::Attribute>", "operands");
-      paramList.emplace_back("::llvm::SmallVectorImpl<::mlir::OpFoldResult> &",
-                             "results");
-      auto *m = opClass.declareMethod("::mlir::LogicalResult", "fold",
-                                      std::move(paramList));
-      ERROR_IF_PRUNED(m, "fold", op);
-    }
+  if (hasSingleResult) {
+    retType = "::mlir::OpFoldResult";
+  } else {
+    paramList.emplace_back("::llvm::SmallVectorImpl<::mlir::OpFoldResult> &",
+                           "results");
+    retType = "::mlir::LogicalResult";
   }
+
+  auto *m = opClass.declareMethod(retType, "fold", std::move(paramList));
+  ERROR_IF_PRUNED(m, "fold", op);
 }
 
 void OpEmitter::genOpInterfaceMethods(const tblgen::InterfaceTrait *opTrait) {
