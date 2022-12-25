@@ -22619,19 +22619,21 @@ static SDValue combineShuffleToVectorExtend(ShuffleVectorSDNode *SVN,
     // Check for non power of 2 vector sizes
     if (NumElts % Scale != 0)
       continue;
-    if (!isAnyExtend(Scale))
-      continue;
 
     EVT OutSVT = EVT::getIntegerVT(*DAG.getContext(), EltSizeInBits * Scale);
     EVT OutVT = EVT::getVectorVT(*DAG.getContext(), OutSVT, NumElts / Scale);
     // Never create an illegal type. Only create unsupported operations if we
     // are pre-legalization.
-    if (TLI.isTypeLegal(OutVT))
-      if (!LegalOperations ||
-          TLI.isOperationLegalOrCustom(ISD::ANY_EXTEND_VECTOR_INREG, OutVT))
-        return DAG.getBitcast(VT,
-                              DAG.getNode(ISD::ANY_EXTEND_VECTOR_INREG,
-                                          SDLoc(SVN), OutVT, N0));
+    if (!TLI.isTypeLegal(OutVT))
+      continue;
+
+    if (!isAnyExtend(Scale))
+      continue;
+
+    if (!LegalOperations ||
+        TLI.isOperationLegalOrCustom(ISD::ANY_EXTEND_VECTOR_INREG, OutVT))
+      return DAG.getBitcast(
+          VT, DAG.getNode(ISD::ANY_EXTEND_VECTOR_INREG, SDLoc(SVN), OutVT, N0));
   }
 
   return SDValue();
