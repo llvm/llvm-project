@@ -11,11 +11,9 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; VF8UF1:       [[CMP:%.+]] = icmp eq i64 %index.next, %n.vec
 ; VF8UF1-NEXT:  br i1 [[CMP]], label %middle.block, label %vector.body
 ;
-; VF8UF2:       [[CMP:%.+]] = icmp eq i64 %index.next, %n.vec
-; VF8UF2-NEXT:  br i1 [[CMP]], label %middle.block, label %vector.body
+; VF8UF2:       br i1 true, label %middle.block, label %vector.body
 ;
-; VF16UF1:       [[CMP:%.+]] = icmp eq i64 %index.next, %n.vec
-; VF16UF1-NEXT:  br i1 [[CMP]], label %middle.block, label %vector.body
+; VF16UF1:      br i1 true, label %middle.block, label %vector.body
 ;
 entry:
   %and = and i64 %N, 15

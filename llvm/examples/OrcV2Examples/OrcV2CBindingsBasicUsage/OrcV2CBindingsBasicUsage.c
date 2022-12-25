@@ -55,6 +55,9 @@ LLVMOrcThreadSafeModuleRef createDemoModule(void) {
   //  - Build the return instruction.
   LLVMBuildRet(Builder, Result);
 
+  //  - Free the builder.
+  LLVMDisposeBuilder(Builder);
+
   // Our demo module is now complete. Wrap it and our ThreadSafeContext in a
   // ThreadSafeModule.
   LLVMOrcThreadSafeModuleRef TSM = LLVMOrcCreateNewThreadSafeModule(M, TSCtx);

@@ -47,7 +47,6 @@ array stdexcept
 array type_traits
 array utility
 array version
-atomic chrono
 atomic cmath
 atomic compare
 atomic cstddef
@@ -108,10 +107,15 @@ charconv limits
 charconv type_traits
 chrono compare
 chrono concepts
+chrono cstddef
 chrono cstdint
+chrono cstdlib
 chrono ctime
 chrono limits
 chrono ratio
+chrono stdexcept
+chrono string_view
+chrono tuple
 chrono type_traits
 chrono version
 cinttypes cstdint
@@ -600,7 +604,6 @@ numeric limits
 numeric type_traits
 numeric version
 optional atomic
-optional chrono
 optional climits
 optional compare
 optional concepts
