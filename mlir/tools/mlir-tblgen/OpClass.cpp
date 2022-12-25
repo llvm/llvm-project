@@ -27,6 +27,11 @@ OpClass::OpClass(StringRef name, StringRef extraClassDeclaration,
   declare<UsingDeclaration>("Op::print");
   /// Type alias for the adaptor class.
   declare<UsingDeclaration>("Adaptor", className + "Adaptor");
+  declare<UsingDeclaration>("GenericAdaptor",
+                            className + "GenericAdaptor<RangeT>")
+      ->addTemplateParam("RangeT");
+  declare<UsingDeclaration>(
+      "FoldAdaptor", "GenericAdaptor<::llvm::ArrayRef<::mlir::Attribute>>");
 }
 
 void OpClass::finalize() {
