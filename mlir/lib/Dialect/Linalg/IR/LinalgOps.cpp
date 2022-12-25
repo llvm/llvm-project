@@ -1016,8 +1016,7 @@ void MapOp::build(
 static void addBodyWithPayloadOp(OpAsmParser &parser, OperationState &result,
                                  const OperationName &payloadOpName,
                                  const NamedAttrList &payloadOpAttrs,
-                                 ArrayRef<Value> operands,
-                                 bool initFirst = false) {
+                                 ArrayRef<Value> operands) {
   OpBuilder b(parser.getContext());
   Region *body = result.addRegion();
   Block &block = body->emplaceBlock();
@@ -1027,24 +1026,14 @@ static void addBodyWithPayloadOp(OpAsmParser &parser, OperationState &result,
     block.addArgument(operand.getType().cast<ShapedType>().getElementType(),
                       b.getUnknownLoc());
   }
-  SmallVector<Value> payloadOpOperands;
-  // If initFirst flag is enabled, we consider init as the first position of
-  // payload operands.
-  if (initFirst) {
-    payloadOpOperands.push_back(block.getArguments().back());
-    for (const auto& arg : block.getArguments().drop_back())
-      payloadOpOperands.push_back(arg);
-  } else {
-    payloadOpOperands = {block.getArguments().begin(),
-                         block.getArguments().end()};
-  }
 
   Operation *payloadOp = b.create(
       result.location, b.getStringAttr(payloadOpName.getStringRef()),
-      payloadOpOperands,
+      block.getArguments(),
       TypeRange{
           result.operands.back().getType().cast<ShapedType>().getElementType()},
       payloadOpAttrs);
+
   b.create<YieldOp>(result.location, payloadOp->getResults());
 }
 
@@ -1083,9 +1072,7 @@ ParseResult MapOp::parse(OpAsmParser &parser, OperationState &result) {
 
 // Retrieve the operation from the body, if it is the only one (except
 // yield) and if it gets the same amount of arguments as the body does.
-// If initFirst flag is enabled, we check that init takes the first position in
-// operands of payload.
-static Operation *findPayloadOp(Block *body, bool initFirst = false) {
+static Operation *findPayloadOp(Block *body) {
   if (body->getOperations().size() != 2)
     return nullptr;
   Operation &payload = body->getOperations().front();
@@ -1094,22 +1081,10 @@ static Operation *findPayloadOp(Block *body, bool initFirst = false) {
   if (payload.getNumOperands() == 0 ||
       payload.getNumOperands() != body->getNumArguments())
     return nullptr;
-  if (initFirst) {
-    // check init
-    if (payload.getOperands().back() != body->getArgument(0))
+  for (const auto &[bbArg, operand] :
+       llvm::zip(payload.getOperands(), body->getArguments())) {
+    if (bbArg != operand)
       return nullptr;
-    // check rest
-    for (int i = 1; i < body->getNumArguments(); ++i) {
-      if (payload.getOperand(i - 1) != body->getArgument(i)) {
-        return nullptr;
-      }
-    }
-  } else {
-    for (const auto &[bbArg, operand] :
-         llvm::zip(payload.getOperands(), body->getArguments())) {
-      if (bbArg != operand)
-        return nullptr;
-    }
   }
   return &payload;
 }
@@ -1308,7 +1283,7 @@ ParseResult ReduceOp::parse(OpAsmParser &parser, OperationState &result) {
 
   if (payloadOpName.has_value()) {
     addBodyWithPayloadOp(parser, result, payloadOpName.value(), payloadOpAttrs,
-                         makeArrayRef(result.operands), /*initFirst=*/true);
+                         makeArrayRef(result.operands));
   } else {
     SmallVector<OpAsmParser::Argument> regionArgs;
     if (parser.parseArgumentList(regionArgs, OpAsmParser::Delimiter::Paren,
@@ -1331,7 +1306,7 @@ static void printDenseI64ArrayAttr(OpAsmPrinter &p, StringRef attributeName,
 
 void ReduceOp::print(OpAsmPrinter &p) {
   Block *mapper = getBody();
-  Operation *payloadOp = findPayloadOp(mapper, /*initFirst=*/true);
+  Operation *payloadOp = findPayloadOp(mapper);
   if (payloadOp) {
     printShortForm(p, payloadOp);
   }

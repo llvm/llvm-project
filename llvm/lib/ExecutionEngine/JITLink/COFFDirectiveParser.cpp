@@ -12,13 +12,18 @@
 
 #include "COFFDirectiveParser.h"
 
+#include <array>
+
 using namespace llvm;
 using namespace jitlink;
 
 #define DEBUG_TYPE "jitlink"
 
 // Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "COFFOptions.inc"
 #undef PREFIX
 
