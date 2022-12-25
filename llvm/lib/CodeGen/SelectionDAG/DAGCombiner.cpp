@@ -22583,23 +22583,19 @@ static SDValue combineShuffleOfScalars(ShuffleVectorSDNode *SVN,
 
 // Match shuffles that can be converted to any_vector_extend_in_reg.
 // This is often generated during legalization.
-// e.g. v4i32 <0,u,1,u> -> (v2i64 any_vector_extend_in_reg(v4i32 src))
-// TODO Add support for ZERO_EXTEND_VECTOR_INREG when we have a test case.
-static SDValue combineShuffleToVectorExtend(ShuffleVectorSDNode *SVN,
-                                            SelectionDAG &DAG,
-                                            const TargetLowering &TLI,
-                                            bool LegalOperations) {
-  EVT VT = SVN->getValueType(0);
+// e.g. v4i32 <0,u,1,u> -> (v2i64 any_vector_extend_in_reg(v4i32 src)),
+// and returns the EVT to which the extension should be performed.
+static std::optional<EVT> canCombineShuffleToAnyExtendVectorInreg(
+    unsigned Opcode, EVT VT, ArrayRef<int> Mask, SelectionDAG &DAG,
+    const TargetLowering &TLI, bool LegalTypes, bool LegalOperations) {
   bool IsBigEndian = DAG.getDataLayout().isBigEndian();
 
   // TODO Add support for big-endian when we have a test case.
   if (!VT.isInteger() || IsBigEndian)
-    return SDValue();
+    return std::nullopt;
 
   unsigned NumElts = VT.getVectorNumElements();
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
-  ArrayRef<int> Mask = SVN->getMask();
-  SDValue N0 = SVN->getOperand(0);
 
   // shuffle<0,-1,1,-1> == (v2i64 anyextend_vector_inreg(v4i32))
   auto isAnyExtend = [&Mask, &NumElts](unsigned Scale) {
@@ -22622,21 +22618,44 @@ static SDValue combineShuffleToVectorExtend(ShuffleVectorSDNode *SVN,
 
     EVT OutSVT = EVT::getIntegerVT(*DAG.getContext(), EltSizeInBits * Scale);
     EVT OutVT = EVT::getVectorVT(*DAG.getContext(), OutSVT, NumElts / Scale);
-    // Never create an illegal type. Only create unsupported operations if we
-    // are pre-legalization.
-    if (!TLI.isTypeLegal(OutVT))
+
+    if (LegalTypes && !TLI.isTypeLegal(OutVT))
       continue;
 
     if (!isAnyExtend(Scale))
       continue;
 
-    if (!LegalOperations ||
-        TLI.isOperationLegalOrCustom(ISD::ANY_EXTEND_VECTOR_INREG, OutVT))
-      return DAG.getBitcast(
-          VT, DAG.getNode(ISD::ANY_EXTEND_VECTOR_INREG, SDLoc(SVN), OutVT, N0));
+    if (!LegalOperations || TLI.isOperationLegalOrCustom(Opcode, OutVT))
+      return OutVT;
   }
 
-  return SDValue();
+  return std::nullopt;
+}
+
+// Match shuffles that can be converted to any_vector_extend_in_reg.
+// This is often generated during legalization.
+// e.g. v4i32 <0,u,1,u> -> (v2i64 any_vector_extend_in_reg(v4i32 src))
+static SDValue combineShuffleToAnyExtendVectorInreg(ShuffleVectorSDNode *SVN,
+                                                    SelectionDAG &DAG,
+                                                    const TargetLowering &TLI,
+                                                    bool LegalOperations) {
+  EVT VT = SVN->getValueType(0);
+  bool IsBigEndian = DAG.getDataLayout().isBigEndian();
+
+  // TODO Add support for big-endian when we have a test case.
+  if (!VT.isInteger() || IsBigEndian)
+    return SDValue();
+
+  unsigned Opcode = ISD::ANY_EXTEND_VECTOR_INREG;
+  SDValue N0 = SVN->getOperand(0);
+  // Never create an illegal type. Only create unsupported operations if we
+  // are pre-legalization.
+  std::optional<EVT> OutVT = canCombineShuffleToAnyExtendVectorInreg(
+      Opcode, VT, SVN->getMask(), DAG, TLI, /*LegalTypes=*/true,
+      LegalOperations);
+  if (!OutVT)
+    return SDValue();
+  return DAG.getBitcast(VT, DAG.getNode(Opcode, SDLoc(SVN), *OutVT, N0));
 }
 
 // Detect 'truncate_vector_inreg' style shuffles that pack the lower parts of
@@ -23124,7 +23143,8 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
     return ShufOp;
 
   // Match shuffles that can be converted to any_vector_extend_in_reg.
-  if (SDValue V = combineShuffleToVectorExtend(SVN, DAG, TLI, LegalOperations))
+  if (SDValue V =
+          combineShuffleToAnyExtendVectorInreg(SVN, DAG, TLI, LegalOperations))
     return V;
 
   // Combine "truncate_vector_in_reg" style shuffles.
