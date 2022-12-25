@@ -407,6 +407,11 @@ void narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
 bool widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
                           SmallVectorImpl<int> &ScaledMask);
 
+/// Repetitively apply `widenShuffleMaskElts()` for as long as it succeeds,
+/// to get the shuffle mask with widest possible elements.
+void getShuffleMaskWithWidestElts(ArrayRef<int> Mask,
+                                  SmallVectorImpl<int> &ScaledMask);
+
 /// Splits and processes shuffle mask depending on the number of input and
 /// output registers. The function does 2 main things: 1) splits the
 /// source/destination vectors into real registers; 2) do the mask analysis to
