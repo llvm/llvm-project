@@ -1648,11 +1648,12 @@ static bool isImplicitlyLinked(StringRef path) {
   return false;
 }
 
-static void loadReexport(StringRef path, DylibFile *umbrella,
+void DylibFile::loadReexport(StringRef path, DylibFile *umbrella,
                          const InterfaceFile *currentTopLevelTapi) {
   DylibFile *reexport = findDylib(path, umbrella, currentTopLevelTapi);
   if (!reexport)
-    error("unable to locate re-export with install name " + path);
+    error(toString(this) + ": unable to locate re-export with install name " +
+          path);
 }
 
 DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
@@ -1676,7 +1677,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
   } else if (!isBundleLoader) {
     // macho_executable and macho_bundle don't have LC_ID_DYLIB,
     // so it's OK.
-    error("dylib " + toString(this) + " missing LC_ID_DYLIB load command");
+    error(toString(this) + ": dylib missing LC_ID_DYLIB load command");
     return;
   }
 
@@ -1705,8 +1706,8 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
   if (dyldInfo && exportsTrie) {
     // It's unclear what should happen in this case. Maybe we should only error
     // out if the two load commands refer to different data?
-    error("dylib " + toString(this) +
-          " has both LC_DYLD_INFO_ONLY and LC_DYLD_EXPORTS_TRIE");
+    error(toString(this) +
+          ": dylib has both LC_DYLD_INFO_ONLY and LC_DYLD_EXPORTS_TRIE");
     return;
   } else if (dyldInfo) {
     parseExportedSymbols(dyldInfo->export_off, dyldInfo->export_size);
@@ -2003,13 +2004,14 @@ void DylibFile::handleLDPreviousSymbol(StringRef name, StringRef originalName) {
 
   VersionTuple start;
   if (start.tryParse(startVersion)) {
-    warn("failed to parse start version, symbol '" + originalName +
-         "' ignored");
+    warn(toString(this) + ": failed to parse start version, symbol '" +
+         originalName + "' ignored");
     return;
   }
   VersionTuple end;
   if (end.tryParse(endVersion)) {
-    warn("failed to parse end version, symbol '" + originalName + "' ignored");
+    warn(toString(this) + ": failed to parse end version, symbol '" +
+         originalName + "' ignored");
     return;
   }
   if (config->platformInfo.minimum < start ||
@@ -2022,7 +2024,8 @@ void DylibFile::handleLDPreviousSymbol(StringRef name, StringRef originalName) {
   if (!compatVersion.empty()) {
     VersionTuple cVersion;
     if (cVersion.tryParse(compatVersion)) {
-      warn("failed to parse compatibility version, symbol '" + originalName +
+      warn(toString(this) +
+           ": failed to parse compatibility version, symbol '" + originalName +
            "' ignored");
       return;
     }
@@ -2061,7 +2064,8 @@ void DylibFile::handleLDInstallNameSymbol(StringRef name,
   std::tie(condition, installName) = name.split('$');
   VersionTuple version;
   if (!condition.consume_front("os") || version.tryParse(condition))
-    warn("failed to parse os version, symbol '" + originalName + "' ignored");
+    warn(toString(this) + ": failed to parse os version, symbol '" +
+         originalName + "' ignored");
   else if (version == config->platformInfo.minimum)
     this->installName = saver().save(installName);
 }
@@ -2076,7 +2080,7 @@ void DylibFile::handleLDHideSymbol(StringRef name, StringRef originalName) {
     std::tie(minVersion, symbolName) = name.split('$');
     VersionTuple versionTup;
     if (versionTup.tryParse(minVersion)) {
-      warn("Failed to parse hidden version, symbol `" + originalName +
+      warn(toString(this) + ": failed to parse hidden version, symbol `" + originalName +
            "` ignored.");
       return;
     }

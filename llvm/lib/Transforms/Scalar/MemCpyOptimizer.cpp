@@ -873,7 +873,7 @@ bool MemCpyOptPass::processMemSet(MemSetInst *MSI, BasicBlock::iterator &BBI) {
 bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
                                          Instruction *cpyStore, Value *cpyDest,
                                          Value *cpySrc, TypeSize cpySize,
-                                         Align cpyAlign, BatchAAResults &BAA,
+                                         Align cpyDestAlign, BatchAAResults &BAA,
                                          std::function<CallInst *()> GetC) {
   // The general transformation to keep in mind is
   //
@@ -978,7 +978,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 
   // Check that dest points to memory that is at least as aligned as src.
   Align srcAlign = srcAlloca->getAlign();
-  bool isDestSufficientlyAligned = srcAlign <= cpyAlign;
+  bool isDestSufficientlyAligned = srcAlign <= cpyDestAlign;
   // If dest is not aligned enough and we can't increase its alignment then
   // bail out.
   if (!isDestSufficientlyAligned && !isa<AllocaInst>(cpyDest)) {
@@ -1501,13 +1501,9 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
     if (Instruction *MI = MD->getMemoryInst()) {
       if (auto *CopySize = dyn_cast<ConstantInt>(M->getLength())) {
         if (auto *C = dyn_cast<CallInst>(MI)) {
-          // FIXME: Can we pass in either of dest/src alignment here instead
-          // of conservatively taking the minimum?
-          Align Alignment = std::min(M->getDestAlign().valueOrOne(),
-                                     M->getSourceAlign().valueOrOne());
           if (performCallSlotOptzn(M, M, M->getDest(), M->getSource(),
                                    TypeSize::getFixed(CopySize->getZExtValue()),
-                                   Alignment, BAA,
+                                   M->getDestAlign().valueOrOne(), BAA,
                                    [C]() -> CallInst * { return C; })) {
             LLVM_DEBUG(dbgs() << "Performed call slot optimization:\n"
                               << "    call: " << *C << "\n"

@@ -599,25 +599,3 @@ func.func @alloc() {
    %1 = gpu.alloc(%0) : memref<2x?x?xf32, 1>
    return
 }
-
-// -----
-
-module attributes {gpu.container_module} {
-  gpu.module @kernel {
-    // expected-error@+1 {{'gpu.func' op gpu.known_block_size must be a dense i32 array}}
-    gpu.func @kernel() kernel attributes {gpu.known_block_size = 32 : i32} {
-      gpu.return
-    }
-  }
-}
-
-// -----
-
-module attributes {gpu.container_module} {
-  gpu.module @kernel {
-    // expected-error@+1 {{'gpu.func' op gpu.known_block_size must contain exactly 3 elements}}
-    gpu.func @kernel() kernel attributes {gpu.known_block_size = array<i32: 2, 1>} {
-      gpu.return
-    }
-  }
-}

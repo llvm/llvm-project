@@ -243,17 +243,20 @@ private:
       break;
 
     case _CharT('j'):
+      __parser_.__day_of_year_ = true;
       __format_spec::__validate_date_or_duration(__flags);
       break;
 
     case _CharT('g'):
-    case _CharT('x'):
-    case _CharT('D'):
-    case _CharT('F'):
     case _CharT('G'):
     case _CharT('U'):
     case _CharT('V'):
     case _CharT('W'):
+      __parser_.__week_of_year_ = true;
+      [[fallthrough]];
+    case _CharT('x'):
+    case _CharT('D'):
+    case _CharT('F'):
       __format_spec::__validate_date(__flags);
       break;
 
@@ -267,6 +270,8 @@ private:
       [[fallthrough]];
     case _CharT('u'):
     case _CharT('w'):
+      __parser_.__weekday_ = true;
+      __validate_weekday(__flags);
       __format_spec::__validate_weekday(__flags);
       break;
 
@@ -373,11 +378,13 @@ private:
     case _CharT('U'):
     case _CharT('V'):
     case _CharT('W'):
+      __parser_.__week_of_year_ = true;
       __format_spec::__validate_date(__flags);
       break;
 
     case _CharT('u'):
     case _CharT('w'):
+      __parser_.__weekday_ = true;
       __format_spec::__validate_weekday(__flags);
       break;
 
