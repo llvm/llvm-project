@@ -54,10 +54,10 @@ struct S {
   virtual void g() = 0;
   // CHECK: CXXMethodDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:22> col:16 g 'void ()' virtual pure
 
-  // CHECK: CXXConstructorDecl 0x{{[^ ]*}} <line:[[@LINE-33]]:8> col:8 implicit S 'void (const S &)' inline default_delete noexcept-unevaluated
+  // CHECK: CXXConstructorDecl 0x{{[^ ]*}} <line:[[@LINE-33]]:8> col:8 implicit S 'void (const S &)' inline default_delete trivial noexcept-unevaluated
   // CHECK: CXXConstructorDecl 0x{{[^ ]*}} <col:8> col:8 implicit constexpr S 'void (S &&)' inline default noexcept-unevaluated
-  // CHECK: CXXMethodDecl 0x{{[^ ]*}} <col:8> col:8 implicit operator= 'S &(const S &)' inline default_delete noexcept-unevaluated
-  // CHECK: CXXMethodDecl 0x{{[^ ]*}} <col:8> col:8 implicit operator= 'S &(S &&)' inline default_delete noexcept-unevaluated
+  // CHECK: CXXMethodDecl 0x{{[^ ]*}} <col:8> col:8 implicit operator= 'S &(const S &)' inline default_delete trivial noexcept-unevaluated
+  // CHECK: CXXMethodDecl 0x{{[^ ]*}} <col:8> col:8 implicit operator= 'S &(S &&)' inline default_delete trivial noexcept-unevaluated
   // CHECK: CXXDestructorDecl 0x{{[^ ]*}} <col:8> col:8 implicit ~S 'void ()' inline default noexcept-unevaluated
 };
 
@@ -70,9 +70,9 @@ struct T : S { // T is not referenced, but S is
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:23> 'int' 100
   // CHECK-NEXT: OverrideAttr
 
-  // CHECK: CXXConstructorDecl 0x{{[^ ]*}} <line:[[@LINE-9]]:8> col:8 implicit T 'void (const T &)' inline default_delete noexcept-unevaluated
-  // CHECK: CXXMethodDecl 0x{{[^ ]*}} <col:8> col:8 implicit operator= 'T &(const T &)' inline default_delete noexcept-unevaluated
-  // CHECK: CXXMethodDecl 0x{{[^ ]*}} <col:8> col:8 implicit operator= 'T &(T &&)' inline default_delete noexcept-unevaluated
+  // CHECK: CXXConstructorDecl 0x{{[^ ]*}} <line:[[@LINE-9]]:8> col:8 implicit T 'void (const T &)' inline default_delete trivial noexcept-unevaluated
+  // CHECK: CXXMethodDecl 0x{{[^ ]*}} <col:8> col:8 implicit operator= 'T &(const T &)' inline default_delete trivial noexcept-unevaluated
+  // CHECK: CXXMethodDecl 0x{{[^ ]*}} <col:8> col:8 implicit operator= 'T &(T &&)' inline default_delete trivial noexcept-unevaluated
   // CHECK: CXXDestructorDecl 0x{{[^ ]*}} <col:8> col:8 implicit ~T 'void ()' inline default noexcept-unevaluated
 };
 
