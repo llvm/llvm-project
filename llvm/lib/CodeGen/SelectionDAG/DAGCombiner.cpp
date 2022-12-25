@@ -22619,13 +22619,11 @@ static std::optional<EVT> canCombineShuffleToAnyExtendVectorInreg(
     EVT OutSVT = EVT::getIntegerVT(*DAG.getContext(), EltSizeInBits * Scale);
     EVT OutVT = EVT::getVectorVT(*DAG.getContext(), OutSVT, NumElts / Scale);
 
-    if (LegalTypes && !TLI.isTypeLegal(OutVT))
+    if ((LegalTypes && !TLI.isTypeLegal(OutVT)) ||
+        (LegalOperations && !TLI.isOperationLegalOrCustom(Opcode, OutVT)))
       continue;
 
-    if (!isAnyExtend(Scale))
-      continue;
-
-    if (!LegalOperations || TLI.isOperationLegalOrCustom(Opcode, OutVT))
+    if (isAnyExtend(Scale))
       return OutVT;
   }
 
