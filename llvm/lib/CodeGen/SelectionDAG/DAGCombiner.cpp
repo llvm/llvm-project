@@ -22581,10 +22581,11 @@ static SDValue combineShuffleOfScalars(ShuffleVectorSDNode *SVN,
   return DAG.getBuildVector(VT, SDLoc(SVN), Ops);
 }
 
-// Match shuffles that can be converted to any_vector_extend_in_reg.
+// Match shuffles that can be converted to *_vector_extend_in_reg.
 // This is often generated during legalization.
 // e.g. v4i32 <0,u,1,u> -> (v2i64 any_vector_extend_in_reg(v4i32 src)),
 // and returns the EVT to which the extension should be performed.
+// NOTE: this assumes that the src is the first operand of the shuffle.
 static std::optional<EVT> canCombineShuffleToExtendVectorInreg(
     unsigned Opcode, EVT VT, std::function<bool(unsigned)> Match,
     SelectionDAG &DAG, const TargetLowering &TLI, bool LegalTypes,
@@ -22600,8 +22601,9 @@ static std::optional<EVT> canCombineShuffleToExtendVectorInreg(
 
   // Attempt to match a '*_extend_vector_inreg' shuffle, we just search for
   // power-of-2 extensions as they are the most likely.
+  // FIXME: should try Scale == NumElts case too,
   for (unsigned Scale = 2; Scale < NumElts; Scale *= 2) {
-    // Check for non power of 2 vector sizes
+    // The vector width must be a multiple of Scale.
     if (NumElts % Scale != 0)
       continue;
 
@@ -22655,6 +22657,108 @@ static SDValue combineShuffleToAnyExtendVectorInreg(ShuffleVectorSDNode *SVN,
   if (!OutVT)
     return SDValue();
   return DAG.getBitcast(VT, DAG.getNode(Opcode, SDLoc(SVN), *OutVT, N0));
+}
+
+// Match shuffles that can be converted to zero_extend_vector_inreg.
+// This is often generated during legalization.
+// e.g. v4i32 <0,z,1,u> -> (v2i64 zero_extend_vector_inreg(v4i32 src))
+static SDValue combineShuffleToZeroExtendVectorInReg(ShuffleVectorSDNode *SVN,
+                                                     SelectionDAG &DAG,
+                                                     const TargetLowering &TLI,
+                                                     bool LegalOperations) {
+  bool LegalTypes = true;
+  EVT VT = SVN->getValueType(0);
+  assert(!VT.isScalableVector() && "Encountered scalable shuffle?");
+  unsigned NumElts = VT.getVectorNumElements();
+
+  // TODO: add support for big-endian when we have a test case.
+  bool IsBigEndian = DAG.getDataLayout().isBigEndian();
+  if (!VT.isInteger() || IsBigEndian)
+    return SDValue();
+
+  SmallVector<int, 16> Mask(SVN->getMask().begin(), SVN->getMask().end());
+  auto ForEachDecomposedIndice = [NumElts, &Mask](auto Fn) {
+    for (int &Indice : Mask) {
+      if (Indice < 0)
+        continue;
+      int OpIdx = (unsigned)Indice < NumElts ? 0 : 1;
+      int OpEltIdx = (unsigned)Indice < NumElts ? Indice : Indice - NumElts;
+      Fn(Indice, OpIdx, OpEltIdx);
+    }
+  };
+
+  // Which elements of which operand does this shuffle demand?
+  std::array<APInt, 2> OpsDemandedElts;
+  for (APInt &OpDemandedElts : OpsDemandedElts)
+    OpDemandedElts = APInt::getZero(NumElts);
+  ForEachDecomposedIndice(
+      [&OpsDemandedElts](int &Indice, int OpIdx, int OpEltIdx) {
+        OpsDemandedElts[OpIdx].setBit(OpEltIdx);
+      });
+
+  // Element-wise(!), which of these demanded elements are know to be zero?
+  std::array<APInt, 2> OpsKnownZeroElts;
+  for (auto I : zip(SVN->ops(), OpsDemandedElts, OpsKnownZeroElts))
+    std::get<2>(I) =
+        DAG.computeVectorKnownZeroElements(std::get<0>(I), std::get<1>(I));
+
+  // Manifest zeroable element knowledge in the shuffle mask.
+  // NOTE: we don't have 'zeroable' sentinel value in generic DAG,
+  //       this is a local invention, but it won't leak into DAG.
+  // FIXME: should we not manifest them, but just check when matching?
+  bool HadZeroableElts = false;
+  ForEachDecomposedIndice([&OpsKnownZeroElts, &HadZeroableElts](
+                              int &Indice, int OpIdx, int OpEltIdx) {
+    if (OpsKnownZeroElts[OpIdx][OpEltIdx]) {
+      Indice = -2; // Zeroable element.
+      HadZeroableElts = true;
+    }
+  });
+
+  // Don't proceed unless we've refined at least one zeroable mask indice.
+  // If we didn't, then we are still trying to match the same shuffle mask
+  // we previously tried to match as ISD::ANY_EXTEND_VECTOR_INREG,
+  // and evidently failed. Proceeding will lead to endless combine loops.
+  if (!HadZeroableElts)
+    return SDValue();
+
+  // FIXME: the shuffle may be more fine-grained than we want.
+
+  // For example,
+  // shuffle<0,z,1,-1> == (v2i64 zero_extend_vector_inreg(v4i32))
+  // But not shuffle<z,z,1,-1> and not shuffle<0,z,z,-1> ! (for same types)
+  auto isZeroExtend = [NumElts, SrcMask = Mask](unsigned Scale) {
+    assert(Scale >= 2 && Scale <= NumElts && NumElts % Scale == 0 &&
+           "Unexpected mask scaling factor.");
+    ArrayRef<int> Mask = SrcMask;
+    for (unsigned SrcElt = 0, NumSrcElts = NumElts / Scale;
+         SrcElt != NumSrcElts; ++SrcElt) {
+      // Analyze the shuffle mask in Scale-sized chunks.
+      ArrayRef<int> MaskChunk = Mask.take_front(Scale);
+      assert(MaskChunk.size() == Scale && "Unexpected mask size.");
+      Mask = Mask.drop_front(MaskChunk.size());
+      // The first indice in this chunk must be SrcElt, but not zero!
+      // FIXME: undef should be fine, but that results in more-defined result.
+      if (int FirstIndice = MaskChunk[0]; (unsigned)FirstIndice != SrcElt)
+        return false;
+      // The rest of the indices in this chunk must be zeros.
+      // FIXME: undef should be fine, but that results in more-defined result.
+      if (!all_of(MaskChunk.drop_front(1),
+                  [](int Indice) { return Indice == -2; }))
+        return false;
+    }
+    assert(Mask.empty() && "Did not process the whole mask?");
+    return true;
+  };
+
+  unsigned Opcode = ISD::ZERO_EXTEND_VECTOR_INREG;
+  SDValue Op = SVN->getOperand(0);
+  // FIXME: try to also match with commutted operands.
+  std::optional<EVT> OutVT = canCombineShuffleToExtendVectorInreg(
+      Opcode, VT, isZeroExtend, DAG, TLI, LegalTypes, LegalOperations);
+  if (!OutVT)
+    return SDValue();
+  return DAG.getBitcast(VT, DAG.getNode(Opcode, SDLoc(SVN), *OutVT, Op));
 }
 
 // Detect 'truncate_vector_inreg' style shuffles that pack the lower parts of
@@ -23628,6 +23732,14 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
 
   if (SDValue V = foldShuffleOfConcatUndefs(SVN, DAG))
     return V;
+
+  // Match shuffles that can be converted to ISD::ZERO_EXTEND_VECTOR_INREG.
+  // Perform this really late, because it could eliminate knowledge
+  // of undef elements created by this shuffle.
+  if (Level < AfterLegalizeTypes)
+    if (SDValue V = combineShuffleToZeroExtendVectorInReg(SVN, DAG, TLI,
+                                                          LegalOperations))
+      return V;
 
   return SDValue();
 }
