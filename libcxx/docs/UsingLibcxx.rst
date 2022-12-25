@@ -455,6 +455,29 @@ which no dialect declares as such (See the second form described above).
 * ``identity::operator()``
 * ``to_integer``
 * ``to_underlying``
+* ``signbit``
+* ``fpclassify``
+* ``isfinite``
+* ``isinf``
+* ``isnan``
+* ``isnormal``
+* ``isgreater``
+* ``isgreaterequal``
+* ``isless``
+* ``islessequal``
+* ``islessgreater``
+* ``isunordered``
+* ``ceil``
+* ``fabs``
+* ``floor``
+* ``cbrt``
+* ``copysign``
+* ``fmax``
+* ``fmin``
+* ``nearbyint``
+* ``rint``
+* ``round``
+* ``trunc``
 
 Extended integral type support
 ------------------------------
