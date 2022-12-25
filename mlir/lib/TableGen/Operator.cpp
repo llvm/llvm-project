@@ -745,3 +745,5 @@ std::string Operator::getSetterName(StringRef name) const {
 std::string Operator::getRemoverName(StringRef name) const {
   return "remove" + convertToCamelFromSnakeCase(name, /*capitalizeFirst=*/true);
 }
+
+bool Operator::hasFolder() const { return def.getValueAsBit("hasFolder"); }
