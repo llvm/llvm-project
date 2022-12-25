@@ -352,7 +352,7 @@ void Value::setNameImpl(const Twine &NewName) {
 
     // Create the new name.
     MallocAllocator Allocator;
-    setValueName(ValueName::Create(NameRef, Allocator));
+    setValueName(ValueName::create(NameRef, Allocator));
     getValueName()->setValue(this);
     return;
   }
