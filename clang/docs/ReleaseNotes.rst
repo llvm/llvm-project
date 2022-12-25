@@ -867,8 +867,6 @@ clang-format
 - Add ``RequiresExpressionIndentation`` option for configuring the alignment of requires-expressions.
   The default value of this option is ``OuterScope``, which differs in behavior from clang-format 15.
   To match the default behavior of clang-format 15, use the ``Keyword`` value.
-- Add ``IntegerLiteralSeparator`` option for fixing integer literal separators
-  in C++, C#, Java, and JavaScript.
 
 clang-extdef-mapping
 --------------------
