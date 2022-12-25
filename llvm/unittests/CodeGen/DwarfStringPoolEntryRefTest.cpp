@@ -19,7 +19,7 @@ using namespace llvm;
 TEST(DwarfStringPoolEntryRefTest, TestFullEntry) {
   BumpPtrAllocator Allocator;
   StringMapEntry<DwarfStringPoolEntry> *StringEntry1 =
-      StringMapEntry<DwarfStringPoolEntry>::Create(
+      StringMapEntry<DwarfStringPoolEntry>::create(
           "Key1", Allocator, DwarfStringPoolEntry{nullptr, 0, 0});
 
   EXPECT_TRUE(StringEntry1->getKey() == "Key1");
@@ -40,7 +40,7 @@ TEST(DwarfStringPoolEntryRefTest, TestFullEntry) {
   EXPECT_FALSE(Ref1 != Ref2);
 
   StringMapEntry<DwarfStringPoolEntry> *StringEntry2 =
-      StringMapEntry<DwarfStringPoolEntry>::Create(
+      StringMapEntry<DwarfStringPoolEntry>::create(
           "Key2", Allocator, DwarfStringPoolEntry{nullptr, 0x1000, 1});
   EXPECT_TRUE(StringEntry2->getKey() == "Key2");
   EXPECT_TRUE(StringEntry2->second.Symbol == nullptr);
@@ -64,7 +64,7 @@ TEST(DwarfStringPoolEntryRefTest, TestShortEntry) {
   BumpPtrAllocator Allocator;
   DwarfStringPoolEntry DwarfEntry1 = {nullptr, 0, 0};
   StringMapEntry<DwarfStringPoolEntry *> *StringEntry1 =
-      StringMapEntry<DwarfStringPoolEntry *>::Create("Key1", Allocator,
+      StringMapEntry<DwarfStringPoolEntry *>::create("Key1", Allocator,
                                                      &DwarfEntry1);
 
   EXPECT_TRUE(StringEntry1->getKey() == "Key1");
@@ -87,7 +87,7 @@ TEST(DwarfStringPoolEntryRefTest, TestShortEntry) {
 
   DwarfStringPoolEntry DwarfEntry2 = {nullptr, 0x1000, 1};
   StringMapEntry<DwarfStringPoolEntry *> *StringEntry2 =
-      StringMapEntry<DwarfStringPoolEntry *>::Create("Key2", Allocator,
+      StringMapEntry<DwarfStringPoolEntry *>::create("Key2", Allocator,
                                                      &DwarfEntry2);
   EXPECT_TRUE(StringEntry2->getKey() == "Key2");
   EXPECT_TRUE(StringEntry2->second->Symbol == nullptr);
@@ -107,12 +107,12 @@ TEST(DwarfStringPoolEntryRefTest, CompareFullAndShort) {
 
   DwarfStringPoolEntry DwarfEntry1 = {nullptr, 0, 0};
   StringMapEntry<DwarfStringPoolEntry *> *StringEntry1 =
-      StringMapEntry<DwarfStringPoolEntry *>::Create("Key1", Allocator,
+      StringMapEntry<DwarfStringPoolEntry *>::create("Key1", Allocator,
                                                      &DwarfEntry1);
   DwarfStringPoolEntryRef Ref1(*StringEntry1);
 
   StringMapEntry<DwarfStringPoolEntry> *StringEntry2 =
-      StringMapEntry<DwarfStringPoolEntry>::Create(
+      StringMapEntry<DwarfStringPoolEntry>::create(
           "Key1", Allocator, DwarfStringPoolEntry{nullptr, 0, 0});
   DwarfStringPoolEntryRef Ref2(*StringEntry2);
 
