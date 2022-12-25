@@ -195,6 +195,9 @@ struct __chrono {
   __alignment __alignment_ : 3;
   bool __locale_specific_form_ : 1;
   bool __weekday_name_ : 1;
+  bool __weekday_              : 1;
+  bool __day_of_year_          : 1;
+  bool __week_of_year_         : 1;
   bool __month_name_ : 1;
 };
 
@@ -318,10 +321,14 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __parsed_specifications<_CharT> __get_parsed_chrono_specifications(auto& __ctx) const {
     return __parsed_specifications<_CharT>{
-        .__chrono_ = __chrono{.__alignment_            = __alignment_,
-                              .__locale_specific_form_ = __locale_specific_form_,
-                              .__weekday_name_         = __weekday_name_,
-                              .__month_name_           = __month_name_},
+        .__chrono_ =
+            __chrono{.__alignment_            = __alignment_,
+                     .__locale_specific_form_ = __locale_specific_form_,
+                     .__weekday_name_         = __weekday_name_,
+                     .__weekday_              = __weekday_,
+                     .__day_of_year_          = __day_of_year_,
+                     .__week_of_year_         = __week_of_year_,
+                     .__month_name_           = __month_name_},
         .__width_{__get_width(__ctx)},
         .__precision_{__get_precision(__ctx)},
         .__fill_{__fill_}};
@@ -334,12 +341,17 @@ public:
   bool __reserved_0_ : 1 {false};
   __type __type_{__type::__default};
 
-  // These two flags are used for formatting chrono. Since the struct has
+  // These flags are only used for formatting chrono. Since the struct has
   // padding space left it's added to this structure.
   bool __weekday_name_ : 1 {false};
+  bool __weekday_      : 1 {false};
+
+  bool __day_of_year_  : 1 {false};
+  bool __week_of_year_ : 1 {false};
+
   bool __month_name_ : 1 {false};
 
-  uint8_t __reserved_1_ : 6 {0};
+  uint8_t __reserved_1_ : 3 {0};
   uint8_t __reserved_2_ : 6 {0};
   // These two flags are only used internally and not part of the
   // __parsed_specifications. Therefore put them at the end.

@@ -119,28 +119,31 @@ private:
 };
 
 // ObjdumpOptID is in ObjdumpOptID.h
-
-#define PREFIX(NAME, VALUE) const char *const OBJDUMP_##NAME[] = VALUE;
+namespace objdump_opt {
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "ObjdumpOpts.inc"
 #undef PREFIX
 
 static constexpr opt::OptTable::Info ObjdumpInfoTable[] = {
-#define OBJDUMP_nullptr nullptr
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
-  {OBJDUMP_##PREFIX, NAME,         HELPTEXT,                                   \
-   METAVAR,          OBJDUMP_##ID, opt::Option::KIND##Class,                   \
-   PARAM,            FLAGS,        OBJDUMP_##GROUP,                            \
-   OBJDUMP_##ALIAS,  ALIASARGS,    VALUES},
+  {PREFIX,          NAME,         HELPTEXT,                                    \
+   METAVAR,         OBJDUMP_##ID, opt::Option::KIND##Class,                    \
+   PARAM,           FLAGS,        OBJDUMP_##GROUP,                             \
+   OBJDUMP_##ALIAS, ALIASARGS,    VALUES},
 #include "ObjdumpOpts.inc"
 #undef OPTION
-#undef OBJDUMP_nullptr
 };
+} // namespace objdump_opt
 
 class ObjdumpOptTable : public CommonOptTable {
 public:
   ObjdumpOptTable()
-      : CommonOptTable(ObjdumpInfoTable, " [options] <input object files>",
+      : CommonOptTable(objdump_opt::ObjdumpInfoTable,
+                       " [options] <input object files>",
                        "llvm object file dumper") {}
 };
 
@@ -153,27 +156,30 @@ enum OtoolOptID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const OTOOL_##NAME[] = VALUE;
+namespace otool {
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "OtoolOpts.inc"
 #undef PREFIX
 
 static constexpr opt::OptTable::Info OtoolInfoTable[] = {
-#define OTOOL_nullptr nullptr
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
-  {OTOOL_##PREFIX, NAME,       HELPTEXT,                                       \
-   METAVAR,        OTOOL_##ID, opt::Option::KIND##Class,                       \
-   PARAM,          FLAGS,      OTOOL_##GROUP,                                  \
-   OTOOL_##ALIAS,  ALIASARGS,  VALUES},
+  {PREFIX,        NAME,       HELPTEXT,                                        \
+   METAVAR,       OTOOL_##ID, opt::Option::KIND##Class,                        \
+   PARAM,         FLAGS,      OTOOL_##GROUP,                                   \
+   OTOOL_##ALIAS, ALIASARGS,  VALUES},
 #include "OtoolOpts.inc"
 #undef OPTION
-#undef OTOOL_nullptr
 };
+} // namespace otool
 
 class OtoolOptTable : public CommonOptTable {
 public:
   OtoolOptTable()
-      : CommonOptTable(OtoolInfoTable, " [option...] [file...]",
+      : CommonOptTable(otool::OtoolInfoTable, " [option...] [file...]",
                        "Mach-O object file displaying tool") {}
 };
 

@@ -124,8 +124,8 @@ define i1 @test_inner_gep_multiple_indices_ult_true_inc_gep_all_inbounds_overflo
 entry:
   %dst.0 = getelementptr inbounds [2 x i32], ptr %dst, i64 0, i64 0
   %upper = getelementptr inbounds [2 x i32], ptr %dst, i64 0, i64 6
-  %gep.1 = getelementptr i32, i32* %dst.0, i64 2
-  %c = icmp slt i32* %gep.1, %upper
+  %gep.1 = getelementptr i32, ptr %dst.0, i64 2
+  %c = icmp slt ptr %gep.1, %upper
   ret i1 %c
 }
 
@@ -142,7 +142,7 @@ entry:
   %dst.0 = getelementptr inbounds [2 x i32], ptr %dst, i64 0, i64 0
   %upper = getelementptr inbounds [2 x i32], ptr %dst, i64 0, i64 2
   %gep.1 = getelementptr i32, ptr %dst.0, i64 1
-  %c = icmp slt i32* %gep.1, %upper
+  %c = icmp slt ptr %gep.1, %upper
   ret i1 %c
 }
 
@@ -159,7 +159,7 @@ entry:
   %dst.0 = getelementptr inbounds [2 x i32], ptr %dst, i64 0, i64 0
   %upper = getelementptr inbounds [2 x i32], ptr %dst, i64 0, i64 2
   %gep.1 = getelementptr i32, ptr %dst.0, i64 1
-  %c = icmp slt i32* %gep.1, %upper
+  %c = icmp slt ptr %gep.1, %upper
   ret i1 %c
 }
 
@@ -175,8 +175,8 @@ define i1 @test_inner_gep_multiple_indices_ult_false_inc_gep_not_inbounds(ptr %d
 entry:
   %dst.0 = getelementptr inbounds [2 x i32], ptr %dst, i64 0, i64 0
   %upper = getelementptr inbounds [2 x i32], ptr %dst, i64 0, i64 2
-  %gep.1 = getelementptr i32, i32* %dst.0, i64 2
-  %c = icmp slt i32* %gep.1, %upper
+  %gep.1 = getelementptr i32, ptr %dst.0, i64 2
+  %c = icmp slt ptr %gep.1, %upper
   ret i1 %c
 }
 
@@ -192,8 +192,8 @@ define i1 @test_inner_gep_multiple_indices_ult_true_inc_gep_not_inbounds_overflo
 entry:
   %dst.0 = getelementptr inbounds [2 x i32], ptr %dst, i64 0, i64 0
   %upper = getelementptr inbounds [2 x i32], ptr %dst, i64 0, i64 5
-  %gep.1 = getelementptr i32, i32* %dst.0, i64 2
-  %c = icmp slt i32* %gep.1, %upper
+  %gep.1 = getelementptr i32, ptr %dst.0, i64 2
+  %c = icmp slt ptr %gep.1, %upper
   ret i1 %c
 }
 

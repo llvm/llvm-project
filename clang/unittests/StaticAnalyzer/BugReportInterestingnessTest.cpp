@@ -33,11 +33,11 @@ class InterestingnessTestChecker : public Checker<check::PreCall> {
                                        const CallEvent &, CheckerContext &)>;
 
   CallDescriptionMap<HandlerFn> Handlers = {
-      {{"setInteresting", 1}, &InterestingnessTestChecker::handleInteresting},
-      {{"setNotInteresting", 1},
+      {{{"setInteresting"}, 1}, &InterestingnessTestChecker::handleInteresting},
+      {{{"setNotInteresting"}, 1},
        &InterestingnessTestChecker::handleNotInteresting},
-      {{"check", 1}, &InterestingnessTestChecker::handleCheck},
-      {{"bug", 1}, &InterestingnessTestChecker::handleBug},
+      {{{"check"}, 1}, &InterestingnessTestChecker::handleCheck},
+      {{{"bug"}, 1}, &InterestingnessTestChecker::handleBug},
   };
 
   void handleInteresting(const CallEvent &Call, CheckerContext &C) const;
