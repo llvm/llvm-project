@@ -52,20 +52,34 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 
 // CHECK-LABEL: NS::AOp declarations
 
-// CHECK: class AOpAdaptor {
+// CHECK: namespace detail {
+// CHECK: class AOpGenericAdaptorBase {
 // CHECK: public:
-// CHECK:   AOpAdaptor(::mlir::ValueRange values
-// CHECK:   ::mlir::ValueRange getODSOperands(unsigned index);
-// CHECK:   ::mlir::Value getA();
-// CHECK:   ::mlir::ValueRange getB();
 // CHECK:   ::mlir::IntegerAttr getAttr1Attr();
 // CHECK:   uint32_t getAttr1();
 // CHECK:   ::mlir::FloatAttr getSomeAttr2Attr();
 // CHECK:   ::std::optional< ::llvm::APFloat > getSomeAttr2();
 // CHECK:   ::mlir::Region &getSomeRegion();
 // CHECK:   ::mlir::RegionRange getSomeRegions();
+// CHECK: };
+// CHECK: }
+
+// CHECK: template <typename RangeT>
+// CHECK: class AOpGenericAdaptor : public detail::AOpGenericAdaptorBase {
+// CHECK: public:
+// CHECK:   AOpGenericAdaptor(RangeT values,
+// CHECK-SAME: odsOperands(values)
+// CHECK:   RangeT getODSOperands(unsigned index) {
+// CHECK:   ValueT getA() {
+// CHECK:   RangeT getB() {
 // CHECK: private:
-// CHECK:   ::mlir::ValueRange odsOperands;
+// CHECK:   RangeT odsOperands;
+// CHECK: };
+
+// CHECK: class AOpAdaptor : public AOpGenericAdaptor<::mlir::ValueRange> {
+// CHECK: public:
+// CHECK:   AOpAdaptor(AOp
+// CHECK:   ::mlir::LogicalResult verify(
 // CHECK: };
 
 // CHECK: class AOp : public ::mlir::Op<AOp, ::mlir::OpTrait::AtLeastNRegions<1>::Impl, ::mlir::OpTrait::AtLeastNResults<1>::Impl, ::mlir::OpTrait::ZeroSuccessors, ::mlir::OpTrait::AtLeastNOperands<1>::Impl, ::mlir::OpTrait::OpInvariants, ::mlir::OpTrait::IsIsolatedFromAbove
@@ -108,10 +122,10 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 
 // DEFS-LABEL: NS::AOp definitions
 
-// DEFS: AOpAdaptor::AOpAdaptor(::mlir::ValueRange values, ::mlir::DictionaryAttr attrs, ::mlir::RegionRange regions) : odsOperands(values), odsAttrs(attrs), odsRegions(regions)
-// DEFS: ::mlir::RegionRange AOpAdaptor::getSomeRegions()
+// DEFS: AOpGenericAdaptorBase::AOpGenericAdaptorBase(::mlir::DictionaryAttr attrs, ::mlir::RegionRange regions) : odsAttrs(attrs), odsRegions(regions)
+// DEFS: ::mlir::RegionRange AOpGenericAdaptorBase::getSomeRegions()
 // DEFS-NEXT: return odsRegions.drop_front(1);
-// DEFS: ::mlir::RegionRange AOpAdaptor::getRegions()
+// DEFS: ::mlir::RegionRange AOpGenericAdaptorBase::getRegions()
 
 // Check AttrSizedOperandSegments
 // ---
@@ -127,14 +141,16 @@ def NS_AttrSizedOperandOp : NS_Op<"attr_sized_operands",
   );
 }
 
-// CHECK-LABEL: AttrSizedOperandOpAdaptor(
-// CHECK-SAME:    ::mlir::ValueRange values
-// CHECK-SAME:    ::mlir::DictionaryAttr attrs
-// CHECK:  ::mlir::ValueRange getA();
-// CHECK:  ::mlir::ValueRange getB();
-// CHECK:  ::mlir::Value getC();
-// CHECK:  ::mlir::ValueRange getD();
+// CHECK-LABEL: class AttrSizedOperandOpGenericAdaptorBase {
 // CHECK:  ::mlir::DenseIntElementsAttr getOperandSegmentSizes();
+
+// CHECK-LABEL: AttrSizedOperandOpGenericAdaptor(
+// CHECK-SAME:    RangeT values
+// CHECK-SAME:    ::mlir::DictionaryAttr attrs
+// CHECK:  RangeT getA() {
+// CHECK:  RangeT getB() {
+// CHECK:  ValueT getC() {
+// CHECK:  RangeT getD() {
 
 // Check op trait for different number of operands
 // ---
@@ -166,7 +182,7 @@ def NS_EOp : NS_Op<"op_with_optionals", []> {
 }
 
 // CHECK-LABEL: NS::EOp declarations
-// CHECK:   ::mlir::Value getA();
+// CHECK:   ::mlir::TypedValue<::mlir::IntegerType> getA();
 // CHECK:   ::mlir::MutableOperandRange getAMutable();
 // CHECK:   ::mlir::TypedValue<::mlir::FloatType> getB();
 // CHECK:   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, /*optional*/::mlir::Type b, /*optional*/::mlir::Value a)
@@ -334,6 +350,18 @@ def NS_SkipDefaultBuildersOp : NS_Op<"skip_default_builders", []> {
 
 // Check leading underscore in op name
 // ---
+
+def NS_VarOfVarOperandOp : NS_Op<"var_of_var_operand", []> {
+  let arguments = (ins
+    VariadicOfVariadic<F32, "var_size">:$var_of_var_attr,
+    DenseI32ArrayAttr:$var_size
+  );
+}
+
+// CHECK-LABEL: class VarOfVarOperandOpGenericAdaptor
+// CHECK: public:
+// CHECK: ::llvm::SmallVector<RangeT> getVarOfVarAttr() {
+
 
 def NS__AOp : NS_Op<"_op_with_leading_underscore", []>;
 

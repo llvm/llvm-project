@@ -1,4 +1,5 @@
 add_mlir_unittest(MLIRIRTests
+  AdaptorTest.cpp
   AttributeTest.cpp
   BlockAndValueMapping.cpp
   DialectTest.cpp
