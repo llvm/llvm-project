@@ -102,9 +102,7 @@ APInt UnsignedDivideUsingMagic(APInt Numerator, APInt Divisor,
                                UnsignedDivisionByConstantInfo Magics) {
   unsigned Bits = Numerator.getBitWidth();
 
-  bool UseNPQ = false;
-  unsigned PreShift = 0, PostShift = 0;
-
+  unsigned PreShift = 0;
   if (AllowEvenDivisorOptimization) {
     // If the divisor is even, we can avoid using the expensive fixup by
     // shifting the divided value upfront.
@@ -117,6 +115,8 @@ APInt UnsignedDivideUsingMagic(APInt Numerator, APInt Divisor,
     }
   }
 
+  unsigned PostShift = 0;
+  bool UseNPQ = false;
   if (!Magics.IsAdd || Divisor.isOne()) {
     assert(Magics.ShiftAmount < Divisor.getBitWidth() &&
            "We shouldn't generate an undefined shift!");
@@ -124,11 +124,13 @@ APInt UnsignedDivideUsingMagic(APInt Numerator, APInt Divisor,
     UseNPQ = false;
   } else {
     PostShift = Magics.ShiftAmount - 1;
+    assert(PostShift < Divisor.getBitWidth() &&
+           "We shouldn't generate an undefined shift!");
     UseNPQ = true;
   }
 
   APInt NPQFactor =
-      UseNPQ ? APInt::getOneBitSet(Bits, Bits - 1) : APInt::getZero(Bits);
+      UseNPQ ? APInt::getSignedMinValue(Bits) : APInt::getZero(Bits);
 
   APInt Q = Numerator.lshr(PreShift);
 
