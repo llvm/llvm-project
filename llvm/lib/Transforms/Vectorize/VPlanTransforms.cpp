@@ -119,7 +119,7 @@ bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
         continue;
       for (VPValue *Op : RepR->operands())
         if (auto *Def = Op->getDefiningRecipe())
-          WorkList.insert(std::make_pair(RepR->getParent(), Def));
+          WorkList.insert(std::make_pair(VPBB, Def));
     }
   }
 

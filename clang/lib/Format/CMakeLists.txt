@@ -8,7 +8,6 @@ add_clang_library(clangFormat
   Format.cpp
   FormatToken.cpp
   FormatTokenLexer.cpp
-  IntegerLiteralSeparatorFixer.cpp
   MacroCallReconstructor.cpp
   MacroExpander.cpp
   NamespaceEndCommentsFixer.cpp
