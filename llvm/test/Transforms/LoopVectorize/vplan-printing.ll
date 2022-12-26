@@ -206,9 +206,6 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-NEXT:   WIDEN-INDUCTION %i = phi 0, %i.next, ir<1>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   WIDEN ir<%cmp> = icmp ult ir<%i>, ir<5>
-; CHECK-NEXT: Successor(s): if.then
-; CHECK-EMPTY:
-; CHECK-NEXT: if.then:
 ; CHECK-NEXT: Successor(s): pred.udiv
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.udiv: {
@@ -227,9 +224,6 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-NEXT: Successor(s): if.then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: if.then.0:
-; CHECK-NEXT: Successor(s): for.inc
-; CHECK-EMPTY:
-; CHECK-NEXT: for.inc:
 ; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%cmp>
 ; CHECK-NEXT:   BLEND %d = ir<0>/vp<[[NOT]]> vp<[[PRED]]>/ir<%cmp>
 ; CHECK-NEXT:   CLONE ir<%idx> = getelementptr ir<%x>, vp<[[STEPS]]>
@@ -404,13 +398,7 @@ define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !db
 ; CHECK-NEXT:    WIDEN ir<%lsd> = load ir<%isd>
 ; CHECK-NEXT:    WIDEN ir<%psd> = add ir<%lsd>, ir<23>
 ; CHECK-NEXT:    WIDEN ir<%cmp1> = icmp slt ir<%lsd>, ir<100>
-; CHECK-NEXT:  Successor(s): check
-; CHECK-EMPTY:
-; CHECK-NEXT:  check:
 ; CHECK-NEXT:    WIDEN ir<%cmp2> = icmp sge ir<%lsd>, ir<200>
-; CHECK-NEXT:  Successor(s): if.then
-; CHECK-EMPTY:
-; CHECK-NEXT:  if.then:
 ; CHECK-NEXT:    EMIT vp<[[NOT1:%.+]]> = not ir<%cmp1>, !dbg /tmp/s.c:5:3
 ; CHECK-NEXT:    EMIT vp<[[SEL1:%.+]]> = select vp<[[NOT1]]> ir<%cmp2> ir<false>, !dbg /tmp/s.c:5:21
 ; CHECK-NEXT:    EMIT vp<[[OR1:%.+]]> = or vp<[[SEL1]]> ir<%cmp1>
@@ -432,9 +420,6 @@ define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !db
 ; CHECK-NEXT:  Successor(s): if.then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  if.then.0:
-; CHECK-NEXT:  Successor(s): if.end
-; CHECK-EMPTY:
-; CHECK-NEXT:  if.end:
 ; CHECK-NEXT:    EMIT vp<[[NOT2:%.+]]> = not ir<%cmp2>
 ; CHECK-NEXT:    EMIT vp<[[SEL2:%.+]]> = select vp<[[NOT1]]> vp<[[NOT2]]> ir<false>
 ; CHECK-NEXT:    BLEND %ysd.0 = vp<[[PHI]]>/vp<[[OR1]]> ir<%psd>/vp<[[SEL2]]>
