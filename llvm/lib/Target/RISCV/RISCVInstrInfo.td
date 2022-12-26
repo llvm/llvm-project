@@ -1852,3 +1852,4 @@ include "RISCVInstrInfoZicbo.td"
 //===----------------------------------------------------------------------===//
 
 include "RISCVInstrInfoXVentana.td"
+include "RISCVInstrInfoXTHead.td"
