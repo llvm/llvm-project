@@ -93,9 +93,7 @@ body:             |
     
     ; (8) Check that a single $noreg location invalidates the entire entry.
     DBG_VALUE_LIST !30, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), $eax, $noreg, debug-location !15
-    ; CHECK:      DW_TAG_variable
-    ; CHECK-NEXT:   DW_AT_name ("localh")
-    ; CHECK-NOT:   DW_AT_location
+    ; CHECK-NOT:   DW_AT_name ("localh")
 
     RET64 debug-location !15
 ...
