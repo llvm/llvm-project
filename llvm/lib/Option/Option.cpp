@@ -58,10 +58,11 @@ void Option::print(raw_ostream &O) const {
 #undef P
   }
 
-  if (!Info->Prefixes.empty()) {
+  if (Info->Prefixes) {
     O << " Prefixes:[";
-    for (size_t I = 0, N = Info->Prefixes.size(); I != N; ++I)
-      O << '"' << Info->Prefixes[I] << (I == N - 1 ? "\"" : "\", ");
+    for (const char *const *Pre = Info->Prefixes; *Pre != nullptr; ++Pre) {
+      O << '"' << *Pre << (*(Pre + 1) == nullptr ? "\"" : "\", ");
+    }
     O << ']';
   }
 
