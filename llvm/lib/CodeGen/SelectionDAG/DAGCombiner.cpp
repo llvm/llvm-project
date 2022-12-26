@@ -22670,6 +22670,7 @@ static SDValue combineShuffleToZeroExtendVectorInReg(ShuffleVectorSDNode *SVN,
   EVT VT = SVN->getValueType(0);
   assert(!VT.isScalableVector() && "Encountered scalable shuffle?");
   unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
 
   // TODO: add support for big-endian when we have a test case.
   bool IsBigEndian = DAG.getDataLayout().isBigEndian();
@@ -22722,15 +22723,31 @@ static SDValue combineShuffleToZeroExtendVectorInReg(ShuffleVectorSDNode *SVN,
   if (!HadZeroableElts)
     return SDValue();
 
-  // FIXME: the shuffle may be more fine-grained than we want.
+  // The shuffle may be more fine-grained than we want. Widen elements first.
+  // FIXME: should we do this before manifesting zeroable shuffle mask indices?
+  SmallVector<int, 16> ScaledMask;
+  getShuffleMaskWithWidestElts(Mask, ScaledMask);
+  assert(Mask.size() >= ScaledMask.size() &&
+         Mask.size() % ScaledMask.size() == 0 && "Unexpected mask widening.");
+  int Prescale = Mask.size() / ScaledMask.size();
+
+  NumElts = ScaledMask.size();
+  EltSizeInBits *= Prescale;
+
+  EVT PrescaledVT = EVT::getVectorVT(
+      *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), EltSizeInBits),
+      NumElts);
+
+  if (LegalTypes && !TLI.isTypeLegal(PrescaledVT) && TLI.isTypeLegal(VT))
+    return SDValue();
 
   // For example,
   // shuffle<0,z,1,-1> == (v2i64 zero_extend_vector_inreg(v4i32))
   // But not shuffle<z,z,1,-1> and not shuffle<0,z,z,-1> ! (for same types)
-  auto isZeroExtend = [NumElts, &SrcMask = Mask](unsigned Scale) {
+  auto isZeroExtend = [NumElts, &ScaledMask](unsigned Scale) {
     assert(Scale >= 2 && Scale <= NumElts && NumElts % Scale == 0 &&
            "Unexpected mask scaling factor.");
-    ArrayRef<int> Mask = SrcMask;
+    ArrayRef<int> Mask = ScaledMask;
     for (unsigned SrcElt = 0, NumSrcElts = NumElts / Scale;
          SrcElt != NumSrcElts; ++SrcElt) {
       // Analyze the shuffle mask in Scale-sized chunks.
@@ -22755,11 +22772,13 @@ static SDValue combineShuffleToZeroExtendVectorInReg(ShuffleVectorSDNode *SVN,
   for (bool Commuted : {false, true}) {
     SDValue Op = SVN->getOperand(!Commuted ? 0 : 1);
     if (Commuted)
-      ShuffleVectorSDNode::commuteMask(Mask);
+      ShuffleVectorSDNode::commuteMask(ScaledMask);
     std::optional<EVT> OutVT = canCombineShuffleToExtendVectorInreg(
-        Opcode, VT, isZeroExtend, DAG, TLI, LegalTypes, LegalOperations);
+        Opcode, PrescaledVT, isZeroExtend, DAG, TLI, LegalTypes,
+        LegalOperations);
     if (OutVT)
-      return DAG.getBitcast(VT, DAG.getNode(Opcode, SDLoc(SVN), *OutVT, Op));
+      return DAG.getBitcast(VT, DAG.getNode(Opcode, SDLoc(SVN), *OutVT,
+                                            DAG.getBitcast(PrescaledVT, Op)));
   }
   return SDValue();
 }

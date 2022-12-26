@@ -40,6 +40,10 @@ struct VPlanTransforms {
 
   static bool mergeReplicateRegions(VPlan &Plan);
 
+  /// Remove redundant VPBasicBlocks by merging them into their predecessor if
+  /// the predecessor has a single successor.
+  static bool mergeBlocksIntoPredecessors(VPlan &Plan);
+
   /// Remove redundant casts of inductions.
   ///
   /// Such redundant casts are casts of induction variables that can be ignored,

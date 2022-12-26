@@ -2881,31 +2881,6 @@ public:
     To->removePredecessor(From);
   }
 
-  /// Try to merge \p Block into its single predecessor, if \p Block is a
-  /// VPBasicBlock and its predecessor has a single successor. Returns a pointer
-  /// to the predecessor \p Block was merged into or nullptr otherwise.
-  static VPBasicBlock *tryToMergeBlockIntoPredecessor(VPBlockBase *Block) {
-    auto *VPBB = dyn_cast<VPBasicBlock>(Block);
-    auto *PredVPBB =
-        dyn_cast_or_null<VPBasicBlock>(Block->getSinglePredecessor());
-    if (!VPBB || !PredVPBB || PredVPBB->getNumSuccessors() != 1)
-      return nullptr;
-
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB))
-      R.moveBefore(*PredVPBB, PredVPBB->end());
-    VPBlockUtils::disconnectBlocks(PredVPBB, VPBB);
-    auto *ParentRegion = cast<VPRegionBlock>(Block->getParent());
-    if (ParentRegion->getExiting() == Block)
-      ParentRegion->setExiting(PredVPBB);
-    SmallVector<VPBlockBase *> Successors(Block->successors());
-    for (auto *Succ : Successors) {
-      VPBlockUtils::disconnectBlocks(Block, Succ);
-      VPBlockUtils::connectBlocks(PredVPBB, Succ);
-    }
-    delete Block;
-    return PredVPBB;
-  }
-
   /// Return an iterator range over \p Range which only includes \p BlockTy
   /// blocks. The accesses are casted to \p BlockTy.
   template <typename BlockTy, typename T>
