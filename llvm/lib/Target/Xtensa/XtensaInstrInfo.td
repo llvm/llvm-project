@@ -79,8 +79,16 @@ def NEG : RRR_Inst<0x00, 0x00, 0x06, (outs AR:$r), (ins AR:$t),
 //===----------------------------------------------------------------------===//
 // Move instructions
 //===----------------------------------------------------------------------===//
+def MOVI : RRI8_Inst<0x02, (outs AR:$t), (ins imm12m:$imm),
+                    "movi\t$t, $imm",
+                    [(set AR:$t, imm12m:$imm)]> {
+  bits<12> imm;
 
-// Conditional move
+  let imm8{7-0} = imm{7-0};
+  let s{3-0} = imm{11-8};
+  let r = 0xa;
+}
+
 def MOVEQZ : RRR_Inst<0x00, 0x03, 0x08, (outs AR:$r), (ins AR:$s, AR:$t),
                      "moveqz\t$r, $s, $t", []>;
 def MOVNEZ : RRR_Inst<0x00, 0x03, 0x09, (outs AR:$r), (ins AR:$s, AR:$t),
@@ -91,8 +99,143 @@ def MOVGEZ : RRR_Inst<0x00, 0x03, 0x0B, (outs AR:$r), (ins AR:$s, AR:$t),
                      "movgez\t$r, $s, $t", []>;
 
 //===----------------------------------------------------------------------===//
+// Shift instructions
+//===----------------------------------------------------------------------===//
+
+let Uses = [SAR] in {
+  def SLL : RRR_Inst<0x00, 0x01, 0x0A, (outs AR:$r), (ins AR:$s),
+                    "sll\t$r, $s", []> {
+    let t = 0x00;
+  }
+
+  def SRA : RRR_Inst<0x00, 0x01, 0x0B, (outs AR:$r), (ins AR:$t),
+                    "sra\t$r, $t", []> {
+    let s = 0x00;
+  }
+
+  def SRC : RRR_Inst<0x00, 0x01, 0x08, (outs AR:$r), (ins AR:$s, AR:$t),
+                    "src\t$r, $s, $t", []>;
+
+  def SRL : RRR_Inst<0x00, 0x01, 0x09, (outs AR:$r), (ins AR:$t),
+                    "srl\t$r, $t", []> {
+    let s = 0x00;
+  }
+}
+
+let Defs = [SAR] in {
+  def SSL : RRR_Inst<0x00, 0x00, 0x04, (outs), (ins AR:$s),
+                    "ssl\t$s", []> {
+    let r = 0x01;
+    let t = 0x00;
+  }
+
+  def SSR : RRR_Inst<0x00, 0x00, 0x04, (outs), (ins AR:$s),
+                    "ssr\t$s", []> {
+    let r = 0x00;
+    let t = 0x00;
+  }
+}
+
+def EXTUI : RRR_Inst<0x00, 0x04, 0x00, (outs AR:$r), (ins AR:$t, uimm5:$imm1, imm1_16:$imm2),
+                    "extui\t$r, $t, $imm1, $imm2", []> {
+  bits<5> imm1;
+  bits<4> imm2;
+
+  let s = imm1{3-0};
+  let Inst{16} = imm1{4};
+  let Inst{23-20} = imm2;
+}
+
+def SRAI : RRR_Inst<0x00, 0x01, 0x02, (outs AR:$r), (ins AR:$t, uimm5:$sa),
+                   "srai\t$r, $t, $sa",
+                   [(set AR:$r, (sra AR:$t, uimm5:$sa))]> {
+  bits<5> sa;
+
+  let Inst{20} = sa{4};
+  let s = sa{3-0};
+}
+
+def SRLI : RRR_Inst<0x00, 0x01, 0x04, (outs AR:$r), (ins AR:$t, uimm4:$sa),
+                   "srli\t$r, $t, $sa",
+                   [(set AR:$r, (srl AR:$t, uimm4:$sa))]> {
+  bits<4> sa;
+
+  let s = sa;
+}
+
+def SLLI : RRR_Inst<0x00, 0x01, 0x00, (outs AR:$r), (ins AR:$s, shimm1_31:$sa),
+                   "slli\t$r, $s, $sa",
+                   [(set AR:$r, (shl AR:$s, shimm1_31:$sa))]> {
+  bits<5> sa;
+
+  let Inst{20} = sa{4};
+  let t = sa{3-0};
+}
+
+def SSA8L : RRR_Inst<0x00, 0x00, 0x04, (outs), (ins AR:$s),
+                    "ssa8l\t$s", []> {
+  let r = 0x2;
+  let t = 0x0;
+}
+
+def SSAI : RRR_Inst<0x00, 0x00, 0x04, (outs), (ins uimm5:$imm),
+                   "ssai\t$imm", []> {
+  bits<5> imm;
+
+  let r = 0x04;
+  let s = imm{3-0};
+  let t{3-1} = 0;
+  let t{0} = imm{4};
+}
+
+//===----------------------------------------------------------------------===//
+// Load and store instructions
+//===----------------------------------------------------------------------===//
+
+// Load instructions
+let mayLoad = 1 in {
+
+  class Load_RRI8<bits<4> oper, string instrAsm, SDPatternOperator opNode,
+        ComplexPattern addrOp, Operand memOp>
+	  : RRI8_Inst<0x02, (outs AR:$t), (ins memOp:$addr),
+                instrAsm#"\t$t, $addr",
+               [(set AR:$t, (opNode addrOp:$addr))]> {
+    bits<12> addr;
+
+    let r = oper;
+    let imm8{7-0} = addr{11-4};
+    let s{3-0} = addr{3-0};
+  }
+}
+
+def L8UI  : Load_RRI8<0x00, "l8ui", zextloadi8, addr_ish1, mem8>;
+def L16SI : Load_RRI8<0x09, "l16si", sextloadi16, addr_ish2, mem16>;
+def L16UI : Load_RRI8<0x01, "l16ui", zextloadi16, addr_ish2, mem16>;
+def L32I  : Load_RRI8<0x02, "l32i", load, addr_ish4, mem32>;
+
+// Store instructions
+let mayStore = 1 in {
+  class Store_II8<bits<4> oper, string instrAsm, SDPatternOperator opNode,
+        ComplexPattern addrOp, Operand memOp>
+	  : RRI8_Inst<0x02, (outs), (ins AR:$t, memOp:$addr),
+                instrAsm#"\t$t, $addr",
+               [(opNode AR:$t, addrOp:$addr)]> {
+    bits<12> addr;
+
+    let r = oper;
+    let imm8{7-0} = addr{11-4};
+    let s{3-0} = addr{3-0};
+  }
+}
+
+def S8I  : Store_II8<0x04, "s8i", truncstorei8, addr_ish1, mem8>;
+def S16I : Store_II8<0x05, "s16i", truncstorei16, addr_ish2, mem16>;
+def S32I : Store_II8<0x06, "s32i", store, addr_ish4, mem32>;
+
+//===----------------------------------------------------------------------===//
 // Mem barrier instructions
 //===----------------------------------------------------------------------===//
+
 def MEMW :  RRR_Inst<0x00, 0x00, 0x00, (outs), (ins),
                     "memw", []> {
   let r = 0x2;
@@ -149,4 +292,15 @@ def NOP : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins),
   let r = 0x02;
   let s = 0x00;
   let t = 0x0f;
+}
+
+def WSR : RSR_Inst<0x00, 0x03, 0x01, (outs SR:$sr), (ins AR:$t),
+                  "wsr\t$t, $sr", []>;
+
+def RSR : RSR_Inst<0x00, 0x03, 0x00, (outs AR:$t), (ins SR:$sr),
+                  "rsr\t$t, $sr", []>;
+
+def XSR : RSR_Inst<0x00, 0x01, 0x06, (outs AR:$ard, SR:$srd), (ins AR:$t, SR:$sr),
+                  "xsr\t$t, $sr", []> {
+  let Constraints = "$ard = $t, $srd = $sr";
 }

@@ -55,7 +55,10 @@ class XtensaAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy parseRegister(OperandVector &Operands,
                                      bool AllowParens = false, bool SR = false);
   OperandMatchResultTy parseOperandWithModifier(OperandVector &Operands);
-  bool parseOperand(OperandVector &Operands);
+  bool parseOperand(OperandVector &Operands, StringRef Mnemonic,
+                    bool SR = false);
+  bool ParseInstructionWithSR(ParseInstructionInfo &Info, StringRef Name,
+                              SMLoc NameLoc, OperandVector &Operands);
   OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override {
     return MatchOperand_NoMatch;
@@ -141,8 +144,41 @@ public:
 
   bool isImm8_sh8() const {
     return isImm(-32768, 32512) &&
-           ((dyn_cast<MCConstantExpr>(getImm())->getValue() & 0xFF) == 0);
+           ((cast<MCConstantExpr>(getImm())->getValue() & 0xFF) == 0);
   }
+
+  bool isImm12() const { return isImm(-2048, 2047); }
+
+  bool isImm12m() const { return isImm(-2048, 2047); }
+
+  bool isOffset4m32() const {
+    return isImm(0, 60) &&
+           ((cast<MCConstantExpr>(getImm())->getValue() & 0x3) == 0);
+  }
+
+  bool isOffset8m8() const { return isImm(0, 255); }
+
+  bool isOffset8m16() const {
+    return isImm(0, 510) &&
+           ((cast<MCConstantExpr>(getImm())->getValue() & 0x1) == 0);
+  }
+
+  bool isOffset8m32() const {
+    return isImm(0, 1020) &&
+           ((cast<MCConstantExpr>(getImm())->getValue() & 0x3) == 0);
+  }
+
+  bool isUimm4() const { return isImm(0, 15); }
+
+  bool isUimm5() const { return isImm(0, 31); }
+
+  bool isImm8n_7() const { return isImm(-8, 7); }
+
+  bool isShimm1_31() const { return isImm(1, 31); }
+
+  bool isImm16_31() const { return isImm(16, 31); }
+
+  bool isImm1_16() const { return isImm(1, 16); }
 
   /// getStartLoc - Gets location of the first token of this operand
   SMLoc getStartLoc() const override { return StartLoc; }
@@ -292,6 +328,39 @@ bool XtensaAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected immediate in range [-32768, 32512], first 8 bits "
                  "should be zero");
+  case Match_InvalidImm12:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [-2048, 2047]");
+  case Match_InvalidImm12m:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [-2048, 2047]");
+  case Match_InvalidImm1_16:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [1, 16]");
+  case Match_InvalidShimm1_31:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [1, 31]");
+  case Match_InvalidUimm4:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [0, 15]");
+  case Match_InvalidUimm5:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [0, 31]");
+  case Match_InvalidOffset8m8:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [0, 255]");
+  case Match_InvalidOffset8m16:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [0, 510], first bit "
+                 "should be zero");
+  case Match_InvalidOffset8m32:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [0, 1020], first 2 bits "
+                 "should be zero");
+  case Match_InvalidOffset4m32:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [0, 60], first 2 bits "
+                 "should be zero");
   }
 
   report_fatal_error("Unknown match type detected!");
@@ -324,22 +393,33 @@ OperandMatchResultTy XtensaAsmParser::parseRegister(OperandVector &Operands,
   if (AllowParens && getLexer().is(AsmToken::LParen)) {
     size_t ReadCount = getLexer().peekTokens(Buf);
     if (ReadCount == 2 && Buf[1].getKind() == AsmToken::RParen) {
+      if ((Buf[0].getKind() == AsmToken::Integer) && (!SR))
+        return MatchOperand_NoMatch;
       HadParens = true;
       getParser().Lex(); // Eat '('
     }
   }
 
+  unsigned RegNo = 0;
+
   switch (getLexer().getKind()) {
   default:
     return MatchOperand_NoMatch;
+  case AsmToken::Integer:
+    if (!SR)
+      return MatchOperand_NoMatch;
+    RegName = StringRef(std::to_string(getLexer().getTok().getIntVal()));
+    RegNo = MatchRegisterName(RegName);
+    if (RegNo == 0)
+      RegNo = MatchRegisterAltName(RegName);
+    break;
   case AsmToken::Identifier:
     RegName = getLexer().getTok().getIdentifier();
+    RegNo = MatchRegisterName(RegName);
+    if (RegNo == 0)
+      RegNo = MatchRegisterAltName(RegName);
     break;
   }
-
-  unsigned RegNo = MatchRegisterName(RegName);
-  if (RegNo == 0)
-    RegNo = MatchRegisterAltName(RegName);
 
   if (RegNo == 0) {
     if (HadParens)
@@ -404,9 +484,10 @@ XtensaAsmParser::parseOperandWithModifier(OperandVector &Operands) {
 /// Looks at a token type and creates the relevant operand
 /// from this information, adding to Operands.
 /// If operand was parsed, returns false, else true.
-bool XtensaAsmParser::parseOperand(OperandVector &Operands) {
+bool XtensaAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic,
+                                   bool SR) {
   // Attempt to parse token as register
-  if (parseRegister(Operands, true) == MatchOperand_Success)
+  if (parseRegister(Operands, true, SR) == MatchOperand_Success)
     return false;
 
   // Attempt to parse token as an immediate
@@ -419,9 +500,75 @@ bool XtensaAsmParser::parseOperand(OperandVector &Operands) {
   return true;
 }
 
+bool XtensaAsmParser::ParseInstructionWithSR(ParseInstructionInfo &Info,
+                                             StringRef Name, SMLoc NameLoc,
+                                             OperandVector &Operands) {
+  if ((Name.startswith("wsr.") || Name.startswith("rsr.") ||
+       Name.startswith("xsr.")) &&
+      (Name.size() > 4)) {
+    // Parse case when instruction name is concatenated with SR register
+    // name, like "wsr.sar a1"
+
+    // First operand is token for instruction
+    Operands.push_back(XtensaOperand::createToken(Name.take_front(3), NameLoc));
+
+    StringRef RegName = Name.drop_front(4);
+    unsigned RegNo = MatchRegisterName(RegName);
+
+    if (RegNo == 0)
+      RegNo = MatchRegisterAltName(RegName);
+
+    if (RegNo == 0) {
+      Error(NameLoc, "invalid register name");
+      return true;
+    }
+
+    // Parse operand
+    if (parseOperand(Operands, Name))
+      return true;
+
+    SMLoc S = getLoc();
+    SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
+    Operands.push_back(XtensaOperand::createReg(RegNo, S, E));
+  } else {
+    // First operand is token for instruction
+    Operands.push_back(XtensaOperand::createToken(Name, NameLoc));
+
+    // Parse first operand
+    if (parseOperand(Operands, Name))
+      return true;
+
+    if (!getLexer().is(AsmToken::Comma)) {
+      SMLoc Loc = getLexer().getLoc();
+      getParser().eatToEndOfStatement();
+      return Error(Loc, "unexpected token");
+    }
+
+    getLexer().Lex();
+
+    // Parse second operand
+    if (parseOperand(Operands, Name, true))
+      return true;
+  }
+
+  if (getLexer().isNot(AsmToken::EndOfStatement)) {
+    SMLoc Loc = getLexer().getLoc();
+    getParser().eatToEndOfStatement();
+    return Error(Loc, "unexpected token");
+  }
+
+  getParser().Lex(); // Consume the EndOfStatement.
+  return false;
+}
+
 bool XtensaAsmParser::ParseInstruction(ParseInstructionInfo &Info,
                                        StringRef Name, SMLoc NameLoc,
                                        OperandVector &Operands) {
+  if (Name.startswith("wsr") || Name.startswith("rsr") ||
+      Name.startswith("xsr")) {
+    return ParseInstructionWithSR(Info, Name, NameLoc, Operands);
+  }
+
   // First operand is token for instruction
   Operands.push_back(XtensaOperand::createToken(Name, NameLoc));
 
@@ -430,7 +577,7 @@ bool XtensaAsmParser::ParseInstruction(ParseInstructionInfo &Info,
     return false;
 
   // Parse first operand
-  if (parseOperand(Operands))
+  if (parseOperand(Operands, Name))
     return true;
 
   // Parse until end of statement, consuming commas between operands
@@ -439,7 +586,7 @@ bool XtensaAsmParser::ParseInstruction(ParseInstructionInfo &Info,
     getLexer().Lex();
 
     // Parse next operand
-    if (parseOperand(Operands))
+    if (parseOperand(Operands, Name))
       return true;
   }
 

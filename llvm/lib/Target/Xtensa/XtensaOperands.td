@@ -34,3 +34,86 @@ def imm8_sh8 : Immediate<i32, [{ return Imm >= -32768 && Imm <= 32512 && ((Imm &
                         "Imm8_sh8_AsmOperand"> {
   let EncoderMethod = "getImm8_sh8OpValue";
 }
+
+// imm12 predicate - Immediate in the range [-2048,2047]
+def Imm12_AsmOperand : ImmAsmOperand<"Imm12">;
+def imm12 : Immediate<i32, [{ return Imm >= -2048 && Imm <= 2047; }], "Imm12_AsmOperand"> {
+  let EncoderMethod = "getImm12OpValue";
+}
+
+// imm12m predicate - Immediate for MOV operation
+def Imm12m_AsmOperand : ImmAsmOperand<"Imm12m">;
+def imm12m : Immediate<i32, [{ return Imm >= -2048 && Imm <= 2047; }], "Imm12m_AsmOperand"> {
+  let EncoderMethod = "getImm12OpValue";
+}
+
+// uimm4 predicate - Immediate in the range [0,15]
+def Uimm4_AsmOperand : ImmAsmOperand<"Uimm4">;
+def uimm4 : Immediate<i32, [{ return Imm >= 0 && Imm <= 15; }], "Uimm4_AsmOperand"> {
+  let EncoderMethod = "getUimm4OpValue";
+}
+
+// uimm5 predicate - Immediate in the range [0,31]
+def Uimm5_AsmOperand : ImmAsmOperand<"Uimm5">;
+def uimm5 : Immediate<i32, [{ return Imm >= 0 && Imm <= 31; }], "Uimm5_AsmOperand"> {
+  let EncoderMethod = "getUimm5OpValue";
+}
+
+// imm1_16 predicate - Immediate in the range [1,16]
+def Imm1_16_AsmOperand : ImmAsmOperand<"Imm1_16">;
+def imm1_16 : Immediate<i32, [{ return Imm >= 1 && Imm <= 16; }], "Imm1_16_AsmOperand"> {
+  let EncoderMethod = "getImm1_16OpValue";
+}
+
+// shimm1_31 predicate - Immediate in the range [1,31]
+def Shimm1_31_AsmOperand : ImmAsmOperand<"Shimm1_31">;
+def shimm1_31 : Immediate<i32, [{ return Imm >= 1 && Imm <= 31; }], "Shimm1_31_AsmOperand"> {
+  let EncoderMethod = "getShimm1_31OpValue";
+}
+
+// Memory offset 0..255 for 8-bit memory accesses
+def Offset8m8_AsmOperand : ImmAsmOperand<"Offset8m8">;
+def offset8m8 : Immediate<i32,
+    [{ return Imm >= 0 && Imm <= 255; }],
+    "Offset8m8_AsmOperand">;
+
+// Memory offset 0..510 for 16-bit memory accesses
+def Offset8m16_AsmOperand : ImmAsmOperand<"Offset8m16">;
+def offset8m16 : Immediate<i32,
+    [{ return Imm >= 0 && Imm <= 510 && (Imm & 0x1 == 0); }],
+    "Offset8m16_AsmOperand">;
+
+// Memory offset 0..1020 for 32-bit memory accesses
+def Offset8m32_AsmOperand : ImmAsmOperand<"Offset8m32">;
+def offset8m32 : Immediate<i32,
+    [{ return Imm >= 0 && Imm <= 1020 && (Imm & 0x3 == 0); }],
+    "Offset8m32_AsmOperand">;
+
+// Memory offset 0..60 for 32-bit memory accesses
+def Offset4m32_AsmOperand : ImmAsmOperand<"Offset4m32">;
+def offset4m32 : Immediate<i32,
+    [{ return Imm >= 0 && Imm <= 60 && (Imm & 0x3 == 0); }],
+    "Offset4m32_AsmOperand">;
+//===----------------------------------------------------------------------===//
+// Memory address operands
+//===----------------------------------------------------------------------===//
+
+class mem<Operand offset> : Operand<i32> {
+  let MIOperandInfo = (ops AR, offset);
+  let EncoderMethod = "getMemRegEncoding";
+  let OperandType = "OPERAND_MEMORY";
+  let PrintMethod = "printMemOperand";
+}
+
+def mem8   : mem<offset8m8>;
+
+def mem16  : mem<offset8m16>;
+
+def mem32  : mem<offset8m32>;
+
+def mem32n : mem<offset4m32>;
+
+//Add patterns for future use in stack addressing mode
+def addr_ish1 : ComplexPattern<iPTR, 2, "selectMemRegAddrISH1", [frameindex]>;
+def addr_ish2 : ComplexPattern<iPTR, 2, "selectMemRegAddrISH2", [frameindex]>;
+def addr_ish4 : ComplexPattern<iPTR, 2, "selectMemRegAddrISH4", [frameindex]>;

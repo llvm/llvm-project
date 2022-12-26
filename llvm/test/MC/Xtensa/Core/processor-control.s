@@ -25,7 +25,46 @@ isync
 # CHECK: encoding: [0xf0,0x20,0x00]
 nop
 
+# Instruction format RSR
+# CHECK-INST: rsr a8, sar
+# CHECK: encoding: [0x80,0x03,0x03]
+rsr a8, sar
+
+# CHECK-INST: rsr a8, sar
+# CHECK: encoding: [0x80,0x03,0x03]
+rsr.sar a8
+
+# CHECK-INST: rsr a8, sar
+# CHECK: encoding: [0x80,0x03,0x03]
+rsr a8, 3
+
 # Instruction format RRR
 # CHECK-INST: rsync
 # CHECK: encoding: [0x10,0x20,0x00]
 rsync
+
+# Instruction format RSR
+# CHECK-INST: wsr a8, sar
+# CHECK: encoding: [0x80,0x03,0x13]
+wsr a8, sar
+
+# CHECK-INST: wsr a8, sar
+# CHECK: encoding: [0x80,0x03,0x13]
+wsr.sar a8
+
+# CHECK-INST: wsr a8, sar
+# CHECK: encoding: [0x80,0x03,0x13]
+wsr a8, 3
+
+# Instruction format RRR
+# CHECK-INST: xsr a8, sar
+# CHECK: encoding: [0x80,0x03,0x61]
+xsr a8, sar
+
+# CHECK-INST: xsr a8, sar
+# CHECK: encoding: [0x80,0x03,0x61]
+xsr.sar a8
+
+# CHECK-INST: xsr a8, sar
+# CHECK: encoding: [0x80,0x03,0x61]
+xsr a8, 3
