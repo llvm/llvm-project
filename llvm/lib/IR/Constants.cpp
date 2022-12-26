@@ -337,6 +337,12 @@ bool Constant::containsPoisonElement() const {
       this, [&](const auto *C) { return isa<PoisonValue>(C); });
 }
 
+bool Constant::containsUndefElement() const {
+  return containsUndefinedElement(this, [&](const auto *C) {
+    return isa<UndefValue>(C) && !isa<PoisonValue>(C);
+  });
+}
+
 bool Constant::containsConstantExpression() const {
   if (auto *VTy = dyn_cast<FixedVectorType>(getType())) {
     for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i)
