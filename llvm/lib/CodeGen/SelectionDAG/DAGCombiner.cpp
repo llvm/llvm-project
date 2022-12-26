@@ -22585,9 +22585,10 @@ static SDValue combineShuffleOfScalars(ShuffleVectorSDNode *SVN,
 // This is often generated during legalization.
 // e.g. v4i32 <0,u,1,u> -> (v2i64 any_vector_extend_in_reg(v4i32 src)),
 // and returns the EVT to which the extension should be performed.
-static std::optional<EVT> canCombineShuffleToAnyExtendVectorInreg(
-    unsigned Opcode, EVT VT, ArrayRef<int> Mask, SelectionDAG &DAG,
-    const TargetLowering &TLI, bool LegalTypes, bool LegalOperations) {
+static std::optional<EVT> canCombineShuffleToExtendVectorInreg(
+    unsigned Opcode, EVT VT, std::function<bool(unsigned)> Match,
+    SelectionDAG &DAG, const TargetLowering &TLI, bool LegalTypes,
+    bool LegalOperations) {
   bool IsBigEndian = DAG.getDataLayout().isBigEndian();
 
   // TODO Add support for big-endian when we have a test case.
@@ -22596,18 +22597,6 @@ static std::optional<EVT> canCombineShuffleToAnyExtendVectorInreg(
 
   unsigned NumElts = VT.getVectorNumElements();
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
-
-  // shuffle<0,-1,1,-1> == (v2i64 anyextend_vector_inreg(v4i32))
-  auto isAnyExtend = [&Mask, &NumElts](unsigned Scale) {
-    for (unsigned i = 0; i != NumElts; ++i) {
-      if (Mask[i] < 0)
-        continue;
-      if ((i % Scale) == 0 && Mask[i] == (int)(i / Scale))
-        continue;
-      return false;
-    }
-    return true;
-  };
 
   // Attempt to match a '*_extend_vector_inreg' shuffle, we just search for
   // power-of-2 extensions as they are the most likely.
@@ -22623,7 +22612,7 @@ static std::optional<EVT> canCombineShuffleToAnyExtendVectorInreg(
         (LegalOperations && !TLI.isOperationLegalOrCustom(Opcode, OutVT)))
       continue;
 
-    if (isAnyExtend(Scale))
+    if (Match(Scale))
       return OutVT;
   }
 
@@ -22644,13 +22633,25 @@ static SDValue combineShuffleToAnyExtendVectorInreg(ShuffleVectorSDNode *SVN,
   if (!VT.isInteger() || IsBigEndian)
     return SDValue();
 
+  // shuffle<0,-1,1,-1> == (v2i64 anyextend_vector_inreg(v4i32))
+  auto isAnyExtend = [NumElts = VT.getVectorNumElements(),
+                      Mask = SVN->getMask()](unsigned Scale) {
+    for (unsigned i = 0; i != NumElts; ++i) {
+      if (Mask[i] < 0)
+        continue;
+      if ((i % Scale) == 0 && Mask[i] == (int)(i / Scale))
+        continue;
+      return false;
+    }
+    return true;
+  };
+
   unsigned Opcode = ISD::ANY_EXTEND_VECTOR_INREG;
   SDValue N0 = SVN->getOperand(0);
   // Never create an illegal type. Only create unsupported operations if we
   // are pre-legalization.
-  std::optional<EVT> OutVT = canCombineShuffleToAnyExtendVectorInreg(
-      Opcode, VT, SVN->getMask(), DAG, TLI, /*LegalTypes=*/true,
-      LegalOperations);
+  std::optional<EVT> OutVT = canCombineShuffleToExtendVectorInreg(
+      Opcode, VT, isAnyExtend, DAG, TLI, /*LegalTypes=*/true, LegalOperations);
   if (!OutVT)
     return SDValue();
   return DAG.getBitcast(VT, DAG.getNode(Opcode, SDLoc(SVN), *OutVT, N0));
