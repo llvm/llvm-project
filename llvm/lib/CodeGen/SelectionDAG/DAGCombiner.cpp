@@ -22727,7 +22727,7 @@ static SDValue combineShuffleToZeroExtendVectorInReg(ShuffleVectorSDNode *SVN,
   // For example,
   // shuffle<0,z,1,-1> == (v2i64 zero_extend_vector_inreg(v4i32))
   // But not shuffle<z,z,1,-1> and not shuffle<0,z,z,-1> ! (for same types)
-  auto isZeroExtend = [NumElts, SrcMask = Mask](unsigned Scale) {
+  auto isZeroExtend = [NumElts, &SrcMask = Mask](unsigned Scale) {
     assert(Scale >= 2 && Scale <= NumElts && NumElts % Scale == 0 &&
            "Unexpected mask scaling factor.");
     ArrayRef<int> Mask = SrcMask;
@@ -22752,13 +22752,16 @@ static SDValue combineShuffleToZeroExtendVectorInReg(ShuffleVectorSDNode *SVN,
   };
 
   unsigned Opcode = ISD::ZERO_EXTEND_VECTOR_INREG;
-  SDValue Op = SVN->getOperand(0);
-  // FIXME: try to also match with commutted operands.
-  std::optional<EVT> OutVT = canCombineShuffleToExtendVectorInreg(
-      Opcode, VT, isZeroExtend, DAG, TLI, LegalTypes, LegalOperations);
-  if (!OutVT)
-    return SDValue();
-  return DAG.getBitcast(VT, DAG.getNode(Opcode, SDLoc(SVN), *OutVT, Op));
+  for (bool Commuted : {false, true}) {
+    SDValue Op = SVN->getOperand(!Commuted ? 0 : 1);
+    if (Commuted)
+      ShuffleVectorSDNode::commuteMask(Mask);
+    std::optional<EVT> OutVT = canCombineShuffleToExtendVectorInreg(
+        Opcode, VT, isZeroExtend, DAG, TLI, LegalTypes, LegalOperations);
+    if (OutVT)
+      return DAG.getBitcast(VT, DAG.getNode(Opcode, SDLoc(SVN), *OutVT, Op));
+  }
+  return SDValue();
 }
 
 // Detect 'truncate_vector_inreg' style shuffles that pack the lower parts of
