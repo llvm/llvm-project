@@ -30,9 +30,9 @@ class FalsePositiveGenerator : public Checker<eval::Call> {
   using HandlerFn = bool (Self::*)(const CallEvent &Call,
                                    CheckerContext &) const;
   CallDescriptionMap<HandlerFn> Callbacks = {
-      {{{"reachedWithContradiction"}, 0}, &Self::reachedWithContradiction},
-      {{{"reachedWithNoContradiction"}, 0}, &Self::reachedWithNoContradiction},
-      {{{"reportIfCanBeTrue"}, 1}, &Self::reportIfCanBeTrue},
+      {{"reachedWithContradiction", 0}, &Self::reachedWithContradiction},
+      {{"reachedWithNoContradiction", 0}, &Self::reachedWithNoContradiction},
+      {{"reportIfCanBeTrue", 1}, &Self::reportIfCanBeTrue},
   };
 
   bool report(CheckerContext &C, ProgramStateRef State,

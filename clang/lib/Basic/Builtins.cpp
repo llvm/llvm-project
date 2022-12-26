@@ -18,9 +18,8 @@
 #include "llvm/ADT/StringRef.h"
 using namespace clang;
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-    {"not a builtin function", nullptr, nullptr, nullptr, ALL_LANGUAGES,
-     nullptr},
+static const Builtin::Info BuiltinInfo[] = {
+  { "not a builtin function", nullptr, nullptr, nullptr, ALL_LANGUAGES,nullptr},
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
   { #ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr },
 #define LANGBUILTIN(ID, TYPE, ATTRS, LANGS)                                    \
