@@ -27,8 +27,9 @@ add_llvm_unittest(SupportTests
   CRCTest.cpp
   CSKYAttributeParserTest.cpp
   DataExtractorTest.cpp
-  DebugTest.cpp
   DebugCounterTest.cpp
+  DebugTest.cpp
+  DivisionByConstantTest.cpp
   DJBTest.cpp
   EndianStreamTest.cpp
   EndianTest.cpp

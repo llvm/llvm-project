@@ -28,8 +28,16 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "Pointer16";
   case PCRel16:
     return "PCRel16";
+  case Delta32:
+    return "Delta32";
+  case Delta32FromGOT:
+    return "Delta32FromGOT";
+  case RequestGOTAndTransformToDelta32FromGOT:
+    return "RequestGOTAndTransformToDelta32FromGOT";
   }
+
   return getGenericEdgeKindName(K);
 }
 
+const char NullPointerContent[PointerSize] = {0x00, 0x00, 0x00, 0x00};
 } // namespace llvm::jitlink::i386
