@@ -1540,31 +1540,10 @@ define void @PR54562_mem(ptr %src, ptr %dst) {
 }
 
 define <64 x i8> @shuffle_v32i16_zextinreg_to_v16i32(<64 x i8> %a)  {
-; AVX512F-LABEL: shuffle_v32i16_zextinreg_to_v16i32:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512F-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: shuffle_v32i16_zextinreg_to_v16i32:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
-; AVX512BW-NEXT:    retq
-;
-; AVX512DQ-LABEL: shuffle_v32i16_zextinreg_to_v16i32:
-; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX512DQ-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512DQ-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; AVX512DQ-NEXT:    retq
-;
-; AVX512VBMI-LABEL: shuffle_v32i16_zextinreg_to_v16i32:
-; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
-; AVX512VBMI-NEXT:    retq
+; ALL-LABEL: shuffle_v32i16_zextinreg_to_v16i32:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; ALL-NEXT:    retq
   %b = shufflevector <64 x i8> %a, <64 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef
 >, <64 x i32> <i32 0, i32 1, i32 84, i32 84, i32 2, i32 3, i32 84, i32 84, i32 4, i32 5, i32 84, i32 84, i32 6, i32 7, i32 84, i32 84, i32 8, i32 9, i32 84, i32 84, i32 10, i32 11, i32 84, i32 84, i32 12, i32 13, i32 84, i32 84, i32 14, i32 15, i32 84, i32 84, i32 16, i32 17, i32 84, i32 84, i32 18, i32 19, i32 84, i32 84, i32 20, i32 21, i32 84, i32 84, i32 22, i32 23, i32 84, i32 84, i32 24, i32 25, i32 84, i32 84, i32 26, i32 27, i32 84, i32 84, i32 28, i32 29, i32 84, i32 84, i32 30, i32 31, i32 84, i32 84>
   ret <64 x i8> %b
