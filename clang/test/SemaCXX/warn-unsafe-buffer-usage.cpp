@@ -11,9 +11,12 @@
 #define INCLUDED
 #pragma clang system_header
 
+<<<<<<< HEAD
 // Xfail buffer warns until MIOPEN GTEST compiles ok
 // XFAIL: *
 
+=======
+>>>>>>> 991d7848b740 ([SafeBufferUsage] restore safe buffer usage warnings for MIOpen GTest)
 // no spanification warnings for system headers
 void foo(...);  // let arguments of `foo` to hold testing expressions
 void testAsSystemHeader(char *p) {

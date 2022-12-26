@@ -3,9 +3,12 @@
 // RUN:            -fdiagnostics-parseable-fixits \
 // RUN:            -fsyntax-only %s 2>&1 | FileCheck %s
 
+<<<<<<< HEAD
 // need to enable unsafe buffer patches
 // XFAIL:*
 
+=======
+>>>>>>> 991d7848b740 ([SafeBufferUsage] restore safe buffer usage warnings for MIOpen GTest)
 // TODO test we don't mess up vertical whitespace
 // TODO test different whitespaces
 // TODO test different contexts

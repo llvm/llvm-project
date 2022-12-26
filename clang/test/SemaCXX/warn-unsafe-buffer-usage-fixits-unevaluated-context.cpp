@@ -3,8 +3,6 @@
 // RUN:            -fdiagnostics-parseable-fixits \
 // RUN:            -fsyntax-only %s 2>&1 | FileCheck %s
 
-// XFAIL: *
-
 namespace std {
   class type_info;
   class bad_cast;

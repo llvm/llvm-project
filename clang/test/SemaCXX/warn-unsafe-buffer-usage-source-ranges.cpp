@@ -2,8 +2,6 @@
 // RUN:            -fsafe-buffer-usage-suggestions \
 // RUN:            -fdiagnostics-print-source-range-info %s 2>&1 | FileCheck %s
 
-// XFAIL: *
-
 void foo(int i) {
   int * ptr;
 

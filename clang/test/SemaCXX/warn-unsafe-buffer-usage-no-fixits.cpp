@@ -1,7 +1,14 @@
+<<<<<<< HEAD
 // RUN: %clang_cc1 -x c -Wunsafe-buffer-usage \
 // RUN:            -fsafe-buffer-usage-suggestions \
 // RUN:            -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 // XFAIL: *
+=======
+// RUN: %clang_cc1 -x c -Wunsafe-buffer-usage -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -x c -std=c89 -Wunsafe-buffer-usage -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -x c -std=gnu89 -Wunsafe-buffer-usage -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -x c -std=iso9899:1990 -Wunsafe-buffer-usage -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+>>>>>>> 991d7848b740 ([SafeBufferUsage] restore safe buffer usage warnings for MIOpen GTest)
 
 // RUN: %clang_cc1 -x c -std=c89 -Wunsafe-buffer-usage \
 // RUN:            -fsafe-buffer-usage-suggestions \

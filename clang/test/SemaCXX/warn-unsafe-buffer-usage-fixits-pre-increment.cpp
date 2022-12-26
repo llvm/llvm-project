@@ -3,9 +3,6 @@
 // RUN:            -triple=arm-apple \
 // RUN:            -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
-// UnsafeBuffer
-// XFAIL: *
-
 void foo(int * , int *);
 
 void simple() {

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage -fsafe-buffer-usage-suggestions -verify %s
-// XFAIL: *
 void bar(int * param) {}
 
 void foo1a() {

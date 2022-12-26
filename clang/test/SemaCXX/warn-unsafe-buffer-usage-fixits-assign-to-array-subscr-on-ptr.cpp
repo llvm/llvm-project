@@ -2,8 +2,6 @@
 // RUN:            -fsafe-buffer-usage-suggestions \
 // RUN:            -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
-// XFAIL: *
-
 // TODO cases where we don't want fixits
 
 // The Fix-It for unsafe operation is trivially empty.

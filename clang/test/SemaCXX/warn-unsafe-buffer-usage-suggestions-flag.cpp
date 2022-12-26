@@ -1,6 +1,5 @@
 // Test the -cc1 flag. There's no -fno-... option in -cc1 invocations,
 // just the positive option.
-// XFAIL: *
 
 // RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage -verify=OFF %s
 // RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage -verify=ON %s \

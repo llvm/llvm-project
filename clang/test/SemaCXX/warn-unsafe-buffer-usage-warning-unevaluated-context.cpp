@@ -2,8 +2,6 @@
 // RUN:            -fsafe-buffer-usage-suggestions \
 // RUN:            -fblocks -include %s -verify %s
 
-// XFAIL: *
-
 // RUN: %clang -x c++ -frtti -fsyntax-only -fblocks -include %s %s 2>&1 | FileCheck --allow-empty %s
 // RUN: %clang_cc1 -std=c++11 -fblocks -include %s %s 2>&1 | FileCheck --allow-empty %s
 // RUN: %clang_cc1 -std=c++20 -fblocks -include %s %s 2>&1 | FileCheck --allow-empty %s

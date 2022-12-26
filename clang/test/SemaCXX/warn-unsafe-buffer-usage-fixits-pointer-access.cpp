@@ -2,8 +2,6 @@
 // RUN:            -fsafe-buffer-usage-suggestions \
 // RUN:            -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
-// XFAIL: *
-
 void foo(int* v) {
 }
 

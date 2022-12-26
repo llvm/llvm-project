@@ -2169,10 +2169,6 @@ public:
 
   void handleUnsafeOperation(const Stmt *Operation,
                              bool IsRelatedToDecl) override {
-#ifdef MIOPEN_GTEST_FIXED
-    S.Diag(Operation->getBeginLoc(), diag::warn_unsafe_buffer_expression)
-        << Operation->getSourceRange();
-#endif
     SourceLocation Loc;
     SourceRange Range;
     unsigned MsgParam = 0;
@@ -2421,7 +2417,6 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
 
   // The Callback function that performs analyses:
   auto CallAnalyzers = [&](const Decl *Node) -> void {
-#ifdef MIOPEN_GTEST_FIXED
     // Perform unsafe buffer usage analysis:
     if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation,
                          Node->getBeginLoc()) ||
@@ -2430,7 +2425,6 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       clang::checkUnsafeBufferUsage(Node, R,
                                     UnsafeBufferUsageShouldEmitSuggestions);
     }
-#endif
 
     // More analysis ...
   };
@@ -2669,17 +2663,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
       if (S.getLangOpts().CPlusPlus && !fscope->isCoroutine() && isNoexcept(FD))
         checkThrowInNonThrowingFunc(S, FD, AC);
-#ifdef MIOPEN_GTEST_FIXED
-  // Emit unsafe buffer usage warnings and fixits.
-  if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation, D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_unsafe_buffer_variable, D->getBeginLoc())) {
-    UnsafeBufferUsageReporter R(S);
-    checkUnsafeBufferUsage(
-        D, R,
-        /*EmitFixits=*/S.getDiagnostics().getDiagnosticOptions().ShowFixits &&
-            S.getLangOpts().CPlusPlus20);
-  }
-#endif
+
   // If none of the previous checks caused a CFG build, trigger one here
   // for the logical error handler.
   if (LogicalErrorHandler::hasActiveDiagnostics(Diags, D->getBeginLoc())) {

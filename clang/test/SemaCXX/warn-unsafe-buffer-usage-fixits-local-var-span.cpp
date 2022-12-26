@@ -1,7 +1,11 @@
+<<<<<<< HEAD
 // RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage \
 // RUN:            -fsafe-buffer-usage-suggestions \
 // RUN:            -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 // XFAIL: *
+=======
+// RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+>>>>>>> 991d7848b740 ([SafeBufferUsage] restore safe buffer usage warnings for MIOpen GTest)
 typedef int * Int_ptr_t;
 typedef int Int_t;
 
