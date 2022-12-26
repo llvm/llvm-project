@@ -114,13 +114,6 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
-Changes to Interprocedural Optimizations
-----------------------------------------
-
-* Function Specialization has been integrated into IPSCCP.
-* Specialization of functions has been enabled by default at all
-  optimization levels except Os, Oz.
-
 Changes to the AArch64 Backend
 ------------------------------
 
