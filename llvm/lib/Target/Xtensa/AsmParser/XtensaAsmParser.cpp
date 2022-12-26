@@ -15,6 +15,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
@@ -63,6 +64,7 @@ class XtensaAsmParser : public MCTargetAsmParser {
                                         SMLoc &EndLoc) override {
     return MatchOperand_NoMatch;
   }
+  OperandMatchResultTy parsePCRelTarget(OperandVector &Operands);
 
 public:
   enum XtensaMatchResultTy {
@@ -179,6 +181,66 @@ public:
   bool isImm16_31() const { return isImm(16, 31); }
 
   bool isImm1_16() const { return isImm(1, 16); }
+
+  bool isB4const() const {
+    if (Kind != Immediate)
+      return false;
+    if (auto *CE = dyn_cast<MCConstantExpr>(getImm())) {
+      int64_t Value = CE->getValue();
+      switch (Value) {
+      case -1:
+      case 1:
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+      case 8:
+      case 10:
+      case 12:
+      case 16:
+      case 32:
+      case 64:
+      case 128:
+      case 256:
+        return true;
+      default:
+        return false;
+      }
+    }
+    return false;
+  }
+
+  bool isB4constu() const {
+    if (Kind != Immediate)
+      return false;
+    if (auto *CE = dyn_cast<MCConstantExpr>(getImm())) {
+      int64_t Value = CE->getValue();
+      switch (Value) {
+      case 32768:
+      case 65536:
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+      case 8:
+      case 10:
+      case 12:
+      case 16:
+      case 32:
+      case 64:
+      case 128:
+      case 256:
+        return true;
+      default:
+        return false;
+      }
+    }
+    return false;
+  }
 
   /// getStartLoc - Gets location of the first token of this operand
   SMLoc getStartLoc() const override { return StartLoc; }
@@ -328,6 +390,12 @@ bool XtensaAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected immediate in range [-32768, 32512], first 8 bits "
                  "should be zero");
+  case Match_InvalidB4const:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected b4const immediate");
+  case Match_InvalidB4constu:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected b4constu immediate");
   case Match_InvalidImm12:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected immediate in range [-2048, 2047]");
@@ -364,6 +432,30 @@ bool XtensaAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   }
 
   report_fatal_error("Unknown match type detected!");
+}
+
+OperandMatchResultTy
+XtensaAsmParser::parsePCRelTarget(OperandVector &Operands) {
+  MCAsmParser &Parser = getParser();
+  LLVM_DEBUG(dbgs() << "parsePCRelTarget\n");
+
+  SMLoc S = getLexer().getLoc();
+
+  // Expressions are acceptable
+  const MCExpr *Expr = nullptr;
+  if (Parser.parseExpression(Expr)) {
+    // We have no way of knowing if a symbol was consumed so we must ParseFail
+    return MatchOperand_ParseFail;
+  }
+
+  // Currently not support constants
+  if (Expr->getKind() == MCExpr::ExprKind::Constant) {
+    Error(getLoc(), "unknown operand");
+    return MatchOperand_ParseFail;
+  }
+
+  Operands.push_back(XtensaOperand::createImm(Expr, S, getLexer().getLoc()));
+  return MatchOperand_Success;
 }
 
 bool XtensaAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
@@ -486,6 +578,18 @@ XtensaAsmParser::parseOperandWithModifier(OperandVector &Operands) {
 /// If operand was parsed, returns false, else true.
 bool XtensaAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic,
                                    bool SR) {
+  // Check if the current operand has a custom associated parser, if so, try to
+  // custom parse the operand, or fallback to the general approach.
+  OperandMatchResultTy ResTy = MatchOperandParserImpl(Operands, Mnemonic);
+  if (ResTy == MatchOperand_Success)
+    return false;
+
+  // If there wasn't a custom match, try the generic matcher below. Otherwise,
+  // there was a match, but an error occurred, in which case, just return that
+  // the operand parsing failed.
+  if (ResTy == MatchOperand_ParseFail)
+    return true;
+
   // Attempt to parse token as register
   if (parseRegister(Operands, true, SR) == MatchOperand_Success)
     return false;

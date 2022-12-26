@@ -232,6 +232,208 @@ def S8I  : Store_II8<0x04, "s8i", truncstorei8, addr_ish1, mem8>;
 def S16I : Store_II8<0x05, "s16i", truncstorei16, addr_ish2, mem16>;
 def S32I : Store_II8<0x06, "s32i", store, addr_ish4, mem32>;
 
+def L32R : RI16_Inst<0x01, (outs AR:$t), (ins L32Rtarget:$label),
+                    "l32r\t$t, $label", []> {
+  bits<16> label;
+  let imm16 = label;
+}
+
+//===----------------------------------------------------------------------===//
+// Conditional branch instructions
+//===----------------------------------------------------------------------===//
+let isBranch = 1, isTerminator = 1 in {
+  class Branch_RR<bits<4> oper, string instrAsm, CondCode CC>
+      : RRI8_Inst<0x07, (outs),
+                 (ins AR:$s, AR:$t, brtarget:$target),
+                  instrAsm#"\t$s, $t, $target",
+                 [(brcc CC, AR:$s, AR:$t,  bb:$target)]> {
+    bits<8> target;
+
+    let r = oper;
+    let imm8 = target;
+  }
+
+  class Branch_RI<bits<4> oper, string instrAsm, CondCode CC>
+      : RRI8_Inst<0x06, (outs),
+                 (ins AR:$s, b4const:$imm, brtarget:$target),
+                  instrAsm#"\t$s, $imm, $target",
+                 [(brcc CC, AR:$s, b4const:$imm,  bb:$target)]> {
+    bits<4> imm;
+    bits<8> target;
+
+    let t = oper;
+    let r = imm;
+    let imm8 = target;
+  }
+
+  class Branch_RIU<bits<4> oper, string instrAsm, CondCode CC>
+    : RRI8_Inst<0x06, (outs),
+               (ins AR:$s, b4constu:$imm, brtarget:$target),
+                instrAsm#"\t$s, $imm, $target",
+               [(brcc CC, AR:$s, b4constu:$imm,  bb:$target)]> {
+    bits<4> imm;
+    bits<8> target;
+
+    let t = oper;
+    let r = imm;
+    let imm8 = target;
+  }
+
+  class Branch_RZ<bits<2> n, bits<2> m, string instrAsm, CondCode CC>
+    : BRI12_Inst<0x06, n, m, (outs),
+                (ins AR:$s, brtarget:$target),
+                 instrAsm#"\t$s, $target",
+                [(brcc CC, AR:$s, (i32 0),  bb:$target)]> {
+    bits<12> target;
+
+    let imm12 = target;
+  }
+}
+
+def BEQ   : Branch_RR<0x01, "beq", SETEQ>;
+def BNE   : Branch_RR<0x09, "bne", SETNE>;
+def BGE   : Branch_RR<0x0A, "bge", SETGE>;
+def BLT   : Branch_RR<0x02, "blt", SETLT>;
+def BGEU  : Branch_RR<0x0B, "bgeu", SETUGE>;
+def BLTU  : Branch_RR<0x03, "bltu", SETULT>;
+
+def BEQI  : Branch_RI<0x02, "beqi", SETEQ>;
+def BNEI  : Branch_RI<0x06, "bnei", SETNE>;
+def BGEI  : Branch_RI<0x0E, "bgei", SETGE>;
+def BLTI  : Branch_RI<0x0A, "blti", SETLT>;
+def BGEUI : Branch_RIU<0x0F, "bgeui", SETUGE>;
+def BLTUI : Branch_RIU<0x0B, "bltui", SETULT>;
+
+def BEQZ  : Branch_RZ<0x01, 0x00, "beqz", SETEQ>;
+def BNEZ  : Branch_RZ<0x01, 0x01, "bnez", SETNE>;
+def BGEZ  : Branch_RZ<0x01, 0x03, "bgez", SETGE>;
+def BLTZ  : Branch_RZ<0x01, 0x02, "bltz", SETLT>;
+
+def BALL : RRI8_Inst<0x07, (outs),
+                    (ins AR:$s, AR:$t, brtarget:$target),
+                    "ball\t$s, $t, $target", []> {
+  bits<8> target;
+
+  let r = 0x04;
+  let imm8 = target;
+}
+
+def BANY : RRI8_Inst<0x07, (outs),
+                    (ins AR:$s, AR:$t, brtarget:$target),
+                    "bany\t$s, $t, $target", []> {
+  bits<8> target;
+
+  let r = 0x08;
+  let imm8 = target;
+}
+
+def BBC : RRI8_Inst<0x07, (outs),
+                   (ins AR:$s, AR:$t, brtarget:$target),
+                   "bbc\t$s, $t, $target", []> {
+  bits<8> target;
+
+  let r = 0x05;
+  let imm8 = target;
+}
+
+def BBS : RRI8_Inst<0x07, (outs),
+                   (ins AR:$s, AR:$t, brtarget:$target),
+                   "bbs\t$s, $t, $target", []> {
+  bits<8> target;
+
+  let r = 0x0d;
+  let imm8 = target;
+}
+
+def BNALL : RRI8_Inst<0x07, (outs),
+                    (ins AR:$s, AR:$t, brtarget:$target),
+                    "bnall\t$s, $t, $target", []> {
+  bits<8> target;
+
+  let r = 0x0c;
+  let imm8 = target;
+}
+
+def BNONE : RRI8_Inst<0x07, (outs),
+                     (ins AR:$s, AR:$t, brtarget:$target),
+                     "bnone\t$s, $t, $target", []> {
+  bits<8> target;
+
+  let r = 0x00;
+  let imm8 = target;
+}
+
+def BBCI : RRI8_Inst<0x07, (outs),
+                    (ins AR:$s, uimm5:$imm, brtarget:$target),
+                    "bbci\t$s, $imm, $target", []> {
+  bits<8> target;
+  bits<5> imm;
+
+  let r{3-1} = 0x3;
+  let r{0} = imm{4};
+  let t{3-0} = imm{3-0};
+  let imm8 = target;
+}
+
+def BBSI : RRI8_Inst<0x07, (outs),
+                    (ins AR:$s, uimm5:$imm, brtarget:$target),
+                    "bbsi\t$s, $imm, $target", []> {
+  bits<8> target;
+  bits<5> imm;
+
+  let r{3-1} = 0x7;
+  let r{0} = imm{4};
+  let t{3-0} = imm{3-0};
+  let imm8 = target;
+}
+
+//===----------------------------------------------------------------------===//
+// Call and jump instructions
+//===----------------------------------------------------------------------===//
+
+let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
+  def J : CALL_Inst<0x06, (outs), (ins jumptarget:$offset),
+                   "j\t$offset",
+                   [(br bb:$offset)]> {
+    let n = 0x0;
+  }
+
+  def JX : CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins AR:$s),
+                     "jx\t$s",
+                     [(brind AR:$s)]> {
+    let m = 0x2;
+    let n = 0x2;
+    let r = 0;
+    let isIndirectBranch = 1;
+  }
+}
+
+let isCall = 1, Defs = [A0] in {
+  def CALL0 : CALL_Inst<0x05, (outs), (ins pcrel32call:$offset),
+                       "call0\t$offset", []> {
+    let n = 0;
+  }
+
+  def CALLX0 : CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins AR:$s),
+                         "callx0\t$s", []> {
+    let m = 0x3;
+    let n = 0x0;
+    let r = 0;
+  }
+}
+
+let isReturn = 1, isTerminator = 1,
+    isBarrier = 1, Uses = [A0] in {
+
+  def RET : CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins),
+                      "ret", []> {
+    let m = 0x2;
+    let n = 0x0;
+    let s = 0;
+    let r = 0;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Mem barrier instructions
 //===----------------------------------------------------------------------===//

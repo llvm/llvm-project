@@ -48,6 +48,14 @@ l16si a1, a2, 512
 l32i a1, a2, 1024
 # CHECK: :[[#@LINE-1]]:14: error: expected immediate in range [0, 1020], first 2 bits should be zero
 
+# b4const
+beqi a1, 257, LBL0
+# CHECK: :[[#@LINE-1]]:10: error: expected b4const immediate
+
+# b4constu
+bgeui a9, 32000, LBL0
+# CHECK: :[[#@LINE-1]]:11: error: expected b4constu immediate
+
 # Invalid number of operands
 addi a1, a2
 # CHECK: :[[#@LINE-1]]:1: error: too few operands for instruction
@@ -85,6 +93,17 @@ wsr.uregister a2
 wsr a2, uregister
 # CHECK: :[[#@LINE-1]]:9: error: invalid operand for instruction
 
+# Instruction format BRI12
+beqz b1, LBL0
+# CHECK: :[[#@LINE-1]]:6: error: invalid operand for instruction
+# Instruction format BRI8
+bltui r7, 16, LBL0
+# CHECK: :[[#@LINE-1]]:7: error: invalid operand for instruction
+
+# Instruction format CALLX
+callx0 r10
+# CHECK: :[[#@LINE-1]]:8: error: invalid operand for instruction
+
 # Check invalid operands order for different formats
 # Instruction format RRI8
 addi a1, 10, a2
@@ -93,3 +112,13 @@ addi a1, 10, a2
 # Instruction format RSR
 wsr sar, a2
 # CHECK: :[[#@LINE-1]]:5: error: invalid operand for instruction
+
+# Instruction format BRI12
+beqz LBL0, a2
+# CHECK: :[[#@LINE-1]]:6: error: invalid operand for instruction
+
+# Instruction format BRI8
+bltui 16, a7, LBL0
+# CHECK: :[[#@LINE-1]]:7: error: invalid operand for instruction
+bltui a7, LBL0, 16
+# CHECK: :[[#@LINE-1]]:19: error: unknown operand
