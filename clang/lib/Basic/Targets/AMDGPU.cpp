@@ -86,7 +86,7 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
 } // namespace targets
 } // namespace clang
 
-const Builtin::Info AMDGPUTargetInfo::BuiltinInfo[] = {
+static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
   {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
