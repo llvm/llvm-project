@@ -43,9 +43,20 @@ public:
 private:
   // Print various types of operand.
   void printOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printMemOperand(const MCInst *MI, int OpNUm, raw_ostream &O);
 
   void printImm8_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printImm8_sh8_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printImm12_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printImm12m_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printUimm4_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printUimm5_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printShimm1_31_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printImm1_16_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printOffset8m8_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printOffset8m16_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printOffset8m32_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printOffset4m32_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
 };
 } // end namespace llvm
 

@@ -15,6 +15,11 @@ moveqz a2, a3, a4
 # CHECK: encoding: [0xc0,0x3b,0xb3]
 movgez a3, a11, a12
 
+# Instruction format RRI8
+# CHECK-INST: movi a1, -2048
+# CHECK: encoding: [0x12,0xa8,0x00]
+movi a1, -2048
+
 # Instruction format RRR
 # CHECK-INST: movltz a7, a8, a9
 # CHECK: encoding: [0x90,0x78,0xa3]
