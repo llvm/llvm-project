@@ -8,6 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "XtensaMCTargetDesc.h"
+#include "XtensaInstPrinter.h"
 #include "XtensaMCAsmInfo.h"
 #include "TargetInfo/XtensaTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
@@ -25,6 +26,9 @@
 #define GET_REGINFO_MC_DESC
 #include "XtensaGenRegisterInfo.inc"
 
+#define GET_SUBTARGETINFO_MC_DESC
+#include "XtensaGenSubtargetInfo.inc"
+
 using namespace llvm;
 
 static MCAsmInfo *createXtensaMCAsmInfo(const MCRegisterInfo &MRI,
@@ -40,10 +44,23 @@ static MCInstrInfo *createXtensaMCInstrInfo() {
   return X;
 }
 
+static MCInstPrinter *createXtensaMCInstPrinter(const Triple &TT,
+                                                unsigned SyntaxVariant,
+                                                const MCAsmInfo &MAI,
+                                                const MCInstrInfo &MII,
+                                                const MCRegisterInfo &MRI) {
+  return new XtensaInstPrinter(MAI, MII, MRI);
+}
+
 static MCRegisterInfo *createXtensaMCRegisterInfo(const Triple &TT) {
   MCRegisterInfo *X = new MCRegisterInfo();
   InitXtensaMCRegisterInfo(X, Xtensa::SP);
   return X;
+}
+
+static MCSubtargetInfo *
+createXtensaMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
+  return createXtensaMCSubtargetInfoImpl(TT, CPU, CPU, FS);
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaTargetMC() {
@@ -57,9 +74,17 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaTargetMC() {
   // Register the MCInstrInfo.
   TargetRegistry::RegisterMCInstrInfo(getTheXtensaTarget(), createXtensaMCInstrInfo);
 
+  // Register the MCInstPrinter.
+  TargetRegistry::RegisterMCInstPrinter(getTheXtensaTarget(),
+                                        createXtensaMCInstPrinter);
+
   // Register the MCRegisterInfo.
   TargetRegistry::RegisterMCRegInfo(getTheXtensaTarget(),
                                     createXtensaMCRegisterInfo);
+
+  // Register the MCSubtargetInfo.
+  TargetRegistry::RegisterMCSubtargetInfo(getTheXtensaTarget(),
+                                          createXtensaMCSubtargetInfo);
 
   // Register the MCAsmBackend.
   TargetRegistry::RegisterMCAsmBackend(getTheXtensaTarget(),
