@@ -19,6 +19,11 @@ using namespace llvm;
 /// the divisor not be 0, 1, or -1.  Taken from "Hacker's Delight", Henry S.
 /// Warren, Jr., Chapter 10.
 SignedDivisionByConstantInfo SignedDivisionByConstantInfo::get(const APInt &D) {
+  assert(!D.isZero() && "Precondition violation.");
+
+  // We'd be endlessly stuck in the loop.
+  assert(D.getBitWidth() >= 3 && "Does not work at smaller bitwidths.");
+
   APInt Delta;
   APInt SignedMin = APInt::getSignedMinValue(D.getBitWidth());
   struct SignedDivisionByConstantInfo Retval;
@@ -67,6 +72,9 @@ SignedDivisionByConstantInfo SignedDivisionByConstantInfo::get(const APInt &D) {
 /// of the divided value are known zero.
 UnsignedDivisionByConstantInfo
 UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros) {
+  assert(!D.isZero() && "Precondition violation.");
+  assert(D.getBitWidth() > 1 && "Does not work at smaller bitwidths.");
+
   APInt Delta;
   struct UnsignedDivisionByConstantInfo Retval;
   Retval.IsAdd = false; // initialize "add" indicator

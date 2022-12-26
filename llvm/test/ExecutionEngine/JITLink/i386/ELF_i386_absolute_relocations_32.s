@@ -1,25 +1,23 @@
 # RUN: llvm-mc -triple=i386-unknown-linux-gnu -filetype=obj -o %t.o %s
-# RUN: llvm-jitlink -noexec %t.o
+# RUN: llvm-jitlink -noexec \
+# RUN:   -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
+# RUN:   -abs external_data=0x100 \
+# RUN:   -check %s %t.o
+
+# Test ELF 32 bit absolute relocations
 
         .text
-        .globl  main
-        .p2align        4
+        .globl  main     
+        .p2align        4, 0x90
         .type   main,@function
-main:
-    pushl   %ebp
-    movl    %esp, %ebp
-    pushl   %eax
-    movl    $0, -4(%ebp)
-    movl    a, %eax
-    addl    $4, %esp
-    popl    %ebp
-    retl
-
+main:                                   
+        retl
         .size   main, .-main
 
-        .data
-        .p2align        2
-        .type   a,@object
-a:
-        .long   42
-        .size   a, 4
+# jitlink-check: decode_operand(foo, 0) = external_data
+        .globl  foo     
+        .p2align        4, 0x90
+        .type   foo,@function
+foo:
+        movl    external_data, %eax
+        .size   foo, .-foo

@@ -155,7 +155,7 @@ public:
         continue;
       }
 
-      TheTable[I] = MapEntryTy::Create(
+      TheTable[I] = MapEntryTy::create(
           static_cast<MapEntryTy *>(Bucket)->getKey(), getAllocator(),
           static_cast<MapEntryTy *>(Bucket)->getValue());
       HashTable[I] = RHSHashTable[I];
@@ -336,7 +336,7 @@ public:
     if (Bucket == getTombstoneVal())
       --NumTombstones;
     Bucket =
-        MapEntryTy::Create(Key, getAllocator(), std::forward<ArgsTy>(Args)...);
+        MapEntryTy::create(Key, getAllocator(), std::forward<ArgsTy>(Args)...);
     ++NumItems;
     assert(NumItems + NumTombstones <= NumBuckets);
 
