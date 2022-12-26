@@ -1016,9 +1016,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // and prior to optimizing globals.
   // FIXME: This position in the pipeline hasn't been carefully considered in
   // years, it should be re-analyzed.
-  MPM.addPass(IPSCCPPass(IPSCCPOptions(/*AllowFuncSpec=*/
-                                       Level != OptimizationLevel::Os &&
-                                       Level != OptimizationLevel::Oz)));
+  MPM.addPass(IPSCCPPass());
 
   // Attach metadata to indirect call sites indicating the set of functions
   // they may target at run-time. This should follow IPSCCP.
@@ -1631,9 +1629,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function
     // pointers passed as arguments to direct uses of functions.
-    MPM.addPass(IPSCCPPass(IPSCCPOptions(/*AllowFuncSpec=*/
-                                         Level != OptimizationLevel::Os &&
-                                         Level != OptimizationLevel::Oz)));
+    MPM.addPass(IPSCCPPass());
 
     // Attach metadata to indirect call sites indicating the set of functions
     // they may target at run-time. This should follow IPSCCP.
