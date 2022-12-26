@@ -102,6 +102,36 @@ def Offset4m32_AsmOperand : ImmAsmOperand<"Offset4m32">;
 def offset4m32 : Immediate<i32,
     [{ return Imm >= 0 && Imm <= 60 && (Imm & 0x3 == 0); }],
     "Offset4m32_AsmOperand">;
+
+// b4const predicate - Branch Immediate 4-bit signed operand
+def B4const_AsmOperand: ImmAsmOperand<"B4const">;
+def b4const: Immediate<i32,
+  [{ switch (Imm) {
+        case -1: case 1: case 2: case 3:  case 4:
+        case 5:  case 6: case 7: case 8: case 10: case 12:
+        case 16: case 32: case 64: case 128: case 256: return 1;
+        default: return 0;
+     }
+  }],
+  "B4const_AsmOperand"> {
+  let EncoderMethod = "getB4constOpValue";
+  let DecoderMethod = "decodeB4constOperand";
+}
+
+// b4constu predicate - Branch Immediate 4-bit unsigned operand
+def B4constu_AsmOperand: ImmAsmOperand<"B4constu">;
+def b4constu: Immediate<i32,
+  [{ switch (Imm) {
+        case 32768: case 65536: case 2: case 3:  case 4:
+        case 5:  case 6: case 7: case 8: case 10: case 12:
+        case 16: case 32: case 64: case 128: case 256: return 1;
+        default: return 0;
+     }
+  }],
+  "B4constu_AsmOperand"> {
+  let EncoderMethod = "getB4constuOpValue";
+  let DecoderMethod = "decodeB4constuOperand";
+}
 //===----------------------------------------------------------------------===//
 // Memory address operands
 //===----------------------------------------------------------------------===//
@@ -133,3 +163,41 @@ def mem32n : mem<offset4m32> {
 def addr_ish1 : ComplexPattern<iPTR, 2, "selectMemRegAddrISH1", [frameindex]>;
 def addr_ish2 : ComplexPattern<iPTR, 2, "selectMemRegAddrISH2", [frameindex]>;
 def addr_ish4 : ComplexPattern<iPTR, 2, "selectMemRegAddrISH4", [frameindex]>;
+
+//===----------------------------------------------------------------------===//
+// Symbolic address operands
+//===----------------------------------------------------------------------===//
+def XtensaPCRelTargetAsmOperand : AsmOperandClass {
+  let Name = "PCRelTarget";
+  let ParserMethod = "parsePCRelTarget";
+  let PredicateMethod = "isImm";
+  let RenderMethod = "addImmOperands";
+}
+
+def  pcrel32call : Operand<iPTR> {
+  let PrintMethod = "printCallOperand";
+  let EncoderMethod = "getCallEncoding";
+  let DecoderMethod = "decodeCallOperand";
+  let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+}
+
+def brtarget : Operand<OtherVT> {
+  let PrintMethod = "printBranchTarget";
+  let EncoderMethod = "getBranchTargetEncoding";
+  let DecoderMethod = "decodeBranchOperand";
+  let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+}
+
+def jumptarget : Operand<OtherVT> {
+  let PrintMethod = "printJumpTarget";
+  let EncoderMethod = "getJumpTargetEncoding";
+  let DecoderMethod = "decodeJumpOperand";
+  let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+}
+
+def L32Rtarget : Operand<OtherVT> {
+  let PrintMethod = "printL32RTarget";
+  let EncoderMethod = "getL32RTargetEncoding";
+  let DecoderMethod = "decodeL32ROperand";
+  let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+}
