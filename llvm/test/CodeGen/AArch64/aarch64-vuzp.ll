@@ -59,10 +59,8 @@ entry:
 
 ; Check that this pattern is recognized as a VZIP and
 ; that the vector blend transform does not scramble the pattern.
-; FIXME: we can not recognize generic ZERO_EXTEND_VECTOR_INREG legalization
-;        as a zip1.
 ; CHECK-LABEL: vzipNoBlend:
-; CHECK-NOT: zip1
+; CHECK: zip1
 define <8 x i8> @vzipNoBlend(ptr %A, ptr %B) nounwind {
   %t = load <8 x i8>, ptr %A
   %vzip = shufflevector <8 x i8> %t, <8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 undef, i8 undef, i8 undef, i8 undef>, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
@@ -78,9 +76,8 @@ define <8 x i8> @vzipNoBlendCommutted(ptr %A, ptr %B) nounwind {
   ret <8 x i8> %vzip
 }
 
-; FIXME: this is identical to @vzipNoBlend
 ; CHECK-LABEL: vzipStillZExt:
-; CHECK-NOT: zip1
+; CHECK: zip1
 define <8 x i8> @vzipStillZExt(ptr %A, ptr %B) nounwind {
   %t = load <8 x i8>, ptr %A
   %vzip = shufflevector <8 x i8> %t, <8 x i8> <i8 undef, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <8 x i32> <i32 0, i32 9, i32 1, i32 9, i32 2, i32 9, i32 3, i32 9>
