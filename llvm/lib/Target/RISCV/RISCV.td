@@ -445,6 +445,14 @@ def HasVendorXVentanaCondOps : Predicate<"Subtarget->hasVendorXVentanaCondOps()"
                                 AssemblerPredicate<(all_of FeatureVendorXVentanaCondOps),
                                 "'XVentanaCondOps' (Ventana Conditional Ops)">;
 
+def FeatureVendorXTHeadVdot
+    : SubtargetFeature<"xtheadvdot", "HasVendorXTHeadVdot", "true",
+                       "'xtheadvdot' (T-Head Vector Extensions for Dot)",
+                       [FeatureStdExtV]>;
+def HasVendorXTHeadVdot : Predicate<"Subtarget->hasVendorXTHeadVdot()">,
+                                    AssemblerPredicate<(all_of FeatureVendorXTHeadVdot),
+                                    "'xtheadvdot' (T-Head Vector Extensions for Dot)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
