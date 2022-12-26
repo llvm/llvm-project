@@ -16,6 +16,10 @@ using namespace clang::driver;
 using namespace clang::driver::options;
 using namespace llvm::opt;
 
+#define OPTTABLE_VALUES_CODE
+#include "clang/Driver/Options.inc"
+#undef OPTTABLE_VALUES_CODE
+
 #define PREFIX(NAME, VALUE)                                                    \
   static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
   static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
@@ -43,16 +47,6 @@ public:
 }
 
 const llvm::opt::OptTable &clang::driver::getDriverOptTable() {
-  static const DriverOptTable *Table = []() {
-    auto Result = std::make_unique<DriverOptTable>();
-    // Options.inc is included in DriverOptions.cpp, and calls OptTable's
-    // addValues function.
-    // Opt is a variable used in the code fragment in Options.inc.
-    OptTable &Opt = *Result;
-#define OPTTABLE_ARG_INIT
-#include "clang/Driver/Options.inc"
-#undef OPTTABLE_ARG_INIT
-    return Result.release();
-  }();
-  return *Table;
+  static DriverOptTable Table;
+  return Table;
 }
