@@ -20,7 +20,11 @@
 CRT_FE_ROUND_MODE __fe_getround(void) {
 #if __loongarch_frlen != 0
   int fcsr;
+#  ifdef __clang__
   __asm__ __volatile__("movfcsr2gr %0, $fcsr0" : "=r" (fcsr));
+#  else
+  __asm__ __volatile__("movfcsr2gr %0, $r0" : "=r" (fcsr));
+#  endif
   fcsr &= LOONGARCH_RMODE_MASK;
   switch (fcsr) {
   case LOONGARCH_TOWARDZERO:
@@ -41,9 +45,15 @@ CRT_FE_ROUND_MODE __fe_getround(void) {
 int __fe_raise_inexact(void) {
 #if __loongarch_frlen != 0
   int fcsr;
+#  ifdef __clang__
   __asm__ __volatile__("movfcsr2gr %0, $fcsr0" : "=r" (fcsr));
   __asm__ __volatile__(
       "movgr2fcsr $fcsr0, %0" :: "r" (fcsr | LOONGARCH_INEXACT));
+#  else
+  __asm__ __volatile__("movfcsr2gr %0, $r0" : "=r" (fcsr));
+  __asm__ __volatile__(
+      "movgr2fcsr $r0, %0" :: "r" (fcsr | LOONGARCH_INEXACT));
+#  endif
 #endif
   return 0;
 }
