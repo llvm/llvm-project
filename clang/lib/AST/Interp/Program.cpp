@@ -53,10 +53,11 @@ unsigned Program::createGlobalString(const StringLiteral *S) {
   }
 
   // Create a descriptor for the string.
-  Descriptor *Desc = allocateDescriptor(S, CharType, S->getLength() + 1,
-                                        /*isConst=*/true,
-                                        /*isTemporary=*/false,
-                                        /*isMutable=*/false);
+  Descriptor *Desc =
+      allocateDescriptor(S, CharType, std::nullopt, S->getLength() + 1,
+                         /*isConst=*/true,
+                         /*isTemporary=*/false,
+                         /*isMutable=*/false);
 
   // Allocate storage for the string.
   // The byte length does not include the null terminator.
@@ -184,9 +185,10 @@ std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
   const bool IsConst = Ty.isConstQualified();
   const bool IsTemporary = D.dyn_cast<const Expr *>();
   if (auto T = Ctx.classify(Ty)) {
-    Desc = createDescriptor(D, *T, IsConst, IsTemporary);
+    Desc = createDescriptor(D, *T, std::nullopt, IsConst, IsTemporary);
   } else {
-    Desc = createDescriptor(D, Ty.getTypePtr(), IsConst, IsTemporary);
+    Desc = createDescriptor(D, Ty.getTypePtr(), std::nullopt, IsConst,
+                            IsTemporary);
   }
   if (!Desc)
     return {};
@@ -236,7 +238,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   auto GetBaseDesc = [this](const RecordDecl *BD, Record *BR) -> Descriptor * {
     if (!BR)
       return nullptr;
-    return allocateDescriptor(BD, BR, /*isConst=*/false,
+    return allocateDescriptor(BD, BR, std::nullopt, /*isConst=*/false,
                               /*isTemporary=*/false,
                               /*isMutable=*/false);
   };
@@ -286,10 +288,10 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     const bool IsMutable = FD->isMutable();
     Descriptor *Desc;
     if (std::optional<PrimType> T = Ctx.classify(FT)) {
-      Desc = createDescriptor(FD, *T, IsConst, /*isTemporary=*/false,
-                              IsMutable);
+      Desc = createDescriptor(FD, *T, std::nullopt, IsConst,
+                              /*isTemporary=*/false, IsMutable);
     } else {
-      Desc = createDescriptor(FD, FT.getTypePtr(), IsConst,
+      Desc = createDescriptor(FD, FT.getTypePtr(), std::nullopt, IsConst,
                               /*isTemporary=*/false, IsMutable);
     }
     if (!Desc)
@@ -305,12 +307,14 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
 }
 
 Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
+                                      Descriptor::MetadataSize MDSize,
                                       bool IsConst, bool IsTemporary,
                                       bool IsMutable, const Expr *Init) {
   // Classes and structures.
   if (auto *RT = Ty->getAs<RecordType>()) {
     if (auto *Record = getOrCreateRecord(RT->getDecl()))
-      return allocateDescriptor(D, Record, IsConst, IsTemporary, IsMutable);
+      return allocateDescriptor(D, Record, MDSize, IsConst, IsTemporary,
+                                IsMutable);
   }
 
   // Arrays.
@@ -325,21 +329,21 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems) {
           return {};
         }
-        return allocateDescriptor(D, *T, NumElems, IsConst, IsTemporary,
+        return allocateDescriptor(D, *T, MDSize, NumElems, IsConst, IsTemporary,
                                   IsMutable);
       } else {
         // Arrays of composites. In this case, the array is a list of pointers,
         // followed by the actual elements.
-        Descriptor *ElemDesc =
-            createDescriptor(D, ElemTy.getTypePtr(), IsConst, IsTemporary);
+        Descriptor *ElemDesc = createDescriptor(
+            D, ElemTy.getTypePtr(), std::nullopt, IsConst, IsTemporary);
         if (!ElemDesc)
           return nullptr;
         InterpSize ElemSize =
             ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
         if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems)
           return {};
-        return allocateDescriptor(D, ElemDesc, NumElems, IsConst, IsTemporary,
-                                  IsMutable);
+        return allocateDescriptor(D, ElemDesc, MDSize, NumElems, IsConst,
+                                  IsTemporary, IsMutable);
       }
     }
 
@@ -350,8 +354,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         return allocateDescriptor(D, *T, IsTemporary,
                                   Descriptor::UnknownSize{});
       } else {
-        Descriptor *Desc =
-            createDescriptor(D, ElemTy.getTypePtr(), IsConst, IsTemporary);
+        Descriptor *Desc = createDescriptor(D, ElemTy.getTypePtr(), MDSize,
+                                            IsConst, IsTemporary);
         if (!Desc)
           return nullptr;
         return allocateDescriptor(D, Desc, IsTemporary,
@@ -363,13 +367,15 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
   // Atomic types.
   if (auto *AT = Ty->getAs<AtomicType>()) {
     const Type *InnerTy = AT->getValueType().getTypePtr();
-    return createDescriptor(D, InnerTy, IsConst, IsTemporary, IsMutable);
+    return createDescriptor(D, InnerTy, MDSize, IsConst, IsTemporary,
+                            IsMutable);
   }
 
   // Complex types - represented as arrays of elements.
   if (auto *CT = Ty->getAs<ComplexType>()) {
     PrimType ElemTy = *Ctx.classify(CT->getElementType());
-    return allocateDescriptor(D, ElemTy, 2, IsConst, IsTemporary, IsMutable);
+    return allocateDescriptor(D, ElemTy, MDSize, 2, IsConst, IsTemporary,
+                              IsMutable);
   }
 
   return nullptr;
