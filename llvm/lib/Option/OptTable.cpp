@@ -62,10 +62,12 @@ static inline bool operator<(const OptTable::Info &A, const OptTable::Info &B) {
   if (int N = StrCmpOptionName(A.Name, B.Name))
     return N < 0;
 
-  for (size_t I = 0, K = std::min(A.Prefixes.size(), B.Prefixes.size()); I != K;
-       ++I)
-    if (int N = StrCmpOptionName(A.Prefixes[I], B.Prefixes[I]))
+  for (const char * const *APre = A.Prefixes,
+                  * const *BPre = B.Prefixes;
+                          *APre != nullptr && *BPre != nullptr; ++APre, ++BPre){
+    if (int N = StrCmpOptionName(*APre, *BPre))
       return N < 0;
+  }
 
   // Names are the same, check that classes are in order; exactly one
   // should be joined, and it should succeed the other.
@@ -129,8 +131,11 @@ OptTable::OptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase)
   // Build prefixes.
   for (unsigned i = FirstSearchableIndex + 1, e = getNumOptions() + 1;
                 i != e; ++i) {
-    const auto &P = getInfo(i).Prefixes;
-    PrefixesUnion.insert(P.begin(), P.end());
+    if (const char *const *P = getInfo(i).Prefixes) {
+      for (; *P != nullptr; ++P) {
+        PrefixesUnion.insert(*P);
+      }
+    }
   }
 
   // Build prefix chars.
@@ -163,7 +168,8 @@ static bool isInput(const StringSet<> &Prefixes, StringRef Arg) {
 /// \returns Matched size. 0 means no match.
 static unsigned matchOption(const OptTable::Info *I, StringRef Str,
                             bool IgnoreCase) {
-  for (auto Prefix : I->Prefixes) {
+  for (const char * const *Pre = I->Prefixes; *Pre != nullptr; ++Pre) {
+    StringRef Prefix(*Pre);
     if (Str.startswith(Prefix)) {
       StringRef Rest = Str.substr(Prefix.size());
       bool Matched = IgnoreCase ? Rest.startswith_insensitive(I->Name)
@@ -177,10 +183,13 @@ static unsigned matchOption(const OptTable::Info *I, StringRef Str,
 
 // Returns true if one of the Prefixes + In.Names matches Option
 static bool optionMatches(const OptTable::Info &In, StringRef Option) {
-  for (auto Prefix : In.Prefixes)
-    if (Option.endswith(In.Name))
-      if (Option.slice(0, Option.size() - In.Name.size()) == Prefix)
-        return true;
+  if (In.Prefixes) {
+    StringRef InName(In.Name);
+    for (size_t I = 0; In.Prefixes[I]; I++)
+      if (Option.endswith(InName))
+        if (Option.slice(0, Option.size() - InName.size()) == In.Prefixes[I])
+          return true;
+  }
   return false;
 }
 
@@ -212,13 +221,13 @@ OptTable::findByPrefix(StringRef Cur, unsigned int DisableFlags) const {
   std::vector<std::string> Ret;
   for (size_t I = FirstSearchableIndex, E = OptionInfos.size(); I < E; I++) {
     const Info &In = OptionInfos[I];
-    if (In.Prefixes.empty() || (!In.HelpText && !In.GroupID))
+    if (!In.Prefixes || (!In.HelpText && !In.GroupID))
       continue;
     if (In.Flags & DisableFlags)
       continue;
 
-    for (auto Prefix : In.Prefixes) {
-      std::string S = (Prefix + In.Name + "\t").str();
+    for (int I = 0; In.Prefixes[I]; I++) {
+      std::string S = std::string(In.Prefixes[I]) + std::string(In.Name) + "\t";
       if (In.HelpText)
         S += In.HelpText;
       if (StringRef(S).startswith(Cur) && S != std::string(Cur) + "\t")
@@ -256,7 +265,7 @@ unsigned OptTable::findNearest(StringRef Option, std::string &NearestString,
 
     // * Ignore positional argument option candidates (which do not
     //   have prefixes).
-    if (CandidateInfo.Prefixes.empty())
+    if (!CandidateInfo.Prefixes)
       continue;
 
     // Now check if the candidate ends with a character commonly used when
@@ -276,7 +285,8 @@ unsigned OptTable::findNearest(StringRef Option, std::string &NearestString,
     // Consider each possible prefix for each candidate to find the most
     // appropriate one. For example, if a user asks for "--helm", suggest
     // "--help" over "-help".
-    for (auto CandidatePrefix : CandidateInfo.Prefixes) {
+    for (int P = 0;
+         const char *const CandidatePrefix = CandidateInfo.Prefixes[P]; P++) {
       std::string Candidate = (CandidatePrefix + CandidateName).str();
       StringRef CandidateRef = Candidate;
       unsigned Distance =
