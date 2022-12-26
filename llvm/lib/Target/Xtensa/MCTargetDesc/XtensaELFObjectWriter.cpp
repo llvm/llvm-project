@@ -46,7 +46,13 @@ XtensaObjectWriter::~XtensaObjectWriter() {}
 unsigned XtensaObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
-  report_fatal_error("invalid fixup kind!");
+
+  switch ((unsigned)Fixup.getKind()) {
+  case FK_Data_4:
+    return ELF::R_XTENSA_32;
+  default:
+    return ELF::R_XTENSA_SLOT0_OP;
+  }
 }
 
 std::unique_ptr<MCObjectTargetWriter>
