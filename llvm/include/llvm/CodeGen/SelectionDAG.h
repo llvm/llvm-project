@@ -1940,6 +1940,10 @@ public:
   bool MaskedValueIsAllOnes(SDValue Op, const APInt &Mask,
                             unsigned Depth = 0) const;
 
+  /// For each demanded element of a vector, see if it is known to be zero.
+  APInt computeVectorKnownZeroElements(SDValue Op, const APInt &DemandedElts,
+                                       unsigned Depth = 0) const;
+
   /// Determine which bits of Op are known to be either zero or one and return
   /// them in Known. For vectors, the known bits are those that are shared by
   /// every vector element.
