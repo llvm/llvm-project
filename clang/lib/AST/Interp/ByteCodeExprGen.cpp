@@ -835,19 +835,10 @@ bool ByteCodeExprGen<Emitter>::VisitExprWithCleanups(
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
     const MaterializeTemporaryExpr *E) {
-  StorageDuration SD = E->getStorageDuration();
-
-  // We conservatively only support these for now.
-  if (SD != SD_Static && SD != SD_Automatic)
-    return false;
-
   const Expr *SubExpr = E->getSubExpr();
   std::optional<PrimType> SubExprT = classify(SubExpr);
-  // FIXME: Implement this for records and arrays as well.
-  if (!SubExprT)
-    return false;
 
-  if (SD == SD_Static) {
+  if (E->getStorageDuration() == SD_Static) {
     if (std::optional<unsigned> GlobalIndex = P.createGlobal(E)) {
       const LifetimeExtendedTemporaryDecl *TempDecl =
           E->getLifetimeExtendedTemporaryDecl();
@@ -859,15 +850,54 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
         return false;
       return this->emitGetPtrGlobal(*GlobalIndex, E);
     }
-  } else if (SD == SD_Automatic) {
-    if (std::optional<unsigned> LocalIndex =
-            allocateLocalPrimitive(SubExpr, *SubExprT, true, true)) {
+
+    return false;
+  }
+
+  // For everyhing else, use local variables.
+  if (SubExprT) {
+    if (std::optional<unsigned> LocalIndex = allocateLocalPrimitive(
+            SubExpr, *SubExprT, /*IsMutable=*/true, /*IsExtended=*/true)) {
       if (!this->visitInitializer(SubExpr))
         return false;
-
-      if (!this->emitSetLocal(*SubExprT, *LocalIndex, E))
-        return false;
+      this->emitSetLocal(*SubExprT, *LocalIndex, E);
       return this->emitGetPtrLocal(*LocalIndex, E);
+    }
+  } else {
+    if (std::optional<unsigned> LocalIndex =
+            allocateLocal(SubExpr, /*IsExtended=*/true)) {
+      if (!this->emitGetPtrLocal(*LocalIndex, E))
+        return false;
+      return this->visitInitializer(SubExpr);
+    }
+  }
+  return false;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCompoundLiteralExpr(
+    const CompoundLiteralExpr *E) {
+  std::optional<PrimType> T = classify(E->getType());
+  const Expr *Init = E->getInitializer();
+  if (E->isFileScope()) {
+    if (std::optional<unsigned> GlobalIndex = P.createGlobal(E)) {
+      if (classify(E->getType()))
+        return this->visit(Init);
+      if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+        return false;
+      return this->visitInitializer(Init);
+    }
+  }
+
+  // Otherwise, use a local variable.
+  if (T) {
+    // For primitive types, we just visit the initializer.
+    return this->visit(Init);
+  } else {
+    if (std::optional<unsigned> LocalIndex = allocateLocal(Init)) {
+      if (!this->emitGetPtrLocal(*LocalIndex, E))
+        return false;
+      return this->visitInitializer(Init);
     }
   }
 
@@ -1326,6 +1356,8 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
       }
     }
     return true;
+  } else if (const auto *CLE = dyn_cast<CompoundLiteralExpr>(Initializer)) {
+    return visitInitializer(CLE->getInitializer());
   }
 
   assert(false && "Unknown expression for array initialization");
@@ -1511,6 +1543,10 @@ bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
+  // We don't know what to do with these, so just return false.
+  if (VD->getType().isNull())
+    return false;
+
   const Expr *Init = VD->getInit();
   std::optional<PrimType> VarT = classify(VD->getType());
 
