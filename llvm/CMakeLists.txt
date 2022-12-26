@@ -725,7 +725,7 @@ option (LLVM_ENABLE_SPHINX "Use Sphinx to generate llvm documentation." OFF)
 option (LLVM_ENABLE_OCAMLDOC "Build OCaml bindings documentation." ON)
 option (LLVM_ENABLE_BINDINGS "Build bindings." ON)
 
-if(UNIX)
+if(UNIX AND CMAKE_SIZEOF_VOID_P GREATER_EQUAL 8)
   set(LLVM_ENABLE_ONDISK_CAS_default ON)
 else()
   set(LLVM_ENABLE_ONDISK_CAS_default OFF)
