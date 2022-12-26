@@ -13,7 +13,8 @@
 #include <__concepts/invocable.h>
 #include <__concepts/same_as.h>
 #include <__config>
-#include <type_traits>
+#include <__functional/invoke.h>
+#include <__type_traits/integral_constant.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
