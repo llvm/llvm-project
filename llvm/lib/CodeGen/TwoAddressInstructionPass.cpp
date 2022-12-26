@@ -1681,6 +1681,13 @@ bool TwoAddressInstructionPass::processStatepoint(
       continue;
     }
 
+    if (!MRI->constrainRegClass(RegB, MRI->getRegClass(RegA))) {
+      LLVM_DEBUG(dbgs() << "MRI: couldn't constrain" << printReg(RegB, TRI, 0)
+                        << " to register class of " << printReg(RegA, TRI, 0)
+                        << '\n');
+      NeedCopy = true;
+      continue;
+    }
     MRI->replaceRegWith(RegA, RegB);
 
     if (LIS) {
