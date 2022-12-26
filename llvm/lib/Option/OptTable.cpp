@@ -300,17 +300,6 @@ unsigned OptTable::findNearest(StringRef Option, std::string &NearestString,
   return BestDistance;
 }
 
-bool OptTable::addValues(StringRef Option, const char *Values) {
-  for (size_t I = FirstSearchableIndex, E = OptionInfos.size(); I < E; I++) {
-    Info &In = OptionInfos[I];
-    if (optionMatches(In, Option)) {
-      In.Values = Values;
-      return true;
-    }
-  }
-  return false;
-}
-
 // Parse a single argument, return the new argument, and update Index. If
 // GroupedShortOptions is true, -a matches "-abc" and the argument in Args will
 // be updated to "-bc". This overload does not support

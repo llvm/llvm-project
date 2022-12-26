@@ -260,6 +260,21 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#endif // PREFIX\n\n";
 
   OS << "/////////\n";
+  OS << "// ValuesCode\n\n";
+  OS << "#ifdef OPTTABLE_VALUES_CODE\n";
+  for (const Record &R : llvm::make_pointee_range(Opts)) {
+    // The option values, if any;
+    if (!isa<UnsetInit>(R.getValueInit("ValuesCode"))) {
+      assert(isa<UnsetInit>(R.getValueInit("Values")) &&
+             "Cannot choose between Values and ValuesCode");
+      OS << "#define VALUES_CODE " << getOptionName(R) << "_Values\n";
+      OS << R.getValueAsString("ValuesCode") << "\n";
+      OS << "#undef VALUES_CODE\n";
+    }
+  }
+  OS << "#endif\n";
+
+  OS << "/////////\n";
   OS << "// Groups\n\n";
   OS << "#ifdef OPTION\n";
   for (const Record &R : llvm::make_pointee_range(Groups)) {
@@ -388,6 +403,9 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     OS << ", ";
     if (!isa<UnsetInit>(R.getValueInit("Values")))
       write_cstring(OS, R.getValueAsString("Values"));
+    else if (!isa<UnsetInit>(R.getValueInit("ValuesCode"))) {
+      OS << getOptionName(R) << "_Values";
+    }
     else
       OS << "nullptr";
   };
@@ -460,29 +478,5 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   OS << "\n";
 
   OS << "\n";
-  OS << "#ifdef OPTTABLE_ARG_INIT\n";
-  OS << "//////////\n";
-  OS << "// Option Values\n\n";
-  for (const Record &R : llvm::make_pointee_range(Opts)) {
-    if (isa<UnsetInit>(R.getValueInit("ValuesCode")))
-      continue;
-    OS << "{\n";
-    OS << "bool ValuesWereAdded;\n";
-    OS << R.getValueAsString("ValuesCode");
-    OS << "\n";
-    for (StringRef Prefix : R.getValueAsListOfStrings("Prefixes")) {
-      OS << "ValuesWereAdded = Opt.addValues(";
-      std::string S(Prefix);
-      S += R.getValueAsString("Name");
-      write_cstring(OS, S);
-      OS << ", Values);\n";
-      OS << "(void)ValuesWereAdded;\n";
-      OS << "assert(ValuesWereAdded && \"Couldn't add values to "
-            "OptTable!\");\n";
-    }
-    OS << "}\n";
-  }
-  OS << "\n";
-  OS << "#endif // OPTTABLE_ARG_INIT\n";
 }
 } // end namespace llvm
