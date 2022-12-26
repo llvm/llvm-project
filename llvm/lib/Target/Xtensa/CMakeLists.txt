@@ -3,6 +3,7 @@ add_llvm_component_group(Xtensa)
 set(LLVM_TARGET_DEFINITIONS Xtensa.td)
 
 tablegen(LLVM XtensaGenInstrInfo.inc -gen-instr-info)
+tablegen(LLVM XtensaGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM XtensaGenRegisterInfo.inc -gen-register-info)
 
 add_public_tablegen_target(XtensaCommonTableGen)
