@@ -784,6 +784,8 @@ public:
   mlir::cir::CallOp buildCoroAllocBuiltinCall(mlir::Location loc);
   mlir::cir::CallOp buildCoroBeginBuiltinCall(mlir::Location loc,
                                               mlir::Value coroframeAddr);
+  mlir::cir::CallOp buildCoroEndBuiltinCall(mlir::Location loc,
+                                            mlir::Value nullPtr);
 
   RValue buildCoawaitExpr(const CoawaitExpr &E,
                           AggValueSlot aggSlot = AggValueSlot::ignored(),

@@ -228,6 +228,28 @@ CIRGenFunction::buildCoroBeginBuiltinCall(mlir::Location loc,
       mlir::ValueRange{CurCoro.Data->CoroId.getResult(0), coroframeAddr});
 }
 
+mlir::cir::CallOp CIRGenFunction::buildCoroEndBuiltinCall(mlir::Location loc,
+                                                          mlir::Value nullPtr) {
+  auto int8PtrTy = builder.getInt8PtrTy();
+  auto boolTy = builder.getBoolTy();
+  mlir::Operation *builtin = CGM.getGlobalValue(CGM.builtinCoroEnd);
+
+  mlir::cir::FuncOp fnOp;
+  if (!builtin) {
+    fnOp = CGM.createCIRFunction(
+        loc, CGM.builtinCoroEnd,
+        builder.getFunctionType(mlir::TypeRange{int8PtrTy, boolTy},
+                                mlir::TypeRange{boolTy}),
+        /*FD=*/nullptr);
+    assert(fnOp && "should always succeed");
+    fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));
+  } else
+    fnOp = cast<mlir::cir::FuncOp>(builtin);
+
+  return builder.create<mlir::cir::CallOp>(
+      loc, fnOp, mlir::ValueRange{nullPtr, builder.getBool(false, loc)});
+}
+
 mlir::LogicalResult
 CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
   auto openCurlyLoc = getLoc(S.getBeginLoc());
@@ -299,8 +321,6 @@ CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
     if (buildStmt(S.getPromiseDeclStmt(), /*useCurrentScope=*/true).failed())
       return mlir::failure();
 
-    // FIXME(cir): handle promiseAddr and coro id related stuff?
-
     // ReturnValue should be valid as long as the coroutine's return type
     // is not void. The assertion could help us to reduce the check later.
     assert(ReturnValue.isValid() == (bool)S.getReturnStmt());
@@ -332,10 +352,10 @@ CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
     if (buildBodyAndFallthrough(*this, S, S.getBody()).failed())
       return mlir::failure();
 
-    // See if we need to generate final suspend.
-    // const bool CanFallthrough = Builder.GetInsertBlock();
-    // FIXME: LLVM tracks fallthrough by checking the insertion
-    // point is valid, we can probably do better.
+    // FIXME(cir): LLVM checks CanFallthrough by looking into the availability
+    // of the insert block, do we need this? Likely not since fallthroughs
+    // usually get an implicit AST node for a CoreturnStmt.
+    // From LLVM IR Gen: const bool CanFallthrough = Builder.GetInsertBlock();
     const bool CanFallthrough = false;
     const bool HasCoreturns = CurCoro.Data->CoreturnCount > 0;
     if (CanFallthrough || HasCoreturns) {

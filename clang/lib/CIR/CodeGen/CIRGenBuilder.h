@@ -91,13 +91,20 @@ public:
                                        mlir::IntegerType::get(getContext(), 8));
   }
 
-  /// Get a constant 32-bit value.
+  // Get a constant 32-bit value.
   mlir::cir::ConstantOp getInt32(uint32_t C, mlir::Location loc) {
     auto int32Ty = mlir::IntegerType::get(getContext(), 32);
     return create<mlir::cir::ConstantOp>(loc, int32Ty,
                                          mlir::IntegerAttr::get(int32Ty, C));
   }
 
+  // Get a bool
+  mlir::Value getBool(bool state, mlir::Location loc) {
+    return create<mlir::cir::ConstantOp>(
+        loc, getBoolTy(), mlir::BoolAttr::get(getContext(), state));
+  }
+
+  // Get the bool type
   mlir::cir::BoolType getBoolTy() {
     return ::mlir::cir::BoolType::get(getContext());
   }
