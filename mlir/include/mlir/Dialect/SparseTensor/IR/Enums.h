@@ -171,25 +171,25 @@ inline std::string toMLIRString(DimLevelType dlt) {
   switch (dlt) {
   // TODO: should probably raise an error instead of printing it...
   case DimLevelType::Undef:
-    return "\"undef\"";
+    return "undef";
   case DimLevelType::Dense:
-    return "\"dense\"";
+    return "dense";
   case DimLevelType::Compressed:
-    return "\"compressed\"";
+    return "compressed";
   case DimLevelType::CompressedNu:
-    return "\"compressed-nu\"";
+    return "compressed-nu";
   case DimLevelType::CompressedNo:
-    return "\"compressed-no\"";
+    return "compressed-no";
   case DimLevelType::CompressedNuNo:
-    return "\"compressed-nu-no\"";
+    return "compressed-nu-no";
   case DimLevelType::Singleton:
-    return "\"singleton\"";
+    return "singleton";
   case DimLevelType::SingletonNu:
-    return "\"singleton-nu\"";
+    return "singleton-nu";
   case DimLevelType::SingletonNo:
-    return "\"singleton-no\"";
+    return "singleton-no";
   case DimLevelType::SingletonNuNo:
-    return "\"singleton-nu-no\"";
+    return "singleton-nu-no";
   }
   return "";
 }
