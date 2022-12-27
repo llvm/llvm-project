@@ -865,7 +865,7 @@ static LogicalResult forwardStoreToLoad(
 
     // We now have a candidate for forwarding.
     assert(lastWriteStoreOp == nullptr &&
-           "multiple simulataneous replacement stores");
+           "multiple simultaneous replacement stores");
     lastWriteStoreOp = storeOp;
   }
 
