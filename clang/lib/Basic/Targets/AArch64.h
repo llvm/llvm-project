@@ -58,8 +58,6 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
 
   llvm::AArch64::ArchKind ArchKind = llvm::AArch64::ArchKind::INVALID;
 
-  static const Builtin::Info BuiltinInfo[];
-
   std::string ABI;
   StringRef getArchProfile() const;
 

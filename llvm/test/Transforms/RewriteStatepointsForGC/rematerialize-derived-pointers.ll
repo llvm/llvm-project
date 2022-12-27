@@ -298,13 +298,12 @@ define void @test_loop(i32 addrspace(1)* %base) gc "statepoint-example" {
 ; CHECK-NEXT:    [[PTR_GEP:%.*]] = getelementptr i32, i32 addrspace(1)* [[BASE:%.*]], i32 15
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[DOT01:%.*]] = phi i32 addrspace(1)* [ [[PTR_GEP]], [[ENTRY:%.*]] ], [ [[PTR_GEP_REMAT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 addrspace(1)* [ [[BASE]], [[ENTRY]] ], [ [[BASE_RELOCATED_CASTED:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    call void @use_obj32(i32 addrspace(1)* [[DOT01]])
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 addrspace(1)* [ [[BASE]], [[ENTRY:%.*]] ], [ [[BASE_RELOCATED_CASTED:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[PTR_GEP_REMAT:%.*]] = getelementptr i32, i32 addrspace(1)* [[DOT0]], i32 15
+; CHECK-NEXT:    call void @use_obj32(i32 addrspace(1)* [[PTR_GEP_REMAT]])
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(i32 addrspace(1)* [[DOT0]]) ]
 ; CHECK-NEXT:    [[BASE_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    [[BASE_RELOCATED_CASTED]] = bitcast i8 addrspace(1)* [[BASE_RELOCATED]] to i32 addrspace(1)*
-; CHECK-NEXT:    [[PTR_GEP_REMAT]] = getelementptr i32, i32 addrspace(1)* [[BASE_RELOCATED_CASTED]], i32 15
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:

@@ -9,6 +9,8 @@
 @A = external global i32
 @B = external global i32
 @C = external global i32
+@D = external global i32
+@E = external global i32
 
 define i32 @loadA() {
    %a = load i32, i32* @A
@@ -26,9 +28,9 @@ if.then:
   br label %if.endif
 
 if.else:
-  store i32 2, i32* @C
+  store i32 2, i32* @D
   %call2 = call i32 @loadA()
-  store i32 1, i32* @B
+  store i32 1, i32* @E
   br label %if.endif
 
 if.endif:

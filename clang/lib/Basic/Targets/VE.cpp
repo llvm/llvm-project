@@ -18,7 +18,7 @@
 using namespace clang;
 using namespace clang::targets;
 
-const Builtin::Info VETargetInfo::BuiltinInfo[] = {
+static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
   {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
 #include "clang/Basic/BuiltinsVE.def"

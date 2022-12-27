@@ -147,7 +147,7 @@ private:
   // Create RVVIntrinsicDef.
   void InitRVVIntrinsic(const RVVIntrinsicRecord &Record, StringRef SuffixStr,
                         StringRef OverloadedSuffixStr, bool IsMask,
-                        RVVTypes &Types, bool HasPolicy, Policy DefaultPolicy,
+                        RVVTypes &Types, bool HasPolicy, Policy PolicyAttrs,
                         bool IsPrototypeDefaultTU);
 
   // Create FunctionDecl for a vector intrinsic.
@@ -314,7 +314,7 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
 void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
     const RVVIntrinsicRecord &Record, StringRef SuffixStr,
     StringRef OverloadedSuffixStr, bool IsMasked, RVVTypes &Signature,
-    bool HasPolicy, Policy DefaultPolicy, bool IsPrototypeDefaultTU) {
+    bool HasPolicy, Policy PolicyAttrs, bool IsPrototypeDefaultTU) {
   // Function name, e.g. vadd_vv_i32m1.
   std::string Name = Record.Name;
   if (!SuffixStr.empty())
@@ -334,7 +334,7 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
 
   RVVIntrinsic::updateNamesAndPolicy(IsMasked, HasPolicy, IsPrototypeDefaultTU,
                                      Name, BuiltinName, OverloadedName,
-                                     DefaultPolicy);
+                                     PolicyAttrs);
 
   // Put into IntrinsicList.
   size_t Index = IntrinsicList.size();

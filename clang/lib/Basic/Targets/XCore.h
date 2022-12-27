@@ -22,7 +22,6 @@ namespace clang {
 namespace targets {
 
 class LLVM_LIBRARY_VISIBILITY XCoreTargetInfo : public TargetInfo {
-  static const Builtin::Info BuiltinInfo[];
 
 public:
   XCoreTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
