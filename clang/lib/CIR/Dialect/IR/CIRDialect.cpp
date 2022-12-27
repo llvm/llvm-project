@@ -1410,9 +1410,12 @@ LogicalResult UnaryOp::verify() {
 //===----------------------------------------------------------------------===//
 
 void AwaitOp::build(OpBuilder &builder, OperationState &result,
+                    mlir::cir::AwaitKind kind,
                     function_ref<void(OpBuilder &, Location)> readyBuilder,
                     function_ref<void(OpBuilder &, Location)> suspendBuilder,
                     function_ref<void(OpBuilder &, Location)> resumeBuilder) {
+  result.addAttribute(getKindAttrName(result.name),
+                      cir::AwaitKindAttr::get(builder.getContext(), kind));
   {
     OpBuilder::InsertionGuard guard(builder);
     Region *readyRegion = result.addRegion();
