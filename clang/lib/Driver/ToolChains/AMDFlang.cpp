@@ -999,6 +999,13 @@ void AMDFlang::ConstructJob(Compilation &C, const JobAction &JA,
   // Remove "noinline" attriblute
   LowerCmdArgs.push_back("-x"); LowerCmdArgs.push_back("183"); LowerCmdArgs.push_back("0x10");
 
+  // Move option 234 flang reductions up to -fopenmp-target-fast
+  // instructing flang2 to use 32 teams for reduction tuning via opt 234.
+  if (Args.hasFlag(options::OPT_fopenmp_target_fast,
+      options::OPT_fno_openmp_target_fast, false)) {
+    LowerCmdArgs.push_back("-x"); LowerCmdArgs.push_back("234"); LowerCmdArgs.push_back("32");
+  }
+
   // Set a -x flag for second part of Fortran frontend
   for (Arg *A : Args.filtered(options::OPT_Mx_EQ)) {
     A->claim();
