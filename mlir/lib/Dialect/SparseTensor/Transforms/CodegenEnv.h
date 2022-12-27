@@ -14,6 +14,7 @@
 #define MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_CODEGENENV_H_
 
 #include "CodegenUtils.h"
+#include "LoopEmitter.h"
 
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
@@ -45,9 +46,9 @@ public:
   linalg::GenericOp op() const { return linalgOp; }
   const SparsificationOptions &options() const { return sparseOptions; }
   Merger &merger() { return latticeMerger; }
-  SparseTensorLoopEmitter *emitter() { return loopEmitter; }
+  LoopEmitter *emitter() { return loopEmitter; }
 
-  void startEmit(OpOperand *so, unsigned lv, SparseTensorLoopEmitter *le);
+  void startEmit(OpOperand *so, unsigned lv, LoopEmitter *le);
 
   /// Generates loop boundary statements (entering/exiting loops). The function
   /// passes and updates the passed-in parameters.
@@ -135,7 +136,7 @@ private:
 
   // Loop emitter helper class (keep reference in scope!).
   // TODO: move emitter constructor up in time?
-  SparseTensorLoopEmitter *loopEmitter;
+  LoopEmitter *loopEmitter;
 
   // Topological sort.
   std::vector<unsigned> topSort;
