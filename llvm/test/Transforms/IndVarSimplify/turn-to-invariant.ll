@@ -629,3 +629,215 @@ done:
 failed:
   ret i32 -3
 }
+
+; TODO: Same as test_litter_conditions, but with logical AND.
+define i32 @test_litter_conditions_logical_and(i32 %start, i32 %len) {
+; CHECK-LABEL: @test_litter_conditions_logical_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[ZERO_CHECK:%.*]] = icmp ne i32 [[IV]], 0
+; CHECK-NEXT:    [[FAKE_1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[ZERO_CHECK]], [[FAKE_1]]
+; CHECK-NEXT:    br i1 [[AND_1]], label [[RANGE_CHECK_BLOCK:%.*]], label [[FAILED_1:%.*]]
+; CHECK:       range_check_block:
+; CHECK-NEXT:    [[IV_MINUS_1:%.*]] = add i32 [[IV]], -1
+; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp ult i32 [[IV_MINUS_1]], [[LEN:%.*]]
+; CHECK-NEXT:    [[FAKE_2:%.*]] = call i1 @cond()
+; CHECK-NEXT:    [[AND_2:%.*]] = select i1 [[RANGE_CHECK]], i1 [[FAKE_2]], i1 false
+; CHECK-NEXT:    br i1 [[AND_2]], label [[BACKEDGE]], label [[FAILED_2:%.*]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[DONE:%.*]], label [[LOOP]]
+; CHECK:       done:
+; CHECK-NEXT:    [[IV_LCSSA2:%.*]] = phi i32 [ [[IV]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA2]]
+; CHECK:       failed_1:
+; CHECK-NEXT:    ret i32 -1
+; CHECK:       failed_2:
+; CHECK-NEXT:    ret i32 -2
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %backedge]
+  %zero_check = icmp ne i32 %iv, 0
+  %fake_1 = call i1 @cond()
+  %and_1 = and i1 %zero_check, %fake_1
+  br i1 %and_1, label %range_check_block, label %failed_1
+
+range_check_block:
+  %iv.minus.1 = add i32 %iv, -1
+  %range_check = icmp ult i32 %iv.minus.1, %len
+  %fake_2 = call i1 @cond()
+  %and_2 = select i1 %range_check, i1 %fake_2, i1 false
+  br i1 %and_2, label %backedge, label %failed_2
+
+backedge:
+  %iv.next = add i32 %iv, -1
+  %loop_cond = call i1 @cond()
+  br i1 %loop_cond, label %done, label %loop
+
+done:
+  ret i32 %iv
+
+failed_1:
+  ret i32 -1
+
+failed_2:
+  ret i32 -2
+}
+
+; TODO: Same as test_litter_conditions_inverse, but with logical OR.
+define i32 @test_litter_conditions_inverse_logical_or(i32 %start, i32 %len) {
+; CHECK-LABEL: @test_litter_conditions_inverse_logical_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[ZERO_CHECK:%.*]] = icmp ne i32 [[IV]], 0
+; CHECK-NEXT:    [[FAKE_1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[ZERO_CHECK]], [[FAKE_1]]
+; CHECK-NEXT:    br i1 [[AND_1]], label [[RANGE_CHECK_BLOCK:%.*]], label [[FAILED_1:%.*]]
+; CHECK:       range_check_block:
+; CHECK-NEXT:    [[IV_MINUS_1:%.*]] = add i32 [[IV]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FAILED:%.*]] = icmp uge i32 [[IV_MINUS_1]], [[LEN:%.*]]
+; CHECK-NEXT:    [[FAKE_2:%.*]] = call i1 @cond()
+; CHECK-NEXT:    [[OR_2:%.*]] = select i1 [[RANGE_CHECK_FAILED]], i1 true, i1 [[FAKE_2]]
+; CHECK-NEXT:    br i1 [[OR_2]], label [[FAILED_2:%.*]], label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[DONE:%.*]], label [[LOOP]]
+; CHECK:       done:
+; CHECK-NEXT:    [[IV_LCSSA2:%.*]] = phi i32 [ [[IV]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA2]]
+; CHECK:       failed_1:
+; CHECK-NEXT:    ret i32 -1
+; CHECK:       failed_2:
+; CHECK-NEXT:    ret i32 -2
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %backedge]
+  %zero_check = icmp ne i32 %iv, 0
+  %fake_1 = call i1 @cond()
+  %and_1 = and i1 %zero_check, %fake_1
+  br i1 %and_1, label %range_check_block, label %failed_1
+
+range_check_block:
+  %iv.minus.1 = add i32 %iv, -1
+  %range_check_failed = icmp uge i32 %iv.minus.1, %len
+  %fake_2 = call i1 @cond()
+  %or_2 = select i1 %range_check_failed, i1 true, i1 %fake_2
+  br i1 %or_2, label %failed_2, label %backedge
+
+backedge:
+  %iv.next = add i32 %iv, -1
+  %loop_cond = call i1 @cond()
+  br i1 %loop_cond, label %done, label %loop
+
+done:
+  ret i32 %iv
+
+failed_1:
+  ret i32 -1
+
+failed_2:
+  ret i32 -2
+}
+
+; TODO: Same as test_and_conditions, but with logical AND.
+define i32 @test_and_conditions_logical_and(i32 %start, i32 %len) {
+; CHECK-LABEL: @test_and_conditions_logical_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[ZERO_CHECK:%.*]] = icmp ne i32 [[IV]], 0
+; CHECK-NEXT:    [[IV_MINUS_1:%.*]] = add i32 [[IV]], -1
+; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp ult i32 [[IV_MINUS_1]], [[LEN:%.*]]
+; CHECK-NEXT:    [[BOTH_CHECKS:%.*]] = select i1 [[ZERO_CHECK]], i1 [[RANGE_CHECK]], i1 false
+; CHECK-NEXT:    br i1 [[BOTH_CHECKS]], label [[BACKEDGE]], label [[FAILED:%.*]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[DONE:%.*]], label [[LOOP]]
+; CHECK:       done:
+; CHECK-NEXT:    [[IV_LCSSA1:%.*]] = phi i32 [ [[IV]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA1]]
+; CHECK:       failed:
+; CHECK-NEXT:    ret i32 -3
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %backedge]
+  %zero_check = icmp ne i32 %iv, 0
+  %iv.minus.1 = add i32 %iv, -1
+  %range_check = icmp ult i32 %iv.minus.1, %len
+  %both_checks = select i1 %zero_check, i1 %range_check, i1 false
+  br i1 %both_checks, label %backedge, label %failed
+
+backedge:
+  %iv.next = add i32 %iv, -1
+  %loop_cond = call i1 @cond()
+  br i1 %loop_cond, label %done, label %loop
+
+done:
+  ret i32 %iv
+
+failed:
+  ret i32 -3
+}
+
+; TODO: Same as test_and_conditions_inverse, but with logical OR.
+define i32 @test_and_conditions_inverse_logical_or(i32 %start, i32 %len) {
+; CHECK-LABEL: @test_and_conditions_inverse_logical_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[ZERO_CHECK_FAILED:%.*]] = icmp eq i32 [[IV]], 0
+; CHECK-NEXT:    [[IV_MINUS_1:%.*]] = add i32 [[IV]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FAILED:%.*]] = icmp uge i32 [[IV_MINUS_1]], [[LEN:%.*]]
+; CHECK-NEXT:    [[EITHER_CHECK:%.*]] = select i1 [[ZERO_CHECK_FAILED]], i1 true, i1 [[RANGE_CHECK_FAILED]]
+; CHECK-NEXT:    br i1 [[EITHER_CHECK]], label [[FAILED:%.*]], label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[DONE:%.*]], label [[LOOP]]
+; CHECK:       done:
+; CHECK-NEXT:    [[IV_LCSSA1:%.*]] = phi i32 [ [[IV]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA1]]
+; CHECK:       failed:
+; CHECK-NEXT:    ret i32 -3
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %backedge]
+  %zero_check_failed = icmp eq i32 %iv, 0
+  %iv.minus.1 = add i32 %iv, -1
+  %range_check_failed = icmp uge i32 %iv.minus.1, %len
+  %either_check = select i1 %zero_check_failed, i1 true, i1 %range_check_failed
+  br i1 %either_check, label %failed, label %backedge
+
+backedge:
+  %iv.next = add i32 %iv, -1
+  %loop_cond = call i1 @cond()
+  br i1 %loop_cond, label %done, label %loop
+
+done:
+  ret i32 %iv
+
+failed:
+  ret i32 -3
+}

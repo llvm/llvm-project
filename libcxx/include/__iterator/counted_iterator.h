@@ -25,9 +25,10 @@
 #include <__iterator/iterator_traits.h>
 #include <__iterator/readable_traits.h>
 #include <__memory/pointer_traits.h>
+#include <__type_traits/add_pointer.h>
+#include <__type_traits/conditional.h>
 #include <__utility/move.h>
 #include <compare>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

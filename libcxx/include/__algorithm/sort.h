@@ -26,9 +26,12 @@
 #include <__iterator/iterator_traits.h>
 #include <__memory/destruct_n.h>
 #include <__memory/unique_ptr.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/is_arithmetic.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <climits>
+#include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
