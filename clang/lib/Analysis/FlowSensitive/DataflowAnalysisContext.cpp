@@ -48,9 +48,8 @@ StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
     // context-sensitive analysis. But, this only applies to storage locations,
     // since fields access it not allowed to fail. In contrast, field *values*
     // don't need this allowance, since the API allows for uninitialized fields.
-    auto Fields = Options.EnableContextSensitiveAnalysis
-                      ? getObjectFields(Type)
-                      : getReferencedFields(Type);
+    auto Fields = Opts.ContextSensitiveOpts ? getObjectFields(Type)
+                                            : getReferencedFields(Type);
     for (const FieldDecl *Field : Fields)
       FieldLocs.insert({Field, &createStorageLocation(Field->getType())});
     return takeOwnership(
