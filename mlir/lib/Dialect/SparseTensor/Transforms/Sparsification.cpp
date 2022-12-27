@@ -12,6 +12,7 @@
 
 #include "CodegenEnv.h"
 #include "CodegenUtils.h"
+#include "LoopEmitter.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -1564,7 +1565,7 @@ public:
     SmallVector<Value> tensors;
     for (OpOperand &t : op->getOpOperands())
       tensors.push_back(t.get());
-    SparseTensorLoopEmitter lpe(
+    LoopEmitter lpe(
         tensors,
         StringAttr::get(op.getContext(), linalg::GenericOp::getOperationName()),
         /*hasOutput=*/true, /*isSparseOut=*/sparseOut != nullptr,

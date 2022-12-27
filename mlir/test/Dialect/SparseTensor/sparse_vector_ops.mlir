@@ -17,6 +17,8 @@
 // CHECK-DAG:       %[[C1:.*]] = arith.constant dense<2.000000e+00> : vector<8xf32>
 // CHECK-DAG:       %[[C2:.*]] = arith.constant dense<1.000000e+00> : vector<8xf32>
 // CHECK-DAG:       %[[C3:.*]] = arith.constant dense<255> : vector<8xi64>
+// CHECK-DAG:       %[[C4:.*]] = arith.constant dense<4> : vector<8xi32>
+// CHECK-DAG:       %[[C5:.*]] = arith.constant dense<1> : vector<8xi32>
 // CHECK:           scf.for
 // CHECK:             %[[VAL_14:.*]] = vector.load
 // CHECK:             %[[VAL_15:.*]] = math.absf %[[VAL_14]] : vector<8xf32>
@@ -38,8 +40,11 @@
 // CHECK:             %[[VAL_31:.*]] = arith.andi %[[VAL_30]], %[[C3]] : vector<8xi64>
 // CHECK:             %[[VAL_32:.*]] = arith.trunci %[[VAL_31]] : vector<8xi64> to vector<8xi16>
 // CHECK:             %[[VAL_33:.*]] = arith.extsi %[[VAL_32]] : vector<8xi16> to vector<8xi32>
-// CHECK:             %[[VAL_34:.*]] = arith.uitofp %[[VAL_33]] : vector<8xi32> to vector<8xf32>
-// CHECK:             vector.store %[[VAL_34]]
+// CHECK:             %[[VAL_34:.*]] = arith.shrsi %[[VAL_33]], %[[C4]] : vector<8xi32>
+// CHECK:             %[[VAL_35:.*]] = arith.shrui %[[VAL_34]], %[[C4]] : vector<8xi32>
+// CHECK:             %[[VAL_36:.*]] = arith.shli %[[VAL_35]], %[[C5]] : vector<8xi32>
+// CHECK:             %[[VAL_37:.*]] = arith.uitofp %[[VAL_36]] : vector<8xi32> to vector<8xf32>
+// CHECK:             vector.store %[[VAL_37]]
 // CHECK:           }
 func.func @vops(%arga: tensor<1024xf32, #DenseVector>,
                 %argb: tensor<1024xf32, #DenseVector>) -> tensor<1024xf32> {
@@ -47,6 +52,8 @@ func.func @vops(%arga: tensor<1024xf32, #DenseVector>,
   %o = arith.constant 1.0 : f32
   %c = arith.constant 2.0 : f32
   %i = arith.constant 255 : i64
+  %s = arith.constant 4 : i32
+  %t = arith.constant 1 : i32
   %0 = linalg.generic #trait
     ins(%arga, %argb: tensor<1024xf32, #DenseVector>, tensor<1024xf32, #DenseVector>)
     outs(%init: tensor<1024xf32>) {
@@ -69,8 +76,11 @@ func.func @vops(%arga: tensor<1024xf32, #DenseVector>,
         %15 = arith.andi %14, %i : i64
         %16 = arith.trunci %15 : i64 to i16
         %17 = arith.extsi %16 : i16 to i32
-        %18 = arith.uitofp %17 : i32 to f32
-        linalg.yield %18 : f32
+	%18 = arith.shrsi %17, %s : i32
+	%19 = arith.shrui %18, %s : i32
+	%20 = arith.shli %19, %t : i32
+        %21 = arith.uitofp %20 : i32 to f32
+        linalg.yield %21 : f32
   } -> tensor<1024xf32>
   return %0 : tensor<1024xf32>
 }
