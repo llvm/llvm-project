@@ -1356,6 +1356,17 @@ def CallOp : CIR_Op<"call",
 // AwaitOp
 //===----------------------------------------------------------------------===//
 
+def AK_Initial : I32EnumAttrCase<"init", 1>;
+def AK_User    : I32EnumAttrCase<"user", 2>;
+def AK_Final   : I32EnumAttrCase<"final", 3>;
+
+def AwaitKind : I32EnumAttr<
+    "AwaitKind",
+    "await kind",
+    [AK_Initial, AK_User, AK_Final]> {
+  let cppNamespace = "::mlir::cir";
+}
+
 def AwaitOp : CIR_Op<"await",
        [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
         RecursivelySpeculatable, NoRegionArguments]> {
@@ -1386,12 +1397,17 @@ def AwaitOp : CIR_Op<"await",
     of CIR, e.g. LLVM, should use the `suspend` region to track more
     lower level codegen (e.g. intrinsic emission for coro.save/coro.suspend).
 
+    There are also 3 flavors of `cir.await` available:
+    - `init`: compiler generated initial suspend via implicit `co_await`.
+    - `user`: also known as normal, representing user written co_await's.
+    - `final`: compiler generated final suspend via implicit `co_await`.
+
     From the C++ snippet we get:
 
     ```mlir
       cir.scope {
         ... // auto &&x = CommonExpr();
-        cir.await(ready : {
+        cir.await(user, ready : {
           ... // x.await_ready()
         }, suspend : {
           ... // x.await_suspend()
@@ -1405,11 +1421,12 @@ def AwaitOp : CIR_Op<"await",
     as part of the enclosing await scope.
   }];
 
+  let arguments = (ins AwaitKind:$kind);
   let regions = (region SizedRegion<1>:$ready,
                         SizedRegion<1>:$suspend,
                         SizedRegion<1>:$resume);
   let assemblyFormat = [{
-    `(`
+    `(` $kind `,`
     `ready` `:` $ready `,`
     `suspend` `:` $suspend `,`
     `resume` `:` $resume `,`
@@ -1420,6 +1437,7 @@ def AwaitOp : CIR_Op<"await",
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins
+      "mlir::cir::AwaitKind":$kind,
       CArg<"function_ref<void(OpBuilder &, Location)>",
            "nullptr">:$readyBuilder,
       CArg<"function_ref<void(OpBuilder &, Location)>",

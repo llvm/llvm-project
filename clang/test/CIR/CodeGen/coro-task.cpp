@@ -171,7 +171,7 @@ VoidTask silly_task() {
 
 // First regions `ready` has a special cir.yield code to veto suspension.
 
-// CHECK:   cir.await(ready : {
+// CHECK:   cir.await(init, ready : {
 // CHECK:     %[[#ReadyVeto:]] = cir.call @_ZNSt14suspend_always11await_readyEv(%[[#SuspendAlwaysAddr]])
 // CHECK:     cir.if %[[#ReadyVeto]] {
 // CHECK:       cir.yield break
@@ -212,7 +212,7 @@ VoidTask silly_task() {
 
 // The actual user written co_await
 // CHECK: cir.scope {
-// CHECK:   cir.await(ready : {
+// CHECK:   cir.await(user, ready : {
 // CHECK:   }, suspend : {
 // CHECK:   }, resume : {
 // CHECK:   },)
@@ -223,7 +223,7 @@ VoidTask silly_task() {
 
 // The final suspend co_await
 // CHECK: cir.scope {
-// CHECK:   cir.await(ready : {
+// CHECK:   cir.await(final, ready : {
 // CHECK:   }, suspend : {
 // CHECK:   }, resume : {
 // CHECK:   },)

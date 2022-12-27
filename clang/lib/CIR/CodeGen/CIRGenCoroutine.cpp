@@ -18,14 +18,11 @@
 using namespace clang;
 using namespace cir;
 
-namespace {
-enum class AwaitKind { Init, Normal, Yield, Final };
-} // namespace
 struct cir::CGCoroData {
   // What is the current await expression kind and how many
   // await/yield expressions were encountered so far.
   // These are used to generate pretty labels for await expressions in LLVM IR.
-  AwaitKind CurrentAwaitKind = AwaitKind::Init;
+  mlir::cir::AwaitKind CurrentAwaitKind = mlir::cir::AwaitKind::init;
 
   // Stores the __builtin_coro_id emitted in the function so that we can supply
   // it as the first argument to other builtins.
@@ -340,11 +337,11 @@ CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
     }
 
     // FIXME(cir): EHStack.pushCleanup<CallCoroEnd>(EHCleanup);
-    CurCoro.Data->CurrentAwaitKind = AwaitKind::Init;
+    CurCoro.Data->CurrentAwaitKind = mlir::cir::AwaitKind::init;
     if (buildStmt(S.getInitSuspendStmt(), /*useCurrentScope=*/true).failed())
       return mlir::failure();
 
-    CurCoro.Data->CurrentAwaitKind = AwaitKind::Normal;
+    CurCoro.Data->CurrentAwaitKind = mlir::cir::AwaitKind::user;
 
     // FIXME(cir): wrap buildBodyAndFallthrough with try/catch bits.
     if (S.getExceptionHandler())
@@ -359,7 +356,7 @@ CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
     const bool CanFallthrough = false;
     const bool HasCoreturns = CurCoro.Data->CoreturnCount > 0;
     if (CanFallthrough || HasCoreturns) {
-      CurCoro.Data->CurrentAwaitKind = AwaitKind::Final;
+      CurCoro.Data->CurrentAwaitKind = mlir::cir::AwaitKind::final;
       {
         mlir::OpBuilder::InsertionGuard guard(builder);
         builder.setInsertionPoint(CurCoro.Data->FinalSuspendInsPoint);
@@ -404,9 +401,11 @@ struct LValueOrRValue {
   RValue RV;
 };
 } // namespace
-static LValueOrRValue buildSuspendExpression(
-    CIRGenFunction &CGF, CGCoroData &Coro, CoroutineSuspendExpr const &S,
-    AwaitKind Kind, AggValueSlot aggSlot, bool ignoreResult, bool forLValue) {
+static LValueOrRValue
+buildSuspendExpression(CIRGenFunction &CGF, CGCoroData &Coro,
+                       CoroutineSuspendExpr const &S, mlir::cir::AwaitKind Kind,
+                       AggValueSlot aggSlot, bool ignoreResult,
+                       bool forLValue) {
   auto *E = S.getCommonExpr();
 
   auto awaitBuild = mlir::success();
@@ -418,7 +417,7 @@ static LValueOrRValue buildSuspendExpression(
   auto &builder = CGF.getBuilder();
 
   [[maybe_unused]] auto awaitOp = builder.create<mlir::cir::AwaitOp>(
-      CGF.getLoc(S.getSourceRange()),
+      CGF.getLoc(S.getSourceRange()), Kind,
       /*readyBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
         auto *cond = S.getReadyExpr();
@@ -469,7 +468,7 @@ static LValueOrRValue buildSuspendExpression(
         // function is marked as 'noexcept', we avoid generating this additional
         // IR.
         CXXTryStmt *TryStmt = nullptr;
-        if (Coro.ExceptionHandler && Kind == AwaitKind::Init &&
+        if (Coro.ExceptionHandler && Kind == mlir::cir::AwaitKind::init &&
             memberCallExpressionCanThrow(S.getResumeExpr())) {
           llvm_unreachable("NYI");
         }
