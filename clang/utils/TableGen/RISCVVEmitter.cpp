@@ -163,14 +163,14 @@ void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
     OS << "  ID = Intrinsic::riscv_" + RVVI->getIRName() + ";\n";
   if (RVVI->getNF() >= 2)
     OS << "  NF = " + utostr(RVVI->getNF()) + ";\n";
-  // We had initialized DefaultPolicy as TU/TUMU in CodeGen function.
-  if (!RVVI->getDefaultPolicy().isTUPolicy() &&
-      !RVVI->getDefaultPolicy().isTUMUPolicy() && !RVVI->hasPassthruOperand() &&
+  // We had initialized PolicyAttrs as TU/TUMU in CodeGen function.
+  if (!RVVI->getPolicyAttrs().isTUPolicy() &&
+      !RVVI->getPolicyAttrs().isTUMUPolicy() && !RVVI->hasPassthruOperand() &&
       !RVVI->hasManualCodegen() && RVVI->hasVL())
-    OS << "  DefaultPolicy = " << RVVI->getDefaultPolicyBits() << ";\n";
+    OS << "  PolicyAttrs = " << RVVI->getPolicyAttrsBits() << ";\n";
 
   if (RVVI->hasManualCodegen()) {
-    OS << "  DefaultPolicy = " << RVVI->getDefaultPolicyBits() << ";\n";
+    OS << "  PolicyAttrs = " << RVVI->getPolicyAttrsBits() << ";\n";
     if (RVVI->isMasked())
       OS << "IsMasked = true;\n";
     else
@@ -195,13 +195,12 @@ void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
       OS << "  std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);\n";
       if (RVVI->hasPolicyOperand())
         OS << "  Ops.push_back(ConstantInt::get(Ops.back()->getType(),"
-              " DefaultPolicy));\n";
-      if (RVVI->hasMaskedOffOperand() &&
-          RVVI->getDefaultPolicy().isTAMAPolicy())
+              " PolicyAttrs));\n";
+      if (RVVI->hasMaskedOffOperand() && RVVI->getPolicyAttrs().isTAMAPolicy())
         OS << "  Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));\n";
       // Masked reduction cases.
       if (!RVVI->hasMaskedOffOperand() && RVVI->hasPassthruOperand() &&
-          RVVI->getDefaultPolicy().isTAMAPolicy())
+          RVVI->getPolicyAttrs().isTAMAPolicy())
         OS << "  Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));\n";
     } else {
       OS << "  std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end());\n";
@@ -209,9 +208,8 @@ void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
   } else {
     if (RVVI->hasPolicyOperand())
       OS << "  Ops.push_back(ConstantInt::get(Ops.back()->getType(), "
-            "DefaultPolicy));\n";
-    else if (RVVI->hasPassthruOperand() &&
-             RVVI->getDefaultPolicy().isTAPolicy())
+            "PolicyAttrs));\n";
+    else if (RVVI->hasPassthruOperand() && RVVI->getPolicyAttrs().isTAPolicy())
       OS << "  Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));\n";
   }
 
@@ -448,7 +446,7 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
   llvm::stable_sort(Defs, [](const std::unique_ptr<RVVIntrinsic> &A,
                              const std::unique_ptr<RVVIntrinsic> &B) {
     if (A->getIRName() == B->getIRName())
-      return (A->getDefaultPolicy() < B->getDefaultPolicy());
+      return (A->getPolicyAttrs() < B->getPolicyAttrs());
     return (A->getIRName() < B->getIRName());
   });
 
@@ -462,7 +460,7 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
     StringRef CurIRName = Def->getIRName();
     if (CurIRName != PrevDef->getIRName() ||
         (Def->getManualCodegen() != PrevDef->getManualCodegen()) ||
-        (Def->getDefaultPolicy() != PrevDef->getDefaultPolicy())) {
+        (Def->getPolicyAttrs() != PrevDef->getPolicyAttrs())) {
       emitCodeGenSwitchBody(PrevDef, OS);
     }
     PrevDef = Def.get();
