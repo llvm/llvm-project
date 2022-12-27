@@ -2,25 +2,23 @@
 
 %struct.S = type { i32 }
 
-define dso_local void @foo(%struct.S* %this, i32 %bar) {
+define dso_local void @foo(ptr %this, i32 %bar) {
 entry:
-  %this.addr = alloca %struct.S*, align 8
+  %this.addr = alloca ptr, align 8
   %bar.addr = alloca i32, align 4
-  store %struct.S* %this, %struct.S** %this.addr, align 8
-  store i32 %bar, i32* %bar.addr, align 4
-  %this1 = load %struct.S*, %struct.S** %this.addr, align 8
-  %0 = load i32, i32* %bar.addr, align 4
+  store ptr %this, ptr %this.addr, align 8
+  store i32 %bar, ptr %bar.addr, align 4
+  %this1 = load ptr, ptr %this.addr, align 8
+  %0 = load i32, ptr %bar.addr, align 4
   %tobool = icmp ne i32 %0, 0
   br i1 %tobool, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  %foo = getelementptr inbounds %struct.S, %struct.S* %this1, i32 0, i32 0
-  store i32 1, i32* %foo, align 4
+  store i32 1, ptr %this1, align 4
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %foo2 = getelementptr inbounds %struct.S, %struct.S* %this1, i32 0, i32 0
-  store i32 0, i32* %foo2, align 4
+  store i32 0, ptr %this1, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then

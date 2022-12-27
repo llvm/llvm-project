@@ -6,10 +6,9 @@
 ; CHECK-LABEL: @vector_scalar(
 ; CHECK: store double
 ; CHECK: store <1 x double>
-define void @vector_scalar(double* %ptr, double %a, <1 x double> %b) {
-  %1 = bitcast double* %ptr to <1 x double>*
-  %2 = getelementptr <1 x double>, <1 x double>* %1, i32 1
-  store double %a, double* %ptr, align 8
-  store <1 x double> %b, <1 x double>* %2, align 8
+define void @vector_scalar(ptr %ptr, double %a, <1 x double> %b) {
+  %1 = getelementptr <1 x double>, ptr %ptr, i32 1
+  store double %a, ptr %ptr, align 8
+  store <1 x double> %b, ptr %1, align 8
   ret void
 }
