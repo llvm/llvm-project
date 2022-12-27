@@ -9512,7 +9512,8 @@ Value *BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues,
   for (const std::unique_ptr<TreeEntry> &E : VectorizableTree) {
     if ((E->State == TreeEntry::NeedToGather &&
          (!E->getMainOp() || E->Idx > 0)) ||
-        E->getOpcode() == Instruction::ExtractValue ||
+        (E->State != TreeEntry::NeedToGather &&
+         E->getOpcode() == Instruction::ExtractValue) ||
         E->getOpcode() == Instruction::InsertElement)
         continue;
     Instruction *LastInst = &getLastInstructionInBundle(E.get());
