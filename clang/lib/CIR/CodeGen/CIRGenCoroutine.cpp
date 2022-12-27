@@ -233,6 +233,7 @@ CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
   auto openCurlyLoc = getLoc(S.getBeginLoc());
   auto nullPtrCst = builder.getNullPtr(builder.getInt8PtrTy(), openCurlyLoc);
 
+  CurFn.setCoroutineAttr(mlir::UnitAttr::get(builder.getContext()));
   auto coroId = buildCoroIDBuiltinCall(openCurlyLoc, nullPtrCst);
   createCoroData(*this, CurCoro, coroId);
 

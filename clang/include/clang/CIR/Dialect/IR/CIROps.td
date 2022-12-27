@@ -1203,6 +1203,7 @@ def FuncOp : CIR_Op<"func", [
   let arguments = (ins SymbolNameAttr:$sym_name,
                        TypeAttrOf<FunctionType>:$function_type,
                        UnitAttr:$builtin,
+                       UnitAttr:$coroutine,
                        DefaultValuedAttr<GlobalLinkageKind,
                                          "GlobalLinkageKind::ExternalLinkage">:$linkage,
                        OptionalAttr<StrAttr>:$sym_visibility,
