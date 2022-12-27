@@ -12,7 +12,7 @@
 //
 // Computes C = A x B with all matrices sparse (SpMSpM) in CSR.
 //
-// CHECK-LABEL:   func.func private @_insert_D_C_4_4_f64_0_0(
+// CHECK-LABEL:   func.func private @_insert_dense_compressed_4_4_f64_0_0(
 // CHECK-SAME:      %[[VAL_0:.*0]]: memref<?xindex>,
 // CHECK-SAME:      %[[VAL_1:.*1]]: memref<?xindex>,
 // CHECK-SAME:      %[[VAL_2:.*2]]: memref<?xf64>,
@@ -129,7 +129,7 @@
 // CHECK:             %[[VAL_72:.*]]:4 = scf.for %[[VAL_73:.*]] = %[[VAL_11]] to %[[VAL_71]] step %[[VAL_12]] iter_args(%[[VAL_74:.*]] = %[[VAL_42]], %[[VAL_75:.*]] = %[[VAL_43]], %[[VAL_76:.*]] = %[[VAL_44]], %[[VAL_77:.*]] = %[[VAL_45]]) -> (memref<?xindex>, memref<?xindex>, memref<?xf64>, !sparse_tensor.storage_specifier
 // CHECK:               %[[VAL_78:.*]] = memref.load %[[VAL_38]]{{\[}}%[[VAL_73]]] : memref<4xindex>
 // CHECK:               %[[VAL_79:.*]] = memref.load %[[VAL_36]]{{\[}}%[[VAL_78]]] : memref<4xf64>
-// CHECK:               %[[VAL_80:.*]]:4 = func.call @_insert_D_C_4_4_f64_0_0(%[[VAL_74]], %[[VAL_75]], %[[VAL_76]], %[[VAL_77]], %[[VAL_41]], %[[VAL_78]], %[[VAL_79]]) : (memref<?xindex>, memref<?xindex>, memref<?xf64>, !sparse_tensor.storage_specifier
+// CHECK:               %[[VAL_80:.*]]:4 = func.call @_insert_dense_compressed_4_4_f64_0_0(%[[VAL_74]], %[[VAL_75]], %[[VAL_76]], %[[VAL_77]], %[[VAL_41]], %[[VAL_78]], %[[VAL_79]]) : (memref<?xindex>, memref<?xindex>, memref<?xf64>, !sparse_tensor.storage_specifier
 // CHECK:               memref.store %[[VAL_10]], %[[VAL_36]]{{\[}}%[[VAL_78]]] : memref<4xf64>
 // CHECK:               memref.store %[[VAL_13]], %[[VAL_37]]{{\[}}%[[VAL_78]]] : memref<4xi1>
 // CHECK:               scf.yield %[[VAL_80]]#0, %[[VAL_80]]#1, %[[VAL_80]]#2, %[[VAL_80]]#3 : memref<?xindex>, memref<?xindex>, memref<?xf64>, !sparse_tensor.storage_specifier
