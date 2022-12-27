@@ -6,22 +6,22 @@ target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:3
 ; This is NOT OK to vectorize, as either load may alias either store.
 
 ; CHECK: load double
-; CHECK: store double 0.000000e+00, double addrspace(1)* %a,
+; CHECK: store double 0.000000e+00, ptr addrspace(1) %a,
 ; CHECK: load double
-; CHECK: store double 0.000000e+00, double addrspace(1)* %a.idx.1
-define amdgpu_kernel void @interleave(double addrspace(1)* nocapture %a, double addrspace(1)* nocapture %b, double addrspace(1)* nocapture readonly %c) #0 {
+; CHECK: store double 0.000000e+00, ptr addrspace(1) %a.idx.1
+define amdgpu_kernel void @interleave(ptr addrspace(1) nocapture %a, ptr addrspace(1) nocapture %b, ptr addrspace(1) nocapture readonly %c) #0 {
 entry:
-  %a.idx.1 = getelementptr inbounds double, double addrspace(1)* %a, i64 1
-  %c.idx.1 = getelementptr inbounds double, double addrspace(1)* %c, i64 1
+  %a.idx.1 = getelementptr inbounds double, ptr addrspace(1) %a, i64 1
+  %c.idx.1 = getelementptr inbounds double, ptr addrspace(1) %c, i64 1
 
-  %ld.c = load double, double addrspace(1)* %c, align 8 ; may alias store to %a
-  store double 0.0, double addrspace(1)* %a, align 8
+  %ld.c = load double, ptr addrspace(1) %c, align 8 ; may alias store to %a
+  store double 0.0, ptr addrspace(1) %a, align 8
 
-  %ld.c.idx.1 = load double, double addrspace(1)* %c.idx.1, align 8 ; may alias store to %a
-  store double 0.0, double addrspace(1)* %a.idx.1, align 8
+  %ld.c.idx.1 = load double, ptr addrspace(1) %c.idx.1, align 8 ; may alias store to %a
+  store double 0.0, ptr addrspace(1) %a.idx.1, align 8
 
   %add = fadd double %ld.c, %ld.c.idx.1
-  store double %add, double addrspace(1)* %b
+  store double %add, ptr addrspace(1) %b
 
   ret void
 }

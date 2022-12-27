@@ -7,15 +7,15 @@ target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:3
 ; CHECK: store i32
 ; CHECK: store i32
 ; CHECK: store i32
-define amdgpu_kernel void @no_implicit_float(i32 addrspace(1)* %out) #0 {
-  %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
-  %out.gep.2 = getelementptr i32, i32 addrspace(1)* %out, i32 2
-  %out.gep.3 = getelementptr i32, i32 addrspace(1)* %out, i32 3
+define amdgpu_kernel void @no_implicit_float(ptr addrspace(1) %out) #0 {
+  %out.gep.1 = getelementptr i32, ptr addrspace(1) %out, i32 1
+  %out.gep.2 = getelementptr i32, ptr addrspace(1) %out, i32 2
+  %out.gep.3 = getelementptr i32, ptr addrspace(1) %out, i32 3
 
-  store i32 123, i32 addrspace(1)* %out.gep.1
-  store i32 456, i32 addrspace(1)* %out.gep.2
-  store i32 333, i32 addrspace(1)* %out.gep.3
-  store i32 1234, i32 addrspace(1)* %out
+  store i32 123, ptr addrspace(1) %out.gep.1
+  store i32 456, ptr addrspace(1) %out.gep.2
+  store i32 333, ptr addrspace(1) %out.gep.3
+  store i32 1234, ptr addrspace(1) %out
   ret void
 }
 
