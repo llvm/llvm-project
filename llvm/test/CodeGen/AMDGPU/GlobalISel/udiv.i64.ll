@@ -186,10 +186,11 @@ declare i32 @llvm.amdgcn.readfirstlane(i32)
 define amdgpu_ps i64 @s_udiv_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-LABEL: s_udiv_i64:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_mov_b32 s4, 1
 ; CHECK-NEXT:    s_or_b64 s[6:7], s[0:1], s[2:3]
-; CHECK-NEXT:    s_mov_b32 s4, 0
-; CHECK-NEXT:    s_mov_b32 s5, -1
-; CHECK-NEXT:    s_and_b64 s[6:7], s[6:7], s[4:5]
+; CHECK-NEXT:    s_mov_b32 s8, 0
+; CHECK-NEXT:    s_mov_b32 s9, -1
+; CHECK-NEXT:    s_and_b64 s[6:7], s[6:7], s[8:9]
 ; CHECK-NEXT:    v_cmp_ne_u64_e64 vcc, s[6:7], 0
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v2, s2
 ; CHECK-NEXT:    s_cbranch_vccz .LBB1_2
@@ -316,12 +317,12 @@ define amdgpu_ps i64 @s_udiv_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v9, v5, vcc
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v3
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; CHECK-NEXT:    s_mov_b32 s5, 0
+; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:    s_branch .LBB1_3
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CHECK-NEXT:  .LBB1_3: ; %Flow
-; CHECK-NEXT:    s_xor_b32 s1, s5, -1
+; CHECK-NEXT:    s_xor_b32 s1, s4, 1
 ; CHECK-NEXT:    s_and_b32 s1, s1, 1
 ; CHECK-NEXT:    s_cmp_lg_u32 s1, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB1_5
@@ -1971,10 +1972,10 @@ define <2 x i64> @v_udiv_v2i64_24bit(<2 x i64> %num, <2 x i64> %den) {
 ; GISEL-NEXT:    v_add_i32_e32 v20, vcc, v20, v6
 ; GISEL-NEXT:    v_and_b32_e32 v6, 0xffffff, v0
 ; GISEL-NEXT:    v_and_b32_e32 v0, 0xffffff, v2
-; GISEL-NEXT:    s_bfe_i32 s4, -1, 0x10000
-; GISEL-NEXT:    s_bfe_i32 s5, -1, 0x10000
-; GISEL-NEXT:    s_bfe_i32 s6, -1, 0x10000
-; GISEL-NEXT:    s_bfe_i32 s7, -1, 0x10000
+; GISEL-NEXT:    s_bfe_i32 s4, 1, 0x10000
+; GISEL-NEXT:    s_bfe_i32 s5, 1, 0x10000
+; GISEL-NEXT:    s_bfe_i32 s6, 1, 0x10000
+; GISEL-NEXT:    s_bfe_i32 s7, 1, 0x10000
 ; GISEL-NEXT:    v_add_i32_e32 v2, vcc, v18, v15
 ; GISEL-NEXT:    v_cndmask_b32_e64 v15, 0, 1, vcc
 ; GISEL-NEXT:    v_add_i32_e32 v14, vcc, v14, v15
