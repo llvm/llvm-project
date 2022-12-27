@@ -421,11 +421,12 @@ def IfOp : CIR_Op<"if",
 def YieldOpKind_BK : I32EnumAttrCase<"Break", 1, "break">;
 def YieldOpKind_FT : I32EnumAttrCase<"Fallthrough", 2, "fallthrough">;
 def YieldOpKind_CE : I32EnumAttrCase<"Continue", 3, "continue">;
+def YieldOpKind_NS : I32EnumAttrCase<"NoSuspend", 4, "nosuspend">;
 
 def YieldOpKind : I32EnumAttr<
     "YieldOpKind",
     "yield kind",
-    [YieldOpKind_BK, YieldOpKind_FT, YieldOpKind_CE]> {
+    [YieldOpKind_BK, YieldOpKind_FT, YieldOpKind_CE, YieldOpKind_NS]> {
   let cppNamespace = "::mlir::cir";
 }
 
@@ -449,12 +450,14 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     Only available inside `cir.switch` regions.
     - `continue`: only allowed under `cir.loop`, continue execution to the next
     loop step.
+    - `nosuspend`: specific to the `ready` region inside `cir.await` op, it makes
+    control-flow to be transfered back to the parent, preventing suspension.
 
     As a general rule, `cir.yield` must be explicitly used whenever a region has
     more than one block and no terminator, or within `cir.switch` regions not
     `cir.return` terminated.
 
-    Example:
+    Examples:
     ```mlir
     cir.if %4 {
       ...
@@ -472,6 +475,16 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
       ...
       cir.yield continue
     }
+
+    cir.await(init, ready : {
+      // Call std::suspend_always::await_ready
+      %18 = cir.call @_ZNSt14suspend_always11await_readyEv(...)
+      cir.if %18 {
+        // yields back to the parent.
+        cir.yield nosuspend
+      }
+      cir.yield // control-flow to the next region for suspension.
+    }, ...)
     ```
   }];
 
@@ -506,6 +519,9 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     }
     bool isContinue() {
       return !isPlain() && *getKind() == YieldOpKind::Continue;
+    }
+    bool isNoSuspend() {
+      return !isPlain() && *getKind() == YieldOpKind::NoSuspend;
     }
   }];
 

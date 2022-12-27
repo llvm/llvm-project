@@ -573,31 +573,37 @@ LogicalResult ScopeOp::verify() { return success(); }
 //===----------------------------------------------------------------------===//
 
 mlir::LogicalResult YieldOp::verify() {
-  auto canDominateYieldBreak =
-      [&](Operation *parentOp) {
-        mlir::Region *lastAwaitRegion = nullptr;
-        while (!llvm::isa<cir::FuncOp>(parentOp)) {
-          auto awaitOp = dyn_cast<cir::AwaitOp>(parentOp);
-          if (awaitOp) {
-            if (lastAwaitRegion && lastAwaitRegion == &awaitOp.getResume()) {
-              emitOpError()
-                  << "break can only be used in 'ready' and 'suspend' regions";
-              return false;
-            }
-            return true;
-          }
+  auto isDominatedByLoopOrSwitch = [&](Operation *parentOp) {
+    while (!llvm::isa<cir::FuncOp>(parentOp)) {
+      if (llvm::isa<cir::SwitchOp, cir::LoopOp>(parentOp))
+        return true;
+      parentOp = parentOp->getParentOp();
+    }
 
-          if (llvm::isa<cir::SwitchOp, cir::LoopOp>(parentOp))
-            return true;
+    emitOpError() << "shall be dominated by 'cir.loop' or 'cir.switch'";
+    return false;
+  };
 
-          lastAwaitRegion = parentOp->getParentRegion();
-          parentOp = parentOp->getParentOp();
+  auto isDominatedByProperAwaitRegion = [&](Operation *parentOp,
+                                            mlir::Region *currRegion) {
+    while (!llvm::isa<cir::FuncOp>(parentOp)) {
+      auto awaitOp = dyn_cast<cir::AwaitOp>(parentOp);
+      if (awaitOp) {
+        if (currRegion && currRegion == &awaitOp.getResume()) {
+          emitOpError() << "kind 'nosuspend' can only be used in 'ready' and "
+                           "'suspend' regions";
+          return false;
         }
+        return true;
+      }
 
-        emitOpError()
-            << "shall be dominated by 'cir.loop', 'cir.switch' or 'cir.await'";
-        return false;
-      };
+      currRegion = parentOp->getParentRegion();
+      parentOp = parentOp->getParentOp();
+    }
+
+    emitOpError() << "shall be dominated by 'cir.await'";
+    return false;
+  };
 
   auto isDominatedByLoop = [](Operation *parentOp) {
     while (!llvm::isa<cir::FuncOp>(parentOp)) {
@@ -608,8 +614,15 @@ mlir::LogicalResult YieldOp::verify() {
     return false;
   };
 
+  if (isNoSuspend()) {
+    if (!isDominatedByProperAwaitRegion(getOperation()->getParentOp(),
+                                        getOperation()->getParentRegion()))
+      return mlir::failure();
+    return mlir::success();
+  }
+
   if (isBreak()) {
-    if (!canDominateYieldBreak(getOperation()->getParentOp()))
+    if (!isDominatedByLoopOrSwitch(getOperation()->getParentOp()))
       return mlir::failure();
     return mlir::success();
   }

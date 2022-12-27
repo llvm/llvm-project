@@ -429,10 +429,10 @@ buildSuspendExpression(CIRGenFunction &CGF, CGCoroData &Coro,
             /*thenBuilder=*/
             [&](mlir::OpBuilder &b, mlir::Location loc) {
               // If expression is ready, no need to suspend,
-              // `YieldOpKind::Break` tells control flow to return to parent, no
-              // more regions to be executed.
-              builder.create<mlir::cir::YieldOp>(loc,
-                                                 mlir::cir::YieldOpKind::Break);
+              // `YieldOpKind::NoSuspend` tells control flow to return to
+              // parent, no more regions to be executed.
+              builder.create<mlir::cir::YieldOp>(
+                  loc, mlir::cir::YieldOpKind::NoSuspend);
             });
 
         if (!condV) {

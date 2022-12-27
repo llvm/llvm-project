@@ -53,7 +53,7 @@ cir.func @yieldfallthrough() {
 cir.func @yieldbreak() {
   %0 = cir.cst(true) : !cir.bool
   cir.if %0 {
-    cir.yield break // expected-error {{shall be dominated by 'cir.loop', 'cir.switch' or 'cir.await'}}
+    cir.yield break // expected-error {{shall be dominated by 'cir.loop' or 'cir.switch'}}
   }
   cir.return
 }
@@ -231,5 +231,35 @@ module {
 // -----
 
 cir.func coroutine @bad_task() { // expected-error {{coroutine body must use at least one cir.await op}}
+  cir.return
+}
+
+// -----
+
+cir.func coroutine @bad_yield() {
+  cir.scope {
+    cir.await(user, ready : {
+      cir.yield
+    }, suspend : {
+      cir.yield
+    }, resume : {
+      cir.yield nosuspend // expected-error {{kind 'nosuspend' can only be used in 'ready' and 'suspend' regions}}
+    },)
+  }
+  cir.return
+}
+
+// -----
+
+cir.func coroutine @good_yield() {
+  cir.scope {
+    cir.await(user, ready : {
+      cir.yield nosuspend
+    }, suspend : {
+      cir.yield nosuspend
+    }, resume : {
+      cir.yield
+    },)
+  }
   cir.return
 }
