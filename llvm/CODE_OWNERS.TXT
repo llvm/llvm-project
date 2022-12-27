@@ -201,6 +201,10 @@ N: Chad Rosier
 E: mcrosier@codeaurora.org
 D: Fast-Isel
 
+N: Andrei Safronov
+E: andrei.safronov@espressif.com
+D: Xtensa backend (lib/Target/Xtensa/*)
+
 N: Duncan Sands
 E: baldrick@free.fr
 D: DragonEgg

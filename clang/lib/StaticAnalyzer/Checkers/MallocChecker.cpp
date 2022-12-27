@@ -392,10 +392,10 @@ private:
                                      const CallEvent &Call, CheckerContext &C)>;
 
   const CallDescriptionMap<CheckFn> FreeingMemFnMap{
-      {{{"free"}, 1}, &MallocChecker::checkFree},
-      {{{"if_freenameindex"}, 1}, &MallocChecker::checkIfFreeNameIndex},
-      {{{"kfree"}, 1}, &MallocChecker::checkFree},
-      {{{"g_free"}, 1}, &MallocChecker::checkFree},
+      {{"free", 1}, &MallocChecker::checkFree},
+      {{"if_freenameindex", 1}, &MallocChecker::checkIfFreeNameIndex},
+      {{"kfree", 1}, &MallocChecker::checkFree},
+      {{"g_free", 1}, &MallocChecker::checkFree},
   };
 
   bool isFreeingCall(const CallEvent &Call) const;
@@ -404,41 +404,41 @@ private:
   friend class NoOwnershipChangeVisitor;
 
   CallDescriptionMap<CheckFn> AllocatingMemFnMap{
-      {{{"alloca"}, 1}, &MallocChecker::checkAlloca},
-      {{{"_alloca"}, 1}, &MallocChecker::checkAlloca},
-      {{{"malloc"}, 1}, &MallocChecker::checkBasicAlloc},
-      {{{"malloc"}, 3}, &MallocChecker::checkKernelMalloc},
-      {{{"calloc"}, 2}, &MallocChecker::checkCalloc},
-      {{{"valloc"}, 1}, &MallocChecker::checkBasicAlloc},
-      {{CDF_MaybeBuiltin, {"strndup"}, 2}, &MallocChecker::checkStrdup},
-      {{CDF_MaybeBuiltin, {"strdup"}, 1}, &MallocChecker::checkStrdup},
-      {{{"_strdup"}, 1}, &MallocChecker::checkStrdup},
-      {{{"kmalloc"}, 2}, &MallocChecker::checkKernelMalloc},
-      {{{"if_nameindex"}, 1}, &MallocChecker::checkIfNameIndex},
-      {{CDF_MaybeBuiltin, {"wcsdup"}, 1}, &MallocChecker::checkStrdup},
-      {{CDF_MaybeBuiltin, {"_wcsdup"}, 1}, &MallocChecker::checkStrdup},
-      {{{"g_malloc"}, 1}, &MallocChecker::checkBasicAlloc},
-      {{{"g_malloc0"}, 1}, &MallocChecker::checkGMalloc0},
-      {{{"g_try_malloc"}, 1}, &MallocChecker::checkBasicAlloc},
-      {{{"g_try_malloc0"}, 1}, &MallocChecker::checkGMalloc0},
-      {{{"g_memdup"}, 2}, &MallocChecker::checkGMemdup},
-      {{{"g_malloc_n"}, 2}, &MallocChecker::checkGMallocN},
-      {{{"g_malloc0_n"}, 2}, &MallocChecker::checkGMallocN0},
-      {{{"g_try_malloc_n"}, 2}, &MallocChecker::checkGMallocN},
-      {{{"g_try_malloc0_n"}, 2}, &MallocChecker::checkGMallocN0},
+      {{"alloca", 1}, &MallocChecker::checkAlloca},
+      {{"_alloca", 1}, &MallocChecker::checkAlloca},
+      {{"malloc", 1}, &MallocChecker::checkBasicAlloc},
+      {{"malloc", 3}, &MallocChecker::checkKernelMalloc},
+      {{"calloc", 2}, &MallocChecker::checkCalloc},
+      {{"valloc", 1}, &MallocChecker::checkBasicAlloc},
+      {{CDF_MaybeBuiltin, "strndup", 2}, &MallocChecker::checkStrdup},
+      {{CDF_MaybeBuiltin, "strdup", 1}, &MallocChecker::checkStrdup},
+      {{"_strdup", 1}, &MallocChecker::checkStrdup},
+      {{"kmalloc", 2}, &MallocChecker::checkKernelMalloc},
+      {{"if_nameindex", 1}, &MallocChecker::checkIfNameIndex},
+      {{CDF_MaybeBuiltin, "wcsdup", 1}, &MallocChecker::checkStrdup},
+      {{CDF_MaybeBuiltin, "_wcsdup", 1}, &MallocChecker::checkStrdup},
+      {{"g_malloc", 1}, &MallocChecker::checkBasicAlloc},
+      {{"g_malloc0", 1}, &MallocChecker::checkGMalloc0},
+      {{"g_try_malloc", 1}, &MallocChecker::checkBasicAlloc},
+      {{"g_try_malloc0", 1}, &MallocChecker::checkGMalloc0},
+      {{"g_memdup", 2}, &MallocChecker::checkGMemdup},
+      {{"g_malloc_n", 2}, &MallocChecker::checkGMallocN},
+      {{"g_malloc0_n", 2}, &MallocChecker::checkGMallocN0},
+      {{"g_try_malloc_n", 2}, &MallocChecker::checkGMallocN},
+      {{"g_try_malloc0_n", 2}, &MallocChecker::checkGMallocN0},
   };
 
   CallDescriptionMap<CheckFn> ReallocatingMemFnMap{
-      {{{"realloc"}, 2},
+      {{"realloc", 2},
        std::bind(&MallocChecker::checkRealloc, _1, _2, _3, false)},
-      {{{"reallocf"}, 2},
+      {{"reallocf", 2},
        std::bind(&MallocChecker::checkRealloc, _1, _2, _3, true)},
-      {{{"g_realloc"}, 2},
+      {{"g_realloc", 2},
        std::bind(&MallocChecker::checkRealloc, _1, _2, _3, false)},
-      {{{"g_try_realloc"}, 2},
+      {{"g_try_realloc", 2},
        std::bind(&MallocChecker::checkRealloc, _1, _2, _3, false)},
-      {{{"g_realloc_n"}, 3}, &MallocChecker::checkReallocN},
-      {{{"g_try_realloc_n"}, 3}, &MallocChecker::checkReallocN},
+      {{"g_realloc_n", 3}, &MallocChecker::checkReallocN},
+      {{"g_try_realloc_n", 3}, &MallocChecker::checkReallocN},
   };
 
   bool isMemCall(const CallEvent &Call) const;

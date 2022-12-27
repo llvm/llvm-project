@@ -307,6 +307,34 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
   return Changed;
 }
 
+bool VPlanTransforms::mergeBlocksIntoPredecessors(VPlan &Plan) {
+  SmallVector<VPBasicBlock *> WorkList;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(depth_first(
+           VPBlockRecursiveTraversalWrapper<VPBlockBase *>(Plan.getEntry())))) {
+    auto *PredVPBB =
+        dyn_cast_or_null<VPBasicBlock>(VPBB->getSinglePredecessor());
+    if (PredVPBB && PredVPBB->getNumSuccessors() == 1)
+      WorkList.push_back(VPBB);
+  }
+
+  for (VPBasicBlock *VPBB : WorkList) {
+    VPBasicBlock *PredVPBB = cast<VPBasicBlock>(VPBB->getSinglePredecessor());
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB))
+      R.moveBefore(*PredVPBB, PredVPBB->end());
+    VPBlockUtils::disconnectBlocks(PredVPBB, VPBB);
+    auto *ParentRegion = cast_or_null<VPRegionBlock>(VPBB->getParent());
+    if (ParentRegion && ParentRegion->getExiting() == VPBB)
+      ParentRegion->setExiting(PredVPBB);
+    SmallVector<VPBlockBase *> Successors(VPBB->successors());
+    for (auto *Succ : Successors) {
+      VPBlockUtils::disconnectBlocks(VPBB, Succ);
+      VPBlockUtils::connectBlocks(PredVPBB, Succ);
+    }
+    delete VPBB;
+  }
+  return !WorkList.empty();
+}
+
 void VPlanTransforms::removeRedundantInductionCasts(VPlan &Plan) {
   for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);

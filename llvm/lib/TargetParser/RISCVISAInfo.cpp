@@ -105,6 +105,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"svnapot", RISCVExtensionVersion{1, 0}},
     {"svinval", RISCVExtensionVersion{1, 0}},
     {"xventanacondops", RISCVExtensionVersion{1, 0}},
+    {"xtheadvdot", RISCVExtensionVersion{1, 0}},
 };
 
 static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
@@ -784,6 +785,7 @@ static const char *ImpliedExtsZk[] = {"zkn", "zkt", "zkr"};
 static const char *ImpliedExtsZkn[] = {"zbkb", "zbkc", "zbkx", "zkne", "zknd", "zknh"};
 static const char *ImpliedExtsZks[] = {"zbkb", "zbkc", "zbkx", "zksed", "zksh"};
 static const char *ImpliedExtsZvfh[] = {"zve32f"};
+static const char *ImpliedExtsXTHeadVdot[] = {"v"};
 
 struct ImpliedExtsEntry {
   StringLiteral Name;
@@ -799,6 +801,7 @@ struct ImpliedExtsEntry {
 // Note: The table needs to be sorted by name.
 static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"v"}, {ImpliedExtsV}},
+    {{"xtheadvdot"}, {ImpliedExtsXTHeadVdot}},
     {{"zdinx"}, {ImpliedExtsZdinx}},
     {{"zfh"}, {ImpliedExtsZfh}},
     {{"zfhmin"}, {ImpliedExtsZfhmin}},
