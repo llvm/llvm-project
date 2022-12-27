@@ -118,7 +118,7 @@ VoidTask silly_task() {
   co_await std::suspend_always();
 }
 
-// CHECK: cir.func @_Z10silly_taskv() -> ![[VoidTask]] {
+// CHECK: cir.func coroutine @_Z10silly_taskv() -> ![[VoidTask]] {{.*}} {
 
 // Allocate promise.
 
