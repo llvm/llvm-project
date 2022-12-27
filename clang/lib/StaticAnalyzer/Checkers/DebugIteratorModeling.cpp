@@ -42,11 +42,11 @@ class DebugIteratorModeling
                                                  CheckerContext &) const;
 
   CallDescriptionMap<FnCheck> Callbacks = {
-      {{"clang_analyzer_iterator_position", 1},
+      {{{"clang_analyzer_iterator_position"}, 1},
        &DebugIteratorModeling::analyzerIteratorPosition},
-      {{"clang_analyzer_iterator_container", 1},
+      {{{"clang_analyzer_iterator_container"}, 1},
        &DebugIteratorModeling::analyzerIteratorContainer},
-      {{"clang_analyzer_iterator_validity", 1},
+      {{{"clang_analyzer_iterator_validity"}, 1},
        &DebugIteratorModeling::analyzerIteratorValidity},
   };
 

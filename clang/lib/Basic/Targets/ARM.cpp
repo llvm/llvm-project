@@ -991,7 +991,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
-const Builtin::Info ARMTargetInfo::BuiltinInfo[] = {
+static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
   {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
 #define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \

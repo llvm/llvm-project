@@ -532,10 +532,10 @@ namespace {
 class CFRetainReleaseChecker : public Checker<check::PreCall> {
   mutable APIMisuse BT{this, "null passed to CF memory management function"};
   const CallDescriptionSet ModelledCalls = {
-      {"CFRetain", 1},
-      {"CFRelease", 1},
-      {"CFMakeCollectable", 1},
-      {"CFAutorelease", 1},
+      {{"CFRetain"}, 1},
+      {{"CFRelease"}, 1},
+      {{"CFMakeCollectable"}, 1},
+      {{"CFAutorelease"}, 1},
   };
 
 public:
