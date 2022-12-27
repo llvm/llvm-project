@@ -853,8 +853,7 @@ multiclass RVVUnitStridedSegLoad<string op> {
           Operands.push_back(Ops[NF]);
           Operands.push_back(Ops[NF + 2]);
         } else {
-          for (unsigned I = 0; I < NF; ++I)
-            Operands.push_back(Ops[NF + I + 1]);
+          Operands.append(Ops.begin() + NF + 1, Ops.begin() + 2 * NF + 1);
           Operands.push_back(Ops[2 * NF + 1]);
           Operands.push_back(Ops[NF]);
           Operands.push_back(Ops[2 * NF + 2]);
@@ -870,10 +869,7 @@ multiclass RVVUnitStridedSegLoad<string op> {
           Operands.push_back(Ops[NF]);
           Operands.push_back(Ops[NF + 1]);
         } else {
-          for (unsigned I = 0; I < NF; ++I)
-            Operands.push_back(Ops[NF + I]);
-          Operands.push_back(Ops[2 * NF]);
-          Operands.push_back(Ops[2 * NF + 1]);
+          Operands.append(Ops.begin() + NF, Ops.begin() + 2 * NF + 2);
         }
       }
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
@@ -931,8 +927,7 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
           Operands.push_back(Ops[NF + 3]);
           NewVL = Ops[NF + 2];
         } else {
-          for (unsigned I = 0; I < NF; ++I)
-            Operands.push_back(Ops[NF + I + 1]);
+          Operands.append(Ops.begin() + NF + 1, Ops.begin() + 2 * NF + 1);
           Operands.push_back(Ops[2 * NF + 1]);
           Operands.push_back(Ops[NF]);
           Operands.push_back(Ops[2 * NF + 3]);
@@ -950,8 +945,7 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
           Operands.push_back(Ops[NF + 2]);
           NewVL = Ops[NF + 1];
         } else {
-          for (unsigned I = 0; I < NF; ++I)
-            Operands.push_back(Ops[NF + I]);
+          Operands.append(Ops.begin() + NF, Ops.begin() + 2 * NF);
           Operands.push_back(Ops[2 * NF]);
           Operands.push_back(Ops[2 * NF + 2]);
           NewVL = Ops[2 * NF + 1];
@@ -1012,8 +1006,7 @@ multiclass RVVStridedSegLoad<string op> {
           Operands.push_back(Ops[NF]);
           Operands.push_back(Ops[NF + 3]);
         } else {
-          for (unsigned I = 0; I < NF; ++I)
-            Operands.push_back(Ops[NF + I + 1]);
+          Operands.append(Ops.begin() + NF + 1, Ops.begin() + 2 * NF + 1);
           Operands.push_back(Ops[2 * NF + 1]);
           Operands.push_back(Ops[2 * NF + 2]);
           Operands.push_back(Ops[NF]);
@@ -1031,8 +1024,7 @@ multiclass RVVStridedSegLoad<string op> {
           Operands.push_back(Ops[NF + 1]);
           Operands.push_back(Ops[NF + 2]);
         } else {
-          for (unsigned I = 0; I < NF; ++I)
-            Operands.push_back(Ops[NF + I]);
+          Operands.append(Ops.begin() + NF, Ops.begin() + 2 * NF);
           Operands.push_back(Ops[2 * NF]);
           Operands.push_back(Ops[2 * NF + 1]);
           Operands.push_back(Ops[2 * NF + 2]);
@@ -1087,8 +1079,7 @@ multiclass RVVIndexedSegLoad<string op> {
           Operands.push_back(Ops[NF + 3]);
           IntrinsicTypes = {ResultType, Ops[NF + 2]->getType(), Ops.back()->getType()};
         } else {
-          for (unsigned I = 0; I < NF; ++I)
-            Operands.push_back(Ops[NF + I + 1]);
+          Operands.append(Ops.begin() + NF + 1, Ops.begin() + 2 * NF + 1);
           Operands.push_back(Ops[2 * NF + 1]);
           Operands.push_back(Ops[2 * NF + 2]);
           Operands.push_back(Ops[NF]);
@@ -1108,8 +1099,7 @@ multiclass RVVIndexedSegLoad<string op> {
           Operands.push_back(Ops[NF + 2]);
           IntrinsicTypes = {ResultType, Ops[NF + 1]->getType(), Ops.back()->getType()};
         } else {
-          for (unsigned I = 0; I < NF; ++I)
-            Operands.push_back(Ops[NF + I]);
+          Operands.append(Ops.begin() + NF, Ops.begin() + 2 * NF);
           Operands.push_back(Ops[2 * NF]);
           Operands.push_back(Ops[2 * NF + 1]);
           Operands.push_back(Ops[2 * NF + 2]);
