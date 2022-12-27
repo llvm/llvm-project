@@ -229,8 +229,12 @@ VoidTask silly_task() {
 // CHECK:   },)
 // CHECK: }
 
-// Return
-// FIXME: add missing builtin calls
+// Call builtin coro end and return
+
+// CHECK-NEXT: %[[#CoroEndArg0:]] = cir.cst(#cir.null : !cir.ptr<i8>)
+// CHECK-NEXT: %[[#CoroEndArg1:]] = cir.cst(false) : !cir.bool
+// CHECK-NEXT: = cir.call @__builtin_coro_end(%[[#CoroEndArg0]], %[[#CoroEndArg1]])
+
 // CHECK: %[[#Tmp1:]] = cir.load %[[#VoidTaskAddr]]
 // CHECK-NEXT: cir.return %[[#Tmp1]]
 // CHECK-NEXT: }

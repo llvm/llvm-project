@@ -413,6 +413,7 @@ public:
   static constexpr const char *builtinCoroId = "__builtin_coro_id";
   static constexpr const char *builtinCoroAlloc = "__builtin_coro_alloc";
   static constexpr const char *builtinCoroBegin = "__builtin_coro_begin";
+  static constexpr const char *builtinCoroEnd = "__builtin_coro_end";
 
 private:
   // An ordered map of canonical GlobalDecls to their mangled names.
