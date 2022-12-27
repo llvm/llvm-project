@@ -48,12 +48,12 @@ define dso_local void @st_sink_split_bb(ptr nocapture %arg, ptr nocapture %arg1,
 ; CHECK-YES:       bb5:
 ; CHECK-YES-NEXT:    br i1 [[ARG3:%.*]], label [[BB6:%.*]], label [[BB7:%.*]]
 ; CHECK-YES:       bb6:
-; CHECK-YES-NEXT:    store i32 2, ptr [[ARG]], align 4
 ; CHECK-YES-NEXT:    br label [[BB9_SINK_SPLIT:%.*]]
 ; CHECK-YES:       bb7:
-; CHECK-YES-NEXT:    store i32 3, ptr [[ARG]], align 4
 ; CHECK-YES-NEXT:    br label [[BB9_SINK_SPLIT]]
 ; CHECK-YES:       bb9.sink.split:
+; CHECK-YES-NEXT:    [[DOTSINK:%.*]] = phi i32 [ 2, [[BB6]] ], [ 3, [[BB7]] ]
+; CHECK-YES-NEXT:    store i32 [[DOTSINK]], ptr [[ARG]], align 4
 ; CHECK-YES-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[ARG1:%.*]], i64 1
 ; CHECK-YES-NEXT:    store i32 3, ptr [[TMP0]], align 4
 ; CHECK-YES-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[ARG1]], i64 2
