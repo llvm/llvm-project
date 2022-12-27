@@ -1371,31 +1371,27 @@ createInvariantCond(const Loop *L, BasicBlock *ExitingBB,
                             BI->getCondition()->getName());
 }
 
-static bool optimizeLoopExitWithUnknownExitCount(
-    const Loop *L, BranchInst *BI, BasicBlock *ExitingBB, const SCEV *MaxIter,
-    bool SkipLastIter, ScalarEvolution *SE, SCEVExpander &Rewriter,
-    SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+std::optional<Value *> createReplacement(Value *V, const Loop *L,
+                                         BasicBlock *ExitingBB,
+                                         const SCEV *MaxIter, bool SkipLastIter,
+                                         ScalarEvolution *SE,
+                                         SCEVExpander &Rewriter) {
   ICmpInst::Predicate Pred;
   Value *LHS, *RHS;
-  BasicBlock *TrueSucc, *FalseSucc;
-  if (!match(BI, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
-                      m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc))))
-    return false;
-
-  assert((L->contains(TrueSucc) != L->contains(FalseSucc)) &&
-         "Not a loop exit!");
+  if (!match(V, m_ICmp(Pred, m_Value(LHS), m_Value(RHS))))
+    return std::nullopt;
 
   // 'LHS pred RHS' should now mean that we stay in loop.
+  auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  BasicBlock *FalseSucc = BI->getSuccessor(1);
   if (L->contains(FalseSucc))
     Pred = CmpInst::getInversePredicate(Pred);
 
   const SCEV *LHSS = SE->getSCEVAtScope(LHS, L);
   const SCEV *RHSS = SE->getSCEVAtScope(RHS, L);
   // Can we prove it to be trivially true or false?
-  if (auto EV = SE->evaluatePredicateAt(Pred, LHSS, RHSS, BI)) {
-    foldExit(L, ExitingBB, /*IsTaken*/ !*EV, DeadInsts);
-    return true;
-  }
+  if (auto EV = SE->evaluatePredicateAt(Pred, LHSS, RHSS, BI))
+    return createFoldedExitCond(L, ExitingBB, /*IsTaken*/ !*EV);
 
   auto *ARTy = LHSS->getType();
   auto *MaxIterTy = MaxIter->getType();
@@ -1418,16 +1414,27 @@ static bool optimizeLoopExitWithUnknownExitCount(
   auto LIP = SE->getLoopInvariantExitCondDuringFirstIterations(Pred, LHSS, RHSS,
                                                                L, BI, MaxIter);
   if (!LIP)
-    return false;
+    return std::nullopt;
 
   // Can we prove it to be trivially true?
   if (SE->isKnownPredicateAt(LIP->Pred, LIP->LHS, LIP->RHS, BI))
-    foldExit(L, ExitingBB, /*IsTaken*/ false, DeadInsts);
-  else {
-    auto *NewCond = createInvariantCond(L, ExitingBB, *LIP, Rewriter);
-    replaceExitCond(BI, NewCond, DeadInsts);
-  }
+    return createFoldedExitCond(L, ExitingBB, /*IsTaken*/ false);
+  else
+    return createInvariantCond(L, ExitingBB, *LIP, Rewriter);
+}
 
+static bool optimizeLoopExitWithUnknownExitCount(
+    const Loop *L, BranchInst *BI, BasicBlock *ExitingBB, const SCEV *MaxIter,
+    bool SkipLastIter, ScalarEvolution *SE, SCEVExpander &Rewriter,
+    SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+  assert(
+      (L->contains(BI->getSuccessor(0)) != L->contains(BI->getSuccessor(1))) &&
+      "Not a loop exit!");
+  auto NewCond = createReplacement(BI->getCondition(), L, ExitingBB, MaxIter,
+                                   SkipLastIter, SE, Rewriter);
+  if (!NewCond)
+    return false;
+  replaceExitCond(BI, *NewCond, DeadInsts);
   return true;
 }
 

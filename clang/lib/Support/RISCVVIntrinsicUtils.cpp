@@ -939,8 +939,7 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
         // (void, op0 address, op1 address, ..., maskedoff0, maskedoff1, ...)
         PrototypeDescriptor MaskoffType = NewPrototype[1];
         MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
-        for (unsigned I = 0; I < NF; ++I)
-          NewPrototype.insert(NewPrototype.begin() + NF + 1, MaskoffType);
+        NewPrototype.insert(NewPrototype.begin() + NF + 1, NF, MaskoffType);
       }
     }
     // Erase passthru operand for TAM
@@ -983,8 +982,7 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
       // (void, op0 address, op1 address, maskedoff0, maskedoff1, ...)
       PrototypeDescriptor MaskoffType = Prototype[1];
       MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
-      for (unsigned I = 0; I < NF; ++I)
-        NewPrototype.insert(NewPrototype.begin() + NF + 1, MaskoffType);
+      NewPrototype.insert(NewPrototype.begin() + NF + 1, NF, MaskoffType);
     }
  }
 

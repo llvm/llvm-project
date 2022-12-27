@@ -310,6 +310,14 @@ TEST(ELFObjectFileTest, MachineTestForCSKY) {
     checkFormatAndArch(D, Formats[I++], Triple::csky);
 }
 
+TEST(ELFObjectFileTest, MachineTestForXtensa) {
+  std::array<StringRef, 4> Formats = {"elf32-xtensa", "elf32-xtensa",
+                                      "elf64-unknown", "elf64-unknown"};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_XTENSA))
+    checkFormatAndArch(D, Formats[I++], Triple::xtensa);
+}
+
 // ELF relative relocation type test.
 TEST(ELFObjectFileTest, RelativeRelocationTypeTest) {
   EXPECT_EQ(ELF::R_CKCORE_RELATIVE, getELFRelativeRelocationType(ELF::EM_CSKY));
