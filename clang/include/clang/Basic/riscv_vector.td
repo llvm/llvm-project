@@ -137,8 +137,6 @@ class PolicyScheme<int val>{
 def NonePolicy : PolicyScheme<0>;
 def HasPassthruOperand : PolicyScheme<1>;
 def HasPolicyOperand : PolicyScheme<2>;
-// Specail case for passthru operand which is not a first opeand.
-def HasPassthruOperandAtIdx1 : PolicyScheme<3>;
 
 class RVVBuiltin<string suffix, string prototype, string type_range,
                  string overloaded_suffix = ""> {
@@ -1878,20 +1876,19 @@ defm vwmaccus : RVVOutOp1Op2BuiltinSet<"vwmaccus", "csi",
 // 12.15. Vector Integer Merge Instructions
 // C/C++ Operand: (mask, op1, op2, vl), Intrinsic: (passthru, op1, op2, mask, vl)
 let HasMasked = false,
-    UnMaskedPolicyScheme = HasPassthruOperandAtIdx1,
+    UnMaskedPolicyScheme = HasPassthruOperand,
     MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
-      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
       // insert poison passthru
       if (PolicyAttrs == TAIL_AGNOSTIC)
         Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
       IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops.back()->getType()};
     }] in {
   defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "csil",
-                                    [["vvm", "v", "vmvv"],
-                                     ["vxm", "v", "vmve"],
-                                     ["vvm", "Uv", "UvmUvUv"],
-                                     ["vxm", "Uv", "UvmUvUe"]]>;
+                                    [["vvm", "v", "vvvm"],
+                                     ["vxm", "v", "vvem"],
+                                     ["vvm", "Uv", "UvUvUvm"],
+                                     ["vxm", "Uv", "UvUvUem"]]>;
 }
 
 // 12.16. Vector Integer Move Instructions
@@ -2022,19 +2019,18 @@ let Name = "vfclass_v", UnMaskedPolicyScheme = HasPassthruOperand in
 // 14.15. Vector Floating-Point Merge Instructio
 // C/C++ Operand: (mask, op1, op2, vl), Builtin: (op1, op2, mask, vl)
 let HasMasked = false,
-    UnMaskedPolicyScheme = HasPassthruOperandAtIdx1,
+    UnMaskedPolicyScheme = HasPassthruOperand,
     MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
-      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
       // insert poison passthru
       if (PolicyAttrs == TAIL_AGNOSTIC)
         Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
       IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops.back()->getType()};
     }] in {
   defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "xfd",
-                                    [["vvm", "v", "vmvv"]]>;
+                                    [["vvm", "v", "vvvm"]]>;
   defm vfmerge : RVVOutOp1BuiltinSet<"vfmerge", "xfd",
-                                    [["vfm", "v", "vmve"]]>;
+                                     [["vfm", "v", "vvem"]]>;
 }
 
 // 14.16. Vector Floating-Point Move Instruction
@@ -2222,10 +2218,9 @@ defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csil",
 // 17.5. Vector Compress Instruction
 let IsPrototypeDefaultTU = true,
     HasMasked = false,
-    UnMaskedPolicyScheme = HasPassthruOperandAtIdx1,
+    UnMaskedPolicyScheme = HasPassthruOperand,
     MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
-      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
       // insert poison passthru
       if (PolicyAttrs == TAIL_AGNOSTIC)
         Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
@@ -2233,10 +2228,10 @@ let IsPrototypeDefaultTU = true,
     }] in {
   // signed and floating type
   defm vcompress : RVVOutBuiltinSet<"vcompress", "csilxfd",
-                                    [["vm", "v", "vmvv"]]>;
+                                    [["vm", "v", "vvvm"]]>;
   // unsigned type
   defm vcompress : RVVOutBuiltinSet<"vcompress", "csil",
-                                    [["vm", "Uv", "UvmUvUv"]]>;
+                                    [["vm", "Uv", "UvUvUvm"]]>;
 }
 
 // Miscellaneous
