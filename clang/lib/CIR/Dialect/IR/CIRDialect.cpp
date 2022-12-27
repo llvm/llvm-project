@@ -931,7 +931,7 @@ void LoopOp::build(OpBuilder &builder, OperationState &result,
   OpBuilder::InsertionGuard guard(builder);
   ::mlir::cir::LoopOpKindAttr kindAttr =
       cir::LoopOpKindAttr::get(builder.getContext(), kind);
-  result.addAttribute("kind", kindAttr);
+  result.addAttribute(getKindAttrName(result.name), kindAttr);
 
   Region *condRegion = result.addRegion();
   builder.createBlock(condRegion);
@@ -1095,11 +1095,12 @@ void GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
   odsState.addAttribute(getSymTypeAttrName(odsState.name),
                         ::mlir::TypeAttr::get(sym_type));
   if (isConstant)
-    odsState.addAttribute("constant", odsBuilder.getUnitAttr());
+    odsState.addAttribute(getConstantAttrName(odsState.name),
+                          odsBuilder.getUnitAttr());
 
   ::mlir::cir::GlobalLinkageKindAttr linkageAttr =
       cir::GlobalLinkageKindAttr::get(odsBuilder.getContext(), linkage);
-  odsState.addAttribute("linkage", linkageAttr);
+  odsState.addAttribute(getLinkageAttrName(odsState.name), linkageAttr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1156,10 +1157,13 @@ void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
 }
 
 ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
-  if (::mlir::succeeded(parser.parseOptionalKeyword("builtin")))
-    state.addAttribute("builtin", parser.getBuilder().getUnitAttr());
-  if (::mlir::succeeded(parser.parseOptionalKeyword("coroutine")))
-    state.addAttribute("coroutine", parser.getBuilder().getUnitAttr());
+  auto builtinNameAttr = getBuiltinAttrName(state.name);
+  auto coroutineNameAttr = getCoroutineAttrName(state.name);
+  if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
+    state.addAttribute(builtinNameAttr, parser.getBuilder().getUnitAttr());
+  if (::mlir::succeeded(
+          parser.parseOptionalKeyword(coroutineNameAttr.strref())))
+    state.addAttribute(coroutineNameAttr, parser.getBuilder().getUnitAttr());
 
   // Default to external linkage if no keyword is provided.
   state.addAttribute(getLinkageAttrNameString(),
