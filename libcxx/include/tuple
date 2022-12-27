@@ -205,11 +205,45 @@ template <class... Types>
 #include <__compare/common_comparison_category.h>
 #include <__compare/synth_three_way.h>
 #include <__config>
+#include <__functional/invoke.h>
 #include <__functional/unwrap_ref.h>
 #include <__fwd/array.h>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/uses_allocator.h>
+#include <__type_traits/apply_cv.h>
+#include <__type_traits/common_reference.h>
+#include <__type_traits/common_type.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/conjunction.h>
+#include <__type_traits/copy_cvref.h>
+#include <__type_traits/disjunction.h>
+#include <__type_traits/is_arithmetic.h>
+#include <__type_traits/is_assignable.h>
+#include <__type_traits/is_constructible.h>
+#include <__type_traits/is_convertible.h>
+#include <__type_traits/is_copy_assignable.h>
+#include <__type_traits/is_copy_constructible.h>
+#include <__type_traits/is_default_constructible.h>
+#include <__type_traits/is_empty.h>
+#include <__type_traits/is_final.h>
+#include <__type_traits/is_implicitly_default_constructible.h>
+#include <__type_traits/is_move_assignable.h>
+#include <__type_traits/is_move_constructible.h>
+#include <__type_traits/is_nothrow_assignable.h>
+#include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_nothrow_copy_assignable.h>
+#include <__type_traits/is_nothrow_copy_constructible.h>
+#include <__type_traits/is_nothrow_default_constructible.h>
+#include <__type_traits/is_nothrow_move_assignable.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/is_swappable.h>
+#include <__type_traits/lazy.h>
 #include <__type_traits/maybe_const.h>
+#include <__type_traits/nat.h>
+#include <__type_traits/negation.h>
+#include <__type_traits/remove_cvref.h>
+#include <__type_traits/remove_reference.h>
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
@@ -217,7 +251,6 @@ template <class... Types>
 #include <__utility/piecewise_construct.h>
 #include <__utility/swap.h>
 #include <cstddef>
-#include <type_traits>
 #include <version>
 
 // standard-mandated includes
@@ -1822,6 +1855,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <exception>
 #  include <iosfwd>
 #  include <new>
+#  include <type_traits>
 #  include <typeinfo>
 #  include <utility>
 #endif
