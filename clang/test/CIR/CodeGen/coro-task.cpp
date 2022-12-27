@@ -174,7 +174,7 @@ VoidTask silly_task() {
 // CHECK:   cir.await(init, ready : {
 // CHECK:     %[[#ReadyVeto:]] = cir.call @_ZNSt14suspend_always11await_readyEv(%[[#SuspendAlwaysAddr]])
 // CHECK:     cir.if %[[#ReadyVeto]] {
-// CHECK:       cir.yield break
+// CHECK:       cir.yield nosuspend
 // CHECK:     }
 // CHECK:     cir.yield
 
