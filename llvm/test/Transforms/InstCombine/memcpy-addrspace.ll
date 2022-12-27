@@ -3,152 +3,141 @@
 
 @test.data = private unnamed_addr addrspace(2) constant [8 x i32] [i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7], align 4
 
-define void @test_load(i32 addrspace(1)* %out, i64 %x) {
+define void @test_load(ptr addrspace(1) %out, i64 %x) {
 ; CHECK-LABEL: @test_load(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [8 x i32], [8 x i32] addrspace(2)* @test.data, i64 0, i64 [[X:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32 addrspace(2)* [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* [[OUT:%.*]], i64 [[X]]
-; CHECK-NEXT:    store i32 [[TMP0]], i32 addrspace(1)* [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [8 x i32], ptr addrspace(2) @test.data, i64 0, i64 [[X:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(2) [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]
+; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %data = alloca [8 x i32], align 4
-  %0 = bitcast [8 x i32]* %data to i8*
-  call void @llvm.memcpy.p0i8.p2i8.i64(i8* align 4 %0, i8 addrspace(2)* align 4 bitcast ([8 x i32] addrspace(2)* @test.data to i8 addrspace(2)*), i64 32, i1 false)
-  %arrayidx = getelementptr inbounds [8 x i32], [8 x i32]* %data, i64 0, i64 %x
-  %1 = load i32, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %x
-  store i32 %1, i32 addrspace(1)* %arrayidx1, align 4
+  call void @llvm.memcpy.p0.p2.i64(ptr align 4 %data, ptr addrspace(2) align 4 @test.data, i64 32, i1 false)
+  %arrayidx = getelementptr inbounds [8 x i32], ptr %data, i64 0, i64 %x
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %x
+  store i32 %0, ptr addrspace(1) %arrayidx1, align 4
   ret void
 }
 
-define void @test_load_bitcast_chain(i32 addrspace(1)* %out, i64 %x) {
+define void @test_load_bitcast_chain(ptr addrspace(1) %out, i64 %x) {
 ; CHECK-LABEL: @test_load_bitcast_chain(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr [8 x i32], [8 x i32] addrspace(2)* @test.data, i64 0, i64 [[X:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32 addrspace(2)* [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* [[OUT:%.*]], i64 [[X]]
-; CHECK-NEXT:    store i32 [[TMP0]], i32 addrspace(1)* [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr addrspace(2) @test.data, i64 [[X:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(2) [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]
+; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %data = alloca [8 x i32], align 4
-  %0 = bitcast [8 x i32]* %data to i8*
-  call void @llvm.memcpy.p0i8.p2i8.i64(i8* align 4 %0, i8 addrspace(2)* align 4 bitcast ([8 x i32] addrspace(2)* @test.data to i8 addrspace(2)*), i64 32, i1 false)
-  %1 = bitcast i8* %0 to i32*
-  %arrayidx = getelementptr inbounds i32, i32* %1, i64 %x
-  %2 = load i32, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %x
-  store i32 %2, i32 addrspace(1)* %arrayidx1, align 4
+  call void @llvm.memcpy.p0.p2.i64(ptr align 4 %data, ptr addrspace(2) align 4 @test.data, i64 32, i1 false)
+  %arrayidx = getelementptr inbounds i32, ptr %data, i64 %x
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %x
+  store i32 %0, ptr addrspace(1) %arrayidx1, align 4
   ret void
 }
 
-define void @test_call(i32 addrspace(1)* %out, i64 %x) {
+define void @test_call(ptr addrspace(1) %out, i64 %x) {
 ; CHECK-LABEL: @test_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA:%.*]] = alloca [8 x i32], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast [8 x i32]* [[DATA]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p2i8.i64(i8* noundef nonnull align 4 dereferenceable(32) [[TMP0]], i8 addrspace(2)* noundef align 4 dereferenceable(32) bitcast ([8 x i32] addrspace(2)* @test.data to i8 addrspace(2)*), i64 32, i1 false)
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* [[DATA]], i64 0, i64 [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @foo(i32* nonnull [[ARRAYIDX]])
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* [[OUT:%.*]], i64 [[X]]
-; CHECK-NEXT:    store i32 [[TMP1]], i32 addrspace(1)* [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p2.i64(ptr noundef nonnull align 4 dereferenceable(32) [[DATA]], ptr addrspace(2) noundef align 4 dereferenceable(32) @test.data, i64 32, i1 false)
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i32], ptr [[DATA]], i64 0, i64 [[X:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @foo(ptr nonnull [[ARRAYIDX]])
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]
+; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %data = alloca [8 x i32], align 4
-  %0 = bitcast [8 x i32]* %data to i8*
-  call void @llvm.memcpy.p0i8.p2i8.i64(i8* align 4 %0, i8 addrspace(2)* align 4 bitcast ([8 x i32] addrspace(2)* @test.data to i8 addrspace(2)*), i64 32, i1 false)
-  %arrayidx = getelementptr inbounds [8 x i32], [8 x i32]* %data, i64 0, i64 %x
-  %1 = call i32 @foo(i32* %arrayidx)
-  %arrayidx1 = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %x
-  store i32 %1, i32 addrspace(1)* %arrayidx1, align 4
+  call void @llvm.memcpy.p0.p2.i64(ptr align 4 %data, ptr addrspace(2) align 4 @test.data, i64 32, i1 false)
+  %arrayidx = getelementptr inbounds [8 x i32], ptr %data, i64 0, i64 %x
+  %0 = call i32 @foo(ptr %arrayidx)
+  %arrayidx1 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %x
+  store i32 %0, ptr addrspace(1) %arrayidx1, align 4
   ret void
 }
 
-define void @test_call_no_null_opt(i32 addrspace(1)* %out, i64 %x) #0 {
+define void @test_call_no_null_opt(ptr addrspace(1) %out, i64 %x) #0 {
 ; CHECK-LABEL: @test_call_no_null_opt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA:%.*]] = alloca [8 x i32], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast [8 x i32]* [[DATA]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p2i8.i64(i8* noundef nonnull align 4 dereferenceable(32) [[TMP0]], i8 addrspace(2)* noundef align 4 dereferenceable(32) bitcast ([8 x i32] addrspace(2)* @test.data to i8 addrspace(2)*), i64 32, i1 false)
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* [[DATA]], i64 0, i64 [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @foo(i32* [[ARRAYIDX]])
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* [[OUT:%.*]], i64 [[X]]
-; CHECK-NEXT:    store i32 [[TMP1]], i32 addrspace(1)* [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p2.i64(ptr noundef nonnull align 4 dereferenceable(32) [[DATA]], ptr addrspace(2) noundef align 4 dereferenceable(32) @test.data, i64 32, i1 false)
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i32], ptr [[DATA]], i64 0, i64 [[X:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @foo(ptr [[ARRAYIDX]])
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]
+; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %data = alloca [8 x i32], align 4
-  %0 = bitcast [8 x i32]* %data to i8*
-  call void @llvm.memcpy.p0i8.p2i8.i64(i8* align 4 %0, i8 addrspace(2)* align 4 bitcast ([8 x i32] addrspace(2)* @test.data to i8 addrspace(2)*), i64 32, i1 false)
-  %arrayidx = getelementptr inbounds [8 x i32], [8 x i32]* %data, i64 0, i64 %x
-  %1 = call i32 @foo(i32* %arrayidx)
-  %arrayidx1 = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %x
-  store i32 %1, i32 addrspace(1)* %arrayidx1, align 4
+  call void @llvm.memcpy.p0.p2.i64(ptr align 4 %data, ptr addrspace(2) align 4 @test.data, i64 32, i1 false)
+  %arrayidx = getelementptr inbounds [8 x i32], ptr %data, i64 0, i64 %x
+  %0 = call i32 @foo(ptr %arrayidx)
+  %arrayidx1 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %x
+  store i32 %0, ptr addrspace(1) %arrayidx1, align 4
   ret void
 }
 
-define void @test_load_and_call(i32 addrspace(1)* %out, i64 %x, i64 %y) {
+define void @test_load_and_call(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; CHECK-LABEL: @test_load_and_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA:%.*]] = alloca [8 x i32], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast [8 x i32]* [[DATA]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p2i8.i64(i8* noundef nonnull align 4 dereferenceable(32) [[TMP0]], i8 addrspace(2)* noundef align 4 dereferenceable(32) bitcast ([8 x i32] addrspace(2)* @test.data to i8 addrspace(2)*), i64 32, i1 false)
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* [[DATA]], i64 0, i64 [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* [[OUT:%.*]], i64 [[X]]
-; CHECK-NEXT:    store i32 [[TMP1]], i32 addrspace(1)* [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @foo(i32* nonnull [[ARRAYIDX]])
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* [[OUT]], i64 [[Y:%.*]]
-; CHECK-NEXT:    store i32 [[TMP2]], i32 addrspace(1)* [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p2.i64(ptr noundef nonnull align 4 dereferenceable(32) [[DATA]], ptr addrspace(2) noundef align 4 dereferenceable(32) @test.data, i64 32, i1 false)
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i32], ptr [[DATA]], i64 0, i64 [[X:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]
+; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @foo(ptr nonnull [[ARRAYIDX]])
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT]], i64 [[Y:%.*]]
+; CHECK-NEXT:    store i32 [[TMP1]], ptr addrspace(1) [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %data = alloca [8 x i32], align 4
-  %0 = bitcast [8 x i32]* %data to i8*
-  call void @llvm.memcpy.p0i8.p2i8.i64(i8* align 4 %0, i8 addrspace(2)* align 4 bitcast ([8 x i32] addrspace(2)* @test.data to i8 addrspace(2)*), i64 32, i1 false)
-  %arrayidx = getelementptr inbounds [8 x i32], [8 x i32]* %data, i64 0, i64 %x
-  %1 = load i32, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %x
-  store i32 %1, i32 addrspace(1)* %arrayidx1, align 4
-  %2 = call i32 @foo(i32* %arrayidx)
-  %arrayidx2 = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %y
-  store i32 %2, i32 addrspace(1)* %arrayidx2, align 4
+  call void @llvm.memcpy.p0.p2.i64(ptr align 4 %data, ptr addrspace(2) align 4 @test.data, i64 32, i1 false)
+  %arrayidx = getelementptr inbounds [8 x i32], ptr %data, i64 0, i64 %x
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %x
+  store i32 %0, ptr addrspace(1) %arrayidx1, align 4
+  %1 = call i32 @foo(ptr %arrayidx)
+  %arrayidx2 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %y
+  store i32 %1, ptr addrspace(1) %arrayidx2, align 4
   ret void
 }
 
-define void @test_load_and_call_no_null_opt(i32 addrspace(1)* %out, i64 %x, i64 %y) #0 {
+define void @test_load_and_call_no_null_opt(ptr addrspace(1) %out, i64 %x, i64 %y) #0 {
 ; CHECK-LABEL: @test_load_and_call_no_null_opt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA:%.*]] = alloca [8 x i32], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast [8 x i32]* [[DATA]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p2i8.i64(i8* noundef nonnull align 4 dereferenceable(32) [[TMP0]], i8 addrspace(2)* noundef align 4 dereferenceable(32) bitcast ([8 x i32] addrspace(2)* @test.data to i8 addrspace(2)*), i64 32, i1 false)
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* [[DATA]], i64 0, i64 [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* [[OUT:%.*]], i64 [[X]]
-; CHECK-NEXT:    store i32 [[TMP1]], i32 addrspace(1)* [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @foo(i32* [[ARRAYIDX]])
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* [[OUT]], i64 [[Y:%.*]]
-; CHECK-NEXT:    store i32 [[TMP2]], i32 addrspace(1)* [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p2.i64(ptr noundef nonnull align 4 dereferenceable(32) [[DATA]], ptr addrspace(2) noundef align 4 dereferenceable(32) @test.data, i64 32, i1 false)
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i32], ptr [[DATA]], i64 0, i64 [[X:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]
+; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @foo(ptr [[ARRAYIDX]])
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT]], i64 [[Y:%.*]]
+; CHECK-NEXT:    store i32 [[TMP1]], ptr addrspace(1) [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %data = alloca [8 x i32], align 4
-  %0 = bitcast [8 x i32]* %data to i8*
-  call void @llvm.memcpy.p0i8.p2i8.i64(i8* align 4 %0, i8 addrspace(2)* align 4 bitcast ([8 x i32] addrspace(2)* @test.data to i8 addrspace(2)*), i64 32, i1 false)
-  %arrayidx = getelementptr inbounds [8 x i32], [8 x i32]* %data, i64 0, i64 %x
-  %1 = load i32, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %x
-  store i32 %1, i32 addrspace(1)* %arrayidx1, align 4
-  %2 = call i32 @foo(i32* %arrayidx)
-  %arrayidx2 = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %y
-  store i32 %2, i32 addrspace(1)* %arrayidx2, align 4
+  call void @llvm.memcpy.p0.p2.i64(ptr align 4 %data, ptr addrspace(2) align 4 @test.data, i64 32, i1 false)
+  %arrayidx = getelementptr inbounds [8 x i32], ptr %data, i64 0, i64 %x
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %x
+  store i32 %0, ptr addrspace(1) %arrayidx1, align 4
+  %1 = call i32 @foo(ptr %arrayidx)
+  %arrayidx2 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %y
+  store i32 %1, ptr addrspace(1) %arrayidx2, align 4
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p2i8.i64(i8* nocapture writeonly, i8 addrspace(2)* nocapture readonly, i64, i1)
-declare i32 @foo(i32* %x)
+declare void @llvm.memcpy.p0.p2.i64(ptr nocapture writeonly, ptr addrspace(2) nocapture readonly, i64, i1)
+declare i32 @foo(ptr %x)
 
 attributes #0 = { null_pointer_is_valid }
