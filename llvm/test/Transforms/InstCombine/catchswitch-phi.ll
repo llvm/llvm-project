@@ -5,10 +5,10 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128-ni:1"
 target triple = "wasm32-unknown-unknown"
 
 %struct.quux = type { i32 }
-%struct.blam = type <{ %struct.quux }>
+%struct.blam = type <{ i32, %struct.quux }>
 
 declare void @foo()
-declare void @bar(%struct.quux*)
+declare void @bar(ptr)
 declare i32 @baz()
 declare i32 @__gxx_wasm_personality_v0(...)
 ; Function Attrs: noreturn
@@ -16,33 +16,33 @@ declare void @llvm.wasm.rethrow() #0
 
 ; Test that a PHI in catchswitch BB are excluded from combining into a non-PHI
 ; instruction.
-define void @test0(i1 %c1) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test0(i1 %c1) personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK-LABEL: @test0(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca [[STRUCT_BLAM:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_BLAM]], %struct.blam* [[TMP0]], i32 0, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_BLAM]], ptr [[TMP0]], i32 0, i32 1
 ; CHECK-NEXT:    invoke void @foo()
 ; CHECK-NEXT:    to label [[BB3:%.*]] unwind label [[BB4:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_BLAM]], %struct.blam* [[TMP0]], i32 0, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_BLAM]], ptr [[TMP0]], i32 0, i32 1
 ; CHECK-NEXT:    invoke void @foo()
 ; CHECK-NEXT:    to label [[BB3]] unwind label [[BB4]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb4:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi %struct.quux* [ [[TMP1]], [[BB1]] ], [ [[TMP2]], [[BB2]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi ptr [ [[TMP1]], [[BB1]] ], [ [[TMP2]], [[BB2]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = catchswitch within none [label %bb5] unwind label [[BB7:%.*]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[TMP5:%.*]] = catchpad within [[TMP4]] [i8* null]
+; CHECK-NEXT:    [[TMP5:%.*]] = catchpad within [[TMP4]] [ptr null]
 ; CHECK-NEXT:    invoke void @foo() [ "funclet"(token [[TMP5]]) ]
 ; CHECK-NEXT:    to label [[BB6:%.*]] unwind label [[BB7]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[TMP6:%.*]] = cleanuppad within none []
-; CHECK-NEXT:    call void @bar(%struct.quux* [[TMP3]]) [ "funclet"(token [[TMP6]]) ]
+; CHECK-NEXT:    call void @bar(ptr nonnull [[TMP3]]) [ "funclet"(token [[TMP6]]) ]
 ; CHECK-NEXT:    unreachable
 ;
 bb:
@@ -50,12 +50,12 @@ bb:
   br i1 %c1, label %bb1, label %bb2
 
 bb1:                                              ; preds = %bb
-  %tmp1 = getelementptr inbounds %struct.blam, %struct.blam* %tmp0, i32 0, i32 0
+  %tmp1 = getelementptr inbounds %struct.blam, ptr %tmp0, i32 0, i32 1
   invoke void @foo()
   to label %bb3 unwind label %bb4
 
 bb2:                                              ; preds = %bb
-  %tmp2 = getelementptr inbounds %struct.blam, %struct.blam* %tmp0, i32 0, i32 0
+  %tmp2 = getelementptr inbounds %struct.blam, ptr %tmp0, i32 0, i32 1
   invoke void @foo()
   to label %bb3 unwind label %bb4
 
@@ -66,11 +66,11 @@ bb4:                                              ; preds = %bb2, %bb1
   ; This PHI should not be combined into a non-PHI instruction, because
   ; catchswitch BB cannot have any non-PHI instruction other than catchswitch
   ; itself.
-  %tmp3 = phi %struct.quux* [ %tmp1, %bb1 ], [ %tmp2, %bb2 ]
+  %tmp3 = phi ptr [ %tmp1, %bb1 ], [ %tmp2, %bb2 ]
   %tmp4 = catchswitch within none [label %bb5] unwind label %bb7
 
 bb5:                                              ; preds = %bb4
-  %tmp5 = catchpad within %tmp4 [i8* null]
+  %tmp5 = catchpad within %tmp4 [ptr null]
   invoke void @foo() [ "funclet"(token %tmp5) ]
   to label %bb6 unwind label %bb7
 
@@ -79,13 +79,13 @@ bb6:                                              ; preds = %bb5
 
 bb7:                                              ; preds = %bb5, %bb4
   %tmp6 = cleanuppad within none []
-  call void @bar(%struct.quux* %tmp3) [ "funclet"(token %tmp6) ]
+  call void @bar(ptr %tmp3) [ "funclet"(token %tmp6) ]
   unreachable
 }
 
 ; Test that slicing-up of illegal integer type PHI does not happen in catchswitch
 ; BBs, which can't have any non-PHI instruction before the catchswitch.
-define void @test1() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test1() personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @foo()
@@ -108,7 +108,7 @@ define void @test1() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality
 ; CHECK-NEXT:    [[AP_1:%.*]] = phi i8 [ [[AP_0]], [[IF_END]] ], [ 0, [[INVOKE_CONT]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = catchswitch within none [label %catch.start] unwind label [[CATCH_DISPATCH1]]
 ; CHECK:       catch.start:
-; CHECK-NEXT:    [[TMP1:%.*]] = catchpad within [[TMP0]] [i8* null]
+; CHECK-NEXT:    [[TMP1:%.*]] = catchpad within [[TMP0]] [ptr null]
 ; CHECK-NEXT:    br i1 false, label [[CATCH:%.*]], label [[RETHROW:%.*]]
 ; CHECK:       catch:
 ; CHECK-NEXT:    catchret from [[TMP1]] to label [[TRY_CONT]]
@@ -119,7 +119,7 @@ define void @test1() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality
 ; CHECK-NEXT:    [[AP_2:%.*]] = phi i8 [ [[AP_1]], [[CATCH_DISPATCH]] ], [ [[AP_1]], [[RETHROW]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = catchswitch within none [label %catch.start1] unwind to caller
 ; CHECK:       catch.start1:
-; CHECK-NEXT:    [[TMP3:%.*]] = catchpad within [[TMP2]] [i8* null]
+; CHECK-NEXT:    [[TMP3:%.*]] = catchpad within [[TMP2]] [ptr null]
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[AP_2]], 1
 ; CHECK-NEXT:    [[TOBOOL1_NOT:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL1_NOT]], label [[IF_END1:%.*]], label [[IF_THEN1:%.*]]
@@ -168,7 +168,7 @@ catch.dispatch:                                   ; preds = %if.end, %invoke.con
   %tmp0 = catchswitch within none [label %catch.start] unwind label %catch.dispatch1
 
 catch.start:                                      ; preds = %catch.dispatch
-  %tmp1 = catchpad within %tmp0 [i8* null]
+  %tmp1 = catchpad within %tmp0 [ptr null]
   br i1 0, label %catch, label %rethrow
 
 catch:                                            ; preds = %catch.start
@@ -183,7 +183,7 @@ catch.dispatch1:                                  ; preds = %rethrow, %catch.dis
   %tmp2 = catchswitch within none [label %catch.start1] unwind to caller
 
 catch.start1:                                     ; preds = %catch.dispatch1
-  %tmp3 = catchpad within %tmp2 [i8* null]
+  %tmp3 = catchpad within %tmp2 [ptr null]
   %tobool1 = trunc i8 %ap.2 to i1
   br i1 %tobool1, label %if.then1, label %if.end1
 
