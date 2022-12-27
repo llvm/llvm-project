@@ -45,6 +45,62 @@ static bool acceptBitWidth(unsigned bitWidth) {
   }
 }
 
+void SparseTensorDimSliceAttr::print(AsmPrinter &printer) const {
+  printer << "(";
+  printer << (getStaticOffset() ? std::to_string(*getStaticOffset()) : "?");
+  printer << ", ";
+  printer << (getStaticSize() ? std::to_string(*getStaticSize()) : "?");
+  printer << ", ";
+  printer << (getStaticStride() ? std::to_string(*getStaticStride()) : "?");
+  printer << ")";
+}
+
+static ParseResult parseOptionalStaticSlice(int64_t &result,
+                                            AsmParser &parser) {
+  auto parseResult = parser.parseOptionalInteger(result);
+  if (parseResult.has_value()) {
+    if (parseResult.value().succeeded() && result < 0) {
+      parser.emitError(
+          parser.getCurrentLocation(),
+          "expect positive value or ? for slice offset/size/stride");
+      return failure();
+    }
+    return parseResult.value();
+  }
+
+  // Else, and '?' which represented dynamic slice
+  result = SparseTensorDimSliceAttr::kDynamic;
+  return parser.parseQuestion();
+}
+
+Attribute SparseTensorDimSliceAttr::parse(AsmParser &parser, Type type) {
+  int64_t offset = -1, size = -1, stride = -1;
+
+  if (failed(parser.parseLParen()) ||
+      failed(parseOptionalStaticSlice(offset, parser)) ||
+      failed(parser.parseComma()) ||
+      failed(parseOptionalStaticSlice(size, parser)) ||
+      failed(parser.parseComma()) ||
+      failed(parseOptionalStaticSlice(stride, parser)) ||
+      failed(parser.parseRParen()))
+    return {};
+
+  return parser.getChecked<SparseTensorDimSliceAttr>(parser.getContext(),
+                                                     offset, size, stride);
+}
+
+LogicalResult
+SparseTensorDimSliceAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                 int64_t offset, int64_t size, int64_t stride) {
+  if ((offset == SparseTensorDimSliceAttr::kDynamic || offset >= 0) &&
+      (size == SparseTensorDimSliceAttr::kDynamic || size > 0) &&
+      (stride == SparseTensorDimSliceAttr::kDynamic || stride > 0)) {
+    return success();
+  }
+  return emitError()
+         << "expect positive value or ? for slice offset/size/stride";
+}
+
 Type SparseTensorEncodingAttr::getPointerType() const {
   unsigned ptrWidth = getPointerBitWidth();
   Type indexType = IndexType::get(getContext());
@@ -71,24 +127,70 @@ bool SparseTensorEncodingAttr::hasIdDimOrdering() const {
   return !getDimOrdering() || getDimOrdering().isIdentity();
 }
 
+std::optional<uint64_t>
+SparseTensorEncodingAttr::getStaticDimSliceOffset(unsigned dim) const {
+  return getDimSlices()[dim].getStaticOffset();
+}
+
+std::optional<uint64_t>
+SparseTensorEncodingAttr::getStaticDimSliceSize(unsigned dim) const {
+  return getDimSlices()[dim].getStaticSize();
+}
+
+std::optional<uint64_t>
+SparseTensorEncodingAttr::getStaticDimSliceStride(unsigned dim) const {
+  return getDimSlices()[dim].getStaticStride();
+}
+
+std::optional<uint64_t>
+SparseTensorEncodingAttr::getStaticLvlSliceOffset(unsigned lvl) const {
+  return getStaticDimSliceOffset(toOrigDim(*this, lvl));
+}
+
+std::optional<uint64_t>
+SparseTensorEncodingAttr::getStaticLvlSliceSize(unsigned lvl) const {
+  return getStaticDimSliceSize(toOrigDim(*this, lvl));
+}
+
+std::optional<uint64_t>
+SparseTensorEncodingAttr::getStaticLvlSliceStride(unsigned lvl) const {
+  return getStaticDimSliceStride(toOrigDim(*this, lvl));
+}
+
 Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
-  if (failed(parser.parseLess()))
-    return {};
-  // Parse the data as a dictionary.
-  DictionaryAttr dict;
-  if (failed(parser.parseAttribute(dict)))
-    return {};
-  if (failed(parser.parseGreater()))
-    return {};
+#define RETURN_ON_FAIL(stmt)                                                   \
+  if (failed(stmt)) {                                                          \
+    return {};                                                                 \
+  }
+
+  RETURN_ON_FAIL(parser.parseLess())
+  RETURN_ON_FAIL(parser.parseLBrace())
+
   // Process the data from the parsed dictionary value into struct-like data.
   SmallVector<DimLevelType> dlt;
+  SmallVector<SparseTensorDimSliceAttr> slices;
   AffineMap dimOrd = {};
   AffineMap higherOrd = {};
   unsigned ptr = 0;
   unsigned ind = 0;
-  for (const NamedAttribute &attr : dict) {
-    if (attr.getName() == "dimLevelType") {
-      auto arrayAttr = attr.getValue().dyn_cast<ArrayAttr>();
+
+  StringRef attrName;
+  // Exactly 6 keys.
+  SmallVector<StringRef, 6> keys = {"dimLevelType",   "dimOrdering",
+                                    "higherOrdering", "pointerBitWidth",
+                                    "indexBitWidth",  "slice"};
+  while (succeeded(parser.parseOptionalKeyword(&attrName))) {
+    if (!llvm::is_contained(keys, attrName)) {
+      parser.emitError(parser.getNameLoc(), "unexpected key: ") << attrName;
+      return {};
+    }
+
+    // Consume the `=` after keys
+    RETURN_ON_FAIL(parser.parseEqual())
+    if (attrName == "dimLevelType") {
+      Attribute attr;
+      RETURN_ON_FAIL(parser.parseAttribute(attr));
+      auto arrayAttr = attr.dyn_cast<ArrayAttr>();
       if (!arrayAttr) {
         parser.emitError(parser.getNameLoc(),
                          "expected an array for dimension level types");
@@ -127,47 +229,80 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
           return {};
         }
       }
-    } else if (attr.getName() == "dimOrdering") {
-      auto affineAttr = attr.getValue().dyn_cast<AffineMapAttr>();
+    } else if (attrName == "dimOrdering") {
+      Attribute attr;
+      RETURN_ON_FAIL(parser.parseAttribute(attr))
+
+      auto affineAttr = attr.dyn_cast<AffineMapAttr>();
       if (!affineAttr) {
         parser.emitError(parser.getNameLoc(),
                          "expected an affine map for dimension ordering");
         return {};
       }
       dimOrd = affineAttr.getValue();
-    } else if (attr.getName() == "higherOrdering") {
-      auto affineAttr = attr.getValue().dyn_cast<AffineMapAttr>();
+    } else if (attrName == "higherOrdering") {
+      Attribute attr;
+      RETURN_ON_FAIL(parser.parseAttribute(attr))
+
+      auto affineAttr = attr.dyn_cast<AffineMapAttr>();
       if (!affineAttr) {
         parser.emitError(parser.getNameLoc(),
                          "expected an affine map for higher ordering");
         return {};
       }
       higherOrd = affineAttr.getValue();
-    } else if (attr.getName() == "pointerBitWidth") {
-      auto intAttr = attr.getValue().dyn_cast<IntegerAttr>();
+    } else if (attrName == "pointerBitWidth") {
+      Attribute attr;
+      RETURN_ON_FAIL(parser.parseAttribute(attr))
+
+      auto intAttr = attr.dyn_cast<IntegerAttr>();
       if (!intAttr) {
         parser.emitError(parser.getNameLoc(),
                          "expected an integral pointer bitwidth");
         return {};
       }
       ptr = intAttr.getInt();
-    } else if (attr.getName() == "indexBitWidth") {
-      auto intAttr = attr.getValue().dyn_cast<IntegerAttr>();
+    } else if (attrName == "indexBitWidth") {
+      Attribute attr;
+      RETURN_ON_FAIL(parser.parseAttribute(attr))
+
+      auto intAttr = attr.dyn_cast<IntegerAttr>();
       if (!intAttr) {
         parser.emitError(parser.getNameLoc(),
                          "expected an integral index bitwidth");
         return {};
       }
       ind = intAttr.getInt();
-    } else {
-      parser.emitError(parser.getNameLoc(), "unexpected key: ")
-          << attr.getName().strref();
-      return {};
+    } else if (attrName == "slice") {
+      RETURN_ON_FAIL(parser.parseLSquare())
+      // Dispatches to DimSliceAttr to skip mnemonic
+      bool finished = false;
+      while (auto attr = SparseTensorDimSliceAttr::parse(parser, nullptr)) {
+        auto sliceAttr = attr.cast<SparseTensorDimSliceAttr>();
+        slices.push_back(sliceAttr);
+        if (parser.parseOptionalComma().failed()) {
+          finished = true;
+          break;
+        }
+      }
+      // Wrong when parsing slices
+      if (!finished)
+        return {};
+      RETURN_ON_FAIL(parser.parseRSquare())
     }
+
+    // Only the last item can omit the comma
+    if (parser.parseOptionalComma().failed())
+      break;
   }
+
+  RETURN_ON_FAIL(parser.parseRBrace())
+  RETURN_ON_FAIL(parser.parseGreater())
+#undef RETURN_ON_FAIL
+
   // Construct struct-like storage for attribute.
   return parser.getChecked<SparseTensorEncodingAttr>(
-      parser.getContext(), dlt, dimOrd, higherOrd, ptr, ind);
+      parser.getContext(), dlt, dimOrd, higherOrd, ptr, ind, slices);
 }
 
 void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
@@ -188,14 +323,25 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
     printer << ", pointerBitWidth = " << getPointerBitWidth();
   if (getIndexBitWidth())
     printer << ", indexBitWidth = " << getIndexBitWidth();
+  if (!getDimSlices().empty()) {
+    printer << ", slice = [ ";
+    llvm::interleaveComma(getDimSlices(), printer,
+                          [&](SparseTensorDimSliceAttr attr) {
+                            // Calls SparseTensorDimSliceAttr::print directly to
+                            // skip mnemonic.
+                            attr.print(printer);
+                          });
+    printer << " ]";
+  }
+
   printer << " }>";
 }
 
 LogicalResult SparseTensorEncodingAttr::verify(
     function_ref<InFlightDiagnostic()> emitError,
     ArrayRef<DimLevelType> dimLevelType, AffineMap dimOrdering,
-    AffineMap higherOrdering, unsigned pointerBitWidth,
-    unsigned indexBitWidth) {
+    AffineMap higherOrdering, unsigned pointerBitWidth, unsigned indexBitWidth,
+    ArrayRef<SparseTensorDimSliceAttr> dimSlices) {
   if (!acceptBitWidth(pointerBitWidth))
     return emitError() << "unexpected pointer bitwidth: " << pointerBitWidth;
   if (!acceptBitWidth(indexBitWidth))
@@ -217,6 +363,11 @@ LogicalResult SparseTensorEncodingAttr::verify(
       return emitError() << "unexpected mismatch in higher ordering and "
                             "dimension level types size";
   }
+  if (!dimSlices.empty() && dimSlices.size() != dimLevelType.size()) {
+    return emitError() << "unexpected mismatch in dimension slices and "
+                          "dimension level type size";
+  }
+
   return success();
 }
 
@@ -226,7 +377,7 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
   // Check structural integrity.
   if (failed(verify(emitError, getDimLevelType(), getDimOrdering(),
                     getHigherOrdering(), getPointerBitWidth(),
-                    getIndexBitWidth())))
+                    getIndexBitWidth(), getDimSlices())))
     return failure();
   // Check integrity with tensor type specifics. Dimension ordering is optional,
   // but we always should have dimension level types for the full rank.
