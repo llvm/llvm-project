@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodegenUtils.h"
+#include "LoopEmitter.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -893,7 +894,7 @@ public:
     auto enc = getSparseTensorEncoding(rtp);
 
     // 1. Generates loop for the sparse input.
-    SparseTensorLoopEmitter loopEmitter(
+    LoopEmitter loopEmitter(
         ValueRange{input},
         StringAttr::get(getContext(), ForeachOp::getOperationName()));
     loopEmitter.initializeLoopEmit(rewriter, loc);

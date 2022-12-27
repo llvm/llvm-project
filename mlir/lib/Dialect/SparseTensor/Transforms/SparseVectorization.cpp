@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodegenUtils.h"
+#include "LoopEmitter.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -398,11 +399,11 @@ static bool vectorizeExpr(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
       }
       return true;
     } // An invariant or reduction. In both cases, we treat this as an
-      // invariant value, and rely on later replacing and folding to
-      // construct a proper reduction chain for the latter case.
-      if (codegen)
-        vexp = genVectorInvariantValue(rewriter, vl, exp);
-      return true;
+    // invariant value, and rely on later replacing and folding to
+    // construct a proper reduction chain for the latter case.
+    if (codegen)
+      vexp = genVectorInvariantValue(rewriter, vl, exp);
+    return true;
   }
   // Something defined outside the loop-body is invariant.
   Operation *def = exp.getDefiningOp();
@@ -540,9 +541,8 @@ static bool vectorizeStmt(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
       forOpNew = rewriter.create<scf::ForOp>(
           loc, forOp.getLowerBound(), forOp.getUpperBound(), step, vinit);
       forOpNew->setAttr(
-          SparseTensorLoopEmitter::getLoopEmitterLoopAttrName(),
-          forOp->getAttr(
-              SparseTensorLoopEmitter::getLoopEmitterLoopAttrName()));
+          LoopEmitter::getLoopEmitterLoopAttrName(),
+          forOp->getAttr(LoopEmitter::getLoopEmitterLoopAttrName()));
       rewriter.setInsertionPointToStart(forOpNew.getBody());
     } else {
       forOp.setStep(step);
@@ -609,8 +609,8 @@ public:
 
   ForOpRewriter(MLIRContext *context, unsigned vectorLength,
                 bool enableVLAVectorization, bool enableSIMDIndex32)
-      : OpRewritePattern(context),
-        vl{vectorLength, enableVLAVectorization, enableSIMDIndex32} {}
+      : OpRewritePattern(context), vl{vectorLength, enableVLAVectorization,
+                                      enableSIMDIndex32} {}
 
   LogicalResult matchAndRewrite(scf::ForOp op,
                                 PatternRewriter &rewriter) const override {
@@ -618,7 +618,7 @@ public:
     // sparse compiler, which means no data dependence analysis is required,
     // and its loop-body is very restricted in form.
     if (!op.getRegion().hasOneBlock() || !isIntValue(op.getStep(), 1) ||
-        !op->hasAttr(SparseTensorLoopEmitter::getLoopEmitterLoopAttrName()))
+        !op->hasAttr(LoopEmitter::getLoopEmitterLoopAttrName()))
       return failure();
     // Analyze (!codegen) and rewrite (codegen) loop-body.
     if (vectorizeStmt(rewriter, op, vl, /*codegen=*/false) &&
@@ -646,8 +646,7 @@ public:
     Value inp = op.getSource();
     if (auto redOp = inp.getDefiningOp<vector::ReductionOp>()) {
       if (auto forOp = redOp.getVector().getDefiningOp<scf::ForOp>()) {
-        if (forOp->hasAttr(
-                SparseTensorLoopEmitter::getLoopEmitterLoopAttrName())) {
+        if (forOp->hasAttr(LoopEmitter::getLoopEmitterLoopAttrName())) {
           rewriter.replaceOp(op, redOp.getVector());
           return success();
         }
