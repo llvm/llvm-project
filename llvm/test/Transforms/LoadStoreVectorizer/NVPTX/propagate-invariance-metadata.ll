@@ -4,21 +4,20 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
-define i32 @foo(i32* %ptr) {
+define i32 @foo(ptr %ptr) {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i32 1
-; CHECK-NEXT:    [[P1:%.*]] = addrspacecast i32* [[PTR1]] to i32 addrspace(1)*
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[PTR]] to <2 x i32>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, <2 x i32>* [[TMP1]], align 8, !invariant.load !0
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i32 1
+; CHECK-NEXT:    [[P1:%.*]] = addrspacecast ptr [[PTR1]] to ptr addrspace(1)
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[PTR]], align 8, !invariant.load !0
 ; CHECK-NEXT:    [[V01:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[V12:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[V01]], [[V12]]
 ; CHECK-NEXT:    ret i32 [[SUM]]
 ;
-  %ptr1 = getelementptr i32, i32* %ptr, i32 1
-  %p1 = addrspacecast i32* %ptr1 to i32 addrspace(1)*
-  %v0 = load i32, i32* %ptr, align 8, !invariant.load !0
-  %v1 = load i32, i32* %ptr1, align 4, !invariant.load !0
+  %ptr1 = getelementptr i32, ptr %ptr, i32 1
+  %p1 = addrspacecast ptr %ptr1 to ptr addrspace(1)
+  %v0 = load i32, ptr %ptr, align 8, !invariant.load !0
+  %v1 = load i32, ptr %ptr1, align 4, !invariant.load !0
   %sum = add i32 %v0, %v1
   ret i32 %sum
 }

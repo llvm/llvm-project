@@ -8,37 +8,35 @@ target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:3
 ; The original load has an implicit alignment of 4, and should not
 ; increase to an align 8 load.
 
-define amdgpu_kernel void @load_keep_base_alignment_missing_align(float addrspace(1)* %out) {
+define amdgpu_kernel void @load_keep_base_alignment_missing_align(ptr addrspace(1) %out) {
 ; CHECK-LABEL: @load_keep_base_alignment_missing_align(
-; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 11
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float addrspace(3)* [[PTR0]] to <2 x float> addrspace(3)*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float> addrspace(3)* [[TMP1]], align 4
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 11
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr addrspace(3) [[PTR0]], align 4
 ; CHECK-NEXT:    [[VAL01:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[VAL12:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[VAL01]], [[VAL12]]
-; CHECK-NEXT:    store float [[ADD]], float addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    store float [[ADD]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %ptr0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 11
-  %val0 = load float, float addrspace(3)* %ptr0
+  %ptr0 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 11
+  %val0 = load float, ptr addrspace(3) %ptr0
 
-  %ptr1 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 12
-  %val1 = load float, float addrspace(3)* %ptr1
+  %ptr1 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 12
+  %val1 = load float, ptr addrspace(3) %ptr1
   %add = fadd float %val0, %val1
-  store float %add, float addrspace(1)* %out
+  store float %add, ptr addrspace(1) %out
   ret void
 }
 
 define amdgpu_kernel void @store_keep_base_alignment_missing_align() {
 ; CHECK-LABEL: @store_keep_base_alignment_missing_align(
-; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float addrspace(3)* [[ARRAYIDX0]] to <2 x float> addrspace(3)*
-; CHECK-NEXT:    store <2 x float> zeroinitializer, <2 x float> addrspace(3)* [[TMP1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 1
+; CHECK-NEXT:    store <2 x float> zeroinitializer, ptr addrspace(3) [[ARRAYIDX0]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 1
-  %arrayidx1 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 2
-  store float 0.0, float addrspace(3)* %arrayidx0
-  store float 0.0, float addrspace(3)* %arrayidx1
+  %arrayidx0 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 1
+  %arrayidx1 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 2
+  store float 0.0, ptr addrspace(3) %arrayidx0
+  store float 0.0, ptr addrspace(3) %arrayidx1
   ret void
 }

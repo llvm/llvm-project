@@ -4,30 +4,26 @@
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
-define void @correct_order(i32* noalias %ptr) {
+define void @correct_order(ptr noalias %ptr) {
 ; CHECK-LABEL: @correct_order(
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i64 0
-; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i32, i32* [[PTR]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[NEXT_GEP1]] to <2 x i32>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, <2 x i32>* [[TMP1]], align 4
+; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[NEXT_GEP1]], align 4
 ; CHECK-NEXT:    [[L11:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[L42:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
-; CHECK-NEXT:    [[L2:%.*]] = load i32, i32* [[NEXT_GEP]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[NEXT_GEP]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, <2 x i32>* [[TMP3]], align 4
-; CHECK-NEXT:    [[L3:%.*]] = load i32, i32* [[NEXT_GEP1]], align 4
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[NEXT_GEP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %next.gep = getelementptr i32, i32* %ptr, i64 0
-  %next.gep1 = getelementptr i32, i32* %ptr, i64 1
-  %next.gep2 = getelementptr i32, i32* %ptr, i64 2
+  %next.gep1 = getelementptr i32, ptr %ptr, i64 1
+  %next.gep2 = getelementptr i32, ptr %ptr, i64 2
 
-  %l1 = load i32, i32* %next.gep1, align 4
-  %l2 = load i32, i32* %next.gep, align 4
-  store i32 0, i32* %next.gep1, align 4
-  store i32 0, i32* %next.gep, align 4
-  %l3 = load i32, i32* %next.gep1, align 4
-  %l4 = load i32, i32* %next.gep2, align 4
+  %l1 = load i32, ptr %next.gep1, align 4
+  %l2 = load i32, ptr %ptr, align 4
+  store i32 0, ptr %next.gep1, align 4
+  store i32 0, ptr %ptr, align 4
+  %l3 = load i32, ptr %next.gep1, align 4
+  %l4 = load i32, ptr %next.gep2, align 4
 
   ret void
 }

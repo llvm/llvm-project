@@ -6,30 +6,29 @@ target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:3
 
 ; This fails to vectorize if the !alias.scope is not used
 
-define amdgpu_kernel void @vectorize_alias_scope(float addrspace(1)* nocapture %a, float addrspace(1)* nocapture %b, float addrspace(1)* nocapture readonly %c) #0 {
+define amdgpu_kernel void @vectorize_alias_scope(ptr addrspace(1) nocapture %a, ptr addrspace(1) nocapture %b, ptr addrspace(1) nocapture readonly %c) #0 {
 ; SCOPE-LABEL: @vectorize_alias_scope(
 ; SCOPE-NEXT:  entry:
-; SCOPE-NEXT:    [[LD_C:%.*]] = load float, float addrspace(1)* [[C:%.*]], align 4, !alias.scope !0
-; SCOPE-NEXT:    [[TMP0:%.*]] = bitcast float addrspace(1)* [[A:%.*]] to <2 x float> addrspace(1)*
-; SCOPE-NEXT:    store <2 x float> zeroinitializer, <2 x float> addrspace(1)* [[TMP0]], align 4, !noalias !0
-; SCOPE-NEXT:    store float [[LD_C]], float addrspace(1)* [[B:%.*]], align 4, !noalias !0
+; SCOPE-NEXT:    [[LD_C:%.*]] = load float, ptr addrspace(1) [[C:%.*]], align 4, !alias.scope !0
+; SCOPE-NEXT:    store <2 x float> zeroinitializer, ptr addrspace(1) [[A:%.*]], align 4, !noalias !0
+; SCOPE-NEXT:    store float [[LD_C]], ptr addrspace(1) [[B:%.*]], align 4, !noalias !0
 ; SCOPE-NEXT:    ret void
 ;
 ; NOSCOPE-LABEL: @vectorize_alias_scope(
 ; NOSCOPE-NEXT:  entry:
-; NOSCOPE-NEXT:    [[A_IDX_1:%.*]] = getelementptr inbounds float, float addrspace(1)* [[A:%.*]], i64 1
-; NOSCOPE-NEXT:    store float 0.000000e+00, float addrspace(1)* [[A]], align 4, !noalias !0
-; NOSCOPE-NEXT:    [[LD_C:%.*]] = load float, float addrspace(1)* [[C:%.*]], align 4, !alias.scope !0
-; NOSCOPE-NEXT:    store float 0.000000e+00, float addrspace(1)* [[A_IDX_1]], align 4, !noalias !0
-; NOSCOPE-NEXT:    store float [[LD_C]], float addrspace(1)* [[B:%.*]], align 4, !noalias !0
+; NOSCOPE-NEXT:    [[A_IDX_1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A:%.*]], i64 1
+; NOSCOPE-NEXT:    store float 0.000000e+00, ptr addrspace(1) [[A]], align 4, !noalias !0
+; NOSCOPE-NEXT:    [[LD_C:%.*]] = load float, ptr addrspace(1) [[C:%.*]], align 4, !alias.scope !0
+; NOSCOPE-NEXT:    store float 0.000000e+00, ptr addrspace(1) [[A_IDX_1]], align 4, !noalias !0
+; NOSCOPE-NEXT:    store float [[LD_C]], ptr addrspace(1) [[B:%.*]], align 4, !noalias !0
 ; NOSCOPE-NEXT:    ret void
 ;
 entry:
-  %a.idx.1 = getelementptr inbounds float, float addrspace(1)* %a, i64 1
-  store float 0.0, float addrspace(1)* %a, align 4, !noalias !0
-  %ld.c = load float, float addrspace(1)* %c, align 4, !alias.scope !0
-  store float 0.0, float addrspace(1)* %a.idx.1, align 4, !noalias !0
-  store float %ld.c, float addrspace(1)* %b, align 4, !noalias !0
+  %a.idx.1 = getelementptr inbounds float, ptr addrspace(1) %a, i64 1
+  store float 0.0, ptr addrspace(1) %a, align 4, !noalias !0
+  %ld.c = load float, ptr addrspace(1) %c, align 4, !alias.scope !0
+  store float 0.0, ptr addrspace(1) %a.idx.1, align 4, !noalias !0
+  store float %ld.c, ptr addrspace(1) %b, align 4, !noalias !0
   ret void
 }
 
