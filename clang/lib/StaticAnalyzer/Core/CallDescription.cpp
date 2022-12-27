@@ -36,7 +36,7 @@ static MaybeCount readRequiredParams(MaybeCount RequiredArgs,
 }
 
 ento::CallDescription::CallDescription(CallDescriptionFlags Flags,
-                                       ArrayRef<StringRef> QualifiedName,
+                                       ArrayRef<const char *> QualifiedName,
                                        MaybeCount RequiredArgs /*= None*/,
                                        MaybeCount RequiredParams /*= None*/)
     : RequiredArgs(RequiredArgs),
@@ -44,12 +44,11 @@ ento::CallDescription::CallDescription(CallDescriptionFlags Flags,
       Flags(Flags) {
   assert(!QualifiedName.empty());
   this->QualifiedName.reserve(QualifiedName.size());
-  llvm::transform(QualifiedName, std::back_inserter(this->QualifiedName),
-                  [](StringRef From) { return From.str(); });
+  llvm::copy(QualifiedName, std::back_inserter(this->QualifiedName));
 }
 
 /// Construct a CallDescription with default flags.
-ento::CallDescription::CallDescription(ArrayRef<StringRef> QualifiedName,
+ento::CallDescription::CallDescription(ArrayRef<const char *> QualifiedName,
                                        MaybeCount RequiredArgs /*= None*/,
                                        MaybeCount RequiredParams /*= None*/)
     : CallDescription(CDF_None, QualifiedName, RequiredArgs, RequiredParams) {}

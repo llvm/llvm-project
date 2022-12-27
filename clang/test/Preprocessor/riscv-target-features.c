@@ -446,6 +446,10 @@
 // RUN: -o - | FileCheck --check-prefix=CHECK-XVENTANACONDOPS-EXT %s
 // CHECK-XVENTANACONDOPS-EXT: __riscv_xventanacondops 1000000{{$}}
 
+// RUN: %clang -target riscv64 -march=rv64ixtheadvdot -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-XTHEADVDOT-EXT %s
+// CHECK-XTHEADVDOT-EXT: __riscv_xtheadvdot 1000000{{$}}
+
 // RUN: %clang -target riscv32 -march=rv32izcd0p70 -menable-experimental-extensions \
 // RUN: -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-ZCD-EXT %s
 // RUN: %clang -target riscv64 -march=rv64izcd0p70 -menable-experimental-extensions \

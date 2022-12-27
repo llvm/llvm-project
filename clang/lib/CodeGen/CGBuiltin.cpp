@@ -134,7 +134,7 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
                  AIXLongDouble64Builtins.end())
       Name = AIXLongDouble64Builtins[BuiltinID];
     else
-      Name = Context.BuiltinInfo.getName(BuiltinID).substr(10);
+      Name = Context.BuiltinInfo.getName(BuiltinID) + 10;
   }
 
   llvm::FunctionType *Ty =
@@ -5302,7 +5302,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     LargestVectorWidth = std::max(LargestVectorWidth, VectorWidth);
 
   // See if we have a target specific intrinsic.
-  StringRef Name = getContext().BuiltinInfo.getName(BuiltinID);
+  const char *Name = getContext().BuiltinInfo.getName(BuiltinID);
   Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
   StringRef Prefix =
       llvm::Triple::getArchTypePrefix(getTarget().getTriple().getArch());

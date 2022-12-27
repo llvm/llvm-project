@@ -556,6 +556,10 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
   SDValue Addr;
   TLSModel::Model Model = getTargetMachine().getTLSModel(N->getGlobal());
 
+  if (DAG.getMachineFunction().getFunction().getCallingConv() ==
+      CallingConv::GHC)
+    report_fatal_error("In GHC calling convention TLS is not supported");
+
   switch (Model) {
   case TLSModel::GeneralDynamic:
     // In this model, application code calls the dynamic linker function
@@ -2043,6 +2047,47 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, SDValue Val,
   return Val;
 }
 
+static bool CC_LoongArch_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
+                            CCValAssign::LocInfo LocInfo,
+                            ISD::ArgFlagsTy ArgFlags, CCState &State) {
+  if (LocVT == MVT::i32 || LocVT == MVT::i64) {
+    // Pass in STG registers: Base, Sp, Hp, R1, R2, R3, R4, R5, SpLim
+    //                        s0    s1  s2  s3  s4  s5  s6  s7  s8
+    static const MCPhysReg GPRList[] = {
+        LoongArch::R23, LoongArch::R24, LoongArch::R25, LoongArch::R26, LoongArch::R27,
+        LoongArch::R28, LoongArch::R29, LoongArch::R30, LoongArch::R31};
+    if (unsigned Reg = State.AllocateReg(GPRList)) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+  }
+
+  if (LocVT == MVT::f32) {
+    // Pass in STG registers: F1, F2, F3, F4
+    //                        fs0,fs1,fs2,fs3
+    static const MCPhysReg FPR32List[] = {LoongArch::F24, LoongArch::F25,
+                                          LoongArch::F26, LoongArch::F27};
+    if (unsigned Reg = State.AllocateReg(FPR32List)) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+  }
+
+  if (LocVT == MVT::f64) {
+    // Pass in STG registers: D1, D2, D3, D4
+    //                        fs4,fs5,fs6,fs7
+    static const MCPhysReg FPR64List[] = {LoongArch::F28_64, LoongArch::F29_64,
+                                          LoongArch::F30_64, LoongArch::F31_64};
+    if (unsigned Reg = State.AllocateReg(FPR64List)) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+  }
+
+  report_fatal_error("No registers left in GHC calling convention");
+  return true;
+}
+
 // Transform physical registers into virtual registers.
 SDValue LoongArchTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
@@ -2057,6 +2102,11 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
   case CallingConv::C:
   case CallingConv::Fast:
     break;
+  case CallingConv::GHC:
+    if (!MF.getSubtarget().getFeatureBits()[LoongArch::FeatureBasicF] ||
+        !MF.getSubtarget().getFeatureBits()[LoongArch::FeatureBasicD])
+      report_fatal_error(
+        "GHC calling convention requires the F and D extensions");
   }
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
@@ -2069,7 +2119,10 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
   SmallVector<CCValAssign> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
 
-  analyzeInputArgs(MF, CCInfo, Ins, /*IsRet=*/false, CC_LoongArch);
+  if (CallConv == CallingConv::GHC)
+    CCInfo.AnalyzeFormalArguments(Ins, CC_LoongArch_GHC);
+  else
+    analyzeInputArgs(MF, CCInfo, Ins, /*IsRet=*/false, CC_LoongArch);
 
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
@@ -2237,7 +2290,10 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
   SmallVector<CCValAssign> ArgLocs;
   CCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
 
-  analyzeOutputArgs(MF, ArgCCInfo, Outs, /*IsRet=*/false, &CLI, CC_LoongArch);
+  if (CallConv == CallingConv::GHC)
+    ArgCCInfo.AnalyzeCallOperands(Outs, CC_LoongArch_GHC);
+  else
+    analyzeOutputArgs(MF, ArgCCInfo, Outs, /*IsRet=*/false, &CLI, CC_LoongArch);
 
   // Check if it's really possible to do a tail call.
   if (IsTailCall)
@@ -2480,7 +2536,8 @@ SDValue LoongArchTargetLowering::LowerReturn(
 
   analyzeOutputArgs(DAG.getMachineFunction(), CCInfo, Outs, /*IsRet=*/true,
                     nullptr, CC_LoongArch);
-
+  if (CallConv == CallingConv::GHC && !RVLocs.empty())
+    report_fatal_error("GHC functions return void only");
   SDValue Glue;
   SmallVector<SDValue, 4> RetOps(1, Chain);
 

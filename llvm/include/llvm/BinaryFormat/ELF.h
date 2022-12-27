@@ -930,6 +930,21 @@ enum {
 #include "ELFRelocs/LoongArch.def"
 };
 
+// Xtensa specific e_flags
+enum : unsigned {
+  // Four-bit Xtensa machine type mask.
+  EF_XTENSA_MACH = 0x0000000f,
+  // Various CPU types.
+  EF_XTENSA_MACH_NONE = 0x00000000, // A base Xtensa implementation
+  EF_XTENSA_XT_INSN = 0x00000100,
+  EF_XTENSA_XT_LIT = 0x00000200,
+};
+
+// ELF Relocation types for Xtensa
+enum {
+#include "ELFRelocs/Xtensa.def"
+};
+
 #undef ELF_RELOC
 
 // Section header.

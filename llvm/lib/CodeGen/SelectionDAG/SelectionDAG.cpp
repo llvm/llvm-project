@@ -2557,6 +2557,26 @@ bool SelectionDAG::MaskedValueIsAllOnes(SDValue V, const APInt &Mask,
   return Mask.isSubsetOf(computeKnownBits(V, Depth).One);
 }
 
+APInt SelectionDAG::computeVectorKnownZeroElements(SDValue Op,
+                                                   const APInt &DemandedElts,
+                                                   unsigned Depth) const {
+  EVT VT = Op.getValueType();
+  assert(VT.isVector() && !VT.isScalableVector() && "Only for fixed vectors!");
+
+  unsigned NumElts = VT.getVectorNumElements();
+  assert(DemandedElts.getBitWidth() == NumElts && "Unexpected demanded mask.");
+
+  APInt KnownZeroElements = APInt::getNullValue(NumElts);
+  for (unsigned EltIdx = 0; EltIdx != NumElts; ++EltIdx) {
+    if (!DemandedElts[EltIdx])
+      continue; // Don't query elements that are not demanded.
+    APInt Mask = APInt::getOneBitSet(NumElts, EltIdx);
+    if (MaskedVectorIsZero(Op, Mask, Depth))
+      KnownZeroElements.setBit(EltIdx);
+  }
+  return KnownZeroElements;
+}
+
 /// isSplatValue - Return true if the vector V has the same value
 /// across all DemandedElts. For scalable vectors, we don't know the
 /// number of lanes at compile time.  Instead, we use a 1 bit APInt

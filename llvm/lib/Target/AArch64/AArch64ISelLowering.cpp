@@ -1554,6 +1554,7 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
   setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
   setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
+  setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   setOperationAction(ISD::SRA, VT, Custom);
@@ -5919,6 +5920,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::BUILD_VECTOR:
     return LowerBUILD_VECTOR(Op, DAG);
+  case ISD::ZERO_EXTEND_VECTOR_INREG:
+    return LowerZERO_EXTEND_VECTOR_INREG(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return LowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::SPLAT_VECTOR:
@@ -11441,6 +11444,27 @@ static SDValue tryToConvertShuffleOfTbl2ToTbl4(SDValue Op,
   return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::v16i8,
                      {ID, Tbl1->getOperand(1), Tbl1->getOperand(2),
                       Tbl2->getOperand(1), Tbl2->getOperand(2), TBLMask});
+}
+
+// Baseline legalization for ZERO_EXTEND_VECTOR_INREG will blend-in zeros,
+// but we don't have an appropriate instruction,
+// so custom-lower it as ZIP1-with-zeros.
+SDValue
+AArch64TargetLowering::LowerZERO_EXTEND_VECTOR_INREG(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  EVT VT = Op.getValueType();
+  SDValue SrcOp = Op.getOperand(0);
+  EVT SrcVT = SrcOp.getValueType();
+  assert(VT.getScalarSizeInBits() % SrcVT.getScalarSizeInBits() == 0 &&
+         "Unexpected extension factor.");
+  unsigned Scale = VT.getScalarSizeInBits() / SrcVT.getScalarSizeInBits();
+  // FIXME: support multi-step zipping?
+  if (Scale != 2)
+    return SDValue();
+  SDValue Zeros = DAG.getConstant(0, dl, SrcVT);
+  return DAG.getBitcast(VT,
+                        DAG.getNode(AArch64ISD::ZIP1, dl, SrcVT, SrcOp, Zeros));
 }
 
 SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,

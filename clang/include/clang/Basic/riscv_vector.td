@@ -848,8 +848,7 @@ multiclass RVVUnitStridedSegLoad<string op> {
         // builtin: (val0 address, ..., mask, maskedoff0, ..., ptr, vl)
         // intrinsic: (maskedoff0, ..., ptr, mask, vl)
         if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC) {
-          for (unsigned I = 0; I < NF; ++I)
-            Operands.push_back(llvm::PoisonValue::get(ResultType));
+          Operands.append(NF, llvm::PoisonValue::get(ResultType));
           Operands.push_back(Ops[NF + 1]);
           Operands.push_back(Ops[NF]);
           Operands.push_back(Ops[NF + 2]);
@@ -867,8 +866,7 @@ multiclass RVVUnitStridedSegLoad<string op> {
         // TU builtin: (val0 address, ..., passthru0, ..., ptr, vl)
         // intrinsic: (passthru0, passthru1, ..., ptr, vl)
         if (DefaultPolicy == TAIL_AGNOSTIC) {
-          for (unsigned I = 0; I < NF; ++I)
-            Operands.push_back(llvm::PoisonValue::get(ResultType));
+          Operands.append(NF, llvm::PoisonValue::get(ResultType));
           Operands.push_back(Ops[NF]);
           Operands.push_back(Ops[NF + 1]);
         } else {
@@ -927,8 +925,7 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
         // builtin: (val0 address, ..., mask, maskedoff0, ..., ptr, new_vl, vl)
         // intrinsic: (maskedoff0, ..., ptr, mask, vl)
         if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC) {
-          for (unsigned I = 0; I < NF; ++I)
-            Operands.push_back(llvm::PoisonValue::get(ResultType));
+          Operands.append(NF, llvm::PoisonValue::get(ResultType));
           Operands.push_back(Ops[NF + 1]);
           Operands.push_back(Ops[NF]);
           Operands.push_back(Ops[NF + 3]);
@@ -948,8 +945,7 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
         // TU builtin: (val0 address, ..., passthru0, ..., ptr, new_vl, vl)
         // intrinsic: (passthru0, passthru1, ..., ptr, vl)
         if (DefaultPolicy == TAIL_AGNOSTIC) {
-          for (unsigned I = 0; I < NF; ++I)
-            Operands.push_back(llvm::PoisonValue::get(ResultType));
+          Operands.append(NF, llvm::PoisonValue::get(ResultType));
           Operands.push_back(Ops[NF]);
           Operands.push_back(Ops[NF + 2]);
           NewVL = Ops[NF + 1];
@@ -1010,8 +1006,7 @@ multiclass RVVStridedSegLoad<string op> {
         // builtin: (val0 address, ..., mask, maskedoff0, ..., ptr, stride, vl)
         // intrinsic: (maskedoff0, ..., ptr, stride, mask, vl)
         if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC) {
-          for (unsigned I = 0; I < NF; ++I)
-            Operands.push_back(llvm::PoisonValue::get(ResultType));
+          Operands.append(NF, llvm::PoisonValue::get(ResultType));
           Operands.push_back(Ops[NF + 1]);
           Operands.push_back(Ops[NF + 2]);
           Operands.push_back(Ops[NF]);
@@ -1031,8 +1026,7 @@ multiclass RVVStridedSegLoad<string op> {
         // TU builtin: (val0 address, ..., passthru0, ..., ptr, stride, vl)
         // intrinsic: (passthru0, passthru1, ..., ptr, stride, vl)
         if (DefaultPolicy == TAIL_AGNOSTIC) {
-          for (unsigned I = 0; I < NF; ++I)
-            Operands.push_back(llvm::PoisonValue::get(ResultType));
+          Operands.append(NF, llvm::PoisonValue::get(ResultType));
           Operands.push_back(Ops[NF]);
           Operands.push_back(Ops[NF + 1]);
           Operands.push_back(Ops[NF + 2]);
@@ -1086,8 +1080,7 @@ multiclass RVVIndexedSegLoad<string op> {
         // builtin: (val0 address, ..., mask, maskedoff0, ..., ptr, index, vl)
         // intrinsic: (maskedoff0, ..., ptr, index, mask, vl)
         if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC) {
-          for (unsigned I = 0; I < NF; ++I)
-            Operands.push_back(llvm::PoisonValue::get(ResultType));
+          Operands.append(NF, llvm::PoisonValue::get(ResultType));
           Operands.push_back(Ops[NF + 1]);
           Operands.push_back(Ops[NF + 2]);
           Operands.push_back(Ops[NF]);
@@ -1109,8 +1102,7 @@ multiclass RVVIndexedSegLoad<string op> {
         // TU builtin: (val0 address, ..., passthru0, ..., ptr, index, vl)
         // intrinsic: (passthru0, passthru1, ..., ptr, index, vl)
         if (DefaultPolicy == TAIL_AGNOSTIC) {
-          for (unsigned I = 0; I < NF; ++I)
-            Operands.push_back(llvm::PoisonValue::get(ResultType));
+          Operands.append(NF, llvm::PoisonValue::get(ResultType));
           Operands.push_back(Ops[NF]);
           Operands.push_back(Ops[NF + 1]);
           Operands.push_back(Ops[NF + 2]);
