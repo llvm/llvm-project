@@ -1262,9 +1262,10 @@ LogicalResult cir::FuncOp::verifyType() {
   return success();
 }
 
-// Verifies linkage types, similar to LLVM:
+// Verifies linkage types
 // - functions don't have 'common' linkage
 // - external functions have 'external' or 'extern_weak' linkage
+// - coroutine body must use at least one cir.await operation.
 LogicalResult cir::FuncOp::verify() {
   if (getLinkage() == cir::GlobalLinkageKind::CommonLinkage)
     return emitOpError() << "functions cannot have '"
@@ -1283,6 +1284,19 @@ LogicalResult cir::FuncOp::verify() {
                                   cir::GlobalLinkageKind::ExternalWeakLinkage)
                            << "' linkage";
     return success();
+  }
+
+  if (!isDeclaration() && getCoroutine()) {
+    bool foundAwait = false;
+    this->walk([&](Operation *op) {
+      if (auto await = dyn_cast<AwaitOp>(op)) {
+        foundAwait = true;
+        return;
+      }
+    });
+    if (!foundAwait)
+      return emitOpError()
+             << "coroutine body must use at least one cir.await op";
   }
   return success();
 }

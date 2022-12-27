@@ -227,3 +227,9 @@ cir.func @unary1() {
 module {
   cir.global external @v = #cir.zero : i32 // expected-error {{zero expects struct type}}
 }
+
+// -----
+
+cir.func coroutine @bad_task() { // expected-error {{coroutine body must use at least one cir.await op}}
+  cir.return
+}

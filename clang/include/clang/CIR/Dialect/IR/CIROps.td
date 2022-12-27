@@ -1187,15 +1187,34 @@ def FuncOp : CIR_Op<"func", [
     The function linkage information is specified by `linkage`, as defined by
     `GlobalLinkageKind` attribute.
 
+    A compiler builtin function must be marked as `builtin` for further
+    processing when lowering from CIR.
+
+    The `coroutine` keyword is used to mark coroutine function, which requires
+    at least one `cir.await` instruction to be used in its body.
+
     Example:
 
     ```mlir
     // External function definitions.
-    func @abort()
+    cir.func @abort()
 
     // A function with internal linkage.
-    func internal @count(%x: i64) -> (i64)
+    cir.func internal @count(%x: i64) -> (i64)
       return %x : i64
+    }
+
+    // Linkage information
+    cir.func linkonce_odr @some_method(...)
+
+    // Builtin function
+    cir.func builtin @__builtin_coro_end(!cir.ptr<i8>, !cir.bool) -> !cir.bool
+
+    // Coroutine
+    cir.func coroutine @_Z10silly_taskv() -> !CoroTask {
+      ...
+      cir.await(...)
+      ...
     }
     ```
   }];
