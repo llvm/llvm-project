@@ -22,7 +22,6 @@ namespace clang {
 namespace targets {
 
 class LLVM_LIBRARY_VISIBILITY VETargetInfo : public TargetInfo {
-  static const Builtin::Info BuiltinInfo[];
 
 public:
   VETargetInfo(const llvm::Triple &Triple, const TargetOptions &)

@@ -19,7 +19,7 @@
 using namespace clang;
 using namespace clang::targets;
 
-const Builtin::Info BPFTargetInfo::BuiltinInfo[] = {
+static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
   {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
 #include "clang/Basic/BuiltinsBPF.def"
