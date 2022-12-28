@@ -23,7 +23,6 @@ body:             |
     ; GCN-NEXT: $exec = S_WQM_B64 $exec, implicit-def $scc
     ; GCN-NEXT: renamable $vgpr0 = COPY renamable $sgpr0
     ; GCN-NEXT: renamable $vgpr0 = BUFFER_LOAD_DWORD_IDXEN killed renamable $vgpr0, undef renamable $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
-    ; GCN-NEXT: renamable $vgpr0 = KILL killed renamable $vgpr0, implicit $exec
     ; GCN-NEXT: $exec = S_AND_B64 $exec, killed renamable $sgpr2_sgpr3, implicit-def $scc
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0
     renamable $sgpr2_sgpr3 = COPY $exec
