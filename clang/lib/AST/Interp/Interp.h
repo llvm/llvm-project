@@ -1455,6 +1455,11 @@ inline bool ExpandPtr(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+inline bool CheckGlobalCtor(InterpState &S, CodePtr &PC) {
+  const Pointer &Obj = S.Stk.peek<Pointer>();
+  return CheckCtorCall(S, PC, Obj);
+}
+
 inline bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
   auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
   Pointer ThisPtr;
@@ -1480,11 +1485,6 @@ inline bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
   if (Interpret(S, CallResult)) {
     NewFrame.release(); // Frame was delete'd already.
     assert(S.Current == FrameBefore);
-
-    // For constructors, check that all fields have been initialized.
-    if (Func->isConstructor() && !CheckCtorCall(S, PC, ThisPtr))
-      return false;
-
     return true;
   }
 
