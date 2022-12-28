@@ -2541,7 +2541,7 @@ lowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
 
   int JTI = cast<JumpTableSDNode>(JT.getNode())->getIndex();
   auto *MFI = DAG.getMachineFunction().getInfo<MipsFunctionInfo>();
-  MFI->setJumpTableEntryInfo(JTI, 1, nullptr);
+  MFI->setJumpTableEntryInfo(JTI, 4, nullptr);
 
   SDValue TJT = DAG.getTargetJumpTable(JTI, MVT::i32);
   SDNode *Dest =
