@@ -58,11 +58,11 @@ typedef enum {
 ///
 /// \returns a integer which is the original value of first operand.
 
-#define __cmpccxadd_epi32(__A, __B, __C, __D)                                  \
+#define _cmpccxadd_epi32(__A, __B, __C, __D)                                   \
   ((int)(__builtin_ia32_cmpccxadd32((void *)(__A), (int)(__B), (int)(__C),     \
                                     (int)(__D))))
 
-#define __cmpccxadd_epi64(__A, __B, __C, __D)                                  \
+#define _cmpccxadd_epi64(__A, __B, __C, __D)                                   \
   ((long long)(__builtin_ia32_cmpccxadd64((void *)(__A), (long long)(__B),     \
                                           (long long)(__C), (int)(__D))))
 
