@@ -225,7 +225,6 @@ static VPBasicBlock *getPredicatedThenBlock(VPRegionBlock *R) {
 
 bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
   SetVector<VPRegionBlock *> DeletedRegions;
-  bool Changed = false;
 
   // Collect region blocks to process up-front, to avoid iterator invalidation
   // issues while merging regions.
@@ -304,7 +303,7 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
 
   for (VPRegionBlock *ToDelete : DeletedRegions)
     delete ToDelete;
-  return Changed;
+  return !DeletedRegions.empty();
 }
 
 bool VPlanTransforms::mergeBlocksIntoPredecessors(VPlan &Plan) {

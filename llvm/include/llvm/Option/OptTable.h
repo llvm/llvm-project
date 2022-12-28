@@ -44,7 +44,7 @@ public:
   struct Info {
     /// A null terminated array of prefix strings to apply to name while
     /// matching.
-    const char *const *Prefixes;
+    ArrayRef<StringLiteral> Prefixes;
     StringRef Name;
     const char *HelpText;
     const char *MetaVar;

@@ -892,7 +892,10 @@ module std [system] {
       module hash                       { private header "__functional/hash.h" }
       module hash_fwd                   { private header "__fwd/hash.h" }
       module identity                   { private header "__functional/identity.h" }
-      module invoke                     { private header "__functional/invoke.h" }
+      module invoke                     {
+        private header "__functional/invoke.h"
+        export type_traits
+      }
       module is_transparent             { private header "__functional/is_transparent.h" }
       module mem_fn                     { private header "__functional/mem_fn.h" }
       module mem_fun_ref                { private header "__functional/mem_fun_ref.h" }
@@ -1408,7 +1411,10 @@ module std [system] {
     module is_convertible                      { private header "__type_traits/is_convertible.h" }
     module is_copy_assignable                  { private header "__type_traits/is_copy_assignable.h" }
     module is_copy_constructible               { private header "__type_traits/is_copy_constructible.h" }
-    module is_core_convertible                 { private header "__type_traits/is_core_convertible.h" }
+    module is_core_convertible                 {
+      private header "__type_traits/is_core_convertible.h"
+      export integral_constant
+    }
     module is_default_constructible            { private header "__type_traits/is_default_constructible.h" }
     module is_destructible                     { private header "__type_traits/is_destructible.h" }
     module is_empty                            { private header "__type_traits/is_empty.h" }
@@ -1469,7 +1475,10 @@ module std [system] {
     module is_unsigned                         { private header "__type_traits/is_unsigned.h" }
     module is_unsigned_integer                 { private header "__type_traits/is_unsigned_integer.h" }
     module is_valid_expansion                  { private header "__type_traits/is_valid_expansion.h" }
-    module is_void                             { private header "__type_traits/is_void.h" }
+    module is_void                             {
+      private header "__type_traits/is_void.h"
+      export integral_constant
+    }
     module is_volatile                         { private header "__type_traits/is_volatile.h" }
     module lazy                                { private header "__type_traits/lazy.h" }
     module make_32_64_or_128_bit               { private header "__type_traits/make_32_64_or_128_bit.h" }

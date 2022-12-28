@@ -305,7 +305,6 @@ fstream istream
 fstream mutex
 fstream ostream
 fstream string
-fstream type_traits
 fstream typeinfo
 fstream version
 functional array
@@ -367,7 +366,6 @@ iterator cstdlib
 iterator initializer_list
 iterator iosfwd
 iterator limits
-iterator type_traits
 iterator variant
 iterator version
 latch atomic
@@ -401,7 +399,6 @@ locale mutex
 locale new
 locale streambuf
 locale string
-locale type_traits
 locale version
 map compare
 map cstddef
@@ -655,7 +652,6 @@ thread type_traits
 thread version
 tuple compare
 tuple cstddef
-tuple type_traits
 tuple version
 type_traits cstddef
 type_traits cstdint
@@ -721,7 +717,6 @@ variant initializer_list
 variant limits
 variant new
 variant tuple
-variant type_traits
 variant version
 vector climits
 vector compare

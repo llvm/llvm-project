@@ -8,10 +8,9 @@
 
 ; CHECK-LABEL: return:
 ; CHECK-NEXT:    %.sink = phi i16 [ 5, %if.end ], [ 6, %if.then ]
-; CHECK-NEXT:    %0 = getelementptr inbounds %struct.S0, %struct.S0* %agg.result, i16 0, i32 0
-; CHECK-NEXT:    store i16 %.sink, i16* %0
-; CHECK-NEXT:    %1 = getelementptr inbounds %struct.S0, %struct.S0* %agg.result, i16 0, i32 1
-; CHECK-NEXT:    store i16 0, i16* %1
+; CHECK-NEXT:    store i16 %.sink, ptr %agg.result
+; CHECK-NEXT:    %0 = getelementptr inbounds %struct.S0, ptr %agg.result, i16 0, i32 1
+; CHECK-NEXT:    store i16 0, ptr %0
 ; CHECK-NEXT:    ret void
 
 %struct.S0 = type { i16, i16 }
@@ -19,7 +18,7 @@
 @g_173 = dso_local local_unnamed_addr global i16 0, !dbg !0
 
 ; Function Attrs: noinline norecurse nounwind
-define dso_local void @func_34(%struct.S0* noalias sret(%struct.S0) %agg.result) local_unnamed_addr #0 !dbg !11 {
+define dso_local void @func_34(ptr noalias sret(%struct.S0) %agg.result) local_unnamed_addr #0 !dbg !11 {
 entry:
   br i1 undef, label %if.end, label %if.then, !dbg !18
 
@@ -96,18 +95,16 @@ if.then:                                          ; preds = %entry
   call void @llvm.dbg.value(metadata i16 5, metadata !19, metadata !DIExpression()), !dbg !22
   call void @llvm.dbg.value(metadata i16 5, metadata !19, metadata !DIExpression()), !dbg !22
   call void @llvm.dbg.value(metadata i16 5, metadata !19, metadata !DIExpression()), !dbg !22
-  %l_303.sroa.0.0..sroa_idx = getelementptr inbounds %struct.S0, %struct.S0* %agg.result, i16 0, i32 0, !dbg !23
-  store i16 6, i16* %l_303.sroa.0.0..sroa_idx, !dbg !23
-  %l_303.sroa.2.0..sroa_idx1 = getelementptr inbounds %struct.S0, %struct.S0* %agg.result, i16 0, i32 1, !dbg !23
-  store i16 0, i16* %l_303.sroa.2.0..sroa_idx1, !dbg !23
+  store i16 6, ptr %agg.result, !dbg !23
+  %l_303.sroa.2.0..sroa_idx1 = getelementptr inbounds %struct.S0, ptr %agg.result, i16 0, i32 1, !dbg !23
+  store i16 0, ptr %l_303.sroa.2.0..sroa_idx1, !dbg !23
   br label %return, !dbg !24
 
 if.end:                                           ; preds = %entry
-  %f037 = getelementptr inbounds %struct.S0, %struct.S0* %agg.result, i16 0, i32 0, !dbg !25
-  store i16 5, i16* %f037, !dbg !25
-  %f138 = getelementptr inbounds %struct.S0, %struct.S0* %agg.result, i16 0, i32 1, !dbg !25
-  store i16 0, i16* %f138, !dbg !25
-  store i16 0, i16* @g_173, !dbg !27
+  store i16 5, ptr %agg.result, !dbg !25
+  %f138 = getelementptr inbounds %struct.S0, ptr %agg.result, i16 0, i32 1, !dbg !25
+  store i16 0, ptr %f138, !dbg !25
+  store i16 0, ptr @g_173, !dbg !27
   br label %return, !dbg !28
 
 return:                                           ; preds = %if.end, %if.then
