@@ -350,7 +350,7 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   AddPromotedToType(ISD::SETCC, MVT::i1, MVT::i32);
 
   // Mips Custom Operations
-  if (Subtarget.hasNanoMips())
+  if (Subtarget.hasNanoMips() && !STI.useAbsoluteJumpTables())
     setOperationAction(ISD::BR_JT, MVT::Other, Custom);
   else
     setOperationAction(ISD::BR_JT, MVT::Other, Expand);

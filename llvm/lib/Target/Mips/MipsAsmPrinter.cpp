@@ -58,6 +58,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -72,7 +73,7 @@ using namespace llvm;
 extern cl::opt<bool> EmitJalrReloc;
 
 void MipsAsmPrinter::emitJumpTableInfo() {
-  if (!Subtarget->hasNanoMips()) {
+  if (!Subtarget->hasNanoMips() || Subtarget->useAbsoluteJumpTables() ) {
     AsmPrinter::emitJumpTableInfo();
     return;
   }
