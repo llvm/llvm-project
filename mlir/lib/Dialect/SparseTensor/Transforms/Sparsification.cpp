@@ -1066,6 +1066,11 @@ static void finalizeWhileOp(CodegenEnv &env, OpBuilder &builder, unsigned idx,
   if (env.isReduc() || env.isExpand() || env.getInsertionChain()) {
     while (auto ifOp = dyn_cast_or_null<scf::IfOp>(
                builder.getInsertionBlock()->getParentOp())) {
+      // Break on IfOp for slicing filtering.
+      if (ifOp->getAttr(LoopEmitter::getLoopEmitterLoopAttrName()) ==
+          StringAttr::get(ifOp->getContext(), "slice"))
+        break;
+
       unsigned y = 0;
       SmallVector<Value> yields;
       if (env.isReduc()) {
