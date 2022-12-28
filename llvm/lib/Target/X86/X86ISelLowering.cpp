@@ -20493,6 +20493,12 @@ unsigned X86TargetLowering::getGlobalWrapperKind(
       (M == CodeModel::Small || M == CodeModel::Kernel))
     return X86ISD::WrapperRIP;
 
+  // In the medium model, functions can always be referenced RIP-relatively,
+  // since they must be within 2GiB. This is also possible in non-PIC mode, and
+  // shorter than the 64-bit absolute immediate that would otherwise be emitted.
+  if (M == CodeModel::Medium && isa_and_nonnull<Function>(GV))
+    return X86ISD::WrapperRIP;
+
   // GOTPCREL references must always use RIP.
   if (OpFlags == X86II::MO_GOTPCREL || OpFlags == X86II::MO_GOTPCREL_NORELAX)
     return X86ISD::WrapperRIP;
