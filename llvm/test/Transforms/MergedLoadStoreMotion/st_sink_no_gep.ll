@@ -7,12 +7,12 @@ define void @no_gep_same_ptr(i1 %c, ptr %p, i32 %x, i32 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i32 [[X:%.*]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    store i32 [[Y:%.*]], ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
+; CHECK-NEXT:    [[Y_SINK:%.*]] = phi i32 [ [[X:%.*]], [[IF_THEN]] ], [ [[Y:%.*]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store i32 [[Y_SINK]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -64,12 +64,12 @@ define void @shared_gep(i1 %c, ptr %p, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P:%.*]], i32 1
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i32 [[X:%.*]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    store i32 [[Y:%.*]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
+; CHECK-NEXT:    [[Y_SINK:%.*]] = phi i32 [ [[X:%.*]], [[IF_THEN]] ], [ [[Y:%.*]], [[IF_ELSE]] ]
+; CHECK-NEXT:    store i32 [[Y_SINK]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
