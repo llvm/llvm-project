@@ -333,5 +333,70 @@ define i1 @const_urem_1() {
   ret i1 %rem
 }
 
+define i8 @sdiv_exact_trailing_zeros(i8 %x) {
+; CHECK-LABEL: @sdiv_exact_trailing_zeros(
+; CHECK-NEXT:    [[O:%.*]] = or i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = sdiv exact i8 [[O]], -42
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %o = or i8 %x, 1           ; odd number
+  %r = sdiv exact i8 %o, -42 ; can't divide exactly
+  ret i8 %r
+}
+
+define i8 @sdiv_exact_trailing_zeros_eq(i8 %x) {
+; CHECK-LABEL: @sdiv_exact_trailing_zeros_eq(
+; CHECK-NEXT:    [[O:%.*]] = or i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[R:%.*]] = sdiv exact i8 [[O]], -42
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %o = or i8 %x, 2
+  %r = sdiv exact i8 %o, -42
+  ret i8 %r
+}
+
+define i8 @sdiv_trailing_zeros(i8 %x) {
+; CHECK-LABEL: @sdiv_trailing_zeros(
+; CHECK-NEXT:    [[O:%.*]] = or i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = sdiv i8 [[O]], -12
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %o = or i8 %x, 1
+  %r = sdiv i8 %o, -12
+  ret i8 %r
+}
+
+define <2 x i8> @udiv_exact_trailing_zeros(<2 x i8> %x) {
+; CHECK-LABEL: @udiv_exact_trailing_zeros(
+; CHECK-NEXT:    [[O:%.*]] = or <2 x i8> [[X:%.*]], <i8 3, i8 3>
+; CHECK-NEXT:    [[R:%.*]] = udiv exact <2 x i8> [[O]], <i8 12, i8 12>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %o = or <2 x i8> %x, <i8 3, i8 3>
+  %r = udiv exact <2 x i8> %o, <i8 12, i8 12>  ; can't divide exactly
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @udiv_exact_trailing_zeros_eq(<2 x i8> %x) {
+; CHECK-LABEL: @udiv_exact_trailing_zeros_eq(
+; CHECK-NEXT:    [[O:%.*]] = or <2 x i8> [[X:%.*]], <i8 28, i8 28>
+; CHECK-NEXT:    [[R:%.*]] = udiv exact <2 x i8> [[O]], <i8 12, i8 12>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %o = or <2 x i8> %x, <i8 28, i8 28>
+  %r = udiv exact <2 x i8> %o, <i8 12, i8 12>
+  ret <2 x i8> %r
+}
+
+define i8 @udiv_trailing_zeros(i8 %x) {
+; CHECK-LABEL: @udiv_trailing_zeros(
+; CHECK-NEXT:    [[O:%.*]] = or i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[O]], 12
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %o = or i8 %x, 1
+  %r = udiv i8 %o, 12
+  ret i8 %r
+}
 
 !0 = !{i32 0, i32 3}
