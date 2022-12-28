@@ -3070,9 +3070,9 @@ define dso_local void @test_op_and_fetch() local_unnamed_addr #0 {
 ; CHECK-NEXT:    bne 0, .LBB2_81
 ; CHECK-NEXT:  # %bb.82: # %entry
 ; CHECK-NEXT:    lwsync
+; CHECK-NEXT:    lbz 20, uc@toc@l(3)
 ; CHECK-NEXT:    nand 25, 21, 25
 ; CHECK-NEXT:    li 21, -1
-; CHECK-NEXT:    lbz 20, uc@toc@l(3)
 ; CHECK-NEXT:    std 21, 8(23)
 ; CHECK-NEXT:    std 25, u128@toc@l(24)
 ; CHECK-NEXT:    addis 25, 2, s128@toc@ha
