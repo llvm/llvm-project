@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load(":tblgen.bzl", "gentbl")
 load(":config.bzl", "llvm_config_defines")
@@ -2722,6 +2723,50 @@ cc_library(
     ],
 )
 
+# A flag to pick which `pfm` to use for Exegesis.
+# Usage: `--@llvm-project//llvm:pfm=<disable|external|system>`.
+# Flag documentation: https://bazel.build/extending/config
+string_flag(
+    name = "pfm",
+    build_setting_default = "external",
+    values = [
+        "disable",  # Don't include pfm at all
+        "external",  # Build pfm from source
+        "system",  # Use system pfm (non hermetic)
+    ],
+)
+
+config_setting(
+    name = "pfm_disable",
+    flag_values = {":pfm": "disable"},
+)
+
+config_setting(
+    name = "pfm_external",
+    flag_values = {":pfm": "external"},
+)
+
+config_setting(
+    name = "pfm_system",
+    flag_values = {":pfm": "system"},
+)
+
+cc_library(
+    name = "maybe_pfm",
+    # We want dependencies of this library to have -DHAVE_LIBPFM conditionally
+    # defined, so we set `defines` instead of `copts`.
+    defines = select({
+        ":pfm_external": ["HAVE_LIBPFM=1"],
+        ":pfm_system": ["HAVE_LIBPFM=1"],
+        "//conditions:default": [],
+    }),
+    deps = select({
+        ":pfm_external": ["@pfm//:pfm_external"],
+        ":pfm_system": ["@pfm//:pfm_system"],
+        "//conditions:default": [],
+    }),
+)
+
 cc_library(
     name = "Exegesis",
     srcs = glob([
@@ -2758,6 +2803,7 @@ cc_library(
         ":Support",
         ":Target",
         ":config",
+        ":maybe_pfm",
     ],
 )
 
