@@ -109,6 +109,9 @@ static cl::opt<bool>
     AllowStatepointWithNoDeoptInfo("rs4gc-allow-statepoint-with-no-deopt-info",
                                    cl::Hidden, cl::init(true));
 
+static cl::opt<bool> RematDerivedAtUses("rs4gc-remat-derived-at-uses",
+                                        cl::Hidden, cl::init(true));
+
 /// The IR fed into RewriteStatepointsForGC may have had attributes and
 /// metadata implying dereferenceability that are no longer valid/correct after
 /// RewriteStatepointsForGC has run. This is because semantically, after
@@ -2434,6 +2437,126 @@ findRematerializationCandidates(PointerToBaseTy PointerToBase,
   }
 }
 
+// Try to rematerialize derived pointers immediately before their uses
+// (instead of rematerializing after every statepoint it is live through).
+// This can be beneficial when derived pointer is live across many
+// statepoints, but uses are rare.
+static void rematerializeLiveValuesAtUses(
+    RematCandTy &RematerizationCandidates,
+    MutableArrayRef<PartiallyConstructedSafepointRecord> Records,
+    PointerToBaseTy &PointerToBase) {
+  if (!RematDerivedAtUses)
+    return;
+
+  SmallVector<Instruction *, 32> LiveValuesToBeDeleted;
+
+  LLVM_DEBUG(dbgs() << "Rematerialize derived pointers at uses, "
+                    << "Num statepoints: " << Records.size() << '\n');
+
+  for (auto &It : RematerizationCandidates) {
+    Instruction *Cand = cast<Instruction>(It.first);
+    auto &Record = It.second;
+
+    if (Record.Cost >= RematerializationThreshold)
+      continue;
+
+    if (Cand->user_empty())
+      continue;
+
+    if (Cand->hasOneUse())
+      if (auto *U = dyn_cast<Instruction>(Cand->getUniqueUndroppableUser()))
+        if (U->getParent() == Cand->getParent())
+          continue;
+
+    // Rematerialization before PHI nodes is not implemented.
+    if (llvm::any_of(Cand->users(),
+                     [](const auto *U) { return isa<PHINode>(U); }))
+      continue;
+
+    LLVM_DEBUG(dbgs() << "Trying cand " << *Cand << " ... ");
+
+    // Count of rematerialization instructions we introduce is equal to number
+    // of candidate uses.
+    // Count of rematerialization instructions we eliminate is equal to number
+    // of statepoints it is live through.
+    // Consider transformation profitable if latter is greater than former
+    // (in other words, we create less than eliminate).
+    unsigned NumLiveStatepoints = llvm::count_if(
+        Records, [Cand](const auto &R) { return R.LiveSet.contains(Cand); });
+    unsigned NumUses = Cand->getNumUses();
+
+    LLVM_DEBUG(dbgs() << "Num uses: " << NumUses << " Num live statepoints: "
+                      << NumLiveStatepoints << " ");
+
+    if (NumLiveStatepoints < NumUses) {
+      LLVM_DEBUG(dbgs() << "not profitable\n");
+      continue;
+    }
+
+    // If rematerialization is 'free', then favor rematerialization at
+    // uses as it generally shortens live ranges.
+    // TODO: Short (size ==1) chains only?
+    if (NumLiveStatepoints == NumUses && Record.Cost > 0) {
+      LLVM_DEBUG(dbgs() << "not profitable\n");
+      continue;
+    }
+
+    LLVM_DEBUG(dbgs() << "looks profitable\n");
+
+    // ChainToBase may contain another remat candidate (as a sub chain) which
+    // has been rewritten by now. Need to recollect chain to have up to date
+    // value.
+    // TODO: sort records in findRematerializationCandidates() in
+    // decreasing chain size order?
+    if (Record.ChainToBase.size() > 1) {
+      Record.ChainToBase.clear();
+      findRematerializableChainToBasePointer(Record.ChainToBase, Cand);
+    }
+
+    // Current rematerialization algorithm is very simple: we rematerialize
+    // immediately before EVERY use, even if there are several uses in same
+    // block or if use is local to Cand Def. The reason is that this allows
+    // us to avoid recomputing liveness without complicated analysis:
+    // - If we did not eliminate all uses of original Candidate, we do not
+    //   know exaclty in what BBs it is still live.
+    // - If we rematerialize once per BB, we need to find proper insertion
+    //   place (first use in block, but after Def) and analyze if there is
+    //   statepoint between uses in the block.
+    while (!Cand->user_empty()) {
+      Instruction *UserI = cast<Instruction>(*Cand->user_begin());
+      Instruction *RematChain = rematerializeChain(
+          Record.ChainToBase, UserI, Record.RootOfChain, PointerToBase[Cand]);
+      UserI->replaceUsesOfWith(Cand, RematChain);
+      PointerToBase[RematChain] = PointerToBase[Cand];
+    }
+    LiveValuesToBeDeleted.push_back(Cand);
+  }
+
+  LLVM_DEBUG(dbgs() << "Rematerialized " << LiveValuesToBeDeleted.size()
+                    << " derived pointers\n");
+  for (auto *Cand : LiveValuesToBeDeleted) {
+    assert(Cand->use_empty() && "Unexpected user remain");
+    RematerizationCandidates.erase(Cand);
+    for (auto &R : Records) {
+      assert(!R.LiveSet.contains(Cand) ||
+             R.LiveSet.contains(PointerToBase[Cand]));
+      R.LiveSet.remove(Cand);
+    }
+  }
+
+  // Recollect not rematerialized chains - we might have rewritten
+  // their sub-chains.
+  if (!LiveValuesToBeDeleted.empty()) {
+    for (auto &P : RematerizationCandidates) {
+      auto &R = P.second;
+      if (R.ChainToBase.size() > 1) {
+        R.ChainToBase.clear();
+        findRematerializableChainToBasePointer(R.ChainToBase, P.first);
+      }
+    }
+  }
+}
+
 // From the statepoint live set pick values that are cheaper to recompute then
 // to relocate. Remove this values from the live set, rematerialize them after
 // statepoint and record them in "Info" structure. Note that similar to
@@ -2699,6 +2822,9 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   // In order to reduce live set of statepoint we might choose to rematerialize
   // some values instead of relocating them. This is purely an optimization and
   // does not influence correctness.
+  // First try rematerialization at uses, then after statepoints.
+  rematerializeLiveValuesAtUses(RematerizationCandidates, Records,
+                                PointerToBase);
   for (size_t i = 0; i < Records.size(); i++)
     rematerializeLiveValues(ToUpdate[i], Records[i], PointerToBase,
                             RematerizationCandidates, TTI);
