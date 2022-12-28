@@ -10146,6 +10146,13 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   // Handle attributes.
   ProcessDeclAttributes(S, NewFD, D);
+  const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
+  if (NewTVA && !NewTVA->isDefaultVersion() &&
+      !Context.getTargetInfo().hasFeature("fmv")) {
+    // Don't add to scope fmv functions declarations if fmv disabled
+    AddToScope = false;
+    return NewFD;
+  }
 
   if (getLangOpts().OpenCL) {
     // OpenCL v1.1 s6.5: Using an address space qualifier in a function return
@@ -10354,7 +10361,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         D.setRedeclaration(true);
     }
 
-    assert((NewFD->isInvalidDecl() || !D.isRedeclaration() ||
+    assert((NewFD->isInvalidDecl() || NewFD->isMultiVersion() ||
+            !D.isRedeclaration() ||
             Previous.getResultKind() != LookupResult::FoundOverloaded) &&
            "previous declaration set still overloaded");
 
@@ -10826,37 +10834,53 @@ bool Sema::shouldLinkDependentDeclWithPrevious(Decl *D, Decl *PrevDecl) {
                                         PrevVD->getType());
 }
 
-/// Check the target attribute of the function for MultiVersion
-/// validity.
+/// Check the target or target_version attribute of the function for
+/// MultiVersion validity.
 ///
 /// Returns true if there was an error, false otherwise.
 static bool CheckMultiVersionValue(Sema &S, const FunctionDecl *FD) {
   const auto *TA = FD->getAttr<TargetAttr>();
-  assert(TA && "MultiVersion Candidate requires a target attribute");
-  ParsedTargetAttr ParseInfo =
-      S.getASTContext().getTargetInfo().parseTargetAttr(TA->getFeaturesStr());
+  const auto *TVA = FD->getAttr<TargetVersionAttr>();
+  assert(
+      (TA || TVA) &&
+      "MultiVersion candidate requires a target or target_version attribute");
   const TargetInfo &TargetInfo = S.Context.getTargetInfo();
   enum ErrType { Feature = 0, Architecture = 1 };
 
-  if (!ParseInfo.CPU.empty() && !TargetInfo.validateCpuIs(ParseInfo.CPU)) {
-    S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
-        << Architecture << ParseInfo.CPU;
-    return true;
-  }
-
-  for (const auto &Feat : ParseInfo.Features) {
-    auto BareFeat = StringRef{Feat}.substr(1);
-    if (Feat[0] == '-') {
+  if (TA) {
+    ParsedTargetAttr ParseInfo =
+        S.getASTContext().getTargetInfo().parseTargetAttr(TA->getFeaturesStr());
+    if (!ParseInfo.CPU.empty() && !TargetInfo.validateCpuIs(ParseInfo.CPU)) {
       S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
-          << Feature << ("no-" + BareFeat).str();
+          << Architecture << ParseInfo.CPU;
       return true;
     }
+    for (const auto &Feat : ParseInfo.Features) {
+      auto BareFeat = StringRef{Feat}.substr(1);
+      if (Feat[0] == '-') {
+        S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
+            << Feature << ("no-" + BareFeat).str();
+        return true;
+      }
 
-    if (!TargetInfo.validateCpuSupports(BareFeat) ||
-        !TargetInfo.isValidFeatureName(BareFeat)) {
-      S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
-          << Feature << BareFeat;
-      return true;
+      if (!TargetInfo.validateCpuSupports(BareFeat) ||
+          !TargetInfo.isValidFeatureName(BareFeat)) {
+        S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
+            << Feature << BareFeat;
+        return true;
+      }
+    }
+  }
+
+  if (TVA) {
+    llvm::SmallVector<StringRef, 8> Feats;
+    TVA->getFeatures(Feats);
+    for (const auto &Feat : Feats) {
+      if (!TargetInfo.validateCpuSupports(Feat)) {
+        S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
+            << Feature << Feat;
+        return true;
+      }
     }
   }
   return false;
@@ -10901,6 +10925,10 @@ static bool checkNonMultiVersionCompatAttributes(Sema &S,
       break;
     case attr::Target:
       if (MVKind != MultiVersionKind::Target)
+        return Diagnose(S, A);
+      break;
+    case attr::TargetVersion:
+      if (MVKind != MultiVersionKind::TargetVersion)
         return Diagnose(S, A);
       break;
     case attr::TargetClones:
@@ -11075,18 +11103,18 @@ static bool CheckMultiVersionAdditionalRules(Sema &S, const FunctionDecl *OldFD,
 /// This sets NewFD->isInvalidDecl() to true if there was an error.
 ///
 /// Returns true if there was an error, false otherwise.
-static bool CheckMultiVersionFirstFunction(Sema &S, FunctionDecl *FD,
-                                           MultiVersionKind MVKind,
-                                           const TargetAttr *TA) {
+static bool CheckMultiVersionFirstFunction(Sema &S, FunctionDecl *FD) {
+  MultiVersionKind MVKind = FD->getMultiVersionKind();
   assert(MVKind != MultiVersionKind::None &&
          "Function lacks multiversion attribute");
-
-  // Target only causes MV if it is default, otherwise this is a normal
-  // function.
-  if (MVKind == MultiVersionKind::Target && !TA->isDefaultVersion())
+  const auto *TA = FD->getAttr<TargetAttr>();
+  const auto *TVA = FD->getAttr<TargetVersionAttr>();
+  // Target and target_version only causes MV if it is default, otherwise this
+  // is a normal function.
+  if ((TA && !TA->isDefaultVersion()) || (TVA && !TVA->isDefaultVersion()))
     return false;
 
-  if (MVKind == MultiVersionKind::Target && CheckMultiVersionValue(S, FD)) {
+  if ((TA || TVA) && CheckMultiVersionValue(S, FD)) {
     FD->setInvalidDecl();
     return true;
   }
@@ -11109,25 +11137,27 @@ static bool PreviousDeclsHaveMultiVersionAttribute(const FunctionDecl *FD) {
   return false;
 }
 
-static bool CheckTargetCausesMultiVersioning(
-    Sema &S, FunctionDecl *OldFD, FunctionDecl *NewFD, const TargetAttr *NewTA,
-    bool &Redeclaration, NamedDecl *&OldDecl, LookupResult &Previous) {
+static bool CheckTargetCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
+                                             FunctionDecl *NewFD,
+                                             bool &Redeclaration,
+                                             NamedDecl *&OldDecl,
+                                             LookupResult &Previous) {
+  const auto *NewTA = NewFD->getAttr<TargetAttr>();
+  const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
   const auto *OldTA = OldFD->getAttr<TargetAttr>();
-  ParsedTargetAttr NewParsed =
-      S.getASTContext().getTargetInfo().parseTargetAttr(
-          NewTA->getFeaturesStr());
-  // Sort order doesn't matter, it just needs to be consistent.
-  llvm::sort(NewParsed.Features);
-
+  const auto *OldTVA = OldFD->getAttr<TargetVersionAttr>();
   // If the old decl is NOT MultiVersioned yet, and we don't cause that
   // to change, this is a simple redeclaration.
-  if (!NewTA->isDefaultVersion() &&
-      (!OldTA || OldTA->getFeaturesStr() == NewTA->getFeaturesStr()))
+  if ((NewTA && !NewTA->isDefaultVersion() &&
+       (!OldTA || OldTA->getFeaturesStr() == NewTA->getFeaturesStr())) ||
+      (NewTVA && !NewTVA->isDefaultVersion() &&
+       (!OldTVA || OldTVA->getName() == NewTVA->getName())))
     return false;
 
   // Otherwise, this decl causes MultiVersioning.
   if (CheckMultiVersionAdditionalRules(S, OldFD, NewFD, true,
-                                       MultiVersionKind::Target)) {
+                                       NewTVA ? MultiVersionKind::TargetVersion
+                                              : MultiVersionKind::Target)) {
     NewFD->setInvalidDecl();
     return true;
   }
@@ -11138,7 +11168,9 @@ static bool CheckTargetCausesMultiVersioning(
   }
 
   // If this is 'default', permit the forward declaration.
-  if (!OldFD->isMultiVersion() && !OldTA && NewTA->isDefaultVersion()) {
+  if (!OldFD->isMultiVersion() &&
+      ((NewTA && NewTA->isDefaultVersion() && !OldTA) ||
+       (NewTVA && NewTVA->isDefaultVersion() && !OldTVA))) {
     Redeclaration = true;
     OldDecl = OldFD;
     OldFD->setIsMultiVersion();
@@ -11152,26 +11184,50 @@ static bool CheckTargetCausesMultiVersioning(
     return true;
   }
 
-  ParsedTargetAttr OldParsed =
-      S.getASTContext().getTargetInfo().parseTargetAttr(
-          OldTA->getFeaturesStr());
-  llvm::sort(OldParsed.Features);
+  if (NewTA) {
+    ParsedTargetAttr OldParsed =
+        S.getASTContext().getTargetInfo().parseTargetAttr(
+            OldTA->getFeaturesStr());
+    llvm::sort(OldParsed.Features);
+    ParsedTargetAttr NewParsed =
+        S.getASTContext().getTargetInfo().parseTargetAttr(
+            NewTA->getFeaturesStr());
+    // Sort order doesn't matter, it just needs to be consistent.
+    llvm::sort(NewParsed.Features);
+    if (OldParsed == NewParsed) {
+      S.Diag(NewFD->getLocation(), diag::err_multiversion_duplicate);
+      S.Diag(OldFD->getLocation(), diag::note_previous_declaration);
+      NewFD->setInvalidDecl();
+      return true;
+    }
+  }
 
-  if (OldParsed == NewParsed) {
-    S.Diag(NewFD->getLocation(), diag::err_multiversion_duplicate);
-    S.Diag(OldFD->getLocation(), diag::note_previous_declaration);
-    NewFD->setInvalidDecl();
-    return true;
+  if (NewTVA) {
+    llvm::SmallVector<StringRef, 8> Feats;
+    OldTVA->getFeatures(Feats);
+    llvm::sort(Feats);
+    llvm::SmallVector<StringRef, 8> NewFeats;
+    NewTVA->getFeatures(NewFeats);
+    llvm::sort(NewFeats);
+
+    if (Feats == NewFeats) {
+      S.Diag(NewFD->getLocation(), diag::err_multiversion_duplicate);
+      S.Diag(OldFD->getLocation(), diag::note_previous_declaration);
+      NewFD->setInvalidDecl();
+      return true;
+    }
   }
 
   for (const auto *FD : OldFD->redecls()) {
     const auto *CurTA = FD->getAttr<TargetAttr>();
+    const auto *CurTVA = FD->getAttr<TargetVersionAttr>();
     // We allow forward declarations before ANY multiversioning attributes, but
     // nothing after the fact.
     if (PreviousDeclsHaveMultiVersionAttribute(FD) &&
-        (!CurTA || CurTA->isInherited())) {
+        ((NewTA && (!CurTA || CurTA->isInherited())) ||
+         (NewTVA && (!CurTVA || CurTVA->isInherited())))) {
       S.Diag(FD->getLocation(), diag::err_multiversion_required_in_redecl)
-          << 0;
+          << (NewTA ? 0 : 2);
       S.Diag(NewFD->getLocation(), diag::note_multiversioning_caused_here);
       NewFD->setInvalidDecl();
       return true;
@@ -11202,11 +11258,11 @@ static bool MultiVersionTypesCompatible(MultiVersionKind Old,
 /// multiversioned declaration collection.
 static bool CheckMultiVersionAdditionalDecl(
     Sema &S, FunctionDecl *OldFD, FunctionDecl *NewFD,
-    MultiVersionKind NewMVKind, const TargetAttr *NewTA,
-    const CPUDispatchAttr *NewCPUDisp, const CPUSpecificAttr *NewCPUSpec,
-    const TargetClonesAttr *NewClones, bool &Redeclaration, NamedDecl *&OldDecl,
-    LookupResult &Previous) {
-
+    MultiVersionKind NewMVKind, const CPUDispatchAttr *NewCPUDisp,
+    const CPUSpecificAttr *NewCPUSpec, const TargetClonesAttr *NewClones,
+    bool &Redeclaration, NamedDecl *&OldDecl, LookupResult &Previous) {
+  const auto *NewTA = NewFD->getAttr<TargetAttr>();
+  const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
   MultiVersionKind OldMVKind = OldFD->getMultiVersionKind();
   // Disallow mixing of multiversioning types.
   if (!MultiVersionTypesCompatible(OldMVKind, NewMVKind)) {
@@ -11221,6 +11277,11 @@ static bool CheckMultiVersionAdditionalDecl(
     NewParsed = S.getASTContext().getTargetInfo().parseTargetAttr(
         NewTA->getFeaturesStr());
     llvm::sort(NewParsed.Features);
+  }
+  llvm::SmallVector<StringRef, 8> NewFeats;
+  if (NewTVA) {
+    NewTVA->getFeatures(NewFeats);
+    llvm::sort(NewFeats);
   }
 
   bool UseMemberUsingDeclRules =
@@ -11238,6 +11299,20 @@ static bool CheckMultiVersionAdditionalDecl(
     if (MayNeedOverloadableChecks &&
         S.IsOverload(NewFD, CurFD, UseMemberUsingDeclRules))
       continue;
+
+    if (NewMVKind == MultiVersionKind::None &&
+        OldMVKind == MultiVersionKind::TargetVersion) {
+      NewFD->addAttr(TargetVersionAttr::CreateImplicit(
+          S.Context, "default", NewFD->getSourceRange(),
+          AttributeCommonInfo::AS_GNU));
+      NewFD->setIsMultiVersion();
+      NewMVKind = MultiVersionKind::TargetVersion;
+      if (!NewTVA) {
+        NewTVA = NewFD->getAttr<TargetVersionAttr>();
+        NewTVA->getFeatures(NewFeats);
+        llvm::sort(NewFeats);
+      }
+    }
 
     switch (NewMVKind) {
     case MultiVersionKind::None:
@@ -11258,6 +11333,27 @@ static bool CheckMultiVersionAdditionalDecl(
               CurTA->getFeaturesStr());
       llvm::sort(CurParsed.Features);
       if (CurParsed == NewParsed) {
+        S.Diag(NewFD->getLocation(), diag::err_multiversion_duplicate);
+        S.Diag(CurFD->getLocation(), diag::note_previous_declaration);
+        NewFD->setInvalidDecl();
+        return true;
+      }
+      break;
+    }
+    case MultiVersionKind::TargetVersion: {
+      const auto *CurTVA = CurFD->getAttr<TargetVersionAttr>();
+      if (CurTVA->getName() == NewTVA->getName()) {
+        NewFD->setIsMultiVersion();
+        Redeclaration = true;
+        OldDecl = ND;
+        return false;
+      }
+      llvm::SmallVector<StringRef, 8> CurFeats;
+      if (CurTVA) {
+        CurTVA->getFeatures(CurFeats);
+        llvm::sort(CurFeats);
+      }
+      if (CurFeats == NewFeats) {
         S.Diag(NewFD->getLocation(), diag::err_multiversion_duplicate);
         S.Diag(CurFD->getLocation(), diag::note_previous_declaration);
         NewFD->setInvalidDecl();
@@ -11347,7 +11443,8 @@ static bool CheckMultiVersionAdditionalDecl(
   // Else, this is simply a non-redecl case.  Checking the 'value' is only
   // necessary in the Target case, since The CPUSpecific/Dispatch cases are
   // handled in the attribute adding step.
-  if (NewMVKind == MultiVersionKind::Target &&
+  if ((NewMVKind == MultiVersionKind::TargetVersion ||
+       NewMVKind == MultiVersionKind::Target) &&
       CheckMultiVersionValue(S, NewFD)) {
     NewFD->setInvalidDecl();
     return true;
@@ -11385,16 +11482,20 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
                                       bool &Redeclaration, NamedDecl *&OldDecl,
                                       LookupResult &Previous) {
   const auto *NewTA = NewFD->getAttr<TargetAttr>();
+  const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
   const auto *NewCPUDisp = NewFD->getAttr<CPUDispatchAttr>();
   const auto *NewCPUSpec = NewFD->getAttr<CPUSpecificAttr>();
   const auto *NewClones = NewFD->getAttr<TargetClonesAttr>();
   MultiVersionKind MVKind = NewFD->getMultiVersionKind();
 
   // Main isn't allowed to become a multiversion function, however it IS
-  // permitted to have 'main' be marked with the 'target' optimization hint.
+  // permitted to have 'main' be marked with the 'target' optimization hint,
+  // for 'target_version' only default is allowed.
   if (NewFD->isMain()) {
     if (MVKind != MultiVersionKind::None &&
-        !(MVKind == MultiVersionKind::Target && !NewTA->isDefaultVersion())) {
+        !(MVKind == MultiVersionKind::Target && !NewTA->isDefaultVersion()) &&
+        !(MVKind == MultiVersionKind::TargetVersion &&
+          NewTVA->isDefaultVersion())) {
       S.Diag(NewFD->getLocation(), diag::err_multiversion_not_allowed_on_main);
       NewFD->setInvalidDecl();
       return true;
@@ -11409,18 +11510,34 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
     // multiversioning, this isn't an error condition.
     if (MVKind == MultiVersionKind::None)
       return false;
-    return CheckMultiVersionFirstFunction(S, NewFD, MVKind, NewTA);
+    return CheckMultiVersionFirstFunction(S, NewFD);
   }
 
   FunctionDecl *OldFD = OldDecl->getAsFunction();
 
-  if (!OldFD->isMultiVersion() && MVKind == MultiVersionKind::None)
+  if (!OldFD->isMultiVersion() && MVKind == MultiVersionKind::None) {
+    // No target_version attributes mean default
+    if (!NewTVA) {
+      const auto *OldTVA = OldFD->getAttr<TargetVersionAttr>();
+      if (OldTVA) {
+        NewFD->addAttr(TargetVersionAttr::CreateImplicit(
+            S.Context, "default", NewFD->getSourceRange(),
+            AttributeCommonInfo::AS_GNU));
+        NewFD->setIsMultiVersion();
+        OldFD->setIsMultiVersion();
+        OldDecl = OldFD;
+        Redeclaration = true;
+        return true;
+      }
+    }
     return false;
+  }
 
   // Multiversioned redeclarations aren't allowed to omit the attribute, except
-  // for target_clones.
+  // for target_clones and target_version.
   if (OldFD->isMultiVersion() && MVKind == MultiVersionKind::None &&
-      OldFD->getMultiVersionKind() != MultiVersionKind::TargetClones) {
+      OldFD->getMultiVersionKind() != MultiVersionKind::TargetClones &&
+      OldFD->getMultiVersionKind() != MultiVersionKind::TargetVersion) {
     S.Diag(NewFD->getLocation(), diag::err_multiversion_required_in_redecl)
         << (OldFD->getMultiVersionKind() != MultiVersionKind::Target);
     NewFD->setInvalidDecl();
@@ -11430,8 +11547,9 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
   if (!OldFD->isMultiVersion()) {
     switch (MVKind) {
     case MultiVersionKind::Target:
-      return CheckTargetCausesMultiVersioning(S, OldFD, NewFD, NewTA,
-                                              Redeclaration, OldDecl, Previous);
+    case MultiVersionKind::TargetVersion:
+      return CheckTargetCausesMultiVersioning(S, OldFD, NewFD, Redeclaration,
+                                              OldDecl, Previous);
     case MultiVersionKind::TargetClones:
       if (OldFD->isUsed(false)) {
         NewFD->setInvalidDecl();
@@ -11439,6 +11557,7 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
       }
       OldFD->setIsMultiVersion();
       break;
+
     case MultiVersionKind::CPUDispatch:
     case MultiVersionKind::CPUSpecific:
     case MultiVersionKind::None:
@@ -11449,9 +11568,9 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
   // At this point, we have a multiversion function decl (in OldFD) AND an
   // appropriate attribute in the current function decl.  Resolve that these are
   // still compatible with previous declarations.
-  return CheckMultiVersionAdditionalDecl(S, OldFD, NewFD, MVKind, NewTA,
-                                         NewCPUDisp, NewCPUSpec, NewClones,
-                                         Redeclaration, OldDecl, Previous);
+  return CheckMultiVersionAdditionalDecl(S, OldFD, NewFD, MVKind, NewCPUDisp,
+                                         NewCPUSpec, NewClones, Redeclaration,
+                                         OldDecl, Previous);
 }
 
 /// Perform semantic checking of a new function declaration.
@@ -15016,6 +15135,16 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     Diag(Attr->getLocation(), diag::err_alias_is_definition) << FD << 1;
     FD->dropAttr<IFuncAttr>();
     FD->setInvalidDecl();
+  }
+  if (const auto *Attr = FD->getAttr<TargetVersionAttr>()) {
+    if (!Context.getTargetInfo().hasFeature("fmv") &&
+        !Attr->isDefaultVersion()) {
+      // If function multi versioning disabled skip parsing function body
+      // defined with non-default target_version attribute
+      if (SkipBody)
+        SkipBody->ShouldSkip = true;
+      return nullptr;
+    }
   }
 
   if (auto *Ctor = dyn_cast<CXXConstructorDecl>(FD)) {
