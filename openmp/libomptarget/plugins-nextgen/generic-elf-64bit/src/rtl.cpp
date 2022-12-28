@@ -364,6 +364,10 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   Expected<bool> isImageCompatible(__tgt_image_info *Info) const override {
     return true;
   }
+
+  Triple::ArchType getTripleArch() const override {
+    return Triple::LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE;
+  }
 };
 
 GenericPluginTy *Plugin::createPlugin() { return new GenELF64PluginTy(); }
