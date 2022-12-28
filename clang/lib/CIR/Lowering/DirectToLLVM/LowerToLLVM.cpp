@@ -16,6 +16,7 @@
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
@@ -83,6 +84,84 @@ public:
     return mlir::success();
   }
 };
+
+class CIRIfLowering : public mlir::OpConversionPattern<mlir::cir::IfOp> {
+public:
+  using mlir::OpConversionPattern<mlir::cir::IfOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::IfOp ifOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto &thenRegion = ifOp.getThenRegion();
+    auto &elseRegion = ifOp.getElseRegion();
+
+    (void)thenRegion;
+    (void)elseRegion;
+
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+
+    [[maybe_unused]] auto loc = ifOp.getLoc();
+
+    auto *currentBlock = rewriter.getInsertionBlock();
+    auto *remainingOpsBlock =
+        rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
+    mlir::Block *continueBlock;
+    if (ifOp->getResults().size() == 0)
+      continueBlock = remainingOpsBlock;
+    else
+      llvm_unreachable("NYI");
+
+    // Inline then region
+    [[maybe_unused]] auto *thenBeforeBody = &ifOp.getThenRegion().front();
+    [[maybe_unused]] auto *thenAfterBody = &ifOp.getThenRegion().back();
+    rewriter.inlineRegionBefore(ifOp.getThenRegion(), continueBlock);
+
+    rewriter.setInsertionPointToEnd(thenAfterBody);
+    if (auto thenYieldOp =
+            dyn_cast<mlir::cir::YieldOp>(thenAfterBody->getTerminator())) {
+      [[maybe_unused]] auto thenBranchOp =
+          rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
+              thenYieldOp, thenYieldOp.getArgs(), continueBlock);
+    } else if (auto thenReturnOp = dyn_cast<mlir::cir::ReturnOp>(
+                   thenAfterBody->getTerminator())) {
+      ;
+    } else {
+      llvm_unreachable("what are we terminating with?");
+    }
+
+    rewriter.setInsertionPointToEnd(continueBlock);
+
+    // Inline then region
+    [[maybe_unused]] auto *elseBeforeBody = &ifOp.getElseRegion().front();
+    [[maybe_unused]] auto *elseAfterBody = &ifOp.getElseRegion().back();
+    rewriter.inlineRegionBefore(ifOp.getElseRegion(), thenAfterBody);
+
+    rewriter.setInsertionPointToEnd(currentBlock);
+    auto trunc = rewriter.create<mlir::LLVM::TruncOp>(loc, rewriter.getI1Type(),
+                                                      adaptor.getCondition());
+    rewriter.create<mlir::LLVM::CondBrOp>(loc, trunc.getRes(), thenBeforeBody,
+                                          elseBeforeBody);
+
+    rewriter.setInsertionPointToEnd(elseAfterBody);
+    if (auto elseYieldOp =
+            dyn_cast<mlir::cir::YieldOp>(elseAfterBody->getTerminator())) {
+      [[maybe_unused]] auto elseBranchOp =
+          rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
+              elseYieldOp, elseYieldOp.getArgs(), continueBlock);
+    } else if (auto elseReturnOp = dyn_cast<mlir::cir::ReturnOp>(
+                   elseAfterBody->getTerminator())) {
+      ;
+    } else {
+      llvm_unreachable("what are we terminating with?");
+    }
+
+    rewriter.setInsertionPoint(elseAfterBody->getTerminator());
+    rewriter.replaceOp(ifOp, continueBlock->getArguments());
+
+    return mlir::success();
+  }
+};
+
 
 class CIRScopeOpLowering
     : public mlir::OpConversionPattern<mlir::cir::ScopeOp> {
@@ -584,8 +663,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
   patterns.add<CIRCmpOpLowering, CIRBrCondOpLowering, CIRCallLowering,
                CIRUnaryOpLowering, CIRBinOpLowering, CIRLoadLowering,
                CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering,
-               CIRFuncLowering, CIRScopeOpLowering, CIRCastOpLowering>(
-      converter, patterns.getContext());
+               CIRFuncLowering, CIRScopeOpLowering, CIRCastOpLowering,
+               CIRIfLowering>(converter, patterns.getContext());
 }
 
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter) {
