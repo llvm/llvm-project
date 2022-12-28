@@ -2607,7 +2607,8 @@ bool RISCV::hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2) {
 // Checks if all users only demand the lower word of the original instruction's
 // result.
 // TODO: handle multiple interdependent transformations
-bool RISCV::hasAllWUsers(const MachineInstr &OrigMI, MachineRegisterInfo &MRI) {
+bool RISCV::hasAllWUsers(const MachineInstr &OrigMI,
+                         const MachineRegisterInfo &MRI) {
 
   SmallPtrSet<const MachineInstr *, 4> Visited;
   SmallVector<const MachineInstr *, 4> Worklist;

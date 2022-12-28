@@ -62,7 +62,8 @@ FunctionPass *llvm::createRISCVSExtWRemovalPass() {
 
 // This function returns true if the machine instruction always outputs a value
 // where bits 63:32 match bit 31.
-static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI) {
+static bool isSignExtendingOpW(const MachineInstr &MI,
+                               const MachineRegisterInfo &MRI) {
   uint64_t TSFlags = MI.getDesc().TSFlags;
 
   // Instructions that can be determined from opcode are marked in tablegen.
@@ -93,7 +94,7 @@ static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI) {
   return false;
 }
 
-static bool isSignExtendedW(Register SrcReg, MachineRegisterInfo &MRI,
+static bool isSignExtendedW(Register SrcReg, const MachineRegisterInfo &MRI,
                             SmallPtrSetImpl<MachineInstr *> &FixableDef) {
 
   SmallPtrSet<const MachineInstr *, 4> Visited;
@@ -342,7 +343,8 @@ bool RISCVSExtWRemoval::runOnMachineFunction(MachineFunction &MF) {
       // If all users only use the lower bits, this sext.w is redundant.
       // Or if all definitions reaching MI sign-extend their output,
       // then sext.w is redundant.
-      if (!RISCV::hasAllWUsers(*MI, MRI) && !isSignExtendedW(SrcReg, MRI, FixableDefs))
+      if (!RISCV::hasAllWUsers(*MI, MRI) &&
+          !isSignExtendedW(SrcReg, MRI, FixableDefs))
         continue;
 
       Register DstReg = MI->getOperand(0).getReg();

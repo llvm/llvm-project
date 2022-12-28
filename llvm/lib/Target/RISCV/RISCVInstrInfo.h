@@ -252,7 +252,7 @@ static constexpr int64_t VLMaxSentinel = -1LL;
 
 // Returns true if all uses of OrigMI only depend on the lower word of its
 // output, so we can transform OrigMI to the corresponding W-version.
-bool hasAllWUsers(const MachineInstr &MI, MachineRegisterInfo &MRI);
+bool hasAllWUsers(const MachineInstr &MI, const MachineRegisterInfo &MRI);
 } // namespace RISCV
 
 namespace RISCVVPseudosTable {
