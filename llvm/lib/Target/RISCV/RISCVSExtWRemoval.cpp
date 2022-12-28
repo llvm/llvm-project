@@ -95,6 +95,7 @@ static bool isSignExtendingOpW(const MachineInstr &MI,
 }
 
 static bool isSignExtendedW(Register SrcReg, const MachineRegisterInfo &MRI,
+                            const RISCVInstrInfo &TII,
                             SmallPtrSetImpl<MachineInstr *> &FixableDef) {
 
   SmallPtrSet<const MachineInstr *, 4> Visited;
@@ -282,7 +283,7 @@ static bool isSignExtendedW(Register SrcReg, const MachineRegisterInfo &MRI,
     case RISCV::LWU:
     case RISCV::MUL:
     case RISCV::SUB:
-      if (RISCV::hasAllWUsers(*MI, MRI)) {
+      if (TII.hasAllWUsers(*MI, MRI)) {
         FixableDef.insert(MI);
         break;
       }
@@ -343,8 +344,8 @@ bool RISCVSExtWRemoval::runOnMachineFunction(MachineFunction &MF) {
       // If all users only use the lower bits, this sext.w is redundant.
       // Or if all definitions reaching MI sign-extend their output,
       // then sext.w is redundant.
-      if (!RISCV::hasAllWUsers(*MI, MRI) &&
-          !isSignExtendedW(SrcReg, MRI, FixableDefs))
+      if (!TII.hasAllWUsers(*MI, MRI) &&
+          !isSignExtendedW(SrcReg, MRI, TII, FixableDefs))
         continue;
 
       Register DstReg = MI->getOperand(0).getReg();
