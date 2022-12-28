@@ -319,14 +319,14 @@ define void @bswap_v8i32(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    lsr z2.s, p0/m, z2.s, #24
 ; CHECK-NEXT:    movprfx z3, z0
 ; CHECK-NEXT:    lsr z3.s, p0/m, z3.s, #8
-; CHECK-NEXT:    movprfx z4, z1
-; CHECK-NEXT:    lsr z4.s, p0/m, z4.s, #24
 ; CHECK-NEXT:    movprfx z5, z1
 ; CHECK-NEXT:    lsr z5.s, p0/m, z5.s, #8
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    lsr z2.s, p0/m, z2.s, #24
+; CHECK-NEXT:    movprfx z4, z1
+; CHECK-NEXT:    lsr z4.s, p0/m, z4.s, #24
 ; CHECK-NEXT:    and z3.s, z3.s, #0xff00
 ; CHECK-NEXT:    and z5.s, z5.s, #0xff00
 ; CHECK-NEXT:    orr z2.d, z3.d, z2.d
@@ -356,10 +356,10 @@ define <1 x i64> @bswap_v1i64(<1 x i64> %op) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl1
-; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, #56
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    lsr z2.d, p0/m, z2.d, #40
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, #56
 ; CHECK-NEXT:    movprfx z3, z0
 ; CHECK-NEXT:    lsr z3.d, p0/m, z3.d, #24
 ; CHECK-NEXT:    movprfx z4, z0
@@ -396,10 +396,10 @@ define <2 x i64> @bswap_v2i64(<2 x i64> %op) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, #56
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    lsr z2.d, p0/m, z2.d, #40
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, #56
 ; CHECK-NEXT:    movprfx z3, z0
 ; CHECK-NEXT:    lsr z3.d, p0/m, z3.d, #24
 ; CHECK-NEXT:    movprfx z4, z0
@@ -436,14 +436,14 @@ define void @bswap_v4i64(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    lsr z2.d, p0/m, z2.d, #56
 ; CHECK-NEXT:    movprfx z3, z0
 ; CHECK-NEXT:    lsr z3.d, p0/m, z3.d, #40
 ; CHECK-NEXT:    movprfx z4, z0
 ; CHECK-NEXT:    lsr z4.d, p0/m, z4.d, #24
 ; CHECK-NEXT:    movprfx z5, z0
 ; CHECK-NEXT:    lsr z5.d, p0/m, z5.d, #8
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    lsr z2.d, p0/m, z2.d, #56
 ; CHECK-NEXT:    and z3.d, z3.d, #0xff00
 ; CHECK-NEXT:    and z4.d, z4.d, #0xff0000
 ; CHECK-NEXT:    and z5.d, z5.d, #0xff000000
@@ -451,8 +451,6 @@ define void @bswap_v4i64(ptr %a) #0 {
 ; CHECK-NEXT:    orr z3.d, z5.d, z4.d
 ; CHECK-NEXT:    mov z6.d, z0.d
 ; CHECK-NEXT:    mov z7.d, z0.d
-; CHECK-NEXT:    movprfx z16, z0
-; CHECK-NEXT:    lsl z16.d, p0/m, z16.d, #56
 ; CHECK-NEXT:    orr z2.d, z3.d, z2.d
 ; CHECK-NEXT:    and z6.d, z6.d, #0xff000000
 ; CHECK-NEXT:    and z7.d, z7.d, #0xff0000
@@ -463,6 +461,8 @@ define void @bswap_v4i64(ptr %a) #0 {
 ; CHECK-NEXT:    orr z3.d, z4.d, z3.d
 ; CHECK-NEXT:    movprfx z4, z1
 ; CHECK-NEXT:    lsr z4.d, p0/m, z4.d, #40
+; CHECK-NEXT:    movprfx z16, z0
+; CHECK-NEXT:    lsl z16.d, p0/m, z16.d, #56
 ; CHECK-NEXT:    and z0.d, z0.d, #0xff00
 ; CHECK-NEXT:    movprfx z5, z1
 ; CHECK-NEXT:    lsr z5.d, p0/m, z5.d, #56
