@@ -1630,31 +1630,15 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   Expected<GenericKernelTy *>
   constructKernelEntry(const __tgt_offload_entry &KernelEntry,
                        DeviceImageTy &Image) override {
-    // Create a metadata object for the exec mode global (auto-generated).
-    StaticGlobalTy<llvm::omp::OMPTgtExecModeFlags> ExecModeGlobal(
-        KernelEntry.name, "_exec_mode");
 
-    // Retrieve execution mode for the kernel. This may fail since some kernels
-    // may not have a execution mode.
-    GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
-    if (auto Err = GHandler.readGlobalFromImage(*this, Image, ExecModeGlobal)) {
-      DP("Failed to read execution mode for '%s': %s\n"
-         "Using default GENERIC (1) execution mode\n",
-         KernelEntry.name, toString(std::move(Err)).data());
-      // Consume the error since it is acceptable to fail.
-      consumeError(std::move(Err));
-      // In some cases the execution mode is not included, so use the default.
-      ExecModeGlobal.setValue(llvm::omp::OMP_TGT_EXEC_MODE_GENERIC);
-    }
-
-    // Check that the retrieved execution mode is valid.
-    if (!GenericKernelTy::isValidExecutionMode(ExecModeGlobal.getValue()))
-      return Plugin::error("Invalid execution mode %d for '%s'",
-                           ExecModeGlobal.getValue(), KernelEntry.name);
+    Expected<OMPTgtExecModeFlags> ExecModeOrErr =
+        getExecutionModeForKernel(KernelEntry.name, Image);
+    if (!ExecModeOrErr)
+      return ExecModeOrErr.takeError();
 
     // Allocate and initialize the AMDGPU kernel.
     AMDGPUKernelTy *AMDKernel = Plugin::get().allocate<AMDGPUKernelTy>();
-    new (AMDKernel) AMDGPUKernelTy(KernelEntry.name, ExecModeGlobal.getValue());
+    new (AMDKernel) AMDGPUKernelTy(KernelEntry.name, ExecModeOrErr.get());
 
     return AMDKernel;
   }
