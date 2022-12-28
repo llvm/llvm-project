@@ -472,6 +472,9 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   if (isKernelFunction(*F))
     emitKernelFunctionDirectives(*F, O);
 
+  if (shouldEmitPTXNoReturn(F, TM))
+    O << ".noreturn";
+
   OutStreamer->emitRawText(O.str());
 
   VRegMapping.clear();
@@ -615,6 +618,8 @@ void NVPTXAsmPrinter::emitDeclaration(const Function *F, raw_ostream &O) {
   getSymbol(F)->print(O, MAI);
   O << "\n";
   emitFunctionParamList(F, O);
+  if (shouldEmitPTXNoReturn(F, TM))
+    O << ".noreturn";
   O << ";\n";
 }
 
