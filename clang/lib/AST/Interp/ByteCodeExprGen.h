@@ -162,6 +162,9 @@ protected:
     if (!visitInitializer(Init))
       return false;
 
+    if (Init->getType()->isRecordType() && !this->emitCheckGlobalCtor(Init))
+      return false;
+
     return this->emitPopPtr(Init);
   }
 
