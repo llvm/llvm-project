@@ -26,7 +26,6 @@
 #include "omptarget.h"
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/Support/Allocator.h"
@@ -378,17 +377,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   }
   uint32_t getDynamicMemorySize() const { return OMPX_SharedMemorySize; }
 
-  /// Get target architecture.
-  virtual std::string getArch() const {
-    llvm_unreachable("device doesn't support JIT");
-  }
-
-  /// Post processing after jit backend. The ownership of \p MB will be taken.
-  virtual Expected<std::unique_ptr<MemoryBuffer>>
-  doJITPostProcessing(std::unique_ptr<MemoryBuffer> MB) const {
-    return MB;
-  }
-
 private:
   /// Register offload entry for global variable.
   Error registerGlobalOffloadEntry(DeviceImageTy &DeviceImage,
@@ -537,11 +525,6 @@ struct GenericPluginTy {
 
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;
-
-  /// Get the target triple of this plugin.
-  virtual Triple::ArchType getTripleArch() const {
-    llvm_unreachable("target doesn't support jit");
-  }
 
   /// Allocate a structure using the internal allocator.
   template <typename Ty> Ty *allocate() {
