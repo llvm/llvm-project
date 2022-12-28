@@ -1311,6 +1311,8 @@ inline bool This(InterpState &S, CodePtr OpPC) {
 
 inline bool RVOPtr(InterpState &S, CodePtr OpPC) {
   assert(S.Current->getFunction()->hasRVO());
+  if (S.checkingPotentialConstantExpression())
+    return false;
   S.Stk.push<Pointer>(S.Current->getRVOPtr());
   return true;
 }
@@ -1383,9 +1385,11 @@ inline bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
   Pointer ThisPtr;
   if (Func->hasThisPointer()) {
     ThisPtr = NewFrame->getThis();
-    if (!CheckInvoke(S, PC, ThisPtr)) {
+    if (!CheckInvoke(S, PC, ThisPtr))
       return false;
-    }
+
+    if (S.checkingPotentialConstantExpression())
+      return false;
   }
 
   if (!CheckCallable(S, PC, Func))

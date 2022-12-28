@@ -452,10 +452,11 @@ namespace IncDec {
   static_assert(uninit(), ""); // ref-error {{not an integral constant expression}} \
                                // ref-note {{in call to 'uninit()'}}
 
-  constexpr int OverFlow() { // ref-error {{never produces a constant expression}}
+  constexpr int OverFlow() { // ref-error {{never produces a constant expression}} \
+                             // expected-error {{never produces a constant expression}}
     int a = INT_MAX;
     ++a; // ref-note 2{{is outside the range}} \
-         // expected-note {{is outside the range}}
+         // expected-note 2{{is outside the range}}
     return -1;
   }
   static_assert(OverFlow() == -1, "");  // expected-error {{not an integral constant expression}} \
@@ -464,10 +465,11 @@ namespace IncDec {
                                         // ref-note {{in call to 'OverFlow()'}}
 
 
-  constexpr int UnderFlow() { // ref-error {{never produces a constant expression}}
+  constexpr int UnderFlow() { // ref-error {{never produces a constant expression}} \
+                              // expected-error {{never produces a constant expression}}
     int a = INT_MIN;
     --a; // ref-note 2{{is outside the range}} \
-         // expected-note {{is outside the range}}
+         // expected-note 2{{is outside the range}}
     return -1;
   }
   static_assert(UnderFlow() == -1, "");  // expected-error {{not an integral constant expression}} \

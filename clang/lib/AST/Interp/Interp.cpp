@@ -342,6 +342,11 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
   }
 
   if (!F->isConstexpr()) {
+    // Don't emit anything if we're checking for a potential constant
+    // expression. That will happen later when actually executing.
+    if (S.checkingPotentialConstantExpression())
+      return false;
+
     const SourceLocation &Loc = S.Current->getLocation(OpPC);
     if (S.getLangOpts().CPlusPlus11) {
       const FunctionDecl *DiagDecl = F->getDecl();
