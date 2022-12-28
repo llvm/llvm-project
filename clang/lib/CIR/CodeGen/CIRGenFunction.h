@@ -383,7 +383,7 @@ private:
 
   public:
     VarDeclContext(CIRGenFunction &p, const VarDecl *Value) : P(p) {
-      if (P.currSrcLoc)
+      if (P.currVarDecl)
         OldVal = P.currVarDecl;
       P.currVarDecl = Value;
     }
