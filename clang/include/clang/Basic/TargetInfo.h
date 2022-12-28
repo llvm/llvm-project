@@ -1340,6 +1340,13 @@ public:
     return true;
   }
 
+  /// Returns true if feature has an impact on target code
+  /// generation and get its dependent options in second argument.
+  virtual bool getFeatureDepOptions(StringRef Feature,
+                                    std::string &Options) const {
+    return true;
+  }
+
   struct BranchProtectionInfo {
     LangOptions::SignReturnAddressScopeKind SignReturnAddr =
         LangOptions::SignReturnAddressScopeKind::None;
@@ -1386,7 +1393,9 @@ public:
 
   /// Identify whether this target supports multiversioning of functions,
   /// which requires support for cpu_supports and cpu_is functionality.
-  bool supportsMultiVersioning() const { return getTriple().isX86(); }
+  bool supportsMultiVersioning() const {
+    return getTriple().isX86() || getTriple().isAArch64();
+  }
 
   /// Identify whether this target supports IFuncs.
   bool supportsIFunc() const {
@@ -1402,6 +1411,10 @@ public:
   virtual unsigned multiVersionSortPriority(StringRef Name) const {
     return 0;
   }
+
+  // Return the target-specific cost for feature
+  // that taken into account in priority sorting.
+  virtual unsigned multiVersionFeatureCost() const { return 0; }
 
   // Validate the contents of the __builtin_cpu_is(const char*)
   // argument.

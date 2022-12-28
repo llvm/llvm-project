@@ -9242,8 +9242,8 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BIwmemchr:
     if (Info.getLangOpts().CPlusPlus11)
       Info.CCEDiag(E, diag::note_constexpr_invalid_function)
-        << /*isConstexpr*/0 << /*isConstructor*/0
-        << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'");
+          << /*isConstexpr*/ 0 << /*isConstructor*/ 0
+          << ("'" + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'").str();
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
     [[fallthrough]];
@@ -9288,7 +9288,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     // FIXME: We can compare the bytes in the correct order.
     if (IsRawByte && !isOneByteCharacterType(CharTy)) {
       Info.FFDiag(E, diag::note_constexpr_memchr_unsupported)
-          << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'")
+          << ("'" + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'").str()
           << CharTy;
       return false;
     }
@@ -9350,8 +9350,8 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BIwmemmove:
     if (Info.getLangOpts().CPlusPlus11)
       Info.CCEDiag(E, diag::note_constexpr_invalid_function)
-        << /*isConstexpr*/0 << /*isConstructor*/0
-        << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'");
+          << /*isConstexpr*/ 0 << /*isConstructor*/ 0
+          << ("'" + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'").str();
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
     [[fallthrough]];
@@ -12209,8 +12209,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     // A call to strlen is not a constant expression.
     if (Info.getLangOpts().CPlusPlus11)
       Info.CCEDiag(E, diag::note_constexpr_invalid_function)
-        << /*isConstexpr*/0 << /*isConstructor*/0
-        << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'");
+          << /*isConstexpr*/ 0 << /*isConstructor*/ 0
+          << ("'" + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'").str();
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
     [[fallthrough]];
@@ -12234,8 +12234,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     // A call to strlen is not a constant expression.
     if (Info.getLangOpts().CPlusPlus11)
       Info.CCEDiag(E, diag::note_constexpr_invalid_function)
-        << /*isConstexpr*/0 << /*isConstructor*/0
-        << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'");
+          << /*isConstexpr*/ 0 << /*isConstructor*/ 0
+          << ("'" + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'").str();
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
     [[fallthrough]];
@@ -12290,7 +12290,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         !(isOneByteCharacterType(CharTy1) && isOneByteCharacterType(CharTy2))) {
       // FIXME: Consider using our bit_cast implementation to support this.
       Info.FFDiag(E, diag::note_constexpr_memcmp_unsupported)
-          << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'")
+          << ("'" + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'").str()
           << CharTy1 << CharTy2;
       return false;
     }
