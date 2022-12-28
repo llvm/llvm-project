@@ -1430,7 +1430,10 @@ std::string NVPTXTargetLowering::getPrototype(
   if (VAInfo)
     O << (first ? "" : ",") << " .param .align " << VAInfo->second
       << " .b8 _[]\n";
-  O << ");";
+  O << ")";
+  if (shouldEmitPTXNoReturn(&CB, *nvTM))
+    O << " .noreturn";
+  O << ";";
 
   return Prototype;
 }
