@@ -42,6 +42,11 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
     }
   }
 
+  APValue DummyResult;
+  if (!Run(Parent, Func, DummyResult)) {
+    return false;
+  }
+
   return Func->isConstexpr();
 }
 

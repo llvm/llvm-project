@@ -8,7 +8,9 @@
 
 namespace shifts {
   constexpr void test() { // ref-error {{constexpr function never produces a constant expression}} \
-                          // ref-cxx17-error {{constexpr function never produces a constant expression}}
+                          // ref-cxx17-error {{constexpr function never produces a constant expression}} \
+                          // expected-error {{constexpr function never produces a constant expression}} \
+                          // cxx17-error {{constexpr function never produces a constant expression}} \
 
     char c; // cxx17-warning {{uninitialized variable}} \
             // ref-cxx17-warning {{uninitialized variable}}
@@ -19,6 +21,8 @@ namespace shifts {
     c = 1 << -0;
     c = 1 >> -0;
     c = 1 << -1; // expected-warning {{shift count is negative}} \
+                 // expected-note {{negative shift count -1}} \
+                 // cxx17-note {{negative shift count -1}} \
                  // cxx17-warning {{shift count is negative}} \
                  // ref-warning {{shift count is negative}} \
                  // ref-note {{negative shift count -1}} \
