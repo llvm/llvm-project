@@ -897,13 +897,13 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    mr 21, 8
 ; LE-32BIT-NEXT:    or 8, 14, 3
 ; LE-32BIT-NEXT:    srw 14, 6, 31
-; LE-32BIT-NEXT:    crnand 28, 4, 20
+; LE-32BIT-NEXT:    crnand 21, 4, 20
 ; LE-32BIT-NEXT:    srw 31, 6, 30
 ; LE-32BIT-NEXT:    or 24, 0, 24
 ; LE-32BIT-NEXT:    slw 0, 7, 15
 ; LE-32BIT-NEXT:    mr 23, 7
 ; LE-32BIT-NEXT:    or 17, 17, 14
-; LE-32BIT-NEXT:    bc 12, 28, .LBB9_2
+; LE-32BIT-NEXT:    bc 12, 21, .LBB9_2
 ; LE-32BIT-NEXT:  # %bb.1:
 ; LE-32BIT-NEXT:    ori 14, 31, 0
 ; LE-32BIT-NEXT:    b .LBB9_3
@@ -945,7 +945,7 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    srw 0, 10, 30
 ; LE-32BIT-NEXT:    srw 5, 10, 5
 ; LE-32BIT-NEXT:    or 3, 0, 3
-; LE-32BIT-NEXT:    bc 12, 28, .LBB9_5
+; LE-32BIT-NEXT:    bc 12, 21, .LBB9_5
 ; LE-32BIT-NEXT:  # %bb.4:
 ; LE-32BIT-NEXT:    ori 0, 17, 0
 ; LE-32BIT-NEXT:    b .LBB9_6
@@ -982,11 +982,11 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    srw 30, 21, 30
 ; LE-32BIT-NEXT:    lwz 8, 24(1) # 4-byte Folded Reload
 ; LE-32BIT-NEXT:    slw 21, 29, 16
-; LE-32BIT-NEXT:    cmplwi 7, 16, 64
+; LE-32BIT-NEXT:    cmplwi 2, 16, 64
 ; LE-32BIT-NEXT:    cmplwi 3, 16, 0
 ; LE-32BIT-NEXT:    li 16, 0
 ; LE-32BIT-NEXT:    srw 18, 6, 0
-; LE-32BIT-NEXT:    bc 12, 28, .LBB9_14
+; LE-32BIT-NEXT:    bc 12, 8, .LBB9_14
 ; LE-32BIT-NEXT:  # %bb.13:
 ; LE-32BIT-NEXT:    ori 0, 16, 0
 ; LE-32BIT-NEXT:    b .LBB9_15
@@ -994,7 +994,7 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    addi 0, 21, 0
 ; LE-32BIT-NEXT:  .LBB9_15:
 ; LE-32BIT-NEXT:    lwz 21, 60(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    bc 12, 28, .LBB9_16
+; LE-32BIT-NEXT:    bc 12, 8, .LBB9_16
 ; LE-32BIT-NEXT:    b .LBB9_17
 ; LE-32BIT-NEXT:  .LBB9_16:
 ; LE-32BIT-NEXT:    addi 4, 7, 0
@@ -1013,7 +1013,7 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:  .LBB9_20:
 ; LE-32BIT-NEXT:    addi 8, 21, 0
 ; LE-32BIT-NEXT:  .LBB9_21:
-; LE-32BIT-NEXT:    cmplwi 2, 31, 0
+; LE-32BIT-NEXT:    cmplwi 7, 31, 0
 ; LE-32BIT-NEXT:    bc 12, 20, .LBB9_23
 ; LE-32BIT-NEXT:  # %bb.22:
 ; LE-32BIT-NEXT:    ori 26, 19, 0
@@ -1043,7 +1043,7 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    addi 29, 7, 0
 ; LE-32BIT-NEXT:  .LBB9_32:
 ; LE-32BIT-NEXT:    lwz 7, 44(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    bc 12, 10, .LBB9_33
+; LE-32BIT-NEXT:    bc 12, 30, .LBB9_33
 ; LE-32BIT-NEXT:    b .LBB9_34
 ; LE-32BIT-NEXT:  .LBB9_33:
 ; LE-32BIT-NEXT:    addi 25, 12, 0
@@ -1066,7 +1066,7 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:  .LBB9_40:
 ; LE-32BIT-NEXT:    addi 3, 10, 0
 ; LE-32BIT-NEXT:  .LBB9_41:
-; LE-32BIT-NEXT:    bc 12, 28, .LBB9_43
+; LE-32BIT-NEXT:    bc 12, 8, .LBB9_43
 ; LE-32BIT-NEXT:  # %bb.42:
 ; LE-32BIT-NEXT:    ori 5, 20, 0
 ; LE-32BIT-NEXT:    b .LBB9_43
@@ -1081,7 +1081,7 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    ori 28, 18, 0
 ; LE-32BIT-NEXT:    b .LBB9_47
 ; LE-32BIT-NEXT:  .LBB9_47:
-; LE-32BIT-NEXT:    bc 12, 28, .LBB9_49
+; LE-32BIT-NEXT:    bc 12, 8, .LBB9_49
 ; LE-32BIT-NEXT:  # %bb.48:
 ; LE-32BIT-NEXT:    ori 27, 16, 0
 ; LE-32BIT-NEXT:    b .LBB9_49
@@ -1101,7 +1101,7 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:  .LBB9_54:
 ; LE-32BIT-NEXT:    addi 5, 11, 0
 ; LE-32BIT-NEXT:  .LBB9_55:
-; LE-32BIT-NEXT:    bc 12, 10, .LBB9_56
+; LE-32BIT-NEXT:    bc 12, 30, .LBB9_56
 ; LE-32BIT-NEXT:    b .LBB9_57
 ; LE-32BIT-NEXT:  .LBB9_56:
 ; LE-32BIT-NEXT:    addi 28, 10, 0
@@ -1478,7 +1478,7 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    srw 24, 6, 24
 ; LE-32BIT-NEXT:    or 10, 14, 3
 ; LE-32BIT-NEXT:    slw 14, 5, 31
-; LE-32BIT-NEXT:    crnand 28, 4, 20
+; LE-32BIT-NEXT:    crnand 21, 4, 20
 ; LE-32BIT-NEXT:    slw 31, 5, 30
 ; LE-32BIT-NEXT:    or 24, 0, 24
 ; LE-32BIT-NEXT:    mr 3, 7
@@ -1486,7 +1486,7 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    srw 0, 7, 22
 ; LE-32BIT-NEXT:    lwz 7, 24(1) # 4-byte Folded Reload
 ; LE-32BIT-NEXT:    or 17, 17, 14
-; LE-32BIT-NEXT:    bc 12, 28, .LBB10_2
+; LE-32BIT-NEXT:    bc 12, 21, .LBB10_2
 ; LE-32BIT-NEXT:  # %bb.1:
 ; LE-32BIT-NEXT:    ori 14, 31, 0
 ; LE-32BIT-NEXT:    b .LBB10_3
@@ -1506,7 +1506,7 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    lwz 3, 40(1) # 4-byte Folded Reload
 ; LE-32BIT-NEXT:    or 4, 4, 31
 ; LE-32BIT-NEXT:    slw 0, 11, 0
-; LE-32BIT-NEXT:    cmplwi 3, 15, 0
+; LE-32BIT-NEXT:    cmplwi 2, 15, 64
 ; LE-32BIT-NEXT:    srw 31, 6, 3
 ; LE-32BIT-NEXT:    or 27, 27, 31
 ; LE-32BIT-NEXT:    srw 31, 12, 25
@@ -1531,7 +1531,7 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    slw 24, 11, 16
 ; LE-32BIT-NEXT:    lwz 10, 32(1) # 4-byte Folded Reload
 ; LE-32BIT-NEXT:    or 3, 0, 3
-; LE-32BIT-NEXT:    bc 12, 28, .LBB10_8
+; LE-32BIT-NEXT:    bc 12, 21, .LBB10_8
 ; LE-32BIT-NEXT:  # %bb.7:
 ; LE-32BIT-NEXT:    ori 0, 17, 0
 ; LE-32BIT-NEXT:    b .LBB10_9
@@ -1554,7 +1554,7 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    or 4, 21, 4
 ; LE-32BIT-NEXT:    slw 21, 11, 31
 ; LE-32BIT-NEXT:    srw 20, 12, 15
-; LE-32BIT-NEXT:    cmplwi 7, 15, 64
+; LE-32BIT-NEXT:    cmplwi 3, 15, 0
 ; LE-32BIT-NEXT:    li 15, 0
 ; LE-32BIT-NEXT:    or 27, 21, 27
 ; LE-32BIT-NEXT:    bc 12, 20, .LBB10_14
@@ -1567,7 +1567,7 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    mr 16, 9
 ; LE-32BIT-NEXT:    lwz 9, 52(1) # 4-byte Folded Reload
 ; LE-32BIT-NEXT:    slw 18, 5, 0
-; LE-32BIT-NEXT:    bc 12, 28, .LBB10_17
+; LE-32BIT-NEXT:    bc 12, 8, .LBB10_17
 ; LE-32BIT-NEXT:  # %bb.16:
 ; LE-32BIT-NEXT:    ori 0, 15, 0
 ; LE-32BIT-NEXT:    b .LBB10_18
@@ -1602,7 +1602,7 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:  .LBB10_26:
 ; LE-32BIT-NEXT:    addi 30, 29, 0
 ; LE-32BIT-NEXT:  .LBB10_27:
-; LE-32BIT-NEXT:    bc 12, 28, .LBB10_28
+; LE-32BIT-NEXT:    bc 12, 8, .LBB10_28
 ; LE-32BIT-NEXT:    b .LBB10_29
 ; LE-32BIT-NEXT:  .LBB10_28:
 ; LE-32BIT-NEXT:    addi 28, 26, 0
@@ -1637,13 +1637,13 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:  .LBB10_39:
 ; LE-32BIT-NEXT:    addi 3, 11, 0
 ; LE-32BIT-NEXT:  .LBB10_40:
-; LE-32BIT-NEXT:    cmplwi 2, 31, 0
+; LE-32BIT-NEXT:    cmplwi 7, 31, 0
 ; LE-32BIT-NEXT:    bc 12, 24, .LBB10_42
 ; LE-32BIT-NEXT:  # %bb.41:
 ; LE-32BIT-NEXT:    ori 27, 18, 0
 ; LE-32BIT-NEXT:    b .LBB10_42
 ; LE-32BIT-NEXT:  .LBB10_42:
-; LE-32BIT-NEXT:    bc 12, 28, .LBB10_44
+; LE-32BIT-NEXT:    bc 12, 8, .LBB10_44
 ; LE-32BIT-NEXT:  # %bb.43:
 ; LE-32BIT-NEXT:    ori 26, 22, 0
 ; LE-32BIT-NEXT:    b .LBB10_45
@@ -1660,7 +1660,7 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    ori 3, 28, 0
 ; LE-32BIT-NEXT:    b .LBB10_49
 ; LE-32BIT-NEXT:  .LBB10_49:
-; LE-32BIT-NEXT:    bc 12, 10, .LBB10_50
+; LE-32BIT-NEXT:    bc 12, 30, .LBB10_50
 ; LE-32BIT-NEXT:    b .LBB10_51
 ; LE-32BIT-NEXT:  .LBB10_50:
 ; LE-32BIT-NEXT:    addi 25, 12, 0
@@ -1673,14 +1673,14 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:  .LBB10_53:
 ; LE-32BIT-NEXT:    addi 24, 7, 0
 ; LE-32BIT-NEXT:  .LBB10_54:
-; LE-32BIT-NEXT:    bc 12, 28, .LBB10_56
+; LE-32BIT-NEXT:    bc 12, 8, .LBB10_56
 ; LE-32BIT-NEXT:  # %bb.55:
 ; LE-32BIT-NEXT:    ori 7, 15, 0
 ; LE-32BIT-NEXT:    b .LBB10_57
 ; LE-32BIT-NEXT:  .LBB10_56:
 ; LE-32BIT-NEXT:    addi 7, 23, 0
 ; LE-32BIT-NEXT:  .LBB10_57:
-; LE-32BIT-NEXT:    bc 12, 10, .LBB10_58
+; LE-32BIT-NEXT:    bc 12, 30, .LBB10_58
 ; LE-32BIT-NEXT:    b .LBB10_59
 ; LE-32BIT-NEXT:  .LBB10_58:
 ; LE-32BIT-NEXT:    addi 27, 11, 0
@@ -2087,7 +2087,7 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    or 19, 18, 19
 ; LE-32BIT-NEXT:    cmpwi 6, 31, 1
 ; LE-32BIT-NEXT:    sraw 18, 12, 31
-; LE-32BIT-NEXT:    crand 28, 4, 20
+; LE-32BIT-NEXT:    crand 21, 4, 20
 ; LE-32BIT-NEXT:    srawi 14, 12, 31
 ; LE-32BIT-NEXT:    sraw 31, 12, 30
 ; LE-32BIT-NEXT:    or 3, 21, 3
@@ -2099,7 +2099,7 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:  .LBB11_10:
 ; LE-32BIT-NEXT:    addi 28, 17, 0
 ; LE-32BIT-NEXT:  .LBB11_11:
-; LE-32BIT-NEXT:    bc 12, 28, .LBB11_13
+; LE-32BIT-NEXT:    bc 12, 21, .LBB11_13
 ; LE-32BIT-NEXT:  # %bb.12:
 ; LE-32BIT-NEXT:    ori 18, 14, 0
 ; LE-32BIT-NEXT:    b .LBB11_14
@@ -2158,8 +2158,9 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    ori 24, 22, 0
 ; LE-32BIT-NEXT:    b .LBB11_21
 ; LE-32BIT-NEXT:  .LBB11_21:
-; LE-32BIT-NEXT:    cmplwi 2, 19, 0
-; LE-32BIT-NEXT:    bc 12, 10, .LBB11_22
+; LE-32BIT-NEXT:    cmplwi 7, 19, 0
+; LE-32BIT-NEXT:    cmplwi 2, 16, 64
+; LE-32BIT-NEXT:    bc 12, 30, .LBB11_22
 ; LE-32BIT-NEXT:    b .LBB11_23
 ; LE-32BIT-NEXT:  .LBB11_22:
 ; LE-32BIT-NEXT:    addi 3, 6, 0
@@ -2171,7 +2172,7 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    or 26, 0, 26
 ; LE-32BIT-NEXT:    srw 0, 7, 30
 ; LE-32BIT-NEXT:    or 11, 0, 23
-; LE-32BIT-NEXT:    bc 12, 28, .LBB11_25
+; LE-32BIT-NEXT:    bc 12, 21, .LBB11_25
 ; LE-32BIT-NEXT:  # %bb.24:
 ; LE-32BIT-NEXT:    ori 0, 14, 0
 ; LE-32BIT-NEXT:    b .LBB11_26
@@ -2184,12 +2185,11 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    lwz 4, 52(1) # 4-byte Folded Reload
 ; LE-32BIT-NEXT:    or 5, 0, 5
 ; LE-32BIT-NEXT:    lwz 0, 56(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    cmplwi 7, 16, 64
 ; LE-32BIT-NEXT:    slw 23, 6, 15
 ; LE-32BIT-NEXT:    srw 22, 17, 4
 ; LE-32BIT-NEXT:    li 15, 0
 ; LE-32BIT-NEXT:    sraw 21, 12, 0
-; LE-32BIT-NEXT:    bc 12, 28, .LBB11_28
+; LE-32BIT-NEXT:    bc 12, 8, .LBB11_28
 ; LE-32BIT-NEXT:  # %bb.27:
 ; LE-32BIT-NEXT:    ori 0, 15, 0
 ; LE-32BIT-NEXT:    b .LBB11_29
@@ -2229,7 +2229,7 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    addi 25, 6, 0
 ; LE-32BIT-NEXT:  .LBB11_41:
 ; LE-32BIT-NEXT:    lwz 6, 44(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    bc 12, 28, .LBB11_43
+; LE-32BIT-NEXT:    bc 12, 8, .LBB11_43
 ; LE-32BIT-NEXT:  # %bb.42:
 ; LE-32BIT-NEXT:    ori 8, 27, 0
 ; LE-32BIT-NEXT:    ori 5, 23, 0
@@ -2295,7 +2295,7 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    addi 3, 16, 0
 ; LE-32BIT-NEXT:  .LBB11_66:
 ; LE-32BIT-NEXT:    stw 4, 8(18)
-; LE-32BIT-NEXT:    bc 12, 28, .LBB11_68
+; LE-32BIT-NEXT:    bc 12, 8, .LBB11_68
 ; LE-32BIT-NEXT:  # %bb.67:
 ; LE-32BIT-NEXT:    ori 27, 15, 0
 ; LE-32BIT-NEXT:    b .LBB11_69
@@ -2316,7 +2316,7 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:  .LBB11_74:
 ; LE-32BIT-NEXT:    addi 8, 9, 0
 ; LE-32BIT-NEXT:  .LBB11_75:
-; LE-32BIT-NEXT:    bc 12, 10, .LBB11_77
+; LE-32BIT-NEXT:    bc 12, 30, .LBB11_77
 ; LE-32BIT-NEXT:  # %bb.76:
 ; LE-32BIT-NEXT:    ori 28, 26, 0
 ; LE-32BIT-NEXT:    b .LBB11_78
