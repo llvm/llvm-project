@@ -18,7 +18,7 @@ add_library(PluginInterface OBJECT
 # Only enable JIT for those targets that LLVM can support.
 string(TOUPPER "${LLVM_TARGETS_TO_BUILD}" TargetsSupported)
 foreach(Target ${TargetsSupported})
-  target_compile_definitions(PluginInterface PRIVATE "LIBOMPTARGET_JIT_${TARGET}")
+  target_compile_definitions(PluginInterface PRIVATE "LIBOMPTARGET_JIT_${Target}")
 endforeach()
 
 # This is required when using LLVM libraries.
