@@ -2320,26 +2320,33 @@ private:
     std::string Reasons;
     uint32_t ReasonsMask = Event->memory_fault.fault_reason_mask;
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_PAGE_NOT_PRESENT)
-      Reasons += "HSA_AMD_MEMORY_FAULT_PAGE_NOT_PRESENT\n";
+      Reasons += "HSA_AMD_MEMORY_FAULT_PAGE_NOT_PRESENT, ";
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_READ_ONLY)
-      Reasons += " HSA_AMD_MEMORY_FAULT_READ_ONLY\n";
+      Reasons += " HSA_AMD_MEMORY_FAULT_READ_ONLY, ";
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_NX)
-      Reasons += " HSA_AMD_MEMORY_FAULT_NX\n";
+      Reasons += " HSA_AMD_MEMORY_FAULT_NX, ";
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_HOST_ONLY)
-      Reasons += " HSA_AMD_MEMORY_FAULT_HOST_ONLY\n";
+      Reasons += " HSA_AMD_MEMORY_FAULT_HOST_ONLY, ";
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_DRAMECC)
-      Reasons += " HSA_AMD_MEMORY_FAULT_DRAMECC\n";
+      Reasons += " HSA_AMD_MEMORY_FAULT_DRAMECC, ";
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_IMPRECISE)
-      Reasons += " HSA_AMD_MEMORY_FAULT_IMPRECISE\n";
+      Reasons += " HSA_AMD_MEMORY_FAULT_IMPRECISE, ";
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_SRAMECC)
-      Reasons += " HSA_AMD_MEMORY_FAULT_SRAMECC\n";
+      Reasons += " HSA_AMD_MEMORY_FAULT_SRAMECC, ";
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_HANG)
-      Reasons += " HSA_AMD_MEMORY_FAULT_HANG\n";
+      Reasons += " HSA_AMD_MEMORY_FAULT_HANG, ";
+
+    // If we do not know the reason, say so, otherwise remove the trailing comma
+    // and space.
+    if (Reasons.empty())
+      Reasons = "Unknown (Mask: " + std::to_string(ReasonsMask) + ")";
+    else
+      Reasons.resize(Reasons.size() - /* ', ' */ 2);
 
     // Abort the execution since we do not recover from this error.
     FATAL_MESSAGE(1,
                   "Found HSA_AMD_GPU_MEMORY_FAULT_EVENT in agent %" PRIu64
-                  " at virtual address %p and reasons:\n %s",
+                  " at virtual address %p and reasons: %s",
                   Event->memory_fault.agent.handle,
                   (void *)Event->memory_fault.virtual_address, Reasons.data());
 
