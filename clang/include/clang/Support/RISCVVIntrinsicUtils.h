@@ -394,7 +394,7 @@ private:
   // InputTypes. -1 means the return type.
   std::vector<int64_t> IntrinsicTypes;
   unsigned NF = 1;
-  Policy DefaultPolicy;
+  Policy PolicyAttrs;
 
 public:
   RVVIntrinsic(llvm::StringRef Name, llvm::StringRef Suffix,
@@ -405,7 +405,7 @@ public:
                const RVVTypes &Types,
                const std::vector<int64_t> &IntrinsicTypes,
                const std::vector<llvm::StringRef> &RequiredFeatures,
-               unsigned NF, Policy DefaultPolicy, bool IsPrototypeDefaultTU);
+               unsigned NF, Policy PolicyAttrs, bool IsPrototypeDefaultTU);
   ~RVVIntrinsic() = default;
 
   RVVTypePtr getOutputType() const { return OutputType; }
@@ -433,30 +433,30 @@ public:
   const std::vector<int64_t> &getIntrinsicTypes() const {
     return IntrinsicTypes;
   }
-  Policy getDefaultPolicy() const {
-    assert(DefaultPolicy.PolicyNone == false);
-    return DefaultPolicy;
+  Policy getPolicyAttrs() const {
+    assert(PolicyAttrs.PolicyNone == false);
+    return PolicyAttrs;
   }
-  unsigned getDefaultPolicyBits() const {
+  unsigned getPolicyAttrsBits() const {
     // Return following value.
     // constexpr unsigned TAIL_UNDISTURBED = 0;
     // constexpr unsigned TAIL_AGNOSTIC = 1;
     // constexpr unsigned TAIL_AGNOSTIC_MASK_AGNOSTIC = 3;
     // FIXME: how about value 2
-    // int DefaultPolicy = TAIL_UNDISTURBED;
-    assert(DefaultPolicy.PolicyNone == false);
+    // int PolicyAttrs = TAIL_UNDISTURBED;
+    assert(PolicyAttrs.PolicyNone == false);
 
-    if (DefaultPolicy.isTUMAPolicy())
+    if (PolicyAttrs.isTUMAPolicy())
       return 2;
-    if (DefaultPolicy.isTAMAPolicy())
+    if (PolicyAttrs.isTAMAPolicy())
       return 3;
-    if (DefaultPolicy.isTUMUPolicy())
+    if (PolicyAttrs.isTUMUPolicy())
       return 0;
-    if (DefaultPolicy.isTAMUPolicy())
+    if (PolicyAttrs.isTAMUPolicy())
       return 1;
-    if (DefaultPolicy.isTUPolicy())
+    if (PolicyAttrs.isTUPolicy())
       return 0;
-    if (DefaultPolicy.isTAPolicy())
+    if (PolicyAttrs.isTAPolicy())
       return 1;
 
     llvm_unreachable("unsupport policy");
@@ -471,11 +471,10 @@ public:
                llvm::ArrayRef<PrototypeDescriptor> PrototypeDescriptors);
 
   static llvm::SmallVector<PrototypeDescriptor>
-      computeBuiltinTypes(llvm::ArrayRef<PrototypeDescriptor> Prototype,
-                          bool IsMasked, bool HasMaskedOffOperand, bool HasVL,
-                          unsigned NF, bool IsPrototypeDefaultTU,
-                          PolicyScheme DefaultScheme,
-                          Policy DefaultPolicy);
+  computeBuiltinTypes(llvm::ArrayRef<PrototypeDescriptor> Prototype,
+                      bool IsMasked, bool HasMaskedOffOperand, bool HasVL,
+                      unsigned NF, bool IsPrototypeDefaultTU,
+                      PolicyScheme DefaultScheme, Policy PolicyAttrs);
   static llvm::SmallVector<Policy>
       getSupportedMaskedPolicies(bool HasTailPolicy, bool HasMaskPolicy);
 
@@ -483,7 +482,7 @@ public:
                                    bool IsPrototypeDefaultTU, std::string &Name,
                                    std::string &BuiltinName,
                                    std::string &OverloadedName,
-                                   Policy &DefaultPolicy);
+                                   Policy &PolicyAttrs);
 };
 
 // RVVRequire should be sync'ed with target features, but only

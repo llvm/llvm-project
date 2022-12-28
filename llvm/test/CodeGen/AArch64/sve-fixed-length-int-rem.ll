@@ -587,14 +587,14 @@ define void @srem_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_128-NEXT:    ptrue p0.s, vl4
 ; VBITS_GE_128-NEXT:    ldp q2, q3, [x0]
 ; VBITS_GE_128-NEXT:    ldp q4, q5, [x1, #32]
-; VBITS_GE_128-NEXT:    ldp q7, q6, [x1]
 ; VBITS_GE_128-NEXT:    movprfx z16, z0
 ; VBITS_GE_128-NEXT:    sdiv z16.s, p0/m, z16.s, z4.s
 ; VBITS_GE_128-NEXT:    mls v0.4s, v16.4s, v4.4s
-; VBITS_GE_128-NEXT:    movprfx z4, z3
-; VBITS_GE_128-NEXT:    sdiv z4.s, p0/m, z4.s, z6.s
 ; VBITS_GE_128-NEXT:    movprfx z16, z1
 ; VBITS_GE_128-NEXT:    sdiv z16.s, p0/m, z16.s, z5.s
+; VBITS_GE_128-NEXT:    ldp q7, q6, [x1]
+; VBITS_GE_128-NEXT:    movprfx z4, z3
+; VBITS_GE_128-NEXT:    sdiv z4.s, p0/m, z4.s, z6.s
 ; VBITS_GE_128-NEXT:    mls v1.4s, v16.4s, v5.4s
 ; VBITS_GE_128-NEXT:    movprfx z5, z2
 ; VBITS_GE_128-NEXT:    sdiv z5.s, p0/m, z5.s, z7.s
@@ -1407,14 +1407,14 @@ define void @urem_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_128-NEXT:    ptrue p0.s, vl4
 ; VBITS_GE_128-NEXT:    ldp q2, q3, [x0]
 ; VBITS_GE_128-NEXT:    ldp q4, q5, [x1, #32]
-; VBITS_GE_128-NEXT:    ldp q7, q6, [x1]
 ; VBITS_GE_128-NEXT:    movprfx z16, z0
 ; VBITS_GE_128-NEXT:    udiv z16.s, p0/m, z16.s, z4.s
 ; VBITS_GE_128-NEXT:    mls v0.4s, v16.4s, v4.4s
-; VBITS_GE_128-NEXT:    movprfx z4, z3
-; VBITS_GE_128-NEXT:    udiv z4.s, p0/m, z4.s, z6.s
 ; VBITS_GE_128-NEXT:    movprfx z16, z1
 ; VBITS_GE_128-NEXT:    udiv z16.s, p0/m, z16.s, z5.s
+; VBITS_GE_128-NEXT:    ldp q7, q6, [x1]
+; VBITS_GE_128-NEXT:    movprfx z4, z3
+; VBITS_GE_128-NEXT:    udiv z4.s, p0/m, z4.s, z6.s
 ; VBITS_GE_128-NEXT:    mls v1.4s, v16.4s, v5.4s
 ; VBITS_GE_128-NEXT:    movprfx z5, z2
 ; VBITS_GE_128-NEXT:    udiv z5.s, p0/m, z5.s, z7.s

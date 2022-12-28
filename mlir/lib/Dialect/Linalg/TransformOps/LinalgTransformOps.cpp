@@ -67,14 +67,14 @@ DiagnosedSilenceableFailure
 transform::DecomposeOp::applyToOne(linalg::LinalgOp target,
                                    SmallVectorImpl<Operation *> &results,
                                    transform::TransformState &state) {
-#define DOWNSCALE(trans) \
-    { \
-      FailureOr<LinalgOp> res = tryApply<trans>(target); \
-      if (succeeded(res)) { \
-        results.push_back(*res); \
-        return DiagnosedSilenceableFailure::success(); \
-      } \
-    }
+#define DOWNSCALE(trans)                                                       \
+  {                                                                            \
+    FailureOr<LinalgOp> res = tryApply<trans>(target);                         \
+    if (succeeded(res)) {                                                      \
+      results.push_back(*res);                                                 \
+      return DiagnosedSilenceableFailure::success();                           \
+    }                                                                          \
+  }
 
 #define DOWNSCALE_CALL(a, b) DownscaleSizeOneWindowed2DConvolution<a, b>
 #define DOWNSCALE_NORMAL(a, b) DOWNSCALE(DOWNSCALE_CALL(a, b))
@@ -986,6 +986,10 @@ transform::ScalarizeOp::applyToOne(linalg::LinalgOp target,
   if (failed(maybeTilingResult))
     return emitDefaultDefiniteFailure(target);
 
+  if (target->getNumResults())
+    rewriter.replaceOp(target, maybeTilingResult->replacements);
+  else
+    rewriter.eraseOp(target);
   results.append(maybeTilingResult->tiledOps);
   return DiagnosedSilenceableFailure::success();
 }

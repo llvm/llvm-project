@@ -24,8 +24,7 @@ CodegenEnv::CodegenEnv(linalg::GenericOp linop, SparsificationOptions opts,
       expFilled(), expAdded(), expCount(), redVal(), redExp(-1u),
       redCustom(-1u) {}
 
-void CodegenEnv::startEmit(OpOperand *so, unsigned lv,
-                           SparseTensorLoopEmitter *le) {
+void CodegenEnv::startEmit(OpOperand *so, unsigned lv, LoopEmitter *le) {
   assert(sparseOut == nullptr && loopEmitter == nullptr &&
          insChain == nullptr && "must only start emitting once");
   sparseOut = so;

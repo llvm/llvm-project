@@ -356,24 +356,6 @@ define void @sink_replicate_region_after_replicate_region(i32* %ptr, i32* noalia
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%recur.next> = sext ir<%y>
 ; CHECK-NEXT:   EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%recur> ir<%recur.next>
-; CHECK-NEXT: Successor(s): pred.srem
-; CHECK-EMPTY:
-; CHECK-NEXT: <xVFxUF> pred.srem: {
-; CHECK-NEXT:   pred.srem.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
-; CHECK-NEXT:   Successor(s): pred.srem.if, pred.srem.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.srem.if:
-; CHECK-NEXT:     REPLICATE ir<%rem> = srem vp<[[SPLICE]]>, ir<%x>
-; CHECK-NEXT:   Successor(s): pred.srem.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.srem.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%rem>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): loop.1.split
-; CHECK-EMPTY:
-; CHECK-NEXT: loop.1.split:
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
@@ -382,7 +364,8 @@ define void @sink_replicate_region_after_replicate_region(i32* %ptr, i32* noalia
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
-; CHECK-NEXT:     REPLICATE ir<%rem.div> = sdiv ir<20>, vp<[[PRED]]>
+; CHECK-NEXT:     REPLICATE ir<%rem> = srem vp<[[SPLICE]]>, ir<%x>
+; CHECK-NEXT:     REPLICATE ir<%rem.div> = sdiv ir<20>, ir<%rem>
 ; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE store ir<%rem.div>, ir<%gep>
 ; CHECK-NEXT:     REPLICATE ir<%gep.2> = getelementptr ir<%dst.2>, vp<[[STEPS]]>
@@ -390,6 +373,7 @@ define void @sink_replicate_region_after_replicate_region(i32* %ptr, i32* noalia
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%rem>
 ; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED2:%.+]]> = ir<%rem.div>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }

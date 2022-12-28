@@ -7916,6 +7916,8 @@ class sve_int_bin_cons_misc_0_c<bits<8> opc, string asm, ZPRRegOp zprty>
   let Inst{10}    = opc{0};
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zd;
+
+  let hasSideEffects = 0;
 }
 
 multiclass sve_int_bin_cons_misc_0_c_fexpa<string asm, SDPatternOperator op> {
