@@ -127,7 +127,7 @@ createModuleFromMemoryBuffer(std::unique_ptr<MemoryBuffer> &MB,
 Expected<std::unique_ptr<Module>>
 createModuleFromImage(__tgt_device_image *Image, LLVMContext &Context) {
   StringRef Data((const char *)Image->ImageStart,
-                 (char *)Image->ImageEnd - (char *)Image->ImageStart);
+                 target::getPtrDiff(Image->ImageEnd, Image->ImageStart));
   std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
       Data, /* BufferName */ "", /* RequiresNullTerminator */ false);
   return createModuleFromMemoryBuffer(MB, Context);
@@ -378,8 +378,7 @@ bool checkBitcodeImage(__tgt_device_image *Image, Triple::ArchType TA) {
   }
 
   StringRef Data(reinterpret_cast<const char *>(Image->ImageStart),
-                 reinterpret_cast<char *>(Image->ImageEnd) -
-                     reinterpret_cast<char *>(Image->ImageStart));
+                 target::getPtrDiff(Image->ImageEnd, Image->ImageStart));
   std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
       Data, /* BufferName */ "", /* RequiresNullTerminator */ false);
   if (!MB)

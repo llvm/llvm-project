@@ -132,7 +132,7 @@ public:
 
   /// Get the image size.
   size_t getSize() const {
-    return ((char *)TgtImage->ImageEnd) - ((char *)TgtImage->ImageStart);
+    return getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart);
   }
 
   /// Get a memory buffer reference to the whole image.
@@ -469,7 +469,7 @@ protected:
     --It;
 
     // Evaluate whether the buffer is contained in the pinned allocation.
-    return ((const char *)It->first + It->second > (const char *)Buffer);
+    return (advanceVoidPtr(It->first, It->second) > (const char *)Buffer);
   }
 
   /// Return the execution mode used for kernel \p Name.
