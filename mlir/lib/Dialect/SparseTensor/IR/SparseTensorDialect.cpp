@@ -174,7 +174,7 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
   // Print the struct-like storage in dictionary fashion.
   printer << "<{ dimLevelType = [ ";
   for (unsigned i = 0, e = getDimLevelType().size(); i < e; i++) {
-    printer << toMLIRString(getDimLevelType()[i]);
+    printer << "\"" << toMLIRString(getDimLevelType()[i]) << "\"";
     if (i != e - 1)
       printer << ", ";
   }
