@@ -336,7 +336,21 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
     // lane".
     FuncInfo->removeDeadFrameIndices(MF, /*ResetSGPRSpillStackIDs*/ false);
 
+    const TargetRegisterClass *RC =
+        ST.isWave32() ? &AMDGPU::SGPR_32RegClass : &AMDGPU::SGPR_64RegClass;
+    // Shift back the reserved SGPR for EXEC copy into the lowest range.
+    // This SGPR is reserved to handle the whole-wave spill/copy operations
+    // that might get inserted during vgpr regalloc.
+    Register UnusedLowSGPR = TRI->findUnusedRegister(MRI, RC, MF);
+    if (UnusedLowSGPR && TRI->getHWRegIndex(UnusedLowSGPR) <
+                             TRI->getHWRegIndex(FuncInfo->getSGPRForEXECCopy()))
+      FuncInfo->setSGPRForEXECCopy(UnusedLowSGPR);
+
     MadeChange = true;
+  } else {
+    // No SGPR spills and hence there won't be any WWM spills/copies. Reset the
+    // SGPR reserved for EXEC copy.
+    FuncInfo->setSGPRForEXECCopy(AMDGPU::NoRegister);
   }
 
   SaveBlocks.clear();

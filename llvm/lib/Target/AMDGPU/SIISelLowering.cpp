@@ -12592,6 +12592,14 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
     }
   }
 
+  // Reserve the SGPR(s) to save/restore EXEC for WWM spill/copy handling.
+  unsigned MaxNumSGPRs = ST.getMaxNumSGPRs(MF);
+  Register SReg = ST.isWave32()
+                      ? AMDGPU::SGPR_32RegClass.getRegister(MaxNumSGPRs - 1)
+                      : TRI->getAlignedHighSGPRForRC(MF, /*Align=*/2,
+                                                     &AMDGPU::SGPR_64RegClass);
+  Info->setSGPRForEXECCopy(SReg);
+
   TargetLoweringBase::finalizeLowering(MF);
 }
 
