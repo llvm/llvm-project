@@ -1603,7 +1603,7 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV64I-NEXT:    or a6, a6, t1
 ; RV64I-NEXT:    slli a6, a6, 32
 ; RV64I-NEXT:    or a6, a6, t2
-; RV64I-NEXT:    addi t1, a6, -128
+; RV64I-NEXT:    addiw t1, a6, -128
 ; RV64I-NEXT:    addi t2, a6, -192
 ; RV64I-NEXT:    slli t0, a3, 1
 ; RV64I-NEXT:    bltz t2, .LBB9_2
@@ -1643,7 +1643,7 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV64I-NEXT:  .LBB9_9:
 ; RV64I-NEXT:    sll t3, a3, t6
 ; RV64I-NEXT:    srli t4, a4, 1
-; RV64I-NEXT:    sub t6, t5, a6
+; RV64I-NEXT:    subw t6, t5, a6
 ; RV64I-NEXT:    xori t6, t6, 63
 ; RV64I-NEXT:    srl t4, t4, t6
 ; RV64I-NEXT:    or t4, t3, t4
@@ -2476,7 +2476,7 @@ define void @shl_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV64I-NEXT:    or a6, a6, t1
 ; RV64I-NEXT:    slli a6, a6, 32
 ; RV64I-NEXT:    or a6, a6, t2
-; RV64I-NEXT:    addi t1, a6, -128
+; RV64I-NEXT:    addiw t1, a6, -128
 ; RV64I-NEXT:    addi t2, a6, -192
 ; RV64I-NEXT:    srli t0, a3, 1
 ; RV64I-NEXT:    bltz t2, .LBB10_2
@@ -2516,7 +2516,7 @@ define void @shl_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV64I-NEXT:  .LBB10_9:
 ; RV64I-NEXT:    srl t3, a3, t6
 ; RV64I-NEXT:    slli t4, a4, 1
-; RV64I-NEXT:    sub t6, t5, a6
+; RV64I-NEXT:    subw t6, t5, a6
 ; RV64I-NEXT:    xori t6, t6, 63
 ; RV64I-NEXT:    sll t4, t4, t6
 ; RV64I-NEXT:    or t4, t3, t4
@@ -3354,7 +3354,7 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV64I-NEXT:    or a4, a4, t2
 ; RV64I-NEXT:    slli a4, a4, 32
 ; RV64I-NEXT:    or a4, a4, t3
-; RV64I-NEXT:    addi t3, a4, -128
+; RV64I-NEXT:    addiw t3, a4, -128
 ; RV64I-NEXT:    addi t4, a4, -192
 ; RV64I-NEXT:    slli t0, a3, 1
 ; RV64I-NEXT:    bltz t4, .LBB11_2
@@ -3410,7 +3410,7 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV64I-NEXT:  .LBB11_13:
 ; RV64I-NEXT:    sll t5, a3, s0
 ; RV64I-NEXT:    srli t6, a5, 1
-; RV64I-NEXT:    sub s0, t1, a4
+; RV64I-NEXT:    subw s0, t1, a4
 ; RV64I-NEXT:    xori s0, s0, 63
 ; RV64I-NEXT:    srl t6, t6, s0
 ; RV64I-NEXT:    or t5, t5, t6
