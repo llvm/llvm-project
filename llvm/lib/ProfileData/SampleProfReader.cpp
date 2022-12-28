@@ -1837,10 +1837,6 @@ setupMemoryBuffer(const Twine &Filename) {
     return EC;
   auto Buffer = std::move(BufferOrErr.get());
 
-  // Check the file.
-  if (uint64_t(Buffer->getBufferSize()) > std::numeric_limits<uint32_t>::max())
-    return sampleprof_error::too_large;
-
   return std::move(Buffer);
 }
 
