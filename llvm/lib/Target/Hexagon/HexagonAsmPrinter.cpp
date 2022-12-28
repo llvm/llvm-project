@@ -822,7 +822,7 @@ void HexagonAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
   emitNops(NoopsInSledCount);
 
   OutStreamer->emitLabel(PostSled);
-  recordSled(CurSled, MI, Kind, 0);
+  recordSled(CurSled, MI, Kind, 2);
 }
 
 void HexagonAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI) {
