@@ -1128,6 +1128,15 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
     return tryEmitPrivateForMemory(*value, destType);
   }
 
+  // FIXME: Implement C++11 [basic.start.init]p2: if the initializer of a
+  // reference is a constant expression, and the reference binds to a temporary,
+  // then constant initialization is performed. ConstExprEmitter will
+  // incorrectly emit a prvalue constant in this case, and the calling code
+  // interprets that as the (pointer) value of the reference, rather than the
+  // desired value of the referee.
+  if (destType->isReferenceType())
+    return {};
+
   assert(0 && "not implemented");
   return {};
 }

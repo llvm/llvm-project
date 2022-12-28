@@ -255,13 +255,17 @@ void CIRGenFunction::buildScalarInit(const Expr *init, const ValueDecl *D,
 
 void CIRGenFunction::buildExprAsInit(const Expr *init, const ValueDecl *D,
                                      LValue lvalue, bool capturedByInit) {
+  SourceLocRAIIObject Loc{*this, getLoc(init->getSourceRange())};
   if (capturedByInit)
     llvm_unreachable("NYI");
 
   QualType type = D->getType();
 
   if (type->isReferenceType()) {
-    assert(0 && "not implemented");
+    RValue rvalue = buildReferenceBindingToExpr(init);
+    if (capturedByInit)
+      llvm_unreachable("NYI");
+    buildStoreThroughLValue(rvalue, lvalue);
     return;
   }
   switch (CIRGenFunction::getEvaluationKind(type)) {

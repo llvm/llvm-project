@@ -29,6 +29,11 @@ struct suspend_never {
   void await_resume() noexcept {}
 };
 
+struct string {
+  int size() const;
+  string();
+  string(char const *s);
+};
 } // namespace std
 
 namespace folly {
@@ -102,6 +107,7 @@ co_invoke_fn co_invoke;
 // CHECK: ![[VoidPromisse:ty_.*]] = !cir.struct<"struct.folly::coro::Task<void>::promise_type", i8>
 // CHECK: ![[CoroHandleVoid:ty_.*]] = !cir.struct<"struct.std::coroutine_handle", i8>
 // CHECK: ![[CoroHandlePromise:ty_.*]] = !cir.struct<"struct.std::coroutine_handle", i8>
+// CHECK: ![[StdString:ty_.*]] = !cir.struct<"struct.std::string", i8
 // CHECK: ![[SuspendAlways:ty_.*]] = !cir.struct<"struct.std::suspend_always", i8>
 
 // CHECK: module {{.*}} {
@@ -238,3 +244,12 @@ VoidTask silly_task() {
 // CHECK: %[[#Tmp1:]] = cir.load %[[#VoidTaskAddr]]
 // CHECK-NEXT: cir.return %[[#Tmp1]]
 // CHECK-NEXT: }
+
+folly::coro::Task<int> byRef(const std::string& s) {
+  co_return s.size();
+}
+
+// FIXME: this could be less redundant than two allocas + reloads
+// CHECK: cir.func coroutine @_Z5byRefRKSt6string(%arg0: !cir.ptr<![[StdString]]>
+// CHECK: %[[#AllocaParam:]] = cir.alloca !cir.ptr<![[StdString]]>, {{.*}} ["s", init]
+// CHECK: %[[#AllocaFnUse:]] = cir.alloca !cir.ptr<![[StdString]]>, {{.*}} ["s", init]
