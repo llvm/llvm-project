@@ -78,6 +78,15 @@ private:
   void emitPseudoIndirectBranch(MCStreamer &OutStreamer,
                                 const MachineInstr *MI);
 
+  void emitJumpTableDest(MCStreamer &OutStreamer, const MachineInstr *MI);
+
+  // Emit brsc instruction followed by a label that will be used while creating
+  // offset expressions in jump table entries.
+  void emitBrsc(MCStreamer &OutStreamer, const MachineInstr *MI);
+
+  void emitJumpTableDir(MCStreamer &OutStreamer, unsigned int EntrySize,
+                        unsigned int EntryNum, bool Signed);
+
   // lowerOperand - Convert a MachineOperand into the equivalent MCOperand.
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp);
 
@@ -116,6 +125,7 @@ private:
 public:
   const MipsSubtarget *Subtarget;
   const MipsFunctionInfo *MipsFI;
+  MipsFunctionInfo *MFI;
   MipsMCInstLower MCInstLowering;
 
   explicit MipsAsmPrinter(TargetMachine &TM,
@@ -158,6 +168,7 @@ public:
   void emitEndOfAsmFile(Module &M) override;
   void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
   void emitDebugValue(const MCExpr *Value, unsigned Size) const override;
+  void emitJumpTableInfo() override;
 };
 
 } // end namespace llvm
