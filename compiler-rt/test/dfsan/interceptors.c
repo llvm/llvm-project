@@ -2,8 +2,6 @@
 // RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false %s -o %t && %run %t
 //
 // Tests custom implementations of various glibc functions.
-//
-// REQUIRES: x86_64-target-arch
 
 #include <sanitizer/dfsan_interface.h>
 
