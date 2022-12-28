@@ -1,10 +1,11 @@
-; RUN: opt -verify-scev -passes='print<iv-users>' -disable-output %s | FileCheck %s
-
-; XFAIL: *
+; RUN: opt -verify-scev -passes='print<iv-users>' -disable-output %s 2>&1 | FileCheck %s
 
 target datalayout = "n16"
 
 define i16 @zext_cache_invalidation_1(i1 %c) {
+; CHECK:      IV Users for loop %loop with backedge-taken count 13:
+; CHECK-NEXT:   %iv = {-3,+,4}<nuw><nsw><%loop> in    %iv.ext = zext i16 %iv to i32
+;
 entry:
   br i1 false, label %loop, label %exit
 

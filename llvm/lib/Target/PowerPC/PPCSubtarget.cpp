@@ -37,8 +37,10 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "PPCGenSubtargetInfo.inc"
 
-static cl::opt<bool> UseSubRegLiveness("ppc-track-subreg-liveness",
-cl::desc("Enable subregister liveness tracking for PPC"), cl::Hidden);
+static cl::opt<bool>
+    UseSubRegLiveness("ppc-track-subreg-liveness",
+                      cl::desc("Enable subregister liveness tracking for PPC"),
+                      cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableMachinePipeliner("ppc-enable-pipeliner",

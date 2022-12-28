@@ -1,3 +1,5 @@
+; REQUIRES: bpf-registered-target
+
 ; RUN: llc -filetype obj -o - %s | llvm-readobj --sections - | FileCheck --check-prefix="SECTIONS" %s
 
 ; test seems to be for a non amd/x86 target

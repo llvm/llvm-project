@@ -778,8 +778,8 @@ X86 Support in Clang
 - Switch ``AVX512-BF16`` intrinsics types from ``short`` to ``__bf16``.
 - Add support for ``PREFETCHI`` instructions.
 - Support ISA of ``CMPCCXADD``.
-  * Support intrinsic of ``__cmpccxadd_epi32``.
-  * Support intrinsic of ``__cmpccxadd_epi64``.
+  * Support intrinsic of ``_cmpccxadd_epi32``.
+  * Support intrinsic of ``_cmpccxadd_epi64``.
 - Add support for ``RAO-INT`` instructions.
   * Support intrinsic of ``_aadd_i32/64``
   * Support intrinsic of ``_aand_i32/64``

@@ -249,8 +249,8 @@ define i32 @test_f64_oge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-NEXT:    efdcmpeq cr0, r6, r6
 ; SPE-NEXT:    efdcmpeq cr1, r5, r5
 ; SPE-NEXT:    efdcmplt cr5, r5, r6
-; SPE-NEXT:    crand 4*cr6+lt, 4*cr1+gt, gt
-; SPE-NEXT:    crandc 4*cr5+lt, 4*cr6+lt, 4*cr5+gt
+; SPE-NEXT:    crand 4*cr5+lt, 4*cr1+gt, gt
+; SPE-NEXT:    crandc 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
 ; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
 ; SPE-NEXT:  # %bb.1:
 ; SPE-NEXT:    ori r3, r4, 0
@@ -283,8 +283,8 @@ define i32 @test_f64_ole_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-NEXT:    efdcmpeq cr0, r6, r6
 ; SPE-NEXT:    efdcmpeq cr1, r5, r5
 ; SPE-NEXT:    efdcmpgt cr5, r5, r6
-; SPE-NEXT:    crand 4*cr6+lt, 4*cr1+gt, gt
-; SPE-NEXT:    crandc 4*cr5+lt, 4*cr6+lt, 4*cr5+gt
+; SPE-NEXT:    crand 4*cr5+lt, 4*cr1+gt, gt
+; SPE-NEXT:    crandc 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
 ; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
 ; SPE-NEXT:  # %bb.1:
 ; SPE-NEXT:    ori r3, r4, 0
@@ -354,8 +354,8 @@ define i32 @test_f64_ugt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-NEXT:    efdcmpeq cr0, r5, r5
 ; SPE-NEXT:    efdcmpeq cr1, r7, r7
 ; SPE-NEXT:    efdcmpgt cr5, r5, r7
-; SPE-NEXT:    crnand 4*cr6+lt, 4*cr1+gt, gt
-; SPE-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr6+lt
+; SPE-NEXT:    crnand 4*cr5+lt, 4*cr1+gt, gt
+; SPE-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
 ; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
 ; SPE-NEXT:  # %bb.1:
 ; SPE-NEXT:    ori r3, r4, 0
@@ -389,8 +389,8 @@ define i32 @test_f64_ult_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-NEXT:    efdcmpeq cr0, r5, r5
 ; SPE-NEXT:    efdcmpeq cr1, r7, r7
 ; SPE-NEXT:    efdcmplt cr5, r5, r7
-; SPE-NEXT:    crnand 4*cr6+lt, 4*cr1+gt, gt
-; SPE-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr6+lt
+; SPE-NEXT:    crnand 4*cr5+lt, 4*cr1+gt, gt
+; SPE-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
 ; SPE-NEXT:    bclr 12, 4*cr5+lt, 0
 ; SPE-NEXT:  # %bb.1:
 ; SPE-NEXT:    ori r3, r4, 0
