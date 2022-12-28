@@ -2572,6 +2572,18 @@ bool RISCVInstrInfo::hasAllNBitUsers(const MachineInstr &OrigMI,
           break;
         return false;
 
+      case RISCV::SRLI: {
+        // If we are shifting right by less than Bits, and users don't demand
+        // any bits that were shifted into [Bits-1:0], then we can consider this
+        // as an N-Bit user.
+        unsigned ShAmt = UserMI->getOperand(2).getImm();
+        if (Bits > ShAmt) {
+          Worklist.push_back(std::make_pair(UserMI, Bits - ShAmt));
+          break;
+        }
+        return false;
+      }
+
       // these overwrite higher input bits, otherwise the lower word of output
       // depends only on the lower word of input. So check their uses read W.
       case RISCV::SLLI:
