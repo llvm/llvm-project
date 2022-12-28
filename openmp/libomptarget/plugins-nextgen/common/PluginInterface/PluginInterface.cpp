@@ -740,6 +740,7 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
   // If it is a bitcode image, we have to jit the binary image before loading to
   // the device.
   {
+    // TODO: Move this (at least the environment variable) into the JIT.h.
     UInt32Envar JITOptLevel("LIBOMPTARGET_JIT_OPT_LEVEL", 3);
     Triple::ArchType TA = Plugin.getTripleArch();
     std::string Arch = Device.getArch();
