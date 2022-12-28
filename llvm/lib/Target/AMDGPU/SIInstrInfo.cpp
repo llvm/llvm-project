@@ -4977,7 +4977,8 @@ void SIInstrInfo::insertScratchExecCopy(MachineFunction &MF,
                                         MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI,
                                         const DebugLoc &DL, Register Reg,
-                                        bool IsSCCLive) const {
+                                        bool IsSCCLive,
+                                        SlotIndexes *Indexes) const {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   bool IsWave32 = ST.isWave32();
@@ -4987,25 +4988,36 @@ void SIInstrInfo::insertScratchExecCopy(MachineFunction &MF,
     // the single instruction S_OR_SAVEEXEC that clobbers SCC.
     unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
     MCRegister Exec = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-    BuildMI(MBB, MBBI, DL, TII->get(MovOpc), Reg).addReg(Exec, RegState::Kill);
-    BuildMI(MBB, MBBI, DL, TII->get(MovOpc), Exec).addImm(-1);
+    auto StoreExecMI = BuildMI(MBB, MBBI, DL, TII->get(MovOpc), Reg)
+                           .addReg(Exec, RegState::Kill);
+    auto FlipExecMI = BuildMI(MBB, MBBI, DL, TII->get(MovOpc), Exec).addImm(-1);
+    if (Indexes) {
+      Indexes->insertMachineInstrInMaps(*StoreExecMI);
+      Indexes->insertMachineInstrInMaps(*FlipExecMI);
+    }
   } else {
     const unsigned OrSaveExec =
         IsWave32 ? AMDGPU::S_OR_SAVEEXEC_B32 : AMDGPU::S_OR_SAVEEXEC_B64;
     auto SaveExec =
         BuildMI(MBB, MBBI, DL, TII->get(OrSaveExec), Reg).addImm(-1);
     SaveExec->getOperand(3).setIsDead(); // Mark SCC as dead.
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*SaveExec);
   }
 }
 
 void SIInstrInfo::restoreExec(MachineFunction &MF, MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MBBI,
-                              const DebugLoc &DL, Register Reg) const {
+                              const DebugLoc &DL, Register Reg,
+                              SlotIndexes *Indexes) const {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   unsigned ExecMov = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
   MCRegister Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-  BuildMI(MBB, MBBI, DL, TII->get(ExecMov), Exec).addReg(Reg, RegState::Kill);
+  auto ExecRestoreMI = BuildMI(MBB, MBBI, DL, TII->get(ExecMov), Exec)
+                           .addReg(Reg, RegState::Kill);
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(*ExecRestoreMI);
 }
 
 static const TargetRegisterClass *

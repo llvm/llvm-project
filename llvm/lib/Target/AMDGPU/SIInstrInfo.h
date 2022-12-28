@@ -930,12 +930,12 @@ public:
 
   void insertScratchExecCopy(MachineFunction &MF, MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MBBI,
-                             const DebugLoc &DL, Register Reg,
-                             bool IsSCCLive) const;
+                             const DebugLoc &DL, Register Reg, bool IsSCCLive,
+                             SlotIndexes *Indexes = nullptr) const;
 
   void restoreExec(MachineFunction &MF, MachineBasicBlock &MBB,
                    MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
-                   Register Reg) const;
+                   Register Reg, SlotIndexes *Indexes = nullptr) const;
 
   /// Return the correct register class for \p OpNo.  For target-specific
   /// instructions, this will return the register class that has been defined
