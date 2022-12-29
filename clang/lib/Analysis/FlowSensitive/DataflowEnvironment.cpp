@@ -93,7 +93,19 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
                                   Environment::ValueModel &Model) {
   // Join distinct boolean values preserving information about the constraints
   // in the respective path conditions.
-  if (auto *Expr1 = dyn_cast<BoolValue>(&Val1)) {
+  if (Type->isBooleanType()) {
+    // FIXME: The type check above is a workaround and should be unnecessary.
+    // However, right now we can end up with BoolValue's in integer-typed
+    // variables due to our incorrect handling of boolean-to-integer casts (we
+    // just propagate the BoolValue to the result of the cast). For example:
+    // std::optional<bool> o;
+    //
+    //
+    // int x;
+    // if (o.has_value()) {
+    //   x = o.value();
+    // }
+    auto *Expr1 = cast<BoolValue>(&Val1);
     auto *Expr2 = cast<BoolValue>(&Val2);
     auto &MergedVal = MergedEnv.makeAtomicBoolValue();
     MergedEnv.addToFlowCondition(MergedEnv.makeOr(
