@@ -133,7 +133,7 @@ define {i1, i1} @load_struct(ptr %p) {
   ; EVENT_CALLBACKS: [[OL0:%.*]] = or i[[#SBITS]]
   ; EVENT_CALLBACKS: [[OL1:%.*]] = or i[[#SBITS]] [[OL0]],
   ; EVENT_CALLBACKS: [[S0:%.*]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } undef, i[[#SBITS]] [[OL1]], 0
-  ; EVENT_CALLBACKS: call void @__dfsan_load_callback(i[[#SBITS]] [[OL1]]
+  ; EVENT_CALLBACKS: call void @__dfsan_load_callback(i[[#SBITS]] zeroext [[OL1]]
 
   %s = load {i1, i1}, ptr %p
   ret {i1, i1} %s
@@ -152,7 +152,7 @@ define void @store_struct(ptr %p, {i1, i1} %s) {
 
   ; EVENT_CALLBACKS: @store_struct.dfsan
   ; EVENT_CALLBACKS: [[OL:%.*]] = or i[[#SBITS]]
-  ; EVENT_CALLBACKS: call void @__dfsan_store_callback(i[[#SBITS]] [[OL]]
+  ; EVENT_CALLBACKS: call void @__dfsan_store_callback(i[[#SBITS]] zeroext [[OL]]
 
   ; COMBINE_STORE_PTR: @store_struct.dfsan
   ; COMBINE_STORE_PTR: [[PL:%.*]] = load i[[#SBITS]], ptr @__dfsan_arg_tls, align [[ALIGN:2]]
