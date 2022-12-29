@@ -31,6 +31,9 @@ program main
   !PORTABILITY: Statement function 'sf8' should not pass an array argument that is not a whole array
   sf8(n) = sum(a(1:2))
   sf8a(n) = sum(a) ! ok
+  integer :: sf9
+  !ERROR: Defining expression of statement function 'sf9' cannot be converted to its result type INTEGER(4)
+  sf9(n) = "bad"
  contains
   real function explicit(x,y)
     integer, intent(in) :: x
