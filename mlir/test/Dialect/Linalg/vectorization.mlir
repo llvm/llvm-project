@@ -1459,19 +1459,18 @@ transform.sequence failures(propagate) {
 // -----
 
 #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d2)>
-#map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
-#map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-func.func @vectorize_1d_tensor_extract(%arg0: tensor<3xf32>, %arg1: tensor<4x3xi32>, %arg2: tensor<4x7x2xf32>, %arg3: tensor<4x7x3x2xf32>) -> tensor<4x7x3x2xf32> {
-  %2 = linalg.generic {
-    indexing_maps = [#map0, #map1, #map2],
+#map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+func.func @vectorize_1d_tensor_extract(%arg0: tensor<3xf32>, %arg1: tensor<4x3xi32>, %arg2: tensor<4x7x3x2xf32>) -> tensor<4x7x3x2xf32> {
+  %1 = linalg.generic {
+    indexing_maps = [#map0, #map1],
     iterator_types = ["parallel", "parallel", "parallel", "parallel"]
-  } ins(%arg1, %arg2 : tensor<4x3xi32>, tensor<4x7x2xf32>) outs(%arg3 : tensor<4x7x3x2xf32>) {
-  ^bb0(%arg4: i32, %arg5: f32, %arg6: f32):
-    %3 = arith.index_cast %arg4 : i32 to index
-    %7 = tensor.extract %arg0[%3] : tensor<3xf32>
-    linalg.yield %7 : f32
+  } ins(%arg1 : tensor<4x3xi32>) outs(%arg2 : tensor<4x7x3x2xf32>) {
+  ^bb0(%arg3: i32, %arg4: f32):
+    %2 = arith.index_cast %arg3 : i32 to index
+    %3 = tensor.extract %arg0[%2] : tensor<3xf32>
+    linalg.yield %3 : f32
   } -> tensor<4x7x3x2xf32>
-  return %2 : tensor<4x7x3x2xf32>
+  return %1 : tensor<4x7x3x2xf32>
 }
 // CHECK-LABEL: func.func @vectorize_1d_tensor_extract
 // CHECK-SAME:    %[[ARG0:.*]]: tensor<3xf32>
