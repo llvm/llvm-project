@@ -2756,6 +2756,13 @@ void RewriteInstance::selectFunctionsToProcess() {
   LiteThresholdExecCount = std::max(
       LiteThresholdExecCount, static_cast<uint64_t>(opts::LiteThresholdCount));
 
+  StringSet<> ReorderFunctionsUserSet;
+  if (opts::ReorderFunctions == ReorderFunctions::RT_USER) {
+    for (const std::string &Function :
+         ReorderFunctions::readFunctionOrderFile())
+      ReorderFunctionsUserSet.insert(Function);
+  }
+
   uint64_t NumFunctionsToProcess = 0;
   auto shouldProcess = [&](const BinaryFunction &Function) {
     if (opts::MaxFunctions && NumFunctionsToProcess > opts::MaxFunctions)
@@ -2781,6 +2788,15 @@ void RewriteInstance::selectFunctionsToProcess() {
         return false;
 
     if (opts::Lite) {
+      // Forcibly include functions specified in the -function-order file.
+      if (opts::ReorderFunctions == ReorderFunctions::RT_USER) {
+        Optional<StringRef> Match = Function.forEachName([&](StringRef Name) {
+          return ReorderFunctionsUserSet.contains(Name);
+        });
+        if (Match.has_value())
+          return true;
+      }
+
       if (ProfileReader && !ProfileReader->mayHaveProfileData(Function))
         return false;
 

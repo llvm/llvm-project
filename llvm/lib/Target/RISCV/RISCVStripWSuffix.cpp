@@ -72,7 +72,7 @@ bool RISCVStripWSuffix::runOnMachineFunction(MachineFunction &MF) {
       switch (MI.getOpcode()) {
       case RISCV::ADDW:
       case RISCV::SLLIW:
-        if (RISCV::hasAllWUsers(MI, MRI)) {
+        if (TII.hasAllWUsers(MI, MRI)) {
           unsigned Opc =
               MI.getOpcode() == RISCV::ADDW ? RISCV::ADD : RISCV::SLLI;
           MI.setDesc(TII.get(Opc));

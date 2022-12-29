@@ -69,7 +69,7 @@ void init(Triple TT) {
   }
 #endif
   if (!JITTargetInitialized) {
-    FAILURE_MESSAGE("unsupported JIT target");
+    FAILURE_MESSAGE("unsupported JIT target: %s\n", TT.str().c_str());
     abort();
   }
 

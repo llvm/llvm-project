@@ -19,7 +19,6 @@
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -2368,6 +2367,7 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::AND:
     case RISCV::OR:
     case RISCV::XOR:
+    case RISCV::XORI:
     case RISCV::ANDN:
     case RISCV::ORN:
     case RISCV::XNOR:
@@ -2375,6 +2375,15 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
       if (!hasAllNBitUsers(User, Bits, Depth + 1))
         return false;
       break;
+    case RISCV::SRLI: {
+      unsigned ShAmt = User->getConstantOperandVal(1);
+      // If we are shifting right by less than Bits, and users don't demand any
+      // bits that were shifted into [Bits-1:0], then we can consider this as an
+      // N-Bit user.
+      if (Bits > ShAmt && hasAllNBitUsers(User, Bits - ShAmt, Depth + 1))
+        break;
+      return false;
+    }
     case RISCV::SEXT_B:
     case RISCV::PACKH:
       if (Bits < 8)

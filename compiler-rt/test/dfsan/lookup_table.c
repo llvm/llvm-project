@@ -1,8 +1,6 @@
 // RUN: %clang_dfsan %s -mllvm -dfsan-combine-offset-labels-on-gep=false -mllvm -dfsan-combine-pointer-labels-on-load=false -mllvm -dfsan-combine-taint-lookup-table=remap_to_upper -DLOOKUP_TABLE -o %t && %run %t
 // RUN: %clang_dfsan %s -mllvm -dfsan-combine-offset-labels-on-gep=false -mllvm -dfsan-combine-pointer-labels-on-load=false -mllvm -dfsan-combine-taint-lookup-table=no_match -o %t && %run %t
 // RUN: %clang_dfsan %s -mllvm -dfsan-combine-offset-labels-on-gep=false -mllvm -dfsan-combine-pointer-labels-on-load=false -o %t && %run %t
-//
-// REQUIRES: x86_64-target-arch
 
 #include <sanitizer/dfsan_interface.h>
 #include <assert.h>

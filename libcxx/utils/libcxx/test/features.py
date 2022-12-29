@@ -18,19 +18,6 @@ _isGCC        = lambda cfg: '__GNUC__' in compilerMacros(cfg) and '__clang__' no
 _isMSVC       = lambda cfg: '_MSC_VER' in compilerMacros(cfg)
 _msvcVersion  = lambda cfg: (int(compilerMacros(cfg)['_MSC_VER']) // 100, int(compilerMacros(cfg)['_MSC_VER']) % 100)
 
-def _hasSuitableClangTidy(cfg):
-  try:
-    return int(re.search('[0-9]+', commandOutput(cfg, ['clang-tidy --version'])).group()) >= 13 and runScriptExitCode(
-      cfg, ['stat %{test-tools}/clang_tidy_checks/libcxx-tidy.plugin']) == 0
-  except ConfigurationRuntimeError:
-    return False
-
-def _hasSuitableClangQuery(cfg):
-  try:
-    return int(re.search('[0-9]+', commandOutput(cfg, ['clang-query --version'])).group()) >= 13
-  except ConfigurationRuntimeError:
-    return False
-
 DEFAULT_FEATURES = [
   Feature(name='fcoroutines-ts',
           when=lambda cfg: hasCompileFlag(cfg, '-fcoroutines-ts') and
@@ -154,9 +141,13 @@ DEFAULT_FEATURES = [
   Feature(name='executor-has-no-bash',
           when=lambda cfg: runScriptExitCode(cfg, ['%{exec} bash -c \'bash --version\'']) != 0),
   Feature(name='has-clang-tidy',
-          when=_hasSuitableClangTidy),
+          # TODO This should be the last stable release.
+          when=lambda cfg: runScriptExitCode(cfg, ['clang-tidy-16 --version']) == 0 and
+                           runScriptExitCode(cfg, ['stat %{test-tools}/clang_tidy_checks/libcxx-tidy.plugin']) == 0,
+          actions=[AddSubstitution('%{clang-tidy}', 'clang-tidy-16')]),
   Feature(name='has-clang-query',
-          when=_hasSuitableClangQuery),
+          when=lambda cfg: runScriptExitCode(cfg, ['clang-query-15 --version']) == 0,
+          actions=[AddSubstitution('%{clang-query}', 'clang-query-15')]),
 
   Feature(name='apple-clang',                                                                                                      when=_isAppleClang),
   Feature(name=lambda cfg: 'apple-clang-{__clang_major__}'.format(**compilerMacros(cfg)),                                          when=_isAppleClang),

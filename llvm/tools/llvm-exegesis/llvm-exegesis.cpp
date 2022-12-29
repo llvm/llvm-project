@@ -205,11 +205,11 @@ static cl::opt<std::string>
          cl::desc("Target a specific cpu type (-mcpu=help for details)"),
          cl::value_desc("cpu-name"), cl::cat(Options), cl::init("native"));
 
-static cl::opt<bool>
-    DumpObjectToDisk("dump-object-to-disk",
-                     cl::desc("dumps the generated benchmark object to disk "
-                              "and prints a message to access it"),
-                     cl::cat(BenchmarkOptions), cl::init(true));
+static cl::opt<bool> DumpObjectToDisk(
+    "dump-object-to-disk",
+    cl::desc("dumps the generated benchmark object to disk "
+             "and prints a message to access it (default = false)"),
+    cl::cat(BenchmarkOptions), cl::init(false));
 
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 

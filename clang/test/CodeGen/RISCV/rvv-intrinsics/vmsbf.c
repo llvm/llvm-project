@@ -139,7 +139,7 @@ vbool64_t test_vmsbf_m_b64_m(vbool64_t mask, vbool64_t maskedoff, vbool64_t op1,
 
 // CHECK-RV64-LABEL: @test_vmsbf_m_b4_ma(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.riscv.vmsbf.mask.nxv16i1.i64(<vscale x 16 x i1> undef, <vscale x 16 x i1> [[OP1:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.riscv.vmsbf.mask.nxv16i1.i64(<vscale x 16 x i1> poison, <vscale x 16 x i1> [[OP1:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
 vbool4_t test_vmsbf_m_b4_ma(vbool4_t mask, vbool4_t op1, size_t vl) {

@@ -780,7 +780,7 @@ vuint64m1_t test_vwredsumu_vs_u32mf2_u64m1_tu(vuint64m1_t merge, vuint32mf2_t ve
 
 // CHECK-RV64-LABEL: @test_vwredsum_vs_i32mf2_i64m1_ta(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vwredsum.nxv1i64.nxv1i32.i64(<vscale x 1 x i64> undef, <vscale x 1 x i32> [[VECTOR:%.*]], <vscale x 1 x i64> [[SCALAR:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vwredsum.nxv1i64.nxv1i32.i64(<vscale x 1 x i64> poison, <vscale x 1 x i32> [[VECTOR:%.*]], <vscale x 1 x i64> [[SCALAR:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vint64m1_t test_vwredsum_vs_i32mf2_i64m1_ta(vint32mf2_t vector, vint64m1_t scalar, size_t vl) {
@@ -789,7 +789,7 @@ vint64m1_t test_vwredsum_vs_i32mf2_i64m1_ta(vint32mf2_t vector, vint64m1_t scala
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u32mf2_u64m1_ta(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vwredsumu.nxv1i64.nxv1i32.i64(<vscale x 1 x i64> undef, <vscale x 1 x i32> [[VECTOR:%.*]], <vscale x 1 x i64> [[SCALAR:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vwredsumu.nxv1i64.nxv1i32.i64(<vscale x 1 x i64> poison, <vscale x 1 x i32> [[VECTOR:%.*]], <vscale x 1 x i64> [[SCALAR:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vwredsumu_vs_u32mf2_u64m1_ta(vuint32mf2_t vector, vuint64m1_t scalar, size_t vl) {
@@ -816,7 +816,7 @@ vuint64m1_t test_vwredsumu_vs_u32mf2_u64m1_tum(vbool64_t mask, vuint64m1_t merge
 
 // CHECK-RV64-LABEL: @test_vwredsum_vs_i32mf2_i64m1_tam(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vwredsum.mask.nxv1i64.nxv1i32.i64(<vscale x 1 x i64> undef, <vscale x 1 x i32> [[VECTOR:%.*]], <vscale x 1 x i64> [[SCALAR:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vwredsum.mask.nxv1i64.nxv1i32.i64(<vscale x 1 x i64> poison, <vscale x 1 x i32> [[VECTOR:%.*]], <vscale x 1 x i64> [[SCALAR:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vint64m1_t test_vwredsum_vs_i32mf2_i64m1_tam(vbool64_t mask, vint32mf2_t vector, vint64m1_t scalar, size_t vl) {
@@ -825,7 +825,7 @@ vint64m1_t test_vwredsum_vs_i32mf2_i64m1_tam(vbool64_t mask, vint32mf2_t vector,
 
 // CHECK-RV64-LABEL: @test_vwredsumu_vs_u32mf2_u64m1_tam(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vwredsumu.mask.nxv1i64.nxv1i32.i64(<vscale x 1 x i64> undef, <vscale x 1 x i32> [[VECTOR:%.*]], <vscale x 1 x i64> [[SCALAR:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vwredsumu.mask.nxv1i64.nxv1i32.i64(<vscale x 1 x i64> poison, <vscale x 1 x i32> [[VECTOR:%.*]], <vscale x 1 x i64> [[SCALAR:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vwredsumu_vs_u32mf2_u64m1_tam(vbool64_t mask, vuint32mf2_t vector, vuint64m1_t scalar, size_t vl) {

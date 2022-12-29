@@ -380,7 +380,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Get target architecture.
   virtual std::string getArch() const {
-    llvm_unreachable("device doesn't support JIT");
+    return "unknown";
   }
 
   /// Post processing after jit backend. The ownership of \p MB will be taken.
@@ -540,7 +540,7 @@ struct GenericPluginTy {
 
   /// Get the target triple of this plugin.
   virtual Triple::ArchType getTripleArch() const {
-    llvm_unreachable("target doesn't support jit");
+    return Triple::ArchType::UnknownArch;
   }
 
   /// Allocate a structure using the internal allocator.
