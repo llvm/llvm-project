@@ -65,8 +65,9 @@ mlir::LogicalResult CIRGenFunction::buildStmt(const Stmt *S,
     assert(0 && "not implemented");
 
   switch (S->getStmtClass()) {
-  case Stmt::OpenACCComputeConstructClass:
   case Stmt::OMPScopeDirectiveClass:
+    llvm_unreachable("NYI");
+  case Stmt::OpenACCComputeConstructClass:
   case Stmt::OMPErrorDirectiveClass:
   case Stmt::NoStmtClass:
   case Stmt::CXXCatchStmtClass:
