@@ -2371,10 +2371,13 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::ANDN:
     case RISCV::ORN:
     case RISCV::XNOR:
+    case RISCV::SH1ADD:
+    case RISCV::SH2ADD:
+    case RISCV::SH3ADD:
     RecCheck:
-      if (!hasAllNBitUsers(User, Bits, Depth + 1))
-        return false;
-      break;
+      if (hasAllNBitUsers(User, Bits, Depth + 1))
+        break;
+      return false;
     case RISCV::SRLI: {
       unsigned ShAmt = User->getConstantOperandVal(1);
       // If we are shifting right by less than Bits, and users don't demand any
