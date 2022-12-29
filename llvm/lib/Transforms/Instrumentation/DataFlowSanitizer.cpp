@@ -1033,13 +1033,15 @@ void DFSanFunction::addConditionalCallbacksIfEnabled(Instruction &I,
   }
   IRBuilder<> IRB(&I);
   Value *CondShadow = getShadow(Condition);
+  CallInst *CI;
   if (DFS.shouldTrackOrigins()) {
     Value *CondOrigin = getOrigin(Condition);
-    IRB.CreateCall(DFS.DFSanConditionalCallbackOriginFn,
-                   {CondShadow, CondOrigin});
+    CI = IRB.CreateCall(DFS.DFSanConditionalCallbackOriginFn,
+                        {CondShadow, CondOrigin});
   } else {
-    IRB.CreateCall(DFS.DFSanConditionalCallbackFn, {CondShadow});
+    CI = IRB.CreateCall(DFS.DFSanConditionalCallbackFn, {CondShadow});
   }
+  CI->addParamAttr(0, Attribute::ZExt);
 }
 
 void DFSanFunction::addReachesFunctionCallbacksIfEnabled(IRBuilder<> &IRB,
@@ -1078,6 +1080,7 @@ void DFSanFunction::addReachesFunctionCallbacksIfEnabled(IRBuilder<> &IRB,
     args = { DataShadow, FilePathPtr, CILine, FunctionNamePtr };
     CB = IRB.CreateCall(DFS.DFSanReachesFunctionCallbackFn, args);
   }
+  CB->addParamAttr(0, Attribute::ZExt);
   CB->setDebugLoc(dbgloc);
 }
 
@@ -1413,25 +1416,53 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
 
 // Initializes event callback functions and declare them in the module
 void DataFlowSanitizer::initializeCallbackFunctions(Module &M) {
-  DFSanLoadCallbackFn = Mod->getOrInsertFunction("__dfsan_load_callback",
-                                                 DFSanLoadStoreCallbackFnTy);
-  DFSanStoreCallbackFn = Mod->getOrInsertFunction("__dfsan_store_callback",
-                                                  DFSanLoadStoreCallbackFnTy);
+  {
+    AttributeList AL;
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    DFSanLoadCallbackFn = Mod->getOrInsertFunction(
+        "__dfsan_load_callback", DFSanLoadStoreCallbackFnTy, AL);
+  }
+  {
+    AttributeList AL;
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    DFSanStoreCallbackFn = Mod->getOrInsertFunction(
+        "__dfsan_store_callback", DFSanLoadStoreCallbackFnTy, AL);
+  }
   DFSanMemTransferCallbackFn = Mod->getOrInsertFunction(
       "__dfsan_mem_transfer_callback", DFSanMemTransferCallbackFnTy);
-  DFSanCmpCallbackFn =
-      Mod->getOrInsertFunction("__dfsan_cmp_callback", DFSanCmpCallbackFnTy);
-
-  DFSanConditionalCallbackFn = Mod->getOrInsertFunction(
-      "__dfsan_conditional_callback", DFSanConditionalCallbackFnTy);
-  DFSanConditionalCallbackOriginFn =
-      Mod->getOrInsertFunction("__dfsan_conditional_callback_origin",
-                               DFSanConditionalCallbackOriginFnTy);
-  DFSanReachesFunctionCallbackFn = Mod->getOrInsertFunction(
-      "__dfsan_reaches_function_callback", DFSanReachesFunctionCallbackFnTy);
-  DFSanReachesFunctionCallbackOriginFn =
-      Mod->getOrInsertFunction("__dfsan_reaches_function_callback_origin",
-                               DFSanReachesFunctionCallbackOriginFnTy);
+  {
+    AttributeList AL;
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    DFSanCmpCallbackFn = Mod->getOrInsertFunction("__dfsan_cmp_callback",
+                                                  DFSanCmpCallbackFnTy, AL);
+  }
+  {
+    AttributeList AL;
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    DFSanConditionalCallbackFn = Mod->getOrInsertFunction(
+        "__dfsan_conditional_callback", DFSanConditionalCallbackFnTy, AL);
+  }
+  {
+    AttributeList AL;
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    DFSanConditionalCallbackOriginFn =
+        Mod->getOrInsertFunction("__dfsan_conditional_callback_origin",
+                                 DFSanConditionalCallbackOriginFnTy, AL);
+  }
+  {
+    AttributeList AL;
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    DFSanReachesFunctionCallbackFn =
+        Mod->getOrInsertFunction("__dfsan_reaches_function_callback",
+                                 DFSanReachesFunctionCallbackFnTy, AL);
+  }
+  {
+    AttributeList AL;
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    DFSanReachesFunctionCallbackOriginFn =
+        Mod->getOrInsertFunction("__dfsan_reaches_function_callback_origin",
+                                 DFSanReachesFunctionCallbackOriginFnTy, AL);
+  }
 }
 
 void DataFlowSanitizer::injectMetadataGlobals(Module &M) {
@@ -2403,7 +2434,9 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
   if (ClEventCallbacks) {
     IRBuilder<> IRB(Pos);
     Value *Addr8 = IRB.CreateBitCast(LI.getPointerOperand(), DFSF.DFS.Int8Ptr);
-    IRB.CreateCall(DFSF.DFS.DFSanLoadCallbackFn, {PrimitiveShadow, Addr8});
+    CallInst *CI =
+        IRB.CreateCall(DFSF.DFS.DFSanLoadCallbackFn, {PrimitiveShadow, Addr8});
+    CI->addParamAttr(0, Attribute::ZExt);
   }
 
   IRBuilder<> IRB(AfterLi);
@@ -2663,7 +2696,9 @@ void DFSanVisitor::visitStoreInst(StoreInst &SI) {
   if (ClEventCallbacks) {
     IRBuilder<> IRB(&SI);
     Value *Addr8 = IRB.CreateBitCast(SI.getPointerOperand(), DFSF.DFS.Int8Ptr);
-    IRB.CreateCall(DFSF.DFS.DFSanStoreCallbackFn, {PrimitiveShadow, Addr8});
+    CallInst *CI =
+        IRB.CreateCall(DFSF.DFS.DFSanStoreCallbackFn, {PrimitiveShadow, Addr8});
+    CI->addParamAttr(0, Attribute::ZExt);
   }
 }
 
@@ -2725,7 +2760,9 @@ void DFSanVisitor::visitCmpInst(CmpInst &CI) {
   if (ClEventCallbacks) {
     IRBuilder<> IRB(&CI);
     Value *CombinedShadow = DFSF.getShadow(&CI);
-    IRB.CreateCall(DFSF.DFS.DFSanCmpCallbackFn, CombinedShadow);
+    CallInst *CallI =
+        IRB.CreateCall(DFSF.DFS.DFSanCmpCallbackFn, CombinedShadow);
+    CallI->addParamAttr(0, Attribute::ZExt);
   }
 }
 

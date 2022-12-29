@@ -81,7 +81,7 @@ define [1 x i1] @load_array1(ptr %p) {
 
   ; EVENT_CALLBACKS: @load_array1.dfsan
   ; EVENT_CALLBACKS: [[L:%.*]] = or i[[#SBITS]]
-  ; EVENT_CALLBACKS: call void @__dfsan_load_callback(i[[#SBITS]] [[L]], ptr {{.*}})
+  ; EVENT_CALLBACKS: call void @__dfsan_load_callback(i[[#SBITS]] zeroext [[L]], ptr {{.*}})
 
   ; FAST: @load_array1.dfsan
   ; FAST: [[P:%.*]] = load i[[#SBITS]], ptr @__dfsan_arg_tls, align [[ALIGN:2]]
@@ -107,7 +107,7 @@ define [2 x i1] @load_array2(ptr %p) {
   ; EVENT_CALLBACKS: @load_array2.dfsan
   ; EVENT_CALLBACKS: [[O1:%.*]] = or i[[#SBITS]]
   ; EVENT_CALLBACKS: [[O2:%.*]] = or i[[#SBITS]] [[O1]]
-  ; EVENT_CALLBACKS: call void @__dfsan_load_callback(i[[#SBITS]] [[O2]], ptr {{.*}})
+  ; EVENT_CALLBACKS: call void @__dfsan_load_callback(i[[#SBITS]] zeroext [[O2]], ptr {{.*}})
 
   ; FAST: @load_array2.dfsan
   ; FAST: [[P:%.*]] = load i[[#SBITS]], ptr @__dfsan_arg_tls, align [[ALIGN:2]]
@@ -134,7 +134,7 @@ define [4 x i1] @load_array4(ptr %p) {
   ; EVENT_CALLBACKS: [[O1:%.*]] = or i[[#mul(4, SBITS)]] [[O0]]
   ; EVENT_CALLBACKS: [[O2:%.*]] = trunc i[[#mul(4, SBITS)]] [[O1]] to i[[#SBITS]]
   ; EVENT_CALLBACKS: [[O3:%.*]] = or i[[#SBITS]] [[O2]]
-  ; EVENT_CALLBACKS: call void @__dfsan_load_callback(i[[#SBITS]] [[O3]], ptr {{.*}})
+  ; EVENT_CALLBACKS: call void @__dfsan_load_callback(i[[#SBITS]] zeroext [[O3]], ptr {{.*}})
 
   ; FAST: @load_array4.dfsan
   ; FAST: [[T:%.*]] = trunc i[[#mul(4, SBITS)]] {{.*}} to i[[#SBITS]]
@@ -196,7 +196,7 @@ define void @store_zero_array(ptr %p) {
 define void @store_array2([2 x i1] %a, ptr %p) {
   ; EVENT_CALLBACKS: @store_array2.dfsan
   ; EVENT_CALLBACKS: [[E12:%.*]] = or i[[#SBITS]]
-  ; EVENT_CALLBACKS: call void @__dfsan_store_callback(i[[#SBITS]] [[E12]], ptr %p)
+  ; EVENT_CALLBACKS: call void @__dfsan_store_callback(i[[#SBITS]] zeroext [[E12]], ptr %p)
 
   ; FAST: @store_array2.dfsan
   ; FAST: [[S:%.*]] = load [2 x i[[#SBITS]]], ptr @__dfsan_arg_tls, align [[ALIGN:2]]
