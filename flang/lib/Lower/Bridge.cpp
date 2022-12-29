@@ -2769,11 +2769,13 @@ private:
               } else {
                 llvm_unreachable("unknown category");
               }
-              if (lhsIsWholeAllocatable)
+              if (lhsIsWholeAllocatable) {
+                assert(lhsRealloc.has_value());
                 fir::factory::finalizeRealloc(*builder, loc, *lhsMutableBox,
                                               /*lbounds=*/std::nullopt,
                                               /*takeLboundsIfRealloc=*/false,
                                               *lhsRealloc);
+              }
             },
 
             // [2] User defined assignment. If the context is a scalar
