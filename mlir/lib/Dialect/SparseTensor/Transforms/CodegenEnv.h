@@ -46,9 +46,9 @@ public:
   linalg::GenericOp op() const { return linalgOp; }
   const SparsificationOptions &options() const { return sparseOptions; }
   Merger &merger() { return latticeMerger; }
-  LoopEmitter *emitter() { return loopEmitter; }
+  LoopEmitter &emitter() { return loopEmitter; }
 
-  void startEmit(OpOperand *so, unsigned lv, LoopEmitter *le);
+  void startEmit(OpOperand *so, unsigned lv);
 
   /// Generates loop boundary statements (entering/exiting loops). The function
   /// passes and updates the passed-in parameters.
@@ -73,9 +73,6 @@ public:
   //
   // Topological delegate and sort methods.
   //
-
-  // TODO: get rid of this one!
-  std::vector<unsigned> &topSortRef() { return topSort; }
 
   size_t topSortSize() const { return topSort.size(); }
   unsigned topSortAt(unsigned i) const { return topSort.at(i); }
@@ -134,9 +131,8 @@ private:
   // Merger helper class.
   Merger latticeMerger;
 
-  // Loop emitter helper class (keep reference in scope!).
-  // TODO: move emitter constructor up in time?
-  LoopEmitter *loopEmitter;
+  // Loop emitter helper class.
+  LoopEmitter loopEmitter;
 
   // Topological sort.
   std::vector<unsigned> topSort;

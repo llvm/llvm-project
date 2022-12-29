@@ -30,8 +30,8 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-NEXT:    stxv v30, 128(r1) # 16-byte Folded Spill
 ; CHECK-NEXT:    stxv v31, 144(r1) # 16-byte Folded Spill
 ; CHECK-NEXT:    vmr v31, v5
-; CHECK-NEXT:    vmr v30, v4
 ; CHECK-NEXT:    vmr v29, v3
+; CHECK-NEXT:    vmr v30, v4
 ; CHECK-NEXT:    vmr v28, v2
 ; CHECK-NEXT:    std r30, 160(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    ld r30, 272(r1)
@@ -77,8 +77,8 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-BE-NEXT:    stxv v30, 208(r1) # 16-byte Folded Spill
 ; CHECK-BE-NEXT:    stxv v31, 224(r1) # 16-byte Folded Spill
 ; CHECK-BE-NEXT:    vmr v31, v5
-; CHECK-BE-NEXT:    vmr v30, v4
 ; CHECK-BE-NEXT:    vmr v29, v3
+; CHECK-BE-NEXT:    vmr v30, v4
 ; CHECK-BE-NEXT:    vmr v28, v2
 ; CHECK-BE-NEXT:    std r30, 240(r1) # 8-byte Folded Spill
 ; CHECK-BE-NEXT:    ld r30, 368(r1)

@@ -6,7 +6,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; Test cases for PR50009, which require sinking a replicate-region due to a
 ; first-order recurrence.
 
-define void @sink_replicate_region_1(i32 %x, i8* %ptr, i32* noalias %dst) optsize {
+define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize {
 ; CHECK-LABEL: sink_replicate_region_1
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
@@ -82,12 +82,12 @@ loop:
   %0 = phi i32 [ 0, %entry ], [ %conv, %loop ]
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %rem = srem i32 %0, %x
-  %gep = getelementptr i8, i8* %ptr, i32 %iv
-  %lv = load i8, i8* %gep
+  %gep = getelementptr i8, ptr %ptr, i32 %iv
+  %lv = load i8, ptr %gep
   %conv = sext i8 %lv to i32
   %add = add i32 %conv, %rem
-  %gep.dst = getelementptr i32, i32* %dst, i32 %iv
-  store i32 %add, i32* %gep.dst
+  %gep.dst = getelementptr i32, ptr %dst, i32 %iv
+  store i32 %add, ptr %gep.dst
   %iv.next = add nsw i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 20001
   br i1 %ec, label %exit, label %loop
@@ -96,7 +96,7 @@ exit:
   ret void
 }
 
-define void @sink_replicate_region_2(i32 %x, i8 %y, i32* %ptr) optsize {
+define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-LABEL: sink_replicate_region_2
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
@@ -155,8 +155,8 @@ loop:
   %rem = srem i32 %recur, %x
   %recur.next = sext i8 %y to i32
   %add = add i32 %rem, %recur.next
-  %gep = getelementptr i32, i32* %ptr, i32 %iv
-  store i32 %add, i32* %gep
+  %gep = getelementptr i32, ptr %ptr, i32 %iv
+  store i32 %add, ptr %gep
   %iv.next = add nsw i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 20001
   br i1 %ec, label %exit, label %loop
@@ -165,7 +165,7 @@ exit:
   ret void
 }
 
-define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, i32* %ptr) optsize {
+define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-LABEL: sink_replicate_region_3_reduction
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
@@ -239,7 +239,7 @@ exit:
 
 ; To sink the replicate region containing %rem, we need to split the block
 ; containing %conv at the end, because %conv is the last recipe in the block.
-define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, i8* %ptr, i32* noalias %dst) optsize {
+define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr %ptr, ptr noalias %dst) optsize {
 ; CHECK-LABEL: sink_replicate_region_4_requires_split_at_end_of_block
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
@@ -318,16 +318,16 @@ entry:
 loop:
   %0 = phi i32 [ 0, %entry ], [ %conv, %loop ]
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-  %gep = getelementptr i8, i8* %ptr, i32 %iv
+  %gep = getelementptr i8, ptr %ptr, i32 %iv
   %rem = srem i32 %0, %x
-  %lv = load i8, i8* %gep
+  %lv = load i8, ptr %gep
   %conv = sext i8 %lv to i32
-  %lv.2 = load i8, i8* %gep
+  %lv.2 = load i8, ptr %gep
   %add.1 = add i32 %conv, %rem
   %conv.lv.2 = sext i8 %lv.2 to i32
   %add = add i32 %add.1, %conv.lv.2
-  %gep.dst = getelementptr i32, i32* %dst, i32 %iv
-  store i32 %add, i32* %gep.dst
+  %gep.dst = getelementptr i32, ptr %dst, i32 %iv
+  store i32 %add, ptr %gep.dst
   %iv.next = add nsw i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 20001
   br i1 %ec, label %exit, label %loop
@@ -337,7 +337,7 @@ exit:
 }
 
 ; Test case that requires sinking a recipe in a replicate region after another replicate region.
-define void @sink_replicate_region_after_replicate_region(i32* %ptr, i32* noalias %dst.2, i32 %x, i8 %y) optsize {
+define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias %dst.2, i32 %x, i8 %y) optsize {
 ; CHECK-LABEL: sink_replicate_region_after_replicate_region
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
@@ -399,10 +399,10 @@ loop:                                             ; preds = %loop, %entry
   %rem = srem i32 %recur, %x
   %rem.div = sdiv i32 20, %rem
   %recur.next = sext i8 %y to i32
-  %gep = getelementptr i32, i32* %ptr, i32 %iv
-  store i32 %rem.div, i32* %gep
-  %gep.2 = getelementptr i32, i32* %dst.2, i32 %iv
-  store i32 %rem.div, i32* %gep.2
+  %gep = getelementptr i32, ptr %ptr, i32 %iv
+  store i32 %rem.div, ptr %gep
+  %gep.2 = getelementptr i32, ptr %dst.2, i32 %iv
+  store i32 %rem.div, ptr %gep.2
   %iv.next = add nsw i32 %iv, 1
   %C = icmp sgt i32 %iv.next, %recur.next
   br i1 %C, label %exit, label %loop
@@ -411,7 +411,7 @@ exit:                                             ; preds = %loop
   ret void
 }
 
-define void @need_new_block_after_sinking_pr56146(i32 %x, i32* %src, i32* noalias %dst) {
+define void @need_new_block_after_sinking_pr56146(i32 %x, ptr %src, ptr noalias %dst) {
 ; CHECK-LABEL: need_new_block_after_sinking_pr56146
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
@@ -468,9 +468,9 @@ loop:
   %iv = phi i64 [ 2, %entry ], [ %iv.next, %loop ]
   %.pn = phi i32 [ 0, %entry ], [ %l, %loop ]
   %val = sdiv i32 %.pn, %x
-  %l = load i32, i32* %src, align 4
-  %gep.dst = getelementptr i32, i32* %dst, i64 %iv
-  store i32 %val, i32* %gep.dst
+  %l = load i32, ptr %src, align 4
+  %gep.dst = getelementptr i32, ptr %dst, i64 %iv
+  store i32 %val, ptr %gep.dst
   %iv.next = add nuw nsw i64 %iv, 1
   %ec = icmp ugt i64 %iv, 3
   br i1 %ec, label %exit, label %loop

@@ -646,10 +646,8 @@ static bool matchesInsertDestination(const AnalysisState &state, Value value,
         return true;
     return false;
   };
-  if (llvm::all_of(state.findValueInReverseUseDefChain(value, matchesSlice),
-                   matchesSlice))
-    return true;
-  return false;
+  return static_cast<bool>(llvm::all_of(
+      state.findValueInReverseUseDefChain(value, matchesSlice), matchesSlice));
 }
 
 template <typename OpTy>

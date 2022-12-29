@@ -43,24 +43,24 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; PPC32-NEXT:    mulhwu. 26, 5, 8
 ; PPC32-NEXT:    mcrf 5, 0
 ; PPC32-NEXT:    stw 23, 28(1) # 4-byte Folded Spill
-; PPC32-NEXT:    crnor 28, 30, 10
+; PPC32-NEXT:    crnor 20, 30, 10
 ; PPC32-NEXT:    stw 29, 52(1) # 4-byte Folded Spill
-; PPC32-NEXT:    cmpwi 2, 9, 0
+; PPC32-NEXT:    cmpwi 7, 9, 0
 ; PPC32-NEXT:    mulhwu. 26, 3, 10
 ; PPC32-NEXT:    mcrf 6, 0
-; PPC32-NEXT:    cmpwi 3, 3, 0
+; PPC32-NEXT:    cmpwi 2, 3, 0
 ; PPC32-NEXT:    stw 24, 32(1) # 4-byte Folded Spill
-; PPC32-NEXT:    crnor 29, 10, 14
+; PPC32-NEXT:    crnor 21, 30, 10
 ; PPC32-NEXT:    stw 25, 36(1) # 4-byte Folded Spill
 ; PPC32-NEXT:    mulhwu. 26, 9, 4
 ; PPC32-NEXT:    stw 27, 44(1) # 4-byte Folded Spill
-; PPC32-NEXT:    crorc 28, 28, 6
+; PPC32-NEXT:    crorc 20, 20, 6
 ; PPC32-NEXT:    stw 28, 48(1) # 4-byte Folded Spill
-; PPC32-NEXT:    crorc 20, 28, 22
+; PPC32-NEXT:    crorc 21, 21, 26
 ; PPC32-NEXT:    stw 30, 56(1) # 4-byte Folded Spill
 ; PPC32-NEXT:    mulhwu 0, 6, 10
 ; PPC32-NEXT:    stw 12, 20(1)
-; PPC32-NEXT:    crorc 21, 29, 26
+; PPC32-NEXT:    crorc 20, 20, 22
 ; PPC32-NEXT:    crorc 21, 21, 2
 ; PPC32-NEXT:    li 11, 0
 ; PPC32-NEXT:    mullw 26, 5, 10
@@ -102,7 +102,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; PPC32-NEXT:    addc 4, 7, 3
 ; PPC32-NEXT:    adde 3, 8, 9
 ; PPC32-NEXT:    cror 21, 22, 21
-; PPC32-NEXT:    cmplw   4, 7
+; PPC32-NEXT:    cmplw 4, 7
 ; PPC32-NEXT:    cmplw 1, 3, 8
 ; PPC32-NEXT:    lwz 12, 20(1)
 ; PPC32-NEXT:    cror 20, 21, 20
@@ -115,10 +115,9 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; PPC32-NEXT:    bc 12, 20, .LBB0_1
 ; PPC32-NEXT:    b .LBB0_2
 ; PPC32-NEXT:  .LBB0_1: # %start
-; PPC32-NEXT:    li      7, 0
+; PPC32-NEXT:    li 7, 0
 ; PPC32-NEXT:  .LBB0_2: # %start
 ; PPC32-NEXT:    mtcrf 32, 12 # cr2
-; PPC32-NEXT:    mtcrf 16, 12 # cr3
 ; PPC32-NEXT:    lwz 30, 56(1) # 4-byte Folded Reload
 ; PPC32-NEXT:    lwz 29, 52(1) # 4-byte Folded Reload
 ; PPC32-NEXT:    lwz 28, 48(1) # 4-byte Folded Reload
