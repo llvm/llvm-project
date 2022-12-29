@@ -93,6 +93,11 @@ void BPFMISimplifyPatchable::initialize(MachineFunction &MFParm) {
   LLVM_DEBUG(dbgs() << "*** BPF simplify patchable insts pass ***\n\n");
 }
 
+static bool isST(unsigned Opcode) {
+  return Opcode == BPF::STB_imm || Opcode == BPF::STH_imm ||
+         Opcode == BPF::STW_imm || Opcode == BPF::STD_imm;
+}
+
 static bool isSTX32(unsigned Opcode) {
   return Opcode == BPF::STB32 || Opcode == BPF::STH32 || Opcode == BPF::STW32;
 }
@@ -141,7 +146,7 @@ void BPFMISimplifyPatchable::checkADDrr(MachineRegisterInfo *MRI,
       COREOp = BPF::CORE_LD64;
     else if (isLDX32(Opcode))
       COREOp = BPF::CORE_LD32;
-    else if (isSTX64(Opcode) || isSTX32(Opcode))
+    else if (isSTX64(Opcode) || isSTX32(Opcode) || isST(Opcode))
       COREOp = BPF::CORE_ST;
     else
       continue;
