@@ -32,6 +32,10 @@ def _i64Attr(x, context):
   return IntegerAttr.get(
       IntegerType.get_signless(64, context=context), x)
 
+@register_attribute_builder("StrAttr")
+def _stringAttr(x, context):
+  return StringAttr.get(x, context=context)
+
 @register_attribute_builder("SymbolNameAttr")
 def _symbolNameAttr(x, context):
   return StringAttr.get(x, context=context)
