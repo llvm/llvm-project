@@ -1,0 +1,36 @@
+// RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+
+cir.func @foo(%arg0: !cir.bool) -> i32 {
+  cir.brcond %arg0 ^bb1, ^bb2
+  ^bb1:
+    %0 = cir.cst(1: i32) : i32
+    cir.return %0 : i32
+  ^bb2:
+    %1 = cir.cst(0: i32) : i32
+    cir.return %1 : i32
+}
+
+//      MLIR: module {
+// MLIR-NEXT:   llvm.func @foo(%arg0: i8) -> i32 {
+// MLIR-NEXT:     %0 = llvm.trunc %arg0 : i8 to i1
+// MLIR-NEXT:     llvm.cond_br %0, ^bb1, ^bb2
+// MLIR-NEXT:   ^bb1:  // pred: ^bb0
+// MLIR-NEXT:     %1 = llvm.mlir.constant(1 : i32) : i32
+// MLIR-NEXT:     llvm.return %1 : i32
+// MLIR-NEXT:   ^bb2:  // pred: ^bb0
+// MLIR-NEXT:     %2 = llvm.mlir.constant(0 : i32) : i32
+// MLIR-NEXT:     llvm.return %2 : i32
+// MLIR-NEXT:   }
+// MLIR-NEXT: }
+
+//       LLVM: define i32 @foo(i8 %0) {
+//  LLVM-NEXT:   %2 = trunc i8 %0 to i1
+//  LLVM-NEXT:   br i1 %2, label %3, label %4
+// LLVM-EMPTY:
+//  LLVM-NEXT: 3:                                                ; preds = %1
+//  LLVM-NEXT:   ret i32 1
+// LLVM-EMPTY:
+//  LLVM-NEXT: 4:                                                ; preds = %1
+//  LLVM-NEXT:   ret i32 0
+//  LLVM-NEXT: }
