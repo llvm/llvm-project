@@ -662,14 +662,13 @@ template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::readBinaryIds(
     std::vector<llvm::object::BuildID> &BinaryIds) {
   return readBinaryIdsInternal(*DataBuffer, BinaryIdsSize, BinaryIdsStart,
-                               BinaryIds,
-                               llvm::support::endian::system_endianness());
+                               BinaryIds, getDataEndianness());
 }
 
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::printBinaryIds(raw_ostream &OS) {
   return printBinaryIdsInternal(OS, *DataBuffer, BinaryIdsSize, BinaryIdsStart,
-                                llvm::support::endian::system_endianness());
+                                getDataEndianness());
 }
 
 namespace llvm {
