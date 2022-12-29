@@ -12,8 +12,8 @@
 // UNSUPPORTED: gcc
 
 // TODO: run clang-tidy with modules enabled once they are supported
-// RUN: clang-tidy %s --warnings-as-errors=* -header-filter=.* --checks='-*,libcpp-*' --load=%{test-tools}/clang_tidy_checks/libcxx-tidy.plugin -- %{compile_flags} -fno-modules
-// RUN: clang-tidy %s --warnings-as-errors=* -header-filter=.* --config-file=%S/../../.clang-tidy -- -Wweak-vtables %{compile_flags} -fno-modules
+// RUN: %{clang-tidy} %s --warnings-as-errors=* -header-filter=.* --checks='-*,libcpp-*' --load=%{test-tools}/clang_tidy_checks/libcxx-tidy.plugin -- %{compile_flags} -fno-modules
+// RUN: %{clang-tidy} %s --warnings-as-errors=* -header-filter=.* --config-file=%S/../../.clang-tidy -- -Wweak-vtables %{compile_flags} -fno-modules
 
 // Prevent <ext/hash_map> from generating deprecated warnings for this test.
 #if defined(__DEPRECATED)

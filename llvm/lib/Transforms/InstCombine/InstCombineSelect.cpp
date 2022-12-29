@@ -2634,7 +2634,11 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
     // when 'Swap' is true:
     // fold (X > +/-0.0) ? X : -X or (X >= +/-0.0) ? X : -X to fabs(X)
     // fold (X < +/-0.0) ? X : -X or (X <= +/-0.0) ? X : -X to -fabs(X)
-    if (!SI.hasNoSignedZeros())
+    //
+    // Note: We require "nnan" for this fold because fcmp ignores the signbit
+    //       of NAN, but IEEE-754 specifies the signbit of NAN values with
+    //       fneg/fabs operations.
+    if (!SI.hasNoSignedZeros() || !SI.hasNoNaNs())
       return nullptr;
 
     if (Swap)

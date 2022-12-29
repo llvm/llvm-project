@@ -168,9 +168,10 @@ build:ci --config=generic_clang
 # Speedup bazel using a ramdisk.
 build:ci --sandbox_base=/dev/shm
 
-# Use system's mpfr instead of building it from source.
+# Use system's mpfr and pfm instead of building it from source.
 # This is non hermetic but helps with compile time.
 build:ci --@llvm-project//libc:mpfr=system
+build:ci --@llvm-project//llvm:pfm=system
 
 # Don't build/test targets tagged with "nobuildkite".
 build:ci --build_tag_filters=-nobuildkite

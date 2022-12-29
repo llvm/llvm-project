@@ -22,6 +22,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -438,7 +439,7 @@ static void genInsertionCallHelper(OpBuilder &builder,
                                    StringRef namePrefix,
                                    FuncGeneratorType createFunc) {
   // The mangled name of the function has this format:
-  //   <namePrefix>_[C|S|D]_<shape>_<ordering>_<eltType>
+  //   <namePrefix>_<DLT>_<shape>_<ordering>_<eltType>
   //     _<indexBitWidth>_<pointerBitWidth>
   RankedTensorType rtp = desc.getTensorType();
   SmallString<32> nameBuffer;
@@ -447,13 +448,7 @@ static void genInsertionCallHelper(OpBuilder &builder,
   unsigned rank = rtp.getShape().size();
   assert(rank == indices.size());
   for (unsigned d = 0; d < rank; d++) {
-    if (isCompressedDim(rtp, d)) {
-      nameOstream << "C_";
-    } else if (isSingletonDim(rtp, d)) {
-      nameOstream << "S_";
-    } else {
-      nameOstream << "D_";
-    }
+    nameOstream << toMLIRString(getDimLevelType(rtp, d)) << "_";
   }
   // Static dim sizes are used in the generated code while dynamic sizes are
   // loaded from the dimSizes buffer. This is the reason for adding the shape

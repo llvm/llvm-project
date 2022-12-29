@@ -12,7 +12,14 @@
 
 # NOTE: Don't try to build `PluginInterface` using `add_llvm_library` because we
 # don't want to export `PluginInterface` while `add_llvm_library` requires that.
-add_library(PluginInterface OBJECT PluginInterface.cpp GlobalHandler.cpp)
+add_library(PluginInterface OBJECT
+  PluginInterface.cpp GlobalHandler.cpp JIT.cpp)
+
+# Only enable JIT for those targets that LLVM can support.
+string(TOUPPER "${LLVM_TARGETS_TO_BUILD}" TargetsSupported)
+foreach(Target ${TargetsSupported})
+  target_compile_definitions(PluginInterface PRIVATE "LIBOMPTARGET_JIT_${Target}")
+endforeach()
 
 # This is required when using LLVM libraries.
 llvm_update_compile_flags(PluginInterface)
@@ -20,7 +27,31 @@ llvm_update_compile_flags(PluginInterface)
 if (LLVM_LINK_LLVM_DYLIB)
   set(llvm_libs LLVM)
 else()
-  llvm_map_components_to_libnames(llvm_libs Support)
+  llvm_map_components_to_libnames(llvm_libs
+    ${LLVM_TARGETS_TO_BUILD}
+    AggressiveInstCombine
+    Analysis
+    BinaryFormat
+    BitReader
+    BitWriter
+    CodeGen
+    Core
+    Extensions
+    InstCombine
+    Instrumentation
+    IPO
+    IRReader
+    Linker
+    MC
+    Object
+    Passes
+    Remarks
+    ScalarOpts
+    Support
+    Target
+    TransformUtils
+    Vectorize
+  )
 endif()
 
 target_link_libraries(PluginInterface

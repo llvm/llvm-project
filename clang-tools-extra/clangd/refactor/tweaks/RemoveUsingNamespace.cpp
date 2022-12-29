@@ -89,16 +89,15 @@ bool isTopLevelDecl(const SelectionTree::Node *Node) {
   return Node->Parent && Node->Parent->ASTNode.get<TranslationUnitDecl>();
 }
 
-// Returns the first visible context that contains this DeclContext.
-// For example: Returns ns1 for S1 and a.
-// namespace ns1 {
-// inline namespace ns2 { struct S1 {}; }
-// enum E { a, b, c, d };
-// }
-const DeclContext *visibleContext(const DeclContext *D) {
-  while (D->isInlineNamespace() || D->isTransparentContext())
+// Return true if `LHS` is declared in `RHS`
+bool isDeclaredIn(const NamedDecl *LHS, const DeclContext *RHS) {
+  const auto *D = LHS->getDeclContext();
+  while (D->isInlineNamespace() || D->isTransparentContext()) {
+    if (D->Equals(RHS))
+      return true;
     D = D->getParent();
-  return D;
+  }
+  return D->Equals(RHS);
 }
 
 bool RemoveUsingNamespace::prepare(const Selection &Inputs) {
@@ -152,8 +151,7 @@ Expected<Tweak::Effect> RemoveUsingNamespace::apply(const Selection &Inputs) {
             return; // This reference is already qualified.
 
           for (auto *T : Ref.Targets) {
-            if (!visibleContext(T->getDeclContext())
-                     ->Equals(TargetDirective->getNominatedNamespace()))
+            if (!isDeclaredIn(T, TargetDirective->getNominatedNamespace()))
               return;
             auto Kind = T->getDeclName().getNameKind();
             // Avoid adding qualifiers before operators, e.g.

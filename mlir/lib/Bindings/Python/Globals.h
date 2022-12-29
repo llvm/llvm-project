@@ -103,7 +103,7 @@ private:
   /// the OpView base class (bypassing the user class constructor).
   llvm::StringMap<pybind11::object> rawOpViewClassMap;
   /// Map of attribute ODS name to custom builder.
-  llvm::StringMap<pybind11::function> attributeBuilderMap;
+  llvm::StringMap<pybind11::object> attributeBuilderMap;
 
   /// Set of dialect namespaces that we have attempted to import implementation
   /// modules for.

@@ -1624,6 +1624,29 @@ static APInt extractConstantWithoutWrapping(ScalarEvolution &SE,
   return APInt(BitWidth, 0);
 }
 
+static void insertFoldCacheEntry(
+    const ScalarEvolution::FoldID &ID, const SCEV *S,
+    DenseMap<ScalarEvolution::FoldID, const SCEV *> &FoldCache,
+    DenseMap<const SCEV *, SmallVector<ScalarEvolution::FoldID, 2>>
+        &FoldCacheUser) {
+  auto I = FoldCache.insert({ID, S});
+  if (!I.second) {
+    // Remove FoldCacheUser entry for ID when replacing an existing FoldCache
+    // entry.
+    auto &UserIDs = FoldCacheUser[I.first->second];
+    assert(count(UserIDs, ID) == 1 && "unexpected duplicates in UserIDs");
+    for (unsigned I = 0; I != UserIDs.size(); ++I)
+      if (UserIDs[I] == ID) {
+        std::swap(UserIDs[I], UserIDs.back());
+        break;
+      }
+    UserIDs.pop_back();
+    I.first->second = S;
+  }
+  auto R = FoldCacheUser.insert({S, {}});
+  R.first->second.push_back(ID);
+}
+
 const SCEV *
 ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
   assert(getTypeSizeInBits(Op->getType()) < getTypeSizeInBits(Ty) &&
@@ -1642,11 +1665,8 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
     return Iter->second;
 
   const SCEV *S = getZeroExtendExprImpl(Op, Ty, Depth);
-  if (!isa<SCEVZeroExtendExpr>(S)) {
-    FoldCache.insert({ID, S});
-    auto R = FoldCacheUser.insert({S, {}});
-    R.first->second.push_back(ID);
-  }
+  if (!isa<SCEVZeroExtendExpr>(S))
+    insertFoldCacheEntry(ID, S, FoldCache, FoldCacheUser);
   return S;
 }
 
@@ -1968,11 +1988,8 @@ ScalarEvolution::getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
     return Iter->second;
 
   const SCEV *S = getSignExtendExprImpl(Op, Ty, Depth);
-  if (!isa<SCEVSignExtendExpr>(S)) {
-    FoldCache.insert({ID, S});
-    auto R = FoldCacheUser.insert({S, {}});
-    R.first->second.push_back(ID);
-  }
+  if (!isa<SCEVSignExtendExpr>(S))
+    insertFoldCacheEntry(ID, S, FoldCache, FoldCacheUser);
   return S;
 }
 
