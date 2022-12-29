@@ -39,6 +39,8 @@ public:
 
   const char *getName() const override { return "reorder-functions"; }
   void runOnFunctions(BinaryContext &BC) override;
+
+  static std::vector<std::string> readFunctionOrderFile();
 };
 
 } // namespace bolt

@@ -243,9 +243,7 @@ void ReorderFunctions::reorder(std::vector<Cluster> &&Clusters,
                      TotalCalls2MB, 100 * TotalCalls2MB / TotalCalls);
 }
 
-namespace {
-
-std::vector<std::string> readFunctionOrderFile() {
+std::vector<std::string> ReorderFunctions::readFunctionOrderFile() {
   std::vector<std::string> FunctionNames;
   std::ifstream FuncsFile(opts::FunctionOrderFile, std::ios::in);
   if (!FuncsFile) {
@@ -257,8 +255,6 @@ std::vector<std::string> readFunctionOrderFile() {
   while (std::getline(FuncsFile, FuncName))
     FunctionNames.push_back(FuncName);
   return FunctionNames;
-}
-
 }
 
 void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
