@@ -74,7 +74,7 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
 bool CIRGenTypes::isRecordLayoutComplete(const Type *Ty) const {
   llvm::DenseMap<const Type *, mlir::cir::StructType>::const_iterator I =
       recordDeclTypes.find(Ty);
-  return I != recordDeclTypes.end() && !I->second.isOpaque();
+  return I != recordDeclTypes.end() && I->second.getBody();
 }
 
 /// Return true if it is safe to convert the specified record decl to IR and lay
@@ -143,16 +143,12 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *RD) {
     auto name = getRecordTypeName(RD, "");
     auto identifier = mlir::StringAttr::get(&getMLIRContext(), name);
     entry = mlir::cir::StructType::get(
-        &getMLIRContext(), {}, identifier,
+        &getMLIRContext(), {}, identifier, /*body=*/false,
         mlir::cir::ASTRecordDeclAttr::get(&getMLIRContext(), RD));
   }
 
-  // TODO(CIR): clang checks here whether the type is known to be opaque. This
-  // is equivalent to a forward decl. So far we don't need to support
-  // opaque/forward-declared record decls. If/when we do we might need to have
-  // temporary cir::StructType with no members as stand-ins.
   RD = RD->getDefinition();
-  if (!RD || !RD->isCompleteDefinition() || !entry.isOpaque())
+  if (!RD || !RD->isCompleteDefinition() || entry.getBody())
     return entry;
 
   // If converting this type would cause us to infinitely loop, don't do it!

@@ -27,7 +27,7 @@ struct incomplete;
 void yoyo(incomplete *i) {}
 
 //      CHECK: !ty_22struct2EBar22 = !cir.struct<"struct.Bar", i32, i8>
-//      CHECK: !ty_22struct2Eincomplete22 = !cir.struct<"struct.incomplete"
+//      CHECK: !ty_22struct2Eincomplete22 = !cir.struct<"struct.incomplete", incomplete
 //      CHECK: !ty_22struct2EFoo22 = !cir.struct<"struct.Foo", i32, i8, !ty_22struct2EBar22>
 
 //      CHECK: cir.func linkonce_odr @_ZN3Bar6methodEv(%arg0: !cir.ptr<!ty_22struct2EBar22>
