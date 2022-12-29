@@ -403,8 +403,10 @@ public:
   matchAndRewrite(mlir::cir::CmpOp cmpOp, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto type = adaptor.getLhs().getType();
-    auto integerType =
+    auto i1Type =
         mlir::IntegerType::get(getContext(), 1, mlir::IntegerType::Signless);
+    auto i8Type =
+        mlir::IntegerType::get(getContext(), 8, mlir::IntegerType::Signless);
 
     switch (adaptor.getKind()) {
     case mlir::cir::CmpOpKind::gt: {
@@ -414,12 +416,12 @@ public:
           llvm_unreachable("integer type not supported in CIR yet");
         cmpIType = mlir::LLVM::ICmpPredicate::ugt;
         rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
-            cmpOp, integerType,
+            cmpOp, i1Type,
             mlir::LLVM::ICmpPredicateAttr::get(getContext(), cmpIType),
             adaptor.getLhs(), adaptor.getRhs());
       } else if (type.isa<mlir::FloatType>()) {
         rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(
-            cmpOp, integerType,
+            cmpOp, i1Type,
             mlir::LLVM::FCmpPredicateAttr::get(getContext(),
                                                mlir::LLVM::FCmpPredicate::ugt),
             adaptor.getLhs(), adaptor.getRhs(),
@@ -437,12 +439,12 @@ public:
           llvm_unreachable("integer type not supported in CIR yet");
         cmpIType = mlir::LLVM::ICmpPredicate::uge;
         rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
-            cmpOp, integerType,
+            cmpOp, i1Type,
             mlir::LLVM::ICmpPredicateAttr::get(getContext(), cmpIType),
             adaptor.getLhs(), adaptor.getRhs());
       } else if (type.isa<mlir::FloatType>()) {
         rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(
-            cmpOp, integerType,
+            cmpOp, i1Type,
             mlir::LLVM::FCmpPredicateAttr::get(getContext(),
                                                mlir::LLVM::FCmpPredicate::uge),
             adaptor.getLhs(), adaptor.getRhs(),
@@ -459,12 +461,12 @@ public:
           llvm_unreachable("integer type not supported in CIR yet");
         cmpIType = mlir::LLVM::ICmpPredicate::ult;
         rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
-            cmpOp, integerType,
+            cmpOp, i1Type,
             mlir::LLVM::ICmpPredicateAttr::get(getContext(), cmpIType),
             adaptor.getLhs(), adaptor.getRhs());
       } else if (type.isa<mlir::FloatType>()) {
         rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(
-            cmpOp, integerType,
+            cmpOp, i1Type,
             mlir::LLVM::FCmpPredicateAttr::get(getContext(),
                                                mlir::LLVM::FCmpPredicate::ult),
             adaptor.getLhs(), adaptor.getRhs(),
@@ -481,12 +483,12 @@ public:
           llvm_unreachable("integer type not supported in CIR yet");
         cmpIType = mlir::LLVM::ICmpPredicate::ule;
         rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
-            cmpOp, integerType,
+            cmpOp, i1Type,
             mlir::LLVM::ICmpPredicateAttr::get(getContext(), cmpIType),
             adaptor.getLhs(), adaptor.getRhs());
       } else if (type.isa<mlir::FloatType>()) {
         rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(
-            cmpOp, integerType,
+            cmpOp, i1Type,
             mlir::LLVM::FCmpPredicateAttr::get(getContext(),
                                                mlir::LLVM::FCmpPredicate::ule),
             adaptor.getLhs(), adaptor.getRhs(),
@@ -499,13 +501,13 @@ public:
     case mlir::cir::CmpOpKind::eq: {
       if (type.isa<mlir::IntegerType>()) {
         rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
-            cmpOp, integerType,
+            cmpOp, i1Type,
             mlir::LLVM::ICmpPredicateAttr::get(getContext(),
                                                mlir::LLVM::ICmpPredicate::eq),
             adaptor.getLhs(), adaptor.getRhs());
       } else if (type.isa<mlir::FloatType>()) {
         rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(
-            cmpOp, integerType,
+            cmpOp, i1Type,
             mlir::LLVM::FCmpPredicateAttr::get(getContext(),
                                                mlir::LLVM::FCmpPredicate::ueq),
             adaptor.getLhs(), adaptor.getRhs(),
@@ -517,14 +519,17 @@ public:
     }
     case mlir::cir::CmpOpKind::ne: {
       if (type.isa<mlir::IntegerType>()) {
-        rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
-            cmpOp, integerType,
+        auto cmp = rewriter.create<mlir::LLVM::ICmpOp>(
+            cmpOp.getLoc(), i1Type,
             mlir::LLVM::ICmpPredicateAttr::get(getContext(),
                                                mlir::LLVM::ICmpPredicate::ne),
             adaptor.getLhs(), adaptor.getRhs());
+
+        rewriter.replaceOpWithNewOp<mlir::LLVM::ZExtOp>(cmpOp, i8Type,
+                                                        cmp.getRes());
       } else if (type.isa<mlir::FloatType>()) {
         rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(
-            cmpOp, integerType,
+            cmpOp, i1Type,
             mlir::LLVM::FCmpPredicateAttr::get(getContext(),
                                                mlir::LLVM::FCmpPredicate::une),
             adaptor.getLhs(), adaptor.getRhs(),
