@@ -39,6 +39,7 @@
 #include "comgr-compiler.h"
 #include "comgr-device-libs.h"
 #include "comgr-env.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Driver.h"
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/CodeGenAction.h"
