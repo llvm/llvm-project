@@ -3507,6 +3507,7 @@ template <> struct DOTGraphTraits<BoUpSLP *> : public DefaultDOTGraphTraits {
   std::string getNodeLabel(const TreeEntry *Entry, const BoUpSLP *R) {
     std::string Str;
     raw_string_ostream OS(Str);
+    OS << Entry->Idx << ".\n";
     if (isSplat(Entry->Scalars))
       OS << "<splat> ";
     for (auto *V : Entry->Scalars) {
@@ -3524,6 +3525,8 @@ template <> struct DOTGraphTraits<BoUpSLP *> : public DefaultDOTGraphTraits {
                                        const BoUpSLP *) {
     if (Entry->State == TreeEntry::NeedToGather)
       return "color=red";
+    if (Entry->State == TreeEntry::ScatterVectorize)
+      return "color=blue";
     return "";
   }
 };
