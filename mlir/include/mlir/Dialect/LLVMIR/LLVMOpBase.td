@@ -52,6 +52,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getNoUndefAttrName() { return "llvm.noundef"; }
     static StringRef getSExtAttrName() { return "llvm.signext"; }
     static StringRef getZExtAttrName() { return "llvm.zeroext"; }
+    static StringRef getTBAAAttrName() { return "llvm.tbaa"; }
 
     /// Verifies if the attribute is a well-formed value for "llvm.struct_attrs"
     static LogicalResult verifyStructAttr(
