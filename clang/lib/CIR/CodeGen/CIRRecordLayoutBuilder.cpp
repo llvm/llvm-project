@@ -216,6 +216,7 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D,
           mlir::StringAttr::get(&getMLIRContext(), name + ".base");
       BaseTy = mlir::cir::StructType::get(
           &getMLIRContext(), baseBuilder.fieldTypes, baseIdentifier,
+          /*body=*/true,
           mlir::cir::ASTRecordDeclAttr::get(&getMLIRContext(), D));
       // BaseTy and Ty must agree on their packedness for getCIRFieldNo to work
       // on both of them with the same index.
@@ -227,8 +228,7 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D,
   // TODO(cir): add base class info
   Ty = mlir::cir::StructType::get(
       &getMLIRContext(), builder.fieldTypes, identifier,
-      mlir::cir::ASTRecordDeclAttr::get(&getMLIRContext(), D));
-  Ty.setBody();
+      /*body=*/true, mlir::cir::ASTRecordDeclAttr::get(&getMLIRContext(), D));
 
   auto RL = std::make_unique<CIRGenRecordLayout>(
       Ty, BaseTy, (bool)builder.IsZeroInitializable,

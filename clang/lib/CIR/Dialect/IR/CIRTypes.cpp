@@ -76,21 +76,38 @@ Type StructType::parse(mlir::AsmParser &parser) {
   std::string typeName;
   if (parser.parseString(&typeName))
     return Type();
+
   llvm::SmallVector<Type> members;
+  bool parsedBody = false;
+
   while (mlir::succeeded(parser.parseOptionalComma())) {
+    if (mlir::succeeded(parser.parseOptionalKeyword("incomplete")))
+      break;
+    // FIXME: add parsing for ast node.
+    parsedBody = true;
     Type nextMember;
     if (parser.parseType(nextMember))
       return Type();
     members.push_back(nextMember);
   }
+
   if (parser.parseGreater())
     return Type();
-  return get(parser.getContext(), members, typeName);
+  auto sTy = get(parser.getContext(), members, typeName, parsedBody);
+  return sTy;
 }
 
 void StructType::print(mlir::AsmPrinter &printer) const {
-  printer << '<' << getTypeName() << ", ";
-  llvm::interleaveComma(getMembers(), printer);
+  printer << '<' << getTypeName();
+  if (!getBody()) {
+    printer << ", incomplete";
+  } else {
+    auto members = getMembers();
+    if (!members.empty()) {
+      printer << ", ";
+      llvm::interleaveComma(getMembers(), printer);
+    }
+  }
   if (getAst()) {
     printer << ", ";
     printer.printAttributeWithoutType(*getAst());

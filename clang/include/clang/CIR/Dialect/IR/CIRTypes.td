@@ -78,28 +78,26 @@ def CIR_StructType : CIR_Type<"Struct", "struct"> {
   let parameters = (ins
     ArrayRefParameter<"mlir::Type", "members">:$members,
     "mlir::StringAttr":$typeName,
+    "bool":$body,
     "std::optional<::mlir::cir::ASTRecordDeclAttr>":$ast
   );
 
   let builders = [
     TypeBuilder<(ins
-      "ArrayRef<mlir::Type>":$members, "StringRef":$typeName
+      "ArrayRef<mlir::Type>":$members, "StringRef":$typeName,
+      "bool":$body
     ), [{
       auto id = mlir::StringAttr::get(context, typeName);
-      return StructType::get(context, members, id, std::nullopt);
+      auto sTy = StructType::get(context, members, id, body, std::nullopt);
+      return sTy;
     }]>
   ];
 
   let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
-  private:
-    // Track forward declaration or incomplete struct types.
-    bool hasBody = false;
   public:
     void dropAst();
-    bool isOpaque() const { return !hasBody; }
-    void setBody() { hasBody = true; }
   }];
 
   let extraClassDefinition = [{
