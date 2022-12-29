@@ -12,6 +12,7 @@ module {
 // MLIR-NEXT:  llvm.func @foo(%arg0: i32) -> i32 {
 // MLIR-NEXT:    [[v0:%[0-9]]] = llvm.mlir.constant(0 : i32) : i32
 // MLIR-NEXT:    [[v1:%[0-9]]] = llvm.icmp "ne" %arg0, %0 : i32
+// MLIR-NEXT:    [[v2:%[0-9]]] = llvm.zext %1 : i1 to i8
 // MLIR-NEXT:    llvm.return %arg0 : i32
 // MLIR-NEXT:  }
 // MLIR-NEXT:}
@@ -19,5 +20,6 @@ module {
 
 //      LLVM: define i32 @foo(i32 %0) {
 // LLVM-NEXT:   %2 = icmp ne i32 %0, 0
+// LLVM-NEXT:   %3 = zext i1 %2 to i8
 // LLVM-NEXT:   ret i32 %0
 // LLVM-NEXT: }
