@@ -25,4 +25,4 @@ add_clang_tool(nvptx-arch NVPTXArch.cpp)
 set_target_properties(nvptx-arch PROPERTIES INSTALL_RPATH_USE_LINK_PATH ON)
 target_include_directories(nvptx-arch PRIVATE ${CUDA_INCLUDE_DIRS})
 
-clang_target_link_libraries(nvptx-arch PRIVATE ${cuda-library})
+target_link_libraries(nvptx-arch PRIVATE ${cuda-library})
