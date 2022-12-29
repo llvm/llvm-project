@@ -4313,3 +4313,20 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_R600_FP64
 // CHECK_R600_FP64-DAG: #define __R600__ 1
 // CHECK_R600_FP64-DAG: #define __HAS_FMAF__ 1
+
+// Begin M68k tests ----------------
+
+// RUN: %clang -mcpu=68000 -E -dM %s -o - 2>&1 \
+// RUN:     -target m68k-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_M68K_68000_ATOMICS
+// RUN: %clang -mcpu=68010 -E -dM %s -o - 2>&1 \
+// RUN:     -target m68k-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_M68K_68000_ATOMICS
+// RUN: %clang -mcpu=68020 -E -dM %s -o - 2>&1 \
+// RUN:     -target m68k-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_M68K_68020_ATOMICS
+
+// CHECK_M68K_68000_ATOMICS-NOT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP
+// CHECK_M68K_68020_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK_M68K_68020_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK_M68K_68020_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
