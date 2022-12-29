@@ -113,6 +113,12 @@ void M68kTargetInfo::getTargetDefines(const LangOptions &Opts,
   default:
     break;
   }
+
+  if (CPU >= CK_68020) {
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
+  }
 }
 
 ArrayRef<Builtin::Info> M68kTargetInfo::getTargetBuiltins() const {
