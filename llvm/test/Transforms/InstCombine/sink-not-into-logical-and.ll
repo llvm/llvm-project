@@ -203,3 +203,28 @@ define i1 @t11(i32 %v0, i32 %v1, i32 %v2, i32 %v3, i1 %v4, i1 %v5) {
   call void @use1(i1 %i5)
   ret i1 %i4
 }
+
+; FIXME: This is a miscompile.
+
+define i1 @PR59704(i1 %c, i1 %b, i64 %arg) {
+; CHECK-LABEL: @PR59704(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  %cmp = icmp ne i64 %arg, 0
+  %and = select i1 %cmp, i1 %cmp, i1 false
+  br label %join
+
+join:
+  %phi = phi i1 [ false, %entry ], [ %and, %if ]
+  %not = xor i1 %phi, true
+  ret i1 %not
+}
