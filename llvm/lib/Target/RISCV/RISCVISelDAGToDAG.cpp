@@ -2089,8 +2089,17 @@ bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
     }
   }
 
-  if (ShAmt.getOpcode() == ISD::SUB &&
-      isa<ConstantSDNode>(ShAmt.getOperand(0))) {
+  if (ShAmt.getOpcode() == ISD::ADD &&
+      isa<ConstantSDNode>(ShAmt.getOperand(1))) {
+    uint64_t Imm = ShAmt.getConstantOperandVal(1);
+    // If we are shifting by X+N where N == 0 mod Size, then just shift by X
+    // to avoid the ADD.
+    if (Imm != 0 && Imm % ShiftWidth == 0) {
+      ShAmt = ShAmt.getOperand(0);
+      return true;
+    }
+  } else if (ShAmt.getOpcode() == ISD::SUB &&
+             isa<ConstantSDNode>(ShAmt.getOperand(0))) {
     uint64_t Imm = ShAmt.getConstantOperandVal(0);
     // If we are shifting by N-X where N == 0 mod Size, then just shift by -X to
     // generate a NEG instead of a SUB of a constant.
