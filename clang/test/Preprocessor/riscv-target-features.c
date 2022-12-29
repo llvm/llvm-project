@@ -41,6 +41,7 @@
 // CHECK-NOT: __riscv_zicbom
 // CHECK-NOT: __riscv_zicboz
 // CHECK-NOT: __riscv_svnapot
+// CHECK-NOT: __riscv_svpbmt
 // CHECK-NOT: __riscv_svinval
 // CHECK-NOT: __riscv_xventanacondops
 // CHECK-NOT: __riscv_zcd
@@ -435,6 +436,12 @@
 // RUN: %clang -target riscv64 -march=rv64isvnapot -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-SVNAPOT-EXT %s
 // CHECK-SVNAPOT-EXT: __riscv_svnapot 1000000{{$}}
+
+// RUN: %clang -target riscv32 -march=rv32isvpbmt -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-SVPBMT-EXT %s
+// RUN: %clang -target riscv64 -march=rv64isvpbmt -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-SVPBMT-EXT %s
+// CHECK-SVPBMT-EXT: __riscv_svpbmt 1000000{{$}}
 
 // RUN: %clang -target riscv32 -march=rv32isvinval -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-SVINVAL-EXT %s
