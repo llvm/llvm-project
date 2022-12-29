@@ -339,7 +339,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BImove_if_noexcept:
   case Builtin::BIforward:
   case Builtin::BIas_const:
-    llvm_unreachable("NYI");
+    return RValue::get(buildLValue(E->getArg(0)).getPointer());
   case Builtin::BI__GetExceptionInfo: {
     llvm_unreachable("NYI");
   }

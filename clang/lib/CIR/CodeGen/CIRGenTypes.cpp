@@ -69,18 +69,67 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
   return std::string(typeName);
 }
 
-// isSafeToConvert - Return true if it is safe to convert the specified record
-// decl to CIR and lay it out, false if doing so would cause us to get into a
-// recursive compilation mess.
+/// Return true if the specified type is already completely laid out.
+bool CIRGenTypes::isRecordLayoutComplete(const Type *Ty) const {
+  llvm::DenseMap<const Type *, mlir::cir::StructType>::const_iterator I =
+      recordDeclTypes.find(Ty);
+  return I != recordDeclTypes.end(); // && !I->second->isOpaque();
+}
+
+/// Return true if it is safe to convert the specified record decl to IR and lay
+/// it out, false if doing so would cause us to get into a recursive compilation
+/// mess.
+static bool
+isSafeToConvert(const RecordDecl *RD, CIRGenTypes &CGT,
+                llvm::SmallPtrSet<const RecordDecl *, 16> &AlreadyChecked) {
+  // If we have already checked this type (maybe the same type is used by-value
+  // multiple times in multiple structure fields, don't check again.
+  if (!AlreadyChecked.insert(RD).second)
+    return true;
+
+  const Type *Key = CGT.getContext().getTagDeclType(RD).getTypePtr();
+
+  // If this type is already laid out, converting it is a noop.
+  if (CGT.isRecordLayoutComplete(Key))
+    return true;
+
+  // If this type is currently being laid out, we can't recursively compile it.
+  if (CGT.isRecordBeingLaidOut(Key))
+    return false;
+
+  // If this type would require laying out bases that are currently being laid
+  // out, don't do it.  This includes virtual base classes which get laid out
+  // when a class is translated, even though they aren't embedded by-value into
+  // the class.
+  if (const CXXRecordDecl *CRD = dyn_cast<CXXRecordDecl>(RD)) {
+    for (const auto &I : CRD->bases())
+      if (!isSafeToConvert(I.getType()->castAs<RecordType>()->getDecl(), CGT,
+                           AlreadyChecked))
+        return false;
+  }
+
+  // If this type would require laying out members that are currently being laid
+  // out, don't do it.
+  for ([[maybe_unused]] const auto *I : RD->fields())
+    llvm_unreachable("NYI");
+
+  // If there are no problems, lets do it.
+  return true;
+}
+
+// Return true if it is safe to convert the specified record decl to CIR and lay
+// it out, false if doing so would cause us to get into a recursive compilation
+// mess.
 static bool isSafeToConvert(const RecordDecl *RD, CIRGenTypes &CGT) {
   // If no structs are being laid out, we can certainly do this one.
   if (CGT.noRecordsBeingLaidOut())
     return true;
 
-  llvm_unreachable("NYI");
+  llvm::SmallPtrSet<const RecordDecl *, 16> AlreadyChecked;
+  return isSafeToConvert(RD, CGT, AlreadyChecked);
 }
 
-/// convertRecordDeclType - Lay out a tagged decl type like struct or union.
+/// Lay out a tagged decl type like struct or union.
 mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *RD) {
   // TagDecl's are not necessarily unique, instead use the (clang) type
   // connected to the decl.
