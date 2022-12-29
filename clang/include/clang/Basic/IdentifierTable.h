@@ -595,7 +595,7 @@ public:
   /// Return the identifier token info for the specified named
   /// identifier.
   IdentifierInfo &get(StringRef Name) {
-    auto &Entry = *HashTable.insert(std::make_pair(Name, nullptr)).first;
+    auto &Entry = *HashTable.try_emplace(Name, nullptr).first;
 
     IdentifierInfo *&II = Entry.second;
     if (II) return *II;
