@@ -220,6 +220,17 @@ public:
 
   std::optional<unsigned> getInverseOpcode(unsigned Opcode) const override;
 
+  // Returns true if all uses of OrigMI only depend on the lower \p NBits bits
+  // of its output.
+  bool hasAllNBitUsers(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                       unsigned NBits) const;
+  // Returns true if all uses of OrigMI only depend on the lower word of its
+  // output, so we can transform OrigMI to the corresponding W-version.
+  bool hasAllWUsers(const MachineInstr &MI,
+                    const MachineRegisterInfo &MRI) const {
+    return hasAllNBitUsers(MI, MRI, 32);
+  }
+
 protected:
   const RISCVSubtarget &STI;
 };
@@ -250,9 +261,6 @@ bool hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2);
 // Special immediate for AVL operand of V pseudo instructions to indicate VLMax.
 static constexpr int64_t VLMaxSentinel = -1LL;
 
-// Returns true if all uses of OrigMI only depend on the lower word of its
-// output, so we can transform OrigMI to the corresponding W-version.
-bool hasAllWUsers(const MachineInstr &MI, MachineRegisterInfo &MRI);
 } // namespace RISCV
 
 namespace RISCVVPseudosTable {

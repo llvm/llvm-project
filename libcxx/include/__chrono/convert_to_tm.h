@@ -109,11 +109,11 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
     __result.tm_year = static_cast<int>(__value.year()) - 1900;
     __result.tm_mon  = static_cast<unsigned>(__value.month()) - 1;
   } else if constexpr (same_as<_ChronoT, chrono::year_month_day> || same_as<_ChronoT, chrono::year_month_day_last>) {
-    return __convert_to_tm<_Tm>(
+    return std::__convert_to_tm<_Tm>(
         chrono::year_month_day{__value}, chrono::weekday{static_cast<chrono::sys_days>(__value)});
   } else if constexpr (same_as<_ChronoT, chrono::year_month_weekday> ||
                        same_as<_ChronoT, chrono::year_month_weekday_last>) {
-    return __convert_to_tm<_Tm>(chrono::year_month_day{static_cast<chrono::sys_days>(__value)}, __value.weekday());
+    return std::__convert_to_tm<_Tm>(chrono::year_month_day{static_cast<chrono::sys_days>(__value)}, __value.weekday());
   } else
     static_assert(sizeof(_ChronoT) == 0, "Add the missing type specialization");
 

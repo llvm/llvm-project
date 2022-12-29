@@ -19,21 +19,29 @@ CodegenEnv::CodegenEnv(linalg::GenericOp linop, SparsificationOptions opts,
                        unsigned numTensors, unsigned numLoops,
                        unsigned numFilterLoops)
     : linalgOp(linop), sparseOptions(opts),
-      latticeMerger(numTensors, numLoops, numFilterLoops), loopEmitter(nullptr),
+      latticeMerger(numTensors, numLoops, numFilterLoops), loopEmitter(),
       topSort(), sparseOut(nullptr), outerParNest(-1u), insChain(), expValues(),
       expFilled(), expAdded(), expCount(), redVal(), redExp(-1u),
       redCustom(-1u) {}
 
-void CodegenEnv::startEmit(OpOperand *so, unsigned lv, LoopEmitter *le) {
-  assert(sparseOut == nullptr && loopEmitter == nullptr &&
-         insChain == nullptr && "must only start emitting once");
+void CodegenEnv::startEmit(OpOperand *so, unsigned lv) {
+  assert(sparseOut == nullptr && insChain == nullptr &&
+         "must only start emitting once");
   sparseOut = so;
   outerParNest = lv;
-  loopEmitter = le;
   if (sparseOut) {
     insChain = sparseOut->get();
     latticeMerger.setHasSparseOut(true);
   }
+  // Initialize loop emitter.
+  SmallVector<Value> tensors;
+  for (OpOperand &t : linalgOp->getOpOperands())
+    tensors.push_back(t.get());
+  loopEmitter.initialize(tensors,
+                         StringAttr::get(linalgOp.getContext(),
+                                         linalg::GenericOp::getOperationName()),
+                         /*hasOutput=*/true,
+                         /*isSparseOut=*/sparseOut != nullptr, topSort);
 }
 
 Optional<Operation *> CodegenEnv::genLoopBoundary(
@@ -66,13 +74,13 @@ ArrayRef<unsigned> CodegenEnv::getTopSortSlice(size_t n, size_t m) const {
 }
 
 ArrayRef<unsigned> CodegenEnv::getLoopCurStack() const {
-  return getTopSortSlice(0, loopEmitter->getCurrentDepth());
+  return getTopSortSlice(0, loopEmitter.getCurrentDepth());
 }
 
 Value CodegenEnv::getLoopIdxValue(size_t loopIdx) const {
   for (unsigned lv = 0, lve = topSort.size(); lv < lve; lv++)
     if (topSort[lv] == loopIdx)
-      return loopEmitter->getLoopIV(lv);
+      return loopEmitter.getLoopIV(lv);
   llvm_unreachable("invalid loop index");
 }
 

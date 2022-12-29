@@ -328,11 +328,13 @@ public:
   }
 
   // Returns true if there is a path in the dependence graph from node 'srcId'
-  // to node 'dstId'. Returns false otherwise.
+  // to node 'dstId'. Returns false otherwise. `srcId`, `dstId`, and the
+  // operations that the edges connected are expected to be from the same block.
   bool hasDependencePath(unsigned srcId, unsigned dstId) {
     // Worklist state is: <node-id, next-output-edge-index-to-visit>
     SmallVector<std::pair<unsigned, unsigned>, 4> worklist;
     worklist.push_back({srcId, 0});
+    Operation *dstOp = getNode(dstId)->op;
     // Run DFS traversal to see if 'dstId' is reachable from 'srcId'.
     while (!worklist.empty()) {
       auto &idAndIndex = worklist.back();
@@ -350,8 +352,12 @@ public:
       Edge edge = outEdges[idAndIndex.first][idAndIndex.second];
       // Increment next output edge index for 'idAndIndex'.
       ++idAndIndex.second;
-      // Add node at 'edge.id' to worklist.
-      worklist.push_back({edge.id, 0});
+      // Add node at 'edge.id' to the worklist. We don't need to consider
+      // nodes that are "after" dstId in the containing block; one can't have a
+      // path to `dstId` from any of those nodes.
+      bool afterDst = dstOp->isBeforeInBlock(getNode(edge.id)->op);
+      if (!afterDst && edge.id != idAndIndex.first)
+        worklist.push_back({edge.id, 0});
     }
     return false;
   }
