@@ -609,7 +609,7 @@ private:
   /// Total size of binary ids.
   uint64_t BinaryIdsSize{0};
   /// Start address of binary id length and data pairs.
-  const uint8_t *BinaryIdsStart;
+  const uint8_t *BinaryIdsStart = nullptr;
 
   // Index to the current record in the record array.
   unsigned RecordIndex;
