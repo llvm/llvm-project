@@ -679,7 +679,7 @@ define i64 @sh3add_imm(i64 %0) {
 ; CHECK-LABEL: sh3add_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    ori a0, a0, 7
+; CHECK-NEXT:    addi a0, a0, 7
 ; CHECK-NEXT:    ret
   %a = shl i64 %0, 3
   %b = add i64 %a, 7
