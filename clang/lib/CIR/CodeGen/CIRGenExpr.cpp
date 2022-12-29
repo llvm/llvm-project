@@ -222,12 +222,13 @@ bool CIRGenFunction::hasBooleanRepresentation(QualType Ty) {
 CIRGenCallee CIRGenFunction::buildCallee(const clang::Expr *E) {
   E = E->IgnoreParens();
 
+  // Look through function-to-pointer decay.
   if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
-    assert(ICE && "Only ICE supported so far!");
-    assert(ICE->getCastKind() == CK_FunctionToPointerDecay &&
-           "No other casts supported yet");
-
-    return buildCallee(ICE->getSubExpr());
+    if (ICE->getCastKind() == CK_FunctionToPointerDecay ||
+        ICE->getCastKind() == CK_BuiltinFnToFnPtr) {
+      return buildCallee(ICE->getSubExpr());
+    }
+    // Resolve direct calls.
   } else if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
     const auto *FD = dyn_cast<FunctionDecl>(DRE->getDecl());
     assert(FD &&
@@ -1474,9 +1475,10 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
     assert(!Ty->isAnyComplexType() && "complex types not implemented");
     return buildCompoundAssignmentLValue(cast<CompoundAssignOperator>(E));
   }
-  case Expr::UserDefinedLiteralClass:
-    assert(0 && "should fallback below, remove assert when testcase available");
+  case Expr::CallExprClass:
+  case Expr::CXXMemberCallExprClass:
   case Expr::CXXOperatorCallExprClass:
+  case Expr::UserDefinedLiteralClass:
     return buildCallExprLValue(cast<CallExpr>(E));
   case Expr::ExprWithCleanupsClass: {
     const auto *cleanups = cast<ExprWithCleanups>(E);
