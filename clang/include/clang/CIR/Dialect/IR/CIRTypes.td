@@ -93,7 +93,13 @@ def CIR_StructType : CIR_Type<"Struct", "struct"> {
   let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
+  private:
+    // Track forward declaration or incomplete struct types.
+    bool hasBody = false;
+  public:
     void dropAst();
+    bool isOpaque() const { return !hasBody; }
+    void setBody() { hasBody = true; }
   }];
 
   let extraClassDefinition = [{

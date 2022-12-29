@@ -224,9 +224,11 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D,
     }
   }
 
+  // TODO(cir): add base class info
   Ty = mlir::cir::StructType::get(
       &getMLIRContext(), builder.fieldTypes, identifier,
       mlir::cir::ASTRecordDeclAttr::get(&getMLIRContext(), D));
+  Ty.setBody();
 
   auto RL = std::make_unique<CIRGenRecordLayout>(
       Ty, BaseTy, (bool)builder.IsZeroInitializable,
