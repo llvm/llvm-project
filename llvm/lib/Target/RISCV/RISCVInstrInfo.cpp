@@ -1394,6 +1394,12 @@ bool RISCVInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   case RISCV::MINU:
   case RISCV::MAX:
   case RISCV::MAXU:
+  case RISCV::FMIN_H:
+  case RISCV::FMIN_S:
+  case RISCV::FMIN_D:
+  case RISCV::FMAX_H:
+  case RISCV::FMAX_S:
+  case RISCV::FMAX_D:
     return true;
   }
 
