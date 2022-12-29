@@ -716,7 +716,22 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   mlir::populateFuncToLLVMConversionPatterns(converter, patterns);
 
   mlir::ConversionTarget target(getContext());
-  target.addLegalOp<mlir::ModuleOp>();
+  using namespace mlir::cir;
+  target.addLegalOp<mlir::ModuleOp
+                    // ,AllocaOp
+                    // ,BrCondOp
+                    // ,BrOp
+                    // ,CallOp
+                    // ,CastOp
+                    // ,CmpOp
+                    // ,ConstantOp
+                    // ,FuncOp
+                    // ,LoadOp
+                    // ,LoopOp
+                    // ,ReturnOp
+                    // ,StoreOp
+                    // ,YieldOp
+                    >();
   target.addLegalDialect<mlir::LLVM::LLVMDialect>();
   target.addIllegalDialect<mlir::cir::CIRDialect, mlir::func::FuncDialect>();
 
