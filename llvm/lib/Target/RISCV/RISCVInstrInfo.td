@@ -1239,6 +1239,15 @@ def : PatGprUimmLog2XLen<shl, SLLI>;
 def : PatGprUimmLog2XLen<srl, SRLI>;
 def : PatGprUimmLog2XLen<sra, SRAI>;
 
+// Select 'or' as ADDI if the immediate bits are known to be 0 in $rs1. This
+// can improve compressibility.
+def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
+  KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
+  KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
+  return KnownBits::haveNoCommonBitsSet(Known0, Known1);
+}]>;
+def : PatGprSimm12<or_is_add, ADDI>;
+
 // negate of low bit can be done via two (compressible) shifts.  The negate
 // is never compressible since rs1 and rd can't be the same register.
 def : Pat<(XLenVT (sub 0, (and_oneuse GPR:$rs, 1))),

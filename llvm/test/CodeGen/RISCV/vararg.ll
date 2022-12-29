@@ -627,7 +627,7 @@ define i64 @va2_va_arg(ptr %fmt, ...) nounwind {
 ; ILP32-ILP32F-FPELIM-NEXT:    sw a1, 20(sp)
 ; ILP32-ILP32F-FPELIM-NEXT:    addi a0, sp, 27
 ; ILP32-ILP32F-FPELIM-NEXT:    andi a1, a0, -8
-; ILP32-ILP32F-FPELIM-NEXT:    ori a0, a1, 4
+; ILP32-ILP32F-FPELIM-NEXT:    addi a0, a1, 4
 ; ILP32-ILP32F-FPELIM-NEXT:    sw a0, 12(sp)
 ; ILP32-ILP32F-FPELIM-NEXT:    lw a0, 0(a1)
 ; ILP32-ILP32F-FPELIM-NEXT:    addi a2, a1, 8
@@ -651,7 +651,7 @@ define i64 @va2_va_arg(ptr %fmt, ...) nounwind {
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a1, 4(s0)
 ; ILP32-ILP32F-WITHFP-NEXT:    addi a0, s0, 11
 ; ILP32-ILP32F-WITHFP-NEXT:    andi a1, a0, -8
-; ILP32-ILP32F-WITHFP-NEXT:    ori a0, a1, 4
+; ILP32-ILP32F-WITHFP-NEXT:    addi a0, a1, 4
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a0, -12(s0)
 ; ILP32-ILP32F-WITHFP-NEXT:    lw a0, 0(a1)
 ; ILP32-ILP32F-WITHFP-NEXT:    addi a2, a1, 8
@@ -943,7 +943,7 @@ define i64 @va3_va_arg(i32 %a, i64 %b, ...) nounwind {
 ; ILP32-ILP32F-FPELIM-NEXT:    sw a3, 12(sp)
 ; ILP32-ILP32F-FPELIM-NEXT:    addi a0, sp, 19
 ; ILP32-ILP32F-FPELIM-NEXT:    andi a0, a0, -8
-; ILP32-ILP32F-FPELIM-NEXT:    ori a3, a0, 4
+; ILP32-ILP32F-FPELIM-NEXT:    addi a3, a0, 4
 ; ILP32-ILP32F-FPELIM-NEXT:    sw a3, 4(sp)
 ; ILP32-ILP32F-FPELIM-NEXT:    lw a3, 0(a0)
 ; ILP32-ILP32F-FPELIM-NEXT:    addi a4, a0, 8
@@ -969,7 +969,7 @@ define i64 @va3_va_arg(i32 %a, i64 %b, ...) nounwind {
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a3, 4(s0)
 ; ILP32-ILP32F-WITHFP-NEXT:    addi a0, s0, 11
 ; ILP32-ILP32F-WITHFP-NEXT:    andi a0, a0, -8
-; ILP32-ILP32F-WITHFP-NEXT:    ori a3, a0, 4
+; ILP32-ILP32F-WITHFP-NEXT:    addi a3, a0, 4
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a3, -12(s0)
 ; ILP32-ILP32F-WITHFP-NEXT:    lw a3, 0(a0)
 ; ILP32-ILP32F-WITHFP-NEXT:    addi a4, a0, 8
