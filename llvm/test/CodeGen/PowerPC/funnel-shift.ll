@@ -352,15 +352,14 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ;
 ; CHECK64-LABEL: fshl_i37:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    lis 6, 28339
+; CHECK64-NEXT:    lis 6, 1771
 ; CHECK64-NEXT:    clrldi 7, 5, 27
-; CHECK64-NEXT:    ori 6, 6, 58451
+; CHECK64-NEXT:    ori 6, 6, 15941
 ; CHECK64-NEXT:    sldi 4, 4, 27
-; CHECK64-NEXT:    rldic 6, 6, 33, 0
-; CHECK64-NEXT:    oris 6, 6, 3542
-; CHECK64-NEXT:    ori 6, 6, 31883
+; CHECK64-NEXT:    rldic 6, 6, 32, 5
+; CHECK64-NEXT:    oris 6, 6, 12398
+; CHECK64-NEXT:    ori 6, 6, 46053
 ; CHECK64-NEXT:    mulhdu 6, 7, 6
-; CHECK64-NEXT:    rldicl 6, 6, 59, 5
 ; CHECK64-NEXT:    mulli 6, 6, 37
 ; CHECK64-NEXT:    sub 5, 5, 6
 ; CHECK64-NEXT:    clrlwi 5, 5, 26
@@ -649,15 +648,14 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ;
 ; CHECK64-LABEL: fshr_i37:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    lis 6, 28339
+; CHECK64-NEXT:    lis 6, 1771
 ; CHECK64-NEXT:    clrldi 7, 5, 27
-; CHECK64-NEXT:    ori 6, 6, 58451
+; CHECK64-NEXT:    ori 6, 6, 15941
 ; CHECK64-NEXT:    sldi 4, 4, 27
-; CHECK64-NEXT:    rldic 6, 6, 33, 0
-; CHECK64-NEXT:    oris 6, 6, 3542
-; CHECK64-NEXT:    ori 6, 6, 31883
+; CHECK64-NEXT:    rldic 6, 6, 32, 5
+; CHECK64-NEXT:    oris 6, 6, 12398
+; CHECK64-NEXT:    ori 6, 6, 46053
 ; CHECK64-NEXT:    mulhdu 6, 7, 6
-; CHECK64-NEXT:    rldicl 6, 6, 59, 5
 ; CHECK64-NEXT:    mulli 6, 6, 37
 ; CHECK64-NEXT:    sub 5, 5, 6
 ; CHECK64-NEXT:    addi 5, 5, 27
