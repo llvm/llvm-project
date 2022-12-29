@@ -3723,8 +3723,10 @@ public:
       mlir::Value oldInnerArg = modifyOp.getSequence();
       std::size_t offset = explicitSpace->argPosition(oldInnerArg);
       explicitSpace->setInnerArg(offset, fir::getBase(lexv));
-      fir::ExtendedValue exv = arrayModifyToExv(
-          builder, loc, *explicitSpace->getLhsLoad(0), modifyOp.getResult(0));
+      auto lhsLoad = explicitSpace->getLhsLoad(0);
+      assert(lhsLoad.has_value());
+      fir::ExtendedValue exv =
+          arrayModifyToExv(builder, loc, *lhsLoad, modifyOp.getResult(0));
       genScalarUserDefinedAssignmentCall(builder, loc, userAssignment, exv,
                                          elementalExv);
     } else {
@@ -3899,6 +3901,7 @@ private:
     }
     mlir::Value val = builder.createConvert(loc, eleTy, origVal);
     if (isBoundsSpec()) {
+      assert(lbounds.has_value());
       auto lbs = *lbounds;
       if (lbs.size() > 0) {
         // Rebox the value with user-specified shift.
@@ -3908,9 +3911,11 @@ private:
                                            mlir::Value{});
       }
     } else if (isBoundsRemap()) {
+      assert(lbounds.has_value());
       auto lbs = *lbounds;
       if (lbs.size() > 0) {
         // Rebox the value with user-specified shift and shape.
+        assert(ubounds.has_value());
         auto shapeShiftArgs = flatZip(lbs, *ubounds);
         auto shapeTy = fir::ShapeShiftType::get(eleTy.getContext(), lbs.size());
         mlir::Value shapeShift =
@@ -6298,6 +6303,7 @@ private:
         charLen = builder.createTemporary(loc, builder.getI64Type());
         mlir::Value castLen =
             builder.createConvert(loc, builder.getI64Type(), fir::getLen(exv));
+        assert(charLen.has_value());
         builder.create<fir::StoreOp>(loc, castLen, *charLen);
       }
     }
@@ -6312,6 +6318,7 @@ private:
 
     // Convert to extended value.
     if (fir::isa_char(seqTy.getEleTy())) {
+      assert(charLen.has_value());
       auto len = builder.create<fir::LoadOp>(loc, *charLen);
       return {fir::CharArrayBoxValue{mem, len, extents}, /*needCopy=*/false};
     }
