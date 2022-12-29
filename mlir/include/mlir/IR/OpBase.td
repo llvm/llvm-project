@@ -1292,6 +1292,7 @@ def UnitAttr : Attr<CPred<"$_self.isa<::mlir::UnitAttr>()">, "unit attribute"> {
 class DictionaryAttrBase<Pred condition, string summary> :
     Attr<condition, summary> {
   let storageType = [{ ::mlir::DictionaryAttr }];
+  let constBuilderCall = "$_builder.getDictionaryAttr($0)";
   let returnType = [{ ::mlir::DictionaryAttr }];
   let valueType = NoneType;
   let convertFromStorage = "$_self";
