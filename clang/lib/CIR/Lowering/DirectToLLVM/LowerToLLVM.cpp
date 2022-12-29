@@ -39,6 +39,26 @@ using namespace llvm;
 namespace cir {
 namespace direct {
 
+class CIRBrCondOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::BrCondOp> {
+public:
+  using mlir::OpConversionPattern<mlir::cir::BrCondOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::BrCondOp brOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto condition = adaptor.getCond();
+    auto i1Condition = rewriter.create<mlir::LLVM::TruncOp>(
+        brOp.getLoc(), rewriter.getI1Type(), condition);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::CondBrOp>(
+        brOp, i1Condition.getResult(), brOp.getDestTrue(),
+        adaptor.getDestOperandsTrue(), brOp.getDestFalse(),
+        adaptor.getDestOperandsFalse());
+
+    return mlir::success();
+  }
+};
+
 class CIRCastOpLowering : public mlir::OpConversionPattern<mlir::cir::CastOp> {
 public:
   using mlir::OpConversionPattern<mlir::cir::CastOp>::OpConversionPattern;
@@ -561,11 +581,11 @@ public:
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRBrOpLowering, CIRReturnLowering>(patterns.getContext());
-  patterns.add<CIRCmpOpLowering, CIRCallLowering, CIRUnaryOpLowering,
-               CIRBinOpLowering, CIRLoadLowering, CIRConstantLowering,
-               CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering,
-               CIRScopeOpLowering, CIRCastOpLowering>(converter,
-                                                      patterns.getContext());
+  patterns.add<CIRCmpOpLowering, CIRBrCondOpLowering, CIRCallLowering,
+               CIRUnaryOpLowering, CIRBinOpLowering, CIRLoadLowering,
+               CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering,
+               CIRFuncLowering, CIRScopeOpLowering, CIRCastOpLowering>(
+      converter, patterns.getContext());
 }
 
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter) {
