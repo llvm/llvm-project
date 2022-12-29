@@ -53,6 +53,7 @@ on support follow.
      ``F``            Supported
      ``M``            Supported
      ``Svinval``      Assembly Support
+     ``Svpbmt``       Supported
      ``V``            Supported
      ``Zba``          Supported
      ``Zbb``          Supported
