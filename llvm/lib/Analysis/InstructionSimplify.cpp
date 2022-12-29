@@ -1143,12 +1143,23 @@ static bool isDivZero(Value *X, Value *Y, const SimplifyQuery &Q,
 
 /// These are simplifications common to SDiv and UDiv.
 static Value *simplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
-                          const SimplifyQuery &Q, unsigned MaxRecurse) {
+                          bool IsExact, const SimplifyQuery &Q,
+                          unsigned MaxRecurse) {
   if (Constant *C = foldOrCommuteConstant(Opcode, Op0, Op1, Q))
     return C;
 
   if (Value *V = simplifyDivRem(Opcode, Op0, Op1, Q, MaxRecurse))
     return V;
+
+  // If this is an exact divide by a constant, then the dividend (Op0) must have
+  // at least as many trailing zeros as the divisor to divide evenly. If it has
+  // less trailing zeros, then the result must be poison.
+  const APInt *DivC;
+  if (IsExact && match(Op1, m_APInt(DivC)) && DivC->countTrailingZeros()) {
+    KnownBits KnownOp0 = computeKnownBits(Op0, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    if (KnownOp0.countMaxTrailingZeros() < DivC->countTrailingZeros())
+      return PoisonValue::get(Op0->getType());
+  }
 
   bool IsSigned = Opcode == Instruction::SDiv;
 
@@ -1230,28 +1241,30 @@ static Value *simplifyRem(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
 
 /// Given operands for an SDiv, see if we can fold the result.
 /// If not, this returns null.
-static Value *simplifySDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
-                               unsigned MaxRecurse) {
+static Value *simplifySDivInst(Value *Op0, Value *Op1, bool IsExact,
+                               const SimplifyQuery &Q, unsigned MaxRecurse) {
   // If two operands are negated and no signed overflow, return -1.
   if (isKnownNegation(Op0, Op1, /*NeedNSW=*/true))
     return Constant::getAllOnesValue(Op0->getType());
 
-  return simplifyDiv(Instruction::SDiv, Op0, Op1, Q, MaxRecurse);
+  return simplifyDiv(Instruction::SDiv, Op0, Op1, IsExact, Q, MaxRecurse);
 }
 
-Value *llvm::simplifySDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
-  return ::simplifySDivInst(Op0, Op1, Q, RecursionLimit);
+Value *llvm::simplifySDivInst(Value *Op0, Value *Op1, bool IsExact,
+                              const SimplifyQuery &Q) {
+  return ::simplifySDivInst(Op0, Op1, IsExact, Q, RecursionLimit);
 }
 
 /// Given operands for a UDiv, see if we can fold the result.
 /// If not, this returns null.
-static Value *simplifyUDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
-                               unsigned MaxRecurse) {
-  return simplifyDiv(Instruction::UDiv, Op0, Op1, Q, MaxRecurse);
+static Value *simplifyUDivInst(Value *Op0, Value *Op1, bool IsExact,
+                               const SimplifyQuery &Q, unsigned MaxRecurse) {
+  return simplifyDiv(Instruction::UDiv, Op0, Op1, IsExact, Q, MaxRecurse);
 }
 
-Value *llvm::simplifyUDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
-  return ::simplifyUDivInst(Op0, Op1, Q, RecursionLimit);
+Value *llvm::simplifyUDivInst(Value *Op0, Value *Op1, bool IsExact,
+                              const SimplifyQuery &Q) {
+  return ::simplifyUDivInst(Op0, Op1, IsExact, Q, RecursionLimit);
 }
 
 /// Given operands for an SRem, see if we can fold the result.
@@ -1405,6 +1418,7 @@ static Value *simplifyRightShift(Instruction::BinaryOps Opcode, Value *Op0,
     return IsExact ? Op0 : Constant::getNullValue(Op0->getType());
 
   // The low bit cannot be shifted out of an exact shift if it is set.
+  // TODO: Generalize by counting trailing zeros (see fold for exact division).
   if (IsExact) {
     KnownBits Op0Known =
         computeKnownBits(Op0, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
@@ -5678,9 +5692,9 @@ static Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
   case Instruction::Mul:
     return simplifyMulInst(LHS, RHS, Q, MaxRecurse);
   case Instruction::SDiv:
-    return simplifySDivInst(LHS, RHS, Q, MaxRecurse);
+    return simplifySDivInst(LHS, RHS, /* IsExact */ false, Q, MaxRecurse);
   case Instruction::UDiv:
-    return simplifyUDivInst(LHS, RHS, Q, MaxRecurse);
+    return simplifyUDivInst(LHS, RHS, /* IsExact */ false, Q, MaxRecurse);
   case Instruction::SRem:
     return simplifySRemInst(LHS, RHS, Q, MaxRecurse);
   case Instruction::URem:
@@ -6553,9 +6567,11 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
   case Instruction::Mul:
     return simplifyMulInst(NewOps[0], NewOps[1], Q);
   case Instruction::SDiv:
-    return simplifySDivInst(NewOps[0], NewOps[1], Q);
+    return simplifySDivInst(NewOps[0], NewOps[1],
+                            Q.IIQ.isExact(cast<BinaryOperator>(I)), Q);
   case Instruction::UDiv:
-    return simplifyUDivInst(NewOps[0], NewOps[1], Q);
+    return simplifyUDivInst(NewOps[0], NewOps[1],
+                            Q.IIQ.isExact(cast<BinaryOperator>(I)), Q);
   case Instruction::FDiv:
     return simplifyFDivInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q);
   case Instruction::SRem:

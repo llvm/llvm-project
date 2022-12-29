@@ -95,13 +95,11 @@ define i8 @udiv_demanded_low_bits_set(i8 %a) {
   ret i8 %u
 }
 
-; TODO: This can't divide evenly, so it is poison.
+; This can't divide evenly, so it is poison.
 
 define i8 @udiv_exact_demanded_low_bits_set(i8 %a) {
 ; CHECK-LABEL: @udiv_exact_demanded_low_bits_set(
-; CHECK-NEXT:    [[O:%.*]] = or i8 [[A:%.*]], 3
-; CHECK-NEXT:    [[U:%.*]] = udiv exact i8 [[O]], 12
-; CHECK-NEXT:    ret i8 [[U]]
+; CHECK-NEXT:    ret i8 poison
 ;
   %o = or i8 %a, 3
   %u = udiv exact i8 %o, 12
