@@ -94,6 +94,7 @@ STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
 STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
 STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
+STATISTIC(NumURemExpanded, "Number of bound urem's expanded");
 
 namespace {
 
@@ -772,14 +773,20 @@ static bool processURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   assert(Instr->getOpcode() == Instruction::URem);
   assert(!Instr->getType()->isVectorTy());
 
-  // X % Y -> X for X < Y
-  if (LVI->getConstantRange(Instr->getOperand(0), Instr)
-          .icmp(ICmpInst::ICMP_ULT,
-                LVI->getConstantRange(Instr->getOperand(1), Instr))) {
-    Instr->replaceAllUsesWith(Instr->getOperand(0));
+  Value *X = Instr->getOperand(0);
+  Value *Y = Instr->getOperand(1);
+
+  ConstantRange XCR = LVI->getConstantRange(X, Instr);
+  ConstantRange YCR = LVI->getConstantRange(Y, Instr);
+
+  // X u% Y -> X  iff X u< Y
+  if (XCR.icmp(ICmpInst::ICMP_ULT, YCR)) {
+    Instr->replaceAllUsesWith(X);
     Instr->eraseFromParent();
+    ++NumURemExpanded;
     return true;
   }
+
   return false;
 }
 
