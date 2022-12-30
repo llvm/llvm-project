@@ -1253,7 +1253,6 @@ class AMDGPUAsmParser : public MCTargetAsmParser {
   bool ForcedDPP = false;
   bool ForcedSDWA = false;
   KernelScopeInfo KernelScope;
-  unsigned CPolSeen;
 
   /// @name Auto-generated Match Functions
   /// {
@@ -1554,6 +1553,7 @@ public:
   OperandMatchResultTy
   parseNamedBit(StringRef Name, OperandVector &Operands,
                 AMDGPUOperand::ImmTy ImmTy = AMDGPUOperand::ImmTyNone);
+  unsigned getCPolKind(StringRef Id, StringRef Mnemo, bool &Disabling) const;
   OperandMatchResultTy parseCPol(OperandVector &Operands);
   OperandMatchResultTy parseStringWithPrefix(StringRef Prefix,
                                              StringRef &Value,
@@ -1684,6 +1684,7 @@ private:
   bool isId(const StringRef Id) const;
   bool isId(const AsmToken &Token, const StringRef Id) const;
   bool isToken(const AsmToken::TokenKind Kind) const;
+  StringRef getId() const;
   bool trySkipId(const StringRef Id);
   bool trySkipId(const StringRef Pref, const StringRef Id);
   bool trySkipId(const StringRef Id, const AsmToken::TokenKind Kind);
@@ -5868,7 +5869,6 @@ bool AMDGPUAsmParser::ParseInstruction(ParseInstructionInfo &Info,
     OperandMode Mode = OperandMode_Default;
     if (IsMIMG && isGFX10Plus() && Operands.size() == 2)
       Mode = OperandMode_NSA;
-    CPolSeen = 0;
     OperandMatchResultTy Res = parseOperand(Operands, Name, Mode);
 
     if (Res != MatchOperand_Success) {
@@ -6011,86 +6011,74 @@ AMDGPUAsmParser::parseNamedBit(StringRef Name, OperandVector &Operands,
   return MatchOperand_Success;
 }
 
+unsigned AMDGPUAsmParser::getCPolKind(StringRef Id, StringRef Mnemo,
+                                      bool &Disabling) const {
+  Disabling = Id.startswith("no");
+
+  if (isGFX940() && !Mnemo.startswith("s_")) {
+    return StringSwitch<unsigned>(Id)
+        .Case("nt", AMDGPU::CPol::NT)
+        .Case("nont", AMDGPU::CPol::NT)
+        .Case("sc0", AMDGPU::CPol::SC0)
+        .Case("nosc0", AMDGPU::CPol::SC0)
+        .Case("sc1", AMDGPU::CPol::SC1)
+        .Case("nosc1", AMDGPU::CPol::SC1)
+        .Default(0);
+  }
+
+  return StringSwitch<unsigned>(Id)
+      .Case("dlc", AMDGPU::CPol::DLC)
+      .Case("nodlc", AMDGPU::CPol::DLC)
+      .Case("glc", AMDGPU::CPol::GLC)
+      .Case("noglc", AMDGPU::CPol::GLC)
+      .Case("scc", AMDGPU::CPol::SCC)
+      .Case("noscc", AMDGPU::CPol::SCC)
+      .Case("slc", AMDGPU::CPol::SLC)
+      .Case("noslc", AMDGPU::CPol::SLC)
+      .Default(0);
+}
+
 OperandMatchResultTy
 AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
-  OperandMatchResultTy Res = MatchOperand_NoMatch;
-
+  StringRef Mnemo = ((AMDGPUOperand &)*Operands[0]).getToken();
+  SMLoc OpLoc = getLoc();
+  unsigned Enabled = 0, Seen = 0;
   for (;;) {
-    unsigned CPolOn = 0;
-    unsigned CPolOff = 0;
     SMLoc S = getLoc();
-
-    StringRef Mnemo = ((AMDGPUOperand &)*Operands[0]).getToken();
-    if (isGFX940() && !Mnemo.startswith("s_")) {
-      if (trySkipId("sc0"))
-        CPolOn = AMDGPU::CPol::SC0;
-      else if (trySkipId("nosc0"))
-        CPolOff = AMDGPU::CPol::SC0;
-      else if (trySkipId("nt"))
-        CPolOn = AMDGPU::CPol::NT;
-      else if (trySkipId("nont"))
-        CPolOff = AMDGPU::CPol::NT;
-      else if (trySkipId("sc1"))
-        CPolOn = AMDGPU::CPol::SC1;
-      else if (trySkipId("nosc1"))
-        CPolOff = AMDGPU::CPol::SC1;
-      else
-        break;
-    } else if (trySkipId("glc"))
-      CPolOn = AMDGPU::CPol::GLC;
-    else if (trySkipId("noglc"))
-      CPolOff = AMDGPU::CPol::GLC;
-    else if (trySkipId("slc"))
-      CPolOn = AMDGPU::CPol::SLC;
-    else if (trySkipId("noslc"))
-      CPolOff = AMDGPU::CPol::SLC;
-    else if (trySkipId("dlc"))
-      CPolOn = AMDGPU::CPol::DLC;
-    else if (trySkipId("nodlc"))
-      CPolOff = AMDGPU::CPol::DLC;
-    else if (trySkipId("scc"))
-      CPolOn = AMDGPU::CPol::SCC;
-    else if (trySkipId("noscc"))
-      CPolOff = AMDGPU::CPol::SCC;
-    else
+    bool Disabling;
+    unsigned CPol = getCPolKind(getId(), Mnemo, Disabling);
+    if (!CPol)
       break;
 
-    if (!isGFX10Plus() && ((CPolOn | CPolOff) & AMDGPU::CPol::DLC)) {
+    lex();
+
+    if (!isGFX10Plus() && CPol == AMDGPU::CPol::DLC) {
       Error(S, "dlc modifier is not supported on this GPU");
       return MatchOperand_ParseFail;
     }
 
-    if (!isGFX90A() && ((CPolOn | CPolOff) & AMDGPU::CPol::SCC)) {
+    if (!isGFX90A() && CPol == AMDGPU::CPol::SCC) {
       Error(S, "scc modifier is not supported on this GPU");
       return MatchOperand_ParseFail;
     }
 
-    if (CPolSeen & (CPolOn | CPolOff)) {
+    if (Seen & CPol) {
       Error(S, "duplicate cache policy modifier");
       return MatchOperand_ParseFail;
     }
 
-    CPolSeen |= (CPolOn | CPolOff);
-    Res = MatchOperand_Success;
+    if (!Disabling)
+      Enabled |= CPol;
 
-    AMDGPUOperand *CPolOp = nullptr;
-    for (unsigned I = 1; I != Operands.size(); ++I) {
-      AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
-      if (Op.isCPol()) {
-        CPolOp = &Op;
-        break;
-      }
-    }
-
-    if (CPolOp) {
-      CPolOp->setImm((CPolOp->getImm() | CPolOn) & ~CPolOff);
-    } else {
-      Operands.push_back(
-          AMDGPUOperand::CreateImm(this, CPolOn, S, AMDGPUOperand::ImmTyCPol));
-    }
+    Seen |= CPol;
   }
 
-  return Res;
+  if (!Seen)
+    return MatchOperand_NoMatch;
+
+  Operands.push_back(
+      AMDGPUOperand::CreateImm(this, Enabled, OpLoc, AMDGPUOperand::ImmTyCPol));
+  return MatchOperand_Success;
 }
 
 static void addOptionalImmOperand(
@@ -7118,6 +7106,10 @@ AMDGPUAsmParser::isId(const StringRef Id) const {
 bool
 AMDGPUAsmParser::isToken(const AsmToken::TokenKind Kind) const {
   return getTokenKind() == Kind;
+}
+
+StringRef AMDGPUAsmParser::getId() const {
+  return isToken(AsmToken::Identifier) ? getTokenStr() : StringRef();
 }
 
 bool

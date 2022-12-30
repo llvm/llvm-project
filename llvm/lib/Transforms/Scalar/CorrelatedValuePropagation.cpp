@@ -94,6 +94,7 @@ STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
 STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
 STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
+STATISTIC(NumURemExpanded, "Number of bound urem's expanded");
 
 namespace {
 
@@ -768,18 +769,84 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   return true;
 }
 
+static bool expandURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
+  assert(Instr->getOpcode() == Instruction::URem);
+  assert(!Instr->getType()->isVectorTy());
+
+  Value *X = Instr->getOperand(0);
+  Value *Y = Instr->getOperand(1);
+
+  ConstantRange XCR = LVI->getConstantRange(X, Instr);
+  ConstantRange YCR = LVI->getConstantRange(Y, Instr);
+
+  // Given
+  //   R  = X u% Y
+  // We can represent the modulo operation as a loop/self-recursion:
+  //   urem_rec(X, Y):
+  //     Z = X - Y
+  //     if X u< Y
+  //       ret X
+  //     else
+  //       ret urem_rec(Z, Y)
+  // which isn't better, but if we only need a single iteration
+  // to compute the answer, this becomes quite good:
+  //   R  = X < Y ? X : X - Y    iff X u< 2*Y (w/ unsigned saturation)
+  // Now, we do not care about all full multiples of Y in X, they do not change
+  // the answer, thus we could rewrite the expression as:
+  //   X* = X - (Y * |_ X / Y _|)
+  //   R  = X* % Y
+  // so we don't need the *first* iteration to return, we just need to
+  // know *which* iteration will always return, so we could also rewrite it as:
+  //   X* = X - (Y * |_ X / Y _|)
+  //   R  = X* % Y                 iff X* u< 2*Y (w/ unsigned saturation)
+  // but that does not seem profitable here.
+
+  bool XIsBound =
+      XCR.icmp(ICmpInst::ICMP_ULT, YCR.umul_sat(APInt(YCR.getBitWidth(), 2)));
+  // Even if we don't know X's range, the divisor may be so large, X can't ever
+  // be 2x larger than that. I.e. if divisor is always negative.
+  if (!XIsBound && !YCR.isAllNegative())
+    return false;
+
+  IRBuilder<> B{Instr};
+  if (!XIsBound) {
+    // NOTE: this transformation increases use count on X, but that is fine
+    // unless the transformation is valid because the divisor is negative,
+    // and is non-variable, and thus we didn't have any extra uses.
+    if (auto *Ycst = dyn_cast<ConstantInt>(Y); Ycst && Ycst->isNegative())
+      X = B.CreateFreeze(X, X->getName() + ".frozen");
+  }
+  auto *AdjX = B.CreateNUWSub(X, Y, Instr->getName() + ".urem");
+  auto *Cmp = B.CreateICmp(ICmpInst::ICMP_ULT, X, Y, Instr->getName() + ".cmp");
+  auto *ExpandedURem = B.CreateSelect(Cmp, X, AdjX);
+  ExpandedURem->takeName(Instr);
+  Instr->replaceAllUsesWith(ExpandedURem);
+  Instr->eraseFromParent();
+  ++NumURemExpanded;
+  return true;
+}
+
 static bool processURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   assert(Instr->getOpcode() == Instruction::URem);
   assert(!Instr->getType()->isVectorTy());
 
-  // X % Y -> X for X < Y
-  if (LVI->getConstantRange(Instr->getOperand(0), Instr)
-          .icmp(ICmpInst::ICMP_ULT,
-                LVI->getConstantRange(Instr->getOperand(1), Instr))) {
-    Instr->replaceAllUsesWith(Instr->getOperand(0));
+  Value *X = Instr->getOperand(0);
+  Value *Y = Instr->getOperand(1);
+
+  ConstantRange XCR = LVI->getConstantRange(X, Instr);
+  ConstantRange YCR = LVI->getConstantRange(Y, Instr);
+
+  // X u% Y -> X  iff X u< Y
+  if (XCR.icmp(ICmpInst::ICMP_ULT, YCR)) {
+    Instr->replaceAllUsesWith(X);
     Instr->eraseFromParent();
+    ++NumURemExpanded;
     return true;
   }
+
+  if (expandURem(Instr, LVI))
+    return true;
+
   return false;
 }
 
