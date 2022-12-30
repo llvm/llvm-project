@@ -157,9 +157,8 @@ private:
 public:
   /// This constructor initializes the data members to match that
   /// of the specified triple.
-  AArch64Subtarget(const Triple &TT, const std::string &CPU,
-                   const std::string &TuneCPU, const std::string &FS,
-                   const TargetMachine &TM, bool LittleEndian,
+  AArch64Subtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
+                   StringRef FS, const TargetMachine &TM, bool LittleEndian,
                    unsigned MinSVEVectorSizeInBitsOverride = 0,
                    unsigned MaxSVEVectorSizeInBitsOverride = 0,
                    bool StreamingSVEModeDisabled = true);
