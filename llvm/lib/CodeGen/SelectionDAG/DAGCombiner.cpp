@@ -612,6 +612,7 @@ namespace {
     SDValue splitMergedValStore(StoreSDNode *ST);
     SDValue TransformFPLoadStorePair(SDNode *N);
     SDValue convertBuildVecZextToZext(SDNode *N);
+    SDValue convertBuildVecZextToBuildVecWithZeros(SDNode *N);
     SDValue reduceBuildVecExtToExtBuildVec(SDNode *N);
     SDValue reduceBuildVecTruncToBitCast(SDNode *N);
     SDValue reduceBuildVecToShuffle(SDNode *N);
@@ -21451,6 +21452,117 @@ SDValue DAGCombiner::convertBuildVecZextToZext(SDNode *N) {
                      VT, In);
 }
 
+// If this is a very simple BUILD_VECTOR with first element being a ZERO_EXTEND,
+// and all other elements being constant zero's, granularize the BUILD_VECTOR's
+// element width, absorbing the ZERO_EXTEND, turning it into a constant zero op.
+// This patten can appear during legalization.
+//
+// NOTE: This can be generalized to allow more than a single
+//       non-constant-zero op, UNDEF's, and to be KnownBits-based,
+SDValue DAGCombiner::convertBuildVecZextToBuildVecWithZeros(SDNode *N) {
+  // Don't run this after legalization. Targets may have other preferences.
+  if (Level >= AfterLegalizeDAG)
+    return SDValue();
+
+  // FIXME: support big-endian.
+  if (DAG.getDataLayout().isBigEndian())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  EVT OpVT = N->getOperand(0).getValueType();
+  assert(!VT.isScalableVector() && "Encountered scalable BUILD_VECTOR?");
+
+  unsigned EltBitwidth = VT.getScalarSizeInBits();
+  // NOTE: the actual width of operands may be wider than that!
+
+  // Analyze all operands of this BUILD_VECTOR. What is the largest number of
+  // active bits they all have? We'll want to truncate them all to that width.
+  unsigned ActiveBits = 0;
+  APInt KnownZeroOps(VT.getVectorNumElements(), 0);
+  for (auto I : enumerate(N->ops())) {
+    SDValue Op = I.value();
+    // FIXME: support UNDEF elements?
+    if (auto *Cst = dyn_cast<ConstantSDNode>(Op)) {
+      unsigned OpActiveBits =
+          Cst->getAPIntValue().trunc(EltBitwidth).getActiveBits();
+      if (OpActiveBits == 0) {
+        KnownZeroOps.setBit(I.index());
+        continue;
+      }
+      // Profitability check: don't allow non-zero constant operands.
+      return SDValue();
+    }
+    // Profitability check: there must only be a single non-zero operand,
+    // and it must be the first operand of the BUILD_VECTOR.
+    if (I.index() != 0)
+      return SDValue();
+    // The operand must be a zero-extension itself.
+    // FIXME: this could be generalized to known leading zeros check.
+    if (Op.getOpcode() != ISD::ZERO_EXTEND)
+      return SDValue();
+    unsigned CurrActiveBits =
+        Op.getOperand(0).getValueSizeInBits().getFixedSize();
+    assert(!ActiveBits && "Already encountered non-constant-zero operand?");
+    ActiveBits = CurrActiveBits;
+    // We want to at least halve the element size.
+    if (2 * ActiveBits > EltBitwidth)
+      return SDValue();
+  }
+
+  // This BUILD_VECTOR must have at least one non-constant-zero operand.
+  if (ActiveBits == 0)
+    return SDValue();
+
+  // We have EltBitwidth bits, the *minimal* chunk size is ActiveBits,
+  // into how many chunks can we split our element width?
+  unsigned Factor = divideCeil(EltBitwidth, ActiveBits);
+  assert(Factor > 1 && "Did not split the element after all?");
+  assert(EltBitwidth % Factor == 0 && "Can not split into this many chunks?");
+  unsigned ChunkBitwidth = EltBitwidth / Factor;
+  assert(ChunkBitwidth >= ActiveBits && "Underestimated chunk size?");
+  assert(ChunkBitwidth < EltBitwidth && "Failed to reduce element width?");
+
+  EVT OpIntVT = EVT::getIntegerVT(*DAG.getContext(), OpVT.getSizeInBits());
+  EVT NewScalarIntVT = EVT::getIntegerVT(*DAG.getContext(), ChunkBitwidth);
+  EVT NewIntVT = EVT::getVectorVT(*DAG.getContext(), NewScalarIntVT,
+                                  Factor * N->getNumOperands());
+
+  // Never create illegal types.
+  if (!TLI.isTypeLegal(OpIntVT) || !TLI.isTypeLegal(NewScalarIntVT) ||
+      !TLI.isTypeLegal(NewIntVT))
+    return SDValue();
+
+  if (LegalOperations &&
+      !(TLI.isOperationLegalOrCustom(ISD::BITCAST, OpIntVT) &&
+        TLI.isOperationLegalOrCustom(ISD::TRUNCATE, NewScalarIntVT) &&
+        TLI.isOperationLegalOrCustom(ISD::BUILD_VECTOR, NewIntVT)))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue ZeroOp = DAG.getConstant(0, DL, NewScalarIntVT);
+
+  // Recreate the BUILD_VECTOR, with elements now being Factor times smaller.
+  SmallVector<SDValue, 16> NewOps;
+  NewOps.reserve(NewIntVT.getVectorNumElements());
+  for (auto I : enumerate(N->ops())) {
+    SDValue Op = I.value();
+    // FIXME: after allowing UNDEF's, do handle them here.
+    unsigned SrcOpIdx = I.index();
+    if (KnownZeroOps[SrcOpIdx]) {
+      NewOps.append(Factor, ZeroOp);
+      continue;
+    }
+    Op = DAG.getBitcast(OpIntVT, Op);
+    Op = DAG.getNode(ISD::TRUNCATE, DL, NewScalarIntVT, Op);
+    NewOps.emplace_back(Op);
+    NewOps.append(Factor - 1, ZeroOp);
+  }
+  assert(NewOps.size() == NewIntVT.getVectorNumElements());
+  SDValue NewBV = DAG.getBuildVector(NewIntVT, DL, NewOps);
+  NewBV = DAG.getBitcast(VT, NewBV);
+  return NewBV;
+}
+
 SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
   EVT VT = N->getValueType(0);
 
@@ -21514,6 +21626,9 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
   }
 
   if (SDValue V = convertBuildVecZextToZext(N))
+    return V;
+
+  if (SDValue V = convertBuildVecZextToBuildVecWithZeros(N))
     return V;
 
   if (SDValue V = reduceBuildVecExtToExtBuildVec(N))
