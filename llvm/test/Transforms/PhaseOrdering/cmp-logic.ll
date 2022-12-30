@@ -123,16 +123,15 @@ define i32 @PR56119(i32 %e.coerce) {
 ;
 ; OZ-LABEL: @PR56119(
 ; OZ-NEXT:  entry:
-; OZ-NEXT:    [[E_COERCE_FR:%.*]] = freeze i32 [[E_COERCE:%.*]]
-; OZ-NEXT:    [[TMP0:%.*]] = and i32 [[E_COERCE_FR]], 255
-; OZ-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TMP0]], 7
-; OZ-NEXT:    br i1 [[CMP2]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; OZ-NEXT:    [[CONV2:%.*]] = and i32 [[E_COERCE:%.*]], 255
+; OZ-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[CONV2]], 7
+; OZ-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; OZ:       if.then:
 ; OZ-NEXT:    tail call void (...) @foo()
 ; OZ-NEXT:    br label [[IF_END]]
 ; OZ:       if.end:
-; OZ-NEXT:    [[TMP1:%.*]] = load i32, ptr @c, align 4
-; OZ-NEXT:    ret i32 [[TMP1]]
+; OZ-NEXT:    [[TMP0:%.*]] = load i32, ptr @c, align 4
+; OZ-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
   %e = alloca %struct.a, align 4
