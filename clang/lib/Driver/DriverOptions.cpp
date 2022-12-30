@@ -27,6 +27,14 @@ using namespace llvm::opt;
 #include "clang/Driver/Options.inc"
 #undef PREFIX
 
+static constexpr const llvm::StringLiteral PrefixTable_init[] =
+#define PREFIX_UNION(VALUES) VALUES
+#include "clang/Driver/Options.inc"
+#undef PREFIX_UNION
+    ;
+static constexpr const llvm::ArrayRef<llvm::StringLiteral>
+    PrefixTable(PrefixTable_init, std::size(PrefixTable_init) - 1);
+
 static constexpr OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
@@ -38,12 +46,10 @@ static constexpr OptTable::Info InfoTable[] = {
 
 namespace {
 
-class DriverOptTable : public OptTable {
+class DriverOptTable : public PrecomputedOptTable {
 public:
-  DriverOptTable()
-    : OptTable(InfoTable) {}
+  DriverOptTable() : PrecomputedOptTable(InfoTable, PrefixTable) {}
 };
-
 }
 
 const llvm::opt::OptTable &clang::driver::getDriverOptTable() {

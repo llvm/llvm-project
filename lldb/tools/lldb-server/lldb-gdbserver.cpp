@@ -297,9 +297,9 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class LLGSOptTable : public opt::OptTable {
+class LLGSOptTable : public opt::GenericOptTable {
 public:
-  LLGSOptTable() : OptTable(InfoTable) {}
+  LLGSOptTable() : opt::GenericOptTable(InfoTable) {}
 
   void PrintHelp(llvm::StringRef Name) {
     std::string Usage =

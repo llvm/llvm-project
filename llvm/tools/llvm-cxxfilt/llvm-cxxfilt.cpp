@@ -51,9 +51,11 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class CxxfiltOptTable : public opt::OptTable {
+class CxxfiltOptTable : public opt::GenericOptTable {
 public:
-  CxxfiltOptTable() : OptTable(InfoTable) { setGroupedShortOptions(true); }
+  CxxfiltOptTable() : opt::GenericOptTable(InfoTable) {
+    setGroupedShortOptions(true);
+  }
 };
 } // namespace
 

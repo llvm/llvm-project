@@ -97,18 +97,19 @@ using namespace llvm::opt;
 
 namespace {
 
-class CommonOptTable : public opt::OptTable {
+class CommonOptTable : public opt::GenericOptTable {
 public:
   CommonOptTable(ArrayRef<Info> OptionInfos, const char *Usage,
                  const char *Description)
-      : OptTable(OptionInfos), Usage(Usage), Description(Description) {
+      : opt::GenericOptTable(OptionInfos), Usage(Usage),
+        Description(Description) {
     setGroupedShortOptions(true);
   }
 
   void printHelp(StringRef Argv0, bool ShowHidden = false) const {
     Argv0 = sys::path::filename(Argv0);
-    opt::OptTable::printHelp(outs(), (Argv0 + Usage).str().c_str(), Description,
-                             ShowHidden, ShowHidden);
+    opt::GenericOptTable::printHelp(outs(), (Argv0 + Usage).str().c_str(),
+                                    Description, ShowHidden, ShowHidden);
     // TODO Replace this with OptTable API once it adds extrahelp support.
     outs() << "\nPass @FILE as argument to read options from FILE.\n";
   }

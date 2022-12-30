@@ -9,7 +9,6 @@
 #include "llvm/Option/OptTable.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptSpecifier.h"
@@ -23,6 +22,7 @@
 #include <cctype>
 #include <cstring>
 #include <map>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -125,16 +125,13 @@ OptTable::OptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase)
     }
   }
 #endif
+}
 
-  // Build prefixes.
-  for (unsigned i = FirstSearchableIndex + 1, e = getNumOptions() + 1;
-                i != e; ++i) {
-    const auto &P = getInfo(i).Prefixes;
-    PrefixesUnion.insert(P.begin(), P.end());
-  }
+void OptTable::buildPrefixChars() {
+  assert(PrefixChars.empty() && "rebuilding a non-empty prefix char");
 
   // Build prefix chars.
-  for (const StringRef &Prefix : PrefixesUnion.keys()) {
+  for (const StringLiteral &Prefix : getPrefixesUnion()) {
     for (char C : Prefix)
       if (!is_contained(PrefixChars, C))
         PrefixChars.push_back(C);
@@ -151,10 +148,10 @@ const Option OptTable::getOption(OptSpecifier Opt) const {
   return Option(&getInfo(id), this);
 }
 
-static bool isInput(const StringSet<> &Prefixes, StringRef Arg) {
+static bool isInput(const ArrayRef<StringLiteral> &Prefixes, StringRef Arg) {
   if (Arg == "-")
     return true;
-  for (const StringRef &Prefix : Prefixes.keys())
+  for (const StringRef &Prefix : Prefixes)
     if (Arg.startswith(Prefix))
       return false;
   return true;
@@ -236,6 +233,9 @@ unsigned OptTable::findNearest(StringRef Option, std::string &NearestString,
   // Consider each [option prefix + option name] pair as a candidate, finding
   // the closest match.
   unsigned BestDistance = UINT_MAX;
+  SmallString<16> Candidate;
+  SmallString<16> NormalizedName;
+
   for (const Info &CandidateInfo :
        ArrayRef<Info>(OptionInfos).drop_front(FirstSearchableIndex)) {
     StringRef CandidateName = CandidateInfo.Name;
@@ -243,7 +243,7 @@ unsigned OptTable::findNearest(StringRef Option, std::string &NearestString,
     // We can eliminate some option prefix/name pairs as candidates right away:
     // * Ignore option candidates with empty names, such as "--", or names
     //   that do not meet the minimum length.
-    if (CandidateName.empty() || CandidateName.size() < MinimumLength)
+    if (CandidateName.size() < MinimumLength)
       continue;
 
     // * If FlagsToInclude were specified, ignore options that don't include
@@ -262,26 +262,25 @@ unsigned OptTable::findNearest(StringRef Option, std::string &NearestString,
     // Now check if the candidate ends with a character commonly used when
     // delimiting an option from its value, such as '=' or ':'. If it does,
     // attempt to split the given option based on that delimiter.
-    StringRef LHS, RHS;
     char Last = CandidateName.back();
     bool CandidateHasDelimiter = Last == '=' || Last == ':';
-    std::string NormalizedName = std::string(Option);
+    StringRef RHS;
     if (CandidateHasDelimiter) {
-      std::tie(LHS, RHS) = Option.split(Last);
-      NormalizedName = std::string(LHS);
-      if (Option.find(Last) == LHS.size())
+      std::tie(NormalizedName, RHS) = Option.split(Last);
+      if (Option.find(Last) == NormalizedName.size())
         NormalizedName += Last;
-    }
+    } else
+      NormalizedName = Option;
 
     // Consider each possible prefix for each candidate to find the most
     // appropriate one. For example, if a user asks for "--helm", suggest
     // "--help" over "-help".
     for (auto CandidatePrefix : CandidateInfo.Prefixes) {
-      std::string Candidate = (CandidatePrefix + CandidateName).str();
-      StringRef CandidateRef = Candidate;
-      unsigned Distance =
-          CandidateRef.edit_distance(NormalizedName, /*AllowReplacements=*/true,
-                                     /*MaxEditDistance=*/BestDistance);
+      Candidate = CandidatePrefix;
+      Candidate += CandidateName;
+      unsigned Distance = StringRef(Candidate).edit_distance(
+          NormalizedName, /*AllowReplacements=*/true,
+          /*MaxEditDistance=*/BestDistance);
       if (RHS.empty() && CandidateHasDelimiter) {
         // The Candidate ends with a = or : delimiter, but the option passed in
         // didn't contain the delimiter (or doesn't have anything after it).
@@ -310,7 +309,7 @@ std::unique_ptr<Arg> OptTable::parseOneArgGrouped(InputArgList &Args,
   // itself.
   const char *CStr = Args.getArgString(Index);
   StringRef Str(CStr);
-  if (isInput(PrefixesUnion, Str))
+  if (isInput(getPrefixesUnion(), Str))
     return std::make_unique<Arg>(getOption(InputOptionID), Str, Index++, CStr);
 
   const Info *End = OptionInfos.data() + OptionInfos.size();
@@ -375,7 +374,7 @@ std::unique_ptr<Arg> OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
 
   // Anything that doesn't start with PrefixesUnion is an input, as is '-'
   // itself.
-  if (isInput(PrefixesUnion, Str))
+  if (isInput(getPrefixesUnion(), Str))
     return std::make_unique<Arg>(getOption(InputOptionID), Str, Index++,
                                  Str.data());
 
@@ -652,4 +651,14 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
   }
 
   OS.flush();
+}
+
+GenericOptTable::GenericOptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase)
+    : OptTable(OptionInfos, IgnoreCase) {
+
+  std::set<StringLiteral> TmpPrefixesUnion;
+  for (auto const &Info : OptionInfos.drop_front(FirstSearchableIndex))
+    TmpPrefixesUnion.insert(Info.Prefixes.begin(), Info.Prefixes.end());
+  PrefixesUnionBuffer.append(TmpPrefixesUnion.begin(), TmpPrefixesUnion.end());
+  buildPrefixChars();
 }

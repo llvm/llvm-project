@@ -237,8 +237,14 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       CurPrefix = NewPrefix;
   }
 
-  // Dump prefixes.
+  DenseSet<StringRef> PrefixesUnionSet;
+  for (const auto &Prefix : Prefixes)
+    PrefixesUnionSet.insert(Prefix.first.begin(), Prefix.first.end());
+  SmallVector<StringRef> PrefixesUnion(PrefixesUnionSet.begin(),
+                                       PrefixesUnionSet.end());
+  array_pod_sort(PrefixesUnion.begin(), PrefixesUnion.end());
 
+  // Dump prefixes.
   OS << "/////////\n";
   OS << "// Prefixes\n\n";
   OS << "#ifdef PREFIX\n";
@@ -259,6 +265,20 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#undef COMMA\n";
   OS << "#endif // PREFIX\n\n";
 
+  // Dump prefix unions.
+  OS << "/////////\n";
+  OS << "// Prefix Union\n\n";
+  OS << "#ifdef PREFIX_UNION\n";
+  OS << "#define COMMA ,\n";
+  OS << "PREFIX_UNION({\n";
+  for (const auto &Prefix : PrefixesUnion) {
+    OS << "llvm::StringLiteral(\"" << Prefix << "\") COMMA ";
+  }
+  OS << "llvm::StringLiteral(\"\")})\n";
+  OS << "#undef COMMA\n";
+  OS << "#endif // PREFIX_UNION\n\n";
+
+  // Dump groups.
   OS << "/////////\n";
   OS << "// ValuesCode\n\n";
   OS << "#ifdef OPTTABLE_VALUES_CODE\n";

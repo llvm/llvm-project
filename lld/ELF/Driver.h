@@ -16,7 +16,7 @@
 
 namespace lld::elf {
 // Parses command line options.
-class ELFOptTable : public llvm::opt::OptTable {
+class ELFOptTable : public llvm::opt::GenericOptTable {
 public:
   ELFOptTable();
   llvm::opt::InputArgList parse(ArrayRef<const char *> argv);
