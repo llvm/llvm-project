@@ -265,7 +265,6 @@ arith::AddUIExtendedOp::fold(ArrayRef<Attribute> operands,
   Type overflowTy = getOverflow().getType();
   // addui_extended(x, 0) -> x, false
   if (matchPattern(getRhs(), m_Zero())) {
-    auto overflowZero = APInt::getZero(1);
     Builder builder(getContext());
     auto falseValue = builder.getZeroAttr(overflowTy);
 
