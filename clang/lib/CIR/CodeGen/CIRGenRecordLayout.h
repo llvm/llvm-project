@@ -74,6 +74,10 @@ public:
     assert(FieldInfo.count(FD) && "Invalid field for record!");
     return FieldInfo.lookup(FD);
   }
+
+  /// Check whether this struct can be C++ zero-initialized with a
+  /// zeroinitializer.
+  bool isZeroInitializable() const { return IsZeroInitializable; }
 };
 
 } // namespace cir
