@@ -1623,10 +1623,8 @@ hasAcceptableDefaultArgument(Sema &S, const ParmDecl *D,
   if (!D->hasDefaultArgument())
     return false;
 
-  llvm::SmallDenseSet<const ParmDecl *, 4> Visited;
-  while (D && !Visited.count(D)) {
-    Visited.insert(D);
-
+  llvm::SmallPtrSet<const ParmDecl *, 4> Visited;
+  while (D && Visited.insert(D).second) {
     auto &DefaultArg = D->getDefaultArgStorage();
     if (!DefaultArg.isInherited() && S.isAcceptable(D, Kind))
       return true;
