@@ -495,6 +495,8 @@ def VOP_MAC_F16_t16 : VOP_MAC <f16> {
                      Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
                      getVregSrcForVT_t16<Src2VT>.ret:$src2, // stub argument
                      dpp8:$dpp8, FI:$fi);
+  let Src2Mod = FP32InputMods; // dummy unused modifiers
+  let Src2RC64 = VGPRSrc_32;   // stub argument
 }
 def VOP_MAC_F32 : VOP_MAC <f32>;
 let HasExtDPP = 0, HasExt32BitDPP = 0 in
