@@ -324,6 +324,11 @@ public:
   // C++ related functions.
   void buildDeclContext(const DeclContext *DC);
 
+  /// Return the result of value-initializing the given type, i.e. a null
+  /// expression of the given type.  This is usually, but not always, an LLVM
+  /// null constant.
+  mlir::Value buildNullConstant(QualType T);
+
   llvm::StringRef getMangledName(clang::GlobalDecl GD);
 
   // Make sure that this type is translated.

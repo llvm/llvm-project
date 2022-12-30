@@ -1344,3 +1344,25 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
   }
   llvm_unreachable("Unknown APValue kind");
 }
+
+mlir::Value CIRGenModule::buildNullConstant(QualType T) {
+  if (T->getAs<PointerType>())
+    llvm_unreachable("NYI");
+
+  if (getTypes().isZeroInitializable(T))
+    llvm_unreachable("NYI");
+
+  if (const ConstantArrayType *CAT =
+          getASTContext().getAsConstantArrayType(T)) {
+    llvm_unreachable("NYI");
+  }
+
+  if (const RecordType *RT = T->getAs<RecordType>())
+    llvm_unreachable("NYI");
+
+  assert(T->isMemberDataPointerType() &&
+         "Should only see pointers to data members here!");
+
+  llvm_unreachable("NYI");
+  return {};
+}

@@ -48,6 +48,9 @@ public:
   mlir::Type ConvertType(QualType T) { return CGF.ConvertType(T); }
   LValue buildLValue(const Expr *E) { return CGF.buildLValue(E); }
 
+  /// Emit a value that corresponds to null for the given type.
+  mlir::Value buildNullValue(QualType Ty);
+
   //===--------------------------------------------------------------------===//
   //                            Visitor Methods
   //===--------------------------------------------------------------------===//
@@ -117,7 +120,10 @@ public:
   }
 
   mlir::Value VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E) {
-    llvm_unreachable("NYI");
+    if (E->getType()->isVoidType())
+      return nullptr;
+
+    return buildNullValue(E->getType());
   }
   mlir::Value VisitGNUNullExpr(const GNUNullExpr *E) {
     llvm_unreachable("NYI");
@@ -1313,6 +1319,10 @@ LValue ScalarExprEmitter::buildCompoundAssignLValue(
 
   assert(!CGF.getLangOpts().OpenMP && "Not implemented");
   return LHSLV;
+}
+
+mlir::Value ScalarExprEmitter::buildNullValue(QualType Ty) {
+  return CGF.buildFromMemory(CGF.CGM.buildNullConstant(Ty), Ty);
 }
 
 mlir::Value ScalarExprEmitter::buildCompoundAssign(

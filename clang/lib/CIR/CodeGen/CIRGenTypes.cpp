@@ -755,3 +755,35 @@ CIRGenTypes::getCIRGenRecordLayout(const RecordDecl *RD) {
          "Unable to find record layout information for type");
   return *I->second;
 }
+
+bool CIRGenTypes::isZeroInitializable(QualType T) {
+  if (T->getAs<PointerType>())
+    return Context.getTargetNullPointerValue(T) == 0;
+
+  if (const auto *AT = Context.getAsArrayType(T)) {
+    if (isa<IncompleteArrayType>(AT))
+      return true;
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(AT))
+      if (Context.getConstantArrayElementCount(CAT) == 0)
+        return true;
+    T = Context.getBaseElementType(T);
+  }
+
+  // Records are non-zero-initializable if they contain any
+  // non-zero-initializable subobjects.
+  if (const RecordType *RT = T->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+    return isZeroInitializable(RD);
+  }
+
+  // We have to ask the ABI about member pointers.
+  if (const MemberPointerType *MPT = T->getAs<MemberPointerType>())
+    llvm_unreachable("NYI");
+
+  // Everything else is okay.
+  return true;
+}
+
+bool CIRGenTypes::isZeroInitializable(const RecordDecl *RD) {
+  return getCIRGenRecordLayout(RD).isZeroInitializable();
+}

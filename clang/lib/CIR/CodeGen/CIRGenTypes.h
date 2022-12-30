@@ -144,10 +144,17 @@ public:
     return RecordsBeingLaidOut.count(Ty);
   }
 
+  /// Return whether a type can be zero-initialized (in the C++ sense) with an
+  /// LLVM zeroinitializer.
+  bool isZeroInitializable(clang::QualType T);
+  /// Return whether a record type can be zero-initialized (in the C++ sense)
+  /// with an LLVM zeroinitializer.
+  bool isZeroInitializable(const clang::RecordDecl *RD);
+
   const ABIInfo &getABIInfo() const { return TheABIInfo; }
   CIRGenCXXABI &getCXXABI() const { return TheCXXABI; }
 
-  /// ConvertType - Convert type T into a mlir::Type.
+  /// Convert type T into a mlir::Type.
   mlir::Type ConvertType(clang::QualType T);
 
   mlir::Type convertRecordDeclType(const clang::RecordDecl *recordDecl);
