@@ -49,7 +49,7 @@ public:
   LValue buildLValue(const Expr *E) { return CGF.buildLValue(E); }
 
   /// Emit a value that corresponds to null for the given type.
-  mlir::Value buildNullValue(QualType Ty);
+  mlir::Value buildNullValue(QualType Ty, mlir::Location loc);
 
   //===--------------------------------------------------------------------===//
   //                            Visitor Methods
@@ -123,7 +123,7 @@ public:
     if (E->getType()->isVoidType())
       return nullptr;
 
-    return buildNullValue(E->getType());
+    return buildNullValue(E->getType(), CGF.getLoc(E->getSourceRange()));
   }
   mlir::Value VisitGNUNullExpr(const GNUNullExpr *E) {
     llvm_unreachable("NYI");
@@ -1321,8 +1321,8 @@ LValue ScalarExprEmitter::buildCompoundAssignLValue(
   return LHSLV;
 }
 
-mlir::Value ScalarExprEmitter::buildNullValue(QualType Ty) {
-  return CGF.buildFromMemory(CGF.CGM.buildNullConstant(Ty), Ty);
+mlir::Value ScalarExprEmitter::buildNullValue(QualType Ty, mlir::Location loc) {
+  return CGF.buildFromMemory(CGF.CGM.buildNullConstant(Ty, loc), Ty);
 }
 
 mlir::Value ScalarExprEmitter::buildCompoundAssign(
