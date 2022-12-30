@@ -179,8 +179,10 @@ lowerIshftc(fir::FirOpBuilder &builder, mlir::Location loc,
   llvm::SmallVector<fir::ExtendedValue> args;
   args.push_back(getOperand(0));
   args.push_back(getOperand(1));
+  auto iPC = isPresentCheck(2);
+  assert(iPC.has_value());
   args.push_back(builder
-                     .genIfOp(loc, {resultType}, *isPresentCheck(2),
+                     .genIfOp(loc, {resultType}, *iPC,
                               /*withElseRegion=*/true)
                      .genThen([&]() {
                        fir::ExtendedValue sizeExv = getOperand(2);

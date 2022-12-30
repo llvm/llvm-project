@@ -25,10 +25,13 @@ def testConstShape():
         shape.ConstWitnessOp(False)
         shape.ConstSizeOp(30)
         shape.ConstSizeOp(IntegerAttr.get(IndexType.get(), 40))
-        shape.ConstShapeOp([1, 2])
+        x = shape.ConstShapeOp([1, 2])
+        shape.MeetOp(x, x, error="impossible")
         return shape.ConstShapeOp(
             DenseElementsAttr.get(
                 np.array([3, 4], dtype=np.int64), type=IndexType.get()))
+
+
 
     # CHECK-LABEL: func @const_shape_tensor(%arg0: tensor<12x?xf32>)
     # CHECK-DAG: shape.const_witness false

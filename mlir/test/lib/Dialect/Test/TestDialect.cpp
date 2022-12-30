@@ -1183,8 +1183,8 @@ LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
   auto type = IntegerType::get(context, 17);
 
   Attribute encoding;
-  if (auto ranked_ty = sval.dyn_cast<RankedTensorType>())
-    encoding = ranked_ty.getEncoding();
+  if (auto rankedTy = sval.dyn_cast<RankedTensorType>())
+    encoding = rankedTy.getEncoding();
   inferredReturnShapes.push_back(ShapedTypeComponents({dim}, type, encoding));
   return success();
 }

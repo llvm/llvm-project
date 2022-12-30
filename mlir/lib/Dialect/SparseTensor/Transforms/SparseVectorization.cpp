@@ -398,7 +398,8 @@ static bool vectorizeExpr(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
         vexp = rewriter.create<arith::AddIOp>(loc, veci, incr);
       }
       return true;
-    } // An invariant or reduction. In both cases, we treat this as an
+    }
+    // An invariant or reduction. In both cases, we treat this as an
     // invariant value, and rely on later replacing and folding to
     // construct a proper reduction chain for the latter case.
     if (codegen)
