@@ -36,7 +36,7 @@ define i64 @shl_by_complemented_64(i64 %x) {
 ; RV32I-NEXT:    sll a1, a1, a4
 ; RV32I-NEXT:    li a4, 63
 ; RV32I-NEXT:    sub a4, a4, a0
-; RV32I-NEXT:    xori a4, a4, 31
+; RV32I-NEXT:    not a4, a4
 ; RV32I-NEXT:    srli a0, a0, 1
 ; RV32I-NEXT:    srl a0, a0, a4
 ; RV32I-NEXT:    or a1, a1, a0
@@ -88,7 +88,7 @@ define i64 @lshr_by_complemented_64(i64 %x) {
 ; RV32I-NEXT:    srl a4, a0, a4
 ; RV32I-NEXT:    li a5, 63
 ; RV32I-NEXT:    sub a5, a5, a0
-; RV32I-NEXT:    xori a0, a5, 31
+; RV32I-NEXT:    not a0, a5
 ; RV32I-NEXT:    slli a1, a1, 1
 ; RV32I-NEXT:    sll a0, a1, a0
 ; RV32I-NEXT:    or a0, a4, a0
@@ -141,7 +141,7 @@ define i64 @ashr_by_complemented_64(i64 %x) {
 ; RV32I-NEXT:    srl a3, a2, a3
 ; RV32I-NEXT:    li a4, 63
 ; RV32I-NEXT:    sub a4, a4, a2
-; RV32I-NEXT:    xori a2, a4, 31
+; RV32I-NEXT:    not a2, a4
 ; RV32I-NEXT:    slli a1, a1, 1
 ; RV32I-NEXT:    sll a1, a1, a2
 ; RV32I-NEXT:    or a3, a3, a1
@@ -191,7 +191,7 @@ define i64 @shl_by_masked_complemented_64(i64 %x) {
 ; RV32I-NEXT:    j .LBB7_3
 ; RV32I-NEXT:  .LBB7_2:
 ; RV32I-NEXT:    sll a1, a1, a3
-; RV32I-NEXT:    xori a4, a4, 31
+; RV32I-NEXT:    not a4, a4
 ; RV32I-NEXT:    srli a5, a0, 1
 ; RV32I-NEXT:    srl a4, a5, a4
 ; RV32I-NEXT:    or a1, a1, a4
@@ -227,7 +227,7 @@ define i64 @lshr_by_masked_complemented_64(i64 %x) {
 ; RV32I-NEXT:    j .LBB8_3
 ; RV32I-NEXT:  .LBB8_2:
 ; RV32I-NEXT:    srl a0, a0, a3
-; RV32I-NEXT:    xori a4, a4, 31
+; RV32I-NEXT:    not a4, a4
 ; RV32I-NEXT:    slli a5, a1, 1
 ; RV32I-NEXT:    sll a4, a5, a4
 ; RV32I-NEXT:    or a0, a0, a4
@@ -266,7 +266,7 @@ define i64 @ashr_by_masked_complemented_64(i64 %x) {
 ; RV32I-NEXT:    not a4, a0
 ; RV32I-NEXT:    sra a1, a2, a4
 ; RV32I-NEXT:    srl a0, a0, a4
-; RV32I-NEXT:    xori a3, a3, 31
+; RV32I-NEXT:    not a3, a3
 ; RV32I-NEXT:    slli a2, a2, 1
 ; RV32I-NEXT:    sll a2, a2, a3
 ; RV32I-NEXT:    or a0, a0, a2
