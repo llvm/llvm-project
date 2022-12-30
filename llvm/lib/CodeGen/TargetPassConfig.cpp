@@ -89,12 +89,8 @@ static cl::opt<bool> DisableMachineSink("disable-machine-sink", cl::Hidden,
 static cl::opt<bool> DisablePostRAMachineSink("disable-postra-machine-sink",
     cl::Hidden,
     cl::desc("Disable PostRA Machine Sinking"));
-static cl::opt<bool>
-    DisableLSR("disable-lsr", cl::Hidden,
-               cl::desc("Disable Loop Strength Reduction Pass"),
-               // FIXME: Investigate and re-enable. HWASAN exposes some
-               // non-determinism in the pass.
-               cl::init(LLVM_HWADDRESS_SANITIZER_BUILD));
+static cl::opt<bool> DisableLSR("disable-lsr", cl::Hidden,
+    cl::desc("Disable Loop Strength Reduction Pass"));
 static cl::opt<bool> DisableConstantHoisting("disable-constant-hoisting",
     cl::Hidden, cl::desc("Disable ConstantHoisting"));
 static cl::opt<bool> DisableCGP("disable-cgp", cl::Hidden,
