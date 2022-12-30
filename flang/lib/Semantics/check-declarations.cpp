@@ -141,6 +141,7 @@ private:
   };
   void CheckAlreadySeenDefinedIo(const DerivedTypeSpec &,
       GenericKind::DefinedIo, const Symbol &, const Symbol &generic);
+  void CheckModuleProcedureDef(const Symbol &);
 
   SemanticsContext &context_;
   evaluate::FoldingContext &foldingContext_{context_.foldingContext()};
@@ -155,6 +156,9 @@ private:
       characterizeCache_;
   // Collection of symbols with BIND(C) names
   std::map<std::string, SymbolRef> bindC_;
+  // Collection of module procedure symbols with non-BIND(C)
+  // global names, qualified by their module.
+  std::map<std::pair<SourceName, const Symbol *>, SymbolRef> moduleProcs_;
   // Derived types that have defined input/output procedures
   std::vector<TypeWithDefinedIo> seenDefinedIoTypes_;
 };
@@ -1052,6 +1056,7 @@ void CheckHelper::CheckSubprogram(
     }
   }
   CheckLocalVsGlobal(symbol);
+  CheckModuleProcedureDef(symbol);
 }
 
 void CheckHelper::CheckLocalVsGlobal(const Symbol &symbol) {
@@ -1329,6 +1334,13 @@ void CheckHelper::CheckGeneric(
                     [](const auto &) {},
                 },
       details.kind().u);
+  // Ensure that shadowed symbols are checked
+  if (details.specific()) {
+    Check(*details.specific());
+  }
+  if (details.derivedType()) {
+    Check(*details.derivedType());
+  }
 }
 
 // Check that the specifics of this generic are distinguishable from each other
@@ -2437,6 +2449,40 @@ void CheckHelper::CheckSymbolType(const Symbol &symbol) {
         messages_.Say(
             "'%s' has a type %s with a deferred type parameter but is neither an allocatable nor an object pointer"_err_en_US,
             symbol.name(), dyType->AsFortran());
+      }
+    }
+  }
+}
+
+void CheckHelper::CheckModuleProcedureDef(const Symbol &symbol) {
+  auto procClass{ClassifyProcedure(symbol)};
+  if (const auto *subprogram{symbol.detailsIf<SubprogramDetails>()};
+      subprogram &&
+      (procClass == ProcedureDefinitionClass::Module &&
+          symbol.attrs().test(Attr::MODULE)) &&
+      !subprogram->bindName() && !subprogram->isInterface()) {
+    const Symbol *module{nullptr};
+    if (const Scope * moduleScope{FindModuleContaining(symbol.owner())};
+        moduleScope && moduleScope->symbol()) {
+      if (const auto *details{
+              moduleScope->symbol()->detailsIf<ModuleDetails>()}) {
+        if (details->parent()) {
+          moduleScope = details->parent();
+        }
+        module = moduleScope->symbol();
+      }
+    }
+    if (module) {
+      std::pair<SourceName, const Symbol *> key{symbol.name(), module};
+      auto iter{moduleProcs_.find(key)};
+      if (iter == moduleProcs_.end()) {
+        moduleProcs_.emplace(std::move(key), symbol);
+      } else if (
+          auto *msg{messages_.Say(symbol.name(),
+              "Module procedure '%s' in module '%s' has multiple definitions"_err_en_US,
+              symbol.name(), module->name())}) {
+        msg->Attach(iter->second->name(), "Previous definition of '%s'"_en_US,
+            symbol.name());
       }
     }
   }
