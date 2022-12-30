@@ -1480,6 +1480,7 @@ builtin_headers = glob(
     ["lib/Headers/**/*.h"],
     exclude = [
         # FIXME: They are not handled in CMake side.
+        "lib/Headers/openmp_wrappers/stdlib.h",
         "lib/Headers/openmp_wrappers/time.h",
         "lib/Headers/ppc_wrappers/nmmintrin.h",
     ],
