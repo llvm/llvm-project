@@ -1345,12 +1345,12 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
   llvm_unreachable("Unknown APValue kind");
 }
 
-mlir::Value CIRGenModule::buildNullConstant(QualType T) {
+mlir::Value CIRGenModule::buildNullConstant(QualType T, mlir::Location loc) {
   if (T->getAs<PointerType>())
     llvm_unreachable("NYI");
 
   if (getTypes().isZeroInitializable(T))
-    llvm_unreachable("NYI");
+    return builder.getNullValue(getTypes().convertTypeForMem(T), loc);
 
   if (const ConstantArrayType *CAT =
           getASTContext().getAsConstantArrayType(T)) {

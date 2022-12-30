@@ -1845,6 +1845,13 @@ CIRGenModule::GetAddrOfGlobal(GlobalDecl GD, ForDefinition_t IsForDefinition) {
                              IsForDefinition);
   }
 
+  if (isa<FunctionDecl>(D)) {
+    const CIRGenFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
+    auto Ty = getTypes().GetFunctionType(FI);
+    return GetAddrOfFunction(GD, Ty, /*ForVTable=*/false, /*DontDefer=*/false,
+                             IsForDefinition);
+  }
+
   llvm_unreachable("NYI");
 }
 

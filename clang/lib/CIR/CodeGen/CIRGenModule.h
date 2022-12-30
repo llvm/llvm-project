@@ -327,7 +327,7 @@ public:
   /// Return the result of value-initializing the given type, i.e. a null
   /// expression of the given type.  This is usually, but not always, an LLVM
   /// null constant.
-  mlir::Value buildNullConstant(QualType T);
+  mlir::Value buildNullConstant(QualType T, mlir::Location loc);
 
   llvm::StringRef getMangledName(clang::GlobalDecl GD);
 

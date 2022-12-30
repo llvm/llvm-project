@@ -116,6 +116,13 @@ public:
         loc, ty, mlir::cir::NullAttr::get(getContext(), ty));
   }
 
+  // Creates null value for type ty.
+  mlir::cir::ConstantOp getNullValue(mlir::Type ty, mlir::Location loc) {
+    assert(ty.isa<mlir::IntegerType>() && "NYI");
+    return create<mlir::cir::ConstantOp>(loc, ty,
+                                         mlir::IntegerAttr::get(ty, 0));
+  }
+
   mlir::Value getBitcast(mlir::Location loc, mlir::Value src,
                          mlir::Type newTy) {
     return create<mlir::cir::CastOp>(loc, newTy, mlir::cir::CastKind::bitcast,
