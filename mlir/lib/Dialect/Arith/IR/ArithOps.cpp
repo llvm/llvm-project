@@ -265,7 +265,6 @@ arith::AddUIExtendedOp::fold(ArrayRef<Attribute> operands,
   Type overflowTy = getOverflow().getType();
   // addui_extended(x, 0) -> x, false
   if (matchPattern(getRhs(), m_Zero())) {
-    auto overflowZero = APInt::getZero(1);
     Builder builder(getContext());
     auto falseValue = builder.getZeroAttr(overflowTy);
 
@@ -2222,6 +2221,9 @@ LogicalResult arith::SelectOp::verify() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::ShLIOp::fold(ArrayRef<Attribute> operands) {
+  // shli(x, 0) -> x
+  if (matchPattern(getRhs(), m_Zero()))
+    return getLhs();
   // Don't fold if shifting more than the bit width.
   bool bounded = false;
   auto result = constFoldBinaryOp<IntegerAttr>(
@@ -2237,6 +2239,9 @@ OpFoldResult arith::ShLIOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::ShRUIOp::fold(ArrayRef<Attribute> operands) {
+  // shrui(x, 0) -> x
+  if (matchPattern(getRhs(), m_Zero()))
+    return getLhs();
   // Don't fold if shifting more than the bit width.
   bool bounded = false;
   auto result = constFoldBinaryOp<IntegerAttr>(
@@ -2252,6 +2257,9 @@ OpFoldResult arith::ShRUIOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::ShRSIOp::fold(ArrayRef<Attribute> operands) {
+  // shrsi(x, 0) -> x
+  if (matchPattern(getRhs(), m_Zero()))
+    return getLhs();
   // Don't fold if shifting more than the bit width.
   bool bounded = false;
   auto result = constFoldBinaryOp<IntegerAttr>(
