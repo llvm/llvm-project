@@ -626,23 +626,19 @@ calculateGatherOffset(OpBuilder &b, tensor::ExtractOp extractOp,
 
   const size_t numIndices = extractOp.getIndices().size();
   for (size_t i = 1; i < numIndices; i++) {
-    auto dimSizeBcast = b.create<vector::BroadcastOp>(
-        loc, indexVecType,
+    auto dimSize = broadcastIfNeeded(
+        b,
         b.create<arith::ConstantIndexOp>(
             loc,
-            extractOp.getTensor().getType().cast<ShapedType>().getDimSize(i)));
-    offset = b.create<arith::MulIOp>(loc, offset, dimSizeBcast);
+            extractOp.getTensor().getType().cast<ShapedType>().getDimSize(i)),
+        indexVecType.getShape());
 
-    auto originalIndexBcast = bvm.lookup(extractOp.getIndices()[i]);
-    if (i == numIndices - 1) {
-      // We only need an additional broadcast for the trailing index. All other
-      // indices have already been broadcast by `vectorizeLinalgIndex` to match
-      // the output size.
-      originalIndexBcast = b.create<vector::BroadcastOp>(
-          loc, indexVecType, bvm.lookup(extractOp.getIndices()[i]));
-    }
+    offset = b.create<arith::MulIOp>(loc, offset, dimSize);
 
-    offset = b.create<arith::AddIOp>(loc, originalIndexBcast, offset);
+    auto extractOpIndex = broadcastIfNeeded(
+        b, bvm.lookup(extractOp.getIndices()[i]), indexVecType.getShape());
+
+    offset = b.create<arith::AddIOp>(loc, extractOpIndex, offset);
   }
 
   return offset;
