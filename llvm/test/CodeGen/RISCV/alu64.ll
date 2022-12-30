@@ -215,7 +215,7 @@ define i64 @sll(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    j .LBB11_3
 ; RV32I-NEXT:  .LBB11_2:
 ; RV32I-NEXT:    sll a1, a1, a2
-; RV32I-NEXT:    xori a2, a2, 31
+; RV32I-NEXT:    not a2, a2
 ; RV32I-NEXT:    srli a0, a0, 1
 ; RV32I-NEXT:    srl a0, a0, a2
 ; RV32I-NEXT:    or a1, a1, a0
@@ -303,7 +303,7 @@ define i64 @srl(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    j .LBB15_3
 ; RV32I-NEXT:  .LBB15_2:
 ; RV32I-NEXT:    srl a0, a0, a2
-; RV32I-NEXT:    xori a2, a2, 31
+; RV32I-NEXT:    not a2, a2
 ; RV32I-NEXT:    slli a1, a1, 1
 ; RV32I-NEXT:    sll a1, a1, a2
 ; RV32I-NEXT:    or a0, a0, a1
@@ -335,7 +335,7 @@ define i64 @sra(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB16_2:
 ; RV32I-NEXT:    srl a0, a0, a2
-; RV32I-NEXT:    xori a2, a2, 31
+; RV32I-NEXT:    not a2, a2
 ; RV32I-NEXT:    slli a3, a3, 1
 ; RV32I-NEXT:    sll a2, a3, a2
 ; RV32I-NEXT:    or a0, a0, a2

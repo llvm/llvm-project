@@ -291,7 +291,7 @@ define i64 @bext_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:  .LBB12_2:
 ; CHECK-NEXT:    srl a0, a0, a2
 ; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    xori a2, a3, 31
+; CHECK-NEXT:    not a2, a3
 ; CHECK-NEXT:    sll a1, a1, a2
 ; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:  .LBB12_3:
