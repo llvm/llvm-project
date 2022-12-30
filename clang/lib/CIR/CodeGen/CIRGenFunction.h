@@ -86,6 +86,7 @@ private:
   /// related with initialization and destruction of objects.
   /// -------
 
+public:
   // Represents a cir.scope, cir.if, and then/else regions. I.e. lexical
   // scopes that require cleanups.
   struct LexicalScopeContext {
@@ -99,6 +100,12 @@ private:
     // from switches.
     mlir::Block *EntryBlock;
 
+    // On a coroutine body, the OnFallthrough sub stmt holds the handler
+    // (CoreturnStmt) for control flow falling off the body. Keep track
+    // of emitted co_return in this scope and allow OnFallthrough to be
+    // skipeed.
+    bool HasCoreturn = false;
+
     // FIXME: perhaps we can use some info encoded in operations.
     enum Kind {
       Regular, // cir.if, cir.scope, if_regions
@@ -111,6 +118,12 @@ private:
     LexicalScopeContext(mlir::Location b, mlir::Location e, mlir::Block *eb)
         : EntryBlock(eb), BeginLoc(b), EndLoc(e) {}
     ~LexicalScopeContext() = default;
+
+    // ---
+    // Coroutine tracking
+    // ---
+    bool hasCoreturn() const { return HasCoreturn; }
+    void setCoreturn() { HasCoreturn = true; }
 
     // ---
     // Kind
@@ -198,6 +211,7 @@ private:
     mlir::Location BeginLoc, EndLoc;
   };
 
+private:
   class LexicalScopeGuard {
     CIRGenFunction &CGF;
     LexicalScopeContext *OldVal = nullptr;
