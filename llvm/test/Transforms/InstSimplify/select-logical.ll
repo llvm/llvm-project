@@ -553,3 +553,39 @@ define i1 @select_and_same_op_negative(i1 %x, i1 %y, i1 %z) {
   %r = select i1 %a, i1 %x, i1 %z
   ret i1 %r
 }
+
+define i1 @and_same_op(i1 %x) {
+; CHECK-LABEL: @and_same_op(
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[X:%.*]], i1 [[X]], i1 false
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %r = select i1 %x, i1 %x, i1 false
+  ret i1 %r
+}
+
+define <2 x i1> @or_same_op(<2 x i1> %x) {
+; CHECK-LABEL: @or_same_op(
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[X:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[X]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %r = select <2 x i1> %x, <2 x i1> <i1 true, i1 true>, <2 x i1> %x
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @always_true_same_op(<2 x i1> %x) {
+; CHECK-LABEL: @always_true_same_op(
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[X:%.*]], <2 x i1> [[X]], <2 x i1> <i1 poison, i1 true>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %r = select <2 x i1> %x, <2 x i1> %x, <2 x i1> <i1 poison, i1 true>
+  ret <2 x i1> %r
+}
+
+define i1 @always_false_same_op(i1 %x) {
+; CHECK-LABEL: @always_false_same_op(
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[X:%.*]], i1 false, i1 [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %r = select i1 %x, i1 false, i1 %x
+  ret i1 %r
+}
