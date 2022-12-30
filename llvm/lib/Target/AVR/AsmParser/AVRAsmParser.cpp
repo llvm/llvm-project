@@ -29,6 +29,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
+#include <array>
 #include <sstream>
 
 #define DEBUG_TYPE "avr-asm-parser"
@@ -67,7 +68,7 @@ class AVRAsmParser : public MCTargetAsmParser {
 
   OperandMatchResultTy parseMemriOperand(OperandVector &Operands);
 
-  bool parseOperand(OperandVector &Operands);
+  bool parseOperand(OperandVector &Operands, bool maybeReg);
   int parseRegisterName(unsigned (*matchFn)(StringRef));
   int parseRegisterName();
   int parseRegister(bool RestoreOnFailure = false);
@@ -457,9 +458,9 @@ bool AVRAsmParser::tryParseRelocExpression(OperandVector &Operands) {
   // Check for sign.
   AsmToken tokens[2];
   if (Parser.getLexer().peekTokens(tokens) == 2)
-      if (tokens[0].getKind() == AsmToken::LParen &&
-          tokens[1].getKind() == AsmToken::Minus)
-        isNegated = true;
+    if (tokens[0].getKind() == AsmToken::LParen &&
+        tokens[1].getKind() == AsmToken::Minus)
+      isNegated = true;
 
   // Check if we have a target specific modifier (lo8, hi8, &c)
   if (CurTok != AsmToken::Identifier ||
@@ -514,7 +515,7 @@ bool AVRAsmParser::tryParseRelocExpression(OperandVector &Operands) {
   return false;
 }
 
-bool AVRAsmParser::parseOperand(OperandVector &Operands) {
+bool AVRAsmParser::parseOperand(OperandVector &Operands, bool maybeReg) {
   LLVM_DEBUG(dbgs() << "parseOperand\n");
 
   switch (getLexer().getKind()) {
@@ -522,9 +523,8 @@ bool AVRAsmParser::parseOperand(OperandVector &Operands) {
     return Error(Parser.getTok().getLoc(), "unexpected token in operand");
 
   case AsmToken::Identifier:
-    // Try to parse a register, if it fails,
-    // fall through to the next case.
-    if (!tryParseRegisterOperand(Operands)) {
+    // Try to parse a register, fall through to the next case if it fails.
+    if (maybeReg && !tryParseRegisterOperand(Operands)) {
       return false;
     }
     [[fallthrough]];
@@ -624,12 +624,11 @@ bool AVRAsmParser::ParseInstruction(ParseInstructionInfo &Info,
                                     OperandVector &Operands) {
   Operands.push_back(AVROperand::CreateToken(Mnemonic, NameLoc));
 
-  bool first = true;
+  int OperandNum = -1;
   while (getLexer().isNot(AsmToken::EndOfStatement)) {
-    if (!first)
+    OperandNum++;
+    if (OperandNum > 0)
       eatComma();
-
-    first = false;
 
     auto MatchResult = MatchOperandParserImpl(Operands, Mnemonic);
 
@@ -644,7 +643,28 @@ bool AVRAsmParser::ParseInstruction(ParseInstructionInfo &Info,
       return Error(Loc, "failed to parse register and immediate pair");
     }
 
-    if (parseOperand(Operands)) {
+    // These specific operands should be treated as addresses/symbols/labels,
+    // other than registers.
+    bool maybeReg = true;
+    if (OperandNum == 1) {
+      std::array<StringRef, 8> Insts = {"lds", "adiw", "sbiw", "ldi"};
+      for (auto Inst : Insts) {
+        if (Inst == Mnemonic) {
+          maybeReg = false;
+          break;
+        }
+      }
+    } else if (OperandNum == 0) {
+      std::array<StringRef, 8> Insts = {"sts", "call", "rcall", "rjmp", "jmp"};
+      for (auto Inst : Insts) {
+        if (Inst == Mnemonic) {
+          maybeReg = false;
+          break;
+        }
+      }
+    }
+
+    if (parseOperand(Operands, maybeReg)) {
       SMLoc Loc = getLexer().getLoc();
       Parser.eatToEndOfStatement();
       return Error(Loc, "unexpected token in argument list");
