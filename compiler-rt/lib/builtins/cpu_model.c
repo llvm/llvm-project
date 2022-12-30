@@ -838,6 +838,66 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
   return 0;
 }
 #elif defined(__aarch64__)
+// LSE support detection for out-of-line atomics
+// using HWCAP and Auxiliary vector
+_Bool __aarch64_have_lse_atomics
+    __attribute__((visibility("hidden"), nocommon));
+
+#if defined(__has_include)
+#if __has_include(<sys/auxv.h>)
+#include <sys/auxv.h>
+#if __has_include(<asm/hwcap.h>)
+#include <asm/hwcap.h>
+
+#if defined(__ANDROID__)
+#include <string.h>
+#include <sys/system_properties.h>
+#elif defined(__Fuchsia__)
+#include <zircon/features.h>
+#include <zircon/syscalls.h>
+#endif
+
+// Detect Exynos 9810 CPU
+#define IF_EXYNOS9810                                                          \
+  char arch[PROP_VALUE_MAX];                                                   \
+  if (__system_property_get("ro.arch", arch) > 0 &&                            \
+      strncmp(arch, "exynos9810", sizeof("exynos9810") - 1) == 0)
+
+static void CONSTRUCTOR_ATTRIBUTE init_have_lse_atomics(void) {
+#if defined(__FreeBSD__)
+  unsigned long hwcap;
+  int result = elf_aux_info(AT_HWCAP, &hwcap, sizeof hwcap);
+  __aarch64_have_lse_atomics = result == 0 && (hwcap & HWCAP_ATOMICS) != 0;
+#elif defined(__Fuchsia__)
+  // This ensures the vDSO is a direct link-time dependency of anything that
+  // needs this initializer code.
+#pragma comment(lib, "zircon")
+  uint32_t features;
+  zx_status_t status = _zx_system_get_features(ZX_FEATURE_KIND_CPU, &features);
+  __aarch64_have_lse_atomics =
+      status == ZX_OK && (features & ZX_ARM64_FEATURE_ISA_ATOMICS) != 0;
+#else
+  unsigned long hwcap = getauxval(AT_HWCAP);
+  _Bool result = (hwcap & HWCAP_ATOMICS) != 0;
+#if defined(__ANDROID__)
+  if (result) {
+    // Some cores in the Exynos 9810 CPU are ARMv8.2 and others are ARMv8.0;
+    // only the former support LSE atomics.  However, the kernel in the
+    // initial Android 8.0 release of Galaxy S9/S9+ devices incorrectly
+    // reported the feature as being supported.
+    //
+    // The kernel appears to have been corrected to mark it unsupported as of
+    // the Android 9.0 release on those devices, and this issue has not been
+    // observed anywhere else. Thus, this workaround may be removed if
+    // compiler-rt ever drops support for Android 8.0.
+    IF_EXYNOS9810 result = false;
+  }
+#endif // defined(__ANDROID__)
+  __aarch64_have_lse_atomics = result;
+#endif // defined(__FreeBSD__)
+}
+
+#if !defined(DISABLE_AARCH64_FMV)
 // CPUFeatures must correspond to the same AArch64 features in
 // AArch64TargetParser.h
 enum CPUFeatures {
@@ -901,6 +961,7 @@ enum CPUFeatures {
   FEAT_SME2,
   FEAT_MAX
 };
+
 // Architecture features used
 // in Function Multi Versioning
 struct {
@@ -908,20 +969,9 @@ struct {
   // As features grows new fields could be added
 } __aarch64_cpu_features __attribute__((visibility("hidden"), nocommon));
 
-// LSE support detection for out-of-line atomics
-// using HWCAP and Auxiliary vector
-_Bool __aarch64_have_lse_atomics
-    __attribute__((visibility("hidden"), nocommon));
-#if defined(__has_include)
-#if __has_include(<sys/auxv.h>)
-#include <sys/auxv.h>
-#if __has_include(<asm/hwcap.h>)
-#include <asm/hwcap.h>
-
 #ifndef AT_HWCAP
 #define AT_HWCAP 16
 #endif
-
 #ifndef HWCAP_CPUID
 #define HWCAP_CPUID (1 << 11)
 #endif
@@ -1085,54 +1135,6 @@ _Bool __aarch64_have_lse_atomics
 #ifndef HWCAP2_SVE_EBF16
 #define HWCAP2_SVE_EBF16 (1UL << 33)
 #endif
-
-#if defined(__ANDROID__)
-#include <string.h>
-#include <sys/system_properties.h>
-#elif defined(__Fuchsia__)
-#include <zircon/features.h>
-#include <zircon/syscalls.h>
-#endif
-
-// Detect Exynos 9810 CPU
-#define IF_EXYNOS9810                                                          \
-  char arch[PROP_VALUE_MAX];                                                   \
-  if (__system_property_get("ro.arch", arch) > 0 &&                            \
-      strncmp(arch, "exynos9810", sizeof("exynos9810") - 1) == 0)
-
-static void CONSTRUCTOR_ATTRIBUTE init_have_lse_atomics(void) {
-#if defined(__FreeBSD__)
-  unsigned long hwcap;
-  int result = elf_aux_info(AT_HWCAP, &hwcap, sizeof hwcap);
-  __aarch64_have_lse_atomics = result == 0 && (hwcap & HWCAP_ATOMICS) != 0;
-#elif defined(__Fuchsia__)
-  // This ensures the vDSO is a direct link-time dependency of anything that
-  // needs this initializer code.
-#pragma comment(lib, "zircon")
-  uint32_t features;
-  zx_status_t status = _zx_system_get_features(ZX_FEATURE_KIND_CPU, &features);
-  __aarch64_have_lse_atomics =
-      status == ZX_OK && (features & ZX_ARM64_FEATURE_ISA_ATOMICS) != 0;
-#else
-  unsigned long hwcap = getauxval(AT_HWCAP);
-  _Bool result = (hwcap & HWCAP_ATOMICS) != 0;
-#if defined(__ANDROID__)
-  if (result) {
-    // Some cores in the Exynos 9810 CPU are ARMv8.2 and others are ARMv8.0;
-    // only the former support LSE atomics.  However, the kernel in the
-    // initial Android 8.0 release of Galaxy S9/S9+ devices incorrectly
-    // reported the feature as being supported.
-    //
-    // The kernel appears to have been corrected to mark it unsupported as of
-    // the Android 9.0 release on those devices, and this issue has not been
-    // observed anywhere else. Thus, this workaround may be removed if
-    // compiler-rt ever drops support for Android 8.0.
-    IF_EXYNOS9810 result = false;
-  }
-#endif // defined(__ANDROID__)
-  __aarch64_have_lse_atomics = result;
-#endif // defined(__FreeBSD__)
-}
 
 void init_cpu_features_resolver(unsigned long hwcap, unsigned long hwcap2) {
 #define setCPUFeature(F) __aarch64_cpu_features.features |= 1ULL << F
@@ -1344,6 +1346,7 @@ void CONSTRUCTOR_ATTRIBUTE init_cpu_features(void) {
 #undef setCPUFeature
 #undef IF_EXYNOS9810
 }
+#endif // !defined(DISABLE_AARCH64_FMV)
 #endif // defined(__has_include)
 #endif // __has_include(<sys/auxv.h>)
 #endif // __has_include(<asm/hwcap.h>)
