@@ -25,7 +25,7 @@ vint8m1_t vadd_generic (vint8m1_t op0, vint8m1_t op1, size_t op2);
 // CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 8 x i8>, ptr [[OP0_ADDR]], align 1
 // CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 8 x i8>, ptr [[OP1_ADDR]], align 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VL_ADDR]], align 8
-// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vadd.nxv8i8.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> [[TMP0]], <vscale x 8 x i8> [[TMP1]], i64 [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vadd.nxv8i8.nxv8i8.i64(<vscale x 8 x i8> poison, <vscale x 8 x i8> [[TMP0]], <vscale x 8 x i8> [[TMP1]], i64 [[TMP2]])
 // CHECK-NEXT:    store <vscale x 8 x i8> [[TMP3]], ptr [[RET]], align 1
 // CHECK-NEXT:    [[TMP4:%.*]] = load <vscale x 8 x i8>, ptr [[RET]], align 1
 // CHECK-NEXT:    ret <vscale x 8 x i8> [[TMP4]]

@@ -82,7 +82,9 @@ UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros) {
   APInt SignedMin = APInt::getSignedMinValue(D.getBitWidth());
   APInt SignedMax = APInt::getSignedMaxValue(D.getBitWidth());
 
-  APInt NC = AllOnes - (AllOnes - D).urem(D);
+  // Calculate NC, the largest dividend such that NC.urem(D) == D-1.
+  APInt NC = AllOnes - (AllOnes + 1 - D).urem(D);
+  assert(NC.urem(D) == D - 1 && "Unexpected NC value");
   unsigned P = D.getBitWidth() - 1; // initialize P
   APInt Q1, R1, Q2, R2;
   // initialize Q1 = 2P/NC; R1 = rem(2P,NC)
