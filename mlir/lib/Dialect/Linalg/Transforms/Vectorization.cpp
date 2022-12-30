@@ -38,7 +38,7 @@ using namespace mlir::linalg;
 #define DEBUG_TYPE "linalg-vectorization"
 
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X)
+#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 /// Try to vectorize `convOp` as a convolution.
 static FailureOr<Operation *> vectorizeConvolution(RewriterBase &rewriter,
@@ -860,7 +860,7 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
     // Remove zeros from indexing map to use it as masking map.
     SmallVector<int64_t> zeroPos;
     auto results = indexingMap.getResults();
-    for (auto result : llvm::enumerate(results)) {
+    for (const auto &result : llvm::enumerate(results)) {
       if (result.value().isa<AffineConstantExpr>()) {
         zeroPos.push_back(result.index());
       }

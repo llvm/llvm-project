@@ -97,10 +97,21 @@ APInt MULHU(APInt X, APInt Y) {
   return (X.zext(WideBits) * Y.zext(WideBits)).lshr(Bits).trunc(Bits);
 }
 
-APInt UnsignedDivideUsingMagic(APInt Numerator, APInt Divisor,
+APInt UnsignedDivideUsingMagic(const APInt &Numerator, const APInt &Divisor,
+                               bool LZOptimization,
                                bool AllowEvenDivisorOptimization, bool ForceNPQ,
                                UnsignedDivisionByConstantInfo Magics) {
   unsigned Bits = Numerator.getBitWidth();
+
+  if (LZOptimization && !Divisor.isOne()) {
+    unsigned LeadingZeros = Numerator.countLeadingZeros();
+    // Clip to the number of leading zeros in the divisor.
+    LeadingZeros = std::min(LeadingZeros, Divisor.countLeadingZeros());
+    if (LeadingZeros > 0) {
+      Magics = UnsignedDivisionByConstantInfo::get(Divisor, LeadingZeros);
+      assert(!Magics.IsAdd && "Should use cheap fixup now");
+    }
+  }
 
   unsigned PreShift = 0;
   if (AllowEvenDivisorOptimization) {
@@ -159,7 +170,7 @@ TEST(UnsignedDivisionByConstantTest, Test) {
   for (unsigned Bits = 1; Bits <= 32; ++Bits) {
     if (Bits < 2)
       continue; // Not supported by `UnsignedDivisionByConstantInfo::get()`.
-    if (Bits > 11)
+    if (Bits > 10)
       continue; // Unreasonably slow.
     EnumerateAPInts(Bits, [Bits](const APInt &Divisor) {
       if (Divisor.isZero())
@@ -168,17 +179,20 @@ TEST(UnsignedDivisionByConstantTest, Test) {
           UnsignedDivisionByConstantInfo::get(Divisor);
       EnumerateAPInts(Bits, [Divisor, Magics, Bits](const APInt &Numerator) {
         APInt NativeResult = Numerator.udiv(Divisor);
-        for (bool AllowEvenDivisorOptimization : {true, false}) {
-          for (bool ForceNPQ : {false, true}) {
-            APInt MagicResult = UnsignedDivideUsingMagic(
-                Numerator, Divisor, AllowEvenDivisorOptimization, ForceNPQ,
-                Magics);
-            ASSERT_EQ(MagicResult, NativeResult)
-                << " ... given the operation:  urem i" << Bits << " "
-                << Numerator << ", " << Divisor
-                << " (allow even divisior optimization = "
-                << AllowEvenDivisorOptimization << ", force NPQ = " << ForceNPQ
-                << ")";
+        for (bool LZOptimization : {true, false}) {
+          for (bool AllowEvenDivisorOptimization : {true, false}) {
+            for (bool ForceNPQ : {false, true}) {
+              APInt MagicResult = UnsignedDivideUsingMagic(
+                  Numerator, Divisor, LZOptimization,
+                  AllowEvenDivisorOptimization, ForceNPQ, Magics);
+              ASSERT_EQ(MagicResult, NativeResult)
+                    << " ... given the operation:  urem i" << Bits << " "
+                    << Numerator << ", " << Divisor
+                    << " (allow LZ optimization = "
+                    << LZOptimization << ", allow even divisior optimization = "
+                    << AllowEvenDivisorOptimization << ", force NPQ = "
+                    << ForceNPQ << ")";
+            }
           }
         }
       });

@@ -30,10 +30,10 @@ define void @store(ptr %p) {
   ret void
 }
 
-; CHECK: declare void @__dfsan_load_callback(i[[#SBITS]], ptr)
-; CHECK: declare void @__dfsan_store_callback(i[[#SBITS]], ptr)
+; CHECK: declare void @__dfsan_load_callback(i[[#SBITS]] zeroext, ptr)
+; CHECK: declare void @__dfsan_store_callback(i[[#SBITS]] zeroext, ptr)
 ; CHECK: declare void @__dfsan_mem_transfer_callback(ptr, i64)
-; CHECK: declare void @__dfsan_cmp_callback(i[[#SBITS]])
+; CHECK: declare void @__dfsan_cmp_callback(i[[#SBITS]] zeroext)
 
 ; CHECK: ; Function Attrs: nounwind memory(read)
 ; CHECK-NEXT: declare zeroext i[[#SBITS]] @__dfsan_union_load(ptr, i64)

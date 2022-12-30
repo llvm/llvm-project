@@ -413,6 +413,10 @@ def FeatureStdExtSvnapot
     : SubtargetFeature<"svnapot", "HasStdExtSvnapot", "true",
                        "'Svnapot' (NAPOT Translation Contiguity)">;
 
+def FeatureStdExtSvpbmt
+    : SubtargetFeature<"svpbmt", "HasStdExtSvpbmt", "true",
+                       "'Svpbmt' (Page-Based Memory Types)">;
+
 def FeatureStdExtSvinval
     : SubtargetFeature<"svinval", "HasStdExtSvinval", "true",
                        "'Svinval' (Fine-Grained Address-Translation Cache Invalidation)">;

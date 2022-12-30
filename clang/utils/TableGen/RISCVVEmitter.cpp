@@ -197,11 +197,13 @@ void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
         OS << "  Ops.push_back(ConstantInt::get(Ops.back()->getType(),"
               " PolicyAttrs));\n";
       if (RVVI->hasMaskedOffOperand() && RVVI->getPolicyAttrs().isTAMAPolicy())
-        OS << "  Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));\n";
+        OS << "  Ops.insert(Ops.begin(), "
+              "llvm::PoisonValue::get(ResultType));\n";
       // Masked reduction cases.
       if (!RVVI->hasMaskedOffOperand() && RVVI->hasPassthruOperand() &&
           RVVI->getPolicyAttrs().isTAMAPolicy())
-        OS << "  Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));\n";
+        OS << "  Ops.insert(Ops.begin(), "
+              "llvm::PoisonValue::get(ResultType));\n";
     } else {
       OS << "  std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end());\n";
     }
@@ -210,7 +212,7 @@ void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
       OS << "  Ops.push_back(ConstantInt::get(Ops.back()->getType(), "
             "PolicyAttrs));\n";
     else if (RVVI->hasPassthruOperand() && RVVI->getPolicyAttrs().isTAPolicy())
-      OS << "  Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));\n";
+      OS << "  Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));\n";
   }
 
   OS << "  IntrinsicTypes = {";

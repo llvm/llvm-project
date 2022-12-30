@@ -395,6 +395,6 @@ mlir::getRegionBranchSuccessorOperands(Operation *operation,
                                        std::optional<unsigned> regionIndex) {
   auto range = getMutableRegionBranchSuccessorOperands(operation, regionIndex);
   if (range)
-    return static_cast<OperandRange>(*range);
+    return range->operator OperandRange();
   return std::nullopt;
 }

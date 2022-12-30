@@ -35,8 +35,8 @@ define i32 @simple_arith(i32 %a, i32 %b) #0 {
 ; RV32IC-NEXT:    c.andi a2, 11
 ; RV32IC-NEXT:    c.slli a2, 7
 ; RV32IC-NEXT:    c.srai a1, 9
-; RV32IC-NEXT:    c.add a1, a2
 ; RV32IC-NEXT:    sub a0, a1, a0
+; RV32IC-NEXT:    c.add a0, a2
 ; RV32IC-NEXT:    c.jr ra
   %1 = add i32 %a, 1
   %2 = and i32 %1, 11
