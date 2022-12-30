@@ -1725,8 +1725,10 @@ void OpEmitter::genPopulateDefaultAttributes() {
     body << "if (!attributes.get(attrNames[" << index << "])) {\n";
     FmtContext fctx;
     fctx.withBuilder(odsBuilder);
-    std::string defaultValue = std::string(
-        tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+
+    std::string defaultValue =
+        std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
+                          tgfmt(attr.getDefaultValue(), &fctx)));
     body.indent() << formatv("attributes.append(attrNames[{0}], {1});\n", index,
                              defaultValue);
     body.unindent() << "}\n";
