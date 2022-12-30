@@ -3668,6 +3668,12 @@ bool InstCombinerImpl::sinkNotIntoLogicalOp(Instruction &I) {
   Value *Op0, *Op1;
   if (!match(&I, m_LogicalOp(m_Value(Op0), m_Value(Op1))))
     return false;
+
+  // If this logic op has not been simplified yet, just bail out and let that
+  // happen first. Otherwise, the code below may wrongly invert.
+  if (Op0 == Op1)
+    return false;
+
   Instruction::BinaryOps NewOpc =
       match(&I, m_LogicalAnd()) ? Instruction::Or : Instruction::And;
   bool IsBinaryOp = isa<BinaryOperator>(I);

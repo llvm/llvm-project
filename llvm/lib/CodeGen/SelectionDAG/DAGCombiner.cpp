@@ -500,6 +500,8 @@ namespace {
     SDValue replaceStoreChain(StoreSDNode *ST, SDValue BetterChain);
     SDValue replaceStoreOfFPConstant(StoreSDNode *ST);
 
+    bool refineExtractVectorEltIntoMultipleNarrowExtractVectorElts(SDNode *N);
+
     SDValue visitSTORE(SDNode *N);
     SDValue visitLIFETIME_END(SDNode *N);
     SDValue visitINSERT_VECTOR_ELT(SDNode *N);
@@ -17111,7 +17113,7 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
   SDValue Chain = LD->getOperand(0);
   StoreSDNode *ST = dyn_cast<StoreSDNode>(Chain.getNode());
   // TODO: Relax this restriction for unordered atomics (see D66309)
-  if (!ST || !ST->isSimple())
+  if (!ST || !ST->isSimple() || ST->getAddressSpace() != LD->getAddressSpace())
     return SDValue();
 
   EVT LDType = LD->getValueType(0);
@@ -20256,6 +20258,168 @@ static SDValue scalarizeExtractedBinop(SDNode *ExtElt, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Given a ISD::EXTRACT_VECTOR_ELT, which is a glorified bit sequence extract,
+// recursively analyse all of it's users. and try to model themselves as
+// bit sequence extractions. If all of them agree on the new, narrower element
+// type, and all of them can be modelled as ISD::EXTRACT_VECTOR_ELT's of that
+// new element type, do so now.
+// This is mainly useful to recover from legalization that scalarized
+// the vector as wide elements, but tries to rebuild it with narrower elements.
+//
+// Some more nodes could be modelled if that helps cover interesting patterns.
+bool DAGCombiner::refineExtractVectorEltIntoMultipleNarrowExtractVectorElts(
+    SDNode *N) {
+  // We perform this optimization post type-legalization because
+  // the type-legalizer often scalarizes integer-promoted vectors.
+  // Performing this optimization before may cause legalizaton cycles.
+  if (Level != AfterLegalizeVectorOps && Level != AfterLegalizeTypes)
+    return false;
+
+  // TODO: Add support for big-endian.
+  if (DAG.getDataLayout().isBigEndian())
+    return false;
+
+  SDValue VecOp = N->getOperand(0);
+  EVT VecVT = VecOp.getValueType();
+  assert(!VecVT.isScalableVector() && "Only for fixed vectors.");
+
+  // We must start with a constant extraction index.
+  auto *IndexC = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!IndexC)
+    return false;
+
+  assert(IndexC->getZExtValue() < VecVT.getVectorNumElements() &&
+         "Original ISD::EXTRACT_VECTOR_ELT is undefinend?");
+
+  // TODO: deal with the case of implicit anyext of the extraction.
+  unsigned VecEltBitWidth = VecVT.getScalarSizeInBits();
+  EVT ScalarVT = N->getValueType(0);
+  if (VecVT.getScalarType() != ScalarVT)
+    return false;
+
+  // TODO: deal with the cases other than everything being integer-typed.
+  if (!ScalarVT.isScalarInteger())
+    return false;
+
+  struct Entry {
+    SDNode *Producer;
+
+    // Which bits of VecOp does it contain?
+    unsigned BitPos;
+    int NumBits;
+    // NOTE: the actual width of \p Producer may be wider than NumBits!
+
+    Entry(Entry &&) = default;
+    Entry(SDNode *Producer_, unsigned BitPos_, int NumBits_)
+        : Producer(Producer_), BitPos(BitPos_), NumBits(NumBits_) {}
+
+    Entry() = delete;
+    Entry(const Entry &) = delete;
+    Entry &operator=(const Entry &) = delete;
+    Entry &operator=(Entry &&) = delete;
+  };
+  SmallVector<Entry, 32> Worklist;
+  SmallVector<Entry, 32> Leafs;
+
+  // We start at the "root" ISD::EXTRACT_VECTOR_ELT.
+  Worklist.emplace_back(N, /*BitPos=*/VecEltBitWidth * IndexC->getZExtValue(),
+                        /*NumBits=*/VecEltBitWidth);
+
+  while (!Worklist.empty()) {
+    Entry E = Worklist.pop_back_val();
+    // Does the node not even use any of the VecOp bits?
+    if (!(E.NumBits > 0 && E.BitPos < VecVT.getSizeInBits() &&
+          E.BitPos + E.NumBits <= VecVT.getSizeInBits()))
+      return false; // Let's allow the other combines clean this up first.
+    // Did we fail to model any of the users of the Producer?
+    bool ProducerIsLeaf = false;
+    // Look at each user of this Producer.
+    for (SDNode *User : E.Producer->uses()) {
+      switch (User->getOpcode()) {
+      // TODO: support ISD::BITCAST
+      // TODO: support ISD::ANY_EXTEND
+      // TODO: support ISD::ZERO_EXTEND
+      // TODO: support ISD::SIGN_EXTEND
+      case ISD::TRUNCATE:
+        // Truncation simply means we keep position, but extract less bits.
+        Worklist.emplace_back(User, E.BitPos,
+                              /*NumBits=*/User->getValueSizeInBits(0));
+        break;
+      // TODO: support ISD::SRA
+      // TODO: support ISD::SHL
+      case ISD::SRL:
+        // We should be shifting the Producer by a constant amount.
+        if (auto *ShAmtC = dyn_cast<ConstantSDNode>(User->getOperand(1));
+            User->getOperand(0).getNode() == E.Producer && ShAmtC) {
+          // Logical right-shift means that we start extraction later,
+          // but stop it at the same position we did previously.
+          unsigned ShAmt = ShAmtC->getZExtValue();
+          Worklist.emplace_back(User, E.BitPos + ShAmt, E.NumBits - ShAmt);
+          break;
+        }
+        [[fallthrough]];
+      default:
+        // We can not model this user of the Producer.
+        // Which means the current Producer will be a ISD::EXTRACT_VECTOR_ELT.
+        ProducerIsLeaf = true;
+        // Profitability check: all users that we can not model
+        //                      must be ISD::BUILD_VECTOR's.
+        if (User->getOpcode() != ISD::BUILD_VECTOR)
+          return false;
+        break;
+      }
+    }
+    if (ProducerIsLeaf)
+      Leafs.emplace_back(std::move(E));
+  }
+
+  unsigned NewVecEltBitWidth = Leafs.front().NumBits;
+
+  // If we are still at the same element granularity, give up,
+  if (NewVecEltBitWidth == VecEltBitWidth)
+    return false;
+
+  // The vector width must be a multiple of the new element width.
+  if (VecVT.getSizeInBits() % NewVecEltBitWidth != 0)
+    return false;
+
+  // All leafs must agree on the new element width.
+  // All leafs must not expect any "padding" bits ontop of that width.
+  // All leafs must start extraction from multiple of that width.
+  if (!all_of(Leafs, [NewVecEltBitWidth](const Entry &E) {
+        return (unsigned)E.NumBits == NewVecEltBitWidth &&
+               E.Producer->getValueSizeInBits(0) == NewVecEltBitWidth &&
+               E.BitPos % NewVecEltBitWidth == 0;
+      }))
+    return false;
+
+  EVT NewScalarVT = EVT::getIntegerVT(*DAG.getContext(), NewVecEltBitWidth);
+  EVT NewVecVT = EVT::getVectorVT(*DAG.getContext(), NewScalarVT,
+                                  VecVT.getSizeInBits() / NewVecEltBitWidth);
+
+  if (LegalTypes &&
+      !(TLI.isTypeLegal(NewScalarVT) && TLI.isTypeLegal(NewVecVT)))
+    return false;
+
+  if (LegalOperations &&
+      !(TLI.isOperationLegalOrCustom(ISD::BITCAST, NewVecVT) &&
+        TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, NewVecVT)))
+    return false;
+
+  SDValue NewVecOp = DAG.getBitcast(NewVecVT, VecOp);
+  for (const Entry &E : Leafs) {
+    SDLoc DL(E.Producer);
+    unsigned NewIndex = E.BitPos / NewVecEltBitWidth;
+    assert(NewIndex < NewVecVT.getVectorNumElements() &&
+           "Creating out-of-bounds ISD::EXTRACT_VECTOR_ELT?");
+    SDValue V = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, NewScalarVT, NewVecOp,
+                            DAG.getVectorIdxConstant(NewIndex, DL));
+    CombineTo(E.Producer, V);
+  }
+
+  return true;
+}
+
 SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
   SDValue VecOp = N->getOperand(0);
   SDValue Index = N->getOperand(1);
@@ -20449,6 +20613,9 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
       return SDValue(N, 0);
     }
   }
+
+  if (refineExtractVectorEltIntoMultipleNarrowExtractVectorElts(N))
+    return SDValue(N, 0);
 
   // Everything under here is trying to match an extract of a loaded value.
   // If the result of load has to be truncated, then it's not necessarily

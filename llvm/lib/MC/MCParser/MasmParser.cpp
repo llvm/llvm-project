@@ -6720,6 +6720,7 @@ void MasmParser::initializeDirectiveKindMap() {
   DirectiveKindMap["even"] = DK_EVEN;
   DirectiveKindMap["org"] = DK_ORG;
   DirectiveKindMap["extern"] = DK_EXTERN;
+  DirectiveKindMap["extrn"] = DK_EXTERN;
   DirectiveKindMap["public"] = DK_PUBLIC;
   // DirectiveKindMap[".comm"] = DK_COMM;
   DirectiveKindMap["comment"] = DK_COMMENT;

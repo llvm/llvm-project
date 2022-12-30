@@ -860,7 +860,7 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
     // Remove zeros from indexing map to use it as masking map.
     SmallVector<int64_t> zeroPos;
     auto results = indexingMap.getResults();
-    for (auto result : llvm::enumerate(results)) {
+    for (const auto &result : llvm::enumerate(results)) {
       if (result.value().isa<AffineConstantExpr>()) {
         zeroPos.push_back(result.index());
       }

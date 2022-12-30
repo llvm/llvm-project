@@ -204,7 +204,7 @@ std::optional<Value *> InstCombiner::targetSimplifyDemandedVectorEltsIntrinsic(
 }
 
 Value *InstCombinerImpl::EmitGEPOffset(User *GEP) {
-  return llvm::EmitGEPOffset(&Builder, DL, GEP);
+  return llvm::emitGEPOffset(&Builder, DL, GEP);
 }
 
 /// Legal integers and common types are considered desirable. This is used to
