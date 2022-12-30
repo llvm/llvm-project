@@ -67,3 +67,81 @@ defm THVdotVMAQAU     : THVdotVMAQA<"th.vmaqau",    0b100010>;
 defm THVdotVMAQASU    : THVdotVMAQA<"th.vmaqasu",   0b100100>;
 defm THVdotVMAQAUS    : THVdotVMAQA_VX<"th.vmaqaus",0b100110>;
 }
+
+// Associate LMUL with tablegen records of register classes.
+def THVdotV_M1  : LMULInfo<0b000,  8,   VR, VR,   VR,   VR,   VR, "M1">;
+def THVdotV_M2  : LMULInfo<0b001, 16, VRM2, VRM2, VR,   VR,   VR, "M2">;
+def THVdotV_M4  : LMULInfo<0b010, 32, VRM4, VRM4, VRM2, VR,   VR, "M4">;
+def THVdotV_M8  : LMULInfo<0b011, 64, VRM8, VRM8, VRM4, VRM2, VR, "M8">;
+
+defvar MxListTHVdot = [V_MF2, THVdotV_M1, THVdotV_M2, THVdotV_M4, THVdotV_M8];
+
+defset list<VTypeInfoToWide> AllQuadWidenableInt8NoVLMulVectors = {
+  def : VTypeInfoToWide<VI8MF2,  VI32MF2>;
+  def : VTypeInfoToWide<VI8M1,   VI32M1>;
+  def : VTypeInfoToWide<VI8M2,   VI32M2>;
+  def : VTypeInfoToWide<VI8M4,   VI32M4>;
+  def : VTypeInfoToWide<VI8M8,   VI32M8>;
+}
+
+//===----------------------------------------------------------------------===//
+// Combination of instruction classes.
+// Use these multiclasses to define instructions more easily.
+//===----------------------------------------------------------------------===//
+multiclass VPseudoVMAQA_VV_VX {
+  foreach m = MxListTHVdot in {
+    defm "" : VPseudoTernaryW_VV<m>;
+    defm "" : VPseudoTernaryW_VX<m>;
+  }
+}
+
+multiclass VPseudoVMAQA_VX {
+  foreach m = MxListTHVdot in {
+    defm "" : VPseudoTernaryW_VX<m>;
+  }
+}
+
+multiclass VPatTernaryVMAQA_VV<string intrinsic, string instruction,
+                               list<VTypeInfoToWide> vtilist> {
+  foreach vtiToWti = vtilist in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
+    defm : VPatTernaryWithPolicy<intrinsic, instruction, "VV",
+                                 wti.Vector, vti.Vector, vti.Vector,
+                                 vti.Mask, wti.Log2SEW, vti.LMul,
+                                 wti.RegClass, vti.RegClass, vti.RegClass>;
+  }
+}
+
+multiclass VPatTernaryVMAQA_VX<string intrinsic, string instruction,
+                               list<VTypeInfoToWide> vtilist> {
+  foreach vtiToWti = vtilist in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
+    defm : VPatTernaryWithPolicy<intrinsic, instruction,
+                                 "V"#vti.ScalarSuffix,
+                                 wti.Vector, vti.Scalar, vti.Vector,
+                                 vti.Mask, wti.Log2SEW, vti.LMul,
+                                 wti.RegClass, vti.ScalarRegClass, vti.RegClass>;
+  }
+}
+
+multiclass VPatTernaryVMAQA_VV_VX<string intrinsic, string instruction,
+                                  list<VTypeInfoToWide> vtilist>
+    : VPatTernaryVMAQA_VV<intrinsic, instruction, vtilist>,
+      VPatTernaryVMAQA_VX<intrinsic, instruction, vtilist>;
+
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions and codegen patterns
+//===----------------------------------------------------------------------===//
+defm PseudoTHVdotVMAQA      : VPseudoVMAQA_VV_VX;
+defm PseudoTHVdotVMAQAU     : VPseudoVMAQA_VV_VX;
+defm PseudoTHVdotVMAQASU    : VPseudoVMAQA_VV_VX;
+defm PseudoTHVdotVMAQAUS    : VPseudoVMAQA_VX;
+
+let Predicates = [HasVendorXTHeadVdot] in {
+defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqa",  "PseudoTHVdotVMAQA",  AllQuadWidenableInt8NoVLMulVectors>;
+defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqau", "PseudoTHVdotVMAQAU", AllQuadWidenableInt8NoVLMulVectors>;
+defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqasu","PseudoTHVdotVMAQASU",AllQuadWidenableInt8NoVLMulVectors>;
+defm : VPatTernaryVMAQA_VX<"int_riscv_th_vmaqaus",   "PseudoTHVdotVMAQAUS",AllQuadWidenableInt8NoVLMulVectors>;
+}
