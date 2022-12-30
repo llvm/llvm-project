@@ -775,14 +775,14 @@ size_t DwarfExprAST::Node::getChildrenCount() const {
 Optional<uint8_t> DwarfExprAST::Node::getEquivalentDwarfOp() const {
   return visit<Optional<uint8_t>>(
       makeVisitor(
-          [](DIOp::Arg) { return None; }, [](DIOp::Constant) { return None; },
-          [](DIOp::PushLane) { return None; },
-          [](DIOp::Referrer) { return None; },
-          [](DIOp::TypeObject) { return None; },
-          [](DIOp::AddrOf) { return None; }, [](DIOp::Convert) { return None; },
-          [](DIOp::Deref) { return None; }, [](DIOp::Extend) { return None; },
-          [](DIOp::Read) { return None; },
-          [](DIOp::Reinterpret) { return None; },
+          [](DIOp::Arg) { return std::nullopt; }, [](DIOp::Constant) { return std::nullopt; },
+          [](DIOp::PushLane) { return std::nullopt; },
+          [](DIOp::Referrer) { return std::nullopt; },
+          [](DIOp::TypeObject) { return std::nullopt; },
+          [](DIOp::AddrOf) { return std::nullopt; }, [](DIOp::Convert) { return std::nullopt; },
+          [](DIOp::Deref) { return std::nullopt; }, [](DIOp::Extend) { return std::nullopt; },
+          [](DIOp::Read) { return std::nullopt; },
+          [](DIOp::Reinterpret) { return std::nullopt; },
           [](DIOp::Add) { return dwarf::DW_OP_plus; },
           [](DIOp::BitOffset) { return dwarf::DW_OP_LLVM_bit_offset; },
           [](DIOp::ByteOffset) { return dwarf::DW_OP_LLVM_offset; },
@@ -791,8 +791,8 @@ Optional<uint8_t> DwarfExprAST::Node::getEquivalentDwarfOp() const {
           [](DIOp::Shl) { return dwarf::DW_OP_shl; },
           [](DIOp::Shr) { return dwarf::DW_OP_shr; },
           [](DIOp::Sub) { return dwarf::DW_OP_minus; },
-          [](DIOp::Select) { return None; },
-          [](DIOp::Composite) { return None; }),
+          [](DIOp::Select) { return std::nullopt; },
+          [](DIOp::Composite) { return std::nullopt; }),
       Element);
 }
 

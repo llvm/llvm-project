@@ -1089,7 +1089,7 @@ namespace llvm {
     ///             the location field. Omitting the argObjects field is
     ///             equivalent to specifying it to be the empty tuple.
     DILifetime *createBoundedLifetime(DIObject *Obj, DIExpr *Loc,
-                                      ArrayRef<Metadata *> Args = None);
+                                      ArrayRef<Metadata *> Args = std::nullopt);
 
     /// Create a computed lifetime segment of a data object and add it to the
     /// llvm.dbg.retainedNodes named metadata node.
@@ -1103,7 +1103,7 @@ namespace llvm {
     ///             the location field. Omitting the argObjects field is
     ///             equivalent to specifying it to be the empty tuple.
     void createComputedLifetime(DIObject *Obj, DIExpr *Loc,
-                                ArrayRef<Metadata *> Args = None);
+                                ArrayRef<Metadata *> Args = std::nullopt);
 
     /// Insert a new llvm.dbg.def intrinsic call.
     /// \param Lifetime    The beginning of the bounded lifetime being defined.

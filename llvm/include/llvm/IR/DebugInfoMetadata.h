@@ -3307,7 +3307,7 @@ class DIExpr : public MDNode {
 
   DIExpr(LLVMContext &C, StorageType Storage,
          SmallVector<DIOp::Variant> &&Elements)
-      : MDNode(C, DIExprKind, Storage, None), Elements(std::move(Elements)) {}
+      : MDNode(C, DIExprKind, Storage, std::nullopt), Elements(std::move(Elements)) {}
   ~DIExpr() = default;
 
   static DIExpr *getImpl(LLVMContext &Context,
@@ -4059,12 +4059,12 @@ class DILifetime : public DINode {
 public:
   static DILifetime *getDistinct(LLVMContext &Context, Metadata *Obj,
                                  Metadata *Loc,
-                                 ArrayRef<Metadata *> Args = None) {
+                                 ArrayRef<Metadata *> Args = std::nullopt) {
     return getImpl(Context, Obj, Loc, Args, Distinct);
   }
   static TempDILifetime getTemporary(LLVMContext &Context, Metadata *Obj,
                                      Metadata *Loc,
-                                     ArrayRef<Metadata *> Args = None) {
+                                     ArrayRef<Metadata *> Args = std::nullopt) {
     return TempDILifetime(getImpl(Context, Obj, Loc, Args, Temporary));
   }
 
