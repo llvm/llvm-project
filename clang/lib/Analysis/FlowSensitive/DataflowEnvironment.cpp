@@ -235,14 +235,12 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
     if (Parent->isLambda())
       MethodDecl = dyn_cast<CXXMethodDecl>(Parent->getDeclContext());
 
+    // FIXME: Initialize the ThisPointeeLoc of lambdas too.
     if (MethodDecl && !MethodDecl->isStatic()) {
       QualType ThisPointeeType = MethodDecl->getThisObjectType();
-      // FIXME: Add support for union types.
-      if (!ThisPointeeType->isUnionType()) {
-        ThisPointeeLoc = &createStorageLocation(ThisPointeeType);
-        if (Value *ThisPointeeVal = createValue(ThisPointeeType))
-          setValue(*ThisPointeeLoc, *ThisPointeeVal);
-      }
+      ThisPointeeLoc = &createStorageLocation(ThisPointeeType);
+      if (Value *ThisPointeeVal = createValue(ThisPointeeType))
+        setValue(*ThisPointeeLoc, *ThisPointeeVal);
     }
   }
 
@@ -570,7 +568,7 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
     auto &AggregateLoc = *cast<AggregateStorageLocation>(&Loc);
 
     const QualType Type = AggregateLoc.getType();
-    assert(Type->isStructureOrClassType());
+    assert(Type->isStructureOrClassType() || Type->isUnionType());
 
     for (const FieldDecl *Field : getObjectFields(Type)) {
       assert(Field != nullptr);
@@ -684,7 +682,7 @@ Value *Environment::createValueUnlessSelfReferential(
     return &takeOwnership(std::make_unique<PointerValue>(PointeeLoc));
   }
 
-  if (Type->isStructureOrClassType()) {
+  if (Type->isStructureOrClassType() || Type->isUnionType()) {
     CreatedValuesCount++;
     // FIXME: Initialize only fields that are accessed in the context that is
     // being analyzed.
