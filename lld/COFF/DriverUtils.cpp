@@ -794,7 +794,7 @@ static constexpr llvm::opt::OptTable::Info infoTable[] = {
 #undef OPTION
 };
 
-COFFOptTable::COFFOptTable() : OptTable(infoTable, true) {}
+COFFOptTable::COFFOptTable() : GenericOptTable(infoTable, true) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.

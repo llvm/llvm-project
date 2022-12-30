@@ -52,9 +52,9 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class DllOptTable : public llvm::opt::OptTable {
+class DllOptTable : public opt::GenericOptTable {
 public:
-  DllOptTable() : OptTable(InfoTable, false) {}
+  DllOptTable() : opt::GenericOptTable(InfoTable, false) {}
 };
 
 // Opens a file. Path has to be resolved already.

@@ -75,9 +75,9 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class SymbolizerOptTable : public opt::OptTable {
+class SymbolizerOptTable : public opt::GenericOptTable {
 public:
-  SymbolizerOptTable() : OptTable(InfoTable) {
+  SymbolizerOptTable() : GenericOptTable(InfoTable) {
     setGroupedShortOptions(true);
   }
 };
