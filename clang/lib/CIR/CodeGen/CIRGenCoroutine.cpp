@@ -134,17 +134,24 @@ RValue CIRGenFunction::buildCoroutineFrame() {
   llvm_unreachable("NYI");
 }
 
-static mlir::LogicalResult buildBodyAndFallthrough(CIRGenFunction &CGF,
-                                                   const CoroutineBodyStmt &S,
-                                                   Stmt *Body) {
+static mlir::LogicalResult buildBodyAndFallthrough(
+    CIRGenFunction &CGF, const CoroutineBodyStmt &S, Stmt *Body,
+    const CIRGenFunction::LexicalScopeContext *currLexScope) {
   if (CGF.buildStmt(Body, /*useCurrentScope=*/true).failed())
     return mlir::failure();
-  // LLVM codegen checks if a insert basic block is available in order
-  // to decide whether to getFallthroughHandler, sounds like it should
-  // be an assert, not clear. For CIRGen solely rely on getFallthroughHandler.
-  if (Stmt *OnFallthrough = S.getFallthroughHandler())
-    if (CGF.buildStmt(OnFallthrough, /*useCurrentScope=*/true).failed())
-      return mlir::failure();
+  // Note that LLVM checks CanFallthrough by looking into the availability
+  // of the insert block which is kinda brittle and unintuitive, seems to be
+  // related with how landing pads are handled.
+  //
+  // CIRGen handles this by checking pre-existing co_returns in the current
+  // scope instead. Are we missing anything?
+  //
+  // From LLVM IR Gen: const bool CanFallthrough = Builder.GetInsertBlock();
+  const bool CanFallthrough = !currLexScope->hasCoreturn();
+  if (CanFallthrough)
+    if (Stmt *OnFallthrough = S.getFallthroughHandler())
+      if (CGF.buildStmt(OnFallthrough, /*useCurrentScope=*/true).failed())
+        return mlir::failure();
 
   return mlir::success();
 }
@@ -346,14 +353,18 @@ CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
     // FIXME(cir): wrap buildBodyAndFallthrough with try/catch bits.
     if (S.getExceptionHandler())
       assert(!UnimplementedFeature::unhandledException() && "NYI");
-    if (buildBodyAndFallthrough(*this, S, S.getBody()).failed())
+    if (buildBodyAndFallthrough(*this, S, S.getBody(), currLexScope).failed())
       return mlir::failure();
 
-    // FIXME(cir): LLVM checks CanFallthrough by looking into the availability
-    // of the insert block, do we need this? Likely not since fallthroughs
-    // usually get an implicit AST node for a CoreturnStmt.
+    // Note that LLVM checks CanFallthrough by looking into the availability
+    // of the insert block which is kinda brittle and unintuitive, seems to be
+    // related with how landing pads are handled.
+    //
+    // CIRGen handles this by checking pre-existing co_returns in the current
+    // scope instead. Are we missing anything?
+    //
     // From LLVM IR Gen: const bool CanFallthrough = Builder.GetInsertBlock();
-    const bool CanFallthrough = false;
+    const bool CanFallthrough = currLexScope->hasCoreturn();
     const bool HasCoreturns = CurCoro.Data->CoreturnCount > 0;
     if (CanFallthrough || HasCoreturns) {
       CurCoro.Data->CurrentAwaitKind = mlir::cir::AwaitKind::final;
@@ -524,6 +535,8 @@ RValue CIRGenFunction::buildCoawaitExpr(const CoawaitExpr &E,
 
 mlir::LogicalResult CIRGenFunction::buildCoreturnStmt(CoreturnStmt const &S) {
   ++CurCoro.Data->CoreturnCount;
+  currLexScope->setCoreturn();
+
   const Expr *RV = S.getOperand();
   if (RV && RV->getType()->isVoidType() && !isa<InitListExpr>(RV)) {
     // Make sure to evaluate the non initlist expression of a co_return

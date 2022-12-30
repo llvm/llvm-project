@@ -3,6 +3,13 @@
 
 namespace std {
 
+template<typename T> struct remove_reference       { typedef T type; };
+template<typename T> struct remove_reference<T &>  { typedef T type; };
+template<typename T> struct remove_reference<T &&> { typedef T type; };
+
+template<typename T>
+typename remove_reference<T>::type &&move(T &&t) noexcept;
+
 template <class Ret, typename... T>
 struct coroutine_traits { using promise_type = typename Ret::promise_type; };
 
@@ -33,6 +40,16 @@ struct string {
   int size() const;
   string();
   string(char const *s);
+};
+
+template<typename T>
+struct optional {
+  optional();
+  optional(const T&);
+  T &operator*() &;
+  T &&operator*() &&;
+  T &value() &;
+  T &&value() &&;
 };
 } // namespace std
 
@@ -76,15 +93,21 @@ struct Task<void> {
     SemiFuture semi();
 };
 
-struct blocking_wait_fn {
-  template <typename T>
-  T operator()(Task<T>&& awaitable) const {
-    return T();
-  }
-};
+// FIXME: add CIRGen support here.
+// struct blocking_wait_fn {
+//   template <typename T>
+//   T operator()(Task<T>&& awaitable) const {
+//     return T();
+//   }
+// };
 
-inline constexpr blocking_wait_fn blocking_wait{};
-static constexpr blocking_wait_fn const& blockingWait = blocking_wait;
+// inline constexpr blocking_wait_fn blocking_wait{};
+// static constexpr blocking_wait_fn const& blockingWait = blocking_wait;
+
+template <typename T>
+T blockingWait(Task<T>&& awaitable) {
+  return T();
+}
 
 template <typename T>
 Task<T> collectAllRange(Task<T>* awaitable);
@@ -253,3 +276,22 @@ folly::coro::Task<int> byRef(const std::string& s) {
 // CHECK: cir.func coroutine @_Z5byRefRKSt6string(%arg0: !cir.ptr<![[StdString]]>
 // CHECK: %[[#AllocaParam:]] = cir.alloca !cir.ptr<![[StdString]]>, {{.*}} ["s", init]
 // CHECK: %[[#AllocaFnUse:]] = cir.alloca !cir.ptr<![[StdString]]>, {{.*}} ["s", init]
+
+folly::coro::Task<void> silly_coro() {
+  std::optional<folly::coro::Task<int>> task;
+  {
+    std::string s = "yolo";
+    task = byRef(s);
+  }
+  folly::coro::blockingWait(std::move(task.value()));
+  co_return;
+}
+
+// Make sure we properly handle OnFallthrough coro body sub stmt and
+// check there are not multiple co_returns emitted.
+
+// CHECK: cir.func coroutine @_Z10silly_corov()
+// CHECK: cir.await(init, ready : {
+// CHECK: cir.call @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv
+// CHECK-NOT: cir.call @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv
+// CHECK: cir.await(final, ready : {
