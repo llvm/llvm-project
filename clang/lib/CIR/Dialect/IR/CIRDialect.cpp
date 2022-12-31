@@ -417,7 +417,7 @@ bool shouldPrintTerm(mlir::Region &r) {
   if (isa<ReturnOp>(entryBlock->back()))
     return true;
   YieldOp y = dyn_cast<YieldOp>(entryBlock->back());
-  if (y && !y.isPlain())
+  if (y && (!y.isPlain() || !y.getArgs().empty()))
     return true;
   return false;
 }
@@ -546,7 +546,7 @@ void ScopeOp::getSuccessorRegions(mlir::RegionBranchPoint point,
                                   SmallVectorImpl<RegionSuccessor> &regions) {
   // The only region always branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor());
+    regions.push_back(RegionSuccessor(getResults()));
     return;
   }
 
@@ -554,16 +554,18 @@ void ScopeOp::getSuccessorRegions(mlir::RegionBranchPoint point,
   regions.push_back(RegionSuccessor(&getScopeRegion()));
 }
 
-void ScopeOp::build(OpBuilder &builder, OperationState &result,
-                    TypeRange resultTypes,
-                    function_ref<void(OpBuilder &, Location)> scopeBuilder) {
+void ScopeOp::build(
+    OpBuilder &builder, OperationState &result,
+    function_ref<void(OpBuilder &, Type &, Location)> scopeBuilder) {
   assert(scopeBuilder && "the builder callback for 'then' must be present");
-  result.addTypes(resultTypes);
 
   OpBuilder::InsertionGuard guard(builder);
   Region *scopeRegion = result.addRegion();
   builder.createBlock(scopeRegion);
-  scopeBuilder(builder, result.location);
+
+  mlir::Type yieldTy;
+  scopeBuilder(builder, yieldTy, result.location);
+  result.addTypes(TypeRange{yieldTy});
 }
 
 void ScopeOp::build(OpBuilder &builder, OperationState &result,

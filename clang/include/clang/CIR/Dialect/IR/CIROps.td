@@ -565,8 +565,10 @@ def ScopeOp : CIR_Op<"scope", [
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<(ins "TypeRange":$resultTypes,
-               "function_ref<void(OpBuilder &, Location)>":$scopeBuilder)>,
+    // Scopes for yielding values.
+    OpBuilder<(ins
+              "function_ref<void(OpBuilder &, Type &, Location)>":$scopeBuilder)>,
+    // Scopes without yielding values.
     OpBuilder<(ins "function_ref<void(OpBuilder &, Location)>":$scopeBuilder)>
   ];
 }
