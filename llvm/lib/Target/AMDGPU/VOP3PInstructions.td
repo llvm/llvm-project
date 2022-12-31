@@ -359,10 +359,14 @@ defm V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4",
 
 } // End SubtargetPredicate = HasDot1Insts
 
+def DOT2_BF16_Profile
+  : VOP3P_Profile<VOP_F32_V2I16_V2I16_F32, VOP3_REGULAR, /*HasDPP*/ 1> {
+  let HasSrc1Mods = 1;
+}
+
 let SubtargetPredicate = HasDot8Insts  in {
 
-defm V_DOT2_F32_BF16 : VOP3PInst<"v_dot2_f32_bf16",
-  VOP3P_Profile<VOP_F32_V2I16_V2I16_F32, VOP3_REGULAR, /*HasDPP*/ 1>,
+defm V_DOT2_F32_BF16 : VOP3PInst<"v_dot2_f32_bf16", DOT2_BF16_Profile,
   int_amdgcn_fdot2_f32_bf16, 1>;
 
 } // End SubtargetPredicate = HasDot8Insts
