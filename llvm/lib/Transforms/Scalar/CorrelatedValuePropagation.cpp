@@ -801,21 +801,16 @@ static bool expandURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   //   R  = X* % Y                 iff X* u< 2*Y (w/ unsigned saturation)
   // but that does not seem profitable here.
 
-  bool XIsBound =
-      XCR.icmp(ICmpInst::ICMP_ULT, YCR.umul_sat(APInt(YCR.getBitWidth(), 2)));
   // Even if we don't know X's range, the divisor may be so large, X can't ever
   // be 2x larger than that. I.e. if divisor is always negative.
-  if (!XIsBound && !YCR.isAllNegative())
+  if (!XCR.icmp(ICmpInst::ICMP_ULT,
+                YCR.umul_sat(APInt(YCR.getBitWidth(), 2))) &&
+      !YCR.isAllNegative())
     return false;
-
   IRBuilder<> B{Instr};
-  if (!XIsBound) {
-    // NOTE: this transformation increases use count on X, but that is fine
-    // unless the transformation is valid because the divisor is negative,
-    // and is non-variable, and thus we didn't have any extra uses.
-    if (auto *Ycst = dyn_cast<ConstantInt>(Y); Ycst && Ycst->isNegative())
-      X = B.CreateFreeze(X, X->getName() + ".frozen");
-  }
+  // NOTE: this transformation introduces two uses of X,
+  //       but it may be undef so we must freeze it first.
+  X = B.CreateFreeze(X, X->getName() + ".frozen");
   auto *AdjX = B.CreateNUWSub(X, Y, Instr->getName() + ".urem");
   auto *Cmp = B.CreateICmp(ICmpInst::ICMP_ULT, X, Y, Instr->getName() + ".cmp");
   auto *ExpandedURem = B.CreateSelect(Cmp, X, AdjX);
