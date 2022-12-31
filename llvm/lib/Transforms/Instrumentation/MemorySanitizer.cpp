@@ -396,17 +396,10 @@ static const MemoryMapParams Linux_I386_MemoryMapParams = {
 
 // x86_64 Linux
 static const MemoryMapParams Linux_X86_64_MemoryMapParams = {
-#ifdef MSAN_LINUX_X86_64_OLD_MAPPING
-    0x400000000000, // AndMask
-    0,              // XorMask (not used)
-    0,              // ShadowBase (not used)
-    0x200000000000, // OriginBase
-#else
     0,              // AndMask (not used)
     0x500000000000, // XorMask
     0,              // ShadowBase (not used)
     0x100000000000, // OriginBase
-#endif
 };
 
 // mips64 Linux

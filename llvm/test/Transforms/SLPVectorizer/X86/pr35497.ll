@@ -75,13 +75,13 @@ define void @pr35497() local_unnamed_addr #0 {
 ; SSE-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[TMP1]], <i64 2, i64 2>
 ; SSE-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], <i64 20, i64 20>
 ; SSE-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i64> [[TMP3]], zeroinitializer
-; SSE-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP4]], i32 1
-; SSE-NEXT:    [[TMP6:%.*]] = bitcast i64* [[ARRAYIDX2_6]] to <2 x i64>*
-; SSE-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[TMP6]], align 1
-; SSE-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i32 0
-; SSE-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> [[TMP7]], i64 [[ADD]], i32 1
-; SSE-NEXT:    [[TMP9:%.*]] = shl <2 x i64> [[TMP8]], <i64 2, i64 2>
-; SSE-NEXT:    [[TMP10:%.*]] = and <2 x i64> [[TMP9]], <i64 20, i64 20>
+; SSE-NEXT:    [[TMP5:%.*]] = bitcast i64* [[ARRAYIDX2_6]] to <2 x i64>*
+; SSE-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[TMP5]], align 1
+; SSE-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> poison, i64 [[ADD]], i32 0
+; SSE-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP6]], <2 x i64> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; SSE-NEXT:    [[TMP8:%.*]] = shl <2 x i64> [[TMP7]], <i64 2, i64 2>
+; SSE-NEXT:    [[TMP9:%.*]] = and <2 x i64> [[TMP8]], <i64 20, i64 20>
+; SSE-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[TMP9]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
 ; SSE-NEXT:    [[TMP11:%.*]] = lshr <2 x i64> [[TMP4]], <i64 6, i64 6>
 ; SSE-NEXT:    [[TMP12:%.*]] = add nuw nsw <2 x i64> [[TMP10]], [[TMP11]]
 ; SSE-NEXT:    [[TMP13:%.*]] = bitcast i64* [[ARRAYIDX2_2]] to <2 x i64>*
@@ -99,13 +99,13 @@ define void @pr35497() local_unnamed_addr #0 {
 ; AVX-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[TMP1]], <i64 2, i64 2>
 ; AVX-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], <i64 20, i64 20>
 ; AVX-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i64> [[TMP3]], zeroinitializer
-; AVX-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP4]], i32 1
-; AVX-NEXT:    [[TMP6:%.*]] = bitcast i64* [[ARRAYIDX2_6]] to <2 x i64>*
-; AVX-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[TMP6]], align 1
-; AVX-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i32 0
-; AVX-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> [[TMP7]], i64 [[ADD]], i32 1
-; AVX-NEXT:    [[TMP9:%.*]] = shl <2 x i64> [[TMP8]], <i64 2, i64 2>
-; AVX-NEXT:    [[TMP10:%.*]] = and <2 x i64> [[TMP9]], <i64 20, i64 20>
+; AVX-NEXT:    [[TMP5:%.*]] = bitcast i64* [[ARRAYIDX2_6]] to <2 x i64>*
+; AVX-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[TMP5]], align 1
+; AVX-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> poison, i64 [[ADD]], i32 0
+; AVX-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP6]], <2 x i64> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; AVX-NEXT:    [[TMP8:%.*]] = shl <2 x i64> [[TMP7]], <i64 2, i64 2>
+; AVX-NEXT:    [[TMP9:%.*]] = and <2 x i64> [[TMP8]], <i64 20, i64 20>
+; AVX-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[TMP9]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
 ; AVX-NEXT:    [[TMP11:%.*]] = lshr <2 x i64> [[TMP4]], <i64 6, i64 6>
 ; AVX-NEXT:    [[TMP12:%.*]] = add nuw nsw <2 x i64> [[TMP10]], [[TMP11]]
 ; AVX-NEXT:    [[TMP13:%.*]] = bitcast i64* [[ARRAYIDX2_2]] to <2 x i64>*

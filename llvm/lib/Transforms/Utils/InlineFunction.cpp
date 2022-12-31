@@ -833,11 +833,9 @@ static void updateMemprofMetadata(CallBase *CI,
 // Update the metadata on the inlined copy ClonedCall of a call OrigCall in the
 // inlined callee body, based on the callsite metadata InlinedCallsiteMD from
 // the call that was inlined.
-static void
-propagateMemProfHelper(const CallBase *OrigCall, CallBase *ClonedCall,
-                       MDNode *InlinedCallsiteMD,
-                       std::map<const CallBase *, std::vector<Metadata *>>
-                           &OrigCallToNewMemProfMDMap) {
+static void propagateMemProfHelper(const CallBase *OrigCall,
+                                   CallBase *ClonedCall,
+                                   MDNode *InlinedCallsiteMD) {
   MDNode *OrigCallsiteMD = ClonedCall->getMetadata(LLVMContext::MD_callsite);
   MDNode *ClonedCallsiteMD = nullptr;
   // Check if the call originally had callsite metadata, and update it for the
@@ -860,8 +858,6 @@ propagateMemProfHelper(const CallBase *OrigCall, CallBase *ClonedCall,
 
   // New call's MIB list.
   std::vector<Metadata *> NewMIBList;
-  // Updated MIB list for the original call in the out-of-line callee.
-  std::vector<Metadata *> UpdatedOrigMIBList;
 
   // For each MIB metadata, check if its call stack context starts with the
   // new clone's callsite metadata. If so, that MIB goes onto the cloned call in
@@ -875,21 +871,14 @@ propagateMemProfHelper(const CallBase *OrigCall, CallBase *ClonedCall,
     if (haveCommonPrefix(StackMD, ClonedCallsiteMD))
       // Add it to the cloned call's MIB list.
       NewMIBList.push_back(MIB);
-    else
-      // Keep it on the original call.
-      UpdatedOrigMIBList.push_back(MIB);
   }
   if (NewMIBList.empty()) {
     removeMemProfMetadata(ClonedCall);
     removeCallsiteMetadata(ClonedCall);
     return;
   }
-  if (NewMIBList.size() < OrigMemProfMD->getNumOperands()) {
-    assert(!UpdatedOrigMIBList.empty());
-    OrigCallToNewMemProfMDMap[OrigCall] = UpdatedOrigMIBList;
+  if (NewMIBList.size() < OrigMemProfMD->getNumOperands())
     updateMemprofMetadata(ClonedCall, NewMIBList);
-  } else
-    OrigCallToNewMemProfMDMap[OrigCall] = {};
 }
 
 // Update memprof related metadata (!memprof and !callsite) based on the
@@ -911,9 +900,6 @@ propagateMemProfMetadata(Function *Callee, CallBase &CB,
     return;
 
   // Propagate metadata onto the cloned calls in the inlined callee.
-  // Can't update the original call using the VMap since it holds a const
-  // pointer, those will be updated in the subsequent loop.
-  std::map<const CallBase *, std::vector<Metadata *>> OrigCallToNewMemProfMDMap;
   for (const auto &Entry : VMap) {
     // See if this is a call that has been inlined and remapped, and not
     // simplified away in the process.
@@ -929,27 +915,7 @@ propagateMemProfMetadata(Function *Callee, CallBase &CB,
       removeCallsiteMetadata(ClonedCall);
       continue;
     }
-    propagateMemProfHelper(OrigCall, ClonedCall, CallsiteMD,
-                           OrigCallToNewMemProfMDMap);
-  }
-
-  // Update memprof MD on calls within the original callee function to remove
-  // MIB with stacks that matched the inlined context (those moved to a new
-  // memprof MD on the inlined version of the call).
-  for (BasicBlock &BB : *Callee) {
-    for (Instruction &I : BB) {
-      CallBase *Call = dyn_cast<CallBase>(&I);
-      if (!Call || !OrigCallToNewMemProfMDMap.count(Call))
-        continue;
-      std::vector<Metadata *> &UpdatedMemProfMD =
-          OrigCallToNewMemProfMDMap[Call];
-      if (!UpdatedMemProfMD.empty())
-        updateMemprofMetadata(Call, UpdatedMemProfMD);
-      else {
-        removeMemProfMetadata(Call);
-        removeCallsiteMetadata(Call);
-      }
-    }
+    propagateMemProfHelper(OrigCall, ClonedCall, CallsiteMD);
   }
 }
 
