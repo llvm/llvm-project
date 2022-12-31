@@ -50,6 +50,7 @@ public:
   bool isScalar() const { return V1.getInt() == Scalar; }
   bool isComplex() const { return V1.getInt() == Complex; }
   bool isAggregate() const { return V1.getInt() == Aggregate; }
+  bool isIgnored() const { return isScalar() && !getScalarVal(); }
 
   bool isVolatileQualified() const { return V2.getInt(); }
 
