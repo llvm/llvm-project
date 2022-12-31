@@ -413,7 +413,7 @@ bool ByteCodeExprGen<Emitter>::VisitArraySubscriptExpr(
   const Expr *Index = E->getIdx();
   PrimType IndexT = classifyPrim(Index->getType());
 
-  // Take pointer of LHS, add offset from RHS, narrow result.
+  // Take pointer of LHS, add offset from RHS.
   // What's left on the stack after this is a pointer.
   if (!this->visit(Base))
     return false;
@@ -421,10 +421,7 @@ bool ByteCodeExprGen<Emitter>::VisitArraySubscriptExpr(
   if (!this->visit(Index))
     return false;
 
-  if (!this->emitAddOffset(IndexT, E))
-    return false;
-
-  if (!this->emitNarrowPtr(E))
+  if (!this->emitArrayElemPtrPop(IndexT, E))
     return false;
 
   if (DiscardResult)
@@ -1214,16 +1211,11 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
           return false;
       } else {
         // Advance the pointer currently on the stack to the given
-        // dimension and narrow().
-        if (!this->emitDupPtr(Init))
-          return false;
+        // dimension.
         if (!this->emitConstUint32(ElementIndex, Init))
           return false;
-        if (!this->emitAddOffsetUint32(Init))
+        if (!this->emitArrayElemPtrUint32(Init))
           return false;
-        if (!this->emitNarrowPtr(Init))
-          return false;
-
         if (!visitInitializer(Init))
           return false;
         if (!this->emitPopPtr(Init))
@@ -1249,31 +1241,22 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
     for (size_t I = 0; I != Size; ++I) {
       ArrayIndexScope<Emitter> IndexScope(this, I);
 
-      if (!this->emitDupPtr(SubExpr)) // LHS
-        return false;
-
       if (ElemT) {
         if (!this->visit(SubExpr))
           return false;
         if (!this->emitInitElem(*ElemT, I, Initializer))
           return false;
       } else {
-        // Narrow to our array element and recurse into visitInitializer()
+        // Get to our array element and recurse into visitInitializer()
         if (!this->emitConstUint64(I, SubExpr))
           return false;
-
-        if (!this->emitAddOffsetUint64(SubExpr))
+        if (!this->emitArrayElemPtrUint64(SubExpr))
           return false;
-
-        if (!this->emitNarrowPtr(SubExpr))
-          return false;
-
         if (!visitInitializer(SubExpr))
           return false;
+        if (!this->emitPopPtr(Initializer))
+          return false;
       }
-
-      if (!this->emitPopPtr(Initializer))
-        return false;
     }
     return true;
   } else if (const auto *IVIE = dyn_cast<ImplicitValueInitExpr>(Initializer)) {
@@ -1309,13 +1292,9 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
     // FIXME(perf): We're calling the constructor once per array element here,
     //   in the old intepreter we had a special-case for trivial constructors.
     for (size_t I = 0; I != NumElems; ++I) {
-      if (!this->emitDupPtr(Initializer))
-        return false;
       if (!this->emitConstUint64(I, Initializer))
         return false;
-      if (!this->emitAddOffsetUint64(Initializer))
-        return false;
-      if (!this->emitNarrowPtr(Initializer))
+      if (!this->emitArrayElemPtrUint64(Initializer))
         return false;
 
       // Constructor arguments.

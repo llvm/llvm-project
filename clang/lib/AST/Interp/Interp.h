@@ -1455,6 +1455,36 @@ inline bool ExpandPtr(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+// 1) Pops an integral value from the stack
+// 2) Peeks a pointer
+// 3) Pushes a new pointer that's a narrowed array
+//   element of the peeked pointer with the value
+//   from 1) added as offset.
+//
+// This leaves the original pointer on the stack and pushes a new one
+// with the offset applied and narrowed.
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
+  const T &Offset = S.Stk.pop<T>();
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+
+  if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
+    return false;
+
+  return NarrowPtr(S, OpPC);
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
+  const T &Offset = S.Stk.pop<T>();
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
+    return false;
+
+  return NarrowPtr(S, OpPC);
+}
+
 inline bool CheckGlobalCtor(InterpState &S, CodePtr &PC) {
   const Pointer &Obj = S.Stk.peek<Pointer>();
   return CheckCtorCall(S, PC, Obj);

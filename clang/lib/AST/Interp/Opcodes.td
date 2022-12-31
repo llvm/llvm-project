@@ -306,6 +306,9 @@ def RVOPtr : Opcode;
 def NarrowPtr : Opcode;
 // [Pointer] -> [Pointer]
 def ExpandPtr : Opcode;
+// [Pointer, Offset] -> [Pointer]
+def ArrayElemPtr : AluOpcode;
+def ArrayElemPtrPop : AluOpcode;
 
 //===----------------------------------------------------------------------===//
 // Direct field accessors
