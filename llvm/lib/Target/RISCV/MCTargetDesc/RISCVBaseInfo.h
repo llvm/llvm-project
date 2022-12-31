@@ -124,6 +124,7 @@ enum VLMUL : uint8_t {
 };
 
 enum {
+  TAIL_UNDISTURBED_MASK_UNDISTURBED = 0,
   TAIL_AGNOSTIC = 1,
   MASK_AGNOSTIC = 2,
 };

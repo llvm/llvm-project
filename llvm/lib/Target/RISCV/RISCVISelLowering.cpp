@@ -3063,10 +3063,11 @@ static SDValue lowerVECTOR_SHUFFLEAsVNSRL(const SDLoc &DL, MVT VT,
   return convertFromScalableVector(VT, Res, DAG, Subtarget);
 }
 
-static SDValue getVSlidedown(SelectionDAG &DAG, const RISCVSubtarget &Subtarget,
-                             SDLoc DL, EVT VT, SDValue Merge, SDValue Op,
-                             SDValue Offset, SDValue Mask, SDValue VL,
-                             unsigned Policy = /* TUMU */ 0) {
+static SDValue
+getVSlidedown(SelectionDAG &DAG, const RISCVSubtarget &Subtarget, SDLoc DL,
+              EVT VT, SDValue Merge, SDValue Op, SDValue Offset, SDValue Mask,
+              SDValue VL,
+              unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED) {
   if (Merge.isUndef())
     Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
   SDValue PolicyOp = DAG.getTargetConstant(Policy, DL, Subtarget.getXLenVT());
@@ -3074,10 +3075,11 @@ static SDValue getVSlidedown(SelectionDAG &DAG, const RISCVSubtarget &Subtarget,
   return DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, VT, Ops);
 }
 
-static SDValue getVSlideup(SelectionDAG &DAG, const RISCVSubtarget &Subtarget,
-                           SDLoc DL, EVT VT, SDValue Merge, SDValue Op,
-                           SDValue Offset, SDValue Mask, SDValue VL,
-                           unsigned Policy = /* TUMU */ 0) {
+static SDValue
+getVSlideup(SelectionDAG &DAG, const RISCVSubtarget &Subtarget, SDLoc DL,
+            EVT VT, SDValue Merge, SDValue Op, SDValue Offset, SDValue Mask,
+            SDValue VL,
+            unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED) {
   if (Merge.isUndef())
     Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
   SDValue PolicyOp = DAG.getTargetConstant(Policy, DL, Subtarget.getXLenVT());
@@ -3291,7 +3293,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     }
     if (LoV)
       Res = getVSlideup(DAG, Subtarget, DL, ContainerVT, Res, LoV,
-                        DAG.getConstant(InvRotate, DL, XLenVT), TrueMask, VL);
+                        DAG.getConstant(InvRotate, DL, XLenVT), TrueMask, VL,
+                        RISCVII::TAIL_AGNOSTIC);
 
     return convertFromScalableVector(VT, Res, DAG, Subtarget);
   }
@@ -5235,8 +5238,15 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   // Now that the value is in a vector, slide it into position.
   SDValue InsertVL =
       DAG.getNode(ISD::ADD, DL, XLenVT, Idx, DAG.getConstant(1, DL, XLenVT));
+
+  // Use tail agnostic policy if Idx is the last index of Vec.
+  unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+  if (VecVT.isFixedLengthVector() && isa<ConstantSDNode>(Idx) &&
+      cast<ConstantSDNode>(Idx)->getZExtValue() + 1 ==
+          VecVT.getVectorNumElements())
+    Policy = RISCVII::TAIL_AGNOSTIC;
   SDValue Slideup = getVSlideup(DAG, Subtarget, DL, ContainerVT, Vec, ValInVec,
-                                Idx, Mask, InsertVL);
+                                Idx, Mask, InsertVL, Policy);
   if (!VecVT.isFixedLengthVector())
     return Slideup;
   return convertFromScalableVector(VecVT, Slideup, DAG, Subtarget);
@@ -6143,8 +6153,14 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
     SDValue VL =
         getVLOp(OrigIdx + SubVecVT.getVectorNumElements(), DL, DAG, Subtarget);
     SDValue SlideupAmt = DAG.getConstant(OrigIdx, DL, XLenVT);
+
+    // Use tail agnostic policy if OrigIdx is the last index of Vec.
+    unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+    if (VecVT.isFixedLengthVector() &&
+        OrigIdx + 1 == VecVT.getVectorNumElements())
+      Policy = RISCVII::TAIL_AGNOSTIC;
     SDValue Slideup = getVSlideup(DAG, Subtarget, DL, ContainerVT, Vec, SubVec,
-                                  SlideupAmt, Mask, VL);
+                                  SlideupAmt, Mask, VL, Policy);
     if (VecVT.isFixedLengthVector())
       Slideup = convertFromScalableVector(VecVT, Slideup, DAG, Subtarget);
     return DAG.getBitcast(Op.getValueType(), Slideup);
@@ -6483,7 +6499,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_SPLICE(SDValue Op,
       getVSlidedown(DAG, Subtarget, DL, VecVT, DAG.getUNDEF(VecVT), V1,
                     DownOffset, TrueMask, UpOffset);
   return getVSlideup(DAG, Subtarget, DL, VecVT, SlideDown, V2, UpOffset,
-                     TrueMask, DAG.getRegister(RISCV::X0, XLenVT));
+                     TrueMask, DAG.getRegister(RISCV::X0, XLenVT),
+                     RISCVII::TAIL_AGNOSTIC);
 }
 
 SDValue
