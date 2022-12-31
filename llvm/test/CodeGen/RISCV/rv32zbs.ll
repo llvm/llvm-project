@@ -49,8 +49,8 @@ define i64 @bclr_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    li a3, 1
 ; RV32I-NEXT:    sll a4, a3, a2
 ; RV32I-NEXT:    andi a2, a2, 63
-; RV32I-NEXT:    addi a2, a2, -32
-; RV32I-NEXT:    slti a5, a2, 0
+; RV32I-NEXT:    addi a5, a2, -32
+; RV32I-NEXT:    slti a5, a5, 0
 ; RV32I-NEXT:    neg a6, a5
 ; RV32I-NEXT:    and a4, a6, a4
 ; RV32I-NEXT:    sll a2, a3, a2
@@ -65,8 +65,8 @@ define i64 @bclr_i64(i64 %a, i64 %b) nounwind {
 ; RV32ZBS-LABEL: bclr_i64:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    andi a3, a2, 63
-; RV32ZBS-NEXT:    addi a3, a3, -32
-; RV32ZBS-NEXT:    slti a4, a3, 0
+; RV32ZBS-NEXT:    addi a4, a3, -32
+; RV32ZBS-NEXT:    slti a4, a4, 0
 ; RV32ZBS-NEXT:    neg a5, a4
 ; RV32ZBS-NEXT:    bset a2, zero, a2
 ; RV32ZBS-NEXT:    and a2, a5, a2
@@ -170,26 +170,24 @@ define signext i64 @bset_i64_zero(i64 signext %a) nounwind {
 ; RV32I-LABEL: bset_i64_zero:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    li a1, 1
-; RV32I-NEXT:    sll a2, a1, a0
-; RV32I-NEXT:    addi a3, a0, -32
-; RV32I-NEXT:    slti a4, a3, 0
-; RV32I-NEXT:    neg a0, a4
-; RV32I-NEXT:    and a0, a0, a2
-; RV32I-NEXT:    sll a1, a1, a3
-; RV32I-NEXT:    addi a4, a4, -1
-; RV32I-NEXT:    and a1, a4, a1
+; RV32I-NEXT:    sll a1, a1, a0
+; RV32I-NEXT:    addi a0, a0, -32
+; RV32I-NEXT:    slti a2, a0, 0
+; RV32I-NEXT:    neg a0, a2
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    addi a2, a2, -1
+; RV32I-NEXT:    and a1, a2, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBS-LABEL: bset_i64_zero:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    addi a1, a0, -32
-; RV32ZBS-NEXT:    slti a2, a1, 0
-; RV32ZBS-NEXT:    neg a3, a2
-; RV32ZBS-NEXT:    bset a0, zero, a0
-; RV32ZBS-NEXT:    and a0, a3, a0
-; RV32ZBS-NEXT:    bset a1, zero, a1
-; RV32ZBS-NEXT:    addi a2, a2, -1
-; RV32ZBS-NEXT:    and a1, a2, a1
+; RV32ZBS-NEXT:    slti a1, a1, 0
+; RV32ZBS-NEXT:    neg a2, a1
+; RV32ZBS-NEXT:    bset a3, zero, a0
+; RV32ZBS-NEXT:    and a0, a2, a3
+; RV32ZBS-NEXT:    addi a1, a1, -1
+; RV32ZBS-NEXT:    and a1, a1, a3
 ; RV32ZBS-NEXT:    ret
   %shl = shl i64 1, %a
   ret i64 %shl
@@ -288,12 +286,12 @@ define i64 @bext_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    addi a4, a3, -32
 ; CHECK-NEXT:    bltz a4, .LBB12_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srl a0, a1, a4
+; CHECK-NEXT:    srl a0, a1, a3
 ; CHECK-NEXT:    j .LBB12_3
 ; CHECK-NEXT:  .LBB12_2:
 ; CHECK-NEXT:    srl a0, a0, a2
 ; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    xori a2, a3, 31
+; CHECK-NEXT:    not a2, a3
 ; CHECK-NEXT:    sll a1, a1, a2
 ; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:  .LBB12_3:

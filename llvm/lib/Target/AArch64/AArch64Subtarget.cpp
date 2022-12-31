@@ -275,9 +275,8 @@ void AArch64Subtarget::initializeProperties() {
   }
 }
 
-AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
-                                   const std::string &TuneCPU,
-                                   const std::string &FS,
+AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
+                                   StringRef TuneCPU, StringRef FS,
                                    const TargetMachine &TM, bool LittleEndian,
                                    unsigned MinSVEVectorSizeInBitsOverride,
                                    unsigned MaxSVEVectorSizeInBitsOverride,

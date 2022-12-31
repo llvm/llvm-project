@@ -112,14 +112,18 @@ bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
   // First, collect the operands of all predicated replicate recipes as seeds
   // for sinking.
   SetVector<std::pair<VPBasicBlock *, VPRecipeBase *>> WorkList;
+  auto QueueOperands = [&WorkList](VPRecipeBase *R) {
+    for (VPValue *Op : R->operands())
+      if (auto *Def = Op->getDefiningRecipe())
+        WorkList.insert(std::make_pair(R->getParent(), Def));
+  };
+
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
     for (auto &Recipe : *VPBB) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&Recipe);
       if (!RepR || !RepR->isPredicated())
         continue;
-      for (VPValue *Op : RepR->operands())
-        if (auto *Def = Op->getDefiningRecipe())
-          WorkList.insert(std::make_pair(VPBB, Def));
+      QueueOperands(RepR);
     }
   }
 
@@ -129,8 +133,11 @@ bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
     VPBasicBlock *SinkTo;
     VPRecipeBase *SinkCandidate;
     std::tie(SinkTo, SinkCandidate) = WorkList.pop_back_val();
-    if (SinkCandidate->getParent() == SinkTo ||
-        SinkCandidate->mayHaveSideEffects() ||
+    if (SinkCandidate->getParent() == SinkTo) {
+      QueueOperands(SinkCandidate);
+      continue;
+    }
+    if (SinkCandidate->mayHaveSideEffects() ||
         SinkCandidate->mayReadOrWriteMemory())
       continue;
     if (auto *RepR = dyn_cast<VPReplicateRecipe>(SinkCandidate)) {
@@ -184,9 +191,7 @@ bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
       }
     }
     SinkCandidate->moveBefore(*SinkTo, SinkTo->getFirstNonPhi());
-    for (VPValue *Op : SinkCandidate->operands())
-      if (auto *Def = Op->getDefiningRecipe())
-        WorkList.insert(std::make_pair(SinkTo, Def));
+    QueueOperands(SinkCandidate);
     Changed = true;
   }
   return Changed;

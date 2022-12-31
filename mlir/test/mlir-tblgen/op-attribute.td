@@ -392,6 +392,27 @@ def DOp : NS_Op<"d_op", []> {
 // DEF: odsState.addAttribute(getStrAttrAttrName(odsState.name), odsBuilder.getStringAttr(str_attr));
 // DEF: odsState.addAttribute(getDvStrAttrAttrName(odsState.name), odsBuilder.getStringAttr(dv_str_attr));
 
+
+// Test default dictionary attribute.
+// ---
+
+def DefaultDictAttrOp : NS_Op<"default_dict_attr_op", []> {
+  let arguments = (ins
+    DefaultValuedAttr<DictionaryAttr, "{}">:$empty,
+    DefaultValuedAttr<DictionaryAttr, "getDefaultDictAttrs($_builder)">:$non_empty
+  );
+}
+
+// DEF-LABEL: DefaultDictAttrOp definitions
+// DEF: if (!attributes.get(attrNames[0]))
+// DEF:   attributes.append(attrNames[0], odsBuilder.getDictionaryAttr({}));
+// DEF: if (!attributes.get(attrNames[1]))
+// DEF:   attributes.append(attrNames[1], odsBuilder.getDictionaryAttr(getDefaultDictAttrs(odsBuilder)));
+
+// DECL-LABEL: DefaultDictAttrOp declarations
+// DECL: build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::DictionaryAttr empty, ::mlir::DictionaryAttr non_empty)
+
+
 // Test derived type attr.
 // ---
 def DerivedTypeAttrOp : NS_Op<"derived_type_attr_op", []> {
