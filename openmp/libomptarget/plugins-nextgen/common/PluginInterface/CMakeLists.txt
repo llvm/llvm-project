@@ -49,6 +49,7 @@ else()
     ScalarOpts
     Support
     Target
+    TargetParser
     TransformUtils
     Vectorize
   )
