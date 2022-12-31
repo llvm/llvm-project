@@ -2217,6 +2217,12 @@ int TargetLoweringBase::getDivRefinementSteps(EVT VT,
 bool TargetLoweringBase::isLoadBitCastBeneficial(
     EVT LoadVT, EVT BitcastVT, const SelectionDAG &DAG,
     const MachineMemOperand &MMO) const {
+  // Single-element vectors are scalarized, so we should generally avoid having
+  // any memory operations on such types, as they would get scalarized too.
+  if (LoadVT.isFixedLengthVector() && BitcastVT.isFixedLengthVector() &&
+      BitcastVT.getVectorNumElements() == 1)
+    return false;
+
   // Don't do if we could do an indexed load on the original type, but not on
   // the new one.
   if (!LoadVT.isSimple() || !BitcastVT.isSimple())
