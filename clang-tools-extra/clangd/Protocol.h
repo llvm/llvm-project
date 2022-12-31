@@ -228,6 +228,16 @@ struct Location {
 llvm::json::Value toJSON(const Location &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Location &);
 
+/// Extends Locations returned by textDocument/references with extra info.
+/// This is a clangd extension: LSP uses `Location`.
+struct ReferenceLocation : Location {
+  /// clangd extension: contains the name of the function or class in which the
+  /// reference occurs
+  std::optional<std::string> containerName;
+};
+llvm::json::Value toJSON(const ReferenceLocation &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ReferenceLocation &);
+
 struct TextEdit {
   /// The range of the text document to be manipulated. To insert
   /// text into a document create a range where start === end.
@@ -428,6 +438,10 @@ struct ClientCapabilities {
   /// This is a clangd extension. (LSP says this is for unrelated text only).
   /// textDocument.completion.editsNearCursor
   bool CompletionFixes = false;
+
+  /// Client supports displaying a container string for results of
+  /// textDocument/reference (clangd extension)
+  bool ReferenceContainer = false;
 
   /// Client supports hierarchical document symbols.
   /// textDocument.documentSymbol.hierarchicalDocumentSymbolSupport

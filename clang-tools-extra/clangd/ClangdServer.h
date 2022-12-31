@@ -299,7 +299,7 @@ public:
 
   /// Retrieve locations for symbol references.
   void findReferences(PathRef File, Position Pos, uint32_t Limit,
-                      Callback<ReferencesResult> CB);
+                      bool AddContainer, Callback<ReferencesResult> CB);
 
   /// Run formatting for the \p File with content \p Code.
   /// If \p Rng is non-null, formats only that region.
