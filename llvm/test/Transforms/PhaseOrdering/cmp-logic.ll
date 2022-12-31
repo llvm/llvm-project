@@ -123,7 +123,8 @@ define i32 @PR56119(i32 %e.coerce) {
 ;
 ; OZ-LABEL: @PR56119(
 ; OZ-NEXT:  entry:
-; OZ-NEXT:    [[CONV2:%.*]] = and i32 [[E_COERCE:%.*]], 255
+; OZ-NEXT:    [[E_COERCE_FR:%.*]] = freeze i32 [[E_COERCE:%.*]]
+; OZ-NEXT:    [[CONV2:%.*]] = and i32 [[E_COERCE_FR]], 255
 ; OZ-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[CONV2]], 7
 ; OZ-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; OZ:       if.then:
