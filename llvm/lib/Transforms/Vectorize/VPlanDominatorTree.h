@@ -16,6 +16,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANDOMINATORTREE_H
 
 #include "VPlan.h"
+#include "VPlanCFG.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/IR/Dominators.h"
 
