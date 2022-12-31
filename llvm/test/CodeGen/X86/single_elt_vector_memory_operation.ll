@@ -86,53 +86,39 @@ define void @load_single_256bit_elt_vector(ptr %in, ptr %off, ptr %out) nounwind
 ; SSE-LABEL: load_single_256bit_elt_vector:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps (%rdi), %xmm0
-; SSE-NEXT:    movq 24(%rdi), %rax
-; SSE-NEXT:    movq 16(%rdi), %rcx
-; SSE-NEXT:    xorps %xmm1, %xmm1
-; SSE-NEXT:    movaps %xmm1, 48(%rdx)
-; SSE-NEXT:    movaps %xmm1, 32(%rdx)
-; SSE-NEXT:    movq %rcx, 16(%rdx)
-; SSE-NEXT:    movq %rax, 24(%rdx)
+; SSE-NEXT:    movaps 16(%rdi), %xmm1
+; SSE-NEXT:    xorps %xmm2, %xmm2
+; SSE-NEXT:    movaps %xmm2, 48(%rdx)
+; SSE-NEXT:    movaps %xmm2, 32(%rdx)
 ; SSE-NEXT:    movaps %xmm0, (%rdx)
+; SSE-NEXT:    movaps %xmm1, 16(%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_single_256bit_elt_vector:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps (%rdi), %xmm0
-; AVX-NEXT:    movq 24(%rdi), %rax
-; AVX-NEXT:    movq 16(%rdi), %rcx
+; AVX-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovaps %xmm1, 48(%rdx)
-; AVX-NEXT:    vmovaps %xmm1, 32(%rdx)
-; AVX-NEXT:    movq %rcx, 16(%rdx)
-; AVX-NEXT:    movq %rax, 24(%rdx)
-; AVX-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX-NEXT:    vmovaps %ymm1, 32(%rdx)
+; AVX-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: load_single_256bit_elt_vector:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-NEXT:    movq 24(%rdi), %rax
-; AVX2-NEXT:    movq 16(%rdi), %rcx
+; AVX2-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vmovaps %xmm1, 48(%rdx)
-; AVX2-NEXT:    vmovaps %xmm1, 32(%rdx)
-; AVX2-NEXT:    movq %rcx, 16(%rdx)
-; AVX2-NEXT:    movq %rax, 24(%rdx)
-; AVX2-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX2-NEXT:    vmovaps %ymm1, 32(%rdx)
+; AVX2-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: load_single_256bit_elt_vector:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512F-NEXT:    movq 24(%rdi), %rax
-; AVX512F-NEXT:    movq 16(%rdi), %rcx
+; AVX512F-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovaps %xmm1, 48(%rdx)
-; AVX512F-NEXT:    vmovaps %xmm1, 32(%rdx)
-; AVX512F-NEXT:    movq %rcx, 16(%rdx)
-; AVX512F-NEXT:    movq %rax, 24(%rdx)
-; AVX512F-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX512F-NEXT:    vmovaps %ymm1, 32(%rdx)
+; AVX512F-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
   %i0 = load <32 x i8>, ptr %in, align 64
   %i1 = bitcast <32 x i8> %i0 to <1 x i256>
@@ -146,24 +132,22 @@ define void @store_single_256bit_elt_vector(ptr %in, ptr %off, ptr %out) nounwin
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps (%rdi), %xmm0
 ; SSE-NEXT:    movaps 16(%rdi), %xmm1
-; SSE-NEXT:    movaps %xmm1, 16(%rdx)
 ; SSE-NEXT:    movaps %xmm0, (%rdx)
+; SSE-NEXT:    movaps %xmm1, 16(%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: store_single_256bit_elt_vector:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps (%rdi), %xmm0
-; AVX-NEXT:    vmovaps 16(%rdi), %xmm1
-; AVX-NEXT:    vmovaps %xmm1, 16(%rdx)
-; AVX-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX-NEXT:    vmovaps (%rdi), %ymm0
+; AVX-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: store_single_256bit_elt_vector:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-NEXT:    vmovaps 16(%rdi), %xmm1
-; AVX2-NEXT:    vmovaps %xmm1, 16(%rdx)
-; AVX2-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX2-NEXT:    vmovaps (%rdi), %ymm0
+; AVX2-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: store_single_256bit_elt_vector:
@@ -184,93 +168,51 @@ define void @load_single_512bit_elt_vector(ptr %in, ptr %off, ptr %out) nounwind
 ; SSE-LABEL: load_single_512bit_elt_vector:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps (%rdi), %xmm0
-; SSE-NEXT:    movq 24(%rdi), %rax
-; SSE-NEXT:    movq 16(%rdi), %rcx
-; SSE-NEXT:    movq 40(%rdi), %rsi
-; SSE-NEXT:    movq 32(%rdi), %r8
-; SSE-NEXT:    movq 56(%rdi), %r9
-; SSE-NEXT:    movq 48(%rdi), %rdi
-; SSE-NEXT:    xorps %xmm1, %xmm1
-; SSE-NEXT:    movaps %xmm1, 112(%rdx)
-; SSE-NEXT:    movaps %xmm1, 96(%rdx)
-; SSE-NEXT:    movaps %xmm1, 80(%rdx)
-; SSE-NEXT:    movaps %xmm1, 64(%rdx)
-; SSE-NEXT:    movq %rdi, 48(%rdx)
-; SSE-NEXT:    movq %r9, 56(%rdx)
-; SSE-NEXT:    movq %r8, 32(%rdx)
-; SSE-NEXT:    movq %rsi, 40(%rdx)
-; SSE-NEXT:    movq %rcx, 16(%rdx)
-; SSE-NEXT:    movq %rax, 24(%rdx)
+; SSE-NEXT:    movaps 16(%rdi), %xmm1
+; SSE-NEXT:    movaps 32(%rdi), %xmm2
+; SSE-NEXT:    movaps 48(%rdi), %xmm3
+; SSE-NEXT:    xorps %xmm4, %xmm4
+; SSE-NEXT:    movaps %xmm4, 112(%rdx)
+; SSE-NEXT:    movaps %xmm4, 96(%rdx)
+; SSE-NEXT:    movaps %xmm4, 80(%rdx)
+; SSE-NEXT:    movaps %xmm4, 64(%rdx)
+; SSE-NEXT:    movaps %xmm3, 48(%rdx)
+; SSE-NEXT:    movaps %xmm2, 32(%rdx)
+; SSE-NEXT:    movaps %xmm1, 16(%rdx)
 ; SSE-NEXT:    movaps %xmm0, (%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_single_512bit_elt_vector:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps (%rdi), %xmm0
-; AVX-NEXT:    movq 24(%rdi), %rax
-; AVX-NEXT:    movq 16(%rdi), %rcx
-; AVX-NEXT:    movq 40(%rdi), %rsi
-; AVX-NEXT:    movq 32(%rdi), %r8
-; AVX-NEXT:    movq 56(%rdi), %r9
-; AVX-NEXT:    movq 48(%rdi), %rdi
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovaps %xmm1, 112(%rdx)
-; AVX-NEXT:    vmovaps %xmm1, 96(%rdx)
-; AVX-NEXT:    vmovaps %xmm1, 80(%rdx)
-; AVX-NEXT:    vmovaps %xmm1, 64(%rdx)
-; AVX-NEXT:    movq %rdi, 48(%rdx)
-; AVX-NEXT:    movq %r9, 56(%rdx)
-; AVX-NEXT:    movq %r8, 32(%rdx)
-; AVX-NEXT:    movq %rsi, 40(%rdx)
-; AVX-NEXT:    movq %rcx, 16(%rdx)
-; AVX-NEXT:    movq %rax, 24(%rdx)
-; AVX-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX-NEXT:    vmovaps (%rdi), %ymm0
+; AVX-NEXT:    vmovaps 32(%rdi), %ymm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vmovaps %ymm2, 96(%rdx)
+; AVX-NEXT:    vmovaps %ymm2, 64(%rdx)
+; AVX-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX-NEXT:    vmovaps %ymm1, 32(%rdx)
+; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: load_single_512bit_elt_vector:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-NEXT:    movq 24(%rdi), %rax
-; AVX2-NEXT:    movq 16(%rdi), %rcx
-; AVX2-NEXT:    movq 40(%rdi), %rsi
-; AVX2-NEXT:    movq 32(%rdi), %r8
-; AVX2-NEXT:    movq 56(%rdi), %r9
-; AVX2-NEXT:    movq 48(%rdi), %rdi
-; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vmovaps %xmm1, 112(%rdx)
-; AVX2-NEXT:    vmovaps %xmm1, 96(%rdx)
-; AVX2-NEXT:    vmovaps %xmm1, 80(%rdx)
-; AVX2-NEXT:    vmovaps %xmm1, 64(%rdx)
-; AVX2-NEXT:    movq %rdi, 48(%rdx)
-; AVX2-NEXT:    movq %r9, 56(%rdx)
-; AVX2-NEXT:    movq %r8, 32(%rdx)
-; AVX2-NEXT:    movq %rsi, 40(%rdx)
-; AVX2-NEXT:    movq %rcx, 16(%rdx)
-; AVX2-NEXT:    movq %rax, 24(%rdx)
-; AVX2-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX2-NEXT:    vmovaps (%rdi), %ymm0
+; AVX2-NEXT:    vmovaps 32(%rdi), %ymm1
+; AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vmovaps %ymm2, 96(%rdx)
+; AVX2-NEXT:    vmovaps %ymm2, 64(%rdx)
+; AVX2-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX2-NEXT:    vmovaps %ymm1, 32(%rdx)
+; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: load_single_512bit_elt_vector:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512F-NEXT:    movq 24(%rdi), %rax
-; AVX512F-NEXT:    movq 16(%rdi), %rcx
-; AVX512F-NEXT:    movq 40(%rdi), %rsi
-; AVX512F-NEXT:    movq 32(%rdi), %r8
-; AVX512F-NEXT:    movq 56(%rdi), %r9
-; AVX512F-NEXT:    movq 48(%rdi), %rdi
+; AVX512F-NEXT:    vmovaps (%rdi), %zmm0
 ; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovaps %xmm1, 112(%rdx)
-; AVX512F-NEXT:    vmovaps %xmm1, 96(%rdx)
-; AVX512F-NEXT:    vmovaps %xmm1, 80(%rdx)
-; AVX512F-NEXT:    vmovaps %xmm1, 64(%rdx)
-; AVX512F-NEXT:    movq %rdi, 48(%rdx)
-; AVX512F-NEXT:    movq %r9, 56(%rdx)
-; AVX512F-NEXT:    movq %r8, 32(%rdx)
-; AVX512F-NEXT:    movq %rsi, 40(%rdx)
-; AVX512F-NEXT:    movq %rcx, 16(%rdx)
-; AVX512F-NEXT:    movq %rax, 24(%rdx)
-; AVX512F-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX512F-NEXT:    vmovaps %zmm1, 64(%rdx)
+; AVX512F-NEXT:    vmovaps %zmm0, (%rdx)
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
   %i0 = load <64 x i8>, ptr %in, align 128
   %i1 = bitcast <64 x i8> %i0 to <1 x i512>
@@ -286,9 +228,9 @@ define void @store_single_512bit_elt_vector(ptr %in, ptr %off, ptr %out) nounwin
 ; SSE-NEXT:    movaps 16(%rdi), %xmm1
 ; SSE-NEXT:    movaps 32(%rdi), %xmm2
 ; SSE-NEXT:    movaps 48(%rdi), %xmm3
+; SSE-NEXT:    movaps %xmm3, 48(%rdx)
 ; SSE-NEXT:    movaps %xmm0, (%rdx)
 ; SSE-NEXT:    movaps %xmm1, 16(%rdx)
-; SSE-NEXT:    movaps %xmm3, 48(%rdx)
 ; SSE-NEXT:    movaps %xmm2, 32(%rdx)
 ; SSE-NEXT:    retq
 ;
