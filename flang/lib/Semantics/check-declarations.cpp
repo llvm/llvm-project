@@ -1565,6 +1565,12 @@ bool CheckHelper::CheckDefinedAssignmentArg(
         msg =
             "In defined assignment subroutine '%s', second dummy"
             " argument '%s' must have INTENT(IN) or VALUE attribute"_err_en_US;
+      } else if (dataObject->attrs.test(DummyDataObject::Attr::Pointer)) {
+        msg =
+            "In defined assignment subroutine '%s', second dummy argument '%s' must not be a pointer"_err_en_US;
+      } else if (dataObject->attrs.test(DummyDataObject::Attr::Allocatable)) {
+        msg =
+            "In defined assignment subroutine '%s', second dummy argument '%s' must not be an allocatable"_err_en_US;
       }
     } else {
       DIE("pos must be 0 or 1");
