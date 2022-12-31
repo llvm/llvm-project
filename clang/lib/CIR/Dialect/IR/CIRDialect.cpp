@@ -566,6 +566,15 @@ void ScopeOp::build(OpBuilder &builder, OperationState &result,
   scopeBuilder(builder, result.location);
 }
 
+void ScopeOp::build(OpBuilder &builder, OperationState &result,
+                    function_ref<void(OpBuilder &, Location)> scopeBuilder) {
+  assert(scopeBuilder && "the builder callback for 'then' must be present");
+  OpBuilder::InsertionGuard guard(builder);
+  Region *scopeRegion = result.addRegion();
+  builder.createBlock(scopeRegion);
+  scopeBuilder(builder, result.location);
+}
+
 LogicalResult ScopeOp::verify() { return success(); }
 
 //===----------------------------------------------------------------------===//
