@@ -1288,7 +1288,9 @@ void CIRGenFunction::buildAnyExprToMem(const Expr *E, Address Location,
   }
 
   case TEK_Scalar: {
-    assert(0 && "NYI");
+    RValue RV = RValue::get(buildScalarExpr(E));
+    LValue LV = makeAddrLValue(Location, E->getType());
+    buildStoreThroughLValue(RV, LV);
     return;
   }
   }

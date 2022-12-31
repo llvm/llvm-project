@@ -295,3 +295,27 @@ folly::coro::Task<void> silly_coro() {
 // CHECK: cir.call @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv
 // CHECK-NOT: cir.call @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv
 // CHECK: cir.await(final, ready : {
+
+folly::coro::Task<int> go(int const& val) {
+  co_return val;
+}
+folly::coro::Task<int> go1() {
+  auto task = go(1);
+  co_return co_await task;
+}
+
+// CHECK: cir.func coroutine @_Z3go1v()
+// CHECK: %[[#CoReturnValAddr:]] = cir.alloca i32, cir.ptr <i32>, ["__coawait_resume_rval"] {alignment = 1 : i64}
+// CHECK:   cir.await(init, ready : {
+// CHECK:   }, suspend : {
+// CHECK:   }, resume : {
+// CHECK:   },)
+// CHECK: }
+// CHECK: cir.await(user, ready : {
+// CHECK: }, suspend : {
+// CHECK: }, resume : {
+// CHECK:   %[[#ResumeVal:]] = cir.call @_ZN5folly4coro4TaskIiE12await_resumeEv(%3)
+// CHECK:   cir.store %[[#ResumeVal]], %[[#CoReturnValAddr]] : i32, cir.ptr <i32>
+// CHECK: },)
+// CHECK: %[[#V:]] = cir.load %[[#CoReturnValAddr]] : cir.ptr <i32>, i32
+// CHECK: cir.call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi({{.*}}, %[[#V]])

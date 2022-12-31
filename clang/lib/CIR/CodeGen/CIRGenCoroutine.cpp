@@ -416,7 +416,8 @@ static LValueOrRValue
 buildSuspendExpression(CIRGenFunction &CGF, CGCoroData &Coro,
                        CoroutineSuspendExpr const &S, mlir::cir::AwaitKind Kind,
                        AggValueSlot aggSlot, bool ignoreResult,
-                       bool forLValue) {
+                       mlir::Block *scopeParentBlock,
+                       mlir::Value &tmpResumeRValAddr, bool forLValue) {
   auto *E = S.getCommonExpr();
 
   auto awaitBuild = mlir::success();
@@ -488,9 +489,21 @@ buildSuspendExpression(CIRGenFunction &CGF, CGCoroData &Coro,
         // enclosing cir.scope instead.
         if (forLValue)
           awaitRes.LV = CGF.buildLValue(S.getResumeExpr());
-        else
+        else {
           awaitRes.RV =
               CGF.buildAnyExpr(S.getResumeExpr(), aggSlot, ignoreResult);
+          if (!awaitRes.RV.isIgnored()) {
+            // Create the alloca in the block before the scope wrapping
+            // cir.await.
+            tmpResumeRValAddr = CGF.buildAlloca(
+                "__coawait_resume_rval", awaitRes.RV.getScalarVal().getType(),
+                loc, CharUnits::One(),
+                builder.getBestAllocaInsertPoint(scopeParentBlock));
+            // Store the rvalue so we can reload it before the promise call.
+            builder.create<mlir::cir::StoreOp>(loc, awaitRes.RV.getScalarVal(),
+                                               tmpResumeRValAddr);
+          }
+        }
 
         if (TryStmt) {
           llvm_unreachable("NYI");
@@ -509,6 +522,16 @@ RValue CIRGenFunction::buildCoawaitExpr(const CoawaitExpr &E,
                                         bool ignoreResult) {
   RValue rval;
   auto scopeLoc = getLoc(E.getSourceRange());
+
+  // Since we model suspend / resume as an inner region, we must store
+  // resume scalar results in a tmp alloca, and load it after we build the
+  // suspend expression. An alternative way to do this would be to make
+  // every region return a value when promise.return_value() is used, but
+  // it's a bit awkward given that resume is the only region that actually
+  // returns a value.
+  mlir::Block *currEntryBlock = currLexScope->getEntryBlock();
+  [[maybe_unused]] mlir::Value tmpResumeRValAddr;
+
   builder.create<mlir::cir::ScopeOp>(
       scopeLoc, mlir::TypeRange(), /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -527,9 +550,24 @@ RValue CIRGenFunction::buildCoawaitExpr(const CoawaitExpr &E,
         LexicalScopeGuard lexScopeGuard{*this, &lexScope};
         rval = buildSuspendExpression(*this, *CurCoro.Data, E,
                                       CurCoro.Data->CurrentAwaitKind, aggSlot,
-                                      ignoreResult, /*forLValue*/ false)
+                                      ignoreResult, currEntryBlock,
+                                      tmpResumeRValAddr, /*forLValue*/ false)
                    .RV;
       });
+
+  if (ignoreResult || rval.isIgnored())
+    return rval;
+
+  if (rval.isScalar()) {
+    rval = RValue::get(builder.create<mlir::cir::LoadOp>(
+        scopeLoc, rval.getScalarVal().getType(), tmpResumeRValAddr));
+  } else if (rval.isAggregate()) {
+    // This is probably already handled via AggSlot, remove this assertion
+    // once we have a testcase and prove all pieces work.
+    llvm_unreachable("NYI");
+  } else { // complex
+    llvm_unreachable("NYI");
+  }
   return rval;
 }
 
