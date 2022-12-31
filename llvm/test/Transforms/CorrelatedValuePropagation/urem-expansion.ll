@@ -42,6 +42,18 @@ define i8 @constant.divisor.x.range.v4(ptr %x.ptr) {
   %rem = urem i8 %x, 3
   ret i8 %rem
 }
+define i8 @constant.divisor.x.mask.v4(i8 %x) {
+; CHECK-LABEL: @constant.divisor.x.mask.v4(
+; CHECK-NEXT:    [[X_MASKED:%.*]] = and i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[REM_UREM:%.*]] = sub nuw i8 [[X_MASKED]], 3
+; CHECK-NEXT:    [[REM_CMP:%.*]] = icmp ult i8 [[X_MASKED]], 3
+; CHECK-NEXT:    [[REM:%.*]] = select i1 [[REM_CMP]], i8 [[X_MASKED]], i8 [[REM_UREM]]
+; CHECK-NEXT:    ret i8 [[REM]]
+;
+  %x.masked = and i8 %x, 3
+  %rem = urem i8 %x.masked, 3
+  ret i8 %rem
+}
 define i8 @constant.divisor.v5(i8 %x) {
 ; CHECK-LABEL: @constant.divisor.v5(
 ; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], 5
