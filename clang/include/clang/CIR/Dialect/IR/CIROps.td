@@ -532,19 +532,29 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
 // ScopeOp
 //===----------------------------------------------------------------------===//
 
-def ScopeOp : CIR_Op<"scope", [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-       RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments]> {
+def ScopeOp : CIR_Op<"scope", [
+       DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+       RecursivelySpeculatable, AutomaticAllocationScope,
+       NoRegionArguments]> {
   let summary = "Represents a C/C++ scope";
   let description = [{
     `cir.scope` contains one region and defines a strict "scope" for all new
     values produced within its blocks.
 
-    Its region can contain an arbitrary number of blocks but usually defaults
-    to one. The `cir.yield` is a required terminator and can be optionally omitted.
+    The region can contain an arbitrary number of blocks but usually defaults
+    to one and can optionally return a value (useful for representing values
+    coming out of C++ full-expressions) via `cir.yield`:
 
-    A resulting value can also be specificed, though not currently used - together
-    with `cir.yield` should be helpful to represent lifetime extension out of short
-    lived scopes in the future.
+
+    ```mlir
+    %rvalue = cir.scope {
+      ...
+      cir.yield %value
+    }
+    ```
+
+    If `cir.scope` yields no value, the `cir.yield` can be left out, and
+    will be inserted implicitly.
   }];
 
   let results = (outs Variadic<AnyType>:$results);
@@ -552,11 +562,12 @@ def ScopeOp : CIR_Op<"scope", [DeclareOpInterfaceMethods<RegionBranchOpInterface
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
-
   let skipDefaultBuilders = 1;
+
   let builders = [
     OpBuilder<(ins "TypeRange":$resultTypes,
-               "function_ref<void(OpBuilder &, Location)>":$scopeBuilder)>
+               "function_ref<void(OpBuilder &, Location)>":$scopeBuilder)>,
+    OpBuilder<(ins "function_ref<void(OpBuilder &, Location)>":$scopeBuilder)>
   ];
 }
 

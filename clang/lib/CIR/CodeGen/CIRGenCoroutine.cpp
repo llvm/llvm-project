@@ -533,7 +533,7 @@ RValue CIRGenFunction::buildCoawaitExpr(const CoawaitExpr &E,
   [[maybe_unused]] mlir::Value tmpResumeRValAddr;
 
   builder.create<mlir::cir::ScopeOp>(
-      scopeLoc, mlir::TypeRange(), /*scopeBuilder=*/
+      scopeLoc, /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
         // FIXME(cir): abstract all this massive location handling elsewhere.
         SmallVector<mlir::Location, 2> locs;
