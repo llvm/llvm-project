@@ -532,28 +532,13 @@ RValue CIRGenFunction::buildCoawaitExpr(const CoawaitExpr &E,
   mlir::Block *currEntryBlock = currLexScope->getEntryBlock();
   [[maybe_unused]] mlir::Value tmpResumeRValAddr;
 
-  builder.create<mlir::cir::ScopeOp>(
-      scopeLoc, /*scopeBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
-        // FIXME(cir): abstract all this massive location handling elsewhere.
-        SmallVector<mlir::Location, 2> locs;
-        if (loc.isa<mlir::FileLineColLoc>()) {
-          locs.push_back(loc);
-          locs.push_back(loc);
-        } else if (loc.isa<mlir::FusedLoc>()) {
-          auto fusedLoc = loc.cast<mlir::FusedLoc>();
-          locs.push_back(fusedLoc.getLocations()[0]);
-          locs.push_back(fusedLoc.getLocations()[1]);
-        }
-        LexicalScopeContext lexScope{locs[0], locs[1],
-                                     builder.getInsertionBlock()};
-        LexicalScopeGuard lexScopeGuard{*this, &lexScope};
-        rval = buildSuspendExpression(*this, *CurCoro.Data, E,
-                                      CurCoro.Data->CurrentAwaitKind, aggSlot,
-                                      ignoreResult, currEntryBlock,
-                                      tmpResumeRValAddr, /*forLValue*/ false)
-                   .RV;
-      });
+  // No need to explicitly wrap this into a scope since the AST already uses a
+  // ExprWithCleanups, which will wrap this into a cir.scope anyways.
+  rval = buildSuspendExpression(*this, *CurCoro.Data, E,
+                                CurCoro.Data->CurrentAwaitKind, aggSlot,
+                                ignoreResult, currEntryBlock, tmpResumeRValAddr,
+                                /*forLValue*/ false)
+             .RV;
 
   if (ignoreResult || rval.isIgnored())
     return rval;

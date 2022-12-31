@@ -1350,11 +1350,33 @@ mlir::Value ScalarExprEmitter::buildCompoundAssign(
 }
 
 mlir::Value ScalarExprEmitter::VisitExprWithCleanups(ExprWithCleanups *E) {
-  // TODO(cir): CodeGenFunction::RunCleanupsScope Scope(CGF);
-  mlir::Value V = Visit(E->getSubExpr());
+  auto scopeLoc = CGF.getLoc(E->getSourceRange());
+  auto &builder = CGF.builder;
+
+  auto scope = builder.create<mlir::cir::ScopeOp>(
+      scopeLoc, /*scopeBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Type &yieldTy, mlir::Location loc) {
+        SmallVector<mlir::Location, 2> locs;
+        if (loc.isa<mlir::FileLineColLoc>()) {
+          locs.push_back(loc);
+          locs.push_back(loc);
+        } else if (loc.isa<mlir::FusedLoc>()) {
+          auto fusedLoc = loc.cast<mlir::FusedLoc>();
+          locs.push_back(fusedLoc.getLocations()[0]);
+          locs.push_back(fusedLoc.getLocations()[1]);
+        }
+        CIRGenFunction::LexicalScopeContext lexScope{
+            locs[0], locs[1], builder.getInsertionBlock()};
+        CIRGenFunction::LexicalScopeGuard lexScopeGuard{CGF, &lexScope};
+        auto scopeYieldVal = Visit(E->getSubExpr());
+        if (scopeYieldVal) {
+          builder.create<mlir::cir::YieldOp>(loc, scopeYieldVal);
+          yieldTy = scopeYieldVal.getType();
+        }
+      });
 
   // Defend against dominance problems caused by jumps out of expression
   // evaluation through the shared cleanup block.
   // TODO(cir): Scope.ForceCleanup({&V});
-  return V;
+  return scope.getNumResults() > 0 ? scope->getResult(0) : nullptr;
 }
