@@ -201,7 +201,10 @@ VoidTask silly_task() {
 // First regions `ready` has a special cir.yield code to veto suspension.
 
 // CHECK:   cir.await(init, ready : {
-// CHECK:     %[[#ReadyVeto:]] = cir.call @_ZNSt14suspend_always11await_readyEv(%[[#SuspendAlwaysAddr]])
+// CHECK:     %[[#ReadyVeto:]] = cir.scope {
+// CHECK:       %[[#TmpCallRes:]] = cir.call @_ZNSt14suspend_always11await_readyEv(%[[#SuspendAlwaysAddr]])
+// CHECK:       cir.yield %[[#TmpCallRes]] : !cir.bool
+// CHECK:     }
 // CHECK:     cir.if %[[#ReadyVeto]] {
 // CHECK:       cir.yield nosuspend
 // CHECK:     }
@@ -305,12 +308,12 @@ folly::coro::Task<int> go1() {
 }
 
 // CHECK: cir.func coroutine @_Z3go1v()
-// CHECK: %[[#CoReturnValAddr:]] = cir.alloca i32, cir.ptr <i32>, ["__coawait_resume_rval"] {alignment = 1 : i64}
 // CHECK:   cir.await(init, ready : {
 // CHECK:   }, suspend : {
 // CHECK:   }, resume : {
 // CHECK:   },)
 // CHECK: }
+// CHECK: %[[#CoReturnValAddr:]] = cir.alloca i32, cir.ptr <i32>, ["__coawait_resume_rval"] {alignment = 1 : i64}
 // CHECK: cir.await(user, ready : {
 // CHECK: }, suspend : {
 // CHECK: }, resume : {
