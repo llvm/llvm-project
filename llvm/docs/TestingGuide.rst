@@ -206,7 +206,7 @@ Writing new regression tests
 
 The regression test structure is very simple, but does require some
 information to be set. This information is gathered via ``cmake``
-and is written to a file, ``test/lit.site.cfg`` in the build directory.
+and is written to a file, ``test/lit.site.cfg.py`` in the build directory.
 The ``llvm/test`` Makefile does this work for you.
 
 In order for the regression tests to work, each directory of tests must
@@ -235,7 +235,7 @@ as many RUN lines as needed.
 
 :program:`lit` performs substitution on each RUN line to replace LLVM tool names
 with the full paths to the executable built for each tool (in
-``$(LLVM_OBJ_ROOT)/$(BuildMode)/bin)``. This ensures that :program:`lit` does
+``$(LLVM_OBJ_ROOT)/bin``). This ensures that :program:`lit` does
 not invoke any stray LLVM tools in the user's path during testing.
 
 Each RUN line is executed on its own, distinct from other lines unless
