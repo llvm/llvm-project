@@ -84,8 +84,17 @@ bool isOpLoopInvariant(Operation &op, Value indVar, ValueRange iterArgs,
     if (!areAllOpsInTheBlockListInvariant(forOp.getLoopBody(), indVar, iterArgs,
                                           opsWithUsers, opsToHoist))
       return false;
+  } else if (auto parOp = dyn_cast<AffineParallelOp>(op)) {
+    if (!areAllOpsInTheBlockListInvariant(parOp.getLoopBody(), indVar, iterArgs,
+                                          opsWithUsers, opsToHoist))
+      return false;
   } else if (isa<AffineDmaStartOp, AffineDmaWaitOp>(op)) {
     // TODO: Support DMA ops.
+    // FIXME: This should be fixed to not special-case these affine DMA ops but
+    // instead rely on side effects.
+    return false;
+  } else if (op.getNumRegions() > 0) {
+    // We can't handle region-holding ops we don't know about.
     return false;
   } else if (!matchPattern(&op, m_Constant())) {
     // Register op in the set of ops that have users.
