@@ -1082,11 +1082,9 @@ bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
 // AddOffset, SubOffset
 //===----------------------------------------------------------------------===//
 
-template <class T, bool Add> bool OffsetHelper(InterpState &S, CodePtr OpPC) {
-  // Fetch the pointer and the offset.
-  const T &Offset = S.Stk.pop<T>();
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
-
+template <class T, ArithOp Op>
+bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
+                  const Pointer &Ptr) {
   if (!CheckRange(S, OpPC, Ptr, CSK_ArrayToPointer))
     return false;
 
@@ -1113,7 +1111,8 @@ template <class T, bool Add> bool OffsetHelper(InterpState &S, CodePtr OpPC) {
     const unsigned Bits = Offset.bitWidth();
     APSInt APOffset(Offset.toAPSInt().extend(Bits + 2), false);
     APSInt APIndex(Index.toAPSInt().extend(Bits + 2), false);
-    APSInt NewIndex = Add ? (APIndex + APOffset) : (APIndex - APOffset);
+    APSInt NewIndex =
+        (Op == ArithOp::Add) ? (APIndex + APOffset) : (APIndex - APOffset);
     S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
         << NewIndex
         << /*array*/ static_cast<int>(!Ptr.inArray())
@@ -1122,7 +1121,7 @@ template <class T, bool Add> bool OffsetHelper(InterpState &S, CodePtr OpPC) {
   };
 
   unsigned MaxOffset = MaxIndex - Ptr.getIndex();
-  if constexpr (Add) {
+  if constexpr (Op == ArithOp::Add) {
     // If the new offset would be negative, bail out.
     if (Offset.isNegative() && (Offset.isMin() || -Offset > Index))
       return InvalidOffset();
@@ -1144,7 +1143,7 @@ template <class T, bool Add> bool OffsetHelper(InterpState &S, CodePtr OpPC) {
   int64_t WideIndex = static_cast<int64_t>(Index);
   int64_t WideOffset = static_cast<int64_t>(Offset);
   int64_t Result;
-  if constexpr (Add)
+  if constexpr (Op == ArithOp::Add)
     Result = WideIndex + WideOffset;
   else
     Result = WideIndex - WideOffset;
@@ -1155,12 +1154,16 @@ template <class T, bool Add> bool OffsetHelper(InterpState &S, CodePtr OpPC) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool AddOffset(InterpState &S, CodePtr OpPC) {
-  return OffsetHelper<T, true>(S, OpPC);
+  const T &Offset = S.Stk.pop<T>();
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  return OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool SubOffset(InterpState &S, CodePtr OpPC) {
-  return OffsetHelper<T, false>(S, OpPC);
+  const T &Offset = S.Stk.pop<T>();
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  return OffsetHelper<T, ArithOp::Sub>(S, OpPC, Offset, Ptr);
 }
 
 template <ArithOp Op>
@@ -1172,10 +1175,9 @@ static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC) {
   S.Stk.push<Pointer>(Ptr.deref<Pointer>());
 
   // Now the current Ptr again and a constant 1.
-  // FIXME: We shouldn't have to push these two on the stack.
-  S.Stk.push<Pointer>(Ptr.deref<Pointer>());
-  S.Stk.push<OneT>(OneT::from(1));
-  if (!OffsetHelper<OneT, Op == ArithOp::Add>(S, OpPC))
+  Pointer P = Ptr.deref<Pointer>();
+  OneT One = OneT::from(1);
+  if (!OffsetHelper<OneT, Op>(S, OpPC, One, P))
     return false;
 
   // Store the new value.
