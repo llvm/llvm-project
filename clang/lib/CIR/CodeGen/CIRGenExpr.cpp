@@ -1633,37 +1633,21 @@ mlir::LogicalResult CIRGenFunction::buildIfOnBoolExpr(const Expr *cond,
 mlir::Value CIRGenFunction::buildAlloca(StringRef name, mlir::Type ty,
                                         mlir::Location loc,
                                         CharUnits alignment) {
-  auto getAllocaInsertPositionOp =
-      [&](mlir::Block **insertBlock) -> mlir::Operation * {
-    auto *parentBlock = currLexScope->getEntryBlock();
+  return buildAlloca(
+      name, ty, loc, alignment,
+      builder.getBestAllocaInsertPoint(currLexScope->getEntryBlock()));
+}
 
-    auto lastAlloca = std::find_if(
-        parentBlock->rbegin(), parentBlock->rend(),
-        [](mlir::Operation &op) { return isa<mlir::cir::AllocaOp>(&op); });
-
-    *insertBlock = parentBlock;
-    if (lastAlloca == parentBlock->rend())
-      return nullptr;
-    return &*lastAlloca;
-  };
-
+mlir::Value CIRGenFunction::buildAlloca(StringRef name, mlir::Type ty,
+                                        mlir::Location loc, CharUnits alignment,
+                                        mlir::OpBuilder::InsertPoint ip) {
   auto localVarPtrTy = mlir::cir::PointerType::get(builder.getContext(), ty);
   auto alignIntAttr = CGM.getSize(alignment);
 
   mlir::Value addr;
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
-    mlir::Block *insertBlock = nullptr;
-    mlir::Operation *insertOp = getAllocaInsertPositionOp(&insertBlock);
-
-    if (insertOp)
-      builder.setInsertionPointAfter(insertOp);
-    else {
-      assert(insertBlock && "expected valid insertion block");
-      // No previous alloca found, place this one in the beginning
-      // of the block.
-      builder.setInsertionPointToStart(insertBlock);
-    }
+    builder.restoreInsertionPoint(ip);
     addr = builder.create<mlir::cir::AllocaOp>(loc, /*addr type*/ localVarPtrTy,
                                                /*var type*/ ty, name,
                                                alignIntAttr);

@@ -386,6 +386,9 @@ private:
                           mlir::Location loc, clang::CharUnits alignment);
   mlir::Value buildAlloca(llvm::StringRef name, mlir::Type ty,
                           mlir::Location loc, clang::CharUnits alignment);
+  mlir::Value buildAlloca(llvm::StringRef name, mlir::Type ty,
+                          mlir::Location loc, clang::CharUnits alignment,
+                          mlir::OpBuilder::InsertPoint ip);
   void buildAndUpdateRetAlloca(clang::QualType ty, mlir::Location loc,
                                clang::CharUnits alignment);
 

@@ -129,6 +129,18 @@ public:
                                      src);
   }
 
+  OpBuilder::InsertPoint getBestAllocaInsertPoint(mlir::Block *block) {
+    auto lastAlloca =
+        std::find_if(block->rbegin(), block->rend(), [](mlir::Operation &op) {
+          return mlir::isa<mlir::cir::AllocaOp>(&op);
+        });
+
+    if (lastAlloca != block->rend())
+      return OpBuilder::InsertPoint(block,
+                                    ++mlir::Block::iterator(&*lastAlloca));
+    return OpBuilder::InsertPoint(block, block->begin());
+  };
+
   //
   // Operation creation helpers
   // --------------------------
