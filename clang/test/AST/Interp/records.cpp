@@ -88,6 +88,10 @@ constexpr Ints2 ints22; // expected-error {{without a user-provided default cons
                         // expected-error {{must be initialized by a constant expression}} \
                         // ref-error {{without a user-provided default constructor}}
 
+constexpr Ints2 I2 = Ints2{12, 25};
+static_assert(I2.a == 12, "");
+static_assert(I2.b == 25, "");
+
 class C {
   public:
     int a;
