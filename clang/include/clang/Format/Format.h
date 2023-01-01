@@ -2451,9 +2451,9 @@ struct FormatStyle {
   TrailingCommaStyle InsertTrailingCommas;
 
   /// Separator format of integer literals of different bases.
-  /// <0: Remove separators.
-  ///  0: Leave the literal as is.
-  /// >0: Insert separators between digits, starting from the rightmost digit.
+  /// If <0: Remove separators.
+  /// If  0: Leave the literal as is.
+  /// If >0: Insert separators between digits starting from the rightmost digit.
   struct IntegerLiteralSeparatorStyle {
     /// \code
     ///    -1: 0b100111101101
