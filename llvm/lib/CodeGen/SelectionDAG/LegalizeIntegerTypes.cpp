@@ -2435,10 +2435,14 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::FP_TO_UINT:  ExpandIntRes_FP_TO_UINT(N, Lo, Hi); break;
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT: ExpandIntRes_FP_TO_XINT_SAT(N, Lo, Hi); break;
+  case ISD::STRICT_LROUND:
+  case ISD::STRICT_LRINT:
+  case ISD::LROUND:
+  case ISD::LRINT:
   case ISD::STRICT_LLROUND:
   case ISD::STRICT_LLRINT:
   case ISD::LLROUND:
-  case ISD::LLRINT:      ExpandIntRes_LLROUND_LLRINT(N, Lo, Hi); break;
+  case ISD::LLRINT:      ExpandIntRes_XROUND_XRINT(N, Lo, Hi); break;
   case ISD::LOAD:        ExpandIntRes_LOAD(cast<LoadSDNode>(N), Lo, Hi); break;
   case ISD::MUL:         ExpandIntRes_MUL(N, Lo, Hi); break;
   case ISD::READCYCLECOUNTER: ExpandIntRes_READCYCLECOUNTER(N, Lo, Hi); break;
@@ -3474,8 +3478,8 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_XINT_SAT(SDNode *N, SDValue &Lo,
   SplitInteger(Res, Lo, Hi);
 }
 
-void DAGTypeLegalizer::ExpandIntRes_LLROUND_LLRINT(SDNode *N, SDValue &Lo,
-                                                   SDValue &Hi) {
+void DAGTypeLegalizer::ExpandIntRes_XROUND_XRINT(SDNode *N, SDValue &Lo,
+                                                 SDValue &Hi) {
   SDLoc dl(N);
   bool IsStrict = N->isStrictFPOpcode();
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
@@ -3498,7 +3502,33 @@ void DAGTypeLegalizer::ExpandIntRes_LLROUND_LLRINT(SDNode *N, SDValue &Lo,
   }
 
   RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
-  if (N->getOpcode() == ISD::LLROUND ||
+  if (N->getOpcode() == ISD::LROUND ||
+      N->getOpcode() == ISD::STRICT_LROUND) {
+    if (VT == MVT::f32)
+      LC = RTLIB::LROUND_F32;
+    else if (VT == MVT::f64)
+      LC = RTLIB::LROUND_F64;
+    else if (VT == MVT::f80)
+      LC = RTLIB::LROUND_F80;
+    else if (VT == MVT::f128)
+      LC = RTLIB::LROUND_F128;
+    else if (VT == MVT::ppcf128)
+      LC = RTLIB::LROUND_PPCF128;
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected lround input type!");
+  } else if (N->getOpcode() == ISD::LRINT ||
+             N->getOpcode() == ISD::STRICT_LRINT) {
+    if (VT == MVT::f32)
+      LC = RTLIB::LRINT_F32;
+    else if (VT == MVT::f64)
+      LC = RTLIB::LRINT_F64;
+    else if (VT == MVT::f80)
+      LC = RTLIB::LRINT_F80;
+    else if (VT == MVT::f128)
+      LC = RTLIB::LRINT_F128;
+    else if (VT == MVT::ppcf128)
+      LC = RTLIB::LRINT_PPCF128;
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected lrint input type!");
+  } else if (N->getOpcode() == ISD::LLROUND ||
       N->getOpcode() == ISD::STRICT_LLROUND) {
     if (VT == MVT::f32)
       LC = RTLIB::LLROUND_F32;
