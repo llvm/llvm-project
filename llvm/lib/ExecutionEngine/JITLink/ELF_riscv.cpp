@@ -383,6 +383,41 @@ private:
       *(little64_t *)FixupPtr = static_cast<uint64_t>(Value);
       break;
     }
+    case R_RISCV_RVC_BRANCH: {
+      int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
+      if (LLVM_UNLIKELY(!isInRangeForImm(Value >> 1, 8)))
+        return makeTargetOutOfRangeError(G, B, E);
+      if (LLVM_UNLIKELY(!isAlignmentCorrect(Value, 2)))
+        return makeAlignmentError(FixupAddress, Value, 2, E);
+      uint16_t Imm8 = extractBits(Value, 8, 1) << 12;
+      uint16_t Imm4_3 = extractBits(Value, 3, 2) << 10;
+      uint16_t Imm7_6 = extractBits(Value, 6, 2) << 5;
+      uint16_t Imm2_1 = extractBits(Value, 1, 2) << 3;
+      uint16_t Imm5 = extractBits(Value, 5, 1) << 2;
+      uint16_t RawInstr = *(little16_t *)FixupPtr;
+      *(little16_t *)FixupPtr =
+          (RawInstr & 0xE383) | Imm8 | Imm4_3 | Imm7_6 | Imm2_1 | Imm5;
+      break;
+    }
+    case R_RISCV_RVC_JUMP: {
+      int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
+      if (LLVM_UNLIKELY(!isInRangeForImm(Value >> 1, 11)))
+        return makeTargetOutOfRangeError(G, B, E);
+      if (LLVM_UNLIKELY(!isAlignmentCorrect(Value, 2)))
+        return makeAlignmentError(FixupAddress, Value, 2, E);
+      uint16_t Imm11 = extractBits(Value, 11, 1) << 12;
+      uint16_t Imm4 = extractBits(Value, 4, 1) << 11;
+      uint16_t Imm9_8 = extractBits(Value, 8, 2) << 9;
+      uint16_t Imm10 = extractBits(Value, 10, 1) << 8;
+      uint16_t Imm6 = extractBits(Value, 6, 1) << 7;
+      uint16_t Imm7 = extractBits(Value, 7, 1) << 6;
+      uint16_t Imm3_1 = extractBits(Value, 1, 3) << 3;
+      uint16_t Imm5 = extractBits(Value, 5, 1) << 2;
+      uint16_t RawInstr = *(little16_t *)FixupPtr;
+      *(little16_t *)FixupPtr = (RawInstr & 0xE003) | Imm11 | Imm4 | Imm9_8 |
+                                Imm10 | Imm6 | Imm7 | Imm3_1 | Imm5;
+      break;
+    }
     case R_RISCV_SUB6: {
       int64_t Value =
           *(reinterpret_cast<const uint8_t *>(FixupAddress.getValue())) & 0x3f;
@@ -477,6 +512,10 @@ private:
       return EdgeKind_riscv::R_RISCV_SUB32;
     case ELF::R_RISCV_SUB64:
       return EdgeKind_riscv::R_RISCV_SUB64;
+    case ELF::R_RISCV_RVC_BRANCH:
+      return EdgeKind_riscv::R_RISCV_RVC_BRANCH;
+    case ELF::R_RISCV_RVC_JUMP:
+      return EdgeKind_riscv::R_RISCV_RVC_JUMP;
     case ELF::R_RISCV_SUB6:
       return EdgeKind_riscv::R_RISCV_SUB6;
     case ELF::R_RISCV_SET6:
