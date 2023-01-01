@@ -4710,10 +4710,7 @@ private:
 
     // Iterate over the kernels that reach this function
     for (Kernel K : CallerKernelInfoAA.ReachingKernelEntries) {
-      int32_t NextAttrVal = -1;
-      if (K->hasFnAttribute(Attr))
-        NextAttrVal =
-            std::stoi(K->getFnAttribute(Attr).getValueAsString().str());
+      int32_t NextAttrVal = K->getFnAttributeAsParsedInteger(Attr, -1);
 
       if (NextAttrVal == -1 ||
           (CurrentAttrValue != -1 && CurrentAttrValue != NextAttrVal))
