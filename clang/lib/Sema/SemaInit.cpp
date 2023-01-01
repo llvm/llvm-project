@@ -9150,7 +9150,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
       break;
     }
     case SK_ParenthesizedListInit: {
-      CurInit = false;
+      CurInit = nullptr;
       TryOrBuildParenListInitialization(S, Entity, Kind, Args, *this,
                                         /*VerifyOnly=*/false, &CurInit);
       if (CurInit.get() && ResultType)

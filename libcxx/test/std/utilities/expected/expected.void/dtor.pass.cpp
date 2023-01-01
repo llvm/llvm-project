@@ -27,9 +27,7 @@ struct NonTrivial {
   ~NonTrivial() {}
 };
 
-#if __cpp_concepts >= 202002
 static_assert(std::is_trivially_destructible_v<std::expected<void, int>>);
-#endif
 static_assert(!std::is_trivially_destructible_v<std::expected<void, NonTrivial>>);
 
 struct TrackedDestroy {
