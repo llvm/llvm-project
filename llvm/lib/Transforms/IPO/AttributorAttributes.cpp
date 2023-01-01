@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1030,6 +1028,7 @@ struct OffsetInfo {
   void merge(const OffsetInfo &R) { Offsets.append(R.Offsets); }
 };
 
+#ifndef NDEBUG
 static raw_ostream &operator<<(raw_ostream &OS, const OffsetInfo &OI) {
   ListSeparator LS;
   OS << "[";
@@ -1039,6 +1038,7 @@ static raw_ostream &operator<<(raw_ostream &OS, const OffsetInfo &OI) {
   OS << "]";
   return OS;
 }
+#endif // NDEBUG
 
 struct AAPointerInfoImpl
     : public StateWrapper<AA::PointerInfo::State, AAPointerInfo> {
@@ -6731,7 +6731,6 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
         (!Size.has_value() ||
          (!IsGlobalizedLocal && IsInLoop(*AI.CB->getParent()))))
       AI.MoveAllocaIntoEntry = false;
-
   }
 
   return Changed;
