@@ -1,8 +1,15 @@
 ; REQUIRES: avr
-; RUN: llvm-mc -filetype=obj -triple=avr -mcpu=atmega328p %s -o %t.o
-; RUN: ld.lld %t.o --defsym=a=0x12345678 --defsym=b=30 -o %t
-; RUN: llvm-objdump -d --print-imm-hex %t | FileCheck %s
-; RUN: llvm-objdump -s %t | FileCheck --check-prefix=HEX %s
+; RUN: llvm-mc -filetype=obj -triple=avr -mcpu=atmega328p %s -o %t0.o
+; RUN: ld.lld %t0.o --defsym=a=0x12345678 --defsym=b=30 -o %t0
+; RUN: llvm-objdump -d --print-imm-hex --mcpu=atmega328p %t0 | \
+; RUN:     FileCheck --check-prefixes=CHECK,AVR %s
+; RUN: llvm-objdump -s --mcpu=atmega328p %t0 | \
+; RUN:     FileCheck --check-prefixes=HEX,AVRHEX %s
+; RUN: llvm-mc -filetype=obj -triple=avr -mcpu=attiny10 %s --defsym=TINY=1 -o %t1.o
+; RUN: ld.lld %t1.o --defsym=a=0x12345678 --defsym=b=30 -o %t1
+; RUN: llvm-objdump -d --print-imm-hex --mcpu=attiny10 %t1 | FileCheck %s
+; RUN: llvm-objdump -s --mcpu=attiny10 %t1 | \
+; RUN:     FileCheck --check-prefixes=HEX,TINYHEX %s
 
 .section .LDI,"ax",@progbits
 ; CHECK-LABEL: section .LDI:
@@ -43,16 +50,18 @@ ldi r20, pm_lo8(-(a))  ; R_AVR_LO8_LDI_PM_NEG
 ldi r20, pm_hi8(-(a))  ; R_AVR_HI8_LDI_PM_NEG
 ldi r20, pm_hh8(-(a))  ; R_AVR_HH8_LDI_PM_NEG
 
-;; The disassembler is not yet able to decode those opcodes
-;; 9e 8e    std    Y+30, r9
-;; 9e 8c    ldd    r9, Y+30
-;; 4e 96    adiw   r24, 0x1e
+.ifndef TINY
 .section .SIX,"ax",@progbits
-; HEX-LABEL: section .SIX:
-; HEX-NEXT:  9e8e9e8c 4e96
+; AVR-LABEL:    section .SIX:
+; AVR:          std   Y+30, r9
+; AVR-NEXT:     ldd   r9, Y+30
+; AVR-NEXT:     adiw  r24, 0x1e
+; AVRHEX-LABEL: section .SIX:
+; AVRHEX-NEXT:  9e8e9e8c 4e96
 std Y+b, r9   ; R_AVR_6
 ldd r9, Y+b   ; R_AVR_6
 adiw r24, b   ; R_AVR_6_ADIW
+.endif
 
 .section .PORT,"ax",@progbits
 ; CHECK-LABEL: section .PORT:
@@ -74,6 +83,16 @@ rjmp foo + 32  ; R_AVR_13_PCREL
 rjmp foo - 32  ; R_AVR_13_PCREL
 breq foo + 32  ; R_AVR_7_PCREL
 breq foo - 32  ; R_AVR_7_PCREL
+
+.section .LDSSTS,"ax",@progbits
+; CHECK-LABEL: section .LDSSTS:
+; CHECK:       lds r20, 0x1e
+; CHECK-NEXT:  sts 0x1e, r21
+; HEX-LABEL:   section .LDSSTS:
+; AVRHEX:      {{.*}} 40911e00 50931e00
+; TINYHEX:     {{.*}} 4ea15ea9
+lds r20, b
+sts b, r21
 
 .section .DATA,"ax",@progbits
 ; HEX-LABEL: section .DATA:
