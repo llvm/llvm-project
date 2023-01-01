@@ -23,32 +23,33 @@ define void @concat_a_to_shuf_of_a(ptr %a.ptr, ptr %dst) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX-NEXT:    vmovaps %xmm0, 16(%rsi)
-; AVX-NEXT:    vmovaps %xmm1, (%rsi)
+; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: concat_a_to_shuf_of_a:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX2-NEXT:    vmovaps %xmm0, 16(%rsi)
-; AVX2-NEXT:    vmovaps %xmm1, (%rsi)
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,0,0,1]
+; AVX2-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: concat_a_to_shuf_of_a:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512F-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512F-NEXT:    vmovaps %xmm0, 16(%rsi)
-; AVX512F-NEXT:    vmovaps %xmm1, (%rsi)
+; AVX512F-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,0,0,1]
+; AVX512F-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: concat_a_to_shuf_of_a:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512BW-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512BW-NEXT:    vmovaps %xmm0, 16(%rsi)
-; AVX512BW-NEXT:    vmovaps %xmm1, (%rsi)
+; AVX512BW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,0,0,1]
+; AVX512BW-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %a = load <2 x i64>, ptr %a.ptr, align 64
   %shuffle = shufflevector <2 x i64> %a, <2 x i64> poison, <2 x i32> <i32 1, i32 0>
@@ -69,32 +70,33 @@ define void @concat_shuf_of_a_to_a(ptr %a.ptr, ptr %b.ptr, ptr %dst) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX-NEXT:    vmovaps %xmm0, (%rdx)
-; AVX-NEXT:    vmovaps %xmm1, 16(%rdx)
+; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: concat_shuf_of_a_to_a:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX2-NEXT:    vmovaps %xmm0, (%rdx)
-; AVX2-NEXT:    vmovaps %xmm1, 16(%rdx)
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,1,0]
+; AVX2-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: concat_shuf_of_a_to_a:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512F-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512F-NEXT:    vmovaps %xmm0, (%rdx)
-; AVX512F-NEXT:    vmovaps %xmm1, 16(%rdx)
+; AVX512F-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,1,0]
+; AVX512F-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: concat_shuf_of_a_to_a:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512BW-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512BW-NEXT:    vmovaps %xmm0, (%rdx)
-; AVX512BW-NEXT:    vmovaps %xmm1, 16(%rdx)
+; AVX512BW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,1,0]
+; AVX512BW-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %a = load <2 x i64>, ptr %a.ptr, align 64
   %b = load <2 x i64>, ptr %b.ptr, align 64
@@ -567,29 +569,33 @@ define void @concat_shuf_of_a_to_itself(ptr %a.ptr, ptr %dst) {
 ; AVX-LABEL: concat_shuf_of_a_to_itself:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = mem[2,3,0,1]
-; AVX-NEXT:    vmovaps %xmm0, 16(%rsi)
-; AVX-NEXT:    vmovaps %xmm0, (%rsi)
+; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: concat_shuf_of_a_to_itself:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpermilps {{.*#+}} xmm0 = mem[2,3,0,1]
-; AVX2-NEXT:    vmovaps %xmm0, 16(%rsi)
-; AVX2-NEXT:    vmovaps %xmm0, (%rsi)
+; AVX2-NEXT:    vmovaps (%rdi), %xmm0
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,0,1,0]
+; AVX2-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: concat_shuf_of_a_to_itself:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpermilps {{.*#+}} xmm0 = mem[2,3,0,1]
-; AVX512F-NEXT:    vmovaps %xmm0, 16(%rsi)
-; AVX512F-NEXT:    vmovaps %xmm0, (%rsi)
+; AVX512F-NEXT:    vmovaps (%rdi), %xmm0
+; AVX512F-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,0,1,0]
+; AVX512F-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: concat_shuf_of_a_to_itself:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpermilps {{.*#+}} xmm0 = mem[2,3,0,1]
-; AVX512BW-NEXT:    vmovaps %xmm0, 16(%rsi)
-; AVX512BW-NEXT:    vmovaps %xmm0, (%rsi)
+; AVX512BW-NEXT:    vmovaps (%rdi), %xmm0
+; AVX512BW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,0,1,0]
+; AVX512BW-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %a = load <2 x i64>, ptr %a.ptr, align 64
   %shuffle = shufflevector <2 x i64> %a, <2 x i64> poison, <2 x i32> <i32 1, i32 0>
@@ -613,19 +619,18 @@ define void @concat_aaa_to_shuf_of_a(ptr %a.ptr, ptr %dst) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm1
 ; AVX-NEXT:    vmovaps %ymm0, 32(%rsi)
-; AVX-NEXT:    vmovaps %xmm0, 16(%rsi)
-; AVX-NEXT:    vmovaps %xmm1, (%rsi)
+; AVX-NEXT:    vmovaps %ymm1, (%rsi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: concat_aaa_to_shuf_of_a:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; AVX2-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[1,0,0,1]
 ; AVX2-NEXT:    vmovaps %ymm0, 32(%rsi)
-; AVX2-NEXT:    vmovaps %xmm0, 16(%rsi)
-; AVX2-NEXT:    vmovaps %xmm1, (%rsi)
+; AVX2-NEXT:    vmovaps %ymm1, (%rsi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -671,19 +676,18 @@ define void @concat_shuf_of_a_to_aaa(ptr %a.ptr, ptr %dst) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; AVX-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX-NEXT:    vmovaps %xmm0, 32(%rsi)
-; AVX-NEXT:    vmovaps %xmm1, 48(%rsi)
+; AVX-NEXT:    vmovaps %ymm1, 32(%rsi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: concat_shuf_of_a_to_aaa:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; AVX2-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[0,1,1,0]
 ; AVX2-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX2-NEXT:    vmovaps %xmm0, 32(%rsi)
-; AVX2-NEXT:    vmovaps %xmm1, 48(%rsi)
+; AVX2-NEXT:    vmovaps %ymm1, 32(%rsi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
