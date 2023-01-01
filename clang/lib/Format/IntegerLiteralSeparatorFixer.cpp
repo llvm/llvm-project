@@ -78,10 +78,9 @@ IntegerLiteralSeparatorFixer::process(const Environment &Env,
   Lex.SetCommentRetentionState(true);
 
   Token Tok;
-  Lex.LexFromRawLexer(Tok);
-
   tooling::Replacements Result;
-  for (bool Skip = false; Tok.isNot(tok::eof); Lex.LexFromRawLexer(Tok)) {
+
+  for (bool Skip = false; !Lex.LexFromRawLexer(Tok);) {
     auto Length = Tok.getLength();
     if (Length < 2)
       continue;
