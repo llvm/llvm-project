@@ -38,7 +38,10 @@ struct VPlanTransforms {
 
   static bool sinkScalarOperands(VPlan &Plan);
 
-  static bool mergeReplicateRegions(VPlan &Plan);
+  /// Merge replicate regions in their successor region, if a replicate region
+  /// is connected to a successor replicate region with the same predicate by a
+  /// single, empty VPBasicBlock.
+  static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan);
 
   /// Remove redundant VPBasicBlocks by merging them into their predecessor if
   /// the predecessor has a single successor.
