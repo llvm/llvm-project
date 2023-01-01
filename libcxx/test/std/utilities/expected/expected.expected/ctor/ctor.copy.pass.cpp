@@ -56,9 +56,7 @@ static_assert(!std::is_copy_constructible_v<std::expected<NonCopyable, NonCopyab
 // Test: This constructor is trivial if
 // - is_trivially_copy_constructible_v<T> is true and
 // - is_trivially_copy_constructible_v<E> is true.
-#if __cpp_concepts >= 202002
 static_assert(std::is_trivially_copy_constructible_v<std::expected<int, int>>);
-#endif
 static_assert(!std::is_trivially_copy_constructible_v<std::expected<CopyableNonTrivial, int>>);
 static_assert(!std::is_trivially_copy_constructible_v<std::expected<int, CopyableNonTrivial>>);
 static_assert(!std::is_trivially_copy_constructible_v<std::expected<CopyableNonTrivial, CopyableNonTrivial>>);
