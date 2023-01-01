@@ -43,12 +43,12 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 define dso_local double @heavyComputation1() {
 ; CHECK-LABEL: define {{[^@]+}}@heavyComputation1() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[HANDLE:%.*]] = alloca [[STRUCT___TGT_ASYNC_INFO:%.*]], align 8
 ; CHECK-NEXT:    [[A:%.*]] = alloca double, align 8
 ; CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x i8*], align 8
 ; CHECK-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x i8*], align 8
 ; CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS4:%.*]] = alloca [1 x i8*], align 8
 ; CHECK-NEXT:    [[DOTOFFLOAD_PTRS5:%.*]] = alloca [1 x i8*], align 8
+; CHECK-NEXT:    [[HANDLE:%.*]] = alloca [[STRUCT___TGT_ASYNC_INFO:%.*]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[A]] to i8*
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 (...) @rand()
 ; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[CALL]], 777
@@ -461,10 +461,10 @@ define dso_local i32 @dataTransferOnly1(double* noalias %a, i32 %size) {
 ; CHECK-LABEL: define {{[^@]+}}@dataTransferOnly1
 ; CHECK-SAME: (double* noalias [[A:%.*]], i32 [[SIZE:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[HANDLE:%.*]] = alloca [[STRUCT___TGT_ASYNC_INFO:%.*]], align 8
 ; CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x i8*], align 8
 ; CHECK-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x i8*], align 8
 ; CHECK-NEXT:    [[DOTOFFLOAD_SIZES:%.*]] = alloca [1 x i64], align 8
+; CHECK-NEXT:    [[HANDLE:%.*]] = alloca [[STRUCT___TGT_ASYNC_INFO:%.*]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 (...) @rand()
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[SIZE]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[CONV]], 3
