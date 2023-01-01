@@ -21891,6 +21891,109 @@ static SDValue combineConcatVectorOfCasts(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(CastOpcode, DL, VT, NewConcat);
 }
 
+// See if this is a simple CONCAT_VECTORS with no UNDEF operands, and if one of
+// the operands is a SHUFFLE_VECTOR, and all other operands are also operands
+// to that SHUFFLE_VECTOR, create wider SHUFFLE_VECTOR.
+static SDValue combineConcatVectorOfShuffleAndItsOperands(
+    SDNode *N, SelectionDAG &DAG, const TargetLowering &TLI, bool LegalTypes,
+    bool LegalOperations) {
+  EVT VT = N->getValueType(0);
+  EVT OpVT = N->getOperand(0).getValueType();
+  if (VT.isScalableVector())
+    return SDValue();
+
+  // For now, only allow simple 2-operand concatenations.
+  if (N->getNumOperands() != 2)
+    return SDValue();
+
+  // Don't create illegal types/shuffles when not allowed to.
+  if ((LegalTypes && !TLI.isTypeLegal(VT)) ||
+      (LegalOperations &&
+       !TLI.isOperationLegalOrCustom(ISD::VECTOR_SHUFFLE, VT)))
+    return SDValue();
+
+  // Analyze all of the operands of the CONCAT_VECTORS. Out of all of them,
+  // we want to find one that is: (1) a SHUFFLE_VECTOR (2) only used by us,
+  // and (3) all operands of CONCAT_VECTORS must be either that SHUFFLE_VECTOR,
+  // or one of the operands of that SHUFFLE_VECTOR (but not UNDEF!).
+  // (4) and for now, the SHUFFLE_VECTOR must be unary.
+  ShuffleVectorSDNode *SVN = nullptr;
+  for (SDValue Op : N->ops()) {
+    if (auto *CurSVN = dyn_cast<ShuffleVectorSDNode>(Op);
+        CurSVN && CurSVN->getOperand(1).isUndef() && N->isOnlyUserOf(CurSVN) &&
+        all_of(N->ops(), [CurSVN](SDValue Op) {
+          // FIXME: can we allow UNDEF operands?
+          return !Op.isUndef() &&
+                 (Op.getNode() == CurSVN || is_contained(CurSVN->ops(), Op));
+        })) {
+      SVN = CurSVN;
+      break;
+    }
+  }
+  if (!SVN)
+    return SDValue();
+
+  // We are going to pad the shuffle operands, so any indice, that was picking
+  // from the second operand, must be adjusted.
+  SmallVector<int, 16> AdjustedMask;
+  AdjustedMask.reserve(SVN->getMask().size());
+  assert(SVN->getOperand(1).isUndef() && "Expected unary shuffle!");
+  append_range(AdjustedMask, SVN->getMask());
+
+  // Identity masks for the operands of the (padded) shuffle.
+  SmallVector<int, 32> IdentityMask(2 * OpVT.getVectorNumElements());
+  MutableArrayRef<int> FirstShufOpIdentityMask =
+      MutableArrayRef<int>(IdentityMask)
+          .take_front(OpVT.getVectorNumElements());
+  MutableArrayRef<int> SecondShufOpIdentityMask =
+      MutableArrayRef<int>(IdentityMask).take_back(OpVT.getVectorNumElements());
+  std::iota(FirstShufOpIdentityMask.begin(), FirstShufOpIdentityMask.end(), 0);
+  std::iota(SecondShufOpIdentityMask.begin(), SecondShufOpIdentityMask.end(),
+            VT.getVectorNumElements());
+
+  // New combined shuffle mask.
+  SmallVector<int, 32> Mask;
+  Mask.reserve(VT.getVectorNumElements());
+  for (SDValue Op : N->ops()) {
+    assert(!Op.isUndef() && "Not expecting to concatenate UNDEF.");
+    if (Op.getNode() == SVN) {
+      append_range(Mask, AdjustedMask);
+      continue;
+    }
+    if (Op == SVN->getOperand(0)) {
+      append_range(Mask, FirstShufOpIdentityMask);
+      continue;
+    }
+    if (Op == SVN->getOperand(1)) {
+      append_range(Mask, SecondShufOpIdentityMask);
+      continue;
+    }
+    llvm_unreachable("Unexpected operand!");
+  }
+
+  // Don't create illegal shuffle masks.
+  if (!TLI.isShuffleMaskLegal(Mask, VT))
+    return SDValue();
+
+  // Pad the shuffle operands with UNDEF.
+  SDLoc dl(N);
+  std::array<SDValue, 2> ShufOps;
+  for (auto I : zip(SVN->ops(), ShufOps)) {
+    SDValue ShufOp = std::get<0>(I);
+    SDValue &NewShufOp = std::get<1>(I);
+    if (ShufOp.isUndef())
+      NewShufOp = DAG.getUNDEF(VT);
+    else {
+      SmallVector<SDValue, 2> ShufOpParts(N->getNumOperands(),
+                                          DAG.getUNDEF(OpVT));
+      ShufOpParts[0] = ShufOp;
+      NewShufOp = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, ShufOpParts);
+    }
+  }
+  // Finally, create the new wide shuffle.
+  return DAG.getVectorShuffle(VT, dl, ShufOps[0], ShufOps[1], Mask);
+}
+
 SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
   // If we only have one input vector, we don't need to do any concatenation.
   if (N->getNumOperands() == 1)
@@ -22024,6 +22127,10 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
   }
 
   if (SDValue V = combineConcatVectorOfCasts(N, DAG))
+    return V;
+
+  if (SDValue V = combineConcatVectorOfShuffleAndItsOperands(
+          N, DAG, TLI, LegalTypes, LegalOperations))
     return V;
 
   // Type legalization of vectors and DAG canonicalization of SHUFFLE_VECTOR
