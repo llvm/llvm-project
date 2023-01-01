@@ -88,7 +88,7 @@ struct ReferencesResult {
     Override = 1 << 2,
   };
   struct Reference {
-    Location Loc;
+    ReferenceLocation Loc;
     unsigned Attributes = 0;
   };
   std::vector<Reference> References;
@@ -112,7 +112,8 @@ std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos);
 /// Returns references of the symbol at a specified \p Pos.
 /// \p Limit limits the number of results returned (0 means no limit).
 ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
-                                const SymbolIndex *Index = nullptr);
+                                const SymbolIndex *Index = nullptr,
+                                bool AddContext = false);
 
 /// Get info about symbols at \p Pos.
 std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos);
