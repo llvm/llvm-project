@@ -5384,9 +5384,9 @@ def massembler_no_warn : Flag<["-"], "massembler-no-warn">,
 def massembler_fatal_warnings : Flag<["-"], "massembler-fatal-warnings">,
   HelpText<"Make assembler warnings fatal">,
   MarshallingInfoFlag<CodeGenOpts<"FatalWarnings">>;
-def mrelax_relocations : Flag<["--"], "mrelax-relocations">,
-    HelpText<"Use relaxable elf relocations">,
-    MarshallingInfoFlag<CodeGenOpts<"RelaxELFRelocations">>;
+def mrelax_relocations_no : Flag<["-"], "mrelax-relocations=no">,
+    HelpText<"Disable x86 relax relocations">,
+    MarshallingInfoNegativeFlag<CodeGenOpts<"RelaxELFRelocations">>;
 def msave_temp_labels : Flag<["-"], "msave-temp-labels">,
   HelpText<"Save temporary labels in the symbol table. "
            "Note this may change .s semantics and shouldn't generally be used "
