@@ -153,31 +153,6 @@ llvm::Optional<RelationKind> indexableRelation(const index::SymbolRelation &R) {
   return std::nullopt;
 }
 
-// Given a ref contained in enclosing decl `Enclosing`, return
-// the decl that should be used as that ref's Ref::Container. This is
-// usually `Enclosing` itself, but in cases where `Enclosing` is not
-// indexed, we walk further up because Ref::Container should always be
-// an indexed symbol.
-// Note: we don't use DeclContext as the container as in some cases
-// it's useful to use a Decl which is not a DeclContext. For example,
-// for a ref occurring in the initializer of a namespace-scope variable,
-// it's useful to use that variable as the container, as otherwise the
-// next enclosing DeclContext would be a NamespaceDecl or TranslationUnitDecl,
-// which are both not indexed and less granular than we'd like for use cases
-// like call hierarchy.
-const Decl *getRefContainer(const Decl *Enclosing,
-                            const SymbolCollector::Options &Opts) {
-  while (Enclosing) {
-    const auto *ND = dyn_cast<NamedDecl>(Enclosing);
-    if (ND && SymbolCollector::shouldCollectSymbol(*ND, ND->getASTContext(),
-                                                   Opts, true)) {
-      break;
-    }
-    Enclosing = dyn_cast_or_null<Decl>(Enclosing->getDeclContext());
-  }
-  return Enclosing;
-}
-
 // Check if there is an exact spelling of \p ND at \p Loc.
 bool isSpelled(SourceLocation Loc, const NamedDecl &ND) {
   auto Name = ND.getDeclName();
@@ -518,6 +493,19 @@ bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
     return false;
 
   return true;
+}
+
+const Decl *
+SymbolCollector::getRefContainer(const Decl *Enclosing,
+                                 const SymbolCollector::Options &Opts) {
+  while (Enclosing) {
+    const auto *ND = dyn_cast<NamedDecl>(Enclosing);
+    if (ND && shouldCollectSymbol(*ND, ND->getASTContext(), Opts, true)) {
+      break;
+    }
+    Enclosing = dyn_cast_or_null<Decl>(Enclosing->getDeclContext());
+  }
+  return Enclosing;
 }
 
 // Always return true to continue indexing.
