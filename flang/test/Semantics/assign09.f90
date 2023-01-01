@@ -34,11 +34,11 @@ program test
 
   noInterfaceProcPtr => sqrt ! ok
   realToRealProcPtr => sqrt ! ok
-  !ERROR: Procedure pointer 'inttorealprocptr' associated with incompatible procedure designator 'sqrt': incompatible dummy argument #1: incompatible dummy data object types: INTEGER(4) vs REAL(4)
+  !ERROR: Procedure pointer 'inttorealprocptr' associated with incompatible procedure designator 'sqrt': incompatible dummy argument #1: incompatible dummy data object types: REAL(4) vs INTEGER(4)
   intToRealProcPtr => sqrt
   call sub1(sqrt) ! ok
   call sub2(sqrt) ! ok
-  !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p=': incompatible dummy argument #1: incompatible dummy data object types: INTEGER(4) vs REAL(4)
+  !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p=': incompatible dummy argument #1: incompatible dummy data object types: REAL(4) vs INTEGER(4)
   call sub3(sqrt)
 
   noInterfaceProcPtr => noInterfaceExternal ! ok
