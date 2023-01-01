@@ -85,9 +85,9 @@ module m
     call sup(pp)
     !ERROR: If a POINTER or ALLOCATABLE dummy or actual argument is unlimited polymorphic, both must be so
     call sua(pa)
-    !ERROR: Actual argument type 'CLASS(*)' is not compatible with dummy argument type 't'
+    !ERROR: Actual argument type 'CLASS(*)' is not compatible with dummy argument type 'CLASS(t)'
     call spp(up)
-    !ERROR: Actual argument type 'CLASS(*)' is not compatible with dummy argument type 't'
+    !ERROR: Actual argument type 'CLASS(*)' is not compatible with dummy argument type 'CLASS(t)'
     call spa(ua)
     !ERROR: POINTER or ALLOCATABLE dummy and actual arguments must have the same declared type and kind
     call spp(pp2)
