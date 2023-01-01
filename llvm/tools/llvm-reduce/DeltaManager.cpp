@@ -86,6 +86,7 @@ static cl::list<std::string>
     DELTA_PASS("global-variables", reduceGlobalsDeltaPass)                     \
     DELTA_PASS("di-metadata", reduceDIMetadataDeltaPass)                       \
     DELTA_PASS("metadata", reduceMetadataDeltaPass)                            \
+    DELTA_PASS("named-metadata", reduceNamedMetadataDeltaPass)                 \
     DELTA_PASS("arguments", reduceArgumentsDeltaPass)                          \
     DELTA_PASS("instructions", reduceInstructionsDeltaPass)                    \
     DELTA_PASS("simplify-instructions", simplifyInstructionsDeltaPass)         \
