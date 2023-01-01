@@ -224,7 +224,8 @@ private:
       uint32_t Imm11 = extractBits(Value, 11, 1) << 20;
       uint32_t Imm19_12 = extractBits(Value, 12, 8) << 12;
       uint32_t RawInstr = *(little32_t *)FixupPtr;
-      *(little32_t *)FixupPtr = RawInstr | Imm20 | Imm10_1 | Imm11 | Imm19_12;
+      *(little32_t *)FixupPtr =
+          (RawInstr & 0xFFF) | Imm20 | Imm10_1 | Imm11 | Imm19_12;
       break;
     }
     case R_RISCV_CALL: {
