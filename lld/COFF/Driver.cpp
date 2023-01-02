@@ -415,6 +415,9 @@ void LinkerDriver::parseDirectives(InputFile *file) {
     case OPT_nodefaultlib:
       config->noDefaultLibs.insert(doFindLib(arg->getValue()).lower());
       break;
+    case OPT_release:
+      config->writeCheckSum = true;
+      break;
     case OPT_section:
       parseSection(arg->getValue());
       break;
@@ -2021,6 +2024,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (errorCount())
     return;
 
+  // Handle /RELEASE
+  if (args.hasArg(OPT_release))
+    config->writeCheckSum = true;
+  
   // Handle /safeseh, x86 only, on by default, except for mingw.
   if (config->machine == I386) {
     config->safeSEH = args.hasFlag(OPT_safeseh, OPT_safeseh_no, !config->mingw);
