@@ -11,8 +11,8 @@ define i32 @o() #0 {
 ; CHECK-LABEL: @o(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = alloca [1 x i32], align 4
-; CHECK-NEXT:    [[I1:%.*]] = load i8*, i8** bitcast (i64* @d to i8**), align 8
-; CHECK-NEXT:    [[I33:%.*]] = load i32, i32* @f, align 4
+; CHECK-NEXT:    [[I1:%.*]] = load ptr, ptr @d, align 8
+; CHECK-NEXT:    [[I33:%.*]] = load i32, ptr @f, align 4
 ; CHECK-NEXT:    [[I44:%.*]] = icmp eq i32 [[I33]], 0
 ; CHECK-NEXT:    br i1 [[I44]], label [[BB15:%.*]], label [[BB5_LR_PH:%.*]]
 ; CHECK:       bb5.lr.ph:
@@ -21,13 +21,12 @@ define i32 @o() #0 {
 ; CHECK-NEXT:    [[I35:%.*]] = phi i32 [ [[I33]], [[BB5_LR_PH]] ], [ [[I3:%.*]], [[M_EXIT:%.*]] ]
 ; CHECK-NEXT:    [[I6:%.*]] = icmp ult i32 [[I35]], 4
 ; CHECK-NEXT:    [[I7:%.*]] = zext i1 [[I6]] to i32
-; CHECK-NEXT:    store i32 [[I7]], i32* @g, align 4
-; CHECK-NEXT:    [[I8:%.*]] = bitcast [1 x i32]* [[I]] to i8*
-; CHECK-NEXT:    [[I9:%.*]] = call i32 @n(i8* nonnull [[I8]], i8* [[I1]])
+; CHECK-NEXT:    store i32 [[I7]], ptr @g, align 4
+; CHECK-NEXT:    [[I9:%.*]] = call i32 @n(ptr nonnull [[I]], ptr [[I1]])
 ; CHECK-NEXT:    [[I10:%.*]] = icmp eq i32 [[I9]], 0
 ; CHECK-NEXT:    br i1 [[I10]], label [[THREAD_PRE_SPLIT:%.*]], label [[BB5_BB15_CRIT_EDGE:%.*]]
 ; CHECK:       thread-pre-split:
-; CHECK-NEXT:    [[DOTPR:%.*]] = load i32, i32* @i, align 4
+; CHECK-NEXT:    [[DOTPR:%.*]] = load i32, ptr @i, align 4
 ; CHECK-NEXT:    [[I12:%.*]] = icmp eq i32 [[DOTPR]], 0
 ; CHECK-NEXT:    br i1 [[I12]], label [[M_EXIT]], label [[BB13_LR_PH:%.*]]
 ; CHECK:       bb13.lr.ph:
@@ -47,8 +46,8 @@ define i32 @o() #0 {
 ; CHECK-NEXT:    br label [[M_EXIT]]
 ; CHECK:       m.exit:
 ; CHECK-NEXT:    [[DOT1_LCSSA:%.*]] = phi i32 [ [[SPLIT]], [[BB13_M_EXIT_CRIT_EDGE:%.*]] ], [ [[SPLIT2]], [[BB11_M_EXIT_CRIT_EDGE]] ], [ undef, [[THREAD_PRE_SPLIT]] ]
-; CHECK-NEXT:    store i32 [[DOT1_LCSSA]], i32* @h, align 4
-; CHECK-NEXT:    [[I3]] = load i32, i32* @f, align 4
+; CHECK-NEXT:    store i32 [[DOT1_LCSSA]], ptr @h, align 4
+; CHECK-NEXT:    [[I3]] = load i32, ptr @f, align 4
 ; CHECK-NEXT:    [[I4:%.*]] = icmp eq i32 [[I3]], 0
 ; CHECK-NEXT:    br i1 [[I4]], label [[BB2_BB15_CRIT_EDGE:%.*]], label [[BB5]]
 ; CHECK:       bb5.bb15_crit_edge:
@@ -60,25 +59,24 @@ define i32 @o() #0 {
 ;
 bb:
   %i = alloca [1 x i32], align 4
-  %i1 = load i8*, i8** bitcast (i64* @d to i8**), align 8
+  %i1 = load ptr, ptr @d, align 8
   br label %bb2
 
 bb2:                                              ; preds = %m.exit, %bb
-  %i3 = load i32, i32* @f, align 4
+  %i3 = load i32, ptr @f, align 4
   %i4 = icmp eq i32 %i3, 0
   br i1 %i4, label %bb15, label %bb5
 
 bb5:                                              ; preds = %bb2
   %i6 = icmp ult i32 %i3, 4
   %i7 = zext i1 %i6 to i32
-  store i32 %i7, i32* @g, align 4
-  %i8 = bitcast [1 x i32]* %i to i8*
-  %i9 = call i32 @n(i8* nonnull %i8, i8* %i1)
+  store i32 %i7, ptr @g, align 4
+  %i9 = call i32 @n(ptr nonnull %i, ptr %i1)
   %i10 = icmp eq i32 %i9, 0
   br i1 %i10, label %thread-pre-split, label %bb15
 
 thread-pre-split:                                 ; preds = %bb5
-  %.pr = load i32, i32* @i, align 4
+  %.pr = load i32, ptr @i, align 4
   br label %bb11
 
 bb11:                                             ; preds = %j.exit.i, %thread-pre-split
@@ -96,14 +94,14 @@ j.exit.i:                                         ; preds = %bb13
 
 m.exit:                                           ; preds = %bb13, %bb11
   %.1.lcssa = phi i32 [ %.1, %bb13 ], [ %.1, %bb11 ]
-  store i32 %.1.lcssa, i32* @h, align 4
+  store i32 %.1.lcssa, ptr @h, align 4
   br label %bb2
 
 bb15:                                             ; preds = %bb5, %bb2
   ret i32 undef
 }
 
-declare i32 @n(i8*, i8*)  #0
+declare i32 @n(ptr, ptr)  #0
 
 attributes #0 = { "use-soft-float"="false" }
 attributes #1 = { nounwind }
