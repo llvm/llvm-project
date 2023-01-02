@@ -26,7 +26,8 @@ struct ExpandShapeOpInterface
 
     // Verify that the expanded dim sizes are a product of the collapsed dim
     // size.
-    for (auto it : llvm::enumerate(expandShapeOp.getReassociationIndices())) {
+    for (const auto &it :
+         llvm::enumerate(expandShapeOp.getReassociationIndices())) {
       Value srcDimSz =
           builder.create<DimOp>(loc, expandShapeOp.getSrc(), it.index());
       int64_t groupSz = 1;
