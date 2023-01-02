@@ -14,7 +14,7 @@ include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 
 def Transform_AnyOpType : TypeDef<Transform_Dialect, "AnyOp",
-    [DeclareTypeInterfaceMethods<TransformTypeInterface>]> {
+    [DeclareTypeInterfaceMethods<TransformHandleTypeInterface>]> {
   let description = [{
     Transform IR handle that can be associated with a list of arbitrary
     Payload IR operations.
@@ -24,7 +24,7 @@ def Transform_AnyOpType : TypeDef<Transform_Dialect, "AnyOp",
 }
 
 def Transform_OperationType : TypeDef<Transform_Dialect, "Operation",
-    [DeclareTypeInterfaceMethods<TransformTypeInterface>]> {
+    [DeclareTypeInterfaceMethods<TransformHandleTypeInterface>]> {
   let description = [{
     Transform IR handle that can be associated with a list of Payload IR
     operations with the specified operation name.

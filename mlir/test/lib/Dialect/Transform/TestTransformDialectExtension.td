@@ -23,7 +23,7 @@ include "mlir/Dialect/PDL/IR/PDLTypes.td"
 
 def TestTransformTestDialectHandleType
   : TypeDef<Transform_Dialect, "TestDialectOp",
-      [DeclareTypeInterfaceMethods<TransformTypeInterface>]> {
+      [DeclareTypeInterfaceMethods<TransformHandleTypeInterface>]> {
   let description = [{Handle pointing to an op from the Test dialect.}];
   let mnemonic = "test_dialect_op";
   let assemblyFormat = "";
@@ -79,7 +79,7 @@ def TestPrintRemarkAtOperandOp
   : Op<Transform_Dialect, "test_print_remark_at_operand",
        [DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let arguments = (ins
-    Arg<TransformTypeInterface, "",
+    Arg<TransformHandleTypeInterface, "",
         [TransformMappingRead, PayloadIRRead]>:$operand,
     StrAttr:$message);
   let assemblyFormat =
@@ -296,7 +296,7 @@ def TestProduceParamWithNumberOfTestOps
   : Op<Transform_Dialect, "test_produce_param_with_number_of_test_ops",
        [MemoryEffectsOpInterface, ParamProducerTransformOpTrait,
         DeclareOpInterfaceMethods<TransformOpInterface>]> {
-  let arguments = (ins TransformTypeInterface:$handle);
+  let arguments = (ins TransformHandleTypeInterface:$handle);
   let results = (outs TestTransformTestDialectParamType:$result);
   let assemblyFormat = "$handle attr-dict `:` type($handle)";
   let cppNamespace = "::mlir::test";
