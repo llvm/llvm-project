@@ -31,6 +31,10 @@ TestRunner::TestRunner(StringRef TestName,
   assert(this->Program && "Initialized with null program?");
 }
 
+static constexpr std::array<std::optional<StringRef>, 3> DefaultRedirects = {
+    StringRef()};
+static constexpr std::array<std::optional<StringRef>, 3> NullRedirects;
+
 /// Runs the interestingness test, passes file to be tested as first argument
 /// and other specified test arguments after that.
 int TestRunner::run(StringRef Filename) const {
@@ -43,15 +47,11 @@ int TestRunner::run(StringRef Filename) const {
   ProgramArgs.push_back(Filename);
 
   std::string ErrMsg;
-  SmallVector<std::optional<StringRef>, 3> Redirects;
-  std::optional<StringRef> Empty = StringRef();
-  if (!Verbose) {
-    for (int i = 0; i < 3; ++i)
-      Redirects.push_back(Empty);
-  }
-  int Result = sys::ExecuteAndWait(
-      TestName, ProgramArgs, /*Env=*/std::nullopt, Redirects,
-      /*SecondsToWait=*/0, /*MemoryLimit=*/0, &ErrMsg);
+
+  int Result =
+      sys::ExecuteAndWait(TestName, ProgramArgs, /*Env=*/std::nullopt,
+                          Verbose ? DefaultRedirects : NullRedirects,
+                          /*SecondsToWait=*/0, /*MemoryLimit=*/0, &ErrMsg);
 
   if (Result < 0) {
     Error E = make_error<StringError>("Error running interesting-ness test: " +
