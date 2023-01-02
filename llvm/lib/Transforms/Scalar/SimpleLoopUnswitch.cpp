@@ -2188,6 +2188,18 @@ static void unswitchNontrivialInvariants(
     InsertFreeze = !SafetyInfo.isGuaranteedToExecute(TI, &DT, &L);
   }
 
+  // Perform the isGuaranteedNotToBeUndefOrPoison() query before the transform,
+  // otherwise the branch instruction will have been moved outside the loop
+  // already, and may imply that a poison condition is always UB.
+  Value *FullUnswitchCond = nullptr;
+  if (FullUnswitch) {
+    FullUnswitchCond =
+        BI ? skipTrivialSelect(BI->getCondition()) : SI->getCondition();
+    if (InsertFreeze)
+      InsertFreeze = !isGuaranteedNotToBeUndefOrPoison(
+          FullUnswitchCond, &AC, L.getLoopPreheader()->getTerminator(), &DT);
+  }
+
   // If the edge from this terminator to a successor dominates that successor,
   // store a map from each block in its dominator subtree to it. This lets us
   // tell when cloning for a particular successor if a block is dominated by
@@ -2262,12 +2274,10 @@ static void unswitchNontrivialInvariants(
       BasicBlock *ClonedPH = ClonedPHs.begin()->second;
       BI->setSuccessor(ClonedSucc, ClonedPH);
       BI->setSuccessor(1 - ClonedSucc, LoopPH);
-      Value *Cond = skipTrivialSelect(BI->getCondition());
-      if (InsertFreeze) {
-        if (!isGuaranteedNotToBeUndefOrPoison(Cond, &AC, BI, &DT))
-          Cond = new FreezeInst(Cond, Cond->getName() + ".fr", BI);
-      }
-      BI->setCondition(Cond);
+      if (InsertFreeze)
+        FullUnswitchCond = new FreezeInst(
+            FullUnswitchCond, FullUnswitchCond->getName() + ".fr", BI);
+      BI->setCondition(FullUnswitchCond);
       DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
     } else {
       assert(SI && "Must either be a branch or switch!");
@@ -2282,11 +2292,10 @@ static void unswitchNontrivialInvariants(
         else
           Case.setSuccessor(ClonedPHs.find(Case.getCaseSuccessor())->second);
 
-      if (InsertFreeze) {
-        auto Cond = SI->getCondition();
-        if (!isGuaranteedNotToBeUndefOrPoison(Cond, &AC, SI, &DT))
-          SI->setCondition(new FreezeInst(Cond, Cond->getName() + ".fr", SI));
-      }
+      if (InsertFreeze)
+        SI->setCondition(new FreezeInst(
+            FullUnswitchCond, FullUnswitchCond->getName() + ".fr", SI));
+
       // We need to use the set to populate domtree updates as even when there
       // are multiple cases pointing at the same successor we only want to
       // remove and insert one edge in the domtree.
