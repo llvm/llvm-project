@@ -29,6 +29,16 @@ def TestTransformTestDialectHandleType
   let assemblyFormat = "";
 }
 
+def TestTransformTestDialectParamType
+  : TypeDef<Transform_Dialect, "TestDialectParam",
+      [DeclareTypeInterfaceMethods<TransformParamTypeInterface>]> {
+  let description = [{
+    Parameter associated with an i32 attribute for testing purposes.
+  }];
+  let mnemonic = "test_dialect_param";
+  let assemblyFormat = "";
+}
+
 def TestProduceParamOrForwardOperandOp
   : Op<Transform_Dialect, "test_produce_param_or_forward_operand",
        [DeclareOpInterfaceMethods<TransformOpInterface>]> {
@@ -260,6 +270,47 @@ def TestReportNumberOfTrackedHandlesNestedUnder
   let arguments = (ins PDL_Operation:$target);
   let assemblyFormat = "$target attr-dict";
   let cppNamespace = "::mlir::test";
+}
+
+def TestPrintParamOp
+  : Op<Transform_Dialect, "test_print_param",
+       [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+        DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let arguments = (ins TransformParamTypeInterface:$param);
+  let assemblyFormat = "$param attr-dict `:` type($param)";
+  let cppNamespace = "::mlir::test";
+}
+
+def TestAddToParamOp
+  : Op<Transform_Dialect, "test_add_to_param",
+       [MemoryEffectsOpInterface, ParamProducerTransformOpTrait,
+        DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let arguments = (ins Optional<TestTransformTestDialectParamType>:$param,
+                       I32Attr:$addendum);
+  let results = (outs TestTransformTestDialectParamType:$result);
+  let assemblyFormat = "($param^ `,`)? $addendum attr-dict";
+  let cppNamespace = "::mlir::test";
+}
+
+def TestProduceParamWithNumberOfTestOps
+  : Op<Transform_Dialect, "test_produce_param_with_number_of_test_ops",
+       [MemoryEffectsOpInterface, ParamProducerTransformOpTrait,
+        DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let arguments = (ins TransformTypeInterface:$handle);
+  let results = (outs TestTransformTestDialectParamType:$result);
+  let assemblyFormat = "$handle attr-dict `:` type($handle)";
+  let cppNamespace = "::mlir::test";
+}
+
+def TestProduceIntegerParamWithTypeOp
+  : Op<Transform_Dialect, "test_produce_integer_param_with_type",
+       [MemoryEffectsOpInterface, ParamProducerTransformOpTrait,
+        DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let arguments = (ins TypeAttr:$type);
+  let results = (outs TransformParamTypeInterface:$result);
+  let assemblyFormat = "$type attr-dict `:` type($result)";
+  let cppNamespace = "::mlir::test";
+  let hasVerifier = 1;
 }
 
 #endif // MLIR_TESTTRANSFORMDIALECTEXTENSION_TD

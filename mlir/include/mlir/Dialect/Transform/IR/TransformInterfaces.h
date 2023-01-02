@@ -312,45 +312,58 @@ applyTransforms(Operation *payloadRoot, TransformOpInterface transform,
 /// The state maintained across applications of various ops implementing the
 /// TransformOpInterface. The operations implementing this interface and the
 /// surrounding structure are referred to as transform IR. The operations to
-/// which transformations apply are referred to as payload IR. The state thus
-/// contains the many-to-many mapping between values defined in the transform IR
-/// ops and payload IR ops. The "expensive-checks" option can be passed to
-/// the constructor at transformation execution time that transform IR values
-/// used as operands by a transform IR operation are not associated with
-/// dangling pointers to payload IR operations that are known to have been
-/// erased by previous transformation through the same or a different transform
-/// IR value.
+/// which transformations apply are referred to as payload IR. Transform IR
+/// operates on values that can be associated either with a list of payload IR
+/// operations (such values are referred to as handles) or with a list of
+/// parameters represented as attributes. The state thus contains the mapping
+/// between values defined in the transform IR ops and either payload IR ops or
+/// parameters. For payload ops, the mapping is many-to-many and the reverse
+/// mapping is also stored. The "expensive-checks" option can be passed to the
+/// constructor at transformation execution time that transform IR values used
+/// as operands by a transform IR operation are not associated with dangling
+/// pointers to payload IR operations that are known to have been erased by
+/// previous transformation through the same or a different transform IR value.
 ///
 /// A reference to this class is passed as an argument to "apply" methods of the
-/// transform op interface. Thus the "apply" method can call
+/// transform op interface. Thus the "apply" method can call either
 /// `state.getPayloadOps( getSomeOperand() )` to obtain the list of operations
-/// associated with its operand and subject to transformation. The method is
-/// expected to populate the `TransformResults` class instance in order to
-/// update the mapping. The `applyTransform` method takes care of propagating
-/// the state of `TransformResults` into the instance of this class.
+/// or `state.getParams( getSomeOperand() )` to obtain the list of parameters
+/// associated with its operand. The method is expected to populate the
+/// `TransformResults` class instance in order to update the mapping. The
+/// `applyTransform` method takes care of propagating the state of
+/// `TransformResults` into the instance of this class.
 ///
 /// When applying transform IR operations with regions, the client is expected
-/// to create a RegionScope RAII object to create a new "stack frame" for
+/// to create a `RegionScope` RAII object to create a new "stack frame" for
 /// values defined inside the region. The mappings from and to these values will
 /// be automatically dropped when the object goes out of scope, typically at the
-/// end of the "apply" function of the parent operation. If a region contains
+/// end of the `apply` function of the parent operation. If a region contains
 /// blocks with arguments, the client can map those arguments to payload IR ops
-/// using "mapBlockArguments".
+/// using `mapBlockArguments`.
 class TransformState {
+public:
+  using Param = Attribute;
+
+private:
   /// Mapping between a Value in the transform IR and the corresponding set of
   /// operations in the payload IR.
-  using TransformOpMapping = DenseMap<Value, SmallVector<Operation *>>;
+  using TransformOpMapping = DenseMap<Value, SmallVector<Operation *, 2>>;
 
   /// Mapping between a payload IR operation and the transform IR values it is
   /// associated with.
   using TransformOpReverseMapping =
       DenseMap<Operation *, SmallVector<Value, 2>>;
 
-  /// Bidirectional mappings between transform IR values and payload IR
-  /// operations.
+  /// Mapping between a Value in the transform IR and the corresponding list of
+  /// parameters.
+  using ParamMapping = DenseMap<Value, SmallVector<Param>>;
+
+  /// The bidirectional mappings between transform IR values and payload IR
+  /// operations, and the mapping between transform IR values and parameters.
   struct Mappings {
     TransformOpMapping direct;
     TransformOpReverseMapping reverse;
+    ParamMapping params;
   };
 
   friend LogicalResult applyTransforms(Operation *payloadRoot,
@@ -365,6 +378,10 @@ public:
   /// Returns the list of ops that the given transform IR value corresponds to.
   /// This is helpful for transformations that apply to a particular handle.
   ArrayRef<Operation *> getPayloadOps(Value value) const;
+
+  /// Returns the list of parameters that the given transform IR value
+  /// corresponds to.
+  ArrayRef<Attribute> getParams(Value value) const;
 
   /// Populates `handles` with all handles pointing to the given Payload IR op.
   /// Returns success if such handles exist, failure otherwise.
@@ -590,8 +607,15 @@ private:
   /// that the associated payload operation may no longer exist.
   ///
   /// Returns failure if the payload does not satisfy the conditions associated
-  /// with the type of the handle value.
+  /// with the type of the handle value. The value is expected to have a type
+  /// implementing TransformTypeInterface.
   LogicalResult setPayloadOps(Value value, ArrayRef<Operation *> targets);
+
+  /// Sets the parameters associated with the given transform IR value. Returns
+  /// failure if the parameters do not satisfy the conditions associated with
+  /// the type of the value. The value is expected to have a type implementing
+  /// TransformParamTypeInterface.
+  LogicalResult setParams(Value value, ArrayRef<Param> params);
 
   /// Forgets the payload IR ops associated with the given transform IR value.
   void removePayloadOps(Value value);
@@ -661,26 +685,56 @@ class TransformResults {
 public:
   /// Indicates that the result of the transform IR op at the given position
   /// corresponds to the given list of payload IR ops. Each result must be set
-  /// by the transformation exactly once.
+  /// by the transformation exactly once. The value must have a type
+  /// implementing TransformTypeInterface.
   void set(OpResult value, ArrayRef<Operation *> ops);
+
+  /// Indicates that the result of the transform IR op at the given position
+  /// corresponds to the given list of parameters. Each result must be set by
+  /// the transformation exactly once. The value must have a type implementing
+  /// TransformParamTypeInterface.
+  void setParams(OpResult value, ArrayRef<TransformState::Param> params);
 
 private:
   /// Creates an instance of TransformResults that expects mappings for
-  /// `numSegments` values.
+  /// `numSegments` values, which may be associated with payload operations or
+  /// parameters.
   explicit TransformResults(unsigned numSegments);
 
   /// Gets the list of operations associated with the result identified by its
-  /// number in the list of operation results.
+  /// number in the list of operation results. The result must have been set to
+  /// be associated with payload IR operations.
   ArrayRef<Operation *> get(unsigned resultNumber) const;
+
+  /// Gets the list of parameters associated with the result identified by its
+  /// number in the list of operation results. The result must have been set to
+  /// be associated with parameters.
+  ArrayRef<TransformState::Param> getParams(unsigned resultNumber) const;
+
+  /// Returns `true` if the result identified by its number in the list of
+  /// operation results is associated with a list of parameters, `false` if it
+  /// is associated with the list of payload IR operations.
+  bool isParam(unsigned resultNumber) const;
 
   /// Storage for pointers to payload IR ops that are associated with results of
   /// a transform IR op. `segments` contains as many entries as the transform IR
-  /// op has results. Each entry is a reference to a contiguous segment in
-  /// the `operations` list that contains the pointers to operations. This
-  /// allows for operations to be stored contiguously without nested vectors and
-  /// for different segments to be set in any order.
+  /// op has results, even if some of them are not associated with payload IR
+  /// operations. Each entry is a reference to a contiguous segment in the
+  /// `operations` list that contains the pointers to operations. This allows
+  /// for operations to be stored contiguously without nested vectors and for
+  /// different segments to be set in any order.
   SmallVector<ArrayRef<Operation *>, 2> segments;
   SmallVector<Operation *> operations;
+
+  /// Storage for parameters that are associated with results of the transform
+  /// IR op. `paramSegments` contains as many entries as the transform IR op has
+  /// results, even if some of them are not associated with parameters. Each
+  /// entry is a reference to a contiguous segment in the `params` list that
+  /// contains the actual parameters. This allows for parameters to be stored
+  /// contiguously without nested vectors and for different segments to be set
+  /// in any order.
+  SmallVector<ArrayRef<TransformState::Param>, 2> paramSegments;
+  SmallVector<TransformState::Param> params;
 };
 
 TransformState::RegionScope TransformState::make_region_scope(Region &region) {
@@ -892,6 +946,39 @@ public:
                          "to ops that implement MemoryEffectOpInterface";
     }
     return success();
+  }
+};
+
+namespace detail {
+/// Non-template implementation of ParamProducerTransformOpTrait::getEffects().
+void getParamProducerTransformOpTraitEffects(
+    Operation *op, SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
+/// Non-template implementation of ParamProducerTransformOpTrait::verify().
+LogicalResult verifyParamProducerTransformOpTrait(Operation *op);
+} // namespace detail
+
+/// Trait implementing the MemoryEffectsOpInterface for operations that produce
+/// transform dialect parameters. It marks all op results of
+/// TransformHandleTypeInterface as produced by the op, all operands as only
+/// read by the op and, if at least one of the operand is a handle to payload
+/// ops, the entire payload as potentially read. The op must only produce
+/// parameter-typed results.
+template <typename OpTy>
+class ParamProducerTransformOpTrait
+    : public OpTrait::TraitBase<OpTy, ParamProducerTransformOpTrait> {
+public:
+  /// Populates `effects` with effect instances described in the trait
+  /// documentation.
+  void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+    detail::getParamProducerTransformOpTraitEffects(this->getOperation(),
+                                                    effects);
+  }
+
+  /// Checks that the op matches the expectation of this trait, i.e., that it
+  /// implements the MemoryEffectsOpInterface and only produces parameter-typed
+  /// results.
+  static LogicalResult verifyTrait(Operation *op) {
+    return detail::verifyParamProducerTransformOpTrait(op);
   }
 };
 
