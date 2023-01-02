@@ -104,38 +104,6 @@ public:
   }
 };
 
-struct AttributeCounter : public InstVisitor<AttributeCounter> {
-  /// How many features (in this case, attributes) did we count, total?
-  int AttributeCount = 0;
-
-  void visitModule(Module &M) {
-    for (GlobalVariable &GV : M.getGlobalList())
-      visitGlobalVariable(GV);
-  }
-
-  void visitGlobalVariable(GlobalVariable &GV) {
-    // Global variables only have one attribute set.
-    visitAttributeSet(GV.getAttributes());
-  }
-
-  void visitFunction(Function &F) {
-    if (F.getIntrinsicID() != Intrinsic::not_intrinsic)
-      return; // We can neither add nor remove attributes from intrinsics.
-    visitAttributeList(F.getAttributes());
-  }
-
-  void visitCallBase(CallBase &I) { visitAttributeList(I.getAttributes()); }
-
-  void visitAttributeList(const AttributeList &AL) {
-    for (const AttributeSet &AS : AL)
-      visitAttributeSet(AS);
-  }
-
-  void visitAttributeSet(const AttributeSet &AS) {
-    AttributeCount += AS.getNumAttributes();
-  }
-};
-
 } // namespace
 
 AttributeSet
