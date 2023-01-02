@@ -829,3 +829,19 @@ define i32 @PR46586(ptr %p, <4 x i32> %v) {
   %t35 = extractelement <4 x i32> %t34, i32 3
   ret i32 %t35
 }
+
+define void @pr59781(ptr %in, ptr %out) {
+; CHECK-LABEL: pr59781:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    movzbl 2(%rdi), %ecx
+; CHECK-NEXT:    shlq $16, %rcx
+; CHECK-NEXT:    orq %rax, %rcx
+; CHECK-NEXT:    movq %rcx, (%rsi)
+; CHECK-NEXT:    retq
+  %bf.load = load i24, ptr %in, align 8
+  %conv = zext i24 %bf.load to i64
+  %splat.splatinsert = insertelement <1 x i64> zeroinitializer, i64 %conv, i64 0
+  store <1 x i64> %splat.splatinsert, ptr %out, align 8
+  ret void
+}
