@@ -17,6 +17,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Target/LLVMIR/Import.h"
+#include "mlir/Target/LLVMIR/LLVMImportInterface.h"
 #include "mlir/Target/LLVMIR/TypeFromLLVM.h"
 
 namespace llvm {
@@ -43,6 +44,18 @@ class DebugImporter;
 class ModuleImport {
 public:
   ModuleImport(ModuleOp mlirModule, std::unique_ptr<llvm::Module> llvmModule);
+
+  /// Calls the LLVMImportInterface initialization that queries the registered
+  /// dialect interfaces for the supported LLVM IR intrinsics and builds the
+  /// dispatch table. Returns failure if multiple dialect interfaces translate
+  /// the same LLVM IR intrinsic.
+  LogicalResult initializeImportInterface() { return iface.initializeImport(); }
+
+  /// Converts all functions of the LLVM module to MLIR functions.
+  LogicalResult convertFunctions();
+
+  /// Converts all global variables of the LLVM module to MLIR global variables.
+  LogicalResult convertGlobals();
 
   /// Stores the mapping between an LLVM value and its MLIR counterpart.
   void mapValue(llvm::Value *llvm, Value mlir) { mapValue(llvm) = mlir; }
@@ -95,16 +108,6 @@ public:
     return typeTranslator.translateType(type);
   }
 
-  /// Converts an LLVM intrinsic to an MLIR LLVM dialect operation if an MLIR
-  /// counterpart exists. Otherwise, returns failure.
-  LogicalResult convertIntrinsic(OpBuilder &odsBuilder, llvm::CallInst *inst,
-                                 llvm::Intrinsic::ID intrinsicID);
-
-  /// Converts an LLVM instruction to an MLIR LLVM dialect operation if an MLIR
-  /// counterpart exists. Otherwise, returns failure.
-  LogicalResult convertOperation(OpBuilder &odsBuilder,
-                                 llvm::Instruction *inst);
-
   /// Imports `func` into the current module.
   LogicalResult processFunction(llvm::Function *func);
 
@@ -115,11 +118,10 @@ public:
   /// Imports `globalVar` as a GlobalOp, creating it if it doesn't exist.
   GlobalOp processGlobal(llvm::GlobalVariable *globalVar);
 
-  /// Converts all functions of the LLVM module to MLIR functions.
-  LogicalResult convertFunctions();
-
-  /// Converts all global variables of the LLVM module to MLIR global variables.
-  LogicalResult convertGlobals();
+  /// Sets the fastmath flags attribute for the imported operation `op` given
+  /// the original instruction `inst`. Asserts if the operation does not
+  /// implement the fastmath interface.
+  void setFastmathFlagsAttr(llvm::Instruction *inst, Operation *op) const;
 
 private:
   /// Clears the block and value mapping before processing a new region.
@@ -133,14 +135,17 @@ private:
     constantInsertionOp = nullptr;
   }
 
-  /// Sets the fastmath flags attribute for the imported operation `op` given
-  /// the original instruction `inst`. Asserts if the operation does not
-  /// implement the fastmath interface.
-  void setFastmathFlagsAttr(llvm::Instruction *inst, Operation *op) const;
   /// Returns personality of `func` as a FlatSymbolRefAttr.
   FlatSymbolRefAttr getPersonalityAsAttr(llvm::Function *func);
   /// Imports `bb` into `block`, which must be initially empty.
   LogicalResult processBasicBlock(llvm::BasicBlock *bb, Block *block);
+  /// Converts an LLVM intrinsic to an MLIR LLVM dialect operation if an MLIR
+  /// counterpart exists. Otherwise, returns failure.
+  LogicalResult convertIntrinsic(OpBuilder &odsBuilder, llvm::CallInst *inst);
+  /// Converts an LLVM instruction to an MLIR LLVM dialect operation if an MLIR
+  /// counterpart exists. Otherwise, returns failure.
+  LogicalResult convertInstruction(OpBuilder &odsBuilder,
+                                   llvm::Instruction *inst);
   /// Imports `inst` and populates valueMapping[inst] with the result of the
   /// imported operation.
   LogicalResult processInstruction(llvm::Instruction *inst);
@@ -191,6 +196,10 @@ private:
   ModuleOp mlirModule;
   /// The LLVM module being imported.
   std::unique_ptr<llvm::Module> llvmModule;
+
+  /// A dialect interface collection used for dispatching the import to specific
+  /// dialects.
+  LLVMImportInterface iface;
 
   /// Function-local mapping between original and imported block.
   DenseMap<llvm::BasicBlock *, Block *> blockMapping;

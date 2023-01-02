@@ -62,7 +62,7 @@ class LLVM_FloatArithmeticOp<string mnemonic, string instName,
   let arguments = !con(commonArgs, fmfArg);
   string mlirBuilder = [{
     auto op = $_builder.create<$_qualCppClassName>($_location, $lhs, $rhs);
-    setFastmathFlagsAttr(inst, op);
+    moduleImport.setFastmathFlagsAttr(inst, op);
     $res = op;
   }];
 }
@@ -82,7 +82,7 @@ class LLVM_UnaryFloatArithmeticOp<Type type, string mnemonic,
   string llvmInstName = instName;
   string mlirBuilder = [{
     auto op = $_builder.create<$_qualCppClassName>($_location, $operand);
-    setFastmathFlagsAttr(inst, op);
+    moduleImport.setFastmathFlagsAttr(inst, op);
     $res = op;
    }];
 }
@@ -157,7 +157,7 @@ def LLVM_FCmpOp : LLVM_ArithmeticCmpOp<"fcmp", [
     auto *fCmpInst = cast<llvm::FCmpInst>(inst);
     auto op = $_builder.create<$_qualCppClassName>(
       $_location, getFCmpPredicate(fCmpInst->getPredicate()), $lhs, $rhs);
-    setFastmathFlagsAttr(inst, op);
+    moduleImport.setFastmathFlagsAttr(inst, op);
     $res = op;
   }];
   // Set the $predicate index to -1 to indicate there is no matching operand
@@ -227,7 +227,8 @@ def LLVM_AllocaOp : LLVM_Op<"alloca">, MemoryOpWithAlignmentBase {
   // FIXME: Import attributes.
   string mlirBuilder = [{
     auto *allocaInst = cast<llvm::AllocaInst>(inst);
-    Type allocatedType = convertType(allocaInst->getAllocatedType());
+    Type allocatedType =
+      moduleImport.convertType(allocaInst->getAllocatedType());
     unsigned alignment = allocaInst->getAlign().value();
     $res = $_builder.create<LLVM::AllocaOp>(
       $_location, $_resultType, allocatedType, $arraySize, alignment);
@@ -825,7 +826,8 @@ def LLVM_ReturnOp : LLVM_TerminatorOp<"return", [Pure, ReturnLike]> {
       builder.CreateRetVoid();
   }];
   string mlirBuilder = [{
-    FailureOr<SmallVector<Value>> mlirOperands = convertValues(llvmOperands);
+    FailureOr<SmallVector<Value>> mlirOperands =
+      moduleImport.convertValues(llvmOperands);
     if (failed(mlirOperands))
       return failure();
     $_builder.create<LLVM::ReturnOp>($_location, *mlirOperands);
