@@ -19,7 +19,7 @@ namespace objc {
 /// warnings if it contains any incorrect sub-pattern.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/objc-NSDateFormatter.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/objc/nsdate-formatter.html
 class NSDateFormatterCheck : public ClangTidyCheck {
 public:
   NSDateFormatterCheck(StringRef Name, ClangTidyContext *Context)
