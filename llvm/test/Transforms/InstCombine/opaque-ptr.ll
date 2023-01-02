@@ -334,8 +334,10 @@ define i1 @compare_gep_with_base(ptr %p, i64 %idx) {
 
 define <2 x i1> @compare_gep_with_base_vector1(<2 x ptr> %p, i64 %idx) {
 ; CHECK-LABEL: @compare_gep_with_base_vector1(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, <2 x ptr> [[P:%.*]], i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x ptr> [[GEP]], [[P]]
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[IDX:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[DOTSPLATINSERT]], <i64 2, i64 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[C:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %gep = getelementptr inbounds i32, <2 x ptr> %p, i64 %idx
@@ -345,8 +347,7 @@ define <2 x i1> @compare_gep_with_base_vector1(<2 x ptr> %p, i64 %idx) {
 
 define <2 x i1> @compare_gep_with_base_vector2(<2 x ptr> %p, <2 x i64> %idx) {
 ; CHECK-LABEL: @compare_gep_with_base_vector2(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, <2 x ptr> [[P:%.*]], <2 x i64> [[IDX:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x ptr> [[GEP]], [[P]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i64> [[IDX:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %gep = getelementptr inbounds i32, <2 x ptr> %p, <2 x i64> %idx
