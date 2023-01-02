@@ -23,6 +23,7 @@
 #include "Preamble.h"
 #include "SourceCode.h"
 #include "TidyProvider.h"
+#include "clang-include-cleaner/Record.h"
 #include "index/CanonicalIncludes.h"
 #include "index/Index.h"
 #include "index/Symbol.h"
@@ -799,6 +800,12 @@ ParsedAST::ParsedAST(PathRef TUPath, llvm::StringRef Version,
   Resolver = std::make_unique<HeuristicResolver>(getASTContext());
   assert(this->Clang);
   assert(this->Action);
+}
+
+const include_cleaner::PragmaIncludes *ParsedAST::getPragmaIncludes() const {
+  if (!Preamble)
+    return nullptr;
+  return &Preamble->Pragmas;
 }
 
 std::optional<llvm::StringRef> ParsedAST::preambleVersion() const {

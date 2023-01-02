@@ -11,6 +11,7 @@
 #include "Config.h"
 #include "Headers.h"
 #include "SourceCode.h"
+#include "clang-include-cleaner/Record.h"
 #include "support/Logger.h"
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
@@ -77,6 +78,9 @@ public:
 
   std::vector<PragmaMark> takeMarks() { return std::move(Marks); }
 
+  include_cleaner::PragmaIncludes takePragmaIncludes() {
+    return std::move(Pragmas);
+  }
   CanonicalIncludes takeCanonicalIncludes() { return std::move(CanonIncludes); }
 
   bool isMainFileIncludeGuarded() const { return IsMainFileIncludeGuarded; }
@@ -118,6 +122,9 @@ public:
     LangOpts = &CI.getLangOpts();
     SourceMgr = &CI.getSourceManager();
     Includes.collect(CI);
+    if (Config::current().Diagnostics.UnusedIncludes ==
+        Config::UnusedIncludesPolicy::Experiment)
+      Pragmas.record(CI);
     if (BeforeExecuteCallback)
       BeforeExecuteCallback(CI);
   }
@@ -187,6 +194,7 @@ private:
   PreambleParsedCallback ParsedCallback;
   IncludeStructure Includes;
   CanonicalIncludes CanonIncludes;
+  include_cleaner::PragmaIncludes Pragmas;
   MainFileMacros Macros;
   std::vector<PragmaMark> Marks;
   bool IsMainFileIncludeGuarded = false;
@@ -560,6 +568,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
     Result->CompileCommand = Inputs.CompileCommand;
     Result->Diags = std::move(Diags);
     Result->Includes = CapturedInfo.takeIncludes();
+    Result->Pragmas = CapturedInfo.takePragmaIncludes();
     Result->Macros = CapturedInfo.takeMacros();
     Result->Marks = CapturedInfo.takeMarks();
     Result->CanonIncludes = CapturedInfo.takeCanonicalIncludes();
