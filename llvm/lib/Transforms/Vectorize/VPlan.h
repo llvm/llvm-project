@@ -1638,10 +1638,7 @@ public:
         VPValue(VPValue::VPVPredInstPHI, nullptr, this) {}
   ~VPPredInstPHIRecipe() override = default;
 
-  /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPDef *D) {
-    return D->getVPDefID() == VPRecipeBase::VPPredInstPHISC;
-  }
+  VP_CLASSOF_IMPL(VPRecipeBase::VPPredInstPHISC, VPValue::VPVPredInstPHI)
 
   /// Generates phi nodes for live-outs as needed to retain SSA form.
   void execute(VPTransformState &State) override;
@@ -1704,10 +1701,8 @@ public:
     setMask(Mask);
   }
 
-  /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPDef *D) {
-    return D->getVPDefID() == VPRecipeBase::VPWidenMemoryInstructionSC;
-  }
+  VP_CLASSOF_IMPL(VPRecipeBase::VPWidenMemoryInstructionSC,
+                  VPValue::VPVMemoryInstructionSC)
 
   /// Return the address accessed by this recipe.
   VPValue *getAddr() const {
@@ -1879,20 +1874,8 @@ public:
 
   ~VPWidenCanonicalIVRecipe() override = default;
 
-  /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPDef *D) {
-    return D->getVPDefID() == VPRecipeBase::VPWidenCanonicalIVSC;
-  }
-
-  /// Extra classof implementations to allow directly casting from VPUser ->
-  /// VPWidenCanonicalIVRecipe.
-  static inline bool classof(const VPUser *U) {
-    auto *R = dyn_cast<VPRecipeBase>(U);
-    return R && R->getVPDefID() == VPRecipeBase::VPWidenCanonicalIVSC;
-  }
-  static inline bool classof(const VPRecipeBase *R) {
-    return R->getVPDefID() == VPRecipeBase::VPWidenCanonicalIVSC;
-  }
+  VP_CLASSOF_IMPL(VPRecipeBase::VPWidenCanonicalIVSC,
+                  VPValue::VPVWidenCanonicalIVSC)
 
   /// Generate a canonical vector induction variable of the vector loop, with
   /// start = {<Part*VF, Part*VF+1, ..., Part*VF+VF-1> for 0 <= Part < UF}, and

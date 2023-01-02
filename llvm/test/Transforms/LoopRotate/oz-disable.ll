@@ -14,7 +14,7 @@ declare void @use(i32)
 
 define void @test() {
 entry:
-  %end = load i32, i32* @e
+  %end = load i32, ptr @e
   br label %loop
 
 loop:

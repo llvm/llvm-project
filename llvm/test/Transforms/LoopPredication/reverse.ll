@@ -4,7 +4,7 @@
 
 declare void @llvm.experimental.guard(i1, ...)
 
-define i32 @signed_reverse_loop_n_to_lower_limit(i32* %array, i32 %length, i32 %n, i32 %lowerlimit) {
+define i32 @signed_reverse_loop_n_to_lower_limit(ptr %array, i32 %length, i32 %n, i32 %lowerlimit) {
 ; CHECK-LABEL: @signed_reverse_loop_n_to_lower_limit(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -23,8 +23,8 @@ define i32 @signed_reverse_loop_n_to_lower_limit(i32* %array, i32 %length, i32 %
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I_NEXT]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp sgt i32 [[I]], [[LOWERLIMIT]]
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
@@ -49,8 +49,8 @@ loop:
   %within.bounds = icmp ult i32 %i.next, %length
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
   %i.i64 = zext i32 %i.next to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
   %continue = icmp sgt i32 %i, %lowerlimit
   br i1 %continue, label %loop, label %exit
@@ -60,7 +60,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @unsigned_reverse_loop_n_to_lower_limit(i32* %array, i32 %length, i32 %n, i32 %lowerlimit) {
+define i32 @unsigned_reverse_loop_n_to_lower_limit(ptr %array, i32 %length, i32 %n, i32 %lowerlimit) {
 ; CHECK-LABEL: @unsigned_reverse_loop_n_to_lower_limit(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -79,8 +79,8 @@ define i32 @unsigned_reverse_loop_n_to_lower_limit(i32* %array, i32 %length, i32
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I_NEXT]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ugt i32 [[I]], [[LOWERLIMIT]]
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
@@ -105,8 +105,8 @@ loop:
   %within.bounds = icmp ult i32 %i.next, %length
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
   %i.i64 = zext i32 %i.next to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
   %continue = icmp ugt i32 %i, %lowerlimit
   br i1 %continue, label %loop, label %exit
@@ -119,7 +119,7 @@ exit:
 
 ; if we predicated the loop, the guard will definitely fail and we will
 ; deoptimize early on.
-define i32 @unsigned_reverse_loop_n_to_0(i32* %array, i32 %length, i32 %n, i32 %lowerlimit) {
+define i32 @unsigned_reverse_loop_n_to_0(ptr %array, i32 %length, i32 %n, i32 %lowerlimit) {
 ; CHECK-LABEL: @unsigned_reverse_loop_n_to_0(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -137,8 +137,8 @@ define i32 @unsigned_reverse_loop_n_to_0(i32* %array, i32 %length, i32 %n, i32 %
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I_NEXT]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ugt i32 [[I]], 0
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
@@ -163,8 +163,8 @@ loop:
   %within.bounds = icmp ult i32 %i.next, %length
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
   %i.i64 = zext i32 %i.next to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
   %continue = icmp ugt i32 %i, 0
   br i1 %continue, label %loop, label %exit
@@ -175,7 +175,7 @@ exit:
 }
 
 ; do not loop predicate when the range has step -1 and latch has step 1.
-define i32 @reverse_loop_range_step_increment(i32 %n, i32* %array, i32 %length) {
+define i32 @reverse_loop_range_step_increment(i32 %n, ptr %array, i32 %length) {
 ; CHECK-LABEL: @reverse_loop_range_step_increment(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -190,8 +190,8 @@ define i32 @reverse_loop_range_step_increment(i32 %n, i32* %array, i32 %length) 
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[IRC]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_BOUNDS]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[IRC]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nsw i32 [[I]], -1
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ugt i32 [[I]], 65534
@@ -218,8 +218,8 @@ loop:
   %within.bounds = icmp ult i32 %irc, %length
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
   %i.i64 = zext i32 %irc to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %i.next = add nsw i32 %i, -1
   %loop.acc.next = add i32 %loop.acc, %array.i
   %continue = icmp ugt i32 %i, 65534
@@ -230,7 +230,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_reverse_loop_n_to_lower_limit_equal(i32* %array, i32 %length, i32 %n, i32 %lowerlimit) {
+define i32 @signed_reverse_loop_n_to_lower_limit_equal(ptr %array, i32 %length, i32 %n, i32 %lowerlimit) {
 ; CHECK-LABEL: @signed_reverse_loop_n_to_lower_limit_equal(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -249,8 +249,8 @@ define i32 @signed_reverse_loop_n_to_lower_limit_equal(i32* %array, i32 %length,
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I_NEXT]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp sge i32 [[I]], [[LOWERLIMIT]]
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
@@ -275,8 +275,8 @@ loop:
   %within.bounds = icmp ult i32 %i.next, %length
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
   %i.i64 = zext i32 %i.next to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
   %continue = icmp sge i32 %i, %lowerlimit
   br i1 %continue, label %loop, label %exit
@@ -286,7 +286,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @unsigned_reverse_loop_n_to_lower_limit_equal(i32* %array, i32 %length, i32 %n, i32 %lowerlimit) {
+define i32 @unsigned_reverse_loop_n_to_lower_limit_equal(ptr %array, i32 %length, i32 %n, i32 %lowerlimit) {
 ; CHECK-LABEL: @unsigned_reverse_loop_n_to_lower_limit_equal(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -305,8 +305,8 @@ define i32 @unsigned_reverse_loop_n_to_lower_limit_equal(i32* %array, i32 %lengt
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I_NEXT]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp uge i32 [[I]], [[LOWERLIMIT]]
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
@@ -331,8 +331,8 @@ loop:
   %within.bounds = icmp ult i32 %i.next, %length
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
   %i.i64 = zext i32 %i.next to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
   %continue = icmp uge i32 %i, %lowerlimit
   br i1 %continue, label %loop, label %exit
@@ -345,7 +345,7 @@ exit:
 
 ; if we predicated the loop, the guard will definitely fail and we will
 ; deoptimize early on.
-define i32 @unsigned_reverse_loop_n_to_1(i32* %array, i32 %length, i32 %n, i32 %lowerlimit) {
+define i32 @unsigned_reverse_loop_n_to_1(ptr %array, i32 %length, i32 %n, i32 %lowerlimit) {
 ; CHECK-LABEL: @unsigned_reverse_loop_n_to_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -363,8 +363,8 @@ define i32 @unsigned_reverse_loop_n_to_1(i32* %array, i32 %length, i32 %n, i32 %
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I_NEXT]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp uge i32 [[I]], 1
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
@@ -389,8 +389,8 @@ loop:
   %within.bounds = icmp ult i32 %i.next, %length
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
   %i.i64 = zext i32 %i.next to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
   %continue = icmp uge i32 %i, 1
   br i1 %continue, label %loop, label %exit

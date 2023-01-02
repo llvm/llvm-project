@@ -5710,49 +5710,49 @@ bool llvm::propagatesPoison(const Use &PoisonOp) {
 }
 
 void llvm::getGuaranteedWellDefinedOps(
-    const Instruction *I, SmallPtrSetImpl<const Value *> &Operands) {
+    const Instruction *I, SmallVectorImpl<const Value *> &Operands) {
   switch (I->getOpcode()) {
     case Instruction::Store:
-      Operands.insert(cast<StoreInst>(I)->getPointerOperand());
+      Operands.push_back(cast<StoreInst>(I)->getPointerOperand());
       break;
 
     case Instruction::Load:
-      Operands.insert(cast<LoadInst>(I)->getPointerOperand());
+      Operands.push_back(cast<LoadInst>(I)->getPointerOperand());
       break;
 
     // Since dereferenceable attribute imply noundef, atomic operations
     // also implicitly have noundef pointers too
     case Instruction::AtomicCmpXchg:
-      Operands.insert(cast<AtomicCmpXchgInst>(I)->getPointerOperand());
+      Operands.push_back(cast<AtomicCmpXchgInst>(I)->getPointerOperand());
       break;
 
     case Instruction::AtomicRMW:
-      Operands.insert(cast<AtomicRMWInst>(I)->getPointerOperand());
+      Operands.push_back(cast<AtomicRMWInst>(I)->getPointerOperand());
       break;
 
     case Instruction::Call:
     case Instruction::Invoke: {
       const CallBase *CB = cast<CallBase>(I);
       if (CB->isIndirectCall())
-        Operands.insert(CB->getCalledOperand());
+        Operands.push_back(CB->getCalledOperand());
       for (unsigned i = 0; i < CB->arg_size(); ++i) {
         if (CB->paramHasAttr(i, Attribute::NoUndef) ||
             CB->paramHasAttr(i, Attribute::Dereferenceable))
-          Operands.insert(CB->getArgOperand(i));
+          Operands.push_back(CB->getArgOperand(i));
       }
       break;
     }
     case Instruction::Ret:
       if (I->getFunction()->hasRetAttribute(Attribute::NoUndef))
-        Operands.insert(I->getOperand(0));
+        Operands.push_back(I->getOperand(0));
       break;
     case Instruction::Switch:
-      Operands.insert(cast<SwitchInst>(I)->getCondition());
+      Operands.push_back(cast<SwitchInst>(I)->getCondition());
       break;
     case Instruction::Br: {
       auto *BR = cast<BranchInst>(I);
       if (BR->isConditional())
-        Operands.insert(BR->getCondition());
+        Operands.push_back(BR->getCondition());
       break;
     }
     default:
@@ -5761,7 +5761,7 @@ void llvm::getGuaranteedWellDefinedOps(
 }
 
 void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
-                                     SmallPtrSetImpl<const Value *> &Operands) {
+                                     SmallVectorImpl<const Value *> &Operands) {
   getGuaranteedWellDefinedOps(I, Operands);
   switch (I->getOpcode()) {
   // Divisors of these operations are allowed to be partially undef.
@@ -5769,7 +5769,7 @@ void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
   case Instruction::SDiv:
   case Instruction::URem:
   case Instruction::SRem:
-    Operands.insert(I->getOperand(1));
+    Operands.push_back(I->getOperand(1));
     break;
   default:
     break;
@@ -5778,7 +5778,7 @@ void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
 
 bool llvm::mustTriggerUB(const Instruction *I,
                          const SmallSet<const Value *, 16>& KnownPoison) {
-  SmallPtrSet<const Value *, 4> NonPoisonOps;
+  SmallVector<const Value *, 4> NonPoisonOps;
   getGuaranteedNonPoisonOps(I, NonPoisonOps);
 
   for (const auto *V : NonPoisonOps)
@@ -5826,9 +5826,9 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
       if (--ScanLimit == 0)
         break;
 
-      SmallPtrSet<const Value *, 4> WellDefinedOps;
+      SmallVector<const Value *, 4> WellDefinedOps;
       getGuaranteedWellDefinedOps(&I, WellDefinedOps);
-      if (WellDefinedOps.contains(V))
+      if (is_contained(WellDefinedOps, V))
         return true;
 
       if (!isGuaranteedToTransferExecutionToSuccessor(&I))
