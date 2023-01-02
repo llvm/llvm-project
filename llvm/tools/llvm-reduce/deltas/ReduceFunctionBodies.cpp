@@ -51,7 +51,8 @@ static void reduceFunctionData(Oracle &O, Module &M) {
     if (F.hasPrefixData() && !O.shouldKeep())
       F.setPrefixData(nullptr);
 
-    // TODO: Handle prologue data
+    if (F.hasPrologueData() && !O.shouldKeep())
+      F.setPrologueData(nullptr);
   }
 }
 
