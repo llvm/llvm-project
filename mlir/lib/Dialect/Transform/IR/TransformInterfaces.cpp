@@ -79,7 +79,7 @@ transform::TransformState::setPayloadOps(Value value,
   assert(!value.getType().isa<TransformParamTypeInterface>() &&
          "cannot associate payload ops with a value of parameter type");
 
-  auto iface = value.getType().cast<TransformTypeInterface>();
+  auto iface = value.getType().cast<TransformHandleTypeInterface>();
   DiagnosedSilenceableFailure result =
       iface.checkPayload(value.getLoc(), targets);
   if (failed(result.checkAndReport()))
@@ -155,7 +155,7 @@ LogicalResult transform::TransformState::updatePayloadOps(
     }
   }
 
-  auto iface = value.getType().cast<TransformTypeInterface>();
+  auto iface = value.getType().cast<TransformHandleTypeInterface>();
   DiagnosedSilenceableFailure result =
       iface.checkPayload(value.getLoc(), updated);
   if (failed(result.checkAndReport()))
@@ -439,9 +439,10 @@ transform::detail::verifyPossibleTopLevelTransformOpTrait(Operation *op) {
 
   Block *body = &bodyRegion->front();
   if (body->getNumArguments() != 1 ||
-      !body->getArgumentTypes()[0].isa<TransformTypeInterface>()) {
-    return op->emitOpError() << "expects the entry block to have one argument "
-                                "of type implementing TransformTypeInterface";
+      !body->getArgumentTypes()[0].isa<TransformHandleTypeInterface>()) {
+    return op->emitOpError()
+           << "expects the entry block to have one argument "
+              "of type implementing TransformHandleTypeInterface";
   }
 
   if (auto *parent =
@@ -469,7 +470,7 @@ void transform::detail::getParamProducerTransformOpTraitEffects(
   bool hasPayloadOperands = false;
   for (Value operand : op->getOperands()) {
     onlyReadsHandle(operand, effects);
-    if (operand.getType().isa<TransformTypeInterface>())
+    if (operand.getType().isa<TransformHandleTypeInterface>())
       hasPayloadOperands = true;
   }
   if (hasPayloadOperands)

@@ -129,8 +129,8 @@ class TransformTypeInterfaceBase<string cppClass, string cppObjectType>
   }];
 }
 
-def TransformTypeInterface
-    : TransformTypeInterfaceBase<"TransformTypeInterface",
+def TransformHandleTypeInterface
+    : TransformTypeInterfaceBase<"TransformHandleTypeInterface",
                                  "::mlir::Operation *"> {
   let description = [{
     Types that can be used for the Transform dialect handle values. Such types

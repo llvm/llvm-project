@@ -73,7 +73,7 @@ transformation for every mapped op ("batched execution"). Deviations from this
 convention are described in the documentation of Transform IR ops.
 
 The transform IR values have transform IR types, which implement either
-[TransformTypeInterface](Transform.md#transformtypeinterface-transformtypeinterface)
+[TransformHandleTypeInterface](Transform.md#transformhandletypeinterface-transformhandletypeinterface)
 or
 [TransformParamTypeInterface](Transform.md##transformparamtypeinterface-transformparamtypeinterface).
 The former interface verifiers properties of payload IR operations associated
@@ -156,7 +156,7 @@ separate dialect extensions if desired.
 Similarly to operations, additional types can be injected into the dialect using
 the same extension mechanism. The types must:
 
-  * Implement exactly one of `TransformTypeInterface`,
+  * Implement exactly one of `TransformHandleTypeInterface`,
     `TransformParamTypeInterface`.
 
 ## Side Effects
