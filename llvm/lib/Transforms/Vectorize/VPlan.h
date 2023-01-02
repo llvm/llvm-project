@@ -1701,10 +1701,8 @@ public:
     setMask(Mask);
   }
 
-  /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPDef *D) {
-    return D->getVPDefID() == VPRecipeBase::VPWidenMemoryInstructionSC;
-  }
+  VP_CLASSOF_IMPL(VPRecipeBase::VPWidenMemoryInstructionSC,
+                  VPValue::VPVMemoryInstructionSC)
 
   /// Return the address accessed by this recipe.
   VPValue *getAddr() const {
