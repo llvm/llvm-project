@@ -161,6 +161,8 @@ def swaprun_net : F<"swaprun:net">, Alias<swaprun>, AliasArgs<["net"]>,
 def verbose : F<"verbose">;
 def wholearchive_flag : F<"wholearchive">,
     HelpText<"Include all object files from all libraries">;
+def release : F<"release">,
+    HelpText<"Set the Checksum in the header of an PE file">;
 
 def force : F<"force">,
     HelpText<"Allow undefined and multiply defined symbols">;
