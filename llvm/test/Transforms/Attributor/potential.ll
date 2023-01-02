@@ -407,7 +407,7 @@ end:
 define internal i32 @may_return_undef(i32 %c) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@may_return_undef
-; CHECK-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32 noundef [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    switch i32 [[C]], label [[OTHERWISE:%.*]] [
 ; CHECK-NEXT:    i32 1, label [[A:%.*]]
 ; CHECK-NEXT:    i32 -1, label [[B:%.*]]
@@ -439,8 +439,8 @@ define i1 @potential_test10(i32 %c) {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@potential_test10
-; CGSCC-SAME: (i32 [[C:%.*]]) #[[ATTR1]] {
-; CGSCC-NEXT:    [[RET:%.*]] = call i32 @may_return_undef(i32 [[C]]) #[[ATTR2]]
+; CGSCC-SAME: (i32 noundef [[C:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:    [[RET:%.*]] = call i32 @may_return_undef(i32 noundef [[C]]) #[[ATTR2]]
 ; CGSCC-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RET]], 0
 ; CGSCC-NEXT:    ret i1 [[CMP]]
 ;
@@ -452,7 +452,7 @@ define i1 @potential_test10(i32 %c) {
 define i32 @optimize_undef_1(i1 %c) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@optimize_undef_1
-; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i1 noundef [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i32 0
@@ -471,7 +471,7 @@ f:
 define i32 @optimize_undef_2(i1 %c) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@optimize_undef_2
-; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i1 noundef [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i32 0
@@ -490,7 +490,7 @@ f:
 define i32 @optimize_undef_3(i1 %c) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@optimize_undef_3
-; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i1 noundef [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i32 0
@@ -523,10 +523,10 @@ define i32 @potential_test11(i1 %c) {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@potential_test11
-; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
-; CGSCC-NEXT:    [[ZERO1:%.*]] = call i32 @optimize_undef_1(i1 [[C]]) #[[ATTR2]]
-; CGSCC-NEXT:    [[ZERO2:%.*]] = call i32 @optimize_undef_2(i1 [[C]]) #[[ATTR2]]
-; CGSCC-NEXT:    [[ZERO3:%.*]] = call i32 @optimize_undef_3(i1 [[C]]) #[[ATTR2]]
+; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:    [[ZERO1:%.*]] = call i32 @optimize_undef_1(i1 noundef [[C]]) #[[ATTR2]]
+; CGSCC-NEXT:    [[ZERO2:%.*]] = call i32 @optimize_undef_2(i1 noundef [[C]]) #[[ATTR2]]
+; CGSCC-NEXT:    [[ZERO3:%.*]] = call i32 @optimize_undef_3(i1 noundef [[C]]) #[[ATTR2]]
 ; CGSCC-NEXT:    [[ACC1:%.*]] = add i32 [[ZERO1]], [[ZERO2]]
 ; CGSCC-NEXT:    [[ACC2:%.*]] = add i32 [[ACC1]], [[ZERO3]]
 ; CGSCC-NEXT:    ret i32 [[ACC2]]
@@ -542,7 +542,7 @@ define i32 @potential_test11(i1 %c) {
 define i32 @optimize_poison_1(i1 %c) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@optimize_poison_1
-; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i1 noundef [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i32 0
@@ -567,8 +567,8 @@ define i32 @potential_test12(i1 %c) {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@potential_test12
-; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
-; CGSCC-NEXT:    [[ZERO:%.*]] = call i32 @optimize_poison_1(i1 [[C]]) #[[ATTR2]]
+; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:    [[ZERO:%.*]] = call i32 @optimize_poison_1(i1 noundef [[C]]) #[[ATTR2]]
 ; CGSCC-NEXT:    ret i32 [[ZERO]]
 ;
   %zero = call i32 @optimize_poison_1(i1 %c)

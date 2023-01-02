@@ -67,7 +67,7 @@ define void @call_non_nounwind(){
 
 define i32 @maybe_throw(i1 zeroext %0) {
 ; CHECK-LABEL: define {{[^@]+}}@maybe_throw
-; CHECK-SAME: (i1 zeroext [[TMP0:%.*]]) {
+; CHECK-SAME: (i1 noundef zeroext [[TMP0:%.*]]) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[TMP2:%.*]], label [[TMP3:%.*]]
 ; CHECK:       2:
 ; CHECK-NEXT:    tail call void @__cxa_rethrow()
