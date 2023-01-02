@@ -4,9 +4,8 @@
 ; Basic pattern
 define i8 @t0(i8 %x, i1 %cond) {
 ; CHECK-LABEL: @t0(
-; CHECK-NEXT:    [[COND_SPLAT:%.*]] = sext i1 [[COND:%.*]] to i8
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[COND_SPLAT]], [[X:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[SUB]], [[COND_SPLAT]]
+; CHECK-NEXT:    [[X_NEG:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = select i1 [[COND:%.*]], i8 [[X_NEG]], i8 [[X]]
 ; CHECK-NEXT:    ret i8 [[XOR]]
 ;
   %cond.splat = sext i1 %cond to i8
@@ -16,9 +15,8 @@ define i8 @t0(i8 %x, i1 %cond) {
 }
 define <2 x i8> @t0_vec(<2 x i8> %x, <2 x i1> %cond) {
 ; CHECK-LABEL: @t0_vec(
-; CHECK-NEXT:    [[COND_SPLAT:%.*]] = sext <2 x i1> [[COND:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[SUB:%.*]] = add <2 x i8> [[COND_SPLAT]], [[X:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[SUB]], [[COND_SPLAT]]
+; CHECK-NEXT:    [[X_NEG:%.*]] = sub <2 x i8> zeroinitializer, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i8> [[X_NEG]], <2 x i8> [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[XOR]]
 ;
   %cond.splat = sext <2 x i1> %cond to <2 x i8>
@@ -30,10 +28,8 @@ define <2 x i8> @t0_vec(<2 x i8> %x, <2 x i1> %cond) {
 ; Two different extensions are fine
 define i8 @t1(i8 %x, i1 %cond) {
 ; CHECK-LABEL: @t1(
-; CHECK-NEXT:    [[COND_SPLAT0:%.*]] = sext i1 [[COND:%.*]] to i8
-; CHECK-NEXT:    [[COND_SPLAT1:%.*]] = sext i1 [[COND]] to i8
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[COND_SPLAT0]], [[X:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[SUB]], [[COND_SPLAT1]]
+; CHECK-NEXT:    [[X_NEG:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = select i1 [[COND:%.*]], i8 [[X_NEG]], i8 [[X]]
 ; CHECK-NEXT:    ret i8 [[XOR]]
 ;
   %cond.splat0 = sext i1 %cond to i8
@@ -89,10 +85,9 @@ define <2 x i8> @t3_vec(<2 x i8> %x, <2 x i2> %cond) {
 ; xor is not commutative here because of complexity ordering
 define i8 @xor.commuted(i1 %cond) {
 ; CHECK-LABEL: @xor.commuted(
-; CHECK-NEXT:    [[COND_SPLAT:%.*]] = sext i1 [[COND:%.*]] to i8
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @gen.i8()
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[X]], [[COND_SPLAT]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[SUB]], [[COND_SPLAT]]
+; CHECK-NEXT:    [[X_NEG:%.*]] = sub i8 0, [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = select i1 [[COND:%.*]], i8 [[X_NEG]], i8 [[X]]
 ; CHECK-NEXT:    ret i8 [[XOR]]
 ;
   %cond.splat = sext i1 %cond to i8
@@ -107,8 +102,8 @@ define i8 @extrause01_v1(i8 %x, i1 %cond) {
 ; CHECK-LABEL: @extrause01_v1(
 ; CHECK-NEXT:    [[COND_SPLAT:%.*]] = sext i1 [[COND:%.*]] to i8
 ; CHECK-NEXT:    call void @use.i8(i8 [[COND_SPLAT]])
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[COND_SPLAT]], [[X:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[SUB]], [[COND_SPLAT]]
+; CHECK-NEXT:    [[X_NEG:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = select i1 [[COND]], i8 [[X_NEG]], i8 [[X]]
 ; CHECK-NEXT:    ret i8 [[XOR]]
 ;
   %cond.splat = sext i1 %cond to i8
@@ -153,9 +148,8 @@ define i8 @extrause001_v2(i8 %x, i1 %cond) {
 ; CHECK-LABEL: @extrause001_v2(
 ; CHECK-NEXT:    [[COND_SPLAT0:%.*]] = sext i1 [[COND:%.*]] to i8
 ; CHECK-NEXT:    call void @use.i8(i8 [[COND_SPLAT0]])
-; CHECK-NEXT:    [[COND_SPLAT1:%.*]] = sext i1 [[COND]] to i8
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[COND_SPLAT0]], [[X:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[SUB]], [[COND_SPLAT1]]
+; CHECK-NEXT:    [[X_NEG:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = select i1 [[COND]], i8 [[X_NEG]], i8 [[X]]
 ; CHECK-NEXT:    ret i8 [[XOR]]
 ;
   %cond.splat0 = sext i1 %cond to i8
@@ -167,11 +161,10 @@ define i8 @extrause001_v2(i8 %x, i1 %cond) {
 }
 define i8 @extrause010_v2(i8 %x, i1 %cond) {
 ; CHECK-LABEL: @extrause010_v2(
-; CHECK-NEXT:    [[COND_SPLAT0:%.*]] = sext i1 [[COND:%.*]] to i8
-; CHECK-NEXT:    [[COND_SPLAT1:%.*]] = sext i1 [[COND]] to i8
+; CHECK-NEXT:    [[COND_SPLAT1:%.*]] = sext i1 [[COND:%.*]] to i8
 ; CHECK-NEXT:    call void @use.i8(i8 [[COND_SPLAT1]])
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[COND_SPLAT0]], [[X:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[SUB]], [[COND_SPLAT1]]
+; CHECK-NEXT:    [[X_NEG:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = select i1 [[COND]], i8 [[X_NEG]], i8 [[X]]
 ; CHECK-NEXT:    ret i8 [[XOR]]
 ;
   %cond.splat0 = sext i1 %cond to i8
@@ -187,8 +180,8 @@ define i8 @extrause011_v2(i8 %x, i1 %cond) {
 ; CHECK-NEXT:    call void @use.i8(i8 [[COND_SPLAT0]])
 ; CHECK-NEXT:    [[COND_SPLAT1:%.*]] = sext i1 [[COND]] to i8
 ; CHECK-NEXT:    call void @use.i8(i8 [[COND_SPLAT1]])
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[COND_SPLAT0]], [[X:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[SUB]], [[COND_SPLAT1]]
+; CHECK-NEXT:    [[X_NEG:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = select i1 [[COND]], i8 [[X_NEG]], i8 [[X]]
 ; CHECK-NEXT:    ret i8 [[XOR]]
 ;
   %cond.splat0 = sext i1 %cond to i8
@@ -202,10 +195,10 @@ define i8 @extrause011_v2(i8 %x, i1 %cond) {
 define i8 @extrause100_v2(i8 %x, i1 %cond) {
 ; CHECK-LABEL: @extrause100_v2(
 ; CHECK-NEXT:    [[COND_SPLAT0:%.*]] = sext i1 [[COND:%.*]] to i8
-; CHECK-NEXT:    [[COND_SPLAT1:%.*]] = sext i1 [[COND]] to i8
 ; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[COND_SPLAT0]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[SUB]])
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[SUB]], [[COND_SPLAT1]]
+; CHECK-NEXT:    [[X_NEG:%.*]] = sub i8 0, [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = select i1 [[COND]], i8 [[X_NEG]], i8 [[X]]
 ; CHECK-NEXT:    ret i8 [[XOR]]
 ;
   %cond.splat0 = sext i1 %cond to i8
@@ -219,10 +212,10 @@ define i8 @extrause101_v2(i8 %x, i1 %cond) {
 ; CHECK-LABEL: @extrause101_v2(
 ; CHECK-NEXT:    [[COND_SPLAT0:%.*]] = sext i1 [[COND:%.*]] to i8
 ; CHECK-NEXT:    call void @use.i8(i8 [[COND_SPLAT0]])
-; CHECK-NEXT:    [[COND_SPLAT1:%.*]] = sext i1 [[COND]] to i8
 ; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[COND_SPLAT0]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[SUB]])
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[SUB]], [[COND_SPLAT1]]
+; CHECK-NEXT:    [[X_NEG:%.*]] = sub i8 0, [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = select i1 [[COND]], i8 [[X_NEG]], i8 [[X]]
 ; CHECK-NEXT:    ret i8 [[XOR]]
 ;
   %cond.splat0 = sext i1 %cond to i8
