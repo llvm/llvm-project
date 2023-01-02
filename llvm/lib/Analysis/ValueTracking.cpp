@@ -83,15 +83,6 @@ using namespace llvm::PatternMatch;
 static cl::opt<unsigned> DomConditionsMaxUses("dom-conditions-max-uses",
                                               cl::Hidden, cl::init(20));
 
-// According to the LangRef, branching on a poison condition is absolutely
-// immediate full UB.  However, historically we haven't implemented that
-// consistently as we had an important transformation (non-trivial unswitch)
-// which introduced instances of branch on poison/undef to otherwise well
-// defined programs.  This issue has since been fixed, but the flag is
-// temporarily retained to easily diagnose potential regressions.
-static cl::opt<bool> BranchOnPoisonAsUB("branch-on-poison-as-ub",
-                                        cl::Hidden, cl::init(true));
-
 
 /// Returns the bitwidth of the given scalar or pointer type. For vector types,
 /// returns the element type's bitwidth.
@@ -5755,6 +5746,15 @@ void llvm::getGuaranteedWellDefinedOps(
       if (I->getFunction()->hasRetAttribute(Attribute::NoUndef))
         Operands.insert(I->getOperand(0));
       break;
+    case Instruction::Switch:
+      Operands.insert(cast<SwitchInst>(I)->getCondition());
+      break;
+    case Instruction::Br: {
+      auto *BR = cast<BranchInst>(I);
+      if (BR->isConditional())
+        Operands.insert(BR->getCondition());
+      break;
+    }
     default:
       break;
   }
@@ -5771,16 +5771,6 @@ void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
   case Instruction::SRem:
     Operands.insert(I->getOperand(1));
     break;
-  case Instruction::Switch:
-    if (BranchOnPoisonAsUB)
-      Operands.insert(cast<SwitchInst>(I)->getCondition());
-    break;
-  case Instruction::Br: {
-    auto *BR = cast<BranchInst>(I);
-    if (BranchOnPoisonAsUB && BR->isConditional())
-      Operands.insert(BR->getCondition());
-    break;
-  }
   default:
     break;
   }
