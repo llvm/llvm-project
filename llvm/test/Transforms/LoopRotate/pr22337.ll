@@ -5,7 +5,7 @@
 
 define void @f() {
 ; CHECK-LABEL: define void @f(
-; CHECK: getelementptr i8, i8* @a, i32 0
+; CHECK: getelementptr i8, i8* @a, i32 1
 entry:
   br label %for.preheader
 
@@ -16,7 +16,7 @@ for.body:
   br i1 undef, label %if.end, label %if.then8
 
 if.end:
-  %arrayidx = getelementptr i8, i8* @a, i32 0
+  %arrayidx = getelementptr i8, i8* @a, i32 1
   br label %for.preheader
 
 if.then8:
