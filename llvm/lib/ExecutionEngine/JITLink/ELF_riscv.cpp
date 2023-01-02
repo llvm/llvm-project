@@ -338,7 +338,7 @@ private:
                            FixupAddress.getValue())) +
                        E.getAddend())
                           .getValue();
-      *(little16_t *)FixupPtr = static_cast<uint32_t>(Value);
+      *(little16_t *)FixupPtr = static_cast<uint16_t>(Value);
       break;
     }
     case R_RISCV_ADD8: {
