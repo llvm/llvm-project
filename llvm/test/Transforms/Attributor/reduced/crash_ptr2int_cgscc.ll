@@ -5,7 +5,7 @@
 define void @_ZN6openmc13FilterBinIterC1ERKNS_5TallyERNS_8ParticleE(i1 %c1, i1 %c2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind
 ; CHECK-LABEL: define {{[^@]+}}@_ZN6openmc13FilterBinIterC1ERKNS_5TallyERNS_8ParticleE
-; CHECK-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (i1 noundef [[C1:%.*]], i1 [[C2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[D_I_I_I_I:%.*]] = alloca [3 x double], align 8
 ; CHECK-NEXT:    br i1 [[C1]], label [[FOR_BODY_LR_PH_I:%.*]], label [[_ZN6OPENMC13FILTERBINITERC2ERKNS_5TALLYERNS_8PARTICLEE_INTERNALIZED_EXIT:%.*]]

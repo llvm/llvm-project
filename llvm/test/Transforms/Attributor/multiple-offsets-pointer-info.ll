@@ -296,7 +296,7 @@ entry:
 define i8 @phi_gep_simplifiable_1(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@phi_gep_simplifiable_1
-; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (i1 noundef [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    br i1 [[CND1]], label [[THEN:%.*]], label [[ELSE:%.*]]
@@ -342,7 +342,7 @@ join:
 define i8 @phi_gep_simplifiable_2(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@phi_gep_simplifiable_2
-; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (i1 noundef [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    br i1 [[CND1]], label [[THEN:%.*]], label [[ELSE:%.*]]
@@ -383,7 +383,7 @@ join:
 define i8 @phi_gep_not_simplifiable_1(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@phi_gep_not_simplifiable_1
-; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (i1 noundef [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
@@ -422,7 +422,7 @@ join:
 define i8 @phi_gep_not_simplifiable_2(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@phi_gep_not_simplifiable_2
-; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (i1 noundef [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
@@ -460,7 +460,7 @@ join:
 define i8 @phi_offsets(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@phi_offsets
-; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i1 noundef [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    br i1 [[CND1]], label [[THEN:%.*]], label [[ELSE:%.*]]
