@@ -237,6 +237,14 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         DefaultDest->removePredecessor(ParentBB);
         i = SI->removeCase(i);
         e = SI->case_end();
+
+        // Removing this case may have made the condition constant. In that
+        // case, update CI and restart iteration through the cases.
+        if (auto *NewCI = dyn_cast<ConstantInt>(SI->getCondition())) {
+          CI = NewCI;
+          i = SI->case_begin();
+        }
+
         Changed = true;
         continue;
       }
