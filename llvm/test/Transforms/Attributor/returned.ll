@@ -1282,7 +1282,7 @@ declare void @noreturn() noreturn;
 define i32 @deadblockphi3(i32 %A, i1 %c) #0 {
 ; TUNIT: Function Attrs: noinline nounwind uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@deadblockphi3
-; TUNIT-SAME: (i32 returned [[A:%.*]], i1 [[C:%.*]]) #[[ATTR5]] {
+; TUNIT-SAME: (i32 returned [[A:%.*]], i1 noundef [[C:%.*]]) #[[ATTR5]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    br i1 [[C]], label [[R:%.*]], label [[UNREACHABLECALL:%.*]]
 ; TUNIT:       unreachablecall:
@@ -1297,7 +1297,7 @@ define i32 @deadblockphi3(i32 %A, i1 %c) #0 {
 ;
 ; CGSCC: Function Attrs: noinline nounwind uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@deadblockphi3
-; CGSCC-SAME: (i32 returned [[A:%.*]], i1 [[C:%.*]]) #[[ATTR4]] {
+; CGSCC-SAME: (i32 returned [[A:%.*]], i1 noundef [[C:%.*]]) #[[ATTR4]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    br i1 [[C]], label [[R:%.*]], label [[UNREACHABLECALL:%.*]]
 ; CGSCC:       unreachablecall:

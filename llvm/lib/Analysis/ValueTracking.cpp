@@ -5746,6 +5746,15 @@ void llvm::getGuaranteedWellDefinedOps(
       if (I->getFunction()->hasRetAttribute(Attribute::NoUndef))
         Operands.insert(I->getOperand(0));
       break;
+    case Instruction::Switch:
+      Operands.insert(cast<SwitchInst>(I)->getCondition());
+      break;
+    case Instruction::Br: {
+      auto *BR = cast<BranchInst>(I);
+      if (BR->isConditional())
+        Operands.insert(BR->getCondition());
+      break;
+    }
     default:
       break;
   }
@@ -5762,15 +5771,6 @@ void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
   case Instruction::SRem:
     Operands.insert(I->getOperand(1));
     break;
-  case Instruction::Switch:
-    Operands.insert(cast<SwitchInst>(I)->getCondition());
-    break;
-  case Instruction::Br: {
-    auto *BR = cast<BranchInst>(I);
-    if (BR->isConditional())
-      Operands.insert(BR->getCondition());
-    break;
-  }
   default:
     break;
   }

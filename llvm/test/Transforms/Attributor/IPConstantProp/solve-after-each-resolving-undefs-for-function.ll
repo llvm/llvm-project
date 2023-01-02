@@ -5,7 +5,7 @@
 define internal i32 @testf(i1 %c) {
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@testf
-; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    br i1 [[C]], label [[IF_COND:%.*]], label [[IF_END:%.*]]
 ; CGSCC:       if.cond:
@@ -35,7 +35,7 @@ define internal i32 @test1(i1 %c) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    br label [[IF_THEN:%.*]]
 ; CGSCC:       if.then:
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @testf(i1 [[C]]) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @testf(i1 noundef [[C]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    [[RES:%.*]] = icmp eq i32 [[CALL]], 10
 ; CGSCC-NEXT:    br i1 [[RES]], label [[RET1:%.*]], label [[RET2:%.*]]
 ; CGSCC:       ret1:
