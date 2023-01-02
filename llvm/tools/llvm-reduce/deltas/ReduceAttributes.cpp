@@ -42,7 +42,7 @@ using namespace llvm;
 
 namespace {
 
-using AttrPtrVecTy = std::vector<const Attribute *>;
+using AttrPtrVecTy = std::vector<Attribute>;
 using AttrPtrIdxVecVecTy = std::pair<unsigned, AttrPtrVecTy>;
 using AttrPtrVecVecTy = SmallVector<AttrPtrIdxVecVecTy, 3>;
 
@@ -94,24 +94,46 @@ public:
     }
   }
 
+  // FIXME: Should just directly use AttrBuilder instead of going through
+  // AttrPtrVecTy
   void visitAttributeSet(const AttributeSet &AS,
                          AttrPtrVecTy &AttrsToPreserve) {
     assert(AttrsToPreserve.empty() && "Should not be sharing vectors.");
     AttrsToPreserve.reserve(AS.getNumAttributes());
-    for (const Attribute &A : AS)
+
+    // Optnone requires noinline, so removing noinline requires removing the
+    // pair.
+    Attribute NoInline = AS.getAttribute(Attribute::NoInline);
+    bool RemoveNoInline = false;
+    if (NoInline.isValid()) {
+      RemoveNoInline = !O.shouldKeep();
+      if (!RemoveNoInline)
+        AttrsToPreserve.emplace_back(NoInline);
+    }
+
+    for (Attribute A : AS) {
+      if (A.isEnumAttribute()) {
+        Attribute::AttrKind Kind = A.getKindAsEnum();
+        if (Kind == Attribute::NoInline)
+          continue;
+
+        if (RemoveNoInline && Kind == Attribute::OptimizeNone)
+          continue;
+      }
+
       if (O.shouldKeep())
-        AttrsToPreserve.emplace_back(&A);
+        AttrsToPreserve.emplace_back(A);
+    }
   }
 };
 
 } // namespace
 
-AttributeSet
-convertAttributeRefToAttributeSet(LLVMContext &C,
-                                  ArrayRef<const Attribute *> Attributes) {
+AttributeSet convertAttributeRefToAttributeSet(LLVMContext &C,
+                                               ArrayRef<Attribute> Attributes) {
   AttrBuilder B(C);
-  for (const Attribute *A : Attributes)
-    B.addAttribute(*A);
+  for (Attribute A : Attributes)
+    B.addAttribute(A);
   return AttributeSet::get(C, B);
 }
 
