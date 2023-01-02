@@ -322,6 +322,39 @@ define i1 @compare_geps_same_indices_different_types(ptr %a, ptr %b, i64 %idx) {
   ret i1 %c
 }
 
+define i1 @compare_gep_with_base(ptr %p, i64 %idx) {
+; CHECK-LABEL: @compare_gep_with_base(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[IDX:%.*]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %gep = getelementptr inbounds i32, ptr %p, i64 %idx
+  %c = icmp eq ptr %gep, %p
+  ret i1 %c
+}
+
+define <2 x i1> @compare_gep_with_base_vector1(<2 x ptr> %p, i64 %idx) {
+; CHECK-LABEL: @compare_gep_with_base_vector1(
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[IDX:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[DOTSPLATINSERT]], <i64 2, i64 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[C:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %gep = getelementptr inbounds i32, <2 x ptr> %p, i64 %idx
+  %c = icmp eq <2 x ptr> %gep, %p
+  ret <2 x i1> %c
+}
+
+define <2 x i1> @compare_gep_with_base_vector2(<2 x ptr> %p, <2 x i64> %idx) {
+; CHECK-LABEL: @compare_gep_with_base_vector2(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i64> [[IDX:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %gep = getelementptr inbounds i32, <2 x ptr> %p, <2 x i64> %idx
+  %c = icmp eq <2 x ptr> %gep, %p
+  ret <2 x i1> %c
+}
+
 define <4 x i1> @compare_geps_same_indices_scalar_vector_base_mismatch(ptr %ptr, <4 x ptr> %ptrs) {
 ; CHECK-LABEL: @compare_geps_same_indices_scalar_vector_base_mismatch(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i16, <4 x ptr> [[PTRS:%.*]], <4 x i64> <i64 1, i64 2, i64 3, i64 4>
