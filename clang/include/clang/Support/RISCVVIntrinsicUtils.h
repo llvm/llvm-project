@@ -11,10 +11,10 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
+#include <optional>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -27,7 +27,7 @@ class raw_ostream;
 namespace clang {
 namespace RISCV {
 
-using VScaleVal = llvm::Optional<unsigned>;
+using VScaleVal = std::optional<unsigned>;
 
 // Modifier for vector type.
 enum class VectorTypeModifier : uint8_t {
@@ -197,7 +197,7 @@ struct PrototypeDescriptor {
   static const PrototypeDescriptor Mask;
   static const PrototypeDescriptor Vector;
   static const PrototypeDescriptor VL;
-  static llvm::Optional<PrototypeDescriptor>
+  static std::optional<PrototypeDescriptor>
   parsePrototypeDescriptor(llvm::StringRef PrototypeStr);
 };
 
@@ -238,7 +238,7 @@ struct LMULType {
   LMULType(int Log2LMUL);
   // Return the C/C++ string representation of LMUL
   std::string str() const;
-  llvm::Optional<unsigned> getScale(unsigned ElementBitwidth) const;
+  std::optional<unsigned> getScale(unsigned ElementBitwidth) const;
   void MulLog2LMUL(int Log2LMUL);
 };
 
@@ -354,11 +354,11 @@ public:
   /// and LMUL with type transformers). It also record result of type in legal
   /// or illegal set to avoid compute the same config again. The result maybe
   /// have illegal RVVType.
-  llvm::Optional<RVVTypes>
+  std::optional<RVVTypes>
   computeTypes(BasicType BT, int Log2LMUL, unsigned NF,
                llvm::ArrayRef<PrototypeDescriptor> Prototype);
-  llvm::Optional<RVVTypePtr> computeType(BasicType BT, int Log2LMUL,
-                                         PrototypeDescriptor Proto);
+  std::optional<RVVTypePtr> computeType(BasicType BT, int Log2LMUL,
+                                        PrototypeDescriptor Proto);
 };
 
 enum PolicyScheme : uint8_t {
