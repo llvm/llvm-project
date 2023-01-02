@@ -76,8 +76,7 @@ define <2 x i32> @and_not_sext_to_sel(<2 x i32> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @and_not_sext_to_sel(
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i1> [[Y:%.*]] to <2 x i32>
 ; CHECK-NEXT:    call void @use_vec(<2 x i32> [[SEXT]])
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i32> [[SEXT]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[NOT]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[Y]], <2 x i32> zeroinitializer, <2 x i32> [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %sext = sext <2 x i1> %y to <2 x i32>
@@ -94,7 +93,7 @@ define i32 @and_not_sext_to_sel_commute(i32 %px, i1 %y) {
 ; CHECK-NEXT:    call void @use(i32 [[SEXT]])
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[SEXT]], -1
 ; CHECK-NEXT:    call void @use(i32 [[NOT]])
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[X]], [[NOT]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[Y]], i32 0, i32 [[X]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x = mul i32 %px, %px ; thwart complexity-based canonicalization
@@ -105,6 +104,8 @@ define i32 @and_not_sext_to_sel_commute(i32 %px, i1 %y) {
   %r = and i32 %x, %not
   ret i32 %r
 }
+
+; negative test - must be 'not'
 
 define i32 @and_xor_sext_to_sel(i32 %x, i1 %y) {
 ; CHECK-LABEL: @and_xor_sext_to_sel(
@@ -120,6 +121,8 @@ define i32 @and_xor_sext_to_sel(i32 %x, i1 %y) {
   %r = and i32 %xor, %x
   ret i32 %r
 }
+
+; negative test - must be 'sext'
 
 define i32 @and_not_zext_to_sel(i32 %x, i1 %y) {
 ; CHECK-LABEL: @and_not_zext_to_sel(
