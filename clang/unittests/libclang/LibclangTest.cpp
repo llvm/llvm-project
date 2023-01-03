@@ -20,6 +20,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #define DEBUG_TYPE "libclang-test"
 
@@ -922,7 +923,7 @@ void Class1::fun() {}
   ClangTU = clang_parseTranslationUnit(Index, fileName.c_str(), Args, 1,
                                        nullptr, 0, TUFlags);
 
-  llvm::Optional<CXCursor> typeRefCsr;
+  std::optional<CXCursor> typeRefCsr;
   Traverse([&](CXCursor cursor, CXCursor parent) -> CXChildVisitResult {
     if (cursor.kind == CXCursor_TypeRef) {
       typeRefCsr.emplace(cursor);
