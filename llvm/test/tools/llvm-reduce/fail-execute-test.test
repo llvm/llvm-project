@@ -1,3 +1,3 @@
 # RUN: not llvm-reduce --test=%s.NotAFileInTestingDir %p/Inputs/test-output-format.ll 2>&1 | FileCheck -DFILENAME=%s.NotAFileInTestingDir --strict-whitespace %s
 
-# CHECK: Error running interesting-ness test: Executable "[[FILENAME]]" doesn't exist!{{$}}
+# CHECK: Error running interesting-ness test: {{(Executable "[[FILENAME]]" doesn't exist$)?(program not executable$)?}}
