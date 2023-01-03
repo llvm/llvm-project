@@ -579,7 +579,6 @@ void IRPromoter::Cleanup() {
   LLVM_DEBUG(dbgs() << "IR Promotion: Cleanup..\n");
   // Some zexts will now have become redundant, along with their trunc
   // operands, so remove them.
-  // Some zexts need to be replaced with truncate if src bitwidth is larger.
   for (auto *V : Visited) {
     if (!isa<ZExtInst>(V))
       continue;
@@ -593,11 +592,6 @@ void IRPromoter::Cleanup() {
       LLVM_DEBUG(dbgs() << "IR Promotion: Removing unnecessary cast: " << *ZExt
                         << "\n");
       ReplaceAllUsersOfWith(ZExt, Src);
-      continue;
-    } else if (ZExt->getSrcTy()->getScalarSizeInBits() > PromotedWidth) {
-      IRBuilder<> Builder{ZExt};
-      Value *Trunc = Builder.CreateTrunc(Src, ZExt->getDestTy());
-      ReplaceAllUsersOfWith(ZExt, Trunc);
       continue;
     }
 
@@ -634,6 +628,8 @@ void IRPromoter::ConvertTruncs() {
     ConstantInt *Mask =
         ConstantInt::get(SrcTy, APInt::getMaxValue(NumBits).getZExtValue());
     Value *Masked = Builder.CreateAnd(Trunc->getOperand(0), Mask);
+    if (SrcTy != ExtTy)
+      Masked = Builder.CreateTrunc(Masked, ExtTy);
 
     if (auto *I = dyn_cast<Instruction>(Masked))
       NewInsts.insert(I);
