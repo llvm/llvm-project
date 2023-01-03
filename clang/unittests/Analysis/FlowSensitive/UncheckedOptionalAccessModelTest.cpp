@@ -1498,6 +1498,23 @@ TEST_P(UncheckedOptionalAccessTest, NulloptConstructor) {
   )");
 }
 
+TEST_P(UncheckedOptionalAccessTest, NulloptConstructorWithSugaredType) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+    template <typename T>
+    using wrapper = T;
+
+    template <typename T>
+    wrapper<T> wrap(T);
+
+    void target() {
+      $ns::$optional<int> opt(wrap($ns::nullopt));
+      opt.value(); // [[unsafe]]
+    }
+  )");
+}
+
 TEST_P(UncheckedOptionalAccessTest, InPlaceConstructor) {
   ExpectDiagnosticsFor(R"(
     #include "unchecked_optional_access_test.h"
