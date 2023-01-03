@@ -172,6 +172,7 @@ bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
 
   llvm::APInt matched_value(llvm::APInt::getNullValue(64));
 
+  // Look for an exact case match first.
   for (auto val_name : *m_cases) {
     llvm::APInt case_value = val_name.first;
     // Print single valued sets without using enclosing brackets.
@@ -182,6 +183,11 @@ bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
       dest.assign(ss.GetData());
       return true;
     }
+  }
+
+  // Look for ORed cases next.
+  for (auto val_name : *m_cases) {
+    llvm::APInt case_value = val_name.first;
     // Don't display the zero case in an option set unless it's the
     // only value.
     if (case_value == 0 && value != 0)
