@@ -29,6 +29,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
 
 using namespace mlir;
@@ -331,6 +332,20 @@ LogicalResult ModuleImport::convertFunctions() {
   return success();
 }
 
+void ModuleImport::setNonDebugMetadataAttrs(llvm::Instruction *inst,
+                                            Operation *op) {
+  SmallVector<std::pair<unsigned, llvm::MDNode *>> allMetadata;
+  inst->getAllMetadataOtherThanDebugLoc(allMetadata);
+  for (auto &[kind, node] : allMetadata) {
+    if (!iface.isConvertibleMetadata(kind))
+      continue;
+    if (failed(iface.setMetadataAttrs(builder, kind, node, op, *this))) {
+      Location loc = debugImporter->translateLoc(inst->getDebugLoc());
+      emitWarning(loc) << "unhandled metadata (" << kind << ") " << diag(*inst);
+    }
+  }
+}
+
 void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
                                         Operation *op) const {
   auto iface = cast<FastmathFlagsInterface>(op);
@@ -625,6 +640,8 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     // resulting in a conflicting `valueMapping` entry.
     llvm::Instruction *inst = constExpr->getAsInstruction();
     auto guard = llvm::make_scope_exit([&]() {
+      assert(noResultOpMapping.find(inst) == noResultOpMapping.end() &&
+             "expected constant expression to return a result");
       valueMapping.erase(inst);
       inst->deleteValue();
     });
@@ -833,17 +850,19 @@ LogicalResult ModuleImport::convertInstruction(OpBuilder &odsBuilder,
       succBlockArgs.push_back(blockArgs);
     }
 
-    if (brInst->isConditional()) {
-      FailureOr<Value> condition = convertValue(brInst->getCondition());
-      if (failed(condition))
-        return failure();
-      builder.create<LLVM::CondBrOp>(loc, *condition, succBlocks.front(),
-                                     succBlockArgs.front(), succBlocks.back(),
-                                     succBlockArgs.back());
-    } else {
-      builder.create<LLVM::BrOp>(loc, succBlockArgs.front(),
-                                 succBlocks.front());
+    if (!brInst->isConditional()) {
+      auto brOp = builder.create<LLVM::BrOp>(loc, succBlockArgs.front(),
+                                             succBlocks.front());
+      mapNoResultOp(inst, brOp);
+      return success();
     }
+    FailureOr<Value> condition = convertValue(brInst->getCondition());
+    if (failed(condition))
+      return failure();
+    auto condBrOp = builder.create<LLVM::CondBrOp>(
+        loc, *condition, succBlocks.front(), succBlockArgs.front(),
+        succBlocks.back(), succBlockArgs.back());
+    mapNoResultOp(inst, condBrOp);
     return success();
   }
   if (inst->getOpcode() == llvm::Instruction::Switch) {
@@ -874,9 +893,10 @@ LogicalResult ModuleImport::convertInstruction(OpBuilder &odsBuilder,
       caseBlocks[it.index()] = lookupBlock(succBB);
     }
 
-    builder.create<SwitchOp>(loc, *condition, lookupBlock(defaultBB),
-                             defaultBlockArgs, caseValues, caseBlocks,
-                             caseOperandRefs);
+    auto switchOp = builder.create<SwitchOp>(
+        loc, *condition, lookupBlock(defaultBB), defaultBlockArgs, caseValues,
+        caseBlocks, caseOperandRefs);
+    mapNoResultOp(inst, switchOp);
     return success();
   }
   if (inst->getOpcode() == llvm::Instruction::PHI) {
@@ -903,6 +923,8 @@ LogicalResult ModuleImport::convertInstruction(OpBuilder &odsBuilder,
     setFastmathFlagsAttr(inst, callOp);
     if (!callInst->getType()->isVoidTy())
       mapValue(inst, callOp.getResult());
+    else
+      mapNoResultOp(inst, callOp);
     return success();
   }
   if (inst->getOpcode() == llvm::Instruction::LandingPad) {
@@ -918,9 +940,9 @@ LogicalResult ModuleImport::convertInstruction(OpBuilder &odsBuilder,
     }
 
     Type type = convertType(lpInst->getType());
-    Value res =
+    auto lpOp =
         builder.create<LandingpadOp>(loc, type, lpInst->isCleanup(), operands);
-    mapValue(inst, res);
+    mapValue(inst, lpOp);
     return success();
   }
   if (inst->getOpcode() == llvm::Instruction::Invoke) {
@@ -951,6 +973,8 @@ LogicalResult ModuleImport::convertInstruction(OpBuilder &odsBuilder,
     }
     if (!invokeInst->getType()->isVoidTy())
       mapValue(inst, invokeOp.getResults().front());
+    else
+      mapNoResultOp(inst, invokeOp);
     return success();
   }
   if (inst->getOpcode() == llvm::Instruction::GetElementPtr) {
@@ -973,9 +997,9 @@ LogicalResult ModuleImport::convertInstruction(OpBuilder &odsBuilder,
     }
 
     Type type = convertType(inst->getType());
-    Value res = builder.create<GEPOp>(loc, type, sourceElementType, *basePtr,
-                                      indices, gepInst->isInBounds());
-    mapValue(inst, res);
+    auto gepOp = builder.create<GEPOp>(loc, type, sourceElementType, *basePtr,
+                                       indices, gepInst->isInBounds());
+    mapValue(inst, gepOp);
     return success();
   }
 
@@ -1131,6 +1155,16 @@ LogicalResult ModuleImport::processBasicBlock(llvm::BasicBlock *bb,
   for (llvm::Instruction &inst : *bb) {
     if (failed(processInstruction(&inst)))
       return failure();
+
+    // Set the non-debug metadata attributes on the imported operation and emit
+    // a warning if an instruction other than a phi instruction is dropped
+    // during the import.
+    if (Operation *op = lookupOperation(&inst)) {
+      setNonDebugMetadataAttrs(&inst, op);
+    } else if (inst.getOpcode() != llvm::Instruction::PHI) {
+      Location loc = debugImporter->translateLoc(inst.getDebugLoc());
+      emitWarning(loc) << "dropped instruction " << diag(inst);
+    }
   }
   return success();
 }
