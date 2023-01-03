@@ -2981,6 +2981,8 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
 
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
     auto &RFI = OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared];
+    if (!RFI.Declaration)
+      return;
 
     Attributor::SimplifictionCallbackTy SCB =
         [](const IRPosition &, const AbstractAttribute *,
@@ -3085,6 +3087,9 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
   ChangeStatus updateImpl(Attributor &A) override {
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
     auto &RFI = OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared];
+    if (!RFI.Declaration)
+      return ChangeStatus::UNCHANGED;
+
     Function *F = getAnchorScope();
 
     auto NumMallocCalls = MallocCalls.size();
