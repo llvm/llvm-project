@@ -107,12 +107,12 @@ TEST(ThreadSafeModuleTest, WithModuleDoConst) {
   TSM.withModuleDo([](const Module &M) {});
 }
 
-TEST(ThreadSafeModuleTest, TakingModuleDo) {
-  // Test takingModuleDo.
+TEST(ThreadSafeModuleTest, ConsumingModuleDo) {
+  // Test consumingModuleDo.
   ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
   ThreadSafeModule TSM(std::make_unique<Module>("M", *TSCtx.getContext()),
                        TSCtx);
-  TSM.takingModuleDo([](std::unique_ptr<Module> M) {});
+  TSM.consumingModuleDo([](std::unique_ptr<Module> M) {});
 }
 
 } // end anonymous namespace
