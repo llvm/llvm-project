@@ -45,7 +45,6 @@ static cl::opt<bool> PreserveDebugEnvironment(
              "debugging (crash reports, llvm-symbolizer and core dumps)"),
     cl::cat(LLVMReduceOptions));
 
-// FIXME: should be able to do this without other arguments, also add in help.
 static cl::opt<bool>
     PrintDeltaPasses("print-delta-passes",
                      cl::desc("Print list of delta passes, passable to "
