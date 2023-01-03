@@ -662,7 +662,21 @@ private:
                  sourceLocToPosition(SM, Spelled->back().endLocation())};
   }
 
+  static bool shouldPrintCanonicalType(QualType QT) {
+    // The sugared type is more useful in some cases, and the canonical
+    // type in other cases. For now, prefer the sugared type unless
+    // we are printing `decltype(expr)`. This could be refined further
+    // (see https://github.com/clangd/clangd/issues/1298).
+    if (QT->isDecltypeType())
+      return true;
+    if (const AutoType *AT = QT->getContainedAutoType())
+      if (AT->getDeducedType()->isDecltypeType())
+        return true;
+    return false;
+  }
+
   void addTypeHint(SourceRange R, QualType T, llvm::StringRef Prefix) {
+    TypeHintPolicy.PrintCanonicalTypes = shouldPrintCanonicalType(T);
     addTypeHint(R, T, Prefix, TypeHintPolicy);
   }
 
