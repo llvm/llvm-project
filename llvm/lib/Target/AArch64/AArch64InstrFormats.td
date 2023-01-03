@@ -11715,6 +11715,10 @@ multiclass MOPSMemorySetTaggingInsns<bits<2> opcode, string asm> {
   def TN : MOPSMemorySetTagging<opcode, 1, 1, asm # "tn">;
 }
 
+//----------------------------------------------------------------------------
+// 2022 Armv8.9/Armv9.4 Extensions
+//----------------------------------------------------------------------------
+
 //---
 // 2022 Architecture Extensions: General Data Processing (FEAT_CSSC)
 //---
@@ -11778,10 +11782,6 @@ multiclass ComparisonOp<bit isUnsigned, bit isMin, string asm,
                                 !cond(isUnsigned : uimm8_64b,
                                       !not(isUnsigned) : simm8_64b), asm, OpNode>;
 }
-
-//----------------------------------------------------------------------------
-// 2022 Armv8.9/Armv9.4 Extensions
-//----------------------------------------------------------------------------
 
 //---
 // RCPC instructions (FEAT_LRCPC3)
