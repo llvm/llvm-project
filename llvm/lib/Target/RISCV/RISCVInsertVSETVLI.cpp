@@ -260,7 +260,7 @@ static DemandedFields getDemanded(const MachineInstr &MI) {
     Res.LMUL = false;
   }
 
-  // For vmv.s.x and vfmv.s.f, there is only two behaviors, VL = 0 and VL > 0.
+  // For vmv.s.x and vfmv.s.f, there are only two behaviors, VL = 0 and VL > 0.
   if (isScalarMoveInstr(MI)) {
     Res.LMUL = false;
     Res.SEWLMULRatio = false;
@@ -787,7 +787,7 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
 
   DemandedFields Used = getDemanded(MI);
 
-  // For vmv.s.x and vfmv.s.f, there is only two behaviors, VL = 0 and VL > 0.
+  // For vmv.s.x and vfmv.s.f, there are only two behaviors, VL = 0 and VL > 0.
   if (isScalarMoveInstr(MI) && CurInfo.hasEquallyZeroAVL(Require)) {
     Used.VL = false;
     // Additionally, if writing to an implicit_def operand, we don't need to
