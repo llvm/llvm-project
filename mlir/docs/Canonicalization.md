@@ -19,15 +19,28 @@ to capture IR-specific rules for reference.
 
 ## General Design
 
-MLIR has a single canonicalization pass, which iteratively applies
-canonicalization transformations in a greedy way until the IR converges. These
-transformations are defined by the operations themselves, which allows each
-dialect to define its own set of operations and canonicalizations together.
+MLIR has a single canonicalization pass, which iteratively applies the
+canonicalization patterns of all loaded dialects in a greedy way.
+Canonicalization is best-effort and not guaranteed to bring the entire IR in a
+canonical form. It applies patterns until either fixpoint is reached or the
+maximum number of iterations/rewrites (as specified via pass options) is
+exhausted. This is for efficiency reasons and to ensure that faulty patterns
+cannot cause infinite looping.
+
+Canonicalization patterns are registered with the operations themselves, which
+allows each dialect to define its own set of operations and canonicalizations
+together.
 
 Some important things to think about w.r.t. canonicalization patterns:
 
+*   Pass pipelines should not rely on the canonicalizer pass for correctness.
+    They should work correctly with all instances of the canonicalization pass
+    removed.
+
 *   Repeated applications of patterns should converge. Unstable or cyclic
-    rewrites will cause infinite loops in the canonicalizer.
+    rewrites are considered a bug: they can make the canonicalizer pass less
+    predictable and less effective (i.e., some patterns may not be applied) and
+    prevent it from converging.
 
 *   It is generally better to canonicalize towards operations that have fewer
     uses of a value when the operands are duplicated, because some patterns only
