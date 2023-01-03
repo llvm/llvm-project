@@ -6155,9 +6155,8 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
 
       // Move to the outer template scope.
       if (FunctionDecl *FD = dyn_cast<FunctionDecl>(DC)) {
-        // FIXME: We should use `getNonTransparentDeclContext()` here instead
-        // of `getDeclContext()` once we find the invalid test case.
-        if (FD->getFriendObjectKind() && FD->getDeclContext()->isFileContext()){
+        if (FD->getFriendObjectKind() &&
+            FD->getNonTransparentDeclContext()->isFileContext()) {
           DC = FD->getLexicalDeclContext();
           continue;
         }

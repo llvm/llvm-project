@@ -329,6 +329,8 @@ Bug Fixes
 - Fix sanity check when value initializing an empty union so that it takes into
   account anonymous structs which is a GNU extension. This fixes
   `Issue 58800 <https://github.com/llvm/llvm-project/issues/58800>`_
+- Fix an issue that triggers a crash if we instantiate a hidden friend functions.
+  This fixes `Issue 54457 <https://github.com/llvm/llvm-project/issues/54457>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
