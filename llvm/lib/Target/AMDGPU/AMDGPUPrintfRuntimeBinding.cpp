@@ -133,7 +133,16 @@ void AMDGPUPrintfRuntimeBindingImpl::getConversionSpecifiers(
 
 bool AMDGPUPrintfRuntimeBindingImpl::shouldPrintAsStr(char Specifier,
                                                       Type *OpType) const {
-  return Specifier == 's' && isa<PointerType>(OpType);
+  if (Specifier != 's')
+    return false;
+  const PointerType *PT = dyn_cast<PointerType>(OpType);
+  if (!PT || PT->getAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS)
+    return false;
+  Type *ElemType = PT->getContainedType(0);
+  if (ElemType->getTypeID() != Type::IntegerTyID)
+    return false;
+  IntegerType *ElemIType = cast<IntegerType>(ElemType);
+  return ElemIType->getBitWidth() == 8;
 }
 
 bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
