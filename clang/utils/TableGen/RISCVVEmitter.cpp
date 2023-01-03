@@ -25,6 +25,7 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <numeric>
+#include <optional>
 
 using namespace llvm;
 using namespace clang::RISCV;
@@ -560,7 +561,7 @@ void RVVEmitter::createRVVIntrinsics(
     for (char I : TypeRange) {
       for (int Log2LMUL : Log2LMULList) {
         BasicType BT = ParseBasicType(I);
-        Optional<RVVTypes> Types =
+        std::optional<RVVTypes> Types =
             TypeCache.computeTypes(BT, Log2LMUL, NF, Prototype);
         // Ignored to create new intrinsic if there are any illegal types.
         if (!Types)
@@ -584,7 +585,7 @@ void RVVEmitter::createRVVIntrinsics(
                     BasicPrototype, /*IsMasked=*/false,
                     /*HasMaskedOffOperand=*/false, HasVL, NF,
                     IsPrototypeDefaultTU, UnMaskedPolicyScheme, P);
-            Optional<RVVTypes> PolicyTypes =
+            std::optional<RVVTypes> PolicyTypes =
                 TypeCache.computeTypes(BT, Log2LMUL, NF, PolicyPrototype);
             Out.push_back(std::make_unique<RVVIntrinsic>(
                 Name, SuffixStr, OverloadedName, OverloadedSuffixStr, IRName,
@@ -596,7 +597,7 @@ void RVVEmitter::createRVVIntrinsics(
         if (!HasMasked)
           continue;
         // Create a masked intrinsic
-        Optional<RVVTypes> MaskTypes =
+        std::optional<RVVTypes> MaskTypes =
             TypeCache.computeTypes(BT, Log2LMUL, NF, Prototype);
         Out.push_back(std::make_unique<RVVIntrinsic>(
             Name, SuffixStr, OverloadedName, OverloadedSuffixStr, MaskedIRName,
@@ -611,7 +612,7 @@ void RVVEmitter::createRVVIntrinsics(
               RVVIntrinsic::computeBuiltinTypes(
                   BasicPrototype, /*IsMasked=*/true, HasMaskedOffOperand, HasVL,
                   NF, IsPrototypeDefaultTU, MaskedPolicyScheme, P);
-          Optional<RVVTypes> PolicyTypes =
+          std::optional<RVVTypes> PolicyTypes =
               TypeCache.computeTypes(BT, Log2LMUL, NF, PolicyPrototype);
           Out.push_back(std::make_unique<RVVIntrinsic>(
               Name, SuffixStr, OverloadedName, OverloadedSuffixStr,

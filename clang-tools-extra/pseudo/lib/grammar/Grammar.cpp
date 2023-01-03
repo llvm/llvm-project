@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace clang {
 namespace pseudo {
@@ -45,7 +46,7 @@ llvm::StringRef Grammar::symbolName(SymbolID SID) const {
   return T->Nonterminals[SID].Name;
 }
 
-llvm::Optional<SymbolID> Grammar::findNonterminal(llvm::StringRef Name) const {
+std::optional<SymbolID> Grammar::findNonterminal(llvm::StringRef Name) const {
   auto It = llvm::partition_point(
       T->Nonterminals,
       [&](const GrammarTable::Nonterminal &X) { return X.Name < Name; });

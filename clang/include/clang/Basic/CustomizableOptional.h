@@ -10,11 +10,11 @@
 #define CLANG_BASIC_CUSTOMIZABLEOPTIONAL_H
 
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/type_traits.h"
 #include <cassert>
 #include <new>
+#include <optional>
 #include <utility>
 
 namespace clang {
@@ -46,9 +46,9 @@ public:
       : Storage(std::in_place, std::forward<ArgTypes>(Args)...) {}
 
   // Allow conversion from Optional<T>.
-  constexpr CustomizableOptional(const llvm::Optional<T> &y)
+  constexpr CustomizableOptional(const std::optional<T> &y)
       : CustomizableOptional(y ? *y : CustomizableOptional()) {}
-  constexpr CustomizableOptional(llvm::Optional<T> &&y)
+  constexpr CustomizableOptional(std::optional<T> &&y)
       : CustomizableOptional(y ? std::move(*y) : CustomizableOptional()) {}
 
   CustomizableOptional &operator=(T &&y) {
@@ -99,11 +99,11 @@ public:
   }
 
   // Allow conversion to Optional<T>.
-  explicit operator llvm::Optional<T> &() const & {
-    return *this ? **this : llvm::Optional<T>();
+  explicit operator std::optional<T> &() const & {
+    return *this ? **this : std::optional<T>();
   }
-  explicit operator llvm::Optional<T> &&() const && {
-    return *this ? std::move(**this) : llvm::Optional<T>();
+  explicit operator std::optional<T> &&() const && {
+    return *this ? std::move(**this) : std::optional<T>();
   }
 };
 

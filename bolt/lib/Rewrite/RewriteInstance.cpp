@@ -58,6 +58,7 @@
 #include <algorithm>
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <system_error>
 
 #undef  DEBUG_TYPE
@@ -2790,9 +2791,10 @@ void RewriteInstance::selectFunctionsToProcess() {
     if (opts::Lite) {
       // Forcibly include functions specified in the -function-order file.
       if (opts::ReorderFunctions == ReorderFunctions::RT_USER) {
-        Optional<StringRef> Match = Function.forEachName([&](StringRef Name) {
-          return ReorderFunctionsUserSet.contains(Name);
-        });
+        std::optional<StringRef> Match =
+            Function.forEachName([&](StringRef Name) {
+              return ReorderFunctionsUserSet.contains(Name);
+            });
         if (Match.has_value())
           return true;
       }
@@ -4779,7 +4781,7 @@ void RewriteInstance::updateELFSymbolTable(
     assert(SymbolName && "cannot get symbol name");
 
     auto updateSymbolValue = [&](const StringRef Name,
-                                 Optional<uint64_t> Value = std::nullopt) {
+                                 std::optional<uint64_t> Value = std::nullopt) {
       NewSymbol.st_value = Value ? *Value : getNewValueForSymbol(Name);
       NewSymbol.st_shndx = ELF::SHN_ABS;
       outs() << "BOLT-INFO: setting " << Name << " to 0x"
