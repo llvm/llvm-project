@@ -360,3 +360,33 @@ for.end:
   %j.lcssa = phi i64 [ 0, %for.second.guard ], [ %j.02, %for.second.exit ]
   ret i64 %j.lcssa
 }
+
+define void @pr59024() {
+; CHECK-LABEL: @pr59024(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[FOR_2_PREHEADER:%.*]], label [[FOR_1_PREHEADER:%.*]]
+; CHECK:       for.1.preheader:
+; CHECK-NEXT:    br label [[FOR_1:%.*]]
+; CHECK:       for.1:
+; CHECK-NEXT:    br i1 true, label [[FOR_2_PREHEADER_LOOPEXIT:%.*]], label [[FOR_1]]
+; CHECK:       for.2.preheader.loopexit:
+; CHECK-NEXT:    br label [[FOR_2_PREHEADER]]
+; CHECK:       for.2.preheader:
+; CHECK-NEXT:    br label [[FOR_2:%.*]]
+; CHECK:       for.2:
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[FOR_2]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 false, label %for.2, label %for.1
+
+for.1:                                        ; preds = %for.body6, %entry
+  br i1 true, label %for.2, label %for.1
+
+for.2:                                       ; preds = %for.cond13, %for.body6, %entry
+  br i1 true, label %exit, label %for.2
+
+exit:                                          ; preds = %for.cond13
+  ret void
+}

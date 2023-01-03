@@ -1293,7 +1293,7 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
   if (!ShapedType::isDynamic(inputHeight) &&
       !ShapedType::isDynamic(weightHeight)) {
     int64_t calculateSize =
-        (inputHeight - 1) * stride[0] - padding[0] - padding[1] + weightHeight;
+        (inputHeight - 1) * stride[0] + padding[0] + padding[1] + weightHeight;
     outputShape[1] =
         ShapedType::isDynamic(outputShape[1]) ? calculateSize : outputShape[1];
   }
@@ -1301,7 +1301,7 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
   if (!ShapedType::isDynamic(inputWidth) &&
       !ShapedType::isDynamic(weightWidth)) {
     int64_t calculateSize =
-        (inputWidth - 1) * stride[1] - padding[2] - padding[3] + weightWidth;
+        (inputWidth - 1) * stride[1] + padding[2] + padding[3] + weightWidth;
     outputShape[2] =
         ShapedType::isDynamic(outputShape[2]) ? calculateSize : outputShape[2];
   }

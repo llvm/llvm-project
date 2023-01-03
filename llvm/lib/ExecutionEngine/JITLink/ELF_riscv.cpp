@@ -205,12 +205,13 @@ private:
         return makeTargetOutOfRangeError(G, B, E);
       if (LLVM_UNLIKELY(!isAlignmentCorrect(Value, 2)))
         return makeAlignmentError(FixupAddress, Value, 2, E);
-      uint32_t Imm31_25 =
-          extractBits(Value, 5, 6) << 25 | extractBits(Value, 12, 1) << 31;
-      uint32_t Imm11_7 =
-          extractBits(Value, 1, 4) << 8 | extractBits(Value, 11, 1) << 7;
+      uint32_t Imm12 = extractBits(Value, 12, 1) << 31;
+      uint32_t Imm10_5 = extractBits(Value, 5, 6) << 25;
+      uint32_t Imm4_1 = extractBits(Value, 1, 4) << 8;
+      uint32_t Imm11 = extractBits(Value, 11, 1) << 7;
       uint32_t RawInstr = *(little32_t *)FixupPtr;
-      *(little32_t *)FixupPtr = (RawInstr & 0x1FFF07F) | Imm31_25 | Imm11_7;
+      *(little32_t *)FixupPtr =
+          (RawInstr & 0x1FFF07F) | Imm12 | Imm10_5 | Imm4_1 | Imm11;
       break;
     }
     case R_RISCV_JAL: {
@@ -224,7 +225,8 @@ private:
       uint32_t Imm11 = extractBits(Value, 11, 1) << 20;
       uint32_t Imm19_12 = extractBits(Value, 12, 8) << 12;
       uint32_t RawInstr = *(little32_t *)FixupPtr;
-      *(little32_t *)FixupPtr = RawInstr | Imm20 | Imm10_1 | Imm11 | Imm19_12;
+      *(little32_t *)FixupPtr =
+          (RawInstr & 0xFFF) | Imm20 | Imm10_1 | Imm11 | Imm19_12;
       break;
     }
     case R_RISCV_CALL: {
@@ -279,11 +281,11 @@ private:
       int64_t Value = RelHI20->getTarget().getAddress() +
                       RelHI20->getAddend() - E.getTarget().getAddress();
       int64_t Lo = Value & 0xFFF;
-      uint32_t Imm31_25 = extractBits(Lo, 5, 7) << 25;
-      uint32_t Imm11_7 = extractBits(Lo, 0, 5) << 7;
+      uint32_t Imm11_5 = extractBits(Lo, 5, 7) << 25;
+      uint32_t Imm4_0 = extractBits(Lo, 0, 5) << 7;
       uint32_t RawInstr = *(little32_t *)FixupPtr;
 
-      *(little32_t *)FixupPtr = (RawInstr & 0x1FFF07F) | Imm31_25 | Imm11_7;
+      *(little32_t *)FixupPtr = (RawInstr & 0x1FFF07F) | Imm11_5 | Imm4_0;
       break;
     }
     case R_RISCV_HI20: {
@@ -311,10 +313,10 @@ private:
       // with current relocation R_RISCV_LO12_S. So here may need a check.
       int64_t Value = (E.getTarget().getAddress() + E.getAddend()).getValue();
       int64_t Lo = Value & 0xFFF;
-      uint32_t Imm31_25 = extractBits(Lo, 5, 7) << 25;
-      uint32_t Imm11_7 = extractBits(Lo, 0, 5) << 7;
+      uint32_t Imm11_5 = extractBits(Lo, 5, 7) << 25;
+      uint32_t Imm4_0 = extractBits(Lo, 0, 5) << 7;
       uint32_t RawInstr = *(little32_t *)FixupPtr;
-      *(little32_t *)FixupPtr = (RawInstr & 0x1FFF07F) | Imm31_25 | Imm11_7;
+      *(little32_t *)FixupPtr = (RawInstr & 0x1FFF07F) | Imm11_5 | Imm4_0;
       break;
     }
     case R_RISCV_ADD8: {

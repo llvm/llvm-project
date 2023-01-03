@@ -4,7 +4,7 @@
 
 target triple = "amdgcn-amd-amdhsa"
 
-%struct.ident_t = type { i32, i32, i32, i32, i8* }
+%struct.ident_t = type { i32, i32, i32, i32, ptr }
 
 @G = internal addrspace(3) global i32 undef, align 4
 
@@ -16,84 +16,84 @@ define void @kernel() "kernel" {
 ; TUNIT: Function Attrs: norecurse
 ; TUNIT-LABEL: define {{[^@]+}}@kernel
 ; TUNIT-SAME: () #[[ATTR0:[0-9]+]] {
-; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* undef, i8 1, i1 false)
+; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(ptr undef, i8 1, i1 false)
 ; TUNIT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], -1
 ; TUNIT-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; TUNIT:       if.then:
-; TUNIT-NEXT:    store i32 1, i32 addrspace(3)* @G, align 4
+; TUNIT-NEXT:    store i32 1, ptr addrspace(3) @G, align 4
 ; TUNIT-NEXT:    br label [[IF_MERGE:%.*]]
 ; TUNIT:       if.else:
 ; TUNIT-NEXT:    call void @barrier() #[[ATTR4:[0-9]+]]
-; TUNIT-NEXT:    [[L:%.*]] = load i32, i32 addrspace(3)* @G, align 4
+; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr addrspace(3) @G, align 4
 ; TUNIT-NEXT:    call void @use1(i32 [[L]]) #[[ATTR4]]
 ; TUNIT-NEXT:    br label [[IF_MERGE]]
 ; TUNIT:       if.merge:
 ; TUNIT-NEXT:    br i1 [[CMP]], label [[IF_THEN2:%.*]], label [[IF_END:%.*]]
 ; TUNIT:       if.then2:
-; TUNIT-NEXT:    store i32 2, i32 addrspace(3)* @G, align 4
+; TUNIT-NEXT:    store i32 2, ptr addrspace(3) @G, align 4
 ; TUNIT-NEXT:    call void @barrier() #[[ATTR4]]
 ; TUNIT-NEXT:    br label [[IF_END]]
 ; TUNIT:       if.end:
-; TUNIT-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* undef, i8 1)
+; TUNIT-NEXT:    call void @__kmpc_target_deinit(ptr undef, i8 1)
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: norecurse
 ; CGSCC-LABEL: define {{[^@]+}}@kernel
 ; CGSCC-SAME: () #[[ATTR0:[0-9]+]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* undef, i8 1, i1 false)
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(ptr undef, i8 1, i1 false)
 ; CGSCC-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], -1
 ; CGSCC-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CGSCC:       if.then:
-; CGSCC-NEXT:    store i32 1, i32 addrspace(3)* @G, align 4
+; CGSCC-NEXT:    store i32 1, ptr addrspace(3) @G, align 4
 ; CGSCC-NEXT:    br label [[IF_MERGE:%.*]]
 ; CGSCC:       if.else:
 ; CGSCC-NEXT:    call void @barrier()
-; CGSCC-NEXT:    [[L:%.*]] = load i32, i32 addrspace(3)* @G, align 4
+; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr addrspace(3) @G, align 4
 ; CGSCC-NEXT:    call void @use1(i32 [[L]])
 ; CGSCC-NEXT:    br label [[IF_MERGE]]
 ; CGSCC:       if.merge:
 ; CGSCC-NEXT:    br i1 [[CMP]], label [[IF_THEN2:%.*]], label [[IF_END:%.*]]
 ; CGSCC:       if.then2:
-; CGSCC-NEXT:    store i32 2, i32 addrspace(3)* @G, align 4
+; CGSCC-NEXT:    store i32 2, ptr addrspace(3) @G, align 4
 ; CGSCC-NEXT:    call void @barrier()
 ; CGSCC-NEXT:    br label [[IF_END]]
 ; CGSCC:       if.end:
-; CGSCC-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* undef, i8 1)
+; CGSCC-NEXT:    call void @__kmpc_target_deinit(ptr undef, i8 1)
 ; CGSCC-NEXT:    ret void
 ;
-  %call = call i32 @__kmpc_target_init(%struct.ident_t* undef, i8 1, i1 false)
+  %call = call i32 @__kmpc_target_init(ptr undef, i8 1, i1 false)
   %cmp = icmp eq i32 %call, -1
   br i1 %cmp, label %if.then, label %if.else
 if.then:
-  store i32 1, i32 addrspace(3)* @G
+  store i32 1, ptr addrspace(3) @G
   br label %if.merge
 if.else:
   call void @barrier();
-  %l = load i32, i32 addrspace(3)* @G
+  %l = load i32, ptr addrspace(3) @G
   call void @use1(i32 %l)
   br label %if.merge
 if.merge:
   br i1 %cmp, label %if.then2, label %if.end
 if.then2:
-  store i32 2, i32 addrspace(3)* @G
+  store i32 2, ptr addrspace(3) @G
   call void @barrier();
   br label %if.end
 if.end:
-  call void @__kmpc_target_deinit(%struct.ident_t* undef, i8 1)
+  call void @__kmpc_target_deinit(ptr undef, i8 1)
   ret void
 }
 
 declare void @barrier() norecurse nounwind nocallback
 declare void @use1(i32) nosync norecurse nounwind nocallback
-declare i32 @__kmpc_target_init(%struct.ident_t*, i8, i1) nocallback
-declare void @__kmpc_target_deinit(%struct.ident_t*, i8) nocallback
+declare i32 @__kmpc_target_init(ptr, i8, i1) nocallback
+declare void @__kmpc_target_deinit(ptr, i8) nocallback
 
 !llvm.module.flags = !{!0, !1}
 !nvvm.annotations = !{!2}
 
 !0 = !{i32 7, !"openmp", i32 50}
 !1 = !{i32 7, !"openmp-device", i32 50}
-!2 = !{void ()* @kernel, !"kernel", i32 1}
+!2 = !{ptr @kernel, !"kernel", i32 1}
 
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { norecurse "kernel" }
@@ -109,7 +109,7 @@ declare void @__kmpc_target_deinit(%struct.ident_t*, i8) nocallback
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; CHECK: [[META2:![0-9]+]] = !{void ()* @kernel, !"kernel", i32 1}
+; CHECK: [[META2:![0-9]+]] = !{ptr @kernel, !"kernel", i32 1}
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK: {{.*}}

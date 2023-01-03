@@ -1,4 +1,4 @@
-
+; XFAIL: target=aarch64-pc-windows-{{.*}}
 ; RUN: %llc_dwarf -filetype=obj -o %t.o < %s
 ; RUN: llvm-dwarfdump %t.o | FileCheck %s
 

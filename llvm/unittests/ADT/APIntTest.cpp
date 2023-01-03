@@ -1793,6 +1793,16 @@ TEST(APIntTest, isShiftedMask) {
   }
 }
 
+TEST(APIntTest, isOneBitSet) {
+  EXPECT_FALSE(APInt(5, 0x00).isOneBitSet(0));
+  EXPECT_FALSE(APInt(5, 0x02).isOneBitSet(0));
+  EXPECT_FALSE(APInt(5, 0x03).isOneBitSet(0));
+  EXPECT_TRUE(APInt(5, 0x02).isOneBitSet(1));
+  EXPECT_TRUE(APInt(32, (unsigned)(0xffu << 31)).isOneBitSet(31));
+
+  EXPECT_TRUE(APInt::getOneBitSet(255, 13).isOneBitSet(13));
+}
+
 TEST(APIntTest, isPowerOf2) {
   EXPECT_FALSE(APInt(5, 0x00).isPowerOf2());
   EXPECT_FALSE(APInt(32, 0x11).isPowerOf2());

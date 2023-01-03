@@ -31,14 +31,14 @@ struct WrittenTo : public AbstractSparseLattice {
     os << "]";
   }
   ChangeResult addWrites(const SetVector<StringAttr> &writes) {
-    int size_before = this->writes.size();
+    int sizeBefore = this->writes.size();
     this->writes.insert(writes.begin(), writes.end());
-    int size_after = this->writes.size();
-    return size_before == size_after ? ChangeResult::NoChange
-                                     : ChangeResult::Change;
+    int sizeAfter = this->writes.size();
+    return sizeBefore == sizeAfter ? ChangeResult::NoChange
+                                   : ChangeResult::Change;
   }
   ChangeResult meet(const AbstractSparseLattice &other) override {
-    auto rhs = reinterpret_cast<const WrittenTo *>(&other);
+    const auto *rhs = reinterpret_cast<const WrittenTo *>(&other);
     return addWrites(rhs->writes);
   }
 
@@ -64,9 +64,9 @@ void WrittenToAnalysis::visitOperation(Operation *op,
                                        ArrayRef<WrittenTo *> operands,
                                        ArrayRef<const WrittenTo *> results) {
   if (auto store = dyn_cast<memref::StoreOp>(op)) {
-    SetVector<StringAttr> new_writes;
-    new_writes.insert(op->getAttrOfType<StringAttr>("tag_name"));
-    propagateIfChanged(operands[0], operands[0]->addWrites(new_writes));
+    SetVector<StringAttr> newWrites;
+    newWrites.insert(op->getAttrOfType<StringAttr>("tag_name"));
+    propagateIfChanged(operands[0], operands[0]->addWrites(newWrites));
     return;
   } // By default, every result of an op depends on every operand.
     for (const WrittenTo *r : results) {
@@ -80,11 +80,11 @@ void WrittenToAnalysis::visitOperation(Operation *op,
 void WrittenToAnalysis::visitBranchOperand(OpOperand &operand) {
   // Mark branch operands as "brancharg%d", with %d the operand number.
   WrittenTo *lattice = getLatticeElement(operand.get());
-  SetVector<StringAttr> new_writes;
-  new_writes.insert(
+  SetVector<StringAttr> newWrites;
+  newWrites.insert(
       StringAttr::get(operand.getOwner()->getContext(),
                       "brancharg" + Twine(operand.getOperandNumber())));
-  propagateIfChanged(lattice, lattice->addWrites(new_writes));
+  propagateIfChanged(lattice, lattice->addWrites(newWrites));
 }
 
 } // end anonymous namespace
