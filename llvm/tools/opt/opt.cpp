@@ -373,7 +373,6 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "atomic-expand",
       "expandvp",
       "hardware-loops",
-      "type-promotion",
       "mve-tail-predication",
       "interleaved-access",
       "global-merge",
@@ -468,7 +467,6 @@ int main(int argc, char **argv) {
   initializeWasmEHPreparePass(Registry);
   initializeWriteBitcodePassPass(Registry);
   initializeHardwareLoopsPass(Registry);
-  initializeTypePromotionPass(Registry);
   initializeReplaceWithVeclibLegacyPass(Registry);
   initializeJMCInstrumenterPass(Registry);
 
