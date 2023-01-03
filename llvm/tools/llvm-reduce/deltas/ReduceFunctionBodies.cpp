@@ -15,6 +15,7 @@
 #include "Delta.h"
 #include "Utils.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Instructions.h"
 
 using namespace llvm;
 
@@ -33,4 +34,27 @@ static void extractFunctionBodiesFromModule(Oracle &O, Module &Program) {
 void llvm::reduceFunctionBodiesDeltaPass(TestRunner &Test) {
   runDeltaPass(Test, extractFunctionBodiesFromModule,
                "Reducing Function Bodies");
+}
+
+static void reduceFunctionData(Oracle &O, Module &M) {
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    if (F.hasPersonalityFn()) {
+      if (none_of(F,
+                  [](const BasicBlock &BB) {
+                    return BB.isEHPad() || isa<ResumeInst>(BB.getTerminator());
+                  }) &&
+          !O.shouldKeep()) {
+        F.setPersonalityFn(nullptr);
+      }
+    }
+
+    // TODO: Handle prefix data and prologue data
+  }
+}
+
+void llvm::reduceFunctionDataDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, reduceFunctionData, "Reducing Function Data");
 }
