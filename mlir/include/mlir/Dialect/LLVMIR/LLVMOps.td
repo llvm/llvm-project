@@ -400,7 +400,7 @@ def LLVM_StoreOp : LLVM_Op<"store">, MemoryOpWithAlignmentAndAttributes {
      # setAliasScopeMetadataCode;
   // FIXME: Import attributes.
   string mlirBuilder = [{
-    $_builder.create<LLVM::StoreOp>($_location, $value, $addr);
+    $_op = $_builder.create<LLVM::StoreOp>($_location, $value, $addr);
   }];
   let builders = [
     OpBuilder<(ins "Value":$value, "Value":$addr,
@@ -830,7 +830,7 @@ def LLVM_ReturnOp : LLVM_TerminatorOp<"return", [Pure, ReturnLike]> {
       moduleImport.convertValues(llvmOperands);
     if (failed(mlirOperands))
       return failure();
-    $_builder.create<LLVM::ReturnOp>($_location, *mlirOperands);
+    $_op = $_builder.create<LLVM::ReturnOp>($_location, *mlirOperands);
   }];
 }
 
@@ -841,7 +841,7 @@ def LLVM_ResumeOp : LLVM_TerminatorOp<"resume"> {
   string llvmInstName = "Resume";
   string llvmBuilder = [{ builder.CreateResume($value); }];
   string mlirBuilder = [{
-    $_builder.create<LLVM::ResumeOp>($_location, $value);
+    $_op = $_builder.create<LLVM::ResumeOp>($_location, $value);
   }];
 }
 def LLVM_UnreachableOp : LLVM_TerminatorOp<"unreachable"> {
@@ -849,7 +849,7 @@ def LLVM_UnreachableOp : LLVM_TerminatorOp<"unreachable"> {
   string llvmInstName = "Unreachable";
   string llvmBuilder = [{ builder.CreateUnreachable(); }];
   string mlirBuilder = [{
-    $_builder.create<LLVM::UnreachableOp>($_location);
+    $_op = $_builder.create<LLVM::UnreachableOp>($_location);
   }];
 }
 
@@ -1559,7 +1559,7 @@ def LLVM_FenceOp : LLVM_Op<"fence"> {
   }];
   string mlirBuilder = [{
     llvm::FenceInst *fenceInst = cast<llvm::FenceInst>(inst);
-    $_builder.create<LLVM::FenceOp>(
+    $_op = $_builder.create<LLVM::FenceOp>(
       $_location,
       getLLVMAtomicOrdering(fenceInst->getOrdering()),
       getLLVMSyncScope(fenceInst));
