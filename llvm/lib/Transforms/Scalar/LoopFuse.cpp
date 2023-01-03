@@ -896,9 +896,10 @@ private:
             continue;
           }
 
-          if (!FC0->GuardBranch && FC1->GuardBranch) {
-            LLVM_DEBUG(dbgs() << "The second candidate is guarded while the "
-                                 "first one is not. Not fusing.\n");
+          if ((!FC0->GuardBranch && FC1->GuardBranch) ||
+              (FC0->GuardBranch && !FC1->GuardBranch)) {
+            LLVM_DEBUG(dbgs() << "The one of candidate is guarded while the "
+                                 "another one is not. Not fusing.\n");
             reportLoopFusion<OptimizationRemarkMissed>(
                 *FC0, *FC1, OnlySecondCandidateIsGuarded);
             continue;
