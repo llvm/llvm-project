@@ -20,6 +20,7 @@ using namespace LegalizeActions;
 PPCLegalizerInfo::PPCLegalizerInfo(const PPCSubtarget &ST) {
   using namespace TargetOpcode;
   const LLT P0 = LLT::pointer(0, 64);
+  const LLT S1 = LLT::scalar(1);
   const LLT S8 = LLT::scalar(8);
   const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
@@ -28,8 +29,8 @@ PPCLegalizerInfo::PPCLegalizerInfo(const PPCSubtarget &ST) {
   getActionDefinitionsBuilder(G_CONSTANT)
       .legalFor({S32, S64})
       .clampScalar(0, S64, S64);
-  getActionDefinitionsBuilder({G_ZEXT, G_SEXT})
-      .legalForCartesianProduct({S64}, {S8, S16, S32})
+  getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
+      .legalForCartesianProduct({S64}, {S1, S8, S16, S32})
       .clampScalar(0, S64, S64);
   getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
       .legalFor({S64})
@@ -40,6 +41,9 @@ PPCLegalizerInfo::PPCLegalizerInfo(const PPCSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
       .legalFor({S32, S64});
+
+  getActionDefinitionsBuilder(G_FCMP).legalForCartesianProduct({S1},
+                                                               {S32, S64});
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalForCartesianProduct({S64}, {S32, S64});
