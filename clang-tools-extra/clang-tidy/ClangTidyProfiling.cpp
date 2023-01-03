@@ -11,6 +11,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <system_error>
 #include <utility>
 
@@ -74,7 +75,7 @@ void ClangTidyProfiling::storeProfileData() {
   printAsJSON(OS);
 }
 
-ClangTidyProfiling::ClangTidyProfiling(llvm::Optional<StorageParams> Storage)
+ClangTidyProfiling::ClangTidyProfiling(std::optional<StorageParams> Storage)
     : Storage(std::move(Storage)) {}
 
 ClangTidyProfiling::~ClangTidyProfiling() {

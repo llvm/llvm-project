@@ -10,6 +10,7 @@
 #include "index/dex/Iterator.h"
 #include "index/dex/Token.h"
 #include "llvm/Support/MathExtras.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -182,7 +183,7 @@ std::vector<Chunk> encodeStream(llvm::ArrayRef<DocID> Documents) {
 
 /// Reads variable length DocID from the buffer and updates the buffer size. If
 /// the stream is terminated, return std::nullopt.
-llvm::Optional<DocID> readVByte(llvm::ArrayRef<uint8_t> &Bytes) {
+std::optional<DocID> readVByte(llvm::ArrayRef<uint8_t> &Bytes) {
   if (Bytes.front() == 0 || Bytes.empty())
     return std::nullopt;
   DocID Result = 0;
