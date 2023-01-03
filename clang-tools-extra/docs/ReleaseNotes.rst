@@ -204,6 +204,10 @@ Changes in existing checks
   The check now skips concept definitions since redundant expressions still make sense
   inside them.
 
+- Support removing ``c_str`` calls from ``std::string_view`` constructor calls in
+  :doc: `readability-redundant-string-cstr <clang-tidy/checks/readability/redundant-string-cstr>`
+  check.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

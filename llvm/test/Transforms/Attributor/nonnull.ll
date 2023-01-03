@@ -31,7 +31,7 @@ define ptr @test2(ptr nonnull %p) {
 define ptr @test2A(i1 %c, ptr %ret) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@test2A
-; CHECK-SAME: (i1 [[C:%.*]], ptr nofree nonnull readnone returned "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: (i1 noundef [[C:%.*]], ptr nofree nonnull readnone returned "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
 ; CHECK:       A:
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR13:[0-9]+]] [ "nonnull"(ptr [[RET]]) ]
@@ -52,7 +52,7 @@ B:
 define ptr @test2B(i1 %c, ptr %ret) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@test2B
-; CHECK-SAME: (i1 [[C:%.*]], ptr nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (i1 noundef [[C:%.*]], ptr nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
 ; CHECK:       A:
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR13]] [ "dereferenceable"(ptr [[RET]], i32 4) ]
@@ -74,7 +74,7 @@ B:
 ; can we still mark the other one which is trivially nonnull
 define ptr @scc_binder(i1 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@scc_binder
-; CHECK-SAME: (i1 [[C:%.*]]) {
+; CHECK-SAME: (i1 noundef [[C:%.*]]) {
 ; CHECK-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
 ; CHECK:       rec:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @test3(i1 noundef [[C]])
@@ -140,7 +140,7 @@ define ptr @test4() {
 define ptr @test5_helper(i1 %c) {
 ; TUNIT: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@test5_helper
-; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR3]] {
+; TUNIT-SAME: (i1 noundef [[C:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
 ; TUNIT:       rec:
 ; TUNIT-NEXT:    br label [[END]]
@@ -149,7 +149,7 @@ define ptr @test5_helper(i1 %c) {
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@test5_helper
-; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
 ; CGSCC:       rec:
 ; CGSCC-NEXT:    br label [[END]]
@@ -818,7 +818,7 @@ define void @parent4(ptr %a, ptr %b, ptr %c) {
 
 define void @parent5(ptr %a, i1 %a_is_notnull) {
 ; CHECK-LABEL: define {{[^@]+}}@parent5
-; CHECK-SAME: (ptr [[A:%.*]], i1 [[A_IS_NOTNULL:%.*]]) {
+; CHECK-SAME: (ptr [[A:%.*]], i1 noundef [[A_IS_NOTNULL:%.*]]) {
 ; CHECK-NEXT:    br i1 [[A_IS_NOTNULL]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    call void @use1nonnull(ptr nonnull [[A]])

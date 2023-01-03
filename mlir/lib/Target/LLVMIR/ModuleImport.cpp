@@ -37,15 +37,6 @@ using namespace mlir::LLVM::detail;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsFromLLVM.inc"
 
-/// Returns true if the LLVM IR intrinsic is convertible to an MLIR LLVM dialect
-/// intrinsic, or false if no counterpart exists.
-static bool isConvertibleIntrinsic(llvm::Intrinsic::ID id) {
-  static const DenseSet<unsigned> convertibleIntrinsics = {
-#include "mlir/Dialect/LLVMIR/LLVMConvertibleLLVMIRIntrinsics.inc"
-  };
-  return convertibleIntrinsics.contains(id);
-}
-
 // Utility to print an LLVM value as a string for passing to emitError().
 // FIXME: Diagnostic should be able to natively handle types that have
 // operator << (raw_ostream&) defined.
@@ -58,7 +49,7 @@ static std::string diag(llvm::Value &value) {
 
 /// Creates an attribute containing ABI and preferred alignment numbers parsed
 /// a string. The string may be either "abi:preferred" or just "abi". In the
-/// latter case, the prefrred alignment is considered equal to ABI alignment.
+/// latter case, the preferred alignment is considered equal to ABI alignment.
 static DenseIntElementsAttr parseDataLayoutAlignment(MLIRContext &ctx,
                                                      StringRef spec) {
   auto i32 = IntegerType::get(&ctx, 32);
@@ -320,6 +311,7 @@ ModuleImport::ModuleImport(ModuleOp mlirModule,
                            std::unique_ptr<llvm::Module> llvmModule)
     : builder(mlirModule->getContext()), context(mlirModule->getContext()),
       mlirModule(mlirModule), llvmModule(std::move(llvmModule)),
+      iface(mlirModule->getContext()),
       typeTranslator(*mlirModule->getContext()),
       debugImporter(std::make_unique<DebugImporter>(mlirModule->getContext())) {
   builder.setInsertionPointToStart(mlirModule.getBody());
@@ -807,26 +799,20 @@ ModuleImport::convertCallTypeAndOperands(llvm::CallBase *callInst,
 }
 
 LogicalResult ModuleImport::convertIntrinsic(OpBuilder &odsBuilder,
-                                             llvm::CallInst *inst,
-                                             llvm::Intrinsic::ID intrinsicID) {
+                                             llvm::CallInst *inst) {
+  if (succeeded(iface.convertIntrinsic(builder, inst, *this)))
+    return success();
+
   Location loc = translateLoc(inst->getDebugLoc());
-
-  // Check if the intrinsic is convertible to an MLIR dialect counterpart and
-  // copy the arguments to an an LLVM operands array reference for conversion.
-  if (isConvertibleIntrinsic(intrinsicID)) {
-    SmallVector<llvm::Value *> args(inst->args());
-    ArrayRef<llvm::Value *> llvmOperands(args);
-#include "mlir/Dialect/LLVMIR/LLVMIntrinsicFromLLVMIRConversions.inc"
-  }
-
   return emitError(loc) << "unhandled intrinsic " << diag(*inst);
 }
 
-LogicalResult ModuleImport::convertOperation(OpBuilder &odsBuilder,
-                                             llvm::Instruction *inst) {
+LogicalResult ModuleImport::convertInstruction(OpBuilder &odsBuilder,
+                                               llvm::Instruction *inst) {
   // Copy the operands to an LLVM operands array reference for conversion.
   SmallVector<llvm::Value *> operands(inst->operands());
   ArrayRef<llvm::Value *> llvmOperands(operands);
+  ModuleImport &moduleImport = *this;
 
   // Convert all instructions that provide an MLIR builder.
 #include "mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc"
@@ -1006,11 +992,11 @@ LogicalResult ModuleImport::processInstruction(llvm::Instruction *inst) {
   if (auto *callInst = dyn_cast<llvm::CallInst>(inst)) {
     llvm::Function *callee = callInst->getCalledFunction();
     if (callee && callee->isIntrinsic())
-      return convertIntrinsic(builder, callInst, callInst->getIntrinsicID());
+      return convertIntrinsic(builder, callInst);
   }
 
   // Convert all remaining LLVM instructions to MLIR operations.
-  return convertOperation(builder, inst);
+  return convertInstruction(builder, inst);
 }
 
 FlatSymbolRefAttr ModuleImport::getPersonalityAsAttr(llvm::Function *f) {
@@ -1049,7 +1035,8 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
 
   auto functionType =
       convertType(func->getFunctionType()).dyn_cast<LLVMFunctionType>();
-  if (func->isIntrinsic() && isConvertibleIntrinsic(func->getIntrinsicID()))
+  if (func->isIntrinsic() &&
+      iface.isConvertibleIntrinsic(func->getIntrinsicID()))
     return success();
 
   bool dsoLocal = func->hasLocalLinkage();
@@ -1151,8 +1138,17 @@ LogicalResult ModuleImport::processBasicBlock(llvm::BasicBlock *bb,
 OwningOpRef<ModuleOp>
 mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                               MLIRContext *context) {
-  context->loadDialect<LLVMDialect>();
-  context->loadDialect<DLTIDialect>();
+  // Preload all registered dialects to allow the import to iterate the
+  // registered LLVMImportDialectInterface implementations and query the
+  // supported LLVM IR constructs before starting the translation. Assumes the
+  // LLVM and DLTI dialects that convert the core LLVM IR constructs have been
+  // registered before.
+  assert(llvm::is_contained(context->getAvailableDialects(),
+                            LLVMDialect::getDialectNamespace()));
+  assert(llvm::is_contained(context->getAvailableDialects(),
+                            DLTIDialect::getDialectNamespace()));
+  context->loadAllAvailableDialects();
+
   OwningOpRef<ModuleOp> module(ModuleOp::create(FileLineColLoc::get(
       StringAttr::get(context, llvmModule->getSourceFileName()), /*line=*/0,
       /*column=*/0)));
@@ -1166,6 +1162,8 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
   module.get()->setAttr(DLTIDialect::kDataLayoutAttrName, dlSpec);
 
   ModuleImport moduleImport(module.get(), std::move(llvmModule));
+  if (failed(moduleImport.initializeImportInterface()))
+    return {};
   if (failed(moduleImport.convertGlobals()))
     return {};
   if (failed(moduleImport.convertFunctions()))

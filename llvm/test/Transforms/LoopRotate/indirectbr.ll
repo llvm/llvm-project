@@ -12,7 +12,7 @@ while.body:                                       ; preds = %while.cond
   br label %indirectgoto
 
 run_opcode:                                       ; preds = %indirectgoto
-  %tmp276 = load i8, i8* undef                        ; <i8> [#uses=1]
+  %tmp276 = load i8, ptr undef                        ; <i8> [#uses=1]
   br label %indirectgoto
 
 if.else295:                                       ; preds = %divide_late
@@ -39,11 +39,11 @@ sw.default42406:                                  ; preds = %sw.bb30351
 
 indirectgoto:                                     ; preds = %run_opcode, %while.body
   %opcode.0 = phi i8 [ undef, %while.body ], [ %tmp276, %run_opcode ] ; <i8> [#uses=2]
-  indirectbr i8* undef, [label %run_opcode, label %if.else295, label %end_opcode]
+  indirectbr ptr undef, [label %run_opcode, label %if.else295, label %end_opcode]
 }
 
 ; CHECK-LABEL: @foo
-define void @foo(i1 %a, i1 %b, i8* %c) {
+define void @foo(i1 %a, i1 %b, ptr %c) {
 ; CHECK: entry
 ; CHECK-NEXT: br i1 %a, label %return, label %preheader
 entry:
@@ -60,9 +60,9 @@ header:
   br i1 %b, label %return, label %body
 
 ; CHECK: body:
-; CHECK-NEXT:  indirectbr i8* %c, [label %return, label %latch]
+; CHECK-NEXT:  indirectbr ptr %c, [label %return, label %latch]
 body:
-  indirectbr i8* %c, [label %return, label %latch]
+  indirectbr ptr %c, [label %return, label %latch]
 
 ; CHECK: latch:
 ; CHECK-NEXT:  br label %header
