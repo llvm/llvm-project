@@ -2190,12 +2190,12 @@ let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
     defm vmv_x : RVVOp0BuiltinSet<"vmv_x_s", "csil",
                                    [["s", "ve", "ev"],
                                     ["s", "UvUe", "UeUv"]]>;
-  let OverloadedName = "vmv_s", IsPrototypeDefaultTU = true,
+  let OverloadedName = "vmv_s", IsPrototypeDefaultTU = false,
       UnMaskedPolicyScheme = HasPassthruOperand,
       SupportOverloading = false in
     defm vmv_s : RVVOutBuiltinSet<"vmv_s_x", "csil",
-                                   [["x", "v", "vve"],
-                                    ["x", "Uv", "UvUvUe"]]>;
+                                   [["x", "v", "ve"],
+                                    ["x", "Uv", "UvUe"]]>;
 }
 
 // 17.2. Floating-Point Scalar Move Instructions
@@ -2203,12 +2203,12 @@ let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
   let HasVL = false, OverloadedName = "vfmv_f" in
     defm vfmv_f : RVVOp0BuiltinSet<"vfmv_f_s", "xfd",
                                      [["s", "ve", "ev"]]>;
-  let OverloadedName = "vfmv_s", IsPrototypeDefaultTU = true,
+  let OverloadedName = "vfmv_s", IsPrototypeDefaultTU = false,
       UnMaskedPolicyScheme = HasPassthruOperand,
       SupportOverloading = false in
     defm vfmv_s : RVVOutBuiltinSet<"vfmv_s_f", "xfd",
-                                     [["f", "v", "vve"],
-                                      ["x", "Uv", "UvUvUe"]]>;
+                                     [["f", "v", "ve"],
+                                      ["x", "Uv", "UvUe"]]>;
 }
 
 // 17.3. Vector Slide Instructions
