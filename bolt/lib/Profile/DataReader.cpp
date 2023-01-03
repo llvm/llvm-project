@@ -1331,7 +1331,8 @@ bool DataReader::mayHaveProfileData(const BinaryFunction &Function) {
   if (getBranchData(Function) || getMemData(Function))
     return true;
 
-  if (getBranchDataForNames(Function.getNames()) ||
+  if (getFuncSampleData(Function.getNames()) ||
+      getBranchDataForNames(Function.getNames()) ||
       getMemDataForNames(Function.getNames()))
     return true;
 
