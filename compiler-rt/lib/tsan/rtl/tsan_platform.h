@@ -212,20 +212,20 @@ struct MappingAarch64_42 {
 
 struct MappingAarch64_48 {
   static const uptr kLoAppMemBeg   = 0x0000000001000ull;
-  static const uptr kLoAppMemEnd   = 0x0000200000000ull;
-  static const uptr kShadowBeg = 0x0001000000000ull;
-  static const uptr kShadowEnd = 0x0002000000000ull;
-  static const uptr kMetaShadowBeg = 0x0005000000000ull;
-  static const uptr kMetaShadowEnd = 0x0006000000000ull;
+  static const uptr kLoAppMemEnd   = 0x00a0000000000ull;
+  static const uptr kShadowBeg     = 0x0155400000000ull;
+  static const uptr kShadowEnd     = 0x0540000000000ull;
+  static const uptr kMetaShadowBeg = 0x0800000000000ull;
+  static const uptr kMetaShadowEnd = 0x0a00000000000ull;
   static const uptr kMidAppMemBeg  = 0x0aaaa00000000ull;
-  static const uptr kMidAppMemEnd = 0x0aaaf00000000ull;
-  static const uptr kHeapMemBeg    = 0x0ffff00000000ull;
-  static const uptr kHeapMemEnd    = 0x0ffff00000000ull;
-  static const uptr kHiAppMemBeg   = 0x0ffff00000000ull;
+  static const uptr kMidAppMemEnd  = 0x0ac0000000000ull;
+  static const uptr kHiAppMemBeg   = 0x0fc0000000000ull;
   static const uptr kHiAppMemEnd   = 0x1000000000000ull;
-  static const uptr kShadowMsk = 0x0fff800000000ull;
-  static const uptr kShadowXor = 0x0000800000000ull;
-  static const uptr kShadowAdd = 0x0000000000000ull;
+  static const uptr kHeapMemBeg    = 0x0fc0000000000ull;
+  static const uptr kHeapMemEnd    = 0x0fc0000000000ull;
+  static const uptr kShadowMsk     = 0x0c00000000000ull;
+  static const uptr kShadowXor     = 0x0200000000000ull;
+  static const uptr kShadowAdd     = 0x0000000000000ull;
   static const uptr kVdsoBeg       = 0xffff000000000ull;
 };
 
