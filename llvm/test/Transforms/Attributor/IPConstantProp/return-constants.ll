@@ -9,7 +9,7 @@
 define internal %0 @foo(i1 %Q) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: (i1 [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (i1 noundef [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    br i1 [[Q]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
 ; CHECK-NEXT:    [[MRV:%.*]] = insertvalue [[TMP0:%.*]] undef, i32 21, 0
@@ -36,7 +36,7 @@ F:                                                ; preds = %0
 define internal %0 @bar(i1 %Q) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@bar
-; CHECK-SAME: (i1 [[Q:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i1 noundef [[Q:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[A:%.*]] = insertvalue [[TMP0:%.*]] undef, i32 21, 0
 ; CHECK-NEXT:    br i1 [[Q]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
@@ -67,8 +67,8 @@ define %0 @caller(i1 %Q) {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@caller
-; CGSCC-SAME: (i1 [[Q:%.*]]) #[[ATTR1:[0-9]+]] {
-; CGSCC-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]]) #[[ATTR2:[0-9]+]]
+; CGSCC-SAME: (i1 noundef [[Q:%.*]]) #[[ATTR1:[0-9]+]] {
+; CGSCC-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 noundef [[Q]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret [[TMP0]] [[X]]
 ;
   %X = call %0 @foo(i1 %Q)
@@ -100,11 +100,11 @@ define i32 @caller2(i1 %Q) {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@caller2
-; CGSCC-SAME: (i1 [[Q:%.*]]) #[[ATTR1]] {
-; CGSCC-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]]) #[[ATTR2]]
+; CGSCC-SAME: (i1 noundef [[Q:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 noundef [[Q]]) #[[ATTR2]]
 ; CGSCC-NEXT:    [[A:%.*]] = extractvalue [[TMP0]] [[X]], 0
 ; CGSCC-NEXT:    [[B:%.*]] = extractvalue [[TMP0]] [[X]], 1
-; CGSCC-NEXT:    [[Y:%.*]] = call [[TMP0]] @bar(i1 [[Q]]) #[[ATTR2]]
+; CGSCC-NEXT:    [[Y:%.*]] = call [[TMP0]] @bar(i1 noundef [[Q]]) #[[ATTR2]]
 ; CGSCC-NEXT:    [[C:%.*]] = extractvalue [[TMP0]] [[Y]], 0
 ; CGSCC-NEXT:    [[D:%.*]] = extractvalue [[TMP0]] [[Y]], 1
 ; CGSCC-NEXT:    [[M:%.*]] = add i32 [[A]], [[C]]

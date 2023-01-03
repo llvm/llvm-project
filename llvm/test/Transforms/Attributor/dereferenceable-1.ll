@@ -209,7 +209,7 @@ define i32* @f7_0(i32* %ptr) {
 define void @f7_1(i32* %ptr, i1 %c) {
 ; CHECK: Function Attrs: nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@f7_1
-; CHECK-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[PTR:%.*]], i1 noundef [[C:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[A:%.*]] = tail call i32 @unkown_f(i32* noundef nonnull align 4 dereferenceable(4) [[PTR]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[PTR_0:%.*]] = load i32, i32* [[PTR]], align 4
 ; CHECK-NEXT:    [[B:%.*]] = tail call i32 @unkown_f(i32* noundef nonnull align 4 dereferenceable(4) [[PTR]]) #[[ATTR1]]
@@ -240,7 +240,7 @@ if.false:
 define void @f7_2(i1 %c) {
 ; CHECK: Function Attrs: nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@f7_2
-; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (i1 noundef [[C:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[PTR:%.*]] = tail call nonnull align 4 dereferenceable(4) i32* @unkown_ptr() #[[ATTR1]]
 ; CHECK-NEXT:    [[A:%.*]] = tail call i32 @unkown_f(i32* noundef nonnull align 4 dereferenceable(4) [[PTR]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[ARG_A_0:%.*]] = load i32, i32* [[PTR]], align 4
@@ -843,7 +843,7 @@ declare void @llvm.assume(i1)
 define void @max_offset(i1 %c) {
 ; CHECK: Function Attrs: nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@max_offset
-; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (i1 noundef [[C:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:

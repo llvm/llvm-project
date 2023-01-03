@@ -289,6 +289,7 @@ struct Configuration {
   bool autoImport = false;
   bool pseudoRelocs = false;
   bool stdcallFixup = false;
+  bool writeCheckSum = false;
 };
 
 extern std::unique_ptr<Configuration> config;

@@ -72,7 +72,7 @@ define i32 @return1() {
 define i32 @test2_1(i1 %c) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@test2_1
-; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; TUNIT-SAME: (i1 noundef [[C:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:    br i1 [[C]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; TUNIT:       if.true:
 ; TUNIT-NEXT:    [[RET0:%.*]] = add i32 0, 1
@@ -85,7 +85,7 @@ define i32 @test2_1(i1 %c) {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@test2_1
-; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] {
+; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:    br i1 [[C]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CGSCC:       if.true:
 ; CGSCC-NEXT:    [[CALL:%.*]] = tail call i32 @return0() #[[ATTR12:[0-9]+]]
@@ -123,8 +123,8 @@ define i32 @test2_2(i1 %c) {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@test2_2
-; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR2]] {
-; CGSCC-NEXT:    [[RET:%.*]] = tail call noundef i32 @test2_1(i1 [[C]]) #[[ATTR12]]
+; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR2]] {
+; CGSCC-NEXT:    [[RET:%.*]] = tail call noundef i32 @test2_1(i1 noundef [[C]]) #[[ATTR12]]
 ; CGSCC-NEXT:    ret i32 [[RET]]
 ;
   %ret = tail call i32 @test2_1(i1 %c)
@@ -134,7 +134,7 @@ define i32 @test2_2(i1 %c) {
 declare void @use(i32)
 define void @test3(i1 %c) {
 ; TUNIT-LABEL: define {{[^@]+}}@test3
-; TUNIT-SAME: (i1 [[C:%.*]]) {
+; TUNIT-SAME: (i1 noundef [[C:%.*]]) {
 ; TUNIT-NEXT:    br i1 [[C]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; TUNIT:       if.true:
 ; TUNIT-NEXT:    br label [[END:%.*]]
@@ -146,7 +146,7 @@ define void @test3(i1 %c) {
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@test3
-; CGSCC-SAME: (i1 [[C:%.*]]) {
+; CGSCC-SAME: (i1 noundef [[C:%.*]]) {
 ; CGSCC-NEXT:    br i1 [[C]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CGSCC:       if.true:
 ; CGSCC-NEXT:    br label [[END:%.*]]
@@ -352,7 +352,7 @@ define i32 @ipccp3() {
 define internal i32 @ipccp4ia(i1 %c) {
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@ipccp4ia
-; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
 ; CGSCC-NEXT:    ret i32 0
@@ -388,7 +388,7 @@ f:
 define i32 @ipccp4(i1 %c) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@ipccp4
-; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; TUNIT-SAME: (i1 noundef [[C:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    br label [[F]]
@@ -397,7 +397,7 @@ define i32 @ipccp4(i1 %c) {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@ipccp4
-; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR2]] {
+; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR2]] {
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
 ; CGSCC-NEXT:    br label [[F]]
@@ -586,15 +586,10 @@ define internal ptr @test_byval2(ptr byval(%struct.X) %a) {
 }
 define ptr @complicated_args_byval2() {
 ;
-; TUNIT-LABEL: define {{[^@]+}}@complicated_args_byval2() {
-; TUNIT-NEXT:    [[TMP1:%.*]] = load ptr, ptr @S, align 8
-; TUNIT-NEXT:    [[C:%.*]] = call ptr @test_byval2(ptr [[TMP1]])
-; TUNIT-NEXT:    ret ptr [[C]]
-;
-; CGSCC-LABEL: define {{[^@]+}}@complicated_args_byval2() {
-; CGSCC-NEXT:    [[TMP1:%.*]] = load ptr, ptr @S, align 8
-; CGSCC-NEXT:    [[C:%.*]] = call ptr @test_byval2(ptr [[TMP1]])
-; CGSCC-NEXT:    ret ptr [[C]]
+; CHECK-LABEL: define {{[^@]+}}@complicated_args_byval2() {
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr @S, align 8
+; CHECK-NEXT:    [[C:%.*]] = call ptr @test_byval2(ptr [[TMP1]])
+; CHECK-NEXT:    ret ptr [[C]]
 ;
   %c = call ptr @test_byval2(ptr byval(%struct.X) @S)
   ret ptr %c
@@ -1061,12 +1056,19 @@ define internal i1 @cmp_null_after_cast(i32 %a, i8 %b) {
 declare ptr @m()
 
 define i32 @test(i1 %c) {
-; CHECK-LABEL: define {{[^@]+}}@test
-; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[R1:%.*]] = call i32 @ctx_test1(i1 [[C]])
-; CHECK-NEXT:    [[R2:%.*]] = call i32 @ctx_test2(i1 [[C]])
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[R1]], [[R2]]
-; CHECK-NEXT:    ret i32 [[ADD]]
+; TUNIT-LABEL: define {{[^@]+}}@test
+; TUNIT-SAME: (i1 [[C:%.*]]) {
+; TUNIT-NEXT:    [[R1:%.*]] = call i32 @ctx_test1(i1 [[C]])
+; TUNIT-NEXT:    [[R2:%.*]] = call i32 @ctx_test2(i1 [[C]])
+; TUNIT-NEXT:    [[ADD:%.*]] = add i32 [[R1]], [[R2]]
+; TUNIT-NEXT:    ret i32 [[ADD]]
+;
+; CGSCC-LABEL: define {{[^@]+}}@test
+; CGSCC-SAME: (i1 noundef [[C:%.*]]) {
+; CGSCC-NEXT:    [[R1:%.*]] = call i32 @ctx_test1(i1 noundef [[C]])
+; CGSCC-NEXT:    [[R2:%.*]] = call i32 @ctx_test2(i1 noundef [[C]])
+; CGSCC-NEXT:    [[ADD:%.*]] = add i32 [[R1]], [[R2]]
+; CGSCC-NEXT:    ret i32 [[ADD]]
 ;
   %r1 = call i32 @ctx_test1(i1 %c)
   %r2 = call i32 @ctx_test2(i1 %c)
@@ -1076,7 +1078,7 @@ define i32 @test(i1 %c) {
 
 define internal i32 @ctx_test1(i1 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@ctx_test1
-; CHECK-SAME: (i1 [[C:%.*]]) {
+; CHECK-SAME: (i1 noundef [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[JOIN:%.*]]
 ; CHECK:       then:
@@ -1104,7 +1106,7 @@ join:
 
 define internal i32 @ctx_test2(i1 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@ctx_test2
-; CHECK-SAME: (i1 [[C:%.*]]) {
+; CHECK-SAME: (i1 noundef [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[JOIN:%.*]]
 ; CHECK:       then:
@@ -1135,7 +1137,7 @@ join:
 define i1 @test_liveness(i1 %c) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@test_liveness
-; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; TUNIT-SAME: (i1 noundef [[C:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
@@ -1147,7 +1149,7 @@ define i1 @test_liveness(i1 %c) {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@test_liveness
-; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR2]] {
+; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR2]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:

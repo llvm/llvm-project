@@ -4,7 +4,7 @@
 
 declare void @llvm.experimental.guard(i1, ...)
 
-define i32 @unsigned_loop_0_to_n_ult_check(i32* %array, i32 %length, i32 %n) {
+define i32 @unsigned_loop_0_to_n_ult_check(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @unsigned_loop_0_to_n_ult_check(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -21,8 +21,8 @@ define i32 @unsigned_loop_0_to_n_ult_check(i32* %array, i32 %length, i32 %n) {
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
@@ -48,8 +48,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add nuw i32 %i, 1
@@ -61,7 +61,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @unsigned_loop_0_to_n_ule_latch_ult_check(i32* %array, i32 %length, i32 %n) {
+define i32 @unsigned_loop_0_to_n_ule_latch_ult_check(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @unsigned_loop_0_to_n_ule_latch_ult_check(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -78,8 +78,8 @@ define i32 @unsigned_loop_0_to_n_ule_latch_ult_check(i32* %array, i32 %length, i
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ule i32 [[I_NEXT]], [[N]]
@@ -105,8 +105,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add nuw i32 %i, 1
@@ -118,7 +118,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @unsigned_loop_0_to_n_ugt_check(i32* %array, i32 %length, i32 %n) {
+define i32 @unsigned_loop_0_to_n_ugt_check(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @unsigned_loop_0_to_n_ugt_check(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -135,8 +135,8 @@ define i32 @unsigned_loop_0_to_n_ugt_check(i32* %array, i32 %length, i32 %n) {
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
@@ -162,8 +162,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add nuw i32 %i, 1
@@ -175,7 +175,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_loop_0_to_n_ult_check(i32* %array, i32 %length, i32 %n) {
+define i32 @signed_loop_0_to_n_ult_check(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @signed_loop_0_to_n_ult_check(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -192,8 +192,8 @@ define i32 @signed_loop_0_to_n_ult_check(i32* %array, i32 %length, i32 %n) {
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
@@ -219,8 +219,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add nuw i32 %i, 1
@@ -232,11 +232,11 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_loop_0_to_n_ult_check_length_range_known(i32* %array, i32* %length.ptr, i32 %n) {
+define i32 @signed_loop_0_to_n_ult_check_length_range_known(ptr %array, ptr %length.ptr, i32 %n) {
 ; CHECK-LABEL: @signed_loop_0_to_n_ult_check_length_range_known(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
-; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], align 4, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, ptr [[LENGTH_PTR:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[EXIT:%.*]], label [[LOOP_PREHEADER:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp sle i32 [[N]], [[LENGTH]]
@@ -249,8 +249,8 @@ define i32 @signed_loop_0_to_n_ult_check_length_range_known(i32* %array, i32* %l
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP1]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
@@ -264,7 +264,7 @@ define i32 @signed_loop_0_to_n_ult_check_length_range_known(i32* %array, i32* %l
 ;
 entry:
   %tmp5 = icmp sle i32 %n, 0
-  %length = load i32, i32* %length.ptr, !range !{i32 1, i32 2147483648}
+  %length = load i32, ptr %length.ptr, !range !{i32 1, i32 2147483648}
   br i1 %tmp5, label %exit, label %loop.preheader
 
 loop.preheader:
@@ -277,8 +277,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add nuw i32 %i, 1
@@ -290,7 +290,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_loop_0_to_n_inverse_latch_predicate(i32* %array, i32 %length, i32 %n) {
+define i32 @signed_loop_0_to_n_inverse_latch_predicate(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @signed_loop_0_to_n_inverse_latch_predicate(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -307,8 +307,8 @@ define i32 @signed_loop_0_to_n_inverse_latch_predicate(i32* %array, i32 %length,
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp sgt i32 [[I_NEXT]], [[N]]
@@ -334,8 +334,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add nuw i32 %i, 1
@@ -347,7 +347,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_loop_0_to_n_sle_latch_ult_check(i32* %array, i32 %length, i32 %n) {
+define i32 @signed_loop_0_to_n_sle_latch_ult_check(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @signed_loop_0_to_n_sle_latch_ult_check(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -364,8 +364,8 @@ define i32 @signed_loop_0_to_n_sle_latch_ult_check(i32* %array, i32 %length, i32
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp sle i32 [[I_NEXT]], [[N]]
@@ -391,8 +391,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add nuw i32 %i, 1
@@ -404,7 +404,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_loop_0_to_n_preincrement_latch_check(i32* %array, i32 %length, i32 %n) {
+define i32 @signed_loop_0_to_n_preincrement_latch_check(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @signed_loop_0_to_n_preincrement_latch_check(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -422,8 +422,8 @@ define i32 @signed_loop_0_to_n_preincrement_latch_check(i32* %array, i32 %length
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp slt i32 [[I]], [[N]]
@@ -449,8 +449,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add i32 %i, 1
@@ -462,7 +462,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_loop_0_to_n_preincrement_latch_check_postincrement_guard_check(i32* %array, i32 %length, i32 %n) {
+define i32 @signed_loop_0_to_n_preincrement_latch_check_postincrement_guard_check(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @signed_loop_0_to_n_preincrement_latch_check_postincrement_guard_check(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -481,8 +481,8 @@ define i32 @signed_loop_0_to_n_preincrement_latch_check_postincrement_guard_chec
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp slt i32 [[I]], [[N]]
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
@@ -509,8 +509,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %continue = icmp slt i32 %i, %n
@@ -521,7 +521,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_loop_0_to_n_sle_latch_offset_ult_check(i32* %array, i32 %length, i32 %n) {
+define i32 @signed_loop_0_to_n_sle_latch_offset_ult_check(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @signed_loop_0_to_n_sle_latch_offset_ult_check(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -540,8 +540,8 @@ define i32 @signed_loop_0_to_n_sle_latch_offset_ult_check(i32* %array, i32 %leng
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp sle i32 [[I_NEXT]], [[N]]
@@ -568,8 +568,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add i32 %i, 1
@@ -581,7 +581,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_loop_0_to_n_offset_sle_latch_offset_ult_check(i32* %array, i32 %length, i32 %n) {
+define i32 @signed_loop_0_to_n_offset_sle_latch_offset_ult_check(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @signed_loop_0_to_n_offset_sle_latch_offset_ult_check(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -599,8 +599,8 @@ define i32 @signed_loop_0_to_n_offset_sle_latch_offset_ult_check(i32* %array, i3
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[I_NEXT_OFFSET:%.*]] = add i32 [[I_NEXT]], 1
@@ -628,8 +628,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add i32 %i, 1
@@ -642,7 +642,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @unsupported_latch_pred_loop_0_to_n(i32* %array, i32 %length, i32 %n) {
+define i32 @unsupported_latch_pred_loop_0_to_n(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @unsupported_latch_pred_loop_0_to_n(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -655,8 +655,8 @@ define i32 @unsupported_latch_pred_loop_0_to_n(i32* %array, i32 %length, i32 %n)
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_BOUNDS]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ne i32 [[I_NEXT]], [[N]]
@@ -682,8 +682,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add nsw i32 %i, 1
@@ -695,7 +695,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_loop_0_to_n_unsupported_iv_step(i32* %array, i32 %length, i32 %n) {
+define i32 @signed_loop_0_to_n_unsupported_iv_step(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @signed_loop_0_to_n_unsupported_iv_step(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -708,8 +708,8 @@ define i32 @signed_loop_0_to_n_unsupported_iv_step(i32* %array, i32 %length, i32
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_BOUNDS]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nsw i32 [[I]], 2
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
@@ -735,8 +735,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add nsw i32 %i, 2
@@ -748,7 +748,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_loop_0_to_n_equal_iv_range_check(i32* %array, i32 %length, i32 %n) {
+define i32 @signed_loop_0_to_n_equal_iv_range_check(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @signed_loop_0_to_n_equal_iv_range_check(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -766,8 +766,8 @@ define i32 @signed_loop_0_to_n_equal_iv_range_check(i32* %array, i32 %length, i3
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[J_NEXT]] = add nsw i32 [[J]], 1
 ; CHECK-NEXT:    [[I_NEXT]] = add nsw i32 [[I]], 1
@@ -796,8 +796,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %j.next = add nsw i32 %j, 1
@@ -810,7 +810,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_loop_start_to_n_offset_iv_range_check(i32* %array, i32 %start.i,
+define i32 @signed_loop_start_to_n_offset_iv_range_check(ptr %array, i32 %start.i,
 ; CHECK-LABEL: @signed_loop_start_to_n_offset_iv_range_check(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -830,8 +830,8 @@ define i32 @signed_loop_start_to_n_offset_iv_range_check(i32* %array, i32 %start
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP4]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[J_NEXT]] = add i32 [[J]], 1
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
@@ -862,8 +862,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %j.next = add i32 %j, 1
@@ -876,7 +876,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_loop_0_to_n_different_iv_types(i32* %array, i16 %length, i32 %n) {
+define i32 @signed_loop_0_to_n_different_iv_types(ptr %array, i16 %length, i32 %n) {
 ; CHECK-LABEL: @signed_loop_0_to_n_different_iv_types(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -890,8 +890,8 @@ define i32 @signed_loop_0_to_n_different_iv_types(i32* %array, i16 %length, i32 
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i16 [[J]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_BOUNDS]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[J_NEXT]] = add i16 [[J]], 1
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
@@ -920,8 +920,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %j.next = add i16 %j, 1
@@ -934,7 +934,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_loop_0_to_n_different_iv_strides(i32* %array, i32 %length, i32 %n) {
+define i32 @signed_loop_0_to_n_different_iv_strides(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @signed_loop_0_to_n_different_iv_strides(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -948,8 +948,8 @@ define i32 @signed_loop_0_to_n_different_iv_strides(i32* %array, i32 %length, i3
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[J]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_BOUNDS]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[J_NEXT]] = add nsw i32 [[J]], 2
 ; CHECK-NEXT:    [[I_NEXT]] = add nsw i32 [[I]], 1
@@ -978,8 +978,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %j.next = add nsw i32 %j, 2
@@ -992,7 +992,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @two_range_checks(i32* %array.1, i32 %length.1,
+define i32 @two_range_checks(ptr %array.1, i32 %length.1,
 ; CHECK-LABEL: @two_range_checks(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -1015,11 +1015,11 @@ define i32 @two_range_checks(i32* %array.1, i32 %length.1,
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP6]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_1_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY_1:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_1_I:%.*]] = load i32, i32* [[ARRAY_1_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_1_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY_1:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_1_I:%.*]] = load i32, ptr [[ARRAY_1_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_1:%.*]] = add i32 [[LOOP_ACC]], [[ARRAY_1_I]]
-; CHECK-NEXT:    [[ARRAY_2_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY_2:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_2_I:%.*]] = load i32, i32* [[ARRAY_2_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_2_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY_2:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_2_I:%.*]] = load i32, ptr [[ARRAY_2_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC_1]], [[ARRAY_2_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
@@ -1031,7 +1031,7 @@ define i32 @two_range_checks(i32* %array.1, i32 %length.1,
 ; CHECK-NEXT:    [[RESULT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[LOOP_ACC_NEXT_LCSSA]], [[EXIT_LOOPEXIT]] ]
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
-  i32* %array.2, i32 %length.2, i32 %n) {
+  ptr %array.2, i32 %length.2, i32 %n) {
 entry:
   %tmp5 = icmp eq i32 %n, 0
   br i1 %tmp5, label %exit, label %loop.preheader
@@ -1048,12 +1048,12 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.1.i.ptr = getelementptr inbounds i32, i32* %array.1, i64 %i.i64
-  %array.1.i = load i32, i32* %array.1.i.ptr, align 4
+  %array.1.i.ptr = getelementptr inbounds i32, ptr %array.1, i64 %i.i64
+  %array.1.i = load i32, ptr %array.1.i.ptr, align 4
   %loop.acc.1 = add i32 %loop.acc, %array.1.i
 
-  %array.2.i.ptr = getelementptr inbounds i32, i32* %array.2, i64 %i.i64
-  %array.2.i = load i32, i32* %array.2.i.ptr, align 4
+  %array.2.i.ptr = getelementptr inbounds i32, ptr %array.2, i64 %i.i64
+  %array.2.i = load i32, ptr %array.2.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc.1, %array.2.i
 
   %i.next = add nuw i32 %i, 1
@@ -1065,7 +1065,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @three_range_checks(i32* %array.1, i32 %length.1,
+define i32 @three_range_checks(ptr %array.1, i32 %length.1,
 ; CHECK-LABEL: @three_range_checks(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -1094,14 +1094,14 @@ define i32 @three_range_checks(i32* %array.1, i32 %length.1,
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP10]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_1_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY_1:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_1_I:%.*]] = load i32, i32* [[ARRAY_1_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_1_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY_1:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_1_I:%.*]] = load i32, ptr [[ARRAY_1_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_1:%.*]] = add i32 [[LOOP_ACC]], [[ARRAY_1_I]]
-; CHECK-NEXT:    [[ARRAY_2_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY_2:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_2_I:%.*]] = load i32, i32* [[ARRAY_2_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_2_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY_2:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_2_I:%.*]] = load i32, ptr [[ARRAY_2_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_2:%.*]] = add i32 [[LOOP_ACC_1]], [[ARRAY_2_I]]
-; CHECK-NEXT:    [[ARRAY_3_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY_3:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_3_I:%.*]] = load i32, i32* [[ARRAY_3_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_3_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY_3:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_3_I:%.*]] = load i32, ptr [[ARRAY_3_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC_2]], [[ARRAY_3_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
@@ -1113,8 +1113,8 @@ define i32 @three_range_checks(i32* %array.1, i32 %length.1,
 ; CHECK-NEXT:    [[RESULT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[LOOP_ACC_NEXT_LCSSA]], [[EXIT_LOOPEXIT]] ]
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
-  i32* %array.2, i32 %length.2,
-  i32* %array.3, i32 %length.3, i32 %n) {
+  ptr %array.2, i32 %length.2,
+  ptr %array.3, i32 %length.3, i32 %n) {
 entry:
   %tmp5 = icmp eq i32 %n, 0
   br i1 %tmp5, label %exit, label %loop.preheader
@@ -1133,16 +1133,16 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.1.i.ptr = getelementptr inbounds i32, i32* %array.1, i64 %i.i64
-  %array.1.i = load i32, i32* %array.1.i.ptr, align 4
+  %array.1.i.ptr = getelementptr inbounds i32, ptr %array.1, i64 %i.i64
+  %array.1.i = load i32, ptr %array.1.i.ptr, align 4
   %loop.acc.1 = add i32 %loop.acc, %array.1.i
 
-  %array.2.i.ptr = getelementptr inbounds i32, i32* %array.2, i64 %i.i64
-  %array.2.i = load i32, i32* %array.2.i.ptr, align 4
+  %array.2.i.ptr = getelementptr inbounds i32, ptr %array.2, i64 %i.i64
+  %array.2.i = load i32, ptr %array.2.i.ptr, align 4
   %loop.acc.2 = add i32 %loop.acc.1, %array.2.i
 
-  %array.3.i.ptr = getelementptr inbounds i32, i32* %array.3, i64 %i.i64
-  %array.3.i = load i32, i32* %array.3.i.ptr, align 4
+  %array.3.i.ptr = getelementptr inbounds i32, ptr %array.3, i64 %i.i64
+  %array.3.i = load i32, ptr %array.3.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc.2, %array.3.i
 
   %i.next = add nuw i32 %i, 1
@@ -1154,7 +1154,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @three_guards(i32* %array.1, i32 %length.1,
+define i32 @three_guards(ptr %array.1, i32 %length.1,
 ; CHECK-LABEL: @three_guards(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -1177,20 +1177,20 @@ define i32 @three_guards(i32* %array.1, i32 %length.1,
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS_1]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_1_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY_1:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_1_I:%.*]] = load i32, i32* [[ARRAY_1_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_1_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY_1:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_1_I:%.*]] = load i32, ptr [[ARRAY_1_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_1:%.*]] = add i32 [[LOOP_ACC]], [[ARRAY_1_I]]
 ; CHECK-NEXT:    [[WITHIN_BOUNDS_2:%.*]] = icmp ult i32 [[I]], [[LENGTH_2]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP5]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS_2]])
-; CHECK-NEXT:    [[ARRAY_2_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY_2:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_2_I:%.*]] = load i32, i32* [[ARRAY_2_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_2_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY_2:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_2_I:%.*]] = load i32, ptr [[ARRAY_2_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_2:%.*]] = add i32 [[LOOP_ACC_1]], [[ARRAY_2_I]]
 ; CHECK-NEXT:    [[WITHIN_BOUNDS_3:%.*]] = icmp ult i32 [[I]], [[LENGTH_3]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP8]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS_3]])
-; CHECK-NEXT:    [[ARRAY_3_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY_3:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_3_I:%.*]] = load i32, i32* [[ARRAY_3_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_3_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY_3:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_3_I:%.*]] = load i32, ptr [[ARRAY_3_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC_2]], [[ARRAY_3_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
@@ -1202,8 +1202,8 @@ define i32 @three_guards(i32* %array.1, i32 %length.1,
 ; CHECK-NEXT:    [[RESULT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[LOOP_ACC_NEXT_LCSSA]], [[EXIT_LOOPEXIT]] ]
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
-  i32* %array.2, i32 %length.2,
-  i32* %array.3, i32 %length.3, i32 %n) {
+  ptr %array.2, i32 %length.2,
+  ptr %array.3, i32 %length.3, i32 %n) {
 entry:
   %tmp5 = icmp eq i32 %n, 0
   br i1 %tmp5, label %exit, label %loop.preheader
@@ -1220,22 +1220,22 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds.1, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.1.i.ptr = getelementptr inbounds i32, i32* %array.1, i64 %i.i64
-  %array.1.i = load i32, i32* %array.1.i.ptr, align 4
+  %array.1.i.ptr = getelementptr inbounds i32, ptr %array.1, i64 %i.i64
+  %array.1.i = load i32, ptr %array.1.i.ptr, align 4
   %loop.acc.1 = add i32 %loop.acc, %array.1.i
 
   %within.bounds.2 = icmp ult i32 %i, %length.2
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds.2, i32 9) [ "deopt"() ]
 
-  %array.2.i.ptr = getelementptr inbounds i32, i32* %array.2, i64 %i.i64
-  %array.2.i = load i32, i32* %array.2.i.ptr, align 4
+  %array.2.i.ptr = getelementptr inbounds i32, ptr %array.2, i64 %i.i64
+  %array.2.i = load i32, ptr %array.2.i.ptr, align 4
   %loop.acc.2 = add i32 %loop.acc.1, %array.2.i
 
   %within.bounds.3 = icmp ult i32 %i, %length.3
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds.3, i32 9) [ "deopt"() ]
 
-  %array.3.i.ptr = getelementptr inbounds i32, i32* %array.3, i64 %i.i64
-  %array.3.i = load i32, i32* %array.3.i.ptr, align 4
+  %array.3.i.ptr = getelementptr inbounds i32, ptr %array.3, i64 %i.i64
+  %array.3.i = load i32, ptr %array.3.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc.2, %array.3.i
 
   %i.next = add nuw i32 %i, 1
@@ -1247,7 +1247,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @unsigned_loop_0_to_n_unrelated_condition(i32* %array, i32 %length, i32 %n, i32 %x) {
+define i32 @unsigned_loop_0_to_n_unrelated_condition(ptr %array, i32 %length, i32 %n, i32 %x) {
 ; CHECK-LABEL: @unsigned_loop_0_to_n_unrelated_condition(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -1267,8 +1267,8 @@ define i32 @unsigned_loop_0_to_n_unrelated_condition(i32* %array, i32 %length, i
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[GUARD_COND]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
@@ -1296,8 +1296,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %guard.cond, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add nuw i32 %i, 1
@@ -1310,7 +1310,7 @@ exit:
 }
 
 ; Don't change the guard condition if there were no widened subconditions
-define i32 @test_no_widened_conditions(i32* %array, i32 %length, i32 %n, i32 %x1, i32 %x2, i32 %x3) {
+define i32 @test_no_widened_conditions(ptr %array, i32 %length, i32 %n, i32 %x1, i32 %x2, i32 %x3) {
 ; CHECK-LABEL: @test_no_widened_conditions(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -1327,8 +1327,8 @@ define i32 @test_no_widened_conditions(i32* %array, i32 %length, i32 %n, i32 %x1
 ; CHECK-NEXT:    [[GUARD_COND:%.*]] = and i1 [[UNRELATED_COND_AND_1]], [[UNRELATED_COND_3]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[GUARD_COND]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
@@ -1359,8 +1359,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %guard.cond, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add nuw i32 %i, 1
@@ -1372,7 +1372,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_loop_start_to_n_loop_variant_bound(i32* %array, i32 %x, i32 %start, i32 %n) {
+define i32 @signed_loop_start_to_n_loop_variant_bound(ptr %array, i32 %x, i32 %start, i32 %n) {
 ; CHECK-LABEL: @signed_loop_start_to_n_loop_variant_bound(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -1386,8 +1386,8 @@ define i32 @signed_loop_start_to_n_loop_variant_bound(i32* %array, i32 %x, i32 %
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[BOUND]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_BOUNDS]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
@@ -1414,8 +1414,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add nsw i32 %i, 1
@@ -1427,7 +1427,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_loop_start_to_n_non_monotonic_predicate(i32* %array, i32 %x, i32 %start, i32 %n) {
+define i32 @signed_loop_start_to_n_non_monotonic_predicate(ptr %array, i32 %x, i32 %start, i32 %n) {
 ; CHECK-LABEL: @signed_loop_start_to_n_non_monotonic_predicate(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -1440,8 +1440,8 @@ define i32 @signed_loop_start_to_n_non_monotonic_predicate(i32* %array, i32 %x, 
 ; CHECK-NEXT:    [[GUARD_COND:%.*]] = icmp eq i32 [[I]], [[X:%.*]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[GUARD_COND]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
@@ -1467,8 +1467,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %guard.cond, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add nsw i32 %i, 1
@@ -1480,7 +1480,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @unsigned_loop_0_to_n_hoist_length(i32* %array, i16 %length.i16, i32 %n) {
+define i32 @unsigned_loop_0_to_n_hoist_length(ptr %array, i16 %length.i16, i32 %n) {
 ; CHECK-LABEL: @unsigned_loop_0_to_n_hoist_length(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -1499,8 +1499,8 @@ define i32 @unsigned_loop_0_to_n_hoist_length(i32* %array, i16 %length.i16, i32 
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
@@ -1527,8 +1527,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add nuw i32 %i, 1
@@ -1540,7 +1540,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @unsigned_loop_0_to_n_cant_hoist_length(i32* %array, i32 %length, i32 %divider, i32 %n) {
+define i32 @unsigned_loop_0_to_n_cant_hoist_length(ptr %array, i32 %length, i32 %divider, i32 %n) {
 ; CHECK-LABEL: @unsigned_loop_0_to_n_cant_hoist_length(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -1558,8 +1558,8 @@ define i32 @unsigned_loop_0_to_n_cant_hoist_length(i32* %array, i32 %length, i32
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
@@ -1586,8 +1586,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add nuw i32 %i, 1
@@ -1602,10 +1602,10 @@ exit:
 
 ; This is a case where the length information tells us that the guard
 ; must trigger on some iteration.
-define i32 @provably_taken(i32* %array, i32* %length.ptr) {
+define i32 @provably_taken(ptr %array, ptr %length.ptr) {
 ; CHECK-LABEL: @provably_taken(
 ; CHECK-NEXT:  loop.preheader:
-; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], align 4, !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, ptr [[LENGTH_PTR:%.*]], align 4, !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 0, [[LENGTH]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[TMP0]], false
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -1616,8 +1616,8 @@ define i32 @provably_taken(i32* %array, i32* %length.ptr) {
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP1]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp slt i32 [[I_NEXT]], 200
@@ -1627,7 +1627,7 @@ define i32 @provably_taken(i32* %array, i32* %length.ptr) {
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 loop.preheader:
-  %length = load i32, i32* %length.ptr, !range !{i32 0, i32 50}
+  %length = load i32, ptr %length.ptr, !range !{i32 0, i32 50}
   br label %loop
 
 loop:
@@ -1637,8 +1637,8 @@ loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
 
   %i.next = add nuw i32 %i, 1
@@ -1652,7 +1652,7 @@ exit:
 
 ; NE Check (as produced by LFTR) where we can prove Start < End via simple
 ; instruction analysis
-define i32 @ne_latch_zext(i32* %array, i32 %length, i16 %n16) {
+define i32 @ne_latch_zext(ptr %array, i32 %length, i16 %n16) {
 ; CHECK-LABEL: @ne_latch_zext(
 ; CHECK-NEXT:  loop.preheader:
 ; CHECK-NEXT:    [[N:%.*]] = zext i16 [[N16:%.*]] to i32
@@ -1691,7 +1691,7 @@ exit:
 }
 
 ; Same as previous, but with a pre-increment test since this is easier to match
-define i32 @ne_latch_zext_preinc(i32* %array, i32 %length, i16 %n16) {
+define i32 @ne_latch_zext_preinc(ptr %array, i32 %length, i16 %n16) {
 ; CHECK-LABEL: @ne_latch_zext_preinc(
 ; CHECK-NEXT:  loop.preheader:
 ; CHECK-NEXT:    [[N:%.*]] = zext i16 [[N16:%.*]] to i32
@@ -1730,7 +1730,7 @@ exit:
 
 ; NE Check (as produced by LFTR) where we can prove Start < End via the
 ; condition guarding the loop entry.
-define i32 @ne_latch_dom_check(i32* %array, i32 %length, i32 %n) {
+define i32 @ne_latch_dom_check(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @ne_latch_dom_check(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -1772,7 +1772,7 @@ exit:
 }
 
 ; Same as previous, but easier to match
-define i32 @ne_latch_dom_check_preinc(i32* %array, i32 %length, i32 %n) {
+define i32 @ne_latch_dom_check_preinc(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @ne_latch_dom_check_preinc(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -1817,7 +1817,7 @@ exit:
 }
 
 ; Same as previous, except swapped br/cmp
-define i32 @eq_latch_dom_check_preinc(i32* %array, i32 %length, i32 %n) {
+define i32 @eq_latch_dom_check_preinc(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @eq_latch_dom_check_preinc(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -1864,7 +1864,7 @@ exit:
 
 ; NE latch - can't prove (end-start) mod step == 0 (i.e. might wrap
 ; around several times or even be infinite)
-define i32 @neg_ne_latch_mod_step(i32* %array, i32 %length, i16 %n16) {
+define i32 @neg_ne_latch_mod_step(ptr %array, i32 %length, i16 %n16) {
 ; CHECK-LABEL: @neg_ne_latch_mod_step(
 ; CHECK-NEXT:  loop.preheader:
 ; CHECK-NEXT:    [[N:%.*]] = zext i16 [[N16:%.*]] to i32
@@ -1897,7 +1897,7 @@ exit:
 }
 
 ; NE latch - TODO: could prove (end-start) mod step == 0
-define i32 @ne_latch_mod_step(i32* %array, i32 %length) {
+define i32 @ne_latch_mod_step(ptr %array, i32 %length) {
 ; CHECK-LABEL: @ne_latch_mod_step(
 ; CHECK-NEXT:  loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -1928,7 +1928,7 @@ exit:
 }
 
 ; NE Latch - but end > start so wraps around and not equivelent to a ult
-define i32 @neg_ne_latch_swapped_order(i32* %array, i32 %length) {
+define i32 @neg_ne_latch_swapped_order(ptr %array, i32 %length) {
 ; CHECK-LABEL: @neg_ne_latch_swapped_order(
 ; CHECK-NEXT:  loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -1961,7 +1961,7 @@ exit:
 ; Negative test, make sure we don't crash on unconditional latches
 ; TODO: there's no reason we shouldn't be able to predicate the
 ; condition for an statically infinite loop.
-define i32 @unconditional_latch(i32* %a, i32 %length) {
+define i32 @unconditional_latch(ptr %a, i32 %length) {
 ; CHECK-LABEL: @unconditional_latch(
 ; CHECK-NEXT:  loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -1969,7 +1969,7 @@ define i32 @unconditional_latch(i32* %a, i32 %length) {
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 400, [[LOOP_PREHEADER:%.*]] ]
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_BOUNDS]], i32 9) [ "deopt"() ]
-; CHECK-NEXT:    store volatile i32 0, i32* [[A:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -1980,7 +1980,7 @@ loop:
   %i = phi i32 [ %i.next, %loop ], [ 400, %loop.preheader ]
   %within.bounds = icmp ult i32 %i, %length
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
-  store volatile i32 0, i32* %a
+  store volatile i32 0, ptr %a
   %i.next = add i32 %i, 1
   br label %loop
 }

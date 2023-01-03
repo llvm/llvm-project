@@ -30,10 +30,11 @@ class DataLayoutSpecInterface;
 class MLIRContext;
 class ModuleOp;
 
-/// Convert the given LLVM module into MLIR's LLVM dialect.  The LLVM context is
-/// extracted from the registered LLVM IR dialect. In case of error, report it
-/// to the error handler registered with the MLIR context, if any (obtained from
-/// the MLIR module), and return `{}`.
+/// Translates the LLVM module into an MLIR module living in the given context.
+/// The translation supports operations from any dialect that has a registered
+/// implementation of the LLVMImportDialectInterface. It returns nullptr if the
+/// translation fails and reports errors using the error handler registered with
+/// the MLIR context.
 OwningOpRef<ModuleOp>
 translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                         MLIRContext *context);

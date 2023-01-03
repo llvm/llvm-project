@@ -21472,6 +21472,12 @@ SDValue DAGCombiner::convertBuildVecZextToBuildVecWithZeros(SDNode *N) {
   EVT OpVT = N->getOperand(0).getValueType();
   assert(!VT.isScalableVector() && "Encountered scalable BUILD_VECTOR?");
 
+  EVT OpIntVT = EVT::getIntegerVT(*DAG.getContext(), OpVT.getSizeInBits());
+
+  if (!TLI.isTypeLegal(OpIntVT) ||
+      (LegalOperations && !TLI.isOperationLegalOrCustom(ISD::BITCAST, OpIntVT)))
+    return SDValue();
+
   unsigned EltBitwidth = VT.getScalarSizeInBits();
   // NOTE: the actual width of operands may be wider than that!
 
@@ -21515,27 +21521,31 @@ SDValue DAGCombiner::convertBuildVecZextToBuildVecWithZeros(SDNode *N) {
 
   // We have EltBitwidth bits, the *minimal* chunk size is ActiveBits,
   // into how many chunks can we split our element width?
-  unsigned Factor = divideCeil(EltBitwidth, ActiveBits);
-  assert(Factor > 1 && "Did not split the element after all?");
-  assert(EltBitwidth % Factor == 0 && "Can not split into this many chunks?");
-  unsigned ChunkBitwidth = EltBitwidth / Factor;
-  assert(ChunkBitwidth >= ActiveBits && "Underestimated chunk size?");
-  assert(ChunkBitwidth < EltBitwidth && "Failed to reduce element width?");
-
-  EVT OpIntVT = EVT::getIntegerVT(*DAG.getContext(), OpVT.getSizeInBits());
-  EVT NewScalarIntVT = EVT::getIntegerVT(*DAG.getContext(), ChunkBitwidth);
-  EVT NewIntVT = EVT::getVectorVT(*DAG.getContext(), NewScalarIntVT,
-                                  Factor * N->getNumOperands());
-
-  // Never create illegal types.
-  if (!TLI.isTypeLegal(OpIntVT) || !TLI.isTypeLegal(NewScalarIntVT) ||
-      !TLI.isTypeLegal(NewIntVT))
-    return SDValue();
-
-  if (LegalOperations &&
-      !(TLI.isOperationLegalOrCustom(ISD::BITCAST, OpIntVT) &&
-        TLI.isOperationLegalOrCustom(ISD::TRUNCATE, NewScalarIntVT) &&
-        TLI.isOperationLegalOrCustom(ISD::BUILD_VECTOR, NewIntVT)))
+  EVT NewScalarIntVT, NewIntVT;
+  std::optional<unsigned> Factor;
+  // We can split the element into at least two chunks, but not into more
+  // than |_ EltBitwidth / ActiveBits _| chunks. Find a largest split factor
+  // for which the element width is a multiple of it,
+  // and the resulting types/operations on that chunk width are legal.
+  assert(2 * ActiveBits <= EltBitwidth &&
+         "We know that half or less bits of the element are active.");
+  for (unsigned Scale = EltBitwidth / ActiveBits; Scale >= 2; --Scale) {
+    if (EltBitwidth % Scale != 0)
+      continue;
+    unsigned ChunkBitwidth = EltBitwidth / Scale;
+    assert(ChunkBitwidth >= ActiveBits && "As per starting point.");
+    NewScalarIntVT = EVT::getIntegerVT(*DAG.getContext(), ChunkBitwidth);
+    NewIntVT = EVT::getVectorVT(*DAG.getContext(), NewScalarIntVT,
+                                Scale * N->getNumOperands());
+    if (!TLI.isTypeLegal(NewScalarIntVT) || !TLI.isTypeLegal(NewIntVT) ||
+        (LegalOperations &&
+         !(TLI.isOperationLegalOrCustom(ISD::TRUNCATE, NewScalarIntVT) &&
+           TLI.isOperationLegalOrCustom(ISD::BUILD_VECTOR, NewIntVT))))
+      continue;
+    Factor = Scale;
+    break;
+  }
+  if (!Factor)
     return SDValue();
 
   SDLoc DL(N);
@@ -21546,16 +21556,16 @@ SDValue DAGCombiner::convertBuildVecZextToBuildVecWithZeros(SDNode *N) {
   NewOps.reserve(NewIntVT.getVectorNumElements());
   for (auto I : enumerate(N->ops())) {
     SDValue Op = I.value();
-    // FIXME: after allowing UNDEF's, do handle them here.
+    assert(!Op.isUndef() && "FIXME: after allowing UNDEF's, handle them here.");
     unsigned SrcOpIdx = I.index();
     if (KnownZeroOps[SrcOpIdx]) {
-      NewOps.append(Factor, ZeroOp);
+      NewOps.append(*Factor, ZeroOp);
       continue;
     }
     Op = DAG.getBitcast(OpIntVT, Op);
     Op = DAG.getNode(ISD::TRUNCATE, DL, NewScalarIntVT, Op);
     NewOps.emplace_back(Op);
-    NewOps.append(Factor - 1, ZeroOp);
+    NewOps.append(*Factor - 1, ZeroOp);
   }
   assert(NewOps.size() == NewIntVT.getVectorNumElements());
   SDValue NewBV = DAG.getBuildVector(NewIntVT, DL, NewOps);

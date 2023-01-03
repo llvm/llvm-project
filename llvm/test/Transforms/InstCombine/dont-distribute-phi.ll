@@ -43,8 +43,8 @@ bb_exit:
 define zeroext i1 @foo_logical(i32 %arg) {
 ; CHECK-LABEL: @foo_logical(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i32 [[ARG:%.*]], 37
-; CHECK-NEXT:    br i1 [[CMP1_NOT]], label [[BB_THEN:%.*]], label [[BB_ELSE:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[ARG:%.*]], 37
+; CHECK-NEXT:    br i1 [[CMP1]], label [[BB_ELSE:%.*]], label [[BB_THEN:%.*]]
 ; CHECK:       bb_then:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[BB_EXIT:%.*]]
@@ -52,8 +52,9 @@ define zeroext i1 @foo_logical(i32 %arg) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[ARG]], 17
 ; CHECK-NEXT:    br label [[BB_EXIT]]
 ; CHECK:       bb_exit:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i1 [ [[CMP2]], [[BB_ELSE]] ], [ false, [[BB_THEN]] ]
-; CHECK-NEXT:    ret i1 [[PHI1]]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i1 [ [[CMP2]], [[BB_ELSE]] ], [ undef, [[BB_THEN]] ]
+; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[PHI1]], [[CMP1]]
+; CHECK-NEXT:    ret i1 [[AND1]]
 ;
 
 entry:

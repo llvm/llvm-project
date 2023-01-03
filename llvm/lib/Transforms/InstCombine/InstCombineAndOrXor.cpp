@@ -1356,6 +1356,27 @@ Instruction *InstCombinerImpl::foldLogicOfIsFPClass(BinaryOperator &BO,
   return nullptr;
 }
 
+/// Look for the pattern that conditionally negates a value via math operations:
+///   cond.splat = sext i1 cond
+///   sub = add cond.splat, x
+///   xor = xor sub, cond.splat
+/// and rewrite it to do the same, but via logical operations:
+///   value.neg = sub 0, value
+///   cond = select i1 neg, value.neg, value
+Instruction *InstCombinerImpl::canonicalizeConditionalNegationViaMathToSelect(
+    BinaryOperator &I) {
+  assert(I.getOpcode() == BinaryOperator::Xor && "Only for xor!");
+  Value *Cond, *X;
+  // As per complexity ordering, `xor` is not commutative here.
+  if (!match(&I, m_c_BinOp(m_OneUse(m_Value()), m_Value())) ||
+      !match(I.getOperand(1), m_SExt(m_Value(Cond))) ||
+      !Cond->getType()->isIntOrIntVectorTy(1) ||
+      !match(I.getOperand(0), m_c_Add(m_SExt(m_Deferred(Cond)), m_Value(X))))
+    return nullptr;
+  return SelectInst::Create(Cond, Builder.CreateNeg(X, X->getName() + ".neg"),
+                            X);
+}
+
 /// This a limited reassociation for a special case (see above) where we are
 /// checking if two values are either both NAN (unordered) or not-NAN (ordered).
 /// This could be handled more generally in '-reassociation', but it seems like
@@ -2338,6 +2359,16 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   if (match(Op1, m_OneUse(m_SExt(m_Value(A)))) &&
       A->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(A, Op0, Constant::getNullValue(Ty));
+
+  // Similarly, a 'not' of the bool translates to a swap of the select arms:
+  // ~sext(A) & Op1 --> A ? 0 : Op1
+  // Op0 & ~sext(A) --> A ? 0 : Op0
+  if (match(Op0, m_Not(m_SExt(m_Value(A)))) &&
+      A->getType()->isIntOrIntVectorTy(1))
+    return SelectInst::Create(A, Constant::getNullValue(Ty), Op1);
+  if (match(Op1, m_Not(m_SExt(m_Value(A)))) &&
+      A->getType()->isIntOrIntVectorTy(1))
+    return SelectInst::Create(A, Constant::getNullValue(Ty), Op0);
 
   // (iN X s>> (N-1)) & Y --> (X s< 0) ? Y : 0 -- with optional sext
   if (match(&I, m_c_And(m_OneUse(m_SExtOrSelf(
@@ -4235,6 +4266,9 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     return Canonicalized;
 
   if (Instruction *Folded = foldLogicOfIsFPClass(I, Op0, Op1))
+    return Folded;
+
+  if (Instruction *Folded = canonicalizeConditionalNegationViaMathToSelect(I))
     return Folded;
 
   return nullptr;
