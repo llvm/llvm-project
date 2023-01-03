@@ -1475,6 +1475,27 @@ DIExpression::convertToVariadicExpression(const DIExpression *Expr) {
   return DIExpression::get(Expr->getContext(), NewOps);
 }
 
+std::optional<const DIExpression *>
+DIExpression::convertToNonVariadicExpression(const DIExpression *Expr) {
+  // Check for `isValid` covered by `isSingleLocationExpression`.
+  if (!Expr->isSingleLocationExpression())
+    return std::nullopt;
+
+  // An empty expression is already non-variadic.
+  if (!Expr->getNumElements())
+    return Expr;
+
+  auto ElementsBegin = Expr->elements_begin();
+  // If Expr does not have a leading DW_OP_LLVM_arg then we don't need to do
+  // anything.
+  if (*ElementsBegin != dwarf::DW_OP_LLVM_arg)
+    return Expr;
+
+  SmallVector<uint64_t> NonVariadicOps(
+      make_range(ElementsBegin + 2, Expr->elements_end()));
+  return DIExpression::get(Expr->getContext(), NonVariadicOps);
+}
+
 void DIExpression::canonicalizeExpressionOps(SmallVectorImpl<uint64_t> &Ops,
                                              const DIExpression *Expr,
                                              bool IsIndirect) {
