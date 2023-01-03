@@ -1878,7 +1878,7 @@ defm vwmulsu : RVVOutOp0Op1BuiltinSet<"vwmulsu", "csi",
 
 // 12.13. Vector Single-Width Integer Multiply-Add Instructions
 let UnMaskedPolicyScheme = HasPolicyOperand,
-    IsPrototypeDefaultTU = true in {
+    IsPrototypeDefaultTU = false in {
 defm vmacc  : RVVIntTerBuiltinSet;
 defm vnmsac : RVVIntTerBuiltinSet;
 defm vmadd  : RVVIntTerBuiltinSet;
@@ -1990,7 +1990,7 @@ let Log2LMUL = [-2, -1, 0, 1, 2] in {
 
 // 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
 let UnMaskedPolicyScheme = HasPolicyOperand,
-    IsPrototypeDefaultTU = true in {
+    IsPrototypeDefaultTU = false in {
 defm vfmacc  : RVVFloatingTerBuiltinSet;
 defm vfnmacc : RVVFloatingTerBuiltinSet;
 defm vfmsac  : RVVFloatingTerBuiltinSet;
