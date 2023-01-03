@@ -297,6 +297,11 @@ multiclass RVVOp0BuiltinSet<string intrinsic_name, string type_range,
                             list<list<string>> suffixes_prototypes>
     : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [0]>;
 
+// IntrinsicTypes is output, op1 [-1, 0]
+multiclass RVVOutOp0BuiltinSet<string intrinsic_name, string type_range,
+                               list<list<string>> suffixes_prototypes>
+    : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [-1, 0]>;
+
 // IntrinsicTypes is output, op1 [-1, 1]
 multiclass RVVOutOp1BuiltinSet<string intrinsic_name, string type_range,
                                list<list<string>> suffixes_prototypes>
@@ -496,22 +501,22 @@ class RVVConvToNarrowingSignedBuiltin<string overloaded_name>
 class RVVConvToNarrowingUnsignedBuiltin<string overloaded_name>
     : RVVConvBuiltin<"Uv", "UvFw", "csi", overloaded_name>;
 
-let HasMaskedOffOperand = false in {
+let HasMaskedOffOperand = true in {
   multiclass RVVSignedReductionBuiltin {
-    defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
-                                  [["vs", "vSv", "SvSvvSv"]]>;
+    defm "" : RVVOutOp0BuiltinSet<NAME, "csil",
+                                  [["vs", "vSv", "SvvSv"]]>;
   }
   multiclass RVVUnsignedReductionBuiltin {
-    defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
-                                  [["vs", "UvUSv", "USvUSvUvUSv"]]>;
+    defm "" : RVVOutOp0BuiltinSet<NAME, "csil",
+                                  [["vs", "UvUSv", "USvUvUSv"]]>;
   }
   multiclass RVVFloatingReductionBuiltin {
-    defm "" : RVVOutOp1BuiltinSet<NAME, "xfd",
-                                  [["vs", "vSv", "SvSvvSv"]]>;
+    defm "" : RVVOutOp0BuiltinSet<NAME, "xfd",
+                                  [["vs", "vSv", "SvvSv"]]>;
   }
   multiclass RVVFloatingWidenReductionBuiltin {
-    defm "" : RVVOutOp1BuiltinSet<NAME, "xf",
-                                  [["vs", "vSw", "SwSwvSw"]]>;
+    defm "" : RVVOutOp0BuiltinSet<NAME, "xf",
+                                  [["vs", "vSw", "SwvSw"]]>;
   }
 }
 
@@ -2079,7 +2084,7 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
 // 15.1. Vector Single-Width Integer Reduction Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand,
     MaskedPolicyScheme = HasPassthruOperand,
-    IsPrototypeDefaultTU = true,
+    IsPrototypeDefaultTU = false,
     HasMaskPolicy = false in {
 defm vredsum : RVVIntReductionBuiltinSet;
 defm vredmaxu : RVVUnsignedReductionBuiltin;
@@ -2092,11 +2097,11 @@ defm vredxor : RVVIntReductionBuiltinSet;
 
 // 15.2. Vector Widening Integer Reduction Instructions
 // Vector Widening Integer Reduction Operations
-let HasMaskedOffOperand = false in {
-  defm vwredsum : RVVOutOp1BuiltinSet<"vwredsum", "csi",
-                                      [["vs", "vSw", "SwSwvSw"]]>;
-  defm vwredsumu : RVVOutOp1BuiltinSet<"vwredsumu", "csi",
-                                       [["vs", "UvUSw", "USwUSwUvUSw"]]>;
+let HasMaskedOffOperand = true in {
+  defm vwredsum : RVVOutOp0BuiltinSet<"vwredsum", "csi",
+                                      [["vs", "vSw", "SwvSw"]]>;
+  defm vwredsumu : RVVOutOp0BuiltinSet<"vwredsumu", "csi",
+                                       [["vs", "UvUSw", "USwUvUSw"]]>;
 }
 
 // 15.3. Vector Single-Width Floating-Point Reduction Instructions
