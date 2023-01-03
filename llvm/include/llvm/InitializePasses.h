@@ -402,7 +402,7 @@ void initializeTargetTransformInfoWrapperPassPass(PassRegistry&);
 void initializeTLSVariableHoistLegacyPassPass(PassRegistry &);
 void initializeTwoAddressInstructionPassPass(PassRegistry&);
 void initializeTypeBasedAAWrapperPassPass(PassRegistry&);
-void initializeTypePromotionPass(PassRegistry&);
+void initializeTypePromotionLegacyPass(PassRegistry&);
 void initializeUniformityInfoWrapperPassPass(PassRegistry &);
 void initializeUnifyFunctionExitNodesLegacyPassPass(PassRegistry &);
 void initializeUnifyLoopExitsLegacyPassPass(PassRegistry &);

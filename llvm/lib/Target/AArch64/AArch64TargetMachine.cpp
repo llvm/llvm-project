@@ -648,7 +648,7 @@ bool AArch64PassConfig::addPreISel() {
 
 void AArch64PassConfig::addCodeGenPrepare() {
   if (getOptLevel() != CodeGenOpt::None)
-    addPass(createTypePromotionPass());
+    addPass(createTypePromotionLegacyPass());
   TargetPassConfig::addCodeGenPrepare();
 }
 
