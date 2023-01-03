@@ -1,117 +1,107 @@
 // RUN: mlir-opt --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg))" %s -o -| FileCheck %s
 
-// CHECK: #map = affine_map<(d0, d1, d2, d3) -> (d0, d3)>
-// CHECK: #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-// CHECK-LABEL: @broadcast_resize_nearest_fp
-func.func @broadcast_resize_nearest_fp(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x15x13x7xf32> {
-  // CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %arg0
-  // CHECK-SAME{literal}: [[0], [1, 2, 3]]
-  // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<3x15x13x7xf32>
-  // CHECK: %[[GENERIC:.+]] = linalg.generic
-  // CHECK-SAME: indexing_maps = [#map, #map1]
-  // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
-  // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xf32>)
-  // CHECK-SAME: outs(%[[EMPTY]] : tensor<3x15x13x7xf32>)
-  // CHECK-NEXT: ^bb0(%[[IN:.+]]: f32, %[[OUT:.+]]: f32):
-  // CHECK:   linalg.yield %[[IN]]
-  %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = [2, 2, 1, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x1x7xf32>) -> tensor<3x15x13x7xf32>
-
-  // CHECK: return %[[GENERIC]]
-  return %resize : tensor<3x15x13x7xf32>
+// CHECK-LABEL: @unary_resize_nearest_fp
+func.func @unary_resize_nearest_fp(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32> {
+  %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = [2, 2, 1, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32>
+  // CHECK: return %arg0
+  return %resize : tensor<3x1x1x7xf32>
 }
 
 // -----
 
-// CHECK: #map = affine_map<(d0, d1, d2, d3) -> (d0, d3)>
-// CHECK: #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-// CHECK-LABEL: @broadcast_resize_bilinear_fp
-func.func @broadcast_resize_bilinear_fp(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x15x13x7xf32> {
-  // CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %arg0
-  // CHECK-SAME{literal}: [[0], [1, 2, 3]]
-  // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<3x15x13x7xf32>
-  // CHECK: %[[GENERIC:.+]] = linalg.generic
-  // CHECK-SAME: indexing_maps = [#map, #map1]
-  // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
-  // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xf32>)
-  // CHECK-SAME: outs(%[[EMPTY]] : tensor<3x15x13x7xf32>)
-  // CHECK-NEXT: ^bb0(%[[IN:.+]]: f32, %[[OUT:.+]]: f32):
-  // CHECK:   linalg.yield %[[IN]]
-  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [2, 2, 1, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x1x7xf32>) -> tensor<3x15x13x7xf32>
-
-  // CHECK: return %[[GENERIC]]
-  return %resize : tensor<3x15x13x7xf32>
+// CHECK-LABEL: @unary_resize_bilinear_fp
+func.func @unary_resize_bilinear_fp(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32> {
+  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [2, 2, 1, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32>
+  // CHECK: return %arg0
+  return %resize : tensor<3x1x1x7xf32>
 }
 
 // -----
 
-// CHECK: #map = affine_map<(d0, d1, d2, d3) -> (d0, d3)>
-// CHECK: #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-// CHECK-LABEL: @broadcast_resize_nearest_i8
-func.func @broadcast_resize_nearest_i8(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3x15x13x7xi8> {
-  // CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %arg0
-  // CHECK-SAME{literal}: [[0], [1, 2, 3]]
-  // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<3x15x13x7xi8>
-  // CHECK: %[[GENERIC:.+]] = linalg.generic
-  // CHECK-SAME: indexing_maps = [#map, #map1]
-  // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
-  // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xi8>)
-  // CHECK-SAME: outs(%[[EMPTY]] : tensor<3x15x13x7xi8>)
-  // CHECK-NEXT: ^bb0(%[[IN:.+]]: i8, %[[OUT:.+]]: i8):
-  // CHECK:   linalg.yield %[[IN]]
-  %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = [2, 2, 1, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x1x7xi8>) -> tensor<3x15x13x7xi8>
-
-  // CHECK: return %[[GENERIC]]
-  return %resize : tensor<3x15x13x7xi8>
+// CHECK-LABEL: @unary_resize_nearest_i8
+func.func @unary_resize_nearest_i8(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3x1x1x7xi8> {
+  %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = [2, 1, 3, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x1x7xi8>) -> tensor<3x1x1x7xi8>
+  // CHECK: return %arg0
+  return %resize : tensor<3x1x1x7xi8>
 }
 
 // -----
 
-// CHECK: #map = affine_map<(d0, d1, d2, d3) -> (d0, d3)>
-// CHECK: #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-// CHECK-LABEL: @broadcast_resize_nearest_i32
-func.func @broadcast_resize_nearest_i32(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3x15x13x7xi32> {
+// CHECK-LABEL: @broadcast_resize_nearest_f32
+func.func @broadcast_resize_nearest_f32(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x5x7xf32> {
   // CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %arg0
-  // CHECK-SAME{literal}: [[0], [1, 2, 3]]
-  // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<3x15x13x7xi32>
-  // CHECK: %[[GENERIC:.+]] = linalg.generic
-  // CHECK-SAME: indexing_maps = [#map, #map1]
-  // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
-  // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xi8>)
-  // CHECK-SAME: outs(%[[EMPTY]] : tensor<3x15x13x7xi32>)
-  // CHECK-NEXT: ^bb0(%[[IN:.+]]: i8, %[[OUT:.+]]: i32):
+  // CHECK-NEXT{literal}: [[0], [1, 2, 3]] : tensor<3x1x1x7xf32> into tensor<3x7xf32>
+  // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<3x1x5x7xf32>
+  // CHECK: %[[GENERIC:.+]] = linalg.generic 
+  // CHECK-SAME: indexing_maps = [#map, #map1], iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
+  // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xf32>) outs(%[[EMPTY]] : tensor<3x1x5x7xf32>)
+  // CHECK: ^bb0(%[[IN:.+]]: f32, %[[OUT:.+]]: f32):
+  // CHECK:   linalg.yield %[[IN]] : f32
+  %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = [2, 1, 3, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x1x7xf32>) -> tensor<3x1x5x7xf32>
+
+ // CHECK: return %[[GENERIC]]
+  return %resize : tensor<3x1x5x7xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @broadcast_resize_bilinear_i8
+func.func @broadcast_resize_bilinear_i8(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3x4x5x7xi32> {
+  // CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %arg0
+  // CHECK-SAME{literal}: [[0], [1, 2, 3]] : tensor<3x1x1x7xi8> into tensor<3x7xi8>
+  // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<3x7xi32>
+  // CHECK: %[[RESIZE:.+]] = linalg.generic
+  // CHECK-SAME: {indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel"]}
+  // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xi8>) outs(%[[EMPTY]] : tensor<3x7xi32>)
+  // CHECK: ^bb0(%[[IN:.+]]: i8, %[[OUT:.+]]: i32):
   // CHECK:   %[[EXT:.+]] = arith.extsi %[[IN]] : i8 to i32
-  // CHECK:   linalg.yield %[[EXT]]
-  %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = [2, 2, 1, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x1x7xi8>) -> tensor<3x15x13x7xi32>
+  // CHECK-DAG:   %[[C2:.+]] = arith.constant 2 : i32
+  // CHECK:   %[[MUL:.+]] = arith.muli %[[EXT]], %[[C2]] : i32
+  // CHECK-DAG:   %[[C3:.+]] = arith.constant 3 : i32
+  // CHECK:   %[[OUT:.+]] = arith.muli %[[MUL]], %[[C3]] : i32
+  // CHECK:   linalg.yield %[[OUT]] : i32
+  // CHECK: } -> tensor<3x7xi32>
+  // CHECK: %[[EXPAND:.+]] = tensor.expand_shape %1
+  // CHECK-SAME{literal}: [[0], [1, 2, 3]] : tensor<3x7xi32> into tensor<3x1x1x7xi32>
+  // CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %expanded
+  // CHECK-SAME{literal}:[[0], [1, 2, 3]] : tensor<3x1x1x7xi32> into tensor<3x7xi32>
+  // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<3x4x5x7xi32>
+  // CHECK: %[[BROADCAST:.+]] = linalg.generic
+  // CHECK-SAME: indexing_maps = [#map1, #map2], iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
+  // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xi32>) outs(%[[EMPTY]] : tensor<3x4x5x7xi32>) {
+  // CHECK: ^bb0(%[[IN:.+]]: i32, %[[OUT:.+]]: i32):
+  // CHECK:   linalg.yield %[[IN]] : i32
+  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [2, 1, 3, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x1x7xi8>) -> tensor<3x4x5x7xi32>
 
-  // CHECK: return %[[GENERIC]]
-  return %resize : tensor<3x15x13x7xi32>
+  // CHECK: return %[[BROADCAST]]
+  return %resize : tensor<3x4x5x7xi32>
 }
 
 // -----
 
-// CHECK: #map = affine_map<(d0, d1, d2, d3) -> (d0, d3)>
-// CHECK: #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-// CHECK-LABEL: @broadcast_resize_bilinear_i32
-func.func @broadcast_resize_bilinear_i32(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3x15x13x7xi32> {
+// CHECK-LABEL: @unary_resize_bilinear_i32
+func.func @unary_resize_bilinear_i32(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3x1x1x7xi32> {
   // CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %arg0
-  // CHECK-SAME{literal}: [[0], [1, 2, 3]]
-  // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<3x15x13x7xi32>
-  // CHECK: %[[GENERIC:.+]] = linalg.generic
-  // CHECK-SAME: indexing_maps = [#map, #map1]
-  // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
-  // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xi8>)
-  // CHECK-SAME: outs(%[[EMPTY]] : tensor<3x15x13x7xi32>)
-  // CHECK-NEXT: ^bb0(%[[IN:.+]]: i8, %[[OUT:.+]]: i32):
-  // CHECK: %[[EXT:.+]] = arith.extsi %[[IN]] : i8 to i32
-  // CHECK-DAG: %[[C2:.+]] = arith.constant 2 : i32
-  // CHECK: %[[MUL1:.+]] = arith.muli %[[EXT]], %[[C2]] : i32
-  // CHECK-DAG: %[[C1:.+]] = arith.constant 1 : i32
-  // CHECK: %[[MUL2:.+]] = arith.muli %[[MUL1]], %[[C1]] : i32
-  // CHECK: linalg.yield %[[MUL2]]
-  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [2, 2, 1, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x1x7xi8>) -> tensor<3x15x13x7xi32>
+  // CHECK-SAME{literal}: [[0], [1, 2, 3]] : tensor<3x1x1x7xi8> into tensor<3x7xi8>
+  // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<3x7xi32>
+  // CHECK: %[[GENERIC:.+]] = linalg.generic 
+  // CHECK-SAME: indexing_maps = [#map, #map]
+  // CHECK-SAME: iterator_types = ["parallel", "parallel"]}
+  // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xi8>) outs(%[[EMPTY]] : tensor<3x7xi32>) {
+  // CHECK: ^bb0(%[[IN:.+]]: i8, %[[OUT:.+]]: i32):
+  // CHECK:   %[[EXT:.+]] = arith.extsi %[[IN]] : i8 to i32
+  // CHECK-DAG:   %[[C2:.+]] = arith.constant 2 : i32
+  // CHECK:   %[[MUL0:.+]] = arith.muli %[[EXT]], %[[C2]] : i32
+  // CHECK-DAG:   %[[C1:.+]] = arith.constant 2 : i32
+  // CHECK:   %4 = arith.muli %3, %[[C1]] : i32
+  // CHECK:   linalg.yield %4 : i32
+  // CHECK: } -> tensor<3x7xi32>
+  // CHECK: %[[EXPAND:.+]] = tensor.expand_shape %[[GENERIC:.+]]
+  // CHECK-SAME{literal} [[0], [1, 2, 3]] : tensor<3x7xi32> into tensor<3x1x1x7xi32>
+  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [2, 1, 2, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x1x7xi8>) -> tensor<3x1x1x7xi32>
 
-  // CHECK: return %[[GENERIC]]
-  return %resize : tensor<3x15x13x7xi32>
+  // CHECK: return %[[EXPAND]]
+  return %resize : tensor<3x1x1x7xi32>
 }
 
 // -----
