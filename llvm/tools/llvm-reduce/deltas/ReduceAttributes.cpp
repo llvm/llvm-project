@@ -119,6 +119,13 @@ public:
 
         if (RemoveNoInline && Kind == Attribute::OptimizeNone)
           continue;
+
+        // TODO: Could only remove this if there are no constrained calls in the
+        // function.
+        if (Kind == Attribute::StrictFP) {
+          AttrsToPreserve.emplace_back(A);
+          continue;
+        }
       }
 
       if (O.shouldKeep())
