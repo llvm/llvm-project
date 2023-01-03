@@ -8404,9 +8404,6 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
 
 InstructionUniformity
 SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
-  if (MI.getDesc().TSFlags & SIInstrFlags::IsSourceOfDivergence)
-    return InstructionUniformity::NeverUniform;
-
   // Atomics are divergent because they are executed sequentially: when an
   // atomic operation refers to the same address in each thread, then each
   // thread after the first sees the value written by the previous thread as
