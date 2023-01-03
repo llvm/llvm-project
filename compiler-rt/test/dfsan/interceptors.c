@@ -49,7 +49,7 @@ void test_mallinfo() {
   // The mallinfo interceptor takes an argument instead of returning a struct.
   // This doesn't work on AArch64 which uses different registers for the two
   // function types.
-#ifdef defined(__GLIBC__) && !defined(__aarch64__)
+#if defined(__GLIBC__) && !defined(__aarch64__)
   struct mallinfo mi = mallinfo();
   for (int i = 0; i < sizeof(struct mallinfo); ++i) {
     char c = ((char *)(&mi))[i];
