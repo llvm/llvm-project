@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/TargetParser/RISCVISAInfo.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -132,8 +132,8 @@ static bool stripExperimentalPrefix(StringRef &Ext) {
 // have version numbers and no extension name. It assumes the extension name
 // will be at least more than one character.
 static size_t findFirstNonVersionCharacter(StringRef Ext) {
-   assert(!Ext.empty() &&
-          "Already guarded by if-statement in ::parseArchString");
+  assert(!Ext.empty() &&
+         "Already guarded by if-statement in ::parseArchString");
 
   int Pos = Ext.size() - 1;
   while (Pos > 0 && isDigit(Ext[Pos]))
@@ -783,7 +783,8 @@ static const char *ImpliedExtsZvl256b[] = {"zvl128b"};
 static const char *ImpliedExtsZvl128b[] = {"zvl64b"};
 static const char *ImpliedExtsZvl64b[] = {"zvl32b"};
 static const char *ImpliedExtsZk[] = {"zkn", "zkt", "zkr"};
-static const char *ImpliedExtsZkn[] = {"zbkb", "zbkc", "zbkx", "zkne", "zknd", "zknh"};
+static const char *ImpliedExtsZkn[] = {"zbkb", "zbkc", "zbkx",
+                                       "zkne", "zknd", "zknh"};
 static const char *ImpliedExtsZks[] = {"zbkb", "zbkc", "zbkx", "zksed", "zksh"};
 static const char *ImpliedExtsZvfh[] = {"zve32f"};
 static const char *ImpliedExtsXTHeadVdot[] = {"v"};
