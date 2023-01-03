@@ -19,6 +19,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 #define DEBUG_TYPE "lld"
 
@@ -55,7 +56,7 @@ void InputFile::checkArch(Triple::ArchType arch) const {
 
 std::unique_ptr<llvm::TarWriter> tar;
 
-Optional<MemoryBufferRef> readFile(StringRef path) {
+std::optional<MemoryBufferRef> readFile(StringRef path) {
   log("Loading: " + path);
 
   auto mbOrErr = MemoryBuffer::getFile(path);
