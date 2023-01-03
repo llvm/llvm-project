@@ -669,5 +669,42 @@ namespace IncDec {
                                               // expected-note {{in call to 'IntMul}} \
                                               // ref-error {{not an integral constant expression}} \
                                               // ref-note {{in call to 'IntMul}}
+  constexpr int arr[] = {1,2,3};
+  constexpr int ptrInc1() {
+    const int *p = arr;
+    p += 2;
+    return *p;
+  }
+  static_assert(ptrInc1() == 3, "");
+
+  constexpr int ptrInc2() {
+    const int *p = arr;
+    return *(p += 1);
+  }
+  static_assert(ptrInc2() == 2, "");
+
+  constexpr int ptrInc3() { // expected-error {{never produces a constant expression}} \
+                            // ref-error {{never produces a constant expression}}
+    const int *p = arr;
+    p += 12; // expected-note {{cannot refer to element 12 of array of 3 elements}} \
+             // ref-note {{cannot refer to element 12 of array of 3 elements}}
+    return *p;
+  }
+
+  constexpr int ptrIncDec1() {
+    const int *p = arr;
+    p += 2;
+    p -= 1;
+    return *p;
+  }
+  static_assert(ptrIncDec1() == 2, "");
+
+  constexpr int ptrDec1() { // expected-error {{never produces a constant expression}} \
+                        // ref-error {{never produces a constant expression}}
+    const int *p = arr;
+    p -= 1;  // expected-note {{cannot refer to element -1 of array of 3 elements}} \
+             // ref-note {{cannot refer to element -1 of array of 3 elements}}
+    return *p;
+  }
 };
 #endif

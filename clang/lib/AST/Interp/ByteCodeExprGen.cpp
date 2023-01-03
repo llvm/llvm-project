@@ -686,6 +686,41 @@ bool ByteCodeExprGen<Emitter>::VisitFloatCompoundAssignOperator(
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitPointerCompoundAssignOperator(
+    const CompoundAssignOperator *E) {
+  BinaryOperatorKind Op = E->getOpcode();
+  const Expr *LHS = E->getLHS();
+  const Expr *RHS = E->getRHS();
+  std::optional<PrimType> LT = classify(LHS->getType());
+  std::optional<PrimType> RT = classify(RHS->getType());
+
+  if (Op != BO_AddAssign && Op != BO_SubAssign)
+    return false;
+
+  if (!LT || !RT)
+    return false;
+  assert(*LT == PT_Ptr);
+
+  if (!visit(LHS))
+    return false;
+
+  if (!this->emitLoadPtr(LHS))
+    return false;
+
+  if (!visit(RHS))
+    return false;
+
+  if (Op == BO_AddAssign)
+    this->emitAddOffset(*RT, E);
+  else
+    this->emitSubOffset(*RT, E);
+
+  if (DiscardResult)
+    return this->emitStorePopPtr(E);
+  return this->emitStorePtr(E);
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
     const CompoundAssignOperator *E) {
 
@@ -693,6 +728,9 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
   // require special care.
   if (E->getType()->isFloatingType())
     return VisitFloatCompoundAssignOperator(E);
+
+  if (E->getType()->isPointerType())
+    return VisitPointerCompoundAssignOperator(E);
 
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
@@ -705,9 +743,7 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
   if (!LT || !RT || !ResultT || !LHSComputationT)
     return false;
 
-  assert(!E->getType()->isPointerType() &&
-         "Support pointer arithmethic in compound assignment operators");
-
+  assert(!E->getType()->isPointerType() && "Handled above");
   assert(!E->getType()->isFloatingType() && "Handled above");
 
   // Get LHS pointer, load its value and get RHS value.
