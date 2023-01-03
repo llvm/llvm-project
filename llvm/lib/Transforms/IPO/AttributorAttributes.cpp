@@ -1435,11 +1435,20 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
   DenseMap<Value *, OffsetInfo> OffsetInfoMap;
   OffsetInfoMap[&AssociatedValue].insert(0);
 
-  auto HandlePassthroughUser = [&](Value *Usr, const OffsetInfo &PtrOI,
-                                   bool &Follow) {
+  auto HandlePassthroughUser = [&](Value *Usr, Value *CurPtr, bool &Follow) {
+    // One does not simply walk into a map and assign a reference to a possibly
+    // new location. That can cause an invalidation before the assignment
+    // happens, like so:
+    //
+    //   OffsetInfoMap[Usr] = OffsetInfoMap[CurPtr]; /* bad idea! */
+    //
+    // The RHS is a reference that may be invalidated by an insertion caused by
+    // the LHS. So we ensure that the side-effect of the LHS happens first.
+    auto &UsrOI = OffsetInfoMap[Usr];
+    auto &PtrOI = OffsetInfoMap[CurPtr];
     assert(!PtrOI.isUnassigned() &&
            "Cannot pass through if the input Ptr was not visited!");
-    OffsetInfoMap[Usr] = PtrOI;
+    UsrOI = PtrOI;
     Follow = true;
     return true;
   };
@@ -1461,7 +1470,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
 
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
       if (CE->isCast())
-        return HandlePassthroughUser(Usr, OffsetInfoMap[CurPtr], Follow);
+        return HandlePassthroughUser(Usr, CurPtr, Follow);
       if (CE->isCompare())
         return true;
       if (!isa<GEPOperator>(CE)) {
@@ -1491,7 +1500,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     if (isa<PtrToIntInst>(Usr))
       return false;
     if (isa<CastInst>(Usr) || isa<SelectInst>(Usr) || isa<ReturnInst>(Usr))
-      return HandlePassthroughUser(Usr, OffsetInfoMap[CurPtr], Follow);
+      return HandlePassthroughUser(Usr, CurPtr, Follow);
 
     // For PHIs we need to take care of the recurrence explicitly as the value
     // might change while we iterate through a loop. For now, we give up if
@@ -1559,7 +1568,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
         if (IsFirstPHIUser || BaseOI == UsrOI) {
           LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI is invariant " << *CurPtr
                             << " in " << *Usr << "\n");
-          return HandlePassthroughUser(Usr, PtrOI, Follow);
+          return HandlePassthroughUser(Usr, CurPtr, Follow);
         }
 
         LLVM_DEBUG(
