@@ -4,10 +4,10 @@
 declare void @do_safepoint()
 declare ptr addrspace(1) @def_ptr()
 
-define ptr addrspace(1) @test1(ptr addrspace(1) %base1, <2 x i64> %offsets) gc "statepoint-example" {
+define ptr addrspace(1) @test1(ptr addrspace(1) %base1, <2 x i64> %offsets, i1 %c) gc "statepoint-example" {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[FIRST:%.*]], label [[SECOND:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[FIRST:%.*]], label [[SECOND:%.*]]
 ; CHECK:       first:
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(ptr addrspace(1) ()) @def_ptr, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
 ; CHECK-NEXT:    [[BASE21:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.result.p1(token [[STATEPOINT_TOKEN]])
@@ -27,7 +27,7 @@ define ptr addrspace(1) @test1(ptr addrspace(1) %base1, <2 x i64> %offsets) gc "
 ; CHECK-NEXT:    ret ptr addrspace(1) [[PTR_RELOCATED]]
 ;
 entry:
-  br i1 undef, label %first, label %second
+  br i1 %c, label %first, label %second
 
 first:
   %base2 = call ptr addrspace(1) @def_ptr() [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
@@ -124,7 +124,7 @@ entry:
   ret ptr addrspace(1) %ptr
 }
 
-define void @test6() gc "statepoint-example" {
+define void @test6(i1 %c) gc "statepoint-example" {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
@@ -139,7 +139,7 @@ define void @test6() gc "statepoint-example" {
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN1:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(<2 x ptr addrspace(1)> ()) @baz, i32 0, i32 0, i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP262:%.*]] = call <2 x ptr addrspace(1)> @llvm.experimental.gc.result.v2p1(token [[STATEPOINT_TOKEN1]])
 ; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <2 x ptr addrspace(1)> [[TMP262]], i32 0
-; CHECK-NEXT:    br i1 undef, label [[BB7:%.*]], label [[LATCH]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB7:%.*]], label [[LATCH]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
@@ -160,7 +160,7 @@ bb10:                                             ; preds = %bb2
 bb25:                                             ; preds = %bb24
   %tmp26 = call <2 x ptr addrspace(1)> @baz()
   %tmp27 = extractelement <2 x ptr addrspace(1)> %tmp26, i32 0
-  br i1 undef, label %bb7, label %latch
+  br i1 %c, label %bb7, label %latch
 
 bb7:                                              ; preds = %bb25
   br label %latch
