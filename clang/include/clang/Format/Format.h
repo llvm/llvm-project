@@ -2867,7 +2867,7 @@ struct FormatStyle {
   };
 
   /// The pack constructor initializers style to use.
-  /// \version 14;
+  /// \version 14
   PackConstructorInitializersStyle PackConstructorInitializers;
 
   /// The penalty for breaking around an assignment operator.
