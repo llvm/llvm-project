@@ -864,10 +864,14 @@ static bool findIntermediateShape(ArrayRef<int64_t> lhsShape,
            currRhsDim < rhsShape.size()) {
       if (lhsSize < rhsSize) {
         currLhsDim++;
-        lhsSize *= lhsShape[currLhsDim];
+        if (currLhsDim < lhsShape.size()) {
+          lhsSize *= lhsShape[currLhsDim];
+        }
       } else {
         currRhsDim++;
-        rhsSize *= rhsShape[currRhsDim];
+        if (currRhsDim < rhsShape.size()) {
+          rhsSize *= rhsShape[currRhsDim];
+        }
       }
     }
     if (lhsSize == rhsSize) {
