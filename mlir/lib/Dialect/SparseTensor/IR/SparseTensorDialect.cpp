@@ -264,22 +264,45 @@ mlir::sparse_tensor::getSparseTensorEncoding(Type type) {
   return nullptr;
 }
 
+/// Returns true iff the given sparse tensor encoding attribute has a trailing
+/// COO region starting at the given dimension.
+static bool isCOOType(SparseTensorEncodingAttr enc, uint64_t s, bool isUnique) {
+  uint64_t rank = enc.getDimLevelType().size();
+  assert(s < rank && "Dimension out of bounds");
+  if (!isCompressedDim(enc, s))
+    return false;
+
+  for (uint64_t i = s + 1; i < rank; ++i)
+    if (!isSingletonDim(enc, i))
+      return false;
+
+  // If isUnique is true, then make sure that the last dimension level is
+  // unique, that is, rank == 1 (unique the only compressed) and rank > 1
+  // (unique on the last singleton).
+  return !isUnique || isUniqueDLT(getDimLevelType(enc, rank - 1));
+}
+
 bool mlir::sparse_tensor::isUniqueCOOType(RankedTensorType tp) {
   SparseTensorEncodingAttr enc = getSparseTensorEncoding(tp);
-
   if (!enc)
     return false;
 
-  if (!isCompressedDim(tp, 0))
-    return false;
+  return isCOOType(enc, 0, /*isUnique=*/true);
+}
 
-  for (uint64_t i = 1, e = tp.getRank(); i < e; ++i)
-    if (!isSingletonDim(tp, i))
-      return false;
+unsigned mlir::sparse_tensor::getCOOStart(SparseTensorEncodingAttr enc) {
+  unsigned rank = enc.getDimLevelType().size();
+  if (rank <= 1)
+    return rank;
 
-  // This works for rank == 1 (unique the only compressed) and rank > 1 (unique
-  // on the last singleton).
-  return isUniqueDim(tp, tp.getRank() - 1);
+  // We only consider COO region with at least two dimensions for the purpose
+  // of AOS storage optimization.
+  for (unsigned r = 0; r < rank - 1; r++) {
+    if (isCOOType(enc, r, /*isUnique=*/false))
+      return r;
+  }
+
+  return rank;
 }
 
 uint64_t mlir::sparse_tensor::toOrigDim(SparseTensorEncodingAttr enc,

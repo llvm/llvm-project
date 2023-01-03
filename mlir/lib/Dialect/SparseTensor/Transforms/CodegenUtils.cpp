@@ -524,3 +524,31 @@ void sparse_tensor::foreachInSparseConstant(
     callback(coords, val);
   }
 }
+
+Value sparse_tensor::genToPointers(OpBuilder &builder, Location loc,
+                                   Value tensor, uint64_t d) {
+  RankedTensorType srcTp = tensor.getType().cast<RankedTensorType>();
+  SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(srcTp);
+  Type ptrTp = get1DMemRefType(getPointerOverheadType(builder, encSrc),
+                               /*withLayout=*/false);
+  return builder.create<ToPointersOp>(loc, ptrTp, tensor,
+                                      builder.getIndexAttr(d));
+}
+
+Value sparse_tensor::genToIndices(OpBuilder &builder, Location loc,
+                                  Value tensor, uint64_t d, uint64_t cooStart) {
+  RankedTensorType srcTp = tensor.getType().cast<RankedTensorType>();
+  SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(srcTp);
+  Type indTp = get1DMemRefType(getIndexOverheadType(builder, encSrc),
+                               /*withLayout=*/d >= cooStart);
+  return builder.create<ToIndicesOp>(loc, indTp, tensor,
+                                     builder.getIndexAttr(d));
+}
+
+Value sparse_tensor::genToValues(OpBuilder &builder, Location loc,
+                                 Value tensor) {
+  RankedTensorType srcTp = tensor.getType().cast<RankedTensorType>();
+  Type valTp = get1DMemRefType(srcTp.getElementType(),
+                               /*withLayout=*/false);
+  return builder.create<ToValuesOp>(loc, valTp, tensor);
+}
