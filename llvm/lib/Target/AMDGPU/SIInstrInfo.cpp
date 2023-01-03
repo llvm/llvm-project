@@ -5599,13 +5599,12 @@ void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
 }
 
 // Emit the actual waterfall loop, executing the wrapped instruction for each
-// unique value of \p Rsrc across all lanes. In the best case we execute 1
+// unique value of \p ScalarOps across all lanes. In the best case we execute 1
 // iteration, in the worst case we execute 64 (once per lane).
-static void
-emitLoadSRsrcFromVGPRLoop(const SIInstrInfo &TII, MachineRegisterInfo &MRI,
-                          MachineBasicBlock &OrigBB, MachineBasicBlock &LoopBB,
-                          MachineBasicBlock &BodyBB, const DebugLoc &DL,
-                          MachineOperand &Rsrc) {
+static void emitLoadScalarOpsFromVGPRLoop(
+    const SIInstrInfo &TII, MachineRegisterInfo &MRI, MachineBasicBlock &OrigBB,
+    MachineBasicBlock &LoopBB, MachineBasicBlock &BodyBB, const DebugLoc &DL,
+    ArrayRef<MachineOperand *> ScalarOps) {
   MachineFunction &MF = *OrigBB.getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
@@ -5623,72 +5622,105 @@ emitLoadSRsrcFromVGPRLoop(const SIInstrInfo &TII, MachineRegisterInfo &MRI,
   SmallVector<Register, 8> ReadlanePieces;
   Register CondReg;
 
-  Register VRsrc = Rsrc.getReg();
-  unsigned VRsrcUndef = getUndefRegState(Rsrc.isUndef());
+  for (MachineOperand *ScalarOp : ScalarOps) {
+    unsigned RegSize = TRI->getRegSizeInBits(ScalarOp->getReg(), MRI);
+    unsigned NumSubRegs = RegSize / 32;
+    Register VScalarOp = ScalarOp->getReg();
 
-  unsigned RegSize = TRI->getRegSizeInBits(Rsrc.getReg(), MRI);
-  unsigned NumSubRegs =  RegSize / 32;
-  assert(NumSubRegs % 2 == 0 && NumSubRegs <= 32 && "Unhandled register size");
+    if (NumSubRegs == 1) {
+      Register CurReg = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
 
-  for (unsigned Idx = 0; Idx < NumSubRegs; Idx += 2) {
+      BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_READFIRSTLANE_B32), CurReg)
+          .addReg(VScalarOp);
 
-    Register CurRegLo = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
-    Register CurRegHi = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+      Register NewCondReg = MRI.createVirtualRegister(BoolXExecRC);
 
-    // Read the next variant <- also loop target.
-    BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_READFIRSTLANE_B32), CurRegLo)
-            .addReg(VRsrc, VRsrcUndef, TRI->getSubRegFromChannel(Idx));
+      BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_CMP_EQ_U32_e64), NewCondReg)
+          .addReg(CurReg)
+          .addReg(VScalarOp);
 
-    // Read the next variant <- also loop target.
-    BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_READFIRSTLANE_B32), CurRegHi)
-            .addReg(VRsrc, VRsrcUndef, TRI->getSubRegFromChannel(Idx + 1));
+      // Combine the comparison results with AND.
+      if (!CondReg) // First.
+        CondReg = NewCondReg;
+      else { // If not the first, we create an AND.
+        Register AndReg = MRI.createVirtualRegister(BoolXExecRC);
+        BuildMI(LoopBB, I, DL, TII.get(AndOpc), AndReg)
+            .addReg(CondReg)
+            .addReg(NewCondReg);
+        CondReg = AndReg;
+      }
 
-    ReadlanePieces.push_back(CurRegLo);
-    ReadlanePieces.push_back(CurRegHi);
+      // Update ScalarOp operand to use the SGPR ScalarOp.
+      ScalarOp->setReg(CurReg);
+      ScalarOp->setIsKill();
+    } else {
+      unsigned VScalarOpUndef = getUndefRegState(ScalarOp->isUndef());
+      assert(NumSubRegs % 2 == 0 && NumSubRegs <= 32 &&
+             "Unhandled register size");
 
-    // Comparison is to be done as 64-bit.
-    Register CurReg = MRI.createVirtualRegister(&AMDGPU::SGPR_64RegClass);
-    BuildMI(LoopBB, I, DL, TII.get(AMDGPU::REG_SEQUENCE), CurReg)
+      for (unsigned Idx = 0; Idx < NumSubRegs; Idx += 2) {
+        Register CurRegLo = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+        Register CurRegHi = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+
+        // Read the next variant <- also loop target.
+        BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_READFIRSTLANE_B32), CurRegLo)
+            .addReg(VScalarOp, VScalarOpUndef, TRI->getSubRegFromChannel(Idx));
+
+        // Read the next variant <- also loop target.
+        BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_READFIRSTLANE_B32), CurRegHi)
+            .addReg(VScalarOp, VScalarOpUndef,
+                    TRI->getSubRegFromChannel(Idx + 1));
+
+        ReadlanePieces.push_back(CurRegLo);
+        ReadlanePieces.push_back(CurRegHi);
+
+        // Comparison is to be done as 64-bit.
+        Register CurReg = MRI.createVirtualRegister(&AMDGPU::SGPR_64RegClass);
+        BuildMI(LoopBB, I, DL, TII.get(AMDGPU::REG_SEQUENCE), CurReg)
             .addReg(CurRegLo)
             .addImm(AMDGPU::sub0)
             .addReg(CurRegHi)
             .addImm(AMDGPU::sub1);
 
-    Register NewCondReg = MRI.createVirtualRegister(BoolXExecRC);
-    auto Cmp =
-        BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_CMP_EQ_U64_e64), NewCondReg)
-            .addReg(CurReg);
-    if (NumSubRegs <= 2)
-      Cmp.addReg(VRsrc);
-    else
-      Cmp.addReg(VRsrc, VRsrcUndef, TRI->getSubRegFromChannel(Idx, 2));
+        Register NewCondReg = MRI.createVirtualRegister(BoolXExecRC);
+        auto Cmp = BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_CMP_EQ_U64_e64),
+                           NewCondReg)
+                       .addReg(CurReg);
+        if (NumSubRegs <= 2)
+          Cmp.addReg(VScalarOp);
+        else
+          Cmp.addReg(VScalarOp, VScalarOpUndef,
+                     TRI->getSubRegFromChannel(Idx, 2));
 
-    // Combine the comparison results with AND.
-    if (!CondReg) // First.
-      CondReg = NewCondReg;
-    else { // If not the first, we create an AND.
-      Register AndReg = MRI.createVirtualRegister(BoolXExecRC);
-      BuildMI(LoopBB, I, DL, TII.get(AndOpc), AndReg)
+        // Combine the comparison results with AND.
+        if (!CondReg) // First.
+          CondReg = NewCondReg;
+        else { // If not the first, we create an AND.
+          Register AndReg = MRI.createVirtualRegister(BoolXExecRC);
+          BuildMI(LoopBB, I, DL, TII.get(AndOpc), AndReg)
               .addReg(CondReg)
               .addReg(NewCondReg);
-      CondReg = AndReg;
+          CondReg = AndReg;
+        }
+      } // End for loop.
+
+      auto SScalarOpRC =
+          TRI->getEquivalentSGPRClass(MRI.getRegClass(VScalarOp));
+      Register SScalarOp = MRI.createVirtualRegister(SScalarOpRC);
+
+      // Build scalar ScalarOp.
+      auto Merge =
+          BuildMI(LoopBB, I, DL, TII.get(AMDGPU::REG_SEQUENCE), SScalarOp);
+      unsigned Channel = 0;
+      for (Register Piece : ReadlanePieces) {
+        Merge.addReg(Piece).addImm(TRI->getSubRegFromChannel(Channel++));
+      }
+
+      // Update ScalarOp operand to use the SGPR ScalarOp.
+      ScalarOp->setReg(SScalarOp);
+      ScalarOp->setIsKill();
     }
-  } // End for loop.
-
-  auto SRsrcRC = TRI->getEquivalentSGPRClass(MRI.getRegClass(VRsrc));
-  Register SRsrc = MRI.createVirtualRegister(SRsrcRC);
-
-  // Build scalar Rsrc.
-  auto Merge = BuildMI(LoopBB, I, DL, TII.get(AMDGPU::REG_SEQUENCE), SRsrc);
-  unsigned Channel = 0;
-  for (Register Piece : ReadlanePieces) {
-    Merge.addReg(Piece)
-         .addImm(TRI->getSubRegFromChannel(Channel++));
   }
-
-  // Update Rsrc operand to use the SGPR Rsrc.
-  Rsrc.setReg(SRsrc);
-  Rsrc.setIsKill();
 
   Register SaveExec = MRI.createVirtualRegister(BoolXExecRC);
   MRI.setSimpleHint(SaveExec, CondReg);
@@ -5708,14 +5740,15 @@ emitLoadSRsrcFromVGPRLoop(const SIInstrInfo &TII, MachineRegisterInfo &MRI,
   BuildMI(BodyBB, I, DL, TII.get(AMDGPU::SI_WATERFALL_LOOP)).addMBB(&LoopBB);
 }
 
-// Build a waterfall loop around \p MI, replacing the VGPR \p Rsrc register
+// Build a waterfall loop around \p MI, replacing the VGPR \p ScalarOp register
 // with SGPRs by iterating over all unique values across all lanes.
 // Returns the loop basic block that now contains \p MI.
 static MachineBasicBlock *
-loadSRsrcFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
-                  MachineOperand &Rsrc, MachineDominatorTree *MDT,
-                  MachineBasicBlock::iterator Begin = nullptr,
-                  MachineBasicBlock::iterator End = nullptr) {
+loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
+                               ArrayRef<MachineOperand *> ScalarOps,
+                               MachineDominatorTree *MDT,
+                               MachineBasicBlock::iterator Begin = nullptr,
+                               MachineBasicBlock::iterator End = nullptr) {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -5788,7 +5821,7 @@ loadSRsrcFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
     }
   }
 
-  emitLoadSRsrcFromVGPRLoop(TII, MRI, MBB, *LoopBB, *BodyBB, DL, Rsrc);
+  emitLoadScalarOpsFromVGPRLoop(TII, MRI, MBB, *LoopBB, *BodyBB, DL, ScalarOps);
 
   // Restore the EXEC mask
   MachineBasicBlock::iterator First = RemainderBB->begin();
@@ -5985,11 +6018,11 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
                      (isMUBUF(MI) || isMTBUF(MI)))) {
     MachineOperand *SRsrc = getNamedOperand(MI, AMDGPU::OpName::srsrc);
     if (SRsrc && !RI.isSGPRClass(MRI.getRegClass(SRsrc->getReg())))
-      CreatedBB = loadSRsrcFromVGPR(*this, MI, *SRsrc, MDT);
+      CreatedBB = loadMBUFScalarOperandsFromVGPR(*this, MI, {SRsrc}, MDT);
 
     MachineOperand *SSamp = getNamedOperand(MI, AMDGPU::OpName::ssamp);
     if (SSamp && !RI.isSGPRClass(MRI.getRegClass(SSamp->getReg())))
-      CreatedBB = loadSRsrcFromVGPR(*this, MI, *SSamp, MDT);
+      CreatedBB = loadMBUFScalarOperandsFromVGPR(*this, MI, {SSamp}, MDT);
 
     return CreatedBB;
   }
@@ -6017,25 +6050,39 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
       while (End != MBB.end() && End->isCopy() && End->getOperand(1).isReg() &&
              MI.definesRegister(End->getOperand(1).getReg()))
         ++End;
-      CreatedBB = loadSRsrcFromVGPR(*this, MI, *Dest, MDT, Start, End);
+      CreatedBB =
+          loadMBUFScalarOperandsFromVGPR(*this, MI, {Dest}, MDT, Start, End);
     }
   }
 
-  // Legalize MUBUF* instructions.
+  // Legalize MUBUF instructions.
+  bool isSoffsetLegal = true;
+  int SoffsetIdx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::soffset);
+  if (SoffsetIdx != -1) {
+    MachineOperand *Soffset = &MI.getOperand(SoffsetIdx);
+    if (Soffset->isReg() &&
+        !RI.isSGPRClass(MRI.getRegClass(Soffset->getReg()))) {
+      isSoffsetLegal = false;
+    }
+  }
+
+  bool isRsrcLegal = true;
   int RsrcIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::srsrc);
   if (RsrcIdx != -1) {
-    // We have an MUBUF instruction
     MachineOperand *Rsrc = &MI.getOperand(RsrcIdx);
-    unsigned RsrcRC = get(MI.getOpcode()).operands()[RsrcIdx].RegClass;
-    if (RI.getCommonSubClass(MRI.getRegClass(Rsrc->getReg()),
-                             RI.getRegClass(RsrcRC))) {
-      // The operands are legal.
-      // FIXME: We may need to legalize operands besides srsrc.
-      return CreatedBB;
+    if (Rsrc->isReg() && !RI.isSGPRClass(MRI.getRegClass(Rsrc->getReg()))) {
+      isRsrcLegal = false;
     }
+  }
 
-    // Legalize a VGPR Rsrc.
+  // The operands are legal.
+  if (isRsrcLegal && isSoffsetLegal)
+    return CreatedBB;
+
+  if (!isRsrcLegal) {
+    // Legalize a VGPR Rsrc
     //
     // If the instruction is _ADDR64, we can avoid a waterfall by extracting
     // the base pointer from the VGPR Rsrc, adding it to the VAddr, then using
@@ -6048,6 +6095,7 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     // Otherwise we are on non-ADDR64 hardware, and/or we have
     // idxen/offen/bothen and we fall back to a waterfall loop.
 
+    MachineOperand *Rsrc = &MI.getOperand(RsrcIdx);
     MachineBasicBlock &MBB = *MI.getParent();
 
     MachineOperand *VAddr = getNamedOperand(MI, AMDGPU::OpName::vaddr);
@@ -6157,11 +6205,23 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
           .addReg(RsrcPtr, 0, AMDGPU::sub1)
           .addImm(AMDGPU::sub1);
     } else {
-      // This is another variant; legalize Rsrc with waterfall loop from VGPRs
-      // to SGPRs.
-      CreatedBB = loadSRsrcFromVGPR(*this, MI, *Rsrc, MDT);
+      // Legalize a VGPR Rsrc and soffset together.
+      if (!isSoffsetLegal) {
+        MachineOperand *Soffset = getNamedOperand(MI, AMDGPU::OpName::soffset);
+        CreatedBB =
+            loadMBUFScalarOperandsFromVGPR(*this, MI, {Rsrc, Soffset}, MDT);
+        return CreatedBB;
+      }
+      CreatedBB = loadMBUFScalarOperandsFromVGPR(*this, MI, {Rsrc}, MDT);
       return CreatedBB;
     }
+  }
+
+  // Legalize a VGPR soffset.
+  if (!isSoffsetLegal) {
+    MachineOperand *Soffset = getNamedOperand(MI, AMDGPU::OpName::soffset);
+    CreatedBB = loadMBUFScalarOperandsFromVGPR(*this, MI, {Soffset}, MDT);
+    return CreatedBB;
   }
   return CreatedBB;
 }
