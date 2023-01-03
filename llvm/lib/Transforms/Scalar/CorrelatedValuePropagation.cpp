@@ -905,6 +905,15 @@ static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
   if (SDI->getType()->isVectorTy())
     return false;
 
+  ConstantRange LCR = LVI->getConstantRange(SDI->getOperand(0), SDI);
+  ConstantRange RCR = LVI->getConstantRange(SDI->getOperand(1), SDI);
+
+  if (LCR.abs().icmp(CmpInst::ICMP_ULT, RCR.abs())) {
+    SDI->replaceAllUsesWith(SDI->getOperand(0));
+    SDI->eraseFromParent();
+    return true;
+  }
+
   struct Operand {
     Value *V;
     Domain D;

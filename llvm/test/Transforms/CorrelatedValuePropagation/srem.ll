@@ -523,8 +523,7 @@ define dso_local i8 @abs_x_lt_abs_y_positive(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[AND_COND:%.*]] = and i1 [[AND_X]], [[Y_CMP]]
 ; CHECK-NEXT:    br i1 [[AND_COND]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X]], [[Y]]
-; CHECK-NEXT:    ret i8 [[REM]]
+; CHECK-NEXT:    ret i8 [[X]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i8 0
 ;
@@ -556,8 +555,7 @@ define dso_local i8 @abs_x_lt_abs_y_positive_unsigned_cmp(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[AND_COND:%.*]] = and i1 [[AND_X]], [[AND_Y]]
 ; CHECK-NEXT:    br i1 [[AND_COND]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X]], [[Y]]
-; CHECK-NEXT:    ret i8 [[REM]]
+; CHECK-NEXT:    ret i8 [[X]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i8 0
 ;
@@ -591,8 +589,7 @@ define dso_local i8 @abs_x_lt_abs_y_negative(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[AND_COND:%.*]] = and i1 [[AND_X]], [[AND_Y]]
 ; CHECK-NEXT:    br i1 [[AND_COND]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X]], [[Y]]
-; CHECK-NEXT:    ret i8 [[REM]]
+; CHECK-NEXT:    ret i8 [[X]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i8 0
 ;
