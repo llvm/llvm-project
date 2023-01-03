@@ -12,6 +12,7 @@
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "llvm/Support/Errc.h"
+#include <optional>
 #include <queue>
 
 namespace llvm {
@@ -152,7 +153,7 @@ class DataflowAnalysis {
     return *static_cast<const Derived *>(this);
   }
 
-  mutable Optional<unsigned> AnnotationIndex;
+  mutable std::optional<unsigned> AnnotationIndex;
 
 protected:
   const BinaryContext &BC;
