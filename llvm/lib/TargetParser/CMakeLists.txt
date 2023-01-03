@@ -6,7 +6,6 @@ add_llvm_component_library(LLVMTargetParser
   CSKYTargetParser.cpp
   Host.cpp
   LoongArchTargetParser.cpp
-  RISCVISAInfo.cpp
   TargetParser.cpp
   Triple.cpp
   X86TargetParser.cpp

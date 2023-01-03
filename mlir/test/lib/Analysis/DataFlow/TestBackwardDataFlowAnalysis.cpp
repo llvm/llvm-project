@@ -68,15 +68,13 @@ void WrittenToAnalysis::visitOperation(Operation *op,
     new_writes.insert(op->getAttrOfType<StringAttr>("tag_name"));
     propagateIfChanged(operands[0], operands[0]->addWrites(new_writes));
     return;
-  } else {
-    // By default, every result of an op depends on every operand.
+  } // By default, every result of an op depends on every operand.
     for (const WrittenTo *r : results) {
       for (WrittenTo *operand : operands) {
         meet(operand, *r);
       }
       addDependency(const_cast<WrittenTo *>(r), op);
     }
-  }
 }
 
 void WrittenToAnalysis::visitBranchOperand(OpOperand &operand) {
