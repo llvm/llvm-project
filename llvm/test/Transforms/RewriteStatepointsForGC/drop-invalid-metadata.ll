@@ -11,7 +11,7 @@ declare void @baz(i32)
 ; but contains the range metadata.
 ; Since loadedval is not marked invariant, it will prevent incorrectly sinking
 ; %loadedval in LICM and avoid creation of an unrelocated use of %baseaddr.
-define void @test_invariant_load() gc "statepoint-example" {
+define void @test_invariant_load(i1 %c) gc "statepoint-example" {
 ; CHECK-LABEL: @test_invariant_load
 ; CHECK: %loadedval = load i32, ptr addrspace(1) %baseaddr, align 8, !range !0
 bb:
@@ -28,7 +28,7 @@ innerloopHdr:                                              ; preds = %innerloopl
   br label %innermostloophdr
 
 innermostloophdr:                                              ; preds = %bb6, %innerloopHdr
-  br i1 undef, label %exitblock, label %bb6
+  br i1 %c, label %exitblock, label %bb6
 
 bb6:                                              ; preds = %innermostloophdr
   switch i32 undef, label %innermostloophdr [
