@@ -24,6 +24,7 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -1369,7 +1370,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
   for (const GlobalVariable &Global : M->globals()) {
     // Decide the section name.
     StringRef SecName;
-    Optional<SectionKind> GVKind;
+    std::optional<SectionKind> GVKind;
 
     if (!Global.isDeclarationForLinker())
       GVKind = TargetLoweringObjectFile::getKindForGlobal(&Global, Asm->TM);
