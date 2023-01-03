@@ -1426,7 +1426,7 @@ define i1 @check_casted_range(i1 %c) {
 define internal i32 @less_than_100_1(i32 %c) {
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@less_than_100_1
-; CGSCC-SAME: (i32 [[C:%.*]]) #[[ATTR2]] {
+; CGSCC-SAME: (i32 noundef [[C:%.*]]) #[[ATTR2]] {
 ; CGSCC-NEXT:    switch i32 [[C]], label [[OTHERWISE:%.*]] [
 ; CGSCC-NEXT:    i32 0, label [[ONZERO:%.*]]
 ; CGSCC-NEXT:    i32 1, label [[ONONE:%.*]]
@@ -1497,8 +1497,8 @@ define i1 @propagate_range1(i32 %c){
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@propagate_range1
-; CGSCC-SAME: (i32 [[C:%.*]]) #[[ATTR3]] {
-; CGSCC-NEXT:    [[CSRET:%.*]] = call i32 @less_than_100_1(i32 [[C]]) #[[ATTR5]]
+; CGSCC-SAME: (i32 noundef [[C:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[CSRET:%.*]] = call i32 @less_than_100_1(i32 noundef [[C]]) #[[ATTR5]]
 ; CGSCC-NEXT:    [[TRUE:%.*]] = call i1 @is_less_than_100_1(i32 noundef [[CSRET]]) #[[ATTR5]]
 ; CGSCC-NEXT:    ret i1 [[TRUE]]
 ;
@@ -1511,7 +1511,7 @@ define internal i32 @less_than_100_2(i32 %c) {
 ;
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@less_than_100_2
-; TUNIT-SAME: (i32 [[C:%.*]]) #[[ATTR1]] {
+; TUNIT-SAME: (i32 noundef [[C:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:    switch i32 [[C]], label [[OTHERWISE:%.*]] [
 ; TUNIT-NEXT:    i32 0, label [[ONZERO:%.*]]
 ; TUNIT-NEXT:    i32 1, label [[ONONE:%.*]]
@@ -1540,7 +1540,7 @@ define internal i32 @less_than_100_2(i32 %c) {
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@less_than_100_2
-; CGSCC-SAME: (i32 [[C:%.*]]) #[[ATTR2]] {
+; CGSCC-SAME: (i32 noundef [[C:%.*]]) #[[ATTR2]] {
 ; CGSCC-NEXT:    switch i32 [[C]], label [[OTHERWISE:%.*]] [
 ; CGSCC-NEXT:    i32 0, label [[ONZERO:%.*]]
 ; CGSCC-NEXT:    i32 1, label [[ONONE:%.*]]
@@ -1623,10 +1623,10 @@ define i1 @propagate_range2(i32 %c) {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@propagate_range2
-; CGSCC-SAME: (i32 [[C:%.*]]) #[[ATTR3]] {
+; CGSCC-SAME: (i32 noundef [[C:%.*]]) #[[ATTR3]] {
 ; CGSCC-NEXT:    [[CSRET1:%.*]] = call i32 @less_than_100_2(i32 noundef 0) #[[ATTR5]]
 ; CGSCC-NEXT:    [[TRUE1:%.*]] = call i1 @is_less_than_100_2(i32 noundef [[CSRET1]]) #[[ATTR5]]
-; CGSCC-NEXT:    [[CSRET2:%.*]] = call i32 @less_than_100_2(i32 [[C]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[CSRET2:%.*]] = call i32 @less_than_100_2(i32 noundef [[C]]) #[[ATTR5]]
 ; CGSCC-NEXT:    [[TRUE2:%.*]] = call i1 @is_less_than_100_2(i32 noundef [[CSRET2]]) #[[ATTR5]]
 ; CGSCC-NEXT:    [[TRUE:%.*]] = and i1 [[TRUE1]], [[TRUE2]]
 ; CGSCC-NEXT:    ret i1 [[TRUE]]

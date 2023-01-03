@@ -178,7 +178,7 @@ declare void @sink() nounwind willreturn nosync nofree
 define void @mutual_recursion1(i1 %c) #0 {
 ; TUNIT: Function Attrs: nofree noinline nosync nounwind uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@mutual_recursion1
-; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR4:[0-9]+]] {
+; TUNIT-SAME: (i1 noundef [[C:%.*]]) #[[ATTR4:[0-9]+]] {
 ; TUNIT-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
 ; TUNIT:       rec:
 ; TUNIT-NEXT:    call void @sink() #[[ATTR12:[0-9]+]]
@@ -189,7 +189,7 @@ define void @mutual_recursion1(i1 %c) #0 {
 ;
 ; CGSCC: Function Attrs: nofree noinline nosync nounwind uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@mutual_recursion1
-; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR4:[0-9]+]] {
+; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CGSCC-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
 ; CGSCC:       rec:
 ; CGSCC-NEXT:    call void @sink() #[[ATTR12:[0-9]+]]

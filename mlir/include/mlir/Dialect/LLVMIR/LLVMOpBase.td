@@ -378,7 +378,8 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
     # !if(!gt(numResults, 0), "$res = inst;", "");
 
   string mlirBuilder = [{
-    FailureOr<SmallVector<Value>> mlirOperands = convertValues(llvmOperands);
+    FailureOr<SmallVector<Value>> mlirOperands =
+      moduleImport.convertValues(llvmOperands);
     if (failed(mlirOperands))
       return failure();
     SmallVector<Type> resultTypes =
@@ -386,7 +387,7 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
     auto op = $_builder.create<$_qualCppClassName>(
       $_location, resultTypes, *mlirOperands);
     }] # !if(!gt(requiresFastmath, 0),
-      "setFastmathFlagsAttr(inst, op);", "")
+      "moduleImport.setFastmathFlagsAttr(inst, op);", "")
     # !if(!gt(numResults, 0), "$res = op;", "(void)op;");
 }
 

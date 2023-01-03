@@ -6,7 +6,7 @@
 define internal ptr @incdec(i1 %C, ptr %V) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@incdec
-; TUNIT-SAME: (i1 [[C:%.*]], ptr noalias nofree noundef nonnull returned writeonly align 4 dereferenceable(4) "no-capture-maybe-returned" [[V:%.*]]) #[[ATTR0:[0-9]+]] {
+; TUNIT-SAME: (i1 noundef [[C:%.*]], ptr noalias nofree noundef nonnull returned writeonly align 4 dereferenceable(4) "no-capture-maybe-returned" [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       T:
 ; TUNIT-NEXT:    ret ptr [[V]]
@@ -15,7 +15,7 @@ define internal ptr @incdec(i1 %C, ptr %V) {
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@incdec
-; CGSCC-SAME: (i1 [[C:%.*]], ptr nofree noundef nonnull returned align 4 dereferenceable(4) "no-capture-maybe-returned" [[V:%.*]]) #[[ATTR0:[0-9]+]] {
+; CGSCC-SAME: (i1 noundef [[C:%.*]], ptr nofree noundef nonnull returned align 4 dereferenceable(4) "no-capture-maybe-returned" [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:    [[X:%.*]] = load i32, ptr [[V]], align 4
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       T:
@@ -74,9 +74,9 @@ define void @caller(i1 %C) personality ptr @__gxx_personality_v0 {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@caller
-; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] personality ptr @__gxx_personality_v0 {
+; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR2:[0-9]+]] personality ptr @__gxx_personality_v0 {
 ; CGSCC-NEXT:    [[Q:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    [[W:%.*]] = call align 4 ptr @incdec(i1 [[C]], ptr nofree noundef nonnull align 4 dereferenceable(4) [[Q]]) #[[ATTR3:[0-9]+]]
+; CGSCC-NEXT:    [[W:%.*]] = call align 4 ptr @incdec(i1 noundef [[C]], ptr nofree noundef nonnull align 4 dereferenceable(4) [[Q]]) #[[ATTR3:[0-9]+]]
 ; CGSCC-NEXT:    [[S1:%.*]] = call { i32, i32 } @foo(i32 noundef 1, i32 noundef 2) #[[ATTR4:[0-9]+]]
 ; CGSCC-NEXT:    [[X1:%.*]] = extractvalue { i32, i32 } [[S1]], 0
 ; CGSCC-NEXT:    [[S2:%.*]] = call { i32, i32 } @foo(i32 noundef 3, i32 noundef 4) #[[ATTR3]]

@@ -162,7 +162,7 @@ exit:
 define void @not_entry_not_guaranteed_to_execute(i8* %ptr, i1 %cond) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@not_entry_not_guaranteed_to_execute
-; CHECK-SAME: (i8* nocapture nofree readnone [[PTR:%.*]], i1 [[COND:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (i8* nocapture nofree readnone [[PTR:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOADS:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loads:
@@ -189,7 +189,7 @@ exit:
 define void @partial_in_entry(i16* %ptr, i1 %cond) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@partial_in_entry
-; CHECK-SAME: (i16* nocapture nofree nonnull readnone align 2 dereferenceable(4) [[PTR:%.*]], i1 [[COND:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (i16* nocapture nofree nonnull readnone align 2 dereferenceable(4) [[PTR:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOADS:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loads:

@@ -51,9 +51,9 @@ using namespace llvm;
 
 namespace {
 
-  struct IntRange {
-    int64_t Low, High;
-  };
+struct IntRange {
+  int64_t Low, High;
+};
 
 } // end anonymous namespace
 
@@ -275,7 +275,7 @@ BasicBlock *SwitchConvert(CaseItr Begin, CaseItr End, ConstantInt *LowerBound,
     // Check if the gap between LHS's highest and NewLowerBound is unreachable.
     int64_t GapLow = LHS.back().High->getSExtValue() + 1;
     int64_t GapHigh = NewLowerBound->getSExtValue() - 1;
-    IntRange Gap = { GapLow, GapHigh };
+    IntRange Gap = {GapLow, GapHigh};
     if (GapHigh >= GapLow && IsInRanges(Gap, UnreachableRanges))
       NewUpperBound = LHS.back().High;
   }
@@ -287,11 +287,10 @@ BasicBlock *SwitchConvert(CaseItr Begin, CaseItr End, ConstantInt *LowerBound,
 
   // Create a new node that checks if the value is < pivot. Go to the
   // left branch if it is and right branch if not.
-  Function* F = OrigBlock->getParent();
-  BasicBlock* NewNode = BasicBlock::Create(Val->getContext(), "NodeBlock");
+  Function *F = OrigBlock->getParent();
+  BasicBlock *NewNode = BasicBlock::Create(Val->getContext(), "NodeBlock");
 
-  ICmpInst* Comp = new ICmpInst(ICmpInst::ICMP_SLT,
-                                Val, Pivot.Low, "Pivot");
+  ICmpInst *Comp = new ICmpInst(ICmpInst::ICMP_SLT, Val, Pivot.Low, "Pivot");
 
   BasicBlock *LBranch =
       SwitchConvert(LHS.begin(), LHS.end(), LowerBound, NewUpperBound, Val,
@@ -330,8 +329,8 @@ unsigned Clusterify(CaseVector &Cases, SwitchInst *SI) {
     for (CaseItr J = std::next(I), E = Cases.end(); J != E; ++J) {
       int64_t nextValue = J->Low->getSExtValue();
       int64_t currentValue = I->High->getSExtValue();
-      BasicBlock* nextBB = J->BB;
-      BasicBlock* currentBB = I->BB;
+      BasicBlock *nextBB = J->BB;
+      BasicBlock *currentBB = I->BB;
 
       // If the two neighboring cases go to the same destination, merge them
       // into a single case.
@@ -356,8 +355,8 @@ void ProcessSwitchInst(SwitchInst *SI,
                        AssumptionCache *AC, LazyValueInfo *LVI) {
   BasicBlock *OrigBlock = SI->getParent();
   Function *F = OrigBlock->getParent();
-  Value *Val = SI->getCondition();  // The value we are switching on...
-  BasicBlock* Default = SI->getDefaultDest();
+  Value *Val = SI->getCondition(); // The value we are switching on...
+  BasicBlock *Default = SI->getDefaultDest();
 
   // Don't handle unreachable blocks. If there are successors with phis, this
   // would leave them behind with missing predecessors.
@@ -449,7 +448,7 @@ void ProcessSwitchInst(SwitchInst *SI,
         LastRange.High = Low - 1;
       }
       if (High != std::numeric_limits<int64_t>::max()) {
-        IntRange R = { High + 1, std::numeric_limits<int64_t>::max() };
+        IntRange R = {High + 1, std::numeric_limits<int64_t>::max()};
         UnreachableRanges.push_back(R);
       }
 
@@ -492,7 +491,7 @@ void ProcessSwitchInst(SwitchInst *SI,
       SI->eraseFromParent();
       // As all the cases have been replaced with a single branch, only keep
       // one entry in the PHI nodes.
-      for (unsigned I = 0 ; I < (MaxPop - 1) ; ++I)
+      for (unsigned I = 0; I < (MaxPop - 1); ++I)
         PopSucc->removePredecessor(OrigBlock);
       return;
     }

@@ -17,8 +17,8 @@ define i1 @invokecaller(i1 %C) personality ptr @__gxx_personality_v0 {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@invokecaller
-; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] personality ptr @__gxx_personality_v0 {
-; CGSCC-NEXT:    [[X:%.*]] = call i32 @foo(i1 [[C]]) #[[ATTR2:[0-9]+]]
+; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR0:[0-9]+]] personality ptr @__gxx_personality_v0 {
+; CGSCC-NEXT:    [[X:%.*]] = call i32 @foo(i1 noundef [[C]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    br label [[OK:%.*]]
 ; CGSCC:       OK:
 ; CGSCC-NEXT:    [[Y:%.*]] = icmp ne i32 [[X]], 0
@@ -39,7 +39,7 @@ FAIL:
 define internal i32 @foo(i1 %C) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@foo
-; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; TUNIT-SAME: (i1 noundef [[C:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       T:
 ; TUNIT-NEXT:    ret i32 undef
@@ -48,7 +48,7 @@ define internal i32 @foo(i1 %C) {
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@foo
-; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] {
+; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       T:
 ; CGSCC-NEXT:    ret i32 52
@@ -72,8 +72,8 @@ define i1 @caller(i1 %C) {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@caller
-; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
-; CGSCC-NEXT:    [[X:%.*]] = call i32 @foo(i1 [[C]]) #[[ATTR3:[0-9]+]]
+; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR0]] {
+; CGSCC-NEXT:    [[X:%.*]] = call i32 @foo(i1 noundef [[C]]) #[[ATTR3:[0-9]+]]
 ; CGSCC-NEXT:    [[Y:%.*]] = icmp ne i32 [[X]], 0
 ; CGSCC-NEXT:    ret i1 [[Y]]
 ;
