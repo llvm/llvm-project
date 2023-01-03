@@ -401,10 +401,10 @@ for.cond4.preheader.preheader:                    ; preds = %for.cond4.preheader
 
 declare <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8>, <8 x i8>)
 
-define <8 x i16> @sink_shufflevector_pmull(<16 x i8> %a, <16 x i8> %b) {
+define <8 x i16> @sink_shufflevector_pmull(<16 x i8> %a, <16 x i8> %b, i1 %c) {
 ; CHECK-LABEL: @sink_shufflevector_pmull(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 poison, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[B:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -419,7 +419,7 @@ define <8 x i16> @sink_shufflevector_pmull(<16 x i8> %a, <16 x i8> %b) {
 entry:
   %s1 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %s3 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  br i1 poison, label %if.then, label %if.else
+  br i1 %c, label %if.then, label %if.else
 
 if.then:
   %s2 = shufflevector <16 x i8> %b, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -433,12 +433,12 @@ if.else:
 }
 
 ; Indexed pmull is not available on aarch64. Shuffle vector should not be sunk here.
-define <8 x i16> @no_sink_splatvector_pmull(<16 x i8> %a, <16 x i8> %b) {
+define <8 x i16> @no_sink_splatvector_pmull(<16 x i8> %a, <16 x i8> %b, i1 %c) {
 ; CHECK-LABEL: @no_sink_splatvector_pmull(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[S3:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    br i1 poison, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[B:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[VMULL0:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> [[S1]], <8 x i8> [[S2]])
@@ -451,7 +451,7 @@ define <8 x i16> @no_sink_splatvector_pmull(<16 x i8> %a, <16 x i8> %b) {
 entry:
   %s1 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %s3 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  br i1 poison, label %if.then, label %if.else
+  br i1 %c, label %if.then, label %if.else
 
 if.then:
   %s2 = shufflevector <16 x i8> %b, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -465,12 +465,12 @@ if.else:
 }
 
 ; Mask used are not suitable for pmull. Shuffle vector should not be sunk here.
-define <8 x i16> @no_sink_shufflevector_pmull(<16 x i8> %a, <16 x i8> %b) {
+define <8 x i16> @no_sink_shufflevector_pmull(<16 x i8> %a, <16 x i8> %b, i1 %c) {
 ; CHECK-LABEL: @no_sink_shufflevector_pmull(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[S3:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    br i1 poison, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[B:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[VMULL0:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> [[S1]], <8 x i8> [[S2]])
@@ -483,7 +483,7 @@ define <8 x i16> @no_sink_shufflevector_pmull(<16 x i8> %a, <16 x i8> %b) {
 entry:
   %s1 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %s3 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  br i1 poison, label %if.then, label %if.else
+  br i1 %c, label %if.then, label %if.else
 
 if.then:
   %s2 = shufflevector <16 x i8> %b, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
