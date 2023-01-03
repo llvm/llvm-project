@@ -146,7 +146,35 @@ struct DemandedFields {
     TailPolicy = true;
     MaskPolicy = true;
   }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Support for debugging, callable in GDB: V->dump()
+  LLVM_DUMP_METHOD void dump() const {
+    print(dbgs());
+    dbgs() << "\n";
+  }
+
+  /// Implement operator<<.
+  void print(raw_ostream &OS) const {
+    OS << "{";
+    OS << "VL=" << VL << ", ";
+    OS << "SEW=" << SEW << ", ";
+    OS << "LMUL=" << LMUL << ", ";
+    OS << "SEWLMULRatio=" << SEWLMULRatio << ", ";
+    OS << "TailPolicy=" << TailPolicy << ", ";
+    OS << "MaskPolicy=" << MaskPolicy;
+    OS << "}";
+  }
+#endif
 };
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_ATTRIBUTE_USED
+inline raw_ostream &operator<<(raw_ostream &OS, const DemandedFields &DF) {
+  DF.print(OS);
+  return OS;
+}
+#endif
+
 
 /// Return true if the two values of the VTYPE register provided are
 /// indistinguishable from the perspective of an instruction (or set of
