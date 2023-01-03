@@ -500,7 +500,8 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL,
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
       Type *VecPtrTy = VectorTy->getPointerTo(Alloca->getAddressSpace());
       Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
-      Value *VecValue = Builder.CreateLoad(VectorTy, BitCast);
+      Value *VecValue =
+          Builder.CreateAlignedLoad(VectorTy, BitCast, Alloca->getAlign());
       Value *ExtractElement = Builder.CreateExtractElement(VecValue, Index);
       if (Inst->getType() != VecEltTy)
         ExtractElement = Builder.CreateBitOrPointerCast(ExtractElement, Inst->getType());
@@ -514,12 +515,13 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL,
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
       Type *VecPtrTy = VectorTy->getPointerTo(Alloca->getAddressSpace());
       Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
-      Value *VecValue = Builder.CreateLoad(VectorTy, BitCast);
+      Value *VecValue =
+          Builder.CreateAlignedLoad(VectorTy, BitCast, Alloca->getAlign());
       Value *Elt = SI->getValueOperand();
       if (Elt->getType() != VecEltTy)
         Elt = Builder.CreateBitOrPointerCast(Elt, VecEltTy);
       Value *NewVecValue = Builder.CreateInsertElement(VecValue, Elt, Index);
-      Builder.CreateStore(NewVecValue, BitCast);
+      Builder.CreateAlignedStore(NewVecValue, BitCast, Alloca->getAlign());
       Inst->eraseFromParent();
       break;
     }
