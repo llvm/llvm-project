@@ -1723,6 +1723,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   FPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(FPM, Level);
 
+  if (EnableConstraintElimination)
+    FPM.addPass(ConstraintEliminationPass());
+
   FPM.addPass(JumpThreadingPass());
 
   // Do a post inline PGO instrumentation and use pass. This is a context
@@ -1779,9 +1782,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Nuke dead stores.
   MainFPM.addPass(DSEPass());
   MainFPM.addPass(MergedLoadStoreMotionPass());
-
-  if (EnableConstraintElimination)
-    MainFPM.addPass(ConstraintEliminationPass());
 
   LoopPassManager LPM;
   if (EnableLoopFlatten && Level.getSpeedupLevel() > 1)
