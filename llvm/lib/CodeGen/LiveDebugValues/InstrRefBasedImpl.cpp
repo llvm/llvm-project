@@ -1262,7 +1262,7 @@ MLocTracker::emitLoc(const SmallVectorImpl<ResolvedDbgOp> &DbgOps,
           // the pointer to the variable loaded off the stack with a deref:
           assert(!Expr->isImplicit());
           OffsetOps.push_back(dwarf::DW_OP_deref);
-        } else if (UseDerefSize && !Properties.IsVariadic) {
+        } else if (UseDerefSize && Expr->isSingleLocationExpression()) {
           // TODO: Figure out how to handle deref size issues for variadic
           // values.
           // We're loading a value off the stack that's not the same size as the
@@ -1271,7 +1271,7 @@ MLocTracker::emitLoc(const SmallVectorImpl<ResolvedDbgOp> &DbgOps,
           OffsetOps.push_back(dwarf::DW_OP_deref_size);
           OffsetOps.push_back(DerefSizeInBytes);
           StackValue = true;
-        } else if (Expr->isComplex()) {
+        } else if (Expr->isComplex() || Properties.IsVariadic) {
           // A variable with no size ambiguity, but with extra elements in it's
           // expression. Manually dereference the stack location.
           OffsetOps.push_back(dwarf::DW_OP_deref);
@@ -1590,7 +1590,7 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
   // about it. The rest of this LiveDebugValues implementation acts exactly the
   // same for DBG_INSTR_REFs as DBG_VALUEs (just, the former can refer to values
   // that aren't immediately available).
-  DbgValueProperties Properties(Expr, false, false);
+  DbgValueProperties Properties(Expr, false, true);
   SmallVector<DbgOpID> DbgOpIDs;
   if (NewID)
     DbgOpIDs.push_back(DbgOpStore.insert(*NewID));
@@ -1634,7 +1634,7 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
       NewID->getInst() > CurInst) {
     SmallVector<DbgOp> UseBeforeDefLocs;
     UseBeforeDefLocs.push_back(*NewID);
-    TTracker->addUseBeforeDef(V, {MI.getDebugExpression(), false, false},
+    TTracker->addUseBeforeDef(V, {MI.getDebugExpression(), false, true},
                               UseBeforeDefLocs, NewID->getInst());
   }
 

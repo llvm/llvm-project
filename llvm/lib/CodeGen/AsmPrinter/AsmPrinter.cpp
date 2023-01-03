@@ -1132,10 +1132,16 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   OS << " <- ";
 
   const DIExpression *Expr = MI->getDebugExpression();
+  if (Expr->getNumElements() && Expr->isSingleLocationExpression() &&
+      Expr->expr_op_begin()->getOp() == dwarf::DW_OP_LLVM_arg) {
+    SmallVector<uint64_t> Ops(
+        make_range(Expr->elements_begin() + 2, Expr->elements_end()));
+    Expr = DIExpression::get(Expr->getContext(), Ops);
+  }
   if (Expr->getNumElements()) {
     OS << '[';
     ListSeparator LS;
-    for (auto Op : Expr->expr_ops()) {
+    for (auto &Op : Expr->expr_ops()) {
       OS << LS << dwarf::OperationEncodingString(Op.getOp());
       for (unsigned I = 0; I < Op.getNumArgs(); ++I)
         OS << ' ' << Op.getArg(I);
