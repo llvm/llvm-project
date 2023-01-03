@@ -8,26 +8,23 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK: @__dfsan_arg_tls = external thread_local(initialexec) global [[TLS_ARR:\[100 x i64\]]]
-; CHECK: @__dfsan_shadow_width_bits = weak_odr constant i32 [[#SBITS:]]
-; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
-
 define void @cached_shadows(double %arg) {
   ; CHECK: @cached_shadows.dfsan
   ; CHECK:  [[AO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align
-  ; CHECK:  [[AS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
+  ; CHECK:  [[AS:%.*]] = load i8, i8* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i8*), align [[ALIGN:2]]
   ; CHECK: [[L1:.+]]:
-  ; CHECK:  {{.*}} = phi i[[#SBITS]]
+  ; CHECK:  {{.*}} = phi i8
   ; CHECK:  {{.*}} = phi i32
   ; CHECK:  {{.*}} = phi double [ 3.000000e+00
-  ; CHECK:  [[S_L1:%.*]] = phi i[[#SBITS]] [ 0, %[[L0:.*]] ], [ [[S_L7:%.*]], %[[L7:.*]] ]
+  ; CHECK:  [[S_L1:%.*]] = phi i8 [ 0, %[[L0:.*]] ], [ [[S_L7:%.*]], %[[L7:.*]] ]
   ; CHECK:  [[O_L1:%.*]] = phi i32 [ 0, %[[L0]] ], [ [[O_L7:%.*]], %[[L7]] ]
   ; CHECK:  [[V_L1:%.*]] = phi double [ 4.000000e+00, %[[L0]] ], [ [[V_L7:%.*]], %[[L7]] ]
   ; CHECK:  br i1 {{%.+}}, label %[[L2:.*]], label %[[L4:.*]]
   ; CHECK: [[L2]]:
   ; CHECK:  br i1 {{%.+}}, label %[[L3:.+]], label %[[L7]]
   ; CHECK: [[L3]]:
-  ; CHECK:  [[S_L3:%.*]] = or i[[#SBITS]]
-  ; CHECK:  [[AS_NE_L3:%.*]] = icmp ne i[[#SBITS]] [[AS]], 0
+  ; CHECK:  [[S_L3:%.*]] = or i8
+  ; CHECK:  [[AS_NE_L3:%.*]] = icmp ne i8 [[AS]], 0
   ; CHECK:  [[O_L3:%.*]] = select i1 [[AS_NE_L3]], i32 %{{[0-9]+}}, i32 [[O_L1]]
   ; CHECK:  [[V_L3:%.*]] = fsub double [[V_L1]], %{{.+}}
   ; CHECK:  br label %[[L7]]
@@ -36,13 +33,13 @@ define void @cached_shadows(double %arg) {
   ; CHECK: [[L5]]:
   ; CHECK:  br label %[[L6]]
   ; CHECK: [[L6]]:
-  ; CHECK:  [[S_L6:%.*]] = or i[[#SBITS]]
-  ; CHECK:  [[AS_NE_L6:%.*]] = icmp ne i[[#SBITS]] [[AS]], 0
+  ; CHECK:  [[S_L6:%.*]] = or i8
+  ; CHECK:  [[AS_NE_L6:%.*]] = icmp ne i8 [[AS]], 0
   ; CHECK:  [[O_L6:%.*]] = select i1 [[AS_NE_L6]], i32 [[AO]], i32 [[O_L1]]
   ; CHECK:  [[V_L6:%.*]] = fadd double [[V_L1]], %{{.+}}
   ; CHECK:  br label %[[L7]]
   ; CHECK: [[L7]]:
-  ; CHECK:  [[S_L7]] = phi i[[#SBITS]] [ [[S_L3]], %[[L3]] ], [ [[S_L1]], %[[L2]] ], [ [[S_L6]], %[[L6]] ]
+  ; CHECK:  [[S_L7]] = phi i8 [ [[S_L3]], %[[L3]] ], [ [[S_L1]], %[[L2]] ], [ [[S_L6]], %[[L6]] ]
   ; CHECK:  [[O_L7]] = phi i32 [ [[O_L3]], %[[L3]] ], [ [[O_L1]], %[[L2]] ], [ [[O_L6]], %[[L6]] ]
   ; CHECK:  [[V_L7]] = phi double [ [[V_L3]], %[[L3]] ], [ [[V_L1]], %[[L2]] ], [ [[V_L6]], %[[L6]] ]
   ; CHECK:  br i1 %{{.+}}, label %[[L1]], label %[[L8:.+]]

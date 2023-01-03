@@ -515,7 +515,6 @@ class DataFlowSanitizer {
                                  FunctionType *NewFT);
   void initializeCallbackFunctions(Module &M);
   void initializeRuntimeFunctions(Module &M);
-  void injectMetadataGlobals(Module &M);
   bool initializeModule(Module &M);
 
   /// Advances \p OriginAddr to point to the next 32-bit origin and then loads
@@ -1465,26 +1464,6 @@ void DataFlowSanitizer::initializeCallbackFunctions(Module &M) {
   }
 }
 
-void DataFlowSanitizer::injectMetadataGlobals(Module &M) {
-  // These variables can be used:
-  // - by the runtime (to discover what the shadow width was, during
-  //   compilation)
-  // - in testing (to avoid hardcoding the shadow width and type but instead
-  //   extract them by pattern matching)
-  Type *IntTy = Type::getInt32Ty(*Ctx);
-  (void)Mod->getOrInsertGlobal("__dfsan_shadow_width_bits", IntTy, [&] {
-    return new GlobalVariable(
-        M, IntTy, /*isConstant=*/true, GlobalValue::WeakODRLinkage,
-        ConstantInt::get(IntTy, ShadowWidthBits), "__dfsan_shadow_width_bits");
-  });
-  (void)Mod->getOrInsertGlobal("__dfsan_shadow_width_bytes", IntTy, [&] {
-    return new GlobalVariable(M, IntTy, /*isConstant=*/true,
-                              GlobalValue::WeakODRLinkage,
-                              ConstantInt::get(IntTy, ShadowWidthBytes),
-                              "__dfsan_shadow_width_bytes");
-  });
-}
-
 bool DataFlowSanitizer::runImpl(
     Module &M, llvm::function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
   initializeModule(M);
@@ -1526,8 +1505,6 @@ bool DataFlowSanitizer::runImpl(
                                shouldTrackOrigins() ? ClTrackOrigins : 0),
         "__dfsan_track_origins");
   });
-
-  injectMetadataGlobals(M);
 
   initializeCallbackFunctions(M);
   initializeRuntimeFunctions(M);
