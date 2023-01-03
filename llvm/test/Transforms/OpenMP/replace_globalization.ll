@@ -13,11 +13,11 @@ target triple = "nvptx64"
 ; CHECK-LIMIT: remark: replace_globalization.c:5:7: Found thread data sharing on the GPU. Expect degraded performance due to data globalization
 ; UTC_ARGS: --enable
 
-%struct.ident_t = type { i32, i32, i32, i32, i8* }
+%struct.ident_t = type { i32, i32, i32, i32, ptr }
 
-@S = external local_unnamed_addr global i8*
+@S = external local_unnamed_addr global ptr
 @0 = private unnamed_addr constant [113 x i8] c";llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c;__omp_offloading_2a_d80d3d_test_fallback_l11;11;1;;\00", align 1
-@1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([113 x i8], [113 x i8]* @0, i32 0, i32 0) }, align 8
+@1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @0 }, align 8
 @foo_exec_mode = weak constant i8 1
 @bar_exec_mode = weak constant i8 1
 @baz_spmd_exec_mode = weak constant i8 2
@@ -25,79 +25,70 @@ target triple = "nvptx64"
 
 define dso_local void @foo() "kernel" {
 entry:
-  %c = call i32 @__kmpc_target_init(%struct.ident_t* @1, i8 1, i1 true)
-  %x = call align 4 i8* @__kmpc_alloc_shared(i64 4)
+  %c = call i32 @__kmpc_target_init(ptr @1, i8 1, i1 true)
+  %x = call align 4 ptr @__kmpc_alloc_shared(i64 4)
   call void @unknown_no_openmp()
-  %x_on_stack = bitcast i8* %x to i32*
-  %0 = bitcast i32* %x_on_stack to i8*
-  call void @use(i8* %0)
-  call void @__kmpc_free_shared(i8* %x, i64 4)
-  call void @__kmpc_target_deinit(%struct.ident_t* @1, i8 1)
+  call void @use(ptr %x)
+  call void @__kmpc_free_shared(ptr %x, i64 4)
+  call void @__kmpc_target_deinit(ptr @1, i8 1)
   ret void
 }
 
 define void @bar() "kernel" {
-  %c = call i32 @__kmpc_target_init(%struct.ident_t* @1, i8 1, i1 true)
+  %c = call i32 @__kmpc_target_init(ptr @1, i8 1, i1 true)
   call void @unknown_no_openmp()
   %cmp = icmp eq i32 %c, -1
   br i1 %cmp, label %master1, label %exit
 master1:
-  %x = call align 4 i8* @__kmpc_alloc_shared(i64 16), !dbg !11
-  %x_on_stack = bitcast i8* %x to [4 x i32]*
-  %a0 = bitcast [4 x i32]* %x_on_stack to i8*
-  call void @use(i8* %a0)
-  call void @__kmpc_free_shared(i8* %x, i64 16)
+  %x = call align 4 ptr @__kmpc_alloc_shared(i64 16), !dbg !11
+  call void @use(ptr %x)
+  call void @__kmpc_free_shared(ptr %x, i64 16)
   br label %next
 next:
   call void @unknown_no_openmp()
   %b0 = icmp eq i32 %c, -1
   br i1 %b0, label %master2, label %exit
 master2:
-  %y = call align 4 i8* @__kmpc_alloc_shared(i64 4), !dbg !12
-  %y_on_stack = bitcast i8* %y to [4 x i32]*
-  %b1 = bitcast [4 x i32]* %y_on_stack to i8*
-  call void @use(i8* %b1)
-  call void @__kmpc_free_shared(i8* %y, i64 4)
+  %y = call align 4 ptr @__kmpc_alloc_shared(i64 4), !dbg !12
+  call void @use(ptr %y)
+  call void @__kmpc_free_shared(ptr %y, i64 4)
   br label %exit
 exit:
-  call void @__kmpc_target_deinit(%struct.ident_t* @1, i8 1)
+  call void @__kmpc_target_deinit(ptr @1, i8 1)
   ret void
 }
 
 define void @baz_spmd() "kernel" {
-  %c = call i32 @__kmpc_target_init(%struct.ident_t* @1, i8 2, i1 true)
+  %c = call i32 @__kmpc_target_init(ptr @1, i8 2, i1 true)
   call void @unknown_no_openmp()
   %c0 = icmp eq i32 %c, -1
   br i1 %c0, label %master3, label %exit
 master3:
-  %z = call align 4 i8* @__kmpc_alloc_shared(i64 24), !dbg !12
-  %z_on_stack = bitcast i8* %z to [6 x i32]*
-  %c1 = bitcast [6 x i32]* %z_on_stack to i8*
-  call void @use(i8* %c1)
-  call void @__kmpc_free_shared(i8* %z, i64 24)
+  %z = call align 4 ptr @__kmpc_alloc_shared(i64 24), !dbg !12
+  call void @use(ptr %z)
+  call void @__kmpc_free_shared(ptr %z, i64 24)
   br label %exit
 exit:
-  call void @__kmpc_target_deinit(%struct.ident_t* @1, i8 2)
+  call void @__kmpc_target_deinit(ptr @1, i8 2)
   ret void
 }
 
-define void @use(i8* %x) {
+define void @use(ptr %x) {
 entry:
-  store i8* %x, i8** @S
+  store ptr %x, ptr @S
   ret void
 }
 
 @offset =global i32 undef
 @stack = internal addrspace(3) global [1024 x i8] undef
-define private i8* @__kmpc_alloc_shared(i64) {
-  %bc = bitcast [1024 x i8] addrspace(3) * @stack to i8 addrspace(3) *
-  %ac = addrspacecast i8 addrspace(3) * %bc to i8*
-  %l = load i32, i32* @offset
-  %gep = getelementptr i8, i8* %ac, i32 %l
-  ret i8* %gep
+define private ptr @__kmpc_alloc_shared(i64) {
+  %ac = addrspacecast ptr addrspace(3) @stack to ptr
+  %l = load i32, ptr @offset
+  %gep = getelementptr i8, ptr %ac, i32 %l
+  ret ptr %gep
 }
 
-declare void @__kmpc_free_shared(i8*, i64)
+declare void @__kmpc_free_shared(ptr, i64)
 
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 
@@ -106,11 +97,11 @@ declare i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 declare i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 
 ; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
-define weak i32 @__kmpc_target_init(%struct.ident_t*, i8, i1) {
+define weak i32 @__kmpc_target_init(ptr, i8, i1) {
   ret i32 0
 }
 
-declare void @__kmpc_target_deinit(%struct.ident_t*, i8)
+declare void @__kmpc_target_deinit(ptr, i8)
 
 declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 
@@ -125,17 +116,17 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 !4 = !{i32 1, !"wchar_size", i32 4}
 !5 = !{i32 7, !"openmp", i32 50}
 !6 = !{i32 7, !"openmp-device", i32 50}
-!7 = !{void ()* @foo, !"kernel", i32 1}
-!8 = !{void ()* @bar, !"kernel", i32 1}
-!13 = !{void ()* @baz_spmd, !"kernel", i32 1}
+!7 = !{ptr @foo, !"kernel", i32 1}
+!8 = !{ptr @bar, !"kernel", i32 1}
+!13 = !{ptr @baz_spmd, !"kernel", i32 1}
 !9 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
 !10 = !DISubroutineType(types: !2)
 !11 = !DILocation(line: 5, column: 7, scope: !9)
 !12 = !DILocation(line: 5, column: 14, scope: !9)
 ;.
-; CHECK: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external local_unnamed_addr global i8*
+; CHECK: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external local_unnamed_addr global ptr
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [113 x i8] c"
-; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([113 x i8], [113 x i8]* @[[GLOB0]], i32 0, i32 0) }, align 8
+; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
 ; CHECK: @[[FOO_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
 ; CHECK: @[[BAR_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
 ; CHECK: @[[BAZ_SPMD_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 2
@@ -147,77 +138,77 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false)
-; CHECK-NEXT:    [[X:%.*]] = call align 4 i8* @__kmpc_alloc_shared(i64 4) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 1, i1 false)
+; CHECK-NEXT:    [[X:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    call void @unknown_no_openmp()
-; CHECK-NEXT:    call void @use.internalized(i8* nofree [[X]]) #[[ATTR6]]
-; CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[X]], i64 4) #[[ATTR6]]
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1)
+; CHECK-NEXT:    call void @use.internalized(ptr nofree [[X]]) #[[ATTR6]]
+; CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[X]], i64 4) #[[ATTR6]]
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 1)
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 false)
+; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 1, i1 false)
 ; CHECK-NEXT:    call void @unknown_no_openmp()
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[MASTER1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       master1:
-; CHECK-NEXT:    call void @use.internalized(i8* nofree addrspacecast (i8 addrspace(3)* getelementptr inbounds ([16 x i8], [16 x i8] addrspace(3)* @x_shared, i32 0, i32 0) to i8*)) #[[ATTR6]]
+; CHECK-NEXT:    call void @use.internalized(ptr nofree addrspacecast (ptr addrspace(3) @x_shared to ptr)) #[[ATTR6]]
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    call void @unknown_no_openmp()
 ; CHECK-NEXT:    [[B0:%.*]] = icmp eq i32 [[C]], -1
 ; CHECK-NEXT:    br i1 [[B0]], label [[MASTER2:%.*]], label [[EXIT]]
 ; CHECK:       master2:
-; CHECK-NEXT:    call void @use.internalized(i8* nofree addrspacecast (i8 addrspace(3)* getelementptr inbounds ([4 x i8], [4 x i8] addrspace(3)* @y_shared, i32 0, i32 0) to i8*)) #[[ATTR6]]
+; CHECK-NEXT:    call void @use.internalized(ptr nofree addrspacecast (ptr addrspace(3) @y_shared to ptr)) #[[ATTR6]]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 1)
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@baz_spmd
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 2, i1 true)
+; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 true)
 ; CHECK-NEXT:    call void @unknown_no_openmp()
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[C]], -1
 ; CHECK-NEXT:    br i1 [[C0]], label [[MASTER3:%.*]], label [[EXIT:%.*]]
 ; CHECK:       master3:
-; CHECK-NEXT:    [[Z:%.*]] = call align 4 i8* @__kmpc_alloc_shared(i64 24) #[[ATTR6]], !dbg [[DBG10:![0-9]+]]
-; CHECK-NEXT:    call void @use.internalized(i8* nofree [[Z]]) #[[ATTR6]]
-; CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[Z]], i64 24) #[[ATTR6]]
+; CHECK-NEXT:    [[Z:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 24) #[[ATTR6]], !dbg [[DBG10:![0-9]+]]
+; CHECK-NEXT:    call void @use.internalized(ptr nofree [[Z]]) #[[ATTR6]]
+; CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[Z]], i64 24) #[[ATTR6]]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK: Function Attrs: nofree norecurse nounwind memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@use.internalized
-; CHECK-SAME: (i8* nofree [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (ptr nofree [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i8* [[X]], i8** @S, align 8
+; CHECK-NEXT:    store ptr [[X]], ptr @S, align 8
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@use
-; CHECK-SAME: (i8* [[X:%.*]]) {
+; CHECK-SAME: (ptr [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i8* [[X]], i8** @S, align 8
+; CHECK-NEXT:    store ptr [[X]], ptr @S, align 8
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK: Function Attrs: nosync nounwind allocsize(0) memory(read)
 ; CHECK-LABEL: define {{[^@]+}}@__kmpc_alloc_shared
 ; CHECK-SAME: (i64 [[TMP0:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[L:%.*]] = load i32, i32* @offset, align 4
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([1024 x i8], [1024 x i8] addrspace(3)* @stack, i32 0, i32 0) to i8*), i32 [[L]]
-; CHECK-NEXT:    ret i8* [[GEP]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr @offset, align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr addrspacecast (ptr addrspace(3) @stack to ptr), i32 [[L]]
+; CHECK-NEXT:    ret ptr [[GEP]]
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@__kmpc_target_init
-; CHECK-SAME: (%struct.ident_t* [[TMP0:%.*]], i8 [[TMP1:%.*]], i1 [[TMP2:%.*]]) {
+; CHECK-SAME: (ptr [[TMP0:%.*]], i8 [[TMP1:%.*]], i1 [[TMP2:%.*]]) {
 ; CHECK-NEXT:    ret i32 0
 ;
 ;.
@@ -236,9 +227,9 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK: [[META4:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 ; CHECK: [[META5:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META6:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; CHECK: [[META7:![0-9]+]] = !{void ()* @foo, !"kernel", i32 1}
-; CHECK: [[META8:![0-9]+]] = !{void ()* @bar, !"kernel", i32 1}
-; CHECK: [[META9:![0-9]+]] = !{void ()* @baz_spmd, !"kernel", i32 1}
+; CHECK: [[META7:![0-9]+]] = !{ptr @foo, !"kernel", i32 1}
+; CHECK: [[META8:![0-9]+]] = !{ptr @bar, !"kernel", i32 1}
+; CHECK: [[META9:![0-9]+]] = !{ptr @baz_spmd, !"kernel", i32 1}
 ; CHECK: [[DBG10]] = !DILocation(line: 5, column: 14, scope: !11)
 ; CHECK: [[META11:![0-9]+]] = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !12, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
 ; CHECK: [[META12:![0-9]+]] = !DISubroutineType(types: !2)
