@@ -147,7 +147,7 @@ public:
   /// Locks the associated ThreadSafeContext and calls the given function,
   /// passing the contained std::unique_ptr<Module>. The given function should
   /// consume the Module.
-  template <typename Func> decltype(auto) takingModuleDo(Func &&F) {
+  template <typename Func> decltype(auto) consumingModuleDo(Func &&F) {
     auto Lock = TSCtx.getLock();
     return F(std::move(M));
   }
