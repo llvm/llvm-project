@@ -38,9 +38,6 @@ void llvm::reduceFunctionBodiesDeltaPass(TestRunner &Test) {
 
 static void reduceFunctionData(Oracle &O, Module &M) {
   for (Function &F : M) {
-    if (F.isDeclaration())
-      continue;
-
     if (F.hasPersonalityFn()) {
       if (none_of(F,
                   [](const BasicBlock &BB) {
@@ -51,7 +48,10 @@ static void reduceFunctionData(Oracle &O, Module &M) {
       }
     }
 
-    // TODO: Handle prefix data and prologue data
+    if (F.hasPrefixData() && !O.shouldKeep())
+      F.setPrefixData(nullptr);
+
+    // TODO: Handle prologue data
   }
 }
 

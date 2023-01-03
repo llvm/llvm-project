@@ -112,6 +112,13 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
                  ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
                  TypeMapper, Materializer));
 
+  if (OldFunc->hasPrefixData()) {
+    NewFunc->setPrefixData(
+        MapValue(OldFunc->getPrefixData(), VMap,
+                 ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
+                 TypeMapper, Materializer));
+  }
+
   SmallVector<AttributeSet, 4> NewArgAttrs(NewFunc->arg_size());
   AttributeList OldAttrs = OldFunc->getAttributes();
 
