@@ -14,7 +14,6 @@ set(LLVM_LINK_COMPONENTS
 set(exegesis_sources
   BenchmarkRunnerTest.cpp
   ClusteringTest.cpp
-  PerfHelperTest.cpp
   ProgressMeterTest.cpp
   RegisterValueTest.cpp
   )
