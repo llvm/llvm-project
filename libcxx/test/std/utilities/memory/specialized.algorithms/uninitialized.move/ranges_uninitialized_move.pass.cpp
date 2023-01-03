@@ -17,6 +17,7 @@
 
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <iterator>
 #include <memory>
@@ -26,6 +27,7 @@
 
 #include "../buffer.h"
 #include "../counted.h"
+#include "MoveOnly.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -414,6 +416,22 @@ int main(int, char**) {
     {
       Buffer<int, N> out;
       std::ranges::uninitialized_move(in, out);
+    }
+  }
+
+  // MoveOnly types are supported
+  {
+    {
+      MoveOnly a[] = {1, 2, 3, 4};
+      Buffer<MoveOnly, 4> out;
+      std::ranges::uninitialized_move(std::begin(a), std::end(a), std::begin(out), std::end(out));
+      assert(std::ranges::equal(out, std::array<MoveOnly, 4>{1, 2, 3, 4}));
+    }
+    {
+      MoveOnly a[] = {1, 2, 3, 4};
+      Buffer<MoveOnly, 4> out;
+      std::ranges::uninitialized_move(a, out);
+      assert(std::ranges::equal(out, std::array<MoveOnly, 4>{1, 2, 3, 4}));
     }
   }
 
