@@ -82,7 +82,8 @@ declare ptr @err(ptr)
 
 define signext i32 @vararg2(ptr %l, ...) {
 entry:
-  br i1 undef, label %cleanup, label %cond.end
+  %c = load i1, ptr %l
+  br i1 %c, label %cleanup, label %cond.end
 
 cond.end:                                         ; preds = %entry
   %call51 = call ptr @err(ptr nonnull %l)
