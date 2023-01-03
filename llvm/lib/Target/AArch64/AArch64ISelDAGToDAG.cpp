@@ -199,7 +199,7 @@ public:
     else
       return false;
 
-    if (Imm != 1 << (ShtAmt - 1))
+    if (Imm != 1ULL << (ShtAmt - 1))
       return false;
 
     Res1 = Op.getOperand(0);
