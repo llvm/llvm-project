@@ -8,35 +8,30 @@ define void @foo(ptr %d, ptr %e) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x double], ptr [[D:%.*]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds [4 x double], ptr [[D]], i64 0, i64 3
-; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[ARRAYIDX3]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX3]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [4 x double], ptr [[E:%.*]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP1]], double [[TMP2]], double [[TMP0]])
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [4 x double], ptr [[D]], i64 2, i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr [[ARRAYIDX8]], align 8
-; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds [4 x double], ptr [[E]], i64 3, i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX12]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP1]], double [[TMP5]], double [[TMP4]])
 ; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds [4 x double], ptr [[D]], i64 1, i64 3
-; CHECK-NEXT:    [[TMP7:%.*]] = load double, ptr [[ARRAYIDX15]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[ARRAYIDX15]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds [4 x double], ptr [[D]], i64 3, i64 2
-; CHECK-NEXT:    [[TMP8:%.*]] = load double, ptr [[ARRAYIDX17]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX17]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX19:%.*]] = getelementptr inbounds [4 x double], ptr [[E]], i64 2, i64 3
-; CHECK-NEXT:    [[TMP9:%.*]] = load double, ptr [[ARRAYIDX19]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP8]], double [[TMP9]], double [[TMP7]])
+; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr [[ARRAYIDX19]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP2]], double [[TMP3]], double [[TMP1]])
 ; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds [4 x double], ptr [[D]], i64 3, i64 3
-; CHECK-NEXT:    [[TMP11:%.*]] = load double, ptr [[ARRAYIDX21]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX21]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds [4 x double], ptr [[E]], i64 3, i64 3
-; CHECK-NEXT:    [[TMP12:%.*]] = load double, ptr [[ARRAYIDX23]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP11]], double [[TMP12]], double [[TMP10]])
-; CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr @a, align 8
-; CHECK-NEXT:    store double [[TMP3]], ptr [[TMP14]], align 8
-; CHECK-NEXT:    [[F_SROA_4_0__SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[TMP14]], i64 8
-; CHECK-NEXT:    store double [[TMP6]], ptr [[F_SROA_4_0__SROA_IDX]], align 8
-; CHECK-NEXT:    [[F_SROA_539_0__SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[TMP14]], i64 40
-; CHECK-NEXT:    store double [[TMP13]], ptr [[F_SROA_539_0__SROA_IDX]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load double, ptr [[ARRAYIDX23]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP5]], double [[TMP6]], double [[TMP4]])
+; CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr @a, align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = load <2 x double>, ptr [[ARRAYIDX4]], align 8
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x double> poison, double [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP11]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP12]], <2 x double> [[TMP10]], <2 x double> [[TMP9]])
+; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[TMP8]], align 8
+; CHECK-NEXT:    [[F_SROA_539_0__SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 40
+; CHECK-NEXT:    store double [[TMP7]], ptr [[F_SROA_539_0__SROA_IDX]], align 8
 ; CHECK-NEXT:    store i32 6, ptr @b, align 4
 ; CHECK-NEXT:    ret void
 ;
