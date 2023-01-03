@@ -181,7 +181,6 @@ define <vscale x 1 x i64> @test9(<vscale x 1 x i64> %a, i64 %b, <vscale x 1 x i1
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 9, e64, m1, tu, mu
 ; CHECK-NEXT:    vadd.vv v8, v8, v8, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
 entry:
@@ -227,7 +226,6 @@ define <vscale x 1 x double> @test12(<vscale x 1 x double> %a, double %b, <vscal
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 9, e64, m1, tu, mu
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
 entry:
