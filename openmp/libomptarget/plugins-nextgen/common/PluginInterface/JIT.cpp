@@ -107,7 +107,7 @@ void init(Triple TT) {
   initializeWasmEHPreparePass(Registry);
   initializeWriteBitcodePassPass(Registry);
   initializeHardwareLoopsPass(Registry);
-  initializeTypePromotionPass(Registry);
+  initializeTypePromotionLegacyPass(Registry);
   initializeReplaceWithVeclibLegacyPass(Registry);
   initializeJMCInstrumenterPass(Registry);
 }
