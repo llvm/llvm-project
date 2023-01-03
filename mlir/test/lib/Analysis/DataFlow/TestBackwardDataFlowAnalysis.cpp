@@ -38,7 +38,7 @@ struct WrittenTo : public AbstractSparseLattice {
                                      : ChangeResult::Change;
   }
   ChangeResult meet(const AbstractSparseLattice &other) override {
-    auto rhs = reinterpret_cast<const WrittenTo *>(&other);
+    const auto *rhs = reinterpret_cast<const WrittenTo *>(&other);
     return addWrites(rhs->writes);
   }
 
