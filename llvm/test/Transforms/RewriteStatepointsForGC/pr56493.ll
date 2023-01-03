@@ -2,17 +2,17 @@
 ; RUN: opt -passes=rewrite-statepoints-for-gc -S < %s | FileCheck %s
 
 ; Make sure this doesn't crash.
-define void @test() gc "statepoint-example" personality i32* ()* @zot {
+define void @test() gc "statepoint-example" personality ptr @zot {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void (i32 addrspace(1)*, i64, i32 addrspace(1)*, i64, i64)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i32i64p1i32i64i64f(i64 2882400000, i32 0, void (i32 addrspace(1)*, i64, i32 addrspace(1)*, i64, i64)* elementtype(void (i32 addrspace(1)*, i64, i32 addrspace(1)*, i64, i64)) @__llvm_memcpy_element_unordered_atomic_safepoint_4, i32 5, i32 0, i32 addrspace(1)* null, i64 undef, i32 addrspace(1)* null, i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 16) to i64), i64 undef, i32 0, i32 0) [ "deopt"() ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void (ptr addrspace(1), i64, ptr addrspace(1), i64, i64)) @__llvm_memcpy_element_unordered_atomic_safepoint_4, i32 5, i32 0, ptr addrspace(1) null, i64 undef, ptr addrspace(1) null, i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 16) to i64), i64 undef, i32 0, i32 0) [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  call void @llvm.memcpy.element.unordered.atomic.p1i32.p1i32.i64(i32 addrspace(1)* elementtype(i32) align 8 undef, i32 addrspace(1)* elementtype(i32) align 16 bitcast (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 16) to i32 addrspace(1)*), i64 undef, i32 4) #3 [ "deopt"() ]
+  call void @llvm.memcpy.element.unordered.atomic.p1.p1.i64(ptr addrspace(1) elementtype(i32) align 8 undef, ptr addrspace(1) elementtype(i32) align 16 getelementptr inbounds (i8, ptr addrspace(1) null, i64 16), i64 undef, i32 4) #3 [ "deopt"() ]
   ret void
 }
 
-declare i32* @zot()
+declare ptr @zot()
 
-declare void @llvm.memcpy.element.unordered.atomic.p1i32.p1i32.i64(i32 addrspace(1)* nocapture writeonly, i32 addrspace(1)* nocapture readonly, i64, i32 immarg)
+declare void @llvm.memcpy.element.unordered.atomic.p1.p1.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i32 immarg)
