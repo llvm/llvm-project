@@ -8,7 +8,6 @@
 
 #include "clang/Support/RISCVVIntrinsicUtils.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -16,6 +15,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 #include <numeric>
+#include <optional>
 
 using namespace llvm;
 
@@ -362,7 +362,8 @@ void RVVType::applyBasicType() {
   assert(ElementBitwidth != 0 && "Bad element bitwidth!");
 }
 
-Optional<PrototypeDescriptor> PrototypeDescriptor::parsePrototypeDescriptor(
+std::optional<PrototypeDescriptor>
+PrototypeDescriptor::parsePrototypeDescriptor(
     llvm::StringRef PrototypeDescriptorStr) {
   PrototypeDescriptor PD;
   BaseTypeModifier PT = BaseTypeModifier::Invalid;
@@ -783,7 +784,7 @@ void RVVType::applyFixedLog2LMUL(int Log2LMUL, enum FixedLMULType Type) {
   Scale = LMUL.getScale(ElementBitwidth);
 }
 
-Optional<RVVTypes>
+std::optional<RVVTypes>
 RVVTypeCache::computeTypes(BasicType BT, int Log2LMUL, unsigned NF,
                            ArrayRef<PrototypeDescriptor> Prototype) {
   // LMUL x NF must be less than or equal to 8.
@@ -814,8 +815,8 @@ static uint64_t computeRVVTypeHashValue(BasicType BT, int Log2LMUL,
          ((uint64_t)(Proto.VTM & 0xff) << 32);
 }
 
-Optional<RVVTypePtr> RVVTypeCache::computeType(BasicType BT, int Log2LMUL,
-                                               PrototypeDescriptor Proto) {
+std::optional<RVVTypePtr> RVVTypeCache::computeType(BasicType BT, int Log2LMUL,
+                                                    PrototypeDescriptor Proto) {
   uint64_t Idx = computeRVVTypeHashValue(BT, Log2LMUL, Proto);
   // Search first
   auto It = LegalTypes.find(Idx);

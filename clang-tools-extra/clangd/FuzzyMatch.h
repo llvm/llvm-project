@@ -16,10 +16,10 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FUZZYMATCH_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -77,7 +77,7 @@ public:
   // Scores usually fall in a [0,1] range, with 1 being a very good score.
   // "Super" scores in (1,2] are possible if the pattern is the full word.
   // Characters beyond MaxWord are ignored.
-  llvm::Optional<float> match(llvm::StringRef Word);
+  std::optional<float> match(llvm::StringRef Word);
 
   llvm::StringRef pattern() const { return llvm::StringRef(Pat, PatN); }
   bool empty() const { return PatN == 0; }
