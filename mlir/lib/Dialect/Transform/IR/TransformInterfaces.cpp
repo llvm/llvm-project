@@ -408,6 +408,93 @@ bool transform::TransformResults::isParam(unsigned resultNumber) const {
 }
 
 //===----------------------------------------------------------------------===//
+// Utilities for TransformEachOpTrait.
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+transform::detail::checkApplyToOne(Operation *transformOp,
+                                   Location payloadOpLoc,
+                                   const ApplyToEachResultList &partialResult) {
+  Location transformOpLoc = transformOp->getLoc();
+  StringRef transformOpName = transformOp->getName().getStringRef();
+  unsigned expectedNumResults = transformOp->getNumResults();
+  // TODO: encode this implicit must always produce `expectedNumResults`
+  // and nullptr is fine with a proper trait.
+  if (partialResult.size() != expectedNumResults) {
+    auto diag = mlir::emitError(transformOpLoc, "applications of ")
+                << transformOpName << " expected to produce "
+                << expectedNumResults << " results (actually produced "
+                << partialResult.size() << ").";
+    diag.attachNote(transformOpLoc)
+        << "If you need variadic results, consider a generic `apply` "
+        << "instead of the specialized `applyToOne`.";
+    diag.attachNote(transformOpLoc)
+        << "Producing " << expectedNumResults << " null results is "
+        << "allowed if the use case warrants it.";
+    diag.attachNote(payloadOpLoc) << "when applied to this op";
+    return failure();
+  }
+
+  // Check that all is null or none is null
+  // TODO: relax this behavior and encode with a proper trait.
+  if (llvm::any_of(
+          partialResult,
+          [](llvm::PointerUnion<Operation *, Attribute> ptr) { return ptr; }) &&
+      llvm::any_of(partialResult,
+                   [](llvm::PointerUnion<Operation *, Attribute> ptr) {
+                     return !ptr;
+                   })) {
+    auto diag = mlir::emitError(transformOpLoc, "unexpected application of ")
+                << transformOpName
+                << " produces both null and non null results.";
+    diag.attachNote(payloadOpLoc) << "when applied to this op";
+    return failure();
+  }
+
+  // Check that the right kind of value was produced.
+  for (const auto &[ptr, res] :
+       llvm::zip(partialResult, transformOp->getResults())) {
+    if (ptr.is<Operation *>() &&
+        !res.getType().template isa<TransformHandleTypeInterface>()) {
+      mlir::emitError(transformOpLoc)
+          << "applications of " << transformOpName
+          << " expected to produce an Attribute for result #"
+          << res.getResultNumber();
+      return failure();
+    }
+    if (ptr.is<Attribute>() &&
+        !res.getType().template isa<TransformParamTypeInterface>()) {
+      mlir::emitError(transformOpLoc)
+          << "applications of " << transformOpName
+          << " expected to produce an Operation * for result #"
+          << res.getResultNumber();
+      return failure();
+    }
+  }
+  return success();
+}
+
+void transform::detail::setApplyToOneResults(
+    Operation *transformOp, TransformResults &transformResults,
+    ArrayRef<ApplyToEachResultList> results) {
+  for (OpResult r : transformOp->getResults()) {
+    if (r.getType().isa<TransformParamTypeInterface>()) {
+      auto params = llvm::to_vector(
+          llvm::map_range(results, [r](const ApplyToEachResultList &oneResult) {
+            return oneResult[r.getResultNumber()].get<Attribute>();
+          }));
+      transformResults.setParams(r, params);
+    } else {
+      auto payloads = llvm::to_vector(
+          llvm::map_range(results, [r](const ApplyToEachResultList &oneResult) {
+            return oneResult[r.getResultNumber()].get<Operation *>();
+          }));
+      transformResults.set(r, payloads);
+    }
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // Utilities for PossibleTopLevelTransformOpTrait.
 //===----------------------------------------------------------------------===//
 

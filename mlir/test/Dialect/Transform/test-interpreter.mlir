@@ -991,3 +991,36 @@ func.func private @three_test_ops(%arg0: i32) {
   "test.op_a"(%arg0) { attr = 0 : i32} : (i32) -> i32
   return
 }
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{expected to produce an Operation * for result #0}}
+  transform.test_produce_transform_param_or_forward_operand %arg0
+    { first_result_is_param }
+    : (!transform.any_op) -> (!transform.any_op, !transform.param<i64>)
+}
+
+// -----
+
+// expected-note @below {{when applied to this op}}
+module {
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    // expected-error @below {{produces both null and non null results}}
+    transform.test_produce_transform_param_or_forward_operand %arg0
+      { first_result_is_null }
+      : (!transform.any_op) -> (!transform.any_op, !transform.param<i64>)
+  }
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{expected to produce an Attribute for result #1}}
+  transform.test_produce_transform_param_or_forward_operand %arg0
+    { second_result_is_handle }
+    : (!transform.any_op) -> (!transform.any_op, !transform.param<i64>)
+}

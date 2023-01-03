@@ -542,8 +542,8 @@ public:
 };
 
 /// Trait implementing the TransformOpInterface for operations applying a
-/// transformation to a single operation handle and producing zero, one or
-/// multiple operation handles.
+/// transformation to a single operation handle and producing an arbitrary
+/// number of handles and parameter values.
 /// The op must implement a method with the following signature:
 ///   - DiagnosedSilenceableFailure applyToOne(OpTy,
 ///       SmallVector<Operation*> &results, state)
@@ -732,7 +732,82 @@ public:
 
 namespace mlir {
 namespace transform {
+
+/// A single result of applying a transform op with `ApplyEachOpTrait` to a
+/// single payload operation.
+using ApplyToEachResult = llvm::PointerUnion<Operation *, Attribute>;
+
+/// A list of results of applying a transform op with `ApplyEachOpTrait` to a
+/// single payload operation, co-indexed with the results of the transform op.
+class ApplyToEachResultList {
+public:
+  ApplyToEachResultList() = default;
+  explicit ApplyToEachResultList(unsigned size) : results(size) {}
+
+  /// Sets the list of results to `size` null pointers.
+  void assign(unsigned size, std::nullptr_t) { results.assign(size, nullptr); }
+
+  /// Sets the list of results to the given range of values.
+  template <typename Range>
+  void assign(Range &&range) {
+    // This is roughly the implementation of SmallVectorImpl::assign.
+    // Dispatching to it with map_range and template type inference would result
+    // in more complex code here.
+    results.clear();
+    results.reserve(llvm::size(range));
+    for (auto element : range) {
+      if constexpr (std::is_convertible_v<decltype(*std::begin(range)),
+                                          Operation *>) {
+        results.push_back(static_cast<Operation *>(element));
+      } else {
+        results.push_back(static_cast<Attribute>(element));
+      }
+    }
+  }
+
+  /// Appends an element to the list.
+  void push_back(Operation *op) { results.push_back(op); }
+  void push_back(Attribute attr) { results.push_back(attr); }
+
+  /// Reserves space for `size` elements in the list.
+  void reserve(unsigned size) { results.reserve(size); }
+
+  /// Iterators over the list.
+  auto begin() { return results.begin(); }
+  auto end() { return results.end(); }
+  auto begin() const { return results.begin(); }
+  auto end() const { return results.end(); }
+
+  /// Returns the number of elements in the list.
+  size_t size() const { return results.size(); }
+
+  /// Element access. Expects the index to be in bounds.
+  ApplyToEachResult &operator[](size_t index) { return results[index]; }
+  const ApplyToEachResult &operator[](size_t index) const {
+    return results[index];
+  }
+
+private:
+  /// Underlying storage.
+  SmallVector<ApplyToEachResult> results;
+};
+
 namespace detail {
+
+/// Check that the contents of `partialResult` matches the number, kind (payload
+/// op or parameter) and nullity (either all or none) requirements of
+/// `transformOp`. Report errors and return failure otherwise.
+LogicalResult checkApplyToOne(Operation *transformOp, Location payloadOpLoc,
+                              const ApplyToEachResultList &partialResult);
+
+/// "Transpose" the results produced by individual applications, arranging them
+/// per result value of the transform op, and populate `transformResults` with
+/// that. The number, kind and nullity of per-application results are assumed to
+/// have been verified.
+void setApplyToOneResults(Operation *transformOp,
+                          TransformResults &transformResults,
+                          ArrayRef<ApplyToEachResultList> results);
+
 /// Applies a one-to-one or a one-to-many transform to each of the given
 /// targets. Puts the results of transforms, if any, in `results` in the same
 /// order. Fails if any of the application fails. Individual transforms must be
@@ -744,22 +819,28 @@ namespace detail {
 ///   - a concrete Op class, in which case a check is performed whether
 ///   `targets` contains operations of the same class and a silenceable failure
 ///   is reported if it does not.
-template <typename FnTy>
-DiagnosedSilenceableFailure applyTransformToEach(
-    Location loc, int expectedNumResults, ArrayRef<Operation *> targets,
-    SmallVectorImpl<SmallVector<Operation *>> &results, FnTy transform) {
-  SmallVector<Diagnostic> silenceableStack;
-  using OpTy = typename llvm::function_traits<FnTy>::template arg_t<0>;
+template <typename TransformOpTy>
+DiagnosedSilenceableFailure
+applyTransformToEach(TransformOpTy transformOp, ArrayRef<Operation *> targets,
+                     SmallVectorImpl<ApplyToEachResultList> &results,
+                     TransformState &state) {
+  using OpTy = typename llvm::function_traits<
+      decltype(&TransformOpTy::applyToOne)>::template arg_t<0>;
   static_assert(std::is_convertible<OpTy, Operation *>::value,
                 "expected transform function to take an operation");
+
+  SmallVector<Diagnostic> silenceableStack;
+  unsigned expectedNumResults = transformOp->getNumResults();
   for (Operation *target : targets) {
-    // Emplace back a placeholder for the returned new ops.
+    // Emplace back a placeholder for the returned new ops and params.
     // This is filled with `expectedNumResults` if the op fails to apply.
-    results.push_back(SmallVector<Operation *>());
+    ApplyToEachResultList placeholder;
+    placeholder.reserve(expectedNumResults);
+    results.push_back(std::move(placeholder));
 
     auto specificOp = dyn_cast<OpTy>(target);
     if (!specificOp) {
-      Diagnostic diag(loc, DiagnosticSeverity::Error);
+      Diagnostic diag(transformOp->getLoc(), DiagnosticSeverity::Error);
       diag << "transform applied to the wrong op kind";
       diag.attachNote(target->getLoc()) << "when applied to this op";
       // Producing `expectedNumResults` nullptr is a silenceableFailure mode.
@@ -770,11 +851,16 @@ DiagnosedSilenceableFailure applyTransformToEach(
       continue;
     }
 
-    DiagnosedSilenceableFailure result = transform(specificOp, results.back());
-    if (result.isDefiniteFailure())
-      return result;
-    if (result.isSilenceableFailure())
-      result.takeDiagnostics(silenceableStack);
+    DiagnosedSilenceableFailure res =
+        transformOp.applyToOne(specificOp, results.back(), state);
+    if (res.isDefiniteFailure() ||
+        failed(detail::checkApplyToOne(transformOp, specificOp->getLoc(),
+                                       results.back()))) {
+      return DiagnosedSilenceableFailure::definiteFailure();
+    }
+
+    if (res.isSilenceableFailure())
+      res.takeDiagnostics(silenceableStack);
   }
   if (!silenceableStack.empty()) {
     return DiagnosedSilenceableFailure::silenceableFailure(
@@ -783,23 +869,6 @@ DiagnosedSilenceableFailure applyTransformToEach(
   return DiagnosedSilenceableFailure::success();
 }
 
-/// Helper function: transpose MxN into NxM; assumes that the input is a valid.
-static inline SmallVector<SmallVector<Operation *, 1>>
-transposeResults(const SmallVector<SmallVector<Operation *>, 1> &m) {
-  SmallVector<SmallVector<Operation *, 1>> res;
-  if (m.empty())
-    return res;
-  int64_t rows = m.size(), cols = m[0].size();
-  for (int64_t j = 0; j < cols; ++j)
-    res.push_back(SmallVector<Operation *, 1>(rows, nullptr));
-  for (int64_t i = 0; i < rows; ++i) {
-    assert(static_cast<int64_t>(m[i].size()) == cols);
-    for (int64_t j = 0; j < cols; ++j) {
-      res[j][i] = m[i][j];
-    }
-  }
-  return res;
-}
 } // namespace detail
 } // namespace transform
 } // namespace mlir
@@ -808,8 +877,6 @@ template <typename OpTy>
 mlir::DiagnosedSilenceableFailure
 mlir::transform::TransformEachOpTrait<OpTy>::apply(
     TransformResults &transformResults, TransformState &state) {
-  using TransformOpType = typename llvm::function_traits<
-      decltype(&OpTy::applyToOne)>::template arg_t<0>;
   ArrayRef<Operation *> targets =
       state.getPayloadOps(this->getOperation()->getOperand(0));
 
@@ -818,88 +885,35 @@ mlir::transform::TransformEachOpTrait<OpTy>::apply(
   // propagate gracefully.
   // In this case, we fill all results with an empty vector.
   if (targets.empty()) {
-    SmallVector<Operation *> empty;
-    for (auto r : this->getOperation()->getResults())
-      transformResults.set(r.template cast<OpResult>(), empty);
+    SmallVector<Operation *> emptyPayload;
+    SmallVector<Attribute> emptyParams;
+    for (OpResult r : this->getOperation()->getResults()) {
+      if (r.getType().isa<TransformParamTypeInterface>())
+        transformResults.setParams(r, emptyParams);
+      else
+        transformResults.set(r, emptyPayload);
+    }
     return DiagnosedSilenceableFailure::success();
   }
 
   // Step 2. Call applyToOne on each target and record newly produced ops in its
   // corresponding results entry.
-  int expectedNumResults = this->getOperation()->getNumResults();
-  SmallVector<SmallVector<Operation *>, 1> results;
+  SmallVector<ApplyToEachResultList, 1> results;
+  results.reserve(targets.size());
   DiagnosedSilenceableFailure result = detail::applyTransformToEach(
-      this->getOperation()->getLoc(), expectedNumResults, targets, results,
-      [&](TransformOpType specificOp, SmallVector<Operation *> &partialResult) {
-        auto res = static_cast<OpTy *>(this)->applyToOne(specificOp,
-                                                         partialResult, state);
-        if (res.isDefiniteFailure())
-          return res;
-
-        // TODO: encode this implicit must always produce `expectedNumResults`
-        // and nullptr is fine with a proper trait.
-        if (static_cast<int>(partialResult.size()) != expectedNumResults) {
-          auto loc = this->getOperation()->getLoc();
-          auto diag = mlir::emitError(loc, "applications of ")
-                      << OpTy::getOperationName() << " expected to produce "
-                      << expectedNumResults << " results (actually produced "
-                      << partialResult.size() << ").";
-          diag.attachNote(loc)
-              << "If you need variadic results, consider a generic `apply` "
-              << "instead of the specialized `applyToOne`.";
-          diag.attachNote(loc)
-              << "Producing " << expectedNumResults << " null results is "
-              << "allowed if the use case warrants it.";
-          diag.attachNote(specificOp->getLoc()) << "when applied to this op";
-          return DiagnosedSilenceableFailure::definiteFailure();
-        }
-        // Check that all is null or none is null
-        // TODO: relax this behavior and encode with a proper trait.
-        if (llvm::any_of(partialResult, [](Operation *op) { return op; }) &&
-            llvm::any_of(partialResult, [](Operation *op) { return !op; })) {
-          auto loc = this->getOperation()->getLoc();
-          auto diag = mlir::emitError(loc, "unexpected application of ")
-                      << OpTy::getOperationName()
-                      << " produces both null and non null results.";
-          diag.attachNote(specificOp->getLoc()) << "when applied to this op";
-          return DiagnosedSilenceableFailure::definiteFailure();
-        }
-        return res;
-      });
+      cast<OpTy>(this->getOperation()), targets, results, state);
 
   // Step 3. Propagate the definite failure if any and bail out.
   if (result.isDefiniteFailure())
     return result;
 
-  // Step 4. If there are no results, return early.
-  if (OpTy::template hasTrait<OpTrait::ZeroResults>())
-    return result;
+  // Step 4. "Transpose" the results produced by individual applications,
+  // arranging them per result value of the transform op. The number, kind and
+  // nullity of per-application results have been verified by the callback
+  // above.
+  detail::setApplyToOneResults(this->getOperation(), transformResults, results);
 
-  // Step 5. Perform transposition of M applications producing N results each
-  // into N results for each of the M applications.
-  SmallVector<SmallVector<Operation *, 1>> transposedResults =
-      detail::transposeResults(results);
-
-  // Step 6. Single result applies to M ops produces one single M-result.
-  if (OpTy::template hasTrait<OpTrait::OneResult>()) {
-    assert(transposedResults.size() == 1 && "Expected single result");
-    transformResults.set(
-        this->getOperation()->getResult(0).template cast<OpResult>(),
-        transposedResults[0]);
-    // ApplyToOne may have returned silenceableFailure, propagate it.
-    return result;
-  }
-
-  // Step 7. Filter out empty results and set the transformResults.
-  for (const auto &it :
-       llvm::zip(this->getOperation()->getResults(), transposedResults)) {
-    SmallVector<Operation *, 1> filtered;
-    llvm::copy_if(std::get<1>(it), std::back_inserter(filtered),
-                  [](Operation *op) { return op; });
-    transformResults.set(std::get<0>(it).template cast<OpResult>(), filtered);
-  }
-
-  // Step 8. ApplyToOne may have returned silenceableFailure, propagate it.
+  // Step 5. ApplyToOne may have returned silenceableFailure, propagate it.
   return result;
 }
 

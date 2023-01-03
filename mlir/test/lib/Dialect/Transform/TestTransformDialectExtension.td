@@ -173,7 +173,7 @@ def TestWrongNumberOfResultsOp
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::Operation * target,
-        ::llvm::SmallVectorImpl<::mlir::Operation *> &results,
+        ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
 }
@@ -189,7 +189,7 @@ def TestWrongNumberOfMultiResultsOp
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::Operation * target,
-        ::llvm::SmallVectorImpl<::mlir::Operation *> &results,
+        ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
 }
@@ -206,7 +206,7 @@ def TestCorrectNumberOfMultiResultsOp
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::Operation * target,
-        ::llvm::SmallVectorImpl<::mlir::Operation *> &results,
+        ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
 }
@@ -223,7 +223,7 @@ def TestMixedNullAndNonNullResultsOp
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::Operation * target,
-        ::llvm::SmallVectorImpl<::mlir::Operation *> &results,
+        ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
 }
@@ -239,7 +239,7 @@ def TestMixedSuccessAndSilenceableOp
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::Operation * target,
-        ::llvm::SmallVectorImpl<::mlir::Operation *> &results,
+        ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
 }
@@ -311,6 +311,27 @@ def TestProduceIntegerParamWithTypeOp
   let assemblyFormat = "$type attr-dict `:` type($result)";
   let cppNamespace = "::mlir::test";
   let hasVerifier = 1;
+}
+
+def TestProduceTransformParamOrForwardOperandOp
+  : Op<Transform_Dialect, "test_produce_transform_param_or_forward_operand",
+       [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+        TransformEachOpTrait, TransformOpInterface]> {
+  let arguments = (ins TransformHandleTypeInterface:$in,
+                       UnitAttr:$first_result_is_param,
+                       UnitAttr:$first_result_is_null,
+                       UnitAttr:$second_result_is_handle);
+  let results = (outs TransformHandleTypeInterface:$out,
+                      TransformParamTypeInterface:$param);
+  let assemblyFormat = "$in attr-dict `:` functional-type(operands, results)";
+  let cppNamespace = "::mlir::test";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
 }
 
 #endif // MLIR_TESTTRANSFORMDIALECTEXTENSION_TD

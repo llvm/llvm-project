@@ -21,10 +21,9 @@ using namespace mlir;
 // MemRefMultiBufferOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure
-transform::MemRefMultiBufferOp::applyToOne(memref::AllocOp target,
-                                           SmallVector<Operation *> &results,
-                                           transform::TransformState &state) {
+DiagnosedSilenceableFailure transform::MemRefMultiBufferOp::applyToOne(
+    memref::AllocOp target, transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
   auto newBuffer = memref::multiBuffer(target, getFactor());
   if (failed(newBuffer)) {
     Diagnostic diag(target->getLoc(), DiagnosticSeverity::Note);
