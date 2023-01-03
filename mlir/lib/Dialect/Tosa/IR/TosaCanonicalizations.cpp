@@ -88,16 +88,22 @@ struct ReshapeConstOptimization : public OpRewritePattern<tosa::ReshapeOp> {
   LogicalResult matchAndRewrite(tosa::ReshapeOp op,
                                 PatternRewriter &rewriter) const override {
     Value input = op.getInput1();
+    ShapedType inputTy = input.getType().cast<ShapedType>();
+    ShapedType resultTy = op.getType().cast<ShapedType>();
     ArrayAttr newShape = op.getNewShape();
+
+    if (inputTy.getElementType() != resultTy.getElementType())
+      return rewriter.notifyMatchFailure(op, "element type does not match.");
 
     // Check if input is constant
     DenseElementsAttr inputAttr;
     if (!matchPattern(input, m_Constant(&inputAttr)))
-      return failure();
+      return rewriter.notifyMatchFailure(op, "Non-constant input.");
 
     // Check if has >1 consumer and is not splat
     if (!input.hasOneUse() && !inputAttr.isSplat())
-      return failure();
+      return rewriter.notifyMatchFailure(op,
+                                         "Used more than once or not-splat");
 
     // Grab the new shape
     SmallVector<int64_t> newShapeValues = llvm::to_vector<6>(
@@ -132,7 +138,7 @@ LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
   return success();
 }
 
-struct NoOpOptimization : public OpRewritePattern<tosa::TransposeOp> {
+struct TransposeNoOp : public OpRewritePattern<tosa::TransposeOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(tosa::TransposeOp op,
@@ -159,9 +165,60 @@ struct NoOpOptimization : public OpRewritePattern<tosa::TransposeOp> {
   }
 };
 
+// Determines the case when tosa.transpose is a tosa.reshape operation.
+struct TransposeIsReshape : public OpRewritePattern<tosa::TransposeOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::TransposeOp op,
+                                PatternRewriter &rewriter) const override {
+    DenseIntElementsAttr permAttr;
+    if (!matchPattern(op.getPerms(), m_Constant(&permAttr)))
+      return rewriter.notifyMatchFailure(op, "Non-constant permutation");
+
+    auto input = op.getInput1();
+    auto inputTy = input.getType().cast<ShapedType>();
+    if (!inputTy.hasRank())
+      return rewriter.notifyMatchFailure(op, "Unranked input.");
+
+    int64_t numDynDims = 0;
+    for (int i = 0; i < inputTy.getRank(); ++i)
+      if (inputTy.isDynamicDim(i))
+        numDynDims++;
+
+    if (numDynDims > 1)
+      return rewriter.notifyMatchFailure(op, "Has more than one dynamic dim.");
+
+    SmallVector<int64_t> permValues = llvm::to_vector<6>(
+        llvm::map_range(permAttr.getValues<APInt>(),
+                        [](const APInt &val) { return val.getSExtValue(); }));
+
+    SmallVector<int64_t> nonZeroPerms;
+    nonZeroPerms.reserve(permValues.size());
+    for (auto idx : permValues) {
+      auto sz = inputTy.getDimSize(idx);
+      if (sz != 1)
+        nonZeroPerms.push_back(idx);
+    }
+
+    for (int i = 1, s = nonZeroPerms.size(); i < s; ++i)
+      if (nonZeroPerms[i - 1] > nonZeroPerms[i])
+        return rewriter.notifyMatchFailure(op,
+                                           "Transpose changes memeory layout.");
+
+    SmallVector<int64_t> newShape;
+    newShape.reserve(inputTy.getRank());
+    for (int i = 0, s = inputTy.getRank(); i < s; ++i)
+      newShape.push_back(inputTy.getDimSize(permValues[i]));
+
+    rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
+        op, op.getType(), op.getInput1(), rewriter.getI64ArrayAttr(newShape));
+    return success();
+  }
+};
+
 void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<NoOpOptimization>(context);
+  results.add<TransposeNoOp, TransposeIsReshape>(context);
 }
 
 struct AddZeroOptimization : public OpRewritePattern<tosa::AddOp> {
@@ -956,6 +1013,11 @@ OpFoldResult TileOp::fold(ArrayRef<Attribute> operands) {
 
 OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
   if (!operands[1])
+    return {};
+
+  auto inputTy = getInput1().getType().cast<ShapedType>();
+  auto resultTy = getType().cast<ShapedType>();
+  if (inputTy.getElementType() != resultTy.getElementType())
     return {};
 
   // Transposing splat values just means reshaping.
