@@ -109,7 +109,7 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::scf::ForOp target,
-        ::llvm::SmallVector<::mlir::Operation *> &results,
+        ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
 }
@@ -151,7 +151,7 @@ def LoopPipelineOp : Op<Transform_Dialect, "loop.pipeline",
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::scf::ForOp target,
-        ::llvm::SmallVector<::mlir::Operation *> &results,
+        ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
 }
@@ -184,7 +184,7 @@ def LoopUnrollOp : Op<Transform_Dialect, "loop.unroll",
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::Operation *target,
-        ::llvm::SmallVector<::mlir::Operation *> &results,
+        ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
 }

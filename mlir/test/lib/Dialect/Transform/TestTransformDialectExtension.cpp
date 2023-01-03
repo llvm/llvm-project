@@ -243,7 +243,7 @@ DiagnosedSilenceableFailure mlir::test::TestEmitRemarkAndEraseOperandOp::apply(
 }
 
 DiagnosedSilenceableFailure mlir::test::TestWrongNumberOfResultsOp::applyToOne(
-    Operation *target, SmallVectorImpl<Operation *> &results,
+    Operation *target, transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   OperationState opState(target->getLoc(), "foo");
   results.push_back(OpBuilder(target).create(opState));
@@ -252,7 +252,7 @@ DiagnosedSilenceableFailure mlir::test::TestWrongNumberOfResultsOp::applyToOne(
 
 DiagnosedSilenceableFailure
 mlir::test::TestWrongNumberOfMultiResultsOp::applyToOne(
-    Operation *target, SmallVectorImpl<Operation *> &results,
+    Operation *target, transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   static int count = 0;
   if (count++ == 0) {
@@ -264,7 +264,7 @@ mlir::test::TestWrongNumberOfMultiResultsOp::applyToOne(
 
 DiagnosedSilenceableFailure
 mlir::test::TestCorrectNumberOfMultiResultsOp::applyToOne(
-    Operation *target, SmallVectorImpl<Operation *> &results,
+    Operation *target, transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   OperationState opState(target->getLoc(), "foo");
   results.push_back(OpBuilder(target).create(opState));
@@ -274,7 +274,7 @@ mlir::test::TestCorrectNumberOfMultiResultsOp::applyToOne(
 
 DiagnosedSilenceableFailure
 mlir::test::TestMixedNullAndNonNullResultsOp::applyToOne(
-    Operation *target, SmallVectorImpl<Operation *> &results,
+    Operation *target, transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   OperationState opState(target->getLoc(), "foo");
   results.push_back(nullptr);
@@ -284,7 +284,7 @@ mlir::test::TestMixedNullAndNonNullResultsOp::applyToOne(
 
 DiagnosedSilenceableFailure
 mlir::test::TestMixedSuccessAndSilenceableOp::applyToOne(
-    Operation *target, SmallVectorImpl<Operation *> &results,
+    Operation *target, transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   if (target->hasAttr("target_me"))
     return DiagnosedSilenceableFailure::success();
@@ -427,6 +427,35 @@ LogicalResult mlir::test::TestProduceIntegerParamWithTypeOp::verify() {
     return emitOpError() << "expects an integer type";
   }
   return success();
+}
+
+void mlir::test::TestProduceTransformParamOrForwardOperandOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getIn(), effects);
+  transform::producesHandle(getOut(), effects);
+  transform::producesHandle(getParam(), effects);
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestProduceTransformParamOrForwardOperandOp::applyToOne(
+    Operation *target, ::transform::ApplyToEachResultList &results,
+    ::transform::TransformState &state) {
+  Builder builder(getContext());
+  if (getFirstResultIsParam()) {
+    results.push_back(builder.getI64IntegerAttr(0));
+  } else if (getFirstResultIsNull()) {
+    results.push_back(nullptr);
+  } else {
+    results.push_back(state.getPayloadOps(getIn()).front());
+  }
+
+  if (getSecondResultIsHandle()) {
+    results.push_back(state.getPayloadOps(getIn()).front());
+  } else {
+    results.push_back(builder.getI64IntegerAttr(42));
+  }
+
+  return DiagnosedSilenceableFailure::success();
 }
 
 namespace {

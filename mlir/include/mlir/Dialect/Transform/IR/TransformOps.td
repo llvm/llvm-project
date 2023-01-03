@@ -109,7 +109,7 @@ def CastOp : TransformDialectOp<"cast",
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
       ::mlir::Operation *target,
-      ::llvm::SmallVectorImpl<::mlir::Operation *> &results,
+      ::mlir::transform::ApplyToEachResultList &results,
       ::mlir::transform::TransformState &state);
   }];
 }
