@@ -126,7 +126,11 @@ static bool isMaskRegOp(const MachineInstr &MI) {
 
 /// Which subfields of VL or VTYPE have values we need to preserve?
 struct DemandedFields {
-  bool VL = false;
+  // Some unknown property of VL is used.  If demanded, must preserve entire
+  // value.
+  bool VLAny = false;
+  // Only zero vs non-zero is used. If demanded, can change non-zero values.
+  bool VLZeroness = false;
   bool SEW = false;
   bool LMUL = false;
   bool SEWLMULRatio = false;
@@ -138,6 +142,11 @@ struct DemandedFields {
     return SEW || LMUL || SEWLMULRatio || TailPolicy || MaskPolicy;
   }
 
+  // Return true if any property of VL was used
+  bool usedVL() {
+    return VLAny || VLZeroness;
+  }
+
   // Mark all VTYPE subfields and properties as demanded
   void demandVTYPE() {
     SEW = true;
@@ -146,6 +155,13 @@ struct DemandedFields {
     TailPolicy = true;
     MaskPolicy = true;
   }
+
+  // Mark all VL properties as demanded
+  void demandVL() {
+    VLAny = true;
+    VLZeroness = true;
+  }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Support for debugging, callable in GDB: V->dump()
   LLVM_DUMP_METHOD void dump() const {
@@ -156,7 +172,8 @@ struct DemandedFields {
   /// Implement operator<<.
   void print(raw_ostream &OS) const {
     OS << "{";
-    OS << "VL=" << VL << ", ";
+    OS << "VLAny=" << VLAny << ", ";
+    OS << "VLZeroness=" << VLZeroness << ", ";
     OS << "SEW=" << SEW << ", ";
     OS << "LMUL=" << LMUL << ", ";
     OS << "SEWLMULRatio=" << SEWLMULRatio << ", ";
@@ -219,7 +236,7 @@ static DemandedFields getDemanded(const MachineInstr &MI) {
   DemandedFields Res;
   // Start conservative if registers are used
   if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::VL))
-    Res.VL = true;
+    Res.demandVL();;
   if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::VTYPE))
     Res.demandVTYPE();
   // Start conservative on the unlowered form too
@@ -227,7 +244,7 @@ static DemandedFields getDemanded(const MachineInstr &MI) {
   if (RISCVII::hasSEWOp(TSFlags)) {
     Res.demandVTYPE();
     if (RISCVII::hasVLOp(TSFlags))
-      Res.VL = true;
+      Res.demandVL();
 
     // Behavior is independent of mask policy.
     if (!RISCVII::usesMaskPolicy(TSFlags))
@@ -264,6 +281,7 @@ static DemandedFields getDemanded(const MachineInstr &MI) {
   if (isScalarMoveInstr(MI)) {
     Res.LMUL = false;
     Res.SEWLMULRatio = false;
+    Res.VLAny = false;
   }
 
   return Res;
@@ -436,8 +454,12 @@ public:
       if (SEW == Require.SEW)
         return true;
 
-    if (Used.VL && !hasSameAVL(Require))
+    if (Used.VLAny && !hasSameAVL(Require))
       return false;
+
+    if (Used.VLZeroness && !hasEquallyZeroAVL(Require))
+      return false;
+
     return areCompatibleVTYPEs(encodeVTYPE(), Require.encodeVTYPE(), Used);
   }
 
@@ -787,12 +809,10 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
 
   DemandedFields Used = getDemanded(MI);
 
-  // For vmv.s.x and vfmv.s.f, there are only two behaviors, VL = 0 and VL > 0.
-  if (isScalarMoveInstr(MI) && CurInfo.hasEquallyZeroAVL(Require)) {
-    Used.VL = false;
-    // Additionally, if writing to an implicit_def operand, we don't need to
-    // preserve any other bits and are thus compatible with any larger etype,
-    // and can disregard policy bits.  Warning: It's tempting to try doing
+  if (isScalarMoveInstr(MI)) {
+    // For vmv.s.x and vfmv.s.f, if writing to an implicit_def operand, we don't
+    // need to preserve any other bits and are thus compatible with any larger,
+    // etype and can disregard policy bits.  Warning: It's tempting to try doing
     // this for any tail agnostic operation, but we can't as TA requires
     // tail lanes to either be the original value or -1.  We are writing
     // unknown bits to the lanes here.
@@ -1204,12 +1224,20 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
 }
 
 static void doUnion(DemandedFields &A, DemandedFields B) {
-  A.VL |= B.VL;
+  A.VLAny |= B.VLAny;
+  A.VLZeroness |= B.VLZeroness;
   A.SEW |= B.SEW;
   A.LMUL |= B.LMUL;
   A.SEWLMULRatio |= B.SEWLMULRatio;
   A.TailPolicy |= B.TailPolicy;
   A.MaskPolicy |= B.MaskPolicy;
+}
+
+static bool isNonZeroAVL(const MachineOperand &MO) {
+  if (MO.isReg())
+    return RISCV::X0 == MO.getReg();
+  assert(MO.isImm());
+  return 0 != MO.getImm();
 }
 
 // Return true if we can mutate PrevMI to match MI without changing any the
@@ -1221,11 +1249,18 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
   // demanded, or b) we can't rewrite the former to be the later for
   // implementation reasons.
   if (!isVLPreservingConfig(MI)) {
-    if (Used.VL)
+    if (Used.VLAny)
       return false;
 
     // TODO: Requires more care in the mutation...
     if (isVLPreservingConfig(PrevMI))
+      return false;
+
+    // We don't bother to handle the equally zero case here as it's largely
+    // uninteresting.
+    if (Used.VLZeroness &&
+        (!isNonZeroAVL(MI.getOperand(1)) ||
+         !isNonZeroAVL(PrevMI.getOperand(1))))
       return false;
 
     // TODO: Track whether the register is defined between
@@ -1255,7 +1290,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
   // We can have arbitrary code in successors, so VL and VTYPE
   // must be considered demanded.
   DemandedFields Used;
-  Used.VL = true;
+  Used.demandVL();
   Used.demandVTYPE();
   SmallVector<MachineInstr*> ToDelete;
   for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
@@ -1268,10 +1303,10 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
     Register VRegDef = MI.getOperand(0).getReg();
     if (VRegDef != RISCV::X0 &&
         !(VRegDef.isVirtual() && MRI->use_nodbg_empty(VRegDef)))
-      Used.VL = true;
+      Used.demandVL();
 
     if (NextMI) {
-      if (!Used.VL && !Used.usedVTYPE()) {
+      if (!Used.usedVL() && !Used.usedVTYPE()) {
         ToDelete.push_back(&MI);
         // Leave NextMI unchanged
         continue;
