@@ -163,7 +163,7 @@ body:             |
     ; CHECK-NEXT: %x1:_(s32) = G_CONSTANT i32 1
     ; CHECK-NEXT: %x2:_(s32) = G_CONSTANT i32 2
     ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: %add:_(s32) = G_ADD %x1, %y
+    ; CHECK-NEXT: %add:_(s32) = G_ADD %y, %x1
     ; CHECK-NEXT: %sub:_(s32) = G_SUB %add, %x2
     ; CHECK-NEXT: $w0 = COPY %sub(s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -351,7 +351,7 @@ body:             |
     ; CHECK-NEXT: %x1:_(s32) = G_CONSTANT i32 1
     ; CHECK-NEXT: %x2:_(s32) = G_CONSTANT i32 2
     ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: %add:_(s32) = G_ADD %x1, %y
+    ; CHECK-NEXT: %add:_(s32) = G_ADD %y, %x1
     ; CHECK-NEXT: %sub:_(s32) = G_SUB %x2, %add
     ; CHECK-NEXT: $w0 = COPY %sub(s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
