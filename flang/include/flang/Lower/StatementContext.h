@@ -13,9 +13,9 @@
 #ifndef FORTRAN_LOWER_STATEMENTCONTEXT_H
 #define FORTRAN_LOWER_STATEMENTCONTEXT_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include <functional>
+#include <optional>
 
 namespace Fortran::lower {
 
@@ -93,7 +93,7 @@ private:
   StatementContext(StatementContext &&) = delete;
 
   // Stack of cleanup function "lists" (nested cleanup function calls).
-  llvm::SmallVector<llvm::Optional<CleanupFunction>> cufs;
+  llvm::SmallVector<std::optional<CleanupFunction>> cufs;
 };
 
 } // namespace Fortran::lower
