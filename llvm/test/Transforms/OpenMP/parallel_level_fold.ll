@@ -2,74 +2,74 @@
 ; RUN: opt -S -passes=openmp-opt < %s | FileCheck %s
 target triple = "nvptx64"
 
-%struct.ident_t = type { i32, i32, i32, i32, i8* }
+%struct.ident_t = type { i32, i32, i32, i32, ptr }
 
 @no_spmd_exec_mode = weak constant i8 1
 @spmd_exec_mode = weak constant i8 0
 @parallel_exec_mode = weak constant i8 0
 @G = external global i8
-@llvm.compiler.used = appending global [3 x i8*] [i8* @no_spmd_exec_mode, i8* @spmd_exec_mode, i8* @parallel_exec_mode], section "llvm.metadata"
+@llvm.compiler.used = appending global [3 x ptr] [ptr @no_spmd_exec_mode, ptr @spmd_exec_mode, ptr @parallel_exec_mode], section "llvm.metadata"
 
 ;.
 ; CHECK: @[[NO_SPMD_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
 ; CHECK: @[[SPMD_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ; CHECK: @[[PARALLEL_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i8
-; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [3 x i8*] [i8* @no_spmd_exec_mode, i8* @spmd_exec_mode, i8* @parallel_exec_mode], section "llvm.metadata"
+; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [3 x ptr] [ptr @no_spmd_exec_mode, ptr @spmd_exec_mode, ptr @parallel_exec_mode], section "llvm.metadata"
 ;.
 define weak void @none_spmd() {
 ; CHECK-LABEL: define {{[^@]+}}@none_spmd() {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* null, i8 1, i1 false)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 1, i1 false)
 ; CHECK-NEXT:    call void @none_spmd_helper()
 ; CHECK-NEXT:    call void @mixed_helper()
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i8 1)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr null, i8 1)
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i8 1, i1 false)
+  %i = call i32 @__kmpc_target_init(ptr null, i8 1, i1 false)
   call void @none_spmd_helper()
   call void @mixed_helper()
-  call void @__kmpc_target_deinit(%struct.ident_t* null, i8 1)
+  call void @__kmpc_target_deinit(ptr null, i8 1)
   ret void
 }
 
 define weak void @spmd() {
 ; CHECK-LABEL: define {{[^@]+}}@spmd() {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* null, i8 2, i1 false)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 2, i1 false)
 ; CHECK-NEXT:    call void @spmd_helper()
 ; CHECK-NEXT:    call void @mixed_helper()
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i8 2)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr null, i8 2)
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i8 2, i1 false)
+  %i = call i32 @__kmpc_target_init(ptr null, i8 2, i1 false)
   call void @spmd_helper()
   call void @mixed_helper()
-  call void @__kmpc_target_deinit(%struct.ident_t* null, i8 2)
+  call void @__kmpc_target_deinit(ptr null, i8 2)
   ret void
 }
 
 define weak void @parallel() {
 ; CHECK-LABEL: define {{[^@]+}}@parallel() {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* null, i8 2, i1 false)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 2, i1 false)
 ; CHECK-NEXT:    call void @spmd_helper()
-; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* null, i32 0, i32 0, i32 0, i32 0, i8* null, i8* null, i8** null, i64 0)
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i8 2)
+; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr null, i32 0, i32 0, i32 0, i32 0, ptr null, ptr null, ptr null, i64 0)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr null, i8 2)
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i8 2, i1 false)
+  %i = call i32 @__kmpc_target_init(ptr null, i8 2, i1 false)
   call void @spmd_helper()
-  call void @__kmpc_parallel_51(%struct.ident_t* null, i32 0, i32 0, i32 0, i32 0, i8* null, i8* null, i8** null, i64 0)
-  call void @__kmpc_target_deinit(%struct.ident_t* null, i8 2)
+  call void @__kmpc_parallel_51(ptr null, i32 0, i32 0, i32 0, i32 0, ptr null, ptr null, ptr null, i64 0)
+  call void @__kmpc_target_deinit(ptr null, i8 2)
   ret void
 }
 
 define internal void @mixed_helper() {
 ; CHECK-LABEL: define {{[^@]+}}@mixed_helper() {
 ; CHECK-NEXT:    [[LEVEL:%.*]] = call i8 @__kmpc_parallel_level()
-; CHECK-NEXT:    store i8 [[LEVEL]], i8* @G, align 1
+; CHECK-NEXT:    store i8 [[LEVEL]], ptr @G, align 1
 ; CHECK-NEXT:    ret void
 ;
   %level = call i8 @__kmpc_parallel_level()
-  store i8 %level, i8* @G
+  store i8 %level, ptr @G
   ret void
 }
 
@@ -98,17 +98,17 @@ f:
 
 define internal void @spmd_helper() {
 ; CHECK-LABEL: define {{[^@]+}}@spmd_helper() {
-; CHECK-NEXT:    store i8 1, i8* @G, align 1
+; CHECK-NEXT:    store i8 1, ptr @G, align 1
 ; CHECK-NEXT:    ret void
 ;
   %level = call i8 @__kmpc_parallel_level()
-  store i8 %level, i8* @G
+  store i8 %level, ptr @G
   ret void
 }
 
-define internal void @__kmpc_parallel_51(%struct.ident_t*, i32, i32, i32, i32, i8*, i8*, i8**, i64) {
+define internal void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64) {
 ; CHECK-LABEL: define {{[^@]+}}@__kmpc_parallel_51
-; CHECK-SAME: (%struct.ident_t* [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]], i32 [[TMP4:%.*]], i8* [[TMP5:%.*]], i8* [[TMP6:%.*]], i8** [[TMP7:%.*]], i64 [[TMP8:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]], i32 [[TMP4:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]], ptr [[TMP7:%.*]], i64 [[TMP8:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    call void @parallel_helper()
 ; CHECK-NEXT:    ret void
 ;
@@ -119,34 +119,34 @@ define internal void @__kmpc_parallel_51(%struct.ident_t*, i32, i32, i32, i32, i
 define internal void @parallel_helper() {
 ; CHECK-LABEL: define {{[^@]+}}@parallel_helper() {
 ; CHECK-NEXT:    [[LEVEL:%.*]] = call i8 @__kmpc_parallel_level()
-; CHECK-NEXT:    store i8 [[LEVEL]], i8* @G, align 1
+; CHECK-NEXT:    store i8 [[LEVEL]], ptr @G, align 1
 ; CHECK-NEXT:    ret void
 ;
   %level = call i8 @__kmpc_parallel_level()
-  store i8 %level, i8* @G
+  store i8 %level, ptr @G
   ret void
 }
 
 declare void @foo()
 declare void @bar()
 declare i8 @__kmpc_parallel_level()
-declare i32 @__kmpc_target_init(%struct.ident_t*, i8 zeroext, i1 zeroext) #1
-declare void @__kmpc_target_deinit(%struct.ident_t* nocapture readnone, i8 zeroext) #1
+declare i32 @__kmpc_target_init(ptr, i8 zeroext, i1 zeroext) #1
+declare void @__kmpc_target_deinit(ptr nocapture readnone, i8 zeroext) #1
 
 !llvm.module.flags = !{!0, !1}
 !nvvm.annotations = !{!2, !3, !4}
 
 !0 = !{i32 7, !"openmp", i32 50}
 !1 = !{i32 7, !"openmp-device", i32 50}
-!2 = !{void ()* @none_spmd, !"kernel", i32 1}
-!3 = !{void ()* @spmd, !"kernel", i32 1}
-!4 = !{void ()* @parallel, !"kernel", i32 1}
+!2 = !{ptr @none_spmd, !"kernel", i32 1}
+!3 = !{ptr @spmd, !"kernel", i32 1}
+!4 = !{ptr @parallel, !"kernel", i32 1}
 ;.
 ; CHECK: attributes #[[ATTR0]] = { alwaysinline }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; CHECK: [[META2:![0-9]+]] = !{void ()* @none_spmd, !"kernel", i32 1}
-; CHECK: [[META3:![0-9]+]] = !{void ()* @spmd, !"kernel", i32 1}
-; CHECK: [[META4:![0-9]+]] = !{void ()* @parallel, !"kernel", i32 1}
+; CHECK: [[META2:![0-9]+]] = !{ptr @none_spmd, !"kernel", i32 1}
+; CHECK: [[META3:![0-9]+]] = !{ptr @spmd, !"kernel", i32 1}
+; CHECK: [[META4:![0-9]+]] = !{ptr @parallel, !"kernel", i32 1}
 ;.

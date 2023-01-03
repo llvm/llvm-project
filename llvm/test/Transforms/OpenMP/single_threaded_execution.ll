@@ -3,10 +3,10 @@
 ; REQUIRES: asserts
 ; ModuleID = 'single_threaded_exeuction.c'
 
-%struct.ident_t = type { i32, i32, i32, i32, i8* }
+%struct.ident_t = type { i32, i32, i32, i32, ptr }
 
 @0 = private unnamed_addr constant [1 x i8] c"\00", align 1
-@1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([1 x i8], [1 x i8]* @0, i32 0, i32 0) }, align 8
+@1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @0 }, align 8
 @kernel_exec_mode = weak constant i8 1
 
 
@@ -15,7 +15,7 @@
 ; CHECK-NOT: [openmp-opt] Basic block @kernel if.else is executed by a single thread.
 ; CHECK-NOT: [openmp-opt] Basic block @kernel if.end is executed by a single thread.
 define void @kernel() {
-  %call = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i8 1, i1 false)
+  %call = call i32 @__kmpc_target_init(ptr nonnull @1, i8 1, i1 false)
   %cmp = icmp eq i32 %call, -1
   br i1 %cmp, label %if.then, label %if.else
 if.then:
@@ -23,7 +23,7 @@ if.then:
 if.else:
   br label %if.end
 if.end:
-  call void @__kmpc_target_deinit(%struct.ident_t* null, i8 1)
+  call void @__kmpc_target_deinit(ptr null, i8 1)
   ret void
 }
 
@@ -104,11 +104,11 @@ declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 
-declare void @__kmpc_kernel_prepare_parallel(i8*)
+declare void @__kmpc_kernel_prepare_parallel(ptr)
 
-declare i32 @__kmpc_target_init(%struct.ident_t*, i8, i1)
+declare i32 @__kmpc_target_init(ptr, i8, i1)
 
-declare void @__kmpc_target_deinit(%struct.ident_t*, i8)
+declare void @__kmpc_target_deinit(ptr, i8)
 
 attributes #0 = { cold noinline }
 
@@ -123,7 +123,7 @@ attributes #0 = { cold noinline }
 !4 = !{i32 1, !"wchar_size", i32 4}
 !5 = !{i32 7, !"openmp", i32 50}
 !6 = !{i32 7, !"openmp-device", i32 50}
-!7 = !{void ()* @kernel, !"kernel", i32 1}
+!7 = !{ptr @kernel, !"kernel", i32 1}
 !8 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 8, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
 !9 = distinct !DISubprogram(name: "cold", scope: !1, file: !1, line: 8, type: !10, scopeLine: 2, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
 !10 = !DISubroutineType(types: !2)
