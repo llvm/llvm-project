@@ -5,6 +5,12 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
+static bool
+samesign(half x, half y)
+{
+    return ((AS_USHORT(x) ^ AS_USHORT(y)) & (ushort)0x8000) == (ushort)0;
+}
+
 REQUIRES_16BIT_INSTS CONSTATTR half
 #if defined(COMPILING_POWR)
 MATH_MANGLE(powr)(half x, half y)
@@ -49,159 +55,59 @@ MATH_MANGLE(pow)(half x, half y)
 
     // Now all the edge cases
 #if defined COMPILING_POWR
-    bool ax_eq_0 = ax == 0.0h;
-    bool ax_ne_0 = ax != 0.0h;
-    bool ax_lt_1 = ax < 1.0h;
-    bool ax_eq_1 = ax == 1.0h;
-    bool ax_gt_1 = ax > 1.0h;
-    bool ax_lt_pinf = BUILTIN_CLASS_F16(x, CLASS_PNOR|CLASS_PSUB);
-    bool ax_eq_pinf = BUILTIN_CLASS_F16(x, CLASS_PINF);
-    bool ax_eq_nan = BUILTIN_ISNAN_F16(x);
-    bool x_pos = BUILTIN_CLASS_F16(x, CLASS_PZER|CLASS_PSUB|CLASS_PNOR|CLASS_PINF);
-    bool ay_eq_0 = ay == 0.0h;
-    bool ay_eq_pinf = BUILTIN_CLASS_F16(ay, CLASS_PINF);
-    bool ay_eq_nan = BUILTIN_ISNAN_F16(ay);
-    bool y_eq_ninf = BUILTIN_CLASS_F16(y, CLASS_NINF);
-    bool y_eq_pinf = BUILTIN_CLASS_F16(y, CLASS_PINF);
-    bool ay_lt_inf = BUILTIN_CLASS_F16(y, CLASS_PNOR|CLASS_PSUB);
-    bool y_pos = BUILTIN_CLASS_F16(y, CLASS_PZER|CLASS_PSUB|CLASS_PNOR|CLASS_PINF);
+    half iz = y < 0.0h ? PINF_F16 : 0.0h;
+    half zi = y < 0.0h ? 0.0h : PINF_F16;
 
-    if (!FINITE_ONLY_OPT()) {
-        ret = (ax_lt_1 & y_eq_ninf) ? PINF_F16 : ret;
-        ret = (ax_lt_1 & y_eq_pinf) ? 0.0h : ret;
-        ret = (ax_eq_1 & ay_lt_inf) ? 1.0h : ret;
-        ret = (ax_eq_1 & ay_eq_pinf) ? QNAN_F16 : ret;
-        ret = (ax_gt_1 & y_eq_ninf) ? 0.0h : ret;
-        ret = (ax_gt_1 & y_eq_pinf) ? PINF_F16 : ret;
-        ret = (ax_lt_pinf & ay_eq_0) ? 1.0h : ret;
-        ret = (ax_eq_pinf & !y_pos) ? 0.0h : ret;
-        ret = (ax_eq_pinf & y_pos) ? PINF_F16 : ret;
-        ret = (ax_eq_pinf & y_eq_pinf) ? PINF_F16 : ret;
-        ret = (ax_eq_pinf & ay_eq_0) ? QNAN_F16 : ret;
-        ret = (ax_eq_0 & !y_pos) ? PINF_F16 : ret;
-        ret = (ax_eq_0 & y_pos) ? 0.0h : ret;
-        ret = (ax_eq_0 & ay_eq_0) ? QNAN_F16 : ret;
-        ret = (ax_ne_0 & !x_pos) ? QNAN_F16 : ret;
-        ret = ax_eq_nan ? x : ret;
-        ret = ay_eq_nan ? y : ret;
-    } else {
-        ret = ax_eq_1 ? 1.0h : ret;
-        ret = ay_eq_0 ? 1.0h : ret;
-        ret = (ax_eq_0 & y_pos) ? 0.0h : ret;
-    }
+    if (x == 0.0h)
+        ret = iz;
+
+    if (BUILTIN_ISINF_F16(x))
+        ret = zi;
+
+    if (BUILTIN_ISINF_F16(y))
+        ret = ax < 1.0h ? iz : zi;
+
+    if (y == 0.0h)
+        ret = x == 0.0h || BUILTIN_ISINF_F16(x) ? QNAN_F16 : 1.0h;
+
+    if (x == 1.0h)
+        ret = BUILTIN_ISINF_F16(y) ? QNAN_F16 : 1.0h;
+
+    if (x < 0.0h || BUILTIN_ISNAN_F16(x) || BUILTIN_ISNAN_F16(y))
+        ret = QNAN_F16;
 #elif defined COMPILING_POWN
-    bool ax_eq_0 = ax == 0.0h;
-    bool x_eq_ninf = BUILTIN_CLASS_F16(x, CLASS_NINF);
-    bool x_eq_pinf = BUILTIN_CLASS_F16(x, CLASS_PINF);
-    bool ax_lt_pinf = BUILTIN_CLASS_F16(x, CLASS_PNOR|CLASS_PSUB);
-    bool ax_eq_pinf = BUILTIN_CLASS_F16(x, CLASS_PINF);
-    bool ax_eq_nan = BUILTIN_ISNAN_F16(x);
-    bool x_pos = BUILTIN_CLASS_F16(x, CLASS_PZER|CLASS_PSUB|CLASS_PNOR|CLASS_PINF);
-    bool y_pos = ny >= 0;
+    if (BUILTIN_ISINF_F16(ax) || x == 0.0h)
+        ret = BUILTIN_COPYSIGN_F16((x == 0.0h) ^ (ny < 0) ? 0.0h : PINF_F16,
+                                   inty == 1 ? x : 0.0h);
 
-    if (!FINITE_ONLY_OPT()) {
-        half xinf = BUILTIN_COPYSIGN_F16(PINF_F16, x);
-        ret = (ax_eq_0 & !y_pos & (inty == 1)) ? xinf : ret;
-        ret = (ax_eq_0 & !y_pos & (inty == 2)) ? PINF_F16 : ret;
-        ret = (ax_eq_0 & y_pos & (inty == 2)) ? 0.0h : ret;
-        half xzero = BUILTIN_COPYSIGN_F16(0.0h, x);
-        ret = (ax_eq_0 & y_pos & (inty == 1)) ? xzero : ret;
-        ret = (x_eq_ninf & !y_pos & (inty == 1)) ? -0.0h : ret;
-        ret = (x_eq_ninf & !y_pos & (inty != 1)) ? 0.0h : ret;
-        ret = (x_eq_ninf & y_pos & (inty == 1)) ? NINF_F16 : ret;
-        ret = (x_eq_ninf & y_pos & (inty != 1)) ? PINF_F16 : ret;
-        ret = (x_eq_pinf & !y_pos) ? 0.0h : ret;
-        ret = (x_eq_pinf & y_pos) ? PINF_F16 : ret;
-        ret = ax_eq_nan ? x : ret;
-    } else {
-        half xzero = BUILTIN_COPYSIGN_F16(0.0h, x);
-        ret = (ax_eq_0 & y_pos & (inty == 1)) ? xzero : ret;
-        ret = (ax_eq_0 & y_pos & (inty == 2)) ? 0.0h : ret;
-    }
-    ret = ny == 0 ? 1.0h : ret;
+    if (BUILTIN_ISNAN_F16(x))
+        ret = QNAN_F16;
+
+    if (ny == 0)
+        ret = 1.0h;
 #elif defined COMPILING_ROOTN
-    bool ax_eq_0 = ax == 0.0h;
-    bool x_eq_ninf = BUILTIN_CLASS_F16(x, CLASS_NINF);
-    bool x_eq_pinf = BUILTIN_CLASS_F16(x, CLASS_PINF);
-    bool ax_lt_pinf = BUILTIN_CLASS_F16(x, CLASS_PNOR|CLASS_PSUB);
-    bool ax_eq_pinf = BUILTIN_CLASS_F16(x, CLASS_PINF);
-    bool ax_eq_nan = BUILTIN_ISNAN_F16(x);
-    bool x_pos = BUILTIN_CLASS_F16(x, CLASS_PZER|CLASS_PSUB|CLASS_PNOR|CLASS_PINF);
-    bool y_pos = ny >= 0;
+    if (BUILTIN_ISINF_F16(ax) || x == 0.0h)
+        ret = BUILTIN_COPYSIGN_F16((x == 0.0h) ^ (ny < 0) ? 0.0h : PINF_F16,
+                                   inty == 1 ? x : 0.0h);
 
-    if (!FINITE_ONLY_OPT()) {
-        ret = (!x_pos & (inty == 2)) ? QNAN_F16 : ret;
-        half xinf = BUILTIN_COPYSIGN_F16(PINF_F16, x);
-        ret = (ax_eq_0 & !y_pos & (inty == 1)) ? xinf : ret;
-        ret = (ax_eq_0 & !y_pos & (inty == 2)) ? PINF_F16 : ret;
-        ret = (ax_eq_0 & y_pos & (inty == 2)) ? 0.0h : ret;
-        half xzero = BUILTIN_COPYSIGN_F16(0.0h, x);
-        ret = (ax_eq_0 & y_pos & (inty == 1)) ? xzero : ret;
-        ret = (x_eq_ninf & y_pos & (inty == 1)) ? NINF_F16 : ret;
-        ret = (x_eq_ninf & !y_pos & (inty == 1)) ? -0.0h : ret;
-        ret = (x_eq_pinf & !y_pos) ? 0.0h : ret;
-        ret = (x_eq_pinf & y_pos) ? PINF_F16 : ret;
-        ret = ax_eq_nan ? x : ret;
-        ret = ny == 0 ? QNAN_F16 : ret;
-    } else {
-        half xzero = BUILTIN_COPYSIGN_F16(0.0h, x);
-        ret = (ax_eq_0 & y_pos & (inty == 1)) ? xzero : ret;
-        ret = (ax_eq_0 & y_pos & (inty == 2)) ? 0.0h : ret;
-    }
+    if ((x < 0.0h && inty != 1) || ny == 0)
+        ret = QNAN_F16;
 #else
-    bool ax_eq_0 = ax == 0.0h;
-    bool ax_ne_0 = ax != 0.0h;
-    bool ax_lt_1 = ax < 1.0h;
-    bool ax_eq_1 = ax == 1.0h;
-    bool ax_gt_1 = ax > 1.0h;
-    bool ax_lt_pinf = BUILTIN_CLASS_F16(x, CLASS_PNOR|CLASS_PSUB);
-    bool ax_eq_pinf = BUILTIN_CLASS_F16(x, CLASS_PINF);
-    bool ax_eq_nan = BUILTIN_ISNAN_F16(x);
-    bool x_pos = BUILTIN_CLASS_F16(x, CLASS_PZER|CLASS_PSUB|CLASS_PNOR|CLASS_PINF);
-    bool x_eq_ninf = BUILTIN_CLASS_F16(x, CLASS_NINF);
-    bool x_eq_pinf = BUILTIN_CLASS_F16(x, CLASS_PINF);
-    bool ay_eq_0 = ay == 0.0h;
-    bool ay_eq_pinf = BUILTIN_CLASS_F16(ay, CLASS_PINF);
-    bool ay_eq_nan = BUILTIN_ISNAN_F16(ay);
-    bool y_eq_ninf = BUILTIN_CLASS_F16(y, CLASS_NINF);
-    bool y_eq_pinf = BUILTIN_CLASS_F16(y, CLASS_PINF);
-    bool ay_lt_inf = BUILTIN_CLASS_F16(y, CLASS_PNOR|CLASS_PSUB);
-    bool y_pos = BUILTIN_CLASS_F16(y, CLASS_PZER|CLASS_PSUB|CLASS_PNOR|CLASS_PINF);
+    if (x < 0.0h && !inty)
+        ret = QNAN_F16;
 
-    if (!FINITE_ONLY_OPT()) {
-        ret = (!x_pos & (inty == 0)) ? QNAN_F16 : ret;
-        ret = (ax_lt_1 & y_eq_ninf) ? PINF_F16 : ret;
-        ret = (ax_gt_1 & y_eq_ninf) ? 0.0h : ret;
-        ret = (ax_lt_1 & y_eq_pinf) ? 0.0h : ret;
-        ret = (ax_gt_1 & y_eq_pinf) ? PINF_F16 : ret;
-        half xinf = BUILTIN_COPYSIGN_F16(PINF_F16, x);
-        ret = (ax_eq_0 & !y_pos & (inty == 1)) ? xinf : ret;
-        ret = (ax_eq_0 & !y_pos & (inty != 1)) ? PINF_F16 : ret;
-        half xzero = BUILTIN_COPYSIGN_F16(0.0h, x);
-        ret = (ax_eq_0 & y_pos & (inty == 1)) ? xzero : ret;
-        ret = (ax_eq_0 & y_pos & (inty != 1)) ? 0.0h : ret;
-        ret = (ax_eq_0 & y_eq_ninf) ? PINF_F16 : ret;
-        ret = ((x == -1.0h) & ay_eq_pinf) ? 1.0h : ret;
-        ret = (x_eq_ninf & !y_pos & (inty == 1)) ? -0.0h : ret;
-        ret = (x_eq_ninf & !y_pos & (inty != 1)) ? 0.0h : ret;
-        ret = (x_eq_ninf & y_pos & (inty == 1)) ? NINF_F16 : ret;
-        ret = (x_eq_ninf & y_pos & (inty != 1)) ? PINF_F16 : ret;
-        ret = (x_eq_pinf & !y_pos) ? 0.0h : ret;
-        ret = (x_eq_pinf & y_pos) ? PINF_F16 : ret;
-        ret = ax_eq_nan ? x : ret;
-        ret = ay_eq_nan ? y : ret;
-    } else {
-        // XXX work around conformance test incorrectly checking these cases
-        half xinf = BUILTIN_COPYSIGN_F16(PINF_F16, x);
-        ret = (ax_eq_0 & !y_pos & (inty == 1)) ? xinf : ret;
-        ret = (ax_eq_0 & !y_pos & (inty != 1)) ? PINF_F16 : ret;
+    if (BUILTIN_ISINF_F16(ay))
+        ret = ax == 1.0h ? ax : (samesign(y, ax - 1.0h) ? ay : 0.0h);
 
-        half xzero = BUILTIN_COPYSIGN_F16(0.0h, x);
-        ret = (ax_eq_0 & y_pos & (inty == 1)) ? xzero : ret;
-        ret = (ax_eq_0 & y_pos & (inty != 1)) ? 0.0h : ret;
-    }
-    ret = ay == 0.0h ? 1.0h : ret;
-    ret = x == 1.0h ? 1.0h : ret;
+    if (BUILTIN_ISINF_F16(ax) || x == 0.0h)
+        ret = BUILTIN_COPYSIGN_F16((x == 0.0h) ^ (y < 0.0h) ? 0.0h : PINF_F16,
+                                   inty == 1 ? x : 0.0h);
+
+    if (BUILTIN_ISNAN_F16(x) || BUILTIN_ISNAN_F16(y))
+        ret = QNAN_F16;
+
+    if (x == 1.0h || y == 0.0h)
+        ret = 1.0h;
 #endif
 
     return ret;
