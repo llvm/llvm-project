@@ -177,3 +177,39 @@ latch:                                             ; preds = %bb14, %bb9
 exit:
   ret i64 %var30
 }
+
+; Check the case don't crash due to zext source type bitwidth
+; larger than dest type bitwidth.
+define i1 @pr58843(i8 %arg) {
+; CHECK-LABEL: @pr58843(
+; CHECK-NEXT:    [[EXT1:%.*]] = zext i8 [[ARG:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[EXT1]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ext1 = zext i8 %arg to i64
+  %trunc = trunc i64 %ext1 to i3
+  %ext2 = zext i3 %trunc to i8
+  %cmp = icmp ne i8 %ext2, 0
+  ret i1 %cmp
+}
+
+; Check the case don't crash due to xor two op have different
+; types
+define i1 @pr59554(i8 %arg) {
+; CHECK-LABEL: @pr59554(
+; CHECK-NEXT:    [[ARG_EXT:%.*]] = zext i8 [[ARG:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[ARG_EXT]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = xor i32 [[TMP2]], 1
+; CHECK-NEXT:    [[SWITCH_LOBIT:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[SWITCH_LOBIT]]
+;
+  %arg.ext = zext i8 %arg to i64
+  %trunc = trunc i64 %arg.ext to i3
+  %switch.tableidx = xor i3 %trunc, 1
+  %switch.maskindex = zext i3 %trunc to i8
+  %switch.lobit = icmp ne i8 %switch.maskindex, 0
+  ret i1 %switch.lobit
+}
