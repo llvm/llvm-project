@@ -459,8 +459,19 @@ class RVVMaskOp0Builtin<string prototype> : RVVOp0Builtin<"m", prototype, "c"> {
 
 let UnMaskedPolicyScheme = HasPolicyOperand,
     HasMaskedOffOperand = false,
+    IsPrototypeDefaultTU = false in {
+  multiclass RVVSlideUpBuiltinSet {
+    defm "" : RVVOutBuiltinSet<NAME, "csilxfd",
+                               [["vx","v", "vvvz"]]>;
+    defm "" : RVVOutBuiltinSet<NAME, "csil",
+                               [["vx","Uv", "UvUvUvz"]]>;
+  }
+}
+
+let UnMaskedPolicyScheme = HasPolicyOperand,
+    HasMaskedOffOperand = false,
     IsPrototypeDefaultTU = true in {
-  multiclass RVVSlideBuiltinSet {
+  multiclass RVVSlideDownBuiltinSet {
     defm "" : RVVOutBuiltinSet<NAME, "csilxfd",
                                [["vx","v", "vvvz"]]>;
     defm "" : RVVOutBuiltinSet<NAME, "csil",
@@ -2190,9 +2201,9 @@ let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
 
 // 17.3. Vector Slide Instructions
 // 17.3.1. Vector Slideup Instructions
-defm vslideup   : RVVSlideBuiltinSet;
+defm vslideup   : RVVSlideUpBuiltinSet;
 // 17.3.2. Vector Slidedown Instructions
-defm vslidedown : RVVSlideBuiltinSet;
+defm vslidedown : RVVSlideDownBuiltinSet;
 
 // 17.3.3. Vector Slide1up Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand in {
