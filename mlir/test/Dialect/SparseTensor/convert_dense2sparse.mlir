@@ -126,7 +126,7 @@ func.func @sparse_convert_complex(%arg0: tensor<100xcomplex<f64>>) -> tensor<100
 //       CHECK-RWT:     %[[I1:.*]] = sparse_tensor.indices %[[COO]] {dimension = 1 : index}
 //       CHECK-RWT:     %[[NNZ:.*]] = sparse_tensor.number_of_entries %[[COO]]
 //       CHECK-RWT:     %[[V:.*]] = sparse_tensor.values %[[COO]]
-//       CHECK-RWT:     sparse_tensor.sort %[[NNZ]], %[[I0]], %[[I1]] jointly %[[V]] : memref<?xindex>, memref<?xindex> jointly memref<?xf64>
+//       CHECK-RWT:     sparse_tensor.sort %[[NNZ]], %[[I0]], %[[I1]] jointly %[[V]]
 //       CHECK-RWT:     %[[T3:.*]] = bufferization.alloc_tensor()
 //       CHECK-RWT:     %[[T4:.*]] = sparse_tensor.foreach in %[[COO]] init(%[[T3]])
 //       CHECK-RWT:     ^bb0(%[[L1I0:.*]]: index, %[[L1I1:.*]]: index, %[[L1V:.*]]: f64, %[[L1T:.*]]: tensor
@@ -186,7 +186,7 @@ func.func @sparse_convert_2d(%arg0: tensor<2x4xf64>) -> tensor<2x4xf64, #CSR> {
 //       CHECK-RWT:     %[[I1:.*]] = sparse_tensor.indices %[[COO]] {dimension = 1 : index}
 //       CHECK-RWT:     %[[NNZ:.*]] = sparse_tensor.number_of_entries %[[COO]]
 //       CHECK-RWT:     %[[V:.*]] = sparse_tensor.values %[[COO]]
-//       CHECK-RWT:     sparse_tensor.sort %[[NNZ]], %[[I0]], %[[I1]] jointly %[[V]] : memref<?xindex>, memref<?xindex> jointly memref<?xf32>
+//       CHECK-RWT:     sparse_tensor.sort %[[NNZ]], %[[I0]], %[[I1]] jointly %[[V]]
 //       CHECK-RWT:     %[[T3:.*]] = bufferization.alloc_tensor()
 //       CHECK-RWT:     %[[T4:.*]] = sparse_tensor.foreach in %[[COO]] init(%[[T3]])
 //       CHECK-RWT:     ^bb0(%[[L1I0:.*]]: index, %[[L1I1:.*]]: index, %[[L1V:.*]]: f32, %[[L1T:.*]]: tensor
