@@ -36,12 +36,14 @@
 ; INSTRREF-SAME: debug-instr-number 2,
 ; INSTRREF-NEXT: DBG_INSTR_REF ![[S4]],
 ; DBGVALUE-NEXT: DBG_VALUE $rax, $noreg, ![[MYVAR]],
-; CHECK-SAME:       !DIExpression(DW_OP_plus_uconst, 4096, DW_OP_stack_value)
+; DBGVALUE-SAME:       !DIExpression(DW_OP_plus_uconst, 4096, DW_OP_stack_value)
+; INSTRREF-SAME:       !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 4096, DW_OP_stack_value)
 ; INSTRREF-SAME: dbg-instr-ref(2, 0)
 
 ; INSTRREF:      DBG_INSTR_REF ![[MYVAR]],
 ; DBGVALUE:      DBG_VALUE $rax, $noreg, ![[S4]],
-; CHECK-SAME:           !DIExpression(DW_OP_plus_uconst, 4096, DW_OP_stack_value)
+; DBGVALUE-SAME:           !DIExpression(DW_OP_plus_uconst, 4096, DW_OP_stack_value)
+; INSTRREF-SAME:           !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 4096, DW_OP_stack_value)
 ; INSTRREF-SAME: dbg-instr-ref(2, 0)
 ; CHECK-NEXT: $rdi = MOV64rm killed renamable $rax, 1, $noreg, 4096, $noreg,
 

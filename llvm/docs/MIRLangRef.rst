@@ -747,7 +747,7 @@ The example below uses a reference to Instruction 1, Operand 0:
 
 .. code-block:: text
 
-    DBG_INSTR_REF !123, !DIExpression(), dbg-instr-ref(1, 0), debug-location !456
+    DBG_INSTR_REF !123, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !456
 
 CFIIndex Operands
 ^^^^^^^^^^^^^^^^^
@@ -913,7 +913,7 @@ instruction number and operand number. Consider the example below:
 .. code-block:: text
 
     $rbp = MOV64ri 0, debug-instr-number 1, debug-location !12
-    DBG_INSTR_REF !123, !DIExpression(), dbg-instr-ref(1, 0), debug-location !456
+    DBG_INSTR_REF !123, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !456
 
 Instruction numbers are directly attached to machine instructions with an
 optional ``debug-instr-number`` attachment, before the optional
