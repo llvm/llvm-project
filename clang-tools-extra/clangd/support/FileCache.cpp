@@ -8,6 +8,7 @@
 
 #include "support/FileCache.h"
 #include "llvm/ADT/ScopeExit.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -29,7 +30,7 @@ FileCache::FileCache(llvm::StringRef Path)
 
 void FileCache::read(
     const ThreadsafeFS &TFS, std::chrono::steady_clock::time_point FreshTime,
-    llvm::function_ref<void(llvm::Optional<llvm::StringRef>)> Parse,
+    llvm::function_ref<void(std::optional<llvm::StringRef>)> Parse,
     llvm::function_ref<void()> Read) const {
 
   std::lock_guard<std::mutex> Lock(Mu);

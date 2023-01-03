@@ -10,7 +10,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYOPTIONS_H
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorOr.h"
@@ -232,7 +231,7 @@ protected:
 
   /// Try to read configuration files from \p Directory using registered
   /// \c ConfigHandlers.
-  llvm::Optional<OptionsSource> tryReadConfigFile(llvm::StringRef Directory);
+  std::optional<OptionsSource> tryReadConfigFile(llvm::StringRef Directory);
 
   llvm::StringMap<OptionsSource> CachedOptions;
   ClangTidyOptions OverrideOptions;
