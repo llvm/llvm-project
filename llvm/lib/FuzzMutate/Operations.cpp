@@ -174,7 +174,7 @@ OpDescriptor llvm::fuzzerop::gepDescriptor(unsigned Weight) {
     Type *Ty = Srcs[0]->getType()->isOpaquePointerTy()
                    ? Srcs[1]->getType()
                    : Srcs[0]->getType()->getNonOpaquePointerElementType();
-    auto Indices = makeArrayRef(Srcs).drop_front(2);
+    auto Indices = ArrayRef(Srcs).drop_front(2);
     return GetElementPtrInst::Create(Ty, Srcs[0], Indices, "G", Inst);
   };
   // TODO: Handle aggregates and vectors

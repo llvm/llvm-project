@@ -164,11 +164,11 @@ public:
   const Entry *getFromHash(uint64_t Offset) const;
 
   ArrayRef<DWARFSectionKind> getColumnKinds() const {
-    return makeArrayRef(ColumnKinds.get(), Header.NumColumns);
+    return ArrayRef(ColumnKinds.get(), Header.NumColumns);
   }
 
   ArrayRef<Entry> getRows() const {
-    return makeArrayRef(Rows.get(), Header.NumBuckets);
+    return ArrayRef(Rows.get(), Header.NumBuckets);
   }
 };
 

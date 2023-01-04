@@ -860,13 +860,12 @@ Expected<ArrayRef<uint8_t>>
 ELFObjectFile<ELFT>::getSectionContents(DataRefImpl Sec) const {
   const Elf_Shdr *EShdr = getSection(Sec);
   if (EShdr->sh_type == ELF::SHT_NOBITS)
-    return makeArrayRef((const uint8_t *)base(), 0);
+    return ArrayRef((const uint8_t *)base(), (size_t)0);
   if (Error E =
           checkOffset(getMemoryBufferRef(),
                       (uintptr_t)base() + EShdr->sh_offset, EShdr->sh_size))
     return std::move(E);
-  return makeArrayRef((const uint8_t *)base() + EShdr->sh_offset,
-                      EShdr->sh_size);
+  return ArrayRef((const uint8_t *)base() + EShdr->sh_offset, EShdr->sh_size);
 }
 
 template <class ELFT>

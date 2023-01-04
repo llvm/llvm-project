@@ -8464,7 +8464,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // Check if the bytes of the OR we are looking at match with either big or
   // little endian value load
   std::optional<bool> IsBigEndian = isBigEndian(
-      makeArrayRef(ByteOffsets).drop_back(ZeroExtendedBytes), FirstOffset);
+      ArrayRef(ByteOffsets).drop_back(ZeroExtendedBytes), FirstOffset);
   if (!IsBigEndian)
     return SDValue();
 

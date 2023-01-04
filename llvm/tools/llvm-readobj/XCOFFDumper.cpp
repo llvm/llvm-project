@@ -255,7 +255,7 @@ void XCOFFDumper::printLoaderSectionSymbolsHelper(uintptr_t LoaderSectionAddr) {
     W.printHex("SymbolType", LoadSecSymEntPtr->SymbolType);
     W.printEnum("StorageClass",
                 static_cast<uint8_t>(LoadSecSymEntPtr->StorageClass),
-                makeArrayRef(SymStorageClass));
+                ArrayRef(SymStorageClass));
     W.printHex("ImportFileID", LoadSecSymEntPtr->ImportFileID);
     W.printNumber("ParameterTypeCheck", LoadSecSymEntPtr->ParameterTypeCheck);
   }
@@ -330,7 +330,7 @@ void XCOFFDumper::printLoaderSectionRelocationEntry(
     W.printNumber("FixupBitValue", IsFixupIndicated(Info) ? 1 : 0);
     W.printNumber("Length", GetRelocatedLength(Info));
     W.printEnum("Type", static_cast<uint8_t>(Type),
-                makeArrayRef(RelocationTypeNameclass));
+                ArrayRef(RelocationTypeNameclass));
     W.printNumber("SectionNumber", LoaderSecRelEntPtr->SectionNum);
   } else {
     W.startLine() << format_hex(LoaderSecRelEntPtr->VirtualAddr,
@@ -469,8 +469,7 @@ template <typename RelTy> void XCOFFDumper::printRelocation(RelTy Reloc) {
     W.printString("IsSigned", Reloc.isRelocationSigned() ? "Yes" : "No");
     W.printNumber("FixupBitValue", Reloc.isFixupIndicated() ? 1 : 0);
     W.printNumber("Length", Reloc.getRelocatedLength());
-    W.printEnum("Type", (uint8_t)Reloc.Type,
-                makeArrayRef(RelocationTypeNameclass));
+    W.printEnum("Type", (uint8_t)Reloc.Type, ArrayRef(RelocationTypeNameclass));
   } else {
     raw_ostream &OS = W.startLine();
     OS << W.hex(Reloc.VirtualAddress) << " " << RelocName << " " << SymbolName
@@ -535,10 +534,10 @@ void XCOFFDumper::printFileAuxEnt(const XCOFFFileAuxEnt *AuxEntPtr) {
                 Obj.getSymbolIndex(reinterpret_cast<uintptr_t>(AuxEntPtr)));
   W.printString("Name", FileName);
   W.printEnum("Type", static_cast<uint8_t>(AuxEntPtr->Type),
-              makeArrayRef(FileStringType));
+              ArrayRef(FileStringType));
   if (Obj.is64Bit()) {
     W.printEnum("Auxiliary Type", static_cast<uint8_t>(AuxEntPtr->AuxType),
-                makeArrayRef(SymAuxType));
+                ArrayRef(SymAuxType));
   }
 }
 
@@ -576,14 +575,14 @@ void XCOFFDumper::printCsectAuxEnt(XCOFFCsectAuxRef AuxEntRef) {
   // Print out symbol alignment and type.
   W.printNumber("SymbolAlignmentLog2", AuxEntRef.getAlignmentLog2());
   W.printEnum("SymbolType", AuxEntRef.getSymbolType(),
-              makeArrayRef(CsectSymbolTypeClass));
+              ArrayRef(CsectSymbolTypeClass));
   W.printEnum("StorageMappingClass",
               static_cast<uint8_t>(AuxEntRef.getStorageMappingClass()),
-              makeArrayRef(CsectStorageMappingClass));
+              ArrayRef(CsectStorageMappingClass));
 
   if (Obj.is64Bit()) {
     W.printEnum("Auxiliary Type", static_cast<uint8_t>(XCOFF::AUX_CSECT),
-                makeArrayRef(SymAuxType));
+                ArrayRef(SymAuxType));
   } else {
     W.printHex("StabInfoIndex", AuxEntRef.getStabInfoIndex32());
     W.printHex("StabSectNum", AuxEntRef.getStabSectNum32());
@@ -615,7 +614,7 @@ void XCOFFDumper::printExceptionAuxEnt(const XCOFFExceptionAuxEnt *AuxEntPtr) {
   W.printHex("SizeOfFunction", AuxEntPtr->SizeOfFunction);
   W.printNumber("SymbolIndexOfNextBeyond", AuxEntPtr->SymIdxOfNextBeyond);
   W.printEnum("Auxiliary Type", static_cast<uint8_t>(AuxEntPtr->AuxType),
-              makeArrayRef(SymAuxType));
+              ArrayRef(SymAuxType));
 }
 
 void XCOFFDumper::printFunctionAuxEnt(const XCOFFFunctionAuxEnt32 *AuxEntPtr) {
@@ -640,7 +639,7 @@ void XCOFFDumper::printFunctionAuxEnt(const XCOFFFunctionAuxEnt64 *AuxEntPtr) {
   W.printHex("PointerToLineNum", AuxEntPtr->PtrToLineNum);
   W.printNumber("SymbolIndexOfNextBeyond", AuxEntPtr->SymIdxOfNextBeyond);
   W.printEnum("Auxiliary Type", static_cast<uint8_t>(AuxEntPtr->AuxType),
-              makeArrayRef(SymAuxType));
+              ArrayRef(SymAuxType));
 }
 
 void XCOFFDumper::printBlockAuxEnt(const XCOFFBlockAuxEnt32 *AuxEntPtr) {
@@ -661,7 +660,7 @@ void XCOFFDumper::printBlockAuxEnt(const XCOFFBlockAuxEnt64 *AuxEntPtr) {
                 Obj.getSymbolIndex(reinterpret_cast<uintptr_t>(AuxEntPtr)));
   W.printHex("LineNumber", AuxEntPtr->LineNum);
   W.printEnum("Auxiliary Type", static_cast<uint8_t>(AuxEntPtr->AuxType),
-              makeArrayRef(SymAuxType));
+              ArrayRef(SymAuxType));
 }
 
 template <typename T>
@@ -673,7 +672,7 @@ void XCOFFDumper::printSectAuxEntForDWARF(const T *AuxEntPtr) {
   W.printNumber("NumberOfRelocEntries", AuxEntPtr->NumberOfRelocEnt);
   if (Obj.is64Bit())
     W.printEnum("Auxiliary Type", static_cast<uint8_t>(XCOFF::AUX_SECT),
-                makeArrayRef(SymAuxType));
+                ArrayRef(SymAuxType));
 }
 
 static StringRef GetSymbolValueName(XCOFF::StorageClass SC) {
@@ -761,14 +760,14 @@ void XCOFFDumper::printSymbol(const SymbolRef &S) {
   W.printString("Section", SectionName);
   if (SymbolClass == XCOFF::C_FILE) {
     W.printEnum("Source Language ID", SymbolEntRef.getLanguageIdForCFile(),
-                makeArrayRef(CFileLangIdClass));
+                ArrayRef(CFileLangIdClass));
     W.printEnum("CPU Version ID", SymbolEntRef.getCPUTypeIddForCFile(),
-                makeArrayRef(CFileCpuIdClass));
+                ArrayRef(CFileCpuIdClass));
   } else
     W.printHex("Type", SymbolEntRef.getSymbolType());
 
   W.printEnum("StorageClass", static_cast<uint8_t>(SymbolClass),
-              makeArrayRef(SymStorageClass));
+              ArrayRef(SymStorageClass));
   W.printNumber("NumberOfAuxEntries", NumberOfAuxEntries);
 
   if (NumberOfAuxEntries == 0)
@@ -778,7 +777,7 @@ void XCOFFDumper::printSymbol(const SymbolRef &S) {
     if (NumberOfAuxEntries > 1)
       reportUniqueWarning("the " +
                           enumToString(static_cast<uint8_t>(SymbolClass),
-                                       makeArrayRef(SymStorageClass)) +
+                                       ArrayRef(SymStorageClass)) +
                           " symbol at index " + Twine(SymbolIdx) +
                           " should not have more than 1 "
                           "auxiliary entry");
@@ -1198,7 +1197,7 @@ void XCOFFDumper::printSectionHeaders(ArrayRef<T> Sections) {
     if (Sec.isReservedSectionType())
       W.printHex("Flags", "Reserved", SectionType);
     else
-      W.printEnum("Type", SectionType, makeArrayRef(SectionTypeFlagsNames));
+      W.printEnum("Type", SectionType, ArrayRef(SectionTypeFlagsNames));
   }
 
   if (opts::SectionRelocations)

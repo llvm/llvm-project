@@ -6230,7 +6230,7 @@ void Verifier::verifyDeoptimizeCallingConvs() {
     return;
 
   const Function *First = DeoptimizeDeclarations[0];
-  for (const auto *F : makeArrayRef(DeoptimizeDeclarations).slice(1)) {
+  for (const auto *F : ArrayRef(DeoptimizeDeclarations).slice(1)) {
     Check(First->getCallingConv() == F->getCallingConv(),
           "All llvm.experimental.deoptimize declarations must have the same "
           "calling convention",

@@ -309,7 +309,7 @@ public:
   }
 
   ArrayRef<MDNode *> types() const {
-    return makeArrayRef(getTrailingObjects<MDNode *>(), NTypes);
+    return ArrayRef(getTrailingObjects<MDNode *>(), NTypes);
   }
 };
 
@@ -331,7 +331,7 @@ struct ICallBranchFunnel final
 
   CallInst *CI;
   ArrayRef<GlobalTypeMember *> targets() const {
-    return makeArrayRef(getTrailingObjects<GlobalTypeMember *>(), NTargets);
+    return ArrayRef(getTrailingObjects<GlobalTypeMember *>(), NTargets);
   }
 
   unsigned UniqueId;

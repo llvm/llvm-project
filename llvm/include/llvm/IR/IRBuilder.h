@@ -830,7 +830,7 @@ public:
                                    const Twine &Name = "");
 
   /// Conveninence function for the common case when CallArgs are filled
-  /// in using makeArrayRef(CS.arg_begin(), CS.arg_end()); Use needs to be
+  /// in using ArrayRef(CS.arg_begin(), CS.arg_end()); Use needs to be
   /// .get()'ed to get the Value pointer.
   CallInst *CreateGCStatepointCall(uint64_t ID, uint32_t NumPatchBytes,
                                    FunctionCallee ActualCallee,
@@ -858,7 +858,7 @@ public:
       const Twine &Name = "");
 
   // Convenience function for the common case when CallArgs are filled in using
-  // makeArrayRef(CS.arg_begin(), CS.arg_end()); Use needs to be .get()'ed to
+  // ArrayRef(CS.arg_begin(), CS.arg_end()); Use needs to be .get()'ed to
   // get the Value *.
   InvokeInst *
   CreateGCStatepointInvoke(uint64_t ID, uint32_t NumPatchBytes,
@@ -1047,7 +1047,7 @@ public:
     if (MDSrc) {
       unsigned WL[4] = {LLVMContext::MD_prof, LLVMContext::MD_unpredictable,
                         LLVMContext::MD_make_implicit, LLVMContext::MD_dbg};
-      Br->copyMetadata(*MDSrc, makeArrayRef(&WL[0], 4));
+      Br->copyMetadata(*MDSrc, WL);
     }
     return Insert(Br);
   }

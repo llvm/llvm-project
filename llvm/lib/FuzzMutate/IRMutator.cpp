@@ -123,8 +123,8 @@ void InjectorIRStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   // Choose an insertion point for our new instruction.
   size_t IP = uniform<size_t>(IB.Rand, 0, Insts.size() - 1);
 
-  auto InstsBefore = makeArrayRef(Insts).slice(0, IP);
-  auto InstsAfter = makeArrayRef(Insts).slice(IP);
+  auto InstsBefore = ArrayRef(Insts).slice(0, IP);
+  auto InstsAfter = ArrayRef(Insts).slice(IP);
 
   // Choose a source, which will be used to constrain the operation selection.
   SmallVector<Value *, 2> Srcs;
@@ -137,7 +137,7 @@ void InjectorIRStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   if (!OpDesc)
     return;
 
-  for (const auto &Pred : makeArrayRef(OpDesc->SourcePreds).slice(1))
+  for (const auto &Pred : ArrayRef(OpDesc->SourcePreds).slice(1))
     Srcs.push_back(IB.findOrCreateSource(BB, InstsBefore, Srcs, Pred));
 
   if (Value *Op = OpDesc->BuilderFunc(Srcs, Insts[IP])) {
@@ -358,7 +358,7 @@ void InsertCFGStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
 
   // Choose a point where we split the block.
   uint64_t IP = uniform<uint64_t>(IB.Rand, 0, Insts.size() - 1);
-  auto InstsBeforeSplit = makeArrayRef(Insts).slice(0, IP);
+  auto InstsBeforeSplit = ArrayRef(Insts).slice(0, IP);
 
   // `Sink` inherits Blocks' terminator, `Source` will have a BranchInst
   // directly jumps to `Sink`. Here, we have to create a new terminator for
@@ -511,7 +511,7 @@ void SinkInstructionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   uint64_t Idx = uniform<uint64_t>(IB.Rand, 0, Insts.size() - 1);
   Instruction *Inst = Insts[Idx];
   // `Idx + 1` so we don't sink to ourselves.
-  auto InstsAfter = makeArrayRef(Insts).slice(Idx + 1);
+  auto InstsAfter = ArrayRef(Insts).slice(Idx + 1);
   LLVMContext &C = BB.getParent()->getParent()->getContext();
   // Don't sink terminators, void function calls, etc.
   if (Inst->getType() != Type::getVoidTy(C))

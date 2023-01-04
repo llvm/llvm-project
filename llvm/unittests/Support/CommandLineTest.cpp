@@ -436,7 +436,7 @@ TEST(CommandLineTest, HideUnrelatedOptionsMulti) {
   const cl::OptionCategory *VisibleCategories[] = {&TestCategory,
                                                    &TestCategory2};
 
-  cl::HideUnrelatedOptions(makeArrayRef(VisibleCategories));
+  cl::HideUnrelatedOptions(ArrayRef(VisibleCategories));
 
   ASSERT_EQ(cl::ReallyHidden, TestOption1.getOptionHiddenFlag())
       << "Failed to hide extra option.";

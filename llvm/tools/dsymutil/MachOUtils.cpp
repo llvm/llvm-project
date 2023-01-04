@@ -56,7 +56,7 @@ std::string getArchName(StringRef Arch) {
 }
 
 static bool runLipo(StringRef SDKPath, SmallVectorImpl<StringRef> &Args) {
-  auto Path = sys::findProgramByName("lipo", makeArrayRef(SDKPath));
+  auto Path = sys::findProgramByName("lipo", ArrayRef(SDKPath));
   if (!Path)
     Path = sys::findProgramByName("lipo");
 

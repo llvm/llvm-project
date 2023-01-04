@@ -547,7 +547,7 @@ public:
   static bool classof(const Value *V) { return V->getValueID() == SubclassID; }
 
   ArrayRef<unsigned> getOperandIDs() const {
-    return makeArrayRef(getTrailingObjects<unsigned>(), NumOperands);
+    return ArrayRef(getTrailingObjects<unsigned>(), NumOperands);
   }
 
   std::optional<unsigned> getInRangeIndex() const {
@@ -1537,9 +1537,9 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
           C = ConstantExpr::getCompare(BC->Flags, ConstOps[0], ConstOps[1]);
           break;
         case Instruction::GetElementPtr:
-          C = ConstantExpr::getGetElementPtr(
-              BC->SrcElemTy, ConstOps[0], makeArrayRef(ConstOps).drop_front(),
-              BC->Flags, BC->getInRangeIndex());
+          C = ConstantExpr::getGetElementPtr(BC->SrcElemTy, ConstOps[0],
+                                             ArrayRef(ConstOps).drop_front(),
+                                             BC->Flags, BC->getInRangeIndex());
           break;
         case Instruction::Select:
           C = ConstantExpr::getSelect(ConstOps[0], ConstOps[1], ConstOps[2]);
@@ -1624,8 +1624,8 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
         break;
       case Instruction::GetElementPtr:
         I = GetElementPtrInst::Create(BC->SrcElemTy, Ops[0],
-                                      makeArrayRef(Ops).drop_front(),
-                                      "constexpr", InsertBB);
+                                      ArrayRef(Ops).drop_front(), "constexpr",
+                                      InsertBB);
         if (BC->Flags)
           cast<GetElementPtrInst>(I)->setIsInBounds();
         break;
@@ -5392,7 +5392,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
             unsigned ActiveWords = 1;
             if (ValueBitWidth > 64)
               ActiveWords = Record[CurIdx++];
-            Low = readWideAPInt(makeArrayRef(&Record[CurIdx], ActiveWords),
+            Low = readWideAPInt(ArrayRef(&Record[CurIdx], ActiveWords),
                                 ValueBitWidth);
             CurIdx += ActiveWords;
 
@@ -5400,8 +5400,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
               ActiveWords = 1;
               if (ValueBitWidth > 64)
                 ActiveWords = Record[CurIdx++];
-              APInt High = readWideAPInt(
-                  makeArrayRef(&Record[CurIdx], ActiveWords), ValueBitWidth);
+              APInt High = readWideAPInt(ArrayRef(&Record[CurIdx], ActiveWords),
+                                         ValueBitWidth);
               CurIdx += ActiveWords;
 
               // FIXME: It is not clear whether values in the range should be

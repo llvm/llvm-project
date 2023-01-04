@@ -171,7 +171,7 @@ LanaiInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_ABS_HI, "lanai-hi"},
       {MO_ABS_LO, "lanai-lo"},
       {MO_NO_FLAG, "lanai-nf"}};
-  return makeArrayRef(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 
 bool LanaiInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,

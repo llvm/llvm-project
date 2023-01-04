@@ -463,8 +463,8 @@ bool MachineCombiner::preservesResourceLen(
   instr2instrSC(InsInstrs, InsInstrsSC);
   instr2instrSC(DelInstrs, DelInstrsSC);
 
-  ArrayRef<const MCSchedClassDesc *> MSCInsArr = makeArrayRef(InsInstrsSC);
-  ArrayRef<const MCSchedClassDesc *> MSCDelArr = makeArrayRef(DelInstrsSC);
+  ArrayRef<const MCSchedClassDesc *> MSCInsArr{InsInstrsSC};
+  ArrayRef<const MCSchedClassDesc *> MSCDelArr{DelInstrsSC};
 
   // Compute new resource length.
   unsigned ResLenAfterCombine =

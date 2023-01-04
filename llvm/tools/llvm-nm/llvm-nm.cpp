@@ -616,7 +616,7 @@ const struct DarwinStabName DarwinStabNames[] = {
 };
 
 static const char *getDarwinStabString(uint8_t NType) {
-  for (auto I : makeArrayRef(DarwinStabNames))
+  for (auto I : ArrayRef(DarwinStabNames))
     if (I.NType == NType)
       return I.Name;
   return nullptr;
