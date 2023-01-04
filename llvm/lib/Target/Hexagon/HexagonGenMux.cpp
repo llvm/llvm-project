@@ -160,10 +160,10 @@ void HexagonGenMux::getDefsUses(const MachineInstr *MI, BitVector &Defs,
   // First, get the implicit defs and uses for this instruction.
   unsigned Opc = MI->getOpcode();
   const MCInstrDesc &D = HII->get(Opc);
-  if (const MCPhysReg *R = D.ImplicitDefs)
+  if (const MCPhysReg *R = D.getImplicitDefs())
     while (*R)
       expandReg(*R++, Defs);
-  if (const MCPhysReg *R = D.ImplicitUses)
+  if (const MCPhysReg *R = D.getImplicitUses())
     while (*R)
       expandReg(*R++, Uses);
 

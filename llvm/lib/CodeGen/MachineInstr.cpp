@@ -84,11 +84,11 @@ static void tryToGetTargetInfo(const MachineInstr &MI,
 }
 
 void MachineInstr::addImplicitDefUseOperands(MachineFunction &MF) {
-  if (MCID->ImplicitDefs)
+  if (MCID->getImplicitDefs())
     for (const MCPhysReg *ImpDefs = MCID->getImplicitDefs(); *ImpDefs;
            ++ImpDefs)
       addOperand(MF, MachineOperand::CreateReg(*ImpDefs, true, true));
-  if (MCID->ImplicitUses)
+  if (MCID->getImplicitUses())
     for (const MCPhysReg *ImpUses = MCID->getImplicitUses(); *ImpUses;
            ++ImpUses)
       addOperand(MF, MachineOperand::CreateReg(*ImpUses, false, true));
