@@ -160,7 +160,6 @@ def FunctionParmPackExpr : StmtNode<Expr>;
 def MaterializeTemporaryExpr : StmtNode<Expr>;
 def LambdaExpr : StmtNode<Expr>;
 def CXXFoldExpr : StmtNode<Expr>;
-def CXXParenListInitExpr: StmtNode<Expr>;
 
 // C++ Coroutines TS expressions
 def CoroutineSuspendExpr : StmtNode<Expr, 1>;
