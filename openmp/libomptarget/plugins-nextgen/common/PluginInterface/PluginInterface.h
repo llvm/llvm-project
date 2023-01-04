@@ -472,6 +472,10 @@ protected:
     return ((const char *)It->first + It->second > (const char *)Buffer);
   }
 
+  /// Return the execution mode used for kernel \p Name.
+  Expected<OMPTgtExecModeFlags> getExecutionModeForKernel(StringRef Name,
+                                                          DeviceImageTy &Image);
+
   /// Environment variables defined by the LLVM OpenMP implementation
   /// regarding the initial number of streams and events.
   UInt32Envar OMPX_InitialNumStreams;
