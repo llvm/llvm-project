@@ -108,32 +108,23 @@ APInt UnsignedDivideUsingMagic(const APInt &Numerator, const APInt &Divisor,
     // Clip to the number of leading zeros in the divisor.
     LeadingZeros = std::min(LeadingZeros, Divisor.countLeadingZeros());
     if (LeadingZeros > 0) {
-      Magics = UnsignedDivisionByConstantInfo::get(Divisor, LeadingZeros);
+      Magics = UnsignedDivisionByConstantInfo::get(
+          Divisor, LeadingZeros, AllowEvenDivisorOptimization);
       assert(!Magics.IsAdd && "Should use cheap fixup now");
     }
   }
 
   unsigned PreShift = 0;
-  if (AllowEvenDivisorOptimization) {
-    // If the divisor is even, we can avoid using the expensive fixup by
-    // shifting the divided value upfront.
-    if (Magics.IsAdd && !Divisor[0]) {
-      PreShift = Divisor.countTrailingZeros();
-      // Get magic number for the shifted divisor.
-      Magics =
-          UnsignedDivisionByConstantInfo::get(Divisor.lshr(PreShift), PreShift);
-      assert(!Magics.IsAdd && "Should use cheap fixup now");
-    }
-  }
-
   unsigned PostShift = 0;
   bool UseNPQ = false;
   if (!Magics.IsAdd || Divisor.isOne()) {
     assert(Magics.ShiftAmount < Divisor.getBitWidth() &&
            "We shouldn't generate an undefined shift!");
+    PreShift = Magics.PreShift;
     PostShift = Magics.ShiftAmount;
     UseNPQ = false;
   } else {
+    assert(Magics.PreShift == 0 && "Unexpected pre-shift");
     PostShift = Magics.ShiftAmount - 1;
     assert(PostShift < Divisor.getBitWidth() &&
            "We shouldn't generate an undefined shift!");
