@@ -48,6 +48,10 @@ def SDT_LoongArchCsrxchg : SDTypeProfile<1, 3, [SDTCisInt<0>,
                                                 SDTCisVT<3, GRLenVT>]>;
 def SDT_LoongArchIocsrwr : SDTypeProfile<0, 2, [SDTCisInt<0>,
                                                 SDTCisSameAs<0, 1>]>;
+def SDT_LoongArchMovgr2fcsr : SDTypeProfile<0, 2, [SDTCisVT<0, i32>,
+    SDTCisVT<1, GRLenVT>]>;
+def SDT_LoongArchMovfcsr2gr : SDTypeProfile<1, 1, [SDTCisVT<0, GRLenVT>,
+    SDTCisVT<1, i32>]>;
 
 // TODO: Add LoongArch specific DAG Nodes
 // Target-independent nodes, but with target-specific formats.
@@ -102,6 +106,9 @@ def loongarch_ibar : SDNode<"LoongArchISD::IBAR", SDT_LoongArchVI,
                              [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_break : SDNode<"LoongArchISD::BREAK", SDT_LoongArchVI,
                               [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_movfcsr2gr : SDNode<"LoongArchISD::MOVFCSR2GR", SDT_LoongArchMovfcsr2gr>;
+def loongarch_movgr2fcsr : SDNode<"LoongArchISD::MOVGR2FCSR", SDT_LoongArchMovgr2fcsr,
+                                   [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_syscall : SDNode<"LoongArchISD::SYSCALL", SDT_LoongArchVI,
                                 [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_csrrd : SDNode<"LoongArchISD::CSRRD", SDT_LoongArchCsrrd,
@@ -1631,6 +1638,13 @@ def PseudoLI_D : Pseudo<(outs GPR:$rd), (ins grlenimm:$imm), [],
 
 include "LoongArchFloat32InstrInfo.td"
 include "LoongArchFloat64InstrInfo.td"
+
+let Predicates = [HasBasicF] in {
+def : Pat<(loongarch_movfcsr2gr i32:$fcsr),
+          (MOVFCSR2GR FCSR:$fcsr)>;
+def : Pat<(loongarch_movgr2fcsr i32:$fcsr, GRLenVT:$rj),
+          (MOVGR2FCSR FCSR:$fcsr, GPR:$rj)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Privilege Instructions

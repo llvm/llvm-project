@@ -110,6 +110,11 @@ extern __inline int
 
 #define __ibar(/*ui15*/ _1) __builtin_loongarch_ibar((_1))
 
+#define __movfcsr2gr(/*ui5*/ _1) __builtin_loongarch_movfcsr2gr((_1));
+
+#define __movgr2fcsr(/*ui5*/ _1, _2)                                           \
+  __builtin_loongarch_movgr2fcsr((_1), (unsigned int)_2);
+
 #define __syscall(/*ui15*/ _1) __builtin_loongarch_syscall((_1))
 
 #define __csrrd_w(/*ui14*/ _1) ((unsigned int)__builtin_loongarch_csrrd_w((_1)))

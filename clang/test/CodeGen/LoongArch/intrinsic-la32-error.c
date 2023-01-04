@@ -21,6 +21,19 @@ void loongarch_break(int a) {
   __builtin_loongarch_break(a); // expected-error {{argument to '__builtin_loongarch_break' must be a constant integer}}
 }
 
+int movfcsr2gr_out_of_lo_range(int a) {
+  int b =  __builtin_loongarch_movfcsr2gr(-1); // expected-error {{argument value 4294967295 is outside the valid range [0, 3]}}
+  int c = __builtin_loongarch_movfcsr2gr(32); // expected-error {{argument value 32 is outside the valid range [0, 3]}}
+  int d = __builtin_loongarch_movfcsr2gr(a); // expected-error {{argument to '__builtin_loongarch_movfcsr2gr' must be a constant integer}}
+  return 0;
+}
+
+void movgr2fcsr(int a, int b) {
+  __builtin_loongarch_movgr2fcsr(-1, b); // expected-error {{argument value 4294967295 is outside the valid range [0, 3]}}
+  __builtin_loongarch_movgr2fcsr(32, b); // expected-error {{argument value 32 is outside the valid range [0, 3]}}
+  __builtin_loongarch_movgr2fcsr(a, b); // expected-error {{argument to '__builtin_loongarch_movgr2fcsr' must be a constant integer}}
+}
+
 void syscall(int a) {
   __builtin_loongarch_syscall(32769); // expected-error {{argument value 32769 is outside the valid range [0, 32767]}}
   __builtin_loongarch_syscall(-1); // expected-error {{argument value 4294967295 is outside the valid range [0, 32767]}}
