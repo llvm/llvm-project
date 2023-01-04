@@ -512,20 +512,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
                                              std::nullopt);
 
     if (srcTy.isa<IntegerType>() && dstTy.isa<IntegerType>() && !bitExtend) {
-      auto intMin = rewriter.create<arith::ConstantIntOp>(
-          loc,
-          APInt::getSignedMinValue(dstTy.getIntOrFloatBitWidth())
-              .getSExtValue(),
-          srcTy.getIntOrFloatBitWidth());
-
-      auto intMax = rewriter.create<arith::ConstantIntOp>(
-          loc,
-          APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
-              .getSExtValue(),
-          srcTy.getIntOrFloatBitWidth());
-
-      auto clamped = clampIntHelper(loc, args[0], intMin, intMax, rewriter);
-      return rewriter.create<arith::TruncIOp>(loc, dstTy, clamped);
+      return rewriter.create<arith::TruncIOp>(loc, dstTy, args[0]);
     }
   }
 
