@@ -244,54 +244,34 @@ public:
 /// See \c WrapScanModuleBuildAction.
 class WrapScanModuleBuildConsumer : public ASTConsumer {
 public:
-  WrapScanModuleBuildConsumer(CompilerInstance &CI, Module &M,
-                              llvm::cas::CachingOnDiskFileSystem &FS)
-      : M(M), FS(FS) {}
+  WrapScanModuleBuildConsumer(CompilerInstance &CI,
+                              DependencyConsumer &Consumer)
+      : CI(CI), Consumer(Consumer) {}
 
   void HandleTranslationUnit(ASTContext &Ctx) override {
-    auto Tree = FS.createTreeFromNewAccesses();
-    if (Tree)
-      M.setCASFileSystemRootID(Tree->getID().toString());
-    else
-      Ctx.getDiagnostics().Report(diag::err_cas_depscan_failed)
-          << Tree.takeError();
+    if (auto E = Consumer.finalizeModuleBuild(CI))
+      Ctx.getDiagnostics().Report(diag::err_cas_depscan_failed) << std::move(E);
   }
 
 private:
-  Module &M;
-  llvm::cas::CachingOnDiskFileSystem &FS;
+  CompilerInstance &CI;
+  DependencyConsumer &Consumer;
 };
 
 /// A wrapper for implicit module build actions in the scanner.
-///
-/// Captures per-module information such as the CAS filesystem root ID for
-/// module inputs.
 class WrapScanModuleBuildAction : public WrapperFrontendAction {
 public:
-  WrapScanModuleBuildAction(
-      std::unique_ptr<FrontendAction> WrappedAction,
-      IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS)
-      : WrapperFrontendAction(std::move(WrappedAction)), FS(std::move(FS)) {
-    assert(this->FS);
+  WrapScanModuleBuildAction(std::unique_ptr<FrontendAction> WrappedAction,
+                            DependencyConsumer &Consumer)
+      : WrapperFrontendAction(std::move(WrappedAction)), DepConsumer(Consumer) {
   }
 
 private:
   bool BeginInvocation(CompilerInstance &CI) override {
-    // FIXME: exclude unnecessary files such as implicit module pcms from the
-    // scanner itself. These are wasteful and cause spurious cache misses.
-    FS->trackNewAccesses();
-    // Normally this would be looked up while creating the VFS, but implicit
-    // modules share their VFS.
-    for (const auto &File : CI.getHeaderSearchOpts().VFSOverlayFiles)
-      (void)FS->status(File);
-    // If the working directory is not otherwise accessed by the module build,
-    // we still need it due to -fcas-fs-working-directory being set.
-    if (auto CWD = FS->getCurrentWorkingDirectory())
-      (void)FS->status(*CWD);
-    // Exclude the module cache from tracking. The implicit build pcms should
-    // not be needed after scanning.
-    if (!CI.getHeaderSearchOpts().ModuleCachePath.empty())
-      (void)FS->excludeFromTracking(CI.getHeaderSearchOpts().ModuleCachePath);
+    if (auto E = DepConsumer.initializeModuleBuild(CI)) {
+      CI.getDiagnostics().Report(diag::err_cas_depscan_failed) << std::move(E);
+      return false;
+    }
     return WrapperFrontendAction::BeginInvocation(CI);
   }
 
@@ -304,7 +284,8 @@ private:
     assert(M && "WrapScanModuleBuildAction should only be used with module");
     if (!M)
       return OtherConsumer;
-    auto Consumer = std::make_unique<WrapScanModuleBuildConsumer>(CI, *M, *FS);
+    auto Consumer =
+        std::make_unique<WrapScanModuleBuildConsumer>(CI, DepConsumer);
     std::vector<std::unique_ptr<ASTConsumer>> Consumers;
     Consumers.push_back(std::move(Consumer));
     Consumers.push_back(std::move(OtherConsumer));
@@ -312,7 +293,7 @@ private:
   }
 
 private:
-  llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
+  DependencyConsumer &DepConsumer;
 };
 
 /// A clang tool that runs the preprocessor in a mode that's optimized for
@@ -327,14 +308,13 @@ public:
       ScanningOutputFormat Format, bool OptimizeArgs, bool EagerLoadModules,
       bool DisableFree, bool EmitDependencyFile,
       bool DiagGenerationAsCompilation, const CASOptions &CASOpts,
-      RemapPathCallback RemapPath,
       llvm::Optional<StringRef> ModuleName = None,
       raw_ostream *VerboseOS = nullptr)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
         DepFS(std::move(DepFS)), DepCASFS(std::move(DepCASFS)),
         CacheFS(std::move(CacheFS)), Format(Format), OptimizeArgs(OptimizeArgs),
         EagerLoadModules(EagerLoadModules), DisableFree(DisableFree),
-        CASOpts(CASOpts), RemapPath(RemapPath),
+        CASOpts(CASOpts),
         EmitDependencyFile(EmitDependencyFile),
         DiagGenerationAsCompilation(DiagGenerationAsCompilation),
         ModuleName(ModuleName), VerboseOS(VerboseOS) {}
@@ -353,7 +333,13 @@ public:
       // jobs. For any dependent jobs, reuse the scanning result and just
       // update the LastCC1Arguments to correspond to the new invocation.
       // FIXME: to support multi-arch builds, each arch requires a separate scan
-      setLastCC1Arguments(std::move(OriginalInvocation));
+      if (MDC)
+        MDC->applyDiscoveredDependencies(OriginalInvocation);
+
+      // FIXME: caching + multi-job will not work because the consumer will not
+      // apply the changes.
+
+      LastCC1Arguments = OriginalInvocation.getCC1CommandLine();
       return true;
     }
 
@@ -364,13 +350,6 @@ public:
     CompilerInstance &ScanInstance = *ScanInstanceStorage;
     ScanInstance.setInvocation(std::move(Invocation));
     ScanInstance.getInvocation().getCASOpts() = CASOpts;
-
-    if (CacheFS) {
-      CacheFS->trackNewAccesses();
-      CacheFS->setCurrentWorkingDirectory(WorkingDirectory);
-      // Enable caching in the resulting commands.
-      ScanInstance.getFrontendOpts().CacheCompileJob = true;
-    }
 
     // Create the compiler's actual diagnostics engine.
     if (!DiagGenerationAsCompilation)
@@ -493,14 +472,15 @@ public:
     case ScanningOutputFormat::FullTree:
       MDC = std::make_shared<ModuleDepCollector>(
           std::move(Opts), ScanInstance, Consumer, OriginalInvocation,
-          WorkingDirectory, OptimizeArgs, EagerLoadModules);
+          OptimizeArgs, EagerLoadModules);
       ScanInstance.addDependencyCollector(MDC);
       if (CacheFS) {
         ScanInstance.setGenModuleActionWrapper(
-            [CacheFS = CacheFS](const FrontendOptions &Opts,
-                                std::unique_ptr<FrontendAction> Wrapped) {
+            [CacheFS = CacheFS,
+             &Consumer = Consumer](const FrontendOptions &Opts,
+                                   std::unique_ptr<FrontendAction> Wrapped) {
               return std::make_unique<WrapScanModuleBuildAction>(
-                  std::move(Wrapped), std::move(CacheFS));
+                  std::move(Wrapped), Consumer);
             });
       }
       break;
@@ -523,40 +503,18 @@ public:
     if (Error E = Consumer.initialize(ScanInstance, OriginalInvocation))
       return reportError(std::move(E));
 
-    const bool Result = ScanInstance.ExecuteAction(*Action);
+    if (!ScanInstance.ExecuteAction(*Action))
+      return false;
+
+    if (MDC)
+      MDC->applyDiscoveredDependencies(OriginalInvocation);
 
     if (Error E = Consumer.finalize(ScanInstance, OriginalInvocation))
       return reportError(std::move(E));
 
-    if (CacheFS) {
-      // Exclude the module cache from tracking. The implicit build pcms should
-      // not be needed after scanning.
-      if (!ScanInstance.getHeaderSearchOpts().ModuleCachePath.empty())
-        (void)CacheFS->excludeFromTracking(
-            ScanInstance.getHeaderSearchOpts().ModuleCachePath);
+    LastCC1Arguments = OriginalInvocation.getCC1CommandLine();
 
-      // Handle profile mappings.
-      (void)CacheFS->status(
-          OriginalInvocation.getCodeGenOpts().ProfileInstrumentUsePath);
-      (void)CacheFS->status(
-          OriginalInvocation.getCodeGenOpts().SampleProfileFile);
-      (void)CacheFS->status(
-          OriginalInvocation.getCodeGenOpts().ProfileRemappingFile);
-
-      auto Tree = CacheFS->createTreeFromNewAccesses(RemapPath);
-      if (Tree) {
-        if (MDC)
-          MDC->setMainFileCASFileSystemRootID(Tree->getID());
-        Consumer.handleCASFileSystemRootID(Tree->getID());
-      } else
-        ScanInstance.getDiagnostics().Report(diag::err_cas_depscan_failed)
-            << Tree.takeError();
-    }
-
-    if (Result)
-      setLastCC1Arguments(std::move(OriginalInvocation));
-
-    return Result;
+    return true;
   }
 
   bool hasScanned() const { return Scanned; }
@@ -583,13 +541,6 @@ public:
   }
 
 private:
-  void setLastCC1Arguments(CompilerInvocation &&CI) {
-    if (MDC)
-      MDC->applyDiscoveredDependencies(CI);
-    LastCC1Arguments = CI.getCC1CommandLine();
-  }
-
-private:
   StringRef WorkingDirectory;
   DependencyConsumer &Consumer;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
@@ -600,7 +551,6 @@ private:
   bool EagerLoadModules;
   bool DisableFree;
   const CASOptions &CASOpts;
-  RemapPathCallback RemapPath;
   bool EmitDependencyFile = false;
   bool DiagGenerationAsCompilation;
   Optional<StringRef> ModuleName;
@@ -752,7 +702,7 @@ bool DependencyScanningWorker::computeDependencies(
       OptimizeArgs, EagerLoadModules, DisableFree,
       /*EmitDependencyFile=*/false,
       /*DiagGenerationAsCompilation=*/false, getCASOpts(),
-      /*RemapPath=*/nullptr, ModuleName);
+      ModuleName);
   bool Success = forEachDriverJob(
       FinalCommandLine, *Diags, *FileMgr, [&](const driver::Command &Cmd) {
         if (StringRef(Cmd.getCreator().getName()) != "clang") {
@@ -793,9 +743,8 @@ bool DependencyScanningWorker::computeDependencies(
 
 void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
     std::shared_ptr<CompilerInvocation> Invocation, StringRef WorkingDirectory,
-    DependencyConsumer &DepsConsumer, RemapPathCallback RemapPath,
-    DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
-    bool DiagGenerationAsCompilation) {
+    DependencyConsumer &DepsConsumer, DiagnosticConsumer &DiagsConsumer,
+    raw_ostream *VerboseOS, bool DiagGenerationAsCompilation) {
   BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
   // Adjust the invocation.
@@ -825,7 +774,7 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
       WorkingDirectory, DepsConsumer, DepFS, DepCASFS, CacheFS, Format,
       /*OptimizeArgs=*/false, /*DisableFree=*/false, EagerLoadModules,
       /*EmitDependencyFile=*/!DepFile.empty(), DiagGenerationAsCompilation,
-      getCASOpts(), RemapPath,
+      getCASOpts(),
       /*ModuleName=*/None, VerboseOS);
 
   // Ignore result; we're just collecting dependencies.

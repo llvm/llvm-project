@@ -14,7 +14,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
-#include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
 #include "llvm/CAS/CASID.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/BLAKE3.h"
@@ -188,10 +187,6 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   // incompatible modules (e.g. with differences in search paths).
   CI.getHeaderSearchOpts().ModulesStrictContextHash = true;
 
-  if (auto ID = Deps.CASFileSystemRootID)
-    configureInvocationForCaching(CI, CASOpts, ID->toString(), WorkingDirectory,
-                                  /*ProduceIncludeTree=*/false);
-
   return CI;
 }
 
@@ -278,15 +273,6 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
     for (const auto &KV : DirectPrebuiltModularDeps)
       CI.getFrontendOpts().ModuleFiles.push_back(KV.second.PCMFile);
   }
-
-  if (auto ID = MainFileCASFileSystemRootID)
-    configureInvocationForCaching(CI, CASOpts, ID->toString(), WorkingDirectory,
-                                  /*ProduceIncludeTree=*/false);
-}
-
-void ModuleDepCollector::setMainFileCASFileSystemRootID(cas::CASID ID) {
-  assert(!MainFileCASFileSystemRootID || *MainFileCASFileSystemRootID == ID);
-  MainFileCASFileSystemRootID = std::move(ID);
 }
 
 static std::string getModuleContextHash(const ModuleDeps &MD,
@@ -510,15 +496,19 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
                                    *MDC.ScanInstance.getASTReader(), *MF);
       });
 
+  auto &Diags = MDC.ScanInstance.getDiagnostics();
+
+  if (auto E = MDC.Consumer.finalizeModuleInvocation(CI, MD))
+    Diags.Report(diag::err_cas_depscan_failed) << std::move(E);
+
   MDC.associateWithContextHash(CI, MD);
 
   // Finish the compiler invocation. Requires dependencies and the context hash.
   MDC.addOutputPaths(CI, MD);
 
   // Compute the cache key, if needed. Requires dependencies and outputs.
-  if (MDC.CacheCompileJob) {
+  if (MDC.ScanInstance.getFrontendOpts().CacheCompileJob) {
     auto &CAS = MDC.ScanInstance.getOrCreateObjectStore();
-    auto &Diags = MDC.ScanInstance.getDiagnostics();
     if (auto Key = createCompileJobCacheKey(CAS, Diags, CI))
       MD.ModuleCacheKey = Key->toString();
   }
@@ -612,14 +602,10 @@ void ModuleDepCollectorPP::addAffectingModule(
 ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts,
     CompilerInstance &ScanInstance, DependencyConsumer &C,
-    CompilerInvocation OriginalCI, StringRef WorkingDirectory,
-    bool OptimizeArgs, bool EagerLoadModules)
+    CompilerInvocation OriginalCI, bool OptimizeArgs, bool EagerLoadModules)
     : ScanInstance(ScanInstance), Consumer(C), Opts(std::move(Opts)),
-      OriginalInvocation(std::move(OriginalCI)),
-      WorkingDirectory(WorkingDirectory.str()),
-      CASOpts(ScanInstance.getCASOpts()),
-      CacheCompileJob(ScanInstance.getFrontendOpts().CacheCompileJob),
-      OptimizeArgs(OptimizeArgs), EagerLoadModules(EagerLoadModules) {}
+      OriginalInvocation(std::move(OriginalCI)), OptimizeArgs(OptimizeArgs),
+      EagerLoadModules(EagerLoadModules) {}
 
 void ModuleDepCollector::attachToPreprocessor(Preprocessor &PP) {
   PP.addPPCallbacks(std::make_unique<ModuleDepCollectorPP>(*this));

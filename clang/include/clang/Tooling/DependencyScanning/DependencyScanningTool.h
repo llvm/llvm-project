@@ -81,6 +81,8 @@ struct FullDependenciesResult {
   std::vector<ModuleDeps> DiscoveredModules;
 };
 
+using RemapPathCallback = llvm::cas::CachingOnDiskFileSystem::RemapPathCallback;
+
 /// The high-level implementation of the dependency discovery tool that runs on
 /// an individual worker thread.
 class DependencyScanningTool {
@@ -157,7 +159,7 @@ public:
 
   const CASOptions &getCASOpts() const { return Worker.getCASOpts(); }
 
-  llvm::cas::CachingOnDiskFileSystem &getCachingFileSystem() {
+  CachingOnDiskFileSystemPtr getCachingFileSystem() {
     return Worker.getCASFS();
   }
 
@@ -182,9 +184,23 @@ class FullDependencyConsumer : public DependencyConsumer {
 public:
   FullDependencyConsumer(const llvm::StringSet<> &AlreadySeen,
                          LookupModuleOutputCallback LookupModuleOutput,
-                         bool EagerLoadModules)
-      : AlreadySeen(AlreadySeen), LookupModuleOutput(LookupModuleOutput),
+                         bool EagerLoadModules,
+                         CachingOnDiskFileSystemPtr CacheFS = nullptr,
+                         RemapPathCallback RemapPath = nullptr)
+      : CacheFS(std::move(CacheFS)), RemapPath(RemapPath),
+        AlreadySeen(AlreadySeen), LookupModuleOutput(LookupModuleOutput),
         EagerLoadModules(EagerLoadModules) {}
+
+  llvm::Error initialize(CompilerInstance &ScanInstance,
+                         CompilerInvocation &NewInvocation) override;
+  llvm::Error finalize(CompilerInstance &ScanInstance,
+                       CompilerInvocation &NewInvocation) override;
+  llvm::Error
+  initializeModuleBuild(CompilerInstance &ModuleScanInstance) override;
+  llvm::Error
+  finalizeModuleBuild(CompilerInstance &ModuleScanInstance) override;
+  llvm::Error finalizeModuleInvocation(CompilerInvocation &CI,
+                                       const ModuleDeps &MD) override;
 
   void handleBuildCommand(Command Cmd) override {
     Commands.push_back(std::move(Cmd));
@@ -212,6 +228,10 @@ public:
     CASFileSystemRootID = ID;
   }
 
+  Optional<cas::CASID> getCASFileSystemRootID() const {
+    return CASFileSystemRootID;
+  }
+
   std::string lookupModuleOutput(const ModuleID &ID,
                                  ModuleOutputKind Kind) override {
     return LookupModuleOutput(ID, Kind);
@@ -229,6 +249,9 @@ private:
       ClangModuleDeps;
   std::vector<Command> Commands;
   std::string ContextHash;
+  CachingOnDiskFileSystemPtr CacheFS;
+  RemapPathCallback RemapPath;
+  CASOptions CASOpts;
   Optional<cas::CASID> CASFileSystemRootID;
   std::vector<std::string> OutputPaths;
   const llvm::StringSet<> &AlreadySeen;
