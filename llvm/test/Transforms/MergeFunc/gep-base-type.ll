@@ -4,10 +4,10 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; These should not be merged, the type of the GEP pointer argument does not have
 ; the same stride.
 
-%"struct1" = type <{ i8*, i32, [4 x i8] }>
-%"struct2" = type { i8*, { i64, i64 } }
+%"struct1" = type <{ ptr, i32, [4 x i8] }>
+%"struct2" = type { ptr, { i64, i64 } }
 
-define internal %struct2* @Ffunc(%struct2* %P, i64 %i) {
+define internal ptr @Ffunc(ptr %P, i64 %i) {
 ; CHECK-LABEL: @Ffunc(
 ; CHECK-NEXT: getelementptr
 ; CHECK-NEXT: getelementptr
@@ -16,17 +16,17 @@ define internal %struct2* @Ffunc(%struct2* %P, i64 %i) {
 ; CHECK-NEXT: getelementptr
 ; CHECK-NEXT: getelementptr
 ; CHECK-NEXT: ret
-  %1 = getelementptr inbounds %"struct2", %"struct2"* %P, i64 %i
-  %2 = getelementptr inbounds %"struct2", %"struct2"* %P, i64 %i
-  %3 = getelementptr inbounds %"struct2", %"struct2"* %P, i64 %i
-  %4 = getelementptr inbounds %"struct2", %"struct2"* %P, i64 %i
-  %5 = getelementptr inbounds %"struct2", %"struct2"* %P, i64 %i
-  %6 = getelementptr inbounds %"struct2", %"struct2"* %P, i64 %i
-  ret %struct2* %6
+  %1 = getelementptr inbounds %"struct2", ptr %P, i64 %i
+  %2 = getelementptr inbounds %"struct2", ptr %P, i64 %i
+  %3 = getelementptr inbounds %"struct2", ptr %P, i64 %i
+  %4 = getelementptr inbounds %"struct2", ptr %P, i64 %i
+  %5 = getelementptr inbounds %"struct2", ptr %P, i64 %i
+  %6 = getelementptr inbounds %"struct2", ptr %P, i64 %i
+  ret ptr %6
 }
 
 
-define internal %struct1* @Gfunc(%struct1* %P, i64 %i) {
+define internal ptr @Gfunc(ptr %P, i64 %i) {
 ; CHECK-LABEL: @Gfunc(
 ; CHECK-NEXT: getelementptr
 ; CHECK-NEXT: getelementptr
@@ -35,12 +35,12 @@ define internal %struct1* @Gfunc(%struct1* %P, i64 %i) {
 ; CHECK-NEXT: getelementptr
 ; CHECK-NEXT: getelementptr
 ; CHECK-NEXT: ret
-  %1 = getelementptr inbounds %"struct1", %"struct1"* %P, i64 %i
-  %2 = getelementptr inbounds %"struct1", %"struct1"* %P, i64 %i
-  %3 = getelementptr inbounds %"struct1", %"struct1"* %P, i64 %i
-  %4 = getelementptr inbounds %"struct1", %"struct1"* %P, i64 %i
-  %5 = getelementptr inbounds %"struct1", %"struct1"* %P, i64 %i
-  %6 = getelementptr inbounds %"struct1", %"struct1"* %P, i64 %i
-  ret %struct1* %6
+  %1 = getelementptr inbounds %"struct1", ptr %P, i64 %i
+  %2 = getelementptr inbounds %"struct1", ptr %P, i64 %i
+  %3 = getelementptr inbounds %"struct1", ptr %P, i64 %i
+  %4 = getelementptr inbounds %"struct1", ptr %P, i64 %i
+  %5 = getelementptr inbounds %"struct1", ptr %P, i64 %i
+  %6 = getelementptr inbounds %"struct1", ptr %P, i64 %i
+  ret ptr %6
 }
 
