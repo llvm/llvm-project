@@ -187,9 +187,9 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
     DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
   auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-
-  // If there's only one exit, we don't need to do anything.
-  if (PDT.root_size() <= 1)
+  if (PDT.root_size() == 0 ||
+      (PDT.root_size() == 1 &&
+       !isa<BranchInst>(PDT.getRoot()->getTerminator())))
     return false;
 
   LegacyDivergenceAnalysis &DA = getAnalysis<LegacyDivergenceAnalysis>();
