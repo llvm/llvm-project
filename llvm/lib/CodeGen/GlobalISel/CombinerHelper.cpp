@@ -4948,26 +4948,35 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
   auto BuildUDIVPattern = [&](const Constant *C) {
     auto *CI = cast<ConstantInt>(C);
     const APInt &Divisor = CI->getValue();
-    UnsignedDivisionByConstantInfo magics =
-        UnsignedDivisionByConstantInfo::get(Divisor);
+
+    bool SelNPQ = false;
+    APInt Magic(Divisor.getBitWidth(), 0);
     unsigned PreShift = 0, PostShift = 0;
 
-    unsigned SelNPQ;
-    if (!magics.IsAdd || Divisor.isOneValue()) {
-      assert(magics.ShiftAmount < Divisor.getBitWidth() &&
-             "We shouldn't generate an undefined shift!");
-      PostShift = magics.ShiftAmount;
-      PreShift = magics.PreShift;
-      SelNPQ = false;
-    } else {
-      assert(magics.PreShift == 0 && "Unexpected pre-shift");
-      PostShift = magics.ShiftAmount - 1;
-      SelNPQ = true;
+    // Magic algorithm doesn't work for division by 1. We need to emit a select
+    // at the end.
+    // TODO: Use undef values for divisor of 1.
+    if (!Divisor.isOneValue()) {
+      UnsignedDivisionByConstantInfo magics =
+          UnsignedDivisionByConstantInfo::get(Divisor);
+
+      Magic = std::move(magics.Magic);
+
+      if (!magics.IsAdd) {
+        assert(magics.ShiftAmount < Divisor.getBitWidth() &&
+               "We shouldn't generate an undefined shift!");
+        PostShift = magics.ShiftAmount;
+        PreShift = magics.PreShift;
+      } else {
+        assert(magics.PreShift == 0 && "Unexpected pre-shift");
+        PostShift = magics.ShiftAmount - 1;
+        SelNPQ = true;
+      }
     }
 
     PreShifts.push_back(
         MIB.buildConstant(ScalarShiftAmtTy, PreShift).getReg(0));
-    MagicFactors.push_back(MIB.buildConstant(ScalarTy, magics.Magic).getReg(0));
+    MagicFactors.push_back(MIB.buildConstant(ScalarTy, Magic).getReg(0));
     NPQFactors.push_back(
         MIB.buildConstant(ScalarTy,
                           SelNPQ ? APInt::getOneBitSet(EltBits, EltBits - 1)
