@@ -34,6 +34,8 @@ class Error;
 
 namespace exegesis {
 
+enum class InstructionBenchmarkFilter { All, RegOnly, WithMem };
+
 struct InstructionBenchmarkKey {
   // The LLVM opcode name.
   std::vector<MCInst> Instructions;

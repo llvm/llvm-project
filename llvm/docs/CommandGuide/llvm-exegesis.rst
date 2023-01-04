@@ -278,6 +278,14 @@ OPTIONS
  If non-empty, write inconsistencies found during analysis to this file. `-`
  prints to stdout. By default, this analysis is not run.
 
+.. option:: -analysis-filter=[all|reg-only|mem-only]
+
+ By default, all benchmark results are analysed, but sometimes it may be useful
+ to only look at those that to not involve memory, or vice versa. This option
+ allows to either keep all benchmarks, or filter out (ignore) either all the
+ ones that do involve memory (involve instructions that may read or write to
+ memory), or the opposite, to only keep such benchmarks.
+
 .. option:: -analysis-clustering=[dbscan,naive]
 
  Specify the clustering algorithm to use. By default DBSCAN will be used.
