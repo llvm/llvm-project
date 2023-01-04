@@ -788,8 +788,14 @@ void DWARFLinker::lookForDIEsToKeep(AddressesMap &AddressesMap,
     unsigned Idx = Current.CU.getOrigUnit().getDIEIndex(Current.Die);
     CompileUnit::DIEInfo &MyInfo = Current.CU.getInfo(Idx);
 
-    if (MyInfo.Prune)
-      continue;
+    if (MyInfo.Prune) {
+      // We're walking the dependencies of a module forward declaration that was
+      // kept because there is no definition.
+      if (Current.Flags & TF_DependencyWalk)
+        MyInfo.Prune = false;
+      else
+        continue;
+    }
 
     // If the Keep flag is set, we are marking a required DIE's dependencies.
     // If our target is already marked as kept, we're all set.
