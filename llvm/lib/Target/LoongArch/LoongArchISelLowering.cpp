@@ -708,6 +708,26 @@ LoongArchTargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
 
     return Op;
   }
+  case Intrinsic::loongarch_movfcsr2gr: {
+    if (!Subtarget.hasBasicF()) {
+      DAG.getContext()->emitError(
+          "llvm.loongarch.movfcsr2gr expects basic f target feature");
+      return DAG.getMergeValues(
+          {DAG.getUNDEF(Op.getValueType()), Op.getOperand(0)}, SDLoc(Op));
+    }
+    unsigned Imm = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
+    if (!isUInt<2>(Imm)) {
+      DAG.getContext()->emitError("argument to '" + Op->getOperationName(0) +
+                                  "' " + ErrorMsgOOR);
+      return DAG.getMergeValues(
+          {DAG.getUNDEF(Op.getValueType()), Op.getOperand(0)}, SDLoc(Op));
+    }
+    return DAG.getMergeValues(
+        {DAG.getNode(LoongArchISD::MOVFCSR2GR, DL, Op.getValueType(),
+                     DAG.getRegister(LoongArch::FCSR0 + Imm, MVT::i32)),
+         Op.getOperand(0)},
+        DL);
+  }
   }
 }
 
@@ -756,6 +776,21 @@ SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
 
     return DAG.getNode(LoongArchISD::BREAK, DL, MVT::Other, Op0,
                        DAG.getConstant(Imm, DL, GRLenVT));
+  }
+  case Intrinsic::loongarch_movgr2fcsr: {
+    if (!Subtarget.hasBasicF()) {
+      DAG.getContext()->emitError(
+          "llvm.loongarch.movgr2fcsr expects basic f target feature");
+      return Op0;
+    }
+    unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    if (!isUInt<2>(Imm))
+      return emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG);
+
+    return DAG.getNode(
+        LoongArchISD::MOVGR2FCSR, DL, MVT::Other, Op0,
+        DAG.getRegister(LoongArch::FCSR0 + Imm, MVT::i32),
+        DAG.getNode(ISD::ANY_EXTEND, DL, GRLenVT, Op.getOperand(3)));
   }
   case Intrinsic::loongarch_syscall: {
     unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
@@ -1085,11 +1120,38 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   }
   case ISD::INTRINSIC_W_CHAIN: {
     SDValue Op0 = N->getOperand(0);
+    EVT VT = N->getValueType(0);
+    uint64_t Op1 = N->getConstantOperandVal(1);
+    if (Op1 == Intrinsic::loongarch_movfcsr2gr) {
+      if (!Subtarget.hasBasicF()) {
+        DAG.getContext()->emitError(
+            "llvm.loongarch.movfcsr2gr expects basic f target feature");
+        Results.push_back(DAG.getMergeValues(
+            {DAG.getUNDEF(N->getValueType(0)), N->getOperand(0)}, SDLoc(N)));
+        Results.push_back(N->getOperand(0));
+        return;
+      }
+      unsigned Imm = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
+      if (!isUInt<2>(Imm)) {
+        DAG.getContext()->emitError("argument to '" + N->getOperationName(0) +
+                                    "' " + "out of range");
+        Results.push_back(DAG.getMergeValues(
+            {DAG.getUNDEF(N->getValueType(0)), N->getOperand(0)}, SDLoc(N)));
+        Results.push_back(N->getOperand(0));
+        return;
+      }
+      Results.push_back(DAG.getNode(
+          ISD::TRUNCATE, DL, VT,
+          DAG.getNode(LoongArchISD::MOVFCSR2GR, SDLoc(N), MVT::i64,
+                      DAG.getRegister(LoongArch::FCSR0 + Imm, MVT::i32))));
+      Results.push_back(N->getOperand(0));
+      return;
+    }
     SDValue Op2 = N->getOperand(2);
     MVT GRLenVT = Subtarget.getGRLenVT();
     std::string Name = N->getOperationName(0);
 
-    switch (N->getConstantOperandVal(1)) {
+    switch (Op1) {
     default:
       llvm_unreachable("Unexpected Intrinsic.");
 #define CRC_CASE_EXT_BINARYOP(NAME, NODE)                                      \
@@ -1714,6 +1776,8 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(IOCSRWR_W)
     NODE_NAME_CASE(IOCSRWR_D)
     NODE_NAME_CASE(CPUCFG)
+    NODE_NAME_CASE(MOVGR2FCSR)
+    NODE_NAME_CASE(MOVFCSR2GR)
   }
 #undef NODE_NAME_CASE
   return nullptr;
