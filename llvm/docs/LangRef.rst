@@ -366,8 +366,9 @@ added in the future:
     apply for values returned in callee-saved registers.
 
     - On X86-64 the callee preserves all general purpose registers, except for
-      R11. R11 can be used as a scratch register. Floating-point registers
-      (XMMs/YMMs) are not preserved and need to be saved by the caller.
+      R11 and return registers, if any. R11 can be used as a scratch register.
+      Floating-point registers (XMMs/YMMs) are not preserved and need to be
+      saved by the caller.
 
     The idea behind this convention is to support calls to runtime functions
     that have a hot path and a cold path. The hot path is usually a small piece
