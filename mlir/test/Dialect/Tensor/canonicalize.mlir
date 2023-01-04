@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -canonicalize | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -canonicalize="test-convergence" | FileCheck %s
 
 // Checks that NOP casts are removed.
 // CHECK-LABEL: cast_values
