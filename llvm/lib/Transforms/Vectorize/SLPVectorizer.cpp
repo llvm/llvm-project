@@ -6405,20 +6405,26 @@ protected:
       if (auto *SVOpTy =
               dyn_cast<FixedVectorType>(SV->getOperand(0)->getType()))
         LocalVF = SVOpTy->getNumElements();
+      SmallVector<int> ExtMask(Mask.size(), UndefMaskElem);
+      for (auto [Idx, I] : enumerate(Mask)) {
+         if (I == UndefMaskElem)
+           continue;
+         ExtMask[Idx] = SV->getMaskValue(I);
+      }
       bool IsOp1Undef =
           isUndefVector(SV->getOperand(0),
-                        buildUseMask(LocalVF, Mask, UseMask::FirstArg))
+                        buildUseMask(LocalVF, ExtMask, UseMask::FirstArg))
               .all();
       bool IsOp2Undef =
           isUndefVector(SV->getOperand(1),
-                        buildUseMask(LocalVF, Mask, UseMask::SecondArg))
+                        buildUseMask(LocalVF, ExtMask, UseMask::SecondArg))
               .all();
       if (!IsOp1Undef && !IsOp2Undef) {
         // Update mask and mark undef elems.
         for (auto [Idx, I] : enumerate(Mask)) {
           if (I == UndefMaskElem)
             continue;
-          if (SV->getShuffleMask()[I % SV->getShuffleMask().size()] ==
+          if (SV->getMaskValue(I % SV->getShuffleMask().size()) ==
               UndefMaskElem)
             I = UndefMaskElem;
         }
@@ -6495,14 +6501,26 @@ protected:
         // again.
         if (auto *SV1 = dyn_cast<ShuffleVectorInst>(Op1))
           if (auto *SV2 = dyn_cast<ShuffleVectorInst>(Op2)) {
+            SmallVector<int> ExtMask1(Mask.size(), UndefMaskElem);
+            for (auto [Idx, I] : enumerate(CombinedMask1)) {
+                if (I == UndefMaskElem)
+                continue;
+                ExtMask1[Idx] = SV1->getMaskValue(I);
+            }
             SmallBitVector UseMask1 = buildUseMask(
                 cast<FixedVectorType>(SV1->getOperand(1)->getType())
                     ->getNumElements(),
-                CombinedMask1, UseMask::FirstArg);
+                ExtMask1, UseMask::SecondArg);
+            SmallVector<int> ExtMask2(CombinedMask2.size(), UndefMaskElem);
+            for (auto [Idx, I] : enumerate(CombinedMask2)) {
+                if (I == UndefMaskElem)
+                continue;
+                ExtMask2[Idx] = SV2->getMaskValue(I);
+            }
             SmallBitVector UseMask2 = buildUseMask(
                 cast<FixedVectorType>(SV2->getOperand(1)->getType())
                     ->getNumElements(),
-                CombinedMask2, UseMask::FirstArg);
+                ExtMask2, UseMask::SecondArg);
             if (SV1->getOperand(0)->getType() ==
                     SV2->getOperand(0)->getType() &&
                 SV1->getOperand(0)->getType() != SV1->getType() &&
