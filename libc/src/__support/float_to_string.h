@@ -130,8 +130,8 @@ get_table_positive(int exponent, size_t i, const size_t constant) {
 // calculations.
 // The formula being used looks more like this:
 // floor(10^(9*(-i)) * 2^(c_0 + (-e))) % (10^9 * 2^c_0)
-constexpr inline cpp::UInt<MID_INT_SIZE>
-get_table_negative(int exponent, size_t i, const size_t constant) {
+inline cpp::UInt<MID_INT_SIZE> get_table_negative(int exponent, size_t i,
+                                                  const size_t constant) {
   constexpr size_t INT_SIZE = 1024;
   int shift_amount = constant - exponent;
   cpp::UInt<INT_SIZE> num(1);
