@@ -11137,6 +11137,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
 
   MVT VT = Op.getSimpleValueType();
   MVT EltVT = VT.getVectorElementType();
+  MVT OpEltVT = Op.getOperand(0).getSimpleValueType();
   unsigned NumElems = Op.getNumOperands();
 
   // Generate vectors for predicate vectors.
@@ -11151,6 +11152,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
 
   unsigned EVTBits = EltVT.getSizeInBits();
   APInt UndefMask = APInt::getZero(NumElems);
+  APInt FrozenUndefMask = APInt::getZero(NumElems);
   APInt ZeroMask = APInt::getZero(NumElems);
   APInt NonZeroMask = APInt::getZero(NumElems);
   bool IsAllConstants = true;
@@ -11160,6 +11162,10 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     SDValue Elt = Op.getOperand(i);
     if (Elt.isUndef()) {
       UndefMask.setBit(i);
+      continue;
+    }
+    if (Elt.getOpcode() == ISD::FREEZE && Elt.getOperand(0).isUndef()) {
+      FrozenUndefMask.setBit(i);
       continue;
     }
     Values.insert(Elt);
@@ -11175,9 +11181,35 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   }
 
   // All undef vector. Return an UNDEF. All zero vectors were handled above.
-  if (NonZeroMask == 0) {
+  unsigned NumFrozenUndefElts = FrozenUndefMask.countPopulation();
+  if (NonZeroMask == 0 && NumFrozenUndefElts != NumElems) {
     assert(UndefMask.isAllOnes() && "Fully undef mask expected");
     return DAG.getUNDEF(VT);
+  }
+
+  // If we have multiple FREEZE-UNDEF operands, we are likely going to end up
+  // lowering into a suboptimal insertion sequence. Instead, thaw the UNDEF in
+  // our source BUILD_VECTOR, create another FREEZE-UNDEF splat BUILD_VECTOR,
+  // and blend the FREEZE-UNDEF operands back in.
+  // FIXME: is this worthwhile even for a single FREEZE-UNDEF operand?
+  if (NumFrozenUndefElts >= 2 && NumFrozenUndefElts < NumElems) {
+    SmallVector<int, 16> BlendMask(NumElems, -1);
+    SmallVector<SDValue, 16> Elts(NumElems, DAG.getUNDEF(OpEltVT));
+    for (unsigned i = 0; i < NumElems; ++i) {
+      if (UndefMask[i]) {
+        BlendMask[i] = -1;
+        continue;
+      }
+      BlendMask[i] = i;
+      if (!FrozenUndefMask[i])
+        Elts[i] = Op.getOperand(i);
+      else
+        BlendMask[i] += NumElems;
+    }
+    SDValue EltsBV = DAG.getBuildVector(VT, dl, Elts);
+    SDValue FrozenUndefElt = DAG.getFreeze(DAG.getUNDEF(OpEltVT));
+    SDValue FrozenUndefBV = DAG.getSplatBuildVector(VT, dl, FrozenUndefElt);
+    return DAG.getVectorShuffle(VT, dl, EltsBV, FrozenUndefBV, BlendMask);
   }
 
   BuildVectorSDNode *BV = cast<BuildVectorSDNode>(Op.getNode());
