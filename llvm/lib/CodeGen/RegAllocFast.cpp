@@ -443,6 +443,9 @@ void RegAllocFast::spill(MachineBasicBlock::iterator Before, Register VirtReg,
     SpilledOperandsMap[MO->getParent()].push_back(MO);
   for (auto MISpilledOperands : SpilledOperandsMap) {
     MachineInstr &DBG = *MISpilledOperands.first;
+    // We don't have enough support for tracking operands of DBG_VALUE_LISTs.
+    if (DBG.isDebugValueList())
+      continue;
     MachineInstr *NewDV = buildDbgValueForSpill(
         *MBB, Before, *MISpilledOperands.first, FI, MISpilledOperands.second);
     assert(NewDV->getParent() == MBB && "dangling parent pointer");
