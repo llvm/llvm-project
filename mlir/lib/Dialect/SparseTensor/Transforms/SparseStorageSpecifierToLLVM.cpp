@@ -14,6 +14,12 @@
 using namespace mlir;
 using namespace sparse_tensor;
 
+namespace {
+
+//===----------------------------------------------------------------------===//
+// Helper methods.
+//===----------------------------------------------------------------------===//
+
 static SmallVector<Type, 2> getSpecifierFields(StorageSpecifierType tp) {
   MLIRContext *ctx = tp.getContext();
   auto enc = tp.getEncoding();
@@ -34,10 +40,9 @@ static Type convertSpecifier(StorageSpecifierType tp) {
                                           getSpecifierFields(tp));
 }
 
-StorageSpecifierToLLVMTypeConverter::StorageSpecifierToLLVMTypeConverter() {
-  addConversion([](Type type) { return type; });
-  addConversion([](StorageSpecifierType tp) { return convertSpecifier(tp); });
-}
+//===----------------------------------------------------------------------===//
+// Specifier struct builder.
+//===----------------------------------------------------------------------===//
 
 constexpr uint64_t kDimSizePosInSpecifier = 0;
 constexpr uint64_t kMemSizePosInSpecifier = 1;
@@ -101,6 +106,21 @@ void SpecifierStructBuilder::setMemSize(OpBuilder &builder, Location loc,
   value = builder.create<LLVM::InsertValueOp>(
       loc, value, size, ArrayRef<int64_t>({kMemSizePosInSpecifier, pos}));
 }
+
+} // namespace
+
+//===----------------------------------------------------------------------===//
+// The sparse storage specifier type converter (defined in Passes.h).
+//===----------------------------------------------------------------------===//
+
+StorageSpecifierToLLVMTypeConverter::StorageSpecifierToLLVMTypeConverter() {
+  addConversion([](Type type) { return type; });
+  addConversion([](StorageSpecifierType tp) { return convertSpecifier(tp); });
+}
+
+//===----------------------------------------------------------------------===//
+// Storage specifier conversion rules.
+//===----------------------------------------------------------------------===//
 
 template <typename Base, typename SourceOp>
 class SpecifierGetterSetterOpConverter : public OpConversionPattern<SourceOp> {
@@ -175,6 +195,10 @@ public:
     return success();
   }
 };
+
+//===----------------------------------------------------------------------===//
+// Public method for populating conversion rules.
+//===----------------------------------------------------------------------===//
 
 void mlir::populateStorageSpecifierToLLVMPatterns(TypeConverter &converter,
                                                   RewritePatternSet &patterns) {

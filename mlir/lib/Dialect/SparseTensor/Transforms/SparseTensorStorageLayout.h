@@ -50,6 +50,7 @@ namespace sparse_tensor {
 // };
 //
 //===----------------------------------------------------------------------===//
+
 enum class SparseTensorFieldKind : uint32_t {
   StorageSpec = 0,
   PtrMemRef = 1,
@@ -355,4 +356,5 @@ getMutDescriptorFromTensorTuple(Value tensor, SmallVectorImpl<Value> &fields) {
 
 } // namespace sparse_tensor
 } // namespace mlir
+
 #endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_SPARSETENSORBUILDER_H_
