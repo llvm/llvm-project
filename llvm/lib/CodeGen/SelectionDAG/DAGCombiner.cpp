@@ -11740,15 +11740,13 @@ static SDValue tryToFoldExtendOfConstant(SDNode *N, const TargetLowering &TLI,
   SmallVector<SDValue, 8> Elts;
   unsigned NumElts = VT.getVectorNumElements();
 
-  // For zero-extensions, UNDEF elements still guarantee to have the upper
-  // bits set to zero.
-  bool IsZext =
-      Opcode == ISD::ZERO_EXTEND || Opcode == ISD::ZERO_EXTEND_VECTOR_INREG;
-
   for (unsigned i = 0; i != NumElts; ++i) {
     SDValue Op = N0.getOperand(i);
     if (Op.isUndef()) {
-      Elts.push_back(IsZext ? DAG.getConstant(0, DL, SVT) : DAG.getUNDEF(SVT));
+      if (Opcode == ISD::ANY_EXTEND || Opcode == ISD::ANY_EXTEND_VECTOR_INREG)
+        Elts.push_back(DAG.getUNDEF(SVT));
+      else
+        Elts.push_back(DAG.getConstant(0, DL, SVT));
       continue;
     }
 
