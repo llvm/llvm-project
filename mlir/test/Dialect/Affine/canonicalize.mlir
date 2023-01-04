@@ -1,5 +1,5 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -canonicalize | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -canonicalize="top-down=0" | FileCheck %s --check-prefix=CHECK-BOTTOM-UP
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -canonicalize="test-convergence" | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -canonicalize="test-convergence top-down=0" | FileCheck %s --check-prefix=CHECK-BOTTOM-UP
 
 // -----
 
