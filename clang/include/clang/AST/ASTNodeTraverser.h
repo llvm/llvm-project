@@ -717,6 +717,12 @@ public:
     }
   }
 
+  void VisitCXXParenListInitExpr(const CXXParenListInitExpr *PLIE) {
+    if (auto *Filler = PLIE->getArrayFiller()) {
+      Visit(Filler, "array_filler");
+    }
+  }
+
   void VisitBlockExpr(const BlockExpr *Node) { Visit(Node->getBlockDecl()); }
 
   void VisitOpaqueValueExpr(const OpaqueValueExpr *Node) {
