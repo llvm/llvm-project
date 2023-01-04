@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodegenUtils.h"
+#include "SparseTensorStorageLayout.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -551,4 +552,11 @@ Value sparse_tensor::genToValues(OpBuilder &builder, Location loc,
   Type valTp = get1DMemRefType(srcTp.getElementType(),
                                /*withLayout=*/false);
   return builder.create<ToValuesOp>(loc, valTp, tensor);
+}
+
+Value sparse_tensor::genValMemSize(OpBuilder &builder, Location loc,
+                                   Value tensor) {
+  SmallVector<Value> fields;
+  auto desc = getMutDescriptorFromTensorTuple(tensor, fields);
+  return desc.getValMemSize(builder, loc);
 }
