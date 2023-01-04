@@ -1382,6 +1382,24 @@ struct FoldReshapeWithConstant : OpRewritePattern<TensorReshapeOp> {
   }
 };
 
+// Folds TensorReshapeOp(splat x : src_type) : res_type into splat x : res_type.
+template <typename TensorReshapeOp>
+class FoldReshapeWithSplat : public OpRewritePattern<TensorReshapeOp> {
+public:
+  using OpRewritePattern<TensorReshapeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TensorReshapeOp reshapeOp,
+                                PatternRewriter &rewriter) const override {
+    auto splatOp = reshapeOp.getSrc().template getDefiningOp<tensor::SplatOp>();
+    if (!splatOp)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<tensor::SplatOp>(
+        reshapeOp, reshapeOp.getResultType(), splatOp.getInput());
+    return success();
+  }
+};
+
 /// Reshape of a FromElements can be replaced with a FromElements of the
 /// result type
 template <typename TensorReshapeOp>
@@ -1523,6 +1541,7 @@ void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ComposeReassociativeReshapeOps<ExpandShapeOp>,
               ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>,
               FoldReshapeWithConstant<ExpandShapeOp>,
+              FoldReshapeWithSplat<ExpandShapeOp>,
               FoldReshapeWithFromElements<ExpandShapeOp>, FoldDimOfExpandShape,
               FoldDimOfCollapseShape>(context);
 }
@@ -1533,6 +1552,7 @@ void CollapseShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
       .add<ComposeReassociativeReshapeOps<CollapseShapeOp>,
            ComposeCollapseOfExpandOp<CollapseShapeOp, ExpandShapeOp, CastOp>,
            FoldReshapeWithConstant<CollapseShapeOp>,
+           FoldReshapeWithSplat<CollapseShapeOp>,
            FoldReshapeWithFromElements<CollapseShapeOp>, FoldCollapseOfCastOp>(
           context);
 }
@@ -1540,6 +1560,7 @@ void CollapseShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
 OpFoldResult ExpandShapeOp::fold(ArrayRef<Attribute> operands) {
   return foldReshapeOp<ExpandShapeOp, CollapseShapeOp>(*this, operands);
 }
+
 OpFoldResult CollapseShapeOp::fold(ArrayRef<Attribute> operands) {
   return foldReshapeOp<CollapseShapeOp, ExpandShapeOp>(*this, operands);
 }
