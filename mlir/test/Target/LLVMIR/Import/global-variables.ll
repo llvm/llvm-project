@@ -174,3 +174,18 @@
 ; CHECK-SAME:  (dense<[{{\[}}[1, 2], [3, 4]]]> : vector<1x2x2xi32>)
 ; CHECK-SAME:   {addr_space = 0 : i32, dso_local} : !llvm.array<1 x array<2 x vector<2xi32>>>
 @nested_array_vector = internal constant [1 x [2 x <2 x i32>]] [[2 x <2 x i32>] [<2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>]]
+
+; // -----
+
+; CHECK: llvm.mlir.global_ctors {ctors = [@foo, @bar], priorities = [0 : i32, 42 : i32]}
+; CHECK: llvm.mlir.global_dtors {dtors = [@foo], priorities = [0 : i32]}
+@llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr null }, { i32, ptr, ptr } { i32 42, ptr @bar, ptr null }]
+@llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr null }]
+
+define void @foo() {
+  ret void
+}
+
+define void @bar() {
+  ret void
+}
