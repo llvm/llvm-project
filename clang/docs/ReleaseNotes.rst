@@ -331,6 +331,9 @@ Bug Fixes
   `Issue 58800 <https://github.com/llvm/llvm-project/issues/58800>`_
 - Fix an issue that triggers a crash if we instantiate a hidden friend functions.
   This fixes `Issue 54457 <https://github.com/llvm/llvm-project/issues/54457>`_
+- Fix an issue about ``decltype`` in the members of class templates derived from
+  templates with related parameters.
+  `Issue 58674 <https://github.com/llvm/llvm-project/issues/58674>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
