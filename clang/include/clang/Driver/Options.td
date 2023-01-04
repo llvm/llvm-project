@@ -482,6 +482,40 @@ multiclass BoolGOption<string flag_base, KeyPathAndMacro kpm,
               Group<g_Group>;
 }
 
+// Works like BoolOption except without marshalling
+multiclass BoolOptionWithoutMarshalling<string prefix = "", string spelling_base,
+                                        FlagDef flag1_base, FlagDef flag2_base,
+                                        BothFlags suffix = BothFlags<[], "">> {
+  defvar flag1 = FlagDefExpanded<ApplySuffix<flag1_base, suffix>.Result, prefix,
+                                 NAME, spelling_base>;
+
+  defvar flag2 = FlagDefExpanded<ApplySuffix<flag2_base, suffix>.Result, prefix,
+                                 NAME, spelling_base>;
+
+  // The flags must have different polarity, different values, and only
+  // one can be implied.
+  assert !xor(flag1.Polarity, flag2.Polarity),
+         "the flags must have different polarity: flag1: " #
+             flag1.Polarity # ", flag2: " # flag2.Polarity;
+  assert !ne(flag1.Value, flag2.Value),
+         "the flags must have different values: flag1: " #
+             flag1.Value # ", flag2: " # flag2.Value;
+  assert !not(!and(flag1.CanBeImplied, flag2.CanBeImplied)),
+         "only one of the flags can be implied: flag1: " #
+             flag1.CanBeImplied # ", flag2: " # flag2.CanBeImplied;
+
+  defvar implied = !if(flag1.CanBeImplied, flag1, flag2);
+
+  def flag1.RecordName : Flag<["-"], flag1.Spelling>, Flags<flag1.OptionFlags>,
+                         HelpText<flag1.Help>,
+                         ImpliedByAnyOf<implied.ImpliedBy, implied.ValueAsCode>
+                         {}
+  def flag2.RecordName : Flag<["-"], flag2.Spelling>, Flags<flag2.OptionFlags>,
+                         HelpText<flag2.Help>,
+                         ImpliedByAnyOf<implied.ImpliedBy, implied.ValueAsCode>
+                         {}
+}
+
 // FIXME: Diagnose if target does not support protected visibility.
 class MarshallingInfoVisibility<KeyPathAndMacro kpm, code default>
   : MarshallingInfoEnum<kpm, default>,
@@ -4986,7 +5020,6 @@ defm recursive : BooleanFFlag<"recursive">, Group<gfortran_Group>;
 defm repack_arrays : BooleanFFlag<"repack-arrays">, Group<gfortran_Group>;
 defm second_underscore : BooleanFFlag<"second-underscore">, Group<gfortran_Group>;
 defm sign_zero : BooleanFFlag<"sign-zero">, Group<gfortran_Group>;
-defm stack_arrays : BooleanFFlag<"stack-arrays">, Group<gfortran_Group>;
 defm underscoring : BooleanFFlag<"underscoring">, Group<gfortran_Group>;
 defm whole_file : BooleanFFlag<"whole-file">, Group<gfortran_Group>;
 
@@ -5065,6 +5098,10 @@ defm implicit_none : OptInFC1FFlag<"implicit-none", "No implicit typing allowed 
 
 def fno_automatic : Flag<["-"], "fno-automatic">, Group<f_Group>,
   HelpText<"Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE">;
+
+defm stack_arrays : BoolOptionWithoutMarshalling<"f", "stack-arrays",
+  PosFlag<SetTrue, [], "Attempt to allocate array temporaries on the stack, no matter their size">,
+  NegFlag<SetFalse, [], "Allocate array temporaries on the heap (default)">>;
 
 } // let Flags = [FC1Option, FlangOption, FlangOnlyOption]
 
