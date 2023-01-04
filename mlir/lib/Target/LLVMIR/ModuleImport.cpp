@@ -48,6 +48,16 @@ static std::string diag(llvm::Value &value) {
   return os.str();
 }
 
+/// Returns the name of the global_ctors global variables.
+static constexpr StringRef getGlobalCtorsVarName() {
+  return "llvm.global_ctors";
+}
+
+/// Returns the name of the global_dtors global variables.
+static constexpr StringRef getGlobalDtorsVarName() {
+  return "llvm.global_dtors";
+}
+
 /// Creates an attribute containing ABI and preferred alignment numbers parsed
 /// a string. The string may be either "abi:preferred" or just "abi". In the
 /// latter case, the preferred alignment is considered equal to ABI alignment.
@@ -319,9 +329,19 @@ ModuleImport::ModuleImport(ModuleOp mlirModule,
 }
 
 LogicalResult ModuleImport::convertGlobals() {
-  for (llvm::GlobalVariable &globalVar : llvmModule->globals())
+  for (llvm::GlobalVariable &globalVar : llvmModule->globals()) {
+    if (globalVar.getName() == getGlobalCtorsVarName() ||
+        globalVar.getName() == getGlobalDtorsVarName()) {
+      if (failed(convertGlobalCtorsAndDtors(&globalVar))) {
+        return emitError(mlirModule.getLoc())
+               << "unhandled global variable " << diag(globalVar);
+      }
+      continue;
+    }
+
     if (!processGlobal(&globalVar))
       return failure();
+  }
   return success();
 }
 
@@ -561,6 +581,54 @@ GlobalOp ModuleImport::processGlobal(llvm::GlobalVariable *globalVar) {
     globalOp.setSection(globalVar->getSection());
 
   return globals[globalVar] = globalOp;
+}
+
+LogicalResult
+ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
+  if (!globalVar->hasInitializer() || !globalVar->hasAppendingLinkage())
+    return failure();
+  auto *initializer =
+      dyn_cast<llvm::ConstantArray>(globalVar->getInitializer());
+  if (!initializer)
+    return failure();
+
+  SmallVector<Attribute> funcs;
+  SmallVector<int32_t> priorities;
+  for (llvm::Value *operand : initializer->operands()) {
+    auto *aggregate = dyn_cast<llvm::ConstantAggregate>(operand);
+    if (!aggregate || aggregate->getNumOperands() != 3)
+      return failure();
+
+    auto *priority = dyn_cast<llvm::ConstantInt>(aggregate->getOperand(0));
+    auto *func = dyn_cast<llvm::Function>(aggregate->getOperand(1));
+    auto *data = dyn_cast<llvm::Constant>(aggregate->getOperand(2));
+    if (!priority || !func || !data)
+      return failure();
+
+    // GlobalCtorsOps and GlobalDtorsOps do not support non-null data fields.
+    if (!data->isNullValue())
+      return failure();
+
+    funcs.push_back(FlatSymbolRefAttr::get(context, func->getName()));
+    priorities.push_back(priority->getValue().getZExtValue());
+  }
+
+  OpBuilder::InsertionGuard guard(builder);
+  if (!globalInsertionOp)
+    builder.setInsertionPointToStart(mlirModule.getBody());
+  else
+    builder.setInsertionPointAfter(globalInsertionOp);
+
+  if (globalVar->getName() == getGlobalCtorsVarName()) {
+    globalInsertionOp = builder.create<LLVM::GlobalCtorsOp>(
+        mlirModule.getLoc(), builder.getArrayAttr(funcs),
+        builder.getI32ArrayAttr(priorities));
+    return success();
+  }
+  globalInsertionOp = builder.create<LLVM::GlobalDtorsOp>(
+      mlirModule.getLoc(), builder.getArrayAttr(funcs),
+      builder.getI32ArrayAttr(priorities));
+  return success();
 }
 
 SetVector<llvm::Constant *>

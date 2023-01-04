@@ -218,6 +218,9 @@ private:
   /// function entry block.
   FailureOr<Value> convertConstantExpr(llvm::Constant *constant);
 
+  /// Imports the magic globals "global_ctors" and "global_dtors".
+  LogicalResult convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar);
+
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;
   /// Block to insert the next constant into.

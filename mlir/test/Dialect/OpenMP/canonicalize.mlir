@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -canonicalize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -canonicalize="test-convergence" -split-input-file | FileCheck %s
 
 func.func @update_no_op(%x : memref<i32>) {
   omp.atomic.update %x : memref<i32> {

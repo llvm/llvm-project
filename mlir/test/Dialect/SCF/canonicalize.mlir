@@ -1,7 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(canonicalize))' -split-input-file | FileCheck %s
-
-
-// -----
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(canonicalize{test-convergence}))' -split-input-file | FileCheck %s
 
 func.func @single_iteration_some(%A: memref<?x?x?xi32>) {
   %c0 = arith.constant 0 : index

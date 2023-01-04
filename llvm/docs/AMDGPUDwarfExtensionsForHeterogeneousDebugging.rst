@@ -243,6 +243,25 @@ computed offset of an arbitrary location description (such as a vector register)
 is required. The offset operations provide this ability since they can be used
 to compute a location description on the stack.
 
+It could be possible to define ``DW_OP_plus``, ``DW_OP_plus_uconst``, and
+``DW_OP_minus`` to operate on location descriptions to avoid needing
+``DW_OP_LLVM_offset`` and ``DW_OP_LLVM_offset_uconst``. However, this is not
+proposed since currently the arithmetic operations are defined to require values
+of the same base type and produces a result with the same base type. Allowing
+these operations to act on location descriptions would permit the first operand
+to be a location description and the second operand to be an integral value
+type, or vice versa, and return a location description. This complicates the
+rules for implicit conversions between default address space memory location
+descriptions and generic base type values. Currently the rules would convert
+such a location description to the memory address value and then perform two's
+compliment wrap around arithmetic. If the result was used as a location
+description, it would be implicitly converted back to a default address space
+memory location description. This is different to the overflow rules on location
+descriptions. To allow control, an operation that converts a memory location
+description to an address integral type value would be required. Keeping a
+separation of location description operations and arithmetic operations avoids
+this semantic complexity.
+
 See ``DW_OP_LLVM_offset``, ``DW_OP_LLVM_offset_uconst``, and
 ``DW_OP_LLVM_bit_offset`` in
 :ref:`amdgpu-dwarf-general-location-description-operations`.
@@ -413,7 +432,7 @@ Since DWARF stack value entries have a base type and AMDGPU registers are a
 vector of dwords, the ability to specify that a base type is a vector is
 required.
 
-See ``DW_AT_LLVM_vector_size`` in :ref:`amdgpu-dwarf-literal-operations`.
+See ``DW_AT_LLVM_vector_size`` in :ref:`amdgpu-dwarf-base-type-entries`.
 
 .. _amdgpu-dwarf-operation-to-create-vector-composite-location-descriptions:
 
@@ -937,8 +956,12 @@ elements that can be specified are:
 
   If specified:
 
-  * If the current thread is specified, then the current target architecture
-    must be the same as the target architecture of the current thread.
+  * If the current frame is specified, then the current target architecture must
+    be the same as the target architecture of the current frame.
+
+  * If the current frame is specified and is the top frame, and if the current
+    thread is specified, then the current target architecture must be the same
+    as the target architecture of the current thread.
 
   * If the current compilation unit is specified, then the current target
     architecture default address space address size must be the same as the
@@ -969,7 +992,7 @@ elements that can be specified are:
   information entries specifies the program object corresponding to a runtime
   descriptor as the current object when it evaluates its associated expression.*
 
-  The result is undefined if the location descriptor is invalid (see
+  The result is undefined if the location description is invalid (see
   :ref:`amdgpu-dwarf-location-description`).
 
 *An initial stack*
@@ -982,7 +1005,7 @@ elements that can be specified are:
   expression value with initial stack entries. In all other cases the initial
   stack is empty.
 
-  The result is undefined if any location descriptors are invalid (see
+  The result is undefined if any location descriptions are invalid (see
   :ref:`amdgpu-dwarf-location-description`).
 
 If the evaluation requires a context element that is not specified, then the
@@ -1394,7 +1417,7 @@ expression.
 5.  ``DW_OP_call2, DW_OP_call4, DW_OP_call_ref``
 
     ``DW_OP_call2``, ``DW_OP_call4``, and ``DW_OP_call_ref`` perform DWARF
-    procedure calls during evaluation of a DWARF expression.
+    procedure calls during evaluation of a DWARF operation expression.
 
     ``DW_OP_call2`` and ``DW_OP_call4``, have one operand that is, respectively,
     a 2-byte or 4-byte unsigned offset DR that represents the byte offset of a
@@ -1741,7 +1764,7 @@ There are these special value operations currently defined:
       Removing use of the target hook does not cause any test failures in common
       architectures. If the compiler for a target architecture did want some
       form of conversion, including a larger result type, it could always
-      explicitly used the ``DW_OP_convert`` operation.
+      explicitly use the ``DW_OP_convert`` operation.
 
       If T is a larger type than the register size, then the default GDB
       register hook reads bytes from the next register (or reads out of bounds
@@ -1850,7 +1873,7 @@ There are these special value operations currently defined:
 
     See :ref:`amdgpu-dwarf-implicit-location-description-operations` for special
     rules concerning implicit location descriptions created by the
-    ``DW_OP_implicit_pointer`` and ``DW_OP_LLVM_implicit_aspace_pointer``
+    ``DW_OP_implicit_pointer`` and ``DW_OP_LLVM_aspace_implicit_pointer``
     operations.
 
 5.  ``DW_OP_xderef`` *Deprecated*
@@ -2148,6 +2171,7 @@ has a byte address equal to A and an address space equal to AS of the
 corresponding SL.
 
 ``DW_ASPACE_none`` is defined as the target architecture default address space.
+See :ref:`amdgpu-dwarf-segment_addresses``.
 
 If a stack entry is required to be a location description, but it is a value V
 with the generic type, then it is implicitly converted to a location description
@@ -2262,7 +2286,7 @@ type.
     See :ref:`amdgpu-dwarf-implicit-location-description-operations` for special
     rules concerning implicit pointer values produced by dereferencing implicit
     location descriptions created by the ``DW_OP_implicit_pointer`` and
-    ``DW_OP_LLVM_implicit_aspace_pointer`` operations.
+    ``DW_OP_LLVM_aspace_implicit_pointer`` operations.
 
 4.  ``DW_OP_form_tls_address``
 
@@ -2279,7 +2303,7 @@ type.
     corresponding to the executable or shared library containing this DWARF
     expression is used.
 
-    *Some implementations of C, C++, Fortran, and other languages support a
+    *Some implementations of C, C++, Fortran, and other languages, support a
     thread-local storage class. Variables with this storage class have distinct
     values and addresses in distinct threads, much as automatic variables have
     distinct values and addresses in each subprogram invocation. Typically,
@@ -2481,10 +2505,10 @@ implicit storage value starting at the bit offset.
     location description specifies the actual value of the object, rather than
     specifying the memory or register storage that holds the value.*
 
-    See :ref:`amdgpu-dwarf-implicit-location-description-operations` for special
-    rules concerning implicit pointer values produced by dereferencing implicit
-    location descriptions created by the ``DW_OP_implicit_pointer`` and
-    ``DW_OP_LLVM_implicit_aspace_pointer`` operations.
+    See ``DW_OP_implicit_pointer`` (following) for special rules concerning
+    implicit pointer values produced by dereferencing implicit location
+    descriptions created by the ``DW_OP_implicit_pointer`` and
+    ``DW_OP_LLVM_aspace_implicit_pointer`` operations.
 
     .. note::
 
@@ -2514,7 +2538,7 @@ implicit storage value starting at the bit offset.
     that contains the current compilation unit. The second operand is a signed
     LEB128 integer that represents a byte displacement B.
 
-    *Note that D may not be in the current compilation unit.*
+    *Note that D might not be in the current compilation unit.*
 
     *The first operand interpretation is exactly like that for*
     ``DW_FORM_ref_addr``\ *.*
@@ -2540,7 +2564,7 @@ implicit storage value starting at the bit offset.
         refers to an implicit location storage that is the same as LS.
 
         *Note that all bits do not have to come from the same implicit location
-        description, as L' may involve composite location descriptors.*
+        description, as L' may involve composite location descriptions.*
 
     2.  The bits come from consecutive ascending offsets within their respective
         implicit location storage.
@@ -3100,7 +3124,7 @@ architectures.
 DWARF address space identifiers are used by:
 
 * The DWARF expression operations: ``DW_OP_LLVM_aspace_bregx``,
-  ``DW_OP_LLVM_form_aspace_address``, ``DW_OP_LLVM_implicit_aspace_pointer``,
+  ``DW_OP_LLVM_form_aspace_address``, ``DW_OP_LLVM_aspace_implicit_pointer``,
   and ``DW_OP_xderef*``.
 
 * The CFI instructions: ``DW_CFA_LLVM_def_aspace_cfa`` and
@@ -3343,7 +3367,7 @@ A.3.3.5 Low-Level Information
     elements corresponding to the source language thread of execution upon which
     the user is focused, if any.
 
-    The DWARF is ill-formed if E contains an ``DW_OP_fbreg`` operation, or the
+    The DWARF is ill-formed if E contains a ``DW_OP_fbreg`` operation, or the
     resulting location description L is not comprised of one single location
     description SL.
 
@@ -3384,7 +3408,7 @@ A.3.3.5 Low-Level Information
     the subprogram instance that immediately lexically encloses the current call
     frame's subprogram or entry point.
 
-    The DWARF is ill-formed if L is is not comprised of one memory location
+    The DWARF is ill-formed if L is not comprised of one memory location
     description for one of the target architecture specific address spaces.
 
     .. note::
@@ -3765,8 +3789,11 @@ A.5.14 Pointer to Member Type Entries
     result of the evaluation is the location description of the member of the
     class to which the pointer to member entry points.
 
-A.5.16 Dynamic Type Entries
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A.5.18 Dynamic Properties of Types
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A.5.18.1 Data Location
+++++++++++++++++++++++
 
 1.  The ``DW_AT_data_location`` attribute may be used with any type that
     provides one or more levels of hidden indirection and/or run-time parameters
@@ -4308,13 +4335,13 @@ A.6.4.2.2 CFA Definition Instructions
 
 4.  ``DW_CFA_LLVM_def_aspace_cfa_sf`` *New*
 
-    The ``DW_CFA_def_cfa_sf`` instruction takes three operands: an unsigned
-    LEB128 value representing a register number R, a signed LEB128 factored byte
-    displacement B, and an unsigned LEB128 value representing a target
-    architecture specific address space identifier AS. The required action is to
-    define the current CFA rule to be the result of evaluating the DWARF
-    operation expression ``DW_OP_constu AS; DW_OP_LLVM_aspace_bregx R,
-    B * data_alignment_factor`` as a location description.
+    The ``DW_CFA_LLVM_def_aspace_cfa_sf`` instruction takes three operands: an
+    unsigned LEB128 value representing a register number R, a signed LEB128
+    factored byte displacement B, and an unsigned LEB128 value representing a
+    target architecture specific address space identifier AS. The required
+    action is to define the current CFA rule to be the result of evaluating the
+    DWARF operation expression ``DW_OP_constu AS; DW_OP_LLVM_aspace_bregx R, B *
+    data_alignment_factor`` as a location description.
 
     If AS is not one of the values defined by the target architecture specific
     ``DW_ASPACE_*`` values, then the DWARF expression is ill-formed.

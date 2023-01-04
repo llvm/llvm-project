@@ -1016,9 +1016,13 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::BSWAP:
   case ISD::VP_BSWAP:
   case ISD::CTLZ:
+  case ISD::VP_CTLZ:
   case ISD::CTTZ:
+  case ISD::VP_CTTZ:
   case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::VP_CTLZ_ZERO_UNDEF:
   case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ZERO_UNDEF:
   case ISD::CTPOP:
   case ISD::VP_CTPOP:
   case ISD::FABS: case ISD::VP_FABS:
@@ -4097,11 +4101,15 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::BSWAP:
   case ISD::VP_BSWAP:
   case ISD::CTLZ:
+  case ISD::VP_CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::VP_CTLZ_ZERO_UNDEF:
   case ISD::CTPOP:
   case ISD::VP_CTPOP:
   case ISD::CTTZ:
+  case ISD::VP_CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ZERO_UNDEF:
   case ISD::FNEG: case ISD::VP_FNEG:
   case ISD::VP_FABS:
   case ISD::VP_SQRT:

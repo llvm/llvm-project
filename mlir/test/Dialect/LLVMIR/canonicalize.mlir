@@ -1,4 +1,4 @@
-// RUN: mlir-opt -canonicalize %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -canonicalize="test-convergence" %s -split-input-file | FileCheck %s
 
 // CHECK-LABEL: fold_extractvalue
 llvm.func @fold_extractvalue() -> i32 {

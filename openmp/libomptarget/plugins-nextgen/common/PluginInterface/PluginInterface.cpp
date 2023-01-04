@@ -16,6 +16,9 @@
 #include "omptarget.h"
 #include "omptargetplugin.h"
 
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Support/Error.h"
+
 #include <cstdint>
 #include <limits>
 
@@ -355,6 +358,34 @@ Error GenericDeviceTy::registerKernelOffloadEntry(
   Image.getOffloadEntryTable().addEntry(DeviceEntry);
 
   return Plugin::success();
+}
+
+Expected<OMPTgtExecModeFlags>
+GenericDeviceTy::getExecutionModeForKernel(StringRef Name,
+                                           DeviceImageTy &Image) {
+  // Create a metadata object for the exec mode global (auto-generated).
+  StaticGlobalTy<llvm::omp::OMPTgtExecModeFlags> ExecModeGlobal(Name.data(),
+                                                                "_exec_mode");
+
+  // Retrieve execution mode for the kernel. This may fail since some kernels
+  // may not have an execution mode.
+  GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
+  if (auto Err = GHandler.readGlobalFromImage(*this, Image, ExecModeGlobal)) {
+    // Consume the error since it is acceptable to fail.
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Failed to read execution mode for '%s': %s\n"
+       "Using default SPMD (2) execution mode\n",
+       Name.data(), ErrStr.data());
+
+    return OMP_TGT_EXEC_MODE_SPMD;
+  }
+
+  // Check that the retrieved execution mode is valid.
+  if (!GenericKernelTy::isValidExecutionMode(ExecModeGlobal.getValue()))
+    return Plugin::error("Invalid execution mode %d for '%s'",
+                         ExecModeGlobal.getValue(), Name.data());
+
+  return ExecModeGlobal.getValue();
 }
 
 Error GenericDeviceTy::registerHostPinnedMemoryBuffer(const void *Buffer,
