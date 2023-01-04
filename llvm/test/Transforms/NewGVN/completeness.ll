@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=newgvn -enable-phi-of-ops=true -S | FileCheck %s
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-define i32 @test1(i32, i8**) {
+define i32 @test1(i32, ptr) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP0:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP5:%.*]]
@@ -27,7 +27,7 @@ define i32 @test1(i32, i8**) {
   ret i32 %7
 }
 ;; Dependent phi of ops
-define i32 @test1b(i32, i8**) {
+define i32 @test1b(i32, ptr) {
 ; CHECK-LABEL: @test1b(
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP0:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP5:%.*]]
@@ -152,38 +152,38 @@ final:
 }
 
 ;; This example is a bit contrived because we can't create fake memoryuses, so we use two loads in the if blocks
-define i32 @test4(i32, i8**, i32* noalias, i32* noalias) {
+define i32 @test4(i32, ptr, ptr noalias, ptr noalias) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    store i32 5, i32* [[TMP2:%.*]], align 4
-; CHECK-NEXT:    store i32 7, i32* [[TMP3:%.*]], align 4
+; CHECK-NEXT:    store i32 5, ptr [[TMP2:%.*]], align 4
+; CHECK-NEXT:    store i32 7, ptr [[TMP3:%.*]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i32 [[TMP0:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP7:%.*]]
 ; CHECK:         br label [[TMP8:%.*]]
 ; CHECK:         br label [[TMP8]]
 ; CHECK:         [[DOT01:%.*]] = phi i32 [ 5, [[TMP6]] ], [ 7, [[TMP7]] ]
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i32* [ [[TMP2]], [[TMP6]] ], [ [[TMP3]], [[TMP7]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOT0]], align 4
+; CHECK-NEXT:    [[DOT0:%.*]] = phi ptr [ [[TMP2]], [[TMP6]] ], [ [[TMP3]], [[TMP7]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOT0]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul nsw i32 [[TMP9]], 15
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul nsw i32 [[TMP10]], [[DOT01]]
 ; CHECK-NEXT:    ret i32 [[TMP11]]
 ;
-  store i32 5, i32* %2, align 4
-  store i32 7, i32* %3, align 4
+  store i32 5, ptr %2, align 4
+  store i32 7, ptr %3, align 4
   %5 = icmp ne i32 %0, 0
   br i1 %5, label %6, label %8
 
 ; <label>:6:                                      ; preds = %4
-  %7 = load i32, i32* %2, align 4
+  %7 = load i32, ptr %2, align 4
   br label %10
 
 ; <label>:8:                                      ; preds = %4
-  %9 = load i32, i32* %3, align 4
+  %9 = load i32, ptr %3, align 4
   br label %10
 
 ; <label>:10:                                     ; preds = %8, %6
   %.01 = phi i32 [ %7, %6 ], [ %9, %8 ]
-  %.0 = phi i32* [ %2, %6 ], [ %3, %8 ]
-  %11 = load i32, i32* %.0, align 4
+  %.0 = phi ptr [ %2, %6 ], [ %3, %8 ]
+  %11 = load i32, ptr %.0, align 4
   %12 = mul nsw i32 %11, 15
   %13 = mul nsw i32 %12, %.01
   ret i32 %13
@@ -207,8 +207,8 @@ define i64 @test5(i64 %arg) {
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = phi i64 [ [[ARG]], [[BB2]] ], [ [[TMP9]], [[BB5]] ]
 ; CHECK-NEXT:    [[TMP9]] = add nsw i64 [[TMP8]], -1
-; CHECK-NEXT:    [[TMP10:%.*]] = load i64, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @global, i64 0, i64 0), align 16
-; CHECK-NEXT:    [[TMP11:%.*]] = load i64, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @global.1, i64 0, i64 0), align 16
+; CHECK-NEXT:    [[TMP10:%.*]] = load i64, ptr @global, align 16
+; CHECK-NEXT:    [[TMP11:%.*]] = load i64, ptr @global.1, align 16
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul nsw i64 [[TMP11]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[TMP12]], 0
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[BB5]], label [[BB14:%.*]]
@@ -219,12 +219,12 @@ define i64 @test5(i64 %arg) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = phi i64 [ [[TMP24:%.*]], [[BB15]] ], [ [[TMP11]], [[BB14]] ]
 ; CHECK-NEXT:    [[TMP17:%.*]] = phi i64 [ [[TMP22:%.*]], [[BB15]] ], [ [[TMP10]], [[BB14]] ]
 ; CHECK-NEXT:    [[TMP18:%.*]] = phi i64 [ [[TMP20:%.*]], [[BB15]] ], [ 0, [[BB14]] ]
-; CHECK-NEXT:    store i64 [[PHIOFOPS]], i64* [[TMP]], align 8
+; CHECK-NEXT:    store i64 [[PHIOFOPS]], ptr [[TMP]], align 8
 ; CHECK-NEXT:    [[TMP20]] = add nuw nsw i64 [[TMP18]], 1
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [100 x i64], [100 x i64]* @global, i64 0, i64 [[TMP20]]
-; CHECK-NEXT:    [[TMP22]] = load i64, i64* [[TMP21]], align 8
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [100 x i64], [100 x i64]* @global.1, i64 0, i64 [[TMP20]]
-; CHECK-NEXT:    [[TMP24]] = load i64, i64* [[TMP23]], align 8
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [100 x i64], ptr @global, i64 0, i64 [[TMP20]]
+; CHECK-NEXT:    [[TMP22]] = load i64, ptr [[TMP21]], align 8
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [100 x i64], ptr @global.1, i64 0, i64 [[TMP20]]
+; CHECK-NEXT:    [[TMP24]] = load i64, ptr [[TMP23]], align 8
 ; CHECK-NEXT:    [[TMP25]] = mul nsw i64 [[TMP24]], [[TMP22]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[TMP20]], [[TMP25]]
 ; CHECK-NEXT:    br i1 [[TMP26]], label [[BB4:%.*]], label [[BB15]]
@@ -239,7 +239,6 @@ bb:
   br i1 %tmp1, label %bb28, label %bb2
 
 bb2:                                              ; preds = %bb
-  %tmp3 = bitcast i64* %tmp to i8*
   br label %bb7
 
 bb4:                                              ; preds = %bb15
@@ -252,8 +251,8 @@ bb5:                                              ; preds = %bb7, %bb4
 bb7:                                              ; preds = %bb5, %bb2
   %tmp8 = phi i64 [ %arg, %bb2 ], [ %tmp9, %bb5 ]
   %tmp9 = add nsw i64 %tmp8, -1
-  %tmp10 = load i64, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @global, i64 0, i64 0), align 16
-  %tmp11 = load i64, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @global.1, i64 0, i64 0), align 16
+  %tmp10 = load i64, ptr @global, align 16
+  %tmp11 = load i64, ptr @global.1, align 16
   %tmp12 = mul nsw i64 %tmp11, %tmp10
   %tmp13 = icmp eq i64 %tmp12, 0
   br i1 %tmp13, label %bb5, label %bb14
@@ -267,12 +266,12 @@ bb15:                                             ; preds = %bb15, %bb14
   %tmp18 = phi i64 [ %tmp20, %bb15 ], [ 0, %bb14 ]
 ;; This multiply is an op of phis which is really equivalent to phi(tmp25, tmp12)
   %tmp19 = mul nsw i64 %tmp16, %tmp17
-  store i64 %tmp19, i64* %tmp, align 8
+  store i64 %tmp19, ptr %tmp, align 8
   %tmp20 = add nuw nsw i64 %tmp18, 1
-  %tmp21 = getelementptr inbounds [100 x i64], [100 x i64]* @global, i64 0, i64 %tmp20
-  %tmp22 = load i64, i64* %tmp21, align 8
-  %tmp23 = getelementptr inbounds [100 x i64], [100 x i64]* @global.1, i64 0, i64 %tmp20
-  %tmp24 = load i64, i64* %tmp23, align 8
+  %tmp21 = getelementptr inbounds [100 x i64], ptr @global, i64 0, i64 %tmp20
+  %tmp22 = load i64, ptr %tmp21, align 8
+  %tmp23 = getelementptr inbounds [100 x i64], ptr @global.1, i64 0, i64 %tmp20
+  %tmp24 = load i64, ptr %tmp23, align 8
   %tmp25 = mul nsw i64 %tmp24, %tmp22
   %tmp26 = icmp eq i64 %tmp20, %tmp25
   br i1 %tmp26, label %bb4, label %bb15
@@ -285,7 +284,7 @@ bb28:                                             ; preds = %bb27, %bb
 }
 
 ;; These icmps are all equivalent to phis of constants
-define i8 @test6(i8* %addr) {
+define i8 @test6(ptr %addr) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry-block:
 ; CHECK-NEXT:    br label %main-loop
@@ -293,10 +292,10 @@ define i8 @test6(i8* %addr) {
 ; CHECK-NEXT:    [[PHIOFOPS1:%.*]] = phi i1 [ true, %entry-block ], [ false, [[CORE:%.*]] ]
 ; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i1 [ false, %entry-block ], [ true, [[CORE]] ]
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i8 [ 0, %entry-block ], [ 1, [[CORE]] ]
-; CHECK-NEXT:    store volatile i8 0, i8* [[ADDR:%.*]]
+; CHECK-NEXT:    store volatile i8 0, ptr [[ADDR:%.*]]
 ; CHECK-NEXT:    br i1 [[PHIOFOPS1]], label %busy-wait-phi-0, label [[EXIT:%.*]]
 ; CHECK:       busy-wait-phi-0:
-; CHECK-NEXT:    [[LOAD:%.*]] = load volatile i8, i8* [[ADDR]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load volatile i8, ptr [[ADDR]]
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[LOAD]], 0
 ; CHECK-NEXT:    br i1 [[ICMP]], label %busy-wait-phi-0, label [[CORE]]
 ; CHECK:       core:
@@ -312,11 +311,11 @@ entry-block:
 main-loop:
   %phi = phi i8 [ 0, %entry-block ], [ 1, %core ]
   %switch_0 = icmp eq i8 %phi, 0
-  store volatile i8 0, i8* %addr
+  store volatile i8 0, ptr %addr
   br i1 %switch_0, label %busy-wait-phi-0, label %exit
 
 busy-wait-phi-0:
-  %load = load volatile i8, i8* %addr
+  %load = load volatile i8, ptr %addr
   %icmp = icmp eq i8 %load, 0
   br i1 %icmp, label %busy-wait-phi-0, label %core
 
@@ -420,9 +419,9 @@ define void @test10() {
 ; CHECK-NEXT:  b:
 ; CHECK-NEXT:    br label [[G:%.*]]
 ; CHECK:       g:
-; CHECK-NEXT:    [[N:%.*]] = phi i32* [ [[H:%.*]], [[I:%.*]] ], [ null, [[B:%.*]] ]
-; CHECK-NEXT:    [[H]] = getelementptr i32, i32* [[N]], i64 1
-; CHECK-NEXT:    [[J:%.*]] = icmp eq i32* [[H]], inttoptr (i64 32 to i32*)
+; CHECK-NEXT:    [[N:%.*]] = phi ptr [ [[H:%.*]], [[I:%.*]] ], [ null, [[B:%.*]] ]
+; CHECK-NEXT:    [[H]] = getelementptr i32, ptr [[N]], i64 1
+; CHECK-NEXT:    [[J:%.*]] = icmp eq ptr [[H]], inttoptr (i64 32 to ptr)
 ; CHECK-NEXT:    br i1 [[J]], label [[C:%.*]], label [[I]]
 ; CHECK:       i:
 ; CHECK-NEXT:    br i1 undef, label [[K:%.*]], label [[G]]
@@ -434,27 +433,27 @@ define void @test10() {
 ; CHECK-NEXT:    ret void
 ;
 b:
-  %m = getelementptr i32, i32* null, i64 8
+  %m = getelementptr i32, ptr null, i64 8
   br label %g
 
 g:                                                ; preds = %i, %b
-  %n = phi i32* [ %h, %i ], [ null, %b ]
-  %h = getelementptr i32, i32* %n, i64 1
-  %j = icmp eq i32* %h, %m
+  %n = phi ptr [ %h, %i ], [ null, %b ]
+  %h = getelementptr i32, ptr %n, i64 1
+  %j = icmp eq ptr %h, %m
   br i1 %j, label %c, label %i
 
 i:                                                ; preds = %g
   br i1 undef, label %k, label %g
 
 k:                                                ; preds = %i
-  %l = icmp eq i32* %n, %m
+  %l = icmp eq ptr %n, %m
   br i1 %l, label %c, label %o
 
 o:                                                ; preds = %k
   br label %c
 
 c:                                                ; preds = %o, %k, %g
-  %0 = phi i32* [ undef, %o ], [ %m, %k ], [ %m, %g ]
+  %0 = phi ptr [ undef, %o ], [ %m, %k ], [ %m, %g ]
   ret void
 }
 
@@ -467,8 +466,8 @@ define void @test11() {
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP:%.*]] = phi i1 [ false, [[BB1]] ], [ true, [[BB:%.*]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32* @wombat()
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32* [[TMP3]], null
+; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @wombat()
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne ptr [[TMP3]], null
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP]], [[TMP4]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[BB6:%.*]], label [[BB7:%.*]]
 ; CHECK:       bb6:
@@ -484,8 +483,8 @@ bb1:                                              ; preds = %bb
 
 bb2:                                              ; preds = %bb1, %bb
   %tmp = phi i1 [ false, %bb1 ], [ true, %bb ]
-  %tmp3 = call i32* @wombat()
-  %tmp4 = icmp ne i32* %tmp3, null
+  %tmp3 = call ptr @wombat()
+  %tmp4 = icmp ne ptr %tmp3, null
   %tmp5 = and i1 %tmp, %tmp4
   br i1 %tmp5, label %bb6, label %bb7
 
@@ -496,7 +495,7 @@ bb7:                                              ; preds = %bb2
   ret void
 }
 
-declare i32* @wombat()
+declare ptr @wombat()
 
 ;; Ensure that when reachability affects a phi of ops, we recompute
 ;; it.  Here, the phi node is marked for recomputation when bb7->bb3
@@ -505,10 +504,10 @@ declare i32* @wombat()
 ;; change in the verifier, as it goes from a constant value to a
 ;; phi of [true, false]
 
-define void @test12(i32* %p) {
+define void @test12(ptr %p) {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* %p
+; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr %p
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[TMP]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB2:%.*]], label [[BB8:%.*]]
 ; CHECK:       bb2:
@@ -523,7 +522,7 @@ define void @test12(i32* %p) {
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %tmp = load i32, i32* %p
+  %tmp = load i32, ptr %p
   %tmp1 = icmp sgt i32 %tmp, 0
   br i1 %tmp1, label %bb2, label %bb8
 
@@ -552,16 +551,16 @@ define void @test13() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP:%.*]] = load i8, i8* null
+; CHECK-NEXT:    [[TMP:%.*]] = load i8, ptr null
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i8 [ [[TMP]], [[BB1]] ], [ [[TMP10:%.*]], [[BB3]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i8* [ null, [[BB1]] ], [ [[TMP6:%.*]], [[BB3]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi ptr [ null, [[BB1]] ], [ [[TMP6:%.*]], [[BB3]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ undef, [[BB1]] ], [ [[TMP9:%.*]], [[BB3]] ]
-; CHECK-NEXT:    [[TMP6]] = getelementptr i8, i8* [[TMP4]], i64 1
+; CHECK-NEXT:    [[TMP6]] = getelementptr i8, ptr [[TMP4]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = sext i8 [[PHIOFOPS]] to i32
 ; CHECK-NEXT:    [[TMP9]] = mul i32 [[TMP5]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10]] = load i8, i8* [[TMP6]]
+; CHECK-NEXT:    [[TMP10]] = load i8, ptr [[TMP6]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i8 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[BB12:%.*]], label [[BB3]]
 ; CHECK:       bb12:
@@ -575,18 +574,18 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb15, %bb12, %bb
-  %tmp = load i8, i8* null
+  %tmp = load i8, ptr null
   %tmp2 = icmp eq i8 %tmp, 8
   br label %bb3
 
 bb3:                                              ; preds = %bb3, %bb1
-  %tmp4 = phi i8* [ null, %bb1 ], [ %tmp6, %bb3 ]
+  %tmp4 = phi ptr [ null, %bb1 ], [ %tmp6, %bb3 ]
   %tmp5 = phi i32 [ undef, %bb1 ], [ %tmp9, %bb3 ]
-  %tmp6 = getelementptr i8, i8* %tmp4, i64 1
-  %tmp7 = load i8, i8* %tmp4
+  %tmp6 = getelementptr i8, ptr %tmp4, i64 1
+  %tmp7 = load i8, ptr %tmp4
   %tmp8 = sext i8 %tmp7 to i32
   %tmp9 = mul i32 %tmp5, %tmp8
-  %tmp10 = load i8, i8* %tmp6
+  %tmp10 = load i8, ptr %tmp6
   %tmp11 = icmp eq i8 %tmp10, 0
   br i1 %tmp11, label %bb12, label %bb3
 
