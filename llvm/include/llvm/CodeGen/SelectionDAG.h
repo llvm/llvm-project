@@ -903,6 +903,38 @@ public:
   std::pair<SDValue, SDValue>
   getStrictFPExtendOrRound(SDValue Op, SDValue Chain, const SDLoc &DL, EVT VT);
 
+  /// Convert *_EXTEND_VECTOR_INREG to *_EXTEND opcode.
+  static unsigned getOpcode_EXTEND(unsigned Opcode) {
+    switch (Opcode) {
+    case ISD::ANY_EXTEND:
+    case ISD::ANY_EXTEND_VECTOR_INREG:
+      return ISD::ANY_EXTEND;
+    case ISD::ZERO_EXTEND:
+    case ISD::ZERO_EXTEND_VECTOR_INREG:
+      return ISD::ZERO_EXTEND;
+    case ISD::SIGN_EXTEND:
+    case ISD::SIGN_EXTEND_VECTOR_INREG:
+      return ISD::SIGN_EXTEND;
+    }
+    llvm_unreachable("Unknown opcode");
+  }
+
+  /// Convert *_EXTEND to *_EXTEND_VECTOR_INREG opcode.
+  static unsigned getOpcode_EXTEND_VECTOR_INREG(unsigned Opcode) {
+    switch (Opcode) {
+    case ISD::ANY_EXTEND:
+    case ISD::ANY_EXTEND_VECTOR_INREG:
+      return ISD::ANY_EXTEND_VECTOR_INREG;
+    case ISD::ZERO_EXTEND:
+    case ISD::ZERO_EXTEND_VECTOR_INREG:
+      return ISD::ZERO_EXTEND_VECTOR_INREG;
+    case ISD::SIGN_EXTEND:
+    case ISD::SIGN_EXTEND_VECTOR_INREG:
+      return ISD::SIGN_EXTEND_VECTOR_INREG;
+    }
+    llvm_unreachable("Unknown opcode");
+  }
+
   /// Convert Op, which must be of integer type, to the
   /// integer type VT, by either any-extending or truncating it.
   SDValue getAnyExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
