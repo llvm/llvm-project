@@ -222,6 +222,8 @@ class MachineIRBuilder {
 
   MachineIRBuilderState State;
 
+  unsigned getOpcodeForMerge(const DstOp &DstOp, ArrayRef<SrcOp> SrcOps) const;
+
 protected:
   void validateTruncExt(const LLT Dst, const LLT Src, bool IsExtend);
 
@@ -966,16 +968,22 @@ public:
   MachineInstrBuilder buildUndef(const DstOp &Res);
 
   /// Build and insert \p Res = G_MERGE_VALUES \p Op0, ...
+  ///               or \p Res = G_BUILD_VECTOR \p Op0, ...
+  ///               or \p Res = G_CONCAT_VECTORS \p Op0, ...
   ///
   /// G_MERGE_VALUES combines the input elements contiguously into a larger
-  /// register.
+  /// register. It is used when the destination register is not a vector.
+  /// G_BUILD_VECTOR combines scalar inputs into a vector register.
+  /// G_CONCAT_VECTORS combines vector inputs into a vector register.
   ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre The entire register \p Res (and no more) must be covered by the input
   ///      registers.
   /// \pre The type of all \p Ops registers must be identical.
   ///
-  /// \return a MachineInstrBuilder for the newly created instruction.
+  /// \return a MachineInstrBuilder for the newly created instruction. The
+  ///         opcode of the new instruction will depend on the types of both
+  ///         the destination and the sources.
   MachineInstrBuilder buildMerge(const DstOp &Res, ArrayRef<Register> Ops);
   MachineInstrBuilder buildMerge(const DstOp &Res,
                                  std::initializer_list<SrcOp> Ops);

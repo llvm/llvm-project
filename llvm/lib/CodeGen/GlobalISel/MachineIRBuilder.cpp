@@ -604,14 +604,25 @@ MachineInstrBuilder MachineIRBuilder::buildMerge(const DstOp &Res,
   // sufficiently large SmallVector to not go through the heap.
   SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
   assert(TmpVec.size() > 1);
-  return buildInstr(TargetOpcode::G_MERGE_VALUES, Res, TmpVec);
+  return buildInstr(getOpcodeForMerge(Res, TmpVec), Res, TmpVec);
 }
 
 MachineInstrBuilder
 MachineIRBuilder::buildMerge(const DstOp &Res,
                              std::initializer_list<SrcOp> Ops) {
   assert(Ops.size() > 1);
-  return buildInstr(TargetOpcode::G_MERGE_VALUES, Res, Ops);
+  return buildInstr(getOpcodeForMerge(Res, Ops), Res, Ops);
+}
+
+unsigned MachineIRBuilder::getOpcodeForMerge(const DstOp &DstOp,
+                                             ArrayRef<SrcOp> SrcOps) const {
+  if (DstOp.getLLTTy(*getMRI()).isVector()) {
+    if (SrcOps[0].getLLTTy(*getMRI()).isVector())
+      return TargetOpcode::G_CONCAT_VECTORS;
+    return TargetOpcode::G_BUILD_VECTOR;
+  }
+
+  return TargetOpcode::G_MERGE_VALUES;
 }
 
 MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<LLT> Res,
@@ -674,6 +685,9 @@ MachineIRBuilder::buildBuildVectorTrunc(const DstOp &Res,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
   SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
+  if (TmpVec[0].getLLTTy(*getMRI()).getSizeInBits() ==
+      Res.getLLTTy(*getMRI()).getElementType().getSizeInBits())
+    return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
   return buildInstr(TargetOpcode::G_BUILD_VECTOR_TRUNC, Res, TmpVec);
 }
 
@@ -1159,7 +1173,7 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
     break;
   }
   case TargetOpcode::G_MERGE_VALUES: {
-    assert(!SrcOps.empty() && "invalid trivial sequence");
+    assert(SrcOps.size() >= 2 && "invalid trivial sequence");
     assert(DstOps.size() == 1 && "Invalid Dst");
     assert(llvm::all_of(SrcOps,
                         [&, this](const SrcOp &Op) {
@@ -1171,13 +1185,8 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
                    SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
                DstOps[0].getLLTTy(*getMRI()).getSizeInBits() &&
            "input operands do not cover output register");
-    if (SrcOps.size() == 1)
-      return buildCast(DstOps[0], SrcOps[0]);
-    if (DstOps[0].getLLTTy(*getMRI()).isVector()) {
-      if (SrcOps[0].getLLTTy(*getMRI()).isVector())
-        return buildInstr(TargetOpcode::G_CONCAT_VECTORS, DstOps, SrcOps);
-      return buildInstr(TargetOpcode::G_BUILD_VECTOR, DstOps, SrcOps);
-    }
+    assert(!DstOps[0].getLLTTy(*getMRI()).isVector() &&
+           "vectors should be built with G_CONCAT_VECTOR or G_BUILD_VECTOR");
     break;
   }
   case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
@@ -1237,9 +1246,6 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
                                  SrcOps[0].getLLTTy(*getMRI());
                         }) &&
            "type mismatch in input list");
-    if (SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
-        DstOps[0].getLLTTy(*getMRI()).getElementType().getSizeInBits())
-      return buildInstr(TargetOpcode::G_BUILD_VECTOR, DstOps, SrcOps);
     break;
   }
   case TargetOpcode::G_CONCAT_VECTORS: {
