@@ -311,15 +311,14 @@ static void updateChildPruning(const DWARFDie &Die, CompileUnit &CU,
 /// \return true when this DIE and all of its children are only
 /// forward declarations to types defined in external clang modules
 /// (i.e., forward declarations that are children of a DW_TAG_module).
-static bool analyzeContextInfo(
+static void analyzeContextInfo(
     const DWARFDie &DIE, unsigned ParentIdx, CompileUnit &CU,
     DeclContext *CurrentDeclContext, DeclContextTree &Contexts,
     uint64_t ModulesEndOffset, swiftInterfacesMap *ParseableSwiftInterfaces,
-    std::function<void(const Twine &, const DWARFDie &)> ReportWarning,
-    bool InImportedModule = false) {
+    std::function<void(const Twine &, const DWARFDie &)> ReportWarning) {
   // LIFO work list.
   std::vector<ContextWorklistItem> Worklist;
-  Worklist.emplace_back(DIE, CurrentDeclContext, ParentIdx, InImportedModule);
+  Worklist.emplace_back(DIE, CurrentDeclContext, ParentIdx, false);
 
   while (!Worklist.empty()) {
     ContextWorklistItem Current = Worklist.back();
@@ -387,8 +386,6 @@ static bool analyzeContextInfo(
                             Current.InImportedModule);
     }
   }
-
-  return CU.getInfo(DIE).Prune;
 }
 
 static bool dieNeedsChildrenToBeMeaningful(uint32_t Tag) {
@@ -789,8 +786,14 @@ void DWARFLinker::lookForDIEsToKeep(AddressesMap &AddressesMap,
     unsigned Idx = Current.CU.getOrigUnit().getDIEIndex(Current.Die);
     CompileUnit::DIEInfo &MyInfo = Current.CU.getInfo(Idx);
 
-    if (MyInfo.Prune)
-      continue;
+    if (MyInfo.Prune) {
+      // We're walking the dependencies of a module forward declaration that was
+      // kept because there is no definition.
+      if (Current.Flags & TF_DependencyWalk)
+        MyInfo.Prune = false;
+      else
+        continue;
+    }
 
     // If the Keep flag is set, we are marking a required DIE's dependencies.
     // If our target is already marked as kept, we're all set.
@@ -848,6 +851,58 @@ void DWARFLinker::lookForDIEsToKeep(AddressesMap &AddressesMap,
     Worklist.emplace_back(MyInfo.ParentIdx, Current.CU, ParFlags);
   }
 }
+
+#ifndef NDEBUG
+/// A broken link in the keep chain. By recording both the parent and the child
+/// we can show only broken links for DIEs with multiple children.
+struct BrokenLink {
+  BrokenLink(DWARFDie Parent, DWARFDie Child) : Parent(Parent), Child(Child) {}
+  DWARFDie Parent;
+  DWARFDie Child;
+};
+
+/// Verify the keep chain by looking for DIEs that are kept but who's parent
+/// isn't.
+static void verifyKeepChain(CompileUnit &CU) {
+  std::vector<DWARFDie> Worklist;
+  Worklist.push_back(CU.getOrigUnit().getUnitDIE());
+
+  // List of broken links.
+  std::vector<BrokenLink> BrokenLinks;
+
+  while (!Worklist.empty()) {
+    const DWARFDie Current = Worklist.back();
+    Worklist.pop_back();
+
+    const bool CurrentDieIsKept = CU.getInfo(Current).Keep;
+
+    for (DWARFDie Child : reverse(Current.children())) {
+      Worklist.push_back(Child);
+
+      const bool ChildDieIsKept = CU.getInfo(Child).Keep;
+      if (!CurrentDieIsKept && ChildDieIsKept)
+        BrokenLinks.emplace_back(Current, Child);
+    }
+  }
+
+  if (!BrokenLinks.empty()) {
+    for (BrokenLink Link : BrokenLinks) {
+      WithColor::error() << formatv(
+          "Found invalid link in keep chain between {0:x} and {1:x}\n",
+          Link.Parent.getOffset(), Link.Child.getOffset());
+
+      errs() << "Parent:";
+      Link.Parent.dump(errs(), 0, {});
+      CU.getInfo(Link.Parent).dump();
+
+      errs() << "Child:";
+      Link.Child.dump(errs(), 2, {});
+      CU.getInfo(Link.Child).dump();
+    }
+    report_fatal_error("invalid keep chain");
+  }
+}
+#endif
 
 /// Assign an abbreviation number to \p Abbrev.
 ///
@@ -934,9 +989,9 @@ unsigned DWARFLinker::DIECloner::cloneDieReferenceAttribute(
   }
 
   if (!RefInfo.Clone) {
-    assert(Ref > InputDIE.getOffset());
     // We haven't cloned this DIE yet. Just create an empty one and
     // store it. It'll get really cloned when we process it.
+    RefInfo.UnclonedReference = true;
     RefInfo.Clone = DIE::get(DIEAlloc, dwarf::Tag(RefDie.getTag()));
   }
   NewRefDie = RefInfo.Clone;
@@ -949,8 +1004,8 @@ unsigned DWARFLinker::DIECloner::cloneDieReferenceAttribute(
     // FIXME: we should be able to design DIEEntry reliance on
     // DwarfDebug away.
     uint64_t Attr;
-    if (Ref < InputDIE.getOffset()) {
-      // We must have already cloned that DIE.
+    if (Ref < InputDIE.getOffset() && !RefInfo.UnclonedReference) {
+      // We have already cloned that DIE.
       uint32_t NewRefOffset =
           RefUnit->getStartOffset() + NewRefDie->getOffset();
       Attr = NewRefOffset;
@@ -2586,12 +2641,16 @@ Error DWARFLinker::link() {
         CurrentUnit->markEverythingAsKept();
       copyInvariantDebugSection(*OptContext.File.Dwarf);
     } else {
-      for (auto &CurrentUnit : OptContext.CompileUnits)
+      for (auto &CurrentUnit : OptContext.CompileUnits) {
         lookForDIEsToKeep(*OptContext.File.Addresses,
                           OptContext.File.Addresses->getValidAddressRanges(),
                           OptContext.CompileUnits,
                           CurrentUnit->getOrigUnit().getUnitDIE(),
                           OptContext.File, *CurrentUnit, 0);
+#ifndef NDEBUG
+        verifyKeepChain(*CurrentUnit);
+#endif
+      }
     }
 
     // The calls to applyValidRelocs inside cloneDIE will walk the reloc
