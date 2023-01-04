@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
 
   // Parse the file now...
   SMDiagnostic Err;
-  auto SetDataLayout = [](StringRef) -> std::optional<std::string> {
+  auto SetDataLayout = [](StringRef, StringRef) -> std::optional<std::string> {
     if (ClDataLayout.empty())
       return std::nullopt;
     return ClDataLayout;
