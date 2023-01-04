@@ -69,8 +69,7 @@ void AllocCombinerPass::combineAdjustments(BinaryFunction &BF) {
   BinaryContext &BC = BF.getBinaryContext();
   for (BinaryBasicBlock &BB : BF) {
     MCInst *Prev = nullptr;
-    for (auto I = BB.rbegin(), E = BB.rend(); I != E; ++I) {
-      MCInst &Inst = *I;
+    for (MCInst &Inst : llvm::reverse(BB)) {
       if (isIndifferentToSP(Inst, BC))
         continue; // Skip updating Prev
 
