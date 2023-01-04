@@ -331,6 +331,10 @@ Bug Fixes
   `Issue 58800 <https://github.com/llvm/llvm-project/issues/58800>`_
 - Fix an issue that triggers a crash if we instantiate a hidden friend functions.
   This fixes `Issue 54457 <https://github.com/llvm/llvm-project/issues/54457>`_
+- Fix an issue where -frewrite-includes generated line control directives with
+  incorrect line numbers in some cases when a header file used an end of line
+  character sequence that differed from the primary source file.
+  `Issue 59736 <https://github.com/llvm/llvm-project/issues/59736>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
