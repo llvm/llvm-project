@@ -1614,7 +1614,7 @@ public:
         Value val = b.create<arith::UIToFPOp>(b.getF32Type(), in);
         scaleN = b.create<arith::UIToFPOp>(b.getF32Type(), scaleN);
         scaleD = b.create<arith::UIToFPOp>(b.getF32Type(), scaleD);
-        offset = b.create<arith::UIToFPOp>(b.getF32Type(), offset);
+        offset = b.create<arith::SIToFPOp>(b.getF32Type(), offset);
         val = b.create<arith::MulFOp>(val, scaleD);
         val = b.create<arith::AddFOp>(val, offset);
         val = b.create<arith::DivFOp>(val, scaleN);
