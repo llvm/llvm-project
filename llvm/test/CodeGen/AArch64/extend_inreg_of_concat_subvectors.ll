@@ -83,11 +83,11 @@ define void @zext_of_concat_extrause(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) nou
 define void @aext_of_concat(ptr %a, ptr %b, ptr %c, ptr %d) nounwind {
 ; CHECK-LABEL: aext_of_concat:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldr d0, [x1]
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    add.2s v0, v1, v0
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    add.2s v0, v0, v1
 ; CHECK-NEXT:    ldr q1, [x2]
-; CHECK-NEXT:    zip1.4s v0, v0, v0
+; CHECK-NEXT:    ushll.2d v0, v0, #0
 ; CHECK-NEXT:    add.4s v0, v0, v1
 ; CHECK-NEXT:    str q0, [x2]
 ; CHECK-NEXT:    ret

@@ -1755,7 +1755,8 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::AssertAlign:        return visitAssertAlign(N);
   case ISD::SIGN_EXTEND_INREG:  return visitSIGN_EXTEND_INREG(N);
   case ISD::SIGN_EXTEND_VECTOR_INREG:
-  case ISD::ZERO_EXTEND_VECTOR_INREG: return visitEXTEND_VECTOR_INREG(N);
+  case ISD::ZERO_EXTEND_VECTOR_INREG:
+  case ISD::ANY_EXTEND_VECTOR_INREG: return visitEXTEND_VECTOR_INREG(N);
   case ISD::TRUNCATE:           return visitTRUNCATE(N);
   case ISD::BITCAST:            return visitBITCAST(N);
   case ISD::BUILD_PAIR:         return visitBUILD_PAIR(N);
@@ -11690,9 +11691,11 @@ static SDValue tryToFoldExtendOfConstant(SDNode *N, const TargetLowering &TLI,
   SDLoc DL(N);
 
   assert((Opcode == ISD::SIGN_EXTEND || Opcode == ISD::ZERO_EXTEND ||
-         Opcode == ISD::ANY_EXTEND || Opcode == ISD::SIGN_EXTEND_VECTOR_INREG ||
-         Opcode == ISD::ZERO_EXTEND_VECTOR_INREG)
-         && "Expected EXTEND dag node in input!");
+          Opcode == ISD::ANY_EXTEND ||
+          Opcode == ISD::SIGN_EXTEND_VECTOR_INREG ||
+          Opcode == ISD::ZERO_EXTEND_VECTOR_INREG ||
+          Opcode == ISD::ANY_EXTEND_VECTOR_INREG) &&
+         "Expected EXTEND dag node in input!");
 
   // fold (sext c1) -> c1
   // fold (zext c1) -> c1
@@ -13555,7 +13558,8 @@ foldExtendVectorInregToExtendOfSubvector(SDNode *N, const TargetLowering &TLI,
       VT.changeVectorElementType(Src.getValueType().getVectorElementType());
 
   assert((InregOpcode == ISD::SIGN_EXTEND_VECTOR_INREG ||
-          InregOpcode == ISD::ZERO_EXTEND_VECTOR_INREG) &&
+          InregOpcode == ISD::ZERO_EXTEND_VECTOR_INREG ||
+          InregOpcode == ISD::ANY_EXTEND_VECTOR_INREG) &&
          "Expected EXTEND_VECTOR_INREG dag node in input!");
 
   // Profitability check: our operand must be an one-use CONCAT_VECTORS.
@@ -13579,9 +13583,13 @@ SDValue DAGCombiner::visitEXTEND_VECTOR_INREG(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
 
-  // {s/z}ext_vector_inreg(undef) = 0 because the top bits must be the same.
-  if (N0.isUndef())
-    return DAG.getConstant(0, SDLoc(N), VT);
+  if (N0.isUndef()) {
+    // aext_vector_inreg(undef) = undef because the top bits are undefined.
+    // {s/z}ext_vector_inreg(undef) = 0 because the top bits must be the same.
+    return N->getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG
+               ? DAG.getUNDEF(VT)
+               : DAG.getConstant(0, SDLoc(N), VT);
+  }
 
   if (SDValue Res = tryToFoldExtendOfConstant(N, TLI, DAG, LegalTypes))
     return Res;
