@@ -6046,23 +6046,15 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
         UnsignedDivisionByConstantInfo::get(Divisor, LeadingZeros);
     unsigned PreShift = 0, PostShift = 0;
 
-    // If the divisor is even, we can avoid using the expensive fixup by
-    // shifting the divided value upfront.
-    if (magics.IsAdd && !Divisor[0]) {
-      PreShift = Divisor.countTrailingZeros();
-      // Get magic number for the shifted divisor.
-      magics = UnsignedDivisionByConstantInfo::get(Divisor.lshr(PreShift),
-                                                   PreShift + LeadingZeros);
-      assert(!magics.IsAdd && "Should use cheap fixup now");
-    }
-
     unsigned SelNPQ;
     if (!magics.IsAdd || Divisor.isOne()) {
       assert(magics.ShiftAmount < Divisor.getBitWidth() &&
              "We shouldn't generate an undefined shift!");
       PostShift = magics.ShiftAmount;
+      PreShift = magics.PreShift;
       SelNPQ = false;
     } else {
+      assert(magics.PreShift == 0 && "Unexpected pre-shift");
       PostShift = magics.ShiftAmount - 1;
       SelNPQ = true;
     }
