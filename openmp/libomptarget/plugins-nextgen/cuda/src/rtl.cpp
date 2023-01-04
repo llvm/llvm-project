@@ -784,8 +784,10 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "Error in cuDeviceGetAttribute: %s");
   }
 
-  /// See GenericDeviceTy::getArch().
-  std::string getArch() const override { return ComputeCapability.str(); }
+  /// See GenericDeviceTy::getComputeUnitKind().
+  std::string getComputeUnitKind() const override {
+    return ComputeCapability.str();
+  }
 
 private:
   using CUDAStreamManagerTy = GenericDeviceResourceManagerTy<CUDAStreamRef>;
@@ -867,7 +869,7 @@ public:
 /// Class implementing the CUDA-specific functionalities of the plugin.
 struct CUDAPluginTy final : public GenericPluginTy {
   /// Create a CUDA plugin.
-  CUDAPluginTy() : GenericPluginTy() {}
+  CUDAPluginTy() : GenericPluginTy(getTripleArch()) {}
 
   /// This class should not be copied.
   CUDAPluginTy(const CUDAPluginTy &) = delete;
