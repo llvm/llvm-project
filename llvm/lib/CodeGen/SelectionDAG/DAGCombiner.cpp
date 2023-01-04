@@ -13554,8 +13554,9 @@ foldExtendVectorInregToExtendOfSubvector(SDNode *N, const TargetLowering &TLI,
 
   SDValue Src = N->getOperand(0);
   EVT VT = N->getValueType(0);
-  EVT SrcVT =
-      VT.changeVectorElementType(Src.getValueType().getVectorElementType());
+  EVT SrcVT = EVT::getVectorVT(*DAG.getContext(),
+                               Src.getValueType().getVectorElementType(),
+                               VT.getVectorElementCount());
 
   assert((InregOpcode == ISD::SIGN_EXTEND_VECTOR_INREG ||
           InregOpcode == ISD::ZERO_EXTEND_VECTOR_INREG ||
