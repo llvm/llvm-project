@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -canonicalize  | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -canonicalize="test-convergence" | FileCheck %s
 
 // CHECK-LABEL: func @known_oob_load
 func.func @known_oob_load(%arg0: memref<4xf32>) -> f32 {

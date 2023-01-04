@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -canonicalize | FileCheck %s
+// RUN: mlir-opt %s -canonicalize="test-convergence" | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // UnrealizedConversionCastOp
