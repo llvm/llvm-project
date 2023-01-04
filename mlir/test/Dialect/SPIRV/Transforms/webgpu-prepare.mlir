@@ -15,9 +15,9 @@ spirv.module Logical GLSL450 {
 // CHECK-NEXT:       [[LHSHI:%.+]]   = spirv.ShiftRightLogical [[ARG0]], [[CST16]] : i32
 // CHECK-NEXT:       [[RHSLOW:%.+]]  = spirv.BitwiseAnd [[ARG1]], [[CSTMASK]] : i32
 // CHECK-NEXT:       [[RHSHI:%.+]]   = spirv.ShiftRightLogical [[ARG1]], [[CST16]] : i32
-// CHECK-NEXT:       [[RESHI0:%.+]]  = spirv.IMul [[LHSHI]], [[RHSHI]] : i32
-// CHECK-NEXT:       [[MID0:%.+]]    = spirv.IMul [[LHSHI]], [[RHSLOW]] : i32
-// CHECK-NEXT:       [[MID1:%.+]]    = spirv.IMul [[LHSLOW]], [[RHSHI]] : i32
+// CHECK-DAG:        [[RESHI0:%.+]]  = spirv.IMul [[LHSHI]], [[RHSHI]] : i32
+// CHECK-DAG:        [[MID0:%.+]]    = spirv.IMul [[LHSHI]], [[RHSLOW]] : i32
+// CHECK-DAG:        [[MID1:%.+]]    = spirv.IMul [[LHSLOW]], [[RHSHI]] : i32
 // CHECK-NEXT:       [[MID:%.+]]     = spirv.IAdd [[MID0]], [[MID1]] : i32
 // CHECK-NEXT:       [[RESHI1:%.+]]  = spirv.ShiftRightLogical [[MID]], [[CST16]] : i32
 // CHECK-NEXT:       [[RESHI:%.+]]   = spirv.IAdd [[RESHI0]], [[RESHI1]] : i32
@@ -37,9 +37,9 @@ spirv.func @umul_extended_i32(%arg0 : i32, %arg1 : i32) -> !spirv.struct<(i32, i
 // CHECK-NEXT:       [[LHSHI:%.+]]   = spirv.ShiftRightLogical [[ARG0]], [[CST16]] : vector<3xi32>
 // CHECK-NEXT:       [[RHSLOW:%.+]]  = spirv.BitwiseAnd [[ARG1]], [[CSTMASK]] : vector<3xi32>
 // CHECK-NEXT:       [[RHSHI:%.+]]   = spirv.ShiftRightLogical [[ARG1]], [[CST16]] : vector<3xi32>
-// CHECK-NEXT:       [[RESHI0:%.+]]  = spirv.IMul [[LHSHI]], [[RHSHI]] : vector<3xi32>
-// CHECK-NEXT:       [[MID0:%.+]]    = spirv.IMul [[LHSHI]], [[RHSLOW]] : vector<3xi32>
-// CHECK-NEXT:       [[MID1:%.+]]    = spirv.IMul [[LHSLOW]], [[RHSHI]] : vector<3xi32>
+// CHECK-DAG:        [[RESHI0:%.+]]  = spirv.IMul [[LHSHI]], [[RHSHI]] : vector<3xi32>
+// CHECK-DAG:        [[MID0:%.+]]    = spirv.IMul [[LHSHI]], [[RHSLOW]] : vector<3xi32>
+// CHECK-DAG:        [[MID1:%.+]]    = spirv.IMul [[LHSLOW]], [[RHSHI]] : vector<3xi32>
 // CHECK-NEXT:       [[MID:%.+]]     = spirv.IAdd [[MID0]], [[MID1]] : vector<3xi32>
 // CHECK-NEXT:       [[RESHI1:%.+]]  = spirv.ShiftRightLogical [[MID]], [[CST16]] : vector<3xi32>
 // CHECK-NEXT:       [[RESHI:%.+]]   = spirv.IAdd [[RESHI0]], [[RESHI1]] : vector<3xi32>
