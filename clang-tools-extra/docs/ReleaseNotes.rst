@@ -106,6 +106,10 @@ Improvements to clang-tidy
   which is no longer in use. The option will be fully removed in
   :program:`clang-tidy` version 18.
 
+- New global configuration file options `HeaderFileExtensions` and
+  `ImplementationFileExtensions`, replacing the check-local options of the
+  same name.
+
 New checks
 ^^^^^^^^^^
 
@@ -157,25 +161,60 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/assignment-in-if-condition>` check when there
   was an assignement in a lambda found in the condition of an ``if``.
 
+- Deprecated check-local options `HeaderFileExtensions` and `ImplementationFileExtensions`
+  in :doc:`bugprone-dynamic-static-initializers
+  <clang-tidy/checks/bugprone/dynamic-static-initializers>` check.
+  Global options of the same name should be used instead.
+
 - Improved :doc:`bugprone-signal-handler
   <clang-tidy/checks/bugprone/signal-handler>` check. Partial
   support for C++14 signal handler rules was added. Bug report generation was
   improved.
+
+- Deprecated check-local options `HeaderFileExtensions` and `ImplementationFileExtensions`
+  in :doc:`bugprone-suspicious-include
+  <clang-tidy/checks/bugprone/suspicious-include>` check.
+  Global options of the same name should be used instead.
 
 - Fixed a false positive in :doc:`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` when warnings
   would be emitted for uninitialized members of an anonymous union despite
   there being an initializer for one of the other members.
 
+- Deprecated check-local options `HeaderFileExtensions` and `ImplementationFileExtensions`
+  in :doc:`google-build-namespaces
+  <clang-tidy/checks/google/build-namespaces>` check.
+  Global options of the same name should be used instead.
+
+- Deprecated check-local options `HeaderFileExtensions` and `ImplementationFileExtensions`
+  in :doc:`google-global-names-in-headers
+  <clang-tidy/checks/google/global-names-in-headers>` check.
+  Global options of the same name should be used instead.
+
 - Fixed false positives in :doc:`google-objc-avoid-throwing-exception
   <clang-tidy/checks/google/objc-avoid-throwing-exception>` check for exceptions
   thrown by code emitted from macros in system headers.
+
+- Deprecated check-local options `HeaderFileExtensions` and `ImplementationFileExtensions`
+  in :doc:`llvm-header-guard
+  <clang-tidy/checks/llvm/header-guard>` check.
+  Global options of the same name should be used instead.
+
+- Deprecated check-local options `HeaderFileExtensions` and `ImplementationFileExtensions`
+  in :doc:`misc-definitions-in-headers
+  <clang-tidy/checks/misc/definitions-in-headers>` check.
+  Global options of the same name should be used instead.
 
 - Improved :doc:`misc-redundant-expression <clang-tidy/checks/misc/redundant-expression>`
   check.
 
   The check now skips concept definitions since redundant expressions still make sense
   inside them.
+
+- Deprecated check-local options `HeaderFileExtensions` and `ImplementationFileExtensions`
+  in :doc:`misc-unused-using-decls
+  <clang-tidy/checks/misc/misc-unused-using-decls>` check.
+  Global options of the same name should be used instead.
 
 - Improved :doc:`modernize-loop-convert <clang-tidy/checks/modernize/loop-convert>`
   to check for container functions ``begin``/``end`` etc on base classes of the container
