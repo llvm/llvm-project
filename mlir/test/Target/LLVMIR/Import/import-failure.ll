@@ -67,3 +67,43 @@ define void @dropped_instruction(i64 %arg1) {
 !3 = !DILocalVariable(scope: !4, name: "arg", file: !2, line: 1, arg: 1, align: 32);
 !4 = distinct !DISubprogram(name: "intrinsic", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
 !5 = !DILocation(line: 1, column: 2, scope: !4)
+
+; // -----
+
+; global_ctors requires the appending linkage type.
+; CHECK: error: unhandled global variable @llvm.global_ctors
+@llvm.global_ctors = global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr null }]
+
+define void @foo() {
+  ret void
+}
+
+; // -----
+
+; global_dtors with non-null data fields cannot be represented in MLIR.
+; CHECK: error: unhandled global variable @llvm.global_dtors
+@llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr @foo }]
+
+define void @foo() {
+  ret void
+}
+
+; // -----
+
+; global_ctors without a data field should not be imported.
+; CHECK: error: unhandled global variable @llvm.global_ctors
+@llvm.global_ctors = appending global [1 x { i32, ptr }] [{ i32, ptr } { i32 0, ptr @foo }]
+
+define void @foo() {
+  ret void
+}
+
+; // -----
+
+; global_dtors with a wrong argument order should not be imported.
+; CHECK: error: unhandled global variable @llvm.global_dtors
+@llvm.global_dtors = appending global [1 x { ptr, i32, ptr }] [{ ptr, i32, ptr } { ptr @foo, i32 0, ptr null }]
+
+define void @foo() {
+  ret void
+}
