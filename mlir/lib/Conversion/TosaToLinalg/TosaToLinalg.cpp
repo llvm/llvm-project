@@ -1364,8 +1364,7 @@ public:
       return success();
     }
 
-    SmallVector<int32_t> scale;
-    getValuesFromIntArrayAttribute(op.getScale(), scale);
+    ArrayRef<int64_t> scale = op.getScale();
 
     // Collapse the unit width and height away.
     SmallVector<ReassociationExprs, 4> reassociationMap(2);
@@ -1582,10 +1581,9 @@ public:
 
       bool floatingPointMode = resultETy.isF32();
 
-      SmallVector<int32_t> scale, offset, border;
-      getValuesFromIntArrayAttribute(op.getScale(), scale);
-      getValuesFromIntArrayAttribute(op.getOffset(), offset);
-      getValuesFromIntArrayAttribute(op.getBorder(), border);
+      ArrayRef<int64_t> offset = op.getOffset();
+      ArrayRef<int64_t> border = op.getBorder();
+      ArrayRef<int64_t> scale = op.getScale();
 
       Value yScaleN, yScaleD, xScaleN, xScaleD;
       yScaleN = b.create<arith::ConstantOp>(b.getI32IntegerAttr(scale[0]));

@@ -717,8 +717,7 @@ OpFoldResult SubOp::fold(ArrayRef<Attribute> operands) {
 }
 
 namespace {
-template <typename Cmp>
-struct ComparisonFold {
+template <typename Cmp> struct ComparisonFold {
   ComparisonFold() = default;
   APInt operator()(const APInt &l, const APInt &r) {
     return APInt(1, Cmp()(l, r));
@@ -911,10 +910,9 @@ OpFoldResult PadOp::fold(ArrayRef<Attribute> operands) {
 // Fold away cases where a tosa.resize operation returns a copy
 // of the input image.
 OpFoldResult ResizeOp::fold(ArrayRef<Attribute> operands) {
-  SmallVector<int32_t> scale, offset, border;
-  getValuesFromIntArrayAttribute(getScale(), scale);
-  getValuesFromIntArrayAttribute(getOffset(), offset);
-  getValuesFromIntArrayAttribute(getBorder(), border);
+  ArrayRef<int64_t> offset = getOffset();
+  ArrayRef<int64_t> border = getBorder();
+  ArrayRef<int64_t> scale = getScale();
 
   // Check unit scaling.
   if (scale[0] != scale[1] || scale[2] != scale[3]) {
