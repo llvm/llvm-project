@@ -46,22 +46,18 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
     if (!weightType.hasRank())
       return rewriter.notifyMatchFailure(op, "unranked weight input");
 
-    // Stride must be 1 for this optimization.
-    for (APInt stride : op.getStride().getAsValueRange<IntegerAttr>()) {
-      if (!stride.isOne())
-        return failure();
-    }
+    if (!llvm::all_of(op.getStride(), [](int64_t v) { return v == 1; }))
+      return failure();
 
     // Only works for a 1x1 kernel.
     ArrayRef<int64_t> weightShape = weightType.getShape();
     if (weightShape[1] != 1 || weightShape[2] != 1)
       return failure();
 
-    auto padAttr = op.getPad();
+    llvm::ArrayRef<int64_t> padAttr = op.getPad();
     llvm::SmallVector<int64_t> pad(8, 0);
-    for (const auto &it : llvm::enumerate(padAttr.getValue()))
-      pad[it.index() + 2] =
-          it.value().cast<IntegerAttr>().getValue().getSExtValue();
+    for (const auto &it : llvm::enumerate(padAttr))
+      pad[it.index() + 2] = it.value();
 
     if (llvm::any_of(pad, [](int64_t p) { return p != 0; })) {
       Type inputETy = inputType.getElementType();
