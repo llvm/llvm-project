@@ -302,7 +302,7 @@ TEST(RandomIRBuilderTest, dontConnectToSwitch) {
     // Choose an instruction and connect to later operations.
     size_t IP = uniform<size_t>(IB.Rand, 1, Insts.size() - 1);
     Instruction *Inst = Insts[IP - 1];
-    auto ConnectAfter = makeArrayRef(Insts).slice(IP);
+    auto ConnectAfter = ArrayRef(Insts).slice(IP);
     IB.connectToSink(*BB, ConnectAfter, Inst);
     ASSERT_FALSE(verifyModule(*M, &errs()));
   }

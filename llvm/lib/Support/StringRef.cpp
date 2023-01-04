@@ -92,16 +92,15 @@ int StringRef::compare_numeric(StringRef RHS) const {
 unsigned StringRef::edit_distance(llvm::StringRef Other,
                                   bool AllowReplacements,
                                   unsigned MaxEditDistance) const {
-  return llvm::ComputeEditDistance(
-      makeArrayRef(data(), size()),
-      makeArrayRef(Other.data(), Other.size()),
-      AllowReplacements, MaxEditDistance);
+  return llvm::ComputeEditDistance(ArrayRef(data(), size()),
+                                   ArrayRef(Other.data(), Other.size()),
+                                   AllowReplacements, MaxEditDistance);
 }
 
 unsigned llvm::StringRef::edit_distance_insensitive(
     StringRef Other, bool AllowReplacements, unsigned MaxEditDistance) const {
   return llvm::ComputeMappedEditDistance(
-      makeArrayRef(data(), size()), makeArrayRef(Other.data(), Other.size()),
+      ArrayRef(data(), size()), ArrayRef(Other.data(), Other.size()),
       llvm::toLower, AllowReplacements, MaxEditDistance);
 }
 

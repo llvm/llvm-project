@@ -247,8 +247,7 @@ static void dumpSectionOffsets(const typename ELFT::Ehdr &Header,
   else
     ExpectedOffset = sizeof(typename ELFT::Ehdr);
 
-  for (const std::unique_ptr<ELFYAML::Chunk> &C :
-       makeArrayRef(V).drop_front()) {
+  for (const std::unique_ptr<ELFYAML::Chunk> &C : ArrayRef(V).drop_front()) {
     ELFYAML::Section &Sec = *cast<ELFYAML::Section>(C.get());
     const typename ELFT::Shdr &SecHdr = S[Sec.OriginalSecNdx];
 
@@ -360,7 +359,7 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   std::vector<ELFYAML::Section *> OriginalOrder;
   if (!Chunks.empty())
     for (const std::unique_ptr<ELFYAML::Chunk> &C :
-         makeArrayRef(Chunks).drop_front())
+         ArrayRef(Chunks).drop_front())
       OriginalOrder.push_back(cast<ELFYAML::Section>(C.get()));
 
   // Sometimes the order of sections in the section header table does not match

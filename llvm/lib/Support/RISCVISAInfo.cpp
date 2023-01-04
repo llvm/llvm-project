@@ -160,8 +160,8 @@ static std::optional<RISCVExtensionVersion>
 findDefaultVersion(StringRef ExtName) {
   // Find default version of an extension.
   // TODO: We might set default version based on profile or ISA spec.
-  for (auto &ExtInfo : {makeArrayRef(SupportedExtensions),
-                        makeArrayRef(SupportedExperimentalExtensions)}) {
+  for (auto &ExtInfo : {ArrayRef(SupportedExtensions),
+                        ArrayRef(SupportedExperimentalExtensions)}) {
     auto ExtensionInfoIterator = llvm::find_if(ExtInfo, FindByName(ExtName));
 
     if (ExtensionInfoIterator == ExtInfo.end()) {
@@ -469,8 +469,8 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
     ExtName = ExtName.drop_front(1); // Drop '+' or '-'
     Experimental = stripExperimentalPrefix(ExtName);
     auto ExtensionInfos = Experimental
-                              ? makeArrayRef(SupportedExperimentalExtensions)
-                              : makeArrayRef(SupportedExtensions);
+                              ? ArrayRef(SupportedExperimentalExtensions)
+                              : ArrayRef(SupportedExtensions);
     auto ExtensionInfoIterator =
         llvm::find_if(ExtensionInfos, FindByName(ExtName));
 

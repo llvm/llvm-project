@@ -102,7 +102,7 @@ void COFFDumper::printPEHeader(const PEHeader &Hdr) const {
   };
 
   printU16("Magic", Hdr.Magic, "%04x");
-  printOptionalEnumName(Hdr.Magic, makeArrayRef(PEHeaderMagic));
+  printOptionalEnumName(Hdr.Magic, ArrayRef(PEHeaderMagic));
   outs() << '\n';
   print("MajorLinkerVersion", Hdr.MajorLinkerVersion);
   print("MinorLinkerVersion", Hdr.MinorLinkerVersion);
@@ -127,7 +127,7 @@ void COFFDumper::printPEHeader(const PEHeader &Hdr) const {
   printU32("SizeOfHeaders", Hdr.SizeOfHeaders, "%08x\n");
   printU32("CheckSum", Hdr.CheckSum, "%08x\n");
   printU16("Subsystem", Hdr.Subsystem, "%08x");
-  printOptionalEnumName(Hdr.Subsystem, makeArrayRef(PEWindowsSubsystem));
+  printOptionalEnumName(Hdr.Subsystem, ArrayRef(PEWindowsSubsystem));
   outs() << '\n';
 
   printU16("DllCharacteristics", Hdr.DLLCharacteristics, "%08x\n");
@@ -309,7 +309,7 @@ static void printAllUnwindCodes(ArrayRef<UnwindCode> UCs) {
              << " remaining in buffer";
       return ;
     }
-    printUnwindCode(makeArrayRef(I, E));
+    printUnwindCode(ArrayRef(I, E));
     I += UsedSlots;
   }
 }
@@ -655,7 +655,7 @@ static void printWin64EHUnwindInfo(const Win64EH::UnwindInfo *UI) {
   if (UI->NumCodes)
     outs() << "    Unwind Codes:\n";
 
-  printAllUnwindCodes(makeArrayRef(&UI->UnwindCodes[0], UI->NumCodes));
+  printAllUnwindCodes(ArrayRef(&UI->UnwindCodes[0], UI->NumCodes));
 
   outs() << "\n";
   outs().flush();

@@ -145,8 +145,7 @@ struct CodeGenSchedClass {
 
   bool isKeyEqual(Record *IC, ArrayRef<unsigned> W,
                   ArrayRef<unsigned> R) const {
-    return ItinClassDef == IC && makeArrayRef(Writes) == W &&
-           makeArrayRef(Reads) == R;
+    return ItinClassDef == IC && ArrayRef(Writes) == W && ArrayRef(Reads) == R;
   }
 
   // Is this class generated from a variants if existing classes? Instructions

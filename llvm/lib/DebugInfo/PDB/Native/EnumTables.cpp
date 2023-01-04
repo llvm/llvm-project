@@ -32,7 +32,7 @@ static const EnumEntry<uint16_t> OMFSegMapDescFlagNames[] = {
 namespace llvm {
 namespace pdb {
 ArrayRef<EnumEntry<uint16_t>> getOMFSegMapDescFlagNames() {
-  return makeArrayRef(OMFSegMapDescFlagNames);
+  return ArrayRef(OMFSegMapDescFlagNames);
 }
 }
 }

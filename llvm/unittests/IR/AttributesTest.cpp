@@ -201,9 +201,9 @@ TEST(Attributes, HasParentContext) {
 
   {
     AttributeSet AS1 = AttributeSet::get(
-        C1, makeArrayRef(Attribute::get(C1, Attribute::NoReturn)));
+        C1, ArrayRef(Attribute::get(C1, Attribute::NoReturn)));
     AttributeSet AS2 = AttributeSet::get(
-        C2, makeArrayRef(Attribute::get(C2, Attribute::NoReturn)));
+        C2, ArrayRef(Attribute::get(C2, Attribute::NoReturn)));
     EXPECT_TRUE(AS1.hasParentContext(C1));
     EXPECT_FALSE(AS1.hasParentContext(C2));
     EXPECT_FALSE(AS2.hasParentContext(C1));

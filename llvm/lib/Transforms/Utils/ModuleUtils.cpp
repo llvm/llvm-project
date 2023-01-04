@@ -52,7 +52,7 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
   CSVals[2] = Data ? ConstantExpr::getPointerCast(Data, IRB.getInt8PtrTy())
                    : Constant::getNullValue(IRB.getInt8PtrTy());
   Constant *RuntimeCtorInit =
-      ConstantStruct::get(EltTy, makeArrayRef(CSVals, EltTy->getNumElements()));
+      ConstantStruct::get(EltTy, ArrayRef(CSVals, EltTy->getNumElements()));
 
   CurrentCtors.push_back(RuntimeCtorInit);
 
@@ -323,7 +323,7 @@ void llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
                                StringRef SectionName, Align Alignment) {
   // Embed the memory buffer into the module.
   Constant *ModuleConstant = ConstantDataArray::get(
-      M.getContext(), makeArrayRef(Buf.getBufferStart(), Buf.getBufferSize()));
+      M.getContext(), ArrayRef(Buf.getBufferStart(), Buf.getBufferSize()));
   GlobalVariable *GV = new GlobalVariable(
       M, ModuleConstant->getType(), true, GlobalValue::PrivateLinkage,
       ModuleConstant, "llvm.embedded.object");

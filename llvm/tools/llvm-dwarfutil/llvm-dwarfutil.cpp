@@ -461,7 +461,7 @@ int main(int Argc, char const *Argv[]) {
   DwarfutilOptTable T;
   unsigned MAI;
   unsigned MAC;
-  ArrayRef<const char *> ArgsArr = makeArrayRef(Argv + 1, Argc - 1);
+  ArrayRef<const char *> ArgsArr = ArrayRef(Argv + 1, Argc - 1);
   opt::InputArgList Args = T.ParseArgs(ArgsArr, MAI, MAC);
 
   if (Args.hasArg(OPT_help) || Args.size() == 0) {

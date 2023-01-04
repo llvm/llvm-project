@@ -1558,8 +1558,8 @@ const DIExpression *DIExpression::extractAddressClass(const DIExpression *Expr,
     if (Expr->Elements.size() == PatternSize)
       return nullptr;
     return DIExpression::get(Expr->getContext(),
-                             makeArrayRef(&*Expr->Elements.begin(),
-                                          Expr->Elements.size() - PatternSize));
+                             ArrayRef(&*Expr->Elements.begin(),
+                                      Expr->Elements.size() - PatternSize));
   }
   return Expr;
 }
