@@ -152,7 +152,7 @@ struct DimOfLoopResultFolder : public OpRewritePattern<OpTy> {
 
 /// Canonicalize AffineMinOp/AffineMaxOp operations in the context of scf.for
 /// and scf.parallel loops with a known range.
-template <typename OpTy, bool IsMin>
+template <typename OpTy>
 struct AffineOpSCFCanonicalizationPattern : public OpRewritePattern<OpTy> {
   using OpRewritePattern<OpTy>::OpRewritePattern;
 
@@ -192,8 +192,7 @@ struct AffineOpSCFCanonicalizationPattern : public OpRewritePattern<OpTy> {
       return failure();
     };
 
-    return scf::canonicalizeMinMaxOpInLoop(
-        rewriter, op, op.getAffineMap(), op.getOperands(), IsMin, loopMatcher);
+    return scf::canonicalizeMinMaxOpInLoop(rewriter, op, loopMatcher);
   }
 };
 
@@ -214,8 +213,8 @@ void mlir::scf::populateSCFForLoopCanonicalizationPatterns(
     RewritePatternSet &patterns) {
   MLIRContext *ctx = patterns.getContext();
   patterns
-      .add<AffineOpSCFCanonicalizationPattern<AffineMinOp, /*IsMin=*/true>,
-           AffineOpSCFCanonicalizationPattern<AffineMaxOp, /*IsMin=*/false>,
+      .add<AffineOpSCFCanonicalizationPattern<AffineMinOp>,
+           AffineOpSCFCanonicalizationPattern<AffineMaxOp>,
            DimOfIterArgFolder<tensor::DimOp>, DimOfIterArgFolder<memref::DimOp>,
            DimOfLoopResultFolder<tensor::DimOp>,
            DimOfLoopResultFolder<memref::DimOp>>(ctx);
