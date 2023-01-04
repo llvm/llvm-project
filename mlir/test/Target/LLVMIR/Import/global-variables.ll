@@ -12,9 +12,17 @@
 ; CHECK-SAME:  {addr_space = 0 : i32, alignment = 8 : i64} : f64
 @global_float = external global double, align 8
 
+; CHECK:  llvm.mlir.global internal constant @address_before
+; CHECK:  = llvm.mlir.addressof @global_int : !llvm.ptr<i32>
+@address_before = internal constant i32* @global_int
+
 ; CHECK:  llvm.mlir.global external @global_int
 ; CHECK-SAME:  {addr_space = 0 : i32, alignment = 8 : i64} : i32
 @global_int = external global i32, align 8
+
+; CHECK:  llvm.mlir.global internal constant @address_after
+; CHECK:  = llvm.mlir.addressof @global_int : !llvm.ptr<i32>
+@address_after = internal constant i32* @global_int
 
 ; CHECK:  llvm.mlir.global internal @global_string("hello world")
 @global_string = internal global [11 x i8] c"hello world"

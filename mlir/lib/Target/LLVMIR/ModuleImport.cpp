@@ -338,9 +338,10 @@ LogicalResult ModuleImport::convertGlobals() {
       }
       continue;
     }
-
-    if (!processGlobal(&globalVar))
-      return failure();
+    if (failed(convertGlobal(&globalVar))) {
+      return emitError(mlirModule.getLoc())
+             << "unhandled global variable " << diag(globalVar);
+    }
   }
   return success();
 }
@@ -531,17 +532,13 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *value) {
   return nullptr;
 }
 
-GlobalOp ModuleImport::processGlobal(llvm::GlobalVariable *globalVar) {
-  if (globals.count(globalVar))
-    return globals[globalVar];
-
+LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   // Insert the global after the last one or at the start of the module.
   OpBuilder::InsertionGuard guard(builder);
-  if (!globalInsertionOp) {
+  if (!globalInsertionOp)
     builder.setInsertionPointToStart(mlirModule.getBody());
-  } else {
+  else
     builder.setInsertionPointAfter(globalInsertionOp);
-  }
 
   Attribute valueAttr;
   if (globalVar->hasInitializer())
@@ -556,7 +553,7 @@ GlobalOp ModuleImport::processGlobal(llvm::GlobalVariable *globalVar) {
   }
 
   GlobalOp globalOp = builder.create<GlobalOp>(
-      UnknownLoc::get(context), type, globalVar->isConstant(),
+      mlirModule.getLoc(), type, globalVar->isConstant(),
       convertLinkageFromLLVM(globalVar->getLinkage()), globalVar->getName(),
       valueAttr, alignment, /*addr_space=*/globalVar->getAddressSpace(),
       /*dso_local=*/globalVar->isDSOLocal(),
@@ -570,7 +567,7 @@ GlobalOp ModuleImport::processGlobal(llvm::GlobalVariable *globalVar) {
     FailureOr<Value> initializer =
         convertConstantExpr(globalVar->getInitializer());
     if (failed(initializer))
-      return {};
+      return failure();
     builder.create<ReturnOp>(globalOp.getLoc(), *initializer);
   }
   if (globalVar->hasAtLeastLocalUnnamedAddr()) {
@@ -580,7 +577,7 @@ GlobalOp ModuleImport::processGlobal(llvm::GlobalVariable *globalVar) {
   if (globalVar->hasSection())
     globalOp.setSection(globalVar->getSection());
 
-  return globals[globalVar] = globalOp;
+  return success();
 }
 
 LogicalResult
@@ -695,8 +692,9 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
 
   // Convert global variable accesses.
   if (auto *globalVar = dyn_cast<llvm::GlobalVariable>(constant)) {
-    return builder.create<AddressOfOp>(loc, processGlobal(globalVar))
-        .getResult();
+    Type type = convertType(globalVar->getType());
+    auto symbolRef = FlatSymbolRefAttr::get(context, globalVar->getName());
+    return builder.create<AddressOfOp>(loc, type, symbolRef).getResult();
   }
 
   // Convert constant expressions.
@@ -771,11 +769,10 @@ FailureOr<Value> ModuleImport::convertConstantExpr(llvm::Constant *constant) {
 
   // Insert the constant after the last one or at the start or the entry block.
   OpBuilder::InsertionGuard guard(builder);
-  if (!constantInsertionOp) {
+  if (!constantInsertionOp)
     builder.setInsertionPointToStart(constantInsertionBlock);
-  } else {
+  else
     builder.setInsertionPointAfter(constantInsertionOp);
-  }
 
   // Convert all constants of the expression and add them to `valueMapping`.
   SetVector<llvm::Constant *> constantsToConvert =
