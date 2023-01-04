@@ -19,22 +19,19 @@ target triple = "x86_64-apple-macosx10.9.0"
 define void @bar() {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds [[TMP0:%.*]], %0* undef, i64 0, i32 1, i32 0
-; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds [[TMP0]], %0* undef, i64 0, i32 1, i32 0
-; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds [[TMP0]], %0* undef, i64 0, i32 1, i32 0
+; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds [[TMP0:%.*]], ptr undef, i64 0, i32 1, i32 0
+; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds [[TMP0]], ptr undef, i64 0, i32 1, i32 0
+; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds [[TMP0]], ptr undef, i64 0, i32 1, i32 0
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    [[TMP0]] = phi <2 x double> [ <double 1.800000e+01, double 2.800000e+01>, [[BB:%.*]] ], [ [[TMP3:%.*]], [[BB17:%.*]] ], [ [[TMP3]], [[BB16:%.*]] ], [ [[TMP3]], [[BB16]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[I]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP0]], <2 x double>* [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[I2]] to <2 x double>*
-; CHECK-NEXT:    [[TMP3]] = load <2 x double>, <2 x double>* [[TMP2]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP0]], ptr [[I]], align 8
+; CHECK-NEXT:    [[TMP3]] = load <2 x double>, ptr [[I2]], align 8
 ; CHECK-NEXT:    br i1 undef, label [[BB11:%.*]], label [[BB12:%.*]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb12:
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* [[I4]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP4]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[I4]], align 8
 ; CHECK-NEXT:    br i1 undef, label [[BB13:%.*]], label [[BB14:%.*]]
 ; CHECK:       bb13:
 ; CHECK-NEXT:    br label [[BB14]]
@@ -53,29 +50,29 @@ define void @bar() {
 ; CHECK-NEXT:    unreachable
 ;
 bb:
-  %i = getelementptr inbounds %0, %0* undef, i64 0, i32 1, i32 0
-  %i1 = getelementptr inbounds %0, %0* undef, i64 0, i32 1, i32 1
-  %i2 = getelementptr inbounds %0, %0* undef, i64 0, i32 1, i32 0
-  %i3 = getelementptr inbounds %0, %0* undef, i64 0, i32 1, i32 1
-  %i4 = getelementptr inbounds %0, %0* undef, i64 0, i32 1, i32 0
-  %i5 = getelementptr inbounds %0, %0* undef, i64 0, i32 1, i32 1
+  %i = getelementptr inbounds %0, ptr undef, i64 0, i32 1, i32 0
+  %i1 = getelementptr inbounds %0, ptr undef, i64 0, i32 1, i32 1
+  %i2 = getelementptr inbounds %0, ptr undef, i64 0, i32 1, i32 0
+  %i3 = getelementptr inbounds %0, ptr undef, i64 0, i32 1, i32 1
+  %i4 = getelementptr inbounds %0, ptr undef, i64 0, i32 1, i32 0
+  %i5 = getelementptr inbounds %0, ptr undef, i64 0, i32 1, i32 1
   br label %bb6
 
 bb6:                                              ; preds = %bb17, %bb16, %bb16, %bb
   %i7 = phi double [ 2.800000e+01, %bb ], [ %i10, %bb17 ], [ %i10, %bb16 ], [ %i10, %bb16 ]
   %i8 = phi double [ 1.800000e+01, %bb ], [ %i9, %bb17 ], [ %i9, %bb16 ], [ %i9, %bb16 ]
-  store double %i8, double* %i, align 8
-  store double %i7, double* %i1, align 8
-  %i9 = load double, double* %i2, align 8
-  %i10 = load double, double* %i3, align 8
+  store double %i8, ptr %i, align 8
+  store double %i7, ptr %i1, align 8
+  %i9 = load double, ptr %i2, align 8
+  %i10 = load double, ptr %i3, align 8
   br i1 undef, label %bb11, label %bb12
 
 bb11:                                             ; preds = %bb6
   ret void
 
 bb12:                                             ; preds = %bb6
-  store double %i9, double* %i4, align 8
-  store double %i10, double* %i5, align 8
+  store double %i9, ptr %i4, align 8
+  store double %i10, ptr %i5, align 8
   br i1 undef, label %bb13, label %bb14
 
 bb13:                                             ; preds = %bb12
