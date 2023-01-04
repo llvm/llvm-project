@@ -862,8 +862,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     EmitOMPGenericLoopDirective(cast<OMPGenericLoopDirective>(*S));
     break;
   case Stmt::OMPTeamsGenericLoopDirectiveClass:
-    llvm_unreachable("teams loop directive not supported yet.");
-    // EmitOMPTeamsGenericLoopDirective(cast<OMPTeamsGenericLoopDirective>(*S));
+    EmitOMPTeamsGenericLoopDirective(cast<OMPTeamsGenericLoopDirective>(*S));
     break;
   case Stmt::OMPTargetTeamsGenericLoopDirectiveClass:
     EmitOMPTargetTeamsGenericLoopDirective(
@@ -874,9 +873,8 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
         cast<OMPParallelGenericLoopDirective>(*S));
     break;
   case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
-    llvm_unreachable("target parallel loop directive not supported yet.");
-    // EmitOMPTargetParallelGenericLoopDirective(
-        // cast<OMPTargetParallelGenericLoopDirective>(*S));
+    EmitOMPTargetParallelGenericLoopDirective(
+        cast<OMPTargetParallelGenericLoopDirective>(*S));
     break;
   case Stmt::OMPParallelMaskedDirectiveClass:
     llvm_unreachable("parallel masked directive not supported yet.");

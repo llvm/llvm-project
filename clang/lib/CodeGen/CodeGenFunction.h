@@ -3687,6 +3687,11 @@ public:
   static void EmitOMPTargetTeamsGenericLoopDeviceFunction(CodeGenModule &CGM,
       StringRef ParentName, const OMPTargetTeamsGenericLoopDirective &S);
 
+  /// Emit device code for the target parallel loop directive.
+  static void EmitOMPTargetParallelGenericLoopDeviceFunction(
+      CodeGenModule &CGM, StringRef ParentName,
+      const OMPTargetParallelGenericLoopDirective &S);
+
   /// Emit the Stmt \p S and return its topmost canonical loop, if any.
   /// TODO: The \p Depth paramter is not yet implemented and must be 1. In the
   /// future it is meant to be the number of loops expected in the loop nests

@@ -10238,6 +10238,10 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
       CodeGenFunction::EmitOMPTargetTeamsGenericLoopDeviceFunction(
           CGM, ParentName, cast<OMPTargetTeamsGenericLoopDirective>(E));
       break;
+    case OMPD_target_parallel_loop:
+      CodeGenFunction::EmitOMPTargetParallelGenericLoopDeviceFunction(
+          CGM, ParentName, cast<OMPTargetParallelGenericLoopDirective>(E));
+      break;
     case OMPD_parallel:
     case OMPD_for:
     case OMPD_parallel_for:

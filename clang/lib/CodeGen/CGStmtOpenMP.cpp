@@ -8253,24 +8253,14 @@ void CodeGenFunction::EmitOMPParallelGenericLoopDirective(
 /// Emit code for 'teams loop'
 void CodeGenFunction::EmitOMPTeamsGenericLoopDirective(
     const OMPTeamsGenericLoopDirective &S) {
-  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
-    Action.Enter(CGF);
-    // FIXME: Should be able to emit with generic loop code, but it doesn't
-    // work right now.
-    CGF.EmitOMPGenericLoopDirective(S);
-  };
-  emitCommonOMPTeamsDirective(*this, S, OMPD_loop, CodeGen);
-  emitPostUpdateForReductionClause(*this, S,
-                                   [](CodeGenFunction &) { return nullptr; });
-}
-
-/// Emit code for 'target parallel loop'
-void CodeGenFunction::EmitOMPTargetParallelGenericLoopDirective(
-    const OMPTargetParallelGenericLoopDirective &S) {
+  // For now, emit as the two combined directives 'parallel' and 'loop'.
+  // This is similar to what we do for 'target teams loop'. Eventually,
+  // 'distribute' will be added so that 'teams loop' fully emulates
+  // 'teams distribute parallel for'.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     CGF.EmitOMPParallelGenericLoopDirective(S);
   };
-  emitCommonOMPTargetDirective(*this, S, CodeGen);
+  emitCommonOMPTeamsDirective(*this, S, OMPD_loop, CodeGen);
 }
 
 static void emitTargetTeamsGenericLoopRegion(
@@ -8309,6 +8299,47 @@ void CodeGenFunction::EmitOMPTargetTeamsGenericLoopDeviceFunction(
       S, ParentName, Fn, Addr, /*IsOffloadEntry=*/true, CodeGen);
   assert(Fn && Addr &&
          "Target device function emission failed for 'target teams loop'.");
+}
+
+static void emitTargetParallelGenericLoopRegion(
+  CodeGenFunction &CGF, const OMPTargetParallelGenericLoopDirective &S,
+  PrePostActionTy &Action) {
+  Action.Enter(CGF);
+  // Emit directive as a combined directive that consists of two implicit
+  // directives: 'parallel' with (worksharing) 'loop' directive.
+  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    Action.Enter(CGF);
+    CodeGenFunction::OMPCancelStackRAII CancelRegion(
+        CGF, OMPD_target_parallel_loop, /*hasCancel=*/false);
+    CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(), emitForLoopBounds,
+                               emitDispatchForLoopBounds);
+  };
+  emitCommonOMPParallelDirective(CGF, S, OMPD_loop, CodeGen,
+                                 emitEmptyBoundParameters);
+}
+
+void CodeGenFunction::EmitOMPTargetParallelGenericLoopDeviceFunction(
+    CodeGenModule &CGM, StringRef ParentName,
+    const OMPTargetParallelGenericLoopDirective &S) {
+  // Emit target parallel loop region as a standalone region.
+  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    emitTargetParallelGenericLoopRegion(CGF, S, Action);
+  };
+  llvm::Function *Fn;
+  llvm::Constant *Addr;
+  // Emit target region as a standalone region.
+  CGM.getOpenMPRuntime().emitTargetOutlinedFunction(
+      S, ParentName, Fn, Addr, /*IsOffloadEntry=*/true, CodeGen);
+  assert(Fn && Addr && "Target device function emission failed.");
+}
+
+/// Emit code for 'target parallel loop'
+void CodeGenFunction::EmitOMPTargetParallelGenericLoopDirective(
+    const OMPTargetParallelGenericLoopDirective &S) {
+  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    emitTargetParallelGenericLoopRegion(CGF, S, Action);
+  };
+  emitCommonOMPTargetDirective(*this, S, CodeGen);
 }
 
 void CodeGenFunction::EmitSimpleOMPExecutableDirective(
