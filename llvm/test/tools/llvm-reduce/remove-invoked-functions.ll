@@ -1,4 +1,4 @@
-; RUN: llvm-reduce  --delta-passes=instructions --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=instructions --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefixes=CHECK-ALL,CHECK-FINAL %s < %t
 
 ; CHECK-INTERESTINGNESS: define i32 @maybe_throwing_callee(

@@ -201,9 +201,8 @@ define <8 x i64> @vrgather_shuffle_vv_v8i64(<8 x i64> %x, <8 x i64> %y) {
 ; RV64-LABEL: vrgather_shuffle_vv_v8i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a0, 5
-; RV64-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
-; RV64-NEXT:    vmv.s.x v16, a0
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vmv.s.x v16, a0
 ; RV64-NEXT:    vmv.v.i v20, 2
 ; RV64-NEXT:    lui a0, %hi(.LCPI11_0)
 ; RV64-NEXT:    addi a0, a0, %lo(.LCPI11_0)
@@ -386,9 +385,8 @@ define <8 x i8> @splat_ve2_we0(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: splat_ve2_we0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 66
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vrgather.vi v10, v8, 2
 ; CHECK-NEXT:    vrgather.vi v10, v9, 0, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v10
@@ -420,9 +418,8 @@ define <8 x i8> @splat_ve2_we0_ins_i0we4(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: splat_ve2_we0_ins_i0we4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 67
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vrgather.vi v10, v8, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 4

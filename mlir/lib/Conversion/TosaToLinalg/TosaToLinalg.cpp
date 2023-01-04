@@ -864,10 +864,14 @@ static bool findIntermediateShape(ArrayRef<int64_t> lhsShape,
            currRhsDim < rhsShape.size()) {
       if (lhsSize < rhsSize) {
         currLhsDim++;
-        lhsSize *= lhsShape[currLhsDim];
+        if (currLhsDim < lhsShape.size()) {
+          lhsSize *= lhsShape[currLhsDim];
+        }
       } else {
         currRhsDim++;
-        rhsSize *= rhsShape[currRhsDim];
+        if (currRhsDim < rhsShape.size()) {
+          rhsSize *= rhsShape[currRhsDim];
+        }
       }
     }
     if (lhsSize == rhsSize) {
@@ -1325,10 +1329,10 @@ public:
   }
 };
 
-// Handle the case where the resize operation is a regular broadcast. We
-// perform this part separately to avoid generating Extract operations which
-// are difficult to vectorize / optimize.
-class BroadcastResizeConverter : public OpRewritePattern<tosa::ResizeOp> {
+// Handle the resize case where the input is a 1x1 image. This case
+// can entirely avoiding having extract operations which target much
+// more difficult to optimize away.
+class ResizeUnaryConverter : public OpRewritePattern<tosa::ResizeOp> {
 public:
   using OpRewritePattern<tosa::ResizeOp>::OpRewritePattern;
 
@@ -1339,63 +1343,61 @@ public:
     auto input = op.getInput();
     auto inputTy = input.getType().cast<RankedTensorType>();
     auto resultTy = op.getType().cast<RankedTensorType>();
+    const bool isBilinear = op.getMode() == "BILINEAR";
 
-    auto imageH = inputTy.getDimSize(1);
-    auto imageW = inputTy.getDimSize(2);
+    auto inputH = inputTy.getDimSize(1);
+    auto inputW = inputTy.getDimSize(2);
+    auto outputH = resultTy.getDimSize(1);
+    auto outputW = resultTy.getDimSize(2);
 
-    if (imageH != 1 || imageW != 1) {
+    if (inputH != 1 || inputW != 1 || outputH != 1 || outputW != 1)
       return rewriter.notifyMatchFailure(
-          op, "tosa.resize is not a pure broadcast operation");
-    }
+          op, "tosa.resize is not a pure 1x1->1x1 image operation");
 
     // TODO(suderman): These string values should be declared the TOSA dialect.
     if (op.getMode() != "NEAREST_NEIGHBOR" && op.getMode() != "BILINEAR")
       return rewriter.notifyMatchFailure(
           op, "tosa.resize mode should be NEAREST_NEIGHBOR or BILINEAR");
 
-    const bool isBilinear = op.getMode() == "BILINEAR";
+    if (inputTy == resultTy) {
+      rewriter.replaceOp(op, input);
+      return success();
+    }
 
     SmallVector<int32_t> scale;
     getValuesFromIntArrayAttribute(op.getScale(), scale);
 
-    // Collapse the 1 dimensions away.
-    SmallVector<ReassociationExprs, 4> collapseMap(2);
-    collapseMap[0].push_back(builder.getAffineDimExpr(0));
-    collapseMap[1].push_back(builder.getAffineDimExpr(1));
-    collapseMap[1].push_back(builder.getAffineDimExpr(2));
-    collapseMap[1].push_back(builder.getAffineDimExpr(3));
+    // Collapse the unit width and height away.
+    SmallVector<ReassociationExprs, 4> reassociationMap(2);
+    reassociationMap[0].push_back(builder.getAffineDimExpr(0));
+    reassociationMap[1].push_back(builder.getAffineDimExpr(1));
+    reassociationMap[1].push_back(builder.getAffineDimExpr(2));
+    reassociationMap[1].push_back(builder.getAffineDimExpr(3));
 
     auto collapseTy =
         RankedTensorType::get({inputTy.getDimSize(0), inputTy.getDimSize(3)},
                               inputTy.getElementType());
-    Value collapse =
-        builder.create<tensor::CollapseShapeOp>(collapseTy, input, collapseMap);
+    Value collapse = builder.create<tensor::CollapseShapeOp>(collapseTy, input,
+                                                             reassociationMap);
 
-    // Broadcast input to the output shape.
+    // Get any dynamic shapes that appear in the input format.
     llvm::SmallVector<Value> outputDynSize;
     if (inputTy.isDynamicDim(0))
       outputDynSize.push_back(builder.create<tensor::DimOp>(input, 0));
-
     if (inputTy.isDynamicDim(3))
       outputDynSize.push_back(builder.create<tensor::DimOp>(input, 3));
 
-    llvm::SmallVector<AffineExpr> inputExprs{
-        rewriter.getAffineDimExpr(0),
-        rewriter.getAffineDimExpr(3),
-    };
-
-    auto inputMap = AffineMap::get(/*dimCount=*/4, /*symbolCount=*/0,
-                                   inputExprs, builder.getContext());
-    auto resultMap = rewriter.getMultiDimIdentityMap(resultTy.getRank());
-    SmallVector<utils::IteratorType> iterators(4,
+    // Generate the elementwise operation for casting scaling the input value.
+    auto genericTy = collapseTy.clone(resultTy.getElementType());
+    Value empty = builder.create<tensor::EmptyOp>(
+        genericTy.getShape(), resultTy.getElementType(), outputDynSize);
+    auto genericMap = rewriter.getMultiDimIdentityMap(genericTy.getRank());
+    SmallVector<utils::IteratorType> iterators(genericTy.getRank(),
                                                utils::IteratorType::parallel);
 
-    Value empty = builder.create<tensor::EmptyOp>(
-        resultTy.getShape(), resultTy.getElementType(), outputDynSize);
-
     auto generic = builder.create<linalg::GenericOp>(
-        resultTy, ValueRange{collapse}, ValueRange{empty},
-        ArrayRef<AffineMap>{inputMap, resultMap}, iterators,
+        genericTy, ValueRange{collapse}, ValueRange{empty},
+        ArrayRef<AffineMap>{genericMap, genericMap}, iterators,
         [=](OpBuilder &b, Location loc, ValueRange args) {
           Value value = args[0];
           // This is the quantized case.
@@ -1419,7 +1421,107 @@ public:
           b.create<linalg::YieldOp>(loc, value);
         });
 
-    rewriter.replaceOp(op, generic.getResult(0));
+    rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
+        op, resultTy, generic.getResults()[0], reassociationMap);
+    return success();
+  }
+};
+
+// TOSA resize with width or height of 1 may be broadcasted to a wider
+// dimension. This is done by materializing a new tosa.resize without
+// the broadcasting behavior, and an explicit broadcast afterwards.
+class MaterializeResizeBroadcast : public OpRewritePattern<tosa::ResizeOp> {
+public:
+  using OpRewritePattern<tosa::ResizeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::ResizeOp op,
+                                PatternRewriter &rewriter) const final {
+    Location loc = op.getLoc();
+    ImplicitLocOpBuilder builder(loc, rewriter);
+    auto input = op.getInput();
+    auto inputTy = input.getType().dyn_cast<RankedTensorType>();
+    auto resultTy = op.getType().dyn_cast<RankedTensorType>();
+
+    if (!inputTy || !resultTy)
+      return rewriter.notifyMatchFailure(op,
+                                         "requires ranked input/output types");
+
+    auto batch = inputTy.getDimSize(0);
+    auto channels = inputTy.getDimSize(3);
+    auto inputH = inputTy.getDimSize(1);
+    auto inputW = inputTy.getDimSize(2);
+    auto outputH = resultTy.getDimSize(1);
+    auto outputW = resultTy.getDimSize(2);
+
+    if ((inputH != 1 || outputH == 1) && (inputW != 1 || outputW == 1))
+      return rewriter.notifyMatchFailure(
+          op, "tosa.resize has no broadcasting behavior");
+
+    // For any dimension that is broadcastable we generate a width of 1
+    // on the output.
+    llvm::SmallVector<int64_t> resizeShape;
+    resizeShape.push_back(batch);
+    resizeShape.push_back(inputH == 1 ? 1 : outputH);
+    resizeShape.push_back(inputW == 1 ? 1 : outputW);
+    resizeShape.push_back(channels);
+
+    auto resizeTy = resultTy.clone(resizeShape);
+    auto resize =
+        builder.create<tosa::ResizeOp>(resizeTy, input, op->getAttrs());
+
+    // Collapse an unit result dims.
+    SmallVector<ReassociationExprs, 4> reassociationMap(2);
+    reassociationMap[0].push_back(builder.getAffineDimExpr(0));
+    reassociationMap.back().push_back(builder.getAffineDimExpr(1));
+    if (inputH != 1)
+      reassociationMap.push_back({});
+    reassociationMap.back().push_back(builder.getAffineDimExpr(2));
+    if (inputW != 1)
+      reassociationMap.push_back({});
+    reassociationMap.back().push_back(builder.getAffineDimExpr(3));
+
+    llvm::SmallVector<int64_t> collapseShape{batch};
+    if (inputH != 1)
+      collapseShape.push_back(outputH);
+    if (inputW != 1)
+      collapseShape.push_back(outputW);
+    collapseShape.push_back(channels);
+
+    auto collapseTy = resultTy.clone(collapseShape);
+    Value collapse = builder.create<tensor::CollapseShapeOp>(collapseTy, resize,
+                                                             reassociationMap);
+
+    // Broadcast the collapsed shape to the output result.
+    llvm::SmallVector<Value> outputDynSize;
+    if (inputTy.isDynamicDim(0))
+      outputDynSize.push_back(builder.create<tensor::DimOp>(input, 0));
+    if (inputTy.isDynamicDim(3))
+      outputDynSize.push_back(builder.create<tensor::DimOp>(input, 3));
+
+    SmallVector<utils::IteratorType> iterators(resultTy.getRank(),
+                                               utils::IteratorType::parallel);
+    Value empty = builder.create<tensor::EmptyOp>(
+        resultTy.getShape(), resultTy.getElementType(), outputDynSize);
+
+    SmallVector<AffineExpr, 4> inputExprs{rewriter.getAffineDimExpr(0)};
+    if (inputH != 1)
+      inputExprs.push_back(rewriter.getAffineDimExpr(1));
+    if (inputW != 1)
+      inputExprs.push_back(rewriter.getAffineDimExpr(2));
+    inputExprs.push_back(rewriter.getAffineDimExpr(3));
+
+    auto inputMap = AffineMap::get(resultTy.getRank(), /*symbolCount=*/0,
+                                   inputExprs, rewriter.getContext());
+
+    auto outputMap = rewriter.getMultiDimIdentityMap(resultTy.getRank());
+    rewriter.replaceOpWithNewOp<linalg::GenericOp>(
+        op, resultTy, ValueRange{collapse}, ValueRange{empty},
+        ArrayRef<AffineMap>{inputMap, outputMap}, iterators,
+        [=](OpBuilder &b, Location loc, ValueRange args) {
+          Value value = args[0];
+          b.create<linalg::YieldOp>(loc, value);
+        });
+
     return success();
   }
 };
@@ -2222,8 +2324,10 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
   // We have multiple resize coverters to handle degenerate cases.
   patterns->add<GenericResizeConverter>(patterns->getContext(),
                                         /*benefit=*/100);
-  patterns->add<BroadcastResizeConverter>(patterns->getContext(),
-                                          /*benefit=*/200);
+  patterns->add<ResizeUnaryConverter>(patterns->getContext(),
+                                      /*benefit=*/200);
+  patterns->add<MaterializeResizeBroadcast>(patterns->getContext(),
+                                            /*benefit=*/300);
 
   patterns->add<
       // clang-format off

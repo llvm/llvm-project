@@ -71,7 +71,7 @@ define i8 @sub_mask1_trunc_lshr(i64 %a0) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[A0:%.*]], 48
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 63
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i8
-; CHECK-NEXT:    [[NEG:%.*]] = add i8 [[TMP3]], 10
+; CHECK-NEXT:    [[NEG:%.*]] = add nsw i8 [[TMP3]], 10
 ; CHECK-NEXT:    ret i8 [[NEG]]
 ;
   %shift = lshr i64 %a0, 15
@@ -86,7 +86,7 @@ define i32 @sub_sext_mask1_trunc_lshr(i64 %a0) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[A0:%.*]], 48
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 63
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i8
-; CHECK-NEXT:    [[NARROW:%.*]] = add i8 [[TMP3]], 10
+; CHECK-NEXT:    [[NARROW:%.*]] = add nsw i8 [[TMP3]], 10
 ; CHECK-NEXT:    [[NEG:%.*]] = zext i8 [[NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[NEG]]
 ;

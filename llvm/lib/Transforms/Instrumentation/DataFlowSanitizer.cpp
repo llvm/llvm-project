@@ -287,14 +287,23 @@ struct MemoryMapParams {
 
 } // end anonymous namespace
 
+// NOLINTBEGIN(readability-identifier-naming)
+// aarch64 Linux
+const MemoryMapParams Linux_AArch64_MemoryMapParams = {
+    0,               // AndMask (not used)
+    0x0B00000000000, // XorMask
+    0,               // ShadowBase (not used)
+    0x0200000000000, // OriginBase
+};
+
 // x86_64 Linux
-// NOLINTNEXTLINE(readability-identifier-naming)
-static const MemoryMapParams Linux_X86_64_MemoryMapParams = {
+const MemoryMapParams Linux_X86_64_MemoryMapParams = {
     0,              // AndMask (not used)
     0x500000000000, // XorMask
     0,              // ShadowBase (not used)
     0x100000000000, // OriginBase
 };
+// NOLINTEND(readability-identifier-naming)
 
 namespace {
 
@@ -1112,9 +1121,16 @@ bool DataFlowSanitizer::initializeModule(Module &M) {
 
   if (TargetTriple.getOS() != Triple::Linux)
     report_fatal_error("unsupported operating system");
-  if (TargetTriple.getArch() != Triple::x86_64)
+  switch (TargetTriple.getArch()) {
+  case Triple::aarch64:
+    MapParams = &Linux_AArch64_MemoryMapParams;
+    break;
+  case Triple::x86_64:
+    MapParams = &Linux_X86_64_MemoryMapParams;
+    break;
+  default:
     report_fatal_error("unsupported architecture");
-  MapParams = &Linux_X86_64_MemoryMapParams;
+  }
 
   Mod = &M;
   Ctx = &M.getContext();

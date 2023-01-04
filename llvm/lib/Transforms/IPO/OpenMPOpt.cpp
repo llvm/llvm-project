@@ -1767,10 +1767,14 @@ private:
     // function. Used for storing information of the async transfer, allowing to
     // wait on it later.
     auto &IRBuilder = OMPInfoCache.OMPBuilder;
-    auto *F = RuntimeCall.getCaller();
-    Instruction *FirstInst = &(F->getEntryBlock().front());
-    AllocaInst *Handle = new AllocaInst(
-        IRBuilder.AsyncInfo, F->getAddressSpace(), "handle", FirstInst);
+    Function *F = RuntimeCall.getCaller();
+    BasicBlock &Entry = F->getEntryBlock();
+    IRBuilder.Builder.SetInsertPoint(&Entry,
+                                     Entry.getFirstNonPHIOrDbgOrAlloca());
+    Value *Handle = IRBuilder.Builder.CreateAlloca(
+        IRBuilder.AsyncInfo, /*ArraySize=*/nullptr, "handle");
+    Handle =
+        IRBuilder.Builder.CreateAddrSpaceCast(Handle, IRBuilder.AsyncInfoPtr);
 
     // Add "issue" runtime call declaration:
     // declare %struct.tgt_async_info @__tgt_target_data_begin_issue(i64, i32,
@@ -2979,10 +2983,8 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
 
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
     auto &RFI = OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared];
-    if (!RFI.Declaration) {
-      indicatePessimisticFixpoint();
+    if (!RFI.Declaration)
       return;
-    }
 
     Attributor::SimplifictionCallbackTy SCB =
         [](const IRPosition &, const AbstractAttribute *,
@@ -3087,6 +3089,9 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
   ChangeStatus updateImpl(Attributor &A) override {
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
     auto &RFI = OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared];
+    if (!RFI.Declaration)
+      return ChangeStatus::UNCHANGED;
+
     Function *F = getAnchorScope();
 
     auto NumMallocCalls = MallocCalls.size();
