@@ -213,10 +213,10 @@ define i32 @sext_sub_underflow_neg(i8 zeroext %a) {
   ret i32 %res
 }
 
-define i32 @safe_sub_imm_var(i8* %b) {
+define i32 @safe_sub_imm_var(ptr %b) {
 ; CHECK-LABEL: @safe_sub_imm_var(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[B:%.*]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 248, [[TMP1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[SUB]], 252
@@ -224,17 +224,17 @@ define i32 @safe_sub_imm_var(i8* %b) {
 ; CHECK-NEXT:    ret i32 [[CONV4]]
 ;
 entry:
-  %0 = load i8, i8* %b, align 1
+  %0 = load i8, ptr %b, align 1
   %sub = sub nuw nsw i8 -8, %0
   %cmp = icmp ugt i8 %sub, 252
   %conv4 = zext i1 %cmp to i32
   ret i32 %conv4
 }
 
-define i32 @safe_sub_var_imm(i8* %b) {
+define i32 @safe_sub_var_imm(ptr %b) {
 ; CHECK-LABEL: @safe_sub_var_imm(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[B:%.*]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[TMP1]], 248
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[SUB]], 252
@@ -242,17 +242,17 @@ define i32 @safe_sub_var_imm(i8* %b) {
 ; CHECK-NEXT:    ret i32 [[CONV4]]
 ;
 entry:
-  %0 = load i8, i8* %b, align 1
+  %0 = load i8, ptr %b, align 1
   %sub = sub nuw nsw i8 %0, -8
   %cmp = icmp ugt i8 %sub, 252
   %conv4 = zext i1 %cmp to i32
   ret i32 %conv4
 }
 
-define i32 @safe_add_imm_var(i8* %b) {
+define i32 @safe_add_imm_var(ptr %b) {
 ; CHECK-LABEL: @safe_add_imm_var(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[B:%.*]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 129, [[TMP1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[ADD]], 127
@@ -260,17 +260,17 @@ define i32 @safe_add_imm_var(i8* %b) {
 ; CHECK-NEXT:    ret i32 [[CONV4]]
 ;
 entry:
-  %0 = load i8, i8* %b, align 1
+  %0 = load i8, ptr %b, align 1
   %add = add nuw nsw i8 -127, %0
   %cmp = icmp ugt i8 %add, 127
   %conv4 = zext i1 %cmp to i32
   ret i32 %conv4
 }
 
-define i32 @safe_add_var_imm(i8* %b) {
+define i32 @safe_add_var_imm(ptr %b) {
 ; CHECK-LABEL: @safe_add_var_imm(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[B:%.*]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[TMP1]], 129
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[ADD]], 127
@@ -278,7 +278,7 @@ define i32 @safe_add_var_imm(i8* %b) {
 ; CHECK-NEXT:    ret i32 [[CONV4]]
 ;
 entry:
-  %0 = load i8, i8* %b, align 1
+  %0 = load i8, ptr %b, align 1
   %add = add nuw nsw i8 %0, -127
   %cmp = icmp ugt i8 %add, 127
   %conv4 = zext i1 %cmp to i32
