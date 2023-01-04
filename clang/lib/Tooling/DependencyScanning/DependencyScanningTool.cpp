@@ -123,7 +123,7 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
 
 namespace {
 /// Returns a CAS tree containing the dependencies.
-class GetDependencyTree : public DependencyConsumer {
+class GetDependencyTree : public FullDependencyConsumer {
 public:
   void handleBuildCommand(Command) override {}
   void handleFileDependency(StringRef File) override {}
@@ -132,33 +132,33 @@ public:
   void handleDependencyOutputOpts(const DependencyOutputOptions &) override {}
   void handleContextHash(std::string) override {}
 
-  void handleCASFileSystemRootID(cas::CASID ID) override {
-    CASFileSystemRootID = ID;
-  }
-
   std::string lookupModuleOutput(const ModuleID &, ModuleOutputKind) override {
     llvm::report_fatal_error("unexpected call to lookupModuleOutput");
   }
 
   Expected<llvm::cas::ObjectProxy> getTree() {
-    if (CASFileSystemRootID)
-      return CAS.getProxy(*CASFileSystemRootID);
+    if (auto ID = getCASFileSystemRootID())
+      return FS.getCAS().getProxy(*ID);
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "failed to get casfs");
   }
 
-  GetDependencyTree(cas::ObjectStore &CAS) : CAS(CAS) {}
+  GetDependencyTree(llvm::cas::CachingOnDiskFileSystem &FS,
+                    RemapPathCallback RemapPath)
+      : FullDependencyConsumer(AlreadySeen, nullptr, /*EagerModules=*/false,
+                               &FS, RemapPath),
+        FS(FS) {}
 
 private:
-  cas::ObjectStore &CAS;
-  Optional<cas::CASID> CASFileSystemRootID;
+  llvm::cas::CachingOnDiskFileSystem &FS;
+  llvm::StringSet<> AlreadySeen;
 };
 }
 
 llvm::Expected<llvm::cas::ObjectProxy>
 DependencyScanningTool::getDependencyTree(
     const std::vector<std::string> &CommandLine, StringRef CWD) {
-  GetDependencyTree Consumer(Worker.getCASFS().getCAS());
+  GetDependencyTree Consumer(*Worker.getCASFS(), /*RemapPath=*/nullptr);
   auto Result = Worker.computeDependencies(CWD, CommandLine, Consumer);
   if (Result)
     return std::move(Result);
@@ -170,9 +170,9 @@ DependencyScanningTool::getDependencyTreeFromCompilerInvocation(
     std::shared_ptr<CompilerInvocation> Invocation, StringRef CWD,
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
     bool DiagGenerationAsCompilation, RemapPathCallback RemapPath) {
-  GetDependencyTree Consumer(Worker.getCASFS().getCAS());
+  GetDependencyTree Consumer(*Worker.getCASFS(), RemapPath);
   Worker.computeDependenciesFromCompilerInvocation(
-      std::move(Invocation), CWD, Consumer, RemapPath, DiagsConsumer, VerboseOS,
+      std::move(Invocation), CWD, Consumer, DiagsConsumer, VerboseOS,
       DiagGenerationAsCompilation);
   return Consumer.getTree();
 }
@@ -549,8 +549,8 @@ DependencyScanningTool::getIncludeTreeFromCompilerInvocation(
     bool DiagGenerationAsCompilation) {
   IncludeTreePPConsumer Consumer(DB, PrefixMapping);
   Worker.computeDependenciesFromCompilerInvocation(
-      std::move(Invocation), CWD, Consumer, /*RemapPath=*/nullptr,
-      DiagsConsumer, VerboseOS, DiagGenerationAsCompilation);
+      std::move(Invocation), CWD, Consumer, DiagsConsumer, VerboseOS,
+      DiagGenerationAsCompilation);
   return Consumer.getIncludeTree();
 }
 
@@ -561,7 +561,8 @@ DependencyScanningTool::getFullDependencies(
     LookupModuleOutputCallback LookupModuleOutput,
     std::optional<StringRef> ModuleName) {
   FullDependencyConsumer Consumer(AlreadySeen, LookupModuleOutput,
-                                  Worker.shouldEagerLoadModules());
+                                  Worker.shouldEagerLoadModules(),
+                                  Worker.getCASFS());
   llvm::Error Result =
       Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
   if (Result)
@@ -576,12 +577,103 @@ DependencyScanningTool::getFullDependenciesLegacyDriverCommand(
     LookupModuleOutputCallback LookupModuleOutput,
     std::optional<StringRef> ModuleName) {
   FullDependencyConsumer Consumer(AlreadySeen, LookupModuleOutput,
-                                  Worker.shouldEagerLoadModules());
+                                  Worker.shouldEagerLoadModules(),
+                                  Worker.getCASFS());
   llvm::Error Result =
       Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
   if (Result)
     return std::move(Result);
   return Consumer.getFullDependenciesLegacyDriverCommand(CommandLine);
+}
+
+Error FullDependencyConsumer::initialize(CompilerInstance &ScanInstance,
+                                         CompilerInvocation &NewInvocation) {
+  if (CacheFS) {
+    CacheFS->trackNewAccesses();
+    if (auto CWD =
+            ScanInstance.getVirtualFileSystem().getCurrentWorkingDirectory())
+      CacheFS->setCurrentWorkingDirectory(*CWD);
+    // Track paths that are accessed by the scanner before we reach here.
+    for (const auto &File : ScanInstance.getHeaderSearchOpts().VFSOverlayFiles)
+      (void)CacheFS->status(File);
+    // Enable caching in the resulting commands.
+    ScanInstance.getFrontendOpts().CacheCompileJob = true;
+    CASOpts = ScanInstance.getCASOpts();
+  }
+  return Error::success();
+}
+
+Error FullDependencyConsumer::finalize(CompilerInstance &ScanInstance,
+                                       CompilerInvocation &NewInvocation) {
+  if (CacheFS) {
+    // Exclude the module cache from tracking. The implicit build pcms should
+    // not be needed after scanning.
+    if (!ScanInstance.getHeaderSearchOpts().ModuleCachePath.empty())
+      (void)CacheFS->excludeFromTracking(
+          ScanInstance.getHeaderSearchOpts().ModuleCachePath);
+
+    // Handle profile mappings.
+    (void)CacheFS->status(
+        NewInvocation.getCodeGenOpts().ProfileInstrumentUsePath);
+    (void)CacheFS->status(NewInvocation.getCodeGenOpts().SampleProfileFile);
+    (void)CacheFS->status(NewInvocation.getCodeGenOpts().ProfileRemappingFile);
+
+    if (auto E = CacheFS->createTreeFromNewAccesses(RemapPath).moveInto(
+            CASFileSystemRootID))
+      return E;
+
+    configureInvocationForCaching(NewInvocation, CASOpts,
+                                  CASFileSystemRootID->toString(),
+                                  CacheFS->getCurrentWorkingDirectory().get(),
+                                  /*ProduceIncludeTree=*/false);
+  }
+  return Error::success();
+}
+
+Error FullDependencyConsumer::initializeModuleBuild(
+    CompilerInstance &ModuleScanInstance) {
+  if (CacheFS) {
+    CacheFS->trackNewAccesses();
+    auto &HSOpts = ModuleScanInstance.getHeaderSearchOpts();
+    // Normally this would be looked up while creating the VFS, but implicit
+    // modules share their VFS.
+    for (const auto &File : HSOpts.VFSOverlayFiles)
+      (void)CacheFS->status(File);
+    // If the working directory is not otherwise accessed by the module build,
+    // we still need it due to -fcas-fs-working-directory being set.
+    if (auto CWD = CacheFS->getCurrentWorkingDirectory())
+      (void)CacheFS->status(*CWD);
+    // Exclude the module cache from tracking. The implicit build pcms should
+    // not be needed after scanning.
+    if (!HSOpts.ModuleCachePath.empty())
+      (void)CacheFS->excludeFromTracking(HSOpts.ModuleCachePath);
+  }
+  return Error::success();
+}
+
+Error FullDependencyConsumer::finalizeModuleBuild(
+    CompilerInstance &ModuleScanInstance) {
+  if (CacheFS) {
+    std::optional<cas::CASID> RootID;
+    if (auto E = CacheFS->createTreeFromNewAccesses(RemapPath).moveInto(RootID))
+      return E;
+
+    Module *M = ModuleScanInstance.getPreprocessor().getCurrentModule();
+    assert(M && "finalizing without a module");
+
+    M->setCASFileSystemRootID(RootID->toString());
+  }
+  return Error::success();
+}
+
+Error FullDependencyConsumer::finalizeModuleInvocation(CompilerInvocation &CI,
+                                                       const ModuleDeps &MD) {
+  if (auto ID = MD.CASFileSystemRootID) {
+    configureInvocationForCaching(CI, CASOpts, ID->toString(),
+                                  CacheFS->getCurrentWorkingDirectory().get(),
+                                  /*ProduceIncludeTree=*/false);
+  }
+  return llvm::Error::success();
 }
 
 FullDependenciesResult FullDependencyConsumer::takeFullDependencies() {

@@ -237,7 +237,7 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
     MapperPtr = std::make_unique<llvm::PrefixMapper>();
   } else {
     MapperPtr = std::make_unique<llvm::TreePathPrefixMapper>(
-        &Tool.getCachingFileSystem());
+        Tool.getCachingFileSystem());
   }
   llvm::PrefixMapper &Mapper = *MapperPtr;
   if (Error E = PrefixMapping.configurePrefixMapper(Invocation, Mapper))

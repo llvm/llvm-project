@@ -28,6 +28,9 @@ class DependencyOutputOptions;
 namespace tooling {
 namespace dependencies {
 
+using CachingOnDiskFileSystemPtr =
+    llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem>;
+
 class DependencyScanningWorkerFilesystem;
 struct DepscanPrefixMapping;
 
@@ -38,8 +41,6 @@ struct Command {
   std::string Executable;
   std::vector<std::string> Arguments;
 };
-
-using RemapPathCallback = llvm::cas::CachingOnDiskFileSystem::RemapPathCallback;
 
 class DependencyConsumer {
 public:
@@ -52,6 +53,21 @@ public:
 
   virtual llvm::Error finalize(CompilerInstance &ScanInstance,
                                CompilerInvocation &NewInvocation) {
+    return llvm::Error::success();
+  }
+
+  virtual llvm::Error
+  initializeModuleBuild(CompilerInstance &ModuleScanInstance) {
+    return llvm::Error::success();
+  }
+
+  virtual llvm::Error
+  finalizeModuleBuild(CompilerInstance &ModuleScanInstance) {
+    return llvm::Error::success();
+  }
+
+  virtual llvm::Error finalizeModuleInvocation(CompilerInvocation &CI,
+                                               const ModuleDeps &MD) {
     return llvm::Error::success();
   }
 
@@ -157,13 +173,13 @@ public:
   void computeDependenciesFromCompilerInvocation(
       std::shared_ptr<CompilerInvocation> Invocation,
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
-      RemapPathCallback RemapPath, DiagnosticConsumer &DiagsConsumer,
-      raw_ostream *VerboseOS, bool DiagGenerationAsCompilation);
+      DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
+      bool DiagGenerationAsCompilation);
 
   ScanningOutputFormat getScanningFormat() const { return Format; }
 
   llvm::vfs::FileSystem &getRealFS() { return *BaseFS; }
-  llvm::cas::CachingOnDiskFileSystem &getCASFS() { return *CacheFS; }
+  CachingOnDiskFileSystemPtr getCASFS() { return CacheFS; }
   bool useCAS() const { return UseCAS; }
   const CASOptions &getCASOpts() const { return CASOpts; }
 
@@ -189,7 +205,7 @@ private:
   bool OptimizeArgs;
 
   /// The caching file system.
-  llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> CacheFS;
+  CachingOnDiskFileSystemPtr CacheFS;
   /// The CAS Dependency Filesytem. This is not set at the sametime as DepFS;
   llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS;
   CASOptions CASOpts;

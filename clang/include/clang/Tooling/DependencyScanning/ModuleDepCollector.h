@@ -189,8 +189,8 @@ class ModuleDepCollector final : public DependencyCollector {
 public:
   ModuleDepCollector(std::unique_ptr<DependencyOutputOptions> Opts,
                      CompilerInstance &ScanInstance, DependencyConsumer &C,
-                     CompilerInvocation OriginalCI, StringRef WorkingDirectory,
-                     bool OptimizeArgs, bool EagerLoadModules);
+                     CompilerInvocation OriginalCI, bool OptimizeArgs,
+                     bool EagerLoadModules);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
@@ -198,10 +198,6 @@ public:
   /// Apply any changes implied by the discovered dependencies to the given
   /// invocation, (e.g. disable implicit modules, add explicit module paths).
   void applyDiscoveredDependencies(CompilerInvocation &CI);
-
-  /// Set a CAS filesystem root ID for the main file, which will be included by
-  /// \c applyDiscoveredDependencies.
-  void setMainFileCASFileSystemRootID(cas::CASID ID);
 
 private:
   friend ModuleDepCollectorPP;
@@ -228,15 +224,6 @@ private:
   std::unique_ptr<DependencyOutputOptions> Opts;
   /// The original Clang invocation passed to dependency scanner.
   CompilerInvocation OriginalInvocation;
-  /// The original working directory.
-  std::string WorkingDirectory;
-  /// The CAS filesystem root ID for the main input file, if any. This is used
-  /// in \c applyDiscoveredDependencies.
-  Optional<cas::CASID> MainFileCASFileSystemRootID;
-  /// CAS options to apply to invocations.
-  CASOptions CASOpts;
-  /// CAS options to apply to invocations.
-  bool CacheCompileJob;
   /// Whether to optimize the modules' command-line arguments.
   bool OptimizeArgs;
   /// Whether to set up command-lines to load PCM files eagerly.
