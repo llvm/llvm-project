@@ -260,7 +260,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
   // if not outright eliminated.
   if (SE) {
     SE->forgetLoop(L);
-    SE->forgetLoop(SubLoop);
+    SE->forgetBlockAndLoopDispositions();
   }
 
   using namespace ore;
