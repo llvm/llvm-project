@@ -402,7 +402,7 @@ public:
                const RVVTypes &Types,
                const std::vector<int64_t> &IntrinsicTypes,
                const std::vector<llvm::StringRef> &RequiredFeatures,
-               unsigned NF, Policy PolicyAttrs, bool IsPrototypeDefaultTU);
+               unsigned NF, Policy PolicyAttrs);
   ~RVVIntrinsic() = default;
 
   RVVTypePtr getOutputType() const { return OutputType; }
@@ -470,14 +470,13 @@ public:
   static llvm::SmallVector<PrototypeDescriptor>
   computeBuiltinTypes(llvm::ArrayRef<PrototypeDescriptor> Prototype,
                       bool IsMasked, bool HasMaskedOffOperand, bool HasVL,
-                      unsigned NF, bool IsPrototypeDefaultTU,
-                      PolicyScheme DefaultScheme, Policy PolicyAttrs);
+                      unsigned NF, PolicyScheme DefaultScheme,
+                      Policy PolicyAttrs);
   static llvm::SmallVector<Policy>
       getSupportedMaskedPolicies(bool HasTailPolicy, bool HasMaskPolicy);
 
   static void updateNamesAndPolicy(bool IsMasked, bool HasPolicy,
-                                   bool IsPrototypeDefaultTU, std::string &Name,
-                                   std::string &BuiltinName,
+                                   std::string &Name, std::string &BuiltinName,
                                    std::string &OverloadedName,
                                    Policy &PolicyAttrs);
 };
@@ -535,7 +534,6 @@ struct RVVIntrinsicRecord {
   bool HasMasked : 1;
   bool HasVL : 1;
   bool HasMaskedOffOperand : 1;
-  bool IsPrototypeDefaultTU : 1;
   bool HasTailPolicy : 1;
   bool HasMaskPolicy : 1;
   uint8_t UnMaskedPolicyScheme : 2;
