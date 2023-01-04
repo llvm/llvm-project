@@ -12,6 +12,7 @@
 #include "InputElement.h"
 #include "WriterUtils.h"
 #include "lld/Common/CommonLinkerContext.h"
+#include <optional>
 
 #define DEBUG_TYPE "lld"
 
@@ -461,8 +462,9 @@ Symbol *SymbolTable::addDefinedTable(StringRef name, uint32_t flags,
 // become available when the LTO object is read.  In this case we silently
 // replace the empty attributes with the valid ones.
 template <typename T>
-static void setImportAttributes(T *existing, Optional<StringRef> importName,
-                                Optional<StringRef> importModule,
+static void setImportAttributes(T *existing,
+                                std::optional<StringRef> importName,
+                                std::optional<StringRef> importModule,
                                 uint32_t flags, InputFile *file) {
   if (importName) {
     if (!existing->importName)
@@ -492,8 +494,8 @@ static void setImportAttributes(T *existing, Optional<StringRef> importName,
 }
 
 Symbol *SymbolTable::addUndefinedFunction(StringRef name,
-                                          Optional<StringRef> importName,
-                                          Optional<StringRef> importModule,
+                                          std::optional<StringRef> importName,
+                                          std::optional<StringRef> importModule,
                                           uint32_t flags, InputFile *file,
                                           const WasmSignature *sig,
                                           bool isCalledDirectly) {
@@ -577,8 +579,8 @@ Symbol *SymbolTable::addUndefinedData(StringRef name, uint32_t flags,
 }
 
 Symbol *SymbolTable::addUndefinedGlobal(StringRef name,
-                                        Optional<StringRef> importName,
-                                        Optional<StringRef> importModule,
+                                        std::optional<StringRef> importName,
+                                        std::optional<StringRef> importModule,
                                         uint32_t flags, InputFile *file,
                                         const WasmGlobalType *type) {
   LLVM_DEBUG(dbgs() << "addUndefinedGlobal: " << name << "\n");
@@ -601,8 +603,8 @@ Symbol *SymbolTable::addUndefinedGlobal(StringRef name,
 }
 
 Symbol *SymbolTable::addUndefinedTable(StringRef name,
-                                       Optional<StringRef> importName,
-                                       Optional<StringRef> importModule,
+                                       std::optional<StringRef> importName,
+                                       std::optional<StringRef> importModule,
                                        uint32_t flags, InputFile *file,
                                        const WasmTableType *type) {
   LLVM_DEBUG(dbgs() << "addUndefinedTable: " << name << "\n");
@@ -625,8 +627,8 @@ Symbol *SymbolTable::addUndefinedTable(StringRef name,
 }
 
 Symbol *SymbolTable::addUndefinedTag(StringRef name,
-                                     Optional<StringRef> importName,
-                                     Optional<StringRef> importModule,
+                                     std::optional<StringRef> importName,
+                                     std::optional<StringRef> importModule,
                                      uint32_t flags, InputFile *file,
                                      const WasmSignature *sig) {
   LLVM_DEBUG(dbgs() << "addUndefinedTag: " << name << "\n");

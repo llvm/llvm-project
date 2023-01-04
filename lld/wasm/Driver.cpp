@@ -33,6 +33,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
+#include <optional>
 
 #define DEBUG_TYPE "lld"
 
@@ -163,7 +164,8 @@ static cl::TokenizerCallback getQuotingStyle(opt::InputArgList &args) {
 }
 
 // Find a file by concatenating given paths.
-static Optional<std::string> findFile(StringRef path1, const Twine &path2) {
+static std::optional<std::string> findFile(StringRef path1,
+                                           const Twine &path2) {
   SmallString<128> s;
   path::append(s, path1, path2);
   if (fs::exists(s))
@@ -204,7 +206,7 @@ opt::InputArgList WasmOptTable::parse(ArrayRef<const char *> argv) {
 // attribute/flag in the object file itself.
 // See: https://github.com/WebAssembly/tool-conventions/issues/35
 static void readImportFile(StringRef filename) {
-  if (Optional<MemoryBufferRef> buf = readFile(filename))
+  if (std::optional<MemoryBufferRef> buf = readFile(filename))
     for (StringRef sym : args::getLines(*buf))
       config->allowUndefinedSymbols.insert(sym);
 }
@@ -237,7 +239,7 @@ std::vector<MemoryBufferRef> static getArchiveMembers(MemoryBufferRef mb) {
 }
 
 void LinkerDriver::addFile(StringRef path) {
-  Optional<MemoryBufferRef> buffer = readFile(path);
+  std::optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return;
   MemoryBufferRef mbref = *buffer;
@@ -283,30 +285,30 @@ void LinkerDriver::addFile(StringRef path) {
   }
 }
 
-static Optional<std::string> findFromSearchPaths(StringRef path) {
+static std::optional<std::string> findFromSearchPaths(StringRef path) {
   for (StringRef dir : config->searchPaths)
-    if (Optional<std::string> s = findFile(dir, path))
+    if (std::optional<std::string> s = findFile(dir, path))
       return s;
   return std::nullopt;
 }
 
 // This is for -l<basename>. We'll look for lib<basename>.a from
 // search paths.
-static Optional<std::string> searchLibraryBaseName(StringRef name) {
+static std::optional<std::string> searchLibraryBaseName(StringRef name) {
   for (StringRef dir : config->searchPaths) {
     // Currently we don't enable dyanmic linking at all unless -shared or -pie
     // are used, so don't even look for .so files in that case..
     if (config->isPic && !config->isStatic)
-      if (Optional<std::string> s = findFile(dir, "lib" + name + ".so"))
+      if (std::optional<std::string> s = findFile(dir, "lib" + name + ".so"))
         return s;
-    if (Optional<std::string> s = findFile(dir, "lib" + name + ".a"))
+    if (std::optional<std::string> s = findFile(dir, "lib" + name + ".a"))
       return s;
   }
   return std::nullopt;
 }
 
 // This is for -l<namespec>.
-static Optional<std::string> searchLibrary(StringRef name) {
+static std::optional<std::string> searchLibrary(StringRef name) {
   if (name.startswith(":"))
     return findFromSearchPaths(name.substr(1));
   return searchLibraryBaseName(name);
@@ -314,7 +316,7 @@ static Optional<std::string> searchLibrary(StringRef name) {
 
 // Add a given library by searching it from input search paths.
 void LinkerDriver::addLibrary(StringRef name) {
-  if (Optional<std::string> path = searchLibrary(name))
+  if (std::optional<std::string> path = searchLibrary(name))
     addFile(saver().save(*path));
   else
     error("unable to find library -l" + name, ErrorTag::LibNotFound, {name});
@@ -406,7 +408,7 @@ static void readConfigs(opt::InputArgList &args) {
         std::pair<llvm::StringRef, llvm::StringRef>(defaultModule, memoryName);
   } else {
     config->memoryImport =
-        llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>();
+        std::optional<std::pair<llvm::StringRef, llvm::StringRef>>();
   }
 
   if (args.hasArg(OPT_export_memory_with_name)) {
@@ -415,7 +417,7 @@ static void readConfigs(opt::InputArgList &args) {
   } else if (args.hasArg(OPT_export_memory)) {
     config->memoryExport = memoryName;
   } else {
-    config->memoryExport = llvm::Optional<llvm::StringRef>();
+    config->memoryExport = std::optional<llvm::StringRef>();
   }
 
   config->sharedMemory = args.hasArg(OPT_shared_memory);
@@ -488,14 +490,14 @@ static void readConfigs(opt::InputArgList &args) {
 
   if (auto *arg = args.getLastArg(OPT_features)) {
     config->features =
-        llvm::Optional<std::vector<std::string>>(std::vector<std::string>());
+        std::optional<std::vector<std::string>>(std::vector<std::string>());
     for (StringRef s : arg->getValues())
       config->features->push_back(std::string(s));
   }
 
   if (auto *arg = args.getLastArg(OPT_extra_features)) {
     config->extraFeatures =
-        llvm::Optional<std::vector<std::string>>(std::vector<std::string>());
+        std::optional<std::vector<std::string>>(std::vector<std::string>());
     for (StringRef s : arg->getValues())
       config->extraFeatures->push_back(std::string(s));
   }

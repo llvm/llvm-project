@@ -27,6 +27,7 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/Wasm.h"
+#include <optional>
 
 namespace lld {
 namespace wasm {
@@ -252,7 +253,7 @@ public:
       : InputChunk(f, InputChunk::Function, func->SymbolName), signature(s),
         function(func),
         exportName(func && func->ExportName ? (*func->ExportName).str()
-                                            : llvm::Optional<std::string>()) {
+                                            : std::optional<std::string>()) {
     inputSectionOffset = function->CodeSectionOffset;
     rawData =
         file->codeSection->Content.slice(inputSectionOffset, function->Size);
@@ -268,9 +269,9 @@ public:
            c->kind() == InputChunk::SyntheticFunction;
   }
 
-  llvm::Optional<StringRef> getExportName() const {
-    return exportName ? llvm::Optional<StringRef>(*exportName)
-                      : llvm::Optional<StringRef>();
+  std::optional<StringRef> getExportName() const {
+    return exportName ? std::optional<StringRef>(*exportName)
+                      : std::optional<StringRef>();
   }
   void setExportName(std::string exportName) { this->exportName = exportName; }
   uint32_t getFunctionInputOffset() const { return getInputSectionOffset(); }
@@ -299,9 +300,9 @@ public:
   const WasmFunction *function;
 
 protected:
-  llvm::Optional<std::string> exportName;
-  llvm::Optional<uint32_t> functionIndex;
-  llvm::Optional<uint32_t> tableIndex;
+  std::optional<std::string> exportName;
+  std::optional<uint32_t> functionIndex;
+  std::optional<uint32_t> tableIndex;
   uint32_t compressedFuncSize = 0;
   uint32_t compressedSize = 0;
 };

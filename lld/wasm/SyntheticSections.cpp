@@ -17,6 +17,7 @@
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::wasm;
@@ -107,7 +108,8 @@ void DylinkSection::writeBody() {
       LLVM_DEBUG(llvm::dbgs() << "export info: " << toString(*sym) << "\n");
       StringRef name = sym->getName();
       if (auto *f = dyn_cast<DefinedFunction>(sym)) {
-        if (Optional<StringRef> exportName = f->function->getExportName()) {
+        if (std::optional<StringRef> exportName =
+                f->function->getExportName()) {
           name = *exportName;
         }
       }

@@ -12,7 +12,6 @@
 
 #include "TableGenBackends.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -30,6 +29,7 @@
 #include <cctype>
 #include <functional>
 #include <map>
+#include <optional>
 #include <set>
 using namespace llvm;
 
@@ -250,8 +250,9 @@ typedef llvm::PointerUnion<RecordVec*, RecordSet*> VecOrSet;
 
 namespace {
 class InferPedantic {
-  typedef llvm::DenseMap<const Record*,
-                         std::pair<unsigned, Optional<unsigned> > > GMap;
+  typedef llvm::DenseMap<const Record *,
+                         std::pair<unsigned, std::optional<unsigned>>>
+      GMap;
 
   DiagGroupParentMap &DiagGroupParents;
   const std::vector<Record*> &Diags;
@@ -675,7 +676,7 @@ private:
 };
 
 template <class Derived> struct DiagTextVisitor {
-  using ModifierMappingsType = Optional<std::vector<int>>;
+  using ModifierMappingsType = std::optional<std::vector<int>>;
 
 private:
   Derived &getDerived() { return static_cast<Derived &>(*this); }
@@ -706,7 +707,7 @@ public:
 
   private:
     DiagTextVisitor &Visitor;
-    Optional<std::vector<int>> OldMappings;
+    std::optional<std::vector<int>> OldMappings;
 
   public:
     Piece *Substitution;

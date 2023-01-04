@@ -16,6 +16,7 @@
 #include "bolt/Passes/MCF.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include <numeric>
+#include <optional>
 #include <stack>
 
 #define DEBUG_TYPE "shrinkwrapping"
@@ -1465,7 +1466,7 @@ class PredictiveStackPointerTracking
   decltype(ShrinkWrapping::Todo) &TodoMap;
   DataflowInfoManager &Info;
 
-  Optional<unsigned> AnnotationIndex;
+  std::optional<unsigned> AnnotationIndex;
 
 protected:
   void compNextAux(const MCInst &Point,
