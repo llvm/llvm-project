@@ -754,9 +754,6 @@ ABI Changes in Clang
   classified such types as non-POD (for the purposes of Itanium ABI). Clang now
   matches the gcc behavior (except on Darwin and PS4). You can switch back to
   the old ABI behavior with the flag: ``-fclang-abi-compat=15.0``.
-- Some types with implicitly deleted special member functions were accidentally
-  marked as non-trivially copyable. This has been fixed
-  (`#59624 <https://github.com/llvm/llvm-project/issues/59624>`_).
 
 OpenMP Support in Clang
 -----------------------
