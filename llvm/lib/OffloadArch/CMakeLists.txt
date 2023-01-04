@@ -31,4 +31,8 @@ add_llvm_component_library(LLVMOffloadArch
     InterfaceStub
 )
 
+if(NOT WIN32)
+  target_link_libraries(LLVMOffloadArch PRIVATE dl)
+endif()
+
 add_subdirectory(offload-arch)
