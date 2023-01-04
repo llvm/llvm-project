@@ -867,6 +867,8 @@ clang-format
   To match the default behavior of clang-format 15, use the ``Keyword`` value.
 - Add ``IntegerLiteralSeparator`` option for fixing integer literal separators
   in C++, C#, Java, and JavaScript.
+- Add ``BreakAfterAttributes`` option for breaking after a group of C++11
+  attributes before a function declaration/definition name.
 
 clang-extdef-mapping
 --------------------
