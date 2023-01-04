@@ -281,27 +281,33 @@ void InclusionRewriter::OutputContentUpTo(const MemoryBufferRef &FromFile,
 
   StringRef TextToWrite(FromFile.getBufferStart() + WriteFrom,
                         WriteTo - WriteFrom);
+  // count lines manually, it's faster than getPresumedLoc()
+  Line += TextToWrite.count(LocalEOL);
 
   if (MainEOL == LocalEOL) {
     OS << TextToWrite;
-    // count lines manually, it's faster than getPresumedLoc()
-    Line += TextToWrite.count(LocalEOL);
-    if (EnsureNewline && !TextToWrite.endswith(LocalEOL))
-      OS << MainEOL;
   } else {
     // Output the file one line at a time, rewriting the line endings as we go.
     StringRef Rest = TextToWrite;
     while (!Rest.empty()) {
-      StringRef LineText;
-      std::tie(LineText, Rest) = Rest.split(LocalEOL);
+      // Identify and output the next line excluding an EOL sequence if present.
+      size_t Idx = Rest.find(LocalEOL);
+      StringRef LineText = Rest.substr(0, Idx);
       OS << LineText;
-      Line++;
-      if (!Rest.empty())
+      if (Idx != StringRef::npos) {
+        // An EOL sequence was present, output the EOL sequence for the
+        // main source file and skip past the local EOL sequence.
         OS << MainEOL;
+        Idx += LocalEOL.size();
+      }
+      // Strip the line just handled. If Idx is npos or matches the end of the
+      // text, Rest will be set to an empty string and the loop will terminate.
+      Rest = Rest.substr(Idx);
     }
-    if (TextToWrite.endswith(LocalEOL) || EnsureNewline)
-      OS << MainEOL;
   }
+  if (EnsureNewline && !TextToWrite.endswith(LocalEOL))
+    OS << MainEOL;
+
   WriteFrom = WriteTo;
 }
 
