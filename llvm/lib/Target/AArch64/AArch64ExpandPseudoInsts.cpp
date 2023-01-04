@@ -148,10 +148,40 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
 
     case AArch64::ORRWri:
     case AArch64::ORRXri:
-      MIBS.push_back(BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
-        .add(MI.getOperand(0))
-        .addReg(BitSize == 32 ? AArch64::WZR : AArch64::XZR)
-        .addImm(I->Op2));
+      if (I->Op1 == 0) {
+        MIBS.push_back(BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
+                           .add(MI.getOperand(0))
+                           .addReg(BitSize == 32 ? AArch64::WZR : AArch64::XZR)
+                           .addImm(I->Op2));
+      } else {
+        Register DstReg = MI.getOperand(0).getReg();
+        bool DstIsDead = MI.getOperand(0).isDead();
+        MIBS.push_back(
+            BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
+                .addReg(DstReg, RegState::Define |
+                                    getDeadRegState(DstIsDead && LastItem) |
+                                    RenamableState)
+                .addReg(DstReg)
+                .addImm(I->Op2));
+      }
+      break;
+    case AArch64::ANDXri:
+      if (I->Op1 == 0) {
+        MIBS.push_back(BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
+                           .add(MI.getOperand(0))
+                           .addReg(BitSize == 32 ? AArch64::WZR : AArch64::XZR)
+                           .addImm(I->Op2));
+      } else {
+        Register DstReg = MI.getOperand(0).getReg();
+        bool DstIsDead = MI.getOperand(0).isDead();
+        MIBS.push_back(
+            BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
+                .addReg(DstReg, RegState::Define |
+                                    getDeadRegState(DstIsDead && LastItem) |
+                                    RenamableState)
+                .addReg(DstReg)
+                .addImm(I->Op2));
+      }
       break;
     case AArch64::MOVNWi:
     case AArch64::MOVNXi:
