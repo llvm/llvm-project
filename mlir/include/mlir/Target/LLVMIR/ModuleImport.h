@@ -75,8 +75,8 @@ public:
   /// Stores a mapping between an LLVM instruction and the imported MLIR
   /// operation if the operation returns no result. Asserts if the operation
   /// returns a result and should be added to valueMapping instead.
-  void mapNoResultOp(llvm::Instruction *inst, Operation *mlir) {
-    mapNoResultOp(inst) = mlir;
+  void mapNoResultOp(llvm::Instruction *llvm, Operation *mlir) {
+    mapNoResultOp(llvm) = mlir;
   }
 
   /// Provides write-once access to store the MLIR operation corresponding to
@@ -140,12 +140,9 @@ public:
   /// Imports `func` into the current module.
   LogicalResult processFunction(llvm::Function *func);
 
-  /// Converts function attributes of LLVM Function \p func
-  /// into LLVM dialect attributes of LLVMFuncOp \p funcOp.
+  /// Converts function attributes of LLVM Function `func` into LLVM dialect
+  /// attributes of LLVMFuncOp `funcOp`.
   void processFunctionAttributes(llvm::Function *func, LLVMFuncOp funcOp);
-
-  /// Imports `globalVar` as a GlobalOp, creating it if it doesn't exist.
-  GlobalOp processGlobal(llvm::GlobalVariable *globalVar);
 
   /// Sets the fastmath flags attribute for the imported operation `op` given
   /// the original instruction `inst`. Asserts if the operation does not
@@ -165,6 +162,11 @@ private:
     constantInsertionOp = nullptr;
   }
 
+  /// Converts an LLVM global variable into an MLIR LLVM dialect global
+  /// operation if a conversion exists. Otherwise, returns failure.
+  LogicalResult convertGlobal(llvm::GlobalVariable *globalVar);
+  /// Imports the magic globals "global_ctors" and "global_dtors".
+  LogicalResult convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar);
   /// Returns personality of `func` as a FlatSymbolRefAttr.
   FlatSymbolRefAttr getPersonalityAsAttr(llvm::Function *func);
   /// Imports `bb` into `block`, which must be initially empty.
@@ -218,9 +220,6 @@ private:
   /// function entry block.
   FailureOr<Value> convertConstantExpr(llvm::Constant *constant);
 
-  /// Imports the magic globals "global_ctors" and "global_dtors".
-  LogicalResult convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar);
-
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;
   /// Block to insert the next constant into.
@@ -248,8 +247,6 @@ private:
   /// operations for all operations that return no result. All operations that
   /// return a result have a valueMapping entry instead.
   DenseMap<llvm::Instruction *, Operation *> noResultOpMapping;
-  /// Uniquing map of GlobalVariables.
-  DenseMap<llvm::GlobalVariable *, GlobalOp> globals;
   /// The stateful type translator (contains named structs).
   LLVM::TypeFromLLVMIRTranslator typeTranslator;
   /// Stateful debug information importer.
