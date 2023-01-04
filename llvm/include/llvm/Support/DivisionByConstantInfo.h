@@ -31,7 +31,7 @@ struct UnsignedDivisionByConstantInfo {
       bool AllowEvenDivisorOptimization = true);
   APInt Magic;          ///< magic number
   bool IsAdd;           ///< add indicator
-  unsigned ShiftAmount; ///< shift amount
+  unsigned PostShift;   ///< post-shift amount
   unsigned PreShift;    ///< pre-shift amount
 };
 

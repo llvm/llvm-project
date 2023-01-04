@@ -116,22 +116,14 @@ APInt UnsignedDivideUsingMagic(const APInt &Numerator, const APInt &Divisor,
     }
   }
 
-  unsigned PreShift = 0;
-  unsigned PostShift = 0;
-  bool UseNPQ = false;
-  if (!Magics.IsAdd) {
-    assert(Magics.ShiftAmount < Divisor.getBitWidth() &&
-           "We shouldn't generate an undefined shift!");
-    PreShift = Magics.PreShift;
-    PostShift = Magics.ShiftAmount;
-    UseNPQ = false;
-  } else {
-    assert(Magics.PreShift == 0 && "Unexpected pre-shift");
-    PostShift = Magics.ShiftAmount - 1;
-    assert(PostShift < Divisor.getBitWidth() &&
-           "We shouldn't generate an undefined shift!");
-    UseNPQ = true;
-  }
+  assert(Magics.PreShift < Divisor.getBitWidth() &&
+         "We shouldn't generate an undefined shift!");
+  assert(Magics.PostShift < Divisor.getBitWidth() &&
+         "We shouldn't generate an undefined shift!");
+  assert((!Magics.IsAdd || Magics.PreShift == 0) && "Unexpected pre-shift");
+  unsigned PreShift = Magics.PreShift;
+  unsigned PostShift = Magics.PostShift;
+  bool UseNPQ = Magics.IsAdd;
 
   APInt NPQFactor =
       UseNPQ ? APInt::getSignedMinValue(Bits) : APInt::getZero(Bits);
