@@ -43,6 +43,8 @@ enum NodeType : unsigned {
   // FPR<->GPR transfer operations
   MOVGR2FR_W_LA64,
   MOVFR2GR_S_LA64,
+  MOVFCSR2GR,
+  MOVGR2FCSR,
 
   FTINT,
 
