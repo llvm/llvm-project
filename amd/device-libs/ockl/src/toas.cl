@@ -6,14 +6,15 @@
  *===------------------------------------------------------------------------*/
 
 #include "ockl.h"
-
-__attribute__((const, target("flat-address-space"))) bool
+__attribute__((const))
+bool
 OCKL_MANGLE_T(is_local,addr)(const void *a)
 {
     return __builtin_amdgcn_is_shared(a);
 }
 
-__attribute__((const, target("flat-address-space"))) bool
+__attribute__((const))
+bool
 OCKL_MANGLE_T(is_private,addr)(const void *a)
 {
     return __builtin_amdgcn_is_private(a);
