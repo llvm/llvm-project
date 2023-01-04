@@ -2125,7 +2125,13 @@ typedef struct hsa_kernel_dispatch_packet_s {
    * Opaque handle to a code object that includes an implementation-defined
    * executable code for the kernel.
    */
-  uint64_t kernel_object;
+    union {
+#ifdef DEVICE_COMPILER
+        __global
+#endif
+        void *kernel_object;
+        uint64_t kernel_object_padding;
+    };
 
 #ifdef HSA_LARGE_MODEL
 #ifdef DEVICE_COMPILER

@@ -5,7 +5,7 @@
 #define LOCAL_ALIGN 16
 
 struct rtinfo {
-    ulong kernel_object;
+    __global char* kernel_object;
     uint private_segment_size;
     uint group_segment_size;
 };
