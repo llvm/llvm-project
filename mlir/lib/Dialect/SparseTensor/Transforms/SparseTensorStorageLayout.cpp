@@ -5,15 +5,21 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #include "SparseTensorStorageLayout.h"
 #include "CodegenUtils.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
 using namespace sparse_tensor;
+
+//===----------------------------------------------------------------------===//
+// Private helper methods.
+//===----------------------------------------------------------------------===//
 
 static Value createIndexCast(OpBuilder &builder, Location loc, Value value,
                              Type to) {
@@ -47,6 +53,10 @@ convertSparseTensorType(RankedTensorType rtp, SmallVectorImpl<Type> &fields) {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// The sparse tensor type converter (defined in Passes.h).
+//===----------------------------------------------------------------------===//
+
 SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
   addConversion([](Type type) { return type; });
   addConversion([&](RankedTensorType rtp, SmallVectorImpl<Type> &fields) {
@@ -64,6 +74,10 @@ SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
     return genTuple(builder, loc, tp, inputs);
   });
 }
+
+//===----------------------------------------------------------------------===//
+// StorageLayout methods.
+//===----------------------------------------------------------------------===//
 
 unsigned StorageLayout::getMemRefFieldIndex(SparseTensorFieldKind kind,
                                             std::optional<unsigned> dim) const {
@@ -89,6 +103,10 @@ unsigned StorageLayout::getMemRefFieldIndex(StorageSpecifierKind kind,
   return getMemRefFieldIndex(toFieldKind(kind), dim);
 }
 
+//===----------------------------------------------------------------------===//
+// StorageTensorSpecifier methods.
+//===----------------------------------------------------------------------===//
+
 Value SparseTensorSpecifier::getInitValue(OpBuilder &builder, Location loc,
                                           RankedTensorType rtp) {
   return builder.create<StorageSpecifierInitOp>(
@@ -113,6 +131,10 @@ void SparseTensorSpecifier::setSpecifierField(OpBuilder &builder, Location loc,
       loc, specifier, kind, fromOptionalInt(specifier.getContext(), dim),
       createIndexCast(builder, loc, v, getFieldType(kind, dim)));
 }
+
+//===----------------------------------------------------------------------===//
+// Public methods.
+//===----------------------------------------------------------------------===//
 
 constexpr uint64_t kDataFieldStartingIdx = 0;
 
