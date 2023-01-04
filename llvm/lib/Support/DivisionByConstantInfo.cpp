@@ -73,7 +73,7 @@ SignedDivisionByConstantInfo SignedDivisionByConstantInfo::get(const APInt &D) {
 UnsignedDivisionByConstantInfo
 UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros,
                                     bool AllowEvenDivisorOptimization) {
-  assert(!D.isZero() && "Precondition violation.");
+  assert(!D.isZero() && !D.isOne() && "Precondition violation.");
   assert(D.getBitWidth() > 1 && "Does not work at smaller bitwidths.");
 
   APInt Delta;
