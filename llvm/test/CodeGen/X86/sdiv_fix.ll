@@ -65,10 +65,8 @@ define i16 @func(i16 %x, i16 %y) nounwind {
 define i16 @func2(i8 %x, i8 %y) nounwind {
 ; X64-LABEL: func2:
 ; X64:       # %bb.0:
-; X64-NEXT:    movsbl %dil, %eax
-; X64-NEXT:    movsbl %sil, %ecx
-; X64-NEXT:    movswl %cx, %esi
-; X64-NEXT:    movswl %ax, %ecx
+; X64-NEXT:    movsbl %sil, %esi
+; X64-NEXT:    movsbl %dil, %ecx
 ; X64-NEXT:    shll $14, %ecx
 ; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    cltd
