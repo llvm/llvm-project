@@ -283,18 +283,7 @@ get_return_value(__global header_t *header, __global payload_t *payload,
  *  code. Application kernels must only use __ockl_hostcall_preview()
  *  defined elsewhere.
  *
- *  The function is marked noinline to preserve all calls in the
- *  kernel. This is required because the compiler backend includes a
- *  check for the presence of this function as a way to determine that
- *  hostcall is used.
- *
- *  FIXME: Additionally, the optnone attribute is required to ensure
- *  that the SelectAcceleratorCode pass in HCC does not forcibly
- *  inline this function. This should be removed when the SAC pass or
- *  HCC itself is removed.
  */
-__attribute__((noinline))
-__attribute__((optnone))
 long2
 __ockl_hostcall_internal(void *_buffer, uint service_id, ulong arg0, ulong arg1,
                          ulong arg2, ulong arg3, ulong arg4, ulong arg5,

@@ -14,6 +14,7 @@
  *  code. Application kernels must only use __ockl_hostcall_preview()
  *  defined below.
  */
+__attribute__((cold))
 extern long2
 __ockl_hostcall_internal(void *buffer, uint service_id,
                          ulong arg0, ulong arg1, ulong arg2, ulong arg3,
