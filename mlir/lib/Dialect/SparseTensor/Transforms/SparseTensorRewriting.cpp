@@ -809,16 +809,14 @@ private:
       // Sort the COO tensor so that its elements are ordered via increasing
       // indices for the storage ordering of the dst tensor.
       SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(srcTp);
-      auto dynShape = {ShapedType::kDynamic};
-      auto indTp =
-          MemRefType::get(dynShape, getIndexOverheadType(rewriter, encSrc));
       uint64_t rank = dstTp.getRank();
+      uint64_t cooStart = getCOOStart(encSrc);
       // Gather the indices-arrays in the dst tensor storage order.
       SmallVector<Value> xs(rank, Value());
       for (uint64_t i = 0; i < rank; i++) {
         uint64_t orgDim = toOrigDim(encSrc, i);
-        xs[toStoredDim(encDst, orgDim)] = rewriter.create<ToIndicesOp>(
-            loc, indTp, src, rewriter.getIndexAttr(i));
+        xs[toStoredDim(encDst, orgDim)] =
+            genToIndices(rewriter, loc, src, i, cooStart);
       }
 
       // Retrieve NNZ.
@@ -827,8 +825,7 @@ private:
                                                 nnz);
 
       // Retrieve the values-array.
-      auto valTp = MemRefType::get(dynShape, srcTp.getElementType());
-      Value y = rewriter.create<ToValuesOp>(loc, valTp, src);
+      Value y = genToValues(rewriter, loc, src);
 
       // Sort the COO tensor.
       rewriter.create<SortOp>(loc, nnz, xs, ValueRange{y});
