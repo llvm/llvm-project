@@ -792,8 +792,9 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
     // Start at the last label as an approximation of the current basic block.
     // This is a heuristic, since the full set of labels have yet to be
     // determined
-    for (auto LI = Labels.rbegin(); LI != Labels.rend(); ++LI) {
-      auto II = Instructions.find(LI->first);
+    for (const uint32_t Offset :
+         llvm::make_first_range(llvm::reverse(Labels))) {
+      auto II = Instructions.find(Offset);
       if (II != Instructions.end()) {
         Begin = II;
         break;
@@ -2658,10 +2659,10 @@ bool BinaryFunction::replayCFIInstrs(int32_t FromState, int32_t ToState,
   }
 
   // Replay instructions while avoiding duplicates
-  for (auto I = NewCFIs.rbegin(), E = NewCFIs.rend(); I != E; ++I) {
-    if (CFIDiff.isRedundant(FrameInstructions[*I]))
+  for (int32_t State : llvm::reverse(NewCFIs)) {
+    if (CFIDiff.isRedundant(FrameInstructions[State]))
       continue;
-    InsertIt = addCFIPseudo(InBB, InsertIt, *I);
+    InsertIt = addCFIPseudo(InBB, InsertIt, State);
   }
 
   return true;
