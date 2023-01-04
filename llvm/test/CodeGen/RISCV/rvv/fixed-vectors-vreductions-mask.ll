@@ -7,45 +7,13 @@
 declare i1 @llvm.vector.reduce.or.v1i1(<1 x i1>)
 
 define signext i1 @vreduce_or_v1i1(<1 x i1> %v) {
-; LMULMAX1-RV32-LABEL: vreduce_or_v1i1:
-; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX1-RV32-NEXT:    vmv.x.s a0, v8
-; LMULMAX1-RV32-NEXT:    slli a0, a0, 31
-; LMULMAX1-RV32-NEXT:    srai a0, a0, 31
-; LMULMAX1-RV32-NEXT:    ret
-;
-; LMULMAX1-RV64-LABEL: vreduce_or_v1i1:
-; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX1-RV64-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-RV64-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX1-RV64-NEXT:    vmv.x.s a0, v8
-; LMULMAX1-RV64-NEXT:    slli a0, a0, 63
-; LMULMAX1-RV64-NEXT:    srai a0, a0, 63
-; LMULMAX1-RV64-NEXT:    ret
-;
-; LMULMAX8-RV32-LABEL: vreduce_or_v1i1:
-; LMULMAX8-RV32:       # %bb.0:
-; LMULMAX8-RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX8-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX8-RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX8-RV32-NEXT:    vmv.x.s a0, v8
-; LMULMAX8-RV32-NEXT:    slli a0, a0, 31
-; LMULMAX8-RV32-NEXT:    srai a0, a0, 31
-; LMULMAX8-RV32-NEXT:    ret
-;
-; LMULMAX8-RV64-LABEL: vreduce_or_v1i1:
-; LMULMAX8-RV64:       # %bb.0:
-; LMULMAX8-RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX8-RV64-NEXT:    vmv.v.i v8, 0
-; LMULMAX8-RV64-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX8-RV64-NEXT:    vmv.x.s a0, v8
-; LMULMAX8-RV64-NEXT:    slli a0, a0, 63
-; LMULMAX8-RV64-NEXT:    srai a0, a0, 63
-; LMULMAX8-RV64-NEXT:    ret
+; CHECK-LABEL: vreduce_or_v1i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vfirst.m a0, v0
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.or.v1i1(<1 x i1> %v)
   ret i1 %red
 }
@@ -53,45 +21,13 @@ define signext i1 @vreduce_or_v1i1(<1 x i1> %v) {
 declare i1 @llvm.vector.reduce.xor.v1i1(<1 x i1>)
 
 define signext i1 @vreduce_xor_v1i1(<1 x i1> %v) {
-; LMULMAX1-RV32-LABEL: vreduce_xor_v1i1:
-; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX1-RV32-NEXT:    vmv.x.s a0, v8
-; LMULMAX1-RV32-NEXT:    slli a0, a0, 31
-; LMULMAX1-RV32-NEXT:    srai a0, a0, 31
-; LMULMAX1-RV32-NEXT:    ret
-;
-; LMULMAX1-RV64-LABEL: vreduce_xor_v1i1:
-; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX1-RV64-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-RV64-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX1-RV64-NEXT:    vmv.x.s a0, v8
-; LMULMAX1-RV64-NEXT:    slli a0, a0, 63
-; LMULMAX1-RV64-NEXT:    srai a0, a0, 63
-; LMULMAX1-RV64-NEXT:    ret
-;
-; LMULMAX8-RV32-LABEL: vreduce_xor_v1i1:
-; LMULMAX8-RV32:       # %bb.0:
-; LMULMAX8-RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX8-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX8-RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX8-RV32-NEXT:    vmv.x.s a0, v8
-; LMULMAX8-RV32-NEXT:    slli a0, a0, 31
-; LMULMAX8-RV32-NEXT:    srai a0, a0, 31
-; LMULMAX8-RV32-NEXT:    ret
-;
-; LMULMAX8-RV64-LABEL: vreduce_xor_v1i1:
-; LMULMAX8-RV64:       # %bb.0:
-; LMULMAX8-RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX8-RV64-NEXT:    vmv.v.i v8, 0
-; LMULMAX8-RV64-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX8-RV64-NEXT:    vmv.x.s a0, v8
-; LMULMAX8-RV64-NEXT:    slli a0, a0, 63
-; LMULMAX8-RV64-NEXT:    srai a0, a0, 63
-; LMULMAX8-RV64-NEXT:    ret
+; CHECK-LABEL: vreduce_xor_v1i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vfirst.m a0, v0
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.xor.v1i1(<1 x i1> %v)
   ret i1 %red
 }
@@ -99,45 +35,13 @@ define signext i1 @vreduce_xor_v1i1(<1 x i1> %v) {
 declare i1 @llvm.vector.reduce.and.v1i1(<1 x i1>)
 
 define signext i1 @vreduce_and_v1i1(<1 x i1> %v) {
-; LMULMAX1-RV32-LABEL: vreduce_and_v1i1:
-; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX1-RV32-NEXT:    vmv.x.s a0, v8
-; LMULMAX1-RV32-NEXT:    slli a0, a0, 31
-; LMULMAX1-RV32-NEXT:    srai a0, a0, 31
-; LMULMAX1-RV32-NEXT:    ret
-;
-; LMULMAX1-RV64-LABEL: vreduce_and_v1i1:
-; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX1-RV64-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-RV64-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX1-RV64-NEXT:    vmv.x.s a0, v8
-; LMULMAX1-RV64-NEXT:    slli a0, a0, 63
-; LMULMAX1-RV64-NEXT:    srai a0, a0, 63
-; LMULMAX1-RV64-NEXT:    ret
-;
-; LMULMAX8-RV32-LABEL: vreduce_and_v1i1:
-; LMULMAX8-RV32:       # %bb.0:
-; LMULMAX8-RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX8-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX8-RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX8-RV32-NEXT:    vmv.x.s a0, v8
-; LMULMAX8-RV32-NEXT:    slli a0, a0, 31
-; LMULMAX8-RV32-NEXT:    srai a0, a0, 31
-; LMULMAX8-RV32-NEXT:    ret
-;
-; LMULMAX8-RV64-LABEL: vreduce_and_v1i1:
-; LMULMAX8-RV64:       # %bb.0:
-; LMULMAX8-RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX8-RV64-NEXT:    vmv.v.i v8, 0
-; LMULMAX8-RV64-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX8-RV64-NEXT:    vmv.x.s a0, v8
-; LMULMAX8-RV64-NEXT:    slli a0, a0, 63
-; LMULMAX8-RV64-NEXT:    srai a0, a0, 63
-; LMULMAX8-RV64-NEXT:    ret
+; CHECK-LABEL: vreduce_and_v1i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vfirst.m a0, v0
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.and.v1i1(<1 x i1> %v)
   ret i1 %red
 }
@@ -145,45 +49,13 @@ define signext i1 @vreduce_and_v1i1(<1 x i1> %v) {
 declare i1 @llvm.vector.reduce.umax.v1i1(<1 x i1>)
 
 define signext i1 @vreduce_umax_v1i1(<1 x i1> %v) {
-; LMULMAX1-RV32-LABEL: vreduce_umax_v1i1:
-; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX1-RV32-NEXT:    vmv.x.s a0, v8
-; LMULMAX1-RV32-NEXT:    slli a0, a0, 31
-; LMULMAX1-RV32-NEXT:    srai a0, a0, 31
-; LMULMAX1-RV32-NEXT:    ret
-;
-; LMULMAX1-RV64-LABEL: vreduce_umax_v1i1:
-; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX1-RV64-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-RV64-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX1-RV64-NEXT:    vmv.x.s a0, v8
-; LMULMAX1-RV64-NEXT:    slli a0, a0, 63
-; LMULMAX1-RV64-NEXT:    srai a0, a0, 63
-; LMULMAX1-RV64-NEXT:    ret
-;
-; LMULMAX8-RV32-LABEL: vreduce_umax_v1i1:
-; LMULMAX8-RV32:       # %bb.0:
-; LMULMAX8-RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX8-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX8-RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX8-RV32-NEXT:    vmv.x.s a0, v8
-; LMULMAX8-RV32-NEXT:    slli a0, a0, 31
-; LMULMAX8-RV32-NEXT:    srai a0, a0, 31
-; LMULMAX8-RV32-NEXT:    ret
-;
-; LMULMAX8-RV64-LABEL: vreduce_umax_v1i1:
-; LMULMAX8-RV64:       # %bb.0:
-; LMULMAX8-RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX8-RV64-NEXT:    vmv.v.i v8, 0
-; LMULMAX8-RV64-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX8-RV64-NEXT:    vmv.x.s a0, v8
-; LMULMAX8-RV64-NEXT:    slli a0, a0, 63
-; LMULMAX8-RV64-NEXT:    srai a0, a0, 63
-; LMULMAX8-RV64-NEXT:    ret
+; CHECK-LABEL: vreduce_umax_v1i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vfirst.m a0, v0
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.umax.v1i1(<1 x i1> %v)
   ret i1 %red
 }
@@ -191,45 +63,13 @@ define signext i1 @vreduce_umax_v1i1(<1 x i1> %v) {
 declare i1 @llvm.vector.reduce.smax.v1i1(<1 x i1>)
 
 define signext i1 @vreduce_smax_v1i1(<1 x i1> %v) {
-; LMULMAX1-RV32-LABEL: vreduce_smax_v1i1:
-; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX1-RV32-NEXT:    vmv.x.s a0, v8
-; LMULMAX1-RV32-NEXT:    slli a0, a0, 31
-; LMULMAX1-RV32-NEXT:    srai a0, a0, 31
-; LMULMAX1-RV32-NEXT:    ret
-;
-; LMULMAX1-RV64-LABEL: vreduce_smax_v1i1:
-; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX1-RV64-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-RV64-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX1-RV64-NEXT:    vmv.x.s a0, v8
-; LMULMAX1-RV64-NEXT:    slli a0, a0, 63
-; LMULMAX1-RV64-NEXT:    srai a0, a0, 63
-; LMULMAX1-RV64-NEXT:    ret
-;
-; LMULMAX8-RV32-LABEL: vreduce_smax_v1i1:
-; LMULMAX8-RV32:       # %bb.0:
-; LMULMAX8-RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX8-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX8-RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX8-RV32-NEXT:    vmv.x.s a0, v8
-; LMULMAX8-RV32-NEXT:    slli a0, a0, 31
-; LMULMAX8-RV32-NEXT:    srai a0, a0, 31
-; LMULMAX8-RV32-NEXT:    ret
-;
-; LMULMAX8-RV64-LABEL: vreduce_smax_v1i1:
-; LMULMAX8-RV64:       # %bb.0:
-; LMULMAX8-RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX8-RV64-NEXT:    vmv.v.i v8, 0
-; LMULMAX8-RV64-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX8-RV64-NEXT:    vmv.x.s a0, v8
-; LMULMAX8-RV64-NEXT:    slli a0, a0, 63
-; LMULMAX8-RV64-NEXT:    srai a0, a0, 63
-; LMULMAX8-RV64-NEXT:    ret
+; CHECK-LABEL: vreduce_smax_v1i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vfirst.m a0, v0
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.smax.v1i1(<1 x i1> %v)
   ret i1 %red
 }
@@ -237,45 +77,13 @@ define signext i1 @vreduce_smax_v1i1(<1 x i1> %v) {
 declare i1 @llvm.vector.reduce.umin.v1i1(<1 x i1>)
 
 define signext i1 @vreduce_umin_v1i1(<1 x i1> %v) {
-; LMULMAX1-RV32-LABEL: vreduce_umin_v1i1:
-; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX1-RV32-NEXT:    vmv.x.s a0, v8
-; LMULMAX1-RV32-NEXT:    slli a0, a0, 31
-; LMULMAX1-RV32-NEXT:    srai a0, a0, 31
-; LMULMAX1-RV32-NEXT:    ret
-;
-; LMULMAX1-RV64-LABEL: vreduce_umin_v1i1:
-; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX1-RV64-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-RV64-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX1-RV64-NEXT:    vmv.x.s a0, v8
-; LMULMAX1-RV64-NEXT:    slli a0, a0, 63
-; LMULMAX1-RV64-NEXT:    srai a0, a0, 63
-; LMULMAX1-RV64-NEXT:    ret
-;
-; LMULMAX8-RV32-LABEL: vreduce_umin_v1i1:
-; LMULMAX8-RV32:       # %bb.0:
-; LMULMAX8-RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX8-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX8-RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX8-RV32-NEXT:    vmv.x.s a0, v8
-; LMULMAX8-RV32-NEXT:    slli a0, a0, 31
-; LMULMAX8-RV32-NEXT:    srai a0, a0, 31
-; LMULMAX8-RV32-NEXT:    ret
-;
-; LMULMAX8-RV64-LABEL: vreduce_umin_v1i1:
-; LMULMAX8-RV64:       # %bb.0:
-; LMULMAX8-RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX8-RV64-NEXT:    vmv.v.i v8, 0
-; LMULMAX8-RV64-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX8-RV64-NEXT:    vmv.x.s a0, v8
-; LMULMAX8-RV64-NEXT:    slli a0, a0, 63
-; LMULMAX8-RV64-NEXT:    srai a0, a0, 63
-; LMULMAX8-RV64-NEXT:    ret
+; CHECK-LABEL: vreduce_umin_v1i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vfirst.m a0, v0
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.umin.v1i1(<1 x i1> %v)
   ret i1 %red
 }
@@ -283,45 +91,13 @@ define signext i1 @vreduce_umin_v1i1(<1 x i1> %v) {
 declare i1 @llvm.vector.reduce.smin.v1i1(<1 x i1>)
 
 define signext i1 @vreduce_smin_v1i1(<1 x i1> %v) {
-; LMULMAX1-RV32-LABEL: vreduce_smin_v1i1:
-; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX1-RV32-NEXT:    vmv.x.s a0, v8
-; LMULMAX1-RV32-NEXT:    slli a0, a0, 31
-; LMULMAX1-RV32-NEXT:    srai a0, a0, 31
-; LMULMAX1-RV32-NEXT:    ret
-;
-; LMULMAX1-RV64-LABEL: vreduce_smin_v1i1:
-; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX1-RV64-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-RV64-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX1-RV64-NEXT:    vmv.x.s a0, v8
-; LMULMAX1-RV64-NEXT:    slli a0, a0, 63
-; LMULMAX1-RV64-NEXT:    srai a0, a0, 63
-; LMULMAX1-RV64-NEXT:    ret
-;
-; LMULMAX8-RV32-LABEL: vreduce_smin_v1i1:
-; LMULMAX8-RV32:       # %bb.0:
-; LMULMAX8-RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX8-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX8-RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX8-RV32-NEXT:    vmv.x.s a0, v8
-; LMULMAX8-RV32-NEXT:    slli a0, a0, 31
-; LMULMAX8-RV32-NEXT:    srai a0, a0, 31
-; LMULMAX8-RV32-NEXT:    ret
-;
-; LMULMAX8-RV64-LABEL: vreduce_smin_v1i1:
-; LMULMAX8-RV64:       # %bb.0:
-; LMULMAX8-RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX8-RV64-NEXT:    vmv.v.i v8, 0
-; LMULMAX8-RV64-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX8-RV64-NEXT:    vmv.x.s a0, v8
-; LMULMAX8-RV64-NEXT:    slli a0, a0, 63
-; LMULMAX8-RV64-NEXT:    srai a0, a0, 63
-; LMULMAX8-RV64-NEXT:    ret
+; CHECK-LABEL: vreduce_smin_v1i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vfirst.m a0, v0
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.smin.v1i1(<1 x i1> %v)
   ret i1 %red
 }
@@ -1223,45 +999,13 @@ define signext i1 @vreduce_smin_v64i1(<64 x i1> %v) {
 declare i1 @llvm.vector.reduce.add.v1i1(<1 x i1>)
 
 define signext i1 @vreduce_add_v1i1(<1 x i1> %v) {
-; LMULMAX1-RV32-LABEL: vreduce_add_v1i1:
-; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX1-RV32-NEXT:    vmv.x.s a0, v8
-; LMULMAX1-RV32-NEXT:    slli a0, a0, 31
-; LMULMAX1-RV32-NEXT:    srai a0, a0, 31
-; LMULMAX1-RV32-NEXT:    ret
-;
-; LMULMAX1-RV64-LABEL: vreduce_add_v1i1:
-; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX1-RV64-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-RV64-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX1-RV64-NEXT:    vmv.x.s a0, v8
-; LMULMAX1-RV64-NEXT:    slli a0, a0, 63
-; LMULMAX1-RV64-NEXT:    srai a0, a0, 63
-; LMULMAX1-RV64-NEXT:    ret
-;
-; LMULMAX8-RV32-LABEL: vreduce_add_v1i1:
-; LMULMAX8-RV32:       # %bb.0:
-; LMULMAX8-RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX8-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX8-RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX8-RV32-NEXT:    vmv.x.s a0, v8
-; LMULMAX8-RV32-NEXT:    slli a0, a0, 31
-; LMULMAX8-RV32-NEXT:    srai a0, a0, 31
-; LMULMAX8-RV32-NEXT:    ret
-;
-; LMULMAX8-RV64-LABEL: vreduce_add_v1i1:
-; LMULMAX8-RV64:       # %bb.0:
-; LMULMAX8-RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; LMULMAX8-RV64-NEXT:    vmv.v.i v8, 0
-; LMULMAX8-RV64-NEXT:    vmerge.vim v8, v8, 1, v0
-; LMULMAX8-RV64-NEXT:    vmv.x.s a0, v8
-; LMULMAX8-RV64-NEXT:    slli a0, a0, 63
-; LMULMAX8-RV64-NEXT:    srai a0, a0, 63
-; LMULMAX8-RV64-NEXT:    ret
+; CHECK-LABEL: vreduce_add_v1i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vfirst.m a0, v0
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.add.v1i1(<1 x i1> %v)
   ret i1 %red
 }
