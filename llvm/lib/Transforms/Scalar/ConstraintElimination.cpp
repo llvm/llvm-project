@@ -26,12 +26,10 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Transforms/Scalar.h"
 
 #include <cmath>
 #include <string>
@@ -1052,42 +1050,4 @@ PreservedAnalyses ConstraintEliminationPass::run(Function &F,
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
-}
-
-namespace {
-
-class ConstraintElimination : public FunctionPass {
-public:
-  static char ID;
-
-  ConstraintElimination() : FunctionPass(ID) {
-    initializeConstraintEliminationPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    return eliminateConstraints(F, DT);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-  }
-};
-
-} // end anonymous namespace
-
-char ConstraintElimination::ID = 0;
-
-INITIALIZE_PASS_BEGIN(ConstraintElimination, "constraint-elimination",
-                      "Constraint Elimination", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LazyValueInfoWrapperPass)
-INITIALIZE_PASS_END(ConstraintElimination, "constraint-elimination",
-                    "Constraint Elimination", false, false)
-
-FunctionPass *llvm::createConstraintEliminationPass() {
-  return new ConstraintElimination();
 }
