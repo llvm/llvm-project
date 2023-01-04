@@ -249,7 +249,7 @@ define <4 x ptr> @vector_idx_mix_scalar_vector() {
 
 define <vscale x 4 x ptr> @scalable_idx_scalar() {
 ; CHECK-LABEL: @scalable_idx_scalar(
-; CHECK-NEXT:    ret <vscale x 4 x ptr> getelementptr (i32, <vscale x 4 x ptr> zeroinitializer, <vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer))
+; CHECK-NEXT:    ret <vscale x 4 x ptr> getelementptr (i32, <vscale x 4 x ptr> zeroinitializer, <vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer))
 ;
   %gep = getelementptr i32, <vscale x 4 x ptr> zeroinitializer, i64 1
   ret <vscale x 4 x ptr> %gep

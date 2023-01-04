@@ -4,7 +4,7 @@
 ; Fixed vectors
 define <4 x i32> @vpgather_v4i32(<4 x ptr> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: @vpgather_v4i32(
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[EVL:%.*]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[EVL:%.*]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i1> [[TMP1]], [[M:%.*]]
@@ -17,7 +17,7 @@ define <4 x i32> @vpgather_v4i32(<4 x ptr> %ptrs, <4 x i1> %m, i32 zeroext %evl)
 
 define <2 x i64> @vpgather_v2i64(<2 x ptr> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: @vpgather_v2i64(
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[EVL:%.*]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[EVL:%.*]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> <i32 0, i32 1>, [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i1> [[TMP1]], [[M:%.*]]
@@ -30,7 +30,7 @@ define <2 x i64> @vpgather_v2i64(<2 x ptr> %ptrs, <2 x i1> %m, i32 zeroext %evl)
 
 define void @vpscatter_v4i32(<4 x i32> %val, <4 x ptr> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: @vpscatter_v4i32(
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[EVL:%.*]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[EVL:%.*]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i1> [[TMP1]], [[M:%.*]]
@@ -43,7 +43,7 @@ define void @vpscatter_v4i32(<4 x i32> %val, <4 x ptr> %ptrs, <4 x i1> %m, i32 z
 
 define void @vpscatter_v2i64(<2 x i64> %val, <2 x ptr> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: @vpscatter_v2i64(
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[EVL:%.*]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[EVL:%.*]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> <i32 0, i32 1>, [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i1> [[TMP1]], [[M:%.*]]

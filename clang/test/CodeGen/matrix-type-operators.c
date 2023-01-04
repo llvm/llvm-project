@@ -88,7 +88,7 @@ void add_matrix_scalar_double_float(dx5x5_t a, float vf) {
   // OPT:         [[MATRIX:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:    [[SCALAR:%.*]] = load float, float* %vf.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = fpext float [[SCALAR]] to double
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <25 x double> poison, double [[SCALAR_EXT]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <25 x double> poison, double [[SCALAR_EXT]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <25 x double> [[SCALAR_EMBED]], <25 x double> poison, <25 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fadd <25 x double> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:  store <25 x double> [[RES]], <25 x double>* {{.*}}, align 8
@@ -103,7 +103,7 @@ void add_compound_matrix_scalar_double_float(dx5x5_t a, float vf) {
   // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = fpext float [[SCALAR]] to double
   // NOOPT-NEXT:  [[MATRIX:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8{{$}}
   // OPT-NEXT:    [[MATRIX:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <25 x double> poison, double [[SCALAR_EXT]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <25 x double> poison, double [[SCALAR_EXT]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <25 x double> [[SCALAR_EMBED]], <25 x double> poison, <25 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fadd <25 x double> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:  store <25 x double> [[RES]], <25 x double>* {{.*}}, align 8
@@ -118,7 +118,7 @@ void subtract_compound_matrix_scalar_double_float(dx5x5_t a, float vf) {
   // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = fpext float [[SCALAR]] to double
   // NOOPT-NEXT:  [[MATRIX:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8{{$}}
   // OPT-NEXT:    [[MATRIX:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <25 x double> poison, double [[SCALAR_EXT]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <25 x double> poison, double [[SCALAR_EXT]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <25 x double> [[SCALAR_EMBED]], <25 x double> poison, <25 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fsub <25 x double> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:  store <25 x double> [[RES]], <25 x double>* {{.*}}, align 8
@@ -132,7 +132,7 @@ void add_matrix_scalar_double_double(dx5x5_t a, double vd) {
   // NOOPT-NEXT:  [[SCALAR:%.*]] = load double, double* %vd.addr, align 8{{$}}
   // OPT:         [[MATRIX:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:    [[SCALAR:%.*]] = load double, double* %vd.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <25 x double> poison, double [[SCALAR]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <25 x double> poison, double [[SCALAR]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <25 x double> [[SCALAR_EMBED]], <25 x double> poison, <25 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fadd <25 x double> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:  store <25 x double> [[RES]], <25 x double>* {{.*}}, align 8
@@ -146,7 +146,7 @@ void add_compound_matrix_scalar_double_double(dx5x5_t a, double vd) {
   // NOOPT-NEXT:  [[MATRIX:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8{{$}}
   // OPT:         [[SCALAR:%.*]] = load double, double* %vd.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:    [[MATRIX:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <25 x double> poison, double [[SCALAR]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <25 x double> poison, double [[SCALAR]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <25 x double> [[SCALAR_EMBED]], <25 x double> poison, <25 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fadd <25 x double> [[MATRIX]], [[SCALAR_EMBED1]]
   // store <25 x double> [[RES]], <25 x double>* {{.*}}, align 8
@@ -159,7 +159,7 @@ void subtract_compound_matrix_scalar_double_double(dx5x5_t a, double vd) {
   // NOOPT-NEXT:  [[MATRIX:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8{{$}}
   // OPT:         [[SCALAR:%.*]] = load double, double* %vd.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:    [[MATRIX:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <25 x double> poison, double [[SCALAR]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <25 x double> poison, double [[SCALAR]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <25 x double> [[SCALAR_EMBED]], <25 x double> poison, <25 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fsub <25 x double> [[MATRIX]], [[SCALAR_EMBED1]]
   // store <25 x double> [[RES]], <25 x double>* {{.*}}, align 8
@@ -172,7 +172,7 @@ void add_matrix_scalar_float_float(fx2x3_t b, float vf) {
   // NOOPT-NEXT:  [[SCALAR:%.*]] = load float, float* %vf.addr, align 4{{$}}
   // OPT:         [[MATRIX:%.*]] = load <6 x float>, <6 x float>* {{.*}}, align 4, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:    [[SCALAR:%.*]] = load float, float* %vf.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <6 x float> poison, float [[SCALAR]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <6 x float> poison, float [[SCALAR]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <6 x float> [[SCALAR_EMBED]], <6 x float> poison, <6 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fadd <6 x float> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:  store <6 x float> [[RES]], <6 x float>* {{.*}}, align 4
@@ -186,7 +186,7 @@ void add_compound_matrix_scalar_float_float(fx2x3_t b, float vf) {
   // NOOPT-NEXT:  [[MATRIX:%.*]] = load <6 x float>, <6 x float>* %0, align 4{{$}}
   // OPT:         [[SCALAR:%.*]] = load float, float* %vf.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:    [[MATRIX:%.*]] = load <6 x float>, <6 x float>* %0, align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <6 x float> poison, float [[SCALAR]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <6 x float> poison, float [[SCALAR]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <6 x float> [[SCALAR_EMBED]], <6 x float> poison, <6 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fadd <6 x float> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:  store <6 x float> [[RES]], <6 x float>* {{.*}}, align 4
@@ -199,7 +199,7 @@ void subtract_compound_matrix_scalar_float_float(fx2x3_t b, float vf) {
   // NOOPT-NEXT:  [[MATRIX:%.*]] = load <6 x float>, <6 x float>* %0, align 4{{$}}
   // OPT:         [[SCALAR:%.*]] = load float, float* %vf.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:    [[MATRIX:%.*]] = load <6 x float>, <6 x float>* %0, align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <6 x float> poison, float [[SCALAR]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <6 x float> poison, float [[SCALAR]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <6 x float> [[SCALAR_EMBED]], <6 x float> poison, <6 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fsub <6 x float> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:  store <6 x float> [[RES]], <6 x float>* {{.*}}, align 4
@@ -213,7 +213,7 @@ void add_matrix_scalar_float_double(fx2x3_t b, double vd) {
   // OPT:         [[MATRIX:%.*]] = load <6 x float>, <6 x float>* {{.*}}, align 4, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:    [[SCALAR:%.*]] = load double, double* %vd.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:  [[SCALAR_TRUNC:%.*]] = fptrunc double [[SCALAR]] to float
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <6 x float> poison, float [[SCALAR_TRUNC]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <6 x float> poison, float [[SCALAR_TRUNC]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <6 x float> [[SCALAR_EMBED]], <6 x float> poison, <6 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fadd <6 x float> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:  store <6 x float> [[RES]], <6 x float>* {{.*}}, align 4
@@ -228,7 +228,7 @@ void add_compound_matrix_scalar_float_double(fx2x3_t b, double vd) {
   // CHECK-NEXT:  [[SCALAR_TRUNC:%.*]] = fptrunc double [[SCALAR]] to float
   // NOOPT-NEXT:  [[MATRIX:%.*]] = load <6 x float>, <6 x float>* {{.*}}, align 4{{$}}
   // OPT-NEXT:    [[MATRIX:%.*]] = load <6 x float>, <6 x float>* {{.*}}, align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <6 x float> poison, float [[SCALAR_TRUNC]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <6 x float> poison, float [[SCALAR_TRUNC]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <6 x float> [[SCALAR_EMBED]], <6 x float> poison, <6 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fadd <6 x float> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:  store <6 x float> [[RES]], <6 x float>* {{.*}}, align 4
@@ -242,7 +242,7 @@ void subtract_compound_matrix_scalar_float_double(fx2x3_t b, double vd) {
   // CHECK-NEXT:  [[SCALAR_TRUNC:%.*]] = fptrunc double [[SCALAR]] to float
   // NOOPT-NEXT:  [[MATRIX:%.*]] = load <6 x float>, <6 x float>* {{.*}}, align 4{{$}}
   // OPT-NEXT:    [[MATRIX:%.*]] = load <6 x float>, <6 x float>* {{.*}}, align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <6 x float> poison, float [[SCALAR_TRUNC]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <6 x float> poison, float [[SCALAR_TRUNC]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <6 x float> [[SCALAR_EMBED]], <6 x float> poison, <6 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fsub <6 x float> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:  store <6 x float> [[RES]], <6 x float>* {{.*}}, align 4
@@ -327,7 +327,7 @@ void add_matrix_scalar_int_short(ix9x3_t a, short vs) {
   // OPT:          [[MATRIX:%.*]] = load <27 x i32>, <27 x i32>* [[MAT_ADDR:%.*]], align 4, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:     [[SCALAR:%.*]] = load i16, i16* %vs.addr, align 2, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:   [[SCALAR_EXT:%.*]] = sext i16 [[SCALAR]] to i32
-  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <27 x i32> poison, i32 [[SCALAR_EXT]], i32 0
+  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <27 x i32> poison, i32 [[SCALAR_EXT]], i64 0
   // CHECK-NEXT:   [[SCALAR_EMBED1:%.*]] = shufflevector <27 x i32> [[SCALAR_EMBED]], <27 x i32> poison, <27 x i32> zeroinitializer
   // CHECK-NEXT:   [[RES:%.*]] = add <27 x i32> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:   store <27 x i32> [[RES]], <27 x i32>* [[MAT_ADDR]], align 4
@@ -342,7 +342,7 @@ void add_compound_matrix_scalar_int_short(ix9x3_t a, short vs) {
   // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = sext i16 [[SCALAR]] to i32
   // NOOPT-NEXT:  [[MATRIX:%.*]] = load <27 x i32>, <27 x i32>* %0, align 4{{$}}
   // OPT-NEXT:    [[MATRIX:%.*]] = load <27 x i32>, <27 x i32>* %0, align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <27 x i32> poison, i32 [[SCALAR_EXT:%.*]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <27 x i32> poison, i32 [[SCALAR_EXT:%.*]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <27 x i32> [[SCALAR_EMBED]], <27 x i32> poison, <27 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = add <27 x i32> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:  store <27 x i32> [[RES]], <27 x i32>* [[MAT_ADDR]], align 4
@@ -357,7 +357,7 @@ void subtract_compound_matrix_scalar_int_short(ix9x3_t a, short vs) {
   // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = sext i16 [[SCALAR]] to i32
   // NOOPT-NEXT:  [[MATRIX:%.*]] = load <27 x i32>, <27 x i32>* %0, align 4{{$}}
   // OPT-NEXT:    [[MATRIX:%.*]] = load <27 x i32>, <27 x i32>* %0, align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <27 x i32> poison, i32 [[SCALAR_EXT:%.*]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <27 x i32> poison, i32 [[SCALAR_EXT:%.*]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <27 x i32> [[SCALAR_EMBED]], <27 x i32> poison, <27 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = sub <27 x i32> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:  store <27 x i32> [[RES]], <27 x i32>* [[MAT_ADDR]], align 4
@@ -372,7 +372,7 @@ void add_matrix_scalar_int_long_int(ix9x3_t a, long int vli) {
   // OPT:          [[MATRIX:%.*]] = load <27 x i32>, <27 x i32>* [[MAT_ADDR:%.*]], align 4, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:     [[SCALAR:%.*]] = load i64, i64* %vli.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:   [[SCALAR_TRUNC:%.*]] = trunc i64 [[SCALAR]] to i32
-  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <27 x i32> poison, i32 [[SCALAR_TRUNC]], i32 0
+  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <27 x i32> poison, i32 [[SCALAR_TRUNC]], i64 0
   // CHECK-NEXT:   [[SCALAR_EMBED1:%.*]] = shufflevector <27 x i32> [[SCALAR_EMBED]], <27 x i32> poison, <27 x i32> zeroinitializer
   // CHECK-NEXT:   [[RES:%.*]] = add <27 x i32> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:   store <27 x i32> [[RES]], <27 x i32>* [[MAT_ADDR]], align 4
@@ -387,7 +387,7 @@ void add_compound_matrix_scalar_int_long_int(ix9x3_t a, long int vli) {
   // CHECK-NEXT:  [[SCALAR_TRUNC:%.*]] = trunc i64 %1 to i32
   // NOOPT-NEXT:  [[MATRIX:%.*]] = load <27 x i32>, <27 x i32>* %0, align 4{{$}}
   // OPT-NEXT:    [[MATRIX:%.*]] = load <27 x i32>, <27 x i32>* %0, align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <27 x i32> poison, i32 [[SCALAR_TRUNC]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <27 x i32> poison, i32 [[SCALAR_TRUNC]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <27 x i32> [[SCALAR_EMBED]], <27 x i32> poison, <27 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = add <27 x i32> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:  store <27 x i32> [[RES]], <27 x i32>* [[MAT_ADDR]], align 4
@@ -402,7 +402,7 @@ void subtract_compound_matrix_scalar_int_long_int(ix9x3_t a, long int vli) {
   // CHECK-NEXT:  [[SCALAR_TRUNC:%.*]] = trunc i64 %1 to i32
   // NOOPT-NEXT:  [[MATRIX:%.*]] = load <27 x i32>, <27 x i32>* %0, align 4{{$}}
   // OPT-NEXT:    [[MATRIX:%.*]] = load <27 x i32>, <27 x i32>* %0, align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <27 x i32> poison, i32 [[SCALAR_TRUNC]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <27 x i32> poison, i32 [[SCALAR_TRUNC]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <27 x i32> [[SCALAR_EMBED]], <27 x i32> poison, <27 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = sub <27 x i32> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:  store <27 x i32> [[RES]], <27 x i32>* [[MAT_ADDR]], align 4
@@ -417,7 +417,7 @@ void add_matrix_scalar_int_unsigned_long_long(ix9x3_t a, unsigned long long int 
   // OPT:          [[MATRIX:%.*]] = load <27 x i32>, <27 x i32>* [[MAT_ADDR:%.*]], align 4, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:     [[SCALAR:%.*]] = load i64, i64* %vulli.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:   [[SCALAR_TRUNC:%.*]] = trunc i64 [[SCALAR]] to i32
-  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <27 x i32> poison, i32 [[SCALAR_TRUNC]], i32 0
+  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <27 x i32> poison, i32 [[SCALAR_TRUNC]], i64 0
   // CHECK-NEXT:   [[SCALAR_EMBED1:%.*]] = shufflevector <27 x i32> [[SCALAR_EMBED]], <27 x i32> poison, <27 x i32> zeroinitializer
   // CHECK-NEXT:   [[RES:%.*]] = add <27 x i32> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:   store <27 x i32> [[RES]], <27 x i32>* [[MAT_ADDR]], align 4
@@ -432,7 +432,7 @@ void add_compound_matrix_scalar_int_unsigned_long_long(ix9x3_t a, unsigned long 
   // CHECK-NEXT:   [[SCALAR_TRUNC:%.*]] = trunc i64 [[SCALAR]] to i32
   // NOOPT-NEXT:   [[MATRIX:%.*]] = load <27 x i32>, <27 x i32>* [[MATRIX_ADDR:%.*]], align 4{{$}}
   // OPT-NEXT:     [[MATRIX:%.*]] = load <27 x i32>, <27 x i32>* [[MATRIX_ADDR:%.*]], align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <27 x i32> poison, i32 [[SCALAR_TRUNC]], i32 0
+  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <27 x i32> poison, i32 [[SCALAR_TRUNC]], i64 0
   // CHECK-NEXT:   [[SCALAR_EMBED1:%.*]] = shufflevector <27 x i32> [[SCALAR_EMBED]], <27 x i32> poison, <27 x i32> zeroinitializer
   // CHECK-NEXT:   [[RES:%.*]] = add <27 x i32> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:   store <27 x i32> [[RES]], <27 x i32>* [[MAT_ADDR]], align 4
@@ -447,7 +447,7 @@ void subtract_compound_matrix_scalar_int_unsigned_long_long(ix9x3_t a, unsigned 
   // CHECK-NEXT:   [[SCALAR_TRUNC:%.*]] = trunc i64 [[SCALAR]] to i32
   // NOOPT-NEXT:   [[MATRIX:%.*]] = load <27 x i32>, <27 x i32>* [[MATRIX_ADDR:%.*]], align 4{{$}}
   // OPT-NEXT:     [[MATRIX:%.*]] = load <27 x i32>, <27 x i32>* [[MATRIX_ADDR:%.*]], align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <27 x i32> poison, i32 [[SCALAR_TRUNC]], i32 0
+  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <27 x i32> poison, i32 [[SCALAR_TRUNC]], i64 0
   // CHECK-NEXT:   [[SCALAR_EMBED1:%.*]] = shufflevector <27 x i32> [[SCALAR_EMBED]], <27 x i32> poison, <27 x i32> zeroinitializer
   // CHECK-NEXT:   [[RES:%.*]] = sub <27 x i32> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:   store <27 x i32> [[RES]], <27 x i32>* [[MAT_ADDR]], align 4
@@ -462,7 +462,7 @@ void add_matrix_scalar_long_long_int_short(ullx4x2_t b, short vs) {
   // CHECK-NEXT:    [[SCALAR_EXT:%.*]] = sext i16 [[SCALAR]] to i64
   // NOOPT-NEXT:    [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* {{.*}}, align 8{{$}}
   // OPT-NEXT:      [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:    [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR_EXT]], i32 0
+  // CHECK-NEXT:    [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR_EXT]], i64 0
   // CHECK-NEXT:    [[SCALAR_EMBED1:%.*]] = shufflevector <8 x i64> [[SCALAR_EMBED]], <8 x i64> poison, <8 x i32> zeroinitializer
   // CHECK-NEXT:    [[RES:%.*]] = add <8 x i64> [[SCALAR_EMBED1]], [[MATRIX]]
   // CHECK-NEXT:    store <8 x i64> [[RES]], <8 x i64>* {{.*}}, align 8
@@ -477,7 +477,7 @@ void add_compound_matrix_scalar_long_long_int_short(ullx4x2_t b, short vs) {
   // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = sext i16 [[SCALAR]] to i64
   // NOOPT-NEXT:  [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* %0, align 8{{$}}
   // OPT-NEXT:    [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* %0, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR_EXT]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR_EXT]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <8 x i64> [[SCALAR_EMBED]], <8 x i64> poison, <8 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = add <8 x i64> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:  store <8 x i64> [[RES]], <8 x i64>* {{.*}}, align 8
@@ -492,7 +492,7 @@ void subtract_compound_matrix_scalar_long_long_int_short(ullx4x2_t b, short vs) 
   // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = sext i16 [[SCALAR]] to i64
   // NOOPT-NEXT:  [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* %0, align 8{{$}}
   // OPT-NEXT:    [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* %0, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR_EXT]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR_EXT]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <8 x i64> [[SCALAR_EMBED]], <8 x i64> poison, <8 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = sub <8 x i64> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:  store <8 x i64> [[RES]], <8 x i64>* {{.*}}, align 8
@@ -506,7 +506,7 @@ void add_matrix_scalar_long_long_int_int(ullx4x2_t b, long int vli) {
   // NOOPT-NEXT:    [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* {{.*}}, align 8{{$}}
   // OPT:           [[SCALAR:%.*]] = load i64, i64* %vli.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:      [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:    [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR]], i32 0
+  // CHECK-NEXT:    [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR]], i64 0
   // CHECK-NEXT:    [[SCALAR_EMBED1:%.*]] = shufflevector <8 x i64> [[SCALAR_EMBED]], <8 x i64> poison, <8 x i32> zeroinitializer
   // CHECK-NEXT:    [[RES:%.*]] = add <8 x i64> [[SCALAR_EMBED1]], [[MATRIX]]
   // CHECK-NEXT:    store <8 x i64> [[RES]], <8 x i64>* {{.*}}, align 8
@@ -520,7 +520,7 @@ void add_compound_matrix_scalar_long_long_int_int(ullx4x2_t b, long int vli) {
   // NOOPT-NEXT:   [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* {{.*}}, align 8{{$}}
   // OPT:          [[SCALAR:%.*]] = load i64, i64* %vli.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:     [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR]], i32 0
+  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR]], i64 0
   // CHECK-NEXT:   [[SCALAR_EMBED1:%.*]] = shufflevector <8 x i64> [[SCALAR_EMBED]], <8 x i64> poison, <8 x i32> zeroinitializer
   // CHECK-NEXT:   [[RES:%.*]] = add <8 x i64> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:   store <8 x i64> [[RES]], <8 x i64>* {{.*}}, align 8
@@ -534,7 +534,7 @@ void subtract_compound_matrix_scalar_long_long_int_int(ullx4x2_t b, long int vli
   // OPT:          [[SCALAR:%.*]] = load i64, i64* %vli.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
   // NOOPT-NEXT:   [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* {{.*}}, align 8{{$}}
   // OPT-NEXT:     [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR]], i32 0
+  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR]], i64 0
   // CHECK-NEXT:   [[SCALAR_EMBED1:%.*]] = shufflevector <8 x i64> [[SCALAR_EMBED]], <8 x i64> poison, <8 x i32> zeroinitializer
   // CHECK-NEXT:   [[RES:%.*]] = sub <8 x i64> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:   store <8 x i64> [[RES]], <8 x i64>* {{.*}}, align 8
@@ -548,7 +548,7 @@ void add_matrix_scalar_long_long_int_unsigned_long_long(ullx4x2_t b, unsigned lo
   // NOOPT-NEXT:   [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* %0, align 8{{$}}
   // OPT:          [[SCALAR:%.*]] = load i64, i64* %vulli.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:     [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* %0, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR]], i32 0
+  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR]], i64 0
   // CHECK-NEXT:   [[SCALAR_EMBED1:%.*]] = shufflevector <8 x i64> [[SCALAR_EMBED]], <8 x i64> poison, <8 x i32> zeroinitializer
   // CHECK-NEXT:   [[RES:%.*]] = add <8 x i64> [[SCALAR_EMBED1]], [[MATRIX]]
   // CHECK-NEXT:   store <8 x i64> [[RES]], <8 x i64>* {{.*}}, align 8
@@ -561,7 +561,7 @@ void add_compound_matrix_scalar_long_long_int_unsigned_long_long(ullx4x2_t b, un
   // NOOPT-NEXT:   [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* %0, align 8{{$}}
   // OPT:          [[SCALAR:%.*]] = load i64, i64* %vulli.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:     [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* %0, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR]], i32 0
+  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR]], i64 0
   // CHECK-NEXT:   [[SCALAR_EMBED1:%.*]] = shufflevector <8 x i64> [[SCALAR_EMBED]], <8 x i64> poison, <8 x i32> zeroinitializer
   // CHECK-NEXT:   [[RES:%.*]] = add <8 x i64> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:   store <8 x i64> [[RES]], <8 x i64>* {{.*}}, align 8
@@ -575,7 +575,7 @@ void subtract_compound_matrix_scalar_long_long_int_unsigned_long_long(ullx4x2_t 
   // NOOPT-NEXT:   [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* %0, align 8{{$}}
   // OPT:          [[SCALAR:%.*]] = load i64, i64* %vulli.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
   // OPT-NEXT:     [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* %0, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR]], i32 0
+  // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR]], i64 0
   // CHECK-NEXT:   [[SCALAR_EMBED1:%.*]] = shufflevector <8 x i64> [[SCALAR_EMBED]], <8 x i64> poison, <8 x i32> zeroinitializer
   // CHECK-NEXT:   [[RES:%.*]] = sub <8 x i64> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK-NEXT:   store <8 x i64> [[RES]], <8 x i64>* {{.*}}, align 8
@@ -636,7 +636,7 @@ void multiply_matrix_matrix_int(ix9x3_t b, ix3x9_t c) {
 // OPT:           [[A:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
 // OPT-NEXT:      [[S:%.*]] = load float, float* %s.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
 // CHECK-NEXT:    [[S_EXT:%.*]] = fpext float [[S]] to double
-// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <25 x double> poison, double [[S_EXT]], i32 0
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <25 x double> poison, double [[S_EXT]], i64 0
 // CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <25 x double> [[VECINSERT]], <25 x double> poison, <25 x i32> zeroinitializer
 // CHECK-NEXT:    [[RES:%.*]] = fmul <25 x double> [[A]], [[VECSPLAT]]
 // CHECK-NEXT:    store <25 x double> [[RES]], <25 x double>* {{.*}}, align 8
@@ -652,7 +652,7 @@ void multiply_double_matrix_scalar_float(dx5x5_t a, float s) {
 // CHECK-NEXT:    [[S_EXT:%.*]] = fpext float [[S]] to double
 // NOOPT-NEXT:    [[A:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8{{$}}
 // OPT-NEXT:      [[A:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
-// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <25 x double> poison, double [[S_EXT]], i32 0
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <25 x double> poison, double [[S_EXT]], i64 0
 // CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <25 x double> [[VECINSERT]], <25 x double> poison, <25 x i32> zeroinitializer
 // CHECK-NEXT:    [[RES:%.*]] = fmul <25 x double> [[A]], [[VECSPLAT]]
 // CHECK-NEXT:    store <25 x double> [[RES]], <25 x double>* {{.*}}, align 8
@@ -667,7 +667,7 @@ void multiply_compound_double_matrix_scalar_float(dx5x5_t a, float s) {
 // NOOPT-NEXT:    [[S:%.*]] = load double, double* %s.addr, align 8{{$}}
 // OPT:           [[A:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
 // OPT-NEXT:      [[S:%.*]] = load double, double* %s.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
-// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <25 x double> poison, double [[S]], i32 0
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <25 x double> poison, double [[S]], i64 0
 // CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <25 x double> [[VECINSERT]], <25 x double> poison, <25 x i32> zeroinitializer
 // CHECK-NEXT:    [[RES:%.*]] = fmul <25 x double> [[A]], [[VECSPLAT]]
 // CHECK-NEXT:    store <25 x double> [[RES]], <25 x double>* {{.*}}, align 8
@@ -682,7 +682,7 @@ void multiply_double_matrix_scalar_double(dx5x5_t a, double s) {
 // NOOPT-NEXT:    [[A:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8{{$}}
 // OPT:           [[S:%.*]] = load double, double* %s.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
 // OPT-NEXT:      [[A:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
-// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <25 x double> poison, double [[S]], i32 0
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <25 x double> poison, double [[S]], i64 0
 // CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <25 x double> [[VECINSERT]], <25 x double> poison, <25 x i32> zeroinitializer
 // CHECK-NEXT:    [[RES:%.*]] = fmul <25 x double> [[A]], [[VECSPLAT]]
 // CHECK-NEXT:    store <25 x double> [[RES]], <25 x double>* {{.*}}, align 8
@@ -697,7 +697,7 @@ void multiply_compound_double_matrix_scalar_double(dx5x5_t a, double s) {
 // CHECK-NEXT:    [[S_TRUNC:%.*]] = fptrunc double [[S]] to float
 // NOOPT-NEXT:    [[MAT:%.*]] = load <6 x float>, <6 x float>* [[MAT_ADDR:%.*]], align 4{{$}}
 // OPT-NEXT:      [[MAT:%.*]] = load <6 x float>, <6 x float>* [[MAT_ADDR:%.*]], align 4, !tbaa !{{[0-9]+}}{{$}}
-// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <6 x float> poison, float [[S_TRUNC]], i32 0
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <6 x float> poison, float [[S_TRUNC]], i64 0
 // CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <6 x float> [[VECINSERT]], <6 x float> poison, <6 x i32> zeroinitializer
 // CHECK-NEXT:    [[RES:%.*]] = fmul <6 x float> [[VECSPLAT]], [[MAT]]
 // CHECK-NEXT:    store <6 x float> [[RES]], <6 x float>* [[MAT_ADDR]], align 4
@@ -713,7 +713,7 @@ void multiply_float_matrix_scalar_double(fx2x3_t b, double s) {
 // CHECK-NEXT:    [[S_TRUNC:%.*]] = fptrunc double [[S]] to float
 // NOOPT-NEXT:    [[MAT:%.*]] = load <6 x float>, <6 x float>* [[MAT_ADDR:%.*]], align 4{{$}}
 // OPT-NEXT:      [[MAT:%.*]] = load <6 x float>, <6 x float>* [[MAT_ADDR:%.*]], align 4, !tbaa !{{[0-9]+}}{{$}}
-// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <6 x float> poison, float [[S_TRUNC]], i32 0
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <6 x float> poison, float [[S_TRUNC]], i64 0
 // CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <6 x float> [[VECINSERT]], <6 x float> poison, <6 x i32> zeroinitializer
 // CHECK-NEXT:    [[RES:%.*]] = fmul <6 x float> [[MAT]], [[VECSPLAT]]
 // store <6 x float> %3, <6 x float>* %0, align 4
@@ -728,7 +728,7 @@ void multiply_compound_float_matrix_scalar_double(fx2x3_t b, double s) {
 // CHECK-NEXT:    [[S_EXT:%.*]] = sext i16 [[S]] to i32
 // NOOPT-NEXT:    [[MAT:%.*]] = load <27 x i32>, <27 x i32>* [[MAT_ADDR:%.*]], align 4{{$}}
 // OPT-NEXT:      [[MAT:%.*]] = load <27 x i32>, <27 x i32>* [[MAT_ADDR:%.*]], align 4, !tbaa !{{[0-9]+}}{{$}}
-// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <27 x i32> poison, i32 [[S_EXT]], i32 0
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <27 x i32> poison, i32 [[S_EXT]], i64 0
 // CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <27 x i32> [[VECINSERT]], <27 x i32> poison, <27 x i32> zeroinitializer
 // CHECK-NEXT:    [[RES:%.*]] = mul <27 x i32> [[VECSPLAT]], [[MAT]]
 // CHECK-NEXT:    store <27 x i32> [[RES]], <27 x i32>* [[MAT_ADDR]], align 4
@@ -744,7 +744,7 @@ void multiply_int_matrix_scalar_short(ix9x3_t b, short s) {
 // CHECK-NEXT:   [[S_EXT:%.*]] = sext i16 [[S]] to i32
 // NOOPT-NEXT:   [[MAT:%.*]] = load <27 x i32>, <27 x i32>* [[MAT_ADDR:%.*]], align 4{{$}}
 // OPT-NEXT:     [[MAT:%.*]] = load <27 x i32>, <27 x i32>* [[MAT_ADDR:%.*]], align 4, !tbaa !{{[0-9]+}}{{$}}
-// CHECK-NEXT:   [[VECINSERT:%.*]] = insertelement <27 x i32> poison, i32 [[S_EXT]], i32 0
+// CHECK-NEXT:   [[VECINSERT:%.*]] = insertelement <27 x i32> poison, i32 [[S_EXT]], i64 0
 // CHECK-NEXT:   [[VECSPLAT:%.*]] = shufflevector <27 x i32> [[VECINSERT]], <27 x i32> poison, <27 x i32> zeroinitializer
 // CHECK-NEXT:   [[RES:%.*]] = mul <27 x i32> [[MAT]], [[VECSPLAT]]
 // CHECK-NEXT:   store <27 x i32> [[RES]], <27 x i32>* [[MAT_ADDR]], align 4
@@ -760,7 +760,7 @@ void multiply_compound_int_matrix_scalar_short(ix9x3_t b, short s) {
 // NOOPT-NEXT:    [[S:%.*]] = load i64, i64* %s.addr, align 8{{$}}
 // OPT-NEXT:      [[S:%.*]] = load i64, i64* %s.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
 // CHECK-NEXT:    [[S_TRUNC:%.*]] = trunc i64 [[S]] to i32
-// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <27 x i32> poison, i32 [[S_TRUNC]], i32 0
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <27 x i32> poison, i32 [[S_TRUNC]], i64 0
 // CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <27 x i32> [[VECINSERT]], <27 x i32> poison, <27 x i32> zeroinitializer
 // CHECK-NEXT:    [[RES:%.*]] = mul <27 x i32> [[MAT]], [[VECSPLAT]]
 // CHECK-NEXT:    store <27 x i32> [[RES]], <27 x i32>* [[MAT_ADDR]], align 4
@@ -777,7 +777,7 @@ void multiply_compound_int_matrix_scalar_ull(ix9x3_t b, unsigned long long s) {
   // CHECK-NEXT:    [[S_TRUNC:%.*]] = trunc i64 [[S]] to i32
   // NOOPT-NEXT:    [[MAT:%.*]] = load <27 x i32>, <27 x i32>* [[MAT_ADDR:%.*]], align 4{{$}}
   // OPT-NEXT:      [[MAT:%.*]] = load <27 x i32>, <27 x i32>* [[MAT_ADDR:%.*]], align 4, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <27 x i32> poison, i32 [[S_TRUNC]], i32 0
+  // CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <27 x i32> poison, i32 [[S_TRUNC]], i64 0
   // CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <27 x i32> [[VECINSERT]], <27 x i32> poison, <27 x i32> zeroinitializer
   // CHECK-NEXT:    [[RES:%.*]] = mul <27 x i32> [[MAT]], [[VECSPLAT]]
   // CHECK-NEXT:    store <27 x i32> [[RES]], <27 x i32>* [[MAT_ADDR]], align 4
@@ -851,7 +851,7 @@ void multiply_compound_int_matrix_constant(ix9x3_t a) {
 // OPT:           [[A:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
 // OPT-NEXT:      [[S:%.*]] = load float, float* %s.addr, align 4, !tbaa !{{[0-9]+}}{{$}}
 // CHECK-NEXT:    [[S_EXT:%.*]] = fpext float [[S]] to double
-// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <25 x double> poison, double [[S_EXT]], i32 0
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <25 x double> poison, double [[S_EXT]], i64 0
 // CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <25 x double> [[VECINSERT]], <25 x double> poison, <25 x i32> zeroinitializer
 // CHECK-NEXT:    [[RES:%.*]] = fdiv <25 x double> [[A]], [[VECSPLAT]]
 // CHECK-NEXT:    store <25 x double> [[RES]], <25 x double>* {{.*}}, align 8
@@ -866,7 +866,7 @@ void divide_double_matrix_scalar_float(dx5x5_t a, float s) {
 // NOOPT-NEXT:    [[S:%.*]] = load double, double* %s.addr, align 8{{$}}
 // OPT:           [[A:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
 // OPT-NEXT:      [[S:%.*]] = load double, double* %s.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
-// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <25 x double> poison, double [[S]], i32 0
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <25 x double> poison, double [[S]], i64 0
 // CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <25 x double> [[VECINSERT]], <25 x double> poison, <25 x i32> zeroinitializer
 // CHECK-NEXT:    [[RES:%.*]] = fdiv <25 x double> [[A]], [[VECSPLAT]]
 // CHECK-NEXT:    store <25 x double> [[RES]], <25 x double>* {{.*}}, align 8
@@ -882,7 +882,7 @@ void divide_double_matrix_scalar_double(dx5x5_t a, double s) {
 // OPT:           [[MAT:%.*]] = load <6 x float>, <6 x float>* [[MAT_ADDR:%.*]], align 4, !tbaa !{{[0-9]+}}{{$}}
 // OPT-NEXT:      [[S:%.*]] = load double, double* %s.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
 // CHECK-NEXT:    [[S_TRUNC:%.*]] = fptrunc double [[S]] to float
-// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <6 x float> poison, float [[S_TRUNC]], i32 0
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <6 x float> poison, float [[S_TRUNC]], i64 0
 // CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <6 x float> [[VECINSERT]], <6 x float> poison, <6 x i32> zeroinitializer
 // CHECK-NEXT:    [[RES:%.*]] = fdiv <6 x float> [[MAT]], [[VECSPLAT]]
 // CHECK-NEXT:    store <6 x float> [[RES]], <6 x float>* [[MAT_ADDR]], align 4
@@ -898,7 +898,7 @@ void divide_float_matrix_scalar_double(fx2x3_t b, double s) {
 // OPT:           [[MAT:%.*]] = load <27 x i32>, <27 x i32>* [[MAT_ADDR:%.*]], align 4, !tbaa !{{[0-9]+}}{{$}}
 // OPT-NEXT:      [[S:%.*]] = load i16, i16* %s.addr, align 2, !tbaa !{{[0-9]+}}{{$}}
 // CHECK-NEXT:    [[S_EXT:%.*]] = sext i16 [[S]] to i32
-// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <27 x i32> poison, i32 [[S_EXT]], i32 0
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <27 x i32> poison, i32 [[S_EXT]], i64 0
 // CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <27 x i32> [[VECINSERT]], <27 x i32> poison, <27 x i32> zeroinitializer
 // CHECK-NEXT:    [[RES:%.*]] = sdiv <27 x i32> [[MAT]], [[VECSPLAT]]
 // CHECK-NEXT:    store <27 x i32> [[RES]], <27 x i32>* [[MAT_ADDR]], align 4
@@ -914,7 +914,7 @@ void divide_int_matrix_scalar_short(ix9x3_t b, short s) {
 // OPT:           [[MAT:%.*]] = load <27 x i32>, <27 x i32>* [[MAT_ADDR:%.*]], align 4, !tbaa !{{[0-9]+}}{{$}}
 // OPT-NEXT:      [[S:%.*]] = load i64, i64* %s.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
 // CHECK-NEXT:    [[S_TRUNC:%.*]] = trunc i64 [[S]] to i32
-// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <27 x i32> poison, i32 [[S_TRUNC]], i32 0
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <27 x i32> poison, i32 [[S_TRUNC]], i64 0
 // CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <27 x i32> [[VECINSERT]], <27 x i32> poison, <27 x i32> zeroinitializer
 // CHECK-NEXT:    [[RES:%.*]] = sdiv <27 x i32> [[MAT]], [[VECSPLAT]]
 // CHECK-NEXT:    store <27 x i32> [[RES]], <27 x i32>* [[MAT_ADDR]], align 4
@@ -929,7 +929,7 @@ void divide_int_matrix_scalar_ull(ix9x3_t b, unsigned long long s) {
 // NOOPT-NEXT:    [[S:%.*]] = load i64, i64* %s.addr, align 8{{$}}
 // OPT:           [[MAT:%.*]] = load <8 x i64>, <8 x i64>* [[MAT_ADDR:%.*]], align 8, !tbaa !{{[0-9]+}}{{$}}
 // OPT-NEXT:      [[S:%.*]] = load i64, i64* %s.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
-// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[S]], i32 0
+// CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[S]], i64 0
 // CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <8 x i64> [[VECINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
 // CHECK-NEXT:    [[RES:%.*]] = udiv <8 x i64> [[MAT]], [[VECSPLAT]]
 // CHECK-NEXT:    store <8 x i64> [[RES]], <8 x i64>* [[MAT_ADDR]], align 8

@@ -1551,11 +1551,11 @@ vector float test_vec_vec_splati_f(void) {
 
 vector double test_vec_vec_splatid(void) {
   // CHECK-BE: [[T1:%.+]] = fpext float %{{.+}} to double
-  // CHECK-BE-NEXT: [[T2:%.+]] = insertelement <2 x double> poison, double [[T1:%.+]], i32 0
+  // CHECK-BE-NEXT: [[T2:%.+]] = insertelement <2 x double> poison, double [[T1:%.+]], i64 0
   // CHECK-BE-NEXT: [[T3:%.+]] = shufflevector <2 x double> [[T2:%.+]], <2 x double> poison, <2 x i32> zeroinitialize
   // CHECK-BE-NEXT: ret <2 x double> [[T3:%.+]]
   // CHECK-LE: [[T1:%.+]] = fpext float %{{.+}} to double
-  // CHECK-LE-NEXT: [[T2:%.+]] = insertelement <2 x double> poison, double [[T1:%.+]], i32 0
+  // CHECK-LE-NEXT: [[T2:%.+]] = insertelement <2 x double> poison, double [[T1:%.+]], i64 0
   // CHECK-LE-NEXT: [[T3:%.+]] = shufflevector <2 x double> [[T2:%.+]], <2 x double> poison, <2 x i32> zeroinitialize
   // CHECK-LE-NEXT: ret <2 x double> [[T3:%.+]]
   return vec_splatid(1.0);
