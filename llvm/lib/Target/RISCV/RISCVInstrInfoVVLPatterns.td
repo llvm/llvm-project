@@ -228,6 +228,13 @@ def riscv_vcpop_vl : SDNode<"RISCVISD::VCPOP_VL",
                                                  SDTCisSameNumEltsAs<1, 2>,
                                                  SDTCisVT<3, XLenVT>]>>;
 
+def riscv_vfirst_vl : SDNode<"RISCVISD::VFIRST_VL",
+                            SDTypeProfile<1, 3, [SDTCisVT<0, XLenVT>,
+                                                 SDTCisVec<1>, SDTCisInt<1>,
+                                                 SDTCVecEltisVT<2, i1>,
+                                                 SDTCisSameNumEltsAs<1, 2>,
+                                                 SDTCisVT<3, XLenVT>]>>;
+
 def SDT_RISCVVEXTEND_VL : SDTypeProfile<1, 3, [SDTCisVec<0>,
                                                SDTCisSameNumEltsAs<0, 1>,
                                                SDTCisSameNumEltsAs<1, 2>,
@@ -1828,6 +1835,16 @@ foreach mti = AllMasks in {
   def : Pat<(XLenVT (riscv_vcpop_vl (mti.Mask VR:$rs2), (mti.Mask V0),
                                     VLOpFrag)),
             (!cast<Instruction>("PseudoVCPOP_M_" # mti.BX # "_MASK")
+                 VR:$rs2, (mti.Mask V0), GPR:$vl, mti.Log2SEW)>;
+
+  // 16.3 vfirst find-first-set mask bit
+  def : Pat<(XLenVT (riscv_vfirst_vl (mti.Mask VR:$rs2), (mti.Mask true_mask),
+                                    VLOpFrag)),
+            (!cast<Instruction>("PseudoVFIRST_M_" # mti.BX)
+                 VR:$rs2, GPR:$vl, mti.Log2SEW)>;
+  def : Pat<(XLenVT (riscv_vfirst_vl (mti.Mask VR:$rs2), (mti.Mask V0),
+                                    VLOpFrag)),
+            (!cast<Instruction>("PseudoVFIRST_M_" # mti.BX # "_MASK")
                  VR:$rs2, (mti.Mask V0), GPR:$vl, mti.Log2SEW)>;
 }
 

@@ -11,9 +11,9 @@
 
 #include "Config.h"
 #include "lld/Common/LLVM.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Wasm.h"
+#include <optional>
 
 namespace lld {
 namespace wasm {
@@ -178,8 +178,8 @@ public:
 
   uint32_t flags;
 
-  llvm::Optional<StringRef> importName;
-  llvm::Optional<StringRef> importModule;
+  std::optional<StringRef> importName;
+  std::optional<StringRef> importModule;
 };
 
 class FunctionSymbol : public Symbol {
@@ -230,8 +230,8 @@ public:
 
 class UndefinedFunction : public FunctionSymbol {
 public:
-  UndefinedFunction(StringRef name, llvm::Optional<StringRef> importName,
-                    llvm::Optional<StringRef> importModule, uint32_t flags,
+  UndefinedFunction(StringRef name, std::optional<StringRef> importName,
+                    std::optional<StringRef> importModule, uint32_t flags,
                     InputFile *file = nullptr,
                     const WasmSignature *type = nullptr,
                     bool isCalledDirectly = true)
@@ -364,8 +364,8 @@ public:
 
 class UndefinedGlobal : public GlobalSymbol {
 public:
-  UndefinedGlobal(StringRef name, llvm::Optional<StringRef> importName,
-                  llvm::Optional<StringRef> importModule, uint32_t flags,
+  UndefinedGlobal(StringRef name, std::optional<StringRef> importName,
+                  std::optional<StringRef> importModule, uint32_t flags,
                   InputFile *file = nullptr,
                   const WasmGlobalType *type = nullptr)
       : GlobalSymbol(name, UndefinedGlobalKind, flags, file, type) {
@@ -413,8 +413,8 @@ public:
 
 class UndefinedTable : public TableSymbol {
 public:
-  UndefinedTable(StringRef name, llvm::Optional<StringRef> importName,
-                 llvm::Optional<StringRef> importModule, uint32_t flags,
+  UndefinedTable(StringRef name, std::optional<StringRef> importName,
+                 std::optional<StringRef> importModule, uint32_t flags,
                  InputFile *file, const WasmTableType *type)
       : TableSymbol(name, UndefinedTableKind, flags, file, type) {
     this->importName = importName;
@@ -471,8 +471,8 @@ public:
 
 class UndefinedTag : public TagSymbol {
 public:
-  UndefinedTag(StringRef name, llvm::Optional<StringRef> importName,
-               llvm::Optional<StringRef> importModule, uint32_t flags,
+  UndefinedTag(StringRef name, std::optional<StringRef> importName,
+               std::optional<StringRef> importModule, uint32_t flags,
                InputFile *file = nullptr, const WasmSignature *sig = nullptr)
       : TagSymbol(name, UndefinedTagKind, flags, file, sig) {
     this->importName = importName;

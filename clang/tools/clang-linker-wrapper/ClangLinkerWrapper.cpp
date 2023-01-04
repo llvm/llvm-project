@@ -53,6 +53,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <atomic>
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::opt;
@@ -1231,8 +1232,8 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
   return WrappedOutput;
 }
 
-Optional<std::string> findFile(StringRef Dir, StringRef Root,
-                               const Twine &Name) {
+std::optional<std::string> findFile(StringRef Dir, StringRef Root,
+                                    const Twine &Name) {
   SmallString<128> Path;
   if (Dir.startswith("="))
     sys::path::append(Path, Root, Dir.substr(1), Name);
@@ -1244,20 +1245,24 @@ Optional<std::string> findFile(StringRef Dir, StringRef Root,
   return std::nullopt;
 }
 
-Optional<std::string> findFromSearchPaths(StringRef Name, StringRef Root,
-                                          ArrayRef<StringRef> SearchPaths) {
+std::optional<std::string>
+findFromSearchPaths(StringRef Name, StringRef Root,
+                    ArrayRef<StringRef> SearchPaths) {
   for (StringRef Dir : SearchPaths)
-    if (Optional<std::string> File = findFile(Dir, Root, Name))
+    if (std::optional<std::string> File = findFile(Dir, Root, Name))
       return File;
   return std::nullopt;
 }
 
-Optional<std::string> searchLibraryBaseName(StringRef Name, StringRef Root,
-                                            ArrayRef<StringRef> SearchPaths) {
+std::optional<std::string>
+searchLibraryBaseName(StringRef Name, StringRef Root,
+                      ArrayRef<StringRef> SearchPaths) {
   for (StringRef Dir : SearchPaths) {
-    if (Optional<std::string> File = findFile(Dir, Root, "lib" + Name + ".so"))
+    if (std::optional<std::string> File =
+            findFile(Dir, Root, "lib" + Name + ".so"))
       return File;
-    if (Optional<std::string> File = findFile(Dir, Root, "lib" + Name + ".a"))
+    if (std::optional<std::string> File =
+            findFile(Dir, Root, "lib" + Name + ".a"))
       return File;
   }
   return std::nullopt;
@@ -1265,8 +1270,8 @@ Optional<std::string> searchLibraryBaseName(StringRef Name, StringRef Root,
 
 /// Search for static libraries in the linker's library path given input like
 /// `-lfoo` or `-l:libfoo.a`.
-Optional<std::string> searchLibrary(StringRef Input, StringRef Root,
-                                    ArrayRef<StringRef> SearchPaths) {
+std::optional<std::string> searchLibrary(StringRef Input, StringRef Root,
+                                         ArrayRef<StringRef> SearchPaths) {
   if (Input.startswith(":"))
     return findFromSearchPaths(Input.drop_front(), Root, SearchPaths);
   return searchLibraryBaseName(Input, Root, SearchPaths);
