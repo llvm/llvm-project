@@ -341,7 +341,12 @@ inline raw_ostream &operator<<(raw_ostream &OS, const CallsiteInfo &SNI) {
 // Values should be powers of two so that they can be ORed, in particular to
 // track allocations that have different behavior with different calling
 // contexts.
-enum class AllocationType : uint8_t { None = 0, NotCold = 1, Cold = 2 };
+enum class AllocationType : uint8_t {
+  None = 0,
+  NotCold = 1,
+  Cold = 2,
+  All = 3 // This should always be set to the OR of all values.
+};
 
 /// Summary of a single MIB in a memprof metadata on allocations.
 struct MIBInfo {
