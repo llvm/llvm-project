@@ -336,6 +336,9 @@ Value genToIndices(OpBuilder &builder, Location loc, Value tensor, uint64_t d,
 /// Infers the result type and generates ToValuesOp.
 Value genToValues(OpBuilder &builder, Location loc, Value tensor);
 
+/// Generates code to retrieve the values size for the sparse tensor.
+Value genValMemSize(OpBuilder &builder, Location loc, Value tensor);
+
 } // namespace sparse_tensor
 } // namespace mlir
 
