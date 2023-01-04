@@ -37,12 +37,8 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
       return failure();
     }
 
-    // Stride must be 1 for this optimization.
-    for (Attribute stride : op.getStride().getValue()) {
-      if (!stride.cast<IntegerAttr>().getValue().isOne()) {
-        return failure();
-      }
-    }
+    if (!llvm::all_of(op.getStride(), [](int64_t v) { return v == 1; }))
+      return failure();
 
     // Only works for a 1x1 kernel.
     ArrayRef<int64_t> weightShape = weightType.getShape();
@@ -93,11 +89,10 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
       weight = applyZp(weight, wZp);
     }
 
-    auto padAttr = op.getPad();
+    ArrayRef<int64_t> padAttr = op.getPad();
     llvm::SmallVector<int64_t> pad(10, 0);
-    for (const auto &it : llvm::enumerate(padAttr.getValue()))
-      pad[it.index() + 2] =
-          it.value().cast<IntegerAttr>().getValue().getSExtValue();
+    for (const auto &it : llvm::enumerate(padAttr))
+      pad[it.index() + 2] = it.value();
 
     if (llvm::any_of(pad, [](int64_t p) { return p != 0; })) {
       Type inputETy = inputType.getElementType();
