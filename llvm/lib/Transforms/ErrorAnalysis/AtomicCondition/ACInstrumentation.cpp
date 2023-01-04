@@ -130,6 +130,7 @@ void ACInstrumentation::instrumentCallsForACComputation(
     else
       OpRegisterNamePointer = EmptyValuePointer;
 
+
     OpRegisterNamesArray.push_back(OpRegisterNamePointer);
 
     Value *OperandValue = BaseInstruction->getOperand(I);
@@ -177,7 +178,7 @@ void ACInstrumentation::instrumentCallsForACComputation(
   // Creating a call to ACComputingFunction with above parameters
   ArrayRef<Value *> ACArgsRef(ACArgs);
   CallInst *ACComputingCallInstruction =
-      InstructionBuilder.CreateCall(ACComputingFunction, ACArgsRef, "AC");
+      InstructionBuilder.CreateCall(ACComputingFunction, ACArgsRef);
 
   // 2*(Get Location + Store Value at Location) * NumOperands +
   // 2*(Allocate for Array + GetArrayLocation) + ACComputation Function Call
@@ -251,7 +252,7 @@ void ACInstrumentation::instrumentCallsForAFComputation(
   // Creating a call to AFComputingFunction with above parameters
   ArrayRef<Value *> AFArgsRef(AFArgs);
   AFComputingCallInstruction =
-      InstructionBuilder.CreateCall(AFComputingFunction, AFArgsRef, "AF");
+      InstructionBuilder.CreateCall(AFComputingFunction, AFArgsRef);
 
   // Setting IncomingValue for the BasicBlock-IncomingValue pair coming from the
   // Current BasicBlock.
@@ -291,7 +292,7 @@ ACInstrumentation::instrumentPhiNodeForAF(Value *OriginalPHI,
 
   Value *AFPhi = InstructionBuilder.CreatePHI(
       InstructionBuilder.getPtrTy(),
-      static_cast<PHINode *>(OriginalPHI)->getNumIncomingValues());
+      static_cast<PHINode *>(OriginalPHI)->getNumIncomingValues(), "Fi");
 
   // Looping through the Incoming Values and setting the IncomingBlocks for the new PhiNode
   for (unsigned int I = 0;

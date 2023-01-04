@@ -105,7 +105,7 @@ bool isSqrtFunction(const string FunctionName) {
 }
 
 bool isFMAFuncton(const string FunctionName) {
-  return FunctionName.find("llvm.fmuladd.") == 0 ||
+  return FunctionName.find("llvm.fmuladd.") != std::string::npos ||
          FunctionName.find("llvm.fma.")  != std::string::npos;
 }
 

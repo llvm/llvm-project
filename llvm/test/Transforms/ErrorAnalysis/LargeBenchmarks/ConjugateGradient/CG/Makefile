@@ -12,6 +12,7 @@ build_pass:
 	$(OPT) -passes=error-analysis -S cg.ll \
 								  -o cg_ac.ll
 
+
 run_pass:
 	$(LLI) cg_ac.ll
 

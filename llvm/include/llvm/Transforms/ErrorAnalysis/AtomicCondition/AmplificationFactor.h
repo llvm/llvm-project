@@ -474,7 +474,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands, int NumOperands)
       for (int J = 0; J < (*AFItemWRTOperands[I])->NumAFComponents; ++J) {
 #if MEMORY_OPT
         // Get the greatest AF and index of the corresponding component.
-        if(GreatestAF > (*AFItemWRTOperands[I])->Components[J]->AF *
+        if(GreatestAF < (*AFItemWRTOperands[I])->Components[J]->AF *
                              (*AC)->ACWRTOperands[I]) {
           GreatestAF = (*AFItemWRTOperands[I])->Components[J]->AF *
                        (*AC)->ACWRTOperands[I];

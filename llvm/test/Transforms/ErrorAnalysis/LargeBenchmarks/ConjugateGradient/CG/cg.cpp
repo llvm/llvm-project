@@ -42,7 +42,7 @@ int main()
 
 //======================================================================
 
-
+// Prints the vector V
 void print( string title, const vec &V )
 {
   cout << title << '\n';
@@ -59,7 +59,7 @@ void print( string title, const vec &V )
 
 //======================================================================
 
-
+// Prints the matrix A
 void print( string title, const matrix &A )
 {
   cout << title << '\n';
@@ -79,7 +79,7 @@ void print( string title, const matrix &A )
 
 //======================================================================
 
-
+// Inner product of the matrix A with vector V returned as C (a vector)
 vec matrixTimesVector( const matrix &A, const vec &V )     // Matrix times vector
 {
   int n = A.size();
@@ -91,7 +91,7 @@ vec matrixTimesVector( const matrix &A, const vec &V )     // Matrix times vecto
 
 //======================================================================
 
-
+// Returns the Linear combination of aU+bV as a vector W.
 vec vectorCombination( double a, const vec &U, double b, const vec &V )        // Linear combination of vectors
 {
   int n = U.size();
@@ -103,7 +103,7 @@ vec vectorCombination( double a, const vec &U, double b, const vec &V )        /
 
 //======================================================================
 
-
+// Returns the inner product of vector U with V.
 double innerProduct( const vec &U, const vec &V )          // Inner product of U and V
 {
   return inner_product( U.begin(), U.end(), V.begin(), 0.0 );
@@ -112,7 +112,7 @@ double innerProduct( const vec &U, const vec &V )          // Inner product of U
 
 //======================================================================
 
-
+// Computes and returns the Euclidean/2-norm of the vector V.
 double vectorNorm( const vec &V )                          // Vector norm
 {
   return sqrt( innerProduct( V, V ) );
@@ -121,13 +121,18 @@ double vectorNorm( const vec &V )                          // Vector norm
 
 //======================================================================
 
-
+// The conjugate gradient solving algorithm.
 vec conjugateGradientSolver( const matrix &A, const vec &B )
 {
+  // Setting a tolerance level which will be used as a termination condition for this algorithm
   double TOLERANCE = 1.0e-10;
 
+  // Number of vectors/rows in the matrix A.
   int n = A.size();
+
+  // Initializing vector X which will be set to the solution by this algorithm.
   vec X( n, 0.0 );
+
 
   vec R = B;
   vec P = R;
@@ -138,6 +143,7 @@ vec conjugateGradientSolver( const matrix &A, const vec &B )
     vec Rold = R;                                         // Store previous residual
     vec AP = matrixTimesVector( A, P );
 
+    //
     double alpha = innerProduct( R, R ) / max( innerProduct( P, AP ), NEARZERO );
     X = vectorCombination( 1.0, X, alpha, P );            // Next estimate of solution
     R = vectorCombination( 1.0, R, -alpha, AP );          // Residual
