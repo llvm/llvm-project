@@ -77,8 +77,8 @@ define i1 @foo(ptr %p) {
 
 ; NATIVE-SAME: "s,s"(ptr @f.cfi, ptr @g.cfi)
 
-; X86-LINUX: attributes #[[ATTR]] = { naked nounwind }
-; X86-WIN32: attributes #[[ATTR]] = { nounwind }
+; X86-LINUX: attributes #[[ATTR]] = { naked nocf_check nounwind }
+; X86-WIN32: attributes #[[ATTR]] = { nocf_check nounwind }
 ; ARM: attributes #[[ATTR]] = { naked nounwind
 ; THUMB: attributes #[[ATTR]] = { naked nounwind "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }
 ; RISCV: attributes #[[ATTR]] = { naked nounwind "target-features"="-c,-relax" }
