@@ -27,6 +27,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/MathExtras.h"
@@ -42,6 +43,10 @@ using namespace PatternMatch;
 STATISTIC(NumCondsRemoved, "Number of instructions removed");
 DEBUG_COUNTER(EliminatedCounter, "conds-eliminated",
               "Controls which conditions are eliminated");
+
+static cl::opt<unsigned>
+    MaxRows("constraint-elimination-max-rows", cl::init(500), cl::Hidden,
+            cl::desc("Maximum number of rows to keep in constraint system"));
 
 static int64_t MaxConstraintValue = std::numeric_limits<int64_t>::max();
 static int64_t MinSignedConstraintValue = std::numeric_limits<int64_t>::min();
@@ -1017,6 +1022,13 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     Value *Cmp = CB.Inst;
     match(Cmp, m_Intrinsic<Intrinsic::assume>(m_Value(Cmp)));
     if (match(Cmp, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
+      if (Info.getCS(CmpInst::isSigned(Pred)).size() > MaxRows) {
+        LLVM_DEBUG(
+            dbgs()
+            << "Skip adding constraint because system has too many rows.\n");
+        continue;
+      }
+
       // Use the inverse predicate if required.
       if (CB.Not)
         Pred = CmpInst::getInversePredicate(Pred);
