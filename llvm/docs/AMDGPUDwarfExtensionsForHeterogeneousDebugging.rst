@@ -2171,7 +2171,7 @@ has a byte address equal to A and an address space equal to AS of the
 corresponding SL.
 
 ``DW_ASPACE_none`` is defined as the target architecture default address space.
-See :ref:`amdgpu-dwarf-segment_addresses``.
+See :ref:`amdgpu-dwarf-segment_addresses`.
 
 If a stack entry is required to be a location description, but it is a value V
 with the generic type, then it is implicitly converted to a location description
