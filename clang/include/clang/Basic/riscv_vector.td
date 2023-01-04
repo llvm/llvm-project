@@ -201,10 +201,6 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // This builtin support mask agnostic and undisturbed policy.
   bit HasMaskPolicy = true;
 
-  // This builtin prototype is tail undisturbed policy. It also means the
-  // default polcy without suffix is tail undisturbed.
-  bit IsPrototypeDefaultTU = false;
-
   // This builtin prototype with TA or TAMA policy could not support overloading
   // API. Other policy intrinsic functions would support overloading API with
   // suffix `_tu`, `tumu`, `tuma`, `tamu` and `tama`.
@@ -458,8 +454,7 @@ class RVVMaskOp0Builtin<string prototype> : RVVOp0Builtin<"m", prototype, "c"> {
 }
 
 let UnMaskedPolicyScheme = HasPolicyOperand,
-    HasMaskedOffOperand = false,
-    IsPrototypeDefaultTU = false in {
+    HasMaskedOffOperand = false in {
   multiclass RVVSlideUpBuiltinSet {
     defm "" : RVVOutBuiltinSet<NAME, "csilxfd",
                                [["vx","v", "vvvz"]]>;
@@ -469,7 +464,6 @@ let UnMaskedPolicyScheme = HasPolicyOperand,
 }
 
 let UnMaskedPolicyScheme = HasPassthruOperand,
-    IsPrototypeDefaultTU = false,
     ManualCodegen = [{
       if (IsMasked) {
         std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
@@ -1877,8 +1871,7 @@ defm vwmulsu : RVVOutOp0Op1BuiltinSet<"vwmulsu", "csi",
 }
 
 // 12.13. Vector Single-Width Integer Multiply-Add Instructions
-let UnMaskedPolicyScheme = HasPolicyOperand,
-    IsPrototypeDefaultTU = false in {
+let UnMaskedPolicyScheme = HasPolicyOperand in {
 defm vmacc  : RVVIntTerBuiltinSet;
 defm vnmsac : RVVIntTerBuiltinSet;
 defm vmadd  : RVVIntTerBuiltinSet;
@@ -1989,8 +1982,7 @@ let Log2LMUL = [-2, -1, 0, 1, 2] in {
 }
 
 // 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
-let UnMaskedPolicyScheme = HasPolicyOperand,
-    IsPrototypeDefaultTU = false in {
+let UnMaskedPolicyScheme = HasPolicyOperand in {
 defm vfmacc  : RVVFloatingTerBuiltinSet;
 defm vfnmacc : RVVFloatingTerBuiltinSet;
 defm vfmsac  : RVVFloatingTerBuiltinSet;
@@ -2107,7 +2099,6 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
 // 15.1. Vector Single-Width Integer Reduction Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand,
     MaskedPolicyScheme = HasPassthruOperand,
-    IsPrototypeDefaultTU = false,
     HasMaskPolicy = false in {
 defm vredsum : RVVIntReductionBuiltinSet;
 defm vredmaxu : RVVUnsignedReductionBuiltin;
@@ -2190,7 +2181,7 @@ let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
     defm vmv_x : RVVOp0BuiltinSet<"vmv_x_s", "csil",
                                    [["s", "ve", "ev"],
                                     ["s", "UvUe", "UeUv"]]>;
-  let OverloadedName = "vmv_s", IsPrototypeDefaultTU = false,
+  let OverloadedName = "vmv_s",
       UnMaskedPolicyScheme = HasPassthruOperand,
       SupportOverloading = false in
     defm vmv_s : RVVOutBuiltinSet<"vmv_s_x", "csil",
@@ -2203,7 +2194,7 @@ let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
   let HasVL = false, OverloadedName = "vfmv_f" in
     defm vfmv_f : RVVOp0BuiltinSet<"vfmv_f_s", "xfd",
                                      [["s", "ve", "ev"]]>;
-  let OverloadedName = "vfmv_s", IsPrototypeDefaultTU = false,
+  let OverloadedName = "vfmv_s",
       UnMaskedPolicyScheme = HasPassthruOperand,
       SupportOverloading = false in
     defm vfmv_s : RVVOutBuiltinSet<"vfmv_s_f", "xfd",
@@ -2244,8 +2235,7 @@ defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csil",
 }
 
 // 17.5. Vector Compress Instruction
-let IsPrototypeDefaultTU = false,
-    HasMasked = false,
+let HasMasked = false,
     UnMaskedPolicyScheme = HasPassthruOperand,
     MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
