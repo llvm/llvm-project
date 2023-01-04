@@ -21,6 +21,6 @@ func.func @scalarize(%arg0: tensor<24x12xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-  %1, %loops = transform.structured.tile %0 [10, 0, 0]
+  %1, %loops = transform.structured.tile %0 [10, 0, 0] : (!pdl.operation) -> (!pdl.operation, !pdl.operation)
   %2 = transform.structured.scalarize %1
 }

@@ -3,7 +3,13 @@
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   // CHECK %{{.*}}, %{{.*}}:2 = transform.structured.tile
-  %0, %1:2 = transform.structured.tile %arg0 [2, 0, 3]
+  %0, %1:2 = transform.structured.tile %arg0 [2, 0, 3] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation)
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg0: !transform.any_op):
+  %0:2 = transform.structured.split %arg0 after 42 { dimension = 0 } : !transform.any_op
+  transform.structured.split %0#0 after %0#1 { dimension = 1 } : !transform.any_op, !transform.any_op
 }
 
 //===----------------------------------------------------------------------===//

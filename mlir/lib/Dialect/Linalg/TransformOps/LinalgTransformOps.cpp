@@ -19,6 +19,7 @@
 #include "mlir/Dialect/SCF/Transforms/TileUsingInterface.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/IR/TransformUtils.h"
 #include "mlir/Dialect/Transform/Utils/Utils.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -771,9 +772,65 @@ transform::MatchOp::apply(transform::TransformResults &results,
 // MultiTileSizesOp
 //===---------------------------------------------------------------------===//
 
+static void printMultitileSizesTypes(OpAsmPrinter &printer, Operation *op,
+                                     Type targetType, Type lowSizeType, Type,
+                                     Type) {
+  printer.printFunctionalType(TypeRange{targetType}, TypeRange{lowSizeType});
+}
+
+static ParseResult parseMultitileSizesTypes(OpAsmParser &parser,
+                                            Type &targetType, Type &lowSizeType,
+                                            Type &highSizeType,
+                                            Type &splitPointType) {
+  FunctionType funcType;
+  llvm::SMLoc typeLoc = parser.getCurrentLocation();
+  if (failed(parser.parseType<FunctionType>(funcType)))
+    return failure();
+
+  if (funcType.getNumInputs() != 1 || funcType.getNumResults() != 1) {
+    parser.emitError(typeLoc) << "expects a trailing functional type with one "
+                                 "argument and one result";
+  }
+  targetType = funcType.getInput(0);
+  lowSizeType = highSizeType = splitPointType = funcType.getResult(0);
+
+  return success();
+}
+
 DiagnosedSilenceableFailure transform::MultiTileSizesOp::applyToOne(
     LinalgOp target, transform::ApplyToEachResultList &results,
     TransformState &state) {
+  if (getLowSize().getType().isa<TransformParamTypeInterface>()) {
+    if (target.hasDynamicShape()) {
+      results.assign(
+          ArrayRef<Attribute>({Attribute(), Attribute(), Attribute()}));
+      auto diag = emitSilenceableError()
+                  << "cannot compute parametric tile sizes for dynamically "
+                     "shaped payload op";
+      diag.attachNote(target->getLoc()) << "payload op";
+      return diag;
+    }
+
+    FailureOr<StaticMultiSizeSpecification> spec = computeStaticMultiTileSizes(
+        target, getDimension(), getTargetSize(), getDivisor());
+    if (failed(spec)) {
+      results.assign(
+          ArrayRef<Attribute>({Attribute(), Attribute(), Attribute()}));
+      return emitSilenceableError()
+             << "failed to compute multi-size tiling sizes";
+    }
+
+    Builder builder(target.getContext());
+    results.assign(llvm::map_range(
+        ArrayRef<int64_t>({spec->lowTileSize, spec->highTileSize,
+                           spec->lowTileSize * spec->lowTripCount}),
+        [&builder, this](int64_t value) {
+          return builder.getIntegerAttr(
+              getLowSize().getType().cast<ParamType>().getType(), value);
+        }));
+    return DiagnosedSilenceableFailure::success();
+  }
+
   OpBuilder builder(target.getContext());
   builder.setInsertionPoint(target);
   OpFoldResult targetSize = builder.getIndexAttr(getTargetSize());
@@ -804,7 +861,18 @@ void transform::MultiTileSizesOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   onlyReadsHandle(getTarget(), effects);
   producesHandle(getResults(), effects);
-  modifiesPayload(effects);
+  if (getLowSize().getType().isa<TransformParamTypeInterface>())
+    onlyReadsPayload(effects);
+  else
+    modifiesPayload(effects);
+}
+
+LogicalResult transform::MultiTileSizesOp::verify() {
+  if (getLowSize().getType() != getHighSize().getType() ||
+      getLowSize().getType() != getSplitPoint().getType()) {
+    return emitOpError() << "expects all results type to be the same";
+  }
+  return success();
 }
 
 //===---------------------------------------------------------------------===//
@@ -1406,17 +1474,23 @@ DiagnosedSilenceableFailure SplitOp::apply(TransformResults &results,
   splitPoints.reserve(payload.size());
   if (getDynamicSplitPoint()) {
     auto diag = DiagnosedSilenceableFailure::success();
-    splitPoints = llvm::to_vector(llvm::map_range(
-        state.getPayloadOps(getDynamicSplitPoint()), [&](Operation *op) {
-          if (op->getNumResults() != 1 ||
-              !op->getResult(0).getType().isIndex()) {
-            diag = emitSilenceableError()
-                   << "expected dynamic split point handle to point to a "
-                      "single-result index-typed op";
-            diag.attachNote(op->getLoc()) << "dynamic split point";
-          }
-          return OpFoldResult(op->getResult(0));
-        }));
+    if (getDynamicSplitPoint().getType().isa<TransformHandleTypeInterface>()) {
+      splitPoints = llvm::to_vector(llvm::map_range(
+          state.getPayloadOps(getDynamicSplitPoint()), [&](Operation *op) {
+            if (op->getNumResults() != 1 ||
+                !op->getResult(0).getType().isIndex()) {
+              diag = emitSilenceableError()
+                     << "expected dynamic split point handle to point to a "
+                        "single-result index-typed op";
+              diag.attachNote(op->getLoc()) << "dynamic split point";
+            }
+            return OpFoldResult(op->getResult(0));
+          }));
+    } else {
+      splitPoints = llvm::to_vector(
+          llvm::map_range(state.getParams(getDynamicSplitPoint()),
+                          [](Attribute attr) { return OpFoldResult(attr); }));
+    }
     if (diag.isSilenceableFailure()) {
       results.set(getFirst().cast<OpResult>(), {});
       results.set(getSecond().cast<OpResult>(), {});
@@ -1507,11 +1581,7 @@ void SplitOp::getEffects(
 ParseResult SplitOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::UnresolvedOperand target, dynamicSplitPoint;
   IntegerAttr staticSplitPoint;
-  auto pdlOperationType =
-      pdl::OperationType::get(parser.getBuilder().getContext());
-  if (parser.parseOperand(target) ||
-      parser.resolveOperand(target, pdlOperationType, result.operands) ||
-      parser.parseKeyword("after"))
+  if (parser.parseOperand(target) || parser.parseKeyword("after"))
     return failure();
 
   OptionalParseResult dynamicPointParseResult =
@@ -1523,9 +1593,19 @@ ParseResult SplitOp::parse(OpAsmParser &parser, OperationState &result) {
 
     staticSplitPoint =
         parser.getBuilder().getI64IntegerAttr(staticSplitPointValue);
-  } else {
-    if (failed(*dynamicPointParseResult) ||
-        parser.resolveOperand(dynamicSplitPoint, pdlOperationType,
+  }
+
+  Type targetType;
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(targetType) ||
+      parser.resolveOperand(target, targetType, result.operands)) {
+    return failure();
+  }
+  if (dynamicPointParseResult.has_value()) {
+    Type splitPointType;
+    if (failed(*dynamicPointParseResult) || parser.parseComma() ||
+        parser.parseType(splitPointType) ||
+        parser.resolveOperand(dynamicSplitPoint, splitPointType,
                               result.operands)) {
       return failure();
     }
@@ -1537,10 +1617,7 @@ ParseResult SplitOp::parse(OpAsmParser &parser, OperationState &result) {
   result.addAttribute(
       SplitOp::getStaticSplitPointAttrName(result.name).getValue(),
       staticSplitPoint);
-  if (failed(parser.parseOptionalAttrDict(result.attributes)))
-    return failure();
-
-  result.addTypes({pdlOperationType, pdlOperationType});
+  result.addTypes({targetType, targetType});
   return success();
 }
 
@@ -1554,6 +1631,9 @@ void SplitOp::print(OpAsmPrinter &printer) {
   printer << " ";
   printer.printOptionalAttrDict(getOperation()->getAttrs(),
                                 {getStaticSplitPointAttrName()});
+  printer << " : " << getTarget().getType();
+  if (staticSplitSize == ShapedType::kDynamic)
+    printer << ", " << getDynamicSplitPoint().getType();
 }
 
 LogicalResult SplitOp::verify() {
@@ -1716,10 +1796,12 @@ transform::TileReductionUsingForeachThreadOp::applyToOne(
 //===----------------------------------------------------------------------===//
 // TileOp
 //===----------------------------------------------------------------------===//
+
 void transform::TileOp::build(OpBuilder &builder, OperationState &result,
-                              Value target, ArrayRef<int64_t> staticTileSizes,
+                              TypeRange loopTypes, Value target,
+                              ArrayRef<int64_t> staticTileSizes,
                               ArrayRef<int64_t> interchange) {
-  return build(builder, result,
+  return build(builder, result, loopTypes,
                /*target=*/target,
                /*mixedTileSizes=*/
                getAsOpFoldResult(builder.getI64ArrayAttr(staticTileSizes)),
@@ -1727,7 +1809,24 @@ void transform::TileOp::build(OpBuilder &builder, OperationState &result,
 }
 
 void transform::TileOp::build(OpBuilder &builder, OperationState &result,
+                              Value target, ArrayRef<int64_t> staticTileSizes,
+                              ArrayRef<int64_t> interchange) {
+  build(builder, result, target,
+        getAsOpFoldResult(builder.getI64ArrayAttr(staticTileSizes)),
+        interchange);
+}
+
+void transform::TileOp::build(OpBuilder &builder, OperationState &result,
                               Value target,
+                              ArrayRef<OpFoldResult> mixedTileSizes,
+                              ArrayRef<int64_t> interchange) {
+  // Loop types are automaticaly splat by the callee, setting up one is enough.
+  SmallVector<Type> loopTypes(1, builder.getType<transform::AnyOpType>());
+  build(builder, result, loopTypes, target, mixedTileSizes, interchange);
+}
+
+void transform::TileOp::build(OpBuilder &builder, OperationState &result,
+                              TypeRange loopTypes, Value target,
                               ArrayRef<OpFoldResult> mixedTileSizes,
                               ArrayRef<int64_t> interchange) {
   SmallVector<int64_t> staticTileSizes;
@@ -1736,11 +1835,19 @@ void transform::TileOp::build(OpBuilder &builder, OperationState &result,
   // Call the default builder which sets up the proper operands segment sizes
   // attributes for multiple variadic operands. In the absence of this, horrible
   // bugs ensue.
-  MLIRContext *ctx = builder.getContext();
-  auto operationType = pdl::OperationType::get(ctx);
   auto staticTileSizesAttr = builder.getDenseI64ArrayAttr(staticTileSizes);
-  build(builder, result,
-        /*resultTypes=*/TypeRange{operationType, operationType},
+  unsigned numExpectedLoops =
+      staticTileSizes.size() - llvm::count(staticTileSizes, 0);
+  SmallVector<Type> resultTypes;
+  resultTypes.reserve(numExpectedLoops);
+  assert((loopTypes.size() == 1 || loopTypes.size() == numExpectedLoops) &&
+         "expected one loop type or as many as loops");
+  if (loopTypes.size() == 1)
+    resultTypes.append(numExpectedLoops, loopTypes[0]);
+  else
+    llvm::append_range(resultTypes, loopTypes);
+  build(builder, result, /*tiled_linalg_op=*/target.getType(),
+        /*loops=*/resultTypes,
         /*target=*/target,
         /*dynamic_sizes=*/dynamicTileSizes,
         /*static_sizes=*/staticTileSizesAttr,
@@ -1754,18 +1861,44 @@ transform::TileOp::apply(TransformResults &transformResults,
 
   ArrayRef<Operation *> targets = state.getPayloadOps(getTarget());
   SmallVector<ArrayRef<Operation *>> dynamicSizeProducers;
+  SmallVector<SmallVector<int64_t>> paramSizes;
   dynamicSizeProducers.reserve(getDynamicSizes().size());
-  for (Value dynamicSizeProducerHandle : getDynamicSizes()) {
-    dynamicSizeProducers.push_back(
-        state.getPayloadOps(dynamicSizeProducerHandle));
+  paramSizes.reserve(getDynamicSizes().size());
+  for (Value transformValue : getDynamicSizes()) {
+    if (transformValue.getType().isa<ParamType>()) {
+      dynamicSizeProducers.push_back({});
+      ArrayRef<Attribute> params = state.getParams(transformValue);
+      paramSizes.push_back(
+          llvm::to_vector(llvm::map_range(params, [](Attribute attr) {
+            return attr.cast<IntegerAttr>().getValue().getSExtValue();
+          })));
+
+      if (paramSizes.back().size() != targets.size()) {
+        for (OpResult r : getResults())
+          transformResults.set(r, {});
+        DiagnosedSilenceableFailure diag =
+            emitSilenceableError()
+            << "expected as many parameter values ("
+            << dynamicSizeProducers.back().size() << ") as target ops ("
+            << targets.size() << ")";
+        diag.attachNote(transformValue.getLoc()) << "for this parameter";
+        return diag;
+      }
+
+      continue;
+    }
+    paramSizes.push_back({});
+    dynamicSizeProducers.push_back(state.getPayloadOps(transformValue));
 
     if (dynamicSizeProducers.back().size() != targets.size()) {
+      for (OpResult r : getResults())
+        transformResults.set(r, {});
       DiagnosedSilenceableFailure diag =
           emitSilenceableError()
           << "expected as many dynamic size-producing operations ("
           << dynamicSizeProducers.back().size() << ") as target ops ("
           << targets.size() << ")";
-      diag.attachNote(dynamicSizeProducerHandle.getLoc()) << "for this handle";
+      diag.attachNote(transformValue.getLoc()) << "for this handle";
       return diag;
     }
 
@@ -1773,11 +1906,14 @@ transform::TileOp::apply(TransformResults &transformResults,
       if (op->getNumResults() == 1 &&
           op->getResult(0).getType().isa<IndexType>())
         continue;
+
+      for (OpResult r : getResults())
+        transformResults.set(r, {});
       DiagnosedSilenceableFailure diag =
           emitSilenceableError() << "expected sizes to be produced by ops "
                                     "with a single index-type result";
       diag.attachNote(op->getLoc()) << "size producer op";
-      diag.attachNote(dynamicSizeProducerHandle.getLoc()) << "for this handle";
+      diag.attachNote(transformValue.getLoc()) << "for this handle";
       return diag;
     }
   }
@@ -1806,9 +1942,19 @@ transform::TileOp::apply(TransformResults &transformResults,
               if (auto attr = ofr.dyn_cast<Attribute>()) {
                 sizes.push_back(b.create<arith::ConstantIndexOp>(
                     getLoc(), attr.cast<IntegerAttr>().getInt()));
-              } else {
+                continue;
+              }
+              ArrayRef<Operation *> dynamicSizes =
+                  dynamicSizeProducers[dynamicIdx];
+              ArrayRef<int64_t> params = paramSizes[dynamicIdx];
+              ++dynamicIdx;
+              assert((dynamicSizes.empty() ^ params.empty()) &&
+                     "expected either dynamic sizes or parameters");
+              if (!params.empty()) {
                 sizes.push_back(
-                    dynamicSizeProducers[dynamicIdx++][index]->getResult(0));
+                    b.create<arith::ConstantIndexOp>(getLoc(), params[index]));
+              } else {
+                sizes.push_back(dynamicSizes[index]->getResult(0));
               }
             }
             return sizes;
@@ -1890,20 +2036,34 @@ ParseResult transform::TileOp::parse(OpAsmParser &parser,
   OpAsmParser::UnresolvedOperand target;
   SmallVector<OpAsmParser::UnresolvedOperand> dynamicSizes;
   DenseI64ArrayAttr staticSizes;
-  auto pdlOperationType = pdl::OperationType::get(parser.getContext());
-  if (parser.parseOperand(target) ||
-      parser.resolveOperand(target, pdlOperationType, result.operands) ||
+  FunctionType functionalType;
+  llvm::SMLoc operandLoc;
+  if (parser.parseOperand(target) || parser.getCurrentLocation(&operandLoc) ||
       parseDynamicIndexList(parser, dynamicSizes, staticSizes) ||
-      parser.resolveOperands(dynamicSizes, pdlOperationType, result.operands))
+      parseOptionalInterchange(parser, result) ||
+      parser.parseColonType(functionalType))
     return ParseResult::failure();
 
-  // Parse optional interchange.
-  if (failed(parseOptionalInterchange(parser, result)))
-    return ParseResult::failure();
-  result.addAttribute(getStaticSizesAttrName(result.name), staticSizes);
   size_t numExpectedLoops =
       staticSizes.size() - llvm::count(staticSizes.asArrayRef(), 0);
-  result.addTypes(SmallVector<Type>(numExpectedLoops + 1, pdlOperationType));
+  if (functionalType.getNumResults() != numExpectedLoops + 1) {
+    return parser.emitError(parser.getNameLoc())
+           << "expected " << (numExpectedLoops + 1) << " result type(s)";
+  }
+  if (functionalType.getNumInputs() != dynamicSizes.size() + 1) {
+    return parser.emitError(operandLoc)
+           << "expected " << dynamicSizes.size() + 1 << " operand type(s)";
+  }
+  if (parser.resolveOperand(target, functionalType.getInputs().front(),
+                            result.operands) ||
+      parser.resolveOperands(dynamicSizes,
+                             functionalType.getInputs().drop_front(),
+                             operandLoc, result.operands)) {
+    return failure();
+  }
+
+  result.addAttribute(getStaticSizesAttrName(result.name), staticSizes);
+  result.addTypes(functionalType.getResults());
   return success();
 }
 
@@ -1911,6 +2071,8 @@ void TileOp::print(OpAsmPrinter &p) {
   p << ' ' << getTarget();
   printDynamicIndexList(p, getOperation(), getDynamicSizes(), getStaticSizes());
   printOptionalInterchange(p, getInterchange());
+  p << " : ";
+  p.printFunctionalType(getOperands().getTypes(), getResults().getTypes());
 }
 
 void transform::TileOp::getEffects(
