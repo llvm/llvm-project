@@ -19,9 +19,13 @@
 # RUN: llvm-lipo %t.x86_64.out %t.arm64.out -create -o %t.fat.exec.out
 # RUN: %lld -arch x86_64 %t.x86_64.o -bundle_loader %t.fat.exec.out -bundle -o %t.fat.bundle
 
-## FIXME: Re-enable this test, which is failing on arm64, once we figured out why
-## %t.fat.bundle is produced as an arm64.
-# RUN llvm-otool -h %t.fat.bundle -f %t.fat.exec.out | FileCheck %s --check-prefix=CPU-SUB
+# RUN: llvm-otool -h %t.fat.bundle > %t.bundle_header.txt
+# RUN: llvm-otool -f %t.fat.exec.out >> %t.bundle_header.txt
+# RUN: cat %t.bundle_header.txt | FileCheck %s --check-prefix=CPU-SUB
+
+# CPU-SUB:            magic     cputype      cpusubtype   caps      filetype   ncmds sizeofcmds      flags
+# CPU-SUB-NEXT:  0xfeedfacf     16777223              3  0x{{.+}}    {{.+}}  {{.+}}    {{.+}}      {{.+}}
+	
 # CPU-SUB: Fat headers
 # CPU-SUB: nfat_arch 2
 # CPU-SUB: architecture 0
@@ -30,9 +34,6 @@
 # CPU-SUB: architecture 1
 # CPU-SUB-NEXT:    cputype 16777228
 # CPU-SUB-NEXT:    cpusubtype 0
-
-# CPU-SUB:            magic     cputype      cpusubtype   caps      filetype   ncmds sizeofcmds      flags
-# CPU-SUB-NEXT:  0xfeedfacf     16777223              3  0x{{.+}}    {{.+}}  {{.+}}    {{.+}}      {{.+}}
 
 .text
 .global _main
