@@ -1273,18 +1273,8 @@ declare <4 x float> @llvm.amdgcn.image.gather4.lz.2darray.v4f32.f32(i32 immarg, 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(read)
 declare <4 x float> @llvm.amdgcn.image.gather4.l.2darray.v4f32.f32(i32 immarg, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #1
 
-; Function Attrs: nounwind memory(read)
-declare <4 x float> @llvm.amdgcn.image.gather.4h.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #5
-
-; Function Attrs: nounwind memory(read)
-declare <4 x float> @llvm.amdgcn.image.gather.4h.cube.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #5
-
-; Function Attrs: nounwind memory(read)
-declare <4 x float> @llvm.amdgcn.image.gather.4h.2darray.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #5
-
 attributes #0 = { nofree norecurse nosync nounwind willreturn memory(read) }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(read) }
 attributes #2 = { nofree norecurse nosync nounwind willreturn memory(write) }
 attributes #3 = { nocallback nofree nosync nounwind willreturn memory(write) }
 attributes #4 = { nofree norecurse nosync nounwind willreturn memory(read) "target-features"="+extended-image-insts" }
-attributes #5 = { nounwind memory(read) "target-features"="+extended-image-insts" }
