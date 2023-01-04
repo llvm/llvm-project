@@ -389,7 +389,7 @@ void ExplicitCasts() {
   uint16_t4 c;
   c = i;
   // CHECK: %[[CONV:.+]] = trunc i32 %{{.+}} to i16
-  // CHECK: %[[VEC:.+]] = insertelement <4 x i16> poison, i16 %[[CONV]], i32 0
+  // CHECK: %[[VEC:.+]] = insertelement <4 x i16> poison, i16 %[[CONV]], i64 0
   // CHECK: %[[Splat:.+]] = shufflevector <4 x i16> %[[VEC]], <4 x i16> poison, <4 x i32> zeroinitializer
 }
 

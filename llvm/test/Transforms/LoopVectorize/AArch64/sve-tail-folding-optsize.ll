@@ -28,7 +28,7 @@ define void @trip1024_i64(i64* noalias nocapture noundef %dst, i64* noalias noca
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, i64* [[TMP9]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i64* [[TMP10]] to <vscale x 2 x i64>*
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0nxv2i64(<vscale x 2 x i64>* [[TMP11]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK1]], <vscale x 2 x i64> poison)
-; CHECK-NEXT:    [[TMP12:%.*]] = shl nsw <vscale x 2 x i64> [[WIDE_MASKED_LOAD]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP12:%.*]] = shl nsw <vscale x 2 x i64> [[WIDE_MASKED_LOAD]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, i64* [[DST:%.*]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, i64* [[TMP13]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = bitcast i64* [[TMP14]] to <vscale x 2 x i64>*
@@ -40,7 +40,7 @@ define void @trip1024_i64(i64* noalias nocapture noundef %dst, i64* noalias noca
 ; CHECK-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP19]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK3]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1024)
-; CHECK-NEXT:    [[TMP20:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK3]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i32 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP20:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK3]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <vscale x 2 x i1> [[TMP20]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
