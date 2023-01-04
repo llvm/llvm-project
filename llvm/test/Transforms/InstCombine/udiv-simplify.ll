@@ -117,13 +117,11 @@ define i8 @udiv_demanded_high_bits_set(i8 %x, i8 %y) {
   ret i8 %r
 }
 
-; TODO: This should fold the same as above.
+; This should fold the same as above.
 
 define i8 @udiv_exact_demanded_high_bits_set(i8 %x, i8 %y) {
 ; CHECK-LABEL: @udiv_exact_demanded_high_bits_set(
-; CHECK-NEXT:    [[O:%.*]] = or i8 [[X:%.*]], -4
-; CHECK-NEXT:    [[R:%.*]] = udiv exact i8 [[O]], 12
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 21
 ;
   %o = or i8 %x, -4
   %r = udiv exact i8 %o, 12
@@ -142,12 +140,11 @@ define i8 @udiv_demanded_low_bits_clear(i8 %a) {
   ret i8 %u
 }
 
-; TODO: This should fold the same as above.
+; This should fold the same as above.
 
 define i8 @udiv_exact_demanded_low_bits_clear(i8 %a) {
 ; CHECK-LABEL: @udiv_exact_demanded_low_bits_clear(
-; CHECK-NEXT:    [[O:%.*]] = and i8 [[A:%.*]], -4
-; CHECK-NEXT:    [[U:%.*]] = udiv exact i8 [[O]], 12
+; CHECK-NEXT:    [[U:%.*]] = udiv i8 [[A:%.*]], 12
 ; CHECK-NEXT:    ret i8 [[U]]
 ;
   %o = and i8 %a, -4
