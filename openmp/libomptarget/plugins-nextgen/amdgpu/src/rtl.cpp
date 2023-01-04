@@ -1530,7 +1530,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     char GPUName[64];
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_NAME, GPUName))
       return Err;
-    Arch = GPUName;
+    ComputeUnitKind = GPUName;
 
     // Get the wavefront size.
     uint32_t WavefrontSize = 0;
@@ -1669,7 +1669,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     INFO(OMP_INFOTYPE_PLUGIN_KERNEL, getDeviceId(),
          "Using `%s` to link JITed amdgcn ouput.", LLDPath.c_str());
 
-    std::string MCPU = "-plugin-opt=mcpu=" + getArch();
+    std::string MCPU = "-plugin-opt=mcpu=" + getComputeUnitKind();
 
     StringRef Args[] = {LLDPath,
                         "-flavor",
@@ -1692,7 +1692,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         MemoryBuffer::getFileOrSTDIN(LinkerOutputFilePath.data()).get());
   }
 
-  std::string getArch() const override { return Arch; }
+  /// See GenericDeviceTy::getComputeUnitKind().
+  std::string getComputeUnitKind() const override { return ComputeUnitKind; }
 
   /// Allocate and construct an AMDGPU kernel.
   Expected<GenericKernelTy *>
@@ -2096,7 +2097,7 @@ private:
   hsa_agent_t Agent;
 
   /// The GPU architecture.
-  std::string Arch;
+  std::string ComputeUnitKind;
 
   /// Reference to the host device.
   AMDHostDeviceTy &HostDevice;
@@ -2244,7 +2245,7 @@ private:
 /// Class implementing the AMDGPU-specific functionalities of the plugin.
 struct AMDGPUPluginTy final : public GenericPluginTy {
   /// Create an AMDGPU plugin and initialize the AMDGPU driver.
-  AMDGPUPluginTy() : GenericPluginTy(), HostDevice(nullptr) {}
+  AMDGPUPluginTy() : GenericPluginTy(getTripleArch()), HostDevice(nullptr) {}
 
   /// This class should not be copied.
   AMDGPUPluginTy(const AMDGPUPluginTy &) = delete;
