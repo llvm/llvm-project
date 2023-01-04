@@ -74,7 +74,7 @@ ConstraintManager::assumeDualImpl(ProgramStateRef &State,
       // it might happen that a Checker uncoditionally uses one of them if the
       // other is a nullptr. This may also happen with the non-dual and
       // adjacent `assume(true)` and `assume(false)` calls. By implementing
-      // assume in therms of assumeDual, we can keep our API contract there as
+      // assume in terms of assumeDual, we can keep our API contract there as
       // well.
       return ProgramStatePair(StInfeasible, StInfeasible);
     }
