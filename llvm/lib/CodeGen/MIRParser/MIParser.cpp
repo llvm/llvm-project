@@ -1847,7 +1847,7 @@ bool MIParser::parseIRConstant(StringRef::iterator Loc, const Constant *&C) {
   return false;
 }
 
-// See LLT implemntation for bit size limits.
+// See LLT implementation for bit size limits.
 static bool verifyScalarSize(uint64_t Size) {
   return Size != 0 && isUInt<16>(Size);
 }
