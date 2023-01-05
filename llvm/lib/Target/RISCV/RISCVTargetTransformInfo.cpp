@@ -124,13 +124,22 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // zext.w
     if (Imm == UINT64_C(0xffffffff) && ST->hasStdExtZba())
       return TTI::TCC_Free;
+    // bclri
+    if (ST->hasStdExtZbs() && (~Imm).isPowerOf2())
+      return TTI::TCC_Free;
     if (Inst && Idx == 1 && Imm.getBitWidth() <= ST->getXLen() &&
         canUseShiftPair(Inst, Imm))
       return TTI::TCC_Free;
-    [[fallthrough]];
+    Takes12BitImm = true;
+    break;
   case Instruction::Add:
+    Takes12BitImm = true;
+    break;
   case Instruction::Or:
   case Instruction::Xor:
+    // bseti/binvi
+    if (ST->hasStdExtZbs() && Imm.isPowerOf2())
+      return TTI::TCC_Free;
     Takes12BitImm = true;
     break;
   case Instruction::Mul:
