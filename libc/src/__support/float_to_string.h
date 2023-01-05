@@ -233,7 +233,7 @@ class FloatToString {
   // constexpr void init_convert();
 
 public:
-  constexpr FloatToString<T>(T init_float) : float_bits(init_float) {
+  constexpr FloatToString(T init_float) : float_bits(init_float) {
     is_negative = float_bits.get_sign();
     exponent = float_bits.get_exponent();
     mantissa = float_bits.get_explicit_mantissa();
