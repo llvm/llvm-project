@@ -94,11 +94,11 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
   ASSERT_TRUE(V);
   ASSERT_TRUE(isa<ConstantInt>(V));
 
-  V = parseConstantValue("i8* blockaddress(@test, %entry)", Error, M);
+  V = parseConstantValue("ptr blockaddress(@test, %entry)", Error, M);
   ASSERT_TRUE(V);
   ASSERT_TRUE(isa<BlockAddress>(V));
 
-  V = parseConstantValue("i8** undef", Error, M);
+  V = parseConstantValue("ptr undef", Error, M);
   ASSERT_TRUE(V);
   ASSERT_TRUE(isa<UndefValue>(V));
 
@@ -108,7 +108,7 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
   EXPECT_FALSE(parseConstantValue("i32 3.25", Error, M));
   EXPECT_EQ(Error.getMessage(), "floating point constant invalid for type");
 
-  EXPECT_FALSE(parseConstantValue("i32* @foo", Error, M));
+  EXPECT_FALSE(parseConstantValue("ptr @foo", Error, M));
   EXPECT_EQ(Error.getMessage(), "expected a constant value");
 
   EXPECT_FALSE(parseConstantValue("i32 3, ", Error, M));
@@ -126,10 +126,10 @@ TEST(AsmParserTest, TypeAndConstantValueWithSlotMappingParsing) {
       "define void @marker4(i64 %d) {\n"
       "entry:\n"
       "  %conv = trunc i64 %d to i32\n"
-      "  store i32 %conv, i32* getelementptr inbounds "
-      "    ([50 x %st], [50 x %st]* @v, i64 0, i64 0, i32 0), align 16\n"
-      "  store i32 %conv, i32* getelementptr inbounds "
-      "    ([50 x %0], [50 x %0]* @g, i64 0, i64 0, i32 0), align 16\n"
+      "  store i32 %conv, ptr getelementptr inbounds "
+      "    ([50 x %st], ptr @v, i64 0, i64 1, i32 0), align 16\n"
+      "  store i32 %conv, ptr getelementptr inbounds "
+      "    ([50 x %0], ptr @g, i64 0, i64 1, i32 0), align 16\n"
       "  ret void\n"
       "}";
   SlotMapping Mapping;
@@ -138,14 +138,14 @@ TEST(AsmParserTest, TypeAndConstantValueWithSlotMappingParsing) {
   auto &M = *Mod;
 
   const Value *V;
-  V = parseConstantValue("i32* getelementptr inbounds ([50 x %st], [50 x %st]* "
-                         "@v, i64 0, i64 0, i32 0)",
+  V = parseConstantValue("ptr getelementptr inbounds ([50 x %st], ptr "
+                         "@v, i64 0, i64 1, i32 0)",
                          Error, M, &Mapping);
   ASSERT_TRUE(V);
   ASSERT_TRUE(isa<ConstantExpr>(V));
 
-  V = parseConstantValue("i32* getelementptr inbounds ([50 x %0], [50 x %0]* "
-                         "@g, i64 0, i64 0, i32 0)",
+  V = parseConstantValue("ptr getelementptr inbounds ([50 x %0], ptr "
+                         "@g, i64 0, i64 1, i32 0)",
                          Error, M, &Mapping);
   ASSERT_TRUE(V);
   ASSERT_TRUE(isa<ConstantExpr>(V));
@@ -162,10 +162,10 @@ TEST(AsmParserTest, TypeWithSlotMappingParsing) {
       "define void @marker4(i64 %d) {\n"
       "entry:\n"
       "  %conv = trunc i64 %d to i32\n"
-      "  store i32 %conv, i32* getelementptr inbounds "
-      "    ([50 x %st], [50 x %st]* @v, i64 0, i64 0, i32 0), align 16\n"
-      "  store i32 %conv, i32* getelementptr inbounds "
-      "    ([50 x %0], [50 x %0]* @g, i64 0, i64 0, i32 0), align 16\n"
+      "  store i32 %conv, ptr getelementptr inbounds "
+      "    ([50 x %st], ptr @v, i64 0, i64 0, i32 0), align 16\n"
+      "  store i32 %conv, ptr getelementptr inbounds "
+      "    ([50 x %0], ptr @g, i64 0, i64 0, i32 0), align 16\n"
       "  ret void\n"
       "}";
   SlotMapping Mapping;
@@ -246,22 +246,12 @@ TEST(AsmParserTest, TypeWithSlotMappingParsing) {
   ASSERT_TRUE(ST->isOpaque());
 
   // Check we properly parse pointer types.
-  // One indirection.
-  Ty = parseType("i32*", Error, M, &Mapping);
+  Ty = parseType("ptr", Error, M, &Mapping);
   ASSERT_TRUE(Ty);
   ASSERT_TRUE(Ty->isPointerTy());
 
   PointerType *PT = cast<PointerType>(Ty);
-  ASSERT_TRUE(PT->isOpaqueOrPointeeTypeMatches(Type::getIntNTy(Ctx, 32)));
-
-  // Two indirections.
-  Ty = parseType("i32**", Error, M, &Mapping);
-  ASSERT_TRUE(Ty);
-  ASSERT_TRUE(Ty->isPointerTy());
-
-  PT = cast<PointerType>(Ty);
-  Type *ExpectedElemTy = PointerType::getUnqual(Type::getIntNTy(Ctx, 32));
-  ASSERT_TRUE(PT->isOpaqueOrPointeeTypeMatches(ExpectedElemTy));
+  ASSERT_TRUE(PT->isOpaque());
 
   // Check that we reject types with garbage.
   Ty = parseType("i32 garbage", Error, M, &Mapping);
@@ -279,10 +269,10 @@ TEST(AsmParserTest, TypeAtBeginningWithSlotMappingParsing) {
       "define void @marker4(i64 %d) {\n"
       "entry:\n"
       "  %conv = trunc i64 %d to i32\n"
-      "  store i32 %conv, i32* getelementptr inbounds "
-      "    ([50 x %st], [50 x %st]* @v, i64 0, i64 0, i32 0), align 16\n"
-      "  store i32 %conv, i32* getelementptr inbounds "
-      "    ([50 x %0], [50 x %0]* @g, i64 0, i64 0, i32 0), align 16\n"
+      "  store i32 %conv, ptr getelementptr inbounds "
+      "    ([50 x %st], ptr @v, i64 0, i64 0, i32 0), align 16\n"
+      "  store i32 %conv, ptr getelementptr inbounds "
+      "    ([50 x %0], ptr @g, i64 0, i64 0, i32 0), align 16\n"
       "  ret void\n"
       "}";
   SlotMapping Mapping;
@@ -373,23 +363,13 @@ TEST(AsmParserTest, TypeAtBeginningWithSlotMappingParsing) {
 
   // Check we properly parse pointer types.
   // One indirection.
-  Ty = parseTypeAtBeginning("i32*", Read, Error, M, &Mapping);
+  Ty = parseTypeAtBeginning("ptr", Read, Error, M, &Mapping);
   ASSERT_TRUE(Ty);
   ASSERT_TRUE(Ty->isPointerTy());
-  ASSERT_TRUE(Read == 4);
+  ASSERT_TRUE(Read == 3);
 
   PointerType *PT = cast<PointerType>(Ty);
-  ASSERT_TRUE(PT->isOpaqueOrPointeeTypeMatches(Type::getIntNTy(Ctx, 32)));
-
-  // Two indirections.
-  Ty = parseTypeAtBeginning("i32**", Read, Error, M, &Mapping);
-  ASSERT_TRUE(Ty);
-  ASSERT_TRUE(Ty->isPointerTy());
-  ASSERT_TRUE(Read == 5);
-
-  PT = cast<PointerType>(Ty);
-  Type *ExpectedElemTy = PointerType::getUnqual(Type::getIntNTy(Ctx, 32));
-  ASSERT_TRUE(PT->isOpaqueOrPointeeTypeMatches(ExpectedElemTy));
+  ASSERT_TRUE(PT->isOpaque());
 
   // Check that we reject types with garbage.
   Ty = parseTypeAtBeginning("i32 garbage", Read, Error, M, &Mapping);
