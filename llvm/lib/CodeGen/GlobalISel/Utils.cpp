@@ -446,7 +446,7 @@ llvm::getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
   if (!DstTy.isValid())
     return std::nullopt;
   unsigned Opc = DefMI->getOpcode();
-  while (Opc == TargetOpcode::COPY || isPreISelGenericOptimizationHint(Opc)) {
+  while (DefMI->isCopy() || isPreISelGenericOptimizationHint(Opc)) {
     Register SrcReg = DefMI->getOperand(1).getReg();
     auto SrcTy = MRI.getType(SrcReg);
     if (!SrcTy.isValid())

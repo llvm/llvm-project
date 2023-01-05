@@ -203,7 +203,7 @@ unsigned llvm::getInvertedFPClassTest(unsigned Test) {
 
 static MachineOperand *getSalvageOpsForCopy(const MachineRegisterInfo &MRI,
                                             MachineInstr &Copy) {
-  assert(Copy.getOpcode() == TargetOpcode::COPY && "Must be a COPY");
+  assert(Copy.isCopy() && "Must be a COPY");
 
   return &Copy.getOperand(1);
 }

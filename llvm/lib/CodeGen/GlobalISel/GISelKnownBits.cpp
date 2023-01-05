@@ -234,7 +234,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
           MRI.getType(SrcReg).isValid()) {
         // For COPYs we don't do anything, don't increase the depth.
         computeKnownBitsImpl(SrcReg, Known2, DemandedElts,
-                             Depth + (Opcode != TargetOpcode::COPY));
+                             Depth + (!MI.isCopy()));
         Known = KnownBits::commonBits(Known, Known2);
         // If we reach a point where we don't know anything
         // just stop looking through the operands.

@@ -205,7 +205,7 @@ bool CombinerHelper::tryCombineCopy(MachineInstr &MI) {
   return false;
 }
 bool CombinerHelper::matchCombineCopy(MachineInstr &MI) {
-  if (MI.getOpcode() != TargetOpcode::COPY)
+  if (!MI.isCopy())
     return false;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
