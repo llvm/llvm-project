@@ -118,6 +118,11 @@ New checks
 
   Warns when using ``do-while`` loops.
 
+- New :doc:`cppcoreguidelines-avoid-reference-coroutine-parameters
+  <clang-tidy/checks/cppcoreguidelines/avoid-reference-coroutine-parameters>` check.
+
+  Warns on coroutines that accept reference parameters.
+
 - New :doc:`misc-use-anonymous-namespace
   <clang-tidy/checks/misc/use-anonymous-namespace>` check.
 
