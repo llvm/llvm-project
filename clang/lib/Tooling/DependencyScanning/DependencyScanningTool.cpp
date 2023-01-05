@@ -143,9 +143,9 @@ public:
   }
 
   GetDependencyTree(llvm::cas::CachingOnDiskFileSystem &FS,
-                    RemapPathCallback RemapPath)
+                    DepscanPrefixMapping PrefixMapping)
       : FullDependencyConsumer(AlreadySeen, nullptr, /*EagerModules=*/false,
-                               &FS, RemapPath),
+                               &FS, std::move(PrefixMapping)),
         FS(FS) {}
 
 private:
@@ -157,7 +157,7 @@ private:
 llvm::Expected<llvm::cas::ObjectProxy>
 DependencyScanningTool::getDependencyTree(
     const std::vector<std::string> &CommandLine, StringRef CWD) {
-  GetDependencyTree Consumer(*Worker.getCASFS(), /*RemapPath=*/nullptr);
+  GetDependencyTree Consumer(*Worker.getCASFS(), /*PrefixMapping=*/{});
   auto Result = Worker.computeDependencies(CWD, CommandLine, Consumer);
   if (Result)
     return std::move(Result);
@@ -168,8 +168,8 @@ llvm::Expected<llvm::cas::ObjectProxy>
 DependencyScanningTool::getDependencyTreeFromCompilerInvocation(
     std::shared_ptr<CompilerInvocation> Invocation, StringRef CWD,
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
-    bool DiagGenerationAsCompilation, RemapPathCallback RemapPath) {
-  GetDependencyTree Consumer(*Worker.getCASFS(), RemapPath);
+    bool DiagGenerationAsCompilation, DepscanPrefixMapping PrefixMapping) {
+  GetDependencyTree Consumer(*Worker.getCASFS(), std::move(PrefixMapping));
   Worker.computeDependenciesFromCompilerInvocation(
       std::move(Invocation), CWD, Consumer, DiagsConsumer, VerboseOS,
       DiagGenerationAsCompilation);
@@ -588,6 +588,11 @@ DependencyScanningTool::getFullDependenciesLegacyDriverCommand(
 Error FullDependencyConsumer::initialize(CompilerInstance &ScanInstance,
                                          CompilerInvocation &NewInvocation) {
   if (CacheFS) {
+    // Setup prefix mapping.
+    Mapper.emplace(CacheFS);
+    if (Error E = PrefixMapping.configurePrefixMapper(NewInvocation, *Mapper))
+      return E;
+
     CacheFS->trackNewAccesses();
     if (auto CWD =
             ScanInstance.getVirtualFileSystem().getCurrentWorkingDirectory())
@@ -617,8 +622,14 @@ Error FullDependencyConsumer::finalize(CompilerInstance &ScanInstance,
     (void)CacheFS->status(NewInvocation.getCodeGenOpts().SampleProfileFile);
     (void)CacheFS->status(NewInvocation.getCodeGenOpts().ProfileRemappingFile);
 
-    if (auto E = CacheFS->createTreeFromNewAccesses(RemapPath).moveInto(
-            CASFileSystemRootID))
+    auto E = CacheFS
+                 ->createTreeFromNewAccesses(
+                     [&](const llvm::vfs::CachedDirectoryEntry &Entry,
+                         SmallVectorImpl<char> &Storage) {
+                       return Mapper->mapDirEntry(Entry, Storage);
+                     })
+                 .moveInto(CASFileSystemRootID);
+    if (E)
       return E;
 
     configureInvocationForCaching(NewInvocation, CASOpts,
@@ -654,7 +665,14 @@ Error FullDependencyConsumer::finalizeModuleBuild(
     CompilerInstance &ModuleScanInstance) {
   if (CacheFS) {
     std::optional<cas::CASID> RootID;
-    if (auto E = CacheFS->createTreeFromNewAccesses(RemapPath).moveInto(RootID))
+    auto E = CacheFS
+                 ->createTreeFromNewAccesses(
+                     [&](const llvm::vfs::CachedDirectoryEntry &Entry,
+                         SmallVectorImpl<char> &Storage) {
+                       return Mapper->mapDirEntry(Entry, Storage);
+                     })
+                 .moveInto(RootID);
+    if (E)
       return E;
 
     Module *M = ModuleScanInstance.getPreprocessor().getCurrentModule();

@@ -257,17 +257,11 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
                       .moveInto(Root))
       return std::move(E);
   } else {
-    if (Error E =
-            Tool.getDependencyTreeFromCompilerInvocation(
-                    std::move(ScanInvocation), WorkingDirectory, DiagsConsumer,
-                    VerboseOS,
-                    /*DiagGenerationAsCompilation*/ true,
-                    [&](const llvm::vfs::CachedDirectoryEntry &Entry,
-                        SmallVectorImpl<char> &Storage) {
-                      return static_cast<llvm::TreePathPrefixMapper &>(Mapper)
-                          .mapDirEntry(Entry, Storage);
-                    })
-                .moveInto(Root))
+    if (Error E = Tool.getDependencyTreeFromCompilerInvocation(
+                          std::move(ScanInvocation), WorkingDirectory,
+                          DiagsConsumer, VerboseOS,
+                          /*DiagGenerationAsCompilation*/ true, PrefixMapping)
+                      .moveInto(Root))
       return std::move(E);
   }
 
