@@ -15,7 +15,7 @@ using namespace llvm;
 using namespace clang;
 using namespace ast_matchers;
 
-namespace clang::ast_matchers::internal {
+namespace clang::ast_matchers {
 // A `RecursiveASTVisitor` that traverses all descendants of a given node "n"
 // except for those belonging to a different callable of "n".
 class MatchDescendantVisitor
@@ -26,9 +26,10 @@ public:
   // Creates an AST visitor that matches `Matcher` on all
   // descendants of a given node "n" except for the ones
   // belonging to a different callable of "n".
-  MatchDescendantVisitor(const DynTypedMatcher *Matcher, ASTMatchFinder *Finder,
-                         BoundNodesTreeBuilder *Builder,
-                         ASTMatchFinder::BindKind Bind)
+  MatchDescendantVisitor(const internal::DynTypedMatcher *Matcher,
+                         internal::ASTMatchFinder *Finder,
+                         internal::BoundNodesTreeBuilder *Builder,
+                         internal::ASTMatchFinder::BindKind Bind)
       : Matcher(Matcher), Finder(Finder), Builder(Builder), Bind(Bind),
         Matches(false) {}
 
@@ -86,32 +87,32 @@ private:
   // Returns 'true' if traversal should continue after this function
   // returns, i.e. if no match is found or 'Bind' is 'BK_All'.
   template <typename T> bool match(const T &Node) {
-    BoundNodesTreeBuilder RecursiveBuilder(*Builder);
+    internal::BoundNodesTreeBuilder RecursiveBuilder(*Builder);
 
     if (Matcher->matches(DynTypedNode::create(Node), Finder,
                          &RecursiveBuilder)) {
       ResultBindings.addMatch(RecursiveBuilder);
       Matches = true;
-      if (Bind != ASTMatchFinder::BK_All)
+      if (Bind != internal::ASTMatchFinder::BK_All)
         return false; // Abort as soon as a match is found.
     }
     return true;
   }
 
-  const DynTypedMatcher *const Matcher;
-  ASTMatchFinder *const Finder;
-  BoundNodesTreeBuilder *const Builder;
-  BoundNodesTreeBuilder ResultBindings;
-  const ASTMatchFinder::BindKind Bind;
+  const internal::DynTypedMatcher *const Matcher;
+  internal::ASTMatchFinder *const Finder;
+  internal::BoundNodesTreeBuilder *const Builder;
+  internal::BoundNodesTreeBuilder ResultBindings;
+  const internal::ASTMatchFinder::BindKind Bind;
   bool Matches;
 };
 
-AST_MATCHER_P(Stmt, forEveryDescendant, Matcher<Stmt>, innerMatcher) {
+AST_MATCHER_P(Stmt, forEveryDescendant, internal::Matcher<Stmt>, innerMatcher) {
   MatchDescendantVisitor Visitor(new DynTypedMatcher(innerMatcher), Finder,
                                  Builder, ASTMatchFinder::BK_All);
   return Visitor.findMatch(DynTypedNode::create(Node));
 }
-} // namespace clang::ast_matchers::internal
+} // namespace clang::ast_matchers
 
 namespace {
 // Because the analysis revolves around variables and their types, we'll need to
