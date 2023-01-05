@@ -38,9 +38,9 @@ for.body4:                                        ; preds = %for.body4, %for.con
 ;  %arrayidx6 = getelementptr inbounds [3 x [3 x i32]], [3 x [3 x i32]]* @A10, i64 0, i64 %indvars.iv, i64 %indvars.iv26
 ;  %tmp = trunc i64 %indvars.iv26 to i32
 ;  store i32 %tmp, i32* %arrayidx6, align 4
-  %arrayidx10 = getelementptr inbounds [3 x [3 x i32]], [3 x [3 x i32]]* @A10, i64 0, i64 %indvars.iv, i64 %indvars.iv.next27
+  %arrayidx10 = getelementptr inbounds [3 x [3 x i32]], ptr @A10, i64 0, i64 %indvars.iv, i64 %indvars.iv.next27
   %tmp1 = trunc i64 %indvars.iv to i32
-  store i32 %tmp1, i32* %arrayidx10, align 4
+  store i32 %tmp1, ptr %arrayidx10, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %n.wide = zext i32 %n to i64
   %exitcond = icmp ne i64 %indvars.iv.next, %n.wide

@@ -12,7 +12,7 @@ define void @test1() {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INC41:%.*]] = phi i32 [ [[INC4:%.*]], [[FOR_INC3:%.*]] ], [ undef, [[FOR_BODY_PREHEADER:%.*]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INC41]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [5 x i32], [5 x i32]* @b, i64 0, i64 [[IDXPROM]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [5 x i32], ptr @b, i64 0, i64 [[IDXPROM]]
 ; CHECK-NEXT:    br label [[FOR_INC:%.*]]
 ; CHECK:       for.body2.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY2:%.*]]
@@ -20,8 +20,8 @@ define void @test1() {
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[TMP1:%.*]], [[FOR_INC_SPLIT:%.*]] ], [ 1, [[FOR_BODY2_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY_PREHEADER]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; CHECK-NEXT:    store i32 undef, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 undef, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[LSR_IV]], 4
 ; CHECK-NEXT:    [[LSR_IV_NEXT:%.*]] = add nuw nsw i32 [[LSR_IV]], 1
 ; CHECK-NEXT:    br label [[FOR_COND1_FOR_END_CRIT_EDGE:%.*]]
@@ -50,9 +50,9 @@ for.body2:                                        ; preds = %for.inc, %for.body
 
 for.inc:                                          ; preds = %for.body2
   %idxprom = sext i32 %inc41 to i64
-  %arrayidx = getelementptr inbounds [5 x i32], [5 x i32]* @b, i64 0, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
-  store i32 undef, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [5 x i32], ptr @b, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
+  store i32 undef, ptr %arrayidx, align 4
   %cmp = icmp slt i32 %lsr.iv, 4
   %lsr.iv.next = add nuw nsw i32 %lsr.iv, 1
   br i1 %cmp, label %for.body2, label %for.cond1.for.end_crit_edge
@@ -77,7 +77,7 @@ define void @test2() {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INC41:%.*]] = phi i32 [ [[INC4:%.*]], [[FOR_INC3:%.*]] ], [ undef, [[FOR_BODY_PREHEADER:%.*]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INC41]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [5 x i32], [5 x i32]* @b, i64 0, i64 [[IDXPROM]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [5 x i32], ptr @b, i64 0, i64 [[IDXPROM]]
 ; CHECK-NEXT:    br label [[FOR_INC:%.*]]
 ; CHECK:       for.body2.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY2:%.*]]
@@ -85,10 +85,10 @@ define void @test2() {
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[TMP1:%.*]], [[FOR_INC_SPLIT:%.*]] ], [ 1, [[FOR_BODY2_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY_PREHEADER]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[LSR_IV]], 4
 ; CHECK-NEXT:    [[CMP_ZEXT:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    store i32 [[CMP_ZEXT]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[CMP_ZEXT]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[LSR_IV_NEXT:%.*]] = add nuw nsw i32 [[LSR_IV]], 1
 ; CHECK-NEXT:    br label [[FOR_COND1_FOR_END_CRIT_EDGE:%.*]]
 ; CHECK:       for.inc.split:
@@ -116,11 +116,11 @@ for.body2:                                        ; preds = %for.inc, %for.body
 
 for.inc:                                          ; preds = %for.body2
   %idxprom = sext i32 %inc41 to i64
-  %arrayidx = getelementptr inbounds [5 x i32], [5 x i32]* @b, i64 0, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [5 x i32], ptr @b, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp = icmp slt i32 %lsr.iv, 4
   %cmp.zext = zext i1 %cmp to i32
-  store i32 %cmp.zext, i32* %arrayidx, align 4
+  store i32 %cmp.zext, ptr %arrayidx, align 4
   %lsr.iv.next = add nuw nsw i32 %lsr.iv, 1
   br i1 %cmp, label %for.body2, label %for.cond1.for.end_crit_edge
 

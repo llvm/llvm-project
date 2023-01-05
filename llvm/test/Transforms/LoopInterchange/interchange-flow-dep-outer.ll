@@ -39,8 +39,8 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup4
 for.body:                                         ; preds = %for.cond.cleanup4, %entry
   %indvars.iv45 = phi i64 [ 0, %entry ], [ %indvars.iv.next46, %for.cond.cleanup4 ]
   %call = call double @fn1()
-  %arrayidx = getelementptr inbounds [100 x double], [100 x double]* @T, i64 0, i64 %indvars.iv45
-  store double %call, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds [100 x double], ptr @T, i64 0, i64 %indvars.iv45
+  store double %call, ptr %arrayidx, align 8
   br label %for.cond6.preheader
 
 for.cond6.preheader:                              ; preds = %for.cond.cleanup8, %for.body
@@ -48,7 +48,7 @@ for.cond6.preheader:                              ; preds = %for.cond.cleanup8, 
   br label %for.body9
 
 for.cond.cleanup4:                                ; preds = %for.cond.cleanup8
-  %tmp = load double, double* %arrayidx, align 8
+  %tmp = load double, ptr %arrayidx, align 8
   call void @fn2(double %tmp)
   %indvars.iv.next46 = add nuw nsw i64 %indvars.iv45, 1
   %exitcond47 = icmp ne i64 %indvars.iv.next46, 100
@@ -61,11 +61,11 @@ for.cond.cleanup8:                                ; preds = %for.body9
 
 for.body9:                                        ; preds = %for.body9, %for.cond6.preheader
   %indvars.iv = phi i64 [ 1, %for.cond6.preheader ], [ %indvars.iv.next, %for.body9 ]
-  %arrayidx13 = getelementptr inbounds [1000 x [1000 x i32]], [1000 x [1000 x i32]]* @Arr, i64 0, i64 %indvars.iv, i64 %indvars.iv42
-  %tmp1 = load i32, i32* %arrayidx13, align 4
+  %arrayidx13 = getelementptr inbounds [1000 x [1000 x i32]], ptr @Arr, i64 0, i64 %indvars.iv, i64 %indvars.iv42
+  %tmp1 = load i32, ptr %arrayidx13, align 4
   %tmp2 = trunc i64 %indvars.iv45 to i32
   %add = add nsw i32 %tmp1, %tmp2
-  store i32 %add, i32* %arrayidx13, align 4
+  store i32 %add, ptr %arrayidx13, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.body9, label %for.cond.cleanup8

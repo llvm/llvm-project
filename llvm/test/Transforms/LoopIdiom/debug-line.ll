@@ -4,17 +4,16 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-apple-darwin10.0.0"
 
 
-define void @foo(double* nocapture %a) nounwind ssp !dbg !0 {
+define void @foo(ptr nocapture %a) nounwind ssp !dbg !0 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata double* [[A:%.*]], metadata [[META7:![0-9]+]], metadata !DIExpression()), !dbg [[DBG10:![0-9]+]]
+; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata ptr [[A:%.*]], metadata [[META7:![0-9]+]], metadata !DIExpression()), !dbg [[DBG10:![0-9]+]]
 ; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 0, metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG15:![0-9]+]]
-; CHECK-NEXT:    [[A1:%.*]] = bitcast double* [[A]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[A1]], i8 0, i64 8000, i1 false), !dbg [[DBG16:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[A]], i8 0, i64 8000, i1 false), !dbg [[DBG16:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr double, double* [[A]], i64 [[INDVAR]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr double, ptr [[A]], i64 [[INDVAR]]
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVAR_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END:%.*]], !dbg [[DBG15]]
@@ -23,14 +22,14 @@ define void @foo(double* nocapture %a) nounwind ssp !dbg !0 {
 ; CHECK-NEXT:    ret void, !dbg [[DBG18:![0-9]+]]
 ;
 entry:
-  tail call void @llvm.dbg.value(metadata double* %a, metadata !5, metadata !DIExpression()), !dbg !8
+  tail call void @llvm.dbg.value(metadata ptr %a, metadata !5, metadata !DIExpression()), !dbg !8
   tail call void @llvm.dbg.value(metadata i32 0, metadata !10, metadata !DIExpression()), !dbg !14
   br label %for.body
 
 for.body:                                         ; preds = %entry, %for.body
   %indvar = phi i64 [ 0, %entry ], [ %indvar.next, %for.body ]
-  %arrayidx = getelementptr double, double* %a, i64 %indvar
-  store double 0.000000e+00, double* %arrayidx, align 8, !dbg !15
+  %arrayidx = getelementptr double, ptr %a, i64 %indvar
+  store double 0.000000e+00, ptr %arrayidx, align 8, !dbg !15
   %indvar.next = add i64 %indvar, 1
   %exitcond = icmp ne i64 %indvar.next, 1000
   br i1 %exitcond, label %for.body, label %for.end, !dbg !14

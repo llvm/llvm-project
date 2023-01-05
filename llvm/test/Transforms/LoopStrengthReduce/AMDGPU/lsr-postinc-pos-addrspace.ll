@@ -19,9 +19,9 @@ define amdgpu_kernel void @local_cmp_user(i32 %arg0) nounwind {
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[C0]], label [[BB13:%.*]], label [[BB]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[T:%.*]] = load i8 addrspace(3)*, i8 addrspace(3)* addrspace(3)* undef, align 4
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8 addrspace(3)* [[T]], i32 [[LSR_IV_NEXT2]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 addrspace(3)* [[SCEVGEP]], null
+; CHECK-NEXT:    [[T:%.*]] = load ptr addrspace(3), ptr addrspace(3) undef, align 4
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(3) [[T]], i32 [[LSR_IV_NEXT2]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne ptr addrspace(3) [[SCEVGEP]], null
 ; CHECK-NEXT:    br i1 [[C1]], label [[BB11]], label [[BB13]]
 ; CHECK:       bb13:
 ; CHECK-NEXT:    unreachable
@@ -36,9 +36,9 @@ bb11:                                             ; preds = %bb, %entry
   br i1 %c0, label %bb13, label %bb
 
 bb:                                               ; preds = %bb11
-  %t = load i8 addrspace(3)*, i8 addrspace(3)* addrspace(3)* undef, align 4
-  %p = getelementptr i8, i8 addrspace(3)* %t, i32 %ii
-  %c1 = icmp ne i8 addrspace(3)* %p, null
+  %t = load ptr addrspace(3), ptr addrspace(3) undef, align 4
+  %p = getelementptr i8, ptr addrspace(3) %t, i32 %ii
+  %c1 = icmp ne ptr addrspace(3) %p, null
   %i.next = add i32 %i, 1
   br i1 %c1, label %bb11, label %bb13
 
@@ -59,9 +59,9 @@ define amdgpu_kernel void @global_cmp_user(i64 %arg0) nounwind {
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[C0]], label [[BB13:%.*]], label [[BB]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[T:%.*]] = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* undef, align 8
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8 addrspace(1)* [[T]], i64 [[LSR_IV_NEXT2]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 addrspace(1)* [[SCEVGEP]], null
+; CHECK-NEXT:    [[T:%.*]] = load ptr addrspace(1), ptr addrspace(1) undef, align 8
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[T]], i64 [[LSR_IV_NEXT2]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne ptr addrspace(1) [[SCEVGEP]], null
 ; CHECK-NEXT:    br i1 [[C1]], label [[BB11]], label [[BB13]]
 ; CHECK:       bb13:
 ; CHECK-NEXT:    unreachable
@@ -76,9 +76,9 @@ bb11:                                             ; preds = %bb, %entry
   br i1 %c0, label %bb13, label %bb
 
 bb:                                               ; preds = %bb11
-  %t = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* undef, align 8
-  %p = getelementptr i8, i8 addrspace(1)* %t, i64 %ii
-  %c1 = icmp ne i8 addrspace(1)* %p, null
+  %t = load ptr addrspace(1), ptr addrspace(1) undef, align 8
+  %p = getelementptr i8, ptr addrspace(1) %t, i64 %ii
+  %c1 = icmp ne ptr addrspace(1) %p, null
   %i.next = add i64 %i, 1
   br i1 %c1, label %bb11, label %bb13
 
@@ -99,10 +99,10 @@ define amdgpu_kernel void @global_gep_user(i32 %arg0) nounwind {
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[C0]], label [[BB13:%.*]], label [[BB]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[T:%.*]] = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* undef, align 8
+; CHECK-NEXT:    [[T:%.*]] = load ptr addrspace(1), ptr addrspace(1) undef, align 8
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[LSR_IV1]] to i64
-; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, i8 addrspace(1)* [[T]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 addrspace(1)* [[P]], null
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(1) [[T]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne ptr addrspace(1) [[P]], null
 ; CHECK-NEXT:    br i1 [[C1]], label [[BB11]], label [[BB13]]
 ; CHECK:       bb13:
 ; CHECK-NEXT:    unreachable
@@ -117,10 +117,10 @@ bb11:                                             ; preds = %bb, %entry
   br i1 %c0, label %bb13, label %bb
 
 bb:                                               ; preds = %bb11
-  %t = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* undef, align 8
+  %t = load ptr addrspace(1), ptr addrspace(1) undef, align 8
   %idxprom = sext i32 %ii to i64
-  %p = getelementptr i8, i8 addrspace(1)* %t, i64 %idxprom
-  %c1 = icmp ne i8 addrspace(1)* %p, null
+  %p = getelementptr i8, ptr addrspace(1) %t, i64 %idxprom
+  %c1 = icmp ne ptr addrspace(1) %p, null
   %i.next = add i32 %i, 1
   br i1 %c1, label %bb11, label %bb13
 
@@ -142,9 +142,9 @@ define amdgpu_kernel void @global_sext_scale_user(i32 %arg0) nounwind {
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[C0]], label [[BB13:%.*]], label [[BB]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[T:%.*]] = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* undef, align 8
-; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, i8 addrspace(1)* [[T]], i64 [[II_EXT]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 addrspace(1)* [[P]], null
+; CHECK-NEXT:    [[T:%.*]] = load ptr addrspace(1), ptr addrspace(1) undef, align 8
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(1) [[T]], i64 [[II_EXT]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne ptr addrspace(1) [[P]], null
 ; CHECK-NEXT:    br i1 [[C1]], label [[BB11]], label [[BB13]]
 ; CHECK:       bb13:
 ; CHECK-NEXT:    unreachable
@@ -160,9 +160,9 @@ bb11:                                             ; preds = %bb, %entry
   br i1 %c0, label %bb13, label %bb
 
 bb:                                               ; preds = %bb11
-  %t = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* undef, align 8
-  %p = getelementptr i8, i8 addrspace(1)* %t, i64 %ii.ext
-  %c1 = icmp ne i8 addrspace(1)* %p, null
+  %t = load ptr addrspace(1), ptr addrspace(1) undef, align 8
+  %p = getelementptr i8, ptr addrspace(1) %t, i64 %ii.ext
+  %c1 = icmp ne ptr addrspace(1) %p, null
   %i.next = add i32 %i, 1
   br i1 %c1, label %bb11, label %bb13
 
