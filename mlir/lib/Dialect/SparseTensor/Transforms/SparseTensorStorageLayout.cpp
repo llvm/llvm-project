@@ -10,6 +10,7 @@
 #include "CodegenUtils.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -76,34 +77,6 @@ SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
 }
 
 //===----------------------------------------------------------------------===//
-// StorageLayout methods.
-//===----------------------------------------------------------------------===//
-
-unsigned StorageLayout::getMemRefFieldIndex(SparseTensorFieldKind kind,
-                                            std::optional<unsigned> dim) const {
-  unsigned fieldIdx = -1u;
-  foreachFieldInSparseTensor(
-      enc,
-      [dim, kind, &fieldIdx](unsigned fIdx, SparseTensorFieldKind fKind,
-                             unsigned fDim, DimLevelType dlt) -> bool {
-        if ((dim && fDim == dim.value() && kind == fKind) ||
-            (kind == fKind && fKind == SparseTensorFieldKind::ValMemRef)) {
-          fieldIdx = fIdx;
-          // Returns false to break the iteration.
-          return false;
-        }
-        return true;
-      });
-  assert(fieldIdx != -1u);
-  return fieldIdx;
-}
-
-unsigned StorageLayout::getMemRefFieldIndex(StorageSpecifierKind kind,
-                                            std::optional<unsigned> dim) const {
-  return getMemRefFieldIndex(toFieldKind(kind), dim);
-}
-
-//===----------------------------------------------------------------------===//
 // StorageTensorSpecifier methods.
 //===----------------------------------------------------------------------===//
 
@@ -133,6 +106,47 @@ void SparseTensorSpecifier::setSpecifierField(OpBuilder &builder, Location loc,
 }
 
 //===----------------------------------------------------------------------===//
+// SparseTensorDescriptor methods.
+//===----------------------------------------------------------------------===//
+
+sparse_tensor::SparseTensorDescriptor::SparseTensorDescriptor(
+    OpBuilder &builder, Location loc, Type tp, ValueArrayRef buffers)
+    : SparseTensorDescriptorImpl<false>(tp), expandedFields() {
+  SparseTensorEncodingAttr enc = getSparseTensorEncoding(tp);
+  unsigned rank = enc.getDimLevelType().size();
+  unsigned cooStart = getCOOStart(enc);
+  if (cooStart < rank) {
+    ValueRange beforeFields = buffers.drop_back(3);
+    expandedFields.append(beforeFields.begin(), beforeFields.end());
+    Value buffer = buffers[buffers.size() - 3];
+
+    Value stride = constantIndex(builder, loc, rank - cooStart);
+    SmallVector<Value> buffersArray(buffers.begin(), buffers.end());
+    MutSparseTensorDescriptor mutDesc(tp, buffersArray);
+    // Calculate subbuffer size as memSizes[idx] / (stride).
+    Value subBufferSize = mutDesc.getIdxMemSize(builder, loc, cooStart);
+    subBufferSize = builder.create<arith::DivUIOp>(loc, subBufferSize, stride);
+
+    // Create views of the linear idx buffer for the COO indices.
+    for (unsigned i = cooStart; i < rank; i++) {
+      Value subBuffer = builder.create<memref::SubViewOp>(
+          loc, buffer,
+          /*offset=*/ValueRange{constantIndex(builder, loc, i - cooStart)},
+          /*size=*/ValueRange{subBufferSize},
+          /*step=*/ValueRange{stride});
+      expandedFields.push_back(subBuffer);
+    }
+    expandedFields.push_back(buffers[buffers.size() - 2]); // The Values memref.
+    expandedFields.push_back(buffers.back());              // The specifier.
+    fields = expandedFields;
+  } else {
+    fields = buffers;
+  }
+
+  sanityCheck();
+}
+
+//===----------------------------------------------------------------------===//
 // Public methods.
 //===----------------------------------------------------------------------===//
 
@@ -142,17 +156,20 @@ void sparse_tensor::foreachFieldInSparseTensor(
     const SparseTensorEncodingAttr enc,
     llvm::function_ref<bool(unsigned, SparseTensorFieldKind, unsigned,
                             DimLevelType)>
-        callback) {
+        callback,
+    bool isBuffer) {
   assert(enc);
 
 #define RETURN_ON_FALSE(idx, kind, dim, dlt)                                   \
   if (!(callback(idx, kind, dim, dlt)))                                        \
     return;
 
+  unsigned rank = enc.getDimLevelType().size();
+  unsigned cooStart = isBuffer ? getCOOStart(enc) : rank;
   static_assert(kDataFieldStartingIdx == 0);
   unsigned fieldIdx = kDataFieldStartingIdx;
   // Per-dimension storage.
-  for (unsigned r = 0, rank = enc.getDimLevelType().size(); r < rank; r++) {
+  for (unsigned r = 0; r < rank; r++) {
     // Dimension level types apply in order to the reordered dimension.
     // As a result, the compound type can be constructed directly in the given
     // order.
@@ -161,7 +178,8 @@ void sparse_tensor::foreachFieldInSparseTensor(
       RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::PtrMemRef, r, dlt);
       RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::IdxMemRef, r, dlt);
     } else if (isSingletonDLT(dlt)) {
-      RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::IdxMemRef, r, dlt);
+      if (r < cooStart)
+        RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::IdxMemRef, r, dlt);
     } else {
       assert(isDenseDLT(dlt)); // no fields
     }
@@ -213,32 +231,38 @@ void sparse_tensor::foreachFieldAndTypeInSparseTensor(
           return callback(valMemType, fieldIdx, fieldKind, dim, dlt);
         };
         llvm_unreachable("unrecognized field kind");
-      });
+      },
+      /*isBuffer=*/true);
 }
 
-unsigned sparse_tensor::getNumFieldsFromEncoding(SparseTensorEncodingAttr enc) {
+unsigned sparse_tensor::getNumFieldsFromEncoding(SparseTensorEncodingAttr enc,
+                                                 bool isBuffer) {
   unsigned numFields = 0;
-  foreachFieldInSparseTensor(enc,
-                             [&numFields](unsigned, SparseTensorFieldKind,
-                                          unsigned, DimLevelType) -> bool {
-                               numFields++;
-                               return true;
-                             });
+  foreachFieldInSparseTensor(
+      enc,
+      [&numFields](unsigned, SparseTensorFieldKind, unsigned,
+                   DimLevelType) -> bool {
+        numFields++;
+        return true;
+      },
+      isBuffer);
   return numFields;
 }
 
 unsigned
 sparse_tensor::getNumDataFieldsFromEncoding(SparseTensorEncodingAttr enc) {
   unsigned numFields = 0; // one value memref
-  foreachFieldInSparseTensor(enc,
-                             [&numFields](unsigned fidx, SparseTensorFieldKind,
-                                          unsigned, DimLevelType) -> bool {
-                               if (fidx >= kDataFieldStartingIdx)
-                                 numFields++;
-                               return true;
-                             });
+  foreachFieldInSparseTensor(
+      enc,
+      [&numFields](unsigned fidx, SparseTensorFieldKind, unsigned,
+                   DimLevelType) -> bool {
+        if (fidx >= kDataFieldStartingIdx)
+          numFields++;
+        return true;
+      },
+      /*isBuffer=*/true);
   numFields -= 1; // the last field is MetaData field
-  assert(numFields ==
-         getNumFieldsFromEncoding(enc) - kDataFieldStartingIdx - 1);
+  assert(numFields == getNumFieldsFromEncoding(enc, /*isBuffer=*/true) -
+                          kDataFieldStartingIdx - 1);
   return numFields;
 }

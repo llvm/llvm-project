@@ -908,7 +908,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // anything to disable it if we know the stack isn't used here. We may still
   // have emitted code reading it to initialize scratch, but if that's unused
   // reading garbage should be OK.
-  const bool EnablePrivateSegment = ProgInfo.ScratchBlocks > 0;
+  const bool EnablePrivateSegment =
+      ProgInfo.ScratchBlocks > 0 || ProgInfo.DynamicCallStack;
   ProgInfo.ComputePGMRSrc2 =
       S_00B84C_SCRATCH_EN(EnablePrivateSegment) |
       S_00B84C_USER_SGPR(MFI->getNumUserSGPRs()) |

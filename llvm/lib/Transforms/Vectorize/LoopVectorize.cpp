@@ -9244,9 +9244,13 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
           R->getOperand(FirstOpId) == Chain ? FirstOpId + 1 : FirstOpId;
       VPValue *VecOp = Plan->getVPValue(R->getOperand(VecOpId));
 
-      auto *CondOp = CM.blockNeedsPredicationForAnyReason(R->getParent())
-                         ? RecipeBuilder.createBlockInMask(R->getParent(), Plan)
-                         : nullptr;
+      VPValue *CondOp = nullptr;
+      if (CM.blockNeedsPredicationForAnyReason(R->getParent())) {
+        VPBuilder::InsertPointGuard Guard(Builder);
+        Builder.setInsertPoint(WidenRecipe->getParent(),
+                               WidenRecipe->getIterator());
+        CondOp = RecipeBuilder.createBlockInMask(R->getParent(), Plan);
+      }
 
       if (IsFMulAdd) {
         // If the instruction is a call to the llvm.fmuladd intrinsic then we

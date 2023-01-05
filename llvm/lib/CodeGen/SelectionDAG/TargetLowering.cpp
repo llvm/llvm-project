@@ -6039,8 +6039,6 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   auto BuildUDIVPattern = [&](ConstantSDNode *C) {
     if (C->isZero())
       return false;
-    // FIXME: We should use a narrower constant when the upper
-    // bits are known to be zero.
     const APInt& Divisor = C->getAPIntValue();
 
     bool SelNPQ = false;

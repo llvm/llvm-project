@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Dialect/SCF/Utils/AffineCanonicalizationUtils.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
@@ -33,7 +35,7 @@ canonicalizeMinMaxOp(RewriterBase &rewriter, Operation *op,
   RewriterBase::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(op);
   FailureOr<AffineValueMap> simplified =
-      mlir::simplifyConstrainedMinMaxOp(op, constraints);
+      mlir::simplifyConstrainedMinMaxOp(op, std::move(constraints));
   if (failed(simplified))
     return failure();
   return rewriter.replaceOpWithNewOp<AffineApplyOp>(

@@ -2600,7 +2600,9 @@ static bool areInverseVectorBitmasks(Constant *C1, Constant *C2) {
 /// We have an expression of the form (A & C) | (B & D). If A is a scalar or
 /// vector composed of all-zeros or all-ones values and is the bitwise 'not' of
 /// B, it can be used as the condition operand of a select instruction.
-Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B) {
+/// We will detect (A & C) | ~(B | D) when the flag ABIsTheSame enabled.
+Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B,
+                                            bool ABIsTheSame) {
   // We may have peeked through bitcasts in the caller.
   // Exit immediately if we don't have (vector) integer types.
   Type *Ty = A->getType();
@@ -2608,7 +2610,7 @@ Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B) {
     return nullptr;
 
   // If A is the 'not' operand of B and has enough signbits, we have our answer.
-  if (match(B, m_Not(m_Specific(A)))) {
+  if (ABIsTheSame ? (A == B) : match(B, m_Not(m_Specific(A)))) {
     // If these are scalars or vectors of i1, A can be used directly.
     if (Ty->isIntOrIntVectorTy(1))
       return A;
@@ -2627,6 +2629,10 @@ Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B) {
     }
     return nullptr;
   }
+
+  // TODO: add support for sext and constant case
+  if (ABIsTheSame)
+    return nullptr;
 
   // If both operands are constants, see if the constants are inverse bitmasks.
   Constant *AConst, *BConst;
@@ -2676,14 +2682,17 @@ Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B) {
 
 /// We have an expression of the form (A & C) | (B & D). Try to simplify this
 /// to "A' ? C : D", where A' is a boolean or vector of booleans.
+/// When InvertFalseVal is set to true, we try to match the pattern
+/// where we have peeked through a 'not' op and A and B are the same:
+/// (A & C) | ~(A | D) --> (A & C) | (~A & ~D) --> A' ? C : ~D
 Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *C, Value *B,
-                                              Value *D) {
+                                              Value *D, bool InvertFalseVal) {
   // The potential condition of the select may be bitcasted. In that case, look
   // through its bitcast and the corresponding bitcast of the 'not' condition.
   Type *OrigType = A->getType();
   A = peekThroughBitcast(A, true);
   B = peekThroughBitcast(B, true);
-  if (Value *Cond = getSelectCondition(A, B)) {
+  if (Value *Cond = getSelectCondition(A, B, InvertFalseVal)) {
     // ((bc Cond) & C) | ((bc ~Cond) & D) --> bc (select Cond, (bc C), (bc D))
     // If this is a vector, we may need to cast to match the condition's length.
     // The bitcasts will either all exist or all not exist. The builder will
@@ -2699,6 +2708,8 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *C, Value *B,
       SelTy = VectorType::get(EltTy, VecTy->getElementCount());
     }
     Value *BitcastC = Builder.CreateBitCast(C, SelTy);
+    if (InvertFalseVal)
+      D = Builder.CreateNot(D);
     Value *BitcastD = Builder.CreateBitCast(D, SelTy);
     Value *Select = Builder.CreateSelect(Cond, BitcastC, BitcastD);
     return Builder.CreateBitCast(Select, OrigType);
@@ -3085,6 +3096,20 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       if (Value *V = matchSelectFromAndOr(D, B, C, A))
         return replaceInstUsesWith(I, V);
     }
+  }
+
+  if (match(Op0, m_And(m_Value(A), m_Value(C))) &&
+      match(Op1, m_Not(m_Or(m_Value(B), m_Value(D)))) &&
+      (Op0->hasOneUse() || Op1->hasOneUse())) {
+    // (Cond & C) | ~(Cond | D) -> Cond ? C : ~D
+    if (Value *V = matchSelectFromAndOr(A, C, B, D, true))
+      return replaceInstUsesWith(I, V);
+    if (Value *V = matchSelectFromAndOr(A, C, D, B, true))
+      return replaceInstUsesWith(I, V);
+    if (Value *V = matchSelectFromAndOr(C, A, B, D, true))
+      return replaceInstUsesWith(I, V);
+    if (Value *V = matchSelectFromAndOr(C, A, D, B, true))
+      return replaceInstUsesWith(I, V);
   }
 
   // (A ^ B) | ((B ^ C) ^ A) -> (A ^ B) | C
