@@ -2549,7 +2549,7 @@ define <2 x i16> @load_constant_v2i16_split(ptr addrspace(4) %in) #0 {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    global_load_ushort v2, v[0:1], off glc
-; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    s_nop 0
 ; GFX900-NEXT:    global_load_short_d16_hi v2, v[0:1], off offset:2 glc
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    v_mov_b32_e32 v0, v2
@@ -2581,7 +2581,7 @@ define <2 x i16> @load_constant_v2i16_split(ptr addrspace(4) %in) #0 {
 ; GFX900-FLATSCR:       ; %bb.0: ; %entry
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-FLATSCR-NEXT:    global_load_ushort v2, v[0:1], off glc
-; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-FLATSCR-NEXT:    s_nop 0
 ; GFX900-FLATSCR-NEXT:    global_load_short_d16_hi v2, v[0:1], off offset:2 glc
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-FLATSCR-NEXT:    v_mov_b32_e32 v0, v2
