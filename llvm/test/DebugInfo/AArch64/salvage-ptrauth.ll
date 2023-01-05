@@ -1,4 +1,4 @@
-; RUN: opt -mtriple arm64e-apple-darwin -adce %s -S -o - | FileCheck %s
+; RUN: opt -mtriple arm64e-apple-darwin -O2 %s -S -o - | FileCheck %s
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 declare i64 @llvm.ptrauth.auth(i64, i32, i64)
