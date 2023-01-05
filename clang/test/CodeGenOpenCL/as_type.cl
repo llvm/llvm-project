@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple spir-unknown-unknown -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -triple spir-unknown-unknown -o - | FileCheck %s
 
 typedef __attribute__(( ext_vector_type(3) )) char char3;
 typedef __attribute__(( ext_vector_type(4) )) char char4;
@@ -67,29 +67,29 @@ int3 f8(char16 x) {
   return __builtin_astype(x, int3);
 }
 
-//CHECK: define{{.*}} spir_func i32 addrspace(1)* @addr_cast(i32* noundef readnone %[[x:.*]])
-//CHECK: %[[cast:.*]] ={{.*}} addrspacecast i32* %[[x]] to i32 addrspace(1)*
-//CHECK: ret i32 addrspace(1)* %[[cast]]
+//CHECK: define{{.*}} spir_func ptr addrspace(1) @addr_cast(ptr noundef readnone %[[x:.*]])
+//CHECK: %[[cast:.*]] ={{.*}} addrspacecast ptr %[[x]] to ptr addrspace(1)
+//CHECK: ret ptr addrspace(1) %[[cast]]
 global int* addr_cast(int *x) {
   return __builtin_astype(x, global int*);
 }
 
-//CHECK: define{{.*}} spir_func i32 addrspace(1)* @int_to_ptr(i32 noundef %[[x:.*]])
-//CHECK: %[[cast:.*]] = inttoptr i32 %[[x]] to i32 addrspace(1)*
-//CHECK: ret i32 addrspace(1)* %[[cast]]
+//CHECK: define{{.*}} spir_func ptr addrspace(1) @int_to_ptr(i32 noundef %[[x:.*]])
+//CHECK: %[[cast:.*]] = inttoptr i32 %[[x]] to ptr addrspace(1)
+//CHECK: ret ptr addrspace(1) %[[cast]]
 global int* int_to_ptr(int x) {
   return __builtin_astype(x, global int*);
 }
 
-//CHECK: define{{.*}} spir_func i32 @ptr_to_int(i32* noundef %[[x:.*]])
-//CHECK: %[[cast:.*]] = ptrtoint i32* %[[x]] to i32
+//CHECK: define{{.*}} spir_func i32 @ptr_to_int(ptr noundef %[[x:.*]])
+//CHECK: %[[cast:.*]] = ptrtoint ptr %[[x]] to i32
 //CHECK: ret i32 %[[cast]]
 int ptr_to_int(int *x) {
   return __builtin_astype(x, int);
 }
 
-//CHECK: define{{.*}} spir_func <3 x i8> @ptr_to_char3(i32* noundef %[[x:.*]])
-//CHECK: %[[cast1:.*]] = ptrtoint i32* %[[x]] to i32
+//CHECK: define{{.*}} spir_func <3 x i8> @ptr_to_char3(ptr noundef %[[x:.*]])
+//CHECK: %[[cast1:.*]] = ptrtoint ptr %[[x]] to i32
 //CHECK: %[[cast2:.*]] = bitcast i32 %[[cast1]] to <4 x i8>
 //CHECK: %[[astype:.*]] = shufflevector <4 x i8> %[[cast2]], <4 x i8> poison, <3 x i32> <i32 0, i32 1, i32 2>
 //CHECK: ret <3 x i8> %[[astype]]
@@ -97,11 +97,11 @@ char3 ptr_to_char3(int *x) {
   return  __builtin_astype(x, char3);
 }
 
-//CHECK: define{{.*}} spir_func i32* @char3_to_ptr(<3 x i8> noundef %[[x:.*]])
+//CHECK: define{{.*}} spir_func ptr @char3_to_ptr(<3 x i8> noundef %[[x:.*]])
 //CHECK: %[[astype:.*]] = shufflevector <3 x i8> %[[x]], <3 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
 //CHECK: %[[cast1:.*]] = bitcast <4 x i8> %[[astype]] to i32
-//CHECK: %[[cast2:.*]] = inttoptr i32 %[[cast1]] to i32*
-//CHECK: ret i32* %[[cast2]]
+//CHECK: %[[cast2:.*]] = inttoptr i32 %[[cast1]] to ptr
+//CHECK: ret ptr %[[cast2]]
 int* char3_to_ptr(char3 x) {
   return __builtin_astype(x, int*);
 }
