@@ -74,7 +74,7 @@ std::unique_ptr<SnippetGenerator> ExegesisTarget::createSnippetGenerator(
 Expected<std::unique_ptr<BenchmarkRunner>>
 ExegesisTarget::createBenchmarkRunner(
     InstructionBenchmark::ModeE Mode, const LLVMState &State,
-    bool BenchmarkSkipMeasurements,
+    BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
     InstructionBenchmark::ResultAggregationModeE ResultAggMode) const {
   PfmCountersInfo PfmCounters = State.getPfmCounters();
   switch (Mode) {
@@ -82,7 +82,8 @@ ExegesisTarget::createBenchmarkRunner(
     return nullptr;
   case InstructionBenchmark::Latency:
   case InstructionBenchmark::InverseThroughput:
-    if (!BenchmarkSkipMeasurements && !PfmCounters.CycleCounter) {
+    if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
+        !PfmCounters.CycleCounter) {
       const char *ModeName = Mode == InstructionBenchmark::Latency
                                  ? "latency"
                                  : "inverse_throughput";
@@ -94,16 +95,16 @@ ExegesisTarget::createBenchmarkRunner(
                   "can pass --skip-measurements to skip the actual "
                   "benchmarking."));
     }
-    return createLatencyBenchmarkRunner(State, Mode, BenchmarkSkipMeasurements,
+    return createLatencyBenchmarkRunner(State, Mode, BenchmarkPhaseSelector,
                                         ResultAggMode);
   case InstructionBenchmark::Uops:
-    if (!BenchmarkSkipMeasurements && !PfmCounters.UopsCounter &&
-        !PfmCounters.IssueCounters)
+    if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
+        !PfmCounters.UopsCounter && !PfmCounters.IssueCounters)
       return make_error<Failure>(
           "can't run 'uops' mode, sched model does not define uops or issue "
           "counters. You can pass --skip-measurements to skip the actual "
           "benchmarking.");
-    return createUopsBenchmarkRunner(State, BenchmarkSkipMeasurements,
+    return createUopsBenchmarkRunner(State, BenchmarkPhaseSelector,
                                      ResultAggMode);
   }
   return nullptr;
@@ -121,17 +122,16 @@ std::unique_ptr<SnippetGenerator> ExegesisTarget::createParallelSnippetGenerator
 
 std::unique_ptr<BenchmarkRunner> ExegesisTarget::createLatencyBenchmarkRunner(
     const LLVMState &State, InstructionBenchmark::ModeE Mode,
-    bool BenchmarkSkipMeasurements,
+    BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
     InstructionBenchmark::ResultAggregationModeE ResultAggMode) const {
   return std::make_unique<LatencyBenchmarkRunner>(
-      State, Mode, BenchmarkSkipMeasurements, ResultAggMode);
+      State, Mode, BenchmarkPhaseSelector, ResultAggMode);
 }
 
 std::unique_ptr<BenchmarkRunner> ExegesisTarget::createUopsBenchmarkRunner(
-    const LLVMState &State, bool BenchmarkSkipMeasurements,
+    const LLVMState &State, BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
     InstructionBenchmark::ResultAggregationModeE /*unused*/) const {
-  return std::make_unique<UopsBenchmarkRunner>(State,
-                                               BenchmarkSkipMeasurements);
+  return std::make_unique<UopsBenchmarkRunner>(State, BenchmarkPhaseSelector);
 }
 
 static_assert(std::is_pod<PfmCountersInfo>::value,
