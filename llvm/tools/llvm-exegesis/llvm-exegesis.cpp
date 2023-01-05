@@ -116,10 +116,29 @@ static cl::opt<bool> BenchmarkMeasurementsPrintProgress(
     cl::desc("Produce progress indicator when performing measurements"),
     cl::cat(BenchmarkOptions), cl::init(false));
 
-static cl::opt<bool> BenchmarkSkipMeasurements(
-    "skip-measurements",
-    cl::desc("do everything except actually performing the measurements"),
-    cl::cat(BenchmarkOptions), cl::init(false));
+static cl::opt<exegesis::BenchmarkPhaseSelectorE> BenchmarkPhaseSelector(
+    "benchmark-phase",
+    cl::desc(
+        "it is possible to stop the benchmarking process after some phase"),
+    cl::cat(BenchmarkOptions),
+    cl::values(
+        clEnumValN(exegesis::BenchmarkPhaseSelectorE::StopBeforeAllCodegen,
+                   "prepare-snippet",
+                   "Only generate the minimal instruction sequence"),
+        clEnumValN(exegesis::BenchmarkPhaseSelectorE::StopBeforeFullCodegen,
+                   "prepare-and-assemble-snippet",
+                   "Same as prepare-snippet, but also dumps an excerpt of the "
+                   "sequence (hex encoded)"),
+        clEnumValN(exegesis::BenchmarkPhaseSelectorE::StopBeforeMeasurements,
+                   "assemble-measured-code",
+                   "Same as prepare-and-assemble-snippet, but also creates the "
+                   "full sequence "
+                   "that can be dumped to a file using --dump-object-to-disk"),
+        clEnumValN(
+            exegesis::BenchmarkPhaseSelectorE::Measure, "measure",
+            "Same as prepare-measured-code, but also runs the measurement "
+            "(default)")),
+    cl::init(exegesis::BenchmarkPhaseSelectorE::Measure));
 
 static cl::opt<unsigned>
     NumRepetitions("num-repetitions",
@@ -398,7 +417,7 @@ static void runBenchmarkConfigurations(
 }
 
 void benchmarkMain() {
-  if (!BenchmarkSkipMeasurements) {
+  if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure) {
 #ifndef HAVE_LIBPFM
     ExitWithError(
         "benchmarking unavailable, LLVM was built without libpfm. You can pass "
@@ -417,12 +436,12 @@ void benchmarkMain() {
 
   // Preliminary check to ensure features needed for requested
   // benchmark mode are present on target CPU and/or OS.
-  if (!BenchmarkSkipMeasurements)
+  if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure)
     ExitOnErr(State.getExegesisTarget().checkFeatureSupport());
 
   const std::unique_ptr<BenchmarkRunner> Runner =
       ExitOnErr(State.getExegesisTarget().createBenchmarkRunner(
-          BenchmarkMode, State, BenchmarkSkipMeasurements, ResultAggMode));
+          BenchmarkMode, State, BenchmarkPhaseSelector, ResultAggMode));
   if (!Runner) {
     ExitWithError("cannot create benchmark runner");
   }
