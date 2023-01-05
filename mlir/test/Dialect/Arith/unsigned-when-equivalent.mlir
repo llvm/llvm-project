@@ -96,3 +96,12 @@ func.func @dead_code() {
   %1 = arith.floordivsi %0, %0 : i8
   return
 }
+
+// Make sure not crash.
+// CHECK-LABEL: @no_integer_or_index
+func.func @no_integer_or_index() { 
+  // CHECK: arith.cmpi
+  %cst_0 = arith.constant dense<[0]> : vector<1xi32> 
+  %cmp = arith.cmpi slt, %cst_0, %cst_0 : vector<1xi32> 
+  return
+}
