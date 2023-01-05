@@ -63,7 +63,6 @@ private:
   void getConversionSpecifiers(SmallVectorImpl<char> &OpConvSpecifiers,
                                StringRef fmt, size_t num_ops) const;
 
-  bool shouldPrintAsStr(char Specifier, Type *OpType) const;
   bool lowerPrintfForGpu(Module &M);
 
   Value *simplify(Instruction *I, const TargetLibraryInfo *TLI,
@@ -132,18 +131,8 @@ void AMDGPUPrintfRuntimeBindingImpl::getConversionSpecifiers(
   }
 }
 
-bool AMDGPUPrintfRuntimeBindingImpl::shouldPrintAsStr(char Specifier,
-                                                      Type *OpType) const {
-  if (Specifier != 's')
-    return false;
-  const PointerType *PT = dyn_cast<PointerType>(OpType);
-  if (!PT || PT->getAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS)
-    return false;
-  Type *ElemType = PT->getContainedType(0);
-  if (ElemType->getTypeID() != Type::IntegerTyID)
-    return false;
-  IntegerType *ElemIType = cast<IntegerType>(ElemType);
-  return ElemIType->getBitWidth() == 8;
+static bool shouldPrintAsStr(char Specifier, Type *OpType) {
+  return Specifier == 's' && isa<PointerType>(OpType);
 }
 
 static void diagnoseInvalidFormatString(const CallBase *CI) {
