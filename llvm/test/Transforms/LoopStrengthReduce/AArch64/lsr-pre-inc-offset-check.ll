@@ -16,7 +16,7 @@
 
 
 %"Type" = type <{[166 x [338 x i8]]}>
-define void @test_lsr_pre_inc_offset_check(%"Type"* %p) {
+define void @test_lsr_pre_inc_offset_check(ptr %p) {
 ; CHECK-LABEL: test_lsr_pre_inc_offset_check:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w8, #165
@@ -36,13 +36,12 @@ entry:
 exit:
   ret void
 if.then:
-  %arrayidx.i = getelementptr inbounds %"Type", %"Type"* %p, i64 0, i32 0, i64 %indvars, i64 1
-  %0 = bitcast i8* %arrayidx.i to i32*
-  store i32 0, i32* %0, align 1
+  %arrayidx.i = getelementptr inbounds %"Type", ptr %p, i64 0, i32 0, i64 %indvars, i64 1
+  store i32 0, ptr %arrayidx.i, align 1
   br label %if.end
 if.end:
-  %arrayidx.p = getelementptr inbounds %"Type", %"Type"* %p, i64 0, i32 0, i64 %indvars, i64 2
-  store i8 2, i8* %arrayidx.p, align 1
+  %arrayidx.p = getelementptr inbounds %"Type", ptr %p, i64 0, i32 0, i64 %indvars, i64 2
+  store i8 2, ptr %arrayidx.p, align 1
   %indvars.iv.next = add nuw nsw i64 %indvars, 1
   %add.i = add nuw i8 %begin, 1
   %cmp.i.not = icmp eq i64 %indvars.iv.next, 166

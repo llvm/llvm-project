@@ -10,25 +10,25 @@
 define void @PR42346() {
 ; CHECK-LABEL: @PR42346(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL1:%.*]] = call %vec* @bar(%map* undef, %vec* (%map*)* undef)
+; CHECK-NEXT:    [[CALL1:%.*]] = call ptr @bar(ptr undef, ptr undef)
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[CALL2:%.*]] = call %vec* @baz(%map* undef)
+; CHECK-NEXT:    [[CALL2:%.*]] = call ptr @baz(ptr undef)
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %call1 = call %vec* @bar(%map* undef, %vec* (%map*)* undef)
+  %call1 = call ptr @bar(ptr undef, ptr undef)
   br label %exit
 
 if:
-  %call2 = call %vec* @baz(%map* undef)
+  %call2 = call ptr @baz(ptr undef)
   br label %exit
 
 exit:
   ret void
 }
 
-declare %vec* @bar(%map*, %vec* (%map*)*)
-declare %vec* @baz(%map*)
+declare ptr @bar(ptr, ptr)
+declare ptr @baz(ptr)
