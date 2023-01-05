@@ -137,6 +137,19 @@ define i8* @foo() {
   ret i8* %call78
 }
 
+; CHECK-LABEL: define void @test_select(
+; CHECK: call ptr @llvm.objc.retain(
+; CHECK: call void @llvm.objc.release(
+
+define void @test_select(i1 %c0, i1 %c1, i8* %p0, i8* %p1) {
+  %cond = select i1 %c0, i8* %p0, i8* %p1
+  %cond5 = select i1 %c0, i8* %p1, i8* %p0
+  %cond14 = select i1 %c1, i8* %cond5, i8* null
+  call i8* @llvm.objc.retain(i8* %cond14)
+  call void @llvm.objc.release(i8* %cond)
+  ret void
+}
+
 declare i8* @bar(i8*)
 
 declare i8* @llvm.objc.retain(i8*)
