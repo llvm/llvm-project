@@ -3,8 +3,8 @@
 ; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s | FileCheck %s
 
 ;; Note that SETUEQ, SETOGE, SETOLE, SETONE, SETULT and SETUGT should be
-;; expanded by legalize for floating-point types f32 and f64, so there are no.
-;; patterns defined in PPCInstrInfo.td file for these setcc patterns.
+;; expanded by DAG legalizer for floating-point types f32 and f64, so there are
+;; no patterns defined in PPCInstrInfo.td file for these setcc patterns for now.
 
 define i1 @fcmp_false(float %a, float %b) {
 ; CHECK-LABEL: fcmp_false:
