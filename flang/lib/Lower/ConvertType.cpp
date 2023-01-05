@@ -484,6 +484,15 @@ mlir::Type Fortran::lower::convertReal(mlir::MLIRContext *context, int kind) {
   return genRealType(context, kind);
 }
 
+bool Fortran::lower::isDerivedTypeWithLenParameters(
+    const Fortran::semantics::Symbol &sym) {
+  if (const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType())
+    if (const Fortran::semantics::DerivedTypeSpec *derived =
+            declTy->AsDerived())
+      return Fortran::semantics::CountLenParameters(*derived) > 0;
+  return false;
+}
+
 template <typename T>
 mlir::Type Fortran::lower::TypeBuilder<T>::genType(
     Fortran::lower::AbstractConverter &converter,
