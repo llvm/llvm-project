@@ -13,7 +13,7 @@
 ; CHECK-NEXT:   retq
 ; CHECK:      <testVar2>:
 ; CHECK-NEXT:   movq  (%rip), %rax
-; CHECK-NEXT:     R_X86_64_GOTPCREL var2-0x4
+; CHECK-NEXT:     R_X86_64_REX_GOTPCRELX var2-0x4
 ; CHECK-NEXT:   movl  (%rax), %eax
 ; CHECK-NEXT:   retq
 
