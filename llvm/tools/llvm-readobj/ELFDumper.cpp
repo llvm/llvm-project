@@ -6499,7 +6499,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
     DictScope D(W, "ElfHeader");
     {
       DictScope D(W, "Ident");
-      W.printBinary("Magic", ArrayRef(E.e_ident).slice(ELF::EI_MAG0, 4));
+      W.printBinary("Magic",
+                    ArrayRef<unsigned char>(E.e_ident).slice(ELF::EI_MAG0, 4));
       W.printEnum("Class", E.e_ident[ELF::EI_CLASS], ArrayRef(ElfClass));
       W.printEnum("DataEncoding", E.e_ident[ELF::EI_DATA],
                   ArrayRef(ElfDataEncoding));
@@ -6522,7 +6523,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
       }
       W.printEnum("OS/ABI", E.e_ident[ELF::EI_OSABI], OSABI);
       W.printNumber("ABIVersion", E.e_ident[ELF::EI_ABIVERSION]);
-      W.printBinary("Unused", ArrayRef(E.e_ident).slice(ELF::EI_PAD));
+      W.printBinary("Unused",
+                    ArrayRef<unsigned char>(E.e_ident).slice(ELF::EI_PAD));
     }
 
     std::string TypeStr;
