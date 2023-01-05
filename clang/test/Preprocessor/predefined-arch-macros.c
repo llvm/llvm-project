@@ -4330,3 +4330,39 @@
 // CHECK_M68K_68020_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
 // CHECK_M68K_68020_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
 // CHECK_M68K_68020_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+
+// Begin Hexagon tests ----------------
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     --target=hexagon-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_HEXAGON_ATOMICS
+
+// CHECK_HEXAGON_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK_HEXAGON_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK_HEXAGON_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_HEXAGON_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+
+// Begin VE tests ----------------
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     --target=ve-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_VE_ATOMICS
+
+// CHECK_VE_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK_VE_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK_VE_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_VE_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+
+// Begin WebAssembly tests ----------------
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     --target=wasm32-unknown-unknown \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_WASM_ATOMICS
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     --target=wasm64-unknown-unknown \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_WASM_ATOMICS
+
+// CHECK_WASM_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK_WASM_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK_WASM_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_WASM_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
