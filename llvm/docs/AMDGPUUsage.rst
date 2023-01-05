@@ -3583,6 +3583,26 @@ Code object V5 metadata is the same as
 
 ..
 
+  .. table:: AMDHSA Code Object V5 Kernel Attribute Metadata Map
+     :name: amdgpu-amdhsa-code-object-kernel-attribute-metadata-map-v5-table
+
+     =========================== ============== ========= ==============================
+     String Key                  Value Type     Required? Description
+     =========================== ============== ========= ==============================
+     ".uniform_work_group_size"  integer                  Indicates if the kernel
+                                                          requires that each dimension
+                                                          of global size is a multiple
+                                                          of corresponding dimension of
+                                                          work-group size. Value of 1
+                                                          implies true and value of 0
+                                                          implies false. Metadata is
+                                                          only emitted when value is 1.
+     =========================== ============== ========= ==============================
+
+..
+
+..
+
   .. table:: AMDHSA Code Object V5 Kernel Argument Metadata Map Additions and Changes
      :name: amdgpu-amdhsa-code-object-kernel-argument-metadata-map-table-v5
 

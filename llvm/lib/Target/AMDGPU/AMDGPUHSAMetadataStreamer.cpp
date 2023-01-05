@@ -1080,6 +1080,15 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_queue_ptr", Offset, Args);
 }
 
+void MetadataStreamerMsgPackV5::emitKernelAttrs(const Function &Func,
+                                                msgpack::MapDocNode Kern) {
+  MetadataStreamerMsgPackV3::emitKernelAttrs(Func, Kern);
+
+  if (Func.getFnAttribute("uniform-work-group-size").getValueAsBool())
+    Kern[".uniform_work_group_size"] = Kern.getDocument()->getNode(1);
+}
+
+
 } // end namespace HSAMD
 } // end namespace AMDGPU
 } // end namespace llvm
