@@ -485,7 +485,7 @@ public:
     if (!Abbrev) {
       // If we don't have an abbrev to use, emit this in its fully unabbreviated
       // form.
-      auto Count = static_cast<uint32_t>(ArrayRef(Vals).size());
+      auto Count = static_cast<uint32_t>(std::size(Vals));
       EmitCode(bitc::UNABBREV_RECORD);
       EmitVBR(Code, 6);
       EmitVBR(Count, 6);
