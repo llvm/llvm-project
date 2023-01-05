@@ -414,6 +414,24 @@ def nzFPImmAsi32 : PatLeaf<(fpimm), [{
   return convertToNonDenormSingle(APFloatOfN) && !N->isExactlyValue(+0.0);
 }]>;
 
+// A floating point immediate that is exactly an integer (for example 3.0, -5.0)
+// and can be represented in 5 bits (range of [-16, 15]).
+def nzFPImmExactInti5 : PatLeaf<(fpimm), [{
+  APFloat FloatValue = N->getValueAPF();
+  bool IsExact;
+  APSInt IntResult(16, false);
+  FloatValue.convertToInteger(IntResult, APFloat::rmTowardZero, &IsExact);
+  return IsExact && IntResult <= 15 && IntResult >= -16 && !FloatValue.isZero();
+}]>;
+
+def getFPAs5BitExactInt : SDNodeXForm<fpimm, [{
+  APFloat FloatValue = N->getValueAPF();
+  bool IsExact;
+  APSInt IntResult(32, false);
+  FloatValue.convertToInteger(IntResult, APFloat::rmTowardZero, &IsExact);
+  return CurDAG->getTargetConstant(IntResult, SDLoc(N), MVT::i32);
+}]>;
+
 // Convert the floating point immediate into a 32 bit floating point immediate
 // and get a i32 with the resulting bits.
 def getFPAs32BitInt : SDNodeXForm<fpimm, [{

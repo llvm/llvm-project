@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: @unary_resize_nearest_fp
 func.func @unary_resize_nearest_fp(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32> {
-  %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = [2, 2, 1, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32>
+  %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = array<i64: 2, 2, 1, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32>
   // CHECK: return %arg0
   return %resize : tensor<3x1x1x7xf32>
 }
@@ -11,7 +11,7 @@ func.func @unary_resize_nearest_fp(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x1x
 
 // CHECK-LABEL: @unary_resize_bilinear_fp
 func.func @unary_resize_bilinear_fp(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32> {
-  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [2, 2, 1, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32>
+  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = array<i64: 2, 2, 1, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32>
   // CHECK: return %arg0
   return %resize : tensor<3x1x1x7xf32>
 }
@@ -20,7 +20,7 @@ func.func @unary_resize_bilinear_fp(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x1
 
 // CHECK-LABEL: @unary_resize_nearest_i8
 func.func @unary_resize_nearest_i8(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3x1x1x7xi8> {
-  %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = [2, 1, 3, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x1x7xi8>) -> tensor<3x1x1x7xi8>
+  %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = array<i64: 2, 1, 3, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<3x1x1x7xi8>) -> tensor<3x1x1x7xi8>
   // CHECK: return %arg0
   return %resize : tensor<3x1x1x7xi8>
 }
@@ -37,7 +37,7 @@ func.func @broadcast_resize_nearest_f32(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3
   // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xf32>) outs(%[[EMPTY]] : tensor<3x1x5x7xf32>)
   // CHECK: ^bb0(%[[IN:.+]]: f32, %[[OUT:.+]]: f32):
   // CHECK:   linalg.yield %[[IN]] : f32
-  %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = [2, 1, 3, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x1x7xf32>) -> tensor<3x1x5x7xf32>
+  %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = array<i64: 2, 1, 3, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<3x1x1x7xf32>) -> tensor<3x1x5x7xf32>
 
  // CHECK: return %[[GENERIC]]
   return %resize : tensor<3x1x5x7xf32>
@@ -71,7 +71,7 @@ func.func @broadcast_resize_bilinear_i8(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3x
   // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xi32>) outs(%[[EMPTY]] : tensor<3x4x5x7xi32>) {
   // CHECK: ^bb0(%[[IN:.+]]: i32, %[[OUT:.+]]: i32):
   // CHECK:   linalg.yield %[[IN]] : i32
-  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [2, 1, 3, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x1x7xi8>) -> tensor<3x4x5x7xi32>
+  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = array<i64: 2, 1, 3, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<3x1x1x7xi8>) -> tensor<3x4x5x7xi32>
 
   // CHECK: return %[[BROADCAST]]
   return %resize : tensor<3x4x5x7xi32>
@@ -98,7 +98,7 @@ func.func @unary_resize_bilinear_i32(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3x1x1
   // CHECK: } -> tensor<3x7xi32>
   // CHECK: %[[EXPAND:.+]] = tensor.expand_shape %[[GENERIC:.+]]
   // CHECK-SAME{literal} [[0], [1, 2, 3]] : tensor<3x7xi32> into tensor<3x1x1x7xi32>
-  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [2, 1, 2, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x1x7xi8>) -> tensor<3x1x1x7xi32>
+  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = array<i64: 2, 1, 2, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<3x1x1x7xi8>) -> tensor<3x1x1x7xi32>
 
   // CHECK: return %[[EXPAND]]
   return %resize : tensor<3x1x1x7xi32>
@@ -170,7 +170,7 @@ func.func @resize_nearest_int(%arg0: tensor<1x15x13x1xi8>) -> () {
   // CHECK: linalg.yield %[[EXTRACT]]
 
   // Round to the nearest index.
-  %0 = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = [11, 7, 89, 6], offset = [0, 0], border = [0, 0]} : (tensor<1x15x13x1xi8>) -> tensor<1x23x179x1xi8>
+  %0 = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = array<i64: 11, 7, 89, 6>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<1x15x13x1xi8>) -> tensor<1x23x179x1xi8>
   return
 }
 
@@ -279,7 +279,7 @@ func.func @resize_bilinear_int(%arg0: tensor<1x19x20x1xi8>) {
   // CHECK: linalg.yield %[[RESULT]]
 
   // Round to the nearest index.
-  %0 = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [16, 1, 16, 1], offset = [0, 0], border = [0, 0]} : (tensor<1x19x20x1xi8>) -> tensor<1x304x320x1xi48>
+  %0 = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = array<i64: 16, 1, 16, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<1x19x20x1xi8>) -> tensor<1x304x320x1xi48>
   return
 }
 
@@ -310,7 +310,7 @@ func.func @resize_nearest_fp(%input: tensor<1x50x48x1xf32>) -> () {
   // CHECK: %[[Y0:.+]] = arith.uitofp %[[Y]]
   // CHECK: %[[SCALE_Y_N:.*]] = arith.uitofp %[[ISCALE_Y_N]]
   // CHECK: %[[SCALE_Y_D:.*]] = arith.uitofp %[[ISCALE_Y_D]]
-  // CHECK: %[[OFFSET_Y:.*]] = arith.uitofp %[[IOFFSET_Y]]
+  // CHECK: %[[OFFSET_Y:.*]] = arith.sitofp %[[IOFFSET_Y]]
   // CHECK: %[[VAL_29:.*]] = arith.mulf %[[Y0]], %[[SCALE_Y_D]]
   // CHECK: %[[VAL_31:.*]] = arith.addf %[[VAL_29]], %[[OFFSET_Y]]
   // CHECK: %[[VAL_33:.*]] = arith.divf %[[VAL_31]], %[[SCALE_Y_N]]
@@ -321,7 +321,7 @@ func.func @resize_nearest_fp(%input: tensor<1x50x48x1xf32>) -> () {
   // CHECK: %[[X0:.+]] = arith.uitofp %[[X]]
   // CHECK: %[[SCALE_X_N:.*]] = arith.uitofp %[[ISCALE_X_N]]
   // CHECK: %[[SCALE_X_D:.*]] = arith.uitofp %[[ISCALE_X_D]]
-  // CHECK: %[[OFFSET_X:.*]] = arith.uitofp %[[IOFFSET_X]]
+  // CHECK: %[[OFFSET_X:.*]] = arith.sitofp %[[IOFFSET_X]]
   // CHECK: %[[VAL_30:.*]] = arith.mulf %[[X0]], %[[SCALE_X_D]]
   // CHECK: %[[VAL_32:.*]] = arith.addf %[[VAL_30]], %[[OFFSET_X]]
   // CHECK: %[[VAL_34:.*]] = arith.divf %[[VAL_32]], %[[SCALE_X_N]]
@@ -353,7 +353,7 @@ func.func @resize_nearest_fp(%input: tensor<1x50x48x1xf32>) -> () {
   // CHECK: %[[EXTRACT:.+]] = tensor.extract %arg0[%[[IDX0]], %[[IDY]], %[[IDX]], %[[IDX3]]]
   // CHECK: linalg.yield %[[EXTRACT]]
 
-  %output = "tosa.resize"(%input) {mode = "NEAREST_NEIGHBOR", scale = [64, 2, 64, 2], offset = [-31, -31], border = [31, 31]} : (tensor<1x50x48x1xf32>) -> tensor<1x1600x1536x1xf32>
+  %output = "tosa.resize"(%input) {mode = "NEAREST_NEIGHBOR", scale = array<i64: 64, 2, 64, 2>, offset = array<i64: -31, -31>, border = array<i64: 31, 31>} : (tensor<1x50x48x1xf32>) -> tensor<1x1600x1536x1xf32>
   return
 }
 
@@ -384,7 +384,7 @@ func.func @resize_bilinear_fp(%input: tensor<1x23x24x1xf32>) -> () {
   // CHECK: %[[Y0:.+]] = arith.uitofp %[[Y]]
   // CHECK: %[[SCALE_Y_N:.*]] = arith.uitofp %[[ISCALE_Y_N]]
   // CHECK: %[[SCALE_Y_D:.*]] = arith.uitofp %[[ISCALE_Y_D]]
-  // CHECK: %[[OFFSET_Y:.*]] = arith.uitofp %[[IOFFSET_Y]]
+  // CHECK: %[[OFFSET_Y:.*]] = arith.sitofp %[[IOFFSET_Y]]
   // CHECK: %[[VAL_29:.*]] = arith.mulf %[[Y0]], %[[SCALE_Y_D]]
   // CHECK: %[[VAL_31:.*]] = arith.addf %[[VAL_29]], %[[OFFSET_Y]]
   // CHECK: %[[VAL_33:.*]] = arith.divf %[[VAL_31]], %[[SCALE_Y_N]]
@@ -395,7 +395,7 @@ func.func @resize_bilinear_fp(%input: tensor<1x23x24x1xf32>) -> () {
   // CHECK: %[[X0:.+]] = arith.uitofp %[[X]]
   // CHECK: %[[SCALE_X_N:.*]] = arith.uitofp %[[ISCALE_X_N]]
   // CHECK: %[[SCALE_X_D:.*]] = arith.uitofp %[[ISCALE_X_D]]
-  // CHECK: %[[OFFSET_X:.*]] = arith.uitofp %[[IOFFSET_X]]
+  // CHECK: %[[OFFSET_X:.*]] = arith.sitofp %[[IOFFSET_X]]
   // CHECK: %[[VAL_30:.*]] = arith.mulf %[[X0]], %[[SCALE_X_D]]
   // CHECK: %[[VAL_32:.*]] = arith.addf %[[VAL_30]], %[[OFFSET_X]]
   // CHECK: %[[VAL_34:.*]] = arith.divf %[[VAL_32]], %[[SCALE_X_N]]
@@ -458,7 +458,7 @@ func.func @resize_bilinear_fp(%input: tensor<1x23x24x1xf32>) -> () {
   // CHECK: linalg.yield %[[RESULT]]
 
   // Round by bilinear interpolation
-  %output = "tosa.resize"(%input) {mode = "BILINEAR", scale = [4, 1, 4, 1], offset = [0, 0], border = [0, 0]} : (tensor<1x23x24x1xf32>) -> tensor<1x92x96x1xf32>
+  %output = "tosa.resize"(%input) {mode = "BILINEAR", scale = array<i64: 4, 1, 4, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<1x23x24x1xf32>) -> tensor<1x92x96x1xf32>
 
   return
 }
@@ -472,7 +472,7 @@ func.func @resize_dyn(%input: tensor<?x2x2x1xi8>) -> () {
   // CHECK: %[[BATCH:.+]] = tensor.dim %arg0, %[[C0]]
   // CHECK: %[[INIT:.+]] = tensor.empty(%[[BATCH]]) : tensor<?x4x4x1xi32>
   // CHECK: %[[GENERIC:.+]] = linalg.generic
-  %output = "tosa.resize"(%input) { scale = [4, 2, 4, 2], offset = [-1, -1], border = [1, 1], mode = "BILINEAR" } : (tensor<?x2x2x1xi8>)  -> (tensor<?x4x4x1xi32>)
+  %output = "tosa.resize"(%input) { scale = array<i64: 4, 2, 4, 2>, offset = array<i64: -1, -1>, border = array<i64: 1, 1>, mode = "BILINEAR" } : (tensor<?x2x2x1xi8>)  -> (tensor<?x4x4x1xi32>)
   return
 }
 
@@ -480,7 +480,7 @@ func.func @resize_dyn(%input: tensor<?x2x2x1xi8>) -> () {
 
 // CHECK-LABEL: @resize_bilinear_int48
 func.func @resize_bilinear_int48(%arg0: tensor<1x19x19x1xi16>) {
-  %0 = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [16, 1, 16, 1], offset = [0, 0], border = [0, 0]} : (tensor<1x19x19x1xi16>) -> tensor<1x289x289x1xi48>
+  %0 = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = array<i64: 16, 1, 16, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<1x19x19x1xi16>) -> tensor<1x289x289x1xi48>
            return
 }
 
@@ -503,7 +503,7 @@ func.func @skip_interpolate_bilinear_i8(%arg0 : tensor<3x1x2x7xi8>) -> tensor<3x
   // CHECK:    %[[ADD:.+]] = arith.addi %[[MUL0]], %[[MUL1]]
   // CHECK:    %[[RES:.+]] = arith.muli %[[ADD]], %[[C2]]
   // CHECK:    linalg.yield %[[RES]]
-  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [2, 1, 3, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x2x7xi8>) -> tensor<3x1x5x7xi32>
+  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = array<i64: 2, 1, 3, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<3x1x2x7xi8>) -> tensor<3x1x5x7xi32>
 
   // CHECK:  return %[[GENERIC]]
   return %resize : tensor<3x1x5x7xi32>
@@ -522,7 +522,7 @@ func.func @skip_interpolate_bilinear_f32(%arg0 : tensor<3x1x2x7xf32>) -> tensor<
   // CHECK:    %[[MUL1:.+]] = arith.mulf %[[EXTRACT1]], %[[DX]]
   // CHECK:    %[[ADD:.+]] = arith.addf %[[MUL0]], %[[MUL1]]
   // CHECK:    linalg.yield %[[ADD]]
-  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [2, 1, 3, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x2x7xf32>) -> tensor<3x1x5x7xf32>
+  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = array<i64: 2, 1, 3, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<3x1x2x7xf32>) -> tensor<3x1x5x7xf32>
 
   // CHECK:  return %[[GENERIC]]
   return %resize : tensor<3x1x5x7xf32>

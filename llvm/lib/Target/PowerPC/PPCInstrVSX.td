@@ -2501,6 +2501,20 @@ def : Pat<(v4i32 (or (and (vnot v4i32:$C), v4i32:$A),
                      (and v4i32:$B, v4i32:$C))),
           (v4i32 (XXSEL $A, $B, $C))>;
 
+def : Pat<(f64 (fpimm0neg)),
+          (f64 (XSNEGDP (XXLXORdpz)))>;
+
+def : Pat<(f32 (fpimm0neg)),
+          (f32 (COPY_TO_REGCLASS (XSNEGDP (XXLXORdpz)), VSSRC))>;
+
+def : Pat<(f64 (nzFPImmExactInti5:$A)),
+          (COPY_TO_REGCLASS (XVCVSXWDP (COPY_TO_REGCLASS
+                     (VSPLTISW (getFPAs5BitExactInt fpimm:$A)), VSRC)), VSFRC)>;
+
+def : Pat<(f32 (nzFPImmExactInti5:$A)),
+          (COPY_TO_REGCLASS (XVCVSXWDP (COPY_TO_REGCLASS
+                     (VSPLTISW (getFPAs5BitExactInt fpimm:$A)), VSRC)), VSSRC)>;
+
 // Additional fnmsub pattern for PPC specific ISD opcode
 def : Pat<(PPCfnmsub f64:$A, f64:$B, f64:$C),
           (XSNMSUBADP $C, $A, $B)>;

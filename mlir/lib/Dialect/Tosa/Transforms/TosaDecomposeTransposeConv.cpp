@@ -95,11 +95,8 @@ public:
     ShapedType biasTy = bias.getType().cast<ShapedType>();
     ShapedType resultTy = op->getResult(0).getType().cast<ShapedType>();
 
-    llvm::SmallVector<int64_t> pad;
-    llvm::SmallVector<int64_t> stride;
-
-    getValuesFromIntArrayAttribute(op.getOutPad().cast<ArrayAttr>(), pad);
-    getValuesFromIntArrayAttribute(op.getStride().cast<ArrayAttr>(), stride);
+    llvm::ArrayRef<int64_t> stride = op.getStride();
+    llvm::ArrayRef<int64_t> pad = op.getOutPad();
 
     // If striding is all 1 we can modify padding and reverse the kernel along
     // the x/y direction to make it a regular convolution. This is much simpler
@@ -129,13 +126,15 @@ public:
     if (op.getQuantizationInfo()) {
       conv2d = rewriter.create<tosa::Conv2DOp>(
           loc, resultTy, input, reverse2, bias,
-          rewriter.getI64ArrayAttr(convPad), rewriter.getI64ArrayAttr(stride),
-          rewriter.getI64ArrayAttr({1, 1}), *op.getQuantizationInfo());
+          rewriter.getDenseI64ArrayAttr(convPad),
+          rewriter.getDenseI64ArrayAttr(stride),
+          rewriter.getDenseI64ArrayAttr({1, 1}), *op.getQuantizationInfo());
     } else {
       conv2d = rewriter.create<tosa::Conv2DOp>(
           loc, resultTy, input, reverse2, bias,
-          rewriter.getI64ArrayAttr(convPad), rewriter.getI64ArrayAttr(stride),
-          rewriter.getI64ArrayAttr({1, 1}));
+          rewriter.getDenseI64ArrayAttr(convPad),
+          rewriter.getDenseI64ArrayAttr(stride),
+          rewriter.getDenseI64ArrayAttr({1, 1}));
     }
 
     rewriter.replaceOp(op, conv2d);
@@ -164,11 +163,8 @@ public:
     Type biasETy = biasTy.getElementType();
     Type resultETy = resultTy.getElementType();
 
-    llvm::SmallVector<int64_t> pad;
-    llvm::SmallVector<int64_t> stride;
-
-    getValuesFromIntArrayAttribute(op.getOutPad().cast<ArrayAttr>(), pad);
-    getValuesFromIntArrayAttribute(op.getStride().cast<ArrayAttr>(), stride);
+    llvm::ArrayRef<int64_t> pad = op.getOutPad();
+    llvm::ArrayRef<int64_t> stride = op.getStride();
 
     // If striding is all 1 we can modify padding and reverse the kernel along
     // the x/y direction to make it a regular convolution. This is much simpler
@@ -292,18 +288,18 @@ public:
       conv2d = createOpAndInfer<tosa::Conv2DOp>(
                    rewriter, loc, UnrankedTensorType::get(resultETy), input,
                    weight, zeroBias,
-                   /*pad=*/rewriter.getI64ArrayAttr({0, 0, 0, 0}),
-                   /*stride=*/rewriter.getI64ArrayAttr({1, 1}),
-                   /*dilation=*/rewriter.getI64ArrayAttr({1, 1}),
+                   /*pad=*/rewriter.getDenseI64ArrayAttr({0, 0, 0, 0}),
+                   /*stride=*/rewriter.getDenseI64ArrayAttr({1, 1}),
+                   /*dilation=*/rewriter.getDenseI64ArrayAttr({1, 1}),
                    *op.getQuantizationInfo())
                    .getResult();
     } else {
       conv2d = createOpAndInfer<tosa::Conv2DOp>(
                    rewriter, loc, UnrankedTensorType::get(resultETy), input,
                    weight, zeroBias,
-                   /*pad=*/rewriter.getI64ArrayAttr({0, 0, 0, 0}),
-                   /*stride=*/rewriter.getI64ArrayAttr({1, 1}),
-                   /*dilation=*/rewriter.getI64ArrayAttr({1, 1}))
+                   /*pad=*/rewriter.getDenseI64ArrayAttr({0, 0, 0, 0}),
+                   /*stride=*/rewriter.getDenseI64ArrayAttr({1, 1}),
+                   /*dilation=*/rewriter.getDenseI64ArrayAttr({1, 1}))
                    .getResult();
     }
 

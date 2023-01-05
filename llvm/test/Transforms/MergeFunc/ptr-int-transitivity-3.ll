@@ -3,7 +3,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 declare void @stuff()
 
-define void @f0(i64 addrspace(0)* %p0) {
+define void @f0(ptr addrspace(0) %p0) {
 entry:
   call void @stuff()
   call void @stuff()
@@ -11,7 +11,7 @@ entry:
   ret void
 }
 
-define void @f2(i64 addrspace(1)* %p0) {
+define void @f2(ptr addrspace(1) %p0) {
 entry:
   call void @stuff()
   call void @stuff()

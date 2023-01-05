@@ -514,7 +514,8 @@ CFIProgram::Instruction::getOperandAsSigned(const CFIProgram &CFIP,
 
 Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
                              const RegisterLocations *InitialLocs) {
-  std::vector<RegisterLocations> RegisterStates;
+  // State consists of CFA value and register locations.
+  std::vector<std::pair<UnwindLocation, RegisterLocations>> States;
   for (const CFIProgram::Instruction &Inst : CFIP) {
     switch (Inst.Opcode) {
     case dwarf::DW_CFA_set_loc: {
@@ -597,16 +598,18 @@ Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
       break;
 
     case dwarf::DW_CFA_remember_state:
-      RegisterStates.push_back(Row.getRegisterLocations());
+      States.push_back(
+          std::make_pair(Row.getCFAValue(), Row.getRegisterLocations()));
       break;
 
     case dwarf::DW_CFA_restore_state:
-      if (RegisterStates.empty())
+      if (States.empty())
         return createStringError(errc::invalid_argument,
                                  "DW_CFA_restore_state without a matching "
                                  "previous DW_CFA_remember_state");
-      Row.getRegisterLocations() = RegisterStates.back();
-      RegisterStates.pop_back();
+      Row.getCFAValue() = States.back().first;
+      Row.getRegisterLocations() = States.back().second;
+      States.pop_back();
       break;
 
     case dwarf::DW_CFA_GNU_window_save:

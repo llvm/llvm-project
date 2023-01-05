@@ -183,6 +183,17 @@ void genDenseTensorOrSparseConstantIterLoop(
 void sizesFromSrc(OpBuilder &builder, SmallVectorImpl<Value> &sizes,
                   Location loc, Value src);
 
+/// Generates a 1D MemRefType with a dynamic size. When withLayout is set, the
+/// returned memref has a layout has unknown strides and offsets. Otherwise,
+/// a memref with a standard unit stride zero offset layout is returned.
+inline MemRefType get1DMemRefType(Type etp, bool withLayout) {
+  auto layout = withLayout ? StridedLayoutAttr::StridedLayoutAttr::get(
+                                 etp.getContext(), ShapedType::kDynamic,
+                                 {ShapedType::kDynamic})
+                           : StridedLayoutAttr();
+  return MemRefType::get(ShapedType::kDynamic, etp, layout);
+}
+
 /// Scans to top of generated loop.
 Operation *getTop(Operation *op);
 
@@ -312,6 +323,21 @@ inline bool isZeroRankedTensorOrScalar(Type type) {
   auto rtp = type.dyn_cast<RankedTensorType>();
   return !rtp || rtp.getRank() == 0;
 }
+
+/// Infers the result type and generates ToPointersOp.
+Value genToPointers(OpBuilder &builder, Location loc, Value tensor, uint64_t d);
+
+/// Infers the result type and generates ToIndicesOp. If the dim is within a COO
+/// region, the result type is a memref with unknown stride and offset.
+/// Otherwise, the result type is a memref without any specified layout.
+Value genToIndices(OpBuilder &builder, Location loc, Value tensor, uint64_t d,
+                   uint64_t cooStart);
+
+/// Infers the result type and generates ToValuesOp.
+Value genToValues(OpBuilder &builder, Location loc, Value tensor);
+
+/// Generates code to retrieve the values size for the sparse tensor.
+Value genValMemSize(OpBuilder &builder, Location loc, Value tensor);
 
 } // namespace sparse_tensor
 } // namespace mlir

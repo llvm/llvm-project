@@ -512,20 +512,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
                                              std::nullopt);
 
     if (srcTy.isa<IntegerType>() && dstTy.isa<IntegerType>() && !bitExtend) {
-      auto intMin = rewriter.create<arith::ConstantIntOp>(
-          loc,
-          APInt::getSignedMinValue(dstTy.getIntOrFloatBitWidth())
-              .getSExtValue(),
-          srcTy.getIntOrFloatBitWidth());
-
-      auto intMax = rewriter.create<arith::ConstantIntOp>(
-          loc,
-          APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
-              .getSExtValue(),
-          srcTy.getIntOrFloatBitWidth());
-
-      auto clamped = clampIntHelper(loc, args[0], intMin, intMax, rewriter);
-      return rewriter.create<arith::TruncIOp>(loc, dstTy, clamped);
+      return rewriter.create<arith::TruncIOp>(loc, dstTy, args[0]);
     }
   }
 
@@ -1364,8 +1351,7 @@ public:
       return success();
     }
 
-    SmallVector<int32_t> scale;
-    getValuesFromIntArrayAttribute(op.getScale(), scale);
+    ArrayRef<int64_t> scale = op.getScale();
 
     // Collapse the unit width and height away.
     SmallVector<ReassociationExprs, 4> reassociationMap(2);
@@ -1582,10 +1568,9 @@ public:
 
       bool floatingPointMode = resultETy.isF32();
 
-      SmallVector<int32_t> scale, offset, border;
-      getValuesFromIntArrayAttribute(op.getScale(), scale);
-      getValuesFromIntArrayAttribute(op.getOffset(), offset);
-      getValuesFromIntArrayAttribute(op.getBorder(), border);
+      ArrayRef<int64_t> offset = op.getOffset();
+      ArrayRef<int64_t> border = op.getBorder();
+      ArrayRef<int64_t> scale = op.getScale();
 
       Value yScaleN, yScaleD, xScaleN, xScaleD;
       yScaleN = b.create<arith::ConstantOp>(b.getI32IntegerAttr(scale[0]));
@@ -1614,7 +1599,7 @@ public:
         Value val = b.create<arith::UIToFPOp>(b.getF32Type(), in);
         scaleN = b.create<arith::UIToFPOp>(b.getF32Type(), scaleN);
         scaleD = b.create<arith::UIToFPOp>(b.getF32Type(), scaleD);
-        offset = b.create<arith::UIToFPOp>(b.getF32Type(), offset);
+        offset = b.create<arith::SIToFPOp>(b.getF32Type(), offset);
         val = b.create<arith::MulFOp>(val, scaleD);
         val = b.create<arith::AddFOp>(val, offset);
         val = b.create<arith::DivFOp>(val, scaleN);

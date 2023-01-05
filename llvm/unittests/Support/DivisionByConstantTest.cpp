@@ -101,9 +101,11 @@ APInt UnsignedDivideUsingMagic(const APInt &Numerator, const APInt &Divisor,
                                bool LZOptimization,
                                bool AllowEvenDivisorOptimization, bool ForceNPQ,
                                UnsignedDivisionByConstantInfo Magics) {
+  assert(!Divisor.isOne() && "Division by 1 is not supported using Magic.");
+
   unsigned Bits = Numerator.getBitWidth();
 
-  if (LZOptimization && !Divisor.isOne()) {
+  if (LZOptimization) {
     unsigned LeadingZeros = Numerator.countLeadingZeros();
     // Clip to the number of leading zeros in the divisor.
     LeadingZeros = std::min(LeadingZeros, Divisor.countLeadingZeros());
@@ -114,22 +116,14 @@ APInt UnsignedDivideUsingMagic(const APInt &Numerator, const APInt &Divisor,
     }
   }
 
-  unsigned PreShift = 0;
-  unsigned PostShift = 0;
-  bool UseNPQ = false;
-  if (!Magics.IsAdd || Divisor.isOne()) {
-    assert(Magics.ShiftAmount < Divisor.getBitWidth() &&
-           "We shouldn't generate an undefined shift!");
-    PreShift = Magics.PreShift;
-    PostShift = Magics.ShiftAmount;
-    UseNPQ = false;
-  } else {
-    assert(Magics.PreShift == 0 && "Unexpected pre-shift");
-    PostShift = Magics.ShiftAmount - 1;
-    assert(PostShift < Divisor.getBitWidth() &&
-           "We shouldn't generate an undefined shift!");
-    UseNPQ = true;
-  }
+  assert(Magics.PreShift < Divisor.getBitWidth() &&
+         "We shouldn't generate an undefined shift!");
+  assert(Magics.PostShift < Divisor.getBitWidth() &&
+         "We shouldn't generate an undefined shift!");
+  assert((!Magics.IsAdd || Magics.PreShift == 0) && "Unexpected pre-shift");
+  unsigned PreShift = Magics.PreShift;
+  unsigned PostShift = Magics.PostShift;
+  bool UseNPQ = Magics.IsAdd;
 
   APInt NPQFactor =
       UseNPQ ? APInt::getSignedMinValue(Bits) : APInt::getZero(Bits);
@@ -154,7 +148,7 @@ APInt UnsignedDivideUsingMagic(const APInt &Numerator, const APInt &Divisor,
 
   Q = Q.lshr(PostShift);
 
-  return Divisor.isOne() ? Numerator : Q;
+  return Q;
 }
 
 TEST(UnsignedDivisionByConstantTest, Test) {
@@ -166,6 +160,9 @@ TEST(UnsignedDivisionByConstantTest, Test) {
     EnumerateAPInts(Bits, [Bits](const APInt &Divisor) {
       if (Divisor.isZero())
         return; // Division by zero is undefined behavior.
+      if (Divisor.isOne())
+        return; // Division by one is the numerator.
+
       const UnsignedDivisionByConstantInfo Magics =
           UnsignedDivisionByConstantInfo::get(Divisor);
       EnumerateAPInts(Bits, [Divisor, Magics, Bits](const APInt &Numerator) {

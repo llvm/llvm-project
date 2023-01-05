@@ -993,61 +993,21 @@ exit:
   ret void
 }
 
-; CHECK-LABEL: lCPI11_0:
-; CHECK-NEXT: 	.byte	0                               ; 0x0
-; CHECK-NEXT: 	.byte	255                             ; 0xff
-; CHECK-NEXT: 	.byte	255                             ; 0xff
-; CHECK-NEXT: 	.byte	255                             ; 0xff
-; CHECK-NEXT: 	.byte	1                               ; 0x1
-; CHECK-NEXT: 	.byte	255                             ; 0xff
-; CHECK-NEXT: 	.byte	255                             ; 0xff
-; CHECK-NEXT: 	.byte	255                             ; 0xff
-; CHECK-NEXT: 	.byte	2                               ; 0x2
-; CHECK-NEXT: 	.byte	255                             ; 0xff
-; CHECK-NEXT: 	.byte	255                             ; 0xff
-; CHECK-NEXT: 	.byte	255                             ; 0xff
-; CHECK-NEXT: 	.byte	3                               ; 0x3
-; CHECK-NEXT: 	.byte	255                             ; 0xff
-; CHECK-NEXT: 	.byte	255                             ; 0xff
-; CHECK-NEXT: 	.byte	255                             ; 0xff
-
-; CHECK-BE-LABEL:  .LCPI11_0:
-; CHECK-BE-NEXT:  	.byte	255                             // 0xff
-; CHECK-BE-NEXT:  	.byte	255                             // 0xff
-; CHECK-BE-NEXT:  	.byte	255                             // 0xff
-; CHECK-BE-NEXT:  	.byte	0                               // 0x0
-; CHECK-BE-NEXT:  	.byte	255                             // 0xff
-; CHECK-BE-NEXT:  	.byte	255                             // 0xff
-; CHECK-BE-NEXT:  	.byte	255                             // 0xff
-; CHECK-BE-NEXT:  	.byte	1                               // 0x1
-; CHECK-BE-NEXT:  	.byte	255                             // 0xff
-; CHECK-BE-NEXT:  	.byte	255                             // 0xff
-; CHECK-BE-NEXT:  	.byte	255                             // 0xff
-; CHECK-BE-NEXT:  	.byte	2                               // 0x2
-; CHECK-BE-NEXT:  	.byte	255                             // 0xff
-; CHECK-BE-NEXT:  	.byte	255                             // 0xff
-; CHECK-BE-NEXT:  	.byte	255                             // 0xff
-; CHECK-BE-NEXT:  	.byte	3                               // 0x3
-
 define void @zext_v4i8_to_v4i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v4i8_to_v4i32_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:  Lloh12:
-; CHECK-NEXT:    adrp x9, lCPI11_0@PAGE
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:  Lloh13:
-; CHECK-NEXT:    ldr q0, [x9, lCPI11_0@PAGEOFF]
 ; CHECK-NEXT:  LBB11_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr s1, [x0, x8]
+; CHECK-NEXT:    ldr s0, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    tbl.16b v1, { v1 }, v0
-; CHECK-NEXT:    str q1, [x1], #64
+; CHECK-NEXT:    ushll.8h v0, v0, #0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    str q0, [x1], #64
 ; CHECK-NEXT:    b.ne LBB11_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:    .loh AdrpLdr Lloh12, Lloh13
 ;
 ; CHECK-BE-LABEL: zext_v4i8_to_v4i32_in_loop:
 ; CHECK-BE:       // %bb.0: // %entry
@@ -1194,18 +1154,18 @@ exit:
 define void @zext_v12i8_to_v12i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v12i8_to_v12i32_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:  Lloh14:
+; CHECK-NEXT:  Lloh12:
 ; CHECK-NEXT:    adrp x9, lCPI12_0@PAGE
-; CHECK-NEXT:  Lloh15:
+; CHECK-NEXT:  Lloh13:
 ; CHECK-NEXT:    adrp x10, lCPI12_1@PAGE
-; CHECK-NEXT:  Lloh16:
+; CHECK-NEXT:  Lloh14:
 ; CHECK-NEXT:    adrp x11, lCPI12_2@PAGE
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:  Lloh17:
+; CHECK-NEXT:  Lloh15:
 ; CHECK-NEXT:    ldr q0, [x9, lCPI12_0@PAGEOFF]
-; CHECK-NEXT:  Lloh18:
+; CHECK-NEXT:  Lloh16:
 ; CHECK-NEXT:    ldr q1, [x10, lCPI12_1@PAGEOFF]
-; CHECK-NEXT:  Lloh19:
+; CHECK-NEXT:  Lloh17:
 ; CHECK-NEXT:    ldr q2, [x11, lCPI12_2@PAGEOFF]
 ; CHECK-NEXT:  LBB12_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -1220,9 +1180,9 @@ define void @zext_v12i8_to_v12i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    b.ne LBB12_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:    .loh AdrpLdr Lloh16, Lloh19
-; CHECK-NEXT:    .loh AdrpLdr Lloh15, Lloh18
 ; CHECK-NEXT:    .loh AdrpLdr Lloh14, Lloh17
+; CHECK-NEXT:    .loh AdrpLdr Lloh13, Lloh16
+; CHECK-NEXT:    .loh AdrpLdr Lloh12, Lloh15
 ;
 ; CHECK-BE-LABEL: zext_v12i8_to_v12i32_in_loop:
 ; CHECK-BE:       // %bb.0: // %entry
@@ -2192,22 +2152,22 @@ exit:
 define void @zext_v20i8_to_v20i24_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v20i8_to_v20i24_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:  Lloh20:
+; CHECK-NEXT:  Lloh18:
 ; CHECK-NEXT:    adrp x9, lCPI20_0@PAGE
-; CHECK-NEXT:  Lloh21:
+; CHECK-NEXT:  Lloh19:
 ; CHECK-NEXT:    adrp x10, lCPI20_1@PAGE
-; CHECK-NEXT:  Lloh22:
+; CHECK-NEXT:  Lloh20:
 ; CHECK-NEXT:    adrp x11, lCPI20_2@PAGE
-; CHECK-NEXT:  Lloh23:
+; CHECK-NEXT:  Lloh21:
 ; CHECK-NEXT:    adrp x12, lCPI20_3@PAGE
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:  Lloh24:
+; CHECK-NEXT:  Lloh22:
 ; CHECK-NEXT:    ldr q0, [x9, lCPI20_0@PAGEOFF]
-; CHECK-NEXT:  Lloh25:
+; CHECK-NEXT:  Lloh23:
 ; CHECK-NEXT:    ldr q1, [x10, lCPI20_1@PAGEOFF]
-; CHECK-NEXT:  Lloh26:
+; CHECK-NEXT:  Lloh24:
 ; CHECK-NEXT:    ldr q2, [x11, lCPI20_2@PAGEOFF]
-; CHECK-NEXT:  Lloh27:
+; CHECK-NEXT:  Lloh25:
 ; CHECK-NEXT:    ldr q3, [x12, lCPI20_3@PAGEOFF]
 ; CHECK-NEXT:  LBB20_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2228,10 +2188,10 @@ define void @zext_v20i8_to_v20i24_in_loop(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    b.ne LBB20_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:    .loh AdrpLdr Lloh23, Lloh27
-; CHECK-NEXT:    .loh AdrpLdr Lloh22, Lloh26
 ; CHECK-NEXT:    .loh AdrpLdr Lloh21, Lloh25
 ; CHECK-NEXT:    .loh AdrpLdr Lloh20, Lloh24
+; CHECK-NEXT:    .loh AdrpLdr Lloh19, Lloh23
+; CHECK-NEXT:    .loh AdrpLdr Lloh18, Lloh22
 ;
 ; CHECK-BE-LABEL: zext_v20i8_to_v20i24_in_loop:
 ; CHECK-BE:       // %bb.0: // %entry
@@ -2519,30 +2479,30 @@ exit:
 define void @zext_v23i8_to_v23i48_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v23i8_to_v23i48_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:  Lloh28:
+; CHECK-NEXT:  Lloh26:
 ; CHECK-NEXT:    adrp x9, lCPI21_0@PAGE
-; CHECK-NEXT:  Lloh29:
+; CHECK-NEXT:  Lloh27:
 ; CHECK-NEXT:    adrp x10, lCPI21_1@PAGE
-; CHECK-NEXT:  Lloh30:
+; CHECK-NEXT:  Lloh28:
 ; CHECK-NEXT:    adrp x11, lCPI21_2@PAGE
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:  Lloh31:
+; CHECK-NEXT:  Lloh29:
 ; CHECK-NEXT:    ldr q0, [x9, lCPI21_0@PAGEOFF]
-; CHECK-NEXT:  Lloh32:
+; CHECK-NEXT:  Lloh30:
 ; CHECK-NEXT:    adrp x9, lCPI21_3@PAGE
-; CHECK-NEXT:  Lloh33:
+; CHECK-NEXT:  Lloh31:
 ; CHECK-NEXT:    ldr q1, [x10, lCPI21_1@PAGEOFF]
-; CHECK-NEXT:  Lloh34:
+; CHECK-NEXT:  Lloh32:
 ; CHECK-NEXT:    adrp x10, lCPI21_4@PAGE
-; CHECK-NEXT:  Lloh35:
+; CHECK-NEXT:  Lloh33:
 ; CHECK-NEXT:    ldr q2, [x11, lCPI21_2@PAGEOFF]
-; CHECK-NEXT:  Lloh36:
+; CHECK-NEXT:  Lloh34:
 ; CHECK-NEXT:    adrp x11, lCPI21_5@PAGE
-; CHECK-NEXT:  Lloh37:
+; CHECK-NEXT:  Lloh35:
 ; CHECK-NEXT:    ldr q3, [x9, lCPI21_3@PAGEOFF]
-; CHECK-NEXT:  Lloh38:
+; CHECK-NEXT:  Lloh36:
 ; CHECK-NEXT:    ldr q4, [x10, lCPI21_4@PAGEOFF]
-; CHECK-NEXT:  Lloh39:
+; CHECK-NEXT:  Lloh37:
 ; CHECK-NEXT:    ldr q5, [x11, lCPI21_5@PAGEOFF]
 ; CHECK-NEXT:  LBB21_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2570,15 +2530,15 @@ define void @zext_v23i8_to_v23i48_in_loop(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    b.ne LBB21_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:    .loh AdrpLdr Lloh36, Lloh39
-; CHECK-NEXT:    .loh AdrpLdr Lloh34, Lloh38
-; CHECK-NEXT:    .loh AdrpLdr Lloh32, Lloh37
-; CHECK-NEXT:    .loh AdrpAdrp Lloh30, Lloh36
+; CHECK-NEXT:    .loh AdrpLdr Lloh34, Lloh37
+; CHECK-NEXT:    .loh AdrpLdr Lloh32, Lloh36
 ; CHECK-NEXT:    .loh AdrpLdr Lloh30, Lloh35
-; CHECK-NEXT:    .loh AdrpAdrp Lloh29, Lloh34
-; CHECK-NEXT:    .loh AdrpLdr Lloh29, Lloh33
-; CHECK-NEXT:    .loh AdrpAdrp Lloh28, Lloh32
-; CHECK-NEXT:    .loh AdrpLdr Lloh28, Lloh31
+; CHECK-NEXT:    .loh AdrpAdrp Lloh28, Lloh34
+; CHECK-NEXT:    .loh AdrpLdr Lloh28, Lloh33
+; CHECK-NEXT:    .loh AdrpAdrp Lloh27, Lloh32
+; CHECK-NEXT:    .loh AdrpLdr Lloh27, Lloh31
+; CHECK-NEXT:    .loh AdrpAdrp Lloh26, Lloh30
+; CHECK-NEXT:    .loh AdrpLdr Lloh26, Lloh29
 ;
 ; CHECK-BE-LABEL: zext_v23i8_to_v23i48_in_loop:
 ; CHECK-BE:       // %bb.0: // %entry

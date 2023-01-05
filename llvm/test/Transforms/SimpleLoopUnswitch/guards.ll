@@ -219,7 +219,7 @@ exit:
 ; CHECK-LABEL: @test_cleanuppad(
 ; CHECK:       call void (i1, ...) @llvm.experimental.guard(i1 %cond) [ "deopt"() ]
 ; CHECK-NOT:   call void (i1, ...) @llvm.experimental.guard(
-define void @test_cleanuppad(i1 %cond, i32 %N) personality i32 (...)* @__CxxFrameHandler3 {
+define void @test_cleanuppad(i1 %cond, i32 %N) personality ptr @__CxxFrameHandler3 {
 
 entry:
   br label %loop

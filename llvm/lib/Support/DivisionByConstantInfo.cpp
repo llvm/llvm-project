@@ -73,7 +73,7 @@ SignedDivisionByConstantInfo SignedDivisionByConstantInfo::get(const APInt &D) {
 UnsignedDivisionByConstantInfo
 UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros,
                                     bool AllowEvenDivisorOptimization) {
-  assert(!D.isZero() && "Precondition violation.");
+  assert(!D.isZero() && !D.isOne() && "Precondition violation.");
   assert(D.getBitWidth() > 1 && "Does not work at smaller bitwidths.");
 
   APInt Delta;
@@ -143,7 +143,12 @@ UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros,
 
   Retval.Magic = std::move(Q2);             // resulting magic number
   ++Retval.Magic;
-  Retval.ShiftAmount = P - D.getBitWidth(); // resulting shift
+  Retval.PostShift = P - D.getBitWidth(); // resulting shift
+  // Reduce shift amount for IsAdd.
+  if (Retval.IsAdd) {
+    assert(Retval.PostShift > 0 && "Unexpected shift");
+    Retval.PostShift -= 1;
+  }
   Retval.PreShift = 0;
   return Retval;
 }

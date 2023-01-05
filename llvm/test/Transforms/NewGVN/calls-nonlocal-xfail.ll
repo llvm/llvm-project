@@ -6,9 +6,9 @@
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
 target triple = "i386-apple-darwin9"
 
-define i32 @test(i32 %g, i8* %P) nounwind  {
+define i32 @test(i32 %g, ptr %P) nounwind  {
 entry:
-	%tmp2 = call i32 @strlen( i8* %P ) nounwind readonly 		; <i32> [#uses=1]
+	%tmp2 = call i32 @strlen( ptr %P ) nounwind readonly 		; <i32> [#uses=1]
 	%tmp3 = icmp eq i32 %tmp2, 100		; <i1> [#uses=1]
 	%tmp34 = zext i1 %tmp3 to i8		; <i8> [#uses=1]
 	%toBool = icmp ne i8 %tmp34, 0		; <i1> [#uses=1]
@@ -19,7 +19,7 @@ bb:		; preds = %entry
 
 bb6:		; preds = %entry
 	%tmp8 = add i32 %g, 42		; <i32> [#uses=2]
-	%tmp10 = call i32 @strlen( i8* %P ) nounwind readonly 		; <i32> [#uses=1]
+	%tmp10 = call i32 @strlen( ptr %P ) nounwind readonly 		; <i32> [#uses=1]
 	%tmp11 = icmp eq i32 %tmp10, 100		; <i1> [#uses=1]
 	%tmp1112 = zext i1 %tmp11 to i8		; <i8> [#uses=1]
 	%toBool13 = icmp ne i8 %tmp1112, 0		; <i1> [#uses=1]
@@ -30,7 +30,7 @@ bb14:		; preds = %bb6
 
 bb16:		; preds = %bb6
 	%tmp18 = mul i32 %tmp8, 2		; <i32> [#uses=1]
-	%tmp20 = call i32 @strlen( i8* %P ) nounwind readonly 		; <i32> [#uses=1]
+	%tmp20 = call i32 @strlen( ptr %P ) nounwind readonly 		; <i32> [#uses=1]
 	%tmp21 = icmp eq i32 %tmp20, 100		; <i1> [#uses=1]
 	%tmp2122 = zext i1 %tmp21 to i8		; <i8> [#uses=1]
 	%toBool23 = icmp ne i8 %tmp2122, 0		; <i1> [#uses=1]
@@ -50,9 +50,9 @@ return:		; preds = %bb27
 	ret i32 %tmp.0
 }
 
-; CHECK: define i32 @test(i32 %g, i8* %P) #0 {
+; CHECK: define i32 @test(i32 %g, ptr %P) #0 {
 ; CHECK: entry:
-; CHECK:   %tmp2 = call i32 @strlen(i8* %P) #1
+; CHECK:   %tmp2 = call i32 @strlen(ptr %P) #1
 ; CHECK:   %tmp3 = icmp eq i32 %tmp2, 100
 ; CHECK:   %tmp34 = zext i1 %tmp3 to i8
 ; CHECK:   br i1 %tmp3, label %bb, label %bb6
@@ -75,4 +75,4 @@ return:		; preds = %bb27
 ; CHECK:   ret i32 %tmp.0
 ; CHECK: }
 
-declare i32 @strlen(i8*) nounwind readonly 
+declare i32 @strlen(ptr) nounwind readonly 
