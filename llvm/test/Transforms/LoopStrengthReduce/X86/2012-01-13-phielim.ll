@@ -2,10 +2,10 @@
 ; RUN: opt < %s -S -loop-reduce -mtriple=x86_64-- -mcpu=core2 | FileCheck %s
 
 declare i1 @check() nounwind
-declare i1 @foo(i8*, i8*, i8*) nounwind
+declare i1 @foo(ptr, ptr, ptr) nounwind
 
 ; Check that redundant phi elimination ran
-define i32 @test(i8* %base) nounwind uwtable ssp {
+define i32 @test(ptr %base) nounwind uwtable ssp {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[WHILE_BODY_LR_PH_I:%.*]]
@@ -21,14 +21,14 @@ define i32 @test(i8* %base) nounwind uwtable ssp {
 ; CHECK:       for.body.i:
 ; CHECK-NEXT:    [[INDVARS_IV_I:%.*]] = phi i64 [ 0, [[WHILE_BODY_I]] ], [ [[INDVARS_IV_NEXT_I:%.*]], [[FOR_BODY_I]] ]
 ; CHECK-NEXT:    [[ADD_PTR_SUM:%.*]] = add i64 [[ADD_PTR_SUM_I]], [[INDVARS_IV_I]]
-; CHECK-NEXT:    [[ARRAYIDX22_I:%.*]] = getelementptr inbounds i8, i8* [[BASE:%.*]], i64 [[ADD_PTR_SUM]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[ARRAYIDX22_I]], align 1
+; CHECK-NEXT:    [[ARRAYIDX22_I:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i64 [[ADD_PTR_SUM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX22_I]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_I]] = add i64 [[INDVARS_IV_I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = call i1 @check() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_END_I:%.*]], label [[FOR_BODY_I]]
 ; CHECK:       for.end.i:
-; CHECK-NEXT:    [[ADD_PTR_I144:%.*]] = getelementptr inbounds i8, i8* [[BASE]], i64 [[ADD_PTR_SUM_I]]
-; CHECK-NEXT:    [[CMP2:%.*]] = tail call i1 @foo(i8* [[ADD_PTR_I144]], i8* [[ADD_PTR_I144]], i8* undef) #[[ATTR3]]
+; CHECK-NEXT:    [[ADD_PTR_I144:%.*]] = getelementptr inbounds i8, ptr [[BASE]], i64 [[ADD_PTR_SUM_I]]
+; CHECK-NEXT:    [[CMP2:%.*]] = tail call i1 @foo(ptr [[ADD_PTR_I144]], ptr [[ADD_PTR_I144]], ptr undef) #[[ATTR3]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[COND_TRUE29_I]], label [[COND_FALSE35_I:%.*]]
 ; CHECK:       cond.true29.i:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT8_I]] = add i64 [[INDVARS_IV7_I]], 16
@@ -55,15 +55,15 @@ while.body.i:                                     ; preds = %cond.true29.i, %whi
 for.body.i:                                       ; preds = %for.body.i, %while.body.i
   %indvars.iv.i = phi i64 [ 0, %while.body.i ], [ %indvars.iv.next.i, %for.body.i ]
   %add.ptr.sum = add i64 %add.ptr.sum.i, %indvars.iv.i
-  %arrayidx22.i = getelementptr inbounds i8, i8* %base, i64 %add.ptr.sum
-  %0 = load i8, i8* %arrayidx22.i, align 1
+  %arrayidx22.i = getelementptr inbounds i8, ptr %base, i64 %add.ptr.sum
+  %0 = load i8, ptr %arrayidx22.i, align 1
   %indvars.iv.next.i = add i64 %indvars.iv.i, 1
   %cmp = call i1 @check() nounwind
   br i1 %cmp, label %for.end.i, label %for.body.i
 
 for.end.i:                                        ; preds = %for.body.i
-  %add.ptr.i144 = getelementptr inbounds i8, i8* %base, i64 %add.ptr.sum.i
-  %cmp2 = tail call i1 @foo(i8* %add.ptr.i144, i8* %add.ptr.i144, i8* undef) nounwind
+  %add.ptr.i144 = getelementptr inbounds i8, ptr %base, i64 %add.ptr.sum.i
+  %cmp2 = tail call i1 @foo(ptr %add.ptr.i144, ptr %add.ptr.i144, ptr undef) nounwind
   br i1 %cmp2, label %cond.true29.i, label %cond.false35.i
 
 cond.true29.i:                                    ; preds = %for.end.i
@@ -98,8 +98,8 @@ define void @test2(i32 %n) nounwind uwtable {
 ; CHECK-NEXT:    [[CMP469:%.*]] = icmp slt i32 [[TMP0]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP469]], label [[FOR_BODY471:%.*]], label [[FOR_INC498_PREHEADER:%.*]]
 ; CHECK:       for.body471:
-; CHECK-NEXT:    [[FIRST:%.*]] = getelementptr inbounds [5000 x %struct.anon.7.91.199.307.415.475.559.643.751.835.943.1003.1111.1219.1351.1375.1399.1435.1471.1483.1519.1531.1651.1771], [5000 x %struct.anon.7.91.199.307.415.475.559.643.751.835.943.1003.1111.1219.1351.1375.1399.1435.1471.1483.1519.1531.1651.1771]* @tags, i64 0, i64 [[INDVARS_IV1163]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[FIRST]], align 4
+; CHECK-NEXT:    [[FIRST:%.*]] = getelementptr inbounds [5000 x %struct.anon.7.91.199.307.415.475.559.643.751.835.943.1003.1111.1219.1351.1375.1399.1435.1471.1483.1519.1531.1651.1771], ptr @tags, i64 0, i64 [[INDVARS_IV1163]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[FIRST]], align 4
 ; CHECK-NEXT:    br i1 false, label [[IF_THEN477]], label [[FOR_INC498_PREHEADER]]
 ; CHECK:       for.inc498.preheader:
 ; CHECK-NEXT:    br label [[FOR_INC498:%.*]]
@@ -116,19 +116,19 @@ entry:
 
 for.cond468:                                      ; preds = %if.then477, %entry
   %indvars.iv1163 = phi i64 [ %indvars.iv.next1164, %if.then477 ], [ 1, %entry ]
-  %k.0.in = phi i32* [ %last, %if.then477 ], [ getelementptr inbounds ([5000 x %struct.anon.7.91.199.307.415.475.559.643.751.835.943.1003.1111.1219.1351.1375.1399.1435.1471.1483.1519.1531.1651.1771], [5000 x %struct.anon.7.91.199.307.415.475.559.643.751.835.943.1003.1111.1219.1351.1375.1399.1435.1471.1483.1519.1531.1651.1771]* @tags, i64 0, i64 0, i32 2), %entry ]
-  %k.0 = load i32, i32* %k.0.in, align 4
+  %k.0.in = phi ptr [ %last, %if.then477 ], [ getelementptr inbounds ([5000 x %struct.anon.7.91.199.307.415.475.559.643.751.835.943.1003.1111.1219.1351.1375.1399.1435.1471.1483.1519.1531.1651.1771], ptr @tags, i64 0, i64 0, i32 2), %entry ]
+  %k.0 = load i32, ptr %k.0.in, align 4
   %0 = trunc i64 %indvars.iv1163 to i32
   %cmp469 = icmp slt i32 %0, %n
   br i1 %cmp469, label %for.body471, label %for.inc498
 
 for.body471:                                      ; preds = %for.cond468
-  %first = getelementptr inbounds [5000 x %struct.anon.7.91.199.307.415.475.559.643.751.835.943.1003.1111.1219.1351.1375.1399.1435.1471.1483.1519.1531.1651.1771], [5000 x %struct.anon.7.91.199.307.415.475.559.643.751.835.943.1003.1111.1219.1351.1375.1399.1435.1471.1483.1519.1531.1651.1771]* @tags, i64 0, i64 %indvars.iv1163, i32 1
-  %1 = load i32, i32* %first, align 4
+  %first = getelementptr inbounds [5000 x %struct.anon.7.91.199.307.415.475.559.643.751.835.943.1003.1111.1219.1351.1375.1399.1435.1471.1483.1519.1531.1651.1771], ptr @tags, i64 0, i64 %indvars.iv1163, i32 1
+  %1 = load i32, ptr %first, align 4
   br i1 undef, label %if.then477, label %for.inc498
 
 if.then477:                                       ; preds = %for.body471
-  %last = getelementptr inbounds [5000 x %struct.anon.7.91.199.307.415.475.559.643.751.835.943.1003.1111.1219.1351.1375.1399.1435.1471.1483.1519.1531.1651.1771], [5000 x %struct.anon.7.91.199.307.415.475.559.643.751.835.943.1003.1111.1219.1351.1375.1399.1435.1471.1483.1519.1531.1651.1771]* @tags, i64 0, i64 %indvars.iv1163, i32 2
+  %last = getelementptr inbounds [5000 x %struct.anon.7.91.199.307.415.475.559.643.751.835.943.1003.1111.1219.1351.1375.1399.1435.1471.1483.1519.1531.1651.1771], ptr @tags, i64 0, i64 %indvars.iv1163, i32 2
   %indvars.iv.next1164 = add i64 %indvars.iv1163, 1
   br label %for.cond468
 
@@ -157,15 +157,15 @@ define fastcc void @test3(double* nocapture %u) nounwind uwtable ssp {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[INDVARS_IV_I_SV_PHI]], [[INDVARS_IV8_I_SV_PHI26:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    [[MUL_I_US_I:%.*]] = mul nsw i32 0, [[TMP1]]
-; CHECK-NEXT:    [[ARRAYIDX5_US_I:%.*]] = getelementptr inbounds double, double* [[U:%.*]], i64 [[INDVARS_IV_I_SV_PHI]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load double, double* [[ARRAYIDX5_US_I]], align 8
+; CHECK-NEXT:    [[ARRAYIDX5_US_I:%.*]] = getelementptr inbounds double, ptr [[U:%.*]], i64 [[INDVARS_IV_I_SV_PHI]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX5_US_I]], align 8
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_I]] = add i64 [[INDVARS_IV_I_SV_PHI]], 1
 ; CHECK-NEXT:    br i1 undef, label [[FOR_INC8_US_I:%.*]], label [[MESHBB]]
 ; CHECK:       for.body3.lr.ph.us.i.loopexit:
 ; CHECK-NEXT:    br label [[FOR_BODY3_LR_PH_US_I]]
 ; CHECK:       for.body3.lr.ph.us.i:
 ; CHECK-NEXT:    [[INDVARS_IV8_I_SV_PHI26]] = phi i64 [ undef, [[MESHBB1]] ], [ [[INDVARS_IV8_I_SV_PHI24:%.*]], [[FOR_BODY3_LR_PH_US_I_LOOPEXIT:%.*]] ]
-; CHECK-NEXT:    [[ARRAYIDX_US_I:%.*]] = getelementptr inbounds double, double* undef, i64 [[INDVARS_IV8_I_SV_PHI26]]
+; CHECK-NEXT:    [[ARRAYIDX_US_I:%.*]] = getelementptr inbounds double, ptr undef, i64 [[INDVARS_IV8_I_SV_PHI26]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDVARS_IV8_I_SV_PHI26]], 1
 ; CHECK-NEXT:    br label [[FOR_BODY3_US_I:%.*]]
 ; CHECK:       for.inc8.us.i2:
@@ -196,14 +196,14 @@ for.body3.us.i:                                   ; preds = %meshBB, %for.body3.
   %0 = add nsw i64 %indvars.iv.i.SV.phi, %indvars.iv8.i.SV.phi26
   %1 = trunc i64 %0 to i32
   %mul.i.us.i = mul nsw i32 0, %1
-  %arrayidx5.us.i = getelementptr inbounds double, double* %u, i64 %indvars.iv.i.SV.phi
-  %2 = load double, double* %arrayidx5.us.i, align 8
+  %arrayidx5.us.i = getelementptr inbounds double, ptr %u, i64 %indvars.iv.i.SV.phi
+  %2 = load double, ptr %arrayidx5.us.i, align 8
   %indvars.iv.next.i = add i64 %indvars.iv.i.SV.phi, 1
   br i1 undef, label %for.inc8.us.i, label %meshBB
 
 for.body3.lr.ph.us.i:                             ; preds = %meshBB1, %meshBB
   %indvars.iv8.i.SV.phi26 = phi i64 [ undef, %meshBB1 ], [ %indvars.iv8.i.SV.phi24, %meshBB ]
-  %arrayidx.us.i = getelementptr inbounds double, double* undef, i64 %indvars.iv8.i.SV.phi26
+  %arrayidx.us.i = getelementptr inbounds double, ptr undef, i64 %indvars.iv8.i.SV.phi26
   %3 = add i64 %indvars.iv8.i.SV.phi26, 1
   br label %for.body3.us.i
 

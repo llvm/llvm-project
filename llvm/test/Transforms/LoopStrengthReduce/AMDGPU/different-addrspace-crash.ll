@@ -21,10 +21,10 @@ entry:
 
 loop:
   %idx0 = phi i32 [ %next_idx0, %loop ], [ 0, %entry ]
-  %0 = getelementptr inbounds i32, i32 addrspace(5)* null, i32 %idx0
-  %1 = getelementptr inbounds i32, i32 addrspace(1)* null, i32 %idx0
-  store i32 1, i32 addrspace(5)* %0
-  store i32 7, i32 addrspace(1)* %1
+  %0 = getelementptr inbounds i32, ptr addrspace(5) null, i32 %idx0
+  %1 = getelementptr inbounds i32, ptr addrspace(1) null, i32 %idx0
+  store i32 1, ptr addrspace(5) %0
+  store i32 7, ptr addrspace(1) %1
   %next_idx0 = add nuw nsw i32 %idx0, 1
   br label %loop
 }

@@ -3,7 +3,7 @@
 
 declare void @sideeffect()
 
-define void @unused_byref_arg(i32* byref(i32) %dead_arg) {
+define void @unused_byref_arg(ptr byref(i32) %dead_arg) {
 ; CHECK-LABEL: @unused_byref_arg(
 ; CHECK-NEXT:    tail call void @sideeffect()
 ; CHECK-NEXT:    ret void
@@ -12,9 +12,9 @@ define void @unused_byref_arg(i32* byref(i32) %dead_arg) {
   ret void
 }
 
-define void @dont_replace_by_poison(i32* %ptr) {
+define void @dont_replace_by_poison(ptr %ptr) {
 ; CHECK-LABEL: @dont_replace_by_poison(
-; CHECK-NEXT:    call void @unused_byref_arg(i32* byref(i32) poison)
+; CHECK-NEXT:    call void @unused_byref_arg(ptr byref(i32) poison)
 ; CHECK-NEXT:    ret void
 ;
   call void @unused_byref_arg(i32* byref(i32) %ptr)
