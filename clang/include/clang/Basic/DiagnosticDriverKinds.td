@@ -77,9 +77,9 @@ def err_drv_hipspv_no_hip_path : Error<
   "'--hip-path' must be specified when offloading to "
   "SPIR-V%select{| unless %1 is given}0.">;
 
-def err_drv_undetermined_amdgpu_arch : Error<
-  "cannot determine AMDGPU architecture: %0; consider passing it via "
-  "'--march'">;
+def err_drv_undetermined_gpu_arch : Error<
+  "cannot determine %0 architecture: %1; consider passing it via "
+  "'%2'">;
 def err_drv_cuda_version_unsupported : Error<
   "GPU arch %0 is supported by CUDA versions between %1 and %2 (inclusive), "
   "but installation at %3 is %4; use '--cuda-path' to specify a different CUDA "

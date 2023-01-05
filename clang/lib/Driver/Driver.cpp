@@ -3078,17 +3078,19 @@ class OffloadingActionBuilder final {
           if (A->getOption().matches(options::OPT_no_offload_arch_EQ) &&
               ArchStr == "all") {
             GpuArchs.clear();
-          } else if (ArchStr == "native" &&
-                     ToolChains.front()->getTriple().isAMDGPU()) {
-            auto *TC = static_cast<const toolchains::HIPAMDToolChain *>(
-                ToolChains.front());
-            SmallVector<std::string, 1> GPUs;
-            auto Err = TC->detectSystemGPUs(Args, GPUs);
-            if (!Err) {
-              for (auto GPU : GPUs)
-                GpuArchs.insert(Args.MakeArgString(GPU));
-            } else
-              llvm::consumeError(std::move(Err));
+          } else if (ArchStr == "native") {
+            const ToolChain &TC = *ToolChains.front();
+            auto GPUsOrErr = ToolChains.front()->getSystemGPUArchs(Args);
+            if (!GPUsOrErr) {
+              TC.getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
+                  << llvm::Triple::getArchTypeName(TC.getArch())
+                  << llvm::toString(GPUsOrErr.takeError()) << "--offload-arch";
+              continue;
+            }
+
+            for (auto GPU : *GPUsOrErr) {
+              GpuArchs.insert(Args.MakeArgString(GPU));
+            }
           } else {
             ArchStr = getCanonicalOffloadArch(ArchStr);
             if (ArchStr.empty()) {
