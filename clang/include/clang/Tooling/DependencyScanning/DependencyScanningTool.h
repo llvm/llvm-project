@@ -12,11 +12,13 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
+#include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/CAS/CASID.h"
+#include "llvm/Support/PrefixMapper.h"
 #include <optional>
 #include <string>
 #include <vector>
@@ -33,8 +35,6 @@ class IncludeTreeRoot;
 }
 namespace tooling {
 namespace dependencies {
-
-struct DepscanPrefixMapping;
 
 /// A callback to lookup module outputs for "-fmodule-file=", "-o" etc.
 using LookupModuleOutputCallback =
@@ -82,8 +82,6 @@ struct FullDependenciesResult {
   std::vector<ModuleDeps> DiscoveredModules;
 };
 
-using RemapPathCallback = llvm::cas::CachingOnDiskFileSystem::RemapPathCallback;
-
 /// The high-level implementation of the dependency discovery tool that runs on
 /// an individual worker thread.
 class DependencyScanningTool {
@@ -116,7 +114,8 @@ public:
   getDependencyTreeFromCompilerInvocation(
       std::shared_ptr<CompilerInvocation> Invocation, StringRef CWD,
       DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
-      bool DiagGenerationAsCompilation, RemapPathCallback RemapPath = nullptr);
+      bool DiagGenerationAsCompilation,
+      DepscanPrefixMapping PrefixMapping = {});
 
   Expected<cas::IncludeTreeRoot>
   getIncludeTree(cas::ObjectStore &DB,
@@ -187,8 +186,8 @@ public:
                          LookupModuleOutputCallback LookupModuleOutput,
                          bool EagerLoadModules,
                          CachingOnDiskFileSystemPtr CacheFS = nullptr,
-                         RemapPathCallback RemapPath = nullptr)
-      : CacheFS(std::move(CacheFS)), RemapPath(RemapPath),
+                         DepscanPrefixMapping PrefixMapping = {})
+      : CacheFS(std::move(CacheFS)), PrefixMapping(std::move(PrefixMapping)),
         AlreadySeen(AlreadySeen), LookupModuleOutput(LookupModuleOutput),
         EagerLoadModules(EagerLoadModules) {}
 
@@ -251,7 +250,8 @@ private:
   std::vector<Command> Commands;
   std::string ContextHash;
   CachingOnDiskFileSystemPtr CacheFS;
-  RemapPathCallback RemapPath;
+  DepscanPrefixMapping PrefixMapping;
+  std::optional<llvm::TreePathPrefixMapper> Mapper;
   CASOptions CASOpts;
   std::optional<cas::CASID> CASFileSystemRootID;
   std::vector<std::string> OutputPaths;
