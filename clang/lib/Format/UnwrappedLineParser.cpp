@@ -836,6 +836,11 @@ bool UnwrappedLineParser::mightFitOnOneLine(
     Length -= OpeningBrace->TokenText.size() + 1;
   }
 
+  if (const auto *FirstToken = Line.First; FirstToken->is(tok::r_brace)) {
+    assert(!OpeningBrace || OpeningBrace->is(TT_ControlStatementLBrace));
+    Length -= FirstToken->TokenText.size() + 1;
+  }
+
   Index = 0;
   for (auto &Token : Tokens) {
     const auto &SavedToken = SavedTokens[Index++];
