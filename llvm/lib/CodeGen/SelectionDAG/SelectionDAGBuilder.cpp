@@ -7781,11 +7781,13 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
     setValue(&VPIntrin, N);
     break;
   }
+  case ISD::VP_ABS:
   case ISD::VP_CTLZ:
   case ISD::VP_CTLZ_ZERO_UNDEF:
   case ISD::VP_CTTZ:
   case ISD::VP_CTTZ_ZERO_UNDEF: {
-    // Pop is_zero_poison operand.
+    // Pop is_zero_poison operand for cp.ctlz/cttz or
+    // is_int_min_poison operand for vp.abs.
     OpValues.pop_back();
     SDValue Result = DAG.getNode(Opcode, DL, VTs, OpValues);
     setValue(&VPIntrin, Result);

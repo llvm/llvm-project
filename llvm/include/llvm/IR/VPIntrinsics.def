@@ -216,6 +216,10 @@ BEGIN_REGISTER_VP(vp_umax, 2, 3, VP_UMAX, -1)
 VP_PROPERTY_BINARYOP
 END_REGISTER_VP(vp_umax, VP_UMAX)
 
+// llvm.vp.abs(x,mask,vlen,is_int_min_poison)
+BEGIN_REGISTER_VP(vp_abs, 1, 2, VP_ABS, -1)
+END_REGISTER_VP(vp_abs, VP_ABS)
+
 // llvm.vp.bswap(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_bswap, 1, 2, VP_BSWAP, -1)
 END_REGISTER_VP(vp_bswap, VP_BSWAP)
