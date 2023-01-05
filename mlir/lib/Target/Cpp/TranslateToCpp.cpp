@@ -1042,3 +1042,4 @@ LogicalResult emitc::translateToCpp(Operation *op, raw_ostream &os,
   CppEmitter emitter(os, declareVariablesAtTop);
   return emitter.emitOperation(*op, /*trailingSemicolon=*/false);
 }
+

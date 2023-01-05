@@ -29,9 +29,15 @@ class ExecutionEngine(_execution_engine.ExecutionEngine):
     Raise a RuntimeError if the function isn't found.
     """
     func = self.lookup(name)
+    print("Invoking CTypes function '%s'" % name)
+    print("Func object: ")
+    print(func)
     packed_args = (ctypes.c_void_p * len(ctypes_args))()
+    print("Passing %d args using void ptrs." % len(ctypes_args))
     for argNum in range(len(ctypes_args)):
       packed_args[argNum] = ctypes.cast(ctypes_args[argNum], ctypes.c_void_p)
+      print("Arg %d:" % argNum)
+      print(ctypes_args[argNum])
     func(packed_args)
 
   def register_runtime(self, name, ctypes_callback):
