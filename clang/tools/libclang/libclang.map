@@ -487,6 +487,8 @@ LLVM_16 {
     clang_getNonReferenceType;
     clang_CXXMethod_isDeleted;
     clang_createAPISet;
+    clang_getDiagnosticFileContents;
+    clang_getDiagnosticFileOriginalSourceRange;
     clang_disposeAPISet;
     clang_getSymbolGraphForCursor;
     clang_getSymbolGraphForUSR;
