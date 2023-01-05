@@ -34,6 +34,13 @@ class Error;
 
 namespace exegesis {
 
+enum class BenchmarkPhaseSelectorE {
+  StopBeforeAllCodegen,
+  StopBeforeFullCodegen,
+  StopBeforeMeasurements,
+  Measure,
+};
+
 enum class InstructionBenchmarkFilter { All, RegOnly, WithMem };
 
 struct InstructionBenchmarkKey {
