@@ -343,23 +343,20 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
     };
 
     if (sectionType(sec.flags) == S_CSTRING_LITERALS) {
-      if (sec.nreloc && config->dedupStrings)
-        fatal(toString(this) + " contains relocations in " + sec.segname + "," +
-              sec.sectname +
-              ", so LLD cannot deduplicate strings. Try re-running with "
-              "--no-deduplicate-strings.");
-
-      InputSection *isec = make<CStringInputSection>(
-          section, data, align,
-          /*dedupLiterals=*/name == section_names::objcMethname ||
-              config->dedupStrings);
+      if (sec.nreloc)
+        fatal(toString(this) + ": " + sec.segname + "," + sec.sectname +
+              " contains relocations, which is unsupported");
+      bool dedupLiterals =
+          name == section_names::objcMethname || config->dedupStrings;
+      InputSection *isec =
+          make<CStringInputSection>(section, data, align, dedupLiterals);
       // FIXME: parallelize this?
       cast<CStringInputSection>(isec)->splitIntoPieces();
       section.subsections.push_back({0, isec});
     } else if (isWordLiteralSection(sec.flags)) {
       if (sec.nreloc)
-        fatal(toString(this) + " contains unsupported relocations in " +
-              sec.segname + "," + sec.sectname);
+        fatal(toString(this) + ": " + sec.segname + "," + sec.sectname +
+              " contains relocations, which is unsupported");
       InputSection *isec = make<WordLiteralInputSection>(section, data, align);
       section.subsections.push_back({0, isec});
     } else if (auto recordSize = getRecordSize(segname, name)) {
