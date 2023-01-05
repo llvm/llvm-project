@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <utility>
 #include <optional>
+#include <utility>
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -239,6 +239,140 @@ private:
   LinalgTransformationFilter filter;
 };
 
+/// Pattern to tile a consumer and fuse producer with it
+/// while reconstructing the value of the fused producer
+/// from within the loop nest to replace any external
+/// uses of the producer. In general yielding the producer
+/// this way requires a guarantee that the slice of the producer
+/// is not computed redundantly within the tiled loops. An analysis that
+/// figures it out has shown to be very complex. So this is left as a caller
+/// side determination. In this test pattern it is assumed that the tile sizes
+/// are selected such that all producers when fused into the tiled loops do no
+/// have redundant computation.
+struct TestTileConsumerFuseAndYieldProducerUsingSCFForOp
+    : public OpInterfaceRewritePattern<TilingInterface> {
+
+  TestTileConsumerFuseAndYieldProducerUsingSCFForOp(
+      MLIRContext *context, scf::SCFTilingOptions options,
+      LinalgTransformationFilter filter = LinalgTransformationFilter(),
+      PatternBenefit benefit = 1)
+      : OpInterfaceRewritePattern<TilingInterface>(context, benefit),
+        options(std::move(options)), filter(std::move(filter)) {}
+
+  LogicalResult matchAndRewrite(TilingInterface rootOp,
+                                PatternRewriter &rewriter) const override {
+    if (failed(filter.checkAndNotify(rewriter, rootOp)))
+      return failure();
+
+    // Collect list of operations that can be tiled and fused.
+    llvm::SmallDenseSet<Operation *> tiledAndFusedOps =
+        collectTiledAndFusedOps(rootOp);
+    auto isIgnoredUser = [&](Operation *user, scf::ForOp outerMostTiledLoop) {
+      return tiledAndFusedOps.count(user) || isa<tensor::DimOp>(user) ||
+             outerMostTiledLoop->isAncestor(user);
+    };
+
+    // The rest of this method is similar to
+    // scf::tileAndFuseGreedilyUsingSCFForOp, except that also yields
+    // replacements for values of the fused producer.
+
+    // 1. Tile the consumer.
+    SmallVector<OpResult> yieldedValuesToOrigValues;
+    FailureOr<scf::SCFTilingResult> tilingResult =
+        scf::tileUsingSCFForOp(rewriter, rootOp, options);
+    if (failed(tilingResult)) {
+      return rewriter.notifyMatchFailure(rootOp,
+                                         "failed to tile base operation");
+    }
+    yieldedValuesToOrigValues.append(rootOp->result_begin(),
+                                     rootOp->result_end());
+
+    // 2. Tiling each operation results in generation of slices. The source of
+    // these slices could be producers that can be fused into the tiled loops by
+    // computing the slices of these producers in-place. This results in more
+    // slices created for operands of the "fused producer". This open up more
+    // opportunities for fusion. Use a worklist to fuse greedily.
+    auto addCandidateSlices =
+        [](Operation *fusedOp, std::deque<tensor::ExtractSliceOp> &candidates) {
+          for (Value operand : fusedOp->getOperands())
+            if (auto sliceOp = operand.getDefiningOp<tensor::ExtractSliceOp>())
+              candidates.push_back(sliceOp);
+        };
+
+    std::deque<tensor::ExtractSliceOp> candidates;
+    addCandidateSlices(tilingResult->tiledOps.back(), candidates);
+    OpBuilder::InsertionGuard g(rewriter);
+    while (!candidates.empty()) {
+      // Traverse the slices in BFS fashion.
+      tensor::ExtractSliceOp candidateSliceOp = candidates.front();
+      candidates.pop_front();
+
+      // Materialize the slice of the producer in place.
+      std::optional<scf::SCFFuseProducerOfSliceResult> fusedProducer =
+          tileAndFuseProducerOfSlice(rewriter, candidateSliceOp,
+                                     tilingResult->loops);
+      if (!fusedProducer)
+        continue;
+
+      // Check if the fused producer has other uses that require the value
+      // to be yielded from within the tiled loop.
+      OpResult untiledProducer = fusedProducer->origProducer;
+      if (llvm::any_of(untiledProducer.getUsers(), [&](Operation *user) {
+            return !isIgnoredUser(user, tilingResult->loops.front());
+          })) {
+        yieldReplacementForFusedProducer(rewriter, candidateSliceOp,
+                                         fusedProducer.value(),
+                                         tilingResult->loops);
+        yieldedValuesToOrigValues.push_back(untiledProducer);
+      }
+
+      // Add more fusion candidates to the worklist.
+      if (auto fusedProducerOp =
+              fusedProducer->tiledAndFusedProducer.getDefiningOp())
+        addCandidateSlices(fusedProducerOp, candidates);
+    }
+
+    scf::ForOp outermostLoop = tilingResult->loops.front();
+    for (auto [index, origVal] : llvm::enumerate(yieldedValuesToOrigValues)) {
+      Value replacement = outermostLoop.getResult(index);
+      rewriter.replaceUseIf(origVal, replacement, [&](OpOperand &use) {
+        return !isIgnoredUser(use.getOwner(), outermostLoop);
+      });
+    }
+    rewriter.eraseOp(rootOp);
+    filter.replaceLinalgTransformationFilter(rewriter,
+                                             tilingResult->tiledOps.back());
+    return success();
+  }
+
+private:
+  /// Starting from `op` walk all operands backwards to find all
+  /// potentially fusable operations, i.e. operations that implement
+  /// the `TilingInterface`.
+  llvm::SmallDenseSet<Operation *>
+  collectTiledAndFusedOps(Operation *op) const {
+    SmallVector<Operation *> worklist;
+    llvm::SmallDenseSet<Operation *> producers;
+    worklist.push_back(op);
+    producers.insert(op);
+    while (!worklist.empty()) {
+      Operation *current = worklist.pop_back_val();
+      for (OpOperand &operand : current->getOpOperands()) {
+        Operation *producer = operand.get().getDefiningOp();
+        if (!producer || !isa<TilingInterface>(producer) ||
+            producers.count(producer))
+          continue;
+        worklist.push_back(producer);
+        producers.insert(producer);
+      }
+    }
+    return producers;
+  }
+
+  scf::SCFTilingOptions options;
+  LinalgTransformationFilter filter;
+};
+
 /// Pattern to lower operations that implement the `TilingInterface` to
 /// loops/scalar IR using `scf.for`.
 struct LowerToLoopsUsingSCFForOp
@@ -283,6 +417,13 @@ struct TestTilingInterfacePass
           "Test tiling using TilingInterface with scf.for operations"),
       llvm::cl::init(false)};
 
+  Option<bool> testTileConsumerFuseAndYieldProducer{
+      *this, "tile-consumer-fuse-and-yield-producer-using-scf-for",
+      llvm::cl::desc(
+          "Test tile and fuse transformation while yielding fused producer "
+          "replacements using TilingInterface with scf.for operations"),
+      llvm::cl::init(false)};
+
   Option<bool> testTileConsumerAndFuseProducer{
       *this, "tile-consumer-and-fuse-producer-using-scf-for",
       llvm::cl::desc("Test tile and fuse transformation using TilingInterface "
@@ -312,6 +453,19 @@ static void addPatternForTiling(MLIRContext *context,
   LinalgTransformationFilter filter(StringAttr::get(context, filterName),
                                     StringAttr::get(context, "tiled"));
   patterns.add<TestTileUsingSCFForOp>(context, tilingOptions, filter);
+}
+
+static void addPatternForTileFuseAndYield(MLIRContext *context,
+                                          RewritePatternSet &patterns,
+                                          StringRef filterName,
+                                          ArrayRef<int64_t> tileSizes,
+                                          ArrayRef<int64_t> interchange = {}) {
+  scf::SCFTilingOptions tilingOptions;
+  tilingOptions.setTileSizes(tileSizes).setInterchange(interchange);
+  LinalgTransformationFilter filter(StringAttr::get(context, filterName),
+                                    StringAttr::get(context, "tiled"));
+  patterns.add<TestTileConsumerFuseAndYieldProducerUsingSCFForOp>(
+      context, tilingOptions, filter);
 }
 
 static void addPatternForTileAndFuse(MLIRContext *context,
@@ -373,6 +527,12 @@ void TestTilingInterfacePass::addTestPatterns(MLIRContext *context,
     // 6. Fusion of back-to-back-reduction ops
     addPatternForTileAndFuse(context, patterns, "reduction_sequence_fusion",
                              {10});
+    return;
+  }
+  if (testTileConsumerFuseAndYieldProducer) {
+    // 1. Fusion of back-to-back-reduction ops
+    addPatternForTileFuseAndYield(context, patterns,
+                                  "gemm_sequence_fusion_and_yield", {10});
     return;
   }
   if (testLoweringToScalar) {

@@ -505,10 +505,12 @@ getUntiledProducerFromSliceSource(OpOperand *source,
   return {source->get().dyn_cast<OpResult>(), destinationIterArg};
 }
 
-static std::optional<Operation *>
-tileAndFuseProducerOfSlice(RewriterBase &rewriter,
-                           tensor::ExtractSliceOp candidateSliceOp,
-                           MutableArrayRef<scf::ForOp> loops) {
+/// Implementation of fusing producer of a single slice by computing the
+/// slice of the producer in-place.
+std::optional<scf::SCFFuseProducerOfSliceResult>
+mlir::scf::tileAndFuseProducerOfSlice(RewriterBase &rewriter,
+                                      tensor::ExtractSliceOp candidateSliceOp,
+                                      MutableArrayRef<scf::ForOp> loops) {
   // 1. Get the producer of the source (potentially walking through
   // `iter_args` of nested `scf.for`)
   auto [fusableProducer, destinationIterArg] =
@@ -597,7 +599,34 @@ tileAndFuseProducerOfSlice(RewriterBase &rewriter,
           innerMostLoop.getRegionIterArgs()[iterArgNumber.value()]);
     }
   }
-  return fusedProducerValue->getDefiningOp();
+  return scf::SCFFuseProducerOfSliceResult{fusableProducer,
+                                           fusedProducerValue.value()};
+}
+
+/// Reconstruct the fused producer from within the tiled-and-fused code.
+void mlir::scf::yieldReplacementForFusedProducer(
+    RewriterBase &rewriter, tensor::ExtractSliceOp sliceOp,
+    scf::SCFFuseProducerOfSliceResult fusedProducerInfo,
+    MutableArrayRef<scf::ForOp> loops) {
+  auto [fusableProducer, fusedProducerValue] = fusedProducerInfo;
+  SmallVector<Value> initValues;
+  FailureOr<Value> initValue = tensor::getOrCreateDestination(
+      rewriter, fusableProducer.getOwner()->getLoc(), fusableProducer);
+  if (succeeded(initValue)) {
+    SmallVector<OpFoldResult> resultOffsets = sliceOp.getMixedOffsets();
+    SmallVector<OpFoldResult> resultSizes = sliceOp.getMixedSizes();
+    SmallVector<Value> yieldedVals =
+        yieldTiledValues(rewriter, initValue.value(), fusedProducerValue,
+                         resultOffsets, resultSizes, loops);
+  }
+  if (auto dstStyleProducer =
+          fusedProducerValue.getDefiningOp<DestinationStyleOpInterface>()) {
+    Value dstValue =
+        dstStyleProducer.getDpsInitOperand(fusableProducer.getResultNumber())
+            ->get();
+    updateDestinationOperandsForTiledOp(
+        rewriter, dstValue, loops.back().getRegionIterArgs().back());
+  }
 }
 
 /// Implementation of tile consumer and fuse producer greedily.
@@ -661,13 +690,17 @@ mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
     // The operands of the fused producer might themselved be slices of
     // values produced by operations that implement the `TilingInterface`.
     // Add these operations to the worklist.
-    Optional<Operation *> fusedProducer = tileAndFuseProducerOfSlice(
-        rewriter, candidateSliceOp, tileAndFuseResult.loops);
+    std::optional<scf::SCFFuseProducerOfSliceResult> fusedProducer =
+        tileAndFuseProducerOfSlice(rewriter, candidateSliceOp,
+                                   tileAndFuseResult.loops);
     if (!fusedProducer)
       continue;
 
-    tileAndFuseResult.tiledAndFusedOps.insert(fusedProducer.value());
-    addCandidateSlices(fusedProducer.value(), candidates);
+    if (Operation *tiledAndFusedOp =
+            fusedProducer->tiledAndFusedProducer.getDefiningOp()) {
+      tileAndFuseResult.tiledAndFusedOps.insert(tiledAndFusedOp);
+      addCandidateSlices(tiledAndFusedOp, candidates);
+    }
   }
   return tileAndFuseResult;
 }
