@@ -10,8 +10,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_arg_tls = external thread_local(initialexec) global [[TLS_ARR:\[100 x i64\]]]
 define void @cached_shadows(double %arg) {
   ; CHECK: @cached_shadows.dfsan
-  ; CHECK:  [[AO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align
-  ; CHECK:  [[AS:%.*]] = load i8, i8* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i8*), align [[ALIGN:2]]
+  ; CHECK:  [[AO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align
+  ; CHECK:  [[AS:%.*]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN:2]]
   ; CHECK: [[L1:.+]]:
   ; CHECK:  {{.*}} = phi i8
   ; CHECK:  {{.*}} = phi i32
@@ -47,18 +47,18 @@ define void @cached_shadows(double %arg) {
 bb:
   %i = alloca double, align 8
   %i1 = alloca double, align 8
-  %i2 = bitcast double* %i to i8*
-  store volatile double 1.000000e+00, double* %i, align 8
-  %i3 = bitcast double* %i1 to i8*
-  store volatile double 2.000000e+00, double* %i1, align 8
+  %i2 = bitcast ptr %i to ptr
+  store volatile double 1.000000e+00, ptr %i, align 8
+  %i3 = bitcast ptr %i1 to ptr
+  store volatile double 2.000000e+00, ptr %i1, align 8
   br label %bb4
 
 bb4:                                              ; preds = %bb16, %bb
   %i5 = phi double [ 3.000000e+00, %bb ], [ %i17, %bb16 ]
   %i6 = phi double [ 4.000000e+00, %bb ], [ %i18, %bb16 ]
-  %i7 = load volatile double, double* %i1, align 8
+  %i7 = load volatile double, ptr %i1, align 8
   %i8 = fcmp une double %i7, 0.000000e+00
-  %i9 = load volatile double, double* %i1, align 8
+  %i9 = load volatile double, ptr %i1, align 8
   br i1 %i8, label %bb10, label %bb14
 
 bb10:                                             ; preds = %bb4
@@ -70,7 +70,7 @@ bb12:                                             ; preds = %bb10
   br label %bb16
 
 bb14:                                             ; preds = %bb4
-  store volatile double %i9, double* %i, align 8
+  store volatile double %i9, ptr %i, align 8
   %i15 = fadd double %i6, %arg
   br label %bb16
 
