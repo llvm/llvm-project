@@ -115,9 +115,8 @@ public:
 
   void trackNewAccesses() final;
   std::error_code excludeFromTracking(const Twine &Path) final;
-  Expected<ObjectProxy> createTreeFromNewAccesses(
-      llvm::function_ref<StringRef(const vfs::CachedDirectoryEntry &)>
-          RemapPath) final;
+  Expected<ObjectProxy>
+  createTreeFromNewAccesses(RemapPathCallback RemapPath) final;
   Expected<ObjectProxy> createTreeFromAllAccesses() final;
   std::unique_ptr<CachingOnDiskFileSystem::TreeBuilder>
   createTreeBuilder() final;
@@ -695,8 +694,7 @@ CachingOnDiskFileSystemImpl::excludeFromTracking(const Twine &Path) {
 }
 
 Expected<ObjectProxy> CachingOnDiskFileSystemImpl::createTreeFromNewAccesses(
-    llvm::function_ref<StringRef(const vfs::CachedDirectoryEntry &)>
-        RemapPath) {
+    RemapPathCallback RemapPath) {
   DenseMap<const DirectoryEntry *, TrackingState> TrackedAccesses;
   DenseSet<const DirectoryEntry *> ExcludedAccesses;
   {
@@ -726,7 +724,9 @@ Expected<ObjectProxy> CachingOnDiskFileSystemImpl::createTreeFromNewAccesses(
     if (IsExcluded(Entry))
       continue;
 
-    StringRef Path = RemapPath ? RemapPath(*Entry) : Entry->getTreePath();
+    SmallString<128> Storage;
+    StringRef Path =
+        RemapPath ? RemapPath(*Entry, Storage) : Entry->getTreePath();
 
     // FIXME: If Entry is a symbol link, the spelling of its target should be
     // remapped.

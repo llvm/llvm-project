@@ -247,8 +247,6 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
       Tool.getScanningFormat() ==
       tooling::dependencies::ScanningOutputFormat::IncludeTree;
 
-  llvm::BumpPtrAllocator Alloc;
-  llvm::StringSaver Saver(Alloc);
   std::unique_ptr<llvm::PrefixMapper> MapperPtr;
   if (ProduceIncludeTree) {
     MapperPtr = std::make_unique<llvm::PrefixMapper>();
@@ -279,9 +277,10 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
                     std::move(ScanInvocation), WorkingDirectory, DiagsConsumer,
                     VerboseOS,
                     /*DiagGenerationAsCompilation*/ true,
-                    [&](const llvm::vfs::CachedDirectoryEntry &Entry) {
+                    [&](const llvm::vfs::CachedDirectoryEntry &Entry,
+                        SmallVectorImpl<char> &Storage) {
                       return static_cast<llvm::TreePathPrefixMapper &>(Mapper)
-                          .mapDirEntry(Entry, Saver);
+                          .mapDirEntry(Entry, Storage);
                     })
                 .moveInto(Root))
       return std::move(E);

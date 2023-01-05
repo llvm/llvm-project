@@ -194,7 +194,7 @@ public:
   Error add(const MappedPrefix &Mapping) override;
 
   StringRef mapDirEntry(const vfs::CachedDirectoryEntry &Entry,
-                        StringSaver &Saver);
+                        SmallVectorImpl<char> &Storage);
 
   TreePathPrefixMapper(IntrusiveRefCntPtr<vfs::FileSystem> FS,
                        sys::path::Style PathStyle = sys::path::Style::native);

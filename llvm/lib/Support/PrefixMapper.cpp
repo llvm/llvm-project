@@ -226,10 +226,9 @@ Error TreePathPrefixMapper::add(const MappedPrefix &Mapping) {
 
 StringRef
 TreePathPrefixMapper::mapDirEntry(const vfs::CachedDirectoryEntry &Entry,
-                                  StringSaver &Saver) {
+                                  SmallVectorImpl<char> &Storage) {
   StringRef TreePath = Entry.getTreePath();
-  SmallString<256> PathBuf;
   Optional<StringRef> Mapped =
-      cantFail(PrefixMapper::mapImpl(TreePath, PathBuf));
-  return Mapped ? Saver.save(*Mapped) : TreePath;
+      cantFail(PrefixMapper::mapImpl(TreePath, Storage));
+  return Mapped ? *Mapped : TreePath;
 }

@@ -168,9 +168,7 @@ llvm::Expected<llvm::cas::ObjectProxy>
 DependencyScanningTool::getDependencyTreeFromCompilerInvocation(
     std::shared_ptr<CompilerInvocation> Invocation, StringRef CWD,
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
-    bool DiagGenerationAsCompilation,
-    llvm::function_ref<StringRef(const llvm::vfs::CachedDirectoryEntry &)>
-        RemapPath) {
+    bool DiagGenerationAsCompilation, RemapPathCallback RemapPath) {
   GetDependencyTree Consumer(Worker.getCASFS().getCAS());
   Worker.computeDependenciesFromCompilerInvocation(
       std::move(Invocation), CWD, Consumer, RemapPath, DiagsConsumer, VerboseOS,
