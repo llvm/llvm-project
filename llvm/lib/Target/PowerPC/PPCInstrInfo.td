@@ -3327,9 +3327,9 @@ def : Pat<(i64 (sext i1:$in)),
 // FIXME: We should choose either a zext or a sext based on other constants
 // already around.
 def : Pat<(i32 (anyext i1:$in)),
-          (SELECT_I4 i1:$in, (LI 1), (LI 0))>;
+          (SELECT_I4 crbitrc:$in, (LI 1), (LI 0))>;
 def : Pat<(i64 (anyext i1:$in)),
-          (SELECT_I8 i1:$in, (LI8 1), (LI8 0))>;
+          (SELECT_I8 crbitrc:$in, (LI8 1), (LI8 0))>;
 
 // match setcc on i1 variables.
 // CRANDC is:
