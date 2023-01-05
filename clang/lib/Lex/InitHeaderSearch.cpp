@@ -231,7 +231,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
   if (HSOpts.UseStandardSystemIncludes) {
     switch (os) {
     case llvm::Triple::CloudABI:
-    case llvm::Triple::NetBSD:
     case llvm::Triple::NaCl:
     case llvm::Triple::PS4:
     case llvm::Triple::PS5:
@@ -412,9 +411,10 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
   case llvm::Triple::AIX:
   case llvm::Triple::Emscripten:
   case llvm::Triple::FreeBSD:
+  case llvm::Triple::NetBSD:
+  case llvm::Triple::OpenBSD:
   case llvm::Triple::Hurd:
   case llvm::Triple::Linux:
-  case llvm::Triple::OpenBSD:
   case llvm::Triple::Solaris:
   case llvm::Triple::WASI:
     return false;
