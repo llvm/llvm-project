@@ -3162,6 +3162,9 @@ the configuration (without a prefix: ``Auto``).
       --i;                                      --i;
     while (i);                                } while (i);
 
+**InsertNewlineAtEOF** (``Boolean``) :versionbadge:`clang-format 16`
+  Insert a newline at end of file if missing.
+
 **InsertTrailingCommas** (``TrailingCommaStyle``) :versionbadge:`clang-format 11`
   If set to ``TCS_Wrapped`` will insert trailing commas in container
   literals (arrays and objects) that wrap across multiple lines.
