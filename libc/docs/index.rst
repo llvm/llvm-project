@@ -46,7 +46,7 @@ stages there is no ABI stability in any form.
 
 .. toctree::
    :hidden:
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Using
 
    usage_modes
