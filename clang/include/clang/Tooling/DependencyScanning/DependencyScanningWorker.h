@@ -37,8 +37,7 @@ struct Command {
   std::vector<std::string> Arguments;
 };
 
-using RemapPathCallback =
-    llvm::function_ref<StringRef(const llvm::vfs::CachedDirectoryEntry &)>;
+using RemapPathCallback = llvm::cas::CachingOnDiskFileSystem::RemapPathCallback;
 
 class DependencyConsumer {
 public:

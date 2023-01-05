@@ -113,9 +113,7 @@ public:
   getDependencyTreeFromCompilerInvocation(
       std::shared_ptr<CompilerInvocation> Invocation, StringRef CWD,
       DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
-      bool DiagGenerationAsCompilation,
-      llvm::function_ref<StringRef(const llvm::vfs::CachedDirectoryEntry &)>
-          RemapPath = nullptr);
+      bool DiagGenerationAsCompilation, RemapPathCallback RemapPath = nullptr);
 
   Expected<cas::IncludeTreeRoot>
   getIncludeTree(cas::ObjectStore &DB,
