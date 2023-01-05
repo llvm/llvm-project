@@ -2099,8 +2099,7 @@ class getOutsSDWA <bit HasDst, ValueType DstVT, RegisterOperand DstRCSDWA> {
 }
 
 // Returns the assembly string for the inputs and outputs of a VOP[12C]
-// instruction.  This does not add the _e32 suffix, so it can be reused
-// by getAsm64.
+// instruction.
 class getAsm32 <bit HasDst, int NumSrcArgs, ValueType DstVT = i32> {
   string dst = !if(!eq(DstVT.Size, 1), "$sdst", "$vdst"); // use $sdst for VOPC
   string src0 = ", $src0";
@@ -2119,23 +2118,6 @@ class getAsmVOPDPart <int NumSrcArgs, string XorY> {
   string ret = dst #
                !if(!ge(NumSrcArgs, 1), src0, "") #
                !if(!ge(NumSrcArgs, 2), src1, "");
-}
-
-// Returns the assembly string for the inputs and outputs of a VOP3
-// instruction.
-class getAsm64 <bit HasDst, int NumSrcArgs, bit HasIntClamp, bit HasModifiers,
-                bit HasOMod, ValueType DstVT = i32> {
-  string dst = !if(!eq(DstVT.Size, 1), "$sdst", "$vdst"); // use $sdst for VOPC
-  string src0 = !if(!eq(NumSrcArgs, 1), "$src0_modifiers", "$src0_modifiers,");
-  string src1 = !if(!eq(NumSrcArgs, 1), "",
-                   !if(!eq(NumSrcArgs, 2), " $src1_modifiers",
-                                           " $src1_modifiers,"));
-  string src2 = !if(!eq(NumSrcArgs, 3), " $src2_modifiers", "");
-  string iclamp = !if(HasIntClamp, "$clamp", "");
-  string ret =
-  !if(!not(HasModifiers),
-      getAsm32<HasDst, NumSrcArgs, DstVT>.ret # iclamp,
-      dst#", "#src0#src1#src2#"$clamp"#!if(HasOMod, "$omod", ""));
 }
 
 // Returns the assembly string for the inputs and outputs of a VOP3P
@@ -2212,7 +2194,7 @@ class getAsmDPP8 <bit HasDst, int NumSrcArgs, bit HasModifiers, ValueType DstVT 
   let ret = dst#args#" $dpp8$fi";
 }
 
-class getAsmVOP3DPPBase <int NumSrcArgs, bit HasDst, bit HasClamp,
+class getAsmVOP3Base <int NumSrcArgs, bit HasDst, bit HasClamp,
                        bit HasOpSel, bit HasOMod, bit IsVOP3P,
                        bit HasModifiers, bit Src0HasMods,
                        bit Src1HasMods, bit Src2HasMods, ValueType DstVT = i32> {
@@ -2244,7 +2226,7 @@ class getAsmVOP3DPPBase <int NumSrcArgs, bit HasDst, bit HasClamp,
   string clamp = !if(HasClamp, "$clamp", "");
   string omod = !if(HasOMod, "$omod", "");
 
-  string ret = dst#", "#src0#src1#src2#opsel#3PMods#clamp#omod;
+  string ret = dst#!if(!gt(NumSrcArgs,0),", "#src0#src1#src2#opsel#3PMods#clamp#omod, "");
 
 }
 
@@ -2571,7 +2553,16 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
 
 
   field string Asm32 = getAsm32<HasDst, NumSrcArgs, DstVT>.ret;
-  field string Asm64 = getAsm64<HasDst, NumSrcArgs, HasIntClamp, HasModifiers, HasOMod, DstVT>.ret;
+  field string AsmDPP = !if(HasExtDPP,
+                            getAsmDPP<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret, "");
+  field string AsmDPP16 = getAsmDPP16<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret;
+  // DPP8 encoding has no fields for modifiers, and it is enforced by setting
+  // the asm operand name via this HasModifiers flag
+  field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
+  field string AsmVOP3Base = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
+   HasOpSel, HasOMod, IsVOP3P, HasModifiers, HasModifiers, HasModifiers,
+   HasModifiers, DstVT>.ret;
+  field string Asm64 = AsmVOP3Base;
   field string AsmVOP3P = getAsmVOP3P<NumSrcArgs, HasModifiers, HasClamp, HasOpSel>.ret;
   field string AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs,
                                               HasClamp,
@@ -2579,18 +2570,9 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                               HasSrc0FloatMods,
                                               HasSrc1FloatMods,
                                               HasSrc2FloatMods>.ret;
-  field string AsmDPP = !if(HasExtDPP,
-                            getAsmDPP<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret, "");
-  field string AsmDPP16 = getAsmDPP16<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret;
-  // DPP8 encoding has no fields for modifiers, and it is enforced by setting
-  // the asm operand name via this HasModifiers flag
-  field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
-  field string AsmVOP3DPPBase = getAsmVOP3DPPBase<NumSrcArgs, HasDst, HasClamp,
-   HasOpSel, HasOMod, IsVOP3P, HasModifiers, HasModifiers, HasModifiers,
-   HasModifiers, DstVT>.ret;
-  field string AsmVOP3DPP = getAsmVOP3DPP<AsmVOP3DPPBase>.ret;
-  field string AsmVOP3DPP16 = getAsmVOP3DPP16<AsmVOP3DPPBase>.ret;
-  field string AsmVOP3DPP8 = getAsmVOP3DPP8<AsmVOP3DPPBase>.ret;
+  field string AsmVOP3DPP = getAsmVOP3DPP<AsmVOP3Base>.ret;
+  field string AsmVOP3DPP16 = getAsmVOP3DPP16<AsmVOP3Base>.ret;
+  field string AsmVOP3DPP8 = getAsmVOP3DPP8<AsmVOP3Base>.ret;
   field string AsmSDWA = getAsmSDWA<HasDst, NumSrcArgs, DstVT>.ret;
   field string AsmSDWA9 = getAsmSDWA9<HasDst, HasSDWAOMod, NumSrcArgs, DstVT>.ret;
   field string AsmVOPDX = getAsmVOPDPart<NumSrcArgs, "X">.ret;
