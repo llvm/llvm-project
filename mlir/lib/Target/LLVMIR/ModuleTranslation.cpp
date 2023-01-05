@@ -889,6 +889,10 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     if (function->getAttrOfType<UnitAttr>(LLVMDialect::getReadnoneAttrName()))
       llvmFunc->setDoesNotAccessMemory();
 
+    // Convert function_entry_count attribute to metadata.
+    if (std::optional<uint64_t> entryCount = function.getFunctionEntryCount())
+      llvmFunc->setEntryCount(entryCount.value());
+
     // Convert result attributes.
     if (ArrayAttr allResultAttrs = function.getAllResultAttrs()) {
       llvm::AttrBuilder retAttrs(llvmFunc->getContext());
