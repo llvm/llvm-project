@@ -56,12 +56,8 @@ static inline bool cstring_is_mangled(llvm::StringRef s) {
 // pointers
 static ThreadSafeDenseMap<const char *, ConstString> *
 GetDisplayDemangledNamesCache() {
-  static ThreadSafeDenseMap<const char *, ConstString> *g_cache = nullptr;
-  static std::once_flag g_flag;
-  std::call_once(g_flag, []() -> void {
-    g_cache = new ThreadSafeDenseMap<const char *, ConstString>();
-  });
-  return g_cache;
+  static ThreadSafeDenseMap<const char *, ConstString> g_cache;
+  return &g_cache;
 }
 // END SWIFT
 
