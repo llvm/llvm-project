@@ -17,7 +17,12 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FormatVariadic.h"
+
+#include <array>
+#include <cstdint>
 
 namespace mlir {
 namespace spirv {
@@ -61,41 +66,62 @@ struct ExpandUMulExtendedPattern final : OpRewritePattern<UMulExtendedOp> {
           loc,
           llvm::formatv("Unexpected integer type for WebGPU: '{0}'", elemTy));
 
-    // Calculate the 'low' and the 'high' result separately, using long
-    // multiplication:
+    // Emulate 64-bit multiplication by splitting each input element of type i32
+    // into 2 16-bit digits of type i32. This is so that the intermediate
+    // multiplications and additions do not overflow. We extract these 16-bit
+    // digits from i32 vector elements by masking (low digit) and shifting right
+    // (high digit).
     //
-    // lhs = [0   0]  [a   b]
-    // rhs = [0   0]  [c   d]
-    // --lhs * rhs--
-    // =     [    a * c    ]   [    b * d    ] +
-    //       [ 0 ]    [a * d + b * c]    [ 0 ]
-    //
-    // ==> high = (a * c) + (a * d + b * c) >> 16
-    Value low = rewriter.create<IMulOp>(loc, lhs, rhs);
-
+    // The multiplication algorithm used is the standard (long) multiplication.
+    // Multiplying two i32 integers produces 64 bits of result, i.e., 4 16-bit
+    // digits. After constant-folding, we end up emitting only 4 multiplications
+    // and 4 additions.
     Value cstLowMask = rewriter.create<ConstantOp>(
         loc, lhs.getType(), getScalarOrSplatAttr(argTy, (1 << 16) - 1));
-    auto getLowHalf = [&rewriter, loc, cstLowMask](Value val) {
+    auto getLowDigit = [&rewriter, loc, cstLowMask](Value val) {
       return rewriter.create<BitwiseAndOp>(loc, val, cstLowMask);
     };
 
     Value cst16 = rewriter.create<ConstantOp>(loc, lhs.getType(),
                                               getScalarOrSplatAttr(argTy, 16));
-    auto getHighHalf = [&rewriter, loc, cst16](Value val) {
+    auto getHighDigit = [&rewriter, loc, cst16](Value val) {
       return rewriter.create<ShiftRightLogicalOp>(loc, val, cst16);
     };
 
-    Value lhsLow = getLowHalf(lhs);
-    Value lhsHigh = getHighHalf(lhs);
-    Value rhsLow = getLowHalf(rhs);
-    Value rhsHigh = getHighHalf(rhs);
+    Value cst0 = rewriter.create<ConstantOp>(loc, lhs.getType(),
+                                             getScalarOrSplatAttr(argTy, 0));
 
-    Value high0 = rewriter.create<IMulOp>(loc, lhsHigh, rhsHigh);
-    Value mid = rewriter.create<IAddOp>(
-        loc, rewriter.create<IMulOp>(loc, lhsHigh, rhsLow),
-        rewriter.create<IMulOp>(loc, lhsLow, rhsHigh));
-    Value high1 = getHighHalf(mid);
-    Value high = rewriter.create<IAddOp>(loc, high0, high1);
+    Value lhsLow = getLowDigit(lhs);
+    Value lhsHigh = getHighDigit(lhs);
+    Value rhsLow = getLowDigit(rhs);
+    Value rhsHigh = getHighDigit(rhs);
+
+    std::array<Value, 2> lhsDigits = {lhsLow, lhsHigh};
+    std::array<Value, 2> rhsDigits = {rhsLow, rhsHigh};
+    std::array<Value, 4> resultDigits = {cst0, cst0, cst0, cst0};
+
+    for (auto [i, lhsDigit] : llvm::enumerate(lhsDigits)) {
+      for (auto [j, rhsDigit] : llvm::enumerate(rhsDigits)) {
+        Value &thisResDigit = resultDigits[i + j];
+        Value mul = rewriter.create<IMulOp>(loc, lhsDigit, rhsDigit);
+        Value current = rewriter.createOrFold<IAddOp>(loc, thisResDigit, mul);
+        thisResDigit = getLowDigit(current);
+
+        if (i + j + 1 != resultDigits.size()) {
+          Value &nextResDigit = resultDigits[i + j + 1];
+          Value carry = rewriter.createOrFold<IAddOp>(loc, nextResDigit,
+                                                      getHighDigit(current));
+          nextResDigit = carry;
+        }
+      }
+    }
+
+    auto combineDigits = [loc, cst16, &rewriter](Value low, Value high) {
+      Value highBits = rewriter.create<ShiftLeftLogicalOp>(loc, high, cst16);
+      return rewriter.create<BitwiseOrOp>(loc, low, highBits);
+    };
+    Value low = combineDigits(resultDigits[0], resultDigits[1]);
+    Value high = combineDigits(resultDigits[2], resultDigits[3]);
 
     rewriter.replaceOpWithNewOp<CompositeConstructOp>(
         op, op.getType(), llvm::makeArrayRef({low, high}));
