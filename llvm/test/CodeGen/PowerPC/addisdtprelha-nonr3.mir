@@ -10,8 +10,8 @@
   ; Function Attrs: nounwind
   define void @test1() #0 {
   entry:
-    store i1 true, i1* @x, align 1
-    store i32 20, i32* @y, align 4
+    store i1 true, ptr @x, align 1
+    store i32 20, ptr @y, align 4
     ret void
   }
   

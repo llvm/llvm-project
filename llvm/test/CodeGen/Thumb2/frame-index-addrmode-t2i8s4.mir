@@ -5,10 +5,10 @@
   define dso_local i64 @f() #0 {
   entry:
     %a = alloca [10 x i64], align 8
-    %arrayidx = getelementptr inbounds [10 x i64], [10 x i64]* %a, i32 0, i32 1
-    store volatile i64 1, i64* %arrayidx, align 8
-    %arrayidx1 = getelementptr inbounds [10 x i64], [10 x i64]* %a, i32 0, i32 1
-    %0 = load volatile i64, i64* %arrayidx1, align 8
+    %arrayidx = getelementptr inbounds [10 x i64], ptr %a, i32 0, i32 1
+    store volatile i64 1, ptr %arrayidx, align 8
+    %arrayidx1 = getelementptr inbounds [10 x i64], ptr %a, i32 0, i32 1
+    %0 = load volatile i64, ptr %arrayidx1, align 8
     ret i64 %0
   }
 

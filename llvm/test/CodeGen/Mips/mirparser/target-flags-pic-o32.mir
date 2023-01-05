@@ -13,9 +13,9 @@
   entry:
     %call = tail call i32 @_Z1gi(i32 signext %asd)
     %add = add nsw i32 %call, %asd
-    %0 = load i32, i32* @v, align 4
+    %0 = load i32, ptr @v, align 4
     %add1 = add nsw i32 %add, %0
-    %1 = load i32, i32* @j, align 4
+    %1 = load i32, ptr @j, align 4
     %add2 = add nsw i32 %add1, %1
     ret i32 %add2
   }

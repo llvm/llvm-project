@@ -4,7 +4,7 @@
 # Check that constant is in SGPR registers
 
 --- |
-  define amdgpu_kernel void @const_to_sgpr(i32 addrspace(1)* nocapture %arg, i64 %id) {
+  define amdgpu_kernel void @const_to_sgpr(ptr addrspace(1) nocapture %arg, i64 %id) {
   bb:
     br i1 undef, label %bb1, label %bb2
 
@@ -15,7 +15,7 @@
     ret void
   }
 
-  define amdgpu_kernel void @const_to_sgpr_multiple_use(i32 addrspace(1)* nocapture %arg, i64 %id1, i64 %id2) {
+  define amdgpu_kernel void @const_to_sgpr_multiple_use(ptr addrspace(1) nocapture %arg, i64 %id1, i64 %id2) {
   bb:
     br i1 undef, label %bb1, label %bb2
 
@@ -26,7 +26,7 @@
     ret void
   }
 
-  define amdgpu_kernel void @const_to_sgpr_subreg(i32 addrspace(1)* nocapture %arg, i64 %id) {
+  define amdgpu_kernel void @const_to_sgpr_subreg(ptr addrspace(1) nocapture %arg, i64 %id) {
   bb:
     br i1 undef, label %bb1, label %bb2
 

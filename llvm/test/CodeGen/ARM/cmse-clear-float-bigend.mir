@@ -4,17 +4,17 @@
   target triple = "thumbebv8m.main-arm-none-eabi"
 
   ; Function Attrs: cmse_nonsecure_entry nounwind
-  define hidden arm_aapcs_vfpcc void @secure_foo(void (double, double, double, double, double, double, double, double)* %fptr) local_unnamed_addr #0 {
+  define hidden arm_aapcs_vfpcc void @secure_foo(ptr %fptr) local_unnamed_addr #0 {
   entry:
-    %0 = ptrtoint void (double, double, double, double, double, double, double, double)* %fptr to i32
+    %0 = ptrtoint ptr %fptr to i32
     %and = and i32 %0, -2
-    %1 = inttoptr i32 %and to void (double, double, double, double, double, double, double, double)*
+    %1 = inttoptr i32 %and to ptr
     call arm_aapcs_vfpcc void %1(double 0.000000e+00, double 1.000000e+00, double 2.000000e+00, double 3.000000e+00, double 4.000000e+00, double 5.000000e+00, double 6.000000e+00, double 7.000000e+00) #2
     ret void
   }
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
 
   attributes #0 = { "cmse_nonsecure_entry" nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="preserve-sign" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+8msecext,+armv8-m.main,-d32,-fp64,+fp-armv8,+hwdiv,+thumb-mode,-crypto,-fullfp16,-neon" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #1 = { nounwind }

@@ -6,7 +6,7 @@
 # CHECK-NOT: liveins: $eflags
 
 --- |
-  define void @fun(i16 %arg, i64 %arg1, i8 %arg2, i8* %arg3, i32 %arg4) { ret void}
+  define void @fun(i16 %arg, i64 %arg1, i8 %arg2, ptr %arg3, i32 %arg4) { ret void}
 ...
 ---
 name:            fun
