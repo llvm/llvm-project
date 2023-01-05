@@ -74,6 +74,9 @@ mlirPassManagerGetAsOpPassManager(MlirPassManager passManager);
 MLIR_CAPI_EXPORTED MlirLogicalResult
 mlirPassManagerRunOnOp(MlirPassManager passManager, MlirOperation op);
 
+MLIR_CAPI_EXPORTED MlirLogicalResult
+mlirPassManagerEmitKokkos(MlirPassManager passManager, MlirModule module, const char* cxxSourceFile, const char* pySourceFile);
+
 /// Enable mlir-print-ir-after-all.
 MLIR_CAPI_EXPORTED void
 mlirPassManagerEnableIRPrinting(MlirPassManager passManager);

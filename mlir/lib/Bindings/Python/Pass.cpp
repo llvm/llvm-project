@@ -128,6 +128,17 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
           "Run the pass manager on the provided operation, raising an "
           "MLIRError on failure.")
       .def(
+          "emit_kokkos",
+          [](PyPassManager &passManager, PyModule &module, const char* cxxSourceFile, const char* pySourceFile) {
+            MlirLogicalResult status =
+                mlirPassManagerEmitKokkos(passManager.get(), module.get(), cxxSourceFile, pySourceFile);
+            if (mlirLogicalResultIsFailure(status))
+              throw SetPyError(PyExc_RuntimeError,
+                               "Failure while raising MLIR to Kokkos C++ source code.");
+          },
+          py::arg("module"), py::arg("cxx_source_file"), py::arg("py_source_file"),
+          "Emit Kokkos C++ and Python wrappers for the given module, and throw a RuntimeError on failure.")
+      .def(
           "__str__",
           [](PyPassManager &self) {
             MlirPassManager passManager = self.get();

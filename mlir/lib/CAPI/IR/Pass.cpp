@@ -44,6 +44,13 @@ MlirLogicalResult mlirPassManagerRunOnOp(MlirPassManager passManager,
   return wrap(unwrap(passManager)->run(unwrap(op)));
 }
 
+MlirLogicalResult mlirPassManagerEmitKokkos(MlirPassManager passManager,
+                                     MlirModule module,
+                                     const char* cxxSourceFile,
+                                     const char* pySourceFile) {
+  return wrap(unwrap(passManager)->emitKokkos(unwrap(module), cxxSourceFile, pySourceFile));
+}
+
 void mlirPassManagerEnableIRPrinting(MlirPassManager passManager) {
   return unwrap(passManager)->enableIRPrinting();
 }

@@ -19,6 +19,7 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/ADT/Hashing.h"
+#include "mlir/Target/KokkosCpp/KokkosCppEmitter.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CommandLine.h"
@@ -865,6 +866,29 @@ LogicalResult PassManager::run(Operation *op) {
   // Dump all of the pass statistics if necessary.
   if (passStatisticsMode)
     dumpStatistics();
+  return result;
+}
+
+LogicalResult PassManager::emitKokkos(Operation *op, const char* cxxSourceFile, const char* pySourceFile) {
+  MLIRContext *context = getContext();
+  assert(op->getName() == getOpName(*context) &&
+         "operation has a different name than the PassManager or is from a "
+         "different context");
+
+  // Register all dialects for the current pipeline.
+  DialectRegistry dependentDialects;
+  getDependentDialects(dependentDialects);
+  context->appendDialectRegistry(dependentDialects);
+  for (StringRef name : dependentDialects.getDialectNames())
+    context->getOrLoadDialect(name);
+
+  // Open the file for writing
+  std::error_code ec;
+  llvm::raw_fd_ostream cxxFileHandle(StringRef(cxxSourceFile), ec);
+  llvm::raw_fd_ostream pyFileHandle(StringRef(pySourceFile), ec);
+  LogicalResult result = emitc::translateToKokkosCpp(op, cxxFileHandle, pyFileHandle, false);
+  pyFileHandle.close();
+  cxxFileHandle.close();
   return result;
 }
 

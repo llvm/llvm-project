@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TARGET_CPP_CPPEMITTER_H
-#define MLIR_TARGET_CPP_CPPEMITTER_H
+#ifndef MLIR_TARGET_KOKKOSCPP_KOKKOSCPPEMITTER_H
+#define MLIR_TARGET_KOKKOSCPP_KOKKOSCPPEMITTER_H
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Value.h"
@@ -22,14 +22,14 @@
 namespace mlir {
 namespace emitc {
 
-/// Translates the given operation to C++ code. The operation or operations in
-/// the region of 'op' need almost all be in EmitC dialect. The parameter
-/// 'declareVariablesAtTop' enforces that all variables for op results and block
-/// arguments are declared at the beginning of the function.
-LogicalResult translateToCpp(Operation *op, raw_ostream &os,
-                             bool declareVariablesAtTop = false);
+/// Translates the given operation to Kokkos C++ code.
+LogicalResult translateToKokkosCpp(Operation *op, raw_ostream &os,
+                                bool declareVariablesAtTop = false);
 
+/// Translates the given operation to Kokkos C++ code, with a Python wrapper module written to py_os.
+LogicalResult translateToKokkosCpp(Operation *op, raw_ostream &os, raw_ostream &py_os,
+                                bool declareVariablesAtTop = false);
 } // namespace emitc
 } // namespace mlir
 
-#endif // MLIR_TARGET_CPP_CPPEMITTER_H
+#endif // MLIR_TARGET_KOKKOSCPP_KOKKOSCPPEMITTER_H
