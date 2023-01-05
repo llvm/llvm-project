@@ -948,7 +948,7 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandNonIntegralPtrWithNullBase) {
     auto *GEP = dyn_cast<GetElementPtrInst>(V);
     EXPECT_TRUE(GEP);
     EXPECT_TRUE(cast<Constant>(GEP->getPointerOperand())->isNullValue());
-    EXPECT_EQ(GEP->getNumOperands(), 2);
+    EXPECT_EQ(GEP->getNumOperands(), 2U);
     EXPECT_TRUE(match(
         GEP->getOperand(1),
         m_Add(m_Shl(m_Specific(Offset), m_SpecificInt(2)), m_SpecificInt(1))));
