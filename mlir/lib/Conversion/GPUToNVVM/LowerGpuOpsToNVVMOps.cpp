@@ -239,6 +239,7 @@ static void populateOpPatterns(LLVMTypeConverter &converter,
 void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                                RewritePatternSet &patterns) {
   populateWithGenerated(patterns);
+  patterns.add<GPUPrintfOpToVPrintfLowering>(converter);
   patterns
       .add<GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, NVVM::ThreadIdXOp,
                                        NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>,
