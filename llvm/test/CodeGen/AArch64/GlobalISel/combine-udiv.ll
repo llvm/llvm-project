@@ -147,21 +147,21 @@ define <8 x i16> @combine_vec_udiv_nonuniform3(<8 x i16> %x) {
 ; GISEL-LABEL: combine_vec_udiv_nonuniform3:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    adrp x8, .LCPI3_2
-; GISEL-NEXT:    adrp x9, .LCPI3_3
+; GISEL-NEXT:    adrp x9, .LCPI3_1
 ; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI3_2]
-; GISEL-NEXT:    adrp x8, .LCPI3_1
-; GISEL-NEXT:    ldr q4, [x9, :lo12:.LCPI3_3]
+; GISEL-NEXT:    adrp x8, .LCPI3_3
+; GISEL-NEXT:    ldr q3, [x9, :lo12:.LCPI3_1]
 ; GISEL-NEXT:    umull2 v2.4s, v0.8h, v1.8h
 ; GISEL-NEXT:    umull v1.4s, v0.4h, v1.4h
+; GISEL-NEXT:    neg v3.8h, v3.8h
 ; GISEL-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
-; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI3_1]
+; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI3_3]
 ; GISEL-NEXT:    adrp x8, .LCPI3_0
-; GISEL-NEXT:    neg v2.8h, v2.8h
-; GISEL-NEXT:    sub v3.8h, v0.8h, v1.8h
-; GISEL-NEXT:    usra v1.8h, v3.8h, #1
-; GISEL-NEXT:    ldr q3, [x8, :lo12:.LCPI3_0]
-; GISEL-NEXT:    ushl v1.8h, v1.8h, v2.8h
-; GISEL-NEXT:    cmeq v2.8h, v4.8h, v3.8h
+; GISEL-NEXT:    sub v4.8h, v0.8h, v1.8h
+; GISEL-NEXT:    ldr q5, [x8, :lo12:.LCPI3_0]
+; GISEL-NEXT:    usra v1.8h, v4.8h, #1
+; GISEL-NEXT:    cmeq v2.8h, v2.8h, v5.8h
+; GISEL-NEXT:    ushl v1.8h, v1.8h, v3.8h
 ; GISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; GISEL-NEXT:    ret
   %1 = udiv <8 x i16> %x, <i16 7, i16 23, i16 25, i16 27, i16 31, i16 47, i16 63, i16 127>
