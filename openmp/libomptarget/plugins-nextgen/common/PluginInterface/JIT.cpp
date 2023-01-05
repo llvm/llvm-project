@@ -11,6 +11,7 @@
 #include "JIT.h"
 #include "Debug.h"
 
+#include "Utilities.h"
 #include "omptarget.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -38,6 +39,7 @@
 #include "llvm/Target/TargetOptions.h"
 
 #include <mutex>
+#include <system_error>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -113,17 +115,22 @@ void init(Triple TT) {
 }
 
 Expected<std::unique_ptr<Module>>
-createModuleFromImage(__tgt_device_image *Image, LLVMContext &Context) {
-  StringRef Data((const char *)Image->ImageStart,
-                 (char *)Image->ImageEnd - (char *)Image->ImageStart);
-  std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
-      Data, /* BufferName */ "", /* RequiresNullTerminator */ false);
+createModuleFromMemoryBuffer(std::unique_ptr<MemoryBuffer> &MB,
+                             LLVMContext &Context) {
   SMDiagnostic Err;
   auto Mod = parseIR(*MB, Err, Context);
   if (!Mod)
     return make_error<StringError>("Failed to create module",
                                    inconvertibleErrorCode());
   return Mod;
+}
+Expected<std::unique_ptr<Module>>
+createModuleFromImage(__tgt_device_image *Image, LLVMContext &Context) {
+  StringRef Data((const char *)Image->ImageStart,
+                 (char *)Image->ImageEnd - (char *)Image->ImageStart);
+  std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
+      Data, /* BufferName */ "", /* RequiresNullTerminator */ false);
+  return createModuleFromMemoryBuffer(MB, Context);
 }
 
 CodeGenOpt::Level getCGOptLevel(unsigned OptLevel) {
@@ -189,7 +196,10 @@ createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
 class JITEngine {
 public:
   JITEngine(Triple::ArchType TA, std::string MCpu)
-      : TT(Triple::getArchTypeName(TA)), CPU(MCpu) {
+      : TT(Triple::getArchTypeName(TA)), CPU(MCpu),
+        ReplacementModuleFileName("LIBOMPTARGET_JIT_REPLACEMENT_MODULE"),
+        PreOptIRModuleFileName("LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE"),
+        PostOptIRModuleFileName("LIBOMPTARGET_JIT_POST_OPT_IR_MODULE") {
     std::call_once(InitFlag, init, TT);
   }
 
@@ -214,6 +224,11 @@ private:
   LLVMContext Context;
   const Triple TT;
   const std::string CPU;
+
+  /// Control environment variables.
+  target::StringEnvar ReplacementModuleFileName;
+  target::StringEnvar PreOptIRModuleFileName;
+  target::StringEnvar PostOptIRModuleFileName;
 };
 
 void JITEngine::opt(TargetMachine *TM, TargetLibraryInfoImpl *TLII, Module &M,
@@ -277,7 +292,27 @@ Expected<std::unique_ptr<MemoryBuffer>> JITEngine::backend(Module &M,
   std::unique_ptr<TargetMachine> TM = std::move(*TMOrErr);
   TargetLibraryInfoImpl TLII(TT);
 
+  if (PreOptIRModuleFileName.isPresent()) {
+    std::error_code EC;
+    raw_fd_stream FD(PreOptIRModuleFileName.get(), EC);
+    if (EC)
+      return createStringError(
+          EC, "Could not open %s to write the pre-opt IR module\n",
+          PreOptIRModuleFileName.get().c_str());
+    M.print(FD, nullptr);
+  }
+
   opt(TM.get(), &TLII, M, OptLevel);
+
+  if (PostOptIRModuleFileName.isPresent()) {
+    std::error_code EC;
+    raw_fd_stream FD(PostOptIRModuleFileName.get(), EC);
+    if (EC)
+      return createStringError(
+          EC, "Could not open %s to write the post-opt IR module\n",
+          PreOptIRModuleFileName.get().c_str());
+    M.print(FD, nullptr);
+  }
 
   // Prepare the output buffer and stream for codegen.
   SmallVector<char> CGOutputBuffer;
@@ -291,11 +326,26 @@ Expected<std::unique_ptr<MemoryBuffer>> JITEngine::backend(Module &M,
 Expected<std::unique_ptr<MemoryBuffer>>
 JITEngine::run(__tgt_device_image *Image, unsigned OptLevel,
                jit::PostProcessingFn PostProcessing) {
-  auto ModOrErr = createModuleFromImage(Image, Context);
-  if (!ModOrErr)
-    return ModOrErr.takeError();
-
-  auto Mod = std::move(*ModOrErr);
+  Module *Mod = nullptr;
+  // Check if the user replaces the module at runtime or we read it from the
+  // image.
+  if (!ReplacementModuleFileName.isPresent()) {
+    auto ModOrErr = createModuleFromImage(Image, Context);
+    if (!ModOrErr)
+      return ModOrErr.takeError();
+    Mod = ModOrErr->release();
+  } else {
+    auto MBOrErr =
+        MemoryBuffer::getFileOrSTDIN(ReplacementModuleFileName.get());
+    if (!MBOrErr)
+      return createStringError(MBOrErr.getError(),
+                               "Could not read replacement module from %s\n",
+                               ReplacementModuleFileName.get().c_str());
+    auto ModOrErr = createModuleFromMemoryBuffer(MBOrErr.get(), Context);
+    if (!ModOrErr)
+      return ModOrErr.takeError();
+    Mod = ModOrErr->release();
+  }
 
   auto MBOrError = backend(*Mod, OptLevel);
   if (!MBOrError)
