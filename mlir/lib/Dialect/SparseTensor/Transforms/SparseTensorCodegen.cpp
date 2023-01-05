@@ -937,6 +937,26 @@ public:
   }
 };
 
+/// Sparse codegen rule for accessing the linear indices buffer.
+class SparseToIndicesBufferConverter
+    : public OpConversionPattern<ToIndicesBufferOp> {
+public:
+  using OpAdaptor = typename ToIndicesBufferOp::Adaptor;
+  using OpConversionPattern<ToIndicesBufferOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(ToIndicesBufferOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Replace the requested pointer access with corresponding field.
+    // The cast_op is inserted by type converter to intermix 1:N type
+    // conversion.
+    SmallVector<Value> fields;
+    auto desc = getMutDescriptorFromTensorTuple(adaptor.getTensor(), fields);
+    rewriter.replaceOp(op, desc.getAOSMemRef());
+
+    return success();
+  }
+};
+
 /// Sparse codegen rule for value accesses.
 class SparseToValuesConverter : public OpConversionPattern<ToValuesOp> {
 public:
@@ -1005,9 +1025,9 @@ void mlir::populateSparseTensorCodegenPatterns(
                SparseTensorLoadConverter, SparseExpandConverter,
                SparseCompressConverter, SparseInsertConverter,
                SparseToPointersConverter, SparseToIndicesConverter,
-               SparseToValuesConverter, SparseConvertConverter,
-               SparseNumberOfEntriesConverter>(typeConverter,
-                                               patterns.getContext());
+               SparseToIndicesBufferConverter, SparseToValuesConverter,
+               SparseConvertConverter, SparseNumberOfEntriesConverter>(
+      typeConverter, patterns.getContext());
   patterns.add<SparseTensorAllocConverter>(typeConverter, patterns.getContext(),
                                            enableBufferInitialization);
 }

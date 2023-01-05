@@ -122,11 +122,10 @@ func.func @sparse_convert_complex(%arg0: tensor<100xcomplex<f64>>) -> tensor<100
 //       CHECK-RWT:        sparse_tensor.yield %[[IFR]]
 //       CHECK-RWT:     }
 //       CHECK-RWT:     %[[COO:.*]] = sparse_tensor.load %[[T2]] hasInserts
-//       CHECK-RWT:     %[[I0:.*]] = sparse_tensor.indices %[[COO]] {dimension = 0 : index}
-//       CHECK-RWT:     %[[I1:.*]] = sparse_tensor.indices %[[COO]] {dimension = 1 : index}
 //       CHECK-RWT:     %[[NNZ:.*]] = sparse_tensor.number_of_entries %[[COO]]
 //       CHECK-RWT:     %[[V:.*]] = sparse_tensor.values %[[COO]]
-//       CHECK-RWT:     sparse_tensor.sort %[[NNZ]], %[[I0]], %[[I1]] jointly %[[V]]
+//       CHECK-RWT:     %[[I:.*]] = sparse_tensor.indices_buffer %[[COO]]
+//       CHECK-RWT:     sparse_tensor.sort_coo %[[NNZ]], %[[I]] jointly %[[V]] {nx = 2 : index, ny = 0 : index}
 //       CHECK-RWT:     %[[T3:.*]] = bufferization.alloc_tensor()
 //       CHECK-RWT:     %[[T4:.*]] = sparse_tensor.foreach in %[[COO]] init(%[[T3]])
 //       CHECK-RWT:     ^bb0(%[[L1I0:.*]]: index, %[[L1I1:.*]]: index, %[[L1V:.*]]: f64, %[[L1T:.*]]: tensor
@@ -182,11 +181,10 @@ func.func @sparse_convert_2d(%arg0: tensor<2x4xf64>) -> tensor<2x4xf64, #CSR> {
 //       CHECK-RWT:       sparse_tensor.yield %[[L0T2]]
 //       CHECK-RWT:     }
 //       CHECK-RWT:     %[[COO:.*]] = sparse_tensor.load %[[T1]] hasInserts
-//       CHECK-RWT:     %[[I0:.*]] = sparse_tensor.indices %[[COO]] {dimension = 0 : index}
-//       CHECK-RWT:     %[[I1:.*]] = sparse_tensor.indices %[[COO]] {dimension = 1 : index}
 //       CHECK-RWT:     %[[NNZ:.*]] = sparse_tensor.number_of_entries %[[COO]]
 //       CHECK-RWT:     %[[V:.*]] = sparse_tensor.values %[[COO]]
-//       CHECK-RWT:     sparse_tensor.sort %[[NNZ]], %[[I0]], %[[I1]] jointly %[[V]]
+//       CHECK-RWT:     %[[I:.*]] = sparse_tensor.indices_buffer %[[COO]]
+//       CHECK-RWT:     sparse_tensor.sort_coo %[[NNZ]], %[[I]] jointly %[[V]] {nx = 2 : index, ny = 0 : index}
 //       CHECK-RWT:     %[[T3:.*]] = bufferization.alloc_tensor()
 //       CHECK-RWT:     %[[T4:.*]] = sparse_tensor.foreach in %[[COO]] init(%[[T3]])
 //       CHECK-RWT:     ^bb0(%[[L1I0:.*]]: index, %[[L1I1:.*]]: index, %[[L1V:.*]]: f32, %[[L1T:.*]]: tensor
