@@ -449,7 +449,6 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     // Raptorlake:
     case 0xb7:
     // Meteorlake:
-    case 0xb5:
     case 0xaa:
     case 0xac:
       CPU = "alderlake";
