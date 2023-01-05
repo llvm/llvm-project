@@ -1034,8 +1034,8 @@ class MDNode : public Metadata {
     ArrayRef<MDOperand> operands() const {
       if (IsLarge)
         return getLarge();
-      return makeArrayRef(reinterpret_cast<const MDOperand *>(this) - SmallSize,
-                          SmallNumOps);
+      return ArrayRef(reinterpret_cast<const MDOperand *>(this) - SmallSize,
+                      SmallNumOps);
     }
 
     unsigned getNumOperands() const {

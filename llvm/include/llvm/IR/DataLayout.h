@@ -646,7 +646,7 @@ public:
   }
 
   ArrayRef<uint64_t> getMemberOffsets() const {
-    return llvm::makeArrayRef(getTrailingObjects<uint64_t>(), NumElements);
+    return llvm::ArrayRef(getTrailingObjects<uint64_t>(), NumElements);
   }
 
   uint64_t getElementOffset(unsigned Idx) const {

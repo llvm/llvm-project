@@ -5205,8 +5205,8 @@ LegalizerHelper::narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
     CarryIn = CarryOut;
   }
   insertParts(MI.getOperand(0).getReg(), RegTy, NarrowTy,
-              makeArrayRef(DstRegs).take_front(NarrowParts), LeftoverTy,
-              makeArrayRef(DstRegs).drop_front(NarrowParts));
+              ArrayRef(DstRegs).take_front(NarrowParts), LeftoverTy,
+              ArrayRef(DstRegs).drop_front(NarrowParts));
 
   MI.eraseFromParent();
   return Legalized;

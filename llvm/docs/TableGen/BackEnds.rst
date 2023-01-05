@@ -776,7 +776,7 @@ is guarded by ``GET_ATable_DECL``, while the definitions are guarded by
       uint16_t Val2;
     };
     KeyType Key = { Val1, Val2 };
-    auto Table = makeArrayRef(ATable);
+    auto Table = ArrayRef(ATable);
     auto Idx = std::lower_bound(Table.begin(), Table.end(), Key,
       [](const AEntry &LHS, const KeyType &RHS) {
         if (LHS.Val1 < RHS.Val1)
@@ -850,7 +850,7 @@ Here is the generated C++ code.
       uint16_t Encoding;
     };
     KeyType Key = { Encoding };
-    auto Table = makeArrayRef(CTable);
+    auto Table = ArrayRef(CTable);
     auto Idx = std::lower_bound(Table.begin(), Table.end(), Key,
       [](const CEntry &LHS, const KeyType &RHS) {
         if (LHS.Encoding < RHS.Encoding)
@@ -948,7 +948,7 @@ This use of ``SearchIndex`` generates the following additional C++ code.
       unsigned Kind;
     };
     KeyType Key = { Name.upper(), Kind };
-    auto Table = makeArrayRef(Index);
+    auto Table = ArrayRef(Index);
     auto Idx = std::lower_bound(Table.begin(), Table.end(), Key,
       [](const IndexType &LHS, const KeyType &RHS) {
         int CmpName = StringRef(LHS.Name).compare(RHS.Name);
