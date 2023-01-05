@@ -226,6 +226,12 @@ protected:
                                       unsigned Timestamp,
                                       StringRef Name) override;
 
+  std::error_code visitSourceFileContentsRecord(
+      unsigned ID,
+      const serialized_diags::Location &OriginalStartLoc,
+      const serialized_diags::Location &OriginalEndLoc,
+      StringRef Contents) override;
+
   std::error_code visitFixitRecord(const serialized_diags::Location &Start,
                                    const serialized_diags::Location &End,
                                    StringRef CodeToInsert) override;
@@ -363,6 +369,28 @@ std::error_code DiagLoader::visitFilenameRecord(unsigned ID, unsigned Size,
   TopDiags->FileNames[ID] = TopDiags->copyString(Name);
   TopDiags->Files.insert(
       {ID, TopDiags->FakeFiles.getVirtualFileRef(Name, Size, Timestamp)});
+  return std::error_code();
+}
+
+std::error_code DiagLoader::visitSourceFileContentsRecord(
+    unsigned ID,
+    const serialized_diags::Location &OriginalStartLoc,
+    const serialized_diags::Location &OriginalEndLoc,
+    StringRef Contents
+) {
+  CXSourceRange OriginalSourceRange;
+  if (std::error_code EC = readRange(
+          OriginalStartLoc, OriginalEndLoc, OriginalSourceRange))
+    return EC;
+
+  auto file = const_cast<FileEntry *>(TopDiags->Files[ID]);
+  if (!file)
+    return reportInvalidFile("Source file contents for unknown file ID");
+
+  StringRef CopiedContents(TopDiags->copyString(Contents),
+                           Contents.size());
+
+  TopDiags->recordSourceFileContents(file, CopiedContents, OriginalSourceRange);
   return std::error_code();
 }
 

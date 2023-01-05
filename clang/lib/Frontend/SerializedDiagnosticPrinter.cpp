@@ -91,6 +91,7 @@ class SDiagsMerger : SerializedDiagnosticReader {
   AbbrevLookup FileLookup;
   AbbrevLookup CategoryLookup;
   AbbrevLookup DiagFlagLookup;
+  llvm::DenseSet<unsigned> ContentsWritten;
 
 public:
   SDiagsMerger(SDiagsWriter &Writer) : Writer(Writer) {}
@@ -110,6 +111,12 @@ protected:
   std::error_code visitFilenameRecord(unsigned ID, unsigned Size,
                                       unsigned Timestamp,
                                       StringRef Name) override;
+  std::error_code visitSourceFileContentsRecord(
+      unsigned ID,
+      const Location &OriginalStartLoc,
+      const Location &OriginalEndLoc,
+      StringRef Contents) override;
+
   std::error_code visitFixitRecord(const serialized_diags::Location &Start,
                                    const serialized_diags::Location &End,
                                    StringRef CodeToInsert) override;
@@ -460,6 +467,8 @@ void SDiagsWriter::EmitBlockInfoBlock() {
   EmitRecordID(RECORD_DIAG_FLAG, "DiagFlag", Stream, Record);
   EmitRecordID(RECORD_FILENAME, "FileName", Stream, Record);
   EmitRecordID(RECORD_FIXIT, "FixIt", Stream, Record);
+  EmitRecordID(
+      RECORD_SOURCE_FILE_CONTENTS, "SourceFileContents", Stream, Record);
 
   // Emit abbreviation for RECORD_DIAG.
   Abbrev = std::make_shared<BitCodeAbbrev>();
@@ -515,6 +524,16 @@ void SDiagsWriter::EmitBlockInfoBlock() {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));      // FixIt text.
   Abbrevs.set(RECORD_FIXIT, Stream.EmitBlockInfoAbbrev(BLOCK_DIAG,
                                                        Abbrev));
+
+  // Emit the abbreviation for RECORD_SOURCE_FILE_CONTENTS.
+  Abbrev = std::make_shared<BitCodeAbbrev>();
+  Abbrev->Add(BitCodeAbbrevOp(RECORD_SOURCE_FILE_CONTENTS));
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 10)); // File ID.
+  AddRangeLocationAbbrev(*Abbrev);
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 16)); // File size.
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // File contents.
+  Abbrevs.set(RECORD_SOURCE_FILE_CONTENTS,
+              Stream.EmitBlockInfoAbbrev(BLOCK_DIAG, Abbrev));
 
   Stream.ExitBlock();
 }
@@ -888,6 +907,28 @@ std::error_code SDiagsMerger::visitFilenameRecord(unsigned ID, unsigned Size,
                                                   unsigned Timestamp,
                                                   StringRef Name) {
   FileLookup[ID] = Writer.getEmitFile(Name.str().c_str());
+  return std::error_code();
+}
+
+std::error_code SDiagsMerger::visitSourceFileContentsRecord(
+    unsigned ID,
+    const Location &OriginalStartLoc,
+    const Location &OriginalEndLoc,
+    StringRef Contents) {
+  unsigned MappedID = FileLookup[ID];
+  if (!ContentsWritten.insert(MappedID).second)
+    return std::error_code();
+
+  RecordData::value_type Record[] = {
+      RECORD_SOURCE_FILE_CONTENTS, MappedID,
+      FileLookup[OriginalStartLoc.FileID],
+      OriginalStartLoc.Line, OriginalStartLoc.Col, OriginalStartLoc.Offset,
+      FileLookup[OriginalEndLoc.FileID], OriginalEndLoc.Line,
+      OriginalEndLoc.Col, OriginalEndLoc.Offset,
+    Contents.size()};
+
+  Writer.State->Stream.EmitRecordWithBlob(
+      Writer.State->Abbrevs.get(RECORD_SOURCE_FILE_CONTENTS), Record, Contents);
   return std::error_code();
 }
 

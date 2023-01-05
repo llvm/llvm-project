@@ -4760,7 +4760,8 @@ static void printDiagnosticSet(CXDiagnosticSet Diags, unsigned indent) {
     CXString FileName, DiagSpelling, DiagOption, DiagCat;
     unsigned line, column, offset;
     const char *FileNameStr = 0, *DiagOptionStr = 0, *DiagCatStr = 0;
-    
+    const char *FileContents = 0;
+
     D = clang_getDiagnosticInSet(Diags, i);
     DiagLoc = clang_getDiagnosticLocation(D);
     clang_getExpansionLocation(DiagLoc, &File, &line, &column, &offset);
@@ -4793,7 +4794,29 @@ static void printDiagnosticSet(CXDiagnosticSet Diags, unsigned indent) {
     
     printRanges(D, indent);
     printFixIts(D, indent);
-    
+
+    // If we have the source file contents for this file, print them now.
+    FileContents = clang_getDiagnosticFileContents(Diags, File, 0);
+    if (FileContents) {
+      CXSourceRange OriginalSourceRange;
+
+      fprintf(stderr, "CONTENTS OF FILE %s:\n",
+              FileNameStr ? FileNameStr : "(null)");
+
+      OriginalSourceRange = clang_getDiagnosticFileOriginalSourceRange(
+          Diags, File);
+      if (!clang_equalRanges(clang_getNullRange(), OriginalSourceRange)) {
+        printIndent(indent);
+        fprintf(stderr, "Original source range: ");
+        printLocation(clang_getRangeStart(OriginalSourceRange));
+        fprintf(stderr, " - ");
+        printLocation(clang_getRangeEnd(OriginalSourceRange));
+        fprintf(stderr, "\n");
+      }
+
+      fprintf(stderr, "%s\nEND CONTENTS OF FILE\n", FileContents);
+    }
+
     /* Print subdiagnostics. */
     printDiagnosticSet(clang_getChildDiagnostics(D), indent+2);
 
@@ -4801,7 +4824,7 @@ static void printDiagnosticSet(CXDiagnosticSet Diags, unsigned indent) {
     clang_disposeString(DiagSpelling);
     clang_disposeString(DiagOption);
     clang_disposeString(DiagCat);
-  }  
+  }
 }
 
 static int read_diagnostics(const char *filename) {
