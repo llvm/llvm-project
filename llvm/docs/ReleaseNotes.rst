@@ -219,10 +219,6 @@ Changes to the C API
   * ``LLVMConstInBoundsGEP`` -> ``LLVMConstInBoundsGEP2``
   * ``LLVMAddAlias`` -> ``LLVMAddAlias2``
 
-Changes to the Go bindings
---------------------------
-
-
 Changes to the FastISel infrastructure
 --------------------------------------
 
