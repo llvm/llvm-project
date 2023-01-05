@@ -84,12 +84,29 @@ static LogicalResult setProfilingAttrs(OpBuilder &builder, llvm::MDNode *node,
   if (!node->getNumOperands())
     return success();
 
-  // Return failure for non-"branch_weights" metadata.
   auto *name = dyn_cast<llvm::MDString>(node->getOperand(0));
-  if (!name || !name->getString().equals("branch_weights"))
+  if (!name)
     return failure();
 
-  // Copy the branch weights to an array.
+  // Handle function entry count metadata.
+  if (name->getString().equals("function_entry_count")) {
+    // TODO support function entry count metadata with GUID fields.
+    if (node->getNumOperands() != 2)
+      return failure();
+
+    llvm::ConstantInt *entryCount =
+        llvm::mdconst::extract<llvm::ConstantInt>(node->getOperand(1));
+    if (auto funcOp = dyn_cast<LLVMFuncOp>(op)) {
+      funcOp.setFunctionEntryCount(entryCount->getZExtValue());
+      return success();
+    }
+    return failure();
+  }
+
+  if (!name->getString().equals("branch_weights"))
+    return failure();
+
+  // Handle branch weights metadata.
   SmallVector<int32_t> branchWeights;
   branchWeights.reserve(node->getNumOperands() - 1);
   for (unsigned i = 1, e = node->getNumOperands(); i != e; ++i) {
