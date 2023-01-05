@@ -847,6 +847,8 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = X86::INTEL_COREI7_ICELAKE_SERVER;
       break;
 
+    // Emerald Rapids:
+    case 0xcf:
     // Sapphire Rapids:
     case 0x8f:
       CPU = "sapphirerapids";
