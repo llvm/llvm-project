@@ -357,7 +357,7 @@ void ProcessMachCore::LoadBinariesViaExhaustiveSearch() {
         if (dyld != LLDB_INVALID_ADDRESS)
           dylds_found.push_back(dyld);
         if (kernel != LLDB_INVALID_ADDRESS)
-          kernels_found.push_back(dyld);
+          kernels_found.push_back(kernel);
       }
     }
   }
