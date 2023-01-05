@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=aarch64-eabi %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-ISEL
 ; RUN: llc -mtriple=aarch64-eabi %s -o - -mattr=+cssc | FileCheck %s --check-prefixes=CHECK,CHECK-ISEL-CSSC
 ; RUN: llc -mtriple=aarch64-eabi -global-isel %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-GLOBAL
+; RUN: llc -mtriple=aarch64-eabi -global-isel %s -o - -mattr=+cssc | FileCheck %s --check-prefixes=CHECK,CHECK-GLOBAL-CSSC
 
 ; These tests just check that the plumbing is in place for @llvm.smax, @llvm.umax,
 ; @llvm.smin, @llvm.umin.
@@ -30,6 +31,13 @@ define i8 @smaxi8(i8 %a, i8 %b) {
 ; CHECK-GLOBAL-NEXT:    cmp w8, w1, sxtb
 ; CHECK-GLOBAL-NEXT:    csel w0, w0, w1, gt
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: smaxi8:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    sxtb w8, w0
+; CHECK-GLOBAL-CSSC-NEXT:    sxtb w9, w1
+; CHECK-GLOBAL-CSSC-NEXT:    smax w0, w8, w9
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call i8 @llvm.smax.i8(i8 %a, i8 %b)
   ret i8 %c
 }
@@ -58,6 +66,13 @@ define i16 @smaxi16(i16 %a, i16 %b) {
 ; CHECK-GLOBAL-NEXT:    cmp w8, w1, sxth
 ; CHECK-GLOBAL-NEXT:    csel w0, w0, w1, gt
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: smaxi16:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    sxth w8, w0
+; CHECK-GLOBAL-CSSC-NEXT:    sxth w9, w1
+; CHECK-GLOBAL-CSSC-NEXT:    smax w0, w8, w9
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call i16 @llvm.smax.i16(i16 %a, i16 %b)
   ret i16 %c
 }
@@ -81,6 +96,11 @@ define i32 @smaxi32(i32 %a, i32 %b) {
 ; CHECK-GLOBAL-NEXT:    cmp w0, w1
 ; CHECK-GLOBAL-NEXT:    csel w0, w0, w1, gt
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: smaxi32:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    smax w0, w0, w1
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call i32 @llvm.smax.i32(i32 %a, i32 %b)
   ret i32 %c
 }
@@ -104,6 +124,11 @@ define i64 @smaxi64(i64 %a, i64 %b) {
 ; CHECK-GLOBAL-NEXT:    cmp x0, x1
 ; CHECK-GLOBAL-NEXT:    csel x0, x0, x1, gt
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: smaxi64:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    smax x0, x0, x1
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call i64 @llvm.smax.i64(i64 %a, i64 %b)
   ret i64 %c
 }
@@ -153,6 +178,13 @@ define void @smax32i8(<32 x i8> %a, <32 x i8> %b, ptr %p) {
 ; CHECK-GLOBAL-NEXT:    smax v1.16b, v1.16b, v3.16b
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: smax32i8:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    smax v0.16b, v0.16b, v2.16b
+; CHECK-GLOBAL-CSSC-NEXT:    smax v1.16b, v1.16b, v3.16b
+; CHECK-GLOBAL-CSSC-NEXT:    stp q0, q1, [x0]
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <32 x i8> @llvm.smax.v32i8(<32 x i8> %a, <32 x i8> %b)
   store <32 x i8> %c, ptr %p
   ret void
@@ -203,6 +235,13 @@ define void @smax16i16(<16 x i16> %a, <16 x i16> %b, ptr %p) {
 ; CHECK-GLOBAL-NEXT:    smax v1.8h, v1.8h, v3.8h
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: smax16i16:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    smax v0.8h, v0.8h, v2.8h
+; CHECK-GLOBAL-CSSC-NEXT:    smax v1.8h, v1.8h, v3.8h
+; CHECK-GLOBAL-CSSC-NEXT:    stp q0, q1, [x0]
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <16 x i16> @llvm.smax.v16i16(<16 x i16> %a, <16 x i16> %b)
   store <16 x i16> %c, ptr %p
   ret void
@@ -253,6 +292,13 @@ define void @smax8i32(<8 x i32> %a, <8 x i32> %b, ptr %p) {
 ; CHECK-GLOBAL-NEXT:    smax v1.4s, v1.4s, v3.4s
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: smax8i32:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    smax v0.4s, v0.4s, v2.4s
+; CHECK-GLOBAL-CSSC-NEXT:    smax v1.4s, v1.4s, v3.4s
+; CHECK-GLOBAL-CSSC-NEXT:    stp q0, q1, [x0]
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <8 x i32>@llvm.smax.v8i32(<8 x i32> %a, <8 x i32> %b)
   store <8 x i32> %c, ptr %p
   ret void
@@ -280,6 +326,14 @@ define <1 x i64> @smax1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-GLOBAL-NEXT:    cmp x8, x9
 ; CHECK-GLOBAL-NEXT:    fcsel d0, d0, d1, gt
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: smax1i64:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    fmov x8, d0
+; CHECK-GLOBAL-CSSC-NEXT:    fmov x9, d1
+; CHECK-GLOBAL-CSSC-NEXT:    smax x8, x8, x9
+; CHECK-GLOBAL-CSSC-NEXT:    fmov d0, x8
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <1 x i64> @llvm.smax.v1i64(<1 x i64> %a, <1 x i64> %b)
   ret <1 x i64> %c
 }
@@ -287,23 +341,11 @@ define <1 x i64> @smax1i64(<1 x i64> %a, <1 x i64> %b) {
 declare <2 x i64> @llvm.smax.v2i64(<2 x i64> %a, <2 x i64> %b) readnone
 
 define <2 x i64> @smax2i64(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-ISEL-LABEL: smax2i64:
-; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    cmgt v2.2d, v0.2d, v1.2d
-; CHECK-ISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-ISEL-NEXT:    ret
-;
-; CHECK-ISEL-CSSC-LABEL: smax2i64:
-; CHECK-ISEL-CSSC:       // %bb.0:
-; CHECK-ISEL-CSSC-NEXT:    cmgt v2.2d, v0.2d, v1.2d
-; CHECK-ISEL-CSSC-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-ISEL-CSSC-NEXT:    ret
-;
-; CHECK-GLOBAL-LABEL: smax2i64:
-; CHECK-GLOBAL:       // %bb.0:
-; CHECK-GLOBAL-NEXT:    cmgt v2.2d, v0.2d, v1.2d
-; CHECK-GLOBAL-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-GLOBAL-NEXT:    ret
+; CHECK-LABEL: smax2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v2.2d, v0.2d, v1.2d
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
   %c = call <2 x i64> @llvm.smax.v2i64(<2 x i64> %a, <2 x i64> %b)
   ret <2 x i64> %c
 }
@@ -337,6 +379,15 @@ define void @smax4i64(<4 x i64> %a, <4 x i64> %b, ptr %p) {
 ; CHECK-GLOBAL-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: smax4i64:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    cmgt v4.2d, v0.2d, v2.2d
+; CHECK-GLOBAL-CSSC-NEXT:    cmgt v5.2d, v1.2d, v3.2d
+; CHECK-GLOBAL-CSSC-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-GLOBAL-CSSC-NEXT:    bif v1.16b, v3.16b, v5.16b
+; CHECK-GLOBAL-CSSC-NEXT:    stp q0, q1, [x0]
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %a, <4 x i64> %b)
   store <4 x i64> %c, ptr %p
   ret void
@@ -366,6 +417,13 @@ define i8 @umaxi8(i8 %a, i8 %b) {
 ; CHECK-GLOBAL-NEXT:    cmp w8, w1, uxtb
 ; CHECK-GLOBAL-NEXT:    csel w0, w0, w1, hi
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umaxi8:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    and w8, w0, #0xff
+; CHECK-GLOBAL-CSSC-NEXT:    and w9, w1, #0xff
+; CHECK-GLOBAL-CSSC-NEXT:    umax w0, w8, w9
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call i8 @llvm.umax.i8(i8 %a, i8 %b)
   ret i8 %c
 }
@@ -394,6 +452,13 @@ define i16 @umaxi16(i16 %a, i16 %b) {
 ; CHECK-GLOBAL-NEXT:    cmp w8, w1, uxth
 ; CHECK-GLOBAL-NEXT:    csel w0, w0, w1, hi
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umaxi16:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    and w8, w0, #0xffff
+; CHECK-GLOBAL-CSSC-NEXT:    and w9, w1, #0xffff
+; CHECK-GLOBAL-CSSC-NEXT:    umax w0, w8, w9
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call i16 @llvm.umax.i16(i16 %a, i16 %b)
   ret i16 %c
 }
@@ -417,6 +482,11 @@ define i32 @umaxi32(i32 %a, i32 %b) {
 ; CHECK-GLOBAL-NEXT:    cmp w0, w1
 ; CHECK-GLOBAL-NEXT:    csel w0, w0, w1, hi
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umaxi32:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    umax w0, w0, w1
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call i32 @llvm.umax.i32(i32 %a, i32 %b)
   ret i32 %c
 }
@@ -440,6 +510,11 @@ define i64 @umaxi64(i64 %a, i64 %b) {
 ; CHECK-GLOBAL-NEXT:    cmp x0, x1
 ; CHECK-GLOBAL-NEXT:    csel x0, x0, x1, hi
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umaxi64:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    umax x0, x0, x1
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call i64 @llvm.umax.i64(i64 %a, i64 %b)
   ret i64 %c
 }
@@ -489,6 +564,13 @@ define void @umax32i8(<32 x i8> %a, <32 x i8> %b, ptr %p) {
 ; CHECK-GLOBAL-NEXT:    umax v1.16b, v1.16b, v3.16b
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umax32i8:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    umax v0.16b, v0.16b, v2.16b
+; CHECK-GLOBAL-CSSC-NEXT:    umax v1.16b, v1.16b, v3.16b
+; CHECK-GLOBAL-CSSC-NEXT:    stp q0, q1, [x0]
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <32 x i8> @llvm.umax.v32i8(<32 x i8> %a, <32 x i8> %b)
   store <32 x i8> %c, ptr %p
   ret void
@@ -539,6 +621,13 @@ define void @umax16i16(<16 x i16> %a, <16 x i16> %b, ptr %p) {
 ; CHECK-GLOBAL-NEXT:    umax v1.8h, v1.8h, v3.8h
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umax16i16:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    umax v0.8h, v0.8h, v2.8h
+; CHECK-GLOBAL-CSSC-NEXT:    umax v1.8h, v1.8h, v3.8h
+; CHECK-GLOBAL-CSSC-NEXT:    stp q0, q1, [x0]
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <16 x i16> @llvm.umax.v16i16(<16 x i16> %a, <16 x i16> %b)
   store <16 x i16> %c, ptr %p
   ret void
@@ -589,6 +678,13 @@ define void @umax8i32(<8 x i32> %a, <8 x i32> %b, ptr %p) {
 ; CHECK-GLOBAL-NEXT:    umax v1.4s, v1.4s, v3.4s
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umax8i32:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    umax v0.4s, v0.4s, v2.4s
+; CHECK-GLOBAL-CSSC-NEXT:    umax v1.4s, v1.4s, v3.4s
+; CHECK-GLOBAL-CSSC-NEXT:    stp q0, q1, [x0]
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <8 x i32>@llvm.umax.v8i32(<8 x i32> %a, <8 x i32> %b)
   store <8 x i32> %c, ptr %p
   ret void
@@ -616,6 +712,14 @@ define <1 x i64> @umax1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-GLOBAL-NEXT:    cmp x8, x9
 ; CHECK-GLOBAL-NEXT:    fcsel d0, d0, d1, hi
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umax1i64:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    fmov x8, d0
+; CHECK-GLOBAL-CSSC-NEXT:    fmov x9, d1
+; CHECK-GLOBAL-CSSC-NEXT:    umax x8, x8, x9
+; CHECK-GLOBAL-CSSC-NEXT:    fmov d0, x8
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <1 x i64> @llvm.umax.v1i64(<1 x i64> %a, <1 x i64> %b)
   ret <1 x i64> %c
 }
@@ -623,23 +727,11 @@ define <1 x i64> @umax1i64(<1 x i64> %a, <1 x i64> %b) {
 declare <2 x i64> @llvm.umax.v2i64(<2 x i64> %a, <2 x i64> %b) readnone
 
 define <2 x i64> @umax2i64(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-ISEL-LABEL: umax2i64:
-; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    cmhi v2.2d, v0.2d, v1.2d
-; CHECK-ISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-ISEL-NEXT:    ret
-;
-; CHECK-ISEL-CSSC-LABEL: umax2i64:
-; CHECK-ISEL-CSSC:       // %bb.0:
-; CHECK-ISEL-CSSC-NEXT:    cmhi v2.2d, v0.2d, v1.2d
-; CHECK-ISEL-CSSC-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-ISEL-CSSC-NEXT:    ret
-;
-; CHECK-GLOBAL-LABEL: umax2i64:
-; CHECK-GLOBAL:       // %bb.0:
-; CHECK-GLOBAL-NEXT:    cmhi v2.2d, v0.2d, v1.2d
-; CHECK-GLOBAL-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-GLOBAL-NEXT:    ret
+; CHECK-LABEL: umax2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmhi v2.2d, v0.2d, v1.2d
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
   %c = call <2 x i64> @llvm.umax.v2i64(<2 x i64> %a, <2 x i64> %b)
   ret <2 x i64> %c
 }
@@ -673,6 +765,15 @@ define void @umax4i64(<4 x i64> %a, <4 x i64> %b, ptr %p) {
 ; CHECK-GLOBAL-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umax4i64:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    cmhi v4.2d, v0.2d, v2.2d
+; CHECK-GLOBAL-CSSC-NEXT:    cmhi v5.2d, v1.2d, v3.2d
+; CHECK-GLOBAL-CSSC-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-GLOBAL-CSSC-NEXT:    bif v1.16b, v3.16b, v5.16b
+; CHECK-GLOBAL-CSSC-NEXT:    stp q0, q1, [x0]
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <4 x i64> @llvm.umax.v4i64(<4 x i64> %a, <4 x i64> %b)
   store <4 x i64> %c, ptr %p
   ret void
@@ -702,6 +803,13 @@ define i8 @smini8(i8 %a, i8 %b) {
 ; CHECK-GLOBAL-NEXT:    cmp w8, w1, sxtb
 ; CHECK-GLOBAL-NEXT:    csel w0, w0, w1, lt
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: smini8:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    sxtb w8, w0
+; CHECK-GLOBAL-CSSC-NEXT:    sxtb w9, w1
+; CHECK-GLOBAL-CSSC-NEXT:    smin w0, w8, w9
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call i8 @llvm.smin.i8(i8 %a, i8 %b)
   ret i8 %c
 }
@@ -730,6 +838,13 @@ define i16 @smini16(i16 %a, i16 %b) {
 ; CHECK-GLOBAL-NEXT:    cmp w8, w1, sxth
 ; CHECK-GLOBAL-NEXT:    csel w0, w0, w1, lt
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: smini16:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    sxth w8, w0
+; CHECK-GLOBAL-CSSC-NEXT:    sxth w9, w1
+; CHECK-GLOBAL-CSSC-NEXT:    smin w0, w8, w9
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call i16 @llvm.smin.i16(i16 %a, i16 %b)
   ret i16 %c
 }
@@ -753,6 +868,11 @@ define i32 @smini32(i32 %a, i32 %b) {
 ; CHECK-GLOBAL-NEXT:    cmp w0, w1
 ; CHECK-GLOBAL-NEXT:    csel w0, w0, w1, lt
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: smini32:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    smin w0, w0, w1
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call i32 @llvm.smin.i32(i32 %a, i32 %b)
   ret i32 %c
 }
@@ -776,6 +896,11 @@ define i64 @smini64(i64 %a, i64 %b) {
 ; CHECK-GLOBAL-NEXT:    cmp x0, x1
 ; CHECK-GLOBAL-NEXT:    csel x0, x0, x1, lt
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: smini64:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    smin x0, x0, x1
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call i64 @llvm.smin.i64(i64 %a, i64 %b)
   ret i64 %c
 }
@@ -825,6 +950,13 @@ define void @smin32i8(<32 x i8> %a, <32 x i8> %b, ptr %p) {
 ; CHECK-GLOBAL-NEXT:    smin v1.16b, v1.16b, v3.16b
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: smin32i8:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    smin v0.16b, v0.16b, v2.16b
+; CHECK-GLOBAL-CSSC-NEXT:    smin v1.16b, v1.16b, v3.16b
+; CHECK-GLOBAL-CSSC-NEXT:    stp q0, q1, [x0]
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <32 x i8> @llvm.smin.v32i8(<32 x i8> %a, <32 x i8> %b)
   store <32 x i8> %c, ptr %p
   ret void
@@ -875,6 +1007,13 @@ define void @smin16i16(<16 x i16> %a, <16 x i16> %b, ptr %p) {
 ; CHECK-GLOBAL-NEXT:    smin v1.8h, v1.8h, v3.8h
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: smin16i16:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    smin v0.8h, v0.8h, v2.8h
+; CHECK-GLOBAL-CSSC-NEXT:    smin v1.8h, v1.8h, v3.8h
+; CHECK-GLOBAL-CSSC-NEXT:    stp q0, q1, [x0]
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <16 x i16> @llvm.smin.v16i16(<16 x i16> %a, <16 x i16> %b)
   store <16 x i16> %c, ptr %p
   ret void
@@ -925,6 +1064,13 @@ define void @smin8i32(<8 x i32> %a, <8 x i32> %b, ptr %p) {
 ; CHECK-GLOBAL-NEXT:    smin v1.4s, v1.4s, v3.4s
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: smin8i32:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    smin v0.4s, v0.4s, v2.4s
+; CHECK-GLOBAL-CSSC-NEXT:    smin v1.4s, v1.4s, v3.4s
+; CHECK-GLOBAL-CSSC-NEXT:    stp q0, q1, [x0]
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <8 x i32>@llvm.smin.v8i32(<8 x i32> %a, <8 x i32> %b)
   store <8 x i32> %c, ptr %p
   ret void
@@ -952,6 +1098,14 @@ define <1 x i64> @smin1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-GLOBAL-NEXT:    cmp x8, x9
 ; CHECK-GLOBAL-NEXT:    fcsel d0, d0, d1, lt
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: smin1i64:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    fmov x8, d0
+; CHECK-GLOBAL-CSSC-NEXT:    fmov x9, d1
+; CHECK-GLOBAL-CSSC-NEXT:    smin x8, x8, x9
+; CHECK-GLOBAL-CSSC-NEXT:    fmov d0, x8
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <1 x i64> @llvm.smin.v1i64(<1 x i64> %a, <1 x i64> %b)
   ret <1 x i64> %c
 }
@@ -959,23 +1113,11 @@ define <1 x i64> @smin1i64(<1 x i64> %a, <1 x i64> %b) {
 declare <2 x i64> @llvm.smin.v2i64(<2 x i64> %a, <2 x i64> %b) readnone
 
 define <2 x i64> @smin2i64(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-ISEL-LABEL: smin2i64:
-; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    cmgt v2.2d, v1.2d, v0.2d
-; CHECK-ISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-ISEL-NEXT:    ret
-;
-; CHECK-ISEL-CSSC-LABEL: smin2i64:
-; CHECK-ISEL-CSSC:       // %bb.0:
-; CHECK-ISEL-CSSC-NEXT:    cmgt v2.2d, v1.2d, v0.2d
-; CHECK-ISEL-CSSC-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-ISEL-CSSC-NEXT:    ret
-;
-; CHECK-GLOBAL-LABEL: smin2i64:
-; CHECK-GLOBAL:       // %bb.0:
-; CHECK-GLOBAL-NEXT:    cmgt v2.2d, v1.2d, v0.2d
-; CHECK-GLOBAL-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-GLOBAL-NEXT:    ret
+; CHECK-LABEL: smin2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v2.2d, v1.2d, v0.2d
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
   %c = call <2 x i64> @llvm.smin.v2i64(<2 x i64> %a, <2 x i64> %b)
   ret <2 x i64> %c
 }
@@ -1009,6 +1151,15 @@ define void @smin4i64(<4 x i64> %a, <4 x i64> %b, ptr %p) {
 ; CHECK-GLOBAL-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: smin4i64:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    cmgt v4.2d, v2.2d, v0.2d
+; CHECK-GLOBAL-CSSC-NEXT:    cmgt v5.2d, v3.2d, v1.2d
+; CHECK-GLOBAL-CSSC-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-GLOBAL-CSSC-NEXT:    bif v1.16b, v3.16b, v5.16b
+; CHECK-GLOBAL-CSSC-NEXT:    stp q0, q1, [x0]
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %a, <4 x i64> %b)
   store <4 x i64> %c, ptr %p
   ret void
@@ -1038,6 +1189,13 @@ define i8 @umini8(i8 %a, i8 %b) {
 ; CHECK-GLOBAL-NEXT:    cmp w8, w1, uxtb
 ; CHECK-GLOBAL-NEXT:    csel w0, w0, w1, lo
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umini8:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    and w8, w0, #0xff
+; CHECK-GLOBAL-CSSC-NEXT:    and w9, w1, #0xff
+; CHECK-GLOBAL-CSSC-NEXT:    umin w0, w8, w9
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call i8 @llvm.umin.i8(i8 %a, i8 %b)
   ret i8 %c
 }
@@ -1066,6 +1224,13 @@ define i16 @umini16(i16 %a, i16 %b) {
 ; CHECK-GLOBAL-NEXT:    cmp w8, w1, uxth
 ; CHECK-GLOBAL-NEXT:    csel w0, w0, w1, lo
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umini16:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    and w8, w0, #0xffff
+; CHECK-GLOBAL-CSSC-NEXT:    and w9, w1, #0xffff
+; CHECK-GLOBAL-CSSC-NEXT:    umin w0, w8, w9
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call i16 @llvm.umin.i16(i16 %a, i16 %b)
   ret i16 %c
 }
@@ -1089,6 +1254,11 @@ define i32 @umini32(i32 %a, i32 %b) {
 ; CHECK-GLOBAL-NEXT:    cmp w0, w1
 ; CHECK-GLOBAL-NEXT:    csel w0, w0, w1, lo
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umini32:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    umin w0, w0, w1
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call i32 @llvm.umin.i32(i32 %a, i32 %b)
   ret i32 %c
 }
@@ -1112,6 +1282,11 @@ define i64 @umini64(i64 %a, i64 %b) {
 ; CHECK-GLOBAL-NEXT:    cmp x0, x1
 ; CHECK-GLOBAL-NEXT:    csel x0, x0, x1, lo
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umini64:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    umin x0, x0, x1
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call i64 @llvm.umin.i64(i64 %a, i64 %b)
   ret i64 %c
 }
@@ -1161,6 +1336,13 @@ define void @umin32i8(<32 x i8> %a, <32 x i8> %b, ptr %p) {
 ; CHECK-GLOBAL-NEXT:    umin v1.16b, v1.16b, v3.16b
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umin32i8:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    umin v0.16b, v0.16b, v2.16b
+; CHECK-GLOBAL-CSSC-NEXT:    umin v1.16b, v1.16b, v3.16b
+; CHECK-GLOBAL-CSSC-NEXT:    stp q0, q1, [x0]
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <32 x i8> @llvm.umin.v32i8(<32 x i8> %a, <32 x i8> %b)
   store <32 x i8> %c, ptr %p
   ret void
@@ -1211,6 +1393,13 @@ define void @umin16i16(<16 x i16> %a, <16 x i16> %b, ptr %p) {
 ; CHECK-GLOBAL-NEXT:    umin v1.8h, v1.8h, v3.8h
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umin16i16:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    umin v0.8h, v0.8h, v2.8h
+; CHECK-GLOBAL-CSSC-NEXT:    umin v1.8h, v1.8h, v3.8h
+; CHECK-GLOBAL-CSSC-NEXT:    stp q0, q1, [x0]
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <16 x i16> @llvm.umin.v16i16(<16 x i16> %a, <16 x i16> %b)
   store <16 x i16> %c, ptr %p
   ret void
@@ -1261,6 +1450,13 @@ define void @umin8i32(<8 x i32> %a, <8 x i32> %b, ptr %p) {
 ; CHECK-GLOBAL-NEXT:    umin v1.4s, v1.4s, v3.4s
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umin8i32:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    umin v0.4s, v0.4s, v2.4s
+; CHECK-GLOBAL-CSSC-NEXT:    umin v1.4s, v1.4s, v3.4s
+; CHECK-GLOBAL-CSSC-NEXT:    stp q0, q1, [x0]
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <8 x i32>@llvm.umin.v8i32(<8 x i32> %a, <8 x i32> %b)
   store <8 x i32> %c, ptr %p
   ret void
@@ -1288,6 +1484,14 @@ define <1 x i64> @umin1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-GLOBAL-NEXT:    cmp x8, x9
 ; CHECK-GLOBAL-NEXT:    fcsel d0, d0, d1, lo
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umin1i64:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    fmov x8, d0
+; CHECK-GLOBAL-CSSC-NEXT:    fmov x9, d1
+; CHECK-GLOBAL-CSSC-NEXT:    umin x8, x8, x9
+; CHECK-GLOBAL-CSSC-NEXT:    fmov d0, x8
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <1 x i64> @llvm.umin.v1i64(<1 x i64> %a, <1 x i64> %b)
   ret <1 x i64> %c
 }
@@ -1295,24 +1499,12 @@ define <1 x i64> @umin1i64(<1 x i64> %a, <1 x i64> %b) {
 declare <2 x i64> @llvm.umin.v2i64(<2 x i64> %a, <2 x i64> %b) readnone
 
 define <2 x i64> @umin2i64(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-ISEL-LABEL: umin2i64:
-; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    cmhi v2.2d, v1.2d, v0.2d
-; CHECK-ISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-ISEL-NEXT:    ret
-;
-; CHECK-ISEL-CSSC-LABEL: umin2i64:
-; CHECK-ISEL-CSSC:       // %bb.0:
-; CHECK-ISEL-CSSC-NEXT:    cmhi v2.2d, v1.2d, v0.2d
-; CHECK-ISEL-CSSC-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-ISEL-CSSC-NEXT:    ret
-;
-; CHECK-GLOBAL-LABEL: umin2i64:
-; CHECK-GLOBAL:       // %bb.0:
-; CHECK-GLOBAL-NEXT:    cmhi v2.2d, v1.2d, v0.2d
-; CHECK-GLOBAL-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-GLOBAL-NEXT:    ret
-%c = call <2 x i64> @llvm.umin.v2i64(<2 x i64> %a, <2 x i64> %b)
+; CHECK-LABEL: umin2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmhi v2.2d, v1.2d, v0.2d
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
+  %c = call <2 x i64> @llvm.umin.v2i64(<2 x i64> %a, <2 x i64> %b)
   ret <2 x i64> %c
 }
 
@@ -1345,6 +1537,15 @@ define void @umin4i64(<4 x i64> %a, <4 x i64> %b, ptr %p) {
 ; CHECK-GLOBAL-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
 ; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umin4i64:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    cmhi v4.2d, v2.2d, v0.2d
+; CHECK-GLOBAL-CSSC-NEXT:    cmhi v5.2d, v3.2d, v1.2d
+; CHECK-GLOBAL-CSSC-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-GLOBAL-CSSC-NEXT:    bif v1.16b, v3.16b, v5.16b
+; CHECK-GLOBAL-CSSC-NEXT:    stp q0, q1, [x0]
+; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %a, <4 x i64> %b)
   store <4 x i64> %c, ptr %p
   ret void
