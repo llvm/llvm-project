@@ -991,10 +991,8 @@ define <2 x i1> @xor_commute3(<2 x i1> %x, <2 x i1> %y) {
 
 define i1 @not_d_bools_commute00(i1 %c, i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_d_bools_commute00(
-; CHECK-NEXT:    [[Y_C:%.*]] = or i1 [[C:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = xor i1 [[Y_C]], true
-; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[C]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[Y:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[X:%.*]], i1 [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %y_c = or i1 %c, %y
@@ -1006,10 +1004,8 @@ define i1 @not_d_bools_commute00(i1 %c, i1 %x, i1 %y) {
 
 define i1 @not_d_bools_commute01(i1 %c, i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_d_bools_commute01(
-; CHECK-NEXT:    [[Y_C:%.*]] = or i1 [[Y:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = xor i1 [[Y_C]], true
-; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[C]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[Y:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[X:%.*]], i1 [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %y_c = or i1 %y, %c
@@ -1021,10 +1017,8 @@ define i1 @not_d_bools_commute01(i1 %c, i1 %x, i1 %y) {
 
 define i1 @not_d_bools_commute10(i1 %c, i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_d_bools_commute10(
-; CHECK-NEXT:    [[Y_C:%.*]] = or i1 [[C:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = xor i1 [[Y_C]], true
-; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[X:%.*]], [[C]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[Y:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[X:%.*]], i1 [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %y_c = or i1 %c, %y
@@ -1036,10 +1030,8 @@ define i1 @not_d_bools_commute10(i1 %c, i1 %x, i1 %y) {
 
 define i1 @not_d_bools_commute11(i1 %c, i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_d_bools_commute11(
-; CHECK-NEXT:    [[Y_C:%.*]] = or i1 [[Y:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = xor i1 [[Y_C]], true
-; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[X:%.*]], [[C]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[Y:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[X:%.*]], i1 [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %y_c = or i1 %y, %c
@@ -1051,10 +1043,8 @@ define i1 @not_d_bools_commute11(i1 %c, i1 %x, i1 %y) {
 
 define <2 x i1> @not_d_bools_vector(<2 x i1> %c, <2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @not_d_bools_vector(
-; CHECK-NEXT:    [[Y_C:%.*]] = or <2 x i1> [[Y:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = xor <2 x i1> [[Y_C]], <i1 true, i1 true>
-; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i1> [[X:%.*]], [[C]]
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[Y:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[X:%.*]], <2 x i1> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %y_c = or <2 x i1> %y, %c
@@ -1066,10 +1056,8 @@ define <2 x i1> @not_d_bools_vector(<2 x i1> %c, <2 x i1> %x, <2 x i1> %y) {
 
 define <2 x i1> @not_d_bools_vector_poison(<2 x i1> %c, <2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @not_d_bools_vector_poison(
-; CHECK-NEXT:    [[Y_C:%.*]] = or <2 x i1> [[Y:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = xor <2 x i1> [[Y_C]], <i1 poison, i1 true>
-; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i1> [[X:%.*]], [[C]]
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[Y:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[X:%.*]], <2 x i1> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %y_c = or <2 x i1> %y, %c
@@ -1081,11 +1069,9 @@ define <2 x i1> @not_d_bools_vector_poison(<2 x i1> %c, <2 x i1> %x, <2 x i1> %y
 
 define i32 @not_d_allSignBits(i32 %cond, i32 %tval, i32 %fval) {
 ; CHECK-LABEL: @not_d_allSignBits(
-; CHECK-NEXT:    [[BITMASK:%.*]] = ashr i32 [[COND:%.*]], 31
-; CHECK-NEXT:    [[A1:%.*]] = and i32 [[BITMASK]], [[TVAL:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[BITMASK]], [[FVAL:%.*]]
-; CHECK-NEXT:    [[A2:%.*]] = xor i32 [[OR]], -1
-; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[A1]], [[A2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[FVAL:%.*]], -1
+; CHECK-NEXT:    [[DOTNOT2:%.*]] = icmp slt i32 [[COND:%.*]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[DOTNOT2]], i32 [[TVAL:%.*]], i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %bitmask = ashr i32 %cond, 31
@@ -1099,9 +1085,9 @@ define i32 @not_d_allSignBits(i32 %cond, i32 %tval, i32 %fval) {
 define i1 @not_d_bools_use2(i1 %c, i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_d_bools_use2(
 ; CHECK-NEXT:    [[Y_C:%.*]] = or i1 [[C:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = xor i1 [[Y_C]], true
 ; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[C]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[Y]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i1 [[X]], i1 [[TMP1]]
 ; CHECK-NEXT:    call void @use1(i1 [[AND1]])
 ; CHECK-NEXT:    call void @use1(i1 [[Y_C]])
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -1114,6 +1100,8 @@ define i1 @not_d_bools_use2(i1 %c, i1 %x, i1 %y) {
   call void @use1(i1 %y_c)
   ret i1 %r
 }
+
+; negative test: both op is not one-use
 
 define i1 @not_d_bools_negative_use2(i1 %c, i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_d_bools_negative_use2(
