@@ -69,6 +69,7 @@ stages there is no ABI stability in any form.
    :maxdepth: 1
    :caption: Development
 
+   compiler_support
    build_and_test
    developer_guides
    porting
