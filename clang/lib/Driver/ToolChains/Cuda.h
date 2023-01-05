@@ -183,6 +183,11 @@ public:
   const ToolChain &HostTC;
   CudaInstallationDetector CudaInstallation;
 
+  /// Uses nvptx-arch tool to get arch of the system GPU. Will return error
+  /// if unable to find one.
+  virtual Expected<SmallVector<std::string>>
+  getSystemGPUArchs(const llvm::opt::ArgList &Args) const override;
+
 protected:
   Tool *buildAssembler() const override;  // ptxas
   Tool *buildLinker() const override;     // fatbinary (ok, not really a linker)
