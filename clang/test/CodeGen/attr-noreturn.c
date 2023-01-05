@@ -13,6 +13,7 @@ void __attribute__((noreturn)) f(void) {
 // CHECK-LABEL: @test_conditional_gnu(
 // CHECK:         %cond = select i1 %tobool, ptr @t1, ptr @t2
 // CHECK:         call void %cond(
+// CHECK:         call void %cond2(
 // CHECK-NEXT:    unreachable
 
 // CHECK-CXX-LABEL: @_Z20test_conditional_gnui(
