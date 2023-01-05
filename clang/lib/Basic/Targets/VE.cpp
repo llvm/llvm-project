@@ -38,6 +38,11 @@ void VETargetInfo::getTargetDefines(const LangOptions &Opts,
   // FIXME: define __FAST_MATH__ 1 if -ffast-math is enabled
   // FIXME: define __OPTIMIZE__ n if -On is enabled
   // FIXME: define __VECTOR__ n 1 if automatic vectorization is enabled
+
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
 }
 
 ArrayRef<Builtin::Info> VETargetInfo::getTargetBuiltins() const {
