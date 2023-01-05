@@ -265,7 +265,7 @@ void CheckHelper::Check(const Symbol &symbol) {
       messages_.Say(
           "A PROTECTED entity must be a variable or pointer"_err_en_US);
     }
-    if (InCommonBlock(symbol)) { // C856
+    if (FindCommonBlockContaining(symbol)) { // C856
       messages_.Say(
           "A PROTECTED entity may not be in a common block"_err_en_US);
     }
