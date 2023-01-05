@@ -154,8 +154,8 @@ define i32 @pr4918_1(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: @pr4918_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UMUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    [[TMP0:%.*]] = extractvalue { i32, i1 } [[UMUL]], 1
-; CHECK-NEXT:    [[RETVAL:%.*]] = zext i1 [[TMP0]] to i32
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i32, i1 } [[UMUL]], 1
+; CHECK-NEXT:    [[RETVAL:%.*]] = zext i1 [[OVERFLOW]] to i32
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 entry:
@@ -175,8 +175,8 @@ define i32 @pr4918_2(i32 %x, i32 %y) nounwind {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UMUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractvalue { i32, i1 } [[UMUL]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[TMP0]], true
-; CHECK-NEXT:    [[RETVAL:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = xor i1 [[TMP0]], true
+; CHECK-NEXT:    [[RETVAL:%.*]] = zext i1 [[OVERFLOW]] to i32
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 entry:
@@ -195,8 +195,8 @@ define i32 @pr4918_3(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: @pr4918_3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UMUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    [[TMP0:%.*]] = extractvalue { i32, i1 } [[UMUL]], 1
-; CHECK-NEXT:    [[RETVAL:%.*]] = zext i1 [[TMP0]] to i32
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i32, i1 } [[UMUL]], 1
+; CHECK-NEXT:    [[RETVAL:%.*]] = zext i1 [[OVERFLOW]] to i32
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 entry:
@@ -232,8 +232,8 @@ define <4 x i32> @pr20113(<4 x i16> %a, <4 x i16> %b) {
 define i1 @pr21445(i8 %a) {
 ; CHECK-LABEL: @pr21445(
 ; CHECK-NEXT:    [[UMUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[A:%.*]], i8 ptrtoint (ptr @pr21445_data to i8))
-; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i8, i1 } [[UMUL]], 1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[CMP:%.*]] = extractvalue { i8, i1 } [[UMUL]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ext = zext i8 %a to i32
   %mul = mul i32 %ext, zext (i8 ptrtoint (ptr @pr21445_data to i8) to i32)
