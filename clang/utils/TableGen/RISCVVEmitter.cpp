@@ -528,12 +528,8 @@ void RVVEmitter::createRVVIntrinsics(
     StringRef MaskedIRName = R->getValueAsString("MaskedIRName");
     unsigned NF = R->getValueAsInt("NF");
 
-    // If unmasked builtin supports policy, they should be TU or TA.
-    llvm::SmallVector<Policy> SupportedUnMaskedPolicies;
-    SupportedUnMaskedPolicies.emplace_back(Policy(
-        Policy::PolicyType::Undisturbed, Policy::PolicyType::Omit)); // TU
-    SupportedUnMaskedPolicies.emplace_back(
-        Policy(Policy::PolicyType::Agnostic, Policy::PolicyType::Omit)); // TA
+    SmallVector<Policy> SupportedUnMaskedPolicies =
+        RVVIntrinsic::getSupportedUnMaskedPolicies();
     SmallVector<Policy> SupportedMaskedPolicies =
         RVVIntrinsic::getSupportedMaskedPolicies(HasTailPolicy, HasMaskPolicy);
 
