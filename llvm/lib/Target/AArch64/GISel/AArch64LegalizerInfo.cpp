@@ -187,8 +187,19 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({s64, v8s16, v16s8, v4s32})
       .lower();
 
-  getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
-      .legalFor({v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
+  auto &MinMaxActions = getActionDefinitionsBuilder(
+      {G_SMIN, G_SMAX, G_UMIN, G_UMAX});
+  if (HasCSSC)
+    MinMaxActions
+        .legalFor({s32, s64, v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
+        // Making clamping conditional on CSSC extension as without legal types we
+        // lower to CMP which can fold one of the two sxtb's we'd otherwise need
+        // if we detect a type smaller than 32-bit.
+        .minScalar(0, s32);
+  else
+    MinMaxActions
+        .legalFor({v8s8, v16s8, v4s16, v8s16, v2s32, v4s32});
+  MinMaxActions
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
