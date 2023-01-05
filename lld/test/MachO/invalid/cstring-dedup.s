@@ -11,7 +11,7 @@
 # RUN: not %lld -dylib %t/relocs.o 2>&1 | FileCheck %s --check-prefix=RELOCS
 
 # TERM:   not-terminated.o:(__cstring+0x4): string is not null terminated
-# RELOCS: relocs.o contains relocations in __TEXT,__cstring, so LLD cannot deduplicate strings. Try re-running with --no-deduplicate-strings.
+# RELOCS: error: {{.*}}relocs.o: __TEXT,__cstring contains relocations, which is unsupported
 
 #--- not-terminated.s
 .cstring
