@@ -1,4 +1,4 @@
-; RUN: not opt -passes=instcombine < %s 2>&1 | FileCheck %s
+; RUN: not llvm-as -disable-output < %s 2>&1 | FileCheck %s
 ; CHECK: Access type node must be a valid scalar type
 
 define void @test6(ptr %gi) #0 {
