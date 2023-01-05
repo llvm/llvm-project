@@ -288,5 +288,5 @@ EvaluateExpressionOptions *SBExpressionOptions::get() const {
 }
 
 EvaluateExpressionOptions &SBExpressionOptions::ref() const {
-  return *(m_opaque_up.get());
+  return *m_opaque_up;
 }
