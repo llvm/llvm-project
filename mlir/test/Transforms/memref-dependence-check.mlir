@@ -1080,3 +1080,21 @@ func.func @parallel_dependence_check_failure() {
   }
   return
 }
+
+// -----
+
+func.func @affine_if_no_dependence() {
+  %c1 = arith.constant 1 : index
+  %alloc = memref.alloc() : memref<15xi1>
+  %true = arith.constant true
+  affine.store %true, %alloc[%c1] : memref<15xi1>
+  // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
+  // expected-remark@above {{dependence from 0 to 1 at depth 1 = false}}
+  // This set is empty.
+  affine.if affine_set<(d0, d1, d2, d3) : ((d0 + 1) mod 8 >= 0, d0 * -8 >= 0)>(%c1, %c1, %c1, %c1){
+    %265 = affine.load %alloc[%c1] : memref<15xi1>
+    // expected-remark@above {{dependence from 1 to 0 at depth 1 = false}}
+    // expected-remark@above {{dependence from 1 to 1 at depth 1 = false}}
+  }
+  return
+}
