@@ -22,6 +22,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -136,6 +137,17 @@ static bool shouldPrintAsStr(char Specifier, Type *OpType) {
   return Specifier == 's' && isa<PointerType>(OpType);
 }
 
+constexpr StringLiteral NonLiteralStr("???");
+static_assert(NonLiteralStr.size() == 3);
+
+static StringRef getAsConstantStr(Value *V) {
+  StringRef S;
+  if (!getConstantStringInfo(V, S))
+    S = NonLiteralStr;
+
+  return S;
+}
+
 static void diagnoseInvalidFormatString(const CallBase *CI) {
   DiagnosticInfoUnsupported UnsupportedFormatStr(
       *CI->getParent()->getParent(),
@@ -150,8 +162,6 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
   IRBuilder<> Builder(Ctx);
   Type *I32Ty = Type::getInt32Ty(Ctx);
   unsigned UniqID = 0;
-  constexpr StringLiteral NonLiteralStr("???");
-  static_assert(NonLiteralStr.size() == 3);
 
   for (auto *CI : Printfs) {
     unsigned NumOps = CI->arg_size();
@@ -246,31 +256,9 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
             ArgSize = 4;
         }
       }
-      if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], ArgType)) {
-        ArgSize = NonLiteralStr.size() + 1;
-        if (auto *ConstExpr = dyn_cast<ConstantExpr>(Arg)) {
-          auto *GV = dyn_cast<GlobalVariable>(ConstExpr->getOperand(0));
-          if (GV && GV->hasInitializer()) {
-            Constant *Init = GV->getInitializer();
-            bool IsZeroValue = Init->isZeroValue();
-            auto *CA = dyn_cast<ConstantDataArray>(Init);
-            if (IsZeroValue || (CA && CA->isString())) {
-              size_t SizeStr =
-                  IsZeroValue ? 1 : (strlen(CA->getAsCString().data()) + 1);
-              size_t Rem = SizeStr % DWORD_ALIGN;
-              size_t NSizeStr = 0;
-              LLVM_DEBUG(dbgs() << "Printf string original size = " << SizeStr
-                                << '\n');
-              if (Rem) {
-                NSizeStr = SizeStr + (DWORD_ALIGN - Rem);
-              } else {
-                NSizeStr = SizeStr;
-              }
-              ArgSize = NSizeStr;
-            }
-          }
-        }
-      }
+      if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], ArgType))
+        ArgSize = alignTo(getAsConstantStr(Arg).size() + 1, 4);
+
       LLVM_DEBUG(dbgs() << "Printf ArgSize (in buffer) = " << ArgSize
                         << " for type: " << *ArgType << '\n');
       Sizes << ArgSize << ':';
@@ -412,21 +400,9 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
         }
         Arg = new BitCastInst(Arg, IType, "PrintArgFP", Brnch);
         WhatToStore.push_back(Arg);
-      } else if (ArgType->getTypeID() == Type::PointerTyID) {
+      } else if (isa<PointerType>(ArgType)) {
         if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], ArgType)) {
-          StringRef S = NonLiteralStr;
-          if (auto *ConstExpr = dyn_cast<ConstantExpr>(Arg)) {
-            auto *GV = dyn_cast<GlobalVariable>(ConstExpr->getOperand(0));
-            if (GV && GV->hasInitializer()) {
-              Constant *Init = GV->getInitializer();
-              bool IsZeroValue = Init->isZeroValue();
-              auto *CA = dyn_cast<ConstantDataArray>(Init);
-              if (IsZeroValue || (CA && CA->isString())) {
-                S = IsZeroValue ? "" : CA->getAsCString();
-              }
-            }
-          }
-
+          StringRef S = getAsConstantStr(Arg);
           if (!S.empty()) {
             const uint64_t ReadSize = 4;
 
@@ -459,7 +435,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
         } else {
           WhatToStore.push_back(Arg);
         }
-      }  else {
+      } else {
         WhatToStore.push_back(Arg);
       }
       for (unsigned I = 0, E = WhatToStore.size(); I != E; ++I) {
