@@ -1289,6 +1289,10 @@ private:
         Tok->setType(TT_TrailingReturnArrow);
       }
       break;
+    case tok::eof:
+      if (Style.InsertNewlineAtEOF && Tok->NewlinesBefore == 0)
+        Tok->NewlinesBefore = 1;
+      break;
     default:
       break;
     }

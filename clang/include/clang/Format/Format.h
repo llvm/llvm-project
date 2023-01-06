@@ -2450,6 +2450,10 @@ struct FormatStyle {
   /// \version 15
   bool InsertBraces;
 
+  /// Insert a newline at end of file if missing.
+  /// \version 16
+  bool InsertNewlineAtEOF;
+
   /// The style of inserting trailing commas into container literals.
   enum TrailingCommaStyle : int8_t {
     /// Do not insert trailing commas.
@@ -4151,6 +4155,7 @@ struct FormatStyle {
            IndentWidth == R.IndentWidth &&
            IndentWrappedFunctionNames == R.IndentWrappedFunctionNames &&
            InsertBraces == R.InsertBraces &&
+           InsertNewlineAtEOF == R.InsertNewlineAtEOF &&
            IntegerLiteralSeparator.Binary == R.IntegerLiteralSeparator.Binary &&
            IntegerLiteralSeparator.Decimal ==
                R.IntegerLiteralSeparator.Decimal &&

@@ -25171,6 +25171,14 @@ TEST_F(FormatTest, BreakAfterAttributes) {
   EXPECT_EQ(Code, format(Code, Style));
 }
 
+TEST_F(FormatTest, InsertNewlineAtEOF) {
+  FormatStyle Style = getLLVMStyle();
+  Style.InsertNewlineAtEOF = true;
+
+  verifyFormat("int i;\n", Style);
+  verifyFormat("int i;\n", "int i;", Style);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
