@@ -1008,7 +1008,7 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 unsigned RISCVTTIImpl::getEstimatedVLFor(VectorType *Ty) {
   if (isa<ScalableVectorType>(Ty)) {
     const unsigned EltSize = DL.getTypeSizeInBits(Ty->getElementType());
-    const unsigned MinSize = DL.getTypeSizeInBits(Ty).getKnownMinSize();
+    const unsigned MinSize = DL.getTypeSizeInBits(Ty).getKnownMinValue();
     const unsigned VectorBits = *getVScaleForTuning() * RISCV::RVVBitsPerBlock;
     return RISCVTargetLowering::computeVLMAX(VectorBits, EltSize, MinSize);
   }
@@ -1472,7 +1472,7 @@ unsigned RISCVTTIImpl::getRegUsageForType(Type *Ty) {
   TypeSize Size = DL.getTypeSizeInBits(Ty);
   if (Ty->isVectorTy()) {
     if (Size.isScalable() && ST->hasVInstructions())
-      return divideCeil(Size.getKnownMinSize(), RISCV::RVVBitsPerBlock);
+      return divideCeil(Size.getKnownMinValue(), RISCV::RVVBitsPerBlock);
 
     if (ST->useRVVForFixedLengthVectors())
       return divideCeil(Size, ST->getRealMinVLen());
