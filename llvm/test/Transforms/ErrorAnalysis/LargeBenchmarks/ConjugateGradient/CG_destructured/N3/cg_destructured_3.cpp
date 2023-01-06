@@ -27,8 +27,10 @@ vec conjugateGradientSolver( const matrix &A, const vec &B );
 
 int main()
 {
-  matrix A = { { 4, 1, 1 }, { 1, 3, 1 }, { 1, 1, 1} };
-  vec B = { 1, 2, 1 };
+  matrix A = {{ 0.8204, -0.4552, -0.3366},
+              {-0.4552,  1.0242, -0.2784},
+              {-0.3366, -0.2784,  0.4965}};
+  vec B = { 1, 2, 3 };
 
   vec X = conjugateGradientSolver( A, B );
 

@@ -135,7 +135,8 @@ void ACInstrumentation::instrumentCallsForACComputation(
 
     Value *OperandValue = BaseInstruction->getOperand(I);
     // Create a Cast Instruction to double in case operation is float operation.
-    if (isSingleFPOperation(&*BaseInstruction)) {
+    if (OpRegisterNamePointer != EmptyValuePointer &&
+        isSingleFPOperation(&*BaseInstruction)) {
       OperandValue = InstructionBuilder.CreateFPCast(
           BaseInstruction->getOperand(I),
           Type::getDoubleTy(BaseInstruction->getModule()->getContext()));
@@ -217,7 +218,7 @@ void ACInstrumentation::instrumentCallsForAFComputation(
     NumOperands--;
 
   // Incomplete phi nodes are those that are to be assigned an incoming value
-  // which is no generated yet.
+  // which is not generated yet.
   std::vector<Value *> IncompletePHINodes;
   for (int I = 0; I < NumOperands; ++I) {
     if (getFunctionEnum(
