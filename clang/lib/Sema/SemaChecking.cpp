@@ -3705,6 +3705,23 @@ bool Sema::CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
   switch (BuiltinID) {
   default:
     break;
+  case LoongArch::BI__builtin_loongarch_cacop_d:
+    if (!TI.hasFeature("64bit"))
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_loongarch_builtin_requires_la64)
+             << TheCall->getSourceRange();
+    LLVM_FALLTHROUGH;
+  case LoongArch::BI__builtin_loongarch_cacop_w: {
+    if (BuiltinID == LoongArch::BI__builtin_loongarch_cacop_w &&
+        !TI.hasFeature("32bit"))
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_loongarch_builtin_requires_la32)
+             << TheCall->getSourceRange();
+    SemaBuiltinConstantArgRange(TheCall, 0, 0, llvm::maxUIntN(5));
+    SemaBuiltinConstantArgRange(TheCall, 2, llvm::minIntN(12),
+                                llvm::maxIntN(12));
+    break;
+  }
   case LoongArch::BI__builtin_loongarch_crc_w_b_w:
   case LoongArch::BI__builtin_loongarch_crc_w_h_w:
   case LoongArch::BI__builtin_loongarch_crc_w_w_w:

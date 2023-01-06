@@ -19694,6 +19694,12 @@ Value *CodeGenFunction::EmitLoongArchBuiltinExpr(unsigned BuiltinID,
   switch (BuiltinID) {
   default:
     llvm_unreachable("unexpected builtin ID.");
+  case LoongArch::BI__builtin_loongarch_cacop_d:
+    ID = Intrinsic::loongarch_cacop_d;
+    break;
+  case LoongArch::BI__builtin_loongarch_cacop_w:
+    ID = Intrinsic::loongarch_cacop_w;
+    break;
   case LoongArch::BI__builtin_loongarch_dbar:
     ID = Intrinsic::loongarch_dbar;
     break;

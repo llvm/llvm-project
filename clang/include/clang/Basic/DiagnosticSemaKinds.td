@@ -11764,4 +11764,6 @@ def warn_unsafe_buffer_expression : Warning<
 def warn_unsafe_buffer_variable : Warning<
   "variable %0 participates in unchecked buffer operations">,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def err_loongarch_builtin_requires_la32 : Error<
+  "this builtin requires target: loongarch32">;
 } // end of sema component.
