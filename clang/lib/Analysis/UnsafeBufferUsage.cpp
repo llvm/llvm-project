@@ -26,7 +26,7 @@ public:
   // Creates an AST visitor that matches `Matcher` on all
   // descendants of a given node "n" except for the ones
   // belonging to a different callable of "n".
-  MatchDescendantVisitor(const internal::DynTypedMatcher *Matcher,
+  MatchDescendantVisitor(const internal::DynTypedMatcher &Matcher,
                          internal::ASTMatchFinder *Finder,
                          internal::BoundNodesTreeBuilder *Builder,
                          internal::ASTMatchFinder::BindKind Bind)
@@ -89,7 +89,7 @@ private:
   template <typename T> bool match(const T &Node) {
     internal::BoundNodesTreeBuilder RecursiveBuilder(*Builder);
 
-    if (Matcher->matches(DynTypedNode::create(Node), Finder,
+    if (Matcher.matches(DynTypedNode::create(Node), Finder,
                          &RecursiveBuilder)) {
       ResultBindings.addMatch(RecursiveBuilder);
       Matches = true;
@@ -99,7 +99,7 @@ private:
     return true;
   }
 
-  const internal::DynTypedMatcher *const Matcher;
+  const internal::DynTypedMatcher & Matcher;
   internal::ASTMatchFinder *const Finder;
   internal::BoundNodesTreeBuilder *const Builder;
   internal::BoundNodesTreeBuilder ResultBindings;
@@ -108,7 +108,7 @@ private:
 };
 
 AST_MATCHER_P(Stmt, forEveryDescendant, internal::Matcher<Stmt>, innerMatcher) {
-  MatchDescendantVisitor Visitor(new DynTypedMatcher(innerMatcher), Finder,
+  MatchDescendantVisitor Visitor(DynTypedMatcher(innerMatcher), Finder,
                                  Builder, ASTMatchFinder::BK_All);
   return Visitor.findMatch(DynTypedNode::create(Node));
 }
