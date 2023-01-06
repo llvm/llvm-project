@@ -106,6 +106,16 @@ extern __inline int
 
 #define __break(/*ui15*/ _1) __builtin_loongarch_break((_1))
 
+#if __loongarch_grlen == 32
+#define __cacop_w(/*uimm5*/ _1, /*unsigned int*/ _2, /*simm12*/ _3)            \
+  ((void)__builtin_loongarch_cacop_w((_1), (unsigned int)(_2), (_3)))
+#endif
+
+#if __loongarch_grlen == 64
+#define __cacop_d(/*uimm5*/ _1, /*unsigned long int*/ _2, /*simm12*/ _3)       \
+  ((void)__builtin_loongarch_cacop_d((_1), (unsigned long int)(_2), (_3)))
+#endif
+
 #define __dbar(/*ui15*/ _1) __builtin_loongarch_dbar((_1))
 
 #define __ibar(/*ui15*/ _1) __builtin_loongarch_ibar((_1))

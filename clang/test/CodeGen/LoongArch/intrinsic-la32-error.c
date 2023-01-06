@@ -3,6 +3,14 @@
 
 #include <larchintrin.h>
 
+void cacop_d(unsigned long int a) {
+  __builtin_loongarch_cacop_d(1, a, 1024); // expected-error {{this builtin requires target: loongarch64}}
+  __builtin_loongarch_cacop_w(-1, a, 1024); // expected-error {{argument value -1 is outside the valid range [0, 31]}}
+  __builtin_loongarch_cacop_w(32, a, 1024); // expected-error {{argument value 32 is outside the valid range [0, 31]}}
+  __builtin_loongarch_cacop_w(1, a, -4096); // expected-error {{argument value -4096 is outside the valid range [-2048, 2047]}}
+  __builtin_loongarch_cacop_w(1, a, 4096); // expected-error {{argument value 4096 is outside the valid range [-2048, 2047]}}
+}
+
 void dbar(int a) {
   __builtin_loongarch_dbar(32768); // expected-error {{argument value 32768 is outside the valid range [0, 32767]}}
   __builtin_loongarch_dbar(-1); // expected-error {{argument value 4294967295 is outside the valid range [0, 32767]}}

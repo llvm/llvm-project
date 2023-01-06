@@ -123,6 +123,17 @@ int crc_w_w_w(int a, int b) {
   return 0;
 }
 
+// CHECK-LABEL: @cacop_d(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.loongarch.cacop.d(i64 1, i64 [[A:%.*]], i64 1024)
+// CHECK-NEXT:    tail call void @llvm.loongarch.cacop.d(i64 1, i64 [[A]], i64 1024)
+// CHECK-NEXT:    ret void
+//
+void cacop_d(unsigned long int a) {
+  __cacop_d(1, a, 1024);
+  __builtin_loongarch_cacop_d(1, a, 1024);
+}
+
 // CHECK-LABEL: @crc_w_d_w(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crc.w.d.w(i64 [[A:%.*]], i32 [[B:%.*]])

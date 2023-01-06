@@ -52,6 +52,10 @@ defm int_loongarch_masked_cmpxchg : MaskedAtomicRMWFiveOpIntrinsics;
 // LoongArch BASE
 
 def int_loongarch_break : Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
+def int_loongarch_cacop_d : Intrinsic<[], [llvm_i64_ty, llvm_i64_ty, llvm_i64_ty],
+    [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>]>;
+def int_loongarch_cacop_w : Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+    [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>]>;
 def int_loongarch_dbar : Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 def int_loongarch_ibar : Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 def int_loongarch_movfcsr2gr : Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
