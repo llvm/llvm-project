@@ -21,16 +21,7 @@
 
 namespace llvm {
 
-AIXException::AIXException(AsmPrinter *A) : DwarfCFIExceptionBase(A) {}
-
-// This overrides 'DwarfCFIExceptionBase::markFunctionEnd', to avoid the call to
-// tidyLandingPads. This is necessary, because the
-// 'PPCAIXAsmPrinter::emitFunctionBodyEnd' function already checked whether we
-// need ehinfo, and emitted a traceback table with the bits set to indicate that
-// we will be emitting it, if so. Thus, if we remove it now -- so late in the
-// process -- we'll end up having emitted a reference to __ehinfo.N symbol, but
-// not emitting a definition for said symbol.
-void AIXException::markFunctionEnd() {}
+AIXException::AIXException(AsmPrinter *A) : EHStreamer(A) {}
 
 void AIXException::emitExceptionInfoTable(const MCSymbol *LSDA,
                                           const MCSymbol *PerSym) {

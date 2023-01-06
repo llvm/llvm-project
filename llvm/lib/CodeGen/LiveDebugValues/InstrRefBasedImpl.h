@@ -984,7 +984,7 @@ public:
 
   void defVar(const MachineInstr &MI, const DbgValueProperties &Properties,
               const SmallVectorImpl<DbgOpID> &DebugOps) {
-    assert(MI.isDebugValue() || MI.isDebugRef());
+    assert(MI.isDebugValueLike());
     DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
                       MI.getDebugLoc()->getInlinedAt());
     DbgValue Rec = (DebugOps.size() > 0)

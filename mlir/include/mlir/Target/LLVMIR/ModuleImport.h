@@ -149,6 +149,17 @@ public:
   /// implement the fastmath interface.
   void setFastmathFlagsAttr(llvm::Instruction *inst, Operation *op) const;
 
+  /// Converts LLVM metadata to corresponding MLIR representation,
+  /// e.g. metadata nodes referenced via !tbaa are converted to
+  /// TBAA operations hosted inside a MetadataOp.
+  LogicalResult convertMetadata();
+
+  /// Returns SymbolRefAttr representing TBAA metadata `node`
+  /// in `tbaaMapping`.
+  SymbolRefAttr lookupTBAAAttr(const llvm::MDNode *node) {
+    return tbaaMapping.lookup(node);
+  }
+
 private:
   /// Clears the block and value mapping before processing a new region.
   void clearBlockAndValueMapping() {
@@ -219,6 +230,25 @@ private:
   /// them fails. All operations are inserted at the start of the current
   /// function entry block.
   FailureOr<Value> convertConstantExpr(llvm::Constant *constant);
+  /// Returns symbol name to be used for MetadataOp containing
+  /// TBAA metadata operations. It must not conflict with the user
+  /// name space.
+  StringRef getTBAAMetadataOpName() const { return "__tbaa"; }
+  /// Returns a terminated MetadataOp into which TBAA metadata
+  /// operations can be placed. The MetadataOp is created
+  /// on the first invocation of this function.
+  MetadataOp getTBAAMetadataOp();
+  /// Performs conversion of LLVM TBAA metadata starting from
+  /// `node`. On exit from this function all nodes reachable
+  /// from `node` are converted, and tbaaMapping map is updated
+  /// (unless all dependencies have been converted by a previous
+  /// invocation of this function).
+  LogicalResult processTBAAMetadata(const llvm::MDNode *node);
+  /// Returns unique string name of a symbol that may be used
+  /// for a TBAA metadata operation. The name will contain
+  /// the provided `basename` and will be uniqued via
+  /// tbaaNodeCounter (see below).
+  std::string getNewTBAANodeName(StringRef basename);
 
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;
@@ -251,6 +281,16 @@ private:
   LLVM::TypeFromLLVMIRTranslator typeTranslator;
   /// Stateful debug information importer.
   std::unique_ptr<detail::DebugImporter> debugImporter;
+  /// A terminated MetadataOp where TBAA metadata operations
+  /// can be inserted.
+  MetadataOp tbaaMetadataOp{};
+  /// Mapping between LLVM TBAA metadata nodes and symbol references
+  /// to the LLVMIR dialect TBAA operations corresponding to these
+  /// nodes.
+  DenseMap<const llvm::MDNode *, SymbolRefAttr> tbaaMapping;
+  /// A counter to be used as a unique suffix for symbols
+  /// defined by TBAA operations.
+  unsigned tbaaNodeCounter = 0;
 };
 
 } // namespace LLVM

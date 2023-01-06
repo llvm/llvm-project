@@ -30,7 +30,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; DBGVALUE:       %[[REG:[0-9]+]]:gr32 = ADD32ri %1, 512
 ; DBGVALUE-NEXT:  DBG_VALUE %[[REG]]
 ; INSTRREF:       ADD32ri %1, 512, {{.*}}debug-instr-number 1
-; INSTRREF-NEXT:  DBG_INSTR_REF 1, 0
+; INSTRREF-NEXT:  DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
 
 ; Function Attrs: nofree norecurse nounwind uwtable writeonly
 define dso_local i32 @foo(i32 %a, ptr nocapture %b) local_unnamed_addr !dbg !7 {

@@ -2591,9 +2591,6 @@ bool IRTranslator::translateInvoke(const User &U,
 
   bool LowerInlineAsm = I.isInlineAsm();
   bool NeedEHLabel = true;
-  // If it can't throw then use a fast-path without emitting EH labels.
-  if (LowerInlineAsm)
-    NeedEHLabel = (cast<InlineAsm>(I.getCalledOperand()))->canThrow();
 
   // Emit the actual call, bracketed by EH_LABELs so that the MF knows about
   // the region covered by the try.
