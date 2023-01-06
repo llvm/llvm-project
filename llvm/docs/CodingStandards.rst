@@ -1093,10 +1093,8 @@ In general, names should be in camel case (e.g. ``TextFileReader`` and
   nouns and start with an upper-case letter (e.g. ``TextFileReader``).
 
 * **Variable names** should be nouns (as they represent state).  The name should
-  be camel case.  In ``llvm/``, ``clang/``, ``clang-tools-extra/``, ``polly/``,
-  and ``bolt/``, the name should start with an upper-case letter (e.g.
-  ``Leader`` or ``Boats``); start with a lower case-letter letter for other
-  directories.
+  be camel case, and start with an upper case letter (e.g. ``Leader`` or
+  ``Boats``).
 
 * **Function names** should be verb phrases (as they represent actions), and
   command-like function should be imperative.  The name should be camel case,
