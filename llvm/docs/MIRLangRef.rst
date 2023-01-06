@@ -737,7 +737,7 @@ The syntax is:
     EH_LABEL <mcsymbol Ltmp1>
 
 Debug Instruction Reference Operands
-^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A debug instruction reference operand is a pair of indices, referring to an
 instruction and an operand within that instruction respectively; see
