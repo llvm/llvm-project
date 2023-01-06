@@ -8428,6 +8428,10 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   }
   Args.ClaimAllArgs(options::OPT_Xoffload_linker);
 
+  // Embed bitcode instead of an object in JIT mode.
+  if (const Arg *A = Args.getLastArg(options::OPT_fopenmp_target_jit))
+    CmdArgs.push_back("--embed-bitcode");
+
   // Forward `-mllvm` arguments to the LLVM invocations if present.
   for (Arg *A : Args.filtered(options::OPT_mllvm)) {
     CmdArgs.push_back("-mllvm");
