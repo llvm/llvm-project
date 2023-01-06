@@ -603,3 +603,55 @@ func.func @depthwise_conv2d_dyn_w_h(%arg0: tensor<2x?x?x3xf32>, %arg1: tensor<3x
   %0 = "tosa.depthwise_conv2d"(%arg0, %arg1, %arg2) {pad = array<i64: 1, 2, 3, 4>, dilation = array<i64: 2, 1>, stride = array<i64: 1, 2>} : (tensor<2x?x?x3xf32>, tensor<3x6x3x5xf32>, tensor<15xf32>) -> tensor<2x?x?x15xf32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: @conv3d_f32
+func.func @conv3d_f32(%input: tensor<1x49x48x47x27xf32>, %weights: tensor<28x3x4x5x27xf32>, %bias: tensor<28xf32>) -> () {
+  // CHECK-DAG: %[[PERMS:.+]] = arith.constant dense<[1, 2, 3, 4, 0]>
+  // CHECK-DAG: %[[TRANSPOSE:.+]] = "tosa.transpose"(%arg1, %[[PERMS]])
+  // CHECK-DAG: %[[EMPTY:.+]] = tensor.empty()
+  // CHECK-DAG: %[[ZERO:.+]] = arith.constant 0
+  // CHECK-DAG: %[[FILL:.+]] = linalg.fill ins(%[[ZERO]] : f32) outs(%[[EMPTY]] : tensor<1x47x45x43x28xf32>)
+  // CHECK-DAG: %[[EMPTY:.+]] = tensor.empty()
+  // CHECK-DAG: %[[CONV3D:.+]] = linalg.conv_3d_ndhwc_dhwcf
+  // CHECK-SAME: {dilations = dense<1> : tensor<3xi64>, strides = dense<1> : tensor<3xi64>}
+  // CHECK-SAME: ins(%arg0, %[[TRANSPOSE]] : tensor<1x49x48x47x27xf32>, tensor<3x4x5x27x28xf32>)
+  // CHECK-SAME: outs(%[[FILL]] : tensor<1x47x45x43x28xf32>) -> tensor<1x47x45x43x28xf32>
+  // CHECK: %[[GENERIC:.+]] = linalg.generic
+  // CHECK-SAME: {indexing_maps = [#map, #map1, #map1], iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel"]}
+  // CHECK-SAME: ins(%arg2, %[[CONV3D]] : tensor<28xf32>, tensor<1x47x45x43x28xf32>)
+  // CHECK--SAME: outs(%[[EMPTY]] : tensor<1x47x45x43x28xf32>) {
+  // CHECK: ^bb0(%[[A1:.+]]: f32, %[[A2:.+]]: f32, %{{.+}}: f32):
+  // CHECK: %[[ADD:.+]] = arith.addf %[[A1]], %[[A2]] : f32
+  // CHECK: linalg.yield %[[ADD]]
+  %0 = "tosa.conv3d"(%input, %weights, %bias) {pad = array<i64: 0, 0, 0, 0, 0, 0>, stride = array<i64: 1, 1, 1>, dilation = array<i64: 1, 1, 1>} : (tensor<1x49x48x47x27xf32>, tensor<28x3x4x5x27xf32>, tensor<28xf32>)  -> tensor<1x47x45x43x28xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @conv3d_i8
+func.func @conv3d_i8(%input: tensor<1x49x48x47x27xi8>, %weights: tensor<28x3x4x5x27xi8>, %bias: tensor<28xi32>) -> () {
+    // CHECK-DAG: %[[PERMS:.+]] = arith.constant dense<[1, 2, 3, 4, 0]>
+  // CHECK-DAG: %[[TRANSPOSE:.+]] = "tosa.transpose"(%arg1, %[[PERMS]])
+  // CHECK-DAG: %[[EMPTY:.+]] = tensor.empty()
+  // CHECK-DAG: %[[ZERO:.+]] = arith.constant 0
+  // CHECK-DAG: %[[FILL:.+]] = linalg.fill ins(%[[ZERO]] : i32) outs(%[[EMPTY]] : tensor<1x47x45x43x28xi32>)
+  // CHECK-DAG: %[[EMPTY:.+]] = tensor.empty()
+  // CHECK-DAG: %[[IZP:.+]] = arith.constant -128 : i32
+  // CHECK-DAG: %[[FZP:.+]] = arith.constant 42 : i32
+  // CHECK-DAG: %[[CONV3D:.+]] = linalg.conv_3d_ndhwc_dhwcf_q
+  // CHECK-SAME: {dilations = dense<1> : tensor<3xi64>, strides = dense<1> : tensor<3xi64>}
+  // CHECK-SAME: ins(%arg0, %[[TRANSPOSE]], %[[IZP]], %[[FZP]] : tensor<1x49x48x47x27xi8>, tensor<3x4x5x27x28xi8>, i32, i32)
+  // CHECK-SAME: outs(%[[FILL]] : tensor<1x47x45x43x28xi32>) -> tensor<1x47x45x43x28xi32>
+  // CHECK: %[[GENERIC:.+]] = linalg.generic
+  // CHECK-SAME: {indexing_maps = [#map, #map1, #map1], iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel"]}
+  // CHECK-SAME: ins(%arg2, %[[CONV3D]] : tensor<28xi32>, tensor<1x47x45x43x28xi32>)
+  // CHECK--SAME: outs(%[[EMPTY]] : tensor<1x47x45x43x28xi32>) {
+  // CHECK: ^bb0(%[[A1:.+]]: i32, %[[A2:.+]]: i32, %{{.+}}: i32):
+  // CHECK: %[[ADD:.+]] = arith.addi %[[A1]], %[[A2]] : i32
+  // CHECK: linalg.yield %[[ADD]]
+  %0 = "tosa.conv3d"(%input, %weights, %bias) {pad = array<i64: 0, 0, 0, 0, 0, 0>, quantization_info = #tosa.conv_quant<input_zp = -128, weight_zp = 42>, stride = array<i64: 1, 1, 1>, dilation = array<i64: 1, 1, 1>} : (tensor<1x49x48x47x27xi8>, tensor<28x3x4x5x27xi8>, tensor<28xi32>)  -> tensor<1x47x45x43x28xi32>
+  return
+}
