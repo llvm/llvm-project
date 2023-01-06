@@ -56,8 +56,8 @@ static cl::opt<bool> DisableI2pP2iOpt(
 //===----------------------------------------------------------------------===//
 
 std::optional<TypeSize>
-AllocaInst::getAllocationSizeInBits(const DataLayout &DL) const {
-  TypeSize Size = DL.getTypeAllocSizeInBits(getAllocatedType());
+AllocaInst::getAllocationSize(const DataLayout &DL) const {
+  TypeSize Size = DL.getTypeAllocSize(getAllocatedType());
   if (isArrayAllocation()) {
     auto *C = dyn_cast<ConstantInt>(getArraySize());
     if (!C)
@@ -66,6 +66,14 @@ AllocaInst::getAllocationSizeInBits(const DataLayout &DL) const {
     Size *= C->getZExtValue();
   }
   return Size;
+}
+
+std::optional<TypeSize>
+AllocaInst::getAllocationSizeInBits(const DataLayout &DL) const {
+  std::optional<TypeSize> Size = getAllocationSize(DL);
+  if (Size)
+    return *Size * 8;
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1511,7 +1519,7 @@ bool AllocaInst::isStaticAlloca() const {
 
   // Must be in the entry block.
   const BasicBlock *Parent = getParent();
-  return Parent == &Parent->getParent()->front() && !isUsedWithInAlloca();
+  return Parent->isEntryBlock() && !isUsedWithInAlloca();
 }
 
 //===----------------------------------------------------------------------===//

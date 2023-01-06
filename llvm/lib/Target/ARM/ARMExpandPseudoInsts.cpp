@@ -953,6 +953,7 @@ static bool IsAnAddressOperand(const MachineOperand &MO) {
   case MachineOperand::MO_Metadata:
   case MachineOperand::MO_MCSymbol:
     return true;
+  case MachineOperand::MO_DbgInstrRef:
   case MachineOperand::MO_CFIIndex:
     return false;
   case MachineOperand::MO_IntrinsicID:

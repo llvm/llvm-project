@@ -1193,7 +1193,8 @@ public:
   /// case is to provision the cost of vectorization/scalarization in
   /// vectorizer passes.
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     unsigned Index = -1) const;
+                                     unsigned Index = -1, Value *Op0 = nullptr,
+                                     Value *Op1 = nullptr) const;
 
   /// \return The expected cost of vector Insert and Extract.
   /// This is used when instruction is available, and implementation
@@ -1786,7 +1787,8 @@ public:
                                              TTI::TargetCostKind CostKind,
                                              const Instruction *I) = 0;
   virtual InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                             unsigned Index) = 0;
+                                             unsigned Index, Value *Op0,
+                                             Value *Op1) = 0;
   virtual InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
                                              unsigned Index) = 0;
 
@@ -2358,9 +2360,9 @@ public:
                                      const Instruction *I) override {
     return Impl.getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
   }
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     unsigned Index) override {
-    return Impl.getVectorInstrCost(Opcode, Val, Index);
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index,
+                                     Value *Op0, Value *Op1) override {
+    return Impl.getVectorInstrCost(Opcode, Val, Index, Op0, Op1);
   }
   InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
                                      unsigned Index) override {

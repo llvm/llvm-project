@@ -170,7 +170,7 @@ BenchmarkRunner::getRunnableConfiguration(
   // Assemble at least kMinInstructionsForSnippet instructions by repeating
   // the snippet for debug/analysis. This is so that the user clearly
   // understands that the inside instructions are repeated.
-  if (BenchmarkPhaseSelector > BenchmarkPhaseSelectorE::StopBeforeAllCodegen) {
+  if (BenchmarkPhaseSelector > BenchmarkPhaseSelectorE::PrepareSnippet) {
     const int MinInstructionsForSnippet = 4 * Instructions.size();
     const int LoopBodySizeForSnippet = 2 * Instructions.size();
     auto Snippet = assembleSnippet(BC, Repetitor, MinInstructionsForSnippet,
@@ -185,7 +185,7 @@ BenchmarkRunner::getRunnableConfiguration(
 
   // Assemble NumRepetitions instructions repetitions of the snippet for
   // measurements.
-  if (BenchmarkPhaseSelector > BenchmarkPhaseSelectorE::StopBeforeFullCodegen) {
+  if (BenchmarkPhaseSelector > BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet) {
     auto Snippet = assembleSnippet(BC, Repetitor, InstrBenchmark.NumRepetitions,
                                    LoopBodySize);
     if (Error E = Snippet.takeError())
@@ -203,7 +203,7 @@ BenchmarkRunner::runConfiguration(RunnableConfiguration &&RC,
   object::OwningBinary<object::ObjectFile> &ObjectFile = RC.ObjectFile;
 
   if (DumpObjectToDisk &&
-      BenchmarkPhaseSelector > BenchmarkPhaseSelectorE::StopBeforeFullCodegen) {
+      BenchmarkPhaseSelector > BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet) {
     auto ObjectFilePath = writeObjectFile(ObjectFile.getBinary()->getData());
     if (Error E = ObjectFilePath.takeError()) {
       InstrBenchmark.Error = toString(std::move(E));

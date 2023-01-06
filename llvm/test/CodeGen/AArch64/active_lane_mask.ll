@@ -100,7 +100,6 @@ define <vscale x 8 x i1> @lane_mask_nxv8i1_i8(i8 %index, i8 %TC) {
 ; CHECK-NEXT:    mov z1.h, w1
 ; CHECK-NEXT:    umin z0.h, z0.h, #255
 ; CHECK-NEXT:    and z1.h, z1.h, #0xff
-; CHECK-NEXT:    and z0.h, z0.h, #0xff
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmphi p0.h, p0/z, z1.h, z0.h
 ; CHECK-NEXT:    ret

@@ -851,10 +851,11 @@ applyTransformToEach(TransformOpTy transformOp, ArrayRef<Operation *> targets,
       continue;
     }
 
+    Location specificOpLoc = specificOp->getLoc();
     DiagnosedSilenceableFailure res =
         transformOp.applyToOne(specificOp, results.back(), state);
     if (res.isDefiniteFailure() ||
-        failed(detail::checkApplyToOne(transformOp, specificOp->getLoc(),
+        failed(detail::checkApplyToOne(transformOp, specificOpLoc,
                                        results.back()))) {
       return DiagnosedSilenceableFailure::definiteFailure();
     }

@@ -198,6 +198,7 @@ protected:
   bool HasGFX11FullVGPRs = false;
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
+  bool HasVALUTransUseHazard = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1068,7 +1069,7 @@ public:
     return getGeneration() >= GFX11;
   }
 
-  bool hasVALUTransUseHazard() const { return getGeneration() >= GFX11; }
+  bool hasVALUTransUseHazard() const { return HasVALUTransUseHazard; }
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() >= GFX11; }
 

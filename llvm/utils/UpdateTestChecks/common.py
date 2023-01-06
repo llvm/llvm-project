@@ -1159,7 +1159,8 @@ def get_autogennote_suffix(parser, args):
       continue  # Ignore options such as --help that aren't included in args
     # Ignore parameters such as paths to the binary or the list of tests
     if action.dest in ('tests', 'update_only', 'tool_binary', 'opt_binary',
-                       'llc_binary', 'clang', 'opt', 'llvm_bin', 'verbose'):
+                       'llc_binary', 'clang', 'opt', 'llvm_bin', 'verbose',
+                       'force_update'):
       continue
     value = getattr(args, action.dest)
     if action.const is not None:  # action stores a constant (usually True/False)

@@ -118,3 +118,90 @@ define void @foo() {
 define void @foo() {
   ret void
 }
+
+; // -----
+
+; CHECK: error: TBAA root node must have non-empty identity: !2 = !{!""}
+define dso_local void @tbaa(ptr %0) {
+  store i8 1, ptr %0, align 4, !tbaa !2
+  ret void
+}
+
+!0 = !{!""}
+!1 = !{!"omnipotent char", !0, i64 0}
+!2 = !{!1, !1, i64 0}
+
+; // -----
+
+; CHECK: error: unsupported TBAA node format: !0 = !{!1, i64 0, i64 0}
+define dso_local void @tbaa(ptr %0) {
+  store i8 1, ptr %0, align 4, !tbaa !2
+  ret void
+}
+
+!0 = !{!"Simple C/C++ TBAA"}
+!1 = !{!"omnipotent char", !0, i64 0}
+!2 = !{!1, i64 0, i64 0}
+
+; // -----
+
+; CHECK: error: operand '1' must be MDNode: !1 = !{!"omnipotent char", i64 0, i64 0}
+define dso_local void @tbaa(ptr %0) {
+  store i8 1, ptr %0, align 4, !tbaa !2
+  ret void
+}
+
+!0 = !{!"Simple C/C++ TBAA"}
+!1 = !{!"omnipotent char", i64 0, i64 0}
+!2 = !{!1, !1, i64 0}
+
+; // -----
+
+; CHECK: error: missing member offset: !1 = !{!"agg_t", !2, i64 0, !2}
+define dso_local void @tbaa(ptr %0) {
+  store i8 1, ptr %0, align 4, !tbaa !3
+  ret void
+}
+
+!0 = !{!"Simple C/C++ TBAA"}
+!1 = !{!"omnipotent char", !0, i64 0}
+!2 = !{!"agg_t", !1, i64 0, !1}
+!3 = !{!2, !1, i64 0}
+
+; // -----
+
+; CHECK: error: operand '4' must be ConstantInt: !1 = !{!"agg_t", !2, i64 0, !2, double 1.000000e+00}
+define dso_local void @tbaa(ptr %0) {
+  store i8 1, ptr %0, align 4, !tbaa !3
+  ret void
+}
+
+!0 = !{!"Simple C/C++ TBAA"}
+!1 = !{!"omnipotent char", !0, i64 0}
+!2 = !{!"agg_t", !1, i64 0, !1, double 1.0}
+!3 = !{!2, !1, i64 0}
+
+; // -----
+
+; CHECK: error: operand '3' must be ConstantInt: !0 = !{!1, !1, i64 0, double 1.000000e+00}
+define dso_local void @tbaa(ptr %0) {
+  store i8 1, ptr %0, align 4, !tbaa !2
+  ret void
+}
+
+!0 = !{!"Simple C/C++ TBAA"}
+!1 = !{!"omnipotent char", !0, i64 0}
+!2 = !{!1, !1, i64 0, double 1.0}
+
+; // -----
+
+; CHECK: error: unsupported TBAA node format: !0 = !{!1, !1, i64 0, i64 4}
+define dso_local void @tbaa(ptr %0) {
+  store i32 1, ptr %0, align 4, !tbaa !2
+  ret void
+}
+
+!2 = !{!3, !3, i64 0, i64 4}
+!3 = !{!4, i64 4, !"int"}
+!4 = !{!5, i64 1, !"omnipotent char"}
+!5 = !{!"Simple C++ TBAA"}

@@ -448,14 +448,13 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
                      dst_sel:$dst_sel, dst_unused:$dst_unused,
                      src0_sel:$src0_sel, src1_sel:$src1_sel);
   let Asm32 = getAsm32<1, 2, vt0>.ret;
-  let Asm64 = getAsm64<1, 2, 0, HasModifiers, HasOMod, vt0>.ret;
   let AsmDPP = getAsmDPP<1, 2, HasModifiers, vt0>.ret;
   let AsmDPP16 = getAsmDPP16<1, 2, HasModifiers, vt0>.ret;
   let AsmDPP8 = getAsmDPP8<1, 2, 0, vt0>.ret;
   let AsmSDWA = getAsmSDWA<1, 2, vt0>.ret;
   let AsmSDWA9 = getAsmSDWA9<1, 1, 2, vt0>.ret;
-  let AsmVOP3DPPBase =
-      getAsmVOP3DPPBase<2 /*NumSrcArgs*/, HasDst, HasClamp,
+  let AsmVOP3Base =
+      getAsmVOP3Base<2 /*NumSrcArgs*/, HasDst, HasClamp,
                         HasOpSel, HasOMod, IsVOP3P, HasModifiers,
                         HasModifiers, HasModifiers,
                         0 /*Src2HasMods*/, DstVT>.ret;
@@ -535,13 +534,12 @@ def VOP_DOT_ACC_I32_I32   : VOP_DOT_ACC<i32, i32> {
 // Write out to vcc or arbitrary SGPR.
 def VOP2b_I32_I1_I32_I32 : VOPProfile<[i32, i32, i32, untyped], /*EnableClamp=*/1> {
   let Asm32 = "$vdst, vcc, $src0, $src1";
-  let Asm64 = "$vdst, $sdst, $src0, $src1$clamp";
+  let AsmVOP3Base = "$vdst, $sdst, $src0, $src1$clamp";
   let AsmSDWA = "$vdst, vcc, $src0_modifiers, $src1_modifiers$clamp $dst_sel $dst_unused $src0_sel $src1_sel";
   let AsmSDWA9 = "$vdst, vcc, $src0_modifiers, $src1_modifiers$clamp $dst_sel $dst_unused $src0_sel $src1_sel";
   let AsmDPP = "$vdst, vcc, $src0, $src1 $dpp_ctrl$row_mask$bank_mask$bound_ctrl";
   let AsmDPP8 = "$vdst, vcc, $src0, $src1 $dpp8$fi";
   let AsmDPP16 = AsmDPP#"$fi";
-  let AsmVOP3DPPBase = Asm64;
   let InsDPP = (ins DstRCDPP:$old,
                     Src0DPP:$src0,
                     Src1DPP:$src1,
@@ -563,7 +561,6 @@ def VOP2b_I32_I1_I32_I32 : VOPProfile<[i32, i32, i32, untyped], /*EnableClamp=*/
 def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1], /*EnableClamp=*/1> {
   let HasSrc2Mods = 0;
   let Asm32 = "$vdst, vcc, $src0, $src1, vcc";
-  let Asm64 = "$vdst, $sdst, $src0, $src1, $src2$clamp";
   let AsmSDWA = "$vdst, vcc, $src0_modifiers, $src1_modifiers, vcc$clamp $dst_sel $dst_unused $src0_sel $src1_sel";
   let AsmSDWA9 = "$vdst, vcc, $src0_modifiers, $src1_modifiers, vcc$clamp $dst_sel $dst_unused $src0_sel $src1_sel";
   let AsmDPP = "$vdst, vcc, $src0, $src1, vcc $dpp_ctrl$row_mask$bank_mask$bound_ctrl";
@@ -571,7 +568,7 @@ def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1], /*EnableClamp=*/1>
   let AsmDPP16 = AsmDPP#"$fi";
   let Outs32 = (outs DstRC:$vdst);
   let Outs64 = (outs DstRC:$vdst, VOPDstS64orS32:$sdst);
-  let AsmVOP3DPPBase = Asm64;
+  let AsmVOP3Base = "$vdst, $sdst, $src0, $src1, $src2$clamp";
   let OutsVOP3DPP = Outs64;
   let OutsVOP3DPP8 = Outs64;
 
@@ -606,13 +603,12 @@ def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1], /*EnableClamp=*/1>
 // Read in from vcc or arbitrary SGPR.
 class VOP2e_SGPR<list<ValueType> ArgVT> : VOPProfile<ArgVT> {
   let Asm32 = "$vdst, $src0, $src1";
-  let Asm64 = "$vdst, $src0_modifiers, $src1_modifiers, $src2";
   let AsmSDWA = "$vdst, $src0_modifiers, $src1_modifiers, vcc$clamp $dst_sel $dst_unused $src0_sel $src1_sel";
   let AsmSDWA9 = "$vdst, $src0_modifiers, $src1_modifiers, vcc$clamp $dst_sel $dst_unused $src0_sel $src1_sel";
   let AsmDPP = "$vdst, $src0_modifiers, $src1_modifiers, vcc $dpp_ctrl$row_mask$bank_mask$bound_ctrl";
   let AsmDPP8 = "$vdst, $src0, $src1, vcc $dpp8$fi";
   let AsmDPP16 = AsmDPP#"$fi";
-  let AsmVOP3DPPBase = Asm64;
+  let AsmVOP3Base = "$vdst, $src0_modifiers, $src1_modifiers, $src2";
 
   let Outs32 = (outs DstRC:$vdst);
   let Outs64 = (outs DstRC:$vdst);

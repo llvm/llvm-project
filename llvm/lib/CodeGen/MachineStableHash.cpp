@@ -165,6 +165,9 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
   case MachineOperand::MO_Predicate:
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
                                MO.getPredicate());
+  case MachineOperand::MO_DbgInstrRef:
+    return stable_hash_combine(MO.getType(), MO.getInstrRefInstrIndex(),
+                               MO.getInstrRefOpIndex());
   }
   llvm_unreachable("Invalid machine operand type");
 }

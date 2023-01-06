@@ -57,6 +57,8 @@ public:
 private:
   // Helper functions
   bool processStore(StoreInst *SI, BasicBlock::iterator &BBI);
+  bool processStoreOfLoad(StoreInst *SI, LoadInst *LI, const DataLayout &DL,
+                          BasicBlock::iterator &BBI);
   bool processMemSet(MemSetInst *SI, BasicBlock::iterator &BBI);
   bool processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI);
   bool processMemMove(MemMoveInst *M);
