@@ -366,6 +366,9 @@ Non-comprehensive list of changes in this release
   timestamp to be used in replacement of the current date and time in
   the ``__DATE__``, ``__TIME__``, and ``__TIMESTAMP__`` macros. See
   `<https://reproducible-builds.org/docs/source-date-epoch/>`_.
+- Clang now saves the address of ABI-indirect function parameters on the stack,
+  improving the debug information available in programs compiled without
+  optimizations.
 
 New Compiler Flags
 ------------------
