@@ -4,8 +4,8 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+relax -mattr=+experimental-zcmt %s -o %t.rv64.o
 
 # tbljal conversion
-# RUN: ld.lld %t.rv32.o -riscv-tbljal --defsym foo=_start+30 -o %t.rv32
-# RUN: ld.lld %t.rv64.o -riscv-tbljal --defsym foo=_start+30 -o %t.rv64
+# RUN: ld.lld %t.rv32.o --riscv-tbljal --defsym foo=_start+30 -o %t.rv32
+# RUN: ld.lld %t.rv64.o --riscv-tbljal --defsym foo=_start+30 -o %t.rv64
 # RUN: llvm-objdump -d -M no-aliases --mattr=+experimental-zcmt --no-show-raw-insn %t.rv32 | FileCheck --check-prefix=TBLJAL %s
 # RUN: llvm-objdump -d -M no-aliases --mattr=+experimental-zcmt --no-show-raw-insn %t.rv64 | FileCheck --check-prefix=TBLJAL %s
 # TBLJAL:      cm.jalt 34

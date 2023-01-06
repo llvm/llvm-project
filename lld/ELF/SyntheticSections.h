@@ -376,22 +376,19 @@ public:
   bool isNeeded() const override;
   void finalizeContents() override;
 
-  void addCMJTEntryCandidate(const Symbol &symbol);
+  void addCMJTEntryCandidate(const Symbol &symbol, int gain);
   int getCMJTEntryIndex(const Symbol &symbol);
-  void addCMJALTEntryCandidate(const Symbol &symbol);
+  void addCMJALTEntryCandidate(const Symbol &symbol, int gain);
   int getCMJALTEntryIndex(const Symbol &symbol);
   void scanTableJumpEntrys(const InputSection &sec) const;
 
-  // Flag to force TableJump to be in output if we have relocations
-  // that relies on its address.
-  bool hasTableJumpOffRel = false;
-
+  bool isFinalized = false;
 protected:
   uint64_t size = 0;
 
 private:
-  void addEntry(const Symbol &symbol, llvm::DenseMap<llvm::CachedHashStringRef, int> &entriesList);
-  uint32_t getEntry(const Symbol &symbol,
+  void addEntry(const Symbol &symbol, llvm::DenseMap<llvm::CachedHashStringRef, int> &entriesList, int gain);
+  uint32_t getEntry(const Symbol &symbol, uint32_t maxSize,
                     SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0> &entriesList);
   void writeEntries(uint8_t *buf,
                     SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0> &entriesList);
