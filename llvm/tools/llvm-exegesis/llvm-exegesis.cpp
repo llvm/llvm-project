@@ -122,14 +122,14 @@ static cl::opt<exegesis::BenchmarkPhaseSelectorE> BenchmarkPhaseSelector(
         "it is possible to stop the benchmarking process after some phase"),
     cl::cat(BenchmarkOptions),
     cl::values(
-        clEnumValN(exegesis::BenchmarkPhaseSelectorE::StopBeforeAllCodegen,
+        clEnumValN(exegesis::BenchmarkPhaseSelectorE::PrepareSnippet,
                    "prepare-snippet",
                    "Only generate the minimal instruction sequence"),
-        clEnumValN(exegesis::BenchmarkPhaseSelectorE::StopBeforeFullCodegen,
+        clEnumValN(exegesis::BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet,
                    "prepare-and-assemble-snippet",
                    "Same as prepare-snippet, but also dumps an excerpt of the "
                    "sequence (hex encoded)"),
-        clEnumValN(exegesis::BenchmarkPhaseSelectorE::StopBeforeMeasurements,
+        clEnumValN(exegesis::BenchmarkPhaseSelectorE::AssembleMeasuredCode,
                    "assemble-measured-code",
                    "Same as prepare-and-assemble-snippet, but also creates the "
                    "full sequence "
