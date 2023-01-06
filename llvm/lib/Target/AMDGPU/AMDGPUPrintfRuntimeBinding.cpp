@@ -433,7 +433,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
 
           if (!S.empty()) {
             const size_t NSizeStr = S.size() + 1;
-            const size_t ReadSize = 4;
+            const uint64_t ReadSize = 4;
 
             BinaryByteStream Streamer(S, support::little);
 
