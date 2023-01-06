@@ -148,7 +148,7 @@ if(compiler_rt_path)
       add_dependencies(install-builtins-stripped install-builtins-${target}-stripped)
     endforeach()
   endif()
-  set(deps builtins)
+  set(builtins_dep builtins)
   # We don't need to depend on the builtins if we're building instrumented
   # because the next stage will use the same compiler used to build this stage.
   if(NOT LLVM_BUILD_INSTRUMENTED AND CLANG_ENABLE_BOOTSTRAP)
@@ -386,13 +386,13 @@ if(runtimes)
   endif()
   if(NOT LLVM_RUNTIME_TARGETS)
     runtime_default_target(
-      DEPENDS ${deps} ${extra_deps}
+      DEPENDS ${builtins_dep} ${extra_deps}
       PREFIXES ${prefixes})
     set(test_targets check-runtimes)
   else()
     if("default" IN_LIST LLVM_RUNTIME_TARGETS)
       runtime_default_target(
-        DEPENDS ${deps} ${extra_deps}
+        DEPENDS ${builtins_dep} ${extra_deps}
         PREFIXES ${prefixes})
       list(REMOVE_ITEM LLVM_RUNTIME_TARGETS "default")
     else()
@@ -420,8 +420,11 @@ if(runtimes)
     endif()
 
     foreach(name ${LLVM_RUNTIME_TARGETS})
+      if(builtins_dep)
+        set(builtins_dep_name "${builtins_dep}-${name}")
+      endif()
       runtime_register_target(${name} ${name}
-        DEPENDS ${deps})
+        DEPENDS ${builtins_dep_name})
 
       add_dependencies(runtimes runtimes-${name})
       add_dependencies(runtimes-configure runtimes-${name}-configure)

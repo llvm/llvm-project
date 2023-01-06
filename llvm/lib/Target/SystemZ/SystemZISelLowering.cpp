@@ -1628,8 +1628,8 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
       }
       // Join the stores, which are independent of one another.
       Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
-                          makeArrayRef(&MemOps[NumFixedFPRs],
-                                       SystemZ::ELFNumArgFPRs-NumFixedFPRs));
+                          ArrayRef(&MemOps[NumFixedFPRs],
+                                   SystemZ::ELFNumArgFPRs - NumFixedFPRs));
     }
   }
 
@@ -3672,7 +3672,7 @@ SystemZTargetLowering::lowerDYNAMIC_STACKALLOC_XPLINK(SDValue Op,
   bool IsReturnValueUsed = false;
   EVT VT = Op.getValueType();
   SDValue AllocaCall =
-      makeExternalCall(Chain, DAG, "@@ALCAXP", VT, makeArrayRef(NeededSpace),
+      makeExternalCall(Chain, DAG, "@@ALCAXP", VT, ArrayRef(NeededSpace),
                        CallingConv::C, IsSigned, DL, DoesNotReturn,
                        IsReturnValueUsed)
           .first;

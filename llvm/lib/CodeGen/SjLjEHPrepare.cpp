@@ -391,7 +391,7 @@ bool SjLjEHPrepare::setupEntryBlockAndCallSites(Function &F) {
   lowerAcrossUnwindEdges(F, Invokes);
 
   Value *FuncCtx =
-      setupFunctionContext(F, makeArrayRef(LPads.begin(), LPads.end()));
+      setupFunctionContext(F, ArrayRef(LPads.begin(), LPads.end()));
   BasicBlock *EntryBB = &F.front();
   IRBuilder<> Builder(EntryBB->getTerminator());
 

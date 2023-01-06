@@ -63,7 +63,7 @@ unsigned NumJobs = 1;
 void writeBitcode(ReducerWorkItem &M, raw_ostream &OutStream);
 
 void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx,
-                 const char *ToolName);
+                 StringRef ToolName);
 
 bool isReduced(ReducerWorkItem &M, const TestRunner &Test) {
   const bool UseBitcode = Test.inputIsBitcode() || TmpFilesAsBitcode;

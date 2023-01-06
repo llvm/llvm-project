@@ -203,7 +203,7 @@ public:
   // Close |f| and cleanup resources held by it.
   // Returns the non-zero error value if an error occurs when closing the
   // file.
-  static constexpr int cleanup(File *f) {
+  static int cleanup(File *f) {
     int close_result = f->close();
     if (close_result != 0)
       return close_result;

@@ -20,7 +20,7 @@
 ; RUN:   -riscv-v-vector-bits-min=128 -riscv-v-register-bit-width-lmul=8 \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL8
 
-define void @add(float* noalias nocapture readonly %src1, float* noalias nocapture readonly %src2, i32 signext %size, float* noalias nocapture writeonly %result) {
+define void @add(ptr noalias nocapture readonly %src1, ptr noalias nocapture readonly %src2, i32 signext %size, ptr noalias nocapture writeonly %result) {
 ; CHECK-LABEL: add
 ; CHECK-SCALAR:      LV(REG): Found max usage: 2 item
 ; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
@@ -58,19 +58,19 @@ for.cond.cleanup:
 
 for.body:
   %i.011 = phi i64 [ %add4, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds float, float* %src1, i64 %i.011
-  %0 = load float, float* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds float, float* %src2, i64 %i.011
-  %1 = load float, float* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds float, ptr %src1, i64 %i.011
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %src2, i64 %i.011
+  %1 = load float, ptr %arrayidx2, align 4
   %add = fadd float %0, %1
-  %arrayidx3 = getelementptr inbounds float, float* %result, i64 %i.011
-  store float %add, float* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds float, ptr %result, i64 %i.011
+  store float %add, ptr %arrayidx3, align 4
   %add4 = add nuw nsw i64 %i.011, 1
   %exitcond.not = icmp eq i64 %add4, %conv
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-define void @goo(i32** nocapture noundef %a, i32 noundef signext %n) {
+define void @goo(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-LABEL: goo
 ; CHECK-SCALAR:      LV(REG): Found max usage: 1 item
 ; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
@@ -102,10 +102,10 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32*, i32** %a, i64 %indvars.iv
-  %0 = load i32*, i32** %arrayidx, align 8
-  %add.ptr = getelementptr inbounds i32, i32* %0, i64 1
-  store i32* %add.ptr, i32** %arrayidx, align 8
+  %arrayidx = getelementptr inbounds ptr, ptr %a, i64 %indvars.iv
+  %0 = load ptr, ptr %arrayidx, align 8
+  %add.ptr = getelementptr inbounds i32, ptr %0, i64 1
+  store ptr %add.ptr, ptr %arrayidx, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body

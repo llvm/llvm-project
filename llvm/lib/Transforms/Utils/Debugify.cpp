@@ -345,7 +345,7 @@ bool llvm::collectDebugInfoMetadata(Module &M,
             if (I.getDebugLoc().getInlinedAt())
               continue;
             // Skip undef values.
-            if (DVI->isUndef())
+            if (DVI->isKillLocation())
               continue;
 
             auto *Var = DVI->getVariable();
@@ -588,7 +588,7 @@ bool llvm::checkDebugInfoMetadata(Module &M,
             if (I.getDebugLoc().getInlinedAt())
               continue;
             // Skip undef values.
-            if (DVI->isUndef())
+            if (DVI->isKillLocation())
               continue;
 
             auto *Var = DVI->getVariable();

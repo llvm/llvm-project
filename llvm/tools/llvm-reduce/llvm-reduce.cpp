@@ -51,12 +51,12 @@ static cl::opt<bool>
                               "--delta-passes as a comma separated list"),
                      cl::cat(LLVMReduceOptions));
 
-static cl::opt<std::string> InputFilename(cl::Positional, cl::Required,
+static cl::opt<std::string> InputFilename(cl::Positional,
                                           cl::desc("<input llvm ll/bc file>"),
                                           cl::cat(LLVMReduceOptions));
 
 static cl::opt<std::string>
-    TestFilename("test", cl::Required,
+    TestFilename("test",
                  cl::desc("Name of the interesting-ness test to be run"),
                  cl::cat(LLVMReduceOptions));
 
@@ -137,7 +137,8 @@ static std::pair<StringRef, bool> determineOutputType(bool IsMIR,
   return {OutputFilename, OutputBitcode};
 }
 
-void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx, const char *ToolName) {
+void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx,
+                 StringRef ToolName) {
   Expected<BitcodeFileContents> IF = llvm::getBitcodeFileContents(Data);
   if (!IF) {
     WithColor::error(errs(), ToolName) << IF.takeError();
@@ -156,9 +157,20 @@ void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx, con
 
 int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
+  const StringRef ToolName(Argv[0]);
 
   cl::HideUnrelatedOptions({&LLVMReduceOptions, &getColorCategory()});
   cl::ParseCommandLineOptions(Argc, Argv, "LLVM automatic testcase reducer.\n");
+
+  if (Argc == 1) {
+    cl::PrintHelpMessage();
+    return 0;
+  }
+
+  if (PrintDeltaPasses) {
+    printDeltaPasses(outs());
+    return 0;
+  }
 
   bool ReduceModeMIR = false;
   if (InputLanguage != InputLanguages::None) {
@@ -168,9 +180,15 @@ int main(int Argc, char **Argv) {
     ReduceModeMIR = true;
   }
 
-  if (PrintDeltaPasses) {
-    printDeltaPasses(errs());
-    return 0;
+  if (InputFilename.empty()) {
+    WithColor::error(errs(), ToolName)
+        << "reduction testcase positional argument must be specified\n";
+    return 1;
+  }
+
+  if (TestFilename.empty()) {
+    WithColor::error(errs(), ToolName) << "--test option must be specified\n";
+    return 1;
   }
 
   if (!PreserveDebugEnvironment)
@@ -180,7 +198,7 @@ int main(int Argc, char **Argv) {
   std::unique_ptr<TargetMachine> TM;
 
   auto [OriginalProgram, InputIsBitcode] =
-      parseReducerWorkItem(Argv[0], InputFilename, Context, TM, ReduceModeMIR);
+      parseReducerWorkItem(ToolName, InputFilename, Context, TM, ReduceModeMIR);
   if (!OriginalProgram) {
     return 1;
   }
@@ -192,7 +210,7 @@ int main(int Argc, char **Argv) {
 
   // Initialize test environment
   TestRunner Tester(TestFilename, TestArguments, std::move(OriginalProgram),
-                    std::move(TM), Argv[0], OutputFilename, InputIsBitcode,
+                    std::move(TM), ToolName, OutputFilename, InputIsBitcode,
                     OutputBitcode);
 
   // This parses and writes out the testcase into a temporary file copy for the

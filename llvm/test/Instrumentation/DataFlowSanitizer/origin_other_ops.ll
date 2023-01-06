@@ -4,9 +4,6 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK: @__dfsan_arg_tls = external thread_local(initialexec) global [[TLS_ARR:\[100 x i64\]]]
 ; CHECK: @__dfsan_retval_tls = external thread_local(initialexec) global [[TLS_ARR]]
-; CHECK: @__dfsan_shadow_width_bits = weak_odr constant i32 [[#SBITS:]]
-; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
-
 define float @unop(float %f) {
   ; CHECK: @unop.dfsan
   ; CHECK: [[FO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
@@ -20,8 +17,8 @@ define i1 @binop(i1 %a, i1 %b) {
   ; CHECK: @binop.dfsan
   ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
   ; CHECK: [[AO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-  ; CHECK: [[BS:%.*]] = load i[[#SBITS]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
-  ; CHECK: [[NE:%.*]] = icmp ne i[[#SBITS]] [[BS]], 0
+  ; CHECK: [[BS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; CHECK: [[NE:%.*]] = icmp ne i8 [[BS]], 0
   ; CHECK: [[MO:%.*]] = select i1 [[NE]], i32 [[BO]], i32 [[AO]]
   ; CHECK: store i32 [[MO]], ptr @__dfsan_retval_origin_tls, align 4
 
@@ -42,8 +39,8 @@ define i1 @cmpop(i1 %a, i1 %b) {
   ; CHECK: @cmpop.dfsan
   ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
   ; CHECK: [[AO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-  ; CHECK: [[BS:%.*]] = load i[[#SBITS]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
-  ; CHECK: [[NE:%.*]] = icmp ne i[[#SBITS]] [[BS]], 0
+  ; CHECK: [[BS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; CHECK: [[NE:%.*]] = icmp ne i8 [[BS]], 0
   ; CHECK: [[MO:%.*]] = select i1 [[NE]], i32 [[BO]], i32 [[AO]]
   ; CHECK: store i32 [[MO]], ptr @__dfsan_retval_origin_tls, align 4
 
@@ -57,14 +54,14 @@ define ptr @gepop(ptr %p, i32 %a, i32 %b, i32 %c) {
   ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 2), align 4
   ; CHECK: [[AO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
   ; CHECK: [[PO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-  ; CHECK: [[CS:%.*]] = load i[[#SBITS]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 6) to ptr), align 2
-  ; CHECK: [[BS:%.*]] = load i[[#SBITS]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align 2
-  ; CHECK: [[AS:%.*]] = load i[[#SBITS]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
-  ; CHECK: [[AS_NE:%.*]] = icmp ne i[[#SBITS]] [[AS]], 0
+  ; CHECK: [[CS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 6) to ptr), align 2
+  ; CHECK: [[BS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align 2
+  ; CHECK: [[AS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; CHECK: [[AS_NE:%.*]] = icmp ne i8 [[AS]], 0
   ; CHECK: [[APO:%.*]] = select i1 [[AS_NE]], i32 [[AO]], i32 [[PO]]
-  ; CHECK: [[BS_NE:%.*]] = icmp ne i[[#SBITS]] [[BS]], 0
+  ; CHECK: [[BS_NE:%.*]] = icmp ne i8 [[BS]], 0
   ; CHECK: [[ABPO:%.*]] = select i1 [[BS_NE]], i32 [[BO]], i32 [[APO]]
-  ; CHECK: [[CS_NE:%.*]] = icmp ne i[[#SBITS]] [[CS]], 0
+  ; CHECK: [[CS_NE:%.*]] = icmp ne i8 [[CS]], 0
   ; CHECK: [[ABCPO:%.*]] = select i1 [[CS_NE]], i32 [[CO]], i32 [[ABPO]]
   ; CHECK: store i32 [[ABCPO]], ptr @__dfsan_retval_origin_tls, align 4
 
@@ -76,8 +73,8 @@ define i32 @eeop(<4 x i32> %a, i32 %b) {
   ; CHECK: @eeop.dfsan
   ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
   ; CHECK: [[AO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-  ; CHECK: [[BS:%.*]] = load i[[#SBITS]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
-  ; CHECK: [[NE:%.*]] = icmp ne i[[#SBITS]] [[BS]], 0
+  ; CHECK: [[BS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; CHECK: [[NE:%.*]] = icmp ne i8 [[BS]], 0
   ; CHECK: [[MO:%.*]] = select i1 [[NE]], i32 [[BO]], i32 [[AO]]
   ; CHECK: store i32 [[MO]], ptr @__dfsan_retval_origin_tls, align 4
 
@@ -90,11 +87,11 @@ define <4 x i32> @ieop(<4 x i32> %p, i32 %a, i32 %b) {
   ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 2), align 4
   ; CHECK: [[AO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
   ; CHECK: [[PO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-  ; CHECK: [[BS:%.*]] = load i[[#SBITS]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align 2
-  ; CHECK: [[AS:%.*]] = load i[[#SBITS]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
-  ; CHECK: [[AS_NE:%.*]] = icmp ne i[[#SBITS]] [[AS]], 0
+  ; CHECK: [[BS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align 2
+  ; CHECK: [[AS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; CHECK: [[AS_NE:%.*]] = icmp ne i8 [[AS]], 0
   ; CHECK: [[APO:%.*]] = select i1 [[AS_NE]], i32 [[AO]], i32 [[PO]]
-  ; CHECK: [[BS_NE:%.*]] = icmp ne i[[#SBITS]] [[BS]], 0
+  ; CHECK: [[BS_NE:%.*]] = icmp ne i8 [[BS]], 0
   ; CHECK: [[ABPO:%.*]] = select i1 [[BS_NE]], i32 [[BO]], i32 [[APO]]
   ; CHECK: store i32 [[ABPO]], ptr @__dfsan_retval_origin_tls, align 4
 
@@ -106,8 +103,8 @@ define <4 x i32> @svop(<4 x i32> %a, <4 x i32> %b) {
   ; CHECK: @svop.dfsan
   ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
   ; CHECK: [[AO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-  ; CHECK: [[BS:%.*]] = load i[[#SBITS]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
-  ; CHECK: [[NE:%.*]] = icmp ne i[[#SBITS]] [[BS]], 0
+  ; CHECK: [[BS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; CHECK: [[NE:%.*]] = icmp ne i8 [[BS]], 0
   ; CHECK: [[MO:%.*]] = select i1 [[NE]], i32 [[BO]], i32 [[AO]]
   ; CHECK: store i32 [[MO]], ptr @__dfsan_retval_origin_tls, align 4
   
@@ -128,13 +125,13 @@ define {i32, {float, float}} @ivop({i32, {float, float}} %a, {float, float} %b) 
   ; CHECK: @ivop.dfsan
   ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
   ; CHECK: [[AO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-  ; COMM: TODO simplify the expression [[#mul(2,SBYTES) + max(SBYTES,2)]] to
-  ; COMM: [[#mul(3,SBYTES)]], if shadow-tls-alignment is updated to match shadow
-  ; CHECK: [[BS:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 [[#mul(2,SBYTES) + max(SBYTES,2)]]) to ptr), align 2
-  ; CHECK: [[BS0:%.*]] = extractvalue { i[[#SBITS]], i[[#SBITS]] } [[BS]], 0
-  ; CHECK: [[BS1:%.*]] = extractvalue { i[[#SBITS]], i[[#SBITS]] } [[BS]], 1
-  ; CHECK: [[BS01:%.*]] = or i[[#SBITS]] [[BS0]], [[BS1]]
-  ; CHECK: [[NE:%.*]] = icmp ne i[[#SBITS]] [[BS01]], 0
+  ; COMM: TODO simplify the expression 4 to
+  ; COMM: 6, if shadow-tls-alignment is updated to match shadow
+  ; CHECK: [[BS:%.*]] = load { i8, i8 }, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align 2
+  ; CHECK: [[BS0:%.*]] = extractvalue { i8, i8 } [[BS]], 0
+  ; CHECK: [[BS1:%.*]] = extractvalue { i8, i8 } [[BS]], 1
+  ; CHECK: [[BS01:%.*]] = or i8 [[BS0]], [[BS1]]
+  ; CHECK: [[NE:%.*]] = icmp ne i8 [[BS01]], 0
   ; CHECK: [[MO:%.*]] = select i1 [[NE]], i32 [[BO]], i32 [[AO]]
   ; CHECK: store i32 [[MO]], ptr @__dfsan_retval_origin_tls, align 4
   

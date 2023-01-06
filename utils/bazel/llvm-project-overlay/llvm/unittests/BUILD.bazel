@@ -698,9 +698,6 @@ cc_test(
     ) + [
         "tools/llvm-exegesis/Common/AssemblerUtils.h",
     ],
-    tags = [
-        "nobuildkite",  # TODO: allow user space perf monitoring on buildkite.
-    ],
     deps = [
         "//llvm:AllTargetsCodeGens",
         "//llvm:AllTargetsDisassemblers",

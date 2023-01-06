@@ -188,7 +188,8 @@ std::string Fortran::lower::mangle::demangleName(llvm::StringRef name) {
 // Array Literals Mangling
 //===----------------------------------------------------------------------===//
 
-static std::string typeToString(Fortran::common::TypeCategory cat, int kind) {
+static std::string typeToString(Fortran::common::TypeCategory cat, int kind,
+                                llvm::StringRef derivedName) {
   switch (cat) {
   case Fortran::common::TypeCategory::Integer:
     return "i" + std::to_string(kind);
@@ -201,8 +202,7 @@ static std::string typeToString(Fortran::common::TypeCategory cat, int kind) {
   case Fortran::common::TypeCategory::Character:
     return "c" + std::to_string(kind);
   case Fortran::common::TypeCategory::Derived:
-    // FIXME: Replace "DT" with the (fully qualified) type name.
-    return "dt.DT";
+    return derivedName.str();
   }
   llvm_unreachable("bad TypeCategory");
 }
@@ -211,13 +211,13 @@ std::string Fortran::lower::mangle::mangleArrayLiteral(
     const uint8_t *addr, size_t size,
     const Fortran::evaluate::ConstantSubscripts &shape,
     Fortran::common::TypeCategory cat, int kind,
-    Fortran::common::ConstantSubscript charLen) {
+    Fortran::common::ConstantSubscript charLen, llvm::StringRef derivedName) {
   std::string typeId;
   for (Fortran::evaluate::ConstantSubscript extent : shape)
     typeId.append(std::to_string(extent)).append("x");
   if (charLen >= 0)
     typeId.append(std::to_string(charLen)).append("x");
-  typeId.append(typeToString(cat, kind));
+  typeId.append(typeToString(cat, kind, derivedName));
   std::string name =
       fir::NameUniquer::doGenerated("ro."s.append(typeId).append("."));
   if (!size)

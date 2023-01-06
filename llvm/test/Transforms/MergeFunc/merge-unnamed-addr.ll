@@ -2,8 +2,8 @@
 
 ; CHECK-NOT: @b
 
-@x = constant { i32 (i32)*, i32 (i32)* } { i32 (i32)* @a, i32 (i32)* @b }
-; CHECK: { i32 (i32)* @a, i32 (i32)* @a }
+@x = constant { ptr, ptr } { ptr @a, ptr @b }
+; CHECK: { ptr @a, ptr @a }
 
 define internal i32 @a(i32 %a) unnamed_addr {
   %b = xor i32 %a, 0

@@ -1393,11 +1393,11 @@ bool MIParser::verifyImplicitOperands(ArrayRef<ParsedMachineOperand> Operands,
 
   // Gather all the expected implicit operands.
   SmallVector<MachineOperand, 4> ImplicitOperands;
-  if (MCID.ImplicitDefs)
+  if (MCID.getImplicitDefs())
     for (const MCPhysReg *ImpDefs = MCID.getImplicitDefs(); *ImpDefs; ++ImpDefs)
       ImplicitOperands.push_back(
           MachineOperand::CreateReg(*ImpDefs, true, true));
-  if (MCID.ImplicitUses)
+  if (MCID.getImplicitUses())
     for (const MCPhysReg *ImpUses = MCID.getImplicitUses(); *ImpUses; ++ImpUses)
       ImplicitOperands.push_back(
           MachineOperand::CreateReg(*ImpUses, false, true));
@@ -1847,7 +1847,7 @@ bool MIParser::parseIRConstant(StringRef::iterator Loc, const Constant *&C) {
   return false;
 }
 
-// See LLT implemntation for bit size limits.
+// See LLT implementation for bit size limits.
 static bool verifyScalarSize(uint64_t Size) {
   return Size != 0 && isUInt<16>(Size);
 }

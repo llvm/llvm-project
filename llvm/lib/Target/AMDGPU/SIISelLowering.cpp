@@ -1971,8 +1971,7 @@ static ArgDescriptor allocateVGPR32Input(CCState &CCInfo, unsigned Mask = ~0u,
   if (Arg.isSet())
     return ArgDescriptor::createArg(Arg, Mask);
 
-  ArrayRef<MCPhysReg> ArgVGPRs
-    = makeArrayRef(AMDGPU::VGPR_32RegClass.begin(), 32);
+  ArrayRef<MCPhysReg> ArgVGPRs = ArrayRef(AMDGPU::VGPR_32RegClass.begin(), 32);
   unsigned RegIdx = CCInfo.getFirstUnallocated(ArgVGPRs);
   if (RegIdx == ArgVGPRs.size()) {
     // Spill to stack required.
@@ -1994,7 +1993,7 @@ static ArgDescriptor allocateVGPR32Input(CCState &CCInfo, unsigned Mask = ~0u,
 static ArgDescriptor allocateSGPR32InputImpl(CCState &CCInfo,
                                              const TargetRegisterClass *RC,
                                              unsigned NumArgRegs) {
-  ArrayRef<MCPhysReg> ArgSGPRs = makeArrayRef(RC->begin(), 32);
+  ArrayRef<MCPhysReg> ArgSGPRs = ArrayRef(RC->begin(), 32);
   unsigned RegIdx = CCInfo.getFirstUnallocated(ArgSGPRs);
   if (RegIdx == ArgSGPRs.size())
     report_fatal_error("ran out of SGPRs for arguments");
@@ -8594,7 +8593,7 @@ SDValue SITargetLowering::handleByteShortBufferStores(SelectionDAG &DAG,
   Ops[1] = BufferStoreExt;
   unsigned Opc = (VDataType == MVT::i8) ? AMDGPUISD::BUFFER_STORE_BYTE :
                                  AMDGPUISD::BUFFER_STORE_SHORT;
-  ArrayRef<SDValue> OpsRef = makeArrayRef(&Ops[0], 9);
+  ArrayRef<SDValue> OpsRef = ArrayRef(&Ops[0], 9);
   return DAG.getMemIntrinsicNode(Opc, DL, M->getVTList(), OpsRef, VDataType,
                                      M->getMemOperand());
 }
@@ -10794,16 +10793,19 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
   SelectionDAG &DAG = DCI.DAG;
 
   EVT VecVT = Vec.getValueType();
-  EVT EltVT = VecVT.getVectorElementType();
+  EVT VecEltVT = VecVT.getVectorElementType();
+  EVT ResVT = N->getValueType(0);
+
+  unsigned VecSize = VecVT.getSizeInBits();
+  unsigned VecEltSize = VecEltVT.getSizeInBits();
 
   if ((Vec.getOpcode() == ISD::FNEG ||
        Vec.getOpcode() == ISD::FABS) && allUsesHaveSourceMods(N)) {
     SDLoc SL(N);
-    EVT EltVT = N->getValueType(0);
     SDValue Idx = N->getOperand(1);
-    SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
-                              Vec.getOperand(0), Idx);
-    return DAG.getNode(Vec.getOpcode(), SL, EltVT, Elt);
+    SDValue Elt =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT, Vec.getOperand(0), Idx);
+    return DAG.getNode(Vec.getOpcode(), SL, ResVT, Elt);
   }
 
   // ScalarRes = EXTRACT_VECTOR_ELT ((vector-BINOP Vec1, Vec2), Idx)
@@ -10811,9 +10813,8 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
   // Vec1Elt = EXTRACT_VECTOR_ELT(Vec1, Idx)
   // Vec2Elt = EXTRACT_VECTOR_ELT(Vec2, Idx)
   // ScalarRes = scalar-BINOP Vec1Elt, Vec2Elt
-  if (Vec.hasOneUse() && DCI.isBeforeLegalize()) {
+  if (Vec.hasOneUse() && DCI.isBeforeLegalize() && VecEltVT == ResVT) {
     SDLoc SL(N);
-    EVT EltVT = N->getValueType(0);
     SDValue Idx = N->getOperand(1);
     unsigned Opc = Vec.getOpcode();
 
@@ -10833,20 +10834,17 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
     case ISD::FMINNUM:
     case ISD::FMAXNUM_IEEE:
     case ISD::FMINNUM_IEEE: {
-      SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
+      SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT,
                                  Vec.getOperand(0), Idx);
-      SDValue Elt1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
+      SDValue Elt1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT,
                                  Vec.getOperand(1), Idx);
 
       DCI.AddToWorklist(Elt0.getNode());
       DCI.AddToWorklist(Elt1.getNode());
-      return DAG.getNode(Opc, SL, EltVT, Elt0, Elt1, Vec->getFlags());
+      return DAG.getNode(Opc, SL, ResVT, Elt0, Elt1, Vec->getFlags());
     }
     }
   }
-
-  unsigned VecSize = VecVT.getSizeInBits();
-  unsigned EltSize = EltVT.getSizeInBits();
 
   // EXTRACT_VECTOR_ELT (<n x e>, var-idx) => n x select (e, const-idx)
   if (shouldExpandVectorDynExt(N)) {
@@ -10855,7 +10853,7 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
     SDValue V;
     for (unsigned I = 0, E = VecVT.getVectorNumElements(); I < E; ++I) {
       SDValue IC = DAG.getVectorIdxConstant(I, SL);
-      SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT, Vec, IC);
+      SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT, Vec, IC);
       if (I == 0)
         V = Elt;
       else
@@ -10871,15 +10869,11 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
   // elements. This exposes more load reduction opportunities by replacing
   // multiple small extract_vector_elements with a single 32-bit extract.
   auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (isa<MemSDNode>(Vec) &&
-      EltSize <= 16 &&
-      EltVT.isByteSized() &&
-      VecSize > 32 &&
-      VecSize % 32 == 0 &&
-      Idx) {
+  if (isa<MemSDNode>(Vec) && VecEltSize <= 16 && VecEltVT.isByteSized() &&
+      VecSize > 32 && VecSize % 32 == 0 && Idx) {
     EVT NewVT = getEquivalentMemType(*DAG.getContext(), VecVT);
 
-    unsigned BitIndex = Idx->getZExtValue() * EltSize;
+    unsigned BitIndex = Idx->getZExtValue() * VecEltSize;
     unsigned EltIdx = BitIndex / 32;
     unsigned LeftoverBitIdx = BitIndex % 32;
     SDLoc SL(N);
@@ -10894,9 +10888,16 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
                               DAG.getConstant(LeftoverBitIdx, SL, MVT::i32));
     DCI.AddToWorklist(Srl.getNode());
 
-    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, EltVT.changeTypeToInteger(), Srl);
+    EVT VecEltAsIntVT = VecEltVT.changeTypeToInteger();
+    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, VecEltAsIntVT, Srl);
     DCI.AddToWorklist(Trunc.getNode());
-    return DAG.getNode(ISD::BITCAST, SL, EltVT, Trunc);
+
+    if (VecEltVT == ResVT) {
+      return DAG.getNode(ISD::BITCAST, SL, VecEltVT, Trunc);
+    }
+
+    assert(ResVT.isScalarInteger());
+    return DAG.getAnyExtOrTrunc(Trunc, SL, ResVT);
   }
 
   return SDValue();

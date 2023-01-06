@@ -498,7 +498,6 @@ int inline convert_float_decimal_typed(Writer *writer,
   constexpr int32_t MANT_WIDTH = fputil::MantissaWidth<T>::VALUE;
   bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_exponent();
-  MantissaInt mantissa = float_bits.get_explicit_mantissa();
 
   char sign_char = 0;
 

@@ -23,4 +23,4 @@ public:
 };
 C c;
 
-// CHECK: "frame-pointer"="none"
+// CHECK-NOT: frame-pointer

@@ -1431,6 +1431,7 @@ def Tosa_ReshapeOp: Tosa_Op<"reshape", [
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 
   let arguments = (ins
     Tosa_Tensor:$input1,

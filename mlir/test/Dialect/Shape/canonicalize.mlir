@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -allow-unregistered-dialect -canonicalize %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -allow-unregistered-dialect -canonicalize="test-convergence" %s | FileCheck %s
 
 // CHECK-LABEL: func @f
 func.func @f(%arg0: tensor<2x3x4xf32>) -> tensor<3xindex> {

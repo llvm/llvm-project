@@ -637,7 +637,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
            "There should be a non-PHI instruction in exit block, else these "
            "instructions will have no parent.");
     for (auto *DVI : DeadDebugInst) {
-      DVI->setUndef();
+      DVI->setKillLocation();
       DVI->moveBefore(InsertDbgValueBefore);
     }
   }

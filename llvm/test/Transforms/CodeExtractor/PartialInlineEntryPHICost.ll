@@ -9,10 +9,10 @@ bb:
   br i1 %tmp, label %bb1, label %bb2
 
 bb1:
-  br i1 undef, label %bb4, label %bb2
+  br i1 %tmp, label %bb4, label %bb2
 
 bb2:                                              ; preds = %bb, %bb1
-  br i1 undef, label %bb4, label %bb5
+  br i1 %tmp, label %bb4, label %bb5
 
 bb4:                                              ; preds = %bb1, %bb2
   %xx1 = phi i32 [ 1, %bb1 ], [ 9, %bb2 ]

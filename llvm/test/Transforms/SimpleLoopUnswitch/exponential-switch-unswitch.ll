@@ -76,10 +76,9 @@
 ; LOOP-MAX-COUNT-111:     Loop at depth 2 containing:
 ; LOOP-MAX-NOT: Loop at depth 2 containing:
 
-define i32 @loop_switch(i32* %addr, i32 %c1, i32 %c2) {
+define i32 @loop_switch(ptr %addr, i32 %c1, i32 %c2) {
 entry:
-  %addr1 = getelementptr i32, i32* %addr, i64 0
-  %addr2 = getelementptr i32, i32* %addr, i64 1
+  %addr2 = getelementptr i32, ptr %addr, i64 1
   %check0 = icmp eq i32 %c2, 0
   %check1 = icmp eq i32 %c2, 31
   %check2 = icmp eq i32 %c2, 32
@@ -114,12 +113,12 @@ case0:
   br i1 %check0, label %exit, label %inner_latch
 
 inner_latch:
-  store volatile i32 0, i32* %addr1
+  store volatile i32 0, ptr %addr
   %test_inner = icmp slt i32 %iv2, 50
   br i1 %test_inner, label %inner_loop, label %outer_latch
 
 outer_latch:
-  store volatile i32 0, i32* %addr2
+  store volatile i32 0, ptr %addr2
   %test_outer = icmp slt i32 %iv1, 50
   br i1 %test_outer, label %outer_loop, label %exit
 

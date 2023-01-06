@@ -80,7 +80,7 @@ bool wouldInstructionBeTriviallyDead(Instruction *I,
                                      const TargetLibraryInfo *TLI = nullptr);
 
 /// Return true if the result produced by the instruction has no side effects on
-/// any paths other than where it is used. This is less conservative than 
+/// any paths other than where it is used. This is less conservative than
 /// wouldInstructionBeTriviallyDead which is based on the assumption
 /// that the use count will be 0. An example usage of this API is for
 /// identifying instructions that can be sunk down to use(s).
@@ -232,7 +232,7 @@ inline Align getKnownAlignment(Value *V, const DataLayout &DL,
 /// uses replaced by the new call.
 CallInst *createCallMatchingInvoke(InvokeInst *II);
 
-/// This function converts the specified invoek into a normall call.
+/// This function converts the specified invoke into a normal call.
 CallInst *changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr);
 
 ///===---------------------------------------------------------------------===//

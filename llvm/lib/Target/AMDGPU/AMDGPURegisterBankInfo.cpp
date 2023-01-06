@@ -344,7 +344,7 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappingsIntrinsic(
     };
 
     const std::array<unsigned, 3> RegSrcOpIdx = { { 0, 2, 3 } };
-    return addMappingFromTable<3>(MI, MRI, RegSrcOpIdx, makeArrayRef(Table));
+    return addMappingFromTable<3>(MI, MRI, RegSrcOpIdx, Table);
   }
   case Intrinsic::amdgcn_writelane: {
     static const OpRegBankEntry<4> Table[4] = {
@@ -363,7 +363,7 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappingsIntrinsic(
 
     // rsrc, voffset, offset
     const std::array<unsigned, 4> RegSrcOpIdx = { { 0, 2, 3, 4 } };
-    return addMappingFromTable<4>(MI, MRI, RegSrcOpIdx, makeArrayRef(Table));
+    return addMappingFromTable<4>(MI, MRI, RegSrcOpIdx, Table);
   }
   default:
     return RegisterBankInfo::getInstrAlternativeMappings(MI);
@@ -392,7 +392,7 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappingsIntrinsicWSideEffects(
 
     // rsrc, offset
     const std::array<unsigned, 2> RegSrcOpIdx = { { 2, 3 } };
-    return addMappingFromTable<2>(MI, MRI, RegSrcOpIdx, makeArrayRef(Table));
+    return addMappingFromTable<2>(MI, MRI, RegSrcOpIdx, Table);
   }
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap: {
@@ -406,7 +406,7 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappingsIntrinsicWSideEffects(
     };
 
     const std::array<unsigned, 3> RegSrcOpIdx = { { 0, 2, 3 } };
-    return addMappingFromTable<3>(MI, MRI, RegSrcOpIdx, makeArrayRef(Table));
+    return addMappingFromTable<3>(MI, MRI, RegSrcOpIdx, Table);
   }
   case Intrinsic::amdgcn_s_sendmsg:
   case Intrinsic::amdgcn_s_sendmsghalt: {
@@ -420,7 +420,7 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappingsIntrinsicWSideEffects(
     };
 
     const std::array<unsigned, 1> RegSrcOpIdx = { { 2 } };
-    return addMappingFromTable<1>(MI, MRI, RegSrcOpIdx, makeArrayRef(Table));
+    return addMappingFromTable<1>(MI, MRI, RegSrcOpIdx, Table);
   }
   default:
     return RegisterBankInfo::getInstrAlternativeMappings(MI);

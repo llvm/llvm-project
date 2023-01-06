@@ -2083,7 +2083,7 @@ HexagonInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
     {MO_IEGOT,  "hexagon-iegot"},
     {MO_TPREL,  "hexagon-tprel"}
   };
-  return makeArrayRef(Flags);
+  return ArrayRef(Flags);
 }
 
 ArrayRef<std::pair<unsigned, const char*>>
@@ -2093,7 +2093,7 @@ HexagonInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   static const std::pair<unsigned, const char*> Flags[] = {
     {HMOTF_ConstExtended, "hexagon-ext"}
   };
-  return makeArrayRef(Flags);
+  return ArrayRef(Flags);
 }
 
 Register HexagonInstrInfo::createVR(MachineFunction *MF, MVT VT) const {

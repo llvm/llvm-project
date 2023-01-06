@@ -52,10 +52,24 @@ public:
     return failure();
   }
 
+  /// Hook for derived dialect interfaces to implement the import of metadata
+  /// into MLIR. Attaches the converted metadata kind and node to the provided
+  /// operation.
+  virtual LogicalResult
+  setMetadataAttrs(OpBuilder &builder, unsigned kind, llvm::MDNode *node,
+                   Operation *op, LLVM::ModuleImport &moduleImport) const {
+    return failure();
+  }
+
   /// Hook for derived dialect interfaces to publish the supported intrinsics.
   /// As every LLVM IR intrinsic has a unique integer identifier, the function
   /// returns the list of supported intrinsic identifiers.
   virtual ArrayRef<unsigned> getSupportedIntrinsics() const { return {}; }
+
+  /// Hook for derived dialect interfaces to publish the supported metadata
+  /// kinds. As every metadata kind has a unique integer identifier, the
+  /// function returns the list of supported metadata identifiers.
+  virtual ArrayRef<unsigned> getSupportedMetadata() const { return {}; }
 };
 
 /// Interface collection for the import of LLVM IR that dispatches to a concrete
@@ -67,10 +81,10 @@ class LLVMImportInterface
 public:
   using Base::Base;
 
-  /// Queries all dialect interfaces to build a map from intrinsic identifiers
-  /// to the dialect interface that supports importing the intrinsic. Returns
-  /// failure if multiple dialect interfaces translate the same LLVM IR
-  /// intrinsic.
+  /// Queries all registered dialect interfaces for the supported LLVM IR
+  /// intrinsic and metadata kinds and builds the dispatch tables for the
+  /// conversion. Returns failure if multiple dialect interfaces translate the
+  /// same LLVM IR intrinsic.
   LogicalResult initializeImport() {
     for (const LLVMImportDialectInterface &iface : *this) {
       // Verify the supported intrinsics have not been mapped before.
@@ -89,6 +103,9 @@ public:
       // Add a mapping for all supported intrinsic identifiers.
       for (unsigned id : iface.getSupportedIntrinsics())
         intrinsicToDialect[id] = iface.getDialect();
+      // Add a mapping for all supported metadata kinds.
+      for (unsigned kind : iface.getSupportedMetadata())
+        metadataToDialect[kind].push_back(iface.getDialect());
     }
 
     return success();
@@ -115,8 +132,41 @@ public:
     return intrinsicToDialect.count(id);
   }
 
+  /// Attaches the given LLVM metadata to the imported operation if a conversion
+  /// to one or more MLIR dialect attributes exists and succeeds. Returns
+  /// success if at least one of the conversions is successful and failure if
+  /// all of them fail.
+  LogicalResult setMetadataAttrs(OpBuilder &builder, unsigned kind,
+                                 llvm::MDNode *node, Operation *op,
+                                 LLVM::ModuleImport &moduleImport) const {
+    // Lookup the dialect interfaces for the given metadata.
+    auto it = metadataToDialect.find(kind);
+    if (it == metadataToDialect.end())
+      return failure();
+
+    // Dispatch the conversion to the dialect interfaces.
+    bool isSuccess = false;
+    for (Dialect *dialect : it->getSecond()) {
+      const LLVMImportDialectInterface *iface = getInterfaceFor(dialect);
+      assert(iface && "expected to find a dialect interface");
+      if (succeeded(
+              iface->setMetadataAttrs(builder, kind, node, op, moduleImport)))
+        isSuccess = true;
+    }
+
+    // Returns failure if all conversions fail.
+    return success(isSuccess);
+  }
+
+  /// Returns true if the given LLVM IR metadata is convertible to an MLIR
+  /// attribute.
+  bool isConvertibleMetadata(unsigned kind) {
+    return metadataToDialect.count(kind);
+  }
+
 private:
   DenseMap<unsigned, Dialect *> intrinsicToDialect;
+  DenseMap<unsigned, SmallVector<Dialect *, 1>> metadataToDialect;
 };
 
 } // namespace mlir

@@ -200,7 +200,6 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["dot7-insts"] = true;
       Features["dot8-insts"] = true;
       Features["dl-insts"] = true;
-      Features["flat-address-space"] = true;
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;
       Features["gfx8-insts"] = true;
@@ -224,7 +223,6 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["dot6-insts"] = true;
       Features["dot7-insts"] = true;
       Features["dl-insts"] = true;
-      Features["flat-address-space"] = true;
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;
       Features["gfx8-insts"] = true;
@@ -247,7 +245,6 @@ bool AMDGPUTargetInfo::initFeatureMap(
       IsWave32Capable = true;
       Features["dl-insts"] = true;
       Features["ci-insts"] = true;
-      Features["flat-address-space"] = true;
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;
       Features["gfx8-insts"] = true;
@@ -300,7 +297,6 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_GFX701:
     case GK_GFX700:
       Features["ci-insts"] = true;
-      Features["flat-address-space"] = true;
       [[fallthrough]];
     case GK_GFX602:
     case GK_GFX601:

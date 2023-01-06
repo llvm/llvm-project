@@ -1672,6 +1672,10 @@ class ArrayCount<int n> : AttrConstraint<
     CPred<"$_self.cast<::mlir::ArrayAttr>().size() == " #n>,
     "with exactly " # n # " elements">;
 
+class DenseArrayCount<int n> : AttrConstraint<
+    CPred<"$_self.cast<::mlir::DenseArrayAttr>().size() == " #n>,
+    "with exactly " # n # " elements">;
+
 class DenseArrayStrictlyPositive<DenseArrayAttrBase arrayType> : AttrConstraint<
   CPred<"::llvm::all_of($_self.cast<" # arrayType #">().asArrayRef(), "
                         "[&](auto v) { return v > 0; })">,

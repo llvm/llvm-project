@@ -8,26 +8,26 @@
   define i32 @testpos() {
   entry:
     %a = alloca i32, align 4
-    call void @other(i32* %a)
-    %b = load i32, i32* %a, align 4
+    call void @other(ptr %a)
+    %b = load i32, ptr %a, align 4
     ret i32 %b
   }
   define i32 @testneg4() {
   entry:
     %a = alloca i32, align 4
-    call void @other(i32* %a)
-    %b = load i32, i32* %a, align 4
+    call void @other(ptr %a)
+    %b = load i32, ptr %a, align 4
     ret i32 %b
   }
   define i32 @testneg8() {
   entry:
     %a = alloca i32, align 4
-    call void @other(i32* %a)
-    %b = load i32, i32* %a, align 4
+    call void @other(ptr %a)
+    %b = load i32, ptr %a, align 4
     ret i32 %b
   }
 
-  declare void @other(i32*)
+  declare void @other(ptr)
 
 ...
 ---

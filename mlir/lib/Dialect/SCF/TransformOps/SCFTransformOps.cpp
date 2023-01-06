@@ -125,7 +125,7 @@ transform::LoopOutlineOp::apply(transform::TransformResults &results,
 
 DiagnosedSilenceableFailure
 transform::LoopPeelOp::applyToOne(scf::ForOp target,
-                                  SmallVector<Operation *> &results,
+                                  transform::ApplyToEachResultList &results,
                                   transform::TransformState &state) {
   scf::ForOp result;
   IRRewriter rewriter(target->getContext());
@@ -182,7 +182,7 @@ loopScheduling(scf::ForOp forOp,
 
 DiagnosedSilenceableFailure
 transform::LoopPipelineOp::applyToOne(scf::ForOp target,
-                                      SmallVector<Operation *> &results,
+                                      transform::ApplyToEachResultList &results,
                                       transform::TransformState &state) {
   scf::PipeliningOption options;
   options.getScheduleFn =
@@ -210,7 +210,7 @@ transform::LoopPipelineOp::applyToOne(scf::ForOp target,
 
 DiagnosedSilenceableFailure
 transform::LoopUnrollOp::applyToOne(Operation *op,
-                                    SmallVector<Operation *> &results,
+                                    transform::ApplyToEachResultList &results,
                                     transform::TransformState &state) {
   LogicalResult result(failure());
   if (scf::ForOp scfFor = dyn_cast<scf::ForOp>(op))

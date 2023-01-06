@@ -1234,13 +1234,12 @@ void DebugAbbrevWriter::addUnitAbbreviations(DWARFUnit &Unit) {
       if (Patch != UnitPatches.end()) {
         bool Patched = false;
         // Patches added later take a precedence over earlier ones.
-        for (auto I = Patch->second.rbegin(), E = Patch->second.rend(); I != E;
-             ++I) {
-          if (I->OldAttr != AttrSpec.Attr)
+        for (const PatchInfo &PI : llvm::reverse(Patch->second)) {
+          if (PI.OldAttr != AttrSpec.Attr)
             continue;
 
-          encodeULEB128(I->NewAttr, OS);
-          encodeULEB128(I->NewAttrForm, OS);
+          encodeULEB128(PI.NewAttr, OS);
+          encodeULEB128(PI.NewAttrForm, OS);
           Patched = true;
           break;
         }

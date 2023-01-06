@@ -546,9 +546,8 @@ void SMDiagnostic::print(const char *ProgName, raw_ostream &OS, bool ShowColors,
   // Add any fix-its.
   // FIXME: Find the beginning of the line properly for multibyte characters.
   std::string FixItInsertionLine;
-  buildFixItLine(
-      CaretLine, FixItInsertionLine, FixIts,
-      makeArrayRef(Loc.getPointer() - ColumnNo, LineContents.size()));
+  buildFixItLine(CaretLine, FixItInsertionLine, FixIts,
+                 ArrayRef(Loc.getPointer() - ColumnNo, LineContents.size()));
 
   // Finally, plop on the caret.
   if (unsigned(ColumnNo) <= NumColumns)

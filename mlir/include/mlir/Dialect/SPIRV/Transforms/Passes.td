@@ -46,4 +46,9 @@ def SPIRVUpdateVCE : Pass<"spirv-update-vce", "spirv::ModuleOp"> {
   let constructor = "mlir::spirv::createUpdateVersionCapabilityExtensionPass()";
 }
 
+def SPIRVWebGPUPreparePass : Pass<"spirv-webgpu-prepare", "spirv::ModuleOp"> {
+  let summary = "Prepare SPIR-V to target WebGPU by expanding unsupported ops "
+                "and replacing with supported ones";
+}
+
 #endif // MLIR_DIALECT_SPIRV_TRANSFORMS_PASSES

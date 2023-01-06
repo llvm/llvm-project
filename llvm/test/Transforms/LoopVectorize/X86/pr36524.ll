@@ -3,19 +3,15 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:1"
 
-define void @foo(i64* %ptr, i32* %ptr.2) {
+define void @foo(ptr %ptr, ptr %ptr.2) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PTR_21:%.*]] = bitcast i32* [[PTR_2:%.*]] to i8*
-; CHECK-NEXT:    [[PTR3:%.*]] = bitcast i64* [[PTR:%.*]] to i8*
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[PTR_2]], i64 1
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = bitcast i32* [[SCEVGEP]] to i8*
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i64, i64* [[PTR]], i64 80
-; CHECK-NEXT:    [[SCEVGEP45:%.*]] = bitcast i64* [[SCEVGEP4]] to i8*
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult i8* [[PTR_21]], [[SCEVGEP45]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult i8* [[PTR3]], [[SCEVGEP2]]
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[PTR_2:%.*]], i64 4
+; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 640
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[PTR_2]], [[UGLYGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[PTR]], [[UGLYGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -30,36 +26,35 @@ define void @foo(i64* %ptr, i32* %ptr.2) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    store i32 [[TMP4]], i32* [[PTR_2]], align 4, !alias.scope !0, !noalias !3
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, i64* [[PTR]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, i64* [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64* [[TMP7]] to <4 x i64>*
-; CHECK-NEXT:    store <4 x i64> [[VEC_IND]], <4 x i64>* [[TMP8]], align 8, !alias.scope !3
+; CHECK-NEXT:    store i32 [[TMP4]], ptr [[PTR_2]], align 4, !alias.scope !0, !noalias !3
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP6]], i32 0
+; CHECK-NEXT:    store <4 x i64> [[VEC_IND]], ptr [[TMP7]], align 8, !alias.scope !3
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 80
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 80
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 80, 80
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 80, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i64 [ 82, [[MIDDLE_BLOCK]] ], [ 2, [[ENTRY]] ], [ 2, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ 82, [[MIDDLE_BLOCK]] ], [ 2, [[ENTRY]] ], [ 2, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[CAN_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[CAN_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = phi i64 [ [[BC_RESUME_VAL6]], [[SCALAR_PH]] ], [ [[TMP13:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = and i64 [[TMP10]], 4294967295
-; CHECK-NEXT:    [[TMP12:%.*]] = trunc i64 [[TMP10]] to i32
-; CHECK-NEXT:    store i32 [[TMP12]], i32* [[PTR_2]], align 4
-; CHECK-NEXT:    [[GEP_PTR:%.*]] = getelementptr inbounds i64, i64* [[PTR]], i64 [[CAN_IV]]
-; CHECK-NEXT:    store i64 [[TMP10]], i64* [[GEP_PTR]], align 8
-; CHECK-NEXT:    [[TMP13]] = add nuw nsw i64 [[TMP11]], 1
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp sgt i32 [[TMP12]], 80
+; CHECK-NEXT:    [[TMP9:%.*]] = phi i64 [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ], [ [[TMP12:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 4294967295
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP9]] to i32
+; CHECK-NEXT:    store i32 [[TMP11]], ptr [[PTR_2]], align 4
+; CHECK-NEXT:    [[GEP_PTR:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 [[CAN_IV]]
+; CHECK-NEXT:    store i64 [[TMP9]], ptr [[GEP_PTR]], align 8
+; CHECK-NEXT:    [[TMP12]] = add nuw nsw i64 [[TMP10]], 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp sgt i32 [[TMP11]], 80
 ; CHECK-NEXT:    [[CAN_IV_NEXT]] = add nuw nsw i64 [[CAN_IV]], 1
-; CHECK-NEXT:    br i1 [[TMP14]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -71,9 +66,9 @@ loop:
   %0 = phi i64 [ 2, %entry ], [ %3, %loop ]
   %1 = and i64 %0, 4294967295
   %2 = trunc i64 %0 to i32
-  store i32 %2, i32* %ptr.2
-  %gep.ptr = getelementptr inbounds i64, i64* %ptr, i64 %can.iv
-  store i64 %0, i64* %gep.ptr
+  store i32 %2, ptr %ptr.2
+  %gep.ptr = getelementptr inbounds i64, ptr %ptr, i64 %can.iv
+  store i64 %0, ptr %gep.ptr
   %3 = add nuw nsw i64 %1, 1
   %4 = icmp sgt i32 %2, 80
   %can.iv.next = add nuw nsw i64 %can.iv, 1

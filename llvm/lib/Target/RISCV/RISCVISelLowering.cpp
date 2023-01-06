@@ -492,7 +492,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_MERGE,       ISD::VP_SELECT,      ISD::VP_FP_TO_SINT,
         ISD::VP_FP_TO_UINT,  ISD::VP_SETCC,       ISD::VP_SIGN_EXTEND,
         ISD::VP_ZERO_EXTEND, ISD::VP_TRUNCATE,    ISD::VP_SMIN,
-        ISD::VP_SMAX,        ISD::VP_UMIN,        ISD::VP_UMAX};
+        ISD::VP_SMAX,        ISD::VP_UMIN,        ISD::VP_UMAX,
+        ISD::VP_ABS};
 
     static const unsigned FloatingPointVPOps[] = {
         ISD::VP_FADD,        ISD::VP_FSUB,        ISD::VP_FMUL,
@@ -611,7 +612,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BSWAP, VT, Expand);
       setOperationAction({ISD::VP_BSWAP, ISD::VP_BITREVERSE}, VT, Expand);
       setOperationAction({ISD::VP_FSHL, ISD::VP_FSHR}, VT, Expand);
-      setOperationAction(ISD::VP_CTPOP, VT, Expand);
+      setOperationAction({ISD::VP_CTLZ, ISD::VP_CTLZ_ZERO_UNDEF, ISD::VP_CTTZ,
+                          ISD::VP_CTTZ_ZERO_UNDEF, ISD::VP_CTPOP},
+                         VT, Expand);
 
       // Custom-lower extensions and truncations from/to mask types.
       setOperationAction({ISD::ANY_EXTEND, ISD::SIGN_EXTEND, ISD::ZERO_EXTEND},
@@ -4175,6 +4178,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerToScalableOp(Op, DAG, RISCVISD::FMAXNUM_VL,
                              /*HasMergeOp*/ true);
   case ISD::ABS:
+  case ISD::VP_ABS:
     return lowerABS(Op, DAG);
   case ISD::CTLZ_ZERO_UNDEF:
   case ISD::CTTZ_ZERO_UNDEF:
@@ -6763,12 +6767,21 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
   SDValue X = Op.getOperand(0);
 
-  assert(VT.isFixedLengthVector() && "Unexpected type");
+  assert((Op.getOpcode() == ISD::VP_ABS || VT.isFixedLengthVector()) &&
+         "Unexpected type for ISD::ABS");
 
-  MVT ContainerVT = getContainerForFixedLengthVector(VT);
-  X = convertToScalableVector(ContainerVT, X, DAG, Subtarget);
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(VT);
+    X = convertToScalableVector(ContainerVT, X, DAG, Subtarget);
+  }
 
-  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  SDValue Mask, VL;
+  if (Op->getOpcode() == ISD::VP_ABS) {
+    Mask = Op->getOperand(1);
+    VL = Op->getOperand(2);
+  } else
+    std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   SDValue SplatZero = DAG.getNode(
       RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
@@ -6778,7 +6791,9 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
   SDValue Max = DAG.getNode(RISCVISD::SMAX_VL, DL, ContainerVT, X, NegX,
                             DAG.getUNDEF(ContainerVT), Mask, VL);
 
-  return convertFromScalableVector(VT, Max, DAG, Subtarget);
+  if (VT.isFixedLengthVector())
+    Max = convertFromScalableVector(VT, Max, DAG, Subtarget);
+  return Max;
 }
 
 SDValue RISCVTargetLowering::lowerFixedLengthVectorFCOPYSIGNToRVV(
@@ -12367,7 +12382,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
 
   if (IsVarArg) {
-    ArrayRef<MCPhysReg> ArgRegs = makeArrayRef(ArgGPRs);
+    ArrayRef<MCPhysReg> ArgRegs = ArrayRef(ArgGPRs);
     unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs);
     const TargetRegisterClass *RC = &RISCV::GPRRegClass;
     MachineFrameInfo &MFI = MF.getFrameInfo();

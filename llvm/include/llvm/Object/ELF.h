@@ -259,7 +259,7 @@ public:
 
   Expected<Elf_Sym_Range> symbols(const Elf_Shdr *Sec) const {
     if (!Sec)
-      return makeArrayRef<Elf_Sym>(nullptr, nullptr);
+      return ArrayRef<Elf_Sym>(nullptr, nullptr);
     return getSectionContentsAsArray<Elf_Sym>(*Sec);
   }
 
@@ -296,7 +296,7 @@ public:
                          ", e_phentsize = " + Twine(getHeader().e_phentsize));
 
     auto *Begin = reinterpret_cast<const Elf_Phdr *>(base() + PhOff);
-    return makeArrayRef(Begin, Begin + getHeader().e_phnum);
+    return ArrayRef(Begin, Begin + getHeader().e_phnum);
   }
 
   /// Get an iterator over notes in a program header.
@@ -516,7 +516,7 @@ ELFFile<ELFT>::getSectionContentsAsArray(const Elf_Shdr &Sec) const {
     return createError("unaligned data");
 
   const T *Start = reinterpret_cast<const T *>(base() + Offset);
-  return makeArrayRef(Start, Size / sizeof(T));
+  return ArrayRef(Start, Size / sizeof(T));
 }
 
 template <class ELFT>
@@ -536,7 +536,7 @@ ELFFile<ELFT>::getSegmentContents(const Elf_Phdr &Phdr) const {
                        ") + p_filesz (0x" + Twine::utohexstr(Size) +
                        ") that is greater than the file size (0x" +
                        Twine::utohexstr(Buf.size()) + ")");
-  return makeArrayRef(base() + Offset, Size);
+  return ArrayRef(base() + Offset, Size);
 }
 
 template <class ELFT>
@@ -798,7 +798,7 @@ Expected<typename ELFT::ShdrRange> ELFFile<ELFT>::sections() const {
   const uintX_t SectionTableOffset = getHeader().e_shoff;
   if (SectionTableOffset == 0) {
     if (!FakeSections.empty())
-      return makeArrayRef(FakeSections.data(), FakeSections.size());
+      return ArrayRef(FakeSections.data(), FakeSections.size());
     return ArrayRef<Elf_Shdr>();
   }
 
@@ -842,7 +842,7 @@ Expected<typename ELFT::ShdrRange> ELFFile<ELFT>::sections() const {
   // Section table goes past end of file!
   if (SectionTableOffset + SectionTableSize > FileSize)
     return createError("section table goes past the end of file");
-  return makeArrayRef(First, NumSections);
+  return ArrayRef(First, NumSections);
 }
 
 template <class ELFT>

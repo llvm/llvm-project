@@ -20,7 +20,11 @@ def Canonicalizer : Pass<"canonicalize"> {
   let summary = "Canonicalize operations";
   let description = [{
     This pass performs various types of canonicalizations over a set of
-    operations. See [Operation Canonicalization](Canonicalization.md) for more
+    operations by iteratively applying the canonicalization patterns of all
+    loaded dialects until either a fixpoint is reached or the maximum number of
+    iterations/rewrites is exhausted. Canonicalization is best-effort and does
+    not guarantee that the entire IR is in a canonical form after running this
+    pass. See [Operation Canonicalization](Canonicalization.md) for more
     details.
   }];
   let constructor = "mlir::createCanonicalizerPass()";
@@ -35,7 +39,9 @@ def Canonicalizer : Pass<"canonicalize"> {
            /*default=*/"10",
            "Max. iterations between applying patterns / simplifying regions">,
     Option<"maxNumRewrites", "max-num-rewrites", "int64_t", /*default=*/"-1",
-           "Max. number of pattern rewrites within an iteration">
+           "Max. number of pattern rewrites within an iteration">,
+    Option<"testConvergence", "test-convergence", "bool", /*default=*/"false",
+           "Test only: Fail pass on non-convergence to detect cyclic pattern">
   ] # RewritePassUtils.options;
 }
 

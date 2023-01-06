@@ -2650,7 +2650,7 @@ IEEEFloat::convertFromZeroExtendedInteger(const integerPart *parts,
                                           unsigned int width, bool isSigned,
                                           roundingMode rounding_mode) {
   unsigned int partCount = partCountForBits(width);
-  APInt api = APInt(width, makeArrayRef(parts, partCount));
+  APInt api = APInt(width, ArrayRef(parts, partCount));
 
   sign = false;
   if (isSigned && APInt::tcExtractBit(parts, width - 1)) {
@@ -4056,9 +4056,9 @@ void IEEEFloat::toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
 
   // Decompose the number into an APInt and an exponent.
   int exp = exponent - ((int) semantics->precision - 1);
-  APInt significand(semantics->precision,
-                    makeArrayRef(significandParts(),
-                                 partCountForBits(semantics->precision)));
+  APInt significand(
+      semantics->precision,
+      ArrayRef(significandParts(), partCountForBits(semantics->precision)));
 
   // Set FormatPrecision if zero.  We want to do this before we
   // truncate trailing zeros, as those are part of the precision.

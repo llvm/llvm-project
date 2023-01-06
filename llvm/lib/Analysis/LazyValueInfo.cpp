@@ -1166,11 +1166,16 @@ static ValueLatticeElement getValueFromOverflowCondition(
   return ValueLatticeElement::getRange(NWR);
 }
 
-static std::optional<ValueLatticeElement>
-getValueFromConditionImpl(Value *Val, Value *Cond, bool isTrueDest,
-                          bool isRevisit,
-                          SmallDenseMap<Value *, ValueLatticeElement> &Visited,
-                          SmallVectorImpl<Value *> &Worklist) {
+// Tracks a Value * condition and whether we're interested in it or its inverse
+typedef PointerIntPair<Value *, 1, bool> CondValue;
+
+static std::optional<ValueLatticeElement> getValueFromConditionImpl(
+    Value *Val, CondValue CondVal, bool isRevisit,
+    SmallDenseMap<CondValue, ValueLatticeElement> &Visited,
+    SmallVectorImpl<CondValue> &Worklist) {
+
+  Value *Cond = CondVal.getPointer();
+  bool isTrueDest = CondVal.getInt();
   if (!isRevisit) {
     if (ICmpInst *ICI = dyn_cast<ICmpInst>(Cond))
       return getValueFromICmpCondition(Val, ICI, isTrueDest);
@@ -1179,6 +1184,17 @@ getValueFromConditionImpl(Value *Val, Value *Cond, bool isTrueDest,
       if (auto *WO = dyn_cast<WithOverflowInst>(EVI->getAggregateOperand()))
         if (EVI->getNumIndices() == 1 && *EVI->idx_begin() == 1)
           return getValueFromOverflowCondition(Val, WO, isTrueDest);
+  }
+
+  Value *N;
+  if (match(Cond, m_Not(m_Value(N)))) {
+    CondValue NKey(N, !isTrueDest);
+    auto NV = Visited.find(NKey);
+    if (NV == Visited.end()) {
+      Worklist.push_back(NKey);
+      return std::nullopt;
+    }
+    return NV->second;
   }
 
   Value *L, *R;
@@ -1190,13 +1206,13 @@ getValueFromConditionImpl(Value *Val, Value *Cond, bool isTrueDest,
   else
     return ValueLatticeElement::getOverdefined();
 
-  auto LV = Visited.find(L);
-  auto RV = Visited.find(R);
+  auto LV = Visited.find(CondValue(L, isTrueDest));
+  auto RV = Visited.find(CondValue(R, isTrueDest));
 
   // if (L && R) -> intersect L and R
-  // if (!(L || R)) -> intersect L and R
+  // if (!(L || R)) -> intersect !L and !R
   // if (L || R) -> union L and R
-  // if (!(L && R)) -> union L and R
+  // if (!(L && R)) -> union !L and !R
   if ((isTrueDest ^ IsAnd) && (LV != Visited.end())) {
     ValueLatticeElement V = LV->second;
     if (V.isOverdefined())
@@ -1210,9 +1226,9 @@ getValueFromConditionImpl(Value *Val, Value *Cond, bool isTrueDest,
   if (LV == Visited.end() || RV == Visited.end()) {
     assert(!isRevisit);
     if (LV == Visited.end())
-      Worklist.push_back(L);
+      Worklist.push_back(CondValue(L, isTrueDest));
     if (RV == Visited.end())
-      Worklist.push_back(R);
+      Worklist.push_back(CondValue(R, isTrueDest));
     return std::nullopt;
   }
 
@@ -1222,12 +1238,13 @@ getValueFromConditionImpl(Value *Val, Value *Cond, bool isTrueDest,
 ValueLatticeElement getValueFromCondition(Value *Val, Value *Cond,
                                           bool isTrueDest) {
   assert(Cond && "precondition");
-  SmallDenseMap<Value*, ValueLatticeElement> Visited;
-  SmallVector<Value *> Worklist;
+  SmallDenseMap<CondValue, ValueLatticeElement> Visited;
+  SmallVector<CondValue> Worklist;
 
-  Worklist.push_back(Cond);
+  CondValue CondKey(Cond, isTrueDest);
+  Worklist.push_back(CondKey);
   do {
-    Value *CurrentCond = Worklist.back();
+    CondValue CurrentCond = Worklist.back();
     // Insert an Overdefined placeholder into the set to prevent
     // infinite recursion if there exists IRs that use not
     // dominated by its def as in this example:
@@ -1237,14 +1254,14 @@ ValueLatticeElement getValueFromCondition(Value *Val, Value *Cond,
         Visited.try_emplace(CurrentCond, ValueLatticeElement::getOverdefined());
     bool isRevisit = !Iter.second;
     std::optional<ValueLatticeElement> Result = getValueFromConditionImpl(
-        Val, CurrentCond, isTrueDest, isRevisit, Visited, Worklist);
+        Val, CurrentCond, isRevisit, Visited, Worklist);
     if (Result) {
       Visited[CurrentCond] = *Result;
       Worklist.pop_back();
     }
   } while (!Worklist.empty());
 
-  auto Result = Visited.find(Cond);
+  auto Result = Visited.find(CondKey);
   assert(Result != Visited.end());
   return Result->second;
 }

@@ -13,7 +13,7 @@ define i32 @call_speculatable() {
 }
 
 define float @call_bitcast_speculatable() {
-  %ret = call float bitcast (i32()* @speculatable to float()*)() #0
+  %ret = call float @speculatable() #0
   ret float %ret
 }
 

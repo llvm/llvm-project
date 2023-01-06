@@ -653,10 +653,10 @@ public:
     if (Bytes.size() >= 4) {
       // D should be casted to uint32_t here as it is passed by format to
       // snprintf as vararg.
-      for (uint32_t D : makeArrayRef(
-               reinterpret_cast<const support::little32_t *>(Bytes.data()),
-               Bytes.size() / 4))
-        OS << format(" %08" PRIX32, D);
+      for (uint32_t D :
+           ArrayRef(reinterpret_cast<const support::little32_t *>(Bytes.data()),
+                    Bytes.size() / 4))
+          OS << format(" %08" PRIX32, D);
     } else {
       for (unsigned char B : Bytes)
         OS << format(" %02" PRIX8, B);

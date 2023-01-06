@@ -10,7 +10,7 @@ define i32 @f1(i32 %x) {
 }
 
 declare i32 @g()
-define void @f2(i32 %x) personality i32 ()* @g {
+define void @f2(i32 %x) personality ptr @g {
 bb0:
   %y1 = invoke i32 @g() to label %bb1 unwind label %bb2
 bb1:
@@ -26,7 +26,7 @@ bb2:
 ; CHECK-NEXT:  %y2 = phi i32 [ %y1, %bb0 ]
 }
 
-define void @f3(i32 %x) personality i32 ()* @g {
+define void @f3(i32 %x) personality ptr @g {
 bb0:
   %y1 = invoke i32 @g() to label %bb1 unwind label %bb2
 bb1:

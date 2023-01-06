@@ -824,7 +824,6 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     // Raptorlake:
     case 0xb7:
     // Meteorlake:
-    case 0xb5:
     case 0xaa:
     case 0xac:
       CPU = "alderlake";
@@ -848,6 +847,8 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = X86::INTEL_COREI7_ICELAKE_SERVER;
       break;
 
+    // Emerald Rapids:
+    case 0xcf:
     // Sapphire Rapids:
     case 0x8f:
       CPU = "sapphirerapids";

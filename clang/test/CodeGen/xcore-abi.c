@@ -138,4 +138,4 @@ char testchar (void) {
   return (char)-1;
 }
 
-// CHECK: "frame-pointer"="none"
+// CHECK-NOT: frame-pointer

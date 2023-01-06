@@ -186,7 +186,7 @@ Changes to the X86 Backend
 * Support ISA of ``AVX-IFMA``.
 * Support ISA of ``AVX-VNNI-INT8``.
 * Support ISA of ``AVX-NE-CONVERT``.
-* ``-mcpu=raptorlake`` and ``-mcpu=meteorlake`` are now supported.
+* ``-mcpu=raptorlake``, ``-mcpu=meteorlake`` and ``-mcpu=emeraldrapids`` are now supported.
 * ``-mcpu=sierraforest``, ``-mcpu=graniterapids`` and ``-mcpu=grandridge`` are now supported.
 
 Changes to the OCaml bindings
@@ -218,10 +218,6 @@ Changes to the C API
   * ``LLVMConstGEP`` -> ``LLVMConstGEP2``
   * ``LLVMConstInBoundsGEP`` -> ``LLVMConstInBoundsGEP2``
   * ``LLVMAddAlias`` -> ``LLVMAddAlias2``
-
-Changes to the Go bindings
---------------------------
-
 
 Changes to the FastISel infrastructure
 --------------------------------------

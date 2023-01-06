@@ -8,7 +8,7 @@ entry:
   %a = alloca i32
   ; CHECK: conflicting debug info for argument
   call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !3, metadata !DIExpression()), !dbg !6
-  call void @llvm.dbg.declare(metadata i32* %a, metadata !4, metadata !DIExpression()), !dbg !6
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !4, metadata !DIExpression()), !dbg !6
   ret void, !dbg !6
 }
 

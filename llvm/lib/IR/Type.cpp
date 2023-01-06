@@ -793,7 +793,7 @@ bool PointerType::isLoadableOrStorableType(Type *ElemTy) {
 
 TargetExtType::TargetExtType(LLVMContext &C, StringRef Name,
                              ArrayRef<Type *> Types, ArrayRef<unsigned> Ints)
-    : Type(C, TargetExtTyID), Name(Name) {
+    : Type(C, TargetExtTyID), Name(C.pImpl->Saver.save(Name)) {
   NumContainedTys = Types.size();
 
   // Parameter storage immediately follows the class in allocation.

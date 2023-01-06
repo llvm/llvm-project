@@ -5,58 +5,58 @@
 ; Validate that the argument and return value are both dead
 ; CHECK-LABEL: define internal void @test1()
 
-define internal %Ty* @test1(%Ty* %this) {
-  ret %Ty* %this
+define internal ptr @test1(ptr %this) {
+  ret ptr %this
 }
 
 ; do not keep alive the return value of a function with a dead 'returned' argument
 ; CHECK-LABEL: define internal void @test2()
 
-define internal %Ty* @test2(%Ty* returned %this) {
-  ret %Ty* %this
+define internal ptr @test2(ptr returned %this) {
+  ret ptr %this
 }
 
 ; dummy to keep 'this' alive
-@dummy = global %Ty* null 
+@dummy = global ptr null 
 
 ; Validate that return value is dead
-; CHECK-LABEL: define internal void @test3(%Ty* %this)
+; CHECK-LABEL: define internal void @test3(ptr %this)
 
-define internal %Ty* @test3(%Ty* %this) {
-  store volatile %Ty* %this, %Ty** @dummy
-  ret %Ty* %this
+define internal ptr @test3(ptr %this) {
+  store volatile ptr %this, ptr @dummy
+  ret ptr %this
 }
 
 ; keep alive return value of a function if the 'returned' argument is live
-; CHECK-LABEL: define internal %Ty* @test4(%Ty* returned %this)
+; CHECK-LABEL: define internal ptr @test4(ptr returned %this)
 
-define internal %Ty* @test4(%Ty* returned %this) {
-  store volatile %Ty* %this, %Ty** @dummy
-  ret %Ty* %this
+define internal ptr @test4(ptr returned %this) {
+  store volatile ptr %this, ptr @dummy
+  ret ptr %this
 }
 
 ; don't do this if 'returned' is on the call site...
-; CHECK-LABEL: define internal void @test5(%Ty* %this)
+; CHECK-LABEL: define internal void @test5(ptr %this)
 
-define internal %Ty* @test5(%Ty* %this) {
-  store volatile %Ty* %this, %Ty** @dummy
-  ret %Ty* %this
+define internal ptr @test5(ptr %this) {
+  store volatile ptr %this, ptr @dummy
+  ret ptr %this
 }
 
 ; Drop all these attributes
 ; CHECK-LABEL: define internal void @test6
-define internal align 8 dereferenceable_or_null(2) noundef noalias i8* @test6() {
-  ret i8* null
+define internal align 8 dereferenceable_or_null(2) noundef noalias ptr @test6() {
+  ret ptr null
 }
 
-define %Ty* @caller(%Ty* %this) {
-  %1 = call %Ty* @test1(%Ty* %this)
-  %2 = call %Ty* @test2(%Ty* %this)
-  %3 = call %Ty* @test3(%Ty* %this)
-  %4 = call %Ty* @test4(%Ty* %this)
+define ptr @caller(ptr %this) {
+  %1 = call ptr @test1(ptr %this)
+  %2 = call ptr @test2(ptr %this)
+  %3 = call ptr @test3(ptr %this)
+  %4 = call ptr @test4(ptr %this)
 ; ...instead, drop 'returned' form the call site
-; CHECK: call void @test5(%Ty* %this)
-  %5 = call %Ty* @test5(%Ty* returned %this)
-  %6 = call i8* @test6()
-  ret %Ty* %this
+; CHECK: call void @test5(ptr %this)
+  %5 = call ptr @test5(ptr returned %this)
+  %6 = call ptr @test6()
+  ret ptr %this
 }

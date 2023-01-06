@@ -1357,8 +1357,6 @@ def FeatureISAVersion11_5_0 : FeatureSet<
 
 def AMDGPUInstrInfo : InstrInfo {
   let guessInstructionProperties = 1;
-  let noNamedPositionallyEncodedOperands = 1;
-  let useDeprecatedPositionallyEncodedOperands = 1;
 }
 
 def AMDGPUAsmParser : AsmParser {

@@ -124,27 +124,19 @@ void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
     auto rank = rtp.getRank();
     auto shape = rtp.getShape();
     auto enc = getSparseTensorEncoding(rtp);
-    auto dynShape = {ShapedType::kDynamic};
+    uint64_t cooStart = enc ? getCOOStart(enc) : rank;
     // Scan all dimensions of current tensor.
     for (int64_t d = 0; d < rank; d++) {
       // This should be called only once at beginning.
       assert(!ptrBuffer[t][d] && !idxBuffer[t][d] && !highs[t][d]);
       // Handle sparse storage schemes.
       if (isCompressedDLT(dimTypes[t][d])) {
-        auto ptrTp =
-            MemRefType::get(dynShape, getPointerOverheadType(builder, enc));
-        auto indTp =
-            MemRefType::get(dynShape, getIndexOverheadType(builder, enc));
-        auto dim = builder.getIndexAttr(d);
         // Generate sparse primitives to obtains pointer and indices.
-        ptrBuffer[t][d] = builder.create<ToPointersOp>(loc, ptrTp, tensor, dim);
-        idxBuffer[t][d] = builder.create<ToIndicesOp>(loc, indTp, tensor, dim);
+        ptrBuffer[t][d] = genToPointers(builder, loc, tensor, d);
+        idxBuffer[t][d] = genToIndices(builder, loc, tensor, d, cooStart);
       } else if (isSingletonDLT(dimTypes[t][d])) {
         // Singleton dimension, fetch indices.
-        auto indTp =
-            MemRefType::get(dynShape, getIndexOverheadType(builder, enc));
-        auto dim = builder.getIndexAttr(d);
-        idxBuffer[t][d] = builder.create<ToIndicesOp>(loc, indTp, tensor, dim);
+        idxBuffer[t][d] = genToIndices(builder, loc, tensor, d, cooStart);
       } else {
         // Dense dimension, nothing to fetch.
         assert(isDenseDLT(dimTypes[t][d]));

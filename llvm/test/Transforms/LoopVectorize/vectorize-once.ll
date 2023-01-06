@@ -69,10 +69,10 @@ _ZSt10accumulateIPiiET0_T_S2_S1_.exit:            ; preds = %for.body.i, %entry
 
 attributes #0 = { nounwind readonly ssp uwtable "fp-contract-model"="standard" "frame-pointer"="non-leaf" "realign-stack" "relocation-model"="pic" "ssp-buffers-size"="8" }
 
-; CHECK:      [[VEC_LOOP1]] = distinct !{[[VEC_LOOP1]], [[MD_IS_VEC:![0-9]+]]}
+; CHECK:      [[VEC_LOOP1]] = distinct !{[[VEC_LOOP1]], [[MD_IS_VEC:![0-9]+]], [[MD_RT_UNROLL_DIS:![0-9]+]]}
 ; CHECK-NEXT: [[MD_IS_VEC:![0-9]+]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-NEXT: [[SCALAR_LOOP1]] = distinct !{[[SCALAR_LOOP1]], [[MD_RT_UNROLL_DIS:![0-9]+]], [[MD_IS_VEC]]}
 ; CHECK-NEXT: [[MD_RT_UNROLL_DIS]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-NEXT: [[SCALAR_LOOP1]] = distinct !{[[SCALAR_LOOP1]], [[MD_RT_UNROLL_DIS:![0-9]+]], [[MD_IS_VEC]]}
 ; CHECK-NEXT: [[SCALAR_LOOP2]] = distinct !{[[SCALAR_LOOP2]], [[VEC_WIDTH_1:![0-9]+]]}
 ; CHECK-NEXT: [[VEC_WIDTH_1]] = !{!"llvm.loop.vectorize.width", i32 1}
 

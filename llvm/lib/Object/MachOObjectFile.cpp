@@ -4517,7 +4517,7 @@ MachOObjectFile::getSectionRawName(DataRefImpl Sec) const {
   assert(Sec.d.a < Sections.size() && "Should have detected this earlier");
   const section_base *Base =
     reinterpret_cast<const section_base *>(Sections[Sec.d.a]);
-  return makeArrayRef(Base->sectname);
+  return ArrayRef(Base->sectname);
 }
 
 ArrayRef<char>
@@ -4525,7 +4525,7 @@ MachOObjectFile::getSectionRawFinalSegmentName(DataRefImpl Sec) const {
   assert(Sec.d.a < Sections.size() && "Should have detected this earlier");
   const section_base *Base =
     reinterpret_cast<const section_base *>(Sections[Sec.d.a]);
-  return makeArrayRef(Base->segname);
+  return ArrayRef(Base->segname);
 }
 
 bool
@@ -4901,7 +4901,7 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoRebaseOpcodes() const {
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.rebase_off));
-  return makeArrayRef(Ptr, DyldInfo.rebase_size);
+  return ArrayRef(Ptr, DyldInfo.rebase_size);
 }
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoBindOpcodes() const {
@@ -4915,7 +4915,7 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoBindOpcodes() const {
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.bind_off));
-  return makeArrayRef(Ptr, DyldInfo.bind_size);
+  return ArrayRef(Ptr, DyldInfo.bind_size);
 }
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoWeakBindOpcodes() const {
@@ -4929,7 +4929,7 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoWeakBindOpcodes() const {
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.weak_bind_off));
-  return makeArrayRef(Ptr, DyldInfo.weak_bind_size);
+  return ArrayRef(Ptr, DyldInfo.weak_bind_size);
 }
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoLazyBindOpcodes() const {
@@ -4943,7 +4943,7 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoLazyBindOpcodes() const {
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.lazy_bind_off));
-  return makeArrayRef(Ptr, DyldInfo.lazy_bind_size);
+  return ArrayRef(Ptr, DyldInfo.lazy_bind_size);
 }
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoExportsTrie() const {
@@ -4957,7 +4957,7 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoExportsTrie() const {
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.export_off));
-  return makeArrayRef(Ptr, DyldInfo.export_size);
+  return ArrayRef(Ptr, DyldInfo.export_size);
 }
 
 Expected<std::optional<MachO::linkedit_data_command>>
@@ -5248,7 +5248,7 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldExportsTrie() const {
   MachO::linkedit_data_command DyldExportsTrie = DyldExportsTrieOrError.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldExportsTrie.dataoff));
-  return makeArrayRef(Ptr, DyldExportsTrie.datasize);
+  return ArrayRef(Ptr, DyldExportsTrie.datasize);
 }
 
 SmallVector<uint64_t> MachOObjectFile::getFunctionStarts() const {
@@ -5271,7 +5271,7 @@ ArrayRef<uint8_t> MachOObjectFile::getUuid() const {
     return std::nullopt;
   // Returning a pointer is fine as uuid doesn't need endian swapping.
   const char *Ptr = UuidLoadCmd + offsetof(MachO::uuid_command, uuid);
-  return makeArrayRef(reinterpret_cast<const uint8_t *>(Ptr), 16);
+  return ArrayRef(reinterpret_cast<const uint8_t *>(Ptr), 16);
 }
 
 StringRef MachOObjectFile::getStringTableData() const {

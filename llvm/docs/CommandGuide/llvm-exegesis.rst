@@ -196,13 +196,16 @@ OPTIONS
  In `analysis` mode, you also need to specify at least one of the
  `-analysis-clusters-output-file=` and `-analysis-inconsistencies-output-file=`.
 
-.. option:: --skip-measurements
+.. option:: --benchmark-phase=[prepare-snippet|prepare-and-assemble-snippet|assemble-measured-code|measure]
 
   By default, when `-mode=` is specified, the generated snippet will be executed
   and measured, and that requires that we are running on the hardware for which
   the snippet was generated, and that supports performance measurements.
-  But sometimes, you just want to generate snippets, and this is exactly what
-  this options allows one to do.
+  However, it is possible to stop at some stage before measuring. Choices are:
+  * ``prepare-snippet``: Only generate the minimal instruction sequence.
+  * ``prepare-and-assemble-snippet``: Same as ``prepare-snippet``, but also dumps an excerpt of the sequence (hex encoded).
+  * ``assemble-measured-code``: Same as ``prepare-and-assemble-snippet``. but also creates the full sequence that can be dumped to a file using ``--dump-object-to-disk``.
+  * ``measure``: Same as ``assemble-measured-code``, but also runs the measurement.
 
 .. option:: -x86-lbr-sample-period=<nBranches/sample>
 
@@ -278,6 +281,14 @@ OPTIONS
  If non-empty, write inconsistencies found during analysis to this file. `-`
  prints to stdout. By default, this analysis is not run.
 
+.. option:: -analysis-filter=[all|reg-only|mem-only]
+
+ By default, all benchmark results are analysed, but sometimes it may be useful
+ to only look at those that to not involve memory, or vice versa. This option
+ allows to either keep all benchmarks, or filter out (ignore) either all the
+ ones that do involve memory (involve instructions that may read or write to
+ memory), or the opposite, to only keep such benchmarks.
+
 .. option:: -analysis-clustering=[dbscan,naive]
 
  Specify the clustering algorithm to use. By default DBSCAN will be used.
@@ -329,9 +340,8 @@ OPTIONS
 
 .. option:: --dump-object-to-disk=true
 
- By default, llvm-exegesis will dump the generated code to a temporary file to
- enable code inspection. You may disable it to speed up the execution and save
- disk space.
+ If set,  llvm-exegesis will dump the generated code to a temporary file to
+ enable code inspection. Disabled by default.
 
 EXIT STATUS
 -----------

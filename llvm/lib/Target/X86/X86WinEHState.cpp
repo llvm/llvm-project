@@ -389,10 +389,10 @@ Function *WinEHStatePass::generateLSDAInEAXThunk(Function *ParentFunc) {
   Type *ArgTys[5] = {Int8PtrType, Int8PtrType, Int8PtrType, Int8PtrType,
                      Int8PtrType};
   FunctionType *TrampolineTy =
-      FunctionType::get(Int32Ty, makeArrayRef(&ArgTys[0], 4),
+      FunctionType::get(Int32Ty, ArrayRef(&ArgTys[0], 4),
                         /*isVarArg=*/false);
   FunctionType *TargetFuncTy =
-      FunctionType::get(Int32Ty, makeArrayRef(&ArgTys[0], 5),
+      FunctionType::get(Int32Ty, ArrayRef(&ArgTys[0], 5),
                         /*isVarArg=*/false);
   Function *Trampoline =
       Function::Create(TrampolineTy, GlobalValue::InternalLinkage,

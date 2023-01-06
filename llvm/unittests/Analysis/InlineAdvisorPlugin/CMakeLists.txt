@@ -10,9 +10,7 @@ if (NOT WIN32)
   endif()
 
   unset(LLVM_LINK_COMPONENTS)
-  add_llvm_library(InlineAdvisorPlugin MODULE BUILDTREE_ONLY
-    InlineAdvisorPlugin.cpp
-    )
+  add_llvm_library(InlineAdvisorPlugin MODULE BUILDTREE_ONLY InlineAdvisorPlugin.cpp)
   # Put PLUGIN next to the unit test executable.
   set_output_directory(InlineAdvisorPlugin
       BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/../

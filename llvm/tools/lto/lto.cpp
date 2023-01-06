@@ -496,7 +496,7 @@ void lto_codegen_debug_options_array(lto_code_gen_t cg,
   SmallVector<StringRef, 4> Options;
   for (int i = 0; i < number; ++i)
     Options.push_back(options[i]);
-  unwrap(cg)->setCodeGenDebugOptions(makeArrayRef(Options));
+  unwrap(cg)->setCodeGenDebugOptions(ArrayRef(Options));
 }
 
 unsigned int lto_api_version() { return LTO_API_VERSION; }

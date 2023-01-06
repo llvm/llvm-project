@@ -48,7 +48,7 @@ entry:
 declare i64 @llvm.experimental.constrained.fptosi.i64.f64(double, metadata) #1
 declare i64 @llvm.experimental.constrained.fptoui.i64.f64(double, metadata) #1
 
-attributes #0 = { nounwind strictfp "strictfp" "target-cpu"="pwr7" }
+attributes #0 = { nounwind strictfp "target-cpu"="pwr7" }
 attributes #1 = { nounwind }
 
 

@@ -1545,6 +1545,16 @@ llvm.func @passthrough() attributes {passthrough = ["noinline", ["alignstack", "
 
 // -----
 
+// CHECK-LABEL: @functionEntryCount
+// CHECK-SAME: !prof ![[PROF_ID:[0-9]*]]
+llvm.func @functionEntryCount() attributes {function_entry_count = 4242 : i64} {
+  llvm.return
+}
+
+// CHECK: ![[PROF_ID]] = !{!"function_entry_count", i64 4242}
+
+// -----
+
 // CHECK-LABEL: @constant_bf16
 llvm.func @constant_bf16() -> bf16 {
   %0 = llvm.mlir.constant(1.000000e+01 : bf16) : bf16

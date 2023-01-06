@@ -22,6 +22,7 @@
 #include "clang/Analysis/FlowSensitive/CFGMatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/NoopLattice.h"
+#include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
@@ -100,8 +101,10 @@ auto inPlaceClass() {
 }
 
 auto isOptionalNulloptConstructor() {
-  return cxxConstructExpr(hasOptionalType(), argumentCountIs(1),
-                          hasArgument(0, hasNulloptType()));
+  return cxxConstructExpr(
+      hasOptionalType(),
+      hasDeclaration(cxxConstructorDecl(parameterCountIs(1),
+                                        hasParameter(0, hasNulloptType()))));
 }
 
 auto isOptionalInPlaceConstructor() {
@@ -452,6 +455,7 @@ void assignOptionalValue(const Expr &E, Environment &Env,
 BoolValue &valueOrConversionHasValue(const FunctionDecl &F, const Expr &E,
                                      const MatchFinder::MatchResult &MatchRes,
                                      LatticeTransferState &State) {
+  assert(F.getTemplateSpecializationArgs() != nullptr);
   assert(F.getTemplateSpecializationArgs()->size() > 0);
 
   const int TemplateParamOptionalWrappersCount = countOptionalWrappers(

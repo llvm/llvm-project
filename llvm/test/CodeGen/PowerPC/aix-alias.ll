@@ -1,5 +1,5 @@
 ; TODO: Add object generation test when visibility for object generation
-;       is implemnted.
+;       is implemented.
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
 ; RUN:     -mattr=-altivec -data-sections=false -xcoff-traceback-table=false < %s | \

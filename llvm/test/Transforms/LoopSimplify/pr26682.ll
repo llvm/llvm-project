@@ -19,7 +19,7 @@ for:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %for.cond ]
   %cmp1 = icmp eq i32 %x, 0
   %iv.next = add nuw nsw i32 %iv, 1
-  %a = load i32, i32* @a
+  %a = load i32, ptr @a
   br i1 %cmp1, label %for.cond, label %for.end
 
 for.cond:
