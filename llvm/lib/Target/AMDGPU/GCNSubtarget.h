@@ -1139,7 +1139,7 @@ public:
   bool hasLdsWaitVMSRC() const { return getGeneration() >= GFX12; }
 
   bool hasVALUPartialForwardingHazard() const {
-    return getGeneration() >= GFX11;
+    return getGeneration() == GFX11;
   }
 
   bool hasVALUTransUseHazard() const { return HasVALUTransUseHazard; }
