@@ -425,6 +425,15 @@ struct UnPackOpTiling
     resultSizes = llvm::to_vector(sizes);
     return success();
   }
+
+  FailureOr<Value> generateResultTileValue(Operation *op, OpBuilder &b,
+                                           unsigned resultNumber,
+                                           ArrayRef<OpFoldResult> offsets,
+                                           ArrayRef<OpFoldResult> sizes) const {
+    return getTiledImplementation(op, b, offsets, sizes)
+        .back()
+        ->getResult(resultNumber);
+  }
 };
 
 } // namespace
