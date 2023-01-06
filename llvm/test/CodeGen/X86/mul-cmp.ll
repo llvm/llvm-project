@@ -2,19 +2,25 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=sse | FileCheck %s --check-prefixes=CHECK,SSE
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=avx | FileCheck %s --check-prefixes=CHECK,AVX
 
+; With no-wrap:
+; (X * Y) == 0 --> (X == 0) || (Y == 0)
+; (X * Y) != 0 --> (X != 0) && (Y != 0)
+
 define i1 @mul_nsw_eq0_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: mul_nsw_eq0_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    mulb %sil
-; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    testb %sil, %sil
+; CHECK-NEXT:    sete %cl
+; CHECK-NEXT:    testb %dil, %dil
 ; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    orb %cl, %al
 ; CHECK-NEXT:    retq
   %m = mul nsw i8 %x, %y
   %r = icmp eq i8 %m, 0
   ret i1 %r
 }
+
+; negative test - not valid if mul can overflow
 
 define i1 @mul_eq0_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: mul_eq0_i8:
@@ -29,6 +35,8 @@ define i1 @mul_eq0_i8(i8 %x, i8 %y) {
   %r = icmp eq i8 %m, 0
   ret i1 %r
 }
+
+; negative test - don't try with minsize
 
 define i1 @mul_nsw_eq0_i8_size(i8 %x, i8 %y) minsize {
 ; CHECK-LABEL: mul_nsw_eq0_i8_size:
@@ -47,9 +55,11 @@ define i1 @mul_nsw_eq0_i8_size(i8 %x, i8 %y) minsize {
 define i1 @mul_nsw_ne0_i16(i16 %x, i16 %y) {
 ; CHECK-LABEL: mul_nsw_ne0_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    imull %esi, %edi
+; CHECK-NEXT:    testw %si, %si
+; CHECK-NEXT:    setne %cl
 ; CHECK-NEXT:    testw %di, %di
 ; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    andb %cl, %al
 ; CHECK-NEXT:    retq
   %m = mul nsw i16 %x, %y
   %r = icmp ne i16 %m, 0
@@ -59,9 +69,11 @@ define i1 @mul_nsw_ne0_i16(i16 %x, i16 %y) {
 define i1 @mul_nuw_eq0_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: mul_nuw_eq0_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    imull %esi, %edi
+; CHECK-NEXT:    testl %esi, %esi
+; CHECK-NEXT:    sete %cl
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    orb %cl, %al
 ; CHECK-NEXT:    retq
   %m = mul nuw i32 %x, %y
   %r = icmp eq i32 %m, 0
@@ -71,9 +83,11 @@ define i1 @mul_nuw_eq0_i32(i32 %x, i32 %y) {
 define i1 @mul_nsw_nuw_ne0_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: mul_nsw_nuw_ne0_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    imulq %rsi, %rdi
+; CHECK-NEXT:    testq %rsi, %rsi
+; CHECK-NEXT:    setne %cl
 ; CHECK-NEXT:    testq %rdi, %rdi
 ; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    andb %cl, %al
 ; CHECK-NEXT:    retq
   %m = mul nsw nuw i64 %x, %y
   %r = icmp ne i64 %m, 0
@@ -83,36 +97,18 @@ define i1 @mul_nsw_nuw_ne0_i64(i64 %x, i64 %y) {
 define <16 x i1> @mul_nuw_eq0_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; SSE-LABEL: mul_nuw_eq0_v16i8:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE-NEXT:    movdqa %xmm0, %xmm3
-; SSE-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE-NEXT:    pmullw %xmm2, %xmm3
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; SSE-NEXT:    pand %xmm2, %xmm3
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE-NEXT:    pmullw %xmm1, %xmm0
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    packuswb %xmm3, %xmm0
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pcmpeqb %xmm1, %xmm0
+; SSE-NEXT:    pxor %xmm2, %xmm2
+; SSE-NEXT:    pcmpeqb %xmm2, %xmm1
+; SSE-NEXT:    pcmpeqb %xmm2, %xmm0
+; SSE-NEXT:    por %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: mul_nuw_eq0_v16i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpunpckhbw {{.*#+}} xmm2 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; AVX-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; AVX-NEXT:    vpmullw %xmm2, %xmm3, %xmm2
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
-; AVX-NEXT:    vpand %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; AVX-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpand %xmm3, %xmm0, %xmm0
-; AVX-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %m = mul nuw <16 x i8> %x, %y
   %r = icmp eq <16 x i8> %m, zeroinitializer
@@ -122,31 +118,30 @@ define <16 x i1> @mul_nuw_eq0_v16i8(<16 x i8> %x, <16 x i8> %y) {
 define <4 x i1> @mul_nsw_ne0_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; SSE-LABEL: mul_nsw_ne0_v4i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; SSE-NEXT:    pmuludq %xmm1, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE-NEXT:    pmuludq %xmm2, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE-NEXT:    pxor %xmm1, %xmm0
+; SSE-NEXT:    pxor %xmm2, %xmm2
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm1
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE-NEXT:    pxor %xmm1, %xmm2
+; SSE-NEXT:    pandn %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: mul_nsw_ne0_v4i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %m = mul nsw <4 x i32> %x, %y
   %r = icmp ne <4 x i32> %m, zeroinitializer
   ret <4 x i1> %r
 }
+
+; negative test - don't try with minsize
+; TODO: SSE would be much smaller if decomposed.
 
 define <4 x i1> @mul_nsw_ne0_v4i32_size(<4 x i32> %x, <4 x i32> %y) minsize {
 ; SSE-LABEL: mul_nsw_ne0_v4i32_size:
