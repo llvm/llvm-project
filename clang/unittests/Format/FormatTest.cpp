@@ -23588,10 +23588,10 @@ TEST_F(FormatTest, Concepts) {
                "concept DelayedCheck = !!false || requires(T t) { t.bar(); } "
                "&& sizeof(T) <= 8;");
 
-  verifyFormat(
-      "template <typename T>\n"
-      "concept DelayedCheck = static_cast<bool>(0) ||\n"
-      "                       requires(T t) { t.bar(); } && sizeof(T) <= 8;");
+  verifyFormat("template <typename T>\n"
+               "concept DelayedCheck =\n"
+               "    static_cast<bool>(0) || requires(T t) { t.bar(); } && "
+               "sizeof(T) <= 8;");
 
   verifyFormat("template <typename T>\n"
                "concept DelayedCheck = bool(0) || requires(T t) { t.bar(); } "
@@ -23599,8 +23599,8 @@ TEST_F(FormatTest, Concepts) {
 
   verifyFormat(
       "template <typename T>\n"
-      "concept DelayedCheck = (bool)(0) ||\n"
-      "                       requires(T t) { t.bar(); } && sizeof(T) <= 8;");
+      "concept DelayedCheck =\n"
+      "    (bool)(0) || requires(T t) { t.bar(); } && sizeof(T) <= 8;");
 
   verifyFormat("template <typename T>\n"
                "concept DelayedCheck = (bool)0 || requires(T t) { t.bar(); } "
@@ -23635,6 +23635,9 @@ TEST_F(FormatTest, Concepts) {
 
   verifyFormat("template <typename T>\n"
                "concept True = S<T>::Value;");
+
+  verifyFormat("template <S T>\n"
+               "concept True = T.field;");
 
   verifyFormat(
       "template <typename T>\n"
@@ -23914,11 +23917,9 @@ TEST_F(FormatTest, Concepts) {
   verifyFormat("template <typename T> concept True = true;", Style);
 
   verifyFormat(
-      "template <typename T> concept C = decltype([]() -> std::true_type {\n"
-      "                                    return {};\n"
-      "                                  }())::value &&\n"
-      "                                  requires(T t) { t.bar(); } && "
-      "sizeof(T) <= 8;",
+      "template <typename T> concept C =\n"
+      "    decltype([]() -> std::true_type { return {}; }())::value &&\n"
+      "    requires(T t) { t.bar(); } && sizeof(T) <= 8;",
       Style);
 
   verifyFormat("template <typename T> concept Semiregular =\n"
@@ -23936,21 +23937,20 @@ TEST_F(FormatTest, Concepts) {
 
   // The following tests are invalid C++, we just want to make sure we don't
   // assert.
-  verifyFormat("template <typename T>\n"
-               "concept C = requires C2<T>;");
+  verifyNoCrash("template <typename T>\n"
+                "concept C = requires C2<T>;");
 
-  verifyFormat("template <typename T>\n"
-               "concept C = 5 + 4;");
+  verifyNoCrash("template <typename T>\n"
+                "concept C = 5 + 4;");
 
-  verifyFormat("template <typename T>\n"
-               "concept C =\n"
-               "class X;");
+  verifyNoCrash("template <typename T>\n"
+                "concept C = class X;");
 
-  verifyFormat("template <typename T>\n"
-               "concept C = [] && true;");
+  verifyNoCrash("template <typename T>\n"
+                "concept C = [] && true;");
 
-  verifyFormat("template <typename T>\n"
-               "concept C = [] && requires(T t) { typename T::size_type; };");
+  verifyNoCrash("template <typename T>\n"
+                "concept C = [] && requires(T t) { typename T::size_type; };");
 }
 
 TEST_F(FormatTest, RequiresClausesPositions) {
