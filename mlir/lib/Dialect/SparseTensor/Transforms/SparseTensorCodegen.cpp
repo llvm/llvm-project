@@ -103,10 +103,9 @@ static scf::ForOp createFor(OpBuilder &builder, Location loc, Value upper,
 /// Gets the dimension size for the given sparse tensor at the given
 /// original dimension 'dim'. Returns std::nullopt if no sparse encoding is
 /// attached to the given tensor type.
-static std::optional<Value> sizeFromTensorAtDim(OpBuilder &builder,
-                                                Location loc,
-                                                SparseTensorDescriptor desc,
-                                                unsigned dim) {
+static std::optional<Value>
+sizeFromTensorAtDim(OpBuilder &builder, Location loc,
+                    const SparseTensorDescriptor &desc, unsigned dim) {
   RankedTensorType rtp = desc.getTensorType();
   // Access into static dimension can query original type directly.
   // Note that this is typically already done by DimOp's folding.
@@ -937,6 +936,26 @@ public:
   }
 };
 
+/// Sparse codegen rule for accessing the linear indices buffer.
+class SparseToIndicesBufferConverter
+    : public OpConversionPattern<ToIndicesBufferOp> {
+public:
+  using OpAdaptor = typename ToIndicesBufferOp::Adaptor;
+  using OpConversionPattern<ToIndicesBufferOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(ToIndicesBufferOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Replace the requested pointer access with corresponding field.
+    // The cast_op is inserted by type converter to intermix 1:N type
+    // conversion.
+    SmallVector<Value> fields;
+    auto desc = getMutDescriptorFromTensorTuple(adaptor.getTensor(), fields);
+    rewriter.replaceOp(op, desc.getAOSMemRef());
+
+    return success();
+  }
+};
+
 /// Sparse codegen rule for value accesses.
 class SparseToValuesConverter : public OpConversionPattern<ToValuesOp> {
 public:
@@ -1005,9 +1024,9 @@ void mlir::populateSparseTensorCodegenPatterns(
                SparseTensorLoadConverter, SparseExpandConverter,
                SparseCompressConverter, SparseInsertConverter,
                SparseToPointersConverter, SparseToIndicesConverter,
-               SparseToValuesConverter, SparseConvertConverter,
-               SparseNumberOfEntriesConverter>(typeConverter,
-                                               patterns.getContext());
+               SparseToIndicesBufferConverter, SparseToValuesConverter,
+               SparseConvertConverter, SparseNumberOfEntriesConverter>(
+      typeConverter, patterns.getContext());
   patterns.add<SparseTensorAllocConverter>(typeConverter, patterns.getContext(),
                                            enableBufferInitialization);
 }

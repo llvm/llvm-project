@@ -227,12 +227,12 @@ ProgramStateRef ErrnoChecker::checkRegionChanges(
   // If 'errno' is invalidated we can not know if it is checked or written into,
   // allow read and write without bug reports.
   if (llvm::is_contained(Regions, ErrnoRegion))
-    return setErrnoStateIrrelevant(State);
+    return clearErrnoState(State);
 
   // Always reset errno state when the system memory space is invalidated.
   // The ErrnoRegion is not always found in the list in this case.
   if (llvm::is_contained(Regions, ErrnoRegion->getMemorySpace()))
-    return setErrnoStateIrrelevant(State);
+    return clearErrnoState(State);
 
   return State;
 }

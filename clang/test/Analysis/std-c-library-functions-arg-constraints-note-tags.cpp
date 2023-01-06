@@ -49,3 +49,18 @@ void test_buffer_size_note(char *buf, int y) {
   clang_analyzer_express(buf); // expected-warning {{}} // the message does not really matter \
                                // expected-note {{}}
 }
+
+int __test_case_note();
+
+int test_case_note_1(int y) {
+  int x = __test_case_note(); // expected-note{{Function returns 0}} \
+                              // expected-note{{'x' initialized here}}
+  return y / x; // expected-warning{{Division by zero}} \
+                // expected-note{{Division by zero}}
+}
+
+int test_case_note_2(int y) {
+  int x = __test_case_note(); // expected-note{{Function returns 1}}
+  return y / (x - 1); // expected-warning{{Division by zero}} \
+                      // expected-note{{Division by zero}}
+}

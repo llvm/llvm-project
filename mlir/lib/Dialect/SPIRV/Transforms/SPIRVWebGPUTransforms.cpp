@@ -15,9 +15,16 @@
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Location.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FormatVariadic.h"
+
+#include <array>
+#include <cstdint>
 
 namespace mlir {
 namespace spirv {
@@ -40,68 +47,125 @@ Attribute getScalarOrSplatAttr(Type type, int64_t value) {
   return SplatElementsAttr::get(type, sizedValue);
 }
 
+Value lowerExtendedMultiplication(Operation *mulOp, PatternRewriter &rewriter,
+                                  Value lhs, Value rhs,
+                                  bool signExtendArguments) {
+  Location loc = mulOp->getLoc();
+  Type argTy = lhs.getType();
+  // Emulate 64-bit multiplication by splitting each input element of type i32
+  // into 2 16-bit digits of type i32. This is so that the intermediate
+  // multiplications and additions do not overflow. We extract these 16-bit
+  // digits from i32 vector elements by masking (low digit) and shifting right
+  // (high digit).
+  //
+  // The multiplication algorithm used is the standard (long) multiplication.
+  // Multiplying two i32 integers produces 64 bits of result, i.e., 4 16-bit
+  // digits.
+  //   - With zero-extended arguments, we end up emitting only 4 multiplications
+  //     and 4 additions after constant folding.
+  //   - With sign-extended arguments, we end up emitting 8 multiplications and
+  //     and 12 additions after CSE.
+  Value cstLowMask = rewriter.create<ConstantOp>(
+      loc, lhs.getType(), getScalarOrSplatAttr(argTy, (1 << 16) - 1));
+  auto getLowDigit = [&rewriter, loc, cstLowMask](Value val) {
+    return rewriter.create<BitwiseAndOp>(loc, val, cstLowMask);
+  };
+
+  Value cst16 = rewriter.create<ConstantOp>(loc, lhs.getType(),
+                                            getScalarOrSplatAttr(argTy, 16));
+  auto getHighDigit = [&rewriter, loc, cst16](Value val) {
+    return rewriter.create<ShiftRightLogicalOp>(loc, val, cst16);
+  };
+
+  auto getSignDigit = [&rewriter, loc, cst16, &getHighDigit](Value val) {
+    // We only need to shift arithmetically by 15, but the extra
+    // sign-extension bit will be truncated by the logical shift, so this is
+    // fine. We do not have to introduce an extra constant since any
+    // value in [15, 32) would do.
+    return getHighDigit(
+        rewriter.create<ShiftRightArithmeticOp>(loc, val, cst16));
+  };
+
+  Value cst0 = rewriter.create<ConstantOp>(loc, lhs.getType(),
+                                           getScalarOrSplatAttr(argTy, 0));
+
+  Value lhsLow = getLowDigit(lhs);
+  Value lhsHigh = getHighDigit(lhs);
+  Value lhsExt = signExtendArguments ? getSignDigit(lhs) : cst0;
+  Value rhsLow = getLowDigit(rhs);
+  Value rhsHigh = getHighDigit(rhs);
+  Value rhsExt = signExtendArguments ? getSignDigit(rhs) : cst0;
+
+  std::array<Value, 4> lhsDigits = {lhsLow, lhsHigh, lhsExt, lhsExt};
+  std::array<Value, 4> rhsDigits = {rhsLow, rhsHigh, rhsExt, rhsExt};
+  std::array<Value, 4> resultDigits = {cst0, cst0, cst0, cst0};
+
+  for (auto [i, lhsDigit] : llvm::enumerate(lhsDigits)) {
+    for (auto [j, rhsDigit] : llvm::enumerate(rhsDigits)) {
+      if (i + j >= resultDigits.size())
+        continue;
+
+      if (lhsDigit == cst0 || rhsDigit == cst0)
+        continue;
+
+      Value &thisResDigit = resultDigits[i + j];
+      Value mul = rewriter.create<IMulOp>(loc, lhsDigit, rhsDigit);
+      Value current = rewriter.createOrFold<IAddOp>(loc, thisResDigit, mul);
+      thisResDigit = getLowDigit(current);
+
+      if (i + j + 1 != resultDigits.size()) {
+        Value &nextResDigit = resultDigits[i + j + 1];
+        Value carry = rewriter.createOrFold<IAddOp>(loc, nextResDigit,
+                                                    getHighDigit(current));
+        nextResDigit = carry;
+      }
+    }
+  }
+
+  auto combineDigits = [loc, cst16, &rewriter](Value low, Value high) {
+    Value highBits = rewriter.create<ShiftLeftLogicalOp>(loc, high, cst16);
+    return rewriter.create<BitwiseOrOp>(loc, low, highBits);
+  };
+  Value low = combineDigits(resultDigits[0], resultDigits[1]);
+  Value high = combineDigits(resultDigits[2], resultDigits[3]);
+
+  return rewriter.create<CompositeConstructOp>(
+      loc, mulOp->getResultTypes().front(), llvm::makeArrayRef({low, high}));
+}
+
 //===----------------------------------------------------------------------===//
 // Rewrite Patterns
 //===----------------------------------------------------------------------===//
-struct ExpandUMulExtendedPattern final : OpRewritePattern<UMulExtendedOp> {
-  using OpRewritePattern::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(UMulExtendedOp op,
+template <typename MulExtendedOp, bool SignExtendArguments>
+struct ExpandMulExtendedPattern final : OpRewritePattern<MulExtendedOp> {
+  using OpRewritePattern<MulExtendedOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(MulExtendedOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
     Value lhs = op.getOperand1();
     Value rhs = op.getOperand2();
-    Type argTy = lhs.getType();
 
     // Currently, WGSL only supports 32-bit integer types. Any other integer
     // types should already have been promoted/demoted to i32.
-    auto elemTy = getElementTypeOrSelf(argTy).cast<IntegerType>();
+    auto elemTy = getElementTypeOrSelf(lhs.getType()).cast<IntegerType>();
     if (elemTy.getIntOrFloatBitWidth() != 32)
       return rewriter.notifyMatchFailure(
           loc,
           llvm::formatv("Unexpected integer type for WebGPU: '{0}'", elemTy));
 
-    // Calculate the 'low' and the 'high' result separately, using long
-    // multiplication:
-    //
-    // lhs = [0   0]  [a   b]
-    // rhs = [0   0]  [c   d]
-    // --lhs * rhs--
-    // =     [    a * c    ]   [    b * d    ] +
-    //       [ 0 ]    [a * d + b * c]    [ 0 ]
-    //
-    // ==> high = (a * c) + (a * d + b * c) >> 16
-    Value low = rewriter.create<IMulOp>(loc, lhs, rhs);
-
-    Value cstLowMask = rewriter.create<ConstantOp>(
-        loc, lhs.getType(), getScalarOrSplatAttr(argTy, (1 << 16) - 1));
-    auto getLowHalf = [&rewriter, loc, cstLowMask](Value val) {
-      return rewriter.create<BitwiseAndOp>(loc, val, cstLowMask);
-    };
-
-    Value cst16 = rewriter.create<ConstantOp>(loc, lhs.getType(),
-                                              getScalarOrSplatAttr(argTy, 16));
-    auto getHighHalf = [&rewriter, loc, cst16](Value val) {
-      return rewriter.create<ShiftRightLogicalOp>(loc, val, cst16);
-    };
-
-    Value lhsLow = getLowHalf(lhs);
-    Value lhsHigh = getHighHalf(lhs);
-    Value rhsLow = getLowHalf(rhs);
-    Value rhsHigh = getHighHalf(rhs);
-
-    Value high0 = rewriter.create<IMulOp>(loc, lhsHigh, rhsHigh);
-    Value mid = rewriter.create<IAddOp>(
-        loc, rewriter.create<IMulOp>(loc, lhsHigh, rhsLow),
-        rewriter.create<IMulOp>(loc, lhsLow, rhsHigh));
-    Value high1 = getHighHalf(mid);
-    Value high = rewriter.create<IAddOp>(loc, high0, high1);
-
-    rewriter.replaceOpWithNewOp<CompositeConstructOp>(
-        op, op.getType(), llvm::makeArrayRef({low, high}));
+    Value mul = lowerExtendedMultiplication(op, rewriter, lhs, rhs,
+                                            SignExtendArguments);
+    rewriter.replaceOp(op, mul);
     return success();
   }
 };
+
+using ExpandSMulExtendedPattern =
+    ExpandMulExtendedPattern<SMulExtendedOp, true>;
+using ExpandUMulExtendedPattern =
+    ExpandMulExtendedPattern<UMulExtendedOp, false>;
 
 //===----------------------------------------------------------------------===//
 // Passes
@@ -127,9 +191,8 @@ void populateSPIRVExpandExtendedMultiplicationPatterns(
     RewritePatternSet &patterns) {
   // WGSL currently does not support extended multiplication ops, see:
   // https://github.com/gpuweb/gpuweb/issues/1565.
-  // TODO(https://github.com/llvm/llvm-project/issues/59563): Add SMulExtended
-  // expansion.
-  patterns.add<ExpandUMulExtendedPattern>(patterns.getContext());
+  patterns.add<ExpandSMulExtendedPattern, ExpandUMulExtendedPattern>(
+      patterns.getContext());
 }
 } // namespace spirv
 } // namespace mlir

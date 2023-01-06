@@ -61,8 +61,10 @@ enum NodeType : unsigned {
   BITREV_4B,
   BITREV_W,
 
-  // Intrinsic operations
+  // Intrinsic operations start ============================================
   BREAK,
+  CACOP_D,
+  CACOP_W,
   DBAR,
   IBAR,
   SYSCALL,
@@ -93,6 +95,7 @@ enum NodeType : unsigned {
 
   // Read CPU configuration information operation
   CPUCFG,
+  // Intrinsic operations end =============================================
 };
 } // end namespace LoongArchISD
 

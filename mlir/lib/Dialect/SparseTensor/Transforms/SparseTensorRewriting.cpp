@@ -152,7 +152,8 @@ static void sizesForTensor(OpBuilder &builder, SmallVectorImpl<Value> &sizes,
 // TODO: The dim level property of the COO type relies on input tensors, the
 // shape relies on the output tensor
 // Helpers to setup a COO type.
-static RankedTensorType getUnorderedCOOFromType(RankedTensorType src) {
+static RankedTensorType
+getUnorderedCOOFromTypeWithOrdering(RankedTensorType src, AffineMap ordering) {
   auto *ctx = src.getContext();
   auto rank = src.getRank();
   SmallVector<DimLevelType> dims;
@@ -176,10 +177,14 @@ static RankedTensorType getUnorderedCOOFromType(RankedTensorType src) {
   // default value.
   unsigned pointerBitWidth = encSrc ? encSrc.getPointerBitWidth() : 0;
   unsigned indexBitWidth = encSrc ? encSrc.getIndexBitWidth() : 0;
-  auto enc = SparseTensorEncodingAttr::get(
-      ctx, dims, AffineMap::getMultiDimIdentityMap(rank, ctx), AffineMap(),
-      pointerBitWidth, indexBitWidth);
+  auto enc = SparseTensorEncodingAttr::get(ctx, dims, ordering, AffineMap(),
+                                           pointerBitWidth, indexBitWidth);
   return RankedTensorType::get(src.getShape(), src.getElementType(), enc);
+}
+
+static RankedTensorType getUnorderedCOOFromType(RankedTensorType src) {
+  return getUnorderedCOOFromTypeWithOrdering(
+      src, AffineMap::getMultiDimIdentityMap(src.getRank(), src.getContext()));
 }
 
 /// Collects the dynamic dimension sizes for `tp` with the assumption that
@@ -771,6 +776,7 @@ private:
     RankedTensorType srcTp = src.getType().cast<RankedTensorType>();
     RankedTensorType dstTp = op.getType().cast<RankedTensorType>();
     SparseTensorEncodingAttr encDst = getSparseTensorEncoding(dstTp);
+    int64_t rank = dstTp.getRank();
 
     SmallVector<Value> srcSizes;
     sizesForTensor(rewriter, srcSizes, loc, srcTp, src);
@@ -788,16 +794,21 @@ private:
       // the overhead types.
       SmallVector<Value> dynSrcSizes;
       getDynamicSizes(srcTp, srcSizes, dynSrcSizes);
-      srcTp = getUnorderedCOOFromType(srcTp);
+      srcTp =
+          getUnorderedCOOFromTypeWithOrdering(srcTp, encDst.getDimOrdering());
       tmpCoo =
           rewriter.create<AllocTensorOp>(loc, srcTp, dynSrcSizes).getResult();
       auto foreachOp = rewriter.create<ForeachOp>(
           loc, src, tmpCoo,
           [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
               ValueRange reduc) {
-            // The resulting COO tensor has identity ordering.
-            auto t = builder.create<InsertOp>(loc, v, reduc.front(),
-                                              args.slice(0, srcTp.getRank()));
+            SmallVector<Value> dstIndices(srcTp.getRank(), Value());
+            for (int64_t i = 0; i < rank; i++) {
+              uint64_t dim = toStoredDim(encDst, i);
+              dstIndices[dim] = args[i];
+            }
+            auto t =
+                builder.create<InsertOp>(loc, v, reduc.front(), dstIndices);
             builder.create<sparse_tensor::YieldOp>(loc, t);
           });
       src = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
@@ -806,19 +817,6 @@ private:
     // Only need to sort if the srcTp is not already sorted (we faithfully take
     // the guarantee from the sparse tensor encoding).
     if (!isAllDimOrdered(srcTp)) {
-      // Sort the COO tensor so that its elements are ordered via increasing
-      // indices for the storage ordering of the dst tensor.
-      SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(srcTp);
-      uint64_t rank = dstTp.getRank();
-      uint64_t cooStart = getCOOStart(encSrc);
-      // Gather the indices-arrays in the dst tensor storage order.
-      SmallVector<Value> xs(rank, Value());
-      for (uint64_t i = 0; i < rank; i++) {
-        uint64_t orgDim = toOrigDim(encSrc, i);
-        xs[toStoredDim(encDst, orgDim)] =
-            genToIndices(rewriter, loc, src, i, cooStart);
-      }
-
       // Retrieve NNZ.
       Value nnz = rewriter.create<NumberOfEntriesOp>(loc, src);
       nnz = rewriter.create<arith::IndexCastOp>(loc, rewriter.getIndexType(),
@@ -826,9 +824,28 @@ private:
 
       // Retrieve the values-array.
       Value y = genToValues(rewriter, loc, src);
-
-      // Sort the COO tensor.
-      rewriter.create<SortOp>(loc, nnz, xs, ValueRange{y});
+      SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(srcTp);
+      // Sort the COO tensor so that its elements are ordered via increasing
+      // indices for the storage ordering of the dst tensor. Use SortCoo if the
+      // COO tensor has the same dim ordering as the dst tensor.
+      if (rank > 1 && hasSameDimOrdering(srcTp, dstTp)) {
+        MemRefType indTp =
+            get1DMemRefType(getIndexOverheadType(rewriter, encSrc),
+                            /*withLayout=*/false);
+        Value xs = rewriter.create<ToIndicesBufferOp>(loc, indTp, src);
+        rewriter.create<SortCooOp>(loc, nnz, xs, ValueRange{y},
+                                   rewriter.getIndexAttr(rank),
+                                   rewriter.getIndexAttr(0));
+      } else {
+        // Gather the indices-arrays in the dst tensor storage order.
+        SmallVector<Value> xs(rank, Value());
+        for (int64_t i = 0; i < rank; i++) {
+          uint64_t orgDim = toOrigDim(encSrc, i);
+          xs[toStoredDim(encDst, orgDim)] =
+              genToIndices(rewriter, loc, src, i, /*cooStart=*/0);
+        }
+        rewriter.create<SortOp>(loc, nnz, xs, ValueRange{y});
+      }
     }
 
     // For each element in the COO tensor, insert the element to the dst tensor.

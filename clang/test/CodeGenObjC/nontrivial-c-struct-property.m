@@ -68,3 +68,39 @@ typedef struct {
 // CHECK: call void @objc_copyCppObjectAtomic({{.*}}, {{.*}}, ptr noundef @__move_assignment_8_8_s0)
 // CHECK-NOT: call
 // CHECK: ret void
+
+// CHECK: define void @test0(ptr noundef %[[C:.*]], ptr noundef %[[A:.*]])
+// CHECK: %[[C_ADDR:.*]] = alloca ptr, align 8
+// CHECK: %[[A_ADDR:.*]] = alloca ptr, align 8
+// CHECK: %[[AGG_TMP_ENSURED:.*]] = alloca %[[STRUCT_S0]], align 8
+// CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_S0]], align 8
+// CHECK: store ptr null, ptr %[[C_ADDR]], align 8
+// CHECK: call void @llvm.objc.storeStrong(ptr %[[C_ADDR]], ptr %[[C]])
+// CHECK: store ptr %[[A]], ptr %[[A_ADDR]], align 8
+// CHECK: %[[V0:.*]] = load ptr, ptr %[[A_ADDR]], align 8
+// CHECK: call void @__copy_constructor_8_8_s0(ptr %[[AGG_TMP_ENSURED]], ptr %[[V0]])
+// CHECK: %[[V1:.*]] = load ptr, ptr %[[C_ADDR]], align 8
+// CHECK: call void @__copy_constructor_8_8_s0(ptr %[[AGG_TMP]], ptr %[[AGG_TMP_ENSURED]])
+// CHECK: %[[V2:.*]] = icmp eq ptr %[[V1]], null
+// CHECK: br i1 %[[V2]], label %[[MSGSEND_NULL:.*]], label %[[MSGSEND_CALL:.*]]
+
+// CHECK: [[MSGSEND_CALL]]:
+// CHECK: %[[V3:.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_, align 8
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_S0]], ptr %[[AGG_TMP]], i32 0, i32 0
+// CHECK: %[[V4:.*]] = load ptr, ptr %[[COERCE_DIVE]], align 8
+// CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint ptr %[[V4]] to i64
+// CHECK: call void @objc_msgSend(ptr noundef %[[V1]], ptr noundef %[[V3]], i64 %[[COERCE_VAL_PI]])
+// CHECK: br label %[[MSGSEND_CONT:.*]]
+
+// CHECK: [[MSGSEND_NULL]]:
+// CHECK: call void @__destructor_8_s0(ptr %[[AGG_TMP]])
+// CHECK: br label %[[MSGSEND_CONT]]
+
+// CHECK: [[MSGSEND_CONT]]:
+// CHECK: call void @__destructor_8_s0(ptr %[[AGG_TMP_ENSURED]]
+// CHECK: call void @llvm.objc.storeStrong(ptr %[[C_ADDR]], ptr null)
+// CHECK: ret void
+
+void test0(C *c, S0 *a) {
+  c.atomic0 = *a;
+}

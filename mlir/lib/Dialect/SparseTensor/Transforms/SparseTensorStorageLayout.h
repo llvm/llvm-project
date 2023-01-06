@@ -390,6 +390,13 @@ public:
     return layout.getFieldIndexAndStride(SparseTensorFieldKind::IdxMemRef,
                                          idxDim);
   }
+
+  Value getAOSMemRef() const {
+    auto enc = getSparseTensorEncoding(rType);
+    unsigned cooStart = getCOOStart(enc);
+    assert(cooStart < enc.getDimLevelType().size());
+    return getIdxMemRef(cooStart);
+  }
 };
 
 class SparseTensorDescriptor : public SparseTensorDescriptorImpl<false> {

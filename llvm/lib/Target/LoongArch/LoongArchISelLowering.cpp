@@ -746,13 +746,38 @@ SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
   SDLoc DL(Op);
   MVT GRLenVT = Subtarget.getGRLenVT();
   SDValue Op0 = Op.getOperand(0);
+  uint64_t IntrinsicEnum = Op.getConstantOperandVal(1);
   SDValue Op2 = Op.getOperand(2);
   const StringRef ErrorMsgOOR = "out of range";
 
-  switch (Op.getConstantOperandVal(1)) {
+  switch (IntrinsicEnum) {
   default:
     // TODO: Add more Intrinsics.
     return SDValue();
+  case Intrinsic::loongarch_cacop_d:
+  case Intrinsic::loongarch_cacop_w: {
+    if (IntrinsicEnum == Intrinsic::loongarch_cacop_d && !Subtarget.is64Bit()) {
+      DAG.getContext()->emitError(
+          "llvm.loongarch.cacop.d requires target: loongarch64");
+      return Op.getOperand(0);
+    }
+    if (IntrinsicEnum == Intrinsic::loongarch_cacop_w && Subtarget.is64Bit()) {
+      DAG.getContext()->emitError(
+          "llvm.loongarch.cacop.w requires target: loongarch32");
+      return Op.getOperand(0);
+    }
+    // call void @llvm.loongarch.cacop.[d/w](uimm5, rj, simm12)
+    unsigned Imm1 = cast<ConstantSDNode>(Op2)->getZExtValue();
+    if (!isUInt<5>(Imm1))
+      return emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG);
+    SDValue Op4 = Op.getOperand(4);
+    int Imm2 = cast<ConstantSDNode>(Op4)->getSExtValue();
+    if (!isInt<12>(Imm2))
+      return emitIntrinsicErrorMessage(Op, ErrorMsgOOR, DAG);
+
+    return Op;
+  }
+
   case Intrinsic::loongarch_dbar: {
     unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
     if (!isUInt<15>(Imm))
@@ -1778,6 +1803,8 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(CPUCFG)
     NODE_NAME_CASE(MOVGR2FCSR)
     NODE_NAME_CASE(MOVFCSR2GR)
+    NODE_NAME_CASE(CACOP_D)
+    NODE_NAME_CASE(CACOP_W)
   }
 #undef NODE_NAME_CASE
   return nullptr;

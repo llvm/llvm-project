@@ -235,7 +235,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
     case llvm::Triple::PS4:
     case llvm::Triple::PS5:
     case llvm::Triple::ELFIAMCU:
-    case llvm::Triple::Fuchsia:
       break;
     case llvm::Triple::Win32:
       if (triple.getEnvironment() != llvm::Triple::Cygnus)
@@ -338,7 +337,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
   case llvm::Triple::RTEMS:
   case llvm::Triple::NaCl:
   case llvm::Triple::ELFIAMCU:
-  case llvm::Triple::Fuchsia:
     break;
   case llvm::Triple::PS4:
   case llvm::Triple::PS5: {
@@ -413,6 +411,7 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
   case llvm::Triple::FreeBSD:
   case llvm::Triple::NetBSD:
   case llvm::Triple::OpenBSD:
+  case llvm::Triple::Fuchsia:
   case llvm::Triple::Hurd:
   case llvm::Triple::Linux:
   case llvm::Triple::Solaris:

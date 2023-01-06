@@ -270,6 +270,19 @@ func.func @sparse_indices_coo(%arg0: tensor<?x?x?xf64, #ccoo>) -> memref<?xindex
   return %0 : memref<?xindex, strided<[?], offset: ?>>
 }
 
+// CHECK-LABEL:   func.func @sparse_indices_buffer_coo(
+//  CHECK-SAME: %[[A0:.*0]]: memref<?xindex>,
+//  CHECK-SAME: %[[A1:.*1]]: memref<?xindex>,
+//  CHECK-SAME: %[[A2:.*2]]: memref<?xindex>,
+//  CHECK-SAME: %[[A3:.*3]]: memref<?xindex>,
+//  CHECK-SAME: %[[A4:.*4]]: memref<?xf64>,
+//  CHECK-SAME: %[[A5:.*5]]: !sparse_tensor.storage_specifier
+//       CHECK: return %[[A3]] : memref<?xindex>
+func.func @sparse_indices_buffer_coo(%arg0: tensor<?x?x?xf64, #ccoo>) -> memref<?xindex> {
+  %0 = sparse_tensor.indices_buffer  %arg0 : tensor<?x?x?xf64, #ccoo> to memref<?xindex>
+  return %0 : memref<?xindex>
+}
+
 // CHECK-LABEL: func @sparse_noe(
 //  CHECK-SAME: %[[A0:.*]]: memref<?xi32>,
 //  CHECK-SAME: %[[A1:.*]]: memref<?xi64>,

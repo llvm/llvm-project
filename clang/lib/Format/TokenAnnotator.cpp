@@ -1690,8 +1690,8 @@ private:
         if (!Tok)
           return false;
 
-        if (Tok->isOneOf(tok::kw_class, tok::kw_enum, tok::kw_concept,
-                         tok::kw_struct, tok::kw_using)) {
+        if (Tok->isOneOf(tok::kw_class, tok::kw_enum, tok::kw_struct,
+                         tok::kw_using)) {
           return false;
         }
 
@@ -3530,7 +3530,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (Right.is(TT_BlockComment))
       return true;
     // foo() -> const Bar * override/final
-    if (Right.isOneOf(Keywords.kw_override, Keywords.kw_final) &&
+    if (Right.isOneOf(Keywords.kw_override, Keywords.kw_final,
+                      tok::kw_noexcept) &&
         !Right.is(TT_StartOfName)) {
       return true;
     }

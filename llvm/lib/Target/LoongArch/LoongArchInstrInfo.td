@@ -589,6 +589,10 @@ def RDTIMEL_W : RDTIME_2R<0b0000000000000000011000, "rdtimel.w">;
 def RDTIMEH_W : RDTIME_2R<0b0000000000000000011001, "rdtimeh.w">;
 def CPUCFG : ALU_2R<0b0000000000000000011011, "cpucfg">;
 
+// Cache Maintenance Instructions
+def CACOP : FmtCACOP<(outs), (ins uimm5:$op, GPR:$rj, simm12:$imm12), "cacop",
+                     "$op, $rj, $imm12">;
+
 /// LA64 instructions
 
 let Predicates = [IsLA64] in {
@@ -1563,6 +1567,10 @@ defm : PseudoBinPat<"atomic_load_xor_32", PseudoAtomicLoadXor32>;
 
 /// Intrinsics
 
+def : Pat<(int_loongarch_cacop_d timm:$op, i64:$rj, timm:$imm12),
+          (CACOP uimm5:$op, GPR:$rj, simm12:$imm12)>;
+def : Pat<(int_loongarch_cacop_w i32:$op, i32:$rj, i32:$imm12),
+          (CACOP uimm5:$op, GPR:$rj, simm12:$imm12)>;
 def : Pat<(loongarch_dbar uimm15:$imm15), (DBAR uimm15:$imm15)>;
 def : Pat<(loongarch_ibar uimm15:$imm15), (IBAR uimm15:$imm15)>;
 def : Pat<(loongarch_break uimm15:$imm15), (BREAK uimm15:$imm15)>;
@@ -1672,10 +1680,6 @@ let Predicates = [IsLA64] in {
 def IOCSRRD_D : IOCSRRD<0b0000011001001000000011, "iocsrrd.d">;
 def IOCSRWR_D : IOCSRWR<0b0000011001001000000111, "iocsrwr.d">;
 } // Predicates = [IsLA64]
-
-// Cache Maintenance Instructions
-def CACOP : FmtCACOP<(outs), (ins uimm5:$op, GPR:$rj, simm12:$imm12), "cacop",
-                     "$op, $rj, $imm12">;
 
 // TLB Maintenance Instructions
 def TLBSRCH  : FmtI32<0b00000110010010000010100000000000, "tlbsrch">;
