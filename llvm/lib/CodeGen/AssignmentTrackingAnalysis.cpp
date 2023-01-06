@@ -2111,7 +2111,8 @@ bool AssignmentTrackingLowering::emitPromotedVarLocs(
         // operand is nullptr. We also can't handle variadic DIExpressions yet.
         // Some of those conditions don't have a type we can pick for
         // undef. Use i32.
-        if (DVI->isUndef() || DVI->getValue() == nullptr || DVI->hasArgList())
+        if (DVI->isKillLocation() || DVI->getValue() == nullptr ||
+            DVI->hasArgList())
           return UndefValue::get(Type::getInt32Ty(DVI->getContext()));
         return DVI->getValue();
       };

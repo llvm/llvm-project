@@ -267,7 +267,7 @@ public:
            getIntrinsicID() != Intrinsic::dbg_assign;
   }
 
-  void setUndef() {
+  void setKillLocation() {
     // TODO: When/if we remove duplicate values from DIArgLists, we don't need
     // this set anymore.
     SmallPtrSet<Value *, 4> RemovedValues;
@@ -279,7 +279,7 @@ public:
     }
   }
 
-  bool isUndef() const {
+  bool isKillLocation() const {
     return (getNumVariableLocationOps() == 0 &&
             !getExpression()->isComplex()) ||
            any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
