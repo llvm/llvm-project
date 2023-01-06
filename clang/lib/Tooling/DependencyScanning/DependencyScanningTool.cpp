@@ -156,8 +156,9 @@ private:
 
 llvm::Expected<llvm::cas::ObjectProxy>
 DependencyScanningTool::getDependencyTree(
-    const std::vector<std::string> &CommandLine, StringRef CWD) {
-  GetDependencyTree Consumer(*Worker.getCASFS(), /*PrefixMapping=*/{});
+    const std::vector<std::string> &CommandLine, StringRef CWD,
+    DepscanPrefixMapping PrefixMapping) {
+  GetDependencyTree Consumer(*Worker.getCASFS(), std::move(PrefixMapping));
   auto Result = Worker.computeDependencies(CWD, CommandLine, Consumer);
   if (Result)
     return std::move(Result);
@@ -558,10 +559,10 @@ DependencyScanningTool::getFullDependencies(
     const std::vector<std::string> &CommandLine, StringRef CWD,
     const llvm::StringSet<> &AlreadySeen,
     LookupModuleOutputCallback LookupModuleOutput,
-    llvm::Optional<StringRef> ModuleName) {
+    llvm::Optional<StringRef> ModuleName, DepscanPrefixMapping PrefixMapping) {
   FullDependencyConsumer Consumer(AlreadySeen, LookupModuleOutput,
                                   Worker.shouldEagerLoadModules(),
-                                  Worker.getCASFS());
+                                  Worker.getCASFS(), std::move(PrefixMapping));
   llvm::Error Result =
       Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
   if (Result)
@@ -637,6 +638,10 @@ Error FullDependencyConsumer::finalize(CompilerInstance &ScanInstance,
                                   CacheFS->getCurrentWorkingDirectory().get(),
                                   /*ProduceIncludeTree=*/false);
   }
+
+  if (Mapper)
+    DepscanPrefixMapping::remapInvocationPaths(NewInvocation, *Mapper);
+
   return Error::success();
 }
 
