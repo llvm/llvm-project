@@ -740,7 +740,7 @@ bool TypeInfer::EnforceSameNumElts(TypeSetByHwMode &V, TypeSetByHwMode &W) {
   auto NoLength = [](const SmallDenseSet<ElementCount> &Lengths,
                      MVT T) -> bool {
     return !Lengths.count(T.isVector() ? T.getVectorElementCount()
-                                       : ElementCount());
+                                       : ElementCount::getNull());
   };
 
   SmallVector<unsigned, 4> Modes;
@@ -751,9 +751,11 @@ bool TypeInfer::EnforceSameNumElts(TypeSetByHwMode &V, TypeSetByHwMode &W) {
 
     SmallDenseSet<ElementCount> VN, WN;
     for (MVT T : VS)
-      VN.insert(T.isVector() ? T.getVectorElementCount() : ElementCount());
+      VN.insert(T.isVector() ? T.getVectorElementCount()
+                             : ElementCount::getNull());
     for (MVT T : WS)
-      WN.insert(T.isVector() ? T.getVectorElementCount() : ElementCount());
+      WN.insert(T.isVector() ? T.getVectorElementCount()
+                             : ElementCount::getNull());
 
     Changed |= berase_if(VS, std::bind(NoLength, WN, std::placeholders::_1));
     Changed |= berase_if(WS, std::bind(NoLength, VN, std::placeholders::_1));
