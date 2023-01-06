@@ -5095,6 +5095,7 @@ cc_library(
         ":SPIRVDialect",
         ":SPIRVPassIncGen",
         ":SPIRVUtils",
+        ":Support",
         ":Transforms",
         "//llvm:Support",
     ],
@@ -10517,8 +10518,8 @@ cc_library(
         ":Support",
         ":TableGen",
         "//llvm:Support",
-        "//llvm:TargetParser",
         "//llvm:TableGen",
+        "//llvm:TargetParser",
     ],
 )
 
