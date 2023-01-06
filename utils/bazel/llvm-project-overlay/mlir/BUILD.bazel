@@ -9138,6 +9138,7 @@ cc_library(
         ":TransformDialectEnumsIncGen",
         ":TransformDialectIncGen",
         ":TransformDialectInterfacesIncGen",
+        ":TransformDialectUtils",
         ":TransformOpsIncGen",
         ":TransformTypesIncGen",
         "//llvm:Support",
@@ -9187,14 +9188,13 @@ cc_library(
 
 cc_library(
     name = "TransformDialectUtils",
-    srcs = ["lib/Dialect/Transform/Utils/Utils.cpp"],
-    hdrs = ["include/mlir/Dialect/Transform/Utils/Utils.h"],
+    srcs = glob(["lib/Dialect/Transform/Utils/*cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Transform/Utils/*.h"]),
     includes = ["include"],
     deps = [
         ":DialectUtils",
         ":IR",
         ":Support",
-        ":TransformDialect",
         ":ViewLikeInterface",
         "//llvm:Support",
     ],
