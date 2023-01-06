@@ -386,7 +386,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Post processing after jit backend. The ownership of \p MB will be taken.
   virtual Expected<std::unique_ptr<MemoryBuffer>>
   doJITPostProcessing(std::unique_ptr<MemoryBuffer> MB) const {
-    return MB;
+    return std::move(MB);
   }
 
 private:
