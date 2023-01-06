@@ -839,7 +839,7 @@ private:
       } else {
         // Gather the indices-arrays in the dst tensor storage order.
         SmallVector<Value> xs(rank, Value());
-        for (uint64_t i = 0; i < rank; i++) {
+        for (int64_t i = 0; i < rank; i++) {
           uint64_t orgDim = toOrigDim(encSrc, i);
           xs[toStoredDim(encDst, orgDim)] =
               genToIndices(rewriter, loc, src, i, /*cooStart=*/0);
