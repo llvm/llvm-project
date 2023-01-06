@@ -277,6 +277,16 @@ bool DynamicLoaderMacOSXDYLD::ReadDYLDInfoFromMemoryAndSetNotificationCallback(
           m_dyld_all_image_infos_addr = symbol->GetLoadAddress(&target);
       }
 
+      if (m_dyld_all_image_infos_addr == LLDB_INVALID_ADDRESS) {
+        ConstString g_sect_name("__all_image_info");
+        SectionSP dyld_aii_section_sp =
+            dyld_module_sp->GetSectionList()->FindSectionByName(g_sect_name);
+        if (dyld_aii_section_sp) {
+          Address dyld_aii_addr(dyld_aii_section_sp, 0);
+          m_dyld_all_image_infos_addr = dyld_aii_addr.GetLoadAddress(&target);
+        }
+      }
+
       // Update all image infos
       InitializeFromAllImageInfos();
 
