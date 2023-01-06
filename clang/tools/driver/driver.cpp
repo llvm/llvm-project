@@ -248,11 +248,13 @@ static void getCLEnvVarOptions(std::string &EnvValue, llvm::StringSaver &Saver,
 template <class T>
 static T checkEnvVar(const char *EnvOptSet, const char *EnvOptFile,
                      std::string &OptFile) {
-  T OptVal = ::getenv(EnvOptSet);
-  if (OptVal) {
-    if (const char *Var = ::getenv(EnvOptFile))
-      OptFile = Var;
-  }
+  const char *Str = ::getenv(EnvOptSet);
+  if (!Str)
+    return T{};
+
+  T OptVal = Str;
+  if (const char *Var = ::getenv(EnvOptFile))
+    OptFile = Var;
   return OptVal;
 }
 
@@ -264,32 +266,37 @@ static bool SetBackdoorDriverOutputsFromEnvVars(Driver &TheDriver) {
                         TheDriver.CCPrintHeadersFilename)) {
     TheDriver.CCPrintHeadersFormat = HIFMT_Textual;
     TheDriver.CCPrintHeadersFiltering = HIFIL_None;
-  } else if (const char *EnvVar = checkEnvVar<const char *>(
-                 "CC_PRINT_HEADERS_FORMAT", "CC_PRINT_HEADERS_FILE",
-                 TheDriver.CCPrintHeadersFilename)) {
-    TheDriver.CCPrintHeadersFormat = stringToHeaderIncludeFormatKind(EnvVar);
-    if (!TheDriver.CCPrintHeadersFormat) {
-      TheDriver.Diag(clang::diag::err_drv_print_header_env_var) << 0 << EnvVar;
-      return false;
-    }
+  } else {
+    std::string EnvVar = checkEnvVar<std::string>(
+        "CC_PRINT_HEADERS_FORMAT", "CC_PRINT_HEADERS_FILE",
+        TheDriver.CCPrintHeadersFilename);
+    if (!EnvVar.empty()) {
+      TheDriver.CCPrintHeadersFormat =
+          stringToHeaderIncludeFormatKind(EnvVar.c_str());
+      if (!TheDriver.CCPrintHeadersFormat) {
+        TheDriver.Diag(clang::diag::err_drv_print_header_env_var)
+            << 0 << EnvVar;
+        return false;
+      }
 
-    const char *FilteringStr = ::getenv("CC_PRINT_HEADERS_FILTERING");
-    HeaderIncludeFilteringKind Filtering;
-    if (!stringToHeaderIncludeFiltering(FilteringStr, Filtering)) {
-      TheDriver.Diag(clang::diag::err_drv_print_header_env_var)
-          << 1 << FilteringStr;
-      return false;
-    }
+      const char *FilteringStr = ::getenv("CC_PRINT_HEADERS_FILTERING");
+      HeaderIncludeFilteringKind Filtering;
+      if (!stringToHeaderIncludeFiltering(FilteringStr, Filtering)) {
+        TheDriver.Diag(clang::diag::err_drv_print_header_env_var)
+            << 1 << FilteringStr;
+        return false;
+      }
 
-    if ((TheDriver.CCPrintHeadersFormat == HIFMT_Textual &&
-         Filtering != HIFIL_None) ||
-        (TheDriver.CCPrintHeadersFormat == HIFMT_JSON &&
-         Filtering != HIFIL_Only_Direct_System)) {
-      TheDriver.Diag(clang::diag::err_drv_print_header_env_var_combination)
-          << EnvVar << FilteringStr;
-      return false;
+      if ((TheDriver.CCPrintHeadersFormat == HIFMT_Textual &&
+           Filtering != HIFIL_None) ||
+          (TheDriver.CCPrintHeadersFormat == HIFMT_JSON &&
+           Filtering != HIFIL_Only_Direct_System)) {
+        TheDriver.Diag(clang::diag::err_drv_print_header_env_var_combination)
+            << EnvVar << FilteringStr;
+        return false;
+      }
+      TheDriver.CCPrintHeadersFiltering = Filtering;
     }
-    TheDriver.CCPrintHeadersFiltering = Filtering;
   }
 
   TheDriver.CCLogDiagnostics =
