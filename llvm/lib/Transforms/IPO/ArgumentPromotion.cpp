@@ -543,7 +543,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
       if (!isAligned(I->getAlign(), Off))
         return false;
 
-      NeededDerefBytes = std::max(NeededDerefBytes, Off + Size.getFixedValue());
+      NeededDerefBytes = std::max(NeededDerefBytes, Off + Size.getFixedSize());
       NeededAlign = std::max(NeededAlign, I->getAlign());
     }
 

@@ -764,8 +764,8 @@ bool TypeInfer::EnforceSameNumElts(TypeSetByHwMode &V, TypeSetByHwMode &W) {
 namespace {
 struct TypeSizeComparator {
   bool operator()(const TypeSize &LHS, const TypeSize &RHS) const {
-    return std::make_tuple(LHS.isScalable(), LHS.getKnownMinValue()) <
-           std::make_tuple(RHS.isScalable(), RHS.getKnownMinValue());
+    return std::make_tuple(LHS.isScalable(), LHS.getKnownMinSize()) <
+           std::make_tuple(RHS.isScalable(), RHS.getKnownMinSize());
   }
 };
 } // end anonymous namespace
