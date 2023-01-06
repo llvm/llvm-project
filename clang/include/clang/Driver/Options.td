@@ -1728,6 +1728,7 @@ def fsanitize_memory_track_origins_EQ : Joined<["-"], "fsanitize-memory-track-or
                                         MarshallingInfoInt<CodeGenOpts<"SanitizeMemoryTrackOrigins">>;
 def fsanitize_memory_track_origins : Flag<["-"], "fsanitize-memory-track-origins">,
                                      Group<f_clang_Group>,
+                                     Alias<fsanitize_memory_track_origins_EQ>, AliasArgs<["2"]>,
                                      HelpText<"Enable origins tracking in MemorySanitizer">;
 def fno_sanitize_memory_track_origins : Flag<["-"], "fno-sanitize-memory-track-origins">,
                                         Group<f_clang_Group>,
