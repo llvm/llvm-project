@@ -76,33 +76,33 @@ define internal void @.omp_outlined.(ptr noalias nocapture readonly %.global_tid
 ; TUNIT-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 ; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]])
 ; TUNIT-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-; TUNIT-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
-; TUNIT-NEXT:    call void @__kmpc_for_static_init_4(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP4]], i32 noundef 34, ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 noundef 1, i32 noundef 1)
-; TUNIT-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-; TUNIT-NEXT:    [[CMP4:%.*]] = icmp sgt i32 [[TMP5]], 197
-; TUNIT-NEXT:    [[COND:%.*]] = select i1 [[CMP4]], i32 197, i32 [[TMP5]]
+; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
+; TUNIT-NEXT:    call void @__kmpc_for_static_init_4(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP0]], i32 noundef 34, ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 noundef 1, i32 noundef 1)
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+; TUNIT-NEXT:    [[CMP4:%.*]] = icmp sgt i32 [[TMP1]], 197
+; TUNIT-NEXT:    [[COND:%.*]] = select i1 [[CMP4]], i32 197, i32 [[TMP1]]
 ; TUNIT-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4
-; TUNIT-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
-; TUNIT-NEXT:    [[CMP513:%.*]] = icmp sgt i32 [[TMP6]], [[COND]]
+; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
+; TUNIT-NEXT:    [[CMP513:%.*]] = icmp sgt i32 [[TMP2]], [[COND]]
 ; TUNIT-NEXT:    br i1 [[CMP513]], label [[OMP_LOOP_EXIT:%.*]], label [[OMP_INNER_FOR_BODY_LR_PH:%.*]]
 ; TUNIT:       omp.inner.for.body.lr.ph:
-; TUNIT-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[B]], align 8
-; TUNIT-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[A]], align 8
-; TUNIT-NEXT:    [[TMP9:%.*]] = sext i32 [[TMP6]] to i64
-; TUNIT-NEXT:    [[TMP10:%.*]] = sext i32 [[COND]] to i64
+; TUNIT-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B]], align 8
+; TUNIT-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[A]], align 8
+; TUNIT-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP2]] to i64
+; TUNIT-NEXT:    [[TMP6:%.*]] = sext i32 [[COND]] to i64
 ; TUNIT-NEXT:    br label [[OMP_INNER_FOR_BODY:%.*]]
 ; TUNIT:       omp.inner.for.body:
-; TUNIT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[OMP_INNER_FOR_BODY]] ], [ [[TMP9]], [[OMP_INNER_FOR_BODY_LR_PH]] ]
+; TUNIT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[OMP_INNER_FOR_BODY]] ], [ [[TMP5]], [[OMP_INNER_FOR_BODY_LR_PH]] ]
 ; TUNIT-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
-; TUNIT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[INDVARS_IV_NEXT]]
-; TUNIT-NEXT:    [[TMP11:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; TUNIT-NEXT:    [[CONV7:%.*]] = fadd float [[TMP11]], 1.000000e+00
-; TUNIT-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 [[INDVARS_IV_NEXT]]
+; TUNIT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i64 [[INDVARS_IV_NEXT]]
+; TUNIT-NEXT:    [[TMP7:%.*]] = load float, ptr [[ARRAYIDX]], align 4
+; TUNIT-NEXT:    [[CONV7:%.*]] = fadd float [[TMP7]], 1.000000e+00
+; TUNIT-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i64 [[INDVARS_IV_NEXT]]
 ; TUNIT-NEXT:    store float [[CONV7]], ptr [[ARRAYIDX9]], align 4
-; TUNIT-NEXT:    [[CMP5:%.*]] = icmp slt i64 [[INDVARS_IV]], [[TMP10]]
+; TUNIT-NEXT:    [[CMP5:%.*]] = icmp slt i64 [[INDVARS_IV]], [[TMP6]]
 ; TUNIT-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY]], label [[OMP_LOOP_EXIT]]
 ; TUNIT:       omp.loop.exit:
-; TUNIT-NEXT:    call void @__kmpc_for_static_fini(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP4]])
+; TUNIT-NEXT:    call void @__kmpc_for_static_fini(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP0]])
 ; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]])
 ; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]])
 ; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]])
@@ -132,33 +132,33 @@ define internal void @.omp_outlined.(ptr noalias nocapture readonly %.global_tid
 ; CGSCC-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 ; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]])
 ; CGSCC-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-; CGSCC-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
-; CGSCC-NEXT:    call void @__kmpc_for_static_init_4(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP5]], i32 noundef 34, ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 noundef 1, i32 noundef 1)
-; CGSCC-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-; CGSCC-NEXT:    [[CMP4:%.*]] = icmp sgt i32 [[TMP6]], [[SUB2]]
-; CGSCC-NEXT:    [[COND:%.*]] = select i1 [[CMP4]], i32 [[SUB2]], i32 [[TMP6]]
+; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
+; CGSCC-NEXT:    call void @__kmpc_for_static_init_4(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP1]], i32 noundef 34, ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 noundef 1, i32 noundef 1)
+; CGSCC-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+; CGSCC-NEXT:    [[CMP4:%.*]] = icmp sgt i32 [[TMP2]], [[SUB2]]
+; CGSCC-NEXT:    [[COND:%.*]] = select i1 [[CMP4]], i32 [[SUB2]], i32 [[TMP2]]
 ; CGSCC-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4
-; CGSCC-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
-; CGSCC-NEXT:    [[CMP513:%.*]] = icmp sgt i32 [[TMP7]], [[COND]]
+; CGSCC-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
+; CGSCC-NEXT:    [[CMP513:%.*]] = icmp sgt i32 [[TMP3]], [[COND]]
 ; CGSCC-NEXT:    br i1 [[CMP513]], label [[OMP_LOOP_EXIT:%.*]], label [[OMP_INNER_FOR_BODY_LR_PH:%.*]]
 ; CGSCC:       omp.inner.for.body.lr.ph:
-; CGSCC-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[B]], align 8
-; CGSCC-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[A]], align 8
-; CGSCC-NEXT:    [[TMP10:%.*]] = sext i32 [[TMP7]] to i64
-; CGSCC-NEXT:    [[TMP11:%.*]] = sext i32 [[COND]] to i64
+; CGSCC-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B]], align 8
+; CGSCC-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[A]], align 8
+; CGSCC-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP3]] to i64
+; CGSCC-NEXT:    [[TMP7:%.*]] = sext i32 [[COND]] to i64
 ; CGSCC-NEXT:    br label [[OMP_INNER_FOR_BODY:%.*]]
 ; CGSCC:       omp.inner.for.body:
-; CGSCC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[OMP_INNER_FOR_BODY]] ], [ [[TMP10]], [[OMP_INNER_FOR_BODY_LR_PH]] ]
+; CGSCC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[OMP_INNER_FOR_BODY]] ], [ [[TMP6]], [[OMP_INNER_FOR_BODY_LR_PH]] ]
 ; CGSCC-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
-; CGSCC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 [[INDVARS_IV_NEXT]]
-; CGSCC-NEXT:    [[TMP12:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CGSCC-NEXT:    [[CONV7:%.*]] = fadd float [[TMP12]], 1.000000e+00
-; CGSCC-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 [[INDVARS_IV_NEXT]]
+; CGSCC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i64 [[INDVARS_IV_NEXT]]
+; CGSCC-NEXT:    [[TMP8:%.*]] = load float, ptr [[ARRAYIDX]], align 4
+; CGSCC-NEXT:    [[CONV7:%.*]] = fadd float [[TMP8]], 1.000000e+00
+; CGSCC-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[INDVARS_IV_NEXT]]
 ; CGSCC-NEXT:    store float [[CONV7]], ptr [[ARRAYIDX9]], align 4
-; CGSCC-NEXT:    [[CMP5:%.*]] = icmp slt i64 [[INDVARS_IV]], [[TMP11]]
+; CGSCC-NEXT:    [[CMP5:%.*]] = icmp slt i64 [[INDVARS_IV]], [[TMP7]]
 ; CGSCC-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY]], label [[OMP_LOOP_EXIT]]
 ; CGSCC:       omp.loop.exit:
-; CGSCC-NEXT:    call void @__kmpc_for_static_fini(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP5]])
+; CGSCC-NEXT:    call void @__kmpc_for_static_fini(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP1]])
 ; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]])
 ; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]])
 ; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]])

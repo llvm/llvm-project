@@ -44,8 +44,8 @@ define void @bar(ptr noundef byval(%struct.test.a) align 8 %dev) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly byval([[STRUCT_TEST_A:%.*]]) align 8 dereferenceable(24) [[DEV:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_TEST_B:%.*]], ptr [[DEV]], i64 0, i32 1
-; CHECK-NEXT:    store i32 1, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_TEST_B:%.*]], ptr [[DEV]], i64 0, i32 1
+; CHECK-NEXT:    store i32 1, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %1 = getelementptr inbounds %struct.test.b, ptr %dev, i64 0, i32 1

@@ -11,7 +11,7 @@
 ; Function Attrs: convergent norecurse nounwind
 define weak void @__omp_offloading_fd02_c0934fc2_foo_l4() #0 {
 ; CHECK: Function Attrs: convergent norecurse nounwind
-; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_fd02_c0934fc2_foo_l4(
+; CHECK-LABEL: @__omp_offloading_fd02_c0934fc2_foo_l4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1:[0-9]+]], i8 2, i1 false)
 ; CHECK-NEXT:    [[THREAD_ID_IN_BLOCK:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
@@ -58,7 +58,7 @@ declare void @__kmpc_target_deinit(ptr, i8)
 ; Function Attrs: convergent nounwind
 define hidden void @bar() #1 {
 ; CHECK: Function Attrs: alwaysinline convergent nounwind
-; CHECK-LABEL: define {{[^@]+}}@bar(
+; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
 ;
