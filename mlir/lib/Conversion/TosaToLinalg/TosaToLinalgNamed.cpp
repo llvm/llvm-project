@@ -99,47 +99,40 @@ static mlir::Value getConvOutputDim(Location loc, Value inputDim,
 }
 
 // Creates a vector of the dynamic output dims for Conv2D and Depthwise_Conv2D
-static SmallVector<Value>
-inferDynamicDimsForConv(Location loc, Value input, Value weight,
-                        ShapedType resultTy, DenseI64ArrayAttr padAttr,
-                        DenseI64ArrayAttr strideAttr,
-                        DenseI64ArrayAttr dilationAttr, int64_t weightHDim,
-                        int64_t weightWDim, OpBuilder &rewriter) {
+static SmallVector<Value> inferDynamicDimsForConv(
+    Location loc, Value input, Value weight, ShapedType resultTy,
+    ArrayRef<int64_t> padAttr, ArrayRef<int64_t> strideAttr,
+    ArrayRef<int64_t> dilationAttr, ArrayRef<int64_t> inputSizeDims,
+    ArrayRef<int64_t> kernelSizeDims, OpBuilder &rewriter) {
   ShapedType inputTy = input.getType().cast<ShapedType>();
   Type inputETy = inputTy.getElementType();
   int64_t inputRank = inputTy.getRank();
-  int64_t heightDim = 1;
-  int64_t weightDim = 2;
 
   SmallVector<Value> dynDims;
   dynDims.resize(resultTy.getRank());
+
+  for (uint32_t i = 0, s = inputSizeDims.size(); i < s; ++i) {
+    int64_t inputDim = inputSizeDims[i];
+    int64_t kernelDim = kernelSizeDims[i];
+    if (inputTy.isDynamicDim(inputDim)) {
+      auto padTop = padAttr[i * 2];
+      auto padBottom = padAttr[i * 2 + 1];
+      auto stride = strideAttr[i];
+      auto dilation = dilationAttr[i];
+      Value initDynDim = rewriter.create<tensor::DimOp>(loc, input, inputDim);
+      Value kernelDynDim =
+          rewriter.create<tensor::DimOp>(loc, weight, kernelDim);
+      // H = F(IH, pad_top, pad_bottom, dilation_y, KH, stride_y)
+      dynDims[inputDim] =
+          getConvOutputDim(loc, initDynDim, padTop, padBottom, kernelDynDim,
+                           stride, dilation, inputETy, rewriter);
+    }
+  }
+
+  // Get the batch/channels dimensions.
   for (int i = 0; i < inputRank; i++) {
-    if (inputTy.isDynamicDim(i) && i != heightDim && i != weightDim)
+    if (inputTy.isDynamicDim(i) && !dynDims[i])
       dynDims[i] = rewriter.create<tensor::DimOp>(loc, input, i);
-  }
-
-  // Dynamic input height
-  if (inputTy.isDynamicDim(heightDim)) {
-    Value initHDim =
-        rewriter.create<tensor::DimOp>(loc, input, heightDim).getResult();
-    Value kernelHDim =
-        rewriter.create<tensor::DimOp>(loc, weight, weightHDim).getResult();
-    // H = F(IH, pad_top, pad_bottom, dilation_y, KH, stride_y)
-    dynDims[heightDim] =
-        getConvOutputDim(loc, initHDim, padAttr[0], padAttr[1], kernelHDim,
-                         strideAttr[0], dilationAttr[0], inputETy, rewriter);
-  }
-
-  // Dynamic input weight
-  if (inputTy.isDynamicDim(weightDim)) {
-    Value initWDim =
-        rewriter.create<tensor::DimOp>(loc, input, weightDim).getResult();
-    Value kernelWDim =
-        rewriter.create<tensor::DimOp>(loc, weight, weightWDim).getResult();
-    // W = F(IW, pad_left, pad_right, dilation_x, KW, stride_x)
-    dynDims[weightDim] =
-        getConvOutputDim(loc, initWDim, padAttr[2], padAttr[3], kernelWDim,
-                         strideAttr[1], dilationAttr[1], inputETy, rewriter);
   }
 
   SmallVector<Value> filteredDims = condenseValues(dynDims);
@@ -161,21 +154,23 @@ static void createDepthwiseConvCollapseMap(
 
 namespace {
 
-class ConvConverter : public OpConversionPattern<tosa::Conv2DOp> {
+template <typename TosaConvOp, typename LinalgConvOp, typename LinalgConvQOp>
+class ConvConverter : public OpConversionPattern<TosaConvOp> {
 public:
-  using OpConversionPattern<tosa::Conv2DOp>::OpConversionPattern;
+  using OpConversionPattern<TosaConvOp>::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(tosa::Conv2DOp op, OpAdaptor adaptor,
+  matchAndRewrite(TosaConvOp op, typename TosaConvOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     Location loc = op->getLoc();
     Value input = op->getOperand(0);
     Value weight = op->getOperand(1);
     Value bias = op->getOperand(2);
 
-    ShapedType inputTy = input.getType().cast<ShapedType>();
-    ShapedType weightTy = weight.getType().cast<ShapedType>();
-    ShapedType biasTy = bias.getType().cast<ShapedType>();
-    ShapedType resultTy = op->getResult(0).getType().cast<ShapedType>();
+    ShapedType inputTy = input.getType().template cast<ShapedType>();
+    ShapedType weightTy = weight.getType().template cast<ShapedType>();
+    ShapedType biasTy = bias.getType().template cast<ShapedType>();
+    ShapedType resultTy =
+        op->getResult(0).getType().template cast<ShapedType>();
 
     Type inputETy = inputTy.getElementType();
     Type resultETy = resultTy.getElementType();
@@ -183,7 +178,7 @@ public:
     DenseI64ArrayAttr padAttr = op.getPadAttr();
     DenseI64ArrayAttr strideTosaAttr = op.getStrideAttr();
     DenseI64ArrayAttr dilationTosaAttr = op.getDilationAttr();
-    bool isQuantized = op->hasAttr("quantization_info");
+    bool isQuantized = op.getQuantizationInfo().has_value();
 
     if (!weightTy.hasStaticShape() || !biasTy.hasStaticShape())
       return rewriter.notifyMatchFailure(
@@ -193,17 +188,24 @@ public:
       return rewriter.notifyMatchFailure(
           op, "tosa.conv ops does not support unsigned integer input");
 
+    llvm::SmallVector<int64_t> inputSizeDims;
+    llvm::SmallVector<int64_t> kernelSizeDims;
+    for (int i = 1; i < resultTy.getRank() - 1; i++) {
+      inputSizeDims.push_back(i);
+      kernelSizeDims.push_back(i);
+    }
+
     SmallVector<Value> filteredDims = inferDynamicDimsForConv(
-        loc, input, weight, resultTy, padAttr, strideTosaAttr, dilationTosaAttr,
-        /*weightHDim=*/1, /*weightWDim=*/2, rewriter);
+        loc, input, weight, resultTy, padAttr.asArrayRef(),
+        strideTosaAttr.asArrayRef(), dilationTosaAttr.asArrayRef(),
+        inputSizeDims, kernelSizeDims, rewriter);
 
     auto weightShape = weightTy.getShape();
 
     // Apply padding as necessary.
     Attribute zeroAttr = rewriter.getZeroAttr(inputETy);
     if (isQuantized) {
-      auto quantizationInfo =
-          op->getAttr("quantization_info").cast<tosa::ConvOpQuantizationAttr>();
+      auto quantizationInfo = *op.getQuantizationInfo();
       int64_t iZp = quantizationInfo.getInputZp();
 
       int64_t intMin =
@@ -230,11 +232,15 @@ public:
     // convolution operation.
     // TODO(suderman): See if this can be efficiently folded - check whether
     // the input is used anywhere else, if not fold the constant.
-    SmallVector<int64_t> weightPerm{1, 2, 3, 0};
-    SmallVector<int64_t> newWeightShape{weightShape[1], weightShape[2],
-                                        weightShape[3], weightShape[0]};
-    auto weightPermAttr = DenseIntElementsAttr::get(
-        RankedTensorType::get({4}, rewriter.getI64Type()), weightPerm);
+    SmallVector<int64_t> weightPerm;
+    for (int i = 1; i < resultTy.getRank(); i++)
+      weightPerm.push_back(i);
+    weightPerm.push_back(0);
+
+    SmallVector<int64_t> newWeightShape;
+    for (auto dim : weightPerm)
+      newWeightShape.push_back(weightShape[dim]);
+    auto weightPermAttr = rewriter.getI64TensorAttr(weightPerm);
     Value weightPermValue =
         rewriter.create<arith::ConstantOp>(loc, weightPermAttr);
     Type newWeightTy =
@@ -256,16 +262,15 @@ public:
     ArrayRef<int64_t> dilation = dilationTosaAttr;
 
     // Create the convolution op.
-    auto strideAttr = DenseIntElementsAttr::get(
-        RankedTensorType::get({2}, rewriter.getI64Type()), stride);
-    auto dilationAttr = DenseIntElementsAttr::get(
-        RankedTensorType::get({2}, rewriter.getI64Type()), dilation);
+    auto strideAttr = rewriter.getI64TensorAttr(stride);
+    auto dilationAttr = rewriter.getI64TensorAttr(dilation);
 
     // Create maps for the bias broadcasting
     SmallVector<AffineMap, 4> indexingMaps;
     indexingMaps.push_back(AffineMap::get(
         /*dimCount=*/resultTy.getRank(), /*symbolCount=*/0,
-        {rewriter.getAffineDimExpr(3)}, rewriter.getContext()));
+        {rewriter.getAffineDimExpr(resultTy.getRank() - 1)},
+        rewriter.getContext()));
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
 
@@ -273,8 +278,7 @@ public:
         loc, resultTy.getShape(), resultETy, filteredDims);
 
     if (isQuantized) {
-      auto quantizationInfo =
-          op->getAttr("quantization_info").cast<tosa::ConvOpQuantizationAttr>();
+      auto quantizationInfo = *op.getQuantizationInfo();
       auto iZp = rewriter.getI32IntegerAttr(quantizationInfo.getInputZp());
       auto kZp = rewriter.getI32IntegerAttr(quantizationInfo.getWeightZp());
 
@@ -282,7 +286,7 @@ public:
       auto kZpVal = rewriter.create<arith::ConstantOp>(loc, kZp);
       Value conv =
           rewriter
-              .create<linalg::Conv2DNhwcHwcfQOp>(
+              .create<LinalgConvQOp>(
                   loc, resultTy, ValueRange{input, weight, iZpVal, kZpVal},
                   ValueRange{zeroTensor}, strideAttr, dilationAttr)
               ->getResult(0);
@@ -304,7 +308,7 @@ public:
     }
 
     Value conv = rewriter
-                     .create<linalg::Conv2DNhwcHwcfOp>(
+                     .create<LinalgConvOp>(
                          loc, resultTy, ValueRange{input, weight},
                          ValueRange{zeroTensor}, strideAttr, dilationAttr)
                      ->getResult(0);
@@ -358,8 +362,10 @@ public:
 
     // Compute output dynamic dims
     SmallVector<Value> filteredDims = inferDynamicDimsForConv(
-        loc, input, weight, resultTy, padAttr, strideTosaAttr, dilationTosaAttr,
-        0, 1, rewriter);
+        loc, input, weight, resultTy, padAttr.asArrayRef(),
+        strideTosaAttr.asArrayRef(), dilationTosaAttr.asArrayRef(),
+        /*inputSizeDims=*/{1, 2},
+        /*kernelSizeDims=*/{0, 1}, rewriter);
 
     bool isQuantized = op->hasAttr("quantization_info");
     IntegerAttr iZp;
@@ -408,11 +414,8 @@ public:
     ArrayRef<int64_t> dilation = dilationTosaAttr;
 
     // Create the convolution op.
-    auto strideAttr = DenseIntElementsAttr::get(
-        RankedTensorType::get({2}, rewriter.getI64Type()), stride);
-    auto dilationAttr = DenseIntElementsAttr::get(
-        RankedTensorType::get({2}, rewriter.getI64Type()), dilation);
-
+    auto strideAttr = rewriter.getI64TensorAttr(stride);
+    auto dilationAttr = rewriter.getI64TensorAttr(dilation);
     ShapedType linalgConvTy =
         RankedTensorType::get({resultShape[0], resultShape[1], resultShape[2],
                                weightShape[2], weightShape[3]},
@@ -610,8 +613,7 @@ public:
                            .result();
 
     SmallVector<int64_t> permutation{1, 0};
-    auto permutationAttr = DenseIntElementsAttr::get(
-        RankedTensorType::get({2}, rewriter.getI64Type()), permutation);
+    auto permutationAttr = rewriter.getI64TensorAttr(permutation);
     Value permutationValue =
         rewriter.create<arith::ConstantOp>(loc, permutationAttr);
 
@@ -966,7 +968,8 @@ void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
     RewritePatternSet *patterns) {
   patterns->add<
       // clang-format off
-      ConvConverter,
+      ConvConverter<tosa::Conv2DOp, linalg::Conv2DNhwcHwcfOp, linalg::Conv2DNhwcHwcfQOp>,
+      ConvConverter<tosa::Conv3DOp, linalg::Conv3DNdhwcDhwcfOp, linalg::Conv3DNdhwcDhwcfQOp>,
       DepthwiseConvConverter,
       MatMulConverter,
       MaxPool2dConverter,
