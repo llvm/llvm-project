@@ -23,6 +23,7 @@ class LinalgOp;
 } // namespace linalg
 
 namespace transform {
+class TransformHandleTypeInterface;
 // Types needed for builders.
 struct TileSizesSpec {};
 struct NumThreadsSpec {};
