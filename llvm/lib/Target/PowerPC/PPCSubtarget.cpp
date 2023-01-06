@@ -48,18 +48,20 @@ static cl::opt<bool>
                            cl::init(false), cl::Hidden);
 
 PPCSubtarget &PPCSubtarget::initializeSubtargetDependencies(StringRef CPU,
+                                                            StringRef TuneCPU,
                                                             StringRef FS) {
   initializeEnvironment();
-  initSubtargetFeatures(CPU, FS);
+  initSubtargetFeatures(CPU, TuneCPU, FS);
   return *this;
 }
 
 PPCSubtarget::PPCSubtarget(const Triple &TT, const std::string &CPU,
-                           const std::string &FS, const PPCTargetMachine &TM)
-    : PPCGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), TargetTriple(TT),
+                           const std::string &TuneCPU, const std::string &FS,
+                           const PPCTargetMachine &TM)
+    : PPCGenSubtargetInfo(TT, CPU, TuneCPU, FS), TargetTriple(TT),
       IsPPC64(TargetTriple.getArch() == Triple::ppc64 ||
               TargetTriple.getArch() == Triple::ppc64le),
-      TM(TM), FrameLowering(initializeSubtargetDependencies(CPU, FS)),
+      TM(TM), FrameLowering(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       InstrInfo(*this), TLInfo(TM, *this) {
   CallLoweringInfo.reset(new PPCCallLowering(*getTargetLowering()));
   Legalizer.reset(new PPCLegalizerInfo(*this));
@@ -76,7 +78,8 @@ void PPCSubtarget::initializeEnvironment() {
   HasPOPCNTD = POPCNTD_Unavailable;
 }
 
-void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
+void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
+                                         StringRef FS) {
   // Determine default and user specified characteristics
   std::string CPUName = std::string(CPU);
   if (CPUName.empty() || CPU == "generic") {
@@ -89,11 +92,14 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
       CPUName = "generic";
   }
 
+  // Determine the CPU to schedule for.
+  if (TuneCPU.empty()) TuneCPU = CPUName;
+
   // Initialize scheduling itinerary for the specified CPU.
   InstrItins = getInstrItineraryForCPU(CPUName);
 
   // Parse features string.
-  ParseSubtargetFeatures(CPUName, /*TuneCPU*/ CPUName, FS);
+  ParseSubtargetFeatures(CPUName, TuneCPU, FS);
 
   // If the user requested use of 64-bit regs, but the cpu selected doesn't
   // support it, ignore.
