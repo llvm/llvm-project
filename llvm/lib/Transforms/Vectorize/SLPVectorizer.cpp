@@ -3947,7 +3947,7 @@ std::optional<BoUpSLP::OrdersType> BoUpSLP::getReorderingData(const TreeEntry &T
     auto *It = ResOrder.begin();
     for (unsigned K = 0; K < VF; K += Sz) {
       OrdersType CurrentOrder(TE.ReorderIndices);
-      SmallVector<int> SubMask(makeArrayRef(ReusedMask).slice(K, Sz));
+      SmallVector<int> SubMask{ArrayRef(ReusedMask).slice(K, Sz)};
       if (SubMask.front() == UndefMaskElem)
         std::iota(SubMask.begin(), SubMask.end(), 0);
       reorderOrder(CurrentOrder, SubMask);
@@ -4083,7 +4083,7 @@ void BoUpSLP::reorderNodeWithReuses(TreeEntry &TE, ArrayRef<int> Mask) const {
   // Clear reorder since it is going to be applied to the new mask.
   TE.ReorderIndices.clear();
   // Try to improve gathered nodes with clustered reuses, if possible.
-  reorderScalars(TE.Scalars, makeArrayRef(NewMask).slice(0, Sz));
+  reorderScalars(TE.Scalars, ArrayRef(NewMask).slice(0, Sz));
   // Fill the reuses mask with the identity submasks.
   for (auto *It = TE.ReuseShuffleIndices.begin(),
             *End = TE.ReuseShuffleIndices.end();
@@ -6899,6 +6899,42 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
         (void)E;
         return VecCost - ScalarCost;
       };
+  // Calculate cost difference from vectorizing set of GEPs.
+  // Negative value means vectorizing is profitable.
+  auto GetGEPCostDiff = [=](ArrayRef<Value *> Ptrs, Value *BasePtr) {
+    InstructionCost CostSavings = 0;
+    for (Value *V : Ptrs) {
+      if (V == BasePtr)
+        continue;
+      auto *Ptr = dyn_cast<GetElementPtrInst>(V);
+      // GEPs may contain just addresses without instructions, considered free.
+      // GEPs with all constant indices also considered to have zero cost.
+      if (!Ptr || Ptr->hasAllConstantIndices())
+        continue;
+
+      // Here we differentiate two cases: when GEPs represent a regular
+      // vectorization tree node (and hence vectorized) and when the set is
+      // arguments of a set of loads or stores being vectorized. In the former
+      // case all the scalar GEPs will be removed as a result of vectorization.
+      // For any external uses of some lanes extract element instructions will
+      // be generated (which cost is estimated separately). For the latter case
+      // since the set of GEPs itself is not vectorized those used more than
+      // once will remain staying in vectorized code as well. So we should not
+      // count them as savings.
+      if (!Ptr->hasOneUse() && isa<LoadInst, StoreInst>(VL0))
+        continue;
+
+      // TODO: it is target dependent, so need to implement and then use a TTI
+      // interface.
+      CostSavings += TTI->getArithmeticInstrCost(Instruction::Add,
+                                                 Ptr->getType(), CostKind);
+    }
+    LLVM_DEBUG(dbgs() << "SLP: Calculated GEPs cost savings or Tree:\n";
+               E->dump());
+    LLVM_DEBUG(dbgs() << "SLP:     GEP cost saving = " << CostSavings << "\n");
+    return InstructionCost() - CostSavings;
+  };
+
   switch (ShuffleOrOp) {
   case Instruction::PHI: {
     // Count reused scalars.
@@ -7173,52 +7209,39 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
   case Instruction::AShr:
   case Instruction::And:
   case Instruction::Or:
-  case Instruction::Xor:
-  case Instruction::GetElementPtr: {
-    unsigned Opcode = ShuffleOrOp == Instruction::GetElementPtr
-                          ? static_cast<unsigned>(Instruction::Add)
-                          : ShuffleOrOp;
+  case Instruction::Xor: {
     auto GetScalarCost = [=](unsigned Idx) {
-      auto *VI = dyn_cast<Instruction>(VL[Idx]);
-      // GEPs may contain just addresses without instructions, consider
-      // their cost 0.
-      if (!VI)
-        return InstructionCost();
+      auto *VI = cast<Instruction>(VL[Idx]);
       unsigned OpIdx = isa<UnaryOperator>(VI) ? 0 : 1;
       TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(VI->getOperand(0));
       TTI::OperandValueInfo Op2Info =
           TTI::getOperandInfo(VI->getOperand(OpIdx));
       SmallVector<const Value *> Operands(VI->operand_values());
-      return TTI->getArithmeticInstrCost(Opcode, ScalarTy, CostKind, Op1Info,
-                                         Op2Info, Operands, VI);
+      return TTI->getArithmeticInstrCost(ShuffleOrOp, ScalarTy, CostKind,
+                                         Op1Info, Op2Info, Operands, VI);
     };
     auto GetVectorCost = [=](InstructionCost CommonCost) {
       unsigned OpIdx = isa<UnaryOperator>(VL0) ? 0 : 1;
       TTI::OperandValueInfo Op1Info = getOperandInfo(VL, 0);
       TTI::OperandValueInfo Op2Info = getOperandInfo(VL, OpIdx);
-      return TTI->getArithmeticInstrCost(Opcode, VecTy, CostKind, Op1Info,
+      return TTI->getArithmeticInstrCost(ShuffleOrOp, VecTy, CostKind, Op1Info,
                                          Op2Info) +
              CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
+  case Instruction::GetElementPtr: {
+    return CommonCost + GetGEPCostDiff(VL, VL0);
+  }
   case Instruction::Load: {
     auto GetScalarCost = [=](unsigned Idx) {
       auto *VI = cast<LoadInst>(VL[Idx]);
-      InstructionCost GEPCost = 0;
-      if (VI != VL0) {
-        auto *Ptr = dyn_cast<GetElementPtrInst>(VI->getPointerOperand());
-        if (Ptr && Ptr->hasOneUse() && !Ptr->hasAllConstantIndices())
-          GEPCost = TTI->getArithmeticInstrCost(Instruction::Add,
-                                                Ptr->getType(), CostKind);
-      }
-      return GEPCost +
-             TTI->getMemoryOpCost(Instruction::Load, ScalarTy, VI->getAlign(),
+      return TTI->getMemoryOpCost(Instruction::Load, ScalarTy, VI->getAlign(),
                                   VI->getPointerAddressSpace(), CostKind,
                                   TTI::OperandValueInfo(), VI);
     };
+    auto *LI0 = cast<LoadInst>(VL0);
     auto GetVectorCost = [=](InstructionCost CommonCost) {
-      auto *LI0 = cast<LoadInst>(VL0);
       InstructionCost VecLdCost;
       if (E->State == TreeEntry::Vectorize) {
         VecLdCost = TTI->getMemoryOpCost(
@@ -7236,34 +7259,46 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       }
       return VecLdCost + CommonCost;
     };
-    return GetCostDiff(GetScalarCost, GetVectorCost);
+
+    InstructionCost Cost = GetCostDiff(GetScalarCost, GetVectorCost);
+    // If this node generates masked gather load then it is not a terminal node.
+    // Hence address operand cost is estimated separately.
+    if (E->State == TreeEntry::ScatterVectorize)
+      return Cost;
+
+    // Estimate cost of GEPs since this tree node is a terminator.
+    SmallVector<Value *> PointerOps(VL.size());
+    for (auto [I, V] : enumerate(VL))
+      PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
+    return Cost + GetGEPCostDiff(PointerOps, LI0->getPointerOperand());
   }
   case Instruction::Store: {
     bool IsReorder = !E->ReorderIndices.empty();
-    auto *SI = cast<StoreInst>(IsReorder ? VL[E->ReorderIndices.front()] : VL0);
     auto GetScalarCost = [=](unsigned Idx) {
       auto *VI = cast<StoreInst>(VL[Idx]);
-      InstructionCost GEPCost = 0;
-      if (VI != SI) {
-        auto *Ptr = dyn_cast<GetElementPtrInst>(VI->getPointerOperand());
-        if (Ptr && Ptr->hasOneUse() && !Ptr->hasAllConstantIndices())
-          GEPCost = TTI->getArithmeticInstrCost(Instruction::Add,
-                                                Ptr->getType(), CostKind);
-      }
       TTI::OperandValueInfo OpInfo = getOperandInfo(VI, 0);
-      return GEPCost + TTI->getMemoryOpCost(
-                           Instruction::Store, ScalarTy, VI->getAlign(),
-                           VI->getPointerAddressSpace(), CostKind, OpInfo, VI);
+      return TTI->getMemoryOpCost(Instruction::Store, ScalarTy, VI->getAlign(),
+                                  VI->getPointerAddressSpace(), CostKind,
+                                  OpInfo, VI);
     };
+    auto *BaseSI =
+        cast<StoreInst>(IsReorder ? VL[E->ReorderIndices.front()] : VL0);
     auto GetVectorCost = [=](InstructionCost CommonCost) {
       // We know that we can merge the stores. Calculate the cost.
       TTI::OperandValueInfo OpInfo = getOperandInfo(VL, 0);
-      return TTI->getMemoryOpCost(Instruction::Store, VecTy, SI->getAlign(),
-                                  SI->getPointerAddressSpace(), CostKind,
+      return TTI->getMemoryOpCost(Instruction::Store, VecTy, BaseSI->getAlign(),
+                                  BaseSI->getPointerAddressSpace(), CostKind,
                                   OpInfo) +
              CommonCost;
     };
-    return GetCostDiff(GetScalarCost, GetVectorCost);
+    SmallVector<Value *> PointerOps(VL.size());
+    for (auto [I, V] : enumerate(VL)) {
+      unsigned Idx = IsReorder ? E->ReorderIndices[I] : I;
+      PointerOps[Idx] = cast<StoreInst>(V)->getPointerOperand();
+    }
+
+    return GetCostDiff(GetScalarCost, GetVectorCost) +
+           GetGEPCostDiff(PointerOps, BaseSI->getPointerOperand());
   }
   case Instruction::Call: {
     auto GetScalarCost = [=](unsigned Idx) {
@@ -8888,8 +8923,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     if (E->State != TreeEntry::NeedToGather &&
         E->getOpcode() == Instruction::Store) {
       ArrayRef<int> Mask =
-          makeArrayRef(reinterpret_cast<const int *>(E->ReorderIndices.begin()),
-                       E->ReorderIndices.size());
+          ArrayRef(reinterpret_cast<const int *>(E->ReorderIndices.begin()),
+                   E->ReorderIndices.size());
       ShuffleBuilder.add(V, Mask);
     } else {
       ShuffleBuilder.addOrdered(V, E->ReorderIndices);
@@ -11273,7 +11308,7 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
     unsigned StartIdx = 0;
     for (unsigned Size = MaxVF; Size >= MinVF; Size /= 2) {
       for (unsigned Cnt = StartIdx, E = Operands.size(); Cnt + Size <= E;) {
-        ArrayRef<Value *> Slice = makeArrayRef(Operands).slice(Cnt, Size);
+        ArrayRef<Value *> Slice = ArrayRef(Operands).slice(Cnt, Size);
         if (!VectorizedStores.count(Slice.front()) &&
             !VectorizedStores.count(Slice.back()) &&
             vectorizeStoreChain(Slice, R, Cnt, MinVF)) {
@@ -12546,7 +12581,7 @@ public:
             continue;
           unsigned NumOps = VectorizedVals.lookup(RdxVal);
           for (Instruction *RedOp :
-               makeArrayRef(ReducedValsToOps.find(RdxVal)->second)
+               ArrayRef(ReducedValsToOps.find(RdxVal)->second)
                    .drop_back(NumOps))
             ExtraReductions.emplace_back(RedOp, RdxVal);
         }
@@ -13044,7 +13079,7 @@ tryToVectorizeSequence(SmallVectorImpl<T *> &Incoming,
     // same/alternate ops only, this may result in some extra final
     // vectorization.
     if (NumElts > 1 &&
-        TryToVectorizeHelper(makeArrayRef(IncIt, NumElts), LimitForRegisterSize)) {
+        TryToVectorizeHelper(ArrayRef(IncIt, NumElts), LimitForRegisterSize)) {
       // Success start over because instructions might have been changed.
       Changed = true;
     } else if (NumElts < Limit(*IncIt) &&
@@ -13066,8 +13101,9 @@ tryToVectorizeSequence(SmallVectorImpl<T *> &Incoming,
           while (SameTypeIt != End && AreCompatible(*SameTypeIt, *It))
             ++SameTypeIt;
           unsigned NumElts = (SameTypeIt - It);
-          if (NumElts > 1 && TryToVectorizeHelper(makeArrayRef(It, NumElts),
-                                            /*LimitForRegisterSize=*/false))
+          if (NumElts > 1 &&
+              TryToVectorizeHelper(ArrayRef(It, NumElts),
+                                   /*LimitForRegisterSize=*/false))
             Changed = true;
           It = SameTypeIt;
         }

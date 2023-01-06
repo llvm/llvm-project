@@ -331,6 +331,13 @@ Bug Fixes
   `Issue 58800 <https://github.com/llvm/llvm-project/issues/58800>`_
 - Fix an issue that triggers a crash if we instantiate a hidden friend functions.
   This fixes `Issue 54457 <https://github.com/llvm/llvm-project/issues/54457>`_
+- Fix an issue where -frewrite-includes generated line control directives with
+  incorrect line numbers in some cases when a header file used an end of line
+  character sequence that differed from the primary source file.
+  `Issue 59736 <https://github.com/llvm/llvm-project/issues/59736>`_
+- In C mode, when ``e1`` has ``__attribute__((noreturn))`` but ``e2`` doesn't,
+  ``(c ? e1 : e2)`` is no longer considered noreturn.
+  `Issue 59792 <https://github.com/llvm/llvm-project/issues/59792>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -798,7 +805,7 @@ X86 Support in Clang
   * Support intrinsic of ``_mm(256)_cvtneobf16_ps``.
   * Support intrinsic of ``_mm(256)_cvtneoph_ps``.
   * Support intrinsic of ``_mm(256)_cvtneps_avx_pbh``.
-- ``-march=raptorlake`` and ``-march=meteorlake`` are now supported.
+- ``-march=raptorlake``, ``-march=meteorlake`` and ``-march=emeraldrapids`` are now supported.
 - ``-march=sierraforest``, ``-march=graniterapids`` and ``-march=grandridge`` are now supported.
 - Lift _BitInt() supported max width from 128 to 8388608.
 - Support intrinsics of ``_mm(256)_reduce_(add|mul|or|and)_epi8/16``.
@@ -867,6 +874,9 @@ clang-format
   To match the default behavior of clang-format 15, use the ``Keyword`` value.
 - Add ``IntegerLiteralSeparator`` option for fixing integer literal separators
   in C++, C#, Java, and JavaScript.
+- Add ``BreakAfterAttributes`` option for breaking after a group of C++11
+  attributes before a function declaration/definition name.
+- Add ``InsertNewlineAtEOF`` option for inserting a newline at EOF if missing.
 
 clang-extdef-mapping
 --------------------

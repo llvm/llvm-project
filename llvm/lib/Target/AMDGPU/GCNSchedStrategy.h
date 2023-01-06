@@ -126,6 +126,33 @@ public:
   GCNMaxILPSchedStrategy(const MachineSchedContext *C);
 };
 
+class ScheduleMetrics {
+  unsigned ScheduleLength;
+  unsigned BubbleCycles;
+
+public:
+  ScheduleMetrics() {}
+  ScheduleMetrics(unsigned L, unsigned BC)
+      : ScheduleLength(L), BubbleCycles(BC) {}
+  unsigned getLength() const { return ScheduleLength; }
+  unsigned getBubbles() const { return BubbleCycles; }
+  unsigned getMetric() const {
+    unsigned Metric = (BubbleCycles * ScaleFactor) / ScheduleLength;
+    // Metric is zero if the amount of bubbles is less than 1% which is too
+    // small. So, return 1.
+    return Metric ? Metric : 1;
+  }
+  static const unsigned ScaleFactor;
+};
+
+inline raw_ostream &operator<<(raw_ostream &OS, const ScheduleMetrics &Sm) {
+  dbgs() << "\n Schedule Metric (scaled by "
+         << ScheduleMetrics::ScaleFactor
+         << " ) is: " << Sm.getMetric() << " [ " << Sm.getBubbles() << "/"
+         << Sm.getLength() << " ]\n";
+  return OS;
+}
+
 class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   friend class GCNSchedStage;
   friend class OccInitialScheduleStage;
@@ -258,6 +285,13 @@ public:
 
   // Check result of scheduling.
   void checkScheduling();
+
+  // computes the given schedule virtual execution time in clocks
+  ScheduleMetrics getScheduleMetrics(const std::vector<SUnit> &InputSchedule);
+  ScheduleMetrics getScheduleMetrics(const GCNScheduleDAGMILive &DAG);
+  unsigned computeSUnitReadyCycle(const SUnit &SU, unsigned CurrCycle,
+                                  DenseMap<unsigned, unsigned> &ReadyCycles,
+                                  const TargetSchedModel &SM);
 
   // Returns true if scheduling should be reverted.
   virtual bool shouldRevertScheduling(unsigned WavesAfter);

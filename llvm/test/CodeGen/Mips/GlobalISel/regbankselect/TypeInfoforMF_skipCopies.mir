@@ -2,8 +2,8 @@
 # RUN: llc -O0 -mtriple=mipsel-linux-gnu -run-pass=regbankselect -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=MIPS32
 --- |
 
-  define void @skipCopiesOutgoing(float* %ptr_a, float* %ptr_b, float* %ptr_c) {entry: ret void}
-  define void @skipCopiesIncoming(float* %float_ptr) {entry: ret void}
+  define void @skipCopiesOutgoing(ptr %ptr_a, ptr %ptr_b, ptr %ptr_c) {entry: ret void}
+  define void @skipCopiesIncoming(ptr %float_ptr) {entry: ret void}
 
 ...
 ---

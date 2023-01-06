@@ -1184,6 +1184,18 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   // Handle Function attributes.
   processFunctionAttributes(func, funcOp);
 
+  // Convert non-debug metadata by using the dialect interface.
+  SmallVector<std::pair<unsigned, llvm::MDNode *>> allMetadata;
+  func->getAllMetadata(allMetadata);
+  for (auto &[kind, node] : allMetadata) {
+    if (!iface.isConvertibleMetadata(kind))
+      continue;
+    if (failed(iface.setMetadataAttrs(builder, kind, node, funcOp, *this))) {
+      emitWarning(funcOp->getLoc())
+          << "unhandled function metadata (" << kind << ") " << diag(*func);
+    }
+  }
+
   if (func->isDeclaration())
     return success();
 

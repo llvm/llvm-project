@@ -1853,6 +1853,63 @@ define void @xor(i8 %a, ptr %p) {
   ret void
 }
 
+define i1 @xor_neg_cond(i32 %a) {
+; CHECK-LABEL: @xor_neg_cond(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[A:%.*]], 10
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[CMP1]], true
+; CHECK-NEXT:    br i1 [[XOR]], label [[EXIT:%.*]], label [[GUARD:%.*]]
+; CHECK:       guard:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp1 = icmp eq i32 %a, 10
+  %xor = xor i1 %cmp1, true
+  br i1 %xor, label %exit, label %guard
+
+guard:
+  %cmp2 = icmp eq i32 %a, 10
+  ret i1 %cmp2
+
+exit:
+  ret i1 false
+}
+
+define i1 @xor_approx(i32 %a) {
+; CHECK-LABEL: @xor_approx(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[A:%.*]], 2
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[A]], 5
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ugt i32 [[A]], 7
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp ult i32 [[A]], 9
+; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[CMP3]], [[CMP4]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[OR]], true
+; CHECK-NEXT:    br i1 [[XOR]], label [[EXIT:%.*]], label [[GUARD:%.*]]
+; CHECK:       guard:
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp eq i32 [[A]], 6
+; CHECK-NEXT:    ret i1 [[CMP5]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp1 = icmp ugt i32 %a, 2
+  %cmp2 = icmp ult i32 %a, 5
+  %cmp3 = icmp ugt i32 %a, 7
+  %cmp4 = icmp ult i32 %a, 9
+  %and1 = and i1 %cmp1, %cmp2
+  %and2 = and i1 %cmp3, %cmp4
+  %or = or i1 %and1, %and2
+  %xor = xor i1 %or, true
+  br i1 %xor, label %exit, label %guard
+
+guard:
+  %cmp5 = icmp eq i32 %a, 6
+  ret i1 %cmp5
+
+exit:
+  ret i1 false
+}
+
 declare i32 @llvm.uadd.sat.i32(i32, i32)
 declare i32 @llvm.usub.sat.i32(i32, i32)
 declare i32 @llvm.sadd.sat.i32(i32, i32)

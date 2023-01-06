@@ -35,13 +35,13 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define dso_local void @_Z15mul_to_additionjjjjPj(i32 %k, i32 %l, i32 %m, i32 %size, i32* nocapture %data) local_unnamed_addr #0 !dbg !7 {
+define dso_local void @_Z15mul_to_additionjjjjPj(i32 %k, i32 %l, i32 %m, i32 %size, ptr nocapture %data) local_unnamed_addr #0 !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata i32 %k, metadata !14, metadata !DIExpression()), !dbg !24
   call void @llvm.dbg.value(metadata i32 %l, metadata !15, metadata !DIExpression()), !dbg !24
   call void @llvm.dbg.value(metadata i32 %m, metadata !16, metadata !DIExpression()), !dbg !24
   call void @llvm.dbg.value(metadata i32 %size, metadata !17, metadata !DIExpression()), !dbg !24
-  call void @llvm.dbg.value(metadata i32* %data, metadata !18, metadata !DIExpression()), !dbg !24
+  call void @llvm.dbg.value(metadata ptr %data, metadata !18, metadata !DIExpression()), !dbg !24
   call void @llvm.dbg.value(metadata i32 0, metadata !19, metadata !DIExpression()), !dbg !24
   %cmp9.not = icmp eq i32 %size, 0, !dbg !25
   br i1 %cmp9.not, label %while.end, label %while.body.preheader, !dbg !26
@@ -60,8 +60,8 @@ while.body:                                       ; preds = %while.body, %while.
   call void @llvm.dbg.value(metadata !DIArgList(i32 %add, i32 %l), metadata !22, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_mul, DW_OP_stack_value)), !dbg !29
   call void @llvm.dbg.value(metadata !DIArgList(i32 %add, i32 %m, i32 %l), metadata !23, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 2, DW_OP_mul, DW_OP_LLVM_arg, 1, DW_OP_shl, DW_OP_stack_value)), !dbg !29
   call void @llvm.dbg.value(metadata !DIArgList(i32 %m, i32 %add, i32 %l), metadata !23, metadata !DIExpression(DW_OP_LLVM_arg, 1, DW_OP_LLVM_arg, 2, DW_OP_mul, DW_OP_LLVM_arg, 0, DW_OP_shl, DW_OP_stack_value)), !dbg !29
-  %arrayidx = getelementptr inbounds i32, i32* %data, i64 %indvars.iv, !dbg !30
-  store i32 %add, i32* %arrayidx, align 4, !dbg !31
+  %arrayidx = getelementptr inbounds i32, ptr %data, i64 %indvars.iv, !dbg !30
+  store i32 %add, ptr %arrayidx, align 4, !dbg !31
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !32
   call void @llvm.dbg.value(metadata i64 %indvars.iv.next, metadata !19, metadata !DIExpression()), !dbg !24
   %exitcond = icmp ne i64 %indvars.iv.next, %wide.trip.count, !dbg !25

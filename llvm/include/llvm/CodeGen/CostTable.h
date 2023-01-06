@@ -47,7 +47,7 @@ template <size_t N, class CostType>
 inline const CostTblEntryT<CostType> *
 CostTableLookup(const CostTblEntryT<CostType> (&Table)[N], int ISD, MVT Ty) {
   // Wrapper to fix template argument deduction failures.
-  return CostTableLookup<CostType>(makeArrayRef(Table), ISD, Ty);
+  return CostTableLookup<CostType>(Table, ISD, Ty);
 }
 
 /// Type Conversion Cost Table
@@ -81,7 +81,7 @@ inline const TypeConversionCostTblEntryT<CostType> *
 ConvertCostTableLookup(const TypeConversionCostTblEntryT<CostType> (&Table)[N],
                        int ISD, MVT Dst, MVT Src) {
   // Wrapper to fix template argument deduction failures.
-  return ConvertCostTableLookup<CostType>(makeArrayRef(Table), ISD, Dst, Src);
+  return ConvertCostTableLookup<CostType>(Table, ISD, Dst, Src);
 }
 
 } // namespace llvm

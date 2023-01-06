@@ -22,6 +22,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -62,7 +63,6 @@ private:
   void getConversionSpecifiers(SmallVectorImpl<char> &OpConvSpecifiers,
                                StringRef fmt, size_t num_ops) const;
 
-  bool shouldPrintAsStr(char Specifier, Value *Op) const;
   bool lowerPrintfForGpu(Module &M);
 
   Value *simplify(Instruction *I, const TargetLibraryInfo *TLI,
@@ -131,32 +131,17 @@ void AMDGPUPrintfRuntimeBindingImpl::getConversionSpecifiers(
   }
 }
 
-bool AMDGPUPrintfRuntimeBindingImpl::shouldPrintAsStr(char Specifier,
-                                                      Value *Op) const {
-  if (Specifier != 's')
-    return false;
-  Type *OpType = Op->getType();
-  const PointerType *PT = dyn_cast<PointerType>(OpType);
-  if (!PT || PT->getAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS)
-    return false;
+static bool shouldPrintAsStr(char Specifier, Type *OpType) {
+  return Specifier == 's' && isa<PointerType>(OpType);
+}
 
-  // String literals are usually globals with a [N x i8] initializer.
-  if (auto *GV = dyn_cast<GlobalVariable>(Op)) {
-    if (!GV->hasInitializer())
-      return false;
-
-    Type *InitType = GV->getInitializer()->getType();
-    if (!InitType->isArrayTy())
-      return false;
-
-    if (!cast<ArrayType>(InitType)->getElementType()->isIntegerTy(8))
-      return false;
-
-    return true;
-  }
-
-  // TODO: handle more cases?
-  return false;
+static void diagnoseInvalidFormatString(const CallBase *CI) {
+  DiagnosticInfoUnsupported UnsupportedFormatStr(
+      *CI->getParent()->getParent(),
+      "printf format string must be a trivially resolved constant string "
+      "global variable",
+      CI->getDebugLoc());
+  CI->getContext().diagnose(UnsupportedFormatStr);
 }
 
 bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
@@ -190,28 +175,32 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
         Op = Op_simplified;
     }
 
-    ConstantExpr *ConstExpr = dyn_cast<ConstantExpr>(Op);
-    GlobalVariable *GVar = !Ctx.supportsTypedPointers() ? dyn_cast<GlobalVariable>(Op) : ConstExpr ? dyn_cast<GlobalVariable>(ConstExpr->getOperand(0)) : nullptr;
-    if (!GVar)
+    Value *Stripped = Op->stripPointerCasts();
+    if (isa<UndefValue>(Stripped) || isa<ConstantPointerNull>(Stripped))
       continue;
 
-    StringRef Str("unknown");
-    if (GVar && GVar->hasInitializer()) {
-      auto *Init = GVar->getInitializer();
-      if (auto *CA = dyn_cast<ConstantDataArray>(Init)) {
-        if (CA->isString())
-          Str = CA->getAsCString();
-      } else if (isa<ConstantAggregateZero>(Init)) {
-        Str = "";
-      }
-      //
-      // we need this call to ascertain
-      // that we are printing a string
-      // or a pointer. It takes out the
-      // specifiers and fills up the first
-      // arg
-      getConversionSpecifiers(OpConvSpecifiers, Str, NumOps - 1);
+    GlobalVariable *GVar = dyn_cast<GlobalVariable>(Stripped);
+    if (!GVar || !GVar->hasDefinitiveInitializer() || !GVar->isConstant()) {
+      diagnoseInvalidFormatString(CI);
+      continue;
     }
+
+    auto *Init = GVar->getInitializer();
+    if (isa<UndefValue>(Init) || isa<ConstantAggregateZero>(Init))
+      continue;
+
+    auto *CA = dyn_cast<ConstantDataArray>(Init);
+    if (!CA || !CA->isString()) {
+      diagnoseInvalidFormatString(CI);
+      continue;
+    }
+
+    StringRef Str(CA->getAsCString());
+
+    // We need this call to ascertain that we are printing a string or a
+    // pointer. It takes out the specifiers and fills up the first arg.
+    getConversionSpecifiers(OpConvSpecifiers, Str, NumOps - 1);
+
     // Add metadata for the string
     std::string AStreamHolder;
     raw_string_ostream Sizes(AStreamHolder);
@@ -260,37 +249,41 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
             ArgSize = 4;
         }
       }
-      if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], Arg)) {
-        auto *GV = dyn_cast<GlobalVariable>(Arg);
-        if (GV && GV->hasInitializer()) {
-          Constant *Init = GV->getInitializer();
-          bool IsZeroValue = Init->isZeroValue();
-          auto *CA = dyn_cast<ConstantDataArray>(Init);
-          if (IsZeroValue || (CA && CA->isString())) {
-            size_t SizeStr =
-              IsZeroValue ? 1 : (strlen(CA->getAsCString().data()) + 1);
-            size_t Rem = SizeStr % DWORD_ALIGN;
-            size_t NSizeStr = 0;
-            LLVM_DEBUG(dbgs() << "Printf string original size = " << SizeStr
-                       << '\n');
-            if (Rem) {
-              NSizeStr = SizeStr + (DWORD_ALIGN - Rem);
-            } else {
-              NSizeStr = SizeStr;
+      if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], ArgType)) {
+        if (auto *ConstExpr = dyn_cast<ConstantExpr>(Arg)) {
+          auto *GV = dyn_cast<GlobalVariable>(ConstExpr->getOperand(0));
+          if (GV && GV->hasInitializer()) {
+            Constant *Init = GV->getInitializer();
+            bool IsZeroValue = Init->isZeroValue();
+            auto *CA = dyn_cast<ConstantDataArray>(Init);
+            if (IsZeroValue || (CA && CA->isString())) {
+              size_t SizeStr =
+                  IsZeroValue ? 1 : (strlen(CA->getAsCString().data()) + 1);
+              size_t Rem = SizeStr % DWORD_ALIGN;
+              size_t NSizeStr = 0;
+              LLVM_DEBUG(dbgs() << "Printf string original size = " << SizeStr
+                                << '\n');
+              if (Rem) {
+                NSizeStr = SizeStr + (DWORD_ALIGN - Rem);
+              } else {
+                NSizeStr = SizeStr;
+              }
+              ArgSize = NSizeStr;
             }
-            ArgSize = NSizeStr;
+          } else {
+            ArgSize = sizeof(NonLiteralStr);
           }
         } else {
           ArgSize = sizeof(NonLiteralStr);
         }
       }
       LLVM_DEBUG(dbgs() << "Printf ArgSize (in buffer) = " << ArgSize
-                 << " for type: " << *ArgType << '\n');
+                        << " for type: " << *ArgType << '\n');
       Sizes << ArgSize << ':';
       Sum += ArgSize;
     }
     LLVM_DEBUG(dbgs() << "Printf format string in source = " << Str.str()
-               << '\n');
+                      << '\n');
     for (char C : Str) {
       // Rest of the C escape sequences (e.g. \') are handled correctly
       // by the MDParser
@@ -338,7 +331,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
     Type *I8Ptr = PointerType::get(I8Ty, 1);
     FunctionType *FTy_alloc = FunctionType::get(I8Ptr, Tys_alloc, false);
     FunctionCallee PrintfAllocFn =
-      M.getOrInsertFunction(StringRef("__printf_alloc"), FTy_alloc, Attr);
+        M.getOrInsertFunction(StringRef("__printf_alloc"), FTy_alloc, Attr);
 
     LLVM_DEBUG(dbgs() << "Printf metadata = " << Sizes.str() << '\n');
     std::string fmtstr = itostr(++UniqID) + ":" + Sizes.str();
@@ -359,7 +352,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
     SmallVector<Value *, 1> alloc_args;
     alloc_args.push_back(sumC);
     CallInst *pcall =
-      CallInst::Create(PrintfAllocFn, alloc_args, "printf_alloc_fn", CI);
+        CallInst::Create(PrintfAllocFn, alloc_args, "printf_alloc_fn", CI);
 
     //
     // Insert code to split basicblock with a
@@ -367,36 +360,35 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
     // basicblock splits after buffer overflow check
     //
     ConstantPointerNull *zeroIntPtr =
-      ConstantPointerNull::get(PointerType::get(I8Ty, 1));
+        ConstantPointerNull::get(PointerType::get(I8Ty, 1));
     auto *cmp = cast<ICmpInst>(Builder.CreateICmpNE(pcall, zeroIntPtr, ""));
     if (!CI->use_empty()) {
       Value *result =
-        Builder.CreateSExt(Builder.CreateNot(cmp), I32Ty, "printf_res");
+          Builder.CreateSExt(Builder.CreateNot(cmp), I32Ty, "printf_res");
       CI->replaceAllUsesWith(result);
     }
     SplitBlock(CI->getParent(), cmp);
     Instruction *Brnch =
-      SplitBlockAndInsertIfThen(cmp, cmp->getNextNode(), false);
+        SplitBlockAndInsertIfThen(cmp, cmp->getNextNode(), false);
 
     Builder.SetInsertPoint(Brnch);
 
     // store unique printf id in the buffer
     //
     GetElementPtrInst *BufferIdx = GetElementPtrInst::Create(
-      I8Ty, pcall, ConstantInt::get(Ctx, APInt(32, 0)), "PrintBuffID",
-      Brnch);
+        I8Ty, pcall, ConstantInt::get(Ctx, APInt(32, 0)), "PrintBuffID", Brnch);
 
     Type *idPointer = PointerType::get(I32Ty, AMDGPUAS::GLOBAL_ADDRESS);
     Value *id_gep_cast =
-      new BitCastInst(BufferIdx, idPointer, "PrintBuffIdCast", Brnch);
+        new BitCastInst(BufferIdx, idPointer, "PrintBuffIdCast", Brnch);
 
     new StoreInst(ConstantInt::get(I32Ty, UniqID), id_gep_cast, Brnch);
 
     // 1st 4 bytes hold the printf_id
     // the following GEP is the buffer pointer
-    BufferIdx = GetElementPtrInst::Create(
-      I8Ty, pcall, ConstantInt::get(Ctx, APInt(32, 4)), "PrintBuffGep",
-      Brnch);
+    BufferIdx = GetElementPtrInst::Create(I8Ty, pcall,
+                                          ConstantInt::get(Ctx, APInt(32, 4)),
+                                          "PrintBuffGep", Brnch);
 
     Type *Int32Ty = Type::getInt32Ty(Ctx);
     Type *Int64Ty = Type::getInt64Ty(Ctx);
@@ -427,15 +419,17 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
         Arg = new BitCastInst(Arg, IType, "PrintArgFP", Brnch);
         WhatToStore.push_back(Arg);
       } else if (ArgType->getTypeID() == Type::PointerTyID) {
-        if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], Arg)) {
+        if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], ArgType)) {
           const char *S = NonLiteralStr;
-          auto *GV = dyn_cast<GlobalVariable>(Arg);
-          if (GV && GV->hasInitializer()) {
-            Constant *Init = GV->getInitializer();
-            bool IsZeroValue = Init->isZeroValue();
-            auto *CA = dyn_cast<ConstantDataArray>(Init);
-            if (IsZeroValue || (CA && CA->isString())) {
-              S = IsZeroValue ? "" : CA->getAsCString().data();
+          if (auto *ConstExpr = dyn_cast<ConstantExpr>(Arg)) {
+            auto *GV = dyn_cast<GlobalVariable>(ConstExpr->getOperand(0));
+            if (GV && GV->hasInitializer()) {
+              Constant *Init = GV->getInitializer();
+              bool IsZeroValue = Init->isZeroValue();
+              auto *CA = dyn_cast<ConstantDataArray>(Init);
+              if (IsZeroValue || (CA && CA->isString())) {
+                S = IsZeroValue ? "" : CA->getAsCString().data();
+              }
             }
           }
           size_t SizeStr = strlen(S) + 1;
@@ -478,7 +472,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
         uint32_t TotalSize = EleCount * EleSize;
         if (EleCount == 3) {
           ShuffleVectorInst *Shuffle =
-            new ShuffleVectorInst(Arg, Arg, ArrayRef<int>{0, 1, 2, 2});
+              new ShuffleVectorInst(Arg, Arg, ArrayRef<int>{0, 1, 2, 2});
           Shuffle->insertBefore(Brnch);
           Arg = Shuffle;
           ArgType = Arg->getType();
@@ -521,27 +515,25 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       }
       for (unsigned I = 0, E = WhatToStore.size(); I != E; ++I) {
         Value *TheBtCast = WhatToStore[I];
-        unsigned ArgSize =
-          TD->getTypeAllocSizeInBits(TheBtCast->getType()) / 8;
+        unsigned ArgSize = TD->getTypeAllocSizeInBits(TheBtCast->getType()) / 8;
         SmallVector<Value *, 1> BuffOffset;
         BuffOffset.push_back(ConstantInt::get(I32Ty, ArgSize));
 
         Type *ArgPointer = PointerType::get(TheBtCast->getType(), 1);
         Value *CastedGEP =
-          new BitCastInst(BufferIdx, ArgPointer, "PrintBuffPtrCast", Brnch);
+            new BitCastInst(BufferIdx, ArgPointer, "PrintBuffPtrCast", Brnch);
         StoreInst *StBuff = new StoreInst(TheBtCast, CastedGEP, Brnch);
         LLVM_DEBUG(dbgs() << "inserting store to printf buffer:\n"
-                   << *StBuff << '\n');
+                          << *StBuff << '\n');
         (void)StBuff;
         if (I + 1 == E && ArgCount + 1 == CI->arg_size())
           break;
         BufferIdx = GetElementPtrInst::Create(I8Ty, BufferIdx, BuffOffset,
                                               "PrintBuffNextPtr", Brnch);
         LLVM_DEBUG(dbgs() << "inserting gep to the printf buffer:\n"
-                   << *BufferIdx << '\n');
+                          << *BufferIdx << '\n');
       }
     }
-
   }
 
   // erase the printf calls

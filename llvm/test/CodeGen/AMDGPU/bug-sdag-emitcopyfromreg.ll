@@ -3,7 +3,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 < %s | FileCheck %s -check-prefix=ISA
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -stop-before=si-fix-sgpr-copies < %s | FileCheck %s -check-prefix=MIR
 
-define void @f(i32 %arg, float* %ptr) {
+define void @f(i32 %arg, ptr %ptr) {
 ; ISA-LABEL: f:
 ; ISA:       ; %bb.0: ; %bb
 ; ISA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -59,7 +59,7 @@ define void @f(i32 %arg, float* %ptr) {
   ; MIR-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; MIR-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
-  ; MIR-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[S_MOV_B64_]], 0, 0 :: (invariant load (s64) from `<2 x i32> addrspace(4)* null`, align 4294967296, addrspace 4)
+  ; MIR-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[S_MOV_B64_]], 0, 0 :: (invariant load (s64) from `ptr addrspace(4) null`, align 4294967296, addrspace 4)
   ; MIR-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
   ; MIR-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
   ; MIR-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
@@ -118,7 +118,7 @@ define void @f(i32 %arg, float* %ptr) {
   ; MIR-NEXT:   FLAT_STORE_DWORD [[COPY8]], [[PHI2]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.ptr)
   ; MIR-NEXT:   SI_RETURN
 bb:
-  %i = load <2 x i32>, <2 x i32> addrspace(4)* null, align 4294967296
+  %i = load <2 x i32>, ptr addrspace(4) null, align 4294967296
   %i1 = extractelement <2 x i32> %i, i64 1
   %i2 = extractelement <2 x i32> %i, i64 0
   %i3 = lshr i32 %i1, 1
@@ -144,7 +144,7 @@ bb14:
   br i1 %i20, label %bb14, label %bb21
 
 bb21:
-  store float %i15, float* %ptr, align 4
+  store float %i15, ptr %ptr, align 4
   ret void
 }
 

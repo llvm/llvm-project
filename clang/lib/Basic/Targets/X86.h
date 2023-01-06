@@ -301,10 +301,6 @@ public:
     return false;
   }
 
-  bool shouldEmitFloat16WithExcessPrecision() const override {
-    return HasFloat16 && !hasLegalHalfType();
-  }
-
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 

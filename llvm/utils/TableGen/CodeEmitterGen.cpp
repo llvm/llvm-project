@@ -517,9 +517,8 @@ void CodeEmitterGen::run(raw_ostream &o) {
       o << "  const unsigned opcode = MI.getOpcode();\n"
         << "  if (Scratch.getBitWidth() != " << BitWidth << ")\n"
         << "    Scratch = Scratch.zext(" << BitWidth << ");\n"
-        << "  Inst = APInt(" << BitWidth
-        << ", makeArrayRef(InstBits + opcode * " << NumWords << ", " << NumWords
-        << "));\n"
+        << "  Inst = APInt(" << BitWidth << ", ArrayRef(InstBits + opcode * "
+        << NumWords << ", " << NumWords << "));\n"
         << "  APInt &Value = Inst;\n"
         << "  APInt &op = Scratch;\n"
         << "  switch (opcode) {\n";

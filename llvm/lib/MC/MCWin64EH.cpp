@@ -1282,9 +1282,9 @@ static void ARM64EmitUnwindInfoForSegment(MCStreamer &streamer,
     // FIXME: We should be able to split unwind info into multiple sections.
     if (CodeWords > 0xFF || EpilogCount > 0xFFFF)
       report_fatal_error(
-          "SEH unwind data splitting is only implemnted for large functions, "
-          "cases of too many code words or too many epilogs will be done later"
-      );
+          "SEH unwind data splitting is only implemented for large functions, "
+          "cases of too many code words or too many epilogs will be done "
+          "later");
     uint32_t row2 = 0x0;
     row2 |= (CodeWords & 0xFF) << 16;
     row2 |= (EpilogCount & 0xFFFF);

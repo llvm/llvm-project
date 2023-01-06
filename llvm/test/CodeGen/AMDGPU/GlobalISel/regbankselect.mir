@@ -2,49 +2,49 @@
 # RUN: llc -march=amdgcn -mcpu=hawaii -mattr=+flat-for-global -run-pass=regbankselect %s -verify-machineinstrs -o - | FileCheck %s
 
 --- |
-  define amdgpu_kernel void @load_constant(i32 addrspace(4)* %ptr0) {
+  define amdgpu_kernel void @load_constant(ptr addrspace(4) %ptr0) {
     ret void
   }
 
-  define amdgpu_kernel void @load_constant_volatile(i32 addrspace(4)* %ptr0) {
+  define amdgpu_kernel void @load_constant_volatile(ptr addrspace(4) %ptr0) {
     ret void
   }
 
-  define amdgpu_kernel void @load_global_uniform_invariant(i32 addrspace(1)* %ptr1) {
-    %tmp0 = load i32, i32 addrspace(1)* %ptr1
+  define amdgpu_kernel void @load_global_uniform_invariant(ptr addrspace(1) %ptr1) {
+    %tmp0 = load i32, ptr addrspace(1) %ptr1
     ret void
   }
 
-  define amdgpu_kernel void @load_global_uniform_noclobber(i32 addrspace(1)* %ptr1) {
-    %tmp0 = load i32, i32 addrspace(1)* %ptr1, !amdgpu.noclobber !0
+  define amdgpu_kernel void @load_global_uniform_noclobber(ptr addrspace(1) %ptr1) {
+    %tmp0 = load i32, ptr addrspace(1) %ptr1, !amdgpu.noclobber !0
     ret void
   }
 
-  define amdgpu_kernel void @load_global_uniform_variant(i32 addrspace(1)* %ptr1) {
-    %tmp0 = load i32, i32 addrspace(1)* %ptr1
+  define amdgpu_kernel void @load_global_uniform_variant(ptr addrspace(1) %ptr1) {
+    %tmp0 = load i32, ptr addrspace(1) %ptr1
     ret void
   }
 
-  define amdgpu_kernel void @load_global_uniform_volatile_invariant(i32 addrspace(1)* %ptr1) {
-    %tmp0 = load i32, i32 addrspace(1)* %ptr1
+  define amdgpu_kernel void @load_global_uniform_volatile_invariant(ptr addrspace(1) %ptr1) {
+    %tmp0 = load i32, ptr addrspace(1) %ptr1
     ret void
   }
 
-  define amdgpu_kernel void @load_global_uniform_atomic_invariant(i32 addrspace(1)* %ptr1) {
-    %tmp0 = load i32, i32 addrspace(1)* %ptr1
+  define amdgpu_kernel void @load_global_uniform_atomic_invariant(ptr addrspace(1) %ptr1) {
+    %tmp0 = load i32, ptr addrspace(1) %ptr1
     ret void
   }
 
-  define amdgpu_kernel void @load_global_non_uniform(i32 addrspace(1)* %ptr2) {
+  define amdgpu_kernel void @load_global_non_uniform(ptr addrspace(1) %ptr2) {
     %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() #0
-    %tmp1 = getelementptr i32, i32 addrspace(1)* %ptr2, i32 %tmp0
-    %tmp2 = load i32, i32 addrspace(1)* %tmp1
+    %tmp1 = getelementptr i32, ptr addrspace(1) %ptr2, i32 %tmp0
+    %tmp2 = load i32, ptr addrspace(1) %tmp1
     ret void
   }
 
   define void @non_power_of_2() { ret void }
 
-  define amdgpu_kernel void @load_constant_v4i16_from_8_align8(<3 x i16> addrspace(4)* %ptr0) {
+  define amdgpu_kernel void @load_constant_v4i16_from_8_align8(ptr addrspace(4) %ptr0) {
     ret void
   }
 

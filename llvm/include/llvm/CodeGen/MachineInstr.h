@@ -190,7 +190,7 @@ private:
     }
 
     ArrayRef<MachineMemOperand *> getMMOs() const {
-      return makeArrayRef(getTrailingObjects<MachineMemOperand *>(), NumMMOs);
+      return ArrayRef(getTrailingObjects<MachineMemOperand *>(), NumMMOs);
     }
 
     MCSymbol *getPreInstrSymbol() const {
@@ -731,7 +731,7 @@ public:
       return {};
 
     if (Info.is<EIIK_MMO>())
-      return makeArrayRef(Info.getAddrOfZeroTagPointer(), 1);
+      return ArrayRef(Info.getAddrOfZeroTagPointer(), 1);
 
     if (ExtraInfo *EI = Info.get<EIIK_OutOfLine>())
       return EI->getMMOs();

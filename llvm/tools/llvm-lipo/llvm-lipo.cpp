@@ -729,7 +729,7 @@ int llvm_lipo_main(int argc, char **argv) {
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmParsers();
 
-  Config C = parseLipoOptions(makeArrayRef(argv + 1, argc - 1));
+  Config C = parseLipoOptions(ArrayRef(argv + 1, argc - 1));
   LLVMContext LLVMCtx;
   SmallVector<OwningBinary<Binary>, 1> InputBinaries =
       readInputBinaries(LLVMCtx, C.InputFiles);

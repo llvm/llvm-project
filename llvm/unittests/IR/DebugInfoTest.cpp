@@ -84,7 +84,7 @@ TEST(DINodeTest, splitFlags) {
   {                                                                            \
     SmallVector<DINode::DIFlags, 8> V;                                         \
     EXPECT_EQ(REMAINDER, DINode::splitFlags(FLAGS, V));                        \
-    EXPECT_TRUE(makeArrayRef(V).equals(VECTOR));                               \
+    EXPECT_TRUE(ArrayRef(V).equals(VECTOR));                                   \
   }
   CHECK_SPLIT(DINode::FlagPublic, {DINode::FlagPublic}, DINode::FlagZero);
   CHECK_SPLIT(DINode::FlagProtected, {DINode::FlagProtected}, DINode::FlagZero);

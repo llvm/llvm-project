@@ -6101,15 +6101,15 @@ const X86MemoryFoldTableEntry *
 llvm::lookupFoldTable(unsigned RegOp, unsigned OpNum) {
   ArrayRef<X86MemoryFoldTableEntry> FoldTable;
   if (OpNum == 0)
-    FoldTable = makeArrayRef(MemoryFoldTable0);
+    FoldTable = ArrayRef(MemoryFoldTable0);
   else if (OpNum == 1)
-    FoldTable = makeArrayRef(MemoryFoldTable1);
+    FoldTable = ArrayRef(MemoryFoldTable1);
   else if (OpNum == 2)
-    FoldTable = makeArrayRef(MemoryFoldTable2);
+    FoldTable = ArrayRef(MemoryFoldTable2);
   else if (OpNum == 3)
-    FoldTable = makeArrayRef(MemoryFoldTable3);
+    FoldTable = ArrayRef(MemoryFoldTable3);
   else if (OpNum == 4)
-    FoldTable = makeArrayRef(MemoryFoldTable4);
+    FoldTable = ArrayRef(MemoryFoldTable4);
   else
     return nullptr;
 
