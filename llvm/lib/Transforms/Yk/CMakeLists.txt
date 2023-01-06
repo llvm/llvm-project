@@ -3,6 +3,7 @@ add_llvm_component_library(LLVMYkPasses
   ControlPoint.cpp
   LivenessAnalysis.cpp
   StackMaps.cpp
+  ShadowStack.cpp
 
   DEPENDS
   intrinsics_gen
