@@ -611,7 +611,7 @@ static bool relaxZcmt(const InputSection &sec, size_t i, uint64_t loc,
   if(!in.riscvTableJumpSection || !in.riscvTableJumpSection->isFinalized)
     return false;
   
-  const auto jalr = sec.data()[r.offset + 4];
+  const auto jalr = sec.contentMaybeDecompress().data()[r.offset + 4];
   const uint8_t rd = (jalr & ((1ULL << (11 + 1)) - 1)) >> 7;
   int tblEntryIndex = -1;
   if (rd == 0){
