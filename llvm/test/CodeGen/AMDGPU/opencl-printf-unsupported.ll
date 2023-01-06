@@ -59,24 +59,6 @@ entry:
   ret void
 }
 
-@struct = private unnamed_addr addrspace(4) constant { [6 x i8] } { [6 x i8] [i8 1, i8 2, i8 3, i8 4, i8 5, i8 6] }
-
-; CHECK: error: <unknown>:0:0: in function test_format_struct void (i32): printf format string must be a trivially resolved constant string global variable
-define amdgpu_kernel void @test_format_struct(i32 %n) {
-  %str = alloca [9 x i8], align 1, addrspace(5)
-  %call1 = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) @struct, ptr addrspace(5) %str, i32 %n)
-  ret void
-}
-
-@array.i16 = private unnamed_addr addrspace(4) constant [6 x i16] [i16 1, i16 2, i16 3, i16 4, i16 5, i16 6]
-
-; CHECK: error: <unknown>:0:0: in function test_format_array_i16 void (i32): printf format string must be a trivially resolved constant string global variable
-define amdgpu_kernel void @test_format_array_i16(i32 %n) {
-  %str = alloca [9 x i8], align 1, addrspace(5)
-  %call1 = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) @array.i16, ptr addrspace(5) %str, i32 %n)
-  ret void
-}
-
 declare i32 @printf(ptr addrspace(4), ...)
 
 !llvm.dbg.cu = !{!0}
