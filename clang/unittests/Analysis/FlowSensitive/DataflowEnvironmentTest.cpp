@@ -57,6 +57,8 @@ TEST_F(EnvironmentTest, CreateValueRecursiveType) {
       bool X;
       Recursive *R;
     };
+    // Use both fields to force them to be created with `createValue`.
+    void Usage(Recursive R) { (void)R.X; (void)R.R; }
   )cc";
 
   auto Unit =
@@ -71,15 +73,22 @@ TEST_F(EnvironmentTest, CreateValueRecursiveType) {
                          has(fieldDecl(hasName("R")).bind("field-r")))))
                 .bind("target"),
             Context);
-  const QualType *Ty = selectFirst<QualType>("target", Results);
+  const QualType *TyPtr = selectFirst<QualType>("target", Results);
+  ASSERT_THAT(TyPtr, NotNull());
+  QualType Ty = *TyPtr;
+  ASSERT_FALSE(Ty.isNull());
+
   const FieldDecl *R = selectFirst<FieldDecl>("field-r", Results);
-  ASSERT_TRUE(Ty != nullptr && !Ty->isNull());
-  ASSERT_TRUE(R != nullptr);
+  ASSERT_THAT(R, NotNull());
+
+  Results = match(functionDecl(hasName("Usage")).bind("fun"), Context);
+  const auto *Fun = selectFirst<FunctionDecl>("fun", Results);
+  ASSERT_THAT(Fun, NotNull());
 
   // Verify that the struct and the field (`R`) with first appearance of the
   // type is created successfully.
-  Environment Env(DAContext);
-  Value *Val = Env.createValue(*Ty);
+  Environment Env(DAContext, *Fun);
+  Value *Val = Env.createValue(Ty);
   ASSERT_NE(Val, nullptr);
   StructValue *SVal = clang::dyn_cast<StructValue>(Val);
   ASSERT_NE(SVal, nullptr);
