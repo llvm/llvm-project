@@ -3,7 +3,7 @@
 
 @B = common global [1024 x i32] zeroinitializer, align 16
 
-define void @dep_free_parametric(i32* noalias %A, i64 %N) {
+define void @dep_free_parametric(ptr noalias %A, i64 %N) {
 ; CHECK-LABEL: @dep_free_parametric(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp slt i64 0, [[N:%.*]]
@@ -19,8 +19,8 @@ define void @dep_free_parametric(i32* noalias %A, i64 %N) {
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[SUB]], [[ADD]]
 ; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[MUL]], [[I_05]]
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[REM]] to i32
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[I_05]]
-; CHECK-NEXT:    store i32 [[CONV]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[I_05]]
+; CHECK-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_05]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INC]], [[N]]
 ; CHECK-NEXT:    [[SUB7:%.*]] = sub nsw i64 [[I1_02]], 3
@@ -28,8 +28,8 @@ define void @dep_free_parametric(i32* noalias %A, i64 %N) {
 ; CHECK-NEXT:    [[MUL9:%.*]] = mul nsw i64 [[SUB7]], [[ADD8]]
 ; CHECK-NEXT:    [[REM10:%.*]] = srem i64 [[MUL9]], [[I1_02]]
 ; CHECK-NEXT:    [[CONV11:%.*]] = trunc i64 [[REM10]] to i32
-; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, i64 [[I1_02]]
-; CHECK-NEXT:    store i32 [[CONV11]], i32* [[ARRAYIDX12]], align 4
+; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds [1024 x i32], ptr @B, i64 0, i64 [[I1_02]]
+; CHECK-NEXT:    store i32 [[CONV11]], ptr [[ARRAYIDX12]], align 4
 ; CHECK-NEXT:    [[INC14]] = add nsw i64 [[I1_02]], 1
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i64 [[INC14]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[BB5]], label [[BB15:%.*]]
@@ -52,8 +52,8 @@ bb5:                                         ; preds = %bb3, %bb5
   %mul = mul nsw i64 %sub, %add
   %rem = srem i64 %mul, %i.05
   %conv = trunc i64 %rem to i32
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %i.05
-  store i32 %conv, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %i.05
+  store i32 %conv, ptr %arrayidx, align 4
   %inc = add nsw i64 %i.05, 1
   %cmp = icmp slt i64 %inc, %N
   br i1 %cmp, label %bb5, label %bb10
@@ -75,8 +75,8 @@ bb9:                                        ; preds = %bb8, %bb9
   %mul9 = mul nsw i64 %sub7, %add8
   %rem10 = srem i64 %mul9, %i1.02
   %conv11 = trunc i64 %rem10 to i32
-  %arrayidx12 = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, i64 %i1.02
-  store i32 %conv11, i32* %arrayidx12, align 4
+  %arrayidx12 = getelementptr inbounds [1024 x i32], ptr @B, i64 0, i64 %i1.02
+  store i32 %conv11, ptr %arrayidx12, align 4
   %inc14 = add nsw i64 %i1.02, 1
   %cmp3 = icmp slt i64 %inc14, %N
   br i1 %cmp3, label %bb9, label %bb15
@@ -91,7 +91,7 @@ bb12:                                        ; preds = %bb15, %bb14
 ; Test that `%add` is moved in for.first.preheader, and the two loops for.first
 ; and for.second are fused.
 
-define void @moveinsts_preheader(i32* noalias %A, i32* noalias %B, i64 %N, i32 %x) {
+define void @moveinsts_preheader(ptr noalias %A, ptr noalias %B, i64 %N, i32 %x) {
 ; CHECK-LABEL: @moveinsts_preheader(
 ; CHECK-NEXT:  for.first.guard:
 ; CHECK-NEXT:    [[CMP_GUARD:%.*]] = icmp slt i64 0, [[N:%.*]]
@@ -102,12 +102,12 @@ define void @moveinsts_preheader(i32* noalias %A, i32* noalias %B, i64 %N, i32 %
 ; CHECK:       for.first:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[INC_I:%.*]], [[FOR_FIRST]] ], [ 0, [[FOR_FIRST_PREHEADER]] ]
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[INC_J:%.*]], [[FOR_FIRST]] ], [ 0, [[FOR_FIRST_PREHEADER]] ]
-; CHECK-NEXT:    [[AI:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[I]]
-; CHECK-NEXT:    store i32 0, i32* [[AI]], align 4
+; CHECK-NEXT:    [[AI:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[I]]
+; CHECK-NEXT:    store i32 0, ptr [[AI]], align 4
 ; CHECK-NEXT:    [[INC_I]] = add nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i64 [[INC_I]], [[N]]
-; CHECK-NEXT:    [[BJ:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[J]]
-; CHECK-NEXT:    store i32 0, i32* [[BJ]], align 4
+; CHECK-NEXT:    [[BJ:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[J]]
+; CHECK-NEXT:    store i32 0, ptr [[BJ]], align 4
 ; CHECK-NEXT:    [[INC_J]] = add nsw i64 [[J]], 1
 ; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i64 [[INC_J]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_J]], label [[FOR_FIRST]], label [[FOR_SECOND_EXIT:%.*]]
@@ -125,8 +125,8 @@ for.first.preheader:
 
 for.first:
   %i = phi i64 [ %inc.i, %for.first ], [ 0, %for.first.preheader ]
-  %Ai = getelementptr inbounds i32, i32* %A, i64 %i
-  store i32 0, i32* %Ai, align 4
+  %Ai = getelementptr inbounds i32, ptr %A, i64 %i
+  store i32 0, ptr %Ai, align 4
   %inc.i = add nsw i64 %i, 1
   %cmp.i = icmp slt i64 %inc.i, %N
   br i1 %cmp.i, label %for.first, label %for.first.exit
@@ -143,8 +143,8 @@ for.second.preheader:
 
 for.second:
   %j = phi i64 [ %inc.j, %for.second ], [ 0, %for.second.preheader ]
-  %Bj = getelementptr inbounds i32, i32* %B, i64 %j
-  store i32 0, i32* %Bj, align 4
+  %Bj = getelementptr inbounds i32, ptr %B, i64 %j
+  store i32 0, ptr %Bj, align 4
   %inc.j = add nsw i64 %j, 1
   %cmp.j = icmp slt i64 %inc.j, %N
   br i1 %cmp.j, label %for.second, label %for.second.exit
@@ -159,7 +159,7 @@ for.end:
 ; Test that `%add` is moved in for.second.exit, and the two loops for.first
 ; and for.second are fused.
 
-define void @moveinsts_exitblock(i32* noalias %A, i32* noalias %B, i64 %N, i32 %x) {
+define void @moveinsts_exitblock(ptr noalias %A, ptr noalias %B, i64 %N, i32 %x) {
 ; CHECK-LABEL: @moveinsts_exitblock(
 ; CHECK-NEXT:  for.first.guard:
 ; CHECK-NEXT:    [[CMP_GUARD:%.*]] = icmp slt i64 0, [[N:%.*]]
@@ -169,12 +169,12 @@ define void @moveinsts_exitblock(i32* noalias %A, i32* noalias %B, i64 %N, i32 %
 ; CHECK:       for.first:
 ; CHECK-NEXT:    [[I_04:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_FIRST]] ], [ 0, [[FOR_FIRST_PREHEADER]] ]
 ; CHECK-NEXT:    [[J_02:%.*]] = phi i64 [ [[INC6:%.*]], [[FOR_FIRST]] ], [ 0, [[FOR_FIRST_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[I_04]]
-; CHECK-NEXT:    store i32 0, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[I_04]]
+; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_04]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INC]], [[N]]
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[J_02]]
-; CHECK-NEXT:    store i32 0, i32* [[ARRAYIDX4]], align 4
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[J_02]]
+; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[INC6]] = add nsw i64 [[J_02]], 1
 ; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i64 [[INC6]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_J]], label [[FOR_FIRST]], label [[FOR_SECOND_EXIT:%.*]]
@@ -193,8 +193,8 @@ for.first.preheader:
 
 for.first:
   %i.04 = phi i64 [ %inc, %for.first ], [ 0, %for.first.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %i.04
-  store i32 0, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %i.04
+  store i32 0, ptr %arrayidx, align 4
   %inc = add nsw i64 %i.04, 1
   %cmp = icmp slt i64 %inc, %N
   br i1 %cmp, label %for.first, label %for.first.exit
@@ -211,8 +211,8 @@ for.second.preheader:
 
 for.second:
   %j.02 = phi i64 [ %inc6, %for.second ], [ 0, %for.second.preheader ]
-  %arrayidx4 = getelementptr inbounds i32, i32* %B, i64 %j.02
-  store i32 0, i32* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds i32, ptr %B, i64 %j.02
+  store i32 0, ptr %arrayidx4, align 4
   %inc6 = add nsw i64 %j.02, 1
   %cmp.j = icmp slt i64 %inc6, %N
   br i1 %cmp.j, label %for.second, label %for.second.exit
@@ -227,7 +227,7 @@ for.end:
 ; Test that `%add` is moved in for.first.guard, and the two loops for.first
 ; and for.second are fused.
 
-define void @moveinsts_guardblock(i32* noalias %A, i32* noalias %B, i64 %N, i32 %x) {
+define void @moveinsts_guardblock(ptr noalias %A, ptr noalias %B, i64 %N, i32 %x) {
 ; CHECK-LABEL: @moveinsts_guardblock(
 ; CHECK-NEXT:  for.first.guard:
 ; CHECK-NEXT:    [[CMP_GUARD:%.*]] = icmp slt i64 0, [[N:%.*]]
@@ -238,12 +238,12 @@ define void @moveinsts_guardblock(i32* noalias %A, i32* noalias %B, i64 %N, i32 
 ; CHECK:       for.first:
 ; CHECK-NEXT:    [[I_04:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_FIRST]] ], [ 0, [[FOR_FIRST_PREHEADER]] ]
 ; CHECK-NEXT:    [[J_02:%.*]] = phi i64 [ [[INC6:%.*]], [[FOR_FIRST]] ], [ 0, [[FOR_FIRST_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[I_04]]
-; CHECK-NEXT:    store i32 0, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[I_04]]
+; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_04]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INC]], [[N]]
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[J_02]]
-; CHECK-NEXT:    store i32 0, i32* [[ARRAYIDX4]], align 4
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[J_02]]
+; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[INC6]] = add nsw i64 [[J_02]], 1
 ; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i64 [[INC6]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_J]], label [[FOR_FIRST]], label [[FOR_SECOND_EXIT:%.*]]
@@ -261,8 +261,8 @@ for.first.preheader:
 
 for.first:
   %i.04 = phi i64 [ %inc, %for.first ], [ 0, %for.first.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %i.04
-  store i32 0, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %i.04
+  store i32 0, ptr %arrayidx, align 4
   %inc = add nsw i64 %i.04, 1
   %cmp = icmp slt i64 %inc, %N
   br i1 %cmp, label %for.first, label %for.first.exit
@@ -279,8 +279,8 @@ for.second.preheader:
 
 for.second:
   %j.02 = phi i64 [ %inc6, %for.second ], [ 0, %for.second.preheader ]
-  %arrayidx4 = getelementptr inbounds i32, i32* %B, i64 %j.02
-  store i32 0, i32* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds i32, ptr %B, i64 %j.02
+  store i32 0, ptr %arrayidx4, align 4
   %inc6 = add nsw i64 %j.02, 1
   %cmp.j = icmp slt i64 %inc6, %N
   br i1 %cmp.j, label %for.second, label %for.second.exit
@@ -296,7 +296,7 @@ for.end:
 ; from for.second.guard to for.first.guard, and the two loops for.first and
 ; for.second are fused.
 
-define i64 @updatephi_guardnonloopblock(i32* noalias %A, i32* noalias %B, i64 %N, i32 %x) {
+define i64 @updatephi_guardnonloopblock(ptr noalias %A, ptr noalias %B, i64 %N, i32 %x) {
 ; CHECK-LABEL: @updatephi_guardnonloopblock(
 ; CHECK-NEXT:  for.first.guard:
 ; CHECK-NEXT:    [[CMP_GUARD:%.*]] = icmp slt i64 0, [[N:%.*]]
@@ -306,12 +306,12 @@ define i64 @updatephi_guardnonloopblock(i32* noalias %A, i32* noalias %B, i64 %N
 ; CHECK:       for.first:
 ; CHECK-NEXT:    [[I_04:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_FIRST]] ], [ 0, [[FOR_FIRST_PREHEADER]] ]
 ; CHECK-NEXT:    [[J_02:%.*]] = phi i64 [ [[INC6:%.*]], [[FOR_FIRST]] ], [ 0, [[FOR_FIRST_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[I_04]]
-; CHECK-NEXT:    store i32 0, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[I_04]]
+; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_04]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INC]], [[N]]
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[J_02]]
-; CHECK-NEXT:    store i32 0, i32* [[ARRAYIDX4]], align 4
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[J_02]]
+; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[INC6]] = add nsw i64 [[J_02]], 1
 ; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i64 [[INC6]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_J]], label [[FOR_FIRST]], label [[FOR_SECOND_EXIT:%.*]]
@@ -330,8 +330,8 @@ for.first.preheader:
 
 for.first:
   %i.04 = phi i64 [ %inc, %for.first ], [ 0, %for.first.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %i.04
-  store i32 0, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %i.04
+  store i32 0, ptr %arrayidx, align 4
   %inc = add nsw i64 %i.04, 1
   %cmp = icmp slt i64 %inc, %N
   br i1 %cmp, label %for.first, label %for.first.exit
@@ -347,8 +347,8 @@ for.second.preheader:
 
 for.second:
   %j.02 = phi i64 [ %inc6, %for.second ], [ 0, %for.second.preheader ]
-  %arrayidx4 = getelementptr inbounds i32, i32* %B, i64 %j.02
-  store i32 0, i32* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds i32, ptr %B, i64 %j.02
+  store i32 0, ptr %arrayidx4, align 4
   %inc6 = add nsw i64 %j.02, 1
   %cmp.j = icmp slt i64 %inc6, %N
   br i1 %cmp.j, label %for.second, label %for.second.exit

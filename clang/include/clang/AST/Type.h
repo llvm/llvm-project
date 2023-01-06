@@ -763,6 +763,8 @@ public:
   unsigned getLocalFastQualifiers() const { return Value.getInt(); }
   void setLocalFastQualifiers(unsigned Quals) { Value.setInt(Quals); }
 
+  bool UseExcessPrecision(const ASTContext &Ctx);
+
   /// Retrieves a pointer to the underlying (unqualified) type.
   ///
   /// This function requires that the type not be NULL. If the type might be

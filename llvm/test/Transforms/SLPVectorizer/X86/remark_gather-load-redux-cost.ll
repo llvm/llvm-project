@@ -22,7 +22,7 @@ define i32 @test(ptr noalias %p, ptr noalias %addr) {
   ; YAML-NEXT: Function:        test
   ; YAML-NEXT: Args:
   ; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
-  ; YAML-NEXT:   - Cost:            '-17'
+  ; YAML-NEXT:   - Cost:            '-3'
   ; YAML-NEXT:   - String:          ' and with tree size '
   ; YAML-NEXT:   - TreeSize:        '7'
 entry:

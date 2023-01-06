@@ -443,6 +443,11 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     // Alderlake:
     case 0x97:
     case 0x9a:
+    // Raptorlake:
+    case 0xb7:
+    // Meteorlake:
+    case 0xaa:
+    case 0xac:
       CPU = "alderlake";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_ALDERLAKE;
@@ -456,11 +461,21 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = INTEL_COREI7_ICELAKE_SERVER;
       break;
 
+    // Emerald Rapids:
+    case 0xcf:
     // Sapphire Rapids:
     case 0x8f:
       CPU = "sapphirerapids";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_SAPPHIRERAPIDS;
+      break;
+
+    // Granite Rapids:
+    case 0xae:
+    case 0xad:
+      CPU = "graniterapids";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_GRANITERAPIDS;
       break;
 
     case 0x1c: // Most 45 nm Intel Atom processors

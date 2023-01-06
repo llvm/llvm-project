@@ -496,6 +496,13 @@ LogicalResult ToIndicesOp::verify() {
   return success();
 }
 
+LogicalResult ToIndicesBufferOp::verify() {
+  auto e = getSparseTensorEncoding(getTensor().getType());
+  if (getCOOStart(e) >= e.getDimLevelType().size())
+    return emitError("expected sparse tensor with a COO region");
+  return success();
+}
+
 LogicalResult ToValuesOp::verify() {
   RankedTensorType ttp = getTensor().getType().cast<RankedTensorType>();
   MemRefType mtp = getResult().getType().cast<MemRefType>();

@@ -1276,10 +1276,10 @@ transform::TileReductionUsingForeachThreadOp::applyToOne(
           numThreads, tileSizes, getMapping());
 
   if (failed(result)) {
-    results.assign(3, nullptr);
-    Diagnostic diag(target->getLoc(), DiagnosticSeverity::Remark);
-    diag << "could not tile reduction in target.";
-    return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+    results.assign(4, nullptr);
+    auto diag = emitSilenceableError() << "could not tile reduction";
+    diag.attachNote(target.getLoc()) << "target operation";
+    return diag;
   }
   results.push_back(result->loops);
   results.push_back(result->initialOp);

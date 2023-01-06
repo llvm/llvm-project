@@ -301,7 +301,7 @@ Error DbiStreamBuilder::finalizeMsfLayout() {
         sizeof(object::FpoData) * OldFpoData.size();
     DbgStreams[(int)DbgHeaderType::FPO]->WriteFn =
         [this](BinaryStreamWriter &Writer) {
-          return Writer.writeArray(makeArrayRef(OldFpoData));
+          return Writer.writeArray(ArrayRef(OldFpoData));
         };
   }
 
@@ -406,7 +406,7 @@ Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
   if (!SectionContribs.empty()) {
     if (auto EC = Writer.writeEnum(DbiSecContribVer60))
       return EC;
-    if (auto EC = Writer.writeArray(makeArrayRef(SectionContribs)))
+    if (auto EC = Writer.writeArray(ArrayRef(SectionContribs)))
       return EC;
   }
 
@@ -415,7 +415,7 @@ Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
     SecMapHeader SMHeader = {Size, Size};
     if (auto EC = Writer.writeObject(SMHeader))
       return EC;
-    if (auto EC = Writer.writeArray(makeArrayRef(SectionMap)))
+    if (auto EC = Writer.writeArray(ArrayRef(SectionMap)))
       return EC;
   }
 

@@ -1064,7 +1064,7 @@ AttributeListImpl::AttributeListImpl(ArrayRef<AttributeSet> Sets)
 }
 
 void AttributeListImpl::Profile(FoldingSetNodeID &ID) const {
-  Profile(ID, makeArrayRef(begin(), end()));
+  Profile(ID, ArrayRef(begin(), end()));
 }
 
 void AttributeListImpl::Profile(FoldingSetNodeID &ID,
@@ -1333,6 +1333,12 @@ AttributeList AttributeList::setAttributesAtIndex(LLVMContext &C,
   if (Index >= AttrSets.size())
     AttrSets.resize(Index + 1);
   AttrSets[Index] = Attrs;
+
+  // Remove trailing empty attribute sets.
+  while (!AttrSets.empty() && !AttrSets.back().hasAttributes())
+    AttrSets.pop_back();
+  if (AttrSets.empty())
+    return {};
   return AttributeList::getImpl(C, AttrSets);
 }
 
@@ -1375,14 +1381,8 @@ AttributeList::removeAttributeAtIndex(LLVMContext &C, unsigned Index,
                                       Attribute::AttrKind Kind) const {
   if (!hasAttributeAtIndex(Index, Kind))
     return *this;
-
-  Index = attrIdxToArrayIdx(Index);
-  SmallVector<AttributeSet, 4> AttrSets(this->begin(), this->end());
-  assert(Index < AttrSets.size());
-
-  AttrSets[Index] = AttrSets[Index].removeAttribute(C, Kind);
-
-  return getImpl(C, AttrSets);
+  return setAttributesAtIndex(C, Index,
+                              getAttributes(Index).removeAttribute(C, Kind));
 }
 
 AttributeList AttributeList::removeAttributeAtIndex(LLVMContext &C,
@@ -1390,14 +1390,8 @@ AttributeList AttributeList::removeAttributeAtIndex(LLVMContext &C,
                                                     StringRef Kind) const {
   if (!hasAttributeAtIndex(Index, Kind))
     return *this;
-
-  Index = attrIdxToArrayIdx(Index);
-  SmallVector<AttributeSet, 4> AttrSets(this->begin(), this->end());
-  assert(Index < AttrSets.size());
-
-  AttrSets[Index] = AttrSets[Index].removeAttribute(C, Kind);
-
-  return getImpl(C, AttrSets);
+  return setAttributesAtIndex(C, Index,
+                              getAttributes(Index).removeAttribute(C, Kind));
 }
 
 AttributeList AttributeList::removeAttributesAtIndex(
@@ -1415,12 +1409,9 @@ AttributeList::removeAttributesAtIndex(LLVMContext &C,
                                        unsigned WithoutIndex) const {
   if (!pImpl)
     return {};
-  WithoutIndex = attrIdxToArrayIdx(WithoutIndex);
-  if (WithoutIndex >= getNumAttrSets())
+  if (attrIdxToArrayIdx(WithoutIndex) >= getNumAttrSets())
     return *this;
-  SmallVector<AttributeSet, 4> AttrSets(this->begin(), this->end());
-  AttrSets[WithoutIndex] = AttributeSet();
-  return getImpl(C, AttrSets);
+  return setAttributesAtIndex(C, WithoutIndex, AttributeSet());
 }
 
 AttributeList AttributeList::addDereferenceableRetAttr(LLVMContext &C,

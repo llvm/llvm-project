@@ -20,7 +20,7 @@ for.body:                                         ; preds = %for.body.for.body_c
   br label %for.body.for.body_crit_edge
 
 for.body.for.body_crit_edge:                      ; preds = %for.body
-  %.pre8 = load i128, i128* undef, align 16, !dbg !19, !tbaa !37
+  %.pre8 = load i128, ptr undef, align 16, !dbg !19, !tbaa !37
   br label %for.body, !dbg !17
 }
 

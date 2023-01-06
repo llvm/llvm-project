@@ -2931,7 +2931,7 @@ typedef MetadataTest DIExpressionTest;
 TEST_F(DIExpressionTest, get) {
   uint64_t Elements[] = {2, 6, 9, 78, 0};
   auto *N = DIExpression::get(Context, Elements);
-  EXPECT_EQ(makeArrayRef(Elements), N->getElements());
+  EXPECT_EQ(ArrayRef(Elements), N->getElements());
   EXPECT_EQ(N, DIExpression::get(Context, Elements));
 
   EXPECT_EQ(5u, N->getNumElements());

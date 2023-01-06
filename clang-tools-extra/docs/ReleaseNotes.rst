@@ -99,6 +99,9 @@ Improvements to clang-tidy
 - Change to Python 3 in the shebang of `add_new_check.py` and `rename_check.py`,
   as the existing code is not compatible with Python 2.
 
+- Fix a minor bug in `add_new_check.py` to only traverse subdirectories
+  when updating the list of checks in the documentation.
+
 New checks
 ^^^^^^^^^^
 
@@ -117,6 +120,11 @@ New checks
   <clang-tidy/checks/cppcoreguidelines/avoid-do-while>` check.
 
   Warns when using ``do-while`` loops.
+
+- New :doc:`cppcoreguidelines-avoid-reference-coroutine-parameters
+  <clang-tidy/checks/cppcoreguidelines/avoid-reference-coroutine-parameters>` check.
+
+  Warns on coroutines that accept reference parameters.
 
 - New :doc:`misc-use-anonymous-namespace
   <clang-tidy/checks/misc/use-anonymous-namespace>` check.

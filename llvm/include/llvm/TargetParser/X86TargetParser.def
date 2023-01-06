@@ -103,6 +103,7 @@ X86_CPU_SUBTYPE(INTEL_COREI7_GRANITERAPIDS,  "graniterapids")
 // Alternate names supported by __builtin_cpu_is and target multiversioning.
 X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "raptorlake")
 X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "meteorlake")
+X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_SAPPHIRERAPIDS, "emeraldrapids")
 
 #undef X86_CPU_SUBTYPE_ALIAS
 #undef X86_CPU_SUBTYPE
@@ -221,6 +222,7 @@ X86_FEATURE       (RAOINT,          "raoint")
 X86_FEATURE       (AVX512FP16,      "avx512fp16")
 X86_FEATURE       (AMX_FP16,        "amx-fp16")
 X86_FEATURE       (CMPCCXADD,       "cmpccxadd")
+X86_FEATURE       (AVXNECONVERT,    "avxneconvert")
 X86_FEATURE       (AVXVNNI,         "avxvnni")
 X86_FEATURE       (AVXIFMA,         "avxifma")
 X86_FEATURE       (AVXVNNIINT8,     "avxvnniint8")

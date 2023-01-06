@@ -46,7 +46,7 @@ __attribute__((noinline)) void foo(int n, int N) {
   for (i = 0; i < N; i++) {
     if (i < n + 1)
       bar(1);
-    else if (i < n - 1)
+    else if (i == n - 1)
       bar(2);
     else
       bar(3);

@@ -68,23 +68,23 @@ static ArrayRef<MCPhysReg> CC_X86_VectorCallGetSSEs(const MVT &ValVT) {
   if (ValVT.is512BitVector()) {
     static const MCPhysReg RegListZMM[] = {X86::ZMM0, X86::ZMM1, X86::ZMM2,
                                            X86::ZMM3, X86::ZMM4, X86::ZMM5};
-    return makeArrayRef(std::begin(RegListZMM), std::end(RegListZMM));
+    return ArrayRef(std::begin(RegListZMM), std::end(RegListZMM));
   }
 
   if (ValVT.is256BitVector()) {
     static const MCPhysReg RegListYMM[] = {X86::YMM0, X86::YMM1, X86::YMM2,
                                            X86::YMM3, X86::YMM4, X86::YMM5};
-    return makeArrayRef(std::begin(RegListYMM), std::end(RegListYMM));
+    return ArrayRef(std::begin(RegListYMM), std::end(RegListYMM));
   }
 
   static const MCPhysReg RegListXMM[] = {X86::XMM0, X86::XMM1, X86::XMM2,
                                          X86::XMM3, X86::XMM4, X86::XMM5};
-  return makeArrayRef(std::begin(RegListXMM), std::end(RegListXMM));
+  return ArrayRef(std::begin(RegListXMM), std::end(RegListXMM));
 }
 
 static ArrayRef<MCPhysReg> CC_X86_64_VectorCallGetGPRs() {
   static const MCPhysReg RegListGPR[] = {X86::RCX, X86::RDX, X86::R8, X86::R9};
-  return makeArrayRef(std::begin(RegListGPR), std::end(RegListGPR));
+  return ArrayRef(std::begin(RegListGPR), std::end(RegListGPR));
 }
 
 static bool CC_X86_VectorCallAssignRegister(unsigned &ValNo, MVT &ValVT,

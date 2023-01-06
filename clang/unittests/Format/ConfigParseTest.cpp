@@ -167,6 +167,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(IndentRequiresClause);
   CHECK_PARSE_BOOL(IndentWrappedFunctionNames);
   CHECK_PARSE_BOOL(InsertBraces);
+  CHECK_PARSE_BOOL(InsertNewlineAtEOF);
   CHECK_PARSE_BOOL(KeepEmptyLinesAtTheStartOfBlocks);
   CHECK_PARSE_BOOL(ObjCSpaceAfterProperty);
   CHECK_PARSE_BOOL(ObjCSpaceBeforeProtocolList);
@@ -878,6 +879,13 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               BreakBeforeConceptDeclarations, FormatStyle::BBCDS_Always);
   CHECK_PARSE("BreakBeforeConceptDeclarations: false",
               BreakBeforeConceptDeclarations, FormatStyle::BBCDS_Allowed);
+
+  CHECK_PARSE("BreakAfterAttributes: Always", BreakAfterAttributes,
+              FormatStyle::ABS_Always);
+  CHECK_PARSE("BreakAfterAttributes: Leave", BreakAfterAttributes,
+              FormatStyle::ABS_Leave);
+  CHECK_PARSE("BreakAfterAttributes: Never", BreakAfterAttributes,
+              FormatStyle::ABS_Never);
 }
 
 TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {

@@ -4423,7 +4423,7 @@ Error GlobalISelEmitter::importChildMatcher(
       // Treat G_BUILD_VECTOR as the canonical opcode, and G_BUILD_VECTOR_TRUNC
       // as an alternative.
       InsnOperand.getInsnMatcher().addPredicate<InstructionOpcodeMatcher>(
-      makeArrayRef({&BuildVector, &BuildVectorTrunc}));
+          ArrayRef({&BuildVector, &BuildVectorTrunc}));
 
       // TODO: Handle both G_BUILD_VECTOR and G_BUILD_VECTOR_TRUNC We could
       // theoretically not emit any opcode check, but getOpcodeMatcher currently

@@ -423,8 +423,8 @@ void X86InterleavedAccessGroup::interleave8bitStride4(
     return;
   }
 
-  reorderSubVector(VT, TransposedMatrix, VecOut, makeArrayRef(Concat, 16),
-                   NumOfElm, 4, Builder);
+  reorderSubVector(VT, TransposedMatrix, VecOut, ArrayRef(Concat, 16), NumOfElm,
+                   4, Builder);
 }
 
 //  createShuffleStride returns shuffle mask of size N.
@@ -534,7 +534,7 @@ static void concatSubVector(Value **Vec, ArrayRef<Instruction *> InVec,
   for (unsigned j = 0; j < VecElems / 32; j++)
     for (int i = 0; i < 3; i++)
       Vec[i + j * 3] = Builder.CreateShuffleVector(
-          InVec[j * 6 + i], InVec[j * 6 + i + 3], makeArrayRef(Concat, 32));
+          InVec[j * 6 + i], InVec[j * 6 + i + 3], ArrayRef(Concat, 32));
 
   if (VecElems == 32)
     return;
@@ -693,25 +693,25 @@ void X86InterleavedAccessGroup::transpose_4x4(
 
   // dst = src1[0,1],src2[0,1]
   static constexpr int IntMask1[] = {0, 1, 4, 5};
-  ArrayRef<int> Mask = makeArrayRef(IntMask1, 4);
+  ArrayRef<int> Mask = ArrayRef(IntMask1, 4);
   Value *IntrVec1 = Builder.CreateShuffleVector(Matrix[0], Matrix[2], Mask);
   Value *IntrVec2 = Builder.CreateShuffleVector(Matrix[1], Matrix[3], Mask);
 
   // dst = src1[2,3],src2[2,3]
   static constexpr int IntMask2[] = {2, 3, 6, 7};
-  Mask = makeArrayRef(IntMask2, 4);
+  Mask = ArrayRef(IntMask2, 4);
   Value *IntrVec3 = Builder.CreateShuffleVector(Matrix[0], Matrix[2], Mask);
   Value *IntrVec4 = Builder.CreateShuffleVector(Matrix[1], Matrix[3], Mask);
 
   // dst = src1[0],src2[0],src1[2],src2[2]
   static constexpr int IntMask3[] = {0, 4, 2, 6};
-  Mask = makeArrayRef(IntMask3, 4);
+  Mask = ArrayRef(IntMask3, 4);
   TransposedMatrix[0] = Builder.CreateShuffleVector(IntrVec1, IntrVec2, Mask);
   TransposedMatrix[2] = Builder.CreateShuffleVector(IntrVec3, IntrVec4, Mask);
 
   // dst = src1[1],src2[1],src1[3],src2[3]
   static constexpr int IntMask4[] = {1, 5, 3, 7};
-  Mask = makeArrayRef(IntMask4, 4);
+  Mask = ArrayRef(IntMask4, 4);
   TransposedMatrix[1] = Builder.CreateShuffleVector(IntrVec1, IntrVec2, Mask);
   TransposedMatrix[3] = Builder.CreateShuffleVector(IntrVec3, IntrVec4, Mask);
 }
@@ -841,7 +841,7 @@ bool X86TargetLowering::lowerInterleavedStore(StoreInst *SI,
   for (unsigned i = 0; i < Factor; i++)
     Indices.push_back(Mask[i]);
 
-  ArrayRef<ShuffleVectorInst *> Shuffles = makeArrayRef(SVI);
+  ArrayRef<ShuffleVectorInst *> Shuffles = ArrayRef(SVI);
 
   // Create an interleaved access group.
   IRBuilder<> Builder(SI);
