@@ -24,8 +24,8 @@
 # TBLJAL-NEXT: cm.jt   0
 
 # Check the bounds of what would be out of range (for the first call) for other jump types.
-# RUN: ld.lld %t.rv32.o -riscv-tbljal --defsym foo=_start+0x100000 -o %t-boundary.rv32
-# RUN: ld.lld %t.rv64.o -riscv-tbljal --defsym foo=_start+0x100000 -o %t-boundary.rv64
+# RUN: ld.lld %t.rv32.o --riscv-tbljal --defsym foo=_start+0x100000 -o %t-boundary.rv32
+# RUN: ld.lld %t.rv64.o --riscv-tbljal --defsym foo=_start+0x100000 -o %t-boundary.rv64
 # RUN: ld.lld %t.rv32.o --defsym foo=_start+0x100000 -o %t-oldboundary.rv32
 # RUN: ld.lld %t.rv64.o --defsym foo=_start+0x100000 -o %t-oldboundary.rv64
 # RUN: llvm-objdump -d -M no-aliases --mattr=+experimental-zcmt --no-show-raw-insn %t-boundary.rv32 | FileCheck --check-prefix=BOUNDARY %s
