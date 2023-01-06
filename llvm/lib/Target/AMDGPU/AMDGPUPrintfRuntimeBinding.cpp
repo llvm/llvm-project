@@ -438,20 +438,15 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       for (unsigned I = 0, E = WhatToStore.size(); I != E; ++I) {
         Value *TheBtCast = WhatToStore[I];
         unsigned ArgSize = TD->getTypeAllocSize(TheBtCast->getType());
-        SmallVector<Value *, 1> BuffOffset;
-        BuffOffset.push_back(ConstantInt::get(I32Ty, ArgSize));
-
-        Type *ArgPointer = PointerType::get(TheBtCast->getType(), 1);
-        Value *CastedGEP =
-            new BitCastInst(BufferIdx, ArgPointer, "PrintBuffPtrCast", Brnch);
-        StoreInst *StBuff = new StoreInst(TheBtCast, CastedGEP, Brnch);
+        StoreInst *StBuff = new StoreInst(TheBtCast, BufferIdx, Brnch);
         LLVM_DEBUG(dbgs() << "inserting store to printf buffer:\n"
                           << *StBuff << '\n');
         (void)StBuff;
         if (I + 1 == E && ArgCount + 1 == CI->arg_size())
           break;
-        BufferIdx = GetElementPtrInst::Create(I8Ty, BufferIdx, BuffOffset,
-                                              "PrintBuffNextPtr", Brnch);
+        BufferIdx = GetElementPtrInst::Create(
+            I8Ty, BufferIdx, {ConstantInt::get(I32Ty, ArgSize)},
+            "PrintBuffNextPtr", Brnch);
         LLVM_DEBUG(dbgs() << "inserting gep to the printf buffer:\n"
                           << *BufferIdx << '\n');
       }
