@@ -16,15 +16,16 @@ define void @_ZNK1q1rEv() local_unnamed_addr #0 align 2 {
 ; CHECK-LABEL: _ZNK1q1rEv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 28, -32(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu 1, -64(1)
 ; CHECK-NEXT:    std 0, 80(1)
-; CHECK-NEXT:    li 29, 0
-; CHECK-NEXT:    lwz 30, 0(3)
-; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
-; CHECK-NEXT:    ld 28, .LC0@toc@l(3)
+; CHECK-NEXT:    addis 4, 2, .LC0@toc@ha
+; CHECK-NEXT:    lwz 3, 0(3)
+; CHECK-NEXT:    ld 29, .LC0@toc@l(4)
+; CHECK-NEXT:    addi 3, 3, -1
+; CHECK-NEXT:    clrldi 3, 3, 32
+; CHECK-NEXT:    addi 30, 3, 1
 ; CHECK-NEXT:    addis 3, 2, aj@got@tlsgd@ha
 ; CHECK-NEXT:    addi 3, 3, aj@got@tlsgd@l
 ; CHECK-NEXT:    bl __tls_get_addr(aj@tlsgd)
@@ -33,14 +34,14 @@ define void @_ZNK1q1rEv() local_unnamed_addr #0 align 2 {
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_1: # %monotonic.i
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lwz 5, 0(28)
+; CHECK-NEXT:    lwz 5, 0(29)
 ; CHECK-NEXT:    andi. 5, 5, 255
 ; CHECK-NEXT:    bne 0, .LBB0_4
 ; CHECK-NEXT:  # %bb.2: # %for.cond.i
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    addi 29, 29, 1
-; CHECK-NEXT:    cmplw 29, 30
-; CHECK-NEXT:    bne 0, .LBB0_1
+; CHECK-NEXT:    addi 30, 30, -1
+; CHECK-NEXT:    cmpldi 30, 0
+; CHECK-NEXT:    bc 12, 1, .LBB0_1
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mr 4, 3
 ; CHECK-NEXT:  .LBB0_4: # %if.end
@@ -50,7 +51,6 @@ define void @_ZNK1q1rEv() local_unnamed_addr #0 align 2 {
 ; CHECK-NEXT:    ld 0, 16(1)
 ; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 entry:
