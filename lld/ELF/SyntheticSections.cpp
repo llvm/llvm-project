@@ -1298,14 +1298,18 @@ void TableJumpSection::writeEntries(
     SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
         &entriesList) {
   for (const auto &symbolName : entriesList) {
-    if(symbolName.second == 0)
+    if (symbolName.second == 0)
       continue;
     // Use the symbol from in.symTab to ensure we have the final adjusted
     // symbol.
     for (const auto &symbol : in.symTab->getSymbols()) {
-      llvm::CachedHashStringRef sym = llvm::CachedHashStringRef("<unknown>:" +symbol.sym->getName().str());;
-      if(symbol.sym->file)
-        sym = llvm::CachedHashStringRef(symbol.sym->file->mb.getBufferIdentifier().str() + ":" +symbol.sym->getName().str());
+      llvm::CachedHashStringRef sym =
+          llvm::CachedHashStringRef("<unknown>:" + symbol.sym->getName().str());
+      ;
+      if (symbol.sym->file)
+        sym = llvm::CachedHashStringRef(
+            symbol.sym->file->mb.getBufferIdentifier().str() + ":" +
+            symbol.sym->getName().str());
 
       if (sym.hash() != symbolName.first.hash())
         continue;
