@@ -219,11 +219,9 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       // expand the arguments that do not follow this rule.
       //
       if (ArgSize % DWORD_ALIGN != 0) {
-        llvm::Type *ResType = llvm::Type::getInt32Ty(Ctx);
-        auto *LLVMVecType = llvm::dyn_cast<llvm::FixedVectorType>(ArgType);
-        int NumElem = LLVMVecType ? LLVMVecType->getNumElements() : 1;
-        if (LLVMVecType && NumElem > 1)
-          ResType = llvm::FixedVectorType::get(ResType, NumElem);
+        Type *ResType = Type::getInt32Ty(Ctx);
+        if (auto *VecType = dyn_cast<VectorType>(ArgType))
+          ResType = VectorType::get(ResType, VecType->getElementCount());
         Builder.SetInsertPoint(CI);
         Builder.SetCurrentDebugLocation(CI->getDebugLoc());
         if (OpConvSpecifiers[ArgCount - 1] == 'x' ||
@@ -465,52 +463,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
           Arg = new PtrToIntInst(Arg, DstType, "PrintArgPtr", Brnch);
           WhatToStore.push_back(Arg);
         }
-      } else if (isa<FixedVectorType>(ArgType)) {
-        Type *IType = nullptr;
-        uint32_t EleCount = cast<FixedVectorType>(ArgType)->getNumElements();
-        uint32_t EleSize = ArgType->getScalarSizeInBits();
-        uint32_t TotalSize = EleCount * EleSize;
-        if (EleCount == 3) {
-          ShuffleVectorInst *Shuffle =
-              new ShuffleVectorInst(Arg, Arg, ArrayRef<int>{0, 1, 2, 2});
-          Shuffle->insertBefore(Brnch);
-          Arg = Shuffle;
-          ArgType = Arg->getType();
-          TotalSize += EleSize;
-        }
-        switch (EleSize) {
-        default:
-          EleCount = TotalSize / 64;
-          IType = Type::getInt64Ty(ArgType->getContext());
-          break;
-        case 8:
-          if (EleCount >= 8) {
-            EleCount = TotalSize / 64;
-            IType = Type::getInt64Ty(ArgType->getContext());
-          } else if (EleCount >= 3) {
-            EleCount = 1;
-            IType = Type::getInt32Ty(ArgType->getContext());
-          } else {
-            EleCount = 1;
-            IType = Type::getInt16Ty(ArgType->getContext());
-          }
-          break;
-        case 16:
-          if (EleCount >= 3) {
-            EleCount = TotalSize / 64;
-            IType = Type::getInt64Ty(ArgType->getContext());
-          } else {
-            EleCount = 1;
-            IType = Type::getInt32Ty(ArgType->getContext());
-          }
-          break;
-        }
-        if (EleCount > 1) {
-          IType = FixedVectorType::get(IType, EleCount);
-        }
-        Arg = new BitCastInst(Arg, IType, "PrintArgVect", Brnch);
-        WhatToStore.push_back(Arg);
-      } else {
+      }  else {
         WhatToStore.push_back(Arg);
       }
       for (unsigned I = 0, E = WhatToStore.size(); I != E; ++I) {
