@@ -23,11 +23,11 @@ namespace mlir {
 class DialectRegistry;
 } // namespace mlir
 
-#define GET_OP_CLASSES
-#include "TestTransformDialectExtension.h.inc"
-
 #define GET_TYPEDEF_CLASSES
 #include "TestTransformDialectExtensionTypes.h.inc"
+
+#define GET_OP_CLASSES
+#include "TestTransformDialectExtension.h.inc"
 
 namespace test {
 /// Registers the test extension to the Transform dialect.
