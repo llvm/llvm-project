@@ -1043,10 +1043,9 @@ define i2 @bool_add_lshr(i1 %a, i1 %b) {
 
 define i4 @not_bool_add_lshr(i2 %a, i2 %b) {
 ; CHECK-LABEL: @not_bool_add_lshr(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i2 [[A:%.*]] to i4
-; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i2 [[B:%.*]] to i4
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i4 [[ZEXT_A]], [[ZEXT_B]]
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i4 [[ADD]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i2 [[A:%.*]], -1
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i2 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i4
 ; CHECK-NEXT:    ret i4 [[LSHR]]
 ;
   %zext.a = zext i2 %a to i4

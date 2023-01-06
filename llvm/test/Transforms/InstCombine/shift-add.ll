@@ -462,10 +462,9 @@ define i2 @ashr_2_add_zext_basic(i1 %a, i1 %b) {
 
 define i32 @lshr_16_add_zext_basic(i16 %a, i16 %b) {
 ; CHECK-LABEL: @lshr_16_add_zext_basic(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i16 [[A:%.*]] to i32
-; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i16 [[B:%.*]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZEXT_A]], [[ZEXT_B]]
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[ADD]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[A:%.*]], -1
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i16 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i32
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %zext.a = zext i16 %a to i32
@@ -524,10 +523,9 @@ define i32 @lshr_16_add_not_known_16_leading_zeroes(i32 %a, i32 %b) {
 
 define i64 @lshr_32_add_zext_basic(i32 %a, i32 %b) {
 ; CHECK-LABEL: @lshr_32_add_zext_basic(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i32 [[B:%.*]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[ZEXT_A]], [[ZEXT_B]]
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 [[ADD]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i64
 ; CHECK-NEXT:    ret i64 [[LSHR]]
 ;
   %zext.a = zext i32 %a to i64
@@ -582,10 +580,9 @@ define i64 @lshr_33_i32_add_zext_basic(i32 %a, i32 %b) {
 
 define i64 @lshr_16_to_64_add_zext_basic(i16 %a, i16 %b) {
 ; CHECK-LABEL: @lshr_16_to_64_add_zext_basic(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i16 [[A:%.*]] to i64
-; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i16 [[B:%.*]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[ZEXT_A]], [[ZEXT_B]]
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 [[ADD]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[A:%.*]], -1
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i16 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i64
 ; CHECK-NEXT:    ret i64 [[LSHR]]
 ;
   %zext.a = zext i16 %a to i64
@@ -628,10 +625,9 @@ define i64 @lshr_32_add_not_known_32_leading_zeroes(i64 %a, i64 %b) {
 
 define i32 @ashr_16_add_zext_basic(i16 %a, i16 %b) {
 ; CHECK-LABEL: @ashr_16_add_zext_basic(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i16 [[A:%.*]] to i32
-; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i16 [[B:%.*]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZEXT_A]], [[ZEXT_B]]
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[ADD]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[A:%.*]], -1
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i16 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i32
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %zext.a = zext i16 %a to i32
@@ -643,10 +639,9 @@ define i32 @ashr_16_add_zext_basic(i16 %a, i16 %b) {
 
 define i64 @ashr_32_add_zext_basic(i32 %a, i32 %b) {
 ; CHECK-LABEL: @ashr_32_add_zext_basic(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i32 [[B:%.*]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[ZEXT_A]], [[ZEXT_B]]
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 [[ADD]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i64
 ; CHECK-NEXT:    ret i64 [[LSHR]]
 ;
   %zext.a = zext i32 %a to i64
@@ -658,10 +653,9 @@ define i64 @ashr_32_add_zext_basic(i32 %a, i32 %b) {
 
 define i64 @ashr_16_to_64_add_zext_basic(i16 %a, i16 %b) {
 ; CHECK-LABEL: @ashr_16_to_64_add_zext_basic(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i16 [[A:%.*]] to i64
-; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i16 [[B:%.*]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[ZEXT_A]], [[ZEXT_B]]
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 [[ADD]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[A:%.*]], -1
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i16 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i64
 ; CHECK-NEXT:    ret i64 [[LSHR]]
 ;
   %zext.a = zext i16 %a to i64
@@ -673,13 +667,10 @@ define i64 @ashr_16_to_64_add_zext_basic(i16 %a, i16 %b) {
 
 define i32 @lshr_32_add_zext_trunc(i32 %a, i32 %b) {
 ; CHECK-LABEL: @lshr_32_add_zext_trunc(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i32 [[B:%.*]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[ZEXT_A]], [[ZEXT_B]]
-; CHECK-NEXT:    [[TRUNC_ADD:%.*]] = trunc i64 [[ADD]] to i32
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[ADD]], 32
-; CHECK-NEXT:    [[TRUNC_SHR:%.*]] = trunc i64 [[SHR]] to i32
-; CHECK-NEXT:    [[RET:%.*]] = add i32 [[TRUNC_ADD]], [[TRUNC_SHR]]
+; CHECK-NEXT:    [[ADD_NARROWED:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i32 [[ADD_NARROWED]], [[A]]
+; CHECK-NEXT:    [[TRUNC_SHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i32
+; CHECK-NEXT:    [[RET:%.*]] = add i32 [[ADD_NARROWED]], [[TRUNC_SHR]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %zext.a = zext i32 %a to i64
@@ -695,29 +686,27 @@ define i32 @lshr_32_add_zext_trunc(i32 %a, i32 %b) {
 define <3 x i32> @add3_i96(<3 x i32> %0, <3 x i32> %1) {
 ; CHECK-LABEL: @add3_i96(
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <3 x i32> [[TMP0:%.*]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <3 x i32> [[TMP1:%.*]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <3 x i32> [[TMP1:%.*]], i64 0
+; CHECK-NEXT:    [[ADD_NARROWED:%.*]] = add i32 [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i32 [[ADD_NARROWED]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <3 x i32> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[TMP6]], [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <3 x i32> [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <3 x i32> [[TMP1]], i64 1
-; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
-; CHECK-NEXT:    [[TMP12:%.*]] = add nuw nsw i64 [[TMP11]], [[TMP9]]
-; CHECK-NEXT:    [[TMP13:%.*]] = lshr i64 [[TMP7]], 32
-; CHECK-NEXT:    [[TMP14:%.*]] = add nuw nsw i64 [[TMP12]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <3 x i32> [[TMP0]], i64 2
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <3 x i32> [[TMP1]], i64 2
-; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP16]], [[TMP15]]
-; CHECK-NEXT:    [[TMP18:%.*]] = lshr i64 [[TMP14]], 32
-; CHECK-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP18]] to i32
-; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[TMP17]], [[TMP19]]
-; CHECK-NEXT:    [[TMP21:%.*]] = trunc i64 [[TMP7]] to i32
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <3 x i32> undef, i32 [[TMP21]], i64 0
-; CHECK-NEXT:    [[TMP23:%.*]] = trunc i64 [[TMP14]] to i32
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <3 x i32> [[TMP22]], i32 [[TMP23]], i64 1
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <3 x i32> [[TMP24]], i32 [[TMP20]], i64 2
-; CHECK-NEXT:    ret <3 x i32> [[TMP25]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <3 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = add nuw nsw i64 [[TMP8]], [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i64
+; CHECK-NEXT:    [[TMP11:%.*]] = add nuw nsw i64 [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <3 x i32> [[TMP0]], i64 2
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <3 x i32> [[TMP1]], i64 2
+; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP13]], [[TMP12]]
+; CHECK-NEXT:    [[TMP15:%.*]] = lshr i64 [[TMP11]], 32
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP15]] to i32
+; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP14]], [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <3 x i32> undef, i32 [[ADD_NARROWED]], i64 0
+; CHECK-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP11]] to i32
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <3 x i32> [[TMP18]], i32 [[TMP19]], i64 1
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <3 x i32> [[TMP20]], i32 [[TMP17]], i64 2
+; CHECK-NEXT:    ret <3 x i32> [[TMP21]]
 ;
   %3 = extractelement <3 x i32> %0, i64 0
   %4 = zext i32 %3 to i64
