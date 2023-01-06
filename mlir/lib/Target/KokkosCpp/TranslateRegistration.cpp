@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Math/IR/Math.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/Target/KokkosCpp/KokkosCppEmitter.h"
@@ -33,14 +33,14 @@ void registerToKokkosTranslation() {
       llvm::cl::init(false));
 
   TranslateFromMLIRRegistration reg(
-      "mlir-to-kokkos",
-      [](ModuleOp module, raw_ostream &output) {
+      "mlir-to-kokkos", "translate from mlir to Kokkos",
+      [](Operation *op, raw_ostream &output) {
         return emitc::translateToKokkosCpp(
-            module, output, /* declareVariablesAtTop */ false);
+            op, output, /* declareVariablesAtTop */ false);
       },
       [](DialectRegistry &registry) {
         // clang-format off
-        registry.insert<arith::ArithmeticDialect,
+        registry.insert<arith::ArithDialect,
                         cf::ControlFlowDialect,
                         emitc::EmitCDialect,
                         func::FuncDialect,
