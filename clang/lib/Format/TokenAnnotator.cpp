@@ -3530,7 +3530,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (Right.is(TT_BlockComment))
       return true;
     // foo() -> const Bar * override/final
-    if (Right.isOneOf(Keywords.kw_override, Keywords.kw_final) &&
+    if (Right.isOneOf(Keywords.kw_override, Keywords.kw_final,
+                      tok::kw_noexcept) &&
         !Right.is(TT_StartOfName)) {
       return true;
     }
