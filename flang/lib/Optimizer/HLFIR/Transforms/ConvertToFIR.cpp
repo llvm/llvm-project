@@ -291,6 +291,18 @@ public:
   }
 };
 
+class NullOpConversion : public mlir::OpRewritePattern<hlfir::NullOp> {
+public:
+  explicit NullOpConversion(mlir::MLIRContext *ctx) : OpRewritePattern{ctx} {}
+
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::NullOp nullop,
+                  mlir::PatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<fir::ZeroOp>(nullop, nullop.getType());
+    return mlir::success();
+  }
+};
+
 class ConvertHLFIRtoFIR
     : public hlfir::impl::ConvertHLFIRtoFIRBase<ConvertHLFIRtoFIR> {
 public:
@@ -302,8 +314,9 @@ public:
     auto module = this->getOperation();
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<AssignOpConversion, DeclareOpConversion,
-                    DesignateOpConversion, NoReassocOpConversion>(context);
+    patterns
+        .insert<AssignOpConversion, DeclareOpConversion, DesignateOpConversion,
+                NoReassocOpConversion, NullOpConversion>(context);
     mlir::ConversionTarget target(*context);
     target.addIllegalDialect<hlfir::hlfirDialect>();
     target.markUnknownOpDynamicallyLegal(
