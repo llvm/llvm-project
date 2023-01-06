@@ -2924,11 +2924,8 @@ template <class ELFT> void Writer<ELFT>::openFile() {
 template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
   parallel::TaskGroup tg;
   for (OutputSection *sec : outputSections)
-    if (sec->flags & SHF_ALLOC) {
+    if (sec->flags & SHF_ALLOC)
       sec->writeTo<ELFT>(Out::bufferStart + sec->offset, tg);
-      if (config->emachine == EM_RISCV && config->riscvTbljal)
-        in.riscvTableJumpSection->writeTo(Out::bufferStart + sec->offset);
-    }
 }
 
 static void fillTrap(uint8_t *i, uint8_t *end) {
