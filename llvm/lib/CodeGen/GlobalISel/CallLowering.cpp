@@ -680,7 +680,7 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
     if (VA.needsCustom()) {
       std::function<void()> Thunk;
       unsigned NumArgRegs = Handler.assignCustomValue(
-          Args[i], makeArrayRef(ArgLocs).slice(j), &Thunk);
+          Args[i], ArrayRef(ArgLocs).slice(j), &Thunk);
       if (Thunk)
         DelayedOutgoingRegAssignments.emplace_back(Thunk);
       if (!NumArgRegs)

@@ -29,6 +29,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
 
 using namespace mlir;
@@ -45,6 +46,16 @@ static std::string diag(llvm::Value &value) {
   llvm::raw_string_ostream os(str);
   os << value;
   return os.str();
+}
+
+/// Returns the name of the global_ctors global variables.
+static constexpr StringRef getGlobalCtorsVarName() {
+  return "llvm.global_ctors";
+}
+
+/// Returns the name of the global_dtors global variables.
+static constexpr StringRef getGlobalDtorsVarName() {
+  return "llvm.global_dtors";
 }
 
 /// Creates an attribute containing ABI and preferred alignment numbers parsed
@@ -318,9 +329,20 @@ ModuleImport::ModuleImport(ModuleOp mlirModule,
 }
 
 LogicalResult ModuleImport::convertGlobals() {
-  for (llvm::GlobalVariable &globalVar : llvmModule->globals())
-    if (!processGlobal(&globalVar))
-      return failure();
+  for (llvm::GlobalVariable &globalVar : llvmModule->globals()) {
+    if (globalVar.getName() == getGlobalCtorsVarName() ||
+        globalVar.getName() == getGlobalDtorsVarName()) {
+      if (failed(convertGlobalCtorsAndDtors(&globalVar))) {
+        return emitError(mlirModule.getLoc())
+               << "unhandled global variable " << diag(globalVar);
+      }
+      continue;
+    }
+    if (failed(convertGlobal(&globalVar))) {
+      return emitError(mlirModule.getLoc())
+             << "unhandled global variable " << diag(globalVar);
+    }
+  }
   return success();
 }
 
@@ -329,6 +351,20 @@ LogicalResult ModuleImport::convertFunctions() {
     if (failed(processFunction(&func)))
       return failure();
   return success();
+}
+
+void ModuleImport::setNonDebugMetadataAttrs(llvm::Instruction *inst,
+                                            Operation *op) {
+  SmallVector<std::pair<unsigned, llvm::MDNode *>> allMetadata;
+  inst->getAllMetadataOtherThanDebugLoc(allMetadata);
+  for (auto &[kind, node] : allMetadata) {
+    if (!iface.isConvertibleMetadata(kind))
+      continue;
+    if (failed(iface.setMetadataAttrs(builder, kind, node, op, *this))) {
+      Location loc = debugImporter->translateLoc(inst->getDebugLoc());
+      emitWarning(loc) << "unhandled metadata (" << kind << ") " << diag(*inst);
+    }
+  }
 }
 
 void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
@@ -496,17 +532,13 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *value) {
   return nullptr;
 }
 
-GlobalOp ModuleImport::processGlobal(llvm::GlobalVariable *globalVar) {
-  if (globals.count(globalVar))
-    return globals[globalVar];
-
+LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   // Insert the global after the last one or at the start of the module.
   OpBuilder::InsertionGuard guard(builder);
-  if (!globalInsertionOp) {
+  if (!globalInsertionOp)
     builder.setInsertionPointToStart(mlirModule.getBody());
-  } else {
+  else
     builder.setInsertionPointAfter(globalInsertionOp);
-  }
 
   Attribute valueAttr;
   if (globalVar->hasInitializer())
@@ -521,7 +553,7 @@ GlobalOp ModuleImport::processGlobal(llvm::GlobalVariable *globalVar) {
   }
 
   GlobalOp globalOp = builder.create<GlobalOp>(
-      UnknownLoc::get(context), type, globalVar->isConstant(),
+      mlirModule.getLoc(), type, globalVar->isConstant(),
       convertLinkageFromLLVM(globalVar->getLinkage()), globalVar->getName(),
       valueAttr, alignment, /*addr_space=*/globalVar->getAddressSpace(),
       /*dso_local=*/globalVar->isDSOLocal(),
@@ -535,7 +567,7 @@ GlobalOp ModuleImport::processGlobal(llvm::GlobalVariable *globalVar) {
     FailureOr<Value> initializer =
         convertConstantExpr(globalVar->getInitializer());
     if (failed(initializer))
-      return {};
+      return failure();
     builder.create<ReturnOp>(globalOp.getLoc(), *initializer);
   }
   if (globalVar->hasAtLeastLocalUnnamedAddr()) {
@@ -545,7 +577,55 @@ GlobalOp ModuleImport::processGlobal(llvm::GlobalVariable *globalVar) {
   if (globalVar->hasSection())
     globalOp.setSection(globalVar->getSection());
 
-  return globals[globalVar] = globalOp;
+  return success();
+}
+
+LogicalResult
+ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
+  if (!globalVar->hasInitializer() || !globalVar->hasAppendingLinkage())
+    return failure();
+  auto *initializer =
+      dyn_cast<llvm::ConstantArray>(globalVar->getInitializer());
+  if (!initializer)
+    return failure();
+
+  SmallVector<Attribute> funcs;
+  SmallVector<int32_t> priorities;
+  for (llvm::Value *operand : initializer->operands()) {
+    auto *aggregate = dyn_cast<llvm::ConstantAggregate>(operand);
+    if (!aggregate || aggregate->getNumOperands() != 3)
+      return failure();
+
+    auto *priority = dyn_cast<llvm::ConstantInt>(aggregate->getOperand(0));
+    auto *func = dyn_cast<llvm::Function>(aggregate->getOperand(1));
+    auto *data = dyn_cast<llvm::Constant>(aggregate->getOperand(2));
+    if (!priority || !func || !data)
+      return failure();
+
+    // GlobalCtorsOps and GlobalDtorsOps do not support non-null data fields.
+    if (!data->isNullValue())
+      return failure();
+
+    funcs.push_back(FlatSymbolRefAttr::get(context, func->getName()));
+    priorities.push_back(priority->getValue().getZExtValue());
+  }
+
+  OpBuilder::InsertionGuard guard(builder);
+  if (!globalInsertionOp)
+    builder.setInsertionPointToStart(mlirModule.getBody());
+  else
+    builder.setInsertionPointAfter(globalInsertionOp);
+
+  if (globalVar->getName() == getGlobalCtorsVarName()) {
+    globalInsertionOp = builder.create<LLVM::GlobalCtorsOp>(
+        mlirModule.getLoc(), builder.getArrayAttr(funcs),
+        builder.getI32ArrayAttr(priorities));
+    return success();
+  }
+  globalInsertionOp = builder.create<LLVM::GlobalDtorsOp>(
+      mlirModule.getLoc(), builder.getArrayAttr(funcs),
+      builder.getI32ArrayAttr(priorities));
+  return success();
 }
 
 SetVector<llvm::Constant *>
@@ -612,8 +692,9 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
 
   // Convert global variable accesses.
   if (auto *globalVar = dyn_cast<llvm::GlobalVariable>(constant)) {
-    return builder.create<AddressOfOp>(loc, processGlobal(globalVar))
-        .getResult();
+    Type type = convertType(globalVar->getType());
+    auto symbolRef = FlatSymbolRefAttr::get(context, globalVar->getName());
+    return builder.create<AddressOfOp>(loc, type, symbolRef).getResult();
   }
 
   // Convert constant expressions.
@@ -625,6 +706,8 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     // resulting in a conflicting `valueMapping` entry.
     llvm::Instruction *inst = constExpr->getAsInstruction();
     auto guard = llvm::make_scope_exit([&]() {
+      assert(noResultOpMapping.find(inst) == noResultOpMapping.end() &&
+             "expected constant expression to return a result");
       valueMapping.erase(inst);
       inst->deleteValue();
     });
@@ -686,11 +769,10 @@ FailureOr<Value> ModuleImport::convertConstantExpr(llvm::Constant *constant) {
 
   // Insert the constant after the last one or at the start or the entry block.
   OpBuilder::InsertionGuard guard(builder);
-  if (!constantInsertionOp) {
+  if (!constantInsertionOp)
     builder.setInsertionPointToStart(constantInsertionBlock);
-  } else {
+  else
     builder.setInsertionPointAfter(constantInsertionOp);
-  }
 
   // Convert all constants of the expression and add them to `valueMapping`.
   SetVector<llvm::Constant *> constantsToConvert =
@@ -833,17 +915,19 @@ LogicalResult ModuleImport::convertInstruction(OpBuilder &odsBuilder,
       succBlockArgs.push_back(blockArgs);
     }
 
-    if (brInst->isConditional()) {
-      FailureOr<Value> condition = convertValue(brInst->getCondition());
-      if (failed(condition))
-        return failure();
-      builder.create<LLVM::CondBrOp>(loc, *condition, succBlocks.front(),
-                                     succBlockArgs.front(), succBlocks.back(),
-                                     succBlockArgs.back());
-    } else {
-      builder.create<LLVM::BrOp>(loc, succBlockArgs.front(),
-                                 succBlocks.front());
+    if (!brInst->isConditional()) {
+      auto brOp = builder.create<LLVM::BrOp>(loc, succBlockArgs.front(),
+                                             succBlocks.front());
+      mapNoResultOp(inst, brOp);
+      return success();
     }
+    FailureOr<Value> condition = convertValue(brInst->getCondition());
+    if (failed(condition))
+      return failure();
+    auto condBrOp = builder.create<LLVM::CondBrOp>(
+        loc, *condition, succBlocks.front(), succBlockArgs.front(),
+        succBlocks.back(), succBlockArgs.back());
+    mapNoResultOp(inst, condBrOp);
     return success();
   }
   if (inst->getOpcode() == llvm::Instruction::Switch) {
@@ -874,9 +958,10 @@ LogicalResult ModuleImport::convertInstruction(OpBuilder &odsBuilder,
       caseBlocks[it.index()] = lookupBlock(succBB);
     }
 
-    builder.create<SwitchOp>(loc, *condition, lookupBlock(defaultBB),
-                             defaultBlockArgs, caseValues, caseBlocks,
-                             caseOperandRefs);
+    auto switchOp = builder.create<SwitchOp>(
+        loc, *condition, lookupBlock(defaultBB), defaultBlockArgs, caseValues,
+        caseBlocks, caseOperandRefs);
+    mapNoResultOp(inst, switchOp);
     return success();
   }
   if (inst->getOpcode() == llvm::Instruction::PHI) {
@@ -903,6 +988,8 @@ LogicalResult ModuleImport::convertInstruction(OpBuilder &odsBuilder,
     setFastmathFlagsAttr(inst, callOp);
     if (!callInst->getType()->isVoidTy())
       mapValue(inst, callOp.getResult());
+    else
+      mapNoResultOp(inst, callOp);
     return success();
   }
   if (inst->getOpcode() == llvm::Instruction::LandingPad) {
@@ -918,9 +1005,9 @@ LogicalResult ModuleImport::convertInstruction(OpBuilder &odsBuilder,
     }
 
     Type type = convertType(lpInst->getType());
-    Value res =
+    auto lpOp =
         builder.create<LandingpadOp>(loc, type, lpInst->isCleanup(), operands);
-    mapValue(inst, res);
+    mapValue(inst, lpOp);
     return success();
   }
   if (inst->getOpcode() == llvm::Instruction::Invoke) {
@@ -951,6 +1038,8 @@ LogicalResult ModuleImport::convertInstruction(OpBuilder &odsBuilder,
     }
     if (!invokeInst->getType()->isVoidTy())
       mapValue(inst, invokeOp.getResults().front());
+    else
+      mapNoResultOp(inst, invokeOp);
     return success();
   }
   if (inst->getOpcode() == llvm::Instruction::GetElementPtr) {
@@ -973,9 +1062,9 @@ LogicalResult ModuleImport::convertInstruction(OpBuilder &odsBuilder,
     }
 
     Type type = convertType(inst->getType());
-    Value res = builder.create<GEPOp>(loc, type, sourceElementType, *basePtr,
-                                      indices, gepInst->isInBounds());
-    mapValue(inst, res);
+    auto gepOp = builder.create<GEPOp>(loc, type, sourceElementType, *basePtr,
+                                       indices, gepInst->isInBounds());
+    mapValue(inst, gepOp);
     return success();
   }
 
@@ -1095,6 +1184,18 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   // Handle Function attributes.
   processFunctionAttributes(func, funcOp);
 
+  // Convert non-debug metadata by using the dialect interface.
+  SmallVector<std::pair<unsigned, llvm::MDNode *>> allMetadata;
+  func->getAllMetadata(allMetadata);
+  for (auto &[kind, node] : allMetadata) {
+    if (!iface.isConvertibleMetadata(kind))
+      continue;
+    if (failed(iface.setMetadataAttrs(builder, kind, node, funcOp, *this))) {
+      emitWarning(funcOp->getLoc())
+          << "unhandled function metadata (" << kind << ") " << diag(*func);
+    }
+  }
+
   if (func->isDeclaration())
     return success();
 
@@ -1131,6 +1232,16 @@ LogicalResult ModuleImport::processBasicBlock(llvm::BasicBlock *bb,
   for (llvm::Instruction &inst : *bb) {
     if (failed(processInstruction(&inst)))
       return failure();
+
+    // Set the non-debug metadata attributes on the imported operation and emit
+    // a warning if an instruction other than a phi instruction is dropped
+    // during the import.
+    if (Operation *op = lookupOperation(&inst)) {
+      setNonDebugMetadataAttrs(&inst, op);
+    } else if (inst.getOpcode() != llvm::Instruction::PHI) {
+      Location loc = debugImporter->translateLoc(inst.getDebugLoc());
+      emitWarning(loc) << "dropped instruction " << diag(inst);
+    }
   }
   return success();
 }

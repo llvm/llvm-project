@@ -224,7 +224,7 @@ std::vector<CVType> ContinuationRecordBuilder::end(TypeIndex Index) {
   std::vector<CVType> Types;
   Types.reserve(SegmentOffsets.size());
 
-  auto SO = makeArrayRef(SegmentOffsets);
+  ArrayRef SO = SegmentOffsets;
 
   uint32_t End = SegmentWriter.getOffset();
 

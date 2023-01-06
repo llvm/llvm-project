@@ -8,7 +8,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 ; CHECK-NOT: Checks all passed, doing the transformation
 
 ; Outer loop does not start at zero
-define void @test_1(i32 %N, i32* nocapture %C, i32* nocapture readonly %A, i32 %scale) {
+define void @test_1(i32 %N, ptr nocapture %C, ptr nocapture readonly %A, i32 %scale) {
 entry:
   %cmp25 = icmp sgt i32 %N, 0
   br i1 %cmp25, label %for.body4.lr.ph, label %for.cond.cleanup
@@ -21,11 +21,11 @@ for.body4.lr.ph:
 for.body4:
   %j.024 = phi i32 [ 0, %for.body4.lr.ph ], [ %inc, %for.body4 ]
   %add = add nsw i32 %j.024, %mul
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add
+  %0 = load i32, ptr %arrayidx, align 4
   %mul5 = mul nsw i32 %0, %scale
-  %arrayidx8 = getelementptr inbounds i32, i32* %C, i32 %add
-  store i32 %mul5, i32* %arrayidx8, align 4
+  %arrayidx8 = getelementptr inbounds i32, ptr %C, i32 %add
+  store i32 %mul5, ptr %arrayidx8, align 4
   %inc = add nuw nsw i32 %j.024, 1
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.cond.cleanup3, label %for.body4
@@ -40,7 +40,7 @@ for.cond.cleanup:
 }
 
 ; Inner loop does not start at zero
-define void @test_2(i32 %N, i32* nocapture %C, i32* nocapture readonly %A, i32 %scale) {
+define void @test_2(i32 %N, ptr nocapture %C, ptr nocapture readonly %A, i32 %scale) {
 entry:
   %cmp25 = icmp sgt i32 %N, 0
   br i1 %cmp25, label %for.body4.lr.ph, label %for.cond.cleanup
@@ -53,11 +53,11 @@ for.body4.lr.ph:
 for.body4:
   %j.024 = phi i32 [ 1, %for.body4.lr.ph ], [ %inc, %for.body4 ]
   %add = add nsw i32 %j.024, %mul
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add
+  %0 = load i32, ptr %arrayidx, align 4
   %mul5 = mul nsw i32 %0, %scale
-  %arrayidx8 = getelementptr inbounds i32, i32* %C, i32 %add
-  store i32 %mul5, i32* %arrayidx8, align 4
+  %arrayidx8 = getelementptr inbounds i32, ptr %C, i32 %add
+  store i32 %mul5, ptr %arrayidx8, align 4
   %inc = add nuw nsw i32 %j.024, 1
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.cond.cleanup3, label %for.body4
@@ -72,7 +72,7 @@ for.cond.cleanup:
 }
 
 ; Outer IV used directly
-define hidden void @test_3(i16 zeroext %N, i32* nocapture %C, i32* nocapture readonly %A, i32 %scale) {
+define hidden void @test_3(i16 zeroext %N, ptr nocapture %C, ptr nocapture readonly %A, i32 %scale) {
 entry:
   %conv = zext i16 %N to i32
   %cmp25 = icmp eq i16 %N, 0
@@ -83,17 +83,17 @@ for.body.lr.ph.split.us:                          ; preds = %entry
 
 for.body.us:                                      ; preds = %for.cond2.for.cond.cleanup6_crit_edge.us, %for.body.lr.ph.split.us
   %i.026.us = phi i32 [ 0, %for.body.lr.ph.split.us ], [ %inc12.us, %for.cond2.for.cond.cleanup6_crit_edge.us ]
-  %arrayidx.us = getelementptr inbounds i32, i32* %A, i32 %i.026.us
+  %arrayidx.us = getelementptr inbounds i32, ptr %A, i32 %i.026.us
   %mul9.us = mul nuw nsw i32 %i.026.us, %conv
   br label %for.body7.us
 
 for.body7.us:                                     ; preds = %for.body.us, %for.body7.us
   %j.024.us = phi i32 [ 0, %for.body.us ], [ %inc.us, %for.body7.us ]
-  %0 = load i32, i32* %arrayidx.us, align 4
+  %0 = load i32, ptr %arrayidx.us, align 4
   %mul.us = mul nsw i32 %0, %scale
   %add.us = add nuw nsw i32 %j.024.us, %mul9.us
-  %arrayidx10.us = getelementptr inbounds i32, i32* %C, i32 %add.us
-  store i32 %mul.us, i32* %arrayidx10.us, align 4
+  %arrayidx10.us = getelementptr inbounds i32, ptr %C, i32 %add.us
+  store i32 %mul.us, ptr %arrayidx10.us, align 4
   %inc.us = add nuw nsw i32 %j.024.us, 1
   %exitcond = icmp ne i32 %inc.us, %conv
   br i1 %exitcond, label %for.body7.us, label %for.cond2.for.cond.cleanup6_crit_edge.us
@@ -111,7 +111,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 }
 
 ; Inner IV used directly
-define hidden void @test_4(i16 zeroext %N, i32* nocapture %C, i32* nocapture readonly %A, i32 %scale) {
+define hidden void @test_4(i16 zeroext %N, ptr nocapture %C, ptr nocapture readonly %A, i32 %scale) {
 entry:
   %conv = zext i16 %N to i32
   %cmp25 = icmp eq i16 %N, 0
@@ -127,12 +127,12 @@ for.body.us:                                      ; preds = %for.cond2.for.cond.
 
 for.body7.us:                                     ; preds = %for.body.us, %for.body7.us
   %j.024.us = phi i32 [ 0, %for.body.us ], [ %inc.us, %for.body7.us ]
-  %arrayidx.us = getelementptr inbounds i32, i32* %A, i32 %j.024.us
-  %0 = load i32, i32* %arrayidx.us, align 4
+  %arrayidx.us = getelementptr inbounds i32, ptr %A, i32 %j.024.us
+  %0 = load i32, ptr %arrayidx.us, align 4
   %mul.us = mul nsw i32 %0, %scale
   %add.us = add nuw nsw i32 %j.024.us, %mul9.us
-  %arrayidx10.us = getelementptr inbounds i32, i32* %C, i32 %add.us
-  store i32 %mul.us, i32* %arrayidx10.us, align 4
+  %arrayidx10.us = getelementptr inbounds i32, ptr %C, i32 %add.us
+  store i32 %mul.us, ptr %arrayidx10.us, align 4
   %inc.us = add nuw nsw i32 %j.024.us, 1
   %exitcond = icmp ne i32 %inc.us, %conv
   br i1 %exitcond, label %for.body7.us, label %for.cond2.for.cond.cleanup6_crit_edge.us
@@ -151,7 +151,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 
 ; Inner iteration count not invariant in outer loop
 declare i32 @get_int() readonly
-define void @test_5(i16 zeroext %N, i32* nocapture %C, i32* nocapture readonly %A, i32 %scale) {
+define void @test_5(i16 zeroext %N, ptr nocapture %C, ptr nocapture readonly %A, i32 %scale) {
 entry:
   %conv = zext i16 %N to i32
   %cmp27 = icmp eq i16 %N, 0
@@ -187,18 +187,18 @@ for.cond.cleanup5:                                ; preds = %for.cond.cleanup5.l
 for.body6:                                        ; preds = %for.body6.lr.ph, %for.body6
   %j.026 = phi i32 [ 0, %for.body6.lr.ph ], [ %inc, %for.body6 ]
   %add = add nsw i32 %j.026, %mul
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add
+  %0 = load i32, ptr %arrayidx, align 4
   %mul7 = mul nsw i32 %0, %scale
-  %arrayidx10 = getelementptr inbounds i32, i32* %C, i32 %add
-  store i32 %mul7, i32* %arrayidx10, align 4
+  %arrayidx10 = getelementptr inbounds i32, ptr %C, i32 %add
+  store i32 %mul7, ptr %arrayidx10, align 4
   %inc = add nuw nsw i32 %j.026, 1
   %exitcond = icmp ne i32 %inc, %call
   br i1 %exitcond, label %for.body6, label %for.cond.cleanup5.loopexit
 }
 
 ; Inner loop has an early exit
-define hidden void @test_6(i16 zeroext %N, i32* nocapture %C, i32* nocapture readonly %A, i32 %scale) {
+define hidden void @test_6(i16 zeroext %N, ptr nocapture %C, ptr nocapture readonly %A, i32 %scale) {
 entry:
   %conv = zext i16 %N to i32
   %cmp39 = icmp eq i16 %N, 0
@@ -215,8 +215,8 @@ for.body.us:                                      ; preds = %for.body.us.prehead
 for.body7.us:                                     ; preds = %for.body.us, %if.end.us
   %j.038.us = phi i32 [ 0, %for.body.us ], [ %inc.us, %if.end.us ]
   %add.us = add nuw nsw i32 %j.038.us, %mul.us
-  %arrayidx.us = getelementptr inbounds i32, i32* %A, i32 %add.us
-  %0 = load i32, i32* %arrayidx.us, align 4
+  %arrayidx.us = getelementptr inbounds i32, ptr %A, i32 %add.us
+  %0 = load i32, ptr %arrayidx.us, align 4
   %tobool.us = icmp eq i32 %0, 0
   br i1 %tobool.us, label %if.end.us, label %cleanup.us
 
@@ -226,8 +226,8 @@ cleanup.us:                                       ; preds = %if.end.us, %for.bod
   br i1 %exitcond, label %for.cond.cleanup, label %for.body.us
 
 if.end.us:                                        ; preds = %for.body7.us
-  %arrayidx17.us = getelementptr inbounds i32, i32* %C, i32 %add.us
-  store i32 0, i32* %arrayidx17.us, align 4
+  %arrayidx17.us = getelementptr inbounds i32, ptr %C, i32 %add.us
+  store i32 0, ptr %arrayidx17.us, align 4
   %inc.us = add nuw nsw i32 %j.038.us, 1
   %cmp4.us = icmp ult i32 %inc.us, %conv
   br i1 %cmp4.us, label %for.body7.us, label %cleanup.us
@@ -236,7 +236,7 @@ for.cond.cleanup:                                 ; preds = %cleanup.us, %entry
   ret void
 }
 
-define hidden void @test_7(i16 zeroext %N, i32* nocapture %C, i32* nocapture readonly %A, i32 %scale) {
+define hidden void @test_7(i16 zeroext %N, ptr nocapture %C, ptr nocapture readonly %A, i32 %scale) {
 entry:
   %conv = zext i16 %N to i32
   %cmp30 = icmp eq i16 %N, 0
@@ -254,11 +254,11 @@ for.body.us:                                      ; preds = %for.body.us.prehead
 for.body7.us:                                     ; preds = %for.body7.us, %for.body7.lr.ph.us
   %j.029.us = phi i32 [ 0, %for.body7.lr.ph.us ], [ %inc.us, %for.body7.us ]
   %add.us = add nuw nsw i32 %j.029.us, %mul.us
-  %arrayidx.us = getelementptr inbounds i32, i32* %A, i32 %add.us
-  %0 = load i32, i32* %arrayidx.us, align 4
+  %arrayidx.us = getelementptr inbounds i32, ptr %A, i32 %add.us
+  %0 = load i32, ptr %arrayidx.us, align 4
   %mul9.us = mul nsw i32 %0, %scale
-  %arrayidx13.us = getelementptr inbounds i32, i32* %C, i32 %add.us
-  store i32 %mul9.us, i32* %arrayidx13.us, align 4
+  %arrayidx13.us = getelementptr inbounds i32, ptr %C, i32 %add.us
+  store i32 %mul9.us, ptr %arrayidx13.us, align 4
   %inc.us = add nuw nsw i32 %j.029.us, 1
   %exitcond = icmp eq i32 %inc.us, %conv
   br i1 %exitcond, label %for.cond2.for.cond.cleanup6_crit_edge.us, label %for.body7.us
@@ -277,7 +277,7 @@ cleanup:                                          ; preds = %for.cond2.for.cond.
 }
 
 ; Step is not 1
-define i32 @test_8(i32 %val, i16* nocapture %A) {
+define i32 @test_8(i32 %val, ptr nocapture %A) {
 entry:
   br label %for.body
 
@@ -289,12 +289,12 @@ for.body:                                         ; preds = %entry, %for.inc6
 for.body3:                                        ; preds = %for.body, %for.body3
   %j.017 = phi i32 [ 0, %for.body ], [ %inc, %for.body3 ]
   %add = add nuw nsw i32 %j.017, %mul
-  %arrayidx = getelementptr inbounds i16, i16* %A, i32 %add
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %A, i32 %add
+  %0 = load i16, ptr %arrayidx, align 2
   %conv16 = zext i16 %0 to i32
   %add4 = add i32 %conv16, %val
   %conv5 = trunc i32 %add4 to i16
-  store i16 %conv5, i16* %arrayidx, align 2
+  store i16 %conv5, ptr %arrayidx, align 2
   %inc = add nuw nsw i32 %j.017, 1
   %exitcond = icmp ne i32 %inc, 20
   br i1 %exitcond, label %for.body3, label %for.inc6
@@ -310,7 +310,7 @@ for.end8:                                         ; preds = %for.inc6
 
 
 ; Step is not 1
-define i32 @test_9(i32 %val, i16* nocapture %A) {
+define i32 @test_9(i32 %val, ptr nocapture %A) {
 entry:
   br label %for.body
 
@@ -322,12 +322,12 @@ for.body:                                         ; preds = %entry, %for.inc6
 for.body3:                                        ; preds = %for.body, %for.body3
   %j.017 = phi i32 [ 0, %for.body ], [ %inc, %for.body3 ]
   %add = add nuw nsw i32 %j.017, %mul
-  %arrayidx = getelementptr inbounds i16, i16* %A, i32 %add
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %A, i32 %add
+  %0 = load i16, ptr %arrayidx, align 2
   %conv16 = zext i16 %0 to i32
   %add4 = add i32 %conv16, %val
   %conv5 = trunc i32 %add4 to i16
-  store i16 %conv5, i16* %arrayidx, align 2
+  store i16 %conv5, ptr %arrayidx, align 2
   %inc = add nuw nsw i32 %j.017, 2
   %exitcond = icmp ne i32 %inc, 20
   br i1 %exitcond, label %for.body3, label %for.inc6
@@ -347,7 +347,7 @@ for.end8:                                         ; preds = %for.inc6
 ; icmp ult i32 %j, tripcount-step.
 
 ; test_10: The step is not 1.
-define i32 @test_10(i32* nocapture %A) {
+define i32 @test_10(ptr nocapture %A) {
 entry:
   br label %for.cond1.preheader
 
@@ -359,8 +359,8 @@ for.cond1.preheader:
 for.body4:
   %j.016 = phi i32 [ 0, %for.cond1.preheader ], [ %add5, %for.body4 ]
   %add = add i32 %j.016, %mul
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add
-  store i32 30, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add
+  store i32 30, ptr %arrayidx, align 4
   %add5 = add nuw nsw i32 %j.016, 2
   %cmp2 = icmp ult i32 %j.016, 18
   br i1 %cmp2, label %for.body4, label %for.cond.cleanup3
@@ -371,13 +371,13 @@ for.cond.cleanup3:
   br i1 %cmp, label %for.cond1.preheader, label %for.cond.cleanup
 
 for.cond.cleanup:
-  %0 = load i32, i32* %A, align 4
+  %0 = load i32, ptr %A, align 4
   ret i32 %0
 }
 
 ; test_11: The inner inducation variable is used in a compare which
 ; isn't the condition of the inner branch.
-define i32 @test_11(i32* nocapture %A) {
+define i32 @test_11(ptr nocapture %A) {
 entry:
   br label %for.cond1.preheader
 
@@ -391,8 +391,8 @@ for.body4:
   %cmp5 = icmp ult i32 %j.019, 5
   %cond = select i1 %cmp5, i32 30, i32 15
   %add = add i32 %j.019, %mul
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add
-  store i32 %cond, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add
+  store i32 %cond, ptr %arrayidx, align 4
   %inc = add nuw nsw i32 %j.019, 1
   %cmp2 = icmp ult i32 %j.019, 19
   br i1 %cmp2, label %for.body4, label %for.cond.cleanup3
@@ -403,12 +403,12 @@ for.cond.cleanup3:
   br i1 %cmp, label %for.cond1.preheader, label %for.cond.cleanup
 
 for.cond.cleanup:
-  %0 = load i32, i32* %A, align 4
+  %0 = load i32, ptr %A, align 4
   ret i32 %0
 }
 
 ; test_12: Incoming phi node value for preheader is a variable
-define i32 @test_12(i32* %A) {
+define i32 @test_12(ptr %A) {
 entry:
   br label %while.cond1.preheader
 
@@ -425,8 +425,8 @@ while.body3.preheader:
 while.body3:
   %j.115 = phi i32 [ %inc, %while.body3 ], [ %j.017, %while.body3.preheader ]
   %add = add i32 %j.115, %mul
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add
-  store i32 30, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add
+  store i32 30, ptr %arrayidx, align 4
   %inc = add nuw nsw i32 %j.115, 1
   %cmp2 = icmp ult i32 %j.115, 19
   br i1 %cmp2, label %while.body3, label %while.end.loopexit
@@ -442,7 +442,7 @@ while.end:
   br i1 %cmp, label %while.cond1.preheader, label %while.end5
 
 while.end5:
-  %0 = load i32, i32* %A, align 4
+  %0 = load i32, ptr %A, align 4
   ret i32 %0
 }
 
@@ -555,8 +555,8 @@ for.body8.us.us:
   %mul9.us.us = mul nsw i32 %add.us.us, %N
   %add10.us.us = add nsw i32 %mul9.us.us, %i.036.us
   %idxprom.us.us = sext i32 %add10.us.us to i64
-  %arrayidx.us.us = getelementptr inbounds i32, i32* %A, i64 %idxprom.us.us
-  tail call void @f(i32* %arrayidx.us.us) #2
+  %arrayidx.us.us = getelementptr inbounds i32, ptr %A, i64 %idxprom.us.us
+  tail call void @f(ptr %arrayidx.us.us) #2
   %inc.us.us = add nuw nsw i32 %k.031.us.us, 1
   %cmp6.us.us = icmp slt i32 %inc.us.us, %N
   br i1 %cmp6.us.us, label %for.body8.us.us, label %for.cond5.for.cond.cleanup7_crit_edge.us.us
@@ -621,8 +621,8 @@ for.body8.us.us:
   %j.026.us.us = phi i32 [ 0, %for.cond5.preheader.us.us ], [ %inc.us.us, %for.body8.us.us ]
   %add.us.us = add nsw i32 %j.026.us.us, %mul.us.us
   %idxprom.us.us = sext i32 %add.us.us to i64
-  %arrayidx.us.us = getelementptr inbounds i32, i32* %A, i64 %idxprom.us.us
-  tail call void @f(i32* %arrayidx.us.us) #2
+  %arrayidx.us.us = getelementptr inbounds i32, ptr %A, i64 %idxprom.us.us
+  tail call void @f(ptr %arrayidx.us.us) #2
   %inc.us.us = add nuw nsw i32 %j.026.us.us, 1
   %exitcond = icmp ne i32 %inc.us.us, %M
   br i1 %exitcond, label %for.body8.us.us, label %for.cond5.for.cond.cleanup7_crit_edge.us.us
@@ -684,8 +684,8 @@ for.body4.us.us:
   %j.028.us.us = phi i32 [ %inc10.us.us, %for.cond5.for.cond.cleanup7_crit_edge.us.us ], [ 0, %for.body4.us.us.preheader ]
   %add.us.us = add nsw i32 %j.028.us.us, %mul.us
   %idxprom.us.us = sext i32 %add.us.us to i64
-  %arrayidx.us.us = getelementptr inbounds i32, i32* %A, i64 %idxprom.us.us
-  store i32 0, i32* %arrayidx.us.us, align 4
+  %arrayidx.us.us = getelementptr inbounds i32, ptr %A, i64 %idxprom.us.us
+  store i32 0, ptr %arrayidx.us.us, align 4
   br label %for.body8.us.us
 
 for.cond5.for.cond.cleanup7_crit_edge.us.us:
@@ -695,7 +695,7 @@ for.cond5.for.cond.cleanup7_crit_edge.us.us:
 
 for.body8.us.us:
   %k.026.us.us = phi i32 [ 0, %for.body4.us.us ], [ %inc.us.us, %for.body8.us.us ]
-  tail call void bitcast (void (...)* @g to void ()*)() #2
+  tail call void @g() #2
   %inc.us.us = add nuw nsw i32 %k.026.us.us, 1
   %exitcond = icmp ne i32 %inc.us.us, %N
   br i1 %exitcond, label %for.body8.us.us, label %for.cond5.for.cond.cleanup7_crit_edge.us.us
@@ -712,16 +712,15 @@ for.cond.cleanup:
 
 ; Backedge-taken count is not predictable.
 %struct.Limits = type { i16, i16 }
-define void @backedge_count(%struct.Limits* %lim) {
+define void @backedge_count(ptr %lim) {
 entry:
-  %N = getelementptr inbounds %struct.Limits, %struct.Limits* %lim, i32 0, i32 0
-  %M = getelementptr inbounds %struct.Limits, %struct.Limits* %lim, i32 0, i32 1
-  %0 = load i16, i16* %N, align 2
+  %M = getelementptr inbounds %struct.Limits, ptr %lim, i32 0, i32 1
+  %0 = load i16, ptr %lim, align 2
   %cmp20 = icmp sgt i16 %0, 0
   br i1 %cmp20, label %for.cond2.preheader.preheader, label %for.cond.cleanup
 
 for.cond2.preheader.preheader:
-  %.pre = load i16, i16* %M, align 2
+  %.pre = load i16, ptr %M, align 2
   br label %for.cond2.preheader
 
 for.cond2.preheader:
@@ -735,7 +734,7 @@ for.cond.cleanup:
   ret void
 
 for.cond.cleanup6.loopexit:
-  %.pre22 = load i16, i16* %N, align 2
+  %.pre22 = load i16, ptr %lim, align 2
   br label %for.cond.cleanup6
 
 for.cond.cleanup6:
@@ -748,16 +747,16 @@ for.cond.cleanup6:
 
 for.body7:
   %j.018 = phi i32 [ %inc, %for.body7 ], [ 0, %for.cond2.preheader ]
-  tail call void bitcast (void (...)* @g to void ()*)()
+  tail call void @g()
   %inc = add nuw nsw i32 %j.018, 1
-  %5 = load i16, i16* %M, align 2
+  %5 = load i16, ptr %M, align 2
   %conv3 = sext i16 %5 to i32
   %cmp4 = icmp slt i32 %inc, %conv3
   br i1 %cmp4, label %for.body7, label %for.cond.cleanup6.loopexit
 }
 
 ; Invalid trip count
-define void @invalid_tripCount(i8* %a, i32 %b, i32 %c, i32 %initial-mutations, i32 %statemutations) {
+define void @invalid_tripCount(ptr %a, i32 %b, i32 %c, i32 %initial-mutations, i32 %statemutations) {
 entry:
   %iszero = icmp eq i32 %b, 0
   br i1 %iszero, label %for.empty, label %for.loopinit
@@ -771,7 +770,7 @@ for.loopbody:
   %0 = icmp eq i32 %statemutations, %initial-mutations
   br i1 %0, label %for.notmutated, label %for.mutated
 for.mutated:
-  call void @objc_enumerationMutation(i8* %a)
+  call void @objc_enumerationMutation(ptr %a)
   br label %for.notmutated
 for.notmutated:
   %1 = add nuw i32 %for.index, 1
@@ -789,7 +788,7 @@ for.empty:
 ; GEP doesn't dominate the loop latch so can't guarantee N*M won't overflow.
 @first = global i32 1, align 4
 @a = external global [0 x i8], align 1
-define void @overflow(i32 %lim, i8* %a) {
+define void @overflow(i32 %lim, ptr %a) {
 entry:
   %cmp17.not = icmp eq i32 %lim, 0
   br i1 %cmp17.not, label %for.cond.cleanup, label %for.cond1.preheader.preheader
@@ -816,15 +815,15 @@ for.cond.cleanup3:
 for.body4:
   %j.016 = phi i32 [ 0, %for.cond1.preheader ], [ %inc, %if.end ]
   %add = add i32 %j.016, %mul
-  %0 = load i32, i32* @first, align 4
+  %0 = load i32, ptr @first, align 4
   %tobool.not = icmp eq i32 %0, 0
   br i1 %tobool.not, label %if.end, label %if.then
 
 if.then:
-  %arrayidx = getelementptr inbounds [0 x i8], [0 x i8]* @a, i32 0, i32 %add
-  %1 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds [0 x i8], ptr @a, i32 0, i32 %add
+  %1 = load i8, ptr %arrayidx, align 1
   tail call void asm sideeffect "", "r"(i8 %1)
-  store i32 0, i32* @first, align 4
+  store i32 0, ptr @first, align 4
   br label %if.end
 
 if.end:
@@ -834,6 +833,6 @@ if.end:
   br i1 %cmp2, label %for.body4, label %for.cond.cleanup3
 }
 
-declare void @objc_enumerationMutation(i8*)
-declare dso_local void @f(i32*)
+declare void @objc_enumerationMutation(ptr)
+declare dso_local void @f(ptr)
 declare dso_local void @g(...)

@@ -6,7 +6,7 @@ target datalayout = "n8:16:32:64"
 
 declare i1 @pred(i32)
 
-define void @test([10000 x i32]* %P, i32 %STRIDE) {
+define void @test(ptr %P, i32 %STRIDE) {
 ; <label>:0
 	br label %Loop
 Loop:		; preds = %Loop, %0

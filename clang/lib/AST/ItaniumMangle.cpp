@@ -4249,7 +4249,6 @@ recurse:
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:
   case Expr::CXXInheritedCtorInitExprClass:
-  case Expr::CXXParenListInitExprClass:
     llvm_unreachable("unexpected statement kind");
 
   case Expr::ConstantExprClass:

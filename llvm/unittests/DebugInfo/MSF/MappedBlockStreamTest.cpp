@@ -493,7 +493,7 @@ TEST(MappedBlockStreamTest, DataLivesAfterStreamDestruction) {
 
 MATCHER_P3(BlockIsFilledWith, Layout, BlockIndex, Byte, "succeeded") {
   uint64_t Offset = msf::blockToOffset(BlockIndex, Layout.SB->BlockSize);
-  ArrayRef<uint8_t> BufferRef = makeArrayRef(arg);
+  ArrayRef<uint8_t> BufferRef = ArrayRef(arg);
   BufferRef = BufferRef.slice(Offset, Layout.SB->BlockSize);
   return llvm::all_of(BufferRef, [this](uint8_t B) { return B == Byte; });
 }

@@ -71,8 +71,9 @@ SignedDivisionByConstantInfo SignedDivisionByConstantInfo::get(const APInt &D) {
 /// LeadingZeros can be used to simplify the calculation if the upper bits
 /// of the divided value are known zero.
 UnsignedDivisionByConstantInfo
-UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros) {
-  assert(!D.isZero() && "Precondition violation.");
+UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros,
+                                    bool AllowEvenDivisorOptimization) {
+  assert(!D.isZero() && !D.isOne() && "Precondition violation.");
   assert(D.getBitWidth() > 1 && "Does not work at smaller bitwidths.");
 
   APInt Delta;
@@ -129,8 +130,25 @@ UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros) {
     Delta -= R2;
   } while (P < D.getBitWidth() * 2 &&
            (Q1.ult(Delta) || (Q1 == Delta && R1.isZero())));
+
+  if (Retval.IsAdd && !D[0] && AllowEvenDivisorOptimization) {
+    unsigned PreShift = D.countTrailingZeros();
+    APInt ShiftedD = D.lshr(PreShift);
+    Retval =
+        UnsignedDivisionByConstantInfo::get(ShiftedD, LeadingZeros + PreShift);
+    assert(Retval.IsAdd == 0 && Retval.PreShift == 0);
+    Retval.PreShift = PreShift;
+    return Retval;
+  }
+
   Retval.Magic = std::move(Q2);             // resulting magic number
   ++Retval.Magic;
-  Retval.ShiftAmount = P - D.getBitWidth(); // resulting shift
+  Retval.PostShift = P - D.getBitWidth(); // resulting shift
+  // Reduce shift amount for IsAdd.
+  if (Retval.IsAdd) {
+    assert(Retval.PostShift > 0 && "Unexpected shift");
+    Retval.PostShift -= 1;
+  }
+  Retval.PreShift = 0;
   return Retval;
 }

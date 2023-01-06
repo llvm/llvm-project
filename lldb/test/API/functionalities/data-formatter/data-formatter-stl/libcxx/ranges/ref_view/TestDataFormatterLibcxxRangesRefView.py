@@ -28,6 +28,7 @@ class LibcxxRangesRefViewDataFormatterTestCase(TestBase):
                 children=self.check_string_vec_children())
 
     @add_test_categories(["libc++"])
+    @skipIf(compiler=no_match("clang"), compiler_version=['<', '16.0'])
     def test_with_run_command(self):
         """Test that std::ranges::ref_view is formatted correctly when printed.
         """

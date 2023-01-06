@@ -535,7 +535,7 @@ namespace llvm {
   FunctionPass *createPseudoProbeInserter();
 
   /// Create IR Type Promotion pass. \see TypePromotion.cpp
-  FunctionPass *createTypePromotionPass();
+  FunctionPass *createTypePromotionLegacyPass();
 
   /// Add Flow Sensitive Discriminators. PassNum specifies the
   /// sequence number of this pass (starting from 1).

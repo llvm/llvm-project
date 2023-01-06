@@ -475,7 +475,7 @@ void VirtRegRewriter::expandCopyBundle(MachineInstr &MI) const {
     // clobbering.
     for (int E = MIs.size(), PrevE = E; E > 1; PrevE = E) {
       for (int I = E; I--; )
-        if (!anyRegsAlias(MIs[I], makeArrayRef(MIs).take_front(E), TRI)) {
+        if (!anyRegsAlias(MIs[I], ArrayRef(MIs).take_front(E), TRI)) {
           if (I + 1 != E)
             std::swap(MIs[I], MIs[E - 1]);
           --E;

@@ -3796,13 +3796,13 @@ static ArrayRef<MCPhysReg> get64BitArgumentGPRs(CallingConv::ID CallConv,
     static const MCPhysReg GPR64ArgRegsWin64[] = {
       X86::RCX, X86::RDX, X86::R8,  X86::R9
     };
-    return makeArrayRef(std::begin(GPR64ArgRegsWin64), std::end(GPR64ArgRegsWin64));
+    return ArrayRef(std::begin(GPR64ArgRegsWin64), std::end(GPR64ArgRegsWin64));
   }
 
   static const MCPhysReg GPR64ArgRegs64Bit[] = {
     X86::RDI, X86::RSI, X86::RDX, X86::RCX, X86::R8, X86::R9
   };
-  return makeArrayRef(std::begin(GPR64ArgRegs64Bit), std::end(GPR64ArgRegs64Bit));
+  return ArrayRef(std::begin(GPR64ArgRegs64Bit), std::end(GPR64ArgRegs64Bit));
 }
 
 // FIXME: Get this from tablegen.
@@ -3828,7 +3828,7 @@ static ArrayRef<MCPhysReg> get64BitArgumentXMMs(MachineFunction &MF,
     X86::XMM0, X86::XMM1, X86::XMM2, X86::XMM3,
     X86::XMM4, X86::XMM5, X86::XMM6, X86::XMM7
   };
-  return makeArrayRef(std::begin(XMMArgRegs64Bit), std::end(XMMArgRegs64Bit));
+  return ArrayRef(std::begin(XMMArgRegs64Bit), std::end(XMMArgRegs64Bit));
 }
 
 #ifndef NDEBUG
@@ -6975,38 +6975,6 @@ static SDValue getOnesVector(EVT VT, SelectionDAG &DAG, const SDLoc &dl) {
   return DAG.getBitcast(VT, Vec);
 }
 
-// Convert *_EXTEND_VECTOR_INREG to *_EXTEND opcode.
-static unsigned getOpcode_EXTEND(unsigned Opcode) {
-  switch (Opcode) {
-  case ISD::ANY_EXTEND:
-  case ISD::ANY_EXTEND_VECTOR_INREG:
-    return ISD::ANY_EXTEND;
-  case ISD::ZERO_EXTEND:
-  case ISD::ZERO_EXTEND_VECTOR_INREG:
-    return ISD::ZERO_EXTEND;
-  case ISD::SIGN_EXTEND:
-  case ISD::SIGN_EXTEND_VECTOR_INREG:
-    return ISD::SIGN_EXTEND;
-  }
-  llvm_unreachable("Unknown opcode");
-}
-
-// Convert *_EXTEND to *_EXTEND_VECTOR_INREG opcode.
-static unsigned getOpcode_EXTEND_VECTOR_INREG(unsigned Opcode) {
-  switch (Opcode) {
-  case ISD::ANY_EXTEND:
-  case ISD::ANY_EXTEND_VECTOR_INREG:
-    return ISD::ANY_EXTEND_VECTOR_INREG;
-  case ISD::ZERO_EXTEND:
-  case ISD::ZERO_EXTEND_VECTOR_INREG:
-    return ISD::ZERO_EXTEND_VECTOR_INREG;
-  case ISD::SIGN_EXTEND:
-  case ISD::SIGN_EXTEND_VECTOR_INREG:
-    return ISD::SIGN_EXTEND_VECTOR_INREG;
-  }
-  llvm_unreachable("Unknown opcode");
-}
-
 static SDValue getEXTEND_VECTOR_INREG(unsigned Opcode, const SDLoc &DL, EVT VT,
                                       SDValue In, SelectionDAG &DAG) {
   EVT InVT = In.getValueType();
@@ -7027,7 +6995,7 @@ static SDValue getEXTEND_VECTOR_INREG(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
 
   if (VT.getVectorNumElements() != InVT.getVectorNumElements())
-    Opcode = getOpcode_EXTEND_VECTOR_INREG(Opcode);
+    Opcode = DAG.getOpcode_EXTEND_VECTOR_INREG(Opcode);
 
   return DAG.getNode(Opcode, DL, VT, In);
 }
@@ -9665,7 +9633,7 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
     unsigned SeqLen = Sequence.size();
     bool UpperZeroOrUndef =
         SeqLen == 1 ||
-        llvm::all_of(makeArrayRef(Sequence).drop_front(), [](SDValue V) {
+        llvm::all_of(ArrayRef(Sequence).drop_front(), [](SDValue V) {
           return !V || V.isUndef() || isNullConstant(V);
         });
     SDValue Op0 = Sequence[0];
@@ -11137,6 +11105,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
 
   MVT VT = Op.getSimpleValueType();
   MVT EltVT = VT.getVectorElementType();
+  MVT OpEltVT = Op.getOperand(0).getSimpleValueType();
   unsigned NumElems = Op.getNumOperands();
 
   // Generate vectors for predicate vectors.
@@ -11151,6 +11120,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
 
   unsigned EVTBits = EltVT.getSizeInBits();
   APInt UndefMask = APInt::getZero(NumElems);
+  APInt FrozenUndefMask = APInt::getZero(NumElems);
   APInt ZeroMask = APInt::getZero(NumElems);
   APInt NonZeroMask = APInt::getZero(NumElems);
   bool IsAllConstants = true;
@@ -11160,6 +11130,10 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     SDValue Elt = Op.getOperand(i);
     if (Elt.isUndef()) {
       UndefMask.setBit(i);
+      continue;
+    }
+    if (Elt.getOpcode() == ISD::FREEZE && Elt.getOperand(0).isUndef()) {
+      FrozenUndefMask.setBit(i);
       continue;
     }
     Values.insert(Elt);
@@ -11175,9 +11149,35 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   }
 
   // All undef vector. Return an UNDEF. All zero vectors were handled above.
-  if (NonZeroMask == 0) {
+  unsigned NumFrozenUndefElts = FrozenUndefMask.countPopulation();
+  if (NonZeroMask == 0 && NumFrozenUndefElts != NumElems) {
     assert(UndefMask.isAllOnes() && "Fully undef mask expected");
     return DAG.getUNDEF(VT);
+  }
+
+  // If we have multiple FREEZE-UNDEF operands, we are likely going to end up
+  // lowering into a suboptimal insertion sequence. Instead, thaw the UNDEF in
+  // our source BUILD_VECTOR, create another FREEZE-UNDEF splat BUILD_VECTOR,
+  // and blend the FREEZE-UNDEF operands back in.
+  // FIXME: is this worthwhile even for a single FREEZE-UNDEF operand?
+  if (NumFrozenUndefElts >= 2 && NumFrozenUndefElts < NumElems) {
+    SmallVector<int, 16> BlendMask(NumElems, -1);
+    SmallVector<SDValue, 16> Elts(NumElems, DAG.getUNDEF(OpEltVT));
+    for (unsigned i = 0; i < NumElems; ++i) {
+      if (UndefMask[i]) {
+        BlendMask[i] = -1;
+        continue;
+      }
+      BlendMask[i] = i;
+      if (!FrozenUndefMask[i])
+        Elts[i] = Op.getOperand(i);
+      else
+        BlendMask[i] += NumElems;
+    }
+    SDValue EltsBV = DAG.getBuildVector(VT, dl, Elts);
+    SDValue FrozenUndefElt = DAG.getFreeze(DAG.getUNDEF(OpEltVT));
+    SDValue FrozenUndefBV = DAG.getSplatBuildVector(VT, dl, FrozenUndefElt);
+    return DAG.getVectorShuffle(VT, dl, EltsBV, FrozenUndefBV, BlendMask);
   }
 
   BuildVectorSDNode *BV = cast<BuildVectorSDNode>(Op.getNode());
@@ -22121,7 +22121,7 @@ static SDValue LowerAVXExtend(SDValue Op, SelectionDAG &DAG,
           InVT.getVectorElementType() == MVT::i32) &&
          "Unexpected element type");
 
-  unsigned ExtendInVecOpc = getOpcode_EXTEND_VECTOR_INREG(Opc);
+  unsigned ExtendInVecOpc = DAG.getOpcode_EXTEND_VECTOR_INREG(Opc);
 
   if (VT == MVT::v32i16 && !Subtarget.hasBWI()) {
     assert(InVT == MVT::v32i8 && "Unexpected VT!");
@@ -29750,11 +29750,11 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
     const int Mask[] = {1, -1,  3, -1,  5, -1,  7, -1,
                         9, -1, 11, -1, 13, -1, 15, -1};
     // <a|b|c|d> => <b|undef|d|undef>
-    SDValue Odd0 = DAG.getVectorShuffle(VT, dl, A, A,
-                                        makeArrayRef(&Mask[0], NumElts));
+    SDValue Odd0 =
+        DAG.getVectorShuffle(VT, dl, A, A, ArrayRef(&Mask[0], NumElts));
     // <e|f|g|h> => <f|undef|h|undef>
-    SDValue Odd1 = DAG.getVectorShuffle(VT, dl, B, B,
-                                        makeArrayRef(&Mask[0], NumElts));
+    SDValue Odd1 =
+        DAG.getVectorShuffle(VT, dl, B, B, ArrayRef(&Mask[0], NumElts));
 
     // Emit two multiplies, one for the lower 2 ints and one for the higher 2
     // ints.
@@ -38005,7 +38005,7 @@ static bool matchUnaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
 
         Shuffle = unsigned(MatchAny ? ISD::ANY_EXTEND : ISD::ZERO_EXTEND);
         if (SrcVT.getVectorNumElements() != NumDstElts)
-          Shuffle = getOpcode_EXTEND_VECTOR_INREG(Shuffle);
+          Shuffle = DAG.getOpcode_EXTEND_VECTOR_INREG(Shuffle);
 
         DstVT = MVT::getIntegerVT(Scale * MaskEltSize);
         DstVT = MVT::getVectorVT(DstVT, NumDstElts);
@@ -41206,7 +41206,7 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     // See if this reduces to a PSHUFD which is no more expensive and can
     // combine with more operations. Note that it has to at least flip the
     // dwords as otherwise it would have been removed as a no-op.
-    if (makeArrayRef(Mask).equals({2, 3, 0, 1})) {
+    if (ArrayRef(Mask).equals({2, 3, 0, 1})) {
       int DMask[] = {0, 1, 2, 3};
       int DOffset = N.getOpcode() == X86ISD::PSHUFLW ? 0 : 2;
       DMask[DOffset + 0] = DOffset + 1;
@@ -41241,8 +41241,8 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
         int MappedMask[8];
         for (int i = 0; i < 8; ++i)
           MappedMask[i] = 2 * DMask[WordMask[i] / 2] + WordMask[i] % 2;
-        if (makeArrayRef(MappedMask).equals({0, 0, 1, 1, 2, 2, 3, 3}) ||
-            makeArrayRef(MappedMask).equals({4, 4, 5, 5, 6, 6, 7, 7})) {
+        if (ArrayRef(MappedMask).equals({0, 0, 1, 1, 2, 2, 3, 3}) ||
+            ArrayRef(MappedMask).equals({4, 4, 5, 5, 6, 6, 7, 7})) {
           // We can replace all three shuffles with an unpack.
           V = DAG.getBitcast(VT, D.getOperand(0));
           return DAG.getNode(MappedMask[0] == 0 ? X86ISD::UNPCKL
@@ -55530,7 +55530,7 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
       SDValue Ext = InVec.getOperand(0);
       if (Ext.getValueSizeInBits() > SizeInBits)
         Ext = extractSubVector(Ext, 0, DAG, DL, SizeInBits);
-      unsigned ExtOp = getOpcode_EXTEND_VECTOR_INREG(InOpcode);
+      unsigned ExtOp = DAG.getOpcode_EXTEND_VECTOR_INREG(InOpcode);
       return DAG.getNode(ExtOp, DL, VT, Ext);
     }
     if (IdxVal == 0 && InOpcode == ISD::VSELECT &&
@@ -55771,7 +55771,7 @@ static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
   // -> EXTEND_VECTOR_INREG(X).
   // TODO: Handle non-zero subvector indices.
   if (InOpcode == ISD::EXTRACT_SUBVECTOR && In.getConstantOperandVal(1) == 0 &&
-      In.getOperand(0).getOpcode() == getOpcode_EXTEND(Opcode) &&
+      In.getOperand(0).getOpcode() == DAG.getOpcode_EXTEND(Opcode) &&
       In.getOperand(0).getOperand(0).getValueSizeInBits() ==
           In.getValueSizeInBits())
     return DAG.getNode(Opcode, DL, VT, In.getOperand(0).getOperand(0));

@@ -130,8 +130,8 @@ get_table_positive(int exponent, size_t i, const size_t constant) {
 // calculations.
 // The formula being used looks more like this:
 // floor(10^(9*(-i)) * 2^(c_0 + (-e))) % (10^9 * 2^c_0)
-constexpr inline cpp::UInt<MID_INT_SIZE>
-get_table_negative(int exponent, size_t i, const size_t constant) {
+inline cpp::UInt<MID_INT_SIZE> get_table_negative(int exponent, size_t i,
+                                                  const size_t constant) {
   constexpr size_t INT_SIZE = 1024;
   int shift_amount = constant - exponent;
   cpp::UInt<INT_SIZE> num(1);
@@ -233,7 +233,7 @@ class FloatToString {
   // constexpr void init_convert();
 
 public:
-  constexpr FloatToString<T>(T init_float) : float_bits(init_float) {
+  constexpr FloatToString(T init_float) : float_bits(init_float) {
     is_negative = float_bits.get_sign();
     exponent = float_bits.get_exponent();
     mantissa = float_bits.get_explicit_mantissa();

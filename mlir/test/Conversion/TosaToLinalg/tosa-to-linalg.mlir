@@ -400,12 +400,6 @@ func.func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
   %19 = "tosa.clamp"(%0) {min_int = 1 : i64, max_int = 5 : i64, min_fp = 1.0 : f32, max_fp = 5.0 : f32} : (tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
-  // CHECK: arith.constant -32768
-  // CHECK: arith.constant 32767
-  // CHECK: arith.cmpi slt
-  // CHECK: select
-  // CHECK: arith.cmpi slt
-  // CHECK: select
   // CHECK: arith.trunci
   %20 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi16>
 

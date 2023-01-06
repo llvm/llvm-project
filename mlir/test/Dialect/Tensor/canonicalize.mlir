@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -canonicalize | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -canonicalize="test-convergence" | FileCheck %s
 
 // Checks that NOP casts are removed.
 // CHECK-LABEL: cast_values
@@ -1013,9 +1013,34 @@ func.func @reshape_splat_constant_int32() -> tensor<2x4x2xi32> {
 //       CHECK:   %[[CST:.*]] = arith.constant dense<{{.*}}> : tensor<2x4x2xi32>
 //   CHECK-NOT:   tensor.expand_shape
 //       CHECK:   return %[[CST]]
+// -----
+func.func @expand_shape_splat(%arg : f32) -> tensor<2x2x2xf32> {
+  %c0 = tensor.splat %arg : tensor<2x4xf32>
+  %0 = tensor.expand_shape %c0 [[0], [1, 2]]
+      : tensor<2x4xf32> into tensor<2x2x2xf32>
+  return %0 : tensor<2x2x2xf32>
+}
+// CHECK-LABEL: @expand_shape_splat
+// CHECK-SAME:    %[[ARG0:.+]]: f32
+//       CHECK:   %[[CST:.*]] = tensor.splat %[[ARG0:.+]] : tensor<2x2x2xf32>
+//   CHECK-NOT:   tensor.expand_shape
+//       CHECK:   return %[[CST]]
 
 // -----
 
+func.func @collapse_shape_splat(%arg : f32) -> tensor<2x4xf32> {
+  %c0 = tensor.splat %arg : tensor<2x2x2xf32>
+  %0 = tensor.collapse_shape %c0 [[0], [1, 2]]
+      : tensor<2x2x2xf32> into tensor<2x4xf32>
+  return %0 : tensor<2x4xf32>
+}
+// CHECK-LABEL: @collapse_shape_splat
+// CHECK-SAME:    %[[ARG0:.+]]: f32
+//       CHECK:   %[[CST:.*]] = tensor.splat %[[ARG0:.+]] : tensor<2x4xf32>
+//   CHECK-NOT:   tensor.collapse_shape
+//       CHECK:   return %[[CST]]
+
+// -----
 func.func @reshape_splat_constant_int16() -> tensor<2x4x2xi16> {
   %c0 = arith.constant dense<42> : tensor<2x8xi16>
   %0 = tensor.expand_shape %c0 [[0], [1, 2]]

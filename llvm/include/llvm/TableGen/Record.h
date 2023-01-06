@@ -255,7 +255,7 @@ public:
   void Profile(FoldingSetNodeID &ID) const;
 
   ArrayRef<Record *> getClasses() const {
-    return makeArrayRef(getTrailingObjects<Record *>(), NumClasses);
+    return ArrayRef(getTrailingObjects<Record *>(), NumClasses);
   }
 
   using const_record_iterator = Record * const *;
@@ -742,7 +742,7 @@ public:
   std::string getAsString() const override;
 
   ArrayRef<Init*> getValues() const {
-    return makeArrayRef(getTrailingObjects<Init *>(), NumValues);
+    return ArrayRef(getTrailingObjects<Init *>(), NumValues);
   }
 
   const_iterator begin() const { return getTrailingObjects<Init *>(); }
@@ -1018,11 +1018,11 @@ public:
   }
 
   ArrayRef<Init *> getConds() const {
-    return makeArrayRef(getTrailingObjects<Init *>(), NumConds);
+    return ArrayRef(getTrailingObjects<Init *>(), NumConds);
   }
 
   ArrayRef<Init *> getVals() const {
-    return makeArrayRef(getTrailingObjects<Init *>()+NumConds, NumConds);
+    return ArrayRef(getTrailingObjects<Init *>() + NumConds, NumConds);
   }
 
   Init *Fold(Record *CurRec) const;
@@ -1340,7 +1340,7 @@ public:
   size_t         args_size () const { return NumArgs; }
   bool           args_empty() const { return NumArgs == 0; }
 
-  ArrayRef<Init *> args() const { return makeArrayRef(args_begin(), NumArgs); }
+  ArrayRef<Init *> args() const { return ArrayRef(args_begin(), NumArgs); }
 
   Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off anonymous def");
@@ -1448,11 +1448,11 @@ public:
   }
 
   ArrayRef<Init *> getArgs() const {
-    return makeArrayRef(getTrailingObjects<Init *>(), NumArgs);
+    return ArrayRef(getTrailingObjects<Init *>(), NumArgs);
   }
 
   ArrayRef<StringInit *> getArgNames() const {
-    return makeArrayRef(getTrailingObjects<StringInit *>(), NumArgNames);
+    return ArrayRef(getTrailingObjects<StringInit *>(), NumArgNames);
   }
 
   Init *resolveReferences(Resolver &R) const override;

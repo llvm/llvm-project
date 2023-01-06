@@ -237,6 +237,14 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         DefaultDest->removePredecessor(ParentBB);
         i = SI->removeCase(i);
         e = SI->case_end();
+
+        // Removing this case may have made the condition constant. In that
+        // case, update CI and restart iteration through the cases.
+        if (auto *NewCI = dyn_cast<ConstantInt>(SI->getCondition())) {
+          CI = NewCI;
+          i = SI->case_begin();
+        }
+
         Changed = true;
         continue;
       }
@@ -611,10 +619,8 @@ void llvm::RecursivelyDeleteTriviallyDeadInstructions(
 bool llvm::replaceDbgUsesWithUndef(Instruction *I) {
   SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   findDbgUsers(DbgUsers, I);
-  for (auto *DII : DbgUsers) {
-    Value *Undef = UndefValue::get(I->getType());
-    DII->replaceVariableLocationOp(I, Undef);
-  }
+  for (auto *DII : DbgUsers)
+    DII->setKillLocation();
   return !DbgUsers.empty();
 }
 
@@ -1906,8 +1912,7 @@ void llvm::salvageDebugInfoForDbgValues(
       // using DIArgList for dbg.assign yet. FIXME: support this.
       // Also do not salvage if the resulting DIArgList would contain an
       // unreasonably large number of values.
-      Value *Undef = UndefValue::get(I.getOperand(0)->getType());
-      DII->replaceVariableLocationOp(I.getOperand(0), Undef);
+      DII->setKillLocation();
     }
     LLVM_DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
     Salvaged = true;
@@ -1916,10 +1921,8 @@ void llvm::salvageDebugInfoForDbgValues(
   if (Salvaged)
     return;
 
-  for (auto *DII : DbgUsers) {
-    Value *Undef = UndefValue::get(I.getType());
-    DII->replaceVariableLocationOp(&I, Undef);
-  }
+  for (auto *DII : DbgUsers)
+    DII->setKillLocation();
 }
 
 Value *getSalvageOpsForGEP(GetElementPtrInst *GEP, const DataLayout &DL,

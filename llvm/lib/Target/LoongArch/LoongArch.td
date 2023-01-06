@@ -17,6 +17,9 @@ include "llvm/Target/Target.td"
 def Feature64Bit
     : SubtargetFeature<"64bit", "HasLA64", "true",
                        "LA64 Basic Integer and Privilege Instruction Set">;
+def Feature32Bit
+    : SubtargetFeature<"32bit", "HasLA32", "true",
+                       "LA32 Basic Integer and Privilege Instruction Set">;
 def IsLA64
     : Predicate<"Subtarget->is64Bit()">,
       AssemblerPredicate<(all_of Feature64Bit),
@@ -124,7 +127,7 @@ include "LoongArchInstrInfo.td"
 // LoongArch processors supported.
 //===----------------------------------------------------------------------===//
 
-def : ProcessorModel<"generic-la32", NoSchedModel, []>;
+def : ProcessorModel<"generic-la32", NoSchedModel, [Feature32Bit]>;
 def : ProcessorModel<"generic-la64", NoSchedModel, [Feature64Bit]>;
 
 // Support generic for compatibility with other targets. The triple will be used

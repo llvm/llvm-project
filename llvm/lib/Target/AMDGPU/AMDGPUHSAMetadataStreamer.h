@@ -58,6 +58,8 @@ protected:
   virtual void emitVersion() = 0;
   virtual void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                                     msgpack::ArrayDocNode Args) = 0;
+  virtual void emitKernelAttrs(const Function &Func,
+                               msgpack::MapDocNode Kern) = 0;
 };
 
 class MetadataStreamerMsgPackV3 : public MetadataStreamer {
@@ -90,7 +92,7 @@ protected:
 
   void emitKernelLanguage(const Function &Func, msgpack::MapDocNode Kern);
 
-  void emitKernelAttrs(const Function &Func, msgpack::MapDocNode Kern);
+  void emitKernelAttrs(const Function &Func, msgpack::MapDocNode Kern) override;
 
   void emitKernelArgs(const MachineFunction &MF, msgpack::MapDocNode Kern);
 
@@ -149,6 +151,7 @@ protected:
   void emitVersion() override;
   void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                             msgpack::ArrayDocNode Args) override;
+  void emitKernelAttrs(const Function &Func, msgpack::MapDocNode Kern) override;
 
 public:
   MetadataStreamerMsgPackV5() = default;
@@ -209,6 +212,10 @@ protected:
   void emitVersion() override;
   void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                             msgpack::ArrayDocNode Args) override {
+    llvm_unreachable("Dummy override should not be invoked!");
+  }
+  void emitKernelAttrs(const Function &Func,
+                       msgpack::MapDocNode Kern) override {
     llvm_unreachable("Dummy override should not be invoked!");
   }
 

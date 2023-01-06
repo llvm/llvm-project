@@ -391,8 +391,10 @@ constexpr ProcInfo Processors[] = {
   { {"sierraforest"}, CK_Sierraforest, FEATURE_AVX2, FeaturesSierraforest },
   // Grandridge microarchitecture based processors.
   { {"grandridge"}, CK_Grandridge, FEATURE_AVX2, FeaturesGrandridge },
-  // Graniterapids microarchitecture based processors.
+  // Granite Rapids microarchitecture based processors.
   { {"graniterapids"}, CK_Graniterapids, FEATURE_AVX512BF16, FeaturesGraniteRapids },
+  // Emerald Rapids microarchitecture based processors.
+  { {"emeraldrapids"}, CK_Emeraldrapids, FEATURE_AVX512BF16, FeaturesSapphireRapids },
   // Knights Landing processor.
   { {"knl"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL },
   // Knights Mill processor.

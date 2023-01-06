@@ -21,7 +21,7 @@ namespace misc {
 /// This check warns on variables which could be declared const but are not.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-const-correctness.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/misc/const-correctness.html
 class ConstCorrectnessCheck : public ClangTidyCheck {
 public:
   ConstCorrectnessCheck(StringRef Name, ClangTidyContext *Context);

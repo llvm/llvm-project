@@ -102,25 +102,6 @@ For more information about LLVM's data structures and the tradeoffs they make,
 please consult `that section of the programmer's manual
 <https://llvm.org/docs/ProgrammersManual.html#picking-the-right-data-structure-for-a-task>`_.
 
-Guidelines for Go code
-----------------------
-
-Any code written in the Go programming language is not subject to the
-formatting rules below. Instead, we adopt the formatting rules enforced by
-the `gofmt`_ tool.
-
-Go code should strive to be idiomatic. Two good sets of guidelines for what
-this means are `Effective Go`_ and `Go Code Review Comments`_.
-
-.. _gofmt:
-  https://golang.org/cmd/gofmt/
-
-.. _Effective Go:
-  https://golang.org/doc/effective_go.html
-
-.. _Go Code Review Comments:
-  https://github.com/golang/go/wiki/CodeReviewComments
-
 Mechanical Source Issues
 ========================
 
@@ -1112,10 +1093,8 @@ In general, names should be in camel case (e.g. ``TextFileReader`` and
   nouns and start with an upper-case letter (e.g. ``TextFileReader``).
 
 * **Variable names** should be nouns (as they represent state).  The name should
-  be camel case.  In ``llvm/``, ``clang/``, ``clang-tools-extra/``, ``polly/``,
-  and ``bolt/``, the name should start with an upper-case letter (e.g.
-  ``Leader`` or ``Boats``); start with a lower case-letter letter for other
-  directories.
+  be camel case, and start with an upper case letter (e.g. ``Leader`` or
+  ``Boats``).
 
 * **Function names** should be verb phrases (as they represent actions), and
   command-like function should be imperative.  The name should be camel case,

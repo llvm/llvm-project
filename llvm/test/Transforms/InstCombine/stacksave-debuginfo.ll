@@ -8,7 +8,7 @@ declare void @llvm.stackrestore(ptr) #0
 
 define ptr @test1(i32 %P) !dbg !6 {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr undef
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr poison
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[P:%.*]] to i64, !dbg !13
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, i64 [[TMP1]], align 4, !dbg !13
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[A]]

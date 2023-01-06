@@ -1,5 +1,6 @@
-// RUN: mlir-opt %s -canonicalize --split-input-file \
-// RUN:   -allow-unregistered-dialect |\
+// RUN: mlir-opt %s \
+// RUN:   -canonicalize="test-convergence" \
+// RUN:   --split-input-file -allow-unregistered-dialect | \
 // RUN: FileCheck %s
 
 // Basic folding of to_tensor(to_memref(t)) -> t

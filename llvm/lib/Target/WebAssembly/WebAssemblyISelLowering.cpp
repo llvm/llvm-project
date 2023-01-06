@@ -194,6 +194,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                    MVT::v2f64})
       setOperationAction(ISD::VECTOR_SHUFFLE, T, Custom);
 
+    // Support splatting
+    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
+		   MVT::v2f64})
+      setOperationAction(ISD::SPLAT_VECTOR, T, Legal);
+
     // Custom lowering since wasm shifts must have a scalar shift amount
     for (auto Op : {ISD::SHL, ISD::SRA, ISD::SRL})
       for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64})
@@ -2161,18 +2166,8 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       return IsConstant(Lane);
     };
   } else {
-    // Use a splat, but possibly a load_splat
-    LoadSDNode *SplattedLoad;
-    if ((SplattedLoad = dyn_cast<LoadSDNode>(SplatValue)) &&
-        SplattedLoad->getMemoryVT() == VecT.getVectorElementType()) {
-      Result = DAG.getMemIntrinsicNode(
-          WebAssemblyISD::LOAD_SPLAT, DL, DAG.getVTList(VecT),
-          {SplattedLoad->getChain(), SplattedLoad->getBasePtr(),
-           SplattedLoad->getOffset()},
-          SplattedLoad->getMemoryVT(), SplattedLoad->getMemOperand());
-    } else {
-      Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
-    }
+    // Use a splat (which might be selected as a load splat)
+    Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
     IsLaneConstructed = [&SplatValue](size_t _, const SDValue &Lane) {
       return Lane == SplatValue;
     };
@@ -2359,6 +2354,32 @@ performVECTOR_SHUFFLECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   SDValue NewShuffle = DAG.getVectorShuffle(
       SrcType, SDLoc(N), CastOp, DAG.getUNDEF(SrcType), Shuffle->getMask());
   return DAG.getBitcast(DstType, NewShuffle);
+}
+
+/// Convert ({u,s}itofp vec) --> ({u,s}itofp ({s,z}ext vec)) so it doesn't get
+/// split up into scalar instructions during legalization, and the vector
+/// extending instructions are selected in performVectorExtendCombine below.
+static SDValue
+performVectorExtendToFPCombine(SDNode *N,
+                               TargetLowering::DAGCombinerInfo &DCI) {
+  auto &DAG = DCI.DAG;
+  assert(N->getOpcode() == ISD::UINT_TO_FP ||
+         N->getOpcode() == ISD::SINT_TO_FP);
+
+  EVT InVT = N->getOperand(0)->getValueType(0);
+  EVT ResVT = N->getValueType(0);
+  MVT ExtVT;
+  if (ResVT == MVT::v4f32 && (InVT == MVT::v4i16 || InVT == MVT::v4i8))
+    ExtVT = MVT::v4i32;
+  else if (ResVT == MVT::v2f64 && (InVT == MVT::v2i16 || InVT == MVT::v2i8))
+    ExtVT = MVT::v2i32;
+  else
+    return SDValue();
+
+  unsigned Op =
+      N->getOpcode() == ISD::UINT_TO_FP ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
+  SDValue Conv = DAG.getNode(Op, SDLoc(N), ExtVT, N->getOperand(0));
+  return DAG.getNode(N->getOpcode(), SDLoc(N), ResVT, Conv);
 }
 
 static SDValue
@@ -2646,6 +2667,9 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
     return performVectorExtendCombine(N, DCI);
+  case ISD::UINT_TO_FP:
+  case ISD::SINT_TO_FP:
+    return performVectorExtendToFPCombine(N, DCI);
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
   case ISD::FP_ROUND:

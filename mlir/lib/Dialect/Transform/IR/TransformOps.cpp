@@ -261,8 +261,7 @@ LogicalResult transform::AlternativesOp::verify() {
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::CastOp::applyToOne(Operation *target,
-                              SmallVectorImpl<Operation *> &results,
+transform::CastOp::applyToOne(Operation *target, ApplyToEachResultList &results,
                               transform::TransformState &state) {
   results.push_back(target);
   return DiagnosedSilenceableFailure::success();
@@ -281,7 +280,8 @@ bool transform::CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return llvm::all_of(
       std::initializer_list<Type>{inputs.front(), outputs.front()},
       [](Type ty) {
-        return ty.isa<pdl::OperationType, transform::TransformTypeInterface>();
+        return ty
+            .isa<pdl::OperationType, transform::TransformHandleTypeInterface>();
       });
 }
 
@@ -370,9 +370,9 @@ LogicalResult transform::ForeachOp::verify() {
     return emitOpError() << "expects the same number of results as the "
                             "terminator has operands";
   for (Value v : yieldOp.getOperands())
-    if (!v.getType().isa<TransformTypeInterface>())
-      return yieldOp->emitOpError(
-          "expects operands to have types implementing TransformTypeInterface");
+    if (!v.getType().isa<TransformHandleTypeInterface>())
+      return yieldOp->emitOpError("expects operands to have types implementing "
+                                  "TransformHandleTypeInterface");
   return success();
 }
 

@@ -2741,13 +2741,13 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     const MCInstrDesc &NewDesc = get(NewOpC);
     MI->setDesc(NewDesc);
 
-    if (NewDesc.ImplicitDefs)
+    if (NewDesc.getImplicitDefs())
       for (const MCPhysReg *ImpDefs = NewDesc.getImplicitDefs();
            *ImpDefs; ++ImpDefs)
         if (!MI->definesRegister(*ImpDefs))
           MI->addOperand(*MI->getParent()->getParent(),
                          MachineOperand::CreateReg(*ImpDefs, true, true));
-    if (NewDesc.ImplicitUses)
+    if (NewDesc.getImplicitUses())
       for (const MCPhysReg *ImpUses = NewDesc.getImplicitUses();
            *ImpUses; ++ImpUses)
         if (!MI->readsRegister(*ImpUses))
@@ -2993,7 +2993,7 @@ PPCInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_TLSLD_LO, "ppc-tlsld-lo"},
       {MO_TOC_LO, "ppc-toc-lo"},
       {MO_TLS, "ppc-tls"}};
-  return makeArrayRef(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 
 ArrayRef<std::pair<unsigned, const char *>>
@@ -3012,7 +3012,7 @@ PPCInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
       {MO_GOT_TLSGD_PCREL_FLAG, "ppc-got-tlsgd-pcrel"},
       {MO_GOT_TLSLD_PCREL_FLAG, "ppc-got-tlsld-pcrel"},
       {MO_GOT_TPREL_PCREL_FLAG, "ppc-got-tprel-pcrel"}};
-  return makeArrayRef(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 
 // Expand VSX Memory Pseudo instruction to either a VSX or a FP instruction.

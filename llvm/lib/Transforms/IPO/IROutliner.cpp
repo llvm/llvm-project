@@ -1277,7 +1277,7 @@ static std::optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
 /// \param [in,out] Region - The region of code to be analyzed.
 /// \param [in] Outputs - The values found by the code extractor.
 static void
-findExtractedOutputToOverallOutputMapping(OutlinableRegion &Region,
+findExtractedOutputToOverallOutputMapping(Module &M, OutlinableRegion &Region,
                                           SetVector<Value *> &Outputs) {
   OutlinableGroup &Group = *Region.Parent;
   IRSimilarityCandidate &C = *Region.Candidate;
@@ -1350,7 +1350,8 @@ findExtractedOutputToOverallOutputMapping(OutlinableRegion &Region,
     // the output, so we add a pointer type to the argument types of the overall
     // function to handle this output and create a mapping to it.
     if (!TypeFound) {
-      Group.ArgumentTypes.push_back(PointerType::getUnqual(Output->getType()));
+      Group.ArgumentTypes.push_back(Output->getType()->getPointerTo(
+          M.getDataLayout().getAllocaAddrSpace()));
       // Mark the new pointer type as the last value in the aggregate argument
       // list.
       unsigned ArgTypeIdx = Group.ArgumentTypes.size() - 1;
@@ -1418,7 +1419,7 @@ void IROutliner::findAddInputsOutputs(Module &M, OutlinableRegion &Region,
 
   // Map the outputs found by the CodeExtractor to the arguments found for
   // the overall function.
-  findExtractedOutputToOverallOutputMapping(Region, Outputs);
+  findExtractedOutputToOverallOutputMapping(M, Region, Outputs);
 }
 
 /// Replace the extracted function in the Region with a call to the overall

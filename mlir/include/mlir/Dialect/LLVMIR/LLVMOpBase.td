@@ -234,12 +234,16 @@ class LLVM_OpBase<Dialect dialect, string mnemonic, list<Trait> traits = []> :
   //             of the MLIR operation argument with the given name, or if the
   //             name matches the result name, by a reference to store the
   //             result of the newly created MLIR operation to;
+  //   - $_op - substituted by a reference to store the newly created MLIR
+  //            operation (only for MLIR operations that return no result);
   //   - $_int_attr - substituted by a call to an integer attribute matcher;
   //   - $_var_attr - substituted by a call to a variable attribute matcher;
   //   - $_resultType - substituted with the MLIR result type;
   //   - $_location - substituted with the MLIR location;
   //   - $_builder - substituted with the MLIR builder;
   //   - $_qualCppClassName - substitiuted with the MLIR operation class name.
+  // Always either store a reference to the result of the newly created
+  // operation, or to the operation itself if it does not return a result.
   // Additionally, `$$` can be used to produce the dollar character.
   string mlirBuilder = "";
 
@@ -388,7 +392,7 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
       $_location, resultTypes, *mlirOperands);
     }] # !if(!gt(requiresFastmath, 0),
       "moduleImport.setFastmathFlagsAttr(inst, op);", "")
-    # !if(!gt(numResults, 0), "$res = op;", "(void)op;");
+    # !if(!gt(numResults, 0), "$res = op;", "$_op = op;");
 }
 
 // Base class for LLVM intrinsic operations, should not be used directly. Places

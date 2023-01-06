@@ -328,20 +328,20 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NOFMV-NEXT:    [[ADD5:%.*]] = add nsw i32 [[ADD3]], [[CALL4]]
 // CHECK-NOFMV-NEXT:    ret i32 [[ADD5]]
 
-// CHECK: attributes #0 = { noinline nounwind optnone "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+lse,+neon" }
-// CHECK: attributes #1 = { noinline nounwind optnone "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon,+sve,+sve2" }
-// CHECK: attributes #2 = { noinline nounwind optnone "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #3 = { noinline nounwind optnone "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon,+sha2" }
-// CHECK: attributes #4 = { noinline nounwind optnone "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+mte,+neon,+sha2" }
-// CHECK: attributes #5 = { noinline nounwind optnone "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon" }
-// CHECK: attributes #6 = { noinline nounwind optnone "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+crc,+dotprod,+fp-armv8,+neon" }
-// CHECK: attributes #7 = { noinline nounwind optnone "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon,+rand" }
-// CHECK: attributes #8 = { noinline nounwind optnone "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+predres,+rcpc" }
-// CHECK: attributes #9 = { noinline nounwind optnone "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon,+sve,+sve2,+sve2-aes,+wfxt" }
-// CHECK: attributes #10 = { noinline nounwind optnone "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon" }
-// CHECK: attributes #11 = { noinline nounwind optnone "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+complxnum,+fp-armv8,+fullfp16,+neon,+sve,+sve2,+sve2-bitperm" }
-// CHECK: attributes #12 = { noinline nounwind optnone "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bti" }
-// CHECK: attributes #13 = { noinline nounwind optnone "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon,+sb,+sve" }
+// CHECK: attributes #0 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+lse,+neon" }
+// CHECK: attributes #1 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon,+sve,+sve2" }
+// CHECK: attributes #2 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #3 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon,+sha2" }
+// CHECK: attributes #4 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+mte,+neon,+sha2" }
+// CHECK: attributes #5 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon" }
+// CHECK: attributes #6 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+crc,+dotprod,+fp-armv8,+neon" }
+// CHECK: attributes #7 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon,+rand" }
+// CHECK: attributes #8 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+predres,+rcpc" }
+// CHECK: attributes #9 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon,+sve,+sve2,+sve2-aes,+wfxt" }
+// CHECK: attributes #10 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon" }
+// CHECK: attributes #11 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+complxnum,+fp-armv8,+fullfp16,+neon,+sve,+sve2,+sve2-bitperm" }
+// CHECK: attributes #12 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bti" }
+// CHECK: attributes #13 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon,+sb,+sve" }
 
-// CHECK-NOFMV: attributes #0 = { noinline nounwind optnone "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-fmv" }
-// CHECK-NOFMV: attributes #1 = { "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-fmv" }
+// CHECK-NOFMV: attributes #0 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-fmv" }
+// CHECK-NOFMV: attributes #1 = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-fmv" }

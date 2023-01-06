@@ -1110,9 +1110,8 @@ define double @vreduce_fwadd_v32f64(ptr %x, double %s) {
 ; CHECK-NEXT:    vslidedown.vi v16, v8, 16
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwadd.vv v24, v8, v16
-; CHECK-NEXT:    vsetivli zero, 16, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    vfredusum.vs v8, v24, v8
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret

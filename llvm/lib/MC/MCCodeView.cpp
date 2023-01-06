@@ -321,7 +321,7 @@ ArrayRef<MCCVLoc> CodeViewContext::getLinesForExtent(size_t L, size_t R) {
     return std::nullopt;
   if (L >= MCCVLines.size())
     return std::nullopt;
-  return makeArrayRef(&MCCVLines[L], R - L);
+  return ArrayRef(&MCCVLines[L], R - L);
 }
 
 void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,

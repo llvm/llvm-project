@@ -1221,6 +1221,36 @@ struct FormatStyle {
   /// \version 3.8
   BraceWrappingFlags BraceWrapping;
 
+  /// Different ways to break after attributes.
+  enum AttributeBreakingStyle : int8_t {
+    /// Always break after attributes.
+    /// \code
+    ///   [[nodiscard]]
+    ///   inline int f();
+    ///   [[gnu::const]] [[nodiscard]]
+    ///   int g();
+    /// \endcode
+    ABS_Always,
+    /// Leave the line breaking after attributes as is.
+    /// \code
+    ///   [[nodiscard]] inline int f();
+    ///   [[gnu::const]] [[nodiscard]]
+    ///   int g();
+    /// \endcode
+    ABS_Leave,
+    /// Never break after attributes.
+    /// \code
+    ///   [[nodiscard]] inline int f();
+    ///   [[gnu::const]] [[nodiscard]] int g();
+    /// \endcode
+    ABS_Never,
+  };
+
+  /// Break after a group of C++11 attributes before a function
+  /// declaration/definition name.
+  /// \version 16
+  AttributeBreakingStyle BreakAfterAttributes;
+
   /// If ``true``, clang-format will always break after a Json array `[`
   /// otherwise it will scan until the closing `]` to determine if it should add
   /// newlines between elements (prettier compatible).
@@ -2419,6 +2449,10 @@ struct FormatStyle {
   /// \endcode
   /// \version 15
   bool InsertBraces;
+
+  /// Insert a newline at end of file if missing.
+  /// \version 16
+  bool InsertNewlineAtEOF;
 
   /// The style of inserting trailing commas into container literals.
   enum TrailingCommaStyle : int8_t {
@@ -4079,6 +4113,7 @@ struct FormatStyle {
            BinPackArguments == R.BinPackArguments &&
            BinPackParameters == R.BinPackParameters &&
            BitFieldColonSpacing == R.BitFieldColonSpacing &&
+           BreakAfterAttributes == R.BreakAfterAttributes &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
            BreakArrays == R.BreakArrays &&
            BreakBeforeBinaryOperators == R.BreakBeforeBinaryOperators &&
@@ -4120,6 +4155,7 @@ struct FormatStyle {
            IndentWidth == R.IndentWidth &&
            IndentWrappedFunctionNames == R.IndentWrappedFunctionNames &&
            InsertBraces == R.InsertBraces &&
+           InsertNewlineAtEOF == R.InsertNewlineAtEOF &&
            IntegerLiteralSeparator.Binary == R.IntegerLiteralSeparator.Binary &&
            IntegerLiteralSeparator.Decimal ==
                R.IntegerLiteralSeparator.Decimal &&

@@ -170,6 +170,8 @@ static mlir::Type unwrapElementType(mlir::Type type) {
 fir::ExtendedValue Fortran::lower::genExtAddrInInitializer(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const Fortran::lower::SomeExpr &addr) {
+  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
+    TODO(loc, "generate initializer address in HLFIR");
   Fortran::lower::SymMap globalOpSymMap;
   Fortran::lower::AggregateStoreMap storeMap;
   Fortran::lower::StatementContext stmtCtx;
@@ -193,6 +195,8 @@ mlir::Value Fortran::lower::genInitialDataTarget(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     mlir::Type boxType, const Fortran::lower::SomeExpr &initialTarget,
     bool couldBeInEquivalence) {
+  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
+    TODO(loc, "initial data target in HLFIR");
   Fortran::lower::SymMap globalOpSymMap;
   Fortran::lower::AggregateStoreMap storeMap;
   Fortran::lower::StatementContext stmtCtx;

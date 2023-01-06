@@ -8,6 +8,8 @@
 // CHECK-DAG: @expm1f(f32) -> f32 attributes {llvm.readnone}
 // CHECK-DAG: @atan2(f64, f64) -> f64 attributes {llvm.readnone}
 // CHECK-DAG: @atan2f(f32, f32) -> f32 attributes {llvm.readnone}
+// CHECK-DAG: @cbrt(f64) -> f64 attributes {llvm.readnone}
+// CHECK-DAG: @cbrtf(f32) -> f32 attributes {llvm.readnone}
 // CHECK-DAG: @tan(f64) -> f64 attributes {llvm.readnone}
 // CHECK-DAG: @tanf(f32) -> f32 attributes {llvm.readnone}
 // CHECK-DAG: @tanh(f64) -> f64 attributes {llvm.readnone}
@@ -237,6 +239,18 @@ func.func @trunc_caller(%float: f32, %double: f64) -> (f32, f64) {
   %float_result = math.trunc %float : f32
   // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @trunc(%[[DOUBLE]]) : (f64) -> f64
   %double_result = math.trunc %double : f64
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
+  return %float_result, %double_result : f32, f64
+}
+
+// CHECK-LABEL: func @cbrt_caller
+// CHECK-SAME: %[[FLOAT:.*]]: f32
+// CHECK-SAME: %[[DOUBLE:.*]]: f64
+func.func @cbrt_caller(%float: f32, %double: f64) -> (f32, f64)  {
+  // CHECK-DAG: %[[FLOAT_RESULT:.*]] = call @cbrtf(%[[FLOAT]]) : (f32) -> f32
+  %float_result = math.cbrt %float : f32
+  // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @cbrt(%[[DOUBLE]]) : (f64) -> f64
+  %double_result = math.cbrt %double : f64
   // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
   return %float_result, %double_result : f32, f64
 }

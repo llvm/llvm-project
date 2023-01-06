@@ -1134,7 +1134,7 @@ COFFObjectFile::getSymbolAuxData(COFFSymbolRef Symbol) const {
            "Aux Symbol data did not point to the beginning of a symbol");
 #endif
   }
-  return makeArrayRef(Aux, Symbol.getNumberOfAuxSymbols() * SymbolSize);
+  return ArrayRef(Aux, Symbol.getNumberOfAuxSymbols() * SymbolSize);
 }
 
 uint32_t COFFObjectFile::getSymbolIndex(COFFSymbolRef Symbol) const {
@@ -1199,7 +1199,7 @@ Error COFFObjectFile::getSectionContents(const coff_section *Sec,
   uint32_t SectionSize = getSectionSize(Sec);
   if (Error E = checkOffset(Data, ConStart, SectionSize))
     return E;
-  Res = makeArrayRef(reinterpret_cast<const uint8_t *>(ConStart), SectionSize);
+  Res = ArrayRef(reinterpret_cast<const uint8_t *>(ConStart), SectionSize);
   return Error::success();
 }
 

@@ -341,12 +341,11 @@ public:
         }
       }
     } else {
-      for (auto I = Func.rbegin(), E = Func.rend(); I != E; ++I) {
-        Worklist.push(&*I);
+      for (BinaryBasicBlock &BB : llvm::reverse(Func)) {
+        Worklist.push(&BB);
         MCInst *Prev = nullptr;
-        for (auto J = (*I).rbegin(), E2 = (*I).rend(); J != E2; ++J) {
-          MCInst &Inst = *J;
-          PrevPoint[&Inst] = Prev ? ProgramPoint(Prev) : ProgramPoint(&*I);
+        for (MCInst &Inst : llvm::reverse(BB)) {
+          PrevPoint[&Inst] = Prev ? ProgramPoint(Prev) : ProgramPoint(&BB);
           Prev = &Inst;
         }
       }
@@ -417,8 +416,8 @@ public:
         for (MCInst &Inst : *BB)
           doNext(Inst, *BB);
       else
-        for (auto I = BB->rbegin(), E = BB->rend(); I != E; ++I)
-          doNext(*I, *BB);
+        for (MCInst &Inst : llvm::reverse(*BB))
+          doNext(Inst, *BB);
 
       if (Changed) {
         if (!Backward) {

@@ -467,9 +467,8 @@ define void @buildvec_seq_v9i8(ptr %x) {
 ; RV32-NEXT:    li a1, 3
 ; RV32-NEXT:    sb a1, 8(a0)
 ; RV32-NEXT:    li a1, 73
-; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    vmv.v.i v9, 2
 ; RV32-NEXT:    li a1, 36
 ; RV32-NEXT:    vmv.s.x v8, a1

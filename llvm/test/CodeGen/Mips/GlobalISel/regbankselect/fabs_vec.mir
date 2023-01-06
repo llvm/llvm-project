@@ -2,8 +2,8 @@
 # RUN: llc -mtriple=mipsel-linux-gnu -mcpu=mips32r5 -mattr=+msa,+fp64,+nan2008 -run-pass=regbankselect -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=P5600
 --- |
 
-  define void @fabs_v4f32(<4 x float>* %a, <4 x float>* %c) { entry: ret void }
-  define void @fabs_v2f64(<2 x double>* %a, <2 x double>* %c) { entry: ret void }
+  define void @fabs_v4f32(ptr %a, ptr %c) { entry: ret void }
+  define void @fabs_v2f64(ptr %a, ptr %c) { entry: ret void }
 
 ...
 ---

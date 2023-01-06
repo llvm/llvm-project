@@ -114,7 +114,7 @@ void MCDwarfLineEntry::make(MCStreamer *MCOS, MCSection *Section) {
 }
 
 //
-// This helper routine returns an expression of End - Start + IntVal .
+// This helper routine returns an expression of End - Start - IntVal .
 //
 static inline const MCExpr *makeEndMinusStartExpr(MCContext &Ctx,
                                                   const MCSymbol &Start,
@@ -308,10 +308,9 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   };
   assert(std::size(StandardOpcodeLengths) >=
          (Params.DWARF2LineOpcodeBase - 1U));
-  return Emit(
-      MCOS, Params,
-      makeArrayRef(StandardOpcodeLengths, Params.DWARF2LineOpcodeBase - 1),
-      LineStr);
+  return Emit(MCOS, Params,
+              ArrayRef(StandardOpcodeLengths, Params.DWARF2LineOpcodeBase - 1),
+              LineStr);
 }
 
 static const MCExpr *forceExpAbs(MCStreamer &OS, const MCExpr* Expr) {

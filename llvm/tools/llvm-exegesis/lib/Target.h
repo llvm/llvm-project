@@ -160,7 +160,7 @@ public:
   // Creates a benchmark runner for the given mode.
   Expected<std::unique_ptr<BenchmarkRunner>> createBenchmarkRunner(
       InstructionBenchmark::ModeE Mode, const LLVMState &State,
-      bool BenchmarkSkipMeasurements,
+      BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       InstructionBenchmark::ResultAggregationModeE ResultAggMode =
           InstructionBenchmark::Min) const;
 
@@ -199,10 +199,10 @@ private:
       const LLVMState &State, const SnippetGenerator::Options &Opts) const;
   std::unique_ptr<BenchmarkRunner> virtual createLatencyBenchmarkRunner(
       const LLVMState &State, InstructionBenchmark::ModeE Mode,
-      bool BenchmarkSkipMeasurements,
+      BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       InstructionBenchmark::ResultAggregationModeE ResultAggMode) const;
   std::unique_ptr<BenchmarkRunner> virtual createUopsBenchmarkRunner(
-      const LLVMState &State, bool BenchmarkSkipMeasurements,
+      const LLVMState &State, BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       InstructionBenchmark::ResultAggregationModeE ResultAggMode) const;
 
   const ExegesisTarget *Next = nullptr;

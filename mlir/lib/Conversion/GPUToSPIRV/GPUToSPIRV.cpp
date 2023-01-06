@@ -442,10 +442,9 @@ static Value createGroupReduceOpImpl(OpBuilder &builder, Location loc,
   if (isUniform) {
     return builder.create<UniformOp>(loc, type, scope, groupOp, arg)
         .getResult();
-  } else {
-    return builder.create<NonUniformOp>(loc, type, scope, groupOp, arg, Value{})
-        .getResult();
   }
+  return builder.create<NonUniformOp>(loc, type, scope, groupOp, arg, Value{})
+      .getResult();
 }
 
 static llvm::Optional<Value> createGroupReduceOp(OpBuilder &builder,

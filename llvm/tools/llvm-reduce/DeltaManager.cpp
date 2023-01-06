@@ -31,6 +31,7 @@
 #include "deltas/ReduceInstructionFlagsMIR.h"
 #include "deltas/ReduceInstructions.h"
 #include "deltas/ReduceInstructionsMIR.h"
+#include "deltas/ReduceInvokes.h"
 #include "deltas/ReduceMemoryOperations.h"
 #include "deltas/ReduceMetadata.h"
 #include "deltas/ReduceModuleData.h"
@@ -76,15 +77,18 @@ static cl::list<std::string>
     DELTA_PASS("aliases", reduceAliasesDeltaPass)                              \
     DELTA_PASS("simplify-conditionals-true", reduceConditionalsTrueDeltaPass)  \
     DELTA_PASS("simplify-conditionals-false", reduceConditionalsFalseDeltaPass)\
+    DELTA_PASS("invokes", reduceInvokesDeltaPass)                              \
     DELTA_PASS("unreachable-basic-blocks", reduceUnreachableBasicBlocksDeltaPass) \
     DELTA_PASS("basic-blocks", reduceBasicBlocksDeltaPass)                     \
     DELTA_PASS("simplify-cfg", reduceUsingSimplifyCFGDeltaPass)                \
+    DELTA_PASS("function-data", reduceFunctionDataDeltaPass)                   \
     DELTA_PASS("global-values", reduceGlobalValuesDeltaPass)                   \
     DELTA_PASS("global-objects", reduceGlobalObjectsDeltaPass)                 \
     DELTA_PASS("global-initializers", reduceGlobalsInitializersDeltaPass)      \
     DELTA_PASS("global-variables", reduceGlobalsDeltaPass)                     \
     DELTA_PASS("di-metadata", reduceDIMetadataDeltaPass)                       \
     DELTA_PASS("metadata", reduceMetadataDeltaPass)                            \
+    DELTA_PASS("named-metadata", reduceNamedMetadataDeltaPass)                 \
     DELTA_PASS("arguments", reduceArgumentsDeltaPass)                          \
     DELTA_PASS("instructions", reduceInstructionsDeltaPass)                    \
     DELTA_PASS("simplify-instructions", simplifyInstructionsDeltaPass)         \

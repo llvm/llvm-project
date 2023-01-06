@@ -2081,23 +2081,6 @@ void ASTStmtWriter::VisitCXXFoldExpr(CXXFoldExpr *E) {
   Code = serialization::EXPR_CXX_FOLD;
 }
 
-void ASTStmtWriter::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
-  VisitExpr(E);
-  ArrayRef<Expr *> InitExprs = E->getInitExprs();
-  Record.push_back(InitExprs.size());
-  Record.push_back(E->getUserSpecifiedInitExprs().size());
-  Record.AddSourceLocation(E->getInitLoc());
-  Record.AddSourceLocation(E->getBeginLoc());
-  Record.AddSourceLocation(E->getEndLoc());
-  for (Expr *InitExpr : E->getInitExprs())
-    Record.AddStmt(InitExpr);
-  bool HasArrayFiller = E->getArrayFiller();
-  Record.push_back(HasArrayFiller);
-  if (HasArrayFiller)
-    Record.AddStmt(E->getArrayFiller());
-  Code = serialization::EXPR_CXX_PAREN_LIST_INIT;
-}
-
 void ASTStmtWriter::VisitOpaqueValueExpr(OpaqueValueExpr *E) {
   VisitExpr(E);
   Record.AddStmt(E->getSourceExpr());

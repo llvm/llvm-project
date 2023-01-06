@@ -22,6 +22,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -62,7 +63,6 @@ private:
   void getConversionSpecifiers(SmallVectorImpl<char> &OpConvSpecifiers,
                                StringRef fmt, size_t num_ops) const;
 
-  bool shouldPrintAsStr(char Specifier, Type *OpType) const;
   bool lowerPrintfForGpu(Module &M);
 
   Value *simplify(Instruction *I, const TargetLibraryInfo *TLI,
@@ -131,18 +131,17 @@ void AMDGPUPrintfRuntimeBindingImpl::getConversionSpecifiers(
   }
 }
 
-bool AMDGPUPrintfRuntimeBindingImpl::shouldPrintAsStr(char Specifier,
-                                                      Type *OpType) const {
-  if (Specifier != 's')
-    return false;
-  const PointerType *PT = dyn_cast<PointerType>(OpType);
-  if (!PT || PT->getAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS)
-    return false;
-  Type *ElemType = PT->getContainedType(0);
-  if (ElemType->getTypeID() != Type::IntegerTyID)
-    return false;
-  IntegerType *ElemIType = cast<IntegerType>(ElemType);
-  return ElemIType->getBitWidth() == 8;
+static bool shouldPrintAsStr(char Specifier, Type *OpType) {
+  return Specifier == 's' && isa<PointerType>(OpType);
+}
+
+static void diagnoseInvalidFormatString(const CallBase *CI) {
+  DiagnosticInfoUnsupported UnsupportedFormatStr(
+      *CI->getParent()->getParent(),
+      "printf format string must be a trivially resolved constant string "
+      "global variable",
+      CI->getDebugLoc());
+  CI->getContext().diagnose(UnsupportedFormatStr);
 }
 
 bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
@@ -176,30 +175,32 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
         Op = Op_simplified;
     }
 
-    ConstantExpr *ConstExpr = dyn_cast<ConstantExpr>(Op);
-    if (!ConstExpr) {
+    Value *Stripped = Op->stripPointerCasts();
+    if (isa<UndefValue>(Stripped) || isa<ConstantPointerNull>(Stripped))
+      continue;
+
+    GlobalVariable *GVar = dyn_cast<GlobalVariable>(Stripped);
+    if (!GVar || !GVar->hasDefinitiveInitializer() || !GVar->isConstant()) {
+      diagnoseInvalidFormatString(CI);
       continue;
     }
 
-    GlobalVariable *GVar = dyn_cast<GlobalVariable>(ConstExpr->getOperand(0));
+    auto *Init = GVar->getInitializer();
+    if (isa<UndefValue>(Init) || isa<ConstantAggregateZero>(Init))
+      continue;
 
-    StringRef Str("unknown");
-    if (GVar && GVar->hasInitializer()) {
-      auto *Init = GVar->getInitializer();
-      if (auto *CA = dyn_cast<ConstantDataArray>(Init)) {
-        if (CA->isString())
-          Str = CA->getAsCString();
-      } else if (isa<ConstantAggregateZero>(Init)) {
-        Str = "";
-      }
-      //
-      // we need this call to ascertain
-      // that we are printing a string
-      // or a pointer. It takes out the
-      // specifiers and fills up the first
-      // arg
-      getConversionSpecifiers(OpConvSpecifiers, Str, NumOps - 1);
+    auto *CA = dyn_cast<ConstantDataArray>(Init);
+    if (!CA || !CA->isString()) {
+      diagnoseInvalidFormatString(CI);
+      continue;
     }
+
+    StringRef Str(CA->getAsCString());
+
+    // We need this call to ascertain that we are printing a string or a
+    // pointer. It takes out the specifiers and fills up the first arg.
+    getConversionSpecifiers(OpConvSpecifiers, Str, NumOps - 1);
+
     // Add metadata for the string
     std::string AStreamHolder;
     raw_string_ostream Sizes(AStreamHolder);

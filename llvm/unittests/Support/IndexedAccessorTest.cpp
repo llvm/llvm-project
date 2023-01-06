@@ -39,7 +39,7 @@ static void compareData(ArrayIndexedAccessorRange<T> range,
 namespace {
 TEST(AccessorRange, SliceTest) {
   int rawData[] = {0, 1, 2, 3, 4};
-  ArrayRef<int> data = llvm::makeArrayRef(rawData);
+  ArrayRef<int> data = llvm::ArrayRef(rawData);
 
   ArrayIndexedAccessorRange<int> range(rawData, /*start=*/0, /*numElements=*/5);
   compareData(range, data);
