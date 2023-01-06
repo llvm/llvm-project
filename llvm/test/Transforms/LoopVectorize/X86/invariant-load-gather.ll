@@ -59,13 +59,13 @@ define i32 @inv_load_conditional(ptr %a, i64 %n, ptr %b, i32 %k) {
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX9:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT17:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX9]]
-; CHECK-NEXT:    store <8 x i32> [[BROADCAST_SPLAT14]], ptr [[TMP5]], align 4, !alias.scope !7, !noalias !10
+; CHECK-NEXT:    store <8 x i32> [[BROADCAST_SPLAT14]], ptr [[TMP5]], align 4, !alias.scope !8, !noalias !11
 ; CHECK-NEXT:    [[INDEX_NEXT17]] = add nuw i64 [[INDEX9]], 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT17]], [[N_VEC7]]
-; CHECK-NEXT:    br i1 [[TMP6]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <8 x ptr> [[BROADCAST_SPLAT12]], zeroinitializer
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER15:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[BROADCAST_SPLAT12]], i32 4, <8 x i1> [[TMP7]], <8 x i32> poison), !alias.scope !10
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER15:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[BROADCAST_SPLAT12]], i32 4, <8 x i1> [[TMP7]], <8 x i32> poison), !alias.scope !11
 ; CHECK-NEXT:    [[PREDPHI16:%.*]] = select <8 x i1> [[TMP7]], <8 x i32> [[WIDE_MASKED_GATHER15]], <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i32> [[PREDPHI16]], i64 7
 ; CHECK-NEXT:    [[CMP_N8:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC7]]

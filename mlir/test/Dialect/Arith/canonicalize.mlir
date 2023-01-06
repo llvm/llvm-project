@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -canonicalize --split-input-file | FileCheck %s
+// RUN: mlir-opt %s -canonicalize="test-convergence" --split-input-file | FileCheck %s
 
 // CHECK-LABEL: @select_same_val
 //       CHECK:   return %arg1

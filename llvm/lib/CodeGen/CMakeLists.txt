@@ -230,8 +230,8 @@ add_llvm_component_library(LLVMCodeGen
   TargetRegisterInfo.cpp
   TargetSchedule.cpp
   TargetSubtargetInfo.cpp
-  TypePromotion.cpp
   TwoAddressInstructionPass.cpp
+  TypePromotion.cpp
   UnreachableBlockElim.cpp
   ValueTypes.cpp
   VLIWMachineScheduler.cpp

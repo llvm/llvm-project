@@ -262,6 +262,8 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
       if (op.getNumResults() != 1)
         return emitError(record, "expected op to have one result");
       bs << "moduleImport.mapValue(inst)";
+    } else if (name == "_op") {
+      bs << "moduleImport.mapNoResultOp(inst)";
     } else if (name == "_int_attr") {
       bs << "moduleImport.matchIntegerAttr";
     } else if (name == "_var_attr") {

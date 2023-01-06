@@ -205,6 +205,55 @@ public:
     return {};
   }
 };
+
+/// A pointer arithmetic expression of one of the forms:
+///  \code
+///  ptr + n | n + ptr | ptr - n | ptr += n | ptr -= n
+///  \endcode
+class PointerArithmeticGadget : public UnsafeGadget {
+  static constexpr const char *const PointerArithmeticTag = "ptrAdd";
+  static constexpr const char *const PointerArithmeticPointerTag = "ptrAddPtr";
+  const BinaryOperator *PA; // pointer arithmetic expression
+  const Expr * Ptr;         // the pointer expression in `PA`
+
+public:
+    PointerArithmeticGadget(const MatchFinder::MatchResult &Result)
+      : UnsafeGadget(Kind::PointerArithmetic),
+        PA(Result.Nodes.getNodeAs<BinaryOperator>(PointerArithmeticTag)),
+        Ptr(Result.Nodes.getNodeAs<Expr>(PointerArithmeticPointerTag)) {}
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::PointerArithmetic;
+  }
+
+  static Matcher matcher() {
+    auto HasIntegerType = anyOf(
+          hasType(isInteger()), hasType(enumType()));
+    auto PtrAtRight = allOf(hasOperatorName("+"),
+                            hasRHS(expr(hasPointerType()).bind(PointerArithmeticPointerTag)),
+                            hasLHS(HasIntegerType));
+    auto PtrAtLeft = allOf(
+           anyOf(hasOperatorName("+"), hasOperatorName("-"),
+                 hasOperatorName("+="), hasOperatorName("-=")),
+           hasLHS(expr(hasPointerType()).bind(PointerArithmeticPointerTag)),
+           hasRHS(HasIntegerType));
+
+    return stmt(binaryOperator(anyOf(PtrAtLeft, PtrAtRight)).bind(PointerArithmeticTag));
+  }
+
+  const Stmt *getBaseStmt() const override { return PA; }
+
+  DeclUseList getClaimedVarUseSites() const override {
+    if (const auto *DRE =
+            dyn_cast<DeclRefExpr>(Ptr->IgnoreParenImpCasts())) {
+      return {DRE};
+    }
+
+    return {};
+  }
+  // FIXME: pointer adding zero should be fine
+  //FIXME: this gadge will need a fix-it
+};
 } // namespace
 
 namespace {

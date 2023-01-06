@@ -6,7 +6,7 @@
 ; CHECK-LABEL: CallSite:
 ; CHECK-NEXT:    phi i32 [ [[R2]], %land.rhs.split ], [ [[R1]], %entry.split ], !dbg [[DBG1]]
 
-define i32 @test1(i32* dereferenceable(4) %cc, i32 %dd) !dbg !6 {
+define i32 @test1(ptr dereferenceable(4) %cc, i32 %dd) !dbg !6 {
 entry:
   br i1 undef, label %CallSite, label %land.rhs
 
@@ -20,15 +20,15 @@ CallSite:                                         ; preds = %land.rhs, %entry
 }
 
 ; CHECK-LABEL: @test2
-; CHECK:         [[LV1:%.*]] = load i32, i32* %ptr, align 4, !dbg [[DBG_LV:!.*]]
+; CHECK:         [[LV1:%.*]] = load i32, ptr %ptr, align 4, !dbg [[DBG_LV:!.*]]
 ; CHECK-NEXT:    [[R1:%.+]] = call i32 @callee(i32 0, i32 10), !dbg [[DBG_CALL:!.*]]
-; CHECK:         [[LV2:%.*]] = load i32, i32* %ptr, align 4, !dbg [[DBG_LV]]
+; CHECK:         [[LV2:%.*]] = load i32, ptr %ptr, align 4, !dbg [[DBG_LV]]
 ; CHECK-NEXT:    [[R2:%.+]] = call i32 @callee(i32 0, i32 %i), !dbg [[DBG_CALL]]
 ; CHECK-LABEL: CallSite:
 ; CHECK-NEXT:    phi i32 [ [[LV1]], %Header.split ], [ [[LV2]], %TBB.split ], !dbg [[DBG_LV]]
 ; CHECK-NEXT:    phi i32 [ [[R1]], %Header.split ], [ [[R2]], %TBB.split ], !dbg [[DBG_CALL]]
 
-define void @test2(i32* %ptr, i32 %i) !dbg !19 {
+define void @test2(ptr %ptr, i32 %i) !dbg !19 {
 Header:
   %tobool = icmp ne i32 %i, 10
   br i1 %tobool, label %TBB, label %CallSite
@@ -37,7 +37,7 @@ TBB:                                              ; preds = %Header
   br i1 undef, label %CallSite, label %End
 
 CallSite:                                         ; preds = %TBB, %Header
-  %lv = load i32, i32* %ptr, align 4, !dbg !25
+  %lv = load i32, ptr %ptr, align 4, !dbg !25
   %cv = call i32 @callee(i32 0, i32 %i), !dbg !26
   %sub = sub nsw i32 %lv, %cv
   br label %End

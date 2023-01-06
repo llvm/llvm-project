@@ -27,6 +27,7 @@
 namespace mlir {
 
 class AffineForOp;
+class AffineValueMap;
 class Block;
 class Location;
 struct MemRefAccess;
@@ -383,6 +384,13 @@ IntegerSet simplifyIntegerSet(IntegerSet set);
 unsigned getInnermostCommonLoopDepth(
     ArrayRef<Operation *> ops,
     SmallVectorImpl<AffineForOp> *surroundingLoops = nullptr);
+
+/// Try to simplify the given affine.min or affine.max op to an affine map with
+/// a single result and operands, taking into account the specified constraint
+/// set. Return failure if no simplified version could be found.
+FailureOr<AffineValueMap>
+simplifyConstrainedMinMaxOp(Operation *op,
+                            FlatAffineValueConstraints constraints);
 
 } // namespace mlir
 

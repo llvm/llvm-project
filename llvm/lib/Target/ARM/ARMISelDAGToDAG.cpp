@@ -2640,7 +2640,7 @@ void ARMDAGToDAGISel::SelectMVE_LongShift(SDNode *N, uint16_t Opcode,
   Ops.push_back(getAL(CurDAG, Loc));
   Ops.push_back(CurDAG->getRegister(0, MVT::i32));
 
-  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), makeArrayRef(Ops));
+  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), ArrayRef(Ops));
 }
 
 void ARMDAGToDAGISel::SelectMVE_VADCSBC(SDNode *N, uint16_t OpcodeWithCarry,
@@ -2674,7 +2674,7 @@ void ARMDAGToDAGISel::SelectMVE_VADCSBC(SDNode *N, uint16_t OpcodeWithCarry,
   else
     AddEmptyMVEPredicateToOps(Ops, Loc, N->getValueType(0));
 
-  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), makeArrayRef(Ops));
+  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), ArrayRef(Ops));
 }
 
 void ARMDAGToDAGISel::SelectMVE_VSHLC(SDNode *N, bool Predicated) {
@@ -2693,7 +2693,7 @@ void ARMDAGToDAGISel::SelectMVE_VSHLC(SDNode *N, bool Predicated) {
   else
     AddEmptyMVEPredicateToOps(Ops, Loc);
 
-  CurDAG->SelectNodeTo(N, ARM::MVE_VSHLC, N->getVTList(), makeArrayRef(Ops));
+  CurDAG->SelectNodeTo(N, ARM::MVE_VSHLC, N->getVTList(), ArrayRef(Ops));
 }
 
 static bool SDValueToConstBool(SDValue SDVal) {
@@ -2755,7 +2755,7 @@ void ARMDAGToDAGISel::SelectBaseMVE_VMLLDAV(SDNode *N, bool Predicated,
   else
     AddEmptyMVEPredicateToOps(Ops, Loc);
 
-  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), makeArrayRef(Ops));
+  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), ArrayRef(Ops));
 }
 
 void ARMDAGToDAGISel::SelectMVE_VMLLDAV(SDNode *N, bool Predicated,
@@ -2883,7 +2883,7 @@ void ARMDAGToDAGISel::SelectMVE_VxDUP(SDNode *N, const uint16_t *Opcodes,
   else
     AddEmptyMVEPredicateToOps(Ops, Loc, N->getValueType(0));
 
-  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), makeArrayRef(Ops));
+  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), ArrayRef(Ops));
 }
 
 void ARMDAGToDAGISel::SelectCDE_CXxD(SDNode *N, uint16_t Opcode,

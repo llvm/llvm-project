@@ -549,9 +549,8 @@ Expected<typename ELFT::DynRange> ELFFile<ELFT>::dynamicEntries() const {
 
   for (const Elf_Phdr &Phdr : *ProgramHeadersOrError) {
     if (Phdr.p_type == ELF::PT_DYNAMIC) {
-      Dyn = makeArrayRef(
-          reinterpret_cast<const Elf_Dyn *>(base() + Phdr.p_offset),
-          Phdr.p_filesz / sizeof(Elf_Dyn));
+      Dyn = ArrayRef(reinterpret_cast<const Elf_Dyn *>(base() + Phdr.p_offset),
+                     Phdr.p_filesz / sizeof(Elf_Dyn));
       break;
     }
   }

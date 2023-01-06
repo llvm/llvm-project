@@ -78,6 +78,19 @@ func.func @sparse_pointers(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xin
 
 // -----
 
+#COO = #sparse_tensor.encoding<{dimLevelType = ["compressed-nu", "singleton"]}>
+
+// CHECK-LABEL: func @sparse_indices_buffer(
+//  CHECK-SAME: %[[A:.*]]: tensor<?x?xf64, #{{.*}}>)
+//       CHECK: %[[T:.*]] = sparse_tensor.indices_buffer %[[A]] : tensor<?x?xf64, #{{.*}}> to memref<?xindex>
+//       CHECK: return %[[T]] : memref<?xindex>
+func.func @sparse_indices_buffer(%arg0: tensor<?x?xf64, #COO>) -> memref<?xindex> {
+  %0 = sparse_tensor.indices_buffer %arg0 : tensor<?x?xf64, #COO> to memref<?xindex>
+  return %0 : memref<?xindex>
+}
+
+// -----
+
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
 // CHECK-LABEL: func @sparse_indices(

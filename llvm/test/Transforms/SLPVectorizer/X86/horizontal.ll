@@ -15,7 +15,7 @@
 ;   return sum;
 ; }
 
-define i32 @add_red(float* %A, i32 %n) {
+define i32 @add_red(ptr %A, i32 %n) {
 ; CHECK-LABEL: @add_red(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP31:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -27,9 +27,8 @@ define i32 @add_red(float* %A, i32 %n) {
 ; CHECK-NEXT:    [[I_033:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SUM_032:%.*]] = phi float [ 0.000000e+00, [[FOR_BODY_LR_PH]] ], [ [[ADD17:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i64 [[I_033]], 2
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[MUL]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[ARRAYIDX]] to <4 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[MUL]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP2]], <float 7.000000e+00, float 7.000000e+00, float 7.000000e+00, float 7.000000e+00>
 ; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP3]])
 ; CHECK-NEXT:    [[ADD17]] = fadd fast float [[SUM_032]], [[TMP4]]
@@ -55,22 +54,22 @@ for.body:
   %i.033 = phi i64 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
   %sum.032 = phi float [ 0.000000e+00, %for.body.lr.ph ], [ %add17, %for.body ]
   %mul = shl nsw i64 %i.033, 2
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %mul
-  %1 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %mul
+  %1 = load float, ptr %arrayidx, align 4
   %mul2 = fmul float %1, 7.000000e+00
   %add28 = or i64 %mul, 1
-  %arrayidx4 = getelementptr inbounds float, float* %A, i64 %add28
-  %2 = load float, float* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %A, i64 %add28
+  %2 = load float, ptr %arrayidx4, align 4
   %mul5 = fmul float %2, 7.000000e+00
   %add6 = fadd fast float %mul2, %mul5
   %add829 = or i64 %mul, 2
-  %arrayidx9 = getelementptr inbounds float, float* %A, i64 %add829
-  %3 = load float, float* %arrayidx9, align 4
+  %arrayidx9 = getelementptr inbounds float, ptr %A, i64 %add829
+  %3 = load float, ptr %arrayidx9, align 4
   %mul10 = fmul float %3, 7.000000e+00
   %add11 = fadd fast float %add6, %mul10
   %add1330 = or i64 %mul, 3
-  %arrayidx14 = getelementptr inbounds float, float* %A, i64 %add1330
-  %4 = load float, float* %arrayidx14, align 4
+  %arrayidx14 = getelementptr inbounds float, ptr %A, i64 %add1330
+  %4 = load float, ptr %arrayidx14, align 4
   %mul15 = fmul float %4, 7.000000e+00
   %add16 = fadd fast float %add11, %mul15
   %add17 = fadd fast float %sum.032, %add16
@@ -98,23 +97,21 @@ for.end:
 ;   return sum;
 ; }
 
-define i32 @mul_red(float* noalias %A, float* noalias %B, i32 %n) {
+define i32 @mul_red(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; CHECK-LABEL: @mul_red(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP38:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP38]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[B:%.*]] to <4 x float>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_040:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SUM_039:%.*]] = phi float [ 0.000000e+00, [[FOR_BODY_LR_PH]] ], [ [[MUL21:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i64 [[I_040]], 2
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[MUL]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[MUL]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <4 x float> [[TMP1]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP5]])
 ; CHECK-NEXT:    [[MUL21]] = fmul float [[SUM_039]], [[TMP6]]
@@ -133,13 +130,13 @@ entry:
   br i1 %cmp38, label %for.body.lr.ph, label %for.end
 
 for.body.lr.ph:
-  %0 = load float, float* %B, align 4
-  %arrayidx4 = getelementptr inbounds float, float* %B, i64 1
-  %1 = load float, float* %arrayidx4, align 4
-  %arrayidx9 = getelementptr inbounds float, float* %B, i64 2
-  %2 = load float, float* %arrayidx9, align 4
-  %arrayidx15 = getelementptr inbounds float, float* %B, i64 3
-  %3 = load float, float* %arrayidx15, align 4
+  %0 = load float, ptr %B, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %B, i64 1
+  %1 = load float, ptr %arrayidx4, align 4
+  %arrayidx9 = getelementptr inbounds float, ptr %B, i64 2
+  %2 = load float, ptr %arrayidx9, align 4
+  %arrayidx15 = getelementptr inbounds float, ptr %B, i64 3
+  %3 = load float, ptr %arrayidx15, align 4
   %4 = sext i32 %n to i64
   br label %for.body
 
@@ -147,22 +144,22 @@ for.body:
   %i.040 = phi i64 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
   %sum.039 = phi float [ 0.000000e+00, %for.body.lr.ph ], [ %mul21, %for.body ]
   %mul = shl nsw i64 %i.040, 2
-  %arrayidx2 = getelementptr inbounds float, float* %A, i64 %mul
-  %5 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %A, i64 %mul
+  %5 = load float, ptr %arrayidx2, align 4
   %mul3 = fmul float %0, %5
   %add35 = or i64 %mul, 1
-  %arrayidx6 = getelementptr inbounds float, float* %A, i64 %add35
-  %6 = load float, float* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds float, ptr %A, i64 %add35
+  %6 = load float, ptr %arrayidx6, align 4
   %mul7 = fmul float %1, %6
   %add8 = fadd fast float %mul3, %mul7
   %add1136 = or i64 %mul, 2
-  %arrayidx12 = getelementptr inbounds float, float* %A, i64 %add1136
-  %7 = load float, float* %arrayidx12, align 4
+  %arrayidx12 = getelementptr inbounds float, ptr %A, i64 %add1136
+  %7 = load float, ptr %arrayidx12, align 4
   %mul13 = fmul float %2, %7
   %add14 = fadd fast float %add8, %mul13
   %add1737 = or i64 %mul, 3
-  %arrayidx18 = getelementptr inbounds float, float* %A, i64 %add1737
-  %8 = load float, float* %arrayidx18, align 4
+  %arrayidx18 = getelementptr inbounds float, ptr %A, i64 %add1737
+  %8 = load float, ptr %arrayidx18, align 4
   %mul19 = fmul float %3, %8
   %add20 = fadd fast float %add14, %mul19
   %mul21 = fmul float %sum.039, %add20
@@ -195,29 +192,27 @@ for.end:
 ;   return sum;
 ; }
 
-define i32 @long_red(float* noalias %A, float* noalias %B, i32 %n) {
+define i32 @long_red(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; CHECK-LABEL: @long_red(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP81:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP81]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[B:%.*]] to <8 x float>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x float>, <8 x float>* [[TMP0]], align 4
-; CHECK-NEXT:    [[ARRAYIDX45:%.*]] = getelementptr inbounds float, float* [[B]], i64 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[ARRAYIDX45]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[ARRAYIDX45:%.*]] = getelementptr inbounds float, ptr [[B]], i64 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX45]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_083:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SUM_082:%.*]] = phi float [ 0.000000e+00, [[FOR_BODY_LR_PH]] ], [ [[ADD51:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[I_083]], 6
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[MUL]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float* [[ARRAYIDX2]] to <8 x float>*
-; CHECK-NEXT:    [[TMP5:%.*]] = load <8 x float>, <8 x float>* [[TMP4]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[MUL]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load <8 x float>, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <8 x float> [[TMP1]], [[TMP5]]
 ; CHECK-NEXT:    [[ADD47:%.*]] = add nsw i64 [[MUL]], 8
-; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD47]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* [[ARRAYIDX48]], align 4
+; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[ADD47]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[ARRAYIDX48]], align 4
 ; CHECK-NEXT:    [[MUL49:%.*]] = fmul fast float [[TMP2]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP6]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP8]], [[MUL49]]
@@ -237,23 +232,23 @@ entry:
   br i1 %cmp81, label %for.body.lr.ph, label %for.end
 
 for.body.lr.ph:
-  %0 = load float, float* %B, align 4
-  %arrayidx4 = getelementptr inbounds float, float* %B, i64 1
-  %1 = load float, float* %arrayidx4, align 4
-  %arrayidx9 = getelementptr inbounds float, float* %B, i64 2
-  %2 = load float, float* %arrayidx9, align 4
-  %arrayidx15 = getelementptr inbounds float, float* %B, i64 3
-  %3 = load float, float* %arrayidx15, align 4
-  %arrayidx21 = getelementptr inbounds float, float* %B, i64 4
-  %4 = load float, float* %arrayidx21, align 4
-  %arrayidx27 = getelementptr inbounds float, float* %B, i64 5
-  %5 = load float, float* %arrayidx27, align 4
-  %arrayidx33 = getelementptr inbounds float, float* %B, i64 6
-  %6 = load float, float* %arrayidx33, align 4
-  %arrayidx39 = getelementptr inbounds float, float* %B, i64 7
-  %7 = load float, float* %arrayidx39, align 4
-  %arrayidx45 = getelementptr inbounds float, float* %B, i64 8
-  %8 = load float, float* %arrayidx45, align 4
+  %0 = load float, ptr %B, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %B, i64 1
+  %1 = load float, ptr %arrayidx4, align 4
+  %arrayidx9 = getelementptr inbounds float, ptr %B, i64 2
+  %2 = load float, ptr %arrayidx9, align 4
+  %arrayidx15 = getelementptr inbounds float, ptr %B, i64 3
+  %3 = load float, ptr %arrayidx15, align 4
+  %arrayidx21 = getelementptr inbounds float, ptr %B, i64 4
+  %4 = load float, ptr %arrayidx21, align 4
+  %arrayidx27 = getelementptr inbounds float, ptr %B, i64 5
+  %5 = load float, ptr %arrayidx27, align 4
+  %arrayidx33 = getelementptr inbounds float, ptr %B, i64 6
+  %6 = load float, ptr %arrayidx33, align 4
+  %arrayidx39 = getelementptr inbounds float, ptr %B, i64 7
+  %7 = load float, ptr %arrayidx39, align 4
+  %arrayidx45 = getelementptr inbounds float, ptr %B, i64 8
+  %8 = load float, ptr %arrayidx45, align 4
   %9 = sext i32 %n to i64
   br label %for.body
 
@@ -261,47 +256,47 @@ for.body:
   %i.083 = phi i64 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
   %sum.082 = phi float [ 0.000000e+00, %for.body.lr.ph ], [ %add51, %for.body ]
   %mul = mul nsw i64 %i.083, 6
-  %arrayidx2 = getelementptr inbounds float, float* %A, i64 %mul
-  %10 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %A, i64 %mul
+  %10 = load float, ptr %arrayidx2, align 4
   %mul3 = fmul fast float %0, %10
   %add80 = or i64 %mul, 1
-  %arrayidx6 = getelementptr inbounds float, float* %A, i64 %add80
-  %11 = load float, float* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds float, ptr %A, i64 %add80
+  %11 = load float, ptr %arrayidx6, align 4
   %mul7 = fmul fast float %1, %11
   %add8 = fadd fast float %mul3, %mul7
   %add11 = add nsw i64 %mul, 2
-  %arrayidx12 = getelementptr inbounds float, float* %A, i64 %add11
-  %12 = load float, float* %arrayidx12, align 4
+  %arrayidx12 = getelementptr inbounds float, ptr %A, i64 %add11
+  %12 = load float, ptr %arrayidx12, align 4
   %mul13 = fmul fast float %2, %12
   %add14 = fadd fast float %add8, %mul13
   %add17 = add nsw i64 %mul, 3
-  %arrayidx18 = getelementptr inbounds float, float* %A, i64 %add17
-  %13 = load float, float* %arrayidx18, align 4
+  %arrayidx18 = getelementptr inbounds float, ptr %A, i64 %add17
+  %13 = load float, ptr %arrayidx18, align 4
   %mul19 = fmul fast float %3, %13
   %add20 = fadd fast float %add14, %mul19
   %add23 = add nsw i64 %mul, 4
-  %arrayidx24 = getelementptr inbounds float, float* %A, i64 %add23
-  %14 = load float, float* %arrayidx24, align 4
+  %arrayidx24 = getelementptr inbounds float, ptr %A, i64 %add23
+  %14 = load float, ptr %arrayidx24, align 4
   %mul25 = fmul fast float %4, %14
   %add26 = fadd fast float %add20, %mul25
   %add29 = add nsw i64 %mul, 5
-  %arrayidx30 = getelementptr inbounds float, float* %A, i64 %add29
-  %15 = load float, float* %arrayidx30, align 4
+  %arrayidx30 = getelementptr inbounds float, ptr %A, i64 %add29
+  %15 = load float, ptr %arrayidx30, align 4
   %mul31 = fmul fast float %5, %15
   %add32 = fadd fast float %add26, %mul31
   %add35 = add nsw i64 %mul, 6
-  %arrayidx36 = getelementptr inbounds float, float* %A, i64 %add35
-  %16 = load float, float* %arrayidx36, align 4
+  %arrayidx36 = getelementptr inbounds float, ptr %A, i64 %add35
+  %16 = load float, ptr %arrayidx36, align 4
   %mul37 = fmul fast float %6, %16
   %add38 = fadd fast float %add32, %mul37
   %add41 = add nsw i64 %mul, 7
-  %arrayidx42 = getelementptr inbounds float, float* %A, i64 %add41
-  %17 = load float, float* %arrayidx42, align 4
+  %arrayidx42 = getelementptr inbounds float, ptr %A, i64 %add41
+  %17 = load float, ptr %arrayidx42, align 4
   %mul43 = fmul fast float %7, %17
   %add44 = fadd fast float %add38, %mul43
   %add47 = add nsw i64 %mul, 8
-  %arrayidx48 = getelementptr inbounds float, float* %A, i64 %add47
-  %18 = load float, float* %arrayidx48, align 4
+  %arrayidx48 = getelementptr inbounds float, ptr %A, i64 %add47
+  %18 = load float, ptr %arrayidx48, align 4
   %mul49 = fmul fast float %8, %18
   %add50 = fadd fast float %add44, %mul49
   %add51 = fadd fast float %sum.082, %add50
@@ -329,23 +324,21 @@ for.end:
 ;   return sum;
 ; }
 
-define i32 @chain_red(float* noalias %A, float* noalias %B, i32 %n) {
+define i32 @chain_red(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; CHECK-LABEL: @chain_red(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP41:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP41]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[B:%.*]] to <4 x float>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_043:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SUM_042:%.*]] = phi float [ 0.000000e+00, [[FOR_BODY_LR_PH]] ], [ [[OP_RDX:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i64 [[I_043]], 2
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[MUL]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[MUL]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP5]])
 ; CHECK-NEXT:    [[OP_RDX]] = fadd fast float [[TMP6]], [[SUM_042]]
@@ -364,13 +357,13 @@ entry:
   br i1 %cmp41, label %for.body.lr.ph, label %for.end
 
 for.body.lr.ph:
-  %0 = load float, float* %B, align 4
-  %arrayidx4 = getelementptr inbounds float, float* %B, i64 1
-  %1 = load float, float* %arrayidx4, align 4
-  %arrayidx10 = getelementptr inbounds float, float* %B, i64 2
-  %2 = load float, float* %arrayidx10, align 4
-  %arrayidx16 = getelementptr inbounds float, float* %B, i64 3
-  %3 = load float, float* %arrayidx16, align 4
+  %0 = load float, ptr %B, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %B, i64 1
+  %1 = load float, ptr %arrayidx4, align 4
+  %arrayidx10 = getelementptr inbounds float, ptr %B, i64 2
+  %2 = load float, ptr %arrayidx10, align 4
+  %arrayidx16 = getelementptr inbounds float, ptr %B, i64 3
+  %3 = load float, ptr %arrayidx16, align 4
   %4 = sext i32 %n to i64
   br label %for.body
 
@@ -378,23 +371,23 @@ for.body:
   %i.043 = phi i64 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
   %sum.042 = phi float [ 0.000000e+00, %for.body.lr.ph ], [ %add21, %for.body ]
   %mul = shl nsw i64 %i.043, 2
-  %arrayidx2 = getelementptr inbounds float, float* %A, i64 %mul
-  %5 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %A, i64 %mul
+  %5 = load float, ptr %arrayidx2, align 4
   %mul3 = fmul fast float %0, %5
   %add = fadd fast float %sum.042, %mul3
   %add638 = or i64 %mul, 1
-  %arrayidx7 = getelementptr inbounds float, float* %A, i64 %add638
-  %6 = load float, float* %arrayidx7, align 4
+  %arrayidx7 = getelementptr inbounds float, ptr %A, i64 %add638
+  %6 = load float, ptr %arrayidx7, align 4
   %mul8 = fmul fast float %1, %6
   %add9 = fadd fast float %add, %mul8
   %add1239 = or i64 %mul, 2
-  %arrayidx13 = getelementptr inbounds float, float* %A, i64 %add1239
-  %7 = load float, float* %arrayidx13, align 4
+  %arrayidx13 = getelementptr inbounds float, ptr %A, i64 %add1239
+  %7 = load float, ptr %arrayidx13, align 4
   %mul14 = fmul fast float %2, %7
   %add15 = fadd fast float %add9, %mul14
   %add1840 = or i64 %mul, 3
-  %arrayidx19 = getelementptr inbounds float, float* %A, i64 %add1840
-  %8 = load float, float* %arrayidx19, align 4
+  %arrayidx19 = getelementptr inbounds float, ptr %A, i64 %add1840
+  %8 = load float, ptr %arrayidx19, align 4
   %mul20 = fmul fast float %3, %8
   %add21 = fadd fast float %add15, %mul20
   %inc = add nsw i64 %i.043, 1
@@ -436,7 +429,7 @@ for.end:
 ;   }
 ; }
 
-define void @foo(float* nocapture readonly %arg_A, i32 %arg_B, float* nocapture %array) {
+define void @foo(ptr nocapture readonly %arg_A, i32 %arg_B, ptr nocapture %array) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1495:%.*]] = icmp eq i32 [[ARG_B:%.*]], 0
@@ -446,31 +439,31 @@ define void @foo(float* nocapture readonly %arg_A, i32 %arg_B, float* nocapture 
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_COND_CLEANUP15:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[ARRAY:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[ARRAY:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP0]], 1
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[ARRAY]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[ARRAYIDX4]], align 4
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[ARRAY]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP0]], 2
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* [[ARRAY]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* [[ARRAYIDX8]], align 4
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr [[ARRAY]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[ARRAYIDX8]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = or i64 [[TMP0]], 3
-; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds float, float* [[ARRAY]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* [[ARRAYIDX12]], align 4
+; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds float, ptr [[ARRAY]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[ARRAYIDX12]], align 4
 ; CHECK-NEXT:    br i1 [[CMP1495]], label [[FOR_COND_CLEANUP15]], label [[FOR_BODY16_LR_PH:%.*]]
 ; CHECK:       for.body16.lr.ph:
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds float, float* [[ARG_A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load float, float* [[ADD_PTR]], align 4
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds float, ptr [[ARG_A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = load float, ptr [[ADD_PTR]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY16:%.*]]
 ; CHECK:       for.cond.cleanup15:
 ; CHECK-NEXT:    [[W2_0_LCSSA:%.*]] = phi float [ [[TMP5]], [[FOR_BODY]] ], [ [[SUB28:%.*]], [[FOR_BODY16]] ]
 ; CHECK-NEXT:    [[W3_0_LCSSA:%.*]] = phi float [ [[TMP7]], [[FOR_BODY]] ], [ [[W2_096:%.*]], [[FOR_BODY16]] ]
 ; CHECK-NEXT:    [[W1_0_LCSSA:%.*]] = phi float [ [[TMP3]], [[FOR_BODY]] ], [ [[W0_0100:%.*]], [[FOR_BODY16]] ]
 ; CHECK-NEXT:    [[W0_0_LCSSA:%.*]] = phi float [ [[TMP1]], [[FOR_BODY]] ], [ [[SUB19:%.*]], [[FOR_BODY16]] ]
-; CHECK-NEXT:    store float [[W0_0_LCSSA]], float* [[ARRAYIDX]], align 4
-; CHECK-NEXT:    store float [[W1_0_LCSSA]], float* [[ARRAYIDX4]], align 4
-; CHECK-NEXT:    store float [[W2_0_LCSSA]], float* [[ARRAYIDX8]], align 4
-; CHECK-NEXT:    store float [[W3_0_LCSSA]], float* [[ARRAYIDX12]], align 4
+; CHECK-NEXT:    store float [[W0_0_LCSSA]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store float [[W1_0_LCSSA]], ptr [[ARRAYIDX4]], align 4
+; CHECK-NEXT:    store float [[W2_0_LCSSA]], ptr [[ARRAYIDX8]], align 4
+; CHECK-NEXT:    store float [[W3_0_LCSSA]], ptr [[ARRAYIDX12]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND109:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 6
 ; CHECK-NEXT:    br i1 [[EXITCOND109]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
@@ -507,22 +500,22 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup15
 for.body:                                         ; preds = %for.cond.cleanup15, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.cond.cleanup15 ]
   %0 = shl i64 %indvars.iv, 2
-  %arrayidx = getelementptr inbounds float, float* %array, i64 %0
-  %1 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %array, i64 %0
+  %1 = load float, ptr %arrayidx, align 4
   %2 = or i64 %0, 1
-  %arrayidx4 = getelementptr inbounds float, float* %array, i64 %2
-  %3 = load float, float* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %array, i64 %2
+  %3 = load float, ptr %arrayidx4, align 4
   %4 = or i64 %0, 2
-  %arrayidx8 = getelementptr inbounds float, float* %array, i64 %4
-  %5 = load float, float* %arrayidx8, align 4
+  %arrayidx8 = getelementptr inbounds float, ptr %array, i64 %4
+  %5 = load float, ptr %arrayidx8, align 4
   %6 = or i64 %0, 3
-  %arrayidx12 = getelementptr inbounds float, float* %array, i64 %6
-  %7 = load float, float* %arrayidx12, align 4
+  %arrayidx12 = getelementptr inbounds float, ptr %array, i64 %6
+  %7 = load float, ptr %arrayidx12, align 4
   br i1 %cmp1495, label %for.cond.cleanup15, label %for.body16.lr.ph
 
 for.body16.lr.ph:                                 ; preds = %for.body
-  %add.ptr = getelementptr inbounds float, float* %arg_A, i64 %indvars.iv
-  %8 = load float, float* %add.ptr, align 4
+  %add.ptr = getelementptr inbounds float, ptr %arg_A, i64 %indvars.iv
+  %8 = load float, ptr %add.ptr, align 4
   br label %for.body16
 
 for.cond.cleanup15:                               ; preds = %for.body16, %for.body
@@ -530,10 +523,10 @@ for.cond.cleanup15:                               ; preds = %for.body16, %for.bo
   %w3.0.lcssa = phi float [ %7, %for.body ], [ %w2.096, %for.body16 ]
   %w1.0.lcssa = phi float [ %3, %for.body ], [ %w0.0100, %for.body16 ]
   %w0.0.lcssa = phi float [ %1, %for.body ], [ %sub19, %for.body16 ]
-  store float %w0.0.lcssa, float* %arrayidx, align 4
-  store float %w1.0.lcssa, float* %arrayidx4, align 4
-  store float %w2.0.lcssa, float* %arrayidx8, align 4
-  store float %w3.0.lcssa, float* %arrayidx12, align 4
+  store float %w0.0.lcssa, ptr %arrayidx, align 4
+  store float %w1.0.lcssa, ptr %arrayidx4, align 4
+  store float %w2.0.lcssa, ptr %arrayidx8, align 4
+  store float %w3.0.lcssa, ptr %arrayidx12, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond109 = icmp eq i64 %indvars.iv.next, 6
   br i1 %exitcond109, label %for.cond.cleanup, label %for.body
@@ -570,28 +563,26 @@ for.body16:                                       ; preds = %for.body16, %for.bo
 ;   }
 ; }
 
-define void @store_red_double(double* noalias %A, double* noalias %B, double* noalias %C, i32 %n) {
+define void @store_red_double(ptr noalias %A, ptr noalias %B, ptr noalias %C, i32 %n) {
 ; CHECK-LABEL: @store_red_double(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP17:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP17]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[B:%.*]] to <2 x double>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_018:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i64 [[I_018]], 2
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 [[MUL]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double* [[ARRAYIDX2]] to <2 x double>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, <2 x double>* [[TMP3]], align 8
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[MUL]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[ARRAYIDX2]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <2 x double> [[TMP1]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP5]], i32 1
 ; CHECK-NEXT:    [[ADD8:%.*]] = fadd fast double [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds double, double* [[C:%.*]], i64 [[I_018]]
-; CHECK-NEXT:    store double [[ADD8]], double* [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds double, ptr [[C:%.*]], i64 [[I_018]]
+; CHECK-NEXT:    store double [[ADD8]], ptr [[ARRAYIDX9]], align 8
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_018]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]]
@@ -603,25 +594,25 @@ entry:
   br i1 %cmp17, label %for.body.lr.ph, label %for.end
 
 for.body.lr.ph:
-  %0 = load double, double* %B, align 8
-  %arrayidx4 = getelementptr inbounds double, double* %B, i64 1
-  %1 = load double, double* %arrayidx4, align 8
+  %0 = load double, ptr %B, align 8
+  %arrayidx4 = getelementptr inbounds double, ptr %B, i64 1
+  %1 = load double, ptr %arrayidx4, align 8
   %2 = sext i32 %n to i64
   br label %for.body
 
 for.body:
   %i.018 = phi i64 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
   %mul = shl nsw i64 %i.018, 2
-  %arrayidx2 = getelementptr inbounds double, double* %A, i64 %mul
-  %3 = load double, double* %arrayidx2, align 8
+  %arrayidx2 = getelementptr inbounds double, ptr %A, i64 %mul
+  %3 = load double, ptr %arrayidx2, align 8
   %mul3 = fmul fast double %0, %3
   %add16 = or i64 %mul, 1
-  %arrayidx6 = getelementptr inbounds double, double* %A, i64 %add16
-  %4 = load double, double* %arrayidx6, align 8
+  %arrayidx6 = getelementptr inbounds double, ptr %A, i64 %add16
+  %4 = load double, ptr %arrayidx6, align 8
   %mul7 = fmul fast double %1, %4
   %add8 = fadd fast double %mul3, %mul7
-  %arrayidx9 = getelementptr inbounds double, double* %C, i64 %i.018
-  store double %add8, double* %arrayidx9, align 8
+  %arrayidx9 = getelementptr inbounds double, ptr %C, i64 %i.018
+  store double %add8, ptr %arrayidx9, align 8
   %inc = add nsw i64 %i.018, 1
   %exitcond = icmp eq i64 %inc, %2
   br i1 %exitcond, label %for.end, label %for.body
@@ -641,7 +632,7 @@ for.end:
 ;   return sum;
 ; }
 
-define i32 @store_red(float* noalias %A, float* noalias %B, float* noalias %C, i32 %n) {
+define i32 @store_red(ptr noalias %A, ptr noalias %B, ptr noalias %C, i32 %n) {
 ; CHECK-LABEL: @store_red(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP37:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -651,17 +642,15 @@ define i32 @store_red(float* noalias %A, float* noalias %B, float* noalias %C, i
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_039:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[C_ADDR_038:%.*]] = phi float* [ [[C:%.*]], [[FOR_BODY_LR_PH]] ], [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[C_ADDR_038:%.*]] = phi ptr [ [[C:%.*]], [[FOR_BODY_LR_PH]] ], [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i64 [[I_039]], 2
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[MUL]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[B:%.*]] to <4 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[MUL]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP5]])
-; CHECK-NEXT:    store float [[TMP6]], float* [[C_ADDR_038]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, float* [[C_ADDR_038]], i64 1
+; CHECK-NEXT:    store float [[TMP6]], ptr [[C_ADDR_038]], align 4
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, ptr [[C_ADDR_038]], i64 1
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_039]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]]
@@ -673,40 +662,40 @@ entry:
   br i1 %cmp37, label %for.body.lr.ph, label %for.end
 
 for.body.lr.ph:
-  %arrayidx4 = getelementptr inbounds float, float* %B, i64 1
-  %arrayidx9 = getelementptr inbounds float, float* %B, i64 2
-  %arrayidx15 = getelementptr inbounds float, float* %B, i64 3
+  %arrayidx4 = getelementptr inbounds float, ptr %B, i64 1
+  %arrayidx9 = getelementptr inbounds float, ptr %B, i64 2
+  %arrayidx15 = getelementptr inbounds float, ptr %B, i64 3
   %0 = sext i32 %n to i64
   br label %for.body
 
 for.body:
   %i.039 = phi i64 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
-  %C.addr.038 = phi float* [ %C, %for.body.lr.ph ], [ %incdec.ptr, %for.body ]
-  %1 = load float, float* %B, align 4
+  %C.addr.038 = phi ptr [ %C, %for.body.lr.ph ], [ %incdec.ptr, %for.body ]
+  %1 = load float, ptr %B, align 4
   %mul = shl nsw i64 %i.039, 2
-  %arrayidx2 = getelementptr inbounds float, float* %A, i64 %mul
-  %2 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %A, i64 %mul
+  %2 = load float, ptr %arrayidx2, align 4
   %mul3 = fmul fast float %1, %2
-  %3 = load float, float* %arrayidx4, align 4
+  %3 = load float, ptr %arrayidx4, align 4
   %add34 = or i64 %mul, 1
-  %arrayidx6 = getelementptr inbounds float, float* %A, i64 %add34
-  %4 = load float, float* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds float, ptr %A, i64 %add34
+  %4 = load float, ptr %arrayidx6, align 4
   %mul7 = fmul fast float %3, %4
   %add8 = fadd fast float %mul3, %mul7
-  %5 = load float, float* %arrayidx9, align 4
+  %5 = load float, ptr %arrayidx9, align 4
   %add1135 = or i64 %mul, 2
-  %arrayidx12 = getelementptr inbounds float, float* %A, i64 %add1135
-  %6 = load float, float* %arrayidx12, align 4
+  %arrayidx12 = getelementptr inbounds float, ptr %A, i64 %add1135
+  %6 = load float, ptr %arrayidx12, align 4
   %mul13 = fmul fast float %5, %6
   %add14 = fadd fast float %add8, %mul13
-  %7 = load float, float* %arrayidx15, align 4
+  %7 = load float, ptr %arrayidx15, align 4
   %add1736 = or i64 %mul, 3
-  %arrayidx18 = getelementptr inbounds float, float* %A, i64 %add1736
-  %8 = load float, float* %arrayidx18, align 4
+  %arrayidx18 = getelementptr inbounds float, ptr %A, i64 %add1736
+  %8 = load float, ptr %arrayidx18, align 4
   %mul19 = fmul fast float %7, %8
   %add20 = fadd fast float %add14, %mul19
-  store float %add20, float* %C.addr.038, align 4
-  %incdec.ptr = getelementptr inbounds float, float* %C.addr.038, i64 1
+  store float %add20, ptr %C.addr.038, align 4
+  %incdec.ptr = getelementptr inbounds float, ptr %C.addr.038, i64 1
   %inc = add nsw i64 %i.039, 1
   %exitcond = icmp eq i64 %inc, %0
   br i1 %exitcond, label %for.end, label %for.body
@@ -718,263 +707,263 @@ for.end:
 @arr_i32 = global [32 x i32] zeroinitializer, align 16
 @arr_float = global [32 x float] zeroinitializer, align 16
 
-define void @float_red_example4(float* %res) {
+define void @float_red_example4(ptr %res) {
 ; CHECK-LABEL: @float_red_example4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, <4 x float>* bitcast ([32 x float]* @arr_float to <4 x float>*), align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr @arr_float, align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP0]])
-; CHECK-NEXT:    store float [[TMP1]], float* [[RES:%.*]], align 16
+; CHECK-NEXT:    store float [[TMP1]], ptr [[RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 0), align 16
-  %1 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 1), align 4
+  %0 = load float, ptr @arr_float, align 16
+  %1 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 1), align 4
   %add = fadd fast float %1, %0
-  %2 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 2), align 8
+  %2 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 2), align 8
   %add.1 = fadd fast float %2, %add
-  %3 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 3), align 4
+  %3 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 3), align 4
   %add.2 = fadd fast float %3, %add.1
-  store float %add.2, float* %res, align 16
+  store float %add.2, ptr %res, align 16
   ret void
 }
 
-define void @float_red_example8(float* %res) {
+define void @float_red_example8(ptr %res) {
 ; CHECK-LABEL: @float_red_example8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, <8 x float>* bitcast ([32 x float]* @arr_float to <8 x float>*), align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr @arr_float, align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP0]])
-; CHECK-NEXT:    store float [[TMP1]], float* [[RES:%.*]], align 16
+; CHECK-NEXT:    store float [[TMP1]], ptr [[RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 0), align 16
-  %1 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 1), align 4
+  %0 = load float, ptr @arr_float, align 16
+  %1 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 1), align 4
   %add = fadd fast float %1, %0
-  %2 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 2), align 8
+  %2 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 2), align 8
   %add.1 = fadd fast float %2, %add
-  %3 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 3), align 4
+  %3 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 3), align 4
   %add.2 = fadd fast float %3, %add.1
-  %4 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 4), align 16
+  %4 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 4), align 16
   %add.3 = fadd fast float %4, %add.2
-  %5 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 5), align 4
+  %5 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 5), align 4
   %add.4 = fadd fast float %5, %add.3
-  %6 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 6), align 8
+  %6 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 6), align 8
   %add.5 = fadd fast float %6, %add.4
-  %7 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 7), align 4
+  %7 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 7), align 4
   %add.6 = fadd fast float %7, %add.5
-  store float %add.6, float* %res, align 16
+  store float %add.6, ptr %res, align 16
   ret void
 }
 
-define void @float_red_example16(float* %res) {
+define void @float_red_example16(ptr %res) {
 ; CHECK-LABEL: @float_red_example16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, <16 x float>* bitcast ([32 x float]* @arr_float to <16 x float>*), align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr @arr_float, align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v16f32(float -0.000000e+00, <16 x float> [[TMP0]])
-; CHECK-NEXT:    store float [[TMP1]], float* [[RES:%.*]], align 16
+; CHECK-NEXT:    store float [[TMP1]], ptr [[RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 0), align 16
-  %1 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 1), align 4
+  %0 = load float, ptr @arr_float, align 16
+  %1 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 1), align 4
   %add = fadd fast float %1, %0
-  %2 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 2), align 8
+  %2 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 2), align 8
   %add.1 = fadd fast float %2, %add
-  %3 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 3), align 4
+  %3 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 3), align 4
   %add.2 = fadd fast float %3, %add.1
-  %4 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 4), align 16
+  %4 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 4), align 16
   %add.3 = fadd fast float %4, %add.2
-  %5 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 5), align 4
+  %5 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 5), align 4
   %add.4 = fadd fast float %5, %add.3
-  %6 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 6), align 8
+  %6 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 6), align 8
   %add.5 = fadd fast float %6, %add.4
-  %7 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 7), align 4
+  %7 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 7), align 4
   %add.6 = fadd fast float %7, %add.5
-  %8 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 8), align 16
+  %8 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 8), align 16
   %add.7 = fadd fast float %8, %add.6
-  %9 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 9), align 4
+  %9 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 9), align 4
   %add.8 = fadd fast float %9, %add.7
-  %10 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 10), align 8
+  %10 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 10), align 8
   %add.9 = fadd fast float %10, %add.8
-  %11 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 11), align 4
+  %11 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 11), align 4
   %add.10 = fadd fast float %11, %add.9
-  %12 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 12), align 16
+  %12 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 12), align 16
   %add.11 = fadd fast float %12, %add.10
-  %13 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 13), align 4
+  %13 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 13), align 4
   %add.12 = fadd fast float %13, %add.11
-  %14 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 14), align 8
+  %14 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 14), align 8
   %add.13 = fadd fast float %14, %add.12
-  %15 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 15), align 4
+  %15 = load float, ptr getelementptr inbounds ([32 x float], ptr @arr_float, i64 0, i64 15), align 4
   %add.14 = fadd fast float %15, %add.13
-  store float %add.14, float* %res, align 16
+  store float %add.14, ptr %res, align 16
   ret void
 }
 
-define void @i32_red_example4(i32* %res) {
+define void @i32_red_example4(ptr %res) {
 ; CHECK-LABEL: @i32_red_example4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([32 x i32]* @arr_i32 to <4 x i32>*), align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @arr_i32, align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP0]])
-; CHECK-NEXT:    store i32 [[TMP1]], i32* [[RES:%.*]], align 16
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 0), align 16
-  %1 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 1), align 4
+  %0 = load i32, ptr @arr_i32, align 16
+  %1 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 1), align 4
   %add = add nsw i32 %1, %0
-  %2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 2), align 8
+  %2 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 2), align 8
   %add.1 = add nsw i32 %2, %add
-  %3 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 3), align 4
+  %3 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 3), align 4
   %add.2 = add nsw i32 %3, %add.1
-  store i32 %add.2, i32* %res, align 16
+  store i32 %add.2, ptr %res, align 16
   ret void
 }
 
-define void @i32_red_example8(i32* %res) {
+define void @i32_red_example8(ptr %res) {
 ; CHECK-LABEL: @i32_red_example8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr @arr_i32, align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
-; CHECK-NEXT:    store i32 [[TMP1]], i32* [[RES:%.*]], align 16
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 0), align 16
-  %1 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 1), align 4
+  %0 = load i32, ptr @arr_i32, align 16
+  %1 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 1), align 4
   %add = add nsw i32 %1, %0
-  %2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 2), align 8
+  %2 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 2), align 8
   %add.1 = add nsw i32 %2, %add
-  %3 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 3), align 4
+  %3 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 3), align 4
   %add.2 = add nsw i32 %3, %add.1
-  %4 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 4), align 16
+  %4 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 4), align 16
   %add.3 = add nsw i32 %4, %add.2
-  %5 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 5), align 4
+  %5 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 5), align 4
   %add.4 = add nsw i32 %5, %add.3
-  %6 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 6), align 8
+  %6 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 6), align 8
   %add.5 = add nsw i32 %6, %add.4
-  %7 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 7), align 4
+  %7 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 7), align 4
   %add.6 = add nsw i32 %7, %add.5
-  store i32 %add.6, i32* %res, align 16
+  store i32 %add.6, ptr %res, align 16
   ret void
 }
 
-define void @i32_red_example16(i32* %res) {
+define void @i32_red_example16(ptr %res) {
 ; CHECK-LABEL: @i32_red_example16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, <16 x i32>* bitcast ([32 x i32]* @arr_i32 to <16 x i32>*), align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr @arr_i32, align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP0]])
-; CHECK-NEXT:    store i32 [[TMP1]], i32* [[RES:%.*]], align 16
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 0), align 16
-  %1 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 1), align 4
+  %0 = load i32, ptr @arr_i32, align 16
+  %1 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 1), align 4
   %add = add nsw i32 %1, %0
-  %2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 2), align 8
+  %2 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 2), align 8
   %add.1 = add nsw i32 %2, %add
-  %3 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 3), align 4
+  %3 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 3), align 4
   %add.2 = add nsw i32 %3, %add.1
-  %4 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 4), align 16
+  %4 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 4), align 16
   %add.3 = add nsw i32 %4, %add.2
-  %5 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 5), align 4
+  %5 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 5), align 4
   %add.4 = add nsw i32 %5, %add.3
-  %6 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 6), align 8
+  %6 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 6), align 8
   %add.5 = add nsw i32 %6, %add.4
-  %7 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 7), align 4
+  %7 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 7), align 4
   %add.6 = add nsw i32 %7, %add.5
-  %8 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 8), align 16
+  %8 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 8), align 16
   %add.7 = add nsw i32 %8, %add.6
-  %9 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 9), align 4
+  %9 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 9), align 4
   %add.8 = add nsw i32 %9, %add.7
-  %10 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 10), align 8
+  %10 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 10), align 8
   %add.9 = add nsw i32 %10, %add.8
-  %11 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 11), align 4
+  %11 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 11), align 4
   %add.10 = add nsw i32 %11, %add.9
-  %12 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 12), align 16
+  %12 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 12), align 16
   %add.11 = add nsw i32 %12, %add.10
-  %13 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 13), align 4
+  %13 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 13), align 4
   %add.12 = add nsw i32 %13, %add.11
-  %14 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 14), align 8
+  %14 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 14), align 8
   %add.13 = add nsw i32 %14, %add.12
-  %15 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 15), align 4
+  %15 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 15), align 4
   %add.14 = add nsw i32 %15, %add.13
-  store i32 %add.14, i32* %res, align 16
+  store i32 %add.14, ptr %res, align 16
   ret void
 }
 
-define void @i32_red_example32(i32* %res) {
+define void @i32_red_example32(ptr %res) {
 ; CHECK-LABEL: @i32_red_example32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <32 x i32>, <32 x i32>* bitcast ([32 x i32]* @arr_i32 to <32 x i32>*), align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <32 x i32>, ptr @arr_i32, align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> [[TMP0]])
-; CHECK-NEXT:    store i32 [[TMP1]], i32* [[RES:%.*]], align 16
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 0), align 16
-  %1 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 1), align 4
+  %0 = load i32, ptr @arr_i32, align 16
+  %1 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 1), align 4
   %add = add nsw i32 %1, %0
-  %2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 2), align 8
+  %2 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 2), align 8
   %add.1 = add nsw i32 %2, %add
-  %3 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 3), align 4
+  %3 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 3), align 4
   %add.2 = add nsw i32 %3, %add.1
-  %4 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 4), align 16
+  %4 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 4), align 16
   %add.3 = add nsw i32 %4, %add.2
-  %5 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 5), align 4
+  %5 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 5), align 4
   %add.4 = add nsw i32 %5, %add.3
-  %6 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 6), align 8
+  %6 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 6), align 8
   %add.5 = add nsw i32 %6, %add.4
-  %7 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 7), align 4
+  %7 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 7), align 4
   %add.6 = add nsw i32 %7, %add.5
-  %8 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 8), align 16
+  %8 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 8), align 16
   %add.7 = add nsw i32 %8, %add.6
-  %9 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 9), align 4
+  %9 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 9), align 4
   %add.8 = add nsw i32 %9, %add.7
-  %10 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 10), align 8
+  %10 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 10), align 8
   %add.9 = add nsw i32 %10, %add.8
-  %11 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 11), align 4
+  %11 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 11), align 4
   %add.10 = add nsw i32 %11, %add.9
-  %12 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 12), align 16
+  %12 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 12), align 16
   %add.11 = add nsw i32 %12, %add.10
-  %13 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 13), align 4
+  %13 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 13), align 4
   %add.12 = add nsw i32 %13, %add.11
-  %14 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 14), align 8
+  %14 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 14), align 8
   %add.13 = add nsw i32 %14, %add.12
-  %15 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 15), align 4
+  %15 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 15), align 4
   %add.14 = add nsw i32 %15, %add.13
-  %16 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 16), align 16
+  %16 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 16), align 16
   %add.15 = add nsw i32 %16, %add.14
-  %17 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 17), align 4
+  %17 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 17), align 4
   %add.16 = add nsw i32 %17, %add.15
-  %18 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 18), align 8
+  %18 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 18), align 8
   %add.17 = add nsw i32 %18, %add.16
-  %19 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 19), align 4
+  %19 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 19), align 4
   %add.18 = add nsw i32 %19, %add.17
-  %20 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 20), align 16
+  %20 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 20), align 16
   %add.19 = add nsw i32 %20, %add.18
-  %21 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 21), align 4
+  %21 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 21), align 4
   %add.20 = add nsw i32 %21, %add.19
-  %22 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 22), align 8
+  %22 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 22), align 8
   %add.21 = add nsw i32 %22, %add.20
-  %23 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 23), align 4
+  %23 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 23), align 4
   %add.22 = add nsw i32 %23, %add.21
-  %24 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 24), align 16
+  %24 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 24), align 16
   %add.23 = add nsw i32 %24, %add.22
-  %25 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 25), align 4
+  %25 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 25), align 4
   %add.24 = add nsw i32 %25, %add.23
-  %26 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 26), align 8
+  %26 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 26), align 8
   %add.25 = add nsw i32 %26, %add.24
-  %27 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 27), align 4
+  %27 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 27), align 4
   %add.26 = add nsw i32 %27, %add.25
-  %28 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 28), align 16
+  %28 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 28), align 16
   %add.27 = add nsw i32 %28, %add.26
-  %29 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 29), align 4
+  %29 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 29), align 4
   %add.28 = add nsw i32 %29, %add.27
-  %30 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 30), align 8
+  %30 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 30), align 8
   %add.29 = add nsw i32 %30, %add.28
-  %31 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 31), align 4
+  %31 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 31), align 4
   %add.30 = add nsw i32 %31, %add.29
-  store i32 %add.30, i32* %res, align 16
+  store i32 %add.30, ptr %res, align 16
   ret void
 }
 
@@ -983,35 +972,35 @@ declare i32 @foobar(i32)
 define void @i32_red_call(i32 %val) {
 ; CHECK-LABEL: @i32_red_call(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr @arr_i32, align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @foobar(i32 [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 0), align 16
-  %1 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 1), align 4
+  %0 = load i32, ptr @arr_i32, align 16
+  %1 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 1), align 4
   %add = add nsw i32 %1, %0
-  %2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 2), align 8
+  %2 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 2), align 8
   %add.1 = add nsw i32 %2, %add
-  %3 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 3), align 4
+  %3 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 3), align 4
   %add.2 = add nsw i32 %3, %add.1
-  %4 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 4), align 16
+  %4 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 4), align 16
   %add.3 = add nsw i32 %4, %add.2
-  %5 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 5), align 4
+  %5 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 5), align 4
   %add.4 = add nsw i32 %5, %add.3
-  %6 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 6), align 8
+  %6 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 6), align 8
   %add.5 = add nsw i32 %6, %add.4
-  %7 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 7), align 4
+  %7 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 7), align 4
   %add.6 = add nsw i32 %7, %add.5
   %res = call i32 @foobar(i32 %add.6)
   ret void
 }
 
-define void @i32_red_invoke(i32 %val) personality i32 (...)* @__gxx_personality_v0 {
+define void @i32_red_invoke(i32 %val) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @i32_red_invoke(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr @arr_i32, align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[RES:%.*]] = invoke i32 @foobar(i32 [[TMP1]])
 ; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
@@ -1023,20 +1012,20 @@ define void @i32_red_invoke(i32 %val) personality i32 (...)* @__gxx_personality_
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 0), align 16
-  %1 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 1), align 4
+  %0 = load i32, ptr @arr_i32, align 16
+  %1 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 1), align 4
   %add = add nsw i32 %1, %0
-  %2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 2), align 8
+  %2 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 2), align 8
   %add.1 = add nsw i32 %2, %add
-  %3 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 3), align 4
+  %3 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 3), align 4
   %add.2 = add nsw i32 %3, %add.1
-  %4 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 4), align 16
+  %4 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 4), align 16
   %add.3 = add nsw i32 %4, %add.2
-  %5 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 5), align 4
+  %5 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 5), align 4
   %add.4 = add nsw i32 %5, %add.3
-  %6 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 6), align 8
+  %6 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 6), align 8
   %add.5 = add nsw i32 %6, %add.4
-  %7 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 7), align 4
+  %7 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 7), align 4
   %add.6 = add nsw i32 %7, %add.5
   %res = invoke i32 @foobar(i32 %add.6) to label %normal unwind label %exception
 exception:
@@ -1047,13 +1036,12 @@ normal:
 }
 
 ; Test case from PR47670. Reduction result is used as incoming value in phi.
-define i32 @reduction_result_used_in_phi(i32* nocapture readonly %data, i1 zeroext %b) {
+define i32 @reduction_result_used_in_phi(ptr nocapture readonly %data, i1 zeroext %b) {
 ; CHECK-LABEL: @reduction_result_used_in_phi(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DATA:%.*]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[DATA:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -1064,15 +1052,15 @@ entry:
   br i1 %b, label %bb, label %exit
 
 bb:
-  %l.0 = load i32, i32* %data, align 4
-  %idx.1 = getelementptr inbounds i32, i32* %data, i64 1
-  %l.1 = load i32, i32* %idx.1, align 4
+  %l.0 = load i32, ptr %data, align 4
+  %idx.1 = getelementptr inbounds i32, ptr %data, i64 1
+  %l.1 = load i32, ptr %idx.1, align 4
   %add.1 = add i32 %l.1, %l.0
-  %idx.2 = getelementptr inbounds i32, i32* %data, i64 2
-  %l.2 = load i32, i32* %idx.2, align 4
+  %idx.2 = getelementptr inbounds i32, ptr %data, i64 2
+  %l.2 = load i32, ptr %idx.2, align 4
   %add.2 = add i32 %l.2, %add.1
-  %idx.3 = getelementptr inbounds i32, i32* %data, i64 3
-  %l.3 = load i32, i32* %idx.3, align 4
+  %idx.3 = getelementptr inbounds i32, ptr %data, i64 3
+  %l.3 = load i32, ptr %idx.3, align 4
   %add.3 = add i32 %l.3, %add.2
   br label %exit
 
@@ -1081,13 +1069,12 @@ exit:
   ret i32 %sum.1
 }
 
-define i32 @reduction_result_used_in_phi_loop(i32* nocapture readonly %data, i1 zeroext %b) {
+define i32 @reduction_result_used_in_phi_loop(ptr nocapture readonly %data, i1 zeroext %b) {
 ; CHECK-LABEL: @reduction_result_used_in_phi_loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DATA:%.*]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[DATA:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -1098,15 +1085,15 @@ entry:
   br i1 %b, label %bb, label %exit
 
 bb:
-  %l.0 = load i32, i32* %data, align 4
-  %idx.1 = getelementptr inbounds i32, i32* %data, i64 1
-  %l.1 = load i32, i32* %idx.1, align 4
+  %l.0 = load i32, ptr %data, align 4
+  %idx.1 = getelementptr inbounds i32, ptr %data, i64 1
+  %l.1 = load i32, ptr %idx.1, align 4
   %add.1 = add i32 %l.1, %l.0
-  %idx.2 = getelementptr inbounds i32, i32* %data, i64 2
-  %l.2 = load i32, i32* %idx.2, align 4
+  %idx.2 = getelementptr inbounds i32, ptr %data, i64 2
+  %l.2 = load i32, ptr %idx.2, align 4
   %add.2 = add i32 %l.2, %add.1
-  %idx.3 = getelementptr inbounds i32, i32* %data, i64 3
-  %l.3 = load i32, i32* %idx.3, align 4
+  %idx.3 = getelementptr inbounds i32, ptr %data, i64 3
+  %l.3 = load i32, ptr %idx.3, align 4
   %add.3 = add i32 %l.3, %add.2
   br label %exit
 
@@ -1142,20 +1129,19 @@ bb.1:
 
 ; The FMF on the reduction should match the incoming insts.
 
-define float @fadd_v4f32_fmf(float* %p) {
+define float @fadd_v4f32_fmf(ptr %p) {
 ; CHECK-LABEL: @fadd_v4f32_fmf(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P:%.*]] to <4 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;
   %p1 = getelementptr inbounds float, float* %p, i64 1
-  %p2 = getelementptr inbounds float, float* %p, i64 2
-  %p3 = getelementptr inbounds float, float* %p, i64 3
-  %t0 = load float, float* %p, align 4
-  %t1 = load float, float* %p1, align 4
-  %t2 = load float, float* %p2, align 4
-  %t3 = load float, float* %p3, align 4
+  %p2 = getelementptr inbounds float, ptr %p, i64 2
+  %p3 = getelementptr inbounds float, ptr %p, i64 3
+  %t0 = load float, ptr %p, align 4
+  %t1 = load float, ptr %p1, align 4
+  %t2 = load float, ptr %p2, align 4
+  %t3 = load float, ptr %p3, align 4
   %add1 = fadd reassoc nsz float %t1, %t0
   %add2 = fadd reassoc nsz float %t2, %add1
   %add3 = fadd reassoc nsz float %t3, %add2
@@ -1166,20 +1152,19 @@ define float @fadd_v4f32_fmf(float* %p) {
 ; Only the common FMF of all operations in the reduction propagate to the result.
 ; In this example, "contract nnan arcp" are dropped, but "ninf" transfers with the required flags.
 
-define float @fadd_v4f32_fmf_intersect(float* %p) {
+define float @fadd_v4f32_fmf_intersect(ptr %p) {
 ; CHECK-LABEL: @fadd_v4f32_fmf_intersect(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P:%.*]] to <4 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = call reassoc ninf nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;
   %p1 = getelementptr inbounds float, float* %p, i64 1
-  %p2 = getelementptr inbounds float, float* %p, i64 2
-  %p3 = getelementptr inbounds float, float* %p, i64 3
-  %t0 = load float, float* %p, align 4
-  %t1 = load float, float* %p1, align 4
-  %t2 = load float, float* %p2, align 4
-  %t3 = load float, float* %p3, align 4
+  %p2 = getelementptr inbounds float, ptr %p, i64 2
+  %p3 = getelementptr inbounds float, ptr %p, i64 3
+  %t0 = load float, ptr %p, align 4
+  %t1 = load float, ptr %p1, align 4
+  %t2 = load float, ptr %p2, align 4
+  %t3 = load float, ptr %p3, align 4
   %add1 = fadd ninf reassoc nsz nnan float %t1, %t0
   %add2 = fadd ninf reassoc nsz nnan arcp float %t2, %add1
   %add3 = fadd ninf reassoc nsz contract float %t3, %add2
@@ -1188,30 +1173,30 @@ define float @fadd_v4f32_fmf_intersect(float* %p) {
 
 ; This must not propagate 'nsw' to a new add instruction.
 
-define void @nsw_propagation_v4i32(i32* %res, i32 %start) {
+define void @nsw_propagation_v4i32(ptr %res, i32 %start) {
 ; CHECK-LABEL: @nsw_propagation_v4i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([32 x i32]* @arr_i32 to <4 x i32>*), align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @arr_i32, align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP2]], [[START:%.*]]
-; CHECK-NEXT:    store i32 [[OP_RDX]], i32* [[RES:%.*]], align 16
+; CHECK-NEXT:    store i32 [[OP_RDX]], ptr [[RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
 
 ; STORE-LABEL: @nsw_propagation_v4i32(
-; STORE-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([32 x i32]* @arr_i32 to <4 x i32>*), align 16
+; STORE-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @arr_i32, align 16
 ; STORE-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
 ; STORE-NEXT:    [[OP_RDX:%.*]] = add i32 [[START:%.*]], [[TMP2]]
-; STORE-NEXT:    store i32 [[OP_RDX]], i32* [[RES:%.*]], align 16
+; STORE-NEXT:    store i32 [[OP_RDX]], ptr [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
-  %t0 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 0), align 16
-  %t1 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 1), align 4
-  %t2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 2), align 8
-  %t3 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 3), align 4
+  %t0 = load i32, ptr @arr_i32, align 16
+  %t1 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 1), align 4
+  %t2 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 2), align 8
+  %t3 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 3), align 4
   %s = add nsw i32 %start, %t0
   %add = add nsw i32 %t1, %s
   %add.1 = add nsw i32 %t2, %add
   %add.2 = add nsw i32 %t3, %add.1
-  store i32 %add.2, i32* %res, align 16
+  store i32 %add.2, ptr %res, align 16
   ret void
 }
 

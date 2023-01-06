@@ -3286,7 +3286,7 @@ llvm::Optional<uint32_t> Lexer::tryReadNumericUCN(const char *&StartPtr,
   uint32_t CodePoint = 0;
   while (Count != NumHexDigits || Delimited) {
     char C = getCharAndSize(CurPtr, CharSize);
-    if (!Delimited && C == '{') {
+    if (!Delimited && Count == 0 && C == '{') {
       Delimited = true;
       CurPtr += CharSize;
       continue;

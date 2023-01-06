@@ -42,7 +42,7 @@ using namespace llvm;
 
 namespace {
 
-using AttrPtrVecTy = std::vector<const Attribute *>;
+using AttrPtrVecTy = std::vector<Attribute>;
 using AttrPtrIdxVecVecTy = std::pair<unsigned, AttrPtrVecTy>;
 using AttrPtrVecVecTy = SmallVector<AttrPtrIdxVecVecTy, 3>;
 
@@ -94,56 +94,53 @@ public:
     }
   }
 
+  // FIXME: Should just directly use AttrBuilder instead of going through
+  // AttrPtrVecTy
   void visitAttributeSet(const AttributeSet &AS,
                          AttrPtrVecTy &AttrsToPreserve) {
     assert(AttrsToPreserve.empty() && "Should not be sharing vectors.");
     AttrsToPreserve.reserve(AS.getNumAttributes());
-    for (const Attribute &A : AS)
+
+    // Optnone requires noinline, so removing noinline requires removing the
+    // pair.
+    Attribute NoInline = AS.getAttribute(Attribute::NoInline);
+    bool RemoveNoInline = false;
+    if (NoInline.isValid()) {
+      RemoveNoInline = !O.shouldKeep();
+      if (!RemoveNoInline)
+        AttrsToPreserve.emplace_back(NoInline);
+    }
+
+    for (Attribute A : AS) {
+      if (A.isEnumAttribute()) {
+        Attribute::AttrKind Kind = A.getKindAsEnum();
+        if (Kind == Attribute::NoInline)
+          continue;
+
+        if (RemoveNoInline && Kind == Attribute::OptimizeNone)
+          continue;
+
+        // TODO: Could only remove this if there are no constrained calls in the
+        // function.
+        if (Kind == Attribute::StrictFP) {
+          AttrsToPreserve.emplace_back(A);
+          continue;
+        }
+      }
+
       if (O.shouldKeep())
-        AttrsToPreserve.emplace_back(&A);
-  }
-};
-
-struct AttributeCounter : public InstVisitor<AttributeCounter> {
-  /// How many features (in this case, attributes) did we count, total?
-  int AttributeCount = 0;
-
-  void visitModule(Module &M) {
-    for (GlobalVariable &GV : M.getGlobalList())
-      visitGlobalVariable(GV);
-  }
-
-  void visitGlobalVariable(GlobalVariable &GV) {
-    // Global variables only have one attribute set.
-    visitAttributeSet(GV.getAttributes());
-  }
-
-  void visitFunction(Function &F) {
-    if (F.getIntrinsicID() != Intrinsic::not_intrinsic)
-      return; // We can neither add nor remove attributes from intrinsics.
-    visitAttributeList(F.getAttributes());
-  }
-
-  void visitCallBase(CallBase &I) { visitAttributeList(I.getAttributes()); }
-
-  void visitAttributeList(const AttributeList &AL) {
-    for (const AttributeSet &AS : AL)
-      visitAttributeSet(AS);
-  }
-
-  void visitAttributeSet(const AttributeSet &AS) {
-    AttributeCount += AS.getNumAttributes();
+        AttrsToPreserve.emplace_back(A);
+    }
   }
 };
 
 } // namespace
 
-AttributeSet
-convertAttributeRefToAttributeSet(LLVMContext &C,
-                                  ArrayRef<const Attribute *> Attributes) {
+AttributeSet convertAttributeRefToAttributeSet(LLVMContext &C,
+                                               ArrayRef<Attribute> Attributes) {
   AttrBuilder B(C);
-  for (const Attribute *A : Attributes)
-    B.addAttribute(*A);
+  for (Attribute A : Attributes)
+    B.addAttribute(A);
   return AttributeSet::get(C, B);
 }
 

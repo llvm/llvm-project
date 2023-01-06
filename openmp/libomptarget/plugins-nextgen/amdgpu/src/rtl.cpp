@@ -18,6 +18,7 @@
 #include <hsa_ext_amd.h>
 #include <mutex>
 #include <string>
+#include <system_error>
 #include <unistd.h>
 #include <unordered_map>
 
@@ -28,10 +29,17 @@
 #include "Utilities.h"
 #include "UtilitiesRTL.h"
 
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Program.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 namespace omp {
@@ -1519,6 +1527,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = initMemoryPools())
       return Err;
 
+    char GPUName[64];
+    if (auto Err = getDeviceAttr(HSA_AGENT_INFO_NAME, GPUName))
+      return Err;
+    Arch = GPUName;
+
     // Get the wavefront size.
     uint32_t WavefrontSize = 0;
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_WAVEFRONT_SIZE, WavefrontSize))
@@ -1626,35 +1639,74 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
+  Expected<std::unique_ptr<MemoryBuffer>>
+  doJITPostProcessing(std::unique_ptr<MemoryBuffer> MB) const override {
+
+    // TODO: We should try to avoid materialization but there seems to be no
+    // good linker interface w/o file i/o.
+    SmallString<128> LinkerOutputFilePath;
+    std::error_code EC = sys::fs::createTemporaryFile(
+        "amdgpu-pre-link-jit", ".out", LinkerOutputFilePath);
+    if (EC)
+      return createStringError(EC,
+                               "Failed to create temporary file for linker");
+
+    SmallString<128> LinkerInputFilePath = LinkerOutputFilePath;
+    LinkerInputFilePath.pop_back_n(2);
+
+    auto FD = raw_fd_ostream(LinkerInputFilePath.data(), EC);
+    if (EC)
+      return createStringError(EC, "Failed to open temporary file for linker");
+    FD.write(MB->getBufferStart(), MB->getBufferSize());
+    FD.close();
+
+    const auto &ErrorOrPath = sys::findProgramByName("lld");
+    if (!ErrorOrPath)
+      return createStringError(inconvertibleErrorCode(),
+                               "Failed to find `lld` on the PATH.");
+
+    std::string LLDPath = ErrorOrPath.get();
+    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, getDeviceId(),
+         "Using `%s` to link JITed amdgcn ouput.", LLDPath.c_str());
+
+    std::string MCPU = "-plugin-opt=mcpu=" + getArch();
+
+    StringRef Args[] = {LLDPath,
+                        "-flavor",
+                        "gnu",
+                        "--no-undefined",
+                        "-shared",
+                        MCPU,
+                        "-o",
+                        LinkerOutputFilePath.data(),
+                        LinkerInputFilePath.data()};
+
+    std::string Error;
+    int RC = sys::ExecuteAndWait(LLDPath, Args, std::nullopt, {}, 0, 0, &Error);
+    if (RC)
+      return createStringError(inconvertibleErrorCode(),
+                               "Linking optimized bitcode failed: %s",
+                               Error.c_str());
+
+    return std::move(
+        MemoryBuffer::getFileOrSTDIN(LinkerOutputFilePath.data()).get());
+  }
+
+  std::string getArch() const override { return Arch; }
+
   /// Allocate and construct an AMDGPU kernel.
   Expected<GenericKernelTy *>
   constructKernelEntry(const __tgt_offload_entry &KernelEntry,
                        DeviceImageTy &Image) override {
-    // Create a metadata object for the exec mode global (auto-generated).
-    StaticGlobalTy<llvm::omp::OMPTgtExecModeFlags> ExecModeGlobal(
-        KernelEntry.name, "_exec_mode");
 
-    // Retrieve execution mode for the kernel. This may fail since some kernels
-    // may not have a execution mode.
-    GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
-    if (auto Err = GHandler.readGlobalFromImage(*this, Image, ExecModeGlobal)) {
-      DP("Failed to read execution mode for '%s': %s\n"
-         "Using default GENERIC (1) execution mode\n",
-         KernelEntry.name, toString(std::move(Err)).data());
-      // Consume the error since it is acceptable to fail.
-      consumeError(std::move(Err));
-      // In some cases the execution mode is not included, so use the default.
-      ExecModeGlobal.setValue(llvm::omp::OMP_TGT_EXEC_MODE_GENERIC);
-    }
-
-    // Check that the retrieved execution mode is valid.
-    if (!GenericKernelTy::isValidExecutionMode(ExecModeGlobal.getValue()))
-      return Plugin::error("Invalid execution mode %d for '%s'",
-                           ExecModeGlobal.getValue(), KernelEntry.name);
+    Expected<OMPTgtExecModeFlags> ExecModeOrErr =
+        getExecutionModeForKernel(KernelEntry.name, Image);
+    if (!ExecModeOrErr)
+      return ExecModeOrErr.takeError();
 
     // Allocate and initialize the AMDGPU kernel.
     AMDGPUKernelTy *AMDKernel = Plugin::get().allocate<AMDGPUKernelTy>();
-    new (AMDKernel) AMDGPUKernelTy(KernelEntry.name, ExecModeGlobal.getValue());
+    new (AMDKernel) AMDGPUKernelTy(KernelEntry.name, ExecModeOrErr.get());
 
     return AMDKernel;
   }
@@ -2043,6 +2095,9 @@ private:
   /// The agent handler corresponding to the device.
   hsa_agent_t Agent;
 
+  /// The GPU architecture.
+  std::string Arch;
+
   /// Reference to the host device.
   AMDHostDeviceTy &HostDevice;
 
@@ -2271,6 +2326,8 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     return Plugin::check(Status, "Error in hsa_shut_down: %s");
   }
 
+  Triple::ArchType getTripleArch() const override { return Triple::amdgcn; }
+
   /// Get the ELF code for recognizing the compatible image binary.
   uint16_t getMagicElfBits() const override { return ELF::EM_AMDGPU; }
 
@@ -2336,26 +2393,33 @@ private:
     std::string Reasons;
     uint32_t ReasonsMask = Event->memory_fault.fault_reason_mask;
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_PAGE_NOT_PRESENT)
-      Reasons += "HSA_AMD_MEMORY_FAULT_PAGE_NOT_PRESENT\n";
+      Reasons += "HSA_AMD_MEMORY_FAULT_PAGE_NOT_PRESENT, ";
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_READ_ONLY)
-      Reasons += " HSA_AMD_MEMORY_FAULT_READ_ONLY\n";
+      Reasons += " HSA_AMD_MEMORY_FAULT_READ_ONLY, ";
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_NX)
-      Reasons += " HSA_AMD_MEMORY_FAULT_NX\n";
+      Reasons += " HSA_AMD_MEMORY_FAULT_NX, ";
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_HOST_ONLY)
-      Reasons += " HSA_AMD_MEMORY_FAULT_HOST_ONLY\n";
+      Reasons += " HSA_AMD_MEMORY_FAULT_HOST_ONLY, ";
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_DRAMECC)
-      Reasons += " HSA_AMD_MEMORY_FAULT_DRAMECC\n";
+      Reasons += " HSA_AMD_MEMORY_FAULT_DRAMECC, ";
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_IMPRECISE)
-      Reasons += " HSA_AMD_MEMORY_FAULT_IMPRECISE\n";
+      Reasons += " HSA_AMD_MEMORY_FAULT_IMPRECISE, ";
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_SRAMECC)
-      Reasons += " HSA_AMD_MEMORY_FAULT_SRAMECC\n";
+      Reasons += " HSA_AMD_MEMORY_FAULT_SRAMECC, ";
     if (ReasonsMask & HSA_AMD_MEMORY_FAULT_HANG)
-      Reasons += " HSA_AMD_MEMORY_FAULT_HANG\n";
+      Reasons += " HSA_AMD_MEMORY_FAULT_HANG, ";
+
+    // If we do not know the reason, say so, otherwise remove the trailing comma
+    // and space.
+    if (Reasons.empty())
+      Reasons = "Unknown (Mask: " + std::to_string(ReasonsMask) + ")";
+    else
+      Reasons.resize(Reasons.size() - /* ', ' */ 2);
 
     // Abort the execution since we do not recover from this error.
     FATAL_MESSAGE(1,
                   "Found HSA_AMD_GPU_MEMORY_FAULT_EVENT in agent %" PRIu64
-                  " at virtual address %p and reasons:\n %s",
+                  " at virtual address %p and reasons: %s",
                   Event->memory_fault.agent.handle,
                   (void *)Event->memory_fault.virtual_address, Reasons.data());
 

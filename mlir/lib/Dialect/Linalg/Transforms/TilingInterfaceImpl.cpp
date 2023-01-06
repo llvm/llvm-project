@@ -258,6 +258,8 @@ struct LinalgOpPartialReductionInterface
     // Insert the new parallel dimension based on the index of the reduction
     // loop. This could be controlled by user for more flexibility.
     int64_t insertSplitDimension = reductionDims[0];
+    assert(sizes.size() >= static_cast<size_t>(insertSplitDimension) &&
+           "reduction dimension must be tiled");
 
     SmallVector<Operation *, 4> combinerOps;
     if (!matchReduction(linalgOp.getRegionOutputArgs(), 0, combinerOps) ||

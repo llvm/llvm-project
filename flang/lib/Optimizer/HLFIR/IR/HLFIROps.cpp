@@ -503,5 +503,15 @@ void hlfir::ApplyOp::build(mlir::OpBuilder &builder,
   build(builder, odsState, resultType, expr, indices, typeparams);
 }
 
+//===----------------------------------------------------------------------===//
+// NullOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::NullOp::build(mlir::OpBuilder &builder,
+                          mlir::OperationState &odsState) {
+  return build(builder, odsState,
+               fir::ReferenceType::get(builder.getNoneType()));
+}
+
 #define GET_OP_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIROps.cpp.inc"

@@ -796,18 +796,18 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     // UDiv doesn't demand low bits that are zero in the divisor.
     const APInt *SA;
     if (match(I->getOperand(1), m_APInt(SA))) {
-      // If the shift is exact, then it does demand the low bits.
-      if (cast<UDivOperator>(I)->isExact())
-        break;
-
-      // FIXME: Take the demanded mask of the result into account.
+      // TODO: Take the demanded mask of the result into account.
       unsigned RHSTrailingZeros = SA->countTrailingZeros();
       APInt DemandedMaskIn =
           APInt::getHighBitsSet(BitWidth, BitWidth - RHSTrailingZeros);
-      if (SimplifyDemandedBits(I, 0, DemandedMaskIn, LHSKnown, Depth + 1))
+      if (SimplifyDemandedBits(I, 0, DemandedMaskIn, LHSKnown, Depth + 1)) {
+        // We can't guarantee that "exact" is still true after changing the
+        // the dividend.
+        I->dropPoisonGeneratingFlags();
         return I;
+      }
 
-      // Propagate zero bits from the input.
+      // Increase high zero bits from the input.
       Known.Zero.setHighBits(std::min(
           BitWidth, LHSKnown.Zero.countLeadingOnes() + RHSTrailingZeros));
     } else {

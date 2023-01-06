@@ -4,17 +4,17 @@
 # Test that MIPS unaligned load/store instructions can be mapped to their
 # corresponding microMIPS instructions.
 --- |
-  define void @g(i32* %a, i32* %b) {
+  define void @g(ptr %a, ptr %b) {
   entry:
-    %0 = load i32, i32* %a, align 1
-    store i32 %0, i32* %b, align 1
+    %0 = load i32, ptr %a, align 1
+    store i32 %0, ptr %b, align 1
     ret void
   }
 
-  define void @g2(i32* %a, i32* %b) {
+  define void @g2(ptr %a, ptr %b) {
   entry:
-    %0 = load i32, i32* %a, align 1
-    store i32 %0, i32* %b, align 1
+    %0 = load i32, ptr %a, align 1
+    store i32 %0, ptr %b, align 1
     ret void
   }
 ...

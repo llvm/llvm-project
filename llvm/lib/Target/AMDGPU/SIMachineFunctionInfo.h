@@ -587,7 +587,7 @@ public:
     auto I = SGPRSpillToVGPRLanes.find(FrameIndex);
     return (I == SGPRSpillToVGPRLanes.end())
                ? ArrayRef<SIRegisterInfo::SpilledReg>()
-               : makeArrayRef(I->second);
+               : ArrayRef(I->second);
   }
 
   ArrayRef<Register> getSGPRSpillVGPRs() const { return SpillVGPRs; }
@@ -651,7 +651,7 @@ public:
     auto I = PrologEpilogSGPRSpillToVGPRLanes.find(FrameIndex);
     return (I == PrologEpilogSGPRSpillToVGPRLanes.end())
                ? ArrayRef<SIRegisterInfo::SpilledReg>()
-               : makeArrayRef(I->second);
+               : ArrayRef(I->second);
   }
 
   void allocateWWMSpill(MachineFunction &MF, Register VGPR, uint64_t Size = 4,

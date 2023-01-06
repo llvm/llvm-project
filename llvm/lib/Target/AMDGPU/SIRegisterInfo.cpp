@@ -2887,7 +2887,7 @@ ArrayRef<int16_t> SIRegisterInfo::getRegSplitParts(const TargetRegisterClass *RC
   const std::vector<int16_t> &Parts = RegSplitParts[EltDWORDs - 1];
   const unsigned NumParts = RegDWORDs / EltDWORDs;
 
-  return makeArrayRef(Parts.data(), NumParts);
+  return ArrayRef(Parts.data(), NumParts);
 }
 
 const TargetRegisterClass*
@@ -3155,17 +3155,15 @@ SIRegisterInfo::getProperlyAlignedRC(const TargetRegisterClass *RC) const {
 
 ArrayRef<MCPhysReg>
 SIRegisterInfo::getAllSGPR128(const MachineFunction &MF) const {
-  return makeArrayRef(AMDGPU::SGPR_128RegClass.begin(),
-                      ST.getMaxNumSGPRs(MF) / 4);
+  return ArrayRef(AMDGPU::SGPR_128RegClass.begin(), ST.getMaxNumSGPRs(MF) / 4);
 }
 
 ArrayRef<MCPhysReg>
 SIRegisterInfo::getAllSGPR64(const MachineFunction &MF) const {
-  return makeArrayRef(AMDGPU::SGPR_64RegClass.begin(),
-                      ST.getMaxNumSGPRs(MF) / 2);
+  return ArrayRef(AMDGPU::SGPR_64RegClass.begin(), ST.getMaxNumSGPRs(MF) / 2);
 }
 
 ArrayRef<MCPhysReg>
 SIRegisterInfo::getAllSGPR32(const MachineFunction &MF) const {
-  return makeArrayRef(AMDGPU::SGPR_32RegClass.begin(), ST.getMaxNumSGPRs(MF));
+  return ArrayRef(AMDGPU::SGPR_32RegClass.begin(), ST.getMaxNumSGPRs(MF));
 }

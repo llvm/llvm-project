@@ -1,3 +1,4 @@
+// REQUIRES: target={{x86_64-.*}}
 // RUN: %clang_dfsan -gmlt -mllvm -dfsan-track-origins=1 %s -o %t && \
 // RUN:     %run %t >%t.out 2>&1
 // RUN: FileCheck %s < %t.out

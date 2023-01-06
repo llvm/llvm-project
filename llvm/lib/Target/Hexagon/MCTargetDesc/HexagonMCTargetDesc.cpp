@@ -610,7 +610,7 @@ unsigned Hexagon_MC::GetELFFlags(const MCSubtargetInfo &STI) {
 }
 
 llvm::ArrayRef<MCPhysReg> Hexagon_MC::GetVectRegRev() {
-  return makeArrayRef(VectRegRev);
+  return ArrayRef(VectRegRev);
 }
 
 namespace {

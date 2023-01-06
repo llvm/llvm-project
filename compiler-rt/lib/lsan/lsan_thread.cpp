@@ -92,8 +92,4 @@ void RunCallbackForEachThreadLocked(
   GetLsanThreadRegistryLocked()->RunCallbackForEachThreadLocked(cb, arg);
 }
 
-void FinishThreadLocked(u32 tid) {
-  GetLsanThreadRegistryLocked()->FinishThread(tid);
-}
-
 }  // namespace __lsan

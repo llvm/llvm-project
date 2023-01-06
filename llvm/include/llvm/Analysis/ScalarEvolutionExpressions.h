@@ -187,7 +187,7 @@ protected:
 
   SCEVNAryExpr(const FoldingSetNodeIDRef ID, enum SCEVTypes T,
                const SCEV *const *O, size_t N)
-      : SCEV(ID, T, computeExpressionSize(makeArrayRef(O, N))), Operands(O),
+      : SCEV(ID, T, computeExpressionSize(ArrayRef(O, N))), Operands(O),
         NumOperands(N) {}
 
 public:
@@ -199,7 +199,7 @@ public:
   }
 
   ArrayRef<const SCEV *> operands() const {
-    return makeArrayRef(Operands, NumOperands);
+    return ArrayRef(Operands, NumOperands);
   }
 
   NoWrapFlags getNoWrapFlags(NoWrapFlags Mask = NoWrapMask) const {

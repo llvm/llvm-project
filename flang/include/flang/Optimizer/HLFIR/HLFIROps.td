@@ -457,4 +457,29 @@ def hlfir_ApplyOp : hlfir_Op<"apply", [NoMemoryEffect, AttrSizedOperandSegments]
   ];
 }
 
+def hlfir_NullOp : hlfir_Op<"null", [NoMemoryEffect, fir_FortranVariableOpInterface]> {
+  let summary = "create a NULL() address";
+
+  let description = [{
+    Create a NULL() address.
+    So far is not intended to represent NULL(MOLD).
+  }];
+
+  let results = (outs AnyFortranVariable);
+  let builders = [OpBuilder<(ins)>];
+
+  let assemblyFormat = "type(results) attr-dict";
+  let extraClassDeclaration = [{
+    // Implement FortranVariableInterface interface.
+    std::optional<fir::FortranVariableFlagsEnum> getFortranAttrs() const {
+      return std::nullopt;
+    }
+    mlir::Value getShape() const {return mlir::Value{};}
+    mlir::OperandRange getExplicitTypeParams() const {
+      // Return an empty range.
+      return {(*this)->getOperands().begin(), (*this)->getOperands().begin()};
+    }
+  }];
+}
+
 #endif // FORTRAN_DIALECT_HLFIR_OPS

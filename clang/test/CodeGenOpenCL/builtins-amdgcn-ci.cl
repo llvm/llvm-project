@@ -1,8 +1,8 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu hawaii -S -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu fiji -S -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu gfx906 -S -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu hawaii -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu fiji -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu gfx906 -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -S -emit-llvm -o - %s | FileCheck %s
 
 typedef unsigned int uint;
 typedef unsigned long ulong;
@@ -36,29 +36,27 @@ void test_s_memtime(global ulong* out)
 }
 
 // CHECK-LABEL: @test_is_shared(
-// CHECK: [[CAST:%[0-9]+]] = bitcast i32* %{{[0-9]+}} to i8*
-// CHECK: call i1 @llvm.amdgcn.is.shared(i8* [[CAST]]
+// CHECK: call i1 @llvm.amdgcn.is.shared(ptr %{{[0-9]+}}
 int test_is_shared(const int* ptr) {
   return __builtin_amdgcn_is_shared(ptr);
 }
 
 // CHECK-LABEL: @test_is_private(
-// CHECK: [[CAST:%[0-9]+]] = bitcast i32* %{{[0-9]+}} to i8*
-// CHECK: call i1 @llvm.amdgcn.is.private(i8* [[CAST]]
+// CHECK: call i1 @llvm.amdgcn.is.private(ptr %{{[0-9]+}}
 int test_is_private(const int* ptr) {
   return __builtin_amdgcn_is_private(ptr);
 }
 
 // CHECK-LABEL: @test_is_shared_global(
-// CHECK: [[CAST:%[0-9]+]] = addrspacecast i32 addrspace(1)* %{{[0-9]+}} to i8*
-// CHECK: call i1 @llvm.amdgcn.is.shared(i8* [[CAST]]
+// CHECK: [[CAST:%[0-9]+]] = addrspacecast ptr addrspace(1) %{{[0-9]+}} to ptr
+// CHECK: call i1 @llvm.amdgcn.is.shared(ptr [[CAST]]
 int test_is_shared_global(const global int* ptr) {
   return __builtin_amdgcn_is_shared(ptr);
 }
 
 // CHECK-LABEL: @test_is_private_global(
-// CHECK: [[CAST:%[0-9]+]] = addrspacecast i32 addrspace(1)* %{{[0-9]+}} to i8*
-// CHECK: call i1 @llvm.amdgcn.is.private(i8* [[CAST]]
+// CHECK: [[CAST:%[0-9]+]] = addrspacecast ptr addrspace(1) %{{[0-9]+}} to ptr
+// CHECK: call i1 @llvm.amdgcn.is.private(ptr [[CAST]]
 int test_is_private_global(const global int* ptr) {
   return __builtin_amdgcn_is_private(ptr);
 }

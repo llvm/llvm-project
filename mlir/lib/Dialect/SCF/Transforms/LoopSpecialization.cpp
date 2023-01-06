@@ -154,7 +154,6 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
   return success();
 }
 
-template <typename OpTy, bool IsMin>
 static void rewriteAffineOpAfterPeeling(RewriterBase &rewriter, ForOp forOp,
                                         ForOp partialIteration,
                                         Value previousUb) {
@@ -164,18 +163,20 @@ static void rewriteAffineOpAfterPeeling(RewriterBase &rewriter, ForOp forOp,
          "expected same step in main and partial loop");
   Value step = forOp.getStep();
 
-  forOp.walk([&](OpTy affineOp) {
-    AffineMap map = affineOp.getAffineMap();
-    (void)scf::rewritePeeledMinMaxOp(rewriter, affineOp, map,
-                                     affineOp.getOperands(), IsMin, mainIv,
-                                     previousUb, step,
+  forOp.walk([&](Operation *affineOp) {
+    if (!isa<AffineMinOp, AffineMaxOp>(affineOp))
+      return WalkResult::advance();
+    (void)scf::rewritePeeledMinMaxOp(rewriter, affineOp, mainIv, previousUb,
+                                     step,
                                      /*insideLoop=*/true);
+    return WalkResult::advance();
   });
-  partialIteration.walk([&](OpTy affineOp) {
-    AffineMap map = affineOp.getAffineMap();
-    (void)scf::rewritePeeledMinMaxOp(rewriter, affineOp, map,
-                                     affineOp.getOperands(), IsMin, partialIv,
-                                     previousUb, step, /*insideLoop=*/false);
+  partialIteration.walk([&](Operation *affineOp) {
+    if (!isa<AffineMinOp, AffineMaxOp>(affineOp))
+      return WalkResult::advance();
+    (void)scf::rewritePeeledMinMaxOp(rewriter, affineOp, partialIv, previousUb,
+                                     step, /*insideLoop=*/false);
+    return WalkResult::advance();
   });
 }
 
@@ -188,10 +189,7 @@ LogicalResult mlir::scf::peelAndCanonicalizeForLoop(RewriterBase &rewriter,
     return failure();
 
   // Rewrite affine.min and affine.max ops.
-  rewriteAffineOpAfterPeeling<AffineMinOp, /*IsMin=*/true>(
-      rewriter, forOp, partialIteration, previousUb);
-  rewriteAffineOpAfterPeeling<AffineMaxOp, /*IsMin=*/false>(
-      rewriter, forOp, partialIteration, previousUb);
+  rewriteAffineOpAfterPeeling(rewriter, forOp, partialIteration, previousUb);
 
   return success();
 }

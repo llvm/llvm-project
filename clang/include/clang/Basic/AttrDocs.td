@@ -6705,7 +6705,7 @@ For example:
 
 .. code-block:: c++
 
-  int* [[clang::annotate("category1", "foo", 1)]] f(int[[clang::annotate("category2")]] *);
+  int* [[clang::annotate_type("category1", "foo", 1)]] f(int[[clang::annotate_type("category2")]] *);
 
 The attribute does not have any effect on the semantics of the type system,
 neither type checking rules, nor runtime semantics. In particular:

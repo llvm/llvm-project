@@ -9,7 +9,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 define void @test1() {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32 addrspace(3)* undef, align 4
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(3) undef, align 4
 ; CHECK-NEXT:    [[VAL1:%.*]] = add i32 undef, 12
 ; CHECK-NEXT:    [[VAL2:%.*]] = trunc i64 undef to i32
 ; CHECK-NEXT:    [[VAL3:%.*]] = mul i32 [[VAL1]], [[VAL2]]
@@ -125,7 +125,7 @@ define void @test1() {
 ; CHECK-NEXT:    br i1 false, label [[BB7]], label [[BB15SPLITSPLITSPLITSPLITSPLITSPLIT]]
 ;
 bb:
-  %val = load i32, i32 addrspace(3)* undef, align 4
+  %val = load i32, ptr addrspace(3) undef, align 4
   %val1 = add i32 undef, 12
   %val2 = trunc i64 undef to i32
   %val3 = mul i32 %val1, %val2
@@ -190,10 +190,8 @@ bb32:                                             ; preds = %bb29
 define void @test2() {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[VAL:%.*]] = bitcast i8* null to i32*
-; CHECK-NEXT:    [[VAL1:%.*]] = load i32, i32* [[VAL]], align 4
-; CHECK-NEXT:    [[VAL2:%.*]] = bitcast i8* null to i32*
-; CHECK-NEXT:    [[VAL3:%.*]] = load i32, i32* [[VAL2]], align 4
+; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr null, align 4
+; CHECK-NEXT:    [[VAL3:%.*]] = load i32, ptr null, align 4
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[VAL5:%.*]] = sext i32 [[VAL16:%.*]] to i64
@@ -215,10 +213,8 @@ define void @test2() {
 ; CHECK-NEXT:    br i1 [[VAL17]], label [[BB6]], label [[BB4:%.*]]
 ;
 bb:
-  %val = bitcast i8* null to i32*
-  %val1 = load i32, i32* %val, align 4
-  %val2 = bitcast i8* null to i32*
-  %val3 = load i32, i32* %val2, align 4
+  %val1 = load i32, ptr null, align 4
+  %val3 = load i32, ptr null, align 4
   br label %bb6
 
 bb4:                                              ; preds = %bb12

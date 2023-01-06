@@ -641,3 +641,72 @@ define i32 @xor1s_shiftr32(i32 %val, i32 %cnt) nounwind {
   %result = lshr i32 %val, %adjcnt
   ret i32 %result
 }
+define i32 @invalid_sub31(i32 %val, i32 %cnt) nounwind {
+; X86-NOBMI2-LABEL: invalid_sub31:
+; X86-NOBMI2:       # %bb.0:
+; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NOBMI2-NEXT:    addb $-31, %cl
+; X86-NOBMI2-NEXT:    shll %cl, %eax
+; X86-NOBMI2-NEXT:    retl
+;
+; X86-BMI2-LABEL: invalid_sub31:
+; X86-BMI2:       # %bb.0:
+; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-BMI2-NEXT:    addb $-31, %al
+; X86-BMI2-NEXT:    shlxl %eax, {{[0-9]+}}(%esp), %eax
+; X86-BMI2-NEXT:    retl
+;
+; X64-NOBMI2-LABEL: invalid_sub31:
+; X64-NOBMI2:       # %bb.0:
+; X64-NOBMI2-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NOBMI2-NEXT:    movl %edi, %eax
+; X64-NOBMI2-NEXT:    leal -31(%rsi), %ecx
+; X64-NOBMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NOBMI2-NEXT:    shll %cl, %eax
+; X64-NOBMI2-NEXT:    retq
+;
+; X64-BMI2-LABEL: invalid_sub31:
+; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    addb $-31, %sil
+; X64-BMI2-NEXT:    shlxl %esi, %edi, %eax
+; X64-BMI2-NEXT:    retq
+  %adjcnt = sub i32 %cnt, 31
+  %result = shl i32 %val, %adjcnt
+  ret i32 %result
+}
+
+define i32 @invalid_add31(i32 %val, i32 %cnt) nounwind {
+; X86-NOBMI2-LABEL: invalid_add31:
+; X86-NOBMI2:       # %bb.0:
+; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NOBMI2-NEXT:    addb $31, %cl
+; X86-NOBMI2-NEXT:    shll %cl, %eax
+; X86-NOBMI2-NEXT:    retl
+;
+; X86-BMI2-LABEL: invalid_add31:
+; X86-BMI2:       # %bb.0:
+; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-BMI2-NEXT:    addb $31, %al
+; X86-BMI2-NEXT:    shlxl %eax, {{[0-9]+}}(%esp), %eax
+; X86-BMI2-NEXT:    retl
+;
+; X64-NOBMI2-LABEL: invalid_add31:
+; X64-NOBMI2:       # %bb.0:
+; X64-NOBMI2-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NOBMI2-NEXT:    movl %edi, %eax
+; X64-NOBMI2-NEXT:    leal 31(%rsi), %ecx
+; X64-NOBMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NOBMI2-NEXT:    shll %cl, %eax
+; X64-NOBMI2-NEXT:    retq
+;
+; X64-BMI2-LABEL: invalid_add31:
+; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    addb $31, %sil
+; X64-BMI2-NEXT:    shlxl %esi, %edi, %eax
+; X64-BMI2-NEXT:    retq
+  %adjcnt = add i32 %cnt, 31
+  %result = shl i32 %val, %adjcnt
+  ret i32 %result
+}

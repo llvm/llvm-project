@@ -57,7 +57,11 @@ struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {
     config.enableRegionSimplification = enableRegionSimplification;
     config.maxIterations = maxIterations;
     config.maxNumRewrites = maxNumRewrites;
-    (void)applyPatternsAndFoldGreedily(getOperation(), patterns, config);
+    LogicalResult converged =
+        applyPatternsAndFoldGreedily(getOperation(), patterns, config);
+    // Canonicalization is best-effort. Non-convergence is not a pass failure.
+    if (testConvergence && failed(converged))
+      signalPassFailure();
   }
 
   FrozenRewritePatternSet patterns;

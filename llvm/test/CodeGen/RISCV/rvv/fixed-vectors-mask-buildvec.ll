@@ -166,9 +166,8 @@ define <4 x i1> @buildvec_mask_nonconst_v4i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: buildvec_mask_nonconst_v4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 3
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a2
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a2
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    vand.vi v8, v8, 1
@@ -178,9 +177,8 @@ define <4 x i1> @buildvec_mask_nonconst_v4i1(i1 %x, i1 %y) {
 ; ZVE32F-LABEL: buildvec_mask_nonconst_v4i1:
 ; ZVE32F:       # %bb.0:
 ; ZVE32F-NEXT:    li a2, 3
-; ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
-; ZVE32F-NEXT:    vmv.s.x v0, a2
 ; ZVE32F-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; ZVE32F-NEXT:    vmv.s.x v0, a2
 ; ZVE32F-NEXT:    vmv.v.x v8, a1
 ; ZVE32F-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; ZVE32F-NEXT:    vand.vi v8, v8, 1
@@ -295,9 +293,8 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: buildvec_mask_nonconst_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 19
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a2
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a2
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    vand.vi v8, v8, 1
@@ -307,9 +304,8 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1(i1 %x, i1 %y) {
 ; ZVE32F-LABEL: buildvec_mask_nonconst_v8i1:
 ; ZVE32F:       # %bb.0:
 ; ZVE32F-NEXT:    li a2, 19
-; ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
-; ZVE32F-NEXT:    vmv.s.x v0, a2
 ; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; ZVE32F-NEXT:    vmv.s.x v0, a2
 ; ZVE32F-NEXT:    vmv.v.x v8, a1
 ; ZVE32F-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; ZVE32F-NEXT:    vand.vi v8, v8, 1

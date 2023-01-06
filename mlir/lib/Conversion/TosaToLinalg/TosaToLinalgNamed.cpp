@@ -63,19 +63,22 @@ static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
       highIndices, padValue);
 }
 
-static mlir::Value reifyConstantDim(Attribute attr,
+static mlir::Value reifyConstantDim(int64_t attr,
                                     ImplicitLocOpBuilder &builder) {
   return builder.createOrFold<arith::IndexCastOp>(
-      builder.getIndexType(), builder.create<arith::ConstantOp>(attr));
+      builder.getIndexType(),
+      builder.create<arith::ConstantOp>(builder.getI64IntegerAttr(attr)));
 }
 
 // Calculating the output width/height using the formula:
 // H = ((IH+pad_top+pad_bottom-(dilation_y*(KH-1)+1))/stride_y)+1
 // W = ((IW+pad_left+pad_right-(dilation_x*(KW-1)+1))/stride_x)+1
-static mlir::Value
-getConvOutputDim(Location loc, Value inputDim, Attribute padBeforeAttr,
-                 Attribute padAfterAttr, Value kernelDim, Attribute strideAttr,
-                 Attribute dilationAttr, Type inputETy, OpBuilder &rewriter) {
+
+static mlir::Value getConvOutputDim(Location loc, Value inputDim,
+                                    int64_t padBeforeAttr, int64_t padAfterAttr,
+                                    Value kernelDim, int64_t strideAttr,
+                                    int64_t dilationAttr, Type inputETy,
+                                    OpBuilder &rewriter) {
   ImplicitLocOpBuilder builder(loc, rewriter);
   auto one = rewriter.create<arith::ConstantOp>(
       loc, IntegerAttr::get(inputDim.getType(), 1));
@@ -96,10 +99,12 @@ getConvOutputDim(Location loc, Value inputDim, Attribute padBeforeAttr,
 }
 
 // Creates a vector of the dynamic output dims for Conv2D and Depthwise_Conv2D
-static SmallVector<Value> inferDynamicDimsForConv(
-    Location loc, Value input, Value weight, ShapedType resultTy,
-    ArrayAttr padAttr, ArrayAttr strideAttr, ArrayAttr dilationAttr,
-    int64_t weightHDim, int64_t weightWDim, OpBuilder &rewriter) {
+static SmallVector<Value>
+inferDynamicDimsForConv(Location loc, Value input, Value weight,
+                        ShapedType resultTy, DenseI64ArrayAttr padAttr,
+                        DenseI64ArrayAttr strideAttr,
+                        DenseI64ArrayAttr dilationAttr, int64_t weightHDim,
+                        int64_t weightWDim, OpBuilder &rewriter) {
   ShapedType inputTy = input.getType().cast<ShapedType>();
   Type inputETy = inputTy.getElementType();
   int64_t inputRank = inputTy.getRank();
@@ -120,10 +125,9 @@ static SmallVector<Value> inferDynamicDimsForConv(
     Value kernelHDim =
         rewriter.create<tensor::DimOp>(loc, weight, weightHDim).getResult();
     // H = F(IH, pad_top, pad_bottom, dilation_y, KH, stride_y)
-    dynDims[heightDim] = getConvOutputDim(
-        loc, initHDim, padAttr.getValue()[0], padAttr.getValue()[1], kernelHDim,
-        strideAttr.getValue()[0], dilationAttr.getValue()[0], inputETy,
-        rewriter);
+    dynDims[heightDim] =
+        getConvOutputDim(loc, initHDim, padAttr[0], padAttr[1], kernelHDim,
+                         strideAttr[0], dilationAttr[0], inputETy, rewriter);
   }
 
   // Dynamic input weight
@@ -133,10 +137,9 @@ static SmallVector<Value> inferDynamicDimsForConv(
     Value kernelWDim =
         rewriter.create<tensor::DimOp>(loc, weight, weightWDim).getResult();
     // W = F(IW, pad_left, pad_right, dilation_x, KW, stride_x)
-    dynDims[weightDim] = getConvOutputDim(
-        loc, initWDim, padAttr.getValue()[2], padAttr.getValue()[3], kernelWDim,
-        strideAttr.getValue()[1], dilationAttr.getValue()[1], inputETy,
-        rewriter);
+    dynDims[weightDim] =
+        getConvOutputDim(loc, initWDim, padAttr[2], padAttr[3], kernelWDim,
+                         strideAttr[1], dilationAttr[1], inputETy, rewriter);
   }
 
   SmallVector<Value> filteredDims = condenseValues(dynDims);
@@ -177,9 +180,9 @@ public:
     Type inputETy = inputTy.getElementType();
     Type resultETy = resultTy.getElementType();
 
-    auto padAttr = op->getAttr("pad").cast<ArrayAttr>();
-    auto strideTosaAttr = op->getAttr("stride").cast<ArrayAttr>();
-    auto dilationTosaAttr = op->getAttr("dilation").cast<ArrayAttr>();
+    DenseI64ArrayAttr padAttr = op.getPadAttr();
+    DenseI64ArrayAttr strideTosaAttr = op.getStrideAttr();
+    DenseI64ArrayAttr dilationTosaAttr = op.getDilationAttr();
     bool isQuantized = op->hasAttr("quantization_info");
 
     if (!weightTy.hasStaticShape() || !biasTy.hasStaticShape())
@@ -219,7 +222,7 @@ public:
 
     llvm::SmallVector<int64_t> pad;
     pad.resize(2, 0);
-    getValuesFromIntArrayAttribute(padAttr, pad);
+    llvm::append_range(pad, padAttr.asArrayRef());
     pad.resize(pad.size() + 2, 0);
     input = applyPad(loc, input, pad, zeroAttr, rewriter);
 
@@ -249,9 +252,8 @@ public:
                            .result();
 
     // Extract the attributes for convolution.
-    llvm::SmallVector<int64_t> stride, dilation;
-    getValuesFromIntArrayAttribute(strideTosaAttr, stride);
-    getValuesFromIntArrayAttribute(dilationTosaAttr, dilation);
+    ArrayRef<int64_t> stride = strideTosaAttr;
+    ArrayRef<int64_t> dilation = dilationTosaAttr;
 
     // Create the convolution op.
     auto strideAttr = DenseIntElementsAttr::get(
@@ -346,9 +348,9 @@ public:
     Type inputETy = inputTy.getElementType();
     Type resultETy = resultTy.getElementType();
 
-    auto padAttr = op->getAttr("pad").cast<ArrayAttr>();
-    auto strideTosaAttr = op->getAttr("stride").cast<ArrayAttr>();
-    auto dilationTosaAttr = op->getAttr("dilation").cast<ArrayAttr>();
+    auto padAttr = op->getAttr("pad").cast<DenseI64ArrayAttr>();
+    auto strideTosaAttr = op->getAttr("stride").cast<DenseI64ArrayAttr>();
+    auto dilationTosaAttr = op->getAttr("dilation").cast<DenseI64ArrayAttr>();
 
     if (!weightTy.hasStaticShape() || !biasTy.hasStaticShape())
       return rewriter.notifyMatchFailure(
@@ -396,21 +398,21 @@ public:
 
     llvm::SmallVector<int64_t> pad;
     pad.resize(2, 0);
-    getValuesFromIntArrayAttribute(padAttr, pad);
+    llvm::append_range(pad, padAttr.asArrayRef());
     pad.resize(pad.size() + 2, 0);
 
     input = applyPad(loc, input, pad, zeroAttr, rewriter);
 
     // Extract the attributes for convolution.
-    llvm::SmallVector<int64_t> stride, dilation;
-    getValuesFromIntArrayAttribute(strideTosaAttr, stride);
-    getValuesFromIntArrayAttribute(dilationTosaAttr, dilation);
+    ArrayRef<int64_t> stride = strideTosaAttr;
+    ArrayRef<int64_t> dilation = dilationTosaAttr;
 
     // Create the convolution op.
     auto strideAttr = DenseIntElementsAttr::get(
         RankedTensorType::get({2}, rewriter.getI64Type()), stride);
     auto dilationAttr = DenseIntElementsAttr::get(
         RankedTensorType::get({2}, rewriter.getI64Type()), dilation);
+
     ShapedType linalgConvTy =
         RankedTensorType::get({resultShape[0], resultShape[1], resultShape[2],
                                weightShape[2], weightShape[3]},
@@ -717,15 +719,14 @@ public:
     // Apply padding as necessary.
     llvm::SmallVector<int64_t> pad;
     pad.resize(2, 0);
-    getValuesFromIntArrayAttribute(op.getPad(), pad);
+    llvm::append_range(pad, op.getPad());
     pad.resize(pad.size() + 2, 0);
     Value paddedInput = applyPad(loc, input, pad, initialAttr, rewriter);
 
     Value initialValue = rewriter.create<arith::ConstantOp>(loc, initialAttr);
 
-    SmallVector<int64_t> kernel, stride;
-    getValuesFromIntArrayAttribute(op.getKernel(), kernel);
-    getValuesFromIntArrayAttribute(op.getStride(), stride);
+    ArrayRef<int64_t> kernel = op.getKernel();
+    ArrayRef<int64_t> stride = op.getStride();
 
     Attribute strideAttr = rewriter.getI64VectorAttr(stride);
     Attribute dilationAttr = rewriter.getI64VectorAttr({1, 1});
@@ -777,7 +778,7 @@ public:
     // Apply padding as necessary.
     llvm::SmallVector<int64_t> pad;
     pad.resize(2, 0);
-    getValuesFromIntArrayAttribute(op.getPad(), pad);
+    llvm::append_range(pad, op.getPad());
     pad.resize(pad.size() + 2, 0);
     Attribute padAttr = rewriter.getZeroAttr(inElementTy);
     Value paddedInput = applyPad(loc, input, pad, padAttr, rewriter);
@@ -785,9 +786,8 @@ public:
     Attribute initialAttr = rewriter.getZeroAttr(accETy);
     Value initialValue = rewriter.create<arith::ConstantOp>(loc, initialAttr);
 
-    SmallVector<int64_t> kernel, stride;
-    getValuesFromIntArrayAttribute(op.getKernel(), kernel);
-    getValuesFromIntArrayAttribute(op.getStride(), stride);
+    ArrayRef<int64_t> kernel = op.getKernel();
+    ArrayRef<int64_t> stride = op.getStride();
 
     Attribute strideAttr = rewriter.getI64VectorAttr(stride);
     Attribute dilationAttr = rewriter.getI64VectorAttr({1, 1});

@@ -424,6 +424,9 @@ mlir::scf::tileReductionUsingScf(PatternRewriter &b,
       break;
     }
   }
+  if (static_cast<size_t>(reductionDim) >= tileSize.size())
+    return b.notifyMatchFailure(op, "reduction dimension must be tiled");
+
   // 1. create the inital tensor value.
   FailureOr<Operation *> identityTensor =
       op.generateInitialTensorForPartialReduction(b, loc, tileSize,

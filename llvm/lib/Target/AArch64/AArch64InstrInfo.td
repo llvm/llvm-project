@@ -8571,11 +8571,15 @@ def : Pat<(AArch64AssertZExtBool GPR32:$op),
 //===----------------------------===//
 // 2022 Architecture Extensions:
 //===----------------------------===//
+
 def : InstAlias<"clrbhb",  (HINT 22), 0>;
 let Predicates = [HasCLRBHB] in {
   def : InstAlias<"clrbhb",  (HINT 22), 1>;
 }
 
+//===----------------------------------------------------------------------===//
+// Translation Hardening Extension (FEAT_THE)
+//===----------------------------------------------------------------------===//
 defm RCW     : ReadCheckWriteCompareAndSwap;
 
 defm RCWCLR  : ReadCheckWriteOperation<0b001, "clr">;

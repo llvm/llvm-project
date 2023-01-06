@@ -85,29 +85,6 @@ struct IncrementLoopInfo {
 
   bool isStructured() const { return !headerBlock; }
 
-  /// \return true if for this do loop its do-variable's value
-  /// is represented as the block argument of the do loop's
-  /// region. In this case the data type of the block argument
-  /// matches the original data type of the do-variable as written
-  /// in user code, and the value is adjusted using the step value
-  /// on each iteration of the do loop.
-  ///
-  /// When do-variable's data type is an integer type shorter
-  /// than IndexType, processing the do-variable separately
-  /// from the do loop's iteration index allows getting rid
-  /// of type casts, which can make backend optimizations easier.
-  /// In particular, computing the do variable value from
-  /// the iteration index may introduce chains like trunc->arith->sext,
-  /// which may be optimized into sequences of shift operations
-  /// in InstCombine, which then prevents vectorizer from recognizing
-  /// unit-strided accesses.
-  ///
-  /// We could have disabled the extra iteration variable usage
-  /// for cases when its data type is not shorter than IndexType,
-  /// but this requires having proper DataLayout set up for the enclosing
-  /// module. This is currently blocked by llvm-project#57230 issue.
-  bool doVarIsALoopArg() const { return isStructured() && !isUnordered; }
-
   mlir::Type getLoopVariableType() const {
     assert(loopVariable && "must be set");
     return fir::unwrapRefType(loopVariable.getType());
@@ -1393,16 +1370,25 @@ private:
     if (!infiniteLoop && !whileCondition)
       genFIRIncrementLoopBegin(incrementLoopNestInfo);
 
-    // Loop body code - NonLabelDoStmt and EndDoStmt code is generated here.
-    // Their genFIR calls are nops except for block management in some cases.
-    for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations())
-      genFIR(e, unstructuredContext);
+    // Loop body code.
+    auto iter = eval.getNestedEvaluations().begin();
+    for (auto end = --eval.getNestedEvaluations().end(); iter != end; ++iter)
+      genFIR(*iter, unstructuredContext);
+
+    // An EndDoStmt in unstructured code may start a new block.
+    Fortran::lower::pft::Evaluation &endDoEval = *iter;
+    assert(endDoEval.getIf<Fortran::parser::EndDoStmt>() && "no enddo stmt");
+    if (unstructuredContext)
+      maybeStartBlock(endDoEval.block);
 
     // Loop end code.
     if (infiniteLoop || whileCondition)
       genFIRBranch(headerBlock);
     else
       genFIRIncrementLoopEnd(incrementLoopNestInfo);
+
+    // This call may generate a branch in some contexts.
+    genFIR(endDoEval, unstructuredContext);
   }
 
   /// Generate FIR to begin a structured or unstructured increment loop nest.
@@ -1450,28 +1436,26 @@ private:
 
       // Structured loop - generate fir.do_loop.
       if (info.isStructured()) {
-        mlir::Value doVarInit = nullptr;
-        if (info.doVarIsALoopArg())
-          doVarInit = builder->createConvert(loc, info.getLoopVariableType(),
-                                             lowerValue);
-
-        info.doLoop = builder->create<fir::DoLoopOp>(
-            loc, lowerValue, upperValue, info.stepValue, info.isUnordered,
-            /*finalCountValue=*/!info.isUnordered,
-            doVarInit ? mlir::ValueRange{doVarInit} : mlir::ValueRange{});
-        builder->setInsertionPointToStart(info.doLoop.getBody());
-        mlir::Value value;
-        if (!doVarInit) {
-          // Update the loop variable value, as it may have non-index
-          // references.
-          value = builder->createConvert(loc, info.getLoopVariableType(),
-                                         info.doLoop.getInductionVar());
+        mlir::Type loopVarType = info.getLoopVariableType();
+        mlir::Value loopValue;
+        if (info.isUnordered) {
+          // The loop variable value is explicitly updated.
+          info.doLoop = builder->create<fir::DoLoopOp>(
+              loc, lowerValue, upperValue, info.stepValue, /*unordered=*/true);
+          builder->setInsertionPointToStart(info.doLoop.getBody());
+          loopValue = builder->createConvert(loc, loopVarType,
+                                             info.doLoop.getInductionVar());
         } else {
-          // The loop variable value is the region's argument rather
-          // than the DoLoop's index value.
-          value = info.doLoop.getRegionIterArgs()[0];
+          // The loop variable is a doLoop op argument.
+          info.doLoop = builder->create<fir::DoLoopOp>(
+              loc, lowerValue, upperValue, info.stepValue, /*unordered=*/false,
+              /*finalCountValue=*/true,
+              builder->createConvert(loc, loopVarType, lowerValue));
+          builder->setInsertionPointToStart(info.doLoop.getBody());
+          loopValue = info.doLoop.getRegionIterArgs()[0];
         }
-        builder->create<fir::StoreOp>(loc, value, info.loopVariable);
+        // Update the loop variable value in case it has non-index references.
+        builder->create<fir::StoreOp>(loc, loopValue, info.loopVariable);
         if (info.maskExpr) {
           Fortran::lower::StatementContext stmtCtx;
           mlir::Value maskCond = createFIRExpr(loc, info.maskExpr, stmtCtx);
@@ -1559,40 +1543,28 @@ private:
       IncrementLoopInfo &info = *it;
       if (info.isStructured()) {
         // End fir.do_loop.
-        if (!info.isUnordered) {
-          builder->setInsertionPointToEnd(info.doLoop.getBody());
-          llvm::SmallVector<mlir::Value, 2> results;
-          results.push_back(builder->create<mlir::arith::AddIOp>(
-              loc, info.doLoop.getInductionVar(), info.doLoop.getStep()));
-          if (info.doVarIsALoopArg()) {
-            // If we use an extra iteration variable of the same data
-            // type as the original do-variable, we have to increment
-            // it by the step value. Note that the step has 'index'
-            // type, so we need to cast it, first.
-            mlir::Value stepCast = builder->createConvert(
-                loc, info.getLoopVariableType(), info.doLoop.getStep());
-            mlir::Value doVarValue =
-                builder->create<fir::LoadOp>(loc, info.loopVariable);
-            results.push_back(builder->create<mlir::arith::AddIOp>(
-                loc, doVarValue, stepCast));
-          }
-          builder->create<fir::ResultOp>(loc, results);
-        }
-        builder->setInsertionPointAfter(info.doLoop);
-        if (info.isUnordered)
+        if (info.isUnordered) {
+          builder->setInsertionPointAfter(info.doLoop);
           continue;
-        // The loop control variable may be used after loop execution.
-        mlir::Value lcv = nullptr;
-        if (info.doVarIsALoopArg()) {
-          // Final do-variable value is the second result of the DoLoop.
-          assert(info.doLoop.getResults().size() == 2 &&
-                 "invalid do-variable handling");
-          lcv = info.doLoop.getResult(1);
-        } else {
-          lcv = builder->createConvert(loc, info.getLoopVariableType(),
-                                       info.doLoop.getResult(0));
         }
-        builder->create<fir::StoreOp>(loc, lcv, info.loopVariable);
+        // Decrement tripVariable.
+        builder->setInsertionPointToEnd(info.doLoop.getBody());
+        llvm::SmallVector<mlir::Value, 2> results;
+        results.push_back(builder->create<mlir::arith::AddIOp>(
+            loc, info.doLoop.getInductionVar(), info.doLoop.getStep()));
+        // Step loopVariable to help optimizations such as vectorization.
+        // Induction variable elimination will clean up as necessary.
+        mlir::Value step = builder->createConvert(
+            loc, info.getLoopVariableType(), info.doLoop.getStep());
+        mlir::Value loopVar =
+            builder->create<fir::LoadOp>(loc, info.loopVariable);
+        results.push_back(
+            builder->create<mlir::arith::AddIOp>(loc, loopVar, step));
+        builder->create<fir::ResultOp>(loc, results);
+        builder->setInsertionPointAfter(info.doLoop);
+        // The loop control variable may be used after the loop.
+        builder->create<fir::StoreOp>(loc, info.doLoop.getResult(1),
+                                      info.loopVariable);
         continue;
       }
 
@@ -1645,6 +1617,7 @@ private:
               &currentIfOp.getElseRegion().front());
         } else if (e.isA<Fortran::parser::EndIfStmt>()) {
           builder->setInsertionPointAfter(topIfOp);
+          genFIR(e, /*unstructuredContext=*/false); // may generate branch
         } else {
           genFIR(e, /*unstructuredContext=*/false);
         }
@@ -2220,6 +2193,8 @@ private:
          getEval().getNestedEvaluations()) {
       if (auto *selectTypeStmt =
               eval.getIf<Fortran::parser::SelectTypeStmt>()) {
+        // A genFIR(SelectTypeStmt) call would have unwanted side effects.
+        maybeStartBlock(eval.block);
         // Retrieve the selector
         const auto &s = std::get<Fortran::parser::Selector>(selectTypeStmt->t);
         if (const auto *v = std::get_if<Fortran::parser::Variable>(&s.u))
@@ -2280,6 +2255,7 @@ private:
                      eval.getIf<Fortran::parser::TypeGuardStmt>()) {
         // Map the type guard local symbol for the selector to a more precise
         // typed entity in the TypeGuardStmt when necessary.
+        genFIR(eval);
         const auto &guard =
             std::get<Fortran::parser::TypeGuardStmt::Guard>(typeGuardStmt->t);
         if (hasLocalScope)
@@ -2385,11 +2361,13 @@ private:
         builder->restoreInsertionPoint(crtInsPt);
         ++typeGuardIdx;
       } else if (eval.getIf<Fortran::parser::EndSelectStmt>()) {
+        genFIR(eval);
         if (hasLocalScope)
           localSymbols.popScope();
         stmtCtx.finalize();
+      } else {
+        genFIR(eval);
       }
-      genFIR(eval);
     }
   }
 
@@ -3104,6 +3082,10 @@ private:
   }
 
   // Nop statements - No code, or code is generated at the construct level.
+  // But note that the genFIR call immediately below that wraps one of these
+  // calls does block management, possibly starting a new block, and possibly
+  // generating a branch to end a block. So these calls may still be required
+  // for that functionality.
   void genFIR(const Fortran::parser::AssociateStmt &) {}       // nop
   void genFIR(const Fortran::parser::CaseStmt &) {}            // nop
   void genFIR(const Fortran::parser::ContinueStmt &) {}        // nop
@@ -3124,36 +3106,42 @@ private:
   void genFIR(const Fortran::parser::SelectTypeStmt &) {}      // nop
   void genFIR(const Fortran::parser::TypeGuardStmt &) {}       // nop
 
-  /// Generate FIR for the Evaluation `eval`.
+  /// Generate FIR for Evaluation \p eval.
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               bool unstructuredContext = true) {
-    if (unstructuredContext) {
-      // When transitioning from unstructured to structured code,
-      // the structured code could be a target that starts a new block.
+    // Start a new unstructured block when applicable. When transitioning
+    // from unstructured to structured code, unstructuredContext is true,
+    // which accounts for the possibility that the structured code could be
+    // a target that starts a new block.
+    if (unstructuredContext)
       maybeStartBlock(eval.isConstruct() && eval.lowerAsStructured()
                           ? eval.getFirstNestedEvaluation().block
                           : eval.block);
-    }
 
+    // Generate evaluation specific code. Even nop calls should usually reach
+    // here in case they start a new block or require generation of a generic
+    // end-of-block branch. An alternative is to add special case code
+    // elsewhere, such as in the genFIR code for a parent construct.
     setCurrentEval(eval);
     setCurrentPosition(eval.position);
     eval.visit([&](const auto &stmt) { genFIR(stmt); });
 
-    if (unstructuredContext && blockIsUnterminated()) {
-      // Exit from an unstructured IF or SELECT construct block.
-      Fortran::lower::pft::Evaluation *successor{};
-      if (eval.isActionStmt())
-        successor = eval.controlSuccessor;
-      else if (eval.isConstruct() &&
-               eval.getLastNestedEvaluation()
-                   .lexicalSuccessor->isIntermediateConstructStmt())
-        successor = eval.constructExit;
-      else if (eval.isConstructStmt() &&
-               eval.lexicalSuccessor == eval.controlSuccessor)
-        // empty construct block
-        successor = eval.parentConstruct->constructExit;
-      if (successor && successor->block)
-        genFIRBranch(successor->block);
+    // Generate an end-of-block branch for several special cases. For
+    // constructs, this can be done for either the end construct statement,
+    // or for the construct itself, which will skip this code if the
+    // end statement was visited first and generated a branch.
+    Fortran::lower::pft::Evaluation *successor =
+        eval.isConstruct() ? eval.getLastNestedEvaluation().lexicalSuccessor
+                           : eval.lexicalSuccessor;
+    if (successor && blockIsUnterminated()) {
+      if (successor->isIntermediateConstructStmt() &&
+          successor->parentConstruct->lowerAsUnstructured())
+        // Exit from an intermediate unstructured IF or SELECT construct block.
+        genFIRBranch(successor->parentConstruct->constructExit->block);
+      else if (unstructuredContext && eval.isConstructStmt() &&
+               successor == eval.controlSuccessor)
+        // Exit from a degenerate, empty construct block.
+        genFIRBranch(eval.parentConstruct->constructExit->block);
     }
   }
 

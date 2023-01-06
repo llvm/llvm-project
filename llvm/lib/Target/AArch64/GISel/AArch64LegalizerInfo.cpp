@@ -187,8 +187,19 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({s64, v8s16, v16s8, v4s32})
       .lower();
 
-  getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
-      .legalFor({v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
+  auto &MinMaxActions = getActionDefinitionsBuilder(
+      {G_SMIN, G_SMAX, G_UMIN, G_UMAX});
+  if (HasCSSC)
+    MinMaxActions
+        .legalFor({s32, s64, v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
+        // Making clamping conditional on CSSC extension as without legal types we
+        // lower to CMP which can fold one of the two sxtb's we'd otherwise need
+        // if we detect a type smaller than 32-bit.
+        .minScalar(0, s32);
+  else
+    MinMaxActions
+        .legalFor({v8s8, v16s8, v4s16, v8s16, v2s32, v4s32});
+  MinMaxActions
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
@@ -796,20 +807,36 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .customFor({{s32, s32}, {s64, s64}});
 
   auto always = [=](const LegalityQuery &Q) { return true; };
-  getActionDefinitionsBuilder(G_CTPOP)
-      .legalFor({{v8s8, v8s8}, {v16s8, v16s8}})
+  auto &CTPOPActions = getActionDefinitionsBuilder(G_CTPOP);
+  if (HasCSSC)
+    CTPOPActions
+        .legalFor({{s32, s32},
+                   {s64, s64},
+                   {v8s8, v8s8},
+                   {v16s8, v16s8}})
+        .customFor({{s128, s128},
+                    {v2s64, v2s64},
+                    {v2s32, v2s32},
+                    {v4s32, v4s32},
+                    {v4s16, v4s16},
+                    {v8s16, v8s16}});
+  else
+    CTPOPActions
+        .legalFor({{v8s8, v8s8},
+                   {v16s8, v16s8}})
+        .customFor({{s32, s32},
+                    {s64, s64},
+                    {s128, s128},
+                    {v2s64, v2s64},
+                    {v2s32, v2s32},
+                    {v4s32, v4s32},
+                    {v4s16, v4s16},
+                    {v8s16, v8s16}});
+  CTPOPActions
       .clampScalar(0, s32, s128)
       .widenScalarToNextPow2(0)
       .minScalarEltSameAsIf(always, 1, 0)
-      .maxScalarEltSameAsIf(always, 1, 0)
-      .customFor({{s32, s32},
-                  {s64, s64},
-                  {s128, s128},
-                  {v2s64, v2s64},
-                  {v2s32, v2s32},
-                  {v4s32, v4s32},
-                  {v4s16, v4s16},
-                  {v8s16, v8s16}});
+      .maxScalarEltSameAsIf(always, 1, 0);
 
   // TODO: Vector types.
   getActionDefinitionsBuilder({G_SADDSAT, G_SSUBSAT}).lowerIf(isScalar(0));
@@ -1267,10 +1294,10 @@ bool AArch64LegalizerInfo::legalizeBitfieldExtract(
 bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
                                          MachineRegisterInfo &MRI,
                                          LegalizerHelper &Helper) const {
-  // While there is no integer popcount instruction, it can
-  // be more efficiently lowered to the following sequence that uses
-  // AdvSIMD registers/instructions as long as the copies to/from
-  // the AdvSIMD registers are cheap.
+  // When there is no integer popcount instruction (FEAT_CSSC isn't available),
+  // it can be more efficiently lowered to the following sequence that uses
+  // AdvSIMD registers/instructions as long as the copies to/from the AdvSIMD
+  // registers are cheap.
   //  FMOV    D0, X0        // copy 64-bit int to vector, high bits zero'd
   //  CNT     V0.8B, V0.8B  // 8xbyte pop-counts
   //  ADDV    B0, V0.8B     // sum 8xbyte pop-counts
@@ -1291,10 +1318,23 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
   Register Dst = MI.getOperand(0).getReg();
   Register Val = MI.getOperand(1).getReg();
   LLT Ty = MRI.getType(Val);
+  unsigned Size = Ty.getSizeInBits();
 
   assert(Ty == MRI.getType(Dst) &&
          "Expected src and dst to have the same type!");
-  unsigned Size = Ty.getSizeInBits();
+
+  if (ST->hasCSSC() && Ty.isScalar() && Size == 128) {
+    LLT s64 = LLT::scalar(64);
+
+    auto Split = MIRBuilder.buildUnmerge(s64, Val);
+    auto CTPOP1 = MIRBuilder.buildCTPOP(s64, Split->getOperand(0));
+    auto CTPOP2 = MIRBuilder.buildCTPOP(s64, Split->getOperand(1));
+    auto Add = MIRBuilder.buildAdd(s64, CTPOP1, CTPOP2);
+
+    MIRBuilder.buildZExt(Dst, Add);
+    MI.eraseFromParent();
+    return true;
+  }
 
   if (!ST->hasNEON() ||
       MI.getMF()->getFunction().hasFnAttribute(Attribute::NoImplicitFloat)) {

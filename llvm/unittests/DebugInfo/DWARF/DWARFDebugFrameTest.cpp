@@ -1143,16 +1143,22 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_remember_state) {
 
   // Make a CIE that has a valid CFA definition and a single register unwind
   // rule for register that we will verify is in all of the pushed rows.
-  EXPECT_THAT_ERROR(parseCFI(TestCIE, {dwarf::DW_CFA_def_cfa, 12, 32}),
+  constexpr uint8_t CFAOff1 = 32;
+  constexpr uint8_t CFAOff2 = 16;
+  constexpr uint8_t Reg1 = 14;
+  constexpr uint8_t Reg2 = 15;
+  constexpr uint8_t Reg3 = 16;
+
+  EXPECT_THAT_ERROR(parseCFI(TestCIE, {dwarf::DW_CFA_def_cfa, 12, CFAOff1}),
                     Succeeded());
 
   // Make a FDE with DWARF call frame instruction opcodes that encodes the
   // follwing rows:
-  // 0x1000: CFA=reg12+32: Reg1=[CFA-8]
-  // 0x1004: CFA=reg12+32: Reg1=[CFA-8] Reg2=[CFA-16]
-  // 0x1008: CFA=reg12+32: Reg1=[CFA-8] Reg2=[CFA-16] Reg3=[CFA-24]
-  // 0x100C: CFA=reg12+32: Reg1=[CFA-8] Reg2=[CFA-16]
-  // 0x1010: CFA=reg12+32: Reg1=[CFA-8]
+  // 0x1000: CFA=reg12+CFAOff1: Reg1=[CFA-8]
+  // 0x1004: CFA=reg12+CFAOff1: Reg1=[CFA-8] Reg2=[CFA-16]
+  // 0x1008: CFA=reg12+CFAOff2: Reg1=[CFA-8] Reg2=[CFA-16] Reg3=[CFA-24]
+  // 0x100C: CFA=reg12+CFAOff1: Reg1=[CFA-8] Reg2=[CFA-16]
+  // 0x1010: CFA=reg12+CFAOff1: Reg1=[CFA-8]
   // This state machine will:
   //  - set Reg1 location
   //  - push a row (from DW_CFA_advance_loc)
@@ -1160,6 +1166,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_remember_state) {
   //  - set Reg2 location
   //  - push a row (from DW_CFA_advance_loc)
   //  - remember the state
+  //  - set CFA offset to CFAOff2
   //  - set Reg3 location
   //  - push a row (from DW_CFA_advance_loc)
   //  - remember the state where Reg1 and Reg2 were set
@@ -1167,14 +1174,12 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_remember_state) {
   //  - remember the state where only Reg1 was set
   //  - push a row (automatically at the end of instruction parsing)
   // Then we verify that all registers are correct in all generated rows.
-  constexpr uint8_t Reg1 = 14;
-  constexpr uint8_t Reg2 = 15;
-  constexpr uint8_t Reg3 = 16;
   EXPECT_THAT_ERROR(
       parseCFI(TestFDE,
                {dwarf::DW_CFA_offset | Reg1, 1, dwarf::DW_CFA_advance_loc | 4,
                 dwarf::DW_CFA_remember_state, dwarf::DW_CFA_offset | Reg2, 2,
                 dwarf::DW_CFA_advance_loc | 4, dwarf::DW_CFA_remember_state,
+                dwarf::DW_CFA_def_cfa_offset, CFAOff2,
                 dwarf::DW_CFA_offset | Reg3, 3, dwarf::DW_CFA_advance_loc | 4,
                 dwarf::DW_CFA_restore_state, dwarf::DW_CFA_advance_loc | 4,
                 dwarf::DW_CFA_restore_state}),
@@ -1206,18 +1211,28 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_remember_state) {
   const dwarf::UnwindTable &Rows = RowsOrErr.get();
   EXPECT_EQ(Rows.size(), 5u);
   EXPECT_EQ(Rows[0].getAddress(), 0x1000u);
+  EXPECT_EQ(Rows[0].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(12, CFAOff1));
   EXPECT_EQ(Rows[0].getRegisterLocations(), VerifyLocs1);
 
   EXPECT_EQ(Rows[1].getAddress(), 0x1004u);
+  EXPECT_EQ(Rows[1].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(12, CFAOff1));
   EXPECT_EQ(Rows[1].getRegisterLocations(), VerifyLocs2);
 
   EXPECT_EQ(Rows[2].getAddress(), 0x1008u);
+  EXPECT_EQ(Rows[2].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(12, CFAOff2));
   EXPECT_EQ(Rows[2].getRegisterLocations(), VerifyLocs3);
 
   EXPECT_EQ(Rows[3].getAddress(), 0x100Cu);
+  EXPECT_EQ(Rows[3].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(12, CFAOff1));
   EXPECT_EQ(Rows[3].getRegisterLocations(), VerifyLocs2);
 
   EXPECT_EQ(Rows[4].getAddress(), 0x1010u);
+  EXPECT_EQ(Rows[4].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(12, CFAOff1));
   EXPECT_EQ(Rows[4].getRegisterLocations(), VerifyLocs1);
 }
 

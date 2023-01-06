@@ -3377,34 +3377,34 @@ static ArrayRef<unsigned> getAllVariants() {
     AMDGPUAsmVariants::DPP, AMDGPUAsmVariants::VOP3_DPP
   };
 
-  return makeArrayRef(Variants);
+  return ArrayRef(Variants);
 }
 
 // What asm variants we should check
 ArrayRef<unsigned> AMDGPUAsmParser::getMatchedVariants() const {
   if (isForcedDPP() && isForcedVOP3()) {
     static const unsigned Variants[] = {AMDGPUAsmVariants::VOP3_DPP};
-    return makeArrayRef(Variants);
+    return ArrayRef(Variants);
   }
   if (getForcedEncodingSize() == 32) {
     static const unsigned Variants[] = {AMDGPUAsmVariants::DEFAULT};
-    return makeArrayRef(Variants);
+    return ArrayRef(Variants);
   }
 
   if (isForcedVOP3()) {
     static const unsigned Variants[] = {AMDGPUAsmVariants::VOP3};
-    return makeArrayRef(Variants);
+    return ArrayRef(Variants);
   }
 
   if (isForcedSDWA()) {
     static const unsigned Variants[] = {AMDGPUAsmVariants::SDWA,
                                         AMDGPUAsmVariants::SDWA9};
-    return makeArrayRef(Variants);
+    return ArrayRef(Variants);
   }
 
   if (isForcedDPP()) {
     static const unsigned Variants[] = {AMDGPUAsmVariants::DPP};
-    return makeArrayRef(Variants);
+    return ArrayRef(Variants);
   }
 
   return getAllVariants();
@@ -3433,7 +3433,7 @@ unsigned AMDGPUAsmParser::findImplicitSGPRReadInVOP(const MCInst &Inst) const {
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
   const unsigned Num = Desc.getNumImplicitUses();
   for (unsigned i = 0; i < Num; ++i) {
-    unsigned Reg = Desc.ImplicitUses[i];
+    unsigned Reg = Desc.getImplicitUses()[i];
     switch (Reg) {
     case AMDGPU::FLAT_SCR:
     case AMDGPU::VCC:

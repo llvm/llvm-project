@@ -108,7 +108,7 @@ APInt::APInt(unsigned numBits, ArrayRef<uint64_t> bigVal) : BitWidth(numBits) {
 
 APInt::APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[])
     : BitWidth(numBits) {
-  initFromArray(makeArrayRef(bigVal, numWords));
+  initFromArray(ArrayRef(bigVal, numWords));
 }
 
 APInt::APInt(unsigned numbits, StringRef Str, uint8_t radix)
@@ -459,7 +459,7 @@ APInt APInt::extractBits(unsigned numBits, unsigned bitPosition) const {
   // Extracting bits that start on a source word boundary can be done
   // as a fast memory copy.
   if (loBit == 0)
-    return APInt(numBits, makeArrayRef(U.pVal + loWord, 1 + hiWord - loWord));
+    return APInt(numBits, ArrayRef(U.pVal + loWord, 1 + hiWord - loWord));
 
   // General case - shift + copy source words directly into place.
   APInt Result(numBits, 0);

@@ -14,8 +14,6 @@
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LLVM.h"
 
-#include "llvm/ADT/SmallVector.h"
-
 namespace mlir {
 class OpAsmPrinter;
 

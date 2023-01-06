@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -canonicalize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -canonicalize="test-convergence" -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @memref_cast(
 func.func @memref_cast(%a: index, %b: index) -> memref<?x?xf32> {
@@ -308,6 +308,20 @@ func.func @fold_fill_reshape() -> tensor<6x4xf32> {
       : tensor<1x2x3x4xf32> into tensor<6x4xf32>
   // CHECK: return %[[FILL]] : tensor<6x4xf32>
   return %reshape : tensor<6x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_fill_extract_slice(
+//  CHECK-SAME:     %[[t:.*]]: tensor<1x1xf32>
+func.func @fold_fill_extract_slice(%t: tensor<1x1xf32>) -> (tensor<f32>) {
+  %cst = arith.constant 0.000000e+00 : f32
+  // CHECK: %[[e:.*]] = tensor.extract_slice %[[t]]
+  // CHECK: %[[f:.*]] = linalg.fill {{.*}} outs(%[[e]] : tensor<f32>)
+  %0 = linalg.fill ins(%cst : f32) outs(%t : tensor<1x1xf32>) -> tensor<1x1xf32>
+  %1 = tensor.extract_slice %0[0, 0] [1, 1] [1, 1] : tensor<1x1xf32> to tensor<f32>
+  // CHECK: return %[[f]]
+  return %1 : tensor<f32>
 }
 
 // -----

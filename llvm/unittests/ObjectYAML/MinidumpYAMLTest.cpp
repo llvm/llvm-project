@@ -137,7 +137,7 @@ Streams:
   EXPECT_EQ(OSPlatform::Linux, SysInfo.PlatformId);
   EXPECT_EQ(
       (ArrayRef<uint8_t>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}),
-      makeArrayRef(SysInfo.CPU.Other.ProcessorFeatures));
+      ArrayRef(SysInfo.CPU.Other.ProcessorFeatures));
 }
 
 // Test that we can parse a normal-looking ExceptionStream.

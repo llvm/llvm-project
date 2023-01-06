@@ -131,6 +131,10 @@
 // RUN:   | FileCheck %s -check-prefix=graniterapids
 // graniterapids: "-target-cpu" "graniterapids"
 //
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=emeraldrapids 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=emeraldrapids
+// emeraldrapids: "-target-cpu" "emeraldrapids"
+//
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=sapphirerapids 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=sapphirerapids
 // sapphirerapids: "-target-cpu" "sapphirerapids"

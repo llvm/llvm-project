@@ -240,26 +240,30 @@ define <2 x half> @test_fdiv(<2 x half> %a, <2 x half> %b) #0 {
 
 ; CHECK-LABEL: test_frem(
 ; -- Load two 16x2 inputs and split them into f16 elements
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_frem_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_frem_param_1];
+; CHECK-DAG:  ld.param.b32       [[A:%hh[0-9]+]], [test_frem_param_0];
+; CHECK-DAG:  ld.param.b32       [[B:%hh[0-9]+]], [test_frem_param_1];
 ; -- Split into elements
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-DAG:  mov.b32         {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-DAG:  mov.b32            {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
+; CHECK-DAG:  mov.b32            {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
 ; -- promote to f32.
-; CHECK-DAG:  cvt.f32.f16     [[FA0:%f[0-9]+]], [[A0]];
-; CHECK-DAG:  cvt.f32.f16     [[FB0:%f[0-9]+]], [[B0]];
-; CHECK-DAG:  cvt.f32.f16     [[FA1:%f[0-9]+]], [[A1]];
-; CHECK-DAG:  cvt.f32.f16     [[FB1:%f[0-9]+]], [[B1]];
+; CHECK-DAG:  cvt.f32.f16        [[FA0:%f[0-9]+]], [[A0]];
+; CHECK-DAG:  cvt.f32.f16        [[FB0:%f[0-9]+]], [[B0]];
+; CHECK-DAG:  cvt.f32.f16        [[FA1:%f[0-9]+]], [[A1]];
+; CHECK-DAG:  cvt.f32.f16        [[FB1:%f[0-9]+]], [[B1]];
 ; -- frem(a[0],b[0]).
-; CHECK-DAG:  div.rn.f32      [[FD0:%f[0-9]+]], [[FA0]], [[FB0]];
-; CHECK-DAG:  cvt.rzi.f32.f32 [[DI0:%f[0-9]+]], [[FD0]];
-; CHECK-DAG:  mul.f32         [[RI0:%f[0-9]+]], [[DI0]], [[FB0]];
-; CHECK-DAG:  sub.f32         [[RF0:%f[0-9]+]], [[FA0]], [[RI0]];
+; CHECK-DAG:  div.rn.f32         [[FD0:%f[0-9]+]], [[FA0]], [[FB0]];
+; CHECK-DAG:  cvt.rzi.f32.f32    [[DI0:%f[0-9]+]], [[FD0]];
+; CHECK-DAG:  mul.f32            [[RI0:%f[0-9]+]], [[DI0]], [[FB0]];
+; CHECK-DAG:  sub.f32            [[RFNINF0:%f[0-9]+]], [[FA0]], [[RI0]];
+; CHECK-DAG:  testp.infinite.f32 [[ISB0INF:%p[0-9]+]], [[FB0]];
+; CHECK-DAG:  selp.f32           [[RF0:%f[0-9]+]], [[FA0]], [[RFNINF0]], [[ISB0INF]];
 ; -- frem(a[1],b[1]).
-; CHECK-DAG:  div.rn.f32      [[FD1:%f[0-9]+]], [[FA1]], [[FB1]];
-; CHECK-DAG:  cvt.rzi.f32.f32 [[DI1:%f[0-9]+]], [[FD1]];
-; CHECK-DAG:  mul.f32         [[RI1:%f[0-9]+]], [[DI1]], [[FB1]];
-; CHECK-DAG:  sub.f32         [[RF1:%f[0-9]+]], [[FA1]], [[RI1]];
+; CHECK-DAG:  div.rn.f32         [[FD1:%f[0-9]+]], [[FA1]], [[FB1]];
+; CHECK-DAG:  cvt.rzi.f32.f32    [[DI1:%f[0-9]+]], [[FD1]];
+; CHECK-DAG:  mul.f32            [[RI1:%f[0-9]+]], [[DI1]], [[FB1]];
+; CHECK-DAG:  sub.f32            [[RFNINF1:%f[0-9]+]], [[FA1]], [[RI1]];
+; CHECK-DAG:  testp.infinite.f32 [[ISB1INF:%p[0-9]+]], [[FB1]];
+; CHECK-DAG:  selp.f32           [[RF1:%f[0-9]+]], [[FA1]], [[RFNINF1]], [[ISB1INF]];
 ; -- convert back to f16.
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%h[0-9]+]], [[RF0]];
 ; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%h[0-9]+]], [[RF1]];

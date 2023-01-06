@@ -56,7 +56,7 @@ GloballyHashedType::hashType(ArrayRef<uint8_t> RecordData,
       ArrayRef<uint8_t> BytesToHash;
       if (TI.isSimple() || TI.isNoneType()) {
         const uint8_t *IndexBytes = reinterpret_cast<const uint8_t *>(&TI);
-        BytesToHash = makeArrayRef(IndexBytes, sizeof(TypeIndex));
+        BytesToHash = ArrayRef(IndexBytes, sizeof(TypeIndex));
       } else {
         if (TI.toArrayIndex() >= Prev.size() ||
             Prev[TI.toArrayIndex()].empty()) {

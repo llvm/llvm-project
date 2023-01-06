@@ -4,14 +4,14 @@
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv7m-arm-none-eabi"
 
-define void @h(i32* nocapture %p, i32 %x) local_unnamed_addr #0 {
+define void @h(ptr nocapture %p, i32 %x) local_unnamed_addr #0 {
 ; CHECK-LABEL: @h(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[REM21:%.*]] = urem i32 [[X]], 10
-; CHECK-NEXT:    store i32 [[REM21]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[REM21]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -23,7 +23,7 @@ entry:
 
 if.then:
   %rem2 = srem i32 %x, 10
-  store i32 %rem2, i32* %p, align 4
+  store i32 %rem2, ptr %p, align 4
   br label %if.end
 
 if.end:
@@ -511,4 +511,176 @@ entry:
 
   %div = srem i64 %x, %y
   ret i64 %div
+}
+
+define dso_local i8 @abs_x_lt_abs_y_positive(i8 %x, i8 %y) {
+; CHECK-LABEL: @abs_x_lt_abs_y_positive(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_CMP:%.*]] = icmp slt i8 [[X:%.*]], 10
+; CHECK-NEXT:    [[X_CMP2:%.*]] = icmp sgt i8 [[X]], -10
+; CHECK-NEXT:    [[AND_X:%.*]] = and i1 [[X_CMP]], [[X_CMP2]]
+; CHECK-NEXT:    [[Y_CMP:%.*]] = icmp sge i8 [[Y:%.*]], 10
+; CHECK-NEXT:    [[AND_COND:%.*]] = and i1 [[AND_X]], [[Y_CMP]]
+; CHECK-NEXT:    br i1 [[AND_COND]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[X]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %x.cmp = icmp slt i8 %x, 10
+  %x.cmp2 = icmp sgt i8 %x, -10
+  %and.x = and i1 %x.cmp, %x.cmp2
+  %y.cmp = icmp sge i8 %y, 10
+  %and.cond = and i1 %and.x, %y.cmp
+  br i1 %and.cond, label %if.else, label %if.then
+
+if.else:                                          ; preds = %entry
+  %rem = srem i8 %x, %y
+  ret i8 %rem
+
+if.then:                                          ; preds = %entry, %if.then6, %if.end4
+  ret i8 0
+}
+
+define dso_local i8 @abs_x_lt_abs_y_positive_unsigned_cmp(i8 %x, i8 %y) {
+; CHECK-LABEL: @abs_x_lt_abs_y_positive_unsigned_cmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_CMP:%.*]] = icmp slt i8 [[X:%.*]], 10
+; CHECK-NEXT:    [[X_CMP2:%.*]] = icmp sgt i8 [[X]], -10
+; CHECK-NEXT:    [[AND_X:%.*]] = and i1 [[X_CMP]], [[X_CMP2]]
+; CHECK-NEXT:    [[Y_CMP:%.*]] = icmp uge i8 [[Y:%.*]], 10
+; CHECK-NEXT:    [[Y_CMP2:%.*]] = icmp ule i8 [[Y]], 20
+; CHECK-NEXT:    [[AND_Y:%.*]] = and i1 [[Y_CMP]], [[Y_CMP2]]
+; CHECK-NEXT:    [[AND_COND:%.*]] = and i1 [[AND_X]], [[AND_Y]]
+; CHECK-NEXT:    br i1 [[AND_COND]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[X]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %x.cmp = icmp slt i8 %x, 10
+  %x.cmp2 = icmp sgt i8 %x, -10
+  %and.x = and i1 %x.cmp, %x.cmp2
+  %y.cmp = icmp uge i8 %y, 10
+  %y.cmp2 = icmp ule i8 %y, 20
+  %and.y = and i1 %y.cmp, %y.cmp2
+  %and.cond = and i1 %and.x, %and.y
+  br i1 %and.cond, label %if.else, label %if.then
+
+if.else:                                          ; preds = %entry
+  %rem = srem i8 %x, %y
+  ret i8 %rem
+
+if.then:                                          ; preds = %entry, %if.then6, %if.end4
+  ret i8 0
+}
+
+define dso_local i8 @abs_x_lt_abs_y_negative(i8 %x, i8 %y) {
+; CHECK-LABEL: @abs_x_lt_abs_y_negative(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_CMP:%.*]] = icmp slt i8 [[X:%.*]], 10
+; CHECK-NEXT:    [[X_CMP2:%.*]] = icmp sgt i8 [[X]], -10
+; CHECK-NEXT:    [[AND_X:%.*]] = and i1 [[X_CMP]], [[X_CMP2]]
+; CHECK-NEXT:    [[Y_CMP:%.*]] = icmp sge i8 [[Y:%.*]], -20
+; CHECK-NEXT:    [[Y_CMP2:%.*]] = icmp sle i8 [[Y]], -11
+; CHECK-NEXT:    [[AND_Y:%.*]] = and i1 [[Y_CMP]], [[Y_CMP2]]
+; CHECK-NEXT:    [[AND_COND:%.*]] = and i1 [[AND_X]], [[AND_Y]]
+; CHECK-NEXT:    br i1 [[AND_COND]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[X]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %x.cmp = icmp slt i8 %x, 10
+  %x.cmp2 = icmp sgt i8 %x, -10
+  %and.x = and i1 %x.cmp, %x.cmp2
+  %y.cmp = icmp sge i8 %y, -20
+  %y.cmp2 = icmp sle i8 %y, -11
+  %and.y = and i1 %y.cmp, %y.cmp2
+  %and.cond = and i1 %and.x, %and.y
+  br i1 %and.cond, label %if.else, label %if.then
+
+if.else:                                          ; preds = %entry
+  %rem = srem i8 %x, %y
+  ret i8 %rem
+
+if.then:                                          ; preds = %entry, %if.then6, %if.end4
+  ret i8 0
+}
+
+; Negative test: abs(x) less than or equal abs(y)
+
+define dso_local i8 @abs_x_lte_abs_y(i8 %x, i8 %y) {
+; CHECK-LABEL: @abs_x_lte_abs_y(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_CMP:%.*]] = icmp slt i8 [[X:%.*]], 10
+; CHECK-NEXT:    [[X_CMP2:%.*]] = icmp sgt i8 [[X]], -10
+; CHECK-NEXT:    [[AND_X:%.*]] = and i1 [[X_CMP]], [[X_CMP2]]
+; CHECK-NEXT:    [[Y_CMP:%.*]] = icmp sge i8 [[Y:%.*]], -20
+; CHECK-NEXT:    [[Y_CMP2:%.*]] = icmp sle i8 [[Y]], -9
+; CHECK-NEXT:    [[AND_Y:%.*]] = and i1 [[Y_CMP]], [[Y_CMP2]]
+; CHECK-NEXT:    [[AND_COND:%.*]] = and i1 [[AND_X]], [[AND_Y]]
+; CHECK-NEXT:    br i1 [[AND_COND]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X]], [[Y]]
+; CHECK-NEXT:    ret i8 [[REM]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %x.cmp = icmp slt i8 %x, 10
+  %x.cmp2 = icmp sgt i8 %x, -10
+  %and.x = and i1 %x.cmp, %x.cmp2
+  %y.cmp = icmp sge i8 %y, -20
+  %y.cmp2 = icmp sle i8 %y, -9
+  %and.y = and i1 %y.cmp, %y.cmp2
+  %and.cond = and i1 %and.x, %and.y
+  br i1 %and.cond, label %if.else, label %if.then
+
+if.else:                                          ; preds = %entry
+  %rem = srem i8 %x, %y
+  ret i8 %rem
+
+if.then:                                          ; preds = %entry, %if.then6, %if.end4
+  ret i8 0
+}
+
+; Negative test: abs(x) has unknown predication with abs(y)
+
+define dso_local i8 @abs_x_unknown_abs_y(i8 %x, i8 %y) {
+; CHECK-LABEL: @abs_x_unknown_abs_y(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_CMP:%.*]] = icmp slt i8 [[X:%.*]], 10
+; CHECK-NEXT:    [[X_CMP2:%.*]] = icmp sgt i8 [[X]], -10
+; CHECK-NEXT:    [[AND_X:%.*]] = and i1 [[X_CMP]], [[X_CMP2]]
+; CHECK-NEXT:    [[Y_CMP:%.*]] = icmp sge i8 [[Y:%.*]], -20
+; CHECK-NEXT:    [[Y_CMP2:%.*]] = icmp sle i8 [[Y]], -9
+; CHECK-NEXT:    [[AND_Y:%.*]] = and i1 [[Y_CMP]], [[Y_CMP2]]
+; CHECK-NEXT:    [[AND_COND:%.*]] = and i1 [[AND_X]], [[AND_Y]]
+; CHECK-NEXT:    br i1 [[AND_COND]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X]], [[Y]]
+; CHECK-NEXT:    ret i8 [[REM]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %x.cmp = icmp slt i8 %x, 10
+  %x.cmp2 = icmp sgt i8 %x, -10
+  %and.x = and i1 %x.cmp, %x.cmp2
+  %y.cmp = icmp sge i8 %y, -20
+  %y.cmp2 = icmp sle i8 %y, -9
+  %and.y = and i1 %y.cmp, %y.cmp2
+  %and.cond = and i1 %and.x, %and.y
+  br i1 %and.cond, label %if.else, label %if.then
+
+if.else:                                          ; preds = %entry
+  %rem = srem i8 %x, %y
+  ret i8 %rem
+
+if.then:                                          ; preds = %entry, %if.then6, %if.end4
+  ret i8 0
 }

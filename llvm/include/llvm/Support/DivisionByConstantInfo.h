@@ -26,11 +26,13 @@ struct SignedDivisionByConstantInfo {
 
 /// Magic data for optimising unsigned division by a constant.
 struct UnsignedDivisionByConstantInfo {
-  static UnsignedDivisionByConstantInfo get(const APInt &D,
-                                            unsigned LeadingZeros = 0);
+  static UnsignedDivisionByConstantInfo
+  get(const APInt &D, unsigned LeadingZeros = 0,
+      bool AllowEvenDivisorOptimization = true);
   APInt Magic;          ///< magic number
   bool IsAdd;           ///< add indicator
-  unsigned ShiftAmount; ///< shift amount
+  unsigned PostShift;   ///< post-shift amount
+  unsigned PreShift;    ///< pre-shift amount
 };
 
 } // namespace llvm

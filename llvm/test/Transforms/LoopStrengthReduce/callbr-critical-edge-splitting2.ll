@@ -36,7 +36,7 @@ entry:
 
 for.cond:                                         ; preds = %if.end3, %entry
   %g.0 = phi i32 [ undef, %entry ], [ %inc, %if.end3 ]
-  %0 = load i32, i32* @f, align 4
+  %0 = load i32, ptr @f, align 4
   %tobool.not = icmp eq i32 %0, 0
   br i1 %tobool.not, label %if.end3, label %if.then
 

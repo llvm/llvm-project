@@ -493,12 +493,11 @@ static Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
     assert(SrcTy->getStructNumElements() == DestTy->getStructNumElements());
     Value *Result = PoisonValue::get(DestTy);
     for (unsigned int I = 0, E = SrcTy->getStructNumElements(); I < E; ++I) {
-      Value *Element = createCast(
-          Builder, Builder.CreateExtractValue(V, makeArrayRef(I)),
-          DestTy->getStructElementType(I));
+      Value *Element =
+          createCast(Builder, Builder.CreateExtractValue(V, ArrayRef(I)),
+                     DestTy->getStructElementType(I));
 
-      Result =
-          Builder.CreateInsertValue(Result, Element, makeArrayRef(I));
+      Result = Builder.CreateInsertValue(Result, Element, ArrayRef(I));
     }
     return Result;
   }

@@ -241,7 +241,7 @@ static Expected<SectionRename> parseRenameSectionValue(StringRef FlagValue) {
 
   if (NameAndFlags.size() > 1) {
     Expected<SectionFlag> ParsedFlagSet =
-        parseSectionFlagSet(makeArrayRef(NameAndFlags).drop_front());
+        parseSectionFlagSet(ArrayRef(NameAndFlags).drop_front());
     if (!ParsedFlagSet)
       return ParsedFlagSet.takeError();
     SR.NewFlags = *ParsedFlagSet;
@@ -575,7 +575,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
 
   const char *const *DashDash =
       llvm::find_if(RawArgsArr, [](StringRef Str) { return Str == "--"; });
-  ArrayRef<const char *> ArgsArr = makeArrayRef(RawArgsArr.begin(), DashDash);
+  ArrayRef<const char *> ArgsArr = ArrayRef(RawArgsArr.begin(), DashDash);
   if (DashDash != RawArgsArr.end())
     DashDash = std::next(DashDash);
 
@@ -1231,7 +1231,7 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
                            function_ref<Error(Error)> ErrorCallback) {
   const char *const *DashDash =
       llvm::find_if(RawArgsArr, [](StringRef Str) { return Str == "--"; });
-  ArrayRef<const char *> ArgsArr = makeArrayRef(RawArgsArr.begin(), DashDash);
+  ArrayRef<const char *> ArgsArr = ArrayRef(RawArgsArr.begin(), DashDash);
   if (DashDash != RawArgsArr.end())
     DashDash = std::next(DashDash);
 

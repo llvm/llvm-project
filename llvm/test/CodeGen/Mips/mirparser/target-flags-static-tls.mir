@@ -18,32 +18,32 @@
   entry:
     %call = tail call i32 @_Z1gi(i32 signext %asd)
     %add = add nsw i32 %call, %asd
-    %0 = load i32, i32* @v, align 4
+    %0 = load i32, ptr @v, align 4
     %add1 = add nsw i32 %add, %0
-    %.b.i.i = load i1, i1* @__tls_guard, align 1
+    %.b.i.i = load i1, ptr @__tls_guard, align 1
     br i1 %.b.i.i, label %entry._ZTW1k.exit_crit_edge, label %init.i.i
 
   entry._ZTW1k.exit_crit_edge:
-    %.pre = load i32, i32* @k, align 4
+    %.pre = load i32, ptr @k, align 4
     br label %_ZTW1k.exit
 
   init.i.i:
-    store i1 true, i1* @__tls_guard, align 1
+    store i1 true, ptr @__tls_guard, align 1
     %call.i.i.i = tail call i32 @_Z1gi(i32 signext 3)
-    store i32 %call.i.i.i, i32* @k, align 4
+    store i32 %call.i.i.i, ptr @k, align 4
     br label %_ZTW1k.exit
 
   _ZTW1k.exit:
     %1 = phi i32 [ %.pre, %entry._ZTW1k.exit_crit_edge ], [ %call.i.i.i, %init.i.i ]
     %add2 = add nsw i32 %add1, %1
-    br i1 icmp ne (void ()* @_ZTH1j, void ()* null), label %2, label %_ZTW1j.exit
+    br i1 icmp ne (ptr @_ZTH1j, ptr null), label %2, label %_ZTW1j.exit
 
   ; <label>:2:
     tail call void @_ZTH1j()
     br label %_ZTW1j.exit
 
   _ZTW1j.exit:
-    %3 = load i32, i32* @j, align 4
+    %3 = load i32, ptr @j, align 4
     %add3 = add nsw i32 %add2, %3
     ret i32 %add3
   }

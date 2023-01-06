@@ -1572,7 +1572,7 @@ static void buildClonedLoops(Loop &OrigL, ArrayRef<BasicBlock *> ExitBlocks,
   // We need a stable insertion order. We use the order of the original loop
   // order and map into the correct parent loop.
   for (auto *BB : llvm::concat<BasicBlock *const>(
-           makeArrayRef(ClonedPH), ClonedLoopBlocks, ClonedExitsInLoops))
+           ArrayRef(ClonedPH), ClonedLoopBlocks, ClonedExitsInLoops))
     if (Loop *OuterL = ExitLoopMap.lookup(BB))
       OuterL->addBasicBlockToLoop(BB, LI);
 
@@ -2206,8 +2206,8 @@ static void unswitchNontrivialInvariants(
   // some *other* successor with a single data structure. We use this to
   // significantly reduce cloning.
   SmallDenseMap<BasicBlock *, BasicBlock *, 16> DominatingSucc;
-  for (auto *SuccBB : llvm::concat<BasicBlock *const>(
-           makeArrayRef(RetainedSuccBB), UnswitchedSuccBBs))
+  for (auto *SuccBB : llvm::concat<BasicBlock *const>(ArrayRef(RetainedSuccBB),
+                                                      UnswitchedSuccBBs))
     if (SuccBB->getUniquePredecessor() ||
         llvm::all_of(predecessors(SuccBB), [&](BasicBlock *PredBB) {
           return PredBB == ParentBB || DT.dominates(SuccBB, PredBB);

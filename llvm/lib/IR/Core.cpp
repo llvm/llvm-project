@@ -1154,7 +1154,7 @@ LLVMValueRef LLVMMDNodeInContext(LLVMContextRef C, LLVMValueRef *Vals,
                                  unsigned Count) {
   LLVMContext &Context = *unwrap(C);
   SmallVector<Metadata *, 8> MDs;
-  for (auto *OV : makeArrayRef(Vals, Count)) {
+  for (auto *OV : ArrayRef(Vals, Count)) {
     Value *V = unwrap(OV);
     Metadata *MD;
     if (!V)
@@ -1388,9 +1388,8 @@ LLVMValueRef LLVMConstIntOfArbitraryPrecision(LLVMTypeRef IntTy,
                                               unsigned NumWords,
                                               const uint64_t Words[]) {
     IntegerType *Ty = unwrap<IntegerType>(IntTy);
-    return wrap(ConstantInt::get(Ty->getContext(),
-                                 APInt(Ty->getBitWidth(),
-                                       makeArrayRef(Words, NumWords))));
+    return wrap(ConstantInt::get(
+        Ty->getContext(), APInt(Ty->getBitWidth(), ArrayRef(Words, NumWords))));
 }
 
 LLVMValueRef LLVMConstIntOfString(LLVMTypeRef IntTy, const char Str[],
@@ -1488,7 +1487,7 @@ LLVMValueRef LLVMConstStructInContext(LLVMContextRef C,
                                       LLVMValueRef *ConstantVals,
                                       unsigned Count, LLVMBool Packed) {
   Constant **Elements = unwrap<Constant>(ConstantVals, Count);
-  return wrap(ConstantStruct::getAnon(*unwrap(C), makeArrayRef(Elements, Count),
+  return wrap(ConstantStruct::getAnon(*unwrap(C), ArrayRef(Elements, Count),
                                       Packed != 0));
 }
 
@@ -1504,12 +1503,12 @@ LLVMValueRef LLVMConstNamedStruct(LLVMTypeRef StructTy,
   Constant **Elements = unwrap<Constant>(ConstantVals, Count);
   StructType *Ty = unwrap<StructType>(StructTy);
 
-  return wrap(ConstantStruct::get(Ty, makeArrayRef(Elements, Count)));
+  return wrap(ConstantStruct::get(Ty, ArrayRef(Elements, Count)));
 }
 
 LLVMValueRef LLVMConstVector(LLVMValueRef *ScalarConstantVals, unsigned Size) {
-  return wrap(ConstantVector::get(makeArrayRef(
-                            unwrap<Constant>(ScalarConstantVals, Size), Size)));
+  return wrap(ConstantVector::get(
+      ArrayRef(unwrap<Constant>(ScalarConstantVals, Size), Size)));
 }
 
 /*-- Opcode mapping */
@@ -3146,9 +3145,9 @@ LLVMValueRef LLVMBuildInvoke2(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
                               LLVMValueRef *Args, unsigned NumArgs,
                               LLVMBasicBlockRef Then, LLVMBasicBlockRef Catch,
                               const char *Name) {
-  return wrap(unwrap(B)->CreateInvoke(
-      unwrap<FunctionType>(Ty), unwrap(Fn), unwrap(Then), unwrap(Catch),
-      makeArrayRef(unwrap(Args), NumArgs), Name));
+  return wrap(unwrap(B)->CreateInvoke(unwrap<FunctionType>(Ty), unwrap(Fn),
+                                      unwrap(Then), unwrap(Catch),
+                                      ArrayRef(unwrap(Args), NumArgs), Name));
 }
 
 LLVMValueRef LLVMBuildLandingPad(LLVMBuilderRef B, LLVMTypeRef Ty,
@@ -3167,8 +3166,7 @@ LLVMValueRef LLVMBuildCatchPad(LLVMBuilderRef B, LLVMValueRef ParentPad,
                                LLVMValueRef *Args, unsigned NumArgs,
                                const char *Name) {
   return wrap(unwrap(B)->CreateCatchPad(unwrap(ParentPad),
-                                        makeArrayRef(unwrap(Args), NumArgs),
-                                        Name));
+                                        ArrayRef(unwrap(Args), NumArgs), Name));
 }
 
 LLVMValueRef LLVMBuildCleanupPad(LLVMBuilderRef B, LLVMValueRef ParentPad,
@@ -3178,9 +3176,8 @@ LLVMValueRef LLVMBuildCleanupPad(LLVMBuilderRef B, LLVMValueRef ParentPad,
     Type *Ty = Type::getTokenTy(unwrap(B)->getContext());
     ParentPad = wrap(Constant::getNullValue(Ty));
   }
-  return wrap(unwrap(B)->CreateCleanupPad(unwrap(ParentPad),
-                                          makeArrayRef(unwrap(Args), NumArgs),
-                                          Name));
+  return wrap(unwrap(B)->CreateCleanupPad(
+      unwrap(ParentPad), ArrayRef(unwrap(Args), NumArgs), Name));
 }
 
 LLVMValueRef LLVMBuildResume(LLVMBuilderRef B, LLVMValueRef Exn) {
@@ -3837,7 +3834,7 @@ LLVMValueRef LLVMBuildCall2(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
                             const char *Name) {
   FunctionType *FTy = unwrap<FunctionType>(Ty);
   return wrap(unwrap(B)->CreateCall(FTy, unwrap(Fn),
-                                    makeArrayRef(unwrap(Args), NumArgs), Name));
+                                    ArrayRef(unwrap(Args), NumArgs), Name));
 }
 
 LLVMValueRef LLVMBuildSelect(LLVMBuilderRef B, LLVMValueRef If,

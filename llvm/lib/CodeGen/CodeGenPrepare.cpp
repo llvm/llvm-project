@@ -1241,7 +1241,7 @@ simplifyRelocatesOffABase(GCRelocateInst *RelocatedBase,
     }
     Value *Replacement =
         Builder.CreateGEP(Derived->getSourceElementType(), ActualRelocatedBase,
-                          makeArrayRef(OffsetV));
+                          ArrayRef(OffsetV));
     Replacement->takeName(ToReplace);
     // If the newly generated derived pointer's type does not match the original
     // derived pointer's type, cast the new derived pointer to match it. Same
@@ -5680,11 +5680,10 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
     // If the final index isn't a vector, emit a scalar GEP containing all ops
     // and a vector GEP with all zeroes final index.
     if (!Ops[FinalIndex]->getType()->isVectorTy()) {
-      NewAddr =
-          Builder.CreateGEP(SourceTy, Ops[0], makeArrayRef(Ops).drop_front());
+      NewAddr = Builder.CreateGEP(SourceTy, Ops[0], ArrayRef(Ops).drop_front());
       auto *IndexTy = VectorType::get(ScalarIndexTy, NumElts);
       auto *SecondTy = GetElementPtrInst::getIndexedType(
-          SourceTy, makeArrayRef(Ops).drop_front());
+          SourceTy, ArrayRef(Ops).drop_front());
       NewAddr =
           Builder.CreateGEP(SecondTy, NewAddr, Constant::getNullValue(IndexTy));
     } else {
@@ -5695,10 +5694,9 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
       if (Ops.size() != 2) {
         // Replace the last index with 0.
         Ops[FinalIndex] = Constant::getNullValue(ScalarIndexTy);
-        Base =
-            Builder.CreateGEP(SourceTy, Base, makeArrayRef(Ops).drop_front());
+        Base = Builder.CreateGEP(SourceTy, Base, ArrayRef(Ops).drop_front());
         SourceTy = GetElementPtrInst::getIndexedType(
-            SourceTy, makeArrayRef(Ops).drop_front());
+            SourceTy, ArrayRef(Ops).drop_front());
       }
 
       // Now create the GEP with scalar pointer and vector index.
@@ -8328,7 +8326,7 @@ bool CodeGenPrepare::placeDbgValues(Function &F) {
               dbgs()
               << "Unable to find valid location for Debug Value, undefing:\n"
               << *DVI);
-          DVI->setUndef();
+          DVI->setKillLocation();
           break;
         }
 

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -cl-std=CL2.0 -emit-llvm -o - -triple spir-unknown-unknown %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space -emit-llvm -o - -triple spir-unknown-unknown %s | FileCheck %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -emit-llvm -o - -triple spir-unknown-unknown %s | FileCheck %s
+// RUN: %clang_cc1 -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space -emit-llvm -o - -triple spir-unknown-unknown %s | FileCheck %s
 
 typedef short short4 __attribute__((ext_vector_type(4)));
 
@@ -21,18 +21,18 @@ void kernel test1() {
   generic int *generic *gengen = 0;
   generic int *local *genloc = 0;
   generic int *global *genglob = 0;
-  // CHECK-DAG: call spir_func void @_Z3fooPU3AS1iS0_(i32 addrspace(1)* noundef {{.*}}, i32 addrspace(1)* noundef {{.*}})
+  // CHECK-DAG: call spir_func void @_Z3fooPU3AS1iS0_(ptr addrspace(1) noundef {{.*}}, ptr addrspace(1) noundef {{.*}})
   foo(a, b);
-  // CHECK-DAG: call spir_func void @_Z3fooPU3AS4iS0_(i32 addrspace(4)* noundef {{.*}}, i32 addrspace(4)* noundef {{.*}})
+  // CHECK-DAG: call spir_func void @_Z3fooPU3AS4iS0_(ptr addrspace(4) noundef {{.*}}, ptr addrspace(4) noundef {{.*}})
   foo(b, c);
-  // CHECK-DAG: call spir_func void @_Z3fooPU3AS4iS0_(i32 addrspace(4)* noundef {{.*}}, i32 addrspace(4)* noundef {{.*}})
+  // CHECK-DAG: call spir_func void @_Z3fooPU3AS4iS0_(ptr addrspace(4) noundef {{.*}}, ptr addrspace(4) noundef {{.*}})
   foo(a, d);
 
-  // CHECK-DAG: call spir_func void @_Z3barPU3AS4PU3AS4iS2_(i32 addrspace(4)* addrspace(4)* noundef {{.*}}, i32 addrspace(4)* addrspace(4)* noundef {{.*}})
+  // CHECK-DAG: call spir_func void @_Z3barPU3AS4PU3AS4iS2_(ptr addrspace(4) noundef {{.*}}, ptr addrspace(4) noundef {{.*}})
   bar(gengen, genloc);
-  // CHECK-DAG: call spir_func void @_Z3barPU3AS4PU3AS4iS2_(i32 addrspace(4)* addrspace(4)* noundef {{.*}}, i32 addrspace(4)* addrspace(4)* noundef {{.*}})
+  // CHECK-DAG: call spir_func void @_Z3barPU3AS4PU3AS4iS2_(ptr addrspace(4) noundef {{.*}}, ptr addrspace(4) noundef {{.*}})
   bar(gengen, genglob);
-  // CHECK-DAG: call spir_func void @_Z3barPU3AS1PU3AS4iS2_(i32 addrspace(4)* addrspace(1)* noundef {{.*}}, i32 addrspace(4)* addrspace(1)* noundef {{.*}})
+  // CHECK-DAG: call spir_func void @_Z3barPU3AS1PU3AS4iS2_(ptr addrspace(1) noundef {{.*}}, ptr addrspace(1) noundef {{.*}})
   bar(genglob, genglob);
 }
 

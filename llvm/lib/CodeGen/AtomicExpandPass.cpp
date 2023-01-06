@@ -1664,19 +1664,19 @@ static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
   case AtomicRMWInst::BAD_BINOP:
     llvm_unreachable("Should not have BAD_BINOP.");
   case AtomicRMWInst::Xchg:
-    return makeArrayRef(LibcallsXchg);
+    return ArrayRef(LibcallsXchg);
   case AtomicRMWInst::Add:
-    return makeArrayRef(LibcallsAdd);
+    return ArrayRef(LibcallsAdd);
   case AtomicRMWInst::Sub:
-    return makeArrayRef(LibcallsSub);
+    return ArrayRef(LibcallsSub);
   case AtomicRMWInst::And:
-    return makeArrayRef(LibcallsAnd);
+    return ArrayRef(LibcallsAnd);
   case AtomicRMWInst::Or:
-    return makeArrayRef(LibcallsOr);
+    return ArrayRef(LibcallsOr);
   case AtomicRMWInst::Xor:
-    return makeArrayRef(LibcallsXor);
+    return ArrayRef(LibcallsXor);
   case AtomicRMWInst::Nand:
-    return makeArrayRef(LibcallsNand);
+    return ArrayRef(LibcallsNand);
   case AtomicRMWInst::Max:
   case AtomicRMWInst::Min:
   case AtomicRMWInst::UMax:
