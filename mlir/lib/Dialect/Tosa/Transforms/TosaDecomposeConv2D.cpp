@@ -107,7 +107,7 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
     auto reshapedInput = rewriter
                              .create<tosa::ReshapeOp>(
                                  op.getLoc(), revisedInputShapeType, input,
-                                 rewriter.getI64ArrayAttr(
+                                 rewriter.getDenseI64ArrayAttr(
                                      convertFromMlirShape(revisedInputShape)))
                              .getResult();
 
@@ -120,7 +120,7 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
     auto reshapedWeight = rewriter
                               .create<tosa::ReshapeOp>(
                                   op.getLoc(), revisedWeightShapeType, weight,
-                                  rewriter.getI64ArrayAttr(
+                                  rewriter.getDenseI64ArrayAttr(
                                       convertFromMlirShape(revisedWeightShape)))
                               .getResult();
 
@@ -150,7 +150,7 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
                                               inputShape[2], weightShape[0]};
     rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
         op, resultType, fullyConnectedValue,
-        rewriter.getI64ArrayAttr(convertFromMlirShape(outputShape)));
+        rewriter.getDenseI64ArrayAttr(convertFromMlirShape(outputShape)));
     return success();
   }
 };

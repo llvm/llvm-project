@@ -598,7 +598,7 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
     if (newShape.size() != rank) {
       operand = rewriter.create<tosa::ReshapeOp>(
           loc, RankedTensorType::get(newShape, type.getElementType()), operand,
-          rewriter.getI64ArrayAttr(newShape));
+          rewriter.getDenseI64ArrayAttr(newShape));
     }
 
     operands.push_back(operand);
@@ -1146,11 +1146,8 @@ public:
     }
 
     // The shift and multiplier values.
-    SmallVector<int32_t> multiplierValues;
-    getValuesFromIntArrayAttribute(op.getMultiplier(), multiplierValues);
-
-    SmallVector<int8_t> shiftValues;
-    getValuesFromIntArrayAttribute(op.getShift(), shiftValues);
+    SmallVector<int32_t> multiplierValues(op.getMultiplier());
+    SmallVector<int8_t> shiftValues(op.getShift());
 
     // If we shift by more than the bitwidth, this just sets to 0.
     for (int i = 0, s = multiplierValues.size(); i < s; i++) {
@@ -1942,8 +1939,7 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
     auto elementTy = inputTy.getElementType();
     int64_t rank = inputTy.getRank();
 
-    SmallVector<int64_t> multiples;
-    getValuesFromIntArrayAttribute(op.getMultiples(), multiples);
+    ArrayRef<int64_t> multiples = op.getMultiples();
 
     // Broadcast the newly added dimensions to their appropriate multiple.
     SmallVector<int64_t, 2> genericShape;
@@ -1986,7 +1982,7 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
 
     rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
         op, resultTy, genericOp.getResult(0),
-        rewriter.getI64ArrayAttr(resultTy.getShape()));
+        rewriter.getDenseI64ArrayAttr(resultTy.getShape()));
     return success();
   }
 };

@@ -324,12 +324,6 @@ static void buildExplicitValuePadOpWithQuantInfo(OpBuilder &builder,
 // TOSA Operator Return Type Inference.
 //===----------------------------------------------------------------------===//
 
-static void getI64Values(ArrayAttr arrayAttr, SmallVector<int64_t> &values) {
-  for (auto it : arrayAttr) {
-    values.push_back(it.cast<IntegerAttr>().getValue().getSExtValue());
-  }
-}
-
 static LogicalResult resolveBroadcastShape(const ValueShapeRange &operands,
                                            SmallVector<int64_t> &outShape) {
   int64_t outRank = 0;
@@ -594,15 +588,8 @@ LogicalResult tosa::SliceOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  ArrayAttr sizes = SliceOpAdaptor(operands, attributes).getSize();
-  SmallVector<int64_t> outputShape;
-  outputShape.reserve(sizes.size());
-  for (auto val : sizes) {
-    outputShape.push_back(val.cast<IntegerAttr>().getValue().getSExtValue());
-  }
-
-  inferredReturnShapes.push_back(
-      ShapedTypeComponents(convertToMlirShape(outputShape)));
+  inferredReturnShapes.push_back(ShapedTypeComponents(
+      convertToMlirShape(SliceOpAdaptor(operands, attributes).getSize())));
   return success();
 }
 
@@ -627,7 +614,7 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
     ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   TileOpAdaptor adaptor(operands, attributes);
-  ArrayAttr multiples = adaptor.getMultiples();
+  ArrayRef<int64_t> multiples = adaptor.getMultiples();
   ShapeAdaptor inputShape = operands.getShape(0);
   SmallVector<int64_t> outputShape;
   if (!inputShape.hasRank()) {
@@ -636,19 +623,12 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
     return success();
   }
 
-  // We need the multiple values to determine the output shape.
-  SmallVector<int64_t> multipleValues;
-  multipleValues.reserve(multiples.size());
-  for (auto val : multiples) {
-    multipleValues.push_back(val.cast<IntegerAttr>().getValue().getSExtValue());
-  }
-
   // Any non dynamic dimension can be multiplied to a known size.
   outputShape.reserve(multiples.size());
   for (int i = 0, s = inputShape.getRank(); i < s; i++) {
     int64_t dim = inputShape.getDimSize(i);
     if (dim != ShapedType::kDynamic)
-      dim *= multipleValues[i];
+      dim *= multiples[i];
     outputShape.push_back(dim);
   }
 
@@ -662,11 +642,8 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ReshapeOpAdaptor adaptor(operands, attributes);
   ShapeAdaptor inputShape = operands.getShape(0);
-
-  ArrayAttr newShape = adaptor.getNewShape();
-  llvm::SmallVector<int64_t> newShapeValue;
-  getI64Values(newShape, newShapeValue);
-  newShapeValue = convertToMlirShape(newShapeValue);
+  llvm::SmallVector<int64_t> newShapeValue =
+      convertToMlirShape(adaptor.getNewShape());
 
   // We cannot infer from the total number of elements so we must take the
   // shape attribute as exact.
