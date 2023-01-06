@@ -395,7 +395,7 @@ public:
   const llvm::opt::ArgStringList *
   extractCC1Arguments(llvm::ArrayRef<const char *> Argv) {
     const std::unique_ptr<driver::Compilation> Compilation(
-        Driver.BuildCompilation(llvm::makeArrayRef(Argv)));
+        Driver.BuildCompilation(llvm::ArrayRef(Argv)));
 
     return getCC1Arguments(Diags.get(), Compilation.get());
   }

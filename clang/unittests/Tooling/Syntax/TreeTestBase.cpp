@@ -39,10 +39,10 @@ ArrayRef<syntax::Token> tokens(syntax::Node *N,
                                const TokenBufferTokenManager &STM) {
   assert(N->isOriginal() && "tokens of modified nodes are not well-defined");
   if (auto *L = dyn_cast<syntax::Leaf>(N))
-    return llvm::makeArrayRef(STM.getToken(L->getTokenKey()), 1);
+    return llvm::ArrayRef(STM.getToken(L->getTokenKey()), 1);
   auto *T = cast<syntax::Tree>(N);
-  return llvm::makeArrayRef(STM.getToken(T->findFirstLeaf()->getTokenKey()),
-                            STM.getToken(T->findLastLeaf()->getTokenKey()) + 1);
+  return llvm::ArrayRef(STM.getToken(T->findFirstLeaf()->getTokenKey()),
+                        STM.getToken(T->findLastLeaf()->getTokenKey()) + 1);
 }
 } // namespace
 

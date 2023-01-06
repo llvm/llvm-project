@@ -399,8 +399,9 @@ public:
 
   static llvm::iterator_range<used_clauses_child_iterator>
   used_clauses_children(ArrayRef<OMPClause *> Clauses) {
-    return {used_clauses_child_iterator(Clauses),
-            used_clauses_child_iterator(llvm::makeArrayRef(Clauses.end(), 0))};
+    return {
+        used_clauses_child_iterator(Clauses),
+        used_clauses_child_iterator(llvm::ArrayRef(Clauses.end(), (size_t)0))};
   }
 
   /// Iterates over a filtered subrange of clauses applied to a
@@ -445,7 +446,7 @@ public:
   getClausesOfKind(ArrayRef<OMPClause *> Clauses) {
     return {specific_clause_iterator<SpecificClause>(Clauses),
             specific_clause_iterator<SpecificClause>(
-                llvm::makeArrayRef(Clauses.end(), 0))};
+                llvm::ArrayRef(Clauses.end(), (size_t)0))};
   }
 
   template <typename SpecificClause>

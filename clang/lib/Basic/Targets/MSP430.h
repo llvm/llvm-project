@@ -71,7 +71,7 @@ public:
         {{"r2"}, "sr"},
         {{"r3"}, "cg"},
     };
-    return llvm::makeArrayRef(GCCRegAliases);
+    return llvm::ArrayRef(GCCRegAliases);
   }
 
   bool validateAsmConstraint(const char *&Name,
