@@ -608,7 +608,7 @@ private:
   ///
   /// Returns failure if the payload does not satisfy the conditions associated
   /// with the type of the handle value. The value is expected to have a type
-  /// implementing TransformTypeInterface.
+  /// implementing TransformHandleTypeInterface.
   LogicalResult setPayloadOps(Value value, ArrayRef<Operation *> targets);
 
   /// Sets the parameters associated with the given transform IR value. Returns
@@ -686,7 +686,7 @@ public:
   /// Indicates that the result of the transform IR op at the given position
   /// corresponds to the given list of payload IR ops. Each result must be set
   /// by the transformation exactly once. The value must have a type
-  /// implementing TransformTypeInterface.
+  /// implementing TransformHandleTypeInterface.
   void set(OpResult value, ArrayRef<Operation *> ops);
 
   /// Indicates that the result of the transform IR op at the given position
