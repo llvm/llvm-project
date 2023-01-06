@@ -10566,10 +10566,10 @@ TEST_F(FormatTest, UnderstandsOverloadedOperators) {
 
 TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
   verifyFormat("void A::b() && {}");
-  verifyFormat("void A::b() &&noexcept {}");
+  verifyFormat("void A::b() && noexcept {}");
   verifyFormat("Deleted &operator=(const Deleted &) & = default;");
   verifyFormat("Deleted &operator=(const Deleted &) && = delete;");
-  verifyFormat("Deleted &operator=(const Deleted &) &noexcept = default;");
+  verifyFormat("Deleted &operator=(const Deleted &) & noexcept = default;");
   verifyFormat("SomeType MemberFunction(const Deleted &) & = delete;");
   verifyFormat("SomeType MemberFunction(const Deleted &) && = delete;");
   verifyFormat("Deleted &operator=(const Deleted &) &;");
@@ -10579,16 +10579,16 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
   verifyFormat("SomeType MemberFunction(const Deleted &) && {}");
   verifyFormat("SomeType MemberFunction(const Deleted &) && final {}");
   verifyFormat("SomeType MemberFunction(const Deleted &) && override {}");
-  verifyFormat("SomeType MemberFunction(const Deleted &) &&noexcept {}");
+  verifyFormat("SomeType MemberFunction(const Deleted &) && noexcept {}");
   verifyFormat("void Fn(T const &) const &;");
   verifyFormat("void Fn(T const volatile &&) const volatile &&;");
-  verifyFormat("void Fn(T const volatile &&) const volatile &&noexcept;");
+  verifyFormat("void Fn(T const volatile &&) const volatile && noexcept;");
   verifyFormat("template <typename T>\n"
                "void F(T) && = delete;",
                getGoogleStyle());
   verifyFormat("template <typename T> void operator=(T) &;");
   verifyFormat("template <typename T> void operator=(T) const &;");
-  verifyFormat("template <typename T> void operator=(T) &noexcept;");
+  verifyFormat("template <typename T> void operator=(T) & noexcept;");
   verifyFormat("template <typename T> void operator=(T) & = default;");
   verifyFormat("template <typename T> void operator=(T) &&;");
   verifyFormat("template <typename T> void operator=(T) && = delete;");
@@ -10678,31 +10678,31 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
 
   verifyFormat("struct f {\n"
                "  template <class T>\n"
-               "  int &foo(const std::string &str) &noexcept {}\n"
+               "  int &foo(const std::string &str) & noexcept {}\n"
                "};",
                BreakTemplate);
 
   verifyFormat("struct f {\n"
                "  template <class T>\n"
-               "  int &foo(const std::string &str) &&noexcept {}\n"
+               "  int &foo(const std::string &str) && noexcept {}\n"
                "};",
                BreakTemplate);
 
   verifyFormat("struct f {\n"
                "  template <class T>\n"
-               "  int &foo(const std::string &str) const &noexcept {}\n"
+               "  int &foo(const std::string &str) const & noexcept {}\n"
                "};",
                BreakTemplate);
 
   verifyFormat("struct f {\n"
                "  template <class T>\n"
-               "  int &foo(const std::string &str) const &noexcept {}\n"
+               "  int &foo(const std::string &str) const & noexcept {}\n"
                "};",
                BreakTemplate);
 
   verifyFormat("struct f {\n"
                "  template <class T>\n"
-               "  auto foo(const std::string &str) &&noexcept -> int & {}\n"
+               "  auto foo(const std::string &str) && noexcept -> int & {}\n"
                "};",
                BreakTemplate);
 
