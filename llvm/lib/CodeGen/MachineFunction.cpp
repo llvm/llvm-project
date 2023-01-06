@@ -763,8 +763,10 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
             dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts()))
       getMMI().addPersonality(PF);
 
-    if (LPI->isCleanup())
-      addCleanup(LandingPad);
+    // If there's no typeid list specified, then "cleanup" is implicit.
+    // Otherwise, id 0 is reserved for the cleanup action.
+    if (LPI->isCleanup() && LPI->getNumClauses() != 0)
+      LP.TypeIds.push_back(0);
 
     // FIXME: New EH - Add the clauses in reverse order. This isn't 100%
     //        correct, but we need to do it this way because of how the DWARF EH
@@ -772,23 +774,25 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
     for (unsigned I = LPI->getNumClauses(); I != 0; --I) {
       Value *Val = LPI->getClause(I - 1);
       if (LPI->isCatch(I - 1)) {
-        addCatchTypeInfo(LandingPad,
-                         dyn_cast<GlobalValue>(Val->stripPointerCasts()));
+        LP.TypeIds.push_back(
+            getTypeIDFor(dyn_cast<GlobalValue>(Val->stripPointerCasts())));
       } else {
         // Add filters in a list.
         auto *CVal = cast<Constant>(Val);
-        SmallVector<const GlobalValue *, 4> FilterList;
+        SmallVector<unsigned, 4> FilterList;
         for (const Use &U : CVal->operands())
-          FilterList.push_back(cast<GlobalValue>(U->stripPointerCasts()));
+          FilterList.push_back(
+              getTypeIDFor(cast<GlobalValue>(U->stripPointerCasts())));
 
-        addFilterTypeInfo(LandingPad, FilterList);
+        LP.TypeIds.push_back(getFilterIDFor(FilterList));
       }
     }
 
   } else if (const auto *CPI = dyn_cast<CatchPadInst>(FirstI)) {
     for (unsigned I = CPI->arg_size(); I != 0; --I) {
-      Value *TypeInfo = CPI->getArgOperand(I - 1)->stripPointerCasts();
-      addCatchTypeInfo(LandingPad, dyn_cast<GlobalValue>(TypeInfo));
+      auto *TypeInfo =
+          dyn_cast<GlobalValue>(CPI->getArgOperand(I - 1)->stripPointerCasts());
+      LP.TypeIds.push_back(getTypeIDFor(TypeInfo));
     }
 
   } else {
@@ -796,73 +800,6 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
   }
 
   return LandingPadLabel;
-}
-
-void MachineFunction::addCatchTypeInfo(MachineBasicBlock *LandingPad,
-                                       ArrayRef<const GlobalValue *> TyInfo) {
-  LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
-  for (const GlobalValue *GV : llvm::reverse(TyInfo))
-    LP.TypeIds.push_back(getTypeIDFor(GV));
-}
-
-void MachineFunction::addFilterTypeInfo(MachineBasicBlock *LandingPad,
-                                        ArrayRef<const GlobalValue *> TyInfo) {
-  LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
-  std::vector<unsigned> IdsInFilter(TyInfo.size());
-  for (unsigned I = 0, E = TyInfo.size(); I != E; ++I)
-    IdsInFilter[I] = getTypeIDFor(TyInfo[I]);
-  LP.TypeIds.push_back(getFilterIDFor(IdsInFilter));
-}
-
-void MachineFunction::tidyLandingPads(DenseMap<MCSymbol *, uintptr_t> *LPMap,
-                                      bool TidyIfNoBeginLabels) {
-  for (unsigned i = 0; i != LandingPads.size(); ) {
-    LandingPadInfo &LandingPad = LandingPads[i];
-    if (LandingPad.LandingPadLabel &&
-        !LandingPad.LandingPadLabel->isDefined() &&
-        (!LPMap || (*LPMap)[LandingPad.LandingPadLabel] == 0))
-      LandingPad.LandingPadLabel = nullptr;
-
-    // Special case: we *should* emit LPs with null LP MBB. This indicates
-    // "nounwind" case.
-    if (!LandingPad.LandingPadLabel && LandingPad.LandingPadBlock) {
-      LandingPads.erase(LandingPads.begin() + i);
-      continue;
-    }
-
-    if (TidyIfNoBeginLabels) {
-      for (unsigned j = 0, e = LandingPads[i].BeginLabels.size(); j != e; ++j) {
-        MCSymbol *BeginLabel = LandingPad.BeginLabels[j];
-        MCSymbol *EndLabel = LandingPad.EndLabels[j];
-        if ((BeginLabel->isDefined() || (LPMap && (*LPMap)[BeginLabel] != 0)) &&
-            (EndLabel->isDefined() || (LPMap && (*LPMap)[EndLabel] != 0)))
-          continue;
-
-        LandingPad.BeginLabels.erase(LandingPad.BeginLabels.begin() + j);
-        LandingPad.EndLabels.erase(LandingPad.EndLabels.begin() + j);
-        --j;
-        --e;
-      }
-
-      // Remove landing pads with no try-ranges.
-      if (LandingPads[i].BeginLabels.empty()) {
-        LandingPads.erase(LandingPads.begin() + i);
-        continue;
-      }
-    }
-
-    // If there is no landing pad, ensure that the list of typeids is empty.
-    // If the only typeid is a cleanup, this is the same as having no typeids.
-    if (!LandingPad.LandingPadBlock ||
-        (LandingPad.TypeIds.size() == 1 && !LandingPad.TypeIds[0]))
-      LandingPad.TypeIds.clear();
-    ++i;
-  }
-}
-
-void MachineFunction::addCleanup(MachineBasicBlock *LandingPad) {
-  LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
-  LP.TypeIds.push_back(0);
 }
 
 void MachineFunction::setCallSiteLandingPad(MCSymbol *Sym,
@@ -878,7 +815,7 @@ unsigned MachineFunction::getTypeIDFor(const GlobalValue *TI) {
   return TypeInfos.size();
 }
 
-int MachineFunction::getFilterIDFor(std::vector<unsigned> &TyIds) {
+int MachineFunction::getFilterIDFor(ArrayRef<unsigned> TyIds) {
   // If the new filter coincides with the tail of an existing filter, then
   // re-use the existing filter.  Folding filters more than this requires
   // re-ordering filters and/or their elements - probably not worth it.
