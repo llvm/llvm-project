@@ -345,4 +345,4 @@
 // RUN:   | FileCheck %s --check-prefix=DRIVER-PASS-INCLUDES
 // DRIVER-PASS-INCLUDES:      "-cc1" {{.*}}"-resource-dir" "[[RESOURCE:[^"]+]]"
 // DRIVER-PASS-INCLUDES:      "-internal-isystem" "[[RESOURCE]]{{/|\\\\}}include"
-// DRIVER-PASS-INCLUDES:      "-internal-externc-isystem" "/usr/include"
+// DRIVER-PASS-INCLUDES:      "-internal-externc-isystem" "{{.*}}/usr/include"
