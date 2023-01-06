@@ -1661,6 +1661,40 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
 }
 
 void AArch64TargetLowering::addTypeForStreamingSVE(MVT VT) {
+  // By default set all operations to Expand,
+  // then change to Legal/Custom if needed.
+  for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op)
+    setOperationAction(Op, VT, Expand);
+
+  // STORE, LOAD, SCALAR_TO_VECTOR and BITCAST are natively supported,
+  // so no need to Custom/Expand them.
+  setOperationAction(ISD::STORE, VT, Legal);
+  setOperationAction(ISD::LOAD, VT, Legal);
+  setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Legal);
+  setOperationAction(ISD::BITCAST, VT, Legal);
+
+  setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
+  setOperationAction(ISD::MLOAD, VT, Custom);
+  setOperationAction(ISD::MSTORE, VT, Custom);
+  setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
+  setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+  setOperationAction(ISD::SDIV, VT, Custom);
+  setOperationAction(ISD::SHL, VT, Custom);
+  setOperationAction(ISD::SRA, VT, Custom);
+  setOperationAction(ISD::SRL, VT, Custom);
+  setOperationAction(ISD::OR, VT, Custom);
+  setOperationAction(ISD::SETCC, VT, Custom);
+  setOperationAction(ISD::UDIV, VT, Custom);
+  setOperationAction(ISD::SINT_TO_FP, VT, Custom);
+  setOperationAction(ISD::FP_TO_SINT, VT, Custom);
+  setOperationAction(ISD::FP_TO_UINT, VT, Custom);
+  setOperationAction(ISD::UINT_TO_FP, VT, Custom);
+  setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
+  setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
+  setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
+  setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
+  setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
+  setOperationAction(ISD::FCOPYSIGN, VT, Custom);
   setOperationAction(ISD::ANY_EXTEND, VT, Custom);
   setOperationAction(ISD::ZERO_EXTEND, VT, Custom);
   setOperationAction(ISD::SIGN_EXTEND, VT, Custom);

@@ -49,15 +49,10 @@ define <vscale x 8 x i8> @umulo_nxv8i8(<vscale x 8 x i8> %x, <vscale x 8 x i8> %
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    and z1.h, z1.h, #0xff
 ; CHECK-NEXT:    and z0.h, z0.h, #0xff
-; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    mul z2.h, p0/m, z2.h, z1.h
-; CHECK-NEXT:    umulh z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    lsr z1.h, z2.h, #8
-; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    lsr z1.h, z0.h, #8
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z1.h, #0
-; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
-; CHECK-NEXT:    mov z2.h, p0/m, #0 // =0x0
-; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    mov z0.h, p0/m, #0 // =0x0
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 8 x i8>, <vscale x 8 x i1> } @llvm.umul.with.overflow.nxv8i8(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y)
   %b = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i1> } %a, 0

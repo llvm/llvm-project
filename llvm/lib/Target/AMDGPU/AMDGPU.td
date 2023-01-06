@@ -723,6 +723,12 @@ def FeatureVOPD : SubtargetFeature<"vopd",
   "Has VOPD dual issue wave32 instructions"
 >;
 
+def FeatureVALUTransUseHazard : SubtargetFeature<"valu-trans-use-hazard",
+  "HasVALUTransUseHazard",
+  "true",
+  "Hazard when TRANS instructions are closely followed by a use of the result"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1300,6 +1306,7 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureImageInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
+   FeatureVALUTransUseHazard,
    FeatureMADIntraFwdBug]>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<

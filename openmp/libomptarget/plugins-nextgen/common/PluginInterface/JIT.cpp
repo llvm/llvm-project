@@ -122,7 +122,7 @@ createModuleFromMemoryBuffer(std::unique_ptr<MemoryBuffer> &MB,
   if (!Mod)
     return make_error<StringError>("Failed to create module",
                                    inconvertibleErrorCode());
-  return Mod;
+  return std::move(Mod);
 }
 Expected<std::unique_ptr<Module>>
 createModuleFromImage(__tgt_device_image *Image, LLVMContext &Context) {
@@ -189,7 +189,7 @@ createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
   if (!TM)
     return make_error<StringError>("Failed to create target machine",
                                    inconvertibleErrorCode());
-  return TM;
+  return std::move(TM);
 }
 
 ///

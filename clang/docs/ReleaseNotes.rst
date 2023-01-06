@@ -338,6 +338,8 @@ Bug Fixes
 - In C mode, when ``e1`` has ``__attribute__((noreturn))`` but ``e2`` doesn't,
   ``(c ? e1 : e2)`` is no longer considered noreturn.
   `Issue 59792 <https://github.com/llvm/llvm-project/issues/59792>`_
+- Fix an issue that makes Clang crash on lambda template parameters. This fixes
+  `Issue 57960 <https://github.com/llvm/llvm-project/issues/57960>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
