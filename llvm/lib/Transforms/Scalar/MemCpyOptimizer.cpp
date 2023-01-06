@@ -1354,8 +1354,8 @@ static bool hasUndefContents(MemorySSA *MSSA, BatchAAResults &AA, Value *V,
         if (getUnderlyingObject(II->getArgOperand(1)) == Alloca) {
           const DataLayout &DL = Alloca->getModule()->getDataLayout();
           if (std::optional<TypeSize> AllocaSize =
-                  Alloca->getAllocationSizeInBits(DL))
-            if (*AllocaSize == LTSize->getValue() * 8)
+                  Alloca->getAllocationSize(DL))
+            if (*AllocaSize == LTSize->getValue())
               return true;
         }
       }
