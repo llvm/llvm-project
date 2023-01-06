@@ -2047,6 +2047,7 @@ MachineInstr *SIFrameLowering::buildCFIForRegToRegSpill(
 }
 
 static void encodeDwarfRegisterLocation(int DwarfReg, raw_ostream &OS) {
+  assert(DwarfReg >= 0);
   if (DwarfReg < 32) {
     OS << uint8_t(dwarf::DW_OP_reg0 + DwarfReg);
   } else {
@@ -2068,6 +2069,7 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
 
   int DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
   int DwarfVGPR = MCRI.getDwarfRegNum(VGPR, false);
+  assert(DwarfSGPR != -1 && DwarfVGPR != -1);
 
   // CFI for an SGPR spilled to a single lane of a VGPR is implemented as an
   // expression(E) rule where E is a register location description referencing
@@ -2109,6 +2111,7 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
   const MCRegisterInfo &MCRI = *MF.getMMI().getContext().getRegisterInfo();
 
   int DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
+  assert(DwarfSGPR != -1);
 
   // CFI for an SGPR spilled to a multiple lanes of VGPRs is implemented as an
   // expression(E) rule where E is a composite location description
@@ -2170,6 +2173,7 @@ MachineInstr *SIFrameLowering::buildCFIForVGPRToVMEMSpill(
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   int DwarfVGPR = MCRI.getDwarfRegNum(VGPR, false);
+  assert(DwarfVGPR != -1);
 
   SmallString<20> Block;
   raw_svector_ostream OSBlock(Block);
@@ -2212,6 +2216,7 @@ MachineInstr *SIFrameLowering::buildCFIForRegToSGPRPairSpill(
   int DwarfReg = MCRI.getDwarfRegNum(Reg, false);
   int DwarfSGPR0 = MCRI.getDwarfRegNum(SGPR0, false);
   int DwarfSGPR1 = MCRI.getDwarfRegNum(SGPR1, false);
+  assert(DwarfReg != -1 && DwarfSGPR0 != 1 && DwarfSGPR1 != 1);
 
   // CFI for a register spilled to a pair of SGPRs is implemented as an
   // expression(E) rule where E is a composite location description with
