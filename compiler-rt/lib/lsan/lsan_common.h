@@ -108,7 +108,6 @@ void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
 
 void RunCallbackForEachThreadLocked(__sanitizer::ThreadRegistry::ThreadCallback cb,
                                     void *arg);
-void FinishThreadLocked(u32 tid);
 
 //// --------------------------------------------------------------------------
 //// Allocator prototypes.
