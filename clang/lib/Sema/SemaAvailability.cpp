@@ -898,6 +898,11 @@ void Sema::DiagnoseUnguardedAvailabilityViolations(Decl *D) {
       return;
 
     Body = FD->getBody();
+
+    if (auto *CD = dyn_cast<CXXConstructorDecl>(FD))
+      for (const CXXCtorInitializer *CI : CD->inits())
+        DiagnoseUnguardedAvailability(*this, D).IssueDiagnostics(CI->getInit());
+
   } else if (auto *MD = dyn_cast<ObjCMethodDecl>(D))
     Body = MD->getBody();
   else if (auto *BD = dyn_cast<BlockDecl>(D))
