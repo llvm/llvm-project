@@ -39,7 +39,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
-#include <cstdlib>
+#include <iostream>
 
 using namespace llvm;
 using namespace llvm::dwarf;
@@ -1172,40 +1172,47 @@ bool GotPltSection::isNeeded() const {
 }
 
 TableJumpSection::TableJumpSection()
-    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS, config->wordsize,
-                       "__tbljalvec_base$") {}
+    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, config->wordsize,
+                       ".riscv.jvt") {}
 
-void TableJumpSection::addCMJTEntryCandidate(const Symbol &symbol) {
-  addEntry(symbol, CMJTEntryCandidates);
+void TableJumpSection::addCMJTEntryCandidate(const Symbol &symbol, int gain) {
+  addEntry(symbol, CMJTEntryCandidates, gain);
 }
 
 int TableJumpSection::getCMJTEntryIndex(const Symbol &symbol) {
-  uint32_t index = getEntry(symbol, finalizedCMJTEntries);
+  uint32_t index = getEntry(symbol, maxCMJTEntrySize, finalizedCMJTEntries);
   return index < maxCMJTEntrySize ? (int)(startCMJTEntryIdx + index) : -1;
 }
 
-void TableJumpSection::addCMJALTEntryCandidate(const Symbol &symbol) {
-  addEntry(symbol, CMJALTEntryCandidates);
+void TableJumpSection::addCMJALTEntryCandidate(const Symbol &symbol, int gain) {
+  addEntry(symbol, CMJALTEntryCandidates, gain);
 }
 
 int TableJumpSection::getCMJALTEntryIndex(const Symbol &symbol) {
-  uint32_t index = getEntry(symbol, finalizedCMJALTEntries);
+  uint32_t index = getEntry(symbol, maxCMJALTEntrySize, finalizedCMJALTEntries);
   return index < maxCMJALTEntrySize ? (int)(startCMJALTEntryIdx + index) : -1;
 }
 
 void TableJumpSection::addEntry(const Symbol &symbol,
-                                llvm::DenseMap<llvm::CachedHashStringRef, int> &entriesList) {
-  ++entriesList[llvm::CachedHashStringRef(symbol.getName().str())];
+                                llvm::DenseMap<llvm::CachedHashStringRef, int> &entriesList, int gain) {
+  if(symbol.file)
+    entriesList[llvm::CachedHashStringRef(symbol.file->mb.getBufferIdentifier().str() + ":" +symbol.getName().str())] += gain;
+  else
+    entriesList[llvm::CachedHashStringRef("<unknown>:" +symbol.getName().str())] += gain;
 }
 
-uint32_t TableJumpSection::getEntry(const Symbol &symbol,
+uint32_t TableJumpSection::getEntry(const Symbol &symbol, uint32_t maxSize,
                     SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0> &entriesList){
   // Prevent adding duplicate entries
   uint32_t i = 0;
-  for (; i < entriesList.size(); ++i) {
+  llvm::CachedHashStringRef symName = llvm::CachedHashStringRef("<unknown>:" +symbol.getName().str());;
+  if(symbol.file)
+    symName = llvm::CachedHashStringRef(symbol.file->mb.getBufferIdentifier().str() + ":" +symbol.getName().str());
+
+  for (; i < entriesList.size() && i <= maxSize; ++i) {
     // If this is a duplicate addition, do not add it and return the address
     // offset of the original entry.
-    if (symbol.getName().compare(entriesList[i].first.val()) == 0) {
+    if (symName.hash() == entriesList[i].first.hash()) {
       return i;
     }
   }
@@ -1215,23 +1222,29 @@ uint32_t TableJumpSection::getEntry(const Symbol &symbol,
 void TableJumpSection::scanTableJumpEntrys(const InputSection &sec) const {
   for (auto [i, r] : llvm::enumerate(sec.relocations)) {
     switch (r.type) {
-    // auipc + jalr pair
+    case R_RISCV_JAL:
     case R_RISCV_CALL:
     case R_RISCV_CALL_PLT: {
+      int gain = 6;
+      if(r.type == R_RISCV_JAL)
+        gain = 2;
+
       const auto jalr = sec.data()[r.offset + 4];
       const uint8_t rd = (jalr & ((1ULL << (11 + 1)) - 1)) >> 7;
       if (rd == 0)
-        in.riscvTableJumpSection->addCMJTEntryCandidate(*r.sym);
+        in.riscvTableJumpSection->addCMJTEntryCandidate(*r.sym, gain);
       else if (rd == 1)
-        in.riscvTableJumpSection->addCMJALTEntryCandidate(*r.sym);
-      else
-        return; // Unknown link register, do not modify.
+        in.riscvTableJumpSection->addCMJALTEntryCandidate(*r.sym, gain);
     }
     }
   }
 }
 
 void TableJumpSection::finalizeContents() {
+  if(isFinalized)
+    return;
+  isFinalized = true;
+
   auto cmp = [](const llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int> &p1,
                 const llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int> &p2) {
     return p1.second > p2.second;

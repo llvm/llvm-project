@@ -458,7 +458,7 @@ template <class ELFT> void elf::createSyntheticSections() {
     in.riscvTableJumpSection = std::make_unique<TableJumpSection>();
     add(*in.riscvTableJumpSection);
 
-    symtab->addSymbol(Defined{/*file=*/nullptr, "__tbljalvec_base$", STB_GLOBAL,
+    symtab->addSymbol(Defined{/*file=*/nullptr, "__jvt_base$", STB_GLOBAL,
                               STT_NOTYPE, STT_NOTYPE,
                               /*value=*/0, /*size=*/0,
                               in.riscvTableJumpSection.get()});
@@ -1657,15 +1657,6 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   if (config->emachine == EM_HEXAGON)
     hexagonTLSSymbolUpdate(outputSections);
 
-  // scan all R_RISCV_CALL/R_RISCV_CALL_PLT for RISCV Zcmt Jump table.
-  if (in.riscvTableJumpSection) {
-    for (InputSectionBase *inputSection : inputSections) {
-      in.riscvTableJumpSection->scanTableJumpEntrys(
-          cast<InputSection>(*inputSection));
-    }
-    in.riscvTableJumpSection->finalizeContents();
-  }
-
   uint32_t pass = 0, assignPasses = 0;
   for (;;) {
     bool changed = target->needsThunks ? tc.createThunks(pass, outputSections)
@@ -1689,6 +1680,19 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       if (changed)
         script->assignAddresses();
       changed |= a32p.createFixes();
+    }
+    if (config->riscvTbljal){
+      if(!changed){
+        // scan all R_RISCV_JAL, R_RISCV_CALL/R_RISCV_CALL_PLT for RISCV Zcmt Jump table.
+        if (in.riscvTableJumpSection) {
+          for (InputSectionBase *inputSection : inputSections) {
+            in.riscvTableJumpSection->scanTableJumpEntrys(
+                cast<InputSection>(*inputSection));
+          }
+          in.riscvTableJumpSection->finalizeContents();
+          changed |= target->relaxOnce(pass);
+        }
+      }
     }
 
     finalizeSynthetic(in.got.get());
@@ -2124,7 +2128,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     finalizeSynthetic(in.mipsGot.get());
     finalizeSynthetic(in.igotPlt.get());
     finalizeSynthetic(in.gotPlt.get());
-    finalizeSynthetic(in.riscvTableJumpSection.get());
+    // finalizeSynthetic(in.riscvTableJumpSection.get());
     finalizeSynthetic(in.relaIplt.get());
     finalizeSynthetic(in.relaPlt.get());
     finalizeSynthetic(in.plt.get());
