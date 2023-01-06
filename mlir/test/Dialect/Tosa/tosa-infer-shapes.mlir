@@ -91,7 +91,7 @@ func.func @test_unary_i32(%arg0 : tensor<4xi32>) -> () {
   %5 = "tosa.reverse"(%arg0) { axis = 0 : i64 } : (tensor<4xi32>) -> tensor<?xi32>
 
   // CHECK: "tosa.rescale"(%arg0) {{.+}} : (tensor<4xi32>) -> tensor<4xi16>
-  %6 = "tosa.rescale"(%arg0) {input_zp = 243 : i32, output_zp = 252 : i32, multiplier = [42 : i32, 43 : i32], shift = [14 : i32, 15 : i32], scale32 = false, double_round = false, per_channel = false} : (tensor<4xi32>)  -> (tensor<*xi16>)
+  %6 = "tosa.rescale"(%arg0) {input_zp = 243 : i32, output_zp = 252 : i32, multiplier = array<i32: 42, 43>, shift = array<i32: 14, 15>, scale32 = false, double_round = false, per_channel = false} : (tensor<4xi32>)  -> (tensor<*xi16>)
 
   // CHECK: "tosa.identity"(%arg0) : (tensor<4xi32>) -> tensor<4xi32>
   %7 = "tosa.identity"(%arg0) : (tensor<4xi32>) -> tensor<?xi32>
@@ -372,14 +372,14 @@ func.func @test_table_dynamic(%arg0 : tensor<4x?xi16>, %arg1 : tensor<513xi16>) 
 
 // CHECK-LABEL: @test_static_reshape
 func.func @test_static_reshape(%arg0 : tensor<4x4xi32>) -> () {
-  // CHECK: "tosa.reshape"(%arg0) {new_shape = [16]} : (tensor<4x4xi32>) -> tensor<16xi32>
-  %0 = "tosa.reshape"(%arg0) {new_shape = [16]} : (tensor<4x4xi32>)  -> tensor<?xi32>
+  // CHECK: "tosa.reshape"(%arg0) {new_shape = array<i64: 16>} : (tensor<4x4xi32>) -> tensor<16xi32>
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 16>} : (tensor<4x4xi32>)  -> tensor<?xi32>
 
-  // CHECK: "tosa.reshape"(%arg0) {new_shape = [-1]} : (tensor<4x4xi32>) -> tensor<16xi32>
-  %1 = "tosa.reshape"(%arg0) {new_shape = [-1]} : (tensor<4x4xi32>)  -> tensor<?xi32>
+  // CHECK: "tosa.reshape"(%arg0) {new_shape = array<i64: -1>} : (tensor<4x4xi32>) -> tensor<16xi32>
+  %1 = "tosa.reshape"(%arg0) {new_shape = array<i64: -1>} : (tensor<4x4xi32>)  -> tensor<?xi32>
 
-  // CHECK: "tosa.reshape"(%arg0) {new_shape = [2, -1]} : (tensor<4x4xi32>) -> tensor<2x8xi32>
-  %2 = "tosa.reshape"(%arg0) {new_shape = [2, -1]} : (tensor<4x4xi32>)  -> tensor<?x?xi32>
+  // CHECK: "tosa.reshape"(%arg0) {new_shape = array<i64: 2, -1>} : (tensor<4x4xi32>) -> tensor<2x8xi32>
+  %2 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, -1>} : (tensor<4x4xi32>)  -> tensor<?x?xi32>
 
   return
 }
@@ -387,14 +387,14 @@ func.func @test_static_reshape(%arg0 : tensor<4x4xi32>) -> () {
 
 // CHECK-LABEL: @test_dynamic_reshape
 func.func @test_dynamic_reshape(%arg0 : tensor<4x?xi32>) -> () {
-  // CHECK: %0 = "tosa.reshape"(%arg0) {new_shape = [16]} : (tensor<4x?xi32>) -> tensor<16xi32>
-  %0 = "tosa.reshape"(%arg0) {new_shape = [16]} : (tensor<4x?xi32>)  -> tensor<?xi32>
+  // CHECK: %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 16>} : (tensor<4x?xi32>) -> tensor<16xi32>
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 16>} : (tensor<4x?xi32>)  -> tensor<?xi32>
 
-  // CHECK: %1 = "tosa.reshape"(%arg0) {new_shape = [-1]} : (tensor<4x?xi32>) -> tensor<?xi32>
-  %1 = "tosa.reshape"(%arg0) {new_shape = [-1]} : (tensor<4x?xi32>)  -> tensor<?xi32>
+  // CHECK: %1 = "tosa.reshape"(%arg0) {new_shape = array<i64: -1>} : (tensor<4x?xi32>) -> tensor<?xi32>
+  %1 = "tosa.reshape"(%arg0) {new_shape = array<i64: -1>} : (tensor<4x?xi32>)  -> tensor<?xi32>
 
-  // CHECK: %2 = "tosa.reshape"(%arg0) {new_shape = [2, -1]} : (tensor<4x?xi32>) -> tensor<2x?xi32>
-  %2 = "tosa.reshape"(%arg0) {new_shape = [2, -1]} : (tensor<4x?xi32>)  -> tensor<?x?xi32>
+  // CHECK: %2 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, -1>} : (tensor<4x?xi32>) -> tensor<2x?xi32>
+  %2 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, -1>} : (tensor<4x?xi32>)  -> tensor<?x?xi32>
 
   return
 }
@@ -532,8 +532,8 @@ func.func @test_padding_simple(%arg0 : tensor<1x2xf32>) -> () {
 
 // CHECK-LABEL: @test_slice
 func.func @test_slice(%arg0 : tensor<?xi32>) -> () {
-  // CHECK: "tosa.slice"(%arg0) {size = [2], start = [1]} : (tensor<?xi32>) -> tensor<2xi32>
-  %0 = "tosa.slice"(%arg0) { size = [2], start = [1] } : (tensor<?xi32>) -> tensor<?xi32>
+  // CHECK: "tosa.slice"(%arg0) {size = array<i64: 2>, start = array<i64: 1>} : (tensor<?xi32>) -> tensor<2xi32>
+  %0 = "tosa.slice"(%arg0) { size = array<i64: 2>, start = array<i64: 1> } : (tensor<?xi32>) -> tensor<?xi32>
   return
 }
 
@@ -541,8 +541,8 @@ func.func @test_slice(%arg0 : tensor<?xi32>) -> () {
 
 // CHECK-LABEL: @test_slice_dynamic
 func.func @test_slice_dynamic(%arg0 : tensor<10x?x2xf32>) -> () {
-  // CHECK: "tosa.slice"(%arg0) {size = [7, -1, 1], start = [1, 0, 0]} : (tensor<10x?x2xf32>) -> tensor<7x?x1xf32>
-  %0 = "tosa.slice"(%arg0) {size = [7, -1, 1], start = [1, 0, 0]} : (tensor<10x?x2xf32>) -> tensor<?x?x?xf32>
+  // CHECK: "tosa.slice"(%arg0) {size = array<i64: 7, -1, 1>, start = array<i64: 1, 0, 0>} : (tensor<10x?x2xf32>) -> tensor<7x?x1xf32>
+  %0 = "tosa.slice"(%arg0) {size = array<i64: 7, -1, 1>, start = array<i64: 1, 0, 0>} : (tensor<10x?x2xf32>) -> tensor<?x?x?xf32>
   return
 }
 
@@ -550,8 +550,8 @@ func.func @test_slice_dynamic(%arg0 : tensor<10x?x2xf32>) -> () {
 
 // CHECK-LABEL: @test_tile
 func.func @test_tile(%arg0 : tensor<2x3x?xi32>) -> () {
-  // CHECK: "tosa.tile"(%arg0) {multiples = [2, 1, 5]} : (tensor<2x3x?xi32>) -> tensor<4x3x?xi32>
-  %0 = "tosa.tile"(%arg0) {multiples = [2, 1, 5]} : (tensor<2x3x?xi32>)  -> (tensor<?x?x?xi32>)
+  // CHECK: "tosa.tile"(%arg0) {multiples = array<i64: 2, 1, 5>} : (tensor<2x3x?xi32>) -> tensor<4x3x?xi32>
+  %0 = "tosa.tile"(%arg0) {multiples = array<i64: 2, 1, 5>} : (tensor<2x3x?xi32>)  -> (tensor<?x?x?xi32>)
   return
 }
 
