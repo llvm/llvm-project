@@ -1329,13 +1329,13 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureImageInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
-   FeatureVALUTransUseHazard,
    FeatureBackOffBarrier,
    FeatureMADIntraFwdBug]>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureMSAALoadDstSelBug])>;
+    [FeatureMSAALoadDstSelBug,
+     FeatureVALUTransUseHazard])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
