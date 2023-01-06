@@ -1908,8 +1908,8 @@ void llvm::salvageDebugInfoForDbgValues(
       DII->addVariableLocationOps(AdditionalValues, SalvagedExpr);
     } else {
       // Do not salvage using DIArgList for dbg.addr/dbg.declare, as it is
-      // currently only valid for stack value expressions. Do not salvage
-      // using DIArgList for dbg.assign yet. FIXME: support this.
+      // not currently supported in those instructions. Do not salvage using
+      // DIArgList for dbg.assign yet. FIXME: support this.
       // Also do not salvage if the resulting DIArgList would contain an
       // unreasonably large number of values.
       DII->setKillLocation();

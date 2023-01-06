@@ -119,13 +119,7 @@ class DbgValueLoc {
 public:
   DbgValueLoc(const DIExpression *Expr, ArrayRef<DbgValueLocEntry> Locs)
       : Expression(Expr), ValueLocEntries(Locs.begin(), Locs.end()),
-        IsVariadic(true) {
-#ifndef NDEBUG
-    // Currently, DBG_VALUE_VAR expressions must use stack_value.
-    assert(Expr && Expr->isValid() &&
-           is_contained(Locs, dwarf::DW_OP_stack_value));
-#endif
-  }
+        IsVariadic(true) {}
 
   DbgValueLoc(const DIExpression *Expr, ArrayRef<DbgValueLocEntry> Locs,
               bool IsVariadic)
@@ -136,10 +130,6 @@ public:
            !any_of(Locs, [](auto LE) { return LE.isLocation(); }));
     if (!IsVariadic) {
       assert(ValueLocEntries.size() == 1);
-    } else {
-      // Currently, DBG_VALUE_VAR expressions must use stack_value.
-      assert(Expr && Expr->isValid() &&
-             is_contained(Expr->getElements(), dwarf::DW_OP_stack_value));
     }
 #endif
   }

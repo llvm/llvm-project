@@ -767,7 +767,7 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
   assert(!SD->isVariadic());
   SDDbgOperand DbgOperand = SD->getLocationOps()[0];
   MDNode *Var = SD->getVariable();
-  DIExpression *Expr = (DIExpression*)SD->getExpression();
+  const DIExpression *Expr = (DIExpression *)SD->getExpression();
   DebugLoc DL = SD->getDebugLoc();
   const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_INSTR_REF);
 
@@ -851,6 +851,10 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
   }
   assert(OperandIdx < DefMI->getNumOperands());
 
+  // Only convert Expr to variadic form when we're sure we're emitting a
+  // complete instruction reference.
+  if (!SD->isVariadic())
+    Expr = DIExpression::convertToVariadicExpression(Expr);
   // Make the DBG_INSTR_REF refer to that instruction, and that operand.
   unsigned InstrNum = DefMI->getDebugInstrNum();
   SmallVector<MachineOperand, 1> MOs(
