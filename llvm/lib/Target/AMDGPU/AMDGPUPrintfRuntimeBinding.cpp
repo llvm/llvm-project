@@ -457,10 +457,6 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
             WhatToStore.push_back(ANumV);
           }
         } else {
-          uint64_t Size = TD->getTypeAllocSizeInBits(ArgType);
-          assert((Size == 32 || Size == 64) && "unsupported size");
-          Type *DstType = (Size == 32) ? Int32Ty : Int64Ty;
-          Arg = new PtrToIntInst(Arg, DstType, "PrintArgPtr", Brnch);
           WhatToStore.push_back(Arg);
         }
       }  else {
