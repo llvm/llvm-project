@@ -138,9 +138,8 @@ define i16 @select_xor_3(i16 %A, i8 %cond) {
 ; CONDOPS-LABEL: select_xor_3:
 ; CONDOPS:       # %bb.0: # %entry
 ; CONDOPS-NEXT:    andi a1, a1, 1
-; CONDOPS-NEXT:    seqz a1, a1
 ; CONDOPS-NEXT:    li a2, 43
-; CONDOPS-NEXT:    vt.maskc a1, a2, a1
+; CONDOPS-NEXT:    vt.maskcn a1, a2, a1
 ; CONDOPS-NEXT:    xor a0, a0, a1
 ; CONDOPS-NEXT:    ret
 entry:
@@ -205,8 +204,7 @@ define i32 @select_xor_4(i32 %A, i32 %B, i8 %cond) {
 ; CONDOPS-LABEL: select_xor_4:
 ; CONDOPS:       # %bb.0: # %entry
 ; CONDOPS-NEXT:    andi a2, a2, 1
-; CONDOPS-NEXT:    seqz a2, a2
-; CONDOPS-NEXT:    vt.maskc a1, a1, a2
+; CONDOPS-NEXT:    vt.maskcn a1, a1, a2
 ; CONDOPS-NEXT:    xor a0, a0, a1
 ; CONDOPS-NEXT:    ret
 entry:
@@ -384,8 +382,7 @@ define i32 @select_or_2(i32 %A, i32 %B, i8 %cond) {
 ; CONDOPS-LABEL: select_or_2:
 ; CONDOPS:       # %bb.0: # %entry
 ; CONDOPS-NEXT:    andi a2, a2, 1
-; CONDOPS-NEXT:    seqz a2, a2
-; CONDOPS-NEXT:    vt.maskc a1, a1, a2
+; CONDOPS-NEXT:    vt.maskcn a1, a1, a2
 ; CONDOPS-NEXT:    or a0, a0, a1
 ; CONDOPS-NEXT:    ret
 entry:
@@ -449,8 +446,7 @@ define i32 @select_or_3(i32 %A, i32 %B, i32 %cond) {
 ; CONDOPS-LABEL: select_or_3:
 ; CONDOPS:       # %bb.0: # %entry
 ; CONDOPS-NEXT:    andi a2, a2, 1
-; CONDOPS-NEXT:    seqz a2, a2
-; CONDOPS-NEXT:    vt.maskc a1, a1, a2
+; CONDOPS-NEXT:    vt.maskcn a1, a1, a2
 ; CONDOPS-NEXT:    or a0, a0, a1
 ; CONDOPS-NEXT:    ret
 entry:
