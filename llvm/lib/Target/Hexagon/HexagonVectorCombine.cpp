@@ -1816,9 +1816,9 @@ auto HexagonVectorCombine::getSizeOf(const Type *Ty, SizeKind Kind) const
   auto *NcTy = const_cast<Type *>(Ty);
   switch (Kind) {
   case Store:
-    return DL.getTypeStoreSize(NcTy).getFixedValue();
+    return DL.getTypeStoreSize(NcTy).getFixedSize();
   case Alloc:
-    return DL.getTypeAllocSize(NcTy).getFixedValue();
+    return DL.getTypeAllocSize(NcTy).getFixedSize();
   }
   llvm_unreachable("Unhandled SizeKind enum");
 }
