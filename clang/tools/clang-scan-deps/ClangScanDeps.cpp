@@ -935,8 +935,8 @@ int main(int argc, const char **argv) {
                                              Errs))
             HadErrors = true;
         } else if (Format == ScanningOutputFormat::Tree) {
-          auto MaybeTree =
-              WorkerTools[I]->getDependencyTree(Input->CommandLine, CWD);
+          auto MaybeTree = WorkerTools[I]->getDependencyTree(
+              Input->CommandLine, CWD, PrefixMapping);
           std::unique_lock<std::mutex> LockGuard(Lock);
           TreeResults.emplace_back(LocalIndex, std::move(Filename),
                                    std::move(MaybeTree));
@@ -957,7 +957,7 @@ int main(int argc, const char **argv) {
         } else {
           auto MaybeFullDeps = WorkerTools[I]->getFullDependencies(
               Input->CommandLine, CWD, AlreadySeenModules, LookupOutput,
-              MaybeModuleName);
+              MaybeModuleName, PrefixMapping);
           if (handleFullDependencyToolResult(Filename, MaybeFullDeps, FD,
                                              LocalIndex, DependencyOS, Errs))
             HadErrors = true;
