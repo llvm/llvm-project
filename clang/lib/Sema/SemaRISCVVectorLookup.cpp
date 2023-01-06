@@ -66,7 +66,7 @@ static const RVVIntrinsicRecord RVVIntrinsicRecords[] = {
 // Get subsequence of signature table.
 static ArrayRef<PrototypeDescriptor> ProtoSeq2ArrayRef(uint16_t Index,
                                                        uint8_t Length) {
-  return makeArrayRef(&RVVSignatureTable[Index], Length);
+  return ArrayRef(&RVVSignatureTable[Index], Length);
 }
 
 static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {

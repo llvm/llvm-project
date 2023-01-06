@@ -213,7 +213,7 @@ ArrayRef<const char *> CSKYTargetInfo::getGCCRegNames() const {
       "fr31",
 
   };
-  return llvm::makeArrayRef(GCCRegNames);
+  return llvm::ArrayRef(GCCRegNames);
 }
 
 ArrayRef<TargetInfo::GCCRegAlias> CSKYTargetInfo::getGCCRegAliases() const {
@@ -285,7 +285,7 @@ ArrayRef<TargetInfo::GCCRegAlias> CSKYTargetInfo::getGCCRegAliases() const {
       {{"vr31"}, "fr31"},
 
   };
-  return llvm::makeArrayRef(GCCRegAliases);
+  return llvm::ArrayRef(GCCRegAliases);
 }
 
 bool CSKYTargetInfo::validateAsmConstraint(

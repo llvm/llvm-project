@@ -146,7 +146,7 @@ const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
 }
 
 ArrayRef<const ParsedAttrInfo *> ParsedAttrInfo::getAllBuiltin() {
-  return llvm::makeArrayRef(AttrInfoMap);
+  return llvm::ArrayRef(AttrInfoMap);
 }
 
 unsigned ParsedAttr::getMinArgs() const { return getInfo().NumArgs; }

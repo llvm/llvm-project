@@ -370,7 +370,7 @@ TEST(ToolChainTest, PostCallback) {
 TEST(GetDriverMode, PrefersLastDriverMode) {
   static constexpr const char *Args[] = {"clang-cl", "--driver-mode=foo",
                                          "--driver-mode=bar", "foo.cpp"};
-  EXPECT_EQ(getDriverMode(Args[0], llvm::makeArrayRef(Args).slice(1)), "bar");
+  EXPECT_EQ(getDriverMode(Args[0], llvm::ArrayRef(Args).slice(1)), "bar");
 }
 
 struct SimpleDiagnosticConsumer : public DiagnosticConsumer {

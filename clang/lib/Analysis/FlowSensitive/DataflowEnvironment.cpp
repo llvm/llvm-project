@@ -275,7 +275,7 @@ Environment Environment::pushCall(const CallExpr *Call) const {
   }
 
   Env.pushCallInternal(Call->getDirectCallee(),
-                       llvm::makeArrayRef(Call->getArgs(), Call->getNumArgs()));
+                       llvm::ArrayRef(Call->getArgs(), Call->getNumArgs()));
 
   return Env;
 }
@@ -289,7 +289,7 @@ Environment Environment::pushCall(const CXXConstructExpr *Call) const {
   Env.ThisPointeeLoc = Env.ReturnLoc;
 
   Env.pushCallInternal(Call->getConstructor(),
-                       llvm::makeArrayRef(Call->getArgs(), Call->getNumArgs()));
+                       llvm::ArrayRef(Call->getArgs(), Call->getNumArgs()));
 
   return Env;
 }
