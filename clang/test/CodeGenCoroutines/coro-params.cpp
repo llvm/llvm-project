@@ -64,8 +64,8 @@ void consume(int,int,int) noexcept;
 // TODO: Add support for CopyOnly params
 // CHECK: define{{.*}} void @_Z1fi8MoveOnly11MoveAndCopy(i32 noundef %val, %struct.MoveOnly* noundef %[[MoParam:.+]], %struct.MoveAndCopy* noundef %[[McParam:.+]]) #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*
 void f(int val, MoveOnly moParam, MoveAndCopy mcParam) {
-  // CHECK: %[[MoCopy:.+]] = alloca %struct.MoveOnly
-  // CHECK: %[[McCopy:.+]] = alloca %struct.MoveAndCopy
+  // CHECK: %[[MoCopy:.+]] = alloca %struct.MoveOnly,
+  // CHECK: %[[McCopy:.+]] = alloca %struct.MoveAndCopy,
   // CHECK: store i32 %val, i32* %[[ValAddr:.+]]
 
   // CHECK: call i8* @llvm.coro.begin(
@@ -110,7 +110,7 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam) {
 // CHECK-LABEL: void @_Z16dependent_paramsI1A1BEvT_T0_S3_(%struct.A* noundef %x, %struct.B* noundef %0, %struct.B* noundef %y)
 template <typename T, typename U>
 void dependent_params(T x, U, U y) {
-  // CHECK: %[[x_copy:.+]] = alloca %struct.A
+  // CHECK: %[[x_copy:.+]] = alloca %struct.A,
   // CHECK-NEXT: %[[unnamed_copy:.+]] = alloca %struct.B
   // CHECK-NEXT: %[[y_copy:.+]] = alloca %struct.B
 
