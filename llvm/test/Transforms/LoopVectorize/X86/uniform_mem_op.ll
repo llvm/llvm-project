@@ -31,7 +31,7 @@ define i32 @uniform_load(ptr align(4) %addr) {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 4096
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       loopexit:
 ; CHECK-NEXT:    [[LOAD_LCSSA:%.*]] = phi i32 [ [[LOAD]], [[FOR_BODY]] ], [ [[TMP0]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[LOAD_LCSSA]]
