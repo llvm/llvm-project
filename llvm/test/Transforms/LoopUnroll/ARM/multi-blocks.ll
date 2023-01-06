@@ -2,7 +2,7 @@
 ; RUN: opt -mtriple=thumbv8m.main -mcpu=cortex-m33 -passes=loop-unroll -S < %s -o - | FileCheck %s
 ; RUN: opt -mtriple=thumbv7em -mcpu=cortex-m7 -passes=loop-unroll -S < %s -o - | FileCheck %s
 
-define void @test_three_blocks(i32* nocapture %Output, i32* nocapture readonly %Condition, i32* nocapture readonly %Input, i32 %MaxJ) {
+define void @test_three_blocks(ptr nocapture %Output, ptr nocapture readonly %Condition, ptr nocapture readonly %Input, i32 %MaxJ) {
 ; CHECK-LABEL: @test_three_blocks(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp eq i32 [[MAXJ:%.*]], 0
@@ -29,13 +29,13 @@ define void @test_three_blocks(i32* nocapture %Output, i32* nocapture readonly %
 ; CHECK:       for.body.epil.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY_EPIL:%.*]]
 ; CHECK:       for.body.epil:
-; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i32, i32* [[CONDITION:%.*]], i32 [[J_010_UNR]]
-; CHECK-NEXT:    [[I_EPIL:%.*]] = load i32, i32* [[ARRAYIDX_EPIL]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i32, ptr [[CONDITION:%.*]], i32 [[J_010_UNR]]
+; CHECK-NEXT:    [[I_EPIL:%.*]] = load i32, ptr [[ARRAYIDX_EPIL]], align 4
 ; CHECK-NEXT:    [[TOBOOL_EPIL:%.*]] = icmp eq i32 [[I_EPIL]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_EPIL]], label [[FOR_INC_EPIL:%.*]], label [[IF_THEN_EPIL:%.*]]
 ; CHECK:       if.then.epil:
-; CHECK-NEXT:    [[ARRAYIDX1_EPIL:%.*]] = getelementptr inbounds i32, i32* [[INPUT:%.*]], i32 [[J_010_UNR]]
-; CHECK-NEXT:    [[I1_EPIL:%.*]] = load i32, i32* [[ARRAYIDX1_EPIL]], align 4
+; CHECK-NEXT:    [[ARRAYIDX1_EPIL:%.*]] = getelementptr inbounds i32, ptr [[INPUT:%.*]], i32 [[J_010_UNR]]
+; CHECK-NEXT:    [[I1_EPIL:%.*]] = load i32, ptr [[ARRAYIDX1_EPIL]], align 4
 ; CHECK-NEXT:    [[ADD_EPIL:%.*]] = add i32 [[I1_EPIL]], [[TEMP_09_UNR]]
 ; CHECK-NEXT:    br label [[FOR_INC_EPIL]]
 ; CHECK:       for.inc.epil:
@@ -44,13 +44,13 @@ define void @test_three_blocks(i32* nocapture %Output, i32* nocapture readonly %
 ; CHECK-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i32 1, [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP]], label [[FOR_BODY_EPIL_1:%.*]], label [[FOR_COND_CLEANUP_LOOPEXIT_EPILOG_LCSSA:%.*]]
 ; CHECK:       for.body.epil.1:
-; CHECK-NEXT:    [[ARRAYIDX_EPIL_1:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC_EPIL]]
-; CHECK-NEXT:    [[I_EPIL_1:%.*]] = load i32, i32* [[ARRAYIDX_EPIL_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_EPIL_1:%.*]] = getelementptr inbounds i32, ptr [[CONDITION]], i32 [[INC_EPIL]]
+; CHECK-NEXT:    [[I_EPIL_1:%.*]] = load i32, ptr [[ARRAYIDX_EPIL_1]], align 4
 ; CHECK-NEXT:    [[TOBOOL_EPIL_1:%.*]] = icmp eq i32 [[I_EPIL_1]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_EPIL_1]], label [[FOR_INC_EPIL_1:%.*]], label [[IF_THEN_EPIL_1:%.*]]
 ; CHECK:       if.then.epil.1:
-; CHECK-NEXT:    [[ARRAYIDX1_EPIL_1:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[INC_EPIL]]
-; CHECK-NEXT:    [[I1_EPIL_1:%.*]] = load i32, i32* [[ARRAYIDX1_EPIL_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX1_EPIL_1:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[INC_EPIL]]
+; CHECK-NEXT:    [[I1_EPIL_1:%.*]] = load i32, ptr [[ARRAYIDX1_EPIL_1]], align 4
 ; CHECK-NEXT:    [[ADD_EPIL_1:%.*]] = add i32 [[I1_EPIL_1]], [[TEMP_1_EPIL]]
 ; CHECK-NEXT:    br label [[FOR_INC_EPIL_1]]
 ; CHECK:       for.inc.epil.1:
@@ -59,13 +59,13 @@ define void @test_three_blocks(i32* nocapture %Output, i32* nocapture readonly %
 ; CHECK-NEXT:    [[EPIL_ITER_CMP_1:%.*]] = icmp ne i32 2, [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP_1]], label [[FOR_BODY_EPIL_2:%.*]], label [[FOR_COND_CLEANUP_LOOPEXIT_EPILOG_LCSSA]]
 ; CHECK:       for.body.epil.2:
-; CHECK-NEXT:    [[ARRAYIDX_EPIL_2:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC_EPIL_1]]
-; CHECK-NEXT:    [[I_EPIL_2:%.*]] = load i32, i32* [[ARRAYIDX_EPIL_2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_EPIL_2:%.*]] = getelementptr inbounds i32, ptr [[CONDITION]], i32 [[INC_EPIL_1]]
+; CHECK-NEXT:    [[I_EPIL_2:%.*]] = load i32, ptr [[ARRAYIDX_EPIL_2]], align 4
 ; CHECK-NEXT:    [[TOBOOL_EPIL_2:%.*]] = icmp eq i32 [[I_EPIL_2]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_EPIL_2]], label [[FOR_INC_EPIL_2:%.*]], label [[IF_THEN_EPIL_2:%.*]]
 ; CHECK:       if.then.epil.2:
-; CHECK-NEXT:    [[ARRAYIDX1_EPIL_2:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[INC_EPIL_1]]
-; CHECK-NEXT:    [[I1_EPIL_2:%.*]] = load i32, i32* [[ARRAYIDX1_EPIL_2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX1_EPIL_2:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[INC_EPIL_1]]
+; CHECK-NEXT:    [[I1_EPIL_2:%.*]] = load i32, ptr [[ARRAYIDX1_EPIL_2]], align 4
 ; CHECK-NEXT:    [[ADD_EPIL_2:%.*]] = add i32 [[I1_EPIL_2]], [[TEMP_1_EPIL_1]]
 ; CHECK-NEXT:    br label [[FOR_INC_EPIL_2]]
 ; CHECK:       for.inc.epil.2:
@@ -79,58 +79,58 @@ define void @test_three_blocks(i32* nocapture %Output, i32* nocapture readonly %
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[TEMP_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TEMP_1_LCSSA]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
-; CHECK-NEXT:    store i32 [[TEMP_0_LCSSA]], i32* [[OUTPUT:%.*]], align 4
+; CHECK-NEXT:    store i32 [[TEMP_0_LCSSA]], ptr [[OUTPUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[J_010:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[INC_3]], [[FOR_INC_3]] ]
 ; CHECK-NEXT:    [[TEMP_09:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[TEMP_1_3]], [[FOR_INC_3]] ]
 ; CHECK-NEXT:    [[NITER:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[NITER_NEXT_3:%.*]], [[FOR_INC_3]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[J_010]]
-; CHECK-NEXT:    [[I:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[CONDITION]], i32 [[J_010]]
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[I]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[FOR_INC:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[J_010]]
-; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[J_010]]
+; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[I1]], [[TEMP_09]]
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[TEMP_1:%.*]] = phi i32 [ [[ADD]], [[IF_THEN]] ], [ [[TEMP_09]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i32 [[J_010]], 1
 ; CHECK-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i32 [[NITER]], 1
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC]]
-; CHECK-NEXT:    [[I_1:%.*]] = load i32, i32* [[ARRAYIDX_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[CONDITION]], i32 [[INC]]
+; CHECK-NEXT:    [[I_1:%.*]] = load i32, ptr [[ARRAYIDX_1]], align 4
 ; CHECK-NEXT:    [[TOBOOL_1:%.*]] = icmp eq i32 [[I_1]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_1]], label [[FOR_INC_1:%.*]], label [[IF_THEN_1:%.*]]
 ; CHECK:       if.then.1:
-; CHECK-NEXT:    [[ARRAYIDX1_1:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[INC]]
-; CHECK-NEXT:    [[I1_1:%.*]] = load i32, i32* [[ARRAYIDX1_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX1_1:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[INC]]
+; CHECK-NEXT:    [[I1_1:%.*]] = load i32, ptr [[ARRAYIDX1_1]], align 4
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 [[I1_1]], [[TEMP_1]]
 ; CHECK-NEXT:    br label [[FOR_INC_1]]
 ; CHECK:       for.inc.1:
 ; CHECK-NEXT:    [[TEMP_1_1:%.*]] = phi i32 [ [[ADD_1]], [[IF_THEN_1]] ], [ [[TEMP_1]], [[FOR_INC]] ]
 ; CHECK-NEXT:    [[INC_1:%.*]] = add nuw nsw i32 [[INC]], 1
 ; CHECK-NEXT:    [[NITER_NEXT_1:%.*]] = add nuw nsw i32 [[NITER_NEXT]], 1
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC_1]]
-; CHECK-NEXT:    [[I_2:%.*]] = load i32, i32* [[ARRAYIDX_2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, ptr [[CONDITION]], i32 [[INC_1]]
+; CHECK-NEXT:    [[I_2:%.*]] = load i32, ptr [[ARRAYIDX_2]], align 4
 ; CHECK-NEXT:    [[TOBOOL_2:%.*]] = icmp eq i32 [[I_2]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_2]], label [[FOR_INC_2:%.*]], label [[IF_THEN_2:%.*]]
 ; CHECK:       if.then.2:
-; CHECK-NEXT:    [[ARRAYIDX1_2:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[INC_1]]
-; CHECK-NEXT:    [[I1_2:%.*]] = load i32, i32* [[ARRAYIDX1_2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX1_2:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[INC_1]]
+; CHECK-NEXT:    [[I1_2:%.*]] = load i32, ptr [[ARRAYIDX1_2]], align 4
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 [[I1_2]], [[TEMP_1_1]]
 ; CHECK-NEXT:    br label [[FOR_INC_2]]
 ; CHECK:       for.inc.2:
 ; CHECK-NEXT:    [[TEMP_1_2:%.*]] = phi i32 [ [[ADD_2]], [[IF_THEN_2]] ], [ [[TEMP_1_1]], [[FOR_INC_1]] ]
 ; CHECK-NEXT:    [[INC_2:%.*]] = add nuw nsw i32 [[INC_1]], 1
 ; CHECK-NEXT:    [[NITER_NEXT_2:%.*]] = add nuw nsw i32 [[NITER_NEXT_1]], 1
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC_2]]
-; CHECK-NEXT:    [[I_3:%.*]] = load i32, i32* [[ARRAYIDX_3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, ptr [[CONDITION]], i32 [[INC_2]]
+; CHECK-NEXT:    [[I_3:%.*]] = load i32, ptr [[ARRAYIDX_3]], align 4
 ; CHECK-NEXT:    [[TOBOOL_3:%.*]] = icmp eq i32 [[I_3]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_3]], label [[FOR_INC_3]], label [[IF_THEN_3:%.*]]
 ; CHECK:       if.then.3:
-; CHECK-NEXT:    [[ARRAYIDX1_3:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[INC_2]]
-; CHECK-NEXT:    [[I1_3:%.*]] = load i32, i32* [[ARRAYIDX1_3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX1_3:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[INC_2]]
+; CHECK-NEXT:    [[I1_3:%.*]] = load i32, ptr [[ARRAYIDX1_3]], align 4
 ; CHECK-NEXT:    [[ADD_3:%.*]] = add i32 [[I1_3]], [[TEMP_1_2]]
 ; CHECK-NEXT:    br label [[FOR_INC_3]]
 ; CHECK:       for.inc.3:
@@ -149,20 +149,20 @@ for.body.preheader:                               ; preds = %entry
 
 for.cond.cleanup:                                 ; preds = %for.inc, %entry
   %temp.0.lcssa = phi i32 [ 0, %entry ], [ %temp.1, %for.inc ]
-  store i32 %temp.0.lcssa, i32* %Output, align 4
+  store i32 %temp.0.lcssa, ptr %Output, align 4
   ret void
 
 for.body:                                         ; preds = %for.inc, %for.body.preheader
   %j.010 = phi i32 [ %inc, %for.inc ], [ 0, %for.body.preheader ]
   %temp.09 = phi i32 [ %temp.1, %for.inc ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %Condition, i32 %j.010
-  %i = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %Condition, i32 %j.010
+  %i = load i32, ptr %arrayidx, align 4
   %tobool = icmp eq i32 %i, 0
   br i1 %tobool, label %for.inc, label %if.then
 
 if.then:                                          ; preds = %for.body
-  %arrayidx1 = getelementptr inbounds i32, i32* %Input, i32 %j.010
-  %i1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %Input, i32 %j.010
+  %i1 = load i32, ptr %arrayidx1, align 4
   %add = add i32 %i1, %temp.09
   br label %for.inc
 
@@ -173,7 +173,7 @@ for.inc:                                          ; preds = %if.then, %for.body
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-define void @test_two_exits(i32* nocapture %Output, i32* nocapture readonly %Condition, i32* nocapture readonly %Input, i32 %MaxJ) {
+define void @test_two_exits(ptr nocapture %Output, ptr nocapture readonly %Condition, ptr nocapture readonly %Input, i32 %MaxJ) {
 ; CHECK-LABEL: @test_two_exits(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP14:%.*]] = icmp eq i32 [[MAXJ:%.*]], 0
@@ -183,13 +183,13 @@ define void @test_two_exits(i32* nocapture %Output, i32* nocapture readonly %Con
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[J_016:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INC_3:%.*]], [[IF_END_3:%.*]] ]
 ; CHECK-NEXT:    [[TEMP_015:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[TEMP_0_ADD_3:%.*]], [[IF_END_3]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[INPUT:%.*]], i32 [[J_016]]
-; CHECK-NEXT:    [[I:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[INPUT:%.*]], i32 [[J_016]]
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[I]], 65535
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[CLEANUP_LOOPEXIT:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[CONDITION:%.*]], i32 [[J_016]]
-; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[CONDITION:%.*]], i32 [[J_016]]
+; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[I1]], 0
 ; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[TOBOOL]], i32 0, i32 [[I]]
 ; CHECK-NEXT:    [[TEMP_0_ADD:%.*]] = add i32 [[ADD]], [[TEMP_015]]
@@ -197,13 +197,13 @@ define void @test_two_exits(i32* nocapture %Output, i32* nocapture readonly %Con
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC]], [[MAXJ]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY_1:%.*]], label [[CLEANUP_LOOPEXIT]]
 ; CHECK:       for.body.1:
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[INC]]
-; CHECK-NEXT:    [[I_1:%.*]] = load i32, i32* [[ARRAYIDX_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[INC]]
+; CHECK-NEXT:    [[I_1:%.*]] = load i32, ptr [[ARRAYIDX_1]], align 4
 ; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp ugt i32 [[I_1]], 65535
 ; CHECK-NEXT:    br i1 [[CMP1_1]], label [[CLEANUP_LOOPEXIT]], label [[IF_END_1:%.*]]
 ; CHECK:       if.end.1:
-; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC]]
-; CHECK-NEXT:    [[I1_1:%.*]] = load i32, i32* [[ARRAYIDX2_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i32, ptr [[CONDITION]], i32 [[INC]]
+; CHECK-NEXT:    [[I1_1:%.*]] = load i32, ptr [[ARRAYIDX2_1]], align 4
 ; CHECK-NEXT:    [[TOBOOL_1:%.*]] = icmp eq i32 [[I1_1]], 0
 ; CHECK-NEXT:    [[ADD_1:%.*]] = select i1 [[TOBOOL_1]], i32 0, i32 [[I_1]]
 ; CHECK-NEXT:    [[TEMP_0_ADD_1:%.*]] = add i32 [[ADD_1]], [[TEMP_0_ADD]]
@@ -211,13 +211,13 @@ define void @test_two_exits(i32* nocapture %Output, i32* nocapture readonly %Con
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[INC_1]], [[MAXJ]]
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[FOR_BODY_2:%.*]], label [[CLEANUP_LOOPEXIT]]
 ; CHECK:       for.body.2:
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[INC_1]]
-; CHECK-NEXT:    [[I_2:%.*]] = load i32, i32* [[ARRAYIDX_2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[INC_1]]
+; CHECK-NEXT:    [[I_2:%.*]] = load i32, ptr [[ARRAYIDX_2]], align 4
 ; CHECK-NEXT:    [[CMP1_2:%.*]] = icmp ugt i32 [[I_2]], 65535
 ; CHECK-NEXT:    br i1 [[CMP1_2]], label [[CLEANUP_LOOPEXIT]], label [[IF_END_2:%.*]]
 ; CHECK:       if.end.2:
-; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC_1]]
-; CHECK-NEXT:    [[I1_2:%.*]] = load i32, i32* [[ARRAYIDX2_2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds i32, ptr [[CONDITION]], i32 [[INC_1]]
+; CHECK-NEXT:    [[I1_2:%.*]] = load i32, ptr [[ARRAYIDX2_2]], align 4
 ; CHECK-NEXT:    [[TOBOOL_2:%.*]] = icmp eq i32 [[I1_2]], 0
 ; CHECK-NEXT:    [[ADD_2:%.*]] = select i1 [[TOBOOL_2]], i32 0, i32 [[I_2]]
 ; CHECK-NEXT:    [[TEMP_0_ADD_2:%.*]] = add i32 [[ADD_2]], [[TEMP_0_ADD_1]]
@@ -225,13 +225,13 @@ define void @test_two_exits(i32* nocapture %Output, i32* nocapture readonly %Con
 ; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[INC_2]], [[MAXJ]]
 ; CHECK-NEXT:    br i1 [[CMP_2]], label [[FOR_BODY_3:%.*]], label [[CLEANUP_LOOPEXIT]]
 ; CHECK:       for.body.3:
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[INC_2]]
-; CHECK-NEXT:    [[I_3:%.*]] = load i32, i32* [[ARRAYIDX_3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[INC_2]]
+; CHECK-NEXT:    [[I_3:%.*]] = load i32, ptr [[ARRAYIDX_3]], align 4
 ; CHECK-NEXT:    [[CMP1_3:%.*]] = icmp ugt i32 [[I_3]], 65535
 ; CHECK-NEXT:    br i1 [[CMP1_3]], label [[CLEANUP_LOOPEXIT]], label [[IF_END_3]]
 ; CHECK:       if.end.3:
-; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC_2]]
-; CHECK-NEXT:    [[I1_3:%.*]] = load i32, i32* [[ARRAYIDX2_3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds i32, ptr [[CONDITION]], i32 [[INC_2]]
+; CHECK-NEXT:    [[I1_3:%.*]] = load i32, ptr [[ARRAYIDX2_3]], align 4
 ; CHECK-NEXT:    [[TOBOOL_3:%.*]] = icmp eq i32 [[I1_3]], 0
 ; CHECK-NEXT:    [[ADD_3:%.*]] = select i1 [[TOBOOL_3]], i32 0, i32 [[I_3]]
 ; CHECK-NEXT:    [[TEMP_0_ADD_3]] = add i32 [[ADD_3]], [[TEMP_0_ADD_2]]
@@ -243,7 +243,7 @@ define void @test_two_exits(i32* nocapture %Output, i32* nocapture readonly %Con
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    [[TEMP_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TEMP_0_LCSSA_PH]], [[CLEANUP_LOOPEXIT]] ]
-; CHECK-NEXT:    store i32 [[TEMP_0_LCSSA]], i32* [[OUTPUT:%.*]], align 4
+; CHECK-NEXT:    store i32 [[TEMP_0_LCSSA]], ptr [[OUTPUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -256,14 +256,14 @@ for.body.preheader:                               ; preds = %entry
 for.body:                                         ; preds = %if.end, %for.body.preheader
   %j.016 = phi i32 [ %inc, %if.end ], [ 0, %for.body.preheader ]
   %temp.015 = phi i32 [ %temp.0.add, %if.end ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %Input, i32 %j.016
-  %i = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %Input, i32 %j.016
+  %i = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp ugt i32 %i, 65535
   br i1 %cmp1, label %cleanup, label %if.end
 
 if.end:                                           ; preds = %for.body
-  %arrayidx2 = getelementptr inbounds i32, i32* %Condition, i32 %j.016
-  %i1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %Condition, i32 %j.016
+  %i1 = load i32, ptr %arrayidx2, align 4
   %tobool = icmp eq i32 %i1, 0
   %add = select i1 %tobool, i32 0, i32 %i
   %temp.0.add = add i32 %add, %temp.015
@@ -273,11 +273,11 @@ if.end:                                           ; preds = %for.body
 
 cleanup:                                          ; preds = %if.end, %for.body, %entry
   %temp.0.lcssa = phi i32 [ 0, %entry ], [ %temp.015, %for.body ], [ %temp.0.add, %if.end ]
-  store i32 %temp.0.lcssa, i32* %Output, align 4
+  store i32 %temp.0.lcssa, ptr %Output, align 4
   ret void
 }
 
-define void @test_three_exits(i32* nocapture %Output, i32* nocapture readonly %Condition, i32* nocapture readonly %Input, i32 %MaxJ) {
+define void @test_three_exits(ptr nocapture %Output, ptr nocapture readonly %Condition, ptr nocapture readonly %Input, i32 %MaxJ) {
 ; CHECK-LABEL: @test_three_exits(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP20:%.*]] = icmp eq i32 [[MAXJ:%.*]], 0
@@ -287,13 +287,13 @@ define void @test_three_exits(i32* nocapture %Output, i32* nocapture readonly %C
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[J_022:%.*]] = phi i32 [ [[INC:%.*]], [[IF_END5:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[TEMP_021:%.*]] = phi i32 [ [[TEMP_0_ADD:%.*]], [[IF_END5]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[CONDITION:%.*]], i32 [[J_022]]
-; CHECK-NEXT:    [[I:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[CONDITION:%.*]], i32 [[J_022]]
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[I]], 65535
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[CLEANUP_LOOPEXIT:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[INPUT:%.*]], i32 [[J_022]]
-; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[INPUT:%.*]], i32 [[J_022]]
+; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ugt i32 [[I1]], 65535
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[CLEANUP_LOOPEXIT]], label [[IF_END5]]
 ; CHECK:       if.end5:
@@ -308,7 +308,7 @@ define void @test_three_exits(i32* nocapture %Output, i32* nocapture readonly %C
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    [[TEMP_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TEMP_0_LCSSA_PH]], [[CLEANUP_LOOPEXIT]] ]
-; CHECK-NEXT:    store i32 [[TEMP_0_LCSSA]], i32* [[OUTPUT:%.*]], align 4
+; CHECK-NEXT:    store i32 [[TEMP_0_LCSSA]], ptr [[OUTPUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -321,14 +321,14 @@ for.body.preheader:                               ; preds = %entry
 for.body:                                         ; preds = %if.end5, %for.body.preheader
   %j.022 = phi i32 [ %inc, %if.end5 ], [ 0, %for.body.preheader ]
   %temp.021 = phi i32 [ %temp.0.add, %if.end5 ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %Condition, i32 %j.022
-  %i = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %Condition, i32 %j.022
+  %i = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp ugt i32 %i, 65535
   br i1 %cmp1, label %cleanup, label %if.end
 
 if.end:                                           ; preds = %for.body
-  %arrayidx2 = getelementptr inbounds i32, i32* %Input, i32 %j.022
-  %i1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %Input, i32 %j.022
+  %i1 = load i32, ptr %arrayidx2, align 4
   %cmp3 = icmp ugt i32 %i1, 65535
   br i1 %cmp3, label %cleanup, label %if.end5
 
@@ -342,17 +342,17 @@ if.end5:                                          ; preds = %if.end
 
 cleanup:                                          ; preds = %if.end5, %if.end, %for.body, %entry
   %temp.0.lcssa = phi i32 [ 0, %entry ], [ %temp.021, %if.end ], [ %temp.021, %for.body ], [ %temp.0.add, %if.end5 ]
-  store i32 %temp.0.lcssa, i32* %Output, align 4
+  store i32 %temp.0.lcssa, ptr %Output, align 4
   ret void
 }
 
-define void @test_four_blocks(i32* nocapture %Output, i32* nocapture readonly %Condition, i32* nocapture readonly %Input, i32 %MaxJ) {
+define void @test_four_blocks(ptr nocapture %Output, ptr nocapture readonly %Condition, ptr nocapture readonly %Input, i32 %MaxJ) {
 ; CHECK-LABEL: @test_four_blocks(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP25:%.*]] = icmp ugt i32 [[MAXJ:%.*]], 1
 ; CHECK-NEXT:    br i1 [[CMP25]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load i32, i32* [[INPUT:%.*]], align 4
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load i32, ptr [[INPUT:%.*]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[MAXJ]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[MAXJ]], -2
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i32 [[TMP0]], 3
@@ -377,19 +377,19 @@ define void @test_four_blocks(i32* nocapture %Output, i32* nocapture readonly %C
 ; CHECK:       for.body.epil.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY_EPIL:%.*]]
 ; CHECK:       for.body.epil:
-; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i32, i32* [[CONDITION:%.*]], i32 [[J_027_UNR]]
-; CHECK-NEXT:    [[I1_EPIL:%.*]] = load i32, i32* [[ARRAYIDX_EPIL]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i32, ptr [[CONDITION:%.*]], i32 [[J_027_UNR]]
+; CHECK-NEXT:    [[I1_EPIL:%.*]] = load i32, ptr [[ARRAYIDX_EPIL]], align 4
 ; CHECK-NEXT:    [[CMP1_EPIL:%.*]] = icmp ugt i32 [[I1_EPIL]], 65535
-; CHECK-NEXT:    [[ARRAYIDX2_EPIL:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[J_027_UNR]]
-; CHECK-NEXT:    [[I2_EPIL:%.*]] = load i32, i32* [[ARRAYIDX2_EPIL]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2_EPIL:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[J_027_UNR]]
+; CHECK-NEXT:    [[I2_EPIL:%.*]] = load i32, ptr [[ARRAYIDX2_EPIL]], align 4
 ; CHECK-NEXT:    [[CMP4_EPIL:%.*]] = icmp ugt i32 [[I2_EPIL]], [[I_UNR]]
 ; CHECK-NEXT:    br i1 [[CMP1_EPIL]], label [[IF_THEN_EPIL:%.*]], label [[IF_ELSE_EPIL:%.*]]
 ; CHECK:       if.else.epil:
 ; CHECK-NEXT:    [[NOT_CMP4_EPIL:%.*]] = xor i1 [[CMP4_EPIL]], true
 ; CHECK-NEXT:    [[SUB_EPIL:%.*]] = sext i1 [[NOT_CMP4_EPIL]] to i32
 ; CHECK-NEXT:    [[SUB10_SINK_EPIL:%.*]] = add i32 [[J_027_UNR]], [[SUB_EPIL]]
-; CHECK-NEXT:    [[ARRAYIDX11_EPIL:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[SUB10_SINK_EPIL]]
-; CHECK-NEXT:    [[I3_EPIL:%.*]] = load i32, i32* [[ARRAYIDX11_EPIL]], align 4
+; CHECK-NEXT:    [[ARRAYIDX11_EPIL:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[SUB10_SINK_EPIL]]
+; CHECK-NEXT:    [[I3_EPIL:%.*]] = load i32, ptr [[ARRAYIDX11_EPIL]], align 4
 ; CHECK-NEXT:    [[SUB13_EPIL:%.*]] = sub i32 [[TEMP_026_UNR]], [[I3_EPIL]]
 ; CHECK-NEXT:    br label [[FOR_INC_EPIL:%.*]]
 ; CHECK:       if.then.epil:
@@ -402,19 +402,19 @@ define void @test_four_blocks(i32* nocapture %Output, i32* nocapture readonly %C
 ; CHECK-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i32 1, [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP]], label [[FOR_BODY_EPIL_1:%.*]], label [[FOR_COND_CLEANUP_LOOPEXIT_EPILOG_LCSSA:%.*]]
 ; CHECK:       for.body.epil.1:
-; CHECK-NEXT:    [[ARRAYIDX_EPIL_1:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC_EPIL]]
-; CHECK-NEXT:    [[I1_EPIL_1:%.*]] = load i32, i32* [[ARRAYIDX_EPIL_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_EPIL_1:%.*]] = getelementptr inbounds i32, ptr [[CONDITION]], i32 [[INC_EPIL]]
+; CHECK-NEXT:    [[I1_EPIL_1:%.*]] = load i32, ptr [[ARRAYIDX_EPIL_1]], align 4
 ; CHECK-NEXT:    [[CMP1_EPIL_1:%.*]] = icmp ugt i32 [[I1_EPIL_1]], 65535
-; CHECK-NEXT:    [[ARRAYIDX2_EPIL_1:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[INC_EPIL]]
-; CHECK-NEXT:    [[I2_EPIL_1:%.*]] = load i32, i32* [[ARRAYIDX2_EPIL_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2_EPIL_1:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[INC_EPIL]]
+; CHECK-NEXT:    [[I2_EPIL_1:%.*]] = load i32, ptr [[ARRAYIDX2_EPIL_1]], align 4
 ; CHECK-NEXT:    [[CMP4_EPIL_1:%.*]] = icmp ugt i32 [[I2_EPIL_1]], [[I2_EPIL]]
 ; CHECK-NEXT:    br i1 [[CMP1_EPIL_1]], label [[IF_THEN_EPIL_1:%.*]], label [[IF_ELSE_EPIL_1:%.*]]
 ; CHECK:       if.else.epil.1:
 ; CHECK-NEXT:    [[NOT_CMP4_EPIL_1:%.*]] = xor i1 [[CMP4_EPIL_1]], true
 ; CHECK-NEXT:    [[SUB_EPIL_1:%.*]] = sext i1 [[NOT_CMP4_EPIL_1]] to i32
 ; CHECK-NEXT:    [[SUB10_SINK_EPIL_1:%.*]] = add i32 [[INC_EPIL]], [[SUB_EPIL_1]]
-; CHECK-NEXT:    [[ARRAYIDX11_EPIL_1:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[SUB10_SINK_EPIL_1]]
-; CHECK-NEXT:    [[I3_EPIL_1:%.*]] = load i32, i32* [[ARRAYIDX11_EPIL_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX11_EPIL_1:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[SUB10_SINK_EPIL_1]]
+; CHECK-NEXT:    [[I3_EPIL_1:%.*]] = load i32, ptr [[ARRAYIDX11_EPIL_1]], align 4
 ; CHECK-NEXT:    [[SUB13_EPIL_1:%.*]] = sub i32 [[TEMP_1_EPIL]], [[I3_EPIL_1]]
 ; CHECK-NEXT:    br label [[FOR_INC_EPIL_1:%.*]]
 ; CHECK:       if.then.epil.1:
@@ -427,19 +427,19 @@ define void @test_four_blocks(i32* nocapture %Output, i32* nocapture readonly %C
 ; CHECK-NEXT:    [[EPIL_ITER_CMP_1:%.*]] = icmp ne i32 2, [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP_1]], label [[FOR_BODY_EPIL_2:%.*]], label [[FOR_COND_CLEANUP_LOOPEXIT_EPILOG_LCSSA]]
 ; CHECK:       for.body.epil.2:
-; CHECK-NEXT:    [[ARRAYIDX_EPIL_2:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC_EPIL_1]]
-; CHECK-NEXT:    [[I1_EPIL_2:%.*]] = load i32, i32* [[ARRAYIDX_EPIL_2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_EPIL_2:%.*]] = getelementptr inbounds i32, ptr [[CONDITION]], i32 [[INC_EPIL_1]]
+; CHECK-NEXT:    [[I1_EPIL_2:%.*]] = load i32, ptr [[ARRAYIDX_EPIL_2]], align 4
 ; CHECK-NEXT:    [[CMP1_EPIL_2:%.*]] = icmp ugt i32 [[I1_EPIL_2]], 65535
-; CHECK-NEXT:    [[ARRAYIDX2_EPIL_2:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[INC_EPIL_1]]
-; CHECK-NEXT:    [[I2_EPIL_2:%.*]] = load i32, i32* [[ARRAYIDX2_EPIL_2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2_EPIL_2:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[INC_EPIL_1]]
+; CHECK-NEXT:    [[I2_EPIL_2:%.*]] = load i32, ptr [[ARRAYIDX2_EPIL_2]], align 4
 ; CHECK-NEXT:    [[CMP4_EPIL_2:%.*]] = icmp ugt i32 [[I2_EPIL_2]], [[I2_EPIL_1]]
 ; CHECK-NEXT:    br i1 [[CMP1_EPIL_2]], label [[IF_THEN_EPIL_2:%.*]], label [[IF_ELSE_EPIL_2:%.*]]
 ; CHECK:       if.else.epil.2:
 ; CHECK-NEXT:    [[NOT_CMP4_EPIL_2:%.*]] = xor i1 [[CMP4_EPIL_2]], true
 ; CHECK-NEXT:    [[SUB_EPIL_2:%.*]] = sext i1 [[NOT_CMP4_EPIL_2]] to i32
 ; CHECK-NEXT:    [[SUB10_SINK_EPIL_2:%.*]] = add i32 [[INC_EPIL_1]], [[SUB_EPIL_2]]
-; CHECK-NEXT:    [[ARRAYIDX11_EPIL_2:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[SUB10_SINK_EPIL_2]]
-; CHECK-NEXT:    [[I3_EPIL_2:%.*]] = load i32, i32* [[ARRAYIDX11_EPIL_2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX11_EPIL_2:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[SUB10_SINK_EPIL_2]]
+; CHECK-NEXT:    [[I3_EPIL_2:%.*]] = load i32, ptr [[ARRAYIDX11_EPIL_2]], align 4
 ; CHECK-NEXT:    [[SUB13_EPIL_2:%.*]] = sub i32 [[TEMP_1_EPIL_1]], [[I3_EPIL_2]]
 ; CHECK-NEXT:    br label [[FOR_INC_EPIL_2:%.*]]
 ; CHECK:       if.then.epil.2:
@@ -457,18 +457,18 @@ define void @test_four_blocks(i32* nocapture %Output, i32* nocapture readonly %C
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[TEMP_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TEMP_1_LCSSA]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
-; CHECK-NEXT:    store i32 [[TEMP_0_LCSSA]], i32* [[OUTPUT:%.*]], align 4
+; CHECK-NEXT:    store i32 [[TEMP_0_LCSSA]], ptr [[OUTPUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[DOTPRE]], [[FOR_BODY_LR_PH_NEW]] ], [ [[I2_3]], [[FOR_INC_3]] ]
 ; CHECK-NEXT:    [[J_027:%.*]] = phi i32 [ 1, [[FOR_BODY_LR_PH_NEW]] ], [ [[INC_3]], [[FOR_INC_3]] ]
 ; CHECK-NEXT:    [[TEMP_026:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH_NEW]] ], [ [[TEMP_1_3]], [[FOR_INC_3]] ]
 ; CHECK-NEXT:    [[NITER:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH_NEW]] ], [ [[NITER_NEXT_3:%.*]], [[FOR_INC_3]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[J_027]]
-; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[CONDITION]], i32 [[J_027]]
+; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[I1]], 65535
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[J_027]]
-; CHECK-NEXT:    [[I2:%.*]] = load i32, i32* [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[J_027]]
+; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[I2]], [[I]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
@@ -479,27 +479,27 @@ define void @test_four_blocks(i32* nocapture %Output, i32* nocapture readonly %C
 ; CHECK-NEXT:    [[NOT_CMP4:%.*]] = xor i1 [[CMP4]], true
 ; CHECK-NEXT:    [[SUB:%.*]] = sext i1 [[NOT_CMP4]] to i32
 ; CHECK-NEXT:    [[SUB10_SINK:%.*]] = add i32 [[J_027]], [[SUB]]
-; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[SUB10_SINK]]
-; CHECK-NEXT:    [[I3:%.*]] = load i32, i32* [[ARRAYIDX11]], align 4
+; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[SUB10_SINK]]
+; CHECK-NEXT:    [[I3:%.*]] = load i32, ptr [[ARRAYIDX11]], align 4
 ; CHECK-NEXT:    [[SUB13:%.*]] = sub i32 [[TEMP_026]], [[I3]]
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[TEMP_1:%.*]] = phi i32 [ [[ADD]], [[IF_THEN]] ], [ [[SUB13]], [[IF_ELSE]] ]
 ; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i32 [[J_027]], 1
 ; CHECK-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i32 [[NITER]], 1
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC]]
-; CHECK-NEXT:    [[I1_1:%.*]] = load i32, i32* [[ARRAYIDX_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[CONDITION]], i32 [[INC]]
+; CHECK-NEXT:    [[I1_1:%.*]] = load i32, ptr [[ARRAYIDX_1]], align 4
 ; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp ugt i32 [[I1_1]], 65535
-; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[INC]]
-; CHECK-NEXT:    [[I2_1:%.*]] = load i32, i32* [[ARRAYIDX2_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[INC]]
+; CHECK-NEXT:    [[I2_1:%.*]] = load i32, ptr [[ARRAYIDX2_1]], align 4
 ; CHECK-NEXT:    [[CMP4_1:%.*]] = icmp ugt i32 [[I2_1]], [[I2]]
 ; CHECK-NEXT:    br i1 [[CMP1_1]], label [[IF_THEN_1:%.*]], label [[IF_ELSE_1:%.*]]
 ; CHECK:       if.else.1:
 ; CHECK-NEXT:    [[NOT_CMP4_1:%.*]] = xor i1 [[CMP4_1]], true
 ; CHECK-NEXT:    [[SUB_1:%.*]] = sext i1 [[NOT_CMP4_1]] to i32
 ; CHECK-NEXT:    [[SUB10_SINK_1:%.*]] = add i32 [[INC]], [[SUB_1]]
-; CHECK-NEXT:    [[ARRAYIDX11_1:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[SUB10_SINK_1]]
-; CHECK-NEXT:    [[I3_1:%.*]] = load i32, i32* [[ARRAYIDX11_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX11_1:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[SUB10_SINK_1]]
+; CHECK-NEXT:    [[I3_1:%.*]] = load i32, ptr [[ARRAYIDX11_1]], align 4
 ; CHECK-NEXT:    [[SUB13_1:%.*]] = sub i32 [[TEMP_1]], [[I3_1]]
 ; CHECK-NEXT:    br label [[FOR_INC_1:%.*]]
 ; CHECK:       if.then.1:
@@ -510,19 +510,19 @@ define void @test_four_blocks(i32* nocapture %Output, i32* nocapture readonly %C
 ; CHECK-NEXT:    [[TEMP_1_1:%.*]] = phi i32 [ [[ADD_1]], [[IF_THEN_1]] ], [ [[SUB13_1]], [[IF_ELSE_1]] ]
 ; CHECK-NEXT:    [[INC_1:%.*]] = add nuw nsw i32 [[INC]], 1
 ; CHECK-NEXT:    [[NITER_NEXT_1:%.*]] = add nuw nsw i32 [[NITER_NEXT]], 1
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC_1]]
-; CHECK-NEXT:    [[I1_2:%.*]] = load i32, i32* [[ARRAYIDX_2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, ptr [[CONDITION]], i32 [[INC_1]]
+; CHECK-NEXT:    [[I1_2:%.*]] = load i32, ptr [[ARRAYIDX_2]], align 4
 ; CHECK-NEXT:    [[CMP1_2:%.*]] = icmp ugt i32 [[I1_2]], 65535
-; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[INC_1]]
-; CHECK-NEXT:    [[I2_2:%.*]] = load i32, i32* [[ARRAYIDX2_2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[INC_1]]
+; CHECK-NEXT:    [[I2_2:%.*]] = load i32, ptr [[ARRAYIDX2_2]], align 4
 ; CHECK-NEXT:    [[CMP4_2:%.*]] = icmp ugt i32 [[I2_2]], [[I2_1]]
 ; CHECK-NEXT:    br i1 [[CMP1_2]], label [[IF_THEN_2:%.*]], label [[IF_ELSE_2:%.*]]
 ; CHECK:       if.else.2:
 ; CHECK-NEXT:    [[NOT_CMP4_2:%.*]] = xor i1 [[CMP4_2]], true
 ; CHECK-NEXT:    [[SUB_2:%.*]] = sext i1 [[NOT_CMP4_2]] to i32
 ; CHECK-NEXT:    [[SUB10_SINK_2:%.*]] = add i32 [[INC_1]], [[SUB_2]]
-; CHECK-NEXT:    [[ARRAYIDX11_2:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[SUB10_SINK_2]]
-; CHECK-NEXT:    [[I3_2:%.*]] = load i32, i32* [[ARRAYIDX11_2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX11_2:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[SUB10_SINK_2]]
+; CHECK-NEXT:    [[I3_2:%.*]] = load i32, ptr [[ARRAYIDX11_2]], align 4
 ; CHECK-NEXT:    [[SUB13_2:%.*]] = sub i32 [[TEMP_1_1]], [[I3_2]]
 ; CHECK-NEXT:    br label [[FOR_INC_2:%.*]]
 ; CHECK:       if.then.2:
@@ -533,19 +533,19 @@ define void @test_four_blocks(i32* nocapture %Output, i32* nocapture readonly %C
 ; CHECK-NEXT:    [[TEMP_1_2:%.*]] = phi i32 [ [[ADD_2]], [[IF_THEN_2]] ], [ [[SUB13_2]], [[IF_ELSE_2]] ]
 ; CHECK-NEXT:    [[INC_2:%.*]] = add nuw i32 [[INC_1]], 1
 ; CHECK-NEXT:    [[NITER_NEXT_2:%.*]] = add nuw nsw i32 [[NITER_NEXT_1]], 1
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC_2]]
-; CHECK-NEXT:    [[I1_3:%.*]] = load i32, i32* [[ARRAYIDX_3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, ptr [[CONDITION]], i32 [[INC_2]]
+; CHECK-NEXT:    [[I1_3:%.*]] = load i32, ptr [[ARRAYIDX_3]], align 4
 ; CHECK-NEXT:    [[CMP1_3:%.*]] = icmp ugt i32 [[I1_3]], 65535
-; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[INC_2]]
-; CHECK-NEXT:    [[I2_3]] = load i32, i32* [[ARRAYIDX2_3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[INC_2]]
+; CHECK-NEXT:    [[I2_3]] = load i32, ptr [[ARRAYIDX2_3]], align 4
 ; CHECK-NEXT:    [[CMP4_3:%.*]] = icmp ugt i32 [[I2_3]], [[I2_2]]
 ; CHECK-NEXT:    br i1 [[CMP1_3]], label [[IF_THEN_3:%.*]], label [[IF_ELSE_3:%.*]]
 ; CHECK:       if.else.3:
 ; CHECK-NEXT:    [[NOT_CMP4_3:%.*]] = xor i1 [[CMP4_3]], true
 ; CHECK-NEXT:    [[SUB_3:%.*]] = sext i1 [[NOT_CMP4_3]] to i32
 ; CHECK-NEXT:    [[SUB10_SINK_3:%.*]] = add i32 [[INC_2]], [[SUB_3]]
-; CHECK-NEXT:    [[ARRAYIDX11_3:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[SUB10_SINK_3]]
-; CHECK-NEXT:    [[I3_3:%.*]] = load i32, i32* [[ARRAYIDX11_3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX11_3:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[SUB10_SINK_3]]
+; CHECK-NEXT:    [[I3_3:%.*]] = load i32, ptr [[ARRAYIDX11_3]], align 4
 ; CHECK-NEXT:    [[SUB13_3:%.*]] = sub i32 [[TEMP_1_2]], [[I3_3]]
 ; CHECK-NEXT:    br label [[FOR_INC_3]]
 ; CHECK:       if.then.3:
@@ -564,23 +564,23 @@ entry:
   br i1 %cmp25, label %for.body.lr.ph, label %for.cond.cleanup
 
 for.body.lr.ph:                                   ; preds = %entry
-  %.pre = load i32, i32* %Input, align 4
+  %.pre = load i32, ptr %Input, align 4
   br label %for.body
 
 for.cond.cleanup:                                 ; preds = %for.inc, %entry
   %temp.0.lcssa = phi i32 [ 0, %entry ], [ %temp.1, %for.inc ]
-  store i32 %temp.0.lcssa, i32* %Output, align 4
+  store i32 %temp.0.lcssa, ptr %Output, align 4
   ret void
 
 for.body:                                         ; preds = %for.inc, %for.body.lr.ph
   %i = phi i32 [ %.pre, %for.body.lr.ph ], [ %i2, %for.inc ]
   %j.027 = phi i32 [ 1, %for.body.lr.ph ], [ %inc, %for.inc ]
   %temp.026 = phi i32 [ 0, %for.body.lr.ph ], [ %temp.1, %for.inc ]
-  %arrayidx = getelementptr inbounds i32, i32* %Condition, i32 %j.027
-  %i1 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %Condition, i32 %j.027
+  %i1 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp ugt i32 %i1, 65535
-  %arrayidx2 = getelementptr inbounds i32, i32* %Input, i32 %j.027
-  %i2 = load i32, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %Input, i32 %j.027
+  %i2 = load i32, ptr %arrayidx2, align 4
   %cmp4 = icmp ugt i32 %i2, %i
   br i1 %cmp1, label %if.then, label %if.else
 
@@ -593,8 +593,8 @@ if.else:                                          ; preds = %for.body
   %not.cmp4 = xor i1 %cmp4, true
   %sub = sext i1 %not.cmp4 to i32
   %sub10.sink = add i32 %j.027, %sub
-  %arrayidx11 = getelementptr inbounds i32, i32* %Input, i32 %sub10.sink
-  %i3 = load i32, i32* %arrayidx11, align 4
+  %arrayidx11 = getelementptr inbounds i32, ptr %Input, i32 %sub10.sink
+  %i3 = load i32, ptr %arrayidx11, align 4
   %sub13 = sub i32 %temp.026, %i3
   br label %for.inc
 
@@ -605,7 +605,7 @@ for.inc:                                          ; preds = %if.else, %if.then
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-define void @test_five_blocks(i32* nocapture %Output, i32* nocapture readonly %Condition, i32* nocapture readonly %Input, i32 %MaxJ) {
+define void @test_five_blocks(ptr nocapture %Output, ptr nocapture readonly %Condition, ptr nocapture readonly %Input, i32 %MaxJ) {
 ; CHECK-LABEL: @test_five_blocks(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP24:%.*]] = icmp ugt i32 [[MAXJ:%.*]], 1
@@ -615,20 +615,20 @@ define void @test_five_blocks(i32* nocapture %Output, i32* nocapture readonly %C
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[J_026:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_INC:%.*]] ], [ 1, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[TEMP_025:%.*]] = phi i32 [ [[TEMP_1:%.*]], [[FOR_INC]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[INPUT:%.*]], i32 [[J_026]]
-; CHECK-NEXT:    [[I:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[INPUT:%.*]], i32 [[J_026]]
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[I]], [[TEMP_025]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[ADD]], 16777215
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[CLEANUP_LOOPEXIT:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[CONDITION:%.*]], i32 [[J_026]]
-; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[CONDITION:%.*]], i32 [[J_026]]
+; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ugt i32 [[I1]], 65535
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[IF_THEN4:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then4:
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[J_026]], -1
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, i32* [[INPUT]], i32 [[SUB]]
-; CHECK-NEXT:    [[I2:%.*]] = load i32, i32* [[ARRAYIDX6]], align 4
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, ptr [[INPUT]], i32 [[SUB]]
+; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt i32 [[I]], [[I2]]
 ; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[CMP7]] to i32
 ; CHECK-NEXT:    [[ADD8:%.*]] = add i32 [[ADD]], [[COND]]
@@ -646,7 +646,7 @@ define void @test_five_blocks(i32* nocapture %Output, i32* nocapture readonly %C
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    [[TEMP_2:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TEMP_2_PH]], [[CLEANUP_LOOPEXIT]] ]
-; CHECK-NEXT:    store i32 [[TEMP_2]], i32* [[OUTPUT:%.*]], align 4
+; CHECK-NEXT:    store i32 [[TEMP_2]], ptr [[OUTPUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -659,22 +659,22 @@ for.body.preheader:                               ; preds = %entry
 for.body:                                         ; preds = %for.inc, %for.body.preheader
   %j.026 = phi i32 [ %inc, %for.inc ], [ 1, %for.body.preheader ]
   %temp.025 = phi i32 [ %temp.1, %for.inc ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %Input, i32 %j.026
-  %i = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %Input, i32 %j.026
+  %i = load i32, ptr %arrayidx, align 4
   %add = add i32 %i, %temp.025
   %cmp1 = icmp ugt i32 %add, 16777215
   br i1 %cmp1, label %cleanup, label %if.end
 
 if.end:                                           ; preds = %for.body
-  %arrayidx2 = getelementptr inbounds i32, i32* %Condition, i32 %j.026
-  %i1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %Condition, i32 %j.026
+  %i1 = load i32, ptr %arrayidx2, align 4
   %cmp3 = icmp ugt i32 %i1, 65535
   br i1 %cmp3, label %if.then4, label %if.else
 
 if.then4:                                         ; preds = %if.end
   %sub = add i32 %j.026, -1
-  %arrayidx6 = getelementptr inbounds i32, i32* %Input, i32 %sub
-  %i2 = load i32, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %Input, i32 %sub
+  %i2 = load i32, ptr %arrayidx6, align 4
   %cmp7 = icmp ugt i32 %i, %i2
   %cond = zext i1 %cmp7 to i32
   %add8 = add i32 %add, %cond
@@ -692,66 +692,62 @@ for.inc:                                          ; preds = %if.else, %if.then4
 
 cleanup:                                          ; preds = %for.inc, %for.body, %entry
   %temp.2 = phi i32 [ 0, %entry ], [ %add, %for.body ], [ %temp.1, %for.inc ]
-  store i32 %temp.2, i32* %Output, align 4
+  store i32 %temp.2, ptr %Output, align 4
   ret void
 }
 
-%struct.Node = type { %struct.Node*, i32 }
-define void @iterate_inc(%struct.Node* %n, i32 %limit) {
+%struct.Node = type { ptr, i32 }
+define void @iterate_inc(ptr %n, i32 %limit) {
 ; CHECK-LABEL: @iterate_inc(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TOBOOL5:%.*]] = icmp eq %struct.Node* [[N:%.*]], null
+; CHECK-NEXT:    [[TOBOOL5:%.*]] = icmp eq ptr [[N:%.*]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL5]], label [[WHILE_END:%.*]], label [[LAND_RHS_PREHEADER:%.*]]
 ; CHECK:       land.rhs.preheader:
 ; CHECK-NEXT:    br label [[LAND_RHS:%.*]]
 ; CHECK:       land.rhs:
-; CHECK-NEXT:    [[LIST_ADDR_06:%.*]] = phi %struct.Node* [ [[N]], [[LAND_RHS_PREHEADER]] ], [ [[I2_3:%.*]], [[WHILE_BODY_3:%.*]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = getelementptr inbounds [[STRUCT_NODE:%.*]], %struct.Node* [[LIST_ADDR_06]], i32 0, i32 1
-; CHECK-NEXT:    [[I:%.*]] = load i32, i32* [[VAL]], align 4
+; CHECK-NEXT:    [[LIST_ADDR_06:%.*]] = phi ptr [ [[N]], [[LAND_RHS_PREHEADER]] ], [ [[I2_3:%.*]], [[WHILE_BODY_3:%.*]] ]
+; CHECK-NEXT:    [[VAL:%.*]] = getelementptr inbounds [[STRUCT_NODE:%.*]], ptr [[LIST_ADDR_06]], i32 0, i32 1
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr [[VAL]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], [[LIMIT:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[WHILE_BODY:%.*]], label [[WHILE_END_LOOPEXIT:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[INC]], i32* [[VAL]], align 4
-; CHECK-NEXT:    [[I1:%.*]] = bitcast %struct.Node* [[LIST_ADDR_06]] to %struct.Node**
-; CHECK-NEXT:    [[I2:%.*]] = load %struct.Node*, %struct.Node** [[I1]], align 4
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq %struct.Node* [[I2]], null
+; CHECK-NEXT:    store i32 [[INC]], ptr [[VAL]], align 4
+; CHECK-NEXT:    [[I2:%.*]] = load ptr, ptr [[LIST_ADDR_06]], align 4
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq ptr [[I2]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END_LOOPEXIT]], label [[LAND_RHS_1:%.*]]
 ; CHECK:       land.rhs.1:
-; CHECK-NEXT:    [[VAL_1:%.*]] = getelementptr inbounds [[STRUCT_NODE]], %struct.Node* [[I2]], i32 0, i32 1
-; CHECK-NEXT:    [[I_1:%.*]] = load i32, i32* [[VAL_1]], align 4
+; CHECK-NEXT:    [[VAL_1:%.*]] = getelementptr inbounds [[STRUCT_NODE]], ptr [[I2]], i32 0, i32 1
+; CHECK-NEXT:    [[I_1:%.*]] = load i32, ptr [[VAL_1]], align 4
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp slt i32 [[I_1]], [[LIMIT]]
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[WHILE_BODY_1:%.*]], label [[WHILE_END_LOOPEXIT]]
 ; CHECK:       while.body.1:
 ; CHECK-NEXT:    [[INC_1:%.*]] = add nsw i32 [[I_1]], 1
-; CHECK-NEXT:    store i32 [[INC_1]], i32* [[VAL_1]], align 4
-; CHECK-NEXT:    [[I1_1:%.*]] = bitcast %struct.Node* [[I2]] to %struct.Node**
-; CHECK-NEXT:    [[I2_1:%.*]] = load %struct.Node*, %struct.Node** [[I1_1]], align 4
-; CHECK-NEXT:    [[TOBOOL_1:%.*]] = icmp eq %struct.Node* [[I2_1]], null
+; CHECK-NEXT:    store i32 [[INC_1]], ptr [[VAL_1]], align 4
+; CHECK-NEXT:    [[I2_1:%.*]] = load ptr, ptr [[I2]], align 4
+; CHECK-NEXT:    [[TOBOOL_1:%.*]] = icmp eq ptr [[I2_1]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL_1]], label [[WHILE_END_LOOPEXIT]], label [[LAND_RHS_2:%.*]]
 ; CHECK:       land.rhs.2:
-; CHECK-NEXT:    [[VAL_2:%.*]] = getelementptr inbounds [[STRUCT_NODE]], %struct.Node* [[I2_1]], i32 0, i32 1
-; CHECK-NEXT:    [[I_2:%.*]] = load i32, i32* [[VAL_2]], align 4
+; CHECK-NEXT:    [[VAL_2:%.*]] = getelementptr inbounds [[STRUCT_NODE]], ptr [[I2_1]], i32 0, i32 1
+; CHECK-NEXT:    [[I_2:%.*]] = load i32, ptr [[VAL_2]], align 4
 ; CHECK-NEXT:    [[CMP_2:%.*]] = icmp slt i32 [[I_2]], [[LIMIT]]
 ; CHECK-NEXT:    br i1 [[CMP_2]], label [[WHILE_BODY_2:%.*]], label [[WHILE_END_LOOPEXIT]]
 ; CHECK:       while.body.2:
 ; CHECK-NEXT:    [[INC_2:%.*]] = add nsw i32 [[I_2]], 1
-; CHECK-NEXT:    store i32 [[INC_2]], i32* [[VAL_2]], align 4
-; CHECK-NEXT:    [[I1_2:%.*]] = bitcast %struct.Node* [[I2_1]] to %struct.Node**
-; CHECK-NEXT:    [[I2_2:%.*]] = load %struct.Node*, %struct.Node** [[I1_2]], align 4
-; CHECK-NEXT:    [[TOBOOL_2:%.*]] = icmp eq %struct.Node* [[I2_2]], null
+; CHECK-NEXT:    store i32 [[INC_2]], ptr [[VAL_2]], align 4
+; CHECK-NEXT:    [[I2_2:%.*]] = load ptr, ptr [[I2_1]], align 4
+; CHECK-NEXT:    [[TOBOOL_2:%.*]] = icmp eq ptr [[I2_2]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL_2]], label [[WHILE_END_LOOPEXIT]], label [[LAND_RHS_3:%.*]]
 ; CHECK:       land.rhs.3:
-; CHECK-NEXT:    [[VAL_3:%.*]] = getelementptr inbounds [[STRUCT_NODE]], %struct.Node* [[I2_2]], i32 0, i32 1
-; CHECK-NEXT:    [[I_3:%.*]] = load i32, i32* [[VAL_3]], align 4
+; CHECK-NEXT:    [[VAL_3:%.*]] = getelementptr inbounds [[STRUCT_NODE]], ptr [[I2_2]], i32 0, i32 1
+; CHECK-NEXT:    [[I_3:%.*]] = load i32, ptr [[VAL_3]], align 4
 ; CHECK-NEXT:    [[CMP_3:%.*]] = icmp slt i32 [[I_3]], [[LIMIT]]
 ; CHECK-NEXT:    br i1 [[CMP_3]], label [[WHILE_BODY_3]], label [[WHILE_END_LOOPEXIT]]
 ; CHECK:       while.body.3:
 ; CHECK-NEXT:    [[INC_3:%.*]] = add nsw i32 [[I_3]], 1
-; CHECK-NEXT:    store i32 [[INC_3]], i32* [[VAL_3]], align 4
-; CHECK-NEXT:    [[I1_3:%.*]] = bitcast %struct.Node* [[I2_2]] to %struct.Node**
-; CHECK-NEXT:    [[I2_3]] = load %struct.Node*, %struct.Node** [[I1_3]], align 4
-; CHECK-NEXT:    [[TOBOOL_3:%.*]] = icmp eq %struct.Node* [[I2_3]], null
+; CHECK-NEXT:    store i32 [[INC_3]], ptr [[VAL_3]], align 4
+; CHECK-NEXT:    [[I2_3]] = load ptr, ptr [[I2_2]], align 4
+; CHECK-NEXT:    [[TOBOOL_3:%.*]] = icmp eq ptr [[I2_3]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL_3]], label [[WHILE_END_LOOPEXIT]], label [[LAND_RHS]]
 ; CHECK:       while.end.loopexit:
 ; CHECK-NEXT:    br label [[WHILE_END]]
@@ -759,25 +755,24 @@ define void @iterate_inc(%struct.Node* %n, i32 %limit) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %tobool5 = icmp eq %struct.Node* %n, null
+  %tobool5 = icmp eq ptr %n, null
   br i1 %tobool5, label %while.end, label %land.rhs.preheader
 
 land.rhs.preheader:                               ; preds = %entry
   br label %land.rhs
 
 land.rhs:                                         ; preds = %while.body, %land.rhs.preheader
-  %list.addr.06 = phi %struct.Node* [ %i2, %while.body ], [ %n, %land.rhs.preheader ]
-  %val = getelementptr inbounds %struct.Node, %struct.Node* %list.addr.06, i32 0, i32 1
-  %i = load i32, i32* %val, align 4
+  %list.addr.06 = phi ptr [ %i2, %while.body ], [ %n, %land.rhs.preheader ]
+  %val = getelementptr inbounds %struct.Node, ptr %list.addr.06, i32 0, i32 1
+  %i = load i32, ptr %val, align 4
   %cmp = icmp slt i32 %i, %limit
   br i1 %cmp, label %while.body, label %while.end
 
 while.body:                                       ; preds = %land.rhs
   %inc = add nsw i32 %i, 1
-  store i32 %inc, i32* %val, align 4
-  %i1 = bitcast %struct.Node* %list.addr.06 to %struct.Node**
-  %i2 = load %struct.Node*, %struct.Node** %i1, align 4
-  %tobool = icmp eq %struct.Node* %i2, null
+  store i32 %inc, ptr %val, align 4
+  %i2 = load ptr, ptr %list.addr.06, align 4
+  %tobool = icmp eq ptr %i2, null
   br i1 %tobool, label %while.end, label %land.rhs
 
 while.end:                                        ; preds = %while.body, %land.rhs, %entry
