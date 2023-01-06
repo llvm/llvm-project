@@ -196,7 +196,7 @@ public:
   /// the current strategy. Returns None if the fix cannot be produced;
   /// returns an empty list if no fixes are necessary.
   virtual Optional<FixItList> getFixits(const Strategy &) const {
-    return None;
+    return std::nullopt;
   }
 
 };
