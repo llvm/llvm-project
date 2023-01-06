@@ -3543,7 +3543,6 @@ void UnwrappedLineParser::parseConstraintExpression() {
     case tok::minus:
     case tok::star:
     case tok::slash:
-    case tok::kw_decltype:
       LambdaNextTimeAllowed = true;
       // Just eat them.
       nextToken();

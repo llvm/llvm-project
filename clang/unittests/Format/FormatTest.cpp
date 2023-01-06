@@ -24199,6 +24199,10 @@ TEST_F(FormatTest, RequiresClauses) {
                "  }\n"
                "};");
 
+  verifyFormat("template <class T>\n"
+               "  requires(std::same_as<int, T>)\n"
+               "decltype(auto) fun() {}");
+
   auto Style = getLLVMStyle();
 
   verifyFormat(
