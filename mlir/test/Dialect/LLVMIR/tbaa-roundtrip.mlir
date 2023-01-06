@@ -6,7 +6,6 @@ module {
     llvm.tbaa_tag @tbaa_tag_1 {access_type = @tbaa_root_0, base_type = @tbaa_root_0, offset = 0 : i64}
     llvm.tbaa_root @tbaa_root_2 {id = "Other language TBAA"}
     llvm.tbaa_tag @tbaa_tag_3 {access_type = @tbaa_root_2, base_type = @tbaa_root_2, offset = 0 : i64}
-    llvm.return
   }
   llvm.func @tbaa1(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
     %0 = llvm.mlir.constant(1 : i8) : i8
@@ -21,7 +20,6 @@ module {
 // CHECK:             llvm.tbaa_tag @tbaa_tag_1 {access_type = @tbaa_root_0, base_type = @tbaa_root_0, offset = 0 : i64}
 // CHECK:             llvm.tbaa_root @tbaa_root_2 {id = "Other language TBAA"}
 // CHECK:             llvm.tbaa_tag @tbaa_tag_3 {access_type = @tbaa_root_2, base_type = @tbaa_root_2, offset = 0 : i64}
-// CHECK:             llvm.return
 // CHECK:           }
 // CHECK:           llvm.func @tbaa1(%[[VAL_0:.*]]: !llvm.ptr, %[[VAL_1:.*]]: !llvm.ptr) {
 // CHECK:             %[[VAL_2:.*]] = llvm.mlir.constant(1 : i8) : i8
@@ -40,7 +38,6 @@ module {
     llvm.tbaa_type_desc @tbaa_type_desc_5 {id = "int", members = {<@tbaa_type_desc_1, 0>}}
     llvm.tbaa_type_desc @tbaa_type_desc_6 {id = "agg1_t", members = {<@tbaa_type_desc_5, 0>, <@tbaa_type_desc_5, 4>}}
     llvm.tbaa_tag @tbaa_tag_7 {access_type = @tbaa_type_desc_5, base_type = @tbaa_type_desc_6, offset = 0 : i64}
-    llvm.return
   }
   llvm.func @tbaa2(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
     %0 = llvm.mlir.constant(0 : i32) : i32
@@ -63,7 +60,6 @@ module {
 // CHECK:             llvm.tbaa_type_desc @tbaa_type_desc_5 {id = "int", members = {<@tbaa_type_desc_1, 0>}}
 // CHECK:             llvm.tbaa_type_desc @tbaa_type_desc_6 {id = "agg1_t", members = {<@tbaa_type_desc_5, 0>, <@tbaa_type_desc_5, 4>}}
 // CHECK:             llvm.tbaa_tag @tbaa_tag_7 {access_type = @tbaa_type_desc_5, base_type = @tbaa_type_desc_6, offset = 0 : i64}
-// CHECK:             llvm.return
 // CHECK:           }
 // CHECK:           llvm.func @tbaa2(%[[VAL_0:.*]]: !llvm.ptr, %[[VAL_1:.*]]: !llvm.ptr) {
 // CHECK:             %[[VAL_2:.*]] = llvm.mlir.constant(0 : i32) : i32
@@ -82,7 +78,6 @@ module {
     llvm.tbaa_tag @tbaa_tag_1 {access_type = @tbaa_root_0, base_type = @tbaa_root_0, offset = 0 : i64}
     llvm.tbaa_root @tbaa_root_2 {id = "Other language TBAA"}
     llvm.tbaa_tag @tbaa_tag_3 {access_type = @tbaa_root_2, base_type = @tbaa_root_2, offset = 0 : i64}
-    llvm.return
   }
   llvm.func @tbaa1(%arg0: !llvm.ptr) {
     %0 = llvm.mlir.constant(1 : i8) : i8
@@ -96,7 +91,6 @@ module {
 // CHECK:             llvm.tbaa_tag @tbaa_tag_1 {access_type = @tbaa_root_0, base_type = @tbaa_root_0, offset = 0 : i64}
 // CHECK:             llvm.tbaa_root @tbaa_root_2 {id = "Other language TBAA"}
 // CHECK:             llvm.tbaa_tag @tbaa_tag_3 {access_type = @tbaa_root_2, base_type = @tbaa_root_2, offset = 0 : i64}
-// CHECK:             llvm.return
 // CHECK:           }
 // CHECK:           llvm.func @tbaa1(%[[VAL_0:.*]]: !llvm.ptr) {
 // CHECK:             %[[VAL_1:.*]] = llvm.mlir.constant(1 : i8) : i8
