@@ -55,7 +55,7 @@ static void check(remarks::Format SerializerFormat, const remarks::Remark &R,
                   StringRef ExpectedR, StringRef ExpectedMeta,
                   std::optional<remarks::StringTable> StrTab = std::nullopt) {
   return check(SerializerFormat, remarks::SerializerMode::Separate,
-               makeArrayRef(&R, &R + 1), ExpectedR, ExpectedMeta,
+               ArrayRef(&R, &R + 1), ExpectedR, ExpectedMeta,
                std::move(StrTab));
 }
 
@@ -64,7 +64,7 @@ checkStandalone(remarks::Format SerializerFormat, const remarks::Remark &R,
                 StringRef ExpectedR,
                 std::optional<remarks::StringTable> StrTab = std::nullopt) {
   return check(SerializerFormat, remarks::SerializerMode::Standalone,
-               makeArrayRef(&R, &R + 1), ExpectedR,
+               ArrayRef(&R, &R + 1), ExpectedR,
                /*ExpectedMeta=*/std::nullopt, std::move(StrTab));
 }
 

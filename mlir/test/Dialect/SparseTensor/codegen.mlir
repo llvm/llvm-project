@@ -50,6 +50,10 @@
   dimLevelType = [ "compressed-nu", "singleton" ]
 }>
 
+#ccoo = #sparse_tensor.encoding<{
+  dimLevelType = [ "compressed", "compressed-nu", "singleton" ]
+}>
+
 // CHECK-LABEL: func @sparse_nop(
 //  CHECK-SAME: %[[A0:.*]]: memref<?xi32>,
 //  CHECK-SAME: %[[A1:.*]]: memref<?xi64>,
@@ -231,6 +235,52 @@ func.func @sparse_indices_dcsr(%arg0: tensor<?x?xf64, #DCSR>) -> memref<?xi64> {
 func.func @sparse_values_dcsr(%arg0: tensor<?x?xf64, #DCSR>) -> memref<?xf64> {
   %0 = sparse_tensor.values %arg0 : tensor<?x?xf64, #DCSR> to memref<?xf64>
   return %0 : memref<?xf64>
+}
+
+// CHECK-LABEL: func.func @sparse_values_coo(
+//  CHECK-SAME: %[[A0:.*0]]: memref<?xindex>,
+//  CHECK-SAME: %[[A1:.*1]]: memref<?xindex>,
+//  CHECK-SAME: %[[A2:.*2]]: memref<?xindex>,
+//  CHECK-SAME: %[[A3:.*3]]: memref<?xindex>,
+//  CHECK-SAME: %[[A4:.*4]]: memref<?xf64>,
+//  CHECK-SAME: %[[A5:.*5]]: !sparse_tensor.storage_specifier
+//       CHECK: return %[[A4]] : memref<?xf64>
+func.func @sparse_values_coo(%arg0: tensor<?x?x?xf64, #ccoo>) -> memref<?xf64> {
+  %0 = sparse_tensor.values %arg0 : tensor<?x?x?xf64, #ccoo> to memref<?xf64>
+  return %0 : memref<?xf64>
+}
+
+
+// CHECK-LABEL:   func.func @sparse_indices_coo(
+//  CHECK-SAME: %[[A0:.*0]]: memref<?xindex>,
+//  CHECK-SAME: %[[A1:.*1]]: memref<?xindex>,
+//  CHECK-SAME: %[[A2:.*2]]: memref<?xindex>,
+//  CHECK-SAME: %[[A3:.*3]]: memref<?xindex>,
+//  CHECK-SAME: %[[A4:.*4]]: memref<?xf64>,
+//  CHECK-SAME: %[[A5:.*5]]: !sparse_tensor.storage_specifier
+//       CHECK: %[[C2:.*]] = arith.constant 2 : index
+//       CHECK: %[[S0:.*]] = sparse_tensor.storage_specifier.get %[[A5]]  idx_mem_sz at 1
+//       CHECK: %[[S1:.*]] = arith.index_cast %[[S0]]
+//       CHECK: %[[S2:.*]] = arith.divui %[[S1]], %[[C2]] : index
+//       CHECK: %[[R1:.*]] = memref.subview %[[A3]][0] {{\[}}%[[S2]]] [2] : memref<?xindex> to memref<?xindex, strided<[2]>>
+//       CHECK: %[[R2:.*]] = memref.cast %[[R1]] : memref<?xindex, strided<[2]>> to memref<?xindex, strided<[?], offset: ?>>
+//       CHECK: return %[[R2]] : memref<?xindex, strided<[?], offset: ?>>
+func.func @sparse_indices_coo(%arg0: tensor<?x?x?xf64, #ccoo>) -> memref<?xindex, strided<[?], offset: ?>> {
+  %0 = sparse_tensor.indices  %arg0 { dimension = 1 : index } : tensor<?x?x?xf64, #ccoo> to memref<?xindex, strided<[?], offset: ?>>
+  return %0 : memref<?xindex, strided<[?], offset: ?>>
+}
+
+// CHECK-LABEL:   func.func @sparse_indices_buffer_coo(
+//  CHECK-SAME: %[[A0:.*0]]: memref<?xindex>,
+//  CHECK-SAME: %[[A1:.*1]]: memref<?xindex>,
+//  CHECK-SAME: %[[A2:.*2]]: memref<?xindex>,
+//  CHECK-SAME: %[[A3:.*3]]: memref<?xindex>,
+//  CHECK-SAME: %[[A4:.*4]]: memref<?xf64>,
+//  CHECK-SAME: %[[A5:.*5]]: !sparse_tensor.storage_specifier
+//       CHECK: return %[[A3]] : memref<?xindex>
+func.func @sparse_indices_buffer_coo(%arg0: tensor<?x?x?xf64, #ccoo>) -> memref<?xindex> {
+  %0 = sparse_tensor.indices_buffer  %arg0 : tensor<?x?x?xf64, #ccoo> to memref<?xindex>
+  return %0 : memref<?xindex>
 }
 
 // CHECK-LABEL: func @sparse_noe(
@@ -571,25 +621,23 @@ func.func @sparse_insert_typed(%arg0: tensor<128xf64, #SparseVector>, %arg1: ind
 }
 
 // CHECK-LABEL: func.func private @"_insert_compressed-nu_singleton_5_6_f64_0_0"(
-//  CHECK-SAME: %[[A0:.*0]]: memref<?xindex>,
-//  CHECK-SAME: %[[A1:.*1]]: memref<?xindex>,
-//  CHECK-SAME: %[[A2:.*2]]: memref<?xindex>,
-//  CHECK-SAME: %[[A3:.*3]]: memref<?xf64>,
-//  CHECK-SAME: %[[A4:.*4]]: !sparse_tensor.storage_specifier
+//  CHECK-SAME: %[[A1:.*0]]: memref<?xindex>,
+//  CHECK-SAME: %[[A2:.*1]]: memref<?xindex>,
+//  CHECK-SAME: %[[A3:.*2]]: memref<?xf64>,
+//  CHECK-SAME: %[[A4:.*3]]: !sparse_tensor.storage_specifier
+//  CHECK-SAME: %[[A5:.*4]]: index,
 //  CHECK-SAME: %[[A5:.*5]]: index,
-//  CHECK-SAME: %[[A5:.*6]]: index,
-//  CHECK-SAME: %[[A7:.*7]]: f64)
+//  CHECK-SAME: %[[A7:.*6]]: f64)
 //
 // CHECK-LABEL: func.func @sparse_insert_coo(
 //  CHECK-SAME: %[[A0:.*0]]: memref<?xindex>,
 //  CHECK-SAME: %[[A1:.*1]]: memref<?xindex>,
-//  CHECK-SAME: %[[A2:.*2]]: memref<?xindex>,
-//  CHECK-SAME: %[[A3:.*3]]: memref<?xf64>,
-//  CHECK-SAME: %[[A4:.*4]]: !sparse_tensor.storage_specifier
-//  CHECK-SAME: %[[A5:.*5]]: index,
-//  CHECK-SAME: %[[A6:.*6]]: f64)
-//       CHECK: %[[R:.*]]:5 = call @"_insert_compressed-nu_singleton_5_6_f64_0_0"(%[[A0]], %[[A1]], %[[A2]], %[[A3]], %[[A4]], %[[A5]], %[[A5]], %[[A6]])
-//       CHECK: return %[[R]]#0, %[[R]]#1, %[[R]]#2, %[[R]]#3, %[[R]]#4
+//  CHECK-SAME: %[[A2:.*2]]: memref<?xf64>,
+//  CHECK-SAME: %[[A3:.*3]]: !sparse_tensor.storage_specifier
+//  CHECK-SAME: %[[A4:.*4]]: index,
+//  CHECK-SAME: %[[A5:.*5]]: f64)
+//       CHECK: %[[R:.*]]:4 = call @"_insert_compressed-nu_singleton_5_6_f64_0_0"(%[[A0]], %[[A1]], %[[A2]], %[[A3]], %[[A4]], %[[A4]], %[[A5]])
+//       CHECK: return %[[R]]#0, %[[R]]#1, %[[R]]#2, %[[R]]#3
 func.func @sparse_insert_coo(%arg0: tensor<5x6xf64, #Coo>, %arg1: index, %arg2: f64) -> tensor<5x6xf64, #Coo> {
   %0 = sparse_tensor.insert %arg2 into %arg0[%arg1, %arg1] : tensor<5x6xf64, #Coo>
   %1 = sparse_tensor.load %0 hasInserts : tensor<5x6xf64, #Coo>

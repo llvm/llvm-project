@@ -6960,7 +6960,7 @@ AArch64InstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_G3, "aarch64-g3"},     {MO_G2, "aarch64-g2"},
       {MO_G1, "aarch64-g1"},     {MO_G0, "aarch64-g0"},
       {MO_HI12, "aarch64-hi12"}};
-  return makeArrayRef(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 
 ArrayRef<std::pair<unsigned, const char *>>
@@ -6977,7 +6977,7 @@ AArch64InstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
       {MO_DLLIMPORTAUX, "aarch64-dllimportaux"},
       {MO_PREL, "aarch64-prel"},
       {MO_TAGGED, "aarch64-tagged"}};
-  return makeArrayRef(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 
 ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
@@ -6985,7 +6985,7 @@ AArch64InstrInfo::getSerializableMachineMemOperandTargetFlags() const {
   static const std::pair<MachineMemOperand::Flags, const char *> TargetFlags[] =
       {{MOSuppressPair, "aarch64-suppress-pair"},
        {MOStridedAccess, "aarch64-strided-access"}};
-  return makeArrayRef(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 
 /// Constants defining how certain sequences should be outlined.

@@ -327,7 +327,7 @@ public:
     return dropUnknownNonDebugMetadata(std::nullopt);
   }
   void dropUnknownNonDebugMetadata(unsigned ID1) {
-    return dropUnknownNonDebugMetadata(makeArrayRef(ID1));
+    return dropUnknownNonDebugMetadata(ArrayRef(ID1));
   }
   void dropUnknownNonDebugMetadata(unsigned ID1, unsigned ID2) {
     unsigned IDs[] = {ID1, ID2};

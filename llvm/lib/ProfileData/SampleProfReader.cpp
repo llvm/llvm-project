@@ -956,8 +956,8 @@ std::error_code SampleProfileReaderExtBinaryBase::decompressSection(
 
   uint8_t *Buffer = Allocator.Allocate<uint8_t>(DecompressBufSize);
   size_t UCSize = DecompressBufSize;
-  llvm::Error E = compression::zlib::decompress(
-      makeArrayRef(Data, *CompressSize), Buffer, UCSize);
+  llvm::Error E = compression::zlib::decompress(ArrayRef(Data, *CompressSize),
+                                                Buffer, UCSize);
   if (E)
     return sampleprof_error::uncompress_failed;
   DecompressBuf = reinterpret_cast<const uint8_t *>(Buffer);
@@ -1836,10 +1836,6 @@ setupMemoryBuffer(const Twine &Filename) {
   if (std::error_code EC = BufferOrErr.getError())
     return EC;
   auto Buffer = std::move(BufferOrErr.get());
-
-  // Check the file.
-  if (uint64_t(Buffer->getBufferSize()) > std::numeric_limits<uint32_t>::max())
-    return sampleprof_error::too_large;
 
   return std::move(Buffer);
 }

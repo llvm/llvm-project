@@ -824,6 +824,19 @@ TEST(DiagnosticsTest, IgnoreVerify) {
   EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
 }
 
+TEST(DiagnosticTest, IgnoreBEFilelistOptions) {
+  auto TU = TestTU::withCode("");
+  TU.ExtraArgs.push_back("-Xclang");
+  for (const auto *DisableOption :
+       {"-fsanitize-ignorelist=null", "-fprofile-list=null",
+        "-fxray-always-instrument=null", "-fxray-never-instrument=null",
+        "-fxray-attr-list=null"}) {
+    TU.ExtraArgs.push_back(DisableOption);
+    EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+    TU.ExtraArgs.pop_back();
+  }
+}
+
 // Recursive main-file include is diagnosed, and doesn't crash.
 TEST(DiagnosticsTest, RecursivePreamble) {
   auto TU = TestTU::withCode(R"cpp(

@@ -646,7 +646,7 @@ void DataAggregator::processProfile(BinaryContext &BC) {
   // Mark all functions with registered events as having a valid profile.
   for (auto &BFI : BC.getBinaryFunctions()) {
     BinaryFunction &BF = BFI.second;
-    if (getBranchData(BF)) {
+    if (getBranchData(BF) || getFuncSampleData(BF.getNames())) {
       const auto Flags = opts::BasicAggregation ? BinaryFunction::PF_SAMPLE
                                                 : BinaryFunction::PF_LBR;
       BF.markProfiled(Flags);

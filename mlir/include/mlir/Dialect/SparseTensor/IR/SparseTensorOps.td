@@ -154,6 +154,34 @@ def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [Pure]>,
   let hasVerifier = 1;
 }
 
+def SparseTensor_ToIndicesBufferOp : SparseTensor_Op<"indices_buffer", [Pure]>,
+    Arguments<(ins AnySparseTensor:$tensor)>,
+    Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
+  let summary = "Extracts the linear indices array from a tensor";
+  let description = [{
+    Returns the linear indices array for a sparse tensor with a trailing COO
+    region with at least two dimensions. It is an error if the tensor doesn't
+    contain such a COO region. This is similar to the `bufferization.to_memref`
+    operation in the sense that it provides a bridge between a tensor world view
+    and a bufferized world view. Unlike the `bufferization.to_memref` operation,
+    however, this sparse operation actually lowers into code that extracts the
+    linear indices array from the sparse storage scheme that stores the indices
+    for the COO region as an array of structures. For example, a 2D COO sparse
+    tensor with two non-zero elements at coordinates (1, 3) and (4, 6) are
+    stored in a linear buffer as (1, 4, 3, 6) instead of two buffer as (1, 4)
+    and (3, 6).
+
+    Example:
+
+    ```mlir
+    %1 = sparse_tensor.indices_buffer %0
+    : tensor<64x64xf64, #COO> to memref<?xindex>
+    ```
+  }];
+  let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($result)";
+  let hasVerifier = 1;
+}
+
 def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [Pure]>,
     Arguments<(ins AnySparseTensor:$tensor)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {

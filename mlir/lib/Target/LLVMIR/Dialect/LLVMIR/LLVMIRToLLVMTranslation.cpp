@@ -65,6 +65,68 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
   return failure();
 }
 
+/// Returns the list of LLVM IR metadata kinds that are convertible to MLIR LLVM
+/// dialect attributes.
+static ArrayRef<unsigned> getSupportedMetadataImpl() {
+  static const SmallVector<unsigned> convertibleMetadata = {
+      llvm::LLVMContext::MD_prof // profiling metadata
+  };
+  return convertibleMetadata;
+}
+
+/// Attaches the given profiling metadata to the imported operation if a
+/// conversion to an MLIR profiling attribute exists and succeeds. Returns
+/// failure otherwise.
+static LogicalResult setProfilingAttrs(OpBuilder &builder, llvm::MDNode *node,
+                                       Operation *op,
+                                       LLVM::ModuleImport &moduleImport) {
+  // Return success for empty metadata nodes since there is nothing to import.
+  if (!node->getNumOperands())
+    return success();
+
+  auto *name = dyn_cast<llvm::MDString>(node->getOperand(0));
+  if (!name)
+    return failure();
+
+  // Handle function entry count metadata.
+  if (name->getString().equals("function_entry_count")) {
+    // TODO support function entry count metadata with GUID fields.
+    if (node->getNumOperands() != 2)
+      return failure();
+
+    llvm::ConstantInt *entryCount =
+        llvm::mdconst::extract<llvm::ConstantInt>(node->getOperand(1));
+    if (auto funcOp = dyn_cast<LLVMFuncOp>(op)) {
+      funcOp.setFunctionEntryCount(entryCount->getZExtValue());
+      return success();
+    }
+    return failure();
+  }
+
+  if (!name->getString().equals("branch_weights"))
+    return failure();
+
+  // Handle branch weights metadata.
+  SmallVector<int32_t> branchWeights;
+  branchWeights.reserve(node->getNumOperands() - 1);
+  for (unsigned i = 1, e = node->getNumOperands(); i != e; ++i) {
+    llvm::ConstantInt *branchWeight =
+        llvm::mdconst::extract<llvm::ConstantInt>(node->getOperand(i));
+    branchWeights.push_back(branchWeight->getZExtValue());
+  }
+
+  // Attach the branch weights to the operations that support it.
+  if (auto condBrOp = dyn_cast<CondBrOp>(op)) {
+    condBrOp.setBranchWeightsAttr(builder.getI32VectorAttr(branchWeights));
+    return success();
+  }
+  if (auto switchOp = dyn_cast<SwitchOp>(op)) {
+    switchOp.setBranchWeightsAttr(builder.getI32VectorAttr(branchWeights));
+    return success();
+  }
+  return failure();
+}
+
 namespace {
 
 /// Implementation of the dialect interface that converts operations belonging
@@ -80,10 +142,30 @@ public:
     return convertIntrinsicImpl(builder, inst, moduleImport);
   }
 
+  /// Attaches the given LLVM metadata to the imported operation if a conversion
+  /// to an LLVM dialect attribute exists and succeeds. Returns failure
+  /// otherwise.
+  LogicalResult setMetadataAttrs(OpBuilder &builder, unsigned kind,
+                                 llvm::MDNode *node, Operation *op,
+                                 LLVM::ModuleImport &moduleImport) const final {
+    // Call metadata specific handlers.
+    if (kind == llvm::LLVMContext::MD_prof)
+      return setProfilingAttrs(builder, node, op, moduleImport);
+
+    // A handler for a supported metadata kind is missing.
+    llvm_unreachable("unknown metadata type");
+  }
+
   /// Returns the list of LLVM IR intrinsic identifiers that are convertible to
   /// MLIR LLVM dialect intrinsics.
   ArrayRef<unsigned> getSupportedIntrinsics() const final {
     return getSupportedIntrinsicsImpl();
+  }
+
+  /// Returns the list of LLVM IR metadata kinds that are convertible to MLIR
+  /// LLVM dialect attributes.
+  ArrayRef<unsigned> getSupportedMetadata() const final {
+    return getSupportedMetadataImpl();
   }
 };
 } // namespace

@@ -19,3 +19,4 @@
 #undef GET_SVE_BUILTINS
 
 #undef BUILTIN
+#undef TARGET_BUILTIN

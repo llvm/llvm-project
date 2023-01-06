@@ -487,10 +487,6 @@ public:
     if (BaseLoc == nullptr)
       return;
 
-    // FIXME: Add support for union types.
-    if (BaseLoc->getType()->isUnionType())
-      return;
-
     auto &MemberLoc = BaseLoc->getChild(*Member);
     if (MemberLoc.getType()->isReferenceType()) {
       Env.setStorageLocation(*S, MemberLoc);

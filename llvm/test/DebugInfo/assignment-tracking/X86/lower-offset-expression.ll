@@ -13,6 +13,8 @@
 
 ; CHECK: DBG_VALUE %stack.0.a, $noreg, {{.+}}, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref, DW_OP_LLVM_fragment, 64, 32), debug-location
 
+target triple = "x86_64-unknown-linux-gnu"
+
 define dso_local void @fun() !dbg !7 {
 entry:
   %a = alloca <4 x i32>, !DIAssignID !24

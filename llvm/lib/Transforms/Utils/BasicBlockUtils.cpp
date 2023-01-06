@@ -502,8 +502,8 @@ static bool remomveUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
     bool IsDbgValueKind = (!DAI || at::getAssignmentInsts(DAI).empty());
     DebugVariable Aggregate = GetAggregateVariable(DVI);
     if (!SeenDefForAggregate.contains(Aggregate)) {
-      bool IsUndef = DVI->isUndef() && IsDbgValueKind;
-      if (!IsUndef) {
+      bool IsKill = DVI->isKillLocation() && IsDbgValueKind;
+      if (!IsKill) {
         SeenDefForAggregate.insert(Aggregate);
       } else if (DAI) {
         ToBeRemoved.push_back(DAI);

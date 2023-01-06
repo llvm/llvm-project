@@ -64,7 +64,7 @@ private:
 public:
   size_t size(BasicBlock *BB) const { return GetNumPreds(BB); }
   ArrayRef<BasicBlock *> get(BasicBlock *BB) {
-    return makeArrayRef(GetPreds(BB), GetNumPreds(BB));
+    return ArrayRef(GetPreds(BB), GetNumPreds(BB));
   }
 
   /// clear - Remove all information.

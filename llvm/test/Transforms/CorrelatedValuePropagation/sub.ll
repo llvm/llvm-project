@@ -146,11 +146,11 @@ exit:
 define void @test6(i32 %a) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[A:%.*]], ptrtoint (i32* @b to i32)
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[A:%.*]], ptrtoint (ptr @b to i32)
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %sub = sub i32 %a, ptrtoint (i32* @b to i32)
+  %sub = sub i32 %a, ptrtoint (ptr @b to i32)
   ret void
 }
 
@@ -298,9 +298,9 @@ exit:
 }
 
 @limit = external global i32
-define i32 @test11(i32* %p, i32 %i) {
+define i32 @test11(ptr %p, i32 %i) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[LIMIT:%.*]] = load i32, i32* [[P:%.*]], !range !0
+; CHECK-NEXT:    [[LIMIT:%.*]] = load i32, ptr [[P:%.*]], !range !0
 ; CHECK-NEXT:    [[WITHIN_1:%.*]] = icmp slt i32 [[LIMIT]], [[I:%.*]]
 ; CHECK-NEXT:    [[I_MINUS_7:%.*]] = add i32 [[I]], -7
 ; CHECK-NEXT:    [[WITHIN_2:%.*]] = icmp slt i32 [[LIMIT]], [[I_MINUS_7]]
@@ -473,18 +473,18 @@ exit:
 ; single basic block loop
 ; because the loop exit condition is SLT, we can supplement the iv sub
 ; (iv.next def) with an nsw.
-define i32 @test16(i32* %n, i32* %a) {
+define i32 @test16(ptr %n, ptr %a) {
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:  preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[PREHEADER:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ACC:%.*]] = phi i32 [ 0, [[PREHEADER]] ], [ [[ACC_CURR:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, i32* [[A:%.*]] unordered, align 8
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr [[A:%.*]] unordered, align 8
 ; CHECK-NEXT:    fence acquire
 ; CHECK-NEXT:    [[ACC_CURR]] = sub i32 [[ACC]], [[X]]
 ; CHECK-NEXT:    [[IV_NEXT]] = sub nsw i32 [[IV]], -1
-; CHECK-NEXT:    [[NVAL:%.*]] = load atomic i32, i32* [[N:%.*]] unordered, align 8
+; CHECK-NEXT:    [[NVAL:%.*]] = load atomic i32, ptr [[N:%.*]] unordered, align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV_NEXT]], [[NVAL]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -496,11 +496,11 @@ preheader:
 loop:
   %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
   %acc = phi i32 [ 0, %preheader ], [ %acc.curr, %loop ]
-  %x = load atomic i32, i32* %a unordered, align 8
+  %x = load atomic i32, ptr %a unordered, align 8
   fence acquire
   %acc.curr = sub i32 %acc, %x
   %iv.next = sub i32 %iv, -1
-  %nval = load atomic i32, i32* %n unordered, align 8
+  %nval = load atomic i32, ptr %n unordered, align 8
   %cmp = icmp slt i32 %iv.next, %nval
   br i1 %cmp, label %loop, label %exit
 

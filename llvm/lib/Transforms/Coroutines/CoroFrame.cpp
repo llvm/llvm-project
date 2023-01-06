@@ -77,11 +77,14 @@ public:
 //
 // For every basic block 'i' it maintains a BlockData that consists of:
 //   Consumes:  a bit vector which contains a set of indices of blocks that can
-//              reach block 'i'
+//              reach block 'i'. A block can trivially reach itself.
 //   Kills: a bit vector which contains a set of indices of blocks that can
-//          reach block 'i', but one of the path will cross a suspend point
+//          reach block 'i' but there is a path crossing a suspend point
+//          not repeating 'i' (path to 'i' without cycles containing 'i').
 //   Suspend: a boolean indicating whether block 'i' contains a suspend point.
 //   End: a boolean indicating whether block 'i' contains a coro.end intrinsic.
+//   KillLoop: There is a path from 'i' to 'i' not otherwise repeating 'i' that
+//             crosses a suspend point.
 //
 namespace {
 struct SuspendCrossingInfo {
@@ -92,6 +95,7 @@ struct SuspendCrossingInfo {
     BitVector Kills;
     bool Suspend = false;
     bool End = false;
+    bool KillLoop = false;
   };
   SmallVector<BlockData, SmallVectorThreshold> Block;
 
@@ -109,13 +113,28 @@ struct SuspendCrossingInfo {
 
   SuspendCrossingInfo(Function &F, coro::Shape &Shape);
 
-  bool hasPathCrossingSuspendPoint(BasicBlock *DefBB, BasicBlock *UseBB) const {
-    size_t const DefIndex = Mapping.blockToIndex(DefBB);
-    size_t const UseIndex = Mapping.blockToIndex(UseBB);
-
-    bool const Result = Block[UseIndex].Kills[DefIndex];
-    LLVM_DEBUG(dbgs() << UseBB->getName() << " => " << DefBB->getName()
+  /// Returns true if there is a path from \p From to \p To crossing a suspend
+  /// point without crossing \p From a 2nd time.
+  bool hasPathCrossingSuspendPoint(BasicBlock *From, BasicBlock *To) const {
+    size_t const FromIndex = Mapping.blockToIndex(From);
+    size_t const ToIndex = Mapping.blockToIndex(To);
+    bool const Result = Block[ToIndex].Kills[FromIndex];
+    LLVM_DEBUG(dbgs() << From->getName() << " => " << To->getName()
                       << " answer is " << Result << "\n");
+    return Result;
+  }
+
+  /// Returns true if there is a path from \p From to \p To crossing a suspend
+  /// point without crossing \p From a 2nd time. If \p From is the same as \p To
+  /// this will also check if there is a looping path crossing a suspend point.
+  bool hasPathOrLoopCrossingSuspendPoint(BasicBlock *From,
+                                         BasicBlock *To) const {
+    size_t const FromIndex = Mapping.blockToIndex(From);
+    size_t const ToIndex = Mapping.blockToIndex(To);
+    bool Result = Block[ToIndex].Kills[FromIndex] ||
+                  (From == To && Block[ToIndex].KillLoop);
+    LLVM_DEBUG(dbgs() << From->getName() << " => " << To->getName()
+                      << " answer is " << Result << " (path or loop)\n");
     return Result;
   }
 
@@ -271,6 +290,7 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, coro::Shape &Shape)
         } else {
           // This is reached when S block it not Suspend nor coro.end and it
           // need to make sure that it is not in the kill set.
+          S.KillLoop |= S.Kills[SuccNo];
           S.Kills.reset(SuccNo);
         }
 
@@ -1440,6 +1460,19 @@ private:
         for (auto *S : LifetimeStarts)
           if (Checker.isDefinitionAcrossSuspend(*S, I))
             return true;
+      // Addresses are guaranteed to be identical after every lifetime.start so
+      // we cannot use the local stack if the address escaped and there is a
+      // suspend point between lifetime markers. This should also cover the
+      // case of a single lifetime.start intrinsic in a loop with suspend point.
+      if (PI.isEscaped()) {
+        for (auto *A : LifetimeStarts) {
+          for (auto *B : LifetimeStarts) {
+            if (Checker.hasPathOrLoopCrossingSuspendPoint(A->getParent(),
+                                                          B->getParent()))
+              return true;
+          }
+        }
+      }
       return false;
     }
     // FIXME: Ideally the isEscaped check should come at the beginning.
@@ -2573,34 +2606,32 @@ static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
   }
 }
 
-static void collectFrameAllocas(Function &F, coro::Shape &Shape,
-                                const SuspendCrossingInfo &Checker,
-                                SmallVectorImpl<AllocaInfo> &Allocas) {
-  for (Instruction &I : instructions(F)) {
-    auto *AI = dyn_cast<AllocaInst>(&I);
-    if (!AI)
-      continue;
-    // The PromiseAlloca will be specially handled since it needs to be in a
-    // fixed position in the frame.
-    if (AI == Shape.SwitchLowering.PromiseAlloca) {
-      continue;
-    }
-    DominatorTree DT(F);
-    // The code that uses lifetime.start intrinsic does not work for functions
-    // with loops without exit. Disable it on ABIs we know to generate such
-    // code.
-    bool ShouldUseLifetimeStartInfo =
-        (Shape.ABI != coro::ABI::Async && Shape.ABI != coro::ABI::Retcon &&
-         Shape.ABI != coro::ABI::RetconOnce);
-    AllocaUseVisitor Visitor{F.getParent()->getDataLayout(), DT,
-                             *Shape.CoroBegin, Checker,
-                             ShouldUseLifetimeStartInfo};
-    Visitor.visitPtr(*AI);
-    if (!Visitor.getShouldLiveOnFrame())
-      continue;
-    Allocas.emplace_back(AI, Visitor.getAliasesCopy(),
-                         Visitor.getMayWriteBeforeCoroBegin());
-  }
+static void collectFrameAlloca(AllocaInst *AI, coro::Shape &Shape,
+                               const SuspendCrossingInfo &Checker,
+                               SmallVectorImpl<AllocaInfo> &Allocas,
+                               const DominatorTree &DT) {
+  if (Shape.CoroSuspends.empty())
+    return;
+
+  // The PromiseAlloca will be specially handled since it needs to be in a
+  // fixed position in the frame.
+  if (AI == Shape.SwitchLowering.PromiseAlloca)
+    return;
+
+  // The code that uses lifetime.start intrinsic does not work for functions
+  // with loops without exit. Disable it on ABIs we know to generate such
+  // code.
+  bool ShouldUseLifetimeStartInfo =
+      (Shape.ABI != coro::ABI::Async && Shape.ABI != coro::ABI::Retcon &&
+       Shape.ABI != coro::ABI::RetconOnce);
+  AllocaUseVisitor Visitor{AI->getModule()->getDataLayout(), DT,
+                           *Shape.CoroBegin, Checker,
+                           ShouldUseLifetimeStartInfo};
+  Visitor.visitPtr(*AI);
+  if (!Visitor.getShouldLiveOnFrame())
+    return;
+  Allocas.emplace_back(AI, Visitor.getAliasesCopy(),
+                       Visitor.getMayWriteBeforeCoroBegin());
 }
 
 void coro::salvageDebugInfo(
@@ -2753,6 +2784,8 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
     SpillInfo Spills;
     for (int Repeat = 0; Repeat < 4; ++Repeat) {
       // See if there are materializable instructions across suspend points.
+      // FIXME: We can use a worklist to track the possible materialize
+      // instructions instead of iterating the whole function again and again.
       for (Instruction &I : instructions(F))
         if (materializable(I)) {
           for (User *U : I.users())
@@ -2775,26 +2808,17 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
       Shape.ABI != coro::ABI::RetconOnce)
     sinkLifetimeStartMarkers(F, Shape, Checker);
 
-  if (Shape.ABI == coro::ABI::Switch || !Shape.CoroSuspends.empty())
-    collectFrameAllocas(F, Shape, Checker, FrameData.Allocas);
-  LLVM_DEBUG(dumpAllocas(FrameData.Allocas));
-
   // Collect the spills for arguments and other not-materializable values.
   for (Argument &A : F.args())
     for (User *U : A.users())
       if (Checker.isDefinitionAcrossSuspend(A, U))
         FrameData.Spills[&A].push_back(cast<Instruction>(U));
 
+  const DominatorTree DT(F);
   for (Instruction &I : instructions(F)) {
     // Values returned from coroutine structure intrinsics should not be part
     // of the Coroutine Frame.
     if (isCoroutineStructureIntrinsic(I) || &I == Shape.CoroBegin)
-      continue;
-
-    // The Coroutine Promise always included into coroutine frame, no need to
-    // check for suspend crossing.
-    if (Shape.ABI == coro::ABI::Switch &&
-        Shape.SwitchLowering.PromiseAlloca == &I)
       continue;
 
     // Handle alloca.alloc specially here.
@@ -2823,8 +2847,10 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
     if (isa<CoroAllocaGetInst>(I))
       continue;
 
-    if (isa<AllocaInst>(I))
+    if (auto *AI = dyn_cast<AllocaInst>(&I)) {
+      collectFrameAlloca(AI, Shape, Checker, FrameData.Allocas, DT);
       continue;
+    }
 
     for (User *U : I.users())
       if (Checker.isDefinitionAcrossSuspend(I, U)) {
@@ -2835,6 +2861,8 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
         FrameData.Spills[&I].push_back(cast<Instruction>(U));
       }
   }
+
+  LLVM_DEBUG(dumpAllocas(FrameData.Allocas));
 
   // We don't want the layout of coroutine frame to be affected
   // by debug information. So we only choose to salvage DbgValueInst for

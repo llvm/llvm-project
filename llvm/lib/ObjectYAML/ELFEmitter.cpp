@@ -1967,7 +1967,7 @@ bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
     return false;
 
   State.writeELFHeader(OS);
-  writeArrayData(OS, makeArrayRef(PHeaders));
+  writeArrayData(OS, ArrayRef(PHeaders));
 
   const ELFYAML::SectionHeaderTable &SHT = Doc.getSectionHeaderTable();
   if (!SHT.NoHeaders.value_or(false))

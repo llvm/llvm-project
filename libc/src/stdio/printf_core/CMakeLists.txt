@@ -21,6 +21,7 @@ add_object_library(
     libc.src.__support.str_to_integer
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.type_traits
 )
 
 add_object_library(

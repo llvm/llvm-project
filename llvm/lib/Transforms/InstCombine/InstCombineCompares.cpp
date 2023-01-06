@@ -631,8 +631,8 @@ static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
     // Cast base to the expected type.
     Value *NewVal = Builder.CreateBitOrPointerCast(
         Base, PtrTy, Start->getName() + "to.ptr");
-    NewVal = Builder.CreateInBoundsGEP(
-        ElemTy, NewVal, makeArrayRef(NewInsts[Val]), Val->getName() + ".ptr");
+    NewVal = Builder.CreateInBoundsGEP(ElemTy, NewVal, ArrayRef(NewInsts[Val]),
+                                       Val->getName() + ".ptr");
     NewVal = Builder.CreateBitOrPointerCast(
         NewVal, Val->getType(), Val->getName() + ".conv");
     Val->replaceAllUsesWith(NewVal);

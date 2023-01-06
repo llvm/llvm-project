@@ -343,6 +343,13 @@ public:
   /// \returns true if this APInt is non-positive.
   bool isNonPositive() const { return !isStrictlyPositive(); }
 
+  /// Determine if this APInt Value only has the specified bit set.
+  ///
+  /// \returns true if this APInt only has the specified bit set.
+  bool isOneBitSet(unsigned BitNo) const {
+    return (*this)[BitNo] && countPopulation() == 1;
+  }
+
   /// Determine if all bits are set.  This is true for zero-width values.
   bool isAllOnes() const {
     if (BitWidth == 0)

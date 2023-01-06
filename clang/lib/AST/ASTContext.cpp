@@ -10191,7 +10191,8 @@ QualType ASTContext::mergeFunctionParameterTypes(QualType lhs, QualType rhs,
 
 QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
                                         bool OfBlockPointer, bool Unqualified,
-                                        bool AllowCXX) {
+                                        bool AllowCXX,
+                                        bool IsConditionalOperator) {
   const auto *lbase = lhs->castAs<FunctionType>();
   const auto *rbase = rhs->castAs<FunctionType>();
   const auto *lproto = dyn_cast<FunctionProtoType>(lbase);
@@ -10254,9 +10255,27 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
   if (lbaseInfo.getNoCfCheck() != rbaseInfo.getNoCfCheck())
     return {};
 
-  // FIXME: some uses, e.g. conditional exprs, really want this to be 'both'.
-  bool NoReturn = lbaseInfo.getNoReturn() || rbaseInfo.getNoReturn();
-
+  // When merging declarations, it's common for supplemental information like
+  // attributes to only be present in one of the declarations, and we generally
+  // want type merging to preserve the union of information.  So a merged
+  // function type should be noreturn if it was noreturn in *either* operand
+  // type.
+  //
+  // But for the conditional operator, this is backwards.  The result of the
+  // operator could be either operand, and its type should conservatively
+  // reflect that.  So a function type in a composite type is noreturn only
+  // if it's noreturn in *both* operand types.
+  //
+  // Arguably, noreturn is a kind of subtype, and the conditional operator
+  // ought to produce the most specific common supertype of its operand types.
+  // That would differ from this rule in contravariant positions.  However,
+  // neither C nor C++ generally uses this kind of subtype reasoning.  Also,
+  // as a practical matter, it would only affect C code that does abstraction of
+  // higher-order functions (taking noreturn callbacks!), which is uncommon to
+  // say the least.  So we use the simpler rule.
+  bool NoReturn = IsConditionalOperator
+                      ? lbaseInfo.getNoReturn() && rbaseInfo.getNoReturn()
+                      : lbaseInfo.getNoReturn() || rbaseInfo.getNoReturn();
   if (lbaseInfo.getNoReturn() != NoReturn)
     allLTypes = false;
   if (rbaseInfo.getNoReturn() != NoReturn)
@@ -10389,9 +10408,9 @@ static QualType mergeEnumWithInteger(ASTContext &Context, const EnumType *ET,
   return {};
 }
 
-QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
-                                bool OfBlockPointer,
-                                bool Unqualified, bool BlockReturnType) {
+QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
+                                bool Unqualified, bool BlockReturnType,
+                                bool IsConditionalOperator) {
   // For C++ we will not reach this code with reference types (see below),
   // for OpenMP variant call overloading we might.
   //
@@ -10684,7 +10703,8 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
                                   ArrayType::ArraySizeModifier(), 0);
   }
   case Type::FunctionNoProto:
-    return mergeFunctionTypes(LHS, RHS, OfBlockPointer, Unqualified);
+    return mergeFunctionTypes(LHS, RHS, OfBlockPointer, Unqualified,
+                              /*AllowCXX=*/false, IsConditionalOperator);
   case Type::Record:
   case Type::Enum:
     return {};

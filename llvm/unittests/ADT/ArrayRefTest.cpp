@@ -44,9 +44,9 @@ namespace {
 TEST(ArrayRefTest, AllocatorCopy) {
   BumpPtrAllocator Alloc;
   static const uint16_t Words1[] = { 1, 4, 200, 37 };
-  ArrayRef<uint16_t> Array1 = makeArrayRef(Words1, 4);
+  ArrayRef<uint16_t> Array1 = ArrayRef(Words1, 4);
   static const uint16_t Words2[] = { 11, 4003, 67, 64000, 13 };
-  ArrayRef<uint16_t> Array2 = makeArrayRef(Words2, 5);
+  ArrayRef<uint16_t> Array2 = ArrayRef(Words2, 5);
   ArrayRef<uint16_t> Array1c = Array1.copy(Alloc);
   ArrayRef<uint16_t> Array2c = Array2.copy(Alloc);
   EXPECT_TRUE(Array1.equals(Array1c));
@@ -63,9 +63,9 @@ TEST(ArrayRefTest, AllocatorCopy) {
     void operator=(const NonAssignable &RHS) { assert(RHS.Ptr != nullptr); }
     bool operator==(const NonAssignable &RHS) const { return Ptr == RHS.Ptr; }
   } Array3Src[] = {"hello", "world"};
-  ArrayRef<NonAssignable> Array3Copy = makeArrayRef(Array3Src).copy(Alloc);
-  EXPECT_EQ(makeArrayRef(Array3Src), Array3Copy);
-  EXPECT_NE(makeArrayRef(Array3Src).data(), Array3Copy.data());
+  ArrayRef<NonAssignable> Array3Copy = ArrayRef(Array3Src).copy(Alloc);
+  EXPECT_EQ(ArrayRef(Array3Src), Array3Copy);
+  EXPECT_NE(ArrayRef(Array3Src).data(), Array3Copy.data());
 }
 
 // This test is pure UB given the ArrayRef<> implementation.
@@ -222,31 +222,32 @@ TEST(ArrayRefTest, EmptyInitializerList) {
   EXPECT_TRUE(A.empty());
 }
 
-TEST(ArrayRefTest, makeArrayRef) {
+TEST(ArrayRefTest, ArrayRef) {
   static const int A1[] = {1, 2, 3, 4, 5, 6, 7, 8};
 
-  // No copy expected for non-const ArrayRef (true no-op)
+  // A copy is expected for non-const ArrayRef (thin copy)
   ArrayRef<int> AR1(A1);
-  ArrayRef<int> &AR1Ref = makeArrayRef(AR1);
-  EXPECT_EQ(&AR1, &AR1Ref);
+  const ArrayRef<int> &AR1Ref = ArrayRef(AR1);
+  EXPECT_NE(&AR1, &AR1Ref);
+  EXPECT_TRUE(AR1.equals(AR1Ref));
 
   // A copy is expected for non-const ArrayRef (thin copy)
   const ArrayRef<int> AR2(A1);
-  const ArrayRef<int> &AR2Ref = makeArrayRef(AR2);
+  const ArrayRef<int> &AR2Ref = ArrayRef(AR2);
   EXPECT_NE(&AR2Ref, &AR2);
   EXPECT_TRUE(AR2.equals(AR2Ref));
 }
 
 TEST(ArrayRefTest, OwningArrayRef) {
   static const int A1[] = {0, 1};
-  OwningArrayRef<int> A(makeArrayRef(A1));
+  OwningArrayRef<int> A{ArrayRef(A1)};
   OwningArrayRef<int> B(std::move(A));
   EXPECT_EQ(A.data(), nullptr);
 }
 
-TEST(ArrayRefTest, makeArrayRefFromStdArray) {
+TEST(ArrayRefTest, ArrayRefFromStdArray) {
   std::array<int, 5> A1{{42, -5, 0, 1000000, -1000000}};
-  ArrayRef<int> A2 = makeArrayRef(A1);
+  ArrayRef<int> A2 = ArrayRef(A1);
 
   EXPECT_EQ(A1.size(), A2.size());
   for (std::size_t i = 0; i < A1.size(); ++i) {

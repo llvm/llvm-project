@@ -40,7 +40,7 @@ public:
     assert(Constraints.empty() || R.size() == Constraints.back().size());
     // If all variable coefficients are 0, the constraint does not provide any
     // usable information.
-    if (all_of(makeArrayRef(R).drop_front(1), [](int64_t C) { return C == 0; }))
+    if (all_of(ArrayRef(R).drop_front(1), [](int64_t C) { return C == 0; }))
       return false;
 
     for (const auto &C : R) {
@@ -55,7 +55,7 @@ public:
   bool addVariableRowFill(ArrayRef<int64_t> R) {
     // If all variable coefficients are 0, the constraint does not provide any
     // usable information.
-    if (all_of(makeArrayRef(R).drop_front(1), [](int64_t C) { return C == 0; }))
+    if (all_of(ArrayRef(R).drop_front(1), [](int64_t C) { return C == 0; }))
       return false;
 
     for (auto &CR : Constraints) {

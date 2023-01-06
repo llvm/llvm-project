@@ -92,6 +92,7 @@ define amdgpu_kernel void @loop_const_true(ptr addrspace(3) %ptr, i32 %n) nounwi
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x9
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_addk_i32 s0, 0x80
+; GCN-NEXT:    s_and_b64 vcc, exec, -1
 ; GCN-NEXT:    s_mov_b32 m0, -1
 ; GCN-NEXT:  .LBB1_1: ; %for.body
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -101,7 +102,10 @@ define amdgpu_kernel void @loop_const_true(ptr addrspace(3) %ptr, i32 %n) nounwi
 ; GCN-NEXT:    v_add_f32_e32 v1, 1.0, v1
 ; GCN-NEXT:    ds_write_b32 v0, v1
 ; GCN-NEXT:    s_add_i32 s0, s0, 4
-; GCN-NEXT:    s_branch .LBB1_1
+; GCN-NEXT:    s_mov_b64 vcc, vcc
+; GCN-NEXT:   s_cbranch_vccnz .LBB1_1
+; GCN-NEXT:  ; %bb.2: ; %DummyReturnBlock
+; GCN-NEXT:    s_endpgm
 ;
 ; GCN_DBG-LABEL: loop_const_true:
 ; GCN_DBG:       ; %bb.0: ; %entry

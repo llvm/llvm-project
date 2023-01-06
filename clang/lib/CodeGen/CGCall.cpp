@@ -1856,19 +1856,16 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
     if (!CodeGenOpts.TrapFuncName.empty())
       FuncAttrs.addAttribute("trap-func-name", CodeGenOpts.TrapFuncName);
   } else {
-    StringRef FpKind;
     switch (CodeGenOpts.getFramePointer()) {
     case CodeGenOptions::FramePointerKind::None:
-      FpKind = "none";
+      // This is the default behavior.
       break;
     case CodeGenOptions::FramePointerKind::NonLeaf:
-      FpKind = "non-leaf";
-      break;
     case CodeGenOptions::FramePointerKind::All:
-      FpKind = "all";
-      break;
+      FuncAttrs.addAttribute("frame-pointer",
+                             CodeGenOptions::getFramePointerKindName(
+                                 CodeGenOpts.getFramePointer()));
     }
-    FuncAttrs.addAttribute("frame-pointer", FpKind);
 
     if (CodeGenOpts.LessPreciseFPMAD)
       FuncAttrs.addAttribute("less-precise-fpmad", "true");

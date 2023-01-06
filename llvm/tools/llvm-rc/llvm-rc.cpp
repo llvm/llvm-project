@@ -740,10 +740,10 @@ int llvm_rc_main(int Argc, char **Argv) {
 
   char **DashDash = std::find_if(Argv + 1, Argv + Argc,
                                  [](StringRef Str) { return Str == "--"; });
-  ArrayRef<const char *> ArgsArr = makeArrayRef(Argv + 1, DashDash);
+  ArrayRef<const char *> ArgsArr = ArrayRef(Argv + 1, DashDash);
   ArrayRef<const char *> FileArgsArr;
   if (DashDash != Argv + Argc)
-    FileArgsArr = makeArrayRef(DashDash + 1, Argv + Argc);
+    FileArgsArr = ArrayRef(DashDash + 1, Argv + Argc);
 
   RcOptions Opts = getOptions(Argv[0], ArgsArr, FileArgsArr);
 

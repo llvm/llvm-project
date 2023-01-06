@@ -300,8 +300,7 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
 
 void PseudoLoweringEmitter::run(raw_ostream &o) {
   StringRef Classes[] = {"PseudoInstExpansion", "Instruction"};
-  std::vector<Record *> Insts =
-      Records.getAllDerivedDefinitions(makeArrayRef(Classes));
+  std::vector<Record *> Insts = Records.getAllDerivedDefinitions(Classes);
 
   // Process the pseudo expansion definitions, validating them as we do so.
   Records.startTimer("Process definitions");

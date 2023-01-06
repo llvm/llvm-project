@@ -1284,7 +1284,8 @@ static MVT getPhysicalRegisterVT(SDNode *N, unsigned Reg,
     NumRes = 1;
   } else {
     const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
-    assert(MCID.ImplicitDefs && "Physical reg def must be in implicit def list!");
+    assert(MCID.getImplicitDefs() &&
+           "Physical reg def must be in implicit def list!");
     NumRes = MCID.getNumDefs();
     for (const MCPhysReg *ImpDef = MCID.getImplicitDefs(); *ImpDef; ++ImpDef) {
       if (Reg == *ImpDef)
@@ -1422,7 +1423,7 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
     }
     if (const uint32_t *RegMask = getNodeRegMask(Node))
       CheckForLiveRegDefMasked(SU, RegMask,
-                               makeArrayRef(LiveRegDefs.get(), TRI->getNumRegs()),
+                               ArrayRef(LiveRegDefs.get(), TRI->getNumRegs()),
                                RegAdded, LRegs);
 
     const MCInstrDesc &MCID = TII->get(Node->getMachineOpcode());
@@ -1438,7 +1439,7 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
           CheckForLiveRegDef(SU, Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);
         }
     }
-    if (!MCID.ImplicitDefs)
+    if (!MCID.getImplicitDefs())
       continue;
     for (const MCPhysReg *Reg = MCID.getImplicitDefs(); *Reg; ++Reg)
       CheckForLiveRegDef(SU, *Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);

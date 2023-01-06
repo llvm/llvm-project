@@ -58,8 +58,8 @@ public:
   /// Users of this function should pay attention to respect endianness
   /// contraints.
   void update(StringRef Data) {
-    update(makeArrayRef(reinterpret_cast<const uint8_t *>(Data.data()),
-                        Data.size()));
+    update(
+        ArrayRef(reinterpret_cast<const uint8_t *>(Data.data()), Data.size()));
   }
 
   /// Forward to `HasherT::final()` if available.
@@ -131,9 +131,8 @@ public:
     add(Value.size());
     if (hashbuilder_detail::IsHashableData<T>::value &&
         Endianness == support::endian::system_endianness()) {
-      this->update(
-          makeArrayRef(reinterpret_cast<const uint8_t *>(Value.begin()),
-                       Value.size() * sizeof(T)));
+      this->update(ArrayRef(reinterpret_cast<const uint8_t *>(Value.begin()),
+                            Value.size() * sizeof(T)));
     } else {
       for (auto &V : Value)
         add(V);
@@ -160,8 +159,8 @@ public:
     // `StringRef::begin()` and `StringRef::end()`. Explicitly call `update` to
     // guarantee the fast path.
     add(Value.size());
-    this->update(makeArrayRef(reinterpret_cast<const uint8_t *>(Value.begin()),
-                              Value.size()));
+    this->update(ArrayRef(reinterpret_cast<const uint8_t *>(Value.begin()),
+                          Value.size()));
     return *this;
   }
 
@@ -210,7 +209,7 @@ public:
   ///   friend void addHash(HashBuilderImpl<HasherT, Endianness> &HBuilder,
   ///                       const StructWithFastHash &Value) {
   ///     if (Endianness == support::endian::system_endianness()) {
-  ///       HBuilder.update(makeArrayRef(
+  ///       HBuilder.update(ArrayRef(
   ///           reinterpret_cast<const uint8_t *>(&Value), sizeof(Value)));
   ///     } else {
   ///       // Rely on existing `add` methods to handle endianness.
@@ -240,7 +239,7 @@ public:
   ///   friend void addHash(HashBuilderImpl<HasherT, Endianness> &HBuilder,
   ///                       const CustomContainer &Value) {
   ///     if (Endianness == support::endian::system_endianness()) {
-  ///       HBuilder.update(makeArrayRef(
+  ///       HBuilder.update(ArrayRef(
   ///           reinterpret_cast<const uint8_t *>(&Value.Size),
   ///           sizeof(Value.Size) + Value.Size * sizeof(Value.Elements[0])));
   ///     } else {
@@ -320,8 +319,8 @@ public:
   std::enable_if_t<is_detected<HasByteSwapT, T>::value, HashBuilderImpl &>
   adjustForEndiannessAndAdd(const T &Value) {
     T SwappedValue = support::endian::byte_swap(Value, Endianness);
-    this->update(makeArrayRef(reinterpret_cast<const uint8_t *>(&SwappedValue),
-                              sizeof(SwappedValue)));
+    this->update(ArrayRef(reinterpret_cast<const uint8_t *>(&SwappedValue),
+                          sizeof(SwappedValue)));
     return *this;
   }
 
@@ -349,8 +348,8 @@ private:
                        Endianness == support::endian::system_endianness(),
                    HashBuilderImpl &>
   addRangeElementsImpl(T *First, T *Last, std::forward_iterator_tag) {
-    this->update(makeArrayRef(reinterpret_cast<const uint8_t *>(First),
-                              (Last - First) * sizeof(T)));
+    this->update(ArrayRef(reinterpret_cast<const uint8_t *>(First),
+                          (Last - First) * sizeof(T)));
     return *this;
   }
 };

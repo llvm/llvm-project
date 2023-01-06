@@ -108,7 +108,7 @@ TEST(BitstreamReaderTest, readRecordWithBlobWhileStreaming) {
       Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
       AbbrevID = Stream.EmitAbbrev(std::move(Abbrev));
       unsigned Record[] = {RecordID};
-      Stream.EmitRecordWithBlob(AbbrevID, makeArrayRef(Record), BlobIn);
+      Stream.EmitRecordWithBlob(AbbrevID, ArrayRef(Record), BlobIn);
 
       Stream.ExitBlock();
     }

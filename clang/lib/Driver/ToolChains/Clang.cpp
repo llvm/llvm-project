@@ -2705,6 +2705,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       !JA.isOffloading(Action::OFK_HIP))
     FPContract = "on";
   bool StrictFPModel = false;
+  StringRef Float16ExcessPrecision = "";
 
   if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
     CmdArgs.push_back("-mlimit-float-precision");
@@ -2901,6 +2902,27 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       break;
     }
 
+    case options::OPT_fexcess_precision_EQ: {
+      StringRef Val = A->getValue();
+      const llvm::Triple::ArchType Arch = TC.getArch();
+      if (Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64) {
+        if (Val.equals("standard") || Val.equals("fast"))
+          Float16ExcessPrecision = Val;
+        // To make it GCC compatible, allow the value of "16" which
+        // means disable excess precision, the same meaning than clang's
+        // equivalent value "none".
+        else if (Val.equals("16"))
+          Float16ExcessPrecision = "none";
+        else
+          D.Diag(diag::err_drv_unsupported_option_argument)
+              << A->getSpelling() << Val;
+      } else {
+        if (!(Val.equals("standard") || Val.equals("fast")))
+          D.Diag(diag::err_drv_unsupported_option_argument)
+              << A->getSpelling() << Val;
+      }
+      break;
+    }
     case options::OPT_ffinite_math_only:
       HonorINFs = false;
       HonorNaNs = false;
@@ -3070,6 +3092,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
   if (!FPEvalMethod.empty())
     CmdArgs.push_back(Args.MakeArgString("-ffp-eval-method=" + FPEvalMethod));
+
+  if (!Float16ExcessPrecision.empty())
+    CmdArgs.push_back(Args.MakeArgString("-ffloat16-excess-precision=" +
+                                         Float16ExcessPrecision));
 
   ParseMRecip(D, Args, CmdArgs);
 

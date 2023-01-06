@@ -2418,9 +2418,9 @@ bool AMDGPULegalizerInfo::legalizeSinCos(
 
   Intrinsic::ID TrigIntrin = MI.getOpcode() == AMDGPU::G_FSIN ?
     Intrinsic::amdgcn_sin : Intrinsic::amdgcn_cos;
-  B.buildIntrinsic(TrigIntrin, makeArrayRef<Register>(DstReg), false)
-    .addUse(TrigVal)
-    .setMIFlags(Flags);
+  B.buildIntrinsic(TrigIntrin, ArrayRef<Register>(DstReg), false)
+      .addUse(TrigVal)
+      .setMIFlags(Flags);
   MI.eraseFromParent();
   return true;
 }
@@ -4014,11 +4014,11 @@ bool AMDGPULegalizerInfo::legalizeFDIV64(MachineInstr &MI,
     .addUse(Scale)
     .setMIFlags(Flags);
 
-  B.buildIntrinsic(Intrinsic::amdgcn_div_fixup, makeArrayRef(Res), false)
-    .addUse(Fmas.getReg(0))
-    .addUse(RHS)
-    .addUse(LHS)
-    .setMIFlags(Flags);
+  B.buildIntrinsic(Intrinsic::amdgcn_div_fixup, ArrayRef(Res), false)
+      .addUse(Fmas.getReg(0))
+      .addUse(RHS)
+      .addUse(LHS)
+      .setMIFlags(Flags);
 
   MI.eraseFromParent();
   return true;

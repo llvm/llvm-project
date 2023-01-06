@@ -220,7 +220,7 @@ Value *GenericToNVVM::remapConstantVectorOrConstantAggregate(
   } else {
     for (unsigned i = 0; i < NumOperands; ++i) {
       NewValue =
-          Builder.CreateInsertValue(NewValue, NewOperands[i], makeArrayRef(i));
+          Builder.CreateInsertValue(NewValue, NewOperands[i], ArrayRef(i));
     }
   }
 
@@ -274,7 +274,7 @@ Value *GenericToNVVM::remapConstantExpr(Module *M, Function *F, ConstantExpr *C,
     // GetElementPtrConstantExpr
     return Builder.CreateGEP(cast<GEPOperator>(C)->getSourceElementType(),
                              NewOperands[0],
-                             makeArrayRef(&NewOperands[1], NumOperands - 1), "",
+                             ArrayRef(&NewOperands[1], NumOperands - 1), "",
                              cast<GEPOperator>(C)->isInBounds());
   case Instruction::Select:
     // SelectConstantExpr

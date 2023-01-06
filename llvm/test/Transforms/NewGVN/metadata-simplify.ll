@@ -5,153 +5,153 @@
 
 ; RUN: opt < %s -S -passes=newgvn | FileCheck %s
 
-define i1 @test1(i32** %arg, i1 %arg2) {
+define i1 @test1(ptr %arg, i1 %arg2) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32*, i32** [[ARG:%.*]], !nonnull !0
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32* [[LOAD1]], null
+; CHECK-NEXT:    [[LOAD1:%.*]] = load ptr, ptr [[ARG:%.*]], !nonnull !0
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[LOAD1]], null
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[LOAD2:%.*]] = load i32*, i32** [[ARG]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32* [[LOAD2]], null
+; CHECK-NEXT:    [[LOAD2:%.*]] = load ptr, ptr [[ARG]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[LOAD2]], null
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   br i1 %arg2, label %bb1, label %bb2
 
 bb1:
-  %load1 = load i32*, i32** %arg, !nonnull !0
-  %cmp1 = icmp eq i32* %load1, null
+  %load1 = load ptr, ptr %arg, !nonnull !0
+  %cmp1 = icmp eq ptr %load1, null
   ret i1 %cmp1
 
 bb2:
-  %load2 = load i32*, i32** %arg
-  %cmp2 = icmp eq i32* %load2, null
+  %load2 = load ptr, ptr %arg
+  %cmp2 = icmp eq ptr %load2, null
   ret i1 %cmp2
 }
 
-define i1 @test2(i32** %arg, i1 %arg2) {
+define i1 @test2(ptr %arg, i1 %arg2) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32*, i32** [[ARG:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32* [[LOAD1]], null
+; CHECK-NEXT:    [[LOAD1:%.*]] = load ptr, ptr [[ARG:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[LOAD1]], null
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[LOAD2:%.*]] = load i32*, i32** [[ARG]], !nonnull !0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32* [[LOAD2]], null
+; CHECK-NEXT:    [[LOAD2:%.*]] = load ptr, ptr [[ARG]], !nonnull !0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[LOAD2]], null
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   br i1 %arg2, label %bb1, label %bb2
 
 bb1:
-  %load1 = load i32*, i32** %arg
-  %cmp1 = icmp eq i32* %load1, null
+  %load1 = load ptr, ptr %arg
+  %cmp1 = icmp eq ptr %load1, null
   ret i1 %cmp1
 
 bb2:
-  %load2 = load i32*, i32** %arg, !nonnull !0
-  %cmp2 = icmp eq i32* %load2, null
+  %load2 = load ptr, ptr %arg, !nonnull !0
+  %cmp2 = icmp eq ptr %load2, null
   ret i1 %cmp2
 }
 
 
-define i1 @test3(i32* %ptr, i1 %arg2) {
+define i1 @test3(ptr %ptr, i1 %arg2) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, i32* [[PTR:%.*]], !range !1
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[PTR:%.*]], !range !1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[LOAD1]], 999
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, i32* [[PTR]]
+; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[PTR]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[LOAD2]], 999
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   br i1 %arg2, label %bb1, label %bb2
 
 bb1:
-  %load1 = load i32, i32* %ptr, !range !1
+  %load1 = load i32, ptr %ptr, !range !1
   %cmp1 = icmp ne i32 %load1, 999
   ret i1 %cmp1
 
 bb2:
-  %load2 = load i32, i32* %ptr
+  %load2 = load i32, ptr %ptr
   %cmp2 = icmp ne i32 %load2, 999
   ret i1 %cmp2
 }
 
-define i1 @test4(i32* %ptr, i1 %arg2) {
+define i1 @test4(ptr %ptr, i1 %arg2) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, i32* [[PTR:%.*]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[PTR:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[LOAD1]], 999
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, i32* [[PTR]], !range !1
+; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[PTR]], !range !1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[LOAD2]], 999
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   br i1 %arg2, label %bb1, label %bb2
 
 bb1:
-  %load1 = load i32, i32* %ptr
+  %load1 = load i32, ptr %ptr
   %cmp1 = icmp ne i32 %load1, 999
   ret i1 %cmp1
 
 bb2:
-  %load2 = load i32, i32* %ptr, !range !1
+  %load2 = load i32, ptr %ptr, !range !1
   %cmp2 = icmp ne i32 %load2, 999
   ret i1 %cmp2
 }
 
-define i1 @test5(i32* %ptr, i1 %arg2) {
+define i1 @test5(ptr %ptr, i1 %arg2) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, i32* [[PTR:%.*]], !range !1
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[PTR:%.*]], !range !1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[LOAD1]], 999
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, i32* [[PTR]]
+; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[PTR]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[LOAD2]], 999
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   br i1 %arg2, label %bb1, label %bb2
 
 bb1:
-  %load1 = load i32, i32* %ptr, !range !1
+  %load1 = load i32, ptr %ptr, !range !1
   %cmp1 = icmp slt i32 %load1, 999
   ret i1 %cmp1
 
 bb2:
-  %load2 = load i32, i32* %ptr
+  %load2 = load i32, ptr %ptr
   %cmp2 = icmp slt i32 %load2, 999
   ret i1 %cmp2
 }
 
-define i1 @test6(i32* %ptr, i1 %arg2) {
+define i1 @test6(ptr %ptr, i1 %arg2) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, i32* [[PTR:%.*]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[PTR:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[LOAD1]], 999
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, i32* [[PTR]], !range !1
+; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[PTR]], !range !1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[LOAD2]], 999
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   br i1 %arg2, label %bb1, label %bb2
 
 bb1:
-  %load1 = load i32, i32* %ptr
+  %load1 = load i32, ptr %ptr
   %cmp1 = icmp slt i32 %load1, 999
   ret i1 %cmp1
 
 bb2:
-  %load2 = load i32, i32* %ptr, !range !1
+  %load2 = load i32, ptr %ptr, !range !1
   %cmp2 = icmp slt i32 %load2, 999
   ret i1 %cmp2
 }

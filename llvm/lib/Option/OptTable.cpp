@@ -497,7 +497,7 @@ InputArgList OptTable::parseArgs(int Argc, char *const *Argv,
   cl::expandResponseFiles(Argc, Argv, EnvVar, Saver, NewArgv);
 
   unsigned MAI, MAC;
-  opt::InputArgList Args = ParseArgs(makeArrayRef(NewArgv), MAI, MAC);
+  opt::InputArgList Args = ParseArgs(ArrayRef(NewArgv), MAI, MAC);
   if (MAC)
     ErrorFn((Twine(Args.getArgString(MAI)) + ": missing argument").str());
 

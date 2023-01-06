@@ -3,9 +3,9 @@
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 declare i32 @__CxxFrameHandler3(...)
-define i8* @f2(i1 %val) presplitcoroutine personality i32 (...)* @__CxxFrameHandler3 {
+define ptr @f2(i1 %val) presplitcoroutine personality ptr @__CxxFrameHandler3 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %valueA = call i32 @f();
   %valueB = call i32 @f();
   %need.alloc = call i1 @llvm.coro.alloc(token %id)
@@ -13,12 +13,12 @@ entry:
 
 dyn.alloc:
   %size = call i32 @llvm.coro.size.i32()
-  %alloc = call i8* @malloc(i32 %size)
+  %alloc = call ptr @malloc(i32 %size)
   br label %dowork.0
 
 dowork.0:
-  %phi = phi i8* [ null, %entry ], [ %alloc, %dyn.alloc ]
-  %hdl = call i8* @llvm.coro.begin(token %id, i8* %phi)
+  %phi = phi ptr [ null, %entry ], [ %alloc, %dyn.alloc ]
+  %hdl = call ptr @llvm.coro.begin(token %id, ptr %phi)
   invoke void @print(i32 0)
     to label %checksuspend unwind label %catch.dispatch.1
 
@@ -32,18 +32,18 @@ dowork.1:
     to label %checksuspend unwind label %catch.dispatch.1
 
 cleanup:
-  %mem = call i8* @llvm.coro.free(token %id, i8* %hdl)
-  call void @free(i8* %mem)
+  %mem = call ptr @llvm.coro.free(token %id, ptr %hdl)
+  call void @free(ptr %mem)
   br label %suspend
 
 suspend:
-  call i1 @llvm.coro.end(i8* %hdl, i1 0)
-  ret i8* %hdl
+  call i1 @llvm.coro.end(ptr %hdl, i1 0)
+  ret ptr %hdl
 
 catch.dispatch.1:
   %cs1 = catchswitch within none [label %handler1] unwind to caller
 handler1:
-  %h1 = catchpad within %cs1 [i8* null, i32 64, i8* null]
+  %h1 = catchpad within %cs1 [ptr null, i32 64, ptr null]
   invoke void @print(i32 2) [ "funclet"(token %h1) ]
           to label %catchret1 unwind label %catch.dispatch.2
 catchret1:
@@ -52,7 +52,7 @@ catchret1:
 catch.dispatch.2:
   %cs2 = catchswitch within %h1 [label %handler2] unwind label %cleanup2
 handler2:
-  %h2 = catchpad within %cs2 [i8* null, i32 64, i8* null]
+  %h2 = catchpad within %cs2 [ptr null, i32 64, ptr null]
   invoke void @print(i32 3) [ "funclet"(token %h2) ]
           to label %cleanup unwind label %cleanup2
 cleanup2:
@@ -84,11 +84,11 @@ cleanup2:
 ; CHECK:   br i1 %switch, label %cleanup2.from.handler2, label %cleanup2.from.catch.dispatch.2
 
 ; CHECK: cleanup2.from.handler2:
-; CHECK:   %valueB.reload = load i32, i32* %valueB.spill.addr, align 4
+; CHECK:   %valueB.reload = load i32, ptr %valueB.spill.addr, align 4
 ; CHECK:   br label %cleanup2
 
 ; CHECK: cleanup2.from.catch.dispatch.2:
-; CHECK:   %valueA.reload = load i32, i32* %valueA.spill.addr, align 4
+; CHECK:   %valueA.reload = load i32, ptr %valueA.spill.addr, align 4
 ; CHECK:   br label %cleanup2
 
 ; CHECK: cleanup2:
@@ -97,19 +97,19 @@ cleanup2:
 ; CHECK:   br label %cleanup
 }
 
-declare i8* @llvm.coro.free(token, i8*)
+declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()
 declare i8  @llvm.coro.suspend(token, i1)
-declare void @llvm.coro.resume(i8*)
-declare void @llvm.coro.destroy(i8*)
+declare void @llvm.coro.resume(ptr)
+declare void @llvm.coro.destroy(ptr)
 
-declare token @llvm.coro.id(i32, i8*, i8*, i8*)
+declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
-declare i8* @llvm.coro.begin(token, i8*)
-declare i1 @llvm.coro.end(i8*, i1)
+declare ptr @llvm.coro.begin(token, ptr)
+declare i1 @llvm.coro.end(ptr, i1)
 
-declare noalias i8* @malloc(i32)
+declare noalias ptr @malloc(i32)
 declare void @print(i32)
-declare void @free(i8*)
+declare void @free(ptr)
 
 declare i32 @f()

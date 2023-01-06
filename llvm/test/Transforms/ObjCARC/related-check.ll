@@ -132,6 +132,19 @@ define ptr @foo() {
   ret ptr %call78
 }
 
+; CHECK-LABEL: define void @test_select(
+; CHECK: call ptr @llvm.objc.retain(
+; CHECK: call void @llvm.objc.release(
+
+define void @test_select(i1 %c0, i1 %c1, ptr %p0, ptr %p1) {
+  %cond = select i1 %c0, ptr %p0, ptr %p1
+  %cond5 = select i1 %c0, ptr %p1, ptr %p0
+  %cond14 = select i1 %c1, ptr %cond5, ptr null
+  call ptr @llvm.objc.retain(ptr %cond14)
+  call void @llvm.objc.release(ptr %cond)
+  ret void
+}
+
 declare ptr @bar(ptr)
 
 declare ptr @llvm.objc.retain(ptr)

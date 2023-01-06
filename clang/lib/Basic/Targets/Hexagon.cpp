@@ -102,6 +102,11 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   std::string NumPhySlots = isTinyCore() ? "3" : "4";
   Builder.defineMacro("__HEXAGON_PHYSICAL_SLOTS__", NumPhySlots);
+
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
 }
 
 bool HexagonTargetInfo::initFeatureMap(

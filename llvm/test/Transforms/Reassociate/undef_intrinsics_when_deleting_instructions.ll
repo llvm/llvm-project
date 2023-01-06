@@ -4,11 +4,11 @@
 ; that gets dropped and cannot be salvaged.
 
 ; CHECK-NOT: %add = fadd fast float %a, %b
-; CHECK: call void @llvm.dbg.value(metadata float undef, metadata [[VAR_X:![0-9]+]], metadata !DIExpression())
+; CHECK: call void @llvm.dbg.value(metadata float poison, metadata [[VAR_X:![0-9]+]], metadata !DIExpression())
 
 ; CHECK-LABEL: if.then:
 ; CHECK-NOT: %add1 = fadd fast float %add, %c
-; CHECK: call void @llvm.dbg.value(metadata float undef, metadata [[VAR_Y:![0-9]+]], metadata !DIExpression())
+; CHECK: call void @llvm.dbg.value(metadata float poison, metadata [[VAR_Y:![0-9]+]], metadata !DIExpression())
 ; CHECK-LABEL: !0 =
 ; CHECK-DAG: [[VAR_Y]] = !DILocalVariable(name: "y"
 ; CHECK-DAG: [[VAR_X]] = !DILocalVariable(name: "x"

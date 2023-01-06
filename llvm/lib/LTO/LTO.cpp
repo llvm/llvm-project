@@ -1190,7 +1190,7 @@ static const char *libcallRoutineNames[] = {
 };
 
 ArrayRef<const char*> LTO::getRuntimeLibcallSymbols() {
-  return makeArrayRef(libcallRoutineNames);
+  return ArrayRef(libcallRoutineNames);
 }
 
 /// This class defines the interface to the ThinLTO backend.

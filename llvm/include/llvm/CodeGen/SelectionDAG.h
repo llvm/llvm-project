@@ -783,7 +783,7 @@ public:
     SDVTList VTs = getVTList(MVT::Other, MVT::Glue);
     SDValue Ops[] = { Chain, getRegister(Reg, N.getValueType()), N, Glue };
     return getNode(ISD::CopyToReg, dl, VTs,
-                   makeArrayRef(Ops, Glue.getNode() ? 4 : 3));
+                   ArrayRef(Ops, Glue.getNode() ? 4 : 3));
   }
 
   // Similar to last getCopyToReg() except parameter Reg is a SDValue
@@ -792,7 +792,7 @@ public:
     SDVTList VTs = getVTList(MVT::Other, MVT::Glue);
     SDValue Ops[] = { Chain, Reg, N, Glue };
     return getNode(ISD::CopyToReg, dl, VTs,
-                   makeArrayRef(Ops, Glue.getNode() ? 4 : 3));
+                   ArrayRef(Ops, Glue.getNode() ? 4 : 3));
   }
 
   SDValue getCopyFromReg(SDValue Chain, const SDLoc &dl, unsigned Reg, EVT VT) {
@@ -809,7 +809,7 @@ public:
     SDVTList VTs = getVTList(VT, MVT::Other, MVT::Glue);
     SDValue Ops[] = { Chain, getRegister(Reg, VT), Glue };
     return getNode(ISD::CopyFromReg, dl, VTs,
-                   makeArrayRef(Ops, Glue.getNode() ? 3 : 2));
+                   ArrayRef(Ops, Glue.getNode() ? 3 : 2));
   }
 
   SDValue getCondCode(ISD::CondCode Cond);
@@ -902,6 +902,38 @@ public:
   /// float type VT, by either extending or rounding (by truncation).
   std::pair<SDValue, SDValue>
   getStrictFPExtendOrRound(SDValue Op, SDValue Chain, const SDLoc &DL, EVT VT);
+
+  /// Convert *_EXTEND_VECTOR_INREG to *_EXTEND opcode.
+  static unsigned getOpcode_EXTEND(unsigned Opcode) {
+    switch (Opcode) {
+    case ISD::ANY_EXTEND:
+    case ISD::ANY_EXTEND_VECTOR_INREG:
+      return ISD::ANY_EXTEND;
+    case ISD::ZERO_EXTEND:
+    case ISD::ZERO_EXTEND_VECTOR_INREG:
+      return ISD::ZERO_EXTEND;
+    case ISD::SIGN_EXTEND:
+    case ISD::SIGN_EXTEND_VECTOR_INREG:
+      return ISD::SIGN_EXTEND;
+    }
+    llvm_unreachable("Unknown opcode");
+  }
+
+  /// Convert *_EXTEND to *_EXTEND_VECTOR_INREG opcode.
+  static unsigned getOpcode_EXTEND_VECTOR_INREG(unsigned Opcode) {
+    switch (Opcode) {
+    case ISD::ANY_EXTEND:
+    case ISD::ANY_EXTEND_VECTOR_INREG:
+      return ISD::ANY_EXTEND_VECTOR_INREG;
+    case ISD::ZERO_EXTEND:
+    case ISD::ZERO_EXTEND_VECTOR_INREG:
+      return ISD::ZERO_EXTEND_VECTOR_INREG;
+    case ISD::SIGN_EXTEND:
+    case ISD::SIGN_EXTEND_VECTOR_INREG:
+      return ISD::SIGN_EXTEND_VECTOR_INREG;
+    }
+    llvm_unreachable("Unknown opcode");
+  }
 
   /// Convert Op, which must be of integer type, to the
   /// integer type VT, by either any-extending or truncating it.

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -canonicalize | FileCheck %s
+// RUN: mlir-opt %s -canonicalize="test-convergence" | FileCheck %s
 
 // CHECK-LABEL: func @create_of_real_and_imag
 // CHECK-SAME: (%[[CPLX:.*]]: complex<f32>)

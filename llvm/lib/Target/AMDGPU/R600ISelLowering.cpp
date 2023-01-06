@@ -1705,7 +1705,7 @@ SDValue R600TargetLowering::constBufferLoad(LoadSDNode *LoadNode, int Block,
     NewVT = VT;
     NumElements = VT.getVectorNumElements();
   }
-  SDValue Result = DAG.getBuildVector(NewVT, DL, makeArrayRef(Slots, NumElements));
+  SDValue Result = DAG.getBuildVector(NewVT, DL, ArrayRef(Slots, NumElements));
   if (!VT.isVector()) {
     Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Result,
                          DAG.getConstant(0, DL, MVT::i32));

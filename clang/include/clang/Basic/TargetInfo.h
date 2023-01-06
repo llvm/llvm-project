@@ -933,8 +933,6 @@ public:
     return true;
   }
 
-  virtual bool shouldEmitFloat16WithExcessPrecision() const { return false; }
-
   /// Specify if mangling based on address space map should be used or
   /// not for language specific address spaces
   bool useAddressSpaceMapMangling() const {

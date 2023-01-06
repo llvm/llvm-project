@@ -106,9 +106,24 @@ extern __inline int
 
 #define __break(/*ui15*/ _1) __builtin_loongarch_break((_1))
 
+#if __loongarch_grlen == 32
+#define __cacop_w(/*uimm5*/ _1, /*unsigned int*/ _2, /*simm12*/ _3)            \
+  ((void)__builtin_loongarch_cacop_w((_1), (unsigned int)(_2), (_3)))
+#endif
+
+#if __loongarch_grlen == 64
+#define __cacop_d(/*uimm5*/ _1, /*unsigned long int*/ _2, /*simm12*/ _3)       \
+  ((void)__builtin_loongarch_cacop_d((_1), (unsigned long int)(_2), (_3)))
+#endif
+
 #define __dbar(/*ui15*/ _1) __builtin_loongarch_dbar((_1))
 
 #define __ibar(/*ui15*/ _1) __builtin_loongarch_ibar((_1))
+
+#define __movfcsr2gr(/*ui5*/ _1) __builtin_loongarch_movfcsr2gr((_1));
+
+#define __movgr2fcsr(/*ui5*/ _1, _2)                                           \
+  __builtin_loongarch_movgr2fcsr((_1), (unsigned int)_2);
 
 #define __syscall(/*ui15*/ _1) __builtin_loongarch_syscall((_1))
 

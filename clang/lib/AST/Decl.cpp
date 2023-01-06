@@ -1020,6 +1020,16 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
       explicitSpecSuppressor = MD;
     }
 
+    // OpenMP target declare device functions are not callable from the host so
+    // they should not be exported from the device image. This applies to all
+    // functions as the host-callable kernel functions are emitted at codegen.
+    ASTContext &Context = D->getASTContext();
+    if (Context.getLangOpts().OpenMP && Context.getLangOpts().OpenMPIsDevice &&
+        ((Context.getTargetInfo().getTriple().isAMDGPU() ||
+          Context.getTargetInfo().getTriple().isNVPTX()) ||
+         OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(MD)))
+      LV.mergeVisibility(HiddenVisibility, /*newExplicit=*/false);
+
   } else if (const auto *RD = dyn_cast<CXXRecordDecl>(D)) {
     if (const auto *spec = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
       mergeTemplateLV(LV, spec, computation);
@@ -3180,11 +3190,13 @@ bool FunctionDecl::isMSVCRTEntryPoint() const {
 }
 
 bool FunctionDecl::isReservedGlobalPlacementOperator() const {
-  assert(getDeclName().getNameKind() == DeclarationName::CXXOperatorName);
-  assert(getDeclName().getCXXOverloadedOperator() == OO_New ||
-         getDeclName().getCXXOverloadedOperator() == OO_Delete ||
-         getDeclName().getCXXOverloadedOperator() == OO_Array_New ||
-         getDeclName().getCXXOverloadedOperator() == OO_Array_Delete);
+  if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
+    return false;
+  if (getDeclName().getCXXOverloadedOperator() != OO_New &&
+      getDeclName().getCXXOverloadedOperator() != OO_Delete &&
+      getDeclName().getCXXOverloadedOperator() != OO_Array_New &&
+      getDeclName().getCXXOverloadedOperator() != OO_Array_Delete)
+    return false;
 
   if (!getDeclContext()->getRedeclContext()->isTranslationUnit())
     return false;

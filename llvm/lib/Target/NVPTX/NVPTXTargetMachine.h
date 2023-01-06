@@ -13,7 +13,6 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_NVPTXTARGETMACHINE_H
 #define LLVM_LIB_TARGET_NVPTX_NVPTXTARGETMACHINE_H
 
-#include "ManagedStringPool.h"
 #include "NVPTXSubtarget.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
@@ -32,7 +31,8 @@ class NVPTXTargetMachine : public LLVMTargetMachine {
   NVPTXSubtarget Subtarget;
 
   // Hold Strings that can be free'd all together with NVPTXTargetMachine
-  ManagedStringPool ManagedStrPool;
+  BumpPtrAllocator StrAlloc;
+  UniqueStringSaver StrPool;
 
 public:
   NVPTXTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -48,8 +48,8 @@ public:
   bool is64Bit() const { return is64bit; }
   bool useShortPointers() const { return UseShortPointers; }
   NVPTX::DrvInterface getDrvInterface() const { return drvInterface; }
-  ManagedStringPool *getManagedStrPool() const {
-    return const_cast<ManagedStringPool *>(&ManagedStrPool);
+  UniqueStringSaver &getStrPool() const {
+    return const_cast<UniqueStringSaver &>(StrPool);
   }
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;

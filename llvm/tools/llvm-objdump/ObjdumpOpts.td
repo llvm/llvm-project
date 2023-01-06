@@ -40,7 +40,7 @@ def archive_headers : Flag<["--"], "archive-headers">,
 
 defm build_id :
   Eq<"build-id", "Build ID to look up. Once found, added as an input file">,
-  MetaVarName<"<dir>">;
+  MetaVarName<"<hex>">;
 
 def : Flag<["-"], "a">, Alias<archive_headers>,
   HelpText<"Alias for --archive-headers">;

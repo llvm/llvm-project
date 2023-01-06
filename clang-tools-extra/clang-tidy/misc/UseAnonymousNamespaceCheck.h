@@ -28,7 +28,7 @@ namespace misc {
 ///     empty string between ";" if there are other filename extensions.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-anonymous-namespace.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/misc/use-anonymous-namespace.html
 class UseAnonymousNamespaceCheck : public ClangTidyCheck {
 public:
   UseAnonymousNamespaceCheck(StringRef Name, ClangTidyContext *Context);

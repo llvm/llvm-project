@@ -364,24 +364,41 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "amdgcn-", "polly-", "riscv-", "dxil-"};
   std::vector<StringRef> PassNameContain = {"ehprepare"};
   std::vector<StringRef> PassNameExact = {
-      "safe-stack",           "cost-model",
-      "codegenprepare",       "interleaved-load-combine",
-      "unreachableblockelim", "verify-safepoint-ir",
-      "atomic-expand",        "expandvp",
-      "hardware-loops",       "type-promotion",
-      "mve-tail-predication", "interleaved-access",
-      "global-merge",         "pre-isel-intrinsic-lowering",
-      "expand-reductions",    "indirectbr-expand",
-      "generic-to-nvvm",      "expandmemcmp",
-      "loop-reduce",          "lower-amx-type",
-      "pre-amx-config",       "lower-amx-intrinsics",
-      "polyhedral-info",      "print-polyhedral-info",
-      "replace-with-veclib",  "jmc-instrument",
-      "dot-regions",          "dot-regions-only",
-      "view-regions",         "view-regions-only",
-      "select-optimize",      "expand-large-div-rem",
-      "structurizecfg",       "fix-irreducible",
-      "expand-large-fp-convert"};
+      "safe-stack",
+      "cost-model",
+      "codegenprepare",
+      "interleaved-load-combine",
+      "unreachableblockelim",
+      "verify-safepoint-ir",
+      "atomic-expand",
+      "expandvp",
+      "hardware-loops",
+      "mve-tail-predication",
+      "interleaved-access",
+      "global-merge",
+      "pre-isel-intrinsic-lowering",
+      "expand-reductions",
+      "indirectbr-expand",
+      "generic-to-nvvm",
+      "expandmemcmp",
+      "loop-reduce",
+      "lower-amx-type",
+      "pre-amx-config",
+      "lower-amx-intrinsics",
+      "polyhedral-info",
+      "print-polyhedral-info",
+      "replace-with-veclib",
+      "jmc-instrument",
+      "dot-regions",
+      "dot-regions-only",
+      "view-regions",
+      "view-regions-only",
+      "select-optimize",
+      "expand-large-div-rem",
+      "structurizecfg",
+      "fix-irreducible",
+      "expand-large-fp-convert"
+  };
   for (const auto &P : PassNamePrefix)
     if (Pass.startswith(P))
       return true;
@@ -450,7 +467,6 @@ int main(int argc, char **argv) {
   initializeWasmEHPreparePass(Registry);
   initializeWriteBitcodePassPass(Registry);
   initializeHardwareLoopsPass(Registry);
-  initializeTypePromotionPass(Registry);
   initializeReplaceWithVeclibLegacyPass(Registry);
   initializeJMCInstrumenterPass(Registry);
 

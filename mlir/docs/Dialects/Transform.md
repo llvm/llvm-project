@@ -42,47 +42,61 @@ may look like:
 
 ```mlir
 %0 = transform.loop.find { size > 42 } : !transform.interface<tileable>
-%1:2 = transform.loop.tile %0 { tile_sizes = [2,3,4] }
+%1 = transform.compute_trailing_tile_size %0 : !transform.param<index>
+%2:2 = transform.loop.tile %0 tile_sizes(1, 4, %1)
       : (!transform.interface<tileable>)
-    -> (!transform.op<loop>, !transform.op<loop>)
+     -> (!transform.op<loop>, !transform.op<loop>)
 transform.loop.unroll %1#1 : !transform.op<loop>
 ```
 
-The values used in the Transform dialect, also referred to as *handles*,
-correspond to (groups of) operations in the payload IR. In the example
+The values used in the Transform dialect may correspond to either:
+
+  * sets of operations in the payload IR;
+
+  * sets of parameters (attributes) known at the execution time of the
+    transform dialect.
+
+The former kind of values is also referred to as *handles*. In the example
 above, `%0` corresponds to the set of loops found in the payload IR that
-satisfy the condition, and `%1` correspond to groups of outer and inner
-loops, respectively, produced by the tiling transformation.
+satisfy the condition, and `%2` correspond to groups of outer and inner
+loops, respectively, produced by the tiling transformation, whereas `%1`
+corresponds to a list of tile sizes selected for each of the operations
+that `%0` corresponds to.
 
 A transform handle such as `%0` may be associated with multiple payload
-operations. This is conceptually a set of operations and no assumptions
-should be made about the order of ops unless specified otherwise by the
-operation. Most Transform IR ops support operand values that are mapped to
-multiple operations. They usually apply the respective transformation for
-every mapped op ("batched execution"). Deviations from this convention are
-described in the documentation of Transform IR ops.
+operations. This is conceptually a set of operations and no assumptions should
+be made about the order of ops unless specified otherwise by the operation.
+Operations may take as operands and produce an arbitrary combination of values
+representing handles and parameters. Most Transform IR ops support operand
+values that are mapped to multiple operations. They usually apply the respective
+transformation for every mapped op ("batched execution"). Deviations from this
+convention are described in the documentation of Transform IR ops.
 
-The handle values have transform IR types. These types describe properties
-of payload IR operations associated with the value that are known to the
-transform dialect, for example, all associated payload operations implement
-a "TileableOp" interface, or have a specific "loop" kind. These properties
-are used to statically indicate pre- and post-conditions of a
-transformation connected to a Transform dialect operation. The conditions
-are verified when payload IR operations are first associated with a
-transform handle. By convention, Transform dialect operations are expected
-to indicate narrow preconditions for their operands by enforcing operand
-type constraints in the their definitions and verifiers. On the contrary,
-operations are expected to have few constraints on their results. Specific
-instances of a transform operation can then be created with a more
-restricted result type than the constraint in the operation (e.g., the
-"find" operation only constrains the result type to be a transform IR type
-while its concrete instance can have a type with stricter constraints such
-as implementing the "tilable" interface). The verification will then happen
-at transform execution time. This approach allows one to capture payload IR
-operation properties in the transform IR without resorting to excessive
-use of type casts or coupling dialect extensions between themselves. It is
-a trade-off between verbosity/complexity and static hardening, which can
-be revised in the future.
+The transform IR values have transform IR types, which implement either
+[TransformHandleTypeInterface](Transform.md#transformhandletypeinterface-transformhandletypeinterface)
+or
+[TransformParamTypeInterface](Transform.md##transformparamtypeinterface-transformparamtypeinterface).
+The former interface verifiers properties of payload IR operations associated
+with the value that are known to the transform dialect, for example, all
+associated payload operations implement a "TileableOp" interface, or have a
+specific "loop" kind. Similarly, the latter interface verifies properties of
+attributes associated with the parameter value. These properties are used to
+statically indicate pre- and post-conditions of a transformation connected to a
+Transform dialect operation. The conditions are verified when attributes or
+payload IR operations are first associated with a transform handle. By
+convention, Transform dialect operations are expected to indicate narrow
+preconditions for their operands by enforcing operand type constraints in the
+their definitions and verifiers. On the contrary, operations are expected to
+have few constraints on their results. Specific instances of a transform
+operation can then be created with a more restricted result type than the
+constraint in the operation (e.g., the "find" operation only constrains the
+result type to be a transform IR type while its concrete instance can have a
+type with stricter constraints such as implementing the "tilable" interface).
+The verification will then happen at transform execution time. This approach
+allows one to capture payload IR operation properties in the transform IR
+without resorting to excessive use of type casts or coupling dialect extensions
+between themselves. It is a trade-off between verbosity/complexity and static
+hardening, which can be revised in the future.
 
 Overall, Transform IR ops are expected to be contained in a single top-level
 op. Such top-level ops specify how to apply the transformations described
@@ -96,8 +110,8 @@ programmatically triggered by calling:
 
 ```c++
 LogicalResult transform::applyTransforms(Operation *payloadRoot,
-                                          TransformOpInterface transform,
-                                          const TransformOptions &options);
+                                         TransformOpInterface transform,
+                                         const TransformOptions &options);
 ```
 
 that applies the transformations specified by the top-level `transform` to
@@ -138,6 +152,12 @@ Operations injected into the dialect must:
 The presence of interface implementations is checked at runtime when the
 dialect is loaded to allow for those implementations to be supplied by
 separate dialect extensions if desired.
+
+Similarly to operations, additional types can be injected into the dialect using
+the same extension mechanism. The types must:
+
+  * Implement exactly one of `TransformHandleTypeInterface`,
+    `TransformParamTypeInterface`.
 
 ## Side Effects
 
@@ -249,6 +269,8 @@ must be enabled explicitly through `TransformOptions`. Additionally, the
 `transform-dialect-check-uses` pass emits warnings when a handle may be used
 after it has been consumed, but does so abstractly, without processing the
 payload IR.
+
+Values associated with parameters (non-handles) cannot be invalidated.
 
 ## Intended Use and Integrations
 

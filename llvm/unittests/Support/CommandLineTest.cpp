@@ -436,7 +436,7 @@ TEST(CommandLineTest, HideUnrelatedOptionsMulti) {
   const cl::OptionCategory *VisibleCategories[] = {&TestCategory,
                                                    &TestCategory2};
 
-  cl::HideUnrelatedOptions(makeArrayRef(VisibleCategories));
+  cl::HideUnrelatedOptions(ArrayRef(VisibleCategories));
 
   ASSERT_EQ(cl::ReallyHidden, TestOption1.getOptionHiddenFlag())
       << "Failed to hide extra option.";
@@ -1060,7 +1060,7 @@ TEST(CommandLineTest, BadResponseFile) {
   ASSERT_STREQ(Argv[0], "clang");
   ASSERT_STREQ(Argv[1], AFileExp.c_str());
 
-#ifndef _AIX
+#if !defined(_AIX) && !defined(__MVS__)
   std::string ADirExp = std::string("@") + std::string(ADir.path());
   Argv = {"clang", ADirExp.c_str()};
   Res = cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv);

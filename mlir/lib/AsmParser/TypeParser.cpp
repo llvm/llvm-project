@@ -495,8 +495,9 @@ Parser::parseVectorDimensionList(SmallVectorImpl<int64_t> &dimensions,
 }
 
 /// Parse a dimension list of a tensor or memref type.  This populates the
-/// dimension list, using -1 for the `?` dimensions if `allowDynamic` is set and
-/// errors out on `?` otherwise. Parsing the trailing `x` is configurable.
+/// dimension list, using ShapedType::kDynamic for the `?` dimensions if
+/// `allowDynamic` is set and errors out on `?` otherwise. Parsing the trailing
+/// `x` is configurable.
 ///
 ///   dimension-list ::= eps | dimension (`x` dimension)*
 ///   dimension-list-with-trailing-x ::= (dimension `x`)*

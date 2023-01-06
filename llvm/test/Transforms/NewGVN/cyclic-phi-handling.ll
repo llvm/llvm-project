@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=newgvn -S | FileCheck %s
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(i32 %arg, i32 %arg1, i32 (i32, i32)* %arg2) {
+define void @foo(i32 %arg, i32 %arg1, ptr %arg2) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label %bb3
