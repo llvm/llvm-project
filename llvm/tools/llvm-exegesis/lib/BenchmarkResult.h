@@ -35,9 +35,9 @@ class Error;
 namespace exegesis {
 
 enum class BenchmarkPhaseSelectorE {
-  StopBeforeAllCodegen,
-  StopBeforeFullCodegen,
-  StopBeforeMeasurements,
+  PrepareSnippet,
+  PrepareAndAssembleSnippet,
+  AssembleMeasuredCode,
   Measure,
 };
 
