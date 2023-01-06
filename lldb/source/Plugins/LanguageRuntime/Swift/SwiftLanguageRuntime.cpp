@@ -42,7 +42,7 @@
 #include "swift/AST/Decl.h"
 #include "swift/AST/Module.h"
 #include "swift/Demangling/Demangle.h"
-#include "swift/Reflection/ReflectionContext.h"
+#include "swift/RemoteInspection/ReflectionContext.h"
 #include "swift/RemoteAST/RemoteAST.h"
 
 #include "clang/AST/ASTContext.h"
