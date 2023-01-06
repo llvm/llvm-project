@@ -138,8 +138,7 @@ public:
       // Turn this into an undef debug value list; right now, the simplest form
       // of this is an expression with one arg, and an undef debug operand.
       Expression =
-          DIExpression::get(Expr.getContext(), {dwarf::DW_OP_LLVM_arg, 0,
-                                                dwarf::DW_OP_stack_value});
+          DIExpression::get(Expr.getContext(), {dwarf::DW_OP_LLVM_arg, 0});
       if (auto FragmentInfoOpt = Expr.getFragmentInfo())
         Expression = *DIExpression::createFragmentExpression(
             Expression, FragmentInfoOpt->OffsetInBits,

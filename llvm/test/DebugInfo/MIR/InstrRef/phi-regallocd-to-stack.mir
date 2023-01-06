@@ -139,7 +139,7 @@ body:             |
     %63:gr32 = PHI %23, %bb.0, %43, %bb.1, debug-location !18
     %64:gr32 = PHI %24, %bb.0, %44, %bb.1, debug-location !18
 
-    DBG_INSTR_REF !14, !DIExpression(), dbg-instr-ref(1, 0), debug-location !12
+    DBG_INSTR_REF !14, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !12
     ; CHECK:      DBG_PHI %stack.1, 1, 32
     ; CHECK:      renamable $eax = MOV32rm %stack.1,
     ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)

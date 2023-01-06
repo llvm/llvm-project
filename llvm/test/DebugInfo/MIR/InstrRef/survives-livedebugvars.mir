@@ -112,18 +112,18 @@ body:             |
     %2:gr64 = COPY $rdi
     %3:gr64 = COPY killed %2
     %5:gr32 = COPY killed %4
-    DBG_INSTR_REF !9, !DIExpression(), dbg-instr-ref(1, 0), debug-location !16
+    DBG_INSTR_REF !9, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !16
     JMP_1 %bb.3
 
   bb.1:
-    DBG_INSTR_REF !9, !DIExpression(), dbg-instr-ref(2, 0), debug-location !16
+    DBG_INSTR_REF !9, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0), debug-location !16
     JMP_1 %bb.4
 
   bb.2:
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !19
     $edi = COPY %6, debug-location !19
     $al = MOV8ri 0, debug-location !19
-    DBG_INSTR_REF !9, !DIExpression(), dbg-instr-ref(3, 0), debug-location !16
+    DBG_INSTR_REF !9, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(3, 0), debug-location !16
     CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $al, implicit $edi, implicit-def $eax, debug-location !19
     ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !19
     %7:gr32 = COPY $eax, debug-location !19
@@ -131,12 +131,12 @@ body:             |
 
   bb.3:
     %6:gr32 = MOV32rm %3, 1, $noreg, 0, $noreg, debug-location !17
-    DBG_INSTR_REF !9, !DIExpression(), dbg-instr-ref(4, 0), debug-location !16
+    DBG_INSTR_REF !9, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(4, 0), debug-location !16
     JMP_1 %bb.2
 
   bb.4:
     $eax = COPY %5, debug-location !18
-    DBG_INSTR_REF !9, !DIExpression(), dbg-instr-ref(5, 0), debug-location !16
+    DBG_INSTR_REF !9, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(5, 0), debug-location !16
     RET64 implicit $eax, debug-location !18
 
 ...

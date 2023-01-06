@@ -44,6 +44,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -1153,6 +1154,10 @@ void MachineFunction::finalizeDebugInstrRefs() {
         MakeUndefDbgValue(MI);
         continue;
       }
+      // Only convert Expr to variadic form when we're sure we're emitting a
+      // complete instruction reference.
+      MI.getDebugExpressionOp().setMetadata(
+          DIExpression::convertToVariadicExpression(MI.getDebugExpression()));
 
       assert(Reg.isVirtual());
       MachineInstr &DefMI = *RegInfo->def_instr_begin(Reg);
