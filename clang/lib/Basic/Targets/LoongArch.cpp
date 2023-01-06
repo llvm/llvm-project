@@ -158,6 +158,12 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
   } else if (ABI == "lp64s" || ABI == "ilp32s") {
     Builder.defineMacro("__loongarch_soft_float");
   }
+
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
+  if (GRLen == 64)
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
 }
 
 static constexpr Builtin::Info BuiltinInfo[] = {
