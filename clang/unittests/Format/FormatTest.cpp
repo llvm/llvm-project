@@ -10341,6 +10341,8 @@ TEST_F(FormatTest, UnderstandsTemplateParameters) {
   verifyFormat("bool_constant<a && noexcept(f())>");
   verifyFormat("bool_constant<a || noexcept(f())>");
 
+  verifyFormat("if (std::tuple_size_v<T> > 0)");
+
   // Not template parameters.
   verifyFormat("return a < b && c > d;");
   verifyFormat("void f() {\n"
