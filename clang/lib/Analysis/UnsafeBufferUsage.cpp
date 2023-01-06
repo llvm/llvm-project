@@ -108,8 +108,9 @@ private:
 };
 
 AST_MATCHER_P(Stmt, forEveryDescendant, internal::Matcher<Stmt>, innerMatcher) {
-  MatchDescendantVisitor Visitor(new DynTypedMatcher(innerMatcher), Finder,
-                                 Builder, ASTMatchFinder::BK_All);
+  const DynTypedMatcher &DTM = static_cast<DynTypedMatcher>(innerMatcher);
+  
+  MatchDescendantVisitor Visitor(&DTM, Finder, Builder, ASTMatchFinder::BK_All);  
   return Visitor.findMatch(DynTypedNode::create(Node));
 }
 } // namespace clang::ast_matchers
