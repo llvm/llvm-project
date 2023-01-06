@@ -200,3 +200,14 @@ void loongarch_movgr2fcsr(int a) {
   __movgr2fcsr(1, a);
   __builtin_loongarch_movgr2fcsr(1, a);
 }
+
+// CHECK-LABEL: @cacop_w(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.loongarch.cacop.w(i32 1, i32 [[A:%.*]], i32 1024)
+// CHECK-NEXT:    tail call void @llvm.loongarch.cacop.w(i32 1, i32 [[A]], i32 1024)
+// CHECK-NEXT:    ret void
+//
+void cacop_w(unsigned long int a) {
+  __cacop_w(1, a, 1024);
+  __builtin_loongarch_cacop_w(1, a, 1024);
+}

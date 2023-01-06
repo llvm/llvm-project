@@ -17,6 +17,8 @@
 
 // TODO: Support more builtins.
 // TODO: Added feature constraints.
+TARGET_BUILTIN(__builtin_loongarch_cacop_d, "vLiULiLi", "nc", "64bit")
+TARGET_BUILTIN(__builtin_loongarch_cacop_w, "viUii", "nc", "32bit")
 TARGET_BUILTIN(__builtin_loongarch_dbar, "vIUi", "nc", "")
 TARGET_BUILTIN(__builtin_loongarch_ibar, "vIUi", "nc", "")
 TARGET_BUILTIN(__builtin_loongarch_movfcsr2gr, "UiIUi", "nc", "f")
