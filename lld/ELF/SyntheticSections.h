@@ -383,15 +383,22 @@ public:
   void scanTableJumpEntrys(const InputSection &sec) const;
 
   bool isFinalized = false;
+
 protected:
   uint64_t size = 0;
 
 private:
-  void addEntry(const Symbol &symbol, llvm::DenseMap<llvm::CachedHashStringRef, int> &entriesList, int gain);
-  uint32_t getEntry(const Symbol &symbol, uint32_t maxSize,
-                    SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0> &entriesList);
-  void writeEntries(uint8_t *buf,
-                    SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0> &entriesList);
+  void addEntry(const Symbol &symbol,
+                llvm::DenseMap<llvm::CachedHashStringRef, int> &entriesList,
+                int gain);
+  uint32_t getEntry(
+      const Symbol &symbol, uint32_t maxSize,
+      SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
+          &entriesList);
+  void writeEntries(
+      uint8_t *buf,
+      SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
+          &entriesList);
   void padUntil(uint8_t *buf, const uint8_t index);
 
   const size_t xlen = config->is64 ? 64 : 32;
@@ -404,9 +411,11 @@ private:
   static const size_t startCMJALTEntryIdx = 32;
 
   llvm::DenseMap<llvm::CachedHashStringRef, int> CMJTEntryCandidates;
-  SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0> finalizedCMJTEntries;
+  SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
+      finalizedCMJTEntries;
   llvm::DenseMap<llvm::CachedHashStringRef, int> CMJALTEntryCandidates;
-  SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0> finalizedCMJALTEntries;
+  SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
+      finalizedCMJALTEntries;
 };
 
 // The IgotPltSection is a Got associated with the PltSection for GNU Ifunc

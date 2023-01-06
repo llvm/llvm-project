@@ -1172,8 +1172,8 @@ bool GotPltSection::isNeeded() const {
 }
 
 TableJumpSection::TableJumpSection()
-    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, config->wordsize,
-                       ".riscv.jvt") {}
+    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS,
+                       config->wordsize, ".riscv.jvt") {}
 
 void TableJumpSection::addCMJTEntryCandidate(const Symbol &symbol, int gain) {
   addEntry(symbol, CMJTEntryCandidates, gain);
@@ -1193,21 +1193,31 @@ int TableJumpSection::getCMJALTEntryIndex(const Symbol &symbol) {
   return index < maxCMJALTEntrySize ? (int)(startCMJALTEntryIdx + index) : -1;
 }
 
-void TableJumpSection::addEntry(const Symbol &symbol,
-                                llvm::DenseMap<llvm::CachedHashStringRef, int> &entriesList, int gain) {
-  if(symbol.file)
-    entriesList[llvm::CachedHashStringRef(symbol.file->mb.getBufferIdentifier().str() + ":" +symbol.getName().str())] += gain;
+void TableJumpSection::addEntry(
+    const Symbol &symbol,
+    llvm::DenseMap<llvm::CachedHashStringRef, int> &entriesList, int gain) {
+  if (symbol.file)
+    entriesList[llvm::CachedHashStringRef(
+        symbol.file->mb.getBufferIdentifier().str() + ":" +
+        symbol.getName().str())] += gain;
   else
-    entriesList[llvm::CachedHashStringRef("<unknown>:" +symbol.getName().str())] += gain;
+    entriesList[llvm::CachedHashStringRef("<unknown>:" +
+                                          symbol.getName().str())] += gain;
 }
 
-uint32_t TableJumpSection::getEntry(const Symbol &symbol, uint32_t maxSize,
-                    SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0> &entriesList){
+uint32_t TableJumpSection::getEntry(
+    const Symbol &symbol, uint32_t maxSize,
+    SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
+        &entriesList) {
   // Prevent adding duplicate entries
   uint32_t i = 0;
-  llvm::CachedHashStringRef symName = llvm::CachedHashStringRef("<unknown>:" +symbol.getName().str());;
-  if(symbol.file)
-    symName = llvm::CachedHashStringRef(symbol.file->mb.getBufferIdentifier().str() + ":" +symbol.getName().str());
+  llvm::CachedHashStringRef symName =
+      llvm::CachedHashStringRef("<unknown>:" + symbol.getName().str());
+  ;
+  if (symbol.file)
+    symName =
+        llvm::CachedHashStringRef(symbol.file->mb.getBufferIdentifier().str() +
+                                  ":" + symbol.getName().str());
 
   for (; i < entriesList.size() && i <= maxSize; ++i) {
     // If this is a duplicate addition, do not add it and return the address
@@ -1226,7 +1236,7 @@ void TableJumpSection::scanTableJumpEntrys(const InputSection &sec) const {
     case R_RISCV_CALL:
     case R_RISCV_CALL_PLT: {
       int gain = 6;
-      if(r.type == R_RISCV_JAL)
+      if (r.type == R_RISCV_JAL)
         gain = 2;
 
       const auto jalr = sec.contentMaybeDecompress().data()[r.offset + 4];
@@ -1241,14 +1251,15 @@ void TableJumpSection::scanTableJumpEntrys(const InputSection &sec) const {
 }
 
 void TableJumpSection::finalizeContents() {
-  if(isFinalized)
+  if (isFinalized)
     return;
   isFinalized = true;
 
-  auto cmp = [](const llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int> &p1,
-                const llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int> &p2) {
-    return p1.second > p2.second;
-  };
+  auto cmp =
+      [](const llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int> &p1,
+         const llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int> &p2) {
+        return p1.second > p2.second;
+      };
 
   std::copy(CMJTEntryCandidates.begin(), CMJTEntryCandidates.end(),
             std::back_inserter(finalizedCMJTEntries));
@@ -1284,7 +1295,9 @@ void TableJumpSection::padUntil(uint8_t *buf, const uint8_t address) {
 }
 
 void TableJumpSection::writeEntries(
-    uint8_t *buf, SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0> &entriesList) {
+    uint8_t *buf,
+    SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
+        &entriesList) {
   // for (const auto &symbolName : entriesList) {
   //   // Use the symbol from in.symTab to ensure we have the final adjusted
   //   // symbol.

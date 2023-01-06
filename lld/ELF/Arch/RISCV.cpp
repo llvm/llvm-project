@@ -605,26 +605,24 @@ static void initSymbolAnchors() {
   }
 }
 
-
 static bool relaxZcmt(const InputSection &sec, size_t i, uint64_t loc,
-                      Relocation &r, uint32_t &remove){
-  if(!in.riscvTableJumpSection || !in.riscvTableJumpSection->isFinalized)
+                      Relocation &r, uint32_t &remove) {
+  if (!in.riscvTableJumpSection || !in.riscvTableJumpSection->isFinalized)
     return false;
-  
+
   const auto jalr = sec.contentMaybeDecompress().data()[r.offset + 4];
   const uint8_t rd = (jalr & ((1ULL << (11 + 1)) - 1)) >> 7;
   int tblEntryIndex = -1;
-  if (rd == 0){
+  if (rd == 0) {
     tblEntryIndex = in.riscvTableJumpSection->getCMJTEntryIndex(*r.sym);
-  }
-  else if(rd == X_RA){
+  } else if (rd == X_RA) {
     tblEntryIndex = in.riscvTableJumpSection->getCMJALTEntryIndex(*r.sym);
   }
 
-  if (tblEntryIndex >= 0){
+  if (tblEntryIndex >= 0) {
     sec.relaxAux->relocTypes[i] = R_RISCV_JAL;
     sec.relaxAux->writes.push_back(0xa002 |
-                                  (tblEntryIndex << 2)); // cm.jt or cm.jalt
+                                   (tblEntryIndex << 2)); // cm.jt or cm.jalt
     remove = 6;
     return true;
   }
@@ -651,7 +649,7 @@ static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
     sec.relaxAux->relocTypes[i] = R_RISCV_RVC_JUMP;
     sec.relaxAux->writes.push_back(0x2001); // c.jal
     remove = 6;
-  } else if(!relaxZcmt(sec,i,loc,r,remove) && isInt<21>(displace)) {
+  } else if (!relaxZcmt(sec, i, loc, r, remove) && isInt<21>(displace)) {
     sec.relaxAux->relocTypes[i] = R_RISCV_JAL;
     sec.relaxAux->writes.push_back(0x6f | rd << 7); // jal
     remove = 4;
