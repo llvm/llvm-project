@@ -2356,6 +2356,32 @@ performVECTOR_SHUFFLECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   return DAG.getBitcast(DstType, NewShuffle);
 }
 
+/// Convert ({u,s}itofp vec) --> ({u,s}itofp ({s,z}ext vec)) so it doesn't get
+/// split up into scalar instructions during legalization, and the vector
+/// extending instructions are selected in performVectorExtendCombine below.
+static SDValue
+performVectorExtendToFPCombine(SDNode *N,
+                               TargetLowering::DAGCombinerInfo &DCI) {
+  auto &DAG = DCI.DAG;
+  assert(N->getOpcode() == ISD::UINT_TO_FP ||
+         N->getOpcode() == ISD::SINT_TO_FP);
+
+  EVT InVT = N->getOperand(0)->getValueType(0);
+  EVT ResVT = N->getValueType(0);
+  MVT ExtVT;
+  if (ResVT == MVT::v4f32 && (InVT == MVT::v4i16 || InVT == MVT::v4i8))
+    ExtVT = MVT::v4i32;
+  else if (ResVT == MVT::v2f64 && (InVT == MVT::v2i16 || InVT == MVT::v2i8))
+    ExtVT = MVT::v2i32;
+  else
+    return SDValue();
+
+  unsigned Op =
+      N->getOpcode() == ISD::UINT_TO_FP ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
+  SDValue Conv = DAG.getNode(Op, SDLoc(N), ExtVT, N->getOperand(0));
+  return DAG.getNode(N->getOpcode(), SDLoc(N), ResVT, Conv);
+}
+
 static SDValue
 performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   auto &DAG = DCI.DAG;
@@ -2641,6 +2667,9 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
     return performVectorExtendCombine(N, DCI);
+  case ISD::UINT_TO_FP:
+  case ISD::SINT_TO_FP:
+    return performVectorExtendToFPCombine(N, DCI);
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
   case ISD::FP_ROUND:
