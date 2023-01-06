@@ -218,7 +218,7 @@ bool StackProtector::HasAddressTaken(const Instruction *AI,
       // We can't subtract a fixed size from a scalable one, so in that case
       // assume the scalable value is of minimum size.
       TypeSize NewAllocSize =
-          TypeSize::Fixed(AllocSize.getKnownMinSize()) - OffsetSize;
+          TypeSize::Fixed(AllocSize.getKnownMinValue()) - OffsetSize;
       if (HasAddressTaken(I, NewAllocSize))
         return true;
       break;

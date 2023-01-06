@@ -311,15 +311,8 @@ public:
 // the exact size. If the type is a scalable vector, it will represent the known
 // minimum size.
 class TypeSize : public details::FixedOrScalableQuantity<TypeSize, uint64_t> {
-  using UP = details::FixedOrScalableQuantity<TypeSize, uint64_t>;
-
   TypeSize(const FixedOrScalableQuantity<TypeSize, uint64_t> &V)
       : FixedOrScalableQuantity(V) {}
-
-  // Make 'getFixedValue' private, it is exposed as 'getFixedSize' below.
-  using UP::getFixedValue;
-  // Make 'getKnownMinValue' private, it is exposed as 'getKnownMinSize' below.
-  using UP::getKnownMinValue;
 
 public:
   constexpr TypeSize(ScalarTy Quantity, bool Scalable)
@@ -406,7 +399,7 @@ public:
 /// Similar to the alignTo functions in MathExtras.h
 inline constexpr TypeSize alignTo(TypeSize Size, uint64_t Align) {
   assert(Align != 0u && "Align must be non-zero");
-  return {(Size.getKnownMinSize() + Align - 1) / Align * Align,
+  return {(Size.getKnownMinValue() + Align - 1) / Align * Align,
           Size.isScalable()};
 }
 

@@ -408,7 +408,7 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Type *Ty, Align Alignment,
   TypeSize TySize = DL.getTypeStoreSize(Ty);
   if (TySize.isScalable())
     return false;
-  APInt Size(DL.getIndexTypeSizeInBits(V->getType()), TySize.getFixedSize());
+  APInt Size(DL.getIndexTypeSizeInBits(V->getType()), TySize.getFixedValue());
   return isSafeToLoadUnconditionally(V, Alignment, Size, DL, ScanFrom, AC, DT,
                                      TLI);
 }
