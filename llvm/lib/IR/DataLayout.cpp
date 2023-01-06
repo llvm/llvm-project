@@ -67,7 +67,7 @@ StructLayout::StructLayout(StructType *ST, const DataLayout &DL) {
 
     getMemberOffsets()[i] = StructSize;
     // Consume space for this data item
-    StructSize += DL.getTypeAllocSize(Ty).getFixedSize();
+    StructSize += DL.getTypeAllocSize(Ty).getFixedValue();
   }
 
   // Add padding to the end of the struct so that it could be put in an array

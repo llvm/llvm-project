@@ -650,7 +650,7 @@ public:
         continue;
       }
       CandidateTy Candidate(GV, K.second.size(),
-                      DL.getTypeAllocSize(GV->getValueType()).getFixedSize());
+                      DL.getTypeAllocSize(GV->getValueType()).getFixedValue());
       if (MostUsed < Candidate)
         MostUsed = Candidate;
     }
