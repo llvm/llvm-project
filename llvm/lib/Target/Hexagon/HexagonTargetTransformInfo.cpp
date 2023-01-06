@@ -329,7 +329,8 @@ InstructionCost HexagonTTIImpl::getCastInstrCost(unsigned Opcode, Type *DstTy,
 }
 
 InstructionCost HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                                   unsigned Index) {
+                                                   unsigned Index, Value *Op0,
+                                                   Value *Op1) {
   Type *ElemTy = Val->isVectorTy() ? cast<VectorType>(Val)->getElementType()
                                    : Val;
   if (Opcode == Instruction::InsertElement) {
@@ -338,7 +339,8 @@ InstructionCost HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     if (ElemTy->isIntegerTy(32))
       return Cost;
     // If it's not a 32-bit value, there will need to be an extract.
-    return Cost + getVectorInstrCost(Instruction::ExtractElement, Val, Index);
+    return Cost + getVectorInstrCost(Instruction::ExtractElement, Val, Index,
+                                     Op0, Op1);
   }
 
   if (Opcode == Instruction::ExtractElement)
