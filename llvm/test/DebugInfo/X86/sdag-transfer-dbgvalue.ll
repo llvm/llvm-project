@@ -24,7 +24,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-LABEL: bb.0.entry:
 ; CHECK:         %[[REG:[0-9]+]]:gr32 = ADD32ri %1, 512,
 ; INSTRREF-SAME:   debug-instr-number 1
-; INSTRREF-NEXT: DBG_INSTR_REF 1, 0
+; INSTRREF-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
 ; DBGVALUE-NEXT: DBG_VALUE %[[REG]]
 
 ; Function Attrs: nofree norecurse nounwind uwtable writeonly

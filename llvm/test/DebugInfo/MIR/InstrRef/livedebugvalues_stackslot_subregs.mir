@@ -49,7 +49,7 @@ body:  |
     $rax = MOV64ri 0
     $rdi = MOV64ri 0
 
-    DBG_INSTR_REF 1, 0, !11, !DIExpression(), debug-location !12
+    DBG_INSTR_REF !11, !DIExpression(), dbg-instr-ref(1, 0), debug-location !12
     ; CHECK:      DBG_INSTR_REF
     ; CHECK-NEXT: DBG_VALUE $esi
     RET64 $rsi, debug-location !12
