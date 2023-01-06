@@ -39,11 +39,10 @@ define void @ctlz_v16i8(ptr %x, ptr %y) nounwind {
 ;
 ; LMULMAX8-LABEL: ctlz_v16i8:
 ; LMULMAX8:       # %bb.0:
-; LMULMAX8-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; LMULMAX8-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; LMULMAX8-NEXT:    vle8.v v8, (a0)
-; LMULMAX8-NEXT:    vzext.vf4 v12, v8
-; LMULMAX8-NEXT:    vfcvt.f.xu.v v12, v12
-; LMULMAX8-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; LMULMAX8-NEXT:    vzext.vf2 v10, v8
+; LMULMAX8-NEXT:    vfwcvt.f.xu.v v12, v10
 ; LMULMAX8-NEXT:    vnsrl.wi v10, v12, 23
 ; LMULMAX8-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; LMULMAX8-NEXT:    vnsrl.wi v9, v10, 0
@@ -838,11 +837,10 @@ define void @ctlz_v32i8(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-LABEL: ctlz_v32i8:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a1, 32
-; LMULMAX8-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; LMULMAX8-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; LMULMAX8-NEXT:    vle8.v v8, (a0)
-; LMULMAX8-NEXT:    vzext.vf4 v16, v8
-; LMULMAX8-NEXT:    vfcvt.f.xu.v v16, v16
-; LMULMAX8-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; LMULMAX8-NEXT:    vzext.vf2 v12, v8
+; LMULMAX8-NEXT:    vfwcvt.f.xu.v v16, v12
 ; LMULMAX8-NEXT:    vnsrl.wi v12, v16, 23
 ; LMULMAX8-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; LMULMAX8-NEXT:    vnsrl.wi v10, v12, 0
