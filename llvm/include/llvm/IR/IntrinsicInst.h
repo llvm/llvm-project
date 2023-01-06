@@ -274,7 +274,7 @@ public:
     for (Value *OldValue : location_ops()) {
       if (!RemovedValues.insert(OldValue).second)
         continue;
-      Value *Undef = UndefValue::get(OldValue->getType());
+      Value *Undef = PoisonValue::get(OldValue->getType());
       replaceVariableLocationOp(OldValue, Undef);
     }
   }

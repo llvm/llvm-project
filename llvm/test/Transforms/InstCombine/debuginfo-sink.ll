@@ -33,7 +33,7 @@ sink1:
 ; value range.
 
 ; CHECK-LABEL: define i32 @bar(
-; CHECK:       call void @llvm.dbg.value(metadata ptr undef,
+; CHECK:       call void @llvm.dbg.value(metadata ptr poison,
 ; CHECK-NEXT:  br label %sink2
 
 define i32 @bar(ptr %a, i32 %b) !dbg !70 {
