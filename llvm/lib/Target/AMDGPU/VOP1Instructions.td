@@ -163,8 +163,7 @@ class VOPProfileI2F<ValueType dstVt, ValueType srcVt> :
 
   let Ins64 = (ins Src0RC64:$src0, clampmod:$clamp, omod:$omod);
   let InsVOP3Base = (ins Src0VOP3DPP:$src0, clampmod:$clamp, omod:$omod);
-  let Asm64 = "$vdst, $src0$clamp$omod";
-  let AsmVOP3DPPBase = Asm64;
+  let AsmVOP3Base = "$vdst, $src0$clamp$omod";
 
   let HasModifiers = 0;
   let HasClamp = 1;
@@ -175,8 +174,7 @@ class VOPProfileI2F_True16<ValueType dstVt, ValueType srcVt> :
 
   let Ins64 = (ins Src0RC64:$src0, clampmod:$clamp, omod:$omod);
   let InsVOP3Base = (ins Src0VOP3DPP:$src0, clampmod:$clamp, omod:$omod);
-  let Asm64 = "$vdst, $src0$clamp$omod";
-  let AsmVOP3DPPBase = Asm64;
+  let AsmVOP3Base = "$vdst, $src0$clamp$omod";
 
   let HasModifiers = 0;
   let HasClamp = 1;
@@ -382,7 +380,6 @@ class VOP_MOVREL<RegisterOperand Src1RC> : VOPProfile<[untyped, i32, untyped, un
   let Ins32 = (ins Src0RC32:$vdst, Src1RC:$src0);
   let Ins64 = (ins Src0RC64:$vdst, Src1RC:$src0);
   let Asm32 = getAsm32<1, 1>.ret;
-  let Asm64 = getAsm64<1, 1, 0, 0, 1>.ret;
 
   let OutsSDWA = (outs Src0RC32:$vdst);
   let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
@@ -403,8 +400,8 @@ class VOP_MOVREL<RegisterOperand Src1RC> : VOPProfile<[untyped, i32, untyped, un
   let InsVOP3DPP16 = getInsVOP3DPP16<InsVOP3Base, Src0RC64, NumSrcArgs>.ret;
   let InsVOP3DPP8 = getInsVOP3DPP8<InsVOP3Base, Src0RC64, NumSrcArgs>.ret;
 
-  let AsmVOP3DPPBase =
-      getAsmVOP3DPPBase<NumSrcArgs, 1 /* HasDst */, HasClamp,
+  let AsmVOP3Base =
+      getAsmVOP3Base<NumSrcArgs, 1 /* HasDst */, HasClamp,
                         HasOpSel, HasOMod, IsVOP3P, HasModifiers,
                         HasModifiers, HasModifiers, HasModifiers>.ret;
 
