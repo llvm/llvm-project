@@ -6389,7 +6389,7 @@ static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
                        llvm::PHINode *LSRInductionVar, DVIRecoveryRec &DVIRec,
                        const SCEV *SCEVInductionVar,
                        SCEVDbgValueBuilder IterCountExpr) {
-  if (!DVIRec.DVI->isUndef())
+  if (!DVIRec.DVI->isKillLocation())
     return false;
 
   // LSR may have caused several changes to the dbg.value in the failed salvage
@@ -6538,7 +6538,7 @@ static void DbgGatherSalvagableDVI(
         continue;
       // Ensure that if any location op is undef that the dbg.vlue is not
       // cached.
-      if (DVI->isUndef())
+      if (DVI->isKillLocation())
         continue;
 
       // Check that the location op SCEVs are suitable for translation to
