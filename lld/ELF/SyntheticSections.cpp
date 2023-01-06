@@ -39,7 +39,6 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
-#include <iostream>
 
 using namespace llvm;
 using namespace llvm::dwarf;
@@ -1278,11 +1277,11 @@ size_t TableJumpSection::getSize() const {
 }
 
 void TableJumpSection::writeTo(uint8_t *buf) {
-  // target->writeTableJumpHeader(buf);
-  // writeEntries(buf + startCMJTEntryIdx, finalizedCMJTEntries);
-  // padUntil(buf + ((startCMJTEntryIdx + finalizedCMJTEntries.size()) * xlen),
-  //          startCMJALTEntryIdx * xlen);
-  // writeEntries(buf + startCMJALTEntryIdx, finalizedCMJALTEntries);
+  target->writeTableJumpHeader(buf);
+  writeEntries(buf + startCMJTEntryIdx, finalizedCMJTEntries);
+  padUntil(buf + ((startCMJTEntryIdx + finalizedCMJTEntries.size()) * xlen),
+           startCMJALTEntryIdx * xlen);
+  writeEntries(buf + startCMJALTEntryIdx, finalizedCMJALTEntries);
 }
 
 void TableJumpSection::padUntil(uint8_t *buf, const uint8_t address) {
@@ -1298,20 +1297,26 @@ void TableJumpSection::writeEntries(
     uint8_t *buf,
     SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
         &entriesList) {
-  // for (const auto &symbolName : entriesList) {
-  //   // Use the symbol from in.symTab to ensure we have the final adjusted
-  //   // symbol.
-  //   for (const auto &symbol : in.symTab->getSymbols()) {
-  //     if (symbol.sym->getName() != symbolName.first)
-  //       continue;
-  //     // Only process defined symbols.
-  //     auto *definedSymbol = dyn_cast<Defined>(symbol.sym);
-  //     if (!definedSymbol)
-  //       continue;
-  //     target->writeTableJump(buf, definedSymbol->getVA());
-  //     buf += config->wordsize;
-  //   }
-  // }
+  for (const auto &symbolName : entriesList) {
+    if(symbolName.second == 0)
+      continue;
+    // Use the symbol from in.symTab to ensure we have the final adjusted
+    // symbol.
+    for (const auto &symbol : in.symTab->getSymbols()) {
+      llvm::CachedHashStringRef sym = llvm::CachedHashStringRef("<unknown>:" +symbol.sym->getName().str());;
+      if(symbol.sym->file)
+        sym = llvm::CachedHashStringRef(symbol.sym->file->mb.getBufferIdentifier().str() + ":" +symbol.sym->getName().str());
+
+      if (sym.hash() != symbolName.first.hash())
+        continue;
+      // Only process defined symbols.
+      auto *definedSymbol = dyn_cast<Defined>(symbol.sym);
+      if (!definedSymbol)
+        continue;
+      target->writeTableJump(buf, definedSymbol->getVA());
+      buf += config->wordsize;
+    }
+  }
 }
 
 bool TableJumpSection::isNeeded() const { return config->riscvTbljal; }
