@@ -1519,7 +1519,7 @@ bool AllocaInst::isStaticAlloca() const {
 
   // Must be in the entry block.
   const BasicBlock *Parent = getParent();
-  return Parent == &Parent->getParent()->front() && !isUsedWithInAlloca();
+  return Parent->isEntryBlock() && !isUsedWithInAlloca();
 }
 
 //===----------------------------------------------------------------------===//
