@@ -72,6 +72,9 @@ Improvements to Clang's diagnostics
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+- Clang now saves the address of ABI-indirect function parameters on the stack,
+  improving the debug information available in programs compiled without
+  optimizations.
 
 New Compiler Flags
 ------------------
