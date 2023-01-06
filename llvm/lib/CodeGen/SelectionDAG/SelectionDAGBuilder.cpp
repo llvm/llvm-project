@@ -8896,7 +8896,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
   // memory and is nonvolatile.
   SDValue Flag, Chain = (HasSideEffect) ? getRoot() : DAG.getRoot();
 
-  bool EmitEHLabels = isa<InvokeInst>(Call) && IA->canThrow();
+  bool EmitEHLabels = isa<InvokeInst>(Call);
   if (EmitEHLabels) {
     assert(EHPadBB && "InvokeInst must have an EHPadBB");
   }
