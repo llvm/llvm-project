@@ -6,12 +6,13 @@ add_mlir_translation_library(MLIRTargetKokkosCpp
   ${EMITC_MAIN_INCLUDE_DIR}/emitc/Target/KokkosCpp
 
   LINK_LIBS PUBLIC
-  MLIRArithmetic
-  MLIRControlFlow
-  MLIRFunc
+  MLIRArithDialect
+  MLIRControlFlowDialect
+  MLIREmitCDialect
+  MLIRFuncDialect
   MLIRIR
-  MLIRMath
-  MLIRSCF
+  MLIRMathDialect
+  MLIRSCFDialect
   MLIRSupport
   MLIRTranslateLib
   )
