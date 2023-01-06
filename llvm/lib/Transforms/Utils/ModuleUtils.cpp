@@ -150,7 +150,7 @@ void llvm::removeFromUsedLists(Module &M,
   removeFromUsedList(M, "llvm.compiler.used", ShouldRemove);
 }
 
-static void setKCFIType(Module &M, Function &F, StringRef MangledType) {
+void llvm::setKCFIType(Module &M, Function &F, StringRef MangledType) {
   if (!M.getModuleFlag("kcfi"))
     return;
   // Matches CodeGenModule::CreateKCFITypeId in Clang.
