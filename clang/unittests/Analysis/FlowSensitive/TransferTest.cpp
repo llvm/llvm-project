@@ -16,7 +16,6 @@
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/LangStandard.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Testing/Support/Error.h"
@@ -40,22 +39,17 @@ void runDataflow(llvm::StringRef Code, Matcher Match,
                  LangStandard::Kind Std = LangStandard::lang_cxx17,
                  llvm::StringRef TargetFun = "target") {
   using ast_matchers::hasName;
-  llvm::SmallVector<std::string, 3> ASTBuildArgs = {
-      "-fsyntax-only", "-fno-delayed-template-parsing",
-      "-std=" +
-          std::string(LangStandard::getLangStandardForKind(Std).getName())};
-  auto AI =
-      AnalysisInputs<NoopAnalysis>(Code, hasName(TargetFun),
-                                   [&Options](ASTContext &C, Environment &) {
-                                     return NoopAnalysis(C, Options);
-                                   })
-          .withASTBuildArgs(ASTBuildArgs);
-  if (Options.BuiltinTransferOpts &&
-      Options.BuiltinTransferOpts->ContextSensitiveOpts)
-    AI = std::move(AI).withContextSensitivity();
   ASSERT_THAT_ERROR(
       checkDataflow<NoopAnalysis>(
-          std::move(AI),
+          AnalysisInputs<NoopAnalysis>(Code, hasName(TargetFun),
+                                       [Options](ASTContext &C, Environment &) {
+                                         return NoopAnalysis(C, Options);
+                                       })
+              .withASTBuildArgs(
+                  {"-fsyntax-only", "-fno-delayed-template-parsing",
+                   "-std=" +
+                       std::string(LangStandard::getLangStandardForKind(Std)
+                                       .getName())}),
           /*VerifyResults=*/
           [&Match](const llvm::StringMap<DataflowAnalysisState<NoopLattice>>
                        &Results,
@@ -157,7 +151,6 @@ TEST(TransferTest, StructVarDecl) {
 
     void target() {
       A Foo;
-      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -205,7 +198,6 @@ TEST(TransferTest, StructVarDeclWithInit) {
 
     void target() {
       A Foo = Gen();
-      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -246,13 +238,11 @@ TEST(TransferTest, StructVarDeclWithInit) {
 TEST(TransferTest, ClassVarDecl) {
   std::string Code = R"(
     class A {
-     public:
       int Bar;
     };
 
     void target() {
       A Foo;
-      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -346,10 +336,6 @@ TEST(TransferTest, SelfReferentialReferenceVarDecl) {
 
     void target() {
       A &Foo = getA();
-      (void)Foo.Bar.FooRef;
-      (void)Foo.Bar.FooPtr;
-      (void)Foo.Bar.BazRef;
-      (void)Foo.Bar.BazPtr;
       // [[p]]
     }
   )";
@@ -492,10 +478,6 @@ TEST(TransferTest, SelfReferentialPointerVarDecl) {
 
     void target() {
       A *Foo = getA();
-      (void)Foo->Bar->FooRef;
-      (void)Foo->Bar->FooPtr;
-      (void)Foo->Bar->BazRef;
-      (void)Foo->Bar->BazPtr;
       // [[p]]
     }
   )";
@@ -909,7 +891,7 @@ TEST(TransferTest, StructParamDecl) {
     };
 
     void target(A Foo) {
-      (void)Foo.Bar;
+      (void)0;
       // [[p]]
     }
   )";
@@ -1070,9 +1052,6 @@ TEST(TransferTest, DerivedBaseMemberClass) {
       int APrivate;
     public:
       int APublic;
-
-    private:
-      friend void target();
     };
 
     class B : public A {
@@ -1081,20 +1060,10 @@ TEST(TransferTest, DerivedBaseMemberClass) {
       int BProtected;
     private:
       int BPrivate;
-
-    private:
-      friend void target();
     };
 
     void target() {
       B Foo;
-      (void)Foo.ADefault;
-      (void)Foo.AProtected;
-      (void)Foo.APrivate;
-      (void)Foo.APublic;
-      (void)Foo.BDefault;
-      (void)Foo.BProtected;
-      (void)Foo.BPrivate;
       // [[p]]
     }
   )";
@@ -1233,7 +1202,6 @@ TEST(TransferTest, DerivedBaseMemberStructDefault) {
 
     void target() {
       B Foo;
-      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -1557,11 +1525,7 @@ TEST(TransferTest, UnionThisMember) {
       int Bar;
 
       void target() {
-        A a;
-        // Mention the fields to ensure they're included in the analysis.
-        (void)a.Foo;
-        (void)a.Bar;
-        // [[p]]
+        (void)0; // [[p]]
       }
     };
   )";
@@ -1813,7 +1777,6 @@ TEST(TransferTest, TemporaryObject) {
 
     void target() {
       A Foo = A();
-      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -1851,7 +1814,6 @@ TEST(TransferTest, ElidableConstructor) {
 
     void target() {
       A Foo = A();
-      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -1889,7 +1851,6 @@ TEST(TransferTest, AssignmentOperator) {
     void target() {
       A Foo;
       A Bar;
-      (void)Foo.Baz;
       // [[p1]]
       Foo = Bar;
       // [[p2]]
@@ -1952,7 +1913,6 @@ TEST(TransferTest, CopyConstructor) {
 
     void target() {
       A Foo;
-      (void)Foo.Baz;
       A Bar = Foo;
       // [[p]]
     }
@@ -1998,7 +1958,6 @@ TEST(TransferTest, CopyConstructorWithParens) {
 
     void target() {
       A Foo;
-      (void)Foo.Baz;
       A Bar((A(Foo)));
       // [[p]]
     }
@@ -2059,7 +2018,6 @@ TEST(TransferTest, MoveConstructor) {
     void target() {
       A Foo;
       A Bar;
-      (void)Foo.Baz;
       // [[p1]]
       Foo = std::move(Bar);
       // [[p2]]

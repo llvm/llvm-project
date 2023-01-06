@@ -54,21 +54,14 @@ llvm::DenseSet<const FieldDecl *> getObjectFields(QualType Type);
 /// is used during dataflow analysis.
 class DataflowAnalysisContext {
 public:
-  // FIXME: merge with TransferOptions from Transfer.h.
-  struct Options {
-    bool EnableContextSensitiveAnalysis;
-  };
-
   /// Constructs a dataflow analysis context.
   ///
   /// Requirements:
   ///
   ///  `S` must not be null.
-  DataflowAnalysisContext(std::unique_ptr<Solver> S,
-                          Options Opts = {
-                              /*EnableContextSensitiveAnalysis=*/false})
+  DataflowAnalysisContext(std::unique_ptr<Solver> S)
       : S(std::move(S)), TrueVal(createAtomicBoolValue()),
-        FalseVal(createAtomicBoolValue()), Options(Opts) {
+        FalseVal(createAtomicBoolValue()) {
     assert(this->S != nullptr);
   }
 
@@ -260,11 +253,7 @@ public:
   /// returns null.
   const ControlFlowContext *getControlFlowContext(const FunctionDecl *F);
 
-  void addFieldsReferencedInScope(llvm::DenseSet<const FieldDecl *> Fields);
-
 private:
-  friend class Environment;
-
   struct NullableQualTypeDenseMapInfo : private llvm::DenseMapInfo<QualType> {
     static QualType getEmptyKey() {
       // Allow a NULL `QualType` by using a different value as the empty key.
@@ -275,10 +264,6 @@ private:
     using DenseMapInfo::getTombstoneKey;
     using DenseMapInfo::isEqual;
   };
-
-  /// Returns the subset of fields of `Type` that are referenced in the scope of
-  /// the analysis.
-  llvm::DenseSet<const FieldDecl *> getReferencedFields(QualType Type);
 
   /// Adds all constraints of the flow condition identified by `Token` and all
   /// of its transitive dependencies to `Constraints`. `VisitedTokens` is used
@@ -345,8 +330,6 @@ private:
   AtomicBoolValue &TrueVal;
   AtomicBoolValue &FalseVal;
 
-  Options Options;
-
   // Indices that are used to avoid recreating the same composite boolean
   // values.
   llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, ConjunctionValue *>
@@ -376,9 +359,6 @@ private:
   llvm::DenseMap<AtomicBoolValue *, BoolValue *> FlowConditionConstraints;
 
   llvm::DenseMap<const FunctionDecl *, ControlFlowContext> FunctionContexts;
-
-  // All fields referenced (statically) in the scope of the analysis.
-  llvm::DenseSet<const FieldDecl *> FieldsReferencedInScope;
 };
 
 } // namespace dataflow
