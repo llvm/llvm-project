@@ -10861,6 +10861,8 @@ def err_omp_depend_sink_source_with_modifier : Error<
   "depend modifier cannot be used with 'sink' or 'source' depend type">;
 def err_omp_depend_modifier_not_iterator : Error<
   "expected iterator specification as depend modifier">;
+def err_omp_map_modifier_not_iterator : Error<
+  "expected iterator specification as map modifier">;
 def err_omp_linear_ordered : Error<
   "'linear' clause cannot be specified along with 'ordered' clause with a parameter">;
 def err_omp_unexpected_schedule_modifier : Error<

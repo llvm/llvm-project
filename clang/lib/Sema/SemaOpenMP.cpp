@@ -215,6 +215,7 @@ private:
     llvm::SmallVector<ImplicitDefaultFDInfoTy, 8>
         ImplicitDefaultFirstprivateFDs;
     Expr *DeclareMapperVar = nullptr;
+    SmallVector<VarDecl *, 16> IteratorVarDecls;
     SharingMapTy(OpenMPDirectiveKind DKind, DeclarationNameInfo Name,
                  Scope *CurScope, SourceLocation Loc)
         : Directive(DKind), DirectiveName(Name), CurScope(CurScope),
@@ -1151,6 +1152,22 @@ public:
   const Expr *getDeclareMapperVarRef() const {
     const SharingMapTy *Top = getTopOfStackOrNull();
     return Top ? Top->DeclareMapperVar : nullptr;
+  }
+
+  /// Add a new iterator variable.
+  void addIteratorVarDecl(VarDecl *VD) {
+    SharingMapTy &StackElem = getTopOfStack();
+    StackElem.IteratorVarDecls.push_back(VD->getCanonicalDecl());
+  }
+  /// Check if variable declaration is an iterator VarDecl.
+  bool isIteratorVarDecl(const VarDecl *VD) const {
+    const SharingMapTy *Top = getTopOfStackOrNull();
+    if (!Top)
+      return false;
+
+    return llvm::any_of(Top->IteratorVarDecls, [VD](const VarDecl *IteratorVD) {
+      return IteratorVD == VD->getCanonicalDecl();
+    });
   }
   /// get captured field from ImplicitDefaultFirstprivateFDs
   VarDecl *getImplicitFDCapExprDecl(const FieldDecl *FD) const {
@@ -6076,7 +6093,7 @@ processImplicitMapsWithDefaultMappers(Sema &S, DSAStackTy *Stack,
     CXXScopeSpec MapperIdScopeSpec;
     DeclarationNameInfo MapperId;
     if (OMPClause *NewClause = S.ActOnOpenMPMapClause(
-            C->getMapTypeModifiers(), C->getMapTypeModifiersLoc(),
+            nullptr, C->getMapTypeModifiers(), C->getMapTypeModifiersLoc(),
             MapperIdScopeSpec, MapperId, C->getMapType(),
             /*IsMapTypeImplicit=*/true, SourceLocation(), SourceLocation(),
             SubExprs, OMPVarListLocTy()))
@@ -6218,8 +6235,8 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
         CXXScopeSpec MapperIdScopeSpec;
         DeclarationNameInfo MapperId;
         if (OMPClause *Implicit = ActOnOpenMPMapClause(
-                OMPC_MAP_MODIFIER_unknown, SourceLocation(), MapperIdScopeSpec,
-                MapperId, OMPC_MAP_tofrom,
+                nullptr, OMPC_MAP_MODIFIER_unknown, SourceLocation(),
+                MapperIdScopeSpec, MapperId, OMPC_MAP_tofrom,
                 /*IsMapTypeImplicit=*/true, SourceLocation(), SourceLocation(),
                 Exprs, OMPVarListLocTy(), /*NoDiagnose=*/true))
           ClausesWithImplicit.emplace_back(Implicit);
@@ -6235,7 +6252,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
         DeclarationNameInfo MapperId;
         auto Kind = static_cast<OpenMPMapClauseKind>(ClauseKindCnt);
         if (OMPClause *Implicit = ActOnOpenMPMapClause(
-                ImplicitMapModifiers[I], ImplicitMapModifiersLoc[I],
+                nullptr, ImplicitMapModifiers[I], ImplicitMapModifiersLoc[I],
                 MapperIdScopeSpec, MapperId, Kind, /*IsMapTypeImplicit=*/true,
                 SourceLocation(), SourceLocation(), ImplicitMap,
                 OMPVarListLocTy())) {
@@ -17777,7 +17794,7 @@ OMPClause *Sema::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
     assert(0 <= ExtraModifier && ExtraModifier <= OMPC_MAP_unknown &&
            "Unexpected map modifier.");
     Res = ActOnOpenMPMapClause(
-        Data.MapTypeModifiers, Data.MapTypeModifiersLoc,
+        Data.IteratorExpr, Data.MapTypeModifiers, Data.MapTypeModifiersLoc,
         Data.ReductionOrMapperIdScopeSpec, Data.ReductionOrMapperId,
         static_cast<OpenMPMapClauseKind>(ExtraModifier), Data.IsMapTypeImplicit,
         ExtraModifierLoc, ColonLoc, VarList, Locs);
@@ -21943,7 +21960,7 @@ static void checkMappableExpressionList(
 }
 
 OMPClause *Sema::ActOnOpenMPMapClause(
-    ArrayRef<OpenMPMapModifierKind> MapTypeModifiers,
+    Expr *IteratorModifier, ArrayRef<OpenMPMapModifierKind> MapTypeModifiers,
     ArrayRef<SourceLocation> MapTypeModifiersLoc,
     CXXScopeSpec &MapperIdScopeSpec, DeclarationNameInfo &MapperId,
     OpenMPMapClauseKind MapType, bool IsMapTypeImplicit, SourceLocation MapLoc,
@@ -21953,8 +21970,13 @@ OMPClause *Sema::ActOnOpenMPMapClause(
   OpenMPMapModifierKind Modifiers[] = {
       OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
       OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
-      OMPC_MAP_MODIFIER_unknown};
+      OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown};
   SourceLocation ModifiersLoc[NumberOfOMPMapClauseModifiers];
+
+  if (IteratorModifier && !IteratorModifier->getType()->isSpecificBuiltinType(
+                              BuiltinType::OMPIterator))
+    Diag(IteratorModifier->getExprLoc(),
+         diag::err_omp_map_modifier_not_iterator);
 
   // Process map-type-modifiers, flag errors for duplicate modifiers.
   unsigned Count = 0;
@@ -21979,11 +22001,11 @@ OMPClause *Sema::ActOnOpenMPMapClause(
 
   // We need to produce a map clause even if we don't have variables so that
   // other diagnostics related with non-existing map clauses are accurate.
-  return OMPMapClause::Create(Context, Locs, MVLI.ProcessedVarList,
-                              MVLI.VarBaseDeclarations, MVLI.VarComponents,
-                              MVLI.UDMapperList, Modifiers, ModifiersLoc,
-                              MapperIdScopeSpec.getWithLocInContext(Context),
-                              MapperId, MapType, IsMapTypeImplicit, MapLoc);
+  return OMPMapClause::Create(
+      Context, Locs, MVLI.ProcessedVarList, MVLI.VarBaseDeclarations,
+      MVLI.VarComponents, MVLI.UDMapperList, IteratorModifier, Modifiers,
+      ModifiersLoc, MapperIdScopeSpec.getWithLocInContext(Context), MapperId,
+      MapType, IsMapTypeImplicit, MapLoc);
 }
 
 QualType Sema::ActOnOpenMPDeclareReductionType(SourceLocation TyLoc,
@@ -22377,6 +22399,11 @@ Sema::ActOnOpenMPDeclareMapperDirectiveVarDecl(Scope *S, QualType MapperType,
   return E;
 }
 
+void Sema::ActOnOpenMPIteratorVarDecl(VarDecl *VD) {
+  if (DSAStack->getDeclareMapperVarRef())
+    DSAStack->addIteratorVarDecl(VD);
+}
+
 bool Sema::isOpenMPDeclareMapperVarDeclAllowed(const VarDecl *VD) const {
   assert(LangOpts.OpenMP && "Expected OpenMP mode.");
   const Expr *Ref = DSAStack->getDeclareMapperVarRef();
@@ -22384,6 +22411,8 @@ bool Sema::isOpenMPDeclareMapperVarDeclAllowed(const VarDecl *VD) const {
     if (VD->getCanonicalDecl() == DRE->getDecl()->getCanonicalDecl())
       return true;
     if (VD->isUsableInConstantExpressions(Context))
+      return true;
+    if (LangOpts.OpenMP >= 52 && DSAStack->isIteratorVarDecl(VD))
       return true;
     return false;
   }
