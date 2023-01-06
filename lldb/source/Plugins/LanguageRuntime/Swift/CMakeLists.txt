@@ -8,7 +8,7 @@ add_lldb_library(lldbPluginSwiftLanguageRuntime PLUGIN
   LINK_LIBS
     swiftAST
     swiftBasic
-    swiftReflection
+    swiftRemoteInspection
     swiftRemoteAST
     lldbCore
     lldbExpression

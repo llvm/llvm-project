@@ -16,7 +16,7 @@
 #include "LLDBMemoryReader.h"
 #include "SwiftLanguageRuntime.h"
 #include "SwiftMetadataCache.h"
-#include "swift/Reflection/TypeLowering.h"
+#include "swift/RemoteInspection/TypeLowering.h"
 #include "llvm/Support/Memory.h"
 
 namespace swift {
