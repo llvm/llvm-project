@@ -76,7 +76,7 @@ static const AllocaInst *findMatchingAlloca(const IntrinsicInst &II,
     return nullptr;
   int64_t LifetimeSize = Size->getSExtValue();
 
-  if (LifetimeSize != -1 && LifetimeSize != *AllocaSize)
+  if (LifetimeSize != -1 && uint64_t(LifetimeSize) != *AllocaSize)
     return nullptr;
 
   return AI;
