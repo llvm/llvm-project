@@ -162,6 +162,9 @@ FailureOr<Operation *> fuseElementwiseOps(RewriterBase &rewriter,
 
 /// Split the given `op` into two parts along the given iteration space
 /// `dimension` at the specified `splitPoint`, and return the two parts.
+/// If the second part is statically known to be empty, do not create it
+/// and return nullptr instead. Error state is signalled by returning
+/// a pair of nullptrs.
 ///
 /// For example, the following op:
 ///
