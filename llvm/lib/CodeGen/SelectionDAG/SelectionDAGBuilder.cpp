@@ -4062,11 +4062,11 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
     AllocSize = DAG.getNode(ISD::MUL, dl, IntPtr, AllocSize,
                             DAG.getVScale(dl, IntPtr,
                                           APInt(IntPtr.getScalarSizeInBits(),
-                                                TySize.getKnownMinValue())));
+                                                TySize.getKnownMinSize())));
   else
     AllocSize =
         DAG.getNode(ISD::MUL, dl, IntPtr, AllocSize,
-                    DAG.getConstant(TySize.getFixedValue(), dl, IntPtr));
+                    DAG.getConstant(TySize.getFixedSize(), dl, IntPtr));
 
   // Handle alignment.  If the requested alignment is less than or equal to
   // the stack alignment, ignore it.  If the size is greater than or equal to
