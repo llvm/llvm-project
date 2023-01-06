@@ -2053,6 +2053,10 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
     if (!C->getType()->getScalarType()->isOpaquePointerTy() && Idxs.size() != 1)
       return false;
 
+    // Avoid losing inrange information.
+    if (InRangeIndex)
+      return false;
+
     return all_of(Idxs, [](Value *Idx) {
       Constant *IdxC = cast<Constant>(Idx);
       return IdxC->isNullValue() || isa<UndefValue>(IdxC);
