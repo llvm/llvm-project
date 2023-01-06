@@ -740,7 +740,8 @@ class TargetExtType : public Type {
   TargetExtType(LLVMContext &C, StringRef Name, ArrayRef<Type *> Types,
                 ArrayRef<unsigned> Ints);
 
-  std::string Name;
+  // These strings are ultimately owned by the context.
+  StringRef Name;
   unsigned *IntParams;
 
 public:
