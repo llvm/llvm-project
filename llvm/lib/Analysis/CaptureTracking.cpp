@@ -179,25 +179,10 @@ namespace {
       if (EphValues.contains(I))
         return false;
 
-      if (!EarliestCapture) {
+      if (!EarliestCapture)
         EarliestCapture = I;
-      } else if (EarliestCapture->getParent() == I->getParent()) {
-        if (I->comesBefore(EarliestCapture))
-          EarliestCapture = I;
-      } else {
-        BasicBlock *CurrentBB = I->getParent();
-        BasicBlock *EarliestBB = EarliestCapture->getParent();
-        if (DT.dominates(EarliestBB, CurrentBB)) {
-          // EarliestCapture already comes before the current use.
-        } else if (DT.dominates(CurrentBB, EarliestBB)) {
-          EarliestCapture = I;
-        } else {
-          // Otherwise find the nearest common dominator and use its terminator.
-          auto *NearestCommonDom =
-              DT.findNearestCommonDominator(CurrentBB, EarliestBB);
-          EarliestCapture = NearestCommonDom->getTerminator();
-        }
-      }
+      else
+        EarliestCapture = DT.findNearestCommonDominator(EarliestCapture, I);
       Captured = true;
 
       // Return false to continue analysis; we need to see all potential
