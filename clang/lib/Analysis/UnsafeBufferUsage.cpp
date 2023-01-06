@@ -8,111 +8,11 @@
 
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace llvm;
 using namespace clang;
 using namespace ast_matchers;
-
-namespace clang::ast_matchers {
-// A `RecursiveASTVisitor` that traverses all descendants of a given node "n"
-// except for those belonging to a different callable of "n".
-class MatchDescendantVisitor
-    : public RecursiveASTVisitor<MatchDescendantVisitor> {
-public:
-  typedef RecursiveASTVisitor<MatchDescendantVisitor> VisitorBase;
-
-  // Creates an AST visitor that matches `Matcher` on all
-  // descendants of a given node "n" except for the ones
-  // belonging to a different callable of "n".
-  MatchDescendantVisitor(const internal::DynTypedMatcher *Matcher,
-                         internal::ASTMatchFinder *Finder,
-                         internal::BoundNodesTreeBuilder *Builder,
-                         internal::ASTMatchFinder::BindKind Bind)
-      : Matcher(Matcher), Finder(Finder), Builder(Builder), Bind(Bind),
-        Matches(false) {}
-
-  // Returns true if a match is found in a subtree of `DynNode`, which belongs
-  // to the same callable of `DynNode`.
-  bool findMatch(const DynTypedNode &DynNode) {
-    Matches = false;
-    if (const Stmt *StmtNode = DynNode.get<Stmt>()) {
-      TraverseStmt(const_cast<Stmt *>(StmtNode));
-      *Builder = ResultBindings;
-      return Matches;
-    }
-    return false;
-  }
-
-  // The following are overriding methods from the base visitor class.
-  // They are public only to allow CRTP to work. They are *not *part
-  // of the public API of this class.
-
-  // For the matchers so far used in safe buffers, we only need to match
-  // `Stmt`s.  To override more as needed.
-
-  bool TraverseDecl(Decl *Node) {
-    if (!Node)
-      return true;
-    if (!match(*Node))
-      return false;
-    // To skip callables:
-    if (isa<FunctionDecl, BlockDecl, ObjCMethodDecl>(Node))
-      return true;
-    // Traverse descendants
-    return VisitorBase::TraverseDecl(Node);
-  }
-
-  bool TraverseStmt(Stmt *Node, DataRecursionQueue *Queue = nullptr) {
-    if (!Node)
-      return true;
-    if (!match(*Node))
-      return false;
-    // To skip callables:
-    if (isa<LambdaExpr>(Node))
-      return true;
-    return VisitorBase::TraverseStmt(Node);
-  }
-
-  bool shouldVisitTemplateInstantiations() const { return true; }
-  bool shouldVisitImplicitCode() const {
-    // TODO: let's ignore implicit code for now
-    return false;
-  }
-
-private:
-  // Sets 'Matched' to true if 'Matcher' matches 'Node'
-  //
-  // Returns 'true' if traversal should continue after this function
-  // returns, i.e. if no match is found or 'Bind' is 'BK_All'.
-  template <typename T> bool match(const T &Node) {
-    internal::BoundNodesTreeBuilder RecursiveBuilder(*Builder);
-
-    if (Matcher->matches(DynTypedNode::create(Node), Finder,
-                         &RecursiveBuilder)) {
-      ResultBindings.addMatch(RecursiveBuilder);
-      Matches = true;
-      if (Bind != internal::ASTMatchFinder::BK_All)
-        return false; // Abort as soon as a match is found.
-    }
-    return true;
-  }
-
-  const internal::DynTypedMatcher *const Matcher;
-  internal::ASTMatchFinder *const Finder;
-  internal::BoundNodesTreeBuilder *const Builder;
-  internal::BoundNodesTreeBuilder ResultBindings;
-  const internal::ASTMatchFinder::BindKind Bind;
-  bool Matches;
-};
-
-AST_MATCHER_P(Stmt, forEveryDescendant, internal::Matcher<Stmt>, innerMatcher) {
-  MatchDescendantVisitor Visitor(new DynTypedMatcher(innerMatcher), Finder,
-                                 Builder, ASTMatchFinder::BK_All);
-  return Visitor.findMatch(DynTypedNode::create(Node));
-}
-} // namespace clang::ast_matchers
 
 namespace {
 // Because the analysis revolves around variables and their types, we'll need to
@@ -498,7 +398,7 @@ static std::pair<GadgetList, DeclUseTracker> findGadgets(const Decl *D) {
 
   // clang-format off
   M.addMatcher(
-    stmt(forEveryDescendant(
+    stmt(forEachDescendant(
       stmt(anyOf(
         // Add Gadget::matcher() for every gadget in the registry.
 #define GADGET(x)                                                              \
