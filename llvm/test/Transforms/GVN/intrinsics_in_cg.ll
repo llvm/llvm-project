@@ -2,7 +2,6 @@
 ; RUN: opt < %s -passes='require<globals-aa>,gvn' -S | FileCheck %s
 
 ; Ensure we do not hoist the load over the call.
-; FIXME: Currently broken until D141190 or similar lands.
 
 @G1 = internal global i32 1
 @G2 = internal global i32 1
@@ -32,16 +31,13 @@ check:
 define i32 @indirect_intrinsic(i1 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@indirect_intrinsic
 ; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    br i1 [[C]], label [[INIT:%.*]], label [[DOTCHECK_CRIT_EDGE:%.*]]
-; CHECK:       .check_crit_edge:
-; CHECK-NEXT:    [[V_PRE:%.*]] = load i32, ptr @G2, align 4
-; CHECK-NEXT:    br label [[CHECK:%.*]]
+; CHECK-NEXT:    br i1 [[C]], label [[INIT:%.*]], label [[CHECK:%.*]]
 ; CHECK:       init:
 ; CHECK-NEXT:    store i32 0, ptr @G2, align 4
 ; CHECK-NEXT:    br label [[CHECK]]
 ; CHECK:       check:
-; CHECK-NEXT:    [[V:%.*]] = phi i32 [ [[V_PRE]], [[DOTCHECK_CRIT_EDGE]] ], [ 0, [[INIT]] ]
 ; CHECK-NEXT:    call void @intrinsic_caller()
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr @G2, align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
   br i1 %c, label %init, label %check
