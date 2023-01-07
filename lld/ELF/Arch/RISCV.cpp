@@ -612,7 +612,7 @@ static bool relaxZcmt(const InputSection &sec, size_t i, uint64_t loc,
     return false;
 
   const auto jalr = sec.contentMaybeDecompress().data()[r.offset + 4];
-  const uint8_t rd = extractBits(jalr,11,7);
+  const uint8_t rd = extractBits(jalr, 11, 7);
   int tblEntryIndex = -1;
   if (rd == 0) {
     tblEntryIndex = in.riscvTableJumpSection->getCMJTEntryIndex(*r.sym);
@@ -1204,7 +1204,7 @@ void TableJumpSection::scanTableJumpEntrys(const InputSection &sec) const {
         gain = 2;
 
       const auto jalr = sec.contentMaybeDecompress().data()[r.offset + 4];
-      const uint8_t rd = extractBits(jalr,11,7);
+      const uint8_t rd = extractBits(jalr, 11, 7);
 
       if (rd == 0)
         in.riscvTableJumpSection->addCMJTEntryCandidate(*r.sym, gain);
