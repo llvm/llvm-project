@@ -6423,7 +6423,7 @@ protected:
               .all();
       if (!IsOp1Undef && !IsOp2Undef) {
         // Update mask and mark undef elems.
-        for (auto [Idx, I] : enumerate(Mask)) {
+        for (int &I : Mask) {
           if (I == UndefMaskElem)
             continue;
           if (SV->getMaskValue(I % SV->getShuffleMask().size()) ==
