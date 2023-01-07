@@ -42,6 +42,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -253,7 +254,7 @@ MapOpcodeIntoControlFlowKind(InstructionOpcodeAndModrm opcode_and_modrm) {
 ///    primary_opcode, opcode_len and modrm byte. Refer to the struct definition
 ///    for more details.
 ///    Otherwise if the given instruction is invalid, returns std::nullopt.
-llvm::Optional<InstructionOpcodeAndModrm>
+std::optional<InstructionOpcodeAndModrm>
 InstructionLengthDecode(const uint8_t *inst_bytes, int bytes_len,
                         bool is_exec_mode_64b) {
   int op_idx = 0;
@@ -384,7 +385,7 @@ InstructionLengthDecode(const uint8_t *inst_bytes, int bytes_len,
 
 lldb::InstructionControlFlowKind GetControlFlowKind(bool is_exec_mode_64b,
                                                     Opcode m_opcode) {
-  llvm::Optional<InstructionOpcodeAndModrm> ret;
+  std::optional<InstructionOpcodeAndModrm> ret;
 
   if (m_opcode.GetOpcodeBytes() == nullptr || m_opcode.GetByteSize() <= 0) {
     // x86_64 and i386 instructions are categorized as Opcode::Type::eTypeBytes

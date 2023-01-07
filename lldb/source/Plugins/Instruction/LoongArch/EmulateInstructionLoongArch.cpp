@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cstdlib>
+#include <optional>
 
 #include "EmulateInstructionLoongArch.h"
 #include "Plugins/Process/Utility/InstructionUtils.h"
@@ -129,7 +130,7 @@ bool EmulateInstructionLoongArch::WritePC(lldb::addr_t pc) {
                                LLDB_REGNUM_GENERIC_PC, pc);
 }
 
-llvm::Optional<RegisterInfo>
+std::optional<RegisterInfo>
 EmulateInstructionLoongArch::GetRegisterInfo(lldb::RegisterKind reg_kind,
                                              uint32_t reg_index) {
   if (reg_kind == eRegisterKindGeneric) {

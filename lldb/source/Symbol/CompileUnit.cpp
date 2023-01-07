@@ -13,6 +13,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/Timer.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -319,10 +320,9 @@ void CompileUnit::ResolveSymbolContext(
   // subsequent line exact matches below.
   const bool inlines = false;
   const bool exact = true;
-  const llvm::Optional<uint16_t> column =
-      src_location_spec.GetColumn()
-          ? llvm::Optional<uint16_t>(line_entry.column)
-          : std::nullopt;
+  const std::optional<uint16_t> column =
+      src_location_spec.GetColumn() ? std::optional<uint16_t>(line_entry.column)
+                                    : std::nullopt;
 
   SourceLocationSpec found_entry(line_entry.file, line_entry.line, column,
                                  inlines, exact);

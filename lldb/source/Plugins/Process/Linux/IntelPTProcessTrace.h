@@ -11,6 +11,7 @@
 
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include <memory>
+#include <optional>
 
 namespace lldb_private {
 namespace process_linux {
@@ -40,7 +41,7 @@ public:
   ///   \b std::nullopt if this instance doesn't support the requested data, an
   ///   \a llvm::Error if this isntance supports it but fails at fetching it,
   ///   and \b Error::success() otherwise.
-  virtual llvm::Expected<llvm::Optional<std::vector<uint8_t>>>
+  virtual llvm::Expected<std::optional<std::vector<uint8_t>>>
   TryGetBinaryData(const TraceGetBinaryDataRequest &request) = 0;
 };
 

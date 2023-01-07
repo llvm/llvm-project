@@ -33,6 +33,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/ScopeExit.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -760,15 +761,14 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   // This will be the address of the storage for paths, if we are using them,
   // or nullptr to signal we aren't.
   lldb::addr_t path_array_addr = 0x0;
-  llvm::Optional<llvm::detail::scope_exit<std::function<void()>>>
+  std::optional<llvm::detail::scope_exit<std::function<void()>>>
       path_array_cleanup;
 
   // This is the address to a buffer large enough to hold the largest path
   // conjoined with the library name we're passing in.  This is a convenience 
   // to avoid having to call malloc in the dlopen function.
   lldb::addr_t buffer_addr = 0x0;
-  llvm::Optional<llvm::detail::scope_exit<std::function<void()>>>
-      buffer_cleanup;
+  std::optional<llvm::detail::scope_exit<std::function<void()>>> buffer_cleanup;
 
   // Set the values into our args and write them to the target:
   if (paths != nullptr) {

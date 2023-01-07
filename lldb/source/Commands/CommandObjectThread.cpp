@@ -9,6 +9,7 @@
 #include "CommandObjectThread.h"
 
 #include <memory>
+#include <optional>
 #include <sstream>
 
 #include "CommandObjectThreadUtil.h"
@@ -124,8 +125,8 @@ public:
 
   Options *GetOptions() override { return &m_options; }
 
-  llvm::Optional<std::string> GetRepeatCommand(Args &current_args,
-                                               uint32_t idx) override {
+  std::optional<std::string> GetRepeatCommand(Args &current_args,
+                                              uint32_t idx) override {
     llvm::StringRef count_opt("--count");
     llvm::StringRef start_opt("--start");
 
@@ -2160,7 +2161,7 @@ public:
 
     // Instance variables to hold the values for command options.
     TraceDumperOptions m_dumper_options;
-    llvm::Optional<FileSpec> m_output_file;
+    std::optional<FileSpec> m_output_file;
   };
 
   CommandObjectTraceDumpFunctionCalls(CommandInterpreter &interpreter)
@@ -2197,7 +2198,7 @@ protected:
     }
     TraceCursorSP &cursor_sp = *cursor_or_error;
 
-    llvm::Optional<StreamFile> out_file;
+    std::optional<StreamFile> out_file;
     if (m_options.m_output_file) {
       out_file.emplace(m_options.m_output_file->GetPath().c_str(),
                        File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate |
@@ -2334,7 +2335,7 @@ public:
     // Instance variables to hold the values for command options.
     size_t m_count;
     size_t m_continue;
-    llvm::Optional<FileSpec> m_output_file;
+    std::optional<FileSpec> m_output_file;
     TraceDumperOptions m_dumper_options;
   };
 
@@ -2355,8 +2356,8 @@ public:
 
   Options *GetOptions() override { return &m_options; }
 
-  llvm::Optional<std::string> GetRepeatCommand(Args &current_command_args,
-                                               uint32_t index) override {
+  std::optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                              uint32_t index) override {
     std::string cmd;
     current_command_args.GetCommandString(cmd);
     if (cmd.find(" --continue") == std::string::npos)
@@ -2394,7 +2395,7 @@ protected:
       return false;
     }
 
-    llvm::Optional<StreamFile> out_file;
+    std::optional<StreamFile> out_file;
     if (m_options.m_output_file) {
       out_file.emplace(m_options.m_output_file->GetPath().c_str(),
                        File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate |
@@ -2419,7 +2420,7 @@ protected:
   CommandOptions m_options;
   // Last traversed id used to continue a repeat command. None means
   // that all the trace has been consumed.
-  llvm::Optional<lldb::user_id_t> m_last_id;
+  std::optional<lldb::user_id_t> m_last_id;
 };
 
 // CommandObjectTraceDumpInfo

@@ -16,6 +16,7 @@
 #include "llvm/Support/JSON.h"
 #include <atomic>
 #include <chrono>
+#include <optional>
 #include <ratio>
 #include <string>
 #include <vector>
@@ -145,9 +146,9 @@ public:
 
 protected:
   StatsDuration m_create_time;
-  llvm::Optional<StatsTimepoint> m_launch_or_attach_time;
-  llvm::Optional<StatsTimepoint> m_first_private_stop_time;
-  llvm::Optional<StatsTimepoint> m_first_public_stop_time;
+  std::optional<StatsTimepoint> m_launch_or_attach_time;
+  std::optional<StatsTimepoint> m_first_private_stop_time;
+  std::optional<StatsTimepoint> m_first_public_stop_time;
   StatsSuccessFail m_expr_eval{"expressionEvaluation"};
   StatsSuccessFail m_frame_var{"frameVariable"};
   std::vector<intptr_t> m_module_identifiers;

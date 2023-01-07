@@ -10,12 +10,12 @@
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_CPLUSPLUSNAMEPARSER_H
 
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -45,7 +45,7 @@ public:
   //    std::vector<int>::push_back(int)
   //    int& map<int, pair<short, int>>::operator[](short) const
   //    int (*get_function(const chat *))()
-  llvm::Optional<ParsedFunction> ParseAsFunctionDefinition();
+  std::optional<ParsedFunction> ParseAsFunctionDefinition();
 
   // Treats given text as a potentially nested name of C++ entity (function,
   // class, field) and parses it.
@@ -55,7 +55,7 @@ public:
   //    std::vector<int>::push_back
   //    map<int, pair<short, int>>::operator[]
   //    func<C>(int, C&)::nested_class::method
-  llvm::Optional<ParsedName> ParseAsFullName();
+  std::optional<ParsedName> ParseAsFullName();
 
 private:
   // A C++ definition to parse.
@@ -125,10 +125,10 @@ private:
   clang::Token &Peek();
   bool ConsumeBrackets(clang::tok::TokenKind left, clang::tok::TokenKind right);
 
-  llvm::Optional<ParsedFunction> ParseFunctionImpl(bool expect_return_type);
+  std::optional<ParsedFunction> ParseFunctionImpl(bool expect_return_type);
 
   // Parses functions returning function pointers 'string (*f(int x))(float y)'
-  llvm::Optional<ParsedFunction> ParseFuncPtr(bool expect_return_type);
+  std::optional<ParsedFunction> ParseFuncPtr(bool expect_return_type);
 
   // Consumes function arguments enclosed within '(' ... ')'
   bool ConsumeArguments();
@@ -176,7 +176,7 @@ private:
   ///   [A-Za-z,.\s\d]+
   bool ConsumeAbiTag();
 
-  llvm::Optional<ParsedNameRanges> ParseFullNameImpl();
+  std::optional<ParsedNameRanges> ParseFullNameImpl();
   llvm::StringRef GetTextForRange(const Range &range);
 
   // Populate m_tokens by calling clang lexer on m_text.

@@ -9,6 +9,7 @@
 #include "IntelPTMultiCoreTrace.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Procfs.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -145,7 +146,7 @@ Error IntelPTMultiCoreTrace::TraceStop(lldb::tid_t tid) {
                            "per-cpu process tracing is enabled.");
 }
 
-Expected<Optional<std::vector<uint8_t>>>
+Expected<std::optional<std::vector<uint8_t>>>
 IntelPTMultiCoreTrace::TryGetBinaryData(
     const TraceGetBinaryDataRequest &request) {
   if (!request.cpu_id)

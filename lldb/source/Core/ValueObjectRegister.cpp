@@ -28,6 +28,7 @@
 
 #include <cassert>
 #include <memory>
+#include <optional>
 
 namespace lldb_private {
 class ExecutionContextScope;
@@ -82,7 +83,7 @@ size_t ValueObjectRegisterSet::CalculateNumChildren(uint32_t max) {
   return 0;
 }
 
-llvm::Optional<uint64_t> ValueObjectRegisterSet::GetByteSize() { return 0; }
+std::optional<uint64_t> ValueObjectRegisterSet::GetByteSize() { return 0; }
 
 bool ValueObjectRegisterSet::UpdateValue() {
   m_error.Clear();
@@ -228,7 +229,7 @@ size_t ValueObjectRegister::CalculateNumChildren(uint32_t max) {
   return children_count <= max ? children_count : max;
 }
 
-llvm::Optional<uint64_t> ValueObjectRegister::GetByteSize() {
+std::optional<uint64_t> ValueObjectRegister::GetByteSize() {
   return m_reg_info.byte_size;
 }
 

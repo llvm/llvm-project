@@ -9,6 +9,7 @@
 #include "PlatformWindows.h"
 
 #include <cstdio>
+#include <optional>
 #if defined(_WIN32)
 #include "lldb/Host/windows/windows.h"
 #include <winsock2.h>
@@ -225,7 +226,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
 
   /* Inject paths parameter into inferior */
   lldb::addr_t injected_paths{0x0};
-  llvm::Optional<llvm::detail::scope_exit<std::function<void()>>> paths_cleanup;
+  std::optional<llvm::detail::scope_exit<std::function<void()>>> paths_cleanup;
   if (paths) {
     llvm::SmallVector<llvm::UTF16, 261> search_paths;
 

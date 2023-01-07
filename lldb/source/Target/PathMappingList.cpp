@@ -8,6 +8,7 @@
 
 #include <climits>
 #include <cstring>
+#include <optional>
 
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/PosixApi.h"
@@ -164,7 +165,7 @@ void PathMappingList::Clear(bool notify) {
 
 bool PathMappingList::RemapPath(ConstString path,
                                 ConstString &new_path) const {
-  if (llvm::Optional<FileSpec> remapped = RemapPath(path.GetStringRef())) {
+  if (std::optional<FileSpec> remapped = RemapPath(path.GetStringRef())) {
     new_path.SetString(remapped->GetPath());
     return true;
   }
@@ -183,9 +184,8 @@ static void AppendPathComponents(FileSpec &path, llvm::StringRef components,
     path.AppendPathComponent(*component);
 }
 
-llvm::Optional<FileSpec>
-PathMappingList::RemapPath(llvm::StringRef mapping_path,
-                           bool only_if_exists) const {
+std::optional<FileSpec> PathMappingList::RemapPath(llvm::StringRef mapping_path,
+                                                   bool only_if_exists) const {
   if (m_pairs.empty() || mapping_path.empty())
     return {};
   LazyBool path_is_relative = eLazyBoolCalculate;
@@ -220,7 +220,7 @@ PathMappingList::RemapPath(llvm::StringRef mapping_path,
   return {};
 }
 
-llvm::Optional<llvm::StringRef>
+std::optional<llvm::StringRef>
 PathMappingList::ReverseRemapPath(const FileSpec &file, FileSpec &fixed) const {
   std::string path = file.GetPath();
   llvm::StringRef path_ref(path);
@@ -238,7 +238,8 @@ PathMappingList::ReverseRemapPath(const FileSpec &file, FileSpec &fixed) const {
   return std::nullopt;
 }
 
-llvm::Optional<FileSpec> PathMappingList::FindFile(const FileSpec &orig_spec) const {
+std::optional<FileSpec>
+PathMappingList::FindFile(const FileSpec &orig_spec) const {
   // We must normalize the orig_spec again using the host's path style,
   // otherwise there will be mismatch between the host and remote platform
   // if they use different path styles.

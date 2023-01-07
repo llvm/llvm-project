@@ -95,6 +95,7 @@
 
 #include <cctype>
 #include <memory>
+#include <optional>
 
 using namespace clang;
 using namespace llvm;
@@ -876,7 +877,7 @@ private:
   /// should always be const-qualified.
   /// \return Returns std::nullopt if no completion should be provided for the
   ///         given CodeCompletionResult.
-  llvm::Optional<CompletionWithPriority>
+  std::optional<CompletionWithPriority>
   getCompletionForResult(const CodeCompletionResult &R) const {
     std::string ToInsert;
     std::string Description;
@@ -965,7 +966,7 @@ public:
         continue;
 
       CodeCompletionResult &R = Results[I];
-      llvm::Optional<CompletionWithPriority> CompletionAndPriority =
+      std::optional<CompletionWithPriority> CompletionAndPriority =
           getCompletionForResult(R);
       if (!CompletionAndPriority)
         continue;

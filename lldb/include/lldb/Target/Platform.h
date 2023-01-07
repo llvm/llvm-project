@@ -13,6 +13,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -203,9 +204,9 @@ public:
 
   bool SetOSVersion(llvm::VersionTuple os_version);
 
-  llvm::Optional<std::string> GetOSBuildString();
+  std::optional<std::string> GetOSBuildString();
 
-  llvm::Optional<std::string> GetOSKernelDescription();
+  std::optional<std::string> GetOSKernelDescription();
 
   // Returns the name of the platform
   llvm::StringRef GetName() { return GetPluginName(); }
@@ -231,11 +232,11 @@ public:
   // HostInfo::GetOSVersion().
   virtual bool GetRemoteOSVersion() { return false; }
 
-  virtual llvm::Optional<std::string> GetRemoteOSBuildString() {
+  virtual std::optional<std::string> GetRemoteOSBuildString() {
     return std::nullopt;
   }
 
-  virtual llvm::Optional<std::string> GetRemoteOSKernelDescription() {
+  virtual std::optional<std::string> GetRemoteOSKernelDescription() {
     return std::nullopt;
   }
 

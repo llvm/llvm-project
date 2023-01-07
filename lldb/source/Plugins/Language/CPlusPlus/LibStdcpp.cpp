@@ -19,6 +19,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -297,7 +298,7 @@ bool lldb_private::formatters::LibStdcppWStringSummaryProvider(
         return false;
 
       // Safe to pass nullptr for exe_scope here.
-      llvm::Optional<uint64_t> size = wchar_compiler_type.GetBitSize(nullptr);
+      std::optional<uint64_t> size = wchar_compiler_type.GetBitSize(nullptr);
       if (!size)
         return false;
       const uint32_t wchar_size = *size;

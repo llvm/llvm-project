@@ -12,6 +12,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -31,8 +32,8 @@ void Diagnostics::Terminate() {
 
 bool Diagnostics::Enabled() { return InstanceImpl().operator bool(); }
 
-Optional<Diagnostics> &Diagnostics::InstanceImpl() {
-  static Optional<Diagnostics> g_diagnostics;
+std::optional<Diagnostics> &Diagnostics::InstanceImpl() {
+  static std::optional<Diagnostics> g_diagnostics;
   return g_diagnostics;
 }
 

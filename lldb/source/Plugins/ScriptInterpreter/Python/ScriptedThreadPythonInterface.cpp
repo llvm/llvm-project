@@ -18,6 +18,7 @@
 #include "SWIGPythonBridge.h"
 #include "ScriptInterpreterPythonImpl.h"
 #include "ScriptedThreadPythonInterface.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -70,7 +71,7 @@ lldb::tid_t ScriptedThreadPythonInterface::GetThreadID() {
   return obj->GetIntegerValue(LLDB_INVALID_THREAD_ID);
 }
 
-llvm::Optional<std::string> ScriptedThreadPythonInterface::GetName() {
+std::optional<std::string> ScriptedThreadPythonInterface::GetName() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_name", error);
 
@@ -90,7 +91,7 @@ lldb::StateType ScriptedThreadPythonInterface::GetState() {
   return static_cast<StateType>(obj->GetIntegerValue(eStateInvalid));
 }
 
-llvm::Optional<std::string> ScriptedThreadPythonInterface::GetQueue() {
+std::optional<std::string> ScriptedThreadPythonInterface::GetQueue() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_queue", error);
 
@@ -133,8 +134,7 @@ StructuredData::DictionarySP ScriptedThreadPythonInterface::GetRegisterInfo() {
   return dict;
 }
 
-llvm::Optional<std::string>
-ScriptedThreadPythonInterface::GetRegisterContext() {
+std::optional<std::string> ScriptedThreadPythonInterface::GetRegisterContext() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_register_context", error);
 

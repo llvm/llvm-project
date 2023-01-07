@@ -12,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 
 #include "AppleObjCRuntime.h"
 #include "lldb/lldb-private.h"
@@ -444,7 +445,7 @@ private:
   EncodingToTypeSP m_encoding_to_type_sp;
   std::once_flag m_no_classes_cached_warning;
   std::once_flag m_no_expanded_cache_warning;
-  llvm::Optional<std::pair<lldb::addr_t, lldb::addr_t>> m_CFBoolean_values;
+  std::optional<std::pair<lldb::addr_t, lldb::addr_t>> m_CFBoolean_values;
   uint64_t m_realized_class_generation_count;
 };
 
