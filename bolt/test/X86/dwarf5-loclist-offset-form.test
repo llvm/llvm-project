@@ -37,8 +37,8 @@
 # POSTCHECK: DW_AT_loclists_base [DW_FORM_sec_offset]  (0x0000000c)
 # POSTCHECK: DW_TAG_variable [5]
 # POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0)
-# POSTCHECK-NEXT: [0x[[#ADDR1]]
-# POSTCHECK-SAME: 0x[[#ADDR1 + 9]]
+# POSTCHECK-NEXT: [0x[[#ADDR2]]
+# POSTCHECK-SAME: 0x[[#ADDR2 + 9]]
 # POSTCHECK-NEXT: [0x[[#ADDR3]]
 # POSTCHECK-SAME: 0x[[#ADDR3 + 6]]
 # POSTCHECK: DW_TAG_variable [5]
@@ -50,7 +50,7 @@
 # POSTCHECK: DW_AT_loclists_base [DW_FORM_sec_offset]  (0x00000043)
 # POSTCHECK: DW_TAG_variable [11]
 # POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0)
-# POSTCHECK-NEXT: [0x[[#ADDR5]]
-# POSTCHECK-SAME: 0x[[#ADDR5 + 3]]
+# POSTCHECK-NEXT: [0x[[#ADDR7]]
+# POSTCHECK-SAME: 0x[[#ADDR7 + 3]]
 # POSTCHECK-NEXT: [0x[[#ADDR8]]
 # POSTCHECK-SAME: 0x[[#ADDR8 + 1]]
