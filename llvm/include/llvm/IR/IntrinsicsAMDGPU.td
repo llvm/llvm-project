@@ -181,7 +181,8 @@ def int_amdgcn_implicit_buffer_ptr :
 // FIXME: Should be mangled for wave size.
 def int_amdgcn_init_exec : Intrinsic<[],
   [llvm_i64_ty],      // 64-bit literal constant
-  [IntrConvergent, ImmArg<ArgIndex<0>>]>;
+  [IntrConvergent, IntrNoMem, IntrHasSideEffects, IntrNoCallback,
+   IntrNoFree, IntrWillReturn, ImmArg<ArgIndex<0>>]>;
 
 // Set EXEC according to a thread count packed in an SGPR input:
 //    thread_count = (input >> bitoffset) & 0x7f;
@@ -191,7 +192,8 @@ def int_amdgcn_init_exec : Intrinsic<[],
 def int_amdgcn_init_exec_from_input : Intrinsic<[],
   [llvm_i32_ty,       // 32-bit SGPR input
    llvm_i32_ty],      // bit offset of the thread count
-  [IntrConvergent, ImmArg<ArgIndex<1>>]>;
+  [IntrConvergent, IntrHasSideEffects, IntrNoMem, IntrNoCallback,
+   IntrNoFree, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
 
 def int_amdgcn_wavefrontsize :
   ClangBuiltin<"__builtin_amdgcn_wavefrontsize">,
@@ -2455,7 +2457,7 @@ def int_amdgcn_end_cf : Intrinsic<[], [llvm_anyint_ty],
   [IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // Represent unreachable in a divergent region.
-def int_amdgcn_unreachable : Intrinsic<[], [], [IntrConvergent]>;
+def int_amdgcn_unreachable : Intrinsic<[], [], [IntrConvergent, IntrNoCallback, IntrNoFree]>;
 
 // Emit 2.5 ulp, no denormal division. Should only be inserted by
 // pass based on !fpmath metadata.
