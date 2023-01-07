@@ -2432,6 +2432,12 @@ def int_amdgcn_cvt_sr_fp8_f32 : ClangBuiltin<"__builtin_amdgcn_cvt_sr_fp8_f32">,
             [llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
+// Represent a relocation constant.
+def int_amdgcn_reloc_constant : DefaultAttrsIntrinsic<
+  [llvm_i32_ty], [llvm_metadata_ty],
+  [IntrNoMem, IntrSpeculatable]
+>;
+
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend
 // should emit calls to these.
@@ -2463,12 +2469,6 @@ def int_amdgcn_unreachable : Intrinsic<[], [], [IntrConvergent, IntrNoCallback, 
 // pass based on !fpmath metadata.
 def int_amdgcn_fdiv_fast : DefaultAttrsIntrinsic<
   [llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-  [IntrNoMem, IntrSpeculatable]
->;
-
-// Represent a relocation constant.
-def int_amdgcn_reloc_constant : DefaultAttrsIntrinsic<
-  [llvm_i32_ty], [llvm_metadata_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
 }
