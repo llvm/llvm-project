@@ -93,7 +93,7 @@ enum class TypeModifier : uint8_t {
 };
 
 struct Policy {
-  bool PolicyNone = false;
+  bool IsUnspecified = false;
   enum PolicyType {
     Undisturbed,
     Agnostic,
@@ -102,7 +102,7 @@ struct Policy {
   PolicyType TailPolicy = Omit;
   PolicyType MaskPolicy = Omit;
   bool IntrinsicWithoutMU = false;
-  Policy() : PolicyNone(true) {}
+  Policy() : IsUnspecified(true) {}
   Policy(PolicyType _TailPolicy, PolicyType _MaskPolicy,
          bool _IntrinsicWithoutMU = false)
       : TailPolicy(_TailPolicy), MaskPolicy(_MaskPolicy),
@@ -150,11 +150,11 @@ struct Policy {
     return MaskPolicy == Undisturbed && TailPolicy == Omit;
   }
 
-  bool isPolicyNonePolicy() const { return PolicyNone; }
+  bool isUnspecified() const { return IsUnspecified; }
 
   bool operator==(const Policy &Other) const {
-    return PolicyNone == Other.PolicyNone && TailPolicy == Other.TailPolicy &&
-           MaskPolicy == Other.MaskPolicy &&
+    return IsUnspecified == Other.IsUnspecified &&
+           TailPolicy == Other.TailPolicy && MaskPolicy == Other.MaskPolicy &&
            IntrinsicWithoutMU == Other.IntrinsicWithoutMU;
   }
 
@@ -431,7 +431,7 @@ public:
     return IntrinsicTypes;
   }
   Policy getPolicyAttrs() const {
-    assert(PolicyAttrs.PolicyNone == false);
+    assert(PolicyAttrs.IsUnspecified == false);
     return PolicyAttrs;
   }
   unsigned getPolicyAttrsBits() const {
@@ -441,7 +441,7 @@ public:
     // constexpr unsigned TAIL_AGNOSTIC_MASK_AGNOSTIC = 3;
     // FIXME: how about value 2
     // int PolicyAttrs = TAIL_UNDISTURBED;
-    assert(PolicyAttrs.PolicyNone == false);
+    assert(PolicyAttrs.IsUnspecified == false);
 
     if (PolicyAttrs.isTUMAPolicy())
       return 2;
