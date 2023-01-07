@@ -550,17 +550,15 @@ SDValue LoongArchTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
 SDValue
 LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
                                                SelectionDAG &DAG) const {
-  GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
-  assert(N->getOffset() == 0 && "unexpected offset in global node");
-
-  SDValue Addr;
-  TLSModel::Model Model = getTargetMachine().getTLSModel(N->getGlobal());
-
   if (DAG.getMachineFunction().getFunction().getCallingConv() ==
       CallingConv::GHC)
     report_fatal_error("In GHC calling convention TLS is not supported");
 
-  switch (Model) {
+  GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
+  assert(N->getOffset() == 0 && "unexpected offset in global node");
+
+  SDValue Addr;
+  switch (getTargetMachine().getTLSModel(N->getGlobal())) {
   case TLSModel::GeneralDynamic:
     // In this model, application code calls the dynamic linker function
     // __tls_get_addr to locate TLS offsets into the dynamic thread vector at
