@@ -612,7 +612,7 @@ static bool relaxZcmt(const InputSection &sec, size_t i, uint64_t loc,
     return false;
 
   const auto jalr = sec.contentMaybeDecompress().data()[r.offset + 4];
-  const uint8_t rd = (jalr & ((1ULL << (11 + 1)) - 1)) >> 7;
+  const uint8_t rd = extractBits(jalr,11,7);
   int tblEntryIndex = -1;
   if (rd == 0) {
     tblEntryIndex = in.riscvTableJumpSection->getCMJTEntryIndex(*r.sym);
@@ -1133,4 +1133,158 @@ void elf::mergeRISCVAttributesSections() {
 TargetInfo *elf::getRISCVTargetInfo() {
   static RISCV target;
   return &target;
+}
+
+TableJumpSection::TableJumpSection()
+    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS,
+                       config->wordsize, ".riscv.jvt") {}
+
+void TableJumpSection::addCMJTEntryCandidate(const Symbol &symbol, int gain) {
+  addEntry(symbol, CMJTEntryCandidates, gain);
+}
+
+int TableJumpSection::getCMJTEntryIndex(const Symbol &symbol) {
+  uint32_t index = getEntry(symbol, maxCMJTEntrySize, finalizedCMJTEntries);
+  return index < maxCMJTEntrySize ? (int)(startCMJTEntryIdx + index) : -1;
+}
+
+void TableJumpSection::addCMJALTEntryCandidate(const Symbol &symbol, int gain) {
+  addEntry(symbol, CMJALTEntryCandidates, gain);
+}
+
+int TableJumpSection::getCMJALTEntryIndex(const Symbol &symbol) {
+  uint32_t index = getEntry(symbol, maxCMJALTEntrySize, finalizedCMJALTEntries);
+  return index < maxCMJALTEntrySize ? (int)(startCMJALTEntryIdx + index) : -1;
+}
+
+void TableJumpSection::addEntry(
+    const Symbol &symbol,
+    llvm::DenseMap<llvm::CachedHashStringRef, int> &entriesList, int gain) {
+  if (symbol.file)
+    entriesList[llvm::CachedHashStringRef(
+        symbol.file->mb.getBufferIdentifier().str() + ":" +
+        symbol.getName().str())] += gain;
+  else
+    entriesList[llvm::CachedHashStringRef("<unknown>:" +
+                                          symbol.getName().str())] += gain;
+}
+
+uint32_t TableJumpSection::getEntry(
+    const Symbol &symbol, uint32_t maxSize,
+    SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
+        &entriesList) {
+  // Prevent adding duplicate entries
+  uint32_t i = 0;
+  llvm::CachedHashStringRef symName =
+      llvm::CachedHashStringRef("<unknown>:" + symbol.getName().str());
+  ;
+  if (symbol.file)
+    symName =
+        llvm::CachedHashStringRef(symbol.file->mb.getBufferIdentifier().str() +
+                                  ":" + symbol.getName().str());
+
+  for (; i < entriesList.size() && i <= maxSize; ++i) {
+    // If this is a duplicate addition, do not add it and return the address
+    // offset of the original entry.
+    if (symName.hash() == entriesList[i].first.hash()) {
+      return i;
+    }
+  }
+  return i;
+}
+
+void TableJumpSection::scanTableJumpEntrys(const InputSection &sec) const {
+  for (auto [i, r] : llvm::enumerate(sec.relocations)) {
+    switch (r.type) {
+    case R_RISCV_JAL:
+    case R_RISCV_CALL:
+    case R_RISCV_CALL_PLT: {
+      int gain = 6;
+      if (r.type == R_RISCV_JAL)
+        gain = 2;
+
+      const auto jalr = sec.contentMaybeDecompress().data()[r.offset + 4];
+      const uint8_t rd = extractBits(jalr,11,7);
+
+      if (rd == 0)
+        in.riscvTableJumpSection->addCMJTEntryCandidate(*r.sym, gain);
+      else if (rd == 1)
+        in.riscvTableJumpSection->addCMJALTEntryCandidate(*r.sym, gain);
+    }
+    }
+  }
+}
+
+void TableJumpSection::finalizeContents() {
+  if (isFinalized)
+    return;
+  isFinalized = true;
+
+  auto cmp =
+      [](const llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int> &p1,
+         const llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int> &p2) {
+        return p1.second > p2.second;
+      };
+
+  std::copy(CMJTEntryCandidates.begin(), CMJTEntryCandidates.end(),
+            std::back_inserter(finalizedCMJTEntries));
+  std::sort(finalizedCMJTEntries.begin(), finalizedCMJTEntries.end(), cmp);
+
+  std::copy(CMJALTEntryCandidates.begin(), CMJALTEntryCandidates.end(),
+            std::back_inserter(finalizedCMJALTEntries));
+  std::sort(finalizedCMJALTEntries.begin(), finalizedCMJALTEntries.end(), cmp);
+}
+
+size_t TableJumpSection::getSize() const {
+  if (!CMJALTEntryCandidates.empty()) {
+    return (startCMJALTEntryIdx + CMJALTEntryCandidates.size()) * xlen;
+  }
+  return (startCMJTEntryIdx + CMJTEntryCandidates.size()) * xlen;
+}
+
+void TableJumpSection::writeTo(uint8_t *buf) {
+  target->writeTableJumpHeader(buf);
+  writeEntries(buf + startCMJTEntryIdx, finalizedCMJTEntries);
+  padUntil(buf + ((startCMJTEntryIdx + finalizedCMJTEntries.size()) * xlen),
+           startCMJALTEntryIdx * xlen);
+  writeEntries(buf + startCMJALTEntryIdx, finalizedCMJALTEntries);
+}
+
+void TableJumpSection::padUntil(uint8_t *buf, const uint8_t address) {
+  for (size_t i = 0; i < address; ++i) {
+    if (config->is64)
+      write64le(buf, 0);
+    else
+      write32le(buf, 0);
+  }
+}
+
+void TableJumpSection::writeEntries(
+    uint8_t *buf,
+    SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
+        &entriesList) {
+  for (const auto &symbolName : entriesList) {
+    if (symbolName.second == 0)
+      continue;
+    // Use the symbol from in.symTab to ensure we have the final adjusted
+    // symbol.
+    for (const auto &symbol : in.symTab->getSymbols()) {
+      llvm::CachedHashStringRef sym =
+          llvm::CachedHashStringRef("<unknown>:" + symbol.sym->getName().str());
+      ;
+      if (symbol.sym->file)
+        sym = llvm::CachedHashStringRef(
+            symbol.sym->file->mb.getBufferIdentifier().str() + ":" +
+            symbol.sym->getName().str());
+
+      if (sym.hash() != symbolName.first.hash())
+        continue;
+      // Only process defined symbols.
+      auto *definedSymbol = dyn_cast<Defined>(symbol.sym);
+      if (!definedSymbol)
+        continue;
+      target->writeTableJump(buf, definedSymbol->getVA());
+      buf += config->wordsize;
+    }
+  }
 }

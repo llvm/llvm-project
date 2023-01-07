@@ -373,7 +373,6 @@ public:
   TableJumpSection();
   size_t getSize() const override;
   void writeTo(uint8_t *buf) override;
-  bool isNeeded() const override;
   void finalizeContents() override;
 
   void addCMJTEntryCandidate(const Symbol &symbol, int gain);
