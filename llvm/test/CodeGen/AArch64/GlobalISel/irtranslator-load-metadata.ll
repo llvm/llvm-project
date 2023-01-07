@@ -33,7 +33,7 @@ define i32 @load_dereferenceable(ptr dereferenceable(4) %ptr) {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (dereferenceable load (s32) from %ir.ptr)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.ptr)
   ; CHECK-NEXT:   $w0 = COPY [[LOAD]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   %load = load i32, ptr %ptr, align 4
@@ -46,7 +46,7 @@ define i32 @load_dereferenceable_invariant(ptr dereferenceable(4) %ptr) {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (dereferenceable invariant load (s32) from %ir.ptr)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (invariant load (s32) from %ir.ptr)
   ; CHECK-NEXT:   $w0 = COPY [[LOAD]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   %load = load i32, ptr %ptr, align 4, !invariant.load !0
