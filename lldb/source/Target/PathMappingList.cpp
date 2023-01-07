@@ -174,13 +174,13 @@ bool PathMappingList::RemapPath(ConstString path,
 /// Append components to path, applying style.
 static void AppendPathComponents(FileSpec &path, llvm::StringRef components,
                                  llvm::sys::path::Style style) {
-    auto component = llvm::sys::path::begin(components, style);
-    auto e = llvm::sys::path::end(components);
-    while (component != e &&
-        llvm::sys::path::is_separator(*component->data(), style))
-      ++component;
-    for (; component != e; ++component)
-      path.AppendPathComponent(*component);
+  auto component = llvm::sys::path::begin(components, style);
+  auto e = llvm::sys::path::end(components);
+  while (component != e &&
+         llvm::sys::path::is_separator(*component->data(), style))
+    ++component;
+  for (; component != e; ++component)
+    path.AppendPathComponent(*component);
 }
 
 llvm::Optional<FileSpec>
