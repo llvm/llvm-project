@@ -231,17 +231,17 @@ shoes:
 ; INSTRREF:      DBG_PHI $rdi, 1
 ; INSTRREF-NEXT: DBG_VALUE $rdi, 0, ![[SOCKS]], !DIExpression(),
 ; INSTRREF-NEXT: %0:gr64 = COPY $rdi
-; INSTRREF-NEXT: DBG_INSTR_REF ![[KNEES]], !DIExpression(DW_OP_deref), dbg-instr-ref(1, 0),
+; INSTRREF-NEXT: DBG_INSTR_REF ![[KNEES]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref), dbg-instr-ref(1, 0),
 
 ; In fast-isel mode, neither variable are hoisted or forwarded to a physreg.
 
 ; FASTISEL-INSTRREF-LABEL: name: qux
 
 ; FASTISEL-INSTRREF:      DBG_PHI $rdi, 1
-; FASTISEL-INSTRREF:      DBG_INSTR_REF ![[SOCKS]], !DIExpression(DW_OP_deref), dbg-instr-ref(1, 0),
+; FASTISEL-INSTRREF:      DBG_INSTR_REF ![[SOCKS]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref), dbg-instr-ref(1, 0),
 
 ; FASTISEL-INSTRREF-LABEL: bb.1.lala:
-; FASTISEL-INSTRREF:      DBG_INSTR_REF ![[KNEES]], !DIExpression(DW_OP_deref), dbg-instr-ref(1, 0),
+; FASTISEL-INSTRREF:      DBG_INSTR_REF ![[KNEES]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref), dbg-instr-ref(1, 0),
 declare i64 @cheddar(ptr %arg)
 
 define void @qux(ptr noalias sret(i32) %agg.result) !dbg !40 {

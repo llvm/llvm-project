@@ -18,10 +18,10 @@
 
 # POSTCHECK: version = 0x0005
 # POSTCHECK: DW_TAG_variable
-# POSTCHECK: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x3)
+# POSTCHECK: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x2)
 # POSTCHECK-EMPTY:
 # POSTCHECK: DW_TAG_variable
-# POSTCHECK: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x4)
+# POSTCHECK: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x3)
 # POSTCHECK-EMPTY:
 
 # clang++ main.cpp -g -O2

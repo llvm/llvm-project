@@ -23,8 +23,8 @@
 ;; (which happens to be the case here). It's just important that SelectionDAG
 ;; was fed these fragments.
 
-; CHECK: DBG{{.*}}DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; CHECK: DBG{{.*}}DIExpression(DW_OP_LLVM_fragment, 64, 32)
+; CHECK: DBG{{.*}}DIExpression({{(DW_OP_LLVM_arg, 0, )?}}DW_OP_LLVM_fragment, 0, 32)
+; CHECK: DBG{{.*}}DIExpression({{(DW_OP_LLVM_arg, 0, )?}}DW_OP_LLVM_fragment, 64, 32)
 
 ;; Source
 ;; ------
