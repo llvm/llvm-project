@@ -3876,7 +3876,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (EltSize > (2 * SrcEltSize)) {
       if (IsInt2FP) {
         // Do a regular integer sign/zero extension then convert to float.
-        MVT IVecVT = MVT::getVectorVT(MVT::getIntegerVT(EltSize),
+        MVT IVecVT = MVT::getVectorVT(MVT::getIntegerVT(EltSize / 2),
                                       VT.getVectorElementCount());
         unsigned ExtOpcode = Op.getOpcode() == ISD::UINT_TO_FP
                                  ? ISD::ZERO_EXTEND

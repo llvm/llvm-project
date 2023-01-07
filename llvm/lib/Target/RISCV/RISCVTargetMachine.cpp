@@ -129,6 +129,15 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
   unsigned RVVBitsMin = RVVVectorBitsMinOpt;
   unsigned RVVBitsMax = RVVVectorBitsMaxOpt;
 
+  Attribute VScaleRangeAttr = F.getFnAttribute(Attribute::VScaleRange);
+  if (VScaleRangeAttr.isValid()) {
+    if (!RVVVectorBitsMinOpt.getNumOccurrences())
+      RVVBitsMin = VScaleRangeAttr.getVScaleRangeMin() * RISCV::RVVBitsPerBlock;
+    std::optional<unsigned> VScaleMax = VScaleRangeAttr.getVScaleRangeMax();
+    if (VScaleMax.has_value() && !RVVVectorBitsMaxOpt.getNumOccurrences())
+      RVVBitsMax = *VScaleMax * RISCV::RVVBitsPerBlock;
+  }
+
   if (RVVBitsMin != -1U) {
     // FIXME: Change to >= 32 when VLEN = 32 is supported.
     assert((RVVBitsMin == 0 || (RVVBitsMin >= 64 && RVVBitsMin <= 65536 &&

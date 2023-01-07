@@ -134,7 +134,7 @@ body:             |
     DBG_PHI $rbx, 1
     $rax = COPY $rbx
     $rbx = MOV64ri 0
-    DBG_INSTR_REF 1, 0, !12, !DIExpression(), debug-location !13
+    DBG_INSTR_REF !12, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !13
 
     ; This sequence should mark the contents of rbx on block entry as being the
     ; value for the variable at this DBG_INSTR_REF. We've force it to be in
@@ -142,8 +142,8 @@ body:             |
     ; CHECK:      DBG_PHI $rbx, 1
     ; CHECK-NEXT: $rax = COPY $rbx
     ; CHECK-NEXT: $rbx = MOV64ri 0
-    ; CHECK-NEXT: DBG_INSTR_REF 1, 0
-    ; CHECK-NEXT: DBG_VALUE $rax, $noreg
+    ; CHECK-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}} $rax
 
     $rbx = COPY $rax
     renamable $rbx = ADD64rr killed renamable $rbx, killed renamable $r14, implicit-def $eflags, debug-location !23

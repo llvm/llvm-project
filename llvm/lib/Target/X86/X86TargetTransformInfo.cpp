@@ -4257,7 +4257,8 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 }
 
 InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                               unsigned Index) {
+                                               unsigned Index, Value *Op0,
+                                               Value *Op1) {
   static const CostTblEntry SLMCostTbl[] = {
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i8,      4 },
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i16,     4 },
@@ -4330,12 +4331,34 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       }
     }
 
+    MVT MScalarTy = LT.second.getScalarType();
+    auto IsCheapPInsrPExtrInsertPS = [&]() {
+      return (MScalarTy == MVT::i16 && ST->hasSSE2()) ||
+             (MScalarTy.isInteger() && ST->hasSSE41()) ||
+             (MScalarTy == MVT::f32 && ST->hasSSE41() &&
+              Opcode == Instruction::InsertElement);
+    };
+
     if (Index == 0) {
       // Floating point scalars are already located in index #0.
       // Many insertions to #0 can fold away for scalar fp-ops, so let's assume
       // true for all.
       if (ScalarType->isFloatingPointTy())
         return RegisterFileMoveCost;
+
+      if (Opcode == Instruction::InsertElement &&
+          isa_and_nonnull<UndefValue>(Op0)) {
+        // Consider the gather cost to be cheap.
+        if (isa_and_nonnull<LoadInst>(Op1))
+          return RegisterFileMoveCost;
+        if (!IsCheapPInsrPExtrInsertPS()) {
+          // mov constant-to-GPR + movd/movq GPR -> XMM.
+          if (isa_and_nonnull<Constant>(Op1) && Op1->getType()->isIntegerTy())
+            return 2 + RegisterFileMoveCost;
+          // Assume movd/movq GPR -> XMM is relatively cheap on all targets.
+          return 1 + RegisterFileMoveCost;
+        }
+      }
 
       // Assume movd/movq XMM -> GPR is relatively cheap on all targets.
       if (ScalarType->isIntegerTy() && Opcode == Instruction::ExtractElement)
@@ -4344,19 +4367,13 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Unexpected vector opcode");
-    MVT MScalarTy = LT.second.getScalarType();
     if (ST->useSLMArithCosts())
       if (auto *Entry = CostTableLookup(SLMCostTbl, ISD, MScalarTy))
         return Entry->Cost + RegisterFileMoveCost;
 
     // Assume pinsr/pextr XMM <-> GPR is relatively cheap on all targets.
-    if ((MScalarTy == MVT::i16 && ST->hasSSE2()) ||
-        (MScalarTy.isInteger() && ST->hasSSE41()))
-      return 1 + RegisterFileMoveCost;
-
     // Assume insertps is relatively cheap on all targets.
-    if (MScalarTy == MVT::f32 && ST->hasSSE41() &&
-        Opcode == Instruction::InsertElement)
+    if (IsCheapPInsrPExtrInsertPS())
       return 1 + RegisterFileMoveCost;
 
     // For extractions we just need to shuffle the element to index 0, which
@@ -4383,7 +4400,8 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   if (Opcode == Instruction::ExtractElement && ScalarType->isPointerTy())
     RegisterFileMoveCost += 1;
 
-  return BaseT::getVectorInstrCost(Opcode, Val, Index) + RegisterFileMoveCost;
+  return BaseT::getVectorInstrCost(Opcode, Val, Index, Op0, Op1) +
+         RegisterFileMoveCost;
 }
 
 InstructionCost X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
@@ -5155,7 +5173,8 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   }
 
   // Add the final extract element to the cost.
-  return ReductionCost + getVectorInstrCost(Instruction::ExtractElement, Ty, 0);
+  return ReductionCost + getVectorInstrCost(Instruction::ExtractElement, Ty, 0,
+                                            nullptr, nullptr);
 }
 
 InstructionCost X86TTIImpl::getMinMaxCost(Type *Ty, Type *CondTy,
@@ -5455,7 +5474,8 @@ X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
   }
 
   // Add the final extract element to the cost.
-  return MinMaxCost + getVectorInstrCost(Instruction::ExtractElement, Ty, 0);
+  return MinMaxCost + getVectorInstrCost(Instruction::ExtractElement, Ty, 0,
+                                         nullptr, nullptr);
 }
 
 /// Calculate the cost of materializing a 64-bit value. This helper

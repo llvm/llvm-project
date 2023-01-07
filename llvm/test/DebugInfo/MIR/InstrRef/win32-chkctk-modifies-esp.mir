@@ -142,9 +142,9 @@ body:             |
     CALLpcrel32 &_chkstk, implicit $esp, implicit $ssp, implicit $eax, implicit $esp, implicit-def dead $eax, implicit-def $esp, implicit-def dead $eflags, debug-instr-number 2, debug-location !41
     $ebx = MOV32rr $esp, debug-location !41
     $eax = MOV32ri 0
-    DBG_INSTR_REF 2, 6, !42, !DIExpression(DW_OP_deref), debug-location !46
-    ; CHECK-LABEL: DBG_INSTR_REF 2, 6
-    ; CHECK:       DBG_VALUE $esp
+    DBG_INSTR_REF !42, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref), dbg-instr-ref(2, 6), debug-location !46
+    ; CHECK-LABEL: DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 6)
+    ; CHECK:       DBG_VALUE_LIST {{.+}}, $esp
 
     ;; Variable value is $esp / $ebx, will be based on $esp initially. We'll now
     ;; allocate more stack space, and several things should happen:
@@ -156,18 +156,18 @@ body:             |
     ;;    $ebx, which comes from the first modified $esp.
     CALLpcrel32 &_chkstk, implicit $esp, implicit $ssp, implicit $eax, implicit $esp, implicit-def dead $eax, implicit-def $esp, implicit-def dead $eflags, debug-instr-number 3, debug-location !41
     ; CHECK-NEXT: CALLpcrel32
-    ; CHECK-NEXT: DBG_VALUE $ebx
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $ebx
 
-    DBG_INSTR_REF 3, 6, !42, !DIExpression(DW_OP_deref), debug-location !46
-    ; CHECK-NEXT: DBG_INSTR_REF 3, 6
-    ; CHECK-NEXT: DBG_VALUE $esp
+    DBG_INSTR_REF !42, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref), dbg-instr-ref(3, 6), debug-location !46
+    ; CHECK-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(3, 6)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $esp
 
     $esp = ADD32ri killed $esp, 0, implicit-def dead $eflags
     ; CHECK-NEXT: ADD32ri
 
-    DBG_INSTR_REF 3, 6, !42, !DIExpression(DW_OP_deref), debug-location !46
-    ; CHECK-NEXT: DBG_INSTR_REF 3, 6
-    ; CHECK-NEXT: DBG_VALUE $noreg
+    DBG_INSTR_REF !42, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref), dbg-instr-ref(3, 6), debug-location !46
+    ; CHECK-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(3, 6)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $noreg
 
     $esp = MOV32rr $ebp, debug-location !49
     $ebp = frame-destroy POP32r implicit-def $esp, implicit $esp, debug-location !49

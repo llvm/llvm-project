@@ -250,10 +250,9 @@
 # POSTCHECK-DWO-MAIN: DW_TAG_inlined_subroutine [12]
 # POSTCHECK-DWO-MAIN-NEXT: DW_AT_abstract_origin [DW_FORM_ref4]
 # POSTCHECK-DWO-MAIN-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x2) rangelist = 0x00000020
-# BOLT uses DW_RLE_startx_length encoding. Wit this encoding llvm-dwarfdump tries to lookup the actual address.
-# Since .debug_addr is in the binary low_pc is set to 0.
-# POSTCHECK-DWO-MAIN-NEXT: [0x0000000000000000, 0x0000000000000004)
-# POSTCHECK-DWO-MAIN-NEXT: [0x0000000000000000, 0x0000000000000006))
+# Encded as a pair. So it's offset from base address.
+# POSTCHECK-DWO-MAIN-NEXT: [0x0000000000000007, 0x000000000000000b)
+# POSTCHECK-DWO-MAIN-NEXT: [0x0000000000000017, 0x000000000000001d))
 
 # POSTCHECK-DWO-HELPER1: version = 0x0005
 # POSTCHECK-DWO-HELPER1: DW_TAG_subprogram [7]

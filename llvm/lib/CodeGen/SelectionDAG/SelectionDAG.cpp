@@ -2977,17 +2977,11 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
                             Depth + 1);
   case ISD::SPLAT_VECTOR: {
     SDValue SrcOp = Op.getOperand(0);
-    if (SrcOp.getValueSizeInBits() != BitWidth) {
-      assert(SrcOp.getValueSizeInBits() > BitWidth &&
-             "Expected SPLAT_VECTOR implicit truncation");
-      // FIXME: We should be able to truncate the known bits here to match
-      // the official semantics of SPLAT_VECTOR, but doing so exposes a
-      // Hexagon target bug which results in an infinite loop during
-      // DAGCombine.  (See D137140 for repo).  Once that's fixed, we can
-      // strengthen this.
-      break;
-    }
-    Known = computeKnownBits(SrcOp, Depth + 1);
+    assert(SrcOp.getValueSizeInBits() >= BitWidth &&
+           "Expected SPLAT_VECTOR implicit truncation");
+    // Implicitly truncate the bits to match the official semantics of
+    // SPLAT_VECTOR.
+    Known = computeKnownBits(SrcOp, Depth + 1).trunc(BitWidth);
     break;
   }
   case ISD::BUILD_VECTOR:

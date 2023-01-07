@@ -170,7 +170,7 @@ public:
             std::map<DebugAddressRangesVector, uint64_t> &CachedRanges);
 
   /// Add ranges and return offset into section.
-  virtual uint64_t addRanges(const DebugAddressRangesVector &Ranges);
+  virtual uint64_t addRanges(DebugAddressRangesVector &Ranges);
 
   /// Returns an offset of an empty address ranges list that is always written
   /// to .debug_ranges
@@ -232,7 +232,7 @@ public:
       std::map<DebugAddressRangesVector, uint64_t> &CachedRanges) override;
 
   /// Add ranges and return offset into section.
-  uint64_t addRanges(const DebugAddressRangesVector &Ranges) override;
+  uint64_t addRanges(DebugAddressRangesVector &Ranges) override;
 
   std::unique_ptr<DebugBufferVector> releaseBuffer() override {
     return std::move(RangesBuffer);

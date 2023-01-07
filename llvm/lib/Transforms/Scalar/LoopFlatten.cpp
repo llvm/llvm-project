@@ -215,6 +215,15 @@ struct FlattenInfo {
     LLVM_DEBUG(dbgs() << "Matched multiplication: "; MatchedMul->dump());
     LLVM_DEBUG(dbgs() << "Matched iteration count: "; MatchedItCount->dump());
 
+    // The mul should not have any other uses. Widening may leave trivially dead
+    // uses, which can be ignored.
+    if (count_if(MatchedMul->users(), [](User *U) {
+          return !isInstructionTriviallyDead(cast<Instruction>(U));
+        }) > 1) {
+      LLVM_DEBUG(dbgs() << "Multiply has more than one use\n");
+      return false;
+    }
+
     // Look through extends if the IV has been widened. Don't look through
     // extends if we already looked through a trunc.
     if (Widened && IsAdd &&

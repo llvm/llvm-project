@@ -48,11 +48,11 @@
 ; BOLT: DW_TAG_skeleton_unit
 ; BOLT: DW_AT_dwo_name [DW_FORM_strx1]  (indexed (00000001) string = "helper.dwo.dwo")
 ; BOLT-NEXT: DW_AT_low_pc [DW_FORM_addrx]	(indexed (00000003) address = 0x0000000000000000)
-; BOLT-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x00000027
+; BOLT-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x0000002a
 ; BOLT-NEXT: [0x[[#ADDR3]]
 ; BOLT-SAME: 0x[[#ADDR3 + 0x3D]]
 ; BOLT-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]  (0x00000038)
-; BOLT-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x00000023)
+; BOLT-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x00000026)
 
 ; PRE-BOLT-DWO-MAIN: version = 0x0005
 ; PRE-BOLT-DWO-MAIN: DW_TAG_compile_unit

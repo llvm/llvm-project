@@ -874,7 +874,8 @@ InstructionCost ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 }
 
 InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
-                                               unsigned Index) {
+                                               unsigned Index, Value *Op0,
+                                               Value *Op1) {
   // Penalize inserting into an D-subregister. We end up with a three times
   // lower estimated throughput on swift.
   if (ST->hasSlowLoadDSubregister() && Opcode == Instruction::InsertElement &&
@@ -893,7 +894,7 @@ InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     if (ValTy->isVectorTy() &&
         ValTy->getScalarSizeInBits() <= 32)
       return std::max<InstructionCost>(
-          BaseT::getVectorInstrCost(Opcode, ValTy, Index), 2U);
+          BaseT::getVectorInstrCost(Opcode, ValTy, Index, Op0, Op1), 2U);
   }
 
   if (ST->hasMVEIntegerOps() && (Opcode == Instruction::InsertElement ||
@@ -906,7 +907,7 @@ InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     return LT.first * (ValTy->getScalarType()->isIntegerTy() ? 4 : 1);
   }
 
-  return BaseT::getVectorInstrCost(Opcode, ValTy, Index);
+  return BaseT::getVectorInstrCost(Opcode, ValTy, Index, Op0, Op1);
 }
 
 InstructionCost ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,

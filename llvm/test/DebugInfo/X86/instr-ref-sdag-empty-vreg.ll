@@ -7,7 +7,7 @@
 ;; vreg that is never defined, which risks a crash. Check that we don't crash,
 ;; and produce an empty variable location.
 
-; CHECK: DBG_VALUE $noreg
+; CHECK: DBG_VALUE_LIST {{.+}}, $noreg
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"

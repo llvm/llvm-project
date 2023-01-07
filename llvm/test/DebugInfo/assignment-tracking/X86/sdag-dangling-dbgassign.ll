@@ -79,7 +79,7 @@ define i32 @test1() local_unnamed_addr #0 !dbg !17 {
 ; CHECK-NEXT:    DBG_VALUE 0, $noreg, ![[BAR1]], !DIExpression()
 ; CHECK-NEXT:    [[REG1:%[0-9]+]]:gr64 = LEA64r
 ; INSTRREF-SAME:    debug-instr-number 1
-; INSTRREF-NEXT:  DBG_INSTR_REF 1, 0, ![[FOO1]], !DIExpression()
+; INSTRREF-NEXT:  DBG_INSTR_REF ![[FOO1]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
 ; DBGVALUE-NEXT:  DBG_VALUE [[REG1]], $noreg, ![[FOO1]], !DIExpression()
 entry1:
   call void @llvm.dbg.assign(metadata ptr @S, metadata !20, metadata !DIExpression(), metadata !54, metadata ptr undef, metadata !DIExpression()), !dbg !23
@@ -92,8 +92,8 @@ define i32 @test2() local_unnamed_addr #0 !dbg !26 {
 ; CHECK-LABEL: bb.0.entry2
 ; CHECK-NEXT:    [[REG2:%[0-9]+]]:gr64 = LEA64r
 ; INSTRREF-SAME:    debug-instr-number 1
-; INSTRREF-NEXT: DBG_INSTR_REF 1, 0, ![[FOO2]], !DIExpression()
-; INSTRREF-NEXT: DBG_INSTR_REF 1, 0, ![[BAR2]], !DIExpression()
+; INSTRREF-NEXT: DBG_INSTR_REF ![[FOO2]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
+; INSTRREF-NEXT: DBG_INSTR_REF ![[BAR2]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
 ; DBGVALUE-NEXT: DBG_VALUE [[REG2]], $noreg, ![[FOO2]], !DIExpression
 ; DBGVALUE-NEXT: DBG_VALUE [[REG2]], $noreg, ![[BAR2]], !DIExpression
 entry2:
@@ -107,8 +107,8 @@ define i32 @test3() local_unnamed_addr #0 !dbg !33 {
 ; CHECK-LABEL: bb.0.entry3
 ; CHECK-NEXT:    [[REG3:%[0-9]+]]:gr64 = LEA64r
 ; INSTRREF-SAME:    debug-instr-number 1
-; INSTRREF-NEXT: DBG_INSTR_REF 1, 0, ![[BAR3]], !DIExpression()
-; INSTRREF-NEXT: DBG_INSTR_REF 1, 0, ![[FOO3]], !DIExpression()
+; INSTRREF-NEXT: DBG_INSTR_REF ![[BAR3]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
+; INSTRREF-NEXT: DBG_INSTR_REF ![[FOO3]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
 ; DBGVALUE-NEXT: DBG_VALUE [[REG3]], $noreg, ![[BAR3]], !DIExpression()
 ; DBGVALUE-NEXT: DBG_VALUE [[REG3]], $noreg, ![[FOO3]], !DIExpression()
 entry3:
@@ -125,7 +125,7 @@ define i32 @test4() local_unnamed_addr #0 !dbg !40 {
 ; CHECK-NEXT:    DBG_VALUE 0, $noreg, ![[FOO4]], !DIExpression()
 ; CHECK-NEXT:    [[REG4:%[0-9]+]]:gr64 = LEA64r
 ; INSTRREF-SAME:    debug-instr-number 1
-; INSTRREF-NEXT: DBG_INSTR_REF 1, 0, ![[BAR4]], !DIExpression()
+; INSTRREF-NEXT: DBG_INSTR_REF ![[BAR4]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
 ; DBGVALUE-NEXT: DBG_VALUE [[REG4]], $noreg, ![[BAR4]], !DIExpression()
 entry4:
   call void @llvm.dbg.assign(metadata ptr @S, metadata !42, metadata !DIExpression(), metadata !54, metadata ptr undef, metadata !DIExpression()), !dbg !44
@@ -141,7 +141,7 @@ define i32 @test5() local_unnamed_addr #0 !dbg !47 {
 ; CHECK-NEXT:    DBG_VALUE 0, $noreg, ![[FOO5]], !DIExpression()
 ; CHECK-NEXT:    [[REG5:%[0-9]+]]:gr64 = LEA64r
 ; INSTRREF-SAME:    debug-instr-number 1
-; INSTRREF-NEXT: DBG_INSTR_REF 1, 0, ![[BAR5]], !DIExpression()
+; INSTRREF-NEXT: DBG_INSTR_REF ![[BAR5]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
 ; DBGVALUE-NEXT: DBG_VALUE [[REG5]], $noreg, ![[BAR5]], !DIExpression()
 ; CHECK-NOT:     DBG_{{.*}} ![[FOO5]], !DIExpression()
 ; CHECK:         RET

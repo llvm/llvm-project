@@ -6,6 +6,8 @@ with an aim to replace the previous flang project
 (https://github.com/flang-compiler/flang) and address its various deficiencies.
 F18 was subsequently accepted into the LLVM project and rechristened as Flang.
 
+Please note that flang is not ready yet for production usage.
+
 ## Getting Started
 
 Read more about flang in the [docs directory](docs).
@@ -206,17 +208,15 @@ ninja check-flang
 
 Flang is written in C++17.
 
-The code has been compiled and tested with
-GCC versions from 7.2.0 to 9.3.0.
+The code has been compiled and tested with GCC versions from 7.2.0 to 9.3.0.
 
-The code has been compiled and tested with
-clang version 7.0, 8.0, 9.0 and 10.0
+The code has been compiled and tested with clang version 7.0, 8.0, 9.0 and 10.0
 using either GNU's libstdc++ or LLVM's libc++.
 
-The code has been compiled on
-AArch64, x86\_64 and ppc64le servers
-with CentOS7, Ubuntu18.04, Rhel, MacOs, Mojave, XCode and
-Apple Clang version 10.0.1.
+The code has been compiled on AArch64, x86_64 and ppc64le servers with CentOS7,
+Ubuntu18.04, Rhel, MacOs, Mojave, XCode and Apple Clang version 10.0.1.
+
+Note that flang is not supported on 32 bit CPUs.
 
 ### Building flang with GCC
 

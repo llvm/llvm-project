@@ -1779,7 +1779,7 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
 
     // We must sink this DBG_VALUE if its operand is sunk. To avoid searching
     // for DBG_VALUEs later, record them when they're encountered.
-    if (MI.isDebugValue()) {
+    if (MI.isDebugValue() && !MI.isDebugRef()) {
       SmallDenseMap<MCRegister, SmallVector<unsigned, 2>, 4> MIUnits;
       bool IsValid = true;
       for (MachineOperand &MO : MI.debug_operands()) {
