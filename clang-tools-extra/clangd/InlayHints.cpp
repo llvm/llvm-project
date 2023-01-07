@@ -671,7 +671,8 @@ private:
     if (QT->isDecltypeType())
       return true;
     if (const AutoType *AT = QT->getContainedAutoType())
-      if (AT->getDeducedType()->isDecltypeType())
+      if (!AT->getDeducedType().isNull() &&
+          AT->getDeducedType()->isDecltypeType())
         return true;
     return false;
   }
