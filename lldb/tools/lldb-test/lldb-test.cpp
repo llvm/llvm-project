@@ -141,7 +141,7 @@ static cl::opt<std::string> InputFile(cl::Positional, cl::desc("<input file>"),
                                       cl::Required, cl::sub(SymTabSubcommand));
 
 /// Validate that the options passed make sense.
-static llvm::Optional<llvm::Error> validate();
+static std::optional<llvm::Error> validate();
 
 /// Transforms the selected mangling preference into a Mangled::NamePreference
 static Mangled::NamePreference getNamePreference();
@@ -861,7 +861,7 @@ Expected<Error (*)(lldb_private::Module &)> opts::symbols::getAction() {
   llvm_unreachable("Unsupported symbol action.");
 }
 
-llvm::Optional<llvm::Error> opts::symtab::validate() {
+std::optional<llvm::Error> opts::symtab::validate() {
   if (ManglingPreference != ManglingPreference::None &&
       FindSymbolsByRegex.empty())
     return make_string_error("Mangling preference set but no regex specified.");

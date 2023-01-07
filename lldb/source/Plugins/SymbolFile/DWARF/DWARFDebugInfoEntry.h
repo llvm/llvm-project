@@ -68,7 +68,7 @@ public:
       const DWARFUnit *cu, const dw_attr_t attr, uint64_t fail_value,
       bool check_specification_or_abstract_origin = false) const;
 
-  llvm::Optional<uint64_t> GetAttributeValueAsOptionalUnsigned(
+  std::optional<uint64_t> GetAttributeValueAsOptionalUnsigned(
       const DWARFUnit *cu, const dw_attr_t attr,
       bool check_specification_or_abstract_origin = false) const;
 

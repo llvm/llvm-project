@@ -105,9 +105,9 @@ public:
   // should_[suppress|stop|notify] flag can be std::nullopt - no filtering by
   // this flag true - only signals that have it set to true are returned false -
   // only signals that have it set to true are returned
-  std::vector<int32_t> GetFilteredSignals(llvm::Optional<bool> should_suppress,
-                                          llvm::Optional<bool> should_stop,
-                                          llvm::Optional<bool> should_notify);
+  std::vector<int32_t> GetFilteredSignals(std::optional<bool> should_suppress,
+                                          std::optional<bool> should_stop,
+                                          std::optional<bool> should_notify);
 
 protected:
   // Classes that inherit from UnixSignals can see and modify these

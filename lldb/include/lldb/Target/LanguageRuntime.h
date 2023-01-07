@@ -151,7 +151,7 @@ public:
   /// from the user interface.
   virtual bool IsAllowedRuntimeValue(ConstString name) { return false; }
 
-  virtual llvm::Optional<CompilerType> GetRuntimeType(CompilerType base_type) {
+  virtual std::optional<CompilerType> GetRuntimeType(CompilerType base_type) {
     return std::nullopt;
   }
 

@@ -30,7 +30,7 @@ llvm::VersionTuple HostInfoOpenBSD::GetOSVersion() {
   return llvm::VersionTuple();
 }
 
-llvm::Optional<std::string> HostInfoOpenBSD::GetOSBuildString() {
+std::optional<std::string> HostInfoOpenBSD::GetOSBuildString() {
   int mib[2] = {CTL_KERN, KERN_OSREV};
   char osrev_str[12];
   uint32_t osrev = 0;

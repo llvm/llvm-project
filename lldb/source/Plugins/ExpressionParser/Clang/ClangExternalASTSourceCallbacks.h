@@ -50,7 +50,7 @@ public:
 
   /// Module-related methods.
   /// \{
-  llvm::Optional<clang::ASTSourceDescriptor>
+  std::optional<clang::ASTSourceDescriptor>
   getSourceDescriptor(unsigned ID) override;
   clang::Module *getModule(unsigned ID) override;
   OptionalClangModuleID RegisterModule(clang::Module *module);

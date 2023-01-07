@@ -51,9 +51,9 @@ using namespace lldb;
 
 #define NON_PRINTABLE_CHAR '.'
 
-static llvm::Optional<llvm::APInt> GetAPInt(const DataExtractor &data,
-                                            lldb::offset_t *offset_ptr,
-                                            lldb::offset_t byte_size) {
+static std::optional<llvm::APInt> GetAPInt(const DataExtractor &data,
+                                           lldb::offset_t *offset_ptr,
+                                           lldb::offset_t byte_size) {
   if (byte_size == 0)
     return std::nullopt;
 
@@ -99,7 +99,7 @@ static llvm::Optional<llvm::APInt> GetAPInt(const DataExtractor &data,
 static lldb::offset_t DumpAPInt(Stream *s, const DataExtractor &data,
                                 lldb::offset_t offset, lldb::offset_t byte_size,
                                 bool is_signed, unsigned radix) {
-  llvm::Optional<llvm::APInt> apint = GetAPInt(data, &offset, byte_size);
+  std::optional<llvm::APInt> apint = GetAPInt(data, &offset, byte_size);
   if (apint) {
     std::string apint_str = toString(*apint, radix, is_signed);
     switch (radix) {
@@ -239,7 +239,7 @@ void DumpFloatingPoint(std::ostringstream &ss, FloatT f) {
   ss << f;
 }
 
-static llvm::Optional<MemoryTagMap>
+static std::optional<MemoryTagMap>
 GetMemoryTags(lldb::addr_t addr, size_t length,
               ExecutionContextScope *exe_scope) {
   assert(addr != LLDB_INVALID_ADDRESS);
@@ -295,11 +295,10 @@ GetMemoryTags(lldb::addr_t addr, size_t length,
   return memory_tag_map;
 }
 
-static void
-printMemoryTags(const DataExtractor &DE, Stream *s, lldb::addr_t addr,
-                size_t len,
-                const llvm::Optional<MemoryTagMap> &memory_tag_map) {
-  std::vector<llvm::Optional<lldb::addr_t>> tags =
+static void printMemoryTags(const DataExtractor &DE, Stream *s,
+                            lldb::addr_t addr, size_t len,
+                            const std::optional<MemoryTagMap> &memory_tag_map) {
+  std::vector<std::optional<lldb::addr_t>> tags =
       memory_tag_map->GetTags(addr, len);
 
   // Only print if there is at least one tag for this line
@@ -359,7 +358,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
 
   offset_t offset = start_offset;
 
-  llvm::Optional<MemoryTagMap> memory_tag_map;
+  std::optional<MemoryTagMap> memory_tag_map;
   if (show_memory_tags && base_addr != LLDB_INVALID_ADDRESS)
     memory_tag_map =
         GetMemoryTags(base_addr, DE.GetByteSize() - offset, exe_scope);
@@ -652,7 +651,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       if (exe_scope)
         target_sp = exe_scope->CalculateTarget();
 
-      llvm::Optional<unsigned> format_max_padding;
+      std::optional<unsigned> format_max_padding;
       if (target_sp)
         format_max_padding = target_sp->GetMaxZeroPaddingInFloatFormat();
 
@@ -667,7 +666,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       // x87DoubleExtended semantics which has a byte size of 10 (80-bit).
       const size_t semantics_byte_size =
           (llvm::APFloat::getSizeInBits(semantics) + 7) / 8;
-      llvm::Optional<llvm::APInt> apint =
+      std::optional<llvm::APInt> apint =
           GetAPInt(DE, &offset, semantics_byte_size);
       if (apint) {
         llvm::APFloat apfloat(semantics, *apint);

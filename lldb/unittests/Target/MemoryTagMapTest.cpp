@@ -29,7 +29,7 @@ TEST(MemoryTagMapTest, EmptyTagMap) {
 }
 
 TEST(MemoryTagMapTest, GetTags) {
-  using TagsVec = std::vector<llvm::Optional<lldb::addr_t>>;
+  using TagsVec = std::vector<std::optional<lldb::addr_t>>;
 
   MemoryTagManagerAArch64MTE manager;
   MemoryTagMap tag_map(&manager);

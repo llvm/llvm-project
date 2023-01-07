@@ -83,7 +83,7 @@ bool SelectHelper::FDIsSetError(lldb::socket_t fd) const {
     return false;
 }
 
-static void updateMaxFd(llvm::Optional<lldb::socket_t> &vold,
+static void updateMaxFd(std::optional<lldb::socket_t> &vold,
                         lldb::socket_t vnew) {
   if (!vold)
     vold = vnew;
@@ -101,10 +101,10 @@ lldb_private::Status SelectHelper::Select() {
     return lldb_private::Status("Too many file descriptors for select()");
 #endif
 
-  llvm::Optional<lldb::socket_t> max_read_fd;
-  llvm::Optional<lldb::socket_t> max_write_fd;
-  llvm::Optional<lldb::socket_t> max_error_fd;
-  llvm::Optional<lldb::socket_t> max_fd;
+  std::optional<lldb::socket_t> max_read_fd;
+  std::optional<lldb::socket_t> max_write_fd;
+  std::optional<lldb::socket_t> max_error_fd;
+  std::optional<lldb::socket_t> max_fd;
   for (auto &pair : m_fd_map) {
     pair.second.PrepareForSelect();
     const lldb::socket_t fd = pair.first;

@@ -703,7 +703,7 @@ public:
   LoadAddressResolver(Target *target, bool &symbol_was_missing_weak)
       : m_target(target), m_symbol_was_missing_weak(symbol_was_missing_weak) {}
 
-  llvm::Optional<lldb::addr_t> Resolve(SymbolContextList &sc_list) {
+  std::optional<lldb::addr_t> Resolve(SymbolContextList &sc_list) {
     if (sc_list.IsEmpty())
       return std::nullopt;
 

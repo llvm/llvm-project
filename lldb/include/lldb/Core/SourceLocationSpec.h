@@ -48,7 +48,7 @@ public:
   ///     Whether to look for an exact match.
   ///
   explicit SourceLocationSpec(FileSpec file_spec, uint32_t line,
-                              llvm::Optional<uint16_t> column = std::nullopt,
+                              std::optional<uint16_t> column = std::nullopt,
                               bool check_inlines = false,
                               bool exact_match = false);
 
@@ -166,9 +166,9 @@ public:
 
   FileSpec GetFileSpec() const { return m_declaration.GetFile(); }
 
-  llvm::Optional<uint32_t> GetLine() const;
+  std::optional<uint32_t> GetLine() const;
 
-  llvm::Optional<uint16_t> GetColumn() const;
+  std::optional<uint16_t> GetColumn() const;
 
   bool GetCheckInlines() const { return m_check_inlines; }
 

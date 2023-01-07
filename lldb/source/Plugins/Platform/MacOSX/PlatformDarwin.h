@@ -88,7 +88,7 @@ public:
 
   void
   ARMGetSupportedArchitectures(std::vector<ArchSpec> &archs,
-                               llvm::Optional<llvm::Triple::OSType> os = {});
+                               std::optional<llvm::Triple::OSType> os = {});
 
   void x86GetSupportedArchitectures(std::vector<ArchSpec> &archs);
 

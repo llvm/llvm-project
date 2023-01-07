@@ -24,7 +24,7 @@ bool CommandHistory::IsEmpty() const {
   return m_history.empty();
 }
 
-llvm::Optional<llvm::StringRef>
+std::optional<llvm::StringRef>
 CommandHistory::FindString(llvm::StringRef input_str) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (input_str.size() < 2)

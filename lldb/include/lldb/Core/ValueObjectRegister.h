@@ -37,7 +37,7 @@ public:
                                     lldb::RegisterContextSP &reg_ctx_sp,
                                     uint32_t set_idx);
 
-  llvm::Optional<uint64_t> GetByteSize() override;
+  std::optional<uint64_t> GetByteSize() override;
 
   lldb::ValueType GetValueType() const override {
     return lldb::eValueTypeRegisterSet;
@@ -87,7 +87,7 @@ public:
                                     lldb::RegisterContextSP &reg_ctx_sp,
                                     const RegisterInfo *reg_info);
 
-  llvm::Optional<uint64_t> GetByteSize() override;
+  std::optional<uint64_t> GetByteSize() override;
 
   lldb::ValueType GetValueType() const override {
     return lldb::eValueTypeRegister;

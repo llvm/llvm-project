@@ -156,7 +156,7 @@ PlatformDarwinDevice::GetSDKDirectoryForCurrentOSVersion() {
 
     // Fall back to the platform's build string.
     if (!build) {
-      if (llvm::Optional<std::string> os_build_str = GetOSBuildString()) {
+      if (std::optional<std::string> os_build_str = GetOSBuildString()) {
         build = ConstString(*os_build_str);
       }
     }

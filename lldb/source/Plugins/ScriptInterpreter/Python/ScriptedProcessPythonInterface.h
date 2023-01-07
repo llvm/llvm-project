@@ -37,7 +37,7 @@ public:
 
   Status Stop() override;
 
-  llvm::Optional<MemoryRegionInfo>
+  std::optional<MemoryRegionInfo>
   GetMemoryRegionContainingAddress(lldb::addr_t address,
                                    Status &error) override;
 
@@ -56,7 +56,7 @@ public:
 
   bool IsAlive() override;
 
-  llvm::Optional<std::string> GetScriptedThreadPluginName() override;
+  std::optional<std::string> GetScriptedThreadPluginName() override;
 
   StructuredData::DictionarySP GetMetadata() override;
 

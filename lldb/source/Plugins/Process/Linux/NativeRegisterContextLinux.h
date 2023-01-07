@@ -54,7 +54,7 @@ public:
   };
   /// Return architecture-specific data needed to make inferior syscalls, if
   /// they are supported.
-  virtual llvm::Optional<SyscallData> GetSyscallData() { return std::nullopt; }
+  virtual std::optional<SyscallData> GetSyscallData() { return std::nullopt; }
 
   struct MmapData {
     // Syscall numbers can be found (e.g.) in /usr/include/asm/unistd.h for the
@@ -64,7 +64,7 @@ public:
   };
   /// Return the architecture-specific data needed to make mmap syscalls, if
   /// they are supported.
-  virtual llvm::Optional<MmapData> GetMmapData() { return std::nullopt; }
+  virtual std::optional<MmapData> GetMmapData() { return std::nullopt; }
 
   struct MemoryTaggingDetails {
     /// Object with tag handling utilities. If the function below returns

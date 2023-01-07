@@ -73,7 +73,7 @@ size_t IntelPTThreadTraceCollection::GetTracedThreadsCount() const {
   return m_thread_traces.size();
 }
 
-llvm::Expected<llvm::Optional<std::vector<uint8_t>>>
+llvm::Expected<std::optional<std::vector<uint8_t>>>
 IntelPTThreadTraceCollection::TryGetBinaryData(
     const TraceGetBinaryDataRequest &request) {
   if (!request.tid)

@@ -174,9 +174,9 @@ static size_t CalculateNumChildren(
     lldb_private::ExecutionContextScope *exe_scope =
         nullptr // does not matter here because all we trade in are basic types
     ) {
-  llvm::Optional<uint64_t> container_size =
+  std::optional<uint64_t> container_size =
       container_type.GetByteSize(exe_scope);
-  llvm::Optional<uint64_t> element_size = element_type.GetByteSize(exe_scope);
+  std::optional<uint64_t> element_size = element_type.GetByteSize(exe_scope);
 
   if (container_size && element_size && *element_size) {
     if (*container_size % *element_size)
@@ -201,7 +201,7 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
     if (idx >= CalculateNumChildren())
       return {};
-    llvm::Optional<uint64_t> size = m_child_type.GetByteSize(nullptr);
+    std::optional<uint64_t> size = m_child_type.GetByteSize(nullptr);
     if (!size)
       return {};
     auto offset = idx * *size;

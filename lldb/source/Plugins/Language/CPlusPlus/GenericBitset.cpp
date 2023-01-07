@@ -107,7 +107,7 @@ ValueObjectSP GenericBitsetFrontEnd::GetChildAtIndex(size_t idx) {
   ValueObjectSP chunk;
   // For small bitsets __first_ is not an array, but a plain size_t.
   if (m_first->GetCompilerType().IsArrayType(&type)) {
-    llvm::Optional<uint64_t> bit_size =
+    std::optional<uint64_t> bit_size =
         type.GetBitSize(ctx.GetBestExecutionContextScope());
     if (!bit_size || *bit_size == 0)
       return {};
@@ -119,7 +119,7 @@ ValueObjectSP GenericBitsetFrontEnd::GetChildAtIndex(size_t idx) {
   if (!type || !chunk)
     return {};
 
-  llvm::Optional<uint64_t> bit_size =
+  std::optional<uint64_t> bit_size =
       type.GetBitSize(ctx.GetBestExecutionContextScope());
   if (!bit_size || *bit_size == 0)
     return {};

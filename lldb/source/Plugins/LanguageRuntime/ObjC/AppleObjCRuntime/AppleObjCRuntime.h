@@ -128,7 +128,7 @@ protected:
   lldb::ModuleWP m_objc_module_wp;
   std::unique_ptr<FunctionCaller> m_print_object_caller_up;
 
-  llvm::Optional<uint32_t> m_Foundation_major;
+  std::optional<uint32_t> m_Foundation_major;
 };
 
 } // namespace lldb_private

@@ -98,7 +98,7 @@ private:
 
   using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance instead.
 
-  using RegisterFileFlag = llvm::Optional<bool>;
+  using RegisterFileFlag = std::optional<bool>;
   mutable RegisterFileFlag m_is_reg_file_reduced;
 };
 

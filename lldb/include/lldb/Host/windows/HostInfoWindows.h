@@ -28,8 +28,8 @@ public:
   static UserIDResolver &GetUserIDResolver();
 
   static llvm::VersionTuple GetOSVersion();
-  static llvm::Optional<std::string> GetOSBuildString();
-  static llvm::Optional<std::string> GetOSKernelDescription();
+  static std::optional<std::string> GetOSBuildString();
+  static std::optional<std::string> GetOSKernelDescription();
   static bool GetHostname(std::string &s);
   static FileSpec GetProgramFileSpec();
   static FileSpec GetDefaultShell();

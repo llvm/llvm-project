@@ -1088,7 +1088,7 @@ UUID ObjectFilePECOFF::GetUUID() {
   return m_uuid;
 }
 
-llvm::Optional<FileSpec> ObjectFilePECOFF::GetDebugLink() {
+std::optional<FileSpec> ObjectFilePECOFF::GetDebugLink() {
   std::string gnu_debuglink_file;
   uint32_t gnu_debuglink_crc;
   if (GetDebugLinkContents(*m_binary, gnu_debuglink_file, gnu_debuglink_crc))

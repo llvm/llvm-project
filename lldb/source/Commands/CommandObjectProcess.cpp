@@ -152,8 +152,8 @@ public:
 
   Options *GetOptions() override { return &m_all_options; }
 
-  llvm::Optional<std::string> GetRepeatCommand(Args &current_command_args,
-                                               uint32_t index) override {
+  std::optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                              uint32_t index) override {
     // No repeat for "process launch"...
     return std::string("");
   }

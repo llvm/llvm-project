@@ -34,7 +34,7 @@ public:
 
     uint64_t m_ipt_trace_size;
     bool m_enable_tsc;
-    llvm::Optional<uint64_t> m_psb_period;
+    std::optional<uint64_t> m_psb_period;
   };
 
   CommandObjectThreadTraceStartIntelPT(TraceIntelPT &trace,
@@ -78,7 +78,7 @@ public:
     uint64_t m_ipt_trace_size;
     uint64_t m_process_buffer_size_limit;
     bool m_enable_tsc;
-    llvm::Optional<uint64_t> m_psb_period;
+    std::optional<uint64_t> m_psb_period;
     bool m_per_cpu_tracing;
     bool m_disable_cgroup_filtering;
   };
@@ -124,7 +124,7 @@ namespace ParsingUtils {
 /// \return
 ///   The converted number of bytes or \a std::nullopt if the expression is
 ///   invalid.
-llvm::Optional<uint64_t>
+std::optional<uint64_t>
 ParseUserFriendlySizeExpression(llvm::StringRef size_expression);
 } // namespace ParsingUtils
 

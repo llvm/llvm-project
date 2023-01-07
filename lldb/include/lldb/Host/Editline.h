@@ -99,7 +99,7 @@ using FixIndentationCallbackType =
     llvm::unique_function<int(Editline *, StringList &, int)>;
 
 using SuggestionCallbackType =
-    llvm::unique_function<llvm::Optional<std::string>(llvm::StringRef)>;
+    llvm::unique_function<std::optional<std::string>(llvm::StringRef)>;
 
 using CompleteCallbackType = llvm::unique_function<void(CompletionRequest &)>;
 

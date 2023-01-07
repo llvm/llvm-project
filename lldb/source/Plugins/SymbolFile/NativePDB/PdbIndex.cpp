@@ -73,12 +73,12 @@ lldb::addr_t PdbIndex::MakeVirtualAddress(uint16_t segment,
          static_cast<lldb::addr_t>(offset);
 }
 
-llvm::Optional<uint16_t>
-PdbIndex::GetModuleIndexForAddr(uint16_t segment, uint32_t offset) const {
+std::optional<uint16_t> PdbIndex::GetModuleIndexForAddr(uint16_t segment,
+                                                        uint32_t offset) const {
   return GetModuleIndexForVa(MakeVirtualAddress(segment, offset));
 }
 
-llvm::Optional<uint16_t> PdbIndex::GetModuleIndexForVa(lldb::addr_t va) const {
+std::optional<uint16_t> PdbIndex::GetModuleIndexForVa(lldb::addr_t va) const {
   auto iter = m_va_to_modi.find(va);
   if (iter == m_va_to_modi.end())
     return std::nullopt;
@@ -138,7 +138,7 @@ void PdbIndex::BuildAddrToSymbolMap(CompilandIndexItem &cci) {
 std::vector<SymbolAndUid> PdbIndex::FindSymbolsByVa(lldb::addr_t va) {
   std::vector<SymbolAndUid> result;
 
-  llvm::Optional<uint16_t> modi = GetModuleIndexForVa(va);
+  std::optional<uint16_t> modi = GetModuleIndexForVa(va);
   if (!modi)
     return result;
 
