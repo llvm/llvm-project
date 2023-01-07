@@ -9,6 +9,7 @@
 #include "DWARFContext.h"
 
 #include "lldb/Core/Section.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

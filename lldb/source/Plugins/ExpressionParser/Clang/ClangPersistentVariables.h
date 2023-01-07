@@ -15,6 +15,7 @@
 #include "ClangModulesDeclVendor.h"
 
 #include "lldb/Expression/ExpressionVariable.h"
+#include <optional>
 
 namespace lldb_private {
 

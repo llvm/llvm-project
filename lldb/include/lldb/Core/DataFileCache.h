@@ -19,6 +19,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 #include <mutex>
+#include <optional>
 
 namespace lldb_private {
 

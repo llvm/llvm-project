@@ -26,6 +26,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 
 namespace lldb_private {
 

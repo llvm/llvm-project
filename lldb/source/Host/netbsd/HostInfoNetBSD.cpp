@@ -12,6 +12,7 @@
 #include <climits>
 #include <cstdio>
 #include <cstring>
+#include <optional>
 #include <pthread.h>
 #include <sys/sysctl.h>
 #include <sys/types.h>

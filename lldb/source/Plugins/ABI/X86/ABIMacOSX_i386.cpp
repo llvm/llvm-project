@@ -8,6 +8,7 @@
 
 #include "ABIMacOSX_i386.h"
 
+#include <optional>
 #include <vector>
 
 #include "llvm/ADT/STLExtras.h"

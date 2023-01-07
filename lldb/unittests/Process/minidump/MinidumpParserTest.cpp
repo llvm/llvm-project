@@ -32,6 +32,7 @@
 
 // C++ includes
 #include <memory>
+#include <optional>
 
 using namespace lldb_private;
 using namespace minidump;

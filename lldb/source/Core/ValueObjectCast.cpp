@@ -14,6 +14,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
+#include <optional>
 
 namespace lldb_private {
 class ConstString;

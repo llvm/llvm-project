@@ -12,6 +12,7 @@
 #include "DWARFDataExtractor.h"
 #include "llvm/ADT/Optional.h"
 #include <cstddef>
+#include <optional>
 
 class DWARFUnit;
 class SymbolFileDWARF;

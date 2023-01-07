@@ -12,6 +12,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/FormatProviders.h"
+#include <optional>
 
 namespace lldb_private {
 

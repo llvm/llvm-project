@@ -56,6 +56,7 @@
 #include "PdbSymUid.h"
 #include "PdbUtil.h"
 #include "UdtRecordCompleter.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

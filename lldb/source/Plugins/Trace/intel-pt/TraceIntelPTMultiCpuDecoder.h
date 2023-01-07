@@ -13,6 +13,7 @@
 #include "PerfContextSwitchDecoder.h"
 #include "ThreadDecoder.h"
 #include "forward-declarations.h"
+#include <optional>
 
 namespace lldb_private {
 namespace trace_intel_pt {

@@ -12,6 +12,7 @@
 #include "Plugins/Process/Utility/AuxVector.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include <optional>
 
 namespace lldb_private {
 

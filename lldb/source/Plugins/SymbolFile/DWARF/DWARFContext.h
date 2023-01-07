@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Support/Threading.h"
 #include <memory>
+#include <optional>
 
 namespace lldb_private {
 class DWARFContext {

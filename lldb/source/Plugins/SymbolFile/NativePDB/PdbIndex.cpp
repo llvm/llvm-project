@@ -22,6 +22,7 @@
 
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/lldb-defines.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb_private::npdb;

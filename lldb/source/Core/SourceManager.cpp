@@ -32,6 +32,7 @@
 #include "llvm/ADT/Twine.h"
 
 #include <memory>
+#include <optional>
 #include <utility>
 
 #include <cassert>

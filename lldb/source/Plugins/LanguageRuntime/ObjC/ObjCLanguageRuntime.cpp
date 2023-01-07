@@ -27,6 +27,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DJB.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

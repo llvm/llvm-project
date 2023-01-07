@@ -16,6 +16,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace lldb_private {
 namespace trace_intel_pt {

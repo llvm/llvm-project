@@ -14,6 +14,7 @@
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 #include <utility>
 #include <vector>
 

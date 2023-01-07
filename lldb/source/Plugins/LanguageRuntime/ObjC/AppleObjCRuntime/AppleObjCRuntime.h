@@ -17,6 +17,7 @@
 #include "lldb/lldb-private.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
+#include <optional>
 
 namespace lldb_private {
 

@@ -13,6 +13,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <mutex>
+#include <optional>
 
 namespace lldb_private {
 

@@ -31,6 +31,7 @@
 #include "lldb/lldb-types.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 
 #include <cinttypes>

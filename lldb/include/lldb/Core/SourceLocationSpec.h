@@ -13,6 +13,7 @@
 #include "lldb/lldb-defines.h"
 #include "llvm/ADT/Optional.h"
 
+#include <optional>
 #include <string>
 
 namespace lldb_private {

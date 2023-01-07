@@ -24,6 +24,7 @@
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include <optional>
 
 using namespace llvm::codeview;
 using namespace llvm::pdb;

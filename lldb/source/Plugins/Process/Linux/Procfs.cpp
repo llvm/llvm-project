@@ -10,6 +10,7 @@
 #include "lldb/Host/linux/Support.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

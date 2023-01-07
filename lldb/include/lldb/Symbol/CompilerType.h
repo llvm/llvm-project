@@ -10,6 +10,7 @@
 #define LLDB_SYMBOL_COMPILERTYPE_H
 
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 

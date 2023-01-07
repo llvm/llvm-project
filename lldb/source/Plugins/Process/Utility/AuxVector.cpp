@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AuxVector.h"
+#include <optional>
 
 AuxVector::AuxVector(const lldb_private::DataExtractor &data) {
   ParseAuxv(data);

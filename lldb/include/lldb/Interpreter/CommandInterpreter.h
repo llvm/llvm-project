@@ -26,6 +26,7 @@
 #include "lldb/lldb-private.h"
 
 #include <mutex>
+#include <optional>
 #include <stack>
 
 namespace lldb_private {

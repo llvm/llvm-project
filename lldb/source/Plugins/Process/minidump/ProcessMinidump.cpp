@@ -37,6 +37,7 @@
 #include "Plugins/Process/Utility/StopInfoMachException.h"
 
 #include <memory>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

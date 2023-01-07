@@ -16,6 +16,7 @@
 #include "lldb/lldb-types.h"
 #include "llvm/Support/Error.h"
 #include <memory>
+#include <optional>
 
 namespace lldb_private {
 namespace process_linux {

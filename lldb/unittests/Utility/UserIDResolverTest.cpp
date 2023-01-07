@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/UserIDResolver.h"
 #include "gmock/gmock.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace testing;

@@ -20,6 +20,7 @@
 #include "CompileUnitIndex.h"
 #include "PdbIndex.h"
 #include "PdbAstBuilder.h"
+#include <optional>
 
 namespace clang {
 class TagDecl;

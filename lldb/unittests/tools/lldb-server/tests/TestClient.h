@@ -18,6 +18,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <memory>
+#include <optional>
 #include <string>
 
 #if LLDB_SERVER_IS_DEBUGSERVER

@@ -15,6 +15,7 @@
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/lldb-enumerations.h"
+#include <optional>
 
 class DWARFDIE;
 namespace lldb_private {

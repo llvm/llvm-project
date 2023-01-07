@@ -37,6 +37,7 @@
 
 #include <memory>
 #include <mutex>
+#include <optional>
 
 #include <cassert>
 #include <cctype>

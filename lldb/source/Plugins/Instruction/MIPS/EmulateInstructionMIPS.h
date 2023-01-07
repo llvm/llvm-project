@@ -26,6 +26,7 @@ namespace lldb_private {
 
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Utility/Status.h"
+#include <optional>
 
 class EmulateInstructionMIPS : public lldb_private::EmulateInstruction {
 public:

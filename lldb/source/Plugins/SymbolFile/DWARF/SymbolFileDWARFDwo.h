@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDWO_H
 
 #include "SymbolFileDWARF.h"
+#include <optional>
 
 class SymbolFileDWARFDwo : public SymbolFileDWARF {
   /// LLVM RTTI support.

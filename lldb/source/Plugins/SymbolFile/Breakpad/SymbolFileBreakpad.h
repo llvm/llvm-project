@@ -15,6 +15,7 @@
 #include "lldb/Symbol/PostfixExpression.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
+#include <optional>
 
 namespace lldb_private {
 

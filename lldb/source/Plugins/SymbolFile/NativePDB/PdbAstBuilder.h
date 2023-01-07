@@ -17,6 +17,7 @@
 
 #include "PdbIndex.h"
 #include "PdbSymUid.h"
+#include <optional>
 
 namespace clang {
 class TagDecl;

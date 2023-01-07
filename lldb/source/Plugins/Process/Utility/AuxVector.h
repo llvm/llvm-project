@@ -11,6 +11,7 @@
 
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
+#include <optional>
 #include <unordered_map>
 
 class AuxVector {

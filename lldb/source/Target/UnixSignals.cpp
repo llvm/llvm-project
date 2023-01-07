@@ -13,6 +13,7 @@
 #include "Plugins/Process/Utility/NetBSDSignals.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/ArchSpec.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace llvm;

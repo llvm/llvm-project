@@ -19,6 +19,7 @@
 
 #include <cstdint>
 
+#include <optional>
 #include <string>
 
 namespace lldb_private {

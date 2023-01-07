@@ -9,6 +9,7 @@
 #include "EmulateInstructionPPC64.h"
 
 #include <cstdlib>
+#include <optional>
 
 #include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
 #include "lldb/Core/PluginManager.h"

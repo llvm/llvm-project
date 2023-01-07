@@ -13,6 +13,7 @@
 #include "lldb/lldb-types.h"
 
 #include "llvm/Support/Error.h"
+#include <optional>
 
 class DIERef;
 class DWARFASTParser;

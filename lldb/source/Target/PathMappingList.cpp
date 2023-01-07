@@ -8,6 +8,7 @@
 
 #include <climits>
 #include <cstring>
+#include <optional>
 
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/PosixApi.h"

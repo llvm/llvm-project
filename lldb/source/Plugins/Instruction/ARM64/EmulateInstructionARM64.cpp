@@ -23,6 +23,7 @@
 #include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
 
 #include <cstdlib>
+#include <optional>
 
 #define GPR_OFFSET(idx) ((idx)*8)
 #define GPR_OFFSET_NAME(reg) 0

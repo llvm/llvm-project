@@ -9,6 +9,7 @@
 #ifndef LLDB_TARGET_TRACE_H
 #define LLDB_TARGET_TRACE_H
 
+#include <optional>
 #include <unordered_map>
 
 #include "llvm/Support/JSON.h"

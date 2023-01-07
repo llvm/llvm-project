@@ -23,6 +23,7 @@
 #include "lldb/Utility/Timer.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ThreadPool.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb;

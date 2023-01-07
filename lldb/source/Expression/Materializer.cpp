@@ -25,6 +25,7 @@
 #include "lldb/lldb-forward.h"
 
 #include <memory>
+#include <optional>
 
 using namespace lldb_private;
 

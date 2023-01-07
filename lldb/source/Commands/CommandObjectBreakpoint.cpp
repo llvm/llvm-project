@@ -30,6 +30,7 @@
 #include "lldb/Utility/StreamString.h"
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 using namespace lldb;

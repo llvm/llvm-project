@@ -18,6 +18,7 @@
 
 #include <functional>
 #include <mutex>
+#include <optional>
 #include <vector>
 
 namespace lldb_private {

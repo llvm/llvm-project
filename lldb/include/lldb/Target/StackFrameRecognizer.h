@@ -17,6 +17,7 @@
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
 
+#include <optional>
 #include <vector>
 
 namespace lldb_private {

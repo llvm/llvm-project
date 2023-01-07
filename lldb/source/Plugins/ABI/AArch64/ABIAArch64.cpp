@@ -14,6 +14,7 @@
 #include "lldb/Target/Process.h"
 
 #include <bitset>
+#include <optional>
 
 LLDB_PLUGIN_DEFINE(ABIAArch64)
 

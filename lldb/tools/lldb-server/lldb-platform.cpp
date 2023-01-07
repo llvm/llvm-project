@@ -19,6 +19,7 @@
 #include <sys/wait.h>
 #endif
 #include <fstream>
+#include <optional>
 
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"

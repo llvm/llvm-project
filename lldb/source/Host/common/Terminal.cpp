@@ -14,6 +14,7 @@
 
 #include <csignal>
 #include <fcntl.h>
+#include <optional>
 
 #if LLDB_ENABLE_TERMIOS
 #include <termios.h>

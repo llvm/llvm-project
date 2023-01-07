@@ -11,6 +11,7 @@
 
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Utility/CompletionRequest.h"
+#include <optional>
 
 namespace lldb_private {
 

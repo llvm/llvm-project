@@ -14,6 +14,7 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/StreamString.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

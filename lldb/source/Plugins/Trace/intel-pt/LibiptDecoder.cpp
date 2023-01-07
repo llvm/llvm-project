@@ -8,6 +8,7 @@
 #include "LibiptDecoder.h"
 #include "TraceIntelPT.h"
 #include "lldb/Target/Process.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

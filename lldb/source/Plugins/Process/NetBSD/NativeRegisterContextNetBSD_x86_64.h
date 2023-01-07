@@ -19,6 +19,7 @@
 // clang-format on
 
 #include <array>
+#include <optional>
 
 #include "Plugins/Process/NetBSD/NativeRegisterContextNetBSD.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"

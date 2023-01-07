@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_PLATFORMANDROIDREMOTEGDBSERVER_H
 
 #include <map>
+#include <optional>
 #include <utility>
 
 #include "Plugins/Platform/gdb-server/PlatformRemoteGDBServer.h"
