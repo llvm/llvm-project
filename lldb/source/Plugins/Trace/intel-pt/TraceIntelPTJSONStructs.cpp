@@ -8,6 +8,7 @@
 
 #include "TraceIntelPTJSONStructs.h"
 #include "llvm/Support/JSON.h"
+#include <optional>
 #include <string>
 
 using namespace lldb;

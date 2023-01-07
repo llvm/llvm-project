@@ -13,6 +13,7 @@
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Target/MemoryTagManager.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 
 namespace lldb_private {
 namespace process_linux {

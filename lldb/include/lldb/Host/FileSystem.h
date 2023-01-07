@@ -22,6 +22,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <optional>
 #include <sys/stat.h>
 
 namespace lldb_private {

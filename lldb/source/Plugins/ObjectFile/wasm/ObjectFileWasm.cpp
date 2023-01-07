@@ -24,6 +24,7 @@
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

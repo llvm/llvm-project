@@ -40,6 +40,7 @@
 #include "lldb/Utility/StreamString.h"
 
 #include <map>
+#include <optional>
 
 using namespace llvm;
 using lldb_private::LLDBLog;

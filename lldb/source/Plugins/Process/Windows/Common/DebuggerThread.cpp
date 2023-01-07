@@ -30,6 +30,7 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <optional>
 #include <psapi.h>
 
 #ifndef STATUS_WX86_BREAKPOINT

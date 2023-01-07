@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cinttypes>
+#include <optional>
 
 #include "lldb/Interpreter/CommandHistory.h"
 

@@ -11,6 +11,7 @@
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/StreamString.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb_private::ansi;

@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <optional>
 #include <unordered_map>
 
 #include "lldb/Core/FileSpecList.h"

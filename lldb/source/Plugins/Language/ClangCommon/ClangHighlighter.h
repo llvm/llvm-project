@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringSet.h"
 
 #include "lldb/Core/Highlighter.h"
+#include <optional>
 
 namespace lldb_private {
 

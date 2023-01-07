@@ -17,6 +17,7 @@
 #include "lldb/Utility/Log.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

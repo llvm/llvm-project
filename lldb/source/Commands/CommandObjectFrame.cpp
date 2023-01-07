@@ -32,6 +32,7 @@
 #include "lldb/Utility/Args.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 
 using namespace lldb;

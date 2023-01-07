@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/UserIDResolver.h"
 #include "llvm/Support/ManagedStatic.h"
+#include <optional>
 
 using namespace lldb_private;
 

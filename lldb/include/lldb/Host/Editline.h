@@ -46,6 +46,7 @@
 
 #include <csignal>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 

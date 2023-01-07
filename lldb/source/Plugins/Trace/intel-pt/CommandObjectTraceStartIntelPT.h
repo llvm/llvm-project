@@ -13,6 +13,7 @@
 #include "TraceIntelPT.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include <optional>
 
 namespace lldb_private {
 namespace trace_intel_pt {

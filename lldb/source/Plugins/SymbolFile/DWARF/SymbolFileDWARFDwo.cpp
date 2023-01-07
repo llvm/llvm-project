@@ -17,6 +17,7 @@
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFUnit.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

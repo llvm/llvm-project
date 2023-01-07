@@ -10,6 +10,7 @@
 
 #include <cinttypes>
 
+#include <optional>
 #include <vector>
 
 #include "lldb/Core/Module.h"

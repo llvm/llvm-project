@@ -11,6 +11,7 @@
 
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/Optional.h"
+#include <optional>
 
 namespace lldb_private {
 

@@ -10,6 +10,7 @@
 #include "LibiptDecoder.h"
 #include "TraceIntelPT.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <optional>
 #include <utility>
 
 using namespace lldb;

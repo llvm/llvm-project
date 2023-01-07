@@ -25,6 +25,7 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/FileSpec.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

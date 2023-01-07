@@ -23,6 +23,7 @@
 #include "llvm/ADT/Triple.h"
 
 #include <mutex>
+#include <optional>
 #include <vector>
 
 namespace lldb_private {

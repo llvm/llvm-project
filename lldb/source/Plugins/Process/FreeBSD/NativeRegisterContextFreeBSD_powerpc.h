@@ -20,6 +20,7 @@
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_powerpc.h"
 
 #include <array>
+#include <optional>
 
 namespace lldb_private {
 namespace process_freebsd {

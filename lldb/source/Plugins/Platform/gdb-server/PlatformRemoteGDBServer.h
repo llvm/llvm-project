@@ -10,6 +10,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PLATFORM_GDB_SERVER_PLATFORMREMOTEGDBSERVER_H
 #define LLDB_SOURCE_PLUGINS_PLATFORM_GDB_SERVER_PLATFORMREMOTEGDBSERVER_H
 
+#include <optional>
 #include <string>
 
 #include "Plugins/Process/Utility/GDBRemoteSignals.h"

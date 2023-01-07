@@ -19,6 +19,7 @@
 // C++ includes
 #include <algorithm>
 #include <map>
+#include <optional>
 #include <vector>
 #include <utility>
 

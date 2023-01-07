@@ -27,6 +27,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 

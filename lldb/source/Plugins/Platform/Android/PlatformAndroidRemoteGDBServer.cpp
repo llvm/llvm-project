@@ -15,6 +15,7 @@
 
 #include "PlatformAndroidRemoteGDBServer.h"
 
+#include <optional>
 #include <sstream>
 
 using namespace lldb;

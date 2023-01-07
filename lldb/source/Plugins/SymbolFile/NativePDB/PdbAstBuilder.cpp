@@ -24,6 +24,7 @@
 #include "PdbUtil.h"
 #include "UdtRecordCompleter.h"
 #include "SymbolFileNativePDB.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb_private::npdb;

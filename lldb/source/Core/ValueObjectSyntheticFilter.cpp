@@ -17,6 +17,7 @@
 #include "lldb/Utility/Status.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include <optional>
 
 namespace lldb_private {
 class Declaration;

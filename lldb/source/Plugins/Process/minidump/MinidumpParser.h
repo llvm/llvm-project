@@ -27,6 +27,7 @@
 
 // C++ includes
 #include <cstring>
+#include <optional>
 #include <unordered_map>
 
 namespace lldb_private {

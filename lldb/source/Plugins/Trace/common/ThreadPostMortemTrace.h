@@ -10,6 +10,7 @@
 #define LLDB_TARGET_THREADPOSTMORTEMTRACE_H
 
 #include "lldb/Target/Thread.h"
+#include <optional>
 
 namespace lldb_private {
 

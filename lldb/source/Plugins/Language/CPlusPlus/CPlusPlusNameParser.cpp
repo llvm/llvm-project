@@ -12,6 +12,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Threading.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

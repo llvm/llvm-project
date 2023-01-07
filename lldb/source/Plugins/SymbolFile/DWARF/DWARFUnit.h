@@ -16,6 +16,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/Support/RWMutex.h"
 #include <atomic>
+#include <optional>
 
 class DWARFUnit;
 class DWARFCompileUnit;

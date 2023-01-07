@@ -18,6 +18,7 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <optional>
 
 using namespace lldb_private;
 

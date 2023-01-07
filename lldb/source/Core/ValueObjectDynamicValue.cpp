@@ -23,6 +23,7 @@
 #include "lldb/lldb-types.h"
 
 #include <cstring>
+#include <optional>
 namespace lldb_private {
 class Declaration;
 }

@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/RegisterValue.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace lldb_private;
 using llvm::APInt;

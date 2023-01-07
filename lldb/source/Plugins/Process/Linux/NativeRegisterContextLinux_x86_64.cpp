@@ -19,6 +19,7 @@
 #include "lldb/Utility/Status.h"
 #include <cpuid.h>
 #include <linux/elf.h>
+#include <optional>
 
 // Newer toolchains define __get_cpuid_count in cpuid.h, but some
 // older-but-still-supported ones (e.g. gcc 5.4.0) don't, so we

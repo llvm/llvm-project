@@ -30,6 +30,7 @@
 #include <sys/uio.h>
 // NT_PRSTATUS and NT_FPREGSET definition
 #include <elf.h>
+#include <optional>
 
 #ifndef NT_ARM_SVE
 #define NT_ARM_SVE 0x405 /* ARM Scalable Vector Extension */

@@ -16,6 +16,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/lldb-private.h"
+#include <optional>
 
 namespace lldb_private {
 

@@ -20,6 +20,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include <linux/perf_event.h>
+#include <optional>
 #include <sstream>
 #include <sys/ioctl.h>
 #include <sys/syscall.h>

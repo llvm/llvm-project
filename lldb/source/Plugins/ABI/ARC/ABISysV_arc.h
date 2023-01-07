@@ -11,6 +11,7 @@
 
 // Other libraries and framework includes
 #include <llvm/ADT/Optional.h>
+#include <optional>
 
 // Project includes
 #include "lldb/Target/ABI.h"

@@ -25,6 +25,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include <memory>
+#include <optional>
 
 using namespace lldb_private;
 using namespace clang;

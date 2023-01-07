@@ -11,6 +11,7 @@
 
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include <memory>
+#include <optional>
 
 namespace lldb_private {
 namespace process_linux {

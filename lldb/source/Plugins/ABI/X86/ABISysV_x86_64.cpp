@@ -31,6 +31,7 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
+#include <optional>
 #include <vector>
 
 using namespace lldb;

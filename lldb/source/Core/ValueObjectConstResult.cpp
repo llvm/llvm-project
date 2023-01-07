@@ -17,6 +17,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Scalar.h"
+#include <optional>
 
 namespace lldb_private {
 class Module;

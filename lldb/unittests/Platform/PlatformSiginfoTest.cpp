@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 
 #include <initializer_list>
+#include <optional>
 #include <tuple>
 
 #include "Plugins/Platform/FreeBSD/PlatformFreeBSD.h"

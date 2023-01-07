@@ -14,6 +14,7 @@
 #include "intel-pt.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
+#include <optional>
 
 namespace lldb_private {
 namespace trace_intel_pt {

@@ -17,6 +17,7 @@
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Host/HostInfo.h"
+#include <optional>
 
 namespace lldb_private {
 

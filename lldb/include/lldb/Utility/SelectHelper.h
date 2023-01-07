@@ -16,6 +16,7 @@
 #include "llvm/ADT/Optional.h"
 
 #include <chrono>
+#include <optional>
 
 class SelectHelper {
 public:

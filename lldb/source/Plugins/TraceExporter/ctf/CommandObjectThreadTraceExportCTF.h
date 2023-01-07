@@ -12,6 +12,7 @@
 #include "TraceExporterCTF.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include <optional>
 
 namespace lldb_private {
 namespace ctf {

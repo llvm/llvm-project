@@ -27,6 +27,7 @@
 #include "lldb/Utility/Stream.h"
 
 #include <algorithm>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

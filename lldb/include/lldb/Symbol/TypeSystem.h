@@ -11,6 +11,7 @@
 
 #include <functional>
 #include <mutex>
+#include <optional>
 #include <string>
 
 #include "llvm/ADT/APFloat.h"

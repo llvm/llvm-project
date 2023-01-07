@@ -8,6 +8,7 @@
 
 #include <climits>
 #include <iomanip>
+#include <optional>
 
 #include "lldb/Host/Editline.h"
 

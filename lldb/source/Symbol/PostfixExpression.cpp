@@ -15,6 +15,7 @@
 #include "lldb/Core/dwarf.h"
 #include "lldb/Utility/Stream.h"
 #include "llvm/ADT/StringExtras.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb_private::postfix;

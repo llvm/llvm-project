@@ -13,6 +13,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <fcntl.h>
+#include <optional>
 
 #ifdef _WIN32
 #include "lldb/Host/windows/windows.h"

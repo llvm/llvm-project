@@ -13,6 +13,7 @@
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Trace.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

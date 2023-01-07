@@ -17,6 +17,7 @@
 #include "DWARFDebugAbbrev.h"
 #include "DWARFDebugRanges.h"
 #include <map>
+#include <optional>
 #include <set>
 #include <vector>
 

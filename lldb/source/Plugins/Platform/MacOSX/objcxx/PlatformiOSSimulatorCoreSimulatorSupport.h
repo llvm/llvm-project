@@ -11,6 +11,7 @@
 #define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_OBJCXX_PLATFORMIOSSIMULATORCORESIMULATORSUPPORT_H
 
 #include <functional>
+#include <optional>
 #include <ostream>
 #include <string>
 #include <vector>

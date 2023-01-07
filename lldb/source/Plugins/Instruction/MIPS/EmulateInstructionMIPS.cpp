@@ -9,6 +9,7 @@
 #include "EmulateInstructionMIPS.h"
 
 #include <cstdlib>
+#include <optional>
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Opcode.h"

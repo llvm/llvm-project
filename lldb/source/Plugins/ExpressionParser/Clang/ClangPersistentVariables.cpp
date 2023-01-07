@@ -20,6 +20,7 @@
 #include "clang/AST/Decl.h"
 
 #include "llvm/ADT/StringMap.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

@@ -12,6 +12,7 @@
 #include "lldb/lldb-types.h"
 #include <cstddef>
 #include <llvm/ADT/Optional.h>
+#include <optional>
 
 namespace lldb_private {
 namespace trace_intel_pt {

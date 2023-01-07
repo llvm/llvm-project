@@ -10,6 +10,7 @@
 #define LLDB_INTERPRETER_COMMANDHISTORY_H
 
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 

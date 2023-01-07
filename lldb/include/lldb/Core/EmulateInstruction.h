@@ -9,6 +9,7 @@
 #ifndef LLDB_CORE_EMULATEINSTRUCTION_H
 #define LLDB_CORE_EMULATEINSTRUCTION_H
 
+#include <optional>
 #include <string>
 
 #include "lldb/Core/Address.h"

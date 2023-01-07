@@ -11,6 +11,7 @@
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "clang/Basic/Module.h"
+#include <optional>
 
 namespace lldb_private {
 

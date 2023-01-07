@@ -10,6 +10,7 @@
 
 #include <cctype>
 #include <cstring>
+#include <optional>
 
 constexpr lldb::pid_t StringExtractorGDBRemote::AllProcesses;
 constexpr lldb::tid_t StringExtractorGDBRemote::AllThreads;

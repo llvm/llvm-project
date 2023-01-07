@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
+#include <optional>
 
 namespace clang {
 class CXXBaseSpecifier;

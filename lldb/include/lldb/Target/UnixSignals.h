@@ -10,6 +10,7 @@
 #define LLDB_TARGET_UNIXSIGNALS_H
 
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 

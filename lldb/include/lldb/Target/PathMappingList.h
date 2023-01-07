@@ -13,6 +13,7 @@
 #include "lldb/Utility/Status.h"
 #include "llvm/Support/JSON.h"
 #include <map>
+#include <optional>
 #include <vector>
 
 namespace lldb_private {

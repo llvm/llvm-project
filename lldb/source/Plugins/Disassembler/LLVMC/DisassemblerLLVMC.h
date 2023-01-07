@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 
 #include "lldb/Core/Address.h"
