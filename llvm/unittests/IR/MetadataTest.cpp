@@ -3142,6 +3142,91 @@ TEST_F(DIExpressionTest, convertToVariadicExpression) {
 #undef GET_EXPR
 }
 
+TEST_F(DIExpressionTest, convertToNonVariadicExpression) {
+#define EXPECT_CONVERT_IS_NOOP(TestExpr)                                       \
+  do {                                                                         \
+    std::optional<const DIExpression *> NonVariadic =                          \
+        DIExpression::convertToNonVariadicExpression(TestExpr);                \
+    EXPECT_TRUE(NonVariadic.has_value());                                      \
+    EXPECT_EQ(*NonVariadic, TestExpr);                                         \
+  } while (false)
+#define EXPECT_NON_VARIADIC_OPS_EQUAL(TestExpr, Expected)                      \
+  do {                                                                         \
+    std::optional<const DIExpression *> NonVariadic =                          \
+        DIExpression::convertToNonVariadicExpression(TestExpr);                \
+    EXPECT_TRUE(NonVariadic.has_value());                                      \
+    EXPECT_EQ(*NonVariadic, Expected);                                         \
+  } while (false)
+#define EXPECT_INVALID_CONVERSION(TestExpr)                                    \
+  do {                                                                         \
+    std::optional<const DIExpression *> NonVariadic =                          \
+        DIExpression::convertToNonVariadicExpression(TestExpr);                \
+    EXPECT_FALSE(NonVariadic.has_value());                                     \
+  } while (false)
+#define GET_EXPR(...) DIExpression::get(Context, {__VA_ARGS__})
+
+  // Expressions which are already non-variadic should be unaffected.
+  EXPECT_CONVERT_IS_NOOP(GET_EXPR());
+  EXPECT_CONVERT_IS_NOOP(GET_EXPR(dwarf::DW_OP_plus_uconst, 4));
+  EXPECT_CONVERT_IS_NOOP(
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 4, dwarf::DW_OP_stack_value));
+  EXPECT_CONVERT_IS_NOOP(GET_EXPR(dwarf::DW_OP_plus_uconst, 6,
+                                  dwarf::DW_OP_stack_value,
+                                  dwarf::DW_OP_LLVM_fragment, 32, 32));
+  EXPECT_CONVERT_IS_NOOP(GET_EXPR(dwarf::DW_OP_plus_uconst, 14,
+                                  dwarf::DW_OP_LLVM_fragment, 32, 32));
+
+  // Variadic expressions with a single leading `LLVM_arg 0` and no other
+  // LLVM_args should have the leading arg removed.
+  EXPECT_NON_VARIADIC_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_LLVM_arg, 0), GET_EXPR());
+  EXPECT_NON_VARIADIC_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_stack_value),
+      GET_EXPR(dwarf::DW_OP_stack_value));
+  EXPECT_NON_VARIADIC_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_fragment, 16, 32),
+      GET_EXPR(dwarf::DW_OP_LLVM_fragment, 16, 32));
+  EXPECT_NON_VARIADIC_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_stack_value,
+               dwarf::DW_OP_LLVM_fragment, 24, 32),
+      GET_EXPR(dwarf::DW_OP_stack_value, dwarf::DW_OP_LLVM_fragment, 24, 32));
+  EXPECT_NON_VARIADIC_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus_uconst, 4),
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 4));
+  EXPECT_NON_VARIADIC_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus_uconst, 4,
+               dwarf::DW_OP_stack_value),
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 4, dwarf::DW_OP_stack_value));
+  EXPECT_NON_VARIADIC_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus_uconst, 6,
+               dwarf::DW_OP_stack_value, dwarf::DW_OP_LLVM_fragment, 32, 32),
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 6, dwarf::DW_OP_stack_value,
+               dwarf::DW_OP_LLVM_fragment, 32, 32));
+  EXPECT_NON_VARIADIC_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_LLVM_arg, 0,
+                                         dwarf::DW_OP_plus_uconst, 14,
+                                         dwarf::DW_OP_LLVM_fragment, 32, 32),
+                                GET_EXPR(dwarf::DW_OP_plus_uconst, 14,
+                                         dwarf::DW_OP_LLVM_fragment, 32, 32));
+
+  // Variadic expressions that have any LLVM_args other than a leading
+  // `LLVM_arg 0` cannot be converted and so should return std::nullopt.
+  EXPECT_INVALID_CONVERSION(GET_EXPR(
+      dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_mul));
+  EXPECT_INVALID_CONVERSION(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_arg, 1,
+               dwarf::DW_OP_plus, dwarf::DW_OP_stack_value));
+  EXPECT_INVALID_CONVERSION(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_arg, 0,
+               dwarf::DW_OP_minus, dwarf::DW_OP_stack_value));
+  EXPECT_INVALID_CONVERSION(GET_EXPR(dwarf::DW_OP_constu, 5,
+                                     dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_div,
+                                     dwarf::DW_OP_stack_value));
+
+#undef EXPECT_CONVERT_IS_NOOP
+#undef EXPECT_NON_VARIADIC_OPS_EQUAL
+#undef EXPECT_INVALID_CONVERSION
+#undef GET_EXPR
+}
+
 TEST_F(DIExpressionTest, replaceArg) {
 #define EXPECT_REPLACE_ARG_EQ(Expr, OldArg, NewArg, ...)                       \
   do {                                                                         \

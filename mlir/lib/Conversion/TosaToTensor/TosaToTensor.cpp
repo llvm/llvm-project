@@ -30,13 +30,13 @@ public:
                                 PatternRewriter &rewriter) const final {
     Location loc = sliceOp.getLoc();
     Value input = sliceOp.getInput();
-    SmallVector<int64_t> strides, sizes, starts;
-    starts = extractFromI64ArrayAttr(sliceOp.getStart());
+    SmallVector<int64_t> strides, sizes;
+    ArrayRef<int64_t> starts = sliceOp.getStart();
     strides.resize(sliceOp.getType().template cast<ShapedType>().getRank(), 1);
 
     SmallVector<Value> dynSizes;
     for (const auto &i : llvm::enumerate(sliceOp.getSize())) {
-      int64_t size = i.value().cast<IntegerAttr>().getInt();
+      int64_t size = i.value();
       size_t index = i.index();
       sizes.push_back(size == -1 ? ShapedType::kDynamic : size);
       if (!ShapedType::isDynamic(sizes.back()))

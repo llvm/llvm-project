@@ -409,12 +409,18 @@ void MetadataStreamerYamlV2::emitHiddenKernelArgs(const Function &Func,
 
   // Emit "default queue" and "completion action" arguments if enqueue kernel is
   // used, otherwise emit dummy "none" arguments.
-  if (HiddenArgNumBytes >= 48) {
-    if (Func.hasFnAttribute("calls-enqueue-kernel")) {
+  if (HiddenArgNumBytes >= 40) {
+    if (!Func.hasFnAttribute("amdgpu-no-default-queue")) {
       emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenDefaultQueue);
-      emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenCompletionAction);
     } else {
       emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenNone);
+    }
+  }
+
+  if (HiddenArgNumBytes >= 48) {
+    if (!Func.hasFnAttribute("amdgpu-no-completion-action")) {
+      emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenCompletionAction);
+    } else {
       emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenNone);
     }
   }
@@ -836,14 +842,20 @@ void MetadataStreamerMsgPackV3::emitHiddenKernelArgs(
 
   // Emit "default queue" and "completion action" arguments if enqueue kernel is
   // used, otherwise emit dummy "none" arguments.
-  if (HiddenArgNumBytes >= 48) {
-    if (Func.hasFnAttribute("calls-enqueue-kernel")) {
+  if (HiddenArgNumBytes >= 40) {
+    if (!Func.hasFnAttribute("amdgpu-no-default-queue")) {
       emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_default_queue", Offset,
-                    Args);
-      emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_completion_action", Offset,
                     Args);
     } else {
       emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_none", Offset, Args);
+    }
+  }
+
+  if (HiddenArgNumBytes >= 48) {
+    if (!Func.hasFnAttribute("amdgpu-no-completion-action")) {
+      emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_completion_action", Offset,
+                    Args);
+    } else {
       emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_none", Offset, Args);
     }
   }
@@ -1056,13 +1068,18 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
   else
     Offset += 8; // Skipped.
 
-  if (Func.hasFnAttribute("calls-enqueue-kernel")) {
+  if (!Func.hasFnAttribute("amdgpu-no-default-queue")) {
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_default_queue", Offset,
                   Args);
+  } else {
+    Offset += 8; // Skipped.
+  }
+
+  if (!Func.hasFnAttribute("amdgpu-no-completion-action")) {
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_completion_action", Offset,
                   Args);
   } else {
-    Offset += 16; // Skipped.
+    Offset += 8; // Skipped.
   }
 
   Offset += 72; // Reserved.

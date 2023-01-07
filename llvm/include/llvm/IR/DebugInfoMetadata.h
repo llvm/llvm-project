@@ -2805,6 +2805,13 @@ public:
   static const DIExpression *
   convertToVariadicExpression(const DIExpression *Expr);
 
+  /// If \p Expr is a valid single-location expression, i.e. it refers to only a
+  /// single debug operand at the start of the expression, then return that
+  /// expression in a non-variadic form by removing DW_OP_LLVM_arg from the
+  /// expression if it is present; otherwise returns std::nullopt.
+  static std::optional<const DIExpression *>
+  convertToNonVariadicExpression(const DIExpression *Expr);
+
   /// Inserts the elements of \p Expr into \p Ops modified to a canonical form,
   /// which uses DW_OP_LLVM_arg (i.e. is a variadic expression) and folds the
   /// implied derefence from the \p IsIndirect flag into the expression. This

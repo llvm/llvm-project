@@ -470,6 +470,22 @@ func.func @convert_logical_not_to_not_equal(%arg0: vector<3xi64>, %arg1: vector<
   spirv.ReturnValue %3 : vector<3xi1>
 }
 
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.LogicalNotEqual
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @convert_logical_not_equal_false
+// CHECK-SAME: %[[ARG:.+]]: vector<4xi1>
+func.func @convert_logical_not_equal_false(%arg: vector<4xi1>) -> vector<4xi1> {
+  %cst = spirv.Constant dense<false> : vector<4xi1>
+  // CHECK: spirv.ReturnValue %[[ARG]] : vector<4xi1>
+  %0 = spirv.LogicalNotEqual %arg, %cst : vector<4xi1>
+  spirv.ReturnValue %0 : vector<4xi1>
+}
+
 // -----
 
 func.func @convert_logical_not_to_equal(%arg0: vector<3xi64>, %arg1: vector<3xi64>) -> vector<3xi1> {
