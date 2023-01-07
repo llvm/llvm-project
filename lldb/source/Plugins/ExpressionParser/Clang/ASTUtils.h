@@ -73,7 +73,7 @@ public:
     return m_Source->getModule(ID);
   }
 
-  llvm::Optional<clang::ASTSourceDescriptor>
+  std::optional<clang::ASTSourceDescriptor>
   getSourceDescriptor(unsigned ID) override {
     return m_Source->getSourceDescriptor(ID);
   }

@@ -1040,7 +1040,7 @@ NativeRegisterContextLinux_x86_64::GetPtraceOffset(uint32_t reg_index) {
          (IsMPX(reg_index) ? 128 : 0);
 }
 
-llvm::Optional<NativeRegisterContextLinux::SyscallData>
+std::optional<NativeRegisterContextLinux::SyscallData>
 NativeRegisterContextLinux_x86_64::GetSyscallData() {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86: {
@@ -1062,7 +1062,7 @@ NativeRegisterContextLinux_x86_64::GetSyscallData() {
   }
 }
 
-llvm::Optional<NativeRegisterContextLinux::MmapData>
+std::optional<NativeRegisterContextLinux::MmapData>
 NativeRegisterContextLinux_x86_64::GetMmapData() {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:

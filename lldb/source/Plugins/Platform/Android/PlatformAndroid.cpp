@@ -149,7 +149,7 @@ Status PlatformAndroid::ConnectRemote(Args &args) {
   const char *url = args.GetArgumentAtIndex(0);
   if (!url)
     return Status("URL is null.");
-  llvm::Optional<URI> parsed_url = URI::Parse(url);
+  std::optional<URI> parsed_url = URI::Parse(url);
   if (!parsed_url)
     return Status("Invalid URL: %s", url);
   if (parsed_url->hostname != "localhost")

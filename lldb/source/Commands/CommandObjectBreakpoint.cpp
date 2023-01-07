@@ -2205,7 +2205,7 @@ public:
         break;
 
       case 'N':
-        llvm::Optional<FileSpec> file_spec;
+        std::optional<FileSpec> file_spec;
         const llvm::StringRef dash_f("-f");
         for (int arg_idx = 0; arg_idx < opt_arg_pos; arg_idx++) {
           if (dash_f == request.GetParsedLine().GetArgumentAtIndex(arg_idx)) {

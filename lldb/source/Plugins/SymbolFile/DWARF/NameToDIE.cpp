@@ -107,7 +107,7 @@ bool NameToDIE::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
     // No empty strings allowed in the name to DIE maps.
     if (str.empty())
       return false;
-    if (llvm::Optional<DIERef> die_ref = DIERef::Decode(data, offset_ptr))
+    if (std::optional<DIERef> die_ref = DIERef::Decode(data, offset_ptr))
       m_map.Append(ConstString(str), *die_ref);
     else
       return false;

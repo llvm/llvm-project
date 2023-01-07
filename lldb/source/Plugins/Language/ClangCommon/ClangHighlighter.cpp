@@ -132,7 +132,7 @@ determineClangStyle(const ClangHighlighter &highlighter,
 
 void ClangHighlighter::Highlight(const HighlightStyle &options,
                                  llvm::StringRef line,
-                                 llvm::Optional<size_t> cursor_pos,
+                                 std::optional<size_t> cursor_pos,
                                  llvm::StringRef previous_lines,
                                  Stream &result) const {
   using namespace clang;

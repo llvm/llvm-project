@@ -602,7 +602,7 @@ static llvm::ArrayRef<const char *> GetCompatibleArchs(ArchSpec::Core core) {
 /// distinct names (e.g. armv7f) but armv7 binaries run fine on an armv7f
 /// processor.
 void PlatformDarwin::ARMGetSupportedArchitectures(
-    std::vector<ArchSpec> &archs, llvm::Optional<llvm::Triple::OSType> os) {
+    std::vector<ArchSpec> &archs, std::optional<llvm::Triple::OSType> os) {
   const ArchSpec system_arch = GetSystemArchitecture();
   const ArchSpec::Core system_core = system_arch.GetCore();
   for (const char *arch : GetCompatibleArchs(system_core)) {

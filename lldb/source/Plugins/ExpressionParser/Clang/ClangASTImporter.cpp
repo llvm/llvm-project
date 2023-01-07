@@ -812,7 +812,7 @@ ClangASTImporter::MapCompleter::~MapCompleter() = default;
 llvm::Expected<Decl *>
 ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
   if (m_std_handler) {
-    llvm::Optional<Decl *> D = m_std_handler->Import(From);
+    std::optional<Decl *> D = m_std_handler->Import(From);
     if (D) {
       // Make sure we don't use this decl later to map it back to it's original
       // decl. The decl the CxxModuleHandler created has nothing to do with

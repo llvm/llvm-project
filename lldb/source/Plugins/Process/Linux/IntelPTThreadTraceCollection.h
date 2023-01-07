@@ -62,7 +62,7 @@ public:
   size_t GetTracedThreadsCount() const;
 
   /// \copydoc IntelPTProcessTrace::TryGetBinaryData()
-  llvm::Expected<llvm::Optional<std::vector<uint8_t>>>
+  llvm::Expected<std::optional<std::vector<uint8_t>>>
   TryGetBinaryData(const TraceGetBinaryDataRequest &request);
 
 private:

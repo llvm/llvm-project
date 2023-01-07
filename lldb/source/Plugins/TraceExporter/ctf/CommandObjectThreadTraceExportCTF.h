@@ -30,7 +30,7 @@ public:
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
-    llvm::Optional<size_t> m_thread_index;
+    std::optional<size_t> m_thread_index;
     std::string m_file;
   };
 

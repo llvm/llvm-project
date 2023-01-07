@@ -112,8 +112,8 @@ protected:
   const char *m_description;
   ConstString m_plugin_name;
   std::mutex m_core_sim_path_mutex;
-  llvm::Optional<FileSpec> m_core_simulator_framework_path;
-  llvm::Optional<CoreSimulatorSupport::Device> m_device;
+  std::optional<FileSpec> m_core_simulator_framework_path;
+  std::optional<CoreSimulatorSupport::Device> m_device;
   CoreSimulatorSupport::DeviceType::ProductFamilyID m_kind;
 
   FileSpec GetCoreSimulatorPath();

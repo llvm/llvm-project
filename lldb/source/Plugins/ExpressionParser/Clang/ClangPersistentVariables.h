@@ -66,7 +66,7 @@ public:
     return name;
   }
 
-  llvm::Optional<CompilerType>
+  std::optional<CompilerType>
   GetCompilerTypeFromPersistentDecl(ConstString type_name) override;
 
   void RegisterPersistentDecl(ConstString name, clang::NamedDecl *decl,

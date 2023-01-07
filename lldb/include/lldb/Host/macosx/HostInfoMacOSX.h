@@ -25,7 +25,7 @@ class HostInfoMacOSX : public HostInfoPosix {
 public:
   static llvm::VersionTuple GetOSVersion();
   static llvm::VersionTuple GetMacCatalystVersion();
-  static llvm::Optional<std::string> GetOSBuildString();
+  static std::optional<std::string> GetOSBuildString();
   static FileSpec GetProgramFileSpec();
   static FileSpec GetXcodeContentsDirectory();
   static FileSpec GetXcodeDeveloperDirectory();

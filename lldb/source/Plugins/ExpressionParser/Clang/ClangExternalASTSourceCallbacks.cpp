@@ -70,7 +70,7 @@ ClangExternalASTSourceCallbacks::RegisterModule(clang::Module *module) {
   return OptionalClangModuleID(id);
 }
 
-llvm::Optional<clang::ASTSourceDescriptor>
+std::optional<clang::ASTSourceDescriptor>
 ClangExternalASTSourceCallbacks::getSourceDescriptor(unsigned id) {
   if (clang::Module *module = getModule(id))
     return {*module};

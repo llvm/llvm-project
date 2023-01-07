@@ -25,7 +25,7 @@ TEST(RegisterValueTest, GetSet8) {
 
 TEST(RegisterValueTest, GetScalarValue) {
   using RV = RegisterValue;
-  const auto &Get = [](const RV &V) -> llvm::Optional<Scalar> {
+  const auto &Get = [](const RV &V) -> std::optional<Scalar> {
     Scalar S;
     if (V.GetScalarValue(S))
       return S;

@@ -69,7 +69,7 @@ void UnwindPlan::Row::RegisterLocation::SetIsDWARFExpression(
   m_location.expr.length = len;
 }
 
-static llvm::Optional<std::pair<lldb::ByteOrder, uint32_t>>
+static std::optional<std::pair<lldb::ByteOrder, uint32_t>>
 GetByteOrderAndAddrSize(Thread *thread) {
   if (!thread)
     return std::nullopt;

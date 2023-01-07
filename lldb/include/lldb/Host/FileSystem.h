@@ -196,7 +196,7 @@ public:
   void SetHomeDirectory(std::string home_directory);
 
 private:
-  static llvm::Optional<FileSystem> &InstanceImpl();
+  static std::optional<FileSystem> &InstanceImpl();
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> m_fs;
   std::string m_home_directory;
 };

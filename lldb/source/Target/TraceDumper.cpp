@@ -532,11 +532,11 @@ CalculateSymbolInfo(const ExecutionContext &exe_ctx, lldb::addr_t load_address,
   return symbol_info;
 }
 
-Optional<lldb::user_id_t> TraceDumper::DumpInstructions(size_t count) {
+std::optional<lldb::user_id_t> TraceDumper::DumpInstructions(size_t count) {
   ThreadSP thread_sp = m_cursor_sp->GetExecutionContextRef().GetThreadSP();
 
   SymbolInfo prev_symbol_info;
-  Optional<lldb::user_id_t> last_id;
+  std::optional<lldb::user_id_t> last_id;
 
   ExecutionContext exe_ctx;
   thread_sp->GetProcess()->GetTarget().CalculateExecutionContext(exe_ctx);
@@ -669,7 +669,7 @@ TraceDumper::FunctionCall::GetLastTracedSegment() {
   return m_traced_segments.back();
 }
 
-const Optional<TraceDumper::FunctionCall::UntracedPrefixSegment> &
+const std::optional<TraceDumper::FunctionCall::UntracedPrefixSegment> &
 TraceDumper::FunctionCall::GetUntracedPrefixSegment() const {
   return m_untraced_prefix_segment;
 }

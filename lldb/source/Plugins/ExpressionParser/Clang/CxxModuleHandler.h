@@ -44,7 +44,7 @@ class CxxModuleHandler {
 
   /// Tries to manually instantiate the given foreign template in the target
   /// context (designated by m_sema).
-  llvm::Optional<clang::Decl *> tryInstantiateStdTemplate(clang::Decl *d);
+  std::optional<clang::Decl *> tryInstantiateStdTemplate(clang::Decl *d);
 
 public:
   CxxModuleHandler() = default;
@@ -54,7 +54,7 @@ public:
   /// deserializing it from the 'std' module. This function returns a Decl if a
   /// Decl has been deserialized from the 'std' module. Otherwise this function
   /// returns nothing.
-  llvm::Optional<clang::Decl *> Import(clang::Decl *d);
+  std::optional<clang::Decl *> Import(clang::Decl *d);
 
   /// Returns true iff this instance is capable of importing any declarations
   /// in the target ASTContext.

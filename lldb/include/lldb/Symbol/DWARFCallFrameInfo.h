@@ -123,7 +123,7 @@ private:
 
   bool IsEHFrame() const;
 
-  llvm::Optional<FDEEntryMap::Entry>
+  std::optional<FDEEntryMap::Entry>
   GetFirstFDEEntryInRange(const AddressRange &range);
 
   void GetFDEIndex();

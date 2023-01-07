@@ -193,7 +193,7 @@ void ProcessInstanceInfo::DumpAsTableRow(Stream &s, UserIDResolver &resolver,
 
     auto print = [&](bool (ProcessInstanceInfo::*isValid)() const,
                      uint32_t (ProcessInstanceInfo::*getID)() const,
-                     llvm::Optional<llvm::StringRef> (UserIDResolver::*getName)(
+                     std::optional<llvm::StringRef> (UserIDResolver::*getName)(
                          UserIDResolver::id_t id)) {
       const char *format = "{0,-10} ";
       if (!(this->*isValid)()) {

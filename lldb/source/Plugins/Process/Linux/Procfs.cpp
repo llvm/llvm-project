@@ -52,7 +52,7 @@ lldb_private::process_linux::GetAvailableLogicalCoreIDs(StringRef cpuinfo) {
 
 llvm::Expected<llvm::ArrayRef<cpu_id_t>>
 lldb_private::process_linux::GetAvailableLogicalCoreIDs() {
-  static Optional<std::vector<cpu_id_t>> logical_cores_ids;
+  static std::optional<std::vector<cpu_id_t>> logical_cores_ids;
   if (!logical_cores_ids) {
     // We find the actual list of core ids by parsing /proc/cpuinfo
     Expected<ArrayRef<uint8_t>> cpuinfo = GetProcfsCpuInfo();

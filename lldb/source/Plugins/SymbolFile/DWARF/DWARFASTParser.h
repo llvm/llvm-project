@@ -59,7 +59,7 @@ public:
   virtual lldb_private::ConstString
   GetDIEClassTemplateParams(const DWARFDIE &die) = 0;
 
-  static llvm::Optional<lldb_private::SymbolFile::ArrayInfo>
+  static std::optional<lldb_private::SymbolFile::ArrayInfo>
   ParseChildArrayInfo(const DWARFDIE &parent_die,
                       const lldb_private::ExecutionContext *exe_ctx = nullptr);
 

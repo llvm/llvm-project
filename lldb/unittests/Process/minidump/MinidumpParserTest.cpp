@@ -70,7 +70,7 @@ public:
     return llvm::Error::success();
   }
 
-  llvm::Optional<MinidumpParser> parser;
+  std::optional<MinidumpParser> parser;
 };
 
 TEST_F(MinidumpParserTest, InvalidMinidump) {
@@ -183,7 +183,7 @@ Streams:
 ...
 )"),
                     llvm::Succeeded());
-  llvm::Optional<LinuxProcStatus> proc_status = parser->GetLinuxProcStatus();
+  std::optional<LinuxProcStatus> proc_status = parser->GetLinuxProcStatus();
   ASSERT_TRUE(proc_status.has_value());
   lldb::pid_t pid = proc_status->GetPid();
   ASSERT_EQ(16001UL, pid);
@@ -218,7 +218,7 @@ Streams:
 ...
 )"),
                     llvm::Succeeded());
-  llvm::Optional<lldb::pid_t> pid = parser->GetPid();
+  std::optional<lldb::pid_t> pid = parser->GetPid();
   ASSERT_TRUE(pid.has_value());
   ASSERT_EQ(16001UL, *pid);
 }
@@ -260,7 +260,7 @@ TEST_F(MinidumpParserTest, GetExceptionStream) {
 
 void check_mem_range_exists(MinidumpParser &parser, const uint64_t range_start,
                             const uint64_t range_size) {
-  llvm::Optional<minidump::Range> range = parser.FindMemoryRange(range_start);
+  std::optional<minidump::Range> range = parser.FindMemoryRange(range_start);
   ASSERT_TRUE(range.has_value()) << "There is no range containing this address";
   EXPECT_EQ(range_start, range->start);
   EXPECT_EQ(range_start + range_size, range->start + range->range_ref.size());
@@ -544,14 +544,14 @@ TEST_F(MinidumpParserTest, GetMiscInfoWindows) {
   SetUpData("fizzbuzz_no_heap.dmp");
   const MinidumpMiscInfo *misc_info = parser->GetMiscInfo();
   ASSERT_NE(nullptr, misc_info);
-  llvm::Optional<lldb::pid_t> pid = misc_info->GetPid();
+  std::optional<lldb::pid_t> pid = misc_info->GetPid();
   ASSERT_TRUE(pid.has_value());
   ASSERT_EQ(4440UL, *pid);
 }
 
 TEST_F(MinidumpParserTest, GetPidWindows) {
   SetUpData("fizzbuzz_no_heap.dmp");
-  llvm::Optional<lldb::pid_t> pid = parser->GetPid();
+  std::optional<lldb::pid_t> pid = parser->GetPid();
   ASSERT_TRUE(pid.has_value());
   ASSERT_EQ(4440UL, *pid);
 }
@@ -559,7 +559,7 @@ TEST_F(MinidumpParserTest, GetPidWindows) {
 // wow64
 TEST_F(MinidumpParserTest, GetPidWow64) {
   SetUpData("fizzbuzz_wow64.dmp");
-  llvm::Optional<lldb::pid_t> pid = parser->GetPid();
+  std::optional<lldb::pid_t> pid = parser->GetPid();
   ASSERT_TRUE(pid.has_value());
   ASSERT_EQ(7836UL, *pid);
 }

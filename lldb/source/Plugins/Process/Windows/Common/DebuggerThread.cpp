@@ -413,7 +413,7 @@ DebuggerThread::HandleExitProcessEvent(const EXIT_PROCESS_DEBUG_INFO &info,
   return DBG_CONTINUE;
 }
 
-static llvm::Optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
+static std::optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
   // Check that file is not empty as we cannot map a file with zero length.
   DWORD dwFileSizeHi = 0;
   DWORD dwFileSizeLo = ::GetFileSize(hFile, &dwFileSizeHi);
@@ -505,7 +505,7 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
       path += 4;
 
     on_load_dll(path);
-  } else if (llvm::Optional<std::string> path =
+  } else if (std::optional<std::string> path =
                  GetFileNameFromHandleFallback(info.hFile)) {
     on_load_dll(*path);
   } else {

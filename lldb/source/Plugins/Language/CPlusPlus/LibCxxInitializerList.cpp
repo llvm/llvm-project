@@ -93,7 +93,7 @@ bool lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
   if (!m_element_type.IsValid())
     return false;
 
-  if (llvm::Optional<uint64_t> size = m_element_type.GetByteSize(nullptr)) {
+  if (std::optional<uint64_t> size = m_element_type.GetByteSize(nullptr)) {
     m_element_size = *size;
     // Store raw pointers or end up with a circular dependency.
     m_start = m_backend.GetChildMemberWithName(g_begin_, true).get();

@@ -204,7 +204,7 @@ lldb::ValueType ValueObjectConstResult::GetValueType() const {
   return eValueTypeConstResult;
 }
 
-llvm::Optional<uint64_t> ValueObjectConstResult::GetByteSize() {
+std::optional<uint64_t> ValueObjectConstResult::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   if (!m_byte_size) {
     if (auto size =

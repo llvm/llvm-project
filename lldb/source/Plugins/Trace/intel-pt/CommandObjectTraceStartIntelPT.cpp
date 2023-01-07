@@ -33,7 +33,7 @@ Status CommandObjectThreadTraceStartIntelPT::CommandOptions::SetOptionValue(
 
   switch (short_option) {
   case 's': {
-    if (Optional<uint64_t> bytes =
+    if (std::optional<uint64_t> bytes =
             ParsingUtils::ParseUserFriendlySizeExpression(option_arg))
       m_ipt_trace_size = *bytes;
     else
@@ -98,7 +98,7 @@ Status CommandObjectProcessTraceStartIntelPT::CommandOptions::SetOptionValue(
 
   switch (short_option) {
   case 's': {
-    if (Optional<uint64_t> bytes =
+    if (std::optional<uint64_t> bytes =
             ParsingUtils::ParseUserFriendlySizeExpression(option_arg))
       m_ipt_trace_size = *bytes;
     else
@@ -107,7 +107,7 @@ Status CommandObjectProcessTraceStartIntelPT::CommandOptions::SetOptionValue(
     break;
   }
   case 'l': {
-    if (Optional<uint64_t> bytes =
+    if (std::optional<uint64_t> bytes =
             ParsingUtils::ParseUserFriendlySizeExpression(option_arg))
       m_process_buffer_size_limit = *bytes;
     else
@@ -171,7 +171,7 @@ bool CommandObjectProcessTraceStartIntelPT::DoExecute(
   return result.Succeeded();
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 ParsingUtils::ParseUserFriendlySizeExpression(llvm::StringRef size_expression) {
   if (size_expression.empty()) {
     return std::nullopt;

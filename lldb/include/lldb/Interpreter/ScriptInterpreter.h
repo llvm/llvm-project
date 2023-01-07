@@ -576,7 +576,7 @@ public:
 
   Status GetStatusFromSBError(const lldb::SBError &error) const;
 
-  llvm::Optional<MemoryRegionInfo> GetOpaqueTypeFromSBMemoryRegionInfo(
+  std::optional<MemoryRegionInfo> GetOpaqueTypeFromSBMemoryRegionInfo(
       const lldb::SBMemoryRegionInfo &mem_region) const;
 
 protected:

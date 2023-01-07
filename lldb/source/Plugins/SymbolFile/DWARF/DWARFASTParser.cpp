@@ -19,7 +19,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
 
-llvm::Optional<SymbolFile::ArrayInfo>
+std::optional<SymbolFile::ArrayInfo>
 DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
                                     const ExecutionContext *exe_ctx) {
   SymbolFile::ArrayInfo array_info;

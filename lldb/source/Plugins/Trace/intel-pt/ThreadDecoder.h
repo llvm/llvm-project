@@ -40,7 +40,7 @@ public:
   ///     The lowest TSC value in this trace if available, \a std::nullopt if
   ///     the trace is empty or the trace contains no timing information, or an
   ///     \a llvm::Error if it was not possible to set up the decoder.
-  llvm::Expected<llvm::Optional<uint64_t>> FindLowestTSC();
+  llvm::Expected<std::optional<uint64_t>> FindLowestTSC();
 
   ThreadDecoder(const ThreadDecoder &other) = delete;
   ThreadDecoder &operator=(const ThreadDecoder &other) = delete;
@@ -50,7 +50,7 @@ private:
 
   lldb::ThreadSP m_thread_sp;
   TraceIntelPT &m_trace;
-  llvm::Optional<DecodedThreadSP> m_decoded_thread;
+  std::optional<DecodedThreadSP> m_decoded_thread;
 };
 
 } // namespace trace_intel_pt

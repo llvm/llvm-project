@@ -28,7 +28,7 @@ protected:
   SubsystemRAII<FileSystem, HostInfo, TypeSystemClang, ObjectFileELF,
                 SymbolFileDWARF>
       subsystems;
-  llvm::Optional<TestFile> m_file;
+  std::optional<TestFile> m_file;
   lldb::ModuleSP m_module_sp;
   DWARFUnit *m_dwarf_unit;
 

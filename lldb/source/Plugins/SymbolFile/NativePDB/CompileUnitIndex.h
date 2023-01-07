@@ -63,10 +63,10 @@ struct CompilandIndexItem {
   std::map<lldb::addr_t, PdbSymUid> m_symbols_by_va;
 
   // S_COMPILE3 sym describing compilation settings for the module.
-  llvm::Optional<llvm::codeview::Compile3Sym> m_compile_opts;
+  std::optional<llvm::codeview::Compile3Sym> m_compile_opts;
 
   // S_OBJNAME sym describing object name.
-  llvm::Optional<llvm::codeview::ObjNameSym> m_obj_name;
+  std::optional<llvm::codeview::ObjNameSym> m_obj_name;
 
   // LF_BUILDINFO sym describing source file name, working directory,
   // command line, etc.  This usually contains exactly 5 items which

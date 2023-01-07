@@ -32,8 +32,8 @@ void Diagnostics::Terminate() {
 
 bool Diagnostics::Enabled() { return InstanceImpl().operator bool(); }
 
-Optional<Diagnostics> &Diagnostics::InstanceImpl() {
-  static Optional<Diagnostics> g_diagnostics;
+std::optional<Diagnostics> &Diagnostics::InstanceImpl() {
+  static std::optional<Diagnostics> g_diagnostics;
   return g_diagnostics;
 }
 

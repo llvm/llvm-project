@@ -33,7 +33,7 @@ public:
 
   virtual ~ExpressionVariable();
 
-  llvm::Optional<uint64_t> GetByteSize() { return m_frozen_sp->GetByteSize(); }
+  std::optional<uint64_t> GetByteSize() { return m_frozen_sp->GetByteSize(); }
 
   ConstString GetName() { return m_frozen_sp->GetName(); }
 
@@ -227,7 +227,7 @@ public:
   virtual void
   RemovePersistentVariable(lldb::ExpressionVariableSP variable) = 0;
 
-  virtual llvm::Optional<CompilerType>
+  virtual std::optional<CompilerType>
   GetCompilerTypeFromPersistentDecl(ConstString type_name) = 0;
 
   virtual lldb::addr_t LookupSymbol(ConstString name);
