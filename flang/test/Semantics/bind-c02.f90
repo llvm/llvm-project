@@ -18,6 +18,7 @@ module m
   !ERROR: Only variable and named common block can be in BIND statement
   bind(c) :: sub
 
+  !PORTABILITY: Global name 'm' conflicts with a module
   !PORTABILITY: Name 'm' declared in a module should not have the same name as the module
   bind(c) :: m ! no error for implicit type variable
 

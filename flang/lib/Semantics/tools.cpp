@@ -1042,14 +1042,12 @@ ProcedureDefinitionClass ClassifyProcedure(const Symbol &symbol) { // 15.2.2
     return ProcedureDefinitionClass::None;
   } else if (ultimate.attrs().test(Attr::INTRINSIC)) {
     return ProcedureDefinitionClass::Intrinsic;
+  } else if (IsDummy(ultimate)) {
+    return ProcedureDefinitionClass::Dummy;
+  } else if (IsProcedurePointer(symbol)) {
+    return ProcedureDefinitionClass::Pointer;
   } else if (ultimate.attrs().test(Attr::EXTERNAL)) {
     return ProcedureDefinitionClass::External;
-  } else if (const auto *procDetails{ultimate.detailsIf<ProcEntityDetails>()}) {
-    if (procDetails->isDummy()) {
-      return ProcedureDefinitionClass::Dummy;
-    } else if (IsPointer(ultimate)) {
-      return ProcedureDefinitionClass::Pointer;
-    }
   } else if (const auto *nameDetails{
                  ultimate.detailsIf<SubprogramNameDetails>()}) {
     switch (nameDetails->kind()) {

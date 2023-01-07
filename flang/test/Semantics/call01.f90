@@ -119,11 +119,11 @@ function f14(n) result(res)
 end function
 
 subroutine s01(f1, f2, fp1, fp2)
-  !PORTABILITY: A procedure pointer should not have assumed-length CHARACTER(*) result type
+  !PORTABILITY: A dummy procedure pointer should not have assumed-length CHARACTER(*) result type
   character*(*) :: f1, f3, fp1
   external :: f1, f3
   pointer :: fp1
-  !PORTABILITY: A procedure pointer should not have assumed-length CHARACTER(*) result type
+  !PORTABILITY: A dummy procedure pointer should not have assumed-length CHARACTER(*) result type
   procedure(character*(*)), pointer :: fp2
   interface
     character*(*) function f2()
