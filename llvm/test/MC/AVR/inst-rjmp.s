@@ -14,6 +14,8 @@ foo:
 end:
   rjmp .-4
   rjmp .-6
+x:
+  rjmp x
 
 ; CHECK: rjmp    .Ltmp0+2                ; encoding: [A,0b1100AAAA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: .Ltmp0+2, kind: fixup_13_pcrel
@@ -31,7 +33,10 @@ end:
 ; CHECK:                                 ;   fixup A - offset: 0, value: .Ltmp4-4, kind: fixup_13_pcrel
 ; CHECK: rjmp    .Ltmp5-6                ; encoding: [A,0b1100AAAA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: .Ltmp5-6, kind: fixup_13_pcrel
+; CHECK: rjmp    x                       ; encoding: [A,0b1100AAAA]
+; CHECK:                                 ;   fixup A - offset: 0, value: x, kind: fixup_13_pcrel
 
+; INST: rjmp	.+0
 ; INST: rjmp	.+0
 ; INST: rjmp	.+0
 ; INST: rjmp	.+0
