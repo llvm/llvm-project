@@ -1159,7 +1159,7 @@ public:
   };
 
   /// Alias for requesting the default scratch TypeSystemClang in GetForTarget.
-  // This isn't constexpr as gtest/llvm::Optional comparison logic is trying
+  // This isn't constexpr as gtest/std::optional comparison logic is trying
   // to get the address of this for pretty-printing.
   static const std::nullopt_t DefaultAST;
 

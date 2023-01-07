@@ -29,7 +29,6 @@
 #include "lldb/Host/windows/PosixApi.h"
 #endif
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/VersionTuple.h"
 
 namespace lldb_private {

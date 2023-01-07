@@ -9,7 +9,6 @@
 #ifndef LLDB_UTILITY_TIMEOUT_H
 #define LLDB_UTILITY_TIMEOUT_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/FormatProviders.h"
 #include <optional>

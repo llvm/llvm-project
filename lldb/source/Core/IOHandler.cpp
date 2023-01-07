@@ -50,7 +50,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using llvm::Optional;
 using llvm::StringRef;
 
 IOHandler::IOHandler(Debugger &debugger, IOHandler::Type type)

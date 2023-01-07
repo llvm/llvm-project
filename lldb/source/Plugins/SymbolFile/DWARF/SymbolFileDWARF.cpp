@@ -8,7 +8,6 @@
 
 #include "SymbolFileDWARF.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Threading.h"

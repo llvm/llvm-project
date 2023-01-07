@@ -17,7 +17,6 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-forward.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"

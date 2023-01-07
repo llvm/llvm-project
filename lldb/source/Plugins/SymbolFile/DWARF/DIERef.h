@@ -10,7 +10,6 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DIEREF_H
 
 #include "lldb/Core/dwarf.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/FormatProviders.h"
 #include <cassert>
 #include <optional>

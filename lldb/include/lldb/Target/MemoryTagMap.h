@@ -11,7 +11,6 @@
 
 #include "lldb/Target/MemoryTagManager.h"
 #include "lldb/lldb-private.h"
-#include "llvm/ADT/Optional.h"
 #include <map>
 #include <optional>
 

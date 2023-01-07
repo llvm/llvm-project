@@ -11,7 +11,6 @@
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
