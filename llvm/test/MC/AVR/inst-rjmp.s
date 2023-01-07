@@ -16,6 +16,7 @@ end:
   rjmp .-6
 x:
   rjmp x
+  .short 0xc00f
 
 ; CHECK: rjmp    .Ltmp0+2                ; encoding: [A,0b1100AAAA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: .Ltmp0+2, kind: fixup_13_pcrel
@@ -45,3 +46,4 @@ x:
 ; INST: rjmp	.+0
 ; INST: rjmp	.+0
 ; INST: rjmp	.+0
+; INST: rjmp	.+30
