@@ -623,7 +623,7 @@ static bool relaxZcmt(const InputSection &sec, size_t i, uint64_t loc,
   }
 
   if (tblEntryIndex >= 0) {
-    if(config->is64)
+    if (config->is64)
       sec.relaxAux->relocTypes[i] = R_RISCV_64;
     else
       sec.relaxAux->relocTypes[i] = R_RISCV_32;
@@ -887,8 +887,8 @@ void elf::riscvFinalizeRelax(int passes) {
             write16le(p, aux.writes[writesIdx++]);
             break;
           case R_RISCV_JAL:
-              skip = 4;
-              write32le(p, aux.writes[writesIdx++]);
+            skip = 4;
+            write32le(p, aux.writes[writesIdx++]);
             break;
           case R_RISCV_64:
             if (config->riscvTbljal &&
@@ -903,8 +903,8 @@ void elf::riscvFinalizeRelax(int passes) {
               skip = 2;
               write16le(p, aux.writes[writesIdx++]);
             } else {
-              // Used by relaxTlsLe to write a uint32_t then suppress the handling
-              // in relocateAlloc.
+              // Used by relaxTlsLe to write a uint32_t then suppress the
+              // handling in relocateAlloc.
               skip = 4;
               write32le(p, aux.writes[writesIdx++]);
               aux.relocTypes[i] = R_RISCV_NONE;
