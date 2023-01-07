@@ -27,6 +27,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
@@ -41,10 +42,21 @@ using namespace mlir::LLVM::detail;
 // Utility to print an LLVM value as a string for passing to emitError().
 // FIXME: Diagnostic should be able to natively handle types that have
 // operator << (raw_ostream&) defined.
-static std::string diag(llvm::Value &value) {
+static std::string diag(const llvm::Value &value) {
   std::string str;
   llvm::raw_string_ostream os(str);
   os << value;
+  return os.str();
+}
+
+// Utility to print an LLVM metadata node as a string for passing
+// to emitError(). The module argument is needed to print the nodes
+// canonically numbered.
+static std::string diagMD(const llvm::Metadata *node,
+                          const llvm::Module *module) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  node->print(os, module, /*IsForDebug=*/true);
   return os.str();
 }
 
@@ -326,6 +338,277 @@ ModuleImport::ModuleImport(ModuleOp mlirModule,
       typeTranslator(*mlirModule->getContext()),
       debugImporter(std::make_unique<DebugImporter>(mlirModule->getContext())) {
   builder.setInsertionPointToStart(mlirModule.getBody());
+}
+
+MetadataOp ModuleImport::getTBAAMetadataOp() {
+  if (tbaaMetadataOp)
+    return tbaaMetadataOp;
+
+  OpBuilder::InsertionGuard guard(builder);
+  Location loc = mlirModule.getLoc();
+
+  builder.setInsertionPointToEnd(mlirModule.getBody());
+  tbaaMetadataOp = builder.create<MetadataOp>(loc, getTBAAMetadataOpName());
+  builder.createBlock(&tbaaMetadataOp.getBody());
+  builder.create<ReturnOp>(loc, Value{});
+
+  return tbaaMetadataOp;
+}
+
+std::string ModuleImport::getNewTBAANodeName(StringRef basename) {
+  return (Twine("tbaa_") + Twine(basename) + Twine('_') +
+          Twine(tbaaNodeCounter++))
+      .str();
+}
+
+LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
+  Location loc = mlirModule.getLoc();
+  SmallVector<const llvm::MDNode *> workList;
+  SetVector<const llvm::MDNode *> nodesToConvert;
+  workList.push_back(node);
+  while (!workList.empty()) {
+    const llvm::MDNode *current = workList.pop_back_val();
+    if (tbaaMapping.count(current))
+      continue;
+    // Allow cycles in TBAA metadata. Just import it as-is,
+    // and diagnose the problem during LLVMIR dialect verification.
+    if (!nodesToConvert.insert(current))
+      continue;
+    for (const llvm::MDOperand &operand : current->operands())
+      if (auto *opNode = dyn_cast_or_null<const llvm::MDNode>(operand.get()))
+        workList.push_back(opNode);
+  }
+
+  // If `node` is a valid TBAA root node, then return its identity
+  // string, otherwise return std::nullopt.
+  auto getIdentityIfRootNode =
+      [&](const llvm::MDNode *node) -> std::optional<StringRef> {
+    // Root node, e.g.:
+    //   !0 = !{!"Simple C/C++ TBAA"}
+    if (node->getNumOperands() != 1)
+      return std::nullopt;
+    // If the operand is MDString, then assume that this is a root node.
+    if (auto op0 = dyn_cast<const llvm::MDString>(node->getOperand(0)))
+      return op0->getString();
+    return std::nullopt;
+  };
+
+  // If `node` looks like a TBAA type descriptor metadata,
+  // then return true, if it is a valid node, and false otherwise.
+  // If it does not look like a TBAA type descriptor metadata, then
+  // return std::nullopt.
+  // If `identity` and `memberTypes/Offsets` are non-null, then they will
+  // contain the converted metadata operands for a valid TBAA node (i.e. when
+  // true is returned).
+  auto isTypeDescriptorNode =
+      [&](const llvm::MDNode *node, StringRef *identity = nullptr,
+          SmallVectorImpl<Attribute> *memberTypes = nullptr,
+          SmallVectorImpl<int64_t> *memberOffsets =
+              nullptr) -> std::optional<bool> {
+    unsigned numOperands = node->getNumOperands();
+    // Type descriptor, e.g.:
+    //   !1 = !{!"int", !0, /*optional*/i64 0} /* scalar int type */
+    //   !2 = !{!"agg_t", !1, i64 0} /* struct agg_t { int x; } */
+    if (numOperands < 2)
+      return std::nullopt;
+
+    // TODO: support "new" format (D41501) for type descriptors,
+    //       where the first operand is an MDNode.
+    auto identityNode = dyn_cast<const llvm::MDString>(node->getOperand(0));
+    if (!identityNode)
+      return std::nullopt;
+
+    // This should be a type descriptor node.
+    if (identity)
+      *identity = identityNode->getString();
+
+    for (unsigned pairNum = 0, e = numOperands / 2; pairNum < e; ++pairNum) {
+      const auto *memberNode =
+          dyn_cast<const llvm::MDNode>(node->getOperand(2 * pairNum + 1));
+      if (!memberNode) {
+        emitError(loc) << "operand '" << 2 * pairNum + 1 << "' must be MDNode: "
+                       << diagMD(node, llvmModule.get());
+        return false;
+      }
+      int64_t offset = 0;
+      if (2 * pairNum + 2 >= numOperands) {
+        // Allow for optional 0 offset in 2-operand nodes.
+        if (numOperands != 2) {
+          emitError(loc) << "missing member offset: "
+                         << diagMD(node, llvmModule.get());
+          return false;
+        }
+      } else {
+        auto *offsetCI = llvm::mdconst::dyn_extract<llvm::ConstantInt>(
+            node->getOperand(2 * pairNum + 2));
+        if (!offsetCI) {
+          emitError(loc) << "operand '" << 2 * pairNum + 2
+                         << "' must be ConstantInt: "
+                         << diagMD(node, llvmModule.get());
+          return false;
+        }
+        offset = offsetCI->getZExtValue();
+      }
+
+      if (memberTypes)
+        memberTypes->push_back(tbaaMapping.lookup(memberNode));
+      if (memberOffsets)
+        memberOffsets->push_back(offset);
+    }
+
+    return true;
+  };
+
+  // If `node` looks like a TBAA access tag metadata,
+  // then return true, if it is a valid node, and false otherwise.
+  // If it does not look like a TBAA access tag metadata, then
+  // return std::nullopt.
+  // If the other arguments are non-null, then they will contain
+  // the converted metadata operands for a valid TBAA node (i.e. when true is
+  // returned).
+  auto isTagNode =
+      [&](const llvm::MDNode *node, SymbolRefAttr *baseSymRef = nullptr,
+          SymbolRefAttr *accessSymRef = nullptr, int64_t *offset = nullptr,
+          bool *isConstant = nullptr) -> std::optional<bool> {
+    // Access tag, e.g.:
+    //   !3 = !{!1, !1, i64 0} /* scalar int access */
+    //   !4 = !{!2, !1, i64 0} /* agg_t::x access */
+    //
+    // Optional 4th argument is ConstantInt 0/1 identifying whether
+    // the location being accessed is "constant" (see for details:
+    // https://llvm.org/docs/LangRef.html#representation).
+    unsigned numOperands = node->getNumOperands();
+    if (numOperands != 3 && numOperands != 4)
+      return std::nullopt;
+    auto baseMD = dyn_cast<const llvm::MDNode>(node->getOperand(0));
+    auto accessMD = dyn_cast<const llvm::MDNode>(node->getOperand(1));
+    auto offsetCI =
+        llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(2));
+    if (!baseMD || !accessMD || !offsetCI)
+      return std::nullopt;
+    // TODO: support "new" TBAA format, if needed (see D41501).
+    // In the "old" format the first operand of the access type
+    // metadata is MDString. We have to distinguish the formats,
+    // because access tags have the same structure, but different
+    // meaning for the operands.
+    if (accessMD->getNumOperands() < 1 ||
+        !isa<llvm::MDString>(accessMD->getOperand(0)))
+      return std::nullopt;
+    bool isConst = false;
+    if (numOperands == 4) {
+      auto isConstantCI =
+          llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(3));
+      if (!isConstantCI) {
+        emitError(loc) << "operand '3' must be ConstantInt: "
+                       << diagMD(node, llvmModule.get());
+        return false;
+      }
+      isConst = isConstantCI->getValue()[0];
+    }
+    if (baseSymRef)
+      *baseSymRef = tbaaMapping.lookup(baseMD);
+    if (accessSymRef)
+      *accessSymRef = tbaaMapping.lookup(accessMD);
+    if (offset)
+      *offset = offsetCI->getZExtValue();
+    if (isConstant)
+      *isConstant = isConst;
+    return true;
+  };
+
+  // Insert new operations before the terminator.
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(&getTBAAMetadataOp().getBody().back().back());
+  StringAttr metadataOpName = SymbolTable::getSymbolName(getTBAAMetadataOp());
+
+  // On the first walk, create SymbolRefAttr's and map them
+  // to nodes in `nodesToConvert`.
+  for (const auto *current : nodesToConvert) {
+    if (std::optional<StringRef> identity = getIdentityIfRootNode(current)) {
+      if (identity.value().empty())
+        return emitError(loc) << "TBAA root node must have non-empty identity: "
+                              << diagMD(current, llvmModule.get());
+
+      // The root nodes do not have operands, so we can create
+      // the TBAARootMetadataOp on the first walk.
+      auto rootNode = builder.create<TBAARootMetadataOp>(
+          loc, getNewTBAANodeName("root"), identity.value());
+      tbaaMapping.try_emplace(current, FlatSymbolRefAttr::get(rootNode));
+      continue;
+    }
+    if (std::optional<bool> isValid = isTypeDescriptorNode(current)) {
+      if (!isValid.value())
+        return failure();
+      tbaaMapping.try_emplace(
+          current, FlatSymbolRefAttr::get(builder.getContext(),
+                                          getNewTBAANodeName("type_desc")));
+      continue;
+    }
+    if (std::optional<bool> isValid = isTagNode(current)) {
+      if (!isValid.value())
+        return failure();
+      // TBAATagOp symbols must be referred by their fully qualified
+      // names, so create a path to TBAATagOp symbol.
+      tbaaMapping.try_emplace(
+          current, SymbolRefAttr::get(
+                       builder.getContext(), metadataOpName,
+                       FlatSymbolRefAttr::get(builder.getContext(),
+                                              getNewTBAANodeName("tag"))));
+      continue;
+    }
+    return emitError(loc) << "unsupported TBAA node format: "
+                          << diagMD(current, llvmModule.get());
+  }
+
+  // On the second walk, create TBAA operations using the symbol names from the
+  // map.
+  for (const auto *current : nodesToConvert) {
+    StringRef identity;
+    SmallVector<Attribute> memberTypes;
+    SmallVector<int64_t> memberOffsets;
+    if (std::optional<bool> isValid = isTypeDescriptorNode(
+            current, &identity, &memberTypes, &memberOffsets)) {
+      assert(isValid.value() && "type descriptor node must be valid");
+
+      builder.create<TBAATypeDescriptorOp>(
+          loc, tbaaMapping.lookup(current).getLeafReference(),
+          builder.getStringAttr(identity), builder.getArrayAttr(memberTypes),
+          memberOffsets);
+      continue;
+    }
+    SymbolRefAttr baseSymRef, accessSymRef;
+    int64_t offset;
+    bool isConstant;
+    if (std::optional<bool> isValid = isTagNode(
+            current, &baseSymRef, &accessSymRef, &offset, &isConstant)) {
+      assert(isValid.value() && "access tag node must be valid");
+      builder.create<TBAATagOp>(
+          loc, tbaaMapping.lookup(current).getLeafReference(),
+          baseSymRef.getLeafReference(), accessSymRef.getLeafReference(),
+          offset, isConstant);
+      continue;
+    }
+  }
+
+  return success();
+}
+
+LogicalResult ModuleImport::convertMetadata() {
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(mlirModule.getBody(), mlirModule.getBody()->end());
+  for (const llvm::Function &func : llvmModule->functions())
+    for (const llvm::Instruction &inst : llvm::instructions(func)) {
+      llvm::AAMDNodes nodes = inst.getAAMetadata();
+      if (!nodes)
+        continue;
+
+      if (const llvm::MDNode *tbaaMD = nodes.TBAA)
+        if (failed(processTBAAMetadata(tbaaMD)))
+          return failure();
+      // TODO: only TBAA metadata is currently supported.
+    }
+
+  return success();
 }
 
 LogicalResult ModuleImport::convertGlobals() {
@@ -1274,6 +1557,8 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
 
   ModuleImport moduleImport(module.get(), std::move(llvmModule));
   if (failed(moduleImport.initializeImportInterface()))
+    return {};
+  if (failed(moduleImport.convertMetadata()))
     return {};
   if (failed(moduleImport.convertGlobals()))
     return {};

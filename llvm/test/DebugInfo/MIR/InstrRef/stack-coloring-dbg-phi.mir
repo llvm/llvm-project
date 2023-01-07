@@ -219,7 +219,7 @@ body:             |
     ;AAAAAA %4:gr32 = PHI %0, %bb.11, %10, %bb.21, debug-instr-number 1
     ;BBBBBB %4:gr32 = PHI %0, %bb.11, %10, %bb.21
     %5:gr32 = PHI undef %35:gr32, %bb.11, %9, %bb.21
-    ;AAAAAA DBG_INSTR_REF 1, 0, !10, !DIExpression(), debug-location !9
+    ;AAAAAA DBG_INSTR_REF !10, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !9
     ;BBBBBB DBG_VALUE %4, 0, !10, !DIExpression(), debug-location !9
     %39:gr8 = COPY %27.sub_8bit
     TEST8rr killed %39, %39, implicit-def $eflags, debug-location !9

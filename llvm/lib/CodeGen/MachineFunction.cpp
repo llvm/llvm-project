@@ -44,6 +44,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -763,8 +764,10 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
             dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts()))
       getMMI().addPersonality(PF);
 
-    if (LPI->isCleanup())
-      addCleanup(LandingPad);
+    // If there's no typeid list specified, then "cleanup" is implicit.
+    // Otherwise, id 0 is reserved for the cleanup action.
+    if (LPI->isCleanup() && LPI->getNumClauses() != 0)
+      LP.TypeIds.push_back(0);
 
     // FIXME: New EH - Add the clauses in reverse order. This isn't 100%
     //        correct, but we need to do it this way because of how the DWARF EH
@@ -772,23 +775,25 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
     for (unsigned I = LPI->getNumClauses(); I != 0; --I) {
       Value *Val = LPI->getClause(I - 1);
       if (LPI->isCatch(I - 1)) {
-        addCatchTypeInfo(LandingPad,
-                         dyn_cast<GlobalValue>(Val->stripPointerCasts()));
+        LP.TypeIds.push_back(
+            getTypeIDFor(dyn_cast<GlobalValue>(Val->stripPointerCasts())));
       } else {
         // Add filters in a list.
         auto *CVal = cast<Constant>(Val);
-        SmallVector<const GlobalValue *, 4> FilterList;
+        SmallVector<unsigned, 4> FilterList;
         for (const Use &U : CVal->operands())
-          FilterList.push_back(cast<GlobalValue>(U->stripPointerCasts()));
+          FilterList.push_back(
+              getTypeIDFor(cast<GlobalValue>(U->stripPointerCasts())));
 
-        addFilterTypeInfo(LandingPad, FilterList);
+        LP.TypeIds.push_back(getFilterIDFor(FilterList));
       }
     }
 
   } else if (const auto *CPI = dyn_cast<CatchPadInst>(FirstI)) {
     for (unsigned I = CPI->arg_size(); I != 0; --I) {
-      Value *TypeInfo = CPI->getArgOperand(I - 1)->stripPointerCasts();
-      addCatchTypeInfo(LandingPad, dyn_cast<GlobalValue>(TypeInfo));
+      auto *TypeInfo =
+          dyn_cast<GlobalValue>(CPI->getArgOperand(I - 1)->stripPointerCasts());
+      LP.TypeIds.push_back(getTypeIDFor(TypeInfo));
     }
 
   } else {
@@ -796,73 +801,6 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
   }
 
   return LandingPadLabel;
-}
-
-void MachineFunction::addCatchTypeInfo(MachineBasicBlock *LandingPad,
-                                       ArrayRef<const GlobalValue *> TyInfo) {
-  LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
-  for (const GlobalValue *GV : llvm::reverse(TyInfo))
-    LP.TypeIds.push_back(getTypeIDFor(GV));
-}
-
-void MachineFunction::addFilterTypeInfo(MachineBasicBlock *LandingPad,
-                                        ArrayRef<const GlobalValue *> TyInfo) {
-  LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
-  std::vector<unsigned> IdsInFilter(TyInfo.size());
-  for (unsigned I = 0, E = TyInfo.size(); I != E; ++I)
-    IdsInFilter[I] = getTypeIDFor(TyInfo[I]);
-  LP.TypeIds.push_back(getFilterIDFor(IdsInFilter));
-}
-
-void MachineFunction::tidyLandingPads(DenseMap<MCSymbol *, uintptr_t> *LPMap,
-                                      bool TidyIfNoBeginLabels) {
-  for (unsigned i = 0; i != LandingPads.size(); ) {
-    LandingPadInfo &LandingPad = LandingPads[i];
-    if (LandingPad.LandingPadLabel &&
-        !LandingPad.LandingPadLabel->isDefined() &&
-        (!LPMap || (*LPMap)[LandingPad.LandingPadLabel] == 0))
-      LandingPad.LandingPadLabel = nullptr;
-
-    // Special case: we *should* emit LPs with null LP MBB. This indicates
-    // "nounwind" case.
-    if (!LandingPad.LandingPadLabel && LandingPad.LandingPadBlock) {
-      LandingPads.erase(LandingPads.begin() + i);
-      continue;
-    }
-
-    if (TidyIfNoBeginLabels) {
-      for (unsigned j = 0, e = LandingPads[i].BeginLabels.size(); j != e; ++j) {
-        MCSymbol *BeginLabel = LandingPad.BeginLabels[j];
-        MCSymbol *EndLabel = LandingPad.EndLabels[j];
-        if ((BeginLabel->isDefined() || (LPMap && (*LPMap)[BeginLabel] != 0)) &&
-            (EndLabel->isDefined() || (LPMap && (*LPMap)[EndLabel] != 0)))
-          continue;
-
-        LandingPad.BeginLabels.erase(LandingPad.BeginLabels.begin() + j);
-        LandingPad.EndLabels.erase(LandingPad.EndLabels.begin() + j);
-        --j;
-        --e;
-      }
-
-      // Remove landing pads with no try-ranges.
-      if (LandingPads[i].BeginLabels.empty()) {
-        LandingPads.erase(LandingPads.begin() + i);
-        continue;
-      }
-    }
-
-    // If there is no landing pad, ensure that the list of typeids is empty.
-    // If the only typeid is a cleanup, this is the same as having no typeids.
-    if (!LandingPad.LandingPadBlock ||
-        (LandingPad.TypeIds.size() == 1 && !LandingPad.TypeIds[0]))
-      LandingPad.TypeIds.clear();
-    ++i;
-  }
-}
-
-void MachineFunction::addCleanup(MachineBasicBlock *LandingPad) {
-  LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
-  LP.TypeIds.push_back(0);
 }
 
 void MachineFunction::setCallSiteLandingPad(MCSymbol *Sym,
@@ -878,7 +816,7 @@ unsigned MachineFunction::getTypeIDFor(const GlobalValue *TI) {
   return TypeInfos.size();
 }
 
-int MachineFunction::getFilterIDFor(std::vector<unsigned> &TyIds) {
+int MachineFunction::getFilterIDFor(ArrayRef<unsigned> TyIds) {
   // If the new filter coincides with the tail of an existing filter, then
   // re-use the existing filter.  Folding filters more than this requires
   // re-ordering filters and/or their elements - probably not worth it.
@@ -1196,19 +1134,18 @@ void MachineFunction::finalizeDebugInstrRefs() {
   auto *TII = getSubtarget().getInstrInfo();
 
   auto MakeUndefDbgValue = [&](MachineInstr &MI) {
-    const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_VALUE);
+    const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_VALUE_LIST);
     MI.setDesc(RefII);
-    MI.getOperand(0).setReg(0);
-    MI.getOperand(1).ChangeToRegister(0, false);
+    MI.getDebugOperand(0).setReg(0);
   };
 
   DenseMap<Register, DebugInstrOperandPair> ArgDbgPHIs;
   for (auto &MBB : *this) {
     for (auto &MI : MBB) {
-      if (!MI.isDebugRef() || !MI.getOperand(0).isReg())
+      if (!MI.isDebugRef() || !MI.getDebugOperand(0).isReg())
         continue;
 
-      Register Reg = MI.getOperand(0).getReg();
+      Register Reg = MI.getDebugOperand(0).getReg();
 
       // Some vregs can be deleted as redundant in the meantime. Mark those
       // as DBG_VALUE $noreg. Additionally, some normal instructions are
@@ -1217,6 +1154,10 @@ void MachineFunction::finalizeDebugInstrRefs() {
         MakeUndefDbgValue(MI);
         continue;
       }
+      // Only convert Expr to variadic form when we're sure we're emitting a
+      // complete instruction reference.
+      MI.getDebugExpressionOp().setMetadata(
+          DIExpression::convertToVariadicExpression(MI.getDebugExpression()));
 
       assert(Reg.isVirtual());
       MachineInstr &DefMI = *RegInfo->def_instr_begin(Reg);
@@ -1226,8 +1167,7 @@ void MachineFunction::finalizeDebugInstrRefs() {
       // for why this is important.
       if (DefMI.isCopyLike() || TII->isCopyInstr(DefMI)) {
         auto Result = salvageCopySSA(DefMI, ArgDbgPHIs);
-        MI.getOperand(0).ChangeToImmediate(Result.first);
-        MI.getOperand(1).setImm(Result.second);
+        MI.getDebugOperand(0).ChangeToDbgInstrRef(Result.first, Result.second);
       } else {
         // Otherwise, identify the operand number that the VReg refers to.
         unsigned OperandIdx = 0;
@@ -1240,8 +1180,7 @@ void MachineFunction::finalizeDebugInstrRefs() {
 
         // Morph this instr ref to point at the given instruction and operand.
         unsigned ID = DefMI.getDebugInstrNum();
-        MI.getOperand(0).ChangeToImmediate(ID);
-        MI.getOperand(1).setImm(OperandIdx);
+        MI.getDebugOperand(0).ChangeToDbgInstrRef(ID, OperandIdx);
       }
     }
   }

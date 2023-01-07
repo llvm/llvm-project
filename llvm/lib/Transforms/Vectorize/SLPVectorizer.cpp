@@ -6745,9 +6745,24 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       // broadcast.
       assert(VecTy == FinalVecTy &&
              "No reused scalars expected for broadcast.");
-      return TTI->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
-                                 /*Mask=*/std::nullopt, CostKind, /*Index=*/0,
-                                 /*SubTp=*/nullptr, /*Args=*/VL[0]);
+      const auto *It =
+          find_if(VL, [](Value *V) { return !isa<UndefValue>(V); });
+      // If all values are undefs - consider cost free.
+      if (It == VL.end())
+        return TTI::TCC_Free;
+      // Add broadcast for non-identity shuffle only.
+      bool NeedShuffle =
+          VL.front() != *It || !all_of(VL.drop_front(), UndefValue::classof);
+      InstructionCost InsertCost =
+          TTI->getVectorInstrCost(Instruction::InsertElement, VecTy,
+                                  /*Index=*/0, PoisonValue::get(VecTy), *It);
+      return InsertCost + (NeedShuffle
+                               ? TTI->getShuffleCost(
+                                     TargetTransformInfo::SK_Broadcast, VecTy,
+                                     /*Mask=*/std::nullopt, CostKind,
+                                     /*Index=*/0,
+                                     /*SubTp=*/nullptr, /*Args=*/VL[0])
+                               : TTI::TCC_Free);
     }
     InstructionCost ReuseShuffleCost = 0;
     if (NeedToShuffleReuses)

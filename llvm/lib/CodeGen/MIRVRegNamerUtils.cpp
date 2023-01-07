@@ -113,6 +113,7 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
     case MachineOperand::MO_Metadata:
     case MachineOperand::MO_MCSymbol:
     case MachineOperand::MO_ShuffleMask:
+    case MachineOperand::MO_DbgInstrRef:
       return 0;
     }
     llvm_unreachable("Unexpected MachineOperandType.");

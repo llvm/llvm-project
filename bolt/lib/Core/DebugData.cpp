@@ -148,8 +148,7 @@ uint64_t DebugRangesSectionWriter::addRanges(
   return EntryOffset;
 }
 
-uint64_t
-DebugRangesSectionWriter::addRanges(const DebugAddressRangesVector &Ranges) {
+uint64_t DebugRangesSectionWriter::addRanges(DebugAddressRangesVector &Ranges) {
   if (Ranges.empty())
     return getEmptyRangesOffset();
 
@@ -207,22 +206,77 @@ getDWARF5Header(const LocListsRangelistsHeader &Header) {
   return HeaderBuffer;
 }
 
-uint64_t DebugRangeListsSectionWriter::addRanges(
-    const DebugAddressRangesVector &Ranges) {
+static bool emitWithBase(raw_ostream &OS,
+                         const DebugAddressRangesVector &Ranges,
+                         DebugAddrWriter &AddrWriter, DWARFUnit &CU,
+                         uint32_t &Index) {
+  if (Ranges.size() < 2)
+    return false;
+  uint64_t Base = Ranges[Index].LowPC;
+  std::vector<std::pair<uint16_t, uint16_t>> RangeOffsets;
+  uint8_t TempBuffer[64];
+  while (Index < Ranges.size()) {
+    const DebugAddressRange &Range = Ranges[Index];
+    if (Range.LowPC == 0)
+      break;
+    assert(Base <= Range.LowPC && "Range base is higher than low PC");
+    uint32_t StartOffset = Range.LowPC - Base;
+    uint32_t EndOffset = Range.HighPC - Base;
+    if (encodeULEB128(EndOffset, TempBuffer) > 2)
+      break;
+    RangeOffsets.emplace_back(StartOffset, EndOffset);
+    ++Index;
+  }
+
+  if (RangeOffsets.size() < 2) {
+    Index -= RangeOffsets.size();
+    return false;
+  }
+
+  support::endian::write(OS, static_cast<uint8_t>(dwarf::DW_RLE_base_addressx),
+                         support::little);
+  uint32_t BaseIndex = AddrWriter.getIndexFromAddress(Base, CU);
+  encodeULEB128(BaseIndex, OS);
+  for (auto &Offset : RangeOffsets) {
+    support::endian::write(OS, static_cast<uint8_t>(dwarf::DW_RLE_offset_pair),
+                           support::little);
+    encodeULEB128(Offset.first, OS);
+    encodeULEB128(Offset.second, OS);
+  }
+  support::endian::write(OS, static_cast<uint8_t>(dwarf::DW_RLE_end_of_list),
+                         support::little);
+  return true;
+}
+
+uint64_t
+DebugRangeListsSectionWriter::addRanges(DebugAddressRangesVector &Ranges) {
   std::lock_guard<std::mutex> Lock(WriterMutex);
 
   RangeEntries.push_back(CurrentOffset);
-  for (const DebugAddressRange &Range : Ranges) {
+  bool WrittenStartxLength = false;
+  std::sort(
+      Ranges.begin(), Ranges.end(),
+      [](const DebugAddressRange &R1, const DebugAddressRange &R2) -> bool {
+        return R1.LowPC < R2.LowPC;
+      });
+  for (unsigned I = 0; I < Ranges.size();) {
+    WrittenStartxLength = false;
+    if (emitWithBase(*CUBodyStream, Ranges, *AddrWriter, *CU, I))
+      continue;
+    const DebugAddressRange &Range = Ranges[I];
     support::endian::write(*CUBodyStream,
                            static_cast<uint8_t>(dwarf::DW_RLE_startx_length),
                            support::little);
     uint32_t Index = AddrWriter->getIndexFromAddress(Range.LowPC, *CU);
     encodeULEB128(Index, *CUBodyStream);
     encodeULEB128(Range.HighPC - Range.LowPC, *CUBodyStream);
+    ++I;
+    WrittenStartxLength = true;
   }
-  support::endian::write(*CUBodyStream,
-                         static_cast<uint8_t>(dwarf::DW_RLE_end_of_list),
-                         support::little);
+  if (WrittenStartxLength)
+    support::endian::write(*CUBodyStream,
+                           static_cast<uint8_t>(dwarf::DW_RLE_end_of_list),
+                           support::little);
   CurrentOffset = CUBodyBuffer->size();
   return RangeEntries.size() - 1;
 }

@@ -550,13 +550,6 @@ static BasicBlock *HandleCallsInBlockInlinedThroughInvoke(
     if (!CI || CI->doesNotThrow())
       continue;
 
-    if (CI->isInlineAsm()) {
-      InlineAsm *IA = cast<InlineAsm>(CI->getCalledOperand());
-      if (!IA->canThrow()) {
-        continue;
-      }
-    }
-
     // We do not need to (and in fact, cannot) convert possibly throwing calls
     // to @llvm.experimental_deoptimize (resp. @llvm.experimental.guard) into
     // invokes.  The caller's "segment" of the deoptimization continuation

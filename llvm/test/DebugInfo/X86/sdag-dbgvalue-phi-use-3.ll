@@ -75,12 +75,12 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
 ; INSTRREF-SAME:    debug-instr-number 9
 ; CHECK-NEXT:    [[REG7:%[0-9]+]]:gr32 = PHI
 ; INSTRREF-SAME:    debug-instr-number 10
-; INSTRREF-NEXT: DBG_INSTR_REF 5, 0, !19, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; INSTRREF-NEXT: DBG_INSTR_REF 6, 0, !19, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-; INSTRREF-NEXT: DBG_INSTR_REF 7, 0, !18, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; INSTRREF-NEXT: DBG_INSTR_REF 8, 0, !18, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-; INSTRREF-NEXT: DBG_INSTR_REF 9, 0, !17, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; INSTRREF-NEXT: DBG_INSTR_REF 10, 0, !17, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+; INSTRREF-NEXT: DBG_INSTR_REF !19, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 0, 32), dbg-instr-ref(5, 0)
+; INSTRREF-NEXT: DBG_INSTR_REF !19, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 32, 32), dbg-instr-ref(6, 0)
+; INSTRREF-NEXT: DBG_INSTR_REF !18, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 0, 32), dbg-instr-ref(7, 0)
+; INSTRREF-NEXT: DBG_INSTR_REF !18, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 32, 32), dbg-instr-ref(8, 0)
+; INSTRREF-NEXT: DBG_INSTR_REF !17, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 0, 32), dbg-instr-ref(9, 0)
+; INSTRREF-NEXT: DBG_INSTR_REF !17, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 32, 32), dbg-instr-ref(10, 0)
 ; DBGVALUE-NEXT: DBG_VALUE [[REG2]], $noreg, !19, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
 ; DBGVALUE-NEXT: DBG_VALUE [[REG3]], $noreg, !19, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 ; DBGVALUE-NEXT: DBG_VALUE [[REG4]], $noreg, !18, !DIExpression(DW_OP_LLVM_fragment, 0, 32)

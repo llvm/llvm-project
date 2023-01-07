@@ -25,14 +25,6 @@ using namespace mlir::tosa;
 
 namespace {
 
-template <typename T>
-static void getValuesFromIntArrayAttribute(ArrayAttr attr,
-                                           SmallVector<T> &arrayValues) {
-  for (Attribute val : attr.getValue()) {
-    arrayValues.push_back(val.cast<IntegerAttr>().getValue().getSExtValue());
-  }
-}
-
 template <typename TosaOp, typename... Args>
 TosaOp createOpAndInfer(PatternRewriter &rewriter, Location loc, Type resultTy,
                         Args &&...args) {
@@ -220,7 +212,7 @@ public:
         stride[1],      inputChannels};
     weight = createOpAndInfer<tosa::ReshapeOp>(
         rewriter, loc, UnrankedTensorType::get(weightETy), weight,
-        rewriter.getI64ArrayAttr(weightReshapeDims0));
+        rewriter.getDenseI64ArrayAttr(weightReshapeDims0));
 
     // Transpose the factored-out stride to the output channels.
     Value transposeWeightVal = rewriter.create<tosa::ConstOp>(
@@ -237,7 +229,7 @@ public:
         weightWidth / stride[1], inputChannels};
     weight = createOpAndInfer<tosa::ReshapeOp>(
         rewriter, loc, UnrankedTensorType::get(weightETy), weight,
-        rewriter.getI64ArrayAttr(weightReshapeDims1));
+        rewriter.getDenseI64ArrayAttr(weightReshapeDims1));
     ShapedType restridedWeightTy = weight.getType().cast<ShapedType>();
 
     weight = createOpAndInfer<tosa::ReverseOp>(
@@ -315,7 +307,7 @@ public:
         batch, convHeight, convWidth, stride[0], stride[1], outputChannels};
     conv2d = createOpAndInfer<tosa::ReshapeOp>(
         rewriter, loc, UnrankedTensorType::get(resultETy), conv2d,
-        rewriter.getI64ArrayAttr(convReshapeDims0));
+        rewriter.getDenseI64ArrayAttr(convReshapeDims0));
 
     // Transpose the factored-out stride to the output channels.
     Value transposeConvVal = rewriter.create<tosa::ConstOp>(
@@ -331,7 +323,7 @@ public:
         batch, convHeight * stride[0], convWidth * stride[1], outputChannels};
     conv2d = createOpAndInfer<tosa::ReshapeOp>(
         rewriter, loc, UnrankedTensorType::get(resultETy), conv2d,
-        rewriter.getI64ArrayAttr(convReshapeDims1));
+        rewriter.getDenseI64ArrayAttr(convReshapeDims1));
 
     // Determine the amount to slice / pad from the result start.
     int64_t resultSliceTop = std::max<int64_t>(0, -pad[0]);
@@ -356,8 +348,8 @@ public:
 
     auto slice = createOpAndInfer<tosa::SliceOp>(
                      rewriter, loc, UnrankedTensorType::get(resultETy), conv2d,
-                     rewriter.getI64ArrayAttr(sliceBegin),
-                     rewriter.getI64ArrayAttr(sliceSize))
+                     rewriter.getDenseI64ArrayAttr(sliceBegin),
+                     rewriter.getDenseI64ArrayAttr(sliceSize))
                      .getResult();
 
     llvm::SmallVector<int32_t, 8> resultPadding = {0, 0, 0, 0, 0, 0, 0, 0};

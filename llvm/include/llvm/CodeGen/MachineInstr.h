@@ -675,19 +675,19 @@ public:
   iterator_range<mop_iterator> debug_operands() {
     if (isDebugDef())
       return make_range(operands_begin() + 1, operands_end());
-    assert(isDebugValue() && "Must be a debug value instruction.");
-    return isDebugValueList()
-               ? make_range(operands_begin() + 2, operands_end())
-               : make_range(operands_begin(), operands_begin() + 1);
+    assert((isDebugValueLike()) && "Must be a debug value instruction.");
+    return isNonListDebugValue()
+               ? make_range(operands_begin(), operands_begin() + 1)
+               : make_range(operands_begin() + 2, operands_end());
   }
   /// \copydoc debug_operands()
   iterator_range<const_mop_iterator> debug_operands() const {
     if (isDebugDef())
       return make_range(operands_begin() + 1, operands_end());
-    assert(isDebugValue() && "Must be a debug value instruction.");
-    return isDebugValueList()
-               ? make_range(operands_begin() + 2, operands_end())
-               : make_range(operands_begin(), operands_begin() + 1);
+    assert((isDebugValueLike()) && "Must be a debug value instruction.");
+    return isNonListDebugValue()
+               ? make_range(operands_begin(), operands_begin() + 1)
+               : make_range(operands_begin() + 2, operands_end());
   }
   /// Returns a range over all explicit operands that are register definitions.
   /// Implicit definition are not included!
@@ -1286,6 +1286,7 @@ public:
   }
   bool isDebugLabel() const { return getOpcode() == TargetOpcode::DBG_LABEL; }
   bool isDebugRef() const { return getOpcode() == TargetOpcode::DBG_INSTR_REF; }
+  bool isDebugValueLike() const { return isDebugValue() || isDebugRef(); }
   bool isDebugPHI() const { return getOpcode() == TargetOpcode::DBG_PHI; }
   bool isDebugDef() const { return getOpcode() == TargetOpcode::DBG_DEF; }
   bool isDebugKill() const { return getOpcode() == TargetOpcode::DBG_KILL; }

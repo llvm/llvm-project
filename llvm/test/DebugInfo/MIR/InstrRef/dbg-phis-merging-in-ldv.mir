@@ -158,32 +158,32 @@ body:             |
   bb.3.if.end:
     liveins: $rbx, $r14
   
-    DBG_INSTR_REF 1, 0, !14, !DIExpression(), debug-location !13
-    DBG_INSTR_REF 2, 0, !12, !DIExpression(), debug-location !13
-    DBG_INSTR_REF 3, 0, !12, !DIExpression(), debug-location !13
+    DBG_INSTR_REF !14, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !13
+    DBG_INSTR_REF !12, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0), debug-location !13
+    DBG_INSTR_REF !12, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(3, 0), debug-location !13
 
     ; Value number 1 is live-through the above control flow from the two
     ; DBG_PHIs:
-    ; CHECK:       DBG_INSTR_REF 1, 0
-    ; CHECK-NEXT:  DBG_VALUE $r14
+    ; CHECK:       DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
+    ; CHECK-NEXT:  DBG_VALUE_LIST {{.+}} $r14
     ;
     ; While value number 2 has different defs that merge on entry to bb.3.
     ; These are both in $rbx though, and we should find its location:
-    ; CHECK:       DBG_INSTR_REF 2, 0
-    ; CHECK-NEXT:  DBG_VALUE $rbx
+    ; CHECK:       DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
+    ; CHECK-NEXT:  DBG_VALUE_LIST {{.+}} $rbx
     ;
     ; Value number 3 cannot be resolved because $rax is clobbered in bb.2,
     ; meaning the merged value in bb.3 is incorrect. It should produce a
     ; DBG_VALUE $noreg.
-    ; CHECK:       DBG_INSTR_REF 3, 0
-    ; CHECK-NEXT:  DBG_VALUE $noreg
+    ; CHECK:       DBG_INSTR_REF {{.+}}, dbg-instr-ref(3, 0)
+    ; CHECK-NEXT:  DBG_VALUE_LIST {{.+}} $noreg
 
     renamable $rbx = ADD64rr killed renamable $rbx, killed renamable $r14, implicit-def $eflags, debug-location !28
-    DBG_INSTR_REF 2, 0, !12, !DIExpression(), debug-location !13
+    DBG_INSTR_REF !12, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0), debug-location !13
 
     ; After clobbering rbx, the variable location should not be available.
-    ; CHECK:       DBG_INSTR_REF 2, 0
-    ; CHECK-NEXT:  DBG_VALUE $noreg
+    ; CHECK:       DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
+    ; CHECK-NEXT:  DBG_VALUE_LIST {{.+}} $noreg
 
     $rdi = MOV64rr $rbx, debug-location !29
     CALL64pcrel32 @ext, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, debug-location !29

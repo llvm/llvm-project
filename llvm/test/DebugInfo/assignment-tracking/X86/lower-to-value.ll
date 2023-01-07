@@ -49,7 +49,7 @@
 ; DBGVALUE: %2:gr64 = nsw ADD64ri8 %1, 2, implicit-def dead $eflags, debug-location
 ; DBGVALUE-NEXT: DBG_VALUE %2, $noreg, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 64, 64), debug-location
 ; INSTRREF: %2:gr64 = nsw ADD64ri8 %1, 2, implicit-def dead $eflags, debug-instr-number 1
-; INSTRREF-NEXT: DBG_INSTR_REF 1, 0, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 64, 64), debug-location
+; INSTRREF-NEXT: DBG_INSTR_REF ![[VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref(1, 0), debug-location
 
 source_filename = "test.cpp"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
