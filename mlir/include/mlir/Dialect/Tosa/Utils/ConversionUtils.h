@@ -41,15 +41,6 @@ Value clampIntHelper(Location loc, Value arg, Value min, Value max,
 // Determines whether the integer value falls witin the range of integer type.
 bool validIntegerRange(IntegerType ty, int64_t value);
 
-// Returns the values in an attribute as an array of values.
-template <typename T>
-void getValuesFromIntArrayAttribute(ArrayAttr attr,
-                                    SmallVector<T> &arrayValues) {
-  for (Attribute val : attr.getValue()) {
-    arrayValues.push_back(val.cast<IntegerAttr>().getValue().getSExtValue());
-  }
-}
-
 // Checks for a dynamic batch dim in any of the passed parameters of an op.
 // The batch dimention must be #0 and the rest of the dimensions must be static.
 template <typename Op>

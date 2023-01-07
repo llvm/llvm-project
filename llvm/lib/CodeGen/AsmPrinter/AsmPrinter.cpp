@@ -1132,12 +1132,11 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   OS << " <- ";
 
   const DIExpression *Expr = MI->getDebugExpression();
-  if (Expr->getNumElements() && Expr->isSingleLocationExpression() &&
-      Expr->expr_op_begin()->getOp() == dwarf::DW_OP_LLVM_arg) {
-    SmallVector<uint64_t> Ops(
-        make_range(Expr->elements_begin() + 2, Expr->elements_end()));
-    Expr = DIExpression::get(Expr->getContext(), Ops);
-  }
+  // First convert this to a non-variadic expression if possible, to simplify
+  // the output.
+  if (auto NonVariadicExpr = DIExpression::convertToNonVariadicExpression(Expr))
+    Expr = *NonVariadicExpr;
+  // Then, output the possibly-simplified expression.
   if (Expr->getNumElements()) {
     OS << '[';
     ListSeparator LS;
