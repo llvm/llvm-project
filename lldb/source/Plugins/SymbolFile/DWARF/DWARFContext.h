@@ -11,7 +11,6 @@
 
 #include "DWARFDataExtractor.h"
 #include "lldb/Core/Section.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Support/Threading.h"
 #include <memory>

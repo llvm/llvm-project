@@ -14,7 +14,6 @@
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Connection.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <memory>

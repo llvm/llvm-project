@@ -25,7 +25,6 @@ typedef void *id;
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 
-#include "llvm/ADT/Optional.h"
 
 // And now the actual magic
 namespace CoreSimulatorSupport {

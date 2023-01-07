@@ -10,7 +10,6 @@
 #define liblldb_ABISysV_arc_h_
 
 // Other libraries and framework includes
-#include <llvm/ADT/Optional.h>
 #include <optional>
 
 // Project includes

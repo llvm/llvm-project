@@ -10,7 +10,6 @@
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_CPLUSPLUSNAMEPARSER_H
 
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 

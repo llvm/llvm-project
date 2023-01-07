@@ -15,7 +15,6 @@
 
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RangeMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/FormatProviders.h"
 
 namespace lldb_private {

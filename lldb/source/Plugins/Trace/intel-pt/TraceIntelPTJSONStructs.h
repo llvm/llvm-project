@@ -11,7 +11,6 @@
 
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "lldb/lldb-types.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
 #include <intel-pt.h>
 #include <optional>

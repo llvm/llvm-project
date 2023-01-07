@@ -14,7 +14,6 @@
 #include <variant>
 
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/Optional.h"
 
 namespace lldb_private {
 

@@ -15,7 +15,6 @@
 
 #include "Plugins/Platform/gdb-server/PlatformRemoteGDBServer.h"
 
-#include "llvm/ADT/Optional.h"
 
 #include "AdbClient.h"
 

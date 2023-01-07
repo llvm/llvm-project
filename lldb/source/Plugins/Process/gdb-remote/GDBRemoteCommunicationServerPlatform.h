@@ -17,7 +17,6 @@
 #include "GDBRemoteCommunicationServerCommon.h"
 #include "lldb/Host/Socket.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"
 
 namespace lldb_private {
