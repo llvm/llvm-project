@@ -24,7 +24,7 @@ public:
   using value_type = T;
 
   constexpr explicit soccc_allocator(int* soccc_count_, int self_coccc_count_ = 0)
-    : soccc_count(soccc_count_), self_soccc_count(self_coccc_count_) {}
+      : soccc_count(soccc_count_), self_soccc_count(self_coccc_count_) {}
 
   template <class U>
   constexpr soccc_allocator(const soccc_allocator<U>& a) : soccc_count(a.get_soccc()) {}

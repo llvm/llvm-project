@@ -4083,7 +4083,8 @@ void BoUpSLP::reorderNodeWithReuses(TreeEntry &TE, ArrayRef<int> Mask) const {
   // Clear reorder since it is going to be applied to the new mask.
   TE.ReorderIndices.clear();
   // Try to improve gathered nodes with clustered reuses, if possible.
-  SmallVector<unsigned> NewOrder(ArrayRef(NewMask).slice(0, Sz));
+  ArrayRef<int> Slice = ArrayRef(NewMask).slice(0, Sz);
+  SmallVector<unsigned> NewOrder(Slice.begin(), Slice.end());
   inversePermutation(NewOrder, NewMask);
   reorderScalars(TE.Scalars, NewMask);
   // Fill the reuses mask with the identity submasks.
@@ -6423,7 +6424,7 @@ protected:
               .all();
       if (!IsOp1Undef && !IsOp2Undef) {
         // Update mask and mark undef elems.
-        for (auto [Idx, I] : enumerate(Mask)) {
+        for (int &I : Mask) {
           if (I == UndefMaskElem)
             continue;
           if (SV->getMaskValue(I % SV->getShuffleMask().size()) ==
