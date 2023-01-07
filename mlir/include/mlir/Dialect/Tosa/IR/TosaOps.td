@@ -1435,7 +1435,7 @@ def Tosa_ReshapeOp: Tosa_Op<"reshape", [
 
   let arguments = (ins
     Tosa_Tensor:$input1,
-    I64ArrayAttr:$new_shape
+    DenseI64ArrayAttr:$new_shape
   );
 
   let results = (outs
@@ -1485,8 +1485,8 @@ def Tosa_SliceOp: Tosa_Op<"slice", [
 
   let arguments = (ins
     Tosa_Tensor1Dto6D:$input,
-    I64ArrayAttr:$start,
-    I64ArrayAttr:$size
+    DenseI64ArrayAttr:$start,
+    DenseI64ArrayAttr:$size
   );
 
   let results = (outs
@@ -1511,7 +1511,7 @@ def Tosa_TileOp: Tosa_Op<"tile", [
 
   let arguments = (ins
     Tosa_Tensor1Dto4D:$input1,
-    I64ArrayAttr:$multiples);
+    DenseI64ArrayAttr:$multiples);
 
   let results = (outs
     Tosa_Tensor1Dto4D:$output
@@ -1717,8 +1717,8 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [Pure,
     Tosa_Tensor:$input,
     I32Attr:$input_zp,
     I32Attr:$output_zp,
-    I32ArrayAttr:$multiplier,
-    I32ArrayAttr:$shift,
+    DenseI32ArrayAttr:$multiplier,
+    DenseI32ArrayAttr:$shift,
     BoolAttr:$scale32,
     BoolAttr:$double_round,
     BoolAttr:$per_channel

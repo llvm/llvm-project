@@ -213,8 +213,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
          ArgCount++) {
       Value *Arg = CI->getArgOperand(ArgCount);
       Type *ArgType = Arg->getType();
-      unsigned ArgSize = TD->getTypeAllocSizeInBits(ArgType);
-      ArgSize = ArgSize / 8;
+      unsigned ArgSize = TD->getTypeAllocSize(ArgType);
       //
       // ArgSize by design should be a multiple of DWORD_ALIGN,
       // expand the arguments that do not follow this rule.
@@ -235,8 +234,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
         else
           Arg = Builder.CreateSExt(Arg, ResType);
         ArgType = Arg->getType();
-        ArgSize = TD->getTypeAllocSizeInBits(ArgType);
-        ArgSize = ArgSize / 8;
+        ArgSize = TD->getTypeAllocSize(ArgType);
         CI->setOperand(ArgCount, Arg);
       }
       if (OpConvSpecifiers[ArgCount - 1] == 'f') {
@@ -516,7 +514,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       }
       for (unsigned I = 0, E = WhatToStore.size(); I != E; ++I) {
         Value *TheBtCast = WhatToStore[I];
-        unsigned ArgSize = TD->getTypeAllocSizeInBits(TheBtCast->getType()) / 8;
+        unsigned ArgSize = TD->getTypeAllocSize(TheBtCast->getType());
         SmallVector<Value *, 1> BuffOffset;
         BuffOffset.push_back(ConstantInt::get(I32Ty, ArgSize));
 

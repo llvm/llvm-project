@@ -252,6 +252,23 @@ OpFoldResult spirv::LogicalAndOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.LogicalNotEqualOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::LogicalNotEqualOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 2 &&
+         "spirv.LogicalNotEqual should take two operands");
+
+  if (Optional<bool> rhs = getScalarOrSplatBoolAttr(operands.back())) {
+    // x && false = x
+    if (!rhs.value())
+      return getOperand1();
+  }
+
+  return Attribute();
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.LogicalNot
 //===----------------------------------------------------------------------===//
 

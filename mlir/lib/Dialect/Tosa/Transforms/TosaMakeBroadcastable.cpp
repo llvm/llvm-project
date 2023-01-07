@@ -130,7 +130,7 @@ static LogicalResult reshapeLowerToHigher(PatternRewriter &rewriter,
 
   auto reshapeLower = rewriter.create<tosa::ReshapeOp>(
       loc, reshapeOutputType, lowerTensorValue,
-      rewriter.getI64ArrayAttr(reshapeOutputShape));
+      rewriter.getDenseI64ArrayAttr(reshapeOutputShape));
 
   if (input1Rank > input2Rank) {
     outInput1 = higherTensorValue;
@@ -144,8 +144,7 @@ static LogicalResult reshapeLowerToHigher(PatternRewriter &rewriter,
 }
 
 namespace {
-template <typename OpTy>
-struct ConvertTosaOp : public OpRewritePattern<OpTy> {
+template <typename OpTy> struct ConvertTosaOp : public OpRewritePattern<OpTy> {
   using OpRewritePattern<OpTy>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(OpTy tosaBinaryOp,
