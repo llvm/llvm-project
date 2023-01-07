@@ -917,9 +917,9 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
   // Update PolicyAttrs if need (TA or TAMA) for compute builtin types.
   if (PolicyAttrs.isMAPolicy())
     PolicyAttrs.TailPolicy = Policy::PolicyType::Agnostic; // TAMA
-  if (PolicyAttrs.isPolicyNonePolicy()) {
+  if (PolicyAttrs.isUnspecified()) {
     if (!IsMasked) {
-      PolicyAttrs.PolicyNone = false;
+      PolicyAttrs.IsUnspecified = false;
       PolicyAttrs.TailPolicy = Policy::PolicyType::Agnostic; // TA
     }
   }
@@ -1016,8 +1016,8 @@ void RVVIntrinsic::updateNamesAndPolicy(bool IsMasked, bool HasPolicy,
     OverloadedName += suffix;
   };
 
-  if (PolicyAttrs.isPolicyNonePolicy()) {
-    PolicyAttrs.PolicyNone = false;
+  if (PolicyAttrs.isUnspecified()) {
+    PolicyAttrs.IsUnspecified = false;
     if (IsMasked) {
       Name += "_m";
       // FIXME: Currently _m default policy implementation is different with
