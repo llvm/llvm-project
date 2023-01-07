@@ -90,7 +90,6 @@ struct ReshapeConstOptimization : public OpRewritePattern<tosa::ReshapeOp> {
     Value input = op.getInput1();
     ShapedType inputTy = input.getType().cast<ShapedType>();
     ShapedType resultTy = op.getType().cast<ShapedType>();
-    ArrayAttr newShape = op.getNewShape();
 
     if (inputTy.getElementType() != resultTy.getElementType())
       return rewriter.notifyMatchFailure(op, "element type does not match.");
@@ -105,16 +104,10 @@ struct ReshapeConstOptimization : public OpRewritePattern<tosa::ReshapeOp> {
       return rewriter.notifyMatchFailure(op,
                                          "Used more than once or not-splat");
 
-    // Grab the new shape
-    SmallVector<int64_t> newShapeValues = llvm::to_vector<6>(
-        llvm::map_range(newShape.getValue(), [](const Attribute &val) {
-          return val.cast<IntegerAttr>().getValue().getSExtValue();
-        }));
-
     // Build new const op with correct output shape
     ShapedType inputShape = input.getType().cast<ShapedType>();
     DenseElementsAttr outputAttr =
-        inputAttr.reshape(inputShape.clone(newShapeValues));
+        inputAttr.reshape(inputShape.clone(op.getNewShape()));
     rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, outputAttr.getType(),
                                                outputAttr);
     return success();
@@ -211,7 +204,8 @@ struct TransposeIsReshape : public OpRewritePattern<tosa::TransposeOp> {
       newShape.push_back(inputTy.getDimSize(permValues[i]));
 
     rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
-        op, op.getType(), op.getInput1(), rewriter.getI64ArrayAttr(newShape));
+        op, op.getType(), op.getInput1(),
+        rewriter.getDenseI64ArrayAttr(newShape));
     return success();
   }
 };
@@ -973,10 +967,7 @@ OpFoldResult SliceOp::fold(ArrayRef<Attribute> operands) {
 
   if (inputTy.hasStaticShape() && outputTy.hasStaticShape() &&
       outputTy.getNumElements() == 1) {
-    llvm::SmallVector<uint64_t> indices;
-    for (auto val : getStart()) {
-      indices.push_back(val.cast<IntegerAttr>().getInt());
-    }
+    llvm::SmallVector<uint64_t> indices(getStart());
     auto value = operand.getValues<Attribute>()[indices];
     return SplatElementsAttr::get(outputTy, value);
   }
@@ -999,11 +990,7 @@ OpFoldResult tosa::SelectOp::fold(ArrayRef<Attribute> operands) {
 }
 
 OpFoldResult TileOp::fold(ArrayRef<Attribute> operands) {
-  bool allOnes = true;
-  for (Attribute val : getMultiples().getValue()) {
-    allOnes = allOnes && val.cast<IntegerAttr>().getValue().getSExtValue() == 1;
-  }
-
+  bool allOnes = llvm::all_of(getMultiples(), [](int64_t v) { return v == 1; });
   if (allOnes && getInput1().getType() == getType())
     return getInput1();
   return {};
