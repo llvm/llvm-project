@@ -279,15 +279,14 @@
 #endif
 
 // By default we allow to use SizeClassAllocator64 on 64-bit platform.
-// But in some cases (e.g. AArch64's 39-bit address space) SizeClassAllocator64
-// does not work well and we need to fallback to SizeClassAllocator32.
+// But in some cases SizeClassAllocator64 does not work well and we need to
+// fallback to SizeClassAllocator32.
 // For such platforms build this code with -DSANITIZER_CAN_USE_ALLOCATOR64=0 or
 // change the definition of SANITIZER_CAN_USE_ALLOCATOR64 here.
 #ifndef SANITIZER_CAN_USE_ALLOCATOR64
-#  if (SANITIZER_ANDROID && defined(__aarch64__)) || SANITIZER_FUCHSIA
-#    define SANITIZER_CAN_USE_ALLOCATOR64 1
-#  elif defined(__mips64) || defined(__aarch64__) || defined(__i386__) || \
-      defined(__arm__) || SANITIZER_RISCV64 || defined(__hexagon__)
+#  if SANITIZER_RISCV64 || SANITIZER_IOS
+#    define SANITIZER_CAN_USE_ALLOCATOR64 0
+#  elif defined(__mips64) || defined(__hexagon__)
 #    define SANITIZER_CAN_USE_ALLOCATOR64 0
 #  else
 #    define SANITIZER_CAN_USE_ALLOCATOR64 (SANITIZER_WORDSIZE == 64)
