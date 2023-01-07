@@ -9624,6 +9624,12 @@ public:
     return ExprEvalContexts.back().isUnevaluated();
   }
 
+  bool isConstantEvaluatedContext() const {
+    assert(!ExprEvalContexts.empty() &&
+           "Must be in an expression evaluation context");
+    return ExprEvalContexts.back().isConstantEvaluated();
+  }
+
   bool isImmediateFunctionContext() const {
     assert(!ExprEvalContexts.empty() &&
            "Must be in an expression evaluation context");

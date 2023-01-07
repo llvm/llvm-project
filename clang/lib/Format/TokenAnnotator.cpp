@@ -166,10 +166,9 @@ private:
         // parameter cases, but should not alter program semantics.
         if (CurrentToken->Next && CurrentToken->Next->is(tok::greater) &&
             Left->ParentBracket != tok::less &&
-            (isKeywordWithCondition(*Line.First) ||
-             CurrentToken->getStartOfNonWhitespace() ==
-                 CurrentToken->Next->getStartOfNonWhitespace().getLocWithOffset(
-                     -1))) {
+            CurrentToken->getStartOfNonWhitespace() ==
+                CurrentToken->Next->getStartOfNonWhitespace().getLocWithOffset(
+                    -1)) {
           return false;
         }
         Left->MatchingParen = CurrentToken;

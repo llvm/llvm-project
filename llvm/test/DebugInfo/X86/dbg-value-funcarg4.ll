@@ -9,8 +9,8 @@
 
 ; CHECK: DBG_PHI $edi, 1
 
-; CHECK: DBG_INSTR_REF 1, 0, ![[LOCAL]], !DIExpression(),
-; CHECK: DBG_INSTR_REF 1, 0, ![[LOCAL2]], !DIExpression(),
+; CHECK: DBG_INSTR_REF ![[LOCAL]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
+; CHECK: DBG_INSTR_REF ![[LOCAL2]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
 
 declare void @bar(i32)
 declare void @llvm.dbg.value(metadata, metadata, metadata)

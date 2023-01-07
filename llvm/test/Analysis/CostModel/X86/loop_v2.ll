@@ -20,7 +20,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %5 = extractelement <2 x i64> %2, i32 1
   %6 = getelementptr inbounds i32, ptr %A, i64 %5
   %7 = load i32, ptr %4, align 4
-  ;CHECK: cost of 1 {{.*}} insert
+  ;CHECK: cost of 0 {{.*}} insert
   %8 = insertelement <2 x i32> undef, i32 %7, i32 0
   %9 = load i32, ptr %6, align 4
   ;CHECK: cost of 1 {{.*}} insert

@@ -30,7 +30,7 @@ nextbb:
   %2 = mul i32 %0, %arg1, !dbg !26
 ; CHECK: IMUL32rr
   call void @llvm.dbg.value(metadata i32 %1, metadata !16, metadata !DIExpression()), !dbg !27
-; INSTRREF-NEXT: DBG_INSTR_REF 1, 0
+; INSTRREF-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
 ; DBGVALUE-NEXT: DBG_VALUE
   br label %exit, !dbg !26
 

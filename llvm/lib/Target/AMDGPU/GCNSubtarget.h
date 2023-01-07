@@ -199,6 +199,7 @@ protected:
   bool HasGFX11FullVGPRs = false;
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
+  bool HasVALUTransUseHazard = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1081,12 +1082,12 @@ public:
   bool hasLdsDirect() const { return getGeneration() >= GFX11; }
 
   bool hasVALUPartialForwardingHazard() const {
-    return getGeneration() >= GFX11;
+    return getGeneration() == GFX11;
   }
 
-  bool hasVALUTransUseHazard() const { return getGeneration() >= GFX11; }
+  bool hasVALUTransUseHazard() const { return HasVALUTransUseHazard; }
 
-  bool hasVALUMaskWriteHazard() const { return getGeneration() >= GFX11; }
+  bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts; }

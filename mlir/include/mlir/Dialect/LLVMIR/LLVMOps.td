@@ -205,6 +205,10 @@ class MemoryOpWithAlignmentAndAttributes : MemoryOpWithAlignmentBase {
   code setAliasScopeMetadataCode = [{
     moduleTranslation.setAliasScopeMetadata(op, inst);
   }];
+
+  code setTBAAMetadataCode = [{
+    moduleTranslation.setTBAAMetadata(op, inst);
+  }];
 }
 
 // Memory-related operations.
@@ -360,6 +364,7 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
      # setNonTemporalMetadataCode
      # setAccessGroupsMetadataCode
      # setAliasScopeMetadataCode
+     # setTBAAMetadataCode
      # [{
     $res = inst;
   }];
@@ -397,7 +402,8 @@ def LLVM_StoreOp : LLVM_Op<"store">, MemoryOpWithAlignmentAndAttributes {
   }] # setAlignmentCode
      # setNonTemporalMetadataCode
      # setAccessGroupsMetadataCode
-     # setAliasScopeMetadataCode;
+     # setAliasScopeMetadataCode
+     # setTBAAMetadataCode;
   // FIXME: Import attributes.
   string mlirBuilder = [{
     $_op = $_builder.create<LLVM::StoreOp>($_location, $value, $addr);
@@ -992,6 +998,7 @@ def LLVM_MetadataOp : LLVM_Op<"metadata", [
   }];
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat = "$sym_name attr-dict-with-keyword $body";
+  let hasRegionVerifier = 1;
 }
 
 def LLVM_AliasScopeDomainMetadataOp : LLVM_Op<"alias_scope_domain", [
@@ -1070,6 +1077,152 @@ def LLVM_AccessGroupMetadataOp : LLVM_Op<"access_group", [
 
     See the following link for more details:
     https://llvm.org/docs/LangRef.html#llvm-access-group-metadata
+  }];
+  let assemblyFormat = "$sym_name attr-dict";
+}
+
+def LLVM_TBAARootMetadataOp : LLVM_Op<"tbaa_root", [
+  HasParent<"MetadataOp">, Symbol
+]> {
+  let arguments = (ins
+    SymbolNameAttr:$sym_name,
+    StrAttr:$identity
+  );
+  let summary = "LLVM dialect TBAA root node metadata.";
+  let description = [{
+    Defines a TBAA root node.
+
+    Example:
+      llvm.metadata @tbaa {
+        llvm.tbaa_root @tbaa_root_0 {identity = "Simple C/C++ TBAA"}
+        llvm.return
+      }
+
+    See the following link for more details:
+    https://llvm.org/docs/LangRef.html#tbaa-metadata
+  }];
+  let assemblyFormat = [{
+    $sym_name ` ` `{` `id` `=` $identity `}` attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+def LLVM_TBAATypeDescriptorOp : LLVM_Op<"tbaa_type_desc", [
+  HasParent<"MetadataOp">, Symbol
+]> {
+  let arguments = (ins
+    SymbolNameAttr:$sym_name,
+    OptionalAttr<StrAttr>:$identity,
+    FlatSymbolRefArrayAttr:$members,
+    DenseI64ArrayAttr:$offsets
+  );
+  let summary = "LLVM dialect TBAA node describing a type.";
+  let description = [{
+    Defines a TBAA node describing a type.
+
+    Example:
+      llvm.metadata @tbaa {
+        llvm.tbaa_root @tbaa_root_0 {identity = "Simple C/C++ TBAA"}
+        llvm.tbaa_type_desc @tbaa_type_desc_1 {
+            identity = "omnipotent char",
+            members = [@tbaa_root_0],
+            offsets = array<i64: 0>
+        }
+        llvm.tbaa_type_desc @tbaa_type_desc_2 {
+            identity = "long long",
+            members = [@tbaa_type_desc_1],
+            offsets = array<i64: 0>
+        }
+        llvm.tbaa_type_desc @tbaa_type_desc_3 {
+            identity = "agg2_t",
+            members = [@tbaa_type_desc_2, @tbaa_type_desc_2],
+            offsets = array<i64: 0, 8>
+        }
+        llvm.tbaa_type_desc @tbaa_type_desc_5 {
+            identity = "int",
+            members = [@tbaa_type_desc_1],
+            offsets = array<i64: 0>
+        }
+        llvm.tbaa_type_desc @tbaa_type_desc_6 {
+            identity = "agg1_t",
+            members = [@tbaa_type_desc_5, @tbaa_type_desc_5],
+            offsets = array<i64: 0, 4>
+        }
+        llvm.return
+      }
+
+    See the following link for more details:
+    https://llvm.org/docs/LangRef.html#tbaa-metadata
+  }];
+
+  // Interleave member types and offsets for better matching
+  // LLVM IR text representation.
+  let assemblyFormat = [{
+    $sym_name ` ` `{`
+      ( `id` `=` $identity^ )? `,`
+      `members` `=` `{` custom<TBAAMembers>($members, $offsets) `}`
+    `}` attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+def LLVM_TBAATagOp : LLVM_Op<"tbaa_tag", [
+  HasParent<"MetadataOp">, Symbol
+]> {
+  let arguments = (ins
+    SymbolNameAttr:$sym_name,
+    FlatSymbolRefAttr:$base_type,
+    FlatSymbolRefAttr:$access_type,
+    I64Attr:$offset,
+    UnitAttr:$constant
+  );
+  let summary = "LLVM dialect TBAA node describing a memory access.";
+  let description = [{
+    Defines a TBAA node describing a memory access.
+
+    Example:
+      llvm.metadata @tbaa {
+        llvm.tbaa_root @tbaa_root_0 {identity = "Simple C/C++ TBAA"}
+        llvm.tbaa_type_desc @tbaa_type_desc_1 {
+            identity = "omnipotent char",
+            members = [@tbaa_root_0],
+            offsets = array<i64: 0>
+        }
+        llvm.tbaa_type_desc @tbaa_type_desc_2 {
+            identity = "long long",
+            members = [@tbaa_type_desc_1],
+            offsets = array<i64: 0>
+        }
+        llvm.tbaa_type_desc @tbaa_type_desc_3 {
+            identity = "agg2_t",
+            members = [@tbaa_type_desc_2, @tbaa_type_desc_2],
+            offsets = array<i64: 0, 8>
+        }
+        llvm.tbaa_tag @tbaa_tag_4 {
+            access_type = @tbaa_type_desc_2,
+            base_type = @tbaa_type_desc_3,
+            offset = 8 : i64
+        }
+        llvm.tbaa_type_desc @tbaa_type_desc_5 {
+            identity = "int",
+            members = [@tbaa_type_desc_1],
+            offsets = array<i64: 0>
+        }
+        llvm.tbaa_type_desc @tbaa_type_desc_6 {
+            identity = "agg1_t",
+            members = [@tbaa_type_desc_5, @tbaa_type_desc_5],
+            offsets = array<i64: 0, 4>
+        }
+        llvm.tbaa_tag @tbaa_tag_7 {
+            access_type = @tbaa_type_desc_5,
+            base_type = @tbaa_type_desc_6,
+            offset = 0 : i64
+        }
+        llvm.return
+      }
+
+    See the following link for more details:
+    https://llvm.org/docs/LangRef.html#tbaa-metadata
   }];
   let assemblyFormat = "$sym_name attr-dict";
 }

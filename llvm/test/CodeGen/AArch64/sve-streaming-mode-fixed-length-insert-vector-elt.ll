@@ -398,12 +398,12 @@ define <4 x double> @insertelement_v4f64(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    mov w8, #1
-; CHECK-NEXT:    fmov d3, #5.00000000
-; CHECK-NEXT:    index z4.d, #0, #1
+; CHECK-NEXT:    fmov d4, #5.00000000
+; CHECK-NEXT:    index z2.d, #0, #1
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    cmpeq p0.d, p0/z, z4.d, z2.d
-; CHECK-NEXT:    mov z1.d, p0/m, d3
+; CHECK-NEXT:    mov z3.d, x8
+; CHECK-NEXT:    cmpeq p0.d, p0/z, z2.d, z3.d
+; CHECK-NEXT:    mov z1.d, p0/m, d4
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
     %op1 = load <4 x double>, ptr %a

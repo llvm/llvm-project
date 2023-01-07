@@ -8,11 +8,112 @@
 
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace llvm;
 using namespace clang;
 using namespace ast_matchers;
+
+namespace clang::ast_matchers {
+// A `RecursiveASTVisitor` that traverses all descendants of a given node "n"
+// except for those belonging to a different callable of "n".
+class MatchDescendantVisitor
+    : public RecursiveASTVisitor<MatchDescendantVisitor> {
+public:
+  typedef RecursiveASTVisitor<MatchDescendantVisitor> VisitorBase;
+
+  // Creates an AST visitor that matches `Matcher` on all
+  // descendants of a given node "n" except for the ones
+  // belonging to a different callable of "n".
+  MatchDescendantVisitor(const internal::DynTypedMatcher *Matcher,
+                         internal::ASTMatchFinder *Finder,
+                         internal::BoundNodesTreeBuilder *Builder,
+                         internal::ASTMatchFinder::BindKind Bind)
+      : Matcher(Matcher), Finder(Finder), Builder(Builder), Bind(Bind),
+        Matches(false) {}
+
+  // Returns true if a match is found in a subtree of `DynNode`, which belongs
+  // to the same callable of `DynNode`.
+  bool findMatch(const DynTypedNode &DynNode) {
+    Matches = false;
+    if (const Stmt *StmtNode = DynNode.get<Stmt>()) {
+      TraverseStmt(const_cast<Stmt *>(StmtNode));
+      *Builder = ResultBindings;
+      return Matches;
+    }
+    return false;
+  }
+
+  // The following are overriding methods from the base visitor class.
+  // They are public only to allow CRTP to work. They are *not *part
+  // of the public API of this class.
+
+  // For the matchers so far used in safe buffers, we only need to match
+  // `Stmt`s.  To override more as needed.
+
+  bool TraverseDecl(Decl *Node) {
+    if (!Node)
+      return true;
+    if (!match(*Node))
+      return false;
+    // To skip callables:
+    if (isa<FunctionDecl, BlockDecl, ObjCMethodDecl>(Node))
+      return true;
+    // Traverse descendants
+    return VisitorBase::TraverseDecl(Node);
+  }
+
+  bool TraverseStmt(Stmt *Node, DataRecursionQueue *Queue = nullptr) {
+    if (!Node)
+      return true;
+    if (!match(*Node))
+      return false;
+    // To skip callables:
+    if (isa<LambdaExpr>(Node))
+      return true;
+    return VisitorBase::TraverseStmt(Node);
+  }
+
+  bool shouldVisitTemplateInstantiations() const { return true; }
+  bool shouldVisitImplicitCode() const {
+    // TODO: let's ignore implicit code for now
+    return false;
+  }
+
+private:
+  // Sets 'Matched' to true if 'Matcher' matches 'Node'
+  //
+  // Returns 'true' if traversal should continue after this function
+  // returns, i.e. if no match is found or 'Bind' is 'BK_All'.
+  template <typename T> bool match(const T &Node) {
+    internal::BoundNodesTreeBuilder RecursiveBuilder(*Builder);
+
+    if (Matcher->matches(DynTypedNode::create(Node), Finder,
+                         &RecursiveBuilder)) {
+      ResultBindings.addMatch(RecursiveBuilder);
+      Matches = true;
+      if (Bind != internal::ASTMatchFinder::BK_All)
+        return false; // Abort as soon as a match is found.
+    }
+    return true;
+  }
+
+  const internal::DynTypedMatcher *const Matcher;
+  internal::ASTMatchFinder *const Finder;
+  internal::BoundNodesTreeBuilder *const Builder;
+  internal::BoundNodesTreeBuilder ResultBindings;
+  const internal::ASTMatchFinder::BindKind Bind;
+  bool Matches;
+};
+
+AST_MATCHER_P(Stmt, forEveryDescendant, internal::Matcher<Stmt>, innerMatcher) {
+  const DynTypedMatcher &DTM = static_cast<DynTypedMatcher>(innerMatcher);
+  
+  MatchDescendantVisitor Visitor(&DTM, Finder, Builder, ASTMatchFinder::BK_All);  
+  return Visitor.findMatch(DynTypedNode::create(Node));
+}
+} // namespace clang::ast_matchers
 
 namespace {
 // Because the analysis revolves around variables and their types, we'll need to
@@ -37,9 +138,9 @@ namespace {
 /// rigid AST structure that constitutes an operation on a pointer-type object.
 /// Discovery of a gadget in the code corresponds to claiming that we understand
 /// what this part of code is doing well enough to potentially improve it.
-/// Gadgets can be unsafe (immediately deserving a warning) or safe (not
-/// deserving a warning per se, but affecting our decision-making process
-/// nonetheless).
+/// Gadgets can be warning (immediately deserving a warning) or fixable (not
+/// always deserving a warning per se, but requires our attention to identify
+/// it warrants a fixit).
 class Gadget {
 public:
   enum class Kind {
@@ -56,7 +157,7 @@ public:
 
   Kind getKind() const { return K; }
 
-  virtual bool isSafe() const = 0;
+  virtual bool isWarningGadget() const = 0;
   virtual const Stmt *getBaseStmt() const = 0;
 
   /// Returns the list of pointer-type variables on which this gadget performs
@@ -64,53 +165,55 @@ public:
   /// of all DeclRefExprs in the gadget's AST!
   virtual DeclUseList getClaimedVarUseSites() const = 0;
 
-  /// Returns a fixit that would fix the current gadget according to
-  /// the current strategy. Returns None if the fix cannot be produced;
-  /// returns an empty list if no fixes are necessary.
-  virtual std::optional<FixItList> getFixits(const Strategy &) const {
-    return std::nullopt;
-  }
-
   virtual ~Gadget() = default;
 
 private:
   Kind K;
 };
 
-using GadgetList = std::vector<std::unique_ptr<Gadget>>;
 
-/// Unsafe gadgets correspond to unsafe code patterns that warrants
+/// Warning gadgets correspond to unsafe code patterns that warrants
 /// an immediate warning.
-class UnsafeGadget : public Gadget {
+class WarningGadget : public Gadget {
 public:
-  UnsafeGadget(Kind K) : Gadget(K) {}
+  WarningGadget(Kind K) : Gadget(K) {}
 
-  static bool classof(const Gadget *G) { return G->isSafe(); }
-  bool isSafe() const final { return false; }
+  static bool classof(const Gadget *G) { return G->isWarningGadget(); }
+  bool isWarningGadget() const final { return true; }
 };
 
-/// Safe gadgets correspond to code patterns that aren't unsafe but need to be
-/// properly recognized in order to emit correct warnings and fixes over unsafe
-/// gadgets. For example, if a raw pointer-type variable is replaced by
-/// a safe C++ container, every use of such variable may need to be
+/// Fixable gadgets correspond to code patterns that aren't always unsafe but need to be
+/// properly recognized in order to emit fixes. For example, if a raw pointer-type
+/// variable is replaced by a safe C++ container, every use of such variable must be
 /// carefully considered and possibly updated.
-class SafeGadget : public Gadget {
+class FixableGadget : public Gadget {
 public:
-  SafeGadget(Kind K) : Gadget(K) {}
+  FixableGadget(Kind K) : Gadget(K) {}
 
-  static bool classof(const Gadget *G) { return !G->isSafe(); }
-  bool isSafe() const final { return true; }
+  static bool classof(const Gadget *G) { return !G->isWarningGadget(); }
+  bool isWarningGadget() const final { return false; }
+
+  /// Returns a fixit that would fix the current gadget according to
+  /// the current strategy. Returns None if the fix cannot be produced;
+  /// returns an empty list if no fixes are necessary.
+  virtual Optional<FixItList> getFixits(const Strategy &) const {
+    return std::nullopt;
+  }
+
 };
+
+using FixableGadgetList = std::vector<std::unique_ptr<FixableGadget>>;
+using WarningGadgetList = std::vector<std::unique_ptr<WarningGadget>>;
 
 /// An increment of a pointer-type value is unsafe as it may run the pointer
 /// out of bounds.
-class IncrementGadget : public UnsafeGadget {
+class IncrementGadget : public WarningGadget {
   static constexpr const char *const OpTag = "op";
   const UnaryOperator *Op;
 
 public:
   IncrementGadget(const MatchFinder::MatchResult &Result)
-      : UnsafeGadget(Kind::Increment),
+      : WarningGadget(Kind::Increment),
         Op(Result.Nodes.getNodeAs<UnaryOperator>(OpTag)) {}
 
   static bool classof(const Gadget *G) {
@@ -139,13 +242,13 @@ public:
 
 /// A decrement of a pointer-type value is unsafe as it may run the pointer
 /// out of bounds.
-class DecrementGadget : public UnsafeGadget {
+class DecrementGadget : public WarningGadget {
   static constexpr const char *const OpTag = "op";
   const UnaryOperator *Op;
 
 public:
   DecrementGadget(const MatchFinder::MatchResult &Result)
-      : UnsafeGadget(Kind::Decrement),
+      : WarningGadget(Kind::Decrement),
         Op(Result.Nodes.getNodeAs<UnaryOperator>(OpTag)) {}
 
   static bool classof(const Gadget *G) {
@@ -173,13 +276,13 @@ public:
 
 /// Array subscript expressions on raw pointers as if they're arrays. Unsafe as
 /// it doesn't have any bounds checks for the array.
-class ArraySubscriptGadget : public UnsafeGadget {
+class ArraySubscriptGadget : public WarningGadget {
   static constexpr const char *const ArraySubscrTag = "arraySubscr";
   const ArraySubscriptExpr *ASE;
 
 public:
   ArraySubscriptGadget(const MatchFinder::MatchResult &Result)
-      : UnsafeGadget(Kind::ArraySubscript),
+      : WarningGadget(Kind::ArraySubscript),
         ASE(Result.Nodes.getNodeAs<ArraySubscriptExpr>(ArraySubscrTag)) {}
 
   static bool classof(const Gadget *G) {
@@ -210,7 +313,7 @@ public:
 ///  \code
 ///  ptr + n | n + ptr | ptr - n | ptr += n | ptr -= n
 ///  \endcode
-class PointerArithmeticGadget : public UnsafeGadget {
+class PointerArithmeticGadget : public WarningGadget {
   static constexpr const char *const PointerArithmeticTag = "ptrAdd";
   static constexpr const char *const PointerArithmeticPointerTag = "ptrAddPtr";
   const BinaryOperator *PA; // pointer arithmetic expression
@@ -218,7 +321,7 @@ class PointerArithmeticGadget : public UnsafeGadget {
 
 public:
     PointerArithmeticGadget(const MatchFinder::MatchResult &Result)
-      : UnsafeGadget(Kind::PointerArithmetic),
+      : WarningGadget(Kind::PointerArithmetic),
         PA(Result.Nodes.getNodeAs<BinaryOperator>(PointerArithmeticTag)),
         Ptr(Result.Nodes.getNodeAs<Expr>(PointerArithmeticPointerTag)) {}
 
@@ -352,10 +455,11 @@ public:
 } // namespace
 
 /// Scan the function and return a list of gadgets found with provided kits.
-static std::pair<GadgetList, DeclUseTracker> findGadgets(const Decl *D) {
+static std::tuple<FixableGadgetList, WarningGadgetList, DeclUseTracker> findGadgets(const Decl *D) {
 
   struct GadgetFinderCallback : MatchFinder::MatchCallback {
-    GadgetList Gadgets;
+    FixableGadgetList FixableGadgets;
+    WarningGadgetList WarningGadgets;
     DeclUseTracker Tracker;
 
     void run(const MatchFinder::MatchResult &Result) override {
@@ -381,9 +485,15 @@ static std::pair<GadgetList, DeclUseTracker> findGadgets(const Decl *D) {
       // Figure out which matcher we've found, and call the appropriate
       // subclass constructor.
       // FIXME: Can we do this more logarithmically?
-#define GADGET(name)                                                           \
+#define FIXABLE_GADGET(name)                                                           \
       if (Result.Nodes.getNodeAs<Stmt>(#name)) {                               \
-        Gadgets.push_back(std::make_unique<name ## Gadget>(Result));           \
+        FixableGadgets.push_back(std::make_unique<name ## Gadget>(Result));           \
+        NEXT;                                                                  \
+      }
+#include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
+#define WARNING_GADGET(name)                                                           \
+      if (Result.Nodes.getNodeAs<Stmt>(#name)) {                               \
+        WarningGadgets.push_back(std::make_unique<name ## Gadget>(Result));           \
         NEXT;                                                                  \
       }
 #include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
@@ -398,7 +508,7 @@ static std::pair<GadgetList, DeclUseTracker> findGadgets(const Decl *D) {
 
   // clang-format off
   M.addMatcher(
-    stmt(forEachDescendant(
+    stmt(forEveryDescendant(
       stmt(anyOf(
         // Add Gadget::matcher() for every gadget in the registry.
 #define GADGET(x)                                                              \
@@ -428,13 +538,13 @@ static std::pair<GadgetList, DeclUseTracker> findGadgets(const Decl *D) {
   // Gadgets "claim" variables they're responsible for. Once this loop finishes,
   // the tracker will only track DREs that weren't claimed by any gadgets,
   // i.e. not understood by the analysis.
-  for (const auto &G : CB.Gadgets) {
+  for (const auto &G : CB.FixableGadgets) {
     for (const auto *DRE : G->getClaimedVarUseSites()) {
       CB.Tracker.claimUse(DRE);
     }
   }
 
-  return {std::move(CB.Gadgets), std::move(CB.Tracker)};
+  return {std::move(CB.FixableGadgets), std::move(CB.WarningGadgets), std::move(CB.Tracker)};
 }
 
 void clang::checkUnsafeBufferUsage(const Decl *D,
@@ -443,25 +553,37 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
 
   SmallSet<const VarDecl *, 8> WarnedDecls;
 
-  auto [Gadgets, Tracker] = findGadgets(D);
+  auto [FixableGadgets, WarningGadgets, Tracker] = findGadgets(D);
 
-  DenseMap<const VarDecl *, std::vector<const Gadget *>> Map;
+  DenseMap<const VarDecl *, std::pair<std::vector<const FixableGadget *>,
+                                std::vector<const WarningGadget *>>> Map;
 
   // First, let's sort gadgets by variables. If some gadgets cover more than one
   // variable, they'll appear more than once in the map.
-  for (const auto &G : Gadgets) {
+  for (const auto &G : FixableGadgets) {
+    DeclUseList DREs = G->getClaimedVarUseSites();
+
+    // Populate the map.
+    for (const DeclRefExpr *DRE : DREs) {
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+        Map[VD].first.push_back(G.get());
+      }
+    }
+  }
+
+  for (const auto &G : WarningGadgets) {
     DeclUseList ClaimedVarUseSites = G->getClaimedVarUseSites();
 
     // Populate the map.
     bool Pushed = false;
     for (const DeclRefExpr *DRE : ClaimedVarUseSites) {
       if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-        Map[VD].push_back(G.get());
+        Map[VD].second.push_back(G.get());
         Pushed = true;
       }
     }
 
-    if (!Pushed && !G->isSafe()) {
+    if (!Pushed) {
       // We won't return to this gadget later. Emit the warning right away.
       Handler.handleUnsafeOperation(G->getBaseStmt());
       continue;
@@ -470,10 +592,14 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
 
   Strategy S;
 
-  for (const auto &[VD, VDGadgets] : Map) {
+  for (const auto &Item : Map) {
+
+    const VarDecl *VD = Item.first;
+    const std::vector<const FixableGadget *> &VDFixableGadgets = Item.second.first;
+    const std::vector<const WarningGadget *> &VDWarningGadgets = Item.second.second;
 
     // If the variable has no unsafe gadgets, skip it entirely.
-    if (!any_of(VDGadgets, [](const Gadget *G) { return !G->isSafe(); }))
+    if (VDWarningGadgets.empty())
       continue;
 
     std::optional<FixItList> Fixes;
@@ -493,7 +619,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
       // to undo the previous fix first, and then if we can't produce the new
       // fix for both variables, revert to the old one.
       Fixes = FixItList{};
-      for (const Gadget *G : VDGadgets) {
+      for (const FixableGadget *G : VDFixableGadgets) {
         std::optional<FixItList> F = G->getFixits(S);
         if (!F) {
           Fixes = std::nullopt;
@@ -511,10 +637,8 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
     } else {
       // The strategy has failed. Emit the warning without the fixit.
       S.set(VD, Strategy::Kind::Wontfix);
-      for (const Gadget *G : VDGadgets) {
-        if (!G->isSafe()) {
-          Handler.handleUnsafeOperation(G->getBaseStmt());
-        }
+      for (const WarningGadget *G : VDWarningGadgets) {
+        Handler.handleUnsafeOperation(G->getBaseStmt());
       }
     }
   }

@@ -62,7 +62,7 @@ public:
                                  const Instruction *I = nullptr);
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *ValTy,
-                                     unsigned Index);
+                                     unsigned Index, Value *Op0, Value *Op1);
 };
 
 } // end namespace llvm

@@ -27,6 +27,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
@@ -149,8 +150,8 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
   IRBuilder<> Builder(Ctx);
   Type *I32Ty = Type::getInt32Ty(Ctx);
   unsigned UniqID = 0;
-  // NB: This is important for this string size to be divisible by 4
-  const char NonLiteralStr[4] = "???";
+  constexpr StringLiteral NonLiteralStr("???");
+  static_assert(NonLiteralStr.size() == 3);
 
   for (auto *CI : Printfs) {
     unsigned NumOps = CI->arg_size();
@@ -212,8 +213,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
          ArgCount++) {
       Value *Arg = CI->getArgOperand(ArgCount);
       Type *ArgType = Arg->getType();
-      unsigned ArgSize = TD->getTypeAllocSizeInBits(ArgType);
-      ArgSize = ArgSize / 8;
+      unsigned ArgSize = TD->getTypeAllocSize(ArgType);
       //
       // ArgSize by design should be a multiple of DWORD_ALIGN,
       // expand the arguments that do not follow this rule.
@@ -234,8 +234,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
         else
           Arg = Builder.CreateSExt(Arg, ResType);
         ArgType = Arg->getType();
-        ArgSize = TD->getTypeAllocSizeInBits(ArgType);
-        ArgSize = ArgSize / 8;
+        ArgSize = TD->getTypeAllocSize(ArgType);
         CI->setOperand(ArgCount, Arg);
       }
       if (OpConvSpecifiers[ArgCount - 1] == 'f') {
@@ -250,6 +249,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
         }
       }
       if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], ArgType)) {
+        ArgSize = NonLiteralStr.size() + 1;
         if (auto *ConstExpr = dyn_cast<ConstantExpr>(Arg)) {
           auto *GV = dyn_cast<GlobalVariable>(ConstExpr->getOperand(0));
           if (GV && GV->hasInitializer()) {
@@ -270,11 +270,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
               }
               ArgSize = NSizeStr;
             }
-          } else {
-            ArgSize = sizeof(NonLiteralStr);
           }
-        } else {
-          ArgSize = sizeof(NonLiteralStr);
         }
       }
       LLVM_DEBUG(dbgs() << "Printf ArgSize (in buffer) = " << ArgSize
@@ -420,7 +416,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
         WhatToStore.push_back(Arg);
       } else if (ArgType->getTypeID() == Type::PointerTyID) {
         if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], ArgType)) {
-          const char *S = NonLiteralStr;
+          StringRef S = NonLiteralStr;
           if (auto *ConstExpr = dyn_cast<ConstantExpr>(Arg)) {
             auto *GV = dyn_cast<GlobalVariable>(ConstExpr->getOperand(0));
             if (GV && GV->hasInitializer()) {
@@ -428,31 +424,34 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
               bool IsZeroValue = Init->isZeroValue();
               auto *CA = dyn_cast<ConstantDataArray>(Init);
               if (IsZeroValue || (CA && CA->isString())) {
-                S = IsZeroValue ? "" : CA->getAsCString().data();
+                S = IsZeroValue ? "" : CA->getAsCString();
               }
             }
           }
-          size_t SizeStr = strlen(S) + 1;
-          size_t Rem = SizeStr % DWORD_ALIGN;
-          size_t NSizeStr = 0;
-          if (Rem) {
-            NSizeStr = SizeStr + (DWORD_ALIGN - Rem);
-          } else {
-            NSizeStr = SizeStr;
-          }
-          if (S[0]) {
-            char *MyNewStr = new char[NSizeStr]();
-            strcpy(MyNewStr, S);
-            int NumInts = NSizeStr / 4;
-            int CharC = 0;
-            while (NumInts) {
-              int ANum = *(int *)(MyNewStr + CharC);
-              CharC += 4;
-              NumInts--;
-              Value *ANumV = ConstantInt::get(Int32Ty, ANum, false);
-              WhatToStore.push_back(ANumV);
+
+          if (!S.empty()) {
+            const size_t NSizeStr = S.size() + 1;
+            const uint64_t ReadSize = 4;
+
+            BinaryByteStream Streamer(S, support::little);
+
+            for (uint64_t Offset = 0; Offset < NSizeStr; Offset += ReadSize) {
+              ArrayRef<uint8_t> ReadBytes;
+              if (Error Err = Streamer.readBytes(
+                      Offset, std::min(ReadSize, S.size() - Offset), ReadBytes))
+                cantFail(std::move(Err),
+                         "failed to read bytes from constant array");
+
+              APInt IntVal(8 * ReadBytes.size(), 0);
+              LoadIntFromMemory(IntVal, ReadBytes.data(), ReadBytes.size());
+
+              // TODO: Should not bothering aligning up.
+              if (ReadBytes.size() < ReadSize)
+                IntVal = IntVal.zext(8 * ReadSize);
+
+              Type *IntTy = Type::getIntNTy(Ctx, IntVal.getBitWidth());
+              WhatToStore.push_back(ConstantInt::get(IntTy, IntVal));
             }
-            delete[] MyNewStr;
           } else {
             // Empty string, give a hint to RT it is no NULL
             Value *ANumV = ConstantInt::get(Int32Ty, 0xFFFFFF00, false);
@@ -515,7 +514,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       }
       for (unsigned I = 0, E = WhatToStore.size(); I != E; ++I) {
         Value *TheBtCast = WhatToStore[I];
-        unsigned ArgSize = TD->getTypeAllocSizeInBits(TheBtCast->getType()) / 8;
+        unsigned ArgSize = TD->getTypeAllocSize(TheBtCast->getType());
         SmallVector<Value *, 1> BuffOffset;
         BuffOffset.push_back(ConstantInt::get(I32Ty, ArgSize));
 
