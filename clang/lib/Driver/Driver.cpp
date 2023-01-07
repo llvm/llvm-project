@@ -721,6 +721,17 @@ void Driver::setLTOMode(const llvm::opt::ArgList &Args) {
 
   OffloadLTOMode = parseLTOMode(*this, Args, options::OPT_foffload_lto_EQ,
                                 options::OPT_fno_offload_lto);
+
+  // Try to enable `-foffload-lto=full` if `-fopenmp-target-jit` is on.
+  if (Args.hasFlag(options::OPT_fopenmp_target_jit,
+                   options::OPT_fno_openmp_target_jit, false)) {
+    if (Arg *A = Args.getLastArg(options::OPT_foffload_lto_EQ,
+                                 options::OPT_fno_offload_lto))
+      if (OffloadLTOMode != LTOK_Full)
+        Diag(diag::err_drv_incompatible_options)
+            << A->getSpelling() << "-fopenmp-target-jit";
+    OffloadLTOMode = LTOK_Full;
+  }
 }
 
 /// Compute the desired OpenMP runtime from the flags provided.
