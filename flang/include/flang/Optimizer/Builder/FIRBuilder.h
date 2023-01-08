@@ -25,6 +25,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
+#include <optional>
 
 namespace fir {
 class AbstractArrayBox;

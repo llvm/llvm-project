@@ -15,6 +15,7 @@
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Support/Utils.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "flang-lower-iteration-space"
 
