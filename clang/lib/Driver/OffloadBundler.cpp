@@ -29,8 +29,8 @@
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
@@ -297,24 +297,12 @@ protected:
 
 /// Read 8-byte integers from a buffer in little-endian format.
 static uint64_t Read8byteIntegerFromBuffer(StringRef Buffer, size_t pos) {
-  uint64_t Res = 0;
-  const char *Data = Buffer.data();
-
-  for (unsigned i = 0; i < 8; ++i) {
-    Res <<= 8;
-    uint64_t Char = (uint64_t)Data[pos + 7 - i];
-    Res |= 0xffu & Char;
-  }
-  return Res;
+  return llvm::support::endian::read64le(Buffer.data() + pos);
 }
 
 /// Write 8-byte integers to a buffer in little-endian format.
 static void Write8byteIntegerToBuffer(raw_fd_ostream &OS, uint64_t Val) {
-  for (unsigned i = 0; i < 8; ++i) {
-    char Char = (char)(Val & 0xffu);
-    OS.write(&Char, 1);
-    Val >>= 8;
-  }
+  llvm::support::endian::write(OS, Val, llvm::support::little);
 }
 
 class BinaryFileHandler final : public FileHandler {
