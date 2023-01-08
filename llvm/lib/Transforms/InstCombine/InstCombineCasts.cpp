@@ -1027,8 +1027,11 @@ Instruction *InstCombinerImpl::transformZExtICmp(ICmpInst *Cmp, ZExtInst &Zext) 
       // If Op1C some other power of two, convert:
       KnownBits Known = computeKnownBits(Cmp->getOperand(0), 0, &Zext);
 
+      // Exactly 1 possible 1? But not the high-bit because that is
+      // canonicalized to this form.
       APInt KnownZeroMask(~Known.Zero);
-      if (KnownZeroMask.isPowerOf2()) { // Exactly 1 possible 1?
+      if (KnownZeroMask.isPowerOf2() &&
+          (Zext.getType()->getScalarSizeInBits() != KnownZeroMask.logBase2() + 1)) {
         bool isNE = Cmp->getPredicate() == ICmpInst::ICMP_NE;
         uint32_t ShAmt = KnownZeroMask.logBase2();
         Value *In = Cmp->getOperand(0);
