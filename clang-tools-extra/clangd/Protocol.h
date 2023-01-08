@@ -27,7 +27,6 @@
 #include "index/SymbolID.h"
 #include "support/MemoryTree.h"
 #include "clang/Index/IndexSymbol.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"

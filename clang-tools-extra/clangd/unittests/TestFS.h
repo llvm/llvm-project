@@ -15,7 +15,6 @@
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <optional>

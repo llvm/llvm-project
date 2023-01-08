@@ -18,7 +18,6 @@
 #include "support/MemoryTree.h"
 #include "support/Path.h"
 #include "support/Threading.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
 #include <chrono>
 #include <cstddef>

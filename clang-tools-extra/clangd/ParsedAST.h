@@ -31,7 +31,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
 #include <optional>

@@ -31,7 +31,6 @@
 #include "support/ThreadsafeFS.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
 #include <memory>

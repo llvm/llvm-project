@@ -29,7 +29,6 @@
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
 #include "clang/Format/Format.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"

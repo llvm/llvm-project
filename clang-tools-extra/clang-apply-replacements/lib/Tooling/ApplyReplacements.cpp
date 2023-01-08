@@ -23,7 +23,6 @@
 #include "clang/Tooling/DiagnosticsYaml.h"
 #include "clang/Tooling/ReplacementsYaml.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"

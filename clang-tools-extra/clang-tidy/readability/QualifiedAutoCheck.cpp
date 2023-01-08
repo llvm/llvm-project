@@ -9,7 +9,6 @@
 #include "QualifiedAutoCheck.h"
 #include "../utils/LexerUtils.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
 
