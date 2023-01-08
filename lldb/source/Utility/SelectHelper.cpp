@@ -20,7 +20,6 @@
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 
 #include <algorithm>
 #include <chrono>

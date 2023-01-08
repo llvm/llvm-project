@@ -19,7 +19,6 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-private.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VersionTuple.h"
 #include <optional>

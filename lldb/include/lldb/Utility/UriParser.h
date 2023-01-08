@@ -9,7 +9,6 @@
 #ifndef LLDB_UTILITY_URIPARSER_H
 #define LLDB_UTILITY_URIPARSER_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
 

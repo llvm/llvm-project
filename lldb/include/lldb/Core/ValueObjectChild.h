@@ -18,8 +18,6 @@
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-types.h"
 
-#include "llvm/ADT/Optional.h"
-
 #include <cstddef>
 #include <cstdint>
 #include <optional>

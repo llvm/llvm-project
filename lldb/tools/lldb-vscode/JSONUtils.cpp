@@ -12,7 +12,6 @@
 #include <sstream>
 #include <string.h>
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"

@@ -11,7 +11,6 @@
 
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/IntervalMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 

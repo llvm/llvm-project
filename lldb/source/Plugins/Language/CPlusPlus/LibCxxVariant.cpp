@@ -12,7 +12,6 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/LLDBAssert.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/ScopeExit.h"
 #include <optional>
 

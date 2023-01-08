@@ -11,7 +11,6 @@
 
 #include "lldb/Core/Declaration.h"
 #include "lldb/lldb-defines.h"
-#include "llvm/ADT/Optional.h"
 
 #include <optional>
 #include <string>

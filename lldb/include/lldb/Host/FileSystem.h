@@ -14,7 +14,6 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/VirtualFileSystem.h"
 

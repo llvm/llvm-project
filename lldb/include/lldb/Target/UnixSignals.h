@@ -16,7 +16,6 @@
 
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
 
 namespace lldb_private {

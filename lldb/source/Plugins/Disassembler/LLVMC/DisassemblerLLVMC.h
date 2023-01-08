@@ -17,7 +17,6 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/PluginManager.h"
-#include "llvm/ADT/Optional.h"
 
 class InstructionLLVMC;
 
