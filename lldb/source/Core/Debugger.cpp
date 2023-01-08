@@ -75,6 +75,7 @@
 #include <list>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <set>
 #include <string>
 #include <system_error>
@@ -1300,7 +1301,7 @@ static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
 
 void Debugger::ReportProgress(uint64_t progress_id, const std::string &message,
                               uint64_t completed, uint64_t total,
-                              llvm::Optional<lldb::user_id_t> debugger_id) {
+                              std::optional<lldb::user_id_t> debugger_id) {
   // Check if this progress is for a specific debugger.
   if (debugger_id) {
     // It is debugger specific, grab it and deliver the event if the debugger
@@ -1356,7 +1357,7 @@ static void PrivateReportDiagnostic(Debugger &debugger,
 
 void Debugger::ReportDiagnosticImpl(DiagnosticEventData::Type type,
                                     std::string message,
-                                    llvm::Optional<lldb::user_id_t> debugger_id,
+                                    std::optional<lldb::user_id_t> debugger_id,
                                     std::once_flag *once) {
   auto ReportDiagnosticLambda = [&]() {
     // The diagnostic subsystem is optional but we still want to broadcast
@@ -1393,21 +1394,21 @@ void Debugger::ReportDiagnosticImpl(DiagnosticEventData::Type type,
 }
 
 void Debugger::ReportWarning(std::string message,
-                             llvm::Optional<lldb::user_id_t> debugger_id,
+                             std::optional<lldb::user_id_t> debugger_id,
                              std::once_flag *once) {
   ReportDiagnosticImpl(DiagnosticEventData::Type::Warning, std::move(message),
                        debugger_id, once);
 }
 
 void Debugger::ReportError(std::string message,
-                           llvm::Optional<lldb::user_id_t> debugger_id,
+                           std::optional<lldb::user_id_t> debugger_id,
                            std::once_flag *once) {
   ReportDiagnosticImpl(DiagnosticEventData::Type::Error, std::move(message),
                        debugger_id, once);
 }
 
 void Debugger::ReportInfo(std::string message,
-                          llvm::Optional<lldb::user_id_t> debugger_id,
+                          std::optional<lldb::user_id_t> debugger_id,
                           std::once_flag *once) {
   ReportDiagnosticImpl(DiagnosticEventData::Type::Info, std::move(message),
                        debugger_id, once);
@@ -1493,7 +1494,7 @@ bool Debugger::EnableLog(llvm::StringRef channel,
 
 ScriptInterpreter *
 Debugger::GetScriptInterpreter(bool can_create,
-                               llvm::Optional<lldb::ScriptLanguage> language) {
+                               std::optional<lldb::ScriptLanguage> language) {
   std::lock_guard<std::recursive_mutex> locker(m_script_interpreter_mutex);
   lldb::ScriptLanguage script_language =
       language ? *language : GetScriptLanguage();

@@ -67,6 +67,7 @@
 
 #include <memory>
 #include <mutex>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -356,7 +357,7 @@ BreakpointSP Target::CreateBreakpoint(const FileSpecList *containingModules,
                                       bool hardware,
                                       LazyBool move_to_nearest_code) {
   FileSpec remapped_file;
-  llvm::Optional<llvm::StringRef> removed_prefix_opt =
+  std::optional<llvm::StringRef> removed_prefix_opt =
       GetSourcePathMap().ReverseRemapPath(file, remapped_file);
   if (!removed_prefix_opt)
     remapped_file = file;
@@ -4474,7 +4475,7 @@ void TargetProperties::CheckJITObjectsDir() {
   else if (!writable)
     os << "is not writable";
 
-  llvm::Optional<lldb::user_id_t> debugger_id;
+  std::optional<lldb::user_id_t> debugger_id;
   if (m_target)
     debugger_id = m_target->GetDebugger().GetID();
   Debugger::ReportError(os.str(), debugger_id);

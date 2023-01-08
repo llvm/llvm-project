@@ -38,6 +38,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -841,11 +842,11 @@ public:
   void ReportErrorIfModifyDetected(const char *format, ...)
       __attribute__((format(printf, 2, 3)));
 
-  void ReportWarningOptimization(llvm::Optional<lldb::user_id_t> debugger_id);
+  void ReportWarningOptimization(std::optional<lldb::user_id_t> debugger_id);
 
   void
   ReportWarningUnsupportedLanguage(lldb::LanguageType language,
-                                   llvm::Optional<lldb::user_id_t> debugger_id);
+                                   std::optional<lldb::user_id_t> debugger_id);
 
   // Return true if the file backing this module has changed since the module
   // was originally created  since we saved the initial file modification time
@@ -894,7 +895,7 @@ public:
   /// \return
   ///     The newly remapped filespec that is may or may not exist if
   ///     \a path was successfully located.
-  llvm::Optional<std::string> RemapSourceFile(llvm::StringRef path) const;
+  std::optional<std::string> RemapSourceFile(llvm::StringRef path) const;
   bool RemapSourceFile(const char *, std::string &) const = delete;
 
   /// Update the ArchSpec to a more specific variant.
@@ -1053,9 +1054,9 @@ protected:
   lldb::ObjectFileSP m_objfile_sp; ///< A shared pointer to the object file
                                    /// parser for this module as it may or may
                                    /// not be shared with the SymbolFile
-  llvm::Optional<UnwindTable> m_unwind_table; ///< Table of FuncUnwinders
-                                              /// objects created for this
-                                              /// Module's functions
+  std::optional<UnwindTable> m_unwind_table; ///< Table of FuncUnwinders
+                                             /// objects created for this
+                                             /// Module's functions
   lldb::SymbolVendorUP
       m_symfile_up; ///< A pointer to the symbol vendor for this module.
   std::vector<lldb::SymbolVendorUP>

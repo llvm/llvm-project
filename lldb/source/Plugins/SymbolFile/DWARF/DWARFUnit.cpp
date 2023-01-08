@@ -22,6 +22,7 @@
 #include "DWARFTypeUnit.h"
 #include "LogChannelDWARF.h"
 #include "SymbolFileDWARFDwo.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -358,7 +359,7 @@ void DWARFUnit::SetDwoStrOffsetsBase() {
   SetStrOffsetsBase(baseOffset);
 }
 
-llvm::Optional<uint64_t> DWARFUnit::GetDWOId() {
+std::optional<uint64_t> DWARFUnit::GetDWOId() {
   ExtractUnitDIENoDwoIfNeeded();
   return m_dwo_id;
 }
@@ -552,7 +553,7 @@ void DWARFUnit::SetRangesBase(dw_addr_t ranges_base) {
   m_ranges_base = ranges_base;
 }
 
-const llvm::Optional<llvm::DWARFDebugRnglistTable> &
+const std::optional<llvm::DWARFDebugRnglistTable> &
 DWARFUnit::GetRnglistTable() {
   if (GetVersion() >= 5 && !m_rnglist_table_done) {
     m_rnglist_table_done = true;
@@ -1010,7 +1011,7 @@ uint32_t DWARFUnit::GetHeaderByteSize() const {
   llvm_unreachable("invalid UnitType.");
 }
 
-llvm::Optional<uint64_t>
+std::optional<uint64_t>
 DWARFUnit::GetStringOffsetSectionItem(uint32_t index) const {
   offset_t offset = GetStrOffsetsBase() + index * 4;
   return m_dwarf.GetDWARFContext().getOrLoadStrOffsetsData().GetU32(&offset);

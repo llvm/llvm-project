@@ -19,6 +19,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <mutex>
+#include <optional>
 #include <sys/types.h>
 
 namespace lldb_private {
@@ -437,10 +438,10 @@ private:
 class SerialPort : public NativeFile {
 public:
   struct Options {
-    llvm::Optional<unsigned int> BaudRate = std::nullopt;
-    llvm::Optional<Terminal::Parity> Parity = std::nullopt;
-    llvm::Optional<Terminal::ParityCheck> ParityCheck = std::nullopt;
-    llvm::Optional<unsigned int> StopBits = std::nullopt;
+    std::optional<unsigned int> BaudRate = std::nullopt;
+    std::optional<Terminal::Parity> Parity = std::nullopt;
+    std::optional<Terminal::ParityCheck> ParityCheck = std::nullopt;
+    std::optional<unsigned int> StopBits = std::nullopt;
   };
 
   // Obtain Options corresponding to the passed URL query string

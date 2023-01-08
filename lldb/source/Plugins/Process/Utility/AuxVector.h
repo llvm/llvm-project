@@ -11,6 +11,7 @@
 
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
+#include <optional>
 #include <unordered_map>
 
 class AuxVector {
@@ -61,7 +62,7 @@ public:
     AUXV_AT_L3_CACHESHAPE = 37,
   };
 
-  llvm::Optional<uint64_t> GetAuxValue(enum EntryType entry_type) const;
+  std::optional<uint64_t> GetAuxValue(enum EntryType entry_type) const;
   void DumpToLog(lldb_private::Log *log) const;
   const char *GetEntryName(EntryType type) const;
 

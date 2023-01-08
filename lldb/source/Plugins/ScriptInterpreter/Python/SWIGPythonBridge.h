@@ -9,6 +9,7 @@
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
 
+#include <optional>
 #include <string>
 
 #include "lldb/Host/Config.h"
@@ -211,7 +212,7 @@ bool LLDBSWIGPythonRunScriptKeywordProcess(const char *python_function_name,
                                            const lldb::ProcessSP &process,
                                            std::string &output);
 
-llvm::Optional<std::string>
+std::optional<std::string>
 LLDBSWIGPythonRunScriptKeywordThread(const char *python_function_name,
                                      const char *session_dictionary_name,
                                      lldb::ThreadSP thread);
@@ -221,7 +222,7 @@ bool LLDBSWIGPythonRunScriptKeywordTarget(const char *python_function_name,
                                           const lldb::TargetSP &target,
                                           std::string &output);
 
-llvm::Optional<std::string>
+std::optional<std::string>
 LLDBSWIGPythonRunScriptKeywordFrame(const char *python_function_name,
                                     const char *session_dictionary_name,
                                     lldb::StackFrameSP frame);

@@ -18,6 +18,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBLog.h"
 #include <memory>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -45,7 +46,7 @@ ScriptedThread::Create(ScriptedProcess &process,
 
   llvm::StringRef thread_class_name;
   if (!script_object) {
-    llvm::Optional<std::string> class_name =
+    std::optional<std::string> class_name =
         process.GetInterface().GetScriptedThreadPluginName();
     if (!class_name || class_name->empty())
       return llvm::createStringError(
@@ -85,7 +86,7 @@ ScriptedThread::~ScriptedThread() { DestroyThread(); }
 
 const char *ScriptedThread::GetName() {
   CheckInterpreterAndScriptObject();
-  llvm::Optional<std::string> thread_name = GetInterface()->GetName();
+  std::optional<std::string> thread_name = GetInterface()->GetName();
   if (!thread_name)
     return nullptr;
   return ConstString(thread_name->c_str()).AsCString();
@@ -93,7 +94,7 @@ const char *ScriptedThread::GetName() {
 
 const char *ScriptedThread::GetQueueName() {
   CheckInterpreterAndScriptObject();
-  llvm::Optional<std::string> queue_name = GetInterface()->GetQueue();
+  std::optional<std::string> queue_name = GetInterface()->GetQueue();
   if (!queue_name)
     return nullptr;
   return ConstString(queue_name->c_str()).AsCString();
@@ -120,7 +121,7 @@ ScriptedThread::CreateRegisterContextForFrame(StackFrame *frame) {
   lldb::RegisterContextSP reg_ctx_sp;
   Status error;
 
-  llvm::Optional<std::string> reg_data = GetInterface()->GetRegisterContext();
+  std::optional<std::string> reg_data = GetInterface()->GetRegisterContext();
   if (!reg_data)
     return ScriptedInterface::ErrorWithMessage<lldb::RegisterContextSP>(
         LLVM_PRETTY_FUNCTION, "Failed to get scripted thread registers data.",

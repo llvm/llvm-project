@@ -19,6 +19,7 @@
 #include "lldb/Utility/Status.h"
 #include <cpuid.h>
 #include <linux/elf.h>
+#include <optional>
 
 // Newer toolchains define __get_cpuid_count in cpuid.h, but some
 // older-but-still-supported ones (e.g. gcc 5.4.0) don't, so we
@@ -1039,7 +1040,7 @@ NativeRegisterContextLinux_x86_64::GetPtraceOffset(uint32_t reg_index) {
          (IsMPX(reg_index) ? 128 : 0);
 }
 
-llvm::Optional<NativeRegisterContextLinux::SyscallData>
+std::optional<NativeRegisterContextLinux::SyscallData>
 NativeRegisterContextLinux_x86_64::GetSyscallData() {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86: {
@@ -1061,7 +1062,7 @@ NativeRegisterContextLinux_x86_64::GetSyscallData() {
   }
 }
 
-llvm::Optional<NativeRegisterContextLinux::MmapData>
+std::optional<NativeRegisterContextLinux::MmapData>
 NativeRegisterContextLinux_x86_64::GetMmapData() {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:

@@ -103,6 +103,10 @@ bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
   DenseSet<Function *> Callers;
   auto &C = M.getContext();
   bool Changed = false;
+
+  // ptr kernel_object, i32 private_segment_size, i32 group_segment_size
+  StructType *HandleTy = nullptr;
+
   for (auto &F : M.functions()) {
     if (F.hasFnAttribute("enqueued-block")) {
       if (!F.hasName()) {
@@ -113,11 +117,17 @@ bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
       }
       LLVM_DEBUG(dbgs() << "found enqueued kernel: " << F.getName() << '\n');
       auto RuntimeHandle = (F.getName() + ".runtime_handle").str();
-      auto T = ArrayType::get(Type::getInt64Ty(C), 2);
+      if (!HandleTy) {
+        Type *Int32 = Type::getInt32Ty(C);
+        HandleTy = StructType::create(
+            C, {Type::getInt8Ty(C)->getPointerTo(0), Int32, Int32},
+            "block.runtime.handle.t");
+      }
+
       auto *GV = new GlobalVariable(
-          M, T,
+          M, HandleTy,
           /*isConstant=*/false, GlobalValue::ExternalLinkage,
-          /*Initializer=*/Constant::getNullValue(T), RuntimeHandle,
+          /*Initializer=*/Constant::getNullValue(HandleTy), RuntimeHandle,
           /*InsertBefore=*/nullptr, GlobalValue::NotThreadLocal,
           AMDGPUAS::GLOBAL_ADDRESS,
           /*isExternallyInitialized=*/false);
@@ -125,16 +135,15 @@ bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
 
       for (auto *U : F.users()) {
         auto *UU = &*U;
-        if (!isa<ConstantExpr>(UU))
-          continue;
-        collectFunctionUsers(UU, Callers);
-        auto *BitCast = cast<ConstantExpr>(UU);
-        auto *NewPtr = ConstantExpr::getPointerCast(GV, BitCast->getType());
-        BitCast->replaceAllUsesWith(NewPtr);
-        F.addFnAttr("runtime-handle", RuntimeHandle);
-        F.setLinkage(GlobalValue::ExternalLinkage);
-        Changed = true;
+
+        if (isa<Constant>(UU))
+          collectFunctionUsers(UU, Callers);
       }
+
+      F.replaceAllUsesWith(ConstantExpr::getAddrSpaceCast(GV, F.getType()));
+      F.addFnAttr("runtime-handle", RuntimeHandle);
+      F.setLinkage(GlobalValue::ExternalLinkage);
+      Changed = true;
     }
   }
 

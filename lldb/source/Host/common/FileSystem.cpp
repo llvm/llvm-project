@@ -37,6 +37,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <optional>
 #include <vector>
 
 using namespace lldb;
@@ -60,8 +61,8 @@ void FileSystem::Terminate() {
   InstanceImpl().reset();
 }
 
-Optional<FileSystem> &FileSystem::InstanceImpl() {
-  static Optional<FileSystem> g_fs;
+std::optional<FileSystem> &FileSystem::InstanceImpl() {
+  static std::optional<FileSystem> g_fs;
   return g_fs;
 }
 

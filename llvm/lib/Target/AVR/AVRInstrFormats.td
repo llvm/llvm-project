@@ -460,6 +460,8 @@ class FBRk<bit f, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{15 - 13} = 0b110;
   let Inst{12} = f;
   let Inst{11 - 0} = k;
+
+  let DecoderMethod = "decodeFBRk";
 }
 
 //===----------------------------------------------------------------------===//

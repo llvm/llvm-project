@@ -12,6 +12,7 @@
 #include "lldb/lldb-private.h"
 
 #include "lldb/Target/ExecutionContext.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -270,7 +271,7 @@ public:
   /// \return
   ///     The approximate wall clock time for the trace item, or \a std::nullopt
   ///     if not available.
-  virtual llvm::Optional<double> GetWallClockTime() const = 0;
+  virtual std::optional<double> GetWallClockTime() const = 0;
 
   /// Get some metadata associated with a synchronization point event. As
   /// different trace technologies might have different values for this,

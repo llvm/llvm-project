@@ -12,6 +12,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/Trace.h"
 
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -58,7 +59,7 @@ public:
   /// \return
   ///     The name of the function that is called the most from this block or
   ///     std::nullopt if no function is called from this block.
-  llvm::Optional<llvm::StringRef> GetMostFrequentlyCalledFunction() const;
+  std::optional<llvm::StringRef> GetMostFrequentlyCalledFunction() const;
 
   /// Get the load address of the first instruction in the block.
   ///
@@ -216,7 +217,7 @@ public:
   ///     The name of the function the 'call' instruction is calling if it can
   ///     be determined, None otherwise.
   void AddCallInstructionMetadata(lldb::addr_t load_addr,
-                                  llvm::Optional<ConstString> func_name);
+                                  std::optional<ConstString> func_name);
 
   /// Append the load address of an instruction to the dynamic instruction
   /// trace.
@@ -235,7 +236,7 @@ private:
   // This map contains the load address of all the call instructions.
   // load address maps to the name of the function it calls (std::nullopt if
   // function name can't be determined)
-  std::unordered_map<lldb::addr_t, llvm::Optional<ConstString>> m_call_isns;
+  std::unordered_map<lldb::addr_t, std::optional<ConstString>> m_call_isns;
 };
 
 /// HTR layer composed of blocks of the trace.

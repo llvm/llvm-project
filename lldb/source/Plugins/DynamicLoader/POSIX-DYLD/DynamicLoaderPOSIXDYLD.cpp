@@ -26,6 +26,7 @@
 #include "lldb/Utility/ProcessInfo.h"
 
 #include <memory>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -694,11 +695,11 @@ addr_t DynamicLoaderPOSIXDYLD::ComputeLoadOffset() {
 }
 
 void DynamicLoaderPOSIXDYLD::EvalSpecialModulesStatus() {
-  if (llvm::Optional<uint64_t> vdso_base =
+  if (std::optional<uint64_t> vdso_base =
           m_auxv->GetAuxValue(AuxVector::AUXV_AT_SYSINFO_EHDR))
     m_vdso_base = *vdso_base;
 
-  if (llvm::Optional<uint64_t> interpreter_base =
+  if (std::optional<uint64_t> interpreter_base =
           m_auxv->GetAuxValue(AuxVector::AUXV_AT_BASE))
     m_interpreter_base = *interpreter_base;
 }
@@ -710,7 +711,7 @@ addr_t DynamicLoaderPOSIXDYLD::GetEntryPoint() {
   if (m_auxv == nullptr)
     return LLDB_INVALID_ADDRESS;
 
-  llvm::Optional<uint64_t> entry_point =
+  std::optional<uint64_t> entry_point =
       m_auxv->GetAuxValue(AuxVector::AUXV_AT_ENTRY);
   if (!entry_point)
     return LLDB_INVALID_ADDRESS;

@@ -22,6 +22,7 @@
 #include "lldb/Utility/Timer.h"
 #include <cstring>
 #include <list>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -167,7 +168,7 @@ bool DWARFCallFrameInfo::GetUnwindPlan(const AddressRange &range,
       module_sp->GetObjectFile() != &m_objfile)
     return false;
 
-  if (llvm::Optional<FDEEntryMap::Entry> entry = GetFirstFDEEntryInRange(range))
+  if (std::optional<FDEEntryMap::Entry> entry = GetFirstFDEEntryInRange(range))
     return FDEToUnwindPlan(entry->data, addr, unwind_plan);
   return false;
 }
@@ -194,7 +195,7 @@ bool DWARFCallFrameInfo::GetAddressRange(Address addr, AddressRange &range) {
   return true;
 }
 
-llvm::Optional<DWARFCallFrameInfo::FDEEntryMap::Entry>
+std::optional<DWARFCallFrameInfo::FDEEntryMap::Entry>
 DWARFCallFrameInfo::GetFirstFDEEntryInRange(const AddressRange &range) {
   if (!m_section_sp || m_section_sp->IsEncrypted())
     return std::nullopt;

@@ -16,6 +16,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace lldb_private {
 namespace trace_intel_pt {
@@ -93,7 +94,7 @@ public:
   void DumpTraceInfo(Thread &thread, Stream &s, bool verbose,
                      bool json) override;
 
-  llvm::Expected<llvm::Optional<uint64_t>> GetRawTraceSize(Thread &thread);
+  llvm::Expected<std::optional<uint64_t>> GetRawTraceSize(Thread &thread);
 
   llvm::Error DoRefreshLiveProcessState(TraceGetStateResponse state,
                                         llvm::StringRef json_response) override;
@@ -131,7 +132,7 @@ public:
   ///     \a llvm::Error::success if the operation was successful, or
   ///     \a llvm::Error otherwise.
   llvm::Error Start(uint64_t ipt_trace_size, uint64_t total_buffer_size_limit,
-                    bool enable_tsc, llvm::Optional<uint64_t> psb_period,
+                    bool enable_tsc, std::optional<uint64_t> psb_period,
                     bool m_per_cpu_tracing, bool disable_cgroup_filtering);
 
   /// \copydoc Trace::Start
@@ -159,7 +160,7 @@ public:
   ///     \a llvm::Error::success if the operation was successful, or
   ///     \a llvm::Error otherwise.
   llvm::Error Start(llvm::ArrayRef<lldb::tid_t> tids, uint64_t ipt_trace_size,
-                    bool enable_tsc, llvm::Optional<uint64_t> psb_period);
+                    bool enable_tsc, std::optional<uint64_t> psb_period);
 
   /// \copydoc Trace::Start
   llvm::Error Start(llvm::ArrayRef<lldb::tid_t> tids,
@@ -174,7 +175,7 @@ public:
   llvm::Expected<pt_cpu> GetCPUInfo();
 
   /// Get or fetch the values used to convert to and from TSCs and nanos.
-  llvm::Optional<LinuxPerfZeroTscConversion> GetPerfZeroTscConversion();
+  std::optional<LinuxPerfZeroTscConversion> GetPerfZeroTscConversion();
 
   /// \return
   ///     The timer object for this trace.
@@ -252,7 +253,7 @@ private:
   ///     std::nullopt if all the traces were empty or no trace contained no
   ///     timing information, or an \a llvm::Error if it was not possible to set
   ///     up the decoder for some trace.
-  llvm::Expected<llvm::Optional<uint64_t>> FindBeginningOfTimeNanos();
+  llvm::Expected<std::optional<uint64_t>> FindBeginningOfTimeNanos();
 
   // Dump out trace info in JSON format
   void DumpTraceInfoAsJson(Thread &thread, Stream &s, bool verbose);
@@ -262,22 +263,22 @@ private:
   /// This variable should only be accessed directly by constructores or live
   /// process data refreshers.
   struct Storage {
-    llvm::Optional<TraceIntelPTMultiCpuDecoder> multicpu_decoder;
+    std::optional<TraceIntelPTMultiCpuDecoder> multicpu_decoder;
     /// These decoders are used for the non-per-cpu case
     llvm::DenseMap<lldb::tid_t, std::unique_ptr<ThreadDecoder>> thread_decoders;
     /// Helper variable used to track long running operations for telemetry.
     TaskTimer task_timer;
     /// It is provided by either a trace bundle or a live process to convert TSC
     /// counters to and from nanos. It might not be available on all hosts.
-    llvm::Optional<LinuxPerfZeroTscConversion> tsc_conversion;
-    llvm::Optional<uint64_t> beginning_of_time_nanos;
+    std::optional<LinuxPerfZeroTscConversion> tsc_conversion;
+    std::optional<uint64_t> beginning_of_time_nanos;
     bool beginning_of_time_nanos_calculated = false;
   } m_storage;
 
   /// It is provided by either a trace bundle or a live process' "cpuInfo"
   /// binary data. We don't put it in the Storage because this variable doesn't
   /// change.
-  llvm::Optional<pt_cpu> m_cpu_info;
+  std::optional<pt_cpu> m_cpu_info;
 
   /// Get the storage after refreshing the data in the case of a live process.
   Storage &GetUpdatedStorage();

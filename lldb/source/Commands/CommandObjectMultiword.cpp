@@ -10,6 +10,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Options.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -290,7 +291,7 @@ void CommandObjectMultiword::HandleCompletion(CompletionRequest &request) {
   sub_command_object->HandleCompletion(request);
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 CommandObjectMultiword::GetRepeatCommand(Args &current_command_args,
                                          uint32_t index) {
   index++;
@@ -420,7 +421,7 @@ void CommandObjectProxy::HandleArgumentCompletion(
     proxy_command->HandleArgumentCompletion(request, opt_element_vector);
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 CommandObjectProxy::GetRepeatCommand(Args &current_command_args,
                                      uint32_t index) {
   CommandObject *proxy_command = GetProxyCommandObject();
