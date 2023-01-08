@@ -13,7 +13,6 @@
 #include "ClangTidyOptions.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/Diagnostic.h"
-#include "llvm/ADT/Optional.h"
 #include <optional>
 #include <type_traits>
 #include <utility>

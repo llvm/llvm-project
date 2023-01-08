@@ -10,7 +10,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_HEADERSOURCESWITCH_H
 
 #include "ParsedAST.h"
-#include "llvm/ADT/Optional.h"
 #include <optional>
 
 namespace clang {

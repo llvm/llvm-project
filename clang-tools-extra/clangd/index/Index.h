@@ -15,7 +15,6 @@
 #include "index/SymbolID.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
 #include <mutex>
 #include <optional>

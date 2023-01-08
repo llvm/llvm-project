@@ -12,8 +12,6 @@
 #include "support/Path.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <optional>
 
