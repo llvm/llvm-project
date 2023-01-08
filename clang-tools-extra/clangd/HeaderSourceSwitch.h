@@ -11,6 +11,7 @@
 
 #include "ParsedAST.h"
 #include "llvm/ADT/Optional.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {

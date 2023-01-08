@@ -36,6 +36,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
+#include <optional>
 #include <tuple>
 #include <utility>
 #include <vector>

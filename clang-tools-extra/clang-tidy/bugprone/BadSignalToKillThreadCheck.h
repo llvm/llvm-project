@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_BADSIGNALTOKILLTHREADCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {

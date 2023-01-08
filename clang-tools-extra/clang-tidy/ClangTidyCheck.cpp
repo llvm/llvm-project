@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/YAMLParser.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {

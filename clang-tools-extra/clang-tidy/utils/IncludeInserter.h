@@ -13,6 +13,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/StringSet.h"
 #include <memory>
+#include <optional>
 
 namespace clang {
 class Preprocessor;

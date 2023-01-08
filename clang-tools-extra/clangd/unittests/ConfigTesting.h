@@ -14,6 +14,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock.h"
 #include <functional>
+#include <optional>
 
 namespace clang {
 namespace clangd {

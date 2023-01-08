@@ -29,6 +29,7 @@
 #include "index/Symbol.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {

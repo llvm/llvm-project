@@ -26,6 +26,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <array>
 #include <cassert>
+#include <optional>
 #include <stack>
 #include <tuple>
 #include <type_traits>

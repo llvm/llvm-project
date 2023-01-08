@@ -52,6 +52,7 @@
 #include <algorithm>
 #include <iterator>
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 

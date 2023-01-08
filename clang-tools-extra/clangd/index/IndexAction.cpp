@@ -22,6 +22,7 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <utility>
 
 namespace clang {

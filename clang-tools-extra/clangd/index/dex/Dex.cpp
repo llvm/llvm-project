@@ -23,6 +23,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
+#include <optional>
 #include <queue>
 #include <utility>
 #include <vector>

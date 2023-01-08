@@ -40,6 +40,7 @@
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <vector>
 

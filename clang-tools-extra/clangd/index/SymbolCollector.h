@@ -25,6 +25,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include <functional>
+#include <optional>
 
 namespace clang {
 namespace clangd {

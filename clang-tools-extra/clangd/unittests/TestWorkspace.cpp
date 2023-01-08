@@ -9,6 +9,7 @@
 #include "TestWorkspace.h"
 #include "index/FileIndex.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {

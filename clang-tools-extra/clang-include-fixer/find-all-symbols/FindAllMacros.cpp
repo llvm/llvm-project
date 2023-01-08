@@ -16,6 +16,7 @@
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Token.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 namespace clang {
 namespace find_all_symbols {

@@ -28,6 +28,7 @@
 #include <cassert>
 #include <cstddef>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>

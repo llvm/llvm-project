@@ -5,6 +5,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {

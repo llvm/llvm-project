@@ -8,6 +8,7 @@
 #include "StdLib.h"
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 

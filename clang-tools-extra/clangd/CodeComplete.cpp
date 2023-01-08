@@ -70,6 +70,7 @@
 #include <algorithm>
 #include <iterator>
 #include <limits>
+#include <optional>
 #include <utility>
 
 // We log detailed candidate here if you run with -debug-only=codecomplete.

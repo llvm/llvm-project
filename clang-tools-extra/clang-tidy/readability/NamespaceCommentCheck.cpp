@@ -14,6 +14,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringExtras.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 

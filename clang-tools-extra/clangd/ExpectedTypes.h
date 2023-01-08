@@ -20,6 +20,7 @@
 
 #include "clang/AST/Type.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 
 namespace clang {
 class CodeCompletionResult;

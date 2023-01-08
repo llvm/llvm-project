@@ -31,6 +31,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include <functional>
+#include <optional>
 
 namespace clang {
 namespace clangd {

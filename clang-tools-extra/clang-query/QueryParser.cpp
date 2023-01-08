@@ -14,6 +14,7 @@
 #include "clang/Tooling/NodeIntrospection.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include <optional>
 #include <set>
 
 using namespace llvm;

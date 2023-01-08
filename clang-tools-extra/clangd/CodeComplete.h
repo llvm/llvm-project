@@ -31,6 +31,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <functional>
 #include <future>
+#include <optional>
 #include <utility>
 
 namespace clang {

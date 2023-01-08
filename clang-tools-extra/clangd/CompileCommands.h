@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <deque>
+#include <optional>
 #include <string>
 #include <vector>
 

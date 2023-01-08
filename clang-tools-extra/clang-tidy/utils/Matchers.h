@@ -11,6 +11,7 @@
 
 #include "TypeTraits.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {

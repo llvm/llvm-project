@@ -33,6 +33,7 @@
 #include "llvm/ADT/StringSet.h"
 #include <algorithm>
 #include <functional>
+#include <optional>
 #include <vector>
 
 namespace llvm {

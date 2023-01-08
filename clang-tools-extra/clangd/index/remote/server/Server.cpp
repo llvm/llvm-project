@@ -36,6 +36,7 @@
 #include <grpc++/grpc++.h>
 #include <grpc++/health_check_service_interface.h>
 #include <memory>
+#include <optional>
 #include <string>
 #include <thread>
 #include <utility>

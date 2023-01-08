@@ -10,6 +10,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <optional>
 #include <variant>
 
 namespace clang {

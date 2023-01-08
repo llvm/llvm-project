@@ -13,6 +13,7 @@
 #include "SymbolInfo.h"
 #include "SymbolReporter.h"
 #include "clang/Lex/PPCallbacks.h"
+#include <optional>
 
 namespace clang {
 class MacroInfo;

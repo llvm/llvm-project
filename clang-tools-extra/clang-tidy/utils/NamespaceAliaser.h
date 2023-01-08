@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include <map>
+#include <optional>
 
 namespace clang {
 namespace tidy {

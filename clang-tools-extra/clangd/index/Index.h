@@ -18,6 +18,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
 #include <mutex>
+#include <optional>
 #include <string>
 
 namespace clang {

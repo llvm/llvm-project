@@ -11,6 +11,7 @@
 
 #include "../utils/RenamerClangTidyCheck.h"
 #include "llvm/ADT/Optional.h"
+#include <optional>
 namespace clang {
 namespace tidy {
 namespace readability {

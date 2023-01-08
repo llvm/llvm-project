@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 
 #include "../utils/ExprSequence.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 using namespace clang::tidy::utils;

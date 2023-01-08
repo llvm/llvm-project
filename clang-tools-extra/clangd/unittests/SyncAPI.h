@@ -18,6 +18,7 @@
 #include "ClangdServer.h"
 #include "Protocol.h"
 #include "index/Index.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {

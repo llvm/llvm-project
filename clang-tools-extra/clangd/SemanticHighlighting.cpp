@@ -33,6 +33,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
+#include <optional>
 
 namespace clang {
 namespace clangd {
