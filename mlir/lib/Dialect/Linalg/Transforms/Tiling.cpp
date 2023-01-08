@@ -693,7 +693,7 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
     }
 
     // 4.b. Clone the op and update init operands.
-    // We cannot use a BlockAndValueMapping here because it can replace
+    // We cannot use a IRMapping here because it can replace
     // different OpOperands with the same value.
     Operation *clonedOp = b.clone(*op.getOperation());
     b.updateRootInPlace(clonedOp, [&]() {

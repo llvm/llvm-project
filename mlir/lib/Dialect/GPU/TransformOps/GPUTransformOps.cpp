@@ -17,7 +17,7 @@
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformUtils.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 
 using namespace mlir;
 using namespace mlir::gpu;
@@ -225,7 +225,7 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapForeachToBlocksImpl(
   // induction variables to the newly created ops.
   SmallVector<Value> blockOps;
   blockIdGenerator(rewriter, foreachThreadOp, blockOps);
-  BlockAndValueMapping bvm;
+  IRMapping bvm;
   for (auto [blockIdx, blockDim] :
        llvm::zip(foreachThreadOp.getThreadIndices(), blockMapping)) {
     bvm.map(blockIdx,
@@ -434,7 +434,7 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
       rewriter.create<ThreadIdOp>(loc, indexType, Dimension::x),
       rewriter.create<ThreadIdOp>(loc, indexType, Dimension::y),
       rewriter.create<ThreadIdOp>(loc, indexType, Dimension::z)};
-  BlockAndValueMapping bvm;
+  IRMapping bvm;
   for (auto [blockIdx, blockDim] :
        llvm::zip(foreachThreadOp.getThreadIndices(), threadMapping)) {
     bvm.map(

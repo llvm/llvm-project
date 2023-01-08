@@ -428,7 +428,7 @@ static void createFullPartialVectorTransferWrite(RewriterBase &b,
   auto notInBounds = b.create<arith::XOrIOp>(
       loc, inBoundsCond, b.create<arith::ConstantIntOp>(loc, true, 1));
   b.create<scf::IfOp>(loc, notInBounds, [&](OpBuilder &b, Location loc) {
-    BlockAndValueMapping mapping;
+    IRMapping mapping;
     Value load = b.create<memref::LoadOp>(
         loc,
         b.create<vector::TypeCastOp>(
@@ -614,7 +614,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
   // Do an in bounds write to either the output or the extra allocated buffer.
   // The operation is cloned to prevent deleting information needed for the
   // later IR creation.
-  BlockAndValueMapping mapping;
+  IRMapping mapping;
   mapping.map(xferWriteOp.getSource(), memrefAndIndices.front());
   mapping.map(xferWriteOp.getIndices(), memrefAndIndices.drop_front());
   auto *clone = b.clone(*xferWriteOp, mapping);

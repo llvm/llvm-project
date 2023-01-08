@@ -12,8 +12,8 @@
 
 #include "mlir/Transforms/InliningUtils.h"
 
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/ADT/MapVector.h"
@@ -43,7 +43,7 @@ remapInlinedLocations(iterator_range<Region::iterator> inlinedBlocks,
 }
 
 static void remapInlinedOperands(iterator_range<Region::iterator> inlinedBlocks,
-                                 BlockAndValueMapping &mapper) {
+                                 IRMapping &mapper) {
   auto remapOperands = [&](Operation *op) {
     for (auto &operand : op->getOpOperands())
       if (auto mappedOp = mapper.lookupOrNull(operand.get()))
@@ -64,17 +64,17 @@ bool InlinerInterface::isLegalToInline(Operation *call, Operation *callable,
   return false;
 }
 
-bool InlinerInterface::isLegalToInline(
-    Region *dest, Region *src, bool wouldBeCloned,
-    BlockAndValueMapping &valueMapping) const {
+bool InlinerInterface::isLegalToInline(Region *dest, Region *src,
+                                       bool wouldBeCloned,
+                                       IRMapping &valueMapping) const {
   if (auto *handler = getInterfaceFor(dest->getParentOp()))
     return handler->isLegalToInline(dest, src, wouldBeCloned, valueMapping);
   return false;
 }
 
-bool InlinerInterface::isLegalToInline(
-    Operation *op, Region *dest, bool wouldBeCloned,
-    BlockAndValueMapping &valueMapping) const {
+bool InlinerInterface::isLegalToInline(Operation *op, Region *dest,
+                                       bool wouldBeCloned,
+                                       IRMapping &valueMapping) const {
   if (auto *handler = getInterfaceFor(op))
     return handler->isLegalToInline(op, dest, wouldBeCloned, valueMapping);
   return false;
@@ -112,7 +112,7 @@ void InlinerInterface::processInlinedCallBlocks(
 /// Utility to check that all of the operations within 'src' can be inlined.
 static bool isLegalToInline(InlinerInterface &interface, Region *src,
                             Region *insertRegion, bool shouldCloneInlinedRegion,
-                            BlockAndValueMapping &valueMapping) {
+                            IRMapping &valueMapping) {
   for (auto &block : *src) {
     for (auto &op : block) {
       // Check this operation.
@@ -142,7 +142,7 @@ static bool isLegalToInline(InlinerInterface &interface, Region *src,
 
 static LogicalResult
 inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
-                 Block::iterator inlinePoint, BlockAndValueMapping &mapper,
+                 Block::iterator inlinePoint, IRMapping &mapper,
                  ValueRange resultsToReplace, TypeRange regionResultTypes,
                  Optional<Location> inlineLoc, bool shouldCloneInlinedRegion,
                  Operation *call = nullptr) {
@@ -243,7 +243,7 @@ inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
     return failure();
 
   // Map the provided call operands to the arguments of the region.
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   for (unsigned i = 0, e = inlinedOperands.size(); i != e; ++i) {
     // Verify that the types of the provided values match the function argument
     // types.
@@ -260,8 +260,7 @@ inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
 }
 
 LogicalResult mlir::inlineRegion(InlinerInterface &interface, Region *src,
-                                 Operation *inlinePoint,
-                                 BlockAndValueMapping &mapper,
+                                 Operation *inlinePoint, IRMapping &mapper,
                                  ValueRange resultsToReplace,
                                  TypeRange regionResultTypes,
                                  Optional<Location> inlineLoc,
@@ -270,12 +269,13 @@ LogicalResult mlir::inlineRegion(InlinerInterface &interface, Region *src,
                       ++inlinePoint->getIterator(), mapper, resultsToReplace,
                       regionResultTypes, inlineLoc, shouldCloneInlinedRegion);
 }
-LogicalResult
-mlir::inlineRegion(InlinerInterface &interface, Region *src, Block *inlineBlock,
-                   Block::iterator inlinePoint, BlockAndValueMapping &mapper,
-                   ValueRange resultsToReplace, TypeRange regionResultTypes,
-                   Optional<Location> inlineLoc,
-                   bool shouldCloneInlinedRegion) {
+LogicalResult mlir::inlineRegion(InlinerInterface &interface, Region *src,
+                                 Block *inlineBlock,
+                                 Block::iterator inlinePoint, IRMapping &mapper,
+                                 ValueRange resultsToReplace,
+                                 TypeRange regionResultTypes,
+                                 Optional<Location> inlineLoc,
+                                 bool shouldCloneInlinedRegion) {
   return inlineRegionImpl(interface, src, inlineBlock, inlinePoint, mapper,
                           resultsToReplace, regionResultTypes, inlineLoc,
                           shouldCloneInlinedRegion);
@@ -367,7 +367,7 @@ LogicalResult mlir::inlineCall(InlinerInterface &interface,
   const auto *callInterface = interface.getInterfaceFor(call->getDialect());
 
   // Map the provided call operands to the arguments of the region.
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   for (unsigned i = 0, e = callOperands.size(); i != e; ++i) {
     BlockArgument regionArg = entryBlock->getArgument(i);
     Value operand = callOperands[i];

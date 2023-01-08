@@ -10,7 +10,7 @@
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AffineExprVisitor.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
@@ -46,7 +46,7 @@ bool mlir::isTopLevelValue(Value value, Region *region) {
 /// dimension or symbol.
 static bool
 remainsLegalAfterInline(Value value, Region *src, Region *dest,
-                        const BlockAndValueMapping &mapping,
+                        const IRMapping &mapping,
                         function_ref<bool(Value, Region *)> legalityCheck) {
   // If the value is a valid dimension for any other reason than being
   // a top-level value, it will remain valid: constants get inlined
@@ -75,7 +75,7 @@ remainsLegalAfterInline(Value value, Region *src, Region *dest,
 /// remain so if their respective users are inlined into `dest`.
 static bool
 remainsLegalAfterInline(ValueRange values, Region *src, Region *dest,
-                        const BlockAndValueMapping &mapping,
+                        const IRMapping &mapping,
                         function_ref<bool(Value, Region *)> legalityCheck) {
   return llvm::all_of(values, [&](Value v) {
     return remainsLegalAfterInline(v, src, dest, mapping, legalityCheck);
@@ -86,7 +86,7 @@ remainsLegalAfterInline(ValueRange values, Region *src, Region *dest,
 /// from `src` to `dest`.
 template <typename OpTy>
 static bool remainsLegalAfterInline(OpTy op, Region *src, Region *dest,
-                                    const BlockAndValueMapping &mapping) {
+                                    const IRMapping &mapping) {
   static_assert(llvm::is_one_of<OpTy, AffineReadOpInterface,
                                 AffineWriteOpInterface>::value,
                 "only ops with affine read/write interface are supported");
@@ -111,9 +111,9 @@ static bool remainsLegalAfterInline(OpTy op, Region *src, Region *dest,
 //  Use "unused attribute" marker to silence clang-tidy warning stemming from
 //  the inability to see through "llvm::TypeSwitch".
 template <>
-bool LLVM_ATTRIBUTE_UNUSED
-remainsLegalAfterInline(AffineApplyOp op, Region *src, Region *dest,
-                        const BlockAndValueMapping &mapping) {
+bool LLVM_ATTRIBUTE_UNUSED remainsLegalAfterInline(AffineApplyOp op,
+                                                   Region *src, Region *dest,
+                                                   const IRMapping &mapping) {
   // If it's a valid dimension, we need to check that it remains so.
   if (isValidDim(op.getResult(), src))
     return remainsLegalAfterInline(
@@ -145,7 +145,7 @@ struct AffineInlinerInterface : public DialectInlinerInterface {
   /// 'wouldBeCloned' is set if the region is cloned into its new location
   /// rather than moved, indicating there may be other users.
   bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
-                       BlockAndValueMapping &valueMapping) const final {
+                       IRMapping &valueMapping) const final {
     // We can inline into affine loops and conditionals if this doesn't break
     // affine value categorization rules.
     Operation *destOp = dest->getParentOp();
@@ -190,7 +190,7 @@ struct AffineInlinerInterface : public DialectInlinerInterface {
   /// Returns true if the given operation 'op', that is registered to this
   /// dialect, can be inlined into the given region, false otherwise.
   bool isLegalToInline(Operation *op, Region *region, bool wouldBeCloned,
-                       BlockAndValueMapping &valueMapping) const final {
+                       IRMapping &valueMapping) const final {
     // Always allow inlining affine operations into a region that is marked as
     // affine scope, or into affine loops and conditionals. There are some edge
     // cases when inlining *into* affine structures, but that is handled in the

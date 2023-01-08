@@ -21,8 +21,8 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AffineExprVisitor.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -288,7 +288,7 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
   // branch while promoting its then block, and analogously drop the 'then'
   // block of the original 'if' from the 'else' branch while promoting its else
   // block.
-  BlockAndValueMapping operandMap;
+  IRMapping operandMap;
   OpBuilder b(hoistOverOp);
   auto hoistedIfOp = b.create<AffineIfOp>(ifOp.getLoc(), ifOp.getIntegerSet(),
                                           ifOp.getOperands(),
