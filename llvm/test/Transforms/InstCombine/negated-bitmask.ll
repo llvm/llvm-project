@@ -233,9 +233,8 @@ define i8 @neg_signbit_use2(i5 %x) {
 
 define i32 @neg_not_signbit1(i8 %x) {
 ; CHECK-LABEL: @neg_not_signbit1(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], 7
-; CHECK-NEXT:    [[R:%.*]] = zext i8 [[TMP2]] to i32
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[ISNOTNEG]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = lshr i8 %x, 7
