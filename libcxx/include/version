@@ -317,7 +317,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # endif
 # define __cpp_lib_concepts                             202002L
 # define __cpp_lib_constexpr_algorithms                 201806L
-// # define __cpp_lib_constexpr_complex                    201711L
+# define __cpp_lib_constexpr_complex                    201711L
 # define __cpp_lib_constexpr_dynamic_alloc              201907L
 # define __cpp_lib_constexpr_functional                 201907L
 # define __cpp_lib_constexpr_iterator                   201811L

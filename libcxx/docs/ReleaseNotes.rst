@@ -50,6 +50,7 @@ Implemented Papers
 - P0600R1 - ``nodiscard`` in the library
 - P0339R6 - ``polymorphic_allocator<>`` as a vocabulary type
 - P1169R4 - ``static operator()``
+- P0415R1 - ``constexpr`` for ``std::complex``
 
 Improvements and New Features
 -----------------------------

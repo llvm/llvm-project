@@ -231,7 +231,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_constexpr_complex",
     "values": { "c++20": 201711 },
     "headers": ["complex"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_constexpr_dynamic_alloc",
     "values": { "c++20": 201907 },
