@@ -119,8 +119,8 @@ protected:
     return Path.value_or("");
   }
 
-  llvm::Optional<TextEdit> insert(llvm::StringRef VerbatimHeader,
-                                  tooling::IncludeDirective Directive) {
+  std::optional<TextEdit> insert(llvm::StringRef VerbatimHeader,
+                                 tooling::IncludeDirective Directive) {
     Clang = setupClang();
     PreprocessOnlyAction Action;
     EXPECT_TRUE(

@@ -59,8 +59,8 @@ const FunctionDecl *getSelectedFunction(const SelectionTree::Node *SelNode) {
   return nullptr;
 }
 
-llvm::Optional<Path> getSourceFile(llvm::StringRef FileName,
-                                   const Tweak::Selection &Sel) {
+std::optional<Path> getSourceFile(llvm::StringRef FileName,
+                                  const Tweak::Selection &Sel) {
   assert(Sel.FS);
   if (auto Source = getCorrespondingHeaderOrSource(FileName, Sel.FS))
     return *Source;
@@ -70,7 +70,7 @@ llvm::Optional<Path> getSourceFile(llvm::StringRef FileName,
 // Synthesize a DeclContext for TargetNS from CurContext. TargetNS must be empty
 // for global namespace, and endwith "::" otherwise.
 // Returns std::nullopt if TargetNS is not a prefix of CurContext.
-llvm::Optional<const DeclContext *>
+std::optional<const DeclContext *>
 findContextForNS(llvm::StringRef TargetNS, const DeclContext *CurContext) {
   assert(TargetNS.empty() || TargetNS.endswith("::"));
   // Skip any non-namespace contexts, e.g. TagDecls, functions/methods.

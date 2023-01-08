@@ -60,7 +60,7 @@ void ImplicitWideningOfMultiplicationResultCheck::storeOptions(
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
 }
 
-llvm::Optional<FixItHint>
+std::optional<FixItHint>
 ImplicitWideningOfMultiplicationResultCheck::includeStddefHeader(
     SourceLocation File) {
   return IncludeInserter.createIncludeInsertion(

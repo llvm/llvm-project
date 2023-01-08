@@ -45,7 +45,7 @@ struct LocatedSymbol {
   // The canonical or best declaration: where most users find its interface.
   Location PreferredDeclaration;
   // Where the symbol is defined, if known. May equal PreferredDeclaration.
-  llvm::Optional<Location> Definition;
+  std::optional<Location> Definition;
   // SymbolID of the located symbol if available.
   SymbolID ID;
 };

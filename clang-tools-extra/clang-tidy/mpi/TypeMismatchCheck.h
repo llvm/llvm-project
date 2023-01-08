@@ -46,7 +46,7 @@ private:
                       ArrayRef<const Expr *> BufferExprs,
                       ArrayRef<StringRef> MPIDatatypes, const LangOptions &LO);
 
-  Optional<ento::mpi::MPIFunctionClassifier> FuncClassifier;
+  std::optional<ento::mpi::MPIFunctionClassifier> FuncClassifier;
 };
 
 } // namespace mpi

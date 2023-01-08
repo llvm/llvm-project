@@ -36,7 +36,7 @@ void PreambleFileStatusCache::update(const llvm::vfs::FileSystem &FS,
   StatCache.insert({PathStore, std::move(S)});
 }
 
-llvm::Optional<llvm::vfs::Status>
+std::optional<llvm::vfs::Status>
 PreambleFileStatusCache::lookup(llvm::StringRef File) const {
   // Canonicalize to match the cached form.
   // Lookup tends to be first by absolute path, so no need to make absolute.

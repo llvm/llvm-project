@@ -71,7 +71,7 @@ void ProBoundsConstantArrayIndexCheck::check(
   if (IndexExpr->isValueDependent())
     return; // We check in the specialization.
 
-  Optional<llvm::APSInt> Index =
+  std::optional<llvm::APSInt> Index =
       IndexExpr->getIntegerConstantExpr(*Result.Context);
   if (!Index) {
     SourceRange BaseRange;

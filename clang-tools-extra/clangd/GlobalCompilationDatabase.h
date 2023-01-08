@@ -38,11 +38,11 @@ public:
   virtual ~GlobalCompilationDatabase() = default;
 
   /// If there are any known-good commands for building this file, returns one.
-  virtual llvm::Optional<tooling::CompileCommand>
+  virtual std::optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const = 0;
 
   /// Finds the closest project to \p File.
-  virtual llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const {
+  virtual std::optional<ProjectInfo> getProjectInfo(PathRef File) const {
     return std::nullopt;
   }
 
@@ -72,10 +72,10 @@ public:
   DelegatingCDB(const GlobalCompilationDatabase *Base);
   DelegatingCDB(std::unique_ptr<GlobalCompilationDatabase> Base);
 
-  llvm::Optional<tooling::CompileCommand>
+  std::optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
 
-  llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override;
+  std::optional<ProjectInfo> getProjectInfo(PathRef File) const override;
 
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
 
@@ -116,12 +116,12 @@ public:
   /// Scans File's parents looking for compilation databases.
   /// Any extra flags will be added.
   /// Might trigger OnCommandChanged, if CDB wasn't broadcasted yet.
-  llvm::Optional<tooling::CompileCommand>
+  std::optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
 
   /// Returns the path to first directory containing a compilation database in
   /// \p File's parents.
-  llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override;
+  std::optional<ProjectInfo> getProjectInfo(PathRef File) const override;
 
   bool blockUntilIdle(Deadline Timeout) const override;
 
@@ -150,7 +150,7 @@ private:
     std::shared_ptr<const tooling::CompilationDatabase> CDB;
     ProjectInfo PI;
   };
-  llvm::Optional<CDBLookupResult> lookupCDB(CDBLookupRequest Request) const;
+  std::optional<CDBLookupResult> lookupCDB(CDBLookupRequest Request) const;
 
   class BroadcastThread;
   std::unique_ptr<BroadcastThread> Broadcaster;
@@ -186,14 +186,14 @@ public:
              std::vector<std::string> FallbackFlags = {},
              CommandMangler Mangler = nullptr);
 
-  llvm::Optional<tooling::CompileCommand>
+  std::optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
 
   /// Sets or clears the compilation command for a particular file.
   void
   setCompileCommand(PathRef File,
-                    llvm::Optional<tooling::CompileCommand> CompilationCommand);
+                    std::optional<tooling::CompileCommand> CompilationCommand);
 
 private:
   mutable std::mutex Mutex;

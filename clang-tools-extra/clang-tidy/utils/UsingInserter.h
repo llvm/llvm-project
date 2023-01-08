@@ -29,7 +29,7 @@ public:
 
   // Creates a \p using declaration fixit. Returns ``std::nullopt`` on error
   // or if the using declaration already exists.
-  llvm::Optional<FixItHint>
+  std::optional<FixItHint>
   createUsingDeclaration(ASTContext &Context, const Stmt &Statement,
                          llvm::StringRef QualifiedName);
 

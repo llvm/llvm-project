@@ -64,7 +64,7 @@ static tooling::CompileCommand cmd(llvm::StringRef File, llvm::StringRef Arg) {
 class OverlayCDBTest : public ::testing::Test {
   class BaseCDB : public GlobalCompilationDatabase {
   public:
-    llvm::Optional<tooling::CompileCommand>
+    std::optional<tooling::CompileCommand>
     getCompileCommand(llvm::StringRef File) const override {
       if (File == testPath("foo.cc"))
         return cmd(File, "-DA=1");
@@ -76,7 +76,7 @@ class OverlayCDBTest : public ::testing::Test {
       return cmd(File, "-DA=2");
     }
 
-    llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override {
+    std::optional<ProjectInfo> getProjectInfo(PathRef File) const override {
       return ProjectInfo{testRoot()};
     }
   };

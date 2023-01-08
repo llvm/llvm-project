@@ -61,10 +61,10 @@ public:
   MockCompilationDatabase(StringRef Directory = StringRef(),
                           StringRef RelPathPrefix = StringRef());
 
-  llvm::Optional<tooling::CompileCommand>
+  std::optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
 
-  llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override;
+  std::optional<ProjectInfo> getProjectInfo(PathRef File) const override;
 
   std::vector<std::string> ExtraClangFlags;
 

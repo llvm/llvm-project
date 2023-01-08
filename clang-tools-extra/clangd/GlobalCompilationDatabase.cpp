@@ -354,7 +354,7 @@ DirectoryBasedGlobalCompilationDatabase::
 DirectoryBasedGlobalCompilationDatabase::
     ~DirectoryBasedGlobalCompilationDatabase() = default;
 
-llvm::Optional<tooling::CompileCommand>
+std::optional<tooling::CompileCommand>
 DirectoryBasedGlobalCompilationDatabase::getCompileCommand(PathRef File) const {
   CDBLookupRequest Req;
   Req.FileName = File;
@@ -398,7 +398,7 @@ DirectoryBasedGlobalCompilationDatabase::getDirectoryCaches(
   return Ret;
 }
 
-llvm::Optional<DirectoryBasedGlobalCompilationDatabase::CDBLookupResult>
+std::optional<DirectoryBasedGlobalCompilationDatabase::CDBLookupResult>
 DirectoryBasedGlobalCompilationDatabase::lookupCDB(
     CDBLookupRequest Request) const {
   assert(llvm::sys::path::is_absolute(Request.FileName) &&
@@ -476,7 +476,7 @@ class DirectoryBasedGlobalCompilationDatabase::BroadcastThread {
     Context Ctx;
   };
   std::deque<Task> Queue;
-  llvm::Optional<Task> ActiveTask;
+  std::optional<Task> ActiveTask;
   std::thread Thread; // Must be last member.
 
   // Thread body: this is just the basic queue procesing boilerplate.
@@ -725,7 +725,7 @@ bool DirectoryBasedGlobalCompilationDatabase::blockUntilIdle(
   return Broadcaster->blockUntilIdle(Timeout);
 }
 
-llvm::Optional<ProjectInfo>
+std::optional<ProjectInfo>
 DirectoryBasedGlobalCompilationDatabase::getProjectInfo(PathRef File) const {
   CDBLookupRequest Req;
   Req.FileName = File;
@@ -744,9 +744,9 @@ OverlayCDB::OverlayCDB(const GlobalCompilationDatabase *Base,
     : DelegatingCDB(Base), Mangler(std::move(Mangler)),
       FallbackFlags(std::move(FallbackFlags)) {}
 
-llvm::Optional<tooling::CompileCommand>
+std::optional<tooling::CompileCommand>
 OverlayCDB::getCompileCommand(PathRef File) const {
-  llvm::Optional<tooling::CompileCommand> Cmd;
+  std::optional<tooling::CompileCommand> Cmd;
   {
     std::lock_guard<std::mutex> Lock(Mutex);
     auto It = Commands.find(removeDots(File));
@@ -772,8 +772,8 @@ tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File) const {
   return Cmd;
 }
 
-void OverlayCDB::setCompileCommand(
-    PathRef File, llvm::Optional<tooling::CompileCommand> Cmd) {
+void OverlayCDB::setCompileCommand(PathRef File,
+                                   std::optional<tooling::CompileCommand> Cmd) {
   // We store a canonical version internally to prevent mismatches between set
   // and get compile commands. Also it assures clients listening to broadcasts
   // doesn't receive different names for the same file.
@@ -801,14 +801,14 @@ DelegatingCDB::DelegatingCDB(std::unique_ptr<GlobalCompilationDatabase> Base)
   BaseOwner = std::move(Base);
 }
 
-llvm::Optional<tooling::CompileCommand>
+std::optional<tooling::CompileCommand>
 DelegatingCDB::getCompileCommand(PathRef File) const {
   if (!Base)
     return std::nullopt;
   return Base->getCompileCommand(File);
 }
 
-llvm::Optional<ProjectInfo> DelegatingCDB::getProjectInfo(PathRef File) const {
+std::optional<ProjectInfo> DelegatingCDB::getProjectInfo(PathRef File) const {
   if (!Base)
     return std::nullopt;
   return Base->getProjectInfo(File);

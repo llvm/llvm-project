@@ -35,11 +35,11 @@ namespace clangd {
 class OpaqueType {
 public:
   /// Create a type from a code completion result.
-  static llvm::Optional<OpaqueType>
+  static std::optional<OpaqueType>
   fromCompletionResult(ASTContext &Ctx, const CodeCompletionResult &R);
   /// Construct an instance from a clang::QualType. This is usually a
   /// PreferredType from a clang's completion context.
-  static llvm::Optional<OpaqueType> fromType(ASTContext &Ctx, QualType Type);
+  static std::optional<OpaqueType> fromType(ASTContext &Ctx, QualType Type);
 
   /// Get the raw byte representation of the type. You can only rely on the
   /// types being equal iff their raw representation is the same. The particular
@@ -55,7 +55,7 @@ public:
   }
 
 private:
-  static llvm::Optional<OpaqueType> encode(ASTContext &Ctx, QualType Type);
+  static std::optional<OpaqueType> encode(ASTContext &Ctx, QualType Type);
   explicit OpaqueType(std::string Data);
 
   std::string Data;

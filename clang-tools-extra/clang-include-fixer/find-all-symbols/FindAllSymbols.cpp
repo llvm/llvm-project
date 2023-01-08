@@ -70,7 +70,7 @@ std::vector<SymbolInfo::Context> GetContexts(const NamedDecl *ND) {
   return Contexts;
 }
 
-llvm::Optional<SymbolInfo>
+std::optional<SymbolInfo>
 CreateSymbolInfo(const NamedDecl *ND, const SourceManager &SM,
                  const HeaderMapCollector *Collector) {
   SymbolInfo::SymbolKind Type;

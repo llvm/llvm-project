@@ -39,7 +39,7 @@ protected:
   }
 
   /// An overload for convenience.
-  llvm::Optional<OpaqueType> fromCompletionResult(const NamedDecl *D) {
+  std::optional<OpaqueType> fromCompletionResult(const NamedDecl *D) {
     return OpaqueType::fromCompletionResult(
         astCtx(), CodeCompletionResult(D, CCP_Declaration));
   }
@@ -75,7 +75,7 @@ protected:
 
 private:
   // Set after calling build().
-  llvm::Optional<ParsedAST> AST;
+  std::optional<ParsedAST> AST;
 };
 
 TEST_F(ExpectedTypeConversionTest, BasicTypes) {

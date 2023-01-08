@@ -30,7 +30,7 @@ static StringRef getUnqualifiedName(StringRef QualifiedName) {
 UsingInserter::UsingInserter(const SourceManager &SourceMgr)
     : SourceMgr(SourceMgr) {}
 
-Optional<FixItHint> UsingInserter::createUsingDeclaration(
+std::optional<FixItHint> UsingInserter::createUsingDeclaration(
     ASTContext &Context, const Stmt &Statement, StringRef QualifiedName) {
   StringRef UnqualifiedName = getUnqualifiedName(QualifiedName);
   const FunctionDecl *Function = getSurroundingFunction(Context, Statement);

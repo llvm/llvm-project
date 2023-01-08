@@ -190,8 +190,8 @@ TEST(PreamblePatchTest, PatchesPreambleIncludes) {
                                 Field(&Inclusion::Resolved, testPath("a.h")))));
 }
 
-llvm::Optional<ParsedAST> createPatchedAST(llvm::StringRef Baseline,
-                                           llvm::StringRef Modified) {
+std::optional<ParsedAST> createPatchedAST(llvm::StringRef Baseline,
+                                          llvm::StringRef Modified) {
   auto BaselinePreamble = TestTU::withCode(Baseline).preamble();
   if (!BaselinePreamble) {
     ADD_FAILURE() << "Failed to build baseline preamble";

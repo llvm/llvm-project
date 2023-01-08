@@ -245,7 +245,7 @@ public:
   // clangd receives the reply from the LSP client.
   // Return a call id of the request.
   llvm::json::Value bindReply(Callback<llvm::json::Value> Reply) {
-    llvm::Optional<std::pair<int, Callback<llvm::json::Value>>> OldestCB;
+    std::optional<std::pair<int, Callback<llvm::json::Value>>> OldestCB;
     int ID;
     {
       std::lock_guard<std::mutex> Mutex(CallMutex);
@@ -516,7 +516,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     // rather want to propagate information from LSPServer's context into the
     // Server, CDB, etc.
     WithContext MainContext(BackgroundContext.clone());
-    llvm::Optional<WithContextValue> WithOffsetEncoding;
+    std::optional<WithContextValue> WithOffsetEncoding;
     if (Opts.Encoding)
       WithOffsetEncoding.emplace(kCurrentOffsetEncoding, *Opts.Encoding);
     Server.emplace(*CDB, TFS, Opts,
@@ -908,7 +908,7 @@ flattenSymbolHierarchy(llvm::ArrayRef<DocumentSymbol> Symbols,
                        const URIForFile &FileURI) {
   std::vector<SymbolInformation> Results;
   std::function<void(const DocumentSymbol &, llvm::StringRef)> Process =
-      [&](const DocumentSymbol &S, llvm::Optional<llvm::StringRef> ParentName) {
+      [&](const DocumentSymbol &S, std::optional<llvm::StringRef> ParentName) {
         SymbolInformation SI;
         SI.containerName = std::string(ParentName ? "" : *ParentName);
         SI.name = S.name;
@@ -949,7 +949,7 @@ void ClangdLSPServer::onFoldingRange(
   Server->foldingRanges(Params.textDocument.uri.file(), std::move(Reply));
 }
 
-static llvm::Optional<Command> asCommand(const CodeAction &Action) {
+static std::optional<Command> asCommand(const CodeAction &Action) {
   Command Cmd;
   if (Action.command && Action.edit)
     return std::nullopt; // Not representable. (We never emit these anyway).
@@ -1149,7 +1149,7 @@ void ClangdLSPServer::onSwitchSourceHeader(
   Server->switchSourceHeader(
       Params.uri.file(),
       [Reply = std::move(Reply),
-       Params](llvm::Expected<llvm::Optional<clangd::Path>> Path) mutable {
+       Params](llvm::Expected<std::optional<clangd::Path>> Path) mutable {
         if (!Path)
           return Reply(Path.takeError());
         if (*Path)

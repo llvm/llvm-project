@@ -170,7 +170,7 @@ public:
 
   /// Control storage of profile date.
   void setProfileStoragePrefix(StringRef ProfilePrefix);
-  llvm::Optional<ClangTidyProfiling::StorageParams>
+  std::optional<ClangTidyProfiling::StorageParams>
   getProfileStorageParams() const;
 
   /// Should be called when starting to process new translation unit.

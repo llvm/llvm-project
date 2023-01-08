@@ -61,10 +61,10 @@ llvm::Annotations::Range rangeOrPoint(const llvm::Annotations &A) {
 
 // Prepare and apply the specified tweak based on the selection in Input.
 // Returns std::nullopt if and only if prepare() failed.
-llvm::Optional<llvm::Expected<Tweak::Effect>>
+std::optional<llvm::Expected<Tweak::Effect>>
 applyTweak(ParsedAST &AST, llvm::Annotations::Range Range, StringRef TweakID,
            const SymbolIndex *Index, llvm::vfs::FileSystem *FS) {
-  llvm::Optional<llvm::Expected<Tweak::Effect>> Result;
+  std::optional<llvm::Expected<Tweak::Effect>> Result;
   SelectionTree::createEach(AST.getASTContext(), AST.getTokens(), Range.Begin,
                             Range.End, [&](SelectionTree ST) {
                               Tweak::Selection S(Index, AST, Range.Begin,

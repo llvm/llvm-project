@@ -62,7 +62,7 @@ struct DiagBase {
   // May be relative, absolute or even artificially constructed.
   std::string File;
   // Absolute path to containing file, if available.
-  llvm::Optional<std::string> AbsFile;
+  std::optional<std::string> AbsFile;
 
   clangd::Range Range;
   DiagnosticsEngine::Level Severity = DiagnosticsEngine::Note;
@@ -128,8 +128,8 @@ CodeAction toCodeAction(const Fix &D, const URIForFile &File);
 int getSeverity(DiagnosticsEngine::Level L);
 
 /// Returns a URI providing more information about a particular diagnostic.
-llvm::Optional<std::string> getDiagnosticDocURI(Diag::DiagSource, unsigned ID,
-                                                llvm::StringRef Name);
+std::optional<std::string> getDiagnosticDocURI(Diag::DiagSource, unsigned ID,
+                                               llvm::StringRef Name);
 
 /// StoreDiags collects the diagnostics that can later be reported by
 /// clangd. It groups all notes for a diagnostic into a single Diag
@@ -171,9 +171,9 @@ private:
   LevelAdjuster Adjuster = nullptr;
   DiagCallback DiagCB = nullptr;
   std::vector<Diag> Output;
-  llvm::Optional<LangOptions> LangOpts;
-  llvm::Optional<Diag> LastDiag;
-  llvm::Optional<FullSourceLoc> LastDiagLoc; // Valid only when LastDiag is set.
+  std::optional<LangOptions> LangOpts;
+  std::optional<Diag> LastDiag;
+  std::optional<FullSourceLoc> LastDiagLoc;  // Valid only when LastDiag is set.
   bool LastDiagOriginallyError = false;      // Valid only when LastDiag is set.
   SourceManager *OrigSrcMgr = nullptr;
 

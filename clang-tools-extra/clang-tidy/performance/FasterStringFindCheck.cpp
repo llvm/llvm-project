@@ -22,7 +22,7 @@ namespace performance {
 
 namespace {
 
-llvm::Optional<std::string> makeCharacterLiteral(const StringLiteral *Literal) {
+std::optional<std::string> makeCharacterLiteral(const StringLiteral *Literal) {
   std::string Result;
   {
     llvm::raw_string_ostream OS(Result);

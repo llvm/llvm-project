@@ -25,7 +25,7 @@ namespace readability {
 // return type. Returns `std::nullopt` when the return type is not
 // `const`-qualified or `const` does not appear in `Def`'s source, like when the
 // type is an alias or a macro.
-static llvm::Optional<Token>
+static std::optional<Token>
 findConstToRemove(const FunctionDecl *Def,
                   const MatchFinder::MatchResult &Result) {
   if (!Def->getReturnType().isLocalConstQualified())
@@ -83,7 +83,7 @@ struct CheckResult {
 static CheckResult checkDef(const clang::FunctionDecl *Def,
                             const MatchFinder::MatchResult &MatchResult) {
   CheckResult Result;
-  llvm::Optional<Token> Tok = findConstToRemove(Def, MatchResult);
+  std::optional<Token> Tok = findConstToRemove(Def, MatchResult);
   if (!Tok)
     return Result;
 
@@ -96,7 +96,7 @@ static CheckResult checkDef(const clang::FunctionDecl *Def,
   // single warning at the definition.
   for (const FunctionDecl *Decl = Def->getPreviousDecl(); Decl != nullptr;
        Decl = Decl->getPreviousDecl()) {
-    if (llvm::Optional<Token> T = findConstToRemove(Decl, MatchResult))
+    if (std::optional<Token> T = findConstToRemove(Decl, MatchResult))
       Result.Hints.push_back(FixItHint::CreateRemoval(
           CharSourceRange::getCharRange(T->getLocation(), T->getEndLoc())));
     else

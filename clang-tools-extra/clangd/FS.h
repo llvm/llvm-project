@@ -45,7 +45,7 @@ public:
   void update(const llvm::vfs::FileSystem &FS, llvm::vfs::Status S);
 
   /// \p Path is a path stored in preamble.
-  llvm::Optional<llvm::vfs::Status> lookup(llvm::StringRef Path) const;
+  std::optional<llvm::vfs::Status> lookup(llvm::StringRef Path) const;
 
   /// Returns a VFS that collects file status.
   /// Only cache stats for files that exist because

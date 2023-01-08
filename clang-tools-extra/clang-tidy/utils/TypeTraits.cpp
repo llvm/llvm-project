@@ -39,8 +39,8 @@ bool hasDeletedCopyConstructor(QualType Type) {
 
 } // namespace
 
-llvm::Optional<bool> isExpensiveToCopy(QualType Type,
-                                       const ASTContext &Context) {
+std::optional<bool> isExpensiveToCopy(QualType Type,
+                                      const ASTContext &Context) {
   if (Type->isDependentType() || Type->isIncompleteType())
     return std::nullopt;
   return !Type.isTriviallyCopyableType(Context) &&

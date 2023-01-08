@@ -48,7 +48,7 @@ private:
   // If we reach an End or Else directive that ends Tree, returns it.
   // If TopLevel is true, then we do not expect End and always return
   // std::nullopt.
-  llvm::Optional<DirectiveTree::Directive> parse(DirectiveTree *Tree,
+  std::optional<DirectiveTree::Directive> parse(DirectiveTree *Tree,
                                                 bool TopLevel) {
     auto StartsDirective =
         [&, AllowDirectiveAt((const Token *)nullptr)]() mutable {
@@ -286,7 +286,7 @@ public:
 private:
   // Return true if the directive starts an always-taken conditional branch,
   // false if the branch is never taken, and std::nullopt otherwise.
-  llvm::Optional<bool> isTakenWhenReached(const DirectiveTree::Directive &Dir) {
+  std::optional<bool> isTakenWhenReached(const DirectiveTree::Directive &Dir) {
     switch (Dir.Kind) {
     case clang::tok::pp_if:
     case clang::tok::pp_elif:
@@ -304,7 +304,7 @@ private:
     // Does the condition consist of exactly one token?
     if (&Value >= Tokens.end() || &Value.nextNC() < Tokens.end())
       return std::nullopt;
-    return llvm::StringSwitch<llvm::Optional<bool>>(Value.text())
+    return llvm::StringSwitch<std::optional<bool>>(Value.text())
         .Cases("true", "1", true)
         .Cases("false", "0", false)
         .Default(std::nullopt);

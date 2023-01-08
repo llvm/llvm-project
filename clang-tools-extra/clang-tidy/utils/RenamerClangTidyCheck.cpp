@@ -446,7 +446,7 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
     if (isa<ClassTemplateSpecializationDecl>(Decl))
       return;
 
-    Optional<FailureInfo> MaybeFailure =
+    std::optional<FailureInfo> MaybeFailure =
         getDeclFailureInfo(Decl, *Result.SourceManager);
     if (!MaybeFailure)
       return;
@@ -477,7 +477,7 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
 void RenamerClangTidyCheck::checkMacro(SourceManager &SourceMgr,
                                        const Token &MacroNameTok,
                                        const MacroInfo *MI) {
-  Optional<FailureInfo> MaybeFailure =
+  std::optional<FailureInfo> MaybeFailure =
       getMacroFailureInfo(MacroNameTok, SourceMgr);
   if (!MaybeFailure)
     return;

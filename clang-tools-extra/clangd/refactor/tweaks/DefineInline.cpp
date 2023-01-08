@@ -53,7 +53,7 @@ namespace {
 // Returns semicolon location for the given FD. Since AST doesn't contain that
 // information, searches for a semicolon by lexing from end of function decl
 // while skipping comments.
-llvm::Optional<SourceLocation> getSemicolonForDecl(const FunctionDecl *FD) {
+std::optional<SourceLocation> getSemicolonForDecl(const FunctionDecl *FD) {
   const SourceManager &SM = FD->getASTContext().getSourceManager();
   const LangOptions &LangOpts = FD->getASTContext().getLangOpts();
 
@@ -349,7 +349,7 @@ const SourceLocation getBeginLoc(const FunctionDecl *FD) {
   return FD->getBeginLoc();
 }
 
-llvm::Optional<tooling::Replacement>
+std::optional<tooling::Replacement>
 addInlineIfInHeader(const FunctionDecl *FD) {
   // This includes inline functions and constexpr functions.
   if (FD->isInlined() || llvm::isa<CXXMethodDecl>(FD))

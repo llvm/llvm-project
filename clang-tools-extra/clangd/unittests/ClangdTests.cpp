@@ -1111,7 +1111,7 @@ TEST(ClangdServerTest, FallbackWhenWaitingForCompileCommand) {
     DelayedCompilationDatabase(Notification &CanReturnCommand)
         : CanReturnCommand(CanReturnCommand) {}
 
-    llvm::Optional<tooling::CompileCommand>
+    std::optional<tooling::CompileCommand>
     getCompileCommand(PathRef File) const override {
       // FIXME: make this timeout and fail instead of waiting forever in case
       // something goes wrong.

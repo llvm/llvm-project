@@ -52,12 +52,12 @@ MockCompilationDatabase::MockCompilationDatabase(llvm::StringRef Directory,
   // -ffreestanding avoids implicit stdc-predef.h.
 }
 
-llvm::Optional<ProjectInfo>
+std::optional<ProjectInfo>
 MockCompilationDatabase::getProjectInfo(PathRef File) const {
   return ProjectInfo{std::string(Directory)};
 }
 
-llvm::Optional<tooling::CompileCommand>
+std::optional<tooling::CompileCommand>
 MockCompilationDatabase::getCompileCommand(PathRef File) const {
   if (ExtraClangFlags.empty())
     return std::nullopt;

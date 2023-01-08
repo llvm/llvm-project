@@ -56,10 +56,10 @@ private:
   /// Generates header insertion fixes for all symbols. Fixes are deduplicated.
   std::vector<Fix> fixesForSymbols(const SymbolSlab &Syms) const;
 
-  llvm::Optional<Fix>
-  insertHeader(llvm::StringRef Name, llvm::StringRef Symbol = "",
-               tooling::IncludeDirective Directive =
-                   tooling::IncludeDirective::Include) const;
+  std::optional<Fix> insertHeader(llvm::StringRef Name,
+                                  llvm::StringRef Symbol = "",
+                                  tooling::IncludeDirective Directive =
+                                      tooling::IncludeDirective::Include) const;
 
   struct UnresolvedName {
     std::string Name;   // E.g. "X" in foo::X.
@@ -84,7 +84,7 @@ private:
 
   // These collect the last unresolved name so that we can associate it with the
   // diagnostic.
-  llvm::Optional<UnresolvedName> LastUnresolvedName;
+  std::optional<UnresolvedName> LastUnresolvedName;
 
   // There can be multiple diagnostics that are caused by the same unresolved
   // name or incomplete type in one parse, especially when code is
@@ -93,9 +93,9 @@ private:
   mutable llvm::StringMap<SymbolSlab> FuzzyFindCache;
   mutable llvm::DenseMap<SymbolID, SymbolSlab> LookupCache;
   // Returns std::nullopt if the number of index requests has reached the limit.
-  llvm::Optional<const SymbolSlab *>
+  std::optional<const SymbolSlab *>
   fuzzyFindCached(const FuzzyFindRequest &Req) const;
-  llvm::Optional<const SymbolSlab *> lookupCached(const SymbolID &ID) const;
+  std::optional<const SymbolSlab *> lookupCached(const SymbolID &ID) const;
 };
 
 } // namespace clangd

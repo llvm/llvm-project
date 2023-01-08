@@ -907,9 +907,9 @@ llvm::StringRef normalizeSuppressedCode(llvm::StringRef Code) {
   return Code;
 }
 
-llvm::Optional<std::string> getDiagnosticDocURI(Diag::DiagSource Source,
-                                                unsigned ID,
-                                                llvm::StringRef Name) {
+std::optional<std::string> getDiagnosticDocURI(Diag::DiagSource Source,
+                                               unsigned ID,
+                                               llvm::StringRef Name) {
   switch (Source) {
   case Diag::Unknown:
     break;

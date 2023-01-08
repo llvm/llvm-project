@@ -48,7 +48,8 @@ public:
   /// Creates a quoted inclusion directive in the right sort order. Returns
   /// std::nullopt on error or if header inclusion directive for header already
   /// exists.
-  Optional<FixItHint> createIncludeInsertion(StringRef FileName, bool IsAngled);
+  std::optional<FixItHint> createIncludeInsertion(StringRef FileName,
+                                                  bool IsAngled);
 
 private:
   typedef SmallVector<SourceRange, 1> SourceRangeVector;

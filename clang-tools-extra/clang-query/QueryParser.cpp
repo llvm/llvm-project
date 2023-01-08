@@ -276,7 +276,7 @@ QueryRef QueryParser::doParse() {
     Diagnostics Diag;
     auto MatcherSource = Line.ltrim();
     auto OrigMatcherSource = MatcherSource;
-    Optional<DynTypedMatcher> Matcher = Parser::parseMatcherExpression(
+    std::optional<DynTypedMatcher> Matcher = Parser::parseMatcherExpression(
         MatcherSource, nullptr, &QS.NamedValues, &Diag);
     if (!Matcher) {
       return makeInvalidQueryFromDiagnostics(Diag);

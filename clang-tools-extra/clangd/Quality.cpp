@@ -368,7 +368,7 @@ static float scopeProximityScore(unsigned ScopeDistance) {
   return std::max(0.65, 2.0 * std::pow(0.6, ScopeDistance / 2.0));
 }
 
-static llvm::Optional<llvm::StringRef>
+static std::optional<llvm::StringRef>
 wordMatching(llvm::StringRef Name, const llvm::StringSet<> *ContextWords) {
   if (ContextWords)
     for (const auto &Word : ContextWords->keys())
