@@ -121,9 +121,9 @@ define i32 @test(ptr nocapture %f) #0 {
 ; VEC-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i32 0
 ; VEC-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VEC:       pred.store.if:
+; VEC-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[F]], i64 [[TMP0]]
 ; VEC-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 0
 ; VEC-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP5]], 20
-; VEC-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[F]], i64 [[TMP0]]
 ; VEC-NEXT:    store i32 [[TMP6]], ptr [[TMP7]], align 4
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VEC:       pred.store.continue:
@@ -131,9 +131,9 @@ define i32 @test(ptr nocapture %f) #0 {
 ; VEC-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.if1:
 ; VEC-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 1
+; VEC-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[F]], i64 [[TMP9]]
 ; VEC-NEXT:    [[TMP10:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 1
 ; VEC-NEXT:    [[TMP11:%.*]] = add nsw i32 [[TMP10]], 20
-; VEC-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[F]], i64 [[TMP9]]
 ; VEC-NEXT:    store i32 [[TMP11]], ptr [[TMP12]], align 4
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.continue2:
@@ -572,8 +572,8 @@ define void @minimal_bit_widths(i1 %c) {
 ; VEC:       pred.store.if:
 ; VEC-NEXT:    [[TMP4:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i32 0
 ; VEC-NEXT:    [[TMP5:%.*]] = zext i8 [[TMP4]] to i32
-; VEC-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i8
 ; VEC-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr undef, i64 [[TMP0]]
+; VEC-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i8
 ; VEC-NEXT:    store i8 [[TMP6]], ptr [[TMP7]], align 1
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VEC:       pred.store.continue:
@@ -583,8 +583,8 @@ define void @minimal_bit_widths(i1 %c) {
 ; VEC-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 1
 ; VEC-NEXT:    [[TMP10:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i32 1
 ; VEC-NEXT:    [[TMP11:%.*]] = zext i8 [[TMP10]] to i32
-; VEC-NEXT:    [[TMP12:%.*]] = trunc i32 [[TMP11]] to i8
 ; VEC-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr undef, i64 [[TMP9]]
+; VEC-NEXT:    [[TMP12:%.*]] = trunc i32 [[TMP11]] to i8
 ; VEC-NEXT:    store i8 [[TMP12]], ptr [[TMP13]], align 1
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; VEC:       pred.store.continue3:
