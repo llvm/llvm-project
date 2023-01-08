@@ -333,7 +333,8 @@ GenericDeviceTy::GenericDeviceTy(int32_t DeviceId, int32_t NumDevices,
       OMPX_InitialNumStreams("LIBOMPTARGET_NUM_INITIAL_STREAMS", 32),
       OMPX_InitialNumEvents("LIBOMPTARGET_NUM_INITIAL_EVENTS", 32),
       DeviceId(DeviceId), GridValues(OMPGridValues),
-      PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock() {
+      PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock(),
+      PinnedAllocs(*this) {
   if (OMP_NumTeams > 0)
     GridValues.GV_Max_Teams =
         std::min(GridValues.GV_Max_Teams, uint32_t(OMP_NumTeams));
@@ -581,23 +582,110 @@ GenericDeviceTy::getExecutionModeForKernel(StringRef Name,
   return ExecModeGlobal.getValue();
 }
 
-Error GenericDeviceTy::registerHostPinnedMemoryBuffer(const void *Buffer,
-                                                      size_t Size) {
-  std::lock_guard<std::shared_mutex> Lock(HostAllocationsMutex);
+Error PinnedAllocationMapTy::registerHostBuffer(void *HstPtr,
+                                                void *DevAccessiblePtr,
+                                                size_t Size) {
+  assert(HstPtr && "Invalid pointer");
+  assert(DevAccessiblePtr && "Invalid pointer");
 
-  auto Res = HostAllocations.insert({Buffer, Size});
+  std::lock_guard<std::shared_mutex> Lock(Mutex);
+
+  // No pinned allocation should intersect.
+  auto Res = Allocs.insert({HstPtr, DevAccessiblePtr, Size});
   if (!Res.second)
-    return Plugin::error("Registering an already registered pinned buffer");
+    return Plugin::error("Cannot register locked buffer");
 
   return Plugin::success();
 }
 
-Error GenericDeviceTy::unregisterHostPinnedMemoryBuffer(const void *Buffer) {
-  std::lock_guard<std::shared_mutex> Lock(HostAllocationsMutex);
+Error PinnedAllocationMapTy::unregisterHostBuffer(void *HstPtr) {
+  assert(HstPtr && "Invalid pointer");
 
-  size_t Erased = HostAllocations.erase(Buffer);
+  std::lock_guard<std::shared_mutex> Lock(Mutex);
+
+  // Find the pinned allocation starting at the host pointer address.
+  auto It = Allocs.find({HstPtr});
+  if (It == Allocs.end())
+    return Plugin::error("Cannot find locked buffer");
+
+  const EntryTy &Entry = *It;
+
+  // There should be no other references to the pinned allocation.
+  if (Entry.References > 1)
+    return Plugin::error("The locked buffer is still being used");
+
+  // Remove the entry from the map.
+  Allocs.erase(It);
+
+  return Plugin::success();
+}
+
+Expected<void *> PinnedAllocationMapTy::lockHostBuffer(void *HstPtr,
+                                                       size_t Size) {
+  assert(HstPtr && "Invalid pointer");
+
+  std::lock_guard<std::shared_mutex> Lock(Mutex);
+
+  auto It = findIntersecting(HstPtr);
+
+  // No intersecting registered allocation found in the map. We must lock and
+  // register the memory buffer into the map.
+  if (It == Allocs.end()) {
+    // First, lock the host buffer and retrieve the device accessible pointer.
+    auto PinnedPtrOrErr = Device.dataLockImpl(HstPtr, Size);
+    if (!PinnedPtrOrErr)
+      return PinnedPtrOrErr.takeError();
+
+    // Then, insert the host buffer entry into the map.
+    auto Res = Allocs.insert({HstPtr, *PinnedPtrOrErr, Size});
+    if (!Res.second)
+      return Plugin::error("Cannot register locked buffer");
+
+    // Return the device accessible pointer.
+    return *PinnedPtrOrErr;
+  }
+
+  const EntryTy &Entry = *It;
+
+#ifdef OMPTARGET_DEBUG
+  // Do not allow partial overlapping among host pinned buffers.
+  if (advanceVoidPtr(HstPtr, Size) > advanceVoidPtr(Entry.HstPtr, Entry.Size))
+    return Plugin::error("Partial overlapping not allowed in locked memory");
+#endif
+
+  // Increase the number of references.
+  Entry.References++;
+
+  // Return the device accessible pointer after applying the correct offset.
+  return advanceVoidPtr(Entry.DevAccessiblePtr,
+                        getPtrDiff(HstPtr, Entry.HstPtr));
+}
+
+Error PinnedAllocationMapTy::unlockHostBuffer(void *HstPtr) {
+  assert(HstPtr && "Invalid pointer");
+
+  std::lock_guard<std::shared_mutex> Lock(Mutex);
+
+  auto It = findIntersecting(HstPtr);
+  if (It == Allocs.end())
+    return Plugin::error("Cannot find locked buffer");
+
+  const EntryTy &Entry = *It;
+
+  // Decrease the number of references. No need to do anything if there are
+  // others using the allocation.
+  if (--Entry.References > 0)
+    return Plugin::success();
+
+  // This was the last user of the allocation. Unlock the original locked memory
+  // buffer, which is the host pointer stored in the entry.
+  if (auto Err = Device.dataUnlockImpl(Entry.HstPtr))
+    return Err;
+
+  // Remove the entry from the map.
+  size_t Erased = Allocs.erase(Entry);
   if (!Erased)
-    return Plugin::error("Cannot find a registered host pinned buffer");
+    return Plugin::error("Cannot find locked buffer");
 
   return Plugin::success();
 }
@@ -648,7 +736,7 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
 
   // Register allocated buffer as pinned memory if the type is host memory.
   if (Kind == TARGET_ALLOC_HOST)
-    if (auto Err = registerHostPinnedMemoryBuffer(Alloc, Size))
+    if (auto Err = PinnedAllocs.registerHostBuffer(Alloc, Alloc, Size))
       return Err;
 
   return Alloc;
@@ -670,7 +758,7 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
 
   // Unregister deallocated pinned memory buffer if the type is host memory.
   if (Kind == TARGET_ALLOC_HOST)
-    if (auto Err = unregisterHostPinnedMemoryBuffer(TgtPtr))
+    if (auto Err = PinnedAllocs.unregisterHostBuffer(TgtPtr))
       return Err;
 
   return Plugin::success();
@@ -991,6 +1079,36 @@ int32_t __tgt_rtl_data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind) {
       Plugin::get().getDevice(DeviceId).dataDelete(TgtPtr, (TargetAllocTy)Kind);
   if (Err) {
     REPORT("Failure to deallocate device pointer %p: %s\n", TgtPtr,
+           toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t __tgt_rtl_data_lock(int32_t DeviceId, void *Ptr, int64_t Size,
+                            void **LockedPtr) {
+  auto LockedPtrOrErr = Plugin::get().getDevice(DeviceId).dataLock(Ptr, Size);
+  if (!LockedPtrOrErr) {
+    auto Err = LockedPtrOrErr.takeError();
+    REPORT("Failure to lock memory %p: %s\n", Ptr,
+           toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
+
+  if (!(*LockedPtrOrErr)) {
+    REPORT("Failure to lock memory %p: obtained a null locked pointer\n", Ptr);
+    return OFFLOAD_FAIL;
+  }
+  *LockedPtr = *LockedPtrOrErr;
+
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t __tgt_rtl_data_unlock(int32_t DeviceId, void *Ptr) {
+  auto Err = Plugin::get().getDevice(DeviceId).dataUnlock(Ptr);
+  if (Err) {
+    REPORT("Failure to unlock memory %p: %s\n", Ptr,
            toString(std::move(Err)).data());
     return OFFLOAD_FAIL;
   }
