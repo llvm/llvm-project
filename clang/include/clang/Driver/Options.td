@@ -2699,6 +2699,11 @@ def fopenmp_offload_mandatory : Flag<["-"], "fopenmp-offload-mandatory">, Group<
   Flags<[CC1Option, NoArgumentUnused]>,
   HelpText<"Do not create a host fallback if offloading to the device fails.">,
   MarshallingInfoFlag<LangOpts<"OpenMPOffloadMandatory">>;
+def fopenmp_target_jit : Flag<["-"], "fopenmp-target-jit">, Group<f_Group>,
+  Flags<[CoreOption, NoArgumentUnused]>,
+  HelpText<"Emit code that can be JIT compiled for OpenMP offloading. Implies -foffload-lto=full">;
+def fno_openmp_target_jit : Flag<["-"], "fno-openmp-target-jit">, Group<f_Group>,
+  Flags<[CoreOption, NoArgumentUnused, HelpHidden]>;
 
 // This option deprecated. The old runtime was deleted.
 def fopenmp_target_new_runtime : Flag<["-"], "fopenmp-target-new-runtime">,
