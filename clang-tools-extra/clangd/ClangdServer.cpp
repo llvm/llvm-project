@@ -39,7 +39,6 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -50,6 +49,7 @@
 #include <future>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <type_traits>
 
@@ -392,7 +392,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
     if (auto Reason = isCancelled())
       return CB(llvm::make_error<CancelledError>(Reason));
 
-    llvm::Optional<SpeculativeFuzzyFind> SpecFuzzyFind;
+    std::optional<SpeculativeFuzzyFind> SpecFuzzyFind;
     if (!IP->Preamble) {
       // No speculation in Fallback mode, as it's supposed to be much faster
       // without compiling.
@@ -470,7 +470,7 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
                                  std::move(Action));
 }
 
-void ClangdServer::formatFile(PathRef File, llvm::Optional<Range> Rng,
+void ClangdServer::formatFile(PathRef File, std::optional<Range> Rng,
                               Callback<tooling::Replacements> CB) {
   auto Code = getDraft(File);
   if (!Code)
@@ -537,7 +537,7 @@ void ClangdServer::formatOnType(PathRef File, Position Pos,
 }
 
 void ClangdServer::prepareRename(PathRef File, Position Pos,
-                                 llvm::Optional<std::string> NewName,
+                                 std::optional<std::string> NewName,
                                  const RenameOptions &RenameOpts,
                                  Callback<RenameResult> CB) {
   auto Action = [Pos, File = File.str(), CB = std::move(CB),
@@ -671,7 +671,7 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
     auto Selections = tweakSelection(Sel, *InpAST, FS.get());
     if (!Selections)
       return CB(Selections.takeError());
-    llvm::Optional<llvm::Expected<Tweak::Effect>> Effect;
+    std::optional<llvm::Expected<Tweak::Effect>> Effect;
     // Try each selection, take the first one that prepare()s.
     // If they all fail, Effect will hold get the last error.
     for (const auto &Selection : *Selections) {
@@ -713,7 +713,7 @@ void ClangdServer::locateSymbolAt(PathRef File, Position Pos,
 }
 
 void ClangdServer::switchSourceHeader(
-    PathRef Path, Callback<llvm::Optional<clangd::Path>> CB) {
+    PathRef Path, Callback<std::optional<clangd::Path>> CB) {
   // We want to return the result as fast as possible, strategy is:
   //  1) use the file-only heuristic, it requires some IO but it is much
   //     faster than building AST, but it only works when .h/.cc files are in
@@ -1028,7 +1028,7 @@ llvm::StringMap<TUScheduler::FileStats> ClangdServer::fileStats() const {
 }
 
 [[nodiscard]] bool
-ClangdServer::blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds) {
+ClangdServer::blockUntilIdleForTest(std::optional<double> TimeoutSeconds) {
   // Order is important here: we don't want to block on A and then B,
   // if B might schedule work on A.
 
@@ -1055,8 +1055,8 @@ ClangdServer::blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds) {
   // Then on the last iteration, verify they're idle without waiting.
   //
   // There's a small chance they're juggling work and we didn't catch them :-(
-  for (llvm::Optional<double> Timeout :
-       {TimeoutSeconds, TimeoutSeconds, llvm::Optional<double>(0)}) {
+  for (std::optional<double> Timeout :
+       {TimeoutSeconds, TimeoutSeconds, std::optional<double>(0)}) {
     if (!CDB.blockUntilIdle(timeoutSeconds(Timeout)))
       return false;
     if (BackgroundIdx && !BackgroundIdx->blockUntilIdleForTest(Timeout))

@@ -6,6 +6,7 @@
 #include "llvm/Testing/Support/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -167,7 +168,7 @@ public:
     std::string Message;
     llvm::SourceMgr::DiagKind Kind;
     size_t Pos;
-    Optional<llvm::Annotations::Range> Range;
+    std::optional<llvm::Annotations::Range> Range;
 
     friend void PrintTo(const Diag &D, std::ostream *OS) {
       *OS << (D.Kind == llvm::SourceMgr::DK_Error ? "error: " : "warning: ")

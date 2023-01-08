@@ -14,6 +14,7 @@
 #include "IncludeSorter.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/Transformer/Transformer.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -49,7 +50,7 @@ public:
   ///
   /// See \c setRule for constraints on the rule.
   TransformerClangTidyCheck(
-      std::function<Optional<transformer::RewriteRuleWith<std::string>>(
+      std::function<std::optional<transformer::RewriteRuleWith<std::string>>(
           const LangOptions &, const OptionsView &)>
           MakeRule,
       StringRef Name, ClangTidyContext *Context);

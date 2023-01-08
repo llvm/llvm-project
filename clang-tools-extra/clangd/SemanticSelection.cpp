@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 #include <queue>
 #include <vector>
 
@@ -40,8 +41,8 @@ void addIfDistinct(const Range &R, std::vector<Range> &Result) {
   }
 }
 
-llvm::Optional<FoldingRange> toFoldingRange(SourceRange SR,
-                                            const SourceManager &SM) {
+std::optional<FoldingRange> toFoldingRange(SourceRange SR,
+                                           const SourceManager &SM) {
   const auto Begin = SM.getDecomposedLoc(SR.getBegin()),
              End = SM.getDecomposedLoc(SR.getEnd());
   // Do not produce folding ranges if either range ends is not within the main
@@ -57,7 +58,7 @@ llvm::Optional<FoldingRange> toFoldingRange(SourceRange SR,
   return Range;
 }
 
-llvm::Optional<FoldingRange>
+std::optional<FoldingRange>
 extractFoldingRange(const syntax::Node *Node,
                     const syntax::TokenBufferTokenManager &TM) {
   if (const auto *Stmt = dyn_cast<syntax::CompoundStatement>(Node)) {

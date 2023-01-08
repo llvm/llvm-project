@@ -33,7 +33,6 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -41,6 +40,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -49,8 +49,8 @@ namespace clang {
 namespace clangd {
 namespace {
 
-llvm::Optional<llvm::StringRef> getArgStr(const clang::Diagnostic &Info,
-                                          unsigned Index) {
+std::optional<llvm::StringRef> getArgStr(const clang::Diagnostic &Info,
+                                         unsigned Index) {
   switch (Info.getArgKind(Index)) {
   case DiagnosticsEngine::ak_c_string:
     return llvm::StringRef(Info.getArgCStr(Index));
@@ -61,7 +61,7 @@ llvm::Optional<llvm::StringRef> getArgStr(const clang::Diagnostic &Info,
   }
 }
 
-std::vector<Fix> only(llvm::Optional<Fix> F) {
+std::vector<Fix> only(std::optional<Fix> F) {
   if (F)
     return {std::move(*F)};
   return {};
@@ -247,7 +247,7 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
   return {};
 }
 
-llvm::Optional<Fix> IncludeFixer::insertHeader(llvm::StringRef Spelled,
+std::optional<Fix> IncludeFixer::insertHeader(llvm::StringRef Spelled,
                                                llvm::StringRef Symbol,
                                                tooling::IncludeDirective Directive) const {
   Fix F;
@@ -281,7 +281,7 @@ std::vector<Fix> IncludeFixer::fixIncompleteType(const Type &T) const {
   auto ID = getSymbolID(TD);
   if (!ID)
     return {};
-  llvm::Optional<const SymbolSlab *> Symbols = lookupCached(ID);
+  std::optional<const SymbolSlab *> Symbols = lookupCached(ID);
   if (!Symbols)
     return {};
   const SymbolSlab &Syms = **Symbols;
@@ -346,7 +346,7 @@ std::vector<Fix> IncludeFixer::fixesForSymbols(const SymbolSlab &Syms) const {
 // "::X::Y" that is qualified by unresolved name "clangd":
 //     clang::clangd::X::Y
 //            ~
-llvm::Optional<std::string> qualifiedByUnresolved(const SourceManager &SM,
+std::optional<std::string> qualifiedByUnresolved(const SourceManager &SM,
                                                   SourceLocation Loc,
                                                   const LangOptions &LangOpts) {
   std::string Result;
@@ -372,15 +372,15 @@ struct CheapUnresolvedName {
   // This is the part of what was typed that was resolved, and it's in its
   // resolved form not its typed form (think `namespace clang { clangd::x }` -->
   // `clang::clangd::`).
-  llvm::Optional<std::string> ResolvedScope;
+  std::optional<std::string> ResolvedScope;
 
   // Unresolved part of the scope. When the unresolved name is a specifier, we
   // use the name that comes after it as the alternative name to resolve and use
   // the specifier as the extra scope in the accessible scopes.
-  llvm::Optional<std::string> UnresolvedScope;
+  std::optional<std::string> UnresolvedScope;
 };
 
-llvm::Optional<std::string> getSpelledSpecifier(const CXXScopeSpec &SS,
+std::optional<std::string> getSpelledSpecifier(const CXXScopeSpec &SS,
     const SourceManager &SM) {
   // Support specifiers written within a single macro argument.
   if (!SM.isWrittenInSameFile(SS.getBeginLoc(), SS.getEndLoc()))
@@ -394,7 +394,7 @@ llvm::Optional<std::string> getSpelledSpecifier(const CXXScopeSpec &SS,
 
 // Extracts unresolved name and scope information around \p Unresolved.
 // FIXME: try to merge this with the scope-wrangling code in CodeComplete.
-llvm::Optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
+std::optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
     const SourceManager &SM, const DeclarationNameInfo &Unresolved,
     CXXScopeSpec *SS, const LangOptions &LangOpts, bool UnresolvedIsSpecifier) {
   CheapUnresolvedName Result;
@@ -405,7 +405,7 @@ llvm::Optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
         Result.ResolvedScope = "";
       } else if (const auto *NS = Nested->getAsNamespace()) {
         std::string SpecifiedNS = printNamespaceScope(*NS);
-        llvm::Optional<std::string> Spelling = getSpelledSpecifier(*SS, SM);
+        std::optional<std::string> Spelling = getSpelledSpecifier(*SS, SM);
 
         // Check the specifier spelled in the source.
         // If the resolved scope doesn't end with the spelled scope, the
@@ -490,7 +490,7 @@ collectAccessibleScopes(Sema &Sem, const DeclarationNameInfo &Typo, Scope *S,
 
 class IncludeFixer::UnresolvedNameRecorder : public ExternalSemaSource {
 public:
-  UnresolvedNameRecorder(llvm::Optional<UnresolvedName> &LastUnresolvedName)
+  UnresolvedNameRecorder(std::optional<UnresolvedName> &LastUnresolvedName)
       : LastUnresolvedName(LastUnresolvedName) {}
 
   void InitializeSema(Sema &S) override { this->SemaPtr = &S; }
@@ -543,7 +543,7 @@ public:
 private:
   Sema *SemaPtr = nullptr;
 
-  llvm::Optional<UnresolvedName> &LastUnresolvedName;
+  std::optional<UnresolvedName> &LastUnresolvedName;
 };
 
 llvm::IntrusiveRefCntPtr<ExternalSemaSource>
@@ -564,13 +564,13 @@ std::vector<Fix> IncludeFixer::fixUnresolvedName() const {
   Req.RestrictForCodeCompletion = true;
   Req.Limit = 100;
 
-  if (llvm::Optional<const SymbolSlab *> Syms = fuzzyFindCached(Req))
+  if (std::optional<const SymbolSlab *> Syms = fuzzyFindCached(Req))
     return fixesForSymbols(**Syms);
 
   return {};
 }
 
-llvm::Optional<const SymbolSlab *>
+std::optional<const SymbolSlab *>
 IncludeFixer::fuzzyFindCached(const FuzzyFindRequest &Req) const {
   auto ReqStr = llvm::formatv("{0}", toJSON(Req)).str();
   auto I = FuzzyFindCache.find(ReqStr);
@@ -593,7 +593,7 @@ IncludeFixer::fuzzyFindCached(const FuzzyFindRequest &Req) const {
   return &E.first->second;
 }
 
-llvm::Optional<const SymbolSlab *>
+std::optional<const SymbolSlab *>
 IncludeFixer::lookupCached(const SymbolID &ID) const {
   LookupRequest Req;
   Req.IDs.insert(ID);
