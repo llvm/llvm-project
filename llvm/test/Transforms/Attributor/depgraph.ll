@@ -57,6 +57,8 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %2 = load i32, ptr %0, align 4' at position {flt: [@-1]} with state set-state(< {  %2 = load i32, ptr %0, align 4[3], } >)
 ; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAUnderlyingObjects] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state UnderlyingObjects inter #1 objs, intra #1 objs
+; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state set-state(< {ptr %0[3], } >)
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAPotentialValues] for CtxI <<null inst>> at position {flt: [@-1]} with state set-state(< {i32 0[3], } >)
@@ -263,6 +265,8 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-NEXT: [AANoAlias] for CtxI '  %5 = getelementptr inbounds i32, ptr %0, i64 4' at position {flt: [@-1]} with state may-alias
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANoFree] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state nofree
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAUnderlyingObjects] for CtxI '  %5 = getelementptr inbounds i32, ptr %0, i64 4' at position {flt: [@-1]} with state UnderlyingObjects inter #1 objs, intra #1 objs
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AADereferenceable] for CtxI '  %5 = getelementptr inbounds i32, ptr %0, i64 4' at position {flt: [@-1]} with state unknown-dereferenceable
 
