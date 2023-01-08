@@ -48,8 +48,8 @@ public:
 
   // FIXME: This algorithm has a bug. It ignores escaping references between a
   // store and a load.
-  llvm::Optional<WriteOp> findStoreToForward(ReadOp loadOp,
-                                             std::vector<WriteOp> &&storeOps) {
+  std::optional<WriteOp> findStoreToForward(ReadOp loadOp,
+                                            std::vector<WriteOp> &&storeOps) {
     llvm::SmallVector<WriteOp> candidateSet;
 
     for (auto storeOp : storeOps)
@@ -59,7 +59,7 @@ public:
     if (candidateSet.empty())
       return {};
 
-    llvm::Optional<WriteOp> nearestStore;
+    std::optional<WriteOp> nearestStore;
     for (auto candidate : candidateSet) {
       auto nearerThan = [&](WriteOp otherStore) {
         if (candidate == otherStore)
@@ -86,8 +86,8 @@ public:
     return nearestStore;
   }
 
-  llvm::Optional<ReadOp> findReadForWrite(WriteOp storeOp,
-                                          std::vector<ReadOp> &&loadOps) {
+  std::optional<ReadOp> findReadForWrite(WriteOp storeOp,
+                                         std::vector<ReadOp> &&loadOps) {
     for (auto &loadOp : loadOps) {
       if (domInfo->dominates(storeOp, loadOp))
         return loadOp;
