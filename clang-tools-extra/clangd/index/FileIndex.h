@@ -31,6 +31,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace clang {

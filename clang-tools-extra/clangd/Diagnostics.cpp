@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <optional>
 #include <vector>
 
 namespace clang {

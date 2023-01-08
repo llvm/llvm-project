@@ -11,6 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 #include "llvm/ADT/StringSet.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {

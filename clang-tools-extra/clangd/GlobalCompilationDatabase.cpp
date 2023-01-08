@@ -30,6 +30,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>

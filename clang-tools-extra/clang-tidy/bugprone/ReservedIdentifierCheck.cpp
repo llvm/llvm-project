@@ -14,6 +14,7 @@
 #include "clang/Lex/Token.h"
 #include <algorithm>
 #include <cctype>
+#include <optional>
 
 // FixItHint
 

@@ -14,6 +14,7 @@
 #include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Tooling/NodeIntrospection.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::dynamic;

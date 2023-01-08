@@ -11,6 +11,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 

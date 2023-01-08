@@ -13,6 +13,7 @@
 #include "gtest/gtest.h"
 #include <atomic>
 #include <chrono>
+#include <optional>
 
 namespace clang {
 namespace clangd {

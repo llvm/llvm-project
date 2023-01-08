@@ -23,6 +23,7 @@
 #include <chrono>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace clang {

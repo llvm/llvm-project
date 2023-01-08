@@ -14,6 +14,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include <cctype>
+#include <optional>
 
 using namespace clang::ast_matchers;
 

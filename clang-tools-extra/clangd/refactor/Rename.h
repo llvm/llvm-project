@@ -13,6 +13,7 @@
 #include "SourceCode.h"
 #include "clang/Basic/LangOptions.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {

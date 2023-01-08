@@ -12,6 +12,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/Sema/DeclSpec.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {

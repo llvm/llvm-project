@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <limits>
+#include <optional>
 #include <tuple>
 
 #define DEBUG_TYPE "FindSymbols"

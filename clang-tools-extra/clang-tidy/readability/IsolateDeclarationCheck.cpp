@@ -9,6 +9,7 @@
 #include "IsolateDeclarationCheck.h"
 #include "../utils/LexerUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 using namespace clang::tidy::utils::lexer;

@@ -9,6 +9,7 @@
 #include "SyncAPI.h"
 #include "Protocol.h"
 #include "index/Index.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {

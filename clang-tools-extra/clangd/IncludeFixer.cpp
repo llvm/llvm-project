@@ -41,6 +41,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>

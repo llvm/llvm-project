@@ -27,6 +27,7 @@
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
+#include <optional>
 
 namespace {
 struct YIncludeHeaderWithReferences;

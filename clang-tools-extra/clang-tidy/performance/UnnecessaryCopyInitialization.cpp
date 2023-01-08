@@ -14,6 +14,7 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Diagnostic.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {

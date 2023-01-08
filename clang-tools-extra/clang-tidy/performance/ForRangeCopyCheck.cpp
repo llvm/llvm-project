@@ -14,6 +14,7 @@
 #include "../utils/TypeTraits.h"
 #include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
 #include "clang/Basic/Diagnostic.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 

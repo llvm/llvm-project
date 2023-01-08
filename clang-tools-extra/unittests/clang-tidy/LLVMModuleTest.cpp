@@ -5,6 +5,7 @@
 #include "llvm/HeaderGuardCheck.h"
 #include "llvm/IncludeOrderCheck.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace clang::tidy::llvm_check;
 

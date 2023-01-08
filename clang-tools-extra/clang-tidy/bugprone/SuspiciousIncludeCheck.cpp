@@ -9,6 +9,7 @@
 #include "SuspiciousIncludeCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Lex/Preprocessor.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {

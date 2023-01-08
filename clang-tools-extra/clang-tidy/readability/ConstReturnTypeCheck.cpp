@@ -13,6 +13,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/Optional.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 

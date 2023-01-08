@@ -45,6 +45,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 

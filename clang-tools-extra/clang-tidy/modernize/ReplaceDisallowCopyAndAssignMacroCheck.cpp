@@ -12,6 +12,7 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {

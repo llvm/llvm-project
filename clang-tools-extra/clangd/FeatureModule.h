@@ -16,6 +16,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <vector>
 

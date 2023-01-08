@@ -11,6 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 #include "../utils/IncludeInserter.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {

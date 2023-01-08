@@ -13,6 +13,7 @@
 #include "support/ThreadCrashReporter.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 #include <system_error>
 
 namespace clang {

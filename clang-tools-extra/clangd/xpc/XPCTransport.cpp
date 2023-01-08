@@ -11,6 +11,7 @@
 #include "support/Logger.h"
 #include "llvm/Support/Errno.h"
 
+#include <optional>
 #include <xpc/xpc.h>
 
 using namespace llvm;

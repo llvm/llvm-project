@@ -40,6 +40,7 @@
 #include <algorithm>
 #include <chrono>
 #include <iostream>
+#include <optional>
 #include <random>
 #include <string>
 #include <thread>

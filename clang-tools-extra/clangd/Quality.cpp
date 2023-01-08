@@ -26,6 +26,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cmath>
+#include <optional>
 
 namespace clang {
 namespace clangd {

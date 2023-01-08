@@ -10,6 +10,7 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {

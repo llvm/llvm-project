@@ -33,6 +33,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
 #include <algorithm>
+#include <optional>
 
 namespace clang {
 namespace clangd {
