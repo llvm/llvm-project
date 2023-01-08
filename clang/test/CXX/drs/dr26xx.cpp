@@ -103,3 +103,19 @@ void f() {
     brachiosaur |= neck;                // OK
 }
 }
+
+namespace dr2631 { // dr2631: 16
+  constexpr int g();
+  consteval int f() {
+    return g();
+  }
+  int k(int x = f()) {
+    return x;
+  }
+  constexpr int g() {
+    return 42;
+  }
+  int test() {
+    return k();
+  }
+}
