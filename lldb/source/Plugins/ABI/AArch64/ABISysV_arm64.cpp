@@ -8,6 +8,7 @@
 
 #include "ABISysV_arm64.h"
 
+#include <optional>
 #include <vector>
 
 #include "llvm/ADT/STLExtras.h"

@@ -24,6 +24,7 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/StringList.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

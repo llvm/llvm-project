@@ -11,6 +11,7 @@
 
 #if LLDB_ENABLE_PYTHON
 
+#include <optional>
 #include <sstream>
 #include <tuple>
 #include <type_traits>

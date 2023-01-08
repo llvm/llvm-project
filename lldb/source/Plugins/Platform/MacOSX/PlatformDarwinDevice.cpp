@@ -14,6 +14,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

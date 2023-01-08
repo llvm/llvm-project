@@ -13,6 +13,7 @@
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
+#include <optional>
 
 namespace lldb_private {
 

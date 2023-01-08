@@ -29,6 +29,7 @@
 
 #include <cstring>
 #include <memory>
+#include <optional>
 
 #include <cinttypes>
 #include <cstdio>

@@ -69,6 +69,7 @@
 
 #include <memory>
 #include <mutex>
+#include <optional>
 
 #ifdef LLDB_ENABLE_SWIFT
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"

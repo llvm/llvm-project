@@ -24,6 +24,7 @@
 #include <sys/ptrace.h>
 #include <sys/types.h>
 // clang-format on
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

@@ -44,6 +44,7 @@
 #define DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
 #include "Plugins/Process/Utility/RegisterInfos_ppc64le.h"
 #undef DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

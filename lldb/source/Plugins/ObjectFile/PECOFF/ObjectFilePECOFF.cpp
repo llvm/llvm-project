@@ -38,6 +38,7 @@
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <optional>
 
 #ifdef LLDB_ENABLE_SWIFT
 #include "swift/ABI/ObjectFile.h"

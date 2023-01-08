@@ -13,6 +13,7 @@
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
+#include <optional>
 
 namespace lldb_private {
 

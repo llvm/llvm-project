@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MinidumpTypes.h"
+#include <optional>
 
 // C includes
 // C++ includes

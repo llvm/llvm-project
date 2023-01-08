@@ -13,6 +13,7 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/StackFrame.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

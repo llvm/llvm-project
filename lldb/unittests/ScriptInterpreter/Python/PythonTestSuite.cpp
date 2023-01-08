@@ -17,6 +17,7 @@
 #include "lldb/Host/HostInfo.h"
 
 #include "PythonTestSuite.h"
+#include <optional>
 
 using namespace lldb_private;
 class TestScriptInterpreterPython : public ScriptInterpreterPythonImpl {

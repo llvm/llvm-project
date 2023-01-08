@@ -10,6 +10,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <optional>
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #include <sys/utsname.h>

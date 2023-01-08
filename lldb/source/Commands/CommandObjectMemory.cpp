@@ -39,6 +39,7 @@
 #include "llvm/Support/MathExtras.h"
 #include <cinttypes>
 #include <memory>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

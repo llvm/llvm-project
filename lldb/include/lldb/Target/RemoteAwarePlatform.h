@@ -10,6 +10,7 @@
 #define LLDB_TARGET_REMOTEAWAREPLATFORM_H
 
 #include "lldb/Target/Platform.h"
+#include <optional>
 
 namespace lldb_private {
 

@@ -30,6 +30,7 @@
 #endif //LLDB_ENABLE_SWIFT
 
 #include <memory>
+#include <optional>
 
 using namespace lldb_private;
 

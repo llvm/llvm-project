@@ -45,6 +45,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <vector>
 
 //#define ENABLE_DEBUG_PRINTF // COMMENT OUT THIS LINE PRIOR TO CHECKIN

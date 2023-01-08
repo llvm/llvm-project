@@ -18,6 +18,7 @@
 #include "SWIGPythonBridge.h"
 #include "ScriptInterpreterPythonImpl.h"
 #include "ScriptedPythonInterface.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

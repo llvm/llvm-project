@@ -24,6 +24,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 // C++ Includes
+#include <optional>
 #include <string>
 
 // C inclues

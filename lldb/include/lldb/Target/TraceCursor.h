@@ -12,6 +12,7 @@
 #include "lldb/lldb-private.h"
 
 #include "lldb/Target/ExecutionContext.h"
+#include <optional>
 
 namespace lldb_private {
 

@@ -20,6 +20,7 @@
 #include "PlatformAndroid.h"
 #include "PlatformAndroidRemoteGDBServer.h"
 #include "lldb/Target/Target.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

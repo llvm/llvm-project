@@ -43,6 +43,7 @@
 #include <cmath>
 
 #include <bitset>
+#include <optional>
 #include <sstream>
 
 using namespace lldb_private;

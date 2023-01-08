@@ -11,6 +11,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include <optional>
 
 using namespace lldb_private;
 

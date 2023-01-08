@@ -14,6 +14,7 @@
 #include <csignal>
 #include <cstring>
 #include <mutex>
+#include <optional>
 #include <sstream>
 #include <thread>
 

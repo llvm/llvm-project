@@ -15,6 +15,7 @@
 #include "ClangModulesDeclVendor.h"
 
 #include "lldb/Expression/ExpressionVariable.h"
+#include <optional>
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"

@@ -12,6 +12,7 @@
 #include <string>
 
 #include <cstdint>
+#include <optional>
 #include <tuple>
 
 using namespace lldb_private;

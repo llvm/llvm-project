@@ -22,6 +22,7 @@
 
 #include <iterator>
 #include <mutex>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

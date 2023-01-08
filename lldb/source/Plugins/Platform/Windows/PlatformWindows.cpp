@@ -9,6 +9,7 @@
 #include "PlatformWindows.h"
 
 #include <cstdio>
+#include <optional>
 #if defined(_WIN32)
 #include "lldb/Host/windows/windows.h"
 #include <winsock2.h>

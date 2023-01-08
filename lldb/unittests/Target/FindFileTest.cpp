@@ -15,6 +15,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <utility>
 
 using namespace llvm;

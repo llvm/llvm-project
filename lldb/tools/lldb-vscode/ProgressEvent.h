@@ -8,6 +8,7 @@
 
 #include <atomic>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <thread>
 

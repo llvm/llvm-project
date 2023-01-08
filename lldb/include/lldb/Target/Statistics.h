@@ -16,6 +16,7 @@
 #include "llvm/Support/JSON.h"
 #include <atomic>
 #include <chrono>
+#include <optional>
 #include <ratio>
 #include <string>
 #include <vector>

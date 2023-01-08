@@ -18,6 +18,7 @@
 #include "gmock/gmock.h"
 #include <future>
 #include <limits>
+#include <optional>
 
 using namespace lldb_private::process_gdb_remote;
 using namespace lldb_private;

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cstdio>
+#include <optional>
 
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointID.h"

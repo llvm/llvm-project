@@ -10,6 +10,7 @@
 #define LLDB_EXPRESSION_EXPRESSIONVARIABLE_H
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "llvm/ADT/DenseMap.h"

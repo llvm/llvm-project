@@ -11,6 +11,7 @@
 #include <cstring>
 #include <dirent.h>
 #include <fcntl.h>
+#include <optional>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/utsname.h>

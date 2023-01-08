@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 #include <iostream>
+#include <optional>
 
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"

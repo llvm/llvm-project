@@ -14,6 +14,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
 #include <intel-pt.h>
+#include <optional>
 #include <vector>
 
 namespace lldb_private {

@@ -14,6 +14,7 @@
 #include "llvm/Support/Chrono.h"
 #include <bitset>
 #include <map>
+#include <optional>
 #include <vector>
 
 #include "UniqueDWARFASTType.h"

@@ -13,6 +13,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb;

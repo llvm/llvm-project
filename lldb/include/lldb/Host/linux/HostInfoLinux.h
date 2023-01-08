@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
 
+#include <optional>
 #include <string>
 
 namespace lldb_private {

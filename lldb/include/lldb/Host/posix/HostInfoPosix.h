@@ -11,6 +11,7 @@
 
 #include "lldb/Host/HostInfoBase.h"
 #include "lldb/Utility/FileSpec.h"
+#include <optional>
 
 namespace lldb_private {
 

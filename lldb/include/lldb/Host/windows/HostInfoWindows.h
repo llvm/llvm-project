@@ -12,6 +12,7 @@
 #include "lldb/Host/HostInfoBase.h"
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/Support/VersionTuple.h"
+#include <optional>
 
 namespace lldb_private {
 class UserIDResolver;

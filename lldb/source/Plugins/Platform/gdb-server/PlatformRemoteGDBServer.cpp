@@ -33,6 +33,7 @@
 
 #include "Plugins/Process/Utility/GDBRemoteSignals.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemote.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

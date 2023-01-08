@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <optional>
 
 #include <cerrno>
 #if defined(_WIN32)

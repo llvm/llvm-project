@@ -22,6 +22,7 @@
 #include "DWARFTypeUnit.h"
 #include "LogChannelDWARF.h"
 #include "SymbolFileDWARFDwo.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

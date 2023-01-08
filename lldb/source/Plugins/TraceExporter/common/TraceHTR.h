@@ -12,6 +12,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/Trace.h"
 
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 

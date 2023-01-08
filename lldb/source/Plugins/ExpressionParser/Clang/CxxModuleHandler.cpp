@@ -13,6 +13,7 @@
 #include "lldb/Utility/Log.h"
 #include "clang/Sema/Lookup.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace clang;

@@ -13,6 +13,7 @@
 #include "lldb/Utility/StringExtractor.h"
 #include "llvm/ADT/StringRef.h"
 
+#include <optional>
 #include <string>
 
 #include <cstddef>

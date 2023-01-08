@@ -15,6 +15,7 @@
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_x86.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
+#include <optional>
 #include <sys/uio.h>
 
 namespace lldb_private {

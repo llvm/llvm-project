@@ -10,6 +10,7 @@
 #ifndef LLDB_TARGET_MEMORYREGIONINFO_H
 #define LLDB_TARGET_MEMORYREGIONINFO_H
 
+#include <optional>
 #include <vector>
 
 #include "lldb/Utility/ConstString.h"

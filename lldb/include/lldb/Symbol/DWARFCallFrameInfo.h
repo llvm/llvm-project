@@ -11,6 +11,7 @@
 
 #include <map>
 #include <mutex>
+#include <optional>
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/dwarf.h"

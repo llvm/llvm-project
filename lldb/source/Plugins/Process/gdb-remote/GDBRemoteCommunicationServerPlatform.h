@@ -11,6 +11,7 @@
 
 #include <map>
 #include <mutex>
+#include <optional>
 #include <set>
 
 #include "GDBRemoteCommunicationServerCommon.h"

@@ -14,6 +14,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/StreamString.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb;

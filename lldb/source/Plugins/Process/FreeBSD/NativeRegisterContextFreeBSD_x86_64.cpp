@@ -25,6 +25,7 @@
 #include "NativeProcessFreeBSD.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb_private::process_freebsd;

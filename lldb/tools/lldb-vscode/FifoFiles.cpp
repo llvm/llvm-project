@@ -17,6 +17,7 @@
 #include <chrono>
 #include <fstream>
 #include <future>
+#include <optional>
 #include <thread>
 
 #include "llvm/Support/FileSystem.h"

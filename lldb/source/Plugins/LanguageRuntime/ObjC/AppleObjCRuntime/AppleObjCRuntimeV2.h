@@ -12,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 
 #include "AppleObjCRuntime.h"
 #include "lldb/lldb-private.h"

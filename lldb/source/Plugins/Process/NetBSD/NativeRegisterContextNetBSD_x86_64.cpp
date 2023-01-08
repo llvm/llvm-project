@@ -31,6 +31,7 @@
 #include <err.h>
 #include <cstdint>
 #include <cstdlib>
+#include <optional>
 // clang-format on
 
 using namespace lldb_private;

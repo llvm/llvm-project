@@ -13,6 +13,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/FormatProviders.h"
 #include <cassert>
+#include <optional>
 #include <vector>
 
 /// Identifies a DWARF debug info entry within a given Module. It contains three

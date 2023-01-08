@@ -12,6 +12,7 @@
 #include "clang/AST/ASTImporter.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/StringSet.h"
+#include <optional>
 
 namespace lldb_private {
 

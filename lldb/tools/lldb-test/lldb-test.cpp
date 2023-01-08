@@ -46,6 +46,7 @@
 #include "llvm/Support/WithColor.h"
 
 #include <cstdio>
+#include <optional>
 #include <thread>
 
 using namespace lldb;

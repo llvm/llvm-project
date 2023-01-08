@@ -11,6 +11,7 @@
 
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ArchSpec.h"
+#include <optional>
 
 namespace lldb_private {
 namespace wasm {

@@ -14,6 +14,7 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <optional>
 
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-defines.h"

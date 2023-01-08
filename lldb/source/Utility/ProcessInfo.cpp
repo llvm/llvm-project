@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallString.h"
 
 #include <climits>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

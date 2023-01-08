@@ -9,6 +9,7 @@
 #include "TraceIntelPTMultiCpuDecoder.h"
 #include "TraceIntelPT.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

@@ -40,6 +40,7 @@
 #include "lldb/Utility/Log.h"
 
 #include "lldb/../../source/Plugins/ObjectFile/JIT/ObjectFileJIT.h"
+#include <optional>
 
 using namespace lldb_private;
 

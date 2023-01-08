@@ -28,6 +28,7 @@
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/lldb-enumerations.h"
+#include <optional>
 #include <tuple>
 
 using namespace lldb;

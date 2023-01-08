@@ -15,6 +15,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/Log.h"
+#include <optional>
 
 using namespace lldb_private;
 

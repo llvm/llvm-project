@@ -20,6 +20,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 
 namespace llvm {
 namespace pdb {

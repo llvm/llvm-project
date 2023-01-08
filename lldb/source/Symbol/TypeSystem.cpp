@@ -14,6 +14,7 @@
 #include "lldb/Utility/Status.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb;

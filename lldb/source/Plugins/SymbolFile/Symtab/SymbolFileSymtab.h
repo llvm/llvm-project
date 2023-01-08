@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_SYMTAB_SYMBOLFILESYMTAB_H
 
 #include <map>
+#include <optional>
 #include <vector>
 
 #include "lldb/Symbol/SymbolFile.h"

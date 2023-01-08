@@ -12,6 +12,7 @@
 #include <atomic>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 

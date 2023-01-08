@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 
 #include <numeric>
+#include <optional>
 #include <sstream>
 
 #include "lldb/Core/ModuleSpec.h"

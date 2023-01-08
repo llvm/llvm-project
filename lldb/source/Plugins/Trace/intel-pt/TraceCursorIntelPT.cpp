@@ -10,6 +10,7 @@
 #include "DecodedThread.h"
 #include "TraceIntelPT.h"
 #include <cstdlib>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

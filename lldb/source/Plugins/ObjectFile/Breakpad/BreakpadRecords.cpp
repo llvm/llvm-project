@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb_private::breakpad;

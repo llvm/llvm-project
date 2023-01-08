@@ -75,6 +75,7 @@
 #include <list>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <set>
 #include <string>
 #include <system_error>

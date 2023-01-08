@@ -58,6 +58,7 @@
 
 #if defined(_WIN32)
 #include "llvm/Config/llvm-config.h"
+#include <optional>
 #endif
 
 using namespace lldb;

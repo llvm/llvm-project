@@ -61,6 +61,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include <tuple>
 
 #include <cassert>

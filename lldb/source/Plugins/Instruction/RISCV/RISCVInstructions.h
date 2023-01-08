@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVINSTRUCTION_H
 
 #include <cstdint>
+#include <optional>
 #include <variant>
 
 #include "llvm/ADT/APFloat.h"

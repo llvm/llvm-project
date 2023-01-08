@@ -12,6 +12,7 @@
 #include "IntelPTProcessTrace.h"
 #include "IntelPTSingleBufferTrace.h"
 #include "IntelPTThreadTraceCollection.h"
+#include <optional>
 
 namespace lldb_private {
 namespace process_linux {

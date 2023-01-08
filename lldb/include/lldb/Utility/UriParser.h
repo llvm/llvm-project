@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 
 namespace llvm {
 class raw_ostream;

@@ -20,6 +20,7 @@
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_mips64.h"
 
 #include <array>
+#include <optional>
 
 namespace lldb_private {
 namespace process_freebsd {

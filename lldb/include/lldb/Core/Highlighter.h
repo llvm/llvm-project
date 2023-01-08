@@ -9,6 +9,7 @@
 #ifndef LLDB_CORE_HIGHLIGHTER_H
 #define LLDB_CORE_HIGHLIGHTER_H
 
+#include <optional>
 #include <utility>
 #include <vector>
 

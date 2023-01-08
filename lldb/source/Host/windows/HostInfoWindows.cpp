@@ -11,6 +11,7 @@
 #include <objbase.h>
 
 #include <mutex>
+#include <optional>
 
 #include "lldb/Host/windows/HostInfoWindows.h"
 #include "lldb/Host/windows/PosixApi.h"

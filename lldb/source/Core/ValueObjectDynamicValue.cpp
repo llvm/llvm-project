@@ -27,6 +27,7 @@
 #endif // LLDB_ENABLE_SWIFT
 
 #include <cstring>
+#include <optional>
 namespace lldb_private {
 class Declaration;
 }

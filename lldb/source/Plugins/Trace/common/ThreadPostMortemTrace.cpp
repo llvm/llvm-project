@@ -9,6 +9,7 @@
 #include "ThreadPostMortemTrace.h"
 
 #include <memory>
+#include <optional>
 
 #include "Plugins/Process/Utility/RegisterContextHistory.h"
 #include "lldb/Target/Process.h"

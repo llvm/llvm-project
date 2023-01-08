@@ -10,6 +10,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Options.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

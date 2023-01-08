@@ -13,6 +13,7 @@
 #include "lldb/lldb-types.h"
 #include <atomic>
 #include <mutex>
+#include <optional>
 
 namespace lldb_private {
 

@@ -25,6 +25,7 @@
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
+#include <optional>
 #include <vector>
 
 namespace lldb_private {

@@ -29,6 +29,7 @@
 
 #include <mutex>
 #include <vector>
+#include <optional>
 
 #if defined(LLDB_CONFIGURATION_DEBUG)
 #define ASSERT_MODULE_LOCK(expr) (expr->AssertModuleLock())

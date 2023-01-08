@@ -10,6 +10,7 @@
 #define LLDB_UTILITY_FILESPEC_H
 
 #include <functional>
+#include <optional>
 #include <string>
 
 #include "lldb/Utility/ConstString.h"

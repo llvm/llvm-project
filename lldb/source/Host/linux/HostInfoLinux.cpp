@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <mutex>
+#include <optional>
 
 using namespace lldb_private;
 

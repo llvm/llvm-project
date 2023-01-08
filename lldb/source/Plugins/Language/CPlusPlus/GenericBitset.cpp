@@ -11,6 +11,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

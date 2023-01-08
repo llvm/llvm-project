@@ -12,6 +12,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "llvm/Support/JSON.h"
+#include <optional>
 #include <sstream>
 #include <string>
 

@@ -22,6 +22,7 @@
 #include "lldb/Utility/Timer.h"
 #include <cstring>
 #include <list>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

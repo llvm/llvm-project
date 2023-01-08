@@ -19,6 +19,7 @@
 #include "llvm/BinaryFormat/Minidump.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
+#include <optional>
 
 // C includes
 // C++ includes

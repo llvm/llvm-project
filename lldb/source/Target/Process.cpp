@@ -9,6 +9,7 @@
 #include <atomic>
 #include <memory>
 #include <mutex>
+#include <optional>
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ScopedPrinter.h"

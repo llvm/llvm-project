@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <memory>
 #include <mutex>
+#include <optional>
 
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointSite.h"

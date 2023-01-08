@@ -11,6 +11,7 @@
 
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Core/SourceLocationSpec.h"
+#include <optional>
 
 namespace lldb_private {
 

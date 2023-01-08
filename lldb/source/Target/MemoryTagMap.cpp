@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/MemoryTagMap.h"
+#include <optional>
 
 using namespace lldb_private;
 

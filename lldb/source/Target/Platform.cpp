@@ -10,6 +10,7 @@
 #include <csignal>
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "lldb/Breakpoint/BreakpointIDList.h"

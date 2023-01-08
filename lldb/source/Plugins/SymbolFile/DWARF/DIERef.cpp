@@ -10,6 +10,7 @@
 #include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "llvm/Support/Format.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

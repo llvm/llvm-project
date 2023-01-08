@@ -20,6 +20,7 @@
 #include "ScriptInterpreterPythonImpl.h"
 #include "ScriptedProcessPythonInterface.h"
 #include "ScriptedThreadPythonInterface.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

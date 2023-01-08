@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/APSInt.h"
 
+#include <optional>
 #include <set>
 
 namespace lldb_private {

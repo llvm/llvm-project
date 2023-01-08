@@ -23,6 +23,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MathExtras.h"
+#include <optional>
 
 using namespace llvm;
 using namespace lldb;

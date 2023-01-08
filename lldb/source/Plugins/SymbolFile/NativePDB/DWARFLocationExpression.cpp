@@ -24,6 +24,7 @@
 #include "PdbUtil.h"
 #include "CodeViewRegisterMapping.h"
 #include "PdbFPOProgramToDWARFExpression.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

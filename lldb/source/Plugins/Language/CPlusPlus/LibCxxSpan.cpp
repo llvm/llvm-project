@@ -12,6 +12,7 @@
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Utility/ConstString.h"
 #include "llvm/ADT/APSInt.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

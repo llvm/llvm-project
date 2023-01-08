@@ -11,6 +11,7 @@
 #include "lldb/lldb-enumerations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace lldb_private;
 

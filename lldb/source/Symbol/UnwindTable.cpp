@@ -9,6 +9,7 @@
 #include "lldb/Symbol/UnwindTable.h"
 
 #include <cstdio>
+#include <optional>
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"

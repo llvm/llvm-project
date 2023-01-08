@@ -19,6 +19,7 @@
 #include <cstdlib>
 #include <grp.h>
 #include <mutex>
+#include <optional>
 #include <pwd.h>
 #include <sys/types.h>
 #include <sys/utsname.h>

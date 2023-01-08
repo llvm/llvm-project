@@ -15,6 +15,7 @@
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/Language/ObjCPlusPlus/ObjCPlusPlusLanguage.h"
 #include "TestingSupport/SubsystemRAII.h"
+#include <optional>
 
 using namespace lldb_private;
 

@@ -19,6 +19,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

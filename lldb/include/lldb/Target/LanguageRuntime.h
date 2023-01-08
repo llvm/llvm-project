@@ -22,6 +22,7 @@
 #include "lldb/Target/Runtime.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
+#include <optional>
 
 namespace lldb_private {
 

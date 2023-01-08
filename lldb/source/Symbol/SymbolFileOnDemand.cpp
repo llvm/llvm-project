@@ -12,6 +12,7 @@
 #include "lldb/Symbol/SymbolFile.h"
 
 #include <memory>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

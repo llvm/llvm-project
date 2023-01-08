@@ -29,6 +29,7 @@
 #include "llvm/Support/VersionTuple.h"
 
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 

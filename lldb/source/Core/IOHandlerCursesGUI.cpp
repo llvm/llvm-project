@@ -75,6 +75,7 @@
 #include <cstdio>
 #include <cstring>
 #include <functional>
+#include <optional>
 #include <type_traits>
 
 using namespace lldb;

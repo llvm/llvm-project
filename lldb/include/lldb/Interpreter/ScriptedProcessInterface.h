@@ -15,6 +15,7 @@
 
 #include "lldb/lldb-private.h"
 
+#include <optional>
 #include <string>
 
 namespace lldb_private {

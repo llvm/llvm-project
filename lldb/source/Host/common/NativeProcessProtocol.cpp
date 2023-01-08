@@ -18,6 +18,7 @@
 #include "lldb/lldb-enumerations.h"
 
 #include "llvm/Support/Process.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;

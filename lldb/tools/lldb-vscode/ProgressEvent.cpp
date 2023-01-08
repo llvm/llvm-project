@@ -9,6 +9,7 @@
 #include "ProgressEvent.h"
 
 #include "JSONUtils.h"
+#include <optional>
 
 using namespace lldb_vscode;
 using namespace llvm;
