@@ -14,6 +14,7 @@
 #include "../utils/TypeTraits.h"
 #include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
 #include "clang/Basic/Diagnostic.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
@@ -81,7 +82,7 @@ bool ForRangeCopyCheck::handleConstValueCopy(const VarDecl &LoopVar,
   } else if (!LoopVar.getType().isConstQualified()) {
     return false;
   }
-  llvm::Optional<bool> Expensive =
+  std::optional<bool> Expensive =
       utils::type_traits::isExpensiveToCopy(LoopVar.getType(), Context);
   if (!Expensive || !*Expensive)
     return false;
@@ -91,7 +92,7 @@ bool ForRangeCopyCheck::handleConstValueCopy(const VarDecl &LoopVar,
            "copy in each iteration; consider making this a reference")
       << utils::fixit::changeVarDeclToReference(LoopVar, Context);
   if (!LoopVar.getType().isConstQualified()) {
-    if (llvm::Optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
+    if (std::optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
             LoopVar, Context, DeclSpec::TQ::TQ_const))
       Diagnostic << *Fix;
   }
@@ -101,7 +102,7 @@ bool ForRangeCopyCheck::handleConstValueCopy(const VarDecl &LoopVar,
 bool ForRangeCopyCheck::handleCopyIsOnlyConstReferenced(
     const VarDecl &LoopVar, const CXXForRangeStmt &ForRange,
     ASTContext &Context) {
-  llvm::Optional<bool> Expensive =
+  std::optional<bool> Expensive =
       utils::type_traits::isExpensiveToCopy(LoopVar.getType(), Context);
   if (LoopVar.getType().isConstQualified() || !Expensive || !*Expensive)
     return false;
@@ -122,7 +123,7 @@ bool ForRangeCopyCheck::handleCopyIsOnlyConstReferenced(
         "loop variable is copied but only used as const reference; consider "
         "making it a const reference");
 
-    if (llvm::Optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
+    if (std::optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
             LoopVar, Context, DeclSpec::TQ::TQ_const))
       Diag << *Fix << utils::fixit::changeVarDeclToReference(LoopVar, Context);
 

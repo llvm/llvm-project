@@ -18,6 +18,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/ScopeExit.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -647,7 +648,7 @@ private:
   }
 
   // Get the range of the main file that *exactly* corresponds to R.
-  llvm::Optional<Range> getHintRange(SourceRange R) {
+  std::optional<Range> getHintRange(SourceRange R) {
     const auto &SM = AST.getSourceManager();
     auto Spelled = Tokens.spelledForExpanded(Tokens.expandedTokens(R));
     // TokenBuffer will return null if e.g. R corresponds to only part of a

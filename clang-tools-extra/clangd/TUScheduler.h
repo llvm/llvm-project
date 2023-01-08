@@ -18,10 +18,10 @@
 #include "support/MemoryTree.h"
 #include "support/Path.h"
 #include "support/Threading.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <chrono>
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -352,7 +352,7 @@ public:
   // FIXME: remove this when there is proper index support via build system
   // integration.
   // FIXME: move to ClangdServer via createProcessingContext.
-  static llvm::Optional<llvm::StringRef> getFileBeingProcessedInContext();
+  static std::optional<llvm::StringRef> getFileBeingProcessedInContext();
 
   void profile(MemoryTree &MT) const;
 
@@ -370,8 +370,8 @@ private:
   std::unique_ptr<HeaderIncluderCache> HeaderIncluders;
   // None when running tasks synchronously and non-None when running tasks
   // asynchronously.
-  llvm::Optional<AsyncTaskRunner> PreambleTasks;
-  llvm::Optional<AsyncTaskRunner> WorkerThreads;
+  std::optional<AsyncTaskRunner> PreambleTasks;
+  std::optional<AsyncTaskRunner> WorkerThreads;
   // Used to create contexts for operations that are not bound to a particular
   // file (e.g. index queries).
   std::string LastActiveFile;

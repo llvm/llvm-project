@@ -36,6 +36,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
+#include <optional>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -255,7 +256,7 @@ void ClangTidyContext::setProfileStoragePrefix(StringRef Prefix) {
   ProfilePrefix = std::string(Prefix);
 }
 
-llvm::Optional<ClangTidyProfiling::StorageParams>
+std::optional<ClangTidyProfiling::StorageParams>
 ClangTidyContext::getProfileStorageParams() const {
   if (ProfilePrefix.empty())
     return std::nullopt;

@@ -51,7 +51,6 @@
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
@@ -61,6 +60,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <vector>
 
 namespace clang {
@@ -116,8 +116,8 @@ void logIfOverflow(const SymbolLocation &Loc) {
 // TUPath is used to resolve the path of URI.
 // FIXME: figure out a good home for it, and share the implementation with
 // FindSymbols.
-llvm::Optional<Location> toLSPLocation(const SymbolLocation &Loc,
-                                       llvm::StringRef TUPath) {
+std::optional<Location> toLSPLocation(const SymbolLocation &Loc,
+                                      llvm::StringRef TUPath) {
   if (!Loc)
     return std::nullopt;
   auto Uri = URI::parse(Loc.FileURI);
@@ -205,8 +205,8 @@ getDeclAtPosition(ParsedAST &AST, SourceLocation Pos, DeclRelationSet Relations,
 
 // Expects Loc to be a SpellingLocation, will bail out otherwise as it can't
 // figure out a filename.
-llvm::Optional<Location> makeLocation(const ASTContext &AST, SourceLocation Loc,
-                                      llvm::StringRef TUPath) {
+std::optional<Location> makeLocation(const ASTContext &AST, SourceLocation Loc,
+                                     llvm::StringRef TUPath) {
   const auto &SM = AST.getSourceManager();
   const FileEntry *F = SM.getFileEntryForID(SM.getFileID(Loc));
   if (!F)
@@ -227,9 +227,9 @@ llvm::Optional<Location> makeLocation(const ASTContext &AST, SourceLocation Loc,
 }
 
 // Treat #included files as symbols, to enable go-to-definition on them.
-llvm::Optional<LocatedSymbol> locateFileReferent(const Position &Pos,
-                                                 ParsedAST &AST,
-                                                 llvm::StringRef MainFilePath) {
+std::optional<LocatedSymbol> locateFileReferent(const Position &Pos,
+                                                ParsedAST &AST,
+                                                llvm::StringRef MainFilePath) {
   for (auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
     if (!Inc.Resolved.empty() && Inc.HashLine == Pos.line) {
       LocatedSymbol File;
@@ -246,7 +246,7 @@ llvm::Optional<LocatedSymbol> locateFileReferent(const Position &Pos,
 
 // Macros are simple: there's no declaration/definition distinction.
 // As a consequence, there's no need to look them up in the index either.
-llvm::Optional<LocatedSymbol>
+std::optional<LocatedSymbol>
 locateMacroReferent(const syntax::Token &TouchedIdentifier, ParsedAST &AST,
                     llvm::StringRef MainFilePath) {
   if (auto M = locateMacroAt(TouchedIdentifier, AST.getPreprocessor())) {
@@ -1200,8 +1200,8 @@ DocumentHighlight toHighlight(const ReferenceFinder::Reference &Ref,
   return DH;
 }
 
-llvm::Optional<DocumentHighlight> toHighlight(SourceLocation Loc,
-                                              const syntax::TokenBuffer &TB) {
+std::optional<DocumentHighlight> toHighlight(SourceLocation Loc,
+                                             const syntax::TokenBuffer &TB) {
   Loc = TB.sourceManager().getFileLoc(Loc);
   if (const auto *Tok = TB.spelledTokenAt(Loc)) {
     DocumentHighlight Result;
@@ -1302,7 +1302,7 @@ void getOverriddenMethods(const CXXMethodDecl *CMD,
   }
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 stringifyContainerForMainFileRef(const Decl *Container) {
   // FIXME We might also want to display the signature here
   // When doing so, remember to also add the Signature to index results!
@@ -1328,7 +1328,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
 
   const auto *IdentifierAtCursor =
       syntax::spelledIdentifierTouching(*CurLoc, AST.getTokens());
-  llvm::Optional<DefinedMacro> Macro;
+  std::optional<DefinedMacro> Macro;
   if (IdentifierAtCursor)
     Macro = locateMacroAt(*IdentifierAtCursor, AST.getPreprocessor());
   if (Macro) {
@@ -1606,7 +1606,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
 }
 
 template <typename HierarchyItem>
-static llvm::Optional<HierarchyItem>
+static std::optional<HierarchyItem>
 declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
   ASTContext &Ctx = ND.getASTContext();
   auto &SM = Ctx.getSourceManager();
@@ -1648,7 +1648,7 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
   return HI;
 }
 
-static llvm::Optional<TypeHierarchyItem>
+static std::optional<TypeHierarchyItem>
 declToTypeHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
   auto Result = declToHierarchyItem<TypeHierarchyItem>(ND, TUPath);
   if (Result) {
@@ -1662,7 +1662,7 @@ declToTypeHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
   return Result;
 }
 
-static llvm::Optional<CallHierarchyItem>
+static std::optional<CallHierarchyItem>
 declToCallHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
   auto Result = declToHierarchyItem<CallHierarchyItem>(ND, TUPath);
   if (!Result)
@@ -1675,8 +1675,8 @@ declToCallHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
 }
 
 template <typename HierarchyItem>
-static llvm::Optional<HierarchyItem> symbolToHierarchyItem(const Symbol &S,
-                                                           PathRef TUPath) {
+static std::optional<HierarchyItem> symbolToHierarchyItem(const Symbol &S,
+                                                          PathRef TUPath) {
   auto Loc = symbolToLocation(S, TUPath);
   if (!Loc) {
     elog("Failed to convert symbol to hierarchy item: {0}", Loc.takeError());
@@ -1694,7 +1694,7 @@ static llvm::Optional<HierarchyItem> symbolToHierarchyItem(const Symbol &S,
   return HI;
 }
 
-static llvm::Optional<TypeHierarchyItem>
+static std::optional<TypeHierarchyItem>
 symbolToTypeHierarchyItem(const Symbol &S, PathRef TUPath) {
   auto Result = symbolToHierarchyItem<TypeHierarchyItem>(S, TUPath);
   if (Result) {
@@ -1704,7 +1704,7 @@ symbolToTypeHierarchyItem(const Symbol &S, PathRef TUPath) {
   return Result;
 }
 
-static llvm::Optional<CallHierarchyItem>
+static std::optional<CallHierarchyItem>
 symbolToCallHierarchyItem(const Symbol &S, PathRef TUPath) {
   auto Result = symbolToHierarchyItem<CallHierarchyItem>(S, TUPath);
   if (!Result)
@@ -1722,7 +1722,7 @@ static void fillSubTypes(const SymbolID &ID,
   Req.Subjects.insert(ID);
   Req.Predicate = RelationKind::BaseOf;
   Index->relations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
-    if (Optional<TypeHierarchyItem> ChildSym =
+    if (std::optional<TypeHierarchyItem> ChildSym =
             symbolToTypeHierarchyItem(Object, TUPath)) {
       if (Levels > 1) {
         ChildSym->children.emplace();
@@ -1754,7 +1754,7 @@ static void fillSuperTypes(const CXXRecordDecl &CXXRD, llvm::StringRef TUPath,
   }
 
   for (const CXXRecordDecl *ParentDecl : typeParents(&CXXRD)) {
-    if (Optional<TypeHierarchyItem> ParentSym =
+    if (std::optional<TypeHierarchyItem> ParentSym =
             declToTypeHierarchyItem(*ParentDecl, TUPath)) {
       fillSuperTypes(*ParentDecl, TUPath, *ParentSym, RPSet);
       Item.data.parents->emplace_back(ParentSym->data);
@@ -2086,7 +2086,7 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
         CXXRD = CTSD->getTemplateInstantiationPattern();
     }
 
-    Optional<TypeHierarchyItem> Result =
+    std::optional<TypeHierarchyItem> Result =
         declToTypeHierarchyItem(*CXXRD, AST.tuPath());
     if (!Result)
       continue;

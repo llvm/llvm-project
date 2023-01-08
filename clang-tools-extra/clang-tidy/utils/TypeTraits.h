@@ -11,6 +11,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Type.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -18,8 +19,7 @@ namespace utils {
 namespace type_traits {
 
 /// Returns `true` if `Type` is expensive to copy.
-llvm::Optional<bool> isExpensiveToCopy(QualType Type,
-                                       const ASTContext &Context);
+std::optional<bool> isExpensiveToCopy(QualType Type, const ASTContext &Context);
 
 /// Returns `true` if `Type` is trivially default constructible.
 bool isTriviallyDefaultConstructible(QualType Type, const ASTContext &Context);

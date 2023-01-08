@@ -9,6 +9,7 @@
 #include "SuspiciousIncludeCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Lex/Preprocessor.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -80,7 +81,7 @@ void SuspiciousIncludePPCallbacks::InclusionDirective(
 
   SourceLocation DiagLoc = FilenameRange.getBegin().getLocWithOffset(1);
 
-  const Optional<StringRef> IFE =
+  const std::optional<StringRef> IFE =
       utils::getFileExtension(FileName, Check.ImplementationFileExtensions);
   if (!IFE)
     return;
