@@ -388,7 +388,7 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
     if (node->getNumOperands() != 1)
       return std::nullopt;
     // If the operand is MDString, then assume that this is a root node.
-    if (auto op0 = dyn_cast<const llvm::MDString>(node->getOperand(0)))
+    if (const auto *op0 = dyn_cast<const llvm::MDString>(node->getOperand(0)))
       return op0->getString();
     return std::nullopt;
   };
@@ -414,7 +414,8 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
 
     // TODO: support "new" format (D41501) for type descriptors,
     //       where the first operand is an MDNode.
-    auto identityNode = dyn_cast<const llvm::MDString>(node->getOperand(0));
+    const auto *identityNode =
+        dyn_cast<const llvm::MDString>(node->getOperand(0));
     if (!identityNode)
       return std::nullopt;
 
@@ -480,9 +481,9 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
     unsigned numOperands = node->getNumOperands();
     if (numOperands != 3 && numOperands != 4)
       return std::nullopt;
-    auto baseMD = dyn_cast<const llvm::MDNode>(node->getOperand(0));
-    auto accessMD = dyn_cast<const llvm::MDNode>(node->getOperand(1));
-    auto offsetCI =
+    const auto *baseMD = dyn_cast<const llvm::MDNode>(node->getOperand(0));
+    const auto *accessMD = dyn_cast<const llvm::MDNode>(node->getOperand(1));
+    auto *offsetCI =
         llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(2));
     if (!baseMD || !accessMD || !offsetCI)
       return std::nullopt;
@@ -496,7 +497,7 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
       return std::nullopt;
     bool isConst = false;
     if (numOperands == 4) {
-      auto isConstantCI =
+      auto *isConstantCI =
           llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(3));
       if (!isConstantCI) {
         emitError(loc) << "operand '3' must be ConstantInt: "
