@@ -24,6 +24,7 @@
 
 using namespace llvm;
 
+namespace {
 class MachineSanitizerBinaryMetadata : public MachineFunctionPass {
 public:
   static char ID;
@@ -31,6 +32,7 @@ public:
   MachineSanitizerBinaryMetadata();
   bool runOnMachineFunction(MachineFunction &F) override;
 };
+} // namespace
 
 INITIALIZE_PASS(MachineSanitizerBinaryMetadata, "machine-sanmd",
                 "Machine Sanitizer Binary Metadata", false, false)

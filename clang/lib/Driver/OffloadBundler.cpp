@@ -184,6 +184,7 @@ bool isCodeObjectCompatible(const OffloadTargetInfo &CodeObjectInfo,
   return true;
 }
 
+namespace {
 /// Generic file handler interface.
 class FileHandler {
 public:
@@ -491,8 +492,6 @@ public:
   }
 };
 
-namespace {
-
 // This class implements a list of temporary files that are removed upon
 // object destruction.
 class TempFileHandlerRAII {
@@ -523,8 +522,6 @@ public:
 private:
   std::forward_list<SmallString<128u>> Files;
 };
-
-} // end anonymous namespace
 
 /// Handler for object files. The bundles are organized by sections with a
 /// designated name.
@@ -827,6 +824,7 @@ public:
     return Error::success();
   }
 };
+} // namespace
 
 /// Return an appropriate object file handler. We use the specific object
 /// handler if we know how to deal with that format, otherwise we use a default
