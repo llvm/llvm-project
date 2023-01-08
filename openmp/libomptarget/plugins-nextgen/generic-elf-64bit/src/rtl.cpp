@@ -20,6 +20,7 @@
 #include "DeviceEnvironment.h"
 #include "GlobalHandler.h"
 #include "PluginInterface.h"
+#include "omptarget.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -63,23 +64,22 @@ struct GenELF64KernelTy : public GenericKernelTy {
 
   /// Launch the kernel using the libffi.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                   uint64_t NumBlocks, uint32_t DynamicMemorySize,
-                   int32_t NumKernelArgs, void *KernelArgs,
+                   uint64_t NumBlocks, KernelArgsTy &KernelArgs, void *Args,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
     // Create a vector of ffi_types, one per argument.
-    SmallVector<ffi_type *, 16> ArgTypes(NumKernelArgs, &ffi_type_pointer);
+    SmallVector<ffi_type *, 16> ArgTypes(KernelArgs.NumArgs, &ffi_type_pointer);
     ffi_type **ArgTypesPtr = (ArgTypes.size()) ? &ArgTypes[0] : nullptr;
 
     // Prepare the cif structure before running the kernel function.
     ffi_cif Cif;
-    ffi_status Status = ffi_prep_cif(&Cif, FFI_DEFAULT_ABI, NumKernelArgs,
+    ffi_status Status = ffi_prep_cif(&Cif, FFI_DEFAULT_ABI, KernelArgs.NumArgs,
                                      &ffi_type_void, ArgTypesPtr);
     if (Status != FFI_OK)
       return Plugin::error("Error in ffi_prep_cif: %d", Status);
 
     // Call the kernel function through libffi.
     long Return;
-    ffi_call(&Cif, Func, &Return, (void **)KernelArgs);
+    ffi_call(&Cif, Func, &Return, (void **)Args);
 
     return Plugin::success();
   }

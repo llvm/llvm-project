@@ -62,8 +62,7 @@ struct CUDAKernelTy : public GenericKernelTy {
 
   /// Launch the CUDA kernel function
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                   uint64_t NumBlocks, uint32_t DynamicMemorySize,
-                   int32_t NumKernelArgs, void *KernelArgs,
+                   uint64_t NumBlocks, KernelArgsTy &KernelArgs, void *Args,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
   /// The default number of blocks is common to the whole device.
@@ -818,8 +817,7 @@ private:
 
 Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                uint32_t NumThreads, uint64_t NumBlocks,
-                               uint32_t DynamicMemorySize,
-                               int32_t NumKernelArgs, void *KernelArgs,
+                               KernelArgsTy &KernelArgs, void *Args,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   CUDADeviceTy &CUDADevice = static_cast<CUDADeviceTy &>(GenericDevice);
 
@@ -827,11 +825,14 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (!Stream)
     return Plugin::error("Failure to get stream");
 
+  uint32_t MaxDynCGroupMem =
+      std::max(KernelArgs.DynCGroupMem, GenericDevice.getDynamicMemorySize());
+
   CUresult Res =
       cuLaunchKernel(Func, NumBlocks, /* gridDimY */ 1,
                      /* gridDimZ */ 1, NumThreads,
-                     /* blockDimY */ 1, /* blockDimZ */ 1, DynamicMemorySize,
-                     Stream, (void **)KernelArgs, nullptr);
+                     /* blockDimY */ 1, /* blockDimZ */ 1, MaxDynCGroupMem,
+                     Stream, (void **)Args, nullptr);
   return Plugin::check(Res, "Error in cuLaunchKernel for '%s': %s", getName());
 }
 
