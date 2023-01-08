@@ -1378,11 +1378,16 @@ TEST(TypeHints, Decltype) {
     using G = Foo<$g[[decltype(0)]], float>;
 
     auto $h[[h]] = $i[[decltype(0)]]{};
+
+    // No crash
+    /* error-ok */
+    auto $j[[s]];
   )cpp",
                   ExpectedHint{": int", "a"}, ExpectedHint{": int", "b"},
                   ExpectedHint{": int", "c"}, ExpectedHint{": int", "e"},
                   ExpectedHint{": int", "f"}, ExpectedHint{": int", "g"},
-                  ExpectedHint{": int", "h"}, ExpectedHint{": int", "i"});
+                  ExpectedHint{": int", "h"}, ExpectedHint{": int", "i"},
+                  ExpectedHint{": auto", "j"});
 }
 
 TEST(DesignatorHints, Basic) {
