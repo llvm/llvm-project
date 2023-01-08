@@ -443,6 +443,6 @@ int main(int argc, const char *argv[]) {
     return runCommand(ExecCommand, *Index) ? 0 : 1;
 
   llvm::LineEditor LE("dexp");
-  while (llvm::Optional<std::string> Request = LE.readLine())
+  while (std::optional<std::string> Request = LE.readLine())
     runCommand(std::move(*Request), *Index);
 }

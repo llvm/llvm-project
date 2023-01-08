@@ -39,7 +39,7 @@ public:
 
   std::unique_ptr<SymbolIndex> index();
 
-  Optional<ParsedAST> openFile(llvm::StringRef Filename);
+  std::optional<ParsedAST> openFile(llvm::StringRef Filename);
 
 private:
   struct SourceFile {

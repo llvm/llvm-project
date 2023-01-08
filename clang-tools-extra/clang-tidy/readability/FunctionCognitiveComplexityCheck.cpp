@@ -219,7 +219,7 @@ class FunctionASTVisitor final
   // Used to efficiently know the last type of the binary sequence operator
   // that was encountered. It would make sense for the function call to start
   // the new sequence, thus it is a stack.
-  using OBO = Optional<BinaryOperator::Opcode>;
+  using OBO = std::optional<BinaryOperator::Opcode>;
   std::stack<OBO, SmallVector<OBO, 4>> BinaryOperatorsStack;
 
 public:
@@ -332,7 +332,8 @@ public:
 
     // We might encounter a function call, which starts a new sequence, thus
     // we need to save the current previous binary operator.
-    const Optional<BinaryOperator::Opcode> BinOpCopy(CurrentBinaryOperator);
+    const std::optional<BinaryOperator::Opcode> BinOpCopy(
+        CurrentBinaryOperator);
 
     // Record the operator that we are currently processing and traverse it.
     CurrentBinaryOperator = Op->getOpcode();

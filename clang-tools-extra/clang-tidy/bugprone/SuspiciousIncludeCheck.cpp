@@ -81,7 +81,7 @@ void SuspiciousIncludePPCallbacks::InclusionDirective(
 
   SourceLocation DiagLoc = FilenameRange.getBegin().getLocWithOffset(1);
 
-  const Optional<StringRef> IFE =
+  const std::optional<StringRef> IFE =
       utils::getFileExtension(FileName, Check.ImplementationFileExtensions);
   if (!IFE)
     return;

@@ -268,7 +268,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   for (const auto &IDAndScore : IDAndScores) {
     const DocID SymbolDocID = IDAndScore.first;
     const auto *Sym = Symbols[SymbolDocID];
-    const llvm::Optional<float> Score = Filter.match(Sym->Name);
+    const std::optional<float> Score = Filter.match(Sym->Name);
     if (!Score)
       continue;
     // Combine Fuzzy Matching score, precomputed symbol quality and boosting

@@ -27,7 +27,7 @@ AST_MATCHER_P(NamespaceAliasDecl, hasTargetNamespace,
   return innerMatcher.matches(*Node.getNamespace(), Finder, Builder);
 }
 
-Optional<FixItHint>
+std::optional<FixItHint>
 NamespaceAliaser::createAlias(ASTContext &Context, const Stmt &Statement,
                               StringRef Namespace,
                               const std::vector<std::string> &Abbreviations) {

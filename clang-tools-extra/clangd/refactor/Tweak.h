@@ -74,7 +74,7 @@ public:
 
   struct Effect {
     /// A message to be displayed to the user.
-    llvm::Optional<std::string> ShowMessage;
+    std::optional<std::string> ShowMessage;
     FileEdits ApplyEdits;
     /// Whether the edits should be formatted before presenting to the client.
     /// Note that it applies to all files.

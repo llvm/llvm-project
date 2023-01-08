@@ -40,7 +40,7 @@ public:
       return;
 
     // FIXME: Why is this happening? We might be losing contents here.
-    llvm::Optional<StringRef> Data = ContentCache.getBufferDataIfLoaded();
+    std::optional<StringRef> Data = ContentCache.getBufferDataIfLoaded();
     if (!Data)
       return;
 

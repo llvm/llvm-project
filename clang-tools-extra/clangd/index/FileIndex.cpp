@@ -189,7 +189,7 @@ std::vector<llvm::StringRef> FileShardedIndex::getAllSources() const {
   return Result;
 }
 
-llvm::Optional<IndexFileIn>
+std::optional<IndexFileIn>
 FileShardedIndex::getShard(llvm::StringRef Uri) const {
   auto It = Shards.find(Uri);
   if (It == Shards.end())

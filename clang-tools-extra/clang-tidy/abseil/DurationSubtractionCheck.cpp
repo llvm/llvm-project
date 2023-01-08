@@ -38,7 +38,7 @@ void DurationSubtractionCheck::check(const MatchFinder::MatchResult &Result) {
   if (Binop->getExprLoc().isMacroID() || Binop->getExprLoc().isInvalid())
     return;
 
-  llvm::Optional<DurationScale> Scale =
+  std::optional<DurationScale> Scale =
       getScaleForDurationInverse(FuncDecl->getName());
   if (!Scale)
     return;

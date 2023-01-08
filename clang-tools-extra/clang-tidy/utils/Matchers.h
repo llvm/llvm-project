@@ -24,7 +24,7 @@ AST_MATCHER(BinaryOperator, isRelationalOperator) {
 AST_MATCHER(BinaryOperator, isEqualityOperator) { return Node.isEqualityOp(); }
 
 AST_MATCHER(QualType, isExpensiveToCopy) {
-  llvm::Optional<bool> IsExpensive =
+  std::optional<bool> IsExpensive =
       utils::type_traits::isExpensiveToCopy(Node, Finder->getASTContext());
   return IsExpensive && *IsExpensive;
 }

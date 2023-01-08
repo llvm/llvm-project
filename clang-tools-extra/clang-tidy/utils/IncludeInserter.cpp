@@ -68,7 +68,7 @@ IncludeSorter &IncludeInserter::getOrCreate(FileID FileID) {
   return *Entry;
 }
 
-llvm::Optional<FixItHint>
+std::optional<FixItHint>
 IncludeInserter::createIncludeInsertion(FileID FileID, llvm::StringRef Header) {
   bool IsAngled = Header.consume_front("<");
   if (IsAngled != Header.consume_back(">"))
@@ -83,7 +83,7 @@ IncludeInserter::createIncludeInsertion(FileID FileID, llvm::StringRef Header) {
   return getOrCreate(FileID).createIncludeInsertion(Header, IsAngled);
 }
 
-llvm::Optional<FixItHint>
+std::optional<FixItHint>
 IncludeInserter::createMainFileIncludeInsertion(StringRef Header) {
   assert(SourceMgr && "SourceMgr shouldn't be null; did you remember to call "
                       "registerPreprocessor()?");

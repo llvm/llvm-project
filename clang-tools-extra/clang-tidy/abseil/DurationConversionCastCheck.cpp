@@ -45,7 +45,7 @@ void DurationConversionCastCheck::check(
   const auto *Arg = Result.Nodes.getNodeAs<Expr>("arg");
   StringRef ConversionFuncName = FuncDecl->getName();
 
-  llvm::Optional<DurationScale> Scale =
+  std::optional<DurationScale> Scale =
       getScaleForDurationInverse(ConversionFuncName);
   if (!Scale)
     return;

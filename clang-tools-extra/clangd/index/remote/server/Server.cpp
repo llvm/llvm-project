@@ -504,7 +504,7 @@ int main(int argc, char *argv[]) {
   auto Logger = makeLogger(LogPrefix.getValue(), llvm::errs());
   clang::clangd::LoggingSession LoggingSession(*Logger);
 
-  llvm::Optional<llvm::raw_fd_ostream> TracerStream;
+  std::optional<llvm::raw_fd_ostream> TracerStream;
   std::unique_ptr<clang::clangd::trace::EventTracer> Tracer;
   if (!TraceFile.empty()) {
     std::error_code EC;
@@ -522,7 +522,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  llvm::Optional<clang::clangd::trace::Session> TracingSession;
+  std::optional<clang::clangd::trace::Session> TracingSession;
   if (Tracer)
     TracingSession.emplace(*Tracer);
 

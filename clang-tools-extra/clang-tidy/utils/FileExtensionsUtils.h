@@ -55,7 +55,7 @@ bool parseFileExtensions(StringRef AllFileExtensions,
 
 /// Decides whether a file has a header file extension.
 /// Returns the file extension, if included in the provided set.
-llvm::Optional<StringRef>
+std::optional<StringRef>
 getFileExtension(StringRef FileName, const FileExtensionsSet &FileExtensions);
 
 /// Decides whether a file has one of the specified file extensions.

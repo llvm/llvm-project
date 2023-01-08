@@ -265,9 +265,9 @@ const FunctionDecl *findEnclosingFunction(const Node *CommonAnc) {
 
 // Zone Range is the union of SourceRanges of all child Nodes in Parent since
 // all child Nodes are RootStmts
-llvm::Optional<SourceRange> findZoneRange(const Node *Parent,
-                                          const SourceManager &SM,
-                                          const LangOptions &LangOpts) {
+std::optional<SourceRange> findZoneRange(const Node *Parent,
+                                         const SourceManager &SM,
+                                         const LangOptions &LangOpts) {
   SourceRange SR;
   if (auto BeginFileRange = toHalfOpenFileRange(
           SM, LangOpts, Parent->Children.front()->ASTNode.getSourceRange()))
@@ -286,7 +286,7 @@ llvm::Optional<SourceRange> findZoneRange(const Node *Parent,
 // FIXME: check if EnclosingFunction has any attributes as the AST doesn't
 // always store the source range of the attributes and thus we end up extracting
 // between the attributes and the EnclosingFunction.
-llvm::Optional<SourceRange>
+std::optional<SourceRange>
 computeEnclosingFuncRange(const FunctionDecl *EnclosingFunction,
                           const SourceManager &SM,
                           const LangOptions &LangOpts) {
@@ -311,9 +311,9 @@ bool validSingleChild(const Node *Child, const FunctionDecl *EnclosingFunc) {
 
 // FIXME: Check we're not extracting from the initializer/condition of a control
 // flow structure.
-llvm::Optional<ExtractionZone> findExtractionZone(const Node *CommonAnc,
-                                                  const SourceManager &SM,
-                                                  const LangOptions &LangOpts) {
+std::optional<ExtractionZone> findExtractionZone(const Node *CommonAnc,
+                                                 const SourceManager &SM,
+                                                 const LangOptions &LangOpts) {
   ExtractionZone ExtZone;
   ExtZone.Parent = getParentOfRootStmts(CommonAnc);
   if (!ExtZone.Parent || ExtZone.Parent->Children.empty())
@@ -358,7 +358,7 @@ struct NewFunction {
   std::vector<Parameter> Parameters;
   SourceRange BodyRange;
   SourceLocation DefinitionPoint;
-  llvm::Optional<SourceLocation> ForwardDeclarationPoint;
+  std::optional<SourceLocation> ForwardDeclarationPoint;
   const CXXRecordDecl *EnclosingClass = nullptr;
   const NestedNameSpecifier *DefinitionQualifier = nullptr;
   const DeclContext *SemanticDC = nullptr;

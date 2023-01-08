@@ -62,7 +62,7 @@ public:
   // CDBDirectory is the first directory containing a CDB in parent directories
   // of a file, or user cache directory if none was found, e.g. stdlib headers.
   static Factory createDiskBackedStorageFactory(
-      std::function<llvm::Optional<ProjectInfo>(PathRef)> GetProjectInfo);
+      std::function<std::optional<ProjectInfo>(PathRef)> GetProjectInfo);
 };
 
 // A priority queue of tasks which can be run on (external) worker threads.
@@ -112,7 +112,7 @@ public:
   // Only affects tasks that run after the call.
   static void preventThreadStarvationInTests();
   [[nodiscard]] bool
-  blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds);
+  blockUntilIdleForTest(std::optional<double> TimeoutSeconds);
 
 private:
   void notifyProgress() const; // Requires lock Mu
@@ -174,7 +174,7 @@ public:
 
   // Wait until the queue is empty, to allow deterministic testing.
   [[nodiscard]] bool
-  blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds = 10) {
+  blockUntilIdleForTest(std::optional<double> TimeoutSeconds = 10) {
     return Queue.blockUntilIdleForTest(TimeoutSeconds);
   }
 

@@ -169,7 +169,7 @@ int main(int argc, const char **argv) {
     LE.setListCompleter([&QS](StringRef Line, size_t Pos) {
       return QueryParser::complete(Line, Pos, QS);
     });
-    while (llvm::Optional<std::string> Line = LE.readLine()) {
+    while (std::optional<std::string> Line = LE.readLine()) {
       QueryRef Q = QueryParser::parse(*Line, QS);
       Q->run(llvm::outs(), QS);
       llvm::outs().flush();

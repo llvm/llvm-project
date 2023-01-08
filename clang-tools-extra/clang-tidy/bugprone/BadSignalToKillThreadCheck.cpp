@@ -35,7 +35,7 @@ void BadSignalToKillThreadCheck::check(const MatchFinder::MatchResult &Result) {
            KeyValue.first->hasMacroDefinition();
   };
   const auto TryExpandAsInteger =
-      [](Preprocessor::macro_iterator It) -> Optional<unsigned> {
+      [](Preprocessor::macro_iterator It) -> std::optional<unsigned> {
     if (It == PP->macro_end())
       return std::nullopt;
     const MacroInfo *MI = PP->getMacroInfo(It->first);

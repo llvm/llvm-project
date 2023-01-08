@@ -114,7 +114,7 @@ bool ExpandAutoType::prepare(const Selection &Inputs) {
 Expected<Tweak::Effect> ExpandAutoType::apply(const Selection& Inputs) {
   auto &SrcMgr = Inputs.AST->getSourceManager();
 
-  llvm::Optional<clang::QualType> DeducedType =
+  std::optional<clang::QualType> DeducedType =
       getDeducedType(Inputs.AST->getASTContext(), AutoRange.getBegin());
 
   // if we can't resolve the type, return an error message

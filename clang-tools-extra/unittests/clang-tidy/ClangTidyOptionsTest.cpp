@@ -168,7 +168,7 @@ public:
     std::string Message;
     llvm::SourceMgr::DiagKind Kind;
     size_t Pos;
-    Optional<llvm::Annotations::Range> Range;
+    std::optional<llvm::Annotations::Range> Range;
 
     friend void PrintTo(const Diag &D, std::ostream *OS) {
       *OS << (D.Kind == llvm::SourceMgr::DK_Error ? "error: " : "warning: ")

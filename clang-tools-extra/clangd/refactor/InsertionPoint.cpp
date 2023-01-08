@@ -22,8 +22,8 @@ namespace {
 // Choose the decl to insert before, according to an anchor.
 // Nullptr means insert at end of DC.
 // None means no valid place to insert.
-llvm::Optional<const Decl *> insertionDecl(const DeclContext &DC,
-                                           const Anchor &A) {
+std::optional<const Decl *> insertionDecl(const DeclContext &DC,
+                                          const Anchor &A) {
   bool LastMatched = false;
   bool ReturnNext = false;
   for (const auto *D : DC.decls()) {

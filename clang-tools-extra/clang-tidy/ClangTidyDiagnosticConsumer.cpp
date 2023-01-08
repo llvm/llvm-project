@@ -256,7 +256,7 @@ void ClangTidyContext::setProfileStoragePrefix(StringRef Prefix) {
   ProfilePrefix = std::string(Prefix);
 }
 
-llvm::Optional<ClangTidyProfiling::StorageParams>
+std::optional<ClangTidyProfiling::StorageParams>
 ClangTidyContext::getProfileStorageParams() const {
   if (ProfilePrefix.empty())
     return std::nullopt;

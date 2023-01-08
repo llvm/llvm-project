@@ -152,7 +152,7 @@ QualType declaredType(const TypeDecl *D);
 /// Retrieves the deduced type at a given location (auto, decltype).
 /// It will return the underlying type.
 /// If the type is an undeduced auto, returns the type itself.
-llvm::Optional<QualType> getDeducedType(ASTContext &, SourceLocation Loc);
+std::optional<QualType> getDeducedType(ASTContext &, SourceLocation Loc);
 
 // Find the abbreviated-function-template `auto` within a type, or returns null.
 // Similar to getContainedAutoTypeLoc, but these `auto`s are

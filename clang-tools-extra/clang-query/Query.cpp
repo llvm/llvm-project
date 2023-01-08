@@ -184,7 +184,7 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
     std::vector<BoundNodes> Matches;
     DynTypedMatcher MaybeBoundMatcher = Matcher;
     if (QS.BindRoot) {
-      llvm::Optional<DynTypedMatcher> M = Matcher.tryBind("root");
+      std::optional<DynTypedMatcher> M = Matcher.tryBind("root");
       if (M)
         MaybeBoundMatcher = *M;
     }

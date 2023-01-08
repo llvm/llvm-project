@@ -21,7 +21,7 @@
 namespace clang {
 namespace find_all_symbols {
 
-llvm::Optional<SymbolInfo>
+std::optional<SymbolInfo>
 FindAllMacros::CreateMacroSymbol(const Token &MacroNameTok,
                                  const MacroInfo *info) {
   std::string FilePath =

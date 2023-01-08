@@ -676,15 +676,15 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
   //===--------------------------------------------------------------------===//
 
   struct CallContext {
-    CallContext(StringRef Name, Optional<unsigned> DestinationPos,
-                Optional<unsigned> SourcePos, unsigned LengthPos,
+    CallContext(StringRef Name, std::optional<unsigned> DestinationPos,
+                std::optional<unsigned> SourcePos, unsigned LengthPos,
                 bool WithIncrease)
         : Name(Name), DestinationPos(DestinationPos), SourcePos(SourcePos),
           LengthPos(LengthPos), WithIncrease(WithIncrease){};
 
     StringRef Name;
-    Optional<unsigned> DestinationPos;
-    Optional<unsigned> SourcePos;
+    std::optional<unsigned> DestinationPos;
+    std::optional<unsigned> SourcePos;
     unsigned LengthPos;
     bool WithIncrease;
   };
@@ -797,7 +797,7 @@ void NotNullTerminatedResultCheck::check(
     return;
 
   if (WantToUseSafeFunctions && PP->isMacroDefined("__STDC_LIB_EXT1__")) {
-    Optional<bool> AreSafeFunctionsWanted;
+    std::optional<bool> AreSafeFunctionsWanted;
 
     Preprocessor::macro_iterator It = PP->macro_begin();
     while (It != PP->macro_end() && !AreSafeFunctionsWanted) {

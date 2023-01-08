@@ -45,7 +45,7 @@ private:
 
   enum class IndirectionType : unsigned char { Pointer, Array };
 
-  Optional<ento::mpi::MPIFunctionClassifier> FuncClassifier;
+  std::optional<ento::mpi::MPIFunctionClassifier> FuncClassifier;
 };
 
 } // namespace mpi

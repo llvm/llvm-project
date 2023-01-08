@@ -77,7 +77,7 @@ struct ReferencedFiles {
 ReferencedFiles findReferencedFiles(
     const ReferencedLocations &Locs, const SourceManager &SM,
     llvm::function_ref<FileID(FileID)> HeaderResponsible,
-    llvm::function_ref<Optional<StringRef>(FileID)> UmbrellaHeader);
+    llvm::function_ref<std::optional<StringRef>(FileID)> UmbrellaHeader);
 ReferencedFiles findReferencedFiles(const ReferencedLocations &Locs,
                                     const IncludeStructure &Includes,
                                     const CanonicalIncludes &CanonIncludes,

@@ -73,7 +73,7 @@ private:
 llvm::Expected<tooling::Replacement>
 removeUsingDirective(ASTContext &Ctx, const UsingDirectiveDecl *D) {
   auto &SM = Ctx.getSourceManager();
-  llvm::Optional<Token> NextTok =
+  std::optional<Token> NextTok =
       Lexer::findNextToken(D->getEndLoc(), SM, Ctx.getLangOpts());
   if (!NextTok || NextTok->isNot(tok::semi))
     return error("no semicolon after using-directive");
