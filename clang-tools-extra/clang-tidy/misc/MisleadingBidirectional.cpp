@@ -90,8 +90,7 @@ static bool containsMisleadingBidi(StringRef Buffer,
 class MisleadingBidirectionalCheck::MisleadingBidirectionalHandler
     : public CommentHandler {
 public:
-  MisleadingBidirectionalHandler(MisleadingBidirectionalCheck &Check,
-                                 std::optional<std::string> User)
+  MisleadingBidirectionalHandler(MisleadingBidirectionalCheck &Check)
       : Check(Check) {}
 
   bool HandleComment(Preprocessor &PP, SourceRange Range) override {
@@ -114,8 +113,7 @@ private:
 MisleadingBidirectionalCheck::MisleadingBidirectionalCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      Handler(std::make_unique<MisleadingBidirectionalHandler>(
-          *this, Context->getOptions().User)) {}
+      Handler(std::make_unique<MisleadingBidirectionalHandler>(*this)) {}
 
 MisleadingBidirectionalCheck::~MisleadingBidirectionalCheck() = default;
 

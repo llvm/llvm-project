@@ -226,9 +226,8 @@ check-generated-output)
 #
 generic-cxx03)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake"
-    #generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake" \
-    #               -DLIBCXX_ENABLE_CLANG_TIDY=ON
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake" \
+                   -DLIBCXX_ENABLE_CLANG_TIDY=ON
     check-runtimes
     check-abi-list
 ;;

@@ -8509,6 +8509,7 @@ static SDValue performTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+namespace {
 // Helper class contains information about comparison operation.
 // The first two operands of this operation are compared values and the
 // last one is the operation.
@@ -8602,6 +8603,7 @@ public:
   // Returns consition code of comparison operation.
   ISD::CondCode getCondCode() const { return CCode; }
 };
+} // namespace
 
 // Verifies conditions to apply an optimization.
 // Returns Reference comparison code and three operands A, B, C.
