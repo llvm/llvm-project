@@ -179,6 +179,16 @@ add_header_library(
 )
 
 add_header_library(
+  double_double
+  HDRS
+    double_double.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.number_pair
+    .multiply_add
+)
+
+add_header_library(
   dyadic_float
   HDRS
     dyadic_float.h
