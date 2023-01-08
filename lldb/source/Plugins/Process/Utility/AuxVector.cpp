@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AuxVector.h"
+#include <optional>
 
 AuxVector::AuxVector(const lldb_private::DataExtractor &data) {
   ParseAuxv(data);
@@ -29,7 +30,7 @@ void AuxVector::ParseAuxv(const lldb_private::DataExtractor &data) {
   }
 }
 
-llvm::Optional<uint64_t>
+std::optional<uint64_t>
 AuxVector::GetAuxValue(enum EntryType entry_type) const {
   auto it = m_auxv_entries.find(static_cast<uint64_t>(entry_type));
   if (it != m_auxv_entries.end())

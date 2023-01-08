@@ -56,6 +56,7 @@
 #include "PdbSymUid.h"
 #include "PdbUtil.h"
 #include "UdtRecordCompleter.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -226,7 +227,7 @@ static bool IsClassRecord(TypeLeafKind kind) {
   }
 }
 
-static llvm::Optional<CVTagRecord>
+static std::optional<CVTagRecord>
 GetNestedTagDefinition(const NestedTypeRecord &Record,
                        const CVTagRecord &parent, TpiStream &tpi) {
   // An LF_NESTTYPE is essentially a nested typedef / using declaration, but it
@@ -777,7 +778,7 @@ TypeSP SymbolFileNativePDB::CreateType(PdbTypeSymId type_id, CompilerType ct) {
 TypeSP SymbolFileNativePDB::CreateAndCacheType(PdbTypeSymId type_id) {
   // If they search for a UDT which is a forward ref, try and resolve the full
   // decl and just map the forward ref uid to the full decl record.
-  llvm::Optional<PdbTypeSymId> full_decl_uid;
+  std::optional<PdbTypeSymId> full_decl_uid;
   if (IsForwardRefUdt(type_id, m_index->tpi())) {
     auto expected_full_ti =
         m_index->tpi().findFullDeclForForwardRef(type_id.index);
@@ -890,7 +891,7 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   }
 
   CompUnitSP comp_unit;
-  llvm::Optional<uint16_t> modi = m_index->GetModuleIndexForVa(addr);
+  std::optional<uint16_t> modi = m_index->GetModuleIndexForVa(addr);
   if (!modi) {
     return nullptr;
   }
@@ -1088,7 +1089,7 @@ uint32_t SymbolFileNativePDB::ResolveSymbolContext(
   lldb::addr_t file_addr = addr.GetFileAddress();
 
   if (NeedsResolvedCompileUnit(resolve_scope)) {
-    llvm::Optional<uint16_t> modi = m_index->GetModuleIndexForVa(file_addr);
+    std::optional<uint16_t> modi = m_index->GetModuleIndexForVa(file_addr);
     if (!modi)
       return 0;
     CompUnitSP cu_sp = GetCompileUnitAtIndex(*modi);
@@ -1431,11 +1432,11 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
   // Parse range and line info.
   uint32_t code_offset = 0;
   int32_t line_offset = 0;
-  llvm::Optional<uint32_t> code_offset_base;
-  llvm::Optional<uint32_t> code_offset_end;
-  llvm::Optional<int32_t> cur_line_offset;
-  llvm::Optional<int32_t> next_line_offset;
-  llvm::Optional<uint32_t> next_file_offset;
+  std::optional<uint32_t> code_offset_base;
+  std::optional<uint32_t> code_offset_end;
+  std::optional<int32_t> cur_line_offset;
+  std::optional<int32_t> next_line_offset;
+  std::optional<uint32_t> next_file_offset;
 
   bool is_terminal_entry = false;
   bool is_start_of_statement = true;
@@ -2105,7 +2106,7 @@ Type *SymbolFileNativePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
   return &*type_sp;
 }
 
-llvm::Optional<SymbolFile::ArrayInfo>
+std::optional<SymbolFile::ArrayInfo>
 SymbolFileNativePDB::GetDynamicArrayInfoForUID(
     lldb::user_id_t type_uid, const lldb_private::ExecutionContext *exe_ctx) {
   return std::nullopt;
@@ -2215,7 +2216,7 @@ void SymbolFileNativePDB::BuildParentMap() {
           Record.Name = unnamed_type_name;
           ++unnamed_type_index;
         }
-        llvm::Optional<CVTagRecord> tag =
+        std::optional<CVTagRecord> tag =
             GetNestedTagDefinition(Record, parent_cvt, index.tpi());
         if (!tag)
           return llvm::ErrorSuccess();
@@ -2266,7 +2267,7 @@ void SymbolFileNativePDB::BuildParentMap() {
   }
 }
 
-llvm::Optional<PdbCompilandSymId>
+std::optional<PdbCompilandSymId>
 SymbolFileNativePDB::FindSymbolScope(PdbCompilandSymId id) {
   CVSymbol sym = m_index->ReadSymbolRecord(id);
   if (symbolOpensScope(sym.kind())) {
@@ -2319,7 +2320,7 @@ SymbolFileNativePDB::FindSymbolScope(PdbCompilandSymId id) {
   return scope_stack.back();
 }
 
-llvm::Optional<llvm::codeview::TypeIndex>
+std::optional<llvm::codeview::TypeIndex>
 SymbolFileNativePDB::GetParentType(llvm::codeview::TypeIndex ti) {
   auto parent_iter = m_parent_types.find(ti);
   if (parent_iter == m_parent_types.end())

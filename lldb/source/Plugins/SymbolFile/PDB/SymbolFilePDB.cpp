@@ -58,6 +58,7 @@
 
 #if defined(_WIN32)
 #include "llvm/Config/llvm-config.h"
+#include <optional>
 #endif
 
 using namespace lldb;
@@ -590,7 +591,7 @@ lldb_private::Type *SymbolFilePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
   return result.get();
 }
 
-llvm::Optional<SymbolFile::ArrayInfo> SymbolFilePDB::GetDynamicArrayInfoForUID(
+std::optional<SymbolFile::ArrayInfo> SymbolFilePDB::GetDynamicArrayInfoForUID(
     lldb::user_id_t type_uid, const lldb_private::ExecutionContext *exe_ctx) {
   return std::nullopt;
 }

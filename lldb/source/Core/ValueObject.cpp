@@ -55,6 +55,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include <tuple>
 
 #include <cassert>
@@ -263,7 +264,7 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
 
   if (auto *runtime =
           process_sp->GetLanguageRuntime(GetObjectRuntimeLanguage())) {
-    if (llvm::Optional<CompilerType> complete_type =
+    if (std::optional<CompilerType> complete_type =
             runtime->GetRuntimeType(compiler_type)) {
       m_override_type = *complete_type;
       if (m_override_type.IsValid())
@@ -682,7 +683,7 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
-  llvm::Optional<uint64_t> item_type_size =
+  std::optional<uint64_t> item_type_size =
       pointee_or_element_compiler_type.GetByteSize(
           exe_ctx.GetBestExecutionContextScope());
   if (!item_type_size)
@@ -1705,7 +1706,7 @@ ValueObjectSP ValueObject::GetSyntheticChildAtOffset(
     return {};
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  llvm::Optional<uint64_t> size =
+  std::optional<uint64_t> size =
       type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
   if (!size)
     return {};
@@ -1747,7 +1748,7 @@ ValueObjectSP ValueObject::GetSyntheticBase(uint32_t offset,
   const bool is_base_class = true;
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  llvm::Optional<uint64_t> size =
+  std::optional<uint64_t> size =
       type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
   if (!size)
     return {};

@@ -14,7 +14,6 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
@@ -22,6 +21,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <optional>
 #include <sys/stat.h>
 
 namespace lldb_private {
@@ -195,7 +195,7 @@ public:
   void SetHomeDirectory(std::string home_directory);
 
 private:
-  static llvm::Optional<FileSystem> &InstanceImpl();
+  static std::optional<FileSystem> &InstanceImpl();
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> m_fs;
   std::string m_home_directory;
 };

@@ -35,6 +35,7 @@
 
 #include <cassert>
 #include <memory>
+#include <optional>
 
 namespace lldb_private {
 class ExecutionContextScope;
@@ -105,7 +106,7 @@ size_t ValueObjectVariable::CalculateNumChildren(uint32_t max) {
   return child_count <= max ? child_count : max;
 }
 
-llvm::Optional<uint64_t> ValueObjectVariable::GetByteSize() {
+std::optional<uint64_t> ValueObjectVariable::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
   CompilerType type(GetCompilerType());

@@ -45,6 +45,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <vector>
 
 //#define ENABLE_DEBUG_PRINTF // COMMENT OUT THIS LINE PRIOR TO CHECKIN
@@ -1322,7 +1323,7 @@ DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
   if (!element_type)
     return nullptr;
 
-  llvm::Optional<SymbolFile::ArrayInfo> array_info = ParseChildArrayInfo(die);
+  std::optional<SymbolFile::ArrayInfo> array_info = ParseChildArrayInfo(die);
   uint32_t byte_stride = attrs.byte_stride;
   uint32_t bit_stride = attrs.bit_stride;
   if (array_info) {
@@ -1376,7 +1377,7 @@ TypeSP DWARFASTParserClang::ParsePointerToMemberType(
   CompilerType clang_type = TypeSystemClang::CreateMemberPointerType(
       class_clang_type, pointee_clang_type);
 
-  if (llvm::Optional<uint64_t> clang_type_size =
+  if (std::optional<uint64_t> clang_type_size =
           clang_type.GetByteSize(nullptr)) {
     return std::make_shared<Type>(die.GetID(), dwarf, attrs.name,
                                   *clang_type_size, nullptr, LLDB_INVALID_UID,
@@ -2070,7 +2071,7 @@ bool DWARFASTParserClang::ParseTemplateDIE(
         clang_type.IsIntegerOrEnumerationType(is_signed);
 
         if (tag == DW_TAG_template_value_parameter && uval64_valid) {
-          llvm::Optional<uint64_t> size = clang_type.GetBitSize(nullptr);
+          std::optional<uint64_t> size = clang_type.GetBitSize(nullptr);
           if (!size)
             return false;
           llvm::APInt apint(*size, uval64, is_signed);
@@ -2480,8 +2481,8 @@ struct MemberAttributes {
   size_t bit_size = 0;
   uint64_t data_bit_offset = UINT64_MAX;
   AccessType accessibility = eAccessNone;
-  llvm::Optional<uint64_t> byte_size;
-  llvm::Optional<DWARFFormValue> const_value_form;
+  std::optional<uint64_t> byte_size;
+  std::optional<DWARFFormValue> const_value_form;
   DWARFFormValue encoding_form;
   /// Indicates the byte offset of the word from the base address of the
   /// structure.
@@ -2885,7 +2886,7 @@ void DWARFASTParserClang::ParseSingleMember(
           die.GetCU()->Supports_unnamed_objc_bitfields();
 
     if (detect_unnamed_bitfields) {
-      llvm::Optional<FieldInfo> unnamed_field_info;
+      std::optional<FieldInfo> unnamed_field_info;
       uint64_t last_field_end = 0;
 
       last_field_end = last_field_info.bit_offset + last_field_info.bit_size;
@@ -2937,7 +2938,7 @@ void DWARFASTParserClang::ParseSingleMember(
   } else {
     last_field_info.bit_offset = field_bit_offset;
 
-    if (llvm::Optional<uint64_t> clang_type_size =
+    if (std::optional<uint64_t> clang_type_size =
             member_type->GetByteSize(nullptr)) {
       last_field_info.bit_size = *clang_type_size * character_width;
     }

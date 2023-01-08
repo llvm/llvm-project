@@ -8,6 +8,7 @@
 #include "LibiptDecoder.h"
 #include "TraceIntelPT.h"
 #include "lldb/Target/Process.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -197,7 +198,7 @@ public:
     }
     if (insn_added_since_last_packet_offset ==
         m_next_infinite_decoding_loop_threshold) {
-      if (Optional<uint64_t> loop_size = TryIdentifyInfiniteLoop()) {
+      if (std::optional<uint64_t> loop_size = TryIdentifyInfiniteLoop()) {
         return createStringError(
             inconvertibleErrorCode(),
             "anomalous trace: possible infinite loop detected of size %" PRIu64,
@@ -209,7 +210,7 @@ public:
   }
 
 private:
-  Optional<uint64_t> TryIdentifyInfiniteLoop() {
+  std::optional<uint64_t> TryIdentifyInfiniteLoop() {
     // The infinite decoding loops we'll encounter are due to sequential
     // instructions that repeat themselves due to direct jumps, therefore in a
     // cycle each individual address will only appear once. We use this
@@ -221,7 +222,7 @@ private:
     // position in the trace. If the given position is an instruction, that
     // position is returned. It skips non-instruction items.
     auto most_recent_insn_index =
-        [&](uint64_t item_index) -> Optional<uint64_t> {
+        [&](uint64_t item_index) -> std::optional<uint64_t> {
       while (true) {
         if (m_decoded_thread.GetItemKindByIndex(item_index) ==
             lldb::eTraceItemKindInstruction) {
@@ -234,14 +235,14 @@ private:
       return std::nullopt;
     };
     // Similar to most_recent_insn_index but skips the starting position.
-    auto prev_insn_index = [&](uint64_t item_index) -> Optional<uint64_t> {
+    auto prev_insn_index = [&](uint64_t item_index) -> std::optional<uint64_t> {
       if (item_index == 0)
         return std::nullopt;
       return most_recent_insn_index(item_index - 1);
     };
 
     // We first find the most recent instruction.
-    Optional<uint64_t> last_insn_index_opt =
+    std::optional<uint64_t> last_insn_index_opt =
         *prev_insn_index(m_decoded_thread.GetItemsCount());
     if (!last_insn_index_opt)
       return std::nullopt;
@@ -249,7 +250,8 @@ private:
 
     // We then find the most recent previous occurrence of that last
     // instruction.
-    Optional<uint64_t> last_insn_copy_index = prev_insn_index(last_insn_index);
+    std::optional<uint64_t> last_insn_copy_index =
+        prev_insn_index(last_insn_index);
     uint64_t loop_size = 1;
     while (last_insn_copy_index &&
            m_decoded_thread.GetInstructionLoadAddress(*last_insn_copy_index) !=
@@ -266,11 +268,11 @@ private:
     uint64_t insn_index_a = last_insn_index,
              insn_index_b = *last_insn_copy_index;
     while (loop_elements_visited < loop_size) {
-      if (Optional<uint64_t> prev = prev_insn_index(insn_index_a))
+      if (std::optional<uint64_t> prev = prev_insn_index(insn_index_a))
         insn_index_a = *prev;
       else
         return std::nullopt;
-      if (Optional<uint64_t> prev = prev_insn_index(insn_index_b))
+      if (std::optional<uint64_t> prev = prev_insn_index(insn_index_b))
         insn_index_b = *prev;
       else
         return std::nullopt;
@@ -334,9 +336,9 @@ public:
   ///   Maximum allowed value of TSCs decoded from this PSB block.
   ///   Any of this PSB's data occurring after this TSC will be excluded.
   PSBBlockDecoder(PtInsnDecoderUP &&decoder_up, const PSBBlock &psb_block,
-                  Optional<lldb::addr_t> next_block_ip,
+                  std::optional<lldb::addr_t> next_block_ip,
                   DecodedThread &decoded_thread, TraceIntelPT &trace_intel_pt,
-                  llvm::Optional<DecodedThread::TSC> tsc_upper_bound)
+                  std::optional<DecodedThread::TSC> tsc_upper_bound)
       : m_decoder_up(std::move(decoder_up)), m_psb_block(psb_block),
         m_next_block_ip(next_block_ip), m_decoded_thread(decoded_thread),
         m_anomaly_detector(*m_decoder_up, trace_intel_pt, decoded_thread),
@@ -368,8 +370,9 @@ public:
   static Expected<PSBBlockDecoder>
   Create(TraceIntelPT &trace_intel_pt, const PSBBlock &psb_block,
          ArrayRef<uint8_t> buffer, Process &process,
-         Optional<lldb::addr_t> next_block_ip, DecodedThread &decoded_thread,
-         llvm::Optional<DecodedThread::TSC> tsc_upper_bound) {
+         std::optional<lldb::addr_t> next_block_ip,
+         DecodedThread &decoded_thread,
+         std::optional<DecodedThread::TSC> tsc_upper_bound) {
     Expected<PtInsnDecoderUP> decoder_up =
         CreateInstructionDecoder(trace_intel_pt, buffer, process);
     if (!decoder_up)
@@ -549,10 +552,10 @@ private:
 private:
   PtInsnDecoderUP m_decoder_up;
   PSBBlock m_psb_block;
-  Optional<lldb::addr_t> m_next_block_ip;
+  std::optional<lldb::addr_t> m_next_block_ip;
   DecodedThread &m_decoded_thread;
   PSBBlockAnomalyDetector m_anomaly_detector;
-  llvm::Optional<DecodedThread::TSC> m_tsc_upper_bound;
+  std::optional<DecodedThread::TSC> m_tsc_upper_bound;
 };
 
 Error lldb_private::trace_intel_pt::DecodeSingleTraceForThread(
@@ -706,11 +709,11 @@ lldb_private::trace_intel_pt::SplitTraceIntoPSBBlock(
     assert(offset_status >= 0 &&
            "This can't fail because we were able to synchronize");
 
-    Optional<uint64_t> ip;
+    std::optional<uint64_t> ip;
     if (!(pts_ip_suppressed & decoding_status))
       ip = maybe_ip;
 
-    Optional<uint64_t> tsc;
+    std::optional<uint64_t> tsc;
     // Now we fetch the first TSC that comes after the PSB.
     while (HasEvents(decoding_status)) {
       pt_event event;
@@ -754,7 +757,7 @@ lldb_private::trace_intel_pt::SplitTraceIntoPSBBlock(
   return executions;
 }
 
-Expected<Optional<uint64_t>>
+Expected<std::optional<uint64_t>>
 lldb_private::trace_intel_pt::FindLowestTSCInTrace(TraceIntelPT &trace_intel_pt,
                                                    ArrayRef<uint8_t> buffer) {
   Expected<PtQueryDecoderUP> decoder_up =

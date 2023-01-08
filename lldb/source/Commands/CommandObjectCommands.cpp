@@ -24,6 +24,7 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/StringList.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -57,8 +58,8 @@ public:
 
   ~CommandObjectCommandsSource() override = default;
 
-  llvm::Optional<std::string> GetRepeatCommand(Args &current_command_args,
-                                               uint32_t index) override {
+  std::optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                              uint32_t index) override {
     return std::string("");
   }
 

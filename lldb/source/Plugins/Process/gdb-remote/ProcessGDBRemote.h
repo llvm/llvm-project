@@ -12,6 +12,7 @@
 #include <atomic>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -253,7 +254,7 @@ protected:
   GDBRemoteCommunicationClient m_gdb_comm;
   std::atomic<lldb::pid_t> m_debugserver_pid;
 
-  llvm::Optional<StringExtractorGDBRemote> m_last_stop_packet;
+  std::optional<StringExtractorGDBRemote> m_last_stop_packet;
   std::recursive_mutex m_last_stop_packet_mutex;
 
   GDBRemoteDynamicRegisterInfoSP m_register_info_sp;

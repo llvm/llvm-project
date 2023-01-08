@@ -10,6 +10,7 @@
 #define LLDB_UTILITY_FILESPEC_H
 
 #include <functional>
+#include <optional>
 #include <string>
 
 #include "lldb/Utility/ConstString.h"
@@ -194,7 +195,7 @@ public:
   /// The guess will be correct if the input path was a valid absolute path on
   /// the system which produced it. On other paths the result of this function
   /// is unreliable (e.g. "c:\foo.txt" is a valid relative posix path).
-  static llvm::Optional<Style> GuessPathStyle(llvm::StringRef absolute_path);
+  static std::optional<Style> GuessPathStyle(llvm::StringRef absolute_path);
 
   /// Case sensitivity of path.
   ///

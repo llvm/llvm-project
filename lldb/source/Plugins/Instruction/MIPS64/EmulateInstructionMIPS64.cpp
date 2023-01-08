@@ -9,6 +9,7 @@
 #include "EmulateInstructionMIPS64.h"
 
 #include <cstdlib>
+#include <optional>
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Opcode.h"
@@ -572,7 +573,7 @@ const char *EmulateInstructionMIPS64::GetRegisterName(unsigned reg_num,
   return nullptr;
 }
 
-llvm::Optional<RegisterInfo>
+std::optional<RegisterInfo>
 EmulateInstructionMIPS64::GetRegisterInfo(RegisterKind reg_kind,
                                           uint32_t reg_num) {
   if (reg_kind == eRegisterKindGeneric) {
@@ -1098,7 +1099,7 @@ bool EmulateInstructionMIPS64::Emulate_DADDiu(llvm::MCInst &insn) {
        * Assume 2's complement and rely on unsigned overflow here.
        */
       uint64_t result = src_opd_val + imm;
-      llvm::Optional<RegisterInfo> reg_info_sp =
+      std::optional<RegisterInfo> reg_info_sp =
           GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips64);
       if (reg_info_sp)
         context.SetRegisterPlusOffset(*reg_info_sp, imm);
@@ -1134,9 +1135,9 @@ bool EmulateInstructionMIPS64::Emulate_SD(llvm::MCInst &insn) {
   src = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   base = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
 
-  llvm::Optional<RegisterInfo> reg_info_base =
+  std::optional<RegisterInfo> reg_info_base =
       GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips64 + base);
-  llvm::Optional<RegisterInfo> reg_info_src =
+  std::optional<RegisterInfo> reg_info_src =
       GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips64 + src);
   if (!reg_info_base || !reg_info_src)
     return false;
@@ -1159,7 +1160,7 @@ bool EmulateInstructionMIPS64::Emulate_SD(llvm::MCInst &insn) {
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
     Status error;
 
-    llvm::Optional<RegisterValue> data_src = ReadRegister(*reg_info_base);
+    std::optional<RegisterValue> data_src = ReadRegister(*reg_info_base);
     if (!data_src)
       return false;
 
@@ -1209,7 +1210,7 @@ bool EmulateInstructionMIPS64::Emulate_LD(llvm::MCInst &insn) {
 
   if (nonvolatile_reg_p(src)) {
     RegisterValue data_src;
-    llvm::Optional<RegisterInfo> reg_info_src =
+    std::optional<RegisterInfo> reg_info_src =
         GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips64 + src);
     if (!reg_info_src)
       return false;
@@ -1276,7 +1277,7 @@ bool EmulateInstructionMIPS64::Emulate_DSUBU_DADDU(llvm::MCInst &insn) {
       result = src_opd_val + rt_opd_val;
 
     Context context;
-    llvm::Optional<RegisterInfo> reg_info_sp =
+    std::optional<RegisterInfo> reg_info_sp =
         GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips64);
     if (reg_info_sp)
       context.SetRegisterPlusOffset(*reg_info_sp, rt_opd_val);

@@ -10,6 +10,7 @@
 #include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "llvm/Support/Format.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -26,8 +27,8 @@ constexpr uint32_t k_dwo_num_mask = 0x3FFFFFFF;
 constexpr uint32_t k_dwo_num_valid_bitmask = (1u << 30);
 constexpr uint32_t k_section_bitmask = (1u << 31);
 
-llvm::Optional<DIERef> DIERef::Decode(const DataExtractor &data,
-                                      lldb::offset_t *offset_ptr) {
+std::optional<DIERef> DIERef::Decode(const DataExtractor &data,
+                                     lldb::offset_t *offset_ptr) {
   const uint32_t bitfield_storage = data.GetU32(offset_ptr);
   uint32_t dwo_num = bitfield_storage & k_dwo_num_mask;
   bool dwo_num_valid = (bitfield_storage & (k_dwo_num_valid_bitmask)) != 0;

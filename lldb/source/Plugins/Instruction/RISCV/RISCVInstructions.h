@@ -10,10 +10,10 @@
 #define LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVINSTRUCTION_H
 
 #include <cstdint>
+#include <optional>
 #include <variant>
 
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/Optional.h"
 
 namespace lldb_private {
 
@@ -27,12 +27,12 @@ struct Rd {
 
 struct Rs {
   uint32_t rs;
-  llvm::Optional<uint64_t> Read(EmulateInstructionRISCV &emulator);
-  llvm::Optional<int32_t> ReadI32(EmulateInstructionRISCV &emulator);
-  llvm::Optional<int64_t> ReadI64(EmulateInstructionRISCV &emulator);
-  llvm::Optional<uint32_t> ReadU32(EmulateInstructionRISCV &emulator);
-  llvm::Optional<llvm::APFloat> ReadAPFloat(EmulateInstructionRISCV &emulator,
-                                            bool isDouble);
+  std::optional<uint64_t> Read(EmulateInstructionRISCV &emulator);
+  std::optional<int32_t> ReadI32(EmulateInstructionRISCV &emulator);
+  std::optional<int64_t> ReadI64(EmulateInstructionRISCV &emulator);
+  std::optional<uint32_t> ReadU32(EmulateInstructionRISCV &emulator);
+  std::optional<llvm::APFloat> ReadAPFloat(EmulateInstructionRISCV &emulator,
+                                           bool isDouble);
 };
 
 #define DERIVE_EQ(NAME)                                                        \

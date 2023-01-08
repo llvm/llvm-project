@@ -11,6 +11,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -277,7 +278,7 @@ public:
   ///     current command line.
   ///     Otherwise a std::string containing the command to be repeated.
   ///     If the string is empty, the command won't be allow repeating.
-  virtual llvm::Optional<std::string>
+  virtual std::optional<std::string>
   GetRepeatCommand(Args &current_command_args, uint32_t index) {
     return std::nullopt;
   }
