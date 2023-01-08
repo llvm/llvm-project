@@ -2097,45 +2097,25 @@ define i32 @single_read_of_static_global() {
 }
 
 define i8 @phi_store() {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn
-; TUNIT-LABEL: define {{[^@]+}}@phi_store
-; TUNIT-SAME: () #[[ATTR3]] {
-; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[A:%.*]] = alloca i16, align 2
-; TUNIT-NEXT:    [[B:%.*]] = bitcast i16* [[A]] to i8*
-; TUNIT-NEXT:    br label [[LOOP:%.*]]
-; TUNIT:       loop:
-; TUNIT-NEXT:    [[P:%.*]] = phi i8* [ [[B]], [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
-; TUNIT-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
-; TUNIT-NEXT:    store i8 1, i8* [[P]], align 1
-; TUNIT-NEXT:    [[G]] = getelementptr i8, i8* [[P]], i64 1
-; TUNIT-NEXT:    [[O]] = add nsw i8 [[I]], 1
-; TUNIT-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 2
-; TUNIT-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
-; TUNIT:       end:
-; TUNIT-NEXT:    [[S:%.*]] = getelementptr i8, i8* [[B]], i64 1
-; TUNIT-NEXT:    [[L:%.*]] = load i8, i8* [[S]], align 1
-; TUNIT-NEXT:    ret i8 [[L]]
-;
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn
-; CGSCC-LABEL: define {{[^@]+}}@phi_store
-; CGSCC-SAME: () #[[ATTR5]] {
-; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[A:%.*]] = alloca i16, align 2
-; CGSCC-NEXT:    [[B:%.*]] = bitcast i16* [[A]] to i8*
-; CGSCC-NEXT:    br label [[LOOP:%.*]]
-; CGSCC:       loop:
-; CGSCC-NEXT:    [[P:%.*]] = phi i8* [ [[B]], [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
-; CGSCC-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
-; CGSCC-NEXT:    store i8 1, i8* [[P]], align 1
-; CGSCC-NEXT:    [[G]] = getelementptr i8, i8* [[P]], i64 1
-; CGSCC-NEXT:    [[O]] = add nsw i8 [[I]], 1
-; CGSCC-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 2
-; CGSCC-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
-; CGSCC:       end:
-; CGSCC-NEXT:    [[S:%.*]] = getelementptr i8, i8* [[B]], i64 1
-; CGSCC-NEXT:    [[L:%.*]] = load i8, i8* [[S]], align 1
-; CGSCC-NEXT:    ret i8 [[L]]
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define {{[^@]+}}@phi_store
+; CHECK-SAME: () #[[ATTR4]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    [[B:%.*]] = bitcast i16* [[A]] to i8*
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[P:%.*]] = phi i8* [ [[B]], [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    store i8 1, i8* [[P]], align 1
+; CHECK-NEXT:    [[G]] = getelementptr i8, i8* [[P]], i64 1
+; CHECK-NEXT:    [[O]] = add nsw i8 [[I]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 2
+; CHECK-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
+; CHECK:       end:
+; CHECK-NEXT:    [[S:%.*]] = getelementptr i8, i8* [[B]], i64 1
+; CHECK-NEXT:    [[L:%.*]] = load i8, i8* [[S]], align 1
+; CHECK-NEXT:    ret i8 [[L]]
 ;
 entry:
   %a = alloca i16
