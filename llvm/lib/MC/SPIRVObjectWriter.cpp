@@ -14,6 +14,7 @@
 
 using namespace llvm;
 
+namespace {
 class SPIRVObjectWriter : public MCObjectWriter {
   ::support::endian::Writer W;
 
@@ -38,6 +39,7 @@ private:
   uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
   void writeHeader(const MCAssembler &Asm);
 };
+} // namespace
 
 void SPIRVObjectWriter::writeHeader(const MCAssembler &Asm) {
   constexpr uint32_t MagicNumber = 0x07230203;

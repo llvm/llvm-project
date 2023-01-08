@@ -1186,8 +1186,6 @@ public:
   }
 };
 
-} // end of anonymous namespace
-
 //===----------------------------------------------------------------------===//
 //                               StoreSiteFinder
 //===----------------------------------------------------------------------===//
@@ -1227,6 +1225,7 @@ public:
                                    BugReporterContext &BRC,
                                    PathSensitiveBugReport &BR) override;
 };
+} // namespace
 
 void StoreSiteFinder::Profile(llvm::FoldingSetNodeID &ID) const {
   static int tag = 0;
@@ -2216,6 +2215,7 @@ PathDiagnosticPieceRef StoreHandler::constructNote(StoreInfo SI,
   return std::make_shared<PathDiagnosticEventPiece>(L, NodeText);
 }
 
+namespace {
 class DefaultStoreHandler final : public StoreHandler {
 public:
   using StoreHandler::StoreHandler;
@@ -2600,6 +2600,7 @@ public:
     return CombinedResult;
   }
 };
+} // namespace
 
 Tracker::Tracker(PathSensitiveBugReport &Report) : Report(Report) {
   // Default expression handlers.

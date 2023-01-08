@@ -69,12 +69,14 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
+namespace {
 class VEELFTargetObjectFile : public TargetLoweringObjectFileELF {
   void Initialize(MCContext &Ctx, const TargetMachine &TM) override {
     TargetLoweringObjectFileELF::Initialize(Ctx, TM);
     InitializeELF(TM.Options.UseInitArray);
   }
 };
+} // namespace
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF() {
   return std::make_unique<VEELFTargetObjectFile>();
