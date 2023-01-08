@@ -20,7 +20,6 @@
 #include "index/SymbolLocation.h"
 #include "index/SymbolOrigin.h"
 #include "clang/Tooling/CompilationDatabase.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/StringSaver.h"

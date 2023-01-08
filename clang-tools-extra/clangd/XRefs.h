@@ -19,7 +19,6 @@
 #include "index/SymbolID.h"
 #include "support/Path.h"
 #include "clang/AST/ASTTypeTraits.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>

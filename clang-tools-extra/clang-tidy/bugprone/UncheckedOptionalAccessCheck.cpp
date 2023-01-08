@@ -18,7 +18,6 @@
 #include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include <memory>
@@ -32,7 +31,6 @@ using ast_matchers::MatchFinder;
 using dataflow::UncheckedOptionalAccessDiagnoser;
 using dataflow::UncheckedOptionalAccessModel;
 using dataflow::UncheckedOptionalAccessModelOptions;
-using llvm::Optional;
 
 static constexpr llvm::StringLiteral FuncID("fun");
 
