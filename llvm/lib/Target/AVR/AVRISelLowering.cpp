@@ -1850,15 +1850,78 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
 // registers in the Regs array.
 // Because AVR does not have a normal shift instruction (only a single bit shift
 // instruction), we have to emulate this behavior with other instructions.
+// It first tries large steps (moving registers around) and then smaller steps
+// like single bit shifts.
+// Large shifts actually reduce the number of shifted registers, so the below
+// algorithms have to work independently of the number of registers that are
+// shifted.
+// For more information and background, see this blogpost:
+// https://aykevl.nl/2021/02/avr-bitshift
 static void insertMultibyteShift(MachineInstr &MI, MachineBasicBlock *BB,
                                  MutableArrayRef<std::pair<Register, int>> Regs,
                                  ISD::NodeType Opc, int64_t ShiftAmt) {
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
+  const AVRSubtarget &STI = BB->getParent()->getSubtarget<AVRSubtarget>();
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
   const DebugLoc &dl = MI.getDebugLoc();
 
   const bool ShiftLeft = Opc == ISD::SHL;
   const bool ArithmeticShift = Opc == ISD::SRA;
+
+  // Zero a register, for use in later operations.
+  Register ZeroReg = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+  BuildMI(*BB, MI, dl, TII.get(AVR::COPY), ZeroReg)
+      .addReg(STI.getZeroRegister());
+
+  // For shift amounts of at least one register, simply rename the registers and
+  // zero the bottom registers.
+  while (ShiftLeft && ShiftAmt >= 8) {
+    // Move all registers one to the left.
+    for (size_t I = 0; I < Regs.size() - 1; I++) {
+      Regs[I] = Regs[I + 1];
+    }
+
+    // Zero the least significant register.
+    Regs[Regs.size() - 1] = std::pair(ZeroReg, 0);
+
+    // Continue shifts with the leftover registers.
+    Regs = Regs.drop_back(1);
+
+    ShiftAmt -= 8;
+  }
+
+  // And again, the same for right shifts.
+  Register ShrExtendReg = 0;
+  if (!ShiftLeft && ShiftAmt >= 8) {
+    if (ArithmeticShift) {
+      // Sign extend the most significant register into ShrExtendReg.
+      ShrExtendReg = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+      Register Tmp = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+      BuildMI(*BB, MI, dl, TII.get(AVR::ADDRdRr), Tmp)
+          .addReg(Regs[0].first, 0, Regs[0].second)
+          .addReg(Regs[0].first, 0, Regs[0].second);
+      BuildMI(*BB, MI, dl, TII.get(AVR::SBCRdRr), ShrExtendReg)
+          .addReg(Tmp)
+          .addReg(Tmp);
+    } else {
+      ShrExtendReg = ZeroReg;
+    }
+    for (; ShiftAmt >= 8; ShiftAmt -= 8) {
+      // Move all registers one to the right.
+      for (size_t I = Regs.size() - 1; I != 0; I--) {
+        Regs[I] = Regs[I - 1];
+      }
+
+      // Zero or sign extend the most significant register.
+      Regs[0] = std::pair(ShrExtendReg, 0);
+
+      // Continue shifts with the leftover registers.
+      Regs = Regs.drop_front(1);
+    }
+  }
+
+  // The bigger shifts are already handled above.
+  assert((ShiftAmt < 8) && "Unexpect shift amount");
 
   // Shift by one. This is the fallback that always works, and the shift
   // operation that is used for 1, 2, and 3 bit shifts.
