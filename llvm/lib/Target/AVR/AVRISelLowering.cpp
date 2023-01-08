@@ -1923,6 +1923,56 @@ static void insertMultibyteShift(MachineInstr &MI, MachineBasicBlock *BB,
   // The bigger shifts are already handled above.
   assert((ShiftAmt < 8) && "Unexpect shift amount");
 
+  // Shift by four bits, using a complicated swap/eor/andi/eor sequence.
+  // It only works for logical shifts because the bits shifted in are all
+  // zeroes.
+  // To shift a single byte right, it produces code like this:
+  //   swap r0
+  //   andi r0, 0x0f
+  // For a two-byte (16-bit) shift, it adds the following instructions to shift
+  // the upper byte into the lower byte:
+  //   swap r1
+  //   eor r0, r1
+  //   andi r1, 0x0f
+  //   eor r0, r1
+  // For bigger shifts, it repeats the above sequence. For example, for a 3-byte
+  // (24-bit) shift it adds:
+  //   swap r2
+  //   eor r1, r2
+  //   andi r2, 0x0f
+  //   eor r1, r2
+  if (!ArithmeticShift && ShiftAmt >= 4) {
+    Register Prev = 0;
+    for (size_t I = 0; I < Regs.size(); I++) {
+      size_t Idx = ShiftLeft ? I : Regs.size() - I - 1;
+      Register SwapReg = MRI.createVirtualRegister(&AVR::LD8RegClass);
+      BuildMI(*BB, MI, dl, TII.get(AVR::SWAPRd), SwapReg)
+          .addReg(Regs[Idx].first, 0, Regs[Idx].second);
+      if (I != 0) {
+        Register R = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+        BuildMI(*BB, MI, dl, TII.get(AVR::EORRdRr), R)
+            .addReg(Prev)
+            .addReg(SwapReg);
+        Prev = R;
+      }
+      Register AndReg = MRI.createVirtualRegister(&AVR::LD8RegClass);
+      BuildMI(*BB, MI, dl, TII.get(AVR::ANDIRdK), AndReg)
+          .addReg(SwapReg)
+          .addImm(ShiftLeft ? 0xf0 : 0x0f);
+      if (I != 0) {
+        Register R = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+        BuildMI(*BB, MI, dl, TII.get(AVR::EORRdRr), R)
+            .addReg(Prev)
+            .addReg(AndReg);
+        size_t PrevIdx = ShiftLeft ? Idx - 1 : Idx + 1;
+        Regs[PrevIdx] = std::pair(R, 0);
+      }
+      Prev = AndReg;
+      Regs[Idx] = std::pair(AndReg, 0);
+    }
+    ShiftAmt -= 4;
+  }
+
   // Shift by one. This is the fallback that always works, and the shift
   // operation that is used for 1, 2, and 3 bit shifts.
   while (ShiftLeft && ShiftAmt) {

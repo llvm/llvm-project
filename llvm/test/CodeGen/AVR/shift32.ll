@@ -29,6 +29,55 @@ define i32 @shl_i32_2(i32 %a) {
   ret i32 %res
 }
 
+define i32 @shl_i32_4(i32 %a) {
+; CHECK-LABEL: shl_i32_4:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    swap r25
+; CHECK-NEXT:    andi r25, 240
+; CHECK-NEXT:    swap r24
+; CHECK-NEXT:    eor r25, r24
+; CHECK-NEXT:    andi r24, 240
+; CHECK-NEXT:    eor r25, r24
+; CHECK-NEXT:    swap r23
+; CHECK-NEXT:    eor r24, r23
+; CHECK-NEXT:    andi r23, 240
+; CHECK-NEXT:    eor r24, r23
+; CHECK-NEXT:    swap r22
+; CHECK-NEXT:    eor r23, r22
+; CHECK-NEXT:    andi r22, 240
+; CHECK-NEXT:    eor r23, r22
+; CHECK-NEXT:    ret
+  %res = shl i32 %a, 4
+  ret i32 %res
+}
+
+; shift four bits and then shift one bit
+define i32 @shl_i32_5(i32 %a) {
+; CHECK-LABEL: shl_i32_5:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    swap r25
+; CHECK-NEXT:    andi r25, 240
+; CHECK-NEXT:    swap r24
+; CHECK-NEXT:    eor r25, r24
+; CHECK-NEXT:    andi r24, 240
+; CHECK-NEXT:    eor r25, r24
+; CHECK-NEXT:    swap r23
+; CHECK-NEXT:    eor r24, r23
+; CHECK-NEXT:    andi r23, 240
+; CHECK-NEXT:    eor r24, r23
+; CHECK-NEXT:    swap r22
+; CHECK-NEXT:    eor r23, r22
+; CHECK-NEXT:    andi r22, 240
+; CHECK-NEXT:    eor r23, r22
+; CHECK-NEXT:    lsl r22
+; CHECK-NEXT:    rol r23
+; CHECK-NEXT:    rol r24
+; CHECK-NEXT:    rol r25
+; CHECK-NEXT:    ret
+  %res = shl i32 %a, 5
+  ret i32 %res
+}
+
 define i32 @shl_i32_8(i32 %a) {
 ; CHECK-LABEL: shl_i32_8:
 ; CHECK:       ; %bb.0:
@@ -53,6 +102,29 @@ define i32 @shl_i32_9(i32 %a) {
 ; CHECK-NEXT:    mov r22, r1
 ; CHECK-NEXT:    ret
   %res = shl i32 %a, 9
+  ret i32 %res
+}
+
+; shift 3 of 4 registers and move the others around
+define i32 @shl_i32_12(i32 %a) {
+; CHECK-LABEL: shl_i32_12:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    swap r24
+; CHECK-NEXT:    andi r24, 240
+; CHECK-NEXT:    swap r23
+; CHECK-NEXT:    eor r24, r23
+; CHECK-NEXT:    andi r23, 240
+; CHECK-NEXT:    eor r24, r23
+; CHECK-NEXT:    swap r22
+; CHECK-NEXT:    eor r23, r22
+; CHECK-NEXT:    andi r22, 240
+; CHECK-NEXT:    eor r23, r22
+; CHECK-NEXT:    mov r25, r24
+; CHECK-NEXT:    mov r24, r23
+; CHECK-NEXT:    mov r23, r22
+; CHECK-NEXT:    mov r22, r1
+; CHECK-NEXT:    ret
+  %res = shl i32 %a, 12
   ret i32 %res
 }
 
@@ -88,6 +160,21 @@ define void @shl_i32_16_ptr(i32 %a, ptr %ptr) {
   ret void
 }
 
+; shift only the most significant byte and then move it
+define i32 @shl_i32_28(i32 %a) {
+; CHECK-LABEL: shl_i32_28:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    swap r22
+; CHECK-NEXT:    andi r22, 240
+; CHECK-NEXT:    mov r25, r22
+; CHECK-NEXT:    mov r24, r1
+; CHECK-NEXT:    mov r23, r1
+; CHECK-NEXT:    mov r22, r1
+; CHECK-NEXT:    ret
+  %res = shl i32 %a, 28
+  ret i32 %res
+}
+
 define i32 @lshr_i32_1(i32 %a) {
 ; CHECK-LABEL: lshr_i32_1:
 ; CHECK:       ; %bb.0:
@@ -113,6 +200,28 @@ define i32 @lshr_i32_2(i32 %a) {
 ; CHECK-NEXT:    ror r22
 ; CHECK-NEXT:    ret
   %res = lshr i32 %a, 2
+  ret i32 %res
+}
+
+define i32 @lshr_i32_4(i32 %a) {
+; CHECK-LABEL: lshr_i32_4:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    swap r22
+; CHECK-NEXT:    andi r22, 15
+; CHECK-NEXT:    swap r23
+; CHECK-NEXT:    eor r22, r23
+; CHECK-NEXT:    andi r23, 15
+; CHECK-NEXT:    eor r22, r23
+; CHECK-NEXT:    swap r24
+; CHECK-NEXT:    eor r23, r24
+; CHECK-NEXT:    andi r24, 15
+; CHECK-NEXT:    eor r23, r24
+; CHECK-NEXT:    swap r25
+; CHECK-NEXT:    eor r24, r25
+; CHECK-NEXT:    andi r25, 15
+; CHECK-NEXT:    eor r24, r25
+; CHECK-NEXT:    ret
+  %res = lshr i32 %a, 4
   ret i32 %res
 }
 
@@ -196,6 +305,31 @@ define i32 @ashr_i32_2(i32 %a) {
 ; CHECK-NEXT:    ror r22
 ; CHECK-NEXT:    ret
   %res = ashr i32 %a, 2
+  ret i32 %res
+}
+
+; can't use the swap/andi/eor trick here
+define i32 @ashr_i32_4(i32 %a) {
+; CHECK-LABEL: ashr_i32_4:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    asr r25
+; CHECK-NEXT:    ror r24
+; CHECK-NEXT:    ror r23
+; CHECK-NEXT:    ror r22
+; CHECK-NEXT:    asr r25
+; CHECK-NEXT:    ror r24
+; CHECK-NEXT:    ror r23
+; CHECK-NEXT:    ror r22
+; CHECK-NEXT:    asr r25
+; CHECK-NEXT:    ror r24
+; CHECK-NEXT:    ror r23
+; CHECK-NEXT:    ror r22
+; CHECK-NEXT:    asr r25
+; CHECK-NEXT:    ror r24
+; CHECK-NEXT:    ror r23
+; CHECK-NEXT:    ror r22
+; CHECK-NEXT:    ret
+  %res = ashr i32 %a, 4
   ret i32 %res
 }
 
