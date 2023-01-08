@@ -114,5 +114,5 @@ entry:
 !1 = !{!"1:1:4:%d\5Cn"}
 !2 = !{!"2:1:8:%g\5Cn"}
 
-attributes #0 = { optnone noinline }
+attributes #0 = { optnone noinline "calls-enqueue-kernel" }
 
