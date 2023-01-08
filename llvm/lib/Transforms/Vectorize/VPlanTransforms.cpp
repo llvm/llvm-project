@@ -126,10 +126,10 @@ bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
 
   bool ScalarVFOnly = Plan.hasScalarVFOnly();
   // Try to sink each replicate or scalar IV steps recipe in the worklist.
-  while (!WorkList.empty()) {
+  for (unsigned I = 0; I != WorkList.size(); ++I) {
     VPBasicBlock *SinkTo;
     VPRecipeBase *SinkCandidate;
-    std::tie(SinkTo, SinkCandidate) = WorkList.pop_back_val();
+    std::tie(SinkTo, SinkCandidate) = WorkList[I];
     if (SinkCandidate->getParent() == SinkTo ||
         SinkCandidate->mayHaveSideEffects() ||
         SinkCandidate->mayReadOrWriteMemory())
