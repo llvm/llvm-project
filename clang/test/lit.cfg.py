@@ -246,6 +246,9 @@ if config.clang_vendor_uti:
 if config.have_ondisk_cas:
     config.available_features.add('ondisk_cas')
 
+if config.have_llvm_driver:
+  config.available_features.add('llvm-driver')
+
 def exclude_unsupported_files_for_aix(dirname):
     for filename in os.listdir(dirname):
         source_path = os.path.join( dirname, filename)

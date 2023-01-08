@@ -18,6 +18,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_ONDISK_CAS
   LLVM_WITH_Z3
   PPC_LINUX_DEFAULT_IEEELONGDOUBLE
+  LLVM_TOOL_LLVM_DRIVER_BUILD
   )
 
 configure_lit_site_cfg(
