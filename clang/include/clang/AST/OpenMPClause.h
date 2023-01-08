@@ -9004,6 +9004,48 @@ public:
   }
 };
 
+/// This represents 'ompx_dyn_cgroup_mem' clause in the '#pragma omp target ...'
+/// directive.
+///
+/// \code
+/// #pragma omp target [...] ompx_dyn_cgroup_mem(N)
+/// \endcode
+class OMPXDynCGroupMemClause
+    : public OMPOneStmtClause<llvm::omp::OMPC_ompx_dyn_cgroup_mem, OMPClause>,
+      public OMPClauseWithPreInit {
+  friend class OMPClauseReader;
+
+  /// Set size.
+  void setSize(Expr *E) { setStmt(E); }
+
+public:
+  /// Build 'ompx_dyn_cgroup_mem' clause.
+  ///
+  /// \param Size Size expression.
+  /// \param HelperSize Helper Size expression
+  /// \param CaptureRegion Innermost OpenMP region where expressions in this
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPXDynCGroupMemClause(Expr *Size, Stmt *HelperSize,
+                         OpenMPDirectiveKind CaptureRegion,
+                         SourceLocation StartLoc, SourceLocation LParenLoc,
+                         SourceLocation EndLoc)
+      : OMPOneStmtClause(Size, StartLoc, LParenLoc, EndLoc),
+        OMPClauseWithPreInit(this) {
+    setPreInitStmt(HelperSize, CaptureRegion);
+  }
+
+  /// Build an empty clause.
+  OMPXDynCGroupMemClause() : OMPOneStmtClause(), OMPClauseWithPreInit(this) {}
+
+  /// Return the size expression.
+  Expr *getSize() { return getStmtAs<Expr>(); }
+
+  /// Return the size expression.
+  Expr *getSize() const { return getStmtAs<Expr>(); }
+};
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_OPENMPCLAUSE_H
