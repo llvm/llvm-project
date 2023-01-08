@@ -29,8 +29,8 @@ static DWARFDataExtractor LoadSection(SectionList *section_list,
 }
 
 const DWARFDataExtractor &
-DWARFContext::LoadOrGetSection(llvm::Optional<SectionType> main_section_type,
-                               llvm::Optional<SectionType> dwo_section_type,
+DWARFContext::LoadOrGetSection(std::optional<SectionType> main_section_type,
+                               std::optional<SectionType> dwo_section_type,
                                SectionData &data) {
   llvm::call_once(data.flag, [&] {
     if (dwo_section_type && isDwo())

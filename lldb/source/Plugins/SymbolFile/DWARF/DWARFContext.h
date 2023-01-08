@@ -47,8 +47,8 @@ private:
   SectionData m_data_debug_types;
 
   const DWARFDataExtractor &
-  LoadOrGetSection(llvm::Optional<lldb::SectionType> main_section_type,
-                   llvm::Optional<lldb::SectionType> dwo_section_type,
+  LoadOrGetSection(std::optional<lldb::SectionType> main_section_type,
+                   std::optional<lldb::SectionType> dwo_section_type,
                    SectionData &data);
 
   const DWARFDataExtractor &getOrLoadCuIndexData();

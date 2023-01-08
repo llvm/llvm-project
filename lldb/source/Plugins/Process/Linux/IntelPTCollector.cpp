@@ -225,7 +225,7 @@ IntelPTCollector::GetBinaryData(const TraceGetBinaryDataRequest &request) {
     return GetProcfsCpuInfo();
 
   if (m_process_trace_up) {
-    Expected<Optional<std::vector<uint8_t>>> data =
+    Expected<std::optional<std::vector<uint8_t>>> data =
         m_process_trace_up->TryGetBinaryData(request);
     if (!data)
       return data.takeError();
@@ -234,7 +234,7 @@ IntelPTCollector::GetBinaryData(const TraceGetBinaryDataRequest &request) {
   }
 
   {
-    Expected<Optional<std::vector<uint8_t>>> data =
+    Expected<std::optional<std::vector<uint8_t>>> data =
         m_thread_traces.TryGetBinaryData(request);
     if (!data)
       return data.takeError();

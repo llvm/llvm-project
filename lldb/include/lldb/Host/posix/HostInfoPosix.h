@@ -23,7 +23,7 @@ class HostInfoPosix : public HostInfoBase {
 public:
   static size_t GetPageSize();
   static bool GetHostname(std::string &s);
-  static llvm::Optional<std::string> GetOSKernelDescription();
+  static std::optional<std::string> GetOSKernelDescription();
 
   static uint32_t GetUserID();
   static uint32_t GetGroupID();

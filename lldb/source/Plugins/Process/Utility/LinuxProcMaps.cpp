@@ -147,7 +147,7 @@ void lldb_private::ParseLinuxSMapRegions(llvm::StringRef linux_smap,
 
   llvm::StringRef lines(linux_smap);
   llvm::StringRef line;
-  llvm::Optional<MemoryRegionInfo> region;
+  std::optional<MemoryRegionInfo> region;
 
   while (lines.size()) {
     std::tie(line, lines) = lines.split('\n');

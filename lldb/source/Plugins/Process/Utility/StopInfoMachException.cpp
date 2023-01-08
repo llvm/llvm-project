@@ -41,7 +41,7 @@ struct PtrauthInstructionInfo {
 
 /// Get any pointer-authentication related information about the instruction
 /// at address \p at_addr.
-static llvm::Optional<PtrauthInstructionInfo>
+static std::optional<PtrauthInstructionInfo>
 GetPtrauthInstructionInfo(Target &target, const ArchSpec &arch,
                           const Address &at_addr) {
   const char *plugin_name = nullptr;
@@ -569,9 +569,9 @@ StopInfoMachException::MachException::Name(exception_type_t exc_type) {
   return NULL;
 }
 
-llvm::Optional<exception_type_t>
+std::optional<exception_type_t>
 StopInfoMachException::MachException::ExceptionCode(const char *name) {
-  return llvm::StringSwitch<llvm::Optional<exception_type_t>>(name)
+  return llvm::StringSwitch<std::optional<exception_type_t>>(name)
       .Case("EXC_BAD_ACCESS", EXC_BAD_ACCESS)
       .Case("EXC_BAD_INSTRUCTION", EXC_BAD_INSTRUCTION)
       .Case("EXC_ARITHMETIC", EXC_ARITHMETIC)

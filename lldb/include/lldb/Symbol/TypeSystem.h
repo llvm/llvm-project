@@ -47,7 +47,7 @@ struct LanguageSet {
   LanguageSet();
 
   /// If the set contains a single language only, return it.
-  llvm::Optional<lldb::LanguageType> GetSingularLanguage();
+  std::optional<lldb::LanguageType> GetSingularLanguage();
   void Insert(lldb::LanguageType language);
   bool Empty() const;
   size_t Size() const;
@@ -309,7 +309,7 @@ public:
 
   virtual const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) = 0;
 
-  virtual llvm::Optional<uint64_t>
+  virtual std::optional<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) = 0;
 
@@ -399,7 +399,7 @@ public:
   virtual CompilerType
   GetTypeTemplateArgument(lldb::opaque_compiler_type_t type, size_t idx,
                           bool expand_pack);
-  virtual llvm::Optional<CompilerType::IntegralTemplateArgument>
+  virtual std::optional<CompilerType::IntegralTemplateArgument>
   GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type, size_t idx,
                               bool expand_pack);
 
@@ -468,7 +468,7 @@ public:
   virtual bool IsCStringType(lldb::opaque_compiler_type_t type,
                              uint32_t &length) = 0;
 
-  virtual llvm::Optional<size_t>
+  virtual std::optional<size_t>
   GetTypeBitAlign(lldb::opaque_compiler_type_t type,
                   ExecutionContextScope *exe_scope) = 0;
 
@@ -556,7 +556,7 @@ public:
   /// process so they can be surfaced to the user.
   virtual void DiagnoseWarnings(Process &process, Module &module) const;
 
-  virtual llvm::Optional<llvm::json::Value> ReportStatistics();
+  virtual std::optional<llvm::json::Value> ReportStatistics();
 
   bool GetHasForcefullyCompletedTypes() const {
     return m_has_forcefully_completed_types;
@@ -627,7 +627,7 @@ private:
   /// \return The found type system or an error.
   llvm::Expected<lldb::TypeSystemSP> GetTypeSystemForLanguage(
       lldb::LanguageType language,
-      llvm::Optional<CreateCallback> create_callback = std::nullopt);
+      std::optional<CreateCallback> create_callback = std::nullopt);
   };
 
 } // namespace lldb_private

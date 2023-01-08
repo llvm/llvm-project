@@ -84,7 +84,7 @@ struct MinidumpMiscInfo {
 
   static const MinidumpMiscInfo *Parse(llvm::ArrayRef<uint8_t> &data);
 
-  llvm::Optional<lldb::pid_t> GetPid() const;
+  std::optional<lldb::pid_t> GetPid() const;
 };
 static_assert(sizeof(MinidumpMiscInfo) == 24,
               "sizeof MinidumpMiscInfo is not correct!");
@@ -95,7 +95,7 @@ public:
   llvm::StringRef proc_status;
   lldb::pid_t pid;
 
-  static llvm::Optional<LinuxProcStatus> Parse(llvm::ArrayRef<uint8_t> &data);
+  static std::optional<LinuxProcStatus> Parse(llvm::ArrayRef<uint8_t> &data);
 
   lldb::pid_t GetPid() const;
 

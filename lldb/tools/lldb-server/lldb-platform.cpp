@@ -353,7 +353,7 @@ int main_platform(int argc, char *argv[]) {
     if (platform.IsConnected()) {
       if (inferior_arguments.GetArgumentCount() > 0) {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        llvm::Optional<uint16_t> port = 0;
+        std::optional<uint16_t> port = 0;
         std::string socket_name;
         Status error = platform.LaunchGDBServer(inferior_arguments,
                                                 "", // hostname

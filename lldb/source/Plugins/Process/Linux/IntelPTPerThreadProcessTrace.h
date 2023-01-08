@@ -45,7 +45,7 @@ public:
 
   TraceIntelPTGetStateResponse GetState() override;
 
-  llvm::Expected<llvm::Optional<std::vector<uint8_t>>>
+  llvm::Expected<std::optional<std::vector<uint8_t>>>
   TryGetBinaryData(const TraceGetBinaryDataRequest &request) override;
 
 private:

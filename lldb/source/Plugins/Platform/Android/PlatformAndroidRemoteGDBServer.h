@@ -42,7 +42,7 @@ public:
 protected:
   std::string m_device_id;
   std::map<lldb::pid_t, uint16_t> m_port_forwards;
-  llvm::Optional<AdbClient::UnixSocketNamespace> m_socket_namespace;
+  std::optional<AdbClient::UnixSocketNamespace> m_socket_namespace;
 
   bool LaunchGDBServer(lldb::pid_t &pid, std::string &connect_url) override;
 

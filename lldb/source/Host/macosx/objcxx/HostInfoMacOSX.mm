@@ -62,7 +62,7 @@
 
 using namespace lldb_private;
 
-llvm::Optional<std::string> HostInfoMacOSX::GetOSBuildString() {
+std::optional<std::string> HostInfoMacOSX::GetOSBuildString() {
   int mib[2] = {CTL_KERN, KERN_OSVERSION};
   char cstr[PATH_MAX];
   size_t cstr_len = sizeof(cstr);

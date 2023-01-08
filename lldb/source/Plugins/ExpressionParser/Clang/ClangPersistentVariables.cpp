@@ -83,7 +83,7 @@ void ClangPersistentVariables::RemovePersistentVariable(
   }
 }
 
-llvm::Optional<CompilerType>
+std::optional<CompilerType>
 ClangPersistentVariables::GetCompilerTypeFromPersistentDecl(
     ConstString type_name) {
   PersistentDecl p = m_persistent_decls.lookup(type_name.GetCString());

@@ -48,7 +48,7 @@ size_t ValueObjectCast::CalculateNumChildren(uint32_t max) {
   return children_count <= max ? children_count : max;
 }
 
-llvm::Optional<uint64_t> ValueObjectCast::GetByteSize() {
+std::optional<uint64_t> ValueObjectCast::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   return m_value.GetValueByteSize(nullptr, &exe_ctx);
 }

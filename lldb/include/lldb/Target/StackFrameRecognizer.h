@@ -155,7 +155,7 @@ class ValueObjectRecognizerSynthesizedValue : public ValueObject {
     SetName(parent.GetName());
   }
 
-  llvm::Optional<uint64_t> GetByteSize() override {
+  std::optional<uint64_t> GetByteSize() override {
     return m_parent->GetByteSize();
   }
   lldb::ValueType GetValueType() const override { return m_type; }

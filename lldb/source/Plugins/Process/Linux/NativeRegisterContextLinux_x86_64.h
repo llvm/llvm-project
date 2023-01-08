@@ -46,9 +46,9 @@ public:
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
-  llvm::Optional<SyscallData> GetSyscallData() override;
+  std::optional<SyscallData> GetSyscallData() override;
 
-  llvm::Optional<MmapData> GetMmapData() override;
+  std::optional<MmapData> GetMmapData() override;
 
 protected:
   void *GetGPRBuffer() override { return &m_gpr_x86_64; }

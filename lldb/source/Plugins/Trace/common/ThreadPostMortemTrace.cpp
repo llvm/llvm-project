@@ -38,6 +38,6 @@ ThreadPostMortemTrace::CreateRegisterContextForFrame(StackFrame *frame) {
 
 bool ThreadPostMortemTrace::CalculateStopInfo() { return false; }
 
-const Optional<FileSpec> &ThreadPostMortemTrace::GetTraceFile() const {
+const std::optional<FileSpec> &ThreadPostMortemTrace::GetTraceFile() const {
   return m_trace_file;
 }

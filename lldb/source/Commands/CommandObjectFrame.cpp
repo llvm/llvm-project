@@ -100,9 +100,9 @@ public:
     }
 
     // Options.
-    llvm::Optional<lldb::addr_t> address;
-    llvm::Optional<ConstString> reg;
-    llvm::Optional<int64_t> offset;
+    std::optional<lldb::addr_t> address;
+    std::optional<ConstString> reg;
+    std::optional<int64_t> offset;
   };
 
   CommandObjectFrameDiagnose(CommandInterpreter &interpreter)
@@ -257,7 +257,7 @@ public:
       return llvm::makeArrayRef(g_frame_select_options);
     }
 
-    llvm::Optional<int32_t> relative_frame_offset;
+    std::optional<int32_t> relative_frame_offset;
   };
 
   CommandObjectFrameSelect(CommandInterpreter &interpreter)

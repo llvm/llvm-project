@@ -71,9 +71,9 @@ public:
 
   const MinidumpMiscInfo *GetMiscInfo();
 
-  llvm::Optional<LinuxProcStatus> GetLinuxProcStatus();
+  std::optional<LinuxProcStatus> GetLinuxProcStatus();
 
-  llvm::Optional<lldb::pid_t> GetPid();
+  std::optional<lldb::pid_t> GetPid();
 
   llvm::ArrayRef<minidump::Module> GetModuleList();
 
@@ -85,7 +85,7 @@ public:
 
   const llvm::minidump::ExceptionStream *GetExceptionStream();
 
-  llvm::Optional<Range> FindMemoryRange(lldb::addr_t addr);
+  std::optional<Range> FindMemoryRange(lldb::addr_t addr);
 
   llvm::ArrayRef<uint8_t> GetMemory(lldb::addr_t addr, size_t size);
 

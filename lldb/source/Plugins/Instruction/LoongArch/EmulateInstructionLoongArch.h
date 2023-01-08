@@ -55,8 +55,8 @@ public:
   bool TestEmulation(Stream *out_stream, ArchSpec &arch,
                      OptionValueDictionary *test_data) override;
 
-  llvm::Optional<RegisterInfo> GetRegisterInfo(lldb::RegisterKind reg_kind,
-                                               uint32_t reg_num) override;
+  std::optional<RegisterInfo> GetRegisterInfo(lldb::RegisterKind reg_kind,
+                                              uint32_t reg_num) override;
   lldb::addr_t ReadPC(bool *success);
   bool WritePC(lldb::addr_t pc);
   bool IsLoongArch64() { return m_arch_subtype == llvm::Triple::loongarch64; }

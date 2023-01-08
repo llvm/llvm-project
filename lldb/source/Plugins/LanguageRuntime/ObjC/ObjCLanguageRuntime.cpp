@@ -414,7 +414,7 @@ Status ObjCLanguageRuntime::ObjCExceptionPrecondition::ConfigurePrecondition(
   return error;
 }
 
-llvm::Optional<CompilerType>
+std::optional<CompilerType>
 ObjCLanguageRuntime::GetRuntimeType(CompilerType base_type) {
   CompilerType class_type;
   bool is_pointer_type = false;

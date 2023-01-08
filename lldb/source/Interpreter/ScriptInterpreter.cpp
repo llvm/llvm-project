@@ -88,7 +88,7 @@ ScriptInterpreter::GetStatusFromSBError(const lldb::SBError &error) const {
   return Status();
 }
 
-llvm::Optional<MemoryRegionInfo>
+std::optional<MemoryRegionInfo>
 ScriptInterpreter::GetOpaqueTypeFromSBMemoryRegionInfo(
     const lldb::SBMemoryRegionInfo &mem_region) const {
   if (!mem_region.m_opaque_up)

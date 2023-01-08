@@ -65,7 +65,8 @@ public:
   static const ArchSpec &
   GetArchitecture(ArchitectureKind arch_kind = eArchKindDefault);
 
-  static llvm::Optional<ArchitectureKind> ParseArchitectureKind(llvm::StringRef kind);
+  static std::optional<ArchitectureKind>
+  ParseArchitectureKind(llvm::StringRef kind);
 
   /// Returns the directory containing the lldb shared library. Only the
   /// directory member of the FileSpec is filled in.

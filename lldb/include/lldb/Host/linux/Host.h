@@ -16,7 +16,7 @@
 namespace lldb_private {
 
 // Get PID (i.e. the primary thread ID) corresponding to the specified TID.
-llvm::Optional<lldb::pid_t> getPIDForTID(lldb::pid_t tid);
+std::optional<lldb::pid_t> getPIDForTID(lldb::pid_t tid);
 
 } // namespace lldb_private
 
