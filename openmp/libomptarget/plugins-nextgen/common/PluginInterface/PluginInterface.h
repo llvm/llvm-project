@@ -252,6 +252,146 @@ protected:
   uint32_t MaxNumThreads;
 };
 
+/// Class representing a map of host pinned allocations. We track these pinned
+/// allocations, so memory tranfers invloving these buffers can be optimized.
+class PinnedAllocationMapTy {
+
+  /// Struct representing a map entry.
+  struct EntryTy {
+    /// The host pointer of the pinned allocation.
+    void *HstPtr;
+
+    /// The pointer that devices' driver should use to transfer data from/to the
+    /// pinned allocation. In most plugins, this pointer will be the same as the
+    /// host pointer above.
+    void *DevAccessiblePtr;
+
+    /// The size of the pinned allocation.
+    size_t Size;
+
+    /// The number of references to the pinned allocation. The allocation should
+    /// remain pinned and registered to the map until the number of references
+    /// becomes zero.
+    mutable size_t References;
+
+    /// Create an entry with the host and device acessible pointers, and the
+    /// buffer size.
+    EntryTy(void *HstPtr, void *DevAccessiblePtr, size_t Size)
+        : HstPtr(HstPtr), DevAccessiblePtr(DevAccessiblePtr), Size(Size),
+          References(1) {}
+
+    /// Utility constructor used for std::set searches.
+    EntryTy(void *HstPtr)
+        : HstPtr(HstPtr), DevAccessiblePtr(nullptr), Size(0), References(0) {}
+  };
+
+  /// Comparator of mep entries. Use the host pointer to enforce an order
+  /// between entries.
+  struct EntryCmpTy {
+    bool operator()(const EntryTy &Left, const EntryTy &Right) const {
+      return Left.HstPtr < Right.HstPtr;
+    }
+  };
+
+  typedef std::set<EntryTy, EntryCmpTy> PinnedAllocSetTy;
+
+  /// The map of host pinned allocations.
+  PinnedAllocSetTy Allocs;
+
+  /// The mutex to protect accesses to the map.
+  mutable std::shared_mutex Mutex;
+
+  /// Reference to the corresponding device.
+  GenericDeviceTy &Device;
+
+  /// Find an allocation that intersects with \p Buffer pointer. Assume
+  /// the map's mutex is acquired.
+  PinnedAllocSetTy::iterator findIntersecting(const void *Buffer) const {
+    if (Allocs.empty())
+      return Allocs.end();
+
+    // Search the first allocation with starting address that is not less than
+    // the buffer address.
+    auto It = Allocs.lower_bound({const_cast<void *>(Buffer)});
+
+    // Direct match of starting addresses.
+    if (It != Allocs.end() && It->HstPtr == Buffer)
+      return It;
+
+    // Not direct match but may be a previous pinned allocation in the map which
+    // contains the buffer. Return false if there is no such a previous
+    // allocation.
+    if (It == Allocs.begin())
+      return Allocs.end();
+
+    // Move to the previous pinned allocation.
+    --It;
+
+    // The buffer is not contained in the pinned allocation.
+    if (advanceVoidPtr(It->HstPtr, It->Size) > Buffer)
+      return It;
+
+    // None found.
+    return Allocs.end();
+  }
+
+public:
+  /// Create the map of pinned allocations corresponding to a specific device.
+  PinnedAllocationMapTy(GenericDeviceTy &Device) : Device(Device) {}
+
+  /// Register a host buffer that was recently locked. None of the already
+  /// registered pinned allocations should intersect with this new one. The
+  /// registration requires the host pointer in \p HstPtr, the pointer that the
+  /// devices should use when transferring data from/to the allocation in
+  /// \p DevAccessiblePtr, and the size of the allocation in \p Size. Notice
+  /// that some plugins may use the same pointer for the \p HstPtr and
+  /// \p DevAccessiblePtr. The allocation must be unregistered using the
+  /// unregisterHostBuffer function.
+  Error registerHostBuffer(void *HstPtr, void *DevAccessiblePtr, size_t Size);
+
+  /// Unregister a host pinned allocation passing the host pointer which was
+  /// previously registered using the registerHostBuffer function. When calling
+  /// this function, the pinned allocation cannot have any other user.
+  Error unregisterHostBuffer(void *HstPtr);
+
+  /// Lock the host buffer at \p HstPtr or register a new user if it intersects
+  /// with an already existing one. A partial overlapping with extension is not
+  /// allowed. The function returns the device accessible pointer of the pinned
+  /// buffer. The buffer must be unlocked using the unlockHostBuffer function.
+  Expected<void *> lockHostBuffer(void *HstPtr, size_t Size);
+
+  /// Unlock the host buffer at \p HstPtr or unregister a user if other users
+  /// are still using the pinned allocation. If this was the last user, the
+  /// pinned allocation is removed from the map and the memory is unlocked.
+  Error unlockHostBuffer(void *HstPtr);
+
+  /// Return the device accessible pointer associated to the host pinned
+  /// allocation which the \p HstPtr belongs, if any. Return null in case the
+  /// \p HstPtr does not belong to any host pinned allocation. The device
+  /// accessible pointer is the one that devices should use for data transfers
+  /// that involve a host pinned buffer.
+  void *getDeviceAccessiblePtrFromPinnedBuffer(const void *HstPtr) const {
+    std::shared_lock<std::shared_mutex> Lock(Mutex);
+
+    // Find the intersecting allocation if any.
+    auto It = findIntersecting(HstPtr);
+    if (It == Allocs.end())
+      return nullptr;
+
+    const EntryTy &Entry = *It;
+    return advanceVoidPtr(Entry.DevAccessiblePtr,
+                          getPtrDiff(HstPtr, Entry.HstPtr));
+  }
+
+  /// Check whether a buffer belongs to a registered host pinned allocation.
+  bool isHostPinnedBuffer(const void *HstPtr) const {
+    std::shared_lock<std::shared_mutex> Lock(Mutex);
+
+    // Return whether there is an intersecting allocation.
+    return (findIntersecting(const_cast<void *>(HstPtr)) != Allocs.end());
+  }
+};
+
 /// Class implementing common functionalities of offload devices. Each plugin
 /// should define the specific device class, derive from this generic one, and
 /// implement the necessary virtual function members.
@@ -309,6 +449,22 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Deallocate data from the device or involving the device.
   Error dataDelete(void *TgtPtr, TargetAllocTy Kind);
+
+  /// Pin host memory to optimize transfers and return the device accessible
+  /// pointer that devices should use for memory transfers involving the host
+  /// pinned allocation.
+  Expected<void *> dataLock(void *HstPtr, int64_t Size) {
+    return PinnedAllocs.lockHostBuffer(HstPtr, Size);
+  }
+
+  virtual Expected<void *> dataLockImpl(void *HstPtr, int64_t Size) = 0;
+
+  /// Unpin a host memory buffer that was previously pinned.
+  Error dataUnlock(void *HstPtr) {
+    return PinnedAllocs.unlockHostBuffer(HstPtr);
+  }
+
+  virtual Error dataUnlockImpl(void *HstPtr) = 0;
 
   /// Submit data to the device (host to device transfer).
   Error dataSubmit(void *TgtPtr, const void *HstPtr, int64_t Size,
@@ -420,12 +576,6 @@ private:
   /// setupDeviceEnvironment() function.
   virtual bool shouldSetupDeviceEnvironment() const { return true; }
 
-  /// Register a host buffer as host pinned allocation.
-  Error registerHostPinnedMemoryBuffer(const void *Buffer, size_t Size);
-
-  /// Unregister a host pinned allocations.
-  Error unregisterHostPinnedMemoryBuffer(const void *Buffer);
-
   /// Pointer to the memory manager or nullptr if not available.
   MemoryManagerTy *MemoryManager;
 
@@ -440,40 +590,7 @@ private:
   UInt64Envar OMPX_TargetStackSize;
   UInt64Envar OMPX_TargetHeapSize;
 
-  /// Map of host pinned allocations. We track these pinned allocations so that
-  /// memory transfers involving these allocations can be optimized.
-  std::map<const void *, size_t> HostAllocations;
-  mutable std::shared_mutex HostAllocationsMutex;
-
 protected:
-  /// Check whether a buffer has been registered as host pinned memory.
-  bool isHostPinnedMemoryBuffer(const void *Buffer) const {
-    std::shared_lock<std::shared_mutex> Lock(HostAllocationsMutex);
-
-    if (HostAllocations.empty())
-      return false;
-
-    // Search the first allocation with starting address that is not less than
-    // the buffer address.
-    auto It = HostAllocations.lower_bound(Buffer);
-
-    // Direct match of starting addresses.
-    if (It != HostAllocations.end() && It->first == Buffer)
-      return true;
-
-    // Not direct match but may be a previous pinned allocation in the map which
-    // contains the buffer. Return false if there is no such a previous
-    // allocation.
-    if (It == HostAllocations.begin())
-      return false;
-
-    // Move to the previous pinned allocation.
-    --It;
-
-    // Evaluate whether the buffer is contained in the pinned allocation.
-    return (advanceVoidPtr(It->first, It->second) > (const char *)Buffer);
-  }
-
   /// Return the execution mode used for kernel \p Name.
   Expected<OMPTgtExecModeFlags> getExecutionModeForKernel(StringRef Name,
                                                           DeviceImageTy &Image);
@@ -507,6 +624,9 @@ protected:
   /// does not mean that device J can access device I's memory directly.
   llvm::SmallVector<PeerAccessState> PeerAccesses;
   std::mutex PeerAccessesLock;
+
+  /// Map of host pinned allocations used for optimize device transfers.
+  PinnedAllocationMapTy PinnedAllocs;
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin
