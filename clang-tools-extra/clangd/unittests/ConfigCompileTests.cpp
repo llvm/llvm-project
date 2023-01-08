@@ -436,7 +436,7 @@ TEST_F(ConfigCompileTests, ExternalBlockDisablesBackgroundIndex) {
 
 TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
   auto GetFrag = [](llvm::StringRef Directory,
-                    llvm::Optional<const char *> MountPoint) {
+                    std::optional<const char *> MountPoint) {
     Fragment Frag;
     Frag.Source.Directory = Directory.str();
     Fragment::IndexBlock::ExternalBlock External;

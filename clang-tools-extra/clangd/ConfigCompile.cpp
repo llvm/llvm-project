@@ -103,7 +103,7 @@ struct FragmentCompiler {
   std::string FragmentDirectory;
   bool Trusted = false;
 
-  llvm::Optional<llvm::Regex>
+  std::optional<llvm::Regex>
   compileRegex(const Located<std::string> &Text,
                llvm::Regex::RegexFlags Flags = llvm::Regex::NoFlags) {
     std::string Anchored = "^(" + *Text + ")$";
@@ -142,7 +142,7 @@ struct FragmentCompiler {
     FragmentCompiler &Outer;
     llvm::StringRef EnumName;
     const Located<std::string> &Input;
-    llvm::Optional<T> Result;
+    std::optional<T> Result;
     llvm::SmallVector<llvm::StringLiteral> ValidValues;
 
   public:
@@ -158,7 +158,7 @@ struct FragmentCompiler {
       return *this;
     }
 
-    llvm::Optional<T> value() {
+    std::optional<T> value() {
       if (!Result)
         Outer.diag(
             Warning,
@@ -173,7 +173,7 @@ struct FragmentCompiler {
   // Attempt to parse a specified string into an enum.
   // Yields std::nullopt and produces a diagnostic on failure.
   //
-  // Optional<T> Value = compileEnum<En>("Foo", Frag.Foo)
+  // std::optional<T> Value = compileEnum<En>("Foo", Frag.Foo)
   //    .map("Foo", Enum::Foo)
   //    .map("Bar", Enum::Bar)
   //    .value();
@@ -291,7 +291,7 @@ struct FragmentCompiler {
     }
 
     if (F.CompilationDatabase) {
-      llvm::Optional<Config::CDBSearchSpec> Spec;
+      std::optional<Config::CDBSearchSpec> Spec;
       if (**F.CompilationDatabase == "Ancestors") {
         Spec.emplace();
         Spec->Policy = Config::CDBSearchSpec::Ancestors;

@@ -179,7 +179,7 @@ struct FileShardedIndex {
   /// a copy of all the relevant data.
   /// Returned index will always have Symbol/Refs/Relation Slabs set, even if
   /// they are empty.
-  llvm::Optional<IndexFileIn> getShard(llvm::StringRef Uri) const;
+  std::optional<IndexFileIn> getShard(llvm::StringRef Uri) const;
 
 private:
   // Contains all the information that belongs to a single file.

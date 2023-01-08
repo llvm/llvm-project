@@ -22,8 +22,8 @@ namespace {
 
 AST_MATCHER(StringLiteral, lengthIsOne) { return Node.getLength() == 1; }
 
-llvm::Optional<std::string> makeCharacterLiteral(const StringLiteral *Literal,
-                                                 const ASTContext &Context) {
+std::optional<std::string> makeCharacterLiteral(const StringLiteral *Literal,
+                                                const ASTContext &Context) {
   assert(Literal->getLength() == 1 &&
          "Only single character string should be matched");
   assert(Literal->getCharByteWidth() == 1 &&
@@ -106,7 +106,7 @@ void FasterStrsplitDelimiterCheck::check(
   if (Literal->getBeginLoc().isMacroID() || Literal->getEndLoc().isMacroID())
     return;
 
-  llvm::Optional<std::string> Replacement =
+  std::optional<std::string> Replacement =
       makeCharacterLiteral(Literal, *Result.Context);
   if (!Replacement)
     return;

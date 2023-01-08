@@ -23,7 +23,7 @@ static const llvm::StringRef RenameCaseToSuiteMessage =
     "Google Test APIs named with 'case' are deprecated; use equivalent APIs "
     "named with 'suite'";
 
-static llvm::Optional<llvm::StringRef>
+static std::optional<llvm::StringRef>
 getNewMacroName(llvm::StringRef MacroName) {
   std::pair<llvm::StringRef, llvm::StringRef> ReplacementMap[] = {
       {"TYPED_TEST_CASE", "TYPED_TEST_SUITE"},
@@ -98,7 +98,7 @@ private:
 
     std::string Name = PP->getSpelling(MacroNameTok);
 
-    llvm::Optional<llvm::StringRef> Replacement = getNewMacroName(Name);
+    std::optional<llvm::StringRef> Replacement = getNewMacroName(Name);
     if (!Replacement)
       return;
 

@@ -18,7 +18,7 @@
 namespace clang {
 namespace clangd {
 
-llvm::Optional<Path> getCorrespondingHeaderOrSource(
+std::optional<Path> getCorrespondingHeaderOrSource(
     PathRef OriginalFile, llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   llvm::StringRef SourceExtensions[] = {".cpp", ".c", ".cc", ".cxx",
                                         ".c++", ".m", ".mm"};
@@ -64,9 +64,9 @@ llvm::Optional<Path> getCorrespondingHeaderOrSource(
   return std::nullopt;
 }
 
-llvm::Optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
-                                                    ParsedAST &AST,
-                                                    const SymbolIndex *Index) {
+std::optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
+                                                   ParsedAST &AST,
+                                                   const SymbolIndex *Index) {
   if (!Index) {
     // FIXME: use the AST to do the inference.
     return std::nullopt;

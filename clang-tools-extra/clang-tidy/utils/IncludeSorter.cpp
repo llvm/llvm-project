@@ -150,8 +150,8 @@ void IncludeSorter::addInclude(StringRef FileName, bool IsAngled,
     IncludeBucket[Kind].push_back(FileName.str());
 }
 
-Optional<FixItHint> IncludeSorter::createIncludeInsertion(StringRef FileName,
-                                                          bool IsAngled) {
+std::optional<FixItHint>
+IncludeSorter::createIncludeInsertion(StringRef FileName, bool IsAngled) {
   std::string IncludeStmt;
   if (Style == IncludeStyle::IS_Google_ObjC) {
     IncludeStmt = IsAngled

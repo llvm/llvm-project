@@ -55,7 +55,7 @@ void DurationFactoryFloatCheck::check(const MatchFinder::MatchResult &Result) {
   if (Arg->getBeginLoc().isMacroID())
     return;
 
-  llvm::Optional<std::string> SimpleArg = stripFloatCast(Result, *Arg);
+  std::optional<std::string> SimpleArg = stripFloatCast(Result, *Arg);
   if (!SimpleArg)
     SimpleArg = stripFloatLiteralFraction(Result, *Arg);
 

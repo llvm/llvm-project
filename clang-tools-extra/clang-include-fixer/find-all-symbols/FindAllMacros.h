@@ -45,8 +45,8 @@ public:
   void EndOfMainFile() override;
 
 private:
-  llvm::Optional<SymbolInfo> CreateMacroSymbol(const Token &MacroNameTok,
-                                               const MacroInfo *MD);
+  std::optional<SymbolInfo> CreateMacroSymbol(const Token &MacroNameTok,
+                                              const MacroInfo *MD);
   // Not a callback, just a common path for all usage types.
   void MacroUsed(const Token &Name, const MacroDefinition &MD);
 

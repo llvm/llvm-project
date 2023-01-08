@@ -56,7 +56,7 @@ private:
     return N.get<Decl>() || N.get<Stmt>() || N.get<Type>();
   }
 
-  llvm::Optional<DynTypedNode> Node;
+  std::optional<DynTypedNode> Node;
 };
 REGISTER_TWEAK(DumpAST)
 

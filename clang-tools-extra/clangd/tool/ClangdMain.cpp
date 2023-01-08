@@ -639,9 +639,9 @@ private:
 
 public:
   FlagsConfigProvider() {
-    llvm::Optional<Config::CDBSearchSpec> CDBSearch;
-    llvm::Optional<Config::ExternalIndexSpec> IndexSpec;
-    llvm::Optional<Config::BackgroundPolicy> BGPolicy;
+    std::optional<Config::CDBSearchSpec> CDBSearch;
+    std::optional<Config::ExternalIndexSpec> IndexSpec;
+    std::optional<Config::BackgroundPolicy> BGPolicy;
 
     // If --compile-commands-dir arg was invoked, check value and override
     // default path.
@@ -784,7 +784,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     clang::format::DefaultFallbackStyle = FallbackStyle.c_str();
 
   // Validate command line arguments.
-  llvm::Optional<llvm::raw_fd_ostream> InputMirrorStream;
+  std::optional<llvm::raw_fd_ostream> InputMirrorStream;
   if (!InputMirrorFile.empty()) {
     std::error_code EC;
     InputMirrorStream.emplace(InputMirrorFile, /*ref*/ EC,
@@ -808,7 +808,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   // Setup tracing facilities if CLANGD_TRACE is set. In practice enabling a
   // trace flag in your editor's config is annoying, launching with
   // `CLANGD_TRACE=trace.json vim` is easier.
-  llvm::Optional<llvm::raw_fd_ostream> TracerStream;
+  std::optional<llvm::raw_fd_ostream> TracerStream;
   std::unique_ptr<trace::EventTracer> Tracer;
   const char *JSONTraceFile = getenv("CLANGD_TRACE");
   const char *MetricsCSVFile = getenv("CLANGD_METRICS");
@@ -828,7 +828,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     }
   }
 
-  llvm::Optional<trace::Session> TracingSession;
+  std::optional<trace::Session> TracingSession;
   if (Tracer)
     TracingSession.emplace(*Tracer);
 

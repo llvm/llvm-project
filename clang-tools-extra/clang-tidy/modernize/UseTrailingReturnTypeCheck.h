@@ -45,7 +45,7 @@ private:
   SourceLocation findTrailingReturnTypeSourceLocation(
       const FunctionDecl &F, const FunctionTypeLoc &FTL, const ASTContext &Ctx,
       const SourceManager &SM, const LangOptions &LangOpts);
-  llvm::Optional<SmallVector<ClassifiedToken, 8>>
+  std::optional<SmallVector<ClassifiedToken, 8>>
   classifyTokensBeforeFunctionName(const FunctionDecl &F, const ASTContext &Ctx,
                                    const SourceManager &SM,
                                    const LangOptions &LangOpts);

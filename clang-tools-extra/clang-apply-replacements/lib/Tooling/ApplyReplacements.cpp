@@ -156,7 +156,7 @@ groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
 
   auto AddToGroup = [&](const tooling::Replacement &R,
                         const tooling::TranslationUnitDiagnostics *SourceTU,
-                        const llvm::Optional<std::string> BuildDir) {
+                        const std::optional<std::string> BuildDir) {
     // Use the file manager to deduplicate paths. FileEntries are
     // automatically canonicalized. Since relative paths can come from different
     // build directories, make them absolute immediately.

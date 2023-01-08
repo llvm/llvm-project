@@ -189,7 +189,7 @@ StmtToBlockMap::StmtToBlockMap(const CFG *TheCFG, ASTContext *TheContext)
     : Context(TheContext) {
   for (const auto *B : *TheCFG) {
     for (const auto &Elem : *B) {
-      if (Optional<CFGStmt> S = Elem.getAs<CFGStmt>())
+      if (std::optional<CFGStmt> S = Elem.getAs<CFGStmt>())
         Map[S->getStmt()] = B;
     }
   }

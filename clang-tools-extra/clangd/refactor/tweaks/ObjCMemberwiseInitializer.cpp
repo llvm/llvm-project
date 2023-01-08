@@ -90,7 +90,7 @@ struct MethodParameter {
     else // Could be a dynamic property or a property in a header.
       Assignee = ("self." + Name).str();
   }
-  static llvm::Optional<MethodParameter> parameterFor(const Decl &D) {
+  static std::optional<MethodParameter> parameterFor(const Decl &D) {
     if (const auto *ID = dyn_cast<ObjCIvarDecl>(&D))
       return MethodParameter(*ID);
     if (const auto *PD = dyn_cast<ObjCPropertyDecl>(&D))

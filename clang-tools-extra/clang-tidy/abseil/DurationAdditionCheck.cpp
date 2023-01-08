@@ -39,7 +39,7 @@ void DurationAdditionCheck::check(const MatchFinder::MatchResult &Result) {
   if (Binop->getExprLoc().isMacroID() || Binop->getExprLoc().isInvalid())
     return;
 
-  llvm::Optional<DurationScale> Scale = getScaleForTimeInverse(
+  std::optional<DurationScale> Scale = getScaleForTimeInverse(
       Result.Nodes.getNodeAs<clang::FunctionDecl>("function_decl")->getName());
   if (!Scale)
     return;
