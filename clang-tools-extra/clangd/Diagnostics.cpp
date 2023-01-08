@@ -23,7 +23,6 @@
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
@@ -34,6 +33,8 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <optional>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -904,9 +905,9 @@ llvm::StringRef normalizeSuppressedCode(llvm::StringRef Code) {
   return Code;
 }
 
-llvm::Optional<std::string> getDiagnosticDocURI(Diag::DiagSource Source,
-                                                unsigned ID,
-                                                llvm::StringRef Name) {
+std::optional<std::string> getDiagnosticDocURI(Diag::DiagSource Source,
+                                               unsigned ID,
+                                               llvm::StringRef Name) {
   switch (Source) {
   case Diag::Unknown:
     break;

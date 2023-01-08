@@ -11,6 +11,7 @@
 #include "XRefs.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -376,7 +377,7 @@ TEST(SymbolInfoTests, All) {
 
     std::vector<SymbolDetails> Expected;
     for (const auto &Sym : T.second) {
-      llvm::Optional<Location> Decl, Def;
+      std::optional<Location> Decl, Def;
       if (Sym.DeclMarker)
         Decl = Location{URIForFile::canonicalize(testPath(TU.Filename), ""),
                         TestInput.range(Sym.DeclMarker)};

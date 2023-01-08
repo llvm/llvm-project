@@ -52,6 +52,7 @@
 #include <algorithm>
 #include <iterator>
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -74,7 +75,7 @@ bool isValidTarget(llvm::StringRef Triple) {
   return bool(Target);
 }
 
-llvm::Optional<DriverInfo> parseDriverOutput(llvm::StringRef Output) {
+std::optional<DriverInfo> parseDriverOutput(llvm::StringRef Output) {
   DriverInfo Info;
   const char SIS[] = "#include <...> search starts here:";
   const char SIE[] = "End of search list.";
@@ -135,7 +136,7 @@ llvm::Optional<DriverInfo> parseDriverOutput(llvm::StringRef Output) {
   return std::move(Info);
 }
 
-llvm::Optional<DriverInfo>
+std::optional<DriverInfo>
 extractSystemIncludesAndTarget(llvm::SmallString<128> Driver,
                                llvm::StringRef Lang,
                                llvm::ArrayRef<std::string> CommandLine,
@@ -225,7 +226,7 @@ extractSystemIncludesAndTarget(llvm::SmallString<128> Driver,
     return std::nullopt;
   }
 
-  llvm::Optional<DriverInfo> Info =
+  std::optional<DriverInfo> Info =
       parseDriverOutput(BufOrError->get()->getBuffer());
   if (!Info)
     return std::nullopt;
@@ -360,7 +361,7 @@ public:
 
 private:
   // Caches includes extracted from a driver. Key is driver:lang.
-  Memoize<llvm::StringMap<llvm::Optional<DriverInfo>>> QueriedDrivers;
+  Memoize<llvm::StringMap<std::optional<DriverInfo>>> QueriedDrivers;
   llvm::Regex QueryDriverRegex;
 };
 } // namespace

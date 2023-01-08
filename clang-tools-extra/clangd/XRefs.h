@@ -19,9 +19,9 @@
 #include "index/SymbolID.h"
 #include "support/Path.h"
 #include "clang/AST/ASTTypeTraits.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <vector>
 
 namespace clang {
@@ -44,7 +44,7 @@ struct LocatedSymbol {
   // The canonical or best declaration: where most users find its interface.
   Location PreferredDeclaration;
   // Where the symbol is defined, if known. May equal PreferredDeclaration.
-  llvm::Optional<Location> Definition;
+  std::optional<Location> Definition;
   // SymbolID of the located symbol if available.
   SymbolID ID;
 };
