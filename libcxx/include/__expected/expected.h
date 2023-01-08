@@ -50,7 +50,6 @@
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <__verbose_abort>
-#include <cstdlib> // for std::abort
 #include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

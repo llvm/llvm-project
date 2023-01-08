@@ -49,7 +49,6 @@
 #include <__utility/swap.h>
 #include <__verbose_abort>
 #include <cstddef>
-#include <cstdlib> // abort
 #include <iosfwd>
 #include <new>
 #include <stdexcept>
