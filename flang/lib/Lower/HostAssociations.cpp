@@ -293,7 +293,7 @@ public:
     llvm::SmallVector<mlir::Value> nonDeferredLenParams;
     if (ba.isChar()) {
       mlir::IndexType idxTy = builder.getIndexType();
-      if (llvm::Optional<int64_t> len = ba.getCharLenConst()) {
+      if (std::optional<int64_t> len = ba.getCharLenConst()) {
         nonDeferredLenParams.push_back(
             builder.createIntegerConstant(loc, idxTy, *len));
       } else if (Fortran::semantics::IsAssumedLengthCharacter(sym) ||

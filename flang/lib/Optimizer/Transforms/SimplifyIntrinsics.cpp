@@ -510,7 +510,7 @@ static unsigned getDimCount(mlir::Value val) {
 /// be reliably found.
 /// We expect that the argument is a result of fir.convert
 /// with the destination type of !fir.box<none>.
-static llvm::Optional<mlir::Type> getArgElementType(mlir::Value val) {
+static std::optional<mlir::Type> getArgElementType(mlir::Value val) {
   mlir::Operation *defOp;
   do {
     defOp = val.getDefiningOp();

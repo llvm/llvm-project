@@ -363,7 +363,7 @@ static unsigned getCharacterKind(mlir::Type t) {
   return hlfir::getFortranElementType(t).cast<fir::CharacterType>().getFKind();
 }
 
-static llvm::Optional<fir::CharacterType::LenType>
+static std::optional<fir::CharacterType::LenType>
 getCharacterLengthIfStatic(mlir::Type t) {
   if (auto charType =
           hlfir::getFortranElementType(t).dyn_cast<fir::CharacterType>())

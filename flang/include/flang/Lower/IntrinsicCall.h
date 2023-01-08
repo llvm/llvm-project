@@ -29,7 +29,7 @@ class StatementContext;
 /// Returned mlir::Value is the returned Fortran intrinsic value.
 fir::ExtendedValue genIntrinsicCall(fir::FirOpBuilder &, mlir::Location,
                                     llvm::StringRef name,
-                                    llvm::Optional<mlir::Type> resultType,
+                                    std::optional<mlir::Type> resultType,
                                     llvm::ArrayRef<fir::ExtendedValue> args,
                                     StatementContext &);
 

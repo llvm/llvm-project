@@ -70,7 +70,7 @@ getExplicitTypeParams(fir::FortranVariableOpInterface var) {
   return res;
 }
 
-std::pair<fir::ExtendedValue, llvm::Optional<hlfir::CleanupFunction>>
+std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
                                 hlfir::Entity entity) {
   if (auto variable = entity.getIfVariableInterface())
