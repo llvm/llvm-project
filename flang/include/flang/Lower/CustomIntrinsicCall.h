@@ -27,6 +27,7 @@
 #include "flang/Lower/AbstractConverter.h"
 #include "llvm/ADT/Optional.h"
 #include <functional>
+#include <optional>
 
 namespace Fortran {
 

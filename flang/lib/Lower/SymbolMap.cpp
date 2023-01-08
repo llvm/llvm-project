@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "flang-lower-symbol-map"
 

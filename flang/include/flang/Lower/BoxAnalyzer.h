@@ -17,6 +17,7 @@
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/Matcher.h"
+#include <optional>
 
 namespace Fortran::lower {
 

@@ -25,6 +25,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace Fortran::lower {
 

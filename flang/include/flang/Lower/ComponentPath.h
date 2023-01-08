@@ -11,6 +11,7 @@
 
 #include "flang/Lower/IterationSpace.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 
 namespace fir {
 class ArrayLoadOp;

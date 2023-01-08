@@ -29,6 +29,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 namespace fir {
 #define GEN_PASS_DEF_AFFINEDIALECTPROMOTION

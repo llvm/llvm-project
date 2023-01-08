@@ -15,6 +15,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "llvm/Support/CommandLine.h"
+#include <optional>
 
 static llvm::cl::opt<std::string> mainEntryName(
     "main-entry-name",
