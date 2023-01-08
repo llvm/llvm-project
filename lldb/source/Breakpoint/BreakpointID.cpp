@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cstdio>
+#include <optional>
 
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointID.h"
@@ -62,7 +63,7 @@ void BreakpointID::GetCanonicalReference(Stream *s, break_id_t bp_id,
     s->Printf("%i.%i", bp_id, loc_id);
 }
 
-llvm::Optional<BreakpointID>
+std::optional<BreakpointID>
 BreakpointID::ParseCanonicalReference(llvm::StringRef input) {
   break_id_t bp_id;
   break_id_t loc_id = LLDB_INVALID_BREAK_ID;

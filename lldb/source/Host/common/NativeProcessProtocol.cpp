@@ -18,6 +18,7 @@
 #include "lldb/lldb-enumerations.h"
 
 #include "llvm/Support/Process.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -66,7 +67,7 @@ NativeProcessProtocol::WriteMemoryTags(int32_t type, lldb::addr_t addr,
   return Status("not implemented");
 }
 
-llvm::Optional<WaitStatus> NativeProcessProtocol::GetExitStatus() {
+std::optional<WaitStatus> NativeProcessProtocol::GetExitStatus() {
   if (m_state == lldb::eStateExited)
     return m_exit_status;
 
@@ -127,7 +128,7 @@ NativeProcessProtocol::GetWatchpointMap() const {
   return m_watchpoint_list.GetWatchpointMap();
 }
 
-llvm::Optional<std::pair<uint32_t, uint32_t>>
+std::optional<std::pair<uint32_t, uint32_t>>
 NativeProcessProtocol::GetHardwareDebugSupportInfo() const {
   Log *log = GetLog(LLDBLog::Process);
 

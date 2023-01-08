@@ -13,6 +13,7 @@
 #include "lldb/Utility/Log.h"
 #include "clang/Sema/Lookup.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace clang;
@@ -180,7 +181,7 @@ T *createDecl(ASTImporter &importer, Decl *from_d, Args &&... args) {
   return to_d;
 }
 
-llvm::Optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
+std::optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
   Log *log = GetLog(LLDBLog::Expressions);
 
   // If we don't have a template to instiantiate, then there is nothing to do.
@@ -287,7 +288,7 @@ llvm::Optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
   return result;
 }
 
-llvm::Optional<Decl *> CxxModuleHandler::Import(Decl *d) {
+std::optional<Decl *> CxxModuleHandler::Import(Decl *d) {
   if (!isValid())
     return {};
 

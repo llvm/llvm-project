@@ -22,6 +22,7 @@
 #include "llvm/ADT/APSInt.h"
 
 #include <memory>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -120,7 +121,7 @@ uint64_t SBType::GetByteSize() {
   LLDB_INSTRUMENT_VA(this);
 
   if (IsValid())
-    if (llvm::Optional<uint64_t> size =
+    if (std::optional<uint64_t> size =
             m_opaque_sp->GetCompilerType(false).GetByteSize(nullptr))
       return *size;
   return 0;

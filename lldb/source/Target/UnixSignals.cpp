@@ -13,6 +13,7 @@
 #include "Plugins/Process/Utility/NetBSDSignals.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/ArchSpec.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace llvm;
@@ -285,9 +286,9 @@ int32_t UnixSignals::GetSignalAtIndex(int32_t index) const {
 uint64_t UnixSignals::GetVersion() const { return m_version; }
 
 std::vector<int32_t>
-UnixSignals::GetFilteredSignals(llvm::Optional<bool> should_suppress,
-                                llvm::Optional<bool> should_stop,
-                                llvm::Optional<bool> should_notify) {
+UnixSignals::GetFilteredSignals(std::optional<bool> should_suppress,
+                                std::optional<bool> should_stop,
+                                std::optional<bool> should_notify) {
   std::vector<int32_t> result;
   for (int32_t signo = GetFirstSignalNumber();
        signo != LLDB_INVALID_SIGNAL_NUMBER;

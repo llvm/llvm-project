@@ -38,6 +38,7 @@
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <optional>
 
 #define IMAGE_DOS_SIGNATURE 0x5A4D    // MZ
 #define IMAGE_NT_SIGNATURE 0x00004550 // PE00
@@ -1087,7 +1088,7 @@ UUID ObjectFilePECOFF::GetUUID() {
   return m_uuid;
 }
 
-llvm::Optional<FileSpec> ObjectFilePECOFF::GetDebugLink() {
+std::optional<FileSpec> ObjectFilePECOFF::GetDebugLink() {
   std::string gnu_debuglink_file;
   uint32_t gnu_debuglink_crc;
   if (GetDebugLinkContents(*m_binary, gnu_debuglink_file, gnu_debuglink_crc))

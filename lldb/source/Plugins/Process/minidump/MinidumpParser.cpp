@@ -19,6 +19,7 @@
 // C++ includes
 #include <algorithm>
 #include <map>
+#include <optional>
 #include <vector>
 #include <utility>
 
@@ -220,7 +221,7 @@ const MinidumpMiscInfo *MinidumpParser::GetMiscInfo() {
   return MinidumpMiscInfo::Parse(data);
 }
 
-llvm::Optional<LinuxProcStatus> MinidumpParser::GetLinuxProcStatus() {
+std::optional<LinuxProcStatus> MinidumpParser::GetLinuxProcStatus() {
   llvm::ArrayRef<uint8_t> data = GetStream(StreamType::LinuxProcStatus);
 
   if (data.size() == 0)
@@ -229,13 +230,13 @@ llvm::Optional<LinuxProcStatus> MinidumpParser::GetLinuxProcStatus() {
   return LinuxProcStatus::Parse(data);
 }
 
-llvm::Optional<lldb::pid_t> MinidumpParser::GetPid() {
+std::optional<lldb::pid_t> MinidumpParser::GetPid() {
   const MinidumpMiscInfo *misc_info = GetMiscInfo();
   if (misc_info != nullptr) {
     return misc_info->GetPid();
   }
 
-  llvm::Optional<LinuxProcStatus> proc_status = GetLinuxProcStatus();
+  std::optional<LinuxProcStatus> proc_status = GetLinuxProcStatus();
   if (proc_status) {
     return proc_status->GetPid();
   }
@@ -426,7 +427,7 @@ const minidump::ExceptionStream *MinidumpParser::GetExceptionStream() {
   return nullptr;
 }
 
-llvm::Optional<minidump::Range>
+std::optional<minidump::Range>
 MinidumpParser::FindMemoryRange(lldb::addr_t addr) {
   llvm::ArrayRef<uint8_t> data64 = GetStream(StreamType::Memory64List);
   Log *log = GetLog(LLDBLog::Modules);
@@ -494,7 +495,7 @@ llvm::ArrayRef<uint8_t> MinidumpParser::GetMemory(lldb::addr_t addr,
   // ranges a Minidump typically has, so I'm not sure if searching for the
   // appropriate range linearly each time is stupid.  Perhaps we should build
   // an index for faster lookups.
-  llvm::Optional<minidump::Range> range = FindMemoryRange(addr);
+  std::optional<minidump::Range> range = FindMemoryRange(addr);
   if (!range)
     return {};
 

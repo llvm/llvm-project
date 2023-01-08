@@ -27,6 +27,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -181,7 +182,7 @@ bool ABISysV_i386::GetArgumentValues(Thread &thread, ValueList &values) const {
 
     // Currently: Support for extracting values with Clang QualTypes only.
     CompilerType compiler_type(value->GetCompilerType());
-    llvm::Optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
+    std::optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
     if (bit_size) {
       bool is_signed;
       if (compiler_type.IsIntegerOrEnumerationType(is_signed)) {
@@ -386,7 +387,7 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
              (type_flags & eTypeIsEnumeration)) //'Integral' + 'Floating Point'
   {
     value.SetValueType(Value::ValueType::Scalar);
-    llvm::Optional<uint64_t> byte_size =
+    std::optional<uint64_t> byte_size =
         return_compiler_type.GetByteSize(&thread);
     if (!byte_size)
       return return_valobj_sp;
@@ -511,7 +512,7 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
     // ToDo: Yet to be implemented
   } else if (type_flags & eTypeIsVector) // 'Packed'
   {
-    llvm::Optional<uint64_t> byte_size =
+    std::optional<uint64_t> byte_size =
         return_compiler_type.GetByteSize(&thread);
     if (byte_size && *byte_size > 0) {
       const RegisterInfo *vec_reg = reg_ctx->GetRegisterInfoByName("xmm0", 0);

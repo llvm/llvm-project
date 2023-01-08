@@ -20,6 +20,7 @@
 #include "ScriptInterpreterPythonImpl.h"
 #include "ScriptedProcessPythonInterface.h"
 #include "ScriptedThreadPythonInterface.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -75,10 +76,10 @@ Status ScriptedProcessPythonInterface::Stop() {
   return GetStatusFromMethod("stop");
 }
 
-llvm::Optional<MemoryRegionInfo>
+std::optional<MemoryRegionInfo>
 ScriptedProcessPythonInterface::GetMemoryRegionContainingAddress(
     lldb::addr_t address, Status &error) {
-  auto mem_region = Dispatch<llvm::Optional<MemoryRegionInfo>>(
+  auto mem_region = Dispatch<std::optional<MemoryRegionInfo>>(
       "get_memory_region_containing_address", error, address);
 
   if (error.Fail()) {
@@ -169,7 +170,7 @@ bool ScriptedProcessPythonInterface::IsAlive() {
   return obj->GetBooleanValue();
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 ScriptedProcessPythonInterface::GetScriptedThreadPluginName() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_scripted_thread_plugin", error);

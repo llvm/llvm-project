@@ -15,6 +15,7 @@
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_x86.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
+#include <optional>
 #include <sys/uio.h>
 
 namespace lldb_private {
@@ -45,9 +46,9 @@ public:
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
-  llvm::Optional<SyscallData> GetSyscallData() override;
+  std::optional<SyscallData> GetSyscallData() override;
 
-  llvm::Optional<MmapData> GetMmapData() override;
+  std::optional<MmapData> GetMmapData() override;
 
 protected:
   void *GetGPRBuffer() override { return &m_gpr_x86_64; }

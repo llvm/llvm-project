@@ -39,10 +39,10 @@ struct TraceDumperOptions {
   /// For each instruction, print the instruction kind.
   bool show_control_flow_kind = false;
   /// Optional custom id to start traversing from.
-  llvm::Optional<uint64_t> id = std::nullopt;
+  std::optional<uint64_t> id = std::nullopt;
   /// Optional number of instructions to skip from the starting position
   /// of the cursor.
-  llvm::Optional<size_t> skip = std::nullopt;
+  std::optional<size_t> skip = std::nullopt;
 };
 
 /// Class used to dump the instructions of a \a TraceCursor using its current
@@ -63,13 +63,13 @@ public:
   struct TraceItem {
     lldb::user_id_t id;
     lldb::addr_t load_address;
-    llvm::Optional<double> timestamp;
+    std::optional<double> timestamp;
     std::optional<uint64_t> hw_clock;
     std::optional<std::string> sync_point_metadata;
-    llvm::Optional<llvm::StringRef> error;
-    llvm::Optional<lldb::TraceEvent> event;
-    llvm::Optional<SymbolInfo> symbol_info;
-    llvm::Optional<SymbolInfo> prev_symbol_info;
+    std::optional<llvm::StringRef> error;
+    std::optional<lldb::TraceEvent> event;
+    std::optional<SymbolInfo> symbol_info;
+    std::optional<SymbolInfo> prev_symbol_info;
     std::optional<lldb::cpu_id_t> cpu_id;
   };
 
@@ -350,7 +350,8 @@ public:
 
     /// \return
     ///   A optional to the untraced prefix segment of this call.
-    const llvm::Optional<UntracedPrefixSegment> &GetUntracedPrefixSegment() const;
+    const std::optional<UntracedPrefixSegment> &
+    GetUntracedPrefixSegment() const;
 
     /// \return
     ///   A pointer to the parent call. It may be \b nullptr.
@@ -360,7 +361,7 @@ public:
 
   private:
     /// An optional untraced segment that precedes all the traced segments.
-    llvm::Optional<UntracedPrefixSegment> m_untraced_prefix_segment;
+    std::optional<UntracedPrefixSegment> m_untraced_prefix_segment;
     /// The traced segments in order. We used a deque to prevent moving these
     /// objects when appending to the list, which would happen with vector.
     std::deque<TracedSegment> m_traced_segments;
@@ -413,7 +414,7 @@ public:
   /// \return
   ///     The instruction id of the last traversed instruction, or \b
   ///     std::nullopt if no instructions were visited.
-  llvm::Optional<lldb::user_id_t> DumpInstructions(size_t count);
+  std::optional<lldb::user_id_t> DumpInstructions(size_t count);
 
   /// Dump all function calls forwards chronologically and hierarchically
   void DumpFunctionCalls();

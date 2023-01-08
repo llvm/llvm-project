@@ -15,6 +15,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Stream.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -95,7 +96,7 @@ static uint32_t MachHeaderSizeFromMagic(uint32_t magic) {
   }
 }
 
-static llvm::Optional<mach_header> ParseMachOHeader(DataExtractor &data) {
+static std::optional<mach_header> ParseMachOHeader(DataExtractor &data) {
   lldb::offset_t offset = 0;
   mach_header header;
   header.magic = data.GetU32(&offset);
@@ -135,7 +136,7 @@ static llvm::Optional<mach_header> ParseMachOHeader(DataExtractor &data) {
 static bool
 ParseFileset(DataExtractor &data, mach_header header,
              std::vector<ObjectContainerMachOFileset::Entry> &entries,
-             llvm::Optional<lldb::addr_t> load_addr = std::nullopt) {
+             std::optional<lldb::addr_t> load_addr = std::nullopt) {
   lldb::offset_t offset = MachHeaderSizeFromMagic(header.magic);
   lldb::offset_t slide = 0;
   for (uint32_t i = 0; i < header.ncmds; ++i) {
@@ -172,7 +173,7 @@ ParseFileset(DataExtractor &data, mach_header header,
 bool ObjectContainerMachOFileset::ParseHeader(
     DataExtractor &data, const lldb_private::FileSpec &file,
     lldb::offset_t file_offset, std::vector<Entry> &entries) {
-  llvm::Optional<mach_header> header = ParseMachOHeader(data);
+  std::optional<mach_header> header = ParseMachOHeader(data);
 
   if (!header)
     return false;
@@ -196,7 +197,7 @@ bool ObjectContainerMachOFileset::ParseHeader() {
 
   std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
-  llvm::Optional<mach_header> header = ParseMachOHeader(m_data);
+  std::optional<mach_header> header = ParseMachOHeader(m_data);
   if (!header)
     return false;
 

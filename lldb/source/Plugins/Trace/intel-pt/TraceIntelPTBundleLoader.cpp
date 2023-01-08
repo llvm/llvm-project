@@ -16,6 +16,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -78,7 +79,7 @@ TraceIntelPTBundleLoader::ParseThread(Process &process,
                                       const JSONThread &thread) {
   lldb::tid_t tid = static_cast<lldb::tid_t>(thread.tid);
 
-  Optional<FileSpec> trace_file;
+  std::optional<FileSpec> trace_file;
   if (thread.ipt_trace)
     trace_file = FileSpec(*thread.ipt_trace);
 

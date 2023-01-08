@@ -12,6 +12,7 @@
 #include "lldb/Symbol/SymbolFile.h"
 
 #include <memory>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -197,7 +198,7 @@ Type *SymbolFileOnDemand::ResolveTypeUID(lldb::user_id_t type_uid) {
   return m_sym_file_impl->ResolveTypeUID(type_uid);
 }
 
-llvm::Optional<SymbolFile::ArrayInfo>
+std::optional<SymbolFile::ArrayInfo>
 SymbolFileOnDemand::GetDynamicArrayInfoForUID(
     lldb::user_id_t type_uid, const lldb_private::ExecutionContext *exe_ctx) {
   if (!m_debug_info_enabled) {

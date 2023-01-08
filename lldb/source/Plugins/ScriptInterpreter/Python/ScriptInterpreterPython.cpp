@@ -50,6 +50,7 @@
 #include <cstdlib>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 
 using namespace lldb;
@@ -2425,7 +2426,7 @@ bool ScriptInterpreterPythonImpl::RunScriptFormatKeyword(
 
   Locker py_lock(this,
                  Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-  if (llvm::Optional<std::string> result = LLDBSWIGPythonRunScriptKeywordThread(
+  if (std::optional<std::string> result = LLDBSWIGPythonRunScriptKeywordThread(
           impl_function, m_dictionary_name.c_str(),
           thread->shared_from_this())) {
     output = std::move(*result);
@@ -2474,7 +2475,7 @@ bool ScriptInterpreterPythonImpl::RunScriptFormatKeyword(
 
   Locker py_lock(this,
                  Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-  if (llvm::Optional<std::string> result = LLDBSWIGPythonRunScriptKeywordFrame(
+  if (std::optional<std::string> result = LLDBSWIGPythonRunScriptKeywordFrame(
           impl_function, m_dictionary_name.c_str(),
           frame->shared_from_this())) {
     output = std::move(*result);

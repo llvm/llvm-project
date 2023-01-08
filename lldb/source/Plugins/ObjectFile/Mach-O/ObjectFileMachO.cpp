@@ -70,6 +70,7 @@
 
 #include <bitset>
 #include <memory>
+#include <optional>
 
 // Unfortunately the signpost header pulls in the system MachO header, too.
 #ifdef CPU_TYPE_ARM
@@ -2200,7 +2201,7 @@ UUID ObjectFileMachO::GetSharedCacheUUID(FileSpec dyld_shared_cache,
   return dsc_uuid;
 }
 
-static llvm::Optional<struct nlist_64>
+static std::optional<struct nlist_64>
 ParseNList(DataExtractor &nlist_data, lldb::offset_t &nlist_data_offset,
            size_t nlist_byte_size) {
   struct nlist_64 nlist;
@@ -2806,7 +2807,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                      nlist_index++) {
                   /////////////////////////////
                   {
-                    llvm::Optional<struct nlist_64> nlist_maybe =
+                    std::optional<struct nlist_64> nlist_maybe =
                         ParseNList(dsc_local_symbols_data, nlist_data_offset,
                                    nlist_byte_size);
                     if (!nlist_maybe)
@@ -6536,7 +6537,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
 
           if (prot != 0 && include_this_region) {
             addr_t pagesize = range_info.GetPageSize();
-            const llvm::Optional<std::vector<addr_t>> &dirty_page_list =
+            const std::optional<std::vector<addr_t>> &dirty_page_list =
                 range_info.GetDirtyPageList();
             if (dirty_pages_only && dirty_page_list) {
               for (addr_t dirtypage : *dirty_page_list) {
