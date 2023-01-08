@@ -60,6 +60,7 @@ public:
 #include <__availability>
 #include <__config>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__verbose_abort>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -408,7 +409,7 @@ void __throw_bad_cast()
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw bad_cast();
 #else
-    _VSTD::abort();
+    std::__libcpp_verbose_abort("bad_cast was thrown in -fno-exceptions mode");
 #endif
 }
 _LIBCPP_END_NAMESPACE_STD

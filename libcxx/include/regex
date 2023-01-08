@@ -776,6 +776,7 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
+#include <__verbose_abort>
 #include <deque>
 #include <stdexcept>
 #include <string>
@@ -1017,7 +1018,7 @@ void __throw_regex_error()
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw regex_error(_Ev);
 #else
-    _VSTD::abort();
+    std::__libcpp_verbose_abort("regex_error was thrown in -fno-exceptions mode");
 #endif
 }
 
