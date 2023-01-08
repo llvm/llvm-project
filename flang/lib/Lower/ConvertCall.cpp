@@ -26,6 +26,7 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "flang-lower-expr"
 
@@ -102,7 +103,7 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
     Fortran::lower::CallerInterface &caller, mlir::FunctionType callSiteType,
-    llvm::Optional<mlir::Type> resultType) {
+    std::optional<mlir::Type> resultType) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   using PassBy = Fortran::lower::CallerInterface::PassEntityBy;
   // Handle cases where caller must allocate the result or a fir.box for it.
@@ -136,7 +137,7 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
     return fir::factory::genMaxWithZero(builder, loc, convertExpr);
   };
   llvm::SmallVector<mlir::Value> resultLengths;
-  auto allocatedResult = [&]() -> llvm::Optional<fir::ExtendedValue> {
+  auto allocatedResult = [&]() -> std::optional<fir::ExtendedValue> {
     llvm::SmallVector<mlir::Value> extents;
     llvm::SmallVector<mlir::Value> lengths;
     if (!caller.callerAllocateResult())
@@ -513,7 +514,7 @@ private:
     bool handleDynamicOptional;
   };
   using PreparedActualArguments =
-      llvm::SmallVector<llvm::Optional<PreparedActualArgument>>;
+      llvm::SmallVector<std::optional<PreparedActualArgument>>;
   using PassBy = Fortran::lower::CallerInterface::PassEntityBy;
 
 public:
@@ -522,9 +523,9 @@ public:
               Fortran::lower::StatementContext &stmtCtx)
       : converter{converter}, symMap{symMap}, stmtCtx{stmtCtx}, loc{loc} {}
 
-  llvm::Optional<hlfir::EntityWithAttributes>
+  std::optional<hlfir::EntityWithAttributes>
   gen(const Fortran::evaluate::ProcedureRef &procRef,
-      llvm::Optional<mlir::Type> resultType) {
+      std::optional<mlir::Type> resultType) {
     mlir::Location loc = getLoc();
     if (auto *specific = procRef.proc().GetSpecificIntrinsic()) {
       if (isElementalProcWithArrayArgs(procRef))
@@ -570,10 +571,10 @@ public:
   }
 
 private:
-  llvm::Optional<hlfir::EntityWithAttributes>
+  std::optional<hlfir::EntityWithAttributes>
   genUserCall(PreparedActualArguments &loweredActuals,
               Fortran::lower::CallerInterface &caller,
-              llvm::Optional<mlir::Type> resultType,
+              std::optional<mlir::Type> resultType,
               mlir::FunctionType callSiteType) {
     mlir::Location loc = getLoc();
     fir::FirOpBuilder &builder = getBuilder();
@@ -666,10 +667,10 @@ private:
     return extendedValueToHlfirEntity(result, ".tmp.func_result");
   }
 
-  llvm::Optional<hlfir::EntityWithAttributes>
+  std::optional<hlfir::EntityWithAttributes>
   genElementalUserCall(PreparedActualArguments &loweredActuals,
                        Fortran::lower::CallerInterface &caller,
-                       llvm::Optional<mlir::Type> resultType,
+                       std::optional<mlir::Type> resultType,
                        mlir::FunctionType callSiteType, bool isImpure) {
     mlir::Location loc = getLoc();
     fir::FirOpBuilder &builder = getBuilder();
@@ -746,7 +747,7 @@ private:
 
   hlfir::EntityWithAttributes
   genIntrinsicRef(const Fortran::evaluate::ProcedureRef &procRef,
-                  llvm::Optional<mlir::Type> resultType,
+                  std::optional<mlir::Type> resultType,
                   const Fortran::evaluate::SpecificIntrinsic &intrinsic) {
     mlir::Location loc = getLoc();
     if (Fortran::lower::intrinsicRequiresCustomOptionalHandling(
@@ -821,10 +822,9 @@ private:
 };
 } // namespace
 
-llvm::Optional<hlfir::EntityWithAttributes> Fortran::lower::convertCallToHLFIR(
+std::optional<hlfir::EntityWithAttributes> Fortran::lower::convertCallToHLFIR(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
-    const evaluate::ProcedureRef &procRef,
-    llvm::Optional<mlir::Type> resultType, Fortran::lower::SymMap &symMap,
-    Fortran::lower::StatementContext &stmtCtx) {
+    const evaluate::ProcedureRef &procRef, std::optional<mlir::Type> resultType,
+    Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
   return CallBuilder(loc, converter, symMap, stmtCtx).gen(procRef, resultType);
 }

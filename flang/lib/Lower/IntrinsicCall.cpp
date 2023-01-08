@@ -40,6 +40,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "flang-lower-intrinsic"
 
@@ -421,7 +422,7 @@ struct IntrinsicLibrary {
   /// Generate FIR for call to Fortran intrinsic \p name with arguments \p arg
   /// and expected result type \p resultType.
   fir::ExtendedValue genIntrinsicCall(llvm::StringRef name,
-                                      llvm::Optional<mlir::Type> resultType,
+                                      std::optional<mlir::Type> resultType,
                                       llvm::ArrayRef<fir::ExtendedValue> arg);
 
   /// Search a runtime function that is associated to the generic intrinsic name
@@ -614,7 +615,7 @@ struct IntrinsicLibrary {
   template <typename GeneratorType>
   fir::ExtendedValue
   outlineInExtendedWrapper(GeneratorType, llvm::StringRef name,
-                           llvm::Optional<mlir::Type> resultType,
+                           std::optional<mlir::Type> resultType,
                            llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <typename GeneratorType>
@@ -1769,7 +1770,7 @@ static void checkPrecisionLoss(llvm::StringRef name,
 }
 
 /// Helpers to get function type from arguments and result type.
-static mlir::FunctionType getFunctionType(llvm::Optional<mlir::Type> resultType,
+static mlir::FunctionType getFunctionType(std::optional<mlir::Type> resultType,
                                           llvm::ArrayRef<mlir::Value> arguments,
                                           fir::FirOpBuilder &builder) {
   llvm::SmallVector<mlir::Type> argTypes;
@@ -1920,7 +1921,7 @@ IntrinsicLibrary::genElementalCall<IntrinsicLibrary::SubroutineGenerator>(
 static fir::ExtendedValue
 invokeHandler(IntrinsicLibrary::ElementalGenerator generator,
               const IntrinsicHandler &handler,
-              llvm::Optional<mlir::Type> resultType,
+              std::optional<mlir::Type> resultType,
               llvm::ArrayRef<fir::ExtendedValue> args, bool outline,
               IntrinsicLibrary &lib) {
   assert(resultType && "expect elemental intrinsic to be functions");
@@ -1931,7 +1932,7 @@ invokeHandler(IntrinsicLibrary::ElementalGenerator generator,
 static fir::ExtendedValue
 invokeHandler(IntrinsicLibrary::ExtendedGenerator generator,
               const IntrinsicHandler &handler,
-              llvm::Optional<mlir::Type> resultType,
+              std::optional<mlir::Type> resultType,
               llvm::ArrayRef<fir::ExtendedValue> args, bool outline,
               IntrinsicLibrary &lib) {
   assert(resultType && "expect intrinsic function");
@@ -1947,7 +1948,7 @@ invokeHandler(IntrinsicLibrary::ExtendedGenerator generator,
 static fir::ExtendedValue
 invokeHandler(IntrinsicLibrary::SubroutineGenerator generator,
               const IntrinsicHandler &handler,
-              llvm::Optional<mlir::Type> resultType,
+              std::optional<mlir::Type> resultType,
               llvm::ArrayRef<fir::ExtendedValue> args, bool outline,
               IntrinsicLibrary &lib) {
   if (handler.isElemental)
@@ -1962,7 +1963,7 @@ invokeHandler(IntrinsicLibrary::SubroutineGenerator generator,
 
 fir::ExtendedValue
 IntrinsicLibrary::genIntrinsicCall(llvm::StringRef specificName,
-                                   llvm::Optional<mlir::Type> resultType,
+                                   std::optional<mlir::Type> resultType,
                                    llvm::ArrayRef<fir::ExtendedValue> args) {
   llvm::StringRef name = genericName(specificName);
   if (const IntrinsicHandler *handler = findIntrinsicHandler(name)) {
@@ -2132,7 +2133,7 @@ IntrinsicLibrary::outlineInWrapper(GeneratorType generator,
 template <typename GeneratorType>
 fir::ExtendedValue IntrinsicLibrary::outlineInExtendedWrapper(
     GeneratorType generator, llvm::StringRef name,
-    llvm::Optional<mlir::Type> resultType,
+    std::optional<mlir::Type> resultType,
     llvm::ArrayRef<fir::ExtendedValue> args) {
   if (hasAbsentOptional(args))
     TODO(loc, "cannot outline call to intrinsic " + llvm::Twine(name) +
@@ -3107,7 +3108,7 @@ IntrinsicLibrary::genCshift(mlir::Type resultType,
 // DATE_AND_TIME
 void IntrinsicLibrary::genDateAndTime(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4 && "date_and_time has 4 args");
-  llvm::SmallVector<llvm::Optional<fir::CharBoxValue>> charArgs(3);
+  llvm::SmallVector<std::optional<fir::CharBoxValue>> charArgs(3);
   for (unsigned i = 0; i < 3; ++i)
     if (const fir::CharBoxValue *charBox = args[i].getCharBox())
       charArgs[i] = *charBox;
@@ -5322,7 +5323,7 @@ Fortran::lower::ArgLoweringRule Fortran::lower::lowerIntrinsicArgumentAs(
 fir::ExtendedValue
 Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
                                  llvm::StringRef name,
-                                 llvm::Optional<mlir::Type> resultType,
+                                 std::optional<mlir::Type> resultType,
                                  llvm::ArrayRef<fir::ExtendedValue> args,
                                  Fortran::lower::StatementContext &stmtCtx) {
   return IntrinsicLibrary{builder, loc, &stmtCtx}.genIntrinsicCall(

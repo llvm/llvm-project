@@ -37,9 +37,9 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace fir {
 #define GEN_PASS_DEF_SIMPLIFYINTRINSICS
@@ -509,7 +509,7 @@ static unsigned getDimCount(mlir::Value val) {
 /// be reliably found.
 /// We expect that the argument is a result of fir.convert
 /// with the destination type of !fir.box<none>.
-static llvm::Optional<mlir::Type> getArgElementType(mlir::Value val) {
+static std::optional<mlir::Type> getArgElementType(mlir::Value val) {
   mlir::Operation *defOp;
   do {
     defOp = val.getDefiningOp();

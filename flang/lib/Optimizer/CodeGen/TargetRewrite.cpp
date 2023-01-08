@@ -29,6 +29,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 namespace fir {
 #define GEN_PASS_DEF_TARGETREWRITEPASS
@@ -64,7 +65,7 @@ struct FixupTy {
   Codes code;
   std::size_t index;
   std::size_t second{};
-  llvm::Optional<std::function<void(mlir::func::FuncOp)>> finalizer{};
+  std::optional<std::function<void(mlir::func::FuncOp)>> finalizer{};
 }; // namespace
 
 /// Target-specific rewriting of the FIR. This is a prerequisite pass to code
@@ -214,7 +215,7 @@ public:
     }
 
     // Determine the rewrite function, `wrap`, for the result value.
-    llvm::Optional<std::function<mlir::Value(mlir::Operation *)>> wrap;
+    std::optional<std::function<mlir::Value(mlir::Operation *)>> wrap;
     if (fnTy.getResults().size() == 1) {
       mlir::Type ty = fnTy.getResult(0);
       llvm::TypeSwitch<mlir::Type>(ty)
