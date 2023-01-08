@@ -218,7 +218,7 @@ entry:
 ; CHECK-NEXT:         .value_kind:     hidden_default_queue
 ; CHECK-NEXT:       - .offset:         64
 ; CHECK-NEXT:         .size:           8
-; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:         .value_kind:     hidden_completion_action
 ; CHECK:          .name:           test48
 ; CHECK:          .symbol:         test48.kd
 define amdgpu_kernel void @test48(
@@ -266,7 +266,7 @@ entry:
 ; CHECK-NEXT:         .value_kind:     hidden_default_queue
 ; CHECK-NEXT:       - .offset:         64
 ; CHECK-NEXT:         .size:           8
-; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:         .value_kind:     hidden_completion_action
 ; CHECK-NEXT:       - .offset:         72
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_multigrid_sync_arg
