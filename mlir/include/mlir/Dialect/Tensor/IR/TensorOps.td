@@ -237,12 +237,6 @@ def Tensor_ExtractOp : Tensor_Op<"extract", [
   let results = (outs AnyType:$result);
   let assemblyFormat = "$tensor `[` $indices `]` attr-dict `:` type($tensor)";
 
-  let builders = [
-    OpBuilder<(ins "Value":$tensor, CArg<"ValueRange", "{}">:$indices), [{
-      auto resType = tensor.getType().cast<ShapedType>().getElementType();
-      build($_builder, $_state, resType, tensor, indices);
-    }]>];
-
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -292,7 +286,7 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     between different flavors of ops on that operate on tensors.
 
     #### Verification vs Inference in the rank-reduced case
-    
+
     Note that there may be multiple ways to infer a resulting rank-reduced type.
       e.g. 1x6x1 could potentially rank-reduce to either 1x6 or 6x1 2-D shapes.
 
@@ -724,13 +718,6 @@ def Tensor_InsertOp : Tensor_Op<"insert", [
     $scalar `into` $dest `[` $indices `]` attr-dict `:` type($dest)
   }];
 
-  let builders = [
-    OpBuilder<(ins "Value":$scalar, "Value":$dest,
-      CArg<"ValueRange", "{}">:$indices), [{
-      auto resType = dest.getType();
-      build($_builder, $_state, resType, scalar, dest, indices);
-    }]>];
-
   let extraClassDeclaration = [{
     std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
       return {1, 2};  // `dest` operand
@@ -795,7 +782,7 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     behavior of tensor.extract_slice.
 
     #### Verification in the rank-reduced case
-    
+
     The same verification discussion and mechanisms apply as for ExtractSliceOp.
     Unlike ExtractSliceOp however, there is no need for a specific inference.
 
@@ -1399,7 +1386,7 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
     rank-reducing behavior of tensor.insert_slice and tensor.extract_slice.
 
     #### Verification in the rank-reduced case
-    
+
     The same verification discussion and mechanisms apply as for ExtractSliceOp.
     Unlike ExtractSliceOp however, there is no need for a specific inference.
   }];

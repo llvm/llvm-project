@@ -30,11 +30,6 @@ class SPIRV_LogicalBinaryOp<string mnemonic, Type operandsType,
                                     "getUnaryOpResultType($_self)"
                      >])> {
   let assemblyFormat = "$operand1 `,` $operand2 `:` type($operand1) attr-dict";
-
-  let builders = [
-    OpBuilder<(ins "Value":$lhs, "Value":$rhs),
-    [{::buildLogicalBinaryOp($_builder, $_state, lhs, rhs);}]>
-  ];
 }
 
 class SPIRV_LogicalUnaryOp<string mnemonic, Type operandType,
@@ -49,11 +44,6 @@ class SPIRV_LogicalUnaryOp<string mnemonic, Type operandType,
                                     "getUnaryOpResultType($_self)"
                      >])> {
   let assemblyFormat = "$operand `:` type($operand) attr-dict";
-
-  let builders = [
-    OpBuilder<(ins "Value":$value),
-    [{::buildLogicalUnaryOp($_builder, $_state, value);}]>
-  ];
 }
 
 // -----

@@ -432,7 +432,8 @@ static void createFullPartialVectorTransferWrite(RewriterBase &b,
     Value load = b.create<memref::LoadOp>(
         loc,
         b.create<vector::TypeCastOp>(
-            loc, MemRefType::get({}, xferOp.getVector().getType()), alloc));
+            loc, MemRefType::get({}, xferOp.getVector().getType()), alloc),
+        ValueRange());
     mapping.map(xferOp.getVector(), load);
     b.clone(*xferOp.getOperation(), mapping);
     b.create<scf::YieldOp>(loc, ValueRange{});

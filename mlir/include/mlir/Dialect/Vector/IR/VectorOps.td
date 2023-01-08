@@ -576,8 +576,6 @@ def Vector_ExtractElementOp :
   let builders = [
     // 0-D builder.
     OpBuilder<(ins "Value":$source)>,
-    // 1-D + position builder.
-    OpBuilder<(ins "Value":$source, "Value":$position)>,
   ];
   let extraClassDeclaration = [{
     VectorType getVectorType() {
