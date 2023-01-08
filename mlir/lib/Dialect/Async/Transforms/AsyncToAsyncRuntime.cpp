@@ -22,7 +22,7 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -319,7 +319,7 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
 
     // Map from function inputs defined above the execute op to the function
     // arguments.
-    BlockAndValueMapping valueMapping;
+    IRMapping valueMapping;
     valueMapping.map(functionInputs, func.getArguments());
     valueMapping.map(execute.getBodyRegion().getArguments(), unwrappedOperands);
 

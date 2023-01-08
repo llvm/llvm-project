@@ -1204,7 +1204,7 @@ static Value insertYieldOp(RewriterBase &rewriter, Location loc, Region &region,
                            ValueRange vals) {
   // Make a clone of overlap region.
   Region tmpRegion;
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   region.cloneInto(&tmpRegion, tmpRegion.begin(), mapper);
   Block &clonedBlock = tmpRegion.front();
   YieldOp clonedYield = cast<YieldOp>(clonedBlock.getTerminator());

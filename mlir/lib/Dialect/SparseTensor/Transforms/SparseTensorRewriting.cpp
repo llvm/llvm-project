@@ -350,7 +350,7 @@ public:
         /*doc=*/nullptr, /*library_call=*/nullptr);
     Block &prodBlock = prod.getRegion().front();
     Block &consBlock = op.getRegion().front();
-    BlockAndValueMapping mapper;
+    IRMapping mapper;
     Block *fusedBlock = new Block();
     fusedOp.getRegion().push_back(fusedBlock);
     unsigned num = prodBlock.getNumArguments();
@@ -390,7 +390,7 @@ public:
 
 private:
   // Helper to add argument and record the mapping.
-  static void addArg(BlockAndValueMapping &mapper, Block *b, BlockArgument a) {
+  static void addArg(IRMapping &mapper, Block *b, BlockArgument a) {
     mapper.map(a, b->addArgument(a.getType(), a.getLoc()));
   }
 };

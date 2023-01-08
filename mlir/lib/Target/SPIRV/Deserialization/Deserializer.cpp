@@ -16,8 +16,8 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
@@ -1750,7 +1750,7 @@ LogicalResult ControlFlowStructurizer::structurize() {
     return failure();
   Region &body = op->getRegion(0);
 
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   // All references to the old merge block should be directed to the
   // selection/loop merge block in the SelectionOp/LoopOp's region.
   mapper.map(mergeBlock, &body.back());

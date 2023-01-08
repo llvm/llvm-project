@@ -15,7 +15,7 @@
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include <optional>
 
 // Return explicit extents. If the base is a fir.box, this won't read it to
@@ -575,7 +575,7 @@ hlfir::inlineElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
   // hlfir.elemental region is a SizedRegion<1>.
   assert(elemental.getRegion().hasOneBlock() &&
          "expect elemental region to have one block");
-  mlir::BlockAndValueMapping mapper;
+  mlir::IRMapping mapper;
   mapper.map(elemental.getIndices(), oneBasedIndices);
   mlir::Operation *newOp;
   for (auto &op : elemental.getRegion().back().getOperations())

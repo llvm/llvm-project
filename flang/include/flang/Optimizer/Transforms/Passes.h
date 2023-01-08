@@ -15,7 +15,7 @@
 #include <memory>
 
 namespace mlir {
-class BlockAndValueMapping;
+class IRMapping;
 class GreedyRewriteConfig;
 class Operation;
 class Pass;
