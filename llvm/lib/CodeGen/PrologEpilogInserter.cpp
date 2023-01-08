@@ -603,9 +603,8 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
       unsigned Reg = CS.getReg();
 
       if (CS.isSpilledToReg()) {
-        BuildMI(SaveBlock, I, DebugLoc(),
-                TII.get(TargetOpcode::COPY), CS.getDstReg())
-          .addReg(Reg, getKillRegState(true));
+        TII.buildCopy(SaveBlock, I, DebugLoc(), CS.getDstReg(), Reg,
+                      getKillRegState(true));
       } else {
         const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
         TII.storeRegToStackSlot(SaveBlock, I, Reg, true, CS.getFrameIdx(), RC,
@@ -631,8 +630,8 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
       unsigned Reg = CI.getReg();
       if (CI.isSpilledToReg()) {
-        BuildMI(RestoreBlock, I, DebugLoc(), TII.get(TargetOpcode::COPY), Reg)
-          .addReg(CI.getDstReg(), getKillRegState(true));
+        TII.buildCopy(RestoreBlock, I, DebugLoc(), Reg, CI.getDstReg(),
+                      getKillRegState(true));
       } else {
         const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
         TII.loadRegFromStackSlot(RestoreBlock, I, Reg, CI.getFrameIdx(), RC,

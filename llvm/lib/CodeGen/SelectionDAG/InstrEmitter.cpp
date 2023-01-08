@@ -171,8 +171,7 @@ void InstrEmitter::EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone,
   } else {
     // Create the reg, emit the copy.
     VRBase = MRI->createVirtualRegister(DstRC);
-    BuildMI(*MBB, InsertPos, Node->getDebugLoc(), TII->get(TargetOpcode::COPY),
-            VRBase).addReg(SrcReg);
+    TII->buildCopy(*MBB, InsertPos, Node->getDebugLoc(), VRBase, SrcReg);
   }
 
   SDValue Op(Node, ResNo);
@@ -329,8 +328,8 @@ InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB,
         OpRC = TRI->getAllocatableClass(OpRC);
         assert(OpRC && "Constraints cannot be fulfilled for allocation");
         Register NewVReg = MRI->createVirtualRegister(OpRC);
-        BuildMI(*MBB, InsertPos, Op.getNode()->getDebugLoc(),
-                TII->get(TargetOpcode::COPY), NewVReg).addReg(VReg);
+        TII->buildCopy(*MBB, InsertPos, Op.getNode()->getDebugLoc(), NewVReg,
+                       VReg);
         VReg = NewVReg;
       } else {
         assert(ConstrainedRC->isAllocatable() &&
@@ -396,8 +395,8 @@ void InstrEmitter::AddOperand(MachineInstrBuilder &MIB,
 
     if (OpRC && IIRC && OpRC != IIRC && VReg.isVirtual()) {
       Register NewVReg = MRI->createVirtualRegister(IIRC);
-      BuildMI(*MBB, InsertPos, Op.getNode()->getDebugLoc(),
-               TII->get(TargetOpcode::COPY), NewVReg).addReg(VReg);
+      TII->buildCopy(*MBB, InsertPos, Op.getNode()->getDebugLoc(), NewVReg,
+                     VReg);
       VReg = NewVReg;
     }
     // Turn additional physreg operands into implicit uses on non-variadic
@@ -465,8 +464,7 @@ Register InstrEmitter::ConstrainForSubReg(Register VReg, unsigned SubIdx,
   RC = TRI->getSubClassWithSubReg(TLI->getRegClassFor(VT, isDivergent), SubIdx);
   assert(RC && "No legal register class for VT supports that SubIdx");
   Register NewReg = MRI->createVirtualRegister(RC);
-  BuildMI(*MBB, InsertPos, DL, TII->get(TargetOpcode::COPY), NewReg)
-    .addReg(VReg);
+  TII->buildCopy(*MBB, InsertPos, DL, NewReg, VReg);
   return NewReg;
 }
 
@@ -522,8 +520,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
       // to a copy
       // r1026 = copy r1024
       VRBase = MRI->createVirtualRegister(TRC);
-      BuildMI(*MBB, InsertPos, Node->getDebugLoc(),
-              TII->get(TargetOpcode::COPY), VRBase).addReg(SrcReg);
+      TII->buildCopy(*MBB, InsertPos, Node->getDebugLoc(), VRBase, SrcReg);
       MRI->clearKillFlags(SrcReg);
     } else {
       // Reg may not support a SubIdx sub-register, and we may need to
@@ -538,9 +535,9 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
         VRBase = MRI->createVirtualRegister(TRC);
 
       // Create the extract_subreg machine instruction.
-      MachineInstrBuilder CopyMI =
-          BuildMI(*MBB, InsertPos, Node->getDebugLoc(),
-                  TII->get(TargetOpcode::COPY), VRBase);
+      MachineInstrBuilder CopyMI = MachineInstrBuilder(
+          *MBB->getParent(),
+          TII->buildCopy(*MBB, InsertPos, Node->getDebugLoc(), VRBase));
       if (Reg.isVirtual())
         CopyMI.addReg(Reg, 0, SubIdx);
       else
@@ -615,8 +612,7 @@ InstrEmitter::EmitCopyToRegClassNode(SDNode *Node,
   const TargetRegisterClass *DstRC =
     TRI->getAllocatableClass(TRI->getRegClass(DstRCIdx));
   Register NewVReg = MRI->createVirtualRegister(DstRC);
-  BuildMI(*MBB, InsertPos, Node->getDebugLoc(), TII->get(TargetOpcode::COPY),
-    NewVReg).addReg(VReg);
+  TII->buildCopy(*MBB, InsertPos, Node->getDebugLoc(), NewVReg, VReg);
 
   SDValue Op(Node, 0);
   bool isNew = VRBaseMap.insert(std::make_pair(Op, NewVReg)).second;
@@ -1272,8 +1268,7 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     if (SrcReg == DestReg) // Coalesced away the copy? Ignore.
       break;
 
-    BuildMI(*MBB, InsertPos, Node->getDebugLoc(), TII->get(TargetOpcode::COPY),
-            DestReg).addReg(SrcReg);
+    TII->buildCopy(*MBB, InsertPos, Node->getDebugLoc(), DestReg, SrcReg);
     break;
   }
   case ISD::CopyFromReg: {

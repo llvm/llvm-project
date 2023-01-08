@@ -1939,14 +1939,48 @@ public:
     return false;
   }
 
+  /// Helper function for inserting a COPY to \p Dst at insertion point \p InsPt
+  /// in \p MBB block.
+  MachineInstr *buildCopy(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator InsPt, const DebugLoc &DL,
+                          Register Dst) const {
+    return BuildMI(MBB, InsPt, DL, get(TargetOpcode::COPY), Dst);
+  }
+
+  /// Helper function for inserting a COPY to \p Dst from \p Src at insertion
+  /// point \p InsPt in \p MBB block.
+  MachineInstr *buildCopy(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator InsPt, const DebugLoc &DL,
+                          Register Dst, Register Src, unsigned Flags = 0,
+                          unsigned SubReg = 0) const {
+    return BuildMI(MBB, InsPt, DL, get(TargetOpcode::COPY), Dst)
+        .addReg(Src, Flags, SubReg);
+  }
+
+  /// Helper function for inserting a COPY to \p Dst from \p Src at insertion
+  /// point \p InsPt in \p MBB block. Get the Debug Location from \p MIMD.
+  MachineInstrBuilder buildCopy(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator InsPt,
+                                const MIMetadata &MIMD, Register Dst,
+                                Register Src, unsigned Flags = 0,
+                                unsigned SubReg = 0) const {
+    MachineFunction &MF = *MBB.getParent();
+    MachineInstr *MI =
+        MF.CreateMachineInstr(get(TargetOpcode::COPY), MIMD.getDL());
+    MBB.insert(InsPt, MI);
+    return MachineInstrBuilder(MF, MI)
+        .setPCSections(MIMD.getPCSections())
+        .addReg(Dst, RegState::Define)
+        .addReg(Src, Flags, SubReg);
+  }
+
   /// During PHI eleimination lets target to make necessary checks and
   /// insert the copy to the PHI destination register in a target specific
   /// manner.
   virtual MachineInstr *createPHIDestinationCopy(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator InsPt,
       const DebugLoc &DL, Register Src, Register Dst) const {
-    return BuildMI(MBB, InsPt, DL, get(TargetOpcode::COPY), Dst)
-        .addReg(Src);
+    return buildCopy(MBB, InsPt, DL, Dst, Src);
   }
 
   /// During PHI eleimination lets target to make necessary checks and
@@ -1957,8 +1991,7 @@ public:
                                             const DebugLoc &DL, Register Src,
                                             unsigned SrcSubReg,
                                             Register Dst) const {
-    return BuildMI(MBB, InsPt, DL, get(TargetOpcode::COPY), Dst)
-        .addReg(Src, 0, SrcSubReg);
+    return buildCopy(MBB, InsPt, DL, Dst, Src, 0, SrcSubReg);
   }
 
   /// Returns a \p outliner::OutlinedFunction struct containing target-specific

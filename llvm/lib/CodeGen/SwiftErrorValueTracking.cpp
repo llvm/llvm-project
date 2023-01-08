@@ -228,9 +228,8 @@ void SwiftErrorValueTracking::propagateVRegs() {
         assert(!VRegs.empty() &&
                "No predecessors?  Is the Calling Convention correct?");
         Register DestReg = UUseVReg;
-        BuildMI(*MBB, MBB->getFirstNonPHI(), DLoc, TII->get(TargetOpcode::COPY),
-                DestReg)
-            .addReg(VRegs[0].second);
+        TII->buildCopy(*MBB, MBB->getFirstNonPHI(), DLoc, DestReg,
+                       VRegs[0].second);
         continue;
       }
 

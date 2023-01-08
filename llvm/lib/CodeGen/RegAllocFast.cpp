@@ -1035,9 +1035,8 @@ void RegAllocFast::defineLiveThroughVirtReg(MachineInstr &MI, unsigned OpNum,
         std::next((MachineBasicBlock::iterator)MI.getIterator());
       LLVM_DEBUG(dbgs() << "Copy " << printReg(LRI->PhysReg, TRI) << " to "
                         << printReg(PrevReg, TRI) << '\n');
-      BuildMI(*MBB, InsertBefore, MI.getDebugLoc(),
-              TII->get(TargetOpcode::COPY), PrevReg)
-        .addReg(LRI->PhysReg, llvm::RegState::Kill);
+      TII->buildCopy(*MBB, InsertBefore, MI.getDebugLoc(), PrevReg,
+                     LRI->PhysReg, llvm::RegState::Kill);
     }
     MachineOperand &MO = MI.getOperand(OpNum);
     if (MO.getSubReg() && !MO.isUndef()) {
