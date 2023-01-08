@@ -17,6 +17,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
+#include <optional>
 
 namespace fir {
 class FirOpBuilder;

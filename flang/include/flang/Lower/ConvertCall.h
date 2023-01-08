@@ -20,6 +20,7 @@
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
+#include <optional>
 
 namespace Fortran::lower {
 

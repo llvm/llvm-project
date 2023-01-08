@@ -20,6 +20,7 @@
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include <optional>
 
 namespace mlir {
 class Location;

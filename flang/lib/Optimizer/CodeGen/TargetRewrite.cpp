@@ -29,6 +29,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 namespace fir {
 #define GEN_PASS_DEF_TARGETREWRITEPASS

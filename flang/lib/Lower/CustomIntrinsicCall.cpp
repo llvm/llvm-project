@@ -16,6 +16,7 @@
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include <optional>
 
 /// Is this a call to MIN or MAX intrinsic with arguments that may be absent at
 /// runtime? This is a special case because MIN and MAX can have any number of

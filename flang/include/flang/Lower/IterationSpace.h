@@ -17,6 +17,7 @@
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include <optional>
 
 namespace llvm {
 class raw_ostream;

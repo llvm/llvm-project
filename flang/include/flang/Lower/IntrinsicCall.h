@@ -11,6 +11,7 @@
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "llvm/ADT/Optional.h"
+#include <optional>
 
 namespace fir {
 class ExtendedValue;

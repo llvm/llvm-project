@@ -25,6 +25,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <optional>
 
 namespace {
 

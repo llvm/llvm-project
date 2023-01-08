@@ -21,6 +21,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include <optional>
 
 //===----------------------------------------------------------------------===//
 // BIND(C) mangling helpers
