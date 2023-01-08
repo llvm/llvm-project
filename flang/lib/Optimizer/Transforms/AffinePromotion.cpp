@@ -27,7 +27,6 @@
 #include "mlir/IR/Visitors.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 

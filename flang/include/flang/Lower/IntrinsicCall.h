@@ -10,7 +10,6 @@
 #define FORTRAN_LOWER_INTRINSICCALL_H
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "llvm/ADT/Optional.h"
 #include <optional>
 
 namespace fir {
