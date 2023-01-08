@@ -1872,8 +1872,8 @@ struct Conv1DGenerator
     if (!setOperKind(reduceOp))
       return;
     auto maybeKind = getCombinerOpKind(reduceOp);
-    if (!(maybeKind && (*maybeKind == vector::CombiningKind::ADD ||
-                        (oper == Pool && isSupportedPoolKind(*maybeKind))))) {
+    if (!maybeKind || (*maybeKind != vector::CombiningKind::ADD &&
+                       (oper != Pool || !isSupportedPoolKind(*maybeKind)))) {
       return;
     }
 
