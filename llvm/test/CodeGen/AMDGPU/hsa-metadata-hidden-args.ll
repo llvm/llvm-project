@@ -225,11 +225,11 @@ entry:
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
-; CHECK-NEXT:       ValueKind:       HiddenDefaultQueue
+; CHECK-NEXT:       ValueKind:       HiddenNone
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
-; CHECK-NEXT:       ValueKind:       HiddenCompletionAction
+; CHECK-NEXT:       ValueKind:       HiddenNone
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:   CodeProps:
 define amdgpu_kernel void @test48(
@@ -277,11 +277,11 @@ entry:
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
-; CHECK-NEXT:       ValueKind:       HiddenDefaultQueue
+; CHECK-NEXT:       ValueKind:       HiddenNone
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
-; CHECK-NEXT:       ValueKind:       HiddenCompletionAction
+; CHECK-NEXT:       ValueKind:       HiddenNone
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
