@@ -163,7 +163,7 @@ public:
 /// In that case, a cleanup function is provided to generate the finalization
 /// code after the end of the fir::ExtendedValue use.
 using CleanupFunction = std::function<void()>;
-std::pair<fir::ExtendedValue, llvm::Optional<CleanupFunction>>
+std::pair<fir::ExtendedValue, std::optional<CleanupFunction>>
 translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
                          Entity entity);
 

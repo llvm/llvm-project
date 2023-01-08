@@ -861,11 +861,11 @@ void Fortran::lower::ExplicitIterSpace::conditionalCleanup() {
   }
 }
 
-llvm::Optional<size_t>
+std::optional<size_t>
 Fortran::lower::ExplicitIterSpace::findArgPosition(fir::ArrayLoadOp load) {
   if (lhsBases[counter]) {
     auto ld = loadBindings.find(*lhsBases[counter]);
-    llvm::Optional<size_t> optPos;
+    std::optional<size_t> optPos;
     if (ld != loadBindings.end() && ld->second == load)
       optPos = static_cast<size_t>(0u);
     assert(optPos.has_value() && "load does not correspond to lhs");
@@ -918,7 +918,7 @@ Fortran::lower::operator<<(llvm::raw_ostream &s,
                u);
   };
   s << "LHS bases:\n";
-  for (const llvm::Optional<Fortran::lower::ExplicitIterSpace::ArrayBases> &u :
+  for (const std::optional<Fortran::lower::ExplicitIterSpace::ArrayBases> &u :
        e.lhsBases)
     if (u)
       dump(*u);

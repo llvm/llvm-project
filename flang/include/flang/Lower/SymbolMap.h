@@ -349,7 +349,7 @@ public:
     symbolMapStack.back().try_emplace(sym, definingOp);
   }
 
-  llvm::Optional<fir::FortranVariableOpInterface>
+  std::optional<fir::FortranVariableOpInterface>
   lookupVariableDefinition(semantics::SymbolRef sym);
 
 private:

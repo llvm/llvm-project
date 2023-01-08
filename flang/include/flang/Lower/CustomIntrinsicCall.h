@@ -54,7 +54,7 @@ using OperandPrepare = std::function<void(const Fortran::lower::SomeExpr &)>;
 /// preparation was done. An absent optional means the argument is statically
 /// present. An mlir::Value means the presence must be checked at runtime, and
 /// that the value contains the "is present" boolean value.
-using OperandPresent = std::function<llvm::Optional<mlir::Value>(std::size_t)>;
+using OperandPresent = std::function<std::optional<mlir::Value>(std::size_t)>;
 
 /// Type of the callback to generate an argument reference after the call
 /// preparation was done. For optional arguments, the utility guarantees
@@ -77,7 +77,7 @@ using OperandGetter = std::function<fir::ExtendedValue(std::size_t)>;
 void prepareCustomIntrinsicArgument(
     const Fortran::evaluate::ProcedureRef &procRef,
     const Fortran::evaluate::SpecificIntrinsic &intrinsic,
-    llvm::Optional<mlir::Type> retTy,
+    std::optional<mlir::Type> retTy,
     const OperandPrepare &prepareOptionalArgument,
     const OperandPrepare &prepareOtherArgument, AbstractConverter &converter);
 
@@ -90,7 +90,7 @@ void prepareCustomIntrinsicArgument(
 /// not generate any implicit loop nest on its own).
 fir::ExtendedValue
 lowerCustomIntrinsic(fir::FirOpBuilder &builder, mlir::Location loc,
-                     llvm::StringRef name, llvm::Optional<mlir::Type> retTy,
+                     llvm::StringRef name, std::optional<mlir::Type> retTy,
                      const OperandPresent &isPresentCheck,
                      const OperandGetter &getOperand, std::size_t numOperands,
                      Fortran::lower::StatementContext &stmtCtx);

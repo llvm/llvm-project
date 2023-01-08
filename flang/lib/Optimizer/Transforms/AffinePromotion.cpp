@@ -169,7 +169,7 @@ namespace {
 /// final number of symbols and dimensions of the affine map. Integer set if
 /// possible is in Optional IntegerSet.
 struct AffineIfCondition {
-  using MaybeAffineExpr = llvm::Optional<mlir::AffineExpr>;
+  using MaybeAffineExpr = std::optional<mlir::AffineExpr>;
 
   explicit AffineIfCondition(mlir::Value fc) : firCondition(fc) {
     if (auto condDef = firCondition.getDefiningOp<mlir::arith::CmpIOp>())
@@ -248,7 +248,7 @@ private:
         dimCount, symCount, {constraintPair->first}, {constraintPair->second});
   }
 
-  llvm::Optional<std::pair<AffineExpr, bool>>
+  std::optional<std::pair<AffineExpr, bool>>
   constraint(mlir::arith::CmpIPredicate predicate, mlir::AffineExpr basic) {
     switch (predicate) {
     case mlir::arith::CmpIPredicate::slt:
@@ -267,7 +267,7 @@ private:
   }
 
   llvm::SmallVector<mlir::Value> affineArgs;
-  llvm::Optional<mlir::IntegerSet> integerSet;
+  std::optional<mlir::IntegerSet> integerSet;
   mlir::Value firCondition;
   unsigned symCount{0u};
   unsigned dimCount{0u};
@@ -330,7 +330,7 @@ static mlir::AffineMap createArrayIndexAffineMap(unsigned dimensions,
   return mlir::AffineMap::get(dimensions, dimensions * 3, index);
 }
 
-static Optional<int64_t> constantIntegerLike(const mlir::Value value) {
+static std::optional<int64_t> constantIntegerLike(const mlir::Value value) {
   if (auto definition = value.getDefiningOp<mlir::arith::ConstantOp>())
     if (auto stepAttr = definition.getValue().dyn_cast<IntegerAttr>())
       return stepAttr.getInt();
