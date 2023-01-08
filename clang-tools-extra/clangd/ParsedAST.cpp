@@ -50,6 +50,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <vector>
 
 // Force the linker to link in Clang-tidy modules.

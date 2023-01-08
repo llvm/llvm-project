@@ -47,6 +47,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <string>
 
 namespace clang {

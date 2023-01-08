@@ -18,6 +18,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/FileSystem.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 

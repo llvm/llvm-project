@@ -12,6 +12,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {

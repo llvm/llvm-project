@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
+#include <optional>
 
 namespace clang {
 namespace clangd {

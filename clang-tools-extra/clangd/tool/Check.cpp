@@ -54,6 +54,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {

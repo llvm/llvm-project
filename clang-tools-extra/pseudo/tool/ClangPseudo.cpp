@@ -24,6 +24,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
+#include <optional>
 
 using clang::pseudo::ForestNode;
 using clang::pseudo::Token;

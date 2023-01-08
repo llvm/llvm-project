@@ -21,6 +21,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstring>
+#include <optional>
 #include <utility>
 
 using namespace clang::ast_matchers;

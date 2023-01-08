@@ -13,6 +13,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {

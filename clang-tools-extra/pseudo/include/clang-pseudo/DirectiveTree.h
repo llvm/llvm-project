@@ -30,6 +30,7 @@
 
 #include "clang-pseudo/Token.h"
 #include "clang/Basic/TokenKinds.h"
+#include <optional>
 #include <variant>
 #include <vector>
 

@@ -12,6 +12,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
+#include <optional>
 
 namespace clang {
 

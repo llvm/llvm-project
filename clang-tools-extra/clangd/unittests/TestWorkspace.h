@@ -19,6 +19,7 @@
 #include "TestTU.h"
 #include "index/Index.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 #include <string>
 #include <vector>
 

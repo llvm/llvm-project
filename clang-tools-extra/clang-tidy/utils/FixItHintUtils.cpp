@@ -10,6 +10,7 @@
 #include "LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Type.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {

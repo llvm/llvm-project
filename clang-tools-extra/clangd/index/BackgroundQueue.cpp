@@ -8,6 +8,7 @@
 
 #include "index/Background.h"
 #include "support/Logger.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {

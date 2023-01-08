@@ -21,6 +21,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/MacroInfo.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 #include <string>
 #include <vector>
 

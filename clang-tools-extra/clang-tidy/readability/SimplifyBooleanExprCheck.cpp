@@ -11,6 +11,7 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/Support/SaveAndRestore.h"
 
+#include <optional>
 #include <string>
 #include <utility>
 

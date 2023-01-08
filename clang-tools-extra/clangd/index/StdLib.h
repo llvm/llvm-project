@@ -26,6 +26,7 @@
 #include "index/Symbol.h"
 #include "support/ThreadsafeFS.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 #include <string>
 
 namespace clang {

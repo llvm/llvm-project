@@ -13,6 +13,7 @@
 #include "Protocol.h"
 #include "support/Markup.h"
 #include "clang/Index/IndexSymbol.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {

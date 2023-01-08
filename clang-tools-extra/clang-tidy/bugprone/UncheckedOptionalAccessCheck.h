@@ -12,6 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {

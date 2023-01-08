@@ -13,6 +13,7 @@
 #include "support/Logger.h"
 #include "support/Path.h"
 #include "clang/AST/Decl.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {

@@ -16,6 +16,7 @@
 #include <AST.h>
 #include <climits>
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace clang {

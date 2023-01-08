@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
 #include <cstring>
+#include <optional>
 
 namespace clang {
 namespace clangd {

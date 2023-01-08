@@ -24,6 +24,7 @@
 #include "gtest/gtest.h"
 #include <chrono>
 #include <fstream>
+#include <optional>
 #include <string>
 
 namespace clang {

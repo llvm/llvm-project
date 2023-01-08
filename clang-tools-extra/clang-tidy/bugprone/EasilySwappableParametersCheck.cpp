@@ -16,6 +16,7 @@
 
 #define DEBUG_TYPE "EasilySwappableParametersCheck"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 namespace optutils = clang::tidy::utils::options;
 

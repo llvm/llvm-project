@@ -25,6 +25,7 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 

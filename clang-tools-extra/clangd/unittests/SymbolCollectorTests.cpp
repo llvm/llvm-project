@@ -26,6 +26,7 @@
 #include "gtest/gtest.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace clang {

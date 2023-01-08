@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringExtras.h"
 
 #include <cctype>
+#include <optional>
 
 using namespace clang::ast_matchers;
 

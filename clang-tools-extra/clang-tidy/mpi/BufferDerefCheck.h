@@ -11,6 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 #include "clang/StaticAnalyzer/Checkers/MPIFunctionClassifier.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {

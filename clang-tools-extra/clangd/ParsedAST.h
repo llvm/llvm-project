@@ -34,6 +34,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 

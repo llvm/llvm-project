@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cmath>
+#include <optional>
 
 #include "DurationRewriter.h"
 #include "clang/Tooling/FixIt.h"

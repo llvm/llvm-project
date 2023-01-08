@@ -22,6 +22,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace clang {

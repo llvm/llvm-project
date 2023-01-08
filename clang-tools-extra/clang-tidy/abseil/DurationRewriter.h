@@ -12,6 +12,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include <cinttypes>
+#include <optional>
 
 namespace clang {
 namespace tidy {

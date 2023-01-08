@@ -14,6 +14,7 @@
 #include "IncludeSorter.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/Transformer/Transformer.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {

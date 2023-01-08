@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDESORTER_H
 
 #include "../ClangTidyCheck.h"
+#include <optional>
 #include <string>
 
 namespace clang {

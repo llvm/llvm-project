@@ -13,6 +13,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
+#include <optional>
 #include <set>
 
 namespace clang {

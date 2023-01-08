@@ -15,6 +15,7 @@
 #include "clang/Tooling/Transformer/Transformer.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {

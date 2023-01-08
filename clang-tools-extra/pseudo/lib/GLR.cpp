@@ -19,6 +19,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <queue>
 
 #define DEBUG_TYPE "GLR.cpp"

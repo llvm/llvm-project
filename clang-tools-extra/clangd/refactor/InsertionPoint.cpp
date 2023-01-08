@@ -13,6 +13,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/SourceManager.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {

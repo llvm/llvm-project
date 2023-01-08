@@ -21,6 +21,7 @@
 #include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Signals.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
