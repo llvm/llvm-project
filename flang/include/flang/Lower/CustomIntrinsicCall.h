@@ -25,7 +25,6 @@
 #define FORTRAN_LOWER_CUSTOMINTRINSICCALL_H
 
 #include "flang/Lower/AbstractConverter.h"
-#include "llvm/ADT/Optional.h"
 #include <functional>
 #include <optional>
 

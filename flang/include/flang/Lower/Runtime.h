@@ -18,10 +18,6 @@
 
 #include <optional>
 
-namespace llvm {
-template <typename T> using Optional = std::optional<T>;
-}
-
 namespace mlir {
 class Location;
 class Value;
