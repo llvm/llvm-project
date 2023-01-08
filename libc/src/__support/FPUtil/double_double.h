@@ -40,7 +40,7 @@ constexpr inline DoubleDouble add(DoubleDouble a, double b) {
 
 // TODO(lntue): add a correct multiplication when FMA instructions are not
 // available.
-constexpr inline DoubleDouble exact_mult(double a, double b) {
+inline DoubleDouble exact_mult(double a, double b) {
   DoubleDouble r{0.0, 0.0};
   r.hi = a * b;
   r.lo = fputil::multiply_add(a, b, -r.hi);
