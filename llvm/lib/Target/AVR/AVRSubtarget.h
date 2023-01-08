@@ -73,6 +73,7 @@ public:
   bool hasLPMX() const { return m_hasLPMX; }
   bool hasELPM() const { return m_hasELPM; }
   bool hasELPMX() const { return m_hasELPMX; }
+  bool hasPROGMEM() const { return m_hasPROGMEM; }
   bool hasSPM() const { return m_hasSPM; }
   bool hasSPMX() const { return m_hasSPMX; }
   bool hasDES() const { return m_hasDES; }
@@ -127,6 +128,7 @@ private:
   bool m_hasLPMX;
   bool m_hasELPM;
   bool m_hasELPMX;
+  bool m_hasPROGMEM;
   bool m_hasSPM;
   bool m_hasSPMX;
   bool m_hasDES;
