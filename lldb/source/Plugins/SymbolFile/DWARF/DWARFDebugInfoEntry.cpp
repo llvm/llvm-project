@@ -11,6 +11,7 @@
 #include <cassert>
 
 #include <algorithm>
+#include <optional>
 
 #include "llvm/Support/LEB128.h"
 
@@ -75,7 +76,7 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
   dw_form_t form;
   for (i = 0; i < numAttributes; ++i) {
     form = abbrevDecl->GetFormByIndexUnchecked(i);
-    llvm::Optional<uint8_t> fixed_skip_size =
+    std::optional<uint8_t> fixed_skip_size =
         DWARFFormValue::GetFixedSize(form, cu);
     if (fixed_skip_size)
       offset += *fixed_skip_size;
@@ -448,7 +449,8 @@ size_t DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
                                              recurse, curr_depth + 1);
         }
       } else {
-        llvm::Optional<uint8_t> fixed_skip_size = DWARFFormValue::GetFixedSize(form, cu);
+        std::optional<uint8_t> fixed_skip_size =
+            DWARFFormValue::GetFixedSize(form, cu);
         if (fixed_skip_size)
           offset += *fixed_skip_size;
         else
@@ -547,7 +549,7 @@ uint64_t DWARFDebugInfoEntry::GetAttributeValueAsUnsigned(
   return fail_value;
 }
 
-llvm::Optional<uint64_t>
+std::optional<uint64_t>
 DWARFDebugInfoEntry::GetAttributeValueAsOptionalUnsigned(
     const DWARFUnit *cu, const dw_attr_t attr,
     bool check_specification_or_abstract_origin) const {

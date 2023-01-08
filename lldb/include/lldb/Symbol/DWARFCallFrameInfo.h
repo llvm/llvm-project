@@ -11,6 +11,7 @@
 
 #include <map>
 #include <mutex>
+#include <optional>
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/dwarf.h"
@@ -122,7 +123,7 @@ private:
 
   bool IsEHFrame() const;
 
-  llvm::Optional<FDEEntryMap::Entry>
+  std::optional<FDEEntryMap::Entry>
   GetFirstFDEEntryInRange(const AddressRange &range);
 
   void GetFDEIndex();

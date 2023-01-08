@@ -53,6 +53,7 @@
 #include "lldb/lldb-enumerations.h"
 
 #include <memory>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -2046,7 +2047,7 @@ lldb::ValueObjectSP Thread::GetSiginfoValue() {
   if (!type.IsValid())
     return ValueObjectConstResult::Create(&target, Status("no siginfo_t for the platform"));
 
-  llvm::Optional<uint64_t> type_size = type.GetByteSize(nullptr);
+  std::optional<uint64_t> type_size = type.GetByteSize(nullptr);
   assert(type_size);
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> data =
       GetSiginfo(*type_size);

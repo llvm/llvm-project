@@ -70,6 +70,7 @@
 #include <cstdint>
 #include <cstring>
 #include <map>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -1125,7 +1126,7 @@ bool Module::FileHasChanged() const {
 }
 
 void Module::ReportWarningOptimization(
-    llvm::Optional<lldb::user_id_t> debugger_id) {
+    std::optional<lldb::user_id_t> debugger_id) {
   ConstString file_name = GetFileSpec().GetFilename();
   if (file_name.IsEmpty())
     return;
@@ -1139,7 +1140,7 @@ void Module::ReportWarningOptimization(
 }
 
 void Module::ReportWarningUnsupportedLanguage(
-    LanguageType language, llvm::Optional<lldb::user_id_t> debugger_id) {
+    LanguageType language, std::optional<lldb::user_id_t> debugger_id) {
   StreamString ss;
   ss << "This version of LLDB has no plugin for the language \""
      << Language::GetNameForLanguageType(language)
@@ -1634,8 +1635,7 @@ bool Module::FindSourceFile(const FileSpec &orig_spec,
   return false;
 }
 
-llvm::Optional<std::string>
-Module::RemapSourceFile(llvm::StringRef path) const {
+std::optional<std::string> Module::RemapSourceFile(llvm::StringRef path) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (auto remapped = m_source_mappings.RemapPath(path))
     return remapped->GetPath();

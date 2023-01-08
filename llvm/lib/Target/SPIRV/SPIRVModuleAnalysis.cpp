@@ -92,7 +92,7 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
     MAI.MS[i].clear();
   MAI.RegisterAliasTable.clear();
   MAI.InstrsToDelete.clear();
-  MAI.FuncNameMap.clear();
+  MAI.FuncMap.clear();
   MAI.GlobalVarList.clear();
   MAI.ExtInstSetMap.clear();
   MAI.Reqs.clear();
@@ -279,12 +279,12 @@ static bool findSameInstrInMS(const MachineInstr &A,
   return false;
 }
 
-// Look for IDs declared with Import linkage, and map the imported name string
+// Look for IDs declared with Import linkage, and map the corresponding function
 // to the register defining that variable (which will usually be the result of
 // an OpFunction). This lets us call externally imported functions using
 // the correct ID registers.
 void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
-                                           const Function &F) {
+                                           const Function *F) {
   if (MI.getOpcode() == SPIRV::OpDecorate) {
     // If it's got Import linkage.
     auto Dec = MI.getOperand(1).getImm();
@@ -292,10 +292,10 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
       auto Lnk = MI.getOperand(MI.getNumOperands() - 1).getImm();
       if (Lnk == static_cast<unsigned>(SPIRV::LinkageType::Import)) {
         // Map imported function name to function ID register.
-        std::string Name = getStringImm(MI, 2);
+        const Function *ImportedFunc =
+            F->getParent()->getFunction(getStringImm(MI, 2));
         Register Target = MI.getOperand(0).getReg();
-        // TODO: check defs from different MFs.
-        MAI.FuncNameMap[Name] = MAI.getRegisterAlias(MI.getMF(), Target);
+        MAI.FuncMap[ImportedFunc] = MAI.getRegisterAlias(MI.getMF(), Target);
       }
     }
   } else if (MI.getOpcode() == SPIRV::OpFunction) {
@@ -303,8 +303,7 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
     Register Reg = MI.defs().begin()->getReg();
     Register GlobalReg = MAI.getRegisterAlias(MI.getMF(), Reg);
     assert(GlobalReg.isValid());
-    // TODO: check that it does not conflict with existing entries.
-    MAI.FuncNameMap[getFunctionGlobalIdentifier(&F)] = GlobalReg;
+    MAI.FuncMap[F] = GlobalReg;
   }
 }
 
@@ -343,13 +342,13 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints);
         } else if (TII->isDecorationInstr(MI)) {
           collectOtherInstr(MI, MAI, SPIRV::MB_Annotations);
-          collectFuncNames(MI, *F);
+          collectFuncNames(MI, &*F);
         } else if (TII->isConstantInstr(MI)) {
           // Now OpSpecConstant*s are not in DT,
           // but they need to be collected anyway.
           collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars);
         } else if (OpCode == SPIRV::OpFunction) {
-          collectFuncNames(MI, *F);
+          collectFuncNames(MI, &*F);
         } else if (OpCode == SPIRV::OpTypeForwardPointer) {
           collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, false);
         }

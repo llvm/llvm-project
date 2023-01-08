@@ -9,6 +9,7 @@
 #include "lldb/Symbol/UnwindTable.h"
 
 #include <cstdio>
+#include <optional>
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
@@ -85,8 +86,8 @@ void UnwindTable::Initialize() {
 
 UnwindTable::~UnwindTable() = default;
 
-llvm::Optional<AddressRange> UnwindTable::GetAddressRange(const Address &addr,
-                                                          SymbolContext &sc) {
+std::optional<AddressRange> UnwindTable::GetAddressRange(const Address &addr,
+                                                         SymbolContext &sc) {
   AddressRange range;
 
   // First check the unwind info from the object file plugin

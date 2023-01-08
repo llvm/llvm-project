@@ -15,6 +15,7 @@
 
 #include <fstream>
 #include <mutex>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -1310,7 +1311,7 @@ NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
 llvm::Expected<addr_t>
 NativeProcessLinux::AllocateMemory(size_t size, uint32_t permissions) {
 
-  llvm::Optional<NativeRegisterContextLinux::MmapData> mmap_data =
+  std::optional<NativeRegisterContextLinux::MmapData> mmap_data =
       GetCurrentThread()->GetRegisterContext().GetMmapData();
   if (!mmap_data)
     return llvm::make_error<UnimplementedError>();
@@ -1335,7 +1336,7 @@ NativeProcessLinux::AllocateMemory(size_t size, uint32_t permissions) {
 }
 
 llvm::Error NativeProcessLinux::DeallocateMemory(lldb::addr_t addr) {
-  llvm::Optional<NativeRegisterContextLinux::MmapData> mmap_data =
+  std::optional<NativeRegisterContextLinux::MmapData> mmap_data =
       GetCurrentThread()->GetRegisterContext().GetMmapData();
   if (!mmap_data)
     return llvm::make_error<UnimplementedError>();
@@ -1869,7 +1870,7 @@ void NativeProcessLinux::ThreadWasCreated(NativeThreadLinux &thread) {
   }
 }
 
-static llvm::Optional<WaitStatus> HandlePid(::pid_t pid) {
+static std::optional<WaitStatus> HandlePid(::pid_t pid) {
   Log *log = GetLog(POSIXLog::Process);
 
   int status;
@@ -1905,13 +1906,13 @@ void NativeProcessLinux::SigchldHandler() {
     if (thread_up->GetID() == GetID())
       checked_main_thread = true;
 
-    if (llvm::Optional<WaitStatus> status = HandlePid(thread_up->GetID()))
+    if (std::optional<WaitStatus> status = HandlePid(thread_up->GetID()))
       tid_events.try_emplace(thread_up->GetID(), *status);
   }
   // Check the main thread even when we're not tracking it as process exit
   // events are reported that way.
   if (!checked_main_thread) {
-    if (llvm::Optional<WaitStatus> status = HandlePid(GetID()))
+    if (std::optional<WaitStatus> status = HandlePid(GetID()))
       tid_events.try_emplace(GetID(), *status);
   }
 

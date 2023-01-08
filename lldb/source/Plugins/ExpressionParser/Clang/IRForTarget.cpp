@@ -40,6 +40,7 @@
 #include "lldb/Utility/StreamString.h"
 
 #include <map>
+#include <optional>
 
 using namespace llvm;
 using lldb_private::LLDBLog;
@@ -299,7 +300,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
   }
 
   lldb::TargetSP target_sp(m_execution_unit.GetTarget());
-  llvm::Optional<uint64_t> bit_size = m_result_type.GetBitSize(target_sp.get());
+  std::optional<uint64_t> bit_size = m_result_type.GetBitSize(target_sp.get());
   if (!bit_size) {
     lldb_private::StreamString type_desc_stream;
     m_result_type.DumpTypeDescription(&type_desc_stream);
@@ -1193,11 +1194,10 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
     }
 
     auto *target = m_execution_unit.GetTarget().get();
-    llvm::Optional<uint64_t> value_size = compiler_type.GetByteSize(target);
+    std::optional<uint64_t> value_size = compiler_type.GetByteSize(target);
     if (!value_size)
       return false;
-    llvm::Optional<size_t> opt_alignment =
-        compiler_type.GetTypeBitAlign(target);
+    std::optional<size_t> opt_alignment = compiler_type.GetTypeBitAlign(target);
     if (!opt_alignment)
       return false;
     lldb::offset_t value_alignment = (*opt_alignment + 7ull) / 8ull;

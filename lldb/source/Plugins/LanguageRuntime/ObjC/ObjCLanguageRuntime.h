@@ -12,6 +12,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <unordered_set>
 
 #include "llvm/Support/Casting.h"
@@ -266,7 +267,7 @@ public:
 
   lldb::TypeSP LookupInCompleteClassCache(ConstString &name);
 
-  llvm::Optional<CompilerType> GetRuntimeType(CompilerType base_type) override;
+  std::optional<CompilerType> GetRuntimeType(CompilerType base_type) override;
 
   virtual llvm::Expected<std::unique_ptr<UtilityFunction>>
   CreateObjectChecker(std::string name, ExecutionContext &exe_ctx) = 0;

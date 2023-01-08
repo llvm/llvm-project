@@ -17,6 +17,7 @@
 #include "lldb/Utility/Log.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -68,7 +69,7 @@ void UnwindPlan::Row::RegisterLocation::SetIsDWARFExpression(
   m_location.expr.length = len;
 }
 
-static llvm::Optional<std::pair<lldb::ByteOrder, uint32_t>>
+static std::optional<std::pair<lldb::ByteOrder, uint32_t>>
 GetByteOrderAndAddrSize(Thread *thread) {
   if (!thread)
     return std::nullopt;

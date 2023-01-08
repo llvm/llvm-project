@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/APSInt.h"
 
+#include <optional>
 #include <set>
 
 namespace lldb_private {
@@ -101,7 +102,7 @@ public:
   };
 
   Type(lldb::user_id_t uid, SymbolFile *symbol_file, ConstString name,
-       llvm::Optional<uint64_t> byte_size, SymbolContextScope *context,
+       std::optional<uint64_t> byte_size, SymbolContextScope *context,
        lldb::user_id_t encoding_uid, EncodingDataType encoding_uid_type,
        const Declaration &decl, const CompilerType &compiler_qual_type,
        ResolveState compiler_type_resolve_state, uint32_t opaque_payload = 0);
@@ -137,7 +138,7 @@ public:
 
   ConstString GetBaseName();
 
-  llvm::Optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope);
+  std::optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope);
 
   uint32_t GetNumChildren(bool omit_empty_base_classes);
 

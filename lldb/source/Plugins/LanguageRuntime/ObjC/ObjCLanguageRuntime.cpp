@@ -27,6 +27,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DJB.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -413,7 +414,7 @@ Status ObjCLanguageRuntime::ObjCExceptionPrecondition::ConfigurePrecondition(
   return error;
 }
 
-llvm::Optional<CompilerType>
+std::optional<CompilerType>
 ObjCLanguageRuntime::GetRuntimeType(CompilerType base_type) {
   CompilerType class_type;
   bool is_pointer_type = false;
