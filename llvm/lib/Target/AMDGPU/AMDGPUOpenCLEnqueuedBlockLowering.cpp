@@ -141,6 +141,10 @@ bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
     }
   }
 
+  // FIXME: This call graph analysis is broken and should be
+  // removed. AMDGPUAttributor infers the individual implicit argument fields
+  // are needed or not, but the runtime crashes in cases where we fail to
+  // optimize these out at -O0.
   for (auto *F : Callers) {
     if (F->getCallingConv() != CallingConv::AMDGPU_KERNEL)
       continue;
