@@ -103,6 +103,8 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
     return static_cast<const OMPNocontextClause *>(C);
   case OMPC_filter:
     return static_cast<const OMPFilterClause *>(C);
+  case OMPC_ompx_dyn_cgroup_mem:
+    return static_cast<const OMPXDynCGroupMemClause *>(C);
   case OMPC_default:
   case OMPC_proc_bind:
   case OMPC_safelen:
@@ -2453,6 +2455,13 @@ void OMPClausePrinter::VisitOMPBindClause(OMPBindClause *Node) {
   OS << "bind("
      << getOpenMPSimpleClauseTypeName(OMPC_bind, unsigned(Node->getBindKind()))
      << ")";
+}
+
+void OMPClausePrinter::VisitOMPXDynCGroupMemClause(
+    OMPXDynCGroupMemClause *Node) {
+  OS << "ompx_dyn_cgroup_mem(";
+  Node->getSize()->printPretty(OS, nullptr, Policy, 0);
+  OS << ")";
 }
 
 void OMPTraitInfo::getAsVariantMatchInfo(ASTContext &ASTCtx,

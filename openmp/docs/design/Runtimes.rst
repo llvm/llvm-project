@@ -1200,8 +1200,9 @@ buffer. This pointer can be obtained using the
 ``llvm_omp_target_dynamic_shared_alloc`` extension. If this function is called
 from the host it will simply return a null pointer. In order to use this buffer
 the kernel must be launched with an adequate amount of dynamic shared memory
-allocated. Currently this is done using the ``LIBOMPTARGET_SHARED_MEMORY_SIZE``
-environment variable. An example is given below.
+allocated. This can be done using the ``LIBOMPTARGET_SHARED_MEMORY_SIZE``
+environment variable or the ``ompx_dyn_cgroup_mem(<N>)`` target directive
+clause. Examples for both are given below.
 
 .. code-block:: c++
 
@@ -1210,19 +1211,41 @@ environment variable. An example is given below.
     #pragma omp target parallel map(from : x)
       {
         int *buf = llvm_omp_target_dynamic_shared_alloc();
-    #pragma omp barrier
         if (omp_get_thread_num() == 0)
           *buf = 1;
     #pragma omp barrier
         if (omp_get_thread_num() == 1)
           x = *buf;
       }
+      assert(x == 1);
     }
 
 .. code-block:: console
 
-    $ clang++ -fopenmp -fopenmp-targets=nvptx64 shared.c
+    $ clang++ -fopenmp --offload-arch=sm_80 -O3 shared.c
     $ env LIBOMPTARGET_SHARED_MEMORY_SIZE=256 ./shared
+
+.. code-block:: c++
+
+    void foo(int N) {
+      int x;
+    #pragma omp target parallel map(from : x) ompx_dyn_cgroup_mem(N * sizeof(int))
+      {
+        int *buf = llvm_omp_target_dynamic_shared_alloc();
+        if (omp_get_thread_num() == 0)
+          buf[N - 1] = 1;
+    #pragma omp barrier
+        if (omp_get_thread_num() == 1)
+          x = buf[N - 1];
+      }
+      assert(x == 1);
+    }
+
+.. code-block:: console
+
+    $ clang++ -fopenmp --offload-arch=gfx90a -O3 shared.c
+    $ env LIBOMPTARGET_NEXTGEN_PLUGINS=1 ./shared
+
 
 .. _libomptarget_device_debugging:
 
