@@ -68,17 +68,11 @@
 #   error "__cpp_lib_complex_udls should have the value 201309L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_complex
-#     error "__cpp_lib_constexpr_complex should be defined in c++20"
-#   endif
-#   if __cpp_lib_constexpr_complex != 201711L
-#     error "__cpp_lib_constexpr_complex should have the value 201711L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_complex
-#     error "__cpp_lib_constexpr_complex should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_constexpr_complex
+#   error "__cpp_lib_constexpr_complex should be defined in c++20"
+# endif
+# if __cpp_lib_constexpr_complex != 201711L
+#   error "__cpp_lib_constexpr_complex should have the value 201711L in c++20"
 # endif
 
 #elif TEST_STD_VER > 20
@@ -90,17 +84,11 @@
 #   error "__cpp_lib_complex_udls should have the value 201309L in c++2b"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_complex
-#     error "__cpp_lib_constexpr_complex should be defined in c++2b"
-#   endif
-#   if __cpp_lib_constexpr_complex != 201711L
-#     error "__cpp_lib_constexpr_complex should have the value 201711L in c++2b"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_complex
-#     error "__cpp_lib_constexpr_complex should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_constexpr_complex
+#   error "__cpp_lib_constexpr_complex should be defined in c++2b"
+# endif
+# if __cpp_lib_constexpr_complex != 201711L
+#   error "__cpp_lib_constexpr_complex should have the value 201711L in c++2b"
 # endif
 
 #endif // TEST_STD_VER > 20
