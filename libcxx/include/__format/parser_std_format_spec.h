@@ -31,7 +31,6 @@
 #include <__iterator/concepts.h>
 #include <__iterator/readable_traits.h> // iter_value_t
 #include <__variant/monostate.h>
-#include <bit>
 #include <cstdint>
 #include <string_view>
 #include <type_traits>
