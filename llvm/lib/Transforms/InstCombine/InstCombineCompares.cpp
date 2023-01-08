@@ -6338,11 +6338,11 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     }
 
     // (zext a) * (zext b)  --> llvm.umul.with.overflow.
-    if (match(Op0, m_Mul(m_ZExt(m_Value(A)), m_ZExt(m_Value(B))))) {
+    if (match(Op0, m_NUWMul(m_ZExt(m_Value(A)), m_ZExt(m_Value(B))))) {
       if (Instruction *R = processUMulZExtIdiom(I, Op0, Op1, *this))
         return R;
     }
-    if (match(Op1, m_Mul(m_ZExt(m_Value(A)), m_ZExt(m_Value(B))))) {
+    if (match(Op1, m_NUWMul(m_ZExt(m_Value(A)), m_ZExt(m_Value(B))))) {
       if (Instruction *R = processUMulZExtIdiom(I, Op1, Op0, *this))
         return R;
     }
