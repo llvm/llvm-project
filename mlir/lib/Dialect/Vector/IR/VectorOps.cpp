@@ -1015,12 +1015,6 @@ void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
   result.addTypes(source.getType().cast<VectorType>().getElementType());
 }
 
-void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
-                                     Value source, Value position) {
-  result.addOperands({source, position});
-  result.addTypes(source.getType().cast<VectorType>().getElementType());
-}
-
 LogicalResult vector::ExtractElementOp::verify() {
   VectorType vectorType = getVectorType();
   if (vectorType.getRank() == 0) {

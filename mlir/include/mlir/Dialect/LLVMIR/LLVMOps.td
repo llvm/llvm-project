@@ -119,9 +119,6 @@ def LLVM_ICmpOp : LLVM_ArithmeticCmpOp<"icmp", [Pure]> {
                               LLVM_ScalarOrVectorOf<LLVM_AnyPointer>]>:$lhs,
                    AnyTypeOf<[LLVM_ScalarOrVectorOf<AnyInteger>,
                               LLVM_ScalarOrVectorOf<LLVM_AnyPointer>]>:$rhs);
-  let builders = [
-    OpBuilder<(ins "ICmpPredicate":$predicate, "Value":$lhs, "Value":$rhs)>
-  ];
   let hasCustomAssemblyFormat = 1;
   string llvmInstName = "ICmp";
   string llvmBuilder = [{
@@ -145,9 +142,6 @@ def LLVM_FCmpOp : LLVM_ArithmeticCmpOp<"fcmp", [
                    LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$rhs,
                    DefaultValuedAttr<LLVM_FastmathFlagsAttr,
                                      "{}">:$fastmathFlags);
-  let builders = [
-    OpBuilder<(ins "FCmpPredicate":$predicate, "Value":$lhs, "Value":$rhs)>
-  ];
   let hasCustomAssemblyFormat = 1;
   string llvmInstName = "FCmp";
   string llvmBuilder = [{
@@ -582,11 +576,6 @@ def LLVM_ExtractElementOp : LLVM_Op<"extractelement", [Pure,
 
   let arguments = (ins LLVM_AnyVector:$vector, AnyInteger:$position);
   let results = (outs LLVM_Type:$res);
-
-  let builders = [
-    OpBuilder<(ins "Value":$vector, "Value":$position,
-                   CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
-  ];
 
   let assemblyFormat = [{
     $vector `[` $position `:` type($position) `]` attr-dict `:` type($vector)
