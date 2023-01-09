@@ -24,8 +24,8 @@ export A a;
 // CHECK: @_ZW1M1a = {{.*}}global %class.A zeroinitializer
 // CHECK: define{{.*}}void @__cxx_global_var_init()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call{{.*}}void @_ZNW1M1AC1Ev({{.*}}@_ZW1M1a
-// CHECK-NEXT: call{{.*}}i32 @__cxa_atexit(ptr @_ZNW1M1AD1Ev, ptr @_ZW1M1a
+// CHECK-NEXT: call{{.*}}@_ZNW1M1AC1Ev({{.*}}@_ZW1M1a
+// CHECK-NEXT: call{{.*}}@__cxa_atexit(ptr @_ZNW1M1AD1Ev, ptr @_ZW1M1a
 
 //--- Use.cpp
 import M;
@@ -54,5 +54,5 @@ void use() {
 // CHECK: @a = {{.*}}global %class.A zeroinitializer
 // CHECK: define{{.*}}void @__cxx_global_var_init()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call{{.*}}void @_ZN1AC1Ev({{.*}}@a
-// CHECK-NEXT: call{{.*}}i32 @__cxa_atexit(ptr @_ZN1AD1Ev, ptr @a
+// CHECK-NEXT: call{{.*}}@_ZN1AC1Ev({{.*}}@a
+// CHECK-NEXT: call{{.*}}@__cxa_atexit(ptr @_ZN1AD1Ev, ptr @a
