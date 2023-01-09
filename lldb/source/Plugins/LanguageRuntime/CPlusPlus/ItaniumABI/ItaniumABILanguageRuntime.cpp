@@ -525,13 +525,13 @@ ValueObjectSP ItaniumABILanguageRuntime::GetExceptionObjectForThread(
   if (!thread_sp->SafeToCallFunctions())
     return {};
 
-  TypeSystemClang *clang_ast_context =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(m_process->GetTarget());
-  if (!clang_ast_context)
+  if (!scratch_ts_sp)
     return {};
 
   CompilerType voidstar =
-      clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
 
   DiagnosticManager diagnostics;
   ExecutionContext exe_ctx;

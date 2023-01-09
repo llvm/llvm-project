@@ -96,7 +96,7 @@ public:
   GetCompilerTypeFromPersistentDecl(ConstString type_name) override;
 
   void RegisterPersistentDecl(ConstString name, clang::NamedDecl *decl,
-                              TypeSystemClang *ctx);
+                              std::shared_ptr<TypeSystemClang> ctx);
 
   clang::NamedDecl *GetPersistentDecl(ConstString name);
 
