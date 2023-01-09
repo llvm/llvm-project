@@ -56,8 +56,6 @@ public:
 private:
   std::vector<Cluster> clusters;
   std::vector<const SectionChunk *> sections;
-
-  const COFFLinkerContext &ctx;
 };
 
 // Maximum amount the combined cluster density can be worse than the original
@@ -73,8 +71,8 @@ using SectionPair = std::pair<const SectionChunk *, const SectionChunk *>;
 // Take the edge list in Config->CallGraphProfile, resolve symbol names to
 // Symbols, and generate a graph between InputSections with the provided
 // weights.
-CallGraphSort::CallGraphSort(const COFFLinkerContext &ctx) : ctx(ctx) {
-  const MapVector<SectionPair, uint64_t> &profile = ctx.config.callGraphProfile;
+CallGraphSort::CallGraphSort(const COFFLinkerContext &ctx) {
+  MapVector<SectionPair, uint64_t> &profile = config->callGraphProfile;
   DenseMap<const SectionChunk *, int> secToCluster;
 
   auto getOrCreateNode = [&](const SectionChunk *isec) -> int {
@@ -87,7 +85,7 @@ CallGraphSort::CallGraphSort(const COFFLinkerContext &ctx) : ctx(ctx) {
   };
 
   // Create the graph.
-  for (const std::pair<SectionPair, uint64_t> &c : profile) {
+  for (std::pair<SectionPair, uint64_t> &c : profile) {
     const auto *fromSec = cast<SectionChunk>(c.first.first->repl);
     const auto *toSec = cast<SectionChunk>(c.first.second->repl);
     uint64_t weight = c.second;
@@ -207,11 +205,11 @@ DenseMap<const SectionChunk *, int> CallGraphSort::run() {
         break;
     }
   }
-  if (!ctx.config.printSymbolOrder.empty()) {
+  if (!config->printSymbolOrder.empty()) {
     std::error_code ec;
-    raw_fd_ostream os(ctx.config.printSymbolOrder, ec, sys::fs::OF_None);
+    raw_fd_ostream os(config->printSymbolOrder, ec, sys::fs::OF_None);
     if (ec) {
-      error("cannot open " + ctx.config.printSymbolOrder + ": " + ec.message());
+      error("cannot open " + config->printSymbolOrder + ": " + ec.message());
       return orderMap;
     }
     // Print the symbols ordered by C3, in the order of increasing curOrder

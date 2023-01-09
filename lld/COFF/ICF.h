@@ -15,9 +15,10 @@
 
 namespace lld::coff {
 
+class Chunk;
 class COFFLinkerContext;
 
-void doICF(COFFLinkerContext &ctx);
+void doICF(COFFLinkerContext &ctx, ICFLevel);
 
 } // namespace lld::coff
 
