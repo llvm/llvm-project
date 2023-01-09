@@ -101,6 +101,29 @@ TEST_F(RecordASTTest, Macros) {
   EXPECT_THAT(Recorded.Roots, testing::ElementsAre(named("x")));
 }
 
+// Decl from template instantiation is filtered out from roots.
+TEST_F(RecordASTTest, ImplicitTemplates) {
+  Inputs.ExtraFiles["dispatch.h"] = R"cpp(
+  struct A {
+    static constexpr int value = 1;
+  };
+  template <class Getter>
+  int dispatch() {
+    return Getter::template get<A>();
+  }
+  )cpp";
+  Inputs.Code = R"cpp(
+  #include "dispatch.h"  
+  struct MyGetter {
+    template <class T> static int get() { return T::value; }
+  };
+  int v = dispatch<MyGetter>();
+  )cpp";
+  auto AST = build();
+  EXPECT_THAT(Recorded.Roots,
+              testing::ElementsAre(named("MyGetter"), named("v")));
+}
+
 class RecordPPTest : public ::testing::Test {
 protected:
   TestInputs Inputs;
