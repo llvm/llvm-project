@@ -358,13 +358,12 @@ static bool makeStringGutsSummary(
     return false;
 
   if ((discriminator & 0b1110'0000) == 0b0100'0000) { // 010xxxxx: Bridged
-    TypeSystemClang *clang_ast_context =
+    TypeSystemClangSP clang_ts_sp =
         ScratchTypeSystemClang::GetForTarget(process->GetTarget());
-    if (!clang_ast_context)
+    if (!clang_ts_sp)
       return false;
 
-    CompilerType id_type = clang_ast_context->GetBasicType(
-            lldb::eBasicTypeObjCID);
+    CompilerType id_type = clang_ts_sp->GetBasicType(lldb::eBasicTypeObjCID);
 
     // We may have an NSString pointer inline, so try formatting it directly.
     lldb_private::DataExtractor DE(&objectAddress, ptrSize,
