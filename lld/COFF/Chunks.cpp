@@ -804,6 +804,7 @@ const uint8_t armThunk[] = {
 
 size_t RangeExtensionThunkARM::getSize() const {
   assert(ctx.config.machine == ARMNT);
+  (void)&ctx;
   return sizeof(armThunk);
 }
 
@@ -824,6 +825,7 @@ const uint8_t arm64Thunk[] = {
 
 size_t RangeExtensionThunkARM64::getSize() const {
   assert(ctx.config.machine == ARM64);
+  (void)&ctx;
   return sizeof(arm64Thunk);
 }
 
