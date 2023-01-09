@@ -25,7 +25,7 @@
 
 using namespace mlir;
 
-#define DEBUG_TYPE "affine-analysis"
+#define DEBUG_TYPE "affine-ops"
 
 #include "mlir/Dialect/Affine/IR/AffineOpsDialect.cpp.inc"
 
