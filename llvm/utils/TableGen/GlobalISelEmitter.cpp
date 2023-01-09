@@ -3696,7 +3696,7 @@ private:
       const TreePatternNode *Src, const TreePatternNode *Dst);
   Expected<action_iterator> createAndImportSubInstructionRenderer(
       action_iterator InsertPt, RuleMatcher &M, const TreePatternNode *Dst,
-      unsigned TempReg);
+      const TreePatternNode *Src, unsigned TempReg);
   Expected<action_iterator>
   createInstructionRenderer(action_iterator InsertPt, RuleMatcher &M,
                             const TreePatternNode *Dst);
@@ -3705,14 +3705,12 @@ private:
       action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
       const TreePatternNode *Src, const TreePatternNode *Dst);
 
-  Expected<action_iterator>
-  importExplicitUseRenderers(action_iterator InsertPt, RuleMatcher &M,
-                             BuildMIAction &DstMIBuilder,
-                             const llvm::TreePatternNode *Dst);
-  Expected<action_iterator>
-  importExplicitUseRenderer(action_iterator InsertPt, RuleMatcher &Rule,
-                            BuildMIAction &DstMIBuilder,
-                            const TreePatternNode *DstChild);
+  Expected<action_iterator> importExplicitUseRenderers(
+      action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
+      const llvm::TreePatternNode *Dst, const TreePatternNode *Src);
+  Expected<action_iterator> importExplicitUseRenderer(
+      action_iterator InsertPt, RuleMatcher &Rule, BuildMIAction &DstMIBuilder,
+      const TreePatternNode *DstChild, const TreePatternNode *Src);
   Error importDefaultOperandRenderers(action_iterator InsertPt, RuleMatcher &M,
                                       BuildMIAction &DstMIBuilder,
                                       DagInit *DefaultOps) const;
@@ -4510,7 +4508,7 @@ Error GlobalISelEmitter::importChildMatcher(
 
 Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     action_iterator InsertPt, RuleMatcher &Rule, BuildMIAction &DstMIBuilder,
-    const TreePatternNode *DstChild) {
+    const TreePatternNode *DstChild, const TreePatternNode *Src) {
 
   const auto &SubOperand = Rule.getComplexSubOperand(DstChild->getName());
   if (SubOperand) {
@@ -4580,7 +4578,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
       DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID);
 
       auto InsertPtOrError = createAndImportSubInstructionRenderer(
-          ++InsertPt, Rule, DstChild, TempRegID);
+          ++InsertPt, Rule, DstChild, Src, TempRegID);
       if (auto Error = InsertPtOrError.takeError())
         return std::move(Error);
       return InsertPtOrError.get();
@@ -4652,6 +4650,16 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     return failedImport(
         "Dst pattern child def is an unsupported tablegen class");
   }
+
+  // Handle the case where the MVT/register class is omitted in the dest pattern
+  // but MVT exists in the source pattern.
+  if (isa<UnsetInit>(DstChild->getLeafValue())) {
+    for (unsigned NumOp = 0; NumOp < Src->getNumChildren(); NumOp++)
+      if (Src->getChild(NumOp)->getName() == DstChild->getName()) {
+        DstMIBuilder.addRenderer<CopyRenderer>(Src->getChild(NumOp)->getName());
+        return InsertPt;
+      }
+  }
   return failedImport("Dst pattern child is an unsupported kind");
 }
 
@@ -4682,8 +4690,9 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
               .takeError())
     return std::move(Error);
 
-  if (auto Error = importExplicitUseRenderers(InsertPt, M, DstMIBuilder, Dst)
-                       .takeError())
+  if (auto Error =
+          importExplicitUseRenderers(InsertPt, M, DstMIBuilder, Dst, Src)
+              .takeError())
     return std::move(Error);
 
   return DstMIBuilder;
@@ -4692,7 +4701,7 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
 Expected<action_iterator>
 GlobalISelEmitter::createAndImportSubInstructionRenderer(
     const action_iterator InsertPt, RuleMatcher &M, const TreePatternNode *Dst,
-    unsigned TempRegID) {
+    const TreePatternNode *Src, unsigned TempRegID) {
   auto InsertPtOrError = createInstructionRenderer(InsertPt, M, Dst);
 
   // TODO: Assert there's exactly one result.
@@ -4706,8 +4715,8 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
   // Assign the result to TempReg.
   DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID, true);
 
-  InsertPtOrError =
-      importExplicitUseRenderers(InsertPtOrError.get(), M, DstMIBuilder, Dst);
+  InsertPtOrError = importExplicitUseRenderers(InsertPtOrError.get(), M,
+                                               DstMIBuilder, Dst, Src);
   if (auto Error = InsertPtOrError.takeError())
     return std::move(Error);
 
@@ -4869,7 +4878,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
 
 Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
     action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
-    const llvm::TreePatternNode *Dst) {
+    const llvm::TreePatternNode *Dst, const llvm::TreePatternNode *Src) {
   const CodeGenInstruction *DstI = DstMIBuilder.getCGI();
   CodeGenInstruction *OrigDstI = &Target.getInstruction(Dst->getOperator());
 
@@ -4898,7 +4907,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
         InsertPt, *ExtractSrcTy, TempRegID);
 
       auto InsertPtOrError = createAndImportSubInstructionRenderer(
-        ++InsertPt, M, ValChild, TempRegID);
+        ++InsertPt, M, ValChild, Src, TempRegID);
       if (auto Error = InsertPtOrError.takeError())
         return std::move(Error);
 
@@ -4955,7 +4964,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
         CodeGenSubRegIndex *SubIdx = CGRegs.getSubRegIdx(SubRegInit->getDef());
 
         auto InsertPtOrError =
-            importExplicitUseRenderer(InsertPt, M, DstMIBuilder, ValChild);
+            importExplicitUseRenderer(InsertPt, M, DstMIBuilder, ValChild, Src);
         if (auto Error = InsertPtOrError.takeError())
           return std::move(Error);
         InsertPt = InsertPtOrError.get();
@@ -5024,7 +5033,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
     }
 
     auto InsertPtOrError = importExplicitUseRenderer(InsertPt, M, DstMIBuilder,
-                                                     Dst->getChild(Child));
+                                                     Dst->getChild(Child), Src);
     if (auto Error = InsertPtOrError.takeError())
       return std::move(Error);
     InsertPt = InsertPtOrError.get();
