@@ -28,8 +28,7 @@
 #define SANITIZER_HAS_STAT64 0
 #define SANITIZER_HAS_STATFS64 0
 #endif
-#else
-// Must be SANITIZER_LINUX then
+#elif SANITIZER_GLIBC || SANITIZER_ANDROID
 #define SANITIZER_HAS_STAT64 1
 #define SANITIZER_HAS_STATFS64 1
 #endif
@@ -517,7 +516,7 @@ struct __sanitizer_dirent {
 };
 #  endif
 
-#  if SANITIZER_LINUX && !SANITIZER_ANDROID
+#  if SANITIZER_GLIBC
 struct __sanitizer_dirent64 {
   unsigned long long d_ino;
   unsigned long long d_off;
