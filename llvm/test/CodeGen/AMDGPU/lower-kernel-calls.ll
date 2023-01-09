@@ -20,6 +20,18 @@ entry:
   ret void
 }
 
+define void @argument.user(void()* %arg) {
+  ret void
+}
+
+; CHECK-LABEL: amdgpu_kernel void @kernel_address_passed(
+; CHECK-NEXT: call void @argument.user(void ()* @kernel_address_passed)
+; CHECK-NEXT: ret void
+define amdgpu_kernel void @kernel_address_passed() {
+  call void @argument.user(void()* @kernel_address_passed)
+  ret void
+}
+
 ; CHECK: define internal void @__amdgpu_test_kernel_to_call_kernel_body(i32 addrspace(1)* %p) #0
 ; CHECK:   store i32 2, i32 addrspace(1)* %p, align 4
 ; CHECK:   ret void

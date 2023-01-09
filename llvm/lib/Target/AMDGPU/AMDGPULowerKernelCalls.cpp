@@ -94,11 +94,10 @@ bool AMDGPULowerKernelCalls::runOnModule(Module &M) {
   for (auto &F : M) {
     if (CallingConv::AMDGPU_KERNEL != F.getCallingConv())
       continue;
-    Function *FBody = NULL;
-    for (Function::user_iterator UI = F.user_begin(), UE = F.user_end();
-         UI != UE;) {
-      CallInst *CI = dyn_cast<CallInst>(*UI++);
-      if (!CI)
+    Function *FBody = nullptr;
+    for (Use &U : make_early_inc_range(F.uses())) {
+      CallBase *CI = dyn_cast<CallBase>(U.getUser());
+      if (!CI || !CI->isCallee(&U))
         continue;
       if (!FBody)
         FBody = cloneKernel(F);
