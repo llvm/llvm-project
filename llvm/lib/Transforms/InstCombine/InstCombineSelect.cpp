@@ -803,19 +803,31 @@ static Value *canonicalizeSaturatedSubtract(const ICmpInst *ICI,
                                             const Value *FalseVal,
                                             InstCombiner::BuilderTy &Builder) {
   ICmpInst::Predicate Pred = ICI->getPredicate();
-  if (!ICmpInst::isUnsigned(Pred))
-    return nullptr;
+  Value *A = ICI->getOperand(0);
+  Value *B = ICI->getOperand(1);
 
   // (b > a) ? 0 : a - b -> (b <= a) ? a - b : 0
+  // (a == 0) ? 0 : a - 1 -> (a != 0) ? a - 1 : 0
   if (match(TrueVal, m_Zero())) {
     Pred = ICmpInst::getInversePredicate(Pred);
     std::swap(TrueVal, FalseVal);
   }
+
   if (!match(FalseVal, m_Zero()))
     return nullptr;
 
-  Value *A = ICI->getOperand(0);
-  Value *B = ICI->getOperand(1);
+  // ugt 0 is canonicalized to ne 0 and requires special handling
+  // (a != 0) ? a + -1 : 0 -> usub.sat(a, 1)
+  if (Pred == ICmpInst::ICMP_NE) {
+    if (match(B, m_Zero()) && match(TrueVal, m_Add(m_Specific(A), m_AllOnes())))
+      return Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, A,
+                                           ConstantInt::get(A->getType(), 1));
+    return nullptr;
+  }
+
+  if (!ICmpInst::isUnsigned(Pred))
+    return nullptr;
+
   if (Pred == ICmpInst::ICMP_ULE || Pred == ICmpInst::ICMP_ULT) {
     // (b < a) ? a - b : 0 -> (a > b) ? a - b : 0
     std::swap(A, B);

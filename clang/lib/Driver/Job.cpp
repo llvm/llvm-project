@@ -353,7 +353,7 @@ int Command::Execute(ArrayRef<std::optional<StringRef>> Redirects,
     assert(Environment.back() == nullptr &&
            "Environment vector should be null-terminated by now");
     ArgvVectorStorage = llvm::toStringRefArray(Environment.data());
-    Env = makeArrayRef(ArgvVectorStorage);
+    Env = ArrayRef(ArgvVectorStorage);
   }
 
   auto Args = llvm::toStringRefArray(Argv.data());
@@ -368,7 +368,7 @@ int Command::Execute(ArrayRef<std::optional<StringRef>> Redirects,
         RedirectFilesOptional.push_back(std::nullopt);
 
     return llvm::sys::ExecuteAndWait(Executable, Args, Env,
-                                     makeArrayRef(RedirectFilesOptional),
+                                     ArrayRef(RedirectFilesOptional),
                                      /*secondsToWait=*/0, /*memoryLimit=*/0,
                                      ErrMsg, ExecutionFailed, &ProcStat);
   }

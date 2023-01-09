@@ -245,6 +245,16 @@ TEST(WalkAST, ConstructExprs) {
   testWalk("struct S { $implicit^S(int); };", "S t = ^42;");
 }
 
+TEST(WalkAST, Operator) {
+  // References to operators are not counted as uses.
+  testWalk("struct string {}; int operator+(string, string);",
+           "int k = string() ^+ string();");
+  testWalk("struct string {int operator+(string); }; ",
+           "int k = string() ^+ string();");
+  testWalk("struct string { friend int operator+(string, string); }; ",
+           "int k = string() ^+ string();");
+}
+
 TEST(WalkAST, Functions) {
   // Definition uses declaration, not the other way around.
   testWalk("void $explicit^foo();", "void ^foo() {}");

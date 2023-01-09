@@ -4,25 +4,26 @@
 define void @tailpred(ptr nocapture readonly %pSrcA, ptr nocapture readonly %pSrcB, ptr nocapture %pDst, i32 %blockSize) {
 ; CHECK-LABEL: tailpred:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    beq .LBB0_6
-; CHECK-NEXT:  @ %bb.1: @ %vector.memcheck
-; CHECK-NEXT:    add.w r5, r2, r3, lsl #1
-; CHECK-NEXT:    add.w r4, r1, r3, lsl #1
-; CHECK-NEXT:    cmp r5, r1
-; CHECK-NEXT:    cset r12, hi
-; CHECK-NEXT:    cmp r4, r2
-; CHECK-NEXT:    cset lr, hi
-; CHECK-NEXT:    cmp r5, r0
-; CHECK-NEXT:    add.w r5, r0, r3, lsl #1
-; CHECK-NEXT:    cset r4, hi
-; CHECK-NEXT:    cmp r5, r2
-; CHECK-NEXT:    cset r5, hi
-; CHECK-NEXT:    tst r5, r4
 ; CHECK-NEXT:    it eq
-; CHECK-NEXT:    andseq.w r5, lr, r12
+; CHECK-NEXT:    popeq {r4, pc}
+; CHECK-NEXT:  .LBB0_1: @ %vector.memcheck
+; CHECK-NEXT:    add.w r12, r1, r3, lsl #1
+; CHECK-NEXT:    add.w lr, r2, r3, lsl #1
+; CHECK-NEXT:    cmp r12, r2
+; CHECK-NEXT:    add.w r4, r0, r3, lsl #1
+; CHECK-NEXT:    cset r12, hi
+; CHECK-NEXT:    cmp lr, r1
+; CHECK-NEXT:    csel r12, zr, r12, ls
+; CHECK-NEXT:    cmp lr, r0
+; CHECK-NEXT:    cset lr, hi
+; CHECK-NEXT:    cmp r4, r2
+; CHECK-NEXT:    cset r4, hi
+; CHECK-NEXT:    tst.w r4, lr
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    cmpeq.w r12, #0
 ; CHECK-NEXT:    beq .LBB0_4
 ; CHECK-NEXT:  @ %bb.2: @ %while.body.preheader
 ; CHECK-NEXT:    dls lr, r3
@@ -47,7 +48,7 @@ define void @tailpred(ptr nocapture readonly %pSrcA, ptr nocapture readonly %pSr
 ; CHECK-NEXT:    vstrh.16 q0, [r2], #16
 ; CHECK-NEXT:    letp lr, .LBB0_5
 ; CHECK-NEXT:  .LBB0_6: @ %while.end
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp.not6 = icmp eq i32 %blockSize, 0
   br i1 %cmp.not6, label %while.end, label %vector.memcheck
@@ -114,20 +115,20 @@ define void @notailpred(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK-NEXT:    cmp r3, #8
 ; CHECK-NEXT:    blo .LBB1_3
 ; CHECK-NEXT:  @ %bb.2: @ %vector.memcheck
-; CHECK-NEXT:    add.w r5, r2, r3, lsl #1
-; CHECK-NEXT:    add.w r6, r1, r3, lsl #1
-; CHECK-NEXT:    cmp r5, r1
-; CHECK-NEXT:    add.w r4, r0, r3, lsl #1
+; CHECK-NEXT:    add.w r7, r1, r3, lsl #1
+; CHECK-NEXT:    add.w r6, r2, r3, lsl #1
+; CHECK-NEXT:    cmp r7, r2
+; CHECK-NEXT:    add.w r5, r0, r3, lsl #1
 ; CHECK-NEXT:    cset r7, hi
-; CHECK-NEXT:    cmp r6, r2
+; CHECK-NEXT:    cmp r6, r1
+; CHECK-NEXT:    csel r7, zr, r7, ls
+; CHECK-NEXT:    cmp r6, r0
 ; CHECK-NEXT:    cset r6, hi
-; CHECK-NEXT:    cmp r5, r0
+; CHECK-NEXT:    cmp r5, r2
 ; CHECK-NEXT:    cset r5, hi
-; CHECK-NEXT:    cmp r4, r2
-; CHECK-NEXT:    cset r4, hi
-; CHECK-NEXT:    tst r4, r5
+; CHECK-NEXT:    tst r5, r6
 ; CHECK-NEXT:    it eq
-; CHECK-NEXT:    andseq.w r7, r7, r6
+; CHECK-NEXT:    cmpeq r7, #0
 ; CHECK-NEXT:    beq .LBB1_7
 ; CHECK-NEXT:  .LBB1_3:
 ; CHECK-NEXT:    mov r5, r3

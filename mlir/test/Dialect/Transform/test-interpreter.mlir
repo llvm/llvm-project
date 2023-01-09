@@ -1024,3 +1024,19 @@ transform.sequence failures(propagate) {
     { second_result_is_handle }
     : (!transform.any_op) -> (!transform.any_op, !transform.param<i64>)
 }
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{attempting to assign a null payload op to this transform value}}
+  %0 = transform.test_produce_null_payload : !transform.any_op
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{attempting to assign a null parameter to this transform value}}
+  %0 = transform.test_produce_null_param : !transform.param<i64>
+}
