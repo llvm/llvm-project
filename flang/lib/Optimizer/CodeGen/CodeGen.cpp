@@ -1568,6 +1568,26 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     // information.
     auto [eleSize, cfiTy] = getSizeAndTypeCode(
         loc, rewriter, useInputType ? inputType : boxTy.getEleTy(), typeparams);
+
+    // When emboxing a fir.ref<none> to an unlimited polymorphic box, get the
+    // type code and element size from the box used to extract the type desc.
+    if (fir::isUnlimitedPolymorphicType(boxTy) &&
+        inputType.isa<mlir::NoneType>() && typeDesc) {
+      if (auto *typeDescOp = typeDesc.getDefiningOp()) {
+        if (auto loadOp = mlir::dyn_cast<mlir::LLVM::LoadOp>(typeDescOp)) {
+          if (auto *gepOp = loadOp.getAddr().getDefiningOp()) {
+            if (auto gep = mlir::dyn_cast<mlir::LLVM::GEPOp>(gepOp)) {
+              mlir::Type idxTy = this->lowerTy().indexType();
+              eleSize = this->loadElementSizeFromBox(loc, idxTy, gep.getBase(),
+                                                     rewriter);
+              cfiTy = this->getValueFromBox(loc, gep.getBase(), cfiTy.getType(),
+                                            rewriter, kTypePosInBox);
+            }
+          }
+        }
+      }
+    }
+
     auto mod = box->template getParentOfType<mlir::ModuleOp>();
     mlir::Value descriptor = populateDescriptor(
         loc, mod, boxTy, inputType, rewriter, rank, eleSize, cfiTy, typeDesc);
