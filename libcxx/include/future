@@ -1626,7 +1626,7 @@ class _LIBCPP_AVAILABILITY_FUTURE __packaged_task_base<_Rp(_ArgTypes...)>
 public:
     _LIBCPP_INLINE_VISIBILITY
     __packaged_task_base() {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL
     virtual ~__packaged_task_base() {}
     virtual void __move_to(__packaged_task_base*) _NOEXCEPT = 0;
     virtual void destroy() = 0;
