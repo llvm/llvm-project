@@ -648,20 +648,97 @@ func.func @warp_constant(%laneid: index) -> (vector<1xf32>) {
 
 // -----
 
-// CHECK-PROP-LABEL: func.func @vector_extract_simple(
-//       CHECK-PROP:   %[[R:.*]] = vector.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<1xf32>) {
-//       CHECK-PROP:     %[[V:.*]] = "some_def"() : () -> vector<1xf32>
-//       CHECK-PROP:     vector.yield %[[V]] : vector<1xf32>
+// TODO: We could use warp shuffles instead of broadcasting the entire vector.
+
+// CHECK-PROP-LABEL: func.func @vector_extract_1d(
+//   CHECK-PROP-DAG:   %[[C5_I32:.*]] = arith.constant 5 : i32
+//   CHECK-PROP-DAG:   %[[C1:.*]] = arith.constant 1 : index
+//       CHECK-PROP:   %[[R:.*]] = vector.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<2xf32>) {
+//       CHECK-PROP:     %[[V:.*]] = "some_def"() : () -> vector<64xf32>
+//       CHECK-PROP:     vector.yield %[[V]] : vector<64xf32>
 //       CHECK-PROP:   }
-//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[R]][0] : vector<1xf32>
-//       CHECK-PROP:   return %[[E]] : f32
-func.func @vector_extract_simple(%laneid: index) -> (f32) {
+//       CHECK-PROP:   %[[E:.*]] = vector.extractelement %[[R]][%[[C1]] : index] : vector<2xf32>
+//       CHECK-PROP:   %[[SHUFFLED:.*]], %{{.*}} = gpu.shuffle  idx %[[E]], %[[C5_I32]]
+//       CHECK-PROP:   return %[[SHUFFLED]] : f32
+func.func @vector_extract_1d(%laneid: index) -> (f32) {
   %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (f32) {
-    %0 = "some_def"() : () -> (vector<1xf32>)
-    %1 = vector.extract %0[0] : vector<1xf32>
+    %0 = "some_def"() : () -> (vector<64xf32>)
+    %1 = vector.extract %0[9] : vector<64xf32>
     vector.yield %1 : f32
   }
   return %r : f32
+}
+
+// -----
+
+// CHECK-PROP-LABEL: func.func @vector_extract_2d(
+//       CHECK-PROP:   %[[W:.*]] = vector.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<5x3xf32>) {
+//       CHECK-PROP:     %[[V:.*]] = "some_def"
+//       CHECK-PROP:     vector.yield %[[V]] : vector<5x96xf32>
+//       CHECK-PROP:   }
+//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][2] : vector<5x3xf32>
+//       CHECK-PROP:   return %[[E]]
+func.func @vector_extract_2d(%laneid: index) -> (vector<3xf32>) {
+  %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<3xf32>) {
+    %0 = "some_def"() : () -> (vector<5x96xf32>)
+    %1 = vector.extract %0[2] : vector<5x96xf32>
+    vector.yield %1 : vector<96xf32>
+  }
+  return %r : vector<3xf32>
+}
+
+// -----
+
+// CHECK-PROP-LABEL: func.func @vector_extract_2d_broadcast_scalar(
+//       CHECK-PROP:   %[[W:.*]] = vector.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<5x96xf32>) {
+//       CHECK-PROP:     %[[V:.*]] = "some_def"
+//       CHECK-PROP:     vector.yield %[[V]] : vector<5x96xf32>
+//       CHECK-PROP:   }
+//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][1, 2] : vector<5x96xf32>
+//       CHECK-PROP:   return %[[E]]
+func.func @vector_extract_2d_broadcast_scalar(%laneid: index) -> (f32) {
+  %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (f32) {
+    %0 = "some_def"() : () -> (vector<5x96xf32>)
+    %1 = vector.extract %0[1, 2] : vector<5x96xf32>
+    vector.yield %1 : f32
+  }
+  return %r : f32
+}
+
+// -----
+
+// CHECK-PROP-LABEL: func.func @vector_extract_2d_broadcast(
+//       CHECK-PROP:   %[[W:.*]] = vector.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<5x96xf32>) {
+//       CHECK-PROP:     %[[V:.*]] = "some_def"
+//       CHECK-PROP:     vector.yield %[[V]] : vector<5x96xf32>
+//       CHECK-PROP:   }
+//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][2] : vector<5x96xf32>
+//       CHECK-PROP:   return %[[E]]
+func.func @vector_extract_2d_broadcast(%laneid: index) -> (vector<96xf32>) {
+  %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<96xf32>) {
+    %0 = "some_def"() : () -> (vector<5x96xf32>)
+    %1 = vector.extract %0[2] : vector<5x96xf32>
+    vector.yield %1 : vector<96xf32>
+  }
+  return %r : vector<96xf32>
+}
+
+// -----
+
+// CHECK-PROP-LABEL: func.func @vector_extract_3d(
+//       CHECK-PROP:   %[[W:.*]] = vector.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<8x4x96xf32>) {
+//       CHECK-PROP:     %[[V:.*]] = "some_def"
+//       CHECK-PROP:     vector.yield %[[V]] : vector<8x128x96xf32>
+//       CHECK-PROP:   }
+//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][2] : vector<8x4x96xf32>
+//       CHECK-PROP:   return %[[E]]
+func.func @vector_extract_3d(%laneid: index) -> (vector<4x96xf32>) {
+  %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x96xf32>) {
+    %0 = "some_def"() : () -> (vector<8x128x96xf32>)
+    %1 = vector.extract %0[2] : vector<8x128x96xf32>
+    vector.yield %1 : vector<128x96xf32>
+  }
+  return %r : vector<4x96xf32>
 }
 
 // -----

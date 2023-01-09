@@ -897,16 +897,81 @@ struct WarpOpExtract : public OpRewritePattern<WarpExecuteOnLane0Op> {
       return failure();
     unsigned int operandNumber = operand->getOperandNumber();
     auto extractOp = operand->get().getDefiningOp<vector::ExtractOp>();
-    if (extractOp.getVectorType().getNumElements() != 1)
-      return failure();
+    VectorType extractSrcType = extractOp.getVectorType();
     Location loc = extractOp.getLoc();
+
+    // "vector.extract %v[] : vector<f32>" is an invalid op.
+    assert(extractSrcType.getRank() > 0 &&
+           "vector.extract does not support rank 0 sources");
+
+    // "vector.extract %v[] : vector<...xf32>" can be canonicalized to %v.
+    if (extractOp.getPosition().empty())
+      return failure();
+
+    // Rewrite vector.extract with 1d source to vector.extractelement.
+    if (extractSrcType.getRank() == 1) {
+      assert(extractOp.getPosition().size() == 1 && "expected 1 index");
+      int64_t pos = extractOp.getPosition()[0].cast<IntegerAttr>().getInt();
+      rewriter.setInsertionPoint(extractOp);
+      rewriter.replaceOpWithNewOp<vector::ExtractElementOp>(
+          extractOp, extractOp.getVector(),
+          rewriter.create<arith::ConstantIndexOp>(loc, pos));
+      return success();
+    }
+
+    // All following cases are 2d or higher dimensional source vectors.
+
+    if (warpOp.getResult(operandNumber).getType() == operand->get().getType()) {
+      // There is no distribution, this is a broadcast. Simply move the extract
+      // out of the warp op.
+      // TODO: This could be optimized. E.g., in case of a scalar result, let
+      // one lane extract and shuffle the result to all other lanes (same as
+      // the 1d case).
+      SmallVector<size_t> newRetIndices;
+      WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+          rewriter, warpOp, {extractOp.getVector()},
+          {extractOp.getVectorType()}, newRetIndices);
+      rewriter.setInsertionPointAfter(newWarpOp);
+      Value distributedVec = newWarpOp->getResult(newRetIndices[0]);
+      // Extract from distributed vector.
+      Value newExtract = rewriter.create<vector::ExtractOp>(
+          loc, distributedVec, extractOp.getPosition());
+      newWarpOp->getResult(operandNumber).replaceAllUsesWith(newExtract);
+      return success();
+    }
+
+    // Find the distributed dimension. There should be exactly one.
+    auto distributedType =
+        warpOp.getResult(operandNumber).getType().cast<VectorType>();
+    auto yieldedType = operand->get().getType().cast<VectorType>();
+    int64_t distributedDim = -1;
+    for (int64_t i = 0; i < yieldedType.getRank(); ++i) {
+      if (distributedType.getDimSize(i) != yieldedType.getDimSize(i)) {
+        // Keep this assert here in case WarpExecuteOnLane0Op gets extended to
+        // support distributing multiple dimensions in the future.
+        assert(distributedDim == -1 && "found multiple distributed dims");
+        distributedDim = i;
+      }
+    }
+    assert(distributedDim != -1 && "could not find distributed dimension");
+
+    // Yield source vector from warp op.
+    SmallVector<int64_t> newDistributedShape(extractSrcType.getShape().begin(),
+                                             extractSrcType.getShape().end());
+    for (int i = 0; i < distributedType.getRank(); ++i)
+      newDistributedShape[i + extractOp.getPosition().size()] =
+          distributedType.getDimSize(i);
+    auto newDistributedType =
+        VectorType::get(newDistributedShape, distributedType.getElementType());
     SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, {extractOp.getVector()}, {extractOp.getVectorType()},
+        rewriter, warpOp, {extractOp.getVector()}, {newDistributedType},
         newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
+    Value distributedVec = newWarpOp->getResult(newRetIndices[0]);
+    // Extract from distributed vector.
     Value newExtract = rewriter.create<vector::ExtractOp>(
-        loc, newWarpOp->getResult(newRetIndices[0]), extractOp.getPosition());
+        loc, distributedVec, extractOp.getPosition());
     newWarpOp->getResult(operandNumber).replaceAllUsesWith(newExtract);
     return success();
   }
