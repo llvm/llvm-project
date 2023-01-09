@@ -880,6 +880,15 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first;
     break;
   }
+  case Intrinsic::abs: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (ST->hasVInstructions() && LT.second.isVector()) {
+      // vrsub.vi v10, v8, 0
+      // vmax.vv v8, v8, v10
+      return LT.first * 2;
+    }
+    break;
+  }
   // TODO: add more intrinsic
   case Intrinsic::experimental_stepvector: {
     unsigned Cost = 1; // vid
