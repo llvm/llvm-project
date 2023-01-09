@@ -954,6 +954,7 @@ struct WarpOpExtract : public OpRewritePattern<WarpExecuteOnLane0Op> {
       }
     }
     assert(distributedDim != -1 && "could not find distributed dimension");
+    (void)distributedDim;
 
     // Yield source vector from warp op.
     SmallVector<int64_t> newDistributedShape(extractSrcType.getShape().begin(),
