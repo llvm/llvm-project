@@ -140,8 +140,7 @@ define <2 x i1> @v2i1_res_by_one(<2 x i1> %x) {
 
 define i1 @i1_ov(i1 %x, i1 %y) {
 ; CHECK-LABEL: @i1_ov(
-; CHECK-NEXT:    [[M:%.*]] = call { i1, i1 } @llvm.smul.with.overflow.i1(i1 [[X:%.*]], i1 [[Y:%.*]])
-; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i1, i1 } [[M]], 1
+; CHECK-NEXT:    [[OV:%.*]] = and i1 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[OV]]
 ;
   %m = call {i1, i1} @llvm.smul.with.overflow.i1(i1 %x, i1 %y)
@@ -151,8 +150,7 @@ define i1 @i1_ov(i1 %x, i1 %y) {
 
 define <2 x i1> @v2i1_ov(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @v2i1_ov(
-; CHECK-NEXT:    [[M:%.*]] = call { <2 x i1>, <2 x i1> } @llvm.smul.with.overflow.v2i1(<2 x i1> [[X:%.*]], <2 x i1> [[Y:%.*]])
-; CHECK-NEXT:    [[OV:%.*]] = extractvalue { <2 x i1>, <2 x i1> } [[M]], 1
+; CHECK-NEXT:    [[OV:%.*]] = and <2 x i1> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[OV]]
 ;
   %m = call {<2 x i1>, <2 x i1>} @llvm.smul.with.overflow.v2i1(<2 x i1> %x, <2 x i1> %y)
