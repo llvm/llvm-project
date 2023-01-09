@@ -10,15 +10,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "COFFLinkerContext.h"
-#include "Symbols.h"
 #include "lld/Common/Memory.h"
-#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/CodeView/TypeHashing.h"
-#include "llvm/Demangle/Demangle.h"
 
 namespace lld::coff {
+
 COFFLinkerContext::COFFLinkerContext()
-    : driver(*this), symtab(*this), rootTimer("Total Linking Time"),
+    : symtab(*this), rootTimer("Total Linking Time"),
       inputFileTimer("Input File Reading", rootTimer),
       ltoTimer("LTO", rootTimer), gcTimer("GC", rootTimer),
       icfTimer("ICF", rootTimer), codeLayoutTimer("Code Layout", rootTimer),
@@ -35,10 +33,6 @@ COFFLinkerContext::COFFLinkerContext()
       symbolMergingTimer("Symbol Merging", addObjectsTimer),
       publicsLayoutTimer("Publics Stream Layout", totalPdbLinkTimer),
       tpiStreamLayoutTimer("TPI Stream Layout", totalPdbLinkTimer),
-      diskCommitTimer("Commit to Disk", totalPdbLinkTimer) {
-  FakeSection ltoTextSection(llvm::COFF::IMAGE_SCN_MEM_EXECUTE);
-  FakeSection ltoDataSection(llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA);
-  ltoTextSectionChunk = make<FakeSectionChunk>(&ltoTextSection.section);
-  ltoDataSectionChunk = make<FakeSectionChunk>(&ltoDataSection.section);
-}
+      diskCommitTimer("Commit to Disk", totalPdbLinkTimer) {}
+
 } // namespace lld::coff
