@@ -4008,6 +4008,10 @@ void AssemblyWriter::printInfoComment(const Value &V) {
 static void maybePrintCallAddrSpace(const Value *Operand, const Instruction *I,
                                     raw_ostream &Out) {
   // We print the address space of the call if it is non-zero.
+  if (Operand == nullptr) {
+    Out << " <cannot get addrspace!>";
+    return;
+  }
   unsigned CallAddrSpace = Operand->getType()->getPointerAddressSpace();
   bool PrintAddrSpace = CallAddrSpace != 0;
   if (!PrintAddrSpace) {
