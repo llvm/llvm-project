@@ -146,6 +146,8 @@ void DepscanPrefixMapping::remapInvocationPaths(CompilerInvocation &Invocation,
   mapInPlaceAll(FrontendOpts.ASTMergeFiles);
   Mapper.mapInPlace(FrontendOpts.OverrideRecordLayoutsFile);
   Mapper.mapInPlace(FrontendOpts.StatsFile);
+  for (auto &[Path, _] : FrontendOpts.ModuleCacheKeys)
+    Mapper.mapInPlace(Path);
 
   // Filesystem options.
   Mapper.mapInPlace(FileSystemOpts.WorkingDir);

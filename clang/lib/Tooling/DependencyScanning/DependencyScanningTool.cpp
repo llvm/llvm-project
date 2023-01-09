@@ -249,6 +249,22 @@ private:
 };
 } // namespace
 
+/// The PCH recorded file paths with canonical paths, create a VFS that
+/// allows remapping back to the non-canonical source paths so that they are
+/// found during dep-scanning.
+static void
+addReversePrefixMappingFileSystem(const llvm::PrefixMapper &PrefixMapper,
+                                  CompilerInstance &ScanInstance) {
+  llvm::PrefixMapper ReverseMapper;
+  ReverseMapper.addInverseRange(PrefixMapper.getMappings());
+  ReverseMapper.sort();
+  std::unique_ptr<llvm::vfs::FileSystem> FS =
+      llvm::vfs::createPrefixMappingFileSystem(
+          std::move(ReverseMapper), &ScanInstance.getVirtualFileSystem());
+
+  ScanInstance.getFileManager().setVirtualFileSystem(std::move(FS));
+}
+
 Error IncludeTreePPConsumer::initialize(CompilerInstance &ScanInstance,
                                         CompilerInvocation &NewInvocation) {
   if (Error E =
@@ -263,17 +279,7 @@ Error IncludeTreePPConsumer::initialize(CompilerInstance &ScanInstance,
     if (PPOpts.Includes.empty() && PPOpts.ImplicitPCHInclude.empty())
       return;
 
-    // The PCH recorded file paths with canonical paths, create a VFS that
-    // allows remapping back to the non-canonical source paths so that they are
-    // found during dep-scanning.
-    llvm::PrefixMapper ReverseMapper;
-    ReverseMapper.addInverseRange(PrefixMapper.getMappings());
-    ReverseMapper.sort();
-    std::unique_ptr<llvm::vfs::FileSystem> FS =
-        llvm::vfs::createPrefixMappingFileSystem(
-            std::move(ReverseMapper), &ScanInstance.getVirtualFileSystem());
-
-    ScanInstance.getFileManager().setVirtualFileSystem(std::move(FS));
+    addReversePrefixMappingFileSystem(PrefixMapper, ScanInstance);
 
     // These are written in the predefines buffer, so we need to remap them.
     for (std::string &Include : PPOpts.Includes)
@@ -594,6 +600,10 @@ Error FullDependencyConsumer::initialize(CompilerInstance &ScanInstance,
     if (Error E = PrefixMapping.configurePrefixMapper(NewInvocation, *Mapper))
       return E;
 
+    const PreprocessorOptions &PPOpts = ScanInstance.getPreprocessorOpts();
+    if (!PPOpts.Includes.empty() || !PPOpts.ImplicitPCHInclude.empty())
+      addReversePrefixMappingFileSystem(*Mapper, ScanInstance);
+
     CacheFS->trackNewAccesses();
     if (auto CWD =
             ScanInstance.getVirtualFileSystem().getCurrentWorkingDirectory())
@@ -716,6 +726,10 @@ Error FullDependencyConsumer::finalizeModuleInvocation(CompilerInvocation &CI,
                                   CacheFS->getCurrentWorkingDirectory().get(),
                                   /*ProduceIncludeTree=*/false);
   }
+
+  if (Mapper)
+    DepscanPrefixMapping::remapInvocationPaths(CI, *Mapper);
+
   return llvm::Error::success();
 }
 

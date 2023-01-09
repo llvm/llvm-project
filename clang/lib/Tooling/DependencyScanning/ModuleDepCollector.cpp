@@ -289,10 +289,12 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
   HashBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
 
   // Save and restore options that should not affect the hash, e.g. the exact
-  // contents of input files.
+  // contents of input files, or prefix mappings.
   auto &MutableCI = const_cast<CompilerInvocation &>(CI);
   llvm::SaveAndRestore<std::string> RestoreCASFSRootID(
-      MutableCI.getFileSystemOpts().CASFileSystemRootID);
+      MutableCI.getFileSystemOpts().CASFileSystemRootID, "");
+  llvm::SaveAndRestore<std::vector<std::string>> RestorePrefixMappings(
+      MutableCI.getFrontendOpts().PathPrefixMappings, {});
 
   // Hash the BuildInvocation without any input files.
   SmallVector<const char *, 32> DummyArgs;
