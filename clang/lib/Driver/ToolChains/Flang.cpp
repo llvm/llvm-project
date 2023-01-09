@@ -52,6 +52,55 @@ void Flang::addPreprocessingOptions(const ArgList &Args,
                    options::OPT_I, options::OPT_cpp, options::OPT_nocpp});
 }
 
+/// @C shouldLoopVersion
+///
+/// Check if Loop Versioning should be enabled.
+/// We look for the last of one of the following:
+///   -Ofast, -O4, -O<number> and -f[no-]version-loops-for-stride.
+/// Loop versioning is disabled if the last option is
+///  -fno-version-loops-for-stride.
+/// Loop versioning is enabled if the last option is one of:
+///  -floop-versioning
+///  -Ofast
+///  -O4
+///  -O3
+/// For all other cases, loop versioning is is disabled.
+///
+/// The gfortran compiler automatically enables the option for -O3 or -Ofast.
+///
+/// @return true if loop-versioning should be enabled, otherwise false.
+static bool shouldLoopVersion(const ArgList &Args) {
+  const Arg *LoopVersioningArg = Args.getLastArg(
+      options::OPT_Ofast, options::OPT_O, options::OPT_O4,
+      options::OPT_floop_versioning, options::OPT_fno_loop_versioning);
+  if (!LoopVersioningArg)
+    return false;
+
+  if (LoopVersioningArg->getOption().matches(options::OPT_fno_loop_versioning))
+    return false;
+
+  if (LoopVersioningArg->getOption().matches(options::OPT_floop_versioning))
+    return true;
+
+  if (LoopVersioningArg->getOption().matches(options::OPT_Ofast) ||
+      LoopVersioningArg->getOption().matches(options::OPT_O4))
+    return true;
+
+  if (LoopVersioningArg->getOption().matches(options::OPT_O)) {
+    StringRef S(LoopVersioningArg->getValue());
+    unsigned OptLevel = 0;
+    // Note -Os or Oz woould "fail" here, so return false. Which is the
+    // desiered behavior.
+    if (S.getAsInteger(10, OptLevel))
+      return false;
+
+    return OptLevel > 2;
+  }
+
+  llvm_unreachable("We should not end up here");
+  return false;
+}
+
 void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   Args.AddAllArgs(CmdArgs,
                   {options::OPT_module_dir, options::OPT_fdebug_module_writer,
@@ -59,16 +108,6 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
                    options::OPT_std_EQ, options::OPT_W_Joined,
                    options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
                    options::OPT_funderscoring, options::OPT_fno_underscoring});
-
-  Arg *stackArrays =
-      Args.getLastArg(options::OPT_Ofast, options::OPT_fstack_arrays,
-                      options::OPT_fno_stack_arrays);
-  if (stackArrays &&
-      !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
-    CmdArgs.push_back("-fstack-arrays");
-
-  if (Args.hasArg(options::OPT_flang_experimental_hlfir))
-    CmdArgs.push_back("-flang-experimental-hlfir");
 
   llvm::codegenoptions::DebugInfoKind DebugInfoKind;
   if (Args.hasArg(options::OPT_gN_Group)) {
@@ -80,6 +119,21 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
     DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
   }
   addDebugInfoKind(CmdArgs, DebugInfoKind);
+}
+
+void Flang::addCodegenOptions(const ArgList &Args,
+                              ArgStringList &CmdArgs) const {
+  Arg *stackArrays =
+      Args.getLastArg(options::OPT_Ofast, options::OPT_fstack_arrays,
+                      options::OPT_fno_stack_arrays);
+  if (stackArrays &&
+      !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
+    CmdArgs.push_back("-fstack-arrays");
+
+  if (Args.hasArg(options::OPT_flang_experimental_hlfir))
+    CmdArgs.push_back("-flang-experimental-hlfir");
+  if (shouldLoopVersion(Args))
+    CmdArgs.push_back("-fversion-loops-for-stride");
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
@@ -390,6 +444,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add target args, features, etc.
   addTargetOptions(Args, CmdArgs);
+
+  // Add Codegen options
+  addCodegenOptions(Args, CmdArgs);
 
   // Add other compile options
   addOtherOptions(Args, CmdArgs);
