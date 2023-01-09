@@ -520,8 +520,7 @@ Optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
   for (const auto &MappedPrefix : Split) {
     // We use the inverse mapping because the \p PrefixMapper will be used for
     // de-canonicalization of paths.
-    if (auto E = PrefixMapper.add(MappedPrefix.getInverse()))
-      return reportCachingBackendError(Clang.getDiagnostics(), std::move(E));
+    PrefixMapper.add(MappedPrefix.getInverse());
   }
 
   if (!CacheOpts.CompilationCachingServicePath.empty()) {
