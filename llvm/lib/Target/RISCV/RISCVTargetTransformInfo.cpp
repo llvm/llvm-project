@@ -453,40 +453,6 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::roundeven, MVT::nxv2f64, 9},
     {Intrinsic::roundeven, MVT::nxv4f64, 9},
     {Intrinsic::roundeven, MVT::nxv8f64, 9},
-    {Intrinsic::fabs, MVT::v2f32, 1},
-    {Intrinsic::fabs, MVT::v4f32, 1},
-    {Intrinsic::fabs, MVT::v8f32, 1},
-    {Intrinsic::fabs, MVT::v16f32, 1},
-    {Intrinsic::fabs, MVT::nxv1f32, 1},
-    {Intrinsic::fabs, MVT::nxv2f32, 1},
-    {Intrinsic::fabs, MVT::nxv4f32, 1},
-    {Intrinsic::fabs, MVT::nxv8f32, 1},
-    {Intrinsic::fabs, MVT::nxv16f32, 1},
-    {Intrinsic::fabs, MVT::v2f64, 1},
-    {Intrinsic::fabs, MVT::v4f64, 1},
-    {Intrinsic::fabs, MVT::v8f64, 1},
-    {Intrinsic::fabs, MVT::v16f64, 1},
-    {Intrinsic::fabs, MVT::nxv1f64, 1},
-    {Intrinsic::fabs, MVT::nxv2f64, 1},
-    {Intrinsic::fabs, MVT::nxv4f64, 1},
-    {Intrinsic::fabs, MVT::nxv8f64, 1},
-    {Intrinsic::sqrt, MVT::v2f32, 1},
-    {Intrinsic::sqrt, MVT::v4f32, 1},
-    {Intrinsic::sqrt, MVT::v8f32, 1},
-    {Intrinsic::sqrt, MVT::v16f32, 1},
-    {Intrinsic::sqrt, MVT::nxv1f32, 1},
-    {Intrinsic::sqrt, MVT::nxv2f32, 1},
-    {Intrinsic::sqrt, MVT::nxv4f32, 1},
-    {Intrinsic::sqrt, MVT::nxv8f32, 1},
-    {Intrinsic::sqrt, MVT::nxv16f32, 1},
-    {Intrinsic::sqrt, MVT::v2f64, 1},
-    {Intrinsic::sqrt, MVT::v4f64, 1},
-    {Intrinsic::sqrt, MVT::v8f64, 1},
-    {Intrinsic::sqrt, MVT::v16f64, 1},
-    {Intrinsic::sqrt, MVT::nxv1f64, 1},
-    {Intrinsic::sqrt, MVT::nxv2f64, 1},
-    {Intrinsic::sqrt, MVT::nxv4f64, 1},
-    {Intrinsic::sqrt, MVT::nxv8f64, 1},
     {Intrinsic::bswap, MVT::v2i16, 3},
     {Intrinsic::bswap, MVT::v4i16, 3},
     {Intrinsic::bswap, MVT::v8i16, 3},
@@ -887,6 +853,13 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       // vmax.vv v8, v8, v10
       return LT.first * 2;
     }
+    break;
+  }
+  case Intrinsic::fabs:
+  case Intrinsic::sqrt: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (ST->hasVInstructions() && LT.second.isVector())
+      return LT.first;
     break;
   }
   // TODO: add more intrinsic
