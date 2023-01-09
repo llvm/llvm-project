@@ -63,3 +63,59 @@ define void @fence_seq_cst() nounwind {
   fence seq_cst
   ret void
 }
+
+define void @fence_singlethread_acquire() nounwind {
+; RV32I-LABEL: fence_singlethread_acquire:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fence r, rw
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fence_singlethread_acquire:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fence r, rw
+; RV64I-NEXT:    ret
+  fence syncscope("singlethread") acquire
+  ret void
+}
+
+define void @fence_singlethread_release() nounwind {
+; RV32I-LABEL: fence_singlethread_release:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fence rw, w
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fence_singlethread_release:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fence rw, w
+; RV64I-NEXT:    ret
+  fence syncscope("singlethread") release
+  ret void
+}
+
+define void @fence_singlethread_acq_rel() nounwind {
+; RV32I-LABEL: fence_singlethread_acq_rel:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fence.tso
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fence_singlethread_acq_rel:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fence.tso
+; RV64I-NEXT:    ret
+  fence syncscope("singlethread") acq_rel
+  ret void
+}
+
+define void @fence_singlethread_seq_cst() nounwind {
+; RV32I-LABEL: fence_singlethread_seq_cst:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fence rw, rw
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fence_singlethread_seq_cst:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    fence rw, rw
+; RV64I-NEXT:    ret
+  fence syncscope("singlethread") seq_cst
+  ret void
+}
