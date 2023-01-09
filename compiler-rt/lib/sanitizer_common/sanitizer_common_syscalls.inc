@@ -910,6 +910,17 @@ POST_SYSCALL(statfs)(long res, const void *path, void *buf) {
   }
 }
 
+PRE_SYSCALL(fstatfs)(long fd, void *buf) {}
+
+POST_SYSCALL(fstatfs)(long res, long fd, void *buf) {
+  if (res >= 0) {
+    if (buf)
+      POST_WRITE(buf, struct_statfs_sz);
+  }
+}
+#  endif  // !SANITIZER_ANDROID
+
+#  if SANITIZER_GLIBC
 PRE_SYSCALL(statfs64)(const void *path, long sz, void *buf) {
   if (path)
     PRE_READ(path, __sanitizer::internal_strlen((const char *)path) + 1);
@@ -922,15 +933,6 @@ POST_SYSCALL(statfs64)(long res, const void *path, long sz, void *buf) {
   }
 }
 
-PRE_SYSCALL(fstatfs)(long fd, void *buf) {}
-
-POST_SYSCALL(fstatfs)(long res, long fd, void *buf) {
-  if (res >= 0) {
-    if (buf)
-      POST_WRITE(buf, struct_statfs_sz);
-  }
-}
-
 PRE_SYSCALL(fstatfs64)(long fd, long sz, void *buf) {}
 
 POST_SYSCALL(fstatfs64)(long res, long fd, long sz, void *buf) {
@@ -939,7 +941,7 @@ POST_SYSCALL(fstatfs64)(long res, long fd, long sz, void *buf) {
       POST_WRITE(buf, struct_statfs64_sz);
   }
 }
-#  endif  // !SANITIZER_ANDROID
+#  endif  // SANITIZER_GLIBC
 
 PRE_SYSCALL(lstat)(const void *filename, void *statbuf) {
   if (filename)
@@ -998,7 +1000,7 @@ POST_SYSCALL(newfstat)(long res, long fd, void *statbuf) {
   }
 }
 
-#  if !SANITIZER_ANDROID
+#  if SANITIZER_GLIBC
 PRE_SYSCALL(ustat)(long dev, void *ubuf) {}
 
 POST_SYSCALL(ustat)(long res, long dev, void *ubuf) {
@@ -1007,7 +1009,7 @@ POST_SYSCALL(ustat)(long res, long dev, void *ubuf) {
       POST_WRITE(ubuf, struct_ustat_sz);
   }
 }
-#  endif  // !SANITIZER_ANDROID
+#  endif  // SANITIZER_GLIBC
 
 PRE_SYSCALL(stat64)(const void *filename, void *statbuf) {
   if (filename)
@@ -2231,7 +2233,7 @@ POST_SYSCALL(setrlimit)(long res, long resource, void *rlim) {
   }
 }
 
-#  if !SANITIZER_ANDROID
+#  if SANITIZER_GLIBC
 PRE_SYSCALL(prlimit64)
 (long pid, long resource, const void *new_rlim, void *old_rlim) {
   if (new_rlim)
