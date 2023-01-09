@@ -458,6 +458,28 @@ mlir::test::TestProduceTransformParamOrForwardOperandOp::applyToOne(
   return DiagnosedSilenceableFailure::success();
 }
 
+void mlir::test::TestProduceNullPayloadOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::producesHandle(getOut(), effects);
+}
+
+DiagnosedSilenceableFailure mlir::test::TestProduceNullPayloadOp::apply(
+    transform::TransformResults &results, transform::TransformState &state) {
+  SmallVector<Operation *, 1> null({nullptr});
+  results.set(getOut().cast<OpResult>(), null);
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestProduceNullParamOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {}
+
+DiagnosedSilenceableFailure
+mlir::test::TestProduceNullParamOp::apply(transform::TransformResults &results,
+                                          transform::TransformState &state) {
+  results.setParams(getOut().cast<OpResult>(), Attribute());
+  return DiagnosedSilenceableFailure::success();
+}
+
 namespace {
 /// Test extension of the Transform dialect. Registers additional ops and
 /// declares PDL as dependent dialect since the additional ops are using PDL
