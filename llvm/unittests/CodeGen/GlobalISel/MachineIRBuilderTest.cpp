@@ -197,7 +197,7 @@ TEST_F(AArch64GISelMITest, BuildXor) {
   B.buildNot(S64, Copies[0]);
 
   // Make sure this works with > 64-bit types
-  auto Merge = B.buildMerge(S128, {Copies[0], Copies[1]});
+  auto Merge = B.buildMergeLikeInstr(S128, {Copies[0], Copies[1]});
   B.buildNot(S128, Merge);
   auto CheckStr = R"(
   ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
@@ -324,7 +324,7 @@ TEST_F(AArch64GISelMITest, BuildAtomicRMW) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(AArch64GISelMITest, BuildMerge) {
+TEST_F(AArch64GISelMITest, BuildMergeLikeInstr) {
   setUp();
   if (!TM)
     return;
@@ -337,15 +337,13 @@ TEST_F(AArch64GISelMITest, BuildMerge) {
 
   // Merging plain constants as one big blob of bit should produce a
   // G_MERGE_VALUES.
-  B.buildMerge(LLT::scalar(128), {RegC0, RegC1, RegC2, RegC3});
+  B.buildMergeLikeInstr(LLT::scalar(128), {RegC0, RegC1, RegC2, RegC3});
   // Merging plain constants to a vector should produce a G_BUILD_VECTOR.
   LLT V2x32 = LLT::fixed_vector(2, 32);
-  Register RegC0C1 =
-      B.buildMerge(V2x32, {RegC0, RegC1}).getReg(0);
-  Register RegC2C3 =
-      B.buildMerge(V2x32, {RegC2, RegC3}).getReg(0);
+  Register RegC0C1 = B.buildMergeLikeInstr(V2x32, {RegC0, RegC1}).getReg(0);
+  Register RegC2C3 = B.buildMergeLikeInstr(V2x32, {RegC2, RegC3}).getReg(0);
   // Merging vector constants to a vector should produce a G_CONCAT_VECTORS.
-  B.buildMerge(LLT::fixed_vector(4, 32), {RegC0C1, RegC2C3});
+  B.buildMergeLikeInstr(LLT::fixed_vector(4, 32), {RegC0C1, RegC2C3});
   // Merging vector constants to a plain type is not allowed.
   // Nothing else to test.
 
