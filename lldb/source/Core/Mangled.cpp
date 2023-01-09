@@ -54,10 +54,10 @@ static inline bool cstring_is_mangled(llvm::StringRef s) {
 // invalid value other than ConstString(nullptr) so, just use const
 // char* as the key as LLVM knows how to do proper DenseMapInfo for
 // pointers
-static ThreadSafeDenseMap<const char *, ConstString> *
+static ThreadSafeDenseMap<const char *, ConstString>&
 GetDisplayDemangledNamesCache() {
   static ThreadSafeDenseMap<const char *, ConstString> g_cache;
-  return &g_cache;
+  return g_cache;
 }
 // END SWIFT
 
@@ -372,8 +372,8 @@ ConstString Mangled::GetDisplayDemangledName(
 
       if (mangled) {
         if (SwiftLanguageRuntime::IsSwiftMangledName(m_mangled.GetStringRef())) {
-          auto display_cache = ::GetDisplayDemangledNamesCache();
-          if (display_cache && display_cache->Lookup(mangled, demangled) &&
+          auto& display_cache = ::GetDisplayDemangledNamesCache();
+          if (display_cache.Lookup(mangled, demangled) &&
               demangled)
             break;
 
@@ -383,7 +383,7 @@ ConstString Mangled::GetDisplayDemangledName(
                   sc);
           if (!demangled_std.empty()) {
             demangled.SetCString(demangled_std.c_str());
-            display_cache->Insert(mangled, demangled);
+            display_cache.Insert(mangled, demangled);
             break;
           }
         }
