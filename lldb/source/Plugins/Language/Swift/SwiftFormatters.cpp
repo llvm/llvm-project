@@ -322,13 +322,12 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     return false;
 
   if ((discriminator & 0xE0) == 0x40) { // 010xxxxx: Bridged
-    TypeSystemClang *clang_ast_context =
+    TypeSystemClangSP clang_ts_sp =
         ScratchTypeSystemClang::GetForTarget(process->GetTarget());
-    if (!clang_ast_context)
+    if (!clang_ts_sp)
       return false;
 
-    CompilerType id_type = clang_ast_context->GetBasicType(
-            lldb::eBasicTypeObjCID);
+    CompilerType id_type = clang_ts_sp->GetBasicType(lldb::eBasicTypeObjCID);
 
     // We may have an NSString pointer inline, so try formatting it directly.
     DataExtractor DE(&objectAddress, ptrSize, process->GetByteOrder(), ptrSize);
