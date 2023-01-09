@@ -625,6 +625,11 @@ mustBeDefaultInitializedAtRuntime(const Fortran::lower::pft::Variable &var) {
     return false;
   if (Fortran::semantics::IsDummy(sym) && !Fortran::semantics::IsIntentOut(sym))
     return false;
+  // Polymorphic intent(out) dummy might need default initialization
+  // at runtime.
+  if (Fortran::semantics::IsPolymorphic(sym) &&
+      Fortran::semantics::IsDummy(sym) && Fortran::semantics::IsIntentOut(sym))
+    return true;
   // Local variables (including function results), and intent(out) dummies must
   // be default initialized at runtime if their type has default initialization.
   return hasDefaultInitialization(sym);
