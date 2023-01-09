@@ -6,11 +6,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define <8 x i16> @load_zext_v8i8i16(ptr %ap)  #0 {
 ; CHECK-LABEL: load_zext_v8i8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp s1, s0, [x0]
-; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    uunpklo z2.h, z0.b
-; CHECK-NEXT:    uunpklo z0.h, z1.b
-; CHECK-NEXT:    splice z0.h, p0, z0.h, z2.h
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %ap
@@ -21,8 +18,8 @@ define <8 x i16> @load_zext_v8i8i16(ptr %ap)  #0 {
 define <4 x i32> @load_zext_v4i16i32(ptr %ap)  #0 {
 ; CHECK-LABEL: load_zext_v4i16i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %ap
@@ -33,8 +30,8 @@ define <4 x i32> @load_zext_v4i16i32(ptr %ap)  #0 {
 define <2 x i64> @load_zext_v2i32i64(ptr %ap) #0 {
 ; CHECK-LABEL: load_zext_v2i32i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <2 x i32>, ptr %ap

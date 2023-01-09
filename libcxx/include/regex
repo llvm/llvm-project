@@ -1446,12 +1446,12 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     __node() {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL
     virtual ~__node() {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL
     virtual void __exec(__state&) const {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL
     virtual void __exec_split(bool, __state&) const {}
 };
 

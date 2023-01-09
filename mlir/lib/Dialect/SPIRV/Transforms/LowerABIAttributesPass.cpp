@@ -26,7 +26,7 @@
 
 namespace mlir {
 namespace spirv {
-#define GEN_PASS_DEF_SPIRVLOWERABIATTRIBUTES
+#define GEN_PASS_DEF_SPIRVLOWERABIATTRIBUTESPASS
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
 } // namespace spirv
 } // namespace mlir
@@ -199,7 +199,8 @@ public:
 
 /// Pass to implement the ABI information specified as attributes.
 class LowerABIAttributesPass final
-    : public spirv::impl::SPIRVLowerABIAttributesBase<LowerABIAttributesPass> {
+    : public spirv::impl::SPIRVLowerABIAttributesPassBase<
+          LowerABIAttributesPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -321,9 +322,4 @@ void LowerABIAttributesPass::runOnOperation() {
       return signalPassFailure();
     }
   }
-}
-
-std::unique_ptr<OperationPass<spirv::ModuleOp>>
-mlir::spirv::createLowerABIAttributesPass() {
-  return std::make_unique<LowerABIAttributesPass>();
 }

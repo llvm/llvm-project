@@ -153,4 +153,18 @@ func.func @simple_if_yield_type_change(%arg2 : memref<10xf32, #spirv.storage_cla
   return
 }
 
+// Memrefs without a spirv storage class are not supported. The conversion
+// should preserve the `scf.if` and not crash.
+func.func @unsupported_yield_type(%arg0 : memref<8xi32>, %arg1 : memref<8xi32>, %c : i1) {
+// CHECK-LABEL: @unsupported_yield_type
+// CHECK-NEXT:    scf.if
+// CHECK:         spirv.Return
+  %r = scf.if %c -> (memref<8xi32>) {
+    scf.yield %arg0 : memref<8xi32>
+  } else {
+    scf.yield %arg1 : memref<8xi32>
+  }
+  return
+}
+
 } // end module

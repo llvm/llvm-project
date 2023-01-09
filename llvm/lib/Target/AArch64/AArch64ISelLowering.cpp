@@ -1687,6 +1687,30 @@ void AArch64TargetLowering::addTypeForStreamingSVE(MVT VT) {
   setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Legal);
   setOperationAction(ISD::BITCAST, VT, Legal);
 
+  // Mark integer truncating stores/extending loads as having custom lowering
+  if (VT.isInteger()) {
+    MVT InnerVT = VT.changeVectorElementType(MVT::i8);
+    while (InnerVT != VT) {
+      setTruncStoreAction(VT, InnerVT, Custom);
+      setLoadExtAction(ISD::ZEXTLOAD, VT, InnerVT, Custom);
+      setLoadExtAction(ISD::SEXTLOAD, VT, InnerVT, Custom);
+      InnerVT = InnerVT.changeVectorElementType(
+          MVT::getIntegerVT(2 * InnerVT.getScalarSizeInBits()));
+    }
+  }
+
+  // Mark floating-point truncating stores/extending loads as having custom
+  // lowering
+  if (VT.isFloatingPoint()) {
+    MVT InnerVT = VT.changeVectorElementType(MVT::f16);
+    while (InnerVT != VT) {
+      setTruncStoreAction(VT, InnerVT, Custom);
+      setLoadExtAction(ISD::EXTLOAD, VT, InnerVT, Custom);
+      InnerVT = InnerVT.changeVectorElementType(
+          MVT::getFloatingPointVT(2 * InnerVT.getScalarSizeInBits()));
+    }
+  }
+
   setOperationAction(ISD::ABS, VT, Custom);
   setOperationAction(ISD::ADD, VT, Custom);
   setOperationAction(ISD::AND, VT, Custom);
@@ -6079,7 +6103,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::MLOAD:
     return LowerMLOAD(Op, DAG);
   case ISD::LOAD:
-    if (useSVEForFixedLengthVectorVT(Op.getValueType()))
+    if (useSVEForFixedLengthVectorVT(Op.getValueType(),
+                                     Subtarget->forceStreamingCompatibleSVE()))
       return LowerFixedLengthVectorLoadToSVE(Op, DAG);
     return LowerLOAD(Op, DAG);
   case ISD::ADD:

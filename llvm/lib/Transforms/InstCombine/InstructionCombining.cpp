@@ -3316,6 +3316,12 @@ InstCombinerImpl::foldExtractOfOverflowIntrinsic(ExtractValueInst &EV) {
   if (OvID == Intrinsic::usub_with_overflow)
     return new ICmpInst(ICmpInst::ICMP_ULT, WO->getLHS(), WO->getRHS());
 
+  // smul with i1 types overflows when both sides are set: -1 * -1 == +1, but
+  // +1 is not possible because we assume signed values.
+  if (OvID == Intrinsic::smul_with_overflow &&
+      WO->getLHS()->getType()->isIntOrIntVectorTy(1))
+    return BinaryOperator::CreateAnd(WO->getLHS(), WO->getRHS());
+
   // If only the overflow result is used, and the right hand side is a
   // constant (or constant splat), we can remove the intrinsic by directly
   // checking for overflow.
