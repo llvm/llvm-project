@@ -89,7 +89,7 @@
 "`P2549R1 <https://wg21.link/P2549R1>`__","LWG","``std::unexpected`` should have ``error()`` as member accessor","July 2022","|Complete|","16.0"
 "`P2553R1 <https://wg21.link/P2553R1>`__","LWG","Make ``mdspan`` ``size_type`` controllable","July 2022","",""
 "`P2554R0 <https://wg21.link/P2554R0>`__","LWG","C-Array Interoperability of MDSpan","July 2022","",""
-"`P2585R0 <https://wg21.link/P2585R0>`__","LWG","Improving default container formatting","July 2022","",""
+"`P2585R0 <https://wg21.link/P2585R0>`__","LWG","Improving default container formatting","July 2022","|Partial|",""
 "`P2590R2 <https://wg21.link/P2590R2>`__","LWG","Explicit lifetime management","July 2022","",""
 "`P2599R2 <https://wg21.link/P2599R2>`__","LWG","``mdspan::size_type`` should be ``index_type``","July 2022","",""
 "`P2604R0 <https://wg21.link/P2604R0>`__","LWG","mdspan: rename pointer and contiguous","July 2022","",""
