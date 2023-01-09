@@ -176,8 +176,10 @@ static lto::Config createConfig() {
     };
   }
 
-  if (config->ltoEmitAsm)
+  if (config->ltoEmitAsm) {
     c.CGFileType = CGFT_AssemblyFile;
+    c.Options.MCOptions.AsmVerbose = true;
+  }
 
   if (!config->saveTempsArgs.empty())
     checkError(c.addSaveTemps(config->outputFile.str() + ".",
