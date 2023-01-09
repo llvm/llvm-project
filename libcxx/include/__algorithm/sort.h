@@ -17,7 +17,9 @@
 #include <__algorithm/partial_sort.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__assert>
-#include <__bits>
+#include <__bit/blsr.h>
+#include <__bit/countl.h>
+#include <__bit/countr.h>
 #include <__config>
 #include <__debug>
 #include <__debug_utils/randomize_range.h>

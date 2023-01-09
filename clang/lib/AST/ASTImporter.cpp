@@ -8683,6 +8683,7 @@ Expected<TypeSourceInfo *> ASTImporter::Import(TypeSourceInfo *FromTSI) {
   return ToContext.getTrivialTypeSourceInfo(*TOrErr, *BeginLocOrErr);
 }
 
+namespace {
 // To use this object, it should be created before the new attribute is created,
 // and destructed after it is created. The construction already performs the
 // import of the data.
@@ -8813,6 +8814,7 @@ public:
     return ToAttr;
   }
 };
+} // namespace
 
 Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
   AttrImporter AI(*this);

@@ -35,8 +35,8 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE ir<%lv.b> = load ir<%gep.b>
 ; CHECK-NEXT:     REPLICATE ir<%add> = add ir<%lv.b>, ir<10>
-; CHECK-NEXT:     REPLICATE ir<%mul> = mul ir<2>, ir<%add>
 ; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, vp<[[STEPS]]
+; CHECK-NEXT:     REPLICATE ir<%mul> = mul ir<2>, ir<%add>
 ; CHECK-NEXT:     REPLICATE store ir<%mul>, ir<%gep.a>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 
@@ -115,8 +115,8 @@ exit:
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:     REPLICATE ir<%add> = add vp<[[PRED]]>, ir<10>
 ; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%mul>
+; CHECK-NEXT:     REPLICATE ir<%add> = add vp<[[PRED]]>, ir<10>
 ; CHECK-NEXT:     REPLICATE store ir<%add>, ir<%gep.a>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 
@@ -868,8 +868,8 @@ define void @update_multiple_users(ptr noalias %src, ptr noalias %dst, i1 %c) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
 ; CHECK-NEXT:     REPLICATE ir<%l1> = load ir<%src>
-; CHECK-NEXT:     REPLICATE ir<%cmp> = icmp ir<%l1>, ir<0>
 ; CHECK-NEXT:     REPLICATE ir<%l2> = trunc ir<%l1>
+; CHECK-NEXT:     REPLICATE ir<%cmp> = icmp ir<%l1>, ir<0>
 ; CHECK-NEXT:     REPLICATE ir<%sel> = select ir<%cmp>, ir<5>, ir<%l2>
 ; CHECK-NEXT:     REPLICATE store ir<%sel>, ir<%dst>
 ; CHECK-NEXT:   Successor(s): pred.store.continue

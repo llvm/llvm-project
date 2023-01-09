@@ -13,7 +13,8 @@
 #include <__algorithm/copy_n.h>
 #include <__algorithm/fill_n.h>
 #include <__algorithm/min.h>
-#include <__bits>
+#include <__bit/countr.h>
+#include <__bit/popcount.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__memory/construct_at.h>

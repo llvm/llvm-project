@@ -947,6 +947,7 @@ static bool isMemModifiedBetween(BasicBlock::iterator Begin,
   });
 }
 
+namespace {
 /// Helper class to indicate whether a vector index can be safely scalarized and
 /// if a freeze needs to be inserted.
 class ScalarizationResult {
@@ -1001,6 +1002,7 @@ public:
     ToFreeze = nullptr;
   }
 };
+} // namespace
 
 /// Check if it is legal to scalarize a memory access to \p VecTy at index \p
 /// Idx. \p Idx must access a valid vector element.

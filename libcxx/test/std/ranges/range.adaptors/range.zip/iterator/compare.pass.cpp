@@ -163,7 +163,12 @@ constexpr bool test() {
     using Subrange = std::ranges::subrange<It>;
     static_assert(!std::three_way_comparable<It>);
     using R = std::ranges::zip_view<Subrange, Subrange>;
+#ifdef _LIBCPP_VERSION
+    // libc++ hasn't implemented LWG-3692 "zip_view::iterator's operator<=> is overconstrained"
     static_assert(!std::three_way_comparable<std::ranges::iterator_t<R>>);
+#else
+    static_assert(std::three_way_comparable<std::ranges::iterator_t<R>>);
+#endif
 
     int a[] = {1, 2, 3, 4};
     int b[] = {5, 6, 7, 8, 9};

@@ -159,8 +159,8 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP23:%.*]] = load i32, i32* [[TMP22]], align 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @c, i64 0, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP24]], align 4
-; CHECK-NEXT:    [[TMP26:%.*]] = and i32 [[TMP25]], [[TMP23]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i64 0, i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP26:%.*]] = and i32 [[TMP25]], [[TMP23]]
 ; CHECK-NEXT:    store i32 [[TMP26]], i32* [[TMP27]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE24]]
 ; CHECK:       pred.store.continue24:
@@ -172,8 +172,8 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP31:%.*]] = load i32, i32* [[TMP30]], align 4
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @c, i64 0, i64 [[TMP29]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = load i32, i32* [[TMP32]], align 4
-; CHECK-NEXT:    [[TMP34:%.*]] = and i32 [[TMP33]], [[TMP31]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i64 0, i64 [[TMP29]]
+; CHECK-NEXT:    [[TMP34:%.*]] = and i32 [[TMP33]], [[TMP31]]
 ; CHECK-NEXT:    store i32 [[TMP34]], i32* [[TMP35]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE26]]
 ; CHECK:       pred.store.continue26:
@@ -185,8 +185,8 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP39:%.*]] = load i32, i32* [[TMP38]], align 4
 ; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @c, i64 0, i64 [[TMP37]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = load i32, i32* [[TMP40]], align 4
-; CHECK-NEXT:    [[TMP42:%.*]] = and i32 [[TMP41]], [[TMP39]]
 ; CHECK-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i64 0, i64 [[TMP37]]
+; CHECK-NEXT:    [[TMP42:%.*]] = and i32 [[TMP41]], [[TMP39]]
 ; CHECK-NEXT:    store i32 [[TMP42]], i32* [[TMP43]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE28]]
 ; CHECK:       pred.store.continue28:
@@ -198,8 +198,8 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP47:%.*]] = load i32, i32* [[TMP46]], align 4
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @c, i64 0, i64 [[TMP45]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = load i32, i32* [[TMP48]], align 4
-; CHECK-NEXT:    [[TMP50:%.*]] = and i32 [[TMP49]], [[TMP47]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i64 0, i64 [[TMP45]]
+; CHECK-NEXT:    [[TMP50:%.*]] = and i32 [[TMP49]], [[TMP47]]
 ; CHECK-NEXT:    store i32 [[TMP50]], i32* [[TMP51]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE30]]
 ; CHECK:       pred.store.continue30:

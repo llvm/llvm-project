@@ -380,6 +380,8 @@ void AVRAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                MutableArrayRef<char> Data, uint64_t Value,
                                bool IsResolved,
                                const MCSubtargetInfo *STI) const {
+  if (Fixup.getKind() >= FirstLiteralRelocationKind)
+    return;
   adjustFixupValue(Fixup, Target, Value, &Asm.getContext());
   if (Value == 0)
     return; // Doesn't change encoding.
@@ -402,6 +404,21 @@ void AVRAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
     uint8_t mask = (((Value >> (i * 8)) & 0xff));
     Data[Offset + i] |= mask;
   }
+}
+
+std::optional<MCFixupKind> AVRAsmBackend::getFixupKind(StringRef Name) const {
+  unsigned Type;
+  Type = llvm::StringSwitch<unsigned>(Name)
+#define ELF_RELOC(X, Y) .Case(#X, Y)
+#include "llvm/BinaryFormat/ELFRelocs/AVR.def"
+#undef ELF_RELOC
+             .Case("BFD_RELOC_NONE", ELF::R_AVR_NONE)
+             .Case("BFD_RELOC_16", ELF::R_AVR_16)
+             .Case("BFD_RELOC_32", ELF::R_AVR_32)
+             .Default(-1u);
+  if (Type != -1u)
+    return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
+  return std::nullopt;
 }
 
 MCFixupKindInfo const &AVRAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
@@ -463,6 +480,11 @@ MCFixupKindInfo const &AVRAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_port5", 3, 5, 0},
   };
 
+  // Fixup kinds from .reloc directive are like R_AVR_NONE. They do not require
+  // any extra processing.
+  if (Kind >= FirstLiteralRelocationKind)
+    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
@@ -488,7 +510,7 @@ bool AVRAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                           const MCValue &Target) {
   switch ((unsigned)Fixup.getKind()) {
   default:
-    return false;
+    return Fixup.getKind() >= FirstLiteralRelocationKind;
   // Fixups which should always be recorded as relocations.
   case AVR::fixup_7_pcrel:
   case AVR::fixup_13_pcrel:
