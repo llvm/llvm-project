@@ -597,6 +597,16 @@ MachineInstrBuilder MachineIRBuilder::buildUndef(const DstOp &Res) {
   return buildInstr(TargetOpcode::G_IMPLICIT_DEF, {Res}, {});
 }
 
+MachineInstrBuilder MachineIRBuilder::buildMergeValues(const DstOp &Res,
+                                                       ArrayRef<Register> Ops) {
+  // Unfortunately to convert from ArrayRef<LLT> to ArrayRef<SrcOp>,
+  // we need some temporary storage for the DstOp objects. Here we use a
+  // sufficiently large SmallVector to not go through the heap.
+  SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
+  assert(TmpVec.size() > 1);
+  return buildInstr(TargetOpcode::G_MERGE_VALUES, Res, TmpVec);
+}
+
 MachineInstrBuilder
 MachineIRBuilder::buildMergeLikeInstr(const DstOp &Res,
                                       ArrayRef<Register> Ops) {
