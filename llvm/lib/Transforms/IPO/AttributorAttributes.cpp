@@ -11228,7 +11228,7 @@ struct AAUnderlyingObjectsImpl
 
     auto DoUpdate = [&](SmallSetVector<Value *, 8> &UnderlyingObjects,
                         AA::ValueScope Scope) {
-      bool UsedAssumedInformation;
+      bool UsedAssumedInformation = false;
       SmallPtrSet<Value *, 8> SeenObjects;
       SmallVector<AA::ValueAndContext> Values;
 
