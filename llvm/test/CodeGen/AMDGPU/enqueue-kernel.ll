@@ -121,13 +121,13 @@ attributes #0 = { "enqueued-block" }
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@caller_indirect
-; CHECK-SAME: (ptr addrspace(1) [[A:%.*]], i8 [[B:%.*]], ptr addrspace(1) [[C:%.*]], i64 [[D:%.*]]) {
+; CHECK-SAME: (ptr addrspace(1) [[A:%.*]], i8 [[B:%.*]], ptr addrspace(1) [[C:%.*]], i64 [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    call void @caller(ptr addrspace(1) [[A]], i8 [[B]], ptr addrspace(1) [[C]], i64 [[D]])
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@caller
-; CHECK-SAME: (ptr addrspace(1) [[A:%.*]], i8 [[B:%.*]], ptr addrspace(1) [[C:%.*]], i64 [[D:%.*]]) {
+; CHECK-SAME: (ptr addrspace(1) [[A:%.*]], i8 [[B:%.*]], ptr addrspace(1) [[C:%.*]], i64 [[D:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BLOCK:%.*]] = alloca <{ i32, i32, ptr addrspace(1), i8 }>, align 8, addrspace(5)
 ; CHECK-NEXT:    [[INST:%.*]] = alloca [[STRUCT_NDRANGE_T:%.*]], align 4, addrspace(5)
@@ -164,7 +164,7 @@ attributes #0 = { "enqueued-block" }
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@inlined_caller
-; CHECK-SAME: (ptr addrspace(1) [[A:%.*]], i8 [[B:%.*]], ptr addrspace(1) [[C:%.*]], i64 [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr addrspace(1) [[A:%.*]], i8 [[B:%.*]], ptr addrspace(1) [[C:%.*]], i64 [[D:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[INST:%.*]] = load i64, ptr addrspace(1) @__test_block_invoke_kernel.runtime_handle, align 4
 ; CHECK-NEXT:    store i64 [[INST]], ptr addrspace(1) [[C]], align 4
@@ -202,7 +202,7 @@ attributes #0 = { "enqueued-block" }
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@user_of_kernel_address
-; CHECK-SAME: (ptr addrspace(1) [[ARG:%.*]]) {
+; CHECK-SAME: (ptr addrspace(1) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    store ptr addrspacecast (ptr addrspace(1) @block_has_used_kernel_address.runtime_handle to ptr), ptr addrspace(1) [[ARG]], align 8
 ; CHECK-NEXT:    ret void
 ;

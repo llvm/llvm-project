@@ -93,10 +93,8 @@ static void collectFunctionUsers(User *U, DenseSet<Function *> &Funcs) {
       collectCallers(F, Funcs);
     return;
   }
-  if (!isa<Constant>(U))
-    return;
-  for (auto *UU : U->users())
-    collectFunctionUsers(&*UU, Funcs);
+  for (User *U : U->users())
+    collectFunctionUsers(U, Funcs);
 }
 
 bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
@@ -133,12 +131,8 @@ bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
           /*isExternallyInitialized=*/false);
       LLVM_DEBUG(dbgs() << "runtime handle created: " << *GV << '\n');
 
-      for (auto *U : F.users()) {
-        auto *UU = &*U;
-
-        if (isa<Constant>(UU))
-          collectFunctionUsers(UU, Callers);
-      }
+      for (User *U : F.users())
+        collectFunctionUsers(U, Callers);
 
       F.replaceAllUsesWith(ConstantExpr::getAddrSpaceCast(GV, F.getType()));
       F.addFnAttr("runtime-handle", RuntimeHandle);
