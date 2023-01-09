@@ -289,7 +289,7 @@ define void @xchg_unused_release(ptr %addr) {
 
 define void @xchg_unused_under_aligned(ptr %addr) {
 ; CHECK-LABEL: @xchg_unused_under_aligned(
-; CHECK-NEXT:    store atomic i32 -1, ptr [[ADDR:%.*]] release, align 4
+; CHECK-NEXT:    store atomic i32 -1, ptr [[ADDR:%.*]] release, align 1
 ; CHECK-NEXT:    ret void
 ;
   atomicrmw xchg ptr %addr, i32 -1 release, align 1
@@ -298,7 +298,7 @@ define void @xchg_unused_under_aligned(ptr %addr) {
 
 define void @xchg_unused_over_aligned(ptr %addr) {
 ; CHECK-LABEL: @xchg_unused_over_aligned(
-; CHECK-NEXT:    store atomic i32 -1, ptr [[ADDR:%.*]] release, align 4
+; CHECK-NEXT:    store atomic i32 -1, ptr [[ADDR:%.*]] release, align 8
 ; CHECK-NEXT:    ret void
 ;
   atomicrmw xchg ptr %addr, i32 -1 release, align 8
