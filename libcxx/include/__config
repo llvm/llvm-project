@@ -1055,6 +1055,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_FALLTHROUGH() ((void)0)
 #  endif
 
+#  if __has_cpp_attribute(_Clang::__lifetimebound__)
+#    define _LIBCPP_LIFETIMEBOUND [[_Clang::__lifetimebound__]]
+#  else
+#    define _LIBCPP_LIFETIMEBOUND
+#  endif
+
 #  if __has_attribute(__nodebug__)
 #    define _LIBCPP_NODEBUG __attribute__((__nodebug__))
 #  else
