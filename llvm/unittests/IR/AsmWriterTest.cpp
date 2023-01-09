@@ -62,4 +62,23 @@ TEST(AsmWriterTest, DumpDIExpression) {
             OS.str());
 }
 
+TEST(AsmWriterTest, PrintAddrspaceWithNullOperand) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M;
+  SmallVector<Type *, 3> FArgTypes;
+  FArgTypes.push_back(Type::getInt64Ty(Ctx));
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx), FArgTypes, false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "", M.get());
+  Argument *Arg0 = F->getArg(0);
+  Value *Args[] = {Arg0};
+  std::unique_ptr<CallInst> Call(CallInst::Create(F, Args));
+  // This will make Call's operand null.
+  Call->dropAllReferences();
+
+  std::string S;
+  raw_string_ostream OS(S);
+  Call->print(OS);
+  std::size_t r = OS.str().find("<cannot get addrspace!>");
+  EXPECT_TRUE(r != std::string::npos);
+}
 }
