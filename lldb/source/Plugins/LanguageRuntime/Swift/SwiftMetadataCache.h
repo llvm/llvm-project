@@ -10,7 +10,7 @@
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/OnDiskHashTable.h"
 
-#include "swift/Reflection/ReflectionContext.h"
+#include "swift/RemoteInspection/ReflectionContext.h"
 #include "swift/Remote/ExternalTypeRefCache.h"
 
 namespace lldb_private {
