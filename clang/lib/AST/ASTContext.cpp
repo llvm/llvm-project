@@ -1507,6 +1507,12 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/RISCVVTypes.def"
   }
 
+  if (Target.getTriple().isWasm() && Target.hasFeature("reference-types")) {
+#define WASM_TYPE(Name, Id, SingletonId)                                       \
+  InitBuiltinType(SingletonId, BuiltinType::Id);
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
+  }
+
   // Builtin type for __objc_yes and __objc_no
   ObjCBuiltinBoolTy = (Target.useSignedCharForObjCBool() ?
                        SignedCharTy : BoolTy);
@@ -2335,6 +2341,12 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Align = 8;                                                                 \
     break;
 #include "clang/Basic/RISCVVTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId)                                       \
+  case BuiltinType::Id:                                                        \
+    Width = 0;                                                                 \
+    Align = 8;                                                                 \
+    break;
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
     }
     break;
   case Type::ObjCObjectPointer:
@@ -4070,6 +4082,18 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
     return {BoolTy, llvm::ElementCount::getScalable(NumEls), 1};
 #include "clang/Basic/RISCVVTypes.def"
   }
+}
+
+/// getExternrefType - Return a WebAssembly externref type, which represents an
+/// opaque reference to a host value.
+QualType ASTContext::getWebAssemblyExternrefType() const {
+  if (Target->getTriple().isWasm() && Target->hasFeature("reference-types")) {
+#define WASM_REF_TYPE(Name, MangledName, Id, SingletonId, AS)                  \
+  if (BuiltinType::Id == BuiltinType::WasmExternRef)                           \
+    return SingletonId;
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
+  }
+  assert(false && "shouldn't try to generate type externref outside WebAssembly target");
 }
 
 /// getScalableVectorType - Return the unique reference to a scalable vector
@@ -8111,6 +8135,8 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
       {
         DiagnosticsEngine &Diags = C->getDiagnostics();
         unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
