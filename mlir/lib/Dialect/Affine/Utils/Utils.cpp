@@ -428,7 +428,7 @@ LogicalResult mlir::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
   // canonicalization is missing composition of affine.applys into it.
   assert(llvm::all_of(ifOp.getOperands(),
                       [](Value v) {
-                        return isTopLevelValue(v) || isForInductionVar(v);
+                        return isTopLevelValue(v) || isAffineForInductionVar(v);
                       }) &&
          "operands not composed");
 

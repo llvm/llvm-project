@@ -576,7 +576,7 @@ void FlatAffineValueConstraints::addInductionVarOrTerminalSymbol(Value val) {
     return;
 
   // Caller is expected to fully compose map/operands if necessary.
-  assert((isTopLevelValue(val) || isForInductionVar(val)) &&
+  assert((isTopLevelValue(val) || isAffineForInductionVar(val)) &&
          "non-terminal symbol / loop IV expected");
   // Outer loop IVs could be used in forOp's bounds.
   if (auto loop = getForInductionVarOwner(val)) {
