@@ -24,10 +24,6 @@ public:
   constexpr R operator()(Args... params) { return func(params...); }
 };
 
-template <class T> struct minus {
-  constexpr T operator()(const T &lhs, const T &rhs) const { return lhs - rhs; }
-};
-
 } // namespace cpp
 } // namespace __llvm_libc
 
