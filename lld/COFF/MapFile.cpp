@@ -63,8 +63,7 @@ static void writeFormattedTimestamp(raw_ostream &os, time_t tds) {
                time->tm_sec, time->tm_year + 1900);
 }
 
-static void sortUniqueSymbols(std::vector<Defined *> &syms,
-                              uint64_t imageBase) {
+static void sortUniqueSymbols(std::vector<Defined *> &syms) {
   // Build helper vector
   using SortEntry = std::pair<Defined *, size_t>;
   std::vector<SortEntry> v;
@@ -81,11 +80,11 @@ static void sortUniqueSymbols(std::vector<Defined *> &syms,
   v.erase(end, v.end());
 
   // Sort by RVA then original order
-  parallelSort(v, [imageBase](const SortEntry &a, const SortEntry &b) {
-    // Add config.imageBase to avoid comparing "negative" RVAs.
+  parallelSort(v, [](const SortEntry &a, const SortEntry &b) {
+    // Add config->imageBase to avoid comparing "negative" RVAs.
     // This can happen with symbols of Absolute kind
-    uint64_t rvaa = imageBase + a.first->getRVA();
-    uint64_t rvab = imageBase + b.first->getRVA();
+    uint64_t rvaa = config->imageBase + a.first->getRVA();
+    uint64_t rvab = config->imageBase + b.first->getRVA();
     return rvaa < rvab || (rvaa == rvab && a.second < b.second);
   });
 
@@ -134,8 +133,8 @@ static void getSymbols(const COFFLinkerContext &ctx,
       syms.push_back(impSym);
   }
 
-  sortUniqueSymbols(syms, ctx.config.imageBase);
-  sortUniqueSymbols(staticSyms, ctx.config.imageBase);
+  sortUniqueSymbols(syms);
+  sortUniqueSymbols(staticSyms);
 }
 
 // Construct a map from symbols to their stringified representations.
@@ -185,7 +184,7 @@ getSymbolStrings(const COFFLinkerContext &ctx, ArrayRef<Defined *> syms) {
     os << "       ";
     os << left_justify(sym->getName(), 26);
     os << " ";
-    os << format_hex_no_prefix((ctx.config.imageBase + sym->getRVA()), 16);
+    os << format_hex_no_prefix((config->imageBase + sym->getRVA()), 16);
     if (!fileDescr.empty()) {
       os << "     "; // FIXME : Handle "f" and "i" flags sometimes generated
                      // by link.exe in those spaces
@@ -200,13 +199,13 @@ getSymbolStrings(const COFFLinkerContext &ctx, ArrayRef<Defined *> syms) {
 }
 
 void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
-  if (ctx.config.mapFile.empty())
+  if (config->mapFile.empty())
     return;
 
   std::error_code ec;
-  raw_fd_ostream os(ctx.config.mapFile, ec, sys::fs::OF_None);
+  raw_fd_ostream os(config->mapFile, ec, sys::fs::OF_None);
   if (ec)
-    fatal("cannot open " + ctx.config.mapFile + ": " + ec.message());
+    fatal("cannot open " + config->mapFile + ": " + ec.message());
 
   ScopedTimer t1(ctx.totalMapTimer);
 
@@ -224,25 +223,24 @@ void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
   t3.stop();
 
   ScopedTimer t4(ctx.writeTimer);
-  SmallString<128> AppName = sys::path::filename(ctx.config.outputFile);
+  SmallString<128> AppName = sys::path::filename(config->outputFile);
   sys::path::replace_extension(AppName, "");
 
   // Print out the file header
   os << " " << AppName << "\n";
   os << "\n";
 
-  os << " Timestamp is " << format_hex_no_prefix(ctx.config.timestamp, 8)
-     << " (";
-  if (ctx.config.repro) {
+  os << " Timestamp is " << format_hex_no_prefix(config->timestamp, 8) << " (";
+  if (config->repro) {
     os << "Repro mode";
   } else {
-    writeFormattedTimestamp(os, ctx.config.timestamp);
+    writeFormattedTimestamp(os, config->timestamp);
   }
   os << ")\n";
 
   os << "\n";
   os << " Preferred load address is "
-     << format_hex_no_prefix(ctx.config.imageBase, 16) << "\n";
+     << format_hex_no_prefix(config->imageBase, 16) << "\n";
   os << "\n";
 
   // Print out section table.
@@ -297,8 +295,8 @@ void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
   uint16_t entrySecIndex = 0;
   uint64_t entryAddress = 0;
 
-  if (!ctx.config.noEntry) {
-    Defined *entry = dyn_cast_or_null<Defined>(ctx.config.entry);
+  if (!config->noEntry) {
+    Defined *entry = dyn_cast_or_null<Defined>(config->entry);
     if (entry) {
       Chunk *chunk = entry->getChunk();
       entrySecIndex = chunk->getOutputSectionIdx();
@@ -318,12 +316,12 @@ void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
     os << staticSymStr[sym] << '\n';
 
   // Print out the exported functions
-  if (ctx.config.mapInfo) {
+  if (config->mapInfo) {
     os << "\n";
     os << " Exports\n";
     os << "\n";
     os << "  ordinal    name\n\n";
-    for (Export &e : ctx.config.exports) {
+    for (Export &e : config->exports) {
       os << format("  %7d", e.ordinal) << "    " << e.name << "\n";
       if (!e.extName.empty() && e.extName != e.name)
         os << "               exported name: " << e.extName << "\n";

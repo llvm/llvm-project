@@ -28,7 +28,6 @@
 #include <vector>
 
 namespace llvm::lto {
-struct Config;
 class LTO;
 }
 
@@ -40,11 +39,11 @@ class COFFLinkerContext;
 
 class BitcodeCompiler {
 public:
-  BitcodeCompiler(COFFLinkerContext &ctx);
+  BitcodeCompiler();
   ~BitcodeCompiler();
 
   void add(BitcodeFile &f);
-  std::vector<InputFile *> compile();
+  std::vector<InputFile *> compile(COFFLinkerContext &ctx);
 
 private:
   std::unique_ptr<llvm::lto::LTO> ltoObj;
@@ -53,11 +52,6 @@ private:
   std::vector<std::string> file_names;
   std::unique_ptr<llvm::raw_fd_ostream> indexFile;
   llvm::DenseSet<StringRef> thinIndices;
-
-  std::string getThinLTOOutputFile(StringRef path);
-  llvm::lto::Config createConfig();
-
-  COFFLinkerContext &ctx;
 };
 }
 

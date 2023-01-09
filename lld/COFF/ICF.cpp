@@ -38,7 +38,7 @@ namespace lld::coff {
 
 class ICF {
 public:
-  ICF(COFFLinkerContext &c) : ctx(c){};
+  ICF(COFFLinkerContext &c, ICFLevel icfLevel) : icfLevel(icfLevel), ctx(c){};
   void run();
 
 private:
@@ -61,6 +61,7 @@ private:
   std::vector<SectionChunk *> chunks;
   int cnt = 0;
   std::atomic<bool> repeat = {false};
+  ICFLevel icfLevel = ICFLevel::All;
 
   COFFLinkerContext &ctx;
 };
@@ -83,7 +84,7 @@ bool ICF::isEligible(SectionChunk *c) {
     return false;
 
   // Under regular (not safe) ICF, all code sections are eligible.
-  if ((ctx.config.doICF == ICFLevel::All) &&
+  if ((icfLevel == ICFLevel::All) &&
       c->getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_EXECUTE)
     return true;
 
@@ -316,6 +317,8 @@ void ICF::run() {
 }
 
 // Entry point to ICF.
-void doICF(COFFLinkerContext &ctx) { ICF(ctx).run(); }
+void doICF(COFFLinkerContext &ctx, ICFLevel icfLevel) {
+  ICF(ctx, icfLevel).run();
+}
 
 } // namespace lld::coff

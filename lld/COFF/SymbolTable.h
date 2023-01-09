@@ -47,7 +47,7 @@ class Symbol;
 // There is one add* function per symbol type.
 class SymbolTable {
 public:
-  SymbolTable(COFFLinkerContext &c) : ctx(c) {}
+  SymbolTable(COFFLinkerContext &ctx) : ctx(ctx) {}
 
   void addFile(InputFile *file);
 
