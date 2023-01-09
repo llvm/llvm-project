@@ -17,7 +17,7 @@
 // RUN: cat %t.output
 // RUN: cat %t.output | wc -l | grep -Fxq 1
 
-// RUN: clang-query -f %S/clang_query/abi_tag_on_virtual.query %s --use-color -- -Wno-unknown-warning-option %{compile_flags} -fno-modules > %t.output
+// RUN: %{clang-query} -f %S/clang_query/abi_tag_on_virtual.query %s --use-color -- -Wno-unknown-warning-option %{compile_flags} -fno-modules > %t.output
 // RUN: cat %t.output
 // RUN: cat %t.output | wc -l | grep -Fxq 1
 
