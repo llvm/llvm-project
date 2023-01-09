@@ -523,9 +523,7 @@ define i8 @test_scalar_usub_combine(i8 %a) {
 ; Can simplify zero check followed by decrement
 define i8 @test_simplify_decrement(i8 %a) {
 ; CHECK-LABEL: @test_simplify_decrement(
-; CHECK-NEXT:    [[I:%.*]] = icmp eq i8 [[A:%.*]], 0
-; CHECK-NEXT:    [[I1:%.*]] = add i8 [[A]], -1
-; CHECK-NEXT:    [[I2:%.*]] = select i1 [[I]], i8 0, i8 [[I1]]
+; CHECK-NEXT:    [[I2:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 1)
 ; CHECK-NEXT:    ret i8 [[I2]]
 ;
   %i = icmp eq i8 %a, 0
@@ -540,8 +538,7 @@ define i8 @test_simplify_decrement_ne(i8 %a) {
 ; CHECK-LABEL: @test_simplify_decrement_ne(
 ; CHECK-NEXT:    [[I:%.*]] = icmp ne i8 [[A:%.*]], 0
 ; CHECK-NEXT:    call void @use.i1(i1 [[I]])
-; CHECK-NEXT:    [[I1:%.*]] = add i8 [[A]], -1
-; CHECK-NEXT:    [[I2:%.*]] = select i1 [[I]], i8 [[I1]], i8 0
+; CHECK-NEXT:    [[I2:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A]], i8 1)
 ; CHECK-NEXT:    ret i8 [[I2]]
 ;
   %i = icmp ne i8 %a, 0
@@ -553,9 +550,7 @@ define i8 @test_simplify_decrement_ne(i8 %a) {
 
 define <2 x i8> @test_simplify_decrement_vec(<2 x i8> %a) {
 ; CHECK-LABEL: @test_simplify_decrement_vec(
-; CHECK-NEXT:    [[I:%.*]] = icmp eq <2 x i8> [[A:%.*]], zeroinitializer
-; CHECK-NEXT:    [[I1:%.*]] = add <2 x i8> [[A]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[I2:%.*]] = select <2 x i1> [[I]], <2 x i8> zeroinitializer, <2 x i8> [[I1]]
+; CHECK-NEXT:    [[I2:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 1, i8 1>)
 ; CHECK-NEXT:    ret <2 x i8> [[I2]]
 ;
   %i = icmp eq <2 x i8> %a, <i8 0, i8 0>
@@ -566,9 +561,7 @@ define <2 x i8> @test_simplify_decrement_vec(<2 x i8> %a) {
 
 define <2 x i8> @test_simplify_decrement_vec_undef(<2 x i8> %a) {
 ; CHECK-LABEL: @test_simplify_decrement_vec_undef(
-; CHECK-NEXT:    [[I:%.*]] = icmp eq <2 x i8> [[A:%.*]], zeroinitializer
-; CHECK-NEXT:    [[I1:%.*]] = add <2 x i8> [[A]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[I2:%.*]] = select <2 x i1> [[I]], <2 x i8> <i8 0, i8 undef>, <2 x i8> [[I1]]
+; CHECK-NEXT:    [[I2:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 1, i8 1>)
 ; CHECK-NEXT:    ret <2 x i8> [[I2]]
 ;
   %i = icmp eq <2 x i8> %a, <i8 0, i8 0>
