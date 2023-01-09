@@ -2913,6 +2913,33 @@ bool X86InstrInfo::isUnconditionalTailCall(const MachineInstr &MI) const {
   }
 }
 
+bool X86InstrInfo::isFarCall(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case X86::FARCALL16i:
+  case X86::FARCALL16m:
+  case X86::FARCALL32i:
+  case X86::FARCALL32m:
+  case X86::FARCALL64m:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool X86InstrInfo::isFarRet(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case X86::LRET16:
+  case X86::LRET32:
+  case X86::LRET64:
+  case X86::LRETI16:
+  case X86::LRETI32:
+  case X86::LRETI64:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool X86InstrInfo::canMakeTailCallConditional(
     SmallVectorImpl<MachineOperand> &BranchCond,
     const MachineInstr &TailCall) const {
