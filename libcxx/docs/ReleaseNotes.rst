@@ -140,6 +140,10 @@ Upcoming Deprecations and Removals
   and such a base template is bound to be incorrect for some types, which could currently cause unexpected
   behavior while going undetected.
 
+- The ``_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED`` macro will not be honored anymore in LLVM 18.
+  Please see the updated documentation about the safe libc++ mode and in particular the ``_LIBCPP_VERBOSE_ABORT``
+  macro for details.
+
 API Changes
 -----------
 - The comparison operators on ``thread::id`` are now defined as free-standing
