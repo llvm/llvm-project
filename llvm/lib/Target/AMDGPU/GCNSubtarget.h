@@ -129,7 +129,7 @@ protected:
   bool HasImageInsts = false;
   bool HasExtendedImageInsts = false;
   bool HasR128A16 = false;
-  bool HasGFX10A16 = false;
+  bool HasA16 = false;
   bool HasG16 = false;
   bool HasNSAEncoding = false;
   unsigned NSAMaxSize = 0;
@@ -900,11 +900,7 @@ public:
     return HasR128A16;
   }
 
-  bool hasGFX10A16() const {
-    return HasGFX10A16;
-  }
-
-  bool hasA16() const { return hasR128A16() || hasGFX10A16(); }
+  bool hasA16() const { return HasA16; }
 
   bool hasG16() const { return HasG16; }
 

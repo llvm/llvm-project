@@ -4620,7 +4620,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       if (ST.hasR128A16()) {
         const MachineOperand *R128A16 = getNamedOperand(MI, AMDGPU::OpName::r128);
         IsA16 = R128A16->getImm() != 0;
-      } else if (ST.hasGFX10A16()) {
+      } else if (ST.hasA16()) {
         const MachineOperand *A16 = getNamedOperand(MI, AMDGPU::OpName::a16);
         IsA16 = A16->getImm() != 0;
       }
