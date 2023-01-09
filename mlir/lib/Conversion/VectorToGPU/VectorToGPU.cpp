@@ -742,8 +742,6 @@ convertTransferReadToLoads(vector::TransferReadOp op,
   if (failed(warpMatrixInfo))
     return failure();
 
-  Attribute memorySpace =
-      op.getSource().getType().cast<MemRefType>().getMemorySpace();
   bool isLdMatrixCompatible =
       isSharedMemory(op.getSource().getType().cast<MemRefType>()) &&
       nvgpu::inferTileWidthInBits(*warpMatrixInfo) == 128;
