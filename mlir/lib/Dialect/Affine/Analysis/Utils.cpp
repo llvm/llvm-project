@@ -31,9 +31,7 @@ using namespace presburger;
 
 using llvm::SmallDenseMap;
 
-/// Populates 'loops' with IVs of the loops surrounding 'op' ordered from
-/// the outermost 'affine.for' operation to the innermost one.
-void mlir::getLoopIVs(Operation &op, SmallVectorImpl<AffineForOp> *loops) {
+void mlir::getAffineForIVs(Operation &op, SmallVectorImpl<AffineForOp> *loops) {
   auto *currOp = op.getParentOp();
   AffineForOp currAffineForOp;
   // Traverse up the hierarchy collecting all 'affine.for' operation while
@@ -460,7 +458,7 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   // 0-d memrefs.
   if (rank == 0) {
     SmallVector<AffineForOp, 4> ivs;
-    getLoopIVs(*op, &ivs);
+    getAffineForIVs(*op, &ivs);
     assert(loopDepth <= ivs.size() && "invalid 'loopDepth'");
     // The first 'loopDepth' IVs are symbols for this region.
     ivs.resize(loopDepth);
@@ -554,7 +552,7 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   // Eliminate any loop IVs other than the outermost 'loopDepth' IVs, on which
   // this memref region is symbolic.
   SmallVector<AffineForOp, 4> enclosingIVs;
-  getLoopIVs(*op, &enclosingIVs);
+  getAffineForIVs(*op, &enclosingIVs);
   assert(loopDepth <= enclosingIVs.size() && "invalid loop depth");
   enclosingIVs.resize(loopDepth);
   SmallVector<Value, 4> vars;
@@ -763,7 +761,7 @@ static LogicalResult addMissingLoopIVBounds(SmallPtrSet<Value, 8> &ivs,
   for (unsigned i = 0, e = cst->getNumDimVars(); i < e; ++i) {
     auto value = cst->getValue(i);
     if (ivs.count(value) == 0) {
-      assert(isForInductionVar(value));
+      assert(isAffineForInductionVar(value));
       auto loop = getForInductionVarOwner(value);
       if (failed(cst->addAffineForOpDomain(loop)))
         return failure();
@@ -782,7 +780,7 @@ unsigned mlir::getInnermostCommonLoopDepth(
   std::vector<SmallVector<AffineForOp, 4>> loops(numOps);
   unsigned loopDepthLimit = std::numeric_limits<unsigned>::max();
   for (unsigned i = 0; i < numOps; ++i) {
-    getLoopIVs(*ops[i], &loops[i]);
+    getAffineForIVs(*ops[i], &loops[i]);
     loopDepthLimit =
         std::min(loopDepthLimit, static_cast<unsigned>(loops[i].size()));
   }
@@ -1046,12 +1044,12 @@ void mlir::getComputationSliceState(
     bool isBackwardSlice, ComputationSliceState *sliceState) {
   // Get loop nest surrounding src operation.
   SmallVector<AffineForOp, 4> srcLoopIVs;
-  getLoopIVs(*depSourceOp, &srcLoopIVs);
+  getAffineForIVs(*depSourceOp, &srcLoopIVs);
   unsigned numSrcLoopIVs = srcLoopIVs.size();
 
   // Get loop nest surrounding dst operation.
   SmallVector<AffineForOp, 4> dstLoopIVs;
-  getLoopIVs(*depSinkOp, &dstLoopIVs);
+  getAffineForIVs(*depSinkOp, &dstLoopIVs);
   unsigned numDstLoopIVs = dstLoopIVs.size();
 
   assert((!isBackwardSlice && loopDepth <= numSrcLoopIVs) ||
@@ -1160,12 +1158,12 @@ mlir::insertBackwardComputationSlice(Operation *srcOpInst, Operation *dstOpInst,
                                      ComputationSliceState *sliceState) {
   // Get loop nest surrounding src operation.
   SmallVector<AffineForOp, 4> srcLoopIVs;
-  getLoopIVs(*srcOpInst, &srcLoopIVs);
+  getAffineForIVs(*srcOpInst, &srcLoopIVs);
   unsigned numSrcLoopIVs = srcLoopIVs.size();
 
   // Get loop nest surrounding dst operation.
   SmallVector<AffineForOp, 4> dstLoopIVs;
-  getLoopIVs(*dstOpInst, &dstLoopIVs);
+  getAffineForIVs(*dstOpInst, &dstLoopIVs);
   unsigned dstLoopIVsSize = dstLoopIVs.size();
   if (dstLoopDepth > dstLoopIVsSize) {
     dstOpInst->emitError("invalid destination loop depth");
@@ -1188,7 +1186,7 @@ mlir::insertBackwardComputationSlice(Operation *srcOpInst, Operation *dstOpInst,
       getInstAtPosition(positions, /*level=*/0, sliceLoopNest.getBody());
   // Get loop nest surrounding 'sliceInst'.
   SmallVector<AffineForOp, 4> sliceSurroundingLoops;
-  getLoopIVs(*sliceInst, &sliceSurroundingLoops);
+  getAffineForIVs(*sliceInst, &sliceSurroundingLoops);
 
   // Sanity check.
   unsigned sliceSurroundingLoopsSize = sliceSurroundingLoops.size();
@@ -1264,17 +1262,34 @@ bool MemRefAccess::operator==(const MemRefAccess &rhs) const {
                       [](AffineExpr e) { return e == 0; });
 }
 
+/// Populates 'loops' with IVs of the surrounding affine.for and affine.parallel
+/// ops ordered from the outermost one to the innermost.
+static void getAffineIVs(Operation &op, SmallVectorImpl<Value> &loops) {
+  auto *currOp = op.getParentOp();
+  AffineForOp currAffineForOp;
+  // Traverse up the hierarchy collecting all 'affine.for' operation while
+  // skipping over 'affine.if' operations.
+  while (currOp) {
+    if (AffineForOp currAffineForOp = dyn_cast<AffineForOp>(currOp))
+      loops.push_back(currAffineForOp.getInductionVar());
+    else if (auto parOp = dyn_cast<AffineParallelOp>(currOp))
+      llvm::append_range(loops, parOp.getIVs());
+    currOp = currOp->getParentOp();
+  }
+  std::reverse(loops.begin(), loops.end());
+}
+
 /// Returns the number of surrounding loops common to 'loopsA' and 'loopsB',
 /// where each lists loops from outer-most to inner-most in loop nest.
 unsigned mlir::getNumCommonSurroundingLoops(Operation &a, Operation &b) {
-  SmallVector<AffineForOp, 4> loopsA, loopsB;
-  getLoopIVs(a, &loopsA);
-  getLoopIVs(b, &loopsB);
+  SmallVector<Value, 4> loopsA, loopsB;
+  getAffineIVs(a, loopsA);
+  getAffineIVs(b, loopsB);
 
   unsigned minNumLoops = std::min(loopsA.size(), loopsB.size());
   unsigned numCommonLoops = 0;
   for (unsigned i = 0; i < minNumLoops; ++i) {
-    if (loopsA[i].getOperation() != loopsB[i].getOperation())
+    if (loopsA[i] != loopsB[i])
       break;
     ++numCommonLoops;
   }

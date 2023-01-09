@@ -864,7 +864,7 @@ bool MemRefDependenceGraph::init(Block *block) {
             block)
           continue;
         SmallVector<AffineForOp, 4> loops;
-        getLoopIVs(*user, &loops);
+        getAffineForIVs(*user, &loops);
         if (loops.empty())
           continue;
         assert(forToNodeMap.count(loops[0]) > 0 && "missing mapping");
@@ -1140,7 +1140,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
 
   // Compute cost of sliced and unsliced src loop nest.
   SmallVector<AffineForOp, 4> srcLoopIVs;
-  getLoopIVs(*srcOpInst, &srcLoopIVs);
+  getAffineForIVs(*srcOpInst, &srcLoopIVs);
 
   // Walk src loop nest and collect stats.
   LoopNestStats srcLoopNestStats;
@@ -1790,7 +1790,7 @@ public:
       dstNode->getLoadOpsForMemref(memref, &dstLoadOpInsts);
 
       SmallVector<AffineForOp, 4> dstLoopIVs;
-      getLoopIVs(*dstLoadOpInsts[0], &dstLoopIVs);
+      getAffineForIVs(*dstLoadOpInsts[0], &dstLoopIVs);
       unsigned dstLoopDepthTest = dstLoopIVs.size();
       auto sibAffineForOp = cast<AffineForOp>(sibNode->op);
 
@@ -1897,7 +1897,7 @@ public:
           continue;
         // Gather loops surrounding 'use'.
         SmallVector<AffineForOp, 4> loops;
-        getLoopIVs(*user, &loops);
+        getAffineForIVs(*user, &loops);
         // Skip 'use' if it is not within a loop nest.
         if (loops.empty())
           continue;
