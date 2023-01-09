@@ -994,3 +994,98 @@ func.func @vector_insertelement_0d(%laneid: index) -> (vector<f32>) {
   }
   return %r : vector<f32>
 }
+
+// -----
+
+// CHECK-PROP-LABEL: func @vector_insert_1d(
+//  CHECK-PROP-SAME:     %[[LANEID:.*]]: index
+//   CHECK-PROP-DAG:   %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-PROP-DAG:   %[[C26:.*]] = arith.constant 26 : index
+//       CHECK-PROP:   %[[W:.*]]:2 = vector.warp_execute_on_lane_0{{.*}} -> (vector<3xf32>, f32)
+//       CHECK-PROP:     %[[VEC:.*]] = "some_def"
+//       CHECK-PROP:     %[[VAL:.*]] = "another_def"
+//       CHECK-PROP:     vector.yield %[[VEC]], %[[VAL]]
+//       CHECK-PROP:   %[[SHOULD_INSERT:.*]] = arith.cmpi eq, %[[LANEID]], %[[C26]]
+//       CHECK-PROP:   %[[R:.*]] = scf.if %[[SHOULD_INSERT]] -> (vector<3xf32>) {
+//       CHECK-PROP:     %[[INSERT:.*]] = vector.insertelement %[[W]]#1, %[[W]]#0[%[[C1]] : index]
+//       CHECK-PROP:     scf.yield %[[INSERT]]
+//       CHECK-PROP:   } else {
+//       CHECK-PROP:     scf.yield %[[W]]#0
+//       CHECK-PROP:   }
+//       CHECK-PROP:   return %[[R]]
+func.func @vector_insert_1d(%laneid: index) -> (vector<3xf32>) {
+  %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<3xf32>) {
+    %0 = "some_def"() : () -> (vector<96xf32>)
+    %f = "another_def"() : () -> (f32)
+    %1 = vector.insert %f, %0[76] : f32 into vector<96xf32>
+    vector.yield %1 : vector<96xf32>
+  }
+  return %r : vector<3xf32>
+}
+
+// -----
+
+// CHECK-PROP-LABEL: func @vector_insert_2d_distr_src(
+//  CHECK-PROP-SAME:     %[[LANEID:.*]]: index
+//       CHECK-PROP:   %[[W:.*]]:2 = vector.warp_execute_on_lane_0{{.*}} -> (vector<3xf32>, vector<4x3xf32>)
+//       CHECK-PROP:     %[[VEC:.*]] = "some_def"
+//       CHECK-PROP:     %[[VAL:.*]] = "another_def"
+//       CHECK-PROP:     vector.yield %[[VAL]], %[[VEC]]
+//       CHECK-PROP:   %[[INSERT:.*]] = vector.insert %[[W]]#0, %[[W]]#1 [2] : vector<3xf32> into vector<4x3xf32>
+//       CHECK-PROP:   return %[[INSERT]]
+func.func @vector_insert_2d_distr_src(%laneid: index) -> (vector<4x3xf32>) {
+  %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x3xf32>) {
+    %0 = "some_def"() : () -> (vector<4x96xf32>)
+    %s = "another_def"() : () -> (vector<96xf32>)
+    %1 = vector.insert %s, %0[2] : vector<96xf32> into vector<4x96xf32>
+    vector.yield %1 : vector<4x96xf32>
+  }
+  return %r : vector<4x3xf32>
+}
+
+// -----
+
+// CHECK-PROP-LABEL: func @vector_insert_2d_distr_pos(
+//  CHECK-PROP-SAME:     %[[LANEID:.*]]: index
+//       CHECK-PROP:   %[[C19:.*]] = arith.constant 19 : index
+//       CHECK-PROP:   %[[W:.*]]:2 = vector.warp_execute_on_lane_0{{.*}} -> (vector<96xf32>, vector<4x96xf32>)
+//       CHECK-PROP:     %[[VEC:.*]] = "some_def"
+//       CHECK-PROP:     %[[VAL:.*]] = "another_def"
+//       CHECK-PROP:     vector.yield %[[VAL]], %[[VEC]]
+//       CHECK-PROP:   %[[SHOULD_INSERT:.*]] = arith.cmpi eq, %[[LANEID]], %[[C19]]
+//       CHECK-PROP:   %[[R:.*]] = scf.if %[[SHOULD_INSERT]] -> (vector<4x96xf32>) {
+//       CHECK-PROP:     %[[INSERT:.*]] = vector.insert %[[W]]#0, %[[W]]#1 [3] : vector<96xf32> into vector<4x96xf32>
+//       CHECK-PROP:     scf.yield %[[INSERT]]
+//       CHECK-PROP:   } else {
+//       CHECK-PROP:     scf.yield %[[W]]#1
+//       CHECK-PROP:   }
+//       CHECK-PROP:   return %[[R]]
+func.func @vector_insert_2d_distr_pos(%laneid: index) -> (vector<4x96xf32>) {
+  %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x96xf32>) {
+    %0 = "some_def"() : () -> (vector<128x96xf32>)
+    %s = "another_def"() : () -> (vector<96xf32>)
+    %1 = vector.insert %s, %0[79] : vector<96xf32> into vector<128x96xf32>
+    vector.yield %1 : vector<128x96xf32>
+  }
+  return %r : vector<4x96xf32>
+}
+
+// -----
+
+// CHECK-PROP-LABEL: func @vector_insert_2d_broadcast(
+//  CHECK-PROP-SAME:     %[[LANEID:.*]]: index
+//       CHECK-PROP:   %[[W:.*]]:2 = vector.warp_execute_on_lane_0{{.*}} -> (vector<96xf32>, vector<4x96xf32>)
+//       CHECK-PROP:     %[[VEC:.*]] = "some_def"
+//       CHECK-PROP:     %[[VAL:.*]] = "another_def"
+//       CHECK-PROP:     vector.yield %[[VAL]], %[[VEC]]
+//       CHECK-PROP:   %[[INSERT:.*]] = vector.insert %[[W]]#0, %[[W]]#1 [2] : vector<96xf32> into vector<4x96xf32>
+//       CHECK-PROP:   return %[[INSERT]]
+func.func @vector_insert_2d_broadcast(%laneid: index) -> (vector<4x96xf32>) {
+  %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x96xf32>) {
+    %0 = "some_def"() : () -> (vector<4x96xf32>)
+    %s = "another_def"() : () -> (vector<96xf32>)
+    %1 = vector.insert %s, %0[2] : vector<96xf32> into vector<4x96xf32>
+    vector.yield %1 : vector<4x96xf32>
+  }
+  return %r : vector<4x96xf32>
+}
