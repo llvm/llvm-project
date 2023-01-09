@@ -125,7 +125,7 @@ define zeroext i16 @v_mul_i16_zeroext(i16 zeroext %num, i16 zeroext %den) {
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_mul_lo_u16 v0, v0, v1
-; GFX10PLUS-NEXT:    v_bfe_u32 v0, v0, 0, 16
+; GFX10PLUS-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %result = mul i16 %num, %den
   ret i16 %result
