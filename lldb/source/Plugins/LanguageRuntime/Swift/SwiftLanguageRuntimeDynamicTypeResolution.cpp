@@ -1644,8 +1644,13 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
   Log *log(GetLog(LLDBLog::Types));
   auto *reflection_ctx = GetReflectionContext();
   const auto *typeref = reflection_ctx->readTypeFromInstance(instance_ptr);
-  if (!typeref)
+  if (!typeref) {
+    if (log) {
+      log->Printf("could not read typeref for type: %s\n",
+                  class_type.GetMangledTypeName().GetCString());
+    }
     return false;
+  }
   swift::Demangle::Demangler dem;
   swift::Demangle::NodePointer node = typeref->getDemangling(dem);
   class_type_or_name.SetCompilerType(ts.RemangleAsType(dem, node));
