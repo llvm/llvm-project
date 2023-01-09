@@ -186,7 +186,7 @@ inline void addExternalNameConversionPass(
 /// \param pm - MLIR pass manager that will hold the pipeline definition
 inline void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
     llvm::OptimizationLevel optLevel = defaultOptLevel,
-    bool stackArrays = false) {
+    bool stackArrays = false, bool loopVersioning = false) {
   // simplify the IR
   mlir::GreedyRewriteConfig config;
   config.enableRegionSimplification = false;
@@ -283,11 +283,13 @@ inline void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
 inline void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
     llvm::OptimizationLevel optLevel = defaultOptLevel,
     bool stackArrays = false, bool underscoring = true,
+    bool loopVersioning = false,
     llvm::codegenoptions::DebugInfoKind debugInfo = NoDebugInfo) {
   fir::createHLFIRToFIRPassPipeline(pm, optLevel);
 
   // Add default optimizer pass pipeline.
-  fir::createDefaultFIROptimizerPassPipeline(pm, optLevel, stackArrays);
+  fir::createDefaultFIROptimizerPassPipeline(
+      pm, optLevel, stackArrays, loopVersioning);
 
   // Add codegen pass pipeline.
   fir::createDefaultFIRCodeGenPassPipeline(
