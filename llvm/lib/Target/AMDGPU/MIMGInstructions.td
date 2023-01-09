@@ -1451,15 +1451,19 @@ multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit IsA16,
         cpol = 0,
         lwe = 0,
         ssamp = 0 in {
+      if op.HAS_GFX10M then
       def _sa_gfx10 : MIMG_IntersectRay_gfx10<op, opcode, info.RegClass, IsA16> {
         let VAddrDwords = info.VAddrDwords;
       }
+      if op.HAS_GFX11 then
       def _sa_gfx11 : MIMG_IntersectRay_gfx11<op, opcode, info.RegClass, IsA16> {
         let VAddrDwords = info.VAddrDwords;
       }
+      if op.HAS_GFX10M then
       def _nsa_gfx10 : MIMG_IntersectRay_nsa_gfx10<op, opcode, info.num_addrs, IsA16> {
         let VAddrDwords = info.num_addrs;
       }
+      if op.HAS_GFX11 then
       def _nsa_gfx11 : MIMG_IntersectRay_nsa_gfx11<op, opcode,
                                                   info.gfx11_nsa_addrs, IsA16,
                                                   info.gfx11_addr_types> {
