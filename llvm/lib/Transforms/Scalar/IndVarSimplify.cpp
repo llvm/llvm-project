@@ -1371,11 +1371,10 @@ createInvariantCond(const Loop *L, BasicBlock *ExitingBB,
                             BI->getCondition()->getName());
 }
 
-std::optional<Value *> createReplacement(Value *V, const Loop *L,
-                                         BasicBlock *ExitingBB,
-                                         const SCEV *MaxIter, bool SkipLastIter,
-                                         ScalarEvolution *SE,
-                                         SCEVExpander &Rewriter) {
+static std::optional<Value *>
+createReplacement(Value *V, const Loop *L, BasicBlock *ExitingBB,
+                  const SCEV *MaxIter, bool SkipLastIter, ScalarEvolution *SE,
+                  SCEVExpander &Rewriter) {
   ICmpInst::Predicate Pred;
   Value *LHS, *RHS;
   if (!match(V, m_ICmp(Pred, m_Value(LHS), m_Value(RHS))))
