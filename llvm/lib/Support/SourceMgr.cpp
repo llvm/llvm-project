@@ -53,7 +53,7 @@ ErrorOr<std::unique_ptr<MemoryBuffer>>
 SourceMgr::OpenIncludeFile(const std::string &Filename,
                            std::string &IncludedFile) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr =
-      MemoryBuffer::getFile(IncludedFile);
+      MemoryBuffer::getFile(Filename);
 
   SmallString<64> Buffer(Filename);
   // If the file didn't exist directly, see if it's in an include path.
