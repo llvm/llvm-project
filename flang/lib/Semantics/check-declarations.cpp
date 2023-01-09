@@ -1451,9 +1451,12 @@ bool CheckHelper::CheckDefinedOperator(SourceName opName, GenericKind kind,
   } else {
     return true; // OK
   }
+  bool isFatal{msg->IsFatal()};
   SayWithDeclaration(
       specific, std::move(*msg), MakeOpName(opName), specific.name());
-  context_.SetError(specific);
+  if (isFatal) {
+    context_.SetError(specific);
+  }
   return false;
 }
 
@@ -1462,6 +1465,9 @@ bool CheckHelper::CheckDefinedOperator(SourceName opName, GenericKind kind,
 std::optional<parser::MessageFixedText> CheckHelper::CheckNumberOfArgs(
     const GenericKind &kind, std::size_t nargs) {
   if (!kind.IsIntrinsicOperator()) {
+    if (nargs < 1 || nargs > 2) {
+      return "%s function '%s' should have 1 or 2 dummy arguments"_warn_en_US;
+    }
     return std::nullopt;
   }
   std::size_t min{2}, max{2}; // allowed number of args; default is binary
