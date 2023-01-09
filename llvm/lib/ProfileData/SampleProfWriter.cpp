@@ -125,6 +125,7 @@ std::error_code SampleProfileWriter::writeWithSizeLimitInternal(
   LLVM_DEBUG(dbgs() << "Profile originally has " << OriginalFunctionCount
                     << " functions, reduced to " << ProfileMap.size() << " in "
                     << IterationCount << " iterations\n");
+  (void)OriginalFunctionCount;
   return sampleprof_error::success;
 }
 
