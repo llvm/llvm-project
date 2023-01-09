@@ -677,15 +677,15 @@ void InstrEmitter::EmitRegSequence(SDNode *Node,
 MachineInstr *
 InstrEmitter::EmitDbgValue(SDDbgValue *SD,
                            DenseMap<SDValue, Register> &VRBaseMap) {
-  MDNode *Var = SD->getVariable();
   DebugLoc DL = SD->getDebugLoc();
-  assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
+  assert(cast<DILocalVariable>(SD->getVariable())
+             ->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
 
   SD->setIsEmitted();
 
-  ArrayRef<SDDbgOperand> LocationOps = SD->getLocationOps();
-  assert(!LocationOps.empty() && "dbg_value with no location operands?");
+  assert(!SD->getLocationOps().empty() &&
+         "dbg_value with no location operands?");
 
   if (SD->isInvalidated())
     return EmitDbgNoLocation(SD);
