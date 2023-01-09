@@ -158,7 +158,6 @@ transform::DecomposeOp::applyToOne(linalg::LinalgOp target,
 #undef DOWNSCALE_NORMAL
 #undef DOWNSCALE_CALL
 #undef DOWNSCALE
-  results.assign(1, nullptr);
   return emitDefaultSilenceableFailure(target);
 }
 //===----------------------------------------------------------------------===//
@@ -583,7 +582,6 @@ transform::FuseIntoContainingOp::apply(transform::TransformResults &results,
   while (!remainingProducers.empty()) {
     auto nextProducer = getNextProducer();
     if (failed(nextProducer)) {
-      results.set(getFusedOp().cast<OpResult>(), ArrayRef<Operation *>());
       Diagnostic diag(containingOp->getLoc(), DiagnosticSeverity::Remark);
       diag << "could not find next producer to fuse into container";
       return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
@@ -628,7 +626,6 @@ transform::FuseIntoContainingOp::apply(transform::TransformResults &results,
       fusedOps.push_back(cloned);
       continue;
     }
-    results.set(getFusedOp().cast<OpResult>(), ArrayRef<Operation *>());
     return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
   }
 
@@ -654,7 +651,6 @@ transform::GeneralizeOp::applyToOne(linalg::LinalgOp target,
     results.push_back(generic->getOperation());
     return DiagnosedSilenceableFailure::success();
   }
-  results.assign(1, nullptr);
   return emitDefaultSilenceableFailure(target);
 }
 
@@ -717,7 +713,6 @@ transform::MatchOp::apply(transform::TransformResults &results,
 
   ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
   if (payloadOps.size() != 1) {
-    results.set(getResult().cast<OpResult>(), {});
     return emitDefiniteFailure("requires exactly one target handle");
   }
 
@@ -802,8 +797,6 @@ DiagnosedSilenceableFailure transform::MultiTileSizesOp::applyToOne(
     TransformState &state) {
   if (getLowSize().getType().isa<TransformParamTypeInterface>()) {
     if (target.hasDynamicShape()) {
-      results.assign(
-          ArrayRef<Attribute>({Attribute(), Attribute(), Attribute()}));
       auto diag = emitSilenceableError()
                   << "cannot compute parametric tile sizes for dynamically "
                      "shaped payload op";
@@ -814,8 +807,6 @@ DiagnosedSilenceableFailure transform::MultiTileSizesOp::applyToOne(
     FailureOr<StaticMultiSizeSpecification> spec = computeStaticMultiTileSizes(
         target, getDimension(), getTargetSize(), getDivisor());
     if (failed(spec)) {
-      results.assign(
-          ArrayRef<Attribute>({Attribute(), Attribute(), Attribute()}));
       return emitSilenceableError()
              << "failed to compute multi-size tiling sizes";
     }
@@ -1271,7 +1262,6 @@ transform::PadOp::applyToOne(linalg::LinalgOp target,
     return DiagnosedSilenceableFailure::success();
   }
 
-  results.assign(1, nullptr);
   return emitDefaultSilenceableFailure(target);
 }
 
@@ -1491,11 +1481,8 @@ DiagnosedSilenceableFailure SplitOp::apply(TransformResults &results,
           llvm::map_range(state.getParams(getDynamicSplitPoint()),
                           [](Attribute attr) { return OpFoldResult(attr); }));
     }
-    if (diag.isSilenceableFailure()) {
-      results.set(getFirst().cast<OpResult>(), {});
-      results.set(getSecond().cast<OpResult>(), {});
+    if (diag.isSilenceableFailure())
       return diag;
-    }
 
     if (splitPoints.size() != payload.size()) {
       return emitDefiniteFailure()
@@ -1518,8 +1505,6 @@ DiagnosedSilenceableFailure SplitOp::apply(TransformResults &results,
     if (!linalgOp) {
       auto diag = emitSilenceableError() << "only applies to structured ops";
       diag.attachNote(target->getLoc()) << "target op";
-      results.set(getFirst().cast<OpResult>(), {});
-      results.set(getSecond().cast<OpResult>(), {});
       return diag;
     }
 
@@ -1527,8 +1512,6 @@ DiagnosedSilenceableFailure SplitOp::apply(TransformResults &results,
       auto diag = emitSilenceableError() << "dimension " << getDimension()
                                          << " does not exist in target op";
       diag.attachNote(target->getLoc()) << "target op";
-      results.set(getFirst().cast<OpResult>(), {});
-      results.set(getSecond().cast<OpResult>(), {});
       return diag;
     }
 
@@ -1552,8 +1535,6 @@ DiagnosedSilenceableFailure SplitOp::apply(TransformResults &results,
   }
 
   if (second.size() != first.size() && !second.empty()) {
-    results.set(getFirst().cast<OpResult>(), {});
-    results.set(getSecond().cast<OpResult>(), {});
     auto diag =
         emitSilenceableError()
         << "splitting does not produce the second part for a subset of targets";
@@ -1781,7 +1762,6 @@ transform::TileReductionUsingForeachThreadOp::applyToOne(
           numThreads, tileSizes, getMapping());
 
   if (failed(result)) {
-    results.assign(4, nullptr);
     auto diag = emitSilenceableError() << "could not tile reduction";
     diag.attachNote(target.getLoc()) << "target operation";
     return diag;
@@ -1874,8 +1854,6 @@ transform::TileOp::apply(TransformResults &transformResults,
           })));
 
       if (paramSizes.back().size() != targets.size()) {
-        for (OpResult r : getResults())
-          transformResults.set(r, {});
         DiagnosedSilenceableFailure diag =
             emitSilenceableError()
             << "expected as many parameter values ("
@@ -1891,8 +1869,6 @@ transform::TileOp::apply(TransformResults &transformResults,
     dynamicSizeProducers.push_back(state.getPayloadOps(transformValue));
 
     if (dynamicSizeProducers.back().size() != targets.size()) {
-      for (OpResult r : getResults())
-        transformResults.set(r, {});
       DiagnosedSilenceableFailure diag =
           emitSilenceableError()
           << "expected as many dynamic size-producing operations ("
@@ -1907,8 +1883,6 @@ transform::TileOp::apply(TransformResults &transformResults,
           op->getResult(0).getType().isa<IndexType>())
         continue;
 
-      for (OpResult r : getResults())
-        transformResults.set(r, {});
       DiagnosedSilenceableFailure diag =
           emitSilenceableError() << "expected sizes to be produced by ops "
                                     "with a single index-type result";
@@ -2237,11 +2211,8 @@ DiagnosedSilenceableFailure transform::TileToForeachThreadOp::apply(
       rewriter, state, transformOp, targets, mixedNumThreads, mixedTileSizes,
       getMapping(), tileOps, tiledOps);
 
-  if (!diag.succeeded()) {
-    transformResults.set(getForeachThreadOp().cast<OpResult>(), {});
-    transformResults.set(getTiledOp().cast<OpResult>(), {});
+  if (!diag.succeeded())
     return diag;
-  }
 
   transformResults.set(getForeachThreadOp().cast<OpResult>(), tileOps);
   transformResults.set(getTiledOp().cast<OpResult>(), tiledOps);
