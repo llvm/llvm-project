@@ -21,6 +21,7 @@
 #include "flang/Runtime/time-intrinsic.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "flang-lower-runtime"
 
@@ -226,17 +227,17 @@ mlir::Value Fortran::lower::genCpuTime(fir::FirOpBuilder &builder,
 
 void Fortran::lower::genDateAndTime(fir::FirOpBuilder &builder,
                                     mlir::Location loc,
-                                    llvm::Optional<fir::CharBoxValue> date,
-                                    llvm::Optional<fir::CharBoxValue> time,
-                                    llvm::Optional<fir::CharBoxValue> zone,
+                                    std::optional<fir::CharBoxValue> date,
+                                    std::optional<fir::CharBoxValue> time,
+                                    std::optional<fir::CharBoxValue> zone,
                                     mlir::Value values) {
   mlir::func::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(DateAndTime)>(loc, builder);
   mlir::FunctionType funcTy = callee.getFunctionType();
   mlir::Type idxTy = builder.getIndexType();
   mlir::Value zero;
-  auto splitArg = [&](llvm::Optional<fir::CharBoxValue> arg,
-                      mlir::Value &buffer, mlir::Value &len) {
+  auto splitArg = [&](std::optional<fir::CharBoxValue> arg, mlir::Value &buffer,
+                      mlir::Value &len) {
     if (arg) {
       buffer = arg->getBuffer();
       len = arg->getLen();

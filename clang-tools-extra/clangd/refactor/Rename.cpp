@@ -33,13 +33,14 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
 #include <algorithm>
+#include <optional>
 
 namespace clang {
 namespace clangd {
 namespace {
 
-llvm::Optional<std::string> filePath(const SymbolLocation &Loc,
-                                     llvm::StringRef HintFilePath) {
+std::optional<std::string> filePath(const SymbolLocation &Loc,
+                                    llvm::StringRef HintFilePath) {
   if (!Loc)
     return std::nullopt;
   auto Path = URI::resolve(Loc.FileURI, HintFilePath);
@@ -196,10 +197,10 @@ enum class ReasonToReject {
   SameName,
 };
 
-llvm::Optional<ReasonToReject> renameable(const NamedDecl &RenameDecl,
-                                          StringRef MainFilePath,
-                                          const SymbolIndex *Index,
-                                          const RenameOptions& Opts) {
+std::optional<ReasonToReject> renameable(const NamedDecl &RenameDecl,
+                                         StringRef MainFilePath,
+                                         const SymbolIndex *Index,
+                                         const RenameOptions &Opts) {
   trace::Span Tracer("Renameable");
   if (!Opts.RenameVirtual) {
     if (const auto *S = llvm::dyn_cast<CXXMethodDecl>(&RenameDecl)) {
@@ -500,13 +501,13 @@ static bool mayBeValidIdentifier(llvm::StringRef Ident) {
 
 // Check if we can rename the given RenameDecl into NewName.
 // Return details if the rename would produce a conflict.
-llvm::Optional<InvalidName> checkName(const NamedDecl &RenameDecl,
-                                      llvm::StringRef NewName) {
+std::optional<InvalidName> checkName(const NamedDecl &RenameDecl,
+                                     llvm::StringRef NewName) {
   trace::Span Tracer("CheckName");
   static constexpr trace::Metric InvalidNameMetric(
       "rename_name_invalid", trace::Metric::Counter, "invalid_kind");
   auto &ASTCtx = RenameDecl.getASTContext();
-  llvm::Optional<InvalidName> Result;
+  std::optional<InvalidName> Result;
   if (isKeyword(NewName, ASTCtx.getLangOpts()))
     Result = InvalidName{InvalidName::Keywords, NewName.str()};
   else if (!mayBeValidIdentifier(NewName))
@@ -910,7 +911,7 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
 //          ranges onto candidates in a plausible way (e.g. guess that lines
 //          were inserted). If such a "near miss" is found, the rename is still
 //          possible
-llvm::Optional<std::vector<Range>>
+std::optional<std::vector<Range>>
 adjustRenameRanges(llvm::StringRef DraftCode, llvm::StringRef Identifier,
                    std::vector<Range> Indexed, const LangOptions &LangOpts) {
   trace::Span Tracer("AdjustRenameRanges");
@@ -922,8 +923,8 @@ adjustRenameRanges(llvm::StringRef DraftCode, llvm::StringRef Identifier,
   return getMappedRanges(Indexed, Lexed);
 }
 
-llvm::Optional<std::vector<Range>> getMappedRanges(ArrayRef<Range> Indexed,
-                                                   ArrayRef<Range> Lexed) {
+std::optional<std::vector<Range>> getMappedRanges(ArrayRef<Range> Indexed,
+                                                  ArrayRef<Range> Lexed) {
   trace::Span Tracer("GetMappedRanges");
   assert(!Indexed.empty());
   assert(llvm::is_sorted(Indexed));

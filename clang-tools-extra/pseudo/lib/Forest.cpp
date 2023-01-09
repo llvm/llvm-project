@@ -11,6 +11,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <optional>
 
 namespace clang {
 namespace pseudo {
@@ -93,11 +94,10 @@ std::string ForestNode::dumpRecursive(const Grammar &G,
   llvm::DenseMap<const ForestNode *, size_t> ReferenceIds;
   std::string Result;
   constexpr Token::Index KEnd = std::numeric_limits<Token::Index>::max();
-  std::function<void(const ForestNode *, Token::Index, llvm::Optional<SymbolID>,
+  std::function<void(const ForestNode *, Token::Index, std::optional<SymbolID>,
                      LineDecoration &LineDec)>
       Dump = [&](const ForestNode *P, Token::Index End,
-                 llvm::Optional<SymbolID> ElidedParent,
-                 LineDecoration LineDec) {
+                 std::optional<SymbolID> ElidedParent, LineDecoration LineDec) {
         bool SharedNode = VisitCounts.find(P)->getSecond() > 1;
         llvm::ArrayRef<const ForestNode *> Children;
         auto EndOfElement = [&](size_t ChildIndex) {

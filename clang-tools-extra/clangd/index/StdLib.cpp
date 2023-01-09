@@ -8,6 +8,7 @@
 #include "StdLib.h"
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -285,8 +286,8 @@ bool StdLibSet::isBest(const LangOptions &LO) const {
          Best[langFromOpts(LO)].load(std::memory_order_acquire);
 }
 
-llvm::Optional<StdLibLocation> StdLibSet::add(const LangOptions &LO,
-                                              const HeaderSearch &HS) {
+std::optional<StdLibLocation> StdLibSet::add(const LangOptions &LO,
+                                             const HeaderSearch &HS) {
   Lang L = langFromOpts(LO);
   int OldVersion = Best[L].load(std::memory_order_acquire);
   int NewVersion = standardFromOpts(LO);

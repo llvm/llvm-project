@@ -223,10 +223,9 @@ private:
   DenseMap<const Constant *, uint8_t> ConstantStatus;
 };
 
-struct AAAMDAttributes
-    : public StateWrapper<BitIntegerState<uint32_t, ALL_ARGUMENT_MASK, 0>,
-                          AbstractAttribute> {
-  using Base = StateWrapper<BitIntegerState<uint32_t, ALL_ARGUMENT_MASK, 0>,
+struct AAAMDAttributes : public StateWrapper<
+  BitIntegerState<uint16_t, ALL_ARGUMENT_MASK, 0>, AbstractAttribute> {
+  using Base = StateWrapper<BitIntegerState<uint16_t, ALL_ARGUMENT_MASK, 0>,
                             AbstractAttribute>;
 
   AAAMDAttributes(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
@@ -469,12 +468,6 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       removeAssumedBits(LDS_KERNEL_ID);
     }
 
-    if (isAssumed(DEFAULT_QUEUE) && funcRetrievesDefaultQueue(A))
-      removeAssumedBits(DEFAULT_QUEUE);
-
-    if (isAssumed(COMPLETION_ACTION) && funcRetrievesCompletionAction(A))
-      removeAssumedBits(COMPLETION_ACTION);
-
     return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED
                                        : ChangeStatus::UNCHANGED;
   }
@@ -565,18 +558,6 @@ private:
 
   bool funcRetrievesHostcallPtr(Attributor &A) {
     auto Pos = llvm::AMDGPU::getHostcallImplicitArgPosition();
-    AA::RangeTy Range(Pos, 8);
-    return funcRetrievesImplicitKernelArg(A, Range);
-  }
-
-  bool funcRetrievesDefaultQueue(Attributor &A) {
-    auto Pos = llvm::AMDGPU::getDefaultQueueImplicitArgPosition();
-    AA::RangeTy Range(Pos, 8);
-    return funcRetrievesImplicitKernelArg(A, Range);
-  }
-
-  bool funcRetrievesCompletionAction(Attributor &A) {
-    auto Pos = llvm::AMDGPU::getCompletionActionImplicitArgPosition();
     AA::RangeTy Range(Pos, 8);
     return funcRetrievesImplicitKernelArg(A, Range);
   }

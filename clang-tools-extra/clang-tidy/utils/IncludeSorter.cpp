@@ -10,6 +10,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include <algorithm>
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -149,8 +150,8 @@ void IncludeSorter::addInclude(StringRef FileName, bool IsAngled,
     IncludeBucket[Kind].push_back(FileName.str());
 }
 
-Optional<FixItHint> IncludeSorter::createIncludeInsertion(StringRef FileName,
-                                                          bool IsAngled) {
+std::optional<FixItHint>
+IncludeSorter::createIncludeInsertion(StringRef FileName, bool IsAngled) {
   std::string IncludeStmt;
   if (Style == IncludeStyle::IS_Google_ObjC) {
     IncludeStmt = IsAngled

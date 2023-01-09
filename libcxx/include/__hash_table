@@ -13,7 +13,7 @@
 #include <__algorithm/max.h>
 #include <__algorithm/min.h>
 #include <__assert>
-#include <__bits> // __libcpp_clz
+#include <__bit/countl.h>
 #include <__config>
 #include <__debug>
 #include <__functional/hash.h>

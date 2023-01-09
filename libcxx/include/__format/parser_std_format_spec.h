@@ -19,6 +19,7 @@
 #include <__algorithm/find_if.h>
 #include <__algorithm/min.h>
 #include <__assert>
+#include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__debug>

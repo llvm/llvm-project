@@ -14,11 +14,11 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/MD5.h"
+#include <optional>
 
 // recursively build the vector of module scopes
 static void moduleNames(const Fortran::semantics::Scope &scope,
@@ -39,7 +39,7 @@ moduleNames(const Fortran::semantics::Symbol &symbol) {
   return result;
 }
 
-static llvm::Optional<llvm::StringRef>
+static std::optional<llvm::StringRef>
 hostName(const Fortran::semantics::Symbol &symbol) {
   const Fortran::semantics::Scope &scope = symbol.owner();
   if (scope.kind() == Fortran::semantics::Scope::Kind::Subprogram) {
@@ -119,7 +119,7 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
           [&](const Fortran::semantics::ObjectEntityDetails &) {
             llvm::SmallVector<llvm::StringRef> modNames =
                 moduleNames(ultimateSymbol);
-            llvm::Optional<llvm::StringRef> optHost = hostName(ultimateSymbol);
+            std::optional<llvm::StringRef> optHost = hostName(ultimateSymbol);
             if (Fortran::semantics::IsNamedConstant(ultimateSymbol))
               return fir::NameUniquer::doConstant(modNames, optHost,
                                                   symbolName);
@@ -128,7 +128,7 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
           [&](const Fortran::semantics::NamelistDetails &) {
             llvm::SmallVector<llvm::StringRef> modNames =
                 moduleNames(ultimateSymbol);
-            llvm::Optional<llvm::StringRef> optHost = hostName(ultimateSymbol);
+            std::optional<llvm::StringRef> optHost = hostName(ultimateSymbol);
             return fir::NameUniquer::doNamelistGroup(modNames, optHost,
                                                      symbolName);
           },
@@ -157,7 +157,7 @@ std::string Fortran::lower::mangle::mangleName(
       derivedType.typeSymbol().GetUltimate();
   llvm::StringRef symbolName = toStringRef(ultimateSymbol.name());
   llvm::SmallVector<llvm::StringRef> modNames = moduleNames(ultimateSymbol);
-  llvm::Optional<llvm::StringRef> optHost = hostName(ultimateSymbol);
+  std::optional<llvm::StringRef> optHost = hostName(ultimateSymbol);
   llvm::SmallVector<std::int64_t> kinds;
   for (const auto &param :
        Fortran::semantics::OrderParameterDeclarations(ultimateSymbol)) {

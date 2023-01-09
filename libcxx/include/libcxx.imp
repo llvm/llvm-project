@@ -1,5 +1,4 @@
 [
-  { include: [ "<__bits>", "private", "<bits>", "public" ] },
   { include: [ "<__hash_table>", "private", "<unordered_map>", "public" ] },
   { include: [ "<__hash_table>", "private", "<unordered_set>", "public" ] },
   { include: [ "<__locale>", "private", "<locale>", "public" ] },

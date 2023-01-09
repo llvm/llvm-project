@@ -23,6 +23,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
+#include <optional>
 
 static llvm::cl::opt<std::size_t>
     nameLengthHashSize("length-to-hash-string-literal",
@@ -1138,7 +1139,7 @@ static void genComponentByComponentAssignment(fir::FirOpBuilder &builder,
     auto fieldRefType = builder.getRefType(lFieldTy);
     mlir::Value toCoor = builder.create<fir::CoordinateOp>(
         loc, fieldRefType, fir::getBase(lhs), field);
-    llvm::Optional<fir::DoLoopOp> outerLoop;
+    std::optional<fir::DoLoopOp> outerLoop;
     if (auto sequenceType = lFieldTy.dyn_cast<fir::SequenceType>()) {
       // Create loops to assign array components elements by elements.
       // Note that, since these are components, they either do not overlap,
@@ -1330,11 +1331,11 @@ mlir::Value fir::factory::createZeroValue(fir::FirOpBuilder &builder,
                            "numeric or logical type");
 }
 
-llvm::Optional<std::int64_t>
+std::optional<std::int64_t>
 fir::factory::getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
                                    mlir::Value stride) {
-  std::function<llvm::Optional<std::int64_t>(mlir::Value)> getConstantValue =
-      [&](mlir::Value value) -> llvm::Optional<std::int64_t> {
+  std::function<std::optional<std::int64_t>(mlir::Value)> getConstantValue =
+      [&](mlir::Value value) -> std::optional<std::int64_t> {
     if (auto valInt = fir::getIntIfConstant(value))
       return *valInt;
     auto *definingOp = value.getDefiningOp();

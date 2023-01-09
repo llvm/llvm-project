@@ -19,10 +19,10 @@ define i32 @sterix(i32, i8, i64) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[MUL3]], [[TMP2]]
 ; CHECK-NEXT:    [[CONV4:%.*]] = trunc i64 [[AND]] to i32
 ; CHECK-NEXT:    [[TOBOOL7_NOT:%.*]] = icmp eq i32 [[CONV4]], 0
-; CHECK-NEXT:    [[PHITMP:%.*]] = zext i1 [[TOBOOL7_NOT]] to i32
+; CHECK-NEXT:    [[PHI_CAST:%.*]] = zext i1 [[TOBOOL7_NOT]] to i32
 ; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[PHITMP]], [[LOR_RHS]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[PHI_CAST]], [[LOR_RHS]] ]
 ; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
 entry:

@@ -100,6 +100,7 @@ static cl::opt<bool>
             cl::desc("Widen the loop induction variables, if possible, so "
                      "overflow checks won't reject flattening"));
 
+namespace {
 // We require all uses of both induction variables to match this pattern:
 //
 //   (OuterPHI * InnerTripCount) + InnerPHI
@@ -288,6 +289,7 @@ struct FlattenInfo {
     return true;
   }
 };
+} // namespace
 
 static bool
 setLoopComponents(Value *&TC, Value *&TripCount, BinaryOperator *&Increment,

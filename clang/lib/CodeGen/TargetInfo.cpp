@@ -9520,15 +9520,6 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     if (NumVGPR != 0)
       F->addFnAttr("amdgpu-num-vgpr", llvm::utostr(NumVGPR));
   }
-
-  if (IsHIPKernel) {
-    // FIXME: This is a dirty, dirty hack to fix bot failures at -O0 and should
-    // be removed. The HIP runtime currently fails to handle the case where one
-    // of these fields fails to optimize out. The runtime should tolerate all
-    // requested implicit inputs regardless of language.
-    F->addFnAttr("amdgpu-no-default-queue");
-    F->addFnAttr("amdgpu-no-completion-action");
-  }
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(

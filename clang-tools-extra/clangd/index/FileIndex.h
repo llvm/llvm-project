@@ -27,10 +27,10 @@
 #include "support/Path.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace clang {
@@ -178,7 +178,7 @@ struct FileShardedIndex {
   /// a copy of all the relevant data.
   /// Returned index will always have Symbol/Refs/Relation Slabs set, even if
   /// they are empty.
-  llvm::Optional<IndexFileIn> getShard(llvm::StringRef Uri) const;
+  std::optional<IndexFileIn> getShard(llvm::StringRef Uri) const;
 
 private:
   // Contains all the information that belongs to a single file.

@@ -9,6 +9,7 @@
 #include "FileExtensionsUtils.h"
 #include "clang/Basic/CharInfo.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -53,7 +54,7 @@ bool parseFileExtensions(StringRef AllFileExtensions,
   return true;
 }
 
-llvm::Optional<StringRef>
+std::optional<StringRef>
 getFileExtension(StringRef FileName, const FileExtensionsSet &FileExtensions) {
   StringRef Extension = llvm::sys::path::extension(FileName);
   if (Extension.empty())

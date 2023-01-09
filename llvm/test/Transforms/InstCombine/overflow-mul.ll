@@ -241,3 +241,41 @@ define i1 @pr21445(i8 %a) {
   %cmp = icmp ne i32 %mul, %and
   ret i1 %cmp
 }
+
+; Negative test: mul(zext x, zext y) may overflow.
+define i32 @mul_may_overflow(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_may_overflow(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[L:%.*]] = zext i32 [[X:%.*]] to i34
+; CHECK-NEXT:    [[R:%.*]] = zext i32 [[Y:%.*]] to i34
+; CHECK-NEXT:    [[MUL34:%.*]] = mul i34 [[L]], [[R]]
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = icmp ult i34 [[MUL34]], 4294967296
+; CHECK-NEXT:    [[RETVAL:%.*]] = zext i1 [[OVERFLOW]] to i32
+; CHECK-NEXT:    ret i32 [[RETVAL]]
+;
+entry:
+  %l = zext i32 %x to i34
+  %r = zext i32 %y to i34
+  %mul34 = mul i34 %l, %r
+  %overflow = icmp ule i34 %mul34, 4294967295
+  %retval = zext i1 %overflow to i32
+  ret i32 %retval
+}
+
+define i32 @mul_known_nuw(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_known_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UMUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[TMP0:%.*]] = extractvalue { i32, i1 } [[UMUL]], 1
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = xor i1 [[TMP0]], true
+; CHECK-NEXT:    [[RETVAL:%.*]] = zext i1 [[OVERFLOW]] to i32
+; CHECK-NEXT:    ret i32 [[RETVAL]]
+;
+entry:
+  %l = zext i32 %x to i34
+  %r = zext i32 %y to i34
+  %mul34 = mul nuw i34 %l, %r
+  %overflow = icmp ule i34 %mul34, 4294967295
+  %retval = zext i1 %overflow to i32
+  ret i32 %retval
+}

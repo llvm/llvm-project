@@ -2646,6 +2646,10 @@ def err_invalid_consteval_take_address : Error<
   " of an immediate invocation">;
 def err_invalid_consteval_call : Error<
   "call to consteval function %q0 is not a constant expression">;
+def note_invalid_consteval_initializer : Note<
+  "in the default initalizer of %0">;
+def note_invalid_consteval_initializer_here : Note<
+  "initialized here %0">;
 def err_invalid_consteval_decl_kind : Error<
   "%0 cannot be declared consteval">;
 def err_invalid_constexpr : Error<
@@ -11232,6 +11236,8 @@ def note_not_module_interface_add_export : Note<
   "add 'export' here if this is intended to be a module interface unit">;
 def err_invalid_module_name : Error<
   "%0 is %select{an invalid|a reserved}1 name for a module">;
+def err_extern_def_in_header_unit : Error<
+  "non-inline external definitions are not permitted in C++ header units">;
 
 def ext_equivalent_internal_linkage_decl_in_modules : ExtWarn<
   "ambiguous use of internal linkage declaration %0 defined in multiple modules">,

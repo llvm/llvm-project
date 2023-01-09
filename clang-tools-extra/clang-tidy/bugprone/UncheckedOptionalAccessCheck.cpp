@@ -18,10 +18,10 @@
 #include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace clang {
@@ -31,11 +31,10 @@ using ast_matchers::MatchFinder;
 using dataflow::UncheckedOptionalAccessDiagnoser;
 using dataflow::UncheckedOptionalAccessModel;
 using dataflow::UncheckedOptionalAccessModelOptions;
-using llvm::Optional;
 
 static constexpr llvm::StringLiteral FuncID("fun");
 
-static Optional<std::vector<SourceLocation>>
+static std::optional<std::vector<SourceLocation>>
 analyzeFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx,
                 UncheckedOptionalAccessModelOptions ModelOptions) {
   using dataflow::ControlFlowContext;
@@ -53,8 +52,8 @@ analyzeFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx,
   UncheckedOptionalAccessModel Analysis(ASTCtx);
   UncheckedOptionalAccessDiagnoser Diagnoser(ModelOptions);
   std::vector<SourceLocation> Diagnostics;
-  Expected<std::vector<
-      Optional<DataflowAnalysisState<UncheckedOptionalAccessModel::Lattice>>>>
+  Expected<std::vector<std::optional<
+      DataflowAnalysisState<UncheckedOptionalAccessModel::Lattice>>>>
       BlockToOutputState = dataflow::runDataflowAnalysis(
           *Context, Analysis, Env,
           [&ASTCtx, &Diagnoser, &Diagnostics](
@@ -96,7 +95,7 @@ void UncheckedOptionalAccessCheck::check(
   if (FuncDecl->isTemplated())
     return;
 
-  if (Optional<std::vector<SourceLocation>> Errors =
+  if (std::optional<std::vector<SourceLocation>> Errors =
           analyzeFunction(*FuncDecl, *Result.Context, ModelOptions))
     for (const SourceLocation &Loc : *Errors)
       diag(Loc, "unchecked access to optional value");
