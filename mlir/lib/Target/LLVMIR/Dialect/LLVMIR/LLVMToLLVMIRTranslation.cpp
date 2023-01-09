@@ -322,6 +322,21 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp &op, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Constructs branch weights metadata if the provided `weights` hold a value,
+/// otherwise returns nullptr.
+static llvm::MDNode *
+convertBranchWeights(std::optional<ElementsAttr> weights,
+                     LLVM::ModuleTranslation &moduleTranslation) {
+  if (!weights)
+    return nullptr;
+  SmallVector<uint32_t> weightValues;
+  weightValues.reserve(weights->size());
+  for (APInt weight : weights->cast<DenseIntElementsAttr>())
+    weightValues.push_back(weight.getLimitedValue());
+  return llvm::MDBuilder(moduleTranslation.getLLVMContext())
+      .createBranchWeights(weightValues);
+}
+
 static LogicalResult
 convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
@@ -336,32 +351,34 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
   // Emit function calls.  If the "callee" attribute is present, this is a
   // direct function call and we also need to look up the remapped function
   // itself.  Otherwise, this is an indirect call and the callee is the first
-  // operand, look it up as a normal value.  Return the llvm::Value
-  // representing the function result, which may be of llvm::VoidTy type.
-  auto convertCall = [&](Operation &op) -> llvm::Value * {
-    auto operands = moduleTranslation.lookupValues(op.getOperands());
+  // operand, look it up as a normal value.
+  if (auto callOp = dyn_cast<LLVM::CallOp>(opInst)) {
+    auto operands = moduleTranslation.lookupValues(callOp.getOperands());
     ArrayRef<llvm::Value *> operandsRef(operands);
-    if (auto attr = op.getAttrOfType<FlatSymbolRefAttr>("callee"))
-      return builder.CreateCall(
+    llvm::CallInst *call;
+    if (auto attr = callOp.getCalleeAttr()) {
+      call = builder.CreateCall(
           moduleTranslation.lookupFunction(attr.getValue()), operandsRef);
-    auto calleeType =
-        op.getOperands().front().getType().cast<LLVMPointerType>();
-    auto *calleeFunctionType = cast<llvm::FunctionType>(
-        moduleTranslation.convertType(calleeType.getElementType()));
-    return builder.CreateCall(calleeFunctionType, operandsRef.front(),
-                              operandsRef.drop_front());
-  };
-
-  // Emit calls.  If the called function has a result, remap the corresponding
-  // value.  Note that LLVM IR dialect CallOp has either 0 or 1 result.
-  if (isa<LLVM::CallOp>(opInst)) {
-    llvm::Value *result = convertCall(opInst);
+    } else {
+      auto calleeType =
+          callOp->getOperands().front().getType().cast<LLVMPointerType>();
+      auto *calleeFunctionType = cast<llvm::FunctionType>(
+          moduleTranslation.convertType(calleeType.getElementType()));
+      call = builder.CreateCall(calleeFunctionType, operandsRef.front(),
+                                operandsRef.drop_front());
+    }
+    llvm::MDNode *branchWeights =
+        convertBranchWeights(callOp.getBranchWeights(), moduleTranslation);
+    if (branchWeights)
+      call->setMetadata(llvm::LLVMContext::MD_prof, branchWeights);
+    // If the called function has a result, remap the corresponding value.  Note
+    // that LLVM IR dialect CallOp has either 0 or 1 result.
     if (opInst.getNumResults() != 0) {
-      moduleTranslation.mapValue(opInst.getResult(0), result);
+      moduleTranslation.mapValue(opInst.getResult(0), call);
       return success();
     }
     // Check that LLVM call returns void for 0-result functions.
-    return success(result->getType()->isVoidTy());
+    return success(call->getType()->isVoidTy());
   }
 
   if (auto inlineAsmOp = dyn_cast<LLVM::InlineAsmOp>(opInst)) {
@@ -442,6 +459,10 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupBlock(invOp.getSuccessor(1)),
           operandsRef.drop_front());
     }
+    llvm::MDNode *branchWeights =
+        convertBranchWeights(invOp.getBranchWeights(), moduleTranslation);
+    if (branchWeights)
+      result->setMetadata(llvm::LLVMContext::MD_prof, branchWeights);
     moduleTranslation.mapBranch(invOp, result);
     // InvokeOp can only have 0 or 1 result
     if (invOp->getNumResults() != 0) {
@@ -478,17 +499,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     return success();
   }
   if (auto condbrOp = dyn_cast<LLVM::CondBrOp>(opInst)) {
-    llvm::MDNode *branchWeights = nullptr;
-    if (auto weights = condbrOp.getBranchWeights()) {
-      // Map weight attributes to LLVM metadata.
-      auto weightValues = weights->getValues<APInt>();
-      auto trueWeight = weightValues[0].getSExtValue();
-      auto falseWeight = weightValues[1].getSExtValue();
-      branchWeights =
-          llvm::MDBuilder(moduleTranslation.getLLVMContext())
-              .createBranchWeights(static_cast<uint32_t>(trueWeight),
-                                   static_cast<uint32_t>(falseWeight));
-    }
+    llvm::MDNode *branchWeights =
+        convertBranchWeights(condbrOp.getBranchWeights(), moduleTranslation);
     llvm::BranchInst *branch = builder.CreateCondBr(
         moduleTranslation.lookupValue(condbrOp.getOperand(0)),
         moduleTranslation.lookupBlock(condbrOp.getSuccessor(0)),
@@ -498,16 +510,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     return success();
   }
   if (auto switchOp = dyn_cast<LLVM::SwitchOp>(opInst)) {
-    llvm::MDNode *branchWeights = nullptr;
-    if (auto weights = switchOp.getBranchWeights()) {
-      llvm::SmallVector<uint32_t> weightValues;
-      weightValues.reserve(weights->size());
-      for (llvm::APInt weight : weights->cast<DenseIntElementsAttr>())
-        weightValues.push_back(weight.getLimitedValue());
-      branchWeights = llvm::MDBuilder(moduleTranslation.getLLVMContext())
-                          .createBranchWeights(weightValues);
-    }
-
+    llvm::MDNode *branchWeights =
+        convertBranchWeights(switchOp.getBranchWeights(), moduleTranslation);
     llvm::SwitchInst *switchInst = builder.CreateSwitch(
         moduleTranslation.lookupValue(switchOp.getValue()),
         moduleTranslation.lookupBlock(switchOp.getDefaultDestination()),

@@ -35,7 +35,7 @@ static_assert(!CEElementCountFixed3.isScalable());
 constexpr ElementCount CEElementCountScalable4 = ElementCount::getScalable(4);
 
 static_assert(CEElementCountScalable4.isScalable());
-static_assert(!ElementCount::getNull().isScalable());
+static_assert(!ElementCount().isScalable());
 static_assert(
     CEElementCountScalable4.hasKnownScalarFactor(ElementCount::getScalable(2)));
 static_assert(ElementCount::getScalable(8).getKnownScalarFactor(

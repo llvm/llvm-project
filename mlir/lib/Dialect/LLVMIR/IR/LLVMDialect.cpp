@@ -1156,7 +1156,13 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
 
 void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
                    StringAttr callee, ValueRange args) {
-  build(builder, state, results, SymbolRefAttr::get(callee), args, nullptr);
+  build(builder, state, results, SymbolRefAttr::get(callee), args, nullptr,
+        nullptr);
+}
+
+void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
+                   FlatSymbolRefAttr callee, ValueRange args) {
+  build(builder, state, results, callee, args, nullptr, nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
@@ -1165,7 +1171,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
   Type resultType = func.getFunctionType().getReturnType();
   if (!resultType.isa<LLVM::LLVMVoidType>())
     results.push_back(resultType);
-  build(builder, state, results, SymbolRefAttr::get(func), args, nullptr);
+  build(builder, state, results, SymbolRefAttr::get(func), args, nullptr,
+        nullptr);
 }
 
 CallInterfaceCallable CallOp::getCallableForCallee() {
@@ -2823,10 +2830,25 @@ namespace {
 struct LLVMInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
 
-  /// Conservatively only allow inlining of pure ops.
+  /// Conservative allowlist-based inlining of operations supported so far.
   bool isLegalToInline(Operation *op, Region *, bool,
                        BlockAndValueMapping &) const final {
-    return isPure(op);
+    if (isPure(op))
+      return true;
+    return llvm::TypeSwitch<Operation *, bool>(op)
+        .Case<LLVM::LoadOp, LLVM::StoreOp>([&](auto memOp) {
+          // Some attributes on load and store operations require handling
+          // during inlining. Since this is not yet implemented, refuse to
+          // inline memory operations that have any of these attributes.
+          if (memOp.getAccessGroups())
+            return false;
+          if (memOp.getAliasScopes())
+            return false;
+          if (memOp.getNoaliasScopes())
+            return false;
+          return true;
+        })
+        .Default([](auto) { return false; });
   }
 };
 } // end anonymous namespace

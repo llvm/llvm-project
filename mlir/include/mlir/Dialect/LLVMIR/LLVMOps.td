@@ -483,7 +483,8 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
   let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
                    Variadic<LLVM_Type>:$callee_operands,
                    Variadic<LLVM_Type>:$normalDestOperands,
-                   Variadic<LLVM_Type>:$unwindDestOperands);
+                   Variadic<LLVM_Type>:$unwindDestOperands,
+                   OptionalAttr<ElementsAttr>:$branch_weights);
   let results = (outs Variadic<LLVM_Type>);
   let successors = (successor AnySuccessor:$normalDest,
                               AnySuccessor:$unwindDest);
@@ -500,7 +501,7 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
       "ValueRange":$normalOps, "Block*":$unwind, "ValueRange":$unwindOps),
     [{
       build($_builder, $_state, tys, /*callee=*/FlatSymbolRefAttr(), ops, normalOps,
-            unwindOps, normal, unwind);
+            unwindOps, nullptr, normal, unwind);
     }]>];
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
@@ -553,12 +554,15 @@ def LLVM_CallOp : LLVM_Op<"call",
   let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
                        Variadic<LLVM_Type>,
                        DefaultValuedAttr<LLVM_FastmathFlagsAttr,
-                                         "{}">:$fastmathFlags);
+                                         "{}">:$fastmathFlags,
+                       OptionalAttr<ElementsAttr>:$branch_weights);
   let results = (outs Optional<LLVM_Type>:$result);
 
   let builders = [
     OpBuilder<(ins "LLVMFuncOp":$func, "ValueRange":$args)>,
     OpBuilder<(ins "TypeRange":$results, "StringAttr":$callee,
+                   CArg<"ValueRange", "{}">:$args)>,
+    OpBuilder<(ins "TypeRange":$results, "FlatSymbolRefAttr":$callee,
                    CArg<"ValueRange", "{}">:$args)>,
     OpBuilder<(ins "TypeRange":$results, "StringRef":$callee,
                    CArg<"ValueRange", "{}">:$args)>
