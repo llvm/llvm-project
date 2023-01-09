@@ -13,16 +13,16 @@
 // RUN: chmod +x %t/amdgpu_arch_empty
 
 // case when amdgpu_arch returns nothing or fails
-// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -nogpulib --amdgpu-arch-tool=%t/amdgpu_arch_fail %s 2>&1 \
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=amdgcn-amd-amdhsa -nogpulib --amdgpu-arch-tool=%t/amdgpu_arch_fail %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-OUTPUT-ERROR
 // NO-OUTPUT-ERROR: fatal error: The option -fopenmp-targets= requires additional options -Xopenmp-target= and -march=
 
 // case when amdgpu_arch returns multiple gpus but all are different
-// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -nogpulib --amdgpu-arch-tool=%t/amdgpu_arch_different %s 2>&1 \
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=amdgcn-amd-amdhsa -nogpulib --amdgpu-arch-tool=%t/amdgpu_arch_different %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=MULTIPLE-OUTPUT-ERROR
 // MULTIPLE-OUTPUT-ERROR: error: The option -fopenmp-targets= requires additional options -Xopenmp-target= and -march= .
 
 // case when amdgpu_arch does not return anything with successful execution
-// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -nogpulib --amdgpu-arch-tool=%t/amdgpu_arch_empty %s 2>&1 \
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=amdgcn-amd-amdhsa -nogpulib --amdgpu-arch-tool=%t/amdgpu_arch_empty %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=EMPTY-OUTPUT
 // EMPTY-OUTPUT: fatal error: The option -fopenmp-targets= requires additional options -Xopenmp-target= and -march=

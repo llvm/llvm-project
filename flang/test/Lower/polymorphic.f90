@@ -23,7 +23,7 @@ module polymorphic_test
   end type
 
   type, extends(p1) :: p2
-    real :: c
+    real :: c = 10.5
   end type
 
   type r1
@@ -737,6 +737,24 @@ module polymorphic_test
 ! CHECK: %[[RES_TMP:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?xnone>>> {bindc_name = ".result"}
 ! CHECK: %[[RES:.*]] = fir.call @_QMpolymorphic_testPunlimited_polymorphic_alloc_array_ret() fastmath<contract> : () -> !fir.class<!fir.heap<!fir.array<?xnone>>>
 ! CHECK: fir.save_result %[[RES]] to %[[RES_TMP]] : !fir.class<!fir.heap<!fir.array<?xnone>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
+
+  subroutine test_unlimited_polymorphic_intentout(a)
+    class(*), intent(out) :: a
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPtest_unlimited_polymorphic_intentout(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.class<none> {fir.bindc_name = "a"}) {
+! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.class<none>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAInitialize(%[[BOX_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+
+  subroutine test_polymorphic_intentout(a)
+    class(p1), intent(out) :: a
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPtest_polymorphic_intentout(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "a"}) {
+! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAInitialize(%[[BOX_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.box<none>, !fir.ref<i8>, i32) -> none
 
 end module
 

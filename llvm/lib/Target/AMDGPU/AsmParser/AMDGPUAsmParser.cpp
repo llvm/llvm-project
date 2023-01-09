@@ -358,7 +358,7 @@ public:
   bool isUNorm() const { return isImmTy(ImmTyUNorm); }
   bool isDA() const { return isImmTy(ImmTyDA); }
   bool isR128A16() const { return isImmTy(ImmTyR128A16); }
-  bool isGFX10A16() const { return isImmTy(ImmTyA16); }
+  bool isA16() const { return isImmTy(ImmTyA16); }
   bool isLWE() const { return isImmTy(ImmTyLWE); }
   bool isOff() const { return isImmTy(ImmTyOff); }
   bool isExpTgt() const { return isImmTy(ImmTyExpTgt); }
@@ -1406,9 +1406,7 @@ public:
     return AMDGPU::hasPackedD16(getSTI());
   }
 
-  bool hasGFX10A16() const {
-    return AMDGPU::hasGFX10A16(getSTI());
-  }
+  bool hasA16() const { return AMDGPU::hasA16(getSTI()); }
 
   bool hasG16() const { return AMDGPU::hasG16(getSTI()); }
 
@@ -5999,7 +5997,7 @@ AMDGPUAsmParser::parseNamedBit(StringRef Name, OperandVector &Operands,
     Error(S, "r128 modifier is not supported on this GPU");
     return MatchOperand_ParseFail;
   }
-  if (Name == "a16" && !isGFX9() && !hasGFX10A16()) {
+  if (Name == "a16" && !hasA16()) {
     Error(S, "a16 modifier is not supported on this GPU");
     return MatchOperand_ParseFail;
   }
@@ -9125,7 +9123,7 @@ AMDGPUAsmParser::parseCustomOperand(OperandVector &Operands, unsigned MCK) {
   case MCK_gds:
   case MCK_ImmGDS:
     return parseNamedBit("gds", Operands, AMDGPUOperand::ImmTyGDS);
-  case MCK_ImmGFX10A16:
+  case MCK_ImmA16:
     return parseNamedBit("a16", Operands, AMDGPUOperand::ImmTyA16);
   case MCK_ImmHigh:
     return parseNamedBit("high", Operands, AMDGPUOperand::ImmTyHigh);

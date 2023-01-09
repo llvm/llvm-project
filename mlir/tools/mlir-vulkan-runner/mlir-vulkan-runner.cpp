@@ -63,8 +63,8 @@ static LogicalResult runMLIRPasses(Operation *op,
 
   passManager.addPass(createConvertGPUToSPIRVPass(/*mapMemorySpace=*/true));
   OpPassManager &modulePM = passManager.nest<spirv::ModuleOp>();
-  modulePM.addPass(spirv::createLowerABIAttributesPass());
-  modulePM.addPass(spirv::createUpdateVersionCapabilityExtensionPass());
+  modulePM.addPass(spirv::createSPIRVLowerABIAttributesPass());
+  modulePM.addPass(spirv::createSPIRVUpdateVCEPass());
   if (options.spirvWebGPUPrepare)
     modulePM.addPass(spirv::createSPIRVWebGPUPreparePass());
 

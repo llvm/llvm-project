@@ -143,7 +143,7 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
 
   if (log) {
     m_module.LogMessage(
-        log, "ManualDWARFIndex::IndexUnit for unit at .debug_info[0x%8.8x]",
+        log, "ManualDWARFIndex::IndexUnit for unit at .debug_info[{0:x16}]",
         unit.GetOffset());
   }
 

@@ -80,6 +80,13 @@ transform::TransformState::setPayloadOps(Value value,
   assert(!value.getType().isa<TransformParamTypeInterface>() &&
          "cannot associate payload ops with a value of parameter type");
 
+  for (Operation *target : targets) {
+    if (target)
+      continue;
+    return emitError(value.getLoc())
+           << "attempting to assign a null payload op to this transform value";
+  }
+
   auto iface = value.getType().cast<TransformHandleTypeInterface>();
   DiagnosedSilenceableFailure result =
       iface.checkPayload(value.getLoc(), targets);
@@ -104,6 +111,13 @@ transform::TransformState::setPayloadOps(Value value,
 LogicalResult transform::TransformState::setParams(Value value,
                                                    ArrayRef<Param> params) {
   assert(value != nullptr && "attempting to set params for a null value");
+
+  for (Attribute attr : params) {
+    if (attr)
+      continue;
+    return emitError(value.getLoc())
+           << "attempting to assign a null parameter to this transform value";
+  }
 
   auto valueType = value.getType().dyn_cast<TransformParamTypeInterface>();
   assert(value &&

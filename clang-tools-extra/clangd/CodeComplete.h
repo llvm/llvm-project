@@ -70,6 +70,10 @@ struct CodeCompleteOptions {
     NeverInsert,
   } InsertIncludes = IncludeInsertion::IWYU;
 
+  /// Whether include insertions for Objective-C code should use #import instead
+  /// of #include.
+  bool ImportInsertions = false;
+
   /// A visual indicator to prepend to the completion label to indicate whether
   /// completion result would trigger an #include insertion or not.
   struct IncludeInsertionIndicator {

@@ -265,8 +265,8 @@ void AMDGPUInstPrinter::printR128A16(const MCInst *MI, unsigned OpNo,
     printNamedBit(MI, OpNo, O, "r128");
 }
 
-void AMDGPUInstPrinter::printGFX10A16(const MCInst *MI, unsigned OpNo,
-                                  const MCSubtargetInfo &STI, raw_ostream &O) {
+void AMDGPUInstPrinter::printA16(const MCInst *MI, unsigned OpNo,
+                                 const MCSubtargetInfo &STI, raw_ostream &O) {
   printNamedBit(MI, OpNo, O, "a16");
 }
 

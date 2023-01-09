@@ -1952,7 +1952,7 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
   auto err = lldb_private::lzma::uncompress(data.GetData(), uncompressedData);
   if (err) {
     GetModule()->ReportWarning(
-        "An error occurred while decompression the section %s: %s",
+        "An error occurred while decompression the section {0}: {1}",
         section->GetName().AsCString(), llvm::toString(std::move(err)).c_str());
     return nullptr;
   }
@@ -2615,7 +2615,7 @@ unsigned ObjectFileELF::ApplyRelocations(
 
   for (unsigned i = 0; i < num_relocations; ++i) {
     if (!rel.Parse(rel_data, &offset)) {
-      GetModule()->ReportError(".rel%s[%d] failed to parse relocation",
+      GetModule()->ReportError(".rel{0}[{1:d}] failed to parse relocation",
                                rel_section->GetName().AsCString(), i);
       break;
     }
@@ -2643,7 +2643,7 @@ unsigned ObjectFileELF::ApplyRelocations(
           }
           *dst = value;
         } else {
-          GetModule()->ReportError(".rel%s[%u] unknown symbol id: %d",
+          GetModule()->ReportError(".rel{0}[{1}] unknown symbol id: {2:d}",
                                    rel_section->GetName().AsCString(), i,
                                    reloc_symbol(rel));
         }
@@ -2651,7 +2651,7 @@ unsigned ObjectFileELF::ApplyRelocations(
       case R_386_PC32:
       default:
         GetModule()->ReportError("unsupported 32-bit relocation:"
-                                 " .rel%s[%u], type %u",
+                                 " .rel{0}[{1}], type {2}",
                                  rel_section->GetName().AsCString(), i,
                                  reloc_type(rel));
       }
@@ -3396,7 +3396,7 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
       GetByteOrder() == eByteOrderLittle, GetAddressByteSize() == 8);
   if (!Decompressor) {
     GetModule()->ReportWarning(
-        "Unable to initialize decompressor for section '%s': %s",
+        "Unable to initialize decompressor for section '{0}': {1}",
         section->GetName().GetCString(),
         llvm::toString(Decompressor.takeError()).c_str());
     section_data.Clear();
@@ -3407,10 +3407,9 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
       std::make_shared<DataBufferHeap>(Decompressor->getDecompressedSize(), 0);
   if (auto error = Decompressor->decompress(
           {buffer_sp->GetBytes(), size_t(buffer_sp->GetByteSize())})) {
-    GetModule()->ReportWarning(
-        "Decompression of section '%s' failed: %s",
-        section->GetName().GetCString(),
-        llvm::toString(std::move(error)).c_str());
+    GetModule()->ReportWarning("Decompression of section '{0}' failed: {1}",
+                               section->GetName().GetCString(),
+                               llvm::toString(std::move(error)).c_str());
     section_data.Clear();
     return 0;
   }

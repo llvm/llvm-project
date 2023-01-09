@@ -4783,6 +4783,20 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
                         Add, ConstantInt::get(A->getType(), C.shl(1)));
   }
 
+  // Canonicalize:
+  // Assume B_Pow2 != 0
+  // 1. A & B_Pow2 != B_Pow2 -> A & B_Pow2 == 0
+  // 2. A & B_Pow2 == B_Pow2 -> A & B_Pow2 != 0
+  if (match(Op0, m_c_And(m_Specific(Op1), m_Value())) &&
+      isKnownToBeAPowerOfTwo(Op1, /* OrZero */ false, 0, &I))
+    return new ICmpInst(CmpInst::getInversePredicate(Pred), Op0,
+                        ConstantInt::getNullValue(Op0->getType()));
+
+  if (match(Op1, m_c_And(m_Specific(Op0), m_Value())) &&
+      isKnownToBeAPowerOfTwo(Op0, /* OrZero */ false, 0, &I))
+    return new ICmpInst(CmpInst::getInversePredicate(Pred), Op1,
+                        ConstantInt::getNullValue(Op1->getType()));
+
   return nullptr;
 }
 
