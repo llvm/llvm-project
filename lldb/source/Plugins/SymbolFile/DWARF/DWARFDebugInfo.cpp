@@ -53,12 +53,13 @@ const DWARFDebugAranges &DWARFDebugInfo::GetCompileUnitAranges() {
   }
 
   // Manually build arange data for everything that wasn't in .debug_aranges.
-  // Skip this step for dSYMs as we can trust dsymutil to have emitted complete
-  // aranges.
-  const bool is_dsym =
-      m_dwarf.GetObjectFile() &&
-      m_dwarf.GetObjectFile()->GetType() == ObjectFile::eTypeDebugInfo;
-  if (!is_dsym) {
+  // The .debug_aranges accelerator is not guaranteed to be complete.
+  // Tools such as dsymutil can provide stronger guarantees than required by the
+  // standard. Without that guarantee, we have to iterate over every CU in the
+  // .debug_info and make sure there's a corresponding entry in the table and if
+  // not, add one for every subprogram.
+  ObjectFile *OF = m_dwarf.GetObjectFile();
+  if (!OF || !OF->CanTrustAddressRanges()) {
     const size_t num_units = GetNumUnits();
     for (size_t idx = 0; idx < num_units; ++idx) {
       DWARFUnit *cu = GetUnitAtIndex(idx);
