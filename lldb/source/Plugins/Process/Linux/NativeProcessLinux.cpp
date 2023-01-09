@@ -1513,9 +1513,9 @@ NativeProcessLinux::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
   case llvm::Triple::arm:
     switch (size_hint) {
     case 2:
-      return llvm::makeArrayRef(g_thumb_opcode);
+      return llvm::ArrayRef(g_thumb_opcode);
     case 4:
-      return llvm::makeArrayRef(g_arm_opcode);
+      return llvm::ArrayRef(g_arm_opcode);
     default:
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "Unrecognised trap opcode size hint!");

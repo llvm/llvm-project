@@ -1277,7 +1277,7 @@ FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
                       Operation::dialect_attr_range attrs) {
   SmallVector<NamedAttribute, 8> attrRef(attrs);
-  return create(location, name, type, llvm::makeArrayRef(attrRef));
+  return create(location, name, type, llvm::ArrayRef(attrRef));
 }
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
                       ArrayRef<NamedAttribute> attrs,
@@ -1853,7 +1853,7 @@ LogicalResult SplitAtOp::fold(ArrayRef<Attribute> operands,
     return failure();
   auto shapeVec = llvm::to_vector<6>(
       operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());
-  auto shape = llvm::makeArrayRef(shapeVec);
+  auto shape = llvm::ArrayRef(shapeVec);
   auto splitPoint = operands[1].cast<IntegerAttr>().getInt();
   // Verify that the split point is in the correct range.
   // TODO: Constant fold to an "error".
@@ -1975,7 +1975,7 @@ ParseResult ReduceOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   // Resolve operands.
-  auto initVals = llvm::makeArrayRef(operands).drop_front();
+  auto initVals = llvm::ArrayRef(operands).drop_front();
   if (parser.resolveOperand(operands.front(), shapeOrExtentTensorType,
                             result.operands) ||
       parser.resolveOperands(initVals, result.types, parser.getNameLoc(),

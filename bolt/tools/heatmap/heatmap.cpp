@@ -50,7 +50,7 @@ static std::string GetExecutablePath(const char *Argv0) {
 }
 
 int main(int argc, char **argv) {
-  cl::HideUnrelatedOptions(makeArrayRef(opts::HeatmapCategories));
+  cl::HideUnrelatedOptions(ArrayRef(opts::HeatmapCategories));
   cl::ParseCommandLineOptions(argc, argv, "");
 
   if (opts::PerfData.empty()) {

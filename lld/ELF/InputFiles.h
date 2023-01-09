@@ -174,11 +174,11 @@ public:
   ArrayRef<Symbol *> getLocalSymbols() {
     if (numSymbols == 0)
       return {};
-    return llvm::makeArrayRef(symbols.get() + 1, firstGlobal - 1);
+    return llvm::ArrayRef(symbols.get() + 1, firstGlobal - 1);
   }
   ArrayRef<Symbol *> getGlobalSymbols() {
-    return llvm::makeArrayRef(symbols.get() + firstGlobal,
-                              numSymbols - firstGlobal);
+    return llvm::ArrayRef(symbols.get() + firstGlobal,
+                          numSymbols - firstGlobal);
   }
   MutableArrayRef<Symbol *> getMutableGlobalSymbols() {
     return llvm::makeMutableArrayRef(symbols.get() + firstGlobal,
