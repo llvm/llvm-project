@@ -381,7 +381,7 @@ define i1 @pr59887(i1 %x, i1 %c) {
 ; CHECK-LABEL: @pr59887(
 ; CHECK-NEXT:    [[ABS:%.*]] = call i1 @llvm.abs.i1(i1 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C:%.*]], i1 [[ABS]], i1 false
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %abs = call i1 @llvm.abs.i1(i1 %x, i1 false)
   %res = select i1 %c, i1 %abs, i1 false
