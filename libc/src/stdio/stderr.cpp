@@ -10,4 +10,6 @@
 
 #include <stdio.h>
 
-extern "C" FILE *stderr = reinterpret_cast<FILE *>(__llvm_libc::stderr);
+extern "C" {
+FILE *stderr = reinterpret_cast<FILE *>(__llvm_libc::stderr);
+}

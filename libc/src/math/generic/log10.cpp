@@ -914,13 +914,11 @@ double log10_accurate(int e_x, int index, double m_x) {
   fputil::DoubleDouble mx{/*lo*/ 0.0, /*hi*/ m_x};
 
   // Further range reductions.
-  int idx[R_STEPS];
   double scale = 0x1.0p+7;
   const fputil::DyadicFloat<128> NEG_ONE(-1.0);
   for (size_t i = 0; i < R_STEPS; ++i) {
     scale *= 0x1.0p+4;
     int id = static_cast<int>(fputil::multiply_add(mx.hi, scale, 0x1.0p+4));
-    idx[i] = id;
     double r = RR[i][id];
     fputil::DoubleDouble rm = fputil::exact_mult(r, mx.hi);
     rm.hi += r - 1.0;
