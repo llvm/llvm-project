@@ -106,8 +106,8 @@ bool SectionLoadList::SetSectionLoadAddress(const lldb::SectionSP &section,
           ModuleSP curr_module_sp(ats_pos->second->GetModule());
           if (curr_module_sp) {
             module_sp->ReportWarning(
-                "address 0x%16.16" PRIx64
-                " maps to more than one section: %s.%s and %s.%s",
+                "address {0:x16} maps to more than one section: {1}.{2} and "
+                "{3}.{4}",
                 load_addr, module_sp->GetFileSpec().GetFilename().GetCString(),
                 section->GetName().GetCString(),
                 curr_module_sp->GetFileSpec().GetFilename().GetCString(),
