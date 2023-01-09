@@ -638,6 +638,25 @@ LogicalResult mlir::normalizeAffineFor(AffineForOp op, bool promoteSingleIter) {
   return success();
 }
 
+/// Returns true if the memory operation of `destAccess` depends on `srcAccess`
+/// inside of the innermost common surrounding affine loop between the two
+/// accesses.
+static bool mustReachAtInnermost(const MemRefAccess &srcAccess,
+                                 const MemRefAccess &destAccess) {
+  // Affine dependence analysis is possible only if both ops in the same
+  // AffineScope.
+  if (getAffineScope(srcAccess.opInst) != getAffineScope(destAccess.opInst))
+    return false;
+
+  unsigned nsLoops =
+      getNumCommonSurroundingLoops(*srcAccess.opInst, *destAccess.opInst);
+  FlatAffineValueConstraints dependenceConstraints;
+  DependenceResult result = checkMemrefAccessDependence(
+      srcAccess, destAccess, nsLoops + 1, &dependenceConstraints,
+      /*dependenceComponents=*/nullptr);
+  return hasDependence(result);
+}
+
 /// Returns true if `srcMemOp` may have an effect on `destMemOp` within the
 /// scope of the outermost `minSurroundingLoops` loops that surround them.
 /// `srcMemOp` and `destMemOp` are expected to be affine read/write ops.
@@ -858,7 +877,14 @@ static LogicalResult forwardStoreToLoad(
     if (!domInfo.dominates(storeOp, loadOp))
       continue;
 
-    // 3. Ensure there is no intermediate operation which could replace the
+    // 3. The store must reach the load. Access function equivalence only
+    // guarantees this for accesses in the same block. The load could be in a
+    // nested block that is unreachable.
+    if (storeOp->getBlock() != loadOp->getBlock() &&
+        !mustReachAtInnermost(srcAccess, destAccess))
+      continue;
+
+    // 4. Ensure there is no intermediate operation which could replace the
     // value in memory.
     if (!mlir::hasNoInterveningEffect<MemoryEffects::Write>(storeOp, loadOp))
       continue;
