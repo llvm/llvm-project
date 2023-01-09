@@ -371,20 +371,19 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV) {
   StringRef Tool = ArgV[1];
   void *GetExecutablePathVP = (void *)(intptr_t)GetExecutablePath;
   if (Tool == "-cc1")
-    return cc1_main(makeArrayRef(ArgV).slice(1), ArgV[0], GetExecutablePathVP);
+    return cc1_main(ArrayRef(ArgV).slice(1), ArgV[0], GetExecutablePathVP);
 #if LLVM_ON_UNIX
   if (Tool == "-cc1depscand")
-    return cc1depscand_main(makeArrayRef(ArgV).slice(2), ArgV[0],
+    return cc1depscand_main(ArrayRef(ArgV).slice(2), ArgV[0],
                             GetExecutablePathVP);
   if (Tool == "-cc1depscan")
-    return cc1depscan_main(makeArrayRef(ArgV).slice(2), ArgV[0],
+    return cc1depscan_main(ArrayRef(ArgV).slice(2), ArgV[0],
                            GetExecutablePathVP);
 #endif /* LLVM_ON_UNIX */
   if (Tool == "-cc1as")
-    return cc1as_main(makeArrayRef(ArgV).slice(2), ArgV[0],
-                      GetExecutablePathVP);
+    return cc1as_main(ArrayRef(ArgV).slice(2), ArgV[0], GetExecutablePathVP);
   if (Tool == "-cc1gen-reproducer")
-    return cc1gen_reproducer_main(makeArrayRef(ArgV).slice(2), ArgV[0],
+    return cc1gen_reproducer_main(ArrayRef(ArgV).slice(2), ArgV[0],
                                   GetExecutablePathVP);
   // Reject unknown tools.
   llvm::errs() << "error: unknown integrated tool '" << Tool << "'. "
@@ -409,7 +408,7 @@ int clang_main(int Argc, char **Argv) {
   llvm::StringSaver Saver(A);
 
   StringRef DriverMode =
-      getDriverMode(Args[0], llvm::makeArrayRef(Args).slice(1));
+      getDriverMode(Args[0], llvm::ArrayRef(Args).slice(1));
   if (isClangCache(DriverMode)) {
     if (Optional<int> ExitCode = handleClangCacheInvocation(Args, Saver))
       return *ExitCode;

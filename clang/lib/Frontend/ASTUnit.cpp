@@ -1761,8 +1761,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
     CIOpts.VFS = VFS;
     CIOpts.Diags = Diags;
     CIOpts.ProbePrecompiled = true; // FIXME: historical default. Needed?
-    CI = createInvocation(llvm::makeArrayRef(ArgBegin, ArgEnd),
-                          std::move(CIOpts));
+    CI = createInvocation(llvm::ArrayRef(ArgBegin, ArgEnd), std::move(CIOpts));
     if (!CI)
       return nullptr;
   }

@@ -371,7 +371,7 @@ public:
           dyn_cast<llvm::StructType>(UnpaddedCoerceAndExpandType)) {
       return structTy->elements();
     } else {
-      return llvm::makeArrayRef(&UnpaddedCoerceAndExpandType, 1);
+      return llvm::ArrayRef(&UnpaddedCoerceAndExpandType, 1);
     }
   }
 
@@ -713,7 +713,7 @@ public:
 
   ArrayRef<ExtParameterInfo> getExtParameterInfos() const {
     if (!HasExtParameterInfos) return {};
-    return llvm::makeArrayRef(getExtParameterInfosBuffer(), NumArgs);
+    return llvm::ArrayRef(getExtParameterInfosBuffer(), NumArgs);
   }
   ExtParameterInfo getExtParameterInfo(unsigned argIndex) const {
     assert(argIndex <= NumArgs);

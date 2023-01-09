@@ -1726,9 +1726,7 @@ public:
   range_iterator range_end() const { return Ranges.end(); }
   unsigned range_size() const { return Ranges.size(); }
 
-  ArrayRef<CharSourceRange> getRanges() const {
-    return llvm::makeArrayRef(Ranges);
-  }
+  ArrayRef<CharSourceRange> getRanges() const { return llvm::ArrayRef(Ranges); }
 
   using fixit_iterator = std::vector<FixItHint>::const_iterator;
 
@@ -1736,9 +1734,7 @@ public:
   fixit_iterator fixit_end() const { return FixIts.end(); }
   unsigned fixit_size() const { return FixIts.size(); }
 
-  ArrayRef<FixItHint> getFixIts() const {
-    return llvm::makeArrayRef(FixIts);
-  }
+  ArrayRef<FixItHint> getFixIts() const { return llvm::ArrayRef(FixIts); }
 };
 
 // Simple debug printing of StoredDiagnostic.

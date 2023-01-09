@@ -204,7 +204,7 @@ void TokenLexer::stringifyVAOPTContents(
       assert(CurTokenIdx != 0 &&
              "Can not have __VAOPT__ contents begin with a ##");
       Token &LHS = VAOPTTokens[CurTokenIdx - 1];
-      pasteTokens(LHS, llvm::makeArrayRef(VAOPTTokens, NumVAOptTokens),
+      pasteTokens(LHS, llvm::ArrayRef(VAOPTTokens, NumVAOptTokens),
                   CurTokenIdx);
       // Replace the token prior to the first ## in this iteration.
       ConcatenatedVAOPTResultToks.back() = LHS;
@@ -722,7 +722,7 @@ bool TokenLexer::Lex(Token &Tok) {
 }
 
 bool TokenLexer::pasteTokens(Token &Tok) {
-  return pasteTokens(Tok, llvm::makeArrayRef(Tokens, NumTokens), CurTokenIdx);
+  return pasteTokens(Tok, llvm::ArrayRef(Tokens, NumTokens), CurTokenIdx);
 }
 
 /// LHSTok is the LHS of a ## operator, and CurTokenIdx is the ##
