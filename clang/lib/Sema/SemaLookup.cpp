@@ -2099,6 +2099,22 @@ bool LookupResult::isAvailableForLookup(Sema &SemaRef, NamedDecl *ND) {
   if (auto *DeductionGuide = ND->getDeclName().getCXXDeductionGuideTemplate())
     return SemaRef.hasReachableDefinition(DeductionGuide);
 
+  // FIXME: The lookup for allocation function is a standalone process.
+  // (We can find the logics in Sema::FindAllocationFunctions)
+  //
+  // Such structure makes it a problem when we instantiate a template
+  // declaration using placement allocation function if the placement
+  // allocation function is invisible.
+  // (See https://github.com/llvm/llvm-project/issues/59601)
+  //
+  // Here we workaround it by making the placement allocation functions
+  // always acceptable. The downside is that we can't diagnose the direct
+  // use of the invisible placement allocation functions. (Although such uses
+  // should be rare).
+  if (auto *FD = dyn_cast<FunctionDecl>(ND);
+      FD && FD->isReservedGlobalPlacementOperator())
+    return true;
+
   auto *DC = ND->getDeclContext();
   // If ND is not visible and it is at namespace scope, it shouldn't be found
   // by name lookup.
