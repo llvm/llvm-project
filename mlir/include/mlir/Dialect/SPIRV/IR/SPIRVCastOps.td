@@ -437,10 +437,6 @@ def SPIRV_GenericCastToPtrExplicitOp : SPIRV_Op<"GenericCastToPtrExplicit", [Pur
 
     <!-- End of AutoGen section -->
 
-    ```
-    [TODO]
-    ```mlir
-
     #### Example:
 
     ```mlir
