@@ -269,8 +269,6 @@ public:
   /// returns null.
   const ControlFlowContext *getControlFlowContext(const FunctionDecl *F);
 
-  void addFieldsReferencedInScope(llvm::DenseSet<const FieldDecl *> Fields);
-
   const Options &getOptions() { return Opts; }
 
 private:
@@ -287,8 +285,11 @@ private:
     using DenseMapInfo::isEqual;
   };
 
-  /// Returns the subset of fields of `Type` that are referenced in the scope of
-  /// the analysis.
+  // Extends the set of modeled field declarations.
+  void addModeledFields(const llvm::DenseSet<const FieldDecl *> &Fields);
+
+  /// Returns the fields of `Type`, limited to the set of fields modeled by this
+  /// context.
   llvm::DenseSet<const FieldDecl *> getReferencedFields(QualType Type);
 
   /// Adds all constraints of the flow condition identified by `Token` and all
@@ -388,8 +389,8 @@ private:
 
   llvm::DenseMap<const FunctionDecl *, ControlFlowContext> FunctionContexts;
 
-  // All fields referenced (statically) in the scope of the analysis.
-  llvm::DenseSet<const FieldDecl *> FieldsReferencedInScope;
+  // Fields modeled by environments covered by this context.
+  llvm::DenseSet<const FieldDecl *> ModeledFields;
 };
 
 } // namespace dataflow
