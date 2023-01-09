@@ -319,7 +319,7 @@ struct common_input_iterator {
   }
   constexpr void operator++(int) { ++it_; }
 
-  constexpr int& operator*() const { return *it_; }
+  constexpr decltype(auto) operator*() const { return *it_; }
 
   friend constexpr bool operator==(common_input_iterator const&, common_input_iterator const&) = default;
 };

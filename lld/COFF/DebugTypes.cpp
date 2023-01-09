@@ -235,7 +235,7 @@ void TpiSource::remapRecord(MutableArrayRef<uint8_t> rec,
         reinterpret_cast<TypeIndex *>(contents.data() + ref.Offset), ref.Count);
     for (TypeIndex &ti : indices) {
       if (!remapTypeIndex(ti, ref.Kind)) {
-        if (config->verbose) {
+        if (ctx.config.verbose) {
           uint16_t kind =
               reinterpret_cast<const RecordPrefix *>(rec.data())->RecordKind;
           StringRef fname = file ? file->getName() : "<unknown PDB>";
@@ -305,7 +305,7 @@ getHashesFromDebugH(ArrayRef<uint8_t> debugH) {
 
 // Merge .debug$T for a generic object file.
 Error TpiSource::mergeDebugT(TypeMerger *m) {
-  assert(!config->debugGHashes &&
+  assert(!ctx.config.debugGHashes &&
          "use remapTpiWithGHashes when ghash is enabled");
 
   CVTypeArray types;
@@ -329,7 +329,7 @@ Error TpiSource::mergeDebugT(TypeMerger *m) {
   tpiMap = indexMapStorage;
   ipiMap = indexMapStorage;
 
-  if (config->showSummary) {
+  if (ctx.config.showSummary) {
     nbTypeRecords = indexMapStorage.size() - nbHeadIndices;
     nbTypeRecordsBytes = reader.getLength();
     // Count how many times we saw each type record in our input. This
@@ -356,7 +356,7 @@ Error TpiSource::mergeDebugT(TypeMerger *m) {
 
 // Merge types from a type server PDB.
 Error TypeServerSource::mergeDebugT(TypeMerger *m) {
-  assert(!config->debugGHashes &&
+  assert(!ctx.config.debugGHashes &&
          "use remapTpiWithGHashes when ghash is enabled");
 
   pdb::PDBFile &pdbFile = pdbInputFile->session->getPDBFile();
@@ -385,7 +385,7 @@ Error TypeServerSource::mergeDebugT(TypeMerger *m) {
     ipiMap = ipiSrc->indexMapStorage;
   }
 
-  if (config->showSummary) {
+  if (ctx.config.showSummary) {
     nbTypeRecords = tpiMap.size() + ipiMap.size();
     nbTypeRecordsBytes =
         expectedTpi->typeArray().getUnderlyingStream().getLength() +
@@ -727,14 +727,14 @@ void TpiSource::mergeUniqueTypeRecords(ArrayRef<uint8_t> typeRecords,
 }
 
 void TpiSource::remapTpiWithGHashes(GHashState *g) {
-  assert(config->debugGHashes && "ghashes must be enabled");
+  assert(ctx.config.debugGHashes && "ghashes must be enabled");
   fillMapFromGHashes(g);
   tpiMap = indexMapStorage;
   ipiMap = indexMapStorage;
   mergeUniqueTypeRecords(file->debugTypes);
   // TODO: Free all unneeded ghash resources now that we have a full index map.
 
-  if (config->showSummary) {
+  if (ctx.config.showSummary) {
     nbTypeRecords = ghashes.size();
     nbTypeRecordsBytes = file->debugTypes.size();
   }
@@ -787,7 +787,7 @@ static ArrayRef<uint8_t> typeArrayToBytes(const CVTypeArray &types) {
 
 // Merge types from a type server PDB.
 void TypeServerSource::remapTpiWithGHashes(GHashState *g) {
-  assert(config->debugGHashes && "ghashes must be enabled");
+  assert(ctx.config.debugGHashes && "ghashes must be enabled");
 
   // IPI merging depends on TPI, so do TPI first, then do IPI.  No need to
   // propagate errors, those should've been handled during ghash loading.
@@ -805,13 +805,13 @@ void TypeServerSource::remapTpiWithGHashes(GHashState *g) {
     ipiSrc->ipiMap = ipiMap;
     ipiSrc->mergeUniqueTypeRecords(typeArrayToBytes(ipi.typeArray()));
 
-    if (config->showSummary) {
+    if (ctx.config.showSummary) {
       nbTypeRecords = ipiSrc->ghashes.size();
       nbTypeRecordsBytes = ipi.typeArray().getUnderlyingStream().getLength();
     }
   }
 
-  if (config->showSummary) {
+  if (ctx.config.showSummary) {
     nbTypeRecords += ghashes.size();
     nbTypeRecordsBytes += tpi.typeArray().getUnderlyingStream().getLength();
   }
@@ -898,7 +898,7 @@ void UsePrecompSource::remapTpiWithGHashes(GHashState *g) {
   mergeUniqueTypeRecords(file->debugTypes,
                          TypeIndex(precompDependency.getStartTypeIndex() +
                                    precompDependency.getTypesCount()));
-  if (config->showSummary) {
+  if (ctx.config.showSummary) {
     nbTypeRecords = ghashes.size();
     nbTypeRecordsBytes = file->debugTypes.size();
   }
