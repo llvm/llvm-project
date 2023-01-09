@@ -623,8 +623,7 @@ define i64 @select_noccmp1(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
 ; SDISEL-NEXT:    cset w8, gt
 ; SDISEL-NEXT:    cmp x2, #2
 ; SDISEL-NEXT:    ccmp x2, #4, #4, lt
-; SDISEL-NEXT:    cset w9, gt
-; SDISEL-NEXT:    orr w8, w8, w9
+; SDISEL-NEXT:    csinc w8, w8, wzr, le
 ; SDISEL-NEXT:    cmp w8, #0
 ; SDISEL-NEXT:    csel x0, xzr, x3, ne
 ; SDISEL-NEXT:    ret
@@ -704,9 +703,8 @@ define i32 @select_noccmp3(i32 %v0, i32 %v1, i32 %v2) {
 ; SDISEL-NEXT:    cmp w0, #22
 ; SDISEL-NEXT:    mov w9, #44
 ; SDISEL-NEXT:    ccmp w0, w9, #0, ge
-; SDISEL-NEXT:    cset w9, gt
+; SDISEL-NEXT:    csel w8, wzr, w8, le
 ; SDISEL-NEXT:    cmp w0, #99
-; SDISEL-NEXT:    and w8, w8, w9
 ; SDISEL-NEXT:    mov w9, #77
 ; SDISEL-NEXT:    ccmp w0, w9, #4, ne
 ; SDISEL-NEXT:    cset w9, eq
