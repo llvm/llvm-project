@@ -3,6 +3,10 @@
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128-n8:16:32"
 
+declare i32 @llvm.bitreverse.i32(i32)
+declare <2 x i8> @llvm.bitreverse.v2i8(<2 x i8>)
+declare void @use_i32(i32)
+
 ;pairwise reverse
 ;template <typename T>
 ;T reverse(T v) {
@@ -313,4 +317,39 @@ define i4 @shuf_4bits_extra_use(<4 x i1> %x) {
   call void @use(<4 x i1> %bitreverse)
   %cast = bitcast <4 x i1> %bitreverse to i4
   ret i4 %cast
+}
+
+define i32 @rev_i1(i1 %x) {
+; CHECK-LABEL: @rev_i1(
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[X:%.*]] to i32
+; CHECK-NEXT:    call void @use_i32(i32 [[Z]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[Z]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %z = zext i1 %x to i32
+  call void @use_i32(i32 %z)
+  %r = call i32 @llvm.bitreverse.i32(i32 %z)
+  ret i32 %r
+}
+
+define <2 x i8> @rev_v2i1(<2 x i1> %x) {
+; CHECK-LABEL: @rev_v2i1(
+; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i1> [[X:%.*]] to <2 x i8>
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.bitreverse.v2i8(<2 x i8> [[Z]])
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %z = zext <2 x i1> %x to <2 x i8>
+  %r = call <2 x i8> @llvm.bitreverse.v2i8(<2 x i8> %z)
+  ret <2 x i8> %r
+}
+
+define i32 @rev_i2(i2 %x) {
+; CHECK-LABEL: @rev_i2(
+; CHECK-NEXT:    [[Z:%.*]] = zext i2 [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[Z]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %z = zext i2 %x to i32
+  %r = call i32 @llvm.bitreverse.i32(i32 %z)
+  ret i32 %r
 }
