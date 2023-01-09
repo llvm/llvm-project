@@ -1423,12 +1423,15 @@ class VIMAGE_IntersectRay_gfx12<mimgopc op, string opcode, int num_addrs,
                                 bit IsA16, bit isDual,
                                 list<RegisterClass> addr_types>
     : VIMAGE_gfx12<op.GFX12, !if(isDual,
-                                 (outs VReg_320:$vdata),
+                                 (outs VReg_320:$vdata, VReg_96:$ray_origin_out,
+                                       VReg_96:$ray_dir_out),
                                  (outs VReg_128:$vdata)),
                    num_addrs, "GFX12", addr_types> {
+  let Constraints = !if(isDual, "$ray_origin_out = $vaddr2, $ray_dir_out = $vaddr3", "");
   let InOperandList = !con(nsah.AddrIns, (ins SReg_128:$rsrc), (ins NV:$nv),
                            !if(IsA16, (ins A16:$a16), (ins)));
   let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $rsrc$nv"#!if(IsA16, "$a16", "");
+  let SchedRW = !if(isDual, [WriteVMEM, WriteVMEM, WriteVMEM], [WriteVMEM]);
 }
 
 multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit IsA16,

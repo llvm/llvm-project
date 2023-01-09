@@ -1129,7 +1129,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
   case Intrinsic::amdgcn_image_bvh_intersect_ray: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::getVT(CI.getType()); // XXX: what is correct VT?
+    Info.memVT = MVT::getVT(
+      IntrID == Intrinsic::amdgcn_image_bvh_intersect_ray ?
+        CI.getType() :
+        cast<StructType>(CI.getType())->getElementType(0)); // XXX: what is correct VT?
 
     Info.fallbackAddressSpace = AMDGPUAS::BUFFER_FAT_POINTER;
     Info.align.reset();
@@ -7858,7 +7861,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       return SDValue();
     }
 
+    const bool IsGFX11 = AMDGPU::isGFX11(*Subtarget);
     const bool IsGFX11Plus = AMDGPU::isGFX11Plus(*Subtarget);
+    const bool IsGFX12Plus = AMDGPU::isGFX12Plus(*Subtarget);
     const bool IsA16 = RayDir.getValueType().getVectorElementType() == MVT::f16;
     const bool Is64 = NodePtr.getValueType() == MVT::i64;
     const unsigned NumVDataDwords = 4;
@@ -7873,14 +7878,16 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     int Opcode;
     if (UseNSA) {
       Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                     IsGFX11Plus ? AMDGPU::MIMGEncGfx11NSA
-                                                 : AMDGPU::MIMGEncGfx10NSA,
+                                     IsGFX12Plus ? AMDGPU::MIMGEncGfx12 :
+                                     IsGFX11 ? AMDGPU::MIMGEncGfx11NSA :
+                                               AMDGPU::MIMGEncGfx10NSA,
                                      NumVDataDwords, NumVAddrDwords);
     } else {
+      assert(!IsGFX12Plus);
       Opcode =
           AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                IsGFX11Plus ? AMDGPU::MIMGEncGfx11Default
-                                            : AMDGPU::MIMGEncGfx10Default,
+                                IsGFX11 ? AMDGPU::MIMGEncGfx11Default
+                                        : AMDGPU::MIMGEncGfx10Default,
                                 NumVDataDwords, NumVAddrDwords);
     }
     assert(Opcode != -1);
@@ -7959,6 +7966,8 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     }
 
     Ops.push_back(TDescr);
+    if (IsGFX12Plus)
+      Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i1)); // nv
     if (IsA16)
       Ops.push_back(DAG.getTargetConstant(1, DL, MVT::i1));
     Ops.push_back(M->getChain());

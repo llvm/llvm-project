@@ -187,9 +187,11 @@ public:
   bool legalizeBufferAtomic(MachineInstr &MI, MachineIRBuilder &B,
                             Intrinsic::ID IID) const;
 
-  bool legalizeBVHIntrinsic(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeBVHIntersectRayIntrinsic(MachineInstr &MI,
+                                        MachineIRBuilder &B) const;
 
-  bool legalizeBVHDualIntrinsic(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeBVHDualIntersectRayIntrinsic(MachineInstr &MI,
+                                            MachineIRBuilder &B) const;
 
   bool legalizeFPTruncRound(MachineInstr &MI, MachineIRBuilder &B) const;
 

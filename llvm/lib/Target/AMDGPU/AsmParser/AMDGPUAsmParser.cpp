@@ -8254,8 +8254,19 @@ void AMDGPUAsmParser::cvtSMEMAtomic(MCInst &Inst, const OperandVector &Operands)
 
 void AMDGPUAsmParser::cvtIntersectRay(MCInst &Inst,
                                       const OperandVector &Operands) {
+  // vdata
+  static_cast<AMDGPUOperand &>(*Operands[1]).addRegOperands(Inst, 1);
+
+  // Add the ray origin and direction output operands.
+  unsigned NumDefs = MII.get(Inst.getOpcode()).getNumDefs();
+  if (NumDefs > 1) {
+    assert(isGFX12Plus());
+    for (unsigned I = 1; I < NumDefs; ++I)
+      static_cast<AMDGPUOperand &>(*Operands[3 + I]).addRegOperands(Inst, 1);
+  }
+
   bool HasNVBit = false;
-  for (unsigned I = 1; I < Operands.size(); ++I) {
+  for (unsigned I = 2; I < Operands.size(); ++I) {
     auto &Operand = (AMDGPUOperand &)*Operands[I];
     if (Operand.isReg())
       Operand.addRegOperands(Inst, 1);
