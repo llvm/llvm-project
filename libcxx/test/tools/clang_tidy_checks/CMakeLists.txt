@@ -6,11 +6,13 @@ set(CMAKE_FIND_PACKAGE_SORT_DIRECTION DEC)
 find_package(Clang 16)
 
 set(SOURCES
+    abi_tag_on_virtual.cpp
+    hide_from_abi.cpp
     robust_against_adl.cpp
-    libcpp_module.cpp
     qualify_declval.cpp
-   )
 
+    libcpp_module.cpp
+   )
 
 if(NOT Clang_FOUND)
   message(STATUS "Could not find a suitable version of the Clang development package;
