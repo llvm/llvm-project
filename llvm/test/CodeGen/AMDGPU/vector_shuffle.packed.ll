@@ -2229,3 +2229,647 @@ entry:
   %vec.ret = shufflevector <2 x half> %insert2, <2 x half> %load0, <2 x i32> <i32 0, i32 3>
   ret <2 x half> %vec.ret
 }
+
+define void @shuffle_v8f16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1, ptr addrspace(1) %out) {
+; GFX9-LABEL: shuffle_v8f16_concat:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off
+; GFX9-NEXT:    global_load_dwordx2 v[8:9], v[2:3], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: shuffle_v8f16_concat:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off
+; GFX10-NEXT:    global_load_dwordx2 v[8:9], v[2:3], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: shuffle_v8f16_concat:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-NEXT:    global_load_b64 v[2:3], v[2:3], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %val0 = load <4 x half>, ptr addrspace(1) %arg0
+  %val1 = load <4 x half>, ptr addrspace(1) %arg1
+  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store <8 x half> %shuffle, ptr addrspace(1) %out
+  ret void
+}
+
+define void @shuffle_v16f16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1, ptr addrspace(1) %out) {
+; GFX9-LABEL: shuffle_v16f16_concat:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off
+; GFX9-NEXT:    global_load_dwordx4 v[10:13], v[2:3], off
+; GFX9-NEXT:    s_mov_b32 s4, 0xffff
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_bfi_b32 v3, s4, v9, v9
+; GFX9-NEXT:    v_bfi_b32 v2, s4, v8, v8
+; GFX9-NEXT:    v_bfi_b32 v1, s4, v7, v7
+; GFX9-NEXT:    v_bfi_b32 v0, s4, v6, v6
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_bfi_b32 v9, s4, v13, v13
+; GFX9-NEXT:    v_bfi_b32 v8, s4, v12, v12
+; GFX9-NEXT:    v_bfi_b32 v7, s4, v11, v11
+; GFX9-NEXT:    v_bfi_b32 v6, s4, v10, v10
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off offset:16
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[0:3], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: shuffle_v16f16_concat:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off
+; GFX10-NEXT:    global_load_dwordx4 v[10:13], v[2:3], off
+; GFX10-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-NEXT:    v_bfi_b32 v3, 0xffff, v9, v9
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_bfi_b32 v13, 0xffff, v13, v13
+; GFX10-NEXT:    v_bfi_b32 v12, 0xffff, v12, v12
+; GFX10-NEXT:    v_bfi_b32 v11, 0xffff, v11, v11
+; GFX10-NEXT:    v_bfi_b32 v10, 0xffff, v10, v10
+; GFX10-NEXT:    v_bfi_b32 v2, 0xffff, v8, v8
+; GFX10-NEXT:    v_bfi_b32 v1, 0xffff, v7, v7
+; GFX10-NEXT:    v_bfi_b32 v0, 0xffff, v6, v6
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[10:13], off offset:16
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[0:3], off
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: shuffle_v16f16_concat:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b128 v[6:9], v[0:1], off
+; GFX11-NEXT:    global_load_b128 v[0:3], v[2:3], off
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    v_bfi_b32 v9, 0xffff, v9, v9
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_bfi_b32 v3, 0xffff, v3, v3
+; GFX11-NEXT:    v_bfi_b32 v2, 0xffff, v2, v2
+; GFX11-NEXT:    v_bfi_b32 v1, 0xffff, v1, v1
+; GFX11-NEXT:    v_bfi_b32 v0, 0xffff, v0, v0
+; GFX11-NEXT:    v_bfi_b32 v8, 0xffff, v8, v8
+; GFX11-NEXT:    v_bfi_b32 v7, 0xffff, v7, v7
+; GFX11-NEXT:    v_bfi_b32 v6, 0xffff, v6, v6
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off offset:16
+; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %val0 = load <8 x half>, ptr addrspace(1) %arg0
+  %val1 = load <8 x half>, ptr addrspace(1) %arg1
+  %shuffle = shufflevector <8 x half> %val0, <8 x half> %val1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <16 x half> %shuffle, ptr addrspace(1) %out
+  ret void
+}
+
+define void @shuffle_v32f16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1, ptr addrspace(1) %out) {
+; GFX9-LABEL: shuffle_v32f16_concat:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dwordx4 v[6:9], v[2:3], off
+; GFX9-NEXT:    global_load_dwordx4 v[10:13], v[2:3], off offset:16
+; GFX9-NEXT:    global_load_dwordx4 v[14:17], v[0:1], off
+; GFX9-NEXT:    global_load_dwordx4 v[18:21], v[0:1], off offset:16
+; GFX9-NEXT:    s_waitcnt vmcnt(3)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off offset:32
+; GFX9-NEXT:    s_waitcnt vmcnt(3)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[10:13], off offset:48
+; GFX9-NEXT:    s_waitcnt vmcnt(3)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[14:17], off
+; GFX9-NEXT:    s_waitcnt vmcnt(3)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[18:21], off offset:16
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: shuffle_v32f16_concat:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    global_load_dwordx4 v[6:9], v[2:3], off
+; GFX10-NEXT:    global_load_dwordx4 v[10:13], v[2:3], off offset:16
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    global_load_dwordx4 v[14:17], v[0:1], off
+; GFX10-NEXT:    global_load_dwordx4 v[18:21], v[0:1], off offset:16
+; GFX10-NEXT:    s_waitcnt vmcnt(3)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off offset:32
+; GFX10-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[10:13], off offset:48
+; GFX10-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[14:17], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[18:21], off offset:16
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: shuffle_v32f16_concat:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off
+; GFX11-NEXT:    global_load_b128 v[10:13], v[2:3], off offset:16
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_load_b128 v[14:17], v[0:1], off
+; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:16
+; GFX11-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:32
+; GFX11-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[10:13], off offset:48
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[14:17], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off offset:16
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %val0 = load <16 x half>, ptr addrspace(1) %arg0
+  %val1 = load <16 x half>, ptr addrspace(1) %arg1
+  %shuffle = shufflevector <16 x half> %val0, <16 x half> %val1, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  store <32 x half> %shuffle, ptr addrspace(1) %out
+  ret void
+}
+
+define void @shuffle_v8i16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1, ptr addrspace(1) %out) {
+; GFX9-LABEL: shuffle_v8i16_concat:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off
+; GFX9-NEXT:    global_load_dwordx2 v[8:9], v[2:3], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: shuffle_v8i16_concat:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off
+; GFX10-NEXT:    global_load_dwordx2 v[8:9], v[2:3], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: shuffle_v8i16_concat:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-NEXT:    global_load_b64 v[2:3], v[2:3], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %val0 = load <4 x i16>, ptr addrspace(1) %arg0
+  %val1 = load <4 x i16>, ptr addrspace(1) %arg1
+  %shuffle = shufflevector <4 x i16> %val0, <4 x i16> %val1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store <8 x i16> %shuffle, ptr addrspace(1) %out
+  ret void
+}
+
+define void @shuffle_v16i16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1, ptr addrspace(1) %out) {
+; GFX9-LABEL: shuffle_v16i16_concat:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dwordx4 v[6:9], v[2:3], off
+; GFX9-NEXT:    global_load_dwordx4 v[10:13], v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off offset:16
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[10:13], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: shuffle_v16i16_concat:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dwordx4 v[6:9], v[2:3], off
+; GFX10-NEXT:    global_load_dwordx4 v[10:13], v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off offset:16
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[10:13], off
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: shuffle_v16i16_concat:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off
+; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:16
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %val0 = load <8 x i16>, ptr addrspace(1) %arg0
+  %val1 = load <8 x i16>, ptr addrspace(1) %arg1
+  %shuffle = shufflevector <8 x i16> %val0, <8 x i16> %val1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <16 x i16> %shuffle, ptr addrspace(1) %out
+  ret void
+}
+
+define void @shuffle_v32i16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1, ptr addrspace(1) %out) {
+; GFX9-LABEL: shuffle_v32i16_concat:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dwordx4 v[6:9], v[2:3], off
+; GFX9-NEXT:    global_load_dwordx4 v[10:13], v[2:3], off offset:16
+; GFX9-NEXT:    global_load_dwordx4 v[14:17], v[0:1], off
+; GFX9-NEXT:    global_load_dwordx4 v[18:21], v[0:1], off offset:16
+; GFX9-NEXT:    s_waitcnt vmcnt(3)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off offset:32
+; GFX9-NEXT:    s_waitcnt vmcnt(3)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[10:13], off offset:48
+; GFX9-NEXT:    s_waitcnt vmcnt(3)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[14:17], off
+; GFX9-NEXT:    s_waitcnt vmcnt(3)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[18:21], off offset:16
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: shuffle_v32i16_concat:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    global_load_dwordx4 v[6:9], v[2:3], off
+; GFX10-NEXT:    global_load_dwordx4 v[10:13], v[2:3], off offset:16
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    global_load_dwordx4 v[14:17], v[0:1], off
+; GFX10-NEXT:    global_load_dwordx4 v[18:21], v[0:1], off offset:16
+; GFX10-NEXT:    s_waitcnt vmcnt(3)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off offset:32
+; GFX10-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[10:13], off offset:48
+; GFX10-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[14:17], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[18:21], off offset:16
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: shuffle_v32i16_concat:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off
+; GFX11-NEXT:    global_load_b128 v[10:13], v[2:3], off offset:16
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_load_b128 v[14:17], v[0:1], off
+; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:16
+; GFX11-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:32
+; GFX11-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[10:13], off offset:48
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[14:17], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off offset:16
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %val0 = load <16 x i16>, ptr addrspace(1) %arg0
+  %val1 = load <16 x i16>, ptr addrspace(1) %arg1
+  %shuffle = shufflevector <16 x i16> %val0, <16 x i16> %val1, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  store <32 x i16> %shuffle, ptr addrspace(1) %out
+  ret void
+}
+
+define void @shuffle_v4i8_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1, ptr addrspace(1) %out) {
+; GFX9-LABEL: shuffle_v4i8_concat:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_ushort v0, v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_load_short_d16_hi v0, v[2:3], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dword v[4:5], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: shuffle_v4i8_concat:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_ushort v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_load_short_d16_hi v0, v[2:3], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dword v[4:5], v0, off
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: shuffle_v4i8_concat:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_load_d16_hi_b16 v0, v[2:3], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b32 v[4:5], v0, off
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %val0 = load <2 x i8>, ptr addrspace(1) %arg0
+  %val1 = load <2 x i8>, ptr addrspace(1) %arg1
+  %shuffle = shufflevector <2 x i8> %val0, <2 x i8> %val1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  store <4 x i8> %shuffle, ptr addrspace(1) %out
+  ret void
+}
+
+define void @shuffle_v8i8_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1, ptr addrspace(1) %out) {
+; GFX9-LABEL: shuffle_v8i8_concat:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dword v6, v[0:1], off
+; GFX9-NEXT:    global_load_dword v7, v[2:3], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dwordx2 v[4:5], v[6:7], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: shuffle_v8i8_concat:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dword v6, v[0:1], off
+; GFX10-NEXT:    global_load_dword v7, v[2:3], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx2 v[4:5], v[6:7], off
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: shuffle_v8i8_concat:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-NEXT:    global_load_b32 v1, v[2:3], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b64 v[4:5], v[0:1], off
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %val0 = load <4 x i8>, ptr addrspace(1) %arg0
+  %val1 = load <4 x i8>, ptr addrspace(1) %arg1
+  %shuffle = shufflevector <4 x i8> %val0, <4 x i8> %val1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store <8 x i8> %shuffle, ptr addrspace(1) %out
+  ret void
+}
+
+define void @shuffle_v16i8_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1, ptr addrspace(1) %out) {
+; GFX9-LABEL: shuffle_v16i8_concat:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off
+; GFX9-NEXT:    global_load_dwordx2 v[8:9], v[2:3], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: shuffle_v16i8_concat:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off
+; GFX10-NEXT:    global_load_dwordx2 v[8:9], v[2:3], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: shuffle_v16i8_concat:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-NEXT:    global_load_b64 v[2:3], v[2:3], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %val0 = load <8 x i8>, ptr addrspace(1) %arg0
+  %val1 = load <8 x i8>, ptr addrspace(1) %arg1
+  %shuffle = shufflevector <8 x i8> %val0, <8 x i8> %val1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <16 x i8> %shuffle, ptr addrspace(1) %out
+  ret void
+}
+
+define void @shuffle_v32i8_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1, ptr addrspace(1) %out) {
+; GFX9-LABEL: shuffle_v32i8_concat:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dwordx4 v[6:9], v[2:3], off
+; GFX9-NEXT:    global_load_dwordx4 v[10:13], v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off offset:16
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[10:13], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: shuffle_v32i8_concat:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dwordx4 v[6:9], v[2:3], off
+; GFX10-NEXT:    global_load_dwordx4 v[10:13], v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off offset:16
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[10:13], off
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: shuffle_v32i8_concat:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off
+; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:16
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %val0 = load <16 x i8>, ptr addrspace(1) %arg0
+  %val1 = load <16 x i8>, ptr addrspace(1) %arg1
+  %shuffle = shufflevector <16 x i8> %val0, <16 x i8> %val1, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  store <32 x i8> %shuffle, ptr addrspace(1) %out
+  ret void
+}
+
+define void @shuffle_v4i32_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1, ptr addrspace(1) %out) {
+; GFX9-LABEL: shuffle_v4i32_concat:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off
+; GFX9-NEXT:    global_load_dwordx2 v[8:9], v[2:3], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: shuffle_v4i32_concat:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off
+; GFX10-NEXT:    global_load_dwordx2 v[8:9], v[2:3], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: shuffle_v4i32_concat:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-NEXT:    global_load_b64 v[2:3], v[2:3], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %val0 = load <2 x i32>, ptr addrspace(1) %arg0
+  %val1 = load <2 x i32>, ptr addrspace(1) %arg1
+  %shuffle = shufflevector <2 x i32> %val0, <2 x i32> %val1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  store <4 x i32> %shuffle, ptr addrspace(1) %out
+  ret void
+}
+
+define void @shuffle_v8i32_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1, ptr addrspace(1) %out) {
+; GFX9-LABEL: shuffle_v8i32_concat:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dwordx4 v[6:9], v[2:3], off
+; GFX9-NEXT:    global_load_dwordx4 v[10:13], v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off offset:16
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[10:13], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: shuffle_v8i32_concat:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dwordx4 v[6:9], v[2:3], off
+; GFX10-NEXT:    global_load_dwordx4 v[10:13], v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off offset:16
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[10:13], off
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: shuffle_v8i32_concat:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off
+; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:16
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %val0 = load <4 x i32>, ptr addrspace(1) %arg0
+  %val1 = load <4 x i32>, ptr addrspace(1) %arg1
+  %shuffle = shufflevector <4 x i32> %val0, <4 x i32> %val1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store <8 x i32> %shuffle, ptr addrspace(1) %out
+  ret void
+}
+
+define void @shuffle_v16i32_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1, ptr addrspace(1) %out) {
+; GFX9-LABEL: shuffle_v16i32_concat:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dwordx4 v[6:9], v[2:3], off
+; GFX9-NEXT:    global_load_dwordx4 v[10:13], v[2:3], off offset:16
+; GFX9-NEXT:    global_load_dwordx4 v[14:17], v[0:1], off
+; GFX9-NEXT:    global_load_dwordx4 v[18:21], v[0:1], off offset:16
+; GFX9-NEXT:    s_waitcnt vmcnt(3)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off offset:32
+; GFX9-NEXT:    s_waitcnt vmcnt(3)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[10:13], off offset:48
+; GFX9-NEXT:    s_waitcnt vmcnt(3)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[14:17], off
+; GFX9-NEXT:    s_waitcnt vmcnt(3)
+; GFX9-NEXT:    global_store_dwordx4 v[4:5], v[18:21], off offset:16
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: shuffle_v16i32_concat:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    global_load_dwordx4 v[6:9], v[2:3], off
+; GFX10-NEXT:    global_load_dwordx4 v[10:13], v[2:3], off offset:16
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    global_load_dwordx4 v[14:17], v[0:1], off
+; GFX10-NEXT:    global_load_dwordx4 v[18:21], v[0:1], off offset:16
+; GFX10-NEXT:    s_waitcnt vmcnt(3)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off offset:32
+; GFX10-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[10:13], off offset:48
+; GFX10-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[14:17], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx4 v[4:5], v[18:21], off offset:16
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: shuffle_v16i32_concat:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off
+; GFX11-NEXT:    global_load_b128 v[10:13], v[2:3], off offset:16
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_load_b128 v[14:17], v[0:1], off
+; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:16
+; GFX11-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:32
+; GFX11-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[10:13], off offset:48
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[14:17], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off offset:16
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %val0 = load <8 x i32>, ptr addrspace(1) %arg0
+  %val1 = load <8 x i32>, ptr addrspace(1) %arg1
+  %shuffle = shufflevector <8 x i32> %val0, <8 x i32> %val1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <16 x i32> %shuffle, ptr addrspace(1) %out
+  ret void
+}
