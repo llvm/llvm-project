@@ -211,7 +211,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   for (const auto &S : Cmd)
     OriginalArgs.push_back(S.c_str());
   bool IsCLMode = driver::IsClangCL(driver::getDriverMode(
-      OriginalArgs[0], llvm::makeArrayRef(OriginalArgs).slice(1)));
+      OriginalArgs[0], llvm::ArrayRef(OriginalArgs).slice(1)));
   // ParseArgs propagates missig arg/opt counts on error, but preserves
   // everything it could parse in ArgList. So we just ignore those counts.
   unsigned IgnoredCount;
@@ -219,7 +219,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   // indices are actually of by one between ArgList and OriginalArgs.
   llvm::opt::InputArgList ArgList;
   ArgList = OptTable.ParseArgs(
-      llvm::makeArrayRef(OriginalArgs).drop_front(), IgnoredCount, IgnoredCount,
+      llvm::ArrayRef(OriginalArgs).drop_front(), IgnoredCount, IgnoredCount,
       /*FlagsToInclude=*/
       IsCLMode ? (driver::options::CLOption | driver::options::CoreOption |
                   driver::options::CLDXCOption)

@@ -233,7 +233,7 @@ public:
     // Check if these transformations introduce visiting of operations that
     // are not in the `ops` set (The new created ops are valid). An invalid
     // operation will trigger the assertion while processing.
-    (void)applyOpPatternsAndFold(makeArrayRef(ops), std::move(patterns),
+    (void)applyOpPatternsAndFold(ArrayRef(ops), std::move(patterns),
                                  /*strict=*/true);
   }
 
@@ -354,7 +354,7 @@ struct TestReturnTypeDriver
       for (auto &op : getOperation().getBody().front())
         ops.push_back(&op);
       // Generate test patterns for each, but skip terminator.
-      for (auto *op : llvm::makeArrayRef(ops).drop_back()) {
+      for (auto *op : llvm::ArrayRef(ops).drop_back()) {
         // Test create method of each of the Op classes below. The resultant
         // output would be in reverse order underneath `op` from which
         // the attributes and regions are used.

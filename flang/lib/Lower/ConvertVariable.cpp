@@ -1014,7 +1014,7 @@ declareCommonBlock(Fortran::lower::AbstractConverter &converter,
     auto commonTy = fir::SequenceType::get(shape, i8Ty);
     auto vecTy = mlir::VectorType::get(sz, i8Ty);
     mlir::Attribute zero = builder.getIntegerAttr(i8Ty, 0);
-    auto init = mlir::DenseElementsAttr::get(vecTy, llvm::makeArrayRef(zero));
+    auto init = mlir::DenseElementsAttr::get(vecTy, llvm::ArrayRef(zero));
     builder.createGlobal(loc, commonTy, commonName, linkage, init);
     // No need to add any initial value later.
     return std::nullopt;

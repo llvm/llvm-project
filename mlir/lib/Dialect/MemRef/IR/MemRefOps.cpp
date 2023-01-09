@@ -2290,7 +2290,7 @@ computeCollapsedLayoutMap(MemRefType srcType,
   SmallVector<int64_t> resultStrides;
   resultStrides.reserve(reassociation.size());
   for (const ReassociationIndices &reassoc : reassociation) {
-    ArrayRef<int64_t> ref = llvm::makeArrayRef(reassoc);
+    ArrayRef<int64_t> ref = llvm::ArrayRef(reassoc);
     while (srcShape[ref.back()] == 1 && ref.size() > 1)
       ref = ref.drop_back();
     if (!ShapedType::isDynamic(srcShape[ref.back()]) || ref.size() == 1) {

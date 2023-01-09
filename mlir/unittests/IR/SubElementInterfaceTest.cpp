@@ -29,7 +29,7 @@ TEST(SubElementInterfaceTest, Nested) {
 
   SmallVector<Attribute> subAttrs;
   dictAttr.walkSubAttrs([&](Attribute attr) { subAttrs.push_back(attr); });
-  EXPECT_EQ(llvm::makeArrayRef(subAttrs),
+  EXPECT_EQ(llvm::ArrayRef(subAttrs),
             ArrayRef<Attribute>({strAttr, trueAttr, falseAttr, boolArrayAttr}));
 }
 

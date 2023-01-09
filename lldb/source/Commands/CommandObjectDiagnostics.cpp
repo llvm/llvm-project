@@ -57,7 +57,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_diagnostics_dump_options);
+      return llvm::ArrayRef(g_diagnostics_dump_options);
     }
 
     FileSpec directory;

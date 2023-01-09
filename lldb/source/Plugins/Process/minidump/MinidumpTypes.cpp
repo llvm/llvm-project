@@ -72,7 +72,7 @@ MinidumpMemoryDescriptor64::ParseMemory64List(llvm::ArrayRef<uint8_t> &data) {
     return {};
 
   return std::make_pair(
-      llvm::makeArrayRef(
+      llvm::ArrayRef(
           reinterpret_cast<const MinidumpMemoryDescriptor64 *>(data.data()),
           *mem_ranges_count),
       *base_rva);

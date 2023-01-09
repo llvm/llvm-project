@@ -1358,7 +1358,7 @@ static constexpr OptionDefinition g_caching_option_table[] = {
 };
 
 llvm::ArrayRef<OptionDefinition> OptionGroupPlatformRSync::GetDefinitions() {
-  return llvm::makeArrayRef(g_rsync_option_table);
+  return llvm::ArrayRef(g_rsync_option_table);
 }
 
 void OptionGroupPlatformRSync::OptionParsingStarting(
@@ -1406,7 +1406,7 @@ Platform::SetThreadCreationBreakpoint(lldb_private::Target &target) {
 }
 
 llvm::ArrayRef<OptionDefinition> OptionGroupPlatformSSH::GetDefinitions() {
-  return llvm::makeArrayRef(g_ssh_option_table);
+  return llvm::ArrayRef(g_ssh_option_table);
 }
 
 void OptionGroupPlatformSSH::OptionParsingStarting(
@@ -1439,7 +1439,7 @@ OptionGroupPlatformSSH::SetOptionValue(uint32_t option_idx,
 }
 
 llvm::ArrayRef<OptionDefinition> OptionGroupPlatformCaching::GetDefinitions() {
-  return llvm::makeArrayRef(g_caching_option_table);
+  return llvm::ArrayRef(g_caching_option_table);
 }
 
 void OptionGroupPlatformCaching::OptionParsingStarting(

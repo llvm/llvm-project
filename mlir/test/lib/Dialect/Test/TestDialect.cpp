@@ -945,8 +945,8 @@ ParseResult PrettyPrintedRegionOp::parse(OpAsmParser &parser,
   //  test.pretty_printed_region start <inner-op> end : <functional-type>
   // Else fallback to parsing the "non pretty-printed" version.
   if (!succeeded(parser.parseOptionalKeyword("start")))
-    return parser.parseGenericOperationAfterOpName(
-        result, llvm::makeArrayRef(operands));
+    return parser.parseGenericOperationAfterOpName(result,
+                                                   llvm::ArrayRef(operands));
 
   FailureOr<OperationName> parseOpNameInfo = parser.parseCustomOperationName();
   if (failed(parseOpNameInfo))

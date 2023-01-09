@@ -757,7 +757,7 @@ int main(int argc, char const *argv[]) {
   LLDBOptTable T;
   unsigned MissingArgIndex;
   unsigned MissingArgCount;
-  ArrayRef<const char *> arg_arr = makeArrayRef(argv + 1, argc - 1);
+  ArrayRef<const char *> arg_arr = ArrayRef(argv + 1, argc - 1);
   opt::InputArgList input_args =
       T.ParseArgs(arg_arr, MissingArgIndex, MissingArgCount);
   llvm::StringRef argv0 = llvm::sys::path::filename(argv[0]);

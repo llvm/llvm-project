@@ -868,7 +868,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_objc_classtable_dump_options);
+      return llvm::ArrayRef(g_objc_classtable_dump_options);
     }
 
     OptionValueBoolean m_verbose;

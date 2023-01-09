@@ -977,9 +977,9 @@ LogicalResult AddUIExtendedOpPattern::matchAndRewrite(
                                                      adaptor.getRhs());
 
   Value sumResult = rewriter.create<spirv::CompositeExtractOp>(
-      loc, result, llvm::makeArrayRef(0));
+      loc, result, llvm::ArrayRef(0));
   Value carryValue = rewriter.create<spirv::CompositeExtractOp>(
-      loc, result, llvm::makeArrayRef(1));
+      loc, result, llvm::ArrayRef(1));
 
   // Convert the carry value to boolean.
   Value one = spirv::ConstantOp::getOne(dstElemTy, loc, rewriter);
@@ -1002,9 +1002,9 @@ LogicalResult MulIExtendedOpPattern<ArithMulOp, SPIRVMulOp>::matchAndRewrite(
       rewriter.create<SPIRVMulOp>(loc, adaptor.getLhs(), adaptor.getRhs());
 
   Value low = rewriter.create<spirv::CompositeExtractOp>(loc, result,
-                                                         llvm::makeArrayRef(0));
-  Value high = rewriter.create<spirv::CompositeExtractOp>(
-      loc, result, llvm::makeArrayRef(1));
+                                                         llvm::ArrayRef(0));
+  Value high = rewriter.create<spirv::CompositeExtractOp>(loc, result,
+                                                          llvm::ArrayRef(1));
 
   rewriter.replaceOp(op, {low, high});
   return success();

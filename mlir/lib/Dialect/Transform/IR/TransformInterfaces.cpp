@@ -383,7 +383,7 @@ void transform::TransformResults::set(OpResult value,
   assert(segments[position].data() == nullptr && "results already set");
   int64_t start = operations.size();
   llvm::append_range(operations, ops);
-  segments[position] = makeArrayRef(operations).drop_front(start);
+  segments[position] = ArrayRef(operations).drop_front(start);
 }
 
 void transform::TransformResults::setParams(
