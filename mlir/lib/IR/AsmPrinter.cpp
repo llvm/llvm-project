@@ -3556,7 +3556,10 @@ void Type::print(raw_ostream &os, AsmState &state) const {
   AsmPrinter::Impl(os, state.getImpl()).printType(*this);
 }
 
-void Type::dump() const { print(llvm::errs()); }
+void Type::dump() const {
+  print(llvm::errs());
+  llvm::errs() << "\n";
+}
 
 void AffineMap::dump() const {
   print(llvm::errs());
