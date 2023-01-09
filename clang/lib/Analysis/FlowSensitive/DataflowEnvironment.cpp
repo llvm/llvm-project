@@ -253,7 +253,7 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
     initVars(Vars);
     // These have to be set before the lines that follow to ensure that create*
     // work correctly for structs.
-    DACtx.addFieldsReferencedInScope(std::move(Fields));
+    DACtx.addModeledFields(Fields);
 
     for (const auto *ParamDecl : FuncDecl->parameters()) {
       assert(ParamDecl != nullptr);
@@ -342,7 +342,7 @@ void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
   }
   getFieldsAndGlobalVars(*FuncDecl->getBody(), Fields, Vars);
   initVars(Vars);
-  DACtx->addFieldsReferencedInScope(std::move(Fields));
+  DACtx->addModeledFields(Fields);
 
   const auto *ParamIt = FuncDecl->param_begin();
 
