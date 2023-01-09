@@ -179,15 +179,16 @@ using UnaryIntFn = llvm::function_ref<std::optional<APInt>(const APInt &)>;
 
 static void TestUnaryOpExhaustive(UnaryRangeFn RangeFn, UnaryIntFn IntFn,
                                   PreferFn PreferenceFn = PreferSmallest) {
-  unsigned Bits = 4;
-  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
-    SmallBitVector Elems(1 << Bits);
-    ForeachNumInConstantRange(CR, [&](const APInt &N) {
-      if (std::optional<APInt> ResultN = IntFn(N))
-        Elems.set(ResultN->getZExtValue());
+  for (unsigned Bits : {1, 4}) {
+    EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
+      SmallBitVector Elems(1 << Bits);
+      ForeachNumInConstantRange(CR, [&](const APInt &N) {
+        if (std::optional<APInt> ResultN = IntFn(N))
+          Elems.set(ResultN->getZExtValue());
+      });
+      TestRange(RangeFn(CR), Elems, PreferenceFn, {CR});
     });
-    TestRange(RangeFn(CR), Elems, PreferenceFn, {CR});
-  });
+  }
 }
 
 using BinaryRangeFn = llvm::function_ref<ConstantRange(const ConstantRange &,
