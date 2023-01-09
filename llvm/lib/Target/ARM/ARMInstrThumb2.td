@@ -5657,6 +5657,11 @@ let Predicates = [HasV8_1MMainline] in {
   defm : ModifiedV8_1CSEL<t2CSINC, (add rGPR:$fval, 1)>;
   defm : ModifiedV8_1CSEL<t2CSINV, (xor rGPR:$fval, -1)>;
   defm : ModifiedV8_1CSEL<t2CSNEG, (sub 0, rGPR:$fval)>;
+
+  def : T2Pat<(ARMcmov (topbitsallzero32:$Rn), (i32 1), cmovpred:$imm),
+              (t2CSINC $Rn, ZR, $imm)>;
+  def : T2Pat<(and (topbitsallzero32:$Rn), (ARMcsinc (i32 0), (i32 0), cmovpred:$imm)),
+              (t2CSEL ZR, $Rn, $imm)>;
 }
 
 // CS aliases.
