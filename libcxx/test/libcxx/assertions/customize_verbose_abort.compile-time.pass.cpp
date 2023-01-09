@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Make sure that we can enable assertions when we back-deploy to older platforms
-// if we define _LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED.
-//
-// Note that this test isn't really different from customize_verbose_abort.pass.cpp when
-// run outside of back-deployment scenarios, but we always want to run this test.
+// This compile-time customization requires cross-file macros, which doesn't work with modules.
+// UNSUPPORTED: modules-build
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1 -D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED
+// Make sure that we can customize the verbose termination function at compile-time by
+// defining _LIBCPP_VERBOSE_ABORT ourselves. Note that this does not have any
+// deployment target requirements.
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1 -D_LIBCPP_VERBOSE_ABORT(...)=my_abort(__VA_ARGS__)
 
 #include <cstdlib>
 
-void std::__libcpp_verbose_abort(char const*, ...) {
+void my_abort(char const*, ...) {
   std::exit(EXIT_SUCCESS);
 }
 
