@@ -3798,7 +3798,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
 
   // Configure the diagnostics.
   std::unique_ptr<DiagnosticOptions> DiagOpts = CreateAndPopulateDiagOpts(
-      llvm::makeArrayRef(command_line_args, num_command_line_args));
+      llvm::ArrayRef(command_line_args, num_command_line_args));
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
       CompilerInstance::createDiagnostics(DiagOpts.release()));
 
@@ -3881,7 +3881,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
 
   LibclangInvocationReporter InvocationReporter(
       *CXXIdx, LibclangInvocationReporter::OperationKind::ParseOperation,
-      options, llvm::makeArrayRef(*Args), /*InvocationArgs=*/std::nullopt,
+      options, llvm::ArrayRef(*Args), /*InvocationArgs=*/std::nullopt,
       unsaved_files);
   std::unique_ptr<ASTUnit> Unit(ASTUnit::LoadFromCommandLine(
       Args->data(), Args->data() + Args->size(),
@@ -3968,7 +3968,7 @@ enum CXErrorCode clang_parseTranslationUnit2FullArgv(
     noteBottomOfStack();
     result = clang_parseTranslationUnit_Impl(
         CIdx, source_filename, command_line_args, num_command_line_args,
-        llvm::makeArrayRef(unsaved_files, num_unsaved_files), options, out_TU);
+        llvm::ArrayRef(unsaved_files, num_unsaved_files), options, out_TU);
   };
 
   llvm::CrashRecoveryContext CRC;
@@ -4499,7 +4499,7 @@ int clang_reparseTranslationUnit(CXTranslationUnit TU,
   CXErrorCode result;
   auto ReparseTranslationUnitImpl = [=, &result]() {
     result = clang_reparseTranslationUnit_Impl(
-        TU, llvm::makeArrayRef(unsaved_files, num_unsaved_files), options);
+        TU, llvm::ArrayRef(unsaved_files, num_unsaved_files), options);
   };
 
   llvm::CrashRecoveryContext CRC;
@@ -8387,9 +8387,8 @@ int clang_getCursorPlatformAvailability(CXCursor cursor, int *always_deprecated,
   getCursorPlatformAvailabilityForDecl(D, always_deprecated, deprecated_message,
                                        always_unavailable, unavailable_message,
                                        AvailabilityAttrs);
-  for (const auto &Avail :
-       llvm::enumerate(llvm::makeArrayRef(AvailabilityAttrs)
-                           .take_front(availability_size))) {
+  for (const auto &Avail : llvm::enumerate(
+           llvm::ArrayRef(AvailabilityAttrs).take_front(availability_size))) {
     availability[Avail.index()].Platform =
         cxstring::createDup(Avail.value()->getPlatform()->getName());
     availability[Avail.index()].Introduced =

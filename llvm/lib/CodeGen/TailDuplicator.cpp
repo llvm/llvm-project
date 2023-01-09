@@ -370,8 +370,10 @@ void TailDuplicator::processPHI(
   // Remove PredBB from the PHI node.
   MI->removeOperand(SrcOpIdx + 1);
   MI->removeOperand(SrcOpIdx);
-  if (MI->getNumOperands() == 1)
+  if (MI->getNumOperands() == 1 && !TailBB->hasAddressTaken())
     MI->eraseFromParent();
+  else if (MI->getNumOperands() == 1)
+    MI->setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
 }
 
 /// Duplicate a TailBB instruction to PredBB and update

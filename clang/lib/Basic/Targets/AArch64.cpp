@@ -625,8 +625,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 }
 
 ArrayRef<Builtin::Info> AArch64TargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfo, clang::AArch64::LastTSBuiltin -
-                                             Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfo, clang::AArch64::LastTSBuiltin -
+                                         Builtin::FirstTSBuiltin);
 }
 
 Optional<std::pair<unsigned, unsigned>>
@@ -1178,7 +1178,7 @@ const char *const AArch64TargetInfo::GCCRegNames[] = {
 };
 
 ArrayRef<const char *> AArch64TargetInfo::getGCCRegNames() const {
-  return llvm::makeArrayRef(GCCRegNames);
+  return llvm::ArrayRef(GCCRegNames);
 }
 
 const TargetInfo::GCCRegAlias AArch64TargetInfo::GCCRegAliases[] = {
@@ -1221,7 +1221,7 @@ const TargetInfo::GCCRegAlias AArch64TargetInfo::GCCRegAliases[] = {
 };
 
 ArrayRef<TargetInfo::GCCRegAlias> AArch64TargetInfo::getGCCRegAliases() const {
-  return llvm::makeArrayRef(GCCRegAliases);
+  return llvm::ArrayRef(GCCRegAliases);
 }
 
 bool AArch64TargetInfo::validateAsmConstraint(

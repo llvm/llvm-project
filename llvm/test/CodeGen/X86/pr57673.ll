@@ -1,4 +1,7 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -stop-after=x86-optimize-LEAs < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -stop-after=x86-optimize-LEAs -experimental-debug-variable-locations=false < %s \
+; RUN:   | FileCheck %s --check-prefix=NORMAL
+; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -stop-after=x86-optimize-LEAs -experimental-debug-variable-locations < %s \
+; RUN:   | FileCheck %s --check-prefix=INSTRREF
 
 ; The LEA optimization pass used to crash on this testcase.
 
@@ -9,7 +12,8 @@
 
 ; CHECK:     LEA64r
 ; CHECK-NOT: LEA64r
-; CHECK:     DBG_VALUE_LIST
+; NORMAL:    DBG_VALUE_LIST
+; INSTRREF:  DBG_INSTR_REF
 
 target triple = "x86_64-unknown-linux-gnu"
 

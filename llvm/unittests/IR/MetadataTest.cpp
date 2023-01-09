@@ -3089,6 +3089,66 @@ TEST_F(DIExpressionTest, createFragmentExpression) {
 #undef EXPECT_INVALID_FRAGMENT
 }
 
+TEST_F(DIExpressionTest, convertToUndefExpression) {
+#define EXPECT_UNDEF_OPS_EQUAL(TestExpr, Expected)                             \
+  do {                                                                         \
+    const DIExpression *Undef =                                                \
+        DIExpression::convertToUndefExpression(TestExpr);                      \
+    EXPECT_EQ(Undef, Expected);                                                \
+  } while (false)
+#define GET_EXPR(...) DIExpression::get(Context, {__VA_ARGS__})
+
+  // Expressions which are single-location and non-complex should be unchanged.
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(), GET_EXPR());
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_LLVM_fragment, 0, 32),
+                         GET_EXPR(dwarf::DW_OP_LLVM_fragment, 0, 32));
+
+  // Variadic expressions should become single-location.
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_LLVM_arg, 0), GET_EXPR());
+  EXPECT_UNDEF_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_fragment, 32, 32),
+      GET_EXPR(dwarf::DW_OP_LLVM_fragment, 32, 32));
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_LLVM_arg, 0,
+                                  dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_mul),
+                         GET_EXPR());
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_LLVM_arg, 0,
+                                  dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_mul,
+                                  dwarf::DW_OP_LLVM_fragment, 64, 32),
+                         GET_EXPR(dwarf::DW_OP_LLVM_fragment, 64, 32));
+
+  // Any stack-computing ops should be removed.
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_plus_uconst, 8), GET_EXPR());
+  EXPECT_UNDEF_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 8, dwarf::DW_OP_LLVM_fragment, 0, 16),
+      GET_EXPR(dwarf::DW_OP_LLVM_fragment, 0, 16));
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_constu, 24, dwarf::DW_OP_shra),
+                         GET_EXPR());
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_constu, 24, dwarf::DW_OP_shra,
+                                  dwarf::DW_OP_LLVM_fragment, 8, 16),
+                         GET_EXPR(dwarf::DW_OP_LLVM_fragment, 8, 16));
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_deref), GET_EXPR());
+  EXPECT_UNDEF_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_deref, dwarf::DW_OP_LLVM_fragment, 16, 16),
+      GET_EXPR(dwarf::DW_OP_LLVM_fragment, 16, 16));
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_constu, 4, dwarf::DW_OP_minus),
+                         GET_EXPR());
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_constu, 4, dwarf::DW_OP_minus,
+                                  dwarf::DW_OP_LLVM_fragment, 24, 16),
+                         GET_EXPR(dwarf::DW_OP_LLVM_fragment, 24, 16));
+
+  // Stack-value operators are also not preserved.
+  EXPECT_UNDEF_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 8, dwarf::DW_OP_stack_value),
+      GET_EXPR());
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_plus_uconst, 8,
+                                  dwarf::DW_OP_stack_value,
+                                  dwarf::DW_OP_LLVM_fragment, 32, 16),
+                         GET_EXPR(dwarf::DW_OP_LLVM_fragment, 32, 16));
+
+#undef EXPECT_UNDEF_OPS_EQUAL
+#undef GET_EXPR
+}
+
 TEST_F(DIExpressionTest, convertToVariadicExpression) {
 #define EXPECT_CONVERT_IS_NOOP(TestExpr)                                       \
   do {                                                                         \
