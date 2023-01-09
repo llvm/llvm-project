@@ -80,7 +80,7 @@ namespace std {
 #include <__algorithm/copy_n.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
-#include <__bits>
+#include <__bit/countl.h>
 #include <__charconv/chars_format.h>
 #include <__charconv/from_chars_result.h>
 #include <__charconv/tables.h>

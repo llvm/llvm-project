@@ -10,7 +10,7 @@
 #define FORTRAN_LOWER_INTRINSICCALL_H
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "llvm/ADT/Optional.h"
+#include <optional>
 
 namespace fir {
 class ExtendedValue;
@@ -28,7 +28,7 @@ class StatementContext;
 /// Returned mlir::Value is the returned Fortran intrinsic value.
 fir::ExtendedValue genIntrinsicCall(fir::FirOpBuilder &, mlir::Location,
                                     llvm::StringRef name,
-                                    llvm::Optional<mlir::Type> resultType,
+                                    std::optional<mlir::Type> resultType,
                                     llvm::ArrayRef<fir::ExtendedValue> args,
                                     StatementContext &);
 

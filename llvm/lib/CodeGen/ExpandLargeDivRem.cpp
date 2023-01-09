@@ -105,6 +105,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI) {
   return Modified;
 }
 
+namespace {
 class ExpandLargeDivRemLegacyPass : public FunctionPass {
 public:
   static char ID;
@@ -125,6 +126,7 @@ public:
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 };
+} // namespace
 
 char ExpandLargeDivRemLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ExpandLargeDivRemLegacyPass, "expand-large-div-rem",

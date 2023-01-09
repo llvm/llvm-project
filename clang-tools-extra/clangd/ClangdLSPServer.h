@@ -18,11 +18,11 @@
 #include "support/MemoryTree.h"
 #include "support/Path.h"
 #include "support/Threading.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
 #include <chrono>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace clang {
@@ -43,7 +43,7 @@ public:
     /// set via LSP (extensions) only.
     bool UseDirBasedCDB = true;
     /// The offset-encoding to use, or std::nullopt to negotiate it over LSP.
-    llvm::Optional<OffsetEncoding> Encoding;
+    std::optional<OffsetEncoding> Encoding;
     /// If set, periodically called to release memory.
     /// Consider malloc_trim(3)
     std::function<void()> MemoryCleanup = nullptr;
@@ -291,9 +291,9 @@ private:
   // The CDB is created by the "initialize" LSP method.
   std::unique_ptr<GlobalCompilationDatabase> BaseCDB;
   // CDB is BaseCDB plus any commands overridden via LSP extensions.
-  llvm::Optional<OverlayCDB> CDB;
+  std::optional<OverlayCDB> CDB;
   // The ClangdServer is created by the "initialize" LSP method.
-  llvm::Optional<ClangdServer> Server;
+  std::optional<ClangdServer> Server;
 };
 } // namespace clangd
 } // namespace clang

@@ -24,6 +24,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -271,7 +272,7 @@ TEST(HighlightsTest, ControlFlow) {
 }
 
 MATCHER_P3(sym, Name, Decl, DefOrNone, "") {
-  llvm::Optional<Range> Def = DefOrNone;
+  std::optional<Range> Def = DefOrNone;
   if (Name != arg.Name) {
     *result_listener << "Name is " << arg.Name;
     return false;
@@ -1002,8 +1003,8 @@ TEST(LocateSymbol, All) {
       )objc"};
   for (const char *Test : Tests) {
     Annotations T(Test);
-    llvm::Optional<Range> WantDecl;
-    llvm::Optional<Range> WantDef;
+    std::optional<Range> WantDecl;
+    std::optional<Range> WantDef;
     if (!T.ranges().empty())
       WantDecl = WantDef = T.range();
     if (!T.ranges("decl").empty())
@@ -1025,7 +1026,7 @@ TEST(LocateSymbol, All) {
       ASSERT_THAT(Results, ::testing::SizeIs(1)) << Test;
       EXPECT_EQ(Results[0].PreferredDeclaration.range, *WantDecl) << Test;
       EXPECT_TRUE(Results[0].ID) << Test;
-      llvm::Optional<Range> GotDef;
+      std::optional<Range> GotDef;
       if (Results[0].Definition)
         GotDef = Results[0].Definition->range;
       EXPECT_EQ(WantDef, GotDef) << Test;
@@ -1060,7 +1061,7 @@ TEST(LocateSymbol, AllMulti) {
   //   N starts at 0.
   struct ExpectedRanges {
     Range WantDecl;
-    llvm::Optional<Range> WantDef;
+    std::optional<Range> WantDef;
   };
   const char *Tests[] = {
       R"objc(
@@ -1127,7 +1128,7 @@ TEST(LocateSymbol, AllMulti) {
     for (size_t Idx = 0; Idx < Ranges.size(); Idx++) {
       EXPECT_EQ(Results[Idx].PreferredDeclaration.range, Ranges[Idx].WantDecl)
           << "($decl" << Idx << ")" << Test;
-      llvm::Optional<Range> GotDef;
+      std::optional<Range> GotDef;
       if (Results[Idx].Definition)
         GotDef = Results[Idx].Definition->range;
       EXPECT_EQ(GotDef, Ranges[Idx].WantDef) << "($def" << Idx << ")" << Test;
@@ -1158,8 +1159,8 @@ TEST(LocateSymbol, Warnings) {
 
   for (const char *Test : Tests) {
     Annotations T(Test);
-    llvm::Optional<Range> WantDecl;
-    llvm::Optional<Range> WantDef;
+    std::optional<Range> WantDecl;
+    std::optional<Range> WantDef;
     if (!T.ranges().empty())
       WantDecl = WantDef = T.range();
     if (!T.ranges("decl").empty())
@@ -1178,7 +1179,7 @@ TEST(LocateSymbol, Warnings) {
     } else {
       ASSERT_THAT(Results, ::testing::SizeIs(1)) << Test;
       EXPECT_EQ(Results[0].PreferredDeclaration.range, *WantDecl) << Test;
-      llvm::Optional<Range> GotDef;
+      std::optional<Range> GotDef;
       if (Results[0].Definition)
         GotDef = Results[0].Definition->range;
       EXPECT_EQ(WantDef, GotDef) << Test;
@@ -1232,7 +1233,7 @@ TEST(LocateSymbol, Textual) {
 
   for (const char *Test : Tests) {
     Annotations T(Test);
-    llvm::Optional<Range> WantDecl;
+    std::optional<Range> WantDecl;
     if (!T.ranges().empty())
       WantDecl = T.range();
 
@@ -1730,7 +1731,7 @@ TEST(LocateSymbol, NearbyIdentifier) {
     Annotations T(Test);
     auto AST = TestTU::withCode(T.code()).build();
     const auto &SM = AST.getSourceManager();
-    llvm::Optional<Range> Nearby;
+    std::optional<Range> Nearby;
     auto Word =
         SpelledWord::touching(cantFail(sourceLocationInMainFile(SM, T.point())),
                               AST.getTokens(), AST.getLangOpts());
@@ -2378,7 +2379,7 @@ TEST(FindReferences, NeedsIndexForMacro) {
 
 TEST(FindReferences, NoQueryForLocalSymbols) {
   struct RecordingIndex : public MemIndex {
-    mutable Optional<llvm::DenseSet<SymbolID>> RefIDs;
+    mutable std::optional<llvm::DenseSet<SymbolID>> RefIDs;
     bool refs(const RefsRequest &Req,
               llvm::function_ref<void(const Ref &)>) const override {
       RefIDs = Req.IDs;

@@ -11,6 +11,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/FixIt.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
@@ -30,7 +31,7 @@ void DurationComparisonCheck::registerMatchers(MatchFinder *Finder) {
 void DurationComparisonCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Binop = Result.Nodes.getNodeAs<BinaryOperator>("binop");
 
-  llvm::Optional<DurationScale> Scale = getScaleForDurationInverse(
+  std::optional<DurationScale> Scale = getScaleForDurationInverse(
       Result.Nodes.getNodeAs<FunctionDecl>("function_decl")->getName());
   if (!Scale)
     return;

@@ -164,7 +164,7 @@ attributes #0 = { "enqueued-block" }
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@inlined_caller
-; CHECK-SAME: (ptr addrspace(1) [[A:%.*]], i8 [[B:%.*]], ptr addrspace(1) [[C:%.*]], i64 [[D:%.*]]) {
+; CHECK-SAME: (ptr addrspace(1) [[A:%.*]], i8 [[B:%.*]], ptr addrspace(1) [[C:%.*]], i64 [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[INST:%.*]] = load i64, ptr addrspace(1) @__test_block_invoke_kernel.runtime_handle, align 4
 ; CHECK-NEXT:    store i64 [[INST]], ptr addrspace(1) [[C]], align 4
@@ -172,7 +172,7 @@ attributes #0 = { "enqueued-block" }
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@__test_block_invoke_kernel
-; CHECK-SAME: (<{ i32, i32, ptr addrspace(1), i8 }> [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (<{ i32, i32, ptr addrspace(1), i8 }> [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTFCA_3_EXTRACT:%.*]] = extractvalue <{ i32, i32, ptr addrspace(1), i8 }> [[ARG]], 2
 ; CHECK-NEXT:    [[DOTFCA_4_EXTRACT:%.*]] = extractvalue <{ i32, i32, ptr addrspace(1), i8 }> [[ARG]], 3
@@ -181,7 +181,7 @@ attributes #0 = { "enqueued-block" }
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@__test_block_invoke_2_kernel
-; CHECK-SAME: (<{ i32, i32, ptr addrspace(1), ptr addrspace(1), i64, i8 }> [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (<{ i32, i32, ptr addrspace(1), ptr addrspace(1), i64, i8 }> [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTFCA_3_EXTRACT:%.*]] = extractvalue <{ i32, i32, ptr addrspace(1), ptr addrspace(1), i64, i8 }> [[ARG]], 2
 ; CHECK-NEXT:    [[DOTFCA_4_EXTRACT:%.*]] = extractvalue <{ i32, i32, ptr addrspace(1), ptr addrspace(1), i64, i8 }> [[ARG]], 3
@@ -193,7 +193,7 @@ attributes #0 = { "enqueued-block" }
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@block_has_used_kernel_address
-; CHECK-SAME: (<{ i32, i32, ptr addrspace(1), i8 }> [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: (<{ i32, i32, ptr addrspace(1), i8 }> [[ARG:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTFCA_3_EXTRACT:%.*]] = extractvalue <{ i32, i32, ptr addrspace(1), i8 }> [[ARG]], 2
 ; CHECK-NEXT:    [[DOTFCA_4_EXTRACT:%.*]] = extractvalue <{ i32, i32, ptr addrspace(1), i8 }> [[ARG]], 3
@@ -208,18 +208,19 @@ attributes #0 = { "enqueued-block" }
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@__amdgpu_enqueued_kernel
-; CHECK-SAME: (<{ i32, i32, ptr addrspace(1), i8 }> [[ARG:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: (<{ i32, i32, ptr addrspace(1), i8 }> [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@__amdgpu_enqueued_kernel.1
-; CHECK-SAME: (<{ i32, i32, ptr addrspace(1), i8 }> [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: (<{ i32, i32, ptr addrspace(1), i8 }> [[ARG:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
 ;.
-; CHECK: attributes #[[ATTR0]] = { "enqueued-block" "runtime-handle"="__test_block_invoke_kernel.runtime_handle" }
-; CHECK: attributes #[[ATTR1]] = { "enqueued-block" "runtime-handle"="__test_block_invoke_2_kernel.runtime_handle" }
-; CHECK: attributes #[[ATTR2]] = { "enqueued-block" "runtime-handle"="block_has_used_kernel_address.runtime_handle" }
-; CHECK: attributes #[[ATTR3]] = { "enqueued-block" "runtime-handle"="__amdgpu_enqueued_kernel.runtime_handle" }
-; CHECK: attributes #[[ATTR4]] = { "enqueued-block" "runtime-handle"="__amdgpu_enqueued_kernel.1.runtime_handle" }
+; CHECK: attributes #[[ATTR0]] = { "calls-enqueue-kernel" }
+; CHECK: attributes #[[ATTR1]] = { "enqueued-block" "runtime-handle"="__test_block_invoke_kernel.runtime_handle" }
+; CHECK: attributes #[[ATTR2]] = { "enqueued-block" "runtime-handle"="__test_block_invoke_2_kernel.runtime_handle" }
+; CHECK: attributes #[[ATTR3]] = { "enqueued-block" "runtime-handle"="block_has_used_kernel_address.runtime_handle" }
+; CHECK: attributes #[[ATTR4]] = { "enqueued-block" "runtime-handle"="__amdgpu_enqueued_kernel.runtime_handle" }
+; CHECK: attributes #[[ATTR5]] = { "enqueued-block" "runtime-handle"="__amdgpu_enqueued_kernel.1.runtime_handle" }
 ;.

@@ -29,6 +29,7 @@
 #include "index/Symbol.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -40,13 +41,13 @@ enum class IndexFileFormat {
 
 // Holds the contents of an index file that was read.
 struct IndexFileIn {
-  llvm::Optional<SymbolSlab> Symbols;
-  llvm::Optional<RefSlab> Refs;
-  llvm::Optional<RelationSlab> Relations;
+  std::optional<SymbolSlab> Symbols;
+  std::optional<RefSlab> Refs;
+  std::optional<RelationSlab> Relations;
   // Keys are URIs of the source files.
-  llvm::Optional<IncludeGraph> Sources;
+  std::optional<IncludeGraph> Sources;
   // This contains only the Directory and CommandLine.
-  llvm::Optional<tooling::CompileCommand> Cmd;
+  std::optional<tooling::CompileCommand> Cmd;
 };
 // Parse an index file. The input must be a RIFF or YAML file.
 llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef, SymbolOrigin);

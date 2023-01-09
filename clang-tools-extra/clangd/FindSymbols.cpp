@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <limits>
+#include <optional>
 #include <tuple>
 
 #define DEBUG_TYPE "FindSymbols"
@@ -219,7 +220,7 @@ std::string getSymbolDetail(ASTContext &Ctx, const NamedDecl &ND) {
   return std::move(OS.str());
 }
 
-llvm::Optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
+std::optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   auto &SM = Ctx.getSourceManager();
 
   SourceLocation BeginLoc = SM.getSpellingLoc(SM.getFileLoc(ND.getBeginLoc()));

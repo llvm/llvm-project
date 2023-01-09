@@ -58,6 +58,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 #define DEBUG_TYPE "flang-lower-bridge"
 
@@ -822,7 +823,7 @@ private:
   Fortran::lower::SymbolBox
   lookupSymbol(const Fortran::semantics::Symbol &sym) {
     if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
-      if (llvm::Optional<fir::FortranVariableOpInterface> var =
+      if (std::optional<fir::FortranVariableOpInterface> var =
               localSymbols.lookupVariableDefinition(sym)) {
         auto exv =
             hlfir::translateToExtendedValue(toLocation(), *builder, *var);
@@ -1097,7 +1098,7 @@ private:
     assert(stmt.typedCall && "Call was not analyzed");
     mlir::Value res{};
     if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
-      llvm::Optional<mlir::Type> resultType = std::nullopt;
+      std::optional<mlir::Type> resultType = std::nullopt;
       if (stmt.typedCall->hasAlternateReturns())
         resultType = builder->getIndexType();
       auto hlfirRes = Fortran::lower::convertCallToHLFIR(
@@ -2543,8 +2544,8 @@ private:
   void genArrayAssignment(
       const Fortran::evaluate::Assignment &assign,
       Fortran::lower::StatementContext &localStmtCtx,
-      llvm::Optional<llvm::SmallVector<mlir::Value>> lbounds = std::nullopt,
-      llvm::Optional<llvm::SmallVector<mlir::Value>> ubounds = std::nullopt) {
+      std::optional<llvm::SmallVector<mlir::Value>> lbounds = std::nullopt,
+      std::optional<llvm::SmallVector<mlir::Value>> ubounds = std::nullopt) {
 
     Fortran::lower::StatementContext &stmtCtx =
         explicitIterationSpace()
@@ -2696,8 +2697,8 @@ private:
                                            : genExprAddr(assign.rhs, stmtCtx);
               const bool lhsIsWholeAllocatable =
                   Fortran::lower::isWholeAllocatable(assign.lhs);
-              llvm::Optional<fir::factory::MutableBoxReallocation> lhsRealloc;
-              llvm::Optional<fir::MutableBoxValue> lhsMutableBox;
+              std::optional<fir::factory::MutableBoxReallocation> lhsRealloc;
+              std::optional<fir::MutableBoxValue> lhsMutableBox;
               auto lhs = [&]() -> fir::ExtendedValue {
                 if (lhsIsWholeAllocatable) {
                   lhsMutableBox = genExprMutableBox(loc, assign.lhs);

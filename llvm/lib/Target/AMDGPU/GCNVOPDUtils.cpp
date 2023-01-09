@@ -142,6 +142,7 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
   return checkVOPDRegConstraints(STII, *FirstMI, SecondMI);
 }
 
+namespace {
 /// Adapts design from MacroFusion
 /// Puts valid candidate instructions back-to-back so they can easily
 /// be turned into VOPD instructions
@@ -183,6 +184,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
     LLVM_DEBUG(dbgs() << "Completed VOPDPairingMutation\n");
   }
 };
+} // namespace
 
 std::unique_ptr<ScheduleDAGMutation> llvm::createVOPDPairingMutation() {
   return std::make_unique<VOPDPairingMutation>(shouldScheduleVOPDAdjacent);

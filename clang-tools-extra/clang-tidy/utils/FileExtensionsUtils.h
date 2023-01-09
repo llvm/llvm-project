@@ -11,9 +11,9 @@
 
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -54,7 +54,7 @@ bool parseFileExtensions(StringRef AllFileExtensions,
 
 /// Decides whether a file has a header file extension.
 /// Returns the file extension, if included in the provided set.
-llvm::Optional<StringRef>
+std::optional<StringRef>
 getFileExtension(StringRef FileName, const FileExtensionsSet &FileExtensions);
 
 /// Decides whether a file has one of the specified file extensions.

@@ -25,6 +25,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <optional>
 
 namespace {
 
@@ -120,7 +121,7 @@ private:
 
   fir::FortranVariableOpInterface
   gen(const Fortran::evaluate::SymbolRef &symbolRef) {
-    if (llvm::Optional<fir::FortranVariableOpInterface> varDef =
+    if (std::optional<fir::FortranVariableOpInterface> varDef =
             getSymMap().lookupVariableDefinition(symbolRef))
       return *varDef;
     TODO(getLoc(), "lowering symbol to HLFIR");

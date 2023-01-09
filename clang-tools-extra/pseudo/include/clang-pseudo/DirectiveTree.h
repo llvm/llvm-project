@@ -30,6 +30,7 @@
 
 #include "clang-pseudo/Token.h"
 #include "clang/Basic/TokenKinds.h"
+#include <optional>
 #include <variant>
 #include <vector>
 
@@ -82,7 +83,7 @@ struct DirectiveTree {
     /// None indicates no branch was taken (e.g. #if 0 ... #endif).
     /// The initial tree from `parse()` has no branches marked as taken.
     /// See `chooseConditionalBranches()`.
-    llvm::Optional<unsigned> Taken;
+    std::optional<unsigned> Taken;
   };
 
   /// Some piece of the file. {One of Code, Directive, Conditional}.
