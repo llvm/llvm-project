@@ -280,13 +280,28 @@ bool InlineSpiller::isSnippet(const LiveInterval &SnipLI) {
   Register Reg = Edit->getReg();
 
   // A snippet is a tiny live range with only a single instruction using it
-  // besides copies to/from Reg or spills/fills. We accept:
+  // besides copies to/from Reg or spills/fills.
+  // Exception is done for statepoint instructions which will fold fills
+  // into their operands.
+  // We accept:
   //
   //   %snip = COPY %Reg / FILL fi#
   //   %snip = USE %snip
+  //   %snip = STATEPOINT %snip in var arg area
   //   %Reg = COPY %snip / SPILL %snip, fi#
   //
-  if (SnipLI.getNumValNums() > 2 || !LIS.intervalIsInOneMBB(SnipLI))
+  if (!LIS.intervalIsInOneMBB(SnipLI))
+    return false;
+
+  // Number of defs should not exceed 2 not accounting defs coming from
+  // statepoint instructions.
+  unsigned NumValNums = SnipLI.getNumValNums();
+  for (auto *VNI : SnipLI.vnis()) {
+    MachineInstr *MI = LIS.getInstructionFromIndex(VNI->def);
+    if (MI->getOpcode() == TargetOpcode::STATEPOINT)
+      --NumValNums;
+  }
+  if (NumValNums > 2)
     return false;
 
   MachineInstr *UseMI = nullptr;
@@ -309,6 +324,9 @@ bool InlineSpiller::isSnippet(const LiveInterval &SnipLI) {
 
     // Allow stack slot stores.
     if (SnipLI.reg() == TII.isStoreToStackSlot(MI, FI) && FI == StackSlot)
+      continue;
+
+    if (StatepointOpers::isFoldableReg(&MI, SnipLI.reg()))
       continue;
 
     // Allow a single additional instruction.
