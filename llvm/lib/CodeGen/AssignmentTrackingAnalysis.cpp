@@ -1217,6 +1217,7 @@ bool AssignmentTrackingLowering::hasVarWithAssignment(VariableID Var,
   return true;
 }
 
+#ifndef NDEBUG
 const char *locStr(AssignmentTrackingLowering::LocKind Loc) {
   using LocKind = AssignmentTrackingLowering::LocKind;
   switch (Loc) {
@@ -1229,6 +1230,7 @@ const char *locStr(AssignmentTrackingLowering::LocKind Loc) {
   };
   llvm_unreachable("unknown LocKind");
 }
+#endif
 
 void AssignmentTrackingLowering::emitDbgValue(
     AssignmentTrackingLowering::LocKind Kind,
