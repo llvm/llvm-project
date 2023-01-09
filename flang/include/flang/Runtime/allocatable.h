@@ -93,7 +93,7 @@ int RTNAME(AllocatableAllocateSource)(Descriptor &, const Descriptor &source,
 // but note the order of first two arguments is reversed for consistency
 // with the other APIs for allocatables.)  The destination descriptor
 // must be initialized.
-int RTNAME(MoveAlloc)(Descriptor &to, const Descriptor &from,
+std::int32_t RTNAME(MoveAlloc)(Descriptor &to, Descriptor &from,
     bool hasStat = false, const Descriptor *errMsg = nullptr,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
