@@ -32,13 +32,13 @@ public:
 
   /// Get the type table or the global type table if /DEBUG:GHASH is enabled.
   inline llvm::codeview::TypeCollection &getTypeTable() {
-    assert(!ctx.config.debugGHashes);
+    assert(!config->debugGHashes);
     return typeTable;
   }
 
   /// Get the ID table or the global ID table if /DEBUG:GHASH is enabled.
   inline llvm::codeview::TypeCollection &getIDTable() {
-    assert(!ctx.config.debugGHashes);
+    assert(!config->debugGHashes);
     return idTable;
   }
 
