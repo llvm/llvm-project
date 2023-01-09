@@ -1033,8 +1033,13 @@ struct WarpOpExtractElement : public OpRewritePattern<WarpExecuteOnLane0Op> {
     Value broadcastFromTid = rewriter.create<AffineApplyOp>(
         loc, sym0.ceilDiv(elementsPerLane), extractOp.getPosition());
     // Extract at position: pos % elementsPerLane
-    Value pos = rewriter.create<AffineApplyOp>(loc, sym0 % elementsPerLane,
-                                               extractOp.getPosition());
+    Value pos =
+        elementsPerLane == 1
+            ? rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult()
+            : rewriter
+                  .create<AffineApplyOp>(loc, sym0 % elementsPerLane,
+                                         extractOp.getPosition())
+                  .getResult();
     Value extracted =
         rewriter.create<vector::ExtractElementOp>(loc, distributedVec, pos);
 
@@ -1047,6 +1052,85 @@ struct WarpOpExtractElement : public OpRewritePattern<WarpExecuteOnLane0Op> {
 
 private:
   WarpShuffleFromIdxFn warpShuffleFromIdxFn;
+};
+
+struct WarpOpInsertElement : public OpRewritePattern<WarpExecuteOnLane0Op> {
+  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    OpOperand *operand = getWarpResult(
+        warpOp, [](Operation *op) { return isa<vector::InsertElementOp>(op); });
+    if (!operand)
+      return failure();
+    unsigned int operandNumber = operand->getOperandNumber();
+    auto insertOp = operand->get().getDefiningOp<vector::InsertElementOp>();
+    VectorType vecType = insertOp.getDestVectorType();
+    VectorType distrType =
+        warpOp.getResult(operandNumber).getType().cast<VectorType>();
+    bool hasPos = static_cast<bool>(insertOp.getPosition());
+
+    // Yield destination vector, source scalar and position from warp op.
+    SmallVector<Value> additionalResults{insertOp.getDest(),
+                                         insertOp.getSource()};
+    SmallVector<Type> additionalResultTypes{distrType,
+                                            insertOp.getSource().getType()};
+    if (hasPos) {
+      additionalResults.push_back(insertOp.getPosition());
+      additionalResultTypes.push_back(insertOp.getPosition().getType());
+    }
+    Location loc = insertOp.getLoc();
+    SmallVector<size_t> newRetIndices;
+    WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, additionalResults, additionalResultTypes,
+        newRetIndices);
+    rewriter.setInsertionPointAfter(newWarpOp);
+    Value distributedVec = newWarpOp->getResult(newRetIndices[0]);
+    Value newSource = newWarpOp->getResult(newRetIndices[1]);
+    Value newPos = hasPos ? newWarpOp->getResult(newRetIndices[2]) : Value();
+    rewriter.setInsertionPointAfter(newWarpOp);
+
+    if (vecType == distrType) {
+      // Broadcast: Simply move the vector.inserelement op out.
+      Value newInsert = rewriter.create<vector::InsertElementOp>(
+          loc, newSource, distributedVec, newPos);
+      newWarpOp->getResult(operandNumber).replaceAllUsesWith(newInsert);
+      return success();
+    }
+
+    // This is a distribution. Only one lane should insert.
+    int64_t elementsPerLane = distrType.getShape()[0];
+    AffineExpr sym0 = getAffineSymbolExpr(0, rewriter.getContext());
+    // tid of extracting thread: pos / elementsPerLane
+    Value insertingLane = rewriter.create<AffineApplyOp>(
+        loc, sym0.ceilDiv(elementsPerLane), newPos);
+    // Insert position: pos % elementsPerLane
+    Value pos =
+        elementsPerLane == 1
+            ? rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult()
+            : rewriter
+                  .create<AffineApplyOp>(loc, sym0 % elementsPerLane, newPos)
+                  .getResult();
+    Value isInsertingLane = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::eq, newWarpOp.getLaneid(), insertingLane);
+    Value newResult =
+        rewriter
+            .create<scf::IfOp>(
+                loc, distrType, isInsertingLane,
+                /*thenBuilder=*/
+                [&](OpBuilder &builder, Location loc) {
+                  Value newInsert = builder.create<vector::InsertElementOp>(
+                      loc, newSource, distributedVec, pos);
+                  builder.create<scf::YieldOp>(loc, newInsert);
+                },
+                /*elseBuilder=*/
+                [&](OpBuilder &builder, Location loc) {
+                  builder.create<scf::YieldOp>(loc, distributedVec);
+                })
+            .getResult(0);
+    newWarpOp->getResult(operandNumber).replaceAllUsesWith(newResult);
+    return success();
+  }
 };
 
 /// Sink scf.for region out of WarpExecuteOnLane0Op. This can be done only if
@@ -1303,7 +1387,8 @@ void mlir::vector::populatePropagateWarpVectorDistributionPatterns(
     const WarpShuffleFromIdxFn &warpShuffleFromIdxFn, PatternBenefit benefit) {
   patterns.add<WarpOpElementwise, WarpOpTransferRead, WarpOpDeadResult,
                WarpOpBroadcast, WarpOpExtract, WarpOpForwardOperand,
-               WarpOpConstant>(patterns.getContext(), benefit);
+               WarpOpConstant, WarpOpInsertElement>(patterns.getContext(),
+                                                    benefit);
   patterns.add<WarpOpExtractElement>(patterns.getContext(),
                                      warpShuffleFromIdxFn, benefit);
   patterns.add<WarpOpScfForOp>(patterns.getContext(), distributionMapFn,
