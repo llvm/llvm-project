@@ -1722,7 +1722,7 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
     APInt NewC2 = *C2;
     KnownBits Know = computeKnownBits(And->getOperand(0), 0, And);
     // Set high zeros of C2 to allow matching negated power-of-2.
-    NewC2 = *C2 + APInt::getHighBitsSet(C2->getBitWidth(),
+    NewC2 = *C2 | APInt::getHighBitsSet(C2->getBitWidth(),
                                         Know.countMinLeadingZeros());
 
     // Restrict this fold only for single-use 'and' (PR10267).
