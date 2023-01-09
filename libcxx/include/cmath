@@ -715,7 +715,7 @@ __constexpr_fmax(_Tp __x, _Up __y) _NOEXCEPT {
 }
 
 template <class _Tp>
-_LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __constexpr_logb(_Tp __x) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __constexpr_logb(_Tp __x) {
 #if !__has_constexpr_builtin(__builtin_logb)
   if (__libcpp_is_constant_evaluated()) {
     if (__x == _Tp(0)) {
@@ -742,7 +742,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __constexpr_logb(_Tp __x) {
 }
 
 template <class _Tp>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp __constexpr_scalbn(_Tp __x, int __exp) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp __constexpr_scalbn(_Tp __x, int __exp) {
 #if !__has_constexpr_builtin(__builtin_scalbln)
   if (__libcpp_is_constant_evaluated()) {
     if (__x == _Tp(0))
