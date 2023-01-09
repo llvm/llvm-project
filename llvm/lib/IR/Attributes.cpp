@@ -1301,9 +1301,9 @@ AttributeList AttributeList::get(LLVMContext &C,
 AttributeList
 AttributeList::addAttributeAtIndex(LLVMContext &C, unsigned Index,
                                    Attribute::AttrKind Kind) const {
-  if (hasAttributeAtIndex(Index, Kind))
-    return *this;
   AttributeSet Attrs = getAttributes(Index);
+  if (Attrs.hasAttribute(Kind))
+    return *this;
   // TODO: Insert at correct position and avoid sort.
   SmallVector<Attribute, 8> NewAttrs(Attrs.begin(), Attrs.end());
   NewAttrs.push_back(Attribute::get(C, Kind));
@@ -1379,19 +1379,19 @@ AttributeList AttributeList::addParamAttribute(LLVMContext &C,
 AttributeList
 AttributeList::removeAttributeAtIndex(LLVMContext &C, unsigned Index,
                                       Attribute::AttrKind Kind) const {
-  if (!hasAttributeAtIndex(Index, Kind))
+  AttributeSet Attrs = getAttributes(Index);
+  if (!Attrs.hasAttribute(Kind))
     return *this;
-  return setAttributesAtIndex(C, Index,
-                              getAttributes(Index).removeAttribute(C, Kind));
+  return setAttributesAtIndex(C, Index, Attrs.removeAttribute(C, Kind));
 }
 
 AttributeList AttributeList::removeAttributeAtIndex(LLVMContext &C,
                                                     unsigned Index,
                                                     StringRef Kind) const {
-  if (!hasAttributeAtIndex(Index, Kind))
+  AttributeSet Attrs = getAttributes(Index);
+  if (!Attrs.hasAttribute(Kind))
     return *this;
-  return setAttributesAtIndex(C, Index,
-                              getAttributes(Index).removeAttribute(C, Kind));
+  return setAttributesAtIndex(C, Index, Attrs.removeAttribute(C, Kind));
 }
 
 AttributeList AttributeList::removeAttributesAtIndex(
