@@ -15,7 +15,7 @@
 
 namespace mlir {
 namespace spirv {
-#define GEN_PASS_DEF_SPIRVCANONICALIZEGL
+#define GEN_PASS_DEF_SPIRVCANONICALIZEGLPASS
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
 } // namespace spirv
 } // namespace mlir
@@ -24,7 +24,7 @@ using namespace mlir;
 
 namespace {
 class CanonicalizeGLPass final
-    : public spirv::impl::SPIRVCanonicalizeGLBase<CanonicalizeGLPass> {
+    : public spirv::impl::SPIRVCanonicalizeGLPassBase<CanonicalizeGLPass> {
 public:
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
@@ -35,7 +35,3 @@ public:
   }
 };
 } // namespace
-
-std::unique_ptr<OperationPass<>> spirv::createCanonicalizeGLPass() {
-  return std::make_unique<CanonicalizeGLPass>();
-}
