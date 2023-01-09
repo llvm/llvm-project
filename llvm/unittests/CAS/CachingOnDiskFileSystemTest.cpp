@@ -351,8 +351,7 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccesses) {
   ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
 
   TreePathPrefixMapper Remapper(FS);
-  ASSERT_THAT_ERROR(Remapper.add(MappedPrefix{TestDirectory.path(), "/"}),
-                    Succeeded());
+  Remapper.add(MappedPrefix{TestDirectory.path(), "/"});
 
   TempFile Extra(TestDirectory.path("Extra"), "", "content");
   SmallVector<TempFile> Temps;
@@ -399,8 +398,7 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesStack) {
   ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
 
   TreePathPrefixMapper Remapper(FS);
-  ASSERT_THAT_ERROR(Remapper.add(MappedPrefix{TestDirectory.path(), "/"}),
-                    Succeeded());
+  Remapper.add(MappedPrefix{TestDirectory.path(), "/"});
 
   TempFile Extra(TestDirectory.path("Extra"), "", "content");
   SmallVector<TempFile> Temps;
@@ -470,8 +468,7 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesExists) {
   ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
 
   TreePathPrefixMapper Remapper(FS);
-  ASSERT_THAT_ERROR(Remapper.add(MappedPrefix{TestDirectory.path(), "/"}),
-                    Succeeded());
+  Remapper.add(MappedPrefix{TestDirectory.path(), "/"});
 
   SmallVector<TempFile> Temps;
   for (size_t I = 0, E = 4; I != E; ++I)
@@ -608,8 +605,7 @@ TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
   ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
 
   TreePathPrefixMapper Remapper(FS);
-  ASSERT_THAT_ERROR(Remapper.add(MappedPrefix{TestDirectory.path(), "/"}),
-                    Succeeded());
+  Remapper.add(MappedPrefix{TestDirectory.path(), "/"});
 
   TempDir D1(TestDirectory.path("d1"));
   TempDir D2(TestDirectory.path("d2"));

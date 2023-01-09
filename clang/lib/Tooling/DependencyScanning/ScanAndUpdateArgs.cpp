@@ -76,104 +76,83 @@ void DepscanPrefixMapping::remapInvocationPaths(CompilerInvocation &Invocation,
     FrontendOpts.PathPrefixMappings.push_back(Map.Old + "=" + Map.New);
   }
 
-  // Returns "false" on success, "true" if the path doesn't exist.
-  auto remapInPlace = [&](std::string &S) -> bool {
-    return errorToBool(Mapper.mapInPlace(S));
+  auto mapInPlaceAll = [&](std::vector<std::string> &Vector) {
+    for (auto &Path : Vector)
+      Mapper.mapInPlace(Path);
   };
 
-  auto remapInPlaceOrFilterOutWith = [&](auto &Vector, auto Remapper) {
-    Vector.erase(llvm::remove_if(Vector, Remapper), Vector.end());
-  };
-
-  auto remapInPlaceOrFilterOut = [&](std::vector<std::string> &Vector) {
-    remapInPlaceOrFilterOutWith(Vector, remapInPlace);
-  };
-
-  // If we can't remap the working directory, skip everything else.
   auto &FileSystemOpts = Invocation.getFileSystemOpts();
-  if (remapInPlace(FileSystemOpts.CASFileSystemWorkingDirectory))
-    return;
+  Mapper.mapInPlace(FileSystemOpts.CASFileSystemWorkingDirectory);
 
   // Remap header search.
   auto &HeaderSearchOpts = Invocation.getHeaderSearchOpts();
-  Mapper.mapInPlaceOrClear(HeaderSearchOpts.Sysroot);
-  remapInPlaceOrFilterOutWith(HeaderSearchOpts.UserEntries,
-                              [&](HeaderSearchOptions::Entry &Entry) {
-                                if (Entry.IgnoreSysRoot)
-                                  return remapInPlace(Entry.Path);
-                                return false;
-                              });
-  remapInPlaceOrFilterOutWith(
-      HeaderSearchOpts.SystemHeaderPrefixes,
-      [&](HeaderSearchOptions::SystemHeaderPrefix &Prefix) {
-        return remapInPlace(Prefix.Prefix);
-      });
-  Mapper.mapInPlaceOrClear(HeaderSearchOpts.ResourceDir);
-  Mapper.mapInPlaceOrClear(HeaderSearchOpts.ModuleCachePath);
-  Mapper.mapInPlaceOrClear(HeaderSearchOpts.ModuleUserBuildPath);
+  Mapper.mapInPlace(HeaderSearchOpts.Sysroot);
+  for (auto &Entry : HeaderSearchOpts.UserEntries)
+    if (Entry.IgnoreSysRoot)
+      Mapper.mapInPlace(Entry.Path);
+
+  for (auto &Prefix : HeaderSearchOpts.SystemHeaderPrefixes)
+    Mapper.mapInPlace(Prefix.Prefix);
+  Mapper.mapInPlace(HeaderSearchOpts.ResourceDir);
+  Mapper.mapInPlace(HeaderSearchOpts.ModuleCachePath);
+  Mapper.mapInPlace(HeaderSearchOpts.ModuleUserBuildPath);
   for (auto I = HeaderSearchOpts.PrebuiltModuleFiles.begin(),
             E = HeaderSearchOpts.PrebuiltModuleFiles.end();
        I != E;) {
     auto Current = I++;
-    if (remapInPlace(Current->second))
-      HeaderSearchOpts.PrebuiltModuleFiles.erase(Current);
+    Mapper.mapInPlace(Current->second);
   }
-  remapInPlaceOrFilterOut(HeaderSearchOpts.PrebuiltModulePaths);
-  remapInPlaceOrFilterOut(HeaderSearchOpts.VFSOverlayFiles);
+  mapInPlaceAll(HeaderSearchOpts.PrebuiltModulePaths);
+  mapInPlaceAll(HeaderSearchOpts.VFSOverlayFiles);
 
   // Preprocessor options.
   auto &PPOpts = Invocation.getPreprocessorOpts();
-  remapInPlaceOrFilterOut(PPOpts.MacroIncludes);
-  remapInPlaceOrFilterOut(PPOpts.Includes);
-  Mapper.mapInPlaceOrClear(PPOpts.ImplicitPCHInclude);
+  mapInPlaceAll(PPOpts.MacroIncludes);
+  mapInPlaceAll(PPOpts.Includes);
+  Mapper.mapInPlace(PPOpts.ImplicitPCHInclude);
 
   // Frontend options.
-  remapInPlaceOrFilterOutWith(
-      FrontendOpts.Inputs, [&](FrontendInputFile &Input) {
-        if (Input.isBuffer())
-          return false; // FIXME: Can this happen when parsing command-line?
+  for (FrontendInputFile &Input : FrontendOpts.Inputs) {
+    if (Input.isBuffer())
+      continue; // FIXME: Can this happen when parsing command-line?
 
-        SmallString<256> PathBuf;
-        Optional<StringRef> RemappedFile =
-            Mapper.mapOrNoneIfError(Input.getFile(), PathBuf);
-        if (!RemappedFile)
-          return true;
-        if (RemappedFile != Input.getFile())
-          Input = FrontendInputFile(*RemappedFile, Input.getKind(),
-                                    Input.isSystem());
-        return false;
-      });
+    SmallString<256> RemappedFile;
+    Mapper.map(Input.getFile(), RemappedFile);
+    if (RemappedFile != Input.getFile())
+      Input =
+          FrontendInputFile(RemappedFile, Input.getKind(), Input.isSystem());
+  }
 
   // Skip the output file. That's not the input CAS filesystem.
-  //   Mapper.mapInPlaceOrClear(OutputFile); <-- this doesn't make sense.
+  //   Mapper.mapInPlace(OutputFile); <-- this doesn't make sense.
 
-  Mapper.mapInPlaceOrClear(FrontendOpts.CodeCompletionAt.FileName);
+  Mapper.mapInPlace(FrontendOpts.CodeCompletionAt.FileName);
 
   // Don't remap plugins (for now), since we don't know how to remap their
   // arguments. Maybe they should be loaded outside of the CAS filesystem?
   // Maybe we should error?
   //
-  //  remapInPlaceOrFilterOut(FrontendOpts.Plugins);
+  //  Mapper.mapInPlaceOrFilterOut(FrontendOpts.Plugins);
 
-  remapInPlaceOrFilterOut(FrontendOpts.ModuleMapFiles);
-  remapInPlaceOrFilterOut(FrontendOpts.ModuleFiles);
-  remapInPlaceOrFilterOut(FrontendOpts.ModulesEmbedFiles);
-  remapInPlaceOrFilterOut(FrontendOpts.ASTMergeFiles);
-  Mapper.mapInPlaceOrClear(FrontendOpts.OverrideRecordLayoutsFile);
-  Mapper.mapInPlaceOrClear(FrontendOpts.StatsFile);
+  mapInPlaceAll(FrontendOpts.ModuleMapFiles);
+  mapInPlaceAll(FrontendOpts.ModuleFiles);
+  mapInPlaceAll(FrontendOpts.ModulesEmbedFiles);
+  mapInPlaceAll(FrontendOpts.ASTMergeFiles);
+  Mapper.mapInPlace(FrontendOpts.OverrideRecordLayoutsFile);
+  Mapper.mapInPlace(FrontendOpts.StatsFile);
 
   // Filesystem options.
-  Mapper.mapInPlaceOrClear(FileSystemOpts.WorkingDir);
+  Mapper.mapInPlace(FileSystemOpts.WorkingDir);
 
   // Code generation options.
   auto &CodeGenOpts = Invocation.getCodeGenOpts();
-  Mapper.mapInPlaceOrClear(CodeGenOpts.DebugCompilationDir);
-  Mapper.mapInPlaceOrClear(CodeGenOpts.CoverageCompilationDir);
+  Mapper.mapInPlace(CodeGenOpts.DebugCompilationDir);
+  Mapper.mapInPlace(CodeGenOpts.CoverageCompilationDir);
 
   // Handle coverage mappings.
-  Mapper.mapInPlaceOrClear(CodeGenOpts.ProfileInstrumentUsePath);
-  Mapper.mapInPlaceOrClear(CodeGenOpts.SampleProfileFile);
-  Mapper.mapInPlaceOrClear(CodeGenOpts.ProfileRemappingFile);
+  Mapper.mapInPlace(CodeGenOpts.ProfileInstrumentUsePath);
+  Mapper.mapInPlace(CodeGenOpts.SampleProfileFile);
+  Mapper.mapInPlace(CodeGenOpts.ProfileRemappingFile);
 }
 
 Error DepscanPrefixMapping::configurePrefixMapper(
@@ -194,8 +173,7 @@ Error DepscanPrefixMapping::configurePrefixMapper(
     StringRef SDK = HSOpts.Sysroot;
     if (isPathApplicableAsPrefix(SDK))
       // Need a new copy of the string since the invocation will be modified.
-      if (auto E = Mapper.add({SDK, *NewSDKPath}))
-        return E;
+      Mapper.add({SDK, *NewSDKPath});
   }
   if (NewToolchainPath) {
     // Look up for the toolchain, assuming resources are at
@@ -212,16 +190,14 @@ Error DepscanPrefixMapping::configurePrefixMapper(
     }
     if (isPathApplicableAsPrefix(Guess))
       // Need a new copy of the string since the invocation will be modified.
-      if (auto E = Mapper.add({Guess, *NewToolchainPath}))
-        return E;
+      Mapper.add({Guess, *NewToolchainPath});
   }
   if (!PrefixMap.empty()) {
     llvm::SmallVector<llvm::MappedPrefix> Split;
     llvm::MappedPrefix::transformJoinedIfValid(PrefixMap, Split);
     for (auto &MappedPrefix : Split) {
       if (isPathApplicableAsPrefix(MappedPrefix.Old)) {
-        if (auto E = Mapper.add(MappedPrefix))
-          return E;
+        Mapper.add(MappedPrefix);
       } else {
         return createStringError(llvm::errc::invalid_argument,
                                  "invalid prefix map: '" + MappedPrefix.Old +

@@ -259,7 +259,7 @@ Error IncludeTreePPConsumer::initialize(CompilerInstance &CI) {
     // allows remapping back to the non-canonical source paths so that they are
     // found during dep-scanning.
     llvm::PrefixMapper ReverseMapper;
-    cantFail(ReverseMapper.addInverseRange(PrefixMapper.getMappings()));
+    ReverseMapper.addInverseRange(PrefixMapper.getMappings());
     ReverseMapper.sort();
     std::unique_ptr<llvm::vfs::FileSystem> FS =
         llvm::vfs::createPrefixMappingFileSystem(std::move(ReverseMapper),
@@ -268,7 +268,7 @@ Error IncludeTreePPConsumer::initialize(CompilerInstance &CI) {
 
     // These are written in the predefines buffer, so we need to remap them.
     for (std::string &Include : PPOpts.Includes)
-      cantFail(PrefixMapper.mapInPlace(Include));
+      PrefixMapper.mapInPlace(Include);
   };
   ensurePathRemapping();
 
@@ -497,7 +497,7 @@ IncludeTreePPConsumer::createIncludeFile(StringRef Filename,
                                          cas::ObjectRef Contents) {
   SmallString<256> MappedPath;
   if (!PrefixMapper.empty()) {
-    cantFail(PrefixMapper.map(Filename, MappedPath));
+    PrefixMapper.map(Filename, MappedPath);
     Filename = MappedPath;
   }
   return cas::IncludeFile::create(DB, Filename, std::move(Contents));

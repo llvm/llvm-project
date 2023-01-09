@@ -406,8 +406,7 @@ static Expected<ObjectProxy> ingestFileSystemImpl(ObjectStore &CAS,
   SmallVector<llvm::MappedPrefix> Split;
   if (!PrefixMapPaths.empty()) {
     MappedPrefix::transformJoinedIfValid(PrefixMapPaths, Split);
-    if (llvm::Error E = Mapper.addRange(Split))
-      return std::move(E);
+    Mapper.addRange(Split);
     Mapper.sort();
   }
 

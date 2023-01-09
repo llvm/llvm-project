@@ -31,15 +31,15 @@ struct PrefixMapperWrapper {
   PrefixMapperWrapper(sys::path::Style PathStyle)
       : PM(PathStyle), Saver(Alloc) {}
 
-  void add(const MappedPrefix &Mapping) { return cantFail(PM.add(Mapping)); }
+  void add(const MappedPrefix &Mapping) { return PM.add(Mapping); }
 
   template <class RangeT> void addRange(const RangeT &Mappings) {
-    return cantFail(PM.addRange(Mappings));
+    return PM.addRange(Mappings);
   }
 
   StringRef map(StringRef Path) {
     SmallString<256> PathBuf;
-    cantFail(PM.map(Path, PathBuf));
+    PM.map(Path, PathBuf);
     return Saver.save(PathBuf.str());
   }
 };
@@ -136,8 +136,8 @@ TEST(PrefixMapperTest, construct) {
 
 TEST(PrefixMapperTest, add) {
   PrefixMapper PM(sys::path::Style::posix);
-  ASSERT_THAT_ERROR(PM.add(MappedPrefix{"a", "b"}), Succeeded());
-  ASSERT_THAT_ERROR(PM.add(MappedPrefix{"b", "a"}), Succeeded());
+  PM.add(MappedPrefix{"a", "b"});
+  PM.add(MappedPrefix{"b", "a"});
   ASSERT_EQ(2u, PM.getMappings().size());
   ASSERT_EQ((MappedPrefix{"a", "b"}), PM.getMappings().front());
   ASSERT_EQ((MappedPrefix{"b", "a"}), PM.getMappings().back());
@@ -146,17 +146,15 @@ TEST(PrefixMapperTest, add) {
 TEST(PrefixMapperTest, addRange) {
   PrefixMapper PM(sys::path::Style::posix);
 
-  ASSERT_THAT_ERROR(PM.add(MappedPrefix{"/old/before", "/new/before"}),
-                    Succeeded());
+  PM.add(MappedPrefix{"/old/before", "/new/before"});
   MappedPrefix Range[] = {
       {"/old/1", "/new/1"},
       {"/old/2", "/new/2"},
       {"/old/3", "/new/3"},
   };
   auto RangeRef = makeArrayRef(Range);
-  ASSERT_THAT_ERROR(PM.addRange(RangeRef), Succeeded());
-  ASSERT_THAT_ERROR(PM.add(MappedPrefix{"/old/after", "/new/after"}),
-                    Succeeded());
+  PM.addRange(RangeRef);
+  PM.add(MappedPrefix{"/old/after", "/new/after"});
 
   ASSERT_EQ(2u + RangeRef.size(), PM.getMappings().size());
   EXPECT_EQ((MappedPrefix{"/old/before", "/new/before"}),
@@ -276,7 +274,7 @@ TEST(PrefixMapperTest, mapNative) {
 TEST(PrefixMapperTest, mapTwoArgs) {
   PrefixMapper PM(sys::path::Style::posix);
   MappedPrefix Mappings[] = {{"/old", "/new"}};
-  ASSERT_THAT_ERROR(PM.addRange(makeArrayRef(Mappings)), Succeeded());
+  PM.addRange(makeArrayRef(Mappings));
 
   MappedPrefix Tests[] = {
       {"/old", "/new"},     {"/old/x/y", "/new/x/y"},
@@ -287,8 +285,8 @@ TEST(PrefixMapperTest, mapTwoArgs) {
   SmallString<128> OutputV;
   std::string OutputS;
   for (MappedPrefix M : Tests) {
-    ASSERT_THAT_ERROR(PM.map(M.Old, OutputV), Succeeded());
-    ASSERT_THAT_ERROR(PM.map(M.Old, OutputS), Succeeded());
+    PM.map(M.Old, OutputV);
+    PM.map(M.Old, OutputS);
     EXPECT_EQ(M.New, OutputV);
     EXPECT_EQ(M.New, OutputS);
   }
@@ -297,7 +295,7 @@ TEST(PrefixMapperTest, mapTwoArgs) {
 TEST(PrefixMapperTest, mapToString) {
   PrefixMapper PM(sys::path::Style::posix);
   MappedPrefix Mappings[] = {{"/old", "/new"}};
-  ASSERT_THAT_ERROR(PM.addRange(makeArrayRef(Mappings)), Succeeded());
+  PM.addRange(makeArrayRef(Mappings));
 
   MappedPrefix Tests[] = {
       {"/old", "/new"},     {"/old/x/y", "/new/x/y"},
@@ -307,8 +305,7 @@ TEST(PrefixMapperTest, mapToString) {
 
   SmallString<128> Output;
   for (MappedPrefix M : Tests) {
-    std::string S;
-    ASSERT_THAT_ERROR(PM.mapToString(M.Old).moveInto(S), Succeeded());
+    std::string S = PM.mapToString(M.Old);
     EXPECT_EQ(M.New, S);
   }
 }
@@ -316,7 +313,7 @@ TEST(PrefixMapperTest, mapToString) {
 TEST(PrefixMapperTest, mapInPlace) {
   PrefixMapper PM(sys::path::Style::posix);
   MappedPrefix Mappings[] = {{"/old", "/new"}};
-  ASSERT_THAT_ERROR(PM.addRange(makeArrayRef(Mappings)), Succeeded());
+  PM.addRange(makeArrayRef(Mappings));
 
   MappedPrefix Tests[] = {
       {"/old", "/new"},     {"/old/x/y", "/new/x/y"},
@@ -329,8 +326,8 @@ TEST(PrefixMapperTest, mapInPlace) {
   for (MappedPrefix M : Tests) {
     V = M.Old;
     S = M.Old;
-    ASSERT_THAT_ERROR(PM.mapInPlace(V), Succeeded());
-    ASSERT_THAT_ERROR(PM.mapInPlace(S), Succeeded());
+    PM.mapInPlace(V);
+    PM.mapInPlace(S);
     EXPECT_EQ(M.New, V);
     EXPECT_EQ(M.New, S);
   }
@@ -406,84 +403,74 @@ TEST(TreePathPrefixMapperTest, add) {
   auto FS = makeIntrusiveRefCnt<GetDirectoryEntryFileSystem>();
   TreePathPrefixMapper PM(FS);
 
-  EXPECT_THAT_ERROR(PM.add(MappedPrefix{"relative", "/new1"}), Succeeded());
-  EXPECT_THAT_ERROR(PM.add(MappedPrefix{"/absolute", "/new2"}), Succeeded());
-  ASSERT_EQ(2u, PM.getMappings().size());
-  EXPECT_EQ((MappedPrefix{"/real/path/1", "/new1"}), PM.getMappings().front());
-  EXPECT_EQ((MappedPrefix{"/real/path/2", "/new2"}), PM.getMappings().back());
+  // Non-canonical paths create two map entries: one for the canonical and one
+  // for the non-canonical path.
+  PM.add(MappedPrefix{"relative", "/new1"});
+  PM.add(MappedPrefix{"/absolute", "/new2"});
+  ASSERT_EQ(4u, PM.getMappings().size());
+  EXPECT_EQ((MappedPrefix{"relative", "/new1"}), PM.getMappings()[0]);
+  EXPECT_EQ((MappedPrefix{"/real/path/1", "/new1"}), PM.getMappings()[1]);
+  EXPECT_EQ((MappedPrefix{"/absolute", "/new2"}), PM.getMappings()[2]);
+  EXPECT_EQ((MappedPrefix{"/real/path/2", "/new2"}), PM.getMappings()[3]);
 
-  EXPECT_THAT_ERROR(PM.add(MappedPrefix{"missing", "/new"}), Failed());
-  EXPECT_EQ(2u, PM.getMappings().size());
+  // Canonical paths create a single entry.
+  PM.add(MappedPrefix{"/real/path", "/new3"});
+  ASSERT_EQ(5u, PM.getMappings().size());
+  EXPECT_EQ((MappedPrefix{"/real/path", "/new3"}), PM.getMappings().back());
+
+  PM.add(MappedPrefix{"missing", "/new"});
+  EXPECT_EQ(6u, PM.getMappings().size());
+  EXPECT_EQ((MappedPrefix{"missing", "/new"}), PM.getMappings().back());
 }
 
 TEST(TreePathPrefixMapperTest, addRange) {
   auto FS = makeIntrusiveRefCnt<GetDirectoryEntryFileSystem>();
   TreePathPrefixMapper PM(FS);
 
-  MappedPrefix BadMapping[] = {
+  MappedPrefix MissingMapping[] = {
       {"missing", "/new"},
   };
   MappedPrefix Mappings[] = {
       {"relative", "/new1"},
       {"/absolute", "/new2"},
+      {"/real/path", "/new3"},
   };
-  EXPECT_THAT_ERROR(PM.addRange(makeArrayRef(Mappings)), Succeeded());
-  ASSERT_EQ(2u, PM.getMappings().size());
-  EXPECT_EQ((MappedPrefix{"/real/path/1", "/new1"}), PM.getMappings().front());
-  EXPECT_EQ((MappedPrefix{"/real/path/2", "/new2"}), PM.getMappings().back());
+  PM.addRange(makeArrayRef(Mappings));
+  ASSERT_EQ(5u, PM.getMappings().size());
+  EXPECT_EQ((MappedPrefix{"relative", "/new1"}), PM.getMappings()[0]);
+  EXPECT_EQ((MappedPrefix{"/real/path/1", "/new1"}), PM.getMappings()[1]);
+  EXPECT_EQ((MappedPrefix{"/absolute", "/new2"}), PM.getMappings()[2]);
+  EXPECT_EQ((MappedPrefix{"/real/path/2", "/new2"}), PM.getMappings()[3]);
+  EXPECT_EQ((MappedPrefix{"/real/path", "/new3"}), PM.getMappings()[4]);
 
-  EXPECT_THAT_ERROR(PM.addRange(makeArrayRef(BadMapping)), Failed());
-  EXPECT_EQ(2u, PM.getMappings().size());
-}
-
-TEST(TreePathPrefixMapperTest, addRangeIfValid) {
-  auto FS = makeIntrusiveRefCnt<GetDirectoryEntryFileSystem>();
-  TreePathPrefixMapper PM(FS);
-
-  MappedPrefix Mappings[] = {
-      {"missing-before", "/new"}, {"relative", "/new1"},
-      {"missing", "/new"},        {"/absolute", "/new2"},
-      {"missing-after", "/new"},
-  };
-  PM.addRangeIfValid(makeArrayRef(Mappings));
-  ASSERT_EQ(2u, PM.getMappings().size());
-  EXPECT_EQ((MappedPrefix{"/real/path/1", "/new1"}), PM.getMappings().front());
-  EXPECT_EQ((MappedPrefix{"/real/path/2", "/new2"}), PM.getMappings().back());
+  PM.addRange(makeArrayRef(MissingMapping));
+  EXPECT_EQ(6u, PM.getMappings().size());
+  EXPECT_EQ((MappedPrefix{"missing", "/new"}), PM.getMappings().back());
 }
 
 TEST(TreePathPrefixMapperTest, addInverseRange) {
   auto FS = makeIntrusiveRefCnt<GetDirectoryEntryFileSystem>();
   TreePathPrefixMapper PM(FS);
 
-  MappedPrefix BadMapping[] = {
+  MappedPrefix MissingMapping[] = {
       {"/new", "missing"},
   };
   MappedPrefix Mappings[] = {
       {"/new1", "relative"},
       {"/new2", "/absolute"},
+      {"/new3", "/real/path"},
   };
-  EXPECT_THAT_ERROR(PM.addInverseRange(makeArrayRef(Mappings)), Succeeded());
-  ASSERT_EQ(2u, PM.getMappings().size());
-  EXPECT_EQ((MappedPrefix{"/real/path/1", "/new1"}), PM.getMappings().front());
-  EXPECT_EQ((MappedPrefix{"/real/path/2", "/new2"}), PM.getMappings().back());
+  PM.addInverseRange(makeArrayRef(Mappings));
+  ASSERT_EQ(5u, PM.getMappings().size());
+  EXPECT_EQ((MappedPrefix{"relative", "/new1"}), PM.getMappings()[0]);
+  EXPECT_EQ((MappedPrefix{"/real/path/1", "/new1"}), PM.getMappings()[1]);
+  EXPECT_EQ((MappedPrefix{"/absolute", "/new2"}), PM.getMappings()[2]);
+  EXPECT_EQ((MappedPrefix{"/real/path/2", "/new2"}), PM.getMappings()[3]);
+  EXPECT_EQ((MappedPrefix{"/real/path", "/new3"}), PM.getMappings()[4]);
 
-  EXPECT_THAT_ERROR(PM.addInverseRange(makeArrayRef(BadMapping)), Failed());
-  EXPECT_EQ(2u, PM.getMappings().size());
-}
-
-TEST(TreePathPrefixMapperTest, addInverseRangeIfValid) {
-  auto FS = makeIntrusiveRefCnt<GetDirectoryEntryFileSystem>();
-  TreePathPrefixMapper PM(FS);
-
-  MappedPrefix Mappings[] = {
-      {"/new", "missing-before"}, {"/new1", "relative"},
-      {"/new", "missing"},        {"/new2", "/absolute"},
-      {"/new", "missing-after"},
-  };
-  PM.addInverseRangeIfValid(makeArrayRef(Mappings));
-  ASSERT_EQ(2u, PM.getMappings().size());
-  EXPECT_EQ((MappedPrefix{"/real/path/1", "/new1"}), PM.getMappings().front());
-  EXPECT_EQ((MappedPrefix{"/real/path/2", "/new2"}), PM.getMappings().back());
+  PM.addInverseRange(makeArrayRef(MissingMapping));
+  EXPECT_EQ(6u, PM.getMappings().size());
+  EXPECT_EQ((MappedPrefix{"missing", "/new"}), PM.getMappings().back());
 }
 
 struct MapState {
@@ -506,39 +493,53 @@ struct MapState {
       {"/real/path/2", "/new2"},
       {"/real/path/2/nested", "/new2/nested"},
   };
-  SmallVector<StringRef> FailedTests = {"missing", "/missing", "/relative"};
+  SmallVector<MappedPrefix> MissingTests = {
+      {"missing/nested", "missing/nested"},
+      {"/missing/nested", "/missing/nested"},
+      {"/relative/nested", "/relative/nested"},
+  };
   MapState() : PM(FS) {
-    EXPECT_THAT_ERROR(PM.add(MappedPrefix{"relative", "/new1"}), Succeeded());
-    EXPECT_THAT_ERROR(PM.add(MappedPrefix{"/absolute", "/new2"}), Succeeded());
+    PM.add(MappedPrefix{"relative", "/new1"});
+    PM.add(MappedPrefix{"/absolute", "/new2"});
   }
 };
 
 TEST(TreePathPrefixMapperTest, map) {
   MapState State;
-  ASSERT_EQ(2u, State.PM.getMappings().size());
+  ASSERT_EQ(4u, State.PM.getMappings().size());
 
   SmallString<128> NotFoundV;
   std::string NotFoundS;
   SmallString<128> FoundV;
   std::string FoundS;
-  for (StringRef S : State.FailedTests) {
+  for (MappedPrefix Map : State.MissingTests) {
     FoundV = "";
     FoundS = "";
-    EXPECT_THAT_EXPECTED(State.PM.mapToString(S), Failed());
-    EXPECT_THAT_ERROR(State.PM.map(S, NotFoundV), Failed());
-    EXPECT_THAT_ERROR(State.PM.map(S, NotFoundS), Failed());
-    EXPECT_EQ("", NotFoundV);
-    EXPECT_EQ("", NotFoundS);
-    EXPECT_EQ(std::nullopt, State.PM.mapOrNoneIfError(S, NotFoundV));
+    EXPECT_EQ(State.PM.mapToString(Map.Old), Map.New);
+    State.PM.map(Map.Old, FoundV);
+    State.PM.map(Map.Old, FoundS);
+    EXPECT_EQ(Map.New, FoundV);
+    EXPECT_EQ(Map.New, FoundS);
+
+    FoundV = "";
+    FoundS = "";
+
+    if (Map.Old.empty())
+      continue;
+
+    const vfs::CachedDirectoryEntry *Entry = nullptr;
+    ASSERT_THAT_ERROR(
+        State.FS->getDirectoryEntry(Map.Old, /*FollowSymlinks=*/false)
+            .moveInto(Entry),
+        Failed());
   }
 
   for (MappedPrefix Map : State.Tests) {
-    EXPECT_THAT_EXPECTED(State.PM.mapToString(Map.Old), HasValue(Map.New));
-    EXPECT_THAT_ERROR(State.PM.map(Map.Old, FoundV), Succeeded());
-    EXPECT_THAT_ERROR(State.PM.map(Map.Old, FoundS), Succeeded());
+    EXPECT_EQ(State.PM.mapToString(Map.Old), Map.New);
+    State.PM.map(Map.Old, FoundV);
+    State.PM.map(Map.Old, FoundS);
     EXPECT_EQ(Map.New, FoundV);
     EXPECT_EQ(Map.New, FoundS);
-    EXPECT_EQ(StringRef(Map.New), State.PM.mapOrNoneIfError(Map.Old, FoundV));
 
     FoundV = "";
     FoundS = "";
@@ -552,11 +553,9 @@ TEST(TreePathPrefixMapperTest, map) {
         Succeeded());
     FoundV = "";
     FoundS = "";
-    EXPECT_THAT_ERROR(State.PM.map(Entry->getTreePath(), FoundV), Succeeded());
-    EXPECT_THAT_ERROR(State.PM.map(Entry->getTreePath(), FoundS), Succeeded());
-    std::string S;
-    ASSERT_THAT_ERROR(State.PM.mapToString(Entry->getTreePath()).moveInto(S),
-                      Succeeded());
+    State.PM.map(Entry->getTreePath(), FoundV);
+    State.PM.map(Entry->getTreePath(), FoundS);
+    std::string S = State.PM.mapToString(Entry->getTreePath());
     EXPECT_EQ(Map.New, S);
     EXPECT_EQ(Map.New, FoundV);
     EXPECT_EQ(Map.New, FoundS);
@@ -565,33 +564,19 @@ TEST(TreePathPrefixMapperTest, map) {
 
 TEST(TreePathPrefixMapperTest, mapInPlace) {
   MapState State;
-  ASSERT_EQ(2u, State.PM.getMappings().size());
+  ASSERT_EQ(4u, State.PM.getMappings().size());
 
   std::string FoundS;
   SmallString<128> FoundV;
-  for (StringRef S : State.FailedTests) {
-    FoundS = S.str();
-    FoundV = S;
-    EXPECT_THAT_ERROR(State.PM.mapInPlace(FoundS), Failed());
-    EXPECT_THAT_ERROR(State.PM.mapInPlace(FoundV), Failed());
-    EXPECT_EQ(S, FoundS);
-    EXPECT_EQ(S, FoundV);
-    State.PM.mapInPlaceOrClear(FoundS);
-    EXPECT_EQ("", FoundS);
-  }
-
-  for (MappedPrefix Map : State.Tests) {
+  auto Tests = State.Tests;
+  Tests.append(State.MissingTests);
+  for (MappedPrefix Map : Tests) {
     FoundS = Map.Old;
     FoundV = Map.Old;
-    EXPECT_THAT_ERROR(State.PM.mapInPlace(FoundS), Succeeded());
-    EXPECT_THAT_ERROR(State.PM.mapInPlace(FoundV), Succeeded());
+    State.PM.mapInPlace(FoundS);
+    State.PM.mapInPlace(FoundV);
     EXPECT_EQ(Map.New, FoundS);
     EXPECT_EQ(Map.New, FoundV);
-
-    FoundS = Map.Old;
-    FoundV = Map.Old;
-    State.PM.mapInPlaceOrClear(FoundS);
-    EXPECT_EQ(Map.New, FoundS);
   }
 }
 

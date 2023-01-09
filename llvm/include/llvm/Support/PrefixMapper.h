@@ -60,44 +60,26 @@ public:
   /// Map \p Path, and saving the new (or existing) path in \p NewPath.
   ///
   /// \pre \p Path is not a reference into \p NewPath.
-  Error map(StringRef Path, SmallVectorImpl<char> &NewPath);
-  Error map(StringRef Path, std::string &NewPath);
+  void map(StringRef Path, SmallVectorImpl<char> &NewPath);
+  void map(StringRef Path, std::string &NewPath);
 
   /// Map \p Path, returning \a std::string.
-  Expected<std::string> mapToString(StringRef Path);
+  std::string mapToString(StringRef Path);
 
   /// Map \p Path in place.
-  Error mapInPlace(SmallVectorImpl<char> &Path);
-  Error mapInPlace(std::string &Path);
-
-  void mapInPlaceOrClear(std::string &Path) {
-    if (errorToBool(mapInPlace(Path)))
-      Path.clear();
-  }
-
-  /// Like \p map() except it returns \p None in case of an error.
-  Optional<StringRef> mapOrNoneIfError(StringRef Path,
-                                       SmallVectorImpl<char> &Storage) {
-    if (Error E = map(Path, Storage)) {
-      consumeError(std::move(E));
-      return std::nullopt;
-    }
-    return StringRef(Storage.begin(), Storage.size());
-  }
+  void mapInPlace(SmallVectorImpl<char> &Path);
+  void mapInPlace(std::string &Path);
 
 protected:
   /// Map (or unmap) \p Path. On a match, fills \p Storage with the mapped path
   /// unless it's an exact match.
   ///
   /// \pre \p Path is not a reference into \p Storage.
-  virtual Expected<Optional<StringRef>> mapImpl(StringRef Path,
-                                                SmallVectorImpl<char> &Storage);
+  virtual Optional<StringRef> mapImpl(StringRef Path,
+                                      SmallVectorImpl<char> &Storage);
 
 public:
-  virtual Error add(const MappedPrefix &MP) {
-    Mappings.push_back(MP);
-    return Error::success();
-  }
+  virtual void add(const MappedPrefix &MP) { Mappings.push_back(MP); }
 
   /// A path-based reverse lexicographic sort, putting deeper paths first so
   /// that deeper paths are prioritized over their parent paths. For example,
@@ -113,28 +95,14 @@ public:
   /// TODO: Test.
   void sort();
 
-  template <class RangeT> Error addRange(const RangeT &Mappings) {
+  template <class RangeT> void addRange(const RangeT &Mappings) {
     for (const MappedPrefix &M : Mappings)
-      if (Error E = add(M))
-        return E;
-    return Error::success();
+      add(M);
   }
 
-  template <class RangeT> Error addInverseRange(const RangeT &Mappings) {
+  template <class RangeT> void addInverseRange(const RangeT &Mappings) {
     for (const MappedPrefix &M : Mappings)
-      if (Error E = add(M.getInverse()))
-        return E;
-    return Error::success();
-  }
-
-  template <class RangeT> void addRangeIfValid(const RangeT &Mappings) {
-    for (const MappedPrefix &M : Mappings)
-      consumeError(add(M));
-  }
-
-  template <class RangeT> void addInverseRangeIfValid(const RangeT &Mappings) {
-    for (const MappedPrefix &M : Mappings)
-      consumeError(add(M.getInverse()));
+      add(M.getInverse());
   }
 
   bool empty() const { return getMappings().empty(); }
@@ -151,7 +119,8 @@ private:
   SmallVector<MappedPrefix> Mappings;
 };
 
-/// Wrapper for \a PrefixMapper that remaps paths that contain symlinks correctly.
+/// Wrapper for \a PrefixMapper that remaps paths that contain symlinks
+/// correctly.
 ///
 /// This compares paths (included the prefix) using a "tree" path (like a real
 /// path that does not follow symlinks in the basename). That is, the path to
@@ -178,20 +147,21 @@ private:
 /// The implementation relies on \a vfs::CachedDirectoryEntry::getTreePath(),
 /// which is only available in some filesystems.
 ///
-/// Returns an error if an input cannot be found, except that an empty string
-/// always maps to itself.
+/// Falls back to a simple path prefix map if an input cannot be found, and
+/// an empty string always maps to itself.
 class TreePathPrefixMapper : public PrefixMapper {
 private:
-  Expected<Optional<StringRef>>
-  mapImpl(StringRef Path, SmallVectorImpl<char> &Storage) override;
+  Optional<StringRef> mapImpl(StringRef Path,
+                              SmallVectorImpl<char> &Storage) override;
 
   /// Find the tree path for \p Path, getting the real path for its parent
   /// directory but not following symlinks in \a sys::path::filename().
-  Expected<StringRef> getTreePath(StringRef Path);
-  Error canonicalizePrefix(StringRef &Prefix);
+  ///
+  /// \returns The tree path, or the original path if there are any errors.
+  StringRef getTreePath(StringRef Path);
 
 public:
-  Error add(const MappedPrefix &Mapping) override;
+  void add(const MappedPrefix &Mapping) override;
 
   StringRef mapDirEntry(const vfs::CachedDirectoryEntry &Entry,
                         SmallVectorImpl<char> &Storage);

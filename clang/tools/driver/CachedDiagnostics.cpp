@@ -389,7 +389,7 @@ FileID CachedDiagnosticSerializer::convertCachedSLocEntry(unsigned Idx) {
         report_fatal_error(
             createFileError(FI.Filename, MemBufOrErr.getError()));
       SmallString<128> PathBuf;
-      cantFail(Mapper.map(FI.Filename, PathBuf));
+      Mapper.map(FI.Filename, PathBuf);
       if (PathBuf.str() != FI.Filename) {
         // The file path was remapped. Keep the original buffer and pass a new
         // buffer using the remapped file path.

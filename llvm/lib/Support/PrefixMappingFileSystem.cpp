@@ -26,9 +26,7 @@ public:
 #define PREFIX_MAP_PATH(Old, New)                                              \
   SmallString<256> New;                                                        \
   Old.toVector(New);                                                           \
-  if (Error E = Mapper.mapInPlace(New)) {                                      \
-    return errorToErrorCode(std::move(E));                                     \
-  }
+  Mapper.mapInPlace(New);
 
   llvm::ErrorOr<Status> status(const Twine &Path) override {
     PREFIX_MAP_PATH(Path, MappedPath)
@@ -45,10 +43,7 @@ public:
                                std::error_code &EC) override {
     SmallString<256> MappedPath;
     Path.toVector(MappedPath);
-    if (Error E = Mapper.mapInPlace(MappedPath)) {
-      EC = errorToErrorCode(std::move(E));
-      return {};
-    }
+    Mapper.mapInPlace(MappedPath);
     return ProxyFileSystem::dir_begin(MappedPath, EC);
   }
 
