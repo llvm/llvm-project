@@ -11,6 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 #include "llvm/ADT/StringSet.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -71,7 +72,7 @@ private:
   llvm::StringMap<std::string> AbbreviationDictionary;
 
   bool isHeuristicEnabled(Heuristic H) const;
-  Optional<int8_t> getBound(Heuristic H, BoundKind BK) const;
+  std::optional<int8_t> getBound(Heuristic H, BoundKind BK) const;
 
   // Runtime information of the currently analyzed function call.
   SmallVector<QualType, SmallVectorSize> ArgTypes;

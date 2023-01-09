@@ -613,6 +613,7 @@ static std::optional<std::string> describeRegion(const MemRegion *MR) {
 
 using Bindings = llvm::SmallVector<std::pair<const MemRegion *, SVal>, 4>;
 
+namespace {
 class VarBindingsCollector : public StoreManager::BindingsHandler {
   SymbolRef Sym;
   Bindings &Result;
@@ -633,6 +634,7 @@ public:
     return true;
   }
 };
+} // namespace
 
 Bindings getAllVarBindingsForSymbol(ProgramStateManager &Manager,
                                     const ExplodedNode *Node, SymbolRef Sym) {

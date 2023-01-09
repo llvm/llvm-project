@@ -1091,10 +1091,17 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   Type *Ty = I.getType();
+  Value *X;
   const APInt *C;
+  unsigned BitWidth = Ty->getScalarSizeInBits();
+
+  // (iN (~X) u>> (N - 1)) --> zext (X > -1)
+  if (match(Op0, m_OneUse(m_Not(m_Value(X)))) &&
+      match(Op1, m_SpecificIntAllowUndef(BitWidth - 1)))
+    return new ZExtInst(Builder.CreateIsNotNeg(X, "isnotneg"), Ty);
+
   if (match(Op1, m_APInt(C))) {
     unsigned ShAmtC = C->getZExtValue();
-    unsigned BitWidth = Ty->getScalarSizeInBits();
     auto *II = dyn_cast<IntrinsicInst>(Op0);
     if (II && isPowerOf2_32(BitWidth) && Log2_32(BitWidth) == ShAmtC &&
         (II->getIntrinsicID() == Intrinsic::ctlz ||
@@ -1320,7 +1327,6 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
   }
 
   // Transform  (x << y) >> y  to  x & (-1 >> y)
-  Value *X;
   if (match(Op0, m_OneUse(m_Shl(m_Value(X), m_Specific(Op1))))) {
     Constant *AllOnes = ConstantInt::getAllOnesValue(Ty);
     Value *Mask = Builder.CreateLShr(AllOnes, Op1);

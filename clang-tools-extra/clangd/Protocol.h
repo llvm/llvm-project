@@ -27,12 +27,12 @@
 #include "index/SymbolID.h"
 #include "support/MemoryTree.h"
 #include "clang/Index/IndexSymbol.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 #include <bitset>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -415,7 +415,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, MarkupKind);
 struct ClientCapabilities {
   /// The supported set of SymbolKinds for workspace/symbol.
   /// workspace.symbol.symbolKind.valueSet
-  llvm::Optional<SymbolKindBitset> WorkspaceSymbolKinds;
+  std::optional<SymbolKindBitset> WorkspaceSymbolKinds;
 
   /// Whether the client accepts diagnostics with codeActions attached inline.
   /// textDocument.publishDiagnostics.codeActionsInline.
@@ -468,7 +468,7 @@ struct ClientCapabilities {
 
   /// The supported set of CompletionItemKinds for textDocument/completion.
   /// textDocument.completion.completionItemKind.valueSet
-  llvm::Optional<CompletionItemKindBitset> CompletionItemKinds;
+  std::optional<CompletionItemKindBitset> CompletionItemKinds;
 
   /// The documentation format that should be used for textDocument/completion.
   /// textDocument.completion.completionItem.documentationFormat
@@ -489,7 +489,7 @@ struct ClientCapabilities {
   bool TheiaSemanticHighlighting = false;
 
   /// Supported encodings for LSP character offsets. (clangd extension).
-  llvm::Optional<std::vector<OffsetEncoding>> offsetEncoding;
+  std::optional<std::vector<OffsetEncoding>> offsetEncoding;
 
   /// The content format that should be used for Hover requests.
   /// textDocument.hover.contentEncoding
@@ -650,14 +650,14 @@ struct WorkDoneProgressReport {
   ///
   /// Clients that don't support cancellation or don't support control
   /// the button's enablement state are allowed to ignore the setting.
-  llvm::Optional<bool> cancellable;
+  std::optional<bool> cancellable;
 
   /// Optional, more detailed associated progress message. Contains
   /// complementary information to the `title`.
   ///
   /// Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
   /// If unset, the previous progress message (if any) is still valid.
-  llvm::Optional<std::string> message;
+  std::optional<std::string> message;
 
   /// Optional progress percentage to display (value 100 is considered 100%).
   /// If not provided infinite progress is assumed and clients are allowed
@@ -665,7 +665,7 @@ struct WorkDoneProgressReport {
   ///
   /// The value should be steadily rising. Clients are free to ignore values
   /// that are not following this rule.
-  llvm::Optional<unsigned> percentage;
+  std::optional<unsigned> percentage;
 };
 llvm::json::Value toJSON(const WorkDoneProgressReport &);
 //
@@ -673,7 +673,7 @@ llvm::json::Value toJSON(const WorkDoneProgressReport &);
 struct WorkDoneProgressEnd {
   /// Optional, a final message indicating to for example indicate the outcome
   /// of the operation.
-  llvm::Optional<std::string> message;
+  std::optional<std::string> message;
 };
 llvm::json::Value toJSON(const WorkDoneProgressEnd &);
 
@@ -878,7 +878,7 @@ struct Diagnostic {
   std::string code;
 
   /// An optional property to describe the error code.
-  llvm::Optional<CodeDescription> codeDescription;
+  std::optional<CodeDescription> codeDescription;
 
   /// A human-readable string describing the source of this
   /// diagnostic, e.g. 'typescript' or 'super lint'.
@@ -1018,13 +1018,13 @@ struct CodeAction {
 
   /// The kind of the code action.
   /// Used to filter code actions.
-  llvm::Optional<std::string> kind;
+  std::optional<std::string> kind;
   const static llvm::StringLiteral QUICKFIX_KIND;
   const static llvm::StringLiteral REFACTOR_KIND;
   const static llvm::StringLiteral INFO_KIND;
 
   /// The diagnostics that this code action resolves.
-  llvm::Optional<std::vector<Diagnostic>> diagnostics;
+  std::optional<std::vector<Diagnostic>> diagnostics;
 
   /// Marks this as a preferred action. Preferred actions are used by the
   /// `auto fix` command and can be targeted by keybindings.
@@ -1034,11 +1034,11 @@ struct CodeAction {
   bool isPreferred = false;
 
   /// The workspace edit this code action performs.
-  llvm::Optional<WorkspaceEdit> edit;
+  std::optional<WorkspaceEdit> edit;
 
   /// A command this code action executes. If a code action provides an edit
   /// and a command, first the edit is executed and then the command.
-  llvm::Optional<Command> command;
+  std::optional<Command> command;
 };
 llvm::json::Value toJSON(const CodeAction &);
 
@@ -1096,7 +1096,7 @@ struct SymbolInformation {
   /// This can be used to re-rank results as the user types, using client-side
   /// fuzzy-matching (that score should be multiplied with this one).
   /// This is a clangd extension, set only for workspace/symbol responses.
-  llvm::Optional<float> score;
+  std::optional<float> score;
 };
 llvm::json::Value toJSON(const SymbolInformation &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolInformation &);
@@ -1117,9 +1117,9 @@ struct SymbolDetails {
 
   SymbolID ID;
 
-  llvm::Optional<Location> declarationRange;
+  std::optional<Location> declarationRange;
 
-  llvm::Optional<Location> definitionRange;
+  std::optional<Location> definitionRange;
 };
 llvm::json::Value toJSON(const SymbolDetails &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolDetails &);
@@ -1201,7 +1201,7 @@ struct Hover {
 
   /// An optional range is a range inside a text document
   /// that is used to visualize a hover, e.g. by changing the background color.
-  llvm::Optional<Range> range;
+  std::optional<Range> range;
 };
 llvm::json::Value toJSON(const Hover &H);
 
@@ -1260,7 +1260,7 @@ struct CompletionItem {
   ///
   /// Note: The range of the edit must be a single line range and it must
   /// contain the position at which completion has been requested.
-  llvm::Optional<TextEdit> textEdit;
+  std::optional<TextEdit> textEdit;
 
   /// An optional array of additional text edits that are applied when selecting
   /// this completion. Edits must not overlap with the main edit nor with
@@ -1311,7 +1311,7 @@ struct ParameterInformation {
   /// label.
   /// Offsets are computed by lspLength(), which counts UTF-16 code units by
   /// default but that can be overriden, see its documentation for details.
-  llvm::Optional<std::pair<unsigned, unsigned>> labelOffsets;
+  std::optional<std::pair<unsigned, unsigned>> labelOffsets;
 
   /// The documentation of this parameter. Optional.
   std::string documentation;
@@ -1730,9 +1730,9 @@ llvm::json::Value toJSON(const SemanticTokensEdit &);
 struct SemanticTokensOrDelta {
   std::string resultId;
   /// Set if we computed edits relative to a previous set of tokens.
-  llvm::Optional<std::vector<SemanticTokensEdit>> edits;
+  std::optional<std::vector<SemanticTokensEdit>> edits;
   /// Set if we computed a fresh set of tokens.
-  llvm::Optional<std::vector<SemanticToken>> tokens; // encoded as integer array
+  std::optional<std::vector<SemanticToken>> tokens; // encoded as integer array
 };
 llvm::json::Value toJSON(const SemanticTokensOrDelta &);
 
@@ -1869,7 +1869,7 @@ struct ASTNode {
   std::string arcana;
   /// The range of the original source file covered by this node.
   /// May be missing for implicit nodes, or those created by macro expansion.
-  llvm::Optional<Range> range;
+  std::optional<Range> range;
   /// Nodes nested within this one, such as the operands of a BinaryOperator.
   std::vector<ASTNode> children;
 };

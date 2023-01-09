@@ -12,6 +12,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/Sema/DeclSpec.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -41,7 +42,7 @@ enum class QualifierTarget {
 
 /// \brief Creates fix to qualify ``VarDecl`` with the specified \c Qualifier.
 /// Requires that `Var` is isolated in written code like in `int foo = 42;`.
-Optional<FixItHint>
+std::optional<FixItHint>
 addQualifierToVarDecl(const VarDecl &Var, const ASTContext &Context,
                       DeclSpec::TQ Qualifier,
                       QualifierTarget CT = QualifierTarget::Pointee,

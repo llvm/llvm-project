@@ -25,6 +25,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include <functional>
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -155,9 +156,9 @@ private:
   void processRelations(const NamedDecl &ND, const SymbolID &ID,
                         ArrayRef<index::SymbolRelation> Relations);
 
-  llvm::Optional<SymbolLocation> getTokenLocation(SourceLocation TokLoc);
+  std::optional<SymbolLocation> getTokenLocation(SourceLocation TokLoc);
 
-  llvm::Optional<std::string> getIncludeHeader(const Symbol &S, FileID);
+  std::optional<std::string> getIncludeHeader(const Symbol &S, FileID);
 
   SymbolID getSymbolIDCached(const Decl *D);
   SymbolID getSymbolIDCached(const llvm::StringRef MacroName,

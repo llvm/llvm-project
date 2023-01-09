@@ -69,6 +69,9 @@ def AVRasrbn : SDNode<"AVRISD::ASRBN", SDTIntBinOp>;
 def AVRlslwn : SDNode<"AVRISD::LSLWN", SDTIntBinOp>;
 def AVRlsrwn : SDNode<"AVRISD::LSRWN", SDTIntBinOp>;
 def AVRasrwn : SDNode<"AVRISD::ASRWN", SDTIntBinOp>;
+def AVRlslw : SDNode<"AVRISD::LSLW", SDTIntShiftDOp>;
+def AVRlsrw : SDNode<"AVRISD::LSRW", SDTIntShiftDOp>;
+def AVRasrw : SDNode<"AVRISD::ASRW", SDTIntShiftDOp>;
 
 // Pseudo shift nodes for non-constant shift amounts.
 def AVRlslLoop : SDNode<"AVRISD::LSLLOOP", SDTIntShiftOp>;
@@ -2337,6 +2340,11 @@ def Lsl16 : ShiftPseudo<(outs DREGS
                                                      : $src, i8
                                                      : $cnt))]>;
 
+def Lsl32 : ShiftPseudo<(outs DREGS:$dstlo, DREGS:$dsthi),
+                        (ins DREGS:$srclo, DREGS:$srchi, i8imm:$cnt),
+                        "# Lsl32 PSEUDO",
+                        [(set i16:$dstlo, i16:$dsthi, (AVRlslw i16:$srclo, i16:$srchi, i8:$cnt))]>;
+
 def Lsr8 : ShiftPseudo<(outs GPR8
                         : $dst),
                        (ins GPR8
@@ -2356,6 +2364,11 @@ def Lsr16 : ShiftPseudo<(outs DREGS
                                             : $dst, (AVRlsrLoop i16
                                                      : $src, i8
                                                      : $cnt))]>;
+
+def Lsr32 : ShiftPseudo<(outs DREGS:$dstlo, DREGS:$dsthi),
+                        (ins DREGS:$srclo, DREGS:$srchi, i8imm:$cnt),
+                        "# Lsr32 PSEUDO",
+                        [(set i16:$dstlo, i16:$dsthi, (AVRlsrw i16:$srclo, i16:$srchi, i8:$cnt))]>;
 
 def Rol8 : ShiftPseudo<(outs GPR8
                         : $dst),
@@ -2416,6 +2429,11 @@ def Asr16 : ShiftPseudo<(outs DREGS
                                             : $dst, (AVRasrLoop i16
                                                      : $src, i8
                                                      : $cnt))]>;
+
+def Asr32 : ShiftPseudo<(outs DREGS:$dstlo, DREGS:$dsthi),
+                        (ins DREGS:$srclo, DREGS:$srchi, i8imm:$cnt),
+                        "# Asr32 PSEUDO",
+                        [(set i16:$dstlo, i16:$dsthi, (AVRasrw i16:$srclo, i16:$srchi, i8:$cnt))]>;
 
 // lowered to a copy from the zero register.
 let usesCustomInserter=1 in

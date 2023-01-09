@@ -11,6 +11,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/FixIt.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
@@ -44,7 +45,7 @@ void DurationConversionCastCheck::check(
   const auto *Arg = Result.Nodes.getNodeAs<Expr>("arg");
   StringRef ConversionFuncName = FuncDecl->getName();
 
-  llvm::Optional<DurationScale> Scale =
+  std::optional<DurationScale> Scale =
       getScaleForDurationInverse(ConversionFuncName);
   if (!Scale)
     return;

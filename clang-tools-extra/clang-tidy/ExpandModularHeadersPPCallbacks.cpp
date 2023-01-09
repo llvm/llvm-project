@@ -12,6 +12,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ASTReader.h"
+#include <optional>
 
 #define DEBUG_TYPE "clang-tidy"
 
@@ -39,7 +40,7 @@ public:
       return;
 
     // FIXME: Why is this happening? We might be losing contents here.
-    llvm::Optional<StringRef> Data = ContentCache.getBufferDataIfLoaded();
+    std::optional<StringRef> Data = ContentCache.getBufferDataIfLoaded();
     if (!Data)
       return;
 

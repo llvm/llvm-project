@@ -290,7 +290,7 @@ void FileOptionsBaseProvider::addRawFileOptions(
   StringRef Path = llvm::sys::path::parent_path(AbsolutePath);
   for (StringRef CurrentPath = Path; !CurrentPath.empty();
        CurrentPath = llvm::sys::path::parent_path(CurrentPath)) {
-    llvm::Optional<OptionsSource> Result;
+    std::optional<OptionsSource> Result;
 
     auto Iter = CachedOptions.find(CurrentPath);
     if (Iter != CachedOptions.end())
@@ -360,7 +360,7 @@ FileOptionsProvider::getRawOptions(StringRef FileName) {
   return RawOptions;
 }
 
-llvm::Optional<OptionsSource>
+std::optional<OptionsSource>
 FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
   assert(!Directory.empty());
 

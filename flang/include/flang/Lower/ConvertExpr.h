@@ -20,6 +20,7 @@
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include <optional>
 
 namespace mlir {
 class Location;
@@ -175,7 +176,7 @@ void createArrayOfPointerAssignment(
     AbstractConverter &converter, const SomeExpr &lhs, const SomeExpr &rhs,
     ExplicitIterSpace &explicitIterSpace, ImplicitIterSpace &implicitIterSpace,
     const llvm::SmallVector<mlir::Value> &lbounds,
-    llvm::Optional<llvm::SmallVector<mlir::Value>> ubounds, SymMap &symMap,
+    std::optional<llvm::SmallVector<mlir::Value>> ubounds, SymMap &symMap,
     StatementContext &stmtCtx);
 
 /// Lower an array expression with "parallel" semantics. Such a rhs expression

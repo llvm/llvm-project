@@ -628,8 +628,19 @@ module std [system] {
     export *
 
     module __bit {
-      module bit_cast { private header "__bit/bit_cast.h" }
-      module byteswap { private header "__bit/byteswap.h" }
+      module bit_cast       { private header "__bit/bit_cast.h" }
+      module bit_ceil       { private header "__bit/bit_ceil.h" }
+      module bit_floor      { private header "__bit/bit_floor.h" }
+      module bit_log2       { private header "__bit/bit_log2.h" }
+      module bit_width      { private header "__bit/bit_width.h" }
+      module blsr           { private header "__bit/blsr.h" }
+      module byteswap       { private header "__bit/byteswap.h" }
+      module countl         { private header "__bit/countl.h" }
+      module countr         { private header "__bit/countr.h" }
+      module endian         { private header "__bit/endian.h" }
+      module has_single_bit { private header "__bit/has_single_bit.h" }
+      module popcount       { private header "__bit/popcount.h" }
+      module rotate         { private header "__bit/rotate.h" }
     }
   }
   module bitset {
@@ -1580,7 +1591,6 @@ module std [system] {
   module __assert            {         header "__assert"            export * }
   module __availability      { private header "__availability"      export * }
   module __bit_reference     { private header "__bit_reference"     export * }
-  module __bits              { private header "__bits"              export * }
   module __debug             {         header "__debug"             export * }
   module __errc              { private header "__errc"              export * }
   module __hash_table        {         header "__hash_table"        export * }

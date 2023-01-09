@@ -196,6 +196,10 @@
 #    define __has_cpp_attribute(__x) 0
 #  endif
 
+#  ifndef __has_constexpr_builtin
+#    define __has_constexpr_builtin(x) 0
+#  endif
+
 // '__is_identifier' returns '0' if '__x' is a reserved identifier provided by
 // the compiler and '1' otherwise.
 #  ifndef __is_identifier
