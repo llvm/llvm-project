@@ -146,9 +146,6 @@ enum NodeType : unsigned {
   // Store the CC value in bits 29 and 28 of an integer.
   IPM,
 
-  // Compiler barrier only; generate a no-op.
-  MEMBARRIER,
-
   // Transaction begin.  The first operand is the chain, the second
   // the TDB pointer, and the third the immediate control field.
   // Returns CC value and chain.
