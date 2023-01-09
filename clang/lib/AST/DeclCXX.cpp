@@ -3249,6 +3249,16 @@ StaticAssertDecl *StaticAssertDecl::CreateDeserialized(ASTContext &C,
                                       nullptr, SourceLocation(), false);
 }
 
+VarDecl *ValueDecl::getPotentiallyDecomposedVarDecl() {
+  assert((isa<VarDecl, BindingDecl>(this)) &&
+         "expected a VarDecl or a BindingDecl");
+  if (auto *Var = llvm::dyn_cast<VarDecl>(this))
+    return Var;
+  if (auto *BD = llvm::dyn_cast<BindingDecl>(this))
+    return llvm::dyn_cast<VarDecl>(BD->getDecomposedDecl());
+  return nullptr;
+}
+
 void BindingDecl::anchor() {}
 
 BindingDecl *BindingDecl::Create(ASTContext &C, DeclContext *DC,

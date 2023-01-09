@@ -788,11 +788,11 @@ def SPIRV_OrderedOp : SPIRV_LogicalBinaryOp<"Ordered", SPIRV_Float, [Commutative
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
     ordered-op ::= ssa-id `=` `spirv.Ordered` ssa-use, ssa-use
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %4 = spirv.Ordered %0, %1 : f32
     %5 = spirv.Ordered %2, %3 : vector<4xf32>
     ```
@@ -870,7 +870,7 @@ def SPIRV_SGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"SGreaterThanEqual",
     ```
     #### Example:
 
-    ```
+    ```mlir
     %4 = spirv.SGreaterThanEqual %0, %1 : i32
     %5 = spirv.SGreaterThanEqual %2, %3 : vector<4xi32>
 
@@ -1146,11 +1146,11 @@ def SPIRV_UnorderedOp : SPIRV_LogicalBinaryOp<"Unordered", SPIRV_Float, [Commuta
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
     unordered-op ::= ssa-id `=` `spirv.Unordered` ssa-use, ssa-use
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %4 = spirv.Unordered %0, %1 : f32
     %5 = spirv.Unordered %2, %3 : vector<4xf32>
     ```

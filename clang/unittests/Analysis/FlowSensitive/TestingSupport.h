@@ -134,6 +134,11 @@ template <typename AnalysisT> struct AnalysisInputs {
     ASTBuildVirtualMappedFiles = std::move(Arg);
     return std::move(*this);
   }
+  AnalysisInputs<AnalysisT> &&
+  withContextSensitivity() && {
+    EnableContextSensitivity = true;
+    return std::move(*this);
+  }
 
   /// Required. Input code that is analyzed.
   llvm::StringRef Code;
@@ -159,6 +164,9 @@ template <typename AnalysisT> struct AnalysisInputs {
   ArrayRef<std::string> ASTBuildArgs = {};
   /// Optional. Options for building the AST context.
   tooling::FileContentMappings ASTBuildVirtualMappedFiles = {};
+  /// Enables context-sensitive analysis when constructing the
+  /// `DataflowAnalysisContext`.
+  bool EnableContextSensitivity = false;
 };
 
 /// Returns assertions based on annotations that are present after statements in
@@ -222,7 +230,9 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
   auto &CFCtx = *MaybeCFCtx;
 
   // Initialize states for running dataflow analysis.
-  DataflowAnalysisContext DACtx(std::make_unique<WatchedLiteralsSolver>());
+  DataflowAnalysisContext DACtx(
+      std::make_unique<WatchedLiteralsSolver>(),
+      {/*EnableContextSensitiveAnalysis=*/AI.EnableContextSensitivity});
   Environment InitEnv(DACtx, *Target);
   auto Analysis = AI.MakeAnalysis(Context, InitEnv);
   std::function<void(const CFGElement &,

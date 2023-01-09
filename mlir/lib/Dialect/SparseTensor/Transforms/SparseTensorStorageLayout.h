@@ -188,12 +188,14 @@ public:
   /*implicit*/ operator Value() { return specifier; }
 
   Value getSpecifierField(OpBuilder &builder, Location loc,
-                          StorageSpecifierKind kind, Optional<unsigned> dim);
+                          StorageSpecifierKind kind,
+                          std::optional<unsigned> dim);
 
   void setSpecifierField(OpBuilder &builder, Location loc, Value v,
-                         StorageSpecifierKind kind, Optional<unsigned> dim);
+                         StorageSpecifierKind kind,
+                         std::optional<unsigned> dim);
 
-  Type getFieldType(StorageSpecifierKind kind, Optional<unsigned> dim) {
+  Type getFieldType(StorageSpecifierKind kind, std::optional<unsigned> dim) {
     return specifier.getType().getFieldType(kind, dim);
   }
 
@@ -240,7 +242,7 @@ protected:
 
 public:
   unsigned getMemRefFieldIndex(SparseTensorFieldKind kind,
-                               Optional<unsigned> dim) const {
+                               std::optional<unsigned> dim) const {
     // Delegates to storage layout.
     StorageLayout<mut> layout(getSparseTensorEncoding(rType));
     return layout.getMemRefFieldIndex(kind, dim);
@@ -266,7 +268,7 @@ public:
 
   Value getSpecifierField(OpBuilder &builder, Location loc,
                           StorageSpecifierKind kind,
-                          Optional<unsigned> dim) const {
+                          std::optional<unsigned> dim) const {
     SparseTensorSpecifier md(fields.back());
     return md.getSpecifierField(builder, loc, kind, dim);
   }
@@ -288,7 +290,7 @@ public:
   }
 
   Value getMemRefField(SparseTensorFieldKind kind,
-                       Optional<unsigned> dim) const {
+                       std::optional<unsigned> dim) const {
     return fields[getMemRefFieldIndex(kind, dim)];
   }
 
@@ -309,7 +311,7 @@ public:
   }
 
   Type getMemRefElementType(SparseTensorFieldKind kind,
-                            Optional<unsigned> dim) const {
+                            std::optional<unsigned> dim) const {
     return getMemRefField(kind, dim)
         .getType()
         .template cast<MemRefType>()
@@ -353,34 +355,30 @@ public:
   /// MutSparseTensorDescriptor).
   ///
 
-  template <typename T = Value>
-  void setMemRefField(SparseTensorFieldKind kind, Optional<unsigned> dim, T v) {
+  void setMemRefField(SparseTensorFieldKind kind, std::optional<unsigned> dim,
+                      Value v) {
     fields[getMemRefFieldIndex(kind, dim)] = v;
   }
 
-  template <typename T = Value>
-  void setMemRefField(unsigned fidx, T v) {
+  void setMemRefField(unsigned fidx, Value v) {
     assert(fidx < fields.size() - 1);
     fields[fidx] = v;
   }
 
-  template <typename T = Value>
-  void setField(unsigned fidx, T v) {
+  void setField(unsigned fidx, Value v) {
     assert(fidx < fields.size());
     fields[fidx] = v;
   }
 
-  template <typename T = Value>
   void setSpecifierField(OpBuilder &builder, Location loc,
-                         StorageSpecifierKind kind, Optional<unsigned> dim,
-                         T v) {
+                         StorageSpecifierKind kind, std::optional<unsigned> dim,
+                         Value v) {
     SparseTensorSpecifier md(fields.back());
     md.setSpecifierField(builder, loc, v, kind, dim);
     fields.back() = md;
   }
 
-  template <typename T = Value>
-  void setDimSize(OpBuilder &builder, Location loc, unsigned dim, T v) {
+  void setDimSize(OpBuilder &builder, Location loc, unsigned dim, Value v) {
     setSpecifierField(builder, loc, StorageSpecifierKind::DimSize, dim, v);
   }
 

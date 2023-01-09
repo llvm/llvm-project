@@ -1,4 +1,4 @@
-//===-- Declaration of POSIX environ --------------------------------------===//
+//===-- C standard library header strings.h -------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-namespace __llvm_libc {
+#ifndef LLVM_LIBC_STRINGS_H
+#define LLVM_LIBC_STRINGS_H
 
-// This is initialized to the correct value by the statup code.
-extern "C" {
-char **environ = nullptr;
-}
+#include <__llvm-libc-common.h>
 
-} // namespace __llvm_libc
+%%public_api()
+
+#endif // LLVM_LIBC_STRINGS_H

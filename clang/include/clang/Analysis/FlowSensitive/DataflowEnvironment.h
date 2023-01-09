@@ -452,6 +452,9 @@ private:
   void pushCallInternal(const FunctionDecl *FuncDecl,
                         ArrayRef<const Expr *> Args);
 
+  /// Assigns storage locations and values to all variables in `Vars`.
+  void initVars(llvm::DenseSet<const VarDecl *> Vars);
+
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
 

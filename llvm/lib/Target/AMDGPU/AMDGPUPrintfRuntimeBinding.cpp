@@ -27,7 +27,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/BinaryByteStream.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
@@ -430,20 +430,21 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
           }
 
           if (!S.empty()) {
-            const size_t NSizeStr = S.size() + 1;
             const uint64_t ReadSize = 4;
 
-            BinaryByteStream Streamer(S, support::little);
+            DataExtractor Extractor(S, /*IsLittleEndian=*/true, 8);
+            DataExtractor::Cursor Offset(0);
+            while (Offset && Offset.tell() < S.size()) {
+              StringRef ReadBytes = Extractor.getBytes(
+                  Offset, std::min(ReadSize, S.size() - Offset.tell()));
 
-            for (uint64_t Offset = 0; Offset < NSizeStr; Offset += ReadSize) {
-              ArrayRef<uint8_t> ReadBytes;
-              if (Error Err = Streamer.readBytes(
-                      Offset, std::min(ReadSize, S.size() - Offset), ReadBytes))
-                cantFail(std::move(Err),
-                         "failed to read bytes from constant array");
+              cantFail(Offset.takeError(),
+                       "failed to read bytes from constant array");
 
               APInt IntVal(8 * ReadBytes.size(), 0);
-              LoadIntFromMemory(IntVal, ReadBytes.data(), ReadBytes.size());
+              LoadIntFromMemory(
+                  IntVal, reinterpret_cast<const uint8_t *>(ReadBytes.data()),
+                  ReadBytes.size());
 
               // TODO: Should not bothering aligning up.
               if (ReadBytes.size() < ReadSize)

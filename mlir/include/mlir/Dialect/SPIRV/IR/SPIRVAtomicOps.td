@@ -134,7 +134,7 @@ def SPIRV_AtomicCompareExchangeOp : SPIRV_Op<"AtomicCompareExchange", []> {
         `spirv.AtomicCompareExchange` scope memory-semantics memory-semantics
                                     ssa-use `,` ssa-use `,` ssa-use
                                     `:` spv-pointer-type
-    ```mlir
+    ```
 
     #### Example:
 
@@ -238,11 +238,11 @@ def SPIRV_AtomicExchangeOp : SPIRV_Op<"AtomicExchange", []> {
     atomic-exchange-op ::=
         `spirv.AtomicCompareExchange` scope memory-semantics
                                     ssa-use `,` ssa-use `:` spv-pointer-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %0 = spirv.AtomicExchange "Workgroup" "Acquire" %pointer, %value,
                             : !spirv.ptr<i32, WorkGroup>
     ```
@@ -299,7 +299,7 @@ def SPIRV_EXTAtomicFAddOp : SPIRV_ExtVendorOp<"AtomicFAdd", []> {
     ```mlir
     %0 = spirv.EXT.AtomicFAdd "Device" "None" %pointer, %value :
                            !spirv.ptr<f32, StorageBuffer>
-    ```mlir
+    ```
   }];
 
   let availability = [
