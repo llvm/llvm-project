@@ -1182,7 +1182,7 @@ public:
   /// this parameter is false, this function returns a nullptr.
   /// \return The scratch type system of the target or a nullptr in case an
   ///         error occurred.
-  static TypeSystemClang *
+  static lldb::TypeSystemClangSP
   GetForTarget(Target &target,
                std::optional<IsolatedASTKind> ast_kind = DefaultAST,
                bool create_on_demand = true);
@@ -1194,8 +1194,8 @@ public:
   /// \param lang_opts The LangOptions of a clang ASTContext that the caller
   ///                  wants to export type information from. This is used to
   ///                  find the best matching sub-AST that will be returned.
-  static TypeSystemClang *GetForTarget(Target &target,
-                                       const clang::LangOptions &lang_opts) {
+  static lldb::TypeSystemClangSP
+  GetForTarget(Target &target, const clang::LangOptions &lang_opts) {
     return GetForTarget(target, InferIsolatedASTKindFromLangOpts(lang_opts));
   }
 
