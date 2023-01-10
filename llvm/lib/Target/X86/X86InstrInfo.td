@@ -135,8 +135,6 @@ def SDTX86Cmpccxadd : SDTypeProfile<1, 4, [SDTCisSameAs<0, 2>,
                                            SDTCisPtrTy<1>, SDTCisSameAs<2, 3>,
                                            SDTCisVT<4, i8>]>;
 
-def X86MemBarrier : SDNode<"X86ISD::MEMBARRIER", SDT_X86MEMBARRIER,
-                            [SDNPHasChain,SDNPSideEffect]>;
 def X86MFence : SDNode<"X86ISD::MFENCE", SDT_X86MEMBARRIER,
                         [SDNPHasChain]>;
 
