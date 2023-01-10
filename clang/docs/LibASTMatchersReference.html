@@ -3940,6 +3940,28 @@ implicit default/copy constructors).
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('isInAnonymousNamespace0')"><a name="isInAnonymousNamespace0Anchor">isInAnonymousNamespace</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isInAnonymousNamespace0"><pre>Matches declarations in an anonymous namespace.
+
+Given
+  class vector {};
+  namespace foo {
+    class vector {};
+    namespace {
+      class vector {}; // #1
+    }
+  }
+  namespace {
+    class vector {}; // #2
+    namespace foo {
+      class vector{}; // #3
+    }
+  }
+cxxRecordDecl(hasName("vector"), isInAnonymousNamespace()) will match
+#1, #2 and #3.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('isInStdNamespace0')"><a name="isInStdNamespace0Anchor">isInStdNamespace</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isInStdNamespace0"><pre>Matches declarations in the namespace `std`, but not in nested namespaces.
 
@@ -3962,25 +3984,6 @@ Given
 cxxRecordDecl(hasName("vector"), isInStdNamespace()) will match only #1.
 </pre></td></tr>
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('isInAnonymousNamespace0')"><a name="isInAnonymousNamespace0Anchor">isInAnonymousNamespace</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isInAnonymousNamespace0"><pre>Matches declarations in an anonymous namespace.
-
-Given
-  class vector {};
-  namespace foo {
-    class vector {};
-    namespace {
-      class vector {}; // #1
-    }
-  }
-  namespace {
-    class vector {}; // #2
-    namespace foo {
-      class vector{}; // #3
-    }
-  }
-cxxRecordDecl(hasName("vector"), isInAnonymousNamespace()) will match #1, #2 and #3.
-</pre></td></tr>
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('isInstantiated0')"><a name="isInstantiated0Anchor">isInstantiated</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isInstantiated0"><pre>Matches declarations that are template instantiations or are inside
@@ -8550,7 +8553,7 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Addr
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaCapture.html">LambdaCapture</a>&gt;</td><td class="name" onclick="toggle('capturesVar0')"><a name="capturesVar0Anchor">capturesVar</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt; InnerMatcher</td></tr>
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaCapture.html">LambdaCapture</a>&gt;</td><td class="name" onclick="toggle('capturesVar0')"><a name="capturesVar0Anchor">capturesVar</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ValueDecl.html">ValueDecl</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="capturesVar0"><pre>Matches a `LambdaCapture` that refers to the specified `VarDecl`. The
 `VarDecl` can be a separate variable that is captured by value or
 reference, or a synthesized variable if the capture has an initializer.
