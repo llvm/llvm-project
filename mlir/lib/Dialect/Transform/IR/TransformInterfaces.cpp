@@ -394,7 +394,7 @@ void transform::TransformResults::setParams(
   assert(paramSegments[position].data() == nullptr && "params already set");
   size_t start = this->params.size();
   llvm::append_range(this->params, params);
-  paramSegments[position] = makeArrayRef(this->params).drop_front(start);
+  paramSegments[position] = ArrayRef(this->params).drop_front(start);
 }
 
 ArrayRef<Operation *>

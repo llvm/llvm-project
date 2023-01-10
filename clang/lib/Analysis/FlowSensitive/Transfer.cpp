@@ -461,6 +461,10 @@ public:
     if (Member->isFunctionOrFunctionTemplate())
       return;
 
+    // FIXME: if/when we add support for modeling enums, use that support here.
+    if (isa<EnumConstantDecl>(Member))
+      return;
+
     if (auto *D = dyn_cast<VarDecl>(Member)) {
       if (D->hasGlobalStorage()) {
         auto *VarDeclLoc = Env.getStorageLocation(*D, SkipPast::None);
