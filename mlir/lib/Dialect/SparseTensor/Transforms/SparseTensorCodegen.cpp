@@ -18,6 +18,9 @@
 #include "CodegenUtils.h"
 #include "SparseTensorStorageLayout.h"
 
+#include "llvm/Support/FormatVariadic.h"
+
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -28,7 +31,6 @@
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/Support/FormatVariadic.h"
 
 #include <optional>
 
@@ -697,6 +699,23 @@ public:
   }
 };
 
+template <typename Op, StorageSpecifierKind kind>
+class SparseSliceGetterOpConverter : public OpConversionPattern<Op> {
+public:
+  using OpConversionPattern<Op>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(Op op, typename Op::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Simply lowers to specifer.get <field> operation.
+    auto desc = getDescriptorFromTensorTuple(adaptor.getSlice());
+    auto v = desc.getSpecifierField(rewriter, op.getLoc(), kind,
+                                    op.getDim().getZExtValue());
+
+    rewriter.replaceOp(op, v);
+    return success();
+  }
+};
+
 /// Sparse codegen rule for trivial tensor casts.
 class SparseCastConverter : public OpConversionPattern<tensor::CastOp> {
 public:
@@ -1099,13 +1118,15 @@ public:
   }
 };
 
-class SparseExtractSliceCoverter
+class SparseExtractSliceConverter
     : public OpConversionPattern<tensor::ExtractSliceOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
   matchAndRewrite(tensor::ExtractSliceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    MLIRContext *ctx = op.getContext();
     auto srcEnc = getSparseTensorEncoding(op.getSourceType());
     auto dstEnc = getSparseTensorEncoding(op.getResult().getType());
     if (!srcEnc && !dstEnc)
@@ -1119,16 +1140,43 @@ public:
     assert(srcEnc.getPosWidth() == dstEnc.getPosWidth());
     assert(srcEnc.getCrdWidth() == dstEnc.getCrdWidth());
 
-    // TODO: support dynamic slices.
-    for (int i = 0, e = op.getSourceType().getRank(); i < e; i++) {
-      assert(op.getStaticStrides()[i] == dstEnc.getStaticDimSliceStride(i));
-      assert(op.getStaticOffsets()[i] == dstEnc.getStaticDimSliceOffset(i));
-      assert(op.getStaticSizes()[i] == dstEnc.getStaticDimSliceSize(i));
+    SmallVector<Value> fields;
+    auto desc = getMutDescriptorFromTensorTuple(adaptor.getSource(), fields);
+
+    auto newSpec = rewriter.create<StorageSpecifierInitOp>(
+        loc, StorageSpecifierType::get(ctx, dstEnc), desc.getSpecifier());
+    desc.setSpecifier(newSpec);
+
+    // Fills in slice information.
+    for (const auto &it : llvm::enumerate(llvm::zip(
+             op.getMixedOffsets(), op.getMixedSizes(), op.getMixedStrides()))) {
+      Dimension dim = it.index();
+      auto [offset, size, stride] = it.value();
+
+      Value offsetV = getValueOrCreateConstantIndexOp(rewriter, loc, offset);
+      Value sizeV = getValueOrCreateConstantIndexOp(rewriter, loc, size);
+      Value strideV = getValueOrCreateConstantIndexOp(rewriter, loc, stride);
+      // TODO: We could probably only set dynamic value here. But it would
+      // requires us to fill the hole when casting a static slice to dynamic
+      // slice.
+      desc.setSpecifierField(rewriter, loc, StorageSpecifierKind::DimOffset,
+                             dim, offsetV);
+
+      // FIXME: we need to distinguish level sizes and dimension size for slices
+      // here. Maybe we should store slice level sizes in a different array
+      // instead of reusing it.
+      assert(srcEnc.hasIdDimOrdering());
+      desc.setSpecifierField(rewriter, loc, StorageSpecifierKind::LvlSize, dim,
+                             sizeV);
+      desc.setSpecifierField(rewriter, loc, StorageSpecifierKind::DimStride,
+                             dim, strideV);
     }
 
-    // TODO: create a new specifer for slices (need to encode slice metadata).
-    // It does not matter now because only constant offset/stride are allowed.
-    rewriter.replaceOp(op, adaptor.getSource());
+    // NOTE: we can not generate tuples directly from descriptor here, as the
+    // descriptor is holding the original type, yet we want the slice type
+    // here (they shared every memref but with an updated specifier).
+    rewriter.replaceOp(op, genTuple(rewriter, loc, op.getResult().getType(),
+                                    desc.getFields()));
     return success();
   }
 };
@@ -1449,13 +1497,18 @@ void mlir::populateSparseTensorCodegenPatterns(
   patterns.add<SparsePackOpConverter, SparseUnpackOpConverter,
                SparseReturnConverter, SparseCallConverter, SparseDimOpConverter,
                SparseCastConverter, SparseTensorDeallocConverter,
-               SparseExtractSliceCoverter, SparseTensorLoadConverter,
+               SparseExtractSliceConverter, SparseTensorLoadConverter,
                SparseExpandConverter, SparseCompressConverter,
-               SparseInsertConverter, SparseToPositionsConverter,
-               SparseToCoordinatesConverter, SparseToCoordinatesBufferConverter,
-               SparseToValuesConverter, SparseConvertConverter,
-               SparseNewOpConverter, SparseNumberOfEntriesConverter>(
-      typeConverter, patterns.getContext());
+               SparseInsertConverter,
+               SparseSliceGetterOpConverter<ToSliceOffsetOp,
+                                            StorageSpecifierKind::DimOffset>,
+               SparseSliceGetterOpConverter<ToSliceStrideOp,
+                                            StorageSpecifierKind::DimStride>,
+               SparseToPositionsConverter, SparseToCoordinatesConverter,
+               SparseToCoordinatesBufferConverter, SparseToValuesConverter,
+               SparseConvertConverter, SparseNewOpConverter,
+               SparseNumberOfEntriesConverter>(typeConverter,
+                                               patterns.getContext());
   patterns.add<SparseTensorAllocConverter>(typeConverter, patterns.getContext(),
                                            enableBufferInitialization);
 }
