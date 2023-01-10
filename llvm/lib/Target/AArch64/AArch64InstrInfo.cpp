@@ -5029,6 +5029,18 @@ bool AArch64InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   case AArch64::ORRv16i8:
   case AArch64::EORv8i8:
   case AArch64::EORv16i8:
+  // -- SVE instructions --
+  case AArch64::ADD_ZZZ_B:
+  case AArch64::ADD_ZZZ_H:
+  case AArch64::ADD_ZZZ_S:
+  case AArch64::ADD_ZZZ_D:
+  case AArch64::MUL_ZZZ_B:
+  case AArch64::MUL_ZZZ_H:
+  case AArch64::MUL_ZZZ_S:
+  case AArch64::MUL_ZZZ_D:
+  case AArch64::AND_ZZZ:
+  case AArch64::ORR_ZZZ:
+  case AArch64::EOR_ZZZ:
     return true;
 
   default:
