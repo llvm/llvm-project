@@ -1072,39 +1072,6 @@ Instruction *InstCombinerImpl::transformZExtICmp(ICmpInst *Cmp,
       Value *And1 = Builder.CreateAnd(Lshr, ConstantInt::get(X->getType(), 1));
       return replaceInstUsesWith(Zext, And1);
     }
-
-    // icmp ne A, B is equal to xor A, B when A and B only really have one bit.
-    // It is also profitable to transform icmp eq into not(xor(A, B)) because
-    // that may lead to additional simplifications.
-    if (IntegerType *ITy = dyn_cast<IntegerType>(Zext.getType())) {
-      Value *LHS = Cmp->getOperand(0);
-      Value *RHS = Cmp->getOperand(1);
-
-      KnownBits KnownLHS = computeKnownBits(LHS, 0, &Zext);
-      KnownBits KnownRHS = computeKnownBits(RHS, 0, &Zext);
-
-      if (KnownLHS == KnownRHS) {
-        APInt KnownBits = KnownLHS.Zero | KnownLHS.One;
-        APInt UnknownBit = ~KnownBits;
-        if (UnknownBit.countPopulation() == 1) {
-          Value *Result = Builder.CreateXor(LHS, RHS);
-
-          // Mask off any bits that are set and won't be shifted away.
-          if (KnownLHS.One.uge(UnknownBit))
-            Result = Builder.CreateAnd(Result,
-                                        ConstantInt::get(ITy, UnknownBit));
-
-          // Shift the bit we're testing down to the lsb.
-          Result = Builder.CreateLShr(
-               Result, ConstantInt::get(ITy, UnknownBit.countTrailingZeros()));
-
-          if (Cmp->getPredicate() == ICmpInst::ICMP_EQ)
-            Result = Builder.CreateXor(Result, ConstantInt::get(ITy, 1));
-          Result->takeName(Cmp);
-          return replaceInstUsesWith(Zext, Result);
-        }
-      }
-    }
   }
 
   return nullptr;
