@@ -1593,3 +1593,8 @@ def int_riscv_sm4ed      : ScalarCryptoByteSelectAny;
 def int_riscv_sm3p0      : ScalarCryptoGprIntrinsicAny;
 def int_riscv_sm3p1      : ScalarCryptoGprIntrinsicAny;
 } // TargetPrefix = "riscv"
+
+//===----------------------------------------------------------------------===//
+// Vendor extensions
+//===----------------------------------------------------------------------===//
+include "llvm/IR/IntrinsicsRISCVXTHead.td"
