@@ -3227,7 +3227,7 @@ int main(int argc, char *argv[]) {
 
   LLDBVSCodeOptTable T;
   unsigned MAI, MAC;
-  llvm::ArrayRef<const char *> ArgsArr = llvm::makeArrayRef(argv + 1, argc);
+  llvm::ArrayRef<const char *> ArgsArr = llvm::ArrayRef(argv + 1, argc);
   llvm::opt::InputArgList input_args = T.ParseArgs(ArgsArr, MAI, MAC);
 
   if (input_args.hasArg(OPT_help)) {

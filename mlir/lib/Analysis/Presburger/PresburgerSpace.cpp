@@ -170,10 +170,9 @@ bool PresburgerSpace::isAligned(const PresburgerSpace &other,
          "alignment.");
 
   ArrayRef<void *> kindAttachments =
-      makeArrayRef(identifiers)
-          .slice(getVarKindOffset(kind), getNumVarKind(kind));
+      ArrayRef(identifiers).slice(getVarKindOffset(kind), getNumVarKind(kind));
   ArrayRef<void *> otherKindAttachments =
-      makeArrayRef(other.identifiers)
+      ArrayRef(other.identifiers)
           .slice(other.getVarKindOffset(kind), other.getNumVarKind(kind));
   return kindAttachments == otherKindAttachments;
 }

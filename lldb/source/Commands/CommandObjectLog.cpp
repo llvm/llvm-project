@@ -146,7 +146,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_log_enable_options);
+      return llvm::ArrayRef(g_log_enable_options);
     }
 
     FileSpec log_file;
@@ -371,7 +371,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_log_dump_options);
+      return llvm::ArrayRef(g_log_dump_options);
     }
 
     FileSpec log_file;

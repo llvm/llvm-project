@@ -236,7 +236,7 @@ struct OptionEnumMapping<
             {bugprone::SignalHandlerCheck::AsyncSafeFunctionSetKind::POSIX,
              "POSIX"},
         };
-    return makeArrayRef(Mapping);
+    return ArrayRef(Mapping);
   }
 };
 

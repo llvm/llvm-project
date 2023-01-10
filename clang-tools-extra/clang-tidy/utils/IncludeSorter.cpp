@@ -231,7 +231,7 @@ OptionEnumMapping<utils::IncludeSorter::IncludeStyle>::getEnumMapping() {
       Mapping[] = {{utils::IncludeSorter::IS_LLVM, "llvm"},
                    {utils::IncludeSorter::IS_Google, "google"},
                    {utils::IncludeSorter::IS_Google_ObjC, "google-objc"}};
-  return makeArrayRef(Mapping);
+  return ArrayRef(Mapping);
 }
 } // namespace tidy
 } // namespace clang

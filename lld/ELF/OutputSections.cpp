@@ -397,7 +397,7 @@ template <class ELFT> void OutputSection::maybeCompress() {
 
   // Split input into 1-MiB shards.
   constexpr size_t shardSize = 1 << 20;
-  auto shardsIn = split(makeArrayRef<uint8_t>(buf.get(), size), shardSize);
+  auto shardsIn = split(ArrayRef<uint8_t>(buf.get(), size), shardSize);
   const size_t numShards = shardsIn.size();
 
   // Compress shards and compute Alder-32 checksums. Use Z_SYNC_FLUSH for all
@@ -697,7 +697,7 @@ elf::getInputSections(const OutputSection &os,
       storage.insert(storage.end(), isd->sections.begin(), isd->sections.end());
     }
   }
-  return storage.empty() ? ret : makeArrayRef(storage);
+  return storage.empty() ? ret : ArrayRef(storage);
 }
 
 // Sorts input sections by section name suffixes, so that .foo.N comes

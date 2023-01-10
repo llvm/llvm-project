@@ -47,7 +47,7 @@ OptionEnumMapping<
            "Camel_Snake_Case"},
           {readability::IdentifierNamingCheck::CT_CamelSnakeBack,
            "camel_Snake_Back"}};
-  return llvm::makeArrayRef(Mapping);
+  return llvm::ArrayRef(Mapping);
 }
 
 template <>
@@ -62,7 +62,7 @@ struct OptionEnumMapping<
         {HungarianPrefixType::HPT_On, "On"},
         {HungarianPrefixType::HPT_LowerCase, "LowerCase"},
         {HungarianPrefixType::HPT_CamelCase, "CamelCase"}};
-    return llvm::makeArrayRef(Mapping);
+    return llvm::ArrayRef(Mapping);
   }
 };
 

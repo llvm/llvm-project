@@ -228,7 +228,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
       continue;
 
     // If the input bitcode file is path/to/a.obj, then the corresponding lto
-    // object file name will soemthing like: path/to/main.exe.lto.a.obj.
+    // object file name will look something like: path/to/main.exe.lto.a.obj.
     StringRef ltoObjName;
     if (bitcodeFilePath == "ld-temp.o") {
       ltoObjName =

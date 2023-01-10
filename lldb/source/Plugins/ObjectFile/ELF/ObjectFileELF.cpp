@@ -447,8 +447,8 @@ bool ObjectFileELF::MagicBytesMatch(DataBufferSP &data_sp,
 }
 
 static uint32_t calc_crc32(uint32_t init, const DataExtractor &data) {
-  return llvm::crc32(
-      init, llvm::makeArrayRef(data.GetDataStart(), data.GetByteSize()));
+  return llvm::crc32(init,
+                     llvm::ArrayRef(data.GetDataStart(), data.GetByteSize()));
 }
 
 uint32_t ObjectFileELF::CalculateELFNotesSegmentsCRC32(
