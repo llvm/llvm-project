@@ -71,6 +71,8 @@ static cl::opt<bool>
                            cl::desc("Disable function internalization."),
                            cl::Hidden, cl::init(false));
 
+static cl::opt<bool> DeduceICVValues("openmp-deduce-icv-values",
+                                     cl::init(false), cl::Hidden);
 static cl::opt<bool> PrintICVValues("openmp-print-icv-values", cl::init(false),
                                     cl::Hidden);
 static cl::opt<bool> PrintOpenMPKernels("openmp-print-gpu-kernels",
@@ -4806,24 +4808,26 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
   }
 
   // Create CallSite AA for all Getters.
-  for (int Idx = 0; Idx < OMPInfoCache.ICVs.size() - 1; ++Idx) {
-    auto ICVInfo = OMPInfoCache.ICVs[static_cast<InternalControlVar>(Idx)];
+  if (DeduceICVValues) {
+    for (int Idx = 0; Idx < OMPInfoCache.ICVs.size() - 1; ++Idx) {
+      auto ICVInfo = OMPInfoCache.ICVs[static_cast<InternalControlVar>(Idx)];
 
-    auto &GetterRFI = OMPInfoCache.RFIs[ICVInfo.Getter];
+      auto &GetterRFI = OMPInfoCache.RFIs[ICVInfo.Getter];
 
-    auto CreateAA = [&](Use &U, Function &Caller) {
-      CallInst *CI = OpenMPOpt::getCallIfRegularCall(U, &GetterRFI);
-      if (!CI)
+      auto CreateAA = [&](Use &U, Function &Caller) {
+        CallInst *CI = OpenMPOpt::getCallIfRegularCall(U, &GetterRFI);
+        if (!CI)
+          return false;
+
+        auto &CB = cast<CallBase>(*CI);
+
+        IRPosition CBPos = IRPosition::callsite_function(CB);
+        A.getOrCreateAAFor<AAICVTracker>(CBPos);
         return false;
+      };
 
-      auto &CB = cast<CallBase>(*CI);
-
-      IRPosition CBPos = IRPosition::callsite_function(CB);
-      A.getOrCreateAAFor<AAICVTracker>(CBPos);
-      return false;
-    };
-
-    GetterRFI.foreachUse(SCC, CreateAA);
+      GetterRFI.foreachUse(SCC, CreateAA);
+    }
   }
   auto &GlobalizationRFI = OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared];
   auto CreateAA = [&](Use &U, Function &F) {
