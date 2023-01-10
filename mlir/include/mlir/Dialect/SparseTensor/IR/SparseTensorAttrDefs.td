@@ -335,13 +335,21 @@ def SparseTensorStorageSpecifierKindAttr
 def IsSparseTensorPred
   : CPred<"!!::mlir::sparse_tensor::getSparseTensorEncoding($_self)">;
 
+def IsSparseTensorSlicePred
+  : CPred<"!!::mlir::sparse_tensor::getSparseTensorEncoding($_self) && "
+          "  ::mlir::sparse_tensor::getSparseTensorEncoding($_self).isSlice()">;
+
 // The following four follow the same idiom as `TensorOf`, `AnyTensor`,
 // `RankedTensorOf`, `AnyRankedTensor`.
 
 class SparseTensorOf<list<Type> allowedTypes>
   : TensorOf<allowedTypes, [IsSparseTensorPred], "sparse tensor">;
 
+class SparseTensorSliceOf<list<Type> allowedTypes>
+  : TensorOf<allowedTypes, [IsSparseTensorSlicePred], "sparse tensor slice">;
+
 def AnySparseTensor : SparseTensorOf<[AnyType]>;
+def AnySparseTensorSlice : SparseTensorSliceOf<[AnyType]>;
 
 class RankedSparseTensorOf<list<Type> allowedTypes>
   : RankedTensorOf<allowedTypes, [IsSparseTensorPred], "ranked sparse tensor">;
