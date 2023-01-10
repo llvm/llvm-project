@@ -17,3 +17,20 @@ define <2 x i64> @testcase(ptr %in) {
   %4 = or <2 x i64> %2, %3
   ret <2 x i64> %4
 }
+
+;; FIXME: This causes miscompile because rot combine
+;; doesn't handle negative shift well.
+define i5 @pr59898(i5 %x) {
+; CHECK-LABEL: pr59898:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr w8, w0, #4
+; CHECK-NEXT:    bfi w8, w0, #1, #31
+; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    ret
+  %r1 = call i5 @llvm.fshr.i5(i5 %x, i5 %x, i5 3)
+  %r2 = call i5 @llvm.fshl.i5(i5 %r1, i5 %r1, i5 2)
+  ret i5 %r2
+}
+
+declare i5 @llvm.fshl.i5(i5, i5, i5)
+declare i5 @llvm.fshr.i5(i5, i5, i5)
