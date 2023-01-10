@@ -8,9 +8,9 @@
 ; PRELINKDISA: gv: (name: "main", {{.*}} callsites: ((callee: ^2, clones: (0), stackIds: (8632435727821051414)), (callee: ^2, clones: (0), stackIds: (15025054523792398438)))))) ; guid = 15822663052811949562
 
 ; RUN: llvm-dis -o - %tb.bc | FileCheck %s --check-prefix=PRELINKDISB
-; PRELINKDISB: gv: (name: "_Z3foov", {{.*}} callsites: ((callee: ^2, clones: (0), stackIds: (2732490490862098848)))))) ; guid = 9191153033785521275
-; PRELINKDISB: gv: (name: "_Z3bazv", {{.*}} callsites: ((callee: ^3, clones: (0), stackIds: (12481870273128938184)))))) ; guid = 15176620447596392000
-; PRELINKDISB: gv: (name: "_Z3barv", {{.*}} allocs: ((versions: (none), memProf: ((type: notcold, stackIds: (12481870273128938184, 2732490490862098848, 8632435727821051414)), (type: cold, stackIds: (12481870273128938184, 2732490490862098848, 15025054523792398438)))))))) ; guid = 17377440600225628772
+; PRELINKDISB: ^[[PLBAR:[0-9]+]] = gv: (name: "_Z3barv", {{.*}} allocs: ((versions: (none), memProf: ((type: notcold, stackIds: (12481870273128938184, 2732490490862098848, 8632435727821051414)), (type: cold, stackIds: (12481870273128938184, 2732490490862098848, 15025054523792398438)))))))) ; guid = 4555904644815367798
+; PRELINKDISB: ^[[PLFOO:[0-9]+]] = gv: (name: "_Z3foov", {{.*}} callsites: ((callee: ^[[PLBAZ:[0-9]+]], clones: (0), stackIds: (2732490490862098848)))))) ; guid = 9191153033785521275
+; PRELINKDISB: ^[[PLBAZ]] = gv: (name: "_Z3bazv", {{.*}} callsites: ((callee: ^[[PLBAR]], clones: (0), stackIds: (12481870273128938184)))))) ; guid = 15176620447596392000
 
 ; RUN: llvm-bcanalyzer -dump %ta.bc | FileCheck %s --check-prefix=PRELINKBCANA
 ; PRELINKBCANA: <STACK_IDS abbrevid=4 op0=8632435727821051414 op1=-3421689549917153178/>
@@ -26,14 +26,13 @@
 ; RUN:     -r=%ta.bc,sleep, \
 ; RUN:     -r=%tb.bc,_Z3foov,pl \
 ; RUN:     -r=%tb.bc,_Znam, \
-; RUN:     -r=%tb.bc,_Z3barv,pl \
 ; RUN:     -r=%tb.bc,_Z3bazv,pl
 
 ; RUN: llvm-dis -o - %t.index.bc | FileCheck %s --check-prefix=COMBINEDDIS
-; COMBINEDDIS: gv: (guid: 9191153033785521275, {{.*}} callsites: ((callee: ^3, clones: (0), stackIds: (2732490490862098848))))))
-; COMBINEDDIS: gv: (guid: 15176620447596392000, {{.*}} callsites: ((callee: ^5, clones: (0), stackIds: (12481870273128938184))))))
-; COMBINEDDIS: gv: (guid: 15822663052811949562, {{.*}} callsites: ((callee: ^2, clones: (0), stackIds: (8632435727821051414)), (callee: ^2, clones: (0), stackIds: (15025054523792398438))))))
-; COMBINEDDIS: gv: (guid: 17377440600225628772, {{.*}} allocs: ((versions: (none), memProf: ((type: notcold, stackIds: (12481870273128938184, 2732490490862098848, 8632435727821051414)), (type: cold, stackIds: (12481870273128938184, 2732490490862098848, 15025054523792398438))))))))
+; COMBINEDDIS: ^[[COMBBAR:[0-9]+]] = gv: (guid: 4555904644815367798, {{.*}} allocs: ((versions: (none), memProf: ((type: notcold, stackIds: (12481870273128938184, 2732490490862098848, 8632435727821051414)), (type: cold, stackIds: (12481870273128938184, 2732490490862098848, 15025054523792398438))))))))
+; COMBINEDDIS: ^[[COMBFOO:[0-9]+]] = gv: (guid: 9191153033785521275, {{.*}} callsites: ((callee: ^[[COMBBAZ:[0-9]+]], clones: (0), stackIds: (2732490490862098848))))))
+; COMBINEDDIS: ^[[COMBBAZ]] = gv: (guid: 15176620447596392000, {{.*}} callsites: ((callee: ^[[COMBBAR]], clones: (0), stackIds: (12481870273128938184))))))
+; COMBINEDDIS: ^[[COMBMAIN:[0-9]+]] = gv: (guid: 15822663052811949562, {{.*}} callsites: ((callee: ^[[COMBFOO]], clones: (0), stackIds: (8632435727821051414)), (callee: ^[[COMBFOO]], clones: (0), stackIds: (15025054523792398438))))))
 
 ; RUN: llvm-bcanalyzer -dump %t.index.bc | FileCheck %s --check-prefix=COMBINEDBCAN
 ; COMBINEDBCAN: <STACK_IDS abbrevid=4 op0=8632435727821051414 op1=-3421689549917153178 op2=-5964873800580613432 op3=2732490490862098848/>
@@ -43,9 +42,9 @@
 ; DISTRIBUTEDDISA: gv: (guid: 15822663052811949562, {{.*}} callsites: ((callee: ^2, clones: (0), stackIds: (8632435727821051414)), (callee: ^2, clones: (0), stackIds: (15025054523792398438))))))
 
 ; RUN: llvm-dis -o - %tb.bc.thinlto.bc | FileCheck %s --check-prefix=DISTRIBUTEDDISB
-; DISTRIBUTEDDISB: gv: (guid: 9191153033785521275, {{.*}} callsites: ((callee: ^2, clones: (0), stackIds: (2732490490862098848))))))
-; DISTRIBUTEDDISB: gv: (guid: 15176620447596392000, {{.*}} callsites: ((callee: ^3, clones: (0), stackIds: (12481870273128938184))))))
-; DISTRIBUTEDDISB: gv: (guid: 17377440600225628772, {{.*}} allocs: ((versions: (none), memProf: ((type: notcold, stackIds: (12481870273128938184, 2732490490862098848, 8632435727821051414)), (type: cold, stackIds: (12481870273128938184, 2732490490862098848, 15025054523792398438))))))))
+; DISTRIBUTEDDISB: ^[[DISTRBAR:[0-9]+]] = gv: (guid: 4555904644815367798, {{.*}} allocs: ((versions: (none), memProf: ((type: notcold, stackIds: (12481870273128938184, 2732490490862098848, 8632435727821051414)), (type: cold, stackIds: (12481870273128938184, 2732490490862098848, 15025054523792398438))))))))
+; DISTRIBUTEDDISB: ^[[DISTRFOO:[0-9]+]] = gv: (guid: 9191153033785521275, {{.*}} callsites: ((callee: ^[[DISTRBAZ:[0-9]+]], clones: (0), stackIds: (2732490490862098848))))))
+; DISTRIBUTEDDISB: ^[[DISTRBAZ]] = gv: (guid: 15176620447596392000, {{.*}} callsites: ((callee: ^[[DISTRBAR]], clones: (0), stackIds: (12481870273128938184))))))
 
 ; RUN: llvm-bcanalyzer -dump %ta.bc.thinlto.bc | FileCheck %s --check-prefix=DISTRIBUTEDBCANA
 ; DISTRIBUTEDBCANA: <STACK_IDS abbrevid=4 op0=8632435727821051414 op1=-3421689549917153178 op2=2732490490862098848/>
@@ -124,7 +123,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: mustprogress noinline uwtable
-define dso_local noalias noundef nonnull ptr @_Z3barv() local_unnamed_addr #0 !dbg !39 {
+define internal noalias noundef nonnull ptr @_Z3barv() local_unnamed_addr #0 !dbg !39 {
 entry:
   %call = call noalias noundef nonnull dereferenceable(10) ptr @_Znam(i64 noundef 10) #2, !dbg !42, !memprof !43, !callsite !48
   ret ptr %call, !dbg !49

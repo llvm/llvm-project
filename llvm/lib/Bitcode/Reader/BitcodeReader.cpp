@@ -7260,8 +7260,12 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       setSpecialRefs(Refs, NumRORefs, NumWORefs);
       auto VIAndOriginalGUID = getValueInfoFromValueId(ValueID);
       // In order to save memory, only record the memprof summaries if this is
-      // the prevailing copy of a symbol.
-      if (IsPrevailing && !IsPrevailing(std::get<2>(VIAndOriginalGUID))) {
+      // the prevailing copy of a symbol. The linker doesn't resolve local
+      // linkage values so don't check whether those are prevailing.
+      auto LT = (GlobalValue::LinkageTypes)Flags.Linkage;
+      if (IsPrevailing &&
+          !GlobalValue::isLocalLinkage(LT) &&
+          !IsPrevailing(std::get<2>(VIAndOriginalGUID))) {
         PendingCallsites.clear();
         PendingAllocs.clear();
       }

@@ -9416,8 +9416,6 @@ combineBinOp_VLToVWBinOp_VL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
         }
       }
     };
-    AppendUsersIfNeeded(LHS);
-    AppendUsersIfNeeded(RHS);
 
     // Control the compile time by limiting the number of node we look at in
     // total.
@@ -9439,6 +9437,13 @@ combineBinOp_VLToVWBinOp_VL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
         if (Res) {
           Matched = true;
           CombinesToApply.push_back(*Res);
+          // All the inputs that are extended need to be folded, otherwise
+          // we would be leaving the old input (since it is may still be used),
+          // and the new one.
+          if (Res->SExtLHS.has_value())
+            AppendUsersIfNeeded(LHS);
+          if (Res->SExtRHS.has_value())
+            AppendUsersIfNeeded(RHS);
           break;
         }
       }

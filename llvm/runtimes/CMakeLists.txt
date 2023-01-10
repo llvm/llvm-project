@@ -421,7 +421,11 @@ if(runtimes)
 
     foreach(name ${LLVM_RUNTIME_TARGETS})
       if(builtins_dep)
-        set(builtins_dep_name "${builtins_dep}-${name}")
+        if (LLVM_BUILTIN_TARGETS)
+          set(builtins_dep_name "${builtins_dep}-${name}")
+        else()
+          set(builtins_dep_name ${builtins_dep})
+        endif()
       endif()
       runtime_register_target(${name} ${name}
         DEPENDS ${builtins_dep_name})

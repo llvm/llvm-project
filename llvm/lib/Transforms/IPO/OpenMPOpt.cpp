@@ -598,6 +598,9 @@ struct KernelInfoState : AbstractState {
   /// caller is __kmpc_parallel_51.
   BooleanStateWithSetVector<uint8_t> ParallelLevels;
 
+  /// Flag that indicates if the kernel has nested Parallelism
+  bool NestedParallelism = false;
+
   /// Abstract State interface
   ///{
 
@@ -683,6 +686,7 @@ struct KernelInfoState : AbstractState {
     SPMDCompatibilityTracker ^= KIS.SPMDCompatibilityTracker;
     ReachedKnownParallelRegions ^= KIS.ReachedKnownParallelRegions;
     ReachedUnknownParallelRegions ^= KIS.ReachedUnknownParallelRegions;
+    NestedParallelism |= KIS.NestedParallelism;
     return *this;
   }
 
@@ -3339,6 +3343,15 @@ struct AAKernelInfoFunction : AAKernelInfo {
     if (!KernelInitCB || !KernelDeinitCB)
       return ChangeStatus::UNCHANGED;
 
+    /// Insert nested Parallelism global variable
+    Function *Kernel = getAnchorScope();
+    Module &M = *Kernel->getParent();
+    Type *Int8Ty = Type::getInt8Ty(M.getContext());
+    new GlobalVariable(M, Int8Ty, /* isConstant */ true,
+                       GlobalValue::WeakAnyLinkage,
+                       ConstantInt::get(Int8Ty, NestedParallelism ? 1 : 0),
+                       Kernel->getName() + "_nested_parallelism");
+
     // If we can we change the execution mode to SPMD-mode otherwise we build a
     // custom state machine.
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
@@ -4354,6 +4367,12 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       if (auto *ParallelRegion = dyn_cast<Function>(
               CB.getArgOperand(WrapperFunctionArgNo)->stripPointerCasts())) {
         ReachedKnownParallelRegions.insert(ParallelRegion);
+        /// Check nested parallelism
+        auto &FnAA = A.getAAFor<AAKernelInfo>(
+            *this, IRPosition::function(*ParallelRegion), DepClassTy::OPTIONAL);
+        NestedParallelism |= !FnAA.getState().isValidState() ||
+                             !FnAA.ReachedKnownParallelRegions.empty() ||
+                             !FnAA.ReachedUnknownParallelRegions.empty();
         break;
       }
       // The condition above should usually get the parallel region function

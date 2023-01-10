@@ -555,7 +555,7 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
                                MachineBasicBlock::iterator MI,
                                const DebugLoc &DL, MCRegister DestReg,
                                MCRegister SrcReg, bool KillSrc,
-                               RegScavenger &RS,
+                               RegScavenger &RS, bool RegsOverlap,
                                Register ImpDefSuperReg = Register(),
                                Register ImpUseSuperReg = Register()) {
   assert((TII.getSubtarget().hasMAIInsts() &&
@@ -572,42 +572,47 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
   const SIRegisterInfo &RI = TII.getRegisterInfo();
 
   // First try to find defining accvgpr_write to avoid temporary registers.
-  for (auto Def = MI, E = MBB.begin(); Def != E; ) {
-    --Def;
-    if (!Def->definesRegister(SrcReg, &RI))
-      continue;
-    if (Def->getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32_e64)
-      break;
-
-    MachineOperand &DefOp = Def->getOperand(1);
-    assert(DefOp.isReg() || DefOp.isImm());
-
-    if (DefOp.isReg()) {
-      // Check that register source operand if not clobbered before MI.
-      // Immediate operands are always safe to propagate.
-      bool SafeToPropagate = true;
-      for (auto I = Def; I != MI && SafeToPropagate; ++I)
-        if (I->modifiesRegister(DefOp.getReg(), &RI))
-          SafeToPropagate = false;
-
-      if (!SafeToPropagate)
+  // In the case of copies of overlapping AGPRs, we conservatively do not
+  // reuse previous accvgpr_writes. Otherwise, we may incorrectly pick up
+  // an accvgpr_write used for this same copy due to implicit-defs
+  if (!RegsOverlap) {
+    for (auto Def = MI, E = MBB.begin(); Def != E; ) {
+      --Def;
+      if (!Def->definesRegister(SrcReg, &RI))
+        continue;
+      if (Def->getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32_e64)
         break;
 
-      DefOp.setIsKill(false);
+      MachineOperand &DefOp = Def->getOperand(1);
+      assert(DefOp.isReg() || DefOp.isImm());
+
+      if (DefOp.isReg()) {
+        bool SafeToPropagate = true;
+        // Check that register source operand is not clobbered before MI.
+        // Immediate operands are always safe to propagate.
+        for (auto I = Def; I != MI && SafeToPropagate; ++I)
+          if (I->modifiesRegister(DefOp.getReg(), &RI))
+            SafeToPropagate = false;
+
+        if (!SafeToPropagate)
+          break;
+
+        DefOp.setIsKill(false);
+      }
+
+      MachineInstrBuilder Builder =
+        BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DestReg)
+        .add(DefOp);
+      if (ImpDefSuperReg)
+        Builder.addReg(ImpDefSuperReg, RegState::Define | RegState::Implicit);
+
+      if (ImpUseSuperReg) {
+        Builder.addReg(ImpUseSuperReg,
+                      getKillRegState(KillSrc) | RegState::Implicit);
+      }
+
+      return;
     }
-
-    MachineInstrBuilder Builder =
-      BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DestReg)
-      .add(DefOp);
-    if (ImpDefSuperReg)
-      Builder.addReg(ImpDefSuperReg, RegState::Define | RegState::Implicit);
-
-    if (ImpUseSuperReg) {
-      Builder.addReg(ImpUseSuperReg,
-                     getKillRegState(KillSrc) | RegState::Implicit);
-    }
-
-    return;
   }
 
   RS.enterBasicBlock(MBB);
@@ -849,7 +854,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     // FIXME: Pass should maintain scavenger to avoid scan through the block on
     // every AGPR spill.
     RegScavenger RS;
-    indirectCopyToAGPR(*this, MBB, MI, DL, DestReg, SrcReg, KillSrc, RS);
+    const bool Overlap = RI.regsOverlap(SrcReg, DestReg);
+    indirectCopyToAGPR(*this, MBB, MI, DL, DestReg, SrcReg, KillSrc, RS, Overlap);
     return;
   }
 
@@ -993,7 +999,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   // If there is an overlap, we can't kill the super-register on the last
   // instruction, since it will also kill the components made live by this def.
-  const bool CanKillSuperReg = KillSrc && !RI.regsOverlap(SrcReg, DestReg);
+  const bool Overlap = RI.regsOverlap(SrcReg, DestReg);
+  const bool CanKillSuperReg = KillSrc && !Overlap;
 
   for (unsigned Idx = 0; Idx < SubIndices.size(); ++Idx) {
     unsigned SubIdx;
@@ -1008,7 +1015,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Register ImpDefSuper = Idx == 0 ? Register(DestReg) : Register();
       Register ImpUseSuper = SrcReg;
       indirectCopyToAGPR(*this, MBB, MI, DL, RI.getSubReg(DestReg, SubIdx),
-                         RI.getSubReg(SrcReg, SubIdx), UseKill, *RS,
+                         RI.getSubReg(SrcReg, SubIdx), UseKill, *RS, Overlap,
                          ImpDefSuper, ImpUseSuper);
     } else if (Opcode == AMDGPU::V_PK_MOV_B32) {
       Register DstSubReg = RI.getSubReg(DestReg, SubIdx);

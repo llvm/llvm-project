@@ -682,6 +682,10 @@ public:
     return symbol_name;
   }
 
+  /// Can we trust the address ranges accelerator associated with this object
+  /// file to be complete.
+  virtual bool CanTrustAddressRanges() { return false; }
+
   static lldb::SymbolType GetSymbolTypeFromName(
       llvm::StringRef name,
       lldb::SymbolType symbol_type_hint = lldb::eSymbolTypeUndefined);

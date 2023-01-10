@@ -153,6 +153,14 @@ class Function;
 /// Abstract Attribute helper functions.
 namespace AA {
 
+enum class GPUAddressSpace : unsigned {
+  Generic = 0,
+  Global = 1,
+  Shared = 3,
+  Constant = 4,
+  Local = 5,
+};
+
 /// Flags to distinguish intra-procedural queries from *potentially*
 /// inter-procedural queries. Not that information can be valid for both and
 /// therefore both bits might be set.
@@ -359,6 +367,10 @@ bool isPotentiallyReachable(
     Attributor &A, const Instruction &FromI, const Function &ToFn,
     const AbstractAttribute &QueryingAA,
     std::function<bool(const Function &F)> GoBackwardsCB);
+
+/// Return true if \p Obj is assumed to be a thread local object.
+bool isAssumedThreadLocalObject(Attributor &A, Value &Obj,
+                                const AbstractAttribute &QueryingAA);
 
 } // namespace AA
 

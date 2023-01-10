@@ -1112,14 +1112,14 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
         }
         StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(0);
         if (frame_sp) {
-          TypeSystemClang *clang_ast_context =
+          TypeSystemClangSP scratch_ts_sp =
               ScratchTypeSystemClang::GetForTarget(target);
 
-          if (!clang_ast_context)
+          if (!scratch_ts_sp)
             return LLDB_INVALID_ADDRESS;
 
           CompilerType clang_void_ptr_type =
-              clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+              scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
           Address pthread_getspecific_addr = GetPthreadSetSpecificAddress();
           if (pthread_getspecific_addr.IsValid()) {
             EvaluateExpressionOptions options;

@@ -238,13 +238,13 @@ public:
   bool isCOMDAT() const;
   void applyRelocation(uint8_t *off, const coff_relocation &rel) const;
   void applyRelX64(uint8_t *off, uint16_t type, OutputSection *os, uint64_t s,
-                   uint64_t p) const;
+                   uint64_t p, uint64_t imageBase) const;
   void applyRelX86(uint8_t *off, uint16_t type, OutputSection *os, uint64_t s,
-                   uint64_t p) const;
+                   uint64_t p, uint64_t imageBase) const;
   void applyRelARM(uint8_t *off, uint16_t type, OutputSection *os, uint64_t s,
-                   uint64_t p) const;
+                   uint64_t p, uint64_t imageBase) const;
   void applyRelARM64(uint8_t *off, uint16_t type, OutputSection *os, uint64_t s,
-                     uint64_t p) const;
+                     uint64_t p, uint64_t imageBase) const;
 
   void getRuntimePseudoRelocs(std::vector<RuntimePseudoReloc> &res);
 
@@ -490,24 +490,26 @@ static const uint8_t importThunkARM64[] = {
 // contents will be a JMP instruction to some __imp_ symbol.
 class ImportThunkChunk : public NonSectionChunk {
 public:
-  ImportThunkChunk(Defined *s)
-      : NonSectionChunk(ImportThunkKind), impSymbol(s) {}
+  ImportThunkChunk(COFFLinkerContext &ctx, Defined *s)
+      : NonSectionChunk(ImportThunkKind), impSymbol(s), ctx(ctx) {}
   static bool classof(const Chunk *c) { return c->kind() == ImportThunkKind; }
 
 protected:
   Defined *impSymbol;
+  COFFLinkerContext &ctx;
 };
 
 class ImportThunkChunkX64 : public ImportThunkChunk {
 public:
-  explicit ImportThunkChunkX64(Defined *s);
+  explicit ImportThunkChunkX64(COFFLinkerContext &ctx, Defined *s);
   size_t getSize() const override { return sizeof(importThunkX86); }
   void writeTo(uint8_t *buf) const override;
 };
 
 class ImportThunkChunkX86 : public ImportThunkChunk {
 public:
-  explicit ImportThunkChunkX86(Defined *s) : ImportThunkChunk(s) {}
+  explicit ImportThunkChunkX86(COFFLinkerContext &ctx, Defined *s)
+      : ImportThunkChunk(ctx, s) {}
   size_t getSize() const override { return sizeof(importThunkX86); }
   void getBaserels(std::vector<Baserel> *res) override;
   void writeTo(uint8_t *buf) const override;
@@ -515,7 +517,8 @@ public:
 
 class ImportThunkChunkARM : public ImportThunkChunk {
 public:
-  explicit ImportThunkChunkARM(Defined *s) : ImportThunkChunk(s) {
+  explicit ImportThunkChunkARM(COFFLinkerContext &ctx, Defined *s)
+      : ImportThunkChunk(ctx, s) {
     setAlignment(2);
   }
   size_t getSize() const override { return sizeof(importThunkARM); }
@@ -525,7 +528,8 @@ public:
 
 class ImportThunkChunkARM64 : public ImportThunkChunk {
 public:
-  explicit ImportThunkChunkARM64(Defined *s) : ImportThunkChunk(s) {
+  explicit ImportThunkChunkARM64(COFFLinkerContext &ctx, Defined *s)
+      : ImportThunkChunk(ctx, s) {
     setAlignment(4);
   }
   size_t getSize() const override { return sizeof(importThunkARM64); }
@@ -534,35 +538,46 @@ public:
 
 class RangeExtensionThunkARM : public NonSectionChunk {
 public:
-  explicit RangeExtensionThunkARM(Defined *t) : target(t) { setAlignment(2); }
+  explicit RangeExtensionThunkARM(COFFLinkerContext &ctx, Defined *t)
+      : target(t), ctx(ctx) {
+    setAlignment(2);
+  }
   size_t getSize() const override;
   void writeTo(uint8_t *buf) const override;
 
   Defined *target;
+
+private:
+  COFFLinkerContext &ctx;
 };
 
 class RangeExtensionThunkARM64 : public NonSectionChunk {
 public:
-  explicit RangeExtensionThunkARM64(Defined *t) : target(t) { setAlignment(4); }
+  explicit RangeExtensionThunkARM64(COFFLinkerContext &ctx, Defined *t)
+      : target(t), ctx(ctx) {
+    setAlignment(4);
+  }
   size_t getSize() const override;
   void writeTo(uint8_t *buf) const override;
 
   Defined *target;
+
+private:
+  COFFLinkerContext &ctx;
 };
 
 // Windows-specific.
 // See comments for DefinedLocalImport class.
 class LocalImportChunk : public NonSectionChunk {
 public:
-  explicit LocalImportChunk(Defined *s) : sym(s) {
-    setAlignment(config->wordsize);
-  }
+  explicit LocalImportChunk(COFFLinkerContext &ctx, Defined *s);
   size_t getSize() const override;
   void getBaserels(std::vector<Baserel> *res) override;
   void writeTo(uint8_t *buf) const override;
 
 private:
   Defined *sym;
+  COFFLinkerContext &ctx;
 };
 
 // Duplicate RVAs are not allowed in RVA tables, so unique symbols by chunk and
@@ -629,8 +644,9 @@ private:
 class Baserel {
 public:
   Baserel(uint32_t v, uint8_t ty) : rva(v), type(ty) {}
-  explicit Baserel(uint32_t v) : Baserel(v, getDefaultType()) {}
-  uint8_t getDefaultType();
+  explicit Baserel(uint32_t v, llvm::COFF::MachineTypes machine)
+      : Baserel(v, getDefaultType(machine)) {}
+  uint8_t getDefaultType(llvm::COFF::MachineTypes machine);
 
   uint32_t rva;
   uint8_t type;
@@ -669,7 +685,8 @@ private:
 // MinGW specific. A Chunk that contains one pointer-sized absolute value.
 class AbsolutePointerChunk : public NonSectionChunk {
 public:
-  AbsolutePointerChunk(uint64_t value) : value(value) {
+  AbsolutePointerChunk(COFFLinkerContext &ctx, uint64_t value)
+      : value(value), ctx(ctx) {
     setAlignment(getSize());
   }
   size_t getSize() const override;
@@ -677,6 +694,7 @@ public:
 
 private:
   uint64_t value;
+  COFFLinkerContext &ctx;
 };
 
 // Return true if this file has the hotpatch flag set to true in the S_COMPILE3
@@ -696,6 +714,21 @@ void applyBranch24T(uint8_t *off, int32_t v);
 void applyArm64Addr(uint8_t *off, uint64_t s, uint64_t p, int shift);
 void applyArm64Imm(uint8_t *off, uint64_t imm, uint32_t rangeLimit);
 void applyArm64Branch26(uint8_t *off, int64_t v);
+
+// Convenience class for initializing a SectionChunk with specific flags.
+class FakeSectionChunk {
+public:
+  FakeSectionChunk(int c) : chunk(nullptr, &section) {
+    section.Characteristics = c;
+    // Comdats from LTO files can't be fully treated as regular comdats
+    // at this point; we don't know what size or contents they are going to
+    // have, so we can't do proper checking of such aspects of them.
+    chunk.selection = llvm::COFF::IMAGE_COMDAT_SELECT_ANY;
+  }
+
+  coff_section section;
+  SectionChunk chunk;
+};
 
 } // namespace lld::coff
 
