@@ -38,6 +38,11 @@ def RMPUPDATE: I<0x01, MRM_FE, (outs), (ins), "rmpupdate", []>, XD,
 let Uses = [RAX] in
 def RMPADJUST: I<0x01, MRM_FE, (outs), (ins), "rmpadjust", []>, XS,
                Requires<[In64BitMode]>;
+
+// F3 0F 01 FD
+let Uses = [RAX, RDX], Defs = [RCX, RDX] in
+def RMPQUERY: I<0x01, MRM_FD, (outs), (ins), "rmpquery", []>, XS,
+               Requires<[In64BitMode]>;
 } // SchedRW
 
 def : InstAlias<"psmash\t{%rax|rax}", (PSMASH)>, Requires<[In64BitMode]>;
@@ -45,3 +50,4 @@ def : InstAlias<"pvalidate\t{%rax|rax}", (PVALIDATE64)>, Requires<[In64BitMode]>
 def : InstAlias<"pvalidate\t{%eax|eax}", (PVALIDATE32)>, Requires<[Not64BitMode]>;
 def : InstAlias<"rmpupdate\t{%rax|rax}", (RMPUPDATE)>, Requires<[In64BitMode]>;
 def : InstAlias<"rmpadjust\t{%rax|rax}", (RMPADJUST)>, Requires<[In64BitMode]>;
+def : InstAlias<"rmpquery\t{%rax, %rcx, %rdx|rdx, rcx, rax}", (RMPQUERY)>, Requires<[In64BitMode]>;
