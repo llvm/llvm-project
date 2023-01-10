@@ -57,6 +57,9 @@ Bug Fixes
 - Fix crash on invalid code when looking up a destructor in a templated class
   inside a namespace. This fixes
   `Issue 59446 <https://github.com/llvm/llvm-project/issues/59446>`_.
+- Fix an issue about ``decltype`` in the members of class templates derived from
+  templates with related parameters. This fixes
+  `Issue 58674 <https://github.com/llvm/llvm-project/issues/58674>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
