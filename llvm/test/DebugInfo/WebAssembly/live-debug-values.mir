@@ -22,6 +22,13 @@
     ret void
   }
 
+  define void @test_target_index_defs() !dbg !21 {
+    call void @llvm.dbg.value(metadata i32 0, metadata !22, metadata !DIExpression()), !dbg !23
+    call void @llvm.dbg.value(metadata i32 0, metadata !24, metadata !DIExpression()), !dbg !23
+    call void @llvm.dbg.value(metadata i32 0, metadata !25, metadata !DIExpression()), !dbg !23
+    ret void
+  }
+
   declare void @llvm.dbg.value(metadata, metadata, metadata)
 
   !llvm.dbg.cu = !{!0}
@@ -59,6 +66,11 @@
   ; CHECK: ![[T1_VAR3:[0-9]+]] = !DILocalVariable(name: "var3", scope: ![[T1_SP]]
   !20 = !DILocalVariable(name: "var4", scope: !14, file: !1, line: 11, type: !8)
   ; CHECK: ![[T1_VAR4:[0-9]+]] = !DILocalVariable(name: "var4", scope: ![[T1_SP]]
+  !21 = distinct !DISubprogram(name: "test_target_index_defs", scope: !1, file: !1, line: 10, type: !6, scopeLine: 1, unit: !0)
+  !22 = !DILocalVariable(name: "var0", scope: !21, file: !1, line: 20, type: !8)
+  !23 = !DILocation(line: 10, scope: !21)
+  !24 = !DILocalVariable(name: "var1", scope: !21, file: !1, line: 20, type: !8)
+  !25 = !DILocalVariable(name: "var2", scope: !21, file: !1, line: 20, type: !8)
 ...
 
 ---
@@ -175,6 +187,46 @@ body: |
   ; CHECK-DAG: DBG_VALUE target-index(wasm-local) + 2, $noreg, ![[T1_VAR2]]
   ; CHECK-NOT: DBG_VALUE target-index(wasm-local){{.*}}, $noreg, ![[T1_VAR3]]
   ; CHECK-NOT: DBG_VALUE target-index(wasm-local){{.*}}, $noreg, ![[T1_VAR4]]
+  bb.3:
+  ; predecessors: %bb.1, %bb.2
+    RETURN implicit-def dead $arguments
+...
+
+---
+# bb.0 defines DBG_VALUEs for local index 2 and 3. The DBG_VALUE for local index
+# 2 is killed in bb.1 due to 'local.tee 2' there, and DBG_VALUE for local
+# index 3 is killed in bb.2 because there is 'local.set 3' there. As a result,
+# bb.3 shoudln't have any additional DBG_VALUEs added for those locals.
+# CHECK-LABEL: name: test_target_index_defs
+name: test_target_index_defs
+liveins:
+  - { reg: '$arguments' }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $arguments
+    DBG_VALUE target-index(wasm-local) + 2, $noreg, !22, !DIExpression(), debug-location !23
+    DBG_VALUE target-index(wasm-local) + 3, $noreg, !24, !DIExpression(), debug-location !23
+    %0:i32 = CONST_I32 1, implicit-def $arguments
+    BR_IF %bb.2, %0:i32, implicit-def $arguments
+
+  bb.1:
+  ; predecessors: %bb.0
+    successors: %bb.3
+    %0:i32 = CONST_I32 1, implicit-def $arguments
+    %1:i32 = LOCAL_TEE_I32 2, %0:i32, implicit-def $arguments
+    DROP_I32 killed %1:i32, implicit-def $arguments
+    BR %bb.3, implicit-def $arguments
+
+  bb.2:
+  ; predecessors: %bb.0
+    successors: %bb.3
+    %0:i32 = CONST_I32 1, implicit-def $arguments
+    LOCAL_SET_I32 3, %0:i32, implicit-def $arguments
+    BR %bb.3, implicit-def $arguments
+
+  ; CHECK: bb.3:
+  ; CHECK-NOT: DBG_VALUE target-index(wasm-local){{.*}}
   bb.3:
   ; predecessors: %bb.1, %bb.2
     RETURN implicit-def dead $arguments
