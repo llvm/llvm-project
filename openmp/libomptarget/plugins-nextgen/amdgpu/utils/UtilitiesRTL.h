@@ -71,8 +71,6 @@ StringRef parseTargetID(StringRef TargetID, StringMap<bool> &FeatureMap) {
 /// Check if an image is compatible with current system's environment.
 bool isImageCompatibleWithEnv(const __tgt_image_info *Info,
                               StringRef EnvTargetID) {
-	assert(0 && "FAIL image");
-#if NEWDRIVER
   llvm::StringRef ImageTargetID(Info->Arch);
   // Compatible in case of exact match.
   if (ImageTargetID == EnvTargetID) {
@@ -125,7 +123,6 @@ bool isImageCompatibleWithEnv(const __tgt_image_info *Info,
   DP("Compatible: Target IDs are compatible \t[Image: %s]\t:\t[Env: %s]\n",
      ImageTargetID.data(), EnvTargetID.data());
 
-#endif
   return true;
 }
 } // namespace utils
