@@ -216,6 +216,10 @@ Changes in existing checks
   :doc: `readability-redundant-string-cstr <clang-tidy/checks/readability/redundant-string-cstr>`
   check.
 
+- Improved :doc:`modernize-loop-convert <clang-tidy/checks/modernize/loop-convert>`
+  to check for container functions ``begin``/``end`` etc on base classes of the container
+  type, instead of only as direct members of the container type itself.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
