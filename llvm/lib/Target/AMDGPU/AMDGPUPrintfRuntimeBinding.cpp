@@ -234,6 +234,13 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
           ResType = VectorType::get(ResType, VecType->getElementCount());
         Builder.SetInsertPoint(CI);
         Builder.SetCurrentDebugLocation(CI->getDebugLoc());
+
+        if (ArgType->isFloatingPointTy()) {
+          Arg = Builder.CreateBitCast(
+              Arg,
+              IntegerType::getIntNTy(Ctx, ArgType->getPrimitiveSizeInBits()));
+        }
+
         if (OpConvSpecifiers[ArgCount - 1] == 'x' ||
             OpConvSpecifiers[ArgCount - 1] == 'X' ||
             OpConvSpecifiers[ArgCount - 1] == 'u' ||
@@ -373,7 +380,6 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
                                           "PrintBuffGep", Brnch);
 
     Type *Int32Ty = Type::getInt32Ty(Ctx);
-    Type *Int64Ty = Type::getInt64Ty(Ctx);
     for (unsigned ArgCount = 1;
          ArgCount < CI->arg_size() && ArgCount <= OpConvSpecifiers.size();
          ArgCount++) {
@@ -381,7 +387,6 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       Type *ArgType = Arg->getType();
       SmallVector<Value *, 32> WhatToStore;
       if (ArgType->isFPOrFPVectorTy() && !isa<VectorType>(ArgType)) {
-        Type *IType = (ArgType->isFloatTy()) ? Int32Ty : Int64Ty;
         if (OpConvSpecifiers[ArgCount - 1] == 'f') {
           if (auto *FpCons = dyn_cast<ConstantFP>(Arg)) {
             APFloat Val(FpCons->getValueAPF());
@@ -389,16 +394,13 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
             Val.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven,
                         &Lost);
             Arg = ConstantFP::get(Ctx, Val);
-            IType = Int32Ty;
           } else if (auto *FpExt = dyn_cast<FPExtInst>(Arg)) {
             if (FpExt->getType()->isDoubleTy() &&
                 FpExt->getOperand(0)->getType()->isFloatTy()) {
               Arg = FpExt->getOperand(0);
-              IType = Int32Ty;
             }
           }
         }
-        Arg = new BitCastInst(Arg, IType, "PrintArgFP", Brnch);
         WhatToStore.push_back(Arg);
       } else if (isa<PointerType>(ArgType)) {
         if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], ArgType)) {
@@ -409,19 +411,31 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
             DataExtractor Extractor(S, /*IsLittleEndian=*/true, 8);
             DataExtractor::Cursor Offset(0);
             while (Offset && Offset.tell() < S.size()) {
-              StringRef ReadBytes = Extractor.getBytes(
-                  Offset, std::min(ReadSize, S.size() - Offset.tell()));
+              uint64_t ReadNow = std::min(ReadSize, S.size() - Offset.tell());
+              uint64_t ReadBytes = 0;
+              switch (ReadNow) {
+              default: llvm_unreachable("min(4, X) > 4?");
+              case 1:
+                ReadBytes = Extractor.getU8(Offset);
+                break;
+              case 2:
+                ReadBytes = Extractor.getU16(Offset);
+                break;
+              case 3:
+                ReadBytes = Extractor.getU24(Offset);
+                break;
+              case 4:
+                ReadBytes = Extractor.getU32(Offset);
+                break;
+              }
 
               cantFail(Offset.takeError(),
                        "failed to read bytes from constant array");
 
-              APInt IntVal(8 * ReadBytes.size(), 0);
-              LoadIntFromMemory(
-                  IntVal, reinterpret_cast<const uint8_t *>(ReadBytes.data()),
-                  ReadBytes.size());
+              APInt IntVal(8 * ReadSize, ReadBytes);
 
               // TODO: Should not bothering aligning up.
-              if (ReadBytes.size() < ReadSize)
+              if (ReadNow < ReadSize)
                 IntVal = IntVal.zext(8 * ReadSize);
 
               Type *IntTy = Type::getIntNTy(Ctx, IntVal.getBitWidth());

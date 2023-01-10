@@ -846,7 +846,7 @@ define void @test17_caller(i32* noalias %p, i32 %c) {
 ; TUNIT-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]]) #[[ATTR10]]
 ; TUNIT-NEXT:    br label [[L3:%.*]]
 ; TUNIT:       l2:
-; TUNIT-NEXT:    tail call void @only_store(i32* nocapture nofree writeonly align 4 [[P]]) #[[ATTR10]]
+; TUNIT-NEXT:    tail call void @only_store(i32* noalias nocapture nofree writeonly align 4 [[P]]) #[[ATTR10]]
 ; TUNIT-NEXT:    br label [[L3]]
 ; TUNIT:       l3:
 ; TUNIT-NEXT:    ret void
