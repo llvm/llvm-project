@@ -85,18 +85,18 @@ declare i32 @foo(i32, i32) nounwind readnone
 ; -CHECK: add
 ; -CHECK-NOT: br
 
-define i32 @test4(i1 zeroext %flag, i32 %x, i32* %y) {
+define i32 @test4(i1 zeroext %flag, i32 %x, ptr %y) {
 entry:
   br i1 %flag, label %if.then, label %if.else
 
 if.then:
   %a = add i32 %x, 5
-  store i32 %a, i32* %y
+  store i32 %a, ptr %y
   br label %if.end
 
 if.else:
   %b = add i32 %x, 7
-  store i32 %b, i32* %y
+  store i32 %b, ptr %y
   br label %if.end
 
 if.end:
@@ -108,18 +108,18 @@ if.end:
 ; CHECK: store
 ; CHECK-NOT: store
 
-define i32 @test5(i1 zeroext %flag, i32 %x, i32* %y) {
+define i32 @test5(i1 zeroext %flag, i32 %x, ptr %y) {
 entry:
   br i1 %flag, label %if.then, label %if.else
 
 if.then:
   %a = add i32 %x, 5
-  store volatile i32 %a, i32* %y
+  store volatile i32 %a, ptr %y
   br label %if.end
 
 if.else:
   %b = add i32 %x, 7
-  store i32 %b, i32* %y
+  store i32 %b, ptr %y
   br label %if.end
 
 if.end:
@@ -130,18 +130,18 @@ if.end:
 ; CHECK: store volatile
 ; CHECK: store
 
-define i32 @test6(i1 zeroext %flag, i32 %x, i32* %y) {
+define i32 @test6(i1 zeroext %flag, i32 %x, ptr %y) {
 entry:
   br i1 %flag, label %if.then, label %if.else
 
 if.then:
   %a = add i32 %x, 5
-  store volatile i32 %a, i32* %y
+  store volatile i32 %a, ptr %y
   br label %if.end
 
 if.else:
   %b = add i32 %x, 7
-  store volatile i32 %b, i32* %y
+  store volatile i32 %b, ptr %y
   br label %if.end
 
 if.end:
@@ -153,20 +153,20 @@ if.end:
 ; CHECK: store volatile
 ; CHECK-NOT: store
 
-define i32 @test7(i1 zeroext %flag, i32 %x, i32* %y) {
+define i32 @test7(i1 zeroext %flag, i32 %x, ptr %y) {
 entry:
   br i1 %flag, label %if.then, label %if.else
 
 if.then:
-  %z = load volatile i32, i32* %y
+  %z = load volatile i32, ptr %y
   %a = add i32 %z, 5
-  store volatile i32 %a, i32* %y
+  store volatile i32 %a, ptr %y
   br label %if.end
 
 if.else:
-  %w = load volatile i32, i32* %y
+  %w = load volatile i32, ptr %y
   %b = add i32 %w, 7
-  store volatile i32 %b, i32* %y
+  store volatile i32 %b, ptr %y
   br label %if.end
 
 if.end:
@@ -181,22 +181,22 @@ if.end:
 ; CHECK-NOT: store
 
 ; The extra store in %if.then means %z and %w are not equivalent.
-define i32 @test9(i1 zeroext %flag, i32 %x, i32* %y, i32* %p) {
+define i32 @test9(i1 zeroext %flag, i32 %x, ptr %y, ptr %p) {
 entry:
   br i1 %flag, label %if.then, label %if.else
 
 if.then:
-  store i32 7, i32* %p
-  %z = load volatile i32, i32* %y
-  store i32 6, i32* %p
+  store i32 7, ptr %p
+  %z = load volatile i32, ptr %y
+  store i32 6, ptr %p
   %a = add i32 %z, 5
-  store volatile i32 %a, i32* %y
+  store volatile i32 %a, ptr %y
   br label %if.end
 
 if.else:
-  %w = load volatile i32, i32* %y
+  %w = load volatile i32, ptr %y
   %b = add i32 %w, 7
-  store volatile i32 %b, i32* %y
+  store volatile i32 %b, ptr %y
   br label %if.end
 
 if.end:
@@ -210,20 +210,20 @@ if.end:
 %struct.anon = type { i32, i32, i32 }
 
 ; The GEP indexes a struct type so cannot have a variable last index.
-define i32 @test10(i1 zeroext %flag, i32 %x, i32* %y, %struct.anon* %s) {
+define i32 @test10(i1 zeroext %flag, i32 %x, ptr %y, ptr %s) {
 entry:
   br i1 %flag, label %if.then, label %if.else
 
 if.then:
   %dummy = add i32 %x, 5
-  %gepa = getelementptr inbounds %struct.anon, %struct.anon* %s, i32 0, i32 1
-  store volatile i32 %x, i32* %gepa
+  %gepa = getelementptr inbounds %struct.anon, ptr %s, i32 0, i32 1
+  store volatile i32 %x, ptr %gepa
   br label %if.end
 
 if.else:
   %dummy1 = add i32 %x, 6
-  %gepb = getelementptr inbounds %struct.anon, %struct.anon* %s, i32 0, i32 2
-  store volatile i32 %x, i32* %gepb
+  %gepb = getelementptr inbounds %struct.anon, ptr %s, i32 0, i32 2
+  store volatile i32 %x, ptr %gepb
   br label %if.end
 
 if.end:
@@ -288,20 +288,20 @@ declare i32 @llvm.cttz.i32(i32 %x) readnone
 ; CHECK: call i32 @llvm.cttz
 
 ; The TBAA metadata should be properly combined.
-define i32 @test13(i1 zeroext %flag, i32 %x, i32* %y) {
+define i32 @test13(i1 zeroext %flag, i32 %x, ptr %y) {
 entry:
   br i1 %flag, label %if.then, label %if.else
 
 if.then:
-  %z = load volatile i32, i32* %y
+  %z = load volatile i32, ptr %y
   %a = add i32 %z, 5
-  store volatile i32 %a, i32* %y, !tbaa !3
+  store volatile i32 %a, ptr %y, !tbaa !3
   br label %if.end
 
 if.else:
-  %w = load volatile i32, i32* %y
+  %w = load volatile i32, ptr %y
   %b = add i32 %w, 7
-  store volatile i32 %b, i32* %y, !tbaa !4
+  store volatile i32 %b, ptr %y, !tbaa !4
   br label %if.end
 
 if.end:
@@ -345,21 +345,21 @@ declare i32 @bar(i32)
 ; CHECK: call i32 @bar(i32 %[[x]])
 
 ; The load should be commoned.
-define i32 @test14(i1 zeroext %flag, i32 %w, i32 %x, i32 %y, %struct.anon* %s) {
+define i32 @test14(i1 zeroext %flag, i32 %w, i32 %x, i32 %y, ptr %s) {
 entry:
   br i1 %flag, label %if.then, label %if.else
 
 if.then:
   %dummy = add i32 %x, 1
-  %gepa = getelementptr inbounds %struct.anon, %struct.anon* %s, i32 0, i32 1
-  %sv1 = load i32, i32* %gepa
+  %gepa = getelementptr inbounds %struct.anon, ptr %s, i32 0, i32 1
+  %sv1 = load i32, ptr %gepa
   %cmp1 = icmp eq i32 %sv1, 56
   br label %if.end
 
 if.else:
   %dummy2 = add i32 %x, 4
-  %gepb = getelementptr inbounds %struct.anon, %struct.anon* %s, i32 0, i32 1
-  %sv2 = load i32, i32* %gepb
+  %gepb = getelementptr inbounds %struct.anon, ptr %s, i32 0, i32 1
+  %sv2 = load i32, ptr %gepb
   %cmp2 = icmp eq i32 %sv2, 57
   br label %if.end
 
@@ -374,22 +374,22 @@ if.end:
 ; CHECK-NOT: load
 
 ; The load should be commoned.
-define i32 @test15(i1 zeroext %flag, i32 %w, i32 %x, i32 %y, %struct.anon* %s) {
+define i32 @test15(i1 zeroext %flag, i32 %w, i32 %x, i32 %y, ptr %s) {
 entry:
   br i1 %flag, label %if.then, label %if.else
 
 if.then:
   %dummy = add i32 %x, 1
-  %gepa = getelementptr inbounds %struct.anon, %struct.anon* %s, i32 0, i32 0
-  %sv1 = load i32, i32* %gepa
+  %gepa = getelementptr inbounds %struct.anon, ptr %s, i32 0, i32 0
+  %sv1 = load i32, ptr %gepa
   %ext1 = zext i32 %sv1 to i64
   %cmp1 = icmp eq i64 %ext1, 56
   br label %if.end
 
 if.else:
   %dummy2 = add i32 %x, 4
-  %gepb = getelementptr inbounds %struct.anon, %struct.anon* %s, i32 0, i32 1
-  %sv2 = load i32, i32* %gepb
+  %gepb = getelementptr inbounds %struct.anon, ptr %s, i32 0, i32 1
+  %sv2 = load i32, ptr %gepb
   %ext2 = zext i32 %sv2 to i64
   %cmp2 = icmp eq i64 %ext2, 56
   br label %if.end
@@ -404,21 +404,21 @@ if.end:
 ; CHECK: load
 ; CHECK-NOT: load
 
-define zeroext i1 @test_crash(i1 zeroext %flag, i32* %i4, i32* %m, i32* %n) {
+define zeroext i1 @test_crash(i1 zeroext %flag, ptr %i4, ptr %m, ptr %n) {
 entry:
   br i1 %flag, label %if.then, label %if.else
 
 if.then:
-  %tmp1 = load i32, i32* %i4
+  %tmp1 = load i32, ptr %i4
   %tmp2 = add i32 %tmp1, -1
-  store i32 %tmp2, i32* %i4
+  store i32 %tmp2, ptr %i4
   br label %if.end
 
 if.else:
-  %tmp3 = load i32, i32* %m
-  %tmp4 = load i32, i32* %n
+  %tmp3 = load i32, ptr %m
+  %tmp4 = load i32, ptr %n
   %tmp5 = add i32 %tmp3, %tmp4
-  store i32 %tmp5, i32* %i4
+  store i32 %tmp5, ptr %i4
   br label %if.end
 
 if.end:
@@ -457,7 +457,7 @@ if.end:
 ; CHECK: zext
 ; CHECK: zext
 
-define zeroext i1 @test16a(i1 zeroext %flag, i1 zeroext %flag2, i32 %blksA, i32 %blksB, i32 %nblks, i8* %p) {
+define zeroext i1 @test16a(i1 zeroext %flag, i1 zeroext %flag2, i32 %blksA, i32 %blksB, i32 %nblks, ptr %p) {
 
 entry:
   br i1 %flag, label %if.then, label %if.else
@@ -467,7 +467,7 @@ if.then:
   %frombool1 = zext i1 %cmp to i8
   %b1 = sext i8 %frombool1 to i32
   %b2 = trunc i32 %b1 to i8
-  store i8 %b2, i8* %p
+  store i8 %b2, ptr %p
   br label %if.end
 
 if.else:
@@ -479,7 +479,7 @@ if.then2:
   %frombool3 = zext i1 %cmp2 to i8
   %a1 = sext i8 %frombool3 to i32
   %a2 = trunc i32 %a1 to i8
-  store i8 %a2, i8* %p
+  store i8 %a2, ptr %p
   br label %if.end
 
 if.end:
@@ -615,7 +615,7 @@ entry:
 if.then:
   %cmp = icmp uge i32 %blksA, %nblks
   %frombool1 = zext i1 %cmp to i8
-  store i8 %frombool1, i8* %p
+  store i8 %frombool1, ptr %p
   br label %if.end
 
 if.else:
@@ -625,7 +625,7 @@ if.then2:
   %add = add i32 %nblks, %blksB
   %cmp2 = icmp ule i32 %add, %blksA
   %frombool3 = zext i1 %cmp2 to i8
-  store i8 %frombool3, i8* %p
+  store i8 %frombool3, ptr %p
   br label %if.end
 
 if.end:
@@ -695,20 +695,20 @@ if.end:
 
 ; CHECK-LABEL: @common_bitcast(
 ; CHECK: %. = select i1 %flag, float 2.000000e+00, float 1.000000e+00
-; CHECK: %[[a1:.*]] = bitcast i32* %x to float*
-; CHECK: store float %., float* %[[a1]]
-define i32 @common_bitcast(i1 zeroext %flag, i32* %x) {
+; CHECK: %[[a1:.*]] = bitcast ptr %x to ptr
+; CHECK: store float %., ptr %[[a1]]
+define i32 @common_bitcast(i1 zeroext %flag, ptr %x) {
 entry:
   br i1 %flag, label %if.then, label %if.else
 
 if.then:
-  %a = bitcast i32* %x to float*
-  store float 2.0, float* %a
+  %a = bitcast ptr %x to ptr
+  store float 2.0, ptr %a
   br label %if.end
 
 if.else:
-  %b = bitcast i32* %x to float*
-  store float 1.0, float* %b
+  %b = bitcast ptr %x to ptr
+  store float 1.0, ptr %b
   br label %if.end
 
 if.end:
@@ -717,20 +717,20 @@ if.end:
 
 ; CHECK-LABEL: @common_addrspacecast(
 ; CHECK: %. = select i1 %flag, i32 9, i32 10
-; CHECK: %[[a2:.*]] = addrspacecast i32* %x to i32 addrspace(1)*
-; CHECK: store i32 %., i32 addrspace(1)* %[[a2]]
-define i32 @common_addrspacecast(i1 zeroext %flag, i32* %x) {
+; CHECK: %[[a2:.*]] = addrspacecast ptr %x to ptr addrspace(1)
+; CHECK: store i32 %., ptr addrspace(1) %[[a2]]
+define i32 @common_addrspacecast(i1 zeroext %flag, ptr %x) {
 entry:
   br i1 %flag, label %if.then, label %if.else
 
 if.then:
-  %a = addrspacecast i32* %x to i32 addrspace(1)*
-  store i32 9, i32 addrspace(1)* %a
+  %a = addrspacecast ptr %x to ptr addrspace(1)
+  store i32 9, ptr addrspace(1) %a
   br label %if.end
 
 if.else:
-  %b = addrspacecast i32* %x to i32 addrspace(1)*
-  store i32 10, i32 addrspace(1)* %b
+  %b = addrspacecast ptr %x to ptr addrspace(1)
+  store i32 10, ptr addrspace(1) %b
   br label %if.end
 
 if.end:
@@ -739,20 +739,20 @@ if.end:
 
 ; Don't merge different address spaces
 ; CHECK-LABEL: @no_common_addrspacecast(
-; CHECK: addrspacecast i32* %x to i32 addrspace(1)*
-; CHECK: addrspacecast i32* %x to i32 addrspace(3)*
-define i32 @no_common_addrspacecast(i1 zeroext %flag, i32* %x) {
+; CHECK: addrspacecast ptr %x to ptr addrspace(1)
+; CHECK: addrspacecast ptr %x to ptr addrspace(3)
+define i32 @no_common_addrspacecast(i1 zeroext %flag, ptr %x) {
 entry:
   br i1 %flag, label %if.then, label %if.else
 
 if.then:
-  %a = addrspacecast i32* %x to i32 addrspace(1)*
-  store i32 9, i32 addrspace(1)* %a
+  %a = addrspacecast ptr %x to ptr addrspace(1)
+  store i32 9, ptr addrspace(1) %a
   br label %if.end
 
 if.else:
-  %b = addrspacecast i32* %x to i32 addrspace(3)*
-  store i32 10, i32 addrspace(3)* %b
+  %b = addrspacecast ptr %x to ptr addrspace(3)
+  store i32 10, ptr addrspace(3) %b
   br label %if.end
 
 if.end:
