@@ -8,8 +8,9 @@ find_package(Clang 16)
 set(SOURCES
     abi_tag_on_virtual.cpp
     hide_from_abi.cpp
-    robust_against_adl.cpp
     qualify_declval.cpp
+    robust_against_adl.cpp
+    uglify_attributes.cpp
 
     libcpp_module.cpp
    )
