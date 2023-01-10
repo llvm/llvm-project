@@ -5643,36 +5643,6 @@ void LSRInstance::Rewrite(const LSRUse &LU, const LSRFixup &LF,
     DeadInsts.emplace_back(OperandIsInstr);
 }
 
-// Trying to hoist the IVInc to loop header if all IVInc users are in
-// the loop header. It will help backend to generate post index load/store
-// when the latch block is different from loop header block.
-static bool canHoistIVInc(const TargetTransformInfo &TTI, const LSRFixup &Fixup,
-                          const LSRUse &LU, Instruction *IVIncInsertPos,
-                          Loop *L) {
-  if (LU.Kind != LSRUse::Address)
-    return false;
-
-  // For now this code do the conservative optimization, only work for
-  // the header block. Later we can hoist the IVInc to the block post
-  // dominate all users.
-  BasicBlock *LHeader = L->getHeader();
-  if (IVIncInsertPos->getParent() == LHeader)
-    return false;
-
-  if (!Fixup.OperandValToReplace ||
-      any_of(Fixup.OperandValToReplace->users(), [&LHeader](User *U) {
-        Instruction *UI = cast<Instruction>(U);
-        return UI->getParent() != LHeader;
-      }))
-    return false;
-
-  Instruction *I = Fixup.UserInst;
-  return (isa<LoadInst>(I) &&
-          TTI.isIndexedLoadLegal(TTI.MIM_PostInc, I->getType())) ||
-         (isa<StoreInst>(I) &&
-          TTI.isIndexedStoreLegal(TTI.MIM_PostInc, I->getType()));
-}
-
 /// Rewrite all the fixup locations with new values, following the chosen
 /// solution.
 void LSRInstance::ImplementSolution(
@@ -5680,6 +5650,8 @@ void LSRInstance::ImplementSolution(
   // Keep track of instructions we may have made dead, so that
   // we can remove them after we are done working.
   SmallVector<WeakTrackingVH, 16> DeadInsts;
+
+  Rewriter.setIVIncInsertPos(L, IVIncInsertPos);
 
   // Mark phi nodes that terminate chains so the expander tries to reuse them.
   for (const IVChain &Chain : IVChainVec) {
@@ -5690,11 +5662,6 @@ void LSRInstance::ImplementSolution(
   // Expand the new value definitions and update the users.
   for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx)
     for (const LSRFixup &Fixup : Uses[LUIdx].Fixups) {
-      Instruction *InsertPos =
-          canHoistIVInc(TTI, Fixup, Uses[LUIdx], IVIncInsertPos, L)
-              ? L->getHeader()->getTerminator()
-              : IVIncInsertPos;
-      Rewriter.setIVIncInsertPos(L, InsertPos);
       Rewrite(Uses[LUIdx], Fixup, *Solution[LUIdx], DeadInsts);
       Changed = true;
     }

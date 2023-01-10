@@ -715,18 +715,24 @@ void applyArm64Addr(uint8_t *off, uint64_t s, uint64_t p, int shift);
 void applyArm64Imm(uint8_t *off, uint64_t imm, uint32_t rangeLimit);
 void applyArm64Branch26(uint8_t *off, int64_t v);
 
+// Convenience class for initializing a coff_section with specific flags.
+class FakeSection {
+public:
+  FakeSection(int c) { section.Characteristics = c; }
+
+  coff_section section;
+};
+
 // Convenience class for initializing a SectionChunk with specific flags.
 class FakeSectionChunk {
 public:
-  FakeSectionChunk(int c) : chunk(nullptr, &section) {
-    section.Characteristics = c;
+  FakeSectionChunk(const coff_section *section) : chunk(nullptr, section) {
     // Comdats from LTO files can't be fully treated as regular comdats
     // at this point; we don't know what size or contents they are going to
     // have, so we can't do proper checking of such aspects of them.
     chunk.selection = llvm::COFF::IMAGE_COMDAT_SELECT_ANY;
   }
 
-  coff_section section;
   SectionChunk chunk;
 };
 

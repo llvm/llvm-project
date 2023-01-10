@@ -405,7 +405,7 @@ unsigned DWARFVerifier::verifyIndex(StringRef Name,
   DataExtractor D(IndexStr, DCtx.isLittleEndian(), 0);
   if (!Index.parse(D))
     return 1;
-  using MapType = IntervalMap<uint32_t, uint64_t>;
+  using MapType = IntervalMap<uint64_t, uint64_t>;
   MapType::Allocator Alloc;
   std::vector<std::unique_ptr<MapType>> Sections(Index.getColumnKinds().size());
   for (const DWARFUnitIndex::Entry &E : Index.getRows()) {
@@ -418,20 +418,20 @@ unsigned DWARFVerifier::verifyIndex(StringRef Name,
                  : ArrayRef(E.getContribution(), 1))) {
       const DWARFUnitIndex::Entry::SectionContribution &SC = E.value();
       int Col = E.index();
-      if (SC.Length == 0)
+      if (SC.getLength() == 0)
         continue;
       if (!Sections[Col])
         Sections[Col] = std::make_unique<MapType>(Alloc);
       auto &M = *Sections[Col];
-      auto I = M.find(SC.Offset);
-      if (I != M.end() && I.start() < (SC.Offset + SC.Length)) {
+      auto I = M.find(SC.getOffset());
+      if (I != M.end() && I.start() < (SC.getOffset() + SC.getLength())) {
         error() << llvm::formatv(
             "overlapping index entries for entries {0:x16} "
             "and {1:x16} for column {2}\n",
             *I, Sig, toString(Index.getColumnKinds()[Col]));
         return 1;
       }
-      M.insert(SC.Offset, SC.Offset + SC.Length - 1, Sig);
+      M.insert(SC.getOffset(), SC.getOffset() + SC.getLength() - 1, Sig);
     }
   }
 
