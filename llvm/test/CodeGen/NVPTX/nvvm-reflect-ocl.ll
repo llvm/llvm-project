@@ -1,6 +1,6 @@
 ; Verify that __nvvm_reflect_ocl() is replaced with an appropriate value
 ;
-; RUN: opt %s -S -passes='default<O2>' -mtriple=nvptx64 \
+; RUN: opt %s -S -passes='default<O2>' -mtriple=nvptx64 -mcpu=sm_20 \
 ; RUN:   | FileCheck %s --check-prefixes=COMMON,SM20
 ; RUN: opt %s -S -passes='default<O2>' -mtriple=nvptx64 -mcpu=sm_35 \
 ; RUN:   | FileCheck %s --check-prefixes=COMMON,SM35

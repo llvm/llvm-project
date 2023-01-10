@@ -726,12 +726,12 @@ const syntax::Token *findNearbyIdentifier(const SpelledWord &Word,
     return T.location() < Word.Location; // Comparison OK: same file.
   });
   // Search for matches after the cursor.
-  for (const syntax::Token &Tok : llvm::makeArrayRef(I, SpelledTokens.end()))
+  for (const syntax::Token &Tok : llvm::ArrayRef(I, SpelledTokens.end()))
     if (Consider(Tok))
       break; // costs of later tokens are greater...
   // Search for matches before the cursor.
   for (const syntax::Token &Tok :
-       llvm::reverse(llvm::makeArrayRef(SpelledTokens.begin(), I)))
+       llvm::reverse(llvm::ArrayRef(SpelledTokens.begin(), I)))
     if (Consider(Tok))
       break;
 

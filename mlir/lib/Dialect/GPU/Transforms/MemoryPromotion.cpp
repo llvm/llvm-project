@@ -70,14 +70,14 @@ static void insertCopyLoops(ImplicitLocOpBuilder &b, Value from, Value to) {
       b, b.getLoc(), lbs, ubs, steps,
       [&](OpBuilder &b, Location loc, ValueRange loopIvs) {
         ivs.assign(loopIvs.begin(), loopIvs.end());
-        auto activeIvs = llvm::makeArrayRef(ivs).take_back(rank);
+        auto activeIvs = llvm::ArrayRef(ivs).take_back(rank);
         Value loaded = b.create<memref::LoadOp>(loc, from, activeIvs);
         b.create<memref::StoreOp>(loc, loaded, to, activeIvs);
       });
 
   // Map the innermost loops to threads in reverse order.
   for (const auto &en :
-       llvm::enumerate(llvm::reverse(llvm::makeArrayRef(ivs).take_back(
+       llvm::enumerate(llvm::reverse(llvm::ArrayRef(ivs).take_back(
            GPUDialect::getNumWorkgroupDimensions())))) {
     Value v = en.value();
     auto loop = cast<scf::ForOp>(v.getParentRegion()->getParentOp());

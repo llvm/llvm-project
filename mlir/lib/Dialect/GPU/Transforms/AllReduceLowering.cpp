@@ -347,7 +347,7 @@ private:
                   return SmallVector<Value, 1>{
                       accumFactory(value, shuffleOp.getResult(0))};
                 },
-                [&] { return llvm::makeArrayRef(value); });
+                [&] { return llvm::ArrayRef(value); });
             value = rewriter.getInsertionBlock()->getArgument(0);
           }
           return SmallVector<Value, 1>{value};

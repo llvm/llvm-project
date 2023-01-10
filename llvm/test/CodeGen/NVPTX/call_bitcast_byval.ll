@@ -37,9 +37,9 @@ define void @boom() {
   %fp = call ptr @usefp(ptr @callee)
   ; CHECK: .param .align 4 .b8 param0[4];
   ; CHECK: st.param.v2.b16 [param0+0]
-  ; CHECK: .callprototype ()_ (.param .align 2 .b8 _[4]);
+  ; CHECK: .callprototype ()_ (.param .align 4 .b8 _[4]);
   call void %fp(ptr byval(%"class.complex") null)
   ret void
 }
 
-declare %complex_half @_Z20__spirv_GroupCMulKHRjjN5__spv12complex_halfE()
+declare %complex_half @_Z20__spirv_GroupCMulKHRjjN5__spv12complex_halfE(i32, i32, ptr byval(%"class.complex"))

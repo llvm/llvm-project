@@ -919,8 +919,8 @@ public:
     if (failed(reader.parseVarInt(dataSize)) ||
         failed(reader.parseBytes(dataSize, data)))
       return failure();
-    result = llvm::makeArrayRef(reinterpret_cast<const char *>(data.data()),
-                                data.size());
+    result = llvm::ArrayRef(reinterpret_cast<const char *>(data.data()),
+                            data.size());
     return success();
   }
 

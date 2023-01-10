@@ -57,7 +57,7 @@ static void createPrintMsg(OpBuilder &builder, Location loc, ModuleOp moduleOp,
   auto dataAttrType = RankedTensorType::get(
       {static_cast<int64_t>(elementVals.size())}, builder.getI8Type());
   auto dataAttr =
-      DenseElementsAttr::get(dataAttrType, llvm::makeArrayRef(elementVals));
+      DenseElementsAttr::get(dataAttrType, llvm::ArrayRef(elementVals));
   auto arrayTy =
       LLVM::LLVMArrayType::get(IntegerType::get(ctx, 8), elementVals.size());
   std::string symbolName = generateGlobalMsgSymbolName(moduleOp);

@@ -37,7 +37,7 @@ template <> struct OptionEnumMapping<modernize::Confidence::Level> {
         Mapping[] = {{modernize::Confidence::CL_Reasonable, "reasonable"},
                      {modernize::Confidence::CL_Safe, "safe"},
                      {modernize::Confidence::CL_Risky, "risky"}};
-    return makeArrayRef(Mapping);
+    return ArrayRef(Mapping);
   }
 };
 
@@ -50,7 +50,7 @@ template <> struct OptionEnumMapping<modernize::VariableNamer::NamingStyle> {
                      {modernize::VariableNamer::NS_CamelBack, "camelBack"},
                      {modernize::VariableNamer::NS_LowerCase, "lower_case"},
                      {modernize::VariableNamer::NS_UpperCase, "UPPER_CASE"}};
-    return makeArrayRef(Mapping);
+    return ArrayRef(Mapping);
   }
 };
 

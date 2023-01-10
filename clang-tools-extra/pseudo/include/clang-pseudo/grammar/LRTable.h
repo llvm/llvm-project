@@ -98,8 +98,8 @@ public:
   //   }
   llvm::ArrayRef<RuleID> getReduceRules(StateID State) const {
     assert(State + 1u < ReduceOffset.size());
-    return llvm::makeArrayRef(Reduces.data() + ReduceOffset[State],
-                              Reduces.data() + ReduceOffset[State+1]);
+    return llvm::ArrayRef(Reduces.data() + ReduceOffset[State],
+                          Reduces.data() + ReduceOffset[State + 1]);
   }
   // Returns whether Terminal can follow Nonterminal in a valid source file.
   bool canFollow(SymbolID Nonterminal, SymbolID Terminal) const {
@@ -113,8 +113,8 @@ public:
 
   // Looks up available recovery actions if we stopped parsing in this state.
   llvm::ArrayRef<Recovery> getRecovery(StateID State) const {
-    return llvm::makeArrayRef(Recoveries.data() + RecoveryOffset[State],
-                              Recoveries.data() + RecoveryOffset[State + 1]);
+    return llvm::ArrayRef(Recoveries.data() + RecoveryOffset[State],
+                          Recoveries.data() + RecoveryOffset[State + 1]);
   }
 
   // Returns the state from which the LR parser should start to parse the input
