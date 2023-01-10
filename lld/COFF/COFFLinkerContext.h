@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_COFF_COFFLinkerContext_H
-#define LLD_COFF_COFFLinkerContext_H
+#ifndef LLD_COFF_COFFLINKERCONTEXT_H
+#define LLD_COFF_COFFLINKERCONTEXT_H
 
 #include "Chunks.h"
 #include "Config.h"
 #include "DebugTypes.h"
+#include "Driver.h"
 #include "InputFiles.h"
 #include "SymbolTable.h"
 #include "Writer.h"
@@ -27,9 +28,9 @@ public:
   COFFLinkerContext &operator=(const COFFLinkerContext &) = delete;
   ~COFFLinkerContext() = default;
 
-  void addTpiSource(TpiSource *tpi) { tpiSourceList.push_back(tpi); }
-
+  LinkerDriver driver;
   SymbolTable symtab;
+  COFFOptTable optTable;
 
   std::vector<ObjFile *> objFileInstances;
   std::map<std::string, PDBInputFile *> pdbInputFileInstances;
@@ -41,6 +42,8 @@ public:
   /// All sources of type information in the program.
   std::vector<TpiSource *> tpiSourceList;
 
+  void addTpiSource(TpiSource *tpi) { tpiSourceList.push_back(tpi); }
+
   std::map<llvm::codeview::GUID, TpiSource *> typeServerSourceMappings;
   std::map<uint32_t, TpiSource *> precompSourceMappings;
 
@@ -51,6 +54,10 @@ public:
   OutputSection *getOutputSection(const Chunk *c) const {
     return c->osidx == 0 ? nullptr : outputSections[c->osidx - 1];
   }
+
+  // Fake sections for parsing bitcode files.
+  FakeSectionChunk ltoTextSectionChunk;
+  FakeSectionChunk ltoDataSectionChunk;
 
   // All timers used in the COFF linker.
   Timer rootTimer;
@@ -77,6 +84,8 @@ public:
   Timer publicsLayoutTimer;
   Timer tpiStreamLayoutTimer;
   Timer diskCommitTimer;
+
+  Configuration config;
 };
 
 } // namespace lld::coff
