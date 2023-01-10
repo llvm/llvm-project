@@ -207,7 +207,7 @@ if.end:
 ; CHECK: add
 ; CHECK: add
 
-%struct.anon = type { i32, i32 }
+%struct.anon = type { i32, i32, i32 }
 
 ; The GEP indexes a struct type so cannot have a variable last index.
 define i32 @test10(i1 zeroext %flag, i32 %x, i32* %y, %struct.anon* %s) {
@@ -216,13 +216,13 @@ entry:
 
 if.then:
   %dummy = add i32 %x, 5
-  %gepa = getelementptr inbounds %struct.anon, %struct.anon* %s, i32 0, i32 0
+  %gepa = getelementptr inbounds %struct.anon, %struct.anon* %s, i32 0, i32 1
   store volatile i32 %x, i32* %gepa
   br label %if.end
 
 if.else:
   %dummy1 = add i32 %x, 6
-  %gepb = getelementptr inbounds %struct.anon, %struct.anon* %s, i32 0, i32 1
+  %gepb = getelementptr inbounds %struct.anon, %struct.anon* %s, i32 0, i32 2
   store volatile i32 %x, i32* %gepb
   br label %if.end
 
