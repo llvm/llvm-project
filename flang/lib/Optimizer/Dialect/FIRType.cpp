@@ -326,6 +326,7 @@ mlir::Type unwrapInnerType(mlir::Type ty) {
           return seqTy.getEleTy();
         return eleTy;
       })
+      .Case<fir::RecordType>([](auto t) { return t; })
       .Default([](mlir::Type) { return mlir::Type{}; });
 }
 
