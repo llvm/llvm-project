@@ -19,7 +19,7 @@ class AmdgpuMemFuncs {
   static bool Init();
   static void *Allocate(uptr size, uptr alignment,
                         DeviceAllocationInfo *da_info);
-  static void Deallocate(void *p);
+  static void Deallocate(void *p, DeviceAllocationInfo *da_info);
   static bool GetPointerInfo(uptr ptr, DevivePointerInfo *ptr_info);
   static uptr GetPageSize();
 };

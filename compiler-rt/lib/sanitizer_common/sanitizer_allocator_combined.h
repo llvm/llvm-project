@@ -54,7 +54,7 @@ class CombinedAllocator {
   }
 
   void *Allocate(AllocatorCache *cache, uptr size, uptr alignment,
-                 DeviceAllocationInfo* da_info = nullptr) {
+                 DeviceAllocationInfo *da_info = nullptr) {
     // Returning 0 on malloc(0) may break a lot of code.
     if (size == 0)
       size = 1;
@@ -104,7 +104,8 @@ class CombinedAllocator {
     primary_.ForceReleaseToOS();
   }
 
-  void Deallocate(AllocatorCache *cache, void *p) {
+  void Deallocate(AllocatorCache *cache, void *p,
+                  DeviceAllocationInfo *da_info = nullptr) {
     if (!p) return;
     if (primary_.PointerIsMine(p))
       cache->Deallocate(&primary_, primary_.GetSizeClass(p), p);
@@ -112,7 +113,7 @@ class CombinedAllocator {
       secondary_.Deallocate(&stats_, p);
 #if SANITIZER_AMDGPU
     else if (device_.PointerIsMine(p))
-      device_.Deallocate(&stats_, p);
+      device_.Deallocate(&stats_, p, da_info);
 #endif
   }
 

@@ -94,7 +94,6 @@ class ChunkHeader {
   // align < 8 -> 0
   // else      -> log2(min(align, 512)) - 2
   u8 user_requested_alignment_log : 3;
-  u8 device_mem : 1;
 
  private:
   u16 user_requested_size_hi;
@@ -176,9 +175,22 @@ class LargeChunkHeader {
                : nullptr;
   }
 
-  void Set(AsanChunk *p) {
+  void Set(AsanChunk *p, DeviceAllocationInfo *da_info = nullptr) {
     if (p) {
       chunk_header = p;
+
+      // remapped_device_page is stored right after chunk_header. We don't
+      // declare it formally in the data structure otherwise some sanity check
+      // will fail for host allocations, where remapped_device_page is really
+      // meaningless.
+      // For device memory, we always have enough space in LargeChunkHeader to
+      // store remapped_device_page because the alignment is always kPageSize_
+      if (da_info) {
+        void **remapped_device_page = reinterpret_cast<void **>(
+            reinterpret_cast<uptr>(&chunk_header) + sizeof(AsanChunk *));
+        *remapped_device_page = da_info->remapped_device_page;
+      }
+
       atomic_store(&magic, kAllocBegMagic, memory_order_release);
       return;
     }
@@ -188,6 +200,14 @@ class LargeChunkHeader {
                                         memory_order_release)) {
       CHECK_EQ(old, kAllocBegMagic);
     }
+  }
+
+  void *GetRemappedDevicePage() const {
+    void **remapped_device_page = reinterpret_cast<void **>(
+      reinterpret_cast<uptr>(&chunk_header) + sizeof(AsanChunk *));
+    return atomic_load(&magic, memory_order_acquire) == kAllocBegMagic
+               ? *remapped_device_page
+               : nullptr;
   }
 };
 
@@ -199,7 +219,13 @@ struct QuarantineCallback {
 
   void Recycle(AsanChunk *m) {
     void *p = get_allocator().GetBlockBegin(m);
+    DeviceAllocationInfo da_info;
     if (p != m) {
+      // For host allocations, GetRemappedDevicePage() doesn't return valid
+      // values for remapped_device_page, but it shouldn't matter because host
+      // memory Deallocate() calls won't use da_info
+      da_info.remapped_device_page =
+        reinterpret_cast<LargeChunkHeader *>(p)->GetRemappedDevicePage();
       // Clear the magic value, as allocator internals may overwrite the
       // contents of deallocated chunk, confusing GetAsanChunk lookup.
       reinterpret_cast<LargeChunkHeader *>(p)->Set(nullptr);
@@ -219,7 +245,7 @@ struct QuarantineCallback {
     thread_stats.real_frees++;
     thread_stats.really_freed += m->UsedSize();
 
-    get_allocator().Deallocate(cache_, p);
+    get_allocator().Deallocate(cache_, p, &da_info);
   }
 
   void *Allocate(uptr size) {
@@ -561,7 +587,6 @@ struct Allocator {
     uptr chunk_beg = user_beg - kChunkHeaderSize;
     AsanChunk *m = reinterpret_cast<AsanChunk *>(chunk_beg);
     m->alloc_type = alloc_type;
-    m->device_mem = da_info ? 1 : 0;
     CHECK(size);
     m->SetUsedSize(size);
     m->user_requested_alignment_log = user_requested_alignment_log;
@@ -602,7 +627,7 @@ struct Allocator {
     atomic_store(&m->chunk_state, CHUNK_ALLOCATED, memory_order_release);
     if (alloc_beg != chunk_beg) {
       CHECK_LE(alloc_beg + sizeof(LargeChunkHeader), chunk_beg);
-      reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Set(m);
+      reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Set(m, da_info);
     }
     RunMallocHooks(res, size);
     return res;
@@ -617,26 +642,9 @@ struct Allocator {
     if (!atomic_compare_exchange_strong(&m->chunk_state, &old_chunk_state,
                                         CHUNK_QUARANTINE,
                                         memory_order_acquire)) {
-      if (!m->device_mem) {
-        ReportInvalidFree(ptr, old_chunk_state, stack);
-        // It's not safe to push a chunk in quarantine on invalid free.
-        return false;
-      } else {
-        // Temporary patch: atomic_compare_exchange_strong will give wrong
-        // results sometimes for device memory, so just use a mutex to protect
-        // us from the possible race conditions
-        //
-        // We need a mutex, borrow fallback_mutex
-        SpinMutexLock l(&fallback_mutex);
-        old_chunk_state = atomic_load(&m->chunk_state, memory_order_relaxed);
-        if (old_chunk_state == CHUNK_ALLOCATED) {
-          atomic_store(&m->chunk_state, CHUNK_QUARANTINE, memory_order_relaxed);
-        } else {
-          ReportInvalidFree(ptr, old_chunk_state, stack);
-          // It's not safe to push a chunk in quarantine on invalid free.
-          return false;
-        }
-      }
+      ReportInvalidFree(ptr, old_chunk_state, stack);
+      // It's not safe to push a chunk in quarantine on invalid free.
+      return false;
     }
     CHECK_EQ(CHUNK_ALLOCATED, old_chunk_state);
     // It was a user data.
@@ -1242,6 +1250,7 @@ hsa_status_t asan_hsa_amd_memory_pool_allocate(
     AmdgpuAllocationInfo aa_info;
     aa_info.alloc_func =
       reinterpret_cast<void *>(asan_hsa_amd_memory_pool_allocate);
+    aa_info.remap_first_device_page = true;
     aa_info.memory_pool = memory_pool;
     aa_info.size = size;
     aa_info.flags = flags;
