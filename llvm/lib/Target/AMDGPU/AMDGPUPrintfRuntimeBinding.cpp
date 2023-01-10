@@ -161,7 +161,13 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
   LLVMContext &Ctx = M.getContext();
   IRBuilder<> Builder(Ctx);
   Type *I32Ty = Type::getInt32Ty(Ctx);
-  unsigned UniqID = 0;
+
+  // Instead of creating global variables, the printf format strings are
+  // extracted and passed as metadata. This avoids polluting llvm's symbol
+  // tables in this module. Metadata is going to be extracted by the backend
+  // passes and inserted into the OpenCL binary as appropriate.
+  NamedMDNode *metaD = M.getOrInsertNamedMetadata("llvm.printf.fmts");
+  unsigned UniqID = metaD->getNumOperands();
 
   for (auto *CI : Printfs) {
     unsigned NumOps = CI->arg_size();
@@ -326,15 +332,6 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
     std::string fmtstr = itostr(++UniqID) + ":" + Sizes.str();
     MDString *fmtStrArray = MDString::get(Ctx, fmtstr);
 
-    // Instead of creating global variables, the
-    // printf format strings are extracted
-    // and passed as metadata. This avoids
-    // polluting llvm's symbol tables in this module.
-    // Metadata is going to be extracted
-    // by the backend passes and inserted
-    // into the OpenCL binary as appropriate.
-    StringRef amd("llvm.printf.fmts");
-    NamedMDNode *metaD = M.getOrInsertNamedMetadata(amd);
     MDNode *myMD = MDNode::get(Ctx, fmtStrArray);
     metaD->addOperand(myMD);
     Value *sumC = ConstantInt::get(SizetTy, Sum, false);
