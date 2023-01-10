@@ -47,7 +47,7 @@ public:
         MustBeDeclaration(Line.MustBeDeclaration), MightBeFunctionDecl(false),
         IsMultiVariableDeclStmt(false), Affected(false),
         LeadingEmptyLinesAffected(false), ChildrenAffected(false),
-        ReturnTypeWrapped(false), IsContinuation(Line.IsContinuation),
+        IsContinuation(Line.IsContinuation),
         FirstStartColumn(Line.FirstStartColumn) {
     assert(!Line.Tokens.empty());
 
@@ -150,9 +150,6 @@ public:
 
   /// \c True if one of this line's children intersects with an input range.
   bool ChildrenAffected;
-
-  /// \c True if breaking after last attribute group in function return type.
-  bool ReturnTypeWrapped;
 
   /// \c True if this line should be indented by ContinuationIndent in addition
   /// to the normal indention level.
