@@ -88,7 +88,11 @@ bool CheckDefaultArgumentVisitor::VisitExpr(const Expr *Node) {
 /// determine whether this declaration can be used in the default
 /// argument expression.
 bool CheckDefaultArgumentVisitor::VisitDeclRefExpr(const DeclRefExpr *DRE) {
-  const NamedDecl *Decl = DRE->getDecl();
+  const ValueDecl *Decl = dyn_cast<ValueDecl>(DRE->getDecl());
+
+  if (!isa<VarDecl, BindingDecl>(Decl))
+    return false;
+
   if (const auto *Param = dyn_cast<ParmVarDecl>(Decl)) {
     // C++ [dcl.fct.default]p9:
     //   [...] parameters of a function shall not be used in default
@@ -102,30 +106,23 @@ bool CheckDefaultArgumentVisitor::VisitDeclRefExpr(const DeclRefExpr *DRE) {
       return S.Diag(DRE->getBeginLoc(),
                     diag::err_param_default_argument_references_param)
              << Param->getDeclName() << DefaultArg->getSourceRange();
-  } else {
-    const VarDecl *VD = nullptr;
-    if (const auto *BD = dyn_cast<BindingDecl>(Decl))
-      VD = dyn_cast_if_present<VarDecl>(BD->getDecomposedDecl());
-    else
-      VD = dyn_cast<VarDecl>(Decl);
-    if (VD) {
-      // C++ [dcl.fct.default]p7:
-      //   Local variables shall not be used in default argument
-      //   expressions.
-      //
-      // C++17 [dcl.fct.default]p7 (by CWG 2082):
-      //   A local variable shall not appear as a potentially-evaluated
-      //   expression in a default argument.
-      //
-      // C++20 [dcl.fct.default]p7 (DR as part of P0588R1, see also CWG 2346):
-      //   Note: A local variable cannot be odr-used (6.3) in a default
-      //   argument.
-      //
-      if (VD->isLocalVarDecl() && !DRE->isNonOdrUse())
-        return S.Diag(DRE->getBeginLoc(),
-                      diag::err_param_default_argument_references_local)
-               << Decl->getDeclName() << DefaultArg->getSourceRange();
-    }
+  } else if (auto *VD = Decl->getPotentiallyDecomposedVarDecl()) {
+    // C++ [dcl.fct.default]p7:
+    //   Local variables shall not be used in default argument
+    //   expressions.
+    //
+    // C++17 [dcl.fct.default]p7 (by CWG 2082):
+    //   A local variable shall not appear as a potentially-evaluated
+    //   expression in a default argument.
+    //
+    // C++20 [dcl.fct.default]p7 (DR as part of P0588R1, see also CWG 2346):
+    //   Note: A local variable cannot be odr-used (6.3) in a default
+    //   argument.
+    //
+    if (VD->isLocalVarDecl() && !DRE->isNonOdrUse())
+      return S.Diag(DRE->getBeginLoc(),
+                    diag::err_param_default_argument_references_local)
+             << Decl << DefaultArg->getSourceRange();
   }
   return false;
 }
@@ -7644,10 +7641,8 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
       FunctionProtoType::ExtProtoInfo EPI = Type->getExtProtoInfo();
       EPI.ExceptionSpec.Type = EST_Unevaluated;
       EPI.ExceptionSpec.SourceDecl = MD;
-      MD->setType(Context.getFunctionType(ReturnType,
-                                          llvm::makeArrayRef(&ArgType,
-                                                             ExpectedParams),
-                                          EPI));
+      MD->setType(Context.getFunctionType(
+          ReturnType, llvm::ArrayRef(&ArgType, ExpectedParams), EPI));
     }
   }
 
@@ -10207,10 +10202,12 @@ void Sema::ActOnFinishCXXMemberSpecification(
     Diag(AL.getLoc(), diag::warn_attribute_after_definition_ignored) << AL;
   }
 
-  ActOnFields(S, RLoc, TagDecl, llvm::makeArrayRef(
-              // strict aliasing violation!
-              reinterpret_cast<Decl**>(FieldCollector->getCurFields()),
-              FieldCollector->getCurNumFields()), LBrac, RBrac, AttrList);
+  ActOnFields(S, RLoc, TagDecl,
+              llvm::ArrayRef(
+                  // strict aliasing violation!
+                  reinterpret_cast<Decl **>(FieldCollector->getCurFields()),
+                  FieldCollector->getCurNumFields()),
+              LBrac, RBrac, AttrList);
 
   CheckCompletedCXXClass(S, cast<CXXRecordDecl>(TagDecl));
 }
@@ -15737,19 +15734,16 @@ bool Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
   VariadicCallType CallType =
     Proto->isVariadic() ? VariadicConstructor : VariadicDoesNotApply;
   SmallVector<Expr *, 8> AllArgs;
-  bool Invalid = GatherArgumentsForCall(Loc, Constructor,
-                                        Proto, 0,
-                                        llvm::makeArrayRef(Args, NumArgs),
-                                        AllArgs,
-                                        CallType, AllowExplicit,
-                                        IsListInitialization);
+  bool Invalid = GatherArgumentsForCall(
+      Loc, Constructor, Proto, 0, llvm::ArrayRef(Args, NumArgs), AllArgs,
+      CallType, AllowExplicit, IsListInitialization);
   ConvertedArgs.append(AllArgs.begin(), AllArgs.end());
 
   DiagnoseSentinelCalls(Constructor, Loc, AllArgs);
 
   CheckConstructorCall(Constructor, DeclInitType,
-                       llvm::makeArrayRef(AllArgs.data(), AllArgs.size()),
-                       Proto, Loc);
+                       llvm::ArrayRef(AllArgs.data(), AllArgs.size()), Proto,
+                       Loc);
 
   return Invalid;
 }
@@ -18350,27 +18344,27 @@ bool Sema::checkThisInStaticMemberFunctionAttributes(CXXMethodDecl *Method) {
     else if (const auto *G = dyn_cast<PtGuardedByAttr>(A))
       Arg = G->getArg();
     else if (const auto *AA = dyn_cast<AcquiredAfterAttr>(A))
-      Args = llvm::makeArrayRef(AA->args_begin(), AA->args_size());
+      Args = llvm::ArrayRef(AA->args_begin(), AA->args_size());
     else if (const auto *AB = dyn_cast<AcquiredBeforeAttr>(A))
-      Args = llvm::makeArrayRef(AB->args_begin(), AB->args_size());
+      Args = llvm::ArrayRef(AB->args_begin(), AB->args_size());
     else if (const auto *ETLF = dyn_cast<ExclusiveTrylockFunctionAttr>(A)) {
       Arg = ETLF->getSuccessValue();
-      Args = llvm::makeArrayRef(ETLF->args_begin(), ETLF->args_size());
+      Args = llvm::ArrayRef(ETLF->args_begin(), ETLF->args_size());
     } else if (const auto *STLF = dyn_cast<SharedTrylockFunctionAttr>(A)) {
       Arg = STLF->getSuccessValue();
-      Args = llvm::makeArrayRef(STLF->args_begin(), STLF->args_size());
+      Args = llvm::ArrayRef(STLF->args_begin(), STLF->args_size());
     } else if (const auto *LR = dyn_cast<LockReturnedAttr>(A))
       Arg = LR->getArg();
     else if (const auto *LE = dyn_cast<LocksExcludedAttr>(A))
-      Args = llvm::makeArrayRef(LE->args_begin(), LE->args_size());
+      Args = llvm::ArrayRef(LE->args_begin(), LE->args_size());
     else if (const auto *RC = dyn_cast<RequiresCapabilityAttr>(A))
-      Args = llvm::makeArrayRef(RC->args_begin(), RC->args_size());
+      Args = llvm::ArrayRef(RC->args_begin(), RC->args_size());
     else if (const auto *AC = dyn_cast<AcquireCapabilityAttr>(A))
-      Args = llvm::makeArrayRef(AC->args_begin(), AC->args_size());
+      Args = llvm::ArrayRef(AC->args_begin(), AC->args_size());
     else if (const auto *AC = dyn_cast<TryAcquireCapabilityAttr>(A))
-      Args = llvm::makeArrayRef(AC->args_begin(), AC->args_size());
+      Args = llvm::ArrayRef(AC->args_begin(), AC->args_size());
     else if (const auto *RC = dyn_cast<ReleaseCapabilityAttr>(A))
-      Args = llvm::makeArrayRef(RC->args_begin(), RC->args_size());
+      Args = llvm::ArrayRef(RC->args_begin(), RC->args_size());
 
     if (Arg && !Finder.TraverseStmt(Arg))
       return true;

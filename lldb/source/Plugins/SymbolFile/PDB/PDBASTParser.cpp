@@ -1261,7 +1261,7 @@ void PDBASTParser::AddRecordMembers(
     auto member_comp_type = member_type->GetLayoutCompilerType();
     if (!member_comp_type.GetCompleteType()) {
       symbol_file.GetObjectFile()->GetModule()->ReportError(
-          ":: Class '%s' has a member '%s' of type '%s' "
+          ":: Class '{0}' has a member '{1}' of type '{2}' "
           "which does not have a complete definition.",
           record_type.GetTypeName().GetCString(), member_name.c_str(),
           member_comp_type.GetTypeName().GetCString());
@@ -1371,7 +1371,7 @@ void PDBASTParser::AddRecordBases(
     auto base_comp_type = base_type->GetFullCompilerType();
     if (!base_comp_type.GetCompleteType()) {
       symbol_file.GetObjectFile()->GetModule()->ReportError(
-          ":: Class '%s' has a base class '%s' "
+          ":: Class '{0}' has a base class '{1}' "
           "which does not have a complete definition.",
           record_type.GetTypeName().GetCString(),
           base_comp_type.GetTypeName().GetCString());
@@ -1430,7 +1430,7 @@ PDBASTParser::AddRecordMethod(lldb_private::SymbolFile &symbol_file,
   CompilerType method_comp_type = method_type->GetFullCompilerType();
   if (!method_comp_type.GetCompleteType()) {
     symbol_file.GetObjectFile()->GetModule()->ReportError(
-        ":: Class '%s' has a method '%s' whose type cannot be completed.",
+        ":: Class '{0}' has a method '{1}' whose type cannot be completed.",
         record_type.GetTypeName().GetCString(),
         method_comp_type.GetTypeName().GetCString());
     if (TypeSystemClang::StartTagDeclarationDefinition(method_comp_type))

@@ -264,6 +264,14 @@ opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion{
             "Never insert #include directives as part of code completion")),
 };
 
+opt<bool> ImportInsertions{
+    "import-insertions",
+    cat(Features),
+    desc("If header insertion is enabled, add #import directives when "
+         "accepting code completions or fixing includes in Objective-C code"),
+    init(CodeCompleteOptions().ImportInsertions),
+};
+
 opt<bool> IncludeCleanerStdlib{
     "include-cleaner-stdlib",
     cat(Features),
@@ -913,6 +921,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.CodeComplete.BundleOverloads = CompletionStyle != Detailed;
   Opts.CodeComplete.ShowOrigins = ShowOrigins;
   Opts.CodeComplete.InsertIncludes = HeaderInsertion;
+  Opts.CodeComplete.ImportInsertions = ImportInsertions;
   if (!HeaderInsertionDecorators) {
     Opts.CodeComplete.IncludeIndicator.Insert.clear();
     Opts.CodeComplete.IncludeIndicator.NoInsert.clear();
@@ -960,6 +969,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   Opts.UseDirtyHeaders = UseDirtyHeaders;
   Opts.PreambleParseForwardingFunctions = PreambleParseForwardingFunctions;
+  Opts.ImportInsertions = ImportInsertions;
   Opts.QueryDriverGlobs = std::move(QueryDriverGlobs);
   Opts.TweakFilter = [&](const Tweak &T) {
     if (T.hidden() && !HiddenFeatures)

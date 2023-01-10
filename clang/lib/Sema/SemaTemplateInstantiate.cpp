@@ -953,8 +953,7 @@ void Sema::PrintInstantiationStack() {
       Diags.Report(Active->PointOfInstantiation,
                    diag::note_building_builtin_dump_struct_call)
           << convertCallArgsToString(
-                 *this,
-                 llvm::makeArrayRef(Active->CallArgs, Active->NumCallArgs));
+                 *this, llvm::ArrayRef(Active->CallArgs, Active->NumCallArgs));
       break;
 
     case CodeSynthesisContext::Memoization:

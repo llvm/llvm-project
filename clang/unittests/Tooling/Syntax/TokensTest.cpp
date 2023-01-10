@@ -191,7 +191,7 @@ public:
                                  llvm::ArrayRef<T> Range, Eq F) {
     assert(Subrange.size() >= 1);
     if (Range.size() < Subrange.size())
-      return llvm::makeArrayRef(Range.end(), Range.end());
+      return llvm::ArrayRef(Range.end(), Range.end());
     for (auto Begin = Range.begin(), Last = Range.end() - Subrange.size();
          Begin <= Last; ++Begin) {
       auto It = Begin;
@@ -200,10 +200,10 @@ public:
         if (!F(*ItSub, *It))
           goto continue_outer;
       }
-      return llvm::makeArrayRef(Begin, It);
+      return llvm::ArrayRef(Begin, It);
     continue_outer:;
     }
-    return llvm::makeArrayRef(Range.end(), Range.end());
+    return llvm::ArrayRef(Range.end(), Range.end());
   }
 
   /// Finds a subrange in \p Tokens that match the tokens specified in \p Query.
@@ -222,15 +222,14 @@ public:
       return Q == T.text(*SourceMgr);
     };
     // Find a match.
-    auto Found =
-        findSubrange(llvm::makeArrayRef(QueryTokens), Tokens, TextMatches);
+    auto Found = findSubrange(llvm::ArrayRef(QueryTokens), Tokens, TextMatches);
     if (Found.begin() == Tokens.end()) {
       ADD_FAILURE() << "could not find the subrange for " << Query;
       std::abort();
     }
     // Check that the match is unique.
-    if (findSubrange(llvm::makeArrayRef(QueryTokens),
-                     llvm::makeArrayRef(Found.end(), Tokens.end()), TextMatches)
+    if (findSubrange(llvm::ArrayRef(QueryTokens),
+                     llvm::ArrayRef(Found.end(), Tokens.end()), TextMatches)
             .begin() != Tokens.end()) {
       ADD_FAILURE() << "match is not unique for " << Query;
       std::abort();
@@ -838,10 +837,10 @@ TEST_F(TokenBufferTest, ExpansionsOverlapping) {
       Buffer.expansionStartingAt(Foo2.data()),
       ValueIs(IsExpansion(SameRange(Foo2.drop_back()),
                           SameRange(findExpanded("3 + 4 2").drop_back()))));
-  EXPECT_THAT(Buffer.expansionsOverlapping(
-                  llvm::makeArrayRef(Foo1.begin(), Foo2.end())),
-              ElementsAre(IsExpansion(SameRange(Foo1.drop_back()), _),
-                          IsExpansion(SameRange(Foo2.drop_back()), _)));
+  EXPECT_THAT(
+      Buffer.expansionsOverlapping(llvm::ArrayRef(Foo1.begin(), Foo2.end())),
+      ElementsAre(IsExpansion(SameRange(Foo1.drop_back()), _),
+                  IsExpansion(SameRange(Foo2.drop_back()), _)));
 
   // Function-like macro expansions.
   recordTokens(R"cpp(
@@ -866,7 +865,7 @@ TEST_F(TokenBufferTest, ExpansionsOverlapping) {
   for (const auto &T : ID2.drop_front())
     EXPECT_EQ(Buffer.expansionStartingAt(&T), std::nullopt);
 
-  EXPECT_THAT(Buffer.expansionsOverlapping(llvm::makeArrayRef(
+  EXPECT_THAT(Buffer.expansionsOverlapping(llvm::ArrayRef(
                   findSpelled("1 + 2").data(), findSpelled("4").data())),
               ElementsAre(IsExpansion(SameRange(ID1), _),
                           IsExpansion(SameRange(ID2), _)));

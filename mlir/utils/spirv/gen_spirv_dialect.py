@@ -810,9 +810,9 @@ def get_op_definition(instruction, opname, doc, existing_info, capability_mappin
   if description is None:
     assembly = '\n    ```\n'\
                '    [TODO]\n'\
-               '    ```mlir\n\n'\
+               '    ```\n\n'\
                '    #### Example:\n\n'\
-               '    ```\n'\
+               '    ```mlir\n'\
                '    [TODO]\n' \
                '    ```'
     description = get_description(text, assembly)

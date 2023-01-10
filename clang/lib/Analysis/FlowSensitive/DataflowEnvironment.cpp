@@ -151,44 +151,62 @@ static Value &widenDistinctValues(QualType Type, Value &Prev,
 }
 
 /// Initializes a global storage value.
-static void initGlobalVar(const VarDecl &D, Environment &Env) {
-  if (!D.hasGlobalStorage() ||
-      Env.getStorageLocation(D, SkipPast::None) != nullptr)
-    return;
-
-  auto &Loc = Env.createStorageLocation(D);
-  Env.setStorageLocation(D, Loc);
-  if (auto *Val = Env.createValue(D.getType()))
-    Env.setValue(Loc, *Val);
-}
-
-/// Initializes a global storage value.
-static void initGlobalVar(const Decl &D, Environment &Env) {
+static void insertIfGlobal(const Decl &D,
+                           llvm::DenseSet<const FieldDecl *> &Fields,
+                           llvm::DenseSet<const VarDecl *> &Vars) {
   if (auto *V = dyn_cast<VarDecl>(&D))
-    initGlobalVar(*V, Env);
+    if (V->hasGlobalStorage())
+      Vars.insert(V);
 }
 
-/// Initializes global storage values that are declared or referenced from
-/// sub-statements of `S`.
-// FIXME: Add support for resetting globals after function calls to enable
-// the implementation of sound analyses.
-static void initGlobalVars(const Stmt &S, Environment &Env) {
-  for (auto *Child : S.children()) {
+static void getFieldsAndGlobalVars(const Decl &D,
+                                   llvm::DenseSet<const FieldDecl *> &Fields,
+                                   llvm::DenseSet<const VarDecl *> &Vars) {
+  insertIfGlobal(D, Fields, Vars);
+  if (const auto *Decomp = dyn_cast<DecompositionDecl>(&D))
+    for (const auto *B : Decomp->bindings())
+      if (auto *ME = dyn_cast_or_null<MemberExpr>(B->getBinding()))
+        // FIXME: should we be using `E->getFoundDecl()`?
+        if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl()))
+          Fields.insert(FD);
+}
+
+/// Traverses `S` and inserts into `Vars` any global storage values that are
+/// declared in or referenced from sub-statements.
+static void getFieldsAndGlobalVars(const Stmt &S,
+                                   llvm::DenseSet<const FieldDecl *> &Fields,
+                                   llvm::DenseSet<const VarDecl *> &Vars) {
+  for (auto *Child : S.children())
     if (Child != nullptr)
-      initGlobalVars(*Child, Env);
-  }
+      getFieldsAndGlobalVars(*Child, Fields, Vars);
 
   if (auto *DS = dyn_cast<DeclStmt>(&S)) {
-    if (DS->isSingleDecl()) {
-      initGlobalVar(*DS->getSingleDecl(), Env);
-    } else {
+    if (DS->isSingleDecl())
+      getFieldsAndGlobalVars(*DS->getSingleDecl(), Fields, Vars);
+    else
       for (auto *D : DS->getDeclGroup())
-        initGlobalVar(*D, Env);
-    }
+          getFieldsAndGlobalVars(*D, Fields, Vars);
   } else if (auto *E = dyn_cast<DeclRefExpr>(&S)) {
-    initGlobalVar(*E->getDecl(), Env);
+    insertIfGlobal(*E->getDecl(), Fields, Vars);
   } else if (auto *E = dyn_cast<MemberExpr>(&S)) {
-    initGlobalVar(*E->getMemberDecl(), Env);
+    // FIXME: should we be using `E->getFoundDecl()`?
+    const ValueDecl *VD = E->getMemberDecl();
+    insertIfGlobal(*VD, Fields, Vars);
+    if (const auto *FD = dyn_cast<FieldDecl>(VD))
+      Fields.insert(FD);
+  }
+}
+
+// FIXME: Add support for resetting globals after function calls to enable
+// the implementation of sound analyses.
+void Environment::initVars(llvm::DenseSet<const VarDecl *> Vars) {
+  for (const VarDecl *D : Vars) {
+    if (getStorageLocation(*D, SkipPast::None) != nullptr)
+      continue;
+    auto &Loc = createStorageLocation(*D);
+    setStorageLocation(*D, Loc);
+    if (auto *Val = createValue(D->getType()))
+      setValue(Loc, *Val);
   }
 }
 
@@ -216,7 +234,27 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
 
   if (const auto *FuncDecl = dyn_cast<FunctionDecl>(&DeclCtx)) {
     assert(FuncDecl->getBody() != nullptr);
-    initGlobalVars(*FuncDecl->getBody(), *this);
+
+    llvm::DenseSet<const FieldDecl *> Fields;
+    llvm::DenseSet<const VarDecl *> Vars;
+
+    // Look for global variable references in the constructor-initializers.
+    if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(&DeclCtx)) {
+      for (const auto *Init : CtorDecl->inits()) {
+        if (const auto *M = Init->getAnyMember())
+          Fields.insert(M);
+        const Expr *E = Init->getInit();
+        assert(E != nullptr);
+        getFieldsAndGlobalVars(*E, Fields, Vars);
+      }
+    }
+    getFieldsAndGlobalVars(*FuncDecl->getBody(), Fields, Vars);
+
+    initVars(Vars);
+    // These have to be set before the lines that follow to ensure that create*
+    // work correctly for structs.
+    DACtx.addFieldsReferencedInScope(std::move(Fields));
+
     for (const auto *ParamDecl : FuncDecl->parameters()) {
       assert(ParamDecl != nullptr);
       auto &ParamLoc = createStorageLocation(*ParamDecl);
@@ -243,15 +281,6 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
         setValue(*ThisPointeeLoc, *ThisPointeeVal);
     }
   }
-
-  // Look for global variable references in the constructor-initializers.
-  if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(&DeclCtx)) {
-    for (const auto *Init : CtorDecl->inits()) {
-      const Expr *E = Init->getInit();
-      assert(E != nullptr);
-      initGlobalVars(*E, *this);
-    }
-  }
 }
 
 bool Environment::canDescend(unsigned MaxDepth,
@@ -275,7 +304,7 @@ Environment Environment::pushCall(const CallExpr *Call) const {
   }
 
   Env.pushCallInternal(Call->getDirectCallee(),
-                       llvm::makeArrayRef(Call->getArgs(), Call->getNumArgs()));
+                       llvm::ArrayRef(Call->getArgs(), Call->getNumArgs()));
 
   return Env;
 }
@@ -289,7 +318,7 @@ Environment Environment::pushCall(const CXXConstructExpr *Call) const {
   Env.ThisPointeeLoc = Env.ReturnLoc;
 
   Env.pushCallInternal(Call->getConstructor(),
-                       llvm::makeArrayRef(Call->getArgs(), Call->getNumArgs()));
+                       llvm::ArrayRef(Call->getArgs(), Call->getNumArgs()));
 
   return Env;
 }
@@ -298,10 +327,24 @@ void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
                                    ArrayRef<const Expr *> Args) {
   CallStack.push_back(FuncDecl);
 
-  // FIXME: In order to allow the callee to reference globals, we probably need
-  // to call `initGlobalVars` here in some way.
+  // FIXME: Share this code with the constructor, rather than duplicating it.
+  llvm::DenseSet<const FieldDecl *> Fields;
+  llvm::DenseSet<const VarDecl *> Vars;
+  // Look for global variable references in the constructor-initializers.
+  if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(FuncDecl)) {
+    for (const auto *Init : CtorDecl->inits()) {
+      if (const auto *M = Init->getAnyMember())
+        Fields.insert(M);
+      const Expr *E = Init->getInit();
+      assert(E != nullptr);
+      getFieldsAndGlobalVars(*E, Fields, Vars);
+    }
+  }
+  getFieldsAndGlobalVars(*FuncDecl->getBody(), Fields, Vars);
+  initVars(Vars);
+  DACtx->addFieldsReferencedInScope(std::move(Fields));
 
-  auto ParamIt = FuncDecl->param_begin();
+  const auto *ParamIt = FuncDecl->param_begin();
 
   // FIXME: Parameters don't always map to arguments 1:1; examples include
   // overloaded operators implemented as member functions, and parameter packs.
@@ -570,7 +613,7 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
     const QualType Type = AggregateLoc.getType();
     assert(Type->isStructureOrClassType() || Type->isUnionType());
 
-    for (const FieldDecl *Field : getObjectFields(Type)) {
+    for (const FieldDecl *Field : DACtx->getReferencedFields(Type)) {
       assert(Field != nullptr);
       StorageLocation &FieldLoc = AggregateLoc.getChild(*Field);
       MemberLocToStruct[&FieldLoc] = std::make_pair(StructVal, Field);
@@ -684,10 +727,8 @@ Value *Environment::createValueUnlessSelfReferential(
 
   if (Type->isStructureOrClassType() || Type->isUnionType()) {
     CreatedValuesCount++;
-    // FIXME: Initialize only fields that are accessed in the context that is
-    // being analyzed.
     llvm::DenseMap<const ValueDecl *, Value *> FieldValues;
-    for (const FieldDecl *Field : getObjectFields(Type)) {
+    for (const FieldDecl *Field : DACtx->getReferencedFields(Type)) {
       assert(Field != nullptr);
 
       QualType FieldType = Field->getType();

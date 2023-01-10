@@ -993,7 +993,8 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   return nullptr;
 }
 
-Instruction *InstCombinerImpl::transformZExtICmp(ICmpInst *Cmp, ZExtInst &Zext) {
+Instruction *InstCombinerImpl::transformZExtICmp(ICmpInst *Cmp,
+                                                 ZExtInst &Zext) {
   // If we are just checking for a icmp eq of a single bit and zext'ing it
   // to an integer, then shift the bit to the appropriate place and then
   // cast to integer to avoid the comparison.
@@ -1023,7 +1024,9 @@ Instruction *InstCombinerImpl::transformZExtICmp(ICmpInst *Cmp, ZExtInst &Zext) 
     // zext (X == 0) to i32 --> (X>>1)^1 iff X has only the 2nd bit set.
     // zext (X != 0) to i32 --> X        iff X has only the low bit set.
     // zext (X != 0) to i32 --> X>>1     iff X has only the 2nd bit set.
-    if (Op1CV->isZero() && Cmp->isEquality()) {
+    if (Op1CV->isZero() && Cmp->isEquality() &&
+        (Cmp->getOperand(0)->getType() == Zext.getType() ||
+         Cmp->getPredicate() == ICmpInst::ICMP_NE)) {
       // If Op1C some other power of two, convert:
       KnownBits Known = computeKnownBits(Cmp->getOperand(0), 0, &Zext);
 
@@ -1031,8 +1034,8 @@ Instruction *InstCombinerImpl::transformZExtICmp(ICmpInst *Cmp, ZExtInst &Zext) 
       // canonicalized to this form.
       APInt KnownZeroMask(~Known.Zero);
       if (KnownZeroMask.isPowerOf2() &&
-          (Zext.getType()->getScalarSizeInBits() != KnownZeroMask.logBase2() + 1)) {
-        bool isNE = Cmp->getPredicate() == ICmpInst::ICMP_NE;
+          (Zext.getType()->getScalarSizeInBits() !=
+           KnownZeroMask.logBase2() + 1)) {
         uint32_t ShAmt = KnownZeroMask.logBase2();
         Value *In = Cmp->getOperand(0);
         if (ShAmt) {
@@ -1042,10 +1045,9 @@ Instruction *InstCombinerImpl::transformZExtICmp(ICmpInst *Cmp, ZExtInst &Zext) 
                                   In->getName() + ".lobit");
         }
 
-        if (!isNE) { // Toggle the low bit.
-          Constant *One = ConstantInt::get(In->getType(), 1);
-          In = Builder.CreateXor(In, One);
-        }
+        // Toggle the low bit for "X == 0".
+        if (Cmp->getPredicate() == ICmpInst::ICMP_EQ)
+          In = Builder.CreateXor(In, ConstantInt::get(In->getType(), 1));
 
         if (Zext.getType() == In->getType())
           return replaceInstUsesWith(Zext, In);

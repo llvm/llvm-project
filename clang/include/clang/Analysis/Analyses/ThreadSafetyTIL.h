@@ -1430,9 +1430,7 @@ public:
   BasicBlock *elseBlock() { return Branches[1]; }
 
   /// Return the list of basic blocks that this terminator can branch to.
-  ArrayRef<BasicBlock*> successors() {
-    return llvm::makeArrayRef(Branches);
-  }
+  ArrayRef<BasicBlock *> successors() { return llvm::ArrayRef(Branches); }
 
   template <class V>
   typename V::R_SExpr traverse(V &Vs, typename V::R_Ctx Ctx) {

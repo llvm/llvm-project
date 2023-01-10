@@ -340,14 +340,6 @@ static bool getPotentialCopiesOfMemoryValue(
                     << " (only exact: " << OnlyExact << ")\n";);
 
   Value &Ptr = *I.getPointerOperand();
-  SmallSetVector<Value *, 8> Objects;
-  if (!AA::getAssumedUnderlyingObjects(A, Ptr, Objects, QueryingAA, &I,
-                                       UsedAssumedInformation)) {
-    LLVM_DEBUG(
-        dbgs() << "Underlying objects stored into could not be determined\n";);
-    return false;
-  }
-
   // Containers to remember the pointer infos and new copies while we are not
   // sure that we can find all of them. If we abort we want to avoid spurious
   // dependences and potential copies in the provided container.
@@ -357,36 +349,36 @@ static bool getPotentialCopiesOfMemoryValue(
 
   const auto *TLI =
       A.getInfoCache().getTargetLibraryInfoForFunction(*I.getFunction());
-  LLVM_DEBUG(dbgs() << "Visit " << Objects.size() << " objects:\n");
-  for (Value *Obj : Objects) {
-    LLVM_DEBUG(dbgs() << "Visit underlying object " << *Obj << "\n");
-    if (isa<UndefValue>(Obj))
-      continue;
-    if (isa<ConstantPointerNull>(Obj)) {
+
+  auto Pred = [&](Value &Obj) {
+    LLVM_DEBUG(dbgs() << "Visit underlying object " << Obj << "\n");
+    if (isa<UndefValue>(&Obj))
+      return true;
+    if (isa<ConstantPointerNull>(&Obj)) {
       // A null pointer access can be undefined but any offset from null may
       // be OK. We do not try to optimize the latter.
       if (!NullPointerIsDefined(I.getFunction(),
                                 Ptr.getType()->getPointerAddressSpace()) &&
           A.getAssumedSimplified(Ptr, QueryingAA, UsedAssumedInformation,
-                                 AA::Interprocedural) == Obj)
-        continue;
+                                 AA::Interprocedural) == &Obj)
+        return true;
       LLVM_DEBUG(
           dbgs() << "Underlying object is a valid nullptr, giving up.\n";);
       return false;
     }
     // TODO: Use assumed noalias return.
-    if (!isa<AllocaInst>(Obj) && !isa<GlobalVariable>(Obj) &&
-        !(IsLoad ? isAllocationFn(Obj, TLI) : isNoAliasCall(Obj))) {
-      LLVM_DEBUG(dbgs() << "Underlying object is not supported yet: " << *Obj
+    if (!isa<AllocaInst>(&Obj) && !isa<GlobalVariable>(&Obj) &&
+        !(IsLoad ? isAllocationFn(&Obj, TLI) : isNoAliasCall(&Obj))) {
+      LLVM_DEBUG(dbgs() << "Underlying object is not supported yet: " << Obj
                         << "\n";);
       return false;
     }
-    if (auto *GV = dyn_cast<GlobalVariable>(Obj))
+    if (auto *GV = dyn_cast<GlobalVariable>(&Obj))
       if (!GV->hasLocalLinkage() &&
           !(GV->isConstant() && GV->hasInitializer())) {
         LLVM_DEBUG(dbgs() << "Underlying object is global with external "
                              "linkage, not supported yet: "
-                          << *Obj << "\n";);
+                          << Obj << "\n";);
         return false;
       }
 
@@ -457,21 +449,21 @@ static bool getPotentialCopiesOfMemoryValue(
     bool HasBeenWrittenTo = false;
 
     AA::RangeTy Range;
-    auto &PI = A.getAAFor<AAPointerInfo>(QueryingAA, IRPosition::value(*Obj),
+    auto &PI = A.getAAFor<AAPointerInfo>(QueryingAA, IRPosition::value(Obj),
                                          DepClassTy::NONE);
     if (!PI.forallInterferingAccesses(A, QueryingAA, I, CheckAccess,
                                       HasBeenWrittenTo, Range)) {
       LLVM_DEBUG(
           dbgs()
           << "Failed to verify all interfering accesses for underlying object: "
-          << *Obj << "\n");
+          << Obj << "\n");
       return false;
     }
 
     if (IsLoad && !HasBeenWrittenTo && !Range.isUnassigned()) {
       const DataLayout &DL = A.getDataLayout();
       Value *InitialValue =
-          AA::getInitialValueForObj(*Obj, *I.getType(), TLI, DL, &Range);
+          AA::getInitialValueForObj(Obj, *I.getType(), TLI, DL, &Range);
       if (!InitialValue) {
         LLVM_DEBUG(dbgs() << "Could not determine required initial value of "
                              "underlying object, abort!\n");
@@ -489,6 +481,16 @@ static bool getPotentialCopiesOfMemoryValue(
     }
 
     PIs.push_back(&PI);
+
+    return true;
+  };
+
+  const auto &AAUO = A.getAAFor<AAUnderlyingObjects>(
+      QueryingAA, IRPosition::value(Ptr), DepClassTy::OPTIONAL);
+  if (!AAUO.forallUnderlyingObjects(Pred)) {
+    LLVM_DEBUG(
+        dbgs() << "Underlying objects stored into could not be determined\n";);
+    return false;
   }
 
   // Only if we were successful collection all potential copies we record

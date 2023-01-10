@@ -185,6 +185,7 @@ PIPE_OPERATOR(AACallEdges)
 PIPE_OPERATOR(AAFunctionReachability)
 PIPE_OPERATOR(AAPointerInfo)
 PIPE_OPERATOR(AAAssumptionInfo)
+PIPE_OPERATOR(AAUnderlyingObjects)
 
 #undef PIPE_OPERATOR
 
@@ -309,38 +310,6 @@ static Value *constructPointer(Type *ResTy, Type *PtrElemTy, Value *Ptr,
 
   LLVM_DEBUG(dbgs() << "Constructed pointer: " << *Ptr << "\n");
   return Ptr;
-}
-
-bool AA::getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
-                                     SmallSetVector<Value *, 8> &Objects,
-                                     const AbstractAttribute &QueryingAA,
-                                     const Instruction *CtxI,
-                                     bool &UsedAssumedInformation,
-                                     AA::ValueScope S,
-                                     SmallPtrSetImpl<Value *> *SeenObjects) {
-  SmallPtrSet<Value *, 8> LocalSeenObjects;
-  if (!SeenObjects)
-    SeenObjects = &LocalSeenObjects;
-
-  SmallVector<AA::ValueAndContext> Values;
-  if (!A.getAssumedSimplifiedValues(IRPosition::value(Ptr), &QueryingAA, Values,
-                                    S, UsedAssumedInformation)) {
-    Objects.insert(const_cast<Value *>(&Ptr));
-    return true;
-  }
-
-  for (auto &VAC : Values) {
-    Value *UO = getUnderlyingObject(VAC.getValue());
-    if (UO && UO != VAC.getValue() && SeenObjects->insert(UO).second) {
-      if (!getAssumedUnderlyingObjects(A, *UO, Objects, QueryingAA,
-                                       VAC.getCtxI(), UsedAssumedInformation, S,
-                                       SeenObjects))
-        return false;
-      continue;
-    }
-    Objects.insert(VAC.getValue());
-  }
-  return true;
 }
 
 static const Value *
@@ -8193,24 +8162,12 @@ void AAMemoryLocationImpl::categorizePtrValue(
                     << Ptr << " ["
                     << getMemoryLocationsAsStr(State.getAssumed()) << "]\n");
 
-  SmallSetVector<Value *, 8> Objects;
-  bool UsedAssumedInformation = false;
-  if (!AA::getAssumedUnderlyingObjects(A, Ptr, Objects, *this, &I,
-                                       UsedAssumedInformation,
-                                       AA::Intraprocedural)) {
-    LLVM_DEBUG(
-        dbgs() << "[AAMemoryLocation] Pointer locations not categorized\n");
-    updateStateAndAccessesMap(State, NO_UNKOWN_MEM, &I, nullptr, Changed,
-                              getAccessKindFromInst(&I));
-    return;
-  }
-
-  for (Value *Obj : Objects) {
+  auto Pred = [&](Value &Obj) {
     // TODO: recognize the TBAA used for constant accesses.
     MemoryLocationsKind MLK = NO_LOCATIONS;
-    if (isa<UndefValue>(Obj))
-      continue;
-    if (isa<Argument>(Obj)) {
+    if (isa<UndefValue>(&Obj))
+      return true;
+    if (isa<Argument>(&Obj)) {
       // TODO: For now we do not treat byval arguments as local copies performed
       // on the call edge, though, we should. To make that happen we need to
       // teach various passes, e.g., DSE, about the copy effect of a byval. That
@@ -8218,25 +8175,25 @@ void AAMemoryLocationImpl::categorizePtrValue(
       // readnone again, arguably their accesses have no effect outside of the
       // function, like accesses to allocas.
       MLK = NO_ARGUMENT_MEM;
-    } else if (auto *GV = dyn_cast<GlobalValue>(Obj)) {
+    } else if (auto *GV = dyn_cast<GlobalValue>(&Obj)) {
       // Reading constant memory is not treated as a read "effect" by the
       // function attr pass so we won't neither. Constants defined by TBAA are
       // similar. (We know we do not write it because it is constant.)
       if (auto *GVar = dyn_cast<GlobalVariable>(GV))
         if (GVar->isConstant())
-          continue;
+          return true;
 
       if (GV->hasLocalLinkage())
         MLK = NO_GLOBAL_INTERNAL_MEM;
       else
         MLK = NO_GLOBAL_EXTERNAL_MEM;
-    } else if (isa<ConstantPointerNull>(Obj) &&
+    } else if (isa<ConstantPointerNull>(&Obj) &&
                !NullPointerIsDefined(getAssociatedFunction(),
                                      Ptr.getType()->getPointerAddressSpace())) {
-      continue;
-    } else if (isa<AllocaInst>(Obj)) {
+      return true;
+    } else if (isa<AllocaInst>(&Obj)) {
       MLK = NO_LOCAL_MEM;
-    } else if (const auto *CB = dyn_cast<CallBase>(Obj)) {
+    } else if (const auto *CB = dyn_cast<CallBase>(&Obj)) {
       const auto &NoAliasAA = A.getAAFor<AANoAlias>(
           *this, IRPosition::callsite_returned(*CB), DepClassTy::OPTIONAL);
       if (NoAliasAA.isAssumedNoAlias())
@@ -8249,10 +8206,21 @@ void AAMemoryLocationImpl::categorizePtrValue(
 
     assert(MLK != NO_LOCATIONS && "No location specified!");
     LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Ptr value can be categorized: "
-                      << *Obj << " -> " << getMemoryLocationsAsStr(MLK)
-                      << "\n");
-    updateStateAndAccessesMap(getState(), MLK, &I, Obj, Changed,
+                      << Obj << " -> " << getMemoryLocationsAsStr(MLK) << "\n");
+    updateStateAndAccessesMap(getState(), MLK, &I, &Obj, Changed,
                               getAccessKindFromInst(&I));
+
+    return true;
+  };
+
+  const auto &AA = A.getAAFor<AAUnderlyingObjects>(
+      *this, IRPosition::value(Ptr), DepClassTy::OPTIONAL);
+  if (!AA.forallUnderlyingObjects(Pred, AA::Intraprocedural)) {
+    LLVM_DEBUG(
+        dbgs() << "[AAMemoryLocation] Pointer locations not categorized\n");
+    updateStateAndAccessesMap(State, NO_UNKOWN_MEM, &I, nullptr, Changed,
+                              getAccessKindFromInst(&I));
+    return;
   }
 
   LLVM_DEBUG(
@@ -11231,6 +11199,159 @@ AACallGraphNode *AACallEdgeIterator::operator*() const {
 
 void AttributorCallGraph::print() { llvm::WriteGraph(outs(), this); }
 
+/// ------------------------ UnderlyingObjects ---------------------------------
+
+namespace {
+struct AAUnderlyingObjectsImpl
+    : StateWrapper<BooleanState, AAUnderlyingObjects> {
+  using BaseTy = StateWrapper<BooleanState, AAUnderlyingObjects>;
+  AAUnderlyingObjectsImpl(const IRPosition &IRP, Attributor &A) : BaseTy(IRP) {}
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr() const override {
+    return std::string("UnderlyingObjects ") +
+           (isValidState()
+                ? (std::string("inter #") +
+                   std::to_string(InterAssumedUnderlyingObjects.size()) +
+                   " objs" + std::string(", intra #") +
+                   std::to_string(IntraAssumedUnderlyingObjects.size()) +
+                   " objs")
+                : "<invalid>");
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {}
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    auto &Ptr = getAssociatedValue();
+
+    auto DoUpdate = [&](SmallSetVector<Value *, 8> &UnderlyingObjects,
+                        AA::ValueScope Scope) {
+      bool UsedAssumedInformation;
+      SmallPtrSet<Value *, 8> SeenObjects;
+      SmallVector<AA::ValueAndContext> Values;
+
+      if (!A.getAssumedSimplifiedValues(IRPosition::value(Ptr), *this, Values,
+                                        Scope, UsedAssumedInformation))
+        return UnderlyingObjects.insert(&Ptr);
+
+      bool Changed = false;
+
+      for (unsigned I = 0; I < Values.size(); ++I) {
+        auto &VAC = Values[I];
+        auto *Obj = VAC.getValue();
+        Value *UO = getUnderlyingObject(Obj);
+        if (UO && UO != VAC.getValue() && SeenObjects.insert(UO).second) {
+          const auto &OtherAA = A.getAAFor<AAUnderlyingObjects>(
+              *this, IRPosition::value(*UO), DepClassTy::OPTIONAL);
+          auto Pred = [&Values](Value &V) {
+            Values.emplace_back(V, nullptr);
+            return true;
+          };
+
+          if (!OtherAA.forallUnderlyingObjects(Pred, Scope))
+            llvm_unreachable(
+                "The forall call should not return false at this position");
+
+          continue;
+        }
+
+        if (isa<SelectInst>(Obj) || isa<PHINode>(Obj)) {
+          Changed |= handleIndirect(A, *Obj, UnderlyingObjects, Scope);
+          continue;
+        }
+
+        Changed |= UnderlyingObjects.insert(Obj);
+      }
+
+      return Changed;
+    };
+
+    bool Changed = false;
+    Changed |= DoUpdate(IntraAssumedUnderlyingObjects, AA::Intraprocedural);
+    Changed |= DoUpdate(InterAssumedUnderlyingObjects, AA::Interprocedural);
+
+    return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
+  }
+
+  bool forallUnderlyingObjects(
+      function_ref<bool(Value &)> Pred,
+      AA::ValueScope Scope = AA::Interprocedural) const override {
+    if (!isValidState())
+      return Pred(getAssociatedValue());
+
+    auto &AssumedUnderlyingObjects = Scope == AA::Intraprocedural
+                                         ? IntraAssumedUnderlyingObjects
+                                         : InterAssumedUnderlyingObjects;
+    for (Value *Obj : AssumedUnderlyingObjects)
+      if (!Pred(*Obj))
+        return false;
+
+    return true;
+  }
+
+private:
+  /// Handle the case where the value is not the actual underlying value, such
+  /// as a phi node or a select instruction.
+  bool handleIndirect(Attributor &A, Value &V,
+                      SmallSetVector<Value *, 8> &UnderlyingObjects,
+                      AA::ValueScope Scope) {
+    bool Changed = false;
+    const auto &AA = A.getAAFor<AAUnderlyingObjects>(
+        *this, IRPosition::value(V), DepClassTy::OPTIONAL);
+    auto Pred = [&](Value &V) {
+      Changed |= UnderlyingObjects.insert(&V);
+      return true;
+    };
+    if (!AA.forallUnderlyingObjects(Pred, Scope))
+      llvm_unreachable(
+          "The forall call should not return false at this position");
+    return Changed;
+  }
+
+  /// All the underlying objects collected so far via intra procedural scope.
+  SmallSetVector<Value *, 8> IntraAssumedUnderlyingObjects;
+  /// All the underlying objects collected so far via inter procedural scope.
+  SmallSetVector<Value *, 8> InterAssumedUnderlyingObjects;
+};
+
+struct AAUnderlyingObjectsFloating final : AAUnderlyingObjectsImpl {
+  AAUnderlyingObjectsFloating(const IRPosition &IRP, Attributor &A)
+      : AAUnderlyingObjectsImpl(IRP, A) {}
+};
+
+struct AAUnderlyingObjectsArgument final : AAUnderlyingObjectsImpl {
+  AAUnderlyingObjectsArgument(const IRPosition &IRP, Attributor &A)
+      : AAUnderlyingObjectsImpl(IRP, A) {}
+};
+
+struct AAUnderlyingObjectsCallSite final : AAUnderlyingObjectsImpl {
+  AAUnderlyingObjectsCallSite(const IRPosition &IRP, Attributor &A)
+      : AAUnderlyingObjectsImpl(IRP, A) {}
+};
+
+struct AAUnderlyingObjectsCallSiteArgument final : AAUnderlyingObjectsImpl {
+  AAUnderlyingObjectsCallSiteArgument(const IRPosition &IRP, Attributor &A)
+      : AAUnderlyingObjectsImpl(IRP, A) {}
+};
+
+struct AAUnderlyingObjectsReturned final : AAUnderlyingObjectsImpl {
+  AAUnderlyingObjectsReturned(const IRPosition &IRP, Attributor &A)
+      : AAUnderlyingObjectsImpl(IRP, A) {}
+};
+
+struct AAUnderlyingObjectsCallSiteReturned final : AAUnderlyingObjectsImpl {
+  AAUnderlyingObjectsCallSiteReturned(const IRPosition &IRP, Attributor &A)
+      : AAUnderlyingObjectsImpl(IRP, A) {}
+};
+
+struct AAUnderlyingObjectsFunction final : AAUnderlyingObjectsImpl {
+  AAUnderlyingObjectsFunction(const IRPosition &IRP, Attributor &A)
+      : AAUnderlyingObjectsImpl(IRP, A) {}
+};
+}
+
 const char AAReturnedValues::ID = 0;
 const char AANoUnwind::ID = 0;
 const char AANoSync::ID = 0;
@@ -11260,6 +11381,7 @@ const char AACallEdges::ID = 0;
 const char AAFunctionReachability::ID = 0;
 const char AAPointerInfo::ID = 0;
 const char AAAssumptionInfo::ID = 0;
+const char AAUnderlyingObjects::ID = 0;
 
 // Macro magic to create the static generator function for attributes that
 // follow the naming scheme.
@@ -11380,6 +11502,7 @@ CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPointerInfo)
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueSimplify)
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAIsDead)
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFree)
+CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAUnderlyingObjects)
 
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAHeapToStack)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAReachability)

@@ -13,6 +13,8 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_AST_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_AST_H
 
+#include "Headers.h"
+#include "index/Symbol.h"
 #include "index/SymbolID.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
@@ -117,6 +119,18 @@ SymbolID getSymbolID(const llvm::StringRef MacroName, const MacroInfo *MI,
 /// For Objective-C protocols, e.g. "@protocol MyProtocol ... @end" this will
 /// return nullptr as protocols don't have an implementation.
 const ObjCImplDecl *getCorrespondingObjCImpl(const ObjCContainerDecl *D);
+
+/// Infer the include directive to use for the given \p FileName. It aims for
+/// #import for ObjC files and #include for the rest.
+///
+/// - For source files we use LangOpts directly to infer ObjC-ness.
+/// - For header files we also check for symbols declared by the file and
+///   existing include directives, as the language can be set to ObjC++ as a
+///   fallback in the absence of compile flags.
+Symbol::IncludeDirective
+preferredIncludeDirective(llvm::StringRef FileName, const LangOptions &LangOpts,
+                          ArrayRef<Inclusion> MainFileIncludes,
+                          ArrayRef<const Decl *> TopLevelDecls);
 
 /// Returns a QualType as string. The result doesn't contain unwritten scopes
 /// like anonymous/inline namespace.

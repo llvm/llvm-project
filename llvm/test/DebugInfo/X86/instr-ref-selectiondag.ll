@@ -26,8 +26,10 @@
 
 ; NORMAL:      %[[REG0:[0-9]+]]:gr32 = ADD32rr
 ; NORMAL-NEXT: DBG_VALUE %[[REG0]]
+; NORMAL-NEXT: DBG_VALUE_LIST {{.+}}, %[[REG0]], 2
 ; NORMAL-NEXT: %[[REG1:[0-9]+]]:gr32 = ADD32rr
 ; NORMAL-NEXT: DBG_VALUE %[[REG1]]
+; NORMAL-NEXT: DBG_VALUE_LIST {{.+}}, %[[REG1]], %[[REG0]]
 
 ; Note that I'm baking in an assumption of one-based ordering here. We could
 ; capture and check for the instruction numbers, we'd rely on machine verifier
@@ -38,20 +40,25 @@
 ; INSTRREF:      ADD32rr
 ; INSTRREF-SAME: debug-instr-number 1
 ; INSTRREF-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
+; INSTRREF-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0), 2
 ; INSTRREF-NEXT: ADD32rr
 ; INSTRREF-SAME: debug-instr-number 2
 ; INSTRREF-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
+; INSTRREF-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0), dbg-instr-ref(1, 0)
 
-; Test that fast-isel will produce DBG_INSTR_REFs too.
+; Test that fast-isel will produce DBG_INSTR_REFs too, except for debug values
+; using DIArgList, which is not supported in FastIsel.
 
 ; FASTISEL-INSTRREF-LABEL: name: foo
 
 ; FASTISEL-INSTRREF:      ADD32rr
 ; FASTISEL-INSTRREF-SAME: debug-instr-number 1
 ; FASTISEL-INSTRREF-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
+; FASTISEL-INSTRREF-NEXT: DBG_VALUE $noreg, {{.+}}
 ; FASTISEL-INSTRREF-NEXT: ADD32rr
 ; FASTISEL-INSTRREF-SAME: debug-instr-number 2
 ; FASTISEL-INSTRREF-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
+; FASTISEL-INSTRREF-NEXT: DBG_VALUE $noreg, {{.+}}
 
 @glob32 = global i32 0
 @glob16 = global i16 0
@@ -64,8 +71,10 @@ define i32 @foo(i32 %bar, i32 %baz, i32 %qux) !dbg !7 {
 entry:
   %0 = add i32 %bar, %baz, !dbg !14
   call void @llvm.dbg.value(metadata i32 %0, metadata !13, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.value(metadata !DIArgList(i32 %0, i32 2), metadata !13, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value)), !dbg !14
   %1 = add i32 %0, %qux
   call void @llvm.dbg.value(metadata i32 %1, metadata !13, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.value(metadata !DIArgList(i32 %1, i32 %0), metadata !13, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value)), !dbg !14
   ret i32 %1, !dbg !14
 }
 
@@ -208,7 +217,7 @@ shoes:
 ;; Test for dbg.declare of non-stack-slot Values. These turn up with NRVO and 
 ;; other ABI scenarios where something is technically in memory, but we don't
 ;; refer to it relative to the stack pointer. We refer to these either with an
-;; indirect DBG_VAUE, or a DBG_INSTR_REF with DW_OP_deref prepended.
+;; indirect DBG_VALUE, or a DBG_INSTR_REF with DW_OP_deref prepended.
 ;;
 ;; Test an inlined dbg.declare in a different scope + block, to test behaviours
 ;; where the debug intrinsic isn't in the first block. The normal-mode DBG_VALUE

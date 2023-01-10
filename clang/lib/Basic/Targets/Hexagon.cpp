@@ -187,7 +187,7 @@ const char *const HexagonTargetInfo::GCCRegNames[] = {
 };
 
 ArrayRef<const char *> HexagonTargetInfo::getGCCRegNames() const {
-  return llvm::makeArrayRef(GCCRegNames);
+  return llvm::ArrayRef(GCCRegNames);
 }
 
 const TargetInfo::GCCRegAlias HexagonTargetInfo::GCCRegAliases[] = {
@@ -197,7 +197,7 @@ const TargetInfo::GCCRegAlias HexagonTargetInfo::GCCRegAliases[] = {
 };
 
 ArrayRef<TargetInfo::GCCRegAlias> HexagonTargetInfo::getGCCRegAliases() const {
-  return llvm::makeArrayRef(GCCRegAliases);
+  return llvm::ArrayRef(GCCRegAliases);
 }
 
 static constexpr Builtin::Info BuiltinInfo[] = {
@@ -255,6 +255,6 @@ void HexagonTargetInfo::fillValidCPUList(
 }
 
 ArrayRef<Builtin::Info> HexagonTargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfo, clang::Hexagon::LastTSBuiltin -
-                                             Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfo, clang::Hexagon::LastTSBuiltin -
+                                         Builtin::FirstTSBuiltin);
 }

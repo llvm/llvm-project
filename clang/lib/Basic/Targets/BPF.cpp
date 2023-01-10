@@ -43,8 +43,8 @@ void BPFTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
 }
 
 ArrayRef<Builtin::Info> BPFTargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfo, clang::BPF::LastTSBuiltin -
-                                             Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfo,
+                        clang::BPF::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }
 
 bool BPFTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,

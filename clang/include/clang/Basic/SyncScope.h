@@ -145,7 +145,7 @@ public:
     static const unsigned Scopes[] = {
         static_cast<unsigned>(WorkGroup), static_cast<unsigned>(Device),
         static_cast<unsigned>(AllSVMDevices), static_cast<unsigned>(SubGroup)};
-    return llvm::makeArrayRef(Scopes);
+    return llvm::ArrayRef(Scopes);
   }
 
   unsigned getFallBackValue() const override {
@@ -197,7 +197,7 @@ public:
         static_cast<unsigned>(SingleThread), static_cast<unsigned>(Wavefront),
         static_cast<unsigned>(Workgroup), static_cast<unsigned>(Agent),
         static_cast<unsigned>(System)};
-    return llvm::makeArrayRef(Scopes);
+    return llvm::ArrayRef(Scopes);
   }
 
   unsigned getFallBackValue() const override {

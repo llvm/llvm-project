@@ -6,9 +6,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @bitcast_v4i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: bitcast_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
   %load = load volatile <4 x i8>, ptr %a

@@ -26,34 +26,42 @@ using namespace llvm;
 
 namespace {
 
-static cl::opt<bool> SampleProfileEvenCountDistribution(
-    "sample-profile-even-count-distribution", cl::init(true), cl::Hidden,
-    cl::desc("Try to evenly distribute counts when there are multiple equally "
+static cl::opt<bool> SampleProfileEvenFlowDistribution(
+    "sample-profile-even-flow-distribution", cl::init(true), cl::Hidden,
+    cl::desc("Try to evenly distribute flow when there are multiple equally "
              "likely options."));
 
-static cl::opt<unsigned> SampleProfileMaxDfsCalls(
-    "sample-profile-max-dfs-calls", cl::init(10), cl::Hidden,
-    cl::desc("Maximum number of dfs iterations for even count distribution."));
+static cl::opt<bool> SampleProfileRebalanceUnknown(
+    "sample-profile-rebalance-unknown", cl::init(true), cl::Hidden,
+    cl::desc("Evenly re-distribute flow among unknown subgraphs."));
 
-static cl::opt<unsigned> SampleProfileProfiCostInc(
-    "sample-profile-profi-cost-inc", cl::init(10), cl::Hidden,
-    cl::desc("A cost of increasing a block's count by one."));
+static cl::opt<bool> SampleProfileJoinIslands(
+    "sample-profile-join-islands", cl::init(true), cl::Hidden,
+    cl::desc("Join isolated components having positive flow."));
 
-static cl::opt<unsigned> SampleProfileProfiCostDec(
-    "sample-profile-profi-cost-dec", cl::init(20), cl::Hidden,
-    cl::desc("A cost of decreasing a block's count by one."));
+static cl::opt<unsigned> SampleProfileProfiCostBlockInc(
+    "sample-profile-profi-cost-block-inc", cl::init(10), cl::Hidden,
+    cl::desc("The cost of increasing a block's count by one."));
 
-static cl::opt<unsigned> SampleProfileProfiCostIncZero(
-    "sample-profile-profi-cost-inc-zero", cl::init(11), cl::Hidden,
-    cl::desc("A cost of increasing a count of zero-weight block by one."));
+static cl::opt<unsigned> SampleProfileProfiCostBlockDec(
+    "sample-profile-profi-cost-block-dec", cl::init(20), cl::Hidden,
+    cl::desc("The cost of decreasing a block's count by one."));
 
-static cl::opt<unsigned> SampleProfileProfiCostIncEntry(
-    "sample-profile-profi-cost-inc-entry", cl::init(40), cl::Hidden,
-    cl::desc("A cost of increasing the entry block's count by one."));
+static cl::opt<unsigned> SampleProfileProfiCostBlockEntryInc(
+    "sample-profile-profi-cost-block-entry-inc", cl::init(40), cl::Hidden,
+    cl::desc("The cost of increasing the entry block's count by one."));
 
-static cl::opt<unsigned> SampleProfileProfiCostDecEntry(
-    "sample-profile-profi-cost-dec-entry", cl::init(10), cl::Hidden,
-    cl::desc("A cost of decreasing the entry block's count by one."));
+static cl::opt<unsigned> SampleProfileProfiCostBlockEntryDec(
+    "sample-profile-profi-cost-block-entry-dec", cl::init(10), cl::Hidden,
+    cl::desc("The cost of decreasing the entry block's count by one."));
+
+static cl::opt<unsigned> SampleProfileProfiCostBlockZeroInc(
+    "sample-profile-profi-cost-block-zero-inc", cl::init(11), cl::Hidden,
+    cl::desc("The cost of increasing a count of zero-weight block by one."));
+
+static cl::opt<unsigned> SampleProfileProfiCostBlockUnknownInc(
+    "sample-profile-profi-cost-block-unknown-inc", cl::init(0), cl::Hidden,
+    cl::desc("The cost of increasing an unknown block's count by one."));
 
 /// A value indicating an infinite flow/capacity/weight of a block/edge.
 /// Not using numeric_limits<int64_t>::max(), as the values can be summed up
@@ -76,6 +84,8 @@ static constexpr int64_t INF = ((int64_t)1) << 50;
 /// minimum total cost respecting the given edge capacities.
 class MinCostMaxFlow {
 public:
+  MinCostMaxFlow(const ProfiParams &Params) : Params(Params) {}
+
   // Initialize algorithm's data structures for a network of a given size.
   void initialize(uint64_t NodeCount, uint64_t SourceNode, uint64_t SinkNode) {
     Source = SourceNode;
@@ -83,7 +93,7 @@ public:
 
     Nodes = std::vector<Node>(NodeCount);
     Edges = std::vector<std::vector<Edge>>(NodeCount, std::vector<Edge>());
-    if (SampleProfileEvenCountDistribution)
+    if (Params.EvenFlowDistribution)
       AugmentingEdges =
           std::vector<std::vector<Edge *>>(NodeCount, std::vector<Edge *>());
   }
@@ -166,11 +176,6 @@ public:
     return Flow;
   }
 
-  /// A cost of taking an unlikely jump.
-  static constexpr int64_t AuxCostUnlikely = ((int64_t)1) << 30;
-  /// Minimum BaseDistance for the jump distance values in island joining.
-  static constexpr uint64_t MinBaseDistance = 10000;
-
 private:
   /// Iteratively find an augmentation path/dag in the network and send the
   /// flow along its edges. The method returns the number of applied iterations.
@@ -180,7 +185,7 @@ private:
       uint64_t PathCapacity = computeAugmentingPathCapacity();
       while (PathCapacity > 0) {
         bool Progress = false;
-        if (SampleProfileEvenCountDistribution) {
+        if (Params.EvenFlowDistribution) {
           // Identify node/edge candidates for augmentation
           identifyShortestEdges(PathCapacity);
 
@@ -253,7 +258,7 @@ private:
       //    from Source to Target; it follows from inequalities
       //    Dist[Source, Target] >= Dist[Source, V] + Dist[V, Target]
       //                         >= Dist[Source, V]
-      if (!SampleProfileEvenCountDistribution && Nodes[Target].Distance == 0)
+      if (!Params.EvenFlowDistribution && Nodes[Target].Distance == 0)
         break;
       if (Nodes[Src].Distance > Nodes[Target].Distance)
         continue;
@@ -342,7 +347,7 @@ private:
 
         if (Edge.OnShortestPath) {
           // If we haven't seen Edge.Dst so far, continue DFS search there
-          if (Dst.Discovery == 0 && Dst.NumCalls < SampleProfileMaxDfsCalls) {
+          if (Dst.Discovery == 0 && Dst.NumCalls < MaxDfsCalls) {
             Dst.Discovery = ++Time;
             Stack.emplace(Edge.Dst, 0);
             Dst.NumCalls++;
@@ -512,6 +517,9 @@ private:
     }
   }
 
+  /// Maximum number of DFS iterations for DAG finding.
+  static constexpr uint64_t MaxDfsCalls = 10;
+
   /// A node in a flow network.
   struct Node {
     /// The cost of the cheapest path from the source to the current node.
@@ -566,6 +574,8 @@ private:
   uint64_t Target;
   /// Augmenting edges.
   std::vector<std::vector<Edge *>> AugmentingEdges;
+  /// Params for flow computation.
+  const ProfiParams &Params;
 };
 
 /// A post-processing adjustment of control flow. It applies two steps by
@@ -586,18 +596,23 @@ private:
 ///
 class FlowAdjuster {
 public:
-  FlowAdjuster(FlowFunction &Func) : Func(Func) {
+  FlowAdjuster(const ProfiParams &Params, FlowFunction &Func)
+      : Params(Params), Func(Func) {
     assert(Func.Blocks[Func.Entry].isEntry() &&
            "incorrect index of the entry block");
   }
 
   // Run the post-processing
   void run() {
-    /// Adjust the flow to get rid of isolated components.
-    joinIsolatedComponents();
+    if (Params.JoinIslands) {
+      /// Adjust the flow to get rid of isolated components.
+      joinIsolatedComponents();
+    }
 
-    /// Rebalance the flow inside unknown subgraphs.
-    rebalanceUnknownSubgraphs();
+    if (Params.RebalanceUnknown) {
+      /// Rebalance the flow inside unknown subgraphs.
+      rebalanceUnknownSubgraphs();
+    }
   }
 
 private:
@@ -736,12 +751,13 @@ private:
   /// To capture this objective with integer distances, we round off fractional
   /// parts to a multiple of 1 / BaseDistance.
   int64_t jumpDistance(FlowJump *Jump) const {
-    uint64_t BaseDistance =
-        std::max(MinCostMaxFlow::MinBaseDistance,
-                 std::min(Func.Blocks[Func.Entry].Flow,
-                          MinCostMaxFlow::AuxCostUnlikely / NumBlocks()));
     if (Jump->IsUnlikely)
-      return MinCostMaxFlow::AuxCostUnlikely;
+      return Params.CostUnlikely;
+
+    uint64_t BaseDistance =
+        std::max(FlowAdjuster::MinBaseDistance,
+                 std::min(Func.Blocks[Func.Entry].Flow,
+                          Params.CostUnlikely / NumBlocks()));
     if (Jump->Flow > 0)
       return BaseDistance + BaseDistance / Jump->Flow;
     return BaseDistance * NumBlocks();
@@ -786,13 +802,13 @@ private:
   bool canRebalanceAtRoot(const FlowBlock *SrcBlock) {
     // Do not attempt to find unknown subgraphs from an unknown or a
     // zero-flow block
-    if (SrcBlock->UnknownWeight || SrcBlock->Flow == 0)
+    if (SrcBlock->HasUnknownWeight || SrcBlock->Flow == 0)
       return false;
 
     // Do not attempt to process subgraphs from a block w/o unknown sucessors
     bool HasUnknownSuccs = false;
     for (auto *Jump : SrcBlock->SuccJumps) {
-      if (Func.Blocks[Jump->Target].UnknownWeight) {
+      if (Func.Blocks[Jump->Target].HasUnknownWeight) {
         HasUnknownSuccs = true;
         break;
       }
@@ -830,7 +846,7 @@ private:
           continue;
         // Process block Dst
         Visited[Dst] = true;
-        if (!Func.Blocks[Dst].UnknownWeight) {
+        if (!Func.Blocks[Dst].HasUnknownWeight) {
           KnownDstBlocks.push_back(&Func.Blocks[Dst]);
         } else {
           Queue.push(Dst);
@@ -893,11 +909,11 @@ private:
       return false;
 
     // Ignore jumps out of SrcBlock to known blocks
-    if (!JumpTarget->UnknownWeight && JumpSource == SrcBlock)
+    if (!JumpTarget->HasUnknownWeight && JumpSource == SrcBlock)
       return true;
 
     // Ignore jumps to known blocks with zero flow
-    if (!JumpTarget->UnknownWeight && JumpTarget->Flow == 0)
+    if (!JumpTarget->HasUnknownWeight && JumpTarget->Flow == 0)
       return true;
 
     return false;
@@ -935,7 +951,7 @@ private:
         break;
 
       // Keep an acyclic order of unknown blocks
-      if (Block->UnknownWeight && Block != SrcBlock)
+      if (Block->HasUnknownWeight && Block != SrcBlock)
         AcyclicOrder.push_back(Block);
 
       // Add to the queue all successors with zero local in-degree
@@ -977,7 +993,7 @@ private:
 
     // Ditribute flow from the remaining blocks
     for (auto *Block : UnknownBlocks) {
-      assert(Block->UnknownWeight && "incorrect unknown subgraph");
+      assert(Block->HasUnknownWeight && "incorrect unknown subgraph");
       uint64_t BlockFlow = 0;
       // Block's flow is the sum of incoming flows
       for (auto *Jump : Block->PredJumps) {
@@ -1019,7 +1035,11 @@ private:
 
   /// A constant indicating an arbitrary exit block of a function.
   static constexpr uint64_t AnyExitBlock = uint64_t(-1);
+  /// Minimum BaseDistance for the jump distance values in island joining.
+  static constexpr uint64_t MinBaseDistance = 10000;
 
+  /// Params for flow computation.
+  const ProfiParams &Params;
   /// The function.
   FlowFunction &Func;
 };
@@ -1029,7 +1049,8 @@ private:
 /// Every block is split into three nodes that are responsible for (i) an
 /// incoming flow, (ii) an outgoing flow, and (iii) penalizing an increase or
 /// reduction of the block weight.
-void initializeNetwork(MinCostMaxFlow &Network, FlowFunction &Func) {
+void initializeNetwork(const ProfiParams &Params, MinCostMaxFlow &Network,
+                       FlowFunction &Func) {
   uint64_t NumBlocks = Func.Blocks.size();
   assert(NumBlocks > 1 && "Too few blocks in a function");
   LLVM_DEBUG(dbgs() << "Initializing profi for " << NumBlocks << " blocks\n");
@@ -1051,7 +1072,7 @@ void initializeNetwork(MinCostMaxFlow &Network, FlowFunction &Func) {
   // Create three nodes for every block of the function
   for (uint64_t B = 0; B < NumBlocks; B++) {
     auto &Block = Func.Blocks[B];
-    assert((!Block.UnknownWeight || Block.Weight == 0 || Block.isEntry()) &&
+    assert((!Block.HasUnknownWeight || Block.Weight == 0 || Block.isEntry()) &&
            "non-zero weight of a block w/o weight except for an entry");
 
     // Split every block into two nodes
@@ -1076,22 +1097,22 @@ void initializeNetwork(MinCostMaxFlow &Network, FlowFunction &Func) {
     // We assume that decreasing block counts is more expensive than increasing,
     // and thus, setting separate costs here. In the future we may want to tune
     // the relative costs so as to maximize the quality of generated profiles.
-    int64_t AuxCostInc = SampleProfileProfiCostInc;
-    int64_t AuxCostDec = SampleProfileProfiCostDec;
-    if (Block.UnknownWeight) {
+    int64_t AuxCostInc = Params.CostBlockInc;
+    int64_t AuxCostDec = Params.CostBlockDec;
+    if (Block.HasUnknownWeight) {
       // Do not penalize changing weights of blocks w/o known profile count
-      AuxCostInc = 0;
+      AuxCostInc = Params.CostBlockUnknownInc;
       AuxCostDec = 0;
     } else {
       // Increasing the count for "cold" blocks with zero initial count is more
       // expensive than for "hot" ones
       if (Block.Weight == 0) {
-        AuxCostInc = SampleProfileProfiCostIncZero;
+        AuxCostInc = Params.CostBlockZeroInc;
       }
       // Modifying the count of the entry block is expensive
       if (Block.isEntry()) {
-        AuxCostInc = SampleProfileProfiCostIncEntry;
-        AuxCostDec = SampleProfileProfiCostDecEntry;
+        AuxCostInc = Params.CostBlockEntryInc;
+        AuxCostDec = Params.CostBlockEntryDec;
       }
     }
     // For blocks with self-edges, do not penalize a reduction of the count,
@@ -1115,7 +1136,7 @@ void initializeNetwork(MinCostMaxFlow &Network, FlowFunction &Func) {
     if (Src != Dst) {
       uint64_t SrcOut = 3 * Src + 1;
       uint64_t DstIn = 3 * Dst;
-      uint64_t Cost = Jump.IsUnlikely ? MinCostMaxFlow::AuxCostUnlikely : 0;
+      uint64_t Cost = Jump.IsUnlikely ? Params.CostUnlikely : 0;
       Network.addEdge(SrcOut, DstIn, Cost);
     }
   }
@@ -1232,21 +1253,38 @@ void verifyWeights(const FlowFunction &Func) {
 } // end of anonymous namespace
 
 /// Apply the profile inference algorithm for a given flow function
-void llvm::applyFlowInference(FlowFunction &Func) {
+void llvm::applyFlowInference(const ProfiParams &Params, FlowFunction &Func) {
   // Create and apply an inference network model
-  auto InferenceNetwork = MinCostMaxFlow();
-  initializeNetwork(InferenceNetwork, Func);
+  auto InferenceNetwork = MinCostMaxFlow(Params);
+  initializeNetwork(Params, InferenceNetwork, Func);
   InferenceNetwork.run();
 
   // Extract flow values for every block and every edge
   extractWeights(InferenceNetwork, Func);
 
   // Post-processing adjustments to the flow
-  auto Adjuster = FlowAdjuster(Func);
+  auto Adjuster = FlowAdjuster(Params, Func);
   Adjuster.run();
 
 #ifndef NDEBUG
   // Verify the result
   verifyWeights(Func);
 #endif
+}
+
+/// Apply the profile inference algorithm for a given flow function
+void llvm::applyFlowInference(FlowFunction &Func) {
+  ProfiParams Params;
+  // Set the params from the command-line flags.
+  Params.EvenFlowDistribution = SampleProfileEvenFlowDistribution;
+  Params.RebalanceUnknown = SampleProfileRebalanceUnknown;
+  Params.JoinIslands = SampleProfileJoinIslands;
+  Params.CostBlockInc = SampleProfileProfiCostBlockInc;
+  Params.CostBlockDec = SampleProfileProfiCostBlockDec;
+  Params.CostBlockEntryInc = SampleProfileProfiCostBlockEntryInc;
+  Params.CostBlockEntryDec = SampleProfileProfiCostBlockEntryDec;
+  Params.CostBlockZeroInc = SampleProfileProfiCostBlockZeroInc;
+  Params.CostBlockUnknownInc = SampleProfileProfiCostBlockUnknownInc;
+
+  applyFlowInference(Params, Func);
 }

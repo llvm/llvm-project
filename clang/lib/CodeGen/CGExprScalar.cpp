@@ -4929,8 +4929,7 @@ Value *ScalarExprEmitter::VisitBlockExpr(const BlockExpr *block) {
 static Value *ConvertVec3AndVec4(CGBuilderTy &Builder, CodeGenFunction &CGF,
                                  Value *Src, unsigned NumElementsDst) {
   static constexpr int Mask[] = {0, 1, 2, -1};
-  return Builder.CreateShuffleVector(Src,
-                                     llvm::makeArrayRef(Mask, NumElementsDst));
+  return Builder.CreateShuffleVector(Src, llvm::ArrayRef(Mask, NumElementsDst));
 }
 
 // Create cast instructions for converting LLVM value \p Src to LLVM type \p

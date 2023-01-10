@@ -283,7 +283,7 @@ public:
         } else if (auto *VD = B->getHoldingVar()) {
           // Holding vars are used to back the BindingDecls of tuple-like
           // types. The holding var declarations appear *after* this statement,
-          // so we have to create a location or them here to share with `B`. We
+          // so we have to create a location for them here to share with `B`. We
           // don't visit the binding, because we know it will be a DeclRefExpr
           // to `VD`.
           auto &VDLoc = Env.createStorageLocation(*VD);

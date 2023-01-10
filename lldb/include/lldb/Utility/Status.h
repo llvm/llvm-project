@@ -64,6 +64,11 @@ public:
   explicit Status(const char *format, ...)
       __attribute__((format(printf, 2, 3)));
 
+  template <typename... Args>
+  static Status createWithFormat(const char *format, Args &&...args) {
+    return Status(llvm::formatv(format, std::forward<Args>(args)...));
+  }
+
   ~Status();
 
   // llvm::Error support
@@ -190,6 +195,11 @@ protected:
   lldb::ErrorType m_type =
       lldb::eErrorTypeInvalid;  ///< The type of the above error code.
   mutable std::string m_string; ///< A string representation of the error code.
+private:
+  explicit Status(const llvm::formatv_object_base &payload) {
+    SetErrorToGenericError();
+    m_string = payload.str();
+  }
 };
 
 } // namespace lldb_private
