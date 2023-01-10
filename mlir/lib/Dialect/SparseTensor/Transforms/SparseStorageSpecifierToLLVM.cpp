@@ -138,7 +138,7 @@ public:
                           op.getDim().value().getZExtValue());
     } else {
       auto enc = op.getSpecifier().getType().getEncoding();
-      StorageLayout<true> layout(enc);
+      StorageLayout layout(enc);
       Optional<unsigned> dim = std::nullopt;
       if (op.getDim())
         dim = op.getDim().value().getZExtValue();
