@@ -5406,9 +5406,10 @@ and ``g2`` using the ``!dbg`` identifier:
 Unlike instructions, global objects (functions and global variables) may have
 multiple metadata attachments with the same identifier.
 
-A transformation is required to drop any metadata attachment that it does not
-know or know it can't preserve. Currently there is an exception for metadata
-attachment to globals for ``!func_sanitize``, ``!type`` and ``!absolute_symbol`` which can't be
+A transformation is required to drop any metadata attachment that it
+does not know or know it can't preserve. Currently there is an
+exception for metadata attachment to globals for ``!func_sanitize``,
+``!type``, ``!absolute_symbol`` and ``!associated`` which can't be
 unconditionally dropped unless the global is itself deleted.
 
 Metadata attached to a module using named metadata may not be dropped, with
