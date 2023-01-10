@@ -3247,6 +3247,13 @@ static void FixMisparsedFunctionReference(
   if (auto *func{
           std::get_if<common::Indirection<parser::FunctionReference>>(&u)}) {
     parser::FunctionReference &funcRef{func->value()};
+    // Ensure that there are no argument keywords
+    for (const auto &arg :
+        std::get<std::list<parser::ActualArgSpec>>(funcRef.v.t)) {
+      if (std::get<std::optional<parser::Keyword>>(arg.t)) {
+        return;
+      }
+    }
     auto &proc{std::get<parser::ProcedureDesignator>(funcRef.v.t)};
     if (Symbol *origSymbol{
             common::visit(common::visitors{
