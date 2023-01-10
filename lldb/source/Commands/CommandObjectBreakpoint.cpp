@@ -56,7 +56,7 @@ public:
   ~BreakpointOptionGroup() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-    return llvm::makeArrayRef(g_breakpoint_modify_options);
+    return llvm::ArrayRef(g_breakpoint_modify_options);
   }
 
   Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
@@ -186,7 +186,7 @@ public:
   ~BreakpointDummyOptionGroup() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-    return llvm::makeArrayRef(g_breakpoint_dummy_options);
+    return llvm::ArrayRef(g_breakpoint_dummy_options);
   }
 
   Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
@@ -497,7 +497,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_breakpoint_set_options);
+      return llvm::ArrayRef(g_breakpoint_set_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1159,7 +1159,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_breakpoint_list_options);
+      return llvm::ArrayRef(g_breakpoint_list_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1282,7 +1282,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_breakpoint_clear_options);
+      return llvm::ArrayRef(g_breakpoint_clear_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1439,7 +1439,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_breakpoint_delete_options);
+      return llvm::ArrayRef(g_breakpoint_delete_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1565,7 +1565,7 @@ public:
   ~BreakpointNameOptionGroup() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-    return llvm::makeArrayRef(g_breakpoint_name_options);
+    return llvm::ArrayRef(g_breakpoint_name_options);
   }
 
   Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
@@ -1625,7 +1625,7 @@ public:
   ~BreakpointAccessOptionGroup() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-    return llvm::makeArrayRef(g_breakpoint_access_options);
+    return llvm::ArrayRef(g_breakpoint_access_options);
   }
   Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                         ExecutionContext *execution_context) override {
@@ -2188,7 +2188,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_breakpoint_read_options);
+      return llvm::ArrayRef(g_breakpoint_read_options);
     }
 
     void HandleOptionArgumentCompletion(
@@ -2377,7 +2377,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_breakpoint_write_options);
+      return llvm::ArrayRef(g_breakpoint_write_options);
     }
 
     // Instance variables to hold the values for command options.

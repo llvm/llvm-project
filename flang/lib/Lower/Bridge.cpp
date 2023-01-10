@@ -473,36 +473,13 @@ public:
   }
 
   fir::ExtendedValue
-  translateToExtendedValue(mlir::Location loc,
-                           hlfir::EntityWithAttributes entity,
-                           Fortran::lower::StatementContext &context) {
-    auto [exv, exvCleanup] =
-        hlfir::translateToExtendedValue(loc, getFirOpBuilder(), entity);
-    if (exvCleanup)
-      context.attachCleanup(*exvCleanup);
-    return exv;
-  }
-
-  fir::ExtendedValue
   genExprAddr(const Fortran::lower::SomeExpr &expr,
               Fortran::lower::StatementContext &context,
               mlir::Location *locPtr = nullptr) override final {
     mlir::Location loc = locPtr ? *locPtr : toLocation();
-    if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
-      hlfir::EntityWithAttributes loweredExpr =
-          Fortran::lower::convertExprToHLFIR(loc, *this, expr, localSymbols,
-                                             context);
-      if (expr.Rank() > 0 &&
-          !Fortran::evaluate::IsSimplyContiguous(expr, getFoldingContext()))
-        TODO(loc, "genExprAddr of non contiguous variables in HLFIR");
-      fir::ExtendedValue exv =
-          translateToExtendedValue(loc, loweredExpr, context);
-      if (fir::isa_trivial(fir::getBase(exv).getType()))
-        TODO(loc, "place trivial in memory");
-      if (const auto *mutableBox = exv.getBoxOf<fir::MutableBoxValue>())
-        exv = fir::factory::genMutableBoxRead(*builder, loc, *mutableBox);
-      return exv;
-    }
+    if (bridge.getLoweringOptions().getLowerToHighLevelFIR())
+      return Fortran::lower::convertExprToAddress(loc, *this, expr,
+                                                  localSymbols, context);
     return Fortran::lower::createSomeExtendedAddress(loc, *this, expr,
                                                      localSymbols, context);
   }
@@ -516,8 +493,8 @@ public:
       hlfir::EntityWithAttributes loweredExpr =
           Fortran::lower::convertExprToHLFIR(loc, *this, expr, localSymbols,
                                              context);
-      fir::ExtendedValue exv =
-          translateToExtendedValue(loc, loweredExpr, context);
+      fir::ExtendedValue exv = Fortran::lower::translateToExtendedValue(
+          loc, getFirOpBuilder(), loweredExpr, context);
       // Load scalar references to integer, logical, real, or complex value
       // to an mlir value, dereference allocatable and pointers, and get rid
       // of fir.box that are no needed or create a copy into contiguous memory.
@@ -548,15 +525,9 @@ public:
   fir::ExtendedValue
   genExprBox(mlir::Location loc, const Fortran::lower::SomeExpr &expr,
              Fortran::lower::StatementContext &stmtCtx) override final {
-    if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
-      hlfir::EntityWithAttributes loweredExpr =
-          Fortran::lower::convertExprToHLFIR(loc, *this, expr, localSymbols,
-                                             stmtCtx);
-      auto exv = translateToExtendedValue(loc, loweredExpr, stmtCtx);
-      if (fir::isa_trivial(fir::getBase(exv).getType()))
-        TODO(loc, "place trivial in memory");
-      return fir::factory::createBoxValue(getFirOpBuilder(), loc, exv);
-    }
+    if (bridge.getLoweringOptions().getLowerToHighLevelFIR())
+      return Fortran::lower::convertExprToBox(loc, *this, expr, localSymbols,
+                                              stmtCtx);
     return Fortran::lower::createBoxValue(loc, *this, expr, localSymbols,
                                           stmtCtx);
   }

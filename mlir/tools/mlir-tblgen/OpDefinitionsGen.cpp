@@ -902,7 +902,7 @@ void OpEmitter::genAttrNameGetters() {
                           [&](StringRef attrName) {
                             body << "::llvm::StringRef(\"" << attrName << "\")";
                           });
-    body << "};\n  return ::llvm::makeArrayRef(attrNames);";
+    body << "};\n  return ::llvm::ArrayRef(attrNames);";
   }
 
   // Emit the getAttributeNameForIndex methods.

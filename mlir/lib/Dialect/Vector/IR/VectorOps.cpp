@@ -1204,8 +1204,7 @@ private:
   /// Folding is only possible in the absence of an internal permutation in the
   /// result vector.
   bool canFold() {
-    return (sentinels ==
-            makeArrayRef(extractPosition).drop_front(extractedRank));
+    return (sentinels == ArrayRef(extractPosition).drop_front(extractedRank));
   }
 
   // Helper to get the next defining op of interest.
@@ -1281,7 +1280,7 @@ LogicalResult ExtractFromInsertTransposeChainState::handleTransposeOp() {
   auto permutation = extractVector<unsigned>(nextTransposeOp.getTransp());
   AffineMap m = inversePermutation(
       AffineMap::getPermutationMap(permutation, extractOp.getContext()));
-  extractPosition = applyPermutationMap(m, makeArrayRef(extractPosition));
+  extractPosition = applyPermutationMap(m, ArrayRef(extractPosition));
   return success();
 }
 
@@ -1290,8 +1289,8 @@ LogicalResult
 ExtractFromInsertTransposeChainState::handleInsertOpWithMatchingPos(
     Value &res) {
   auto insertedPos = extractVector<int64_t>(nextInsertOp.getPosition());
-  if (makeArrayRef(insertedPos) !=
-      llvm::makeArrayRef(extractPosition).take_front(extractedRank))
+  if (ArrayRef(insertedPos) !=
+      llvm::ArrayRef(extractPosition).take_front(extractedRank))
     return failure();
   // Case 2.a. early-exit fold.
   res = nextInsertOp.getSource();
@@ -1332,8 +1331,7 @@ Value ExtractFromInsertTransposeChainState::tryToFoldExtractOpInPlace(
   OpBuilder b(extractOp.getContext());
   extractOp->setAttr(
       extractOp.getPositionAttrName(),
-      b.getI64ArrayAttr(
-          makeArrayRef(extractPosition).take_front(extractedRank)));
+      b.getI64ArrayAttr(ArrayRef(extractPosition).take_front(extractedRank)));
   extractOp.getVectorMutable().assign(source);
   return extractOp.getResult();
 }

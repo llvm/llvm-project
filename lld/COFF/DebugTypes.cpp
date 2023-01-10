@@ -603,7 +603,7 @@ void TpiSource::assignGHashesFromVector(
     return;
   GloballyHashedType *hashes = new GloballyHashedType[hashVec.size()];
   memcpy(hashes, hashVec.data(), hashVec.size() * sizeof(GloballyHashedType));
-  ghashes = makeArrayRef(hashes, hashVec.size());
+  ghashes = ArrayRef(hashes, hashVec.size());
   ownedGHashes = true;
 }
 
@@ -1127,8 +1127,7 @@ void TypeMerger::mergeTypesWithGHash() {
   //   - source 0, type 1...
   //   - source 1, type 0...
   std::vector<GHashCell> entries;
-  for (const GHashCell &cell :
-       makeArrayRef(ghashState.table.table, tableSize)) {
+  for (const GHashCell &cell : ArrayRef(ghashState.table.table, tableSize)) {
     if (!cell.isEmpty())
       entries.push_back(cell);
   }
@@ -1195,8 +1194,8 @@ void TypeMerger::sortDependencies() {
   ctx.tpiSourceList.insert(ctx.tpiSourceList.end(), objs.begin(), objs.end());
   for (uint32_t i = 0, e = ctx.tpiSourceList.size(); i < e; ++i)
     ctx.tpiSourceList[i]->tpiSrcIdx = i;
-  dependencySources = makeArrayRef(ctx.tpiSourceList.data(), numDeps);
-  objectSources = makeArrayRef(ctx.tpiSourceList.data() + numDeps, numObjs);
+  dependencySources = ArrayRef(ctx.tpiSourceList.data(), numDeps);
+  objectSources = ArrayRef(ctx.tpiSourceList.data() + numDeps, numObjs);
 }
 
 /// Given the index into the ghash table for a particular type, return the type

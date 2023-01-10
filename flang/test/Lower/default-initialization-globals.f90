@@ -101,8 +101,9 @@ module tinit
   ! CHECK: %[[VAL_19:.*]] = fir.insert_value %[[VAL_17]], %[[VAL_18]], ["j", !fir.type<_QMtinitTt1{{.*}}>] : (!fir.type<_QMtinitTt1{{.*}}>, i32) -> !fir.type<_QMtinitTt1{{.*}}>
   ! CHECK: %[[VAL_20:.*]] = fir.address_of(@_QMtinitEziel) : !fir.ref<!fir.array<100xf32>>
   ! CHECK: %[[VAL_21:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
-  ! CHECK: %[[VAL_22:.*]] = fir.embox %[[VAL_20]](%[[VAL_21]]) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
-  ! CHECK: %[[VAL_23:.*]] = fir.insert_value %[[VAL_19]], %[[VAL_22]], ["x", !fir.type<_QMtinitTt1{{.*}}>] : (!fir.type<_QMtinitTt1{{.*}}>, !fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.type<_QMtinitTt1{{.*}}>
+  ! CHECK: %[[VAL_22:.*]] = fir.embox %[[VAL_20]](%[[VAL_21]]) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<100xf32>>
+  ! CHECK: %[[VAL_22_B:.*]] = fir.rebox %[[VAL_22]] : (!fir.box<!fir.array<100xf32>>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  ! CHECK: %[[VAL_23:.*]] = fir.insert_value %[[VAL_19]], %[[VAL_22_B]], ["x", !fir.type<_QMtinitTt1{{.*}}>] : (!fir.type<_QMtinitTt1{{.*}}>, !fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.type<_QMtinitTt1{{.*}}>
   ! CHECK: %[[VAL_24:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xf32>>
   ! CHECK: %[[VAL_25:.*]] = fir.shape %[[VAL_13]] : (index) -> !fir.shape<1>
   ! CHECK: %[[VAL_26:.*]] = fir.embox %[[VAL_24]](%[[VAL_25]]) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>

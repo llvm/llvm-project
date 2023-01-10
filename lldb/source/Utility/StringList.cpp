@@ -108,7 +108,7 @@ std::string StringList::LongestCommonPrefix() {
   if (m_strings.empty())
     return {};
 
-  auto args = llvm::makeArrayRef(m_strings);
+  auto args = llvm::ArrayRef(m_strings);
   llvm::StringRef prefix = args.front();
   for (auto arg : args.drop_front()) {
     size_t count = 0;

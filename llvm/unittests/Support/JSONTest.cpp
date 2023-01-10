@@ -174,12 +174,16 @@ TEST(JSONTest, Parse) {
   Compare(R"("\"\\\b\f\n\r\t")", "\"\\\b\f\n\r\t");
   Compare(R"("\u0000")", llvm::StringRef("\0", 1));
   Compare("\"\x7f\"", "\x7f");
-  Compare(R"("\ud801\udc37")", u8"\U00010437"); // UTF16 surrogate pair escape.
-  Compare("\"\xE2\x82\xAC\xF0\x9D\x84\x9E\"", u8"\u20ac\U0001d11e"); // UTF8
+  Compare(R"("\ud801\udc37")", // UTF-16 surrogate pair escape.
+          /*U+10437*/ "\xf0\x90\x90\xb7");
+  Compare("\"\xE2\x82\xAC\xF0\x9D\x84\x9E\"", // UTF-8
+          /*U+20AC U+1D11E*/ "\xe2\x82\xac\xf0\x9d\x84\x9e");
   Compare(
-      R"("LoneLeading=\ud801, LoneTrailing=\udc01, LeadingLeadingTrailing=\ud801\ud801\udc37")",
-      u8"LoneLeading=\ufffd, LoneTrailing=\ufffd, "
-      u8"LeadingLeadingTrailing=\ufffd\U00010437"); // Invalid unicode.
+      // Invalid unicode.
+      R"("LoneLeading=\ud801, LoneTrailing=\udc01, LeadLeadTrail=\ud801\ud801\udc37")",
+      "LoneLeading=" /*U+FFFD*/ "\xef\xbf\xbd, "
+      "LoneTrailing=" /*U+FFFD*/ "\xef\xbf\xbd, "
+      "LeadLeadTrail=" /*U+FFFD U+10437*/ "\xef\xbf\xbd\xf0\x90\x90\xb7");
 
   Compare(R"({"":0,"":0})", Object{{"", 0}});
   Compare(R"({"obj":{},"arr":[]})", Object{{"obj", Object{}}, {"arr", {}}});

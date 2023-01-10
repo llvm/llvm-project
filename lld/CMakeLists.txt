@@ -33,7 +33,7 @@ if(LLD_BUILT_STANDALONE)
   find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
   list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
 
-  # Turn into CACHE PATHs for overwritting
+  # Turn into CACHE PATHs for overwriting
   set(LLVM_INCLUDE_DIRS ${LLVM_INCLUDE_DIRS} CACHE PATH "Path to llvm/include and any other header dirs needed")
   set(LLVM_BINARY_DIR "${LLVM_BINARY_DIR}" CACHE PATH "Path to LLVM build tree")
   set(LLVM_MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../llvm" CACHE PATH "Path to LLVM source tree")

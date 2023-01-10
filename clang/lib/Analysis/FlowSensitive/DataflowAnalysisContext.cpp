@@ -25,15 +25,15 @@
 namespace clang {
 namespace dataflow {
 
-void DataflowAnalysisContext::addFieldsReferencedInScope(
-    llvm::DenseSet<const FieldDecl *> Fields) {
-  llvm::set_union(FieldsReferencedInScope, Fields);
+void DataflowAnalysisContext::addModeledFields(
+    const llvm::DenseSet<const FieldDecl *> &Fields) {
+  llvm::set_union(ModeledFields, Fields);
 }
 
 llvm::DenseSet<const FieldDecl *>
 DataflowAnalysisContext::getReferencedFields(QualType Type) {
   llvm::DenseSet<const FieldDecl *> Fields = getObjectFields(Type);
-  llvm::set_intersect(Fields, FieldsReferencedInScope);
+  llvm::set_intersect(Fields, ModeledFields);
   return Fields;
 }
 
@@ -46,11 +46,10 @@ StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
     // the allocation. Since we only collect fields used in the function where
     // the allocation occurs, we can't apply that filter when performing
     // context-sensitive analysis. But, this only applies to storage locations,
-    // since fields access it not allowed to fail. In contrast, field *values*
+    // since field access it not allowed to fail. In contrast, field *values*
     // don't need this allowance, since the API allows for uninitialized fields.
-    auto Fields = Options.EnableContextSensitiveAnalysis
-                      ? getObjectFields(Type)
-                      : getReferencedFields(Type);
+    auto Fields = Opts.ContextSensitiveOpts ? getObjectFields(Type)
+                                            : getReferencedFields(Type);
     for (const FieldDecl *Field : Fields)
       FieldLocs.insert({Field, &createStorageLocation(Field->getType())});
     return takeOwnership(

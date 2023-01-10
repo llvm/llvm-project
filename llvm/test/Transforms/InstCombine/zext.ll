@@ -685,3 +685,20 @@ define i16 @zext_icmp_eq0_pow2_use2(i32 %x) {
   %z = zext i1 %i to i16
   ret i16 %z
 }
+
+; This used to infinite loop.
+
+define i8 @zext_icmp_eq_pow2(i8 %y, i8 %x) {
+; CHECK-LABEL: @zext_icmp_eq_pow2(
+; CHECK-NEXT:    [[SHLX:%.*]] = shl i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[SHLY:%.*]] = shl i8 -128, [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[SHLX]], [[SHLY]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[C]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shlx = shl i8 %x, 7
+  %shly = shl i8 -128, %y
+  %c = icmp eq i8 %shlx, %shly
+  %r = zext i1 %c to i8
+  ret i8 %r
+}
