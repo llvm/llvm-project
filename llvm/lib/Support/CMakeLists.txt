@@ -260,6 +260,7 @@ add_llvm_component_library(LLVMSupport
   Program.cpp
   RWMutex.cpp
   Signals.cpp
+  ThreadLocal.cpp
   Threading.cpp
   Valgrind.cpp
   Watchdog.cpp
