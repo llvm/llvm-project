@@ -25,32 +25,47 @@
 @c = external global i8, align 1
 @arr = global [SIZE x ptr] [MACRO], align 8
 
-; OVERFLOW:         Section {
-; OVERFLOW-NEXT:      Index: 2
-; OVERFLOW-NEXT:      Name: .data
-; OVERFLOW-NEXT:      PhysicalAddress: 0x0
-; OVERFLOW-NEXT:      VirtualAddress: 0x0
-; OVERFLOW-NEXT:      Size: 0x3FFFC
-; OVERFLOW-NEXT:      RawDataOffset: 0x8C
-; OVERFLOW-NEXT:      RelocationPointer: 0x40088
-; OVERFLOW-NEXT:      LineNumberPointer: 0x0
-; OVERFLOW-NEXT:      NumberOfRelocations: 65535
-; OVERFLOW-NEXT:      NumberOfLineNumbers: 65535
-; OVERFLOW-NEXT:      Type: STYP_DATA (0x40)
-; OVERFLOW-NEXT:    }
-; OVERFLOW-NEXT:    Section {
-; OVERFLOW-NEXT:      Index: 3
-; OVERFLOW-NEXT:      Name: .ovrflo
-; OVERFLOW-NEXT:      NumberOfRelocations: 65535
-; OVERFLOW-NEXT:      NumberOfLineNumbers: 0
-; OVERFLOW-NEXT:      Size: 0x0
-; OVERFLOW-NEXT:      RawDataOffset: 0x0
-; OVERFLOW-NEXT:      RelocationPointer: 0x40088
-; OVERFLOW-NEXT:      LineNumberPointer: 0x0
-; OVERFLOW-NEXT:      IndexOfSectionOverflowed: 2
-; OVERFLOW-NEXT:      IndexOfSectionOverflowed: 2
-; OVERFLOW-NEXT:      Type: STYP_OVRFLO (0x8000)
-; OVERFLOW-NEXT:    }
+; OVERFLOW:      Sections [
+; OVERFLOW-NEXT:   Section {
+; OVERFLOW-NEXT:     Index: 1
+; OVERFLOW-NEXT:     Name: .text
+; OVERFLOW-NEXT:     PhysicalAddress: 0x0
+; OVERFLOW-NEXT:     VirtualAddress: 0x0
+; OVERFLOW-NEXT:     Size: 0x0
+; OVERFLOW-NEXT:     RawDataOffset: 0x8C
+; OVERFLOW-NEXT:     RelocationPointer: 0x0
+; OVERFLOW-NEXT:     LineNumberPointer: 0x0
+; OVERFLOW-NEXT:     NumberOfRelocations: 0
+; OVERFLOW-NEXT:     NumberOfLineNumbers: 0
+; OVERFLOW-NEXT:     Type: STYP_TEXT (0x20)
+; OVERFLOW-NEXT:   }
+; OVERFLOW-NEXT:   Section {
+; OVERFLOW-NEXT:     Index: 2
+; OVERFLOW-NEXT:     Name: .data
+; OVERFLOW-NEXT:     PhysicalAddress: 0x0
+; OVERFLOW-NEXT:     VirtualAddress: 0x0
+; OVERFLOW-NEXT:     Size: 0x3FFFC
+; OVERFLOW-NEXT:     RawDataOffset: 0x8C
+; OVERFLOW-NEXT:     RelocationPointer: 0x40088
+; OVERFLOW-NEXT:     LineNumberPointer: 0x0
+; OVERFLOW-NEXT:     NumberOfRelocations: 65535
+; OVERFLOW-NEXT:     NumberOfLineNumbers: 65535
+; OVERFLOW-NEXT:     Type: STYP_DATA (0x40)
+; OVERFLOW-NEXT:   }
+; OVERFLOW-NEXT:   Section {
+; OVERFLOW-NEXT:     Index: 3
+; OVERFLOW-NEXT:     Name: .ovrflo
+; OVERFLOW-NEXT:     NumberOfRelocations: 65535
+; OVERFLOW-NEXT:     NumberOfLineNumbers: 0
+; OVERFLOW-NEXT:     Size: 0x0
+; OVERFLOW-NEXT:     RawDataOffset: 0x0
+; OVERFLOW-NEXT:     RelocationPointer: 0x40088
+; OVERFLOW-NEXT:     LineNumberPointer: 0x0
+; OVERFLOW-NEXT:     IndexOfSectionOverflowed: 2
+; OVERFLOW-NEXT:     IndexOfSectionOverflowed: 2
+; OVERFLOW-NEXT:     Type: STYP_OVRFLO (0x8000)
+; OVERFLOW-NEXT:   }
+; OVERFLOW-NEXT: ]
 
 ; XCOFF32:       Section {
 ; XCOFF32:         Name: .data
