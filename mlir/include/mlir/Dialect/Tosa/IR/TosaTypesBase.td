@@ -39,6 +39,7 @@ class Tosa_QuantizedType<string n, list<int> params, bit signed>
 //===----------------------------------------------------------------------===//
 
 def Tosa_UInt8 : UI<8>;
+def Tosa_UInt16 : UI<16>;
 
 def Tosa_Int8 : I<8>;
 def Tosa_Int16 : I<16>;
@@ -57,6 +58,7 @@ def Tosa_Bool : I<1>;
 // No unsigned unquantized int types.
 def Tosa_Int : AnyTypeOf<[Tosa_Bool,
                           Tosa_UInt8,
+                          Tosa_UInt16,
                           Tosa_SignedInt]>;
 
 def Tosa_Int32Or64 : AnyTypeOf<[Tosa_Int32,
