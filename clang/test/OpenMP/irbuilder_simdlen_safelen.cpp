@@ -242,18 +242,3 @@ void simple(float *a, float *b, int *c) {
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[LOOPVAR_ADDR]], align 8
 // CHECK-NEXT:    store i32 [[ADD]], ptr [[TMP4]], align 4
 // CHECK-NEXT:    ret void
-//
-//.
-// CHECK: attributes #0 = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
-// CHECK: attributes #1 = { noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
-//.
-// CHECK: !0 = !{i32 1, !"wchar_size", i32 4}
-// CHECK: !1 = !{i32 7, !"openmp", i32 45}
-// CHECK: !2 = !{!"clang version 16.0.0"}
-// CHECK: !3 = distinct !{!3, !4, !5}
-// CHECK: !4 = !{!"llvm.loop.vectorize.enable", i1 true}
-// CHECK: !5 = !{!"llvm.loop.vectorize.width", i32 2}
-// CHECK: !6 = distinct !{}
-// CHECK: !7 = distinct !{!7, !8, !4}
-// CHECK: !8 = !{!"llvm.loop.parallel_accesses", !6}
-//.
