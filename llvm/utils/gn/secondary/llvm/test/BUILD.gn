@@ -82,6 +82,7 @@ write_lit_config("lit_site_cfg") {
     # No bindings are implemented in the GN build.
     "LLVM_BINDINGS=",
     "LLVM_BYE_LINK_INTO_TOOLS=0",
+    "LLVM_EXAMPLEIRTRANSFORMS_LINK_INTO_TOOLS=0",
 
     "HAVE_OCAMLOPT=0",
     "OCAMLFIND=OCAMLFIND-NOTFOUND",
