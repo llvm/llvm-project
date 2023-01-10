@@ -6094,6 +6094,12 @@ bool ObjectFileMachO::GetIsDynamicLinkEditor() {
   return m_header.filetype == llvm::MachO::MH_DYLINKER;
 }
 
+bool ObjectFileMachO::CanTrustAddressRanges() {
+  // Dsymutil guarantees that the .debug_aranges accelerator is complete and can
+  // be trusted by LLDB.
+  return m_header.filetype == llvm::MachO::MH_DSYM;
+}
+
 bool ObjectFileMachO::AllowAssemblyEmulationUnwindPlans() {
   return m_allow_assembly_emulation_unwind_plans;
 }

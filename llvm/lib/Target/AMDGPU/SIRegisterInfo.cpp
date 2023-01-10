@@ -1524,6 +1524,7 @@ void SIRegisterInfo::buildSpillLoadStore(
     unsigned SOffsetRegState = 0;
     unsigned SrcDstRegState = getDefRegState(!IsStore);
     const bool IsLastSubReg = i + 1 == e;
+    const bool IsFirstSubReg = i == 0;
     if (IsLastSubReg) {
       SOffsetRegState |= getKillRegState(Scavenged);
       // The last implicit use carries the "Kill" flag.
@@ -1532,7 +1533,7 @@ void SIRegisterInfo::buildSpillLoadStore(
 
     // Make sure the whole register is defined if there are undef components by
     // adding an implicit def of the super-reg on the first instruction.
-    bool NeedSuperRegDef = e > 1 && IsStore && i == 0;
+    bool NeedSuperRegDef = e > 1 && IsStore && IsFirstSubReg;
     bool NeedSuperRegImpOperand = e > 1;
 
     // Remaining element size to spill into memory after some parts of it
@@ -1559,11 +1560,13 @@ void SIRegisterInfo::buildSpillLoadStore(
         MIB.addReg(ValueReg, RegState::ImplicitDefine);
         NeedSuperRegDef = false;
       }
-      if (IsSubReg || NeedSuperRegImpOperand) {
+      if ((IsSubReg || NeedSuperRegImpOperand) && (IsFirstSubReg || IsLastSubReg)) {
         NeedSuperRegImpOperand = true;
         unsigned State = SrcDstRegState;
-        if (Lane != LaneE)
+        if (!IsLastSubReg || (Lane != LaneE))
           State &= ~RegState::Kill;
+        if (!IsFirstSubReg || (Lane != LaneS))
+          State &= ~RegState::Define;
         MIB.addReg(ValueReg, RegState::Implicit | State);
       }
       RemEltSize -= 4;

@@ -51,6 +51,14 @@ def HasStdExtD : Predicate<"Subtarget->hasStdExtD()">,
                            AssemblerPredicate<(all_of FeatureStdExtD),
                            "'D' (Double-Precision Floating-Point)">;
 
+def FeatureStdExtH
+    : SubtargetFeature<"h", "HasStdExtH", "true",
+                       "'H' (Hypervisor)">;
+
+def HasStdExtH : Predicate<"Subtarget->hasStdExtH()">,
+                           AssemblerPredicate<(all_of FeatureStdExtH),
+                           "'H' (Hypervisor)">;
+
 def FeatureStdExtZihintpause
     : SubtargetFeature<"zihintpause", "HasStdExtZihintpause", "true",
                        "'zihintpause' (Pause Hint)">;

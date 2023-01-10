@@ -4146,7 +4146,7 @@ SDValue SystemZTargetLowering::lowerATOMIC_FENCE(SDValue Op,
   }
 
   // MEMBARRIER is a compiler barrier; it codegens to a no-op.
-  return DAG.getNode(SystemZISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
+  return DAG.getNode(ISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
 }
 
 // Op is an atomic load.  Lower it into a normal volatile load.
@@ -5944,7 +5944,6 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(STRCMP);
     OPCODE(SEARCH_STRING);
     OPCODE(IPM);
-    OPCODE(MEMBARRIER);
     OPCODE(TBEGIN);
     OPCODE(TBEGIN_NOFLOAT);
     OPCODE(TEND);

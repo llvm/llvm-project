@@ -53,13 +53,21 @@ const DWARFDebugAranges &DWARFDebugInfo::GetCompileUnitAranges() {
   }
 
   // Manually build arange data for everything that wasn't in .debug_aranges.
-  const size_t num_units = GetNumUnits();
-  for (size_t idx = 0; idx < num_units; ++idx) {
-    DWARFUnit *cu = GetUnitAtIndex(idx);
+  // The .debug_aranges accelerator is not guaranteed to be complete.
+  // Tools such as dsymutil can provide stronger guarantees than required by the
+  // standard. Without that guarantee, we have to iterate over every CU in the
+  // .debug_info and make sure there's a corresponding entry in the table and if
+  // not, add one for every subprogram.
+  ObjectFile *OF = m_dwarf.GetObjectFile();
+  if (!OF || !OF->CanTrustAddressRanges()) {
+    const size_t num_units = GetNumUnits();
+    for (size_t idx = 0; idx < num_units; ++idx) {
+      DWARFUnit *cu = GetUnitAtIndex(idx);
 
-    dw_offset_t offset = cu->GetOffset();
-    if (cus_with_data.find(offset) == cus_with_data.end())
-      cu->BuildAddressRangeTable(m_cu_aranges_up.get());
+      dw_offset_t offset = cu->GetOffset();
+      if (cus_with_data.find(offset) == cus_with_data.end())
+        cu->BuildAddressRangeTable(m_cu_aranges_up.get());
+    }
   }
 
   const bool minimize = true;

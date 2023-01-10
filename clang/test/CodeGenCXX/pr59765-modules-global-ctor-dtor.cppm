@@ -1,4 +1,11 @@
 // https://github.com/llvm/llvm-project/issues/59765
+//
+// FIXME: Since the signature of the constructors/destructors is
+// different in different targets. The current CHECK can't work
+// well for other targets like AIX. So here is the REQUIRES.
+// It would be better to add the corresponding test for other test.
+// REQUIRES: x86-registered-target,aarch64-registered-target
+//
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: split-file %s %t

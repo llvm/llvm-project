@@ -1,10 +1,10 @@
-# RUN: llvm-mc %s -triple=riscv64 -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+h -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
-# RUN:     | llvm-objdump -M no-aliases -d - \
+# RUN: llvm-mc -filetype=obj -mattr=+h -triple riscv64 < %s \
+# RUN:     | llvm-objdump --mattr=+h -M no-aliases -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
-# RUN: not llvm-mc -triple riscv32 < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=+h < %s 2>&1 \
 # RUN:     | FileCheck -check-prefix=CHECK-RV32 %s
 
 # CHECK-INST: hlv.wu a0, (a1)

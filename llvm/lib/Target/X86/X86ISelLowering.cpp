@@ -31661,7 +31661,7 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   // rmw. In practice, they do not look useful, so we don't try to be
   // especially clever.
   if (SSID == SyncScope::SingleThread)
-    // FIXME: we could just insert an X86ISD::MEMBARRIER here, except we are at
+    // FIXME: we could just insert an ISD::MEMBARRIER here, except we are at
     // the IR level, so we must wrap it in an intrinsic.
     return nullptr;
 
@@ -31782,7 +31782,7 @@ static SDValue LowerATOMIC_FENCE(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   // MEMBARRIER is a compiler barrier; it codegens to a no-op.
-  return DAG.getNode(X86ISD::MEMBARRIER, dl, MVT::Other, Op.getOperand(0));
+  return DAG.getNode(ISD::MEMBARRIER, dl, MVT::Other, Op.getOperand(0));
 }
 
 static SDValue LowerCMP_SWAP(SDValue Op, const X86Subtarget &Subtarget,
@@ -32331,7 +32331,7 @@ static SDValue lowerAtomicArith(SDValue N, SelectionDAG &DAG,
                          DAG.getUNDEF(VT), NewChain);
     }
     // MEMBARRIER is a compiler barrier; it codegens to a no-op.
-    SDValue NewChain = DAG.getNode(X86ISD::MEMBARRIER, DL, MVT::Other, Chain);
+    SDValue NewChain = DAG.getNode(ISD::MEMBARRIER, DL, MVT::Other, Chain);
     assert(!N->hasAnyUseOfValue(0));
     // NOTE: The getUNDEF is needed to give something for the unused result 0.
     return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(),
@@ -34341,7 +34341,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VAARG_64)
   NODE_NAME_CASE(VAARG_X32)
   NODE_NAME_CASE(DYN_ALLOCA)
-  NODE_NAME_CASE(MEMBARRIER)
   NODE_NAME_CASE(MFENCE)
   NODE_NAME_CASE(SEG_ALLOCA)
   NODE_NAME_CASE(PROBED_ALLOCA)

@@ -12,6 +12,7 @@
 #include "llvm/Support/FormatVariadic.h"
 
 #include <mutex>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -9922,7 +9923,7 @@ void ScratchTypeSystemClang::Finalize() {
   m_scratch_ast_source_up.reset();
 }
 
-TypeSystemClang *
+TypeSystemClangSP
 ScratchTypeSystemClang::GetForTarget(Target &target,
                                      std::optional<IsolatedASTKind> ast_kind,
                                      bool create_on_demand) {
@@ -9933,16 +9934,17 @@ ScratchTypeSystemClang::GetForTarget(Target &target,
                    "Couldn't get scratch TypeSystemClang");
     return nullptr;
   }
-  auto ts = *type_system_or_err;
+  auto ts_sp = *type_system_or_err;
   ScratchTypeSystemClang *scratch_ast =
-      llvm::dyn_cast_or_null<ScratchTypeSystemClang>(ts.get());
+      llvm::dyn_cast_or_null<ScratchTypeSystemClang>(ts_sp.get());
   if (!scratch_ast)
     return nullptr;
   // If no dedicated sub-AST was requested, just return the main AST.
   if (ast_kind == DefaultAST)
-    return scratch_ast;
+    return std::static_pointer_cast<TypeSystemClang>(ts_sp);
   // Search the sub-ASTs.
-  return &scratch_ast->GetIsolatedAST(*ast_kind);
+  return std::static_pointer_cast<TypeSystemClang>(
+      scratch_ast->GetIsolatedAST(*ast_kind).shared_from_this());
 }
 
 /// Returns a human-readable name that uniquely identifiers the sub-AST kind.

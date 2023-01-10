@@ -15,8 +15,8 @@ define ptr @test1(ptr dereferenceable(4) %0, ptr dereferenceable(8) %1, i1 zeroe
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@test1
 ; CHECK-SAME: (ptr nofree nonnull readnone dereferenceable(4) "no-capture-maybe-returned" [[TMP0:%.*]], ptr nofree nonnull readnone dereferenceable(8) "no-capture-maybe-returned" [[TMP1:%.*]], i1 zeroext [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], ptr [[TMP0]], ptr [[TMP1]]
-; CHECK-NEXT:    ret ptr [[TMP5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], ptr [[TMP0]], ptr [[TMP1]]
+; CHECK-NEXT:    ret ptr [[TMP4]]
 ;
   %4 = select i1 %2, ptr %0, ptr %1
   ret ptr %4
@@ -27,8 +27,8 @@ define ptr @test2(ptr dereferenceable_or_null(4) %0, ptr dereferenceable(8) %1, 
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@test2
 ; CHECK-SAME: (ptr nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[TMP0:%.*]], ptr nofree nonnull readnone dereferenceable(8) "no-capture-maybe-returned" [[TMP1:%.*]], i1 zeroext [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], ptr [[TMP0]], ptr [[TMP1]]
-; CHECK-NEXT:    ret ptr [[TMP5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], ptr [[TMP0]], ptr [[TMP1]]
+; CHECK-NEXT:    ret ptr [[TMP4]]
 ;
   %4 = select i1 %2, ptr %0, ptr %1
   ret ptr %4

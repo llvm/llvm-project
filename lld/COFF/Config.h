@@ -96,7 +96,7 @@ enum class ICFLevel {
 // Global configuration.
 struct Configuration {
   enum ManifestKind { Default, SideBySide, Embed, No };
-  bool is64() { return machine == AMD64 || machine == ARM64; }
+  bool is64() const { return machine == AMD64 || machine == ARM64; }
 
   llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
   size_t wordsize;
@@ -291,8 +291,6 @@ struct Configuration {
   bool stdcallFixup = false;
   bool writeCheckSum = false;
 };
-
-extern std::unique_ptr<Configuration> config;
 
 } // namespace lld::coff
 
