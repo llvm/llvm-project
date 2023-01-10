@@ -1760,6 +1760,8 @@ void transform::TileToForeachThreadOp::getEffects(
   consumesHandle(getTarget(), effects);
   onlyReadsHandle(getTileSizes(), effects);
   onlyReadsHandle(getNumThreads(), effects);
+  onlyReadsHandle(getPackedNumThreads(), effects);
+  onlyReadsHandle(getPackedTileSizes(), effects);
   producesHandle(getResults(), effects);
 }
 
