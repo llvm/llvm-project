@@ -1024,7 +1024,9 @@ Instruction *InstCombinerImpl::transformZExtICmp(ICmpInst *Cmp,
     // zext (X == 0) to i32 --> (X>>1)^1 iff X has only the 2nd bit set.
     // zext (X != 0) to i32 --> X        iff X has only the low bit set.
     // zext (X != 0) to i32 --> X>>1     iff X has only the 2nd bit set.
-    if (Op1CV->isZero() && Cmp->isEquality()) {
+    if (Op1CV->isZero() && Cmp->isEquality() &&
+        (Cmp->getOperand(0)->getType() == Zext.getType() ||
+         Cmp->getPredicate() == ICmpInst::ICMP_NE)) {
       // If Op1C some other power of two, convert:
       KnownBits Known = computeKnownBits(Cmp->getOperand(0), 0, &Zext);
 

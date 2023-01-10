@@ -645,10 +645,9 @@ define i64 @and_trunc_extra_use1_wider_src(i65 %x, i32 %y) {
 
 define i16 @zext_icmp_eq0_pow2(i32 %x) {
 ; CHECK-LABEL: @zext_icmp_eq0_pow2(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i16 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP2]], 1
-; CHECK-NEXT:    [[Z:%.*]] = xor i16 [[TMP3]], 1
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[I:%.*]] = icmp eq i32 [[M]], 0
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[I]] to i16
 ; CHECK-NEXT:    ret i16 [[Z]]
 ;
   %m = and i32 %x, 4
@@ -661,9 +660,8 @@ define i16 @zext_icmp_eq0_pow2_use1(i32 %x) {
 ; CHECK-LABEL: @zext_icmp_eq0_pow2_use1(
 ; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 4
 ; CHECK-NEXT:    call void @use32(i32 [[M]])
-; CHECK-NEXT:    [[M_LOBIT:%.*]] = lshr exact i32 [[M]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[M_LOBIT]] to i16
-; CHECK-NEXT:    [[Z:%.*]] = xor i16 [[TMP1]], 1
+; CHECK-NEXT:    [[I:%.*]] = icmp eq i32 [[M]], 0
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[I]] to i16
 ; CHECK-NEXT:    ret i16 [[Z]]
 ;
   %m = and i32 %x, 4
@@ -678,9 +676,7 @@ define i16 @zext_icmp_eq0_pow2_use2(i32 %x) {
 ; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 4
 ; CHECK-NEXT:    [[I:%.*]] = icmp eq i32 [[M]], 0
 ; CHECK-NEXT:    call void @use1(i1 [[I]])
-; CHECK-NEXT:    [[M_LOBIT:%.*]] = lshr exact i32 [[M]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[M_LOBIT]] to i16
-; CHECK-NEXT:    [[Z:%.*]] = xor i16 [[TMP1]], 1
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[I]] to i16
 ; CHECK-NEXT:    ret i16 [[Z]]
 ;
   %m = and i32 %x, 4
