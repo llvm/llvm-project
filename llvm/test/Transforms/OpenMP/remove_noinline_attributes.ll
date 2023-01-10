@@ -6,7 +6,7 @@ declare void @unknown()
 ; __kmpc functions
 define void @__kmpc_noinline() noinline nounwind {
 ; CHECK: Function Attrs: nounwind
-; CHECK-LABEL: define {{[^@]+}}@__kmpc_noinline(
+; CHECK-LABEL: @__kmpc_noinline(
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
 ;
@@ -16,7 +16,7 @@ define void @__kmpc_noinline() noinline nounwind {
 ; omp_X functions
 define void @omp_noinline() noinline nounwind {
 ; CHECK: Function Attrs: nounwind
-; CHECK-LABEL: define {{[^@]+}}@omp_noinline(
+; CHECK-LABEL: @omp_noinline(
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
 ;
@@ -26,7 +26,7 @@ define void @omp_noinline() noinline nounwind {
 ; _OMP namespace
 define void @_ZN4ompx_noinline() noinline nounwind {
 ; CHECK: Function Attrs: nounwind
-; CHECK-LABEL: define {{[^@]+}}@_ZN4ompx_noinline(
+; CHECK-LABEL: @_ZN4ompx_noinline(
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
 ;
@@ -38,7 +38,7 @@ define void @_ZN4ompx_noinline() noinline nounwind {
 
 define void @__kmpc_noinline_optnone() noinline optnone nounwind {
 ; CHECK: Function Attrs: noinline nounwind optnone
-; CHECK-LABEL: define {{[^@]+}}@__kmpc_noinline_optnone(
+; CHECK-LABEL: @__kmpc_noinline_optnone(
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
 ;
@@ -47,7 +47,7 @@ define void @__kmpc_noinline_optnone() noinline optnone nounwind {
 }
 define void @omp_noinline_optnone() noinline optnone nounwind {
 ; CHECK: Function Attrs: noinline nounwind optnone
-; CHECK-LABEL: define {{[^@]+}}@omp_noinline_optnone(
+; CHECK-LABEL: @omp_noinline_optnone(
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
 ;
@@ -57,7 +57,7 @@ define void @omp_noinline_optnone() noinline optnone nounwind {
 ; _OMP namespace
 define void @_ZN4ompx_noinline_optnone() noinline optnone nounwind {
 ; CHECK: Function Attrs: noinline nounwind optnone
-; CHECK-LABEL: define {{[^@]+}}@_ZN4ompx_noinline_optnone(
+; CHECK-LABEL: @_ZN4ompx_noinline_optnone(
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
 ;
@@ -66,7 +66,7 @@ define void @_ZN4ompx_noinline_optnone() noinline optnone nounwind {
 }
 define void @a___kmpc_noinline() noinline nounwind {
 ; CHECK: Function Attrs: noinline nounwind
-; CHECK-LABEL: define {{[^@]+}}@a___kmpc_noinline(
+; CHECK-LABEL: @a___kmpc_noinline(
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
 ;
@@ -75,7 +75,7 @@ define void @a___kmpc_noinline() noinline nounwind {
 }
 define void @a_omp_noinline() noinline nounwind {
 ; CHECK: Function Attrs: noinline nounwind
-; CHECK-LABEL: define {{[^@]+}}@a_omp_noinline(
+; CHECK-LABEL: @a_omp_noinline(
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
 ;
@@ -84,7 +84,7 @@ define void @a_omp_noinline() noinline nounwind {
 }
 define void @a__ZN4ompx_noinline() noinline nounwind {
 ; CHECK: Function Attrs: noinline nounwind
-; CHECK-LABEL: define {{[^@]+}}@a__ZN4ompx_noinline(
+; CHECK-LABEL: @a__ZN4ompx_noinline(
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
 ;
