@@ -234,6 +234,13 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
           ResType = VectorType::get(ResType, VecType->getElementCount());
         Builder.SetInsertPoint(CI);
         Builder.SetCurrentDebugLocation(CI->getDebugLoc());
+
+        if (ArgType->isFloatingPointTy()) {
+          Arg = Builder.CreateBitCast(
+              Arg,
+              IntegerType::getIntNTy(Ctx, ArgType->getPrimitiveSizeInBits()));
+        }
+
         if (OpConvSpecifiers[ArgCount - 1] == 'x' ||
             OpConvSpecifiers[ArgCount - 1] == 'X' ||
             OpConvSpecifiers[ArgCount - 1] == 'u' ||
@@ -373,7 +380,6 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
                                           "PrintBuffGep", Brnch);
 
     Type *Int32Ty = Type::getInt32Ty(Ctx);
-    Type *Int64Ty = Type::getInt64Ty(Ctx);
     for (unsigned ArgCount = 1;
          ArgCount < CI->arg_size() && ArgCount <= OpConvSpecifiers.size();
          ArgCount++) {
@@ -381,7 +387,6 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       Type *ArgType = Arg->getType();
       SmallVector<Value *, 32> WhatToStore;
       if (ArgType->isFPOrFPVectorTy() && !isa<VectorType>(ArgType)) {
-        Type *IType = (ArgType->isFloatTy()) ? Int32Ty : Int64Ty;
         if (OpConvSpecifiers[ArgCount - 1] == 'f') {
           if (auto *FpCons = dyn_cast<ConstantFP>(Arg)) {
             APFloat Val(FpCons->getValueAPF());
@@ -389,16 +394,13 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
             Val.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven,
                         &Lost);
             Arg = ConstantFP::get(Ctx, Val);
-            IType = Int32Ty;
           } else if (auto *FpExt = dyn_cast<FPExtInst>(Arg)) {
             if (FpExt->getType()->isDoubleTy() &&
                 FpExt->getOperand(0)->getType()->isFloatTy()) {
               Arg = FpExt->getOperand(0);
-              IType = Int32Ty;
             }
           }
         }
-        Arg = new BitCastInst(Arg, IType, "PrintArgFP", Brnch);
         WhatToStore.push_back(Arg);
       } else if (isa<PointerType>(ArgType)) {
         if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], ArgType)) {
