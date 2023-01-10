@@ -354,7 +354,7 @@ ModuleImport::ModuleImport(ModuleOp mlirModule,
       mlirModule(mlirModule), llvmModule(std::move(llvmModule)),
       iface(mlirModule->getContext()),
       typeTranslator(*mlirModule->getContext()),
-      debugImporter(std::make_unique<DebugImporter>(mlirModule->getContext())) {
+      debugImporter(std::make_unique<DebugImporter>(mlirModule)) {
   builder.setInsertionPointToStart(mlirModule.getBody());
 }
 
@@ -636,13 +636,13 @@ LogicalResult ModuleImport::convertGlobals() {
         globalVar.getName() == getGlobalDtorsVarName()) {
       if (failed(convertGlobalCtorsAndDtors(&globalVar))) {
         return emitError(mlirModule.getLoc())
-               << "unhandled global variable " << diag(globalVar);
+               << "unhandled global variable: " << diag(globalVar);
       }
       continue;
     }
     if (failed(convertGlobal(&globalVar))) {
       return emitError(mlirModule.getLoc())
-             << "unhandled global variable " << diag(globalVar);
+             << "unhandled global variable: " << diag(globalVar);
     }
   }
   return success();
@@ -664,7 +664,9 @@ void ModuleImport::setNonDebugMetadataAttrs(llvm::Instruction *inst,
       continue;
     if (failed(iface.setMetadataAttrs(builder, kind, node, op, *this))) {
       Location loc = debugImporter->translateLoc(inst->getDebugLoc());
-      emitWarning(loc) << "unhandled metadata (" << kind << ") " << diag(*inst);
+      emitWarning(loc) << "unhandled metadata: "
+                       << diagMD(node, llvmModule.get()) << " on "
+                       << diag(*inst);
     }
   }
 }
@@ -967,8 +969,7 @@ ModuleImport::getConstantsToConvert(llvm::Constant *constant) {
 }
 
 FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
-  // Constants have no location attached.
-  Location loc = UnknownLoc::get(context);
+  Location loc = mlirModule.getLoc();
 
   // Convert constants that can be represented as attributes.
   if (Attribute attr = getConstantAsAttr(constant)) {
@@ -1062,7 +1063,7 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     return root;
   }
 
-  return emitError(loc) << "unhandled constant " << diag(*constant);
+  return emitError(loc) << "unhandled constant: " << diag(*constant);
 }
 
 FailureOr<Value> ModuleImport::convertConstantExpr(llvm::Constant *constant) {
@@ -1107,10 +1108,10 @@ FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
   if (auto *constant = dyn_cast<llvm::Constant>(value))
     return convertConstantExpr(constant);
 
-  Location loc = UnknownLoc::get(context);
+  Location loc = mlirModule.getLoc();
   if (auto *inst = dyn_cast<llvm::Instruction>(value))
     loc = translateLoc(inst->getDebugLoc());
-  return emitError(loc) << "unhandled value " << diag(*value);
+  return emitError(loc) << "unhandled value: " << diag(*value);
 }
 
 FailureOr<SmallVector<Value>>
@@ -1187,7 +1188,7 @@ LogicalResult ModuleImport::convertIntrinsic(llvm::CallInst *inst) {
     return success();
 
   Location loc = translateLoc(inst->getDebugLoc());
-  return emitError(loc) << "unhandled intrinsic " << diag(*inst);
+  return emitError(loc) << "unhandled intrinsic: " << diag(*inst);
 }
 
 LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
@@ -1364,7 +1365,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
   if (succeeded(convertInstructionImpl(builder, inst, *this)))
     return success();
 
-  return emitError(loc) << "unhandled instruction " << diag(*inst);
+  return emitError(loc) << "unhandled instruction: " << diag(*inst);
 }
 
 LogicalResult ModuleImport::processInstruction(llvm::Instruction *inst) {
@@ -1432,7 +1433,7 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   builder.setInsertionPoint(mlirModule.getBody(), mlirModule.getBody()->end());
 
   LLVMFuncOp funcOp = builder.create<LLVMFuncOp>(
-      UnknownLoc::get(context), func->getName(), functionType,
+      mlirModule.getLoc(), func->getName(), functionType,
       convertLinkageFromLLVM(func->getLinkage()), dsoLocal, cconv);
 
   // Set the function debug information if available.
@@ -1471,8 +1472,7 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   if (FlatSymbolRefAttr personality = getPersonalityAsAttr(func))
     funcOp.setPersonalityAttr(personality);
   else if (func->hasPersonalityFn())
-    emitWarning(UnknownLoc::get(context),
-                "could not deduce personality, skipping it");
+    emitWarning(funcOp.getLoc(), "could not deduce personality, skipping it");
 
   if (func->hasGC())
     funcOp.setGarbageCollector(StringRef(func->getGC()));
@@ -1487,8 +1487,9 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
     if (!iface.isConvertibleMetadata(kind))
       continue;
     if (failed(iface.setMetadataAttrs(builder, kind, node, funcOp, *this))) {
-      emitWarning(funcOp->getLoc())
-          << "unhandled function metadata (" << kind << ") " << diag(*func);
+      emitWarning(funcOp.getLoc())
+          << "unhandled function metadata: " << diagMD(node, llvmModule.get())
+          << " on " << diag(*func);
     }
   }
 
@@ -1536,7 +1537,7 @@ LogicalResult ModuleImport::processBasicBlock(llvm::BasicBlock *bb,
       setNonDebugMetadataAttrs(&inst, op);
     } else if (inst.getOpcode() != llvm::Instruction::PHI) {
       Location loc = debugImporter->translateLoc(inst.getDebugLoc());
-      emitWarning(loc) << "dropped instruction " << diag(inst);
+      emitWarning(loc) << "dropped instruction: " << diag(inst);
     }
   }
   return success();
