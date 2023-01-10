@@ -160,14 +160,6 @@ hasDerivedTypeWithLengthParameters(const Fortran::semantics::Symbol &sym) {
   return false;
 }
 
-static mlir::Type unwrapElementType(mlir::Type type) {
-  if (mlir::Type ty = fir::dyn_cast_ptrOrBoxEleTy(type))
-    type = ty;
-  if (auto seqType = type.dyn_cast<fir::SequenceType>())
-    type = seqType.getEleTy();
-  return type;
-}
-
 fir::ExtendedValue Fortran::lower::genExtAddrInInitializer(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const Fortran::lower::SomeExpr &addr) {
@@ -254,63 +246,26 @@ mlir::Value Fortran::lower::genInitialDataTarget(
     }
   }
 
-  mlir::Value box;
+  mlir::Value targetBox;
+  mlir::Value targetShift;
   if (initialTarget.Rank() > 0) {
-    box = fir::getBase(Fortran::lower::createSomeArrayBox(
-        converter, initialTarget, globalOpSymMap, stmtCtx));
+    auto target = Fortran::lower::createSomeArrayBox(converter, initialTarget,
+                                                     globalOpSymMap, stmtCtx);
+    targetBox = fir::getBase(target);
+    targetShift = builder.createShape(loc, target);
   } else {
     fir::ExtendedValue addr = Fortran::lower::createInitializerAddress(
         loc, converter, initialTarget, globalOpSymMap, stmtCtx);
-    box = builder.createBox(loc, addr);
+    targetBox = builder.createBox(loc, addr);
+    // Nothing to do for targetShift, the target is a scalar.
   }
-  // box is a fir.box<T>, not a fir.box<fir.ptr<T>> as it should to be used
-  // for pointers. A fir.convert should not be used here, because it would
-  // not actually set the pointer attribute in the descriptor.
-  // In a normal context, fir.rebox would be used to set the pointer attribute
-  // while copying the projection from another fir.box. But fir.rebox cannot be
-  // used in initializer because its current codegen expects that the input
-  // fir.box is in memory, which is not the case in initializers.
-  // So, just replace the fir.embox that created addr with one with
-  // fir.box<fir.ptr<T>> result type.
-  // Note that the descriptor cannot have been created with fir.rebox because
-  // the initial-data-target cannot be a fir.box itself (it cannot be
-  // assumed-shape, deferred-shape, or polymorphic as per C765). However the
-  // case where the initial data target is a derived type with length parameters
-  // will most likely be a bit trickier, hence the TODO above.
-
-  mlir::Operation *op = box.getDefiningOp();
-  if (!op || !mlir::isa<fir::EmboxOp>(*op))
-    fir::emitFatalError(
-        loc, "fir.box must be created with embox in global initializers");
-  mlir::Type targetEleTy = unwrapElementType(box.getType());
-  if (!fir::isa_char(targetEleTy))
-    return builder.create<fir::EmboxOp>(loc, boxType, op->getOperands(),
-                                        op->getAttrs());
-
-  // Handle the character case length particularities: embox takes a length
-  // value argument when the result type has unknown length, but not when the
-  // result type has constant length. The type of the initial target must be
-  // constant length, but the one of the pointer may not be. In this case, a
-  // length operand must be added.
-  auto targetLen = targetEleTy.cast<fir::CharacterType>().getLen();
-  auto ptrLen = unwrapElementType(boxType).cast<fir::CharacterType>().getLen();
-  if (ptrLen == targetLen)
-    // Nothing to do
-    return builder.create<fir::EmboxOp>(loc, boxType, op->getOperands(),
-                                        op->getAttrs());
-  auto embox = mlir::cast<fir::EmboxOp>(*op);
-  auto ptrType = boxType.cast<fir::BoxType>().getEleTy();
-  mlir::Value memref = builder.createConvert(loc, ptrType, embox.getMemref());
-  if (targetLen == fir::CharacterType::unknownLen())
-    // Drop the length argument.
-    return builder.create<fir::EmboxOp>(loc, boxType, memref, embox.getShape(),
-                                        embox.getSlice());
-  // targetLen is constant and ptrLen is unknown. Add a length argument.
-  mlir::Value targetLenValue =
-      builder.createIntegerConstant(loc, builder.getIndexType(), targetLen);
-  return builder.create<fir::EmboxOp>(loc, boxType, memref, embox.getShape(),
-                                      embox.getSlice(),
-                                      mlir::ValueRange{targetLenValue});
+  // The targetBox is a fir.box<T>, not a fir.box<fir.ptr<T>> as it should for
+  // pointers (this matters to get the POINTER attribute correctly inside the
+  // initial value of the descriptor).
+  // Create a fir.rebox to set the attribute correctly, and use targetShift
+  // to preserve the target lower bounds if any.
+  return builder.create<fir::ReboxOp>(loc, boxType, targetBox, targetShift,
+                                      /*slice=*/mlir::Value{});
 }
 
 static mlir::Value genDefaultInitializerValue(
