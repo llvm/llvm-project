@@ -130,7 +130,7 @@ Value lowerExtendedMultiplication(Operation *mulOp, PatternRewriter &rewriter,
   Value high = combineDigits(resultDigits[2], resultDigits[3]);
 
   return rewriter.create<CompositeConstructOp>(
-      loc, mulOp->getResultTypes().front(), llvm::makeArrayRef({low, high}));
+      loc, mulOp->getResultTypes().front(), llvm::ArrayRef({low, high}));
 }
 
 //===----------------------------------------------------------------------===//
