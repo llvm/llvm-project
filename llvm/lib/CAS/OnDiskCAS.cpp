@@ -798,8 +798,9 @@ public:
   Expected<ObjectHandle> load(const IndexProxy &I, TrieRecord::Data Object,
                               InternalRef Ref);
 
-  ObjectHandle getLoadedObject(const IndexProxy &I, TrieRecord::Data Object,
-                               InternalHandle Handle) const;
+  Expected<ObjectHandle> getLoadedObject(const IndexProxy &I,
+                                         TrieRecord::Data Object,
+                                         InternalHandle Handle) const;
 
   struct PooledDataRecord {
     FileOffset Offset;
@@ -1474,14 +1475,15 @@ Expected<ObjectHandle> OnDiskCAS::load(ObjectRef ExternalRef) {
   return load(*I, I->Ref.load(), Ref);
 }
 
-ObjectHandle OnDiskCAS::getLoadedObject(const IndexProxy &I,
-                                        TrieRecord::Data Object,
-                                        InternalHandle Handle) const {
+Expected<ObjectHandle> OnDiskCAS::getLoadedObject(const IndexProxy &I,
+                                                  TrieRecord::Data Object,
+                                                  InternalHandle Handle) const {
   switch (Object.OK) {
   case TrieRecord::ObjectKind::Invalid:
   case TrieRecord::ObjectKind::Object:
     return makeObjectHandle(Handle.getRawData());
   }
+  return createCorruptObjectError(getID(I));
 }
 
 Expected<ObjectHandle>
