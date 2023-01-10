@@ -22,13 +22,6 @@
 
 namespace lld {
 
-std::string toString(coff::Symbol &b);
-
-// There are two different ways to convert an Archive::Symbol to a string:
-// One for Microsoft name mangling and one for Itanium name mangling.
-// Call the functions toCOFFString and toELFString, not just toString.
-std::string toCOFFString(const coff::Archive::Symbol &b);
-
 namespace coff {
 
 using llvm::object::Archive;
@@ -37,6 +30,7 @@ using llvm::object::coff_import_header;
 using llvm::object::coff_symbol_generic;
 
 class ArchiveFile;
+class COFFLinkerContext;
 class InputFile;
 class ObjFile;
 class SymbolTable;
@@ -250,29 +244,25 @@ private:
 // Absolute symbols.
 class DefinedAbsolute : public Defined {
 public:
-  DefinedAbsolute(StringRef n, COFFSymbolRef s)
-      : Defined(DefinedAbsoluteKind, n), va(s.getValue()) {
+  DefinedAbsolute(const COFFLinkerContext &c, StringRef n, COFFSymbolRef s)
+      : Defined(DefinedAbsoluteKind, n), va(s.getValue()), ctx(c) {
     isExternal = s.isExternal();
   }
 
-  DefinedAbsolute(StringRef n, uint64_t v)
-      : Defined(DefinedAbsoluteKind, n), va(v) {}
+  DefinedAbsolute(const COFFLinkerContext &c, StringRef n, uint64_t v)
+      : Defined(DefinedAbsoluteKind, n), va(v), ctx(c) {}
 
   static bool classof(const Symbol *s) {
     return s->kind() == DefinedAbsoluteKind;
   }
 
-  uint64_t getRVA() { return va - config->imageBase; }
+  uint64_t getRVA();
   void setVA(uint64_t v) { va = v; }
   uint64_t getVA() const { return va; }
 
-  // Section index relocations against absolute symbols resolve to
-  // this 16 bit number, and it is the largest valid section index
-  // plus one. This variable keeps it.
-  static uint16_t numOutputSections;
-
 private:
   uint64_t va;
+  const COFFLinkerContext &ctx;
 };
 
 // This symbol is used for linker-synthesized symbols like __ImageBase and
@@ -393,7 +383,8 @@ public:
 // a regular name. A function pointer is given as a DefinedImportData.
 class DefinedImportThunk : public Defined {
 public:
-  DefinedImportThunk(StringRef name, DefinedImportData *s, uint16_t machine);
+  DefinedImportThunk(COFFLinkerContext &ctx, StringRef name,
+                     DefinedImportData *s, uint16_t machine);
 
   static bool classof(const Symbol *s) {
     return s->kind() == DefinedImportThunkKind;
@@ -415,8 +406,9 @@ private:
 // This is here just for compatibility with MSVC.
 class DefinedLocalImport : public Defined {
 public:
-  DefinedLocalImport(StringRef n, Defined *s)
-      : Defined(DefinedLocalImportKind, n), data(make<LocalImportChunk>(s)) {}
+  DefinedLocalImport(COFFLinkerContext &ctx, StringRef n, Defined *s)
+      : Defined(DefinedLocalImportKind, n),
+        data(make<LocalImportChunk>(ctx, s)) {}
 
   static bool classof(const Symbol *s) {
     return s->kind() == DefinedLocalImportKind;
@@ -510,6 +502,10 @@ void replaceSymbol(Symbol *s, ArgT &&... arg) {
   s->canInline = canInline;
 }
 } // namespace coff
+
+std::string toString(const coff::COFFLinkerContext &ctx, coff::Symbol &b);
+std::string toCOFFString(const coff::COFFLinkerContext &ctx,
+                         const llvm::object::Archive::Symbol &b);
 
 } // namespace lld
 
