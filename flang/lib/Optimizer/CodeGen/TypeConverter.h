@@ -144,7 +144,18 @@ public:
           return inputs[0];
         });
     // Similar FIXME workaround here (needed for compare.fir/select-type.fir
-    // tests).
+    // as well as rebox-global.fir tests). This is needed to cope with the
+    // the fact that codegen does not lower some operation results to the LLVM
+    // type produced by this LLVMTypeConverter. For instance, inside FIR
+    // globals, fir.box are lowered to llvm.struct, while the fir.box type
+    // conversion translates it into an llvm.ptr<llvm.struct<>> because
+    // descriptors are manipulated in memory outside of global initializers
+    // where this is not possible. Hence, MLIR inserts
+    // builtin.unrealized_conversion_cast after the translation of operations
+    // producing fir.box in fir.global codegen. addSourceMaterialization and
+    // addTargetMaterialization allow ignoring these ops and removing them
+    // after codegen assuming the type discrepencies are intended (like for
+    // fir.box inside globals).
     addTargetMaterialization(
         [&](mlir::OpBuilder &builder, mlir::Type resultType,
             mlir::ValueRange inputs,
