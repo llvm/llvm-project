@@ -50,13 +50,22 @@ const Stmt &ignoreCFGOmittedNodes(const Stmt &S);
 /// Returns the set of all fields in the type.
 llvm::DenseSet<const FieldDecl *> getObjectFields(QualType Type);
 
+struct ContextSensitiveOptions {
+  /// The maximum depth to analyze. A value of zero is equivalent to disabling
+  /// context-sensitive analysis entirely.
+  unsigned Depth = 2;
+};
+
 /// Owns objects that encompass the state of a program and stores context that
 /// is used during dataflow analysis.
 class DataflowAnalysisContext {
 public:
-  // FIXME: merge with TransferOptions from Transfer.h.
   struct Options {
-    bool EnableContextSensitiveAnalysis;
+    /// Options for analyzing function bodies when present in the translation
+    /// unit, or empty to disable context-sensitive analysis. Note that this is
+    /// fundamentally limited: some constructs, such as recursion, are
+    /// explicitly unsupported.
+    llvm::Optional<ContextSensitiveOptions> ContextSensitiveOpts;
   };
 
   /// Constructs a dataflow analysis context.
@@ -65,10 +74,10 @@ public:
   ///
   ///  `S` must not be null.
   DataflowAnalysisContext(std::unique_ptr<Solver> S,
-                          Options Opts = {
-                              /*EnableContextSensitiveAnalysis=*/false})
+                          Options Opts = Options{
+                              /*ContextSensitiveOpts=*/std::nullopt})
       : S(std::move(S)), TrueVal(createAtomicBoolValue()),
-        FalseVal(createAtomicBoolValue()), Options(Opts) {
+        FalseVal(createAtomicBoolValue()), Opts(Opts) {
     assert(this->S != nullptr);
   }
 
@@ -262,6 +271,8 @@ public:
 
   void addFieldsReferencedInScope(llvm::DenseSet<const FieldDecl *> Fields);
 
+  const Options &getOptions() { return Opts; }
+
 private:
   friend class Environment;
 
@@ -345,7 +356,7 @@ private:
   AtomicBoolValue &TrueVal;
   AtomicBoolValue &FalseVal;
 
-  Options Options;
+  Options Opts;
 
   // Indices that are used to avoid recreating the same composite boolean
   // values.
