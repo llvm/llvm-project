@@ -259,16 +259,16 @@ func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>)
   return %0 : index
 }
 
-//// -----
-//
-//#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
-//
-//func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> i64 {
-//  // _e_xpected-error@+1 {{requested slice data on non-slice tensor}}
-//  %0 = sparse_tensor.storage_specifier.get %arg0 dim_offset at 0
-//       : !sparse_tensor.storage_specifier<#SparseVector> to i64
-//  return %0 : i64
-//}
+// -----
+
+#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
+
+func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> i64 {
+  // expected-error@+1 {{requested slice data on non-slice tensor}}
+  %0 = sparse_tensor.storage_specifier.get %arg0 dim_offset at 0
+       : !sparse_tensor.storage_specifier<#SparseVector>
+  return %0 : index
+}
 
 // -----
 
