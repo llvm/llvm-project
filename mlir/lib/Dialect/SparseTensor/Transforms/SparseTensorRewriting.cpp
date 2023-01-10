@@ -1020,7 +1020,8 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
     //     get the next element from the input file
     //     insert the element to %tmp
     //   %t = sparse_tensor.ConvertOp %tmp
-    RankedTensorType cooTp = getUnorderedCOOFromType(dstTp);
+    RankedTensorType cooTp =
+        getUnorderedCOOFromTypeWithOrdering(dstTp, encDst.getDimOrdering());
     auto cooBuffer =
         rewriter.create<AllocTensorOp>(loc, cooTp, dynSizesArray).getResult();
 
@@ -1050,10 +1051,10 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
     Value indices = dimSizes; // Reuse the indices memref to store indices.
     createFuncCall(rewriter, loc, getNextFuncName, {}, {reader, indices, value},
                    EmitCInterface::On);
-    SmallVector<Value> indicesArray;
+    SmallVector<Value> indicesArray(rank, Value());
     for (uint64_t i = 0; i < rank; i++) {
-      indicesArray.push_back(rewriter.create<memref::LoadOp>(
-          loc, indices, constantIndex(rewriter, loc, i)));
+      indicesArray[toStoredDim(encDst, i)] = rewriter.create<memref::LoadOp>(
+          loc, indices, constantIndex(rewriter, loc, i));
     }
     Value v = rewriter.create<memref::LoadOp>(loc, value);
     Value t = rewriter.create<InsertOp>(loc, v, forOp.getRegionIterArg(0),
