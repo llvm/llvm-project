@@ -489,7 +489,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::run(Module &M) {
     return false;
 
   auto PrintfFunction = M.getFunction("printf");
-  if (!PrintfFunction)
+  if (!PrintfFunction || !PrintfFunction->isDeclaration())
     return false;
 
   for (auto &U : PrintfFunction->uses()) {
