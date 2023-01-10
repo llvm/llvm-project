@@ -375,9 +375,9 @@ TEST(CommandMangler, InputsAfterDashDash) {
     tooling::CompileCommand Cmd;
     Cmd.CommandLine = {"clang", "/Users/foo.cc"};
     Mangler(Cmd, "/Users/foo.cc");
-    EXPECT_THAT(llvm::makeArrayRef(Cmd.CommandLine).take_back(2),
+    EXPECT_THAT(llvm::ArrayRef(Cmd.CommandLine).take_back(2),
                 ElementsAre("--", "/Users/foo.cc"));
-    EXPECT_THAT(llvm::makeArrayRef(Cmd.CommandLine).drop_back(2),
+    EXPECT_THAT(llvm::ArrayRef(Cmd.CommandLine).drop_back(2),
                 Not(Contains("/Users/foo.cc")));
   }
   // In CL mode /U triggers an undef operation, hence `/Users/foo.cc` shouldn't
@@ -386,9 +386,9 @@ TEST(CommandMangler, InputsAfterDashDash) {
     tooling::CompileCommand Cmd;
     Cmd.CommandLine = {"clang", "--driver-mode=cl", "bar.cc", "/Users/foo.cc"};
     Mangler(Cmd, "bar.cc");
-    EXPECT_THAT(llvm::makeArrayRef(Cmd.CommandLine).take_back(2),
+    EXPECT_THAT(llvm::ArrayRef(Cmd.CommandLine).take_back(2),
                 ElementsAre("--", "bar.cc"));
-    EXPECT_THAT(llvm::makeArrayRef(Cmd.CommandLine).drop_back(2),
+    EXPECT_THAT(llvm::ArrayRef(Cmd.CommandLine).drop_back(2),
                 Not(Contains("bar.cc")));
   }
   // All inputs but the main file is dropped.
@@ -396,10 +396,10 @@ TEST(CommandMangler, InputsAfterDashDash) {
     tooling::CompileCommand Cmd;
     Cmd.CommandLine = {"clang", "foo.cc", "bar.cc"};
     Mangler(Cmd, "baz.cc");
-    EXPECT_THAT(llvm::makeArrayRef(Cmd.CommandLine).take_back(2),
+    EXPECT_THAT(llvm::ArrayRef(Cmd.CommandLine).take_back(2),
                 ElementsAre("--", "baz.cc"));
     EXPECT_THAT(
-        llvm::makeArrayRef(Cmd.CommandLine).drop_back(2),
+        llvm::ArrayRef(Cmd.CommandLine).drop_back(2),
         testing::AllOf(Not(Contains("foo.cc")), Not(Contains("bar.cc"))));
   }
 }

@@ -460,7 +460,7 @@ private:
       return std::make_pair(Refs[A].Offset, Refs[A].Type != RefType::Implicit) <
              std::make_pair(Refs[B].Offset, Refs[B].Type != RefType::Implicit);
     });
-    auto Rest = llvm::makeArrayRef(RefOrder);
+    auto Rest = llvm::ArrayRef(RefOrder);
     unsigned End = 0;
     StartLine();
     for (unsigned I = 0; I < Code.size(); ++I) {

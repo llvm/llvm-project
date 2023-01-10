@@ -1360,11 +1360,11 @@ sortISDBySectionOrder(InputSectionDescription *isd,
   }
 
   isd->sections.clear();
-  for (InputSection *isec : makeArrayRef(unorderedSections).slice(0, insPt))
+  for (InputSection *isec : ArrayRef(unorderedSections).slice(0, insPt))
     isd->sections.push_back(isec);
   for (std::pair<InputSection *, int> p : orderedSections)
     isd->sections.push_back(p.first);
-  for (InputSection *isec : makeArrayRef(unorderedSections).slice(insPt))
+  for (InputSection *isec : ArrayRef(unorderedSections).slice(insPt))
     isd->sections.push_back(isec);
 }
 
@@ -2919,7 +2919,7 @@ computeHash(llvm::MutableArrayRef<uint8_t> hashBuf,
   });
 
   // Write to the final output buffer.
-  hashFn(hashBuf.data(), makeArrayRef(hashes.get(), hashesSize));
+  hashFn(hashBuf.data(), ArrayRef(hashes.get(), hashesSize));
 }
 
 template <class ELFT> void Writer<ELFT>::writeBuildId() {

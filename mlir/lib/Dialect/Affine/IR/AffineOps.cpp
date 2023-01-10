@@ -3868,7 +3868,7 @@ static ParseResult parseAffineMapWithMinMax(OpAsmParser &parser,
         return failure();
       result.attributes.erase(tmpAttrStrName);
       llvm::append_range(flatExprs, map.getValue().getResults());
-      auto operandsRef = llvm::makeArrayRef(mapOperands);
+      auto operandsRef = llvm::ArrayRef(mapOperands);
       auto dimsRef = operandsRef.take_front(map.getValue().getNumDims());
       SmallVector<OpAsmParser::UnresolvedOperand> dims(dimsRef.begin(),
                                                        dimsRef.end());

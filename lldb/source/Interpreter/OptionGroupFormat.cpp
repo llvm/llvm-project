@@ -58,7 +58,7 @@ OptionGroupFormat::OptionGroupFormat(
 }
 
 llvm::ArrayRef<OptionDefinition> OptionGroupFormat::GetDefinitions() {
-  auto result = llvm::makeArrayRef(m_option_definitions);
+  auto result = llvm::ArrayRef(m_option_definitions);
   if (m_byte_size.GetDefaultValue() < UINT64_MAX) {
     if (m_count.GetDefaultValue() < UINT64_MAX)
       return result;

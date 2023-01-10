@@ -1033,7 +1033,7 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
     auto llvmFuncType = LLVM::LLVMFunctionType::get(llvmResultType, argTypes);
     auto wrappedFuncType = LLVM::LLVMPointerType::get(llvmFuncType);
 
-    auto funcArguments = llvm::makeArrayRef(operands).drop_front();
+    auto funcArguments = llvm::ArrayRef(operands).drop_front();
 
     // Make sure that the first operand (indirect callee) matches the wrapped
     // LLVM IR function type, and that the types of the other call operands

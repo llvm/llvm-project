@@ -1097,7 +1097,7 @@ ParseResult MapOp::parse(OpAsmParser &parser, OperationState &result) {
 
   if (payloadOpName.has_value()) {
     addBodyWithPayloadOp(parser, result, payloadOpName.value(), payloadOpAttrs,
-                         makeArrayRef(result.operands).drop_back());
+                         ArrayRef(result.operands).drop_back());
   } else {
     SmallVector<OpAsmParser::Argument> regionArgs;
     if (parser.parseArgumentList(regionArgs, OpAsmParser::Delimiter::Paren,
@@ -1338,7 +1338,7 @@ ParseResult ReduceOp::parse(OpAsmParser &parser, OperationState &result) {
 
   if (payloadOpName.has_value()) {
     addBodyWithPayloadOp(parser, result, payloadOpName.value(), payloadOpAttrs,
-                         makeArrayRef(result.operands), /*initFirst=*/true);
+                         ArrayRef(result.operands), /*initFirst=*/true);
   } else {
     SmallVector<OpAsmParser::Argument> regionArgs;
     if (parser.parseArgumentList(regionArgs, OpAsmParser::Delimiter::Paren,

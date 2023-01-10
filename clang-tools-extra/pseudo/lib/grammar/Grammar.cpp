@@ -32,7 +32,7 @@ llvm::ArrayRef<Rule> Grammar::rulesFor(SymbolID SID) const {
   assert(isNonterminal(SID));
   const auto &R = T->Nonterminals[SID].RuleRange;
   assert(R.End <= T->Rules.size());
-  return llvm::makeArrayRef(&T->Rules[R.Start], R.End - R.Start);
+  return llvm::ArrayRef(&T->Rules[R.Start], R.End - R.Start);
 }
 
 const Rule &Grammar::lookupRule(RuleID RID) const {
@@ -180,7 +180,7 @@ static llvm::ArrayRef<std::string> getTerminalNames() {
   TerminalNames[tok::kw_##Keyword] = llvm::StringRef(#Keyword).upper();
 #define TOK(Tok) TerminalNames[tok::Tok] = llvm::StringRef(#Tok).upper();
 #include "clang/Basic/TokenKinds.def"
-    return llvm::makeArrayRef(TerminalNames, NumTerminals);
+    return llvm::ArrayRef(TerminalNames, NumTerminals);
   }();
   return TerminalNames;
 }

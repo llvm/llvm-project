@@ -276,7 +276,7 @@ public:
   }
 
   ArrayRef<coff_relocation> getRelocs() const {
-    return llvm::makeArrayRef(relocsData, relocsSize);
+    return llvm::ArrayRef(relocsData, relocsSize);
   }
 
   // Reloc setter used by ARM range extension thunk insertion.

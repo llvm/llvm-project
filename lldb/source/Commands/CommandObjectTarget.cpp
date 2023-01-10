@@ -153,7 +153,7 @@ public:
   ~OptionGroupDependents() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-    return llvm::makeArrayRef(g_target_dependents_options);
+    return llvm::ArrayRef(g_target_dependents_options);
   }
 
   Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
@@ -1970,7 +1970,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_target_modules_dump_symtab_options);
+      return llvm::ArrayRef(g_target_modules_dump_symtab_options);
     }
 
     SortOrder m_sort_order = eSortOrderNone;
@@ -2422,7 +2422,7 @@ protected:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_target_modules_dump_options);
+      return llvm::ArrayRef(g_target_modules_dump_options);
     }
 
     bool m_verbose;
@@ -2932,7 +2932,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_target_modules_list_options);
+      return llvm::ArrayRef(g_target_modules_list_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -3288,7 +3288,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_target_modules_show_unwind_options);
+      return llvm::ArrayRef(g_target_modules_show_unwind_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -3700,7 +3700,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_target_modules_lookup_options);
+      return llvm::ArrayRef(g_target_modules_lookup_options);
     }
 
     int m_type;        // Should be a eLookupTypeXXX enum after parsing options
@@ -4529,7 +4529,7 @@ public:
     ~CommandOptions() override = default;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_target_stop_hook_add_options);
+      return llvm::ArrayRef(g_target_stop_hook_add_options);
     }
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
