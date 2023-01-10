@@ -163,8 +163,6 @@ hasDerivedTypeWithLengthParameters(const Fortran::semantics::Symbol &sym) {
 fir::ExtendedValue Fortran::lower::genExtAddrInInitializer(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const Fortran::lower::SomeExpr &addr) {
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
-    TODO(loc, "generate initializer address in HLFIR");
   Fortran::lower::SymMap globalOpSymMap;
   Fortran::lower::AggregateStoreMap storeMap;
   Fortran::lower::StatementContext stmtCtx;
@@ -179,6 +177,10 @@ fir::ExtendedValue Fortran::lower::genExtAddrInInitializer(
     Fortran::lower::instantiateVariable(converter, var, globalOpSymMap,
                                         storeMap);
   }
+
+  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
+    return Fortran::lower::convertExprToAddress(loc, converter, addr,
+                                                globalOpSymMap, stmtCtx);
   return Fortran::lower::createInitializerAddress(loc, converter, addr,
                                                   globalOpSymMap, stmtCtx);
 }
@@ -188,8 +190,6 @@ mlir::Value Fortran::lower::genInitialDataTarget(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     mlir::Type boxType, const Fortran::lower::SomeExpr &initialTarget,
     bool couldBeInEquivalence) {
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
-    TODO(loc, "initial data target in HLFIR");
   Fortran::lower::SymMap globalOpSymMap;
   Fortran::lower::AggregateStoreMap storeMap;
   Fortran::lower::StatementContext stmtCtx;
@@ -248,16 +248,23 @@ mlir::Value Fortran::lower::genInitialDataTarget(
 
   mlir::Value targetBox;
   mlir::Value targetShift;
-  if (initialTarget.Rank() > 0) {
-    auto target = Fortran::lower::createSomeArrayBox(converter, initialTarget,
-                                                     globalOpSymMap, stmtCtx);
+  if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+    auto target = Fortran::lower::convertExprToBox(
+        loc, converter, initialTarget, globalOpSymMap, stmtCtx);
     targetBox = fir::getBase(target);
     targetShift = builder.createShape(loc, target);
   } else {
-    fir::ExtendedValue addr = Fortran::lower::createInitializerAddress(
-        loc, converter, initialTarget, globalOpSymMap, stmtCtx);
-    targetBox = builder.createBox(loc, addr);
-    // Nothing to do for targetShift, the target is a scalar.
+    if (initialTarget.Rank() > 0) {
+      auto target = Fortran::lower::createSomeArrayBox(converter, initialTarget,
+                                                       globalOpSymMap, stmtCtx);
+      targetBox = fir::getBase(target);
+      targetShift = builder.createShape(loc, target);
+    } else {
+      fir::ExtendedValue addr = Fortran::lower::createInitializerAddress(
+          loc, converter, initialTarget, globalOpSymMap, stmtCtx);
+      targetBox = builder.createBox(loc, addr);
+      // Nothing to do for targetShift, the target is a scalar.
+    }
   }
   // The targetBox is a fir.box<T>, not a fir.box<fir.ptr<T>> as it should for
   // pointers (this matters to get the POINTER attribute correctly inside the
