@@ -3042,6 +3042,9 @@ static OpFoldResult foldMinMaxOp(T op, ArrayRef<Attribute> operands) {
   SmallVector<int64_t, 2> results;
   auto foldedMap = op.getMap().partialConstantFold(operands, &results);
 
+  if (foldedMap.getNumSymbols() == 1 && foldedMap.isSymbolIdentity())
+    return op.getOperand(0);
+
   // If some of the map results are not constant, try changing the map in-place.
   if (results.empty()) {
     // If the map is the same, report that folding did not happen.

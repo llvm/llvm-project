@@ -276,6 +276,18 @@ bool AffineMap::isIdentity() const {
   return true;
 }
 
+bool AffineMap::isSymbolIdentity() const {
+  if (getNumSymbols() != getNumResults())
+    return false;
+  ArrayRef<AffineExpr> results = getResults();
+  for (unsigned i = 0, numSymbols = getNumSymbols(); i < numSymbols; ++i) {
+    auto expr = results[i].dyn_cast<AffineDimExpr>();
+    if (!expr || expr.getPosition() != i)
+      return false;
+  }
+  return true;
+}
+
 bool AffineMap::isEmpty() const {
   return getNumDims() == 0 && getNumSymbols() == 0 && getNumResults() == 0;
 }

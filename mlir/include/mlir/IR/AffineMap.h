@@ -104,6 +104,10 @@ public:
   /// dimensional identifiers.
   bool isIdentity() const;
 
+  /// Returns true if this affine map is an identity affine map on the symbol
+  /// identifiers.
+  bool isSymbolIdentity() const;
+
   /// Returns true if this affine map is a minor identity, i.e. an identity
   /// affine map (d0, ..., dn) -> (dp, ..., dn) on the most minor dimensions.
   bool isMinorIdentity() const;
