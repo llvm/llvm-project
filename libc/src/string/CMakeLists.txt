@@ -111,9 +111,6 @@ add_entrypoint_object(
     strcmp.cpp
   HDRS
     strcmp.h
-  DEPENDS
-    .memory_utils.strcmp_implementation
-    libc.src.__support.CPP.functional
 )
 
 add_entrypoint_object(
@@ -229,9 +226,6 @@ add_entrypoint_object(
     strncmp.cpp
   HDRS
     strncmp.h
-  DEPENDS
-    .memory_utils.strcmp_implementation
-    libc.src.__support.CPP.functional
 )
 
 add_entrypoint_object(
