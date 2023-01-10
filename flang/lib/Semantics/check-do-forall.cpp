@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-do-forall.h"
+#include "definable.h"
 #include "flang/Common/template.h"
 #include "flang/Evaluate/call.h"
 #include "flang/Evaluate/expression.h"
@@ -486,6 +487,14 @@ private:
       if (!IsVariableName(*symbol)) {
         context_.Say(
             sourceLocation, "DO control must be an INTEGER variable"_err_en_US);
+      } else if (auto why{WhyNotDefinable(sourceLocation,
+                     context_.FindScope(sourceLocation), DefinabilityFlags{},
+                     *symbol)}) {
+        context_
+            .Say(sourceLocation,
+                "'%s' may not be used as a DO variable"_err_en_US,
+                symbol->name())
+            .Attach(std::move(*why));
       } else {
         const DeclTypeSpec *symType{symbol->GetType()};
         if (!symType) {
