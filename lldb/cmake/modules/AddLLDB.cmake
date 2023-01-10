@@ -243,6 +243,16 @@ function(lldb_add_to_buildtree_lldb_framework name subdir)
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${name}> ${copy_dest}
     COMMENT "Copy ${name} to ${copy_dest}"
   )
+
+  # Create a custom target to remove the copy again from LLDB.framework in the
+  # build tree.
+  # Intentionally use remove_directory because the target can be a either a
+  # file or directory and using remove_directory is harmless for files.
+  add_custom_target(${name}-cleanup
+    COMMAND ${CMAKE_COMMAND} -E remove_directory ${copy_dest}
+    COMMENT "Removing ${name} from LLDB.framework")
+  add_dependencies(lldb-framework-cleanup
+    ${name}-cleanup)
 endfunction()
 
 # Add extra install steps for dSYM creation and stripping for the given target.
