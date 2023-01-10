@@ -56,6 +56,8 @@ public:
   }
 
   // Fake sections for parsing bitcode files.
+  FakeSection ltoTextSection;
+  FakeSection ltoDataSection;
   FakeSectionChunk ltoTextSectionChunk;
   FakeSectionChunk ltoDataSectionChunk;
 
