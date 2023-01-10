@@ -1414,13 +1414,10 @@ std::string NVPTXTargetLowering::getPrototype(
       continue;
     }
 
-    Align ParamByValAlign = Outs[OIdx].Flags.getNonZeroByValAlign();
-
-    // Try to increase alignment. This code matches logic in LowerCall when
-    // alignment increase is performed to increase vectorization options.
     Type *ETy = Args[i].IndirectType;
-    Align AlignCandidate = getFunctionParamOptimizedAlign(F, ETy, DL);
-    ParamByValAlign = std::max(ParamByValAlign, AlignCandidate);
+    Align InitialAlign = Outs[OIdx].Flags.getNonZeroByValAlign();
+    Align ParamByValAlign =
+        getFunctionByValParamAlign(F, ETy, InitialAlign, DL);
 
     O << ".param .align " << ParamByValAlign.value() << " .b8 ";
     O << "_";
@@ -1560,17 +1557,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       // The ByValAlign in the Outs[OIdx].Flags is always set at this point,
       // so we don't need to worry whether it's naturally aligned or not.
       // See TargetLowering::LowerCallTo().
-      ArgAlign = Outs[OIdx].Flags.getNonZeroByValAlign();
-
-      // Try to increase alignment to enhance vectorization options.
-      if (const Function *DirectCallee = CB->getCalledFunction())
-        ArgAlign = std::max(
-            ArgAlign, getFunctionParamOptimizedAlign(DirectCallee, ETy, DL));
-
-      // Enforce minumum alignment of 4 to work around ptxas miscompile
-      // for sm_50+. See corresponding alignment adjustment in
-      // emitFunctionParamList() for details.
-      ArgAlign = std::max(ArgAlign, Align(4));
+      Align InitialAlign = Outs[OIdx].Flags.getNonZeroByValAlign();
+      ArgAlign = getFunctionByValParamAlign(CB->getCalledFunction(), ETy,
+                                            InitialAlign, DL);
       if (IsVAArg)
         VAOffset = alignTo(VAOffset, ArgAlign);
     } else {
@@ -4508,6 +4497,29 @@ Align NVPTXTargetLowering::getFunctionParamOptimizedAlign(
 
   assert(!isKernelFunction(*F) && "Expect kernels to have non-local linkage");
   return Align(std::max(uint64_t(16), ABITypeAlign));
+}
+
+/// Helper for computing alignment of a device function byval parameter.
+Align NVPTXTargetLowering::getFunctionByValParamAlign(
+    const Function *F, Type *ArgTy, Align InitialAlign,
+    const DataLayout &DL) const {
+  Align ArgAlign = InitialAlign;
+  // Try to increase alignment to enhance vectorization options.
+  if (F)
+    ArgAlign = std::max(ArgAlign, getFunctionParamOptimizedAlign(F, ArgTy, DL));
+
+  // Work around a bug in ptxas. When PTX code takes address of
+  // byval parameter with alignment < 4, ptxas generates code to
+  // spill argument into memory. Alas on sm_50+ ptxas generates
+  // SASS code that fails with misaligned access. To work around
+  // the problem, make sure that we align byval parameters by at
+  // least 4.
+  // TODO: this will need to be undone when we get to support multi-TU
+  // device-side compilation as it breaks ABI compatibility with nvcc.
+  // Hopefully ptxas bug is fixed by then.
+  ArgAlign = std::max(ArgAlign, Align(4));
+
+  return ArgAlign;
 }
 
 /// isLegalAddressingMode - Return true if the addressing mode represented

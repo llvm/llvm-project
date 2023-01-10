@@ -461,6 +461,11 @@ public:
   Align getFunctionParamOptimizedAlign(const Function *F, Type *ArgTy,
                                        const DataLayout &DL) const;
 
+  /// Helper for computing alignment of a device function byval parameter.
+  Align getFunctionByValParamAlign(const Function *F, Type *ArgTy,
+                                   Align InitialAlign,
+                                   const DataLayout &DL) const;
+
   /// isLegalAddressingMode - Return true if the addressing mode represented
   /// by AM is legal for this target, for a load/store of the specified type
   /// Used to guide target specific optimizations, like loop strength
