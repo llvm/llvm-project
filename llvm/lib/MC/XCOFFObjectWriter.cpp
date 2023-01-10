@@ -107,8 +107,12 @@ using CsectGroups = std::deque<CsectGroup *>;
 // in XCOFF section header table.
 struct SectionEntry {
   char Name[XCOFF::NameSize];
-  // The physical/virtual address of the section. For an object file
-  // these values are equivalent.
+  // The physical/virtual address of the section. For an object file these
+  // values are equivalent, except for in the overflow section header, where
+  // the physical address specifies the number of relocation entries and the
+  // virtual address specifies the number of line number entries.
+  // TODO: Divide Address into PhysicalAddress and VirtualAddress when line
+  // number entries are supported.
   uint64_t Address;
   uint64_t Size;
   uint64_t FileOffsetToData;
@@ -234,7 +238,6 @@ class XCOFFObjectWriter : public MCObjectWriter {
   uint32_t SymbolTableEntryCount = 0;
   uint64_t SymbolTableOffset = 0;
   uint16_t SectionCount = 0;
-  uint64_t RelocationEntryOffset = 0;
   std::vector<std::pair<std::string, size_t>> FileNames;
   bool HasVisibility = false;
 
@@ -280,6 +283,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
       {&Text, &Data, &BSS, &TData, &TBSS}};
 
   std::vector<DwarfSectionEntry> DwarfSections;
+  std::vector<SectionEntry> OverflowSections;
 
   ExceptionSectionEntry ExceptionSection;
 
@@ -309,6 +313,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
                                        int16_t SectionIndex);
   void writeFileHeader();
   void writeAuxFileHeader();
+  void writeSectionHeader(const SectionEntry *Sec);
   void writeSectionHeaderTable();
   void writeSections(const MCAssembler &Asm, const MCAsmLayout &Layout);
   void writeSectionForControlSectionEntry(const MCAssembler &Asm,
@@ -348,7 +353,11 @@ class XCOFFObjectWriter : public MCObjectWriter {
   // *) Builds up the section header table by adding any non-empty sections to
   //    `Sections`.
   void assignAddressesAndIndices(const MCAsmLayout &);
+  // Called after relocations are recorded.
   void finalizeSectionInfo();
+  void finalizeRelocationInfo(SectionEntry *Sec, uint64_t RelCount);
+  void calcOffsetToRelocations(SectionEntry *Sec, uint64_t &RawPointer);
+
   void addExceptionEntry(const MCSymbol *Symbol, const MCSymbol *Trap,
                          unsigned LanguageCode, unsigned ReasonCode,
                          unsigned FunctionSize, bool hasDebug) override;
@@ -399,13 +408,14 @@ void XCOFFObjectWriter::reset() {
     Sec->reset();
   for (auto &DwarfSec : DwarfSections)
     DwarfSec.reset();
+  for (auto &OverflowSec : OverflowSections)
+    OverflowSec.reset();
   ExceptionSection.reset();
 
   // Reset states in XCOFFObjectWriter.
   SymbolTableEntryCount = 0;
   SymbolTableOffset = 0;
   SectionCount = 0;
-  RelocationEntryOffset = 0;
   Strings.clear();
 
   MCObjectWriter::reset();
@@ -921,47 +931,55 @@ void XCOFFObjectWriter::writeAuxFileHeader() {
   W.write<uint32_t>(Sections[1]->Address); // DataStartAddr
 }
 
+void XCOFFObjectWriter::writeSectionHeader(const SectionEntry *Sec) {
+  bool IsDwarf = (Sec->Flags & XCOFF::STYP_DWARF) != 0;
+  bool IsOvrflo = (Sec->Flags & XCOFF::STYP_OVRFLO) != 0;
+  // Nothing to write for this Section.
+  if (Sec->Index == SectionEntry::UninitializedIndex)
+    return;
+
+  // Write Name.
+  ArrayRef<char> NameRef(Sec->Name, XCOFF::NameSize);
+  W.write(NameRef);
+
+  // Write the Physical Address and Virtual Address.
+  // We use 0 for DWARF sections' Physical and Virtual Addresses.
+  writeWord(IsDwarf ? 0 : Sec->Address);
+  // Since line number is not supported, we set it to 0 for overflow sections.
+  writeWord((IsDwarf || IsOvrflo) ? 0 : Sec->Address);
+
+  writeWord(Sec->Size);
+  writeWord(Sec->FileOffsetToData);
+  writeWord(Sec->FileOffsetToRelocations);
+  writeWord(0); // FileOffsetToLineNumberInfo. Not supported yet.
+
+  if (is64Bit()) {
+    W.write<uint32_t>(Sec->RelocationCount);
+    W.write<uint32_t>(0); // NumberOfLineNumbers. Not supported yet.
+    W.write<int32_t>(Sec->Flags);
+    W.OS.write_zeros(4);
+  } else {
+    // For the overflow section header, s_nreloc provides a reference to the
+    // primary section header and s_nlnno must have the same value.
+    // For common section headers, if either of s_nreloc or s_nlnno are set to
+    // 65535, the other one must also be set to 65535.
+    W.write<uint16_t>(Sec->RelocationCount);
+    W.write<uint16_t>((IsOvrflo || Sec->RelocationCount == XCOFF::RelocOverflow)
+                          ? Sec->RelocationCount
+                          : 0); // NumberOfLineNumbers. Not supported yet.
+    W.write<int32_t>(Sec->Flags);
+  }
+}
+
 void XCOFFObjectWriter::writeSectionHeaderTable() {
-  auto writeSectionHeader = [&](const SectionEntry *Sec, bool IsDwarf) {
-    // Nothing to write for this Section.
-    if (Sec->Index == SectionEntry::UninitializedIndex)
-      return false;
-
-    // Write Name.
-    ArrayRef<char> NameRef(Sec->Name, XCOFF::NameSize);
-    W.write(NameRef);
-
-    // Write the Physical Address and Virtual Address. In an object file these
-    // are the same.
-    // We use 0 for DWARF sections' Physical and Virtual Addresses.
-    writeWord(IsDwarf ? 0 : Sec->Address);
-    writeWord(IsDwarf ? 0 : Sec->Address);
-
-    writeWord(Sec->Size);
-    writeWord(Sec->FileOffsetToData);
-    writeWord(Sec->FileOffsetToRelocations);
-    writeWord(0); // FileOffsetToLineNumberInfo. Not supported yet.
-
-    if (is64Bit()) {
-      W.write<uint32_t>(Sec->RelocationCount);
-      W.write<uint32_t>(0); // NumberOfLineNumbers. Not supported yet.
-      W.write<int32_t>(Sec->Flags);
-      W.OS.write_zeros(4);
-    } else {
-      W.write<uint16_t>(Sec->RelocationCount);
-      W.write<uint16_t>(0); // NumberOfLineNumbers. Not supported yet.
-      W.write<int32_t>(Sec->Flags);
-    }
-
-    return true;
-  };
-
   for (const auto *CsectSec : Sections)
-    writeSectionHeader(CsectSec, /* IsDwarf */ false);
+    writeSectionHeader(CsectSec);
   for (const auto &DwarfSec : DwarfSections)
-    writeSectionHeader(&DwarfSec, /* IsDwarf */ true);
+    writeSectionHeader(&DwarfSec);
+  for (const auto &OverflowSec : OverflowSections)
+    writeSectionHeader(&OverflowSec);
   if (hasExceptionSection())
-    writeSectionHeader(&ExceptionSection, false);
+    writeSectionHeader(&ExceptionSection);
 }
 
 void XCOFFObjectWriter::writeRelocation(XCOFFRelocation Reloc,
@@ -1042,60 +1060,139 @@ void XCOFFObjectWriter::writeSymbolTable(const MCAsmLayout &Layout) {
                                     DwarfSection.Index);
 }
 
+void XCOFFObjectWriter::finalizeRelocationInfo(SectionEntry *Sec,
+                                               uint64_t RelCount) {
+  // Handles relocation field overflows in an XCOFF32 file. An XCOFF64 file
+  // may not contain an overflow section header.
+  if (!is64Bit() && (RelCount >= static_cast<uint32_t>(XCOFF::RelocOverflow))) {
+    // Generate an overflow section header.
+    SectionEntry SecEntry(".ovrflo", XCOFF::STYP_OVRFLO);
+
+    // This field specifies the file section number of the section header that
+    // overflowed.
+    SecEntry.RelocationCount = Sec->Index;
+
+    // This field specifies the number of relocation entries actually
+    // required.
+    SecEntry.Address = RelCount;
+    SecEntry.Index = ++SectionCount;
+    OverflowSections.push_back(std::move(SecEntry));
+
+    // The field in the primary section header is always 65535
+    // (XCOFF::RelocOverflow).
+    Sec->RelocationCount = XCOFF::RelocOverflow;
+  } else {
+    Sec->RelocationCount = RelCount;
+  }
+}
+
+void XCOFFObjectWriter::calcOffsetToRelocations(SectionEntry *Sec,
+                                                uint64_t &RawPointer) {
+  if (!Sec->RelocationCount)
+    return;
+
+  Sec->FileOffsetToRelocations = RawPointer;
+  uint64_t RelocationSizeInSec = 0;
+  if (!is64Bit() &&
+      Sec->RelocationCount == static_cast<uint32_t>(XCOFF::RelocOverflow)) {
+    // Find its corresponding overflow section.
+    for (auto &OverflowSec : OverflowSections) {
+      if (OverflowSec.RelocationCount == static_cast<uint32_t>(Sec->Index)) {
+        RelocationSizeInSec =
+            OverflowSec.Address * XCOFF::RelocationSerializationSize32;
+
+        // This field must have the same values as in the corresponding
+        // primary section header.
+        OverflowSec.FileOffsetToRelocations = Sec->FileOffsetToRelocations;
+      }
+    }
+    assert(RelocationSizeInSec && "Overflow section header doesn't exist.");
+  } else {
+    RelocationSizeInSec = Sec->RelocationCount *
+                          (is64Bit() ? XCOFF::RelocationSerializationSize64
+                                     : XCOFF::RelocationSerializationSize32);
+  }
+
+  RawPointer += RelocationSizeInSec;
+  if (RawPointer > MaxRawDataSize)
+    report_fatal_error("Relocation data overflowed this object file.");
+}
+
 void XCOFFObjectWriter::finalizeSectionInfo() {
   for (auto *Section : Sections) {
     if (Section->Index == SectionEntry::UninitializedIndex)
       // Nothing to record for this Section.
       continue;
 
+    uint64_t RelCount = 0;
     for (const auto *Group : Section->Groups) {
       if (Group->empty())
         continue;
 
-      for (auto &Csect : *Group) {
-        const size_t CsectRelocCount = Csect.Relocations.size();
-        // An XCOFF64 file may not contain an overflow section header.
-        if (!is64Bit() && (CsectRelocCount >= XCOFF::RelocOverflow ||
-                           Section->RelocationCount >=
-                               XCOFF::RelocOverflow - CsectRelocCount))
-          report_fatal_error(
-              "relocation entries overflowed; overflow section is "
-              "not implemented yet");
-
-        Section->RelocationCount += CsectRelocCount;
-      }
+      for (auto &Csect : *Group)
+        RelCount += Csect.Relocations.size();
     }
+    finalizeRelocationInfo(Section, RelCount);
   }
 
   for (auto &DwarfSection : DwarfSections)
-    DwarfSection.RelocationCount = DwarfSection.DwarfSect->Relocations.size();
+    finalizeRelocationInfo(&DwarfSection,
+                           DwarfSection.DwarfSect->Relocations.size());
 
-  // Calculate the file offset to the relocation entries.
-  uint64_t RawPointer = RelocationEntryOffset;
-  auto calcOffsetToRelocations = [&](SectionEntry *Sec, bool IsDwarf) {
-    if (!IsDwarf && Sec->Index == SectionEntry::UninitializedIndex)
-      return false;
+  // Calculate the RawPointer value for all headers.
+  uint64_t RawPointer =
+      (is64Bit() ? (XCOFF::FileHeaderSize64 +
+                    SectionCount * XCOFF::SectionHeaderSize64)
+                 : (XCOFF::FileHeaderSize32 +
+                    SectionCount * XCOFF::SectionHeaderSize32)) +
+      auxiliaryHeaderSize();
 
-    if (!Sec->RelocationCount)
-      return false;
+  // Calculate the file offset to the section data.
+  uint64_t CurrAddress = 0;
+  for (auto *Sec : Sections) {
+    if (Sec->Index == SectionEntry::UninitializedIndex || Sec->IsVirtual)
+      continue;
 
-    Sec->FileOffsetToRelocations = RawPointer;
-    const uint64_t RelocationSizeInSec =
-        Sec->RelocationCount * (is64Bit()
-                                    ? XCOFF::RelocationSerializationSize64
-                                    : XCOFF::RelocationSerializationSize32);
-    RawPointer += RelocationSizeInSec;
+    Sec->FileOffsetToData = RawPointer;
+    RawPointer += Sec->Size;
     if (RawPointer > MaxRawDataSize)
-      report_fatal_error("Relocation data overflowed this object file.");
+      report_fatal_error("Section raw data overflowed this object file.");
 
-    return true;
-  };
+    CurrAddress = Sec->Address + Sec->Size;
+  }
 
-  for (auto *Sec : Sections)
-    calcOffsetToRelocations(Sec, /* IsDwarf */ false);
+  // Sections other than DWARF section use DefaultSectionAlign as the default
+  // alignment, while DWARF sections have their own alignments. If these two
+  // alignments are not the same, we need some padding here and to use this
+  // padding in FileOffsetToData calculation.
+  if (!DwarfSections.empty()) {
+    RawPointer +=
+        alignTo(CurrAddress,
+                (*DwarfSections.begin()).DwarfSect->MCSec->getAlign()) -
+        CurrAddress;
+    for (auto &DwarfSection : DwarfSections) {
+      DwarfSection.FileOffsetToData = RawPointer;
+      RawPointer += DwarfSection.MemorySize;
+      if (RawPointer > MaxRawDataSize)
+        report_fatal_error("Section raw data overflowed this object file.");
+    }
+  }
+
+  if (hasExceptionSection()) {
+    ExceptionSection.FileOffsetToData = RawPointer;
+    RawPointer += ExceptionSection.Size;
+
+    assert(RawPointer <= MaxRawDataSize &&
+           "Section raw data overflowed this object file.");
+  }
+
+  for (auto *Sec : Sections) {
+    if (Sec->Index != SectionEntry::UninitializedIndex)
+      calcOffsetToRelocations(Sec, RawPointer);
+  }
 
   for (auto &DwarfSec : DwarfSections)
-    calcOffsetToRelocations(&DwarfSec, /* IsDwarf */ true);
+    calcOffsetToRelocations(&DwarfSec, RawPointer);
 
   // TODO Error check that the number of symbol table entries fits in 32-bits
   // signed ...
@@ -1171,7 +1268,6 @@ void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
   // Section indices are 1-based in XCOFF.
   int32_t SectionIndex = 1;
   bool HasTDataSection = false;
-  uint32_t PaddingsBeforeDwarf = 0;
 
   for (auto *Section : Sections) {
     const bool IsEmpty =
@@ -1249,19 +1345,8 @@ void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
     Section->Size = Address - Section->Address;
   }
 
-  // Start to generate DWARF sections. Sections other than DWARF section use
-  // DefaultSectionAlign as the default alignment, while DWARF sections have
-  // their own alignments. If these two alignments are not the same, we need
-  // some paddings here and record the paddings bytes for FileOffsetToData
-  // calculation.
-  if (!DwarfSections.empty())
-    PaddingsBeforeDwarf =
-        alignTo(Address,
-                (*DwarfSections.begin()).DwarfSect->MCSec->getAlign()) -
-        Address;
-
+  // Start to generate DWARF sections.
   DwarfSectionEntry *LastDwarfSection = nullptr;
-
   for (auto &DwarfSection : DwarfSections) {
     assert((SectionIndex <= MaxSectionIndex) && "Section index overflow!");
 
@@ -1311,49 +1396,8 @@ void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
     Address += ExceptionSection.Size;
     Address = alignTo(Address, DefaultSectionAlign);
   }
+
   SymbolTableEntryCount = SymbolTableIndex;
-
-  // Calculate the RawPointer value for each section.
-  uint64_t RawPointer =
-      (is64Bit() ? (XCOFF::FileHeaderSize64 +
-                    SectionCount * XCOFF::SectionHeaderSize64)
-                 : (XCOFF::FileHeaderSize32 +
-                    SectionCount * XCOFF::SectionHeaderSize32)) +
-      auxiliaryHeaderSize();
-
-  for (auto *Sec : Sections) {
-    if (Sec->Index == SectionEntry::UninitializedIndex || Sec->IsVirtual)
-      continue;
-
-    Sec->FileOffsetToData = RawPointer;
-    RawPointer += Sec->Size;
-    if (RawPointer > MaxRawDataSize)
-      report_fatal_error("Section raw data overflowed this object file.");
-  }
-
-  // Increase the raw pointer for the padding bytes between csect sections and
-  // DWARF sections.
-  if (!DwarfSections.empty())
-    RawPointer += PaddingsBeforeDwarf;
-
-  for (auto &DwarfSection : DwarfSections) {
-    DwarfSection.FileOffsetToData = RawPointer;
-
-    RawPointer += DwarfSection.MemorySize;
-
-    assert(RawPointer <= MaxRawDataSize &&
-           "Section raw data overflowed this object file.");
-  }
-
-  if (hasExceptionSection()) {
-    ExceptionSection.FileOffsetToData = RawPointer;
-    RawPointer += ExceptionSection.Size;
-
-    assert(RawPointer <= MaxRawDataSize &&
-           "Section raw data overflowed this object file.");
-  }
-
-  RelocationEntryOffset = RawPointer;
 }
 
 void XCOFFObjectWriter::writeSectionForControlSectionEntry(
