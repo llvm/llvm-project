@@ -238,6 +238,11 @@ endif()
 
 if(LLDB_BUILD_FRAMEWORK)
   include(LLDBFramework)
+
+  add_dependencies(install-liblldb
+    lldb-framework-cleanup)
+  add_dependencies(install-liblldb-stripped
+    lldb-framework-cleanup)
 endif()
 
 ## BEGIN SWIFT
