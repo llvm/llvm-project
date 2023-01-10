@@ -48,7 +48,7 @@ struct FlowJump;
 struct FlowBlock {
   uint64_t Index;
   uint64_t Weight{0};
-  bool UnknownWeight{false};
+  bool HasUnknownWeight{false};
   uint64_t Flow{0};
   bool HasSelfEdge{false};
   std::vector<FlowJump *> SuccJumps;
@@ -74,9 +74,45 @@ struct FlowFunction {
   std::vector<FlowBlock> Blocks;
   std::vector<FlowJump> Jumps;
   /// The index of the entry block.
-  uint64_t Entry;
+  uint64_t Entry{0};
 };
 
+/// Various thresholds and options controlling the behavior of the profile
+/// inference algorithm. Default values are tuned for several large-scale
+/// applications, and can be modified via corresponding command-line flags.
+struct ProfiParams {
+  /// Evenly distribute flow when there are multiple equally likely options.
+  bool EvenFlowDistribution{false};
+
+  /// Evenly re-distribute flow among unknown subgraphs.
+  bool RebalanceUnknown{false};
+
+  /// Join isolated components having positive flow.
+  bool JoinIslands{false};
+
+  /// The cost of increasing a block's count by one.
+  unsigned CostBlockInc{0};
+
+  /// The cost of decreasing a block's count by one.
+  unsigned CostBlockDec{0};
+
+  /// The cost of increasing a count of zero-weight block by one.
+  unsigned CostBlockZeroInc{0};
+
+  /// The cost of increasing the entry block's count by one.
+  unsigned CostBlockEntryInc{0};
+
+  /// The cost of decreasing the entry block's count by one.
+  unsigned CostBlockEntryDec{0};
+
+  /// The cost of increasing an unknown block's count by one.
+  unsigned CostBlockUnknownInc{0};
+
+  /// The cost of taking an unlikely block/jump.
+  const int64_t CostUnlikely = ((int64_t)1) << 30;
+};
+
+void applyFlowInference(const ProfiParams &Params, FlowFunction &Func);
 void applyFlowInference(FlowFunction &Func);
 
 /// Sample profile inference pass.
@@ -171,10 +207,10 @@ void SampleProfileInference<BT>::apply(BlockWeightMap &BlockWeights,
   for (const auto *BB : BasicBlocks) {
     FlowBlock Block;
     if (SampleBlockWeights.find(BB) != SampleBlockWeights.end()) {
-      Block.UnknownWeight = false;
+      Block.HasUnknownWeight = false;
       Block.Weight = SampleBlockWeights[BB];
     } else {
-      Block.UnknownWeight = true;
+      Block.HasUnknownWeight = true;
       Block.Weight = 0;
     }
     Block.Index = Func.Blocks.size();
