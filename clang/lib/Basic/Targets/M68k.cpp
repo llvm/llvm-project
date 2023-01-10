@@ -137,7 +137,7 @@ const char *const M68kTargetInfo::GCCRegNames[] = {
     "pc"};
 
 ArrayRef<const char *> M68kTargetInfo::getGCCRegNames() const {
-  return llvm::makeArrayRef(GCCRegNames);
+  return llvm::ArrayRef(GCCRegNames);
 }
 
 ArrayRef<TargetInfo::GCCRegAlias> M68kTargetInfo::getGCCRegAliases() const {

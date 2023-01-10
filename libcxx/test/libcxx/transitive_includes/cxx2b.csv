@@ -51,7 +51,6 @@ barrier type_traits
 bit cstdint
 bit cstdlib
 bit limits
-bit type_traits
 bit version
 bitset climits
 bitset cstddef

@@ -128,10 +128,9 @@ Instruction *InstCombinerImpl::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
     if (Ordering != AtomicOrdering::Release &&
         Ordering != AtomicOrdering::Monotonic)
       return nullptr;
-    auto *SI = new StoreInst(RMWI.getValOperand(),
-                             RMWI.getPointerOperand(), &RMWI);
-    SI->setAtomic(Ordering, RMWI.getSyncScopeID());
-    SI->setAlignment(DL.getABITypeAlign(RMWI.getType()));
+    new StoreInst(RMWI.getValOperand(), RMWI.getPointerOperand(),
+                  /*isVolatile*/ false, RMWI.getAlign(), Ordering,
+                  RMWI.getSyncScopeID(), &RMWI);
     return eraseInstFromFunction(RMWI);
   }
 

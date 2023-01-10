@@ -680,7 +680,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~num_get() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~num_get() override {}
 
     template <class _Fp>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
@@ -1350,7 +1350,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~num_put() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~num_put() override {}
 
     virtual iter_type do_put(iter_type __s, ios_base& __iob, char_type __fl,
                              bool __v) const;
@@ -1795,7 +1795,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~time_get() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~time_get() override {}
 
     virtual dateorder do_date_order() const;
     virtual iter_type do_get_time(iter_type __b, iter_type __e, ios_base& __iob,
@@ -2414,25 +2414,17 @@ public:
           __time_get_storage<_CharT>(__nm) {}
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~time_get_byname() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~time_get_byname() override {}
 
-    _LIBCPP_INLINE_VISIBILITY
-     dateorder do_date_order() const override {return this->__do_date_order();}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL dateorder do_date_order() const override {return this->__do_date_order();}
 private:
-    _LIBCPP_INLINE_VISIBILITY
-     const string_type* __weeks() const override  {return this->__weeks_;}
-    _LIBCPP_INLINE_VISIBILITY
-     const string_type* __months() const override {return this->__months_;}
-    _LIBCPP_INLINE_VISIBILITY
-     const string_type* __am_pm() const override  {return this->__am_pm_;}
-    _LIBCPP_INLINE_VISIBILITY
-     const string_type& __c() const override      {return this->__c_;}
-    _LIBCPP_INLINE_VISIBILITY
-     const string_type& __r() const override      {return this->__r_;}
-    _LIBCPP_INLINE_VISIBILITY
-     const string_type& __x() const override      {return this->__x_;}
-    _LIBCPP_INLINE_VISIBILITY
-     const string_type& __X() const override      {return this->__X_;}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type* __weeks() const override  {return this->__weeks_;}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type* __months() const override {return this->__months_;}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type* __am_pm() const override  {return this->__am_pm_;}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type& __c() const override      {return this->__c_;}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type& __r() const override      {return this->__r_;}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type& __x() const override      {return this->__x_;}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type& __X() const override      {return this->__X_;}
 };
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get_byname<char>;
@@ -2482,7 +2474,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~time_put() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~time_put() override {}
     virtual iter_type do_put(iter_type __s, ios_base&, char_type, const tm* __tm,
                              char __fmt, char __mod) const;
 
@@ -2570,7 +2562,7 @@ public:
         : time_put<_CharT, _OutputIterator>(__nm, __refs) {}
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~time_put_byname() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~time_put_byname() override {}
 };
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put_byname<char>;
@@ -2618,7 +2610,7 @@ public:
     static const bool intl = _International;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~moneypunct() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~moneypunct() override {}
 
     virtual char_type   do_decimal_point() const {return numeric_limits<char_type>::max();}
     virtual char_type   do_thousands_sep() const {return numeric_limits<char_type>::max();}
@@ -2668,7 +2660,7 @@ public:
         : moneypunct<_CharT, _International>(__refs) {init(__nm.c_str());}
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~moneypunct_byname() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~moneypunct_byname() override {}
 
      char_type   do_decimal_point() const override {return __decimal_point_;}
      char_type   do_thousands_sep() const override {return __thousands_sep_;}
@@ -2796,7 +2788,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~money_get() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~money_get() override {}
 
     virtual iter_type do_get(iter_type __b, iter_type __e, bool __intl,
                              ios_base& __iob, ios_base::iostate& __err,
@@ -3340,7 +3332,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~money_put() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~money_put() override {}
 
     virtual iter_type do_put(iter_type __s, bool __intl, ios_base& __iob,
                              char_type __fl, long double __units) const;
@@ -3508,7 +3500,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~messages() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~messages() override {}
 
     virtual catalog do_open(const basic_string<char>&, const locale&) const;
     virtual string_type do_get(catalog, int __set, int __msgid,
@@ -3597,7 +3589,7 @@ public:
         : messages<_CharT>(__refs) {}
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~messages_byname() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~messages_byname() override {}
 };
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<char>;

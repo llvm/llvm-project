@@ -126,6 +126,10 @@ public:
   /// Emit a DBG_VALUE $noreg, indicating a variable has no location.
   MachineInstr *EmitDbgNoLocation(SDDbgValue *SD);
 
+  /// Emit a DBG_VALUE_LIST from the operands to SDDbgValue.
+  MachineInstr *EmitDbgValueList(SDDbgValue *SD,
+                                 DenseMap<SDValue, Register> &VRBaseMap);
+
   /// Emit a DBG_VALUE from the operands to SDDbgValue.
   MachineInstr *EmitDbgValueFromSingleOp(SDDbgValue *SD,
                                     DenseMap<SDValue, Register> &VRBaseMap);

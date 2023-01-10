@@ -118,7 +118,7 @@ class OMPThreadPrivateDecl final : public OMPDeclarativeDirective<Decl> {
 
   ArrayRef<const Expr *> getVars() const {
     auto **Storage = reinterpret_cast<Expr **>(Data->getChildren().data());
-    return llvm::makeArrayRef(Storage, Data->getNumChildren());
+    return llvm::ArrayRef(Storage, Data->getNumChildren());
   }
 
   MutableArrayRef<Expr *> getVars() {
@@ -481,7 +481,7 @@ class OMPAllocateDecl final : public OMPDeclarativeDirective<Decl> {
 
   ArrayRef<const Expr *> getVars() const {
     auto **Storage = reinterpret_cast<Expr **>(Data->getChildren().data());
-    return llvm::makeArrayRef(Storage, Data->getNumChildren());
+    return llvm::ArrayRef(Storage, Data->getNumChildren());
   }
 
   MutableArrayRef<Expr *> getVars() {

@@ -86,6 +86,7 @@ public:
   /// The result does not include the decls that come from the preamble.
   /// (These should be const, but RecursiveASTVisitor requires Decl*).
   ArrayRef<Decl *> getLocalTopLevelDecls();
+  ArrayRef<const Decl *> getLocalTopLevelDecls() const;
 
   const std::optional<std::vector<Diag>> &getDiagnostics() const {
     return Diags;

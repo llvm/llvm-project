@@ -109,17 +109,16 @@ typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 #elif defined(__aarch64__)
 static const uptr kMaxAllowedMallocSize = 8UL << 30;
 
-struct AP32 {
-  static const uptr kSpaceBeg = 0;
-  static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
+struct AP64 {
+  static const uptr kSpaceBeg = 0xE00000000000ULL;
+  static const uptr kSpaceSize = 0x40000000000;  // 4T.
   static const uptr kMetadataSize = sizeof(Metadata);
-  typedef __sanitizer::CompactSizeClassMap SizeClassMap;
-  static const uptr kRegionSizeLog = 20;
-  using AddressSpaceView = LocalAddressSpaceView;
+  typedef DefaultSizeClassMap SizeClassMap;
   typedef MsanMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
+  using AddressSpaceView = LocalAddressSpaceView;
 };
-typedef SizeClassAllocator32<AP32> PrimaryAllocator;
+typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 #endif
 typedef CombinedAllocator<PrimaryAllocator> Allocator;
 typedef Allocator::AllocatorCache AllocatorCache;

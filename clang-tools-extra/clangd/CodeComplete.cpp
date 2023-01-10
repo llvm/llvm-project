@@ -187,6 +187,12 @@ MarkupContent renderDoc(const markup::Document &Doc, MarkupKind Kind) {
   return Result;
 }
 
+Symbol::IncludeDirective insertionDirective(const CodeCompleteOptions &Opts) {
+  if (!Opts.ImportInsertions || !Opts.MainFileSignals)
+    return Symbol::IncludeDirective::Include;
+  return Opts.MainFileSignals->InsertionDirective;
+}
+
 // Identifier code completion result.
 struct RawIdentifier {
   llvm::StringRef Name;
@@ -277,9 +283,9 @@ struct CompletionCandidate {
         if (SM.isInMainFile(SM.getExpansionLoc(RD->getBeginLoc())))
           return std::nullopt;
     }
+    Symbol::IncludeDirective Directive = insertionDirective(Opts);
     for (const auto &Inc : RankedIncludeHeaders)
-      // FIXME: We should support #import directives here.
-      if ((Inc.Directive & clang::clangd::Symbol::Include) != 0)
+      if ((Inc.Directive & Directive) != 0)
         return Inc.Header;
     return std::nullopt;
   }
@@ -395,10 +401,10 @@ struct CodeCompletionBuilder {
           Includes.shouldInsertInclude(*ResolvedDeclaring, *ResolvedInserted));
     };
     bool ShouldInsert = C.headerToInsertIfAllowed(Opts).has_value();
+    Symbol::IncludeDirective Directive = insertionDirective(Opts);
     // Calculate include paths and edits for all possible headers.
     for (const auto &Inc : C.RankedIncludeHeaders) {
-      // FIXME: We should support #import directives here.
-      if ((Inc.Directive & clang::clangd::Symbol::Include) == 0)
+      if ((Inc.Directive & Directive) == 0)
         continue;
 
       if (auto ToInclude = Inserted(Inc.Header)) {
@@ -406,7 +412,9 @@ struct CodeCompletionBuilder {
         Include.Header = ToInclude->first;
         if (ToInclude->second && ShouldInsert)
           Include.Insertion = Includes.insert(
-              ToInclude->first, tooling::IncludeDirective::Include);
+              ToInclude->first, Directive == Symbol::Import
+                                    ? tooling::IncludeDirective::Import
+                                    : tooling::IncludeDirective::Include);
         Completion.Includes.push_back(std::move(Include));
       } else
         log("Failed to generate include insertion edits for adding header "

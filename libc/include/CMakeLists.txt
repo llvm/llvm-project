@@ -96,6 +96,15 @@ add_gen_header(
 )
 
 add_gen_header(
+  strings
+  DEF_FILE strings.h.def
+  GEN_HDR strings.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.size_t
+)
+
+add_gen_header(
   time
   DEF_FILE time.h.def
   GEN_HDR time.h

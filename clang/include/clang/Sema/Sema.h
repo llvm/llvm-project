@@ -803,8 +803,8 @@ public:
   unsigned FunctionScopesStart = 0;
 
   ArrayRef<sema::FunctionScopeInfo*> getFunctionScopes() const {
-    return llvm::makeArrayRef(FunctionScopes.begin() + FunctionScopesStart,
-                              FunctionScopes.end());
+    return llvm::ArrayRef(FunctionScopes.begin() + FunctionScopesStart,
+                          FunctionScopes.end());
   }
 
   /// Stack containing information needed when in C++2a an 'auto' is encountered
@@ -819,9 +819,9 @@ public:
   unsigned InventedParameterInfosStart = 0;
 
   ArrayRef<InventedTemplateParameterInfo> getInventedParameterInfos() const {
-    return llvm::makeArrayRef(InventedParameterInfos.begin() +
-                                  InventedParameterInfosStart,
-                              InventedParameterInfos.end());
+    return llvm::ArrayRef(InventedParameterInfos.begin() +
+                              InventedParameterInfosStart,
+                          InventedParameterInfos.end());
   }
 
   typedef LazyVector<TypedefNameDecl *, ExternalSemaSource,
@@ -5409,7 +5409,7 @@ public:
   void MarkDeclRefReferenced(DeclRefExpr *E, const Expr *Base = nullptr);
   void MarkMemberReferenced(MemberExpr *E);
   void MarkFunctionParmPackReferenced(FunctionParmPackExpr *E);
-  void MarkCaptureUsedInEnclosingContext(VarDecl *Capture, SourceLocation Loc,
+  void MarkCaptureUsedInEnclosingContext(ValueDecl *Capture, SourceLocation Loc,
                                          unsigned CapturingScopeIndex);
 
   ExprResult CheckLValueToRValueConversionOperand(Expr *E);
