@@ -23,7 +23,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
@@ -593,20 +592,8 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
 
         // We handle calls specially because the graph-relevant aspects are
         // handled above.
-        if (auto *Call = dyn_cast<CallBase>(&I)) {
-          if (Function *Callee = Call->getCalledFunction()) {
-            // The callgraph doesn't include intrinsic calls.
-            if (Callee->isIntrinsic()) {
-              if (isa<DbgInfoIntrinsic>(Call))
-                // Don't let dbg intrinsics affect alias info.
-                continue;
-
-              MemoryEffects Behaviour = AAResultBase::getMemoryEffects(Callee);
-              FI.addModRefInfo(Behaviour.getModRef());
-            }
-          }
+        if (auto *Call = dyn_cast<CallBase>(&I))
           continue;
-        }
 
         // All non-call instructions we use the primary predicates for whether
         // they read or write memory.

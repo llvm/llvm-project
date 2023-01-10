@@ -1499,18 +1499,6 @@ bool Intrinsic::isOverloaded(ID id) {
 #undef GET_INTRINSIC_OVERLOAD_TABLE
 }
 
-bool Intrinsic::isLeaf(ID id) {
-  switch (id) {
-  default:
-    return true;
-
-  case Intrinsic::experimental_gc_statepoint:
-  case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
-    return false;
-  }
-}
-
 /// This defines the "Intrinsic::getAttributes(ID id)" method.
 #define GET_INTRINSIC_ATTRIBUTES
 #include "llvm/IR/IntrinsicImpl.inc"
