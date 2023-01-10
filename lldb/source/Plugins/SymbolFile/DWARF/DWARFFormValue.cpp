@@ -513,8 +513,7 @@ DWARFDIE DWARFFormValue::Reference() const {
     value += m_unit->GetOffset();
     if (!m_unit->ContainsDIEOffset(value)) {
       m_unit->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-          "DW_FORM_ref* DIE reference 0x%" PRIx64 " is outside of its CU",
-          value);
+          "DW_FORM_ref* DIE reference {0:x16} is outside of its CU", value);
       return {};
     }
     return const_cast<DWARFUnit *>(m_unit)->GetDIE(value);
@@ -525,8 +524,7 @@ DWARFDIE DWARFFormValue::Reference() const {
             DIERef::Section::DebugInfo, value);
     if (!ref_cu) {
       m_unit->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-          "DW_FORM_ref_addr DIE reference 0x%" PRIx64 " has no matching CU",
-          value);
+          "DW_FORM_ref_addr DIE reference {0:x16} has no matching CU", value);
       return {};
     }
     return ref_cu->GetDIE(value);

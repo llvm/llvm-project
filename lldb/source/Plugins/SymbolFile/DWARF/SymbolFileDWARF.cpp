@@ -557,7 +557,7 @@ uint32_t SymbolFileDWARF::CalculateAbilities() {
           for (auto form : invalid_forms)
             error.Printf(" %#x", form);
           m_objfile_sp->GetModule()->ReportWarning(
-              "%s", error.GetString().str().c_str());
+              "{0}", error.GetString().str().c_str());
           return 0;
         }
       }
@@ -1327,9 +1327,9 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(
                                          range.GetByteSize()));
           else {
             GetObjectFile()->GetModule()->ReportError(
-                "0x%8.8" PRIx64 ": adding range [0x%" PRIx64 "-0x%" PRIx64
-                ") which has a base that is less than the function's low PC "
-                "0x%" PRIx64 ". Please file a bug and attach the file at the "
+                "{0x:+8}: adding range [{1:x16}-{2:x16}) which has a base "
+                "that is less than the function's low PC {3:x16}. Please file "
+                "a bug and attach the file at the "
                 "start of this error message",
                 block->GetID(), range_base, range.GetRangeEnd(),
                 subprogram_low_pc);
@@ -1538,7 +1538,7 @@ Type *SymbolFileDWARF::ResolveTypeUID(const DWARFDIE &die,
     Log *log = GetLog(DWARFLog::DebugInfo);
     if (log)
       GetObjectFile()->GetModule()->LogMessage(
-          log, "SymbolFileDWARF::ResolveTypeUID (die = 0x%8.8x) %s '%s'",
+          log, "SymbolFileDWARF::ResolveTypeUID (die = {0:x16}) {1} '{2}'",
           die.GetOffset(), die.GetTagAsCString(), die.GetName());
 
     // We might be coming in in the middle of a type tree (a class within a
@@ -1555,8 +1555,9 @@ Type *SymbolFileDWARF::ResolveTypeUID(const DWARFDIE &die,
           if (log)
             GetObjectFile()->GetModule()->LogMessage(
                 log,
-                "SymbolFileDWARF::ResolveTypeUID (die = 0x%8.8x) %s '%s' "
-                "resolve parent forward type for 0x%8.8x",
+                "SymbolFileDWARF::ResolveTypeUID (die = {0:x16}) "
+                "{1} '{2}' "
+                "resolve parent forward type for {3:x16})",
                 die.GetOffset(), die.GetTagAsCString(), die.GetName(),
                 decl_ctx_die.GetOffset());
         } break;
@@ -1626,7 +1627,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion);
     if (log)
       GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
-          log, "0x%8.8" PRIx64 ": %s '%s' resolving forward declaration...",
+          log, "{0:x8}: {1} '{2}' resolving forward declaration...",
           dwarf_die.GetID(), dwarf_die.GetTagAsCString(),
           type->GetName().AsCString());
     assert(compiler_type);
@@ -1647,7 +1648,7 @@ Type *SymbolFileDWARF::ResolveType(const DWARFDIE &die,
         return type;
 
       GetObjectFile()->GetModule()->ReportError(
-          "Parsing a die that is being parsed die: 0x%8.8x: %s %s",
+          "Parsing a die that is being parsed die: {0:x16}: {1} {2}",
           die.GetOffset(), die.GetTagAsCString(), die.GetName());
 
     } else
@@ -1762,8 +1763,8 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
 
   const char *dwo_name = GetDWOName(*dwarf_cu, cu_die);
   if (!dwo_name) {
-    unit.SetDwoError(Status("missing DWO name in skeleton DIE 0x%8.8" PRIx32,
-                            cu_die.GetOffset()));
+    unit.SetDwoError(Status::createWithFormat(
+        "missing DWO name in skeleton DIE {0:x16}", cu_die.GetOffset()));
     return nullptr;
   }
 
@@ -1777,10 +1778,11 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     comp_dir = cu_die.GetAttributeValueAsString(dwarf_cu, DW_AT_comp_dir,
                                                 nullptr);
     if (!comp_dir) {
-      unit.SetDwoError(
-          Status("unable to locate relative .dwo debug file \"%s\" for "
-                 "skeleton DIE 0x%8.8" PRIx32 " without valid DW_AT_comp_dir "
-                 "attribute", dwo_name, cu_die.GetOffset()));
+      unit.SetDwoError(Status::createWithFormat(
+          "unable to locate relative .dwo debug file \"{0}\" for "
+          "skeleton DIE {1:x16} without valid DW_AT_comp_dir "
+          "attribute",
+          dwo_name, cu_die.GetOffset()));
       return nullptr;
     }
 
@@ -1797,10 +1799,10 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   }
 
   if (!FileSystem::Instance().Exists(dwo_file)) {
-    unit.SetDwoError(
-        Status("unable to locate .dwo debug file \"%s\" for skeleton DIE "
-               "0x%8.8" PRIx32, dwo_file.GetPath().c_str(),
-               cu_die.GetOffset()));
+    unit.SetDwoError(Status::createWithFormat(
+        "unable to locate .dwo debug file \"{0}\" for skeleton DIE "
+        "{1:x16}",
+        dwo_file.GetPath().c_str(), cu_die.GetOffset()));
 
     if (m_dwo_warning_issued.test_and_set(std::memory_order_relaxed) == false) {
       GetObjectFile()->GetModule()->ReportWarning(
@@ -1822,9 +1824,10 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
       FileSystem::Instance().GetByteSize(dwo_file), dwo_file_data_sp,
       dwo_file_data_offset);
   if (dwo_obj_file == nullptr) {
-    unit.SetDwoError(
-          Status("unable to load object file for .dwo debug file \"%s\" for "
-                 "unit DIE 0x%8.8" PRIx32, dwo_name, cu_die.GetOffset()));
+    unit.SetDwoError(Status::createWithFormat(
+        "unable to load object file for .dwo debug file \"{0}\" for "
+        "unit DIE {1:x16}",
+        dwo_name, cu_die.GetOffset()));
     return nullptr;
   }
 
@@ -1900,8 +1903,8 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
                                                nullptr, nullptr, nullptr);
     if (!module_sp) {
       GetObjectFile()->GetModule()->ReportWarning(
-          "0x%8.8x: unable to locate module needed for external types: "
-          "%s\nerror: %s\nDebugging will be degraded due to missing "
+          "{0:x16}: unable to locate module needed for external types: "
+          "{1}\nerror: {2}\nDebugging will be degraded due to missing "
           "types. Rebuilding the project will regenerate the needed "
           "module files.",
           die.GetOffset(), dwo_module_spec.GetFileSpec().GetPath().c_str(),
@@ -1925,7 +1928,8 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
 
     if (dwo_id != dwo_dwo_id) {
       GetObjectFile()->GetModule()->ReportWarning(
-          "0x%8.8x: Module %s is out-of-date (hash mismatch). Type information "
+          "{0:x16}: Module {1} is out-of-date (hash mismatch). Type "
+          "information "
           "from this module may be incomplete or inconsistent with the rest of "
           "the program. Rebuilding the project will regenerate the needed "
           "module files.",
@@ -2105,7 +2109,7 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const Address &so_addr,
           }
         } else {
           GetObjectFile()->GetModule()->ReportWarning(
-              "0x%8.8x: compile unit %u failed to create a valid "
+              "{0:x16}: compile unit {1} failed to create a valid "
               "lldb_private::CompileUnit class.",
               cu_offset, cu_idx);
         }
@@ -2199,8 +2203,8 @@ void SymbolFileDWARF::FindGlobalVariables(
   if (log)
     GetObjectFile()->GetModule()->LogMessage(
         log,
-        "SymbolFileDWARF::FindGlobalVariables (name=\"%s\", "
-        "parent_decl_ctx=%p, max_matches=%u, variables)",
+        "SymbolFileDWARF::FindGlobalVariables (name=\"{0}\", "
+        "parent_decl_ctx={1:p}, max_matches={2}, variables)",
         name.GetCString(), static_cast<const void *>(&parent_decl_ctx),
         max_matches);
 
@@ -2265,8 +2269,8 @@ void SymbolFileDWARF::FindGlobalVariables(
   if (log && num_matches > 0) {
     GetObjectFile()->GetModule()->LogMessage(
         log,
-        "SymbolFileDWARF::FindGlobalVariables (name=\"%s\", "
-        "parent_decl_ctx=%p, max_matches=%u, variables) => %u",
+        "SymbolFileDWARF::FindGlobalVariables (name=\"{0}\", "
+        "parent_decl_ctx={1:p}, max_matches={2}, variables) => {3}",
         name.GetCString(), static_cast<const void *>(&parent_decl_ctx),
         max_matches, num_matches);
   }
@@ -2281,8 +2285,8 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
   if (log) {
     GetObjectFile()->GetModule()->LogMessage(
         log,
-        "SymbolFileDWARF::FindGlobalVariables (regex=\"%s\", "
-        "max_matches=%u, variables)",
+        "SymbolFileDWARF::FindGlobalVariables (regex=\"{0}\", "
+        "max_matches={1}, variables)",
         regex.GetText().str().c_str(), max_matches);
   }
 
@@ -2392,7 +2396,7 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
   if (log) {
     GetObjectFile()->GetModule()->LogMessage(
         log,
-        "SymbolFileDWARF::FindFunctions (name=\"%s\", name_type_mask=0x%x, "
+        "SymbolFileDWARF::FindFunctions (name=\"{0}\", name_type_mask={1:x}, "
         "sc_list)",
         name.GetCString(), name_type_mask);
   }
@@ -2441,8 +2445,8 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
   if (log && num_matches > 0) {
     GetObjectFile()->GetModule()->LogMessage(
         log,
-        "SymbolFileDWARF::FindFunctions (name=\"%s\", "
-        "name_type_mask=0x%x, include_inlines=%d, sc_list) => %u",
+        "SymbolFileDWARF::FindFunctions (name=\"{0}\", "
+        "name_type_mask={1:x}, include_inlines={2:d}, sc_list) => {3}",
         name.GetCString(), name_type_mask, include_inlines, num_matches);
   }
 }
@@ -2458,7 +2462,7 @@ void SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
 
   if (log) {
     GetObjectFile()->GetModule()->LogMessage(
-        log, "SymbolFileDWARF::FindFunctions (regex=\"%s\", sc_list)",
+        log, "SymbolFileDWARF::FindFunctions (regex=\"{0}\", sc_list)",
         regex.GetText().str().c_str());
   }
 
@@ -2508,15 +2512,15 @@ void SymbolFileDWARF::FindTypes(
     if (parent_decl_ctx)
       GetObjectFile()->GetModule()->LogMessage(
           log,
-          "SymbolFileDWARF::FindTypes (sc, name=\"%s\", parent_decl_ctx = "
-          "%p (\"%s\"), max_matches=%u, type_list)",
+          "SymbolFileDWARF::FindTypes (sc, name=\"{0}\", parent_decl_ctx = "
+          "{1:p} (\"{2}\"), max_matches={3}, type_list)",
           name.GetCString(), static_cast<const void *>(&parent_decl_ctx),
           parent_decl_ctx.GetName().AsCString("<NULL>"), max_matches);
     else
       GetObjectFile()->GetModule()->LogMessage(
           log,
-          "SymbolFileDWARF::FindTypes (sc, name=\"%s\", parent_decl_ctx = "
-          "NULL, max_matches=%u, type_list)",
+          "SymbolFileDWARF::FindTypes (sc, name=\"{0}\", parent_decl_ctx = "
+          "NULL, max_matches={1}, type_list)",
           name.GetCString(), max_matches);
   }
 
@@ -2605,16 +2609,16 @@ void SymbolFileDWARF::FindTypes(
     if (parent_decl_ctx) {
       GetObjectFile()->GetModule()->LogMessage(
           log,
-          "SymbolFileDWARF::FindTypes (sc, name=\"%s\", parent_decl_ctx "
-          "= %p (\"%s\"), max_matches=%u, type_list) => %u",
+          "SymbolFileDWARF::FindTypes (sc, name=\"{0}\", parent_decl_ctx "
+          "= {1:p} (\"{2}\"), max_matches={3}, type_list) => {4}",
           name.GetCString(), static_cast<const void *>(&parent_decl_ctx),
           parent_decl_ctx.GetName().AsCString("<NULL>"), max_matches,
           types.GetSize());
     } else {
       GetObjectFile()->GetModule()->LogMessage(
           log,
-          "SymbolFileDWARF::FindTypes (sc, name=\"%s\", parent_decl_ctx "
-          "= NULL, max_matches=%u, type_list) => %u",
+          "SymbolFileDWARF::FindTypes (sc, name=\"{0}\", parent_decl_ctx "
+          "= NULL, max_matches={1}, type_list) => {2}",
           name.GetCString(), max_matches, types.GetSize());
     }
   }
@@ -2672,7 +2676,7 @@ SymbolFileDWARF::FindNamespace(ConstString name,
 
   if (log) {
     GetObjectFile()->GetModule()->LogMessage(
-        log, "SymbolFileDWARF::FindNamespace (sc, name=\"%s\")",
+        log, "SymbolFileDWARF::FindNamespace (sc, name=\"{0}\")",
         name.GetCString());
   }
 
@@ -2696,8 +2700,8 @@ SymbolFileDWARF::FindNamespace(ConstString name,
   if (log && namespace_decl_ctx) {
     GetObjectFile()->GetModule()->LogMessage(
         log,
-        "SymbolFileDWARF::FindNamespace (sc, name=\"%s\") => "
-        "CompilerDeclContext(%p/%p) \"%s\"",
+        "SymbolFileDWARF::FindNamespace (sc, name=\"{0}\") => "
+        "CompilerDeclContext({1:p}/{2:p}) \"{3}\"",
         name.GetCString(),
         static_cast<const void *>(namespace_decl_ctx.GetTypeSystem()),
         static_cast<const void *>(namespace_decl_ctx.GetOpaqueDeclContext()),
@@ -2992,7 +2996,7 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
       GetObjectFile()->GetModule()->LogMessage(
           log,
           "SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(tag=%"
-          "s, name='%s')",
+          "s, name='{0}')",
           DW_TAG_value_to_name(tag), die.GetName());
     }
 
@@ -3064,8 +3068,8 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
           GetObjectFile()->GetModule()->LogMessage(
               log,
               "SymbolFileDWARF::"
-              "FindDefinitionTypeForDWARFDeclContext(tag=%s, "
-              "name='%s') ignoring die=0x%8.8x (%s)",
+              "FindDefinitionTypeForDWARFDeclContext(tag={0}, "
+              "name='{1}') ignoring die={2:x16} ({3})",
               DW_TAG_value_to_name(tag), die.GetName(), type_die.GetOffset(),
               type_die.GetName());
         }
@@ -3078,8 +3082,8 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
         GetObjectFile()->GetModule()->LogMessage(
             log,
             "SymbolFileDWARF::"
-            "FindDefinitionTypeForDWARFDeclContext(tag=%s, "
-            "name='%s') trying die=0x%8.8x (%s)",
+            "FindDefinitionTypeForDWARFDeclContext(tag={0}, "
+            "name='{1}') trying die={2:x16} ({3})",
             DW_TAG_value_to_name(tag), die.GetName(), type_die.GetOffset(),
             type_dwarf_decl_ctx.GetQualifiedName());
       }
@@ -3561,7 +3565,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
         StreamString strm;
         location->DumpLocation(&strm, eDescriptionLevelFull, nullptr);
         GetObjectFile()->GetModule()->ReportError(
-            "0x%8.8x: %s has an invalid location: %s", die.GetOffset(),
+            "{0:x16}: {1} has an invalid location: {2}", die.GetOffset(),
             die.GetTagAsCString(), strm.GetData());
       }
       if (location_DW_OP_addr != LLDB_INVALID_ADDRESS)
@@ -3790,8 +3794,8 @@ void SymbolFileDWARF::ParseAndAppendGlobalVariable(
       variable_list_sp = sc.comp_unit->GetVariableList(false);
     } else {
       GetObjectFile()->GetModule()->ReportError(
-          "parent 0x%8.8" PRIx64 " %s with no valid compile unit in "
-          "symbol context for 0x%8.8" PRIx64 " %s.\n",
+          "parent {0:x8} {1} with no valid compile unit in "
+          "symbol context for {2:x8} {3}.\n",
           sc_parent_die.GetID(), sc_parent_die.GetTagAsCString(), die.GetID(),
           die.GetTagAsCString());
       return;
@@ -3800,8 +3804,8 @@ void SymbolFileDWARF::ParseAndAppendGlobalVariable(
 
   default:
     GetObjectFile()->GetModule()->ReportError(
-        "didn't find appropriate parent DIE for variable list for "
-        "0x%8.8" PRIx64 " %s.\n",
+        "didn't find appropriate parent DIE for variable list for {0:x8} "
+        "{1}.\n",
         die.GetID(), die.GetTagAsCString());
     return;
   }

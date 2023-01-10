@@ -773,12 +773,12 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           // useful for compilers that move epilogue code into the body of a
           // function.)
           if (stack.empty()) {
-            LLDB_LOGF(log,
-                      "DWARFCallFrameInfo::%s(dwarf_offset: %" PRIx32
-                      ", startaddr: %" PRIx64
-                      " encountered DW_CFA_restore_state but state stack "
-                      "is empty. Corrupt unwind info?",
-                      __FUNCTION__, dwarf_offset, startaddr.GetFileAddress());
+            LLDB_LOG(log,
+                     "DWARFCallFrameInfo::{0}(dwarf_offset: "
+                     "{1:x16}, startaddr: [{2:x16}] encountered "
+                     "DW_CFA_restore_state but state stack "
+                     "is empty. Corrupt unwind info?",
+                     __FUNCTION__, dwarf_offset, startaddr.GetFileAddress());
             break;
           }
           lldb::addr_t offset = row->GetOffset();

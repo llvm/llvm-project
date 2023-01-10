@@ -258,8 +258,8 @@ static void PrepareContextToReceiveMembers(TypeSystemClang &ast,
     if (ast_importer.RequireCompleteType(qual_type))
       return;
     die.GetDWARF()->GetObjectFile()->GetModule()->ReportError(
-        "Unable to complete the Decl context for DIE '%s' at offset "
-        "0x%8.8x.\nPlease file a bug report.",
+        "Unable to complete the Decl context for DIE {0} at offset "
+        "{1:x16}.\nPlease file a bug report.",
         type_name_cstr ? type_name_cstr : "", die.GetOffset());
   }
 
@@ -429,7 +429,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
     dwarf->GetObjectFile()->GetModule()->LogMessage(
         log,
         "DWARFASTParserClang::ParseTypeFromDWARF "
-        "(die = 0x%8.8x, decl_ctx = %p (die 0x%8.8x)) %s name = '%s')",
+        "(die = {0:x16}, decl_ctx = {1:p} (die "
+        "{2:16x})) (3:s) name = '{4}')",
         die.GetOffset(), static_cast<void *>(context), context_die.GetOffset(),
         die.GetTagAsCString(), die.GetName());
   }
@@ -506,7 +507,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   }
   default:
     dwarf->GetObjectFile()->GetModule()->ReportError(
-        "{0x%8.8x}: unhandled type tag 0x%4.4x (%s), please file a bug and "
+        "[{0:x16}]: unhandled type tag {1:x4} ({2}), "
+        "please file a bug and "
         "attach the file at the start of this error message",
         die.GetOffset(), tag, DW_TAG_value_to_name(tag));
     break;
@@ -675,7 +677,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
           if (log)
             dwarf->GetObjectFile()->GetModule()->LogMessage(
                 log,
-                "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s '%s' "
+                "SymbolFileDWARF::ParseType (die = {0:16x}) {1} '{2}' "
                 "is Objective-C 'id' built-in type.",
                 die.GetOffset(), die.GetTagAsCString(), die.GetName());
           clang_type = m_ast.GetBasicType(eBasicTypeObjCID);
@@ -686,7 +688,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
           if (log)
             dwarf->GetObjectFile()->GetModule()->LogMessage(
                 log,
-                "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s '%s' "
+                "SymbolFileDWARF::ParseType (die = {0:x16}) {1} '{2}' "
                 "is Objective-C 'Class' built-in type.",
                 die.GetOffset(), die.GetTagAsCString(), die.GetName());
           clang_type = m_ast.GetBasicType(eBasicTypeObjCClass);
@@ -697,7 +699,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
           if (log)
             dwarf->GetObjectFile()->GetModule()->LogMessage(
                 log,
-                "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s '%s' "
+                "SymbolFileDWARF::ParseType (die = {0:x16}) {1} '{2}' "
                 "is Objective-C 'selector' built-in type.",
                 die.GetOffset(), die.GetTagAsCString(), die.GetName());
           clang_type = m_ast.GetBasicType(eBasicTypeObjCSel);
@@ -718,8 +720,8 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
             if (log)
               dwarf->GetObjectFile()->GetModule()->LogMessage(
                   log,
-                  "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s "
-                  "'%s' is 'objc_object*', which we overrode to "
+                  "SymbolFileDWARF::ParseType (die = {0:x16}) {1} "
+                  "'{2}' is 'objc_object*', which we overrode to "
                   "'id'.",
                   die.GetOffset(), die.GetTagAsCString(), die.GetName());
             clang_type = m_ast.GetBasicType(eBasicTypeObjCID);
@@ -800,8 +802,8 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
       if (log) {
         dwarf->GetObjectFile()->GetModule()->LogMessage(
             log,
-            "SymbolFileDWARF(%p) - 0x%8.8x: %s type \"%s\" is a "
-            "forward declaration, complete type is 0x%8.8" PRIx64,
+            "SymbolFileDWARF({0:p}) - {1:x16}}: {2} type \"{3}\" is a "
+            "forward declaration, complete type is {4:x8}",
             static_cast<void *>(this), die.GetOffset(),
             DW_TAG_value_to_name(tag), attrs.name.GetCString(),
             type_sp->GetID());
@@ -870,7 +872,7 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
     TypeSystemClang::CompleteTagDeclarationDefinition(clang_type);
   } else {
     dwarf->GetObjectFile()->GetModule()->ReportError(
-        "DWARF DIE at 0x%8.8x named \"%s\" was not able to start its "
+        "DWARF DIE at {0:x16} named \"{1}\" was not able to start its "
         "definition.\nPlease file a bug and attach the file at the "
         "start of this error message",
         die.GetOffset(), attrs.name.GetCString());
@@ -1033,7 +1035,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
             m_ast.SetMetadataAsUserID(objc_method_decl, die.GetID());
           } else {
             dwarf->GetObjectFile()->GetModule()->ReportError(
-                "{0x%8.8x}: invalid Objective-C method 0x%4.4x (%s), "
+                "[{0:x16}]: invalid Objective-C method {1:x4} ({2}), "
                 "please file a bug and attach the file at the start of "
                 "this error message",
                 die.GetOffset(), tag, DW_TAG_value_to_name(tag));
@@ -1086,7 +1088,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
               LinkDeclContextToDIE(spec_clang_decl_ctx, die);
             } else {
               dwarf->GetObjectFile()->GetModule()->ReportWarning(
-                  "0x%8.8" PRIx64 ": DW_AT_specification(0x%8.8x"
+                  "{0:x8}: DW_AT_specification({1:x16}"
                   ") has no decl\n",
                   die.GetID(), spec_die.GetOffset());
             }
@@ -1105,7 +1107,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
               LinkDeclContextToDIE(abs_clang_decl_ctx, die);
             } else {
               dwarf->GetObjectFile()->GetModule()->ReportWarning(
-                  "0x%8.8" PRIx64 ": DW_AT_abstract_origin(0x%8.8x"
+                  "{0:x8}: DW_AT_abstract_origin({1:x16}"
                   ") has no decl\n",
                   die.GetID(), abs_die.GetOffset());
             }
@@ -1457,9 +1459,9 @@ void DWARFASTParserClang::ParseInheritance(
 
   Type *base_class_type = die.ResolveTypeUID(encoding_form.Reference());
   if (base_class_type == nullptr) {
-    module_sp->ReportError("0x%8.8x: DW_TAG_inheritance failed to "
-                           "resolve the base class at 0x%8.8x"
-                           " from enclosing type 0x%8.8x. \nPlease file "
+    module_sp->ReportError("{0:x16}: DW_TAG_inheritance failed to "
+                           "resolve the base class at {1:x16}"
+                           " from enclosing type {2:x16}. \nPlease file "
                            "a bug and attach the file at the start of "
                            "this error message",
                            die.GetOffset(),
@@ -1689,8 +1691,9 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
         if (log) {
           dwarf->GetObjectFile()->GetModule()->LogMessage(
               log,
-              "SymbolFileDWARF(%p) - 0x%8.8x: %s type \"%s\" is an "
-              "incomplete objc type, complete type is 0x%8.8" PRIx64,
+              "SymbolFileDWARF({0:p}) - {1:x16}: {2} type "
+              "\"{3}\" is an "
+              "incomplete objc type, complete type is {4:x8}",
               static_cast<void *>(this), die.GetOffset(),
               DW_TAG_value_to_name(tag), attrs.name.GetCString(),
               type_sp->GetID());
@@ -1714,7 +1717,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     if (log) {
       dwarf->GetObjectFile()->GetModule()->LogMessage(
           log,
-          "SymbolFileDWARF(%p) - 0x%8.8x: %s type \"%s\" is a "
+          "SymbolFileDWARF({0:p}) - {1:x16}: {2} type \"{3}\" is a "
           "forward declaration, trying to find complete type",
           static_cast<void *>(this), die.GetOffset(), DW_TAG_value_to_name(tag),
           attrs.name.GetCString());
@@ -1743,8 +1746,8 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       if (log) {
         dwarf->GetObjectFile()->GetModule()->LogMessage(
             log,
-            "SymbolFileDWARF(%p) - 0x%8.8x: %s type \"%s\" is a "
-            "forward declaration, complete type is 0x%8.8" PRIx64,
+            "SymbolFileDWARF({0:p}) - {1:x16}: {2} type \"{3}\" is a "
+            "forward declaration, complete type is {4:x8}",
             static_cast<void *>(this), die.GetOffset(),
             DW_TAG_value_to_name(tag), attrs.name.GetCString(),
             type_sp->GetID());
@@ -1795,7 +1798,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
         if (log) {
           dwarf->GetObjectFile()->GetModule()->LogMessage(
               log,
-              "SymbolFileDWARF(%p) - 0x%8.8x: %s type \"%s\" "
+              "SymbolFileDWARF({0:p}) - {1:x16}: {2} type \"{3}\" "
               "clang::ClassTemplateDecl failed to return a decl.",
               static_cast<void *>(this), die.GetOffset(),
               DW_TAG_value_to_name(tag), attrs.name.GetCString());
@@ -1855,7 +1858,9 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
         TypeSystemClang::CompleteTagDeclarationDefinition(clang_type);
       } else {
         dwarf->GetObjectFile()->GetModule()->ReportError(
-            "DWARF DIE at 0x%8.8x named \"%s\" was not able to start its "
+
+            "DWARF DIE at {0:x16} named \"{1}\" was not able to start "
+            "its "
             "definition.\nPlease file a bug and attach the file at the "
             "start of this error message",
             die.GetOffset(), attrs.name.GetCString());
@@ -2660,18 +2665,18 @@ void DWARFASTParserClang::ParseObjCProperty(
   const PropertyAttributes propAttrs(die);
 
   if (!propAttrs.prop_name) {
-    module_sp->ReportError(
-        "0x%8.8" PRIx64 ": DW_TAG_APPLE_property has no name.", die.GetID());
+    module_sp->ReportError("{0:x8}: DW_TAG_APPLE_property has no name.",
+                           die.GetID());
     return;
   }
 
   Type *member_type = die.ResolveTypeUID(attrs.encoding_form.Reference());
   if (!member_type) {
-    module_sp->ReportError("0x%8.8" PRIx64
-                           ": DW_TAG_APPLE_property '%s' refers to type 0x%8.8x"
-                           " which was unable to be parsed",
-                           die.GetID(), propAttrs.prop_name,
-                           attrs.encoding_form.Reference().GetOffset());
+    module_sp->ReportError(
+        "{0:x8}: DW_TAG_APPLE_property '{1}' refers to type {2:x16}"
+        " which was unable to be parsed",
+        die.GetID(), propAttrs.prop_name,
+        attrs.encoding_form.Reference().GetOffset());
     return;
   }
 
@@ -2807,14 +2812,14 @@ void DWARFASTParserClang::ParseSingleMember(
   if (!member_type) {
     if (attrs.name)
       module_sp->ReportError(
-          "0x%8.8" PRIx64 ": DW_TAG_member '%s' refers to type 0x%8.8x"
+          "{0:x8}: DW_TAG_member '{1}' refers to type {2:x16}"
           " which was unable to be parsed",
           die.GetID(), attrs.name, attrs.encoding_form.Reference().GetOffset());
     else
-      module_sp->ReportError(
-          "0x%8.8" PRIx64 ": DW_TAG_member refers to type 0x%8.8x"
-          " which was unable to be parsed",
-          die.GetID(), attrs.encoding_form.Reference().GetOffset());
+      module_sp->ReportError("{0:x8}: DW_TAG_member refers to type {1:x16}"
+                             " which was unable to be parsed",
+                             die.GetID(),
+                             attrs.encoding_form.Reference().GetOffset());
     return;
   }
 
@@ -2864,10 +2869,10 @@ void DWARFASTParserClang::ParseSingleMember(
               this_field_info.bit_offset)))) {
       ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
       objfile->GetModule()->ReportWarning(
-          "0x%8.8" PRIx64 ": %s bitfield named \"%s\" has invalid "
-          "bit offset (0x%8.8" PRIx64
-          ") member will be ignored. Please file a bug against the "
-          "compiler and include the preprocessed output for %s\n",
+          "{0:x16}: {1} bitfield named \"{2}\" has invalid "
+          "bit offset ({3:x8}) member will be ignored. Please file a bug "
+          "against the "
+          "compiler and include the preprocessed output for {4}\n",
           die.GetID(), DW_TAG_value_to_name(tag), attrs.name,
           this_field_info.bit_offset, GetUnitName(parent_die).c_str());
       return;
@@ -2983,11 +2988,10 @@ void DWARFASTParserClang::ParseSingleMember(
             (member_array_size != 0 ||
              attrs.member_byte_offset > parent_byte_size)) {
           module_sp->ReportError(
-              "0x%8.8" PRIx64 ": DW_TAG_member '%s' refers to type 0x%8.8x"
-              " which extends beyond the bounds of 0x%8.8" PRIx64,
+              "{0:x8}: DW_TAG_member '{1}' refers to type {2:x16}"
+              " which extends beyond the bounds of {3:x8}",
               die.GetID(), attrs.name,
-              attrs.encoding_form.Reference().GetOffset(),
-              parent_die.GetID());
+              attrs.encoding_form.Reference().GetOffset(), parent_die.GetID());
         }
 
         member_clang_type =
