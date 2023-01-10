@@ -70,27 +70,6 @@ static constexpr StringRef getGlobalDtorsVarName() {
   return "llvm.global_dtors";
 }
 
-/// Creates an attribute containing ABI and preferred alignment numbers parsed
-/// a string. The string may be either "abi:preferred" or just "abi". In the
-/// latter case, the preferred alignment is considered equal to ABI alignment.
-static DenseIntElementsAttr parseDataLayoutAlignment(MLIRContext &ctx,
-                                                     StringRef spec) {
-  auto i32 = IntegerType::get(&ctx, 32);
-
-  StringRef abiString, preferredString;
-  std::tie(abiString, preferredString) = spec.split(':');
-  int abi, preferred;
-  if (abiString.getAsInteger(/*Radix=*/10, abi))
-    return nullptr;
-
-  if (preferredString.empty())
-    preferred = abi;
-  else if (preferredString.getAsInteger(/*Radix=*/10, preferred))
-    return nullptr;
-
-  return DenseIntElementsAttr::get(VectorType::get({2}, i32), {abi, preferred});
-}
-
 /// Returns a supported MLIR floating point type of the given bit width or null
 /// if the bit width is not supported.
 static FloatType getDLFloatType(MLIRContext &ctx, int32_t bitwidth) {
@@ -248,6 +227,45 @@ static SmallVector<int64_t> getPositionFromIndices(ArrayRef<unsigned> indices) {
   SmallVector<int64_t> position;
   llvm::append_range(position, indices);
   return position;
+}
+
+/// Converts the LLVM instructions that have a generated MLIR builder. Using a
+/// static implementation method called from the module import ensures the
+/// builders have to use the `moduleImport` argument and cannot directly call
+/// import methods. As a result, both the intrinsic and the instruction MLIR
+/// builders have to use the `moduleImport` argument and none of them has direct
+/// access to the private module import methods.
+static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
+                                            llvm::Instruction *inst,
+                                            ModuleImport &moduleImport) {
+  // Copy the operands to an LLVM operands array reference for conversion.
+  SmallVector<llvm::Value *> operands(inst->operands());
+  ArrayRef<llvm::Value *> llvmOperands(operands);
+
+  // Convert all instructions that provide an MLIR builder.
+#include "mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc"
+  return failure();
+}
+
+/// Creates an attribute containing ABI and preferred alignment numbers parsed
+/// a string. The string may be either "abi:preferred" or just "abi". In the
+/// latter case, the preferred alignment is considered equal to ABI alignment.
+static DenseIntElementsAttr parseDataLayoutAlignment(MLIRContext &ctx,
+                                                     StringRef spec) {
+  auto i32 = IntegerType::get(&ctx, 32);
+
+  StringRef abiString, preferredString;
+  std::tie(abiString, preferredString) = spec.split(':');
+  int abi, preferred;
+  if (abiString.getAsInteger(/*Radix=*/10, abi))
+    return nullptr;
+
+  if (preferredString.empty())
+    preferred = abi;
+  else if (preferredString.getAsInteger(/*Radix=*/10, preferred))
+    return nullptr;
+
+  return DenseIntElementsAttr::get(VectorType::get({2}, i32), {abi, preferred});
 }
 
 /// Translate the given LLVM data layout into an MLIR equivalent using the DLTI
@@ -1164,8 +1182,7 @@ ModuleImport::convertCallTypeAndOperands(llvm::CallBase *callInst,
   return success();
 }
 
-LogicalResult ModuleImport::convertIntrinsic(OpBuilder &odsBuilder,
-                                             llvm::CallInst *inst) {
+LogicalResult ModuleImport::convertIntrinsic(llvm::CallInst *inst) {
   if (succeeded(iface.convertIntrinsic(builder, inst, *this)))
     return success();
 
@@ -1173,17 +1190,8 @@ LogicalResult ModuleImport::convertIntrinsic(OpBuilder &odsBuilder,
   return emitError(loc) << "unhandled intrinsic " << diag(*inst);
 }
 
-LogicalResult ModuleImport::convertInstruction(OpBuilder &odsBuilder,
-                                               llvm::Instruction *inst) {
-  // Copy the operands to an LLVM operands array reference for conversion.
-  SmallVector<llvm::Value *> operands(inst->operands());
-  ArrayRef<llvm::Value *> llvmOperands(operands);
-  ModuleImport &moduleImport = *this;
-
-  // Convert all instructions that provide an MLIR builder.
-#include "mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc"
-
-  // Convert all remaining instructions that do not provide an MLIR builder.
+LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
+  // Convert all instructions that do not provide an MLIR builder.
   Location loc = translateLoc(inst->getDebugLoc());
   if (inst->getOpcode() == llvm::Instruction::Br) {
     auto *brInst = cast<llvm::BranchInst>(inst);
@@ -1352,6 +1360,10 @@ LogicalResult ModuleImport::convertInstruction(OpBuilder &odsBuilder,
     return success();
   }
 
+  // Convert all instructions that have an mlirBuilder.
+  if (succeeded(convertInstructionImpl(builder, inst, *this)))
+    return success();
+
   return emitError(loc) << "unhandled instruction " << diag(*inst);
 }
 
@@ -1365,11 +1377,11 @@ LogicalResult ModuleImport::processInstruction(llvm::Instruction *inst) {
   if (auto *callInst = dyn_cast<llvm::CallInst>(inst)) {
     llvm::Function *callee = callInst->getCalledFunction();
     if (callee && callee->isIntrinsic())
-      return convertIntrinsic(builder, callInst);
+      return convertIntrinsic(callInst);
   }
 
   // Convert all remaining LLVM instructions to MLIR operations.
-  return convertInstruction(builder, inst);
+  return convertInstruction(inst);
 }
 
 FlatSymbolRefAttr ModuleImport::getPersonalityAsAttr(llvm::Function *f) {
