@@ -558,9 +558,9 @@ public:
 
 private:
   void notifyOperationInserted(Operation *op) override {
-    GreedyPatternRewriteDriver::notifyOperationInserted(op);
     if (strictMode)
       strictModeFilteredOps.insert(op);
+    GreedyPatternRewriteDriver::notifyOperationInserted(op);
   }
 
   void notifyOperationRemoved(Operation *op) override {
