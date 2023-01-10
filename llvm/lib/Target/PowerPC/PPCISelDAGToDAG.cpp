@@ -68,7 +68,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "ppc-codegen"
+#define DEBUG_TYPE "ppc-isel"
 #define PASS_NAME "PowerPC DAG->DAG Pattern Instruction Selection"
 
 STATISTIC(NumSextSetcc,
