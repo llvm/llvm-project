@@ -494,6 +494,9 @@ mapPossibleTopLevelTransformOpBlockArguments(TransformState &state,
 
 /// Verification hook for PossibleTopLevelTransformOpTrait.
 LogicalResult verifyPossibleTopLevelTransformOpTrait(Operation *op);
+
+/// Verification hook for TransformOpInterface.
+LogicalResult verifyTransformOpInterface(Operation *op);
 } // namespace detail
 
 /// This trait is supposed to be attached to Transform dialect operations that
