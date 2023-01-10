@@ -1484,8 +1484,10 @@ void *TypeSystemSwiftTypeRef::ReconstructType(opaque_compiler_type_t type) {
 }
 
 CompilerType TypeSystemSwiftTypeRef::ReconstructType(CompilerType type) {
-  return {GetSwiftASTContext()->weak_from_this(),
-          ReconstructType(type.GetOpaqueQualType())};
+  if (auto *swift_ast_context = GetSwiftASTContext())
+    return {swift_ast_context->weak_from_this(),
+            ReconstructType(type.GetOpaqueQualType())};
+  return {};
 }
 
 CompilerType TypeSystemSwiftTypeRef::GetTypeFromMangledTypename(
