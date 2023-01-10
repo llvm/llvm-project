@@ -8288,7 +8288,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
   // All the potentially captureable variables in the current nested
   // lambda (within a generic outer lambda), must be captured by an
   // outer lambda that is enclosed within a non-dependent context.
-  CurrentLSI->visitPotentialCaptures([&] (VarDecl *Var, Expr *VarExpr) {
+  CurrentLSI->visitPotentialCaptures([&](ValueDecl *Var, Expr *VarExpr) {
     // If the variable is clearly identified as non-odr-used and the full
     // expression is not instantiation dependent, only then do we not
     // need to check enclosing lambda's for speculative captures.
@@ -8304,6 +8304,10 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
         !IsFullExprInstantiationDependent)
       return;
 
+    VarDecl *UnderlyingVar = Var->getPotentiallyDecomposedVarDecl();
+    if (!UnderlyingVar)
+      return;
+
     // If we have a capture-capable lambda for the variable, go ahead and
     // capture the variable in that lambda (and all its enclosing lambdas).
     if (const Optional<unsigned> Index =
@@ -8311,7 +8315,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
                 S.FunctionScopes, Var, S))
       S.MarkCaptureUsedInEnclosingContext(Var, VarExpr->getExprLoc(), *Index);
     const bool IsVarNeverAConstantExpression =
-        VariableCanNeverBeAConstantExpression(Var, S.Context);
+        VariableCanNeverBeAConstantExpression(UnderlyingVar, S.Context);
     if (!IsFullExprInstantiationDependent || IsVarNeverAConstantExpression) {
       // This full expression is not instantiation dependent or the variable
       // can not be used in a constant expression - which means

@@ -88,7 +88,11 @@ bool CheckDefaultArgumentVisitor::VisitExpr(const Expr *Node) {
 /// determine whether this declaration can be used in the default
 /// argument expression.
 bool CheckDefaultArgumentVisitor::VisitDeclRefExpr(const DeclRefExpr *DRE) {
-  const NamedDecl *Decl = DRE->getDecl();
+  const ValueDecl *Decl = dyn_cast<ValueDecl>(DRE->getDecl());
+
+  if (!isa<VarDecl, BindingDecl>(Decl))
+    return false;
+
   if (const auto *Param = dyn_cast<ParmVarDecl>(Decl)) {
     // C++ [dcl.fct.default]p9:
     //   [...] parameters of a function shall not be used in default
@@ -102,30 +106,23 @@ bool CheckDefaultArgumentVisitor::VisitDeclRefExpr(const DeclRefExpr *DRE) {
       return S.Diag(DRE->getBeginLoc(),
                     diag::err_param_default_argument_references_param)
              << Param->getDeclName() << DefaultArg->getSourceRange();
-  } else {
-    const VarDecl *VD = nullptr;
-    if (const auto *BD = dyn_cast<BindingDecl>(Decl))
-      VD = dyn_cast_if_present<VarDecl>(BD->getDecomposedDecl());
-    else
-      VD = dyn_cast<VarDecl>(Decl);
-    if (VD) {
-      // C++ [dcl.fct.default]p7:
-      //   Local variables shall not be used in default argument
-      //   expressions.
-      //
-      // C++17 [dcl.fct.default]p7 (by CWG 2082):
-      //   A local variable shall not appear as a potentially-evaluated
-      //   expression in a default argument.
-      //
-      // C++20 [dcl.fct.default]p7 (DR as part of P0588R1, see also CWG 2346):
-      //   Note: A local variable cannot be odr-used (6.3) in a default
-      //   argument.
-      //
-      if (VD->isLocalVarDecl() && !DRE->isNonOdrUse())
-        return S.Diag(DRE->getBeginLoc(),
-                      diag::err_param_default_argument_references_local)
-               << Decl->getDeclName() << DefaultArg->getSourceRange();
-    }
+  } else if (auto *VD = Decl->getPotentiallyDecomposedVarDecl()) {
+    // C++ [dcl.fct.default]p7:
+    //   Local variables shall not be used in default argument
+    //   expressions.
+    //
+    // C++17 [dcl.fct.default]p7 (by CWG 2082):
+    //   A local variable shall not appear as a potentially-evaluated
+    //   expression in a default argument.
+    //
+    // C++20 [dcl.fct.default]p7 (DR as part of P0588R1, see also CWG 2346):
+    //   Note: A local variable cannot be odr-used (6.3) in a default
+    //   argument.
+    //
+    if (VD->isLocalVarDecl() && !DRE->isNonOdrUse())
+      return S.Diag(DRE->getBeginLoc(),
+                    diag::err_param_default_argument_references_local)
+             << Decl << DefaultArg->getSourceRange();
   }
   return false;
 }
