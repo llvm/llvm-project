@@ -93,22 +93,23 @@ int main(int argc, const char **argv) {
     TargetNames("targets", cl::CommaSeparated,
                 cl::desc("[<offload kind>-<target triple>,...]"),
                 cl::cat(ClangOffloadBundlerCategory));
-  cl::opt<std::string>
-    FilesType("type", cl::Required,
-              cl::desc("Type of the files to be bundled/unbundled.\n"
-                       "Current supported types are:\n"
-                       "  i   - cpp-output\n"
-                       "  ii  - c++-cpp-output\n"
-                       "  cui - cuda/hip-output\n"
-                       "  d   - dependency\n"
-                       "  ll  - llvm\n"
-                       "  bc  - llvm-bc\n"
-                       "  s   - assembler\n"
-                       "  o   - object\n"
-                       "  a   - archive of objects\n"
-                       "  gch - precompiled-header\n"
-                       "  ast - clang AST file"),
-              cl::cat(ClangOffloadBundlerCategory));
+  cl::opt<std::string> FilesType(
+      "type", cl::Required,
+      cl::desc("Type of the files to be bundled/unbundled.\n"
+               "Current supported types are:\n"
+               "  i    - cpp-output\n"
+               "  ii   - c++-cpp-output\n"
+               "  cui  - cuda-cpp-output\n"
+               "  hipi - hip-cpp-output\n"
+               "  d    - dependency\n"
+               "  ll   - llvm\n"
+               "  bc   - llvm-bc\n"
+               "  s    - assembler\n"
+               "  o    - object\n"
+               "  a    - archive of objects\n"
+               "  gch  - precompiled-header\n"
+               "  ast  - clang AST file"),
+      cl::cat(ClangOffloadBundlerCategory));
   cl::opt<bool>
     Unbundle("unbundle",
              cl::desc("Unbundle bundled file into several output files.\n"),
