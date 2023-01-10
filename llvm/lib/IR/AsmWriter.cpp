@@ -2765,9 +2765,13 @@ void AssemblyWriter::writeOperandBundles(const CallBase *Call) {
         Out << ", ";
       FirstInput = false;
 
-      TypePrinter.print(Input->getType(), Out);
-      Out << " ";
-      WriteAsOperandInternal(Out, Input, WriterCtx);
+      if (Input == nullptr)
+        Out << "<null operand bundle!>";
+      else {
+        TypePrinter.print(Input->getType(), Out);
+        Out << " ";
+        WriteAsOperandInternal(Out, Input, WriterCtx);
+      }
     }
 
     Out << ')';
