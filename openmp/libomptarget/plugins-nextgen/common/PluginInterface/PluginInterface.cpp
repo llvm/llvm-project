@@ -902,7 +902,7 @@ int32_t __tgt_rtl_run_target_team_region_async(
   auto Err = Plugin::get().getDevice(DeviceId).runTargetTeamRegion(
       TgtEntryPtr, TgtArgs, TgtOffsets, NumArgs, NumTeams, ThreadLimit,
       LoopTripCount, AsyncInfoPtr);
-  if (Err)
+  if (Err) {
     REPORT("Failure to run target region " DPxMOD " in device %d: %s\n",
            DPxPTR(TgtEntryPtr), DeviceId, toString(std::move(Err)).data());
     return OFFLOAD_FAIL;
