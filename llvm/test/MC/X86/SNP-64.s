@@ -16,10 +16,6 @@ pvalidate
 // CHECK: encoding: [0xf3,0x0f,0x01,0xfe]
 rmpadjust
 
-// CHECK: rmpquery
-// CHECK: encoding: [0xf3,0x0f,0x01,0xfd]
-rmpquery
-
 // CHECK: rmpupdate
 // CHECK: encoding: [0xf2,0x0f,0x01,0xfe]
 rmpupdate %rax
@@ -35,7 +31,3 @@ pvalidate %rax
 // CHECK: rmpadjust
 // CHECK: encoding: [0xf3,0x0f,0x01,0xfe]
 rmpadjust %rax
-
-// CHECK: rmpquery
-// CHECK: encoding: [0xf3,0x0f,0x01,0xfd]
-rmpquery %rax, %rcx, %rdx
