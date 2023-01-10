@@ -122,11 +122,6 @@ static cl::opt<uint32_t> MaxBBSpeculations(
              "into) when deducing if a value is fully available or not in GVN "
              "(default = 600)"));
 
-static cl::opt<uint32_t> MaxNumInsnsPerBlock(
-    "gvn-max-num-insns", cl::Hidden, cl::init(100),
-    cl::desc("Max number of instructions to scan in each basic block in GVN "
-             "(default = 100)"));
-
 struct llvm::GVNPass::Expression {
   uint32_t opcode;
   bool commutative = false;
@@ -925,19 +920,6 @@ static bool IsValueFullyAvailableInBlock(
   return !UnavailableBB;
 }
 
-/// If the specified BB exists in ValuesPerBlock, replace its value with
-/// NewValue.
-static void replaceValuesPerBlockEntry(
-    SmallVectorImpl<AvailableValueInBlock> &ValuesPerBlock, BasicBlock *BB,
-    Value *NewValue) {
-  for (AvailableValueInBlock &V : ValuesPerBlock) {
-    if (V.BB == BB) {
-      V = AvailableValueInBlock::get(BB, NewValue);
-      return;
-    }
-  }
-}
-
 /// Given a set of loads specified by ValuesPerBlock,
 /// construct SSA form, allowing us to eliminate Load.  This returns the value
 /// that should be used at Load's definition site.
@@ -1365,60 +1347,9 @@ void GVNPass::AnalyzeLoadAvailability(LoadInst *Load, LoadDepVect &Deps,
          "post condition violation");
 }
 
-/// Given the following code, v1 is partially available on some edges, but not
-/// available on the edge from PredBB. This function tries to find if there is
-/// another identical load in the other successor of PredBB.
-///
-///      v0 = load %addr
-///      br %LoadBB
-///
-///   LoadBB:
-///      v1 = load %addr
-///      ...
-///
-///   PredBB:
-///      ...
-///      br %cond, label %LoadBB, label %SuccBB
-///
-///   SuccBB:
-///      v2 = load %addr
-///      ...
-///
-LoadInst *GVNPass::findLoadToHoistIntoPred(BasicBlock *Pred, BasicBlock *LoadBB,
-                                           LoadInst *Load) {
-  // For simplicity we handle a Pred has 2 successors only.
-  auto *Term = Pred->getTerminator();
-  if (Term->getNumSuccessors() != 2)
-    return nullptr;
-  auto *SuccBB = Term->getSuccessor(0);
-  if (SuccBB == LoadBB)
-    SuccBB = Term->getSuccessor(1);
-  if (!SuccBB->getSinglePredecessor())
-    return nullptr;
-
-  int NumInsts = MaxNumInsnsPerBlock;
-  for (Instruction &Inst : *SuccBB) {
-    if (Inst.isIdenticalTo(Load)) {
-      MemDepResult Dep = MD->getDependency(&Inst);
-      // If an identical load doesn't depends on any local instructions, it can
-      // be safely moved to PredBB.
-      if (Dep.isNonLocal())
-        return cast<LoadInst>(&Inst);
-
-      return nullptr;
-    }
-
-    if (--NumInsts == 0)
-      return nullptr;
-  }
-
-  return nullptr;
-}
-
 void GVNPass::eliminatePartiallyRedundantLoad(
     LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
-    MapVector<BasicBlock *, Value *> &AvailableLoads,
-    MapVector<BasicBlock *, LoadInst *> *CriticalEdgePredAndLoad) {
+    MapVector<BasicBlock *, Value *> &AvailableLoads) {
   for (const auto &AvailableLoad : AvailableLoads) {
     BasicBlock *UnavailableBlock = AvailableLoad.first;
     Value *LoadPtr = AvailableLoad.second;
@@ -1472,21 +1403,6 @@ void GVNPass::eliminatePartiallyRedundantLoad(
         AvailableValueInBlock::get(UnavailableBlock, NewLoad));
     MD->invalidateCachedPointerInfo(LoadPtr);
     LLVM_DEBUG(dbgs() << "GVN INSERTED " << *NewLoad << '\n');
-
-    // For PredBB in CriticalEdgePredAndLoad we need to delete the already found
-    // load instruction which is now redundant.
-    if (CriticalEdgePredAndLoad) {
-      auto I = CriticalEdgePredAndLoad->find(UnavailableBlock);
-      if (I != CriticalEdgePredAndLoad->end()) {
-        LoadInst *OldLoad = I->second;
-        OldLoad->replaceAllUsesWith(NewLoad);
-        replaceValuesPerBlockEntry(ValuesPerBlock, OldLoad->getParent(),
-                                   NewLoad);
-        markInstructionForDeletion(OldLoad);
-        if (uint32_t ValNo = VN.lookup(OldLoad, false))
-          removeFromLeaderTable(ValNo, OldLoad, OldLoad->getParent());
-      }
-    }
   }
 
   // Perform PHI construction.
@@ -1573,12 +1489,7 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
   for (BasicBlock *UnavailableBB : UnavailableBlocks)
     FullyAvailableBlocks[UnavailableBB] = AvailabilityState::Unavailable;
 
-  // The edge from Pred to LoadBB is a critical edge will be splitted.
-  SmallVector<BasicBlock *, 4> CriticalEdgePredSplit;
-  // The edge from Pred to LoadBB is a critical edge, another successor of Pred
-  // contains a load can be moved to Pred. This data structure maps the Pred to
-  // the movable load.
-  MapVector<BasicBlock *, LoadInst *> CriticalEdgePredAndLoad;
+  SmallVector<BasicBlock *, 4> CriticalEdgePred;
   for (BasicBlock *Pred : predecessors(LoadBB)) {
     // If any predecessor block is an EH pad that does not allow non-PHI
     // instructions before the terminator, we can't PRE the load.
@@ -1618,60 +1529,45 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
           return false;
         }
 
-      if (LoadInst *LI = findLoadToHoistIntoPred(Pred, LoadBB, Load)) {
-        CriticalEdgePredAndLoad[Pred] = LI;
-      } else
-        CriticalEdgePredSplit.push_back(Pred);
+      CriticalEdgePred.push_back(Pred);
     } else {
       // Only add the predecessors that will not be split for now.
       PredLoads[Pred] = nullptr;
     }
-
-    // Early check for non profitable PRE load.
-    unsigned NumInsertPreds = PredLoads.size() + CriticalEdgePredSplit.size();
-    if (NumInsertPreds > 1)
-      return false;
   }
 
   // Decide whether PRE is profitable for this load.
-  unsigned NumInsertPreds = PredLoads.size() + CriticalEdgePredSplit.size();
-  assert(NumInsertPreds + CriticalEdgePredAndLoad.size() != 0 &&
+  unsigned NumUnavailablePreds = PredLoads.size() + CriticalEdgePred.size();
+  assert(NumUnavailablePreds != 0 &&
          "Fully available value should already be eliminated!");
 
-  // If we need to insert new load in multiple predecessors, reject it.
+  // If this load is unavailable in multiple predecessors, reject it.
   // FIXME: If we could restructure the CFG, we could make a common pred with
   // all the preds that don't have an available Load and insert a new load into
   // that one block.
-  if (NumInsertPreds > 1)
+  if (NumUnavailablePreds != 1)
       return false;
 
   // Now we know where we will insert load. We must ensure that it is safe
   // to speculatively execute the load at that points.
   if (MustEnsureSafetyOfSpeculativeExecution) {
-    if (CriticalEdgePredSplit.size())
+    if (CriticalEdgePred.size())
       if (!isSafeToSpeculativelyExecute(Load, LoadBB->getFirstNonPHI(), AC, DT))
         return false;
     for (auto &PL : PredLoads)
       if (!isSafeToSpeculativelyExecute(Load, PL.first->getTerminator(), AC,
                                         DT))
         return false;
-    for (auto &CEP : CriticalEdgePredAndLoad)
-      if (!isSafeToSpeculativelyExecute(Load, CEP.first->getTerminator(), AC,
-                                        DT))
-        return false;
   }
 
   // Split critical edges, and update the unavailable predecessors accordingly.
-  for (BasicBlock *OrigPred : CriticalEdgePredSplit) {
+  for (BasicBlock *OrigPred : CriticalEdgePred) {
     BasicBlock *NewPred = splitCriticalEdges(OrigPred, LoadBB);
     assert(!PredLoads.count(OrigPred) && "Split edges shouldn't be in map!");
     PredLoads[NewPred] = nullptr;
     LLVM_DEBUG(dbgs() << "Split critical edge " << OrigPred->getName() << "->"
                       << LoadBB->getName() << '\n');
   }
-
-  for (auto &CEP : CriticalEdgePredAndLoad)
-    PredLoads[CEP.first] = nullptr;
 
   // Check if the load can safely be moved to all the unavailable predecessors.
   bool CanDoPRE = true;
@@ -1729,7 +1625,7 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
     }
     // HINT: Don't revert the edge-splitting as following transformation may
     // also need to split these critical edges.
-    return !CriticalEdgePredSplit.empty();
+    return !CriticalEdgePred.empty();
   }
 
   // Okay, we can eliminate this load by inserting a reload in the predecessor
@@ -1754,8 +1650,7 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
     VN.lookupOrAdd(I);
   }
 
-  eliminatePartiallyRedundantLoad(Load, ValuesPerBlock, PredLoads,
-                                  &CriticalEdgePredAndLoad);
+  eliminatePartiallyRedundantLoad(Load, ValuesPerBlock, PredLoads);
   ++NumPRELoad;
   return true;
 }
@@ -1834,8 +1729,7 @@ bool GVNPass::performLoopLoadPRE(LoadInst *Load,
   AvailableLoads[Preheader] = LoadPtr;
 
   LLVM_DEBUG(dbgs() << "GVN REMOVING PRE LOOP LOAD: " << *Load << '\n');
-  eliminatePartiallyRedundantLoad(Load, ValuesPerBlock, AvailableLoads,
-                                  /*CriticalEdgePredAndLoad*/ nullptr);
+  eliminatePartiallyRedundantLoad(Load, ValuesPerBlock, AvailableLoads);
   ++NumPRELoopLoad;
   return true;
 }
@@ -2806,6 +2700,7 @@ bool GVNPass::processBlock(BasicBlock *BB) {
       --BI;
 
     for (auto *I : InstrsToErase) {
+      assert(I->getParent() == BB && "Removing instruction from wrong block?");
       LLVM_DEBUG(dbgs() << "GVN removed: " << *I << '\n');
       salvageKnowledge(I, AC);
       salvageDebugInfo(*I);
