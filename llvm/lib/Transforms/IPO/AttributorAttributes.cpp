@@ -96,12 +96,6 @@ static cl::opt<int> MaxPotentialValuesIterations(
         "Maximum number of iterations we keep dismantling potential values."),
     cl::init(64));
 
-static cl::opt<unsigned> MaxInterferingAccesses(
-    "attributor-max-interfering-accesses", cl::Hidden,
-    cl::desc("Maximum number of interfering accesses to "
-             "check before assuming all might interfere."),
-    cl::init(6));
-
 STATISTIC(NumAAs, "Number of abstract attributes created");
 
 // Some helper macros to deal with statistics tracking.
@@ -1081,7 +1075,6 @@ struct AAPointerInfoImpl
     const bool FindInterferingReads = I.mayWriteToMemory();
     const bool UseDominanceReasoning =
         FindInterferingWrites && NoRecurseAA.isKnownNoRecurse();
-    const bool CanUseCFGResoning = CanIgnoreThreading(I);
     const DominatorTree *DT =
         InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(Scope);
 
@@ -1141,21 +1134,16 @@ struct AAPointerInfoImpl
           (!FindInterferingReads || !Acc.isRead()))
         return true;
 
-      bool Dominates = DT && Exact && Acc.isMustAccess() &&
-                       (Acc.getLocalInst()->getFunction() == &Scope) &&
+      bool Dominates = FindInterferingWrites && DT && Exact &&
+                       Acc.isMustAccess() &&
+                       (Acc.getRemoteInst()->getFunction() == &Scope) &&
                        DT->dominates(Acc.getRemoteInst(), &I);
-      if (FindInterferingWrites && Dominates)
-        HasBeenWrittenTo = true;
+      if (Dominates)
+        DominatingWrites.insert(&Acc);
 
       // Track if all interesting accesses are in the same `nosync` function as
       // the given instruction.
       AllInSameNoSyncFn &= Acc.getRemoteInst()->getFunction() == &Scope;
-
-      // For now we only filter accesses based on CFG reasoning which does not
-      // work yet if we have threading effects, or the access is complicated.
-      if (CanUseCFGResoning && Dominates && UseDominanceReasoning &&
-          IsSameThreadAsInst(Acc))
-        DominatingWrites.insert(&Acc);
 
       InterferingAccesses.push_back({&Acc, Exact});
       return true;
@@ -1163,43 +1151,90 @@ struct AAPointerInfoImpl
     if (!State::forallInterferingAccesses(I, AccessCB, Range))
       return false;
 
-    // Helper to determine if we can skip a specific write access. This is in
-    // the worst case quadratic as we are looking for another write that will
-    // hide the effect of this one.
+    HasBeenWrittenTo = !DominatingWrites.empty();
+
+    // Dominating writes form a chain, find the least/lowest member.
+    Instruction *LeastDominatingWriteInst = nullptr;
+    for (const Access *Acc : DominatingWrites) {
+      if (!LeastDominatingWriteInst) {
+        LeastDominatingWriteInst = Acc->getRemoteInst();
+      } else if (DT->dominates(LeastDominatingWriteInst,
+                               Acc->getRemoteInst())) {
+        LeastDominatingWriteInst = Acc->getRemoteInst();
+      }
+    }
+
+    // Helper to determine if we can skip a specific write access.
     auto CanSkipAccess = [&](const Access &Acc, bool Exact) {
       if (!IsSameThreadAsInst(Acc))
         return false;
-      if ((!Acc.isWriteOrAssumption() ||
-           !AA::isPotentiallyReachable(A, *Acc.getRemoteInst(), I, QueryingAA,
-                                       &ExclusionSet, IsLiveInCalleeCB)) &&
-          (!Acc.isRead() ||
-           !AA::isPotentiallyReachable(A, I, *Acc.getRemoteInst(), QueryingAA,
-                                       &ExclusionSet, IsLiveInCalleeCB)))
+
+      // Check read (RAW) dependences and write (WAR) dependences as necessary.
+      // If we successfully excluded all effects we are interested in, the
+      // access can be skipped.
+      bool ReadChecked = !FindInterferingReads;
+      bool WriteChecked = !FindInterferingWrites;
+
+      // If the instruction cannot reach the access, the former does not
+      // interfere with what the access reads.
+      if (!ReadChecked) {
+        if (!AA::isPotentiallyReachable(A, I, *Acc.getRemoteInst(), QueryingAA,
+                                        &ExclusionSet, IsLiveInCalleeCB))
+          ReadChecked = true;
+      }
+      // If the instruction cannot be reach from the access, the latter does not
+      // interfere with what the instruction reads.
+      if (!WriteChecked) {
+        if (!AA::isPotentiallyReachable(A, *Acc.getRemoteInst(), I, QueryingAA,
+                                        &ExclusionSet, IsLiveInCalleeCB))
+          WriteChecked = true;
+      }
+
+      // If we still might be affected by the write of the access but there are
+      // dominating writes in the function of the instruction
+      // (HasBeenWrittenTo), we can try to reason that the access is overwritten
+      // by them. This would have happend above if they are all in the same
+      // function, so we only check the inter-procedural case. Effectively, we
+      // want to show that there is no call after the dominting write that might
+      // reach the access, and when it returns reach the instruction with the
+      // updated value. To this end, we iterate all call sites, check if they
+      // might reach the instruction without going through another access
+      // (ExclusionSet) and at the same time might reach the access. However,
+      // that is all part of AAInterFnReachability.
+      if (!WriteChecked && HasBeenWrittenTo &&
+          Acc.getRemoteInst()->getFunction() != &Scope) {
+
+        const auto &FnReachabilityAA = A.getAAFor<AAInterFnReachability>(
+            QueryingAA, IRPosition::function(Scope), DepClassTy::OPTIONAL);
+
+        // Without going backwards in the call tree, can we reach the access
+        // from the least dominating write. Do not allow to pass the instruction
+        // itself either.
+        bool Inserted = ExclusionSet.insert(&I).second;
+
+        if (!FnReachabilityAA.instructionCanReach(
+                A, *LeastDominatingWriteInst,
+                *Acc.getRemoteInst()->getFunction(), &ExclusionSet))
+          WriteChecked = true;
+
+        if (Inserted)
+          ExclusionSet.erase(&I);
+      }
+
+      if (ReadChecked && WriteChecked)
         return true;
 
       if (!DT || !UseDominanceReasoning)
         return false;
       if (!DominatingWrites.count(&Acc))
         return false;
-      for (const Access *DomAcc : DominatingWrites) {
-        assert(Acc.getLocalInst()->getFunction() ==
-                   DomAcc->getLocalInst()->getFunction() &&
-               "Expected dominating writes to be in the same function!");
-
-        if (DomAcc != &Acc &&
-            DT->dominates(Acc.getLocalInst(), DomAcc->getLocalInst())) {
-          return true;
-        }
-      }
-      return false;
+      return LeastDominatingWriteInst != Acc.getLocalInst();
     };
 
-    // Run the user callback on all accesses we cannot skip and return if that
-    // succeeded for all or not.
-    unsigned NumInterferingAccesses = InterferingAccesses.size();
+    // Run the user callback on all accesses we cannot skip and return if
+    // that succeeded for all or not.
     for (auto &It : InterferingAccesses) {
       if ((!AllInSameNoSyncFn && !IsThreadLocalObj) ||
-          NumInterferingAccesses > MaxInterferingAccesses ||
           !CanSkipAccess(*It.first, It.second)) {
         if (!UserCB(*It.first, It.second))
           return false;
