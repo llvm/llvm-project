@@ -5468,7 +5468,7 @@ AST_MATCHER_P(ArraySubscriptExpr, hasBase,
 /// \code
 ///   for (;;) {}
 /// \endcode
-/// hasBody(compoundStmt())
+/// forStmt(hasBody(compoundStmt()))
 ///   matches 'for (;;) {}'
 /// with compoundStmt()
 ///   matching '{}'
@@ -5478,7 +5478,7 @@ AST_MATCHER_P(ArraySubscriptExpr, hasBase,
 ///   void f();
 ///   void f() {}
 /// \endcode
-/// hasBody(functionDecl())
+/// functionDecl(hasBody(compoundStmt()))
 ///   matches 'void f() {}'
 /// with compoundStmt()
 ///   matching '{}'
