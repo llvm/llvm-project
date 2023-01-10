@@ -33,6 +33,7 @@ void registerConvertToTargetEnvPass();
 void registerCloneTestPasses();
 void registerPassManagerTestPass();
 void registerPrintSpirvAvailabilityPass();
+void registerLoopLikeInterfaceTestPasses();
 void registerShapeFunctionTestPasses();
 void registerSideEffectTestPasses();
 void registerSliceAnalysisTestPass();
@@ -140,6 +141,7 @@ void registerTestPasses() {
   registerConvertToTargetEnvPass();
   registerPassManagerTestPass();
   registerPrintSpirvAvailabilityPass();
+  registerLoopLikeInterfaceTestPasses();
   registerShapeFunctionTestPasses();
   registerSideEffectTestPasses();
   registerSliceAnalysisTestPass();
