@@ -11,6 +11,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ExitCodes.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/ThreadLocal.h"
 #include "llvm/Support/thread.h"
 #include <mutex>
 #include <setjmp.h>
@@ -20,7 +21,11 @@ using namespace llvm;
 namespace {
 
 struct CrashRecoveryContextImpl;
-LLVM_THREAD_LOCAL static const CrashRecoveryContextImpl *CurrentContext;
+
+sys::ThreadLocal<const CrashRecoveryContextImpl> &getCurrentContext() {
+  static sys::ThreadLocal<const CrashRecoveryContextImpl> CurrentContext;
+  return CurrentContext;
+}
 
 struct CrashRecoveryContextImpl {
   // When threads are disabled, this links up all active
@@ -38,12 +43,12 @@ struct CrashRecoveryContextImpl {
 public:
   CrashRecoveryContextImpl(CrashRecoveryContext *CRC) noexcept
       : CRC(CRC), Failed(false), SwitchedThread(false), ValidJumpBuffer(false) {
-    Next = CurrentContext;
-    CurrentContext = this;
+    Next = getCurrentContext().get();
+    getCurrentContext().set(this);
   }
   ~CrashRecoveryContextImpl() {
     if (!SwitchedThread)
-      CurrentContext = Next;
+      getCurrentContext().set(Next);
   }
 
   /// Called when the separate crash-recovery thread was finished, to
@@ -61,7 +66,7 @@ public:
   void HandleCrash(int RetCode, uintptr_t Context) {
     // Eliminate the current context entry, to avoid re-entering in case the
     // cleanup code crashes.
-    CurrentContext = Next;
+    getCurrentContext().set(Next);
 
     assert(!Failed && "Crash recovery context already failed!");
     Failed = true;
@@ -87,7 +92,10 @@ std::mutex &getCrashRecoveryContextMutex() {
 
 static bool gCrashRecoveryEnabled = false;
 
-LLVM_THREAD_LOCAL static const CrashRecoveryContext *IsRecoveringFromCrash;
+sys::ThreadLocal<const CrashRecoveryContext> &getIsRecoveringFromCrash() {
+  static sys::ThreadLocal<const CrashRecoveryContext> IsRecoveringFromCrash;
+  return IsRecoveringFromCrash;
+}
 
 } // namespace
 
@@ -106,8 +114,8 @@ CrashRecoveryContext::CrashRecoveryContext() {
 CrashRecoveryContext::~CrashRecoveryContext() {
   // Reclaim registered resources.
   CrashRecoveryContextCleanup *i = head;
-  const CrashRecoveryContext *PC = IsRecoveringFromCrash;
-  IsRecoveringFromCrash = this;
+  const CrashRecoveryContext *PC = getIsRecoveringFromCrash().get();
+  getIsRecoveringFromCrash().set(this);
   while (i) {
     CrashRecoveryContextCleanup *tmp = i;
     i = tmp->next;
@@ -115,21 +123,21 @@ CrashRecoveryContext::~CrashRecoveryContext() {
     tmp->recoverResources();
     delete tmp;
   }
-  IsRecoveringFromCrash = PC;
+  getIsRecoveringFromCrash().set(PC);
 
   CrashRecoveryContextImpl *CRCI = (CrashRecoveryContextImpl *) Impl;
   delete CRCI;
 }
 
 bool CrashRecoveryContext::isRecoveringFromCrash() {
-  return IsRecoveringFromCrash != nullptr;
+  return getIsRecoveringFromCrash().get() != nullptr;
 }
 
 CrashRecoveryContext *CrashRecoveryContext::GetCurrent() {
   if (!gCrashRecoveryEnabled)
     return nullptr;
 
-  const CrashRecoveryContextImpl *CRCI = CurrentContext;
+  const CrashRecoveryContextImpl *CRCI = getCurrentContext().get();
   if (!CRCI)
     return nullptr;
 
@@ -199,7 +207,7 @@ static void uninstallExceptionOrSignalHandlers() {}
 // occur inside the __except evaluation block
 static int ExceptionFilter(_EXCEPTION_POINTERS *Except) {
   // Lookup the current thread local recovery object.
-  const CrashRecoveryContextImpl *CRCI = CurrentContext;
+  const CrashRecoveryContextImpl *CRCI = getCurrentContext().get();
 
   if (!CRCI) {
     // Something has gone horribly wrong, so let's just tell everyone
@@ -276,7 +284,7 @@ static LONG CALLBACK ExceptionHandler(PEXCEPTION_POINTERS ExceptionInfo)
   }
 
   // Lookup the current thread local recovery object.
-  const CrashRecoveryContextImpl *CRCI = CurrentContext;
+  const CrashRecoveryContextImpl *CRCI = getCurrentContext().get();
 
   if (!CRCI) {
     // Something has gone horribly wrong, so let's just tell everyone
@@ -350,7 +358,7 @@ static struct sigaction PrevActions[NumSignals];
 
 static void CrashRecoverySignalHandler(int Signal) {
   // Lookup the current thread local recovery object.
-  const CrashRecoveryContextImpl *CRCI = CurrentContext;
+  const CrashRecoveryContextImpl *CRCI = getCurrentContext().get();
 
   if (!CRCI) {
     // We didn't find a crash recovery context -- this means either we got a
