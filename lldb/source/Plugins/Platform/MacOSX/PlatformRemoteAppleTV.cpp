@@ -57,8 +57,10 @@ void PlatformRemoteAppleTV::Terminate() {
   PlatformDarwin::Terminate();
 }
 
-PlatformSP PlatformRemoteAppleTV::CreateInstance(bool force,
-                                                 const ArchSpec *arch) {
+PlatformSP
+PlatformRemoteAppleTV::CreateInstance(bool force, const ArchSpec *arch,
+                                      const Debugger *debugger,
+                                      const ScriptedMetadata *metadata) {
   Log *log = GetLog(LLDBLog::Platform);
   if (log) {
     const char *arch_name;

@@ -39,7 +39,8 @@ public:
                    []() { Debugger::Initialize(nullptr); });
     ArchSpec arch("x86_64-apple-macosx-");
     Platform::SetHostPlatform(
-        PlatformRemoteMacOSX::CreateInstance(true, &arch));
+        PlatformRemoteMacOSX::CreateInstance(true, &arch, /*debugger=*/nullptr,
+                                             /*metadata=*/nullptr));
   }
   void TearDown() override {
     PlatformMacOSX::Terminate();

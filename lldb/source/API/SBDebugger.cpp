@@ -1498,7 +1498,8 @@ SBError SBDebugger::SetCurrentPlatform(const char *platform_name_cstr) {
   if (m_opaque_sp) {
     if (platform_name_cstr && platform_name_cstr[0]) {
       PlatformList &platforms = m_opaque_sp->GetPlatformList();
-      if (PlatformSP platform_sp = platforms.GetOrCreate(platform_name_cstr))
+      if (PlatformSP platform_sp = platforms.GetOrCreate(
+              platform_name_cstr, /*metadata = */ nullptr))
         platforms.SetSelectedPlatform(platform_sp);
       else
         sb_error.ref().SetErrorString("platform not found");

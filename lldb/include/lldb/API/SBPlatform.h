@@ -96,6 +96,9 @@ public:
 
   SBPlatform(const char *platform_name);
 
+  SBPlatform(const char *platform_name, const SBDebugger &debugger,
+             const char *script_name, const SBStructuredData &dict);
+
   SBPlatform(const SBPlatform &rhs);
 
   SBPlatform &operator=(const SBPlatform &rhs);

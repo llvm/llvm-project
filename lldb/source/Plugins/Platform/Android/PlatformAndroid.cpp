@@ -59,7 +59,9 @@ void PlatformAndroid::Terminate() {
   PlatformLinux::Terminate();
 }
 
-PlatformSP PlatformAndroid::CreateInstance(bool force, const ArchSpec *arch) {
+PlatformSP PlatformAndroid::CreateInstance(bool force, const ArchSpec *arch,
+                                           const Debugger *debugger,
+                                           const ScriptedMetadata *metadata) {
   Log *log = GetLog(LLDBLog::Platform);
   if (log) {
     const char *arch_name;

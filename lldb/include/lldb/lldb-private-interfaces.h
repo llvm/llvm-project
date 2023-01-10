@@ -26,6 +26,7 @@ class Value;
 } // namespace llvm
 
 namespace lldb_private {
+class ScriptedMetadata;
 typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp,
                                          const ArchSpec &arch);
 typedef std::unique_ptr<Architecture> (*ArchitectureCreateInstance)(
@@ -77,8 +78,9 @@ typedef lldb::StructuredDataPluginSP (*StructuredDataPluginCreateInstance)(
 typedef Status (*StructuredDataFilterLaunchInfo)(ProcessLaunchInfo &launch_info,
                                                  Target *target);
 typedef SystemRuntime *(*SystemRuntimeCreateInstance)(Process *process);
-typedef lldb::PlatformSP (*PlatformCreateInstance)(bool force,
-                                                   const ArchSpec *arch);
+typedef lldb::PlatformSP (*PlatformCreateInstance)(
+    bool force, const ArchSpec *arch, const Debugger *debugger,
+    const ScriptedMetadata *metadata);
 typedef lldb::ProcessSP (*ProcessCreateInstance)(
     lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
     const FileSpec *crash_file_path, bool can_connect);

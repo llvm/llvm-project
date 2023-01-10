@@ -420,6 +420,7 @@ public:
                             const SBFileSpec &trace_description_file);
 
 private:
+  friend class SBPlatform;
   friend class SBCommandInterpreter;
   friend class SBInputReader;
   friend class SBListener;

@@ -552,7 +552,9 @@ struct PlatformiOSSimulator {
     PluginManager::UnregisterPlugin(PlatformiOSSimulator::CreateInstance);
   }
 
-  static PlatformSP CreateInstance(bool force, const ArchSpec *arch) {
+  static PlatformSP CreateInstance(bool force, const ArchSpec *arch,
+                                   const Debugger *debugger,
+                                   const ScriptedMetadata *metadata) {
     if (shouldSkipSimulatorPlatform(force, arch))
       return nullptr;
 
@@ -597,7 +599,9 @@ struct PlatformAppleTVSimulator {
     PluginManager::UnregisterPlugin(PlatformAppleTVSimulator::CreateInstance);
   }
 
-  static PlatformSP CreateInstance(bool force, const ArchSpec *arch) {
+  static PlatformSP CreateInstance(bool force, const ArchSpec *arch,
+                                   const Debugger *debugger,
+                                   const ScriptedMetadata *metadata) {
     if (shouldSkipSimulatorPlatform(force, arch))
       return nullptr;
     return PlatformAppleSimulator::CreateInstance(
@@ -639,7 +643,9 @@ struct PlatformAppleWatchSimulator {
         PlatformAppleWatchSimulator::CreateInstance);
   }
 
-  static PlatformSP CreateInstance(bool force, const ArchSpec *arch) {
+  static PlatformSP CreateInstance(bool force, const ArchSpec *arch,
+                                   const Debugger *debugger,
+                                   const ScriptedMetadata *metadata) {
     if (shouldSkipSimulatorPlatform(force, arch))
       return nullptr;
     return PlatformAppleSimulator::CreateInstance(
