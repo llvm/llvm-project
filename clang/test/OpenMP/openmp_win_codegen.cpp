@@ -121,10 +121,10 @@ int main() {
 // CHECK1:       omp_if.end:
 // CHECK1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_COPYPRIVATE_CPR_LIST]], i64 0, i64 0
 // CHECK1-NEXT:    store ptr [[LOCAL_J]], ptr [[TMP5]], align 8
-// CHECK1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_COPYPRIVATE_DID_IT]], align 4
-// CHECK1-NEXT:    call void @__kmpc_copyprivate(ptr @[[GLOB1]], i32 [[TMP2]], i64 8, ptr [[DOTOMP_COPYPRIVATE_CPR_LIST]], ptr @.omp.copyprivate.copy_func, i32 [[TMP8]])
-// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[LOCAL_J]], align 4
-// CHECK1-NEXT:    store i32 [[TMP9]], ptr [[TMP0]], align 4
+// CHECK1-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_COPYPRIVATE_DID_IT]], align 4
+// CHECK1-NEXT:    call void @__kmpc_copyprivate(ptr @[[GLOB1]], i32 [[TMP2]], i64 8, ptr [[DOTOMP_COPYPRIVATE_CPR_LIST]], ptr @.omp.copyprivate.copy_func, i32 [[TMP6]])
+// CHECK1-NEXT:    [[TMP7:%.*]] = load i32, ptr [[LOCAL_J]], align 4
+// CHECK1-NEXT:    store i32 [[TMP7]], ptr [[TMP0]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -136,12 +136,12 @@ int main() {
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR1]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
-// CHECK1-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DOTADDR]], align 8
-// CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
+// CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR]], align 8
+// CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
+// CHECK1-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
+// CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP3]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// CHECK1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP4]], i64 0, i64 0
-// CHECK1-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 8
-// CHECK1-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP10]], align 4
-// CHECK1-NEXT:    store i32 [[TMP12]], ptr [[TMP7]], align 4
+// CHECK1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
+// CHECK1-NEXT:    store i32 [[TMP8]], ptr [[TMP5]], align 4
 // CHECK1-NEXT:    ret void
 //

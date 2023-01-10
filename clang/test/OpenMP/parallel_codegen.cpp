@@ -765,6 +765,8 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i32, ptr @global, align 4
 // CHECK3-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[LOADGEP_VLA]], i64 1
 // CHECK3-NEXT:    store i32 [[TMP3]], ptr [[ARRAYIDX1]], align 4
+// CHECK3-NEXT:    br label [[OMP_PAR_REGION_PARALLEL_AFTER:%.*]]
+// CHECK3:       omp.par.region.parallel.after:
 // CHECK3-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK3:       omp.par.pre_finalize:
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
@@ -830,6 +832,8 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP5:%.*]] = mul nsw i64 0, [[TMP2]]
 // CHECK3-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[TMP4]], i64 [[TMP5]]
 // CHECK3-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, ptr [[ARRAYIDX2]], i64 0
+// CHECK3-NEXT:    br label [[OMP_PAR_REGION_PARALLEL_AFTER:%.*]]
+// CHECK3:       omp.par.region.parallel.after:
 // CHECK3-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK3:       omp.par.pre_finalize:
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
@@ -903,7 +907,9 @@ int main (int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP3:%.*]] = load i32, ptr @global, align 4, !dbg [[DBG35]]
 // CHECK4-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[LOADGEP_VLA]], i64 1, !dbg [[DBG35]]
 // CHECK4-NEXT:    store i32 [[TMP3]], ptr [[ARRAYIDX1]], align 4, !dbg [[DBG35]]
-// CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]], !dbg [[DBG35]]
+// CHECK4-NEXT:    br label [[OMP_PAR_REGION_PARALLEL_AFTER:%.*]], !dbg [[DBG35]]
+// CHECK4:       omp.par.region.parallel.after:
+// CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK4:       omp.par.pre_finalize:
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]], !dbg [[DBG35]]
 // CHECK4:       omp.par.outlined.exit.exitStub:
@@ -966,23 +972,25 @@ int main (int argc, char **argv) {
 // CHECK4:       omp.par.region:
 // CHECK4-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[LOADGEP_ARGC_ADDR]], align 8, !dbg [[DBG58:![0-9]+]]
 // CHECK4-NEXT:    call void @_Z3fooIPPcEvT_(ptr noundef [[TMP3]]), !dbg [[DBG58]]
-// CHECK4-NEXT:    call void @llvm.dbg.declare(metadata ptr [[VAR]], metadata [[META59:![0-9]+]], metadata !DIExpression()), !dbg [[DBG66:![0-9]+]]
-// CHECK4-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[VAR]], align 8, !dbg [[DBG66]]
-// CHECK4-NEXT:    [[TMP5:%.*]] = mul nsw i64 0, [[TMP2]], !dbg [[DBG66]]
-// CHECK4-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[TMP4]], i64 [[TMP5]], !dbg [[DBG66]]
-// CHECK4-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, ptr [[ARRAYIDX2]], i64 0, !dbg [[DBG66]]
-// CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]], !dbg [[DBG67:![0-9]+]]
+// CHECK4-NEXT:    call void @llvm.dbg.declare(metadata ptr [[VAR]], metadata [[META60:![0-9]+]], metadata !DIExpression()), !dbg [[DBG67:![0-9]+]]
+// CHECK4-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[VAR]], align 8, !dbg [[DBG67]]
+// CHECK4-NEXT:    [[TMP5:%.*]] = mul nsw i64 0, [[TMP2]], !dbg [[DBG67]]
+// CHECK4-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[TMP4]], i64 [[TMP5]], !dbg [[DBG67]]
+// CHECK4-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, ptr [[ARRAYIDX2]], i64 0, !dbg [[DBG67]]
+// CHECK4-NEXT:    br label [[OMP_PAR_REGION_PARALLEL_AFTER:%.*]], !dbg [[DBG68:![0-9]+]]
+// CHECK4:       omp.par.region.parallel.after:
+// CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK4:       omp.par.pre_finalize:
-// CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]], !dbg [[DBG67]]
+// CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]], !dbg [[DBG68]]
 // CHECK4:       omp.par.outlined.exit.exitStub:
 // CHECK4-NEXT:    ret void
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_Z3fooIPPcEvT_
-// CHECK4-SAME: (ptr noundef [[ARGC:%.*]]) #[[ATTR5]] comdat !dbg [[DBG68:![0-9]+]] {
+// CHECK4-SAME: (ptr noundef [[ARGC:%.*]]) #[[ATTR5]] comdat !dbg [[DBG69:![0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[ARGC_ADDR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    store ptr [[ARGC]], ptr [[ARGC_ADDR]], align 8
-// CHECK4-NEXT:    call void @llvm.dbg.declare(metadata ptr [[ARGC_ADDR]], metadata [[META71:![0-9]+]], metadata !DIExpression()), !dbg [[DBG72:![0-9]+]]
-// CHECK4-NEXT:    ret void, !dbg [[DBG72]]
+// CHECK4-NEXT:    call void @llvm.dbg.declare(metadata ptr [[ARGC_ADDR]], metadata [[META72:![0-9]+]], metadata !DIExpression()), !dbg [[DBG73:![0-9]+]]
+// CHECK4-NEXT:    ret void, !dbg [[DBG73]]
 //
