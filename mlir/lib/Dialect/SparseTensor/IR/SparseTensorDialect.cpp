@@ -765,6 +765,20 @@ LogicalResult ToValuesOp::verify() {
   return success();
 }
 
+LogicalResult ToSliceOffsetOp::verify() {
+  auto rank = getRankedTensorType(getSlice()).getRank();
+  if (rank <= getDim().getSExtValue() || getDim().getSExtValue() < 0)
+    return emitError("requested dimension out of bound");
+  return success();
+}
+
+LogicalResult ToSliceStrideOp::verify() {
+  auto rank = getRankedTensorType(getSlice()).getRank();
+  if (rank <= getDim().getSExtValue() || getDim().getSExtValue() < 0)
+    return emitError("requested dimension out of bound");
+  return success();
+}
+
 LogicalResult GetStorageSpecifierOp::verify() {
   RETURN_FAILURE_IF_FAILED(verifySparsifierGetterSetter(
       getSpecifierKind(), getDim(), getSpecifier(), getOperation()))
