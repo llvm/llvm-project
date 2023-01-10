@@ -72,8 +72,10 @@ void PlatformDarwinKernel::Terminate() {
   PlatformDarwin::Terminate();
 }
 
-PlatformSP PlatformDarwinKernel::CreateInstance(bool force,
-                                                const ArchSpec *arch) {
+PlatformSP
+PlatformDarwinKernel::CreateInstance(bool force, const ArchSpec *arch,
+                                     const Debugger *debugger,
+                                     const ScriptedMetadata *metadata) {
   Log *log = GetLog(LLDBLog::Platform);
   if (log) {
     const char *arch_name;
@@ -968,7 +970,7 @@ bool PlatformDarwinKernel::LoadPlatformBinaryAndSetup(Process *process,
 
   PlatformSP platform_sp =
       process->GetTarget().GetDebugger().GetPlatformList().Create(
-          PlatformDarwinKernel::GetPluginNameStatic());
+          PlatformDarwinKernel::GetPluginNameStatic(), /*metadata = */ nullptr);
   if (platform_sp)
     process->GetTarget().SetPlatform(platform_sp);
 

@@ -511,7 +511,7 @@ DynamicLoaderDarwinKernel::DynamicLoaderDarwinKernel(Process *process,
   process->SetCanRunCode(false);
   PlatformSP platform_sp =
       process->GetTarget().GetDebugger().GetPlatformList().Create(
-          PlatformDarwinKernel::GetPluginNameStatic());
+          PlatformDarwinKernel::GetPluginNameStatic(), /*metadata = */ nullptr);
   if (platform_sp.get())
     process->GetTarget().SetPlatform(platform_sp);
 }
