@@ -26,6 +26,7 @@ def OpenACC_Dialect : Dialect {
   }];
 
   let useDefaultAttributePrinterParser = 1;
+  let useFoldAPI = kEmitFoldAdaptorFolder;
   let cppNamespace = "::mlir::acc";
 }
 
