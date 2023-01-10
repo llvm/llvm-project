@@ -1635,9 +1635,7 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
 
   // Decide whether PRE is profitable for this load.
   unsigned NumInsertPreds = PredLoads.size() + CriticalEdgePredSplit.size();
-  unsigned NumUnavailablePreds = NumInsertPreds +
-      CriticalEdgePredAndLoad.size();
-  assert(NumUnavailablePreds != 0 &&
+  assert(NumInsertPreds + CriticalEdgePredAndLoad.size() != 0 &&
          "Fully available value should already be eliminated!");
 
   // If we need to insert new load in multiple predecessors, reject it.
