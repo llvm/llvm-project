@@ -5822,8 +5822,6 @@ AST_MATCHER_P(ExplicitCastExpr, hasDestinationType,
 
 /// Matches implicit casts whose destination type matches a given
 /// matcher.
-///
-/// FIXME: Unit test this matcher
 AST_MATCHER_P(ImplicitCastExpr, hasImplicitDestinationType,
               internal::Matcher<QualType>, InnerMatcher) {
   return InnerMatcher.matches(Node.getType(), Finder, Builder);
