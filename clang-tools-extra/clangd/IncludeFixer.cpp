@@ -225,7 +225,7 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
   case diag::err_implied_std_initializer_list_not_found:
     return only(insertHeader("<initializer_list>"));
   case diag::err_need_header_before_typeid:
-    return only(insertHeader("<typeid>"));
+    return only(insertHeader("<typeinfo>"));
   case diag::err_need_header_before_placement_new:
   case diag::err_implicit_coroutine_std_nothrow_type_not_found:
     return only(insertHeader("<new>"));
