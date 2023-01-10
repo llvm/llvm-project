@@ -51,7 +51,7 @@ define void @fence_seq_cst() nounwind {
 define void @fence_singlethread_acquire() nounwind {
 ; CHECK-LABEL: fence_singlethread_acquire:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fence r, rw
+; CHECK-NEXT:    #MEMBARRIER
 ; CHECK-NEXT:    ret
   fence syncscope("singlethread") acquire
   ret void
@@ -60,7 +60,7 @@ define void @fence_singlethread_acquire() nounwind {
 define void @fence_singlethread_release() nounwind {
 ; CHECK-LABEL: fence_singlethread_release:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fence rw, w
+; CHECK-NEXT:    #MEMBARRIER
 ; CHECK-NEXT:    ret
   fence syncscope("singlethread") release
   ret void
@@ -69,7 +69,7 @@ define void @fence_singlethread_release() nounwind {
 define void @fence_singlethread_acq_rel() nounwind {
 ; CHECK-LABEL: fence_singlethread_acq_rel:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fence.tso
+; CHECK-NEXT:    #MEMBARRIER
 ; CHECK-NEXT:    ret
   fence syncscope("singlethread") acq_rel
   ret void
@@ -78,7 +78,7 @@ define void @fence_singlethread_acq_rel() nounwind {
 define void @fence_singlethread_seq_cst() nounwind {
 ; CHECK-LABEL: fence_singlethread_seq_cst:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fence rw, rw
+; CHECK-NEXT:    #MEMBARRIER
 ; CHECK-NEXT:    ret
   fence syncscope("singlethread") seq_cst
   ret void
