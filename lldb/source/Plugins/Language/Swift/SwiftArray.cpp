@@ -1,4 +1,4 @@
-//===-- SwiftArray.cpp ------------------------------------------*- C++ -*-===//
+//===-- SwiftArray.cpp ----------------------------------------------------===//
 //
 // This source file is part of the Swift.org open source project
 //
@@ -140,12 +140,11 @@ SwiftArrayBridgedBufferHandler::SwiftArrayBridgedBufferHandler(
     ProcessSP process_sp, lldb::addr_t native_ptr)
     : SwiftArrayBufferHandler(), m_elem_type(), m_synth_array_sp(),
       m_frontend(nullptr) {
-  TypeSystemClang *clang_ast_context =
-        ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
-  if (!clang_ast_context)
+  TypeSystemClangSP clang_ts_sp =
+      ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
+  if (!clang_ts_sp)
     return;
-  m_elem_type = clang_ast_context->GetBasicType(
-          lldb::eBasicTypeObjCID);
+  m_elem_type = clang_ts_sp->GetBasicType(lldb::eBasicTypeObjCID);
   InferiorSizedWord isw(native_ptr, *process_sp);
   m_synth_array_sp = ValueObjectConstResult::CreateValueObjectFromData(
       "_", isw.GetAsData(process_sp->GetByteOrder()), *process_sp, m_elem_type);
@@ -290,16 +289,16 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
 
   if (!valobj.GetTargetSP())
     return nullptr;
-  TypeSystemClang *clang_ast_context =
+  TypeSystemClangSP clang_ts_sp =
       ScratchTypeSystemClang::GetForTarget(*valobj.GetTargetSP());
-  if (!clang_ast_context)
+  if (!clang_ts_sp)
     return nullptr;
 
   // For now we have to keep the old mangled name since the Objc->Swift bindings
   // that are in Foundation don't get the new mangling.
   if (valobj_typename.startswith("_TtCs23_ContiguousArrayStorage") ||
       valobj_typename.startswith("Swift._ContiguousArrayStorage")) {
-    CompilerType anyobject_type = clang_ast_context->GetBasicType(
+    CompilerType anyobject_type = clang_ts_sp->GetBasicType(
             lldb::eBasicTypeObjCID);
     auto handler = std::unique_ptr<SwiftArrayBufferHandler>(
         new SwiftArrayNativeBufferHandler(
