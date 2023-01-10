@@ -749,10 +749,14 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         .libcall();
   }
 
-  // FIXME: Legal types are only legal with NEON.
-  getActionDefinitionsBuilder(G_ABS)
-      .lowerIf(isScalar(0))
-      .legalFor(PackedVectorAllTypeList);
+  // FIXME: Legal vector types are only legal with NEON.
+  auto &ABSActions = getActionDefinitionsBuilder(G_ABS);
+  if (HasCSSC)
+    ABSActions
+        .legalFor({s32, s64});
+  ABSActions
+      .legalFor(PackedVectorAllTypeList)
+      .lowerIf(isScalar(0));
 
   getActionDefinitionsBuilder(G_VECREDUCE_FADD)
       // We only have FADDP to do reduction-like operations. Lower the rest.
