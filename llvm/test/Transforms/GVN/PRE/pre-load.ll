@@ -687,14 +687,18 @@ define i32 @test15(ptr noalias nocapture readonly dereferenceable(8) align 4 %x,
 ; CHECK-LABEL: @test15(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[ENTRY_IF_END_CRIT_EDGE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       entry.if.end_crit_edge:
 ; CHECK-NEXT:    [[VV_PRE:%.*]] = load i32, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i32 [[VV_PRE]], ptr [[R:%.*]], align 4
+; CHECK-NEXT:    [[UU:%.*]] = load i32, ptr [[X]], align 4
+; CHECK-NEXT:    store i32 [[UU]], ptr [[R:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
+; CHECK-NEXT:    [[VV:%.*]] = phi i32 [ [[VV_PRE]], [[ENTRY_IF_END_CRIT_EDGE]] ], [ [[UU]], [[IF_THEN]] ]
 ; CHECK-NEXT:    call void @f()
-; CHECK-NEXT:    ret i32 [[VV_PRE]]
+; CHECK-NEXT:    ret i32 [[VV]]
 ;
 
 entry:
@@ -724,14 +728,18 @@ define i32 @test16(ptr noalias nocapture readonly dereferenceable(8) align 4 %x,
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[ENTRY_IF_END_CRIT_EDGE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       entry.if.end_crit_edge:
 ; CHECK-NEXT:    [[VV_PRE:%.*]] = load i32, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i32 [[VV_PRE]], ptr [[R:%.*]], align 4
+; CHECK-NEXT:    [[UU:%.*]] = load i32, ptr [[X]], align 4
+; CHECK-NEXT:    store i32 [[UU]], ptr [[R:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
+; CHECK-NEXT:    [[VV:%.*]] = phi i32 [ [[VV_PRE]], [[ENTRY_IF_END_CRIT_EDGE]] ], [ [[UU]], [[IF_THEN]] ]
 ; CHECK-NEXT:    call void @f()
-; CHECK-NEXT:    ret i32 [[VV_PRE]]
+; CHECK-NEXT:    ret i32 [[VV]]
 ;
 
 entry:
@@ -779,22 +787,22 @@ define void @test17(ptr %p1, ptr %p2, ptr %p3, ptr %p4)
 ; CHECK-NEXT:    store i64 [[V2]], ptr [[P1]], align 8
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[V3:%.*]] = phi i64 [ [[V3_PRE:%.*]], [[BB200]] ], [ [[V3_PRE1:%.*]], [[BB100]] ], [ [[V2]], [[BB2]] ]
+; CHECK-NEXT:    [[V3:%.*]] = load i64, ptr [[P1]], align 8
 ; CHECK-NEXT:    store i64 [[V3]], ptr [[P2:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb100:
 ; CHECK-NEXT:    [[COND3:%.*]] = call i1 @foo()
-; CHECK-NEXT:    [[V3_PRE1]] = load i64, ptr [[P1]], align 8
 ; CHECK-NEXT:    br i1 [[COND3]], label [[BB3]], label [[BB101:%.*]]
 ; CHECK:       bb101:
-; CHECK-NEXT:    store i64 [[V3_PRE1]], ptr [[P3:%.*]], align 8
+; CHECK-NEXT:    [[V4:%.*]] = load i64, ptr [[P1]], align 8
+; CHECK-NEXT:    store i64 [[V4]], ptr [[P3:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb200:
 ; CHECK-NEXT:    [[COND4:%.*]] = call i1 @bar()
-; CHECK-NEXT:    [[V3_PRE]] = load i64, ptr [[P1]], align 8
 ; CHECK-NEXT:    br i1 [[COND4]], label [[BB3]], label [[BB201:%.*]]
 ; CHECK:       bb201:
-; CHECK-NEXT:    store i64 [[V3_PRE]], ptr [[P4:%.*]], align 8
+; CHECK-NEXT:    [[V5:%.*]] = load i64, ptr [[P1]], align 8
+; CHECK-NEXT:    store i64 [[V5]], ptr [[P4:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 {
