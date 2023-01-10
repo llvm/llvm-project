@@ -8714,10 +8714,22 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
         bool Wave64 = toolchains::AMDGPUToolChain::isWave64(Args, ArchKind);
 
+        bool AsanGpuRT = Args.hasFlag(options::OPT_fgpu_sanitize,
+                                      options::OPT_fno_gpu_sanitize, true);
+
         llvm::SmallVector<std::string, 12> BCLibs =
             RocmInstallation.getCommonBitcodeLibs(
                 Args, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
                 FastRelaxedMath, CorrectSqrt, ABIVer, true);
+
+        if (AsanGpuRT && TC->getSanitizerArgs(Args).needsAsanRt()) {
+          std::string AsanRTL(RocmInstallation.getAsanRTLPath());
+          if (AsanRTL.empty()) {
+            TC->getDriver().Diag(diag::err_drv_no_asan_rt_lib);
+          } else {
+            BCLibs.push_back(AsanRTL);
+          }
+        }
 
         std::vector<std::vector<std::string>> offloadArchList{
             Args.getAllArgValues(options::OPT_offload_arch_EQ),
