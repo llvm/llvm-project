@@ -359,8 +359,8 @@ constexpr size_t FloatToString<long double>::zero_blocks_after_point() {
 }
 
 template <>
-constexpr bool FloatToString<long double>::is_lowest_block(size_t block_index) {
-  return block_index < 0;
+constexpr bool FloatToString<long double>::is_lowest_block(size_t) {
+  return false;
 }
 
 template <>

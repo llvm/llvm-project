@@ -279,9 +279,6 @@ def z_usubo             : SDNode<"SystemZISD::USUBO", SDT_ZBinaryWithFlags>;
 def z_addcarry_1        : SDNode<"SystemZISD::ADDCARRY", SDT_ZBinaryWithCarry>;
 def z_subcarry_1        : SDNode<"SystemZISD::SUBCARRY", SDT_ZBinaryWithCarry>;
 
-def z_membarrier        : SDNode<"SystemZISD::MEMBARRIER", SDTNone,
-                                 [SDNPHasChain, SDNPSideEffect]>;
-
 def z_loadbswap        : SDNode<"SystemZISD::LRV", SDTLoad,
                                  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def z_storebswap       : SDNode<"SystemZISD::STRV", SDTStore,

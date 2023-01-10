@@ -1148,6 +1148,9 @@ enum NodeType {
   /// operand and output are the same floating type.
   ARITH_FENCE,
 
+  /// MEMBARRIER - Compiler barrier only; generate a no-op.
+  MEMBARRIER,
+
   /// OUTCHAIN = ATOMIC_FENCE(INCHAIN, ordering, scope)
   /// This corresponds to the fence instruction. It takes an input chain, and
   /// two integer constants: an AtomicOrdering and a SynchronizationScope.

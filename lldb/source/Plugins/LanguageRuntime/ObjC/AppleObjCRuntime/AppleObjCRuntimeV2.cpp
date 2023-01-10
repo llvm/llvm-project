@@ -1627,9 +1627,9 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunctionImpl(
 
   LLDB_LOG(log, "Creating utility function {0}", name);
 
-  TypeSystemClang *ast =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(exe_ctx.GetTargetRef());
-  if (!ast)
+  if (!scratch_ts_sp)
     return {};
 
   auto utility_fn_or_error = exe_ctx.GetTargetRef().CreateUtilityFunction(
@@ -1643,9 +1643,9 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunctionImpl(
 
   // Make some types for our arguments.
   CompilerType clang_uint32_t_type =
-      ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
+      scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
   CompilerType clang_void_pointer_type =
-      ast->GetBasicType(eBasicTypeVoid).GetPointerType();
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
 
   // Make the runner function for our implementation utility function.
   ValueList arguments;
@@ -1768,9 +1768,9 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
   LLDB_LOG(log, "Creating utility function {0}",
            g_get_shared_cache_class_info_name);
 
-  TypeSystemClang *ast =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(exe_ctx.GetTargetRef());
-  if (!ast)
+  if (!scratch_ts_sp)
     return {};
 
   // If the inferior objc.dylib has the class_getNameRaw function, use that in
@@ -1808,11 +1808,11 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
 
   // Make some types for our arguments.
   CompilerType clang_uint32_t_type =
-      ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
+      scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
   CompilerType clang_void_pointer_type =
-      ast->GetBasicType(eBasicTypeVoid).GetPointerType();
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
   CompilerType clang_uint64_t_pointer_type =
-      ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 64)
+      scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 64)
           .GetPointerType();
 
   // Next make the function caller for our implementation utility function.
@@ -1879,10 +1879,10 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
     return DescriptorMapUpdateResult::Retry();
 
   thread_sp->CalculateExecutionContext(exe_ctx);
-  TypeSystemClang *ast =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(process->GetTarget());
 
-  if (!ast)
+  if (!scratch_ts_sp)
     return DescriptorMapUpdateResult::Fail();
 
   Address function_address;
@@ -2002,7 +2002,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
     options.SetIsForUtilityExpr(true);
 
     CompilerType clang_uint32_t_type =
-        ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
+        scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
 
     Value return_value;
     return_value.SetValueType(Value::ValueType::Scalar);
@@ -2144,10 +2144,10 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
     return DescriptorMapUpdateResult::Retry();
 
   thread_sp->CalculateExecutionContext(exe_ctx);
-  TypeSystemClang *ast =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(process->GetTarget());
 
-  if (!ast)
+  if (!scratch_ts_sp)
     return DescriptorMapUpdateResult::Fail();
 
   Address function_address;
@@ -2237,7 +2237,7 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
     options.SetIsForUtilityExpr(true);
 
     CompilerType clang_uint32_t_type =
-        ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
+        scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
 
     Value return_value;
     return_value.SetValueType(Value::ValueType::Scalar);
@@ -3251,12 +3251,12 @@ public:
     if (!abi)
       return;
 
-    TypeSystemClang *clang_ast_context =
+    TypeSystemClangSP scratch_ts_sp =
         ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
-    if (!clang_ast_context)
+    if (!scratch_ts_sp)
       return;
     CompilerType voidstar =
-        clang_ast_context->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
+        scratch_ts_sp->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
 
     ValueList args;
     Value input_value;

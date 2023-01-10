@@ -600,6 +600,9 @@ struct KernelInfoState : AbstractState {
   /// caller is __kmpc_parallel_51.
   BooleanStateWithSetVector<uint8_t> ParallelLevels;
 
+  /// Flag that indicates if the kernel has nested Parallelism
+  bool NestedParallelism = false;
+
   /// Abstract State interface
   ///{
 
@@ -685,6 +688,7 @@ struct KernelInfoState : AbstractState {
     SPMDCompatibilityTracker ^= KIS.SPMDCompatibilityTracker;
     ReachedKnownParallelRegions ^= KIS.ReachedKnownParallelRegions;
     ReachedUnknownParallelRegions ^= KIS.ReachedUnknownParallelRegions;
+    NestedParallelism |= KIS.NestedParallelism;
     return *this;
   }
 
@@ -3341,6 +3345,15 @@ struct AAKernelInfoFunction : AAKernelInfo {
     if (!KernelInitCB || !KernelDeinitCB)
       return ChangeStatus::UNCHANGED;
 
+    /// Insert nested Parallelism global variable
+    Function *Kernel = getAnchorScope();
+    Module &M = *Kernel->getParent();
+    Type *Int8Ty = Type::getInt8Ty(M.getContext());
+    new GlobalVariable(M, Int8Ty, /* isConstant */ true,
+                       GlobalValue::WeakAnyLinkage,
+                       ConstantInt::get(Int8Ty, NestedParallelism ? 1 : 0),
+                       Kernel->getName() + "_nested_parallelism");
+
     // If we can we change the execution mode to SPMD-mode otherwise we build a
     // custom state machine.
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
@@ -4059,23 +4072,21 @@ struct AAKernelInfoFunction : AAKernelInfo {
       if (!I.mayWriteToMemory())
         return true;
       if (auto *SI = dyn_cast<StoreInst>(&I)) {
-        SmallVector<const Value *> Objects;
-        getUnderlyingObjects(SI->getPointerOperand(), Objects);
-        if (llvm::all_of(Objects,
-                         [](const Value *Obj) { return isa<AllocaInst>(Obj); }))
-          return true;
-        // Check for AAHeapToStack moved objects which must not be guarded.
+        const auto &UnderlyingObjsAA = A.getAAFor<AAUnderlyingObjects>(
+            *this, IRPosition::value(*SI->getPointerOperand()),
+            DepClassTy::OPTIONAL);
         auto &HS = A.getAAFor<AAHeapToStack>(
             *this, IRPosition::function(*I.getFunction()),
             DepClassTy::OPTIONAL);
-        if (llvm::all_of(Objects, [&HS](const Value *Obj) {
-              auto *CB = dyn_cast<CallBase>(Obj);
-              if (!CB)
-                return false;
-              return HS.isAssumedHeapToStack(*CB);
-            })) {
+        if (UnderlyingObjsAA.forallUnderlyingObjects([&](Value &Obj) {
+              if (AA::isAssumedThreadLocalObject(A, Obj, *this))
+                return true;
+              // Check for AAHeapToStack moved objects which must not be
+              // guarded.
+              auto *CB = dyn_cast<CallBase>(&Obj);
+              return CB && HS.isAssumedHeapToStack(*CB);
+            }))
           return true;
-        }
       }
 
       // Insert instruction that needs guarding.
@@ -4356,6 +4367,12 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       if (auto *ParallelRegion = dyn_cast<Function>(
               CB.getArgOperand(WrapperFunctionArgNo)->stripPointerCasts())) {
         ReachedKnownParallelRegions.insert(ParallelRegion);
+        /// Check nested parallelism
+        auto &FnAA = A.getAAFor<AAKernelInfo>(
+            *this, IRPosition::function(*ParallelRegion), DepClassTy::OPTIONAL);
+        NestedParallelism |= !FnAA.getState().isValidState() ||
+                             !FnAA.ReachedKnownParallelRegions.empty() ||
+                             !FnAA.ReachedUnknownParallelRegions.empty();
         break;
       }
       // The condition above should usually get the parallel region function

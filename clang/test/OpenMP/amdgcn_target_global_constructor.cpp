@@ -20,7 +20,7 @@ S A;
 #pragma omp end declare target
 
 #endif
-// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_.*_.*}}_A_l19_ctor
+// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_A_l19_ctor
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @_ZN1SC1Ev(ptr noundef nonnull align 4 dereferenceable(4) addrspacecast (ptr addrspace(1) @A to ptr)) #[[ATTR3:[0-9]+]]
@@ -38,7 +38,7 @@ S A;
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_.*_.*}}_A_l19_dtor
+// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_A_l19_dtor
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 4 dereferenceable(4) addrspacecast (ptr addrspace(1) @A to ptr)) #[[ATTR4:[0-9]+]]

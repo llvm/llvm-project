@@ -48,11 +48,11 @@ def main():
   parser.add_argument('tests', nargs='+')
   config = parser.parse_args()
 
-  script_name = os.path.basename(__file__)
   if config.utc_dir:
     utc_search_path = config.utc_dir[:]
   else:
     utc_search_path = []
+  script_name = os.path.abspath(__file__)
   utc_search_path.append(os.path.join(os.path.dirname(script_name),
                                       os.path.pardir))
 

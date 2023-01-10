@@ -51,6 +51,7 @@ on support follow.
      ``C``            Supported
      ``D``            Supported
      ``F``            Supported
+     ``H``            Assembly Support
      ``M``            Supported
      ``Svinval``      Assembly Support
      ``Svnapot``      Assembly Support

@@ -53,7 +53,7 @@ public:
     if (!type_system)
       return false;
 
-    TypeSystemClang *ast = ScratchTypeSystemClang::GetForTarget(
+    auto ast = ScratchTypeSystemClang::GetForTarget(
         *m_backend.GetExecutionContextRef().GetTargetSP());
     if (!ast)
       return false;

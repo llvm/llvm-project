@@ -19,7 +19,7 @@ define i32 @add(i32 %a, i32 %b) {
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 
 ; DXC: - Name:            HASH
-; DXC:   Size:            28
+; DXC:   Size:            20
 ; DXC:   Hash:
 ; DXC:     IncludesSource:  true
 ; DXC:     Digest:          [ 

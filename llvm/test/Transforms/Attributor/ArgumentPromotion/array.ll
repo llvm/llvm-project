@@ -10,12 +10,12 @@ define void @caller() {
 ; TUNIT-LABEL: define {{[^@]+}}@caller() {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[LEFT:%.*]] = alloca [3 x i32], align 4
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[LEFT]], align 4
-; TUNIT-NEXT:    [[DOT0_1:%.*]] = getelementptr [3 x i32], ptr [[LEFT]], i64 0, i64 1
-; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOT0_1]], align 4
-; TUNIT-NEXT:    [[DOT0_2:%.*]] = getelementptr [3 x i32], ptr [[LEFT]], i64 0, i64 2
-; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOT0_2]], align 4
-; TUNIT-NEXT:    call void @callee(i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]])
+; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[LEFT]], align 4
+; TUNIT-NEXT:    [[LEFT_0_1:%.*]] = getelementptr [3 x i32], ptr [[LEFT]], i64 0, i64 1
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[LEFT_0_1]], align 4
+; TUNIT-NEXT:    [[LEFT_0_2:%.*]] = getelementptr [3 x i32], ptr [[LEFT]], i64 0, i64 2
+; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[LEFT_0_2]], align 4
+; TUNIT-NEXT:    call void @callee(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@caller() {
