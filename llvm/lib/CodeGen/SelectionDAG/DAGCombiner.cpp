@@ -9057,7 +9057,7 @@ SDValue DAGCombiner::visitRotate(SDNode *N) {
   unsigned NextOp = N0.getOpcode();
 
   // fold (rot* (rot* x, c2), c1)
-  //   -> (rot* x, ((c1 % bitsize) +- (c2 % bitsize)) % bitsize)
+  //   -> (rot* x, ((c1 % bitsize) +- (c2 % bitsize) + bitsize) % bitsize)
   if (NextOp == ISD::ROTL || NextOp == ISD::ROTR) {
     SDNode *C1 = DAG.isConstantIntBuildVectorOrConstantInt(N1);
     SDNode *C2 = DAG.isConstantIntBuildVectorOrConstantInt(N0.getOperand(1));
@@ -9073,6 +9073,8 @@ SDValue DAGCombiner::visitRotate(SDNode *N) {
       if (Norm1 && Norm2)
         if (SDValue CombinedShift = DAG.FoldConstantArithmetic(
                 CombineOp, dl, ShiftVT, {Norm1, Norm2})) {
+          CombinedShift = DAG.FoldConstantArithmetic(ISD::ADD, dl, ShiftVT,
+                                                     {CombinedShift, BitsizeC});
           SDValue CombinedShiftNorm = DAG.FoldConstantArithmetic(
               ISD::UREM, dl, ShiftVT, {CombinedShift, BitsizeC});
           return DAG.getNode(N->getOpcode(), dl, VT, N0->getOperand(0),
