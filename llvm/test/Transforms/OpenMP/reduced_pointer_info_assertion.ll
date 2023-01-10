@@ -29,19 +29,6 @@ define fastcc void @rec(ptr %0, i64 %1) {
 
 !0 = !{i32 7, !"openmp", i32 50}
 !1 = !{i32 7, !"openmp-device", i32 50}
-; MODULE-LABEL: define {{[^@]+}}@nblist
-; MODULE-SAME: () #[[ATTR0:[0-9]+]] {
-; MODULE-NEXT:    [[TMP1:%.*]] = call ptr @alloc()
-; MODULE-NEXT:    call fastcc void @rec.internalized(ptr [[TMP1]], i64 0)
-; MODULE-NEXT:    ret i32 0
-;
-;
-; MODULE-LABEL: define {{[^@]+}}@rec.internalized
-; MODULE-SAME: (ptr nocapture writeonly [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR1:[0-9]+]] {
-; MODULE-NEXT:    call fastcc void @rec.internalized(ptr nocapture writeonly [[TMP0]], i64 0) #[[ATTR2:[0-9]+]]
-; MODULE-NEXT:    ret void
-;
-;
 ; MODULE-LABEL: define {{[^@]+}}@rec
 ; MODULE-SAME: (ptr [[TMP0:%.*]], i64 [[TMP1:%.*]]) {
 ; MODULE-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[TMP0]], i64 [[TMP1]]
