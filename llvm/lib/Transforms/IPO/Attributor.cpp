@@ -681,6 +681,59 @@ bool AA::isPotentiallyReachable(
                                   GoBackwardsCB);
 }
 
+bool AA::isAssumedThreadLocalObject(Attributor &A, Value &Obj,
+                                    const AbstractAttribute &QueryingAA) {
+  if (isa<UndefValue>(Obj))
+    return true;
+  if (isa<AllocaInst>(Obj)) {
+    InformationCache &InfoCache = A.getInfoCache();
+    if (!InfoCache.stackIsAccessibleByOtherThreads()) {
+      LLVM_DEBUG(
+          dbgs() << "[AA] Object '" << Obj
+                 << "' is thread local; stack objects are thread local.\n");
+      return true;
+    }
+    const auto &NoCaptureAA = A.getAAFor<AANoCapture>(
+        QueryingAA, IRPosition::value(Obj), DepClassTy::OPTIONAL);
+    LLVM_DEBUG(dbgs() << "[AA] Object '" << Obj << "' is "
+                      << (NoCaptureAA.isAssumedNoCapture() ? "" : "not")
+                      << " thread local; "
+                      << (NoCaptureAA.isAssumedNoCapture() ? "non-" : "")
+                      << "captured stack object.\n");
+    return NoCaptureAA.isAssumedNoCapture();
+  }
+  if (auto *GV = dyn_cast<GlobalVariable>(&Obj)) {
+    if (GV->isConstant()) {
+      LLVM_DEBUG(dbgs() << "[AA] Object '" << Obj
+                        << "' is thread local; constant global\n");
+      return true;
+    }
+    if (GV->isThreadLocal()) {
+      LLVM_DEBUG(dbgs() << "[AA] Object '" << Obj
+                        << "' is thread local; thread local global\n");
+      return true;
+    }
+  }
+
+  if (A.getInfoCache().targetIsGPU()) {
+    if (Obj.getType()->getPointerAddressSpace() ==
+        (int)AA::GPUAddressSpace::Local) {
+      LLVM_DEBUG(dbgs() << "[AA] Object '" << Obj
+                        << "' is thread local; GPU local memory\n");
+      return true;
+    }
+    if (Obj.getType()->getPointerAddressSpace() ==
+        (int)AA::GPUAddressSpace::Constant) {
+      LLVM_DEBUG(dbgs() << "[AA] Object '" << Obj
+                        << "' is thread local; GPU constant memory\n");
+      return true;
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "[AA] Object '" << Obj << "' is not thread local\n");
+  return false;
+}
+
 /// Return true if \p New is equal or worse than \p Old.
 static bool isEqualOrWorse(const Attribute &New, const Attribute &Old) {
   if (!Old.isIntAttribute())

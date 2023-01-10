@@ -641,20 +641,24 @@ extern "C" {
 
 int32_t __tgt_rtl_init_plugin() {
   auto Err = Plugin::initIfNeeded();
-  if (Err)
+  if (Err) {
     REPORT("Failure to initialize plugin " GETNAME(TARGET_NAME) ": %s\n",
            toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
 
-  return (bool)Err;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_deinit_plugin() {
   auto Err = Plugin::deinitIfNeeded();
-  if (Err)
+  if (Err) {
     REPORT("Failure to deinitialize plugin " GETNAME(TARGET_NAME) ": %s\n",
            toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
 
-  return (bool)Err;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *TgtImage) {
@@ -704,20 +708,24 @@ int32_t __tgt_rtl_supports_empty_images() {
 
 int32_t __tgt_rtl_init_device(int32_t DeviceId) {
   auto Err = Plugin::get().initDevice(DeviceId);
-  if (Err)
+  if (Err) {
     REPORT("Failure to initialize device %d: %s\n", DeviceId,
            toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
 
-  return (bool)Err;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_deinit_device(int32_t DeviceId) {
   auto Err = Plugin::get().deinitDevice(DeviceId);
-  if (Err)
+  if (Err) {
     REPORT("Failure to deinitialize device %d: %s\n", DeviceId,
            toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
 
-  return (bool)Err;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_number_of_devices() { return Plugin::get().getNumDevices(); }
@@ -798,11 +806,13 @@ void *__tgt_rtl_data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
 int32_t __tgt_rtl_data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind) {
   auto Err =
       Plugin::get().getDevice(DeviceId).dataDelete(TgtPtr, (TargetAllocTy)Kind);
-  if (Err)
+  if (Err) {
     REPORT("Failure to deallocate device pointer %p: %s\n", TgtPtr,
            toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
 
-  return (bool)Err;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_data_submit(int32_t DeviceId, void *TgtPtr, void *HstPtr,
@@ -816,13 +826,15 @@ int32_t __tgt_rtl_data_submit_async(int32_t DeviceId, void *TgtPtr,
                                     __tgt_async_info *AsyncInfoPtr) {
   auto Err = Plugin::get().getDevice(DeviceId).dataSubmit(TgtPtr, HstPtr, Size,
                                                           AsyncInfoPtr);
-  if (Err)
+  if (Err) {
     REPORT("Failure to copy data from host to device. Pointers: host "
            "= " DPxMOD ", device = " DPxMOD ", size = %" PRId64 ": %s\n",
            DPxPTR(HstPtr), DPxPTR(TgtPtr), Size,
            toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
 
-  return (bool)Err;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
@@ -836,13 +848,15 @@ int32_t __tgt_rtl_data_retrieve_async(int32_t DeviceId, void *HstPtr,
                                       __tgt_async_info *AsyncInfoPtr) {
   auto Err = Plugin::get().getDevice(DeviceId).dataRetrieve(HstPtr, TgtPtr,
                                                             Size, AsyncInfoPtr);
-  if (Err)
+  if (Err) {
     REPORT("Faliure to copy data from device to host. Pointers: host "
            "= " DPxMOD ", device = " DPxMOD ", size = %" PRId64 ": %s\n",
            DPxPTR(HstPtr), DPxPTR(TgtPtr), Size,
            toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
 
-  return (bool)Err;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_data_exchange(int32_t SrcDeviceId, void *SrcPtr,
@@ -859,13 +873,15 @@ int32_t __tgt_rtl_data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
   GenericDeviceTy &SrcDevice = Plugin::get().getDevice(SrcDeviceId);
   GenericDeviceTy &DstDevice = Plugin::get().getDevice(DstDeviceId);
   auto Err = SrcDevice.dataExchange(SrcPtr, DstDevice, DstPtr, Size, AsyncInfo);
-  if (Err)
+  if (Err) {
     REPORT("Failure to copy data from device (%d) to device (%d). Pointers: "
            "host = " DPxMOD ", device = " DPxMOD ", size = %" PRId64 ": %s\n",
            SrcDeviceId, DstDeviceId, DPxPTR(SrcPtr), DPxPTR(DstPtr), Size,
            toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
 
-  return (bool)Err;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_run_target_team_region(int32_t DeviceId, void *TgtEntryPtr,
@@ -886,31 +902,37 @@ int32_t __tgt_rtl_run_target_team_region_async(
   auto Err = Plugin::get().getDevice(DeviceId).runTargetTeamRegion(
       TgtEntryPtr, TgtArgs, TgtOffsets, NumArgs, NumTeams, ThreadLimit,
       LoopTripCount, AsyncInfoPtr);
-  if (Err)
+  if (Err) {
     REPORT("Failure to run target region " DPxMOD " in device %d: %s\n",
            DPxPTR(TgtEntryPtr), DeviceId, toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
 
-  return (bool)Err;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_synchronize(int32_t DeviceId,
                               __tgt_async_info *AsyncInfoPtr) {
   auto Err = Plugin::get().getDevice(DeviceId).synchronize(AsyncInfoPtr);
-  if (Err)
+  if (Err) {
     REPORT("Failure to synchronize stream %p: %s\n", AsyncInfoPtr->Queue,
            toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
 
-  return (bool)Err;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_query_async(int32_t DeviceId,
                               __tgt_async_info *AsyncInfoPtr) {
   auto Err = Plugin::get().getDevice(DeviceId).queryAsync(AsyncInfoPtr);
-  if (Err)
+  if (Err) {
     REPORT("Failure to query stream %p: %s\n", AsyncInfoPtr->Queue,
            toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
 
-  return (bool)Err;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_run_target_region(int32_t DeviceId, void *TgtEntryPtr,
@@ -939,50 +961,60 @@ void __tgt_rtl_print_device_info(int32_t DeviceId) {
 
 int32_t __tgt_rtl_create_event(int32_t DeviceId, void **EventPtr) {
   auto Err = Plugin::get().getDevice(DeviceId).createEvent(EventPtr);
-  if (Err)
+  if (Err) {
     REPORT("Failure to create event: %s\n", toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
 
-  return (bool)Err;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_record_event(int32_t DeviceId, void *EventPtr,
                                __tgt_async_info *AsyncInfoPtr) {
   auto Err =
       Plugin::get().getDevice(DeviceId).recordEvent(EventPtr, AsyncInfoPtr);
-  if (Err)
+  if (Err) {
     REPORT("Failure to record event %p: %s\n", EventPtr,
            toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
 
-  return (bool)Err;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_wait_event(int32_t DeviceId, void *EventPtr,
                              __tgt_async_info *AsyncInfoPtr) {
   auto Err =
       Plugin::get().getDevice(DeviceId).waitEvent(EventPtr, AsyncInfoPtr);
-  if (Err)
+  if (Err) {
     REPORT("Failure to wait event %p: %s\n", EventPtr,
            toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
 
-  return (bool)Err;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_sync_event(int32_t DeviceId, void *EventPtr) {
   auto Err = Plugin::get().getDevice(DeviceId).syncEvent(EventPtr);
-  if (Err)
+  if (Err) {
     REPORT("Failure to synchronize event %p: %s\n", EventPtr,
            toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
 
-  return (bool)Err;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_destroy_event(int32_t DeviceId, void *EventPtr) {
   auto Err = Plugin::get().getDevice(DeviceId).destroyEvent(EventPtr);
-  if (Err)
+  if (Err) {
     REPORT("Failure to destroy event %p: %s\n", EventPtr,
            toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
 
-  return (bool)Err;
+  return OFFLOAD_SUCCESS;
 }
 
 void __tgt_rtl_set_info_flag(uint32_t NewInfoLevel) {
@@ -995,11 +1027,13 @@ int32_t __tgt_rtl_init_async_info(int32_t DeviceId,
   assert(AsyncInfoPtr && "Invalid async info");
 
   auto Err = Plugin::get().getDevice(DeviceId).initAsyncInfo(AsyncInfoPtr);
-  if (Err)
+  if (Err) {
     REPORT("Failure to initialize async info at " DPxMOD " on device %d: %s\n",
            DPxPTR(*AsyncInfoPtr), DeviceId, toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
 
-  return (bool)Err;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_init_device_info(int32_t DeviceId,
@@ -1008,11 +1042,13 @@ int32_t __tgt_rtl_init_device_info(int32_t DeviceId,
   *ErrStr = "";
 
   auto Err = Plugin::get().getDevice(DeviceId).initDeviceInfo(DeviceInfo);
-  if (Err)
+  if (Err) {
     REPORT("Failure to initialize device info at " DPxMOD " on device %d: %s\n",
            DPxPTR(DeviceInfo), DeviceId, toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
 
-  return (bool)Err;
+  return OFFLOAD_SUCCESS;
 }
 
 #ifdef __cplusplus
