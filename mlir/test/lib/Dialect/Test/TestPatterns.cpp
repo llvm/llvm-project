@@ -220,12 +220,12 @@ public:
 
   void runOnOperation() override {
     mlir::RewritePatternSet patterns(&getContext());
-    patterns.add<InsertSameOp, ReplaceWithSameOp, EraseOp>(&getContext());
+    patterns.add<InsertSameOp, ReplaceWithNewOp, EraseOp>(&getContext());
     SmallVector<Operation *> ops;
     getOperation()->walk([&](Operation *op) {
       StringRef opName = op->getName().getStringRef();
       if (opName == "test.insert_same_op" ||
-          opName == "test.replace_with_same_op" || opName == "test.erase_op") {
+          opName == "test.replace_with_new_op" || opName == "test.erase_op") {
         ops.push_back(op);
       }
     });
@@ -260,16 +260,25 @@ private:
   };
 
   // Replace an operation may introduce the re-visiting of its users.
-  class ReplaceWithSameOp : public RewritePattern {
+  class ReplaceWithNewOp : public RewritePattern {
   public:
-    ReplaceWithSameOp(MLIRContext *context)
-        : RewritePattern("test.replace_with_same_op", /*benefit=*/1, context) {}
+    ReplaceWithNewOp(MLIRContext *context)
+        : RewritePattern("test.replace_with_new_op", /*benefit=*/1, context) {}
 
     LogicalResult matchAndRewrite(Operation *op,
                                   PatternRewriter &rewriter) const override {
-      Operation *newOp =
-          rewriter.create(op->getLoc(), op->getName().getIdentifier(),
-                          op->getOperands(), op->getResultTypes());
+      Operation *newOp;
+      if (op->hasAttr("create_erase_op")) {
+        newOp = rewriter.create(
+            op->getLoc(),
+            OperationName("test.erase_op", op->getContext()).getIdentifier(),
+            ValueRange(), TypeRange());
+      } else {
+        newOp = rewriter.create(
+            op->getLoc(),
+            OperationName("test.new_op", op->getContext()).getIdentifier(),
+            op->getOperands(), op->getResultTypes());
+      }
       rewriter.replaceOp(op, newOp->getResults());
       return success();
     }
