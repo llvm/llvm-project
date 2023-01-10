@@ -980,8 +980,7 @@ void GenericOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<EraseIdentityGenericOp>(context);
 }
 
-LogicalResult GenericOp::fold(ArrayRef<Attribute>,
-                              SmallVectorImpl<OpFoldResult> &) {
+LogicalResult GenericOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
   return memref::foldMemRefCast(*this);
 }
 

@@ -467,7 +467,7 @@ LogicalResult ConvertOp::verify() {
   return emitError("unexpected type in convert");
 }
 
-OpFoldResult ConvertOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult ConvertOp::fold(FoldAdaptor adaptor) {
   Type dstType = getType();
   // Fold trivial dense-to-dense convert and leave trivial sparse-to-sparse
   // convert for codegen to remove. This is because we use trivial
@@ -531,7 +531,7 @@ static SetStorageSpecifierOp getSpecifierSetDef(SpecifierOp op) {
   return op.getSpecifier().template getDefiningOp<SetStorageSpecifierOp>();
 }
 
-OpFoldResult GetStorageSpecifierOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult GetStorageSpecifierOp::fold(FoldAdaptor adaptor) {
   StorageSpecifierKind kind = getSpecifierKind();
   std::optional<APInt> dim = getDim();
   for (auto op = getSpecifierSetDef(*this); op; op = getSpecifierSetDef(op))
