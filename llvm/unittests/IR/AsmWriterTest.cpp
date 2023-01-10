@@ -81,4 +81,27 @@ TEST(AsmWriterTest, PrintAddrspaceWithNullOperand) {
   std::size_t r = OS.str().find("<cannot get addrspace!>");
   EXPECT_TRUE(r != std::string::npos);
 }
+
+TEST(AsmWriterTest, PrintNullOperandBundle) {
+  LLVMContext C;
+  Type *Int32Ty = Type::getInt32Ty(C);
+  FunctionType *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
+  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
+  std::unique_ptr<BasicBlock> NormalDest(BasicBlock::Create(C));
+  std::unique_ptr<BasicBlock> UnwindDest(BasicBlock::Create(C));
+  OperandBundleDef Bundle("bundle", UndefValue::get(Int32Ty));
+  std::unique_ptr<InvokeInst> Invoke(
+      InvokeInst::Create(FnTy, Callee, NormalDest.get(), UnwindDest.get(), Args,
+                         Bundle, "result"));
+  // Makes the operand bundle null.
+  Invoke->dropAllReferences();
+  Invoke->setNormalDest(NormalDest.get());
+  Invoke->setUnwindDest(UnwindDest.get());
+
+  std::string S;
+  raw_string_ostream OS(S);
+  Invoke->print(OS);
+  EXPECT_TRUE(OS.str().find("<null operand bundle!>") != std::string::npos);
+}
 }
