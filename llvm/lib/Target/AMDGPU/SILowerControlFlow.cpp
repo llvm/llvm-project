@@ -232,10 +232,9 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   // will interfere with trying to form s_and_saveexec_b64 later.
   Register CopyReg = SimpleIf ? SaveExecReg
                        : MRI->createVirtualRegister(BoolRC);
-  MachineInstr *CopyExec =
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), CopyReg)
-    .addReg(Exec)
-    .addReg(Exec, RegState::ImplicitDefine);
+  MachineInstrBuilder CopyExec = MachineInstrBuilder(
+      *MBB.getParent(), TII->buildCopy(MBB, I, DL, CopyReg, Exec));
+  CopyExec.addReg(Exec, RegState::ImplicitDefine);
   LoweredIf.insert(CopyReg);
 
   Register Tmp = MRI->createVirtualRegister(BoolRC);

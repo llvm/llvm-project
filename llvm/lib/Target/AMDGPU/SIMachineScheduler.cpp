@@ -1821,7 +1821,7 @@ void SIScheduleDAGMI::moveLowLatencies() {
       LastLowLatencyUser = i;
     // Moves COPY instructions on which depends
     // the low latency instructions too.
-    } else if (SU->getInstr()->getOpcode() == AMDGPU::COPY) {
+    } else if (SU->getInstr()->isCopy()) {
       bool CopyForLowLat = false;
       for (SDep& SuccDep : SU->Succs) {
         SUnit *Succ = SuccDep.getSUnit();

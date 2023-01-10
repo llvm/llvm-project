@@ -3155,7 +3155,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     while (Start->getOpcode() != FrameSetupOpcode) {
       --Start;
       bool IsCopy = false;
-      if (Start->getOpcode() == AMDGPU::COPY) {
+      if (Start->isCopy()) {
         auto &Dst = Start->getOperand(0);
         if (Dst.isReg()) {
           Register Reg = Dst.getReg();
@@ -3195,7 +3195,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     while (End->getOpcode() != FrameDestroyOpcode) {
       ++End;
       bool IsCopy = false;
-      if (End->getOpcode() == AMDGPU::COPY) {
+      if (End->isCopy()) {
         auto &Src = End->getOperand(1);
         if (Src.isReg()) {
           Register Reg = Src.getReg();

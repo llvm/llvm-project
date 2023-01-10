@@ -2370,14 +2370,11 @@ void SITargetLowering::insertCopiesSplitCSR(
     Register NewVR = MRI->createVirtualRegister(RC);
     // Create copy from CSR to a virtual register.
     Entry->addLiveIn(*I);
-    BuildMI(*Entry, MBBI, DebugLoc(), TII->get(TargetOpcode::COPY), NewVR)
-      .addReg(*I);
+    TII->buildCopy(*Entry, MBBI, DebugLoc(), NewVR, *I);
 
     // Insert the copy-back instructions right before the terminator.
     for (auto *Exit : Exits)
-      BuildMI(*Exit, Exit->getFirstTerminator(), DebugLoc(),
-              TII->get(TargetOpcode::COPY), *I)
-        .addReg(NewVR);
+      TII->buildCopy(*Exit, Exit->getFirstTerminator(), DebugLoc(), *I, NewVR);
   }
 }
 

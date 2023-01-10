@@ -1979,9 +1979,8 @@ bool SIFrameLowering::spillCalleeSavedRegisters(
     unsigned Reg = CS.getReg();
 
     if (CS.isSpilledToReg()) {
-      BuildMI(MBB, MBBI, DebugLoc(), TII->get(TargetOpcode::COPY),
-              CS.getDstReg())
-          .addReg(Reg, getKillRegState(true));
+      TII->buildCopy(MBB, MBBI, DebugLoc(), CS.getDstReg(), Reg,
+                     getKillRegState(true));
     } else {
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(
           Reg, Reg == RI->getReturnAddressReg(MF) ? MVT::i64 : MVT::i32);

@@ -3100,7 +3100,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     return false;
 
   unsigned Opc = UseMI.getOpcode();
-  if (Opc == AMDGPU::COPY) {
+  if (UseMI.isCopy()) {
     Register DstReg = UseMI.getOperand(0).getReg();
     bool Is16Bit = getOpSize(UseMI, 0) == 2;
     bool isVGPRCopy = RI.isVGPR(*MRI, DstReg);
@@ -5050,8 +5050,7 @@ unsigned SIInstrInfo::buildExtractSubReg(MachineBasicBlock::iterator MI,
   Register SubReg = MRI.createVirtualRegister(SubRC);
 
   if (SuperReg.getSubReg() == AMDGPU::NoSubRegister) {
-    BuildMI(*MBB, MI, DL, get(TargetOpcode::COPY), SubReg)
-      .addReg(SuperReg.getReg(), 0, SubIdx);
+    buildCopy(*MBB, MI, DL, SubReg, SuperReg.getReg(), 0, SubIdx);
     return SubReg;
   }
 
@@ -5061,11 +5060,10 @@ unsigned SIInstrInfo::buildExtractSubReg(MachineBasicBlock::iterator MI,
   // eliminate this extra copy.
   Register NewSuperReg = MRI.createVirtualRegister(SuperRC);
 
-  BuildMI(*MBB, MI, DL, get(TargetOpcode::COPY), NewSuperReg)
-    .addReg(SuperReg.getReg(), 0, SuperReg.getSubReg());
+  buildCopy(*MBB, MI, DL, NewSuperReg, SuperReg.getReg(), 0,
+            SuperReg.getSubReg());
 
-  BuildMI(*MBB, MI, DL, get(TargetOpcode::COPY), SubReg)
-    .addReg(NewSuperReg, 0, SubIdx);
+  buildCopy(*MBB, MI, DL, SubReg, NewSuperReg, 0, SubIdx);
 
   return SubReg;
 }
@@ -5439,9 +5437,8 @@ Register SIInstrInfo::readlaneVGPRToSGPR(Register SrcReg, MachineInstr &UseMI,
   if (RI.hasAGPRs(VRC)) {
     VRC = RI.getEquivalentVGPRClass(VRC);
     Register NewSrcReg = MRI.createVirtualRegister(VRC);
-    BuildMI(*UseMI.getParent(), UseMI, UseMI.getDebugLoc(),
-            get(TargetOpcode::COPY), NewSrcReg)
-        .addReg(SrcReg);
+    buildCopy(*UseMI.getParent(), UseMI, UseMI.getDebugLoc(), NewSrcReg,
+              SrcReg);
     SrcReg = NewSrcReg;
   }
 
@@ -6407,8 +6404,7 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
       Register CarryInReg = Inst.getOperand(4).getReg();
       if (!MRI.constrainRegClass(CarryInReg, CarryRC)) {
         Register NewCarryReg = MRI.createVirtualRegister(CarryRC);
-        BuildMI(*MBB, &Inst, Inst.getDebugLoc(), get(AMDGPU::COPY), NewCarryReg)
-            .addReg(CarryInReg);
+        buildCopy(*MBB, &Inst, Inst.getDebugLoc(), NewCarryReg, CarryInReg);
       }
 
       Register CarryOutReg = Inst.getOperand(1).getReg();
@@ -6692,8 +6688,7 @@ void SIInstrInfo::lowerSelect(SetVectorType &Worklist, MachineInstr &Inst,
       if (CandI.findRegisterDefOperandIdx(AMDGPU::SCC, false, false, &RI) !=
           -1) {
         if (CandI.isCopy() && CandI.getOperand(0).getReg() == AMDGPU::SCC) {
-          BuildMI(MBB, MII, DL, get(AMDGPU::COPY), CopySCC)
-              .addReg(CandI.getOperand(1).getReg());
+          buildCopy(MBB, MII, DL, CopySCC, CandI.getOperand(1).getReg());
           CopyFound = true;
         }
         break;
@@ -7859,7 +7854,7 @@ SIInstrInfo::getSerializableMachineMemOperandTargetFlags() const {
 }
 
 bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI) const {
-  return !MI.isTerminator() && MI.getOpcode() != AMDGPU::COPY &&
+  return !MI.isTerminator() && !MI.isCopy() &&
          MI.modifiesRegister(AMDGPU::EXEC, &RI);
 }
 
@@ -8326,7 +8321,7 @@ MachineInstr *SIInstrInfo::createPHIDestinationCopy(
   if (Cur != MBB.end())
     do {
       if (!Cur->isPHI() && Cur->readsRegister(Dst))
-        return BuildMI(MBB, Cur, DL, get(TargetOpcode::COPY), Dst).addReg(Src);
+        return buildCopy(MBB, Cur, DL, Dst, Src);
       ++Cur;
     } while (Cur != MBB.end() && Cur != LastPHIIt);
 

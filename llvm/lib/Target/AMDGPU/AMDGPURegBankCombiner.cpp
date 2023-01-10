@@ -94,7 +94,7 @@ Register AMDGPURegBankCombinerHelper::getAsVgpr(Register Reg) {
   // Search for existing copy of Reg to vgpr.
   for (MachineInstr &Use : MRI.use_instructions(Reg)) {
     Register Def = Use.getOperand(0).getReg();
-    if (Use.getOpcode() == AMDGPU::COPY && isVgprRegBank(Def))
+    if (Use.isCopy() && isVgprRegBank(Def))
       return Def;
   }
 

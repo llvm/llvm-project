@@ -745,11 +745,9 @@ SIWholeQuadMode::saveSCC(MachineBasicBlock &MBB,
   Register SaveReg = MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
   MachineInstr *Save =
-      BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::COPY), SaveReg)
-          .addReg(AMDGPU::SCC);
+      TII->buildCopy(MBB, Before, DebugLoc(), SaveReg, AMDGPU::SCC);
   MachineInstr *Restore =
-      BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::COPY), AMDGPU::SCC)
-          .addReg(SaveReg);
+      TII->buildCopy(MBB, Before, DebugLoc(), AMDGPU::SCC, SaveReg);
 
   LIS->InsertMachineInstrInMaps(*Save);
   LIS->InsertMachineInstrInMaps(*Restore);
@@ -1227,8 +1225,7 @@ void SIWholeQuadMode::toWQM(MachineBasicBlock &MBB,
   MachineInstr *MI;
 
   if (SavedWQM) {
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::COPY), Exec)
-             .addReg(SavedWQM);
+    MI = TII->buildCopy(MBB, Before, DebugLoc(), Exec, SavedWQM);
   } else {
     MI = BuildMI(MBB, Before, DebugLoc(), TII->get(WQMOpc), Exec).addReg(Exec);
   }
@@ -1313,7 +1310,7 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
   auto II = MBB.getFirstNonPHI(), IE = MBB.end();
   if (IsEntry) {
     // Skip the instruction that saves LiveMask
-    if (II != IE && II->getOpcode() == AMDGPU::COPY)
+    if (II != IE && II->isCopy())
       ++II;
   }
 
@@ -1482,8 +1479,7 @@ void SIWholeQuadMode::lowerLiveMaskQueries() {
     Register Dest = MI->getOperand(0).getReg();
 
     MachineInstr *Copy =
-        BuildMI(*MI->getParent(), MI, DL, TII->get(AMDGPU::COPY), Dest)
-            .addReg(LiveMaskReg);
+        TII->buildCopy(*MI->getParent(), MI, DL, Dest, LiveMaskReg);
 
     LIS->ReplaceMachineInstrInMaps(*MI, *Copy);
     MI->eraseFromParent();
@@ -1622,8 +1618,7 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   if (NeedsLiveMask || (GlobalFlags & StateWQM)) {
     LiveMaskReg = MRI->createVirtualRegister(TRI->getBoolRC());
     MachineInstr *MI =
-        BuildMI(Entry, EntryMI, DebugLoc(), TII->get(AMDGPU::COPY), LiveMaskReg)
-            .addReg(Exec);
+        TII->buildCopy(Entry, EntryMI, DebugLoc(), LiveMaskReg, Exec);
     LIS->InsertMachineInstrInMaps(*MI);
   }
 
