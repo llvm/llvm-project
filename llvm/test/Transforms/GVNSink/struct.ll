@@ -13,11 +13,11 @@ bb:
   br i1 undef, label %bb2, label %bb1
 
 bb1:                                              ; preds = %bb
-  %tmp = getelementptr inbounds %struct, %struct* null, i64 0, i32 1
+  %tmp = getelementptr inbounds %struct, ptr null, i64 0, i32 1
   br label %bb4
 
 bb2:                                              ; preds = %bb
-  %tmp3 = getelementptr inbounds %struct, %struct* null, i64 0, i32 2
+  %tmp3 = getelementptr inbounds %struct, ptr null, i64 0, i32 2
   br label %bb4
 
 bb4:                                              ; preds = %bb2, %bb1
@@ -35,11 +35,11 @@ bb:
   br i1 undef, label %bb2, label %bb1
 
 bb1:                                              ; preds = %bb
-  %tmp = getelementptr inbounds %struct2, %struct2* null, i64 0, i32 0, i32 1
+  %tmp = getelementptr inbounds %struct2, ptr null, i64 0, i32 0, i32 1
   br label %bb4
 
 bb2:                                              ; preds = %bb
-  %tmp3 = getelementptr inbounds %struct2, %struct2* null, i64 0, i32 0, i32 2
+  %tmp3 = getelementptr inbounds %struct2, ptr null, i64 0, i32 0, i32 2
   br label %bb4
 
 bb4:                                              ; preds = %bb2, %bb1
@@ -58,11 +58,11 @@ bb:
   br i1 undef, label %bb2, label %bb1
 
 bb1:                                              ; preds = %bb
-  %tmp = getelementptr inbounds %struct, %struct* null, i32 1, i32 0
+  %tmp = getelementptr inbounds %struct, ptr null, i32 1, i32 0
   br label %bb4
 
 bb2:                                              ; preds = %bb
-  %tmp3 = getelementptr inbounds %struct, %struct* null, i32 2, i32 0
+  %tmp3 = getelementptr inbounds %struct, ptr null, i32 2, i32 0
   br label %bb4
 
 bb4:                                              ; preds = %bb2, %bb1
