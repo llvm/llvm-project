@@ -159,4 +159,27 @@ func.func @_QQmain() {
 // CHECK: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOAD]], ptr %[[DESC]]
 // CHECK: call void @_QMmod1Psub1(ptr %[[DESC]])
 
+fir.global @_QMmod2Ep : !fir.class<!fir.ptr<none>> {
+  %0 = fir.zero_bits !fir.ptr<none>
+  %1 = fir.embox %0 : (!fir.ptr<none>) -> !fir.class<!fir.ptr<none>>
+  fir.has_value %1 : !fir.class<!fir.ptr<none>>
+}
+func.func @_QMmod2Pinitp(%arg0: !fir.ref<!fir.class<!fir.ptr<none>>> {fir.bindc_name = "target"}) {
+  %0 = fir.address_of(@_QMmod2Ep) : !fir.ref<!fir.class<!fir.ptr<none>>>
+  %1 = fir.load %arg0 : !fir.ref<!fir.class<!fir.ptr<none>>>
+  %2 = fir.convert %0 : (!fir.ref<!fir.class<!fir.ptr<none>>>) -> !fir.ref<!fir.box<none>>
+  %3 = fir.convert %1 : (!fir.class<!fir.ptr<none>>) -> !fir.box<none>
+  %4 = fir.call @_FortranAPointerAssociate(%2, %3) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> none
+  return
+}
+func.func private @_FortranAPointerAssociate(!fir.ref<!fir.box<none>>, !fir.box<none>) -> none attributes {fir.runtime}
+
+// CHECK-LABEL: define void @_QMmod2Pinitp(
+// CHECK-SAME: ptr %[[ARG0:.*]]) {
+// CHECK: %[[ALLOCA_CLASS_NONE:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
+// CHECK: %[[LOAD:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[ARG0]]
+// CHECK: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOAD]], ptr %[[ALLOCA_CLASS_NONE]]
+// CHECK: %{{.*}} = call {} @_FortranAPointerAssociate(ptr @_QMmod2Ep, ptr %[[ALLOCA_CLASS_NONE]])
+// CHECK: ret void
+
 
