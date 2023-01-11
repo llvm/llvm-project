@@ -117,9 +117,9 @@ private:
 static void PrintDefList(const std::vector<Record*> &Uses,
                          unsigned Num, raw_ostream &OS) {
   OS << "static const MCPhysReg ImplicitList" << Num << "[] = { ";
-  for (Record *U : Uses)
-    OS << getQualifiedName(U) << ", ";
-  OS << "0 };\n";
+  for (auto [Idx, U] : enumerate(Uses))
+    OS << (Idx ? ", " : "") << getQualifiedName(U);
+  OS << " };\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -907,18 +907,13 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   // Emit all of the instruction's implicit uses and defs.
   Records.startTimer("Emit uses/defs");
   for (const CodeGenInstruction *II : Target.getInstructionsByEnumValue()) {
-    if (!II->ImplicitUses.empty()) {
-      unsigned &IL = EmittedLists[II->ImplicitUses];
+    std::vector<Record *> ImplicitOps = II->ImplicitUses;
+    llvm::append_range(ImplicitOps, II->ImplicitDefs);
+    if (!ImplicitOps.empty()) {
+      unsigned &IL = EmittedLists[ImplicitOps];
       if (!IL) {
         IL = ++ListNumber;
-        PrintDefList(II->ImplicitUses, IL, OS);
-      }
-    }
-    if (!II->ImplicitDefs.empty()) {
-      unsigned &IL = EmittedLists[II->ImplicitDefs];
-      if (!IL) {
-        IL = ++ListNumber;
-        PrintDefList(II->ImplicitDefs, IL, OS);
+        PrintDefList(ImplicitOps, IL, OS);
       }
     }
   }
@@ -1122,7 +1117,9 @@ void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
   OS << Num << ",\t" << MinOperands << ",\t"
      << Inst.Operands.NumDefs << ",\t"
      << Inst.TheDef->getValueAsInt("Size") << ",\t"
-     << SchedModels.getSchedClassIdx(Inst) << ",\t0";
+     << SchedModels.getSchedClassIdx(Inst) << ",\t"
+     << Inst.ImplicitUses.size() << ",\t"
+     << Inst.ImplicitDefs.size() << ",\t0";
 
   CodeGenTarget &Target = CDP.getTargetInfo();
 
@@ -1187,16 +1184,13 @@ void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
   OS.write_hex(Value);
   OS << "ULL, ";
 
-  // Emit the implicit uses and defs lists...
-  if (Inst.ImplicitUses.empty())
+  // Emit the implicit use/def list...
+  std::vector<Record *> ImplicitOps = Inst.ImplicitUses;
+  llvm::append_range(ImplicitOps, Inst.ImplicitDefs);
+  if (ImplicitOps.empty())
     OS << "nullptr, ";
   else
-    OS << "ImplicitList" << EmittedLists[Inst.ImplicitUses] << ", ";
-
-  if (Inst.ImplicitDefs.empty())
-    OS << "nullptr, ";
-  else
-    OS << "ImplicitList" << EmittedLists[Inst.ImplicitDefs] << ", ";
+    OS << "ImplicitList" << EmittedLists[ImplicitOps] << ", ";
 
   // Emit the operand info.
   std::vector<std::string> OperandInfo = GetOperandInfo(Inst);
