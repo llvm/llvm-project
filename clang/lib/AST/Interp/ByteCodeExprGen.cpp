@@ -131,6 +131,11 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return this->emitCastFloatingIntegral(*ToT, CE);
   }
 
+  case CK_NullToPointer:
+    if (DiscardResult)
+      return true;
+    return this->emitNull(classifyPrim(CE->getType()), CE);
+
   case CK_ArrayToPointerDecay:
   case CK_AtomicToNonAtomic:
   case CK_ConstructorConversion:
@@ -138,7 +143,6 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_NonAtomicToAtomic:
   case CK_NoOp:
   case CK_UserDefinedConversion:
-  case CK_NullToPointer:
     return this->visit(SubExpr);
 
   case CK_IntegralToBoolean:
@@ -400,10 +404,7 @@ bool ByteCodeExprGen<Emitter>::VisitImplicitValueInitExpr(const ImplicitValueIni
   if (!T)
     return false;
 
-  if (E->getType()->isPointerType())
-    return this->emitNullPtr(E);
-
-  return this->emitZero(*T, E);
+  return this->visitZeroInitializer(*T, E);
 }
 
 template <class Emitter>
@@ -950,6 +951,8 @@ bool ByteCodeExprGen<Emitter>::visitZeroInitializer(PrimType T, const Expr *E) {
     return this->emitZeroUint64(E);
   case PT_Ptr:
     return this->emitNullPtr(E);
+  case PT_FnPtr:
+    return this->emitNullFnPtr(E);
   case PT_Float:
     assert(false);
   }
@@ -1116,6 +1119,7 @@ bool ByteCodeExprGen<Emitter>::emitConst(T Value, const Expr *E) {
   case PT_Bool:
     return this->emitConstBool(Value, E);
   case PT_Ptr:
+  case PT_FnPtr:
   case PT_Float:
     llvm_unreachable("Invalid integral type");
     break;
@@ -1606,8 +1610,27 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
   if (E->getBuiltinCallee())
     return VisitBuiltinCallExpr(E);
 
-  const Decl *Callee = E->getCalleeDecl();
-  if (const auto *FuncDecl = dyn_cast_if_present<FunctionDecl>(Callee)) {
+  QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
+  std::optional<PrimType> T = classify(ReturnType);
+  bool HasRVO = !ReturnType->isVoidType() && !T;
+
+  if (HasRVO && DiscardResult) {
+    // If we need to discard the return value but the function returns its
+    // value via an RVO pointer, we need to create one such pointer just
+    // for this call.
+    if (std::optional<unsigned> LocalIndex = allocateLocal(E)) {
+      if (!this->emitGetPtrLocal(*LocalIndex, E))
+        return false;
+    }
+  }
+
+  // Put arguments on the stack.
+  for (const auto *Arg : E->arguments()) {
+    if (!this->visit(Arg))
+      return false;
+  }
+
+  if (const FunctionDecl *FuncDecl = E->getDirectCallee()) {
     const Function *Func = getFunction(FuncDecl);
     if (!Func)
       return false;
@@ -1619,24 +1642,7 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     if (Func->isFullyCompiled() && !Func->isConstexpr())
       return false;
 
-    QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
-    std::optional<PrimType> T = classify(ReturnType);
-
-    if (Func->hasRVO() && DiscardResult) {
-      // If we need to discard the return value but the function returns its
-      // value via an RVO pointer, we need to create one such pointer just
-      // for this call.
-      if (std::optional<unsigned> LocalIndex = allocateLocal(E)) {
-        if (!this->emitGetPtrLocal(*LocalIndex, E))
-          return false;
-      }
-    }
-
-    // Put arguments on the stack.
-    for (const auto *Arg : E->arguments()) {
-      if (!this->visit(Arg))
-        return false;
-    }
+    assert(HasRVO == Func->hasRVO());
 
     // In any case call the function. The return value will end up on the stack
     // and if the function has RVO, we already have the pointer on the stack to
@@ -1644,15 +1650,22 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     if (!this->emitCall(Func, E))
       return false;
 
-    if (DiscardResult && !ReturnType->isVoidType() && T)
-      return this->emitPop(*T, E);
-
-    return true;
   } else {
-    assert(false && "We don't support non-FunctionDecl callees right now.");
+    // Indirect call. Visit the callee, which will leave a FunctionPointer on
+    // the stack. Cleanup of the returned value if necessary will be done after
+    // the function call completed.
+    if (!this->visit(E->getCallee()))
+      return false;
+
+    if (!this->emitCallPtr(E))
+      return false;
   }
 
-  return false;
+  // Cleanup for discarded return values.
+  if (DiscardResult && !ReturnType->isVoidType() && T)
+    return this->emitPop(*T, E);
+
+  return true;
 }
 
 template <class Emitter>
@@ -1846,6 +1859,9 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
     return this->emitConst(ECD->getInitVal(), E);
   } else if (const auto *BD = dyn_cast<BindingDecl>(Decl)) {
     return this->visit(BD->getBinding());
+  } else if (const auto *FuncDecl = dyn_cast<FunctionDecl>(Decl)) {
+    const Function *F = getFunction(FuncDecl);
+    return F && this->emitGetFnPtr(F, E);
   }
 
   return false;

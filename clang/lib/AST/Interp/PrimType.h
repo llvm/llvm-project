@@ -24,6 +24,7 @@ namespace interp {
 class Pointer;
 class Boolean;
 class Floating;
+class FunctionPointer;
 
 /// Enumeration of the primitive types of the VM.
 enum PrimType : unsigned {
@@ -38,6 +39,7 @@ enum PrimType : unsigned {
   PT_Bool,
   PT_Float,
   PT_Ptr,
+  PT_FnPtr,
 };
 
 /// Mapping from primitive types to their representation.
@@ -53,6 +55,9 @@ template <> struct PrimConv<PT_Uint64> { using T = Integral<64, false>; };
 template <> struct PrimConv<PT_Float> { using T = Floating; };
 template <> struct PrimConv<PT_Bool> { using T = Boolean; };
 template <> struct PrimConv<PT_Ptr> { using T = Pointer; };
+template <> struct PrimConv<PT_FnPtr> {
+  using T = FunctionPointer;
+};
 
 /// Returns the size of a primitive type in bytes.
 size_t primSize(PrimType Type);
@@ -90,6 +95,7 @@ static inline bool aligned(const void *P) {
       TYPE_SWITCH_CASE(PT_Float, B)                                            \
       TYPE_SWITCH_CASE(PT_Bool, B)                                             \
       TYPE_SWITCH_CASE(PT_Ptr, B)                                              \
+      TYPE_SWITCH_CASE(PT_FnPtr, B)                                            \
     }                                                                          \
   } while (0)
 #define COMPOSITE_TYPE_SWITCH(Expr, B, D)                                      \
