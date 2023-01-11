@@ -2163,8 +2163,13 @@ private:
   void registerFoldRuntimeCall(RuntimeFunction RF);
 
   /// Populate the Attributor with abstract attribute opportunities in the
-  /// function.
+  /// functions.
   void registerAAs(bool IsModulePass);
+
+public:
+  /// Callback to register AAs for live functions, including internal functions
+  /// marked live during the traversal.
+  static void registerAAsForFunction(Attributor &A, const Function &F);
 };
 
 Kernel OpenMPOpt::getUniqueKernelFor(Function &F) {
@@ -4849,20 +4854,35 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
     if (F->isDeclaration())
       continue;
 
-    if (!DisableOpenMPOptDeglobalization)
-      A.getOrCreateAAFor<AAHeapToShared>(IRPosition::function(F));
-    A.getOrCreateAAFor<AAExecutionDomain>(IRPosition::function(*F));
-    if (!DisableOpenMPOptDeglobalization)
-      A.getOrCreateAAFor<AAHeapToStack>(IRPosition::function(*F));
+    // We look at internal functions only on-demand but if any use is not a
+    // direct call or outside the current set of analyzed functions, we have
+    // to do it eagerly.
+    if (F->hasLocalLinkage()) {
+      if (llvm::all_of(F->uses(), [this](const Use &U) {
+            const auto *CB = dyn_cast<CallBase>(U.getUser());
+            return CB && CB->isCallee(&U) &&
+                   !A.isRunOn(const_cast<Function *>(CB->getCaller()));
+          }))
+        continue;
+    }
+    registerAAsForFunction(A, *F);
+  }
+}
 
-    for (auto &I : instructions(*F)) {
-      if (auto *LI = dyn_cast<LoadInst>(&I)) {
-        bool UsedAssumedInformation = false;
-        A.getAssumedSimplified(IRPosition::value(*LI), /* AA */ nullptr,
-                               UsedAssumedInformation, AA::Interprocedural);
-      } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
-        A.getOrCreateAAFor<AAIsDead>(IRPosition::value(*SI));
-      }
+void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
+  if (!DisableOpenMPOptDeglobalization)
+    A.getOrCreateAAFor<AAHeapToShared>(IRPosition::function(F));
+  A.getOrCreateAAFor<AAExecutionDomain>(IRPosition::function(F));
+  if (!DisableOpenMPOptDeglobalization)
+    A.getOrCreateAAFor<AAHeapToStack>(IRPosition::function(F));
+
+  for (auto &I : instructions(F)) {
+    if (auto *LI = dyn_cast<LoadInst>(&I)) {
+      bool UsedAssumedInformation = false;
+      A.getAssumedSimplified(IRPosition::value(*LI), /* AA */ nullptr,
+                             UsedAssumedInformation, AA::Interprocedural);
+    } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+      A.getOrCreateAAFor<AAIsDead>(IRPosition::value(*SI));
     }
   }
 }
@@ -5033,10 +5053,13 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   }
 
   // Look at every function in the Module unless it was internalized.
+  SetVector<Function *> Functions;
   SmallVector<Function *, 16> SCC;
   for (Function &F : M)
-    if (!F.isDeclaration() && !InternalizedMap.lookup(&F))
+    if (!F.isDeclaration() && !InternalizedMap.lookup(&F)) {
       SCC.push_back(&F);
+      Functions.insert(&F);
+    }
 
   if (SCC.empty())
     return PreservedAnalyses::all();
@@ -5057,12 +5080,13 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   AttributorConfig AC(CGUpdater);
   AC.DefaultInitializeLiveInternals = false;
+  AC.IsModulePass = true;
   AC.RewriteSignatures = false;
   AC.MaxFixpointIterations = MaxFixpointIterations;
   AC.OREGetter = OREGetter;
   AC.PassName = DEBUG_TYPE;
+  AC.InitializationCallback = OpenMPOpt::registerAAsForFunction;
 
-  SetVector<Function *> Functions;
   Attributor A(Functions, InfoCache, AC);
 
   OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
@@ -5137,6 +5161,7 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   AC.MaxFixpointIterations = MaxFixpointIterations;
   AC.OREGetter = OREGetter;
   AC.PassName = DEBUG_TYPE;
+  AC.InitializationCallback = OpenMPOpt::registerAAsForFunction;
 
   Attributor A(Functions, InfoCache, AC);
 
