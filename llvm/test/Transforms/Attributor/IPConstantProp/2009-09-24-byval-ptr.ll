@@ -77,15 +77,15 @@ define i32 @unions() nounwind {
 ; TUNIT-LABEL: define {{[^@]+}}@unions
 ; TUNIT-SAME: () #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[MYSTR_CAST:%.*]] = bitcast %struct.MYstr* @mystr to i8*
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i8, i8* [[MYSTR_CAST]], align 8
-; TUNIT-NEXT:    [[MYSTR_0_1:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* @mystr, i64 0, i32 1
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, i32* [[MYSTR_0_1]], align 8
-; TUNIT-NEXT:    call void @vfu1(i8 [[TMP0]], i32 [[TMP1]]) #[[ATTR0]]
 ; TUNIT-NEXT:    [[MYSTR_CAST1:%.*]] = bitcast %struct.MYstr* @mystr to i8*
-; TUNIT-NEXT:    [[TMP2:%.*]] = load i8, i8* [[MYSTR_CAST1]], align 8
-; TUNIT-NEXT:    [[MYSTR_0_12:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* @mystr, i64 0, i32 1
-; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, i32* [[MYSTR_0_12]], align 8
+; TUNIT-NEXT:    [[TMP0:%.*]] = load i8, i8* [[MYSTR_CAST1]], align 8
+; TUNIT-NEXT:    [[MYSTR_0_12:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* @mystr, i64 0, i32 1
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, i32* [[MYSTR_0_12]], align 8
+; TUNIT-NEXT:    call void @vfu1(i8 [[TMP0]], i32 [[TMP1]]) #[[ATTR0]]
+; TUNIT-NEXT:    [[MYSTR_CAST:%.*]] = bitcast %struct.MYstr* @mystr to i8*
+; TUNIT-NEXT:    [[TMP2:%.*]] = load i8, i8* [[MYSTR_CAST]], align 8
+; TUNIT-NEXT:    [[MYSTR_0_1:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* @mystr, i64 0, i32 1
+; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, i32* [[MYSTR_0_1]], align 8
 ; TUNIT-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(i8 [[TMP2]], i32 [[TMP3]]) #[[ATTR0]]
 ; TUNIT-NEXT:    ret i32 [[RESULT]]
 ;
