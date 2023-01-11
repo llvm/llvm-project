@@ -2,8 +2,7 @@
 
 # RUN: llvm-mc -triple x86_64-unknown-linux --filetype=obj --split-dwarf-file=%t.dwo -dwarf-version=5 %s -o %t.o
 # RUN: llvm-dwp %t.dwo -o %t.dwp 2>&1
-# RUN: llvm-dwarfdump -debug-macro -debug-cu-index %t.dwp | FileCheck -check-prefix=CHECK %s
-# RUN: llvm-dwarfdump -debug-macro -debug-cu-index -manaully-generate-unit-index %t.dwp | FileCheck -check-prefix=CHECK2 %s
+# RUN: llvm-dwarfdump -debug-macro -debug-cu-index %t.dwp | FileCheck %s
 
 # CHECK-DAG: .debug_macro.dwo contents:
 # CHECK: macro header: version = 0x0005, flags = 0x00, format = DWARF32
@@ -15,9 +14,6 @@
 # CHECK-NEXT: version = 5, units = 1, slots = 2
 # CHECK: Index Signature          INFO                                      ABBREV                   STR_OFFSETS              MACRO
 # CHECK:     1 0x0000000000000000 [0x0000000000000000, 0x0000000000000019) [0x00000000, 0x00000008) [0x00000000, 0x0000000c) [0x00000000, 0x0000000b)
-
-# CHECK2: Index Signature          INFO                                     ABBREV                   STR_OFFSETS              MACRO
-# CHECK2:     1 0x0000000000000000 [0x0000000000000000, 0x0000000000000019) [0x00000000, 0x00000008) [0x00000000, 0x0000000c) [0x00000000, 0x0000000b)
 
     .section	.debug_info.dwo,"e",@progbits
     .long	.Ldebug_info_dwo_end0-.Ldebug_info_dwo_start0 # Length of Unit
