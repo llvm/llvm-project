@@ -26,21 +26,21 @@ CHECK-LABEL: Abbrev table for offset:
 CHECK: 0x0000[[BAOFF:.*]]
 
 CHECK: .debug_info.dwo contents:
-CHECK: 0x[[#%.8x,COFF:]]:
+CHECK: [[COFF:0x[0-9a-f]*]]:
 CHECK-LABEL: Compile Unit: length = {{.*}}, version = 0x0004, abbr_offset =
-CHECK:         0x[[CAOFF]], addr_size = 0x08 (next unit at 0x[[#%.8x,AOFF:]])
+CHECK:         0x[[CAOFF]], addr_size = 0x08 (next unit at [[AOFF:.*]])
 CHECK:   DW_AT_GNU_dwo_id {{.*}} ([[DWOC:.*]])
-CHECK: [[#AOFF]]:
+CHECK: [[AOFF]]:
 CHECK-LABEL: Compile Unit: length = {{.*}}, version = 0x0004, abbr_offset =
-CHECK:         0x[[AAOFF]], addr_size = 0x08 (next unit at 0x[[#%.8x,BOFF:]])
+CHECK:         0x[[AAOFF]], addr_size = 0x08 (next unit at [[BOFF:.*]])
 CHECK:   DW_AT_GNU_dwo_id {{.*}} ([[DWOA:.*]])
-CHECK: [[#BOFF]]:
+CHECK: [[BOFF]]:
 CHECK-LABEL: Compile Unit: length = {{.*}}, version = 0x0004, abbr_offset =
-CHECK:         0x[[BAOFF]], addr_size = 0x08 (next unit at 0x[[#%.8x,XOFF:]])
+CHECK:         0x[[BAOFF]], addr_size = 0x08 (next unit at [[XOFF:.*]])
 CHECK:   DW_AT_GNU_dwo_id {{.*}} ([[DWOB:.*]])
 
 CHECK-LABEL: .debug_cu_index
-CHECK:    Index  Signature INFO                                        ABBREV                             LINE                     STR_OFFSETS
-CHECK-DAG:       [[DWOC]]  [0x00000000[[#COFF]], 0x00000000[[#AOFF]]) [0x0000[[CAOFF]], 0x0000[[AAOFF]]) [0x00000000, 0x00000011) [0x00000000, 0x00000018)
-CHECK-DAG:       [[DWOA]]  [0x00000000[[#AOFF]], 0x00000000[[#BOFF]]) [0x0000[[AAOFF]], 0x0000[[BAOFF]]) [0x00000011, 0x00000022) [0x00000018, 0x00000028)
-CHECK-DAG:       [[DWOB]]  [0x00000000[[#BOFF]], 0x00000000[[#XOFF]]) [0x0000[[BAOFF]], 0x000000c3)      [0x00000022, 0x00000033) [0x00000028, 0x0000003c)
+CHECK:    Index  Signature INFO                 ABBREV                             LINE                     STR_OFFSETS
+CHECK-DAG:       [[DWOC]]  [[[COFF]], [[AOFF]]) [0x0000[[CAOFF]], 0x0000[[AAOFF]]) [0x00000000, 0x00000011) [0x00000000, 0x00000018)
+CHECK-DAG:       [[DWOA]]  [[[AOFF]], [[BOFF]]) [0x0000[[AAOFF]], 0x0000[[BAOFF]]) [0x00000011, 0x00000022) [0x00000018, 0x00000028)
+CHECK-DAG:       [[DWOB]]  [[[BOFF]], [[XOFF]]) [0x0000[[BAOFF]], 0x000000c3)      [0x00000022, 0x00000033) [0x00000028, 0x0000003c)

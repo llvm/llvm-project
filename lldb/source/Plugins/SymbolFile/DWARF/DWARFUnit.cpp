@@ -341,7 +341,7 @@ void DWARFUnit::SetDwoStrOffsetsBase() {
   if (const llvm::DWARFUnitIndex::Entry *entry = m_header.GetIndexEntry()) {
     if (const auto *contribution =
             entry->getContribution(llvm::DW_SECT_STR_OFFSETS))
-      baseOffset = contribution->getOffset32();
+      baseOffset = contribution->Offset;
     else
       return;
   }
@@ -489,7 +489,7 @@ void DWARFUnit::SetLoclistsBase(dw_addr_t loclists_base) {
           *GetDWOId());
       return;
     }
-    offset += contribution->getOffset32();
+    offset += contribution->Offset;
   }
   m_loclists_base = loclists_base;
 
@@ -527,8 +527,8 @@ DWARFDataExtractor DWARFUnit::GetLocationData() const {
   if (const llvm::DWARFUnitIndex::Entry *entry = m_header.GetIndexEntry()) {
     if (const auto *contribution = entry->getContribution(
             GetVersion() >= 5 ? llvm::DW_SECT_LOCLISTS : llvm::DW_SECT_EXT_LOC))
-      return DWARFDataExtractor(data, contribution->getOffset32(),
-                                contribution->getLength32());
+      return DWARFDataExtractor(data, contribution->Offset,
+                                contribution->Length);
     return DWARFDataExtractor();
   }
   return data;
@@ -540,8 +540,8 @@ DWARFDataExtractor DWARFUnit::GetRnglistData() const {
   if (const llvm::DWARFUnitIndex::Entry *entry = m_header.GetIndexEntry()) {
     if (const auto *contribution =
             entry->getContribution(llvm::DW_SECT_RNGLISTS))
-      return DWARFDataExtractor(data, contribution->getOffset32(),
-                                contribution->getLength32());
+      return DWARFDataExtractor(data, contribution->Offset,
+                                contribution->Length);
     GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
         "Failed to find range list contribution for CU with signature {0:x16}",
         entry->getSignature());
@@ -924,7 +924,7 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data,
           "Package unit with a non-zero abbreviation offset");
     }
     auto *unit_contrib = header.m_index_entry->getContribution();
-    if (!unit_contrib || unit_contrib->getLength32() != header.m_length + 4) {
+    if (!unit_contrib || unit_contrib->Length != header.m_length + 4) {
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "Inconsistent DWARF package unit index");
     }
@@ -935,7 +935,7 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data,
           llvm::inconvertibleErrorCode(),
           "DWARF package index missing abbreviation column");
     }
-    header.m_abbr_offset = abbr_entry->getOffset32();
+    header.m_abbr_offset = abbr_entry->Offset;
   }
 
   bool length_OK = data.ValidOffset(header.GetNextUnitOffset() - 1);
