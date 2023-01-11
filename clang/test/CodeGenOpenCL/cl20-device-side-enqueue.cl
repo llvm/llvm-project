@@ -297,7 +297,7 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   };
 
   // Uses global block literal [[BLG8]] and invoke function [[INVG8]].
-  // COMMON: call spir_func void @__device_side_enqueue_block_invoke_11(ptr addrspace(4) addrspacecast (ptr addrspace(1) [[BLG8]] to ptr addrspace(4)))
+  // COMMON: call spir_func void @__device_side_enqueue_block_invoke_11(ptr addrspace(4) addrspacecast (ptr addrspace(1) [[BLG8]] to ptr addrspace(4))) [[INVOKE_ATTR:#[0-9]+]]
   block_A();
 
   // Emits global block literal [[BLG8]] and block kernel [[INVGK8]]. [[INVGK8]] calls [[INVG8]].
@@ -393,7 +393,7 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
 // COMMON:  ret void
 // COMMON: }
 // COMMON: define spir_kernel void [[INVLK2]](ptr addrspace(4){{.*}})
-// COMMON: define spir_kernel void [[INVGK1]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
+// COMMON: define spir_kernel void [[INVGK1]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})  [[INVOKE_ATTR:#[0-9]+]]
 // COMMON: define spir_kernel void [[INVGK2]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
 // COMMON: define spir_kernel void [[INVGK3]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
 // COMMON: define spir_kernel void [[INVGK4]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
@@ -412,3 +412,5 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
 // COMMON: define spir_kernel void [[INVGK9]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
 // COMMON: define spir_kernel void [[INVGK10]](ptr addrspace(4){{.*}})
 // COMMON: define spir_kernel void [[INVGK11]](ptr addrspace(4){{.*}})
+
+// COMMON: attributes [[INVOKE_ATTR]] = { convergent nounwind }

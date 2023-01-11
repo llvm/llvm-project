@@ -12451,6 +12451,7 @@ llvm::Value *TargetCodeGenInfo::createEnqueuedBlockKernel(
 
   // FIXME: Apply default attributes
   F->addFnAttr(llvm::Attribute::NoUnwind);
+  F->addFnAttr(llvm::Attribute::Convergent);
 
   Builder.CreateRetVoid();
   Builder.restoreIP(IP);
@@ -12504,6 +12505,7 @@ llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
 
   // FIXME: Apply default attributes
   F->addFnAttr(llvm::Attribute::NoUnwind);
+  F->addFnAttr(llvm::Attribute::Convergent);
   F->addFnAttr("enqueued-block");
 
   auto IP = CGF.Builder.saveIP();
