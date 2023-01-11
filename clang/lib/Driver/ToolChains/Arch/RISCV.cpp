@@ -17,8 +17,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/RISCVTargetParser.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
