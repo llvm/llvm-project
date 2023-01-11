@@ -761,6 +761,26 @@ func.func @vector_extractelement_0d(%laneid: index) -> (f32) {
 
 // -----
 
+// CHECK-PROP-LABEL: func.func @vector_extractelement_1element(
+//       CHECK-PROP:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK-PROP:   %[[R:.*]] = vector.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<1xf32>) {
+//       CHECK-PROP:     %[[V:.*]] = "some_def"() : () -> vector<1xf32>
+//       CHECK-PROP:     vector.yield %[[V]] : vector<1xf32>
+//       CHECK-PROP:   }
+//       CHECK-PROP:   %[[E:.*]] = vector.extractelement %[[R]][%[[C0]] : index] : vector<1xf32>
+//       CHECK-PROP:   return %[[E]] : f32
+func.func @vector_extractelement_1element(%laneid: index) -> (f32) {
+  %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (f32) {
+    %0 = "some_def"() : () -> (vector<1xf32>)
+    %c0 = arith.constant 0 : index
+    %1 = vector.extractelement %0[%c0 : index] : vector<1xf32>
+    vector.yield %1 : f32
+  }
+  return %r : f32
+}
+
+// -----
+
 //       CHECK-PROP: #[[$map:.*]] = affine_map<()[s0] -> (s0 ceildiv 3)>
 //       CHECK-PROP: #[[$map1:.*]] = affine_map<()[s0] -> (s0 mod 3)>
 // CHECK-PROP-LABEL: func.func @vector_extractelement_1d(
