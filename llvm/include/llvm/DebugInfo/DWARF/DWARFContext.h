@@ -109,7 +109,7 @@ class DWARFContext : public DIContext {
 
   // When set parses debug_info.dwo/debug_abbrev.dwo manually and populates CU
   // Index, and TU Index for DWARF5.
-  bool ParseCUTUIndexManually;
+  bool ParseCUTUIndexManually = false;
 
 public:
   DWARFContext(std::unique_ptr<const DWARFObject> DObj,
