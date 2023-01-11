@@ -18,7 +18,7 @@ define <2 x i64> @testcase(ptr %in) {
   ret <2 x i64> %4
 }
 
-;; This causes miscompile because rot combine
+;; This used to cause a miscompile because rot combine
 ;; doesn't handle negative shift well.
 define i5 @pr59898(i5 %x) {
 ; CHECK-LABEL: pr59898:
