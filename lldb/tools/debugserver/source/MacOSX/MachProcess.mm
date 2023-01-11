@@ -2285,6 +2285,7 @@ task_t MachProcess::ExceptionMessageBundleComplete() {
         m_thread_list.Clear();
         m_activities.Clear();
         m_breakpoints.DisableAll();
+        m_task.ClearAllocations();
       }
 
       if (m_sent_interrupt_signo != 0) {
