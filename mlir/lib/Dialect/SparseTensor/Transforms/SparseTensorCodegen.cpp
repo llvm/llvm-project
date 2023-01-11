@@ -205,11 +205,30 @@ static void createAllocFields(OpBuilder &builder, Location loc, Type type,
                               ValueRange dynSizes, bool enableInit,
                               SmallVectorImpl<Value> &fields) {
   RankedTensorType rtp = type.cast<RankedTensorType>();
-  Value heuristic = constantIndex(builder, loc, 16);
+  // Build original sizes.
+  SmallVector<Value> sizes;
+  auto shape = rtp.getShape();
+  unsigned rank = shape.size();
+  for (unsigned r = 0, o = 0; r < rank; r++) {
+    if (ShapedType::isDynamic(shape[r]))
+      sizes.push_back(dynSizes[o++]);
+    else
+      sizes.push_back(constantIndex(builder, loc, shape[r]));
+  }
 
+  Value heuristic = constantIndex(builder, loc, 16);
+  Value valHeuristic = heuristic;
+  SparseTensorEncodingAttr enc = getSparseTensorEncoding(rtp);
+  if (enc.isAllDense()) {
+    Value linear = sizes[0];
+    for (unsigned r = 1; r < rank; r++) {
+      linear = builder.create<arith::MulIOp>(loc, linear, sizes[r]);
+    }
+    valHeuristic = linear;
+  }
   foreachFieldAndTypeInSparseTensor(
       rtp,
-      [&builder, &fields, rtp, loc, heuristic,
+      [&builder, &fields, rtp, loc, heuristic, valHeuristic,
        enableInit](Type fType, unsigned fIdx, SparseTensorFieldKind fKind,
                    unsigned /*dim*/, DimLevelType /*dlt*/) -> bool {
         assert(fields.size() == fIdx);
@@ -222,7 +241,10 @@ static void createAllocFields(OpBuilder &builder, Location loc, Type type,
         case SparseTensorFieldKind::IdxMemRef:
         case SparseTensorFieldKind::ValMemRef:
           field = createAllocation(builder, loc, fType.cast<MemRefType>(),
-                                   heuristic, enableInit);
+                                   fKind == SparseTensorFieldKind::ValMemRef
+                                       ? valHeuristic
+                                       : heuristic,
+                                   enableInit);
           break;
         }
         assert(field);
@@ -233,16 +255,6 @@ static void createAllocFields(OpBuilder &builder, Location loc, Type type,
 
   MutSparseTensorDescriptor desc(rtp, fields);
 
-  // Build original sizes.
-  SmallVector<Value> sizes;
-  auto shape = rtp.getShape();
-  unsigned rank = shape.size();
-  for (unsigned r = 0, o = 0; r < rank; r++) {
-    if (ShapedType::isDynamic(shape[r]))
-      sizes.push_back(dynSizes[o++]);
-    else
-      sizes.push_back(constantIndex(builder, loc, shape[r]));
-  }
   // Initialize the storage scheme to an empty tensor. Initialized memSizes
   // to all zeros, sets the dimSizes to known values and gives all pointer
   // fields an initial zero entry, so that it is easier to maintain the

@@ -345,8 +345,8 @@ func.func @sparse_alloc_csc(%arg0: index) -> tensor<10x?xf64, #CSC> {
 //       CHECK:     %[[A2:.*]] = arith.constant 10 : i64
 //       CHECK:     %[[A3:.*]] = arith.constant 30 : i64
 //       CHECK:     %[[A4:.*]] = arith.constant 0.000000e+00 : f64
-//       CHECK:     %[[A5:.*]] = memref.alloc() : memref<16xf64>
-//       CHECK:     %[[A6:.*]] = memref.cast %[[A5]] : memref<16xf64> to memref<?xf64>
+//       CHECK:     %[[A5:.*]] = memref.alloc() : memref<6000xf64>
+//       CHECK:     %[[A6:.*]] = memref.cast %[[A5]] : memref<6000xf64> to memref<?xf64>
 //       CHECK:     %[[A7:.*]] = sparse_tensor.storage_specifier.init : !sparse_tensor.storage_specifier
 //       CHECK:     %[[A8:.*]] = sparse_tensor.storage_specifier.set %[[A7]]  dim_sz at 0 with %[[A3]] : i64, !sparse_tensor.storage_specifier
 //       CHECK:     %[[A9:.*]] = sparse_tensor.storage_specifier.set %[[A8]]  dim_sz at 1 with %[[A2]] : i64, !sparse_tensor.storage_specifier
