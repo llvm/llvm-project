@@ -526,6 +526,38 @@ void sparse_tensor::foreachInSparseConstant(
   }
 }
 
+void sparse_tensor::storeIndices(OpBuilder &builder, Location loc,
+                                 unsigned rank, Value ind, ValueRange ivs,
+                                 unsigned offsetDim, Value offset) {
+  for (unsigned i = 0; i < rank; i++) {
+    Value idx = ivs[i];
+    if (offsetDim == i && offset)
+      idx = builder.create<arith::AddIOp>(loc, idx, offset);
+    builder.create<memref::StoreOp>(loc, idx, ind,
+                                    constantIndex(builder, loc, i));
+  }
+}
+
+Value sparse_tensor::reshapeValuesToLevels(
+    OpBuilder &builder, Location loc, SparseTensorEncodingAttr enc,
+    const SmallVectorImpl<Value> &dimSizes, Value valuesBuffer,
+    Value idxBuffer) {
+  // Use the dstIdx to store the level sizes.
+  unsigned rank = enc.getDimLevelType().size();
+  SmallVector<Value> lvlSizes;
+  for (unsigned i = 0; i < dimSizes.size(); i++)
+    lvlSizes.push_back(dimSizes[toOrigDim(enc, i)]);
+  storeIndices(builder, loc, rank, idxBuffer, lvlSizes);
+  // The memref ReshapeOp requires the sizes buffer to have a static
+  // shape.
+  idxBuffer = builder.create<memref::CastOp>(
+      loc, MemRefType::get({rank}, builder.getIndexType()), idxBuffer);
+  SmallVector<int64_t> shape(rank, ShapedType::kDynamic);
+  Type elemTp = valuesBuffer.getType().cast<MemRefType>().getElementType();
+  return builder.create<memref::ReshapeOp>(loc, MemRefType::get(shape, elemTp),
+                                           valuesBuffer, idxBuffer);
+}
+
 Value sparse_tensor::genToPointers(OpBuilder &builder, Location loc,
                                    Value tensor, uint64_t d) {
   RankedTensorType srcTp = tensor.getType().cast<RankedTensorType>();
