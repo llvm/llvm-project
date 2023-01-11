@@ -72,6 +72,13 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
         continue;
       }
 
+      if (isa<PHINode>(I)) {
+        // We set IsOffset=true, to forbid the memcpy from occurring after the
+        // phi: If one of the phi operands is not based on the alloca, we
+        // would incorrectly omit a write.
+        Worklist.emplace_back(I, true);
+        continue;
+      }
       if (isa<BitCastInst>(I) || isa<AddrSpaceCastInst>(I)) {
         // If uses of the bitcast are ok, we are ok.
         Worklist.emplace_back(I, IsOffset);
