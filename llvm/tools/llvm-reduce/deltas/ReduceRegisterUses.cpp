@@ -29,8 +29,8 @@ static void removeUsesFromFunction(Oracle &O, MachineFunction &MF) {
 
       int NumOperands = MI.getNumOperands();
       int NumRequiredOps = MI.getNumExplicitOperands() +
-                           MI.getDesc().getNumImplicitDefs() +
-                           MI.getDesc().getNumImplicitUses();
+                           MI.getDesc().implicit_defs().size() +
+                           MI.getDesc().implicit_uses().size();
 
       for (int I = NumOperands - 1; I >= 0; --I) {
         MachineOperand &MO = MI.getOperand(I);

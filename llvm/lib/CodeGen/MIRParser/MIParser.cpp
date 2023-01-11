@@ -1419,14 +1419,10 @@ bool MIParser::verifyImplicitOperands(ArrayRef<ParsedMachineOperand> Operands,
 
   // Gather all the expected implicit operands.
   SmallVector<MachineOperand, 4> ImplicitOperands;
-  if (MCID.getImplicitDefs())
-    for (const MCPhysReg *ImpDefs = MCID.getImplicitDefs(); *ImpDefs; ++ImpDefs)
-      ImplicitOperands.push_back(
-          MachineOperand::CreateReg(*ImpDefs, true, true));
-  if (MCID.getImplicitUses())
-    for (const MCPhysReg *ImpUses = MCID.getImplicitUses(); *ImpUses; ++ImpUses)
-      ImplicitOperands.push_back(
-          MachineOperand::CreateReg(*ImpUses, false, true));
+  for (MCPhysReg ImpDef : MCID.implicit_defs())
+    ImplicitOperands.push_back(MachineOperand::CreateReg(ImpDef, true, true));
+  for (MCPhysReg ImpUse : MCID.implicit_uses())
+    ImplicitOperands.push_back(MachineOperand::CreateReg(ImpUse, false, true));
 
   const auto *TRI = MF.getSubtarget().getRegisterInfo();
   assert(TRI && "Expected target register info");
