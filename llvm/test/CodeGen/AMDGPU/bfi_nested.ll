@@ -210,6 +210,47 @@ define float @v_bfi_two_levels(float %x, float %y, float %z) {
   ret float %result
 }
 
+define float @v_bfi_two_levels_inner_or_multiple_uses(float %x, float %y, float %z) {
+; GCN-LABEL: v_bfi_two_levels_inner_or_multiple_uses:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_cvt_u32_f32_e32 v1, v1
+; GCN-NEXT:    v_cvt_u32_f32_e32 v2, v2
+; GCN-NEXT:    v_mul_f32_e32 v0, 0x447fc000, v0
+; GCN-NEXT:    v_lshlrev_b32_e32 v3, 5, v1
+; GCN-NEXT:    v_and_b32_e32 v2, 0xc000001f, v2
+; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GCN-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GCN-NEXT:    v_and_b32_e32 v3, 0x3e0, v3
+; GCN-NEXT:    v_and_b32_e32 v1, 0xffc00, v1
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 20, v0
+; GCN-NEXT:    v_or_b32_e32 v2, v3, v2
+; GCN-NEXT:    v_or_b32_e32 v1, v2, v1
+; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff00000, v0
+; GCN-NEXT:    v_or_b32_e32 v0, v1, v0
+; GCN-NEXT:    v_mul_f32_e32 v0, v0, v2
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+.entry:
+  %y.i32 = fptoui float %y to i32
+  %shl.insert.inner = shl i32 %y.i32, 5
+  %and.insert.inner = and i32 %shl.insert.inner, 992
+  %z.i32 = fptoui float %z to i32
+  %base.inner = and i32 %z.i32, -1073741793
+  %or.inner = or i32 %and.insert.inner , %base.inner
+  %shl.insert.mid = shl i32 %y.i32, 10
+  %and.insert.mid = and i32 %shl.insert.mid, 1047552
+  %or.mid = or i32 %or.inner, %and.insert.mid
+  %fmul.insert.outer = fmul reassoc nnan nsz arcp contract afn float %x, 1.023000e+03
+  %cast.insert.outer = fptoui float %fmul.insert.outer to i32
+  %shl.insert.outer = shl i32 %cast.insert.outer, 20
+  %and.insert.outer = and i32 %shl.insert.outer, 1072693248
+  %or.outer = or i32 %or.mid, %and.insert.outer
+  %result = bitcast i32 %or.outer to float
+  %or.inner.float = bitcast i32 %or.inner to float
+  %result2 = fmul float %result, %or.inner.float
+  ret float %result2
+}
+
 define float @v_bfi_single_constant_as_partition(float %x, float %y, float %z) {
 ; GCN-LABEL: v_bfi_single_constant_as_partition:
 ; GCN:       ; %bb.0: ; %.entry
