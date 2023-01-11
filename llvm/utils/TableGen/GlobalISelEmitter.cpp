@@ -187,8 +187,8 @@ public:
                      std::make_tuple(
                          Other.Ty.isScalable(),
                          Other.Ty.getSizeInBits().getKnownMinValue())
-               : Ty.getSizeInBits().getFixedSize() <
-                     Other.Ty.getSizeInBits().getFixedSize();
+               : Ty.getSizeInBits().getFixedValue() <
+                     Other.Ty.getSizeInBits().getFixedValue();
   }
 
   bool operator==(const LLTCodeGen &B) const { return Ty == B.Ty; }

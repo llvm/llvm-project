@@ -1132,11 +1132,11 @@ namespace llvm {
     /// Return the size of the specified fixed width value type in bits. The
     /// function will assert if the type is scalable.
     uint64_t getFixedSizeInBits() const {
-      return getSizeInBits().getFixedSize();
+      return getSizeInBits().getFixedValue();
     }
 
     uint64_t getScalarSizeInBits() const {
-      return getScalarType().getSizeInBits().getFixedSize();
+      return getScalarType().getSizeInBits().getFixedValue();
     }
 
     /// Return the number of bytes overwritten by a store of the specified value
@@ -1153,7 +1153,7 @@ namespace llvm {
     // Return the number of bytes overwritten by a store of this value type or
     // this value type's element type in the case of a vector.
     uint64_t getScalarStoreSize() const {
-      return getScalarType().getStoreSize().getFixedSize();
+      return getScalarType().getStoreSize().getFixedValue();
     }
 
     /// Return the number of bits overwritten by a store of the specified value

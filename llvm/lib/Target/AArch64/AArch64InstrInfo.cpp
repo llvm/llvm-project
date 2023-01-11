@@ -7383,8 +7383,8 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
       getMemOpInfo(MI.getOpcode(), Scale, DummyWidth, MinOffset, MaxOffset);
 
       Offset += 16; // Update the offset to what it would be if we outlined.
-      if (Offset < MinOffset * (int64_t)Scale.getFixedSize() ||
-          Offset > MaxOffset * (int64_t)Scale.getFixedSize())
+      if (Offset < MinOffset * (int64_t)Scale.getFixedValue() ||
+          Offset > MaxOffset * (int64_t)Scale.getFixedValue())
         return false;
 
       // It's in range, so we can outline it.
@@ -7860,7 +7860,7 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
     // We've pushed the return address to the stack, so add 16 to the offset.
     // This is safe, since we already checked if it would overflow when we
     // checked if this instruction was legal to outline.
-    int64_t NewImm = (Offset + 16) / (int64_t)Scale.getFixedSize();
+    int64_t NewImm = (Offset + 16) / (int64_t)Scale.getFixedValue();
     StackOffsetOperand.setImm(NewImm);
   }
 }

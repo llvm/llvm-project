@@ -306,7 +306,7 @@ bool LoadStoreOpt::mergeStores(SmallVectorImpl<GStore *> &StoresToMerge) {
   bool AnyMerged = false;
   do {
     unsigned NumPow2 = PowerOf2Floor(StoresToMerge.size());
-    unsigned MaxSizeBits = NumPow2 * OrigTy.getSizeInBits().getFixedSize();
+    unsigned MaxSizeBits = NumPow2 * OrigTy.getSizeInBits().getFixedValue();
     // Compute the biggest store we can generate to handle the number of stores.
     unsigned MergeSizeBits;
     for (MergeSizeBits = MaxSizeBits; MergeSizeBits > 1; MergeSizeBits /= 2) {
@@ -352,7 +352,7 @@ bool LoadStoreOpt::doSingleStoreMerge(SmallVectorImpl<GStore *> &Stores) {
   const unsigned NumStores = Stores.size();
   LLT SmallTy = MRI->getType(FirstStore->getValueReg());
   LLT WideValueTy =
-      LLT::scalar(NumStores * SmallTy.getSizeInBits().getFixedSize());
+      LLT::scalar(NumStores * SmallTy.getSizeInBits().getFixedValue());
 
   // For each store, compute pairwise merged debug locs.
   DebugLoc MergedLoc = Stores.front()->getDebugLoc();
