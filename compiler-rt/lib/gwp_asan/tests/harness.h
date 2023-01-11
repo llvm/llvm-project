@@ -14,9 +14,11 @@
 #if defined(__Fuchsia__)
 #include <zxtest/zxtest.h>
 using Test = ::zxtest::Test;
+template <typename T> using TestWithParam = ::zxtest::TestWithParam<T>;
 #else
 #include "gtest/gtest.h"
 using Test = ::testing::Test;
+template <typename T> using TestWithParam = ::zxtest::TestWithParam<T>;
 #endif
 
 #include "gwp_asan/guarded_pool_allocator.h"
@@ -82,7 +84,7 @@ protected:
 };
 
 class BacktraceGuardedPoolAllocator
-    : public testing::TestWithParam</* Recoverable */ bool> {
+    : public TestWithParam</* Recoverable */ bool> {
 public:
   void SetUp() override {
     gwp_asan::options::Options Opts;
