@@ -120,3 +120,36 @@ define i1 @test_smax(i32 %x, i32 %y) {
   %they_are_same = icmp eq i64 %sext_smax_x_y, %smax_sext_x_sext_y
   ret i1 %they_are_same
 }
+
+; TODO: Make sure that zext(umin_seq(x, y)) has same SCEV as umin_seq(zext(x), zext(y)).
+; Equality proof: https://alive2.llvm.org/ce/z/X8kaNx
+define i1 @test_umin_seq(i1 %x, i1 %y) {
+; CHECK-LABEL: 'test_umin_seq'
+; CHECK-NEXT:  Classifying expressions for: @test_umin_seq
+; CHECK-NEXT:    %x_umin_seq_y = select i1 %x, i1 %y, i1 false
+; CHECK-NEXT:    --> (%x umin_seq %y) U: full-set S: full-set
+; CHECK-NEXT:    %zext_x_umin_seq_y = zext i1 %x_umin_seq_y to i64
+; CHECK-NEXT:    --> (zext i1 (%x umin_seq %y) to i64) U: [0,2) S: [0,2)
+; CHECK-NEXT:    %zext_x = zext i1 %x to i64
+; CHECK-NEXT:    --> (zext i1 %x to i64) U: [0,2) S: [0,2)
+; CHECK-NEXT:    %zext_y = zext i1 %y to i64
+; CHECK-NEXT:    --> (zext i1 %y to i64) U: [0,2) S: [0,2)
+; CHECK-NEXT:    %umin_zext_x_zext_y = select i1 %cmp_zext_x_zext_y, i64 %zext_x, i64 %zext_y
+; CHECK-NEXT:    --> ((zext i1 %x to i64) umin (zext i1 %y to i64)) U: [0,2) S: [0,2)
+; CHECK-NEXT:    %umin_seq_zext_x_xext_y = select i1 %zext_x_is_0, i64 0, i64 %umin_zext_x_zext_y
+; CHECK-NEXT:    --> ((zext i1 %x to i64) umin_seq (zext i1 %y to i64)) U: [0,2) S: [0,2)
+; CHECK-NEXT:  Determining loop execution counts for: @test_umin_seq
+;
+  %x_umin_seq_y = select i1 %x, i1 %y, i1 false
+  %zext_x_umin_seq_y = zext i1 %x_umin_seq_y to i64
+
+  %zext_x = zext i1 %x to i64
+  %zext_y = zext i1 %y to i64
+  %zext_x_is_0 = icmp eq i64 %zext_x, 0
+  %cmp_zext_x_zext_y = icmp ult i64 %zext_x, %zext_y
+  %umin_zext_x_zext_y = select i1 %cmp_zext_x_zext_y, i64 %zext_x, i64 %zext_y
+  %umin_seq_zext_x_xext_y = select i1 %zext_x_is_0, i64 0, i64 %umin_zext_x_zext_y
+
+  %they_are_same = icmp eq i64 %zext_x_umin_seq_y, %umin_seq_zext_x_xext_y
+  ret i1 %they_are_same
+}
