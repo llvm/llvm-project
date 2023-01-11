@@ -134,14 +134,14 @@ define ptr @test6_2() #0 {
 
 ; Function Attrs: nounwind readnone ssp uwtable
 define internal ptr @f1(ptr readnone %0) local_unnamed_addr #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
-; CHECK-LABEL: define {{[^@]+}}@f1
-; CHECK-SAME: (ptr noalias nofree nonnull readnone align 8 dereferenceable(1) "no-capture-maybe-returned" [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    br label [[TMP3:%.*]]
-; CHECK:       2:
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
-; CHECK-NEXT:    ret ptr [[TMP0]]
+; CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; CGSCC-LABEL: define {{[^@]+}}@f1
+; CGSCC-SAME: () local_unnamed_addr #[[ATTR0]] {
+; CGSCC-NEXT:    br label [[TMP2:%.*]]
+; CGSCC:       1:
+; CGSCC-NEXT:    unreachable
+; CGSCC:       2:
+; CGSCC-NEXT:    ret ptr @a1
 ;
   %2 = icmp eq i8* %0, null
   br i1 %2, label %3, label %5
@@ -161,17 +161,13 @@ define internal ptr @f2(ptr readnone %0) local_unnamed_addr #0 {
 ; CGSCC: Function Attrs: noinline nounwind uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@f2
 ; CGSCC-SAME: (ptr readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
-; CGSCC-NEXT:    [[TMP2:%.*]] = icmp eq ptr undef, null
-; CGSCC-NEXT:    br i1 [[TMP2]], label [[TMP5:%.*]], label [[TMP3:%.*]]
+; CGSCC-NEXT:    unreachable
+; CGSCC:       2:
+; CGSCC-NEXT:    unreachable
 ; CGSCC:       3:
-; CGSCC-NEXT:    [[TMP4:%.*]] = tail call ptr @f1(ptr noalias nonnull readnone align 4294967296 dereferenceable(4294967295) undef)
-; CGSCC-NEXT:    br label [[TMP7:%.*]]
-; CGSCC:       5:
-; CGSCC-NEXT:    [[TMP6:%.*]] = tail call ptr @f3()
-; CGSCC-NEXT:    br label [[TMP7]]
-; CGSCC:       7:
-; CGSCC-NEXT:    [[TMP8:%.*]] = phi ptr [ [[TMP4]], [[TMP3]] ], [ [[TMP6]], [[TMP5]] ]
-; CGSCC-NEXT:    ret ptr [[TMP8]]
+; CGSCC-NEXT:    unreachable
+; CGSCC:       4:
+; CGSCC-NEXT:    unreachable
 ;
   %2 = icmp eq i8* %0, null
   br i1 %2, label %5, label %3
@@ -192,14 +188,14 @@ define internal ptr @f2(ptr readnone %0) local_unnamed_addr #0 {
 
 ; Function Attrs: nounwind readnone ssp uwtable
 define internal ptr @f3(ptr readnone %0) local_unnamed_addr #0 {
-; CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; CGSCC: Function Attrs: noinline nounwind uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@f3
-; CGSCC-SAME: () local_unnamed_addr #[[ATTR0]] {
-; CGSCC-NEXT:    br label [[TMP2:%.*]]
-; CGSCC:       1:
+; CGSCC-SAME: (ptr readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; CGSCC-NEXT:    unreachable
 ; CGSCC:       2:
-; CGSCC-NEXT:    ret ptr @a1
+; CGSCC-NEXT:    unreachable
+; CGSCC:       3:
+; CGSCC-NEXT:    unreachable
 ;
   %2 = icmp eq i8* %0, null
   br i1 %2, label %3, label %5
@@ -219,13 +215,12 @@ define align 4 ptr @test7() #0 {
 ; TUNIT: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@test7
 ; TUNIT-SAME: () #[[ATTR0]] {
-; TUNIT-NEXT:    [[C:%.*]] = tail call ptr @f1(ptr noalias nofree noundef nonnull readnone align 8 dereferenceable(1) "no-capture-maybe-returned" @a1) #[[ATTR11:[0-9]+]]
-; TUNIT-NEXT:    ret ptr [[C]]
+; TUNIT-NEXT:    ret ptr @a1
 ;
 ; CGSCC: Function Attrs: nofree noinline nosync nounwind willreturn memory(none) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@test7
 ; CGSCC-SAME: () #[[ATTR2:[0-9]+]] {
-; CGSCC-NEXT:    [[C:%.*]] = tail call noundef nonnull align 8 dereferenceable(1) ptr @f1(ptr noalias nofree noundef nonnull readnone align 8 dereferenceable(1) @a1) #[[ATTR13:[0-9]+]]
+; CGSCC-NEXT:    [[C:%.*]] = tail call noundef nonnull align 8 dereferenceable(1) ptr @f1() #[[ATTR13:[0-9]+]]
 ; CGSCC-NEXT:    ret ptr [[C]]
 ;
   %c = tail call i8* @f1(i8* align 8 dereferenceable(1) @a1)
@@ -237,12 +232,12 @@ define align 4 ptr @test7() #0 {
 define internal ptr @f1b(ptr readnone %0) local_unnamed_addr #0 {
 ; CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@f1b
-; CGSCC-SAME: (ptr noalias nofree nonnull readnone align 8 dereferenceable(1) "no-capture-maybe-returned" [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CGSCC-NEXT:    br label [[TMP3:%.*]]
-; CGSCC:       2:
+; CGSCC-SAME: () local_unnamed_addr #[[ATTR0]] {
+; CGSCC-NEXT:    br label [[TMP2:%.*]]
+; CGSCC:       1:
 ; CGSCC-NEXT:    unreachable
-; CGSCC:       3:
-; CGSCC-NEXT:    ret ptr [[TMP0]]
+; CGSCC:       2:
+; CGSCC-NEXT:    ret ptr undef
 ;
   %2 = icmp eq i8* %0, null
   br i1 %2, label %3, label %5
@@ -264,17 +259,13 @@ define internal ptr @f2b(ptr readnone %0) local_unnamed_addr #0 {
 ; CGSCC: Function Attrs: noinline nounwind uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@f2b
 ; CGSCC-SAME: (ptr readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
-; CGSCC-NEXT:    [[TMP2:%.*]] = icmp eq ptr undef, null
-; CGSCC-NEXT:    br i1 [[TMP2]], label [[TMP5:%.*]], label [[TMP3:%.*]]
+; CGSCC-NEXT:    unreachable
+; CGSCC:       2:
+; CGSCC-NEXT:    unreachable
 ; CGSCC:       3:
-; CGSCC-NEXT:    [[TMP4:%.*]] = tail call ptr @f1b(ptr noalias nonnull readnone align 4294967296 dereferenceable(4294967295) undef)
-; CGSCC-NEXT:    br label [[TMP7:%.*]]
-; CGSCC:       5:
-; CGSCC-NEXT:    [[TMP6:%.*]] = tail call ptr @f3b()
-; CGSCC-NEXT:    br label [[TMP7]]
-; CGSCC:       7:
-; CGSCC-NEXT:    [[TMP8:%.*]] = phi ptr [ [[TMP4]], [[TMP3]] ], [ [[TMP6]], [[TMP5]] ]
-; CGSCC-NEXT:    ret ptr [[TMP8]]
+; CGSCC-NEXT:    unreachable
+; CGSCC:       4:
+; CGSCC-NEXT:    unreachable
 ;
   %2 = icmp eq i8* %0, null
   br i1 %2, label %5, label %3
@@ -296,14 +287,14 @@ define internal ptr @f2b(ptr readnone %0) local_unnamed_addr #0 {
 ; Function Attrs: nounwind readnone ssp uwtable
 define internal ptr @f3b(ptr readnone %0) local_unnamed_addr #0 {
 ;
-; CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; CGSCC: Function Attrs: noinline nounwind uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@f3b
-; CGSCC-SAME: () local_unnamed_addr #[[ATTR0]] {
-; CGSCC-NEXT:    br label [[TMP2:%.*]]
-; CGSCC:       1:
+; CGSCC-SAME: (ptr readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; CGSCC-NEXT:    unreachable
 ; CGSCC:       2:
-; CGSCC-NEXT:    ret ptr @a1
+; CGSCC-NEXT:    unreachable
+; CGSCC:       3:
+; CGSCC-NEXT:    unreachable
 ;
   %2 = icmp eq i8* %0, null
   br i1 %2, label %3, label %5
@@ -936,7 +927,7 @@ define i32 @musttail_caller_1(ptr %p) {
 ; TUNIT-NEXT:    [[C:%.*]] = load i1, ptr @cnd, align 1
 ; TUNIT-NEXT:    br i1 [[C]], label [[MT:%.*]], label [[EXIT:%.*]]
 ; TUNIT:       mt:
-; TUNIT-NEXT:    [[V:%.*]] = musttail call i32 @musttail_callee_1(ptr nocapture nofree readonly [[P]]) #[[ATTR12:[0-9]+]]
+; TUNIT-NEXT:    [[V:%.*]] = musttail call i32 @musttail_callee_1(ptr nocapture nofree readonly [[P]]) #[[ATTR11:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[V]]
 ; TUNIT:       exit:
 ; TUNIT-NEXT:    ret i32 0
@@ -1079,7 +1070,7 @@ define ptr @aligned_8_return_caller(ptr align(16) %a, i1 %c1, i1 %c2) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@aligned_8_return_caller
 ; TUNIT-SAME: (ptr nofree readnone align 16 "no-capture-maybe-returned" [[A:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) #[[ATTR9]] {
-; TUNIT-NEXT:    [[R:%.*]] = call align 8 ptr @aligned_8_return(ptr noalias nofree readnone align 16 "no-capture-maybe-returned" [[A]], i1 [[C1]], i1 [[C2]]) #[[ATTR12]]
+; TUNIT-NEXT:    [[R:%.*]] = call align 8 ptr @aligned_8_return(ptr noalias nofree readnone align 16 "no-capture-maybe-returned" [[A]], i1 [[C1]], i1 [[C2]]) #[[ATTR11]]
 ; TUNIT-NEXT:    ret ptr [[R]]
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
@@ -1107,8 +1098,7 @@ attributes #2 = { null_pointer_is_valid }
 ; TUNIT: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR10]] = { nofree norecurse nosync nounwind willreturn memory(read) }
-; TUNIT: attributes #[[ATTR11]] = { nofree norecurse nosync nounwind willreturn }
-; TUNIT: attributes #[[ATTR12]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR11]] = { nofree nosync nounwind willreturn }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable }
 ; CGSCC: attributes #[[ATTR1]] = { noinline nounwind uwtable }
