@@ -1108,6 +1108,8 @@ T tmain(T argc, T *argv) {
   foo();
   #pragma omp target defaultmap(present: pointer)
   foo();
+  #pragma omp target thread_limit(C)
+  foo();
 
   return 0;
 }
@@ -1118,6 +1120,8 @@ T tmain(T argc, T *argv) {
 // OMP51-NEXT: #pragma omp target defaultmap(present: aggregate)
 // OMP51-NEXT: foo()
 // OMP51-NEXT: #pragma omp target defaultmap(present: pointer)
+// OMP51-NEXT: foo()
+// OMP51-NEXT: #pragma omp target thread_limit(C)
 // OMP51-NEXT: foo()
 
 // OMP51-LABEL: int main(int argc, char **argv) {
