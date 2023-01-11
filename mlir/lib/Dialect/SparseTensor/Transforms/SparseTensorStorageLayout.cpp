@@ -109,41 +109,24 @@ void SparseTensorSpecifier::setSpecifierField(OpBuilder &builder, Location loc,
 // SparseTensorDescriptor methods.
 //===----------------------------------------------------------------------===//
 
-sparse_tensor::SparseTensorDescriptor::SparseTensorDescriptor(
-    OpBuilder &builder, Location loc, Type tp, ValueArrayRef buffers)
-    : SparseTensorDescriptorImpl<false>(tp), expandedFields() {
-  SparseTensorEncodingAttr enc = getSparseTensorEncoding(tp);
-  unsigned rank = enc.getDimLevelType().size();
+Value sparse_tensor::SparseTensorDescriptor::getIdxMemRefOrView(
+    OpBuilder &builder, Location loc, unsigned idxDim) const {
+  auto enc = getSparseTensorEncoding(rType);
   unsigned cooStart = getCOOStart(enc);
-  if (cooStart < rank) {
-    ValueRange beforeFields = buffers.drop_back(3);
-    expandedFields.append(beforeFields.begin(), beforeFields.end());
-    Value buffer = buffers[buffers.size() - 3];
-
+  unsigned idx = idxDim >= cooStart ? cooStart : idxDim;
+  Value buffer = getMemRefField(SparseTensorFieldKind::IdxMemRef, idx);
+  if (idxDim >= cooStart) {
+    unsigned rank = enc.getDimLevelType().size();
     Value stride = constantIndex(builder, loc, rank - cooStart);
-    SmallVector<Value> buffersArray(buffers.begin(), buffers.end());
-    MutSparseTensorDescriptor mutDesc(tp, buffersArray);
-    // Calculate subbuffer size as memSizes[idx] / (stride).
-    Value subBufferSize = mutDesc.getIdxMemSize(builder, loc, cooStart);
-    subBufferSize = builder.create<arith::DivUIOp>(loc, subBufferSize, stride);
-
-    // Create views of the linear idx buffer for the COO indices.
-    for (unsigned i = cooStart; i < rank; i++) {
-      Value subBuffer = builder.create<memref::SubViewOp>(
-          loc, buffer,
-          /*offset=*/ValueRange{constantIndex(builder, loc, i - cooStart)},
-          /*size=*/ValueRange{subBufferSize},
-          /*step=*/ValueRange{stride});
-      expandedFields.push_back(subBuffer);
-    }
-    expandedFields.push_back(buffers[buffers.size() - 2]); // The Values memref.
-    expandedFields.push_back(buffers.back());              // The specifier.
-    fields = expandedFields;
-  } else {
-    fields = buffers;
+    Value size = getIdxMemSize(builder, loc, cooStart);
+    size = builder.create<arith::DivUIOp>(loc, size, stride);
+    buffer = builder.create<memref::SubViewOp>(
+        loc, buffer,
+        /*offset=*/ValueRange{constantIndex(builder, loc, idxDim - cooStart)},
+        /*size=*/ValueRange{size},
+        /*step=*/ValueRange{stride});
   }
-
-  sanityCheck();
+  return buffer;
 }
 
 //===----------------------------------------------------------------------===//
@@ -156,8 +139,7 @@ void sparse_tensor::foreachFieldInSparseTensor(
     const SparseTensorEncodingAttr enc,
     llvm::function_ref<bool(unsigned, SparseTensorFieldKind, unsigned,
                             DimLevelType)>
-        callback,
-    bool isBuffer) {
+        callback) {
   assert(enc);
 
 #define RETURN_ON_FALSE(idx, kind, dim, dlt)                                   \
@@ -165,11 +147,13 @@ void sparse_tensor::foreachFieldInSparseTensor(
     return;
 
   unsigned rank = enc.getDimLevelType().size();
-  unsigned cooStart = isBuffer ? getCOOStart(enc) : rank;
+  unsigned end = getCOOStart(enc);
+  if (end != rank)
+    end += 1;
   static_assert(kDataFieldStartingIdx == 0);
   unsigned fieldIdx = kDataFieldStartingIdx;
   // Per-dimension storage.
-  for (unsigned r = 0; r < rank; r++) {
+  for (unsigned r = 0; r < end; r++) {
     // Dimension level types apply in order to the reordered dimension.
     // As a result, the compound type can be constructed directly in the given
     // order.
@@ -178,8 +162,7 @@ void sparse_tensor::foreachFieldInSparseTensor(
       RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::PtrMemRef, r, dlt);
       RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::IdxMemRef, r, dlt);
     } else if (isSingletonDLT(dlt)) {
-      if (r < cooStart)
-        RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::IdxMemRef, r, dlt);
+      RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::IdxMemRef, r, dlt);
     } else {
       assert(isDenseDLT(dlt)); // no fields
     }
@@ -231,38 +214,32 @@ void sparse_tensor::foreachFieldAndTypeInSparseTensor(
           return callback(valMemType, fieldIdx, fieldKind, dim, dlt);
         };
         llvm_unreachable("unrecognized field kind");
-      },
-      /*isBuffer=*/true);
+      });
 }
 
-unsigned sparse_tensor::getNumFieldsFromEncoding(SparseTensorEncodingAttr enc,
-                                                 bool isBuffer) {
+unsigned sparse_tensor::getNumFieldsFromEncoding(SparseTensorEncodingAttr enc) {
   unsigned numFields = 0;
-  foreachFieldInSparseTensor(
-      enc,
-      [&numFields](unsigned, SparseTensorFieldKind, unsigned,
-                   DimLevelType) -> bool {
-        numFields++;
-        return true;
-      },
-      isBuffer);
+  foreachFieldInSparseTensor(enc,
+                             [&numFields](unsigned, SparseTensorFieldKind,
+                                          unsigned, DimLevelType) -> bool {
+                               numFields++;
+                               return true;
+                             });
   return numFields;
 }
 
 unsigned
 sparse_tensor::getNumDataFieldsFromEncoding(SparseTensorEncodingAttr enc) {
   unsigned numFields = 0; // one value memref
-  foreachFieldInSparseTensor(
-      enc,
-      [&numFields](unsigned fidx, SparseTensorFieldKind, unsigned,
-                   DimLevelType) -> bool {
-        if (fidx >= kDataFieldStartingIdx)
-          numFields++;
-        return true;
-      },
-      /*isBuffer=*/true);
+  foreachFieldInSparseTensor(enc,
+                             [&numFields](unsigned fidx, SparseTensorFieldKind,
+                                          unsigned, DimLevelType) -> bool {
+                               if (fidx >= kDataFieldStartingIdx)
+                                 numFields++;
+                               return true;
+                             });
   numFields -= 1; // the last field is MetaData field
-  assert(numFields == getNumFieldsFromEncoding(enc, /*isBuffer=*/true) -
-                          kDataFieldStartingIdx - 1);
+  assert(numFields ==
+         getNumFieldsFromEncoding(enc) - kDataFieldStartingIdx - 1);
   return numFields;
 }
