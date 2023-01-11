@@ -222,6 +222,10 @@ HANDLE_TARGET_OPCODE(PATCHABLE_TYPED_EVENT_CALL)
 
 HANDLE_TARGET_OPCODE(ICALL_BRANCH_FUNNEL)
 
+// This is a fence with the singlethread scope. It represents a compiler memory
+// barrier, but does not correspond to any generated instruction.
+HANDLE_TARGET_OPCODE(MEMBARRIER)
+
 /// The following generic opcodes are not supposed to appear after ISel.
 /// This is something we might want to relax, but for now, this is convenient
 /// to produce diagnostics.
