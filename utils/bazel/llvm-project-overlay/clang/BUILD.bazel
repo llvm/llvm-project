@@ -1372,7 +1372,7 @@ cc_library(
         "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:Target",
-        "//llvm:TargetParser"
+        "//llvm:TargetParser",
         "//llvm:WindowsDriver",
         "//llvm:config",
     ],
