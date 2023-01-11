@@ -1,0 +1,35 @@
+#ifndef PROC
+#define PROC(ENUM, NAME, FEATURES, DEFAULT_MARCH)
+#endif
+
+PROC(INVALID, {"invalid"}, FK_INVALID, {""})
+PROC(GENERIC_RV32, {"generic-rv32"}, FK_NONE, {""})
+PROC(GENERIC_RV64, {"generic-rv64"}, FK_64BIT, {""})
+PROC(ROCKET_RV32, {"rocket-rv32"}, FK_NONE, {""})
+PROC(ROCKET_RV64, {"rocket-rv64"}, FK_64BIT, {""})
+PROC(SIFIVE_E20, {"sifive-e20"}, FK_NONE, {"rv32imc"})
+PROC(SIFIVE_E21, {"sifive-e21"}, FK_NONE, {"rv32imac"})
+PROC(SIFIVE_E24, {"sifive-e24"}, FK_NONE, {"rv32imafc"})
+PROC(SIFIVE_E31, {"sifive-e31"}, FK_NONE, {"rv32imac"})
+PROC(SIFIVE_E34, {"sifive-e34"}, FK_NONE, {"rv32imafc"})
+PROC(SIFIVE_E76, {"sifive-e76"}, FK_NONE, {"rv32imafc"})
+PROC(SIFIVE_S21, {"sifive-s21"}, FK_64BIT, {"rv64imac"})
+PROC(SIFIVE_S51, {"sifive-s51"}, FK_64BIT, {"rv64imac"})
+PROC(SIFIVE_S54, {"sifive-s54"}, FK_64BIT, {"rv64gc"})
+PROC(SIFIVE_S76, {"sifive-s76"}, FK_64BIT, {"rv64gc"})
+PROC(SIFIVE_U54, {"sifive-u54"}, FK_64BIT, {"rv64gc"})
+PROC(SIFIVE_U74, {"sifive-u74"}, FK_64BIT, {"rv64gc"})
+PROC(SYNTACORE_SCR1_BASE, {"syntacore-scr1-base"}, FK_NONE, {"rv32ic"})
+PROC(SYNTACORE_SCR1_MAX, {"syntacore-scr1-max"}, FK_NONE, {"rv32imc"})
+
+#undef PROC
+
+#ifndef TUNE_PROC
+#define TUNE_PROC(ENUM, NAME)
+#endif
+
+TUNE_PROC(GENERIC, "generic")
+TUNE_PROC(ROCKET, "rocket")
+TUNE_PROC(SIFIVE_7, "sifive-7-series")
+
+#undef TUNE_PROC
