@@ -12,9 +12,11 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
+using ::testing::HasSubstr;
 
 namespace {
 
@@ -31,8 +33,8 @@ TEST(AsmWriterTest, DebugPrintDetachedInstruction) {
   std::string S;
   raw_string_ostream OS(S);
   Add->print(OS);
-  std::size_t r = OS.str().find("<badref> = add i32 poison, poison, !<empty");
-  EXPECT_TRUE(r != std::string::npos);
+  EXPECT_THAT(OS.str(),
+              HasSubstr("<badref> = add i32 poison, poison, !<empty"));
 }
 
 TEST(AsmWriterTest, DebugPrintDetachedArgument) {
@@ -78,8 +80,7 @@ TEST(AsmWriterTest, PrintAddrspaceWithNullOperand) {
   std::string S;
   raw_string_ostream OS(S);
   Call->print(OS);
-  std::size_t r = OS.str().find("<cannot get addrspace!>");
-  EXPECT_TRUE(r != std::string::npos);
+  EXPECT_THAT(OS.str(), HasSubstr("<cannot get addrspace!>"));
 }
 
 TEST(AsmWriterTest, PrintNullOperandBundle) {
@@ -102,6 +103,6 @@ TEST(AsmWriterTest, PrintNullOperandBundle) {
   std::string S;
   raw_string_ostream OS(S);
   Invoke->print(OS);
-  EXPECT_TRUE(OS.str().find("<null operand bundle!>") != std::string::npos);
+  EXPECT_THAT(OS.str(), HasSubstr("<null operand bundle!>"));
 }
 }
