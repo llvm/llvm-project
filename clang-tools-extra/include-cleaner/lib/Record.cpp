@@ -204,7 +204,7 @@ public:
         Top.SeenAtLine == HashLine) {
       if (IncludedHeader)
         Out->IWYUExportBy[IncludedHeader->getUniqueID()].push_back(
-            Top.FullPath);
+            Top.Path);
       // main-file #include with export pragma should never be removed.
       if (Top.SeenAtFile == SM.getMainFileID())
         Out->ShouldKeep.insert(HashLine);
@@ -251,14 +251,13 @@ public:
                                        SM.getFileOffset(Range.getBegin()));
     // Record export pragma.
     if (Pragma->startswith("export")) {
-      ExportStack.push_back(
-          {CommentLine, CommentFID,
-           save(SM.getFileEntryForID(CommentFID)->tryGetRealPathName()),
-           false});
+      ExportStack.push_back({CommentLine, CommentFID,
+                             save(SM.getFileEntryForID(CommentFID)->getName()),
+                             false});
     } else if (Pragma->startswith("begin_exports")) {
-      ExportStack.push_back(
-          {CommentLine, CommentFID,
-           save(SM.getFileEntryForID(CommentFID)->tryGetRealPathName()), true});
+      ExportStack.push_back({CommentLine, CommentFID,
+                             save(SM.getFileEntryForID(CommentFID)->getName()),
+                             true});
     } else if (Pragma->startswith("end_exports")) {
       // FIXME: be robust on unmatching cases. We should only pop the stack if
       // the begin_exports and end_exports is in the same file.
@@ -297,8 +296,8 @@ private:
     int SeenAtLine = 0; // 1-based line number.
     // The file where we saw the pragma.
     FileID SeenAtFile;
-    // FullPath of the file SeenAtFile.
-    StringRef FullPath;
+    // Name (per FileEntry::getName()) of the file SeenAtFile.
+    StringRef Path;
     // true if it is a block begin/end_exports pragma; false if it is a
     // single-line export pragma.
     bool Block = false;
