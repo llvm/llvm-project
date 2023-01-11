@@ -970,6 +970,7 @@ bool IsAllocatableDesignator(const Expr<SomeType> &);
 // Procedure and pointer detection predicates
 bool IsProcedure(const Expr<SomeType> &);
 bool IsFunction(const Expr<SomeType> &);
+bool IsProcedurePointer(const Expr<SomeType> &);
 bool IsProcedurePointerTarget(const Expr<SomeType> &);
 bool IsBareNullPointer(const Expr<SomeType> *); // NULL() w/o MOLD= or type
 bool IsNullObjectPointer(const Expr<SomeType> &);

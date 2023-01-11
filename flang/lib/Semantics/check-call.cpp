@@ -930,6 +930,156 @@ static bool CheckElementalConformance(parser::ContextualMessages &messages,
   return true;
 }
 
+// ASSOCIATED (16.9.16)
+static void CheckAssociated(evaluate::ActualArguments &arguments,
+    evaluate::FoldingContext &context, const Scope *scope) {
+  bool ok{true};
+  if (arguments.size() < 2) {
+    return;
+  }
+  if (const auto &pointerArg{arguments[0]}) {
+    if (const auto *pointerExpr{pointerArg->UnwrapExpr()}) {
+      const Symbol *pointerSymbol{GetLastSymbol(*pointerExpr)};
+      if (pointerSymbol && !IsPointer(*pointerSymbol)) {
+        evaluate::AttachDeclaration(
+            context.messages().Say(pointerArg->sourceLocation(),
+                "POINTER= argument of ASSOCIATED() must be a POINTER"_err_en_US),
+            *pointerSymbol);
+        return;
+      }
+      if (const auto &targetArg{arguments[1]}) {
+        // The standard requires that the POINTER= argument be a valid LHS for
+        // a pointer assignment when the TARGET= argument is present.  This,
+        // perhaps unintentionally, excludes function results, including NULL(),
+        // from being used there, as well as INTENT(IN) dummy pointers.
+        // Allow this usage as a benign extension with a portability warning.
+        if (!evaluate::ExtractDataRef(*pointerExpr) &&
+            !evaluate::IsProcedurePointer(*pointerExpr)) {
+          context.messages().Say(pointerArg->sourceLocation(),
+              "POINTER= argument of ASSOCIATED() should be a pointer"_port_en_US);
+        } else if (scope) {
+          if (auto whyNot{WhyNotDefinable(pointerArg->sourceLocation().value_or(
+                                              context.messages().at()),
+                  *scope,
+                  DefinabilityFlags{DefinabilityFlag::PointerDefinition},
+                  *pointerExpr)}) {
+            if (auto *msg{context.messages().Say(pointerArg->sourceLocation(),
+                    "POINTER= argument of ASSOCIATED() would not be a valid left-hand side of a pointer assignment statement"_port_en_US)}) {
+              msg->Attach(std::move(*whyNot));
+            }
+          }
+        }
+        const auto *targetExpr{targetArg->UnwrapExpr()};
+        if (targetExpr && pointerSymbol) {
+          std::optional<characteristics::Procedure> pointerProc, targetProc;
+          const auto *targetProcDesignator{
+              evaluate::UnwrapExpr<evaluate::ProcedureDesignator>(*targetExpr)};
+          const Symbol *targetSymbol{GetLastSymbol(*targetExpr)};
+          bool isCall{false};
+          std::string targetName;
+          if (const auto *targetProcRef{// target is a function call
+                  std::get_if<evaluate::ProcedureRef>(&targetExpr->u)}) {
+            if (auto targetRefedChars{characteristics::Procedure::Characterize(
+                    *targetProcRef, context)}) {
+              targetProc = *targetRefedChars;
+              targetName = targetProcRef->proc().GetName() + "()";
+              isCall = true;
+            }
+          } else if (targetProcDesignator) {
+            targetProc = characteristics::Procedure::Characterize(
+                *targetProcDesignator, context);
+            targetName = targetProcDesignator->GetName();
+          } else if (targetSymbol) {
+            if (IsProcedure(*targetSymbol)) {
+              // proc that's not a call
+              targetProc = characteristics::Procedure::Characterize(
+                  *targetSymbol, context);
+            }
+            targetName = targetSymbol->name().ToString();
+          }
+          if (pointerSymbol && IsProcedure(*pointerSymbol)) {
+            pointerProc = characteristics::Procedure::Characterize(
+                *pointerSymbol, context);
+          }
+          if (pointerProc) {
+            if (targetProc) {
+              // procedure pointer and procedure target
+              std::string whyNot;
+              const evaluate::SpecificIntrinsic *specificIntrinsic{nullptr};
+              if (targetProcDesignator) {
+                specificIntrinsic =
+                    targetProcDesignator->GetSpecificIntrinsic();
+              }
+              if (std::optional<parser::MessageFixedText> msg{
+                      CheckProcCompatibility(isCall, pointerProc, &*targetProc,
+                          specificIntrinsic, whyNot)}) {
+                msg->set_severity(parser::Severity::Warning);
+                evaluate::AttachDeclaration(
+                    context.messages().Say(std::move(*msg),
+                        "pointer '" + pointerSymbol->name().ToString() + "'",
+                        targetName, whyNot),
+                    *pointerSymbol);
+              }
+            } else if (!IsNullProcedurePointer(*targetExpr)) {
+              // procedure pointer and object target
+              evaluate::AttachDeclaration(
+                  context.messages().Say(
+                      "POINTER= argument '%s' is a procedure pointer but the TARGET= argument '%s' is not a procedure or procedure pointer"_err_en_US,
+                      pointerSymbol->name(), targetName),
+                  *pointerSymbol);
+            }
+          } else if (targetProc) {
+            // object pointer and procedure target
+            evaluate::AttachDeclaration(
+                context.messages().Say(
+                    "POINTER= argument '%s' is an object pointer but the TARGET= argument '%s' is a procedure designator"_err_en_US,
+                    pointerSymbol->name(), targetName),
+                *pointerSymbol);
+          } else if (targetSymbol) {
+            // object pointer and target
+            SymbolVector symbols{GetSymbolVector(*targetExpr)};
+            CHECK(!symbols.empty());
+            if (!evaluate::GetLastTarget(symbols)) {
+              parser::Message *msg{context.messages().Say(
+                  targetArg->sourceLocation(),
+                  "TARGET= argument '%s' must have either the POINTER or the TARGET attribute"_err_en_US,
+                  targetExpr->AsFortran())};
+              for (SymbolRef ref : symbols) {
+                msg = evaluate::AttachDeclaration(msg, *ref);
+              }
+            } else if (HasVectorSubscript(*targetExpr) ||
+                ExtractCoarrayRef(*targetExpr)) {
+              context.messages().Say(targetArg->sourceLocation(),
+                  "TARGET= argument '%s' may not have a vector subscript or coindexing"_err_en_US,
+                  targetExpr->AsFortran());
+            }
+            if (const auto pointerType{pointerArg->GetType()}) {
+              if (const auto targetType{targetArg->GetType()}) {
+                ok = pointerType->IsTkCompatibleWith(*targetType);
+              }
+            }
+          }
+        }
+      }
+    }
+  } else {
+    // No arguments to ASSOCIATED()
+    ok = false;
+  }
+  if (!ok) {
+    context.messages().Say(
+        "Arguments of ASSOCIATED() must be a POINTER and an optional valid target"_err_en_US);
+  }
+}
+
+static void CheckSpecificIntrinsic(evaluate::ActualArguments &arguments,
+    evaluate::FoldingContext &context, const Scope *scope,
+    const evaluate::SpecificIntrinsic &intrinsic) {
+  if (intrinsic.name == "associated") {
+    CheckAssociated(arguments, context, scope);
+  }
+}
+
 static parser::Messages CheckExplicitInterface(
     const characteristics::Procedure &proc, evaluate::ActualArguments &actuals,
     const evaluate::FoldingContext &context, const Scope *scope,
@@ -939,39 +1089,36 @@ static parser::Messages CheckExplicitInterface(
   parser::ContextualMessages messages{context.messages().at(), &buffer};
   RearrangeArguments(proc, actuals, messages);
   evaluate::FoldingContext localContext{context, messages};
-  if (buffer.empty()) {
-    int index{0};
-    for (auto &actual : actuals) {
-      const auto &dummy{proc.dummyArguments.at(index++)};
-      if (actual) {
-        CheckExplicitInterfaceArg(*actual, dummy, proc, localContext, scope,
-            intrinsic, allowActualArgumentConversions);
-      } else if (!dummy.IsOptional()) {
-        if (dummy.name.empty()) {
-          messages.Say(
-              "Dummy argument #%d is not OPTIONAL and is not associated with "
-              "an actual argument in this procedure reference"_err_en_US,
-              index);
-        } else {
-          messages.Say("Dummy argument '%s=' (#%d) is not OPTIONAL and is not "
-                       "associated with an actual argument in this procedure "
-                       "reference"_err_en_US,
-              dummy.name, index);
-        }
+  if (!buffer.empty()) {
+    return buffer;
+  }
+  int index{0};
+  for (auto &actual : actuals) {
+    const auto &dummy{proc.dummyArguments.at(index++)};
+    if (actual) {
+      CheckExplicitInterfaceArg(*actual, dummy, proc, localContext, scope,
+          intrinsic, allowActualArgumentConversions);
+    } else if (!dummy.IsOptional()) {
+      if (dummy.name.empty()) {
+        messages.Say(
+            "Dummy argument #%d is not OPTIONAL and is not associated with "
+            "an actual argument in this procedure reference"_err_en_US,
+            index);
+      } else {
+        messages.Say("Dummy argument '%s=' (#%d) is not OPTIONAL and is not "
+                     "associated with an actual argument in this procedure "
+                     "reference"_err_en_US,
+            dummy.name, index);
       }
     }
-    if (proc.IsElemental() && !buffer.AnyFatalError()) {
-      CheckElementalConformance(messages, proc, actuals, localContext);
-    }
+  }
+  if (proc.IsElemental() && !buffer.AnyFatalError()) {
+    CheckElementalConformance(messages, proc, actuals, localContext);
+  }
+  if (intrinsic) {
+    CheckSpecificIntrinsic(actuals, localContext, scope, *intrinsic);
   }
   return buffer;
-}
-
-parser::Messages CheckExplicitInterface(const characteristics::Procedure &proc,
-    evaluate::ActualArguments &actuals, const evaluate::FoldingContext &context,
-    const Scope &scope, const evaluate::SpecificIntrinsic *intrinsic) {
-  return CheckExplicitInterface(
-      proc, actuals, context, &scope, intrinsic, true);
 }
 
 bool CheckInterfaceForGeneric(const characteristics::Procedure &proc,
@@ -1007,8 +1154,8 @@ bool CheckArguments(const characteristics::Procedure &proc,
     }
   }
   if (explicitInterface) {
-    auto buffer{
-        CheckExplicitInterface(proc, actuals, context, scope, intrinsic)};
+    auto buffer{CheckExplicitInterface(
+        proc, actuals, context, &scope, intrinsic, true)};
     if (!buffer.empty()) {
       if (treatingExternalAsImplicit && !buffer.empty()) {
         if (auto *msg{messages.Say(
