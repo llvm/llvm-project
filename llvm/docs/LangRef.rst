@@ -5998,6 +5998,21 @@ valid debug intrinsic.
     !4 = !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)
     !5 = !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
 
+DIAssignID
+""""""""""""
+
+``DIAssignID`` nodes have no operands and are always distinct. They are used to
+link together `@llvm.dbg.assign` intrinsics (:ref:`debug
+intrinsics<dbg_intrinsics>`) and instructions that store in IR. See `Debug Info
+Assignment Tracking <AssignmentTracking.html>`_ for more info.
+
+.. code-block:: llvm
+
+    store i32 %a, ptr %a.addr, align 4, !DIAssignID !2
+    llvm.dbg.assign(metadata %a, metadata !1, metadata !DIExpression(), !2, metadata %a.addr, metadata !DIExpression()), !dbg !3
+
+    !2 = distinct !DIAssignID()
+
 DIArgList
 """"""""""""
 
