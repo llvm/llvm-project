@@ -625,6 +625,7 @@ def OMP_Target : Directive<"target"> {
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Device>,
+    VersionedClause<OMPC_ThreadLimit, 51>,
     VersionedClause<OMPC_DefaultMap>,
     VersionedClause<OMPC_NoWait>
   ];
