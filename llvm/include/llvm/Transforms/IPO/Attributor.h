@@ -1406,11 +1406,12 @@ struct AttributorConfig {
   bool RewriteSignatures = true;
 
   /// Flag to determine if we want to initialize all default AAs for an internal
-  /// function marked live.
-  /// TODO: This should probably be a callback, or maybe
-  /// identifyDefaultAbstractAttributes should be virtual, something to allow
-  /// customizable lazy initialization for internal functions.
+  /// function marked live. See also: InitializationCallback>
   bool DefaultInitializeLiveInternals = true;
+
+  /// Callback function to be invoked on internal functions marked live.
+  std::function<void(Attributor &A, const Function &F)> InitializationCallback =
+      nullptr;
 
   /// Helper to update an underlying call graph and to delete functions.
   CallGraphUpdater &CGUpdater;
@@ -1738,6 +1739,8 @@ struct Attributor {
 
     if (Configuration.DefaultInitializeLiveInternals)
       identifyDefaultAbstractAttributes(const_cast<Function &>(F));
+    if (Configuration.InitializationCallback)
+      Configuration.InitializationCallback(*this, F);
   }
 
   /// Helper function to remove callsite.

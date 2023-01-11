@@ -708,10 +708,10 @@ define internal void @exclusion_set3_helper(i1 %c, ptr %p) {
 ; TUNIT-NEXT:    store i32 77, ptr [[P]], align 4
 ; TUNIT-NEXT:    call void @exclusion_set3_helper(i1 noundef true, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[P]]) #[[ATTR8]]
 ; TUNIT-NEXT:    [[USE2:%.*]] = load i32, ptr [[P]], align 4
-; TUNIT-NEXT:    call void @usei32(i32 [[USE2]])
+; TUNIT-NEXT:    call void @usei32(i32 noundef [[USE2]])
 ; TUNIT-NEXT:    br label [[T]]
 ; TUNIT:       m:
-; TUNIT-NEXT:    call void @usei32(i32 42)
+; TUNIT-NEXT:    call void @usei32(i32 noundef 42)
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nosync

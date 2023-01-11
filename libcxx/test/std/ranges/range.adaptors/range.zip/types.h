@@ -302,29 +302,7 @@ static_assert(std::ranges::contiguous_range<ContiguousNonCommonSized>);
 static_assert(!std::ranges::common_range<ContiguousNonCommonSized>);
 static_assert(std::ranges::sized_range<ContiguousNonCommonSized>);
 
-template <class Base = int*>
-struct common_input_iterator {
-  Base it_;
-
-  using value_type = int;
-  using difference_type = std::intptr_t;
-  using iterator_concept = std::input_iterator_tag;
-
-  constexpr common_input_iterator() = default;
-  constexpr explicit common_input_iterator(Base it) : it_(it) {}
-
-  constexpr common_input_iterator& operator++() {
-    ++it_;
-    return *this;
-  }
-  constexpr void operator++(int) { ++it_; }
-
-  constexpr decltype(auto) operator*() const { return *it_; }
-
-  friend constexpr bool operator==(common_input_iterator const&, common_input_iterator const&) = default;
-};
-
-using InputCommonView = BasicView<common_input_iterator<>>;
+using InputCommonView = BasicView<common_input_iterator<int*>>;
 static_assert(std::ranges::input_range<InputCommonView>);
 static_assert(!std::ranges::forward_range<InputCommonView>);
 static_assert(std::ranges::common_range<InputCommonView>);
@@ -337,7 +315,7 @@ static_assert(!std::ranges::forward_range<NonSimpleInputCommonView>);
 static_assert(std::ranges::common_range<NonSimpleInputCommonView>);
 LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<NonSimpleInputCommonView>);
 
-using InputNonCommonView = BasicView<common_input_iterator<>, sentinel_wrapper<common_input_iterator<>>>;
+using InputNonCommonView = BasicView<common_input_iterator<int*>, sentinel_wrapper<common_input_iterator<int*>>>;
 static_assert(std::ranges::input_range<InputNonCommonView>);
 static_assert(!std::ranges::forward_range<InputNonCommonView>);
 static_assert(!std::ranges::common_range<InputNonCommonView>);

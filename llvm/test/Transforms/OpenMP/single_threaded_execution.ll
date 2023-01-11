@@ -51,6 +51,13 @@ if.end:
   ret void
 }
 
+; CHECK: [openmp-opt] Basic block @foo entry is executed by a single thread.
+; Function Attrs: noinline
+define internal void @foo() {
+entry:
+  ret void
+}
+
 ; CHECK-NOT: [openmp-opt] Basic block @amdgcn entry is executed by a single thread.
 ; CHECK-DAG: [openmp-opt] Basic block @amdgcn if.then is executed by a single thread.
 ; CHECK-NOT: [openmp-opt] Basic block @amdgcn if.end is executed by a single thread.
@@ -69,13 +76,6 @@ if.then:
   br label %if.end
 
 if.end:
-  ret void
-}
-
-; CHECK: [openmp-opt] Basic block @foo entry is executed by a single thread.
-; Function Attrs: noinline
-define internal void @foo() {
-entry:
   ret void
 }
 

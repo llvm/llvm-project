@@ -287,6 +287,26 @@ OpFoldResult MaxUOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// MinSOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult MinSOp::fold(ArrayRef<Attribute> operands) {
+  return foldBinaryOpChecked(operands, [](const APInt &lhs, const APInt &rhs) {
+    return lhs.slt(rhs) ? lhs : rhs;
+  });
+}
+
+//===----------------------------------------------------------------------===//
+// MinUOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult MinUOp::fold(ArrayRef<Attribute> operands) {
+  return foldBinaryOpChecked(operands, [](const APInt &lhs, const APInt &rhs) {
+    return lhs.ult(rhs) ? lhs : rhs;
+  });
+}
+
+//===----------------------------------------------------------------------===//
 // ShlOp
 //===----------------------------------------------------------------------===//
 

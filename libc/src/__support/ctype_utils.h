@@ -36,6 +36,12 @@ static constexpr bool isspace(unsigned ch) {
   return ch == ' ' || (ch - '\t') < 5;
 }
 
+static constexpr int tolower(int ch) {
+  if (isupper(ch))
+    return ch + ('a' - 'A');
+  return ch;
+}
+
 } // namespace internal
 } // namespace __llvm_libc
 

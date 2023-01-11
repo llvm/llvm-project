@@ -131,29 +131,49 @@ LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
   return success();
 }
 
-struct TransposeNoOp : public OpRewritePattern<tosa::TransposeOp> {
+struct ConsolidateTransposeOptimization
+    : public OpRewritePattern<tosa::TransposeOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(tosa::TransposeOp op,
+  LogicalResult matchAndRewrite(tosa::TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
-    auto perm = op.getPerms();
+    // Input is also TransposeOp - transpose(transpose(A)).
+    auto innerTranspose =
+        transposeOp.getInput1().getDefiningOp<tosa::TransposeOp>();
+    if (!innerTranspose)
+      return rewriter.notifyMatchFailure(transposeOp,
+                                         "input must be transpose operation");
 
-    DenseIntElementsAttr permAttr;
-    if (!matchPattern(perm, m_Constant(&permAttr))) {
-      return failure();
-    }
+    SmallVector<int64_t> transposePerms, innerTransposePerms;
+    if (transposeOp.getConstantPerms(transposePerms).failed())
+      return rewriter.notifyMatchFailure(transposeOp,
+                                         "transpose perms must be constant");
+    if (innerTranspose.getConstantPerms(innerTransposePerms).failed())
+      return rewriter.notifyMatchFailure(
+          transposeOp, "inner transpose perms must be constant");
+    if (transposePerms.size() != innerTransposePerms.size())
+      return rewriter.notifyMatchFailure(
+          transposeOp,
+          "transpose and inner transpose perms sizes must be equal");
+    if (transposePerms.empty())
+      return rewriter.notifyMatchFailure(
+          transposeOp, "transpose perms sizes must be positive");
 
-    SmallVector<int64_t> permValues = llvm::to_vector<6>(
-        llvm::map_range(permAttr.getValues<APInt>(),
-                        [](const APInt &val) { return val.getSExtValue(); }));
+    // Consolidate transposes into one transpose.
+    SmallVector<int32_t> perms(transposePerms.size());
+    for (int i = 0, s = transposePerms.size(); i < s; ++i)
+      perms[i] = innerTransposePerms[transposePerms[i]];
 
-    for (int i = 0, s = permValues.size(); i < s; i++) {
-      if (i != permValues[i]) {
-        return failure();
-      }
-    }
+    auto permsTy =
+        RankedTensorType::get(transposePerms.size(), rewriter.getI32Type());
+    auto permsAttr = DenseIntElementsAttr::get(permsTy, perms);
+    Value permsValue =
+        rewriter.create<arith::ConstantOp>(transposeOp.getLoc(), permsAttr);
 
-    rewriter.replaceOp(op, op.getInput1());
+    rewriter.replaceOpWithNewOp<tosa::TransposeOp>(
+        transposeOp, transposeOp.getResult().getType(),
+        innerTranspose.getInput1(), permsValue);
+
     return success();
   }
 };
@@ -212,7 +232,7 @@ struct TransposeIsReshape : public OpRewritePattern<tosa::TransposeOp> {
 
 void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<TransposeNoOp, TransposeIsReshape>(context);
+  results.add<ConsolidateTransposeOptimization, TransposeIsReshape>(context);
 }
 
 struct AddZeroOptimization : public OpRewritePattern<tosa::AddOp> {
@@ -997,26 +1017,27 @@ OpFoldResult TileOp::fold(ArrayRef<Attribute> operands) {
 }
 
 OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
-  if (!operands[1])
-    return {};
-
   auto inputTy = getInput1().getType().cast<ShapedType>();
   auto resultTy = getType().cast<ShapedType>();
-  if (inputTy.getElementType() != resultTy.getElementType())
-    return {};
 
   // Transposing splat values just means reshaping.
   if (auto input = operands[0].dyn_cast_or_null<DenseElementsAttr>()) {
-    if (input.isSplat())
-      return input.reshape(getType().cast<ShapedType>());
+    if (input.isSplat() && resultTy.hasStaticShape() &&
+        inputTy.getElementType() == resultTy.getElementType())
+      return input.reshape(resultTy);
   }
 
-  auto perms = llvm::to_vector<6>(llvm::map_range(
-      operands[1].cast<DenseIntElementsAttr>().getValues<APInt>(),
-      [](const APInt &val) { return val.getSExtValue(); }));
+  // Transpose does not change the input type.
+  if (getInput1().getType() != getType())
+    return {};
 
-  if (llvm::equal(llvm::seq<int64_t>(0, perms.size()), perms) &&
-      getInput1().getType() == getType())
-    return getInput1();
-  return {};
+  // Transpose is not the identity transpose.
+  SmallVector<int64_t> perms;
+  if (getConstantPerms(perms).failed())
+    return {};
+
+  if (!llvm::equal(llvm::seq<int64_t>(0, perms.size()), perms))
+    return {};
+
+  return getInput1();
 }

@@ -279,6 +279,46 @@ func.func @maxu() -> index {
   return %0 : index
 }
 
+// CHECK-LABEL: @mins
+func.func @mins() -> index {
+  %lhs = index.constant -4
+  %rhs = index.constant 2
+  // CHECK: %[[A:.*]] = index.constant -4
+  %0 = index.mins %lhs, %rhs
+  // CHECK: return %[[A]]
+  return %0 : index
+}
+
+// CHECK-LABEL: @mins_nofold
+func.func @mins_nofold() -> index {
+  %lhs = index.constant 1
+  %rhs = index.constant 0x100000000
+  // 32-bit result differs from 64-bit.
+  // CHECK: index.mins
+  %0 = index.mins %lhs, %rhs
+  return %0 : index
+}
+
+// CHECK-LABEL: @mins_nofold_2
+func.func @mins_nofold_2() -> index {
+  %lhs = index.constant 0x7fffffff
+  %rhs = index.constant 0x80000000
+  // 32-bit result differs from 64-bit.
+  // CHECK: index.mins
+  %0 = index.mins %lhs, %rhs
+  return %0 : index
+}
+
+// CHECK-LABEL: @minu
+func.func @minu() -> index {
+  %lhs = index.constant -1
+  %rhs = index.constant 1
+  // CHECK: %[[A:.*]] = index.constant 1
+  %0 = index.minu %lhs, %rhs
+  // CHECK: return %[[A]]
+  return %0 : index
+}
+
 // CHECK-LABEL: @shl
 func.func @shl() -> index {
   %lhs = index.constant 128

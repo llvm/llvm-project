@@ -18,6 +18,25 @@ def BsdExtensions : StandardSpec<"BSDExtensions"> {
       ]
   >;
 
+  HeaderSpec Strings = HeaderSpec<
+      "strings.h",
+      [], // Macros
+      [], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+            "strcasecmp",
+            RetValSpec<IntType>,
+            [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>]
+        >,
+        FunctionSpec<
+            "strncasecmp",
+            RetValSpec<IntType>,
+            [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>, ArgSpec<SizeTType>]
+        >,
+      ]
+  >;
+
   HeaderSpec SysWait = HeaderSpec<
       "sys/wait.h",
       [], // Macros
@@ -34,6 +53,7 @@ def BsdExtensions : StandardSpec<"BSDExtensions"> {
 
   let Headers = [
     String,
+    Strings,
     SysWait,
   ];
 }
