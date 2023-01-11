@@ -116,9 +116,6 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case RISCV::HWASAN_CHECK_MEMACCESS_SHORTGRANULES:
     LowerHWASAN_CHECK_MEMACCESS(*MI);
     return;
-  case RISCV::PseudoMemBarrier:
-    OutStreamer->emitRawComment("MEMBARRIER");
-    return;
   }
 
   MCInst TmpInst;
