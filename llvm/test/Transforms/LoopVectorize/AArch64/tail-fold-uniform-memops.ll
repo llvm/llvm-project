@@ -17,7 +17,7 @@ define void @uniform_load(i32* noalias %dst, i32* noalias readonly %src, i64 %n)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IDX]], 0
 ; CHECK-NEXT:    [[LOAD_VAL:%.*]] = load i32, i32* %src, align 4
 ; CHECK-NOT:     load i32, i32* %src, align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> poison, i32 [[LOAD_VAL]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> poison, i32 [[LOAD_VAL]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* %dst, i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[TMP6]], i32 0
@@ -53,7 +53,7 @@ define void @cond_uniform_load(i32* nocapture %dst, i32* nocapture readonly %src
 ; CHECK-LABEL: @cond_uniform_load(
 ; CHECK:       vector.ph:
 ; CHECK:         [[INIT_ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 %n)
-; CHECK:         [[TMP1:%.*]] = insertelement <4 x i32*> poison, i32* %src, i32 0
+; CHECK:         [[TMP1:%.*]] = insertelement <4 x i32*> poison, i32* %src, i64 0
 ; CHECK-NEXT:    [[SRC_SPLAT:%.*]] = shufflevector <4 x i32*> [[TMP1]], <4 x i32*> poison, <4 x i32> zeroinitializer
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[IDX_NEXT:%.*]], %vector.body ]

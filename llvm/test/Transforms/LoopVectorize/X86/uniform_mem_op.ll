@@ -63,7 +63,7 @@ define i32 @uniform_load2(ptr align(4) %addr) {
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ADDR:%.*]], align 4
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT8]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1]] = add <4 x i32> [[VEC_PHI]], [[BROADCAST_SPLAT9]]
 ; CHECK-NEXT:    [[TMP2]] = add <4 x i32> [[VEC_PHI1]], [[BROADCAST_SPLAT9]]
@@ -496,7 +496,7 @@ define i32 @uniform_load_global() {
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @GAddr, align 4
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT8]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1]] = add <4 x i32> [[VEC_PHI]], [[BROADCAST_SPLAT9]]
 ; CHECK-NEXT:    [[TMP2]] = add <4 x i32> [[VEC_PHI1]], [[BROADCAST_SPLAT9]]
@@ -558,7 +558,7 @@ define i32 @uniform_load_constexpr() {
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr getelementptr (i32, ptr @GAddr, i64 5), align 4
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT8]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1]] = add <4 x i32> [[VEC_PHI]], [[BROADCAST_SPLAT9]]
 ; CHECK-NEXT:    [[TMP2]] = add <4 x i32> [[VEC_PHI1]], [[BROADCAST_SPLAT9]]

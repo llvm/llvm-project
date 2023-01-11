@@ -153,7 +153,7 @@ define void @test_widen_induction(ptr %A, i64 %N) {
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_MOD_VF3:%.*]] = urem i64 [[N]], 2
 ; CHECK-NEXT:    [[N_VEC4:%.*]] = sub i64 [[N]], [[N_MOD_VF3]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[BC_RESUME_VAL]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i64> [[DOTSPLAT]], <i64 0, i64 1>
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
@@ -211,7 +211,7 @@ define void @test_widen_induction_variable_start(ptr %A, i64 %N, i64 %start) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[START]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[START]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i64> [[DOTSPLAT]], <i64 0, i64 1>
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[START]], [[N_VEC]]
@@ -247,7 +247,7 @@ define void @test_widen_induction_variable_start(ptr %A, i64 %N, i64 %start) {
 ; CHECK-NEXT:    [[N_MOD_VF3:%.*]] = urem i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[N_VEC4:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF3]]
 ; CHECK-NEXT:    [[IND_END5:%.*]] = add i64 [[START]], [[N_VEC4]]
-; CHECK-NEXT:    [[DOTSPLATINSERT10:%.*]] = insertelement <2 x i64> poison, i64 [[BC_RESUME_VAL]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT10:%.*]] = insertelement <2 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT11:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT10]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION12:%.*]] = add <2 x i64> [[DOTSPLAT11]], <i64 0, i64 1>
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
@@ -336,7 +336,7 @@ define void @test_widen_induction_step_2(ptr %A, i64 %N, i32 %step) {
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[IND_END5]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_MOD_VF3:%.*]] = urem i64 [[N]], 2
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i64 [[N]], [[N_MOD_VF3]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[BC_RESUME_VAL]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i64> [[DOTSPLAT]], <i64 0, i64 1>
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
@@ -427,7 +427,7 @@ define void @test_widen_extended_induction(ptr %dst) {
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ 16, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ 10000, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i8> poison, i8 [[BC_RESUME_VAL]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i8> poison, i8 [[BC_RESUME_VAL]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i8> [[DOTSPLATINSERT]], <2 x i8> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i8> [[DOTSPLAT]], <i8 0, i8 1>
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
@@ -512,7 +512,7 @@ define void @test_widen_truncated_induction(ptr %A) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 10000, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 10000, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[BC_RESUME_VAL]] to i8
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i8> poison, i8 [[TMP7]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i8> poison, i8 [[TMP7]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i8> [[DOTSPLATINSERT]], <2 x i8> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i8> [[DOTSPLAT]], <i8 0, i8 1>
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
