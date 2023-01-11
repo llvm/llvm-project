@@ -1,5 +1,7 @@
 // https://github.com/llvm/llvm-project/issues/59765
-//
+// FIXME: Disable the test for now to figure out why the
+// test is still being run on AIX despite the REQUIRES.
+// XFAIL: target={{.*}}-aix{{.*}}
 // FIXME: Since the signature of the constructors/destructors is
 // different in different targets. The current CHECK can't work
 // well for other targets like AIX. So here is the REQUIRES.
