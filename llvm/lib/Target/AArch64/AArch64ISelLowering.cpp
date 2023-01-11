@@ -20023,11 +20023,11 @@ static SDValue foldCSELofCTTZ(SDNode *N, SelectionDAG &DAG) {
 
 // (CSEL l r EQ (CMP (CSEL x y cc2 cond) x)) => (CSEL l r cc2 cond)
 // (CSEL l r EQ (CMP (CSEL x y cc2 cond) y)) => (CSEL l r !cc2 cond)
-// Where x and y are constants
+// Where x and y are constants and x != y
 
 // (CSEL l r NE (CMP (CSEL x y cc2 cond) x)) => (CSEL l r !cc2 cond)
 // (CSEL l r NE (CMP (CSEL x y cc2 cond) y)) => (CSEL l r cc2 cond)
-// Where x and y are constants
+// Where x and y are constants and x != y
 static SDValue foldCSELOfCSEL(SDNode *Op, SelectionDAG &DAG) {
   SDValue L = Op->getOperand(0);
   SDValue R = Op->getOperand(1);
@@ -20048,9 +20048,17 @@ static SDValue foldCSELOfCSEL(SDNode *Op, SelectionDAG &DAG) {
 
   SDValue X = CmpLHS->getOperand(0);
   SDValue Y = CmpLHS->getOperand(1);
-  if (!isa<ConstantSDNode>(X) || !isa<ConstantSDNode>(Y)) {
+  if (!isa<ConstantSDNode>(X) || !isa<ConstantSDNode>(Y) || X == Y) {
     return SDValue();
   }
+
+  // If one of the constant is opaque constant, x,y sdnode is still different
+  // but the real value maybe the same. So check APInt here to make sure the
+  // code is correct.
+  ConstantSDNode *CX = cast<ConstantSDNode>(X);
+  ConstantSDNode *CY = cast<ConstantSDNode>(Y);
+  if (CX->getAPIntValue() == CY->getAPIntValue())
+    return SDValue();
 
   AArch64CC::CondCode CC =
       static_cast<AArch64CC::CondCode>(CmpLHS->getConstantOperandVal(2));
