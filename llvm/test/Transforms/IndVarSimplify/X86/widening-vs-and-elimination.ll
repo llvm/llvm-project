@@ -5,64 +5,58 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128-ni:1-p2:32:8:8:32-ni:2"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @test(ptr %p1, ptr %p2) {
-; WIDENING_ON-LABEL: @test(
+define void @test_01(i32 %start, i32 %limit) {
+; WIDENING_ON-LABEL: @test_01(
 ; WIDENING_ON-NEXT:  bb:
-; WIDENING_ON-NEXT:    [[VAR:%.*]] = load atomic i32, ptr [[P1:%.*]] unordered, align 8
-; WIDENING_ON-NEXT:    [[VAR1:%.*]] = load atomic i32, ptr [[P2:%.*]] unordered, align 8
-; WIDENING_ON-NEXT:    [[TMP0:%.*]] = zext i32 [[VAR]] to i64
-; WIDENING_ON-NEXT:    br label [[BB2:%.*]]
-; WIDENING_ON:       bb2:
-; WIDENING_ON-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BB8:%.*]] ], [ [[TMP0]], [[BB:%.*]] ]
+; WIDENING_ON-NEXT:    [[TMP0:%.*]] = zext i32 [[START:%.*]] to i64
+; WIDENING_ON-NEXT:    br label [[LOOP:%.*]]
+; WIDENING_ON:       loop:
+; WIDENING_ON-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[TMP0]], [[BB:%.*]] ]
 ; WIDENING_ON-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], -1
 ; WIDENING_ON-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
-; WIDENING_ON-NEXT:    [[VAR5:%.*]] = icmp ne i64 [[INDVARS_IV]], 0
-; WIDENING_ON-NEXT:    [[TMP2:%.*]] = zext i32 [[VAR1]] to i64
-; WIDENING_ON-NEXT:    [[VAR6_WIDE:%.*]] = icmp ult i64 [[TMP1]], [[TMP2]]
-; WIDENING_ON-NEXT:    [[VAR7:%.*]] = and i1 [[VAR5]], [[VAR6_WIDE]]
-; WIDENING_ON-NEXT:    br i1 [[VAR7]], label [[BB8]], label [[BB11:%.*]]
-; WIDENING_ON:       bb8:
-; WIDENING_ON-NEXT:    br label [[BB2]]
-; WIDENING_ON:       bb11:
+; WIDENING_ON-NEXT:    [[NOT_ZERO:%.*]] = icmp ne i64 [[INDVARS_IV]], 0
+; WIDENING_ON-NEXT:    [[TMP2:%.*]] = zext i32 [[LIMIT:%.*]] to i64
+; WIDENING_ON-NEXT:    [[RANGE_CHECK_WIDE:%.*]] = icmp ult i64 [[TMP1]], [[TMP2]]
+; WIDENING_ON-NEXT:    [[AND:%.*]] = and i1 [[NOT_ZERO]], [[RANGE_CHECK_WIDE]]
+; WIDENING_ON-NEXT:    br i1 [[AND]], label [[BACKEDGE]], label [[EXIT:%.*]]
+; WIDENING_ON:       backedge:
+; WIDENING_ON-NEXT:    br label [[LOOP]]
+; WIDENING_ON:       exit:
 ; WIDENING_ON-NEXT:    ret void
 ;
-; WIDENING_OFF-LABEL: @test(
+; WIDENING_OFF-LABEL: @test_01(
 ; WIDENING_OFF-NEXT:  bb:
-; WIDENING_OFF-NEXT:    [[VAR:%.*]] = load atomic i32, ptr [[P1:%.*]] unordered, align 8
-; WIDENING_OFF-NEXT:    [[VAR1:%.*]] = load atomic i32, ptr [[P2:%.*]] unordered, align 8
-; WIDENING_OFF-NEXT:    br label [[BB2:%.*]]
-; WIDENING_OFF:       bb2:
-; WIDENING_OFF-NEXT:    [[VAR3:%.*]] = phi i32 [ [[VAR4:%.*]], [[BB8:%.*]] ], [ [[VAR]], [[BB:%.*]] ]
-; WIDENING_OFF-NEXT:    [[VAR4]] = add i32 [[VAR3]], -1
-; WIDENING_OFF-NEXT:    [[VAR5:%.*]] = icmp ne i32 [[VAR3]], 0
-; WIDENING_OFF-NEXT:    [[VAR6:%.*]] = icmp ult i32 [[VAR4]], [[VAR1]]
-; WIDENING_OFF-NEXT:    [[VAR7:%.*]] = and i1 [[VAR5]], [[VAR6]]
-; WIDENING_OFF-NEXT:    br i1 [[VAR7]], label [[BB8]], label [[BB11:%.*]]
-; WIDENING_OFF:       bb8:
-; WIDENING_OFF-NEXT:    [[VAR9:%.*]] = zext i32 [[VAR4]] to i64
-; WIDENING_OFF-NEXT:    [[VAR10:%.*]] = getelementptr inbounds i32, ptr addrspace(1) poison, i64 [[VAR9]]
-; WIDENING_OFF-NEXT:    br label [[BB2]]
-; WIDENING_OFF:       bb11:
+; WIDENING_OFF-NEXT:    br label [[LOOP:%.*]]
+; WIDENING_OFF:       loop:
+; WIDENING_OFF-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[START:%.*]], [[BB:%.*]] ]
+; WIDENING_OFF-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
+; WIDENING_OFF-NEXT:    [[NOT_ZERO:%.*]] = icmp ne i32 [[IV]], 0
+; WIDENING_OFF-NEXT:    [[RANGE_CHECK:%.*]] = icmp ult i32 [[IV_NEXT]], [[LIMIT:%.*]]
+; WIDENING_OFF-NEXT:    [[AND:%.*]] = and i1 [[NOT_ZERO]], [[RANGE_CHECK]]
+; WIDENING_OFF-NEXT:    br i1 [[AND]], label [[BACKEDGE]], label [[EXIT:%.*]]
+; WIDENING_OFF:       backedge:
+; WIDENING_OFF-NEXT:    [[ZEXT:%.*]] = zext i32 [[IV_NEXT]] to i64
+; WIDENING_OFF-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr addrspace(1) poison, i64 [[ZEXT]]
+; WIDENING_OFF-NEXT:    br label [[LOOP]]
+; WIDENING_OFF:       exit:
 ; WIDENING_OFF-NEXT:    ret void
 ;
 bb:
-  %var = load atomic i32, ptr %p1 unordered, align 8
-  %var1 = load atomic i32, ptr %p2 unordered, align 8
-  br label %bb2
+  br label %loop
 
-bb2:                                              ; preds = %bb8, %bb
-  %var3 = phi i32 [ %var4, %bb8 ], [ %var, %bb ]
-  %var4 = add i32 %var3, -1
-  %var5 = icmp ne i32 %var3, 0
-  %var6 = icmp ult i32 %var4, %var1
-  %var7 = and i1 %var5, %var6
-  br i1 %var7, label %bb8, label %bb11
+loop:                                              ; preds = %backedge, %bb
+  %iv = phi i32 [ %iv.next, %backedge ], [ %start, %bb ]
+  %iv.next = add i32 %iv, -1
+  %not.zero = icmp ne i32 %iv, 0
+  %range.check = icmp ult i32 %iv.next, %limit
+  %and = and i1 %not.zero, %range.check
+  br i1 %and, label %backedge, label %exit
 
-bb8:                                              ; preds = %bb2
-  %var9 = zext i32 %var4 to i64
-  %var10 = getelementptr inbounds i32, ptr addrspace(1) poison, i64 %var9
-  br label %bb2
+backedge:                                              ; preds = %loop
+  %zext = zext i32 %iv.next to i64
+  %gep = getelementptr inbounds i32, ptr addrspace(1) poison, i64 %zext
+  br label %loop
 
-bb11:                                             ; preds = %bb2
+exit:                                             ; preds = %loop
   ret void
 }
