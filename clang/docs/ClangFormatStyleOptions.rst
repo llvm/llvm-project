@@ -3169,24 +3169,42 @@ the configuration (without a prefix: ``Auto``).
   Nested configuration flags:
 
   Separator format of integer literals of different bases.
-  If <0: Remove separators.
-  If  0: Leave the literal as is.
-  If >0: Insert separators between digits starting from the rightmost digit.
 
-  * ``int8_t Binary`` .. code-block:: c++
+  If negative, remove separators. If  ``0``, leave the literal as is. If
+  positive, insert separators between digits starting from the rightmost
+  digit.
+
+  For example, the config below will leave separators in binary literals
+  alone, insert separators in decimal literals to separate the digits into
+  groups of 3, and remove separators in hexadecimal literals.
+
+  .. code-block:: c++
+
+    IntegerLiteralSeparator:
+      Binary: 0
+      Decimal: 3
+      Hex: -1
+
+  * ``int8_t Binary`` Format separators in binary literals.
+
+    .. code-block:: c++
 
        -1: 0b100111101101
         0: 0b10011'11'0110'1
         3: 0b100'111'101'101
         4: 0b1001'1110'1101
 
-  * ``int8_t Decimal`` .. code-block:: c++
+  * ``int8_t Decimal`` Format separators in decimal literals.
+
+    .. code-block:: c++
 
        -1: 18446744073709550592ull
         0: 184467'440737'0'95505'92ull
         3: 18'446'744'073'709'550'592ull
 
-  * ``int8_t Hex`` .. code-block:: c++
+  * ``int8_t Hex`` Format separators in hexadecimal literals.
+
+    .. code-block:: c++
 
        -1: 0xDEADBEEFDEADBEEFuz
         0: 0xDEAD'BEEF'DE'AD'BEE'Fuz
