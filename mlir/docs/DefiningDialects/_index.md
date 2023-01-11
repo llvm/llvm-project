@@ -255,6 +255,31 @@ LogicalResult MyDialect::verifyRegionResultAttribute(Operation *op, unsigned reg
                                                      unsigned argIndex, NamedAttribute attribute);
 ```
 
+#### `useFoldAPI`
+
+There are currently two possible values that are allowed to be assigned to this
+field:
+* `kEmitFoldAdaptorFolder` generates a `fold` method making use of the op's 
+  `FoldAdaptor` to allow access of operands via convenient getter.
+
+  Generated code example:
+  ```cpp
+  OpFoldResult fold(FoldAdaptor adaptor);
+  // or
+  LogicalResult fold(FoldAdaptor adaptor, SmallVectorImpl<OpFoldResult>& results);
+  ```
+* `kEmitRawAttributesFolder` generates the deprecated legacy `fold`
+  method, containing `ArrayRef<Attribute>` in the parameter list instead of
+  the op's `FoldAdaptor`. This API is scheduled for removal and should not be 
+  used by new dialects.
+
+  Generated code example:
+  ```cpp
+  OpFoldResult fold(ArrayRef<Attribute> operands);
+  // or
+  LogicalResult fold(ArrayRef<Attribute> operands, SmallVectorImpl<OpFoldResult>& results);
+  ```
+
 ### Operation Interface Fallback
 
 Some dialects have an open ecosystem and don't register all of the possible operations. In such

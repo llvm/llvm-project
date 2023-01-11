@@ -314,6 +314,8 @@ public:
   /// Returns the remove name for the accessor of `name`.
   std::string getRemoverName(StringRef name) const;
 
+  bool hasFolder() const;
+
 private:
   /// Populates the vectors containing operands, attributes, results and traits.
   void populateOpStructure();

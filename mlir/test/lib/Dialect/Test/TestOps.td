@@ -1297,6 +1297,31 @@ def TestOpInPlaceFoldSuccess : TEST_Op<"op_in_place_fold_success"> {
   }];
 }
 
+def TestOpFoldWithFoldAdaptor
+  : TEST_Op<"fold_with_fold_adaptor",
+      [AttrSizedOperandSegments, NoTerminator]> {
+  let arguments = (ins
+    I32:$op,
+    DenseI32ArrayAttr:$attr,
+    Variadic<I32>:$variadic,
+    VariadicOfVariadic<I32, "attr">:$var_of_var
+  );
+
+  let results = (outs I32:$res);
+
+  let regions = (region AnyRegion:$body);
+
+  let assemblyFormat = [{
+    $op `,` `[` $variadic `]` `,` `{` $var_of_var `}` $body attr-dict-with-keyword
+  }];
+
+  let hasFolder = 0;
+
+  let extraClassDeclaration = [{
+    ::mlir::OpFoldResult fold(FoldAdaptor adaptor);
+  }];
+}
+
 // An op that always fold itself.
 def TestPassthroughFold : TEST_Op<"passthrough_fold"> {
   let arguments = (ins AnyType:$op);
