@@ -4105,6 +4105,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         (Opts.ObjCRuntime.getKind() == ObjCRuntime::FragileMacOSX);
   }
 
+  if ((Opts.ModulesTS || Opts.CPlusPlusModules) && !Opts.ModulesLocalVisibility)
+    Diags.Report(diag::err_modules_no_lsv) << (Opts.CPlusPlusModules ? 0 : 1);
+
   if (Arg *A = Args.getLastArg(options::OPT_fgnuc_version_EQ)) {
     // Check that the version has 1 to 3 components and the minor and patch
     // versions fit in two decimal digits.
