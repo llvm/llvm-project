@@ -3,4 +3,3 @@ module LLVM_Extern_IR_Attributes_Gen {}
 module LLVM_Extern_IR_Intrinsics_Gen {}
 module LLVM_Extern_IR_Intrinsics_Enum {}
 module LLVM_Extern_Utils_DataTypes {}
-module LLVM_Extern_TargetParser_Gen {}

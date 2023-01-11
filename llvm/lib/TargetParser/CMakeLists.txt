@@ -1,3 +1,4 @@
+
 add_llvm_component_library(LLVMTargetParser
   AArch64TargetParser.cpp
   ARMTargetParserCommon.cpp
@@ -5,7 +6,6 @@ add_llvm_component_library(LLVMTargetParser
   CSKYTargetParser.cpp
   Host.cpp
   LoongArchTargetParser.cpp
-  RISCVTargetParser.cpp
   TargetParser.cpp
   Triple.cpp
   X86TargetParser.cpp
@@ -16,7 +16,4 @@ add_llvm_component_library(LLVMTargetParser
 
   LINK_COMPONENTS
   Support
-
-  DEPENDS
-  RISCVTargetParserTableGen
   )
