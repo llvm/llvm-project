@@ -729,6 +729,14 @@ CachingDiagnosticsProcessor::serializeEmittedDiagnostics() {
 
 Error CachingDiagnosticsProcessor::replayCachedDiagnostics(
     StringRef Buffer, DiagnosticConsumer &Consumer) {
+
+  // A compilation that only includes "#import <Foundation/Foundation.h>" and
+  // passes "-Weverything -Wsystem-headers" generated 3780 warnings and when
+  // replaying them:
+  //   * Deserialization of diagnostics: ~40ms
+  //   * Rendering the diagnostics: ~240ms
+  // FIXME: Look into improving performance of diagnostic rendering.
+
   CachedDiagnosticSerializer Serializer(Mapper, FileMgr);
   if (Error E = Serializer.deserializeCachedDiagnostics(Buffer))
     return E;
