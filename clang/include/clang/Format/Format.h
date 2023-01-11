@@ -1221,6 +1221,36 @@ struct FormatStyle {
   /// \version 3.8
   BraceWrappingFlags BraceWrapping;
 
+  /// Different ways to break after attributes.
+  enum AttributeBreakingStyle : int8_t {
+    /// Always break after attributes.
+    /// \code
+    ///   [[nodiscard]]
+    ///   inline int f();
+    ///   [[gnu::const]] [[nodiscard]]
+    ///   int g();
+    /// \endcode
+    ABS_Always,
+    /// Leave the line breaking after attributes as is.
+    /// \code
+    ///   [[nodiscard]] inline int f();
+    ///   [[gnu::const]] [[nodiscard]]
+    ///   int g();
+    /// \endcode
+    ABS_Leave,
+    /// Never break after attributes.
+    /// \code
+    ///   [[nodiscard]] inline int f();
+    ///   [[gnu::const]] [[nodiscard]] int g();
+    /// \endcode
+    ABS_Never,
+  };
+
+  /// Break after a group of C++11 attributes before a function
+  /// declaration/definition name.
+  /// \version 16
+  AttributeBreakingStyle BreakAfterAttributes;
+
   /// If ``true``, clang-format will always break after a Json array `[`
   /// otherwise it will scan until the closing `]` to determine if it should add
   /// newlines between elements (prettier compatible).
@@ -4097,6 +4127,7 @@ struct FormatStyle {
            BinPackArguments == R.BinPackArguments &&
            BinPackParameters == R.BinPackParameters &&
            BitFieldColonSpacing == R.BitFieldColonSpacing &&
+           BreakAfterAttributes == R.BreakAfterAttributes &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
            BreakArrays == R.BreakArrays &&
            BreakBeforeBinaryOperators == R.BreakBeforeBinaryOperators &&
