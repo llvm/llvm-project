@@ -3231,7 +3231,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``int8_t Decimal`` Format separators in decimal literals.
 
-    .. code-block:: c++
+    .. code-block:: text
 
        -1: 18446744073709550592ull
         0: 184467'440737'0'95505'92ull
@@ -3239,7 +3239,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``int8_t Hex`` Format separators in hexadecimal literals.
 
-    .. code-block:: c++
+    .. code-block:: text
 
        -1: 0xDEADBEEFDEADBEEFuz
         0: 0xDEAD'BEEF'DE'AD'BEE'Fuz
