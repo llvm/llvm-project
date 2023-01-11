@@ -40,14 +40,14 @@ class CStringsTestCase(TestBase):
                     substrs=['[0] = \'h\'',
                              '[5] = \'\\0\''])
 
-        self.expect("p \"hello\"",
+        self.expect("expression \"hello\"",
                     substrs=['[6]) $', 'hello'])
 
-        self.expect("p (char*)\"hello\"",
+        self.expect("expression (char*)\"hello\"",
                     substrs=['(char *) $', ' = 0x',
                              'hello'])
 
-        self.expect("p (int)strlen(\"\")",
+        self.expect("expression (int)strlen(\"\")",
                     substrs=['(int) $', ' = 0'])
 
         self.expect("expression !z",

@@ -24,7 +24,7 @@ class SetDataTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
-        self.expect("p myFoo.x", VARIABLES_DISPLAYED_CORRECTLY,
+        self.expect("expression myFoo.x", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=['2'])
 
         process = self.dbg.GetSelectedTarget().GetProcess()
@@ -40,7 +40,7 @@ class SetDataTestCase(TestBase):
 
         self.runCmd("continue")
 
-        self.expect("p myFoo.x", VARIABLES_DISPLAYED_CORRECTLY,
+        self.expect("expression myFoo.x", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=['4'])
 
         frame = process.GetSelectedThread().GetFrameAtIndex(0)

@@ -15,5 +15,5 @@ class BackticksWithNoTargetTestCase(TestBase):
     @no_debug_info_test
     def test_backticks_no_target(self):
         """A simple test of backticks without a target."""
-        self.expect("print `1+2-3`",
+        self.expect("expression `1+2-3`",
                     substrs=[' = 0'])

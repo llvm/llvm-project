@@ -52,7 +52,7 @@ class TestObjCStructArgument(TestBase):
         frame = thread_list[0].GetFrameAtIndex(0)
         self.assertTrue(frame, "Got a valid frame 0 frame.")
 
-        self.expect("p [summer sumThings:tts]", substrs=['9'])
+        self.expect("expression [summer sumThings:tts]", substrs=['9'])
 
         self.expect(
             "po [NSValue valueWithRect:rect]",
