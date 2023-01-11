@@ -17693,6 +17693,20 @@ TEST_F(FormatTest, AlignCompoundAssignments) {
                "dvsdsv        <<= 5;\n"
                "int dsvvdvsdvvv = 123;",
                Alignment);
+  verifyFormat("int xxx = 5;\n"
+               "xxx     = 5;\n"
+               "{\n"
+               "  int yyy = 6;\n"
+               "  yyy     = 6;\n"
+               "}",
+               Alignment);
+  verifyFormat("int xxx = 5;\n"
+               "xxx    += 5;\n"
+               "{\n"
+               "  int yyy = 6;\n"
+               "  yyy    += 6;\n"
+               "}",
+               Alignment);
   // Test that `<=` is not treated as a compound assignment.
   verifyFormat("aa &= 5;\n"
                "b <= 10;\n"
