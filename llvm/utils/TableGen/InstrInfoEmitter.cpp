@@ -924,20 +924,19 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   Records.startTimer("Emit operand info");
   EmitOperandInfo(OS, OperandInfoIDs);
 
-  // Emit all of the MCInstrDesc records in their ENUM ordering.
-  //
+  // Emit all of the MCInstrDesc records in reverse ENUM ordering.
   Records.startTimer("Emit InstrDesc records");
   OS << "\nextern const MCInstrDesc " << TargetName << "Insts[] = {\n";
   ArrayRef<const CodeGenInstruction*> NumberedInstructions =
     Target.getInstructionsByEnumValue();
 
   SequenceToOffsetTable<std::string> InstrNames;
-  unsigned Num = 0;
-  for (const CodeGenInstruction *Inst : NumberedInstructions) {
+  unsigned Num = NumberedInstructions.size();
+  for (const CodeGenInstruction *Inst : reverse(NumberedInstructions)) {
     // Keep a list of the instruction names.
     InstrNames.add(std::string(Inst->TheDef->getName()));
     // Emit the record into the table.
-    emitRecord(*Inst, Num++, InstrInfo, EmittedLists, OperandInfoIDs, OS);
+    emitRecord(*Inst, --Num, InstrInfo, EmittedLists, OperandInfoIDs, OS);
   }
   OS << "};\n\n";
 
