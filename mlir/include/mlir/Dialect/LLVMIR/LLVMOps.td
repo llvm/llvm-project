@@ -772,7 +772,12 @@ def LLVM_BrOp : LLVM_TerminatorOp<"br",
   let assemblyFormat = [{
     $dest (`(` $destOperands^ `:` type($destOperands) `)`)? attr-dict
   }];
-  let builders = [LLVM_TerminatorPassthroughOpBuilder];
+  let builders = [
+    OpBuilder<(ins "Block *":$dest), [{
+      build($_builder, $_state, ValueRange(), dest);
+    }]>,
+    LLVM_TerminatorPassthroughOpBuilder
+  ];
 }
 def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
     [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
