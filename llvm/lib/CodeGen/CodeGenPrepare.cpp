@@ -2355,7 +2355,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
       // to benefit from cheap constant propagation.
       Type *ScalableVectorTy =
           VectorType::get(Type::getInt8Ty(II->getContext()), 1, true);
-      if (DL->getTypeAllocSize(ScalableVectorTy).getKnownMinSize() == 8) {
+      if (DL->getTypeAllocSize(ScalableVectorTy).getKnownMinValue() == 8) {
         auto *Null = Constant::getNullValue(ScalableVectorTy->getPointerTo());
         auto *One = ConstantInt::getSigned(II->getType(), 1);
         auto *CGep =

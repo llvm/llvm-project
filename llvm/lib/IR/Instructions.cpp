@@ -3594,7 +3594,7 @@ bool CastInst::isBitCastable(Type *SrcTy, Type *DestTy) {
 
   // Could still have vectors of pointers if the number of elements doesn't
   // match
-  if (SrcBits.getKnownMinSize() == 0 || DestBits.getKnownMinSize() == 0)
+  if (SrcBits.getKnownMinValue() == 0 || DestBits.getKnownMinValue() == 0)
     return false;
 
   if (SrcBits != DestBits)

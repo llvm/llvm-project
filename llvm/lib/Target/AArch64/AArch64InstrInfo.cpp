@@ -2647,11 +2647,11 @@ bool AArch64InstrInfo::getMemOperandWithOffsetWidth(
   // set to 1.
   if (LdSt.getNumExplicitOperands() == 3) {
     BaseOp = &LdSt.getOperand(1);
-    Offset = LdSt.getOperand(2).getImm() * Scale.getKnownMinSize();
+    Offset = LdSt.getOperand(2).getImm() * Scale.getKnownMinValue();
   } else {
     assert(LdSt.getNumExplicitOperands() == 4 && "invalid number of operands");
     BaseOp = &LdSt.getOperand(2);
-    Offset = LdSt.getOperand(3).getImm() * Scale.getKnownMinSize();
+    Offset = LdSt.getOperand(3).getImm() * Scale.getKnownMinValue();
   }
   OffsetIsScalable = Scale.isScalable();
 
@@ -4694,7 +4694,7 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
 
   // Construct the complete offset.
   bool IsMulVL = ScaleValue.isScalable();
-  unsigned Scale = ScaleValue.getKnownMinSize();
+  unsigned Scale = ScaleValue.getKnownMinValue();
   int64_t Offset = IsMulVL ? SOffset.getScalable() : SOffset.getFixed();
 
   const MachineOperand &ImmOpnd =
@@ -4712,7 +4712,7 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
                                       MaxOff))
     llvm_unreachable("unhandled opcode in isAArch64FrameOffsetLegal");
 
-  Scale = ScaleValue.getKnownMinSize();
+  Scale = ScaleValue.getKnownMinValue();
   assert(IsMulVL == ScaleValue.isScalable() &&
          "Unscaled opcode has different value for scalable");
 

@@ -2703,7 +2703,7 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *C, Value *B,
       unsigned Elts = VecTy->getElementCount().getKnownMinValue();
       // For a fixed or scalable vector, get the size in bits of N x iM; for a
       // scalar this is just M.
-      unsigned SelEltSize = SelTy->getPrimitiveSizeInBits().getKnownMinSize();
+      unsigned SelEltSize = SelTy->getPrimitiveSizeInBits().getKnownMinValue();
       Type *EltTy = Builder.getIntNTy(SelEltSize / Elts);
       SelTy = VectorType::get(EltTy, VecTy->getElementCount());
     }

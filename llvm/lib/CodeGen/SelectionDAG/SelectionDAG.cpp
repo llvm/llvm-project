@@ -2348,7 +2348,7 @@ SDValue SelectionDAG::CreateStackTemporary(TypeSize Bytes, Align Alignment) {
     StackID = TFI->getStackIDForScalableVectors();
   // The stack id gives an indication of whether the object is scalable or
   // not, so it's safe to pass in the minimum size here.
-  int FrameIdx = MFI.CreateStackObject(Bytes.getKnownMinSize(), Alignment,
+  int FrameIdx = MFI.CreateStackObject(Bytes.getKnownMinValue(), Alignment,
                                        false, nullptr, StackID);
   return getFrameIndex(FrameIdx, TLI->getFrameIndexTy(getDataLayout()));
 }
@@ -2366,8 +2366,9 @@ SDValue SelectionDAG::CreateStackTemporary(EVT VT1, EVT VT2) {
   assert(VT1Size.isScalable() == VT2Size.isScalable() &&
          "Don't know how to choose the maximum size when creating a stack "
          "temporary");
-  TypeSize Bytes =
-      VT1Size.getKnownMinSize() > VT2Size.getKnownMinSize() ? VT1Size : VT2Size;
+  TypeSize Bytes = VT1Size.getKnownMinValue() > VT2Size.getKnownMinValue()
+                       ? VT1Size
+                       : VT2Size;
 
   Type *Ty1 = VT1.getTypeForEVT(*getContext());
   Type *Ty2 = VT2.getTypeForEVT(*getContext());
@@ -6894,7 +6895,7 @@ SDValue SelectionDAG::getMemBasePlusOffset(SDValue Base, TypeSize Offset,
   if (Offset.isScalable())
     Index = getVScale(DL, Base.getValueType(),
                       APInt(Base.getValueSizeInBits().getFixedSize(),
-                            Offset.getKnownMinSize()));
+                            Offset.getKnownMinValue()));
   else
     Index = getConstant(Offset.getFixedSize(), DL, VT);
 
@@ -11099,7 +11100,7 @@ MemSDNode::MemSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl,
   // the MMO. This is because the MMO might indicate only a possible address
   // range instead of specifying the affected memory addresses precisely.
   // TODO: Make MachineMemOperands aware of scalable vectors.
-  assert(memvt.getStoreSize().getKnownMinSize() <= MMO->getSize() &&
+  assert(memvt.getStoreSize().getKnownMinValue() <= MMO->getSize() &&
          "Size mismatch!");
 }
 
