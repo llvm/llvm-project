@@ -12,6 +12,8 @@
 
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/RemoteCachingService/LLVMCASCacheProvider.h"
+#include "llvm/RemoteCachingService/RemoteCacheProvider.h"
 #include "llvm/RemoteCachingService/RemoteCacheServer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
@@ -82,10 +84,15 @@ int main(int Argc, const char **Argv) {
   if (!Cache)
     ExitOnErr(Cache.takeError());
 
+  auto createServer = [&]() -> remote::RemoteCacheServer {
+    return remote::RemoteCacheServer(
+        SocketPath, remote::createLLVMCASCacheProvider(
+                        TempPath, std::move(*CAS), std::move(*Cache)));
+  };
+
   if (ServerMode) {
     outs() << "Server listening on " << SocketPath << '\n';
-    remote::RemoteCacheServer Server(SocketPath, TempPath, std::move(*CAS),
-                                     std::move(*Cache));
+    remote::RemoteCacheServer Server = createServer();
     Server.Start();
     Server.Listen();
     return 0;
@@ -112,8 +119,7 @@ int main(int Argc, const char **Argv) {
     RefArgs.push_back(Arg);
   }
 
-  remote::RemoteCacheServer Server(SocketPath, TempPath, std::move(*CAS),
-                                   std::move(*Cache));
+  remote::RemoteCacheServer Server = createServer();
   // Make sure to start the server before executing the command.
   Server.Start();
   std::thread ServerThread([&Server]() { Server.Listen(); });
