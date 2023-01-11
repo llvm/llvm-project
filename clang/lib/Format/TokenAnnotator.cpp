@@ -598,8 +598,9 @@ private:
         (Contexts.back().CanBeExpression || Contexts.back().IsExpression ||
          Contexts.back().ContextType == Context::TemplateArgument);
 
-    bool IsCpp11AttributeSpecifier = isCpp11AttributeSpecifier(*Left) ||
-                                     Contexts.back().InCpp11AttributeSpecifier;
+    const bool IsInnerSquare = Contexts.back().InCpp11AttributeSpecifier;
+    const bool IsCpp11AttributeSpecifier =
+        isCpp11AttributeSpecifier(*Left) || IsInnerSquare;
 
     // Treat C# Attributes [STAThread] much like C++ attributes [[...]].
     bool IsCSharpAttributeSpecifier =
@@ -634,6 +635,8 @@ private:
         Left->setType(TT_InlineASMSymbolicNameLSquare);
       } else if (IsCpp11AttributeSpecifier) {
         Left->setType(TT_AttributeSquare);
+        if (!IsInnerSquare && Left->Previous)
+          Left->Previous->EndsCppAttributeGroup = false;
       } else if (Style.isJavaScript() && Parent &&
                  Contexts.back().ContextKind == tok::l_brace &&
                  Parent->isOneOf(tok::l_brace, tok::comma)) {
@@ -707,8 +710,11 @@ private:
 
     while (CurrentToken) {
       if (CurrentToken->is(tok::r_square)) {
-        if (IsCpp11AttributeSpecifier)
+        if (IsCpp11AttributeSpecifier) {
           CurrentToken->setType(TT_AttributeSquare);
+          if (!IsInnerSquare)
+            CurrentToken->EndsCppAttributeGroup = true;
+        }
         if (IsCSharpAttributeSpecifier) {
           CurrentToken->setType(TT_AttributeSquare);
         } else if (((CurrentToken->Next &&
@@ -2934,6 +2940,18 @@ bool TokenAnnotator::mustBreakForReturnType(const AnnotatedLine &Line) const {
   return false;
 }
 
+static bool mustBreakAfterAttributes(const FormatToken &Tok,
+                                     const FormatStyle &Style) {
+  switch (Style.BreakAfterAttributes) {
+  case FormatStyle::ABS_Always:
+    return true;
+  case FormatStyle::ABS_Leave:
+    return Tok.NewlinesBefore > 0;
+  default:
+    return false;
+  }
+}
+
 void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   for (AnnotatedLine *ChildLine : Line.Children)
     calculateFormattingInformation(*ChildLine);
@@ -2949,9 +2967,22 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   if (AlignArrayOfStructures)
     calculateArrayInitializerColumnList(Line);
 
+  for (FormatToken *Tok = Current, *AfterLastAttribute = nullptr; Tok;
+       Tok = Tok->Next) {
+    if (isFunctionDeclarationName(Style.isCpp(), *Tok, Line)) {
+      Tok->setType(TT_FunctionDeclarationName);
+      if (AfterLastAttribute &&
+          mustBreakAfterAttributes(*AfterLastAttribute, Style)) {
+        AfterLastAttribute->MustBreakBefore = true;
+        Line.ReturnTypeWrapped = true;
+      }
+      break;
+    }
+    if (Tok->Previous->EndsCppAttributeGroup)
+      AfterLastAttribute = Tok;
+  }
+
   while (Current) {
-    if (isFunctionDeclarationName(Style.isCpp(), *Current, Line))
-      Current->setType(TT_FunctionDeclarationName);
     const FormatToken *Prev = Current->Previous;
     if (Current->is(TT_LineComment)) {
       if (Prev->is(BK_BracedInit) && Prev->opensScope()) {
