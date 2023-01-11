@@ -1,0 +1,96 @@
+// RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+
+module {
+  cir.func @foo() {
+    %0 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
+    %1 = cir.cst(0 : i32) : i32
+    cir.store %1, %0 : i32, cir.ptr <i32>
+    cir.loop for(cond : {
+      %2 = cir.load %0 : cir.ptr <i32>, i32
+      %3 = cir.cst(10 : i32) : i32
+      %4 = cir.cmp(lt, %2, %3) : i32, i32
+      %5 = cir.cast(int_to_bool, %4 : i32), !cir.bool
+      cir.brcond %5 ^bb1, ^bb2
+    ^bb1:  // pred: ^bb0
+      cir.yield continue
+    ^bb2:  // pred: ^bb0
+      cir.yield
+    }, step : {
+      %2 = cir.load %0 : cir.ptr <i32>, i32
+      %3 = cir.unary(inc, %2) : i32, i32
+      cir.store %3, %0 : i32, cir.ptr <i32>
+      cir.yield
+    }) {
+      cir.yield
+    }
+    cir.return
+  }
+}
+
+//      MLIR: module {
+// MLIR-NEXT:   llvm.func @foo() {
+// MLIR-NEXT:     %0 = llvm.mlir.constant(1 : index) : i64
+// MLIR-NEXT:     %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
+// MLIR-NEXT:     %2 = llvm.mlir.constant(0 : i32) : i32
+// MLIR-NEXT:     llvm.store %2, %1 : i32, !llvm.ptr
+// MLIR-NEXT:     llvm.br ^bb1
+// MLIR-NEXT:   ^bb1:  // 2 preds: ^bb0, ^bb5
+// MLIR-NEXT:     %3 = llvm.load %1 : !llvm.ptr
+// MLIR-NEXT:     %4 = llvm.mlir.constant(10 : i32) : i32
+// MLIR-NEXT:     %5 = llvm.icmp "ult" %3, %4 : i32
+// MLIR-NEXT:     %6 = llvm.zext %5 : i1 to i32
+// MLIR-NEXT:     %7 = llvm.mlir.constant(0 : i32) : i32
+// MLIR-NEXT:     %8 = llvm.icmp "ne" %6, %7 : i32
+// MLIR-NEXT:     %9 = llvm.zext %8 : i1 to i8
+// MLIR-NEXT:     %10 = llvm.trunc %9 : i8 to i1
+// MLIR-NEXT:     llvm.cond_br %10, ^bb2, ^bb3
+// MLIR-NEXT:   ^bb2:  // pred: ^bb1
+// MLIR-NEXT:     llvm.br ^bb4
+// MLIR-NEXT:   ^bb3:  // pred: ^bb1
+// MLIR-NEXT:     llvm.br ^bb6
+// MLIR-NEXT:   ^bb4:  // pred: ^bb2
+// MLIR-NEXT:     %11 = llvm.load %1 : !llvm.ptr
+// MLIR-NEXT:     %12 = llvm.mlir.constant(1 : i32) : i32
+// MLIR-NEXT:     %13 = llvm.add %11, %12  : i32
+// MLIR-NEXT:     llvm.store %13, %1 : i32, !llvm.ptr
+// MLIR-NEXT:     llvm.br ^bb5
+// MLIR-NEXT:   ^bb5:  // pred: ^bb4
+// MLIR-NEXT:     llvm.br ^bb1
+// MLIR-NEXT:   ^bb6:  // pred: ^bb3
+// MLIR-NEXT:     llvm.return
+// MLIR-NEXT:   }
+// MLIR-NEXT: }
+
+//      LLVM: define void @foo() {
+//  LLVM-NEXT:   %1 = alloca i32, i64 1, align 4
+//  LLVM-NEXT:   store i32 0, ptr %1, align 4
+//  LLVM-NEXT:   br label %2
+// LLVM-EMPTY:
+//  LLVM-NEXT: 2:
+//  LLVM-NEXT:   %3 = load i32, ptr %1, align 4
+//  LLVM-NEXT:   %4 = icmp ult i32 %3, 10
+//  LLVM-NEXT:   %5 = zext i1 %4 to i32
+//  LLVM-NEXT:   %6 = icmp ne i32 %5, 0
+//  LLVM-NEXT:   %7 = zext i1 %6 to i8
+//  LLVM-NEXT:   %8 = trunc i8 %7 to i1
+//  LLVM-NEXT:   br i1 %8, label %9, label %10
+// LLVM-EMPTY:
+//  LLVM-NEXT: 9:
+//  LLVM-NEXT:   br label %11
+// LLVM-EMPTY:
+//  LLVM-NEXT: 10:
+//  LLVM-NEXT:   br label %15
+// LLVM-EMPTY:
+//  LLVM-NEXT: 11:
+//  LLVM-NEXT:   %12 = load i32, ptr %1, align 4
+//  LLVM-NEXT:   %13 = add i32 %12, 1
+//  LLVM-NEXT:   store i32 %13, ptr %1, align 4
+//  LLVM-NEXT:   br label %14
+// LLVM-EMPTY:
+//  LLVM-NEXT: 14:
+//  LLVM-NEXT:   br label %2
+// LLVM-EMPTY:
+//  LLVM-NEXT: 15:
+//  LLVM-NEXT:   ret void
+//  LLVM-NEXT: }

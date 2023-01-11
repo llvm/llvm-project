@@ -31,6 +31,7 @@
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Passes.h"
 #include "llvm/ADT/Sequence.h"
 
@@ -39,6 +40,99 @@ using namespace llvm;
 
 namespace cir {
 namespace direct {
+
+class CIRLoopOpLowering : public mlir::OpConversionPattern<mlir::cir::LoopOp> {
+public:
+  using mlir::OpConversionPattern<mlir::cir::LoopOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::LoopOp loopOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    if (loopOp.getKind() != mlir::cir::LoopOpKind::For)
+      llvm_unreachable("NYI");
+
+    auto loc = loopOp.getLoc();
+
+    auto *currentBlock = rewriter.getInsertionBlock();
+    auto *remainingOpsBlock =
+        rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
+    mlir::Block *continueBlock;
+    if (loopOp->getResults().size() == 0)
+      continueBlock = remainingOpsBlock;
+    else
+      llvm_unreachable("NYI");
+
+    auto &condRegion = loopOp.getCond();
+    auto &condFrontBlock = condRegion.front();
+
+    auto &stepRegion = loopOp.getStep();
+    auto &stepFrontBlock = stepRegion.front();
+    auto &stepBackBlock = stepRegion.back();
+
+    auto &bodyRegion = loopOp.getBody();
+    auto &bodyFrontBlock = bodyRegion.front();
+    auto &bodyBackBlock = bodyRegion.back();
+
+    bool rewroteContinue = false;
+    bool rewroteBreak = false;
+
+    for (auto &bb : condRegion) {
+      if (rewroteContinue && rewroteBreak)
+        break;
+
+      if (auto yieldOp = dyn_cast<mlir::cir::YieldOp>(bb.getTerminator())) {
+        rewriter.setInsertionPointToEnd(yieldOp->getBlock());
+        if (yieldOp.getKind().has_value()) {
+          switch (yieldOp.getKind().value()) {
+          case mlir::cir::YieldOpKind::Break:
+          case mlir::cir::YieldOpKind::Fallthrough:
+          case mlir::cir::YieldOpKind::NoSuspend:
+            llvm_unreachable("None of these should be present");
+          case mlir::cir::YieldOpKind::Continue:;
+            rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
+                yieldOp, yieldOp.getArgs(), &stepFrontBlock);
+            rewroteContinue = true;
+          }
+        } else {
+          rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
+              yieldOp, yieldOp.getArgs(), continueBlock);
+          rewroteBreak = true;
+        }
+      }
+    }
+
+    rewriter.inlineRegionBefore(condRegion, continueBlock);
+
+    rewriter.inlineRegionBefore(stepRegion, continueBlock);
+
+    if (auto stepYieldOp =
+            dyn_cast<mlir::cir::YieldOp>(stepBackBlock.getTerminator())) {
+      rewriter.setInsertionPointToEnd(stepYieldOp->getBlock());
+      rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
+          stepYieldOp, stepYieldOp.getArgs(), &bodyFrontBlock);
+    } else {
+      llvm_unreachable("What are we terminating with?");
+    }
+
+    rewriter.inlineRegionBefore(bodyRegion, continueBlock);
+
+    if (auto bodyYieldOp =
+            dyn_cast<mlir::cir::YieldOp>(bodyBackBlock.getTerminator())) {
+      rewriter.setInsertionPointToEnd(bodyYieldOp->getBlock());
+      rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
+          bodyYieldOp, bodyYieldOp.getArgs(), &condFrontBlock);
+    } else {
+      llvm_unreachable("What are we terminating with?");
+    }
+
+    rewriter.setInsertionPointToEnd(currentBlock);
+    rewriter.create<mlir::cir::BrOp>(loc, mlir::ValueRange(), &condFrontBlock);
+
+    rewriter.replaceOp(loopOp, continueBlock->getArguments());
+
+    return mlir::success();
+  }
+};
 
 class CIRBrCondOpLowering
     : public mlir::OpConversionPattern<mlir::cir::BrCondOp> {
@@ -93,15 +187,9 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::IfOp ifOp, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    auto &thenRegion = ifOp.getThenRegion();
-    auto &elseRegion = ifOp.getElseRegion();
-
-    (void)thenRegion;
-    (void)elseRegion;
-
     mlir::OpBuilder::InsertionGuard guard(rewriter);
 
-    [[maybe_unused]] auto loc = ifOp.getLoc();
+    auto loc = ifOp.getLoc();
 
     auto *currentBlock = rewriter.getInsertionBlock();
     auto *remainingOpsBlock =
@@ -113,28 +201,24 @@ public:
       llvm_unreachable("NYI");
 
     // Inline then region
-    [[maybe_unused]] auto *thenBeforeBody = &ifOp.getThenRegion().front();
-    [[maybe_unused]] auto *thenAfterBody = &ifOp.getThenRegion().back();
+    auto *thenBeforeBody = &ifOp.getThenRegion().front();
+    auto *thenAfterBody = &ifOp.getThenRegion().back();
     rewriter.inlineRegionBefore(ifOp.getThenRegion(), continueBlock);
 
     rewriter.setInsertionPointToEnd(thenAfterBody);
     if (auto thenYieldOp =
             dyn_cast<mlir::cir::YieldOp>(thenAfterBody->getTerminator())) {
-      [[maybe_unused]] auto thenBranchOp =
-          rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
-              thenYieldOp, thenYieldOp.getArgs(), continueBlock);
-    } else if (auto thenReturnOp = dyn_cast<mlir::cir::ReturnOp>(
-                   thenAfterBody->getTerminator())) {
-      ;
-    } else {
+      rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
+          thenYieldOp, thenYieldOp.getArgs(), continueBlock);
+    } else if (!dyn_cast<mlir::cir::ReturnOp>(thenAfterBody->getTerminator())) {
       llvm_unreachable("what are we terminating with?");
     }
 
     rewriter.setInsertionPointToEnd(continueBlock);
 
     // Inline then region
-    [[maybe_unused]] auto *elseBeforeBody = &ifOp.getElseRegion().front();
-    [[maybe_unused]] auto *elseAfterBody = &ifOp.getElseRegion().back();
+    auto *elseBeforeBody = &ifOp.getElseRegion().front();
+    auto *elseAfterBody = &ifOp.getElseRegion().back();
     rewriter.inlineRegionBefore(ifOp.getElseRegion(), thenAfterBody);
 
     rewriter.setInsertionPointToEnd(currentBlock);
@@ -146,17 +230,12 @@ public:
     rewriter.setInsertionPointToEnd(elseAfterBody);
     if (auto elseYieldOp =
             dyn_cast<mlir::cir::YieldOp>(elseAfterBody->getTerminator())) {
-      [[maybe_unused]] auto elseBranchOp =
-          rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
-              elseYieldOp, elseYieldOp.getArgs(), continueBlock);
-    } else if (auto elseReturnOp = dyn_cast<mlir::cir::ReturnOp>(
-                   elseAfterBody->getTerminator())) {
-      ;
-    } else {
+      rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
+          elseYieldOp, elseYieldOp.getArgs(), continueBlock);
+    } else if (!dyn_cast<mlir::cir::ReturnOp>(elseAfterBody->getTerminator())) {
       llvm_unreachable("what are we terminating with?");
     }
 
-    rewriter.setInsertionPoint(elseAfterBody->getTerminator());
     rewriter.replaceOp(ifOp, continueBlock->getArguments());
 
     return mlir::success();
@@ -681,11 +760,12 @@ public:
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRBrOpLowering, CIRReturnLowering>(patterns.getContext());
-  patterns.add<CIRCmpOpLowering, CIRBrCondOpLowering, CIRCallLowering,
-               CIRUnaryOpLowering, CIRBinOpLowering, CIRLoadLowering,
-               CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering,
-               CIRFuncLowering, CIRScopeOpLowering, CIRCastOpLowering,
-               CIRIfLowering>(converter, patterns.getContext());
+  patterns.add<CIRCmpOpLowering, CIRLoopOpLowering, CIRBrCondOpLowering,
+               CIRCallLowering, CIRUnaryOpLowering, CIRBinOpLowering,
+               CIRLoadLowering, CIRConstantLowering, CIRStoreLowering,
+               CIRAllocaLowering, CIRFuncLowering, CIRScopeOpLowering,
+               CIRCastOpLowering, CIRIfLowering>(converter,
+                                                 patterns.getContext());
 }
 
 namespace {
