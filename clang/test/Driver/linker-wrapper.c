@@ -52,6 +52,16 @@
 // AMDGPU-LINK: lld{{.*}}-flavor gnu --no-undefined -shared -plugin-opt=-amdgpu-internalize-symbols -plugin-opt=mcpu=gfx908 -o {{.*}}.out {{.*}}.o {{.*}}.o
 
 // RUN: clang-offload-packager -o %t.out \
+// RUN:   --image=file=%t.amdgpu.bc,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx1030 \
+// RUN:   --image=file=%t.amdgpu.bc,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx1030
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run --save-temps -O2 \
+// RUN:   --linker-path=/usr/bin/ld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=AMDGPU-LTO-TEMPS
+
+// AMDGPU-LTO-TEMPS: clang" -o [[OBJ:.+]] -fPIC -c --target=amdgcn-amd-amdhsa -O2 -mcpu=gfx1030 {{.*}}.s
+// AMDGPU-LTO-TEMPS: lld{{.*}}-flavor gnu --no-undefined -shared -plugin-opt=-amdgpu-internalize-symbols -plugin-opt=mcpu=gfx1030 -o {{.*}}.out {{.*}}.o
+
+// RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%t.amdgpu.bc,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908 \
 // RUN:   --image=file=%t.amdgpu.bc,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
