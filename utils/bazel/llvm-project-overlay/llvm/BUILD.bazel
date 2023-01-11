@@ -648,6 +648,10 @@ llvm_target_intrinsics_list = [
         "intrinsic_prefix": "hexagon",
     },
     {
+        "name": "LoongArch",
+        "intrinsic_prefix": "loongarch",
+    },
+    {
         "name": "Mips",
         "intrinsic_prefix": "mips",
     },
@@ -686,10 +690,6 @@ llvm_target_intrinsics_list = [
     {
         "name": "XCore",
         "intrinsic_prefix": "xcore",
-    },
-    {
-        "name": "LoongArch",
-        "intrinsic_prefix": "loongarch",
     },
 ]
 
@@ -1779,6 +1779,21 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-instr-info", "lib/Target/Lanai/LanaiGenInstrInfo.inc"),
             ("-gen-register-info", "lib/Target/Lanai/LanaiGenRegisterInfo.inc"),
             ("-gen-subtarget", "lib/Target/Lanai/LanaiGenSubtargetInfo.inc"),
+        ],
+    },
+    {
+        "name": "LoongArch",
+        "short_name": "LoongArch",
+        "tbl_outs": [
+            ("-gen-asm-matcher", "lib/Target/LoongArch/LoongArchGenAsmMatcher.inc"),
+            ("-gen-asm-writer", "lib/Target/LoongArch/LoongArchGenAsmWriter.inc"),
+            ("-gen-dag-isel", "lib/Target/LoongArch/LoongArchGenDAGISel.inc"),
+            ("-gen-disassembler", "lib/Target/LoongArch/LoongArchGenDisassemblerTables.inc"),
+            ("-gen-emitter", "lib/Target/LoongArch/LoongArchGenMCCodeEmitter.inc"),
+            ("-gen-instr-info", "lib/Target/LoongArch/LoongArchGenInstrInfo.inc"),
+            ("-gen-pseudo-lowering", "lib/Target/LoongArch/LoongArchGenMCPseudoLowering.inc"),
+            ("-gen-register-info", "lib/Target/LoongArch/LoongArchGenRegisterInfo.inc"),
+            ("-gen-subtarget", "lib/Target/LoongArch/LoongArchGenSubtargetInfo.inc"),
         ],
     },
     {
