@@ -8073,8 +8073,8 @@ void ASTReader::UpdateSema() {
       SemaObj->FpPragmaStack.Stack.emplace_back(
           Entry.SlotLabel, Entry.Value, Entry.Location, Entry.PushLocation);
     if (FpPragmaCurrentLocation.isInvalid()) {
-      //assert(*FpPragmaCurrentValue == SemaObj->FpPragmaStack.DefaultValue &&
-      //       "Expected a default pragma float_control value");
+      assert(*FpPragmaCurrentValue == SemaObj->FpPragmaStack.DefaultValue &&
+             "Expected a default pragma float_control value");
       // Keep the current values.
     } else {
       SemaObj->FpPragmaStack.CurrentValue = *FpPragmaCurrentValue;
