@@ -1,38 +1,31 @@
 ; Basic test for the new LTO pipeline.
-; For now the only difference is between -O1 and everything else, so
-; -O2, -O3, -Os, -Oz are the same.
 
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='lto<O1>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O1
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O1
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='lto<O1>' -S %s -passes-ep-full-link-time-optimization-early=no-op-module \
 ; RUN:     -passes-ep-full-link-time-optimization-last=no-op-module 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O1 --check-prefix=CHECK-EP
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O1,CHECK-EP
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='lto<O2>' -S  %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O23SZ \
-; RUN:     --check-prefix=CHECK-O2
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-O23,CHECK-O23SZ
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='lto<O2>' -S %s -passes-ep-full-link-time-optimization-early=no-op-module \
 ; RUN:     -passes-ep-full-link-time-optimization-last=no-op-module 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O23SZ \
-; RUN:     --check-prefix=CHECK-O2 --check-prefix=CHECK-EP
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-O23,CHECK-O23SZ,CHECK-EP
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='lto<O3>' -S  %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O23SZ \
-; RUN:     --check-prefix=CHECK-O3
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O3,CHECK-O23,CHECK-O23SZ
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='lto<Os>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O23SZ \
-; RUN:     --check-prefix=CHECK-OS
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-OS,CHECK-OSZ,CHECK-O23SZ
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='lto<Oz>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O23SZ
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-OSZ,CHECK-O23SZ
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='lto<O3>' -S  %s -passes-ep-peephole='no-op-function' 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O23SZ \
-; RUN:     --check-prefix=CHECK-O3 --check-prefix=CHECK-EP-Peephole
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O3,CHECK-O23,CHECK-O23SZ,CHECK-EP-Peephole
 
 ; CHECK-O: Running pass: Annotation2Metadata
 ; CHECK-EP-NEXT: Running pass: NoOpModulePass
@@ -52,6 +45,7 @@
 ; CHECK-O23SZ-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: IPSCCPPass
 ; CHECK-O23SZ-NEXT: Running analysis: AssumptionAnalysis on foo
+; CHECK-O23-NEXT: Running analysis: LoopAnalysis on foo
 ; CHECK-O23SZ-NEXT: Running pass: CalledValuePropagationPass
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}SCC
 ; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis
@@ -101,7 +95,7 @@
 ; CHECK-O23SZ-NEXT: Invalidating analysis: AAManager on foo
 ; CHECK-O23SZ-NEXT: Running pass: OpenMPOptCGSCCPass on (foo)
 ; CHECK-O23SZ-NEXT: Running pass: LoopSimplifyPass on foo
-; CHECK-O23SZ-NEXT: Running analysis: LoopAnalysis on foo
+; CHECK-OSZ-NEXT: Running analysis: LoopAnalysis on foo
 ; CHECK-O23SZ-NEXT: Running pass: LCSSAPass on foo
 ; CHECK-O23SZ-NEXT: Running analysis: MemorySSAAnalysis on foo
 ; CHECK-O23SZ-NEXT: Running analysis: AAManager on foo
