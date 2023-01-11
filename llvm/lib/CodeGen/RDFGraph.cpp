@@ -623,7 +623,7 @@ bool TargetOperandInfo::isFixedReg(const MachineInstr &In, unsigned OpNum)
         return true;
 
   const MCInstrDesc &D = In.getDesc();
-  if (!D.getImplicitDefs() && !D.getImplicitUses())
+  if (D.implicit_defs().empty() && D.implicit_uses().empty())
     return false;
   const MachineOperand &Op = In.getOperand(OpNum);
   // If there is a sub-register, treat the operand as non-fixed. Currently,
@@ -632,14 +632,9 @@ bool TargetOperandInfo::isFixedReg(const MachineInstr &In, unsigned OpNum)
   if (Op.getSubReg() != 0)
     return false;
   Register Reg = Op.getReg();
-  const MCPhysReg *ImpR = Op.isDef() ? D.getImplicitDefs()
-                                     : D.getImplicitUses();
-  if (!ImpR)
-    return false;
-  while (*ImpR)
-    if (*ImpR++ == Reg)
-      return true;
-  return false;
+  ArrayRef<MCPhysReg> ImpOps =
+      Op.isDef() ? D.implicit_defs() : D.implicit_uses();
+  return is_contained(ImpOps, Reg);
 }
 
 //

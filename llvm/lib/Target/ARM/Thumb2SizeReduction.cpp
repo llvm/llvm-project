@@ -253,10 +253,7 @@ Thumb2SizeReduce::Thumb2SizeReduce(std::function<bool(const Function &)> Ftor)
 }
 
 static bool HasImplicitCPSRDef(const MCInstrDesc &MCID) {
-  for (const MCPhysReg *Regs = MCID.getImplicitDefs(); *Regs; ++Regs)
-    if (*Regs == ARM::CPSR)
-      return true;
-  return false;
+  return is_contained(MCID.implicit_defs(), ARM::CPSR);
 }
 
 // Check for a likely high-latency flag def.
