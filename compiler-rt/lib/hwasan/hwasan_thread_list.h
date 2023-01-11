@@ -71,7 +71,7 @@ struct ThreadStats {
   uptr total_stack_size;
 };
 
-class HwasanThreadList {
+class SANITIZER_MUTEX HwasanThreadList {
  public:
   HwasanThreadList(uptr storage, uptr size)
       : free_space_(storage), free_space_end_(storage + size) {
@@ -156,6 +156,15 @@ class HwasanThreadList {
     for (Thread *t : live_list_) cb(t);
   }
 
+  template <class CB>
+  Thread *FindThreadLocked(CB cb) SANITIZER_CHECK_LOCKED(stats_mutex_) {
+    CheckLocked();
+    for (Thread *t : live_list_)
+      if (cb(t))
+        return t;
+    return nullptr;
+  }
+
   void AddThreadStats(Thread *t) SANITIZER_EXCLUDES(stats_mutex_) {
     SpinMutexLock l(&stats_mutex_);
     stats_.n_live_threads++;
@@ -174,6 +183,14 @@ class HwasanThreadList {
   }
 
   uptr GetRingBufferSize() const { return ring_buffer_size_; }
+
+  void Lock() SANITIZER_ACQUIRE(live_list_mutex_) { live_list_mutex_.Lock(); }
+  void CheckLocked() const SANITIZER_CHECK_LOCKED(live_list_mutex_) {
+    live_list_mutex_.CheckLocked();
+  }
+  void Unlock() SANITIZER_RELEASE(live_list_mutex_) {
+    live_list_mutex_.Unlock();
+  }
 
  private:
   Thread *AllocThread() {
