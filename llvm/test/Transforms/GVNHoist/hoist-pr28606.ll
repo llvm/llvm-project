@@ -4,9 +4,9 @@
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc18.0.0"
 
-%struct.S = type { i8* }
+%struct.S = type { ptr, ptr }
 
-declare void @f(<{ %struct.S }>* inalloca(<{ %struct.S }>))
+declare void @f(ptr inalloca(<{ %struct.S }>))
 
 
 ; Check that we don't clone the %x alloca and insert it in the live range of
@@ -15,45 +15,43 @@ define void @test(i1 %b) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    [[INALLOCA_SAVE:%.*]] = call i8* @llvm.stacksave()
+; CHECK-NEXT:    [[INALLOCA_SAVE:%.*]] = call ptr @llvm.stacksave()
 ; CHECK-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_S:%.*]] }>, align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <{ [[STRUCT_S]] }>, <{ [[STRUCT_S]] }>* [[ARGMEM]], i32 0, i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP0]], i32 0, i32 0
-; CHECK-NEXT:    store i8* [[X]], i8** [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARGMEM]], i32 0, i32 1
+; CHECK-NEXT:    store ptr [[X]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP0]], i32 0, i32 0
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARGMEM]], i32 0, i32 1
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       false:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP0]], i32 0, i32 0
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARGMEM]], i32 0, i32 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    call void @f(<{ [[STRUCT_S]] }>* inalloca(<{ [[STRUCT_S]] }>) [[ARGMEM]])
-; CHECK-NEXT:    call void @llvm.stackrestore(i8* [[INALLOCA_SAVE]])
+; CHECK-NEXT:    call void @f(ptr inalloca(<{ [[STRUCT_S]] }>) [[ARGMEM]])
+; CHECK-NEXT:    call void @llvm.stackrestore(ptr [[INALLOCA_SAVE]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %x = alloca i8
-  %inalloca.save = call i8* @llvm.stacksave()
+  %inalloca.save = call ptr @llvm.stacksave()
   %argmem = alloca inalloca <{ %struct.S }>, align 4
-  %0 = getelementptr inbounds <{ %struct.S }>, <{ %struct.S }>* %argmem, i32 0, i32 0
   br i1 %b, label %true, label %false
 
 true:
-  %p = getelementptr inbounds %struct.S, %struct.S* %0, i32 0, i32 0
-  store i8* %x, i8** %p, align 4
+  %p = getelementptr inbounds %struct.S, ptr %argmem, i32 0, i32 1
+  store ptr %x, ptr %p, align 4
   br label %exit
 
 false:
-  %p2 = getelementptr inbounds %struct.S, %struct.S* %0, i32 0, i32 0
-  store i8* %x, i8** %p2, align 4
+  %p2 = getelementptr inbounds %struct.S, ptr %argmem, i32 0, i32 1
+  store ptr %x, ptr %p2, align 4
   br label %exit
 
 exit:
-  call void @f(<{ %struct.S }>* inalloca(<{ %struct.S }>) %argmem)
-  call void @llvm.stackrestore(i8* %inalloca.save)
+  call void @f(ptr inalloca(<{ %struct.S }>) %argmem)
+  call void @llvm.stackrestore(ptr %inalloca.save)
   ret void
 }
 
-declare i8* @llvm.stacksave()
-declare void @llvm.stackrestore(i8*)
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr)
