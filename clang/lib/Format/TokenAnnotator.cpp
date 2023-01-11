@@ -322,6 +322,10 @@ private:
       Contexts.back().IsExpression = false;
     } else if (OpeningParen.is(TT_RequiresExpressionLParen)) {
       Contexts.back().IsExpression = false;
+    } else if (OpeningParen.Previous &&
+               OpeningParen.Previous->is(tok::kw__Generic)) {
+      Contexts.back().ContextType = Context::C11GenericSelection;
+      Contexts.back().IsExpression = true;
     } else if (Line.InPPDirective &&
                (!OpeningParen.Previous ||
                 !OpeningParen.Previous->is(tok::identifier))) {
@@ -1027,6 +1031,8 @@ private:
         }
       } else if (Contexts.back().ColonIsForRangeExpr) {
         Tok->setType(TT_RangeBasedForLoopColon);
+      } else if (Contexts.back().ContextType == Context::C11GenericSelection) {
+        Tok->setType(TT_GenericSelectionColon);
       } else if (CurrentToken && CurrentToken->is(tok::numeric_constant)) {
         Tok->setType(TT_BitFieldColon);
       } else if (Contexts.size() == 1 &&
@@ -1626,6 +1632,8 @@ private:
       StructArrayInitializer,
       // Like in `static_cast<int>`.
       TemplateArgument,
+      // C11 _Generic selection.
+      C11GenericSelection,
     } ContextType = Unknown;
   };
 
@@ -3254,7 +3262,8 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     return 100;
   }
   if (Left.is(tok::l_paren) && Left.Previous &&
-      (Left.Previous->is(tok::kw_for) || Left.Previous->isIf())) {
+      (Left.Previous->isOneOf(tok::kw_for, tok::kw__Generic) ||
+       Left.Previous->isIf())) {
     return 1000;
   }
   if (Left.is(tok::equal) && InFunctionDecl)
@@ -4162,6 +4171,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Right.is(TT_AttributeColon))
       return false;
     if (Right.is(TT_CSharpNamedArgumentColon))
+      return false;
+    if (Right.is(TT_GenericSelectionColon))
       return false;
     if (Right.is(TT_BitFieldColon)) {
       return Style.BitFieldColonSpacing == FormatStyle::BFCS_Both ||
