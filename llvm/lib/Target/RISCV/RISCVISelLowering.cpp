@@ -461,6 +461,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setMaxAtomicSizeInBitsSupported(0);
   }
 
+  setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
+
   setBooleanContents(ZeroOrOneBooleanContent);
 
   if (Subtarget.hasVInstructions()) {
@@ -3667,11 +3669,28 @@ static SDValue lowerConstant(SDValue Op, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) {
+  SDLoc dl(Op);
+  SyncScope::ID FenceSSID =
+      static_cast<SyncScope::ID>(Op.getConstantOperandVal(2));
+
+  // singlethread fences only synchronize with signal handlers on the same
+  // thread and thus only need to preserve instruction order, not actually
+  // enforce memory ordering.
+  if (FenceSSID == SyncScope::SingleThread)
+    // MEMBARRIER is a compiler barrier; it codegens to a no-op.
+    return DAG.getNode(ISD::MEMBARRIER, dl, MVT::Other, Op.getOperand(0));
+
+  return Op;
+}
+
 SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                                             SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default:
     report_fatal_error("unimplemented operand");
+  case ISD::ATOMIC_FENCE:
+    return LowerATOMIC_FENCE(Op, DAG);
   case ISD::GlobalAddress:
     return lowerGlobalAddress(Op, DAG);
   case ISD::BlockAddress:

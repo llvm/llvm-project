@@ -128,9 +128,8 @@ static Value *maybeUnpackLValueExpr(const Expr &E, Environment &Env) {
 
 class TransferVisitor : public ConstStmtVisitor<TransferVisitor> {
 public:
-  TransferVisitor(const StmtToEnvMap &StmtToEnv, Environment &Env,
-                  TransferOptions Options)
-      : StmtToEnv(StmtToEnv), Env(Env), Options(Options) {}
+  TransferVisitor(const StmtToEnvMap &StmtToEnv, Environment &Env)
+      : StmtToEnv(StmtToEnv), Env(Env) {}
 
   void VisitBinaryOperator(const BinaryOperator *S) {
     const Expr *LHS = S->getLHS();
@@ -429,7 +428,7 @@ public:
   }
 
   void VisitReturnStmt(const ReturnStmt *S) {
-    if (!Options.ContextSensitiveOpts)
+    if (!Env.getAnalysisOptions().ContextSensitiveOpts)
       return;
 
     auto *Ret = S->getRetValue();
@@ -460,6 +459,10 @@ public:
 
     // FIXME: Consider assigning pointer values to function member expressions.
     if (Member->isFunctionOrFunctionTemplate())
+      return;
+
+    // FIXME: if/when we add support for modeling enums, use that support here.
+    if (isa<EnumConstantDecl>(Member))
       return;
 
     if (auto *D = dyn_cast<VarDecl>(Member)) {
@@ -760,6 +763,7 @@ private:
   // `F` of `S`. The type `E` must be either `CallExpr` or `CXXConstructExpr`.
   template <typename E>
   void transferInlineCall(const E *S, const FunctionDecl *F) {
+    const auto &Options = Env.getAnalysisOptions();
     if (!(Options.ContextSensitiveOpts &&
           Env.canDescend(Options.ContextSensitiveOpts->Depth, F)))
       return;
@@ -804,12 +808,10 @@ private:
 
   const StmtToEnvMap &StmtToEnv;
   Environment &Env;
-  TransferOptions Options;
 };
 
-void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env,
-              TransferOptions Options) {
-  TransferVisitor(StmtToEnv, Env, Options).Visit(&S);
+void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env) {
+  TransferVisitor(StmtToEnv, Env).Visit(&S);
 }
 
 } // namespace dataflow

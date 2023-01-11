@@ -37,7 +37,7 @@ template <> struct OptionEnumMapping<modernize::Confidence::Level> {
         Mapping[] = {{modernize::Confidence::CL_Reasonable, "reasonable"},
                      {modernize::Confidence::CL_Safe, "safe"},
                      {modernize::Confidence::CL_Risky, "risky"}};
-    return makeArrayRef(Mapping);
+    return ArrayRef(Mapping);
   }
 };
 
@@ -50,7 +50,7 @@ template <> struct OptionEnumMapping<modernize::VariableNamer::NamingStyle> {
                      {modernize::VariableNamer::NS_CamelBack, "camelBack"},
                      {modernize::VariableNamer::NS_LowerCase, "lower_case"},
                      {modernize::VariableNamer::NS_UpperCase, "UPPER_CASE"}};
-    return makeArrayRef(Mapping);
+    return ArrayRef(Mapping);
   }
 };
 
@@ -252,17 +252,18 @@ StatementMatcher makePseudoArrayLoopMatcher() {
   // functions called begin() and end() taking the container as an argument
   // are also allowed.
   TypeMatcher RecordWithBeginEnd = qualType(anyOf(
-      qualType(
-          isConstQualified(),
-          hasUnqualifiedDesugaredType(recordType(hasDeclaration(cxxRecordDecl(
-              hasMethod(cxxMethodDecl(hasName("begin"), isConst())),
-              hasMethod(cxxMethodDecl(hasName("end"),
-                                      isConst()))))   // hasDeclaration
-                                                 ))), // qualType
+      qualType(isConstQualified(),
+               hasUnqualifiedDesugaredType(recordType(hasDeclaration(
+                   cxxRecordDecl(isSameOrDerivedFrom(cxxRecordDecl(
+                       hasMethod(cxxMethodDecl(hasName("begin"), isConst())),
+                       hasMethod(cxxMethodDecl(hasName("end"),
+                                               isConst())))))) // hasDeclaration
+                                                      ))),     // qualType
       qualType(unless(isConstQualified()),
                hasUnqualifiedDesugaredType(recordType(hasDeclaration(
-                   cxxRecordDecl(hasMethod(hasName("begin")),
-                                 hasMethod(hasName("end"))))))) // qualType
+                   cxxRecordDecl(isSameOrDerivedFrom(cxxRecordDecl(
+                       hasMethod(hasName("begin")),
+                       hasMethod(hasName("end"))))))))) // qualType
       ));
 
   StatementMatcher SizeCallMatcher = cxxMemberCallExpr(

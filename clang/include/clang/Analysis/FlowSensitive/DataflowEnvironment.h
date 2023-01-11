@@ -177,6 +177,10 @@ public:
   /// with a symbolic representation of the `this` pointee.
   Environment(DataflowAnalysisContext &DACtx, const DeclContext &DeclCtx);
 
+  const DataflowAnalysisContext::Options &getAnalysisOptions() {
+    return DACtx->getOptions();
+  }
+
   /// Creates and returns an environment to use for an inline analysis  of the
   /// callee. Uses the storage location from each argument in the `Call` as the
   /// storage location for the corresponding parameter in the callee.

@@ -210,3 +210,21 @@ transform.sequence failures(propagate) {
   // expected-note @below {{used here as operand #0}}
   transform.test_consume_operand %0
 }
+
+// -----
+
+transform.sequence failures(suppress) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{TransformOpInterface requires memory effects on operands to be specified}}
+  // expected-note @below {{no effects specified for operand #0}}
+  transform.test_required_memory_effects %arg0 : (!transform.any_op) -> !transform.any_op
+}
+
+// -----
+
+transform.sequence failures(suppress) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{TransformOpInterface requires 'allocate' memory effect to be specified for results}}
+  // expected-note @below {{no 'allocate' effect specified for result #0}}
+  transform.test_required_memory_effects %arg0 {has_operand_effect} : (!transform.any_op) -> !transform.any_op
+}

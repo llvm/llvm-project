@@ -491,10 +491,10 @@ namespace llvm {
   template <typename T, std::size_t N>
   ArrayRef(const std::array<T, N> &Vec) -> ArrayRef<T>;
 
-  /// Deduction guide to construct an ArrayRef from an ArrayRef (no-op) (const)
+  /// Deduction guide to construct an ArrayRef from an ArrayRef (const)
   template <typename T> ArrayRef(const ArrayRef<T> &Vec) -> ArrayRef<T>;
 
-  /// Deduction guide to construct an ArrayRef from an ArrayRef (no-op)
+  /// Deduction guide to construct an ArrayRef from an ArrayRef
   template <typename T> ArrayRef(ArrayRef<T> &Vec) -> ArrayRef<T>;
 
   /// Deduction guide to construct an ArrayRef from a C array.
@@ -505,62 +505,104 @@ namespace llvm {
   /// @name ArrayRef Convenience constructors
   /// @{
   /// Construct an ArrayRef from a single element.
-  template<typename T>
+  template <typename T>
+  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
   ArrayRef<T> makeArrayRef(const T &OneElt) {
     return OneElt;
   }
 
   /// Construct an ArrayRef from a pointer and length.
-  template<typename T>
+  template <typename T>
+  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
   ArrayRef<T> makeArrayRef(const T *data, size_t length) {
     return ArrayRef<T>(data, length);
   }
 
   /// Construct an ArrayRef from a range.
-  template<typename T>
+  template <typename T>
+  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
   ArrayRef<T> makeArrayRef(const T *begin, const T *end) {
     return ArrayRef<T>(begin, end);
   }
 
   /// Construct an ArrayRef from a SmallVector.
   template <typename T>
+  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
   ArrayRef<T> makeArrayRef(const SmallVectorImpl<T> &Vec) {
     return Vec;
   }
 
   /// Construct an ArrayRef from a SmallVector.
   template <typename T, unsigned N>
+  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
   ArrayRef<T> makeArrayRef(const SmallVector<T, N> &Vec) {
     return Vec;
   }
 
   /// Construct an ArrayRef from a std::vector.
-  template<typename T>
+  template <typename T>
+  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
   ArrayRef<T> makeArrayRef(const std::vector<T> &Vec) {
     return Vec;
   }
 
   /// Construct an ArrayRef from a std::array.
   template <typename T, std::size_t N>
+  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
   ArrayRef<T> makeArrayRef(const std::array<T, N> &Arr) {
     return Arr;
   }
 
   /// Construct an ArrayRef from an ArrayRef (no-op) (const)
-  template <typename T> ArrayRef<T> makeArrayRef(const ArrayRef<T> &Vec) {
+  template <typename T>
+  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
+  ArrayRef<T> makeArrayRef(const ArrayRef<T> &Vec) {
     return Vec;
   }
 
   /// Construct an ArrayRef from an ArrayRef (no-op)
-  template <typename T> ArrayRef<T> &makeArrayRef(ArrayRef<T> &Vec) {
+  template <typename T>
+  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
+  ArrayRef<T> &makeArrayRef(ArrayRef<T> &Vec) {
     return Vec;
   }
 
   /// Construct an ArrayRef from a C array.
-  template<typename T, size_t N>
+  template <typename T, size_t N>
+  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
   ArrayRef<T> makeArrayRef(const T (&Arr)[N]) {
     return ArrayRef<T>(Arr);
   }
+
+  /// @name MutableArrayRef Deduction guides
+  /// @{
+  /// Deduction guide to construct a `MutableArrayRef` from a single element
+  template <class T> MutableArrayRef(T &OneElt) -> MutableArrayRef<T>;
+
+  /// Deduction guide to construct a `MutableArrayRef` from a pointer and
+  /// length.
+  template <class T>
+  MutableArrayRef(T *data, size_t length) -> MutableArrayRef<T>;
+
+  /// Deduction guide to construct a `MutableArrayRef` from a `SmallVector`.
+  template <class T>
+  MutableArrayRef(SmallVectorImpl<T> &Vec) -> MutableArrayRef<T>;
+
+  template <class T, unsigned N>
+  MutableArrayRef(SmallVector<T, N> &Vec) -> MutableArrayRef<T>;
+
+  /// Deduction guide to construct a `MutableArrayRef` from a `std::vector`.
+  template <class T> MutableArrayRef(std::vector<T> &Vec) -> MutableArrayRef<T>;
+
+  /// Deduction guide to construct a `MutableArrayRef` from a `std::array`.
+  template <class T, std::size_t N>
+  MutableArrayRef(std::array<T, N> &Vec) -> MutableArrayRef<T>;
+
+  /// Deduction guide to construct a `MutableArrayRef` from a C array.
+  template <typename T, size_t N>
+  MutableArrayRef(T (&Arr)[N]) -> MutableArrayRef<T>;
+
+  /// @}
 
   /// Construct a MutableArrayRef from a single element.
   template<typename T>

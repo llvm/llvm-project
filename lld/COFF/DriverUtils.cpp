@@ -853,7 +853,7 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
   if (!args.hasArg(OPT_lldignoreenv))
     addLINK(expandedArgv);
   cl::ExpandResponseFiles(saver(), getQuotingStyle(args), expandedArgv);
-  args = ctx.optTable.ParseArgs(makeArrayRef(expandedArgv).drop_front(),
+  args = ctx.optTable.ParseArgs(ArrayRef(expandedArgv).drop_front(),
                                 missingIndex, missingCount);
 
   // Print the real command line if response files are expanded.

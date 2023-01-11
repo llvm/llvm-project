@@ -1,20 +1,20 @@
 ; RUN: mlir-translate -import-llvm -mlir-print-debuginfo -split-input-file %s | FileCheck %s
 
-; CHECK-LABEL: @unknown(
-define i32 @unknown(i32 %0) {
+; CHECK: #[[$MODULELOC:.+]] = loc({{.*}}debug-info.ll{{.*}}:0:0)
+
+; CHECK-LABEL: @module_loc(
+define i32 @module_loc(i32 %0) {
 entry:
   br label %next
 end:
-  ; CHECK: ^{{.*}}(%{{.+}}: i32 loc(unknown)):
+  ; CHECK: ^{{.*}}(%{{.+}}: i32 loc({{.*}}debug-info.ll{{.*}}:0:0)):
   %1 = phi i32 [ %2, %next ]
   ret i32 %1
 next:
-  ; CHECK: = llvm.mul %{{.+}}, %{{.+}} : i32 loc(#[[UNKNOWNLOC:.+]])
+  ; CHECK: = llvm.mul %{{.+}}, %{{.+}} : i32 loc(#[[$MODULELOC]])
   %2 = mul i32 %0, %0
   br label %end
 }
-
-; CHECK: #[[UNKNOWNLOC:.+]] = loc(unknown)
 
 ; // -----
 

@@ -59,7 +59,7 @@ class IntegerToString {
     } else {
       for (; uval > 0; --buffptr, uval /= conv_base) {
         uintmax_t digit = (uval % conv_base);
-        buffer[buffptr - 1] = digit < 10 ? digit + '0' : digit + a - 10;
+        buffer[buffptr - 1] = static_cast<char>(digit < 10 ? digit + '0' : digit + a - 10);
       }
     }
     len = buffer.size() - buffptr;

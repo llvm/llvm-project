@@ -471,12 +471,31 @@ DiagnosedSilenceableFailure mlir::test::TestProduceNullPayloadOp::apply(
 }
 
 void mlir::test::TestProduceNullParamOp::getEffects(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {}
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::producesHandle(getOut(), effects);
+}
 
 DiagnosedSilenceableFailure
 mlir::test::TestProduceNullParamOp::apply(transform::TransformResults &results,
                                           transform::TransformState &state) {
   results.setParams(getOut().cast<OpResult>(), Attribute());
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestRequiredMemoryEffectsOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  if (getHasOperandEffect())
+    transform::consumesHandle(getIn(), effects);
+
+  if (getHasResultEffect())
+    transform::producesHandle(getOut(), effects);
+  else
+    transform::onlyReadsHandle(getOut(), effects);
+}
+
+DiagnosedSilenceableFailure mlir::test::TestRequiredMemoryEffectsOp::apply(
+    transform::TransformResults &results, transform::TransformState &state) {
+  results.set(getOut().cast<OpResult>(), state.getPayloadOps(getIn()));
   return DiagnosedSilenceableFailure::success();
 }
 

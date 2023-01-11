@@ -181,7 +181,8 @@ def int_amdgcn_implicit_buffer_ptr :
 // FIXME: Should be mangled for wave size.
 def int_amdgcn_init_exec : Intrinsic<[],
   [llvm_i64_ty],      // 64-bit literal constant
-  [IntrConvergent, ImmArg<ArgIndex<0>>]>;
+  [IntrConvergent, IntrNoMem, IntrHasSideEffects, IntrNoCallback,
+   IntrNoFree, IntrWillReturn, ImmArg<ArgIndex<0>>]>;
 
 // Set EXEC according to a thread count packed in an SGPR input:
 //    thread_count = (input >> bitoffset) & 0x7f;
@@ -191,7 +192,8 @@ def int_amdgcn_init_exec : Intrinsic<[],
 def int_amdgcn_init_exec_from_input : Intrinsic<[],
   [llvm_i32_ty,       // 32-bit SGPR input
    llvm_i32_ty],      // bit offset of the thread count
-  [IntrConvergent, ImmArg<ArgIndex<1>>]>;
+  [IntrConvergent, IntrHasSideEffects, IntrNoMem, IntrNoCallback,
+   IntrNoFree, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
 
 def int_amdgcn_wavefrontsize :
   ClangBuiltin<"__builtin_amdgcn_wavefrontsize">,
@@ -2430,6 +2432,12 @@ def int_amdgcn_cvt_sr_fp8_f32 : ClangBuiltin<"__builtin_amdgcn_cvt_sr_fp8_f32">,
             [llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
+// Represent a relocation constant.
+def int_amdgcn_reloc_constant : DefaultAttrsIntrinsic<
+  [llvm_i32_ty], [llvm_metadata_ty],
+  [IntrNoMem, IntrSpeculatable]
+>;
+
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend
 // should emit calls to these.
@@ -2455,18 +2463,12 @@ def int_amdgcn_end_cf : Intrinsic<[], [llvm_anyint_ty],
   [IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // Represent unreachable in a divergent region.
-def int_amdgcn_unreachable : Intrinsic<[], [], [IntrConvergent]>;
+def int_amdgcn_unreachable : Intrinsic<[], [], [IntrConvergent, IntrNoCallback, IntrNoFree]>;
 
 // Emit 2.5 ulp, no denormal division. Should only be inserted by
 // pass based on !fpmath metadata.
 def int_amdgcn_fdiv_fast : DefaultAttrsIntrinsic<
   [llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-  [IntrNoMem, IntrSpeculatable]
->;
-
-// Represent a relocation constant.
-def int_amdgcn_reloc_constant : DefaultAttrsIntrinsic<
-  [llvm_i32_ty], [llvm_metadata_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
 }

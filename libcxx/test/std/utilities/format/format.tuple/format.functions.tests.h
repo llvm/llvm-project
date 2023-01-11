@@ -11,28 +11,7 @@
 #include <concepts>
 #include <format>
 
-#include "make_string.h"
-
-#define STR(S) MAKE_STRING(CharT, S)
-#define SV(S) MAKE_STRING_VIEW(CharT, S)
-
-template <class T>
-struct context {};
-
-template <>
-struct context<char> {
-  using type = std::format_context;
-};
-
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-template <>
-struct context<wchar_t> {
-  using type = std::wformat_context;
-};
-#endif
-
-template <class T>
-using context_t = typename context<T>::type;
+#include "format.functions.common.h"
 
 enum class color { black, red, gold };
 

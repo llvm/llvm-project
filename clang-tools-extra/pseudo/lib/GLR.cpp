@@ -237,7 +237,7 @@ void glrShift(llvm::ArrayRef<const GSS::Node *> OldHeads,
       Shifts.push_back({*S, H});
   llvm::stable_sort(Shifts, llvm::less_first{});
 
-  auto Rest = llvm::makeArrayRef(Shifts);
+  auto Rest = llvm::ArrayRef(Shifts);
   llvm::SmallVector<const GSS::Node *> Parents;
   while (!Rest.empty()) {
     // Collect the batch of PendingShift that have compatible shift states.

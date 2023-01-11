@@ -9057,7 +9057,7 @@ SDValue DAGCombiner::visitRotate(SDNode *N) {
   unsigned NextOp = N0.getOpcode();
 
   // fold (rot* (rot* x, c2), c1)
-  //   -> (rot* x, ((c1 % bitsize) +- (c2 % bitsize)) % bitsize)
+  //   -> (rot* x, ((c1 % bitsize) +- (c2 % bitsize) + bitsize) % bitsize)
   if (NextOp == ISD::ROTL || NextOp == ISD::ROTR) {
     SDNode *C1 = DAG.isConstantIntBuildVectorOrConstantInt(N1);
     SDNode *C2 = DAG.isConstantIntBuildVectorOrConstantInt(N0.getOperand(1));
@@ -9073,6 +9073,8 @@ SDValue DAGCombiner::visitRotate(SDNode *N) {
       if (Norm1 && Norm2)
         if (SDValue CombinedShift = DAG.FoldConstantArithmetic(
                 CombineOp, dl, ShiftVT, {Norm1, Norm2})) {
+          CombinedShift = DAG.FoldConstantArithmetic(ISD::ADD, dl, ShiftVT,
+                                                     {CombinedShift, BitsizeC});
           SDValue CombinedShiftNorm = DAG.FoldConstantArithmetic(
               ISD::UREM, dl, ShiftVT, {CombinedShift, BitsizeC});
           return DAG.getNode(N->getOpcode(), dl, VT, N0->getOperand(0),
@@ -12356,6 +12358,16 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   // fold (sext (aext x)) -> (sext x)
   if (N0.getOpcode() == ISD::SIGN_EXTEND || N0.getOpcode() == ISD::ANY_EXTEND)
     return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, N0.getOperand(0));
+
+  // fold (sext (sext_inreg x)) -> (sext (trunc x))
+  if (N0.getOpcode() == ISD::SIGN_EXTEND_INREG) {
+    SDValue N00 = N0.getOperand(0);
+    EVT ExtVT = cast<VTSDNode>(N0->getOperand(1))->getVT();
+    if (N00.getOpcode() == ISD::TRUNCATE && (!LegalOperations || TLI.isTypeLegal(ExtVT))) {
+      SDValue T = DAG.getNode(ISD::TRUNCATE, DL, ExtVT, N00.getOperand(0));
+      return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, T);
+    }
+  }
 
   if (N0.getOpcode() == ISD::TRUNCATE) {
     // fold (sext (truncate (load x))) -> (sext (smaller load x))

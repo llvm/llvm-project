@@ -335,7 +335,7 @@ struct VectorReductionPattern final
 
     // Reduce them.
     Value result = values.front();
-    for (Value next : llvm::makeArrayRef(values).drop_front()) {
+    for (Value next : llvm::ArrayRef(values).drop_front()) {
       switch (reduceOp.getKind()) {
 
 #define INT_AND_FLOAT_CASE(kind, iop, fop)                                     \

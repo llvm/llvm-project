@@ -644,7 +644,7 @@ std::vector<DocumentSymbol> collectDocSymbols(ParsedAST &AST) {
   DocumentSymbol Root;
   Root.children = std::move(Syms);
   Root.range = EntireFile;
-  mergePragmas(Root, llvm::makeArrayRef(Pragmas));
+  mergePragmas(Root, llvm::ArrayRef(Pragmas));
   return Root.children;
 }
 

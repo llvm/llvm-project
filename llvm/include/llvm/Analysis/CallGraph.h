@@ -240,9 +240,6 @@ public:
 
   /// Adds a function to the list of functions called by this one.
   void addCalledFunction(CallBase *Call, CallGraphNode *M) {
-    assert(!Call || !Call->getCalledFunction() ||
-           !Call->getCalledFunction()->isIntrinsic() ||
-           !Intrinsic::isLeaf(Call->getCalledFunction()->getIntrinsicID()));
     CalledFunctions.emplace_back(Call ? std::optional<WeakTrackingVH>(Call)
                                       : std::optional<WeakTrackingVH>(),
                                  M);

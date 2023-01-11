@@ -362,9 +362,9 @@ mlir::affineParallelize(AffineForOp forOp,
       parallelReductions, [](const LoopReduction &red) { return red.kind; }));
   AffineParallelOp newPloop = outsideBuilder.create<AffineParallelOp>(
       loc, ValueRange(reducedValues).getTypes(), reductionKinds,
-      llvm::makeArrayRef(lowerBoundMap), lowerBoundOperands,
-      llvm::makeArrayRef(upperBoundMap), upperBoundOperands,
-      llvm::makeArrayRef(forOp.getStep()));
+      llvm::ArrayRef(lowerBoundMap), lowerBoundOperands,
+      llvm::ArrayRef(upperBoundMap), upperBoundOperands,
+      llvm::ArrayRef(forOp.getStep()));
   // Steal the body of the old affine for op.
   newPloop.getRegion().takeBody(forOp.getRegion());
   Operation *yieldOp = &newPloop.getBody()->back();
