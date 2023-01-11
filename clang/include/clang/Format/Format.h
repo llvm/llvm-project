@@ -2501,25 +2501,25 @@ struct FormatStyle {
   /// \endcode
   struct IntegerLiteralSeparatorStyle {
     /// Format separators in binary literals.
-    /// \code{.text}
-    ///    -1: 0b100111101101
-    ///     0: 0b10011'11'0110'1
-    ///     3: 0b100'111'101'101
-    ///     4: 0b1001'1110'1101
+    /// \code
+    ///   /* -1: */ b = 0b100111101101;
+    ///   /*  0: */ b = 0b10011'11'0110'1;
+    ///   /*  3: */ b = 0b100'111'101'101;
+    ///   /*  4: */ b = 0b1001'1110'1101;
     /// \endcode
     int8_t Binary;
     /// Format separators in decimal literals.
-    /// \code{.text}
-    ///    -1: 18446744073709550592ull
-    ///     0: 184467'440737'0'95505'92ull
-    ///     3: 18'446'744'073'709'550'592ull
+    /// \code
+    ///   /* -1: */ d = 18446744073709550592ull;
+    ///   /*  0: */ d = 184467'440737'0'95505'92ull;
+    ///   /*  3: */ d = 18'446'744'073'709'550'592ull;
     /// \endcode
     int8_t Decimal;
     /// Format separators in hexadecimal literals.
-    /// \code{.text}
-    ///    -1: 0xDEADBEEFDEADBEEFuz
-    ///     0: 0xDEAD'BEEF'DE'AD'BEE'Fuz
-    ///     2: 0xDE'AD'BE'EF'DE'AD'BE'EFuz
+    /// \code
+    ///   /* -1: */ h = 0xDEADBEEFDEADBEEFuz;
+    ///   /*  0: */ h = 0xDEAD'BEEF'DE'AD'BEE'Fuz;
+    ///   /*  2: */ h = 0xDE'AD'BE'EF'DE'AD'BE'EFuz;
     /// \endcode
     int8_t Hex;
   };
