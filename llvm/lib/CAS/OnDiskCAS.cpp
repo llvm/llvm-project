@@ -287,12 +287,12 @@ public:
   ArrayRef<InternalRef> as8B() const {
     assert(is8B());
     auto *B = Begin.get<const InternalRef *>();
-    return makeArrayRef(B, Size);
+    return ArrayRef(B, Size);
   }
 
   ArrayRef<InternalRef4B> as4B() const {
     auto *B = Begin.get<const InternalRef4B *>();
-    return makeArrayRef(B, Size);
+    return ArrayRef(B, Size);
   }
 
   InternalRefArrayRef(std::nullopt_t = std::nullopt) {}
@@ -495,14 +495,14 @@ struct DataRecordHandle {
     if (!Size)
       return InternalRefArrayRef();
     if (getLayoutFlags().RefKind == RefKindFlags::InternalRef4B)
-      return makeArrayRef(reinterpret_cast<const InternalRef4B *>(BeginByte),
+      return ArrayRef(reinterpret_cast<const InternalRef4B *>(BeginByte),
                           Size);
-    return makeArrayRef(reinterpret_cast<const InternalRef *>(BeginByte), Size);
+    return ArrayRef(reinterpret_cast<const InternalRef *>(BeginByte), Size);
   }
 
   ArrayRef<char> getData() const {
     assert(H && "Expected valid handle");
-    return makeArrayRef(reinterpret_cast<const char *>(H) + getDataRelOffset(),
+    return ArrayRef(reinterpret_cast<const char *>(H) + getDataRelOffset(),
                         getDataSize());
   }
 
@@ -558,7 +558,7 @@ struct String2BHandle {
   StringRef getString() const { return toStringRef(getArray()); }
   ArrayRef<char> getArray() const {
     assert(H && "Expected valid handle");
-    return makeArrayRef(reinterpret_cast<const char *>(H + 1), getLength());
+    return ArrayRef(reinterpret_cast<const char *>(H + 1), getLength());
   }
 
   static String2BHandle create(function_ref<char *(size_t Size)> Alloc,

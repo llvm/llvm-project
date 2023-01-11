@@ -108,7 +108,7 @@ public:
 
   ArrayRef<SourceLocation> locations() const {
     if (Kind == MatchingImplicitProperty && Locations.size() == 2)
-      return llvm::makeArrayRef(Locations).drop_back();
+      return ArrayRef(Locations).drop_back();
     return Locations;
   }
 

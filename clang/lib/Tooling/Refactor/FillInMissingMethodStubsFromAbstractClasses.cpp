@@ -56,7 +56,7 @@ clang::tooling::initiateFillInMissingMethodStubsFromAbstractClassesOperation(
     ASTSlice &Slice, ASTContext &Context, SourceLocation Location,
     SourceRange SelectionRange, bool CreateOperation) {
   auto SelectedDecl = Slice.innermostSelectedDecl(
-      llvm::makeArrayRef(Decl::CXXRecord), ASTSlice::InnermostDeclOnly);
+      ArrayRef(Decl::CXXRecord), ASTSlice::InnermostDeclOnly);
   if (!SelectedDecl)
     return std::nullopt;
   const auto *Class = cast<CXXRecordDecl>(SelectedDecl->getDecl());

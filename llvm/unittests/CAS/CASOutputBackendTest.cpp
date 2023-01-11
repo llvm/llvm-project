@@ -66,7 +66,7 @@ TEST(CASOutputBackendTest, createFiles) {
 
   SmallVector<CASOutputBackend::OutputFile> OFs = Outputs->takeOutputs();
 
-  auto Array = makeArrayRef(OutputDescriptions);
+  auto Array = ArrayRef(OutputDescriptions);
   ASSERT_EQ(OFs.size(), Array.size());
   for (size_t I = 0, E = Array.size(); I != E; ++I) {
     EXPECT_EQ(Array[I].Path, OFs[I].Path);

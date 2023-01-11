@@ -465,7 +465,7 @@ static bool isObjCSelectorKind(CXCursorKind Kind) {
 static bool isObjCSelector(const CXRenamedIndexedSymbol &Symbol) {
   if (isObjCSelectorKind(Symbol.CursorKind))
     return true;
-  for (const auto &Occurrence : llvm::makeArrayRef(
+  for (const auto &Occurrence : ArrayRef(
            Symbol.IndexedLocations, Symbol.IndexedLocationCount)) {
     if (isObjCSelectorKind(Occurrence.CursorKind))
       return true;
@@ -476,7 +476,7 @@ static bool isObjCSelector(const CXRenamedIndexedSymbol &Symbol) {
 static bool isObjCSelector(const CXIndexedSymbol &Symbol) {
   if (isObjCSelectorKind(Symbol.CursorKind))
     return true;
-  for (const auto &Occurrence : llvm::makeArrayRef(
+  for (const auto &Occurrence : ArrayRef(
            Symbol.IndexedLocations, Symbol.IndexedLocationCount)) {
     if (isObjCSelectorKind(Occurrence.CursorKind))
       return true;
@@ -561,7 +561,7 @@ CXErrorCode performIndexedFileRename(
       return CXError_InvalidArguments;
 
     std::vector<rename::IndexedOccurrence> IndexedOccurrences;
-    for (const auto &Loc : llvm::makeArrayRef(Symbol.IndexedLocations,
+    for (const auto &Loc : ArrayRef(Symbol.IndexedLocations,
                                               Symbol.IndexedLocationCount)) {
       rename::IndexedOccurrence Result;
       Result.Line = Loc.Location.Line;
@@ -675,7 +675,7 @@ CXErrorCode performIndexedSymbolSearch(
       return CXError_InvalidArguments;
 
     std::vector<rename::IndexedOccurrence> IndexedOccurrences;
-    for (const auto &Loc : llvm::makeArrayRef(Symbol.IndexedLocations,
+    for (const auto &Loc : ArrayRef(Symbol.IndexedLocations,
                                               Symbol.IndexedLocationCount)) {
       rename::IndexedOccurrence Result;
       Result.Line = Loc.Location.Line;
@@ -1171,7 +1171,7 @@ void clang_RefactoringActionSet_dispose(CXRefactoringActionSet *Set) {
 void clang_RefactoringActionSetWithDiagnostics_dispose(
     CXRefactoringActionSetWithDiagnostics *Set) {
   if (Set && Set->Actions) {
-    for (auto &S : llvm::makeArrayRef(Set->Actions, Set->NumActions))
+    for (auto &S : ArrayRef(Set->Actions, Set->NumActions))
       clang_disposeDiagnosticSet(S.Diagnostics);
     delete[] Set->Actions;
   }
@@ -1603,8 +1603,8 @@ CXErrorCode clang_Refactoring_findRenamedOccurrencesInIndexedFile(
   if (!Symbols || !NumSymbols || !Filename)
     return CXError_InvalidArguments;
   return performIndexedFileRename(
-      llvm::makeArrayRef(Symbols, NumSymbols), StringRef(Filename),
-      llvm::makeArrayRef(CommandLineArgs, NumCommandLineArgs), CIdx,
+      ArrayRef(Symbols, NumSymbols), StringRef(Filename),
+      ArrayRef(CommandLineArgs, NumCommandLineArgs), CIdx,
       MutableArrayRef<CXUnsavedFile>(UnsavedFiles, NumUnsavedFiles),
       Options ? static_cast<RefactoringOptionSet *>(Options) : nullptr,
       *OutResult);
@@ -1621,8 +1621,8 @@ CXErrorCode clang_Refactoring_findSymbolOccurrencesInIndexedFile(
   if (!Symbols || !NumSymbols || !Filename)
     return CXError_InvalidArguments;
   return performIndexedSymbolSearch(
-      llvm::makeArrayRef(Symbols, NumSymbols), StringRef(Filename),
-      llvm::makeArrayRef(CommandLineArgs, NumCommandLineArgs), CIdx,
+      ArrayRef(Symbols, NumSymbols), StringRef(Filename),
+      ArrayRef(CommandLineArgs, NumCommandLineArgs), CIdx,
       MutableArrayRef<CXUnsavedFile>(UnsavedFiles, NumUnsavedFiles),
       Options ? static_cast<RefactoringOptionSet *>(Options) : nullptr,
       *OutResult);

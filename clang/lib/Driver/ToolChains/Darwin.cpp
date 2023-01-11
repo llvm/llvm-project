@@ -530,7 +530,7 @@ public:
   /// environment block and includes the terminating \a nullptr.
   Optional<ArrayRef<const char *>> getEnvironmentIfOverridden() const {
     if (Environment)
-      return makeArrayRef(*Environment);
+      return ArrayRef(*Environment);
     return std::nullopt;
   }
 

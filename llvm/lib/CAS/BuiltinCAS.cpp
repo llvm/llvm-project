@@ -71,7 +71,7 @@ BuiltinCAS::storeFromOpenFileImpl(sys::fs::file_t FD,
     SmallString<4 * 4096 * 2> Data;
     if (Error E = sys::fs::readNativeFileToEOF(FD, Data, MinMappedSize))
       return std::move(E);
-    return store(std::nullopt, makeArrayRef(Data.data(), Data.size()));
+    return store(std::nullopt, ArrayRef(Data.data(), Data.size()));
   };
 
   // Check whether we can trust the size from stat.

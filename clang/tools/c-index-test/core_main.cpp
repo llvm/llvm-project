@@ -738,7 +738,7 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
 
   auto Callback = [&](CXModuleDependencySet *MDS) {
     llvm::outs() << "modules:\n";
-    for (const auto &M : llvm::makeArrayRef(MDS->Modules, MDS->Count)) {
+    for (const auto &M : ArrayRef(MDS->Modules, MDS->Count)) {
       llvm::outs() << "  module:\n"
                    << "    name: " << clang_getCString(M.Name) << "\n"
                    << "    context-hash: " << clang_getCString(M.ContextHash)
@@ -747,14 +747,14 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
                    << clang_getCString(M.ModuleMapPath) << "\n"
                    << "    module-deps:\n";
       for (const auto &ModuleName :
-           llvm::makeArrayRef(M.ModuleDeps->Strings, M.ModuleDeps->Count))
+           ArrayRef(M.ModuleDeps->Strings, M.ModuleDeps->Count))
         llvm::outs() << "      " << clang_getCString(ModuleName) << "\n";
       llvm::outs() << "    file-deps:\n";
       for (const auto &FileName :
-           llvm::makeArrayRef(M.FileDeps->Strings, M.FileDeps->Count))
+           ArrayRef(M.FileDeps->Strings, M.FileDeps->Count))
         llvm::outs() << "      " << clang_getCString(FileName) << "\n";
       llvm::outs() << "    build-args:";
-      for (const auto &Arg : llvm::makeArrayRef(M.BuildArguments->Strings,
+      for (const auto &Arg : ArrayRef(M.BuildArguments->Strings,
                                                 M.BuildArguments->Count))
         llvm::outs() << " " << clang_getCString(Arg);
       llvm::outs() << "\n";
@@ -805,14 +805,14 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
                  << "\n"
                  << "    module-deps:\n";
     for (const auto &ModuleName :
-         llvm::makeArrayRef(ModuleDeps->Strings, ModuleDeps->Count))
+         ArrayRef(ModuleDeps->Strings, ModuleDeps->Count))
       llvm::outs() << "      " << clang_getCString(ModuleName) << "\n";
     llvm::outs() << "    file-deps:\n";
     for (const auto &FileName :
-         llvm::makeArrayRef(FileDeps->Strings, FileDeps->Count))
+         ArrayRef(FileDeps->Strings, FileDeps->Count))
       llvm::outs() << "      " << clang_getCString(FileName) << "\n";
     llvm::outs() << "    build-args:";
-    for (const auto &Arg : llvm::makeArrayRef(Args->Strings, Args->Count))
+    for (const auto &Arg : ArrayRef(Args->Strings, Args->Count))
       llvm::outs() << " " << clang_getCString(Arg);
     llvm::outs() << "\n";
   };

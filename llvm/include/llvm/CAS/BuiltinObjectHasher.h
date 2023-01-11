@@ -53,13 +53,13 @@ private:
   }
 
   void updateArray(ArrayRef<char> Bytes) {
-    updateArray(makeArrayRef(reinterpret_cast<const uint8_t *>(Bytes.data()),
+    updateArray(ArrayRef(reinterpret_cast<const uint8_t *>(Bytes.data()),
                              Bytes.size()));
   }
 
   void updateSize(uint64_t Size) {
     Size = support::endian::byte_swap(Size, support::endianness::little);
-    Hasher.update(makeArrayRef(reinterpret_cast<const uint8_t *>(&Size),
+    Hasher.update(ArrayRef(reinterpret_cast<const uint8_t *>(&Size),
                                 sizeof(Size)));
   }
 

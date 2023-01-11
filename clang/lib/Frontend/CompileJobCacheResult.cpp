@@ -19,7 +19,7 @@ CompileJobCacheResult::getAllOutputKinds() {
   static const OutputKind OutputKinds[] = {OutputKind::MainOutput,
                                            OutputKind::SerializedDiagnostics,
                                            OutputKind::Dependencies};
-  return llvm::makeArrayRef(OutputKinds);
+  return ArrayRef(OutputKinds);
 }
 
 Error CompileJobCacheResult::forEachOutput(

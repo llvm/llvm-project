@@ -617,7 +617,7 @@ HashMappedTrieHandle::getRecord(SubtrieSlotValue Offset) {
   char *Begin = LMFR->data() + Offset.asData();
   OnDiskHashMappedTrie::ValueProxy Proxy;
   Proxy.Data = makeMutableArrayRef(Begin, getRecordDataSize());
-  Proxy.Hash = makeArrayRef(reinterpret_cast<const uint8_t *>(Proxy.Data.end()),
+  Proxy.Hash = ArrayRef(reinterpret_cast<const uint8_t *>(Proxy.Data.end()),
                             getNumHashBytes());
   return RecordData{Proxy, Offset};
 }

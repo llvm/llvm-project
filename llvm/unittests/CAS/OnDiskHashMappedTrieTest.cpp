@@ -47,8 +47,8 @@ TEST(OnDiskHashMappedTrieTest, Insertion) {
 
     uint8_t Hash0Bytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t Hash1Bytes[8] = {1, 0, 0, 0, 0, 0, 0, 0};
-    auto Hash0 = makeArrayRef(Hash0Bytes).take_front(NumHashBytes);
-    auto Hash1 = makeArrayRef(Hash1Bytes).take_front(NumHashBytes);
+    auto Hash0 = ArrayRef(Hash0Bytes).take_front(NumHashBytes);
+    auto Hash1 = ArrayRef(Hash1Bytes).take_front(NumHashBytes);
     constexpr StringLiteral Data0v1Bytes = "data0.v1";
     constexpr StringLiteral Data0v2Bytes = "data0.v2";
     constexpr StringLiteral Data1Bytes = "data1...";
@@ -56,10 +56,10 @@ TEST(OnDiskHashMappedTrieTest, Insertion) {
     static_assert(Data0v2Bytes.size() == DataSize, "math error");
     static_assert(Data1Bytes.size() == DataSize, "math error");
     ArrayRef<char> Data0v1 =
-        makeArrayRef(Data0v1Bytes.data(), Data0v1Bytes.size());
+        ArrayRef(Data0v1Bytes.data(), Data0v1Bytes.size());
     ArrayRef<char> Data0v2 =
-        makeArrayRef(Data0v2Bytes.data(), Data0v2Bytes.size());
-    ArrayRef<char> Data1 = makeArrayRef(Data1Bytes.data(), Data1Bytes.size());
+        ArrayRef(Data0v2Bytes.data(), Data0v2Bytes.size());
+    ArrayRef<char> Data1 = ArrayRef(Data1Bytes.data(), Data1Bytes.size());
 
     // Lookup when trie is empty.
     EXPECT_FALSE(Trie1->find(Hash0));

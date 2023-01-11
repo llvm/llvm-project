@@ -78,11 +78,11 @@ TEST(MappedPrefixTest, transformJoined) {
 
   SmallVector<MappedPrefix> ComputedSplit;
   MappedPrefix::transformJoinedIfValid(JoinedStrings, ComputedSplit);
-  EXPECT_EQ(makeArrayRef(ExpectedSplit), makeArrayRef(ComputedSplit));
+  EXPECT_EQ(ArrayRef(ExpectedSplit), ArrayRef(ComputedSplit));
 
   ComputedSplit.clear();
   MappedPrefix::transformJoinedIfValid(JoinedRefs, ComputedSplit);
-  EXPECT_EQ(makeArrayRef(ExpectedSplit), makeArrayRef(ComputedSplit));
+  EXPECT_EQ(ArrayRef(ExpectedSplit), ArrayRef(ComputedSplit));
 }
 
 TEST(MappedPrefixTest, transformJoinedError) {
@@ -118,11 +118,11 @@ TEST(MappedPrefixTest, transformJoinedIfValid) {
 
   SmallVector<MappedPrefix> ComputedSplit;
   MappedPrefix::transformJoinedIfValid(JoinedStrings, ComputedSplit);
-  EXPECT_EQ(makeArrayRef(ExpectedSplit), makeArrayRef(ComputedSplit));
+  EXPECT_EQ(ArrayRef(ExpectedSplit), ArrayRef(ComputedSplit));
 
   ComputedSplit.clear();
   MappedPrefix::transformJoinedIfValid(JoinedRefs, ComputedSplit);
-  EXPECT_EQ(makeArrayRef(ExpectedSplit), makeArrayRef(ComputedSplit));
+  EXPECT_EQ(ArrayRef(ExpectedSplit), ArrayRef(ComputedSplit));
 }
 
 TEST(PrefixMapperTest, construct) {
@@ -152,7 +152,7 @@ TEST(PrefixMapperTest, addRange) {
       {"/old/2", "/new/2"},
       {"/old/3", "/new/3"},
   };
-  auto RangeRef = makeArrayRef(Range);
+  auto RangeRef = ArrayRef(Range);
   PM.addRange(RangeRef);
   PM.add(MappedPrefix{"/old/after", "/new/after"});
 
@@ -180,7 +180,7 @@ static void checkPosix(sys::path::Style PathStyle) {
       // on "/new".
       {"/new/reenter-check", "/reentered"},
   };
-  PM.addRange(makeArrayRef(Mappings));
+  PM.addRange(ArrayRef(Mappings));
 
   // Not caught by anything.
   EXPECT_EQ("", PM.map(""));
@@ -228,7 +228,7 @@ static void checkWindows(sys::path::Style PathStyle) {
       // Confirm mappings don't run twice, just the first that matches.
       {"c:\\new\\reenter-check", "c:\\reentered"},
   };
-  PM.addRange(makeArrayRef(Mappings));
+  PM.addRange(ArrayRef(Mappings));
 
   // Not caught by anything.
   EXPECT_EQ("", PM.map(""));
@@ -274,7 +274,7 @@ TEST(PrefixMapperTest, mapNative) {
 TEST(PrefixMapperTest, mapTwoArgs) {
   PrefixMapper PM(sys::path::Style::posix);
   MappedPrefix Mappings[] = {{"/old", "/new"}};
-  PM.addRange(makeArrayRef(Mappings));
+  PM.addRange(ArrayRef(Mappings));
 
   MappedPrefix Tests[] = {
       {"/old", "/new"},     {"/old/x/y", "/new/x/y"},
@@ -295,7 +295,7 @@ TEST(PrefixMapperTest, mapTwoArgs) {
 TEST(PrefixMapperTest, mapToString) {
   PrefixMapper PM(sys::path::Style::posix);
   MappedPrefix Mappings[] = {{"/old", "/new"}};
-  PM.addRange(makeArrayRef(Mappings));
+  PM.addRange(ArrayRef(Mappings));
 
   MappedPrefix Tests[] = {
       {"/old", "/new"},     {"/old/x/y", "/new/x/y"},
@@ -313,7 +313,7 @@ TEST(PrefixMapperTest, mapToString) {
 TEST(PrefixMapperTest, mapInPlace) {
   PrefixMapper PM(sys::path::Style::posix);
   MappedPrefix Mappings[] = {{"/old", "/new"}};
-  PM.addRange(makeArrayRef(Mappings));
+  PM.addRange(ArrayRef(Mappings));
 
   MappedPrefix Tests[] = {
       {"/old", "/new"},     {"/old/x/y", "/new/x/y"},
@@ -435,7 +435,7 @@ TEST(TreePathPrefixMapperTest, addRange) {
       {"/absolute", "/new2"},
       {"/real/path", "/new3"},
   };
-  PM.addRange(makeArrayRef(Mappings));
+  PM.addRange(ArrayRef(Mappings));
   ASSERT_EQ(5u, PM.getMappings().size());
   EXPECT_EQ((MappedPrefix{"relative", "/new1"}), PM.getMappings()[0]);
   EXPECT_EQ((MappedPrefix{"/real/path/1", "/new1"}), PM.getMappings()[1]);
@@ -443,7 +443,7 @@ TEST(TreePathPrefixMapperTest, addRange) {
   EXPECT_EQ((MappedPrefix{"/real/path/2", "/new2"}), PM.getMappings()[3]);
   EXPECT_EQ((MappedPrefix{"/real/path", "/new3"}), PM.getMappings()[4]);
 
-  PM.addRange(makeArrayRef(MissingMapping));
+  PM.addRange(ArrayRef(MissingMapping));
   EXPECT_EQ(6u, PM.getMappings().size());
   EXPECT_EQ((MappedPrefix{"missing", "/new"}), PM.getMappings().back());
 }
@@ -460,7 +460,7 @@ TEST(TreePathPrefixMapperTest, addInverseRange) {
       {"/new2", "/absolute"},
       {"/new3", "/real/path"},
   };
-  PM.addInverseRange(makeArrayRef(Mappings));
+  PM.addInverseRange(ArrayRef(Mappings));
   ASSERT_EQ(5u, PM.getMappings().size());
   EXPECT_EQ((MappedPrefix{"relative", "/new1"}), PM.getMappings()[0]);
   EXPECT_EQ((MappedPrefix{"/real/path/1", "/new1"}), PM.getMappings()[1]);
@@ -468,7 +468,7 @@ TEST(TreePathPrefixMapperTest, addInverseRange) {
   EXPECT_EQ((MappedPrefix{"/real/path/2", "/new2"}), PM.getMappings()[3]);
   EXPECT_EQ((MappedPrefix{"/real/path", "/new3"}), PM.getMappings()[4]);
 
-  PM.addInverseRange(makeArrayRef(MissingMapping));
+  PM.addInverseRange(ArrayRef(MissingMapping));
   EXPECT_EQ(6u, PM.getMappings().size());
   EXPECT_EQ((MappedPrefix{"missing", "/new"}), PM.getMappings().back());
 }

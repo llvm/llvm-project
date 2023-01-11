@@ -293,7 +293,7 @@ makeDepscanDaemonKey(StringRef Mode, const DepscanSharing &Sharing) {
   auto makePIDKey = [&completeKey](uint64_t PID) -> std::string {
     llvm::BLAKE3 Hasher;
     Hasher.update(
-        llvm::makeArrayRef(reinterpret_cast<uint8_t *>(&PID), sizeof(PID)));
+        ArrayRef(reinterpret_cast<uint8_t *>(&PID), sizeof(PID)));
     return completeKey(Hasher);
   };
   auto makeIdentifierKey = [&completeKey](StringRef Ident) -> std::string {
@@ -743,7 +743,7 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
     if (Arg == "-long-running")
       LongRunning = true;
     else if (Arg == "-cas-args") {
-      Server.CASArgs = llvm::makeArrayRef(A + 1, Argv.end());
+      Server.CASArgs = ArrayRef(A + 1, Argv.end());
       break;
     }
   }

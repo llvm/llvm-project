@@ -942,7 +942,7 @@ bool printRefactoringReplacements(
     const CXRefactoringFileReplacementSet &FileSet =
         Replacements.FileReplacementSets[FileIndex];
     if (opts::Apply) {
-      apply(llvm::makeArrayRef(FileSet.Replacements, FileSet.NumReplacements),
+      apply(ArrayRef(FileSet.Replacements, FileSet.NumReplacements),
             clang_getCString(FileSet.Filename));
       continue;
     }
@@ -964,14 +964,14 @@ bool printRefactoringReplacements(
             clang_RefactoringReplacement_getAssociatedSymbolOccurrences(
                 Replacement);
         for (const CXSymbolOccurrence &SymbolOccurrence :
-             llvm::makeArrayRef(Info.AssociatedSymbolOccurrences,
+             ArrayRef(Info.AssociatedSymbolOccurrences,
                                 Info.NumAssociatedSymbolOccurrences)) {
           outs() << " [Symbol " << renameOccurrenceKindString(
                                        SymbolOccurrence.Kind, /*IsLocal*/ false,
                                        SymbolOccurrence.IsMacroExpansion)
                  << ' ' << SymbolOccurrence.SymbolIndex;
           for (const auto &Piece :
-               llvm::makeArrayRef(SymbolOccurrence.NamePieces,
+               ArrayRef(SymbolOccurrence.NamePieces,
                                   SymbolOccurrence.NumNamePieces)) {
             outs() << ' ' << Piece.Begin.Line << ":" << Piece.Begin.Column
                    << " -> " << Piece.End.Line << ":" << Piece.End.Column;

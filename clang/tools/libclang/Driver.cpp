@@ -41,7 +41,7 @@ clang_Driver_getExternalActionsForCommand_v0(int ArgC, const char **ArgV,
     return nullptr;
 
   CXDiagnosticSetDiagnosticConsumer DiagConsumer;
-  auto DiagOpts = CreateAndPopulateDiagOpts(llvm::makeArrayRef(ArgV, ArgC));
+  auto DiagOpts = CreateAndPopulateDiagOpts(ArrayRef(ArgV, ArgC));
   auto Diags = CompilerInstance::createDiagnostics(DiagOpts.release(),
                                                    &DiagConsumer, false);
 
@@ -64,7 +64,7 @@ clang_Driver_getExternalActionsForCommand_v0(int ArgC, const char **ArgV,
                            VFS.release());
   TheDriver.setCheckInputsExist(false);
   std::unique_ptr<driver::Compilation> C(
-      TheDriver.BuildCompilation(llvm::makeArrayRef(ArgV, ArgC)));
+      TheDriver.BuildCompilation(ArrayRef(ArgV, ArgC)));
   if (!C || Diags->hasErrorOccurred()) {
     if (OutDiags)
       *OutDiags = DiagConsumer.getDiagnosticSet();

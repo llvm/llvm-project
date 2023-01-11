@@ -123,14 +123,14 @@ public:
 
   ArrayRef<const InMemoryObject *> getRefs() const { return getRefsImpl(); }
   ArrayRef<const InMemoryObject *> getRefsImpl() const {
-    return makeArrayRef(
+    return ArrayRef(
         reinterpret_cast<const InMemoryObject *const *>(this + 1), NumRefs);
   }
 
   ArrayRef<char> getData() const { return getDataImpl(); }
   ArrayRef<char> getDataImpl() const {
     ArrayRef<const InMemoryObject *> Refs = getRefs();
-    return makeArrayRef(
+    return ArrayRef(
         reinterpret_cast<const char *>(Refs.data() + Refs.size()), DataSize);
   }
 

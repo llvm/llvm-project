@@ -1515,11 +1515,11 @@ ExtractOperation::performExpressionExtraction(ASTContext &Context,
   Replacements.push_back(RefactoringReplacement(
       SourceRange(InsertionLoc, InsertionLoc), OS.str(), CreatedSymbol.get(),
       RefactoringReplacement::AssociatedSymbolLocation(
-          llvm::makeArrayRef(NameOffset), /*IsDeclaration=*/true)));
+          ArrayRef(NameOffset), /*IsDeclaration=*/true)));
   // Replace the expression with the variable.
   Replacements.push_back(
       RefactoringReplacement(ExtractedCharRange, VarName, CreatedSymbol.get(),
-                             /*NameOffset=*/llvm::makeArrayRef(unsigned(0))));
+                             /*NameOffset=*/ArrayRef(unsigned(0))));
 
   RefactoringResult Result(std::move(Replacements));
   Result.AssociatedSymbols.push_back(std::move(CreatedSymbol));
@@ -1803,7 +1803,7 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
   ExtractedNamePieces.push_back(ExtractedName);
   if (isMethodExtraction() && EnclosingObjCMethod &&
       !CapturedVariables.empty()) {
-    for (const auto &Var : llvm::makeArrayRef(CapturedVariables).drop_front())
+    for (const auto &Var : ArrayRef(CapturedVariables).drop_front())
       ExtractedNamePieces.push_back(Var.getName());
   }
   std::unique_ptr<RefactoringResultAssociatedSymbol> CreatedSymbol =
@@ -2009,7 +2009,7 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
       getPreciseTokenLocEnd(ExtractedTokenRange.getEnd(), SM, LangOpts));
   Replacements.push_back(RefactoringReplacement(
       ExtractedCharRange, std::move(InsertedOS.str()), CreatedSymbol.get(),
-      llvm::makeArrayRef(NameOffsets)));
+      ArrayRef(NameOffsets)));
 
   RefactoringResult Result(std::move(Replacements));
   Result.AssociatedSymbols.push_back(std::move(CreatedSymbol));
