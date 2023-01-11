@@ -10,8 +10,8 @@
 
 # CHECK-DAG: .debug_cu_index contents:
 # CHECK: version = 5, units = 1, slots = 2
-# CHECK: Index Signature          INFO                        ABBREV
-# CHECK: 1 [[DWOID]] [0x0000000000000000, 0x0000000000000054) [0x00000000, 0x0000002a)
+# CHECK: Index Signature          INFO                     ABBREV
+# CHECK: 1 [[DWOID]] [0x00000000, 0x00000054) [0x00000000, 0x0000002a)
 
 	.section	.debug_info.dwo,"e",@progbits
 	.long	.Ldebug_info_dwo_end0-.Ldebug_info_dwo_start0 # Length of Unit

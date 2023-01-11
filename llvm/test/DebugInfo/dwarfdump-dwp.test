@@ -38,17 +38,17 @@ RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-dwp.x86_64.o | FileCheck %s
 
 ; CHECK: .debug_cu_index contents:
 ; CHECK-NEXT: version = 2, units = 2, slots = 16
-; CHECK:      Index Signature          INFO                                     ABBREV                   LINE                     STR_OFFSETS
-; CHECK-NEXT: ----- ------------------ ---------------------------------------- ------------------------ ------------------------ ------------------------
-; CHECK-NEXT:     3 0xfef104c25502f092 [0x000000000000002d, 0x000000000000005f) [0x00000043, 0x0000008e) [0x0000001a, 0x00000034) [0x00000010, 0x00000024)
-; CHECK-NEXT:     9 0x03c30756e2d45008 [0x0000000000000000, 0x000000000000002d) [0x00000000, 0x00000043) [0x00000000, 0x0000001a) [0x00000000, 0x00000010)
+; CHECK:      Index Signature          INFO                     ABBREV                   LINE                     STR_OFFSETS
+; CHECK-NEXT: ----- ------------------ ------------------------ ------------------------ ------------------------ ------------------------
+; CHECK-NEXT:     3 0xfef104c25502f092 [0x0000002d, 0x0000005f) [0x00000043, 0x0000008e) [0x0000001a, 0x00000034) [0x00000010, 0x00000024)
+; CHECK-NEXT:     9 0x03c30756e2d45008 [0x00000000, 0x0000002d) [0x00000000, 0x00000043) [0x00000000, 0x0000001a) [0x00000000, 0x00000010)
 
 ; CHECK: .debug_tu_index contents:
 ; CHECK-NEXT: version = 2, units = 2, slots = 16
-; CHECK:      Index Signature          TYPES                                    ABBREV                   LINE                     STR_OFFSETS
-; CHECK-NEXT: ----- ------------------ ---------------------------------------- ------------------------ ------------------------ ------------------------
-; CHECK-NEXT:     9 0x1d02f3be30cc5688 [0x0000000000000024, 0x0000000000000048) [0x00000043, 0x0000008e) [0x0000001a, 0x00000034) [0x00000010, 0x00000024)
-; CHECK-NEXT:    13 0x3875c0e21cda63fc [0x0000000000000000, 0x0000000000000024) [0x00000000, 0x00000043) [0x00000000, 0x0000001a) [0x00000000, 0x00000010)
+; CHECK:      Index Signature          TYPES                    ABBREV                   LINE                     STR_OFFSETS
+; CHECK-NEXT: ----- ------------------ ------------------------ ------------------------ ------------------------ ------------------------
+; CHECK-NEXT:     9 0x1d02f3be30cc5688 [0x00000024, 0x00000048) [0x00000043, 0x0000008e) [0x0000001a, 0x00000034) [0x00000010, 0x00000024)
+; CHECK-NEXT:    13 0x3875c0e21cda63fc [0x00000000, 0x00000024) [0x00000000, 0x00000043) [0x00000000, 0x0000001a) [0x00000000, 0x00000010)
 
 ; TODO: use the index section offset info to correctly dump strings in debug info
 ; TODO: use the index section offset info to correctly dump file names in debug info

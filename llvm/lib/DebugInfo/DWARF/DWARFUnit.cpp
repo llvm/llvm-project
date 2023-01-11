@@ -160,11 +160,11 @@ DWARFUnitVector::getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) {
   if (!CUOff)
     return nullptr;
 
-  uint64_t Offset = CUOff->getOffset();
+  auto Offset = CUOff->Offset;
   auto end = begin() + getNumInfoUnits();
 
   auto *CU =
-      std::upper_bound(begin(), end, CUOff->getOffset(),
+      std::upper_bound(begin(), end, CUOff->Offset,
                        [](uint64_t LHS, const std::unique_ptr<DWARFUnit> &RHS) {
                          return LHS < RHS->getNextUnitOffset();
                        });
@@ -353,12 +353,12 @@ bool DWARFUnitHeader::applyIndexEntry(const DWARFUnitIndex::Entry *Entry) {
     return false;
   auto *UnitContrib = IndexEntry->getContribution();
   if (!UnitContrib ||
-      UnitContrib->getLength() != (getLength() + getUnitLengthFieldByteSize()))
+      UnitContrib->Length != (getLength() + getUnitLengthFieldByteSize()))
     return false;
   auto *AbbrEntry = IndexEntry->getContribution(DW_SECT_ABBREV);
   if (!AbbrEntry)
     return false;
-  AbbrOffset = AbbrEntry->getOffset();
+  AbbrOffset = AbbrEntry->Offset;
   return true;
 }
 
@@ -544,7 +544,7 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
       uint64_t ContributionBaseOffset = 0;
       if (auto *IndexEntry = Header.getIndexEntry())
         if (auto *Contrib = IndexEntry->getContribution(DW_SECT_RNGLISTS))
-          ContributionBaseOffset = Contrib->getOffset();
+          ContributionBaseOffset = Contrib->Offset;
       setRangesSection(
           &Context.getDWARFObj().getRnglistsDWOSection(),
           ContributionBaseOffset +
@@ -565,7 +565,7 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
     if (auto *IndexEntry = Header.getIndexEntry())
       if (const auto *C = IndexEntry->getContribution(
               Header.getVersion() >= 5 ? DW_SECT_LOCLISTS : DW_SECT_EXT_LOC))
-        Data = Data.substr(C->getOffset(), C->getLength());
+        Data = Data.substr(C->Offset, C->Length);
 
     DWARFDataExtractor DWARFData(Data, IsLittleEndian, getAddressByteSize());
     LocTable =
@@ -1156,7 +1156,7 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor &DA) {
   const auto *C =
       IndexEntry ? IndexEntry->getContribution(DW_SECT_STR_OFFSETS) : nullptr;
   if (C)
-    Offset = C->getOffset();
+    Offset = C->Offset;
   if (getVersion() >= 5) {
     if (DA.getData().data() == nullptr)
       return std::nullopt;
@@ -1172,7 +1172,7 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor &DA) {
   // the length of the string offsets section.
   StrOffsetsContributionDescriptor Desc;
   if (C)
-    Desc = StrOffsetsContributionDescriptor(C->getOffset(), C->getLength(), 4,
+    Desc = StrOffsetsContributionDescriptor(C->Offset, C->Length, 4,
                                             Header.getFormat());
   else if (!IndexEntry && !StringOffsetSection.Data.empty())
     Desc = StrOffsetsContributionDescriptor(0, StringOffsetSection.Data.size(),

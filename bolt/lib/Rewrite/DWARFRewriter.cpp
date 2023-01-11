@@ -1212,11 +1212,11 @@ updateDebugData(DWARFContext &DWCtx, std::string &Storage,
       const DWARFUnitIndex::Entry::SectionContribution;
   auto getSliceData = [&](const DWARFUnitIndex::Entry *DWOEntry,
                           StringRef OutData, DWARFSectionKind Sec,
-                          uint64_t &DWPOffset) -> StringRef {
+                          uint32_t &DWPOffset) -> StringRef {
     if (DWOEntry) {
       DWOSectionContribution *DWOContrubution = DWOEntry->getContribution(Sec);
-      DWPOffset = DWOContrubution->getOffset();
-      OutData = OutData.substr(DWPOffset, DWOContrubution->getLength());
+      DWPOffset = DWOContrubution->Offset;
+      OutData = OutData.substr(DWPOffset, DWOContrubution->Length);
     }
     return OutData;
   };
@@ -1227,7 +1227,7 @@ updateDebugData(DWARFContext &DWCtx, std::string &Storage,
 
   Streamer.switchSection(SectionIter->second.first);
   StringRef OutData = SectionContents;
-  uint64_t DWPOffset = 0;
+  uint32_t DWPOffset = 0;
 
   switch (SectionIter->second.second) {
   default: {
@@ -1310,15 +1310,14 @@ static std::string extractDWOTUFromDWP(
   // Sorting so it's easy to compare output.
   // They should be sharing the same Abbrev.
   llvm::sort(TUContributions, [](const TUEntry &V1, const TUEntry &V2) -> bool {
-    return V1.second->getOffset() < V2.second->getOffset();
+    return V1.second->Offset < V2.second->Offset;
   });
 
   for (auto &PairEntry : TUContributions) {
     const DWARFUnitIndex::Entry::SectionContribution *C = PairEntry.second;
     const uint64_t TUSignature = PairEntry.first;
-    DWOTUSection.append(
-        Contents.slice(C->getOffset(), C->getOffset() + C->getLength()).str());
-    TUContributionsToCU.push_back({TUSignature, C->getLength32()});
+    DWOTUSection.append(Contents.slice(C->Offset, C->Offset + C->Length).str());
+    TUContributionsToCU.push_back({TUSignature, C->Length});
   }
   return DWOTUSection;
 }
@@ -1358,12 +1357,11 @@ static void extractTypesFromDWPDWARF5(
   llvm::sort(TUContributions,
              [](const DWARFUnitIndex::Entry::SectionContribution *V1,
                 const DWARFUnitIndex::Entry::SectionContribution *V2) -> bool {
-               return V1->getOffset() < V2->getOffset();
+               return V1->Offset < V2->Offset;
              });
   Streamer.switchSection(MCOFI.getDwarfInfoDWOSection());
   for (const auto *C : TUContributions)
-    Streamer.emitBytes(
-        Contents.slice(C->getOffset(), C->getOffset() + C->getLength()));
+    Streamer.emitBytes(Contents.slice(C->Offset, C->Offset + C->Length));
 }
 
 void DWARFRewriter::writeDWP(
@@ -1512,10 +1510,9 @@ void DWARFRewriter::writeDWP(
           Streamer->emitBytes(OutData);
         auto Index =
             getContributionIndex(SectionIter->second.second, IndexVersion);
-        CurEntry.Contributions[Index].setOffset(ContributionOffsets[Index]);
-        CurEntry.Contributions[Index].setLength(OutData.size());
-        ContributionOffsets[Index] +=
-            CurEntry.Contributions[Index].getLength32();
+        CurEntry.Contributions[Index].Offset = ContributionOffsets[Index];
+        CurEntry.Contributions[Index].Length = OutData.size();
+        ContributionOffsets[Index] += CurEntry.Contributions[Index].Length;
       }
 
       // Strings are combined in to a new string section, and de-duplicated
@@ -1544,10 +1541,9 @@ void DWARFRewriter::writeDWP(
       for (const TUContribution &TUC : TUContributionsToCU) {
         UnitIndexEntry TUEntry = CurEntry;
         TUEntry.Contributions[0] = {};
-        TUEntry.Contributions[Index].setOffset(ContributionOffsets[Index]);
-        TUEntry.Contributions[Index].setLength(TUC.Length);
-        ContributionOffsets[Index] +=
-            TUEntry.Contributions[Index].getLength32();
+        TUEntry.Contributions[Index].Offset = ContributionOffsets[Index];
+        TUEntry.Contributions[Index].Length = TUC.Length;
+        ContributionOffsets[Index] += TUEntry.Contributions[Index].Length;
         TypeIndexEntries.insert(std::make_pair(TUC.Signature, TUEntry));
       }
     }

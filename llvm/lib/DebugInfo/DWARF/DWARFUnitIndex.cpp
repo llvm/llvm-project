@@ -181,14 +181,14 @@ bool DWARFUnitIndex::parseImpl(DataExtractor IndexData) {
   for (unsigned i = 0; i != Header.NumUnits; ++i) {
     auto *Contrib = Contribs[i];
     for (unsigned i = 0; i != Header.NumColumns; ++i)
-      Contrib[i].setOffset(IndexData.getU32(&Offset));
+      Contrib[i].Offset = IndexData.getU32(&Offset);
   }
 
   // Read Table of Section Sizes
   for (unsigned i = 0; i != Header.NumUnits; ++i) {
     auto *Contrib = Contribs[i];
     for (unsigned i = 0; i != Header.NumColumns; ++i)
-      Contrib[i].setLength(IndexData.getU32(&Offset));
+      Contrib[i].Length = IndexData.getU32(&Offset);
   }
 
   return true;
@@ -222,21 +222,13 @@ void DWARFUnitIndex::dump(raw_ostream &OS) const {
     DWARFSectionKind Kind = ColumnKinds[i];
     StringRef Name = getColumnHeader(Kind);
     if (!Name.empty())
-      OS << ' '
-         << left_justify(Name,
-                         Kind == DWARFSectionKind::DW_SECT_INFO ? 40 : 24);
+      OS << ' ' << left_justify(Name, 24);
     else
       OS << format(" Unknown: %-15" PRIu32, RawSectionIds[i]);
   }
   OS << "\n----- ------------------";
-  for (unsigned i = 0; i != Header.NumColumns; ++i) {
-    DWARFSectionKind Kind = ColumnKinds[i];
-    if (Kind == DWARFSectionKind::DW_SECT_INFO ||
-        Kind == DWARFSectionKind::DW_SECT_EXT_TYPES)
-      OS << " ----------------------------------------";
-    else
-      OS << " ------------------------";
-  }
+  for (unsigned i = 0; i != Header.NumColumns; ++i)
+    OS << " ------------------------";
   OS << '\n';
   for (unsigned i = 0; i != Header.NumBuckets; ++i) {
     auto &Row = Rows[i];
@@ -244,16 +236,8 @@ void DWARFUnitIndex::dump(raw_ostream &OS) const {
       OS << format("%5u 0x%016" PRIx64 " ", i + 1, Row.Signature);
       for (unsigned i = 0; i != Header.NumColumns; ++i) {
         auto &Contrib = Contribs[i];
-        DWARFSectionKind Kind = ColumnKinds[i];
-        if (Kind == DWARFSectionKind::DW_SECT_INFO ||
-            Kind == DWARFSectionKind::DW_SECT_EXT_TYPES)
-          OS << format("[0x%016" PRIx64 ", 0x%016" PRIx64 ") ",
-                       Contrib.getOffset(),
-                       Contrib.getOffset() + Contrib.getLength());
-        else
-          OS << format("[0x%08" PRIx32 ", 0x%08" PRIx32 ") ",
-                       Contrib.getOffset(),
-                       Contrib.getOffset() + Contrib.getLength());
+        OS << format("[0x%08x, 0x%08x) ", Contrib.Offset,
+                     Contrib.Offset + Contrib.Length);
       }
       OS << '\n';
     }
@@ -275,25 +259,25 @@ DWARFUnitIndex::Entry::getContribution() const {
 }
 
 const DWARFUnitIndex::Entry *
-DWARFUnitIndex::getFromOffset(uint64_t Offset) const {
+DWARFUnitIndex::getFromOffset(uint32_t Offset) const {
   if (OffsetLookup.empty()) {
     for (uint32_t i = 0; i != Header.NumBuckets; ++i)
       if (Rows[i].Contributions)
         OffsetLookup.push_back(&Rows[i]);
     llvm::sort(OffsetLookup, [&](Entry *E1, Entry *E2) {
-      return E1->Contributions[InfoColumn].getOffset() <
-             E2->Contributions[InfoColumn].getOffset();
+      return E1->Contributions[InfoColumn].Offset <
+             E2->Contributions[InfoColumn].Offset;
     });
   }
   auto I = partition_point(OffsetLookup, [&](Entry *E2) {
-    return E2->Contributions[InfoColumn].getOffset() <= Offset;
+    return E2->Contributions[InfoColumn].Offset <= Offset;
   });
   if (I == OffsetLookup.begin())
     return nullptr;
   --I;
   const auto *E = *I;
   const auto &InfoContrib = E->Contributions[InfoColumn];
-  if ((InfoContrib.getOffset() + InfoContrib.getLength()) <= Offset)
+  if ((InfoContrib.Offset + InfoContrib.Length) <= Offset)
     return nullptr;
   return E;
 }

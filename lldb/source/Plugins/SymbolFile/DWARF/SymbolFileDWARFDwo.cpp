@@ -42,7 +42,7 @@ DWARFCompileUnit *SymbolFileDWARFDwo::GetDWOCompileUnitForHash(uint64_t hash) {
       if (auto *unit_contrib = entry->getContribution())
         return llvm::dyn_cast_or_null<DWARFCompileUnit>(
             DebugInfo().GetUnitAtOffset(DIERef::Section::DebugInfo,
-                                        unit_contrib->getOffset32()));
+                                        unit_contrib->Offset));
     }
     return nullptr;
   }

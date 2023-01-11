@@ -175,7 +175,7 @@ static StringRef getSubsection(StringRef Section,
   const auto *Off = Entry.getContribution(Kind);
   if (!Off)
     return StringRef();
-  return Section.substr(Off->getOffset(), Off->getLength());
+  return Section.substr(Off->Offset, Off->Length);
 }
 
 static void
@@ -200,17 +200,16 @@ addAllTypesFromDWP(MCStreamer &Out,
         continue;
       auto &C =
           Entry.Contributions[getContributionIndex(Kind, TUIndex.getVersion())];
-      C.setOffset(C.getOffset() + I->getOffset());
-      C.setLength(I->getLength());
+      C.Offset += I->Offset;
+      C.Length = I->Length;
       ++I;
     }
     auto &C = Entry.Contributions[TypesContributionIndex];
     Out.emitBytes(Types.substr(
-        C.getOffset() -
-            TUEntry.Contributions[TypesContributionIndex].getOffset(),
-        C.getLength()));
-    C.setOffset(TypesOffset);
-    TypesOffset += C.getLength();
+        C.Offset - TUEntry.Contributions[TypesContributionIndex].Offset,
+        C.Length));
+    C.Offset = TypesOffset;
+    TypesOffset += C.Length;
   }
 }
 
@@ -227,23 +226,23 @@ static void addAllTypesFromTypesSection(
       // Zero out the debug_info contribution
       Entry.Contributions[0] = {};
       auto &C = Entry.Contributions[getContributionIndex(DW_SECT_EXT_TYPES, 2)];
-      C.setOffset(TypesOffset);
+      C.Offset = TypesOffset;
       auto PrevOffset = Offset;
       // Length of the unit, including the 4 byte length field.
-      C.setLength(Data.getU32(&Offset) + 4);
+      C.Length = Data.getU32(&Offset) + 4;
 
       Data.getU16(&Offset); // Version
       Data.getU32(&Offset); // Abbrev offset
       Data.getU8(&Offset);  // Address size
       auto Signature = Data.getU64(&Offset);
-      Offset = PrevOffset + C.getLength32();
+      Offset = PrevOffset + C.Length;
 
       auto P = TypeIndexEntries.insert(std::make_pair(Signature, Entry));
       if (!P.second)
         continue;
 
-      Out.emitBytes(Types.substr(PrevOffset, C.getLength32()));
-      TypesOffset += C.getLength32();
+      Out.emitBytes(Types.substr(PrevOffset, C.Length));
+      TypesOffset += C.Length;
     }
   }
 }
@@ -403,17 +402,14 @@ void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
   }
 }
 
-enum AccessField { Offset, Length };
-void writeIndexTable(MCStreamer &Out, ArrayRef<unsigned> ContributionOffsets,
-                     const MapVector<uint64_t, UnitIndexEntry> &IndexEntries,
-                     const AccessField &Field) {
+void writeIndexTable(
+    MCStreamer &Out, ArrayRef<unsigned> ContributionOffsets,
+    const MapVector<uint64_t, UnitIndexEntry> &IndexEntries,
+    uint32_t DWARFUnitIndex::Entry::SectionContribution::*Field) {
   for (const auto &E : IndexEntries)
     for (size_t I = 0; I != std::size(E.second.Contributions); ++I)
       if (ContributionOffsets[I])
-        Out.emitIntValue((Field == AccessField::Offset
-                              ? E.second.Contributions[I].getOffset32()
-                              : E.second.Contributions[I].getLength32()),
-                         4);
+        Out.emitIntValue(E.second.Contributions[I].*Field, 4);
 }
 
 void writeIndex(MCStreamer &Out, MCSection *Section,
@@ -464,10 +460,12 @@ void writeIndex(MCStreamer &Out, MCSection *Section,
       Out.emitIntValue(getOnDiskSectionId(I), 4);
 
   // Write the offsets.
-  writeIndexTable(Out, ContributionOffsets, IndexEntries, AccessField::Offset);
+  writeIndexTable(Out, ContributionOffsets, IndexEntries,
+                  &DWARFUnitIndex::Entry::SectionContribution::Offset);
 
   // Write the lengths.
-  writeIndexTable(Out, ContributionOffsets, IndexEntries, AccessField::Length);
+  writeIndexTable(Out, ContributionOffsets, IndexEntries,
+                  &DWARFUnitIndex::Entry::SectionContribution::Length);
 }
 
 Error buildDuplicateError(const std::pair<uint64_t, UnitIndexEntry> &PrevE,
@@ -644,9 +642,9 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
 
     for (auto Pair : SectionLength) {
       auto Index = getContributionIndex(Pair.first, IndexVersion);
-      CurEntry.Contributions[Index].setOffset(ContributionOffsets[Index]);
-      CurEntry.Contributions[Index].setLength(Pair.second);
-      ContributionOffsets[Index] += CurEntry.Contributions[Index].getLength32();
+      CurEntry.Contributions[Index].Offset = ContributionOffsets[Index];
+      ContributionOffsets[Index] +=
+          (CurEntry.Contributions[Index].Length = Pair.second);
     }
 
     uint32_t &InfoSectionOffset =
@@ -666,21 +664,21 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
           UnitIndexEntry Entry = CurEntry;
           auto &C = Entry.Contributions[getContributionIndex(DW_SECT_INFO,
                                                              IndexVersion)];
-          C.setOffset(InfoSectionOffset);
-          C.setLength(Header.Length + 4);
+          C.Offset = InfoSectionOffset;
+          C.Length = Header.Length + 4;
 
           if (std::numeric_limits<uint32_t>::max() - InfoSectionOffset <
-              C.getLength32())
+              C.Length)
             return make_error<DWPError>(
                 "debug information section offset is greater than 4GB");
 
-          UnitOffset += C.getLength32();
+          UnitOffset += C.Length;
           if (Header.Version < 5 ||
               Header.UnitType == dwarf::DW_UT_split_compile) {
-            Expected<CompileUnitIdentifiers> EID = getCUIdentifiers(
-                Header, AbbrevSection,
-                Info.substr(UnitOffset - C.getLength32(), C.getLength32()),
-                CurStrOffsetSection, CurStrSection);
+            Expected<CompileUnitIdentifiers> EID =
+                getCUIdentifiers(Header, AbbrevSection,
+                                 Info.substr(UnitOffset - C.Length, C.Length),
+                                 CurStrOffsetSection, CurStrSection);
 
             if (!EID)
               return createFileError(Input, EID.takeError());
@@ -698,9 +696,8 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
             if (!P.second)
               continue;
           }
-          Out.emitBytes(
-              Info.substr(UnitOffset - C.getLength32(), C.getLength32()));
-          InfoSectionOffset += C.getLength32();
+          Out.emitBytes(Info.substr(UnitOffset - C.Length, C.Length));
+          InfoSectionOffset += C.Length;
         }
       }
 
@@ -763,15 +760,15 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
           continue;
         auto &C =
             NewEntry.Contributions[getContributionIndex(Kind, IndexVersion)];
-        C.setOffset(C.getOffset() + I->getOffset());
-        C.setLength(I->getLength());
+        C.Offset += I->Offset;
+        C.Length = I->Length;
         ++I;
       }
       unsigned Index = getContributionIndex(DW_SECT_INFO, IndexVersion);
       auto &C = NewEntry.Contributions[Index];
       Out.emitBytes(CUInfoSection);
-      C.setOffset(InfoSectionOffset);
-      InfoSectionOffset += C.getLength32();
+      C.Offset = InfoSectionOffset;
+      InfoSectionOffset += C.Length;
     }
 
     if (!CurTUIndexSection.empty()) {
