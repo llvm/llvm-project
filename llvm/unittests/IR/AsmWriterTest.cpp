@@ -64,11 +64,11 @@ TEST(AsmWriterTest, DumpDIExpression) {
 
 TEST(AsmWriterTest, PrintAddrspaceWithNullOperand) {
   LLVMContext Ctx;
-  std::unique_ptr<Module> M;
+  Module M("test module", Ctx);
   SmallVector<Type *, 3> FArgTypes;
   FArgTypes.push_back(Type::getInt64Ty(Ctx));
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx), FArgTypes, false);
-  Function *F = Function::Create(FTy, Function::ExternalLinkage, "", M.get());
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "", &M);
   Argument *Arg0 = F->getArg(0);
   Value *Args[] = {Arg0};
   std::unique_ptr<CallInst> Call(CallInst::Create(F, Args));
