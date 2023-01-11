@@ -3872,13 +3872,6 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD) {
   Function *Fn = getOrCreateRuntimeFunctionPtr(
       omp::RuntimeFunction::OMPRTL___kmpc_target_init);
 
-  // Create functions in this module that may be called after OpenMPOpt.
-  // unless a function is called in clang codegen it would be unresolved.
-  getOrCreateRuntimeFunctionPtr(
-      omp::RuntimeFunction::OMPRTL___kmpc_workers_start_barriers);
-  getOrCreateRuntimeFunctionPtr(
-      omp::RuntimeFunction::OMPRTL___kmpc_workers_done_barriers);
-
   CallInst *ThreadKind = Builder.CreateCall(
       Fn, {Ident, IsSPMDVal, UseGenericStateMachine});
 
