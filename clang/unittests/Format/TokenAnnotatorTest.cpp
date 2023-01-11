@@ -1152,6 +1152,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsC11GenericSelection) {
+  auto Tokens = annotate("_Generic(x, int: 1, default: 0)");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw__Generic, TT_Unknown);
+  EXPECT_TOKEN(Tokens[5], tok::colon, TT_GenericSelectionColon);
+  EXPECT_TOKEN(Tokens[9], tok::colon, TT_GenericSelectionColon);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   auto Annotate = [this](llvm::StringRef Code) {
     return annotate(Code, getLLVMStyle(FormatStyle::LK_Verilog));
