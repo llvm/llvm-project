@@ -527,6 +527,19 @@ end module
   scope, with a portability warning, since that global name is not actually
   capable of being "used" in its scope.
 
+* In the definition of the `ASSOCIATED` intrinsic function (16.9.16), its optional
+  second argument `TARGET=` is required to be "allowable as the data-target or
+  proc-target in a pointer assignment statement (10.2.2) in which POINTER is
+  data-pointer-object or proc-pointer-object."  Some Fortran compilers
+  interpret this to require that the first argument (`POINTER=`) be a valid
+  left-hand side for a pointer assignment statement -- in particular, it
+  cannot be `NULL()`, but also it is required to be modifiable.
+  As there is  no good reason to disallow (say) an `INTENT(IN)` pointer here,
+  or even `NULL()` as a well-defined case that is always `.FALSE.`,
+  this compiler doesn't require the `POINTER=` argument to be a valid
+  left-hand side for a pointer assignment statement, and we emit a
+  portability warning when it is not.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the

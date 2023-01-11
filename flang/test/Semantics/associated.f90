@@ -84,10 +84,15 @@ subroutine assoc()
     lVar = associated(null(intAllocVar)) !OK
     lVar = associated(null()) !OK
     lVar = associated(null(intPointerVar1)) !OK
+    !PORTABILITY: POINTER= argument of ASSOCIATED() would not be a valid left-hand side of a pointer assignment statement
+    !BECAUSE: 'NULL()' is a null pointer
     lVar = associated(null(), null()) !OK
     lVar = associated(intPointerVar1, null(intPointerVar2)) !OK
     lVar = associated(intPointerVar1, null()) !OK
+    !PORTABILITY: POINTER= argument of ASSOCIATED() would not be a valid left-hand side of a pointer assignment statement
+    !BECAUSE: 'NULL()' is a null pointer
     lVar = associated(null(), null(intPointerVar1)) !OK
+    !PORTABILITY: POINTER= argument of ASSOCIATED() should be a pointer
     lVar = associated(null(intPointerVar1), null()) !OK
     !ERROR: POINTER= argument of ASSOCIATED() must be a POINTER
     lVar = associated(intVar)
@@ -141,6 +146,7 @@ subroutine assoc()
     !ERROR: Procedure pointer 'intprocpointer1' associated with incompatible procedure designator 'elementalproc': incompatible procedure attributes: Elemental
     intProcPointer1 => elementalProc
     !WARNING: Procedure pointer 'intprocpointer1' associated with incompatible procedure designator 'elementalproc': incompatible procedure attributes: Elemental
+    !ERROR: Non-intrinsic ELEMENTAL procedure 'elementalproc' may not be passed as an actual argument
     lvar = associated(intProcPointer1, elementalProc)
     !ERROR: POINTER= argument 'intpointervar1' is an object pointer but the TARGET= argument 'intfunc' is a procedure designator
     lvar = associated (intPointerVar1, intFunc)
