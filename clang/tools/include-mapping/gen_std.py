@@ -24,13 +24,13 @@ Usage:
        https://www.crummy.com/software/BeautifulSoup/bs4/doc/#installing-beautiful-soup
   2. Download cppreference offline HTML files (e.g. html_book_20181028.zip) at
        https://en.cppreference.com/w/Cppreference:Archives
-  3. Unzip the zip file from step 2 to directory </cppreference>, you should
-     get a "reference" directory in </cppreference>
+  3. Unzip the zip file from step 2 (e.g., to a "cppreference" directory). You should
+     get a "cppreference/reference" directory.
   4. Run the command:
        // Generate C++ symbols
-       gen_std.py -cppreference </cppreference/reference> -language=cpp > StdSymbolMap.inc
+       python3 gen_std.py -cppreference cppreference/reference -language=cpp > StdSymbolMap.inc
        // Generate C symbols
-       gen_std.py -cppreference </cppreference/reference> -language=c > CSymbolMap.inc
+       python3 gen_std.py -cppreference cppreference/reference -language=c > CSymbolMap.inc
 """
 
 
