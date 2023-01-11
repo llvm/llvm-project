@@ -63,9 +63,9 @@ constexpr TypeSize TSFixed0 = TypeSize::Fixed(0);
 constexpr TypeSize TSFixed1 = TypeSize::Fixed(1);
 constexpr TypeSize TSFixed32 = TypeSize::Fixed(32);
 
-static_assert(TSFixed0.getFixedSize() == 0);
-static_assert(TSFixed1.getFixedSize() == 1);
-static_assert(TSFixed32.getFixedSize() == 32);
+static_assert(TSFixed0.getFixedValue() == 0);
+static_assert(TSFixed1.getFixedValue() == 1);
+static_assert(TSFixed32.getFixedValue() == 32);
 static_assert(TSFixed32.getKnownMinValue() == 32);
 
 static_assert(TypeSize::Scalable(32).getKnownMinValue() == 32);

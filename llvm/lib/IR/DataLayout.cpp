@@ -783,7 +783,7 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   case Type::PPC_FP128TyID:
   case Type::FP128TyID:
   case Type::X86_FP80TyID: {
-    unsigned BitWidth = getTypeSizeInBits(Ty).getFixedSize();
+    unsigned BitWidth = getTypeSizeInBits(Ty).getFixedValue();
     auto I = findAlignmentLowerBound(FLOAT_ALIGN, BitWidth);
     if (I != Alignments.end() && I->AlignType == FLOAT_ALIGN &&
         I->TypeBitWidth == BitWidth)
@@ -938,7 +938,7 @@ std::optional<APInt> DataLayout::getGEPIndexForOffset(Type *&ElemTy,
 
   if (auto *VecTy = dyn_cast<VectorType>(ElemTy)) {
     ElemTy = VecTy->getElementType();
-    unsigned ElemSizeInBits = getTypeSizeInBits(ElemTy).getFixedSize();
+    unsigned ElemSizeInBits = getTypeSizeInBits(ElemTy).getFixedValue();
     // GEPs over non-multiple of 8 size vector elements are invalid.
     if (ElemSizeInBits % 8 != 0)
       return std::nullopt;

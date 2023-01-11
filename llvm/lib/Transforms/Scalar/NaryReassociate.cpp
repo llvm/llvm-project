@@ -403,8 +403,9 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
   // Replace the I-th index with LHS.
   IndexExprs[I] = SE->getSCEV(LHS);
   if (isKnownNonNegative(LHS, *DL, 0, AC, GEP, DT) &&
-      DL->getTypeSizeInBits(LHS->getType()).getFixedSize() <
-          DL->getTypeSizeInBits(GEP->getOperand(I)->getType()).getFixedSize()) {
+      DL->getTypeSizeInBits(LHS->getType()).getFixedValue() <
+          DL->getTypeSizeInBits(GEP->getOperand(I)->getType())
+              .getFixedValue()) {
     // Zero-extend LHS if it is non-negative. InstCombine canonicalizes sext to
     // zext if the source operand is proved non-negative. We should do that
     // consistently so that CandidateExpr more likely appears before. See

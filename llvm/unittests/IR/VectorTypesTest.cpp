@@ -290,18 +290,18 @@ TEST(VectorTypesTest, FixedLenComparisons) {
   EXPECT_EQ(V2I32Len.getKnownMinValue(), 64U);
   EXPECT_FALSE(V2I32Len.isScalable());
 
-  EXPECT_LT(V2Int32Ty->getPrimitiveSizeInBits().getFixedSize(),
-            V4Int32Ty->getPrimitiveSizeInBits().getFixedSize());
-  EXPECT_GT(V2Int64Ty->getPrimitiveSizeInBits().getFixedSize(),
-            V2Int32Ty->getPrimitiveSizeInBits().getFixedSize());
+  EXPECT_LT(V2Int32Ty->getPrimitiveSizeInBits().getFixedValue(),
+            V4Int32Ty->getPrimitiveSizeInBits().getFixedValue());
+  EXPECT_GT(V2Int64Ty->getPrimitiveSizeInBits().getFixedValue(),
+            V2Int32Ty->getPrimitiveSizeInBits().getFixedValue());
   EXPECT_EQ(V4Int32Ty->getPrimitiveSizeInBits(),
             V2Int64Ty->getPrimitiveSizeInBits());
   EXPECT_NE(V2Int32Ty->getPrimitiveSizeInBits(),
             V2Int64Ty->getPrimitiveSizeInBits());
 
   // Check that a fixed-only comparison works for fixed size vectors.
-  EXPECT_EQ(V2Int64Ty->getPrimitiveSizeInBits().getFixedSize(),
-            V4Int32Ty->getPrimitiveSizeInBits().getFixedSize());
+  EXPECT_EQ(V2Int64Ty->getPrimitiveSizeInBits().getFixedValue(),
+            V4Int32Ty->getPrimitiveSizeInBits().getFixedValue());
 
   // Check the DataLayout interfaces.
   EXPECT_EQ(DL.getTypeSizeInBits(V2Int64Ty), DL.getTypeSizeInBits(V4Int32Ty));

@@ -319,8 +319,9 @@ static const Value *getNoopInput(const Value *V,
         NoopInput = Op;
     } else if (isa<TruncInst>(I) &&
                TLI.allowTruncateForTailCall(Op->getType(), I->getType())) {
-      DataBits = std::min((uint64_t)DataBits,
-                         I->getType()->getPrimitiveSizeInBits().getFixedSize());
+      DataBits =
+          std::min((uint64_t)DataBits,
+                   I->getType()->getPrimitiveSizeInBits().getFixedValue());
       NoopInput = Op;
     } else if (auto *CB = dyn_cast<CallBase>(I)) {
       const Value *ReturnedOp = CB->getReturnedArgOperand();

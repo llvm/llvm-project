@@ -763,7 +763,7 @@ void DAGTypeLegalizer::SetScalarizedVector(SDValue Op, SDValue Result) {
   // a constant i8 operand.
 
   // We don't currently support the scalarization of scalable vector types.
-  assert(Result.getValueSizeInBits().getFixedSize() >=
+  assert(Result.getValueSizeInBits().getFixedValue() >=
              Op.getScalarValueSizeInBits() &&
          "Invalid type for scalarized vector");
   AnalyzeNewValue(Result);

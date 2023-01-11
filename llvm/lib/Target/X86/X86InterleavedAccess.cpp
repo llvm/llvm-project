@@ -215,7 +215,7 @@ void X86InterleavedAccessGroup::decompose(
          "VecBaseTy's size must be a multiple of 8");
   const Align FirstAlignment = LI->getAlign();
   const Align SubsequentAlignment = commonAlignment(
-      FirstAlignment, VecBaseTy->getPrimitiveSizeInBits().getFixedSize() / 8);
+      FirstAlignment, VecBaseTy->getPrimitiveSizeInBits().getFixedValue() / 8);
   Align Alignment = FirstAlignment;
   for (unsigned i = 0; i < NumLoads; i++) {
     // TODO: Support inbounds GEP.

@@ -309,7 +309,7 @@ void MemoryOpRemark::visitVariable(const Value *V,
                                    SmallVectorImpl<VariableInfo> &Result) {
   if (auto *GV = dyn_cast<GlobalVariable>(V)) {
     auto *Ty = GV->getValueType();
-    uint64_t Size = DL.getTypeSizeInBits(Ty).getFixedSize();
+    uint64_t Size = DL.getTypeSizeInBits(Ty).getFixedValue();
     VariableInfo Var{nameOrNone(GV), Size};
     if (!Var.isEmpty())
       Result.push_back(std::move(Var));
@@ -343,7 +343,7 @@ void MemoryOpRemark::visitVariable(const Value *V,
   // If not, get it from the alloca.
   std::optional<TypeSize> TySize = AI->getAllocationSize(DL);
   std::optional<uint64_t> Size =
-      TySize ? std::optional(TySize->getFixedSize()) : std::nullopt;
+      TySize ? std::optional(TySize->getFixedValue()) : std::nullopt;
   VariableInfo Var{nameOrNone(AI), Size};
   if (!Var.isEmpty())
     Result.push_back(std::move(Var));
