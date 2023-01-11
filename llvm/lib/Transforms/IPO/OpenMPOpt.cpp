@@ -4861,7 +4861,7 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
       if (llvm::all_of(F->uses(), [this](const Use &U) {
             const auto *CB = dyn_cast<CallBase>(U.getUser());
             return CB && CB->isCallee(&U) &&
-                   !A.isRunOn(const_cast<Function *>(CB->getCaller()));
+                   A.isRunOn(const_cast<Function *>(CB->getCaller()));
           }))
         continue;
     }
