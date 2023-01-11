@@ -132,8 +132,8 @@ bool broken(uptr what, typename Has<Mapping::kBroken>::Result = false) {
 }
 
 static int CompareRegion(const void *region_a, const void *region_b) {
-  uptr start_a = ((struct Region *)region_a)->start;
-  uptr start_b = ((struct Region *)region_b)->start;
+  uptr start_a = ((const struct Region *)region_a)->start;
+  uptr start_b = ((const struct Region *)region_b)->start;
 
   if (start_a < start_b) {
     return -1;
