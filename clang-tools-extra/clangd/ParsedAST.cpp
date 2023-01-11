@@ -11,7 +11,6 @@
 #include "../clang-tidy/ClangTidyDiagnosticConsumer.h"
 #include "../clang-tidy/ClangTidyModuleRegistry.h"
 #include "AST.h"
-#include "ASTSignals.h"
 #include "Compiler.h"
 #include "Config.h"
 #include "Diagnostics.h"
@@ -543,6 +542,10 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
             // NOLINT comments)?
             return DiagnosticsEngine::Ignored;
           }
+          // Match behavior for clang-tidy --system-headers=0 (the default).
+          if (Info.hasSourceManager() &&
+              Info.getSourceManager().isInSystemMacro(Info.getLocation()))
+            return DiagnosticsEngine::Ignored;
 
           // Check for warning-as-error.
           if (DiagLevel == DiagnosticsEngine::Warning &&
