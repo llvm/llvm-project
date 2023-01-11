@@ -737,6 +737,7 @@ C++20 Feature Support
 - Implemented CWG2635 as a Defect Report, which prohibits structured bindings from being constrained.
 - Correctly handle access-checks in requires expression. Fixes `GH53364 <https://github.com/llvm/llvm-project/issues/53364>`_,
   `GH53334 <https://github.com/llvm/llvm-project/issues/53334>`_.
+
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
