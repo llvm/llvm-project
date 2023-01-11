@@ -100,10 +100,9 @@ define void @at_plus_bt(ptr %Aptr, ptr %Bptr, ptr %C) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = load <9 x double>, ptr [[APTR:%.*]], align 128
 ; CHECK-NEXT:    [[B:%.*]] = load <9 x double>, ptr [[BPTR:%.*]], align 128
-; CHECK-NEXT:    [[AT:%.*]] = call <9 x double> @llvm.matrix.transpose.v9f64(<9 x double> [[A]], i32 3, i32 3)
-; CHECK-NEXT:    [[BT:%.*]] = call <9 x double> @llvm.matrix.transpose.v9f64(<9 x double> [[B]], i32 3, i32 3)
-; CHECK-NEXT:    [[FADD:%.*]] = fadd <9 x double> [[AT]], [[BT]]
-; CHECK-NEXT:    store <9 x double> [[FADD]], ptr [[C:%.*]], align 128
+; CHECK-NEXT:    [[MFADD:%.*]] = fadd <9 x double> [[A]], [[B]]
+; CHECK-NEXT:    [[MFADD_T:%.*]] = call <9 x double> @llvm.matrix.transpose.v9f64(<9 x double> [[MFADD]], i32 3, i32 3)
+; CHECK-NEXT:    store <9 x double> [[MFADD_T]], ptr [[C:%.*]], align 128
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -122,9 +121,9 @@ define void @a_plus_b_t(ptr %Aptr, ptr %Bptr, ptr %C) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = load <9 x double>, ptr [[APTR:%.*]], align 128
 ; CHECK-NEXT:    [[B:%.*]] = load <9 x double>, ptr [[BPTR:%.*]], align 128
-; CHECK-NEXT:    [[FADD:%.*]] = fadd <9 x double> [[A]], [[B]]
-; CHECK-NEXT:    [[T:%.*]] = call <9 x double> @llvm.matrix.transpose.v9f64(<9 x double> [[FADD]], i32 3, i32 3)
-; CHECK-NEXT:    store <9 x double> [[T]], ptr [[C:%.*]], align 128
+; CHECK-NEXT:    [[MFADD1:%.*]] = fadd <9 x double> [[A]], [[B]]
+; CHECK-NEXT:    [[MFADD_T:%.*]] = call <9 x double> @llvm.matrix.transpose.v9f64(<9 x double> [[MFADD1]], i32 3, i32 3)
+; CHECK-NEXT:    store <9 x double> [[MFADD_T]], ptr [[C:%.*]], align 128
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -145,11 +144,10 @@ define void @atbt_plus_ctdt(ptr %Aptr, ptr %Bptr, ptr %Cptr, ptr %Dptr, ptr %E) 
 ; CHECK-NEXT:    [[C:%.*]] = load <9 x double>, ptr [[CPTR:%.*]], align 128
 ; CHECK-NEXT:    [[D:%.*]] = load <9 x double>, ptr [[DPTR:%.*]], align 128
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double> [[B]], <9 x double> [[A]], i32 3, i32 3, i32 3)
-; CHECK-NEXT:    [[TMP1:%.*]] = call <9 x double> @llvm.matrix.transpose.v9f64(<9 x double> [[TMP0]], i32 3, i32 3)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double> [[D]], <9 x double> [[C]], i32 3, i32 3, i32 3)
-; CHECK-NEXT:    [[TMP3:%.*]] = call <9 x double> @llvm.matrix.transpose.v9f64(<9 x double> [[TMP2]], i32 3, i32 3)
-; CHECK-NEXT:    [[FADD:%.*]] = fadd <9 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    store <9 x double> [[FADD]], ptr [[E:%.*]], align 128
+; CHECK-NEXT:    [[TMP1:%.*]] = call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double> [[D]], <9 x double> [[C]], i32 3, i32 3, i32 3)
+; CHECK-NEXT:    [[MFADD:%.*]] = fadd <9 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[MFADD_T:%.*]] = call <9 x double> @llvm.matrix.transpose.v9f64(<9 x double> [[MFADD]], i32 3, i32 3)
+; CHECK-NEXT:    store <9 x double> [[MFADD_T]], ptr [[E:%.*]], align 128
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -200,17 +198,13 @@ define void @atbt_plus_kctdt_t(ptr %Aptr, ptr %Bptr, ptr %Cptr, ptr %Dptr, doubl
 ; CHECK-NEXT:    [[B:%.*]] = load <9 x double>, ptr [[BPTR:%.*]], align 128
 ; CHECK-NEXT:    [[C:%.*]] = load <9 x double>, ptr [[CPTR:%.*]], align 128
 ; CHECK-NEXT:    [[D:%.*]] = load <9 x double>, ptr [[DPTR:%.*]], align 128
-; CHECK-NEXT:    [[CT:%.*]] = call <9 x double> @llvm.matrix.transpose.v9f64(<9 x double> [[C]], i32 3, i32 3)
-; CHECK-NEXT:    [[DT:%.*]] = call <9 x double> @llvm.matrix.transpose.v9f64(<9 x double> [[D]], i32 3, i32 3)
-; CHECK-NEXT:    [[TMP0:%.*]] = call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double> [[B]], <9 x double> [[A]], i32 3, i32 3, i32 3)
-; CHECK-NEXT:    [[TMP1:%.*]] = call <9 x double> @llvm.matrix.transpose.v9f64(<9 x double> [[TMP0]], i32 3, i32 3)
 ; CHECK-NEXT:    [[VECK:%.*]] = insertelement <9 x double> poison, double [[K:%.*]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <9 x double> [[VECK]], <9 x double> poison, <9 x i32> zeroinitializer
-; CHECK-NEXT:    [[KCT:%.*]] = call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double> [[SPLAT]], <9 x double> [[CT]], i32 3, i32 3, i32 3)
-; CHECK-NEXT:    [[KCTDT:%.*]] = call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double> [[KCT]], <9 x double> [[DT]], i32 3, i32 3, i32 3)
-; CHECK-NEXT:    [[FADD:%.*]] = fadd <9 x double> [[TMP1]], [[KCTDT]]
-; CHECK-NEXT:    [[T:%.*]] = call <9 x double> @llvm.matrix.transpose.v9f64(<9 x double> [[FADD]], i32 3, i32 3)
-; CHECK-NEXT:    store <9 x double> [[T]], ptr [[E:%.*]], align 128
+; CHECK-NEXT:    [[MMUL2:%.*]] = call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double> [[B]], <9 x double> [[A]], i32 3, i32 3, i32 3)
+; CHECK-NEXT:    [[MMUL1:%.*]] = call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double> [[C]], <9 x double> [[SPLAT]], i32 3, i32 3, i32 3)
+; CHECK-NEXT:    [[MMUL:%.*]] = call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double> [[D]], <9 x double> [[MMUL1]], i32 3, i32 3, i32 3)
+; CHECK-NEXT:    [[MFADD:%.*]] = fadd <9 x double> [[MMUL2]], [[MMUL]]
+; CHECK-NEXT:    store <9 x double> [[MFADD]], ptr [[E:%.*]], align 128
 ; CHECK-NEXT:    ret void
 ;
 entry:
