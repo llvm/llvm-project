@@ -62,3 +62,13 @@ void fir::runtime::genNullifyDerivedType(fir::FirOpBuilder &builder,
   args.push_back(c0);
   builder.create<fir::CallOp>(loc, callee, args);
 }
+
+mlir::Value fir::runtime::genSameTypeAs(fir::FirOpBuilder &builder,
+                                        mlir::Location loc, mlir::Value a,
+                                        mlir::Value b) {
+  mlir::func::FuncOp sameTypeAsFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(SameTypeAs)>(loc, builder);
+  auto fTy = sameTypeAsFunc.getFunctionType();
+  auto args = fir::runtime::createArguments(builder, loc, fTy, a, b);
+  return builder.create<fir::CallOp>(loc, sameTypeAsFunc, args).getResult(0);
+}
