@@ -4113,7 +4113,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_renderscript_reduction_bp_set_options);
+      return llvm::ArrayRef(g_renderscript_reduction_bp_set_options);
     }
 
     bool ParseReductionTypes(llvm::StringRef option_val,
@@ -4265,7 +4265,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_renderscript_kernel_bp_set_options);
+      return llvm::ArrayRef(g_renderscript_kernel_bp_set_options);
     }
 
     RSCoordinate m_coord;
@@ -4545,7 +4545,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_renderscript_runtime_alloc_dump_options);
+      return llvm::ArrayRef(g_renderscript_runtime_alloc_dump_options);
     }
 
     FileSpec m_outfile;
@@ -4663,7 +4663,7 @@ public:
     void OptionParsingStarting(ExecutionContext *exe_ctx) override { m_id = 0; }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_renderscript_runtime_alloc_list_options);
+      return llvm::ArrayRef(g_renderscript_runtime_alloc_list_options);
     }
 
     uint32_t m_id = 0;

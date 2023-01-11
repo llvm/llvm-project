@@ -35,20 +35,73 @@ __global__ void use_dispatch_ptr(int* out) {
   *out = *dispatch_ptr;
 }
 
+// CHECK-LABEL: @_Z13use_queue_ptrPi(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[QUEUE_PTR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT]] to ptr
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[QUEUE_PTR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[QUEUE_PTR]] to ptr
+// CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(1) [[OUT_COERCE:%.*]] to ptr
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[OUT_ASCAST]], align 8
+// CHECK-NEXT:    [[OUT1:%.*]] = load ptr, ptr [[OUT_ASCAST]], align 8
+// CHECK-NEXT:    store ptr [[OUT1]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
+// CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(4) [[TMP1]] to ptr
+// CHECK-NEXT:    store ptr [[TMP2]], ptr [[QUEUE_PTR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[QUEUE_PTR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
+// CHECK-NEXT:    ret void
+//
+__global__ void use_queue_ptr(int* out) {
+  const int* queue_ptr = (const int*)__builtin_amdgcn_queue_ptr();
+  *out = *queue_ptr;
+}
+
+// CHECK-LABEL: @_Z19use_implicitarg_ptrPi(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[IMPLICITARG_PTR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT]] to ptr
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[IMPLICITARG_PTR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[IMPLICITARG_PTR]] to ptr
+// CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(1) [[OUT_COERCE:%.*]] to ptr
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[OUT_ASCAST]], align 8
+// CHECK-NEXT:    [[OUT1:%.*]] = load ptr, ptr [[OUT_ASCAST]], align 8
+// CHECK-NEXT:    store ptr [[OUT1]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(4) [[TMP1]] to ptr
+// CHECK-NEXT:    store ptr [[TMP2]], ptr [[IMPLICITARG_PTR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[IMPLICITARG_PTR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
+// CHECK-NEXT:    ret void
+//
+__global__ void use_implicitarg_ptr(int* out) {
+  const int* implicitarg_ptr = (const int*)__builtin_amdgcn_implicitarg_ptr();
+  *out = *implicitarg_ptr;
+}
+
 __global__
-    // CHECK-LABEL: @_Z12test_ds_fmaxf(
-    // CHECK-NEXT:  entry:
-    // CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca float, align 4, addrspace(5)
-    // CHECK-NEXT:    [[X:%.*]] = alloca float, align 4, addrspace(5)
-    // CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC_ADDR]] to ptr
-    // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X]] to ptr
-    // CHECK-NEXT:    store float [[SRC:%.*]], ptr [[SRC_ADDR_ASCAST]], align 4
-    // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[SRC_ADDR_ASCAST]], align 4
-    // CHECK-NEXT:    [[TMP1:%.*]] = call contract float @llvm.amdgcn.ds.fmax.f32(ptr addrspace(3) @_ZZ12test_ds_fmaxfE6shared, float [[TMP0]], i32 0, i32 0, i1 false)
-    // CHECK-NEXT:    store volatile float [[TMP1]], ptr [[X_ASCAST]], align 4
-    // CHECK-NEXT:    ret void
     //
     void
+// CHECK-LABEL: @_Z12test_ds_fmaxf(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[X:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC_ADDR]] to ptr
+// CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X]] to ptr
+// CHECK-NEXT:    store float [[SRC:%.*]], ptr [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = call contract float @llvm.amdgcn.ds.fmax.f32(ptr addrspace(3) @_ZZ12test_ds_fmaxfE6shared, float [[TMP0]], i32 0, i32 0, i1 false)
+// CHECK-NEXT:    store volatile float [[TMP1]], ptr [[X_ASCAST]], align 4
+// CHECK-NEXT:    ret void
+//
     test_ds_fmax(float src) {
   __shared__ float shared;
   volatile float x = __builtin_amdgcn_ds_fmaxf(&shared, src, 0, 0, false);
@@ -216,11 +269,33 @@ __global__ void test_ds_fmin_func(float src, float *__restrict shared) {
 // CHECK-NEXT:    [[X1:%.*]] = load ptr, ptr [[X_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[X1]], ptr [[X_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[X_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[TMP1]])
-// CHECK-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TMP3]] to i8
+// CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[TMP1]])
+// CHECK-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TMP2]] to i8
 // CHECK-NEXT:    store i8 [[FROMBOOL]], ptr [[RET_ASCAST]], align 1
 // CHECK-NEXT:    ret void
 //
 __global__ void test_is_shared(float *x){
   bool ret = __builtin_amdgcn_is_shared(x);
+}
+
+// CHECK-LABEL: @_Z15test_is_privatePi(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[X:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[RET:%.*]] = alloca i8, align 1, addrspace(5)
+// CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X]] to ptr
+// CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
+// CHECK-NEXT:    [[RET_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RET]] to ptr
+// CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(1) [[X_COERCE:%.*]] to ptr
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[X_ASCAST]], align 8
+// CHECK-NEXT:    [[X1:%.*]] = load ptr, ptr [[X_ASCAST]], align 8
+// CHECK-NEXT:    store ptr [[X1]], ptr [[X_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[X_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[TMP1]])
+// CHECK-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[TMP2]] to i8
+// CHECK-NEXT:    store i8 [[FROMBOOL]], ptr [[RET_ASCAST]], align 1
+// CHECK-NEXT:    ret void
+//
+__global__ void test_is_private(int *x){
+  bool ret = __builtin_amdgcn_is_private(x);
 }

@@ -184,11 +184,10 @@ private:
   LogicalResult processBasicBlock(llvm::BasicBlock *bb, Block *block);
   /// Converts an LLVM intrinsic to an MLIR LLVM dialect operation if an MLIR
   /// counterpart exists. Otherwise, returns failure.
-  LogicalResult convertIntrinsic(OpBuilder &odsBuilder, llvm::CallInst *inst);
+  LogicalResult convertIntrinsic(llvm::CallInst *inst);
   /// Converts an LLVM instruction to an MLIR LLVM dialect operation if an MLIR
   /// counterpart exists. Otherwise, returns failure.
-  LogicalResult convertInstruction(OpBuilder &odsBuilder,
-                                   llvm::Instruction *inst);
+  LogicalResult convertInstruction(llvm::Instruction *inst);
   /// Converts the metadata attached to the original instruction `inst` if
   /// a dialect interfaces supports the specific kind of metadata and attaches
   /// the resulting dialect attributes to the converted operation `op`. Emits a

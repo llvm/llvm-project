@@ -11,6 +11,7 @@
 // (bug report: https://llvm.org/PR58392)
 // Check that vector constructors don't leak memory when an operation inside the constructor throws an exception
 
+#include <cstddef>
 #include <type_traits>
 #include <vector>
 
@@ -22,15 +23,19 @@ struct Allocator {
   using value_type      = T;
   using is_always_equal = std::false_type;
 
+  template <class U>
+  Allocator(const Allocator<U>&) {}
+
   Allocator(bool should_throw = true) {
     if (should_throw)
       throw 0;
   }
 
-  T* allocate(int n) { return std::allocator<T>().allocate(n); }
-  void deallocate(T* ptr, int n) { std::allocator<T>().deallocate(ptr, n); }
+  T* allocate(std::size_t n) { return std::allocator<T>().allocate(n); }
+  void deallocate(T* ptr, std::size_t n) { std::allocator<T>().deallocate(ptr, n); }
 
-  friend bool operator==(const Allocator&, const Allocator&) { return false; }
+  template <class U>
+  friend bool operator==(const Allocator&, const Allocator<U>&) { return true; }
 };
 
 struct ThrowingT {

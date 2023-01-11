@@ -494,7 +494,7 @@ static bool symbolGoesInGlobalsStream(const CVSymbol &sym,
 static void addGlobalSymbol(pdb::GSIStreamBuilder &builder, uint16_t modIndex,
                             unsigned symOffset,
                             std::vector<uint8_t> &symStorage) {
-  CVSymbol sym(makeArrayRef(symStorage));
+  CVSymbol sym{ArrayRef(symStorage)};
   switch (sym.kind()) {
   case SymbolKind::S_CONSTANT:
   case SymbolKind::S_UDT:
@@ -508,7 +508,7 @@ static void addGlobalSymbol(pdb::GSIStreamBuilder &builder, uint16_t modIndex,
     // to stabilize it.
     uint8_t *mem = bAlloc().Allocate<uint8_t>(sym.length());
     memcpy(mem, sym.data().data(), sym.length());
-    builder.addGlobalSymbol(CVSymbol(makeArrayRef(mem, sym.length())));
+    builder.addGlobalSymbol(CVSymbol(ArrayRef(mem, sym.length())));
     break;
   }
   case SymbolKind::S_GPROC32:
@@ -1021,7 +1021,7 @@ static ArrayRef<uint8_t> relocateDebugChunk(SectionChunk &debugChunk) {
   assert(debugChunk.getOutputSectionIdx() == 0 &&
          "debug sections should not be in output sections");
   debugChunk.writeTo(buffer);
-  return makeArrayRef(buffer, debugChunk.getSize());
+  return ArrayRef(buffer, debugChunk.getSize());
 }
 
 void PDBLinker::addDebugSymbols(TpiSource *source) {
@@ -1422,7 +1422,7 @@ void PDBLinker::addCommonLinkerModuleSymbols(
   ons.Name = "* Linker *";
   ons.Signature = 0;
 
-  ArrayRef<StringRef> args = makeArrayRef(ctx.config.argv).drop_front();
+  ArrayRef<StringRef> args = ArrayRef(ctx.config.argv).drop_front();
   std::string argStr = quote(args);
   ebs.Fields.push_back("cwd");
   SmallString<64> cwd;

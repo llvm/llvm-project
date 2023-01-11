@@ -741,6 +741,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
          __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101500)
 #      define _LIBCPP_HAS_NO_C11_ALIGNED_ALLOC
 #    endif
+#  elif defined(__ANDROID__) && __ANDROID_API__ < 28
+// Android only provides aligned_alloc when targeting API 28 or higher.
+#    define _LIBCPP_HAS_NO_C11_ALIGNED_ALLOC
 #  endif
 
 #  if defined(__APPLE__) || defined(__FreeBSD__)

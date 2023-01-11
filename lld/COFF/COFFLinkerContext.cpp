@@ -19,8 +19,10 @@
 namespace lld::coff {
 COFFLinkerContext::COFFLinkerContext()
     : driver(*this), symtab(*this),
-      ltoTextSectionChunk(llvm::COFF::IMAGE_SCN_MEM_EXECUTE),
-      ltoDataSectionChunk(llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA),
+      ltoTextSection(llvm::COFF::IMAGE_SCN_MEM_EXECUTE),
+      ltoDataSection(llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA),
+      ltoTextSectionChunk(&ltoTextSection.section),
+      ltoDataSectionChunk(&ltoDataSection.section),
       rootTimer("Total Linking Time"),
       inputFileTimer("Input File Reading", rootTimer),
       ltoTimer("LTO", rootTimer), gcTimer("GC", rootTimer),

@@ -3364,7 +3364,7 @@ LogicalResult
 mlir::applyPartialConversion(Operation *op, ConversionTarget &target,
                              const FrozenRewritePatternSet &patterns,
                              DenseSet<Operation *> *unconvertedOps) {
-  return applyPartialConversion(llvm::makeArrayRef(op), target, patterns,
+  return applyPartialConversion(llvm::ArrayRef(op), target, patterns,
                                 unconvertedOps);
 }
 
@@ -3380,7 +3380,7 @@ mlir::applyFullConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
 LogicalResult
 mlir::applyFullConversion(Operation *op, ConversionTarget &target,
                           const FrozenRewritePatternSet &patterns) {
-  return applyFullConversion(llvm::makeArrayRef(op), target, patterns);
+  return applyFullConversion(llvm::ArrayRef(op), target, patterns);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3401,6 +3401,6 @@ mlir::applyAnalysisConversion(Operation *op, ConversionTarget &target,
                               const FrozenRewritePatternSet &patterns,
                               DenseSet<Operation *> &convertedOps,
                               function_ref<void(Diagnostic &)> notifyCallback) {
-  return applyAnalysisConversion(llvm::makeArrayRef(op), target, patterns,
+  return applyAnalysisConversion(llvm::ArrayRef(op), target, patterns,
                                  convertedOps, notifyCallback);
 }

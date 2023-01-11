@@ -353,7 +353,7 @@ void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     checkCallArgs(Result.Context, Callee, Call->getCallee()->getEndLoc(),
-                  llvm::makeArrayRef(Call->getArgs(), Call->getNumArgs()));
+                  llvm::ArrayRef(Call->getArgs(), Call->getNumArgs()));
   } else {
     const auto *Construct = cast<CXXConstructExpr>(E);
     if (Construct->getNumArgs() > 0 &&
@@ -364,7 +364,7 @@ void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
     checkCallArgs(
         Result.Context, Construct->getConstructor(),
         Construct->getParenOrBraceRange().getBegin(),
-        llvm::makeArrayRef(Construct->getArgs(), Construct->getNumArgs()));
+        llvm::ArrayRef(Construct->getArgs(), Construct->getNumArgs()));
   }
 }
 

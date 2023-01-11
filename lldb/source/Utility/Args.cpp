@@ -312,7 +312,7 @@ void Args::AppendArguments(const char **argv) {
   assert(m_argv.size() == m_entries.size() + 1);
   assert(m_argv.back() == nullptr);
   m_argv.pop_back();
-  for (auto arg : llvm::makeArrayRef(argv, argc)) {
+  for (auto arg : llvm::ArrayRef(argv, argc)) {
     m_entries.emplace_back(arg, '\0');
     m_argv.push_back(m_entries.back().data());
   }
@@ -358,7 +358,7 @@ void Args::DeleteArgumentAtIndex(size_t idx) {
 void Args::SetArguments(size_t argc, const char **argv) {
   Clear();
 
-  auto args = llvm::makeArrayRef(argv, argc);
+  auto args = llvm::ArrayRef(argv, argc);
   m_entries.resize(argc);
   m_argv.resize(argc + 1);
   for (size_t i = 0; i < args.size(); ++i) {

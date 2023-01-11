@@ -220,7 +220,7 @@ struct ThreadState {
 #endif
 
   atomic_uintptr_t in_signal_handler;
-  ThreadSignalContext *signal_ctx;
+  atomic_uintptr_t signal_ctx;
 
 #if !SANITIZER_GO
   StackID last_sleep_stack_id;

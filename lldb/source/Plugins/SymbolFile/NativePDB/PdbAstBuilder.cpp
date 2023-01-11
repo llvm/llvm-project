@@ -1189,7 +1189,7 @@ clang::QualType PdbAstBuilder::CreateFunctionType(
   llvm::cantFail(
       TypeDeserializer::deserializeAs<ArgListRecord>(args_cvt, args));
 
-  llvm::ArrayRef<TypeIndex> arg_indices = llvm::makeArrayRef(args.ArgIndices);
+  llvm::ArrayRef<TypeIndex> arg_indices = llvm::ArrayRef(args.ArgIndices);
   bool is_variadic = IsCVarArgsFunction(arg_indices);
   if (is_variadic)
     arg_indices = arg_indices.drop_back();

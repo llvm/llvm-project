@@ -262,7 +262,7 @@ public:
         SelFirst, AllSpelledTokens.end(), [&](const syntax::Token &Tok) {
           return SM.getFileOffset(Tok.location()) < SelEnd;
         });
-    auto Sel = llvm::makeArrayRef(SelFirst, SelLimit);
+    auto Sel = llvm::ArrayRef(SelFirst, SelLimit);
     // Find which of these are preprocessed to nothing and should be ignored.
     llvm::BitVector PPIgnored(Sel.size(), false);
     for (const syntax::TokenBuffer::Expansion &X :
@@ -419,7 +419,7 @@ private:
     if (EndInvalid)
       End = Toks.expandedTokens().end();
 
-    return llvm::makeArrayRef(Start, End);
+    return llvm::ArrayRef(Start, End);
   }
 
   // Hit-test a consecutive range of tokens from a single file ID.

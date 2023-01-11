@@ -68,7 +68,7 @@ define amdgpu_kernel void @sgpr_trunc_brcond(i32 %cond) {
 ; WAVE64:       ; %bb.0: ; %entry
 ; WAVE64-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; WAVE64-NEXT:    s_waitcnt lgkmcnt(0)
-; WAVE64-NEXT:    s_xor_b32 s0, s0, -1
+; WAVE64-NEXT:    s_xor_b32 s0, s0, 1
 ; WAVE64-NEXT:    s_and_b32 s0, s0, 1
 ; WAVE64-NEXT:    s_cmp_lg_u32 s0, 0
 ; WAVE64-NEXT:    s_cbranch_scc1 .LBB3_2
@@ -85,7 +85,7 @@ define amdgpu_kernel void @sgpr_trunc_brcond(i32 %cond) {
 ; WAVE32:       ; %bb.0: ; %entry
 ; WAVE32-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; WAVE32-NEXT:    s_waitcnt lgkmcnt(0)
-; WAVE32-NEXT:    s_xor_b32 s0, s0, -1
+; WAVE32-NEXT:    s_xor_b32 s0, s0, 1
 ; WAVE32-NEXT:    s_and_b32 s0, s0, 1
 ; WAVE32-NEXT:    s_cmp_lg_u32 s0, 0
 ; WAVE32-NEXT:    s_cbranch_scc1 .LBB3_2
@@ -116,7 +116,7 @@ define amdgpu_kernel void @brcond_sgpr_trunc_and(i32 %cond0, i32 %cond1) {
 ; WAVE64-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; WAVE64-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-NEXT:    s_and_b32 s0, s0, s1
-; WAVE64-NEXT:    s_xor_b32 s0, s0, -1
+; WAVE64-NEXT:    s_xor_b32 s0, s0, 1
 ; WAVE64-NEXT:    s_and_b32 s0, s0, 1
 ; WAVE64-NEXT:    s_cmp_lg_u32 s0, 0
 ; WAVE64-NEXT:    s_cbranch_scc1 .LBB4_2
@@ -134,7 +134,7 @@ define amdgpu_kernel void @brcond_sgpr_trunc_and(i32 %cond0, i32 %cond1) {
 ; WAVE32-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; WAVE32-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-NEXT:    s_and_b32 s0, s0, s1
-; WAVE32-NEXT:    s_xor_b32 s0, s0, -1
+; WAVE32-NEXT:    s_xor_b32 s0, s0, 1
 ; WAVE32-NEXT:    s_and_b32 s0, s0, 1
 ; WAVE32-NEXT:    s_cmp_lg_u32 s0, 0
 ; WAVE32-NEXT:    s_cbranch_scc1 .LBB4_2

@@ -21,6 +21,7 @@
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Complex.h"
+#include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -797,9 +798,12 @@ private:
   gen(const Fortran::evaluate::BOZLiteralConstant &expr) {
     fir::emitFatalError(loc, "BOZ literal must be replaced by semantics");
   }
+
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::NullPointer &expr) {
-    TODO(getLoc(), "lowering NullPointer to HLFIR");
+    auto nullop = getBuilder().create<hlfir::NullOp>(getLoc());
+    return mlir::cast<fir::FortranVariableOpInterface>(nullop.getOperation());
   }
+
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::ProcedureDesignator &expr) {
     TODO(getLoc(), "lowering ProcDes to HLFIR");
@@ -1023,4 +1027,36 @@ hlfir::EntityWithAttributes Fortran::lower::convertExprToHLFIR(
     const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap,
     Fortran::lower::StatementContext &stmtCtx) {
   return HlfirBuilder(loc, converter, symMap, stmtCtx).gen(expr);
+}
+
+fir::BoxValue Fortran::lower::convertExprToBox(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap,
+    Fortran::lower::StatementContext &stmtCtx) {
+  hlfir::EntityWithAttributes loweredExpr =
+      HlfirBuilder(loc, converter, symMap, stmtCtx).gen(expr);
+  auto exv = Fortran::lower::translateToExtendedValue(
+      loc, converter.getFirOpBuilder(), loweredExpr, stmtCtx);
+  if (fir::isa_trivial(fir::getBase(exv).getType()))
+    TODO(loc, "place trivial in memory");
+  return fir::factory::createBoxValue(converter.getFirOpBuilder(), loc, exv);
+}
+
+fir::ExtendedValue Fortran::lower::convertExprToAddress(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap,
+    Fortran::lower::StatementContext &stmtCtx) {
+  hlfir::EntityWithAttributes loweredExpr =
+      HlfirBuilder(loc, converter, symMap, stmtCtx).gen(expr);
+  if (expr.Rank() > 0 && !Fortran::evaluate::IsSimplyContiguous(
+                             expr, converter.getFoldingContext()))
+    TODO(loc, "genExprAddr of non contiguous variables in HLFIR");
+  fir::ExtendedValue exv = Fortran::lower::translateToExtendedValue(
+      loc, converter.getFirOpBuilder(), loweredExpr, stmtCtx);
+  if (fir::isa_trivial(fir::getBase(exv).getType()))
+    TODO(loc, "place trivial in memory");
+  if (const auto *mutableBox = exv.getBoxOf<fir::MutableBoxValue>())
+    exv = fir::factory::genMutableBoxRead(converter.getFirOpBuilder(), loc,
+                                          *mutableBox);
+  return exv;
 }

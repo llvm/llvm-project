@@ -1,7 +1,7 @@
 ; RUN: mlir-translate -import-llvm %s | FileCheck %s
 ; RUN: mlir-translate -import-llvm -mlir-print-debuginfo %s | FileCheck %s --check-prefix=CHECK-DBG
 
-; CHECK-DBG: #[[UNKNOWNLOC:.+]] = loc(unknown)
+; CHECK-DBG: #[[MODULELOC:.+]] = loc({{.*}}basic.ll{{.*}}:0:0)
 
 @global = external global double, align 8
 
@@ -10,7 +10,7 @@ declare float @fe(i32)
 
 ; FIXME: function attributes.
 ; CHECK-LABEL: llvm.func internal @f1(%arg0: i64) -> i32 attributes {dso_local} {
-; CHECK-DBG: llvm.func internal @f1(%arg0: i64 loc(unknown)) -> i32 attributes {dso_local} {
+; CHECK-DBG: llvm.func internal @f1(%arg0: i64 loc({{.*}}basic.ll{{.*}}:0:0)) -> i32 attributes {dso_local} {
 ; CHECK: %[[c2:[0-9]+]] = llvm.mlir.constant(2 : i32) : i32
 ; CHECK: %[[c1:[0-9]+]] = llvm.mlir.constant(true) : i1
 ; CHECK: %[[c43:[0-9]+]] = llvm.mlir.constant(43 : i32) : i32
@@ -19,7 +19,7 @@ define internal dso_local i32 @f1(i64 %a) norecurse {
 entry:
 ; CHECK: %{{[0-9]+}} = llvm.inttoptr %arg0 : i64 to !llvm.ptr<i64>
   %aa = inttoptr i64 %a to i64*
-; CHECK-DBG: llvm.mlir.addressof @global : !llvm.ptr<f64> loc(#[[UNKNOWNLOC]])
+; CHECK-DBG: llvm.mlir.addressof @global : !llvm.ptr<f64> loc(#[[MODULELOC]])
 ; %[[addrof:[0-9]+]] = llvm.mlir.addressof @global : !llvm.ptr<f64>
 ; %[[addrof2:[0-9]+]] = llvm.mlir.addressof @global : !llvm.ptr<f64>
 ; %{{[0-9]+}} = llvm.inttoptr %arg0 : i64 to !llvm.ptr<i64>
@@ -28,7 +28,7 @@ entry:
   %bb = ptrtoint double* @global to i64
   %cc = getelementptr double, double* @global, i32 3
 ; CHECK: %[[b:[0-9]+]] = llvm.trunc %arg0 : i64 to i32
-; CHECK-DBG: llvm.trunc %arg0 : i64 to i32 loc(#[[UNKNOWNLOC]])
+; CHECK-DBG: llvm.trunc %arg0 : i64 to i32 loc(#[[MODULELOC]])
   %b = trunc i64 %a to i32
 ; CHECK: %[[c:[0-9]+]] = llvm.call @fe(%[[b]]) : (i32) -> f32
   %c = call float @fe(i32 %b)
@@ -52,7 +52,7 @@ if.end:
 ; CHECK: llvm.return %[[c43]]
   ret i32 43
 }
-; CHECK-DBG: } loc(#[[UNKNOWNLOC]])
+; CHECK-DBG: } loc(#[[MODULELOC]])
 
 
 @_ZTIi = external dso_local constant i8*

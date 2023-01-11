@@ -72,7 +72,7 @@ GetWasmString(llvm::DataExtractor &data, llvm::DataExtractor::Cursor &c) {
     return std::nullopt;
   }
 
-  llvm::StringRef str = toStringRef(makeArrayRef(str_storage));
+  llvm::StringRef str = toStringRef(llvm::ArrayRef(str_storage));
   return ConstString(str);
 }
 
