@@ -112,7 +112,7 @@
 "`P1065R2 <https://wg21.link/P1065R2>`__","LWG","Constexpr INVOKE","Cologne","|Complete|","12.0"
 "`P1135R6 <https://wg21.link/P1135R6>`__","LWG","The C++20 Synchronization Library","Cologne","|Complete|","11.0"
 "`P1207R4 <https://wg21.link/P1207R4>`__","LWG","Movability of Single-pass Iterators","Cologne","|Complete|","15.0","|ranges|"
-"`P1208R6 <https://wg21.link/P1208R6>`__","LWG","Adopt source_location for C++20","Cologne","",""
+"`P1208R6 <https://wg21.link/P1208R6>`__","LWG","Adopt source_location for C++20","Cologne","|Complete|","16.0"
 "`P1355R2 <https://wg21.link/P1355R2>`__","LWG","Exposing a narrow contract for ceil2","Cologne","|Complete|","9.0"
 "`P1361R2 <https://wg21.link/P1361R2>`__","LWG","Integration of chrono with text formatting","Cologne","|In Progress|",""
 "`P1423R3 <https://wg21.link/P1423R3>`__","LWG","char8_t backward compatibility remediation","Cologne","|Complete|","15.0"

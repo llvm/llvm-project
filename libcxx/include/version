@@ -365,7 +365,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_shared_ptr_arrays                    201707L
 # define __cpp_lib_shift                                201806L
 // # define __cpp_lib_smart_ptr_for_overwrite              202002L
-// # define __cpp_lib_source_location                      201907L
+# if __has_builtin(__builtin_source_location)
+#   define __cpp_lib_source_location                    201907L
+# endif
 # define __cpp_lib_span                                 202002L
 # define __cpp_lib_ssize                                201902L
 # define __cpp_lib_starts_ends_with                     201711L
