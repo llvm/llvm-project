@@ -46,12 +46,18 @@ __gwp_asan_diagnose_error(const gwp_asan::AllocatorState *State,
                           const gwp_asan::AllocationMetadata *Metadata,
                           uintptr_t ErrorPtr);
 
-// For internally-detected errors (double free, invalid free), this function
-// returns the pointer that the error occurred at. If the error is unrelated to
-// GWP-ASan, or if the error was caused by a non-internally detected failure,
-// this function returns zero.
+// This function, provided the fault address from the signal handler, returns
+// the following values:
+//  1. If the crash was caused by an internally-detected error (invalid free,
+//     double free), this function returns the pointer that was used for the
+//     internally-detected bad operation (i.e. the pointer given to free()).
+//  2. For externally-detected crashes (use-after-free, buffer-overflow), this
+//     function returns zero.
+//  3. If GWP-ASan wasn't responsible for the crash at all, this function also
+//     returns zero.
 uintptr_t
-__gwp_asan_get_internal_crash_address(const gwp_asan::AllocatorState *State);
+__gwp_asan_get_internal_crash_address(const gwp_asan::AllocatorState *State,
+                                      uintptr_t ErrorPtr);
 
 // Returns a pointer to the metadata for the allocation that's responsible for
 // the crash. This metadata should not be dereferenced directly due to API
