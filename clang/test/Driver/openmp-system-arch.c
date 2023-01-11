@@ -1,3 +1,9 @@
+// REQUIRES: system-linux
+// REQUIRES: x86-registered-target
+// REQUIRES: amdgpu-registered-target
+// REQUIRES: nvptx-registered-target
+// REQUIRES: shell
+
 // RUN: mkdir -p %t
 // RUN: cp %S/Inputs/amdgpu-arch/amdgpu_arch_fail %t/
 // RUN: cp %S/Inputs/amdgpu-arch/amdgpu_arch_gfx906 %t/
