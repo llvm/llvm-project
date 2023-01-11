@@ -5712,8 +5712,8 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     // When using both -save-temps and -emit-llvm, use a ".tmp.bc" suffix for
     // the unoptimized bitcode so that it does not get overwritten by the ".bc"
     // optimized bitcode output.
-    auto IsHIPRDCInCompilePhase = [&C](const JobAction &JA,
-                                       const llvm::opt::DerivedArgList &Args) {
+    auto IsAMDRDCInCompilePhase = [](const JobAction &JA,
+                                     const llvm::opt::DerivedArgList &Args) {
       // The relocatable compilation in HIP and OpenMP implies -emit-llvm.
       // Similarly, use a ".tmp.bc" suffix for the unoptimized bitcode
       // (generated in the compile phase.)
@@ -5727,7 +5727,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     };
     if (!AtTopLevel && JA.getType() == types::TY_LLVM_BC &&
         (C.getArgs().hasArg(options::OPT_emit_llvm) ||
-         IsHIPRDCInCompilePhase(JA, C.getArgs())))
+         IsAMDRDCInCompilePhase(JA, C.getArgs())))
       Suffixed += ".tmp";
     Suffixed += '.';
     Suffixed += Suffix;
