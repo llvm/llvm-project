@@ -269,6 +269,11 @@ DWARFUnitIndex::Entry::getContribution(DWARFSectionKind Sec) const {
   return nullptr;
 }
 
+DWARFUnitIndex::Entry::SectionContribution &
+DWARFUnitIndex::Entry::getContribution() {
+  return Contributions[Index->InfoColumn];
+}
+
 const DWARFUnitIndex::Entry::SectionContribution *
 DWARFUnitIndex::Entry::getContribution() const {
   return &Contributions[Index->InfoColumn];
