@@ -192,6 +192,8 @@ public:
     std::function<const swift::reflection::TypeRef *()> get_typeref;
   };
 
+  Process &GetProcess() const;
+
   /// An abstract interface to swift::reflection::ReflectionContext
   /// objects of varying pointer sizes.  This class encapsulates all
   /// traffic to ReflectionContext and abstracts the detail that
