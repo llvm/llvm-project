@@ -46,10 +46,16 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
   // ahead and replace the value with the memory location, this lets the caller
   // quickly eliminate the markers.
 
-  SmallVector<PointerIntPair<Value *, 1, bool>, 35> ValuesToInspect;
-  ValuesToInspect.emplace_back(V, false);
-  while (!ValuesToInspect.empty()) {
-    const auto [Value, IsOffset] = ValuesToInspect.pop_back_val();
+  using ValueAndIsOffset = PointerIntPair<Value *, 1, bool>;
+  SmallVector<ValueAndIsOffset, 32> Worklist;
+  SmallPtrSet<ValueAndIsOffset, 32> Visited;
+  Worklist.emplace_back(V, false);
+  while (!Worklist.empty()) {
+    ValueAndIsOffset Elem = Worklist.pop_back_val();
+    if (!Visited.insert(Elem).second)
+      continue;
+
+    const auto [Value, IsOffset] = Elem;
     for (auto &U : Value->uses()) {
       auto *I = cast<Instruction>(U.getUser());
 
@@ -61,13 +67,13 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
 
       if (isa<BitCastInst>(I) || isa<AddrSpaceCastInst>(I)) {
         // If uses of the bitcast are ok, we are ok.
-        ValuesToInspect.emplace_back(I, IsOffset);
+        Worklist.emplace_back(I, IsOffset);
         continue;
       }
       if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
         // If the GEP has all zero indices, it doesn't offset the pointer. If it
         // doesn't, it does.
-        ValuesToInspect.emplace_back(I, IsOffset || !GEP->hasAllZeroIndices());
+        Worklist.emplace_back(I, IsOffset || !GEP->hasAllZeroIndices());
         continue;
       }
 
