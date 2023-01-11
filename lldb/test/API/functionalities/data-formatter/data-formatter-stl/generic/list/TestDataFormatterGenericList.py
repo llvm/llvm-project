@@ -73,7 +73,7 @@ class GenericListDataFormatterTestCase(TestBase):
                     substrs=['size=0',
                              '{}'])
 
-        self.expect("p numbers_list",
+        self.expect("expression numbers_list",
                     substrs=['size=0',
                              '{}'])
 
@@ -114,7 +114,7 @@ class GenericListDataFormatterTestCase(TestBase):
                              '[5] =',
                              '0x0cab0cab'])
 
-        self.expect("p numbers_list",
+        self.expect("expression numbers_list",
                     substrs=['size=6',
                              '[0] = ',
                              '0x12345678',
@@ -186,7 +186,7 @@ class GenericListDataFormatterTestCase(TestBase):
                              '[2]', 'smart',
                              '[3]', '!!!'])
 
-        self.expect("p text_list",
+        self.expect("expression text_list",
                     substrs=['size=4',
                              '\"goofy\"',
                              '\"is\"',

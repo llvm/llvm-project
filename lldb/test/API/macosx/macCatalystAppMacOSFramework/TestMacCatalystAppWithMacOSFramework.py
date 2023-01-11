@@ -24,7 +24,7 @@ class TestMacCatalystAppWithMacOSFramework(TestBase):
                     patterns=[arch + r'.*-apple-ios.*-macabi a\.out',
                               arch + r'.*-apple-macosx.* libfoo.dylib[^(]'])
         self.expect("fr v s", "Hello macCatalyst")
-        self.expect("p s", "Hello macCatalyst")
+        self.expect("expression s", "Hello macCatalyst")
         self.check_debugserver(log)
 
     def check_debugserver(self, log):

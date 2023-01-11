@@ -134,5 +134,5 @@ class CrashingRecursiveInferiorTestCase(TestBase):
 
         # The lldb expression interpreter should be able to read from addresses
         # of the inferior after a crash.
-        self.expect("p i",
+        self.expect("expression i",
                     startstr='(int) $0 =')

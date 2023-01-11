@@ -42,7 +42,7 @@ class EnumTypesTestCase(TestBase):
         # Test the behavior in case have a variable of a type considered
         # 'bitfield' by the heuristic, but the value isn't actually fully
         # covered by the enumerators.
-        self.expect("p (enum bitfield)nonsense", DATA_TYPES_DISPLAYED_CORRECTLY,
+        self.expect("expression (enum bitfield)nonsense", DATA_TYPES_DISPLAYED_CORRECTLY,
                     patterns=[' = B | C | 0x10$'])
 
         # Break inside the main.

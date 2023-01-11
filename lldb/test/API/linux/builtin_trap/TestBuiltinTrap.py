@@ -46,4 +46,4 @@ class BuiltinTrapTestCase(TestBase):
         self.runCmd("up", RUN_SUCCEEDED)
 
         # evaluate a local
-        self.expect('p foo', substrs=['= 5'])
+        self.expect('expression foo', substrs=['= 5'])

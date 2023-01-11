@@ -45,10 +45,10 @@ class PtrToArrayDataFormatterTestCase(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
-        self.expect('p *(int (*)[3])foo',
+        self.expect('expression *(int (*)[3])foo',
                     substrs=['(int[3]) $', '[0] = 1', '[1] = 2', '[2] = 3'])
 
-        self.expect('p *(int (*)[3])foo', matching=False,
+        self.expect('expression *(int (*)[3])foo', matching=False,
                     substrs=['01 00 00 00 02 00 00 00 03 00 00 00'])
-        self.expect('p *(int (*)[3])foo', matching=False,
+        self.expect('expression *(int (*)[3])foo', matching=False,
                     substrs=['0x000000030000000200000001'])
