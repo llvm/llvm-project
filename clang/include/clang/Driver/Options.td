@@ -6572,7 +6572,7 @@ def fsycl_is_host : Flag<["-"], "fsycl-is-host">,
 //         -fdepscan-prefix-map=/my/build/dir=/^build
 // ```
 
-// Driver-only CAS options.
+// Driver CAS options.
 def fdepscan_EQ : Joined<["-"], "fdepscan=">,
     Group<f_Group>,
     HelpText<"Scan for dependencies ahead of compiling, generating a"
