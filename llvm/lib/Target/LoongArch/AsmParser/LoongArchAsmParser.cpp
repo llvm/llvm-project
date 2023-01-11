@@ -1177,9 +1177,8 @@ unsigned LoongArchAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       unsigned Rd = Inst.getOperand(0).getReg();
       unsigned Rk = Inst.getOperand(1).getReg();
       unsigned Rj = Inst.getOperand(2).getReg();
-      if (Rd == Rk || Rd == Rj)
-        return Rd == LoongArch::R0 ? Match_Success
-                                   : Match_RequiresAMORdDifferRkRj;
+      if ((Rd == Rk || Rd == Rj) && Rd != LoongArch::R0)
+        return Match_RequiresAMORdDifferRkRj;
     }
     break;
   case LoongArch::PseudoLA_PCREL_LARGE:
