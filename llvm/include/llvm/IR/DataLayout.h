@@ -473,7 +473,7 @@ public:
   /// For example, returns 5 for i36 and 10 for x86_fp80.
   TypeSize getTypeStoreSize(Type *Ty) const {
     TypeSize BaseSize = getTypeSizeInBits(Ty);
-    return {divideCeil(BaseSize.getKnownMinSize(), 8), BaseSize.isScalable()};
+    return {divideCeil(BaseSize.getKnownMinValue(), 8), BaseSize.isScalable()};
   }
 
   /// Returns the maximum number of bits that may be overwritten by

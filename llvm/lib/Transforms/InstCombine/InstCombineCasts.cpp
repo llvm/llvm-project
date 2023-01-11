@@ -121,14 +121,15 @@ Instruction *InstCombinerImpl::PromoteCastOfAllocation(BitCastInst &CI,
   if (!AI.hasOneUse() && CastElTyAlign == AllocElTyAlign) return nullptr;
 
   // The alloc and cast types should be either both fixed or both scalable.
-  uint64_t AllocElTySize = DL.getTypeAllocSize(AllocElTy).getKnownMinSize();
-  uint64_t CastElTySize = DL.getTypeAllocSize(CastElTy).getKnownMinSize();
+  uint64_t AllocElTySize = DL.getTypeAllocSize(AllocElTy).getKnownMinValue();
+  uint64_t CastElTySize = DL.getTypeAllocSize(CastElTy).getKnownMinValue();
   if (CastElTySize == 0 || AllocElTySize == 0) return nullptr;
 
   // If the allocation has multiple uses, only promote it if we're not
   // shrinking the amount of memory being allocated.
-  uint64_t AllocElTyStoreSize = DL.getTypeStoreSize(AllocElTy).getKnownMinSize();
-  uint64_t CastElTyStoreSize = DL.getTypeStoreSize(CastElTy).getKnownMinSize();
+  uint64_t AllocElTyStoreSize =
+      DL.getTypeStoreSize(AllocElTy).getKnownMinValue();
+  uint64_t CastElTyStoreSize = DL.getTypeStoreSize(CastElTy).getKnownMinValue();
   if (!AI.hasOneUse() && CastElTyStoreSize < AllocElTyStoreSize) return nullptr;
 
   // See if we can satisfy the modulus by pulling a scale out of the array
