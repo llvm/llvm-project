@@ -69,28 +69,31 @@ AARCH64_ARCH("armv9-a",   ARMV9A, "+v9a",
              (AArch64::AEK_CRC | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-              AArch64::AEK_SVE2))
+              AArch64::AEK_SVE | AArch64::AEK_SVE2))
 AARCH64_ARCH("armv9.1-a", ARMV9_1A, "+v9.1a",
              (AArch64::AEK_CRC | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-              AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_SVE2))
+              AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_SVE |
+              AArch64::AEK_SVE2))
 AARCH64_ARCH("armv9.2-a", ARMV9_2A, "+v9.2a",
              (AArch64::AEK_CRC | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-              AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_SVE2))
+              AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_SVE |
+              AArch64::AEK_SVE2))
 AARCH64_ARCH("armv9.3-a", ARMV9_3A, "+v9.3a",
              (AArch64::AEK_CRC | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-              AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_SVE2))
+              AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_SVE |
+              AArch64::AEK_SVE2))
 AARCH64_ARCH("armv9.4-a", ARMV9_4A, "+v9.4a",
              (AArch64::AEK_CRC | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-              AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_SVE2 |
-              AArch64::AEK_RASv2))
+              AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_SVE |
+              AArch64::AEK_SVE2 | AArch64::AEK_RASv2))
 // For v8-R, we do not enable crypto and align with GCC that enables a more
 // minimal set of optional architecture extensions.
 AARCH64_ARCH("armv8-r", ARMV8R, "+v8r",
