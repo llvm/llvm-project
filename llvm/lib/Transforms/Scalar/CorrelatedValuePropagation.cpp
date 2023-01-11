@@ -438,8 +438,8 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
 
 // See if we can prove that the given binary op intrinsic will not overflow.
 static bool willNotOverflow(BinaryOpIntrinsic *BO, LazyValueInfo *LVI) {
-  ConstantRange LRange = LVI->getConstantRange(BO->getLHS(), BO);
-  ConstantRange RRange = LVI->getConstantRange(BO->getRHS(), BO);
+  ConstantRange LRange = LVI->getConstantRangeAtUse(BO->getOperandUse(0));
+  ConstantRange RRange = LVI->getConstantRangeAtUse(BO->getOperandUse(1));
   ConstantRange NWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
       BO->getBinaryOp(), RRange, BO->getNoWrapKind());
   return NWRegion.contains(LRange);

@@ -7,9 +7,9 @@ declare {i16, i1} @llvm.usub.with.overflow.i16(i16, i16)
 
 define i16 @sel_true_cond(i16 %x) {
 ; CHECK-LABEL: @sel_true_cond(
-; CHECK-NEXT:    [[SUB:%.*]] = call i16 @llvm.usub.sat.i16(i16 [[X:%.*]], i16 10)
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nuw i16 [[X:%.*]], 10
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i16 [[X]], 10
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[SUB]], i16 42
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[SUB1]], i16 42
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
   %sub = call i16 @llvm.usub.sat.i16(i16 %x, i16 10)
@@ -72,6 +72,8 @@ define i16 @sel_true_cond_extra_use(i16 %x) {
   ret i16 %sel
 }
 
+; TODO: We could handle this case by raising the limit on the number of
+; instructions we look through.
 define i16 @sel_true_cond_longer_chain(i16 %x) {
 ; CHECK-LABEL: @sel_true_cond_longer_chain(
 ; CHECK-NEXT:    [[SUB:%.*]] = call i16 @llvm.usub.sat.i16(i16 [[X:%.*]], i16 10)
@@ -89,9 +91,9 @@ define i16 @sel_true_cond_longer_chain(i16 %x) {
 
 define i16 @sel_false_cond(i16 %x) {
 ; CHECK-LABEL: @sel_false_cond(
-; CHECK-NEXT:    [[SUB:%.*]] = call i16 @llvm.usub.sat.i16(i16 [[X:%.*]], i16 10)
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nuw i16 [[X:%.*]], 10
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X]], 10
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 42, i16 [[SUB]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 42, i16 [[SUB1]]
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
   %sub = call i16 @llvm.usub.sat.i16(i16 %x, i16 10)
@@ -116,13 +118,13 @@ define i16 @sel_false_cond_insufficient(i16 %x) {
 define i16 @phi_true_cond(i16 %x) {
 ; CHECK-LABEL: @phi_true_cond(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB:%.*]] = call i16 @llvm.usub.sat.i16(i16 [[X:%.*]], i16 10)
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nuw i16 [[X:%.*]], 10
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i16 [[X]], 10
 ; CHECK-NEXT:    br i1 [[CMP]], label [[JOIN:%.*]], label [[SPLIT:%.*]]
 ; CHECK:       split:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i16 [ [[SUB]], [[ENTRY:%.*]] ], [ 42, [[SPLIT]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i16 [ [[SUB1]], [[ENTRY:%.*]] ], [ 42, [[SPLIT]] ]
 ; CHECK-NEXT:    ret i16 [[PHI]]
 ;
 entry:
@@ -163,6 +165,8 @@ join:
   ret i16 %phi
 }
 
+; TODO: We could handle this by using conditions that are not directly on the
+; phi edge.
 define i16 @phi_true_cond_non_local(i16 %x) {
 ; CHECK-LABEL: @phi_true_cond_non_local(
 ; CHECK-NEXT:  entry:
@@ -191,13 +195,13 @@ join:
 define i16 @phi_false_cond(i16 %x) {
 ; CHECK-LABEL: @phi_false_cond(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB:%.*]] = call i16 @llvm.usub.sat.i16(i16 [[X:%.*]], i16 10)
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nuw i16 [[X:%.*]], 10
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X]], 10
 ; CHECK-NEXT:    br i1 [[CMP]], label [[SPLIT:%.*]], label [[JOIN:%.*]]
 ; CHECK:       split:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i16 [ [[SUB]], [[ENTRY:%.*]] ], [ 42, [[SPLIT]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i16 [ [[SUB1]], [[ENTRY:%.*]] ], [ 42, [[SPLIT]] ]
 ; CHECK-NEXT:    ret i16 [[PHI]]
 ;
 entry:
@@ -238,6 +242,8 @@ join:
   ret i16 %phi
 }
 
+; TODO: We could handle this by using conditions that are not directly on the
+; phi edge.
 define i16 @phi_false_cond_non_local(i16 %x) {
 ; CHECK-LABEL: @phi_false_cond_non_local(
 ; CHECK-NEXT:  entry:
@@ -268,10 +274,10 @@ define i16 @loop_cond() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 1000, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 1000, [[ENTRY:%.*]] ], [ [[IV_NEXT1:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[COUNT:%.*]] = phi i16 [ 0, [[ENTRY]] ], [ [[COUNT_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[IV]], 0
-; CHECK-NEXT:    [[IV_NEXT]] = call i16 @llvm.usub.sat.i16(i16 [[IV]], i16 1)
+; CHECK-NEXT:    [[IV_NEXT1]] = sub nuw i16 [[IV]], 1
 ; CHECK-NEXT:    [[COUNT_NEXT]] = add i16 [[COUNT]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
