@@ -194,19 +194,6 @@ CudaInstallationDetector::CudaInstallationDetector(
     if (CheckLibDevice && !FS.exists(LibDevicePath))
       continue;
 
-    // On Linux, we have both lib and lib64 directories, and we need to choose
-    // based on our triple.  On MacOS, we have only a lib directory.
-    //
-    // It's sufficient for our purposes to be flexible: If both lib and lib64
-    // exist, we choose whichever one matches our triple.  Otherwise, if only
-    // lib exists, we use it.
-    if (HostTriple.isArch64Bit() && FS.exists(InstallPath + "/lib64"))
-      LibPath = InstallPath + "/lib64";
-    else if (FS.exists(InstallPath + "/lib"))
-      LibPath = InstallPath + "/lib";
-    else
-      continue;
-
     Version = CudaVersion::UNKNOWN;
     if (auto CudaHFile = FS.getBufferForFile(InstallPath + "/include/cuda.h"))
       Version = parseCudaHFile((*CudaHFile)->getBuffer());
