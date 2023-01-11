@@ -142,7 +142,8 @@ def _GetSymbols(pool, root_dir, index_page_name, namespace, variants_to_accept):
       if variant and variant not in variants_for_symbol:
         continue
       path = os.path.join(root_dir, symbol_page_path)
-      results.append((symbol_name,
+      if os.path.isfile(path):
+        results.append((symbol_name,
                       pool.apply_async(_ReadSymbolPage, (path, symbol_name))))
 
     # Build map from symbol name to a set of headers.
