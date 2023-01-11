@@ -542,8 +542,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
             // NOLINT comments)?
             return DiagnosticsEngine::Ignored;
           }
-          // Match behavior for clang-tidy --system-headers=0 (the default).
-          if (Info.hasSourceManager() &&
+          if (!CTContext->getOptions().SystemHeaders.value_or(false) &&
+              Info.hasSourceManager() &&
               Info.getSourceManager().isInSystemMacro(Info.getLocation()))
             return DiagnosticsEngine::Ignored;
 
