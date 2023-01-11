@@ -72,6 +72,11 @@ static bool CompareDerivedTypeNames(const Descriptor &a, const Descriptor &b) {
   return false;
 }
 
+inline bool CompareDerivedType(
+    const typeInfo::DerivedType *a, const typeInfo::DerivedType *b) {
+  return a == b || CompareDerivedTypeNames(a->name(), b->name());
+}
+
 static const typeInfo::DerivedType *GetDerivedType(const Descriptor &desc) {
   if (const DescriptorAddendum * addendum{desc.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
@@ -94,6 +99,49 @@ bool RTNAME(SameTypeAs)(const Descriptor &a, const Descriptor &b) {
   // Otherwise compare with the name. Note 16.29 kind type parameters are not
   // considered in the test.
   return CompareDerivedTypeNames(derivedTypeA->name(), derivedTypeB->name());
+}
+
+bool RTNAME(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
+  const typeInfo::DerivedType *derivedTypeA{GetDerivedType(a)};
+  const typeInfo::DerivedType *derivedTypeMold{GetDerivedType(mold)};
+
+  // If MOLD is unlimited polymorphic and is either a disassociated pointer or
+  // unallocated allocatable, the result is true.
+  // Unlimited polymorphic descriptors are initialized with a CFI_type_other
+  // type.
+  if (mold.type().raw() == CFI_type_other &&
+      (mold.IsAllocatable() || mold.IsPointer()) &&
+      derivedTypeMold == nullptr) {
+    return true;
+  }
+
+  // If A is unlimited polymorphic and is either a disassociated pointer or
+  // unallocated allocatable, the result is false.
+  // Unlimited polymorphic descriptors are initialized with a CFI_type_other
+  // type.
+  if (a.type().raw() == CFI_type_other &&
+      (a.IsAllocatable() || a.IsPointer()) && derivedTypeA == nullptr) {
+    return false;
+  }
+
+  if (derivedTypeA == nullptr || derivedTypeMold == nullptr) {
+    return false;
+  }
+
+  // Otherwise if the dynamic type of A or MOLD is extensible, the result is
+  // true if and only if the dynamic type of A is an extension type of the
+  // dynamic type of MOLD.
+  if (CompareDerivedType(derivedTypeA, derivedTypeMold)) {
+    return true;
+  }
+  const typeInfo::DerivedType *parent{derivedTypeA->GetParentType()};
+  while (parent) {
+    if (CompareDerivedType(parent, derivedTypeMold)) {
+      return true;
+    }
+    parent = parent->GetParentType();
+  }
+  return false;
 }
 
 // TODO: Assign()
