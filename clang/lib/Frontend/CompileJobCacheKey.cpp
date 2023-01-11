@@ -154,8 +154,7 @@ canonicalizeForCaching(llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
       FrontendOpts.DisableCachedCompileJobReplay;
   FrontendOpts.DisableCachedCompileJobReplay = false;
   FrontendOpts.IncludeTimestamps = false;
-  Opts.PathPrefixMappings = std::move(FrontendOpts.PathPrefixMappings);
-  FrontendOpts.PathPrefixMappings.clear();
+  std::swap(Opts.PathPrefixMappings, FrontendOpts.PathPrefixMappings);
 
   // Hide the CAS configuration, canonicalizing it to keep the path to the
   // CAS from leaking to the compile job, where it might affecting its
